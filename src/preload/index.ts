@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { CANAUX, EVENEMENTS, type Desabonnement, type PontStudio } from '@shared/ipc'
+import {
+  CANAUX,
+  EVENEMENTS,
+  type CommandeMenu,
+  type Desabonnement,
+  type DemandeOutil,
+  type PontStudio,
+} from '@shared/ipc'
 import type { Projet } from '@shared/domain/projet'
 import type { ProgressionTache } from '@shared/domain/tache'
 
@@ -38,6 +45,10 @@ const pont: PontStudio = {
   assets: {
     rechercher: requete => ipcRenderer.invoke(CANAUX.assetsRechercher, requete),
     url: assetId => ipcRenderer.invoke(CANAUX.assetsUrl, assetId),
+  },
+  menu: {
+    surOuvrirOutil: rappel => abonner<DemandeOutil>(EVENEMENTS.ouvrirOutil, rappel),
+    surCommande: rappel => abonner<CommandeMenu>(EVENEMENTS.commandeMenu, rappel),
   },
 }
 

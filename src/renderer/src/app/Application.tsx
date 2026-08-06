@@ -1,8 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useMenuNatif } from '@/hooks/useMenuNatif'
 import { Shell } from './Shell'
 
 export function Application() {
+  useMenuNatif()
+
   const [client] = useState(
     () =>
       new QueryClient({

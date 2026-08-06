@@ -25,7 +25,9 @@
     "fermer": "Close",
     "valider": "Confirm",
     "parcourir": "Browse…",
-    "reessayer": "Retry"
+    "reessayer": "Retry",
+    "reduire": "Minimize",
+    "retirerModule": "Remove tool"
   },
   "generation": {
     "modele": "Model",
@@ -90,7 +92,10 @@
     "ouvrirProjet": "Open project…",
     "projetsRecents": "Recent projects",
     "reglages": "Settings…",
-    "quitter": "Quit"
+    "quitter": "Quit",
+    "affichage": "View",
+    "modules": "Tool windows",
+    "reinitialiserDisposition": "Reset layout"
   },
   "reglages": {
     "titre": "Settings",

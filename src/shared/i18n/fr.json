@@ -25,7 +25,9 @@
     "fermer": "Fermer",
     "valider": "Valider",
     "parcourir": "Parcourir…",
-    "reessayer": "Réessayer"
+    "reessayer": "Réessayer",
+    "reduire": "Réduire",
+    "retirerModule": "Retirer le module"
   },
   "generation": {
     "modele": "Modèle",
@@ -90,7 +92,10 @@
     "ouvrirProjet": "Ouvrir un projet…",
     "projetsRecents": "Projets récents",
     "reglages": "Réglages…",
-    "quitter": "Quitter"
+    "quitter": "Quitter",
+    "affichage": "Affichage",
+    "modules": "Modules",
+    "reinitialiserDisposition": "Réinitialiser la disposition"
   },
   "reglages": {
     "titre": "Réglages",

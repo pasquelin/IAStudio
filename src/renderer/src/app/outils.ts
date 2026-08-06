@@ -42,3 +42,11 @@ export function cleTitreOutil(id: IdOutil): string {
 export function estHorizontale(zone: ZoneOutils): boolean {
   return zone === 'haut' || zone === 'bas'
 }
+
+export function estZoneOutils(valeur: string): valeur is ZoneOutils {
+  return ZONES.some(zone => zone === valeur)
+}
+
+export function estIdOutil(valeur: string): valeur is IdOutil {
+  return OUTILS.some(outil => outil.id === valeur)
+}

@@ -34,9 +34,20 @@ export const CANAUX = {
 export const EVENEMENTS = {
   tacheProgression: 'evt:tache-progression',
   projetChange: 'evt:projet-change',
+  ouvrirOutil: 'evt:ouvrir-outil',
+  commandeMenu: 'evt:commande-menu',
 }
 
 export type Desabonnement = () => void
+
+/** Demande d'ouverture d'un outil venue du menu natif. */
+export type DemandeOutil = {
+  zone: string
+  outil: string
+}
+
+/** Commandes du menu natif sans charge utile, identifiées par un verbe. */
+export type CommandeMenu = 'projet:nouveau' | 'projet:ouvrir' | 'disposition:reinitialiser'
 
 /**
  * Ce que `window.studio` expose. Chaque méthode a exactement un canal dans `CANAUX`.
@@ -67,5 +78,9 @@ export type PontStudio = {
   assets: {
     rechercher: (requete: RequeteAssets) => Promise<Asset[]>
     url: (assetId: string) => Promise<string | null>
+  }
+  menu: {
+    surOuvrirOutil: (rappel: (demande: DemandeOutil) => void) => Desabonnement
+    surCommande: (rappel: (commande: CommandeMenu) => void) => Desabonnement
   }
 }

@@ -10,15 +10,15 @@
  */
 @theme {
   --color-chassis: #2b2d30;
-  --color-base: #1e1f22;
-  --color-surface: #26282c;
-  --color-elevated: #393b40;
-  --color-bordure: #393b40;
+  --color-base: #191a1c;
+  --color-surface: #202124;
+  --color-elevated: #3c3f44;
+  --color-bordure: #34363a;
   --color-accent: #3574f0;
   --color-accent-doux: #2e436e;
   --color-danger: #ff715b;
   --color-texte: #dfe1e5;
-  --color-texte-attenue: #8c8f96;
+  --color-texte-attenue: #868a91;
 
   --radius-sc-sm: 4px;
   --radius-sc-md: 6px;
@@ -30,18 +30,21 @@
 
 :root {
   --sc-controle: 28px;
-  --sc-rail: 30px;
+  /* Largeur du rail : le bouton (32) plus la marge qui l'écarte du bord de la fenêtre. */
+  --sc-rail: 48px;
+  --sc-bouton-rail: 36px;
   --sc-gouttiere: 6px;
-  --sc-entete: 30px;
+  --sc-entete: 32px;
   --sc-ombre-meuble: 0 1px 2px rgb(0 0 0 / 0.25);
   --sc-ombre-flottante: 0 8px 24px rgb(0 0 0 / 0.55);
 }
 
 :root[data-densite='compact'] {
   --sc-controle: 24px;
-  --sc-rail: 26px;
+  --sc-rail: 42px;
+  --sc-bouton-rail: 32px;
   --sc-gouttiere: 4px;
-  --sc-entete: 26px;
+  --sc-entete: 28px;
 }
 
 html,

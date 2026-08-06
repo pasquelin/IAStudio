@@ -29,7 +29,9 @@ export function TitleBar({ espaceActif, surEspace, actions }: TitleBarProps) {
   return (
     <header
       style={SAISISSABLE}
-      className="flex h-14 shrink-0 items-center gap-2 pr-3 pl-22 text-[13px]"
+      // `pl-20` dégage les feux de circulation natifs, dont le centre est à 14px du haut :
+      // une hauteur de 44px les aligne au milieu de la barre.
+      className="flex shrink-0 items-center gap-2 pr-6 pl-24 text-[13px]"
     >
       <nav
         aria-label={t('espaces.navigation')}
@@ -43,7 +45,7 @@ export function TitleBar({ espaceActif, surEspace, actions }: TitleBarProps) {
             aria-current={espace.id === espaceActif ? 'page' : undefined}
             onClick={() => surEspace(espace.id)}
             className={cn(
-              'flex h-8 cursor-pointer items-center gap-2 rounded-(--radius-sc-md) border-none px-3',
+              'flex cursor-pointer items-center gap-2 rounded-(--radius-sc-md) border-none px-3 py-1',
               'text-texte-attenue bg-transparent transition-colors',
               'hover:bg-elevated/60 hover:text-texte',
               espace.id === espaceActif && 'bg-elevated text-texte',

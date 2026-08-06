@@ -1,6 +1,8 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { COULEUR_FOND } from '@shared/constantes'
+import { resoudreLangue } from '@shared/i18n'
+import { poserMenu } from '@main/menu'
 
 const enDeveloppement = !app.isPackaged
 
@@ -39,6 +41,7 @@ function creerFenetre(): BrowserWindow {
 }
 
 void app.whenReady().then(() => {
+  poserMenu(resoudreLangue(app.getLocale()))
   creerFenetre()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) creerFenetre()
