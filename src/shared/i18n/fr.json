@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Scenario Studio" },
+  "app": {
+    "name": "Scenario Studio"
+  },
   "workspaces": {
     "navigation": "Espaces de travail",
     "image": "Image",
@@ -34,7 +36,9 @@
     "loadingModels": "Chargement des modèles…",
     "parameters": "Paramètres",
     "noParameter": "Ce modèle n’attend aucun paramètre.",
-    "randomSeed": "Aléatoire"
+    "randomSeed": "Aléatoire",
+    "noProject": "Ouvrez un projet pour générer.",
+    "noCredentials": "Renseignez vos identifiants API pour voir vos modèles."
   },
   "jobs": {
     "title": "Tâches",
@@ -45,7 +49,8 @@
       "succeeded": "Terminée",
       "failed": "Échouée",
       "cancelled": "Annulée"
-    }
+    },
+    "cancel": "Annuler la tâche"
   },
   "assets": {
     "title": "Assets",
@@ -54,7 +59,8 @@
     "gridView": "Icônes",
     "listView": "Liste",
     "count": "{{count}} asset",
-    "count_other": "{{count}} assets"
+    "count_other": "{{count}} assets",
+    "openProject": "Ouvrez un projet pour voir ses assets."
   },
   "documents": {
     "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer."
@@ -83,7 +89,8 @@
     "rateLimited": "Trop de requêtes. Nouvelle tentative en cours…",
     "server": "Le service Scenario est momentanément indisponible.",
     "network": "Impossible de joindre Scenario. Vérifiez votre connexion.",
-    "unexpected": "Une erreur inattendue est survenue."
+    "unexpected": "Une erreur inattendue est survenue.",
+    "invalidValue": "Valeur invalide."
   },
   "menu": {
     "file": "Fichier",

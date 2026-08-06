@@ -4,6 +4,7 @@ import { useDensity } from '@/hooks/useDensity'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
 import { AccountDialog } from '@/settings/AccountDialog'
+import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { Shell } from './Shell'
@@ -13,7 +14,8 @@ export function Application() {
   useWindowFit()
 
   const load = useSettings(state => state.load)
-  const connect = useProject(state => state.connect)
+  const connectProject = useProject(state => state.connect)
+  const connectJobs = useJobs(state => state.connect)
   const density = useSettings(state => state.settings.appearance.density)
 
   useEffect(() => {
@@ -21,11 +23,11 @@ export function Application() {
   }, [load])
 
   useEffect(() => {
-    const subscription = connect()
+    const subscriptions = [connectProject(), connectJobs()]
     return () => {
-      void subscription.then(stop => stop())
+      for (const subscription of subscriptions) void subscription.then(stop => stop())
     }
-  }, [connect])
+  }, [connectProject, connectJobs])
 
   useDensity(density)
 

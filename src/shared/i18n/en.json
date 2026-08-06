@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Scenario Studio" },
+  "app": {
+    "name": "Scenario Studio"
+  },
   "workspaces": {
     "navigation": "Workspaces",
     "image": "Image",
@@ -34,7 +36,9 @@
     "loadingModels": "Loading models…",
     "parameters": "Parameters",
     "noParameter": "This model takes no parameters.",
-    "randomSeed": "Random"
+    "randomSeed": "Random",
+    "noProject": "Open a project to generate.",
+    "noCredentials": "Enter your API credentials to see your models."
   },
   "jobs": {
     "title": "Jobs",
@@ -45,7 +49,8 @@
       "succeeded": "Done",
       "failed": "Failed",
       "cancelled": "Cancelled"
-    }
+    },
+    "cancel": "Cancel job"
   },
   "assets": {
     "title": "Assets",
@@ -54,7 +59,8 @@
     "gridView": "Icons",
     "listView": "List",
     "count": "{{count}} asset",
-    "count_other": "{{count}} assets"
+    "count_other": "{{count}} assets",
+    "openProject": "Open a project to see its assets."
   },
   "documents": {
     "none": "No document open. Generate or open an asset to get started."
@@ -83,7 +89,8 @@
     "rateLimited": "Too many requests. Retrying…",
     "server": "The Scenario service is temporarily unavailable.",
     "network": "Cannot reach Scenario. Check your connection.",
-    "unexpected": "An unexpected error occurred."
+    "unexpected": "An unexpected error occurred.",
+    "invalidValue": "Invalid value."
   },
   "menu": {
     "file": "File",

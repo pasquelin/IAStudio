@@ -2,6 +2,7 @@ import i18next from 'i18next'
 import { create } from 'zustand'
 import type { Project } from '@shared/domain/project'
 import { getBridge } from '@/services/bridge'
+import { useAssets } from './assets'
 
 type ProjectState = {
   project: Project | null
@@ -23,8 +24,15 @@ export const useProject = create<ProjectState>()(set => ({
     const bridge = getBridge()
     if (!bridge) return () => {}
 
-    const stop = bridge.project.onChange(project => set({ project }))
+    const stop = bridge.project.onChange(project => {
+      set({ project })
+      // Another project means another catalogue: the browser must not keep showing the
+      // previous one's assets.
+      void useAssets.getState().refresh()
+    })
+
     set({ project: await bridge.project.current() })
+    await useAssets.getState().refresh()
     return stop
   },
 
