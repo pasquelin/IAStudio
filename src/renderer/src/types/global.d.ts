@@ -1,4 +1,4 @@
-import type { PontStudio } from '@shared/ipc'
+import type { StudioBridge } from '@shared/ipc'
 
 declare global {
   /**
@@ -6,7 +6,7 @@ declare global {
    * qu'en augmentation de `Window` : la convention du projet interdit `interface`, et
    * seul le declaration merging d'interface permet d'étendre `Window`.
    */
-  var studio: PontStudio
+  var studio: StudioBridge
 }
 
 export {}

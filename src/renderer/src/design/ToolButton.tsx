@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from './cn'
-import { avecRaccourci, type FabriqueInfobulle } from './infobulle'
+import { withShortcut, type TooltipFactory } from './tooltip'
 import { UiIcon } from './UiIcon'
 
 export type ToolButtonProps = Omit<
@@ -11,17 +11,17 @@ export type ToolButtonProps = Omit<
    * Chemin d'icône `@mdi/js`. Absent, le bouton n'affiche que ses `children` — pour celui
    * dont l'aperçu EST la valeur qu'il règle, qu'aucun glyphe ne peut dire.
    */
-  icone?: string
+  icon?: string
   /** Nom accessible et contenu de l'infobulle. */
-  libelle: string
+  label: string
   /** Fabrique d'infobulle de la barre hôte. Absente, l'`aria-label` reste posé. */
-  infobulle?: FabriqueInfobulle
-  raccourci?: string | false
+  tooltip?: TooltipFactory
+  shortcut?: string | false
   /** Outil en cours d'usage : fond neutre. */
-  actif?: boolean
+  active?: boolean
   /** Outil en cours d'usage ET dont la zone a le focus : fond accentué. */
-  accentue?: boolean
-  tailleIcone?: number
+  accented?: boolean
+  iconSize?: number
   children?: ReactNode
   /** Le `<button>` lui-même, pour qu'une barre publie son bouton actif comme ancre. */
   ref?: Ref<HTMLButtonElement>
@@ -34,41 +34,41 @@ export type ToolButtonProps = Omit<
  * inaperçu.
  */
 export function ToolButton({
-  icone,
-  libelle,
-  infobulle,
-  raccourci,
-  actif,
-  accentue,
+  icon,
+  label,
+  tooltip,
+  shortcut,
+  active,
+  accented,
   className,
-  tailleIcone,
+  iconSize,
   children,
   ref,
-  ...reste
+  ...rest
 }: ToolButtonProps) {
-  const nommage = infobulle
-    ? infobulle(libelle, raccourci)
-    : { 'aria-label': avecRaccourci(libelle, raccourci) }
+  const naming = tooltip
+    ? tooltip(label, shortcut)
+    : { 'aria-label': withShortcut(label, shortcut) }
 
   return (
     <button
       type="button"
       ref={ref}
-      aria-pressed={actif}
+      aria-pressed={active}
       className={cn(
         'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-(--radius-sc-md)',
-        'text-texte-attenue size-(--sc-controle) border-none bg-transparent outline-none',
-        'hover:bg-elevated hover:text-texte transition-colors',
+        'text-muted size-(--sc-control) border-none bg-transparent outline-none',
+        'hover:bg-elevated hover:text-text transition-colors',
         'focus-visible:ring-accent focus-visible:ring-1',
         'disabled:cursor-not-allowed disabled:opacity-40',
-        actif && 'bg-elevated text-texte',
-        accentue && 'bg-accent hover:bg-accent text-white',
+        active && 'bg-elevated text-text',
+        accented && 'bg-accent hover:bg-accent text-white',
         className,
       )}
-      {...nommage}
-      {...reste}
+      {...naming}
+      {...rest}
     >
-      {icone !== undefined && <UiIcon chemin={icone} taille={tailleIcone} />}
+      {icon !== undefined && <UiIcon path={icon} size={iconSize} />}
       {children}
     </button>
   )

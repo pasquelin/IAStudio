@@ -1,119 +1,116 @@
 {
-  "application": {
-    "nom": "Scenario Studio"
-  },
-  "espaces": {
+  "app": { "name": "Scenario Studio" },
+  "workspaces": {
+    "navigation": "Espaces de travail",
     "image": "Image",
     "video": "Vidéo",
     "3d": "3D",
     "audio": "Audio",
     "textures": "Textures",
-    "skyboxes": "Skyboxes",
-    "navigation": "Espaces de travail"
+    "skyboxes": "Skyboxes"
   },
-  "panneaux": {
-    "explorateur": "Explorateur",
-    "generateur": "Génération",
+  "panels": {
+    "explorer": "Explorateur",
+    "generator": "Génération",
     "assets": "Assets",
-    "taches": "Tâches"
+    "jobs": "Tâches"
   },
   "actions": {
-    "annuler": "Annuler",
-    "retablir": "Rétablir",
-    "generer": "Générer",
-    "arreter": "Arrêter",
-    "fermer": "Fermer",
-    "valider": "Valider",
-    "parcourir": "Parcourir…",
-    "reessayer": "Réessayer",
-    "reduire": "Réduire",
-    "retirerModule": "Retirer le module"
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "generate": "Générer",
+    "stop": "Arrêter",
+    "close": "Fermer",
+    "confirm": "Valider",
+    "browse": "Parcourir…",
+    "retry": "Réessayer",
+    "collapse": "Réduire",
+    "removeTool": "Retirer le module"
   },
   "generation": {
-    "modele": "Modèle",
-    "choisirModele": "Choisir un modèle",
-    "aucunModele": "Aucun modèle disponible",
-    "chargementModeles": "Chargement des modèles…",
-    "parametres": "Paramètres",
-    "aucunParametre": "Ce modèle n’attend aucun paramètre.",
-    "graineAleatoire": "Aléatoire"
+    "model": "Modèle",
+    "chooseModel": "Choisir un modèle",
+    "noModel": "Aucun modèle disponible",
+    "loadingModels": "Chargement des modèles…",
+    "parameters": "Paramètres",
+    "noParameter": "Ce modèle n’attend aucun paramètre.",
+    "randomSeed": "Aléatoire"
   },
-  "taches": {
-    "titre": "Tâches",
-    "aucune": "Aucune tâche en cours.",
-    "statut": {
-      "en-file": "En file",
-      "en-cours": "En cours",
-      "reussi": "Terminée",
-      "echoue": "Échouée",
-      "annule": "Annulée"
+  "jobs": {
+    "title": "Tâches",
+    "none": "Aucune tâche en cours.",
+    "status": {
+      "queued": "En file",
+      "running": "En cours",
+      "succeeded": "Terminée",
+      "failed": "Échouée",
+      "cancelled": "Annulée"
     }
   },
   "assets": {
-    "titre": "Assets",
-    "aucun": "Aucun asset. Générez quelque chose pour commencer.",
-    "rechercher": "Rechercher…",
-    "affichageGrille": "Icônes",
-    "affichageListe": "Liste",
-    "compte": "{{count}} asset",
-    "compte_other": "{{count}} assets"
-  },
-  "projet": {
-    "aucun": "Aucun projet ouvert",
-    "creer": "Créer un projet",
-    "ouvrir": "Ouvrir un projet",
-    "nomParDefaut": "Nouveau projet"
-  },
-  "authentification": {
-    "titre": "Connexion à Scenario",
-    "cle": "Clé API",
-    "secret": "Secret API",
-    "connecter": "Se connecter",
-    "connecte": "Connecté",
-    "deconnecter": "Se déconnecter",
-    "explication": "Vos identifiants sont chiffrés par le trousseau du système et ne quittent jamais votre machine."
-  },
-  "erreurs": {
-    "identifiantsInvalides": "Clé ou secret API invalide.",
-    "accesRefuse": "Cette clé API n’a pas les droits requis.",
-    "introuvable": "Ressource introuvable.",
-    "tropDeRequetes": "Trop de requêtes. Nouvelle tentative en cours…",
-    "serveur": "Le service Scenario est momentanément indisponible.",
-    "reseau": "Impossible de joindre Scenario. Vérifiez votre connexion.",
-    "inattendue": "Une erreur inattendue est survenue."
-  },
-  "menu": {
-    "fichier": "Fichier",
-    "edition": "Édition",
-    "creer": "Créer",
-    "fenetre": "Fenêtre",
-    "aide": "Aide",
-    "nouveauProjet": "Nouveau projet…",
-    "ouvrirProjet": "Ouvrir un projet…",
-    "projetsRecents": "Projets récents",
-    "reglages": "Réglages…",
-    "quitter": "Quitter",
-    "affichage": "Affichage",
-    "modules": "Modules",
-    "reinitialiserDisposition": "Réinitialiser la disposition",
-    "pleinEcran": "Plein écran"
-  },
-  "reglages": {
-    "titre": "Réglages",
-    "compte": "Compte",
-    "apparence": "Apparence",
-    "generation": "Génération",
-    "stockage": "Stockage",
-    "langue": "Langue",
-    "theme": "Thème",
-    "themeSombre": "Sombre",
-    "themeClair": "Clair",
-    "densite": "Densité",
-    "densiteCompact": "Compact",
-    "densiteConfort": "Confort",
-    "tachesSimultanees": "Tâches simultanées"
+    "title": "Assets",
+    "none": "Aucun asset. Générez quelque chose pour commencer.",
+    "search": "Rechercher…",
+    "gridView": "Icônes",
+    "listView": "Liste",
+    "count": "{{count}} asset",
+    "count_other": "{{count}} assets"
   },
   "documents": {
-    "aucun": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer."
+    "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer."
+  },
+  "project": {
+    "none": "Aucun projet ouvert",
+    "create": "Créer un projet",
+    "open": "Ouvrir un projet",
+    "defaultName": "Nouveau projet"
+  },
+  "auth": {
+    "title": "Connexion à Scenario",
+    "key": "Clé API",
+    "secret": "Secret API",
+    "signIn": "Se connecter",
+    "connected": "Connecté",
+    "signOut": "Se déconnecter",
+    "explanation": "Vos identifiants sont chiffrés par le trousseau du système et ne quittent jamais votre machine."
+  },
+  "errors": {
+    "invalidCredentials": "Clé ou secret API invalide.",
+    "forbidden": "Cette clé API n’a pas les droits requis.",
+    "notFound": "Ressource introuvable.",
+    "rateLimited": "Trop de requêtes. Nouvelle tentative en cours…",
+    "server": "Le service Scenario est momentanément indisponible.",
+    "network": "Impossible de joindre Scenario. Vérifiez votre connexion.",
+    "unexpected": "Une erreur inattendue est survenue."
+  },
+  "menu": {
+    "file": "Fichier",
+    "edit": "Édition",
+    "view": "Affichage",
+    "window": "Fenêtre",
+    "help": "Aide",
+    "newProject": "Nouveau projet…",
+    "openProject": "Ouvrir un projet…",
+    "recentProjects": "Projets récents",
+    "settings": "Réglages…",
+    "quit": "Quitter",
+    "tools": "Modules",
+    "resetLayout": "Réinitialiser la disposition",
+    "fullScreen": "Plein écran"
+  },
+  "settings": {
+    "title": "Réglages",
+    "account": "Compte",
+    "appearance": "Apparence",
+    "generation": "Génération",
+    "storage": "Stockage",
+    "language": "Langue",
+    "theme": "Thème",
+    "themeDark": "Sombre",
+    "themeLight": "Clair",
+    "density": "Densité",
+    "densityCompact": "Compact",
+    "densityComfortable": "Confort",
+    "concurrentJobs": "Tâches simultanées"
   }
 }

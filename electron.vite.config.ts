@@ -13,7 +13,15 @@ export default defineConfig({
   },
   preload: {
     resolve: { alias: { '@shared': partage } },
-    build: { externalizeDeps: true, rollupOptions: { input: resolve('src/preload/index.ts') } },
+    build: {
+      externalizeDeps: true,
+      rollupOptions: {
+        input: resolve('src/preload/index.ts'),
+        // Un preload sandboxé DOIT être en CommonJS : Electron refuse de charger un module
+        // ESM, et le pont `window.studio` n'est alors jamais posé — en silence.
+        output: { format: 'cjs', entryFileNames: 'index.cjs' },
+      },
+    },
   },
   renderer: {
     root: resolve('src/renderer'),

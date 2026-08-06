@@ -1,19 +1,19 @@
-export const VERSION_MANIFESTE = 1
+export const MANIFEST_VERSION = 1
 
-export type Manifeste = {
+export type Manifest = {
   version: number
-  nom: string
-  creeLe: string
-  modifieLe: string
+  name: string
+  createdAt: string
+  updatedAt: string
 }
 
-export type Projet = {
-  chemin: string
-  manifeste: Manifeste
+export type Project = {
+  path: string
+  manifest: Manifest
 }
 
 /** Sous-dossiers créés à l'ouverture d'un projet — cf. spec § 5. */
-export const DOSSIERS_PROJET: readonly string[] = [
+export const PROJECT_FOLDERS: readonly string[] = [
   'assets',
   'assets/img',
   'assets/3d',

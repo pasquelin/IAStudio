@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from './cn'
 
 export type FloatingPanelProps = {
-  titre?: string
+  title?: string
   children: ReactNode
   className?: string
 }
@@ -13,18 +13,18 @@ export type FloatingPanelProps = {
  * n'est posé que sur les surfaces qui flottent au-dessus d'un canvas ou d'un viewport : dans
  * un dock opaque il ne ferait que coûter de la composition par frame.
  */
-export function FloatingPanel({ titre, children, className }: FloatingPanelProps) {
+export function FloatingPanel({ title, children, className }: FloatingPanelProps) {
   return (
     <div
       className={cn(
-        'border-bordure bg-elevated rounded-(--radius-sc-md) border p-2',
-        'shadow-(--sc-ombre-flottante)',
+        'border-border bg-elevated rounded-(--radius-sc-md) border p-2',
+        'shadow-(--sc-shadow-floating)',
         className,
       )}
     >
-      {titre !== undefined && (
-        <div className="text-texte-attenue mb-1.5 px-1 text-[11px] font-medium tracking-wide uppercase">
-          {titre}
+      {title !== undefined && (
+        <div className="text-muted mb-1.5 px-1 text-[11px] font-medium tracking-wide uppercase">
+          {title}
         </div>
       )}
       {children}

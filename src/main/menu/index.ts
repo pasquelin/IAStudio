@@ -1,77 +1,78 @@
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron'
-import { EVENEMENTS } from '@shared/ipc'
-import { TRADUCTIONS, type Langue } from '@shared/i18n'
-import { basculerPleinEcran } from '@main/windows/controles'
+import { TRANSLATIONS, type Language } from '@shared/i18n'
+import { EVENTS } from '@shared/ipc'
+import { toggleFullScreen } from '@main/window/controls'
 
-/** Outils restaurables depuis le menu. Miroir du registre du renderer, volontairement figé
- *  ici : le main ne charge pas le code du renderer, et cette liste bouge rarement. */
-const OUTILS_RESTAURABLES: readonly { id: string; zone: string; cle: string }[] = [
-  { id: 'explorateur', zone: 'gauche', cle: 'explorateur' },
-  { id: 'generateur', zone: 'droite', cle: 'generateur' },
-  { id: 'assets', zone: 'bas', cle: 'assets' },
-  { id: 'taches', zone: 'bas', cle: 'taches' },
+/**
+ * Outils restaurables depuis le menu. Miroir du registre du renderer, volontairement figé
+ * ici : le main ne charge pas le code du renderer, et cette liste bouge rarement.
+ */
+const RESTORABLE_TOOLS: readonly { id: string; zone: string }[] = [
+  { id: 'explorer', zone: 'left' },
+  { id: 'generator', zone: 'right' },
+  { id: 'assets', zone: 'bottom' },
+  { id: 'jobs', zone: 'bottom' },
 ]
 
-function diffuser(canal: string, charge: unknown): void {
-  for (const fenetre of BrowserWindow.getAllWindows()) fenetre.webContents.send(canal, charge)
+function broadcast(channel: string, payload: unknown): void {
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(channel, payload)
 }
 
 /**
  * Menu applicatif natif. Il est la seule voie de retour d'un module retiré par sa croix :
  * un panneau fermé sans moyen de le rouvrir serait un panneau perdu.
  */
-export function poserMenu(langue: Langue): void {
-  const t = TRADUCTIONS[langue]
+export function buildMenu(language: Language): void {
+  const t = TRANSLATIONS[language]
+  const appMenuItem: MenuItemConstructorOptions = { role: 'appMenu', label: app.name }
 
-  const menuApplication: MenuItemConstructorOptions = { role: 'appMenu', label: app.name }
-
-  const modeles: MenuItemConstructorOptions[] = [
-    ...(process.platform === 'darwin' ? [menuApplication] : []),
+  const template: MenuItemConstructorOptions[] = [
+    ...(process.platform === 'darwin' ? [appMenuItem] : []),
     {
-      label: t.menu.fichier,
+      label: t.menu.file,
       submenu: [
         {
-          label: t.menu.nouveauProjet,
+          label: t.menu.newProject,
           accelerator: 'CmdOrCtrl+N',
-          click: () => diffuser(EVENEMENTS.commandeMenu, 'projet:nouveau'),
+          click: () => broadcast(EVENTS.menuCommand, 'project:new'),
         },
         {
-          label: t.menu.ouvrirProjet,
+          label: t.menu.openProject,
           accelerator: 'CmdOrCtrl+O',
-          click: () => diffuser(EVENEMENTS.commandeMenu, 'projet:ouvrir'),
+          click: () => broadcast(EVENTS.menuCommand, 'project:open'),
         },
         { type: 'separator' },
         { role: process.platform === 'darwin' ? 'close' : 'quit' },
       ],
     },
-    { role: 'editMenu', label: t.menu.edition },
+    { role: 'editMenu', label: t.menu.edit },
     {
-      label: t.menu.affichage,
+      label: t.menu.view,
       submenu: [
         {
-          label: t.menu.modules,
-          submenu: OUTILS_RESTAURABLES.map(outil => ({
-            label: t.panneaux[outil.cle as keyof typeof t.panneaux],
-            click: () => diffuser(EVENEMENTS.ouvrirOutil, { zone: outil.zone, outil: outil.id }),
+          label: t.menu.tools,
+          submenu: RESTORABLE_TOOLS.map(tool => ({
+            label: t.panels[tool.id as keyof typeof t.panels],
+            click: () => broadcast(EVENTS.openTool, { zone: tool.zone, tool: tool.id }),
           })),
         },
         {
-          label: t.menu.reinitialiserDisposition,
-          click: () => diffuser(EVENEMENTS.commandeMenu, 'disposition:reinitialiser'),
+          label: t.menu.resetLayout,
+          click: () => broadcast(EVENTS.menuCommand, 'layout:reset'),
         },
         { type: 'separator' },
         {
-          label: t.menu.pleinEcran,
+          label: t.menu.fullScreen,
           accelerator: process.platform === 'darwin' ? 'Ctrl+Cmd+F' : 'F11',
-          click: () => basculerPleinEcran(BrowserWindow.getFocusedWindow()),
+          click: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
         },
         { type: 'separator' },
         { role: 'toggleDevTools' },
         { role: 'reload' },
       ],
     },
-    { role: 'windowMenu', label: t.menu.fenetre },
+    { role: 'windowMenu', label: t.menu.window },
   ]
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(modeles))
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }

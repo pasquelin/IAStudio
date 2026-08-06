@@ -1,61 +1,61 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { Project } from '@shared/domain/project'
+import type { JobProgress } from '@shared/domain/job'
+import type { WindowState } from '@shared/domain/window'
 import {
-  CANAUX,
-  EVENEMENTS,
-  type CommandeMenu,
-  type Desabonnement,
-  type DemandeOutil,
-  type PontStudio,
+  CHANNELS,
+  EVENTS,
+  type MenuCommand,
+  type StudioBridge,
+  type ToolRequest,
+  type Unsubscribe,
 } from '@shared/ipc'
-import type { EtatFenetre } from '@shared/domain/fenetre'
-import type { Projet } from '@shared/domain/projet'
-import type { ProgressionTache } from '@shared/domain/tache'
 
-function abonner<T>(canal: string, rappel: (charge: T) => void): Desabonnement {
-  const ecouteur = (_evenement: IpcRendererEvent, charge: T): void => rappel(charge)
-  ipcRenderer.on(canal, ecouteur)
+function subscribe<T>(channel: string, callback: (payload: T) => void): Unsubscribe {
+  const listener = (_event: IpcRendererEvent, payload: T): void => callback(payload)
+  ipcRenderer.on(channel, listener)
   return () => {
-    ipcRenderer.removeListener(canal, ecouteur)
+    ipcRenderer.removeListener(channel, listener)
   }
 }
 
-const pont: PontStudio = {
-  reglages: {
-    lire: () => ipcRenderer.invoke(CANAUX.reglagesLire),
-    ecrire: partiels => ipcRenderer.invoke(CANAUX.reglagesEcrire, partiels),
-    definirIdentifiants: (cle, secret) =>
-      ipcRenderer.invoke(CANAUX.reglagesDefinirIdentifiants, cle, secret),
-    etatAuthentification: () => ipcRenderer.invoke(CANAUX.reglagesEtatAuthentification),
-    oublierIdentifiants: () => ipcRenderer.invoke(CANAUX.reglagesOublierIdentifiants),
+const bridge: StudioBridge = {
+  settings: {
+    read: () => ipcRenderer.invoke(CHANNELS.settingsRead),
+    write: partial => ipcRenderer.invoke(CHANNELS.settingsWrite, partial),
+    setCredentials: (key, secret) =>
+      ipcRenderer.invoke(CHANNELS.settingsSetCredentials, key, secret),
+    authState: () => ipcRenderer.invoke(CHANNELS.settingsAuthState),
+    forgetCredentials: () => ipcRenderer.invoke(CHANNELS.settingsForgetCredentials),
   },
   scenario: {
-    listerModeles: famille => ipcRenderer.invoke(CANAUX.scenarioListerModeles, famille),
-    decrireModele: modeleId => ipcRenderer.invoke(CANAUX.scenarioDecrireModele, modeleId),
-    generer: (modeleId, corps) => ipcRenderer.invoke(CANAUX.scenarioGenerer, modeleId, corps),
-    annulerTache: tacheId => ipcRenderer.invoke(CANAUX.scenarioAnnulerTache, tacheId),
-    listerTaches: () => ipcRenderer.invoke(CANAUX.scenarioListerTaches),
-    surProgression: rappel => abonner<ProgressionTache>(EVENEMENTS.tacheProgression, rappel),
+    listModels: family => ipcRenderer.invoke(CHANNELS.scenarioListModels, family),
+    describeModel: modelId => ipcRenderer.invoke(CHANNELS.scenarioDescribeModel, modelId),
+    generate: (modelId, body) => ipcRenderer.invoke(CHANNELS.scenarioGenerate, modelId, body),
+    cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
+    listJobs: () => ipcRenderer.invoke(CHANNELS.scenarioListJobs),
+    onProgress: callback => subscribe<JobProgress>(EVENTS.jobProgress, callback),
   },
-  projet: {
-    creer: (chemin, nom) => ipcRenderer.invoke(CANAUX.projetCreer, chemin, nom),
-    ouvrir: chemin => ipcRenderer.invoke(CANAUX.projetOuvrir, chemin),
-    courant: () => ipcRenderer.invoke(CANAUX.projetCourant),
-    choisirDossier: () => ipcRenderer.invoke(CANAUX.projetChoisirDossier),
-    surChangement: rappel => abonner<Projet | null>(EVENEMENTS.projetChange, rappel),
+  project: {
+    create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),
+    open: path => ipcRenderer.invoke(CHANNELS.projectOpen, path),
+    current: () => ipcRenderer.invoke(CHANNELS.projectCurrent),
+    pickFolder: () => ipcRenderer.invoke(CHANNELS.projectPickFolder),
+    onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),
   },
   assets: {
-    rechercher: requete => ipcRenderer.invoke(CANAUX.assetsRechercher, requete),
-    url: assetId => ipcRenderer.invoke(CANAUX.assetsUrl, assetId),
+    search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
+    url: assetId => ipcRenderer.invoke(CHANNELS.assetsUrl, assetId),
   },
-  fenetre: {
-    basculerPleinEcran: () => ipcRenderer.invoke(CANAUX.fenetrePleinEcran),
-    etat: () => ipcRenderer.invoke(CANAUX.fenetreEtat),
-    surEtat: rappel => abonner<EtatFenetre>(EVENEMENTS.fenetreEtat, rappel),
+  window: {
+    toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
+    state: () => ipcRenderer.invoke(CHANNELS.windowState),
+    onState: callback => subscribe<WindowState>(EVENTS.windowState, callback),
   },
   menu: {
-    surOuvrirOutil: rappel => abonner<DemandeOutil>(EVENEMENTS.ouvrirOutil, rappel),
-    surCommande: rappel => abonner<CommandeMenu>(EVENEMENTS.commandeMenu, rappel),
+    onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
+    onCommand: callback => subscribe<MenuCommand>(EVENTS.menuCommand, callback),
   },
 }
 
-contextBridge.exposeInMainWorld('studio', pont)
+contextBridge.exposeInMainWorld('studio', bridge)

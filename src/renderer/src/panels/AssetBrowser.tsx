@@ -4,47 +4,47 @@ import { useRef, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { cn } from '@/design/cn'
-import { infobulleSimple } from '@/design/infobulle'
+import { simpleTooltip } from '@/design/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { useAssets } from '@/stores/assets'
-import { EtatVide } from './EtatVide'
+import { EmptyState } from './EmptyState'
 
-const infobulle = infobulleSimple('bottom')
-const TAILLE_VIGNETTE = 96
-const HAUTEUR_LIGNE = 26
+const tooltip = simpleTooltip('bottom')
+const THUMBNAIL_SIZE = 96
+const ROW_HEIGHT = 26
 
 export type AssetBrowserProps = {
   assets?: Asset[]
 }
 
 /** Actions rendues dans la barre de titre du panneau, sur la même ligne que son nom. */
-export function ActionsAssetBrowser({ assets = [] }: AssetBrowserProps) {
+export function AssetBrowserActions({ assets = [] }: AssetBrowserProps) {
   const { t } = useTranslation()
-  const affichage = useAssets(etat => etat.affichage)
-  const definirAffichage = useAssets(etat => etat.definirAffichage)
+  const view = useAssets(state => state.view)
+  const setView = useAssets(state => state.setView)
 
   return (
     <>
-      <span className="text-texte-attenue mr-1 text-[11px]">
-        {t('assets.compte', { count: assets.length })}
+      <span className="text-muted mr-1 text-[11px]">
+        {t('assets.count', { count: assets.length })}
       </span>
       <ToolButton
-        icone={mdiViewGridOutline}
-        libelle={t('assets.affichageGrille')}
-        infobulle={infobulle}
-        tailleIcone={15}
+        icon={mdiViewGridOutline}
+        label={t('assets.gridView')}
+        tooltip={tooltip}
+        iconSize={15}
         className="size-6"
-        actif={affichage === 'grille'}
-        onClick={() => definirAffichage('grille')}
+        active={view === 'grid'}
+        onClick={() => setView('grid')}
       />
       <ToolButton
-        icone={mdiFormatListBulleted}
-        libelle={t('assets.affichageListe')}
-        infobulle={infobulle}
-        tailleIcone={15}
+        icon={mdiFormatListBulleted}
+        label={t('assets.listView')}
+        tooltip={tooltip}
+        iconSize={15}
         className="size-6"
-        actif={affichage === 'liste'}
-        onClick={() => definirAffichage('liste')}
+        active={view === 'list'}
+        onClick={() => setView('list')}
       />
     </>
   )
@@ -56,70 +56,70 @@ export function ActionsAssetBrowser({ assets = [] }: AssetBrowserProps) {
  */
 export function AssetBrowser({ assets = [] }: AssetBrowserProps) {
   const { t } = useTranslation()
-  const affichage = useAssets(etat => etat.affichage)
-  const defilement = useRef<HTMLDivElement>(null)
+  const view = useAssets(state => state.view)
+  const scroller = useRef<HTMLDivElement>(null)
 
   if (assets.length === 0) {
-    return <EtatVide icone={mdiImageMultipleOutline} message={t('assets.aucun')} />
+    return <EmptyState icon={mdiImageMultipleOutline} message={t('assets.none')} />
   }
 
   return (
-    <div ref={defilement} className="h-full overflow-auto p-2">
-      {affichage === 'grille' ? (
-        <GrilleAssets assets={assets} />
+    <div ref={scroller} className="h-full overflow-auto p-2">
+      {view === 'grid' ? (
+        <AssetsGrid assets={assets} />
       ) : (
-        <ListeAssets assets={assets} conteneur={defilement} />
+        <AssetsList assets={assets} container={scroller} />
       )}
     </div>
   )
 }
 
-function GrilleAssets({ assets }: { assets: Asset[] }) {
+function AssetsGrid({ assets }: { assets: Asset[] }) {
   return (
     <div
       className="grid gap-2"
-      style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${TAILLE_VIGNETTE}px, 1fr))` }}
+      style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${THUMBNAIL_SIZE}px, 1fr))` }}
     >
       {assets.map(asset => (
         <figure key={asset.id} className="m-0 flex flex-col gap-1">
-          <div className="border-bordure bg-surface aspect-square rounded-(--radius-sc-sm) border" />
-          <figcaption className="text-texte-attenue truncate text-[11px]">{asset.nom}</figcaption>
+          <div className="border-border bg-surface aspect-square rounded-(--radius-sc-sm) border" />
+          <figcaption className="text-muted truncate text-[11px]">{asset.name}</figcaption>
         </figure>
       ))}
     </div>
   )
 }
 
-function ListeAssets({
+function AssetsList({
   assets,
-  conteneur,
+  container,
 }: {
   assets: Asset[]
-  conteneur: RefObject<HTMLDivElement | null>
+  container: RefObject<HTMLDivElement | null>
 }) {
-  const virtualiseur = useVirtualizer({
+  const virtualizer = useVirtualizer({
     count: assets.length,
-    getScrollElement: () => conteneur.current,
-    estimateSize: () => HAUTEUR_LIGNE,
+    getScrollElement: () => container.current,
+    estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   })
 
   return (
-    <div style={{ height: virtualiseur.getTotalSize() }} className="relative">
-      {virtualiseur.getVirtualItems().map(ligne => {
-        const asset = assets[ligne.index]
+    <div style={{ height: virtualizer.getTotalSize() }} className="relative">
+      {virtualizer.getVirtualItems().map(row => {
+        const asset = assets[row.index]
         if (!asset) return null
         return (
           <div
             key={asset.id}
-            style={{ transform: `translateY(${ligne.start}px)`, height: ligne.size }}
+            style={{ transform: `translateY(${row.start}px)`, height: row.size }}
             className={cn(
               'absolute inset-x-0 top-0 flex items-center gap-2 rounded-(--radius-sc-sm) px-2',
               'hover:bg-surface text-[12px]',
             )}
           >
-            <span className="truncate">{asset.nom}</span>
-            <span className="text-texte-attenue ml-auto shrink-0 text-[11px]">{asset.type}</span>
+            <span className="truncate">{asset.name}</span>
+            <span className="text-muted ml-auto shrink-0 text-[11px]">{asset.type}</span>
           </div>
         )
       })}

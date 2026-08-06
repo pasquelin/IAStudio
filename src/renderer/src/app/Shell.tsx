@@ -1,15 +1,15 @@
 import { DockviewReact, type DockviewApi, type DockviewReadyEvent } from 'dockview-react'
 import { useCallback, useRef } from 'react'
-import { InfobulleGlobale } from '@/design/InfobulleGlobale'
-import { useDispositions } from '@/stores/dispositions'
-import { tailleParDefaut, useOutils } from '@/stores/outils'
-import { COMPOSANTS_DOCUMENTS } from './documents'
+import { TooltipHost } from '@/design/TooltipHost'
+import { useLayouts } from '@/stores/layouts'
+import { defaultSize, useTools } from '@/stores/tools'
+import { DOCUMENT_COMPONENTS } from './documents'
 import { Footer } from './Footer'
-import type { IdOutil, ZoneOutils as Zone } from './outils'
-import { PoigneeRedimension } from './PoigneeRedimension'
 import { Rail } from './Rail'
+import { ResizeHandle } from './ResizeHandle'
 import { TitleBar } from './TitleBar'
-import { Surface, ZoneOutils } from './ZoneOutils'
+import type { ToolId, ToolZone } from './tools'
+import { Panel, ToolWindow } from './ToolWindow'
 import 'dockview-react/dist/styles/dockview.css'
 import './dockview-theme.css'
 
@@ -22,116 +22,112 @@ import './dockview-theme.css'
  * fenêtres d'outils vivent sur les bords, et n'y entrent jamais.
  */
 export function Shell() {
-  const espaceActif = useDispositions(etat => etat.espaceActif)
-  const activerEspace = useDispositions(etat => etat.activerEspace)
-  const ouverts = useOutils(etat => etat.ouverts)
-  const zoneFocus = useOutils(etat => etat.zoneFocus)
-  const basculer = useOutils(etat => etat.basculer)
-  const focaliser = useOutils(etat => etat.focaliser)
+  const activeWorkspace = useLayouts(state => state.activeWorkspace)
+  const setActiveWorkspace = useLayouts(state => state.setActiveWorkspace)
+  const open = useTools(state => state.open)
+  const focusedZone = useTools(state => state.focusedZone)
+  const toggle = useTools(state => state.toggle)
+  const focus = useTools(state => state.focus)
   const api = useRef<DockviewApi | null>(null)
 
-  const surPret = useCallback((evenement: DockviewReadyEvent) => {
-    api.current = evenement.api
+  const onReady = useCallback((event: DockviewReadyEvent) => {
+    api.current = event.api
   }, [])
 
-  const surBascule = useCallback((zone: Zone, outil: IdOutil) => basculer(zone, outil), [basculer])
+  const onToggle = useCallback((zone: ToolZone, tool: ToolId) => toggle(zone, tool), [toggle])
 
   return (
     <div className="bg-chassis flex h-full flex-col">
-      <TitleBar espaceActif={espaceActif} surEspace={activerEspace} />
+      <TitleBar activeWorkspace={activeWorkspace} onWorkspace={setActiveWorkspace} />
 
       <div className="flex min-h-0 flex-1">
-        <Rail cote="gauche" ouverts={ouverts} zoneFocus={zoneFocus} surBascule={surBascule} />
+        <Rail side="left" open={open} focusedZone={focusedZone} onToggle={onToggle} />
 
         {/* Les poignées occupent exactement la gouttière : l'espace entre deux surfaces EST
             la zone de redimensionnement, plutôt qu'un vide décoratif doublé d'une poignée. */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gouttiere)">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
           <div className="flex min-h-0 flex-1">
-            <BordVertical zone="gauche" />
-            <Surface className="min-w-0 flex-1" onPointerDownCapture={() => focaliser(null)}>
-              <DockviewReact components={COMPOSANTS_DOCUMENTS} onReady={surPret} />
-            </Surface>
-            <BordVertical zone="droite" />
+            <VerticalEdge zone="left" />
+            <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
+              <DockviewReact components={DOCUMENT_COMPONENTS} onReady={onReady} />
+            </Panel>
+            <VerticalEdge zone="right" />
           </div>
-          <BordHorizontal zone="bas" />
+          <HorizontalEdge zone="bottom" />
         </div>
 
-        <Rail cote="droite" ouverts={ouverts} zoneFocus={zoneFocus} surBascule={surBascule} />
+        <Rail side="right" open={open} focusedZone={focusedZone} onToggle={onToggle} />
       </div>
 
       <Footer />
-      <InfobulleGlobale />
+      <TooltipHost />
     </div>
   )
 }
 
-function useZone(zone: Zone) {
-  const ouvert = useOutils(etat => etat.ouverts[zone] ?? null)
-  const taille = useOutils(etat => etat.tailles[zone] ?? tailleParDefaut(zone))
-  const reduite = useOutils(etat => etat.reduites[zone] ?? false)
-  const fermer = useOutils(etat => etat.fermer)
-  const reduire = useOutils(etat => etat.reduire)
-  const focaliser = useOutils(etat => etat.focaliser)
-  const redimensionner = useOutils(etat => etat.redimensionner)
-  return { ouvert, taille, reduite, fermer, reduire, focaliser, redimensionner }
-}
+function useZoneParts(zone: ToolZone) {
+  const openTool = useTools(state => state.open[zone] ?? null)
+  const size = useTools(state => state.sizes[zone] ?? defaultSize(zone))
+  const collapsed = useTools(state => state.collapsed[zone] ?? false)
+  const close = useTools(state => state.close)
+  const collapse = useTools(state => state.collapse)
+  const focus = useTools(state => state.focus)
+  const resize = useTools(state => state.resize)
 
-function useMorceaux(zone: Zone) {
-  const etat = useZone(zone)
-  if (!etat.ouvert) return null
+  if (!openTool) return null
 
   return {
-    panneau: (
-      <ZoneOutils
+    panel: (
+      <ToolWindow
         zone={zone}
-        outil={etat.ouvert}
-        taille={etat.taille}
-        reduite={etat.reduite}
-        surFocus={() => etat.focaliser(zone)}
-        surReduire={() => etat.reduire(zone)}
-        surFermer={() => etat.fermer(zone)}
+        tool={openTool}
+        size={size}
+        collapsed={collapsed}
+        onFocus={() => focus(zone)}
+        onCollapse={() => collapse(zone)}
+        onClose={() => close(zone)}
       />
     ),
-    poignee: etat.reduite ? null : (
-      <PoigneeRedimension
+    handle: collapsed ? null : (
+      <ResizeHandle
         zone={zone}
-        taille={etat.taille}
-        surTaille={(valeur, disponible) => etat.redimensionner(zone, valeur, disponible)}
+        size={size}
+        onSize={(value, available) => resize(zone, value, available)}
       />
     ),
   }
 }
 
-function BordVertical({ zone }: { zone: 'gauche' | 'droite' }) {
-  const morceaux = useMorceaux(zone)
-  if (!morceaux) return null
+function VerticalEdge({ zone }: { zone: 'left' | 'right' }) {
+  const parts = useZoneParts(zone)
+  if (!parts) return null
 
-  return zone === 'gauche' ? (
+  return zone === 'left' ? (
     <>
-      {morceaux.panneau}
-      {morceaux.poignee}
+      {parts.panel}
+      {parts.handle}
     </>
   ) : (
     <>
-      {morceaux.poignee}
-      {morceaux.panneau}
+      {parts.handle}
+      {parts.panel}
     </>
   )
 }
 
-function BordHorizontal({ zone }: { zone: 'haut' | 'bas' }) {
-  const morceaux = useMorceaux(zone)
-  if (!morceaux) return null
+function HorizontalEdge({ zone }: { zone: 'top' | 'bottom' }) {
+  const parts = useZoneParts(zone)
+  if (!parts) return null
 
-  return zone === 'haut' ? (
+  return zone === 'top' ? (
     <>
-      {morceaux.panneau}
-      {morceaux.poignee}
+      {parts.panel}
+      {parts.handle}
     </>
   ) : (
     <>
-      {morceaux.poignee}
-      {morceaux.panneau}
+      {parts.handle}
+      {parts.panel}
     </>
   )
 }

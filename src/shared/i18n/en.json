@@ -1,119 +1,116 @@
 {
-  "application": {
-    "nom": "Scenario Studio"
-  },
-  "espaces": {
+  "app": { "name": "Scenario Studio" },
+  "workspaces": {
+    "navigation": "Workspaces",
     "image": "Image",
     "video": "Video",
     "3d": "3D",
     "audio": "Audio",
     "textures": "Textures",
-    "skyboxes": "Skyboxes",
-    "navigation": "Workspaces"
+    "skyboxes": "Skyboxes"
   },
-  "panneaux": {
-    "explorateur": "Explorer",
-    "generateur": "Generate",
+  "panels": {
+    "explorer": "Explorer",
+    "generator": "Generate",
     "assets": "Assets",
-    "taches": "Jobs"
+    "jobs": "Jobs"
   },
   "actions": {
-    "annuler": "Undo",
-    "retablir": "Redo",
-    "generer": "Generate",
-    "arreter": "Stop",
-    "fermer": "Close",
-    "valider": "Confirm",
-    "parcourir": "Browse…",
-    "reessayer": "Retry",
-    "reduire": "Minimize",
-    "retirerModule": "Remove tool"
+    "undo": "Undo",
+    "redo": "Redo",
+    "generate": "Generate",
+    "stop": "Stop",
+    "close": "Close",
+    "confirm": "Confirm",
+    "browse": "Browse…",
+    "retry": "Retry",
+    "collapse": "Minimize",
+    "removeTool": "Remove tool"
   },
   "generation": {
-    "modele": "Model",
-    "choisirModele": "Choose a model",
-    "aucunModele": "No model available",
-    "chargementModeles": "Loading models…",
-    "parametres": "Parameters",
-    "aucunParametre": "This model takes no parameters.",
-    "graineAleatoire": "Random"
+    "model": "Model",
+    "chooseModel": "Choose a model",
+    "noModel": "No model available",
+    "loadingModels": "Loading models…",
+    "parameters": "Parameters",
+    "noParameter": "This model takes no parameters.",
+    "randomSeed": "Random"
   },
-  "taches": {
-    "titre": "Jobs",
-    "aucune": "No job running.",
-    "statut": {
-      "en-file": "Queued",
-      "en-cours": "Running",
-      "reussi": "Done",
-      "echoue": "Failed",
-      "annule": "Cancelled"
+  "jobs": {
+    "title": "Jobs",
+    "none": "No job running.",
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "succeeded": "Done",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
     }
   },
   "assets": {
-    "titre": "Assets",
-    "aucun": "No asset yet. Generate something to get started.",
-    "rechercher": "Search…",
-    "affichageGrille": "Icons",
-    "affichageListe": "List",
-    "compte": "{{count}} asset",
-    "compte_other": "{{count}} assets"
-  },
-  "projet": {
-    "aucun": "No project open",
-    "creer": "New project",
-    "ouvrir": "Open project",
-    "nomParDefaut": "New project"
-  },
-  "authentification": {
-    "titre": "Connect to Scenario",
-    "cle": "API key",
-    "secret": "API secret",
-    "connecter": "Sign in",
-    "connecte": "Connected",
-    "deconnecter": "Sign out",
-    "explication": "Your credentials are encrypted by the system keychain and never leave your machine."
-  },
-  "erreurs": {
-    "identifiantsInvalides": "Invalid API key or secret.",
-    "accesRefuse": "This API key lacks the required permissions.",
-    "introuvable": "Resource not found.",
-    "tropDeRequetes": "Too many requests. Retrying…",
-    "serveur": "The Scenario service is temporarily unavailable.",
-    "reseau": "Cannot reach Scenario. Check your connection.",
-    "inattendue": "An unexpected error occurred."
-  },
-  "menu": {
-    "fichier": "File",
-    "edition": "Edit",
-    "creer": "Create",
-    "fenetre": "Window",
-    "aide": "Help",
-    "nouveauProjet": "New project…",
-    "ouvrirProjet": "Open project…",
-    "projetsRecents": "Recent projects",
-    "reglages": "Settings…",
-    "quitter": "Quit",
-    "affichage": "View",
-    "modules": "Tool windows",
-    "reinitialiserDisposition": "Reset layout",
-    "pleinEcran": "Full screen"
-  },
-  "reglages": {
-    "titre": "Settings",
-    "compte": "Account",
-    "apparence": "Appearance",
-    "generation": "Generation",
-    "stockage": "Storage",
-    "langue": "Language",
-    "theme": "Theme",
-    "themeSombre": "Dark",
-    "themeClair": "Light",
-    "densite": "Density",
-    "densiteCompact": "Compact",
-    "densiteConfort": "Comfortable",
-    "tachesSimultanees": "Concurrent jobs"
+    "title": "Assets",
+    "none": "No asset yet. Generate something to get started.",
+    "search": "Search…",
+    "gridView": "Icons",
+    "listView": "List",
+    "count": "{{count}} asset",
+    "count_other": "{{count}} assets"
   },
   "documents": {
-    "aucun": "No document open. Generate or open an asset to get started."
+    "none": "No document open. Generate or open an asset to get started."
+  },
+  "project": {
+    "none": "No project open",
+    "create": "New project",
+    "open": "Open project",
+    "defaultName": "New project"
+  },
+  "auth": {
+    "title": "Connect to Scenario",
+    "key": "API key",
+    "secret": "API secret",
+    "signIn": "Sign in",
+    "connected": "Connected",
+    "signOut": "Sign out",
+    "explanation": "Your credentials are encrypted by the system keychain and never leave your machine."
+  },
+  "errors": {
+    "invalidCredentials": "Invalid API key or secret.",
+    "forbidden": "This API key lacks the required permissions.",
+    "notFound": "Resource not found.",
+    "rateLimited": "Too many requests. Retrying…",
+    "server": "The Scenario service is temporarily unavailable.",
+    "network": "Cannot reach Scenario. Check your connection.",
+    "unexpected": "An unexpected error occurred."
+  },
+  "menu": {
+    "file": "File",
+    "edit": "Edit",
+    "view": "View",
+    "window": "Window",
+    "help": "Help",
+    "newProject": "New project…",
+    "openProject": "Open project…",
+    "recentProjects": "Recent projects",
+    "settings": "Settings…",
+    "quit": "Quit",
+    "tools": "Tool windows",
+    "resetLayout": "Reset layout",
+    "fullScreen": "Full screen"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "appearance": "Appearance",
+    "generation": "Generation",
+    "storage": "Storage",
+    "language": "Language",
+    "theme": "Theme",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "density": "Density",
+    "densityCompact": "Compact",
+    "densityComfortable": "Comfortable",
+    "concurrentJobs": "Concurrent jobs"
   }
 }

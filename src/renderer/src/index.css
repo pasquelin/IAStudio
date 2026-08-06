@@ -13,12 +13,12 @@
   --color-base: #191a1c;
   --color-surface: #202124;
   --color-elevated: #3c3f44;
-  --color-bordure: #34363a;
+  --color-border: #34363a;
   --color-accent: #3574f0;
-  --color-accent-doux: #2e436e;
+  --color-accent-soft: #2e436e;
   --color-danger: #ff715b;
-  --color-texte: #dfe1e5;
-  --color-texte-attenue: #868a91;
+  --color-text: #dfe1e5;
+  --color-muted: #868a91;
 
   --radius-sc-sm: 4px;
   --radius-sc-md: 6px;
@@ -29,22 +29,22 @@
 }
 
 :root {
-  --sc-controle: 28px;
+  --sc-control: 28px;
   /* Largeur du rail : le bouton (32) plus la marge qui l'écarte du bord de la fenêtre. */
   --sc-rail: 48px;
-  --sc-bouton-rail: 36px;
-  --sc-gouttiere: 6px;
-  --sc-entete: 32px;
-  --sc-ombre-meuble: 0 1px 2px rgb(0 0 0 / 0.25);
-  --sc-ombre-flottante: 0 8px 24px rgb(0 0 0 / 0.55);
+  --sc-rail-button: 36px;
+  --sc-gutter: 6px;
+  --sc-header: 32px;
+  --sc-shadow-furniture: 0 1px 2px rgb(0 0 0 / 0.25);
+  --sc-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.55);
 }
 
 :root[data-densite='compact'] {
-  --sc-controle: 24px;
+  --sc-control: 24px;
   --sc-rail: 42px;
-  --sc-bouton-rail: 32px;
-  --sc-gouttiere: 4px;
-  --sc-entete: 28px;
+  --sc-rail-button: 32px;
+  --sc-gutter: 4px;
+  --sc-header: 28px;
 }
 
 html,
@@ -56,7 +56,7 @@ body,
 body {
   margin: 0;
   background: var(--color-chassis);
-  color: var(--color-texte);
+  color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 13px;
   /* Un studio ne défile pas : chaque panneau gère son propre débordement. */

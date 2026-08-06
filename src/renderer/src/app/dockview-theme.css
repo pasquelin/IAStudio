@@ -7,26 +7,26 @@
   --dv-group-view-background-color: var(--color-base);
 
   --dv-tabs-and-actions-container-background-color: var(--color-base);
-  --dv-tabs-container-scrollbar-color: var(--color-bordure);
+  --dv-tabs-container-scrollbar-color: var(--color-border);
 
   --dv-activegroup-visiblepanel-tab-background-color: var(--color-elevated);
   --dv-activegroup-hiddenpanel-tab-background-color: var(--color-base);
   --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-base);
 
-  --dv-activegroup-visiblepanel-tab-color: var(--color-texte);
-  --dv-activegroup-hiddenpanel-tab-color: var(--color-texte-attenue);
-  --dv-inactivegroup-visiblepanel-tab-color: var(--color-texte-attenue);
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-texte-attenue);
+  --dv-activegroup-visiblepanel-tab-color: var(--color-text);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-muted);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-muted);
 
   --dv-separator-border: transparent;
-  --dv-paneview-header-border-color: var(--color-bordure);
+  --dv-paneview-header-border-color: var(--color-border);
   --dv-tab-divider-color: transparent;
 
   --dv-drag-over-background-color: rgb(53 116 240 / 0.18);
   --dv-drag-over-border-color: var(--color-accent);
 
-  --dv-tabs-and-actions-container-height: var(--sc-entete);
+  --dv-tabs-and-actions-container-height: var(--sc-header);
   --dv-tabs-and-actions-container-font-size: 12px;
 }
 

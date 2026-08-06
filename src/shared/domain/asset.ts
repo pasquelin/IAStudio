@@ -1,30 +1,30 @@
-export type TypeAsset = 'image' | 'video' | 'audio' | 'modele3d' | 'texture' | 'skybox'
+export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox'
 
-export type EmplacementAsset = 'local' | 'cloud'
+export type AssetLocation = 'local' | 'cloud'
 
 export type Asset = {
   id: string
-  nom: string
-  type: TypeAsset
-  emplacement: EmplacementAsset
-  /** Chemin relatif au dossier du projet quand `emplacement` vaut `local`. */
-  chemin?: string
+  name: string
+  type: AssetType
+  location: AssetLocation
+  /** Chemin relatif au dossier du projet quand `location` vaut `local`. */
+  path?: string
   /** Identifiant Scenario d'origine, quand l'asset vient d'une génération. */
-  assetIdDistant?: string
-  tacheId?: string
-  largeur?: number
-  hauteur?: number
-  octets?: number
+  remoteAssetId?: string
+  jobId?: string
+  width?: number
+  height?: number
+  bytes?: number
   tags: string[]
-  creeLe: string
+  createdAt: string
   /** Asset dont celui-ci dérive — permet de remonter à l'image source d'une texture. */
-  deriveDe?: string
+  derivedFrom?: string
 }
 
-export type RequeteAssets = {
-  type?: TypeAsset
+export type AssetQuery = {
+  type?: AssetType
   tags?: string[]
-  texte?: string
-  limite?: number
-  decalage?: number
+  text?: string
+  limit?: number
+  offset?: number
 }

@@ -1,54 +1,54 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
-import { COULEUR_FOND } from '@shared/constantes'
-import { resoudreLangue } from '@shared/i18n'
-import { poserMenu } from '@main/menu'
-import { enregistrerControlesFenetre, suivreEtat } from '@main/windows/controles'
+import { BACKGROUND_COLOR } from '@shared/constants'
+import { resolveLanguage } from '@shared/i18n'
+import { buildMenu } from '@main/menu'
+import { registerWindowControls, trackWindowState } from '@main/window/controls'
 
-const enDeveloppement = !app.isPackaged
+const isDevelopment = !app.isPackaged
 
-function creerFenetre(): BrowserWindow {
-  const fenetre = new BrowserWindow({
+function createWindow(): BrowserWindow {
+  const window = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1024,
     minHeight: 640,
     show: false,
-    backgroundColor: COULEUR_FOND,
+    backgroundColor: BACKGROUND_COLOR,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 14 },
     webPreferences: {
-      preload: join(import.meta.dirname, '../preload/index.mjs'),
+      preload: join(import.meta.dirname, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
     },
   })
 
-  suivreEtat(fenetre)
-
-  fenetre.once('ready-to-show', () => fenetre.show())
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
 
   // Toute navigation sortante part dans le navigateur : une fenêtre du studio ne doit
   // jamais devenir un navigateur web.
-  fenetre.webContents.setWindowOpenHandler(({ url }) => {
+  window.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)
     return { action: 'deny' }
   })
 
-  const urlDev = process.env['ELECTRON_RENDERER_URL']
-  if (enDeveloppement && urlDev) void fenetre.loadURL(urlDev)
-  else void fenetre.loadFile(join(import.meta.dirname, '../renderer/index.html'))
+  const devUrl = process.env['ELECTRON_RENDERER_URL']
+  if (isDevelopment && devUrl) void window.loadURL(devUrl)
+  else void window.loadFile(join(import.meta.dirname, '../renderer/index.html'))
 
-  return fenetre
+  return window
 }
 
 void app.whenReady().then(() => {
-  enregistrerControlesFenetre()
-  poserMenu(resoudreLangue(app.getLocale()))
-  creerFenetre()
+  registerWindowControls()
+  buildMenu(resolveLanguage(app.getLocale()))
+  createWindow()
+
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) creerFenetre()
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 

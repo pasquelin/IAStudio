@@ -1,8 +1,8 @@
 import { twMerge } from 'tailwind-merge'
 
-type Classe = string | false | null | undefined
+type ClassValue = string | false | null | undefined
 
 /** Fusionne des classes Tailwind en laissant la dernière gagner. */
-export function cn(...classes: Classe[]): string {
+export function cn(...classes: ClassValue[]): string {
   return twMerge(classes.filter(Boolean).join(' '))
 }

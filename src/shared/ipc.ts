@@ -1,96 +1,94 @@
-import type { Asset, RequeteAssets } from './domain/asset'
-import type { DescripteurModele, FamilleModele, ResumeModele } from './domain/modele'
-import type { Projet } from './domain/projet'
-import type { EtatAuthentification, Reglages, ReglagesPartiels } from './domain/reglages'
-import type { EtatFenetre } from './domain/fenetre'
-import type { ProgressionTache, Tache } from './domain/tache'
+import type { Asset, AssetQuery } from './domain/asset'
+import type { Job, JobProgress } from './domain/job'
+import type { ModelDescriptor, ModelFamily, ModelSummary } from './domain/model'
+import type { Project } from './domain/project'
+import type { AuthState, PartialSettings, Settings } from './domain/settings'
+import type { WindowState } from './domain/window'
 
 /**
  * Source unique des noms de canaux. Seul `src/preload/` les cite : un composant qui
  * écrirait `ipcRenderer.invoke('...')` contournerait le contrat — cf. spec § 4.
  */
-export const CANAUX = {
-  reglagesLire: 'reglages:lire',
-  reglagesEcrire: 'reglages:ecrire',
-  reglagesDefinirIdentifiants: 'reglages:definir-identifiants',
-  reglagesEtatAuthentification: 'reglages:etat-authentification',
-  reglagesOublierIdentifiants: 'reglages:oublier-identifiants',
+export const CHANNELS = {
+  settingsRead: 'settings:read',
+  settingsWrite: 'settings:write',
+  settingsSetCredentials: 'settings:set-credentials',
+  settingsAuthState: 'settings:auth-state',
+  settingsForgetCredentials: 'settings:forget-credentials',
 
-  scenarioListerModeles: 'scenario:lister-modeles',
-  scenarioDecrireModele: 'scenario:decrire-modele',
-  scenarioGenerer: 'scenario:generer',
-  scenarioAnnulerTache: 'scenario:annuler-tache',
-  scenarioListerTaches: 'scenario:lister-taches',
+  scenarioListModels: 'scenario:list-models',
+  scenarioDescribeModel: 'scenario:describe-model',
+  scenarioGenerate: 'scenario:generate',
+  scenarioCancelJob: 'scenario:cancel-job',
+  scenarioListJobs: 'scenario:list-jobs',
 
-  projetCreer: 'projet:creer',
-  projetOuvrir: 'projet:ouvrir',
-  projetCourant: 'projet:courant',
-  projetChoisirDossier: 'projet:choisir-dossier',
+  projectCreate: 'project:create',
+  projectOpen: 'project:open',
+  projectCurrent: 'project:current',
+  projectPickFolder: 'project:pick-folder',
 
-  assetsRechercher: 'assets:rechercher',
+  assetsSearch: 'assets:search',
   assetsUrl: 'assets:url',
 
-  fenetrePleinEcran: 'fenetre:plein-ecran',
-  fenetreEtat: 'fenetre:etat',
+  windowToggleFullScreen: 'window:toggle-full-screen',
+  windowState: 'window:state',
 }
 
 /** Canaux poussés par le main vers le renderer. */
-export const EVENEMENTS = {
-  tacheProgression: 'evt:tache-progression',
-  projetChange: 'evt:projet-change',
-  ouvrirOutil: 'evt:ouvrir-outil',
-  commandeMenu: 'evt:commande-menu',
-  fenetreEtat: 'evt:fenetre-etat',
+export const EVENTS = {
+  jobProgress: 'evt:job-progress',
+  projectChanged: 'evt:project-changed',
+  openTool: 'evt:open-tool',
+  menuCommand: 'evt:menu-command',
+  windowState: 'evt:window-state',
 }
 
-export type Desabonnement = () => void
+export type Unsubscribe = () => void
 
 /** Demande d'ouverture d'un outil venue du menu natif. */
-export type DemandeOutil = {
+export type ToolRequest = {
   zone: string
-  outil: string
+  tool: string
 }
 
 /** Commandes du menu natif sans charge utile, identifiées par un verbe. */
-export type CommandeMenu = 'projet:nouveau' | 'projet:ouvrir' | 'disposition:reinitialiser'
+export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset'
 
-/**
- * Ce que `window.studio` expose. Chaque méthode a exactement un canal dans `CANAUX`.
- */
-export type PontStudio = {
-  reglages: {
-    lire: () => Promise<Reglages>
-    ecrire: (partiels: ReglagesPartiels) => Promise<Reglages>
-    definirIdentifiants: (cle: string, secret: string) => Promise<EtatAuthentification>
-    etatAuthentification: () => Promise<EtatAuthentification>
-    oublierIdentifiants: () => Promise<void>
+/** Ce que `window.studio` expose. Chaque méthode a exactement un canal dans `CHANNELS`. */
+export type StudioBridge = {
+  settings: {
+    read: () => Promise<Settings>
+    write: (partial: PartialSettings) => Promise<Settings>
+    setCredentials: (key: string, secret: string) => Promise<AuthState>
+    authState: () => Promise<AuthState>
+    forgetCredentials: () => Promise<void>
   }
   scenario: {
-    listerModeles: (famille?: FamilleModele) => Promise<ResumeModele[]>
-    decrireModele: (modeleId: string) => Promise<DescripteurModele>
-    generer: (modeleId: string, corps: Record<string, unknown>) => Promise<Tache>
-    annulerTache: (tacheId: string) => Promise<void>
-    listerTaches: () => Promise<Tache[]>
-    surProgression: (rappel: (progression: ProgressionTache) => void) => Desabonnement
+    listModels: (family?: ModelFamily) => Promise<ModelSummary[]>
+    describeModel: (modelId: string) => Promise<ModelDescriptor>
+    generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
+    cancelJob: (jobId: string) => Promise<void>
+    listJobs: () => Promise<Job[]>
+    onProgress: (callback: (progress: JobProgress) => void) => Unsubscribe
   }
-  projet: {
-    creer: (chemin: string, nom: string) => Promise<Projet>
-    ouvrir: (chemin: string) => Promise<Projet>
-    courant: () => Promise<Projet | null>
-    choisirDossier: () => Promise<string | null>
-    surChangement: (rappel: (projet: Projet | null) => void) => Desabonnement
+  project: {
+    create: (path: string, name: string) => Promise<Project>
+    open: (path: string) => Promise<Project>
+    current: () => Promise<Project | null>
+    pickFolder: () => Promise<string | null>
+    onChange: (callback: (project: Project | null) => void) => Unsubscribe
   }
   assets: {
-    rechercher: (requete: RequeteAssets) => Promise<Asset[]>
+    search: (query: AssetQuery) => Promise<Asset[]>
     url: (assetId: string) => Promise<string | null>
   }
-  menu: {
-    surOuvrirOutil: (rappel: (demande: DemandeOutil) => void) => Desabonnement
-    surCommande: (rappel: (commande: CommandeMenu) => void) => Desabonnement
+  window: {
+    toggleFullScreen: () => Promise<void>
+    state: () => Promise<WindowState>
+    onState: (callback: (state: WindowState) => void) => Unsubscribe
   }
-  fenetre: {
-    basculerPleinEcran: () => Promise<void>
-    etat: () => Promise<EtatFenetre>
-    surEtat: (rappel: (etat: EtatFenetre) => void) => Desabonnement
+  menu: {
+    onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
+    onCommand: (callback: (command: MenuCommand) => void) => Unsubscribe
   }
 }

@@ -2,19 +2,19 @@ import type { ReactNode } from 'react'
 
 /**
  * Configuration de sections d'une barre : `false` masque, un `ReactNode` remplace,
- * absent laisse le rendu par défaut. Repris de `map3D` — c'est ce qui permet à six
- * espaces de partager une seule barre sans la forker.
+ * absent laisse le rendu par défaut. Repris de map3D — c'est ce qui permet à six espaces
+ * de partager une seule barre sans la forker.
  */
-export type ConfigSlots<S extends string> = Partial<Record<S, ReactNode | false>>
+export type SlotConfig<S extends string> = Partial<Record<S, ReactNode | false>>
 
-export type ResolutionSlot = { visible: boolean; remplacement: ReactNode | null }
+export type SlotResolution = { visible: boolean; replacement: ReactNode | null }
 
-export function resoudreSlot<S extends string>(
-  config: ConfigSlots<S> | undefined,
+export function resolveSlot<S extends string>(
+  config: SlotConfig<S> | undefined,
   section: S,
-): ResolutionSlot {
-  const valeur = config?.[section]
-  if (valeur === false) return { visible: false, remplacement: null }
-  if (valeur === undefined || valeur === null) return { visible: true, remplacement: null }
-  return { visible: true, remplacement: valeur }
+): SlotResolution {
+  const value = config?.[section]
+  if (value === false) return { visible: false, replacement: null }
+  if (value === undefined || value === null) return { visible: true, replacement: null }
+  return { visible: true, replacement: value }
 }

@@ -2,128 +2,128 @@ import { mdiRedo, mdiUndo } from '@mdi/js'
 import { Fragment, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from './cn'
-import { infobulleSimple } from './infobulle'
-import { resoudreSlot, type ConfigSlots } from './slots'
+import { resolveSlot, type SlotConfig } from './slots'
+import { simpleTooltip } from './tooltip'
 import { ToolButton } from './ToolButton'
 
-export type SectionToolbar = 'outils' | 'extras' | 'annuler' | 'refaire'
+export type ToolbarSection = 'tools' | 'extras' | 'undo' | 'redo'
 
-export type Outil = {
+export type Tool = {
   id: string
   /** Clé i18n du libellé — jamais le texte affiché. */
-  cleLibelle: string
-  icone: string
-  raccourci?: string
-  desactive?: boolean
+  labelKey: string
+  icon: string
+  shortcut?: string
+  disabled?: boolean
 }
 
 export type ToolbarProps = {
   /** Outils affichés, dans l'ordre. */
-  outils: Outil[]
-  outilActif?: string
-  surOutil: (id: string) => void
-  orientation?: 'verticale' | 'horizontale'
+  tools: Tool[]
+  activeTool?: string
+  onTool: (id: string) => void
+  orientation?: 'vertical' | 'horizontal'
   /** Masque (`false`) ou remplace (ReactNode) chaque section. */
-  sections?: ConfigSlots<SectionToolbar>
+  sections?: SlotConfig<ToolbarSection>
   /** Outils de l'espace, rendus après les outils natifs et dans le même langage visuel. */
   extras?: ReactNode
-  surAnnuler?: () => void
-  surRefaire?: () => void
-  peutAnnuler?: boolean
-  peutRefaire?: boolean
+  onUndo?: () => void
+  onRedo?: () => void
+  canUndo?: boolean
+  canRedo?: boolean
   className?: string
 }
 
-const infobulle = infobulleSimple()
+const tooltip = simpleTooltip()
 
 /**
  * Barre d'outils unique du studio, partagée par les six espaces. Chaque espace ne fournit
- * que son registre d'outils ; la géométrie suit `--sc-controle` et `--sc-bar-scale`, donc
- * le réglage de densité agit partout sans qu'aucune barre ne connaisse sa valeur.
+ * que son registre d'outils ; la géométrie suit `--sc-control`, donc le réglage de densité
+ * agit partout sans qu'aucune barre ne connaisse sa valeur.
  */
 export function Toolbar({
-  outils,
-  outilActif,
-  surOutil,
-  orientation = 'verticale',
+  tools,
+  activeTool,
+  onTool,
+  orientation = 'vertical',
   sections,
   extras,
-  surAnnuler,
-  surRefaire,
-  peutAnnuler = false,
-  peutRefaire = false,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
   className,
 }: ToolbarProps) {
   const { t } = useTranslation()
-  const verticale = orientation === 'verticale'
-  const slotOutils = resoudreSlot(sections, 'outils')
-  const slotExtras = resoudreSlot(sections, 'extras')
-  const slotAnnuler = resoudreSlot(sections, 'annuler')
-  const slotRefaire = resoudreSlot(sections, 'refaire')
+  const vertical = orientation === 'vertical'
+  const slotTools = resolveSlot(sections, 'tools')
+  const slotExtras = resolveSlot(sections, 'extras')
+  const slotUndo = resolveSlot(sections, 'undo')
+  const slotRedo = resolveSlot(sections, 'redo')
 
-  const separateur = (
+  const separator = (
     <span
       aria-hidden="true"
-      className={cn('bg-bordure', verticale ? 'mx-1 h-px w-4/5' : 'my-1 h-4/5 w-px')}
+      className={cn('bg-border', vertical ? 'mx-1 h-px w-4/5' : 'my-1 h-4/5 w-px')}
     />
   )
 
   return (
     <div
       role="toolbar"
-      aria-orientation={verticale ? 'vertical' : 'horizontal'}
+      aria-orientation={vertical ? 'vertical' : 'horizontal'}
       className={cn(
-        'border-bordure bg-surface flex items-center gap-0.5 rounded-(--radius-sc-lg) border p-1',
-        'shadow-(--sc-ombre-meuble)',
-        verticale ? 'flex-col' : 'flex-row',
+        'border-border bg-surface flex items-center gap-0.5 rounded-(--radius-sc-lg) border p-1',
+        'shadow-(--sc-shadow-furniture)',
+        vertical ? 'flex-col' : 'flex-row',
         className,
       )}
     >
-      {slotOutils.visible &&
-        (slotOutils.remplacement ?? (
+      {slotTools.visible &&
+        (slotTools.replacement ?? (
           <Fragment>
-            {outils.map(outil => (
+            {tools.map(tool => (
               <ToolButton
-                key={outil.id}
-                icone={outil.icone}
-                libelle={t(outil.cleLibelle)}
-                raccourci={outil.raccourci}
-                infobulle={infobulle}
-                actif={outil.id === outilActif}
-                disabled={outil.desactive}
-                onClick={() => surOutil(outil.id)}
+                key={tool.id}
+                icon={tool.icon}
+                label={t(tool.labelKey)}
+                shortcut={tool.shortcut}
+                tooltip={tooltip}
+                active={tool.id === activeTool}
+                disabled={tool.disabled}
+                onClick={() => onTool(tool.id)}
               />
             ))}
           </Fragment>
         ))}
 
-      {slotExtras.visible && (slotExtras.remplacement ?? extras)}
+      {slotExtras.visible && (slotExtras.replacement ?? extras)}
 
-      {(slotAnnuler.visible || slotRefaire.visible) && (surAnnuler || surRefaire) && separateur}
+      {(slotUndo.visible || slotRedo.visible) && (onUndo || onRedo) && separator}
 
-      {slotAnnuler.visible &&
-        surAnnuler &&
-        (slotAnnuler.remplacement ?? (
+      {slotUndo.visible &&
+        onUndo &&
+        (slotUndo.replacement ?? (
           <ToolButton
-            icone={mdiUndo}
-            libelle={t('actions.annuler')}
-            raccourci="⌘Z"
-            infobulle={infobulle}
-            disabled={!peutAnnuler}
-            onClick={surAnnuler}
+            icon={mdiUndo}
+            label={t('actions.undo')}
+            shortcut="⌘Z"
+            tooltip={tooltip}
+            disabled={!canUndo}
+            onClick={onUndo}
           />
         ))}
 
-      {slotRefaire.visible &&
-        surRefaire &&
-        (slotRefaire.remplacement ?? (
+      {slotRedo.visible &&
+        onRedo &&
+        (slotRedo.replacement ?? (
           <ToolButton
-            icone={mdiRedo}
-            libelle={t('actions.retablir')}
-            raccourci="⇧⌘Z"
-            infobulle={infobulle}
-            disabled={!peutRefaire}
-            onClick={surRefaire}
+            icon={mdiRedo}
+            label={t('actions.redo')}
+            shortcut="⇧⌘Z"
+            tooltip={tooltip}
+            disabled={!canRedo}
+            onClick={onRedo}
           />
         ))}
     </div>
