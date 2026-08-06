@@ -16,26 +16,26 @@ export default defineConfig([
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'no-console': ['error', { allow: ['warn', 'error'] }],
-      // La convention interdit `as const` : union explicite, type nommé, ou inférence.
-      // Aucune règle native ne le couvre, d'où le sélecteur AST.
+      // The convention forbids `as const`: explicit union, named type, or inference.
+      // No built-in rule covers it, hence the AST selector.
       'no-restricted-syntax': [
         'error',
         {
           selector: 'TSAsExpression > TSTypeReference > Identifier[name="const"]',
-          message: 'Pas de `as const` : déclarer une union explicite ou un type nommé.',
+          message: 'No `as const`: declare an explicit union or a named type.',
         },
       ],
     },
   },
   {
     files: ['src/renderer/**/*.{ts,tsx}'],
-    // `configs.recommended` reste au format legacy (plugins en tableau) ; seul
-    // `configs.flat.*` est utilisable en configuration à plat.
+    // `configs.recommended` is still in legacy format (plugins as an array); only
+    // `configs.flat.*` works in a flat config.
     extends: [reactHooks.configs.flat['recommended-latest']],
     rules: {
-      // Signale que le React Compiler renonce à mémoïser un composant utilisant une
-      // bibliothèque tierce (react-virtual, react-i18next). C'est un constat, pas un défaut :
-      // la seule façon de le lever serait de renoncer à ces bibliothèques.
+      // Reports that the React Compiler gives up memoizing a component using a third-party
+      // library (react-virtual, react-i18next). That is an observation, not a defect: the
+      // only way to clear it would be to drop those libraries.
       'react-hooks/incompatible-library': 'off',
     },
   },

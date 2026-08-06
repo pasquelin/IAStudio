@@ -17,8 +17,8 @@ export default defineConfig({
       externalizeDeps: true,
       rollupOptions: {
         input: resolve('src/preload/index.ts'),
-        // Un preload sandboxé DOIT être en CommonJS : Electron refuse de charger un module
-        // ESM, et le pont `window.studio` n'est alors jamais posé — en silence.
+        // A sandboxed preload MUST be CommonJS: Electron refuses to load an ESM module, and
+        // the `window.studio` bridge is then never installed — silently.
         output: { format: 'cjs', entryFileNames: 'index.cjs' },
       },
     },
