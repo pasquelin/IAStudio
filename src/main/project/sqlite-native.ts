@@ -2,8 +2,8 @@ import Database from 'better-sqlite3'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
 
 /**
- * Production driver. The only module importing `better-sqlite3`, and therefore the only one a
- * test must never reach: the binary is compiled for Electron's ABI and Vitest runs under Node.
+ * Production driver, and the only module importing `better-sqlite3` — so a native module is
+ * never pulled into a test run.
  */
 export function openNativeDatabase(file: string): SqliteDriver {
   const database = new Database(file)

@@ -1,13 +1,15 @@
 /**
  * The database, reduced to what the catalogue uses.
  *
- * It exists because a single native binary cannot serve both runtimes: `electron-rebuild`
- * compiles `better-sqlite3` for Electron's ABI, and Vitest runs under Node. Production binds
- * `better-sqlite3`, tests bind `node:sqlite` — both are real SQLite, so the migrations and
- * the queries are genuinely exercised either way.
+ * Two reasons, neither of them ABI: `better-sqlite3` v13 ships N-API prebuilds, so the same
+ * binary does load under both Electron and Vitest.
  *
- * It earns its keep a second time: moving heavy queries onto a `worker_threads` pool will
- * swap the driver, not rewrite the catalogue — see CLAUDE.md, invariant 6.
+ * 1. Moving heavy queries onto a `worker_threads` pool swaps the driver rather than rewriting
+ *    the catalogue — the catalogue is synchronous by nature, and blocking the main process
+ *    blocks every window (CLAUDE.md, invariant 6).
+ * 2. The test suite stays free of a native module, so it never depends on `pnpm rebuild:native`
+ *    having been run. Tests bind `node:sqlite`, production binds `better-sqlite3` — both are
+ *    real SQLite, so the migrations and the queries are genuinely exercised either way.
  */
 /** What the catalogue binds. Deliberately narrower than what SQLite accepts. */
 export type SqlValue = string | number | null
