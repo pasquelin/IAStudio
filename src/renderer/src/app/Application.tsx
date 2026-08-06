@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useDensity } from '@/hooks/useDensity'
+import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
 import { useJobs } from '@/stores/jobs'
@@ -9,6 +10,7 @@ import { useSettings } from '@/stores/settings'
 import { Shell } from './Shell'
 
 export function Application() {
+  useMainLogs()
   useNativeMenu()
   useWindowFit()
 
