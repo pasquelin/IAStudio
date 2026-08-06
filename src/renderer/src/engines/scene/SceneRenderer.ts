@@ -40,6 +40,18 @@ function geometryFor(kind: SceneObject['kind']): BufferGeometry {
 }
 
 /**
+ * Reads a studio token off the mounted canvas. The palette is declared once, in `index.css`;
+ * a hex value copied here would leave the viewport on the old grey the day it changes, and it
+ * would be the one surface in the application that never follows.
+ *
+ * An empty string means the token is missing — the caller falls back to three's own default
+ * rather than inventing a colour.
+ */
+function token(styles: CSSStyleDeclaration, name: string): string {
+  return styles.getPropertyValue(name).trim()
+}
+
+/**
  * The three.js side of a scene. It owns no truth: `apply` reflects a state it never computes,
  * so the whole thing can be thrown away and rebuilt — which is exactly what changing workspace
  * does to it.
@@ -47,7 +59,6 @@ function geometryFor(kind: SceneObject['kind']): BufferGeometry {
 export class SceneRenderer {
   private readonly scene = new Scene()
   private readonly camera = new PerspectiveCamera(60, 1, 0.1, 1000)
-  private readonly grid = new GridHelper(GRID_SIZE, GRID_SIZE, '#34363a', '#2b2d30')
   private readonly raycaster = new Raycaster()
   private readonly pointer = new Vector2()
   private readonly meshes = new Map<string, Mesh>()
@@ -57,25 +68,30 @@ export class SceneRenderer {
   private orbit: OrbitControls | null = null
   private gizmo: TransformControls | null = null
   private viewHelper: ViewHelper | null = null
+  private grid: GridHelper | null = null
   private observer: ResizeObserver | null = null
   private frame: number | null = null
   private flying = false
   private lastTime = 0
+  /** Empty until mounted: the palette is only readable once a styled canvas exists. */
+  private meshColor = ''
 
   constructor(private readonly options: SceneRendererOptions) {
-    this.scene.background = new Color('#191a1c')
-    this.scene.add(new HemisphereLight('#ffffff', '#444444', 2))
+    // Neutral studio lighting, not palette: a coloured key light would misreport every material
+    // the user is judging.
+    this.scene.add(new HemisphereLight(0xffffff, 0x444444, 2))
 
-    const sun = new DirectionalLight('#ffffff', 2)
+    const sun = new DirectionalLight(0xffffff, 2)
     sun.position.set(5, 10, 7)
     this.scene.add(sun)
-    this.scene.add(this.grid)
 
     this.camera.position.set(5, 5, 5)
     this.camera.lookAt(0, 0, 0)
   }
 
   mount(canvas: HTMLCanvasElement): void {
+    this.applyPalette(canvas)
+
     const renderer = new WebGLRenderer({ canvas, antialias: true })
     renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer = renderer
@@ -176,16 +192,35 @@ export class SceneRenderer {
       disposeMaterial(mesh)
     }
     this.meshes.clear()
-    this.grid.dispose()
+
+    this.grid?.dispose()
+    this.grid = null
 
     this.renderer?.dispose()
     this.renderer = null
   }
 
+  /** Pulls the studio palette off the canvas, so the viewport follows a theme change with it. */
+  private applyPalette(canvas: HTMLCanvasElement): void {
+    const styles = getComputedStyle(canvas)
+    const background = token(styles, '--color-base')
+    const line = token(styles, '--color-border')
+    const subdivision = token(styles, '--color-chassis')
+
+    this.meshColor = token(styles, '--color-muted')
+    if (background) this.scene.background = new Color(background)
+
+    if (this.grid) this.scene.remove(this.grid)
+    this.grid = new GridHelper(GRID_SIZE, GRID_SIZE, line || undefined, subdivision || undefined)
+    this.scene.add(this.grid)
+  }
+
   private syncMesh(object: SceneObject): void {
     let mesh = this.meshes.get(object.id)
     if (!mesh) {
-      mesh = new Mesh(geometryFor(object.kind), new MeshStandardMaterial({ color: '#8a8f98' }))
+      const material = new MeshStandardMaterial()
+      if (this.meshColor) material.color = new Color(this.meshColor)
+      mesh = new Mesh(geometryFor(object.kind), material)
       mesh.name = object.id
       this.meshes.set(object.id, mesh)
       this.scene.add(mesh)
