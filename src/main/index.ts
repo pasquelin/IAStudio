@@ -16,11 +16,7 @@ function creerFenetre(): BrowserWindow {
     backgroundColor: COULEUR_FOND,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 14 },
-    // Le plein écran natif de macOS bascule la fenêtre dans un espace dédié : les feux de
-    // circulation disparaissent et la barre de menu glisse par-dessus la nôtre. On le
-    // désactive au profit du plein écran « simple » (cf. `basculerPleinEcran`), qui garde
-    // le chrome de la fenêtre — donc les trois boutons, toujours visibles.
-    fullscreenable: false,
+    fullscreenable: true,
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.mjs'),
       contextIsolation: true,

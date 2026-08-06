@@ -1,17 +1,19 @@
 import { BrowserWindow } from 'electron'
 
 /**
- * Plein écran « simple » : la fenêtre occupe l'écran et masque Dock et barre de menu, mais
- * reste une fenêtre ordinaire. Contrairement au plein écran natif de macOS, elle ne part pas
- * dans un espace dédié — les feux de circulation restent donc visibles, et aucune barre de
- * menu ne vient glisser par-dessus la barre de titre du studio.
+ * Bascule le plein écran natif. `simpleFullScreen` a été écarté : il ne fait qu'agrandir la
+ * fenêtre à la taille de l'écran en passant Dock et barre de menu en masquage automatique —
+ * ce n'est pas un plein écran, et ça se voit.
+ *
+ * En plein écran natif, macOS retire la barre de titre de la fenêtre ; les feux de
+ * circulation sont redemandés par `setWindowButtonVisibility` à l'entrée (cf. `main/index`).
  */
 export function basculerPleinEcran(fenetre: BrowserWindow | null): void {
   const cible = fenetre ?? BrowserWindow.getFocusedWindow()
   if (!cible) return
-  cible.setSimpleFullScreen(!cible.isSimpleFullScreen())
+  cible.setFullScreen(!cible.isFullScreen())
 }
 
 export function estPleinEcran(fenetre: BrowserWindow | null): boolean {
-  return fenetre?.isSimpleFullScreen() ?? false
+  return fenetre?.isFullScreen() ?? false
 }

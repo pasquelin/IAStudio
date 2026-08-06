@@ -69,12 +69,11 @@ function useZone(zone: Zone) {
   const ouvert = useOutils(etat => etat.ouverts[zone] ?? null)
   const taille = useOutils(etat => etat.tailles[zone] ?? tailleParDefaut(zone))
   const reduite = useOutils(etat => etat.reduites[zone] ?? false)
-  const focalisee = useOutils(etat => etat.zoneFocus === zone)
   const fermer = useOutils(etat => etat.fermer)
   const reduire = useOutils(etat => etat.reduire)
   const focaliser = useOutils(etat => etat.focaliser)
   const redimensionner = useOutils(etat => etat.redimensionner)
-  return { ouvert, taille, reduite, focalisee, fermer, reduire, focaliser, redimensionner }
+  return { ouvert, taille, reduite, fermer, reduire, focaliser, redimensionner }
 }
 
 function useMorceaux(zone: Zone) {
@@ -88,7 +87,6 @@ function useMorceaux(zone: Zone) {
         outil={etat.ouvert}
         taille={etat.taille}
         reduite={etat.reduite}
-        focalisee={etat.focalisee}
         surFocus={() => etat.focaliser(zone)}
         surReduire={() => etat.reduire(zone)}
         surFermer={() => etat.fermer(zone)}
@@ -98,7 +96,7 @@ function useMorceaux(zone: Zone) {
       <PoigneeRedimension
         zone={zone}
         taille={etat.taille}
-        surTaille={valeur => etat.redimensionner(zone, valeur)}
+        surTaille={(valeur, disponible) => etat.redimensionner(zone, valeur, disponible)}
       />
     ),
   }

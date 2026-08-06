@@ -16,7 +16,7 @@ export function Footer({ gauche, droite }: FooterProps) {
   const { t } = useTranslation()
 
   return (
-    <footer className="text-texte-attenue flex h-6 shrink-0 items-center gap-3 px-4 text-[11px]">
+    <footer className="text-texte-attenue flex shrink-0 items-center gap-3 px-3 pb-2 text-[11px]">
       <span className="truncate">{gauche ?? t('projet.aucun')}</span>
       <span className="ml-auto flex shrink-0 items-center gap-3">{droite}</span>
     </footer>

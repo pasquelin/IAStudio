@@ -14,7 +14,6 @@ export type ZoneOutilsProps = {
   outil: IdOutil
   taille: number
   reduite: boolean
-  focalisee: boolean
   surFocus: () => void
   surReduire: () => void
   surFermer: () => void
@@ -30,7 +29,6 @@ export function ZoneOutils({
   outil,
   taille,
   reduite,
-  focalisee,
   surFocus,
   surReduire,
   surFermer,
@@ -45,7 +43,7 @@ export function ZoneOutils({
       aria-label={titre}
       onPointerDownCapture={surFocus}
       style={reduite ? undefined : couche ? { height: taille } : { width: taille }}
-      className={cn(focalisee && 'ring-accent/30 ring-1', reduite && 'shrink-0')}
+      className={cn(reduite && 'shrink-0')}
     >
       <EnteteSurface titre={titre}>
         {Actions !== undefined && (

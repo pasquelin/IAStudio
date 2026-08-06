@@ -3,7 +3,12 @@ import { persist } from 'zustand/middleware'
 import type { IdOutil, ZoneOutils } from '@/app/outils'
 
 export const TAILLE_MIN = 140
-export const TAILLE_MAX = 720
+
+/**
+ * Une zone d'outils ne prend jamais plus de la moitié de la fenêtre : au-delà, ce n'est plus
+ * un panneau latéral, c'est le centre qui disparaît.
+ */
+export const PART_MAX = 0.5
 
 type OuvertsParZone = Partial<Record<ZoneOutils, IdOutil | null>>
 type TaillesParZone = Partial<Record<ZoneOutils, number>>
@@ -19,7 +24,8 @@ type EtatOutils = {
   fermer: (zone: ZoneOutils) => void
   reduire: (zone: ZoneOutils) => void
   focaliser: (zone: ZoneOutils | null) => void
-  redimensionner: (zone: ZoneOutils, taille: number) => void
+  /** `disponible` : dimension du conteneur, dont on ne prend jamais plus de `PART_MAX`. */
+  redimensionner: (zone: ZoneOutils, taille: number, disponible: number) => void
   reinitialiser: () => void
 }
 
@@ -40,9 +46,13 @@ export function tailleParDefaut(zone: ZoneOutils): number {
   return TAILLES_PAR_DEFAUT[zone]
 }
 
-/** Une taille hors bornes rendrait la zone inutilisable ou mangerait le centre. */
-export function borner(taille: number): number {
-  return Math.min(TAILLE_MAX, Math.max(TAILLE_MIN, Math.round(taille)))
+/**
+ * Borne une taille de zone. Le plafond est relatif à la fenêtre, pas une constante : sur un
+ * écran large, 720 px de panneau ne gênent personne ; sur une fenêtre étroite, ils avalent
+ * le centre.
+ */
+export function borner(taille: number, disponible: number): number {
+  return Math.min(Math.round(disponible * PART_MAX), Math.max(TAILLE_MIN, Math.round(taille)))
 }
 
 export const useOutils = create<EtatOutils>()(
@@ -77,8 +87,8 @@ export const useOutils = create<EtatOutils>()(
 
       focaliser: zone => set({ zoneFocus: zone }),
 
-      redimensionner: (zone, taille) =>
-        set({ tailles: { ...get().tailles, [zone]: borner(taille) } }),
+      redimensionner: (zone, taille, disponible) =>
+        set({ tailles: { ...get().tailles, [zone]: borner(taille, disponible) } }),
 
       reinitialiser: () =>
         set({ ouverts: OUVERTS_PAR_DEFAUT, tailles: {}, reduites: {}, zoneFocus: null }),
