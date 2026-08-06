@@ -36,7 +36,7 @@ export function ZoneOutils({
   surFermer,
 }: ZoneOutilsProps) {
   const { t } = useTranslation()
-  const Contenu = COMPOSANTS_OUTILS[outil]
+  const { Contenu, Actions } = COMPOSANTS_OUTILS[outil]
   const titre = t(cleTitreOutil(outil))
   const couche = estHorizontale(zone)
 
@@ -48,6 +48,12 @@ export function ZoneOutils({
       className={cn(focalisee && 'ring-accent/30 ring-1', reduite && 'shrink-0')}
     >
       <EnteteSurface titre={titre}>
+        {Actions !== undefined && (
+          <>
+            <Actions />
+            <span aria-hidden="true" className="bg-bordure mx-1 h-4 w-px" />
+          </>
+        )}
         <ToolButton
           icone={mdiWindowMinimize}
           libelle={t('actions.reduire')}

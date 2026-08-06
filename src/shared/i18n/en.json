@@ -95,7 +95,8 @@
     "quitter": "Quit",
     "affichage": "View",
     "modules": "Tool windows",
-    "reinitialiserDisposition": "Reset layout"
+    "reinitialiserDisposition": "Reset layout",
+    "pleinEcran": "Full screen"
   },
   "reglages": {
     "titre": "Settings",

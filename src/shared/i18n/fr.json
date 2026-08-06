@@ -95,7 +95,8 @@
     "quitter": "Quitter",
     "affichage": "Affichage",
     "modules": "Modules",
-    "reinitialiserDisposition": "Réinitialiser la disposition"
+    "reinitialiserDisposition": "Réinitialiser la disposition",
+    "pleinEcran": "Plein écran"
   },
   "reglages": {
     "titre": "Réglages",

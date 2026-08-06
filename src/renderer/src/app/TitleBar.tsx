@@ -31,7 +31,7 @@ export function TitleBar({ espaceActif, surEspace, actions }: TitleBarProps) {
       style={SAISISSABLE}
       // `pl-20` dégage les feux de circulation natifs, dont le centre est à 14px du haut :
       // une hauteur de 44px les aligne au milieu de la barre.
-      className="flex shrink-0 items-center gap-2 pr-6 pl-24 text-[13px]"
+      className="flex shrink-0 items-center gap-2 pt-2 pr-6 pb-1 pl-24 text-[13px]"
     >
       <nav
         aria-label={t('espaces.navigation')}

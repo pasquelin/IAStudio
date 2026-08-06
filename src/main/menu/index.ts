@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron'
 import { EVENEMENTS } from '@shared/ipc'
 import { TRADUCTIONS, type Langue } from '@shared/i18n'
+import { basculerPleinEcran } from '@main/windows/plein-ecran'
 
 /** Outils restaurables depuis le menu. Miroir du registre du renderer, volontairement figé
  *  ici : le main ne charge pas le code du renderer, et cette liste bouge rarement. */
@@ -57,6 +58,12 @@ export function poserMenu(langue: Langue): void {
         {
           label: t.menu.reinitialiserDisposition,
           click: () => diffuser(EVENEMENTS.commandeMenu, 'disposition:reinitialiser'),
+        },
+        { type: 'separator' },
+        {
+          label: t.menu.pleinEcran,
+          accelerator: process.platform === 'darwin' ? 'Ctrl+Cmd+F' : 'F11',
+          click: () => basculerPleinEcran(BrowserWindow.getFocusedWindow()),
         },
         { type: 'separator' },
         { role: 'toggleDevTools' },

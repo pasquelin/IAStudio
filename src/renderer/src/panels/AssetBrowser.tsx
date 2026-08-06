@@ -1,21 +1,53 @@
 import { mdiFormatListBulleted, mdiImageMultipleOutline, mdiViewGridOutline } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useRef, useState } from 'react'
+import { useRef, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { cn } from '@/design/cn'
 import { infobulleSimple } from '@/design/infobulle'
 import { ToolButton } from '@/design/ToolButton'
+import { useAssets } from '@/stores/assets'
 import { EtatVide } from './EtatVide'
 
-export type AffichageAssets = 'grille' | 'liste'
-
-const infobulle = infobulleSimple()
+const infobulle = infobulleSimple('bottom')
 const TAILLE_VIGNETTE = 96
 const HAUTEUR_LIGNE = 26
 
 export type AssetBrowserProps = {
   assets?: Asset[]
+}
+
+/** Actions rendues dans la barre de titre du panneau, sur la même ligne que son nom. */
+export function ActionsAssetBrowser({ assets = [] }: AssetBrowserProps) {
+  const { t } = useTranslation()
+  const affichage = useAssets(etat => etat.affichage)
+  const definirAffichage = useAssets(etat => etat.definirAffichage)
+
+  return (
+    <>
+      <span className="text-texte-attenue mr-1 text-[11px]">
+        {t('assets.compte', { count: assets.length })}
+      </span>
+      <ToolButton
+        icone={mdiViewGridOutline}
+        libelle={t('assets.affichageGrille')}
+        infobulle={infobulle}
+        tailleIcone={15}
+        className="size-6"
+        actif={affichage === 'grille'}
+        onClick={() => definirAffichage('grille')}
+      />
+      <ToolButton
+        icone={mdiFormatListBulleted}
+        libelle={t('assets.affichageListe')}
+        infobulle={infobulle}
+        tailleIcone={15}
+        className="size-6"
+        actif={affichage === 'liste'}
+        onClick={() => definirAffichage('liste')}
+      />
+    </>
+  )
 }
 
 /**
@@ -24,41 +56,19 @@ export type AssetBrowserProps = {
  */
 export function AssetBrowser({ assets = [] }: AssetBrowserProps) {
   const { t } = useTranslation()
-  const [affichage, setAffichage] = useState<AffichageAssets>('grille')
+  const affichage = useAssets(etat => etat.affichage)
   const defilement = useRef<HTMLDivElement>(null)
 
-  return (
-    <div className="bg-base flex h-full flex-col">
-      <div className="border-bordure flex h-8 shrink-0 items-center gap-0.5 border-b px-1.5">
-        <ToolButton
-          icone={mdiViewGridOutline}
-          libelle={t('assets.affichageGrille')}
-          infobulle={infobulle}
-          actif={affichage === 'grille'}
-          onClick={() => setAffichage('grille')}
-        />
-        <ToolButton
-          icone={mdiFormatListBulleted}
-          libelle={t('assets.affichageListe')}
-          infobulle={infobulle}
-          actif={affichage === 'liste'}
-          onClick={() => setAffichage('liste')}
-        />
-        <span className="text-texte-attenue ml-auto pr-1 text-[11px]">
-          {t('assets.compte', { count: assets.length })}
-        </span>
-      </div>
+  if (assets.length === 0) {
+    return <EtatVide icone={mdiImageMultipleOutline} message={t('assets.aucun')} />
+  }
 
-      {assets.length === 0 ? (
-        <EtatVide icone={mdiImageMultipleOutline} message={t('assets.aucun')} />
+  return (
+    <div ref={defilement} className="h-full overflow-auto p-2">
+      {affichage === 'grille' ? (
+        <GrilleAssets assets={assets} />
       ) : (
-        <div ref={defilement} className="min-h-0 flex-1 overflow-auto p-2">
-          {affichage === 'grille' ? (
-            <GrilleAssets assets={assets} />
-          ) : (
-            <ListeAssets assets={assets} conteneur={defilement} />
-          )}
-        </div>
+        <ListeAssets assets={assets} conteneur={defilement} />
       )}
     </div>
   )
@@ -85,7 +95,7 @@ function ListeAssets({
   conteneur,
 }: {
   assets: Asset[]
-  conteneur: React.RefObject<HTMLDivElement | null>
+  conteneur: RefObject<HTMLDivElement | null>
 }) {
   const virtualiseur = useVirtualizer({
     count: assets.length,
