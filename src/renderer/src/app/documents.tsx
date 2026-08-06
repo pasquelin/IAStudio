@@ -3,6 +3,7 @@ import type { IDockviewPanelProps } from 'dockview-react'
 import type { FC, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/panels/EmptyState'
+import { ImageDocument } from '@/spaces/image/ImageDocument'
 import { SceneDocument } from '@/spaces/three/SceneDocument'
 import { useDocuments } from '@/stores/documents'
 
@@ -14,7 +15,9 @@ export type DocumentPanelParams = { documentId: string }
  */
 export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps<DocumentPanelParams>>> = {
   home: () => <Home />,
-  image: props => <WithDocument id={props.params.documentId}>{() => <ImageStub />}</WithDocument>,
+  image: props => (
+    <WithDocument id={props.params.documentId}>{() => <ImageDocument />}</WithDocument>
+  ),
   scene: props => (
     <WithDocument id={props.params.documentId}>
       {() => <SceneDocument documentId={props.params.documentId} />}
@@ -37,8 +40,4 @@ function WithDocument({ id, children }: { id: string; children: () => ReactNode 
 
   if (!document) return <EmptyState icon={mdiFileOutline} message={t('documents.missing')} />
   return <>{children()}</>
-}
-
-function ImageStub() {
-  return <div className="size-full bg-white" />
 }

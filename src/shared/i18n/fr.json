@@ -136,6 +136,13 @@
     "new": "Nouveau document",
     "missing": "Ce document n’est plus ouvert."
   },
+  "imageTools": {
+    "brush": "Pinceau",
+    "eraser": "Gomme",
+    "select": "Sélection",
+    "crop": "Recadrer",
+    "text": "Texte"
+  },
   "sceneTools": {
     "translate": "Déplacer",
     "rotate": "Tourner",

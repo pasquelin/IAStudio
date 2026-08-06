@@ -136,6 +136,13 @@
     "new": "New document",
     "missing": "This document is no longer open."
   },
+  "imageTools": {
+    "brush": "Brush",
+    "eraser": "Eraser",
+    "select": "Selection",
+    "crop": "Crop",
+    "text": "Text"
+  },
   "sceneTools": {
     "translate": "Move",
     "rotate": "Rotate",
