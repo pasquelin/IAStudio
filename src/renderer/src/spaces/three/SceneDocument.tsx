@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { shortcutLabel, type CommandId } from '@shared/domain/shortcut'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { removeObject, selectObject, setTransform } from '@/engines/scene/commands'
@@ -6,13 +7,7 @@ import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useKeymap } from '@/stores/keymap'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
-import { SCENE_TOOLS, shortcutLabel } from './scene-tools'
-
-const MODE_BY_TOOL: Record<string, TransformMode> = {
-  translate: 'translate',
-  rotate: 'rotate',
-  scale: 'scale',
-}
+import { SCENE_TOOLS } from './scene-tools'
 
 export function SceneDocument({ documentId }: { documentId: string }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -56,12 +51,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setMode(mode)
   }, [mode])
 
-  useShortcuts({
-    enabled: true,
-    // Pushed on change, not polled: the engine restarts its own loop while something moves, so
-    // nothing has to tick when the keyboard is idle.
-    onMotionChange: held => engine.current?.setMotion(held),
-    onCommand: command => {
+  // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
+  // tool is declared once in `SCENE_TOOLS` and handled once here.
+  const run = useCallback(
+    (command: CommandId) => {
       const store = useScenes.getState()
       switch (command) {
         case 'scene.translate':
@@ -83,12 +76,21 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return store.redoScene(documentId)
       }
     },
+    [documentId],
+  )
+
+  useShortcuts({
+    enabled: true,
+    // Pushed on change, not polled: the engine restarts its own loop while something moves, so
+    // nothing has to tick when the keyboard is idle.
+    onMotionChange: held => engine.current?.setMotion(held),
+    onCommand: run,
   })
 
   const tools = SCENE_TOOLS.map(tool => ({
     ...tool,
     shortcut: shortcutLabel(bindings[tool.command]),
-    disabled: tool.id === 'delete' && scene.selectedId === null,
+    disabled: tool.command === 'scene.delete' && scene.selectedId === null,
   }))
 
   return (
@@ -99,14 +101,13 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         tools={tools}
         activeTool={mode}
         onTool={id => {
-          const next = MODE_BY_TOOL[id]
-          if (next) return setMode(next)
-          if (id === 'frame') return engine.current?.frameSelection()
-          if (id === 'delete' && scene.selectedId)
-            useScenes.getState().runCommand(documentId, removeObject(scene.selectedId))
+          const tool = SCENE_TOOLS.find(candidate => candidate.id === id)
+          if (tool) run(tool.command)
         }}
-        onUndo={() => useScenes.getState().undoScene(documentId)}
-        onRedo={() => useScenes.getState().redoScene(documentId)}
+        onUndo={() => run('scene.undo')}
+        onRedo={() => run('scene.redo')}
+        undoShortcut={shortcutLabel(bindings['scene.undo'])}
+        redoShortcut={shortcutLabel(bindings['scene.redo'])}
         canUndo={undoable}
         canRedo={redoable}
       />

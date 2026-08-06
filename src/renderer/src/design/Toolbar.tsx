@@ -30,6 +30,9 @@ export type ToolbarProps = {
   extras?: ReactNode
   onUndo?: () => void
   onRedo?: () => void
+  /** Shown on the undo/redo tooltips. Absent leaves them unlabelled rather than lying. */
+  undoShortcut?: string
+  redoShortcut?: string
   canUndo?: boolean
   canRedo?: boolean
   className?: string
@@ -51,6 +54,8 @@ export function Toolbar({
   extras,
   onUndo,
   onRedo,
+  undoShortcut,
+  redoShortcut,
   canUndo = false,
   canRedo = false,
   className,
@@ -103,7 +108,7 @@ export function Toolbar({
           <ToolButton
             icon={mdiUndo}
             label={t('actions.undo')}
-            shortcut="⌘Z"
+            shortcut={undoShortcut}
             tooltip={TIP_TOP}
             disabled={!canUndo}
             onClick={onUndo}
@@ -116,7 +121,7 @@ export function Toolbar({
           <ToolButton
             icon={mdiRedo}
             label={t('actions.redo')}
-            shortcut="⇧⌘Z"
+            shortcut={redoShortcut}
             tooltip={TIP_TOP}
             disabled={!canRedo}
             onClick={onRedo}
