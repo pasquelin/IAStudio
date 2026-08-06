@@ -1,9 +1,13 @@
 import { app, BrowserWindow, dialog, net } from 'electron'
+import { randomUUID } from 'node:crypto'
 import type { AuthState } from '@shared/domain/settings'
 import { EVENTS } from '@shared/ipc'
+import { createAssetCollector } from './assets/collector'
 import { assetFilePath, serveAssets } from './assets/protocol'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { broadcast } from './ipc/broadcast'
+import { createJobManager, type JobManager } from './scenario/job-manager'
+import { runnerOf } from './scenario/runner'
 import { createProjectStore, type ProjectStore } from './project/store'
 import { openNativeDatabase } from './project/sqlite-native'
 import { catalogOf } from './scenario/catalog'
@@ -17,6 +21,7 @@ export type Services = {
   settings: SettingsStore
   client: ClientProvider
   models: ModelRegistry
+  jobs: JobManager
   project: ProjectStore
   assets: LocalBackend
   pickFolder: () => Promise<string | null>
@@ -80,6 +85,22 @@ export function createServices(): Services {
     now: timestamp,
   })
 
+  const jobs = createJobManager({
+    runner: runnerOf(() => client.require()),
+    collect: createAssetCollector({
+      retrieve: async remoteAssetId =>
+        (await client.require().assets.retrieve(remoteAssetId)).asset,
+      backend: assets,
+      newId: () => `asset_${randomUUID()}`,
+    }),
+    concurrency: () => settings.read().generation.concurrentJobs,
+    maxRetries: () => settings.read().generation.maxRetries,
+    onProgress: progress => broadcast(EVENTS.jobProgress, progress),
+    now: timestamp,
+    newId: () => `job_${randomUUID()}`,
+    sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+  })
+
   serveAssets(assetId => {
     const current = project.current()
     if (!current) return null
@@ -97,6 +118,7 @@ export function createServices(): Services {
     settings,
     client,
     models,
+    jobs,
     project,
     assets,
     pickFolder,

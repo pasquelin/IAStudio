@@ -1,0 +1,259 @@
+import { isFinished, type Job, type JobProgress, type JobStatus } from '@shared/domain/job'
+import { failureOf } from './client'
+
+/** A job as the API returns it, reduced to what the studio reads. */
+export type RemoteJob = {
+  jobId: string
+  status: string
+  progress?: number
+  metadata?: { assetIds?: readonly string[] }
+}
+
+export type JobRunner = {
+  submit: (modelId: string, body: Record<string, unknown>) => Promise<RemoteJob>
+  poll: (jobId: string) => Promise<RemoteJob>
+  cancel: (jobId: string) => Promise<void>
+}
+
+/**
+ * Brings a finished job's outputs into the project. Separate from the runner because it is
+ * not an API call but a disk write — and because a job is not done until it lands.
+ */
+export type AssetCollector = (job: Job, remoteAssetIds: readonly string[]) => Promise<string[]>
+
+export type JobManagerDeps = {
+  runner: JobRunner
+  collect: AssetCollector
+  concurrency: () => number
+  maxRetries: () => number
+  onProgress: (progress: JobProgress) => void
+  now: () => string
+  newId: () => string
+  sleep: (ms: number) => Promise<void>
+  pollIntervalMs?: number
+  backoffBaseMs?: number
+}
+
+export type JobManager = {
+  submit: (modelId: string, label: string, body: Record<string, unknown>) => Job
+  cancel: (jobId: string) => Promise<void>
+  list: () => Job[]
+}
+
+const DEFAULT_POLL_INTERVAL_MS = 2000
+const DEFAULT_BACKOFF_BASE_MS = 1000
+
+/**
+ * The API knows eight statuses, the studio five. `warming-up` and `finalizing` are running
+ * states, not states of their own; an unknown one is treated as running, so a status Scenario
+ * adds keeps the job polling instead of declaring an outcome nobody understood.
+ */
+const STATUS: Record<string, JobStatus> = {
+  pending: 'queued',
+  queued: 'queued',
+  'warming-up': 'running',
+  'in-progress': 'running',
+  finalizing: 'running',
+  success: 'succeeded',
+  failure: 'failed',
+  canceled: 'cancelled',
+}
+
+export function jobStatusOf(remoteStatus: string): JobStatus {
+  return STATUS[remoteStatus] ?? 'running'
+}
+
+/** Only what a retry can fix. A 401 or a malformed body will fail identically forever. */
+function isRetryable(error: unknown): boolean {
+  const failure = failureOf(error)
+  return failure === 'rate-limited' || failure === 'server' || failure === 'network'
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : 'unexpected'
+}
+
+type Entry = {
+  job: Job
+  body: Record<string, unknown>
+  remoteId: string | null
+  cancelled: boolean
+}
+
+/**
+ * Owns the queue, the concurrency and the polling. The only place in the codebase that polls:
+ * `job.wait()` from the SDK reports no progress and gives up after two minutes, which a video
+ * generation exceeds on its own — see CLAUDE.md.
+ */
+export function createJobManager({
+  runner,
+  collect,
+  concurrency,
+  maxRetries,
+  onProgress,
+  now,
+  newId,
+  sleep,
+  pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
+  backoffBaseMs = DEFAULT_BACKOFF_BASE_MS,
+}: JobManagerDeps): JobManager {
+  const entries = new Map<string, Entry>()
+  const queue: string[] = []
+  let running = 0
+
+  const emit = (entry: Entry): void => {
+    const progress: JobProgress = {
+      id: entry.job.id,
+      status: entry.job.status,
+      progress: entry.job.progress,
+    }
+    if (entry.job.assetIds.length > 0) progress.assetIds = entry.job.assetIds
+    if (entry.job.error !== undefined) progress.error = entry.job.error
+    onProgress(progress)
+  }
+
+  const settle = (entry: Entry, status: JobStatus, error?: string): void => {
+    entry.job.status = status
+    entry.job.finishedAt = now()
+    if (status === 'succeeded') entry.job.progress = 1
+    if (error !== undefined) entry.job.error = error
+    emit(entry)
+  }
+
+  const withRetry = async <T>(action: () => Promise<T>): Promise<T> => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await action()
+      } catch (error) {
+        if (attempt >= maxRetries() || !isRetryable(error)) throw error
+        await sleep(backoffBaseMs * 2 ** attempt)
+      }
+    }
+  }
+
+  const advance = (entry: Entry, remote: RemoteJob): JobStatus => {
+    const status = jobStatusOf(remote.status)
+    const progress = remote.progress ?? entry.job.progress
+
+    // An outcome is announced by `settle` alone, and only once it is actually complete: a
+    // success emitted here would reach the jobs bar before the asset exists on disk.
+    if (isFinished(status)) return status
+
+    if (status !== entry.job.status || progress !== entry.job.progress) {
+      entry.job.status = status
+      entry.job.progress = progress
+      emit(entry)
+    }
+
+    return status
+  }
+
+  const execute = async (entry: Entry): Promise<void> => {
+    try {
+      const submitted = await withRetry(() => runner.submit(entry.job.modelId, entry.body))
+      entry.remoteId = submitted.jobId
+
+      // Cancelled while the submission was in flight: the remote job exists, so it must be
+      // told, otherwise it keeps burning credits with nobody watching.
+      if (entry.cancelled) {
+        await runner.cancel(submitted.jobId).catch(() => {})
+        settle(entry, 'cancelled')
+        return
+      }
+
+      let remote = submitted
+      let status = advance(entry, remote)
+
+      while (!isFinished(status)) {
+        await sleep(pollIntervalMs)
+        if (entry.cancelled) {
+          await runner.cancel(submitted.jobId).catch(() => {})
+          settle(entry, 'cancelled')
+          return
+        }
+
+        remote = await withRetry(() => runner.poll(submitted.jobId))
+        status = advance(entry, remote)
+      }
+
+      if (status !== 'succeeded') {
+        settle(entry, status, status === 'failed' ? 'job-failed' : undefined)
+        return
+      }
+
+      // Succeeded only once the files are on disk and indexed: announcing it earlier shows a
+      // finished job with nothing behind it in the asset browser.
+      entry.job.assetIds = await collect(entry.job, remote.metadata?.assetIds ?? [])
+      settle(entry, 'succeeded')
+    } catch (error) {
+      settle(entry, 'failed', messageOf(error))
+    }
+  }
+
+  const pump = (): void => {
+    while (running < concurrency()) {
+      const id = queue.shift()
+      if (id === undefined) return
+
+      const entry = entries.get(id)
+      if (!entry) continue
+
+      if (entry.cancelled) {
+        settle(entry, 'cancelled')
+        continue
+      }
+
+      running++
+      void execute(entry).finally(() => {
+        running--
+        pump()
+      })
+    }
+  }
+
+  return {
+    submit: (modelId, label, body) => {
+      const job: Job = {
+        id: newId(),
+        modelId,
+        label,
+        status: 'queued',
+        progress: 0,
+        createdAt: now(),
+        assetIds: [],
+      }
+
+      const entry: Entry = { job, body, remoteId: null, cancelled: false }
+      entries.set(job.id, entry)
+      queue.push(job.id)
+      emit(entry)
+      pump()
+
+      return job
+    },
+
+    cancel: async jobId => {
+      const entry = entries.get(jobId)
+      if (!entry || isFinished(entry.job.status)) return
+
+      entry.cancelled = true
+
+      // Never started: it leaves the queue and never reaches the API at all.
+      if (entry.remoteId === null && entry.job.status === 'queued') {
+        const position = queue.indexOf(jobId)
+        if (position >= 0) {
+          queue.splice(position, 1)
+          settle(entry, 'cancelled')
+        }
+        return
+      }
+
+      if (entry.remoteId !== null) await runner.cancel(entry.remoteId).catch(() => {})
+    },
+
+    list: () =>
+      [...entries.values()]
+        .map(entry => entry.job)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+  }
+}

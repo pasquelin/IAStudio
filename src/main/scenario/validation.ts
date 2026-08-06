@@ -18,6 +18,12 @@ export function parseModelId(value: unknown): string {
   return modelId.parse(value)
 }
 
+const jobId = z.string().trim().min(1)
+
+export function parseJobId(value: unknown): string {
+  return jobId.parse(value)
+}
+
 export function parseModelFamily(value: unknown): ModelFamily | undefined {
   return value === undefined ? undefined : family.parse(value)
 }
