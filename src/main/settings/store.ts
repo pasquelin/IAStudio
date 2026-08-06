@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
+import { salvagePartialSettings } from './validation'
 
 export type Credentials = {
   key: string
@@ -55,10 +56,8 @@ function parseCredentials(plain: string): Credentials | null {
 }
 
 export function createSettingsStore(adapter: PersistenceAdapter): SettingsStore {
-  const read = (): Settings => {
-    const stored = adapter.read<PartialSettings>(SETTINGS_KEY)
-    return stored ? merge(DEFAULT_SETTINGS, stored) : DEFAULT_SETTINGS
-  }
+  const read = (): Settings =>
+    merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
 
   /**
    * Reads without side effects. Unreadable credentials are reported, not deleted: erasing

@@ -1,30 +1,21 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { createSettingsStore, type PersistenceAdapter } from './store'
-
-function memoryAdapter(): PersistenceAdapter & { raw: Map<string, unknown> } {
-  const raw = new Map<string, unknown>()
-  return {
-    raw,
-    read: <T>(key: string) => raw.get(key) as T | undefined,
-    write: (key, value) => void raw.set(key, value),
-    remove: key => void raw.delete(key),
-    encrypt: plain => `enc:${plain}`,
-    decrypt: encrypted => {
-      if (!encrypted.startsWith('enc:')) throw new Error('unreadable')
-      return encrypted.slice(4)
-    },
-  }
-}
+import { memoryAdapter, type MemoryAdapter } from './memory-adapter'
+import { createSettingsStore } from './store'
 
 describe('settings store', () => {
-  let adapter: ReturnType<typeof memoryAdapter>
+  let adapter: MemoryAdapter
 
   beforeEach(() => {
     adapter = memoryAdapter()
   })
 
   it('returns the defaults when nothing is stored', () => {
+    expect(createSettingsStore(adapter).read()).toEqual(DEFAULT_SETTINGS)
+  })
+
+  it('falls back to the defaults when the stored settings are unusable', () => {
+    adapter.raw.set('settings', { appearance: { theme: 'purple' } })
     expect(createSettingsStore(adapter).read()).toEqual(DEFAULT_SETTINGS)
   })
 
