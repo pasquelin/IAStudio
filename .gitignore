@@ -6,3 +6,5 @@ release/
 *.log
 secrets/
 .playwright-mcp/
+docs/
+CLAUDE.md

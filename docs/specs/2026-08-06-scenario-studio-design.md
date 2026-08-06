@@ -1,4 +1,4 @@
-# Scenaria Studio — conception
+# Scenario Studio — conception
 
 **Date** : 6 août 2026
 **État** : validé, prêt pour la planification d'implémentation
@@ -104,7 +104,7 @@ déplacement entre groupes, le split et le détachement en fenêtre.
 │  ScenarioClient   @scenario-labs/sdk                          │
 │  ModelRegistry    cache des schémas GET /models/{id}           │
 │  JobManager       file · job.wait() · progression → events     │
-│  ProjectStore     dossier .scenaria · catalog.db · watcher     │
+│  ProjectStore     dossier .scenario · catalog.db · watcher     │
 │  AssetStore       LocalBackend | ScenarioCloudBackend          │
 │  MediaService     ffmpeg · sondes · vignettes                  │
 │  SettingsStore    safeStorage OS pour les secrets              │
@@ -155,7 +155,7 @@ donné, pour éviter deux historiques undo divergents sur la même chose.
 ### Le projet
 
 ```
-MonProjet.scenaria/
+MonProjet.scenario/
 ├── project.json          manifest : nom, version, réglages du projet
 ├── assets/
 │   ├── img/  3d/  tex/  vid/  aud/  sky/
@@ -277,7 +277,7 @@ C'est une décision de métier, pas d'esthétique.
 Menu applicatif et raccourcis système · dialogues open/save natifs · glisser-déposer depuis
 le Finder **et vers** le Finder (`webContents.startDrag`) · progression des jobs sur l'icône
 du Dock · notification à la fin d'un job long · `setDocumentEdited` et documents récents ·
-protocole `scenaria://` · position et taille des fenêtres restaurées.
+protocole `scenario://` · position et taille des fenêtres restaurées.
 
 **Écartés** : vibrancy, imitation des contrôles système, barre de titre native.
 
@@ -443,7 +443,7 @@ le renderer demande « suis-je authentifié ? », pas « quelle est ma clé ? »
 ## 10. Arborescence
 
 ```
-scenaria/
+scenario/
 ├── CLAUDE.md
 ├── electron.vite.config.ts · electron-builder.yml
 ├── docs/

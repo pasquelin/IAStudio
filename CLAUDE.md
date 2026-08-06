@@ -1,10 +1,10 @@
-# CLAUDE.md — Scenaria Studio
+# CLAUDE.md — Scenario Studio
 
 Guide pour Claude Code (claude.ai/code) sur ce dépôt.
 
 ## Nature du projet
 
-**Scenaria Studio** — logiciel de création desktop **Electron + React 19 + TypeScript**, bâti
+**Scenario Studio** — logiciel de création desktop **Electron + React 19 + TypeScript**, bâti
 sur l'**API Scenario** (`docs.scenario.com`). Génération et édition d'images, vidéos, modèles
 3D, audio, textures et skyboxes, dans un shell à docks façon VSCode/DaVinci.
 
@@ -13,7 +13,7 @@ d'ASCII dégradé. Les noms d'API, identifiants et clés techniques restent en a
 
 Gestionnaire de paquets : **pnpm**.
 
-Conception de référence : [`docs/specs/2026-08-06-scenaria-studio-design.md`](docs/specs/2026-08-06-scenaria-studio-design.md).
+Conception de référence : [`docs/specs/2026-08-06-scenario-studio-design.md`](docs/specs/2026-08-06-scenario-studio-design.md).
 La lire avant toute décision d'architecture.
 
 ---
@@ -177,6 +177,20 @@ métier. Ne pas la « améliorer ».
   Ne jamais lancer une rafale non bornée.
 
 ---
+
+## Definition of done — non négociable
+
+Une étape n'est **pas livrée** tant que ces cinq points ne sont pas faits, dans l'ordre :
+
+1. **Les tests unitaires accompagnent le code**, dans le même mouvement. Pas de « on testera
+   après ». Fichiers `*.test.ts` colocalisés.
+2. `pnpm validate` **vert** — typecheck, lint, format, tests.
+3. **`/simplify`** — passe de réutilisation, simplification, altitude.
+4. **`/code-review`** — revue automatique, corrections retenues appliquées.
+5. Seulement alors, annoncer la livraison.
+
+Ne pas demander l'autorisation de lancer les points 3 et 4 : ils font partie du travail.
+Annoncer « c'est fait » sans les avoir passés est une livraison invalide.
 
 ## Commandes
 
