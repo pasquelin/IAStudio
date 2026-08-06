@@ -26,7 +26,8 @@
     "@mdi/react": "^1.6.1",
     "@scenario-labs/sdk": "^2.7.0",
     "better-sqlite3": "^13.0.3",
-    "electron-store": "^11.0.2"
+    "electron-store": "^11.0.2",
+    "three": "0.185.1"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
@@ -42,6 +43,7 @@
     "@types/node": "^24.9.1",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "0.185.4",
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.10",
     "daisyui": "^5.7.16",
