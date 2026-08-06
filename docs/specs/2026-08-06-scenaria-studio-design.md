@@ -283,7 +283,145 @@ protocole `scenaria://` · position et taille des fenêtres restaurées.
 
 ---
 
-## 8. Les réglages
+## 8. Outils, historique et lecture
+
+### 8.1 La barre d'outils — reprise de `map3D`
+
+**Un seul composant**, dans `design/`, partagé par les six espaces. Chaque espace ne fournit
+que son registre d'outils. Repris de `map3D` :
+
+| Mécanisme | Usage ici |
+|---|---|
+| `ToolButton` — icône `@mdi/js`, état actif, tooltip et `aria-label` porteurs du raccourci | Tous les outils. Un bouton sans nom accessible reste impossible. |
+| Sections en **slots** (`components: SlotConfig`) : `false` masque, ReactNode remplace | Un espace masque ce qui ne le concerne pas sans forker la barre |
+| **Flyouts de modes** — un seul mode = pas de flyout, le bouton agit directement | Sélection rect/lasso/baguette, pinceau/gomme, translate/rotate/scale |
+| `extraTools` | Les outils IA sont des outils normaux, pas des boutons flottants |
+| `useFitColumns` — compactage puis passage en colonnes | Indispensable : un panneau docké se redimensionne sans cesse |
+| `--sc-bar-scale` — géométrie proportionnelle | Branché sur le réglage de densité |
+| Deux profondeurs d'ombre : *meuble* / *surface flottante* | Règle reprise telle quelle |
+| Panneaux ancrés portés à la racine, jamais rendus dans la barre | `backdrop-filter` sur la barre en ferait une racine de fond |
+
+Deux adaptations : le `backdrop-filter: blur()` n'est conservé **que** pour les surfaces
+flottant au-dessus d'un canvas ou d'un viewport — dans un dock sur fond opaque il ne fait que
+coûter de la composition par frame. Et les boutons passent de 38 px à **28 px confort /
+24 px compact** : un studio empile bien plus d'outils qu'une carte.
+
+### 8.2 L'espace 3D et l'éditeur three.js
+
+L'éditeur officiel (`mrdoob/three.js/editor/`) **n'est pas une bibliothèque** : pas de
+`package.json`, absent du paquet npm `three`, JavaScript non typé avec son propre constructeur
+de DOM (`libs/ui.js`) et son bus `signals`. Il n'est donc pas importable. Il est en revanche
+sous licence MIT, et sa structure est excellente.
+
+**Repris** : les 24 commandes de `js/commands/` (`AddObject`, `RemoveObject`, `MoveObject`,
+`SetPosition/Rotation/Scale`, `SetMaterial*`, `SetGeometry`, `MultiCmds`…), réimplémentées en
+TypeScript — c'est le vrai apport ; la structure `Sidebar.Object/.Geometry/.Material` pour
+notre inspecteur ; `Loader.js` pour les formats et leurs pièges ; le modèle `Editor` +
+`Selector` pour le `SceneEngine`.
+
+**Écarté** : `libs/ui.js`, le CSS, `Player`/`Script`.
+
+L'essentiel de ce qui *se voit* dans cet éditeur vient d'addons présents, eux, dans le paquet
+npm : `TransformControls` (gizmos), `ViewHelper` (trièdre), `OrbitControls`, `GLTFLoader` +
+`DRACOLoader` + `KTX2Loader`, `RGBELoader` + `PMREMGenerator`, `GLTFExporter`, `USDZExporter`.
+
+### 8.3 L'historique — par grande section
+
+Le mécanisme est générique dans `engines/core/history.ts` ; **chaque grande section instancie
+le sien**. `⌘Z` annule la dernière action de la section active, quel que soit l'onglet.
+
+Modèle **Command**, pas snapshot : contrairement à `map3D` dont les états sont petits, ici une
+pile de calques 4K ou un mesh de 200 000 triangles interdit de photographier l'état à chaque
+action. Chaque moteur déclare ses commandes ; l'historique est générique. On en tire
+gratuitement l'historique visible façon Photoshop et le regroupement d'actions.
+
+**Règle qui rend la portée « par section » lisible** : chaque commande porte le document
+qu'elle touche, et si l'undo vise un autre document que celui affiché, **l'onglet
+correspondant est activé avant d'annuler**. On voit toujours ce qu'on défait.
+
+### 8.4 L'espace Image — calques et masques
+
+| Rapide | Moyen |
+|---|---|
+| Calques (ordre, opacité, visibilité, verrouillage, groupes) · modes de fusion GPU · **masques de calque et d'écrêtage** · pinceau/gomme/seau sur `RenderTexture` · ajustements non destructifs (luminosité, contraste, saturation, teinte, courbes, LUT) · recadrage, retournement, rotation, redimensionnement · formes, texte, pipette, zoom/pan | Sélection rectangle et lasso (deviennent des masques) · **poignées de transformation** (Pixi ne fournit pas de Transformer) · règles, guides, magnétisme |
+
+Outils fournis par l'API sans les écrire : `segment` (baguette magique), `patch-image`
+(inpainting), `reframe` (outpainting), `remove-background`, `restyle`, `upscale`, `pixelate`,
+`vectorize`.
+
+**Le principe qui relie l'éditeur et l'IA** : le masque de calque et le masque d'inpainting
+sont le même objet. On peint un masque au pinceau, on demande à régénérer la zone, le masque
+part vers `patch-image`, le résultat revient comme nouveau calque. Aucun export intermédiaire.
+
+### 8.5 L'espace Textures — un matériau, pas une image
+
+Un `.tex` est un **matériau PBR** : albedo, normal, roughness, metalness, AO, height.
+
+- **Les canaux dérivés se calculent en local**, pas par l'IA : normal depuis height (Sobel en
+  shader), AO depuis height, roughness depuis luminance. Instantané, gratuit, hors ligne.
+  L'IA génère l'albedo (`texture`, ou n'importe quelle image de l'espace Image).
+- **L'aperçu utilise le HDRI courant de l'espace Skyboxes** — une texture jugée sous le mauvais
+  éclairage ne veut rien dire, et ça crée le lien Skyboxes → Textures → 3D sans effort.
+- Tiling : aperçu en répétition 3 × 3, détection de coutures, action « rendre raccordable ».
+
+### 8.6 L'espace Video — deux moniteurs
+
+**Convention Premiere/DaVinci** : source à gauche, programme à droite.
+
+```
+┌────────────────┬─────────────────┐
+│    SOURCE      │     FINAL       │
+│  (rush + cuts) │   (montage)     │
+│ ▶ ▐▐ ■ [┐──┘]  │  ▶ ▐▐ ■  00:42  │
+├────────────────┴─────────────────┤
+│ V2 ▓▓▓▓    ▓▓▓▓▓▓▓▓              │
+│ V1 ▓▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓▓▓    │
+│ A1 ▁▂▄▆█▆▄▂▁▂▄▆█▆▄▂▁             │
+└──────────────────────────────────┘
+```
+
+### 8.7 Un seul lecteur à la fois
+
+Règle globale à toute l'application, pas seulement à la vidéo. Un `PlaybackManager` détient un
+**jeton de lecture unique** : moniteur source, moniteur programme, aperçu audio, vignette
+animée et plein écran le prennent tour à tour, et le prendre révoque son détenteur précédent.
+
+Sans cela : deux flux audibles en même temps, deux décodeurs matériels qui se disputent le GPU,
+et un scrubbing qui saccade sans cause apparente.
+
+Le plein écran prend le jeton comme les autres — il coupe donc naturellement ce qui jouait,
+mais **mémorise la position de lecture interrompue** pour la reprendre en sortant. En
+multi-fenêtres, le jeton est **arbitré par le main** : une lecture lancée sur un écran arrête
+celle de l'autre.
+
+### 8.8 Le budget de calcul — où s'exécute quoi
+
+**Le thread UI ne fait que de l'UI.** Toute opération susceptible de dépasser 16 ms part
+ailleurs. C'est la règle qui décide, pas le confort d'écriture.
+
+| Exécution | Ce qui y va | Pourquoi |
+|---|---|---|
+| **GPU (shaders)** | filtres et ajustements d'image, blend de calques, normal map par Sobel, AO, occlusion, redimensionnement, aperçu de tiling | Premier réflexe : ne jamais mettre sur CPU ce que le GPU fait par pixel et gratuitement |
+| **Web Worker (renderer)** | vignettes, waveforms audio, construction de BVH (`three-mesh-bvh`), parsing de gros GLB, sérialisation d'états lourds, décodage d'images via `createImageBitmap` | Ce sont des calculs JS longs : sur le thread UI ils gèlent la fenêtre |
+| **OffscreenCanvas + Worker** | rendu de vignettes 3D (`mesh-preview`), export d'images, génération de planches de contact | Rendre sans bloquer, et sans monopoliser le viewport visible |
+| **WebAssembly** | Draco, KTX2/Basis, démultiplexage `mediabunny` | Déjà wasm chez leurs auteurs. **Rien n'est embarqué « au cas où »** : chaque wasm doit justifier son poids |
+| **`utilityProcess` Electron** | ffmpeg (export, transcodage, extraction de vignettes), indexation et scan de dossiers, hachage, transferts d'assets | API Electron dédiée aux tâches Node longues, avec IPC intégré — préférée à `child_process` |
+
+**Deux pièges nommés :**
+
+- **`better-sqlite3` est synchrone.** Une requête lourde exécutée dans le process main bloque
+  la gestion des fenêtres — donc toute l'interface, y compris les fenêtres détachées. Les
+  requêtes de catalogue non triviales passent par un `worker_threads` Node.
+- **WebCodecs décode en matériel, mais le nombre de décodeurs est limité.** C'est la raison
+  technique de la règle du lecteur unique (§ 8.7), pas seulement le confort sonore.
+
+**Discipline commune à toute tâche longue** : elle est **annulable**, elle **rapporte sa
+progression**, et elle s'exécute dans un **pool borné** (`hardwareConcurrency − 2`). Une tâche
+qu'on ne peut ni suivre ni interrompre est un bug d'ergonomie, pas une tâche lourde.
+
+---
+
+## 9. Les réglages
 
 Fenêtre native dédiée, ouverte par `⌘,`. Les réglages *du projet* restent un panneau du shell.
 
@@ -302,7 +440,7 @@ le renderer demande « suis-je authentifié ? », pas « quelle est ma clé ? »
 
 ---
 
-## 9. Arborescence
+## 10. Arborescence
 
 ```
 scenaria/
@@ -345,7 +483,7 @@ colocalisés en `*.test.ts`.
 
 ---
 
-## 10. Dépendances
+## 11. Dépendances
 
 | Domaine | Paquets |
 |---|---|
@@ -366,7 +504,7 @@ point-virgule, `printWidth` 100, `arrowParens: avoid`. Alias `@/`. TypeScript st
 
 ---
 
-## 11. Risques identifiés
+## 12. Risques identifiés
 
 | Risque | Traitement |
 |---|---|
@@ -374,12 +512,15 @@ point-virgule, `printWidth` 100, `arrowParens: avoid`. Alias `@/`. TypeScript st
 | Schémas de modèles imprévisibles | `kind` inconnu → saisie brute, jamais de formulaire vide |
 | Débit de l'API inconnu (aucun seuil publié) | Backoff exponentiel, concurrence bornée et réglable |
 | `better-sqlite3` est natif → recompilation Electron | `electron-rebuild` câblé dès le premier commit |
+| `better-sqlite3` est **synchrone** → bloque le main, donc toutes les fenêtres | Requêtes de catalogue non triviales dans un `worker_threads` |
+| Décodeurs matériels WebCodecs en nombre limité | Règle du lecteur unique arbitrée par le main (§ 8.7) |
+| Une tâche longue non annulable gèle l'usage sans geler l'UI | Toute tâche longue est annulable et rapporte sa progression (§ 8.8) |
 | Deux fenêtres éditant le même document | Un seul détenteur du focus d'édition par document |
 | Poids du binaire (ffmpeg + Electron) | Assumé : c'est le prix d'un logiciel qui s'installe et fonctionne |
 
 ---
 
-## 12. Ce qu'on ne construit pas
+## 13. Ce qu’on ne construit pas
 
 À dire explicitement, pour que ce soit un choix et pas un oubli :
 

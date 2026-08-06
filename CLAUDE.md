@@ -79,6 +79,24 @@ inconnu se rend en saisie brute — jamais de formulaire qui disparaît.
 
 ---
 
+### 6. Le thread UI ne fait que de l'UI
+
+Toute opération susceptible de dépasser 16 ms part ailleurs. Dans l'ordre du réflexe :
+
+1. **GPU** — filtres, blend, normal map, AO, redimensionnement. Ne jamais mettre sur CPU ce
+   que le GPU fait par pixel.
+2. **Web Worker** — vignettes, waveforms, BVH, parsing de gros GLB, sérialisation lourde.
+3. **OffscreenCanvas + Worker** — rendus hors écran (vignettes 3D, exports).
+4. **`utilityProcess`** — ffmpeg, indexation, hachage, transferts. Préféré à `child_process`.
+
+Toute tâche longue est **annulable**, **rapporte sa progression**, et tourne dans un pool
+borné à `hardwareConcurrency − 2`.
+
+**`better-sqlite3` est synchrone** : une requête lourde dans le main bloque toutes les
+fenêtres. Les requêtes de catalogue non triviales passent par `worker_threads`.
+
+Aucun wasm n'est embarqué « au cas où » : chaque dépendance wasm doit justifier son poids.
+
 ## TypeScript
 
 - **Zéro `any`** : `unknown` + type guards, génériques, ou types précis.
@@ -208,3 +226,6 @@ qu'une autre session a mis en attente.
 | Un formulaire de génération est vide | Un `kind` inconnu a fait échouer le descripteur au lieu de retomber en saisie brute |
 | 429 en rafale | Concurrence du `JobManager` contournée par un appel direct au SDK |
 | Deux historiques undo divergents | Deux fenêtres détiennent le focus d'édition du même document |
+| L'interface gèle pendant une recherche d'assets | Requête `better-sqlite3` restée sur le main au lieu d'un `worker_threads` |
+| Le scrubbing saccade sans raison | Plusieurs lecteurs actifs : le jeton du `PlaybackManager` a été contourné |
+| `⌘Z` semble ne rien faire | L'action visée appartient à un autre onglet : l'onglet doit être activé avant d'annuler |
