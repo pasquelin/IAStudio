@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+@plugin 'daisyui' {
+  themes: false;
+}
+
+@theme {
+  --color-base: #121212;
+  --color-surface: #1d1f27;
+  --color-elevated: #252833;
+  --color-bordure: #2f333f;
+  --color-accent: #3c5ccf;
+  --color-danger: #ff715b;
+  --color-texte: #f8efe6;
+  --color-texte-attenue: #8b8d98;
+
+  --radius-sc-sm: 4px;
+  --radius-sc-md: 6px;
+  --radius-sc-lg: 8px;
+
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+:root {
+  /* Densité : piloté par le réglage d'apparence, lu par toutes les primitives. */
+  --sc-controle: 28px;
+  --sc-bar-scale: 1;
+  --sc-ombre-meuble: 0 1px 2px rgb(0 0 0 / 0.4);
+  --sc-ombre-flottante: 0 8px 24px rgb(0 0 0 / 0.55);
+}
+
+:root[data-densite='compact'] {
+  --sc-controle: 24px;
+}
+
+html,
+body,
+#racine {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-base);
+  color: var(--color-texte);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  /* Un studio ne défile pas : chaque panneau gère son propre débordement. */
+  overflow: hidden;
+  user-select: none;
+}

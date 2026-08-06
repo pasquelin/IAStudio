@@ -1,0 +1,7 @@
+allowBuilds:
+  better-sqlite3: true
+  electron: true
+  electron-winstaller: false
+  esbuild: true
+minimumReleaseAgeExclude:
+  - immer@11.1.16
