@@ -131,7 +131,10 @@
     "fewer": "Moins de filtres"
   },
   "documents": {
-    "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer."
+    "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer.",
+    "untitled": "Sans titre {{n}}",
+    "new": "Nouveau document",
+    "missing": "Ce document n’est plus ouvert."
   },
   "project": {
     "none": "Aucun projet ouvert",

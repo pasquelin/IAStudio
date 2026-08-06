@@ -131,7 +131,10 @@
     "fewer": "Fewer filters"
   },
   "documents": {
-    "none": "No document open. Generate or open an asset to get started."
+    "none": "No document open. Generate or open an asset to get started.",
+    "untitled": "Untitled {{n}}",
+    "new": "New document",
+    "missing": "This document is no longer open."
   },
   "project": {
     "none": "No project open",
