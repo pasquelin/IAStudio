@@ -12,7 +12,12 @@ describe('ToolButton', () => {
 
   it('garde le même nommage avec une infobulle', () => {
     render(
-      <ToolButton icone={mdiPencil} libelle="Pinceau" raccourci="B" infobulle={infobulleSimple()} />,
+      <ToolButton
+        icone={mdiPencil}
+        libelle="Pinceau"
+        raccourci="B"
+        infobulle={infobulleSimple()}
+      />,
     )
     expect(screen.getByRole('button', { name: 'Pinceau (B)' })).toBeInTheDocument()
   })

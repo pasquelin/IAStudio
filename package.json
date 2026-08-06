@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "start": "electron-vite dev --watch",
     "build": "pnpm typecheck && electron-vite build",
     "dist": "pnpm build && electron-builder",
     "preview": "electron-vite preview",
@@ -18,7 +18,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "validate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "docs:scenario": "bash scripts/fetch-scenario-docs.sh",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3"
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
+    "dev": "electron-vite dev --watch"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
@@ -50,6 +51,7 @@
     "electron-vite": "^5.0.0",
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "i18next": "^26.3.6",
     "immer": "^11.1.16",
     "jsdom": "^28.0.1",
     "prettier": "^3.9.6",
@@ -57,6 +59,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.84.0",
+    "react-i18next": "^17.0.11",
     "react-toastify": "^11.1.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",

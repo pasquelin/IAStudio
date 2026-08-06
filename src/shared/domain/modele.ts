@@ -36,14 +36,7 @@ export type DescripteurChamp = {
 }
 
 export type FamilleModele =
-  | 'image'
-  | 'video'
-  | '3d'
-  | 'audio'
-  | 'upscale'
-  | 'detourage'
-  | 'vectorisation'
-  | 'autre'
+  'image' | 'video' | '3d' | 'audio' | 'upscale' | 'detourage' | 'vectorisation' | 'autre'
 
 export type ResumeModele = {
   id: string

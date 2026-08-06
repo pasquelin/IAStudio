@@ -29,7 +29,15 @@ export default defineConfig([
   },
   {
     files: ['src/renderer/**/*.{ts,tsx}'],
-    extends: [reactHooks.configs.recommended],
+    // `configs.recommended` reste au format legacy (plugins en tableau) ; seul
+    // `configs.flat.*` est utilisable en configuration à plat.
+    extends: [reactHooks.configs.flat['recommended-latest']],
+    rules: {
+      // Signale que le React Compiler renonce à mémoïser un composant utilisant une
+      // bibliothèque tierce (react-virtual, react-i18next). C'est un constat, pas un défaut :
+      // la seule façon de le lever serait de renoncer à ces bibliothèques.
+      'react-hooks/incompatible-library': 'off',
+    },
   },
   {
     files: ['**/*.test.{ts,tsx}'],

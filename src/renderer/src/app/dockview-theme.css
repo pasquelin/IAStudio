@@ -1,0 +1,31 @@
+/*
+ * Habillage Dockview aux jetons du studio. Dockview expose ses couleurs en variables CSS :
+ * on les redirige plutôt que de surcharger ses sélecteurs, qui changent de version en version.
+ */
+.dv-dockview {
+  --dv-background-color: var(--color-base);
+  --dv-group-view-background-color: var(--color-base);
+
+  --dv-tabs-and-actions-container-background-color: var(--color-surface);
+  --dv-tabs-container-scrollbar-color: var(--color-bordure);
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(--color-base);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-surface);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-base);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-surface);
+
+  --dv-activegroup-visiblepanel-tab-color: var(--color-texte);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-texte-attenue);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-texte-attenue);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-texte-attenue);
+
+  --dv-separator-border: var(--color-bordure);
+  --dv-paneview-header-border-color: var(--color-bordure);
+  --dv-tab-divider-color: var(--color-bordure);
+
+  --dv-drag-over-background-color: rgb(60 92 207 / 0.18);
+  --dv-drag-over-border-color: var(--color-accent);
+
+  --dv-tabs-and-actions-container-height: 32px;
+  --dv-tabs-and-actions-container-font-size: 12px;
+}

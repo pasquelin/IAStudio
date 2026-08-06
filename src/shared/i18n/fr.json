@@ -1,0 +1,110 @@
+{
+  "application": {
+    "nom": "Scenario Studio"
+  },
+  "espaces": {
+    "image": "Image",
+    "video": "Vidéo",
+    "3d": "3D",
+    "audio": "Audio",
+    "textures": "Textures",
+    "skyboxes": "Skyboxes",
+    "navigation": "Espaces de travail"
+  },
+  "panneaux": {
+    "explorateur": "Explorateur",
+    "generateur": "Génération",
+    "assets": "Assets",
+    "taches": "Tâches"
+  },
+  "actions": {
+    "annuler": "Annuler",
+    "retablir": "Rétablir",
+    "generer": "Générer",
+    "arreter": "Arrêter",
+    "fermer": "Fermer",
+    "valider": "Valider",
+    "parcourir": "Parcourir…",
+    "reessayer": "Réessayer"
+  },
+  "generation": {
+    "modele": "Modèle",
+    "choisirModele": "Choisir un modèle",
+    "aucunModele": "Aucun modèle disponible",
+    "chargementModeles": "Chargement des modèles…",
+    "parametres": "Paramètres",
+    "aucunParametre": "Ce modèle n’attend aucun paramètre.",
+    "graineAleatoire": "Aléatoire"
+  },
+  "taches": {
+    "titre": "Tâches",
+    "aucune": "Aucune tâche en cours.",
+    "statut": {
+      "en-file": "En file",
+      "en-cours": "En cours",
+      "reussi": "Terminée",
+      "echoue": "Échouée",
+      "annule": "Annulée"
+    }
+  },
+  "assets": {
+    "titre": "Assets",
+    "aucun": "Aucun asset. Générez quelque chose pour commencer.",
+    "rechercher": "Rechercher…",
+    "affichageGrille": "Icônes",
+    "affichageListe": "Liste",
+    "compte": "{{count}} asset",
+    "compte_other": "{{count}} assets"
+  },
+  "projet": {
+    "aucun": "Aucun projet ouvert",
+    "creer": "Créer un projet",
+    "ouvrir": "Ouvrir un projet",
+    "nomParDefaut": "Nouveau projet"
+  },
+  "authentification": {
+    "titre": "Connexion à Scenario",
+    "cle": "Clé API",
+    "secret": "Secret API",
+    "connecter": "Se connecter",
+    "connecte": "Connecté",
+    "deconnecter": "Se déconnecter",
+    "explication": "Vos identifiants sont chiffrés par le trousseau du système et ne quittent jamais votre machine."
+  },
+  "erreurs": {
+    "identifiantsInvalides": "Clé ou secret API invalide.",
+    "accesRefuse": "Cette clé API n’a pas les droits requis.",
+    "introuvable": "Ressource introuvable.",
+    "tropDeRequetes": "Trop de requêtes. Nouvelle tentative en cours…",
+    "serveur": "Le service Scenario est momentanément indisponible.",
+    "reseau": "Impossible de joindre Scenario. Vérifiez votre connexion.",
+    "inattendue": "Une erreur inattendue est survenue."
+  },
+  "menu": {
+    "fichier": "Fichier",
+    "edition": "Édition",
+    "creer": "Créer",
+    "fenetre": "Fenêtre",
+    "aide": "Aide",
+    "nouveauProjet": "Nouveau projet…",
+    "ouvrirProjet": "Ouvrir un projet…",
+    "projetsRecents": "Projets récents",
+    "reglages": "Réglages…",
+    "quitter": "Quitter"
+  },
+  "reglages": {
+    "titre": "Réglages",
+    "compte": "Compte",
+    "apparence": "Apparence",
+    "generation": "Génération",
+    "stockage": "Stockage",
+    "langue": "Langue",
+    "theme": "Thème",
+    "themeSombre": "Sombre",
+    "themeClair": "Clair",
+    "densite": "Densité",
+    "densiteCompact": "Compact",
+    "densiteConfort": "Confort",
+    "tachesSimultanees": "Tâches simultanées"
+  }
+}

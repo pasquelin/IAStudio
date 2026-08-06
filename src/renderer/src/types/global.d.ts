@@ -6,7 +6,6 @@ declare global {
    * qu'en augmentation de `Window` : la convention du projet interdit `interface`, et
    * seul le declaration merging d'interface permet d'étendre `Window`.
    */
-  // eslint-disable-next-line no-var
   var studio: PontStudio
 }
 

@@ -1,11 +1,7 @@
 import type { Asset, RequeteAssets } from './domain/asset'
 import type { DescripteurModele, FamilleModele, ResumeModele } from './domain/modele'
 import type { Projet } from './domain/projet'
-import type {
-  EtatAuthentification,
-  Reglages,
-  ReglagesPartiels,
-} from './domain/reglages'
+import type { EtatAuthentification, Reglages, ReglagesPartiels } from './domain/reglages'
 import type { ProgressionTache, Tache } from './domain/tache'
 
 /**

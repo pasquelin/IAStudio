@@ -8,6 +8,8 @@ secrets/
 .playwright-mcp/
 # Doc externe régénérable (pnpm docs:scenario) — pas de la doc de projet
 docs/scenario-api/
+docs/specs
+docs/superpowers
 CLAUDE.md
 .idea/
 .vscode/

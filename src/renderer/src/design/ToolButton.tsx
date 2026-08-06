@@ -53,8 +53,8 @@ export function ToolButton({
       aria-pressed={actif}
       className={cn(
         'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-(--radius-sc-md)',
-        'size-(--sc-controle) border-none bg-transparent text-texte outline-none',
-        'transition-colors hover:bg-elevated focus-visible:ring-1 focus-visible:ring-accent',
+        'text-texte size-(--sc-controle) border-none bg-transparent outline-none',
+        'hover:bg-elevated focus-visible:ring-accent transition-colors focus-visible:ring-1',
         'disabled:cursor-not-allowed disabled:opacity-40',
         actif && 'bg-accent/20 text-accent',
         className,

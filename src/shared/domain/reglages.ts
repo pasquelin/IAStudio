@@ -34,6 +34,4 @@ export type ReglagesPartiels = {
   stockage?: Partial<Reglages['stockage']>
 }
 
-export type EtatAuthentification =
-  | { authentifie: true }
-  | { authentifie: false; raison?: string }
+export type EtatAuthentification = { authentifie: true } | { authentifie: false; raison?: string }
