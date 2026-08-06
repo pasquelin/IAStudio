@@ -1,3 +1,4 @@
+import { registerScenarioHandlers } from '@main/scenario/handlers'
 import { registerSettingsHandlers } from '@main/settings/handlers'
 import { registerWindowControls } from '@main/window/controls'
 import type { Services } from '@main/services'
@@ -6,4 +7,5 @@ import type { Services } from '@main/services'
 export function registerIpc(services: Services): void {
   registerWindowControls()
   registerSettingsHandlers(services)
+  registerScenarioHandlers(services)
 }

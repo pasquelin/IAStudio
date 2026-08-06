@@ -42,7 +42,13 @@ export type ModelSummary = {
   id: string
   name: string
   family: ModelFamily
-  provider: string
+  /**
+   * Where the model comes from — `scenario`, `civitai`, `huggingface`, … Left a plain string
+   * rather than a union: the API adds values without warning, and an unknown origin must not
+   * make a model disappear from the picker.
+   */
+  source: string
+  description?: string
   thumbnail?: string
 }
 
