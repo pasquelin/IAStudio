@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import type { MenuCommand } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
+import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { useTools } from '@/stores/tools'
 
@@ -13,9 +14,10 @@ function runCommand(command: MenuCommand): void {
       useSettings.getState().openAccountDialog()
       return
     case 'project:new':
+      void useProject.getState().createPicked()
+      return
     case 'project:open':
-      // Not wired yet: the project store has no IPC handler. The menu entries are disabled
-      // in the main process so the user never reaches this branch.
+      void useProject.getState().openPicked()
       return
   }
 }

@@ -1,3 +1,4 @@
+import { registerProjectHandlers } from '@main/project/handlers'
 import { registerScenarioHandlers } from '@main/scenario/handlers'
 import { registerSettingsHandlers } from '@main/settings/handlers'
 import { registerWindowControls } from '@main/window/controls'
@@ -8,4 +9,5 @@ export function registerIpc(services: Services): void {
   registerWindowControls()
   registerSettingsHandlers(services)
   registerScenarioHandlers(services)
+  registerProjectHandlers(services)
 }

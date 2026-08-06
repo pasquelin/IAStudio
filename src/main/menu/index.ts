@@ -72,13 +72,11 @@ export function buildMenu(language: Language): void {
         {
           label: t.menu.newProject,
           accelerator: 'CmdOrCtrl+N',
-          enabled: false,
           click: () => sendToFocused(EVENTS.menuCommand, 'project:new'),
         },
         {
           label: t.menu.openProject,
           accelerator: 'CmdOrCtrl+O',
-          enabled: false,
           click: () => sendToFocused(EVENTS.menuCommand, 'project:open'),
         },
         { type: 'separator' },

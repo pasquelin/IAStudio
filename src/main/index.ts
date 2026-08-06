@@ -3,12 +3,17 @@ import { join } from 'node:path'
 import { WINDOW_CHROME_COLOR } from '@shared/constants'
 import { resolveLanguage } from '@shared/i18n'
 import { buildMenu } from '@main/menu'
+import { registerAssetScheme } from '@main/assets/protocol'
 import { registerIpc } from '@main/ipc/register'
 import { createServices } from '@main/services'
 import { trackWindowState } from '@main/window/controls'
 import { lockNavigation } from '@main/window/navigation'
 
 const isDevelopment = !app.isPackaged
+
+// Must run before the app is ready: afterwards Electron ignores it, `img-src scenario:` in
+// the CSP is never honoured, and every local thumbnail comes back blank.
+registerAssetScheme()
 
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
