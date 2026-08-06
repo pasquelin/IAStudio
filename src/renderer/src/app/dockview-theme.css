@@ -1,6 +1,6 @@
 /*
- * Habillage Dockview aux jetons du studio. Dockview expose ses couleurs en variables CSS :
- * on les redirige plutôt que de surcharger ses sélecteurs, qui changent de version en version.
+ * Dockview skinned with the studio tokens. Dockview exposes its colors as CSS variables: we
+ * redirect those rather than override its selectors, which change from version to version.
  */
 .dv-dockview {
   --dv-background-color: var(--color-base);
@@ -30,8 +30,8 @@
   --dv-tabs-and-actions-container-font-size: 12px;
 }
 
-/* Les onglets du centre reprennent le rayon des surfaces : un onglet carré dans un panneau
-   arrondi se lit comme un corps étranger. */
+/* Center tabs take the surfaces' radius: a square tab inside a rounded panel reads as a
+   foreign body. */
 .dv-dockview .dv-tab {
   border-radius: var(--radius-sc-md);
   margin: 3px 1px;
