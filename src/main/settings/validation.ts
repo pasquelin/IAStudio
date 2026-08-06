@@ -12,6 +12,9 @@ const appearance = z.object({
 const generation = z.object({
   concurrentJobs: z.number().int().min(1).max(16).optional(),
   maxRetries: z.number().int().min(0).max(10).optional(),
+  // Keys are model families and values model ids, both free strings here: the API adds
+  // families and models on its own schedule, and an unknown one must not fail the write.
+  defaultModels: z.record(z.string().min(1), z.string().min(1)).optional(),
 })
 
 const storage = z.object({

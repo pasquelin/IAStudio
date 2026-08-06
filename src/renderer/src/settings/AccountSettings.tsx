@@ -51,10 +51,7 @@ export function AccountSettings() {
   }
 
   return (
-    <section className="flex max-w-md flex-col gap-3">
-      <h2 className="text-base font-semibold">{t('auth.title')}</h2>
-      <p className="text-base-content/60 text-xs">{t('auth.explanation')}</p>
-
+    <div className="flex max-w-md flex-col gap-3">
       {auth.authenticated ? (
         <div className="flex items-center justify-between gap-4">
           <span className="text-success text-sm">{t('auth.connected')}</span>
@@ -98,6 +95,8 @@ export function AccountSettings() {
           </button>
         </form>
       )}
-    </section>
+
+      <p className="text-base-content/60 text-xs">{t('auth.explanation')}</p>
+    </div>
   )
 }

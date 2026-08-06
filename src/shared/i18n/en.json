@@ -122,6 +122,15 @@
     "density": "Density",
     "densityCompact": "Compact",
     "densityComfortable": "Comfortable",
-    "concurrentJobs": "Concurrent jobs"
+    "concurrentJobs": "Concurrent jobs",
+    "sections": "Settings sections",
+    "maxRetries": "Max retries",
+    "defaultModel": "Default model",
+    "noDefaultModel": "Ask every time",
+    "familyUpscale": "Upscaling",
+    "appliesImmediately": "Changes apply immediately.",
+    "accountDescription": "API credentials, encrypted by the system keychain.",
+    "appearanceDescription": "Theme and control density.",
+    "generationDescription": "Generation queue and default models, per family."
   }
 }

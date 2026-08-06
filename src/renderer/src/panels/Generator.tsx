@@ -34,7 +34,11 @@ function useDescriptor(modelId: string | null) {
  */
 export function Generator() {
   const { t } = useTranslation()
-  const [modelId, setModelId] = useState<string | null>(null)
+
+  // The generator serves the Image workspace, the only one with panels registered so far.
+  const defaultModel = useSettings(state => state.settings.generation.defaultModels.image)
+  const [chosen, setChosen] = useState<string | null>(null)
+  const modelId = chosen ?? defaultModel ?? null
 
   const authenticated = useSettings(state => state.auth.authenticated)
   const project = useProject(state => state.project)
@@ -66,7 +70,7 @@ export function Generator() {
         <select
           className="bg-surface border-border h-(--sc-control) rounded-(--radius-sc-sm) border px-2"
           value={modelId ?? ''}
-          onChange={event => setModelId(event.target.value || null)}
+          onChange={event => setChosen(event.target.value)}
         >
           <option value="">{t('generation.chooseModel')}</option>
           {models.data.map(model => (

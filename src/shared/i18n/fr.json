@@ -122,6 +122,15 @@
     "density": "Densité",
     "densityCompact": "Compact",
     "densityComfortable": "Confort",
-    "concurrentJobs": "Tâches simultanées"
+    "concurrentJobs": "Tâches simultanées",
+    "sections": "Sections de réglages",
+    "maxRetries": "Tentatives maximum",
+    "defaultModel": "Modèle par défaut",
+    "noDefaultModel": "Demander à chaque fois",
+    "familyUpscale": "Agrandissement",
+    "appliesImmediately": "Les changements sont appliqués immédiatement.",
+    "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
+    "appearanceDescription": "Thème et densité des contrôles.",
+    "generationDescription": "File de génération et modèles par défaut, par famille."
   }
 }
