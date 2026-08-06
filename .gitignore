@@ -1,0 +1,8 @@
+node_modules/
+dist/
+out/
+release/
+.DS_Store
+*.log
+secrets/
+.playwright-mcp/

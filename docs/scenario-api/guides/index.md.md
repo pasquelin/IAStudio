@@ -1,0 +1,29 @@
+---
+title: Welcome to the Scenario API | Scenario Docs
+---
+
+## Unleashing Creative Potential with AI-Powered Automation
+
+Welcome to the Scenario API, a powerful interface designed to give you programmatic access to everything you can do within the Scenario web application. In an era where visual content is paramount, the ability to rapidly generate, customize, and integrate high-quality images is a game-changer for developers, artists, and businesses alike. The Scenario API empowers you to automate complex creative workflows, transforming your ideas into visuals with unprecedented efficiency and control.
+
+At its core, the Scenario API is built to streamline the process of AI-powered image generation and model training. Whether you’re looking to generate consistent images based on specific text prompts or reference images, train custom AI models tailored to your unique artistic style or business needs, or modify assets in batch processes, this API provides the tools to achieve your vision. It facilitates the seamless integration of AI-generated visuals directly into your applications, opening up new avenues for innovation and user engagement. Furthermore, it excels at automating repetitive design tasks, allowing you to maintain precise control over the creative output while freeing up valuable time and resources.
+
+This documentation serves as your comprehensive guide to harnessing the full potential of the Scenario API. From understanding fundamental concepts to implementing advanced functionalities, we aim to provide you with the knowledge and practical examples necessary to build remarkable AI-driven applications. We encourage you to explore the various capabilities, experiment with different parameters, and discover how the Scenario API can revolutionize your creative and development processes. Your journey into AI-powered automation begins here, and we are excited to see the incredible creations you will bring to life.
+
+## Key Capabilities at a Glance
+
+The Scenario API offers a robust set of capabilities designed to cater to a wide range of AI-powered visual content creation needs. These capabilities are the building blocks for automating and integrating advanced image generation functionalities into your applications and workflows. Below is a summary of the primary functions you can leverage:
+
+| Capability                           | Description                                                                                                                                                                                 | Primary Use Case                                                                                                    | Benefits                                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Generate Consistent Images**       | Create images based on textual descriptions (prompts) or by using existing images as visual references. This ensures stylistic coherence and thematic accuracy across multiple generations. | Generating diverse visual assets for games, marketing, or product design; creating variations of existing artwork.  | Rapid content creation, maintaining brand consistency, exploring creative variations. |
+| **Train Custom AI Models**           | Train custom AI models using your own datasets. This allows the AI to learn and replicate specific styles, characters, or objects unique to your project.                                   | Creating unique art styles, generating consistent characters, producing branded content.                            | High degree of customization, artistic control, proprietary content generation.       |
+| **Create & Modify Assets in Batch**  | Process multiple assets generation or modification requests simultaneously. This is crucial for large-scale content production and efficient workflow management.                           | Mass production of game assets, generating multiple marketing creatives, applying effects to image libraries.       | Scalability, efficiency, reduced manual effort.                                       |
+| **Integrate AI-Generated Visuals**   | Embed the output of the Scenario API directly into your applications, websites, or other digital platforms.                                                                                 | Dynamic content generation for web applications, real-time image creation in games, automated social media posting. | Enhanced user experience, dynamic content, reduced development time.                  |
+| **Automate Repetitive Design Tasks** | Programmatically handle routine design operations that would otherwise require manual intervention. This includes tasks like background removal, image enhancement, or vectorization.       | Automating image clean-up, preparing assets for different platforms, standardizing visual elements.                 | Increased productivity, consistency, cost reduction.                                  |
+
+These capabilities collectively empower you to build sophisticated AI-driven solutions that can significantly enhance your creative output and operational efficiency. As you delve deeper into the Scenario API documentation, you will find detailed guides and examples for each of these functionalities, enabling you to implement them effectively within your projects.
+
+---
+
+﻿👉﻿ [Download OpenAPI spec](https://cdn.cloud.scenario.com/static/api/swagger.yaml)
