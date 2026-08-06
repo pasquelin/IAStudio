@@ -63,6 +63,25 @@ export function signatureOf(event: KeyChord): Signature {
   return parts.join('+')
 }
 
+const MODIFIER_GLYPHS: Record<string, string> = {
+  Ctrl: '⌃',
+  Alt: '⌥',
+  Shift: '⇧',
+  Meta: '⌘',
+}
+
+/**
+ * Turns a signature into what a tooltip shows — the display counterpart of `signatureOf`.
+ * `KeyG` is a position, not a letter, but the letter is what is printed on the key in front of
+ * the user, so that is what is displayed.
+ */
+export function shortcutLabel(signature: Signature): string {
+  const parts = signature.split('+')
+  const code = parts.at(-1) ?? ''
+  const modifiers = parts.slice(0, -1).map(part => MODIFIER_GLYPHS[part] ?? part)
+  return [...modifiers, code.startsWith('Key') ? code.slice(3) : code].join('')
+}
+
 export const DEFAULT_BINDINGS: Record<CommandId, Signature> = {
   'scene.translate': 'KeyG',
   'scene.rotate': 'KeyR',

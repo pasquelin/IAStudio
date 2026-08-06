@@ -4,6 +4,7 @@ import {
   DEFAULT_BINDINGS,
   DEFAULT_MOTION,
   MOTION_IDS,
+  shortcutLabel,
   signatureOf,
   type KeyChord,
 } from './shortcut'
@@ -64,5 +65,24 @@ describe('defaults', () => {
     const motion = new Set(Object.values(DEFAULT_MOTION))
     const shared = Object.values(DEFAULT_BINDINGS).filter(signature => motion.has(signature))
     expect(shared).toEqual(['KeyS'])
+  })
+})
+
+describe('shortcutLabel', () => {
+  it('shows the printed letter of a physical key', () => {
+    expect(shortcutLabel('KeyG')).toBe('G')
+  })
+
+  it('keeps the modifiers in front', () => {
+    expect(shortcutLabel('Shift+KeyG')).toBe('⇧G')
+  })
+
+  it('leaves a non-letter code readable', () => {
+    expect(shortcutLabel('Delete')).toBe('Delete')
+  })
+
+  it('renders every default binding without leaking a raw code', () => {
+    expect(shortcutLabel(DEFAULT_BINDINGS['scene.undo'])).toBe('⌘Z')
+    expect(shortcutLabel(DEFAULT_BINDINGS['scene.redo'])).toBe('⇧⌘Z')
   })
 })
