@@ -65,7 +65,7 @@ describe('local backend', () => {
     const asset = await backend.importFromUrl({
       id: 'asset_1',
       url: 'https://cdn.example/render.png',
-      name: 'Rocher',
+      name: 'Boulder',
       type: 'image',
       jobId: 'job_1',
       remoteAssetId: 'asset_remote',
@@ -96,7 +96,7 @@ describe('local backend', () => {
       failing.importFromUrl({
         id: 'asset_1',
         url: 'https://cdn.example/render.png',
-        name: 'Rocher',
+        name: 'Boulder',
         type: 'image',
       }),
     ).rejects.toThrow('offline')

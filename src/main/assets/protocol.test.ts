@@ -7,7 +7,7 @@ vi.mock('electron', () => ({ net: {}, protocol: {} }))
 
 const { assetFilePath } = await import('./protocol')
 
-const PROJECT = resolve('/projects/Mon projet.scenario')
+const PROJECT = resolve('/projects/My project.scenario')
 
 describe('asset file resolution', () => {
   it('resolves a path stored by the catalogue', () => {

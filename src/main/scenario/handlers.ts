@@ -1,5 +1,6 @@
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { failureOf } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
 import { parseGenerationBody, parseJobId, parseModelFamily, parseModelId } from './validation'
@@ -9,11 +10,29 @@ export type ScenarioHandlerDeps = {
   jobs: JobManager
 }
 
+/**
+ * A rejection crossing the boundary carries its message to the renderer. An SDK message
+ * embeds the request that produced it, so every failure leaves as a code — the same reduction
+ * the job manager and the authentication probe already apply.
+ *
+ * The cause stays attached for the main process alone: Electron serializes `message`, `name`
+ * and `stack` of a rejected handler, never `cause`.
+ */
+async function reduced<T>(action: () => Promise<T>): Promise<T> {
+  try {
+    return await action()
+  } catch (error) {
+    throw new Error(failureOf(error), { cause: error })
+  }
+}
+
 export function registerScenarioHandlers({ models, jobs }: ScenarioHandlerDeps): void {
-  handle(CHANNELS.scenarioListModels, (_event, family) => models.list(parseModelFamily(family)))
+  handle(CHANNELS.scenarioListModels, (_event, family) =>
+    reduced(() => models.list(parseModelFamily(family))),
+  )
 
   handle(CHANNELS.scenarioDescribeModel, (_event, modelId) =>
-    models.describe(parseModelId(modelId)),
+    reduced(() => models.describe(parseModelId(modelId))),
   )
 
   handle(CHANNELS.scenarioGenerate, async (_event, modelId, body) => {

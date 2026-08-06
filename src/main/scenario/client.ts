@@ -18,6 +18,7 @@ export class NotAuthenticatedError extends Error {
  * that produced it, so returning it would walk the API key across the IPC boundary.
  */
 export function failureOf(error: unknown): ApiFailure {
+  if (error instanceof NotAuthenticatedError) return 'missing'
   if (error instanceof APIConnectionError) return 'network'
 
   if (error instanceof APIError) {

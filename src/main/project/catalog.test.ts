@@ -7,7 +7,7 @@ import type { SqliteDriver } from './sqlite'
 function asset(overrides: Partial<Asset> = {}): Asset {
   return {
     id: 'asset_1',
-    name: 'Rocher',
+    name: 'Boulder',
     type: 'image',
     location: 'local',
     tags: [],
@@ -35,13 +35,13 @@ describe('catalog', () => {
         height: 768,
         bytes: 4096,
         derivedFrom: 'asset_0',
-        tags: ['pierre', 'décor'],
+        tags: ['stone', 'set-dressing'],
       }),
     )
 
     expect(catalog.find('asset_1')).toEqual({
       id: 'asset_1',
-      name: 'Rocher',
+      name: 'Boulder',
       type: 'image',
       location: 'local',
       path: 'assets/img/asset_1.png',
@@ -51,7 +51,7 @@ describe('catalog', () => {
       height: 768,
       bytes: 4096,
       derivedFrom: 'asset_0',
-      tags: ['décor', 'pierre'],
+      tags: ['set-dressing', 'stone'],
       createdAt: '2026-08-06T10:00:00.000Z',
     })
   })
@@ -61,27 +61,27 @@ describe('catalog', () => {
   })
 
   it('finds an asset by name, whatever the case', () => {
-    catalog.add(asset({ id: 'asset_1', name: 'Rocher mousseux' }))
-    catalog.add(asset({ id: 'asset_2', name: 'Ciel' }))
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.add(asset({ id: 'asset_2', name: 'Sky' }))
 
-    expect(catalog.search({ text: 'rocher' }).map(found => found.id)).toEqual(['asset_1'])
+    expect(catalog.search({ text: 'boulder' }).map(found => found.id)).toEqual(['asset_1'])
   })
 
   it('treats a wildcard typed by the user as a literal character', () => {
-    catalog.add(asset({ id: 'asset_1', name: 'Rocher' }))
+    catalog.add(asset({ id: 'asset_1', name: 'Boulder' }))
     catalog.add(asset({ id: 'asset_2', name: '100%' }))
 
     expect(catalog.search({ text: '%' }).map(found => found.id)).toEqual(['asset_2'])
   })
 
   it('narrows on every tag at once rather than any of them', () => {
-    catalog.add(asset({ id: 'asset_1', tags: ['pierre', 'décor'] }))
-    catalog.add(asset({ id: 'asset_2', tags: ['pierre'] }))
+    catalog.add(asset({ id: 'asset_1', tags: ['stone', 'set-dressing'] }))
+    catalog.add(asset({ id: 'asset_2', tags: ['stone'] }))
 
-    expect(catalog.search({ tags: ['pierre', 'décor'] }).map(found => found.id)).toEqual([
+    expect(catalog.search({ tags: ['stone', 'set-dressing'] }).map(found => found.id)).toEqual([
       'asset_1',
     ])
-    expect(catalog.search({ tags: ['pierre'] })).toHaveLength(2)
+    expect(catalog.search({ tags: ['stone'] })).toHaveLength(2)
   })
 
   it('filters by type', () => {
@@ -101,15 +101,15 @@ describe('catalog', () => {
   })
 
   it('replaces an asset instead of duplicating it, tags included', () => {
-    catalog.add(asset({ tags: ['brouillon'] }))
-    catalog.add(asset({ name: 'Rocher final', tags: ['validé'] }))
+    catalog.add(asset({ tags: ['draft'] }))
+    catalog.add(asset({ name: 'Final boulder', tags: ['approved'] }))
 
     expect(catalog.search({})).toHaveLength(1)
-    expect(catalog.find('asset_1')?.tags).toEqual(['validé'])
+    expect(catalog.find('asset_1')?.tags).toEqual(['approved'])
   })
 
   it('removes the tags of a deleted asset', () => {
-    catalog.add(asset({ tags: ['pierre'] }))
+    catalog.add(asset({ tags: ['stone'] }))
     driver.prepare('DELETE FROM assets WHERE id = ?').run('asset_1')
 
     expect(driver.prepare('SELECT COUNT(*) AS total FROM asset_tags').get()?.['total']).toBe(0)

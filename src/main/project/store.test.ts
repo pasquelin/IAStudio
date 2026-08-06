@@ -38,9 +38,9 @@ describe('project store', () => {
   })
 
   it('creates the whole tree and its manifest', async () => {
-    const project = await store.create(root, 'Mon projet')
+    const project = await store.create(root, 'My project')
 
-    expect(project.path).toBe(join(root, 'Mon projet.scenario'))
+    expect(project.path).toBe(join(root, 'My project.scenario'))
     for (const folder of PROJECT_FOLDERS) {
       expect(await exists(join(project.path, folder))).toBe(true)
     }
@@ -48,20 +48,20 @@ describe('project store', () => {
     const manifest: unknown = JSON.parse(await readFile(join(project.path, 'project.json'), 'utf8'))
     expect(manifest).toEqual({
       version: 1,
-      name: 'Mon projet',
+      name: 'My project',
       createdAt: '2026-08-06T10:00:00.000Z',
       updatedAt: '2026-08-06T10:00:00.000Z',
     })
   })
 
   it('announces the project it just opened', async () => {
-    const project = await store.create(root, 'Mon projet')
+    const project = await store.create(root, 'My project')
     expect(onChange).toHaveBeenCalledWith(project)
     expect(store.current()).toEqual(project)
   })
 
   it('reopens a project it created', async () => {
-    const created = await store.create(root, 'Mon projet')
+    const created = await store.create(root, 'My project')
     store.close()
 
     expect(store.current()).toBeNull()
@@ -69,7 +69,7 @@ describe('project store', () => {
   })
 
   it('rebuilds a folder deleted between two sessions rather than refusing to open', async () => {
-    const created = await store.create(root, 'Mon projet')
+    const created = await store.create(root, 'My project')
     await rm(join(created.path, 'assets/vid'), { recursive: true })
     store.close()
 
@@ -78,11 +78,36 @@ describe('project store', () => {
   })
 
   it('refuses a manifest it cannot make sense of', async () => {
-    const created = await store.create(root, 'Mon projet')
+    const created = await store.create(root, 'My project')
     await writeFile(join(created.path, 'project.json'), '{"name":42}', 'utf8')
     store.close()
 
     await expect(store.open(created.path)).rejects.toThrow()
+  })
+
+  it('keeps the open project when the next one fails to open', async () => {
+    let failNext = false
+    const fragile = createProjectStore({
+      openDatabase: () => {
+        if (failNext) throw new Error('database is locked')
+        return openMemoryDatabase()
+      },
+      now: () => '2026-08-06T10:00:00.000Z',
+      onChange,
+    })
+
+    const first = await fragile.create(root, 'First')
+    const second = await fragile.create(root, 'Second')
+    await fragile.open(first.path)
+
+    failNext = true
+
+    // The catalogue that failed must not cost the user the one that was working.
+    await expect(fragile.open(second.path)).rejects.toThrow('database is locked')
+    expect(fragile.current()).toEqual(first)
+    expect(() => fragile.catalog()).not.toThrow()
+
+    fragile.close()
   })
 
   it('refuses to hand out a catalogue or a path with no project open', () => {
@@ -91,10 +116,10 @@ describe('project store', () => {
   })
 
   it('indexes into the project that is open, and only that one', async () => {
-    await store.create(root, 'Premier')
+    await store.create(root, 'First')
     store.catalog().add({
       id: 'asset_1',
-      name: 'Rocher',
+      name: 'Boulder',
       type: 'image',
       location: 'local',
       tags: [],

@@ -55,13 +55,19 @@ export function createProjectStore({
     project = null
   }
 
+  /**
+   * The new catalogue is opened before the current one is dropped. The other way round, a
+   * database that fails to open — corrupt, locked, on a full disk — would leave the studio
+   * with no project at all while the interface still showed the previous one as open.
+   */
   const activate = async (opened: Project): Promise<Project> => {
-    close()
-
     const file = join(opened.path, CATALOG_FILE)
     await mkdir(dirname(file), { recursive: true })
 
-    catalog = createCatalog(openDatabase(file))
+    const opening = createCatalog(openDatabase(file))
+
+    close()
+    catalog = opening
     project = opened
     onChange(opened)
     return opened

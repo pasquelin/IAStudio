@@ -18,26 +18,26 @@ describe('DynamicForm', () => {
   it('renders one control per kind', () => {
     renderForm([
       field({ key: 'prompt', label: 'Prompt', kind: 'longText' }),
-      field({ key: 'steps', label: 'Étapes', kind: 'integer' }),
-      field({ key: 'hires', label: 'Haute résolution', kind: 'boolean' }),
+      field({ key: 'steps', label: 'Steps', kind: 'integer' }),
+      field({ key: 'hires', label: 'High resolution', kind: 'boolean' }),
       field({
         key: 'mode',
         label: 'Mode',
         kind: 'choice',
-        options: [{ value: 'txt2img', label: 'Texte' }],
+        options: [{ value: 'txt2img', label: 'Text' }],
       }),
     ])
 
     expect(screen.getByLabelText(/Prompt/).tagName).toBe('TEXTAREA')
-    expect(screen.getByLabelText(/Étapes/)).toHaveAttribute('type', 'number')
-    expect(screen.getByLabelText(/Haute résolution/)).toHaveAttribute('type', 'checkbox')
+    expect(screen.getByLabelText(/Steps/)).toHaveAttribute('type', 'number')
+    expect(screen.getByLabelText(/High resolution/)).toHaveAttribute('type', 'checkbox')
     expect(screen.getByLabelText(/Mode/).tagName).toBe('SELECT')
   })
 
   // A model Scenario just added must stay usable — CLAUDE.md, invariant 5.
   it('renders an unknown kind as free input rather than dropping the form', () => {
-    renderForm([field({ key: 'mystery', label: 'Mystère', kind: 'raw' })])
-    expect(screen.getByLabelText(/Mystère/)).toHaveAttribute('type', 'text')
+    renderForm([field({ key: 'mystery', label: 'Mystery', kind: 'raw' })])
+    expect(screen.getByLabelText(/Mystery/)).toHaveAttribute('type', 'text')
   })
 
   it('says so when a model takes no parameter, instead of showing nothing', () => {
@@ -48,13 +48,13 @@ describe('DynamicForm', () => {
   it('submits only what was filled in', async () => {
     const onSubmit = renderForm([
       field({ key: 'prompt', label: 'Prompt', required: true }),
-      field({ key: 'negative', label: 'Négatif' }),
+      field({ key: 'negative', label: 'Negative' }),
     ])
 
-    await userEvent.type(screen.getByLabelText(/Prompt/), 'un rocher')
+    await userEvent.type(screen.getByLabelText(/Prompt/), 'a boulder')
     await userEvent.click(screen.getByRole('button', { name: 'Générer' }))
 
-    expect(onSubmit).toHaveBeenCalledWith({ prompt: 'un rocher' })
+    expect(onSubmit).toHaveBeenCalledWith({ prompt: 'a boulder' })
   })
 
   it('refuses to submit while a required field is empty', async () => {
@@ -73,23 +73,23 @@ describe('DynamicForm', () => {
         label: 'Mode',
         kind: 'choice',
         options: [
-          { value: 'txt2img', label: 'Texte' },
+          { value: 'txt2img', label: 'Text' },
           { value: 'img2img', label: 'Image' },
         ],
       }),
-      field({ key: 'strength', label: 'Force', dependsOn: { key: 'mode', value: 'img2img' } }),
+      field({ key: 'strength', label: 'Strength', dependsOn: { key: 'mode', value: 'img2img' } }),
     ])
 
-    expect(screen.queryByLabelText(/Force/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Strength/)).not.toBeInTheDocument()
 
     await userEvent.selectOptions(screen.getByLabelText(/Mode/), 'img2img')
-    expect(screen.getByLabelText(/Force/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Strength/)).toBeInTheDocument()
   })
 
   it('rolls a new seed on demand', async () => {
-    renderForm([field({ key: 'seed', label: 'Graine', kind: 'seed' })])
+    renderForm([field({ key: 'seed', label: 'Seed', kind: 'seed' })])
 
-    const input = screen.getByLabelText(/Graine/)
+    const input = screen.getByLabelText(/Seed/)
     expect(input).toHaveValue(null)
 
     await userEvent.click(screen.getByRole('button', { name: 'Aléatoire' }))
@@ -99,9 +99,9 @@ describe('DynamicForm', () => {
   // A seed registered as a string was validated against a number: a hand-typed one never
   // passed, and only the roll button worked.
   it('submits a hand-typed seed as a number', async () => {
-    const onSubmit = renderForm([field({ key: 'seed', label: 'Graine', kind: 'seed' })])
+    const onSubmit = renderForm([field({ key: 'seed', label: 'Seed', kind: 'seed' })])
 
-    await userEvent.type(screen.getByLabelText(/Graine/), '1234')
+    await userEvent.type(screen.getByLabelText(/Seed/), '1234')
     await userEvent.click(screen.getByRole('button', { name: 'Générer' }))
 
     expect(onSubmit).toHaveBeenCalledWith({ seed: 1234 })
@@ -110,9 +110,9 @@ describe('DynamicForm', () => {
   it('groups the fields the model asked to group', () => {
     renderForm([
       field({ key: 'prompt', label: 'Prompt' }),
-      field({ key: 'steps', label: 'Étapes', kind: 'integer', group: 'Avancé' }),
+      field({ key: 'steps', label: 'Steps', kind: 'integer', group: 'Advanced' }),
     ])
 
-    expect(screen.getByRole('group', { name: 'Avancé' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Advanced' })).toBeInTheDocument()
   })
 })
