@@ -1,29 +1,54 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron'
 import type { CHANNELS, StudioBridge } from '@shared/ipc'
 
-type ChannelName = (typeof CHANNELS)[keyof typeof CHANNELS]
+/**
+ * Pairs each channel with the bridge method it must implement. This table is what makes the
+ * boundary typed on BOTH sides: without it, `CHANNELS` is a bag of strings and
+ * `StudioBridge` a bag of functions, and a handler could answer `settings:read` with a
+ * window state — failing only at runtime, inside a component.
+ */
+type ChannelMethod = {
+  [CHANNELS.settingsRead]: StudioBridge['settings']['read']
+  [CHANNELS.settingsWrite]: StudioBridge['settings']['write']
+  [CHANNELS.settingsSetCredentials]: StudioBridge['settings']['setCredentials']
+  [CHANNELS.settingsAuthState]: StudioBridge['settings']['authState']
+  [CHANNELS.settingsForgetCredentials]: StudioBridge['settings']['forgetCredentials']
 
-/** Every method the bridge exposes, flattened: `settings.read`, `window.state`, … */
-type BridgeMethods = {
-  [G in keyof StudioBridge]: StudioBridge[G][keyof StudioBridge[G]]
-}[keyof StudioBridge]
+  [CHANNELS.scenarioListModels]: StudioBridge['scenario']['listModels']
+  [CHANNELS.scenarioDescribeModel]: StudioBridge['scenario']['describeModel']
+  [CHANNELS.scenarioGenerate]: StudioBridge['scenario']['generate']
+  [CHANNELS.scenarioCancelJob]: StudioBridge['scenario']['cancelJob']
+  [CHANNELS.scenarioListJobs]: StudioBridge['scenario']['listJobs']
 
-type Unwrapped<T> = T extends Promise<infer U> ? U : T
+  [CHANNELS.projectCreate]: StudioBridge['project']['create']
+  [CHANNELS.projectOpen]: StudioBridge['project']['open']
+  [CHANNELS.projectCurrent]: StudioBridge['project']['current']
+  [CHANNELS.projectPickFolder]: StudioBridge['project']['pickFolder']
+
+  [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
+  [CHANNELS.assetsUrl]: StudioBridge['assets']['url']
+
+  [CHANNELS.windowToggleFullScreen]: StudioBridge['window']['toggleFullScreen']
+  [CHANNELS.windowState]: StudioBridge['window']['state']
+}
+
+type Resolved<T> = T extends Promise<infer U> ? U : T
 
 /**
- * Registers a handler whose signature is derived from `StudioBridge`, so the main process is
- * bound by the same contract as the preload. Without it, `CHANNELS` is a table of strings and
- * `StudioBridge` a table of functions with nothing tying them together: a handler could
- * return the wrong shape and only fail at runtime, inside a component.
+ * Registers a handler whose arguments and return type are derived from the channel itself.
+ * Answering with the wrong shape, or forgetting an argument, is a compile error.
+ *
+ * The handler may be synchronous or asynchronous: most channels reach the network or the
+ * disk, and forcing a synchronous return would make the helper unusable for them.
  */
-export function handle<M extends BridgeMethods>(
-  channel: ChannelName,
+export function handle<C extends keyof ChannelMethod>(
+  channel: C,
   handler: (
     event: IpcMainInvokeEvent,
-    ...args: M extends (...args: infer A) => unknown ? A : never
-  ) => M extends (...args: never) => infer R ? Unwrapped<R> : never,
+    ...args: Parameters<ChannelMethod[C]>
+  ) => Resolved<ReturnType<ChannelMethod[C]>> | Promise<Resolved<ReturnType<ChannelMethod[C]>>>,
 ): void {
   ipcMain.handle(channel, (event, ...args) =>
-    handler(event, ...(args as M extends (...args: infer A) => unknown ? A : never)),
+    handler(event, ...(args as Parameters<ChannelMethod[C]>)),
   )
 }

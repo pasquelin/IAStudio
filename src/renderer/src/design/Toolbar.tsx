@@ -36,9 +36,11 @@ export type ToolbarProps = {
 }
 
 /**
- * The studio's single toolbar, shared by all six workspaces. Each workspace provides only its
- * tool registry; geometry follows `--sc-control`, so the density setting applies everywhere
- * without any bar knowing its value.
+ * The studio's single toolbar, meant to be shared by every workspace: each one will provide
+ * only its tool registry. No workspace mounts it yet — `spaces/` does not exist.
+ *
+ * Geometry follows `--sc-control`, so the density setting reaches it without the bar ever
+ * knowing its value.
  */
 export function Toolbar({
   tools,

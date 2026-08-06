@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { Orientation } from 'dockview-react'
 import { useLayouts, type SerializedLayout } from './layouts'
 
 function layout(marker: string): SerializedLayout {
-  return {
-    grid: { root: { type: 'branch', data: [] }, width: 0, height: 0, orientation: 'HORIZONTAL' },
+  // Minimal shape: the store never reads a layout back, it only stores and returns it.
+  const value: SerializedLayout = {
+    grid: {
+      root: { type: 'branch', data: [] },
+      width: 0,
+      height: 0,
+      orientation: Orientation.HORIZONTAL,
+    },
     panels: { [marker]: { id: marker, contentComponent: marker } },
-  } as SerializedLayout
+  }
+  return value
 }
 
 describe('layouts store', () => {
@@ -23,7 +31,7 @@ describe('layouts store', () => {
     expect(layouts['3d']?.panels).toHaveProperty('viewport')
   })
 
-  it('restores the remembered layout after a workspace switch', () => {
+  it('keeps the remembered layout across a workspace switch', () => {
     const { remember, setActiveWorkspace } = useLayouts.getState()
     remember('image', layout('generator'))
     setActiveWorkspace('3d')

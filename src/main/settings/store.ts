@@ -23,6 +23,7 @@ export type SettingsStore = {
   setCredentials: (credentials: Credentials) => void
   forgetCredentials: () => void
   hasCredentials: () => boolean
+  discardUnreadableCredentials: () => void
   /** Main process only. Never expose over IPC — see spec § 4, invariant 1. */
   readCredentials: () => Credentials | null
 }
@@ -59,15 +60,18 @@ export function createSettingsStore(adapter: PersistenceAdapter): SettingsStore 
     return stored ? merge(DEFAULT_SETTINGS, stored) : DEFAULT_SETTINGS
   }
 
+  /**
+   * Reads without side effects. Unreadable credentials are reported, not deleted: erasing
+   * from a predicate would make `hasCredentials()` destructive, and a transient keychain
+   * failure would silently cost the user their key.
+   */
   const readCredentials = (): Credentials | null => {
     const encrypted = adapter.read<string>(CREDENTIALS_KEY)
     if (!encrypted) return null
     try {
       return parseCredentials(adapter.decrypt(encrypted))
     } catch {
-      // Keychain changed, profile migrated, data corrupted: forget rather than crash on
-      // startup. The user will re-enter their credentials.
-      adapter.remove(CREDENTIALS_KEY)
+      // Keychain changed, profile migrated, data corrupted.
       return null
     }
   }
@@ -88,6 +92,13 @@ export function createSettingsStore(adapter: PersistenceAdapter): SettingsStore 
     forgetCredentials: () => adapter.remove(CREDENTIALS_KEY),
 
     hasCredentials: () => readCredentials() !== null,
+
+    /** Drops a stored blob that can no longer be read, so the user is asked again. */
+    discardUnreadableCredentials: () => {
+      if (adapter.read<string>(CREDENTIALS_KEY) && readCredentials() === null) {
+        adapter.remove(CREDENTIALS_KEY)
+      }
+    },
 
     readCredentials,
   }

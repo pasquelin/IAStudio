@@ -1,11 +1,24 @@
 import { useEffect } from 'react'
-import { useTools } from '@/stores/tools'
+import type { MenuCommand } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
+import { useTools } from '@/stores/tools'
+
+function runCommand(command: MenuCommand): void {
+  switch (command) {
+    case 'layout:reset':
+      useTools.getState().reset()
+      return
+    case 'project:new':
+    case 'project:open':
+      // Not wired yet: the project store has no IPC handler. The menu entries are disabled
+      // in the main process so the user never reaches this branch.
+      return
+  }
+}
 
 /**
- * Wires the native menu to the shell. This is how a tool removed with its close button comes
- * back: without this listener, "View ▸ Tool windows" would do nothing and the panel would be
- * lost for good.
+ * Wires the native menu to the shell. Without this listener, "View ▸ Tool windows" would emit
+ * into the void and the menu entries would silently do nothing.
  */
 export function useNativeMenu(): void {
   useEffect(() => {
@@ -14,13 +27,14 @@ export function useNativeMenu(): void {
 
     const stopTool = bridge.menu.onOpenTool(({ zone, tool }) => {
       const state = useTools.getState()
-      if (state.open[zone] !== tool) state.toggle(zone, tool)
+      // `toggle` both opens a closed tool and expands a collapsed one; calling it only when
+      // the tool differs would leave a collapsed panel collapsed — the exact case the menu
+      // exists to recover from.
+      if (state.open[zone] !== tool || state.collapsed[zone]) state.toggle(zone, tool)
       state.focus(zone)
     })
 
-    const stopCommand = bridge.menu.onCommand(command => {
-      if (command === 'layout:reset') useTools.getState().reset()
-    })
+    const stopCommand = bridge.menu.onCommand(runCommand)
 
     return () => {
       stopTool()

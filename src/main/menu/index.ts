@@ -5,16 +5,30 @@ import { EVENTS } from '@shared/ipc'
 import { toggleFullScreen } from '@main/window/controls'
 
 /**
- * The native menu belongs to the focused window. Broadcasting would run ⌘N in every window at
- * once — the very "two windows holding the same document" trap listed in CLAUDE.md.
+ * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
+ * build hands an attacker `setCredentials` through a self-XSS.
  */
-function sendToFocused(channel: string, payload?: unknown): void {
-  BrowserWindow.getFocusedWindow()?.webContents.send(channel, payload)
+function developerItems(): MenuItemConstructorOptions[] {
+  if (app.isPackaged) return []
+  return [{ type: 'separator' }, { role: 'toggleDevTools' }, { role: 'reload' }]
 }
 
 /**
- * Native application menu. It is the only way back for a tool removed with its close button:
- * a panel closed with no way to reopen it would be a panel lost.
+ * The native menu belongs to the focused window. Broadcasting would run ⌘N in every window at
+ * once — the very "two windows holding the same document" trap listed in CLAUDE.md.
+ *
+ * On macOS the app outlives its last window, so the menu stays usable with nothing focused;
+ * we fall back to the first live window rather than dropping the command in silence.
+ */
+function sendToFocused(channel: string, payload?: unknown): void {
+  const target = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  if (!target || target.isDestroyed()) return
+  target.webContents.send(channel, payload)
+}
+
+/**
+ * Native application menu. Together with the icon rails, it is one of the two ways back for a
+ * tool removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function buildMenu(language: Language): void {
   const t = TRANSLATIONS[language]
@@ -28,11 +42,13 @@ export function buildMenu(language: Language): void {
         {
           label: t.menu.newProject,
           accelerator: 'CmdOrCtrl+N',
+          enabled: false,
           click: () => sendToFocused(EVENTS.menuCommand, 'project:new'),
         },
         {
           label: t.menu.openProject,
           accelerator: 'CmdOrCtrl+O',
+          enabled: false,
           click: () => sendToFocused(EVENTS.menuCommand, 'project:open'),
         },
         { type: 'separator' },
@@ -61,9 +77,7 @@ export function buildMenu(language: Language): void {
           accelerator: process.platform === 'darwin' ? 'Ctrl+Cmd+F' : 'F11',
           click: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
         },
-        { type: 'separator' },
-        { role: 'toggleDevTools' },
-        { role: 'reload' },
+        ...developerItems(),
       ],
     },
     { role: 'windowMenu', label: t.menu.window },

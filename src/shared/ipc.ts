@@ -7,10 +7,41 @@ import type { ToolId, ToolZone } from './domain/tool'
 import type { WindowState } from './domain/window'
 
 /**
- * Single source of channel names. Only `src/preload/` quotes them: a component writing
- * `ipcRenderer.invoke('...')` would bypass the contract — see spec § 4.
+ * Channel names, declared with literal types. The annotation is verbose on purpose: the
+ * project forbids `as const`, and without literal types `CHANNELS.settingsRead` widens to
+ * `string`, which collapses every channel-keyed table in the main process into one index
+ * signature — and the boundary stops being typed.
  */
-export const CHANNELS = {
+export type Channels = {
+  settingsRead: 'settings:read'
+  settingsWrite: 'settings:write'
+  settingsSetCredentials: 'settings:set-credentials'
+  settingsAuthState: 'settings:auth-state'
+  settingsForgetCredentials: 'settings:forget-credentials'
+
+  scenarioListModels: 'scenario:list-models'
+  scenarioDescribeModel: 'scenario:describe-model'
+  scenarioGenerate: 'scenario:generate'
+  scenarioCancelJob: 'scenario:cancel-job'
+  scenarioListJobs: 'scenario:list-jobs'
+
+  projectCreate: 'project:create'
+  projectOpen: 'project:open'
+  projectCurrent: 'project:current'
+  projectPickFolder: 'project:pick-folder'
+
+  assetsSearch: 'assets:search'
+  assetsUrl: 'assets:url'
+
+  windowToggleFullScreen: 'window:toggle-full-screen'
+  windowState: 'window:state'
+}
+
+/**
+ * Single source of channel names. Outside `shared/`, only `src/preload/` and `src/main/`
+ * reference them; no component ever quotes a channel string — see spec § 4.
+ */
+export const CHANNELS: Channels = {
   settingsRead: 'settings:read',
   settingsWrite: 'settings:write',
   settingsSetCredentials: 'settings:set-credentials',

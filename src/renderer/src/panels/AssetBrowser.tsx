@@ -48,8 +48,9 @@ export function AssetBrowserActions({ assets = [] }: AssetBrowserProps) {
 }
 
 /**
- * Asset library, standing where an Unreal content browser would: bottom strip, two views, and
- * a virtualized grid — a well-stocked project holds thousands of thumbnails.
+ * Asset library, standing where an Unreal content browser would: bottom strip, two views.
+ * The list is virtualized; the grid is not yet — it will have to be before a well-stocked
+ * project, which holds thousands of thumbnails, is loaded into it.
  */
 export function AssetBrowser({ assets = [] }: AssetBrowserProps) {
   const { t } = useTranslation()

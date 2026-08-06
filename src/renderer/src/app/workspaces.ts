@@ -33,7 +33,11 @@ export function workspaceLabelKey(id: WorkspaceId): string {
   return `workspaces.${id}`
 }
 
-export function workspaceById(id: WorkspaceId): Workspace {
+/**
+ * Takes a plain string: the id may come from a persisted layout or from IPC, which is
+ * exactly the case this function exists to reject.
+ */
+export function workspaceById(id: string): Workspace {
   const workspace = WORKSPACES.find(candidate => candidate.id === id)
   if (!workspace) throw new Error(`Unknown workspace: ${id}`)
   return workspace

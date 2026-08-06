@@ -8,6 +8,9 @@ import { ToolButton } from '@/design/ToolButton'
 import { TOOL_COMPONENTS } from './tool-components'
 import { isHorizontal, toolTitleKey, type ToolId, type ToolZone } from './tools'
 
+/** Width of a collapsed vertical zone: the two header buttons and a truncated title. */
+const COLLAPSED_SIZE = 148
+
 export type ToolWindowProps = {
   zone: ToolZone
   tool: ToolId
@@ -33,16 +36,22 @@ export function ToolWindow({
   onClose,
 }: ToolWindowProps) {
   const { t } = useTranslation()
-  const { Content, Actions } = TOOL_COMPONENTS[tool]
+  const definition = TOOL_COMPONENTS[tool]
   const title = t(toolTitleKey(tool))
   const lying = isHorizontal(zone)
+
+  // The id comes from persisted state: an entry left over from an older version would
+  // otherwise throw while rendering, with no error boundary above to catch it.
+  if (!definition) return null
+  const { Content, Actions } = definition
 
   return (
     <Panel
       aria-label={title}
       onPointerDownCapture={onFocus}
-      style={collapsed ? undefined : { [lying ? 'height' : 'width']: size }}
-      className={cn(collapsed && 'shrink-0')}
+      // Collapsed, the panel keeps only its header: dropping the dimension entirely would
+      // leave a vertical zone as wide as its title, giving nothing back to the center.
+      style={{ [lying ? 'height' : 'width']: collapsed ? COLLAPSED_SIZE : size }}
     >
       <PanelHeader title={title}>
         {Actions !== undefined && (

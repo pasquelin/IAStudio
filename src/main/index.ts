@@ -1,9 +1,10 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { BACKGROUND_COLOR } from '@shared/constants'
+import { WINDOW_CHROME_COLOR } from '@shared/constants'
 import { resolveLanguage } from '@shared/i18n'
 import { buildMenu } from '@main/menu'
 import { registerWindowControls, trackWindowState } from '@main/window/controls'
+import { lockNavigation } from '@main/window/navigation'
 
 const isDevelopment = !app.isPackaged
 
@@ -14,7 +15,7 @@ function createWindow(): BrowserWindow {
     minWidth: 1024,
     minHeight: 640,
     show: false,
-    backgroundColor: BACKGROUND_COLOR,
+    backgroundColor: WINDOW_CHROME_COLOR,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 14 },
     webPreferences: {
@@ -28,13 +29,6 @@ function createWindow(): BrowserWindow {
   trackWindowState(window)
   window.once('ready-to-show', () => window.show())
 
-  // Outgoing navigation goes to the system browser: a studio window must never turn into
-  // a web browser.
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
-    return { action: 'deny' }
-  })
-
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (isDevelopment && devUrl) void window.loadURL(devUrl)
   else void window.loadFile(join(import.meta.dirname, '../renderer/index.html'))
@@ -43,6 +37,7 @@ function createWindow(): BrowserWindow {
 }
 
 void app.whenReady().then(() => {
+  lockNavigation()
   registerWindowControls()
   buildMenu(resolveLanguage(app.getLocale()))
   createWindow()

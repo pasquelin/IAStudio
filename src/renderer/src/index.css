@@ -39,7 +39,7 @@
   --sc-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.55);
 }
 
-:root[data-densite='compact'] {
+:root[data-density='compact'] {
   --sc-control: 24px;
   --sc-rail: 42px;
   --sc-rail-button: 32px;

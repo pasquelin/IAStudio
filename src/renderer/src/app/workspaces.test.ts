@@ -13,7 +13,6 @@ describe('workspaces', () => {
   })
 
   it('rejects an unknown id instead of returning an empty workspace', () => {
-    // @ts-expect-error deliberately invalid id
     expect(() => workspaceById('nope')).toThrow()
   })
 

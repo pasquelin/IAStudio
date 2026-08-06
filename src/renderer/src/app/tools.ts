@@ -32,12 +32,12 @@ export const TOOLS: readonly Tool[] = TOOL_PLACEMENTS.map(placement => ({
 }))
 
 /** Indexed once: `TOOLS` never changes, so filtering it on every render is pure waste. */
-const BY_ZONE: Record<ToolZone, Tool[]> = TOOLS.reduce(
+const BY_ZONE = TOOLS.reduce<Record<ToolZone, Tool[]>>(
   (index, tool) => {
     index[tool.zone].push(tool)
     return index
   },
-  { left: [], right: [], top: [], bottom: [] } as Record<ToolZone, Tool[]>,
+  { left: [], right: [], top: [], bottom: [] },
 )
 
 export function toolsInZone(zone: ToolZone): Tool[] {

@@ -15,8 +15,8 @@ const ZONES_BY_SIDE: Record<'left' | 'right', { top: ToolZone[]; bottom: ToolZon
 }
 
 /**
- * An edge's icon rail, IDE-style: it stays in place when the zone is closed, and is the only
- * way to reopen a tool you just closed.
+ * An edge's icon rail, IDE-style: it stays in place when the zone is closed, so a closed tool
+ * is always one click away. "View ▸ Tool windows" in the native menu is the second way back.
  *
  * The left rail is split into two groups — left-column tools at the top, bottom-strip tools
  * at the bottom — so that an icon's position tells where the tool will open.
