@@ -30,9 +30,6 @@ export const CANAUX = {
   assetsRechercher: 'assets:rechercher',
   assetsUrl: 'assets:url',
 
-  fenetreFermer: 'fenetre:fermer',
-  fenetreReduire: 'fenetre:reduire',
-  fenetreZoomer: 'fenetre:zoomer',
   fenetrePleinEcran: 'fenetre:plein-ecran',
   fenetreEtat: 'fenetre:etat',
 }
@@ -92,9 +89,6 @@ export type PontStudio = {
     surCommande: (rappel: (commande: CommandeMenu) => void) => Desabonnement
   }
   fenetre: {
-    fermer: () => Promise<void>
-    reduire: () => Promise<void>
-    zoomer: () => Promise<void>
     basculerPleinEcran: () => Promise<void>
     etat: () => Promise<EtatFenetre>
     surEtat: (rappel: (etat: EtatFenetre) => void) => Desabonnement

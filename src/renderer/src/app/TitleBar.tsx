@@ -1,8 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BoutonsFenetre } from '@/design/BoutonsFenetre'
 import { cn } from '@/design/cn'
 import { UiIcon } from '@/design/UiIcon'
+import { useEtatFenetre } from '@/hooks/useEtatFenetre'
 import { cleLibelleEspace, ESPACES, type IdEspace } from './espaces'
 
 /**
@@ -26,18 +26,18 @@ export type TitleBarProps = {
  */
 export function TitleBar({ espaceActif, surEspace, actions }: TitleBarProps) {
   const { t } = useTranslation()
+  const { pleinEcran } = useEtatFenetre()
 
   return (
     <header
       style={SAISISSABLE}
-      // `pl-20` dégage les feux de circulation natifs, dont le centre est à 14px du haut :
-      // une hauteur de 44px les aligne au milieu de la barre.
-      className="flex shrink-0 items-center gap-2 pt-2 pr-6 pb-1 pl-24 text-[13px]"
+      className={cn(
+        'flex shrink-0 items-center gap-2 pt-2 pr-6 pb-1 text-[13px]',
+        // Le retrait de gauche ne sert qu'à dégager les feux de circulation natifs. En plein
+        // écran macOS les retire : sans cette bascule, il resterait un creux de 80 px.
+        pleinEcran ? 'pl-1.5' : 'pl-24',
+      )}
     >
-      <div style={CLIQUABLE}>
-        <BoutonsFenetre />
-      </div>
-
       <nav
         aria-label={t('espaces.navigation')}
         style={CLIQUABLE}

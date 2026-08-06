@@ -48,9 +48,6 @@ const pont: PontStudio = {
     url: assetId => ipcRenderer.invoke(CANAUX.assetsUrl, assetId),
   },
   fenetre: {
-    fermer: () => ipcRenderer.invoke(CANAUX.fenetreFermer),
-    reduire: () => ipcRenderer.invoke(CANAUX.fenetreReduire),
-    zoomer: () => ipcRenderer.invoke(CANAUX.fenetreZoomer),
     basculerPleinEcran: () => ipcRenderer.invoke(CANAUX.fenetrePleinEcran),
     etat: () => ipcRenderer.invoke(CANAUX.fenetreEtat),
     surEtat: rappel => abonner<EtatFenetre>(EVENEMENTS.fenetreEtat, rappel),

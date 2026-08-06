@@ -15,10 +15,8 @@ function creerFenetre(): BrowserWindow {
     minHeight: 640,
     show: false,
     backgroundColor: COULEUR_FOND,
-    // Les feux natifs sont remplacés par des pastilles dessinées : macOS les retire en
-    // plein écran, et rien dans Electron ne permet de les y garder — cf. `BoutonsFenetre`.
-    titleBarStyle: 'hidden',
-    fullscreenable: false,
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 16, y: 14 },
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.mjs'),
       contextIsolation: true,
@@ -27,7 +25,6 @@ function creerFenetre(): BrowserWindow {
     },
   })
 
-  fenetre.setWindowButtonVisibility(false)
   suivreEtat(fenetre)
 
   fenetre.once('ready-to-show', () => fenetre.show())
