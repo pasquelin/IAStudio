@@ -7,8 +7,7 @@ import {
   mdiVolumeHigh,
 } from '@mdi/js'
 import type { ModelFamily } from '@shared/domain/model'
-
-export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'textures' | 'skyboxes'
+import type { WorkspaceId } from '@shared/domain/workspace'
 
 export type Workspace = {
   id: WorkspaceId
@@ -26,8 +25,6 @@ export const WORKSPACES: readonly Workspace[] = [
   { id: 'skyboxes', icon: mdiPanoramaVariantOutline, family: 'image' },
 ]
 
-export const DEFAULT_WORKSPACE: WorkspaceId = 'image'
-
 /** i18n key of a workspace label — the label is never hardcoded. */
 export function workspaceLabelKey(id: WorkspaceId): string {
   return `workspaces.${id}`
@@ -42,3 +39,6 @@ export function workspaceById(id: string): Workspace {
   if (!workspace) throw new Error(`Unknown workspace: ${id}`)
   return workspace
 }
+
+export { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
+export type { WorkspaceId } from '@shared/domain/workspace'
