@@ -48,6 +48,75 @@ Dans cet ordre :
 5. **JobManager** — file bornée, backoff exponentiel sur 429/5xx, `job.wait()` du SDK, progression poussée par `evt:job-progress`.
 6. **DynamicForm** — le formulaire construit depuis `FieldDescriptor[]`, avec `react-hook-form` + `zod`. **Aucun formulaire de génération écrit à la main** (invariant 5).
 
+## Thème et design system — ne pas réinventer
+
+La direction visuelle est **calquée sur une interface JetBrains**, validée capture à l'appui. Elle
+est déjà en place dans `src/renderer/src/index.css` : **ne pas toucher à la palette, ne pas écrire de
+valeur hexadécimale dans un composant, ne pas ajouter de bibliothèque de composants.**
+
+### La règle qui gouverne le reste
+
+**Le châssis est plus CLAIR que les surfaces.** C'est l'inverse de l'habitude web, et c'est
+précisément ce qui donne la lecture « panneaux posés » d'un IDE : un fond gris moyen qui sert de
+gouttière, et des surfaces plus sombres, arrondies, flottant dessus.
+
+| Jeton | Valeur | Rôle |
+|---|---|---|
+| `chassis` | `#2b2d30` | fond de fenêtre, gouttière entre les surfaces |
+| `base` | `#191a1c` | surfaces : panneaux, centre |
+| `surface` | `#202124` | contenus à l'intérieur d'une surface |
+| `elevated` | `#3c3f44` | survol, état actif d'un bouton |
+| `border` | `#34363a` | séparateurs |
+| `accent` / `accent-soft` | `#3574f0` / `#2e436e` | zone focalisée, sélection |
+| `danger` | `#ff715b` | destructif, échec de job |
+| `text` / `muted` | `#dfe1e5` / `#868a91` | — |
+
+Rayons : `--radius-sc-sm/md/lg` = 4 / 6 / 10 px. Police : Inter (UI), SF Mono (valeurs).
+
+### Gabarits, pilotés par la densité
+
+Tout est en variables CSS, jamais en dur. `[data-density='compact']` les réduit en bloc, posé par
+`useDensity` sur l'élément racine.
+
+| Variable | Confort | Compact |
+|---|---|---|
+| `--sc-control` | 28 px | 24 px |
+| `--sc-rail` / `--sc-rail-button` | 48 / 36 px | 42 / 32 px |
+| `--sc-gutter` | 6 px | 4 px |
+| `--sc-header` | 32 px | 28 px |
+
+Deux ombres, et deux seulement : `--sc-shadow-furniture` pour les meubles (barres, docks) et
+`--sc-shadow-floating` pour ce qui vient de s'ouvrir par-dessus.
+
+### Primitives existantes — les réutiliser
+
+`src/renderer/src/design/` :
+
+- **`ToolButton`** — le bouton d'outil. Icône `@mdi/js`, états `active` (fond neutre) et
+  `accented` (fond bleu, quand la zone a le focus), variante `header` pour les barres de titre de
+  panneau, nom accessible portant le raccourci. **Tout bouton d'icône passe par lui.**
+- **`Toolbar`** — la barre partagée, transposée de map3D : sections en slots (`false` masque, un
+  `ReactNode` remplace), `extras` pour les outils de l'espace, annuler/rétablir intégrés.
+- **`UiIcon`** — unique porte d'entrée des icônes. **Aucun SVG inline dans un composant.**
+- **`Separator`**, **`TooltipHost`** (infobulle partagée montée une fois à la racine),
+  **`tooltip.ts`** (instances `TIP_TOP` / `TIP_RIGHT` / `TIP_BOTTOM` — ne jamais fabriquer une
+  infobulle dans un corps de composant), **`cn`**, **`slots.ts`**.
+
+Dans `app/` : `Panel` et `PanelHeader` (la surface arrondie et son en-tête), `Rail`,
+`ToolWindow`, `ResizeHandle`, `TitleBar`, `Footer`.
+
+### Trois règles non négociables
+
+1. **Le fond reste opaque.** Pas de vibrancy, pas de transparence de fenêtre. Dans un studio on
+   juge des couleurs : un fond translucide fausse la perception de tout ce qui est au-dessus.
+   C'est une décision de métier, pas d'esthétique — ne pas la « améliorer ».
+2. **Si le composant vit dans un dock, il est maison.** DaisyUI est réservé aux surfaces où
+   l'application redevient une application : préférences, dialogues, clés API, onboarding.
+3. **Les onglets appartiennent au centre.** Un document a un nom, donc un onglet. Un outil a une
+   icône, donc une place sur un rail. Aucune fenêtre d'outil n'entre dans le centre.
+
+Icônes : `@mdi/js` + `@mdi/react` exclusivement, via `UiIcon`.
+
 ## Contraintes à ne pas perdre de vue
 
 - La clé API ne quitte jamais le process main. Le renderer demande « suis-je authentifié ? », jamais « quelle est ma clé ? ».
