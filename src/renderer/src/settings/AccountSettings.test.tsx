@@ -5,17 +5,10 @@ import type { ApiFailure } from '@shared/domain/failure'
 import type { AuthState } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
-import { AccountDialog } from './AccountDialog'
+import { AccountSettings } from './AccountSettings'
 
 const KEY = 'api_key_visible'
 const SECRET = 's3cr3t_visible'
-
-function openDialog(): void {
-  useSettings.setState({
-    accountDialogOpen: true,
-    auth: { authenticated: false, reason: 'missing' },
-  })
-}
 
 async function signIn(): Promise<void> {
   await userEvent.type(screen.getByLabelText(/Clé API/), KEY)
@@ -23,36 +16,34 @@ async function signIn(): Promise<void> {
   await userEvent.click(screen.getByRole('button', { name: 'Se connecter' }))
 }
 
-describe('AccountDialog', () => {
+describe('AccountSettings', () => {
   beforeEach(() => {
-    useSettings.setState({
-      accountDialogOpen: false,
-      auth: { authenticated: false, reason: 'missing' },
-    })
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('stays closed until it is asked to open', () => {
-    installFakeBridge()
-    render(<AccountDialog />)
-    expect(screen.getByRole('dialog', { hidden: true })).not.toHaveAttribute('open')
+  it('asks the main process for the current state as soon as it is shown', async () => {
+    const authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
+    installFakeBridge({ settings: { authState } })
+
+    render(<AccountSettings />)
+    await waitFor(() => expect(authState).toHaveBeenCalled())
   })
 
   it('sends the credentials and reports success without echoing them back', async () => {
     const setCredentials = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
     installFakeBridge({ settings: { setCredentials } })
 
-    render(<AccountDialog />)
-    openDialog()
+    render(<AccountSettings />)
     await signIn()
 
     expect(setCredentials).toHaveBeenCalledWith(KEY, SECRET)
     await screen.findByText('Connecté')
 
-    // The secret must not survive anywhere in the rendered tree, input values included.
+    // Nothing typed may survive in the rendered tree, input values included.
     expect(document.body.innerHTML).not.toContain(SECRET)
     expect(document.body.innerHTML).not.toContain(KEY)
   })
@@ -69,8 +60,7 @@ describe('AccountDialog', () => {
       settings: { setCredentials: () => Promise.resolve({ authenticated: false, reason }) },
     })
 
-    render(<AccountDialog />)
-    openDialog()
+    render(<AccountSettings />)
     await signIn()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(message)
@@ -78,8 +68,7 @@ describe('AccountDialog', () => {
 
   it('says nothing before an attempt has been made', () => {
     installFakeBridge()
-    render(<AccountDialog />)
-    openDialog()
+    render(<AccountSettings />)
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -89,8 +78,8 @@ describe('AccountDialog', () => {
     const forgetCredentials = vi.fn(() => Promise.resolve())
     installFakeBridge({ settings: { authState, forgetCredentials } })
 
-    useSettings.setState({ accountDialogOpen: true, auth: { authenticated: true } })
-    render(<AccountDialog />)
+    useSettings.setState({ auth: { authenticated: true } })
+    render(<AccountSettings />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }))
 

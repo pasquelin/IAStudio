@@ -6,6 +6,3 @@
 export const WINDOW_CHROME_COLOR = '#2b2d30'
 
 export const APP_NAME = 'Scenario Studio'
-
-/** Project folder extension. It is a folder, not a file — see spec § 5. */
-export const PROJECT_EXTENSION = 'scenario'

@@ -14,15 +14,12 @@ type SettingsState = {
   auth: AuthState
   /** False until the main process has answered once — the defaults are a placeholder. */
   loaded: boolean
-  accountDialogOpen: boolean
 
   load: () => Promise<void>
   write: (partial: PartialSettings) => Promise<void>
   refreshAuth: () => Promise<AuthState>
   signIn: (key: string, secret: string) => Promise<AuthState>
   signOut: () => Promise<void>
-  openAccountDialog: () => void
-  closeAccountDialog: () => void
 }
 
 /**
@@ -33,7 +30,6 @@ export const useSettings = create<SettingsState>()((set, get) => ({
   settings: DEFAULT_SETTINGS,
   auth: UNKNOWN_AUTH,
   loaded: false,
-  accountDialogOpen: false,
 
   load: async () => {
     const bridge = getBridge()
@@ -78,7 +74,4 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     // Asking again rather than assuming `missing`: a development `.env` may still answer.
     set({ auth: await bridge.settings.authState() })
   },
-
-  openAccountDialog: () => set({ accountDialogOpen: true }),
-  closeAccountDialog: () => set({ accountDialogOpen: false }),
 }))

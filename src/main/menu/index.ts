@@ -3,6 +3,7 @@ import { TRANSLATIONS, type Language } from '@shared/i18n'
 import { TOOL_PLACEMENTS } from '@shared/domain/tool'
 import { EVENTS } from '@shared/ipc'
 import { toggleFullScreen } from '@main/window/controls'
+import { openSettingsWindow } from '@main/window/windows'
 
 /**
  * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
@@ -34,10 +35,12 @@ export function buildMenu(language: Language): void {
   const t = TRANSLATIONS[language]
   const isMac = process.platform === 'darwin'
 
+  // Opened by the main process rather than routed through a renderer: settings are a window
+  // now, and which window is focused has nothing to do with it.
   const settingsItem: MenuItemConstructorOptions = {
     label: t.menu.settings,
     accelerator: 'CmdOrCtrl+,',
-    click: () => sendToFocused(EVENTS.menuCommand, 'settings:open'),
+    click: () => void openSettingsWindow(),
   }
 
   // Spelled out rather than `role: 'appMenu'`: the built-in role has no Preferences entry,

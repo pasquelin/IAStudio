@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { useDensity } from '@/hooks/useDensity'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
-import { AccountDialog } from '@/settings/AccountDialog'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -41,7 +40,6 @@ export function Application() {
   return (
     <QueryClientProvider client={client}>
       <Shell />
-      <AccountDialog />
     </QueryClientProvider>
   )
 }

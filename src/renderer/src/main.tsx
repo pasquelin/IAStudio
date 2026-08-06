@@ -1,8 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Application } from '@/app/Application'
 import { resolveLanguage } from '@shared/i18n'
+import { Application } from '@/app/Application'
 import { initI18n } from '@/i18n'
+import { SettingsWindow } from '@/settings/SettingsWindow'
 import './index.css'
 
 const root = document.getElementById('root')
@@ -12,8 +13,13 @@ if (!root) throw new Error('Root element not found in index.html')
 // an English menu above a French interface reads as a bug.
 await initI18n(resolveLanguage(navigator.language))
 
+/**
+ * Every window loads the same bundle and reads the route from the fragment. One entry point
+ * rather than a second HTML file: the i18n bootstrap, the tokens and the bridge are shared,
+ * and navigation is locked, so the fragment is only ever what the main process loaded.
+ */
+const isSettings = window.location.hash === '#settings'
+
 createRoot(root).render(
-  <StrictMode>
-    <Application />
-  </StrictMode>,
+  <StrictMode>{isSettings ? <SettingsWindow /> : <Application />}</StrictMode>,
 )
