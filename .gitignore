@@ -6,7 +6,8 @@ release/
 *.log
 secrets/
 .playwright-mcp/
-docs/
+# Doc externe régénérable (pnpm docs:scenario) — pas de la doc de projet
+docs/scenario-api/
 CLAUDE.md
 .idea/
 .vscode/
