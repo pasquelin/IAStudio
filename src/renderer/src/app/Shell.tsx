@@ -1,8 +1,7 @@
-import { DockviewReact } from 'dockview-react'
 import { TooltipHost } from '@/design/TooltipHost'
 import { useLayouts } from '@/stores/layouts'
 import { DEFAULT_SIZES, useTools } from '@/stores/tools'
-import { DOCUMENT_COMPONENTS } from './documents'
+import { DocumentArea } from './DocumentArea'
 import { Footer } from './Footer'
 import { Rail } from './Rail'
 import { ResizeHandle } from './ResizeHandle'
@@ -11,10 +10,6 @@ import { isLeading, type ToolZone } from './tools'
 import { Panel, ToolWindow } from './ToolWindow'
 import 'dockview-react/dist/styles/dockview.css'
 import './dockview-theme.css'
-
-// Dockview requires the callback; the API it hands over will be needed once documents
-// exist, not before.
-const noop = (): void => undefined
 
 /**
  * Assembles the studio: icon rails stuck to the edges, rounded tool windows laid over the
@@ -42,7 +37,7 @@ export function Shell() {
           <div className="flex min-h-0 flex-1">
             <Edge zone="left" />
             <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
-              <DockviewReact components={DOCUMENT_COMPONENTS} onReady={noop} />
+              <DocumentArea />
             </Panel>
             <Edge zone="right" />
           </div>
