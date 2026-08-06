@@ -7,7 +7,7 @@ import {
   mdiVolumeHigh,
 } from '@mdi/js'
 import type { ModelFamily } from '@shared/domain/model'
-import type { WorkspaceId } from '@shared/domain/workspace'
+import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 
 export type Workspace = {
   id: WorkspaceId
@@ -16,14 +16,34 @@ export type Workspace = {
   family: ModelFamily
 }
 
-export const WORKSPACES: readonly Workspace[] = [
-  { id: 'image', icon: mdiImageOutline, family: 'image' },
-  { id: 'video', icon: mdiVideoOutline, family: 'video' },
-  { id: '3d', icon: mdiCubeOutline, family: '3d' },
-  { id: 'audio', icon: mdiVolumeHigh, family: 'audio' },
-  { id: 'textures', icon: mdiTextureBox, family: 'image' },
-  { id: 'skyboxes', icon: mdiPanoramaVariantOutline, family: 'image' },
-]
+const ICONS: Record<WorkspaceId, string> = {
+  image: mdiImageOutline,
+  video: mdiVideoOutline,
+  '3d': mdiCubeOutline,
+  audio: mdiVolumeHigh,
+  textures: mdiTextureBox,
+  skyboxes: mdiPanoramaVariantOutline,
+}
+
+const FAMILIES: Record<WorkspaceId, ModelFamily> = {
+  image: 'image',
+  video: 'video',
+  '3d': '3d',
+  audio: 'audio',
+  textures: 'image',
+  skyboxes: 'image',
+}
+
+/**
+ * Derived from the shared registry rather than relisted, the way `app/tools.ts` derives from
+ * `TOOL_PLACEMENTS`: a seventh workspace is then declared once, and the compiler demands its
+ * icon and its family instead of letting the list drift.
+ */
+export const WORKSPACES: readonly Workspace[] = WORKSPACE_IDS.map(id => ({
+  id,
+  icon: ICONS[id],
+  family: FAMILIES[id],
+}))
 
 /** i18n key of a workspace label — the label is never hardcoded. */
 export function workspaceLabelKey(id: WorkspaceId): string {

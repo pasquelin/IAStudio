@@ -28,44 +28,44 @@ export function historyOf(state: Readable, documentId: string): History<SceneSta
  *
  * In memory, like the documents themselves.
  */
-export const useScenes = create<ScenesState>()((set, get) => ({
-  scenes: {},
-  histories: {},
-
-  runCommand: (documentId, command) => {
-    const [scene, history] = run(sceneOf(get(), documentId), historyOf(get(), documentId), command)
+export const useScenes = create<ScenesState>()((set, get) => {
+  /**
+   * `run`, `undo` and `redo` share one signature, so the three actions share one body: read the
+   * document's pair, step it, write it back.
+   */
+  const step = (
+    documentId: string,
+    apply: (scene: SceneState, history: History<SceneState>) => [SceneState, History<SceneState>],
+  ): void => {
+    const [scene, history] = apply(sceneOf(get(), documentId), historyOf(get(), documentId))
     set(state => ({
       scenes: { ...state.scenes, [documentId]: scene },
       histories: { ...state.histories, [documentId]: history },
     }))
-  },
+  }
 
-  // Selection is not a command, so it lands here rather than in the history.
-  setScene: (documentId, scene) =>
-    set(state => ({ scenes: { ...state.scenes, [documentId]: scene } })),
+  return {
+    scenes: {},
+    histories: {},
 
-  undoScene: documentId => {
-    const [scene, history] = undo(sceneOf(get(), documentId), historyOf(get(), documentId))
-    set(state => ({
-      scenes: { ...state.scenes, [documentId]: scene },
-      histories: { ...state.histories, [documentId]: history },
-    }))
-  },
+    runCommand: (documentId, command) =>
+      step(documentId, (scene, history) => run(scene, history, command)),
 
-  redoScene: documentId => {
-    const [scene, history] = redo(sceneOf(get(), documentId), historyOf(get(), documentId))
-    set(state => ({
-      scenes: { ...state.scenes, [documentId]: scene },
-      histories: { ...state.histories, [documentId]: history },
-    }))
-  },
+    // Selection is not a command, so it lands here rather than in the history.
+    setScene: (documentId, scene) =>
+      set(state => ({ scenes: { ...state.scenes, [documentId]: scene } })),
 
-  dropScene: documentId =>
-    set(state => {
-      const scenes = { ...state.scenes }
-      const histories = { ...state.histories }
-      delete scenes[documentId]
-      delete histories[documentId]
-      return { scenes, histories }
-    }),
-}))
+    undoScene: documentId => step(documentId, undo),
+
+    redoScene: documentId => step(documentId, redo),
+
+    dropScene: documentId =>
+      set(state => {
+        const scenes = { ...state.scenes }
+        const histories = { ...state.histories }
+        delete scenes[documentId]
+        delete histories[documentId]
+        return { scenes, histories }
+      }),
+  }
+})
