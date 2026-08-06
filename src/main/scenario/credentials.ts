@@ -2,10 +2,6 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Credentials, SettingsStore } from '@main/settings/store'
 
-export type CredentialSource = 'settings' | 'environment'
-
-export type ResolvedCredentials = Credentials & { source: CredentialSource }
-
 /**
  * How the development fallback reaches the disk. Injected so the resolution order can be
  * tested without a file system and without Electron.
@@ -63,12 +59,8 @@ export function readEnvironmentCredentials(fallback: EnvironmentFallback): Crede
 export function resolveCredentials(
   settings: SettingsStore,
   fallback: EnvironmentFallback,
-): ResolvedCredentials | null {
-  const stored = settings.readCredentials()
-  if (stored) return { ...stored, source: 'settings' }
-
-  const environment = readEnvironmentCredentials(fallback)
-  return environment ? { ...environment, source: 'environment' } : null
+): Credentials | null {
+  return settings.readCredentials() ?? readEnvironmentCredentials(fallback)
 }
 
 export function createFileSystemFallback(rootPath: string, packaged: boolean): EnvironmentFallback {

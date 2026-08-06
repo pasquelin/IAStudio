@@ -1,3 +1,5 @@
+import type { ApiFailure } from './failure'
+
 export type Theme = 'dark' | 'light'
 export type Density = 'compact' | 'comfortable'
 export type AssetBackend = 'local' | 'cloud'
@@ -34,17 +36,4 @@ export type PartialSettings = {
   storage?: Partial<Settings['storage']>
 }
 
-/**
- * Closed union rather than a free string: a raw `error.message` from the SDK could carry the
- * key itself across the boundary. The renderer translates the code, it never displays it.
- */
-export type AuthFailure =
-  | 'missing'
-  | 'invalid-credentials'
-  | 'forbidden'
-  | 'rate-limited'
-  | 'server'
-  | 'network'
-  | 'unexpected'
-
-export type AuthState = { authenticated: true } | { authenticated: false; reason: AuthFailure }
+export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }

@@ -20,10 +20,12 @@ export function registerScenarioHandlers({ models, jobs }: ScenarioHandlerDeps):
     const id = parseModelId(modelId)
     const parsedBody = parseGenerationBody(body)
 
+    // `describe` rather than `list`: the generator just used it to render the form, so it is
+    // warm, whereas a cold `list` paginates the whole catalogue before the job is even queued.
     // A missing label is a cosmetic problem; refusing to generate over one is not.
     const label = await models
-      .list()
-      .then(summaries => summaries.find(summary => summary.id === id)?.name ?? id)
+      .describe(id)
+      .then(descriptor => descriptor.name)
       .catch(() => id)
 
     return jobs.submit(id, label, parsedBody)

@@ -31,7 +31,6 @@ export type Channels = {
   projectPickFolder: 'project:pick-folder'
 
   assetsSearch: 'assets:search'
-  assetsUrl: 'assets:url'
 
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
@@ -60,7 +59,6 @@ export const CHANNELS: Channels = {
   projectPickFolder: 'project:pick-folder',
 
   assetsSearch: 'assets:search',
-  assetsUrl: 'assets:url',
 
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
@@ -112,7 +110,6 @@ export type StudioBridge = {
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
-    url: (assetId: string) => Promise<string | null>
   }
   window: {
     toggleFullScreen: () => Promise<void>

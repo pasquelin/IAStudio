@@ -9,9 +9,11 @@ import {
   buildBody,
   buildSchema,
   defaultValues,
+  dependencyKeys,
   groupFields,
-  isVisible,
+  isNumeric,
   randomSeed,
+  visibleFields,
   type FormValues,
 } from './dynamic-form'
 import { ToolButton } from './ToolButton'
@@ -98,6 +100,8 @@ export function DynamicForm({ fields, onSubmit, submitLabel, busy = false }: Dyn
   const { t } = useTranslation()
   const schema = useMemo(() => buildSchema(fields), [fields])
   const initial = useMemo(() => defaultValues(fields), [fields])
+  const groups = useMemo(() => groupFields(fields), [fields])
+  const dependencies = useMemo(() => dependencyKeys(fields), [fields])
 
   const { register, handleSubmit, watch, setValue, reset, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -108,7 +112,12 @@ export function DynamicForm({ fields, onSubmit, submitLabel, busy = false }: Dyn
   // `guidance` from one model into another that never declared it.
   useEffect(() => reset(initial), [initial, reset])
 
-  const values = watch()
+  // Watching the whole form would re-render every control on every keystroke. Only the keys
+  // another field declares a dependency on can change what is on screen.
+  const watched = dependencies.length > 0 ? watch(dependencies) : []
+  const values: FormValues = Object.fromEntries(
+    dependencies.map((key, index) => [key, watched[index]]),
+  )
 
   if (fields.length === 0) {
     return <p className="text-muted p-2 text-xs">{t('generation.noParameter')}</p>
@@ -121,37 +130,33 @@ export function DynamicForm({ fields, onSubmit, submitLabel, busy = false }: Dyn
         void handleSubmit(submitted => onSubmit(buildBody(fields, submitted)))(event)
       }
     >
-      {groupFields(fields).map(([group, groupedFields]) => (
+      {groups.map(([group, groupedFields]) => (
         <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
           {group && (
             <legend className="text-muted p-0 text-[11px] tracking-wide uppercase">{group}</legend>
           )}
 
-          {groupedFields
-            .filter(field => isVisible(field, values))
-            .map(field => (
-              <label key={field.key} className="flex flex-col gap-1 text-xs">
-                <span className="text-muted">
-                  {field.label}
-                  {field.required && <span aria-hidden> *</span>}
+          {visibleFields(groupedFields, values).map(field => (
+            <label key={field.key} className="flex flex-col gap-1 text-xs">
+              <span className="text-muted">
+                {field.label}
+                {field.required && <span aria-hidden> *</span>}
+              </span>
+
+              <Control
+                field={field}
+                registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
+                onRoll={() => setValue(field.key, randomSeed())}
+              />
+
+              {field.help && <span className="text-muted text-[11px]">{field.help}</span>}
+              {formState.errors[field.key] && (
+                <span role="alert" className="text-danger text-[11px]">
+                  {t('errors.invalidValue')}
                 </span>
-
-                <Control
-                  field={field}
-                  registration={register(field.key, {
-                    valueAsNumber: field.kind === 'number' || field.kind === 'integer',
-                  })}
-                  onRoll={() => setValue(field.key, randomSeed())}
-                />
-
-                {field.help && <span className="text-muted text-[11px]">{field.help}</span>}
-                {formState.errors[field.key] && (
-                  <span role="alert" className="text-danger text-[11px]">
-                    {t('errors.invalidValue')}
-                  </span>
-                )}
-              </label>
-            ))}
+              )}
+            </label>
+          ))}
         </fieldset>
       ))}
 

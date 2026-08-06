@@ -90,7 +90,9 @@
     "server": "Le service Scenario est momentanément indisponible.",
     "network": "Impossible de joindre Scenario. Vérifiez votre connexion.",
     "unexpected": "Une erreur inattendue est survenue.",
-    "invalidValue": "Valeur invalide."
+    "invalidValue": "Valeur invalide.",
+    "rejected": "La génération a échoué.",
+    "storage": "Impossible d’enregistrer le résultat sur le disque."
   },
   "menu": {
     "file": "Fichier",

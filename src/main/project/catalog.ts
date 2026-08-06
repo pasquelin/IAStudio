@@ -1,4 +1,4 @@
-import type { Asset, AssetQuery, AssetType } from '@shared/domain/asset'
+import { isAssetType, type Asset, type AssetQuery, type AssetType } from '@shared/domain/asset'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
 
 /**
@@ -36,12 +36,6 @@ const MIGRATIONS: readonly string[] = [
 
 const DEFAULT_LIMIT = 200
 
-function currentVersion(driver: SqliteDriver): number {
-  const row = driver.prepare('PRAGMA user_version').get()
-  const value = row?.['user_version']
-  return typeof value === 'bigint' ? Number(value) : typeof value === 'number' ? value : 0
-}
-
 export function migrate(driver: SqliteDriver): void {
   for (let version = currentVersion(driver); version < MIGRATIONS.length; version++) {
     driver.exec(MIGRATIONS[version] ?? '')
@@ -65,11 +59,15 @@ function optionalNumber(row: SqlRow, column: string): number | undefined {
   return typeof value === 'bigint' ? Number(value) : undefined
 }
 
+function currentVersion(driver: SqliteDriver): number {
+  const row = driver.prepare('PRAGMA user_version').get()
+  return row ? (optionalNumber(row, 'user_version') ?? 0) : 0
+}
+
 /** The column is a closed union in the domain but a free string in SQLite. */
 function assetType(row: SqlRow): AssetType {
   const value = text(row, 'type')
-  const known: readonly AssetType[] = ['image', 'video', 'audio', 'mesh', 'texture', 'skybox']
-  return known.find(candidate => candidate === value) ?? 'image'
+  return isAssetType(value) ? value : 'image'
 }
 
 function assetOf(row: SqlRow, tags: string[]): Asset {
@@ -128,6 +126,30 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const selectAsset = driver.prepare('SELECT * FROM assets WHERE id = ?')
 
   const tagsOf = (assetId: string): string[] => selectTags.all(assetId).map(row => text(row, 'tag'))
+
+  /**
+   * One query for the whole page rather than one per row: a 200-asset search was 201
+   * synchronous queries, and a synchronous query in the main process blocks every window.
+   */
+  const tagsByAsset = (assetIds: readonly string[]): Map<string, string[]> => {
+    const grouped = new Map<string, string[]>()
+    if (assetIds.length === 0) return grouped
+
+    const placeholders = assetIds.map(() => '?').join(', ')
+    const rows = driver
+      .prepare(`SELECT asset_id, tag FROM asset_tags WHERE asset_id IN (${placeholders})`)
+      .all(...assetIds)
+
+    for (const row of rows) {
+      const assetId = text(row, 'asset_id')
+      const existing = grouped.get(assetId)
+      if (existing) existing.push(text(row, 'tag'))
+      else grouped.set(assetId, [text(row, 'tag')])
+    }
+
+    for (const tags of grouped.values()) tags.sort()
+    return grouped
+  }
 
   return {
     add: asset => {
@@ -188,7 +210,8 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         .prepare(`SELECT * FROM assets ${where} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`)
         .all(...params)
 
-      return rows.map(row => assetOf(row, tagsOf(text(row, 'id'))))
+      const tags = tagsByAsset(rows.map(row => text(row, 'id')))
+      return rows.map(row => assetOf(row, tags.get(text(row, 'id')) ?? []))
     },
 
     close: () => driver.close(),

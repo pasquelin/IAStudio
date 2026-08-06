@@ -1,5 +1,6 @@
 import Scenario, { APIConnectionError, APIError } from '@scenario-labs/sdk'
-import type { AuthFailure, AuthState } from '@shared/domain/settings'
+import type { ApiFailure } from '@shared/domain/failure'
+import type { AuthState } from '@shared/domain/settings'
 import type { Credentials } from '@main/settings/store'
 
 /** Thrown when a channel needing the API is reached without usable credentials. */
@@ -16,7 +17,7 @@ export class NotAuthenticatedError extends Error {
  * The reduction is the point, not a simplification: an `APIError` message embeds the request
  * that produced it, so returning it would walk the API key across the IPC boundary.
  */
-export function failureOf(error: unknown): AuthFailure {
+export function failureOf(error: unknown): ApiFailure {
   if (error instanceof APIConnectionError) return 'network'
 
   if (error instanceof APIError) {
@@ -28,10 +29,6 @@ export function failureOf(error: unknown): AuthFailure {
   }
 
   return 'unexpected'
-}
-
-export function createClient({ key, secret }: Credentials): Scenario {
-  return new Scenario({ apiKey: key, apiSecret: secret })
 }
 
 /**
@@ -72,7 +69,7 @@ export function createClientProvider(resolve: () => Credentials | null): ClientP
     if (client) return client
     const credentials = resolve()
     if (!credentials) return null
-    client = createClient(credentials)
+    client = new Scenario({ apiKey: credentials.key, apiSecret: credentials.secret })
     return client
   }
 

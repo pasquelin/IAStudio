@@ -1,3 +1,4 @@
+import type { JobFailure } from '@shared/domain/failure'
 import { isFinished, type Job, type JobProgress, type JobStatus } from '@shared/domain/job'
 import { failureOf } from './client'
 
@@ -43,6 +44,9 @@ export type JobManager = {
 const DEFAULT_POLL_INTERVAL_MS = 2000
 const DEFAULT_BACKOFF_BASE_MS = 1000
 
+/** Finished jobs kept for the bar's history. Beyond this a long session is just a leak. */
+const RETAINED_JOBS = 200
+
 /**
  * The API knows eight statuses, the studio five. `warming-up` and `finalizing` are running
  * states, not states of their own; an unknown one is treated as running, so a status Scenario
@@ -67,10 +71,6 @@ export function jobStatusOf(remoteStatus: string): JobStatus {
 function isRetryable(error: unknown): boolean {
   const failure = failureOf(error)
   return failure === 'rate-limited' || failure === 'server' || failure === 'network'
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : 'unexpected'
 }
 
 type Entry = {
@@ -112,12 +112,23 @@ export function createJobManager({
     onProgress(progress)
   }
 
-  const settle = (entry: Entry, status: JobStatus, error?: string): void => {
+  /** Insertion order is submission order, so the oldest finished entries go first. */
+  const evictOldFinished = (): void => {
+    const finished = [...entries.values()].filter(candidate => isFinished(candidate.job.status))
+
+    for (const stale of finished.slice(0, finished.length - RETAINED_JOBS)) {
+      entries.delete(stale.job.id)
+    }
+  }
+
+  const settle = (entry: Entry, status: JobStatus, error?: JobFailure): void => {
     entry.job.status = status
     entry.job.finishedAt = now()
+    entry.body = {}
     if (status === 'succeeded') entry.job.progress = 1
     if (error !== undefined) entry.job.error = error
     emit(entry)
+    evictOldFinished()
   }
 
   const withRetry = async <T>(action: () => Promise<T>): Promise<T> => {
@@ -153,40 +164,48 @@ export function createJobManager({
       const submitted = await withRetry(() => runner.submit(entry.job.modelId, entry.body))
       entry.remoteId = submitted.jobId
 
+      // The body is read once and can hold an encoded source image; a finished job has no
+      // reason to keep it alive for the rest of the session.
+      entry.body = {}
+
       // Cancelled while the submission was in flight: the remote job exists, so it must be
       // told, otherwise it keeps burning credits with nobody watching.
-      if (entry.cancelled) {
+      const abandon = async (): Promise<void> => {
         await runner.cancel(submitted.jobId).catch(() => {})
         settle(entry, 'cancelled')
-        return
       }
+
+      if (entry.cancelled) return await abandon()
 
       let remote = submitted
       let status = advance(entry, remote)
 
       while (!isFinished(status)) {
         await sleep(pollIntervalMs)
-        if (entry.cancelled) {
-          await runner.cancel(submitted.jobId).catch(() => {})
-          settle(entry, 'cancelled')
-          return
-        }
+        if (entry.cancelled) return await abandon()
 
         remote = await withRetry(() => runner.poll(submitted.jobId))
         status = advance(entry, remote)
       }
 
       if (status !== 'succeeded') {
-        settle(entry, status, status === 'failed' ? 'job-failed' : undefined)
+        settle(entry, status, status === 'failed' ? 'rejected' : undefined)
         return
       }
 
       // Succeeded only once the files are on disk and indexed: announcing it earlier shows a
       // finished job with nothing behind it in the asset browser.
-      entry.job.assetIds = await collect(entry.job, remote.metadata?.assetIds ?? [])
+      try {
+        entry.job.assetIds = await collect(entry.job, remote.metadata?.assetIds ?? [])
+      } catch {
+        // Writing or indexing failed — a local problem, distinct from anything the API said.
+        settle(entry, 'failed', 'storage')
+        return
+      }
+
       settle(entry, 'succeeded')
     } catch (error) {
-      settle(entry, 'failed', messageOf(error))
+      settle(entry, 'failed', failureOf(error))
     }
   }
 
@@ -238,13 +257,11 @@ export function createJobManager({
 
       entry.cancelled = true
 
-      // Never started: it leaves the queue and never reaches the API at all.
-      if (entry.remoteId === null && entry.job.status === 'queued') {
-        const position = queue.indexOf(jobId)
-        if (position >= 0) {
-          queue.splice(position, 1)
-          settle(entry, 'cancelled')
-        }
+      // Still queued: it leaves the queue and never reaches the API at all.
+      const position = queue.indexOf(jobId)
+      if (position >= 0) {
+        queue.splice(position, 1)
+        settle(entry, 'cancelled')
         return
       }
 

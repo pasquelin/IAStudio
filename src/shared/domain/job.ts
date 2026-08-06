@@ -1,3 +1,5 @@
+import type { JobFailure } from './failure'
+
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
 
 /** A Scenario job, as the studio sees it. */
@@ -11,12 +13,13 @@ export type Job = {
   createdAt: string
   finishedAt?: string
   assetIds: string[]
-  error?: string
+  /** A code, never a message: the renderer translates it — see `domain/failure.ts`. */
+  error?: JobFailure
 }
 
 export type JobProgress = Pick<Job, 'id' | 'status' | 'progress'> & {
   assetIds?: string[]
-  error?: string
+  error?: JobFailure
 }
 
 export const FINISHED_STATUSES: readonly JobStatus[] = ['succeeded', 'failed', 'cancelled']

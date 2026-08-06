@@ -45,11 +45,11 @@ describe('jobs store', () => {
   it('carries the assets and the error a progress reports', () => {
     useJobs
       .getState()
-      .apply({ id: 'job_1', status: 'failed', progress: 0.2, error: 'quota exceeded' })
+      .apply({ id: 'job_1', status: 'failed', progress: 0.2, error: 'rate-limited' })
 
     expect(useJobs.getState().jobs[0]).toMatchObject({
       status: 'failed',
-      error: 'quota exceeded',
+      error: 'rate-limited',
     })
   })
 
@@ -67,11 +67,8 @@ describe('jobs store', () => {
   })
 
   it('puts a freshly submitted job at the top of the list', async () => {
-    installFakeBridge()
-    vi.stubGlobal('studio', {
-      ...globalThis.studio,
+    installFakeBridge({
       scenario: {
-        ...globalThis.studio.scenario,
         generate: () => Promise.resolve(job({ id: 'job_new', status: 'queued', progress: 0 })),
       },
     })

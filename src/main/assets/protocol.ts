@@ -1,28 +1,7 @@
 import { net, protocol } from 'electron'
 import { isAbsolute, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
-
-export const ASSET_SCHEME = 'scenario'
-
-const HOST = 'asset'
-
-/** The URL the renderer receives for a local asset. It never learns the file's path. */
-export function assetUrl(assetId: string): string {
-  return `${ASSET_SCHEME}://${HOST}/${encodeURIComponent(assetId)}`
-}
-
-/** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */
-export function assetIdFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== `${ASSET_SCHEME}:` || parsed.hostname !== HOST) return null
-
-    const id = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-    return id.length > 0 ? id : null
-  } catch {
-    return null
-  }
-}
+import { ASSET_SCHEME, assetIdFromUrl } from '@shared/domain/asset'
 
 /**
  * Resolves an asset's stored path inside its project, or refuses.

@@ -5,26 +5,9 @@ import { describe, expect, it, vi } from 'vitest'
 // Electron in — and there is no Electron under Vitest.
 vi.mock('electron', () => ({ net: {}, protocol: {} }))
 
-const { assetFilePath, assetIdFromUrl, assetUrl } = await import('./protocol')
+const { assetFilePath } = await import('./protocol')
 
 const PROJECT = resolve('/projects/Mon projet.scenario')
-
-describe('asset URLs', () => {
-  it('round-trips an identifier', () => {
-    expect(assetIdFromUrl(assetUrl('asset_1'))).toBe('asset_1')
-  })
-
-  it('survives an identifier needing encoding', () => {
-    expect(assetIdFromUrl(assetUrl('asset/1 2'))).toBe('asset/1 2')
-  })
-
-  it('refuses a URL that is not ours to serve', () => {
-    expect(assetIdFromUrl('https://cdn.cloud.scenario.com/asset_1')).toBeNull()
-    expect(assetIdFromUrl('scenario://other/asset_1')).toBeNull()
-    expect(assetIdFromUrl('scenario://asset/')).toBeNull()
-    expect(assetIdFromUrl('not a url')).toBeNull()
-  })
-})
 
 describe('asset file resolution', () => {
   it('resolves a path stored by the catalogue', () => {

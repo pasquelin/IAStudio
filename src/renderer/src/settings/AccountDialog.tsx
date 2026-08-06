@@ -1,21 +1,7 @@
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AuthFailure } from '@shared/domain/settings'
+import { failureMessageKey } from '@/services/failure-message'
 import { useSettings } from '@/stores/settings'
-
-/**
- * One message per failure code. The main process never sends text — an SDK error message
- * embeds the request that produced it, and that request carries the API key.
- */
-const MESSAGE_KEY: Record<AuthFailure, string> = {
-  missing: 'errors.missingCredentials',
-  'invalid-credentials': 'errors.invalidCredentials',
-  forbidden: 'errors.forbidden',
-  'rate-limited': 'errors.rateLimited',
-  server: 'errors.server',
-  network: 'errors.network',
-  unexpected: 'errors.unexpected',
-}
 
 /**
  * Account settings, opened by ⌘,. Built with DaisyUI rather than the in-house design system:
@@ -114,7 +100,7 @@ export function AccountDialog() {
 
             {attempted && (
               <p role="alert" className="text-error text-xs">
-                {t(MESSAGE_KEY[auth.reason])}
+                {t(failureMessageKey(auth.reason))}
               </p>
             )}
 

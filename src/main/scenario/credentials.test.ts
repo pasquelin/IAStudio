@@ -63,7 +63,6 @@ describe('credential resolution', () => {
     expect(resolveCredentials(settings, fallback(DEV_ENV))).toEqual({
       key: 'saved_key',
       secret: 'saved_secret',
-      source: 'settings',
     })
   })
 
@@ -71,7 +70,6 @@ describe('credential resolution', () => {
     expect(resolveCredentials(createSettingsStore(memoryAdapter()), fallback(DEV_ENV))).toEqual({
       key: 'env_key',
       secret: 'env_secret',
-      source: 'environment',
     })
   })
 

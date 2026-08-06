@@ -10,11 +10,7 @@ type AssetsState = {
   setView: (view: AssetsView) => void
 
   items: Asset[]
-  /** Loadable URLs, resolved lazily: only what reaches the screen needs one. */
-  urls: Record<string, string>
-
   refresh: () => Promise<void>
-  resolveUrl: (assetId: string) => Promise<void>
 }
 
 /**
@@ -26,12 +22,11 @@ type AssetsState = {
  */
 export const useAssets = create<AssetsState>()(
   persist(
-    (set, get) => ({
+    set => ({
       view: 'grid',
       setView: view => set({ view }),
 
       items: [],
-      urls: {},
 
       refresh: async () => {
         const bridge = getBridge()
@@ -40,17 +35,9 @@ export const useAssets = create<AssetsState>()(
         try {
           set({ items: await bridge.assets.search({}) })
         } catch {
-          // No project open: an empty browser is the honest answer, not an error.
-          set({ items: [], urls: {} })
+          // No project open: the catalogue throws, and an empty list is the honest answer.
+          set({ items: [] })
         }
-      },
-
-      resolveUrl: async assetId => {
-        const bridge = getBridge()
-        if (!bridge || get().urls[assetId]) return
-
-        const url = await bridge.assets.url(assetId)
-        if (url) set(state => ({ urls: { ...state.urls, [assetId]: url } }))
       },
     }),
     { name: 'scenario-studio:assets', partialize: state => ({ view: state.view }) },

@@ -1,34 +1,28 @@
 import { mdiFormatListBulleted, mdiImageMultipleOutline, mdiViewGridOutline } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef, type RefObject } from 'react'
+import { useRef, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Asset } from '@shared/domain/asset'
+import { assetUrl, type Asset } from '@shared/domain/asset'
 import { cn } from '@/design/cn'
 import { TIP_BOTTOM } from '@/design/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { useAssets } from '@/stores/assets'
+import { useProject } from '@/stores/project'
 import { EmptyState } from './EmptyState'
 
 const THUMBNAIL_SIZE = 96
 const ROW_HEIGHT = 26
 
-export type AssetBrowserProps = {
-  assets?: Asset[]
-}
-
 /** Actions rendered in the panel's title bar, on the same line as its name. */
-export function AssetBrowserActions({ assets }: AssetBrowserProps) {
+export function AssetBrowserActions() {
   const { t } = useTranslation()
   const view = useAssets(state => state.view)
   const setView = useAssets(state => state.setView)
-  const items = useAssets(state => state.items)
-  const shown = assets ?? items
+  const count = useAssets(state => state.items.length)
 
   return (
     <>
-      <span className="text-muted mr-1 text-[11px]">
-        {t('assets.count', { count: shown.length })}
-      </span>
+      <span className="text-muted mr-1 text-[11px]">{t('assets.count', { count })}</span>
       <ToolButton
         icon={mdiViewGridOutline}
         label={t('assets.gridView')}
@@ -54,46 +48,45 @@ export function AssetBrowserActions({ assets }: AssetBrowserProps) {
  * The list is virtualized; the grid is not yet — it will have to be before a well-stocked
  * project, which holds thousands of thumbnails, is loaded into it.
  */
-export function AssetBrowser({ assets }: AssetBrowserProps) {
+export function AssetBrowser() {
   const { t } = useTranslation()
   const view = useAssets(state => state.view)
   const items = useAssets(state => state.items)
+  const project = useProject(state => state.project)
   const scroller = useRef<HTMLDivElement>(null)
 
-  const shown = assets ?? items
-
-  if (shown.length === 0) {
-    return <EmptyState icon={mdiImageMultipleOutline} message={t('assets.none')} />
+  if (items.length === 0) {
+    // An empty project and no project at all are different situations, and the user can only
+    // act on one of them.
+    const message = project ? t('assets.none') : t('assets.openProject')
+    return <EmptyState icon={mdiImageMultipleOutline} message={message} />
   }
 
   return (
     <div ref={scroller} className="h-full overflow-auto p-2">
       {view === 'grid' ? (
-        <AssetsGrid assets={shown} />
+        <AssetsGrid assets={items} />
       ) : (
-        <AssetsList assets={shown} container={scroller} />
+        <AssetsList assets={items} container={scroller} />
       )}
     </div>
   )
 }
 
+const FRAME = 'border-border bg-surface aspect-square rounded-(--radius-sc-sm) border'
+
 /**
- * A local file is served over `scenario://`, resolved on demand. The renderer asks for an
- * identifier's URL; it never handles a file path — see spec § 3.4.
+ * A local file is served over `scenario://`. The URL is derived from the identifier, not asked
+ * for: the renderer still never handles a file path, and a grid of thumbnails costs no IPC.
  */
 function Thumbnail({ asset }: { asset: Asset }) {
-  const url = useAssets(state => state.urls[asset.id])
-  const resolveUrl = useAssets(state => state.resolveUrl)
+  if (asset.type !== 'image' || asset.location !== 'local' || !asset.path) {
+    return <div className={FRAME} />
+  }
 
-  useEffect(() => {
-    void resolveUrl(asset.id)
-  }, [asset.id, resolveUrl])
-
-  const frame = 'border-border bg-surface aspect-square rounded-(--radius-sc-sm) border'
-
-  if (!url || asset.type !== 'image') return <div className={frame} />
-
-  return <img src={url} alt="" loading="lazy" className={cn(frame, 'object-cover')} />
+  return (
+    <img src={assetUrl(asset.id)} alt="" loading="lazy" className={cn(FRAME, 'object-cover')} />
+  )
 }
 
 function AssetsGrid({ assets }: { assets: Asset[] }) {

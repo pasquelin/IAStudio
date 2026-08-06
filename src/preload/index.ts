@@ -45,7 +45,6 @@ const bridge: StudioBridge = {
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
-    url: assetId => ipcRenderer.invoke(CHANNELS.assetsUrl, assetId),
   },
   window: {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),

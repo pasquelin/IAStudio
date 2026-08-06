@@ -96,6 +96,17 @@ describe('DynamicForm', () => {
     expect(input).not.toHaveValue(null)
   })
 
+  // A seed registered as a string was validated against a number: a hand-typed one never
+  // passed, and only the roll button worked.
+  it('submits a hand-typed seed as a number', async () => {
+    const onSubmit = renderForm([field({ key: 'seed', label: 'Graine', kind: 'seed' })])
+
+    await userEvent.type(screen.getByLabelText(/Graine/), '1234')
+    await userEvent.click(screen.getByRole('button', { name: 'Générer' }))
+
+    expect(onSubmit).toHaveBeenCalledWith({ seed: 1234 })
+  })
+
   it('groups the fields the model asked to group', () => {
     renderForm([
       field({ key: 'prompt', label: 'Prompt' }),

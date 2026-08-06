@@ -9,7 +9,9 @@ const noSubscription = (): (() => void) => () => {}
  * a component that reaches for a channel the test forgot to stub must fail on what it
  * received, not on `undefined is not a function`.
  */
-export function installFakeBridge(settings: Partial<StudioBridge['settings']> = {}): StudioBridge {
+export type BridgeOverrides = { [K in keyof StudioBridge]?: Partial<StudioBridge[K]> }
+
+export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge {
   const bridge: StudioBridge = {
     settings: {
       read: () => Promise.resolve(DEFAULT_SETTINGS),
@@ -17,7 +19,7 @@ export function installFakeBridge(settings: Partial<StudioBridge['settings']> = 
       setCredentials: () => Promise.resolve({ authenticated: true }),
       authState: () => Promise.resolve({ authenticated: false, reason: 'missing' }),
       forgetCredentials: () => Promise.resolve(),
-      ...settings,
+      ...overrides.settings,
     },
     scenario: {
       listModels: () => Promise.resolve([]),
@@ -26,6 +28,7 @@ export function installFakeBridge(settings: Partial<StudioBridge['settings']> = 
       cancelJob: () => Promise.resolve(),
       listJobs: () => Promise.resolve([]),
       onProgress: noSubscription,
+      ...overrides.scenario,
     },
     project: {
       create: () => Promise.reject(new Error('no project')),
@@ -33,19 +36,22 @@ export function installFakeBridge(settings: Partial<StudioBridge['settings']> = 
       current: () => Promise.resolve(null),
       pickFolder: () => Promise.resolve(null),
       onChange: noSubscription,
+      ...overrides.project,
     },
     assets: {
       search: () => Promise.resolve([]),
-      url: () => Promise.resolve(null),
+      ...overrides.assets,
     },
     window: {
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),
       onState: noSubscription,
+      ...overrides.window,
     },
     menu: {
       onOpenTool: noSubscription,
       onCommand: noSubscription,
+      ...overrides.menu,
     },
   }
 

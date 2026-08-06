@@ -233,7 +233,9 @@ describe('job manager', () => {
     expect(progress).toEqual([])
   })
 
-  it('fails the job when its assets cannot be brought down', async () => {
+  // A local write failure is not what the API said, and neither is a code the renderer can
+  // mistake for an API problem.
+  it('fails the job on a storage code when its assets cannot be brought down', async () => {
     const { manager } = harness({
       collect: () => Promise.reject(new Error('disk full')),
     })
@@ -241,7 +243,41 @@ describe('job manager', () => {
     manager.submit('model_flux', 'Flux', {})
     await settled()
 
-    expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'disk full' })
+    expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'storage' })
+  })
+
+  it('reduces an API error to a code rather than carrying its message across', async () => {
+    const leaky = APIError.generate(500, undefined, 'Authorization: Basic c2VjcmV0', new Headers())
+    const { manager } = harness({
+      maxRetries: () => 0,
+      runner: {
+        submit: () => Promise.reject(leaky),
+        poll: () => Promise.resolve(remote('success')),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    const failed = manager.list()[0]
+    expect(failed).toMatchObject({ status: 'failed', error: 'server' })
+    expect(JSON.stringify(failed)).not.toContain('c2VjcmV0')
+  })
+
+  it('reports a job the API rejected as rejected, not as an unknown failure', async () => {
+    const { manager } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('failure')),
+        poll: () => Promise.resolve(remote('failure')),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'rejected' })
   })
 
   it('lists the most recent job first', async () => {

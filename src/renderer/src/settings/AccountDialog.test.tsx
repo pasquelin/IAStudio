@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AuthFailure, AuthState } from '@shared/domain/settings'
+import type { ApiFailure } from '@shared/domain/failure'
+import type { AuthState } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
 import { AccountDialog } from './AccountDialog'
@@ -42,7 +43,7 @@ describe('AccountDialog', () => {
 
   it('sends the credentials and reports success without echoing them back', async () => {
     const setCredentials = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
-    installFakeBridge({ setCredentials })
+    installFakeBridge({ settings: { setCredentials } })
 
     render(<AccountDialog />)
     openDialog()
@@ -56,7 +57,7 @@ describe('AccountDialog', () => {
     expect(document.body.innerHTML).not.toContain(KEY)
   })
 
-  it.each<[AuthFailure, string]>([
+  it.each<[ApiFailure, string]>([
     ['invalid-credentials', 'Clé ou secret API invalide.'],
     ['forbidden', 'Cette clé API n’a pas les droits requis.'],
     ['rate-limited', 'Trop de requêtes. Nouvelle tentative en cours…'],
@@ -65,7 +66,7 @@ describe('AccountDialog', () => {
     ['unexpected', 'Une erreur inattendue est survenue.'],
   ])('translates the %s failure into its own message', async (reason, message) => {
     installFakeBridge({
-      setCredentials: () => Promise.resolve({ authenticated: false, reason }),
+      settings: { setCredentials: () => Promise.resolve({ authenticated: false, reason }) },
     })
 
     render(<AccountDialog />)
@@ -86,7 +87,7 @@ describe('AccountDialog', () => {
   it('re-asks the main process after signing out, rather than assuming the answer', async () => {
     const authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
     const forgetCredentials = vi.fn(() => Promise.resolve())
-    installFakeBridge({ authState, forgetCredentials })
+    installFakeBridge({ settings: { authState, forgetCredentials } })
 
     useSettings.setState({ accountDialogOpen: true, auth: { authenticated: true } })
     render(<AccountDialog />)

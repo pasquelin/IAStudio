@@ -90,7 +90,9 @@
     "server": "The Scenario service is temporarily unavailable.",
     "network": "Cannot reach Scenario. Check your connection.",
     "unexpected": "An unexpected error occurred.",
-    "invalidValue": "Invalid value."
+    "invalidValue": "Invalid value.",
+    "rejected": "The generation failed.",
+    "storage": "Could not save the result to disk."
   },
   "menu": {
     "file": "File",

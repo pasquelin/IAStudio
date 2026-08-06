@@ -1,9 +1,17 @@
 import { z } from 'zod'
-import type { FieldDescriptor } from '@shared/domain/model'
+import type { FieldDescriptor, FieldKind } from '@shared/domain/model'
 
 export type FormValues = Record<string, unknown>
 
-const NUMERIC = new Set(['number', 'integer', 'seed'])
+const NUMERIC: readonly FieldKind[] = ['number', 'integer', 'seed']
+
+/**
+ * Read by both the schema and the registration. Split in two, the seed field registered as a
+ * string and was then validated against a number — a filled seed never passed.
+ */
+export function isNumeric(kind: FieldKind): boolean {
+  return NUMERIC.includes(kind)
+}
 
 /** An emptied input is an absent value, not a zero and not an empty string. */
 function blankToUndefined(value: unknown): unknown {
@@ -22,7 +30,7 @@ function numericSchema(field: FieldDescriptor): z.ZodType {
 function fieldSchema(field: FieldDescriptor): z.ZodType {
   if (field.kind === 'boolean') return z.boolean().optional()
 
-  const base = NUMERIC.has(field.kind) ? numericSchema(field) : z.string().min(1)
+  const base = isNumeric(field.kind) ? numericSchema(field) : z.string().min(1)
   return z.preprocess(blankToUndefined, field.required ? base : base.optional())
 }
 
@@ -41,6 +49,11 @@ export function buildSchema(fields: readonly FieldDescriptor[]) {
 export function isVisible(field: FieldDescriptor, values: FormValues): boolean {
   if (!field.dependsOn) return true
   return values[field.dependsOn.key] === field.dependsOn.value
+}
+
+/** The only keys whose value can change what is on screen. */
+export function dependencyKeys(fields: readonly FieldDescriptor[]): string[] {
+  return [...new Set(fields.flatMap(field => (field.dependsOn ? [field.dependsOn.key] : [])))]
 }
 
 export function visibleFields(

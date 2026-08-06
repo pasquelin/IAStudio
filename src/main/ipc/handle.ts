@@ -26,7 +26,6 @@ type ChannelMethod = {
   [CHANNELS.projectPickFolder]: StudioBridge['project']['pickFolder']
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
-  [CHANNELS.assetsUrl]: StudioBridge['assets']['url']
 
   [CHANNELS.windowToggleFullScreen]: StudioBridge['window']['toggleFullScreen']
   [CHANNELS.windowState]: StudioBridge['window']['state']
