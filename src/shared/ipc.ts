@@ -3,6 +3,7 @@ import type { Job, JobProgress } from './domain/job'
 import type { ModelDescriptor, ModelFamily, ModelSummary } from './domain/model'
 import type { Project } from './domain/project'
 import type { AuthState, PartialSettings, Settings } from './domain/settings'
+import type { ToolId, ToolZone } from './domain/tool'
 import type { WindowState } from './domain/window'
 
 /**
@@ -47,8 +48,8 @@ export type Unsubscribe = () => void
 
 /** Request to open a tool, coming from the native menu. */
 export type ToolRequest = {
-  zone: string
-  tool: string
+  zone: ToolZone
+  tool: ToolId
 }
 
 /** Native menu commands with no payload, identified by a verb. */

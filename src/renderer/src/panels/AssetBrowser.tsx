@@ -4,12 +4,11 @@ import { useRef, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { cn } from '@/design/cn'
-import { simpleTooltip } from '@/design/tooltip'
+import { TIP_BOTTOM } from '@/design/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { useAssets } from '@/stores/assets'
 import { EmptyState } from './EmptyState'
 
-const tooltip = simpleTooltip('bottom')
 const THUMBNAIL_SIZE = 96
 const ROW_HEIGHT = 26
 
@@ -31,18 +30,16 @@ export function AssetBrowserActions({ assets = [] }: AssetBrowserProps) {
       <ToolButton
         icon={mdiViewGridOutline}
         label={t('assets.gridView')}
-        tooltip={tooltip}
-        iconSize={15}
-        className="size-6"
+        tooltip={TIP_BOTTOM}
+        variant="header"
         active={view === 'grid'}
         onClick={() => setView('grid')}
       />
       <ToolButton
         icon={mdiFormatListBulleted}
         label={t('assets.listView')}
-        tooltip={tooltip}
-        iconSize={15}
-        className="size-6"
+        tooltip={TIP_BOTTOM}
+        variant="header"
         active={view === 'list'}
         onClick={() => setView('list')}
       />

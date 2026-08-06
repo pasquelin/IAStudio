@@ -4,10 +4,7 @@ import {
   mdiImageMultipleOutline,
   mdiProgressClock,
 } from '@mdi/js'
-
-export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
-
-export type ToolId = 'explorer' | 'generator' | 'assets' | 'jobs'
+import { TOOL_PLACEMENTS, type ToolId, type ToolZone } from '@shared/domain/tool'
 
 export type Tool = {
   id: ToolId
@@ -15,22 +12,36 @@ export type Tool = {
   zone: ToolZone
 }
 
+const ICONS: Record<ToolId, string> = {
+  explorer: mdiFolderOutline,
+  generator: mdiCreationOutline,
+  assets: mdiImageMultipleOutline,
+  jobs: mdiProgressClock,
+}
+
 /**
  * Tool windows, IDE-style: they live on the edges, one per zone at a time, and are picked
  * from the icon rail. Only the center carries tabs — those are documents, and a document has
  * a name; a tool has an icon.
+ *
+ * Placements come from the shared registry; this module only adds what needs `@mdi/js`.
  */
-export const TOOLS: readonly Tool[] = [
-  { id: 'explorer', icon: mdiFolderOutline, zone: 'left' },
-  { id: 'generator', icon: mdiCreationOutline, zone: 'right' },
-  { id: 'assets', icon: mdiImageMultipleOutline, zone: 'bottom' },
-  { id: 'jobs', icon: mdiProgressClock, zone: 'bottom' },
-]
+export const TOOLS: readonly Tool[] = TOOL_PLACEMENTS.map(placement => ({
+  ...placement,
+  icon: ICONS[placement.id],
+}))
 
-export const ZONES: readonly ToolZone[] = ['left', 'right', 'top', 'bottom']
+/** Indexed once: `TOOLS` never changes, so filtering it on every render is pure waste. */
+const BY_ZONE: Record<ToolZone, Tool[]> = TOOLS.reduce(
+  (index, tool) => {
+    index[tool.zone].push(tool)
+    return index
+  },
+  { left: [], right: [], top: [], bottom: [] } as Record<ToolZone, Tool[]>,
+)
 
 export function toolsInZone(zone: ToolZone): Tool[] {
-  return TOOLS.filter(tool => tool.zone === zone)
+  return BY_ZONE[zone]
 }
 
 /** i18n key of a tool's title — never the displayed text. */
@@ -38,15 +49,5 @@ export function toolTitleKey(id: ToolId): string {
   return `panels.${id}`
 }
 
-/** Horizontal zones: their size is set as a height, not a width. */
-export function isHorizontal(zone: ToolZone): boolean {
-  return zone === 'top' || zone === 'bottom'
-}
-
-export function isToolZone(value: string): value is ToolZone {
-  return ZONES.some(zone => zone === value)
-}
-
-export function isToolId(value: string): value is ToolId {
-  return TOOLS.some(tool => tool.id === value)
-}
+export { isHorizontal, isLeading } from '@shared/domain/tool'
+export type { ToolId, ToolZone } from '@shared/domain/tool'

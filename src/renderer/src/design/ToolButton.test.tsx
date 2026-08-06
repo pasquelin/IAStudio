@@ -1,7 +1,7 @@
 import { mdiPencil } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { simpleTooltip } from './tooltip'
+import { TIP_TOP } from './tooltip'
 import { ToolButton } from './ToolButton'
 
 describe('ToolButton', () => {
@@ -11,7 +11,7 @@ describe('ToolButton', () => {
   })
 
   it('keeps the same naming with a tooltip', () => {
-    render(<ToolButton icon={mdiPencil} label="Brush" shortcut="B" tooltip={simpleTooltip()} />)
+    render(<ToolButton icon={mdiPencil} label="Brush" shortcut="B" tooltip={TIP_TOP} />)
     expect(screen.getByRole('button', { name: 'Brush (B)' })).toBeInTheDocument()
   })
 

@@ -21,6 +21,8 @@ export type ToolButtonProps = Omit<
   active?: boolean
   /** Tool in use AND whose zone has focus: accented background. */
   accented?: boolean
+  /** `header` is the smaller gauge used in panel title bars. */
+  variant?: 'bar' | 'header'
   iconSize?: number
   children?: ReactNode
   /** The `<button>` itself, so a bar can publish its active button as an anchor. */
@@ -39,6 +41,7 @@ export function ToolButton({
   shortcut,
   active,
   accented,
+  variant = 'bar',
   className,
   iconSize,
   children,
@@ -67,7 +70,9 @@ export function ToolButton({
       {...naming}
       {...rest}
     >
-      {icon !== undefined && <UiIcon path={icon} size={iconSize} />}
+      {icon !== undefined && (
+        <UiIcon path={icon} size={iconSize ?? (variant === 'header' ? 14 : 16)} />
+      )}
       {children}
     </button>
   )

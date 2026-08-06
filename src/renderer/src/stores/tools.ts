@@ -42,10 +42,6 @@ const DEFAULT_OPEN: OpenByZone = {
   bottom: 'assets',
 }
 
-export function defaultSize(zone: ToolZone): number {
-  return DEFAULT_SIZES[zone]
-}
-
 /**
  * Clamps a zone size. The ceiling is relative to the window rather than a constant: on a wide
  * screen a 720 px panel bothers nobody; on a narrow window it swallows the center.

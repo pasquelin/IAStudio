@@ -1,21 +1,15 @@
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
+import { TOOL_PLACEMENTS } from '@shared/domain/tool'
 import { EVENTS } from '@shared/ipc'
 import { toggleFullScreen } from '@main/window/controls'
 
 /**
- * Tools restorable from the menu. A mirror of the renderer registry, deliberately frozen
- * here: the main process does not load renderer code, and this list rarely moves.
+ * The native menu belongs to the focused window. Broadcasting would run ⌘N in every window at
+ * once — the very "two windows holding the same document" trap listed in CLAUDE.md.
  */
-const RESTORABLE_TOOLS: readonly { id: string; zone: string }[] = [
-  { id: 'explorer', zone: 'left' },
-  { id: 'generator', zone: 'right' },
-  { id: 'assets', zone: 'bottom' },
-  { id: 'jobs', zone: 'bottom' },
-]
-
-function broadcast(channel: string, payload: unknown): void {
-  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(channel, payload)
+function sendToFocused(channel: string, payload?: unknown): void {
+  BrowserWindow.getFocusedWindow()?.webContents.send(channel, payload)
 }
 
 /**
@@ -34,12 +28,12 @@ export function buildMenu(language: Language): void {
         {
           label: t.menu.newProject,
           accelerator: 'CmdOrCtrl+N',
-          click: () => broadcast(EVENTS.menuCommand, 'project:new'),
+          click: () => sendToFocused(EVENTS.menuCommand, 'project:new'),
         },
         {
           label: t.menu.openProject,
           accelerator: 'CmdOrCtrl+O',
-          click: () => broadcast(EVENTS.menuCommand, 'project:open'),
+          click: () => sendToFocused(EVENTS.menuCommand, 'project:open'),
         },
         { type: 'separator' },
         { role: process.platform === 'darwin' ? 'close' : 'quit' },
@@ -51,14 +45,15 @@ export function buildMenu(language: Language): void {
       submenu: [
         {
           label: t.menu.tools,
-          submenu: RESTORABLE_TOOLS.map(tool => ({
-            label: t.panels[tool.id as keyof typeof t.panels],
-            click: () => broadcast(EVENTS.openTool, { zone: tool.zone, tool: tool.id }),
+          submenu: TOOL_PLACEMENTS.map(placement => ({
+            label: t.panels[placement.id],
+            click: () =>
+              sendToFocused(EVENTS.openTool, { zone: placement.zone, tool: placement.id }),
           })),
         },
         {
           label: t.menu.resetLayout,
-          click: () => broadcast(EVENTS.menuCommand, 'layout:reset'),
+          click: () => sendToFocused(EVENTS.menuCommand, 'layout:reset'),
         },
         { type: 'separator' },
         {

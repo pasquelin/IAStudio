@@ -1,6 +1,8 @@
-import { BrowserWindow, ipcMain } from 'electron'
-import type { WindowState } from '@shared/domain/window'
+import { BrowserWindow } from 'electron'
+import { INITIAL_WINDOW_STATE, type WindowState } from '@shared/domain/window'
+import type { StudioBridge } from '@shared/ipc'
 import { CHANNELS, EVENTS } from '@shared/ipc'
+import { handle } from '@main/ipc/handle'
 
 function stateOf(target: BrowserWindow): WindowState {
   return {
@@ -37,12 +39,14 @@ export function trackWindowState(window: BrowserWindow): void {
 }
 
 export function registerWindowControls(): void {
-  ipcMain.handle(CHANNELS.windowToggleFullScreen, event =>
+  handle<StudioBridge['window']['toggleFullScreen']>(CHANNELS.windowToggleFullScreen, event =>
     toggleFullScreen(BrowserWindow.fromWebContents(event.sender)),
   )
 
-  ipcMain.handle(CHANNELS.windowState, event => {
+  // The window always exists here: the event comes from one of its own renderers. Falling
+  // back to the initial state keeps the return type honest rather than leaking a null.
+  handle<StudioBridge['window']['state']>(CHANNELS.windowState, event => {
     const window = BrowserWindow.fromWebContents(event.sender)
-    return window ? stateOf(window) : null
+    return window ? stateOf(window) : INITIAL_WINDOW_STATE
   })
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { INITIAL_WINDOW_STATE, type WindowState } from '@shared/domain/window'
+import { getBridge } from '@/services/bridge'
 
 /**
  * Window state pushed by the main process. Without it the title bar would not know we entered
@@ -9,10 +10,11 @@ export function useWindowState(): WindowState {
   const [state, setState] = useState<WindowState>(INITIAL_WINDOW_STATE)
 
   useEffect(() => {
-    if (typeof studio === 'undefined') return
+    const bridge = getBridge()
+    if (!bridge) return
 
-    void studio.window.state().then(setState)
-    return studio.window.onState(setState)
+    void bridge.window.state().then(setState)
+    return bridge.window.onState(setState)
   }, [])
 
   return state

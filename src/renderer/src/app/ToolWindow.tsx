@@ -2,12 +2,11 @@ import { mdiClose, mdiWindowMinimize } from '@mdi/js'
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/design/cn'
-import { simpleTooltip } from '@/design/tooltip'
+import { TIP_BOTTOM } from '@/design/tooltip'
+import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
 import { TOOL_COMPONENTS } from './tool-components'
 import { isHorizontal, toolTitleKey, type ToolId, type ToolZone } from './tools'
-
-const tooltip = simpleTooltip('bottom')
 
 export type ToolWindowProps = {
   zone: ToolZone
@@ -42,30 +41,28 @@ export function ToolWindow({
     <Panel
       aria-label={title}
       onPointerDownCapture={onFocus}
-      style={collapsed ? undefined : lying ? { height: size } : { width: size }}
+      style={collapsed ? undefined : { [lying ? 'height' : 'width']: size }}
       className={cn(collapsed && 'shrink-0')}
     >
       <PanelHeader title={title}>
         {Actions !== undefined && (
           <>
             <Actions />
-            <span aria-hidden="true" className="bg-border mx-1 h-4 w-px" />
+            <Separator />
           </>
         )}
         <ToolButton
           icon={mdiWindowMinimize}
           label={t('actions.collapse')}
-          tooltip={tooltip}
-          iconSize={14}
-          className="size-6"
+          tooltip={TIP_BOTTOM}
+          variant="header"
           onClick={onCollapse}
         />
         <ToolButton
           icon={mdiClose}
           label={t('actions.removeTool')}
-          tooltip={tooltip}
-          iconSize={14}
-          className="size-6"
+          tooltip={TIP_BOTTOM}
+          variant="header"
           onClick={onClose}
         />
       </PanelHeader>

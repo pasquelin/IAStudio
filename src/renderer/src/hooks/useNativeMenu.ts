@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { isToolId, isToolZone } from '@/app/tools'
 import { useTools } from '@/stores/tools'
+import { getBridge } from '@/services/bridge'
 
 /**
  * Wires the native menu to the shell. This is how a tool removed with its close button comes
@@ -9,16 +9,16 @@ import { useTools } from '@/stores/tools'
  */
 export function useNativeMenu(): void {
   useEffect(() => {
-    if (typeof studio === 'undefined') return
+    const bridge = getBridge()
+    if (!bridge) return
 
-    const stopTool = studio.menu.onOpenTool(({ zone, tool }) => {
-      if (!isToolZone(zone) || !isToolId(tool)) return
+    const stopTool = bridge.menu.onOpenTool(({ zone, tool }) => {
       const state = useTools.getState()
       if (state.open[zone] !== tool) state.toggle(zone, tool)
       state.focus(zone)
     })
 
-    const stopCommand = studio.menu.onCommand(command => {
+    const stopCommand = bridge.menu.onCommand(command => {
       if (command === 'layout:reset') useTools.getState().reset()
     })
 

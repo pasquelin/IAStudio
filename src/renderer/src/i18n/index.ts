@@ -22,7 +22,3 @@ export async function initI18n(language: Language = DEFAULT_LANGUAGE): Promise<v
     interpolation: { escapeValue: false },
   })
 }
-
-export async function changeLanguage(language: Language): Promise<void> {
-  await i18next.changeLanguage(language)
-}

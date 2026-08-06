@@ -2,8 +2,9 @@ import { mdiRedo, mdiUndo } from '@mdi/js'
 import { Fragment, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from './cn'
+import { Separator } from './Separator'
 import { resolveSlot, type SlotConfig } from './slots'
-import { simpleTooltip } from './tooltip'
+import { TIP_TOP } from './tooltip'
 import { ToolButton } from './ToolButton'
 
 export type ToolbarSection = 'tools' | 'extras' | 'undo' | 'redo'
@@ -34,8 +35,6 @@ export type ToolbarProps = {
   className?: string
 }
 
-const tooltip = simpleTooltip()
-
 /**
  * The studio's single toolbar, shared by all six workspaces. Each workspace provides only its
  * tool registry; geometry follows `--sc-control`, so the density setting applies everywhere
@@ -61,13 +60,6 @@ export function Toolbar({
   const slotUndo = resolveSlot(sections, 'undo')
   const slotRedo = resolveSlot(sections, 'redo')
 
-  const separator = (
-    <span
-      aria-hidden="true"
-      className={cn('bg-border', vertical ? 'mx-1 h-px w-4/5' : 'my-1 h-4/5 w-px')}
-    />
-  )
-
   return (
     <div
       role="toolbar"
@@ -88,7 +80,7 @@ export function Toolbar({
                 icon={tool.icon}
                 label={t(tool.labelKey)}
                 shortcut={tool.shortcut}
-                tooltip={tooltip}
+                tooltip={TIP_TOP}
                 active={tool.id === activeTool}
                 disabled={tool.disabled}
                 onClick={() => onTool(tool.id)}
@@ -99,7 +91,9 @@ export function Toolbar({
 
       {slotExtras.visible && (slotExtras.replacement ?? extras)}
 
-      {(slotUndo.visible || slotRedo.visible) && (onUndo || onRedo) && separator}
+      {(slotUndo.visible || slotRedo.visible) && (onUndo || onRedo) && (
+        <Separator orientation={vertical ? 'horizontal' : 'vertical'} />
+      )}
 
       {slotUndo.visible &&
         onUndo &&
@@ -108,7 +102,7 @@ export function Toolbar({
             icon={mdiUndo}
             label={t('actions.undo')}
             shortcut="⌘Z"
-            tooltip={tooltip}
+            tooltip={TIP_TOP}
             disabled={!canUndo}
             onClick={onUndo}
           />
@@ -121,7 +115,7 @@ export function Toolbar({
             icon={mdiRedo}
             label={t('actions.redo')}
             shortcut="⇧⌘Z"
-            tooltip={tooltip}
+            tooltip={TIP_TOP}
             disabled={!canRedo}
             onClick={onRedo}
           />

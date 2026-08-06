@@ -1,17 +1,20 @@
-import { DockviewReact, type DockviewApi, type DockviewReadyEvent } from 'dockview-react'
-import { useCallback, useRef } from 'react'
+import { DockviewReact } from 'dockview-react'
 import { TooltipHost } from '@/design/TooltipHost'
 import { useLayouts } from '@/stores/layouts'
-import { defaultSize, useTools } from '@/stores/tools'
+import { DEFAULT_SIZES, useTools } from '@/stores/tools'
 import { DOCUMENT_COMPONENTS } from './documents'
 import { Footer } from './Footer'
 import { Rail } from './Rail'
 import { ResizeHandle } from './ResizeHandle'
 import { TitleBar } from './TitleBar'
-import type { ToolId, ToolZone } from './tools'
+import { isLeading, type ToolZone } from './tools'
 import { Panel, ToolWindow } from './ToolWindow'
 import 'dockview-react/dist/styles/dockview.css'
 import './dockview-theme.css'
+
+// Dockview requires the callback; the API it hands over will be needed once documents
+// exist, not before.
+const noop = (): void => undefined
 
 /**
  * Assembles the studio: icon rails stuck to the edges, rounded tool windows laid over the
@@ -23,39 +26,30 @@ import './dockview-theme.css'
 export function Shell() {
   const activeWorkspace = useLayouts(state => state.activeWorkspace)
   const setActiveWorkspace = useLayouts(state => state.setActiveWorkspace)
-  const open = useTools(state => state.open)
-  const focusedZone = useTools(state => state.focusedZone)
-  const toggle = useTools(state => state.toggle)
   const focus = useTools(state => state.focus)
-  const api = useRef<DockviewApi | null>(null)
-
-  const onReady = useCallback((event: DockviewReadyEvent) => {
-    api.current = event.api
-  }, [])
-
-  const onToggle = useCallback((zone: ToolZone, tool: ToolId) => toggle(zone, tool), [toggle])
 
   return (
     <div className="bg-chassis flex h-full flex-col">
       <TitleBar activeWorkspace={activeWorkspace} onWorkspace={setActiveWorkspace} />
 
       <div className="flex min-h-0 flex-1">
-        <Rail side="left" open={open} focusedZone={focusedZone} onToggle={onToggle} />
+        <Rail side="left" />
 
         {/* Handles occupy exactly the gutter: the space between two surfaces IS the resize
             area, rather than decorative emptiness doubled by a handle. */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
+          <Edge zone="top" />
           <div className="flex min-h-0 flex-1">
-            <VerticalEdge zone="left" />
+            <Edge zone="left" />
             <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
-              <DockviewReact components={DOCUMENT_COMPONENTS} onReady={onReady} />
+              <DockviewReact components={DOCUMENT_COMPONENTS} onReady={noop} />
             </Panel>
-            <VerticalEdge zone="right" />
+            <Edge zone="right" />
           </div>
-          <HorizontalEdge zone="bottom" />
+          <Edge zone="bottom" />
         </div>
 
-        <Rail side="right" open={open} focusedZone={focusedZone} onToggle={onToggle} />
+        <Rail side="right" />
       </div>
 
       <Footer />
@@ -64,69 +58,49 @@ export function Shell() {
   )
 }
 
-function useZoneParts(zone: ToolZone) {
-  const openTool = useTools(state => state.open[zone] ?? null)
-  const size = useTools(state => state.sizes[zone] ?? defaultSize(zone))
+/**
+ * A tool window and its resize handle, ordered by the zone. `left` and `top` put the panel
+ * first; the opposite zones put the handle first, because they grow backwards.
+ */
+function Edge({ zone }: { zone: ToolZone }) {
+  const tool = useTools(state => state.open[zone] ?? null)
+  const size = useTools(state => state.sizes[zone] ?? DEFAULT_SIZES[zone])
   const collapsed = useTools(state => state.collapsed[zone] ?? false)
-  const close = useTools(state => state.close)
-  const collapse = useTools(state => state.collapse)
-  const focus = useTools(state => state.focus)
-  const resize = useTools(state => state.resize)
 
-  if (!openTool) return null
+  if (!tool) return null
 
-  return {
-    panel: (
-      <ToolWindow
-        zone={zone}
-        tool={openTool}
-        size={size}
-        collapsed={collapsed}
-        onFocus={() => focus(zone)}
-        onCollapse={() => collapse(zone)}
-        onClose={() => close(zone)}
-      />
-    ),
-    handle: collapsed ? null : (
-      <ResizeHandle
-        zone={zone}
-        size={size}
-        onSize={(value, available) => resize(zone, value, available)}
-      />
-    ),
-  }
-}
+  // Actions are stable for the store's lifetime: subscribing to them would only add
+  // selectors re-run on every write.
+  const { close, collapse, focus, resize } = useTools.getState()
 
-function VerticalEdge({ zone }: { zone: 'left' | 'right' }) {
-  const parts = useZoneParts(zone)
-  if (!parts) return null
-
-  return zone === 'left' ? (
-    <>
-      {parts.panel}
-      {parts.handle}
-    </>
-  ) : (
-    <>
-      {parts.handle}
-      {parts.panel}
-    </>
+  const panel = (
+    <ToolWindow
+      zone={zone}
+      tool={tool}
+      size={size}
+      collapsed={collapsed}
+      onFocus={() => focus(zone)}
+      onCollapse={() => collapse(zone)}
+      onClose={() => close(zone)}
+    />
   )
-}
+  const handle = collapsed ? null : (
+    <ResizeHandle
+      zone={zone}
+      size={size}
+      onSize={(value, available) => resize(zone, value, available)}
+    />
+  )
 
-function HorizontalEdge({ zone }: { zone: 'top' | 'bottom' }) {
-  const parts = useZoneParts(zone)
-  if (!parts) return null
-
-  return zone === 'top' ? (
+  return isLeading(zone) ? (
     <>
-      {parts.panel}
-      {parts.handle}
+      {panel}
+      {handle}
     </>
   ) : (
     <>
-      {parts.handle}
-      {parts.panel}
+      {handle}
+      {panel}
     </>
   )
 }
