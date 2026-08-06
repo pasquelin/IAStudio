@@ -1,7 +1,13 @@
+import { mdiPlus } from '@mdi/js'
+import { kindForWorkspace } from '@shared/domain/document'
 import { useTranslation } from 'react-i18next'
+import { Separator } from '@/design/Separator'
 import { TIP_RIGHT } from '@/design/tooltip'
 import { ToolButton } from '@/design/ToolButton'
+import { useDocuments } from '@/stores/documents'
+import { useLayouts } from '@/stores/layouts'
 import { useTools } from '@/stores/tools'
+import { openDocument } from './DocumentArea'
 import { toolsInZone, toolTitleKey, type ToolZone } from './tools'
 
 export type RailProps = {
@@ -30,9 +36,42 @@ export function Rail({ side }: RailProps) {
       aria-orientation="vertical"
       className="flex w-(--sc-rail) shrink-0 flex-col items-center justify-between py-(--sc-gutter)"
     >
-      <RailGroup zones={top} />
+      <div className="flex flex-col items-center gap-1">
+        {side === 'left' && (
+          <>
+            <NewDocumentButton />
+            <Separator orientation="horizontal" />
+          </>
+        )}
+        <RailGroup zones={top} />
+      </div>
       {bottom.length > 0 && <RailGroup zones={bottom} />}
     </div>
+  )
+}
+
+/**
+ * Above the tool icons rather than in the Explorer header: it stays reachable when every panel
+ * is closed. Disabled — not hidden — where no editor exists yet: a button that vanishes reads
+ * as a display bug.
+ */
+function NewDocumentButton() {
+  const { t } = useTranslation()
+  const workspace = useLayouts(state => state.activeWorkspace)
+
+  return (
+    <ToolButton
+      icon={mdiPlus}
+      iconSize={22}
+      label={t('documents.new')}
+      tooltip={TIP_RIGHT}
+      disabled={kindForWorkspace(workspace) === null}
+      onClick={() => {
+        const created = useDocuments.getState().create(workspace)
+        if (created) openDocument(created)
+      }}
+      className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
+    />
   )
 }
 
