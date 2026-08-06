@@ -1,9 +1,16 @@
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
-import { failureOf } from './client'
+import { log } from '@main/log'
+import { describeFailure, failureOf } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
-import { parseGenerationBody, parseJobId, parseModelFamily, parseModelId } from './validation'
+import {
+  parseGenerationBody,
+  parseJobId,
+  parseModelId,
+  parseModelIds,
+  parseModelQuery,
+} from './validation'
 
 export type ScenarioHandlerDeps = {
   models: ModelRegistry
@@ -22,13 +29,20 @@ async function reduced<T>(action: () => Promise<T>): Promise<T> {
   try {
     return await action()
   } catch (error) {
+    // Logged where the credentials already live: reduced to a code, the renderer cannot say
+    // which call the API refused, and neither could anyone reading a bug report.
+    log.error('scenario', describeFailure(error))
     throw new Error(failureOf(error), { cause: error })
   }
 }
 
 export function registerScenarioHandlers({ models, jobs }: ScenarioHandlerDeps): void {
-  handle(CHANNELS.scenarioListModels, (_event, family) =>
-    reduced(() => models.list(parseModelFamily(family))),
+  handle(CHANNELS.scenarioSearchModels, (_event, query) =>
+    reduced(() => models.search(parseModelQuery(query))),
+  )
+
+  handle(CHANNELS.scenarioModelPreviews, (_event, assetIds) =>
+    reduced(() => models.previews(parseModelIds(assetIds))),
   )
 
   handle(CHANNELS.scenarioDescribeModel, (_event, modelId) =>

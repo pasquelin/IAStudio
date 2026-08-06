@@ -5,6 +5,7 @@ import type { WindowState } from '@shared/domain/window'
 import {
   CHANNELS,
   EVENTS,
+  type LogEntry,
   type MenuCommand,
   type StudioBridge,
   type ToolRequest,
@@ -29,7 +30,8 @@ const bridge: StudioBridge = {
     forgetCredentials: () => ipcRenderer.invoke(CHANNELS.settingsForgetCredentials),
   },
   scenario: {
-    listModels: family => ipcRenderer.invoke(CHANNELS.scenarioListModels, family),
+    searchModels: query => ipcRenderer.invoke(CHANNELS.scenarioSearchModels, query),
+    modelPreviews: assetIds => ipcRenderer.invoke(CHANNELS.scenarioModelPreviews, assetIds),
     describeModel: modelId => ipcRenderer.invoke(CHANNELS.scenarioDescribeModel, modelId),
     generate: (modelId, body) => ipcRenderer.invoke(CHANNELS.scenarioGenerate, modelId, body),
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
@@ -54,6 +56,9 @@ const bridge: StudioBridge = {
   menu: {
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
     onCommand: callback => subscribe<MenuCommand>(EVENTS.menuCommand, callback),
+  },
+  diagnostics: {
+    onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),
   },
 }
 

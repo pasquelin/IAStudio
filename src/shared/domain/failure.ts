@@ -9,6 +9,7 @@ export type ApiFailure =
   | 'missing'
   | 'invalid-credentials'
   | 'forbidden'
+  | 'not-found'
   | 'rate-limited'
   | 'server'
   | 'network'

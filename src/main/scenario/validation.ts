@@ -1,18 +1,13 @@
 import { z } from 'zod'
-import type { ModelFamily } from '@shared/domain/model'
+import {
+  MODEL_FAMILIES,
+  MODEL_ORIGINS,
+  MODEL_PERIODS,
+  MODEL_SORTS,
+  type ModelQuery,
+} from '@shared/domain/model'
 
 const modelId = z.string().trim().min(1)
-
-const family = z.enum([
-  'image',
-  'video',
-  '3d',
-  'audio',
-  'upscale',
-  'background-removal',
-  'vectorization',
-  'other',
-])
 
 export function parseModelId(value: unknown): string {
   return modelId.parse(value)
@@ -24,8 +19,35 @@ export function parseJobId(value: unknown): string {
   return jobId.parse(value)
 }
 
-export function parseModelFamily(value: unknown): ModelFamily | undefined {
-  return value === undefined ? undefined : family.parse(value)
+const facetValue = z.string().trim().min(1).max(80)
+
+/**
+ * `limit` is capped rather than trusted: it sizes the walk the registry performs before it
+ * answers, and a renderer asking for ten thousand would be asking the main process to freeze.
+ */
+const modelQuery = z.object({
+  // Built from the shared unions, never retyped: a hand-copied list silently stops accepting
+  // what the panel offers — `sort: 'oldest'` reached the UI while this schema still refused it.
+  family: z.enum(MODEL_FAMILIES).optional(),
+  search: z.string().trim().max(200).optional(),
+  origin: z.enum(MODEL_ORIGINS).optional(),
+  capabilities: z.array(facetValue).max(20).optional(),
+  tags: z.array(facetValue).max(20).optional(),
+  since: z.enum(MODEL_PERIODS).optional(),
+  sort: z.enum(MODEL_SORTS).optional(),
+  cursor: z.string().max(500).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+})
+
+export function parseModelQuery(value: unknown): ModelQuery {
+  return value === undefined ? {} : modelQuery.parse(value)
+}
+
+/** Bounded to one screenful of cards: the batch becomes a single request body downstream. */
+const modelIds = z.array(modelId).max(100)
+
+export function parseModelIds(value: unknown): string[] {
+  return modelIds.parse(value)
 }
 
 /**

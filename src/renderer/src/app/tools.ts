@@ -1,5 +1,6 @@
 import {
   mdiCreationOutline,
+  mdiCubeScan,
   mdiFolderOutline,
   mdiImageMultipleOutline,
   mdiProgressClock,
@@ -14,6 +15,7 @@ export type Tool = {
 
 const ICONS: Record<ToolId, string> = {
   explorer: mdiFolderOutline,
+  models: mdiCubeScan,
   generator: mdiCreationOutline,
   assets: mdiImageMultipleOutline,
   jobs: mdiProgressClock,

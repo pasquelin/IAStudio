@@ -1,6 +1,6 @@
 import type { Asset, AssetQuery } from './domain/asset'
 import type { Job, JobProgress } from './domain/job'
-import type { ModelDescriptor, ModelFamily, ModelSummary } from './domain/model'
+import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
 import type { AuthState, PartialSettings, Settings } from './domain/settings'
 import type { ToolId, ToolZone } from './domain/tool'
@@ -19,7 +19,8 @@ export type Channels = {
   settingsAuthState: 'settings:auth-state'
   settingsForgetCredentials: 'settings:forget-credentials'
 
-  scenarioListModels: 'scenario:list-models'
+  scenarioSearchModels: 'scenario:search-models'
+  scenarioModelPreviews: 'scenario:model-previews'
   scenarioDescribeModel: 'scenario:describe-model'
   scenarioGenerate: 'scenario:generate'
   scenarioCancelJob: 'scenario:cancel-job'
@@ -47,7 +48,8 @@ export const CHANNELS: Channels = {
   settingsAuthState: 'settings:auth-state',
   settingsForgetCredentials: 'settings:forget-credentials',
 
-  scenarioListModels: 'scenario:list-models',
+  scenarioSearchModels: 'scenario:search-models',
+  scenarioModelPreviews: 'scenario:model-previews',
   scenarioDescribeModel: 'scenario:describe-model',
   scenarioGenerate: 'scenario:generate',
   scenarioCancelJob: 'scenario:cancel-job',
@@ -64,9 +66,23 @@ export const CHANNELS: Channels = {
   windowState: 'window:state',
 }
 
+export type LogLevel = 'info' | 'warn' | 'error'
+
+/**
+ * A line the main process wants visible in the renderer's console. The API calls leave from
+ * the main process, so they never show up in the renderer's Network tab; without this mirror
+ * the only place to watch them is the terminal the app was launched from.
+ */
+export type LogEntry = {
+  level: LogLevel
+  scope: string
+  message: string
+}
+
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
   jobProgress: 'evt:job-progress',
+  log: 'evt:log',
   projectChanged: 'evt:project-changed',
   openTool: 'evt:open-tool',
   menuCommand: 'evt:menu-command',
@@ -94,7 +110,9 @@ export type StudioBridge = {
     forgetCredentials: () => Promise<void>
   }
   scenario: {
-    listModels: (family?: ModelFamily) => Promise<ModelSummary[]>
+    searchModels: (query?: ModelQuery) => Promise<ModelPage>
+    /** Signed picture URL per asset id, absent for the ones the API has nothing for. */
+    modelPreviews: (assetIds: readonly string[]) => Promise<Record<string, string>>
     describeModel: (modelId: string) => Promise<ModelDescriptor>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
     cancelJob: (jobId: string) => Promise<void>
@@ -119,5 +137,8 @@ export type StudioBridge = {
   menu: {
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
     onCommand: (callback: (command: MenuCommand) => void) => Unsubscribe
+  }
+  diagnostics: {
+    onLog: (callback: (entry: LogEntry) => void) => Unsubscribe
   }
 }

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Credentials } from '@main/settings/store'
 import {
   createClientProvider,
+  describeFailure,
   failureOf,
   NotAuthenticatedError,
   testAuthentication,
@@ -41,6 +42,42 @@ describe('failure mapping', () => {
   it('never carries the SDK message across the boundary', () => {
     const leaky = apiError(401, 'Authorization: Basic YXBpX2tleTpzM2NyM3Q=')
     expect(JSON.stringify(failureOf(leaky))).not.toContain('YXBpX2tleQ')
+  })
+})
+
+/**
+ * What the main process may write to its own log, and now mirror to a renderer. It is the only
+ * thing standing between an SDK message — which embeds the whole request, Authorization header
+ * included — and a log file.
+ */
+describe('failure description', () => {
+  it('never carries the SDK message, whatever the status', () => {
+    const leaky = apiError(429, 'Authorization: Basic YXBpX2tleTpzM2NyM3Q=')
+
+    expect(describeFailure(leaky)).not.toContain('YXBpX2tleQ')
+    expect(describeFailure(leaky)).toContain('429')
+  })
+
+  it('keeps the parsed response body, which the credentials never travel in', () => {
+    const refused = APIError.generate(
+      400,
+      { reason: 'sortDirection needs sortBy' },
+      '',
+      new Headers(),
+    )
+
+    expect(describeFailure(refused)).toContain('sortDirection needs sortBy')
+  })
+
+  // Not an API error: nothing in it came from a request, so the message is ours to read.
+  it('describes a plain error by name and message', () => {
+    expect(describeFailure(new TypeError('client.search is undefined'))).toContain(
+      'client.search is undefined',
+    )
+  })
+
+  it('survives something thrown that is not an error at all', () => {
+    expect(describeFailure('boom')).toContain('boom')
   })
 })
 

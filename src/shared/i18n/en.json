@@ -13,6 +13,7 @@
   },
   "panels": {
     "explorer": "Explorer",
+    "models": "Models",
     "generator": "Generate",
     "assets": "Assets",
     "jobs": "Jobs"
@@ -26,14 +27,11 @@
     "confirm": "Confirm",
     "browse": "Browse…",
     "retry": "Retry",
-    "collapse": "Minimize",
     "removeTool": "Remove tool"
   },
   "generation": {
     "model": "Model",
     "chooseModel": "Choose a model",
-    "noModel": "No model available",
-    "loadingModels": "Loading models…",
     "parameters": "Parameters",
     "noParameter": "This model takes no parameters.",
     "randomSeed": "Random",
@@ -56,11 +54,81 @@
     "title": "Assets",
     "none": "No asset yet. Generate something to get started.",
     "search": "Search…",
-    "gridView": "Icons",
-    "listView": "List",
+    "type": "Type",
     "count": "{{count}} asset",
     "count_other": "{{count}} assets",
     "openProject": "Open a project to see its assets."
+  },
+  "models": {
+    "none": "No model in this workspace.",
+    "noSelection": "No model chosen",
+    "pickOne": "Pick one from the list",
+    "origin": "Origin",
+    "official": "Official",
+    "community": "Community",
+    "featured": "Featured",
+    "capability": "Capability",
+    "tag": "Tag",
+    "period": "Date",
+    "publisher": "Publisher"
+  },
+  "sorts": {
+    "relevance": "Quality: highest first",
+    "recent": "Created: newest first",
+    "oldest": "Created: oldest first"
+  },
+  "periods": {
+    "day": "Last 24 hours",
+    "week": "Last 7 days",
+    "month": "Last 30 days",
+    "quarter": "Last quarter"
+  },
+  "families": {
+    "image": "Image",
+    "video": "Video",
+    "3d": "3D",
+    "audio": "Audio",
+    "upscale": "Upscaling",
+    "background-removal": "Background removal",
+    "vectorization": "Vectorization",
+    "other": "Other"
+  },
+  "capabilities": {
+    "txt2img": "Text to image",
+    "img2img": "Image to image",
+    "inpaint": "Inpainting",
+    "outpaint": "Outpainting",
+    "controlnet": "Guidance",
+    "reference": "Reference",
+    "txt2video": "Text to video",
+    "img2video": "Image to video",
+    "video2video": "Video to video",
+    "txt23d": "Text to 3D",
+    "img23d": "Image to 3D",
+    "3d23d": "3D to 3D",
+    "txt2audio": "Text to audio",
+    "audio2audio": "Audio to audio",
+    "video2audio": "Video to audio"
+  },
+  "assetTypes": {
+    "image": "Image",
+    "video": "Video",
+    "audio": "Audio",
+    "mesh": "Mesh",
+    "texture": "Texture",
+    "skybox": "Skybox"
+  },
+  "collection": {
+    "search": "Search…",
+    "sort": "Sort",
+    "gridView": "Icons",
+    "listView": "List",
+    "smaller": "Smaller thumbnails",
+    "larger": "Larger thumbnails",
+    "loading": "Loading…",
+    "noMatch": "No result for this filter.",
+    "more": "More filters",
+    "fewer": "Fewer filters"
   },
   "documents": {
     "none": "No document open. Generate or open an asset to get started."

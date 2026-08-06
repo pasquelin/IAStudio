@@ -13,6 +13,7 @@
   },
   "panels": {
     "explorer": "Explorateur",
+    "models": "Modèles",
     "generator": "Génération",
     "assets": "Assets",
     "jobs": "Tâches"
@@ -26,14 +27,11 @@
     "confirm": "Valider",
     "browse": "Parcourir…",
     "retry": "Réessayer",
-    "collapse": "Réduire",
     "removeTool": "Retirer le module"
   },
   "generation": {
     "model": "Modèle",
     "chooseModel": "Choisir un modèle",
-    "noModel": "Aucun modèle disponible",
-    "loadingModels": "Chargement des modèles…",
     "parameters": "Paramètres",
     "noParameter": "Ce modèle n’attend aucun paramètre.",
     "randomSeed": "Aléatoire",
@@ -56,11 +54,81 @@
     "title": "Assets",
     "none": "Aucun asset. Générez quelque chose pour commencer.",
     "search": "Rechercher…",
-    "gridView": "Icônes",
-    "listView": "Liste",
+    "type": "Type",
     "count": "{{count}} asset",
     "count_other": "{{count}} assets",
     "openProject": "Ouvrez un projet pour voir ses assets."
+  },
+  "models": {
+    "none": "Aucun modèle dans cet espace.",
+    "noSelection": "Aucun modèle choisi",
+    "pickOne": "Choisissez-en un dans la liste",
+    "origin": "Origine",
+    "official": "Officiel",
+    "community": "Communauté",
+    "featured": "Mis en avant",
+    "capability": "Capacité",
+    "tag": "Tag",
+    "period": "Date",
+    "publisher": "Éditeur"
+  },
+  "sorts": {
+    "relevance": "Qualité : les meilleurs",
+    "recent": "Création : les plus récents",
+    "oldest": "Création : les plus anciens"
+  },
+  "periods": {
+    "day": "Dernières 24 h",
+    "week": "7 derniers jours",
+    "month": "30 derniers jours",
+    "quarter": "3 derniers mois"
+  },
+  "families": {
+    "image": "Image",
+    "video": "Vidéo",
+    "3d": "3D",
+    "audio": "Audio",
+    "upscale": "Agrandissement",
+    "background-removal": "Détourage",
+    "vectorization": "Vectorisation",
+    "other": "Autre"
+  },
+  "capabilities": {
+    "txt2img": "Texte vers image",
+    "img2img": "Image vers image",
+    "inpaint": "Retouche interne",
+    "outpaint": "Extension",
+    "controlnet": "Guidage",
+    "reference": "Référence",
+    "txt2video": "Texte vers vidéo",
+    "img2video": "Image vers vidéo",
+    "video2video": "Vidéo vers vidéo",
+    "txt23d": "Texte vers 3D",
+    "img23d": "Image vers 3D",
+    "3d23d": "3D vers 3D",
+    "txt2audio": "Texte vers audio",
+    "audio2audio": "Audio vers audio",
+    "video2audio": "Vidéo vers audio"
+  },
+  "assetTypes": {
+    "image": "Image",
+    "video": "Vidéo",
+    "audio": "Audio",
+    "mesh": "Maillage",
+    "texture": "Texture",
+    "skybox": "Skybox"
+  },
+  "collection": {
+    "search": "Rechercher…",
+    "sort": "Trier",
+    "gridView": "Icônes",
+    "listView": "Liste",
+    "smaller": "Réduire les vignettes",
+    "larger": "Agrandir les vignettes",
+    "loading": "Chargement…",
+    "noMatch": "Aucun résultat pour ce filtre.",
+    "more": "Plus de filtres",
+    "fewer": "Moins de filtres"
   },
   "documents": {
     "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer."

@@ -14,7 +14,8 @@ type ChannelMethod = {
   [CHANNELS.settingsAuthState]: StudioBridge['settings']['authState']
   [CHANNELS.settingsForgetCredentials]: StudioBridge['settings']['forgetCredentials']
 
-  [CHANNELS.scenarioListModels]: StudioBridge['scenario']['listModels']
+  [CHANNELS.scenarioSearchModels]: StudioBridge['scenario']['searchModels']
+  [CHANNELS.scenarioModelPreviews]: StudioBridge['scenario']['modelPreviews']
   [CHANNELS.scenarioDescribeModel]: StudioBridge['scenario']['describeModel']
   [CHANNELS.scenarioGenerate]: StudioBridge['scenario']['generate']
   [CHANNELS.scenarioCancelJob]: StudioBridge['scenario']['cancelJob']

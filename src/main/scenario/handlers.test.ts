@@ -25,7 +25,8 @@ const LEAKY = 'Authorization: Basic YXBpX2tleTpzM2NyM3Q='
 
 function registry(overrides: Partial<ModelRegistry> = {}): ModelRegistry {
   return {
-    list: () => Promise.resolve([]),
+    search: () => Promise.resolve({ items: [], cursor: null }),
+    previews: () => Promise.resolve({}),
     describe: () => Promise.reject(new Error('unused')),
     invalidate: () => {},
     ...overrides,
@@ -49,10 +50,18 @@ describe('scenario handlers', () => {
   // SDK message embeds the request that produced it.
   it('reduces an SDK failure to a code rather than carrying its message across', async () => {
     const failing = APIError.generate(429, undefined, LEAKY, new Headers())
-    registerScenarioHandlers({ models: registry({ list: () => Promise.reject(failing) }), jobs })
+    registerScenarioHandlers({ models: registry({ search: () => Promise.reject(failing) }), jobs })
 
-    await expect(invoke(CHANNELS.scenarioListModels)).rejects.toThrow('rate-limited')
-    await expect(invoke(CHANNELS.scenarioListModels)).rejects.not.toThrow(LEAKY)
+    await expect(invoke(CHANNELS.scenarioSearchModels)).rejects.toThrow('rate-limited')
+    await expect(invoke(CHANNELS.scenarioSearchModels)).rejects.not.toThrow(LEAKY)
+  })
+
+  it('rejects a query asking for more than one page of models', async () => {
+    const search = vi.fn(() => Promise.resolve({ items: [], cursor: null }))
+    registerScenarioHandlers({ models: registry({ search }), jobs })
+
+    await expect(invoke(CHANNELS.scenarioSearchModels, { limit: 10_000 })).rejects.toThrow()
+    expect(search).not.toHaveBeenCalled()
   })
 
   it('reduces a describe failure the same way', async () => {
@@ -62,7 +71,7 @@ describe('scenario handlers', () => {
       jobs,
     })
 
-    await expect(invoke(CHANNELS.scenarioDescribeModel, 'model_flux')).rejects.toThrow('unexpected')
+    await expect(invoke(CHANNELS.scenarioDescribeModel, 'model_flux')).rejects.toThrow('not-found')
   })
 
   it('rejects a malformed model identifier before reaching the registry', async () => {

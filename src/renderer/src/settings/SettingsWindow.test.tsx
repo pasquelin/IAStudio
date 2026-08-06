@@ -94,10 +94,22 @@ describe('SettingsWindow', () => {
         },
       },
       scenario: {
-        listModels: () =>
-          Promise.resolve([
-            { id: 'model_flux', name: 'Flux', family: 'image', source: 'scenario' },
-          ]),
+        searchModels: () =>
+          Promise.resolve({
+            items: [
+              {
+                id: 'model_flux',
+                name: 'Flux',
+                family: 'image',
+                source: 'scenario',
+                origin: 'official',
+                featured: false,
+                capabilities: ['txt2img'],
+                tags: [],
+              },
+            ],
+            cursor: null,
+          }),
       },
     })
 

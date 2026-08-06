@@ -25,11 +25,35 @@ export function failureOf(error: unknown): ApiFailure {
     const { status } = error
     if (status === 401) return 'invalid-credentials'
     if (status === 403) return 'forbidden'
+    if (status === 404) return 'not-found'
     if (status === 429) return 'rate-limited'
     if (status !== undefined && status >= 500) return 'server'
   }
 
   return 'unexpected'
+}
+
+/**
+ * What the main process may write to its own console about a failure. The status and the
+ * parsed response body are safe — the credentials travel in a request header, never in either
+ * — whereas `error.message` embeds the whole request and would put the API key in a log file.
+ *
+ * Without this, a rejected parameter reaches the user as "an unexpected error occurred" and
+ * nothing anywhere says which call the API refused.
+ */
+export function describeFailure(error: unknown): string {
+  if (error instanceof APIError) {
+    const body = error.error === undefined ? '' : ` ${JSON.stringify(error.error)}`
+    return `HTTP ${error.status ?? '?'}${body}`
+  }
+
+  // Not an API error, so nothing in it came from a request: the message is ours and safe, and
+  // it is the only thing that says what actually broke.
+  if (error instanceof Error) {
+    return `${error.name}: ${error.message}\n${error.stack ?? ''}`
+  }
+
+  return `non-error thrown: ${String(error)}`
 }
 
 /**

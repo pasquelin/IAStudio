@@ -1,23 +1,18 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ModelDescriptor, ModelSummary } from '@shared/domain/model'
+import type { ModelDescriptor } from '@shared/domain/model'
+import { workspaceById } from '@/app/workspaces'
 import type { FormValues } from '@/design/dynamic-form'
 import { DynamicForm } from '@/design/DynamicForm'
+import { failureKeyOf } from '@/services/failure-message'
 import { getBridge } from '@/services/bridge'
 import { useJobs } from '@/stores/jobs'
+import { useLayouts } from '@/stores/layouts'
+import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from './EmptyState'
-
-function useModels(enabled: boolean) {
-  return useQuery<ModelSummary[]>({
-    queryKey: ['models'],
-    queryFn: () => getBridge()?.scenario.listModels() ?? Promise.resolve([]),
-    enabled,
-  })
-}
 
 function useDescriptor(modelId: string | null) {
   return useQuery<ModelDescriptor | null>({
@@ -29,57 +24,52 @@ function useDescriptor(modelId: string | null) {
 }
 
 /**
- * Model picker plus the form its schema describes. Nothing about any particular model lives
- * here: the fields come from `GET /models/{id}`, translated by the registry — see spec § 6.
+ * The form the chosen model's schema describes, and nothing else: the prompt, the parameters,
+ * the button. Which model runs is the Models panel's business — see spec § 6, and no field
+ * here is written for any particular model.
  */
 export function Generator() {
   const { t } = useTranslation()
 
-  // The generator serves the Image workspace, the only one with panels registered so far.
-  const defaultModel = useSettings(state => state.settings.generation.defaultModels.image)
-  const [chosen, setChosen] = useState<string | null>(null)
-  const modelId = chosen ?? defaultModel ?? null
+  const workspace = useLayouts(state => state.activeWorkspace)
+  const family = workspaceById(workspace).family
+
+  // The panel's choice wins over the preference: the preference is what to start from.
+  const chosen = useModels(state => state.selected[family] ?? null)
+  const preferred = useSettings(state => state.settings.generation.defaultModels[family] ?? null)
+  const modelId = chosen ?? preferred
 
   const authenticated = useSettings(state => state.auth.authenticated)
   const project = useProject(state => state.project)
   const submit = useJobs(state => state.submit)
 
-  const models = useModels(authenticated)
   const descriptor = useDescriptor(modelId)
 
   if (!authenticated) {
     return <EmptyState icon={mdiCreationOutline} message={t('generation.noCredentials')} />
   }
 
-  if (models.isPending) {
-    return <EmptyState icon={mdiCreationOutline} message={t('generation.loadingModels')} />
+  if (!modelId) {
+    return <EmptyState icon={mdiCreationOutline} message={t('generation.chooseModel')} />
   }
 
-  if (!models.data?.length) {
-    return <EmptyState icon={mdiCreationOutline} message={t('generation.noModel')} />
+  if (descriptor.isPending) {
+    return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
+  }
+
+  // A model can be withdrawn from the catalogue while it is still the chosen one. Without
+  // this the panel renders an empty shell: no form, no reason, nothing to act on.
+  if (descriptor.isError) {
+    return <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
   }
 
   const generate = (body: FormValues): void => {
-    if (modelId) void submit(modelId, body)
+    void submit(modelId, body)
   }
 
   return (
     <div className="flex h-full flex-col overflow-auto">
-      <label className="flex flex-col gap-1 p-2 text-xs">
-        <span className="text-muted">{t('generation.model')}</span>
-        <select
-          className="bg-surface border-border h-(--sc-control) rounded-(--radius-sc-sm) border px-2"
-          value={modelId ?? ''}
-          onChange={event => setChosen(event.target.value)}
-        >
-          <option value="">{t('generation.chooseModel')}</option>
-          {models.data.map(model => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <p className="text-muted truncate px-2 pt-2 text-[11px]">{descriptor.data?.name}</p>
 
       {/* A project is where a generated asset lands; without one there is nowhere to put it. */}
       {!project && <p className="text-muted px-2 text-xs">{t('generation.noProject')}</p>}

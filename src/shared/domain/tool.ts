@@ -6,7 +6,7 @@
  */
 export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
 
-export type ToolId = 'explorer' | 'generator' | 'assets' | 'jobs'
+export type ToolId = 'explorer' | 'models' | 'generator' | 'assets' | 'jobs'
 
 export type ToolPlacement = {
   id: ToolId
@@ -15,6 +15,7 @@ export type ToolPlacement = {
 
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'explorer', zone: 'left' },
+  { id: 'models', zone: 'right' },
   { id: 'generator', zone: 'right' },
   { id: 'assets', zone: 'bottom' },
   { id: 'jobs', zone: 'bottom' },
