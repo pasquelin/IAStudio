@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { COULEUR_FOND } from '@shared/constantes'
 import { resoudreLangue } from '@shared/i18n'
 import { poserMenu } from '@main/menu'
+import { enregistrerControlesFenetre, suivreEtat } from '@main/windows/controles'
 
 const enDeveloppement = !app.isPackaged
 
@@ -14,9 +15,10 @@ function creerFenetre(): BrowserWindow {
     minHeight: 640,
     show: false,
     backgroundColor: COULEUR_FOND,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 14 },
-    fullscreenable: true,
+    // Les feux natifs sont remplacés par des pastilles dessinées : macOS les retire en
+    // plein écran, et rien dans Electron ne permet de les y garder — cf. `BoutonsFenetre`.
+    titleBarStyle: 'hidden',
+    fullscreenable: false,
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.mjs'),
       contextIsolation: true,
@@ -24,6 +26,9 @@ function creerFenetre(): BrowserWindow {
       sandbox: true,
     },
   })
+
+  fenetre.setWindowButtonVisibility(false)
+  suivreEtat(fenetre)
 
   fenetre.once('ready-to-show', () => fenetre.show())
 
@@ -42,6 +47,7 @@ function creerFenetre(): BrowserWindow {
 }
 
 void app.whenReady().then(() => {
+  enregistrerControlesFenetre()
   poserMenu(resoudreLangue(app.getLocale()))
   creerFenetre()
   app.on('activate', () => {

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron'
 import { EVENEMENTS } from '@shared/ipc'
 import { TRADUCTIONS, type Langue } from '@shared/i18n'
-import { basculerPleinEcran } from '@main/windows/plein-ecran'
+import { basculerPleinEcran } from '@main/windows/controles'
 
 /** Outils restaurables depuis le menu. Miroir du registre du renderer, volontairement figé
  *  ici : le main ne charge pas le code du renderer, et cette liste bouge rarement. */

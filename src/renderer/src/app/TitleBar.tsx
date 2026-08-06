@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { BoutonsFenetre } from '@/design/BoutonsFenetre'
 import { cn } from '@/design/cn'
 import { UiIcon } from '@/design/UiIcon'
 import { cleLibelleEspace, ESPACES, type IdEspace } from './espaces'
@@ -33,6 +34,10 @@ export function TitleBar({ espaceActif, surEspace, actions }: TitleBarProps) {
       // une hauteur de 44px les aligne au milieu de la barre.
       className="flex shrink-0 items-center gap-2 pt-2 pr-6 pb-1 pl-24 text-[13px]"
     >
+      <div style={CLIQUABLE}>
+        <BoutonsFenetre />
+      </div>
+
       <nav
         aria-label={t('espaces.navigation')}
         style={CLIQUABLE}

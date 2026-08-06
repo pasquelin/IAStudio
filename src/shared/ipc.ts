@@ -2,6 +2,7 @@ import type { Asset, RequeteAssets } from './domain/asset'
 import type { DescripteurModele, FamilleModele, ResumeModele } from './domain/modele'
 import type { Projet } from './domain/projet'
 import type { EtatAuthentification, Reglages, ReglagesPartiels } from './domain/reglages'
+import type { EtatFenetre } from './domain/fenetre'
 import type { ProgressionTache, Tache } from './domain/tache'
 
 /**
@@ -28,6 +29,12 @@ export const CANAUX = {
 
   assetsRechercher: 'assets:rechercher',
   assetsUrl: 'assets:url',
+
+  fenetreFermer: 'fenetre:fermer',
+  fenetreReduire: 'fenetre:reduire',
+  fenetreZoomer: 'fenetre:zoomer',
+  fenetrePleinEcran: 'fenetre:plein-ecran',
+  fenetreEtat: 'fenetre:etat',
 }
 
 /** Canaux poussés par le main vers le renderer. */
@@ -36,6 +43,7 @@ export const EVENEMENTS = {
   projetChange: 'evt:projet-change',
   ouvrirOutil: 'evt:ouvrir-outil',
   commandeMenu: 'evt:commande-menu',
+  fenetreEtat: 'evt:fenetre-etat',
 }
 
 export type Desabonnement = () => void
@@ -82,5 +90,13 @@ export type PontStudio = {
   menu: {
     surOuvrirOutil: (rappel: (demande: DemandeOutil) => void) => Desabonnement
     surCommande: (rappel: (commande: CommandeMenu) => void) => Desabonnement
+  }
+  fenetre: {
+    fermer: () => Promise<void>
+    reduire: () => Promise<void>
+    zoomer: () => Promise<void>
+    basculerPleinEcran: () => Promise<void>
+    etat: () => Promise<EtatFenetre>
+    surEtat: (rappel: (etat: EtatFenetre) => void) => Desabonnement
   }
 }

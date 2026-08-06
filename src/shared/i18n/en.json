@@ -115,5 +115,10 @@
   },
   "documents": {
     "aucun": "No document open. Generate or open an asset to get started."
+  },
+  "fenetre": {
+    "fermer": "Close",
+    "reduire": "Minimize",
+    "zoomer": "Full screen"
   }
 }

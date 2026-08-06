@@ -7,6 +7,7 @@ import {
   type DemandeOutil,
   type PontStudio,
 } from '@shared/ipc'
+import type { EtatFenetre } from '@shared/domain/fenetre'
 import type { Projet } from '@shared/domain/projet'
 import type { ProgressionTache } from '@shared/domain/tache'
 
@@ -45,6 +46,14 @@ const pont: PontStudio = {
   assets: {
     rechercher: requete => ipcRenderer.invoke(CANAUX.assetsRechercher, requete),
     url: assetId => ipcRenderer.invoke(CANAUX.assetsUrl, assetId),
+  },
+  fenetre: {
+    fermer: () => ipcRenderer.invoke(CANAUX.fenetreFermer),
+    reduire: () => ipcRenderer.invoke(CANAUX.fenetreReduire),
+    zoomer: () => ipcRenderer.invoke(CANAUX.fenetreZoomer),
+    basculerPleinEcran: () => ipcRenderer.invoke(CANAUX.fenetrePleinEcran),
+    etat: () => ipcRenderer.invoke(CANAUX.fenetreEtat),
+    surEtat: rappel => abonner<EtatFenetre>(EVENEMENTS.fenetreEtat, rappel),
   },
   menu: {
     surOuvrirOutil: rappel => abonner<DemandeOutil>(EVENEMENTS.ouvrirOutil, rappel),

@@ -115,5 +115,10 @@
   },
   "documents": {
     "aucun": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer."
+  },
+  "fenetre": {
+    "fermer": "Fermer",
+    "reduire": "Réduire",
+    "zoomer": "Plein écran"
   }
 }
