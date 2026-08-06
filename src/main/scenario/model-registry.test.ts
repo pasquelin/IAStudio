@@ -61,6 +61,13 @@ describe('model registry', () => {
     expect(catalog).toHaveBeenCalledOnce()
   })
 
+  // The catalogue is walked once per privacy, so the same model can be yielded twice.
+  it('lists a model once even when the catalogue yields it twice', async () => {
+    const registry = createModelRegistry({ catalog: () => catalogOf([FLUX, VEO, FLUX]) })
+
+    expect((await registry.list()).map(summary => summary.id)).toEqual(['model_flux', 'model_veo'])
+  })
+
   it('walks every page the catalogue yields', async () => {
     const many = Array.from({ length: 250 }, (_, index) => ({ id: `model_${index}` }))
     const registry = createModelRegistry({ catalog: () => catalogOf(many) })

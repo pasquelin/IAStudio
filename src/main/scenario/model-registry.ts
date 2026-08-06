@@ -72,12 +72,18 @@ export function createModelRegistry({
     const cached = fresh(summaries)
     if (cached) return cached
 
-    const collected: ModelSummary[] = []
-    // Auto-pagination: the SDK walks the cursor, so the page size never leaks into our code.
-    for await (const model of catalog().list()) collected.push(summaryOf(model))
+    // Keyed by id: the catalogue is walked once per privacy, and a model listed twice would
+    // appear twice in the picker.
+    const collected = new Map<string, ModelSummary>()
 
-    summaries = { at: now(), value: collected }
-    return collected
+    // Auto-pagination: the SDK walks the cursor, so the page size never leaks into our code.
+    for await (const model of catalog().list()) {
+      if (!collected.has(model.id)) collected.set(model.id, summaryOf(model))
+    }
+
+    const value = [...collected.values()]
+    summaries = { at: now(), value }
+    return value
   }
 
   return {
