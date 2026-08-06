@@ -70,7 +70,9 @@ function NewDocumentButton() {
         const created = useDocuments.getState().create(workspace)
         if (created) openDocument(created)
       }}
-      className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
+      // Accent-coloured, unlike every tool icon around it: this one acts, the others only
+      // switch what is shown. A grey plus among grey glyphs is a plus nobody finds.
+      className="text-accent bg-accent-soft/40 hover:bg-accent size-(--sc-rail-button) rounded-(--radius-sc-md) hover:text-white disabled:bg-transparent"
     />
   )
 }

@@ -9,10 +9,12 @@
   --dv-tabs-and-actions-container-background-color: var(--color-base);
   --dv-tabs-container-scrollbar-color: var(--color-border);
 
+  /* Only the visible tab carries a background: an editor strip reads by what is lit, not by
+     counting boxes. The others sit straight on the surface. */
   --dv-activegroup-visiblepanel-tab-background-color: var(--color-elevated);
-  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-base);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
   --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);
-  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-base);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
 
   --dv-activegroup-visiblepanel-tab-color: var(--color-text);
   --dv-activegroup-hiddenpanel-tab-color: var(--color-muted);
@@ -26,13 +28,27 @@
   --dv-drag-over-background-color: rgb(53 116 240 / 0.18);
   --dv-drag-over-border-color: var(--color-accent);
 
-  --dv-tabs-and-actions-container-height: var(--sc-header);
+  --dv-tabs-and-actions-container-height: var(--sc-tab);
   --dv-tabs-and-actions-container-font-size: 12px;
 }
 
 /* Center tabs take the surfaces' radius: a square tab inside a rounded panel reads as a
-   foreign body. */
+   foreign body. The horizontal margin is what separates them — touching tabs read as one
+   segmented control rather than as several documents. */
 .dv-dockview .dv-tab {
   border-radius: var(--radius-sc-md);
-  margin: 3px 1px;
+  margin: 3px 2px;
+  padding: 0 4px;
+  transition: background-color 120ms ease;
+}
+
+.dv-dockview .dv-tab:hover {
+  background-color: var(--color-surface);
+}
+
+/* Dockview sizes the tab content off its own line-height; without this the strip keeps the
+   height the container no longer has. */
+.dv-dockview .dv-default-tab {
+  height: 100%;
+  padding: 0 4px;
 }
