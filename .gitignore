@@ -4,7 +4,9 @@ out/
 release/
 .DS_Store
 *.log
-secrets/
+secrets/*
+!secrets/.env.example
+!secrets/README.md
 .playwright-mcp/
 # Doc externe régénérable (pnpm docs:scenario) — pas de la doc de projet
 docs/scenario-api/
