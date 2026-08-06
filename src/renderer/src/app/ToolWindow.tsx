@@ -1,4 +1,4 @@
-import { mdiClose, mdiWindowMinimize } from '@mdi/js'
+import { mdiClose } from '@mdi/js'
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/design/cn'
@@ -8,16 +8,11 @@ import { ToolButton } from '@/design/ToolButton'
 import { TOOL_COMPONENTS } from './tool-components'
 import { isHorizontal, toolTitleKey, type ToolId, type ToolZone } from './tools'
 
-/** Width of a collapsed vertical zone: the two header buttons and a truncated title. */
-const COLLAPSED_SIZE = 148
-
 export type ToolWindowProps = {
   zone: ToolZone
   tool: ToolId
   size: number
-  collapsed: boolean
   onFocus: () => void
-  onCollapse: () => void
   onClose: () => void
 }
 
@@ -25,16 +20,11 @@ export type ToolWindowProps = {
  * A tool window: a dark rounded surface laid over the chassis gutter. One visible tool per
  * zone — the rail switches between them, not a tab; tabs stay in the center, where they carry
  * document names.
+ *
+ * Closing is the only way out, on purpose. A collapsed panel is a third state between open and
+ * closed that looks like neither, and the rail already reopens a tool in one click.
  */
-export function ToolWindow({
-  zone,
-  tool,
-  size,
-  collapsed,
-  onFocus,
-  onCollapse,
-  onClose,
-}: ToolWindowProps) {
+export function ToolWindow({ zone, tool, size, onFocus, onClose }: ToolWindowProps) {
   const { t } = useTranslation()
   const definition = TOOL_COMPONENTS[tool]
   const title = t(toolTitleKey(tool))
@@ -49,9 +39,7 @@ export function ToolWindow({
     <Panel
       aria-label={title}
       onPointerDownCapture={onFocus}
-      // Collapsed, the panel keeps only its header: dropping the dimension entirely would
-      // leave a vertical zone as wide as its title, giving nothing back to the center.
-      style={{ [lying ? 'height' : 'width']: collapsed ? COLLAPSED_SIZE : size }}
+      style={{ [lying ? 'height' : 'width']: size }}
     >
       <PanelHeader title={title}>
         {Actions !== undefined && (
@@ -61,13 +49,6 @@ export function ToolWindow({
           </>
         )}
         <ToolButton
-          icon={mdiWindowMinimize}
-          label={t('actions.collapse')}
-          tooltip={TIP_BOTTOM}
-          variant="header"
-          onClick={onCollapse}
-        />
-        <ToolButton
           icon={mdiClose}
           label={t('actions.removeTool')}
           tooltip={TIP_BOTTOM}
@@ -75,11 +56,9 @@ export function ToolWindow({
           onClick={onClose}
         />
       </PanelHeader>
-      {!collapsed && (
-        <div className="min-h-0 flex-1 overflow-auto">
-          <Content />
-        </div>
-      )}
+      <div className="min-h-0 flex-1 overflow-auto">
+        <Content />
+      </div>
     </Panel>
   )
 }

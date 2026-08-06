@@ -65,26 +65,23 @@ export function Shell() {
 function Edge({ zone }: { zone: ToolZone }) {
   const tool = useTools(state => state.open[zone] ?? null)
   const size = useTools(state => state.sizes[zone] ?? DEFAULT_SIZES[zone])
-  const collapsed = useTools(state => state.collapsed[zone] ?? false)
 
   if (!tool) return null
 
   // Actions are stable for the store's lifetime: subscribing to them would only add
   // selectors re-run on every write.
-  const { close, collapse, focus, resize } = useTools.getState()
+  const { close, focus, resize } = useTools.getState()
 
   const panel = (
     <ToolWindow
       zone={zone}
       tool={tool}
       size={size}
-      collapsed={collapsed}
       onFocus={() => focus(zone)}
-      onCollapse={() => collapse(zone)}
       onClose={() => close(zone)}
     />
   )
-  const handle = collapsed ? null : (
+  const handle = (
     <ResizeHandle
       zone={zone}
       size={size}

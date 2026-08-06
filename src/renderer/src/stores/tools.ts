@@ -9,17 +9,14 @@ export const MIN_CENTER = 240
 
 type OpenByZone = Partial<Record<ToolZone, ToolId | null>>
 type SizesByZone = Partial<Record<ToolZone, number>>
-type CollapsedByZone = Partial<Record<ToolZone, boolean>>
 
 type ToolsState = {
   open: OpenByZone
   sizes: SizesByZone
-  collapsed: CollapsedByZone
   /** Last clicked zone: the one whose rail icon gets accented. */
   focusedZone: ToolZone | null
   toggle: (zone: ToolZone, tool: ToolId) => void
   close: (zone: ToolZone) => void
-  collapse: (zone: ToolZone) => void
   focus: (zone: ToolZone | null) => void
   /** `available`: the container's dimension along the zone's axis. */
   resize: (zone: ToolZone, size: number, available: number) => void
@@ -67,22 +64,13 @@ export const useTools = create<ToolsState>()(
     set => ({
       open: DEFAULT_OPEN,
       sizes: {},
-      collapsed: {},
       focusedZone: null,
 
       toggle: (zone, tool) =>
         set(state => {
           const alreadyOpen = state.open[zone] === tool
-          // Clicking a collapsed tool's icon again expands it rather than closing it —
-          // otherwise a collapsed panel could only be dismissed, never restored in place.
-          if (alreadyOpen && state.collapsed[zone]) {
-            return { collapsed: { ...state.collapsed, [zone]: false }, focusedZone: zone }
-          }
           return {
             open: { ...state.open, [zone]: alreadyOpen ? null : tool },
-            // A different tool in a collapsed zone must arrive expanded, otherwise the click
-            // only swaps the title and looks like it did nothing.
-            collapsed: { ...state.collapsed, [zone]: false },
             focusedZone: alreadyOpen ? null : zone,
           }
         }),
@@ -90,16 +78,8 @@ export const useTools = create<ToolsState>()(
       close: zone =>
         set(state => ({
           open: { ...state.open, [zone]: null },
-          // Clearing `collapsed` too: it would otherwise outlive the panel, and the tool
-          // would come back collapsed, without even its resize handle.
-          collapsed: { ...state.collapsed, [zone]: false },
           focusedZone: state.focusedZone === zone ? null : state.focusedZone,
         })),
-
-      // A toggle, not a one-way switch: the header stays visible when collapsed, so the
-      // button is still there and must do something on the second click.
-      collapse: zone =>
-        set(state => ({ collapsed: { ...state.collapsed, [zone]: !state.collapsed[zone] } })),
 
       focus: zone => set({ focusedZone: zone }),
 
@@ -123,16 +103,24 @@ export const useTools = create<ToolsState>()(
           return { sizes }
         }),
 
-      reset: () => set({ open: DEFAULT_OPEN, sizes: {}, collapsed: {}, focusedZone: null }),
+      reset: () => set({ open: DEFAULT_OPEN, sizes: {}, focusedZone: null }),
     }),
     {
       name: 'scenario-studio:tools',
-      // Bumped whenever a `ToolId` is renamed or dropped: a stale persisted id would reach
-      // `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on startup.
-      version: 1,
+      // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
+      // would reach `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on
+      // startup. Version 1 also held a `collapsed` map, which no longer exists.
+      version: 2,
+      /**
+       * Without this, zustand discards the whole persisted state on a version bump — and with
+       * it which tool is open in each zone and the size the user gave every panel. Dropping a
+       * field should not cost someone their layout: the fields that survived are kept, and the
+       * one that went is simply not read.
+       */
+      migrate: persisted => (typeof persisted === 'object' ? persisted : undefined),
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.
-      partialize: state => ({ open: state.open, sizes: state.sizes, collapsed: state.collapsed }),
+      partialize: state => ({ open: state.open, sizes: state.sizes }),
     },
   ),
 )

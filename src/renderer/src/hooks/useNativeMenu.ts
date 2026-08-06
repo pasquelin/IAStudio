@@ -29,10 +29,8 @@ export function useNativeMenu(): void {
 
     const stopTool = bridge.menu.onOpenTool(({ zone, tool }) => {
       const state = useTools.getState()
-      // `toggle` both opens a closed tool and expands a collapsed one; calling it only when
-      // the tool differs would leave a collapsed panel collapsed — the exact case the menu
-      // exists to recover from.
-      if (state.open[zone] !== tool || state.collapsed[zone]) state.toggle(zone, tool)
+      // Only when it differs: `toggle` would otherwise close the very tool the menu asked for.
+      if (state.open[zone] !== tool) state.toggle(zone, tool)
       state.focus(zone)
     })
 

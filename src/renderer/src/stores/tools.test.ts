@@ -27,7 +27,7 @@ describe('clamp', () => {
 
 describe('tools store', () => {
   beforeEach(() => {
-    useTools.setState({ open: {}, sizes: {}, collapsed: {}, focusedZone: null })
+    useTools.setState({ open: {}, sizes: {}, focusedZone: null })
   })
 
   it('clamps the stored size on resize', () => {
@@ -52,40 +52,10 @@ describe('tools store', () => {
     expect(useTools.getState().sizes.left).toBe(800 - MIN_CENTER)
   })
 
-  it('expands a collapsed zone when its icon is clicked again', () => {
-    useTools.setState({ open: { bottom: 'assets' }, collapsed: { bottom: true } })
-    useTools.getState().toggle('bottom', 'assets')
-    expect(useTools.getState().collapsed.bottom).toBe(false)
-    expect(useTools.getState().open.bottom).toBe('assets')
-  })
-
-  it('opens a different tool expanded, not collapsed', () => {
-    useTools.setState({ open: { bottom: 'assets' }, collapsed: { bottom: true } })
-    useTools.getState().toggle('bottom', 'jobs')
-    expect(useTools.getState().open.bottom).toBe('jobs')
-    expect(useTools.getState().collapsed.bottom).toBe(false)
-  })
-
   it('closes the zone when an expanded tool icon is clicked again', () => {
-    useTools.setState({ open: { bottom: 'assets' }, collapsed: {} })
+    useTools.setState({ open: { bottom: 'assets' } })
     useTools.getState().toggle('bottom', 'assets')
     expect(useTools.getState().open.bottom).toBeNull()
-  })
-
-  it('does not let a closed panel come back collapsed', () => {
-    useTools.setState({ open: { bottom: 'assets' }, collapsed: { bottom: true } })
-    useTools.getState().close('bottom')
-    useTools.getState().toggle('bottom', 'assets')
-    expect(useTools.getState().collapsed.bottom).toBe(false)
-  })
-
-  it('collapses and expands with the same action', () => {
-    useTools.setState({ open: { left: 'explorer' }, collapsed: {} })
-    const { collapse } = useTools.getState()
-    collapse('left')
-    expect(useTools.getState().collapsed.left).toBe(true)
-    collapse('left')
-    expect(useTools.getState().collapsed.left).toBe(false)
   })
 
   it('drops focus from the zone being closed', () => {
