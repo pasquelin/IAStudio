@@ -106,5 +106,8 @@
     "densiteCompact": "Compact",
     "densiteConfort": "Confort",
     "tachesSimultanees": "Tâches simultanées"
+  },
+  "documents": {
+    "aucun": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer."
   }
 }

@@ -3,34 +3,45 @@
   themes: false;
 }
 
+/*
+ * Palette accordée à l'interface de référence : un fond gris moyen qui sert de gouttière,
+ * des surfaces PLUS SOMBRES et arrondies posées dessus. L'inverse de l'habitude web, et
+ * c'est ce qui donne la lecture « panneaux flottants » d'un IDE.
+ */
 @theme {
-  --color-base: #121212;
-  --color-surface: #1d1f27;
-  --color-elevated: #252833;
-  --color-bordure: #2f333f;
-  --color-accent: #3c5ccf;
+  --color-chassis: #2b2d30;
+  --color-base: #1e1f22;
+  --color-surface: #26282c;
+  --color-elevated: #393b40;
+  --color-bordure: #393b40;
+  --color-accent: #3574f0;
+  --color-accent-doux: #2e436e;
   --color-danger: #ff715b;
-  --color-texte: #f8efe6;
-  --color-texte-attenue: #8b8d98;
+  --color-texte: #dfe1e5;
+  --color-texte-attenue: #8c8f96;
 
   --radius-sc-sm: 4px;
   --radius-sc-md: 6px;
-  --radius-sc-lg: 8px;
+  --radius-sc-lg: 10px;
 
-  --font-sans: 'Poppins', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 :root {
-  /* Densité : piloté par le réglage d'apparence, lu par toutes les primitives. */
   --sc-controle: 28px;
-  --sc-bar-scale: 1;
-  --sc-ombre-meuble: 0 1px 2px rgb(0 0 0 / 0.4);
+  --sc-rail: 30px;
+  --sc-gouttiere: 6px;
+  --sc-entete: 30px;
+  --sc-ombre-meuble: 0 1px 2px rgb(0 0 0 / 0.25);
   --sc-ombre-flottante: 0 8px 24px rgb(0 0 0 / 0.55);
 }
 
 :root[data-densite='compact'] {
   --sc-controle: 24px;
+  --sc-rail: 26px;
+  --sc-gouttiere: 4px;
+  --sc-entete: 26px;
 }
 
 html,
@@ -41,7 +52,7 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-base);
+  background: var(--color-chassis);
   color: var(--color-texte);
   font-family: var(--font-sans);
   font-size: 13px;

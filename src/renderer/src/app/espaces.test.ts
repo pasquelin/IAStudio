@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleLibelleEspace, ESPACES, espaceParId } from './espaces'
+import { cleLibelleEspace, ESPACE_PAR_DEFAUT, ESPACES, espaceParId } from './espaces'
 
 describe('espaces', () => {
   it('donne à chaque espace une clé de libellé traduisible', () => {
@@ -9,26 +9,24 @@ describe('espaces', () => {
   })
 
   it('retrouve un espace par son identifiant', () => {
-    expect(espaceParId('3d').icone).toBeTruthy()
+    expect(espaceParId('3d').famille).toBe('3d')
   })
 
-  it('pose la bibliothèque d’assets en bande basse dans tous les espaces', () => {
-    for (const espace of ESPACES) {
-      const assets = espace.panneaux.find(panneau => panneau.id === 'assets')
-      expect(assets?.zone).toBe('bas')
-    }
+  it('refuse un identifiant inconnu plutôt que de rendre un espace vide', () => {
+    // @ts-expect-error identifiant volontairement invalide
+    expect(() => espaceParId('inexistant')).toThrow()
   })
 
-  it('ne place jamais un onglet en premier, faute de panneau de référence', () => {
-    for (const espace of ESPACES) {
-      expect(espace.panneaux[0]?.zone).not.toBe('onglet')
-    }
+  it('associe une famille de modèles à chaque espace', () => {
+    for (const espace of ESPACES) expect(espace.famille).toBeTruthy()
   })
 
-  it('n’ouvre jamais deux fois le même panneau dans un espace', () => {
-    for (const espace of ESPACES) {
-      const ids = espace.panneaux.map(panneau => panneau.id)
-      expect(new Set(ids).size).toBe(ids.length)
-    }
+  it('n’a pas deux espaces de même identifiant', () => {
+    const ids = ESPACES.map(espace => espace.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('a un espace par défaut qui existe', () => {
+    expect(ESPACES.some(espace => espace.id === ESPACE_PAR_DEFAUT)).toBe(true)
   })
 })

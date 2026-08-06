@@ -56,7 +56,7 @@ export function ToolButton({
         'text-texte size-(--sc-controle) border-none bg-transparent outline-none',
         'hover:bg-elevated focus-visible:ring-accent transition-colors focus-visible:ring-1',
         'disabled:cursor-not-allowed disabled:opacity-40',
-        actif && 'bg-accent/20 text-accent',
+        actif && 'bg-accent-doux text-texte',
         className,
       )}
       {...nommage}

@@ -106,5 +106,8 @@
     "densiteCompact": "Compact",
     "densiteConfort": "Comfortable",
     "tachesSimultanees": "Concurrent jobs"
+  },
+  "documents": {
+    "aucun": "No document open. Generate or open an asset to get started."
   }
 }
