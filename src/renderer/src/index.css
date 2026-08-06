@@ -4,6 +4,49 @@
 }
 
 /*
+ * DaisyUI's own theme, fed the studio palette. Without it its components carry no colour at
+ * all, and the "DaisyUI at the margins" rule — preferences, dialogs, API keys — has nothing
+ * to stand on. The values repeat the tokens below on purpose: this is the token layer, the
+ * only place a hex value is allowed.
+ */
+@plugin 'daisyui/theme' {
+  name: 'scenario';
+  default: true;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #202124;
+  --color-base-200: #191a1c;
+  --color-base-300: #2b2d30;
+  --color-base-content: #dfe1e5;
+  --color-primary: #3574f0;
+  --color-primary-content: #f4f6fa;
+  --color-secondary: #3c3f44;
+  --color-secondary-content: #dfe1e5;
+  --color-accent: #2e436e;
+  --color-accent-content: #dfe1e5;
+  --color-neutral: #34363a;
+  --color-neutral-content: #dfe1e5;
+  --color-info: #3574f0;
+  --color-info-content: #f4f6fa;
+  --color-success: #57a773;
+  --color-success-content: #12180f;
+  --color-warning: #e0a350;
+  --color-warning-content: #1d1608;
+  --color-error: #ff715b;
+  --color-error-content: #2a0d08;
+
+  --radius-selector: 4px;
+  --radius-field: 4px;
+  --radius-box: 6px;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/*
  * Palette matched to the reference interface: a mid-grey background acting as a gutter, with
  * DARKER rounded surfaces laid on top. The opposite of the usual web convention, and what
  * gives an IDE its "floating panels" reading.

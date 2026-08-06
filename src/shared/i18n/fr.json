@@ -72,9 +72,11 @@
     "signIn": "Se connecter",
     "connected": "Connecté",
     "signOut": "Se déconnecter",
+    "checking": "Vérification…",
     "explanation": "Vos identifiants sont chiffrés par le trousseau du système et ne quittent jamais votre machine."
   },
   "errors": {
+    "missingCredentials": "Aucun identifiant enregistré.",
     "invalidCredentials": "Clé ou secret API invalide.",
     "forbidden": "Cette clé API n’a pas les droits requis.",
     "notFound": "Ressource introuvable.",

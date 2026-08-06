@@ -72,9 +72,11 @@
     "signIn": "Sign in",
     "connected": "Connected",
     "signOut": "Sign out",
+    "checking": "Checking…",
     "explanation": "Your credentials are encrypted by the system keychain and never leave your machine."
   },
   "errors": {
+    "missingCredentials": "No credentials saved.",
     "invalidCredentials": "Invalid API key or secret.",
     "forbidden": "This API key lacks the required permissions.",
     "notFound": "Resource not found.",

@@ -32,10 +32,40 @@ function sendToFocused(channel: string, payload?: unknown): void {
  */
 export function buildMenu(language: Language): void {
   const t = TRANSLATIONS[language]
-  const appMenuItem: MenuItemConstructorOptions = { role: 'appMenu', label: app.name }
+  const isMac = process.platform === 'darwin'
+
+  const settingsItem: MenuItemConstructorOptions = {
+    label: t.menu.settings,
+    accelerator: 'CmdOrCtrl+,',
+    click: () => sendToFocused(EVENTS.menuCommand, 'settings:open'),
+  }
+
+  // Spelled out rather than `role: 'appMenu'`: the built-in role has no Preferences entry,
+  // and ⌘, is where every macOS user looks for it first.
+  const appMenuItem: MenuItemConstructorOptions = {
+    label: app.name,
+    submenu: [
+      { role: 'about' },
+      { type: 'separator' },
+      settingsItem,
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' },
+    ],
+  }
+
+  // Outside macOS there is no application menu: Settings belongs under File instead.
+  const fileMenuSettings: MenuItemConstructorOptions[] = isMac
+    ? []
+    : [settingsItem, { type: 'separator' }]
 
   const template: MenuItemConstructorOptions[] = [
-    ...(process.platform === 'darwin' ? [appMenuItem] : []),
+    ...(isMac ? [appMenuItem] : []),
     {
       label: t.menu.file,
       submenu: [
@@ -52,7 +82,8 @@ export function buildMenu(language: Language): void {
           click: () => sendToFocused(EVENTS.menuCommand, 'project:open'),
         },
         { type: 'separator' },
-        { role: process.platform === 'darwin' ? 'close' : 'quit' },
+        ...fileMenuSettings,
+        { role: isMac ? 'close' : 'quit' },
       ],
     },
     { role: 'editMenu', label: t.menu.edit },

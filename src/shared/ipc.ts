@@ -84,7 +84,7 @@ export type ToolRequest = {
 }
 
 /** Native menu commands with no payload, identified by a verb. */
-export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset'
+export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset' | 'settings:open'
 
 /** What `window.studio` exposes. Every method maps to exactly one channel in `CHANNELS`. */
 export type StudioBridge = {
