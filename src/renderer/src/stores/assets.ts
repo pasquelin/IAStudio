@@ -1,30 +1,40 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Asset } from '@shared/domain/asset'
+import {
+  COLLECTION_PERSIST_VERSION,
+  DEFAULT_COLLECTION_STATE,
+  type CollectionState,
+} from '@/design/collection-state'
 import { getBridge } from '@/services/bridge'
 
-export type AssetsView = 'grid' | 'list'
-
 type AssetsState = {
-  view: AssetsView
-  setView: (view: AssetsView) => void
+  collection: CollectionState
+  setCollection: (collection: CollectionState) => void
 
   items: Asset[]
   refresh: () => Promise<void>
 }
 
+/** The shape the store persisted before it held a whole `CollectionState`. */
+function readView(persisted: unknown): CollectionState['view'] | null {
+  if (typeof persisted !== 'object' || persisted === null || !('view' in persisted)) return null
+  const { view } = persisted
+  return view === 'grid' || view === 'list' ? view : null
+}
+
 /**
- * The view lives in a store rather than in the component: its buttons are rendered by the
- * panel header, the grid by its content, and both must read the same value.
+ * How the browser is displayed lives in a store rather than in the component: its count is
+ * rendered by the panel header, its grid by the content, and both must read the same list.
  *
- * Only the view is persisted. The catalogue belongs to the project, and a list restored from
- * the last session would show what a different project contained.
+ * Only the display is persisted. The catalogue belongs to the project, and a list restored
+ * from the last session would show what a different project contained.
  */
 export const useAssets = create<AssetsState>()(
   persist(
     set => ({
-      view: 'grid',
-      setView: view => set({ view }),
+      collection: DEFAULT_COLLECTION_STATE,
+      setCollection: collection => set({ collection }),
 
       items: [],
 
@@ -40,6 +50,21 @@ export const useAssets = create<AssetsState>()(
         }
       },
     }),
-    { name: 'scenario-studio:assets', partialize: state => ({ view: state.view }) },
+    {
+      name: 'scenario-studio:assets',
+      version: COLLECTION_PERSIST_VERSION,
+      /**
+       * The store used to persist a bare `view`, before the state became a whole
+       * `CollectionState`. Carried over rather than dropped: zustand would otherwise discard
+       * the entry entirely, and with it the grid-or-list the user had chosen.
+       */
+      migrate: persisted => {
+        const view = readView(persisted)
+        return view ? { collection: { ...DEFAULT_COLLECTION_STATE, view } } : undefined
+      },
+      // The search text is dropped on purpose: reopening on a narrowed catalogue nobody typed
+      // reads as a catalogue gone missing.
+      partialize: state => ({ collection: { ...state.collection, search: '' } }),
+    },
   ),
 )
