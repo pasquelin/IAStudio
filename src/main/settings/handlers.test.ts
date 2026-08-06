@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { DEFAULT_SETTINGS, type AuthState } from '@shared/domain/settings'
 import { CHANNELS } from '@shared/ipc'
 import { registerSettingsHandlers } from './handlers'
 import { memoryAdapter } from './memory-adapter'
@@ -24,12 +24,14 @@ function invoke(channel: string, ...args: unknown[]): unknown {
 describe('settings handlers', () => {
   let settings: SettingsStore
   let onCredentialsChanged: () => void
+  let authState: () => Promise<AuthState>
 
   beforeEach(() => {
     registered.clear()
     settings = createSettingsStore(memoryAdapter())
     onCredentialsChanged = vi.fn()
-    registerSettingsHandlers({ settings, onCredentialsChanged })
+    authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
+    registerSettingsHandlers({ settings, onCredentialsChanged, authState })
   })
 
   it('answers a read with the current settings', () => {
@@ -47,6 +49,30 @@ describe('settings handlers', () => {
   it('rejects a malformed write without persisting anything', () => {
     expect(() => invoke(CHANNELS.settingsWrite, { generation: { concurrentJobs: 999 } })).toThrow()
     expect(settings.read().generation).toEqual(DEFAULT_SETTINGS.generation)
+  })
+
+  it('stores credentials, drops the cached client, then reports the authentication', async () => {
+    await expect(invoke(CHANNELS.settingsSetCredentials, '  api_k\n', 's3cr3t')).resolves.toEqual({
+      authenticated: true,
+    })
+
+    expect(settings.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
+    expect(onCredentialsChanged).toHaveBeenCalledOnce()
+  })
+
+  it('reports a failure instead of an authentication when nothing could be stored', async () => {
+    await expect(invoke(CHANNELS.settingsSetCredentials, '', 's3cr3t')).resolves.toEqual({
+      authenticated: false,
+      reason: 'unexpected',
+    })
+
+    expect(settings.hasCredentials()).toBe(false)
+    expect(onCredentialsChanged).not.toHaveBeenCalled()
+    expect(authState).not.toHaveBeenCalled()
+  })
+
+  it('answers the auth state without touching the store', async () => {
+    await expect(invoke(CHANNELS.settingsAuthState)).resolves.toEqual({ authenticated: true })
   })
 
   it('forgets credentials and announces the change', () => {

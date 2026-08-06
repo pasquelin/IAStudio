@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { PartialSettings } from '@shared/domain/settings'
+import type { Credentials } from './store'
 
 const appearance = z.object({
   theme: z.enum(['dark', 'light']).optional(),
@@ -37,4 +38,12 @@ export function parsePartialSettings(value: unknown): PartialSettings {
 export function salvagePartialSettings(value: unknown): PartialSettings {
   const parsed = partialSettings.safeParse(value)
   return parsed.success ? parsed.data : {}
+}
+
+// Trimmed before the length check: a key pasted from a web page carries a trailing newline,
+// and the API answers 401 to a credential that only differs by whitespace.
+const credential = z.string().trim().min(1)
+
+export function parseCredentials(key: unknown, secret: unknown): Credentials {
+  return { key: credential.parse(key), secret: credential.parse(secret) }
 }
