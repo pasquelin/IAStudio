@@ -6,6 +6,8 @@ export type ShortcutsOptions = {
   /** A document only listens while it is the visible tab. */
   enabled: boolean
   onCommand: (command: CommandId) => void
+  /** Fires when the held set actually changes — never on a frame tick. */
+  onMotionChange?: (held: Set<MotionId>) => void
 }
 
 function isTyping(target: EventTarget | null): boolean {
@@ -19,26 +21,37 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 /**
- * Commands fire once on press; motions are held and read every frame by the renderer, which is
- * why they come back as a mutable ref rather than state — a set that changes sixty times a
- * second must not re-render anything.
+ * Commands fire once on press; motions are held, and reported only when the set changes.
+ *
+ * Pushing on change rather than letting the consumer poll every frame is what keeps an idle
+ * viewport idle: a `requestAnimationFrame` loop that only reads a set nobody touched still
+ * wakes the CPU sixty times a second.
+ *
+ * The set is also exposed as a mutable ref, for a consumer that already runs a loop and would
+ * rather read it than be called.
  */
-export function useShortcuts({ enabled, onCommand }: ShortcutsOptions): {
+export function useShortcuts({ enabled, onCommand, onMotionChange }: ShortcutsOptions): {
   heldMotion: RefObject<Set<MotionId>>
 } {
   const heldMotion = useRef<Set<MotionId>>(new Set())
-  const handler = useRef(onCommand)
+  const handlers = useRef({ onCommand, onMotionChange })
 
   // Kept in an effect rather than assigned while rendering: a ref written during render is
   // read by the listener that the effect below never re-subscribes.
   useEffect(() => {
-    handler.current = onCommand
-  }, [onCommand])
+    handlers.current = { onCommand, onMotionChange }
+  }, [onCommand, onMotionChange])
 
   useEffect(() => {
     const held = heldMotion.current
-    if (!enabled) {
+    const release = () => {
+      if (held.size === 0) return
       held.clear()
+      handlers.current.onMotionChange?.(held)
+    }
+
+    if (!enabled) {
+      release()
       return
     }
 
@@ -48,22 +61,26 @@ export function useShortcuts({ enabled, onCommand }: ShortcutsOptions): {
       const keymap = useKeymap.getState()
 
       const motion = motionFor(keymap, signature)
-      if (motion) held.add(motion)
+      // Holding a key repeats keydown; only a set that actually changed is worth reporting.
+      if (motion && !held.has(motion)) {
+        held.add(motion)
+        handlers.current.onMotionChange?.(held)
+      }
 
       const command = commandFor(keymap, signature)
       if (!command) return
       event.preventDefault()
-      handler.current(command)
+      handlers.current.onCommand(command)
     }
 
     const onKeyUp = (event: KeyboardEvent) => {
       const motion = motionFor(useKeymap.getState(), signatureOf(event))
-      if (motion) held.delete(motion)
+      if (motion && held.delete(motion)) handlers.current.onMotionChange?.(held)
     }
 
     // The window losing focus never delivers the keyup: without this the camera would keep
     // flying after an ⌘Tab.
-    const onBlur = () => held.clear()
+    const onBlur = release
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
@@ -72,7 +89,7 @@ export function useShortcuts({ enabled, onCommand }: ShortcutsOptions): {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
-      held.clear()
+      release()
     }
   }, [enabled])
 
