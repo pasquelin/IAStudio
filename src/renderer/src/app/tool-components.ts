@@ -7,11 +7,11 @@ import type { ToolId } from './tools'
 
 export type ToolDefinition = {
   Content: FC
-  /** Actions rendues dans la barre de titre, sur la même ligne que le nom du panneau. */
+  /** Actions rendered in the title bar, on the same line as the panel name. */
   Actions?: FC
 }
 
-/** Table des contenus d'outils, séparée du registre pour garder `tools.ts` sans dépendance UI. */
+/** Tool content table, kept apart from the registry so `tools.ts` stays free of UI imports. */
 export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
   explorer: { Content: Explorer },
   generator: { Content: Generator },

@@ -4,13 +4,15 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Toolbar, type Tool } from './Toolbar'
 
+// The expected labels below are French because they come from the i18n bundle: they are
+// user-facing text, not identifiers.
 const TOOLS: Tool[] = [
   { id: 'select', labelKey: 'actions.close', icon: mdiCursorDefaultOutline, shortcut: 'V' },
   { id: 'brush', labelKey: 'actions.generate', icon: mdiPencil, shortcut: 'B' },
 ]
 
 describe('Toolbar', () => {
-  it('rend un bouton par outil et signale celui qui est actif', () => {
+  it('renders one button per tool and flags the active one', () => {
     render(<Toolbar tools={TOOLS} activeTool="brush" onTool={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Générer (B)' })).toHaveAttribute(
       'aria-pressed',
@@ -22,19 +24,19 @@ describe('Toolbar', () => {
     )
   })
 
-  it('remonte l’outil choisi', async () => {
+  it('reports the chosen tool', async () => {
     const onTool = vi.fn()
     render(<Toolbar tools={TOOLS} onTool={onTool} />)
     await userEvent.click(screen.getByRole('button', { name: 'Fermer (V)' }))
     expect(onTool).toHaveBeenCalledWith('select')
   })
 
-  it('masque une section passée à false', () => {
+  it('hides a section set to false', () => {
     render(<Toolbar tools={TOOLS} onTool={vi.fn()} sections={{ tools: false }} />)
     expect(screen.queryByRole('button', { name: 'Générer (B)' })).not.toBeInTheDocument()
   })
 
-  it('remplace une section par le nœud fourni', () => {
+  it('replaces a section with the node provided', () => {
     render(
       <Toolbar
         tools={TOOLS}
@@ -46,7 +48,7 @@ describe('Toolbar', () => {
     expect(screen.queryByRole('button', { name: 'Générer (B)' })).not.toBeInTheDocument()
   })
 
-  it('n’affiche annuler et rétablir que si les rappels existent', () => {
+  it('shows undo and redo only when the callbacks exist', () => {
     const { rerender } = render(<Toolbar tools={TOOLS} onTool={vi.fn()} />)
     expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
 
@@ -54,12 +56,12 @@ describe('Toolbar', () => {
     expect(screen.getByRole('button', { name: /Annuler/ })).toBeEnabled()
   })
 
-  it('désactive annuler quand la pile est vide', () => {
+  it('disables undo when the stack is empty', () => {
     render(<Toolbar tools={TOOLS} onTool={vi.fn()} onUndo={vi.fn()} />)
     expect(screen.getByRole('button', { name: /Annuler/ })).toBeDisabled()
   })
 
-  it('déclare son orientation', () => {
+  it('declares its orientation', () => {
     render(<Toolbar tools={TOOLS} onTool={vi.fn()} orientation="horizontal" />)
     expect(screen.getByRole('toolbar')).toHaveAttribute('aria-orientation', 'horizontal')
   })

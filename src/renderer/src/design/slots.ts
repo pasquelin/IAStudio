@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 
 /**
- * Configuration de sections d'une barre : `false` masque, un `ReactNode` remplace,
- * absent laisse le rendu par défaut. Repris de map3D — c'est ce qui permet à six espaces
- * de partager une seule barre sans la forker.
+ * Section configuration for a bar: `false` hides, a `ReactNode` replaces, absent keeps the
+ * default rendering. Taken from map3D — this is what lets six workspaces share a single bar
+ * without forking it.
  */
 export type SlotConfig<S extends string> = Partial<Record<S, ReactNode | false>>
 

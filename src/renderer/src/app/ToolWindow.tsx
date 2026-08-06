@@ -20,9 +20,9 @@ export type ToolWindowProps = {
 }
 
 /**
- * Fenêtre d'outil : une surface sombre arrondie posée sur la gouttière du châssis. Un seul
- * outil visible par zone — c'est le rail qui bascule, pas un onglet ; les onglets restent
- * au centre, où ils portent des noms de documents.
+ * A tool window: a dark rounded surface laid over the chassis gutter. One visible tool per
+ * zone — the rail switches between them, not a tab; tabs stay in the center, where they carry
+ * document names.
  */
 export function ToolWindow({
   zone,

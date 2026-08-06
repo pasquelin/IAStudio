@@ -17,7 +17,7 @@ export type AssetBrowserProps = {
   assets?: Asset[]
 }
 
-/** Actions rendues dans la barre de titre du panneau, sur la même ligne que son nom. */
+/** Actions rendered in the panel's title bar, on the same line as its name. */
 export function AssetBrowserActions({ assets = [] }: AssetBrowserProps) {
   const { t } = useTranslation()
   const view = useAssets(state => state.view)
@@ -51,8 +51,8 @@ export function AssetBrowserActions({ assets = [] }: AssetBrowserProps) {
 }
 
 /**
- * Bibliothèque d'assets, à la place d'un content browser Unreal : bande basse, deux
- * affichages, et une grille virtualisée — un projet fourni compte des milliers de vignettes.
+ * Asset library, standing where an Unreal content browser would: bottom strip, two views, and
+ * a virtualized grid — a well-stocked project holds thousands of thumbnails.
  */
 export function AssetBrowser({ assets = [] }: AssetBrowserProps) {
   const { t } = useTranslation()

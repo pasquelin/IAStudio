@@ -4,10 +4,10 @@ import { Application } from '@/app/Application'
 import { initI18n } from '@/i18n'
 import './index.css'
 
-const root = document.getElementById('racine')
-if (!root) throw new Error('Élément racine introuvable dans index.html')
+const root = document.getElementById('root')
+if (!root) throw new Error('Root element not found in index.html')
 
-// L'UI traduit dès son premier rendu : monter avant l'init afficherait les clés brutes.
+// The UI translates on its very first render: mounting before init would show raw keys.
 await initI18n()
 
 createRoot(root).render(

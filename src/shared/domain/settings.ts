@@ -3,8 +3,8 @@ export type Density = 'compact' | 'comfortable'
 export type AssetBackend = 'local' | 'cloud'
 
 /**
- * Réglages lisibles par le renderer. Les identifiants API n'y figurent JAMAIS : le
- * renderer demande s'il est authentifié, pas quelle est la clé — cf. spec § 9.
+ * Settings the renderer may read. API credentials NEVER appear here: the renderer asks
+ * whether it is authenticated, not what the key is — see spec § 9.
  */
 export type Settings = {
   appearance: {

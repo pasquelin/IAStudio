@@ -6,8 +6,8 @@ import { useWindowState } from '@/hooks/useWindowState'
 import { workspaceLabelKey, WORKSPACES, type WorkspaceId } from './workspaces'
 
 /**
- * `app-region` n'est pas typé par React : la barre entière est saisissable, et chaque
- * contrôle doit explicitement repasser en `no-drag`, sinon il devient incliquable.
+ * `app-region` is not typed by React: the whole bar is draggable, and every control must
+ * explicitly switch back to `no-drag`, otherwise it becomes unclickable.
  */
 const DRAGGABLE: CSSProperties = { WebkitAppRegion: 'drag' } as CSSProperties
 const CLICKABLE: CSSProperties = { WebkitAppRegion: 'no-drag' } as CSSProperties
@@ -15,14 +15,14 @@ const CLICKABLE: CSSProperties = { WebkitAppRegion: 'no-drag' } as CSSProperties
 export type TitleBarProps = {
   activeWorkspace: WorkspaceId
   onWorkspace: (workspace: WorkspaceId) => void
-  /** Actions globales alignées à droite : recherche, exécution, compte. */
+  /** Global actions aligned right: search, run, account. */
   actions?: ReactNode
 }
 
 /**
- * Chrome custom : les feux de circulation restent natifs (`titleBarStyle: 'hiddenInset'`),
- * la barre porte les espaces de travail. On récupère la hauteur d'une barre de titre, et
- * l'application ne ressemble pas à une page web dans un cadre.
+ * Custom chrome: traffic lights stay native (`titleBarStyle: 'hiddenInset'`) and the bar
+ * carries the workspaces. We reclaim a title bar's worth of height, and the application does
+ * not look like a web page in a frame.
  */
 export function TitleBar({ activeWorkspace, onWorkspace, actions }: TitleBarProps) {
   const { t } = useTranslation()
@@ -33,8 +33,8 @@ export function TitleBar({ activeWorkspace, onWorkspace, actions }: TitleBarProp
       style={DRAGGABLE}
       className={cn(
         'flex shrink-0 items-center gap-2 pt-2 pr-6 pb-1 text-[13px]',
-        // Le retrait de gauche ne sert qu'à dégager les feux de circulation natifs. En plein
-        // écran macOS les retire : sans cette bascule, il resterait un creux de 96 px.
+        // The left inset only exists to clear the native traffic lights. macOS removes them
+        // in full screen: without this switch, a 96 px gap would remain.
         fullScreen ? 'pl-1.5' : 'pl-24',
       )}
     >

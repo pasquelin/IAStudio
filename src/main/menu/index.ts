@@ -4,8 +4,8 @@ import { EVENTS } from '@shared/ipc'
 import { toggleFullScreen } from '@main/window/controls'
 
 /**
- * Outils restaurables depuis le menu. Miroir du registre du renderer, volontairement figé
- * ici : le main ne charge pas le code du renderer, et cette liste bouge rarement.
+ * Tools restorable from the menu. A mirror of the renderer registry, deliberately frozen
+ * here: the main process does not load renderer code, and this list rarely moves.
  */
 const RESTORABLE_TOOLS: readonly { id: string; zone: string }[] = [
   { id: 'explorer', zone: 'left' },
@@ -19,8 +19,8 @@ function broadcast(channel: string, payload: unknown): void {
 }
 
 /**
- * Menu applicatif natif. Il est la seule voie de retour d'un module retiré par sa croix :
- * un panneau fermé sans moyen de le rouvrir serait un panneau perdu.
+ * Native application menu. It is the only way back for a tool removed with its close button:
+ * a panel closed with no way to reopen it would be a panel lost.
  */
 export function buildMenu(language: Language): void {
   const t = TRANSLATIONS[language]

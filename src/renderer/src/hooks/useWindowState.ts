@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { INITIAL_WINDOW_STATE, type WindowState } from '@shared/domain/window'
 
 /**
- * État de la fenêtre poussé par le main. Sans lui, la barre de titre ne saurait pas qu'on
- * est passé en plein écran, et garderait le retrait qui dégage les feux de circulation.
+ * Window state pushed by the main process. Without it the title bar would not know we entered
+ * full screen, and would keep the inset that clears the traffic lights.
  */
 export function useWindowState(): WindowState {
   const [state, setState] = useState<WindowState>(INITIAL_WINDOW_STATE)

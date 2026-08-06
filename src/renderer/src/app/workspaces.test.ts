@@ -2,31 +2,31 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_WORKSPACE, workspaceById, workspaceLabelKey, WORKSPACES } from './workspaces'
 
 describe('workspaces', () => {
-  it('donne à chaque espace une clé de libellé traduisible', () => {
+  it('gives every workspace a translatable label key', () => {
     for (const workspace of WORKSPACES) {
       expect(workspaceLabelKey(workspace.id)).toBe(`workspaces.${workspace.id}`)
     }
   })
 
-  it('retrouve un espace par son identifiant', () => {
+  it('finds a workspace by its id', () => {
     expect(workspaceById('3d').family).toBe('3d')
   })
 
-  it('refuse un identifiant inconnu plutôt que de rendre un espace vide', () => {
-    // @ts-expect-error identifiant volontairement invalide
+  it('rejects an unknown id instead of returning an empty workspace', () => {
+    // @ts-expect-error deliberately invalid id
     expect(() => workspaceById('nope')).toThrow()
   })
 
-  it('associe une famille de modèles à chaque espace', () => {
+  it('maps every workspace to a model family', () => {
     for (const workspace of WORKSPACES) expect(workspace.family).toBeTruthy()
   })
 
-  it('n’a pas deux espaces de même identifiant', () => {
+  it('has no two workspaces sharing an id', () => {
     const ids = WORKSPACES.map(workspace => workspace.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('a un espace par défaut qui existe', () => {
+  it('has a default workspace that exists', () => {
     expect(WORKSPACES.some(workspace => workspace.id === DEFAULT_WORKSPACE)).toBe(true)
   })
 })

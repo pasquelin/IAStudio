@@ -3,8 +3,8 @@ import fr from './fr.json'
 import type { Language } from './languages'
 
 /**
- * Les traductions vivent dans `shared/` : le menu natif est construit par le main, l'UI
- * par le renderer, et les deux doivent dire la même chose. Un fichier JSON par langue.
+ * Translations live in `shared/`: the native menu is built by the main process and the UI by
+ * the renderer, and both must say the same thing. One JSON file per language.
  */
 export const TRANSLATIONS: Record<Language, typeof fr> = { fr, en }
 

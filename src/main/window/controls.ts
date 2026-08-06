@@ -17,9 +17,9 @@ export function toggleFullScreen(target: BrowserWindow | null): void {
 }
 
 /**
- * Pousse l'état de la fenêtre au renderer. La barre de titre en a besoin : en plein écran,
- * macOS retire les feux de circulation, et le retrait laisserait sinon un creux de 96 px à
- * gauche des onglets d'espaces.
+ * Pushes window state to the renderer. The title bar needs it: in full screen macOS removes
+ * the traffic lights, and the inset would otherwise leave a 96 px gap left of the workspace
+ * tabs.
  */
 export function trackWindowState(window: BrowserWindow): void {
   const push = (): void => {

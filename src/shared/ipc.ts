@@ -6,8 +6,8 @@ import type { AuthState, PartialSettings, Settings } from './domain/settings'
 import type { WindowState } from './domain/window'
 
 /**
- * Source unique des noms de canaux. Seul `src/preload/` les cite : un composant qui
- * écrirait `ipcRenderer.invoke('...')` contournerait le contrat — cf. spec § 4.
+ * Single source of channel names. Only `src/preload/` quotes them: a component writing
+ * `ipcRenderer.invoke('...')` would bypass the contract — see spec § 4.
  */
 export const CHANNELS = {
   settingsRead: 'settings:read',
@@ -34,7 +34,7 @@ export const CHANNELS = {
   windowState: 'window:state',
 }
 
-/** Canaux poussés par le main vers le renderer. */
+/** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
   jobProgress: 'evt:job-progress',
   projectChanged: 'evt:project-changed',
@@ -45,16 +45,16 @@ export const EVENTS = {
 
 export type Unsubscribe = () => void
 
-/** Demande d'ouverture d'un outil venue du menu natif. */
+/** Request to open a tool, coming from the native menu. */
 export type ToolRequest = {
   zone: string
   tool: string
 }
 
-/** Commandes du menu natif sans charge utile, identifiées par un verbe. */
+/** Native menu commands with no payload, identified by a verb. */
 export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset'
 
-/** Ce que `window.studio` expose. Chaque méthode a exactement un canal dans `CHANNELS`. */
+/** What `window.studio` exposes. Every method maps to exactly one channel in `CHANNELS`. */
 export type StudioBridge = {
   settings: {
     read: () => Promise<Settings>

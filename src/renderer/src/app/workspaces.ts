@@ -13,7 +13,7 @@ export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'textures' | 'sky
 export type Workspace = {
   id: WorkspaceId
   icon: string
-  /** Famille de modèles Scenario proposée par le générateur dans cet espace. */
+  /** Scenario model family the generator offers in this workspace. */
   family: ModelFamily
 }
 
@@ -28,7 +28,7 @@ export const WORKSPACES: readonly Workspace[] = [
 
 export const DEFAULT_WORKSPACE: WorkspaceId = 'image'
 
-/** Clé i18n du libellé d'un espace — le libellé n'est jamais écrit en dur. */
+/** i18n key of a workspace label — the label is never hardcoded. */
 export function workspaceLabelKey(id: WorkspaceId): string {
   return `workspaces.${id}`
 }

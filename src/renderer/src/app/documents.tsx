@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/panels/EmptyState'
 
 /**
- * Composants de documents remis à Dockview. Les documents éditables (image, scène, séquence)
- * s'y ajouteront avec leurs moteurs ; pour l'instant, seule la page d'accueil existe.
+ * Document components handed to Dockview. Editable documents (image, scene, sequence) will be
+ * added here along with their engines; for now only the home page exists.
  */
 export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps>> = {
   home: () => <Home />,

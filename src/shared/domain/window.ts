@@ -1,6 +1,6 @@
-/** État de la fenêtre, poussé par le main à chaque changement. */
+/** Window state, pushed by the main process on every change. */
 export type WindowState = {
-  /** Fenêtre au premier plan. */
+  /** Window is frontmost. */
   active: boolean
   fullScreen: boolean
   maximized: boolean

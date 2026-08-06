@@ -2,9 +2,9 @@ import type { StudioBridge } from '@shared/ipc'
 
 declare global {
   /**
-   * Posé par `contextBridge.exposeInMainWorld('studio', …)`. Déclaré en global plutôt
-   * qu'en augmentation de `Window` : la convention du projet interdit `interface`, et
-   * seul le declaration merging d'interface permet d'étendre `Window`.
+   * Set by `contextBridge.exposeInMainWorld('studio', …)`. Declared as a global rather than as
+   * a `Window` augmentation: the project convention forbids `interface`, and only interface
+   * declaration merging can extend `Window`.
    */
   var studio: StudioBridge
 }

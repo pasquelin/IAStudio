@@ -5,8 +5,8 @@ import type { ToolId, ToolZone } from '@/app/tools'
 export const MIN_SIZE = 140
 
 /**
- * Une zone d'outils ne prend jamais plus de la moitié de la fenêtre : au-delà, ce n'est plus
- * un panneau latéral, c'est le centre qui disparaît.
+ * A tool zone never takes more than half the window: beyond that it stops being a side panel
+ * and starts being the center disappearing.
  */
 export const MAX_SHARE = 0.5
 
@@ -18,13 +18,13 @@ type ToolsState = {
   open: OpenByZone
   sizes: SizesByZone
   collapsed: CollapsedByZone
-  /** Dernière zone cliquée : c'est elle dont l'icône de rail s'accentue. */
+  /** Last clicked zone: the one whose rail icon gets accented. */
   focusedZone: ToolZone | null
   toggle: (zone: ToolZone, tool: ToolId) => void
   close: (zone: ToolZone) => void
   collapse: (zone: ToolZone) => void
   focus: (zone: ToolZone | null) => void
-  /** `available` : dimension du conteneur, dont on ne prend jamais plus de `MAX_SHARE`. */
+  /** `available`: the container's dimension, of which we never take more than `MAX_SHARE`. */
   resize: (zone: ToolZone, size: number, available: number) => void
   reset: () => void
 }
@@ -47,9 +47,8 @@ export function defaultSize(zone: ToolZone): number {
 }
 
 /**
- * Borne une taille de zone. Le plafond est relatif à la fenêtre, pas une constante : sur un
- * écran large, 720 px de panneau ne gênent personne ; sur une fenêtre étroite, ils avalent
- * le centre.
+ * Clamps a zone size. The ceiling is relative to the window rather than a constant: on a wide
+ * screen a 720 px panel bothers nobody; on a narrow window it swallows the center.
  */
 export function clamp(size: number, available: number): number {
   return Math.min(Math.round(available * MAX_SHARE), Math.max(MIN_SIZE, Math.round(size)))
@@ -66,8 +65,8 @@ export const useTools = create<ToolsState>()(
       toggle: (zone, tool) =>
         set(state => {
           const alreadyOpen = state.open[zone] === tool
-          // Rappuyer sur l'icône d'un outil réduit le déplie plutôt que de le fermer :
-          // sinon le seul moyen de revenir d'un panneau réduit serait de le fermer d'abord.
+          // Clicking a collapsed tool's icon again expands it rather than closing it:
+          // otherwise the only way back from a collapsed panel would be to close it first.
           if (alreadyOpen && state.collapsed[zone]) {
             return { collapsed: { ...state.collapsed, [zone]: false }, focusedZone: zone }
           }
@@ -94,8 +93,8 @@ export const useTools = create<ToolsState>()(
     }),
     {
       name: 'scenario-studio:tools',
-      // Le focus est un état de session : le restaurer accentuerait au démarrage une zone
-      // que l'utilisateur n'a pas touchée.
+      // Focus is session state: restoring it would accent a zone on startup that the user
+      // never touched.
       partialize: state => ({ open: state.open, sizes: state.sizes, collapsed: state.collapsed }),
     },
   ),

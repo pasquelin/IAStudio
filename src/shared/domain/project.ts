@@ -12,7 +12,7 @@ export type Project = {
   manifest: Manifest
 }
 
-/** Sous-dossiers créés à l'ouverture d'un projet — cf. spec § 5. */
+/** Subfolders created when a project is opened — see spec § 5. */
 export const PROJECT_FOLDERS: readonly string[] = [
   'assets',
   'assets/img',

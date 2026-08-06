@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { CHANNELS, EVENTS } from './ipc'
 
-describe('contrat IPC', () => {
+describe('IPC contract', () => {
   const allChannels = [...Object.values(CHANNELS), ...Object.values(EVENTS)]
 
-  it('ne déclare aucun canal en double', () => {
+  it('declares no duplicate channel', () => {
     expect(new Set(allChannels).size).toBe(allChannels.length)
   })
 
-  it('préfixe chaque canal de requête par son domaine', () => {
+  it('prefixes every request channel with its domain', () => {
     for (const name of Object.values(CHANNELS)) expect(name).toMatch(/^[a-z]+:[a-z-]+$/)
   })
 
-  it('préfixe chaque événement poussé par `evt:`', () => {
+  it('prefixes every pushed event with `evt:`', () => {
     for (const name of Object.values(EVENTS)) expect(name).toMatch(/^evt:[a-z-]+$/)
   })
 })

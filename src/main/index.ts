@@ -28,8 +28,8 @@ function createWindow(): BrowserWindow {
   trackWindowState(window)
   window.once('ready-to-show', () => window.show())
 
-  // Toute navigation sortante part dans le navigateur : une fenêtre du studio ne doit
-  // jamais devenir un navigateur web.
+  // Outgoing navigation goes to the system browser: a studio window must never turn into
+  // a web browser.
   window.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)
     return { action: 'deny' }

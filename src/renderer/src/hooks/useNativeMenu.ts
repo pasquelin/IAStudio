@@ -3,8 +3,9 @@ import { isToolId, isToolZone } from '@/app/tools'
 import { useTools } from '@/stores/tools'
 
 /**
- * Relie le menu natif au shell. C'est par là qu'un module retiré par sa croix revient :
- * sans cette écoute, « Affichage ▸ Modules » ne ferait rien et le panneau serait perdu.
+ * Wires the native menu to the shell. This is how a tool removed with its close button comes
+ * back: without this listener, "View ▸ Tool windows" would do nothing and the panel would be
+ * lost for good.
  */
 export function useNativeMenu(): void {
   useEffect(() => {

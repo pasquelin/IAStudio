@@ -2,15 +2,15 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export type FooterProps = {
-  /** Fil d'Ariane : projet, document courant. */
+  /** Breadcrumb: project, current document. */
   left?: ReactNode
-  /** Compteurs et indicateurs — connexion, tâches, mémoire. */
+  /** Counters and indicators — connection, jobs, memory. */
   right?: ReactNode
 }
 
 /**
- * Ligne d'état, en pied de fenêtre. Elle occupe toute la largeur, sous les rails : ce qui
- * s'y affiche vaut pour l'application entière, pas pour un panneau.
+ * Status line, at the foot of the window. It spans the full width, below the rails: what it
+ * shows applies to the whole application, not to a single panel.
  */
 export function Footer({ left, right }: FooterProps) {
   const { t } = useTranslation()

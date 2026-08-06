@@ -6,8 +6,8 @@ export type Credentials = {
 }
 
 /**
- * Ce dont le store a besoin pour persister. Injecté pour que les tests n'aient ni Electron
- * ni disque : `safeStorage` n'existe pas hors d'une application empaquetée.
+ * What the store needs in order to persist. Injected so tests need neither Electron nor a
+ * disk: `safeStorage` does not exist outside a packaged application.
  */
 export type PersistenceAdapter = {
   read: <T>(key: string) => T | undefined
@@ -23,7 +23,7 @@ export type SettingsStore = {
   setCredentials: (credentials: Credentials) => void
   forgetCredentials: () => void
   hasCredentials: () => boolean
-  /** Réservé au main. Ne jamais exposer par IPC — cf. spec § 4, invariant 1. */
+  /** Main process only. Never expose over IPC — see spec § 4, invariant 1. */
   readCredentials: () => Credentials | null
 }
 
@@ -65,8 +65,8 @@ export function createSettingsStore(adapter: PersistenceAdapter): SettingsStore 
     try {
       return parseCredentials(adapter.decrypt(encrypted))
     } catch {
-      // Trousseau changé, profil migré, données corrompues : on oublie plutôt que de
-      // planter au démarrage. L'utilisateur ressaisira ses identifiants.
+      // Keychain changed, profile migrated, data corrupted: forget rather than crash on
+      // startup. The user will re-enter their credentials.
       adapter.remove(CREDENTIALS_KEY)
       return null
     }

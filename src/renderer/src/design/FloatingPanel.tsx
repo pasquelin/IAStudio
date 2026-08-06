@@ -8,10 +8,10 @@ export type FloatingPanelProps = {
 }
 
 /**
- * Surface flottante : elle vient de s'ouvrir PAR-DESSUS et doit se détacher, d'où l'ombre
- * profonde là où les meubles (barres, docks) gardent l'ombre discrète. Le flou d'arrière-plan
- * n'est posé que sur les surfaces qui flottent au-dessus d'un canvas ou d'un viewport : dans
- * un dock opaque il ne ferait que coûter de la composition par frame.
+ * Floating surface: it just opened ON TOP and must detach itself, hence the deep shadow where
+ * furniture (bars, docks) keeps the subtle one. Backdrop blur is applied only to surfaces
+ * floating above a canvas or a viewport: inside an opaque dock it would only cost compositing
+ * work every frame.
  */
 export function FloatingPanel({ title, children, className }: FloatingPanelProps) {
   return (

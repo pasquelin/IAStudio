@@ -8,12 +8,12 @@ function layout(marker: string): SerializedLayout {
   } as SerializedLayout
 }
 
-describe('store des dispositions', () => {
+describe('layouts store', () => {
   beforeEach(() => {
     useLayouts.setState({ activeWorkspace: 'image', layouts: {} })
   })
 
-  it('mémorise une disposition par espace', () => {
+  it('remembers one layout per workspace', () => {
     const { remember } = useLayouts.getState()
     remember('image', layout('generator'))
     remember('3d', layout('viewport'))
@@ -23,7 +23,7 @@ describe('store des dispositions', () => {
     expect(layouts['3d']?.panels).toHaveProperty('viewport')
   })
 
-  it('restitue la disposition mémorisée après un changement d’espace', () => {
+  it('restores the remembered layout after a workspace switch', () => {
     const { remember, setActiveWorkspace } = useLayouts.getState()
     remember('image', layout('generator'))
     setActiveWorkspace('3d')
@@ -34,7 +34,7 @@ describe('store des dispositions', () => {
     expect(state.layouts.image?.panels).toHaveProperty('generator')
   })
 
-  it('oublie la disposition d’un seul espace', () => {
+  it('forgets a single workspace layout', () => {
     const { remember, forget } = useLayouts.getState()
     remember('image', layout('generator'))
     remember('audio', layout('tracks'))

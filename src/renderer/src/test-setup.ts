@@ -3,8 +3,8 @@ import { cleanup } from '@testing-library/react'
 import { afterEach, beforeAll } from 'vitest'
 import { initI18n } from '@/i18n'
 
-// Les composants traduisent dès le premier rendu : sans init, `t()` rendrait les clés
-// brutes et chaque assertion sur un libellé deviendrait un test de la clé, pas du texte.
+// Components translate on first render: without init, `t()` would return raw keys and every
+// assertion on a label would test the key rather than the text.
 beforeAll(async () => {
   await initI18n('fr')
 })

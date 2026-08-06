@@ -4,7 +4,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { toolsInZone, toolTitleKey, type ToolId, type ToolZone } from './tools'
 
 export type RailProps = {
-  /** Bord où le rail est collé. Le rail gauche porte aussi les outils de la bande basse. */
+  /** Edge the rail sticks to. The left rail also carries the bottom strip's tools. */
   side: 'left' | 'right'
   open: Partial<Record<ToolZone, ToolId | null>>
   focusedZone: ToolZone | null
@@ -12,11 +12,11 @@ export type RailProps = {
 }
 
 /**
- * Rail d'icônes d'un bord, à la manière d'un IDE : il reste posé quand la zone est refermée,
- * et c'est le seul moyen de rouvrir un outil qu'on vient de fermer.
+ * An edge's icon rail, IDE-style: it stays in place when the zone is closed, and is the only
+ * way to reopen a tool you just closed.
  *
- * Le rail gauche est scindé en deux groupes — les outils de la colonne gauche en haut, ceux
- * de la bande basse en bas — pour que la position de l'icône dise où l'outil va s'ouvrir.
+ * The left rail is split into two groups — left-column tools at the top, bottom-strip tools
+ * at the bottom — so that an icon's position tells where the tool will open.
  */
 export function Rail({ side, open, focusedZone, onToggle }: RailProps) {
   const topZones: ToolZone[] = side === 'left' ? ['left', 'top'] : ['right']

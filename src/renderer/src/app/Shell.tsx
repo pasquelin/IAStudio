@@ -14,12 +14,11 @@ import 'dockview-react/dist/styles/dockview.css'
 import './dockview-theme.css'
 
 /**
- * Assemble le studio : rails d'icônes collés aux bords, fenêtres d'outils arrondies posées
- * sur la gouttière du châssis, Dockview au centre pour les seuls documents, et une ligne
- * d'état en pied.
+ * Assembles the studio: icon rails stuck to the edges, rounded tool windows laid over the
+ * chassis gutter, Dockview in the center for documents only, and a status line at the foot.
  *
- * Le centre ne reçoit QUE des documents : un fichier ouvert et sa barre d'outils. Les
- * fenêtres d'outils vivent sur les bords, et n'y entrent jamais.
+ * The center takes ONLY documents: an open file and its toolbar. Tool windows live on the
+ * edges and never enter it.
  */
 export function Shell() {
   const activeWorkspace = useLayouts(state => state.activeWorkspace)
@@ -43,8 +42,8 @@ export function Shell() {
       <div className="flex min-h-0 flex-1">
         <Rail side="left" open={open} focusedZone={focusedZone} onToggle={onToggle} />
 
-        {/* Les poignées occupent exactement la gouttière : l'espace entre deux surfaces EST
-            la zone de redimensionnement, plutôt qu'un vide décoratif doublé d'une poignée. */}
+        {/* Handles occupy exactly the gutter: the space between two surfaces IS the resize
+            area, rather than decorative emptiness doubled by a handle. */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
           <div className="flex min-h-0 flex-1">
             <VerticalEdge zone="left" />

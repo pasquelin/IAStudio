@@ -9,8 +9,8 @@ type AssetsState = {
 }
 
 /**
- * L'affichage vit dans un store plutôt que dans le composant : ses boutons sont rendus par
- * l'en-tête du panneau, la grille par son contenu, et les deux doivent lire la même valeur.
+ * The view lives in a store rather than in the component: its buttons are rendered by the
+ * panel header, the grid by its content, and both must read the same value.
  */
 export const useAssets = create<AssetsState>()(
   persist(

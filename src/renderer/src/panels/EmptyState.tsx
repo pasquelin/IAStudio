@@ -7,7 +7,7 @@ export type EmptyStateProps = {
   action?: ReactNode
 }
 
-/** Message d'un panneau sans contenu. Un dock vide sans explication se lit comme un bug. */
+/** Message for a panel with no content. An unexplained empty dock reads as a bug. */
 export function EmptyState({ icon, message, action }: EmptyStateProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">

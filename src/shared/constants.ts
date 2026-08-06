@@ -1,7 +1,7 @@
-/** Fond opaque du studio — voir spec § 7 : on juge des couleurs, jamais de translucidité. */
+/** Opaque studio background — see spec § 7: we judge colors here, never translucency. */
 export const BACKGROUND_COLOR = '#191a1c'
 
 export const APP_NAME = 'Scenario Studio'
 
-/** Extension du dossier de projet. C'est un dossier, pas un fichier — cf. spec § 5. */
+/** Project folder extension. It is a folder, not a file — see spec § 5. */
 export const PROJECT_EXTENSION = 'scenario'

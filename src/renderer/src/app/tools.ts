@@ -16,9 +16,9 @@ export type Tool = {
 }
 
 /**
- * Fenêtres d'outils, à la manière d'un IDE : elles vivent sur les bords, une par zone à la
- * fois, et se choisissent au rail d'icônes. Seul le centre porte des onglets — ce sont des
- * documents, et un document a un nom ; un outil a une icône.
+ * Tool windows, IDE-style: they live on the edges, one per zone at a time, and are picked
+ * from the icon rail. Only the center carries tabs — those are documents, and a document has
+ * a name; a tool has an icon.
  */
 export const TOOLS: readonly Tool[] = [
   { id: 'explorer', icon: mdiFolderOutline, zone: 'left' },
@@ -33,12 +33,12 @@ export function toolsInZone(zone: ToolZone): Tool[] {
   return TOOLS.filter(tool => tool.zone === zone)
 }
 
-/** Clé i18n du titre d'un outil — jamais le texte affiché. */
+/** i18n key of a tool's title — never the displayed text. */
 export function toolTitleKey(id: ToolId): string {
   return `panels.${id}`
 }
 
-/** Zones horizontales : leur taille se règle en hauteur, pas en largeur. */
+/** Horizontal zones: their size is set as a height, not a width. */
 export function isHorizontal(zone: ToolZone): boolean {
   return zone === 'top' || zone === 'bottom'
 }

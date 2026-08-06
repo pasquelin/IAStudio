@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_WORKSPACE, type WorkspaceId } from '@/app/workspaces'
 
-/** Disposition Dockview sérialisée. Sa forme appartient à Dockview, on ne la relit pas. */
+/** Serialized Dockview layout. Its shape belongs to Dockview; we never read it back. */
 export type SerializedLayout = SerializedDockview
 
 type LayoutsState = {
@@ -15,8 +15,8 @@ type LayoutsState = {
 }
 
 /**
- * Chaque espace garde SA disposition : revenir sur « 3D » doit retrouver le viewport et
- * l'outliner tels qu'ils étaient, pas la disposition de « Image ».
+ * Every workspace keeps ITS OWN layout: coming back to "3D" must restore the viewport and the
+ * outliner as they were, not the "Image" layout.
  */
 export const useLayouts = create<LayoutsState>()(
   persist(

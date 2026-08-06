@@ -1,12 +1,12 @@
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
 
-/** Un job Scenario, vu par le studio. */
+/** A Scenario job, as the studio sees it. */
 export type Job = {
   id: string
   modelId: string
   label: string
   status: JobStatus
-  /** De 0 à 1. */
+  /** From 0 to 1. */
   progress: number
   createdAt: string
   finishedAt?: string

@@ -2,7 +2,7 @@ export type Language = 'fr' | 'en'
 
 export type LanguageDefinition = {
   code: Language
-  /** Nom de la langue dans cette langue — jamais traduit. */
+  /** The language's name in that language — never translated. */
   name: string
 }
 
@@ -18,8 +18,8 @@ export function isSupportedLanguage(value: string): value is Language {
 }
 
 /**
- * `app.getLocale()` rend des étiquettes BCP 47 (`fr-CA`, `en-GB`) : seule la sous-étiquette
- * primaire nous intéresse, et une langue non supportée retombe sur le défaut.
+ * `app.getLocale()` returns BCP 47 tags (`fr-CA`, `en-GB`): only the primary subtag matters,
+ * and an unsupported language falls back to the default.
  */
 export function resolveLanguage(tag: string | undefined): Language {
   const primary = tag?.split('-')[0]?.toLowerCase()

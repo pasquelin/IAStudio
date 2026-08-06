@@ -10,7 +10,7 @@ export type ToolbarSection = 'tools' | 'extras' | 'undo' | 'redo'
 
 export type Tool = {
   id: string
-  /** Clé i18n du libellé — jamais le texte affiché. */
+  /** i18n key of the label — never the displayed text. */
   labelKey: string
   icon: string
   shortcut?: string
@@ -18,14 +18,14 @@ export type Tool = {
 }
 
 export type ToolbarProps = {
-  /** Outils affichés, dans l'ordre. */
+  /** Tools rendered, in order. */
   tools: Tool[]
   activeTool?: string
   onTool: (id: string) => void
   orientation?: 'vertical' | 'horizontal'
-  /** Masque (`false`) ou remplace (ReactNode) chaque section. */
+  /** Hides (`false`) or replaces (ReactNode) each section. */
   sections?: SlotConfig<ToolbarSection>
-  /** Outils de l'espace, rendus après les outils natifs et dans le même langage visuel. */
+  /** Workspace tools, rendered after the built-in ones and in the same visual language. */
   extras?: ReactNode
   onUndo?: () => void
   onRedo?: () => void
@@ -37,9 +37,9 @@ export type ToolbarProps = {
 const tooltip = simpleTooltip()
 
 /**
- * Barre d'outils unique du studio, partagée par les six espaces. Chaque espace ne fournit
- * que son registre d'outils ; la géométrie suit `--sc-control`, donc le réglage de densité
- * agit partout sans qu'aucune barre ne connaisse sa valeur.
+ * The studio's single toolbar, shared by all six workspaces. Each workspace provides only its
+ * tool registry; geometry follows `--sc-control`, so the density setting applies everywhere
+ * without any bar knowing its value.
  */
 export function Toolbar({
   tools,

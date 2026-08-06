@@ -9,11 +9,11 @@ export type ResizeHandleProps = {
 }
 
 /**
- * Poignée de redimensionnement d'une zone d'outils. Capture le pointeur pour que le geste
- * survive à un curseur qui sort de la poignée — sans capture, un déplacement rapide décroche.
+ * Resize handle for a tool zone. Captures the pointer so the gesture survives a cursor
+ * leaving the handle — without capture, a fast drag detaches.
  *
- * Elle mesure aussi le conteneur au début du geste et transmet sa dimension : c'est elle qui
- * sait ce qui est disponible, le store ne connaît pas le DOM.
+ * It also measures the container when the gesture starts and passes that dimension along: it
+ * is the one that knows what is available, the store knows nothing about the DOM.
  */
 export function ResizeHandle({ zone, size, onSize }: ResizeHandleProps) {
   const start = useRef({ position: 0, size: 0, available: 0 })
@@ -24,7 +24,7 @@ export function ResizeHandle({ zone, size, onSize }: ResizeHandleProps) {
       if (event.buttons === 0) return
       const position = lying ? event.clientY : event.clientX
       const delta = position - start.current.position
-      // Les zones « right » et « bottom » grandissent quand le pointeur recule.
+      // `right` and `bottom` zones grow as the pointer moves backwards.
       const direction = zone === 'right' || zone === 'bottom' ? -1 : 1
       onSize(start.current.size + delta * direction, start.current.available)
     },

@@ -8,30 +8,29 @@ export type ToolButtonProps = Omit<
   'aria-label' | 'children' | 'title'
 > & {
   /**
-   * Chemin d'icône `@mdi/js`. Absent, le bouton n'affiche que ses `children` — pour celui
-   * dont l'aperçu EST la valeur qu'il règle, qu'aucun glyphe ne peut dire.
+   * `@mdi/js` icon path. When absent the button renders only its `children` — for the one
+   * whose preview IS the value it sets, which no glyph can express.
    */
   icon?: string
-  /** Nom accessible et contenu de l'infobulle. */
+  /** Accessible name and tooltip content. */
   label: string
-  /** Fabrique d'infobulle de la barre hôte. Absente, l'`aria-label` reste posé. */
+  /** Tooltip factory of the host bar. When absent, the `aria-label` is still set. */
   tooltip?: TooltipFactory
   shortcut?: string | false
-  /** Outil en cours d'usage : fond neutre. */
+  /** Tool currently in use: neutral background. */
   active?: boolean
-  /** Outil en cours d'usage ET dont la zone a le focus : fond accentué. */
+  /** Tool in use AND whose zone has focus: accented background. */
   accented?: boolean
   iconSize?: number
   children?: ReactNode
-  /** Le `<button>` lui-même, pour qu'une barre publie son bouton actif comme ancre. */
+  /** The `<button>` itself, so a bar can publish its active button as an anchor. */
   ref?: Ref<HTMLButtonElement>
 }
 
 /**
- * Bouton d'une barre d'outils : icône, états actif et accentué, nom accessible porteur du
- * raccourci. Source unique du langage des barres — sans lui, chaque site recopiait la classe
- * active, les attributs d'infobulle et la taille d'icône, et un oubli d'`aria-label` passait
- * inaperçu.
+ * A toolbar button: icon, active and accented states, accessible name carrying the shortcut.
+ * The single source of the bars' visual language — without it every site re-copied the active
+ * class, the tooltip attributes and the icon size, and a missing `aria-label` went unnoticed.
  */
 export function ToolButton({
   icon,

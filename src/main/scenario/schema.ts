@@ -1,9 +1,9 @@
 import type { FieldDescriptor, FieldKind, ModelFamily } from '@shared/domain/model'
 
 /**
- * Forme d'un input de modèle telle que renvoyée par `GET /models/{id}`. Recopiée plutôt
- * qu'importée du SDK : c'est la frontière avec l'extérieur, et elle doit survivre au
- * jour où Scenario ajoute un champ qu'on ne connaît pas.
+ * Shape of a model input as returned by `GET /models/{id}`. Copied rather than imported from
+ * the SDK: this is the boundary with the outside world, and it must survive the day Scenario
+ * adds a field we know nothing about.
  */
 export type ScenarioInput = {
   name: string
@@ -37,8 +37,8 @@ function kindOf(input: ScenarioInput): FieldKind {
     case 'boolean':
       return 'boolean'
     case 'number':
-      // Un pas fractionnaire (guidance 0.5) est un réel ; sans pas, des bornes entières
-      // suffisent à trancher — sinon on reste sur un réel, qui accepte les entiers.
+      // A fractional step (guidance 0.5) means a real number; with no step, integer bounds
+      // are enough to decide — otherwise we stay on a real, which accepts integers anyway.
       if (input.step !== undefined) return isInteger(input.step) ? 'integer' : 'number'
       return isInteger(input.min) && isInteger(input.max) ? 'integer' : 'number'
     case 'string':
@@ -55,7 +55,7 @@ function kindOf(input: ScenarioInput): FieldKind {
 
 function labelOf(input: ScenarioInput): string {
   if (input.label) return input.label
-  // `numInferenceSteps` → `Num inference steps` : un nom d'API reste lisible plutôt que brut.
+  // `numInferenceSteps` → `Num inference steps`: an API name stays readable instead of raw.
   const spaced = input.name
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[_-]+/g, ' ')
@@ -69,9 +69,9 @@ function optionsOf(input: ScenarioInput): FieldDescriptor['options'] {
 }
 
 /**
- * Traduit les inputs d'un modèle en descripteurs de champs. Un type inconnu retombe en
- * saisie brute : un modèle que Scenario vient d'ajouter doit rester utilisable, jamais
- * faire disparaître le formulaire — cf. spec § 6.
+ * Translates a model's inputs into field descriptors. An unknown type falls back to raw
+ * input: a model Scenario just added must stay usable, and must never make the form
+ * disappear — see spec § 6.
  */
 export function translateSchema(inputs: readonly ScenarioInput[] | undefined): FieldDescriptor[] {
   if (!inputs) return []
@@ -107,8 +107,8 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
 ]
 
 /**
- * Déduit la famille d'un modèle de ses capacités. L'ordre compte : `img2video` est un
- * modèle vidéo, pas un modèle image, et les suffixes tranchent avant les motifs larges.
+ * Infers a model's family from its capabilities. Order matters: `img2video` is a video model,
+ * not an image one, and suffixes must win over broader patterns.
  */
 export function familyOf(capabilities: readonly string[] | undefined): ModelFamily {
   if (!capabilities?.length) return 'other'

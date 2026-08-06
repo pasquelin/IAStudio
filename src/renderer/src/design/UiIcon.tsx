@@ -1,16 +1,16 @@
 import Icon from '@mdi/react'
 
 export type UiIconProps = {
-  /** Chemin `@mdi/js`. */
+  /** `@mdi/js` path. */
   path: string
-  /** Défaut : 16 px de glyphe, la convention des barres. */
+  /** Defaults to a 16 px glyph, the convention across bars. */
   size?: number
   className?: string
 }
 
 /**
- * Unique porte d'entrée des icônes. Aucun SVG inline dans un composant : le jour où la
- * bibliothèque d'icônes change, un seul fichier bouge.
+ * The single entry point for icons. No inline SVG in a component: the day the icon library
+ * changes, only one file moves.
  */
 export function UiIcon({ path, size = 16, className }: UiIconProps) {
   return <Icon path={path} size={`${size}px`} className={className} aria-hidden="true" />

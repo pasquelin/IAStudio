@@ -1,7 +1,7 @@
 /**
- * Les entrées d'un modèle Scenario sont propres à chaque modèle et se découvrent à
- * l'exécution (`GET /models/{id}`). `FieldDescriptor` est leur forme normalisée, seule
- * connue du renderer — cf. spec § 6.
+ * A Scenario model's inputs are specific to each model and are discovered at runtime
+ * (`GET /models/{id}`). `FieldDescriptor` is their normalized shape, the only one the
+ * renderer ever sees — see spec § 6.
  */
 export type FieldKind =
   | 'text'

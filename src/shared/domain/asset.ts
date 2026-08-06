@@ -7,9 +7,9 @@ export type Asset = {
   name: string
   type: AssetType
   location: AssetLocation
-  /** Chemin relatif au dossier du projet quand `location` vaut `local`. */
+  /** Path relative to the project folder when `location` is `local`. */
   path?: string
-  /** Identifiant Scenario d'origine, quand l'asset vient d'une génération. */
+  /** Originating Scenario identifier, when the asset comes from a generation. */
   remoteAssetId?: string
   jobId?: string
   width?: number
@@ -17,7 +17,7 @@ export type Asset = {
   bytes?: number
   tags: string[]
   createdAt: string
-  /** Asset dont celui-ci dérive — permet de remonter à l'image source d'une texture. */
+  /** Asset this one derives from — lets us trace a texture back to its source image. */
   derivedFrom?: string
 }
 

@@ -2,7 +2,7 @@ import { twMerge } from 'tailwind-merge'
 
 type ClassValue = string | false | null | undefined
 
-/** Fusionne des classes Tailwind en laissant la dernière gagner. */
+/** Merges Tailwind classes, letting the last one win. */
 export function cn(...classes: ClassValue[]): string {
   return twMerge(classes.filter(Boolean).join(' '))
 }

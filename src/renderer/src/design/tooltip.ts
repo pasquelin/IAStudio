@@ -1,11 +1,11 @@
 /**
- * Fabrique d'attributs d'infobulle — équivalent du `useTip` de map3D. Retourne les attributs
- * à étaler sur le bouton ; le nom accessible porte le raccourci, qu'il y ait une infobulle
- * ou non : un bouton sans infobulle n'est jamais un bouton sans nom accessible.
+ * Tooltip attribute factory — the equivalent of map3D's `useTip`. Returns the attributes to
+ * spread on the button; the accessible name carries the shortcut whether a tooltip exists or
+ * not: a button without a tooltip is never a button without an accessible name.
  */
 export type TooltipFactory = (label: string, shortcut?: string | false) => Record<string, string>
 
-/** Identifiant du `<Tooltip>` partagé, monté une seule fois à la racine. */
+/** Id of the shared `<Tooltip>`, mounted once at the root. */
 export const TOOLTIP_ID = 'sc-tooltip'
 
 export function withShortcut(label: string, shortcut?: string | false): string {

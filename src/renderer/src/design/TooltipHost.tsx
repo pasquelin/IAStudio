@@ -2,8 +2,8 @@ import { Tooltip } from 'react-tooltip'
 import { TOOLTIP_ID } from './tooltip'
 
 /**
- * Infobulle partagée, montée une seule fois à la racine. Un `<Tooltip>` par bouton
- * multiplierait les portails et les écouteurs pour un résultat identique.
+ * Shared tooltip, mounted once at the root. One `<Tooltip>` per button would multiply
+ * portals and listeners for an identical result.
  */
 export function TooltipHost() {
   return (
