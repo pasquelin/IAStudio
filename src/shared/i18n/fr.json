@@ -136,6 +136,13 @@
     "new": "Nouveau document",
     "missing": "Ce document n’est plus ouvert."
   },
+  "sceneTools": {
+    "translate": "Déplacer",
+    "rotate": "Tourner",
+    "scale": "Redimensionner",
+    "frame": "Cadrer la sélection",
+    "delete": "Supprimer"
+  },
   "project": {
     "none": "Aucun projet ouvert",
     "create": "Créer un projet",

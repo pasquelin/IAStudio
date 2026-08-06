@@ -136,6 +136,13 @@
     "new": "New document",
     "missing": "This document is no longer open."
   },
+  "sceneTools": {
+    "translate": "Move",
+    "rotate": "Rotate",
+    "scale": "Scale",
+    "frame": "Frame selection",
+    "delete": "Delete"
+  },
   "project": {
     "none": "No project open",
     "create": "New project",
