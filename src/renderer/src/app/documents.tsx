@@ -3,6 +3,7 @@ import type { IDockviewPanelProps } from 'dockview-react'
 import type { FC, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/panels/EmptyState'
+import { SceneDocument } from '@/spaces/three/SceneDocument'
 import { useDocuments } from '@/stores/documents'
 
 export type DocumentPanelParams = { documentId: string }
@@ -14,7 +15,11 @@ export type DocumentPanelParams = { documentId: string }
 export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps<DocumentPanelParams>>> = {
   home: () => <Home />,
   image: props => <WithDocument id={props.params.documentId}>{() => <ImageStub />}</WithDocument>,
-  scene: props => <WithDocument id={props.params.documentId}>{() => <SceneStub />}</WithDocument>,
+  scene: props => (
+    <WithDocument id={props.params.documentId}>
+      {() => <SceneDocument documentId={props.params.documentId} />}
+    </WithDocument>
+  ),
 }
 
 function Home() {
@@ -36,8 +41,4 @@ function WithDocument({ id, children }: { id: string; children: () => ReactNode 
 
 function ImageStub() {
   return <div className="size-full bg-white" />
-}
-
-function SceneStub() {
-  return <div className="bg-base size-full" />
 }
