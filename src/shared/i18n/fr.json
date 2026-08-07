@@ -571,6 +571,29 @@
       "global": "Partout dans l’application",
       "scene": "Dans la vue 3D",
       "sequence": "Dans le montage"
+    },
+    "spaces": "Espaces de travail",
+    "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
+    "requires": "Sans effet tant que « {{setting}} » est désactivé.",
+    "showGrid": {
+      "title": "Afficher la grille",
+      "help": "Le quadrillage posé au sol de la vue 3D. Il ne fait pas partie de ce que vous fabriquez : c’est un repère pour savoir où sont les choses et à quelle hauteur. On le cache pour juger une image sans rien autour."
+    },
+    "gridSize": {
+      "title": "Taille de la grille",
+      "help": "Jusqu’où le quadrillage s’étend, en mètres, et donc combien de carreaux il compte — un carreau vaut toujours un mètre. Agrandissez-le pour une scène vaste, réduisez-le pour un petit objet posé près de la caméra."
+    },
+    "flySpeed": {
+      "title": "Vitesse de déplacement",
+      "help": "À quelle vitesse la caméra avance quand vous volez dans la vue 3D, en mètres par seconde. Trop lent, on met dix secondes à traverser la scène ; trop rapide, on la dépasse sans la voir."
+    },
+    "boostFactor": {
+      "title": "Accélération",
+      "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
+    },
+    "fieldOfView": {
+      "title": "Angle de vue",
+      "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
     }
   },
   "commands": {

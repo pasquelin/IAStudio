@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { defaultAt, valueAt, type SettingValue } from '@shared/domain/settings-path'
 import {
   boundsOf,
+  descriptorAt,
   optionLabel,
   optionsOf,
   type SettingDescriptor,
@@ -305,6 +306,19 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   const pending = useSettingsDraft(state => valueAt(state.pending, descriptor.path))
   const stage = useSettingsDraft(state => state.stage)
 
+  // The value the condition is read against, buffer included: turning the grid off must grey
+  // its size immediately, not once the change has been applied.
+  const requirement = descriptor.dependsOn
+  const requiredStored = useSettings(state =>
+    requirement ? valueAt(state.settings, requirement.path) : undefined,
+  )
+  const requiredStaged = useSettingsDraft(state =>
+    requirement && state.touched.has(requirement.path)
+      ? valueAt(state.pending, requirement.path)
+      : undefined,
+  )
+  const enabled = !requirement || (requiredStaged ?? requiredStored) === requirement.equals
+
   const value = staged ? pending : stored
   const fallback = defaultAt(descriptor.path)
   // Two different ideas, and they used to share one affordance: `staged` is "changed, not yet
@@ -315,7 +329,12 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   const describedBy = `${id}-help`
 
   return (
-    <div className="border-base-300 flex flex-col gap-1 border-b py-3 last:border-b-0">
+    <div
+      className={cn(
+        'border-base-300 flex flex-col gap-1 border-b py-3 last:border-b-0',
+        !enabled && 'pointer-events-none opacity-50',
+      )}
+    >
       <div className="flex items-center justify-between gap-4">
         <label htmlFor={id} className="flex items-center gap-1.5 text-xs font-medium">
           {/* Marks the row AND, through the section it belongs to, the entry in the tree. */}
@@ -353,6 +372,12 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
 
       <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
         {t(descriptor.helpKey)}
+        {/* A greyed control that does not say why is a dead end. */}
+        {!enabled && requirement && (
+          <span className="text-warning block">
+            {t('settings.requires', { setting: t(descriptorAt(requirement.path)?.titleKey ?? '') })}
+          </span>
+        )}
       </p>
     </div>
   )

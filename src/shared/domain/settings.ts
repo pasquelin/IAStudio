@@ -63,6 +63,22 @@ export type Settings = {
     projectsFolder?: string
     lastProject?: string
   }
+  /**
+   * The 3D workspace. A branch of its own rather than nested under a `spaces` one: every branch
+   * of `Settings` is one level deep, which is what lets the store merge a write by spreading —
+   * a nested branch would be replaced wholesale by a write touching one of its leaves.
+   */
+  three: {
+    showGrid: boolean
+    /** Extent of the ground grid, in metres. */
+    gridSize: number
+    /** Metres per second while flying the viewport camera. */
+    flySpeed: number
+    /** What holding the boost key multiplies the fly speed by. */
+    boostFactor: number
+    /** Vertical field of view, in degrees. */
+    fieldOfView: number
+  }
   shortcuts: {
     /**
      * Only the commands the user actually remapped. A command added by a new version arrives
@@ -89,6 +105,7 @@ export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject' },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
+  three: { showGrid: true, gridSize: 20, flySpeed: 4, boostFactor: 3, fieldOfView: 60 },
   storage: { backend: 'local' },
   shortcuts: { overrides: {} },
   media: {},
@@ -142,6 +159,8 @@ export type SettingsSectionId =
   | 'generation.3d'
   | 'generation.audio'
   | 'generation.upscale'
+  | 'spaces'
+  | 'spaces.three'
   | 'shortcuts'
   | 'media'
 
@@ -155,6 +174,8 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'generation.3d',
   'generation.audio',
   'generation.upscale',
+  'spaces',
+  'spaces.three',
   'shortcuts',
   'media',
 ]

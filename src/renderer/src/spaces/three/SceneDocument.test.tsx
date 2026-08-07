@@ -1,15 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
 import { useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { useSettings } from '@/stores/settings'
 import { SceneDocument } from './SceneDocument'
 
 const setMode = vi.fn()
 const frameSelection = vi.fn()
+const configure = vi.fn()
 
 // jsdom has no WebGL context: the renderer is exercised by hand, not here. What this test
 // covers is that the document wires the toolbar and the keyboard to the right calls.
@@ -20,6 +23,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     apply = vi.fn()
     dispose = vi.fn()
     setMotion = vi.fn()
+    configure = configure
     setMode = setMode
     frameSelection = frameSelection
   },
@@ -147,5 +151,18 @@ describe('SceneDocument', () => {
     await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
     expect(await screen.findByRole('menuitem', { name: /Texte/ })).toBeDisabled()
     expect(meshesOf('doc-1')).toHaveLength(0)
+  })
+})
+
+describe('the viewport settings', () => {
+  it('pushes them into the engine, which holds no truth of its own', () => {
+    configure.mockClear()
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, three: { ...DEFAULT_SETTINGS.three, flySpeed: 12 } },
+    })
+
+    render(<SceneDocument documentId="doc-1" />)
+
+    expect(configure).toHaveBeenCalledWith(expect.objectContaining({ flySpeed: 12 }))
   })
 })

@@ -72,6 +72,16 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
   },
   ...MODEL_FAMILY_SECTIONS,
   {
+    id: 'spaces',
+    labelKey: 'settings.spaces',
+    descriptionKey: 'settings.spacesDescription',
+  },
+  {
+    id: 'spaces.three',
+    labelKey: 'workspaces.3d',
+    parent: 'spaces',
+  },
+  {
     id: 'shortcuts',
     labelKey: 'settings.shortcuts',
     descriptionKey: 'settings.shortcutsDescription',
@@ -137,6 +147,11 @@ type Descriptor<P extends SettingPath> = {
    * cost every reader a narrowing to get at `min` or `options`.
    */
   pathKind?: PathKind
+  /**
+   * Greyed out, with the reason shown, while the condition is false. Declarative rather than a
+   * predicate: it stays testable, and `shared/` takes on no logic.
+   */
+  dependsOn?: { path: SettingPath; equals: SettingValue }
 }
 
 /**
@@ -249,6 +264,53 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.maxRetries.help',
     min: 0,
     max: 10,
+  }),
+  setting({
+    path: 'three.showGrid',
+    kind: 'boolean',
+    section: 'spaces.three',
+    titleKey: 'settings.showGrid.title',
+    helpKey: 'settings.showGrid.help',
+  }),
+  setting({
+    path: 'three.gridSize',
+    kind: 'number',
+    section: 'spaces.three',
+    titleKey: 'settings.gridSize.title',
+    helpKey: 'settings.gridSize.help',
+    min: 2,
+    max: 500,
+    dependsOn: { path: 'three.showGrid', equals: true },
+  }),
+  setting({
+    path: 'three.flySpeed',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.flySpeed.title',
+    helpKey: 'settings.flySpeed.help',
+    min: 0.5,
+    max: 20,
+    step: 0.5,
+  }),
+  setting({
+    path: 'three.boostFactor',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.boostFactor.title',
+    helpKey: 'settings.boostFactor.help',
+    min: 1,
+    max: 10,
+    step: 0.5,
+  }),
+  setting({
+    path: 'three.fieldOfView',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.fieldOfView.title',
+    helpKey: 'settings.fieldOfView.help',
+    min: 30,
+    max: 100,
+    step: 5,
   }),
   setting({
     path: 'media.ffmpegPath',

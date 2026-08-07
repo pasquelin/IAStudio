@@ -41,9 +41,18 @@ export type SceneRendererOptions = {
   onTransform: (id: string, transform: Transform) => void
 }
 
-const FLY_SPEED = 4
-const BOOST_FACTOR = 3
-const GRID_SIZE = 20
+/**
+ * What the viewport is set to. Held by the engine and pushed in by React, like every other
+ * piece of state it reflects: these were three constants, and therefore three settings nobody
+ * could reach.
+ */
+export type ViewportOptions = {
+  showGrid: boolean
+  gridSize: number
+  flySpeed: number
+  boostFactor: number
+  fieldOfView: number
+}
 
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
 const forward = new ThreeVector3()
@@ -58,6 +67,14 @@ const step = new ThreeVector3()
 export class SceneRenderer {
   private readonly scene = new Scene()
   private readonly camera = new PerspectiveCamera(60, 1, 0.1, 1000)
+  /** Replaced by `configure` before the first frame; these keep the engine usable without it. */
+  private viewport: ViewportOptions = {
+    showGrid: true,
+    gridSize: 20,
+    flySpeed: 4,
+    boostFactor: 3,
+    fieldOfView: 60,
+  }
   private readonly raycaster = new Raycaster()
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
@@ -225,6 +242,28 @@ export class SceneRenderer {
   }
 
   /**
+   * The viewport settings changed. The grid is rebuilt rather than resized — `GridHelper` bakes
+   * its geometry at construction — and the camera's projection matrix has to be recomputed by
+   * hand, since three.js never reads `fov` back on its own.
+   */
+  configure(next: ViewportOptions): void {
+    const gridMoved =
+      next.showGrid !== this.viewport.showGrid || next.gridSize !== this.viewport.gridSize
+    const lensMoved = next.fieldOfView !== this.viewport.fieldOfView
+
+    this.viewport = next
+
+    if (lensMoved) {
+      this.camera.fov = next.fieldOfView
+      this.camera.updateProjectionMatrix()
+    }
+
+    const canvas = this.renderer?.domElement
+    if (gridMoved && canvas) this.applyPalette(canvas)
+    if (gridMoved || lensMoved) this.requestRender()
+  }
+
+  /**
    * The theme moved. The background, the grid and the axes are rebuilt from the new tokens, but
    * the meshes are not: their materials were built with the previous `--color-mesh`, and
    * `syncNode` compares by reference — every one of them would be skipped. Emptying what has
@@ -257,7 +296,11 @@ export class SceneRenderer {
       this.scene.remove(this.grid)
       this.grid.dispose()
     }
-    this.grid = new GridHelper(GRID_SIZE, GRID_SIZE, axis || undefined, line || undefined)
+    if (!this.viewport.showGrid) return
+
+    // Divisions equal to the extent, so one square is one metre whatever the size.
+    const size = this.viewport.gridSize
+    this.grid = new GridHelper(size, size, axis || undefined, line || undefined)
     this.scene.add(this.grid)
   }
 
@@ -511,7 +554,8 @@ export class SceneRenderer {
   }
 
   private fly(delta: number): void {
-    const speed = FLY_SPEED * delta * (this.held.has('boost') ? BOOST_FACTOR : 1)
+    const boost = this.held.has('boost') ? this.viewport.boostFactor : 1
+    const speed = this.viewport.flySpeed * delta * boost
 
     this.camera.getWorldDirection(forward)
     right.crossVectors(forward, this.camera.up).normalize()

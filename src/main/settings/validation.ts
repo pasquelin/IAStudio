@@ -60,6 +60,19 @@ const general = z.object({
 
 // Keys are command ids and values signatures, both free strings here: a build that no longer
 // knows a command ignores its remap rather than refusing the whole write.
+const grid = boundsOf('three.gridSize')
+const fly = boundsOf('three.flySpeed')
+const boost = boundsOf('three.boostFactor')
+const lens = boundsOf('three.fieldOfView')
+
+const three = z.object({
+  showGrid: z.boolean().optional(),
+  gridSize: z.number().int().min(grid.min).max(grid.max).optional(),
+  flySpeed: z.number().min(fly.min).max(fly.max).optional(),
+  boostFactor: z.number().min(boost.min).max(boost.max).optional(),
+  fieldOfView: z.number().min(lens.min).max(lens.max).optional(),
+})
+
 const shortcuts = z.object({
   overrides: z.record(z.string().min(1), z.string().min(1)).optional(),
 })
@@ -69,6 +82,7 @@ const partialSettings = z.object({
   appearance: appearance.optional(),
   generation: generation.optional(),
   storage: storage.optional(),
+  three: three.optional(),
   shortcuts: shortcuts.optional(),
   media: media.optional(),
 })

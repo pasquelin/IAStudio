@@ -9,6 +9,7 @@ import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer
 import { useAddNode } from '@/hooks/useAddNode'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
+import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
@@ -26,6 +27,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const bindings = useBindingOverrides()
   const addNodeOf = useAddNode(documentId)
   const active = useDocuments(state => state.activeId === documentId)
+  const viewport = useSettings(state => state.settings.three)
 
   // Before the renderer mounts: a scene that arrives unlit shows nothing, and reads as a broken
   // viewport rather than as an empty document.
@@ -58,6 +60,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.apply(scene)
   }, [scene])
+
+  // Same for the viewport settings, which were three constants inside the engine.
+  useEffect(() => {
+    engine.current?.configure(viewport)
+  }, [viewport])
 
   useEffect(() => {
     engine.current?.setMode(mode)

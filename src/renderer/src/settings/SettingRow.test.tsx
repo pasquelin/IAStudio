@@ -284,3 +284,35 @@ describe('the controls a kind brings with it', () => {
     expect(screen.getByLabelText(/Chemin de ffmpeg/)).toBeEnabled()
   })
 })
+
+describe('a setting that depends on another', () => {
+  beforeEach(() => {
+    useSettings.setState({ settings: DEFAULT_SETTINGS })
+    resetDraft()
+  })
+
+  it('is live while its condition holds', () => {
+    render(rowFor('three.gridSize'))
+
+    expect(screen.getByLabelText(/Taille de la grille/)).toBeEnabled()
+  })
+
+  it('says why it is inert, rather than being a dead end', () => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, three: { ...DEFAULT_SETTINGS.three, showGrid: false } },
+    })
+    render(rowFor('three.gridSize'))
+
+    expect(screen.getByText(/Afficher la grille/)).toBeInTheDocument()
+  })
+
+  // Turning the grid off must grey its size at once, not once the change has been applied.
+  it('follows the buffer, not only what is stored', () => {
+    render(rowFor('three.gridSize'))
+    act(() => {
+      useSettingsDraft.getState().stage('three.showGrid', false)
+    })
+
+    expect(screen.getByText(/Afficher la grille/)).toBeInTheDocument()
+  })
+})

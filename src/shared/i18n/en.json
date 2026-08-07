@@ -571,6 +571,29 @@
       "global": "Anywhere in the application",
       "scene": "In the 3D view",
       "sequence": "In the edit"
+    },
+    "spaces": "Workspaces",
+    "spacesDescription": "What only makes sense inside one space: the 3D view, the edit, the image.",
+    "requires": "Has no effect while “{{setting}}” is off.",
+    "showGrid": {
+      "title": "Show the grid",
+      "help": "The squared floor of the 3D view. It is not part of what you are making: it is a landmark for where things are and how high. Hide it to judge an image with nothing around it."
+    },
+    "gridSize": {
+      "title": "Grid size",
+      "help": "How far the grid reaches, in metres, and therefore how many squares it has — a square is always one metre. Make it bigger for a wide scene, smaller for a little object sitting near the camera."
+    },
+    "flySpeed": {
+      "title": "Fly speed",
+      "help": "How fast the camera moves when you fly through the 3D view, in metres per second. Too slow and crossing the scene takes ten seconds; too fast and you shoot past it without seeing it."
+    },
+    "boostFactor": {
+      "title": "Boost",
+      "help": "What the speed is multiplied by while you hold the boost key. At 3 you go three times faster — enough to cross a large scene without changing the setting above."
+    },
+    "fieldOfView": {
+      "title": "Field of view",
+      "help": "How much the camera takes in, in degrees. A narrow angle pulls close and flattens, like a telephoto lens; a wide one shows far more but bends the edges. 60 is close to what an eye sees."
     }
   },
   "commands": {
