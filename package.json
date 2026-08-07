@@ -10,6 +10,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "start": "electron-vite dev --watch",
+    "start:debug": "electron-vite dev --watch --remoteDebuggingPort 9222",
     "build": "pnpm typecheck && electron-vite build",
     "dist": "pnpm build && bash scripts/dist.sh",
     "preview": "electron-vite preview",
@@ -22,8 +23,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "validate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "docs:scenario": "bash scripts/fetch-scenario-docs.sh",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
-    "dev": "electron-vite dev --watch"
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
