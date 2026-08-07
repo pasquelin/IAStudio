@@ -72,8 +72,9 @@ export class TextureRenderer {
     if (!renderer) return
 
     this.environment = createEnvironment(renderer, this.viewport.scene, this.viewport.requestRender)
-    this.environment.setTexture(null)
-    this.environment.refresh()
+    this.environment.setStudio()
+    // The studio preset has no picture behind it, so the backdrop is the viewport's own colour.
+    this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
   }
 
   /** The engine holds no truth: everything it shows comes back through here. */
@@ -208,7 +209,7 @@ export class TextureRenderer {
 
     if (!wanted) {
       environment.setTexture(null)
-      environment.refresh()
+      environment.setStudio()
       return
     }
 

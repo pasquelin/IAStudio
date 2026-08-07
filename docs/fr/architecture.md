@@ -236,7 +236,7 @@ src/renderer/src/
 │   ├── TitleBar.tsx     espaces de travail, feux natifs
 │   └── documents.tsx    quel éditeur rend quel type de document
 ├── design/       le design system maison — voir plus bas
-├── engines/      canvas, scène, timeline, audio, et l'historique partagé
+├── engines/      canvas, scène, timeline, audio, viewport, skybox, texture, et l'historique partagé
 ├── spaces/       un éditeur par type de document
 │   ├── image/      le canvas Pixi et ses outils
 │   ├── three/      la vue three.js et ses outils
@@ -281,7 +281,7 @@ principal a besoin de `{ id, zone }` pour restaurer un outil fermé, et le dupli
 
 ## Les moteurs
 
-Quatre, aucun React à l'intérieur d'aucun.
+Six, aucun React à l'intérieur d'aucun.
 
 | Moteur | Adossé à | Détient |
 |---|---|---|
@@ -289,6 +289,12 @@ Quatre, aucun React à l'intérieur d'aucun.
 | `SceneRenderer` | three.js 0.185 | la scène 3D : maillages, lumières, gizmos, caméra |
 | `TimelineEngine` | mediabunny + Canvas | la séquence : clips, lecture, formes d'onde, vignettes |
 | `engines/audio` | tableaux d'échantillons | l'édition sonore : rogner, fondus, gain, normaliser, silences |
+| `SkyboxRenderer` | `ViewportEngine` | le ciel vu de l'intérieur : soleil, étalonnage, sondes |
+| `TextureRenderer` | `ViewportEngine` | la matière posée sur une forme : canaux PBR, environnement, tiling |
+
+Les trois qui montrent de la 3D partagent `engines/viewport/` — canevas, caméra, orbite,
+redimensionnement, boucle à la demande, éclairage par image. Chacun écrivant le sien, c'était
+trois chances de ne pas être d'accord sur un redimensionnement ou une libération.
 
 Celui du son est une paire de modules plutôt qu'une classe — `audio-data.ts` fait le travail sur
 les échantillons, `edits.ts` tient un `AudioEditState` rejouable depuis le fichier source. Même

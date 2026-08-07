@@ -281,6 +281,12 @@ Four of them, no React inside any one.
 | `SceneRenderer` | three.js 0.185 | the 3D scene: meshes, lights, gizmos, camera |
 | `TimelineEngine` | mediabunny + Canvas | the sequence: clips, playback, waveforms, filmstrips |
 | `engines/audio` | plain sample arrays | the sound edit: crop, fades, gain, normalise, trim silence |
+| `SkyboxRenderer` | `ViewportEngine` | the sky from the inside: sun, grading, probes |
+| `TextureRenderer` | `ViewportEngine` | the material on a shape: PBR channels, environment, tiling |
+
+The three that show 3D share `engines/viewport/` — canvas, camera, orbit, resizing, on-demand
+loop, image-based lighting. Each writing its own was three chances to disagree about a resize
+or a disposal.
 
 The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
