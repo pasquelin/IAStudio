@@ -9,15 +9,6 @@ import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
 
-/**
- * A menu command that failed. The main process logs the cause; the studio has no surface to
- * report it on yet, and a save that failed still says so — the tab keeps its modified marker.
- * Caught rather than left to `void`, which would raise an unhandled rejection instead.
- */
-function swallow(running: Promise<void>): void {
-  void running.catch(() => {})
-}
-
 /** The global commands, which are the ones the native menu fires. The rest belong to a surface. */
 function runCommand(command: CommandId): void {
   switch (command) {
@@ -33,7 +24,9 @@ function runCommand(command: CommandId): void {
     case 'document.save': {
       // The menu is application-wide and has no idea which tab is in front; the store does.
       const documentId = useDocuments.getState().activeId
-      if (documentId) swallow(saveDocument(documentId))
+      // Caught, not left to `void`: nothing logs an IPC rejection and the studio has no error
+      // surface, so the tab keeping its marker is the whole of what a failed save reports.
+      if (documentId) void saveDocument(documentId).catch(() => {})
       return
     }
   }

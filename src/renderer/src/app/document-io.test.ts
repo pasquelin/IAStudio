@@ -110,6 +110,21 @@ describe('saveDocument', () => {
     expect(write).not.toHaveBeenCalled()
   })
 
+  // The empty viewport a failed read leaves is indistinguishable from a new document: the user
+  // draws in it, the state exists, and the guard on `holds` alone would let ⌘S overwrite the
+  // scene nothing could read.
+  it('keeps refusing to write once the user has drawn in a document that would not load', async () => {
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({ documents: { write, read: () => Promise.reject(new Error('gone')) } })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+
+    await restoreDocument('doc-1')
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    await saveDocument('doc-1')
+
+    expect(write).not.toHaveBeenCalled()
+  })
+
   it('writes nothing for a space that has no serialized form yet', async () => {
     const write = vi.fn(() => Promise.resolve())
     installFakeBridge({ documents: { write } })
@@ -169,6 +184,30 @@ describe('restoreDocument', () => {
 
     await restoreDocument('doc-1')
     expect(useScenes.getState().states['doc-1']).toBeUndefined()
+    expect(isDirty(useScenes.getState(), 'doc-1')).toBe(true)
+  })
+
+  // The tab is live while the read is in flight, and the Add menu acts on it. Overwriting that
+  // edit would also mark the document clean, leaving an undo stack describing a scene that never
+  // existed.
+  it('keeps an edit made while the read was in flight', async () => {
+    let deliver = (): void => {}
+    installFakeBridge({
+      documents: {
+        read: () =>
+          new Promise<DocumentFile>(resolve => {
+            deliver = () => resolve(savedFile())
+          }),
+      },
+    })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+
+    const reading = restoreDocument('doc-1')
+    useScenes.getState().runCommand('doc-1', addNode(meshNode('box-2')))
+    deliver()
+    await reading
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes.map(node => node.id)).toEqual(['box-2'])
     expect(isDirty(useScenes.getState(), 'doc-1')).toBe(true)
   })
 

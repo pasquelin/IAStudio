@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -10,6 +10,14 @@ import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
 import { SceneDocument } from './SceneDocument'
+
+const setDocumentTitle = vi.fn()
+
+// Dockview owns the tabs and needs a layout engine; what matters here is what the space asks
+// of it.
+vi.mock('@/app/DocumentArea', () => ({
+  setDocumentTitle: (...args: unknown[]) => setDocumentTitle(...args),
+}))
 
 const setMode = vi.fn()
 const frameSelection = vi.fn()
@@ -177,5 +185,19 @@ describe('the viewport settings', () => {
     render(<SceneDocument documentId="doc-1" />)
 
     expect(configure).toHaveBeenCalledWith(expect.objectContaining({ flySpeed: 12 }))
+  })
+
+  // The tab title was read imperatively and captured: a renamed document kept its old label
+  // until the modified marker next flipped.
+  it('follows a document renamed while its tab is open', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await act(async () => {
+      useDocuments.setState({
+        documents: { 'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Renamed' } },
+      })
+    })
+
+    expect(setDocumentTitle).toHaveBeenLastCalledWith('doc-1', 'Renamed', expect.any(Boolean))
   })
 })

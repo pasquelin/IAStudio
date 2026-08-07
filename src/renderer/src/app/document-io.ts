@@ -3,7 +3,7 @@ import { createDefaultScene } from '@/engines/scene/default-scene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
-import { markOf, sceneOf, useScenes } from '@/stores/scenes'
+import { hasScene, markOf, sceneOf, useScenes } from '@/stores/scenes'
 
 /**
  * How a kind reaches the disk and comes back. One entry per space that has a serialized form; a
@@ -34,15 +34,14 @@ const SCENE_IO: DocumentIo = {
     }
   },
   install: (documentId, content) => {
+    const scenes = useScenes.getState()
     // `replace`, not a command: loading a document is not something ⌘Z gives back.
-    useScenes.getState().replace(documentId, sceneFromPayload(content))
+    scenes.replace(documentId, sceneFromPayload(content))
     // What is on screen is now exactly what the disk holds, so the document opens clean.
-    useScenes.getState().markSaved(documentId, markOf(useScenes.getState(), documentId))
+    scenes.markSaved(documentId, markOf(useScenes.getState(), documentId))
   },
-  // A scene that arrives unlit shows nothing, and reads as a broken viewport rather than as an
-  // empty document.
   createDefault: documentId => useScenes.getState().ensure(documentId, createDefaultScene),
-  holds: documentId => useScenes.getState().states[documentId] !== undefined,
+  holds: documentId => hasScene(useScenes.getState(), documentId),
 }
 
 const IO_BY_KIND: Partial<Record<DocumentKind, DocumentIo>> = { scene: SCENE_IO }
@@ -53,18 +52,23 @@ const ioOf = (documentId: string): DocumentIo | undefined => {
 }
 
 /**
- * Writes the document to the project. Nothing is marked saved when the write fails: the tab
- * keeps its modified marker, which is the only honest thing to show for work not on disk.
- *
- * A document whose state was never filled is refused. `holds` is what separates "empty scene"
- * from "no scene yet", and a read that failed leaves the second — saving then would write an
- * empty document over the file that would not load.
+ * Documents whose file would not read. Their tab shows an empty editor, which is indistinguishable
+ * from a new one — so without this the user adds a node, the state exists, and the next ⌘S writes
+ * that over the scene nothing could read. The file is the only copy: refusing to write it is the
+ * one safe answer, and it stands until the document is opened again.
+ */
+const unreadable = new Set<string>()
+
+/**
+ * Writes the document to the project. A document whose state was never filled is refused:
+ * `holds` separates "empty scene" from "no scene yet".
  */
 export async function saveDocument(documentId: string): Promise<void> {
   const bridge = getBridge()
   const document = useDocuments.getState().documents[documentId]
   const io = ioOf(documentId)
-  if (!bridge || !document || !io || !io.holds(documentId)) return
+  if (!bridge || !document || !io) return
+  if (unreadable.has(documentId) || !io.holds(documentId)) return
 
   const { content, commit } = io.capture(documentId)
   await bridge.documents.write(document.id, document.kind, { title: document.title, content })
@@ -82,15 +86,16 @@ const loading = new Map<string, Promise<void>>()
  * Fills a document's tab on mount: from the project when a file is there, from the space's own
  * default otherwise. Idempotent — reopening a tab must not reset what is in it.
  *
- * A file that fails to read leaves the tab empty and modified rather than falling back to a
- * default: the marker is what says the document on screen is not the one on disk. A document
- * that was simply never saved reads `null`, which is not a failure and takes the default.
+ * A file that fails to read leaves the tab empty rather than taking the default, which a later
+ * ⌘S would write over it. A document never saved reads `null` — not a failure, and it takes the
+ * default like any new tab.
  */
 export function restoreDocument(documentId: string): Promise<void> {
   const existing = loading.get(documentId)
   if (existing) return existing
 
   const bridge = getBridge()
+  // A descriptor is what `ioOf` reads the kind from, so a missing one has already returned.
   const document = useDocuments.getState().documents[documentId]
   const io = ioOf(documentId)
   if (!io || io.holds(documentId)) return Promise.resolve()
@@ -100,12 +105,23 @@ export function restoreDocument(documentId: string): Promise<void> {
     return Promise.resolve()
   }
 
-  // Swallowed rather than rethrown into a mount effect that has nowhere to show it: the main
-  // process logs the failed read, and the tab stays empty and modified, which is the signal.
+  unreadable.delete(documentId)
+
+  // Nothing is rethrown into a mount effect that has nowhere to show it. Nothing is logged
+  // either: `handle` reports a rejection to no one, and the studio has no error surface yet.
   const reading = bridge.documents
     .read(document.id, document.kind)
-    .then(file => (file ? io.install(documentId, file.content) : io.createDefault(documentId)))
-    .catch(() => {})
+    .then(file => {
+      // Re-checked after the await: the tab was live while the read was in flight, and the Add
+      // menu acts on it. Overwriting that edit would also mark the document clean, leaving an
+      // undo stack whose commands describe a scene that never existed.
+      if (io.holds(documentId)) return
+      if (file) io.install(documentId, file.content)
+      else io.createDefault(documentId)
+    })
+    .catch(() => {
+      unreadable.add(documentId)
+    })
     .finally(() => loading.delete(documentId))
 
   loading.set(documentId, reading)

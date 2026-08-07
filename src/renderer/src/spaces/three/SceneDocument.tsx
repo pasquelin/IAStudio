@@ -26,6 +26,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const undoable = useScenes(state => canUndo(historyOf(state, documentId)))
   const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
   const modified = useScenes(state => isDirty(state, documentId))
+  const title = useDocuments(state => state.documents[documentId]?.title)
   const bindings = useBindingOverrides()
   const addNodeOf = useAddNode(documentId)
   const active = useDocuments(state => state.activeId === documentId)
@@ -38,9 +39,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [documentId])
 
   useEffect(() => {
-    const document = useDocuments.getState().documents[documentId]
-    if (document) setDocumentTitle(documentId, document.title, modified)
-  }, [documentId, modified])
+    if (title) setDocumentTitle(documentId, title, modified)
+  }, [documentId, title, modified])
 
   useEffect(() => {
     const element = host.current

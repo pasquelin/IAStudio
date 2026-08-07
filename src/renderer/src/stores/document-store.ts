@@ -67,6 +67,10 @@ export function createDocumentStore<S>(defaultState: S) {
   const stateOf = (state: Readable<S>, documentId: string): S =>
     state.states[documentId] ?? defaultState
 
+  /** Whether the document has a state at all — not the same question as what that state is. */
+  const hasState = (state: Readable<S>, documentId: string): boolean =>
+    state.states[documentId] !== undefined
+
   const historyOf = (state: Readable<S>, documentId: string): History<S> =>
     state.histories[documentId] ?? NO_HISTORY
 
@@ -159,5 +163,5 @@ export function createDocumentStore<S>(defaultState: S) {
     }
   })
 
-  return { use, stateOf, historyOf, markOf, isDirty }
+  return { use, stateOf, hasState, historyOf, markOf, isDirty }
 }
