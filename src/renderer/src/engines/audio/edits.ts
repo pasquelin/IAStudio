@@ -78,11 +78,23 @@ export function clampRegion(region: Region, data: AudioData): Region | null {
   return to > from ? { from, to } : null
 }
 
-/** Appends a step. Undo drops it again — the chain is the whole of the state. */
+/**
+ * Appends a step, and removes that same step on the way back.
+ *
+ * The index is captured as the command is applied rather than assumed to be the last one:
+ * `history.ts` promises that `revert` undoes its own `apply`, and a blind `slice(0, -1)` would
+ * hold only for as long as appending stays the only audio command there is.
+ */
 export function pushEdit(edit: AudioEdit): Command<AudioEditState> {
+  let at = -1
+
   return {
     id: `audio:${edit.kind}`,
-    apply: state => ({ ...state, edits: [...state.edits, edit] }),
-    revert: state => ({ ...state, edits: state.edits.slice(0, -1) }),
+    apply: state => {
+      at = state.edits.length
+      return { ...state, edits: [...state.edits, edit] }
+    },
+    revert: state =>
+      at < 0 ? state : { ...state, edits: state.edits.filter((_step, index) => index !== at) },
   }
 }

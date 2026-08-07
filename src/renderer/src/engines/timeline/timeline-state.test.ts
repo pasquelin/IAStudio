@@ -7,7 +7,6 @@ import {
   DEFAULT_TRACK_HEIGHT,
   deserializeSequence,
   EMPTY_SEQUENCE,
-  fadeGainAt,
   frameDuration,
   insertClip,
   makeClip,
@@ -169,25 +168,6 @@ describe('fades', () => {
     const crossed = clampFades({ ...clip('a', 0, 1_000), fadeIn: 800, fadeOut: 800 })
     expect(crossed.fadeIn + crossed.fadeOut).toBeLessThanOrEqual(1_000)
     expect(crossed).toMatchObject({ fadeIn: 800, fadeOut: 200 })
-  })
-
-  it('rises across the fade in and falls across the fade out', () => {
-    const faded = { ...clip('a', 0, 1_000), fadeIn: 200, fadeOut: 200 }
-    expect(fadeGainAt(faded, 0)).toBe(0)
-    expect(fadeGainAt(faded, 100)).toBeCloseTo(0.5)
-    expect(fadeGainAt(faded, 500)).toBe(1)
-    expect(fadeGainAt(faded, 900)).toBeCloseTo(0.5)
-    expect(fadeGainAt(faded, 1_000)).toBe(0)
-  })
-
-  it('stays at full level across a clip with no fades', () => {
-    expect(fadeGainAt(clip('a', 0, 1_000), 500)).toBe(1)
-  })
-
-  it('is silent outside the clip', () => {
-    const faded = { ...clip('a', 1_000, 1_000), fadeIn: 200, fadeOut: 200 }
-    expect(fadeGainAt(faded, 500)).toBe(0)
-    expect(fadeGainAt(faded, 2_500)).toBe(0)
   })
 })
 

@@ -28,8 +28,8 @@ export function clampScale(scale: number): number {
  * the strip, so there is room to drop a clip after the last one, and no further — scrolling
  * into unbounded emptiness loses the montage off the left edge.
  */
-export function maxOffset(state: SequenceState, viewport: Viewport, width: number): Us {
-  const span = Math.round(width / viewport.scale)
+export function maxOffset(state: SequenceState, scale: number, width: number): Us {
+  const span = Math.round(width / scale)
   return Math.max(0, sequenceDuration(state) - Math.round(span / 2))
 }
 
@@ -39,13 +39,9 @@ export function maxScrollTop(state: SequenceState, height: number): number {
 
 export function clampViewport(viewport: Viewport, state: SequenceState, size: Size): Viewport {
   const scale = clampScale(viewport.scale)
-  const scaled = { ...viewport, scale }
   return {
     scale,
-    offset: Math.max(
-      0,
-      Math.min(maxOffset(state, scaled, size.width), Math.round(viewport.offset)),
-    ),
+    offset: Math.max(0, Math.min(maxOffset(state, scale, size.width), Math.round(viewport.offset))),
     scrollTop: Math.max(
       0,
       Math.min(maxScrollTop(state, size.height), Math.round(viewport.scrollTop)),

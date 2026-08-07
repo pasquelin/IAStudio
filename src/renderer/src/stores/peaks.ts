@@ -4,13 +4,8 @@ import { getBridge } from '@/services/bridge'
 type PeaksState = {
   /** Absent means never asked; null means asked and there is nothing to draw. */
   byAsset: Record<string, Float32Array | null>
-  /** Fetches an asset's waveform once. Safe to call on every paint. */
+  /** Fetches an asset's waveform once. Safe to call again for one already asked for. */
   request: (assetId: string) => void
-  clear: () => void
-}
-
-export function peaksOf(state: Pick<PeaksState, 'byAsset'>, assetId: string): Float32Array | null {
-  return state.byAsset[assetId] ?? null
 }
 
 /**
@@ -40,11 +35,6 @@ export const usePeaks = create<PeaksState>()((set, get) => {
           pending.delete(assetId)
           set(state => ({ byAsset: { ...state.byAsset, [assetId]: peaks } }))
         })
-    },
-
-    clear: () => {
-      pending.clear()
-      set({ byAsset: {} })
     },
   }
 })

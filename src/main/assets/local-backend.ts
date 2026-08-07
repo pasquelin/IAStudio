@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises'
+import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { ASSET_FOLDERS, type Asset, type AssetType } from '@shared/domain/asset'
 import type { Catalog } from '@main/project/catalog'
@@ -38,10 +38,11 @@ export type LocalBackend = {
   importFromUrl: (request: ImportRequest) => Promise<Asset>
   importFromBytes: (request: WriteRequest, bytes: Uint8Array) => Promise<Asset>
   /**
-   * Overwrites an asset's own file, keeping its id, its name and its place in the catalogue.
-   * What "apply" means in the audio editor: the same asset, edited.
+   * Overwrites an asset's file, keeping its id, its name and its place in the catalogue. What
+   * "apply" means in the audio editor: the same asset, edited. The extension follows the bytes,
+   * so a take re-encoded on the way out is not left claiming to be what it no longer is.
    */
-  replaceBytes: (assetId: string, bytes: Uint8Array) => Promise<Asset>
+  replaceBytes: (assetId: string, bytes: Uint8Array, extension: string) => Promise<Asset>
 }
 
 /**
@@ -112,14 +113,22 @@ export function createLocalBackend({
 
     importFromBytes: (request, bytes) => write(request, bytes),
 
-    replaceBytes: async (assetId, bytes) => {
+    replaceBytes: async (assetId, bytes, extension) => {
       const existing = catalog().find(assetId)
       if (!existing?.path) throw new Error(`asset ${assetId} has no file to replace`)
 
-      await writeFile(join(projectPath(), existing.path), bytes)
+      const relativePath = relativePathFor(assetId, extension, existing.type)
+      await writeFile(join(projectPath(), relativePath), bytes)
+
+      // The extension follows the bytes: an edited take goes back as a `.wav`, and leaving it
+      // under the `.mp3` it was imported as would hand every reader a file that lies.
+      if (relativePath !== existing.path) {
+        await rm(join(projectPath(), existing.path), { force: true })
+      }
+
       // Through `add`, which upserts: the row keeps its id, its tags and its job, and only the
-      // size it now occupies changes.
-      return catalog().add({ ...existing, bytes: bytes.byteLength })
+      // file it points at and the room it takes change.
+      return catalog().add({ ...existing, path: relativePath, bytes: bytes.byteLength })
     },
   }
 }

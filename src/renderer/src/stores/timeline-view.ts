@@ -5,7 +5,6 @@ import { DEFAULT_VIEWPORT } from '@/engines/timeline/viewport'
 type TimelineViewState = {
   viewports: Record<string, Viewport>
   set: (documentId: string, viewport: Viewport) => void
-  drop: (documentId: string) => void
 }
 
 /**
@@ -23,13 +22,6 @@ export const useTimelineView = create<TimelineViewState>()(set => ({
 
   set: (documentId, viewport) =>
     set(state => ({ viewports: { ...state.viewports, [documentId]: viewport } })),
-
-  drop: documentId =>
-    set(state => {
-      const viewports = { ...state.viewports }
-      delete viewports[documentId]
-      return { viewports }
-    }),
 }))
 
 export function viewportOf(

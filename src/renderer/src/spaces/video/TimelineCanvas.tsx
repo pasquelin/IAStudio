@@ -100,9 +100,13 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     size.current = { width, height }
 
     // Backing store in device pixels, drawing in CSS pixels: without this the ruler is soft on
-    // every retina display.
-    canvas.width = Math.round(width * ratio)
-    canvas.height = Math.round(height * ratio)
+    // every retina display. Only when it actually changed — assigning `width` at all throws
+    // away the GPU texture and reallocates several megabytes, even for the same value.
+    const backing = { width: Math.round(width * ratio), height: Math.round(height * ratio) }
+    if (canvas.width !== backing.width || canvas.height !== backing.height) {
+      canvas.width = backing.width
+      canvas.height = backing.height
+    }
     context.setTransform(ratio, 0, 0, ratio, 0, 0)
 
     const current = latest.current

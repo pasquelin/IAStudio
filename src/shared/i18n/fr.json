@@ -327,7 +327,7 @@
     "gain": "Gain",
     "state": "État",
     "muted": "Muette",
-    "soloed": "Solo",
+    "solo": "Solo",
     "locked": "Verrouillée",
     "height": "Hauteur"
   },

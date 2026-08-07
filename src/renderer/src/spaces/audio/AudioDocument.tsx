@@ -5,15 +5,16 @@ import { EmptyState } from '@/design/EmptyState'
 import { Toolbar } from '@/design/Toolbar'
 import { durationOf, type AudioData } from '@/engines/audio/audio-data'
 import {
-  audibleData,
   clampRegion,
   pushEdit,
+  renderEdits,
   type AudioEdit,
   type Region,
 } from '@/engines/audio/edits'
 import { encodeWav } from '@/engines/audio/wav'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { formatDuration } from '@/engines/timeline/timecode'
+import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from '@/stores/assets'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
@@ -24,7 +25,7 @@ import { useWaveSurfer } from './useWaveSurfer'
 export type AudioDocumentProps = { documentId: string }
 
 /** What a fade tool lays down when no region says otherwise. */
-const DEFAULT_FADE = 1_000_000
+const DEFAULT_FADE: Us = SECOND
 
 /**
  * One take, edited.
@@ -70,7 +71,12 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const source = current?.data ?? null
   const failed = current !== null && current.data === null
 
-  const rendered = useMemo(() => (source ? audibleData(source, state) : null), [source, state])
+  // Only what `audibleData` actually reads. Keyed on the whole state it would replay the chain
+  // on every pointer move of a region drag — seventy megabytes, on the UI thread.
+  const rendered = useMemo(
+    () => (source ? renderEdits(source, state.bypassed ? [] : state.edits) : null),
+    [source, state.edits, state.bypassed],
+  )
 
   const onRegionChange = useCallback(
     (region: Region | null) => {

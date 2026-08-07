@@ -138,13 +138,28 @@ describe('local backend', () => {
       new Uint8Array([1, 2, 3]),
     )
 
-    const replaced = await backend.replaceBytes('asset_2', new Uint8Array([4, 5]))
+    const replaced = await backend.replaceBytes('asset_2', new Uint8Array([4, 5]), '.wav')
 
     expect(replaced).toMatchObject({ id: 'asset_2', name: 'Nappe', jobId: 'job_1', bytes: 2 })
     expect(await readFile(join(root, 'assets/aud/asset_2.wav'))).toEqual(Buffer.from([4, 5]))
   })
 
+  // An edited take goes back as a wav; leaving it under its old name would hand every reader
+  // a file whose extension lies about what is inside it.
+  it('renames the file when the bytes are no longer of the same kind, and drops the old one', async () => {
+    await backend.importFromBytes(
+      { id: 'asset_3', name: 'Import', type: 'audio', extension: '.mp3' },
+      new Uint8Array([1]),
+    )
+
+    const replaced = await backend.replaceBytes('asset_3', new Uint8Array([4, 5]), '.wav')
+
+    expect(replaced.path).toBe('assets/aud/asset_3.wav')
+    expect(await readFile(join(root, 'assets/aud/asset_3.wav'))).toEqual(Buffer.from([4, 5]))
+    await expect(readFile(join(root, 'assets/aud/asset_3.mp3'))).rejects.toThrow()
+  })
+
   it('refuses to replace an asset it has no file for', async () => {
-    await expect(backend.replaceBytes('nobody', new Uint8Array([1]))).rejects.toThrow()
+    await expect(backend.replaceBytes('nobody', new Uint8Array([1]), '.wav')).rejects.toThrow()
   })
 })

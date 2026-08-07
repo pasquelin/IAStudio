@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
-import { clipById, trackById, type SequenceState } from '@/engines/timeline/timeline-state'
+import { formatBytes } from '@/helpers/format'
+import { clipById, trackById } from '@/engines/timeline/timeline-state'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -17,39 +18,52 @@ import { TrackInspector } from './TrackInspector'
  * thing it describes, so two panels showing the same clip cannot disagree about it.
  */
 export function Inspector() {
+  // The scroller belongs here rather than to each face: one of the four used to forget it.
+  return (
+    <div className="h-full overflow-auto">
+      <Face />
+    </div>
+  )
+}
+
+function Face() {
   const selection = useSelection(state => state.selection)
   const documentId = useDocuments(state => activeIdOfKind(state, 'sequence'))
   const sequence = useSequences(state => (documentId ? sequenceOf(state, documentId) : null))
   const assets = useAssets(state => state.items)
 
-  if (selection.kind === 'asset') {
-    const chosen = assets.filter(asset => selection.ids.includes(asset.id))
-    if (chosen.length === 0) return <Empty />
-    return <AssetSelection assets={chosen} />
-  }
+  switch (selection.kind) {
+    case 'asset': {
+      const chosen = assets.filter(asset => selection.ids.includes(asset.id))
+      return chosen.length > 0 ? <AssetSelection assets={chosen} /> : <Empty />
+    }
 
-  if (selection.kind === 'clip' && documentId && sequence) {
-    return <ClipFace documentId={documentId} sequence={sequence} />
-  }
+    case 'clip': {
+      const clip = sequence?.selectedId ? clipById(sequence, sequence.selectedId) : null
+      return documentId && sequence && clip ? (
+        <ClipInspector documentId={documentId} sequence={sequence} clip={clip} />
+      ) : (
+        <Empty />
+      )
+    }
 
-  if (selection.kind === 'track' && documentId && sequence) {
-    const track = trackById(sequence, selection.id)
-    if (!track) return <Empty />
-    return <TrackInspector documentId={documentId} sequence={sequence} track={track} />
-  }
+    case 'track': {
+      const track = sequence ? trackById(sequence, selection.id) : null
+      return documentId && track ? (
+        <TrackInspector documentId={documentId} track={track} />
+      ) : (
+        <Empty />
+      )
+    }
 
-  return <Empty />
+    default:
+      return <Empty />
+  }
 }
 
 function Empty() {
   const { t } = useTranslation()
   return <EmptyState icon={mdiTuneVariant} message={t('inspector.empty')} />
-}
-
-function ClipFace({ documentId, sequence }: { documentId: string; sequence: SequenceState }) {
-  const clip = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
-  if (!clip) return <Empty />
-  return <ClipInspector documentId={documentId} sequence={sequence} clip={clip} />
 }
 
 /**
@@ -69,16 +83,4 @@ function AssetSelection({ assets }: { assets: Asset[] }) {
       {total > 0 && <PropertyRow label={t('inspector.size')}>{formatBytes(total)}</PropertyRow>}
     </PropertyGroup>
   )
-}
-
-/** Kibibytes, like every file manager on every desktop the studio runs on. */
-export function formatBytes(bytes: number): string {
-  const units = ['o', 'Kio', 'Mio', 'Gio']
-  let value = bytes
-  let unit = 0
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024
-    unit += 1
-  }
-  return `${value < 10 && unit > 0 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`
 }

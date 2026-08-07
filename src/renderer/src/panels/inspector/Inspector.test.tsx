@@ -165,7 +165,8 @@ describe('Inspector', () => {
     render(<Inspector />)
 
     expect(screen.getByText('A1')).toBeInTheDocument()
-    expect(screen.getByLabelText('Muette')).toBeInTheDocument()
+    // The same control as the header column, so the same accessible name.
+    expect(screen.getByRole('button', { name: /Rendre muette la piste A1/ })).toBeInTheDocument()
   })
 
   it('falls back to the empty state when the selected track is gone', () => {

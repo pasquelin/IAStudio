@@ -1,10 +1,3 @@
-import {
-  mdiHeadphones,
-  mdiLockOpenVariantOutline,
-  mdiLockOutline,
-  mdiVolumeHigh,
-  mdiVolumeOff,
-} from '@mdi/js'
 import { useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ResizeHandle } from '@/design/ResizeHandle'
@@ -14,15 +7,15 @@ import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import {
   clampTrackHeight,
   playsThrough,
-  updateTrack,
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
 import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useSelection } from '@/stores/selection'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
+import { TRACK_FLAGS } from './track-flags'
 
 export type TrackHeadersProps = { documentId: string }
 
@@ -55,11 +48,9 @@ type TrackHeaderProps = { documentId: string; sequence: SequenceState; track: Tr
 function TrackHeader({ documentId, sequence, track }: TrackHeaderProps) {
   const { t } = useTranslation()
 
-  // Mute, solo, lock and height are how one works, not what one made: they go through
-  // `replace`, which skips the history. Renaming is an edit, and goes through a command.
-  const write = (change: (current: Track) => Track): void => {
-    useSequences.getState().replace(documentId, updateTrack(sequence, track.id, change))
-  }
+  // Renaming is an edit and goes through a command; the rest is state — see `writeTrack`.
+  const write = (change: (current: Track) => Track): void =>
+    writeTrack(documentId, track.id, change)
 
   const audible = playsThrough(sequence, track)
 
@@ -73,30 +64,17 @@ function TrackHeader({ documentId, sequence, track }: TrackHeaderProps) {
       <TrackName documentId={documentId} track={track} dimmed={!audible} />
 
       <div className="flex items-center gap-0.5">
-        <ToolButton
-          icon={track.muted ? mdiVolumeOff : mdiVolumeHigh}
-          label={t('timeline.mute', { name: track.name })}
-          tooltip={TIP_RIGHT}
-          variant="header"
-          active={track.muted}
-          onClick={() => write(current => ({ ...current, muted: !current.muted }))}
-        />
-        <ToolButton
-          icon={mdiHeadphones}
-          label={t('timeline.solo', { name: track.name })}
-          tooltip={TIP_RIGHT}
-          variant="header"
-          active={track.solo}
-          onClick={() => write(current => ({ ...current, solo: !current.solo }))}
-        />
-        <ToolButton
-          icon={track.locked ? mdiLockOutline : mdiLockOpenVariantOutline}
-          label={t('timeline.lock', { name: track.name })}
-          tooltip={TIP_RIGHT}
-          variant="header"
-          active={track.locked}
-          onClick={() => write(current => ({ ...current, locked: !current.locked }))}
-        />
+        {TRACK_FLAGS.map(flag => (
+          <ToolButton
+            key={flag.key}
+            icon={flag.iconFor(track[flag.key])}
+            label={t(flag.labelKey, { name: track.name })}
+            tooltip={TIP_RIGHT}
+            variant="header"
+            active={track[flag.key]}
+            onClick={() => write(current => ({ ...current, [flag.key]: !current[flag.key] }))}
+          />
+        ))}
       </div>
 
       <ResizeHandle

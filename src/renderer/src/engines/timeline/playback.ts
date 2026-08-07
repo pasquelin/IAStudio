@@ -48,7 +48,7 @@ export type TransportRegistry = {
 export function createTransportRegistry(): TransportRegistry {
   const players = new Map<string, Transport>()
 
-  const registry: TransportRegistry = {
+  return {
     register: (owner, transport) => {
       players.set(owner, transport)
       return () => {
@@ -67,8 +67,6 @@ export function createTransportRegistry(): TransportRegistry {
       else transport.play()
     },
   }
-
-  return registry
 }
 
 export const transports = createTransportRegistry()

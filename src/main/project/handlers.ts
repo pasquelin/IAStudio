@@ -13,6 +13,9 @@ import {
   parseSaveAudio,
 } from './validation'
 
+/** What `saveAudio` writes — the renderer encodes uncompressed PCM, never a codec. */
+const WAV_EXTENSION = '.wav'
+
 export type ProjectHandlerDeps = {
   project: ProjectStore
   /** Where an edited take is written back. Injected, like everything that touches the disk. */
@@ -59,14 +62,14 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.assetsSaveAudio, async (_event, value) => {
     const request = parseSaveAudio(value)
-    if (request.replaces) return assets.replaceBytes(request.replaces, request.wav)
+    if (request.replaces) return assets.replaceBytes(request.replaces, request.wav, WAV_EXTENSION)
 
     return assets.importFromBytes(
       {
         id: newAssetId(),
         name: request.name,
         type: 'audio',
-        extension: '.wav',
+        extension: WAV_EXTENSION,
         ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
       },
       request.wav,

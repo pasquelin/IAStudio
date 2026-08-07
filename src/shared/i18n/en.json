@@ -327,7 +327,7 @@
     "gain": "Gain",
     "state": "State",
     "muted": "Muted",
-    "soloed": "Soloed",
+    "solo": "Soloed",
     "locked": "Locked",
     "height": "Height"
   },

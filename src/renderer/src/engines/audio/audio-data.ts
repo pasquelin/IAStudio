@@ -50,7 +50,9 @@ export function applyFades(data: AudioData, fadeIn: Us, fadeOut: Us): AudioData 
   if (rise === 0 && fall === 0) return data
 
   return mapChannels(data, channel => {
-    const faded = Float32Array.from(channel)
+    // `slice` memcpys; `Float32Array.from` walks the iterator protocol one sample at a time,
+    // which on eight million samples is the whole cost of the chain.
+    const faded = channel.slice()
     for (let frame = 0; frame < rise; frame++) faded[frame] = (faded[frame] ?? 0) * (frame / rise)
     for (let frame = 0; frame < fall; frame++) {
       const index = total - 1 - frame
@@ -65,7 +67,7 @@ export function applyGain(data: AudioData, db: number): AudioData {
   const factor = 10 ** (db / 20)
 
   return mapChannels(data, channel => {
-    const scaled = Float32Array.from(channel)
+    const scaled = channel.slice()
     for (let frame = 0; frame < scaled.length; frame++) {
       // Clamped: past ±1 the samples wrap on the way out, which is heard as a crackle rather
       // than as loudness.

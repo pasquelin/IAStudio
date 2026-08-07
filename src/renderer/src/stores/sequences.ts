@@ -1,7 +1,12 @@
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
 import { clipForAsset, trackForAsset } from '@/engines/timeline/insert'
-import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
+import {
+  EMPTY_SEQUENCE,
+  updateTrack,
+  type SequenceState,
+  type Track,
+} from '@/engines/timeline/timeline-state'
 import { activeIdOfKind, useDocuments } from './documents'
 import { createDocumentStore } from './document-store'
 
@@ -28,4 +33,20 @@ export function addAssetToSequence(asset: Asset): void {
 
   const clip = clipForAsset(asset.id, asset, sequence.playhead, sequence.settings)
   current.runCommand(documentId, addClip(track.id, clip))
+}
+
+/**
+ * Rewrites a track outside the history.
+ *
+ * Mute, solo, lock and height are how one works, not what one made: they have no business on
+ * the undo stack. Written here rather than in each surface — the header column and the
+ * inspector both do it, and the rule has to hold in one place.
+ */
+export function writeTrack(
+  documentId: string,
+  trackId: string,
+  change: (track: Track) => Track,
+): void {
+  const current = store.use.getState()
+  current.replace(documentId, updateTrack(store.stateOf(current, documentId), trackId, change))
 }

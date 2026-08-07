@@ -23,6 +23,7 @@ export function cachedImage(url: string, onReady: () => void): HTMLImageElement 
 
   image.onload = () => {
     entry.ready = true
+    image.onload = null
     onReady()
   }
   // Remembered as failed rather than dropped: retrying a missing file on every paint would
@@ -33,8 +34,4 @@ export function cachedImage(url: string, onReady: () => void): HTMLImageElement 
   image.src = url
 
   return null
-}
-
-export function clearImageCache(): void {
-  entries.clear()
 }

@@ -4,6 +4,7 @@ import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { formatDuration } from '@/engines/timeline/timecode'
+import { formatBytes } from '@/helpers/format'
 import { generationOf } from '@/helpers/generation'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
@@ -11,7 +12,6 @@ import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useTools } from '@/stores/tools'
-import { formatBytes } from './Inspector'
 
 /**
  * One asset, read out — and the prompt behind it, which is what makes the shelf navigable
@@ -26,7 +26,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
   const probe = asset.probe
 
   return (
-    <div className="overflow-auto">
+    <>
       <PropertyGroup title={t('inspector.identity')}>
         <PropertyRow label={t('inspector.name')}>{asset.name}</PropertyRow>
         <PropertyRow label={t('inspector.type')}>{t(`assetTypes.${asset.type}`)}</PropertyRow>
@@ -59,7 +59,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
           </PropertyRow>
         </PropertyGroup>
       )}
-    </div>
+    </>
   )
 }
 

@@ -8,6 +8,7 @@ import {
   MAX_SPEED,
   MIN_GAIN_DB,
   MIN_SPEED,
+  SECOND,
   trackOfClip,
   type Clip,
   type SequenceState,
@@ -17,9 +18,6 @@ import { useSequences } from '@/stores/sequences'
 import { NumberField } from './NumberField'
 
 export type ClipInspectorProps = { documentId: string; sequence: SequenceState; clip: Clip }
-
-/** Seconds are what a fade is set in; the model counts microseconds. */
-const SECOND = 1_000_000
 
 /**
  * One clip of the montage. Every control writes a command, so each change is one step of the
@@ -36,7 +34,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
   const audio = track?.kind === 'audio'
 
   return (
-    <div className="overflow-auto">
+    <>
       <PropertyGroup title={t('inspector.clip')}>
         <PropertyRow label={t('inspector.source')}>{name}</PropertyRow>
         {track && <PropertyRow label={t('inspector.track')}>{track.name}</PropertyRow>}
@@ -104,6 +102,6 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
           </PropertyRow>
         )}
       </PropertyGroup>
-    </div>
+    </>
   )
 }

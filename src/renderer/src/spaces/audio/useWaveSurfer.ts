@@ -5,13 +5,12 @@ import { playbackToken } from '@/engines/timeline/playback'
 import type { AudioData } from '@/engines/audio/audio-data'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { Region } from '@/engines/audio/edits'
-import type { Us } from '@/engines/timeline/timeline-state'
+import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 
 export type WaveSurferHandle = {
   playing: boolean
   currentTime: Us
   toggle: () => void
-  seek: (time: Us) => void
 }
 
 export type UseWaveSurferOptions = {
@@ -22,8 +21,6 @@ export type UseWaveSurferOptions = {
   owner: string
   onRegionChange: (region: Region | null) => void
 }
-
-const SECOND = 1_000_000
 
 /** Bars rather than a continuous line: fewer paths per redraw, and easier to read at a glance. */
 const BAR_WIDTH = 2
@@ -47,7 +44,6 @@ export function useWaveSurfer({
   onRegionChange,
 }: UseWaveSurferOptions): WaveSurferHandle {
   const surfer = useRef<WaveSurfer | null>(null)
-  const regions = useRef<RegionsPlugin | null>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState<Us>(0)
 
@@ -58,9 +54,11 @@ export function useWaveSurfer({
     notify.current = onRegionChange
   }, [onRegionChange])
 
+  // Created once per container. Kept out of the data effect below on purpose: rebuilding the
+  // instance on every edit would destroy the very region the pointer is dragging.
   useEffect(() => {
     const element = container.current
-    if (!element || !data) return
+    if (!element) return
 
     const plugin = RegionsPlugin.create()
     const instance = WaveSurfer.create({
@@ -69,15 +67,10 @@ export function useWaveSurfer({
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
       height: 'auto',
-      // Handed the samples the studio already decoded: given a URL it would fetch and decode
-      // the take a second time, for a second copy of it in memory.
-      peaks: data.channels,
-      duration: durationOf(data) / SECOND,
       plugins: [plugin],
     })
 
     surfer.current = instance
-    regions.current = plugin
     plugin.enableDragSelection({})
 
     instance.on('play', () => setPlaying(true))
@@ -100,10 +93,16 @@ export function useWaveSurfer({
       playbackToken.release(owner)
       instance.destroy()
       surfer.current = null
-      regions.current = null
       setPlaying(false)
     }
-  }, [container, data, owner])
+  }, [container, owner])
+
+  // The take itself, pushed in. `setOptions` redraws the bars without touching the instance,
+  // its listeners or the region being drawn.
+  useEffect(() => {
+    if (!data) return
+    surfer.current?.setOptions({ peaks: data.channels, duration: durationOf(data) / SECOND })
+  }, [data])
 
   return {
     playing,
@@ -121,12 +120,6 @@ export function useWaveSurfer({
       // Taking the token revokes whoever held it: two audible streams is the bug this prevents.
       playbackToken.acquire(owner, () => instance.pause())
       void instance.play()
-    },
-
-    seek: time => {
-      const instance = surfer.current
-      const total = instance?.getDuration() ?? 0
-      if (instance && total > 0) instance.seekTo(Math.min(1, time / SECOND / total))
     },
   }
 }

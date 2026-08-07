@@ -68,6 +68,9 @@ export function Generator() {
 
   const generate = (body: FormValues): void => {
     void submit(modelId, body)
+    // The preset belongs to the gesture that set it. Dropped once it has been generated from,
+    // not when the form opens: clearing it earlier would reset the very fields it just filled.
+    useModels.getState().consumePreset(family)
   }
 
   return (

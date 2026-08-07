@@ -60,7 +60,8 @@ export type SequenceState = {
   playhead: Us
 }
 
-const SECOND: Us = 1_000_000
+/** One second, in the unit the whole studio counts time in. */
+export const SECOND: Us = 1_000_000
 
 export const DEFAULT_SETTINGS: SequenceSettings = {
   width: 1920,
@@ -159,20 +160,6 @@ export function clampFades(clip: Clip): Clip {
   const fadeIn = Math.max(0, Math.min(clip.fadeIn, clip.duration))
   const fadeOut = Math.max(0, Math.min(clip.fadeOut, clip.duration - fadeIn))
   return fadeIn === clip.fadeIn && fadeOut === clip.fadeOut ? clip : { ...clip, fadeIn, fadeOut }
-}
-
-/**
- * The fade envelope at one instant, 0 to 1, in timeline time. Linear: an equal-power curve
- * belongs to a crossfade between two clips, which this is not.
- */
-export function fadeGainAt(clip: Clip, time: Us): number {
-  const { fadeIn, fadeOut } = clampFades(clip)
-  const into = time - clip.start
-  if (into < 0 || into > clip.duration) return 0
-
-  const rising = fadeIn > 0 ? into / fadeIn : 1
-  const falling = fadeOut > 0 ? (clip.duration - into) / fadeOut : 1
-  return Math.max(0, Math.min(1, rising, falling))
 }
 
 /**
