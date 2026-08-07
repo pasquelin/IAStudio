@@ -1,7 +1,9 @@
 import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
-import { setSource } from '@/engines/skybox/commands'
+import { applyGeneration } from '@/engines/skybox/commands'
+import { generationOf } from '@/helpers/generation'
 import { createDocumentStore } from './document-store'
+import { useJobs } from './jobs'
 
 /** One skybox per document, with its own history — spec § 8.3. */
 const store = createDocumentStore<SkyboxContent>(createSkyboxContent())
@@ -26,5 +28,25 @@ export const historyOf = store.historyOf
 export function setSkyboxSource(documentId: string, asset: Asset): void {
   if (!isLocalPicture(asset)) return
 
-  store.use.getState().runCommand(documentId, setSource({ assetId: asset.id }))
+  store.use
+    .getState()
+    .runCommand(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
+}
+
+/**
+ * Where a picture came from, as a sky records it — `params` dropped, since a document is not a
+ * form and "regenerate" reads the job rather than this.
+ *
+ * Resolved for every picture that lands, not only for generated ones: a photograph dropped over
+ * a generated sky answers nothing here, and writing that nothing is the point. Leaving the
+ * previous prompt in place would credit it with a picture it did not make — which is exactly
+ * what the panel then shows under "what produced this sky".
+ */
+function provenanceOf(asset: Asset): SkyboxContent['generation'] {
+  const { jobs, bodies } = useJobs.getState()
+  const generation = generationOf(asset, jobs, bodies)
+  if (!generation) return undefined
+
+  const { modelId, modelLabel, prompt, seed } = generation
+  return { modelId, modelLabel, prompt, seed }
 }

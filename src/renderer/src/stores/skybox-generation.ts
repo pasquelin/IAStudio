@@ -1,12 +1,9 @@
-import { isLocalPicture, type Asset } from '@shared/domain/asset'
+import { isLocalPicture } from '@shared/domain/asset'
 import { isFinished, type Job } from '@shared/domain/job'
-import type { SkyboxContent } from '@shared/domain/skybox'
-import { applyGeneration } from '@/engines/skybox/commands'
-import { generationOf } from '@/helpers/generation'
 import { useAssets } from './assets'
 import { activeIdOfKind, useDocuments } from './documents'
 import { useJobs } from './jobs'
-import { useSkyboxes } from './skyboxes'
+import { setSkyboxSource } from './skyboxes'
 
 /**
  * Which sky each running generation was launched for.
@@ -34,25 +31,14 @@ export function claimOnSubmit(): (job: Job | null) => void {
   }
 }
 
-/** What a generation is worth remembering of itself, minus the parameters a sky has no use for. */
-function provenanceOf(asset: Asset): SkyboxContent['generation'] {
-  const { jobs, bodies } = useJobs.getState()
-  const generation = generationOf(asset, jobs, bodies)
-  if (!generation) return undefined
-
-  const { modelId, modelLabel, prompt, seed } = generation
-  return { modelId, modelLabel, prompt, seed }
-}
-
 /**
  * Hangs what the finished jobs produced in the skies that asked for them.
  *
- * The catalogue is read once for the whole batch rather than once per claim: `assets.search` is
- * a synchronous SQLite query in the main process, and three jobs settling inside the same
- * couple of hundred milliseconds would otherwise fire three identical reads at it.
- *
- * It is read at all — rather than waited on — because `useJobs` coalesces its own refresh over
- * that same window, so the rows are not in the list yet at the moment a job reports success.
+ * The catalogue is read rather than waited on: `useAssets` coalesces its refresh over a couple
+ * of hundred milliseconds so that a burst of finishing ingests does not freeze every window,
+ * and the rows are therefore not in the list yet at the moment a job reports success. The read
+ * is shared — `refresh` hands back the one already in flight — so several skies settling
+ * together still cost the main process a single SQLite query.
  *
  * The job hands back Scenario's own asset ids; what a document stores is the id of the row the
  * collector wrote, so the two are joined on `jobId` — the only identifier both sides share.
@@ -71,9 +57,7 @@ async function hang(settled: ReadonlyMap<string, string>): Promise<void> {
     // document nothing shows, with a history nobody can reach.
     if (!asset || !documents[documentId]) continue
 
-    useSkyboxes
-      .getState()
-      .runCommand(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
+    setSkyboxSource(documentId, asset)
   }
 }
 

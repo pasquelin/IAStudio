@@ -90,6 +90,20 @@ describe('opening an asset', () => {
     expect(skyboxOf(useSkyboxes.getState(), 'doc-1').source).toEqual({ assetId: 'asset-sky' })
   })
 
+  // The panel shows this field under "what produced this sky". Left in place, it would credit
+  // the prompt of a generated sky with the photograph that has just replaced it.
+  it('clears the provenance of the sky it replaces', () => {
+    open('skyboxes')
+    useSkyboxes.getState().replace('doc-1', {
+      ...skyboxOf(useSkyboxes.getState(), 'doc-1'),
+      generation: { modelId: 'model_sky', modelLabel: 'Skybox Flux.1', prompt: 'a dusk' },
+    })
+
+    openAsset(picture())
+
+    expect(skyboxOf(useSkyboxes.getState(), 'doc-1').generation).toBeUndefined()
+  })
+
   it('refuses what does not decode as a picture', () => {
     open('skyboxes')
     openAsset(asset({ type: 'video' }))

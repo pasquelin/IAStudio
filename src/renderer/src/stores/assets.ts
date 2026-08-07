@@ -63,6 +63,7 @@ export const useAssets = create<AssetsState>()(
   persist(
     (set, get) => {
       let pending: ReturnType<typeof setTimeout> | null = null
+      let reading: Promise<void> | null = null
 
       return {
         collection: DEFAULT_COLLECTION_STATE,
@@ -70,16 +71,27 @@ export const useAssets = create<AssetsState>()(
 
         items: [],
 
+        // Callers that need the rows NOW share the read already in flight rather than opening a
+        // second one: `assets.search` is a synchronous SQLite query in the main process, and
+        // three generations finishing together asked for the same answer three times over.
         refresh: async () => {
-          const bridge = getBridge()
-          if (!bridge) return
+          if (reading) return reading
 
-          try {
-            set({ items: await bridge.assets.search({}) })
-          } catch {
-            // No project open: the catalogue throws, and an empty list is the honest answer.
-            set({ items: [] })
-          }
+          reading = (async () => {
+            const bridge = getBridge()
+            if (!bridge) return
+
+            try {
+              set({ items: await bridge.assets.search({}) })
+            } catch {
+              // No project open: the catalogue throws, and an empty list is the honest answer.
+              set({ items: [] })
+            }
+          })().finally(() => {
+            reading = null
+          })
+
+          return reading
         },
 
         invalidate: () => {
