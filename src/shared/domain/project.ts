@@ -1,3 +1,5 @@
+import { ASSET_FOLDERS } from './asset'
+
 export const MANIFEST_VERSION = 1
 
 /** A project is a folder, not a binary file — versionable, inspectable, repairable by hand. */
@@ -17,15 +19,14 @@ export type Project = {
   manifest: Manifest
 }
 
-/** Subfolders created when a project is opened — see spec § 5. */
+/**
+ * Subfolders created when a project is opened — see spec § 5. The asset folders are derived
+ * from `ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the writer pointing
+ * at a folder this never created.
+ */
 export const PROJECT_FOLDERS: readonly string[] = [
   'assets',
-  'assets/img',
-  'assets/3d',
-  'assets/tex',
-  'assets/vid',
-  'assets/aud',
-  'assets/sky',
+  ...Object.values(ASSET_FOLDERS),
   'documents',
   '.index',
   'layouts',

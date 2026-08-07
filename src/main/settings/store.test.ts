@@ -68,6 +68,25 @@ describe('settings store', () => {
     expect(createSettingsStore(adapter).readCredentials()).toBeNull()
   })
 
+  it('reads a blank pair as unconfigured, and discards it', () => {
+    adapter.raw.set('credentials', 'enc:{"key":"","secret":""}')
+    const store = createSettingsStore(adapter)
+
+    expect(store.readCredentials()).toBeNull()
+    expect(store.hasCredentials()).toBe(false)
+
+    store.discardUnreadableCredentials()
+    expect(adapter.raw.has('credentials')).toBe(false)
+  })
+
+  it('trims a stored pair, as the input path does', () => {
+    adapter.raw.set('credentials', 'enc:{"key":"api_k\\n","secret":" s3cr3t "}')
+    expect(createSettingsStore(adapter).readCredentials()).toEqual({
+      key: 'api_k',
+      secret: 's3cr3t',
+    })
+  })
+
   it('forgets credentials on demand', () => {
     const store = createSettingsStore(adapter)
     store.setCredentials({ key: 'api_k', secret: 's3cr3t' })

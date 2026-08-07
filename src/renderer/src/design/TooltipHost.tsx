@@ -1,5 +1,5 @@
 import { Tooltip } from 'react-tooltip'
-import { TOOLTIP_ID } from './tooltip'
+import { TOOLTIP_ID } from '@/helpers/tooltip'
 
 /**
  * Shared tooltip, mounted once at the root. One `<Tooltip>` per button would multiply

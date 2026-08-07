@@ -8,7 +8,7 @@ import {
 } from '@mdi/js'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from './cn'
+import { cn } from '@/helpers/cn'
 import {
   resizeThumbnails,
   selectedValues,
@@ -17,15 +17,11 @@ import {
   type CollectionState,
   type FacetDescriptor,
   type FacetOption,
-} from './collection-state'
-import { TIP_BOTTOM } from './tooltip'
+} from '@/helpers/collection-state'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { CONTROL } from './styles'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
-
-const CONTROL = cn(
-  'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md)',
-  'text-[11px] outline-none focus-visible:ring-accent focus-visible:ring-1',
-)
 
 type DropdownProps = {
   label: string

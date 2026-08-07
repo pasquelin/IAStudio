@@ -3,6 +3,7 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import i18next from 'i18next'
 import { create as createStore } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { isRecord } from '@/helpers/guards'
 
 type DocumentsState = {
   documents: Record<string, DocumentDescriptor>
@@ -99,7 +100,7 @@ export const useDocuments = createStore<DocumentsState>()(
       version: 1,
       // A version bump must not silently drop what the user has open. A descriptor whose `kind`
       // no longer exists is handled at render time.
-      migrate: persisted => (typeof persisted === 'object' ? persisted : undefined),
+      migrate: persisted => (isRecord(persisted) ? persisted : undefined),
       // Which tab is in front is session state, like `focusedZone`: Dockview announces it on
       // mount, and restoring a stale id would point the layer stack at a tab nobody opened.
       partialize: state => ({ documents: state.documents }),

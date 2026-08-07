@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react'
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { cn } from './cn'
+import { cn } from '@/helpers/cn'
 import {
   buildBody,
   buildSchema,
@@ -15,10 +15,15 @@ import {
   randomSeed,
   visibleFields,
   type FormValues,
-} from './dynamic-form'
+} from '@/helpers/dynamic-form'
+import { FOCUS_RING } from './styles'
 import { ToolButton } from './ToolButton'
 
-const CONTROL = 'bg-surface border-border h-(--sc-control) rounded-(--radius-sc-sm) border px-2'
+// Its own shape — a form field, not a bar control — but the same focus ring as everything else.
+const CONTROL = cn(
+  'bg-surface border-border h-(--sc-control) rounded-(--radius-sc-sm) border px-2',
+  FOCUS_RING,
+)
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]

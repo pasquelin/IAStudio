@@ -5,7 +5,8 @@ import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
   type CollectionState,
-} from '@/design/collection-state'
+} from '@/helpers/collection-state'
+import { isRecord } from '@/helpers/guards'
 import { getBridge } from '@/services/bridge'
 
 type AssetsState = {
@@ -18,7 +19,7 @@ type AssetsState = {
 
 /** The shape the store persisted before it held a whole `CollectionState`. */
 function readView(persisted: unknown): CollectionState['view'] | null {
-  if (typeof persisted !== 'object' || persisted === null || !('view' in persisted)) return null
+  if (!isRecord(persisted) || !('view' in persisted)) return null
   const { view } = persisted
   return view === 'grid' || view === 'list' ? view : null
 }

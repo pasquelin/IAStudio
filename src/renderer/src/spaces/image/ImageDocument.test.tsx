@@ -27,7 +27,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
 describe('ImageDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useCanvases.setState({ canvases: {}, histories: {} })
+    useCanvases.setState({ states: {}, histories: {} })
   })
 
   it('renders the shared toolbar with the image tools', () => {

@@ -1,12 +1,10 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/design/cn'
+import { DRAGGABLE } from '@/helpers/app-region'
+import { cn } from '@/helpers/cn'
 import { useDensity } from '@/hooks/useDensity'
 import { useSettings } from '@/stores/settings'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
-
-/** `app-region` is not typed by React; the header is the window's only drag handle. */
-const DRAGGABLE: CSSProperties = { WebkitAppRegion: 'drag' } as CSSProperties
 
 function NavigationEntry({
   section,

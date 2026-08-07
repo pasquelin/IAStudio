@@ -1,8 +1,8 @@
 import { mdiArrowAll, mdiAxisArrow, mdiCropFree, mdiDelete, mdiResize } from '@mdi/js'
 import type { CommandId } from '@shared/domain/shortcut'
-import type { Tool } from '@/design/Toolbar'
+import type { ToolbarItem } from '@/design/Toolbar'
 
-export type SceneTool = Tool & { command: CommandId }
+export type SceneTool = ToolbarItem & { command: CommandId }
 
 /** The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here. */
 export const SCENE_TOOLS: readonly SceneTool[] = [

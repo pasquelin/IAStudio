@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { placementOf } from '@shared/domain/tool'
 import type { MenuCommand } from '@shared/ipc'
-import { toolServes } from '@/app/tools'
+import { toolServes } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'

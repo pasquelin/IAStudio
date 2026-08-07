@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/design/cn'
+import { cn } from '@/helpers/cn'
+import { CONTROL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
-import { TIP_RIGHT } from '@/design/tooltip'
+import { TIP_RIGHT } from '@/helpers/tooltip'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
@@ -99,8 +100,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           onTool={setTool}
           onMode={pick}
           extras={<BrushControls brush={brush} onBrush={setBrush} />}
-          onUndo={() => useCanvases.getState().undoCanvas(documentId)}
-          onRedo={() => useCanvases.getState().redoCanvas(documentId)}
+          onUndo={() => useCanvases.getState().undo(documentId)}
+          onRedo={() => useCanvases.getState().redo(documentId)}
           canUndo={undoable}
           canRedo={redoable}
         />
@@ -108,12 +109,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     </div>
   )
 }
-
-/** Same control language as `CollectionBar`, so the density setting reaches these too. */
-const CONTROL = cn(
-  'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md)',
-  'text-[11px] outline-none focus-visible:ring-accent focus-visible:ring-1',
-)
 
 function BrushControls({
   brush,

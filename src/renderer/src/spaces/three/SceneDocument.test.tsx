@@ -28,7 +28,7 @@ const box: SceneObject = { id: 'box-1', kind: 'box', name: 'Box', transform: IDE
 describe('SceneDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useScenes.setState({ scenes: {}, histories: {} })
+    useScenes.setState({ states: {}, histories: {} })
   })
 
   it('renders the shared toolbar with the scene tools', () => {

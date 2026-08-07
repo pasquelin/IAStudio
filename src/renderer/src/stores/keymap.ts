@@ -7,6 +7,7 @@ import {
   type MotionId,
   type Signature,
 } from '@shared/domain/shortcut'
+import { isRecord } from '@/helpers/guards'
 
 type KeymapState = {
   bindings: Record<CommandId, Signature>
@@ -17,25 +18,30 @@ type KeymapState = {
 
 type Readable = Pick<KeymapState, 'bindings' | 'motion'>
 
+/**
+ * `Object.entries` widens the key to `string`, so reading a binding table back needs one
+ * narrowing. Written once here, generic over the table, rather than at each of the three call
+ * sites that used to carry their own cast.
+ */
+function entriesOf<K extends string>(table: Record<K, Signature>): [K, Signature][] {
+  return Object.entries<Signature>(table).filter((entry): entry is [K, Signature] =>
+    Object.hasOwn(table, entry[0]),
+  )
+}
+
 export function commandFor(state: Readable, signature: Signature): CommandId | null {
-  const found = Object.entries(state.bindings).find(([, bound]) => bound === signature)
-  // `Object.entries` widens the key to `string`; the entry came from `bindings`, so its key
-  // is a `CommandId`.
-  return found ? (found[0] as CommandId) : null
+  return entriesOf(state.bindings).find(([, bound]) => bound === signature)?.[0] ?? null
 }
 
 export function motionFor(state: Readable, signature: Signature): MotionId | null {
-  const found = Object.entries(state.motion).find(([, bound]) => bound === signature)
-  // Same narrowing as above, same reason.
-  return found ? (found[0] as MotionId) : null
+  return entriesOf(state.motion).find(([, bound]) => bound === signature)?.[0] ?? null
 }
 
 /** Commands sharing a signature with another one — what the settings screen will show in red. */
 export function conflicts(state: Readable): CommandId[] {
   const counted = new Map<Signature, CommandId[]>()
-  for (const [command, signature] of Object.entries(state.bindings)) {
-    // The key comes from `bindings`, so it is a `CommandId`.
-    counted.set(signature, [...(counted.get(signature) ?? []), command as CommandId])
+  for (const [command, signature] of entriesOf(state.bindings)) {
+    counted.set(signature, [...(counted.get(signature) ?? []), command])
   }
   return [...counted.values()].filter(commands => commands.length > 1).flat()
 }
@@ -60,7 +66,7 @@ export const useKeymap = create<KeymapState>()(
       version: 1,
       // Same reason as `stores/tools.ts`: a version bump must not cost the user their remaps.
       // A command that disappeared is simply never read again.
-      migrate: persisted => (typeof persisted === 'object' ? persisted : undefined),
+      migrate: persisted => (isRecord(persisted) ? persisted : undefined),
     },
   ),
 )

@@ -57,6 +57,13 @@ export type ModelOrigin = 'official' | 'community'
 
 export const MODEL_ORIGINS: readonly ModelOrigin[] = ['official', 'community']
 
+/**
+ * How many model ids one preview request may carry — the batch becomes a single request body
+ * downstream. Shared, because the IPC channel refuses more and a refused batch would be lost
+ * without a word.
+ */
+export const MODEL_IDS_BATCH_LIMIT = 100
+
 export const OFFICIAL_TAG = 'sc:scenario'
 
 /** Scenario's own highlight, and the badge their grid shows: 23 of the 642 public models. */

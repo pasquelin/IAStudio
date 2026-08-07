@@ -27,9 +27,9 @@ import {
   mdiVectorLine,
 } from '@mdi/js'
 import type { CanvasTool } from '@/engines/canvas/CanvasEngine'
-import type { Tool } from '@/design/Toolbar'
+import type { ToolbarItem } from '@/design/Toolbar'
 
-export type ImageTool = Tool & { tool: CanvasTool }
+export type ImageTool = ToolbarItem & { tool: CanvasTool }
 
 /**
  * The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here.

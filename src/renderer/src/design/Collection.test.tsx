@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Collection } from './Collection'
-import { DEFAULT_COLLECTION_STATE, type CollectionState } from './collection-state'
+import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collection-state'
 
 type Row = { id: string; name: string }
 

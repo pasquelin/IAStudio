@@ -1,17 +1,28 @@
 import { z } from 'zod'
-import type { PartialSettings } from '@shared/domain/settings'
+import {
+  CONCURRENT_JOBS_RANGE,
+  DENSITIES,
+  MAX_RETRIES_RANGE,
+  THEMES,
+  type PartialSettings,
+} from '@shared/domain/settings'
 import type { Credentials } from './store'
 
+// Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
+// a hand-copied list silently stops accepting what the panel offers.
 const appearance = z.object({
-  theme: z.enum(['dark', 'light']).optional(),
-  density: z.enum(['compact', 'comfortable']).optional(),
+  theme: z.enum(THEMES).optional(),
+  density: z.enum(DENSITIES).optional(),
 })
 
-// Upper bounds are not cosmetic: `concurrentJobs` sizes the JobManager semaphore, and the
-// renderer is the one asking.
 const generation = z.object({
-  concurrentJobs: z.number().int().min(1).max(16).optional(),
-  maxRetries: z.number().int().min(0).max(10).optional(),
+  concurrentJobs: z
+    .number()
+    .int()
+    .min(CONCURRENT_JOBS_RANGE.min)
+    .max(CONCURRENT_JOBS_RANGE.max)
+    .optional(),
+  maxRetries: z.number().int().min(MAX_RETRIES_RANGE.min).max(MAX_RETRIES_RANGE.max).optional(),
   // Keys are model families and values model ids, both free strings here: the API adds
   // families and models on its own schedule, and an unknown one must not fail the write.
   defaultModels: z.record(z.string().min(1), z.string().min(1)).optional(),
@@ -49,4 +60,17 @@ const credential = z.string().trim().min(1)
 
 export function parseCredentials(key: unknown, secret: unknown): Credentials {
   return { key: credential.parse(key), secret: credential.parse(secret) }
+}
+
+const storedCredentials = z.object({ key: credential, secret: credential })
+
+/**
+ * Reads back what this process wrote, on the same `credential` schema as the input path. A
+ * hand-rolled guard accepting `{key:'',secret:''}` made `hasCredentials()` answer true on a
+ * blank pair, which `discardUnreadableCredentials` then refused to drop: the dialogue claimed
+ * to be configured while every call answered 401.
+ */
+export function parseStoredCredentials(plain: string): Credentials | null {
+  const parsed = storedCredentials.safeParse(JSON.parse(plain))
+  return parsed.success ? parsed.data : null
 }

@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
-import { cn } from './cn'
-import { withShortcut, type TooltipFactory } from './tooltip'
+import { cn } from '@/helpers/cn'
+import { withShortcut, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
 export type ToolButtonProps = Omit<

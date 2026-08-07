@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { cn } from '@/design/cn'
+import { cn } from '@/helpers/cn'
 import { TooltipHost } from '@/design/TooltipHost'
 import { useLayouts } from '@/stores/layouts'
 import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
@@ -11,11 +11,11 @@ import { TitleBar } from './TitleBar'
 import {
   isHorizontal,
   isLeading,
-  toolServes,
   type ToolId,
   type ToolSlot,
   type ToolZone,
-} from './tools'
+} from '@shared/domain/tool'
+import { toolServes } from '@/helpers/tool-registry'
 import { Panel, ToolWindow } from './ToolWindow'
 import 'dockview-react/dist/styles/dockview.css'
 import './dockview-theme.css'

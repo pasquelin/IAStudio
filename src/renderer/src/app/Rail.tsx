@@ -4,20 +4,14 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Separator } from '@/design/Separator'
-import { TIP_RIGHT } from '@/design/tooltip'
+import { TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useTools } from '@/stores/tools'
 import { openDocument } from './DocumentArea'
-import {
-  TOOL_SLOTS,
-  toolsInZone,
-  toolTitleKey,
-  type Tool,
-  type ToolSlot,
-  type ToolZone,
-} from './tools'
+import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
+import { toolsInZone, toolTitleKey, type Tool } from '@/helpers/tool-registry'
 
 export type RailProps = {
   /** Edge the rail sticks to. The left rail also carries the bottom strip's tools. */

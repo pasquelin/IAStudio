@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   MODEL_FAMILIES,
+  MODEL_IDS_BATCH_LIMIT,
   MODEL_ORIGINS,
   MODEL_PERIODS,
   MODEL_SORTS,
@@ -43,8 +44,7 @@ export function parseModelQuery(value: unknown): ModelQuery {
   return value === undefined ? {} : modelQuery.parse(value)
 }
 
-/** Bounded to one screenful of cards: the batch becomes a single request body downstream. */
-const modelIds = z.array(modelId).max(100)
+const modelIds = z.array(modelId).max(MODEL_IDS_BATCH_LIMIT)
 
 export function parseModelIds(value: unknown): string[] {
   return modelIds.parse(value)

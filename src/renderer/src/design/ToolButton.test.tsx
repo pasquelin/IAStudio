@@ -1,7 +1,7 @@
 import { mdiPencil } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { TIP_TOP } from './tooltip'
+import { TIP_TOP } from '@/helpers/tooltip'
 import { ToolButton } from './ToolButton'
 
 describe('ToolButton', () => {

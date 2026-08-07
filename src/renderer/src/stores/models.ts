@@ -5,7 +5,7 @@ import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
   type CollectionState,
-} from '@/design/collection-state'
+} from '@/helpers/collection-state'
 
 type ModelsState = {
   /**

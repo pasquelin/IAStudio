@@ -1,7 +1,7 @@
 import type { SerializedDockview } from 'dockview-react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { DEFAULT_WORKSPACE, type WorkspaceId } from '@/app/workspaces'
+import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
 
 /** Serialized Dockview layout. Its shape belongs to Dockview; we never read it back. */
 export type SerializedLayout = SerializedDockview

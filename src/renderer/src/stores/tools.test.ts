@@ -1,27 +1,27 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { clamp, clampSplit, MIN_CENTER, MIN_SIZE, MIN_SPLIT, openFrom, useTools } from './tools'
+import { fitZoneSize, fitSplit, MIN_CENTER, MIN_SIZE, MIN_SPLIT, openFrom, useTools } from './tools'
 
-describe('clamp', () => {
+describe('fitZoneSize', () => {
   it('leaves room for the documents area', () => {
     // 1000 wide, nothing opposite, 240 reserved for the center.
-    expect(clamp(900, 1000, 0)).toBe(1000 - MIN_CENTER)
+    expect(fitZoneSize(900, 1000, 0)).toBe(1000 - MIN_CENTER)
   })
 
   it('accounts for what the opposite zone already takes', () => {
-    expect(clamp(900, 1000, 300)).toBe(1000 - 300 - MIN_CENTER)
+    expect(fitZoneSize(900, 1000, 300)).toBe(1000 - 300 - MIN_CENTER)
   })
 
   it('honours the minimum size', () => {
-    expect(clamp(10, 1000, 0)).toBe(MIN_SIZE)
+    expect(fitZoneSize(10, 1000, 0)).toBe(MIN_SIZE)
   })
 
   it('lets an in-between size through, rounded', () => {
-    expect(clamp(300.4, 1000, 0)).toBe(300)
+    expect(fitZoneSize(300.4, 1000, 0)).toBe(300)
   })
 
   it('never returns less than the minimum, even in a tiny window', () => {
     // Ceiling would be negative here; the floor must still win so the panel stays usable.
-    expect(clamp(500, 200, 0)).toBe(MIN_SIZE)
+    expect(fitZoneSize(500, 200, 0)).toBe(MIN_SIZE)
   })
 })
 
@@ -102,13 +102,13 @@ describe('tools store', () => {
   })
 })
 
-describe('clampSplit', () => {
+describe('fitSplit', () => {
   it('leaves the other half something to live on', () => {
-    expect(clampSplit(500, 400)).toBe(400 - MIN_SPLIT)
+    expect(fitSplit(500, 400)).toBe(400 - MIN_SPLIT)
   })
 
   it('honours the minimum, even in a zone too short for two', () => {
-    expect(clampSplit(10, 120)).toBe(MIN_SPLIT)
+    expect(fitSplit(10, 120)).toBe(MIN_SPLIT)
   })
 })
 

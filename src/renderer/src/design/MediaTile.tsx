@@ -1,15 +1,15 @@
 import { mdiImageOffOutline } from '@mdi/js'
 import { useState, type ReactNode } from 'react'
-import { cn } from './cn'
+import { cn } from '@/helpers/cn'
 import { UiIcon } from './UiIcon'
 
-export const FRAME = 'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
+const FRAME = 'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
 
 /**
  * A picture that fails to load leaves the browser's broken-image glyph in place. The URLs the
  * API signs expire, so this is not hypothetical — the placeholder has to take over.
  */
-export function useLoadable(url?: string): { src?: string; onError: () => void } {
+function useLoadable(url?: string): { src?: string; onError: () => void } {
   const [broken, setBroken] = useState<string | null>(null)
   const usable = url && url !== broken ? url : undefined
 

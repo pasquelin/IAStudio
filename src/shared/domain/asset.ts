@@ -14,6 +14,21 @@ export function isAssetType(value: unknown): value is AssetType {
   return ASSET_TYPES.some(candidate => candidate === value)
 }
 
+/**
+ * Where each kind lands inside a project. One table rather than two: the folders are created
+ * from the project side and written to from the asset side, and a rename on one side alone
+ * would have the writer land in a folder nobody created — an ENOENT at the exact moment a job
+ * succeeds. `Record<AssetType, string>` also makes a new kind a compile error, not a surprise.
+ */
+export const ASSET_FOLDERS: Record<AssetType, string> = {
+  image: 'assets/img',
+  video: 'assets/vid',
+  audio: 'assets/aud',
+  mesh: 'assets/3d',
+  texture: 'assets/tex',
+  skybox: 'assets/sky',
+}
+
 export type AssetLocation = 'local' | 'cloud'
 
 export type Asset = {

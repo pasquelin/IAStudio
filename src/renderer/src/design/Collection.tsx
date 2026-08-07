@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { cn } from './cn'
-import type { CollectionState } from './collection-state'
+import { cn } from '@/helpers/cn'
+import type { CollectionState } from '@/helpers/collection-state'
 
 const GAP = 8
 const ROW_HEIGHT = 26

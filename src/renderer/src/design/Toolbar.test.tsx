@@ -2,11 +2,11 @@ import { mdiCursorDefaultOutline, mdiPencil } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { Toolbar, type Tool } from './Toolbar'
+import { Toolbar, type ToolbarItem } from './Toolbar'
 
 // The expected labels below are French because they come from the i18n bundle: they are
 // user-facing text, not identifiers.
-const TOOLS: Tool[] = [
+const TOOLS: ToolbarItem[] = [
   { id: 'select', labelKey: 'actions.close', icon: mdiCursorDefaultOutline, shortcut: 'V' },
   { id: 'brush', labelKey: 'actions.generate', icon: mdiPencil, shortcut: 'B' },
 ]
@@ -66,7 +66,7 @@ describe('Toolbar', () => {
   })
 
   it('tips a tool’s description while keeping its name terse', () => {
-    const described: Tool[] = [
+    const described: ToolbarItem[] = [
       {
         id: 'brush',
         labelKey: 'actions.generate',
@@ -81,7 +81,7 @@ describe('Toolbar', () => {
   })
 })
 
-const WITH_MODES: Tool[] = [
+const WITH_MODES: ToolbarItem[] = [
   {
     id: 'eraser',
     labelKey: 'actions.close',
@@ -93,7 +93,7 @@ const WITH_MODES: Tool[] = [
   },
 ]
 
-const SINGLE_MODE: Tool[] = [
+const SINGLE_MODE: ToolbarItem[] = [
   {
     id: 'eraser',
     labelKey: 'actions.close',

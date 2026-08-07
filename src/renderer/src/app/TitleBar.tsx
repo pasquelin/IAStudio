@@ -1,16 +1,11 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/design/cn'
+import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
+import { cn } from '@/helpers/cn'
 import { UiIcon } from '@/design/UiIcon'
 import { useWindowState } from '@/hooks/useWindowState'
-import { workspaceLabelKey, WORKSPACES, type WorkspaceId } from './workspaces'
-
-/**
- * `app-region` is not typed by React: the whole bar is draggable, and every control must
- * explicitly switch back to `no-drag`, otherwise it becomes unclickable.
- */
-const DRAGGABLE: CSSProperties = { WebkitAppRegion: 'drag' } as CSSProperties
-const CLICKABLE: CSSProperties = { WebkitAppRegion: 'no-drag' } as CSSProperties
+import type { WorkspaceId } from '@shared/domain/workspace'
+import { workspaceLabelKey, WORKSPACES } from '@/helpers/workspaces'
 
 export type TitleBarProps = {
   activeWorkspace: WorkspaceId

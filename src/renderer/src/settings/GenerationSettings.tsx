@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { CONCURRENT_JOBS_RANGE, MAX_RETRIES_RANGE } from '@shared/domain/settings'
 import { useSettings } from '@/stores/settings'
 
 const NUMBER_INPUT = 'input input-sm w-24'
@@ -15,8 +16,8 @@ export function GenerationSettings() {
         <input
           className={NUMBER_INPUT}
           type="number"
-          min={1}
-          max={16}
+          min={CONCURRENT_JOBS_RANGE.min}
+          max={CONCURRENT_JOBS_RANGE.max}
           value={generation.concurrentJobs}
           onChange={event => {
             const concurrentJobs = event.target.valueAsNumber
@@ -30,8 +31,8 @@ export function GenerationSettings() {
         <input
           className={NUMBER_INPUT}
           type="number"
-          min={0}
-          max={10}
+          min={MAX_RETRIES_RANGE.min}
+          max={MAX_RETRIES_RANGE.max}
           value={generation.maxRetries}
           onChange={event => {
             const maxRetries = event.target.valueAsNumber

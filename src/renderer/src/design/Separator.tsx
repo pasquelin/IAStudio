@@ -1,4 +1,4 @@
-import { cn } from './cn'
+import { cn } from '@/helpers/cn'
 
 export type SeparatorProps = {
   orientation?: 'vertical' | 'horizontal'

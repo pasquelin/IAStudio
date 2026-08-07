@@ -1,5 +1,5 @@
 import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
-import { cn } from '@/design/cn'
+import { cn } from '@/helpers/cn'
 
 export type ResizeHandleProps = {
   /** `vertical` moves up and down and sets a height; `horizontal` sets a width. */

@@ -1,12 +1,13 @@
 import { mdiClose } from '@mdi/js'
 import { memo, type HTMLAttributes, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/design/cn'
-import { TIP_BOTTOM } from '@/design/tooltip'
+import { cn } from '@/helpers/cn'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
 import { TOOL_COMPONENTS } from './tool-components'
-import { toolTitleKey, type ToolId } from './tools'
+import type { ToolId } from '@shared/domain/tool'
+import { toolTitleKey } from '@/helpers/tool-registry'
 
 export type ToolWindowProps = {
   tool: ToolId
@@ -90,7 +91,7 @@ export function Panel({ children, className, ...rest }: HTMLAttributes<HTMLEleme
   )
 }
 
-export function PanelHeader({ title, children }: { title: string; children?: ReactNode }) {
+function PanelHeader({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <header className="flex h-(--sc-header) shrink-0 items-center gap-1 pr-1.5 pl-3">
       <span className="text-text truncate text-[13px] font-semibold">{title}</span>

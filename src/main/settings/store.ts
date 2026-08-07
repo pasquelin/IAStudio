@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
-import { salvagePartialSettings } from './validation'
+import { parseStoredCredentials, salvagePartialSettings } from './validation'
 
 export type Credentials = {
   key: string
@@ -40,21 +40,6 @@ function merge(base: Settings, partial: PartialSettings): Settings {
   }
 }
 
-function parseCredentials(plain: string): Credentials | null {
-  const parsed: unknown = JSON.parse(plain)
-  if (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'key' in parsed &&
-    'secret' in parsed &&
-    typeof parsed.key === 'string' &&
-    typeof parsed.secret === 'string'
-  ) {
-    return { key: parsed.key, secret: parsed.secret }
-  }
-  return null
-}
-
 export function createSettingsStore(adapter: PersistenceAdapter): SettingsStore {
   const read = (): Settings =>
     merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
@@ -68,7 +53,7 @@ export function createSettingsStore(adapter: PersistenceAdapter): SettingsStore 
     const encrypted = adapter.read<string>(CREDENTIALS_KEY)
     if (!encrypted) return null
     try {
-      return parseCredentials(adapter.decrypt(encrypted))
+      return parseStoredCredentials(adapter.decrypt(encrypted))
     } catch {
       // Keychain changed, profile migrated, data corrupted.
       return null

@@ -1,17 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
-import type { Asset, AssetType } from '@shared/domain/asset'
+import { ASSET_FOLDERS, type Asset, type AssetType } from '@shared/domain/asset'
 import type { Catalog } from '@main/project/catalog'
-
-/** Where each kind of asset lands inside a project — mirrors `PROJECT_FOLDERS`. */
-const FOLDER: Record<AssetType, string> = {
-  image: 'assets/img',
-  video: 'assets/vid',
-  audio: 'assets/aud',
-  mesh: 'assets/3d',
-  texture: 'assets/tex',
-  skybox: 'assets/sky',
-}
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {
   image: '.png',
@@ -59,7 +49,7 @@ export function extensionOf(url: string, type: AssetType): string {
 }
 
 export function relativePathFor(id: string, url: string, type: AssetType): string {
-  return `${FOLDER[type]}/${id}${extensionOf(url, type)}`
+  return `${ASSET_FOLDERS[type]}/${id}${extensionOf(url, type)}`
 }
 
 /**

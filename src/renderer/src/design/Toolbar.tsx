@@ -1,13 +1,13 @@
 import { mdiCheck, mdiRedo, mdiUndo } from '@mdi/js'
 import { Fragment, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from './cn'
+import { cn } from '@/helpers/cn'
 import { Flyout } from './Flyout'
 import { Separator } from './Separator'
-import { tipFor, type TooltipFactory } from './tooltip'
+import { tipFor, type TooltipFactory } from '@/helpers/tooltip'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
-import { useHoverFlyout } from './useHoverFlyout'
+import { useHoverFlyout } from '../hooks/useHoverFlyout'
 
 export type ToolMode = {
   id: string
@@ -21,7 +21,7 @@ export type ToolMode = {
   disabled?: boolean
 }
 
-export type Tool = {
+export type ToolbarItem = {
   id: string
   /** i18n key of the label — never the displayed text. */
   labelKey: string
@@ -39,7 +39,7 @@ export type Tool = {
 
 export type ToolbarProps = {
   /** Tools rendered, in order. */
-  tools: Tool[]
+  tools: ToolbarItem[]
   activeTool?: string
   onTool: (id: string) => void
   /** Called when a row of a tool's flyout is chosen. */
@@ -174,7 +174,7 @@ function HistoryButton({
 }
 
 type ToolItemProps = {
-  tool: Tool
+  tool: ToolbarItem
   active: boolean
   /** Placement of the button's own tooltip, and of its flyout rows' — both follow the bar. */
   tip: TooltipFactory

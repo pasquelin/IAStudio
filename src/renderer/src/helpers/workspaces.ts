@@ -35,9 +35,9 @@ const FAMILIES: Record<WorkspaceId, ModelFamily> = {
 }
 
 /**
- * Derived from the shared registry rather than relisted, the way `app/tools.ts` derives from
- * `TOOL_PLACEMENTS`: a seventh workspace is then declared once, and the compiler demands its
- * icon and its family instead of letting the list drift.
+ * Derived from the shared registry rather than relisted, the way `tool-registry.ts` derives
+ * from `TOOL_PLACEMENTS`: a seventh workspace is then declared once, and the compiler demands
+ * its icon and its family instead of letting the list drift.
  */
 export const WORKSPACES: readonly Workspace[] = WORKSPACE_IDS.map(id => ({
   id,
@@ -59,6 +59,3 @@ export function workspaceById(id: string): Workspace {
   if (!workspace) throw new Error(`Unknown workspace: ${id}`)
   return workspace
 }
-
-export { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
-export type { WorkspaceId } from '@shared/domain/workspace'

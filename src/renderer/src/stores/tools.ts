@@ -9,6 +9,7 @@ import {
   type ToolSlot,
   type ToolZone,
 } from '@shared/domain/tool'
+import { isRecord } from '@/helpers/guards'
 
 export const MIN_SIZE = 140
 
@@ -71,13 +72,13 @@ const OPPOSITE: Record<ToolZone, ToolZone> = {
  * the container independently would let left and right add up to the full width, leaving the
  * documents area at zero — and overflowing once the window shrinks.
  */
-export function clamp(size: number, available: number, opposite: number): number {
+export function fitZoneSize(size: number, available: number, opposite: number): number {
   const ceiling = Math.max(MIN_SIZE, Math.round(available - opposite - MIN_CENTER))
   return Math.min(ceiling, Math.max(MIN_SIZE, Math.round(size)))
 }
 
 /** Same idea one level down: neither half of a zone may swallow the other. */
-export function clampSplit(size: number, available: number): number {
+export function fitSplit(size: number, available: number): number {
   const ceiling = Math.max(MIN_SPLIT, Math.round(available - MIN_SPLIT))
   return Math.min(ceiling, Math.max(MIN_SPLIT, Math.round(size)))
 }
@@ -90,10 +91,6 @@ function isZoneOpen(open: OpenByZone, zone: ToolZone): boolean {
 
 function sizeOf(sizes: SizesByZone, zone: ToolZone, open: OpenByZone): number {
   return isZoneOpen(open, zone) ? (sizes[zone] ?? DEFAULT_SIZES[zone]) : 0
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 /**
@@ -170,14 +167,14 @@ export const useTools = create<ToolsState>()(
       // clamps to the same number for as long as the pointer keeps going.
       resize: (zone, size, available) =>
         set(state => {
-          const next = clamp(size, available, sizeOf(state.sizes, OPPOSITE[zone], state.open))
+          const next = fitZoneSize(size, available, sizeOf(state.sizes, OPPOSITE[zone], state.open))
           if (next === state.sizes[zone]) return state
           return { sizes: { ...state.sizes, [zone]: next } }
         }),
 
       resplit: (zone, size, available) =>
         set(state => {
-          const next = clampSplit(size, available)
+          const next = fitSplit(size, available)
           if (next === state.splits[zone]) return state
           return { splits: { ...state.splits, [zone]: next } }
         }),
@@ -190,13 +187,17 @@ export const useTools = create<ToolsState>()(
             const stored = sizes[zone]
             if (stored === undefined) continue
             const available = isHorizontal(zone) ? height : width
-            sizes[zone] = clamp(stored, available, sizeOf(state.sizes, OPPOSITE[zone], state.open))
+            sizes[zone] = fitZoneSize(
+              stored,
+              available,
+              sizeOf(state.sizes, OPPOSITE[zone], state.open),
+            )
 
             // The divider lives inside the zone, along its other axis: left unclamped it ends up
             // past the bottom of a shrunken column, with no way to drag it back.
             const divider = splits[zone]
             if (divider === undefined) continue
-            splits[zone] = clampSplit(divider, isHorizontal(zone) ? width : height)
+            splits[zone] = fitSplit(divider, isHorizontal(zone) ? width : height)
           }
           return { sizes, splits }
         }),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_WORKSPACE, workspaceById, workspaceLabelKey, WORKSPACES } from './workspaces'
+import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
+import { workspaceById, workspaceLabelKey, WORKSPACES } from './workspaces'
 
 describe('workspaces', () => {
   it('gives every workspace a translatable label key', () => {

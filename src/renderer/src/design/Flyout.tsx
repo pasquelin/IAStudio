@@ -1,6 +1,6 @@
 import { useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { cn } from './cn'
+import { cn } from '@/helpers/cn'
 
 export type FlyoutProps = {
   anchor: HTMLElement | null

@@ -8,7 +8,7 @@ const box: SceneObject = { id: 'box-1', kind: 'box', name: 'Box', transform: IDE
 
 describe('scenes store', () => {
   beforeEach(() => {
-    useScenes.setState({ scenes: {}, histories: {} })
+    useScenes.setState({ states: {}, histories: {} })
   })
 
   it('gives an empty scene for a document never opened', () => {
@@ -28,21 +28,21 @@ describe('scenes store', () => {
   })
 
   it('undoes and redoes within one document', () => {
-    const { runCommand, undoScene, redoScene } = useScenes.getState()
+    const { runCommand, undo, redo } = useScenes.getState()
     runCommand('doc-1', addObject(box))
 
-    undoScene('doc-1')
+    undo('doc-1')
     expect(sceneOf(useScenes.getState(), 'doc-1').objects).toHaveLength(0)
     expect(canRedo(historyOf(useScenes.getState(), 'doc-1'))).toBe(true)
 
-    redoScene('doc-1')
+    redo('doc-1')
     expect(sceneOf(useScenes.getState(), 'doc-1').objects).toHaveLength(1)
   })
 
   it('forgets a scene and its history when the document closes', () => {
     useScenes.getState().runCommand('doc-1', addObject(box))
-    useScenes.getState().dropScene('doc-1')
-    expect(useScenes.getState().scenes['doc-1']).toBeUndefined()
+    useScenes.getState().drop('doc-1')
+    expect(useScenes.getState().states['doc-1']).toBeUndefined()
     expect(useScenes.getState().histories['doc-1']).toBeUndefined()
   })
 })

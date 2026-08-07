@@ -15,7 +15,7 @@ const layer: Layer = {
 
 describe('canvases store', () => {
   beforeEach(() => {
-    useCanvases.setState({ canvases: {}, histories: {} })
+    useCanvases.setState({ states: {}, histories: {} })
   })
 
   it('gives a fresh document for one never opened', () => {
@@ -35,14 +35,14 @@ describe('canvases store', () => {
   })
 
   it('undoes and redoes within one document', () => {
-    const { runCommand, undoCanvas, redoCanvas } = useCanvases.getState()
+    const { runCommand, undo, redo } = useCanvases.getState()
     runCommand('doc-1', addLayer(layer))
 
-    undoCanvas('doc-1')
+    undo('doc-1')
     expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(1)
     expect(canRedo(historyOf(useCanvases.getState(), 'doc-1'))).toBe(true)
 
-    redoCanvas('doc-1')
+    redo('doc-1')
     expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(2)
   })
 
@@ -55,8 +55,8 @@ describe('canvases store', () => {
 
   it('forgets a canvas and its history when the document closes', () => {
     useCanvases.getState().runCommand('doc-1', addLayer(layer))
-    useCanvases.getState().dropCanvas('doc-1')
-    expect(useCanvases.getState().canvases['doc-1']).toBeUndefined()
+    useCanvases.getState().drop('doc-1')
+    expect(useCanvases.getState().states['doc-1']).toBeUndefined()
     expect(useCanvases.getState().histories['doc-1']).toBeUndefined()
   })
 })

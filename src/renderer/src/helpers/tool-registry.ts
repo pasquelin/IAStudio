@@ -72,6 +72,3 @@ export function toolServes(id: ToolId, workspace: WorkspaceId): boolean {
 export function toolTitleKey(id: ToolId): string {
   return `panels.${id}`
 }
-
-export { isHorizontal, isLeading, servesWorkspace, TOOL_SLOTS } from '@shared/domain/tool'
-export type { ToolId, ToolSlot, ToolZone } from '@shared/domain/tool'

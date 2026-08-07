@@ -28,7 +28,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     const renderer = new SceneRenderer({
       onSelect: id => {
         const store = useScenes.getState()
-        store.setScene(documentId, selectObject(sceneOf(store, documentId), id))
+        store.replace(documentId, selectObject(sceneOf(store, documentId), id))
       },
       onTransform: (id, transform) =>
         useScenes.getState().runCommand(documentId, setTransform(id, transform)),
@@ -71,9 +71,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return
         }
         case 'scene.undo':
-          return store.undoScene(documentId)
+          return store.undo(documentId)
         case 'scene.redo':
-          return store.redoScene(documentId)
+          return store.redo(documentId)
       }
     },
     [documentId],
