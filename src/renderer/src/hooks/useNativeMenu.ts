@@ -3,6 +3,8 @@ import { placementOf } from '@shared/domain/tool'
 import type { MenuCommand } from '@shared/ipc'
 import { toolServes } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
+import { useAddNode } from '@/hooks/useAddNode'
+import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
@@ -26,6 +28,9 @@ function runCommand(command: MenuCommand): void {
  * into the void and the menu entries would silently do nothing.
  */
 export function useNativeMenu(): void {
+  const documentId = useDocuments(state => state.activeId)
+  const addNodeOf = useAddNode(documentId)
+
   useEffect(() => {
     const bridge = getBridge()
     if (!bridge) return
@@ -44,10 +49,13 @@ export function useNativeMenu(): void {
     })
 
     const stopCommand = bridge.menu.onCommand(runCommand)
+    // The same path the toolbar and the panels take: two ways of adding a node would drift.
+    const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => addNodeOf(kind))
 
     return () => {
       stopTool()
       stopCommand()
+      stopSceneAdd()
     }
-  }, [])
+  }, [addNodeOf])
 }

@@ -5,6 +5,7 @@ import type { Project } from './domain/project'
 import type { AuthState, PartialSettings, Settings } from './domain/settings'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { WindowState } from './domain/window'
+import type { WorkspaceId } from './domain/workspace'
 
 /**
  * Channel names, declared with literal types. The annotation is verbose on purpose: the
@@ -35,6 +36,7 @@ export type Channels = {
 
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
+  windowWorkspace: 'window:workspace'
 }
 
 /**
@@ -64,6 +66,7 @@ export const CHANNELS: Channels = {
 
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
+  windowWorkspace: 'window:workspace',
 }
 
 export type LogLevel = 'info' | 'warn' | 'error'
@@ -87,6 +90,7 @@ export const EVENTS = {
   openTool: 'evt:open-tool',
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
+  sceneAdd: 'evt:scene-add',
 }
 
 export type Unsubscribe = () => void
@@ -99,6 +103,13 @@ export type ToolRequest = {
 
 /** Native menu commands with no payload, identified by a verb. */
 export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset'
+
+/**
+ * Request to drop a node in the active scene, coming from the native menu. `kind` stays a
+ * string: `MeshKind | LightKind` would make the boundary reject a kind the renderer knows and
+ * this build of the menu does not.
+ */
+export type SceneAddRequest = { kind: string }
 
 /** What `window.studio` exposes. Every method maps to exactly one channel in `CHANNELS`. */
 export type StudioBridge = {
@@ -133,10 +144,13 @@ export type StudioBridge = {
     toggleFullScreen: () => Promise<void>
     state: () => Promise<WindowState>
     onState: (callback: (state: WindowState) => void) => Unsubscribe
+    /** Tells the main process which workspace is up, so the menu can follow it. */
+    setWorkspace: (workspace: WorkspaceId) => Promise<void>
   }
   menu: {
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
     onCommand: (callback: (command: MenuCommand) => void) => Unsubscribe
+    onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
   }
   diagnostics: {
     onLog: (callback: (entry: LogEntry) => void) => Unsubscribe

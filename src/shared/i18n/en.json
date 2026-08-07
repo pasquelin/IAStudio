@@ -311,6 +311,9 @@
     "openProject": "Open project…",
     "settings": "Settings…",
     "tools": "Tool windows",
+    "add": "Add",
+    "mesh": "Mesh",
+    "light": "Light",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen"
   },

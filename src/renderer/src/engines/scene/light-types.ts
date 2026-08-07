@@ -5,26 +5,34 @@ import {
   mdiSpotlightBeam,
   mdiWeatherSunny,
 } from '@mdi/js'
+import { LIGHT_ENTRIES, type LightKind } from '@shared/domain/scene'
 import type { LightDescriptor } from './scene-state'
 
 export type LightType = {
-  kind: LightDescriptor['kind']
+  kind: LightKind
   labelKey: string
   icon: string
   create: () => LightDescriptor
 }
 
-/** Defaults taken from `three.js/editor/js/Menubar.Add.js`. */
-export const LIGHT_TYPES: readonly LightType[] = [
-  {
-    kind: 'ambient',
-    labelKey: 'lights.ambient',
+/**
+ * What the shared table cannot carry. Defaults taken from
+ * `three.js/editor/js/Menubar.Add.js`; `create` is narrowed per kind, so a builder handed the
+ * wrong descriptor fails to compile.
+ */
+type LightBuilders = {
+  [K in LightKind]: {
+    icon: string
+    create: () => Extract<LightDescriptor, { kind: K }>
+  }
+}
+
+const LIGHT_BUILDERS: LightBuilders = {
+  ambient: {
     icon: mdiLightbulbGroupOutline,
     create: () => ({ kind: 'ambient', color: '#222222', intensity: 1 }),
   },
-  {
-    kind: 'directional',
-    labelKey: 'lights.directional',
+  directional: {
     icon: mdiWeatherSunny,
     create: () => ({
       kind: 'directional',
@@ -33,9 +41,7 @@ export const LIGHT_TYPES: readonly LightType[] = [
       target: { x: 0, y: 0, z: 0 },
     }),
   },
-  {
-    kind: 'hemisphere',
-    labelKey: 'lights.hemisphere',
+  hemisphere: {
     icon: mdiCircleHalfFull,
     create: () => ({
       kind: 'hemisphere',
@@ -44,15 +50,11 @@ export const LIGHT_TYPES: readonly LightType[] = [
       intensity: 1,
     }),
   },
-  {
-    kind: 'point',
-    labelKey: 'lights.point',
+  point: {
     icon: mdiLightbulbOn,
     create: () => ({ kind: 'point', color: '#ffffff', intensity: 1, distance: 0, decay: 2 }),
   },
-  {
-    kind: 'spot',
-    labelKey: 'lights.spot',
+  spot: {
     icon: mdiSpotlightBeam,
     create: () => ({
       kind: 'spot',
@@ -65,7 +67,13 @@ export const LIGHT_TYPES: readonly LightType[] = [
       target: { x: 0, y: 0, z: 0 },
     }),
   },
-]
+}
+
+export const LIGHT_TYPES: readonly LightType[] = LIGHT_ENTRIES.map(entry => ({
+  kind: entry.kind,
+  labelKey: entry.labelKey,
+  ...LIGHT_BUILDERS[entry.kind],
+}))
 
 export function lightByKind(kind: string): LightType | null {
   return LIGHT_TYPES.find(light => light.kind === kind) ?? null

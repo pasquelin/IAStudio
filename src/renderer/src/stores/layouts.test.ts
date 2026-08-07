@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Orientation } from 'dockview-react'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useLayouts, type SerializedLayout } from './layouts'
 
 function layout(marker: string): SerializedLayout {
@@ -40,6 +41,16 @@ describe('layouts store', () => {
     const state = useLayouts.getState()
     expect(state.activeWorkspace).toBe('image')
     expect(state.layouts.image?.panels).toHaveProperty('generator')
+  })
+
+  // The native menu shows what the active space can do; nothing else tells the main process.
+  it('tells the main process which workspace is up', () => {
+    const setWorkspace = vi.fn(() => Promise.resolve())
+    installFakeBridge({ window: { setWorkspace } })
+
+    useLayouts.getState().setActiveWorkspace('3d')
+
+    expect(setWorkspace).toHaveBeenCalledWith('3d')
   })
 
   it('forgets a single workspace layout', () => {

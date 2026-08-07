@@ -47,6 +47,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),
       onState: noSubscription,
+      setWorkspace: () => Promise.resolve(),
       ...overrides.window,
     },
     diagnostics: {
@@ -56,6 +57,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     menu: {
       onOpenTool: noSubscription,
       onCommand: noSubscription,
+      onSceneAdd: noSubscription,
       ...overrides.menu,
     },
   }

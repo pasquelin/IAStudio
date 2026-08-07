@@ -311,6 +311,9 @@
     "openProject": "Ouvrir un projet…",
     "settings": "Réglages…",
     "tools": "Modules",
+    "add": "Ajouter",
+    "mesh": "Maille",
+    "light": "Lumière",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran"
   },
