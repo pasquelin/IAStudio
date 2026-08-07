@@ -81,7 +81,7 @@
     "failed": "Failed",
     "cancel": "Stop preparing this file",
     "dismiss": "Remove from the list",
-    "noFfmpeg": "ffmpeg not found: no proxy, no waveform. Set its path in the settings.",
+    "noFfmpeg": "Video preparation unavailable: no lighter copy, no waveform.",
     "duplicate": "Already in the project",
     "unreadable": "Unreadable file"
   },
@@ -575,7 +575,7 @@
     },
     "ffmpegPath": {
       "title": "Path to ffmpeg",
-      "help": "Where the ffmpeg program lives. It prepares imported videos: a lighter copy to scrub through smoothly, and the drawing of the soundtrack. Leave it empty to let the application find it by itself. Without it, importing still works, just less comfortably.",
+      "help": "Where to find an ffmpeg to use instead of the one shipped with the application. Leave empty unless you insist on your own.",
       "placeholder": "/opt/homebrew/bin/ffmpeg"
     },
     "defaultModel": "Default model",

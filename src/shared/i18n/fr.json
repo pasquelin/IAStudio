@@ -81,7 +81,7 @@
     "failed": "Échec",
     "cancel": "Interrompre la préparation",
     "dismiss": "Retirer de la liste",
-    "noFfmpeg": "ffmpeg introuvable : ni proxy ni waveform. Indiquez son chemin dans les réglages.",
+    "noFfmpeg": "Préparation vidéo indisponible : ni copie allégée ni forme d’onde.",
     "duplicate": "Déjà dans le projet",
     "unreadable": "Fichier illisible"
   },
@@ -575,7 +575,7 @@
     },
     "ffmpegPath": {
       "title": "Chemin de ffmpeg",
-      "help": "Emplacement du programme ffmpeg, qui prépare les vidéos importées : une copie allégée pour naviguer sans à-coups, et le dessin de la bande son. Laissez vide pour que l’application le cherche elle-même. Sans lui, l’import fonctionne quand même, mais en moins confortable.",
+      "help": "Emplacement d’un programme ffmpeg à utiliser à la place de celui fourni avec l’application. Laissez vide, sauf si vous tenez au vôtre.",
       "placeholder": "/opt/homebrew/bin/ffmpeg"
     },
     "defaultModel": "Modèle par défaut",

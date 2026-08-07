@@ -35,6 +35,16 @@ electronFuses:
 asarUnpack:
   - '**/*.node'
 
+# The encoder the studio ships with. `beforePack` fetches the one matching the target about to
+# be packed, so a run building several of them gives each its own. Outside the asar on purpose:
+# a binary has to be executable on disk to be spawned.
+beforePack: scripts/before-pack.mjs
+
+extraResources:
+  - from: resources/ffmpeg
+    to: ffmpeg
+    filter: ['**/*']
+
 mac:
   category: public.app-category.graphics-design
   icon: build/icon.svg
@@ -42,6 +52,11 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  # Signed with the app, or the hardened runtime refuses to spawn it — an unsigned executable
+  # inside a signed bundle is exactly what Gatekeeper is there to stop.
+  binaries:
+    - Contents/Resources/ffmpeg/ffmpeg
+    - Contents/Resources/ffmpeg/ffprobe
   target:
     - target: dmg
       arch: [arm64, x64]

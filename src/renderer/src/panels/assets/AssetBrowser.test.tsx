@@ -117,19 +117,21 @@ describe('AssetBrowser', () => {
     expect(cancel).toHaveBeenCalledWith('vid')
   })
 
-  it('says what is unavailable rather than failing quietly when ffmpeg is missing', () => {
+  // The studio ships its own encoder, so this is the developer's copy missing, never the
+  // user's install: it states what will not happen, and asks for nothing.
+  it('says what is unavailable rather than failing quietly when the encoder is missing', () => {
     useMedia.setState({
       capabilities: { ffmpeg: false },
       progress: { vid: { assetId: 'vid', stage: 'probe', ratio: 0.1 } },
     })
     render(<AssetBrowser />)
 
-    expect(screen.getByText(/ffmpeg introuvable/)).toBeInTheDocument()
+    expect(screen.getByText(/Préparation vidéo indisponible/)).toBeInTheDocument()
   })
 
   it('leaves the browser alone when nothing is being ingested', () => {
     render(<AssetBrowser />)
-    expect(screen.queryByText(/ffmpeg introuvable/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Préparation vidéo indisponible/)).not.toBeInTheDocument()
   })
 
   // The bar follows the shape of the zone, not the workspace: no exception is coded for Video,

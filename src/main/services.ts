@@ -17,6 +17,7 @@ import { isDevelopment } from '@main/environment'
 import { createAssetCollector } from './assets/collector'
 import { serveAssets, servedFileOf } from './assets/protocol'
 import { createFfmpegResolver } from './media/ffmpeg'
+import { bundledFfmpeg, resourcesRoot } from './resources'
 import { linkedAsset, mediaFilters } from './media/link'
 import {
   binaryRuns,
@@ -199,9 +200,10 @@ export function createServices(settings: SettingsStore): Services {
   })
 
   const ffmpeg = createFfmpegResolver(() => ({
-    // No `resources/ffmpeg/` yet: the bundled binary is a task of its own — see spec § 4.
-    bundled: undefined,
+    bundled: bundledFfmpeg(resourcesRoot(), process.platform),
     configured: settings.read().media.ffmpegPath,
+    // Last, and mostly for development, where the shipped binary is only there once
+    // `pnpm ffmpeg:fetch` has run.
     onPath: findOnPath('ffmpeg', process.env.PATH, delimiter, existsSync),
     exists: existsSync,
   }))
