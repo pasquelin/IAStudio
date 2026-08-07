@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_SETTINGS_SECTION, sectionFromRoute } from '@shared/domain/settings'
+import type { SettingPath } from '@shared/domain/settings-path'
 import {
   descriptorsIn,
   matchSettings,
   sectionEntry,
+  SETTING_REGISTRY,
   type SettingDescriptor,
 } from '@shared/domain/settings-registry'
 import { DRAGGABLE } from '@/helpers/app-region'
@@ -12,8 +14,17 @@ import { cn } from '@/helpers/cn'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
+import { isDirty, useSettingsDraft } from '@/stores/settings-draft'
 import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
+
+/** Whether anything under a section is staged — its own settings, or a sub-section's. */
+function sectionIsStaged(touched: ReadonlySet<SettingPath>, section: SettingsSection): boolean {
+  const ids = [section.id, ...section.children.map(child => child.id)]
+  return SETTING_REGISTRY.some(
+    descriptor => touched.has(descriptor.path) && ids.includes(descriptor.section),
+  )
+}
 
 function NavigationEntry({
   section,
@@ -28,6 +39,9 @@ function NavigationEntry({
 }) {
   const { t } = useTranslation()
   const active = selected === section.id
+  // A section is marked when anything under it is staged, sub-sections included: the change
+  // would otherwise be invisible from a tree the user has navigated away from.
+  const staged = useSettingsDraft(state => sectionIsStaged(state.touched, section))
 
   return (
     <li>
@@ -37,11 +51,20 @@ function NavigationEntry({
         onClick={() => onSelect(section.id)}
         style={{ paddingLeft: `${0.75 + depth * 1}rem` }}
         className={cn(
-          'flex h-(--sc-control) w-full items-center rounded-(--radius-sc-sm) pr-3 text-left text-xs',
+          'flex h-(--sc-control) w-full items-center gap-1.5 rounded-(--radius-sc-sm) pr-3 text-left text-xs',
           active ? 'bg-primary text-primary-content' : 'hover:bg-base-300',
         )}
       >
         {t(section.labelKey)}
+        {staged && (
+          <span
+            title={t('settings.modified')}
+            className={cn(
+              'size-1.5 shrink-0 rounded-full',
+              active ? 'bg-primary-content' : 'bg-primary',
+            )}
+          />
+        )}
       </button>
 
       {section.children.length > 0 && (
@@ -189,6 +212,43 @@ export function SettingsWindow() {
           )}
         </main>
       </div>
+
+      <DraftBar />
     </div>
+  )
+}
+
+/**
+ * Apply, Cancel, OK — and nothing at all while nothing is waiting, so the window is not a form
+ * when it has nothing to submit.
+ *
+ * OK applies and closes; Cancel drops the buffer without writing. Neither exists to be pretty:
+ * without them there is no way back from a session of changes, only a per-row return to the
+ * factory value.
+ */
+function DraftBar() {
+  const { t } = useTranslation()
+  const dirty = useSettingsDraft(isDirty)
+  const apply = useSettingsDraft(state => state.apply)
+  const cancel = useSettingsDraft(state => state.cancel)
+
+  if (!dirty) return null
+
+  return (
+    <footer className="border-base-300 flex shrink-0 items-center justify-end gap-2 border-t px-4 py-2">
+      <button type="button" className="btn btn-sm btn-ghost" onClick={cancel}>
+        {t('settings.cancel')}
+      </button>
+      <button type="button" className="btn btn-sm" onClick={() => void apply()}>
+        {t('settings.apply')}
+      </button>
+      <button
+        type="button"
+        className="btn btn-sm btn-primary"
+        onClick={() => void apply().then(() => window.close())}
+      >
+        {t('settings.confirm')}
+      </button>
+    </footer>
   )
 }

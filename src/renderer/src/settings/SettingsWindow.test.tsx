@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_SETTINGS,
   type PartialSettings,
@@ -9,6 +9,7 @@ import {
 } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
+import { useSettingsDraft } from '@/stores/settings-draft'
 import { SettingsWindow } from './SettingsWindow'
 
 function navigation(): HTMLElement {
@@ -16,6 +17,10 @@ function navigation(): HTMLElement {
 }
 
 describe('SettingsWindow', () => {
+  beforeEach(() => {
+    useSettingsDraft.setState({ pending: {}, touched: new Set() })
+  })
+
   afterEach(() => {
     vi.unstubAllGlobals()
   })
@@ -108,7 +113,7 @@ describe('SettingsWindow', () => {
     expect(screen.queryByLabelText(/Clé API/)).not.toBeInTheDocument()
   })
 
-  it('writes a change as it is made rather than behind an Apply button', async () => {
+  it('writes nothing until Apply is asked for', async () => {
     const write = vi.fn((): Promise<Settings> => Promise.resolve(DEFAULT_SETTINGS))
     installFakeBridge({ settings: { write } })
 
@@ -116,7 +121,33 @@ describe('SettingsWindow', () => {
     await userEvent.click(within(navigation()).getByRole('button', { name: 'Apparence' }))
     await userEvent.selectOptions(screen.getByLabelText(/Densité/), 'compact')
 
+    expect(write).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }))
+
     expect(write).toHaveBeenCalledWith({ appearance: { density: 'compact' } })
+  })
+
+  it('drops what was staged when the change is cancelled', async () => {
+    const write = vi.fn((): Promise<Settings> => Promise.resolve(DEFAULT_SETTINGS))
+    installFakeBridge({ settings: { write } })
+
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Apparence' }))
+    await userEvent.selectOptions(screen.getByLabelText(/Densité/), 'compact')
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+
+    expect(write).not.toHaveBeenCalled()
+    // Back to what is stored, which is what "cancel" has to mean for the control too.
+    expect(screen.getByLabelText(/Densité/)).toHaveValue('comfortable')
+  })
+
+  // A window that shows Apply and Cancel with nothing waiting reads as a form to submit.
+  it('shows no buttons while nothing is waiting', () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    expect(screen.queryByRole('button', { name: 'Appliquer' })).not.toBeInTheDocument()
   })
 
   // What a list of sections cannot do: a user knows what they want, not which tab holds it.
@@ -214,17 +245,19 @@ describe('SettingsWindow', () => {
 
     const picker = await screen.findByLabelText(/Modèle par défaut/)
     await userEvent.selectOptions(picker, 'model_flux')
-    expect(written.at(-1)).toEqual({ generation: { defaultModels: { image: 'model_flux' } } })
 
-    useSettings.setState(state => ({
-      settings: {
-        ...state.settings,
-        generation: { ...state.settings.generation, defaultModels: { image: 'model_flux' } },
-      },
-    }))
+    // Staged like every other setting rather than written on the spot: this screen goes
+    // through the buffer too, so it cannot slip past Apply on its own.
+    expect(written).toEqual([])
+    expect(useSettingsDraft.getState().pending).toEqual({
+      generation: { defaultModels: { image: 'model_flux' } },
+    })
 
     await userEvent.selectOptions(picker, '')
     // Absence of a key, not an empty model id — which the main process would reject.
+    expect(useSettingsDraft.getState().pending).toEqual({ generation: { defaultModels: {} } })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }))
     expect(written.at(-1)).toEqual({ generation: { defaultModels: {} } })
   })
 })

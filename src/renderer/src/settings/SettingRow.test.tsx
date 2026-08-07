@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { SettingPath, SettingValue } from '@shared/domain/settings-path'
 import { descriptorAt } from '@shared/domain/settings-registry'
 import { useSettings } from '@/stores/settings'
+import { useSettingsDraft } from '@/stores/settings-draft'
 import { SettingRow } from './SettingRow'
 
 function rowFor(path: SettingPath) {
@@ -15,20 +16,28 @@ function rowFor(path: SettingPath) {
 
 type Write = [SettingPath, SettingValue | undefined]
 
+/** The real staging, kept so a capture observes without replacing what the row actually does. */
+const stage = useSettingsDraft.getState().stage
+
 function captureWrites(): Write[] {
   const written: Write[] = []
-  useSettings.setState({
-    setValue: (path, value) => {
+  useSettingsDraft.setState({
+    stage: (path, value) => {
       written.push([path, value])
-      return Promise.resolve()
+      stage(path, value)
     },
   })
   return written
 }
 
+function resetDraft(): void {
+  useSettingsDraft.setState({ pending: {}, touched: new Set(), stage })
+}
+
 describe('SettingRow', () => {
   beforeEach(() => {
     useSettings.setState({ settings: DEFAULT_SETTINGS })
+    resetDraft()
   })
 
   // The whole point of the registry: no setting reaches a screen without being explained.
@@ -217,6 +226,7 @@ describe('SettingRow', () => {
 describe('the controls a kind brings with it', () => {
   beforeEach(() => {
     useSettings.setState({ settings: DEFAULT_SETTINGS })
+    resetDraft()
   })
 
   it('writes a boolean as a boolean, not as the string a checkbox carries', () => {

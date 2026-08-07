@@ -88,6 +88,31 @@ export const DEFAULT_SETTINGS: Settings = {
 /** Derived, so a section added to `Settings` is writable without being restated here. */
 export type PartialSettings = { [K in keyof Settings]?: Partial<Settings[K]> }
 
+/**
+ * The branches, read off the defaults rather than listed: a section added to `Settings` shows
+ * up here on its own, which is what `mergePartial` needs in order not to drop it.
+ */
+const BRANCHES: readonly (keyof Settings)[] = Object.keys(DEFAULT_SETTINGS).filter(
+  (key): key is keyof Settings => key in DEFAULT_SETTINGS,
+)
+
+/**
+ * Accumulates one write onto another, one branch deep — which is the whole depth of `Settings`.
+ *
+ * Not the same thing as the store's `merge`, which completes a partial onto a full `Settings`
+ * and therefore has the compiler check that no branch is missing. This one accumulates two
+ * partials, where an absent branch is normal: it is what an editing buffer is made of.
+ */
+export function mergePartial(base: PartialSettings, next: PartialSettings): PartialSettings {
+  const merged: PartialSettings = { ...base }
+
+  for (const branch of BRANCHES) {
+    if (next[branch]) merged[branch] = { ...base[branch], ...next[branch] }
+  }
+
+  return merged
+}
+
 export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }
 
 /**

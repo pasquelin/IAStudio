@@ -551,6 +551,13 @@
       "help": "What the application does when you launch it. “Reopen the last project” puts you back where you left off. “Open nothing” starts on an empty window, which is quicker and calmer if you juggle a lot of projects.",
       "lastProject": "Reopen the last project",
       "nothing": "Open nothing"
-    }
+    },
+    "modified": "Changed, not applied yet",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "confirm": "OK",
+    "discardTitle": "Some settings have not been applied",
+    "discardBody": "You changed settings without applying them. What would you like to do?",
+    "discard": "Don't apply"
   }
 }

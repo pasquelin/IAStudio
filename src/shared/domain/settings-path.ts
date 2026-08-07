@@ -42,8 +42,14 @@ function isSettingValue(value: unknown): value is SettingValue {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 
-/** Reads one leaf. Absent means the setting is unset, which for an optional path is normal. */
-export function valueAt(settings: Settings, path: SettingPath): SettingValue | undefined {
+/**
+ * Reads one leaf. Absent means the setting is unset, which for an optional path is normal —
+ * and, over a partial, means the write simply says nothing about it.
+ */
+export function valueAt(
+  settings: Settings | PartialSettings,
+  path: SettingPath,
+): SettingValue | undefined {
   let current: unknown = settings
 
   for (const key of path.split('.')) {

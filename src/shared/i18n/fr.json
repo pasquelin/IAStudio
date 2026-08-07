@@ -551,6 +551,13 @@
       "help": "Ce que l’application fait quand vous la lancez. « Rouvrir le dernier projet » vous remet là où vous vous étiez arrêté. « Ne rien ouvrir » démarre sur une fenêtre vide, ce qui est plus rapide et plus reposant si vous jonglez entre beaucoup de projets.",
       "lastProject": "Rouvrir le dernier projet",
       "nothing": "Ne rien ouvrir"
-    }
+    },
+    "modified": "Modifié, pas encore appliqué",
+    "apply": "Appliquer",
+    "cancel": "Annuler",
+    "confirm": "OK",
+    "discardTitle": "Des réglages n’ont pas été appliqués",
+    "discardBody": "Vous avez changé des réglages sans les appliquer. Que voulez-vous faire ?",
+    "discard": "Ne pas appliquer"
   }
 }

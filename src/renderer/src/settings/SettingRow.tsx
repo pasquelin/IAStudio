@@ -9,9 +9,11 @@ import {
   type SettingDescriptor,
 } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
+import { cn } from '@/helpers/cn'
 import { useToken } from '@/hooks/useToken'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
+import { useSettingsDraft } from '@/stores/settings-draft'
 
 /**
  * What a numeric field may hand over. An emptied field is mid-edit, and a value zod would
@@ -296,11 +298,18 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   const { t } = useTranslation()
   // Selected down to the leaf, not the whole settings object: that one is rebuilt on every
   // write, so a row would re-render whenever any other setting — or the open project — moved.
-  const value = useSettings(state => valueAt(state.settings, descriptor.path))
-  const setValue = useSettings(state => state.setValue)
+  const stored = useSettings(state => valueAt(state.settings, descriptor.path))
+  // Two primitive selectors rather than one over the draft: the buffer changes on every
+  // keystroke anywhere in the window, and a row must only re-render for its own leaf.
+  const staged = useSettingsDraft(state => state.touched.has(descriptor.path))
+  const pending = useSettingsDraft(state => valueAt(state.pending, descriptor.path))
+  const stage = useSettingsDraft(state => state.stage)
 
+  const value = staged ? pending : stored
   const fallback = defaultAt(descriptor.path)
-  const modified = value !== fallback
+  // Two different ideas, and they used to share one affordance: `staged` is "changed, not yet
+  // applied", `restorable` is "no longer what it ships with".
+  const restorable = value !== fallback
 
   const id = `setting-${descriptor.path}`
   const describedBy = `${id}-help`
@@ -308,7 +317,13 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   return (
     <div className="border-base-300 flex flex-col gap-1 border-b py-3 last:border-b-0">
       <div className="flex items-center justify-between gap-4">
-        <label htmlFor={id} className="text-xs font-medium">
+        <label htmlFor={id} className="flex items-center gap-1.5 text-xs font-medium">
+          {/* Marks the row AND, through the section it belongs to, the entry in the tree. */}
+          <span
+            aria-hidden={!staged}
+            title={staged ? t('settings.modified') : undefined}
+            className={cn('bg-primary size-1.5 shrink-0 rounded-full', !staged && 'invisible')}
+          />
           {t(descriptor.titleKey)}
         </label>
 
@@ -318,7 +333,7 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
             id={id}
             describedBy={describedBy}
             value={value}
-            onChange={next => void setValue(descriptor.path, next)}
+            onChange={next => stage(descriptor.path, next)}
           />
 
           <button
@@ -328,10 +343,10 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
             // Kept in place rather than unmounted: a button appearing between the control and
             // the edge would shift the whole row the moment a value is touched.
             className="btn btn-ghost btn-xs btn-square"
-            disabled={!modified}
-            onClick={() => void setValue(descriptor.path, fallback)}
+            disabled={!restorable}
+            onClick={() => stage(descriptor.path, fallback)}
           >
-            <UiIcon path={mdiRestore} size={14} className={modified ? '' : 'opacity-0'} />
+            <UiIcon path={mdiRestore} size={14} className={restorable ? '' : 'opacity-0'} />
           </button>
         </div>
       </div>
