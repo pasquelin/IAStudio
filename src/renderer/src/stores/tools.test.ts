@@ -118,23 +118,34 @@ describe('openFrom', () => {
   })
 
   it('opens a tool in every zone it sits in, so changing workspace never hides it', () => {
-    // The shelf lies in the bottom strip nearly everywhere and stands on the right in Video
-    // and Audio. Stored in one, it has to be open in the other, or the workspace that reads it
+    // The shelf lies in the bottom band nearly everywhere and stands in the left column in
+    // Video. Stored in one, it has to be open in the other, or the workspace that reads it
     // elsewhere shows nothing where it belongs.
-    expect(openFrom({ right: { primary: 'assets' } })).toEqual({
-      right: { primary: 'assets' },
+    expect(openFrom({ left: { primary: 'assets' } })).toEqual({
+      left: { primary: 'assets' },
       bottom: { primary: 'assets' },
     })
   })
 
-  it('never displaces a tool an explicit layout already put there', () => {
-    const stored = { right: { primary: 'assets' }, bottom: { primary: 'jobs' } }
-    // `jobs` declares the secondary half today, so it lands there and leaves the primary free
-    // for the shelf rather than being overwritten by it.
-    expect(openFrom(stored)).toEqual({
-      right: { primary: 'assets' },
-      bottom: { primary: 'assets', secondary: 'jobs' },
+  it('lands a tool in the zone it declares today, not the one it was stored under', () => {
+    // The shelf was on the right until version 5; the half it held there is the AI's now.
+    const open = openFrom({ right: { primary: 'assets' } })
+    expect(open.right?.primary).toBeUndefined()
+    expect(open.left?.primary).toBe('assets')
+    expect(open.bottom?.primary).toBe('assets')
+  })
+
+  it('drops the jobs panel, which is no longer a tool window', () => {
+    expect(openFrom({ bottom: { primary: 'assets', secondary: 'jobs' } }).bottom).toEqual({
+      primary: 'assets',
     })
+  })
+
+  it('never leaves a second half in a horizontal band — a band is never cut', () => {
+    const stored = { bottom: { primary: 'timeline', secondary: 'explorer' } }
+    expect(openFrom(stored).bottom?.secondary).toBeUndefined()
+    // The explorer is not lost with the half it was stored in: it goes back to the column.
+    expect(openFrom(stored).left?.secondary).toBe('explorer')
   })
 
   it('reads its own shape back unchanged', () => {

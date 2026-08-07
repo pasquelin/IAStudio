@@ -65,10 +65,10 @@ export const DEFAULT_SPLIT = 240
  */
 const DEFAULT_OPEN: OpenByZone = {
   left: { secondary: 'explorer' },
-  // The shelf rather than the generator: it is what a new project needs first, and it shares
-  // the column with the inspector.
-  right: { primary: 'assets', secondary: 'inspector' },
-  bottom: { primary: 'assets', secondary: 'jobs' },
+  // Models rather than the generator: nothing is chosen on a first run, and the generator does
+  // not exist without a model.
+  right: { primary: 'models', secondary: 'inspector' },
+  bottom: { primary: 'assets' },
 }
 
 const OPPOSITE: Record<ToolZone, ToolZone> = {
@@ -120,19 +120,23 @@ export function openFrom(persisted: unknown): OpenByZone {
 }
 
 /**
- * A tool open in one of its zones is open in all of them.
+ * Re-hangs every stored tool on the placements it declares today, and nowhere else.
  *
- * Which zone a tool occupies can depend on the workspace — the asset shelf lies in the bottom
- * strip nearly everywhere and stands beside the montage in Video and Audio — while what is
- * open is stored per zone. Without this, a layout written while the shelf was on the right
- * leaves it invisible in every workspace that reads it at the bottom, and the only way back
- * is the rail.
+ * Two things ride on this. A tool open in one of its zones must be open in all of them: the
+ * shelf lies in the bottom band nearly everywhere and stands in the left column in Video, while
+ * what is open is stored per zone — a layout written in one workspace would otherwise leave it
+ * invisible in the others. And a tool must leave the zones it no longer declares: the shelf
+ * held the upper right until version 5, which belongs to the AI panels now.
+ *
+ * Rebuilding from the placements rather than filtering the stored map is what makes the second
+ * one free, and what keeps a horizontal band whole — no placement cuts one.
  *
  * It never displaces a tool already there: an explicit choice outranks this repair.
  */
 function openEverywhereItSits(open: OpenByZone): OpenByZone {
   const next: OpenByZone = {}
-  for (const zone of TOOL_ZONES) if (open[zone]) next[zone] = { ...open[zone] }
+  // A zone that was open stays open, even once emptied: it holds its size and its handle.
+  for (const zone of TOOL_ZONES) if (open[zone]) next[zone] = {}
 
   for (const zone of TOOL_ZONES) {
     for (const slot of TOOL_SLOTS) {
@@ -160,9 +164,6 @@ function slotsFrom(stored: unknown): ZoneSlots | null {
     // Through `placementOf`, so an id no version knows any more is dropped rather than
     // reaching `TOOL_COMPONENTS` and blanking the window.
     const placement = placementOf(Reflect.get(stored, slot))
-    // Into the half it declares TODAY, not the one it was stored under — the same promise the
-    // version-2 branch above keeps. A tool that changed half would otherwise stay where an old
-    // layout put it, and hold the place of whoever declares that half now.
     if (placement) slots[placement.slot] = placement.id
   }
   return slots
@@ -264,8 +265,9 @@ export const useTools = create<ToolsState>()(
       // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
       // would reach `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on
       // startup. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
-      // mesh and light panels, and 4 the asset shelf moving out of the bottom strip.
-      version: 5,
+      // mesh and light panels, and 4 the asset shelf moving out of the bottom strip. 5 still
+      // cut that strip in two and knew a `jobs` panel, which the status line carries now.
+      version: 6,
       migrate: persisted => {
         if (typeof persisted !== 'object' || persisted === null) return undefined
         const sizes: unknown = Reflect.get(persisted, 'sizes')
