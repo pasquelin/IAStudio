@@ -21,7 +21,7 @@ const CHECKER = cn(
 
 export function ImageDocument({ documentId }: ImageDocumentProps) {
   const { t } = useTranslation()
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<CanvasEngine | null>(null)
 
   const [tool, setTool] = useState('brush')
@@ -35,7 +35,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
 
   useEffect(() => {
-    const element = canvasRef.current
+    const element = hostRef.current
     if (!element) return
 
     const created = new CanvasEngine({
@@ -78,7 +78,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   return (
     <div className="flex h-full min-h-0">
       <div className={cn('relative min-w-0 flex-1', CHECKER)}>
-        <canvas ref={canvasRef} className="block size-full" />
+        {/* Pixi appends its own canvas here — see `CanvasEngine.mount`. */}
+        <div ref={hostRef} className="absolute inset-0" />
 
         <Toolbar
           className="absolute top-2 left-2"

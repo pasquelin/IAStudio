@@ -141,6 +141,7 @@
     "selectRectangle": "Rectangular selection",
     "selectLasso": "Lasso",
     "move": "Move",
+    "fill": "Fill layer",
     "brush": "Brush",
     "eraser": "Eraser",
     "eraserPoint": "Point eraser",

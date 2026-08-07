@@ -176,7 +176,7 @@ function ToolItem({ tool, active, onTool, onMode }: ToolItemProps) {
       />
 
       {flyout.showing && (
-        <Flyout anchor={anchor}>
+        <Flyout anchor={anchor} {...flyout.flyoutProps}>
           {tool.modes?.map(mode => (
             <button
               key={mode.id}

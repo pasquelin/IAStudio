@@ -141,6 +141,7 @@
     "selectRectangle": "Sélection rectangle",
     "selectLasso": "Lasso",
     "move": "Déplacement",
+    "fill": "Remplir le calque",
     "brush": "Pinceau",
     "eraser": "Gomme",
     "eraserPoint": "Gomme ponctuelle",

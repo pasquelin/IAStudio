@@ -1,7 +1,7 @@
 import { Application, Container, Graphics, RenderTexture, Sprite, type BLEND_MODES } from 'pixi.js'
 import type { BlendMode, CanvasState, Layer } from './canvas-state'
 
-export type CanvasTool = 'select' | 'move' | 'brush' | 'eraser' | 'picker' | 'hand'
+export type CanvasTool = 'select' | 'move' | 'brush' | 'eraser' | 'fill' | 'picker' | 'hand'
 
 export type BrushSettings = {
   size: number
@@ -76,11 +76,14 @@ export class CanvasEngine {
    * `await` must therefore check `disposed`, or a component unmounted quickly ends up with a
    * renderer bound to a canvas that no longer exists.
    */
-  async mount(canvas: HTMLCanvasElement): Promise<void> {
+  async mount(host: HTMLElement): Promise<void> {
     const app = new Application()
+    // Pixi makes its own canvas, which is then appended: sharing one element across mounts is
+    // what breaks under React's double-invoked effects in development. The first instance's
+    // `init` resolves after the second has already claimed the element, sees `disposed`, and
+    // tears down the context the second one is drawing into — leaving a canvas dead for good.
     await app.init({
-      canvas,
-      resizeTo: canvas.parentElement ?? undefined,
+      resizeTo: host,
       backgroundAlpha: 0,
       antialias: true,
       autoDensity: true,
@@ -88,9 +91,15 @@ export class CanvasEngine {
     })
 
     if (this.disposed) {
-      app.destroy({ removeView: false }, { children: true, texture: true, textureSource: true })
+      app.destroy({ removeView: true }, { children: true, texture: true, textureSource: true })
       return
     }
+
+    const canvas = app.canvas
+    canvas.style.display = 'block'
+    canvas.style.width = '100%'
+    canvas.style.height = '100%'
+    host.appendChild(canvas)
 
     this.app = app
     app.stage.addChild(this.world)
@@ -164,7 +173,9 @@ export class CanvasEngine {
     this.stamp.destroy()
     this.marquee.destroy()
 
-    this.app?.destroy({ removeView: false }, { children: true, texture: true, textureSource: true })
+    // `removeView`, because the canvas belongs to this engine now: leaving it behind would
+    // stack a dead canvas per mount.
+    this.app?.destroy({ removeView: true }, { children: true, texture: true, textureSource: true })
     this.app = null
   }
 
@@ -198,6 +209,16 @@ export class CanvasEngine {
     const point = this.toWorld(event)
 
     if (this.tool === 'picker') return this.pick(point)
+
+    if (this.tool === 'fill') {
+      const surface = this.activeSurface()
+      if (!surface) return
+      // Edge to edge, not a flood fill from the click: that is what gives a layer a plain
+      // white, black or red background in one gesture.
+      this.fill(surface, this.brush.color)
+      this.options.onStrokeEnd()
+      return
+    }
     // Middle button pans whatever the tool: it is the one gesture no tool may take over.
     if (this.tool === 'hand' || event.button === 1) {
       this.panning = true

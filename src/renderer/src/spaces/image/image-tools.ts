@@ -3,6 +3,7 @@ import {
   mdiCursorMove,
   mdiEraser,
   mdiEyedropperVariant,
+  mdiFormatColorFill,
   mdiHandBackRight,
   mdiLasso,
   mdiSelectDrag,
@@ -46,6 +47,13 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
       { id: 'point', labelKey: 'imageTools.eraserPoint', icon: mdiEraser },
       { id: 'selection', labelKey: 'imageTools.eraserSelection', icon: mdiSelectionDrag },
     ],
+  },
+  {
+    id: 'fill',
+    tool: 'fill',
+    labelKey: 'imageTools.fill',
+    icon: mdiFormatColorFill,
+    shortcut: 'G',
   },
   {
     id: 'picker',
