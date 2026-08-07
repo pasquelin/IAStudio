@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addObject } from '@/engines/scene/commands'
 import { IDENTITY_TRANSFORM, type SceneObject } from '@/engines/scene/scene-state'
+import { useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { SceneDocument } from './SceneDocument'
 
@@ -29,6 +30,7 @@ describe('SceneDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useScenes.setState({ states: {}, histories: {} })
+    useDocuments.setState({ activeId: 'doc-1' })
   })
 
   it('renders the shared toolbar with the scene tools', () => {
@@ -55,6 +57,14 @@ describe('SceneDocument', () => {
 
     await userEvent.keyboard('{Delete}')
     expect(sceneOf(useScenes.getState(), 'doc-1').objects).toHaveLength(0)
+  })
+
+  it('lets the keyboard alone while another tab is in front, since hidden tabs stay mounted', async () => {
+    useDocuments.setState({ activeId: 'doc-2' })
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{r}')
+    expect(setMode).not.toHaveBeenCalledWith('rotate')
   })
 
   it('undoes through the toolbar', async () => {

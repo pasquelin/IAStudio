@@ -29,6 +29,27 @@ function entriesOf<K extends string>(table: Record<K, Signature>): [K, Signature
   )
 }
 
+/**
+ * A persisted table completed with whatever the current build declares. Zustand merges the
+ * stored state one level deep, so a command added since the user last ran the app would come
+ * back missing — and `shortcutLabel(undefined)` throws on the first render of its toolbar.
+ *
+ * Only keys this build still knows are kept: a remap of a command since removed is dropped.
+ */
+function withDefaults<K extends string>(
+  defaults: Record<K, Signature>,
+  persisted: unknown,
+): Record<K, Signature> {
+  const merged = { ...defaults }
+  if (!isRecord(persisted)) return merged
+
+  for (const [key] of entriesOf(defaults)) {
+    const bound = persisted[key]
+    if (typeof bound === 'string') merged[key] = bound
+  }
+  return merged
+}
+
 export function commandFor(state: Readable, signature: Signature): CommandId | null {
   return entriesOf(state.bindings).find(([, bound]) => bound === signature)?.[0] ?? null
 }
@@ -65,8 +86,14 @@ export const useKeymap = create<KeymapState>()(
       name: 'scenario-studio:keymap',
       version: 1,
       // Same reason as `stores/tools.ts`: a version bump must not cost the user their remaps.
-      // A command that disappeared is simply never read again.
       migrate: persisted => (isRecord(persisted) ? persisted : undefined),
+      // Merged per table rather than per store, so adding a command needs no version bump:
+      // the new one arrives with its default and the user's remaps survive.
+      merge: (persisted, current) => ({
+        ...current,
+        bindings: withDefaults(DEFAULT_BINDINGS, isRecord(persisted) ? persisted.bindings : null),
+        motion: withDefaults(DEFAULT_MOTION, isRecord(persisted) ? persisted.motion : null),
+      }),
     },
   ),
 )

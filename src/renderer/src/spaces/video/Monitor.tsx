@@ -2,11 +2,14 @@ import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
 import { ALL_FORMATS, BlobSource, Input, VideoSampleSink } from 'mediabunny'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { assetUrl } from '@shared/domain/asset'
+import { shortcutLabel, type CommandId } from '@shared/domain/shortcut'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
 import type { SinkLike } from '@/engines/timeline/decoder-pool'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
+import { useShortcuts } from '@/hooks/useShortcuts'
+import { useKeymap } from '@/stores/keymap'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
@@ -39,13 +42,22 @@ export type MonitorProps = {
   onTime: (time: Us) => void
   /** Shown in place of the picture when there is nothing to play. */
   placeholder?: ReactNode
+  /** The monitor the space bar drives. One per tab: two would fight over the playback token. */
+  keyboard?: boolean
 }
 
 /**
  * One viewer: a picture, a transport and a timecode. Both monitors of the Video workspace are
  * this component — source on the left, program on the right, as Premiere and DaVinci have it.
  */
-export function Monitor({ owner, title, sequence, onTime, placeholder }: MonitorProps) {
+export function Monitor({
+  owner,
+  title,
+  sequence,
+  onTime,
+  placeholder,
+  keyboard = false,
+}: MonitorProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
   const [playing, setPlaying] = useState(false)
@@ -88,13 +100,25 @@ export function Monitor({ owner, title, sequence, onTime, placeholder }: Monitor
     onTime(0)
   }, [onTime])
 
+  const playPause = useKeymap(state => state.bindings['sequence.playPause'])
+
+  const run = useCallback(
+    (command: CommandId) => {
+      if (command === 'sequence.playPause') toggle()
+    },
+    [toggle],
+  )
+
+  useShortcuts({ enabled: keyboard, onCommand: run })
+
   const transport: ToolbarItem[] = [
     { id: 'rewind', labelKey: 'transport.rewind', icon: mdiSkipPrevious },
     {
       id: 'play',
       labelKey: playing ? 'transport.pause' : 'transport.play',
       icon: playing ? mdiPause : mdiPlay,
-      shortcut: 'Space',
+      // Advertised only where it is armed: a tooltip promising a key nothing listens to lies.
+      shortcut: keyboard ? shortcutLabel(playPause) : undefined,
     },
   ]
 

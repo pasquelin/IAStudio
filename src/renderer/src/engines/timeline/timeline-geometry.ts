@@ -3,6 +3,7 @@ import {
   snapToFrame,
   type SequenceSettings,
   type SequenceState,
+  type Track,
   type Us,
 } from './timeline-state'
 
@@ -69,11 +70,21 @@ export function snap(time: Us, context: SnapContext): Us {
   return best ?? snapToFrame(time, context.settings)
 }
 
+/**
+ * The track a point lands on — a row lookup, without the walk over its clips `hitTest` does.
+ * It is what a drop needs, and dropping happens on every pointer move of a drag.
+ */
+export function trackAt(state: SequenceState, viewport: Viewport, point: Point): Track | null {
+  if (point.y < RULER_HEIGHT) return null
+
+  const row = Math.floor((point.y + viewport.scrollTop - RULER_HEIGHT) / TRACK_HEIGHT)
+  return state.tracks[row] ?? null
+}
+
 export function hitTest(state: SequenceState, viewport: Viewport, point: Point): HitTarget | null {
   if (point.y < RULER_HEIGHT) return { kind: 'ruler' }
 
-  const row = Math.floor((point.y + viewport.scrollTop - RULER_HEIGHT) / TRACK_HEIGHT)
-  const track = state.tracks[row]
+  const track = trackAt(state, viewport, point)
   if (!track) return null
 
   for (const clip of track.clips) {

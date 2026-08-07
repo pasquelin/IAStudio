@@ -1,6 +1,6 @@
 import type { Asset, MediaProbe } from '@shared/domain/asset'
 import { peaksArgs, proxyArgs } from './ffmpeg'
-import { decodePeaks } from './peaks'
+import { decodePeaks, samplesOf } from './peaks'
 
 /** What WebCodecs decodes without help. Anything else is montaged on a proxy. */
 const DECODABLE_CODECS: readonly string[] = ['avc1', 'h264', 'vp8', 'vp9', 'av01']
@@ -82,7 +82,7 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
           const pcm = await deps.run(binary, peaksArgs(sourcePath))
           if (cancelled.has(assetId)) return
 
-          const samples = new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.length / 2))
+          const samples = samplesOf(pcm)
           const buckets = Math.max(
             1,
             Math.round((fields.probe.duration / 1_000_000) * PEAKS_PER_SECOND),

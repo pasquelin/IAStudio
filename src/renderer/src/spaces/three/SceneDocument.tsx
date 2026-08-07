@@ -5,6 +5,7 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { removeObject, selectObject, setTransform } from '@/engines/scene/commands'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { useDocuments } from '@/stores/documents'
 import { useKeymap } from '@/stores/keymap'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
@@ -20,6 +21,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const undoable = useScenes(state => canUndo(historyOf(state, documentId)))
   const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
   const bindings = useKeymap(state => state.bindings)
+  const active = useDocuments(state => state.activeId === documentId)
 
   useEffect(() => {
     const element = canvas.current
@@ -80,7 +82,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   )
 
   useShortcuts({
-    enabled: true,
+    // Dockview keeps hidden tabs mounted, and the hook swallows the keys it recognises: a
+    // scene left in a background tab would eat the space bar the video space listens for.
+    enabled: active,
     // Pushed on change, not polled: the engine restarts its own loop while something moves, so
     // nothing has to tick when the keyboard is idle.
     onMotionChange: held => engine.current?.setMotion(held),
