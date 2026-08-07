@@ -1,14 +1,12 @@
 import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
 import { ALL_FORMATS, BlobSource, Input, VideoSampleSink } from 'mediabunny'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
 import { assetUrl } from '@shared/domain/asset'
-import { ToolButton } from '@/design/ToolButton'
+import { Timecode } from '@/design/Timecode'
+import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
 import type { SinkLike } from '@/engines/timeline/decoder-pool'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
-import { formatTimecode } from '@/engines/timeline/timecode'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
-import { TIP_TOP } from '@/helpers/tooltip'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
@@ -48,7 +46,6 @@ export type MonitorProps = {
  * this component — source on the left, program on the right, as Premiere and DaVinci have it.
  */
 export function Monitor({ owner, title, sequence, onTime, placeholder }: MonitorProps) {
-  const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
   const [playing, setPlaying] = useState(false)
@@ -91,35 +88,35 @@ export function Monitor({ owner, title, sequence, onTime, placeholder }: Monitor
     onTime(0)
   }, [onTime])
 
-  return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="text-muted flex h-6 shrink-0 items-center px-2 text-[11px]">
-        {title}
-      </header>
+  const transport: ToolbarItem[] = [
+    { id: 'rewind', labelKey: 'transport.rewind', icon: mdiSkipPrevious },
+    {
+      id: 'play',
+      labelKey: playing ? 'transport.pause' : 'transport.play',
+      icon: playing ? mdiPause : mdiPlay,
+      shortcut: 'Space',
+    },
+  ]
 
-      <div className="bg-chassis relative min-h-0 flex-1">
+  return (
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-2 p-2">
+      <div className="bg-chassis relative min-h-0 w-full flex-1">
         <div ref={hostRef} className="absolute inset-0" />
         {placeholder}
       </div>
 
-      <footer className="border-border flex h-8 shrink-0 items-center justify-center gap-1 border-t">
-        <ToolButton
-          icon={mdiSkipPrevious}
-          label={t('transport.rewind')}
-          tooltip={TIP_TOP}
-          onClick={rewind}
-        />
-        <ToolButton
-          icon={playing ? mdiPause : mdiPlay}
-          label={playing ? t('transport.pause') : t('transport.play')}
-          tooltip={TIP_TOP}
-          shortcut="Space"
-          onClick={toggle}
-        />
-        <span className="text-muted ml-2 font-mono text-[11px] tabular-nums">
-          {formatTimecode(sequence.playhead, sequence.settings)}
-        </span>
-      </footer>
+      <Toolbar
+        orientation="horizontal"
+        tools={transport}
+        activeTool={playing ? 'play' : undefined}
+        onTool={id => (id === 'rewind' ? rewind() : toggle())}
+        extras={
+          <>
+            <span className="text-muted px-1 text-[11px]">{title}</span>
+            <Timecode time={sequence.playhead} settings={sequence.settings} />
+          </>
+        }
+      />
     </section>
   )
 }
