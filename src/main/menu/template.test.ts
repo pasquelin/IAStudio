@@ -16,7 +16,7 @@ const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   language: 'fr',
   workspace: '3d',
   isMac: true,
-  isPackaged: false,
+  isDevelopment: true,
   overrides: {},
   actions: actions(),
   ...given,
@@ -57,7 +57,7 @@ describe('menuTemplate', () => {
   })
 
   it('drops the developer items once packaged', () => {
-    const roles = rolesUnder(menuTemplate(options({ isPackaged: true })), 'Affichage')
+    const roles = rolesUnder(menuTemplate(options({ isDevelopment: false })), 'Affichage')
     expect(roles).not.toContain('toggleDevTools')
     expect(roles).not.toContain('reload')
   })

@@ -8,6 +8,13 @@ const alias = {
 }
 
 export default defineConfig({
+  // Injected by `define` in electron.vite.config.ts, so a module reaching for one under vitest
+  // would throw a bare ReferenceError. Development is the truthful answer here: the tests are
+  // the dev run.
+  define: {
+    __DEV__: 'true',
+    __COMMIT_HASH__: JSON.stringify('test'),
+  },
   test: {
     projects: [
       {

@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
+import { BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { chromeColor } from './theme'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
 import { TRANSLATIONS } from '@shared/i18n'
 import { EVENTS } from '@shared/ipc'
 import { APP_ICON_PATH } from '@main/resources'
+import { isDevelopment } from '@main/environment'
 import { trackWindowState } from './controls'
 import { windowLanguage } from './language'
 
@@ -28,7 +29,7 @@ export const WEB_PREFERENCES: WebPreferences = {
   sandbox: true,
   // Dropping the menu entries hides the command; this refuses the feature. A compromised
   // dependency calling `openDevTools()` would otherwise still reach `window.studio`.
-  devTools: !app.isPackaged,
+  devTools: isDevelopment,
 }
 
 /**
@@ -45,7 +46,7 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
   const { entry = 'index.html', hash } = options
   const devUrl = process.env['ELECTRON_RENDERER_URL']
 
-  if (!app.isPackaged && devUrl) {
+  if (isDevelopment && devUrl) {
     const base = entry === 'index.html' ? devUrl : `${devUrl}/${entry}`
     void window.loadURL(hash ? `${base}#${hash}` : base)
     return

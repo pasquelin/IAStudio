@@ -4,6 +4,7 @@ import type { BindingOverrides } from '@shared/domain/command'
 import { DEFAULT_LANGUAGE, type Language } from '@shared/i18n'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { isDevelopment } from '@main/environment'
 import { toggleFullScreen } from '@main/window/controls'
 import { openSettingsWindow } from '@main/window/windows'
 import { menuTemplate } from './template'
@@ -64,7 +65,7 @@ export function buildMenu(next: Language = language, remapped: BindingOverrides 
     language,
     workspace: shown,
     isMac: process.platform === 'darwin',
-    isPackaged: app.isPackaged,
+    isDevelopment,
     overrides,
     actions: {
       openSettings: () => void openSettingsWindow(),

@@ -1,4 +1,5 @@
 import { app, shell } from 'electron'
+import { isDevelopment } from '@main/environment'
 import { isReloadShortcut } from './shortcuts'
 
 /**
@@ -26,7 +27,7 @@ export function lockNavigation(): void {
 
     // The packaged menu no longer offers reload, which removes its accelerator; this closes
     // the keyboard path Chromium still honours.
-    if (app.isPackaged) {
+    if (!isDevelopment) {
       contents.on('before-input-event', (event, input) => {
         if (isReloadShortcut(input)) event.preventDefault()
       })

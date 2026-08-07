@@ -11,6 +11,7 @@ import type { AuthState } from '@shared/domain/settings'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
 import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
+import { isDevelopment } from '@main/environment'
 import { createAssetCollector } from './assets/collector'
 import { serveAssets, servedFileOf } from './assets/protocol'
 import { createFfmpegResolver } from './media/ffmpeg'
@@ -141,7 +142,7 @@ export function createServices(): Services {
   // at startup is what makes the account dialog ask again instead of claiming to be set up.
   settings.discardUnreadableCredentials()
 
-  const fallback = createFileSystemFallback(app.getAppPath(), app.isPackaged)
+  const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
   const client = createClientProvider(() => resolveCredentials(settings, fallback))
   const models = createModelRegistry({ catalog: () => catalogOf(client.require()) })
 

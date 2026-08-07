@@ -6,6 +6,7 @@ import { APP_ICON_PATH } from '@main/resources'
 import { buildMenu } from '@main/menu'
 import { registerAssetScheme } from '@main/assets/protocol'
 import { broadcast } from '@main/ipc/broadcast'
+import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
 import { log, mirrorLogsTo } from '@main/log'
 import { createServices } from '@main/services'
@@ -40,12 +41,12 @@ function startUp(splash: Splash): void {
    * sends to every window — including the settings window, which listens to none of it. The
    * terminal keeps the log in a packaged build; nothing crosses IPC.
    */
-  if (!app.isPackaged) mirrorLogsTo(entry => broadcast(EVENTS.log, entry))
+  if (isDevelopment) mirrorLogsTo(entry => broadcast(EVENTS.log, entry))
 
   // An unpackaged run wears the Electron bundle's own identity, so the Dock shows Electron's
   // atom instead of this application's mark. The icon can be replaced at runtime; the name
   // beside it cannot — macOS reads that from the bundle, and it is right in a packaged build.
-  if (!app.isPackaged && process.platform === 'darwin') app.dock?.setIcon(APP_ICON_PATH)
+  if (isDevelopment && process.platform === 'darwin') app.dock?.setIcon(APP_ICON_PATH)
 
   // Before the window: the renderer's first `invoke` must find its handlers registered.
   const services = createServices()

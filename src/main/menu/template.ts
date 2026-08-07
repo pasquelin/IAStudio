@@ -39,7 +39,7 @@ export type MenuOptions = {
   /** `null` when the focused window edits no workspace at all — the settings window. */
   workspace: WorkspaceId | null
   isMac: boolean
-  isPackaged: boolean
+  isDevelopment: boolean
   /** What the user remapped, so the menu advertises the key it will actually answer to. */
   overrides: BindingOverrides
   actions: MenuActions
@@ -49,8 +49,8 @@ export type MenuOptions = {
  * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
  * build hands an attacker `setCredentials` through a self-XSS.
  */
-function developerItems(isPackaged: boolean): MenuItemConstructorOptions[] {
-  if (isPackaged) return []
+function developerItems(isDevelopment: boolean): MenuItemConstructorOptions[] {
+  if (!isDevelopment) return []
   return [{ type: 'separator' }, { role: 'toggleDevTools' }, { role: 'reload' }]
 }
 
@@ -66,7 +66,7 @@ function firstPlacements(): ToolPlacement[] {
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, workspace, isMac, isPackaged, overrides, actions } = options
+  const { language, workspace, isMac, isDevelopment, overrides, actions } = options
 
   /**
    * The accelerator of a command, read off the registry. Written by hand until now, which is
@@ -188,7 +188,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('window.fullScreen'),
           click: () => actions.toggleFullScreen(),
         },
-        ...developerItems(isPackaged),
+        ...developerItems(isDevelopment),
       ],
     },
     { role: 'windowMenu', label: t.menu.window },
