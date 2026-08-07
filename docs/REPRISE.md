@@ -2,6 +2,10 @@
 
 Copier-coller le bloc ci-dessous au début d'une nouvelle session.
 
+> Pour comprendre le logiciel plutôt que reprendre son développement : le
+> [guide de l'utilisateur](fr/guide-utilisateur.md) et la [doc d'architecture](fr/architecture.md),
+> tous deux également [en anglais](en/).
+
 ---
 
 Je reprends le développement de **Scenario Studio**, dans `/Users/pasquelin/Applications/scenario`.
