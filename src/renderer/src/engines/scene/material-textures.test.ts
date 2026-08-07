@@ -1,4 +1,12 @@
-import { BufferAttribute, Mesh, MeshStandardMaterial, SRGBColorSpace, Texture } from 'three'
+import {
+  BufferAttribute,
+  Mesh,
+  MeshStandardMaterial,
+  NoColorSpace,
+  SRGBColorSpace,
+  Texture,
+  type ColorSpace,
+} from 'three'
 import type { MaterialDescriptor } from '@shared/domain/scene'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMaterialTextures } from './material-textures'
@@ -11,10 +19,12 @@ function scriptedCache() {
   const pending = new Map<string, (texture: Texture | null) => void>()
   const acquired: string[] = []
   const released: string[] = []
+  const spaces = new Map<string, ColorSpace>()
 
   const cache: TextureCache = {
-    acquire: assetId => {
+    acquire: (assetId, colorSpace) => {
       acquired.push(assetId)
+      spaces.set(assetId, colorSpace)
       return new Promise(resolve => pending.set(assetId, resolve))
     },
     release: assetId => {
@@ -27,6 +37,7 @@ function scriptedCache() {
     cache,
     acquired,
     released,
+    spaces,
     settle: async (assetId: string, texture: Texture | null = new Texture()) => {
       pending.get(assetId)?.(texture)
       await Promise.resolve()
@@ -123,7 +134,9 @@ describe('createMaterialTextures', () => {
     expect(material.map).toBeNull()
   })
 
-  it('reads the base map as sRGB and leaves the data maps linear', async () => {
+  // The colour space is asked of the cache rather than written onto the texture: the same asset
+  // can dress one slot as colour and another as data, and they must not share one instance.
+  it('asks for the base map as sRGB and the data maps as data', async () => {
     const scripted = scriptedCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
@@ -132,11 +145,11 @@ describe('createMaterialTextures', () => {
       map: { assetId: 'colour' },
       normalMap: { assetId: 'normal' },
     })
-    const colour = await scripted.settle('colour')
-    const normal = await scripted.settle('normal')
+    await scripted.settle('colour')
+    await scripted.settle('normal')
 
-    expect(colour?.colorSpace).toBe(SRGBColorSpace)
-    expect(normal?.colorSpace).not.toBe(SRGBColorSpace)
+    expect(scripted.spaces.get('colour')).toBe(SRGBColorSpace)
+    expect(scripted.spaces.get('normal')).toBe(NoColorSpace)
   })
 
   // Without a second UV set, ambient occlusion is a slot that quietly does nothing.

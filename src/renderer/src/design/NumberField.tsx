@@ -125,8 +125,11 @@ export function NumberField({
         aria-valuemax={max}
         value={typed ?? String(value)}
         onChange={event => {
-          setTyped(event.target.value)
-          emit(Number(event.target.value))
+          const text = event.target.value
+          setTyped(text)
+          // An emptied field is not zero: `Number('')` is, and emitting it would crush the mesh
+          // to its minimum between the moment a value is cleared and the moment one is typed.
+          if (text.trim() !== '') emit(Number(text))
         }}
         onKeyDown={onKeyDown}
         // Typing is a gesture too: a field filled in character by character must cost one undo,

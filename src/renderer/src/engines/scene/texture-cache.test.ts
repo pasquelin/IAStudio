@@ -1,18 +1,28 @@
-import { Texture } from 'three'
+import { NoColorSpace, SRGBColorSpace, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { createTextureCache, type TextureSource } from './texture-cache'
 
-/** A loader whose answers are handed out by the test, one deferred promise per URL. */
+/**
+ * A loader whose answers are handed out by the test. It keeps every pending load of a URL, not
+ * just the last: one asset can be loaded twice at once, once per colour space, and each load
+ * decodes an image of its own.
+ */
 function deferredSource() {
-  const pending = new Map<string, (texture: Texture) => void>()
-  const rejects = new Map<string, (reason: Error) => void>()
+  const pending = new Map<string, ((texture: Texture) => void)[]>()
+  const rejects = new Map<string, ((reason: Error) => void)[]>()
   const calls: string[] = []
+
+  const queue = <T>(map: Map<string, T[]>, url: string, value: T): void => {
+    const waiting = map.get(url)
+    if (waiting) waiting.push(value)
+    else map.set(url, [value])
+  }
 
   const load: TextureSource = url => {
     calls.push(url)
     return new Promise<Texture>((resolve, reject) => {
-      pending.set(url, resolve)
-      rejects.set(url, reject)
+      queue(pending, url, resolve)
+      queue(rejects, url, reject)
     })
   }
 
@@ -22,10 +32,15 @@ function deferredSource() {
     load,
     calls,
     settle: (assetId: string, texture = new Texture()) => {
-      pending.get(urlOf(assetId))?.(texture)
+      const waiting = pending.get(urlOf(assetId)) ?? []
+      pending.delete(urlOf(assetId))
+      // The first holder gets the texture the test named; anyone else waiting gets its own.
+      waiting.forEach((resolve, index) => resolve(index === 0 ? texture : new Texture()))
       return texture
     },
-    fail: (assetId: string) => rejects.get(urlOf(assetId))?.(new Error('gone')),
+    fail: (assetId: string) => {
+      for (const reject of rejects.get(urlOf(assetId)) ?? []) reject(new Error('gone'))
+    },
   }
 }
 
@@ -34,7 +49,7 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    const loading = cache.acquire('tex-1')
+    const loading = cache.acquire('tex-1', NoColorSpace)
     const texture = source.settle('tex-1')
 
     expect(source.calls).toEqual(['scenario://asset/tex-1'])
@@ -46,8 +61,8 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    const first = cache.acquire('tex-1')
-    const second = cache.acquire('tex-1')
+    const first = cache.acquire('tex-1', NoColorSpace)
+    const second = cache.acquire('tex-1', NoColorSpace)
     const texture = source.settle('tex-1')
 
     expect(source.calls).toHaveLength(1)
@@ -59,16 +74,16 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    void cache.acquire('tex-1')
-    void cache.acquire('tex-1')
+    void cache.acquire('tex-1', NoColorSpace)
+    void cache.acquire('tex-1', NoColorSpace)
     const texture = source.settle('tex-1')
     await Promise.resolve()
     const dispose = vi.spyOn(texture, 'dispose')
 
-    cache.release('tex-1')
+    cache.release('tex-1', NoColorSpace)
     expect(dispose).not.toHaveBeenCalled()
 
-    cache.release('tex-1')
+    cache.release('tex-1', NoColorSpace)
     expect(dispose).toHaveBeenCalledTimes(1)
   })
 
@@ -77,8 +92,8 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    const loading = cache.acquire('tex-1')
-    cache.release('tex-1')
+    const loading = cache.acquire('tex-1', NoColorSpace)
+    cache.release('tex-1', NoColorSpace)
 
     const texture = new Texture()
     const dispose = vi.spyOn(texture, 'dispose')
@@ -92,12 +107,12 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    void cache.acquire('tex-1')
+    void cache.acquire('tex-1', NoColorSpace)
     source.settle('tex-1')
     await Promise.resolve()
-    cache.release('tex-1')
+    cache.release('tex-1', NoColorSpace)
 
-    void cache.acquire('tex-1')
+    void cache.acquire('tex-1', NoColorSpace)
     expect(source.calls).toHaveLength(2)
   })
 
@@ -106,7 +121,7 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    const loading = cache.acquire('tex-1')
+    const loading = cache.acquire('tex-1', NoColorSpace)
     source.fail('tex-1')
 
     await expect(loading).resolves.toBeNull()
@@ -116,26 +131,41 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    const loading = cache.acquire('tex-1')
+    const loading = cache.acquire('tex-1', NoColorSpace)
     source.fail('tex-1')
     await loading
 
-    void cache.acquire('tex-1')
+    void cache.acquire('tex-1', NoColorSpace)
     expect(source.calls).toHaveLength(2)
   })
 
   it('ignores a release nobody was holding', () => {
     const cache = createTextureCache(deferredSource().load)
 
-    expect(() => cache.release('never-loaded')).not.toThrow()
+    expect(() => cache.release('never-loaded', NoColorSpace)).not.toThrow()
+  })
+
+  // The same picture read as colour and as data are two textures on the GPU: setting the colour
+  // space on one shared instance would silently wash out the other.
+  it('keeps one texture per colour space', async () => {
+    const source = deferredSource()
+    const cache = createTextureCache(source.load)
+
+    const asColour = cache.acquire('tex-1', SRGBColorSpace)
+    const asData = cache.acquire('tex-1', NoColorSpace)
+    source.settle('tex-1')
+
+    expect(source.calls).toHaveLength(2)
+    expect((await asColour)?.colorSpace).toBe(SRGBColorSpace)
+    expect((await asData)?.colorSpace).toBe(NoColorSpace)
   })
 
   it('frees everything it still holds when the engine goes', async () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    void cache.acquire('tex-1')
-    void cache.acquire('tex-2')
+    void cache.acquire('tex-1', NoColorSpace)
+    void cache.acquire('tex-2', NoColorSpace)
     const first = source.settle('tex-1')
     const second = source.settle('tex-2')
     await Promise.resolve()

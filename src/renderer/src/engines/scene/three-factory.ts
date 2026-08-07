@@ -115,11 +115,7 @@ export function geometryFor(descriptor: GeometryDescriptor): BufferGeometry {
   }
 }
 
-/**
- * The class a kind maps to, with nothing in it yet. What goes in is `applyLight`'s job, in
- * `three-sync`: written in both places, adding a parameter to a light would take two edits, and
- * forgetting one gives a light that is right when created and wrong once edited.
- */
+/** The class a kind maps to, bare: what goes in it is `applyLight`'s job, in `three-sync`. */
 export function bareLight(kind: LightKind): Light {
   switch (kind) {
     case 'ambient':

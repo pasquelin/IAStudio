@@ -1,4 +1,11 @@
-import { SRGBColorSpace, type Mesh, type MeshStandardMaterial, type Texture } from 'three'
+import {
+  NoColorSpace,
+  SRGBColorSpace,
+  type ColorSpace,
+  type Mesh,
+  type MeshStandardMaterial,
+  type Texture,
+} from 'three'
 import { TEXTURE_SLOTS, type MaterialDescriptor, type TextureSlot } from '@shared/domain/scene'
 import type { TextureCache } from './texture-cache'
 import { giveSecondUvSet } from './three-sync'
@@ -14,6 +21,14 @@ export type MaterialTextures = {
  * a slot can change its mind while what it asked for is in flight: each holds exactly one
  * reference — on the asset it wants now, loaded or not — and drops any other arrival.
  */
+/**
+ * The base colour map is authored in sRGB; every other map carries data, not colour, and
+ * decoding it would wash out the normals and lighten the roughness.
+ */
+function spaceOf(slot: TextureSlot): ColorSpace {
+  return slot === 'map' ? SRGBColorSpace : NoColorSpace
+}
+
 export function createMaterialTextures(
   cache: TextureCache,
   mesh: Mesh,
@@ -24,9 +39,6 @@ export function createMaterialTextures(
   const holding = new Map<TextureSlot, string>()
 
   const install = (slot: TextureSlot, texture: Texture): void => {
-    // The base colour map is authored in sRGB; every other map carries data, not colour, and
-    // converting it would wash out the normals and lighten the roughness.
-    if (slot === 'map') texture.colorSpace = SRGBColorSpace
     // Ambient occlusion reads the second UV set, which no primitive of the studio carries: left
     // alone, ticking an AO map would do nothing at all.
     if (slot === 'aoMap') giveSecondUvSet(mesh.geometry)
@@ -39,7 +51,7 @@ export function createMaterialTextures(
 
   const clear = (slot: TextureSlot): void => {
     const held = holding.get(slot)
-    if (held !== undefined) cache.release(held)
+    if (held !== undefined) cache.release(held, spaceOf(slot))
     holding.delete(slot)
 
     if (material[slot] === null) return
@@ -58,7 +70,7 @@ export function createMaterialTextures(
         if (!wanted) continue
 
         holding.set(slot, wanted)
-        void cache.acquire(wanted).then(texture => {
+        void cache.acquire(wanted, spaceOf(slot)).then(texture => {
           // Stale: the slot has moved on, and the reference it took went back with the move.
           if (holding.get(slot) !== wanted || !texture) return
           install(slot, texture)

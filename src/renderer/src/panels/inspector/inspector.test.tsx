@@ -32,6 +32,14 @@ function nodeInStore(id: string): SceneNode | null {
 
 const entries = () => historyOf(useScenes.getState(), 'doc-1').past.length
 
+/** The drag handle of one axis. Throws rather than narrowing, so a miss reads as a miss. */
+function axisHandle(axis: string, occurrence = 0): HTMLElement {
+  const handles = screen.getAllByText(axis)
+  const handle = handles.at(occurrence)
+  if (!handle) throw new Error(`no ${axis} handle at ${occurrence}`)
+  return handle
+}
+
 beforeEach(() => {
   install(meshNode('box-1'))
 })
@@ -127,10 +135,10 @@ describe('inspector panel', () => {
 
     it('moves the node it was handed', () => {
       render(<Content />)
-      const handle = screen.getAllByText('X')[0]
+      const handle = axisHandle('X')
 
-      fireEvent.pointerDown(handle as HTMLElement, { button: 0, pointerId: 1, clientX: 0 })
-      fireEvent.pointerMove(handle as HTMLElement, { pointerId: 1, clientX: 20 })
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 20 })
 
       expect(nodeInStore('box-1')?.transform.position.x).toBe(2)
     })
@@ -138,10 +146,10 @@ describe('inspector panel', () => {
     // Radians are what the document stores; nobody types in them.
     it('turns the node in degrees', () => {
       render(<Content />)
-      const handle = screen.getAllByText('Y')[1]
+      const handle = axisHandle('Y', 1)
 
-      fireEvent.pointerDown(handle as HTMLElement, { button: 0, pointerId: 1, clientX: 0 })
-      fireEvent.pointerMove(handle as HTMLElement, { pointerId: 1, clientX: 90 })
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 90 })
 
       expect(nodeInStore('box-1')?.transform.rotation.y).toBeCloseTo(Math.PI / 2)
     })
@@ -174,10 +182,10 @@ describe('inspector panel', () => {
 
     it('moves the target of the beam', () => {
       render(<Content />)
-      const handle = screen.getAllByText('Z').at(-1)
+      const handle = axisHandle('Z', -1)
 
-      fireEvent.pointerDown(handle as HTMLElement, { button: 0, pointerId: 1, clientX: 0 })
-      fireEvent.pointerMove(handle as HTMLElement, { pointerId: 1, clientX: 10 })
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10 })
 
       const node = nodeInStore('light-1')
       expect(node?.type === 'light' && node.light.kind === 'spot' && node.light.target.z).toBe(1)
@@ -187,7 +195,7 @@ describe('inspector panel', () => {
   describe('history', () => {
     it('leaves one entry for a whole drag, and undo gives the node back', () => {
       render(<Content />)
-      const handle = screen.getAllByText('X')[0] as HTMLElement
+      const handle = axisHandle('X')
 
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
       fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10 })
@@ -215,7 +223,7 @@ describe('inspector panel', () => {
 
     it('keeps two separate drags apart', () => {
       render(<Content />)
-      const handle = screen.getAllByText('X')[0] as HTMLElement
+      const handle = axisHandle('X')
 
       for (const distance of [10, 20]) {
         fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })

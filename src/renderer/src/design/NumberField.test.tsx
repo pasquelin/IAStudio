@@ -86,6 +86,16 @@ describe('NumberField', () => {
     expect(onChange).toHaveBeenLastCalledWith(7)
   })
 
+  // `Number('')` is 0: emitting it would crush the mesh to its minimum in the moment between
+  // clearing a field and typing the new value into it.
+  it('says nothing while the field stands empty', async () => {
+    const { onChange } = renderField({ value: 4, min: 0.001, step: 0.1 })
+
+    await userEvent.clear(screen.getByLabelText('Radius'))
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   // "0." parses to 0, and echoing that back would swallow the dot as it is typed.
   it('leaves a half-written number in the field', async () => {
     renderField({ value: 1 })
