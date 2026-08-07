@@ -15,7 +15,6 @@ export function useTypeLabels(): Map<AssetType, string> {
   return useMemo(() => new Map(ASSET_TYPES.map(value => [value, t(`assetTypes.${value}`)])), [t])
 }
 
-/** Shared with the panel header: in a band the filter bar is drawn there, not in the content. */
 export function useTypeFacet(labels: Map<AssetType, string>): FacetDescriptor[] {
   const { t } = useTranslation()
 

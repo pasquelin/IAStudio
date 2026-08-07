@@ -8,13 +8,9 @@ import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useTypeFacet, useTypeLabels } from './type-facet'
 
-/**
- * The shelf's own row. In a band it carries the whole filter bar: the row is wide and mostly
- * empty there, whereas a second one under it costs height a short zone cannot spare.
- *
- * In a column it carries only the count and the import button — 500 px of browser bar in a
- * 320 px header pushed the panel's own close button out of the frame.
- */
+// The bar rides here in a band, where the row is wide and a second one would cost height the
+// zone cannot spare. Not in a column: 500 px of bar in a 320 px header pushed the close button
+// out of the frame, which is what put it under the title in the first place.
 export function AssetBrowserActions() {
   const { t } = useTranslation()
   const count = useAssets(state => state.items.length)
@@ -34,9 +30,7 @@ export function AssetBrowserActions() {
           state={collection}
           onChange={setCollection}
           facets={facets}
-          layout="inline"
-          // The header draws its own row: the bar brings its controls, not a second surface.
-          className="min-w-0 flex-1 border-b-0 px-0 py-0"
+          layout="header"
         />
       )}
       <span className="text-muted mr-1 text-[11px]">{t('assets.count', { count })}</span>

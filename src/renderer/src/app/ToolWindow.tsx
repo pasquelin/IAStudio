@@ -47,14 +47,11 @@ export const ToolWindow = memo(function ToolWindow({
   // The id comes from persisted state: an entry left over from an older version would
   // otherwise throw while rendering, with no error boundary above to catch it.
   if (!definition) return null
-  const { Content, Actions } = definition
-
-  const lying = isHorizontal(zone)
+  const { Content, Actions, stretchActions } = definition
 
   return (
-    // The whole window is told which zone it is in, header included: the same panel lays out
-    // differently in a narrow column and in a strip across the window, and its own row is part
-    // of what changes — the shelf draws its filter bar there rather than under it.
+    // Zone-wide, header included: a panel lays out differently in a narrow column and in a
+    // strip across the window, and its own row is part of what changes.
     <ToolZoneProvider zone={zone}>
       {/* The zone owns its length: a half given one keeps it, the other takes what is left. Both
           sized here would make the pair overflow the zone the user dragged. */}
@@ -68,7 +65,7 @@ export const ToolWindow = memo(function ToolWindow({
       >
         <PanelHeader
           title={title}
-          stretchActions={lying}
+          stretchActions={stretchActions === true && isHorizontal(zone)}
           trailing={
             <>
               {Actions !== undefined && <Separator />}

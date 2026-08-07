@@ -1,3 +1,4 @@
+import type { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ToolDefinition } from '@/app/tool-components'
 import { EmptyState } from '@/design/EmptyState'
@@ -11,7 +12,7 @@ import { NodeList } from './NodeList'
  * A panel over one half of the scene. Both halves behave identically — only the registry, the
  * glyph and the i18n namespace differ, and all three come from `NODE_KINDS`.
  */
-export function nodePanel(type: SceneNodeType): Required<ToolDefinition> {
+export function nodePanel(type: SceneNodeType): ToolDefinition & { Actions: FC } {
   const { icon, namespace } = NODE_KINDS[type]
 
   function Content() {

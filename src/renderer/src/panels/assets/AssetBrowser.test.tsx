@@ -135,7 +135,7 @@ describe('AssetBrowser', () => {
   // The bar follows the shape of the zone, not the workspace: no exception is coded for Video,
   // where the shelf stands in a column rather than lying across the band.
   describe('the filter bar', () => {
-    it('leaves it to the title row in a band, where the window draws it', () => {
+    it('draws none of its own in a band, leaving it to the title row', () => {
       render(
         <ToolZoneProvider zone="bottom">
           <AssetBrowser />

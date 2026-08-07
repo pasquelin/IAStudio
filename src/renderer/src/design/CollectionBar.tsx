@@ -79,8 +79,10 @@ function Dropdown({ label, options, value, onPick, anyLabel, className }: Dropdo
  * `stacked` for a side dock — narrow and tall, so the controls go on their own rows.
  * `inline` for an edge dock — wide and short, where stacking would eat the content area and
  * stretch a single dropdown across the whole window.
+ * `header` is `inline` on the panel's own title row, which already draws the surface: the bar
+ * brings its controls and no rule, no padding of its own.
  */
-export type CollectionLayout = 'stacked' | 'inline'
+export type CollectionLayout = 'stacked' | 'inline' | 'header'
 
 export type CollectionBarProps = {
   state: CollectionState
@@ -103,7 +105,8 @@ export function CollectionBar({
 }: CollectionBarProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
-  const inline = layout === 'inline'
+  // A header bar is an inline one the panel's own row already provides the surface for.
+  const inline = layout !== 'stacked'
 
   const search = (
     <label className={cn('relative flex items-center', inline ? 'w-56 shrink-0' : 'w-full')}>
@@ -199,7 +202,13 @@ export function CollectionBar({
    */
   if (inline) {
     return (
-      <div className={cn('border-border flex items-center gap-1 border-b px-2 py-1.5', className)}>
+      <div
+        className={cn(
+          'flex items-center gap-1',
+          layout === 'header' ? 'min-w-0 flex-1' : 'border-border border-b px-2 py-1.5',
+          className,
+        )}
+      >
         {search}
         {menus}
         <div className="ml-auto flex items-center gap-1">

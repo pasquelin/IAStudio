@@ -35,6 +35,17 @@ describe('a panel lying in a band', () => {
 
     expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
   })
+
+  // The room is given to the panel that asked for it, not to the zone: the montage shares the
+  // band and would otherwise see its own two buttons drift away from the close button.
+  it('spreads the actions of the panel that declared it, and no other', () => {
+    const { container } = render(
+      <ToolWindow tool="timeline" zone="bottom" onFocus={vi.fn()} onClose={vi.fn()} />,
+    )
+
+    const actions = container.querySelector('header > span:nth-of-type(2)')
+    expect(actions?.className).toContain('ml-auto')
+  })
 })
 
 describe('a panel standing in a column', () => {

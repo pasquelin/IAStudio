@@ -48,8 +48,7 @@ export function AssetBrowser() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* In a band the bar is drawn on the title row instead — see `AssetBrowserActions`: a
-          second row there would cost a tenth of a short zone's height. */}
+      {/* In a band the bar rides on the title row instead — see `AssetBrowserActions`. */}
       {!lying && <CollectionBar state={collection} onChange={setCollection} facets={facets} />}
       <ImportProgress />
       <Collection

@@ -15,6 +15,9 @@ export type ToolDefinition = {
   Content: FC
   /** Actions rendered in the title bar, on the same line as the panel name. */
   Actions?: FC
+  /** Whether those actions take the title row's free width once the panel lies in a band, for
+   * a panel that moves a whole bar up there rather than a button or two. */
+  stretchActions?: boolean
 }
 
 /**
