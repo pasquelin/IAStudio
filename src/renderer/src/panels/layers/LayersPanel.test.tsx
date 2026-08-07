@@ -1,4 +1,3 @@
-import { pixelLayer } from '@/engines/canvas/canvas-state'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'

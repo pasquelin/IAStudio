@@ -10,7 +10,6 @@ import {
   mapLayers,
   serializeCanvas,
   type CanvasState,
-  pixelLayer,
 } from './canvas-state'
 
 const populated: CanvasState = {
