@@ -559,5 +559,91 @@
     "discardTitle": "Some settings have not been applied",
     "discardBody": "You changed settings without applying them. What would you like to do?",
     "discard": "Don't apply"
+  },
+  "commands": {
+    "projectNew": {
+      "title": "New project",
+      "help": "Creates an empty project and opens it. A project is the folder holding everything you make: the images, the videos, the sounds, and how they are arranged."
+    },
+    "projectOpen": {
+      "title": "Open project",
+      "help": "Picks a project already on your disk and opens it in place of the current one. The open project is saved as you go, so there is nothing to save first."
+    },
+    "layoutReset": {
+      "title": "Reset layout",
+      "help": "Puts the panels back where they started. Useful once the windows have been dragged all over and nothing is where you expect. Your work is untouched."
+    },
+    "appSettings": {
+      "title": "Settings",
+      "help": "Opens the settings window — this one: the language, the colours, the account, the shortcuts, and everything else that is adjustable."
+    },
+    "windowFullScreen": {
+      "title": "Full screen",
+      "help": "Gives the window the whole screen, with no bar and no border, to work with nothing around it."
+    },
+    "sceneSelect": {
+      "title": "Select",
+      "help": "The plain tool: click an object in the scene to choose it, without doing anything to it. It is the one you come back to between manipulations."
+    },
+    "sceneTranslate": {
+      "title": "Move",
+      "help": "Drags the chosen object from one place to another, by pulling the coloured arrows — one per direction."
+    },
+    "sceneRotate": {
+      "title": "Rotate",
+      "help": "Turns the chosen object on itself, by pulling the coloured rings — one per axis."
+    },
+    "sceneScale": {
+      "title": "Scale",
+      "help": "Makes the chosen object bigger or smaller, by pulling its handles. Holding Shift keeps its proportions."
+    },
+    "sceneFrame": {
+      "title": "Frame selection",
+      "help": "Brings the camera close enough that the chosen object fills the view. Handy when you are lost, or when an object is tiny."
+    },
+    "sceneDelete": {
+      "title": "Delete",
+      "help": "Removes the chosen object from the scene. Nothing is lost for good: ⌘Z brings it back."
+    },
+    "undo": {
+      "title": "Undo",
+      "help": "Takes back the last thing you did in this document. Each document has its own stack: undo acts on the tab in front, not on the others."
+    },
+    "redo": {
+      "title": "Redo",
+      "help": "Does again what you have just undone. Handy after undoing once too often."
+    },
+    "sequencePlayPause": {
+      "title": "Play / Pause",
+      "help": "Starts playing the edit, or stops it where it is. Starting again picks up where you left off."
+    },
+    "sequenceSplit": {
+      "title": "Split clip",
+      "help": "Cuts the clip in two where the playhead sits, so each half can be handled on its own."
+    },
+    "sequenceDelete": {
+      "title": "Delete clip",
+      "help": "Removes the chosen clip from the edit. The original file stays in your assets."
+    },
+    "sequenceZoomIn": {
+      "title": "Zoom in",
+      "help": "Spreads the edit out to see detail: clips get wider and are easier to aim at."
+    },
+    "sequenceZoomOut": {
+      "title": "Zoom out",
+      "help": "Draws the edit together to see more of it at once, at the cost of the detail."
+    },
+    "sequenceFit": {
+      "title": "Fit to view",
+      "help": "Sets the zoom so the whole edit fits on screen, end to end."
+    },
+    "sequenceStart": {
+      "title": "Go to start",
+      "help": "Brings the playhead right back to the beginning of the edit, moving nothing else."
+    },
+    "sequenceEnd": {
+      "title": "Go to end",
+      "help": "Sends the playhead right to the end of the edit, past the last clip."
+    }
   }
 }

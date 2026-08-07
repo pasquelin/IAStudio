@@ -1,3 +1,4 @@
+import type { CommandId } from '@shared/domain/command'
 import {
   useCallback,
   useEffect,
@@ -8,7 +9,6 @@ import {
   type PointerEvent,
 } from 'react'
 import { posterUrl } from '@shared/domain/asset'
-import type { CommandId } from '@shared/domain/shortcut'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
 import { programOwner, transports } from '@/engines/timeline/playback'

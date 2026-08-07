@@ -1,7 +1,8 @@
+import { type CommandId } from '@shared/domain/command'
+import { shortcutLabel } from '@shared/domain/shortcut'
 import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
 import { ALL_FORMATS, BlobSource, Input, VideoSampleSink } from 'mediabunny'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { shortcutLabel, type CommandId } from '@shared/domain/shortcut'
 import { Timecode } from '@/design/Timecode'
 import { fetchAsset } from '@/helpers/asset-fetch'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
@@ -10,7 +11,7 @@ import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
 import { useShortcuts } from '@/hooks/useShortcuts'
-import { useKeymap } from '@/stores/keymap'
+import { useBinding } from '@/stores/bindings'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
@@ -103,7 +104,7 @@ export function Monitor({
     onTime(0)
   }, [onTime])
 
-  const playPause = useKeymap(state => state.bindings['sequence.playPause'])
+  const playPause = useBinding('sequence.playPause')
 
   const run = useCallback(
     (command: CommandId) => {

@@ -1,8 +1,9 @@
+import type { CommandId } from '@shared/domain/command'
+import type { MotionId } from '@shared/domain/shortcut'
 import { fireEvent, renderHook, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type { CommandId, MotionId } from '@shared/domain/shortcut'
 import { useShortcuts } from './useShortcuts'
 
 /** The hook listens on `window`; the field is here so a test can move focus into one. */

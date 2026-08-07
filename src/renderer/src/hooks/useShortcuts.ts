@@ -1,11 +1,8 @@
+import { type CommandId, type CommandScope } from '@shared/domain/command'
+import { type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
-import {
-  signatureOf,
-  type CommandId,
-  type CommandScope,
-  type MotionId,
-} from '@shared/domain/shortcut'
-import { commandFor, motionFor, useKeymap } from '@/stores/keymap'
+import { commandFor } from '@shared/domain/command'
+import { currentOverrides, motionFor } from '@/stores/bindings'
 
 export type ShortcutsOptions = {
   /** Which surface is listening: the same key means different things on each. */
@@ -65,16 +62,14 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
     const onKeyDown = (event: KeyboardEvent) => {
       if (isTyping(event.target)) return
       const signature = signatureOf(event)
-      const keymap = useKeymap.getState()
-
-      const motion = motionFor(keymap, signature)
+      const motion = motionFor(signature)
       // Holding a key repeats keydown; only a set that actually changed is worth reporting.
       if (motion && !held.has(motion)) {
         held.add(motion)
         handlers.current.onMotionChange?.(held)
       }
 
-      const command = commandFor(keymap, signature, scope)
+      const command = commandFor(signature, scope, currentOverrides())
       if (!command) return
       event.preventDefault()
       // A held key repeats keydown. Space is held far more readily than ⌘Z, and a transport
@@ -83,7 +78,7 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
     }
 
     const onKeyUp = (event: KeyboardEvent) => {
-      const motion = motionFor(useKeymap.getState(), signatureOf(event))
+      const motion = motionFor(signatureOf(event))
       if (motion && held.delete(motion)) handlers.current.onMotionChange?.(held)
     }
 

@@ -559,5 +559,91 @@
     "discardTitle": "Des réglages n’ont pas été appliqués",
     "discardBody": "Vous avez changé des réglages sans les appliquer. Que voulez-vous faire ?",
     "discard": "Ne pas appliquer"
+  },
+  "commands": {
+    "projectNew": {
+      "title": "Nouveau projet",
+      "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."
+    },
+    "projectOpen": {
+      "title": "Ouvrir un projet",
+      "help": "Choisit un projet déjà existant sur votre disque et l’ouvre à la place de celui en cours. Le projet ouvert est enregistré au fur et à mesure, il n’y a rien à sauvegarder avant."
+    },
+    "layoutReset": {
+      "title": "Réinitialiser la disposition",
+      "help": "Remet les panneaux là où ils étaient au départ. Utile quand on a déplacé les fenêtres dans tous les sens et qu’on ne s’y retrouve plus. Votre travail n’est pas touché."
+    },
+    "appSettings": {
+      "title": "Réglages",
+      "help": "Ouvre la fenêtre des réglages, celle-ci même : la langue, les couleurs, le compte, les raccourcis et tout ce qui se règle."
+    },
+    "windowFullScreen": {
+      "title": "Plein écran",
+      "help": "Fait occuper tout l’écran à la fenêtre, sans barre ni bordure, pour travailler sans rien autour."
+    },
+    "sceneSelect": {
+      "title": "Sélectionner",
+      "help": "L’outil de base : cliquer sur un objet de la scène pour le choisir, sans rien lui faire. C’est celui sur lequel on revient entre deux manipulations."
+    },
+    "sceneTranslate": {
+      "title": "Déplacer",
+      "help": "Fait glisser l’objet choisi d’un endroit à un autre, en tirant sur les flèches de couleur — une par direction."
+    },
+    "sceneRotate": {
+      "title": "Pivoter",
+      "help": "Fait tourner l’objet choisi sur lui-même, en tirant sur les cercles de couleur — un par axe."
+    },
+    "sceneScale": {
+      "title": "Redimensionner",
+      "help": "Agrandit ou rétrécit l’objet choisi, en tirant sur les poignées. Maintenir la touche Maj garde ses proportions."
+    },
+    "sceneFrame": {
+      "title": "Cadrer la sélection",
+      "help": "Rapproche la caméra de l’objet choisi pour qu’il remplisse la vue. Pratique quand on s’est perdu ou qu’un objet est minuscule."
+    },
+    "sceneDelete": {
+      "title": "Supprimer",
+      "help": "Retire de la scène l’objet choisi. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
+    },
+    "undo": {
+      "title": "Annuler",
+      "help": "Défait la dernière chose que vous avez faite dans ce document. Chaque document a sa propre pile : annuler agit sur l’onglet en cours, pas sur les autres."
+    },
+    "redo": {
+      "title": "Rétablir",
+      "help": "Refait ce que vous venez d’annuler. Utile quand on annule une fois de trop."
+    },
+    "sequencePlayPause": {
+      "title": "Lire / Pause",
+      "help": "Lance la lecture du montage, ou l’arrête là où elle en est. Relancer repart d’où l’on s’était arrêté."
+    },
+    "sequenceSplit": {
+      "title": "Couper le clip",
+      "help": "Coupe le clip en deux à l’endroit où se trouve la tête de lecture, pour pouvoir traiter les deux morceaux séparément."
+    },
+    "sequenceDelete": {
+      "title": "Supprimer le clip",
+      "help": "Retire du montage le clip choisi. Le fichier d’origine, lui, reste dans vos assets."
+    },
+    "sequenceZoomIn": {
+      "title": "Zoomer",
+      "help": "Étale le montage pour voir le détail : les clips deviennent plus larges et on vise plus précisément."
+    },
+    "sequenceZoomOut": {
+      "title": "Dézoomer",
+      "help": "Resserre le montage pour en voir davantage d’un coup, quitte à perdre le détail."
+    },
+    "sequenceFit": {
+      "title": "Tout afficher",
+      "help": "Ajuste le zoom pour que le montage entier tienne à l’écran, d’un bout à l’autre."
+    },
+    "sequenceStart": {
+      "title": "Aller au début",
+      "help": "Ramène la tête de lecture tout au début du montage, sans rien déplacer d’autre."
+    },
+    "sequenceEnd": {
+      "title": "Aller à la fin",
+      "help": "Envoie la tête de lecture tout à la fin du montage, après le dernier clip."
+    }
   }
 }

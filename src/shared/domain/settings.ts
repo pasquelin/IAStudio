@@ -1,4 +1,5 @@
 import type { LanguagePreference } from '../i18n/languages'
+import type { BindingOverrides } from './command'
 import type { ApiFailure } from './failure'
 import type { ModelFamily } from './model'
 
@@ -62,6 +63,13 @@ export type Settings = {
     projectsFolder?: string
     lastProject?: string
   }
+  shortcuts: {
+    /**
+     * Only the commands the user actually remapped. A command added by a new version arrives
+     * with its own default and needs no migration; a remap of one since removed is ignored.
+     */
+    overrides: BindingOverrides
+  }
   media: {
     /**
      * An ffmpeg binary to use instead of the one on the PATH. Absent is the normal case: the
@@ -82,6 +90,7 @@ export const DEFAULT_SETTINGS: Settings = {
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
   storage: { backend: 'local' },
+  shortcuts: { overrides: {} },
   media: {},
 }
 

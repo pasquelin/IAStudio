@@ -58,11 +58,18 @@ const general = z.object({
   startup: z.enum(STARTUP_BEHAVIOURS).optional(),
 })
 
+// Keys are command ids and values signatures, both free strings here: a build that no longer
+// knows a command ignores its remap rather than refusing the whole write.
+const shortcuts = z.object({
+  overrides: z.record(z.string().min(1), z.string().min(1)).optional(),
+})
+
 const partialSettings = z.object({
   general: general.optional(),
   appearance: appearance.optional(),
   generation: generation.optional(),
   storage: storage.optional(),
+  shortcuts: shortcuts.optional(),
   media: media.optional(),
 })
 

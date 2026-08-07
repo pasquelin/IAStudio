@@ -1,3 +1,4 @@
+import type { CommandId } from '@shared/domain/command'
 import {
   mdiArrowAll,
   mdiAxisArrow,
@@ -7,7 +8,6 @@ import {
   mdiPlus,
   mdiResize,
 } from '@mdi/js'
-import type { CommandId } from '@shared/domain/shortcut'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar'
 import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
 
