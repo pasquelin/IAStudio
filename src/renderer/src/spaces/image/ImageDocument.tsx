@@ -6,8 +6,12 @@ import { Toolbar } from '@/design/Toolbar'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
+import { zoomIn, zoomOut, zoomToActual, zoomToFit } from '@/commands/canvas-view'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
+import { useCanvasViews, viewOf } from '@/stores/canvas-views'
+import { guidePort } from './guide-port'
 import { canvasToolFor, cursorFor, DEFAULT_MODES, IMAGE_TOOLS } from './image-tools'
+import { ZoomBar } from './ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }
 
@@ -31,6 +35,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const [brush, setBrush] = useState<BrushSettings>(DEFAULT_BRUSH)
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
+  const view = useCanvasViews(state => viewOf(state, documentId))
   // Booleans rather than the history itself: a selector building an object on every call hands
   // React a new snapshot each render, and the loop never settles.
   const undoable = useCanvases(state => canUndo(historyOf(state, documentId)))
@@ -40,11 +45,15 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     const element = hostRef.current
     if (!element) return
 
+    const views = () => useCanvasViews.getState()
     const created = new CanvasEngine({
       onPick: color => setBrush(current => ({ ...current, color })),
       // A stroke is one gesture, so it is one history entry — a command per dab would make
       // undo useless.
       onStrokeEnd: () => undefined,
+      onViewport: viewport => views().setViewport(documentId, viewport),
+      onHost: size => views().setHost(documentId, size),
+      guides: guidePort(documentId),
     })
 
     engine.current = created
@@ -60,6 +69,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   useEffect(() => {
     engine.current?.apply(canvas)
   }, [canvas])
+
+  useEffect(() => {
+    engine.current?.setView(view)
+  }, [view])
 
   useEffect(() => {
     engine.current?.setBrush(brush)
@@ -88,9 +101,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   return (
     <div className="flex h-full min-h-0">
-      <div className={cn('relative min-w-0 flex-1', CHECKER)}>
-        {/* Pixi appends its own canvas here — see `CanvasEngine.mount`. The cursor goes on the
-            host rather than the canvas, which Pixi owns and replaces on every mount. */}
+      <div className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}>
+        {/* Pixi appends its own canvas here, and the overlay its own above it — see
+            `CanvasEngine.mount`. The cursor goes on the host rather than the canvas, which Pixi
+            owns and replaces on every mount. */}
         <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
 
         <Toolbar
@@ -104,6 +118,14 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           onRedo={() => useCanvases.getState().redo(documentId)}
           canUndo={undoable}
           canRedo={redoable}
+        />
+
+        <ZoomBar
+          scale={view.viewport.scale}
+          onZoomIn={() => zoomIn(documentId)}
+          onZoomOut={() => zoomOut(documentId)}
+          onFit={() => zoomToFit(documentId)}
+          onActual={() => zoomToActual(documentId)}
         />
       </div>
     </div>

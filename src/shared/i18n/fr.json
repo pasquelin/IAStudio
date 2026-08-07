@@ -228,6 +228,14 @@
     "color": "Couleur",
     "colorHint": "Couleur du pinceau, des formes et du remplissage"
   },
+  "imageView": {
+    "zoom": "Zoom",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "fit": "Ajuster",
+    "fitHint": "Ajuster l'image à la fenêtre",
+    "actualHint": "Taille réelle — un pixel de l'image pour un pixel d'écran"
+  },
   "layers": {
     "add": "Ajouter un calque",
     "addHint": "Ajouter un calque transparent au-dessus de la pile",
@@ -480,6 +488,14 @@
     "light": "Lumière",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "zoomFit": "Ajuster à la fenêtre",
+    "zoomActual": "Taille réelle",
+    "rulers": "Règles",
+    "guides": "Repères",
+    "clearGuides": "Effacer les repères",
+    "snap": "Magnétisme",
     "help": "Aide",
     "about": "À propos de {{name}}"
   },

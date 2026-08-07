@@ -29,6 +29,12 @@ export type DocumentStoreState<S> = {
   /** Writes without touching the history — selection is not a command. */
   replace: (documentId: string, state: S) => void
   /**
+   * Reverts the last command and forgets it, rather than moving it to the redo stack. For a
+   * gesture that turned out to be a no-op — a guide pulled off a ruler and dropped back on it —
+   * where `undo` would leave ⌘Y able to resurrect what the user just threw away.
+   */
+  discardLast: (documentId: string) => void
+  /**
    * Installs a starting state on first open, built rather than shared: a scene needs its own
    * node ids, which a constant default cannot give it. Idempotent — reopening a tab must not
    * reset what is in it.
@@ -135,6 +141,18 @@ export function createDocumentStore<S>(defaultState: S) {
 
       markSaved: (documentId, at) =>
         set(state => ({ saved: { ...state.saved, [documentId]: at } })),
+
+      // Deliberately leaves the open gesture alone: this is called from inside one, and closing
+      // it would stop the rest of that gesture from coalescing — one history entry per frame.
+      discardLast: documentId =>
+        step(documentId, (state, history) => {
+          const command = history.past.at(-1)
+          if (!command) return [state, history]
+          return [
+            command.revert(state),
+            { past: history.past.slice(0, -1), future: history.future },
+          ]
+        }),
 
       // Both close whatever gesture was open: the entry the next command would have merged into
       // is no longer the one the gesture started from.

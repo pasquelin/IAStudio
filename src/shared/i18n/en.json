@@ -228,6 +228,14 @@
     "color": "Colour",
     "colorHint": "Colour of the brush, the shapes and the fill"
   },
+  "imageView": {
+    "zoom": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fit": "Fit",
+    "fitHint": "Fit the image to the window",
+    "actualHint": "Actual size — one image pixel per screen pixel"
+  },
   "layers": {
     "add": "Add a layer",
     "addHint": "Add a transparent layer on top of the stack",
@@ -480,6 +488,14 @@
     "light": "Light",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomFit": "Fit to window",
+    "zoomActual": "Actual size",
+    "rulers": "Rulers",
+    "guides": "Guides",
+    "clearGuides": "Clear guides",
+    "snap": "Snap",
     "help": "Help",
     "about": "About {{name}}"
   },

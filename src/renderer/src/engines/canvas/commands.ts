@@ -11,6 +11,7 @@ import {
   updateSiblings,
   type BlendMode,
   type CanvasState,
+  type Guide,
   type Layer,
   type LayerLocks,
   type Rect,
@@ -146,6 +147,91 @@ function mapLayer(
   return {
     ...state,
     layers: mapLayers(state.layers, layer => (layer.id === id ? (change(layer) ?? layer) : layer)),
+  }
+}
+
+/**
+ * Idempotent on purpose: pulling a guide off a ruler and dragging it is one gesture, and the
+ * commands it emits coalesce on this id. A second one has to move the guide it already laid
+ * down, not stack another beside it.
+ */
+export function addGuide(guide: Guide): Command<CanvasState> {
+  let replaced: Guide | null = null
+
+  return {
+    id: `guide:add:${guide.id}`,
+    apply: state => {
+      // Applied over a guide that already carries this id, the inverse is a move back, not a
+      // removal — and one gesture reaching this branch is enough to lose a guide on ⌘Z.
+      replaced = state.guides.find(other => other.id === guide.id) ?? null
+      return { ...state, guides: [...withoutGuide(state.guides, guide.id), guide] }
+    },
+    revert: state => {
+      const rest = withoutGuide(state.guides, guide.id)
+      return { ...state, guides: replaced ? [...rest, replaced] : rest }
+    },
+  }
+}
+
+function withoutGuide(guides: readonly Guide[], id: string): Guide[] {
+  return guides.filter(guide => guide.id !== id)
+}
+
+/** Dragging a guide is one gesture, so the commands it emits coalesce on this id. */
+export function moveGuide(id: string, position: number): Command<CanvasState> {
+  let previous: number | null = null
+
+  return {
+    id: `guide:move:${id}`,
+    apply: state => {
+      previous = state.guides.find(guide => guide.id === id)?.position ?? null
+      return withGuide(state, id, position)
+    },
+    revert: state => (previous === null ? state : withGuide(state, id, previous)),
+  }
+}
+
+function withGuide(state: CanvasState, id: string, position: number): CanvasState {
+  return {
+    ...state,
+    guides: state.guides.map(guide => (guide.id === id ? { ...guide, position } : guide)),
+  }
+}
+
+/** Dropping a guide back on its ruler removes it, which is how every editor deletes one. */
+export function removeGuide(id: string): Command<CanvasState> {
+  let previous: Guide | null = null
+  let index = 0
+
+  return {
+    id: `guide:remove:${id}`,
+    apply: state => {
+      index = state.guides.findIndex(guide => guide.id === id)
+      previous = state.guides[index] ?? null
+      return { ...state, guides: withoutGuide(state.guides, id) }
+    },
+    // Back where it was, not on top: the stack of guides has an order, and undo must be an
+    // inverse, not an approximation.
+    revert: state =>
+      previous === null
+        ? state
+        : {
+            ...state,
+            guides: [...state.guides.slice(0, index), previous, ...state.guides.slice(index)],
+          },
+  }
+}
+
+export function clearGuides(): Command<CanvasState> {
+  let previous: readonly Guide[] = []
+
+  return {
+    id: 'guide:clear',
+    apply: state => {
+      previous = state.guides
+      return { ...state, guides: [] }
+    },
+    revert: state => ({ ...state, guides: [...previous] }),
   }
 }
 
@@ -324,7 +410,10 @@ export function resizeCanvas(
 
 /**
  * Resamples everything. The layers scale with the frame, which is what makes this different
- * from `resizeCanvas` — the engine resamples the textures by the same factor.
+ * from `resizeCanvas`: the frame moves there, and the content moves here.
+ *
+ * The pixels themselves are not resampled yet — the textures keep their original size and the
+ * transforms carry the factor. That is milestone 10's, with the export.
  */
 export function resizeImage(width: number, height: number): Command<CanvasState> {
   return restructure('canvas:resample', state => {

@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { emptyHistory, run, undo } from '../core/history'
 import type { Command } from '../core/history'
 import {
+  addGuide,
   addLayer,
+  clearGuides,
   cropToRect,
   duplicateLayer,
   flatten,
   groupLayers,
   mergeDown,
+  moveGuide,
+  removeGuide,
   removeLayer,
   renameLayer,
   reorderLayer,
@@ -390,5 +394,73 @@ describe('undoing a frame change', () => {
 
     expect([after.width, after.height]).toEqual([50, 50])
     expect([reverted.width, reverted.height]).toEqual([100, 100])
+  })
+})
+
+const withGuides: CanvasState = {
+  ...DEFAULT_CANVAS,
+  guides: [
+    { id: 'g1', axis: 'x', position: 100 },
+    { id: 'g2', axis: 'y', position: 200 },
+  ],
+}
+
+describe('guide commands', () => {
+  it('lays a guide down and takes it back', () => {
+    const [after, reverted] = roundTrip(
+      DEFAULT_CANVAS,
+      addGuide({ id: 'g1', axis: 'x', position: 40 }),
+    )
+
+    expect(after.guides).toHaveLength(1)
+    expect(reverted.guides).toEqual([])
+  })
+
+  it('moves a guide and restores where it stood', () => {
+    const [after, reverted] = roundTrip(withGuides, moveGuide('g1', 350))
+
+    expect(after.guides[0]?.position).toBe(350)
+    expect(reverted.guides[0]?.position).toBe(100)
+  })
+
+  it('puts a removed guide back at its own index, not on top', () => {
+    const [after, reverted] = roundTrip(withGuides, removeGuide('g1'))
+
+    expect(after.guides.map(guide => guide.id)).toEqual(['g2'])
+    expect(reverted.guides.map(guide => guide.id)).toEqual(['g1', 'g2'])
+  })
+
+  it('clears every guide at once, and gives them all back', () => {
+    const [after, reverted] = roundTrip(withGuides, clearGuides())
+
+    expect(after.guides).toEqual([])
+    expect(reverted.guides).toHaveLength(2)
+  })
+
+  // Two commands of the same drag coalesce, so the second one applies over the first's result.
+  it('keeps the original position across a coalesced drag', () => {
+    const first = moveGuide('g1', 150)
+    const dragged = moveGuide('g1', 320).apply(first.apply(withGuides))
+
+    expect(first.revert(dragged).guides[0]?.position).toBe(100)
+  })
+})
+
+// The gesture that lays a guide down keeps emitting `addGuide`, which is why it replaces.
+describe('addGuide, applied twice', () => {
+  it('moves the guide it already laid rather than stacking another', () => {
+    const first = addGuide({ id: 'g1', axis: 'x', position: 10 }).apply(DEFAULT_CANVAS)
+    const second = addGuide({ id: 'g1', axis: 'x', position: 90 }).apply(first)
+
+    expect(second.guides).toEqual([{ id: 'g1', axis: 'x', position: 90 }])
+  })
+
+  // Applied over a guide that already existed, the inverse is a move back — not a removal, which
+  // would lose a guide the user had laid in an earlier gesture.
+  it('puts the guide it replaced back where it was', () => {
+    const laid = addGuide({ id: 'g1', axis: 'x', position: 10 }).apply(DEFAULT_CANVAS)
+    const again = addGuide({ id: 'g1', axis: 'x', position: 400 })
+
+    expect(again.revert(again.apply(laid)).guides).toEqual([{ id: 'g1', axis: 'x', position: 10 }])
   })
 })

@@ -1,3 +1,5 @@
+import type { Rect } from './canvas-state'
+
 /**
  * The shape tool's arithmetic, kept out of the engine so it can be tested: jsdom has no WebGL
  * context, but a rectangle's corners are just numbers.
@@ -83,11 +85,7 @@ function sideCount(sides: number): number {
 }
 
 /** Normalised so width and height are never negative: dragging up-left is still a rectangle. */
-function box(
-  from: Point,
-  to: Point,
-  constrain: boolean,
-): { x: number; y: number; width: number; height: number } {
+export function box(from: Point, to: Point, constrain: boolean): Rect {
   let dx = to.x - from.x
   let dy = to.y - from.y
 
