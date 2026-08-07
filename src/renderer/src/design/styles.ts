@@ -12,3 +12,12 @@ export const CONTROL = cn(
   'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md) text-[11px]',
   FOCUS_RING,
 )
+
+/**
+ * A value the user types into: the generation form's fields and the inspector's. Its own shape
+ * — bordered, tighter corners — because a field is something to fill in, not a bar control.
+ */
+export const FIELD = cn(
+  'bg-surface border-border text-text h-(--sc-control) rounded-(--radius-sc-sm) border px-2',
+  FOCUS_RING,
+)
