@@ -22,16 +22,9 @@ export type ProjectHandlerDeps = {
   /** Where an edited take is written back. Injected, like everything that touches the disk. */
   assets: LocalBackend
   newAssetId: () => string
-  /** Injected rather than imported: `dialog` needs a live app, which no test has. */
-  pickFolder: () => Promise<string | null>
 }
 
-export function registerProjectHandlers({
-  project,
-  assets,
-  newAssetId,
-  pickFolder,
-}: ProjectHandlerDeps): void {
+export function registerProjectHandlers({ project, assets, newAssetId }: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, (_event, path, name) =>
     project.create(parseProjectPath(path), parseProjectName(name)),
   )
@@ -39,8 +32,6 @@ export function registerProjectHandlers({
   handle(CHANNELS.projectOpen, (_event, path) => project.open(parseProjectPath(path)))
 
   handle(CHANNELS.projectCurrent, () => project.current())
-
-  handle(CHANNELS.projectPickFolder, () => pickFolder())
 
   handle(CHANNELS.assetsSearch, (_event, query) => project.catalog().search(parseAssetQuery(query)))
 

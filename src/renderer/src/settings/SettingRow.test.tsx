@@ -148,7 +148,10 @@ describe('SettingRow', () => {
 
   it('restores the default of a setting that was changed', async () => {
     useSettings.setState({
-      settings: { ...DEFAULT_SETTINGS, appearance: { theme: 'light', density: 'comfortable' } },
+      settings: {
+        ...DEFAULT_SETTINGS,
+        appearance: { ...DEFAULT_SETTINGS.appearance, theme: 'light' },
+      },
     })
     const written = captureWrites()
     render(rowFor('appearance.theme'))
@@ -208,5 +211,66 @@ describe('SettingRow', () => {
     expect(written).toEqual([])
     // And the spaces do not survive on screen, where nothing else would ever clear them.
     expect(field).toHaveValue('/usr/bin/ffmpeg')
+  })
+})
+
+describe('the controls a kind brings with it', () => {
+  beforeEach(() => {
+    useSettings.setState({ settings: DEFAULT_SETTINGS })
+  })
+
+  it('writes a boolean as a boolean, not as the string a checkbox carries', () => {
+    const written = captureWrites()
+    render(rowFor('appearance.reduceMotion'))
+
+    fireEvent.click(screen.getByLabelText(/Limiter les animations/))
+
+    expect(written).toEqual([['appearance.reduceMotion', true]])
+  })
+
+  it('accepts the decimal step of a slider, which a whole-number field would refuse', () => {
+    const written = captureWrites()
+    render(rowFor('appearance.fontScale'))
+
+    fireEvent.change(screen.getByLabelText(/Taille du texte/), { target: { value: '1.15' } })
+
+    expect(written).toEqual([['appearance.fontScale', 1.15]])
+  })
+
+  it('shows the slider value, so a handle position is a number one can aim at', () => {
+    useSettings.setState({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        appearance: { ...DEFAULT_SETTINGS.appearance, fontScale: 1.2 },
+      },
+    })
+    render(rowFor('appearance.fontScale'))
+
+    expect(screen.getByText('1.20')).toBeInTheDocument()
+  })
+
+  it('clamps to the declared maximum rather than sending a value zod would refuse', () => {
+    const written = captureWrites()
+    render(rowFor('appearance.fontScale'))
+
+    fireEvent.change(screen.getByLabelText(/Taille du texte/), { target: { value: '9' } })
+
+    // The range input clamps on its own; what this pins is that the bounds it clamps to are
+    // the registry's, and therefore the same ones the main process enforces.
+    expect(written).toEqual([['appearance.fontScale', 1.4]])
+  })
+
+  it('shows the theme accent while none is set, rather than a colour nobody chose', () => {
+    document.documentElement.style.setProperty('--color-accent', '#3574f0')
+    render(rowFor('appearance.accent'))
+
+    expect(screen.getByLabelText(/Couleur d’accent/)).toHaveValue('#3574f0')
+  })
+
+  it('offers a picker beside a path, and keeps the field writable for a pasted one', () => {
+    render(rowFor('media.ffmpegPath'))
+
+    expect(screen.getByRole('button', { name: 'Parcourir…' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Chemin de ffmpeg/)).toBeEnabled()
   })
 })

@@ -5,6 +5,7 @@ import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
 import type { LightKind, MeshKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
+import type { PathKind } from './domain/settings-registry'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { WindowState } from './domain/window'
 import type { WorkspaceId } from './domain/workspace'
@@ -33,7 +34,8 @@ export type Channels = {
   projectCreate: 'project:create'
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
-  projectPickFolder: 'project:pick-folder'
+
+  dialogPickPath: 'dialog:pick-path'
 
   assetsSearch: 'assets:search'
   assetsPeaks: 'assets:peaks'
@@ -70,7 +72,8 @@ export const CHANNELS: Channels = {
   projectCreate: 'project:create',
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
-  projectPickFolder: 'project:pick-folder',
+
+  dialogPickPath: 'dialog:pick-path',
 
   assetsSearch: 'assets:search',
   assetsPeaks: 'assets:peaks',
@@ -172,8 +175,15 @@ export type StudioBridge = {
     create: (path: string, name: string) => Promise<Project>
     open: (path: string) => Promise<Project>
     current: () => Promise<Project | null>
-    pickFolder: () => Promise<string | null>
     onChange: (callback: (project: Project | null) => void) => Unsubscribe
+  }
+  dialog: {
+    /**
+     * A native picker, answering the chosen path or null when it was cancelled. One channel for
+     * every path the interface asks for — where a project goes, where ffmpeg lives — because
+     * they differ only by which picker opens.
+     */
+    pickPath: (kind: PathKind) => Promise<string | null>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>

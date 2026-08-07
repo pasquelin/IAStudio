@@ -38,13 +38,13 @@ export const useProject = create<ProjectState>()(set => ({
 
   openPicked: async () => {
     const bridge = getBridge()
-    const folder = await bridge?.project.pickFolder()
+    const folder = await bridge?.dialog.pickPath('folder')
     if (bridge && folder) set({ project: await bridge.project.open(folder) })
   },
 
   createPicked: async () => {
     const bridge = getBridge()
-    const folder = await bridge?.project.pickFolder()
+    const folder = await bridge?.dialog.pickPath('folder')
     if (!bridge || !folder) return
 
     // The dialog picks where, not what to call it; renaming a project folder is the file

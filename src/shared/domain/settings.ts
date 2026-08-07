@@ -35,6 +35,11 @@ export type Settings = {
   appearance: {
     theme: Theme
     density: Density
+    /** Overrides `--color-accent`. The theme's own accent when left unset. */
+    accent?: string
+    /** Multiplies the interface's base size. 1 is what the design was drawn at. */
+    fontScale: number
+    reduceMotion: boolean
   }
   generation: {
     concurrentJobs: number
@@ -63,7 +68,7 @@ export type Settings = {
  * exactly this.
  */
 export const DEFAULT_SETTINGS: Settings = {
-  appearance: { theme: 'dark', density: 'comfortable' },
+  appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
   storage: { backend: 'local' },
   media: {},

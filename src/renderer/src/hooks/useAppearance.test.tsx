@@ -42,7 +42,10 @@ function stubMatchMedia(matches: boolean) {
 
 function withAppearance(theme: Theme, density: Density = 'comfortable') {
   useSettings.setState({
-    settings: { ...DEFAULT_SETTINGS, appearance: { theme, density } },
+    settings: {
+      ...DEFAULT_SETTINGS,
+      appearance: { ...DEFAULT_SETTINGS.appearance, theme, density },
+    },
   })
   return renderHook(() => useAppearance())
 }
@@ -116,7 +119,10 @@ describe('following the system', () => {
 
     act(() => {
       useSettings.setState({
-        settings: { ...DEFAULT_SETTINGS, appearance: { theme: 'light', density: 'comfortable' } },
+        settings: {
+          ...DEFAULT_SETTINGS,
+          appearance: { ...DEFAULT_SETTINGS.appearance, theme: 'light' },
+        },
       })
     })
     view.rerender()

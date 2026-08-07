@@ -8,10 +8,12 @@ import {
   descriptorsIn,
   matchSettings,
   optionsOf,
+  PATH_KINDS,
   sectionEntry,
   SETTING_REGISTRY,
   SETTING_SECTIONS,
   UNLISTED_PATHS,
+  type SettingKind,
 } from './settings-registry'
 
 function resolve(bundle: unknown, key: string): unknown {
@@ -42,6 +44,9 @@ function keysOf(): string[] {
     ]),
   ]
 }
+
+/** The kinds a number stands behind, and therefore the ones zod bounds. */
+const NUMERIC: ReadonlySet<SettingKind> = new Set<SettingKind>(['number', 'slider'])
 
 describe('settings registry', () => {
   it('describes each setting once', () => {
@@ -75,7 +80,7 @@ describe('settings registry', () => {
 
   it('bounds every numeric setting, so zod never falls back to infinity', () => {
     for (const descriptor of SETTING_REGISTRY) {
-      if (descriptor.kind !== 'number') continue
+      if (!NUMERIC.has(descriptor.kind)) continue
 
       const bounds = boundsOf(descriptor.path)
       expect(Number.isFinite(bounds.min), `${descriptor.path} has no minimum`).toBe(true)
@@ -95,7 +100,7 @@ describe('settings registry', () => {
 
   it('keeps a numeric default within the bounds it declares', () => {
     for (const descriptor of SETTING_REGISTRY) {
-      if (descriptor.kind !== 'number') continue
+      if (!NUMERIC.has(descriptor.kind)) continue
 
       const value = defaultAt(descriptor.path)
       const bounds = boundsOf(descriptor.path)
@@ -103,11 +108,14 @@ describe('settings registry', () => {
     }
   })
 
-  it('groups settings by the screen that shows them', () => {
-    expect(descriptorsIn('appearance').map(descriptor => descriptor.path)).toEqual([
-      'appearance.theme',
-      'appearance.density',
-    ])
+  it('groups settings by the screen that shows them, in registry order', () => {
+    const shown = descriptorsIn('appearance')
+
+    expect(shown).toEqual(SETTING_REGISTRY.filter(entry => entry.section === 'appearance'))
+    // Put together, the sections account for the whole registry: none of them renders nowhere.
+    expect(SETTING_SECTIONS.flatMap(section => [...descriptorsIn(section.id)])).toHaveLength(
+      SETTING_REGISTRY.length,
+    )
   })
 
   // A descriptor pointing at a section that does not exist would render nowhere at all.
@@ -131,6 +139,24 @@ describe('settings registry', () => {
     expect(descriptorAt('storage.lastProject')).toBeNull()
   })
 
+  // A slider without a step lands on the browser's default of 1, which for a 0.85 to 1.4 range
+  // means three reachable values.
+  it('gives every slider a step, which is the reason it is a slider at all', () => {
+    for (const descriptor of SETTING_REGISTRY) {
+      if (descriptor.kind !== 'slider') continue
+      expect(descriptor.step, `${descriptor.path} has no step`).toBeGreaterThan(0)
+    }
+  })
+
+  // Without one the control has to guess which native picker to open, and guessing wrong sends
+  // someone hunting for a folder when they were asked for a binary.
+  it('says what every path setting points at', () => {
+    for (const descriptor of SETTING_REGISTRY) {
+      if (descriptor.kind !== 'path') continue
+      expect(PATH_KINDS, `${descriptor.path}`).toContain(descriptor.pathKind)
+    }
+  })
+
   it('leaves bounds open for a setting that declares none', () => {
     expect(boundsOf('media.ffmpegPath').max).toBe(Number.POSITIVE_INFINITY)
   })
@@ -140,16 +166,22 @@ describe('settings search', () => {
   const translate = (key: string): string => String(resolve(TRANSLATIONS.fr, key) ?? key)
 
   it('finds a setting by its title', () => {
-    expect(matchSettings('densité', translate).map(entry => entry.path)).toEqual([
-      'appearance.density',
-    ])
+    expect(matchSettings('thème', translate).map(entry => entry.path)).toContain('appearance.theme')
+  })
+
+  // The text size explains that density is what handles control sizes, so it legitimately
+  // answers to the word. A search that only ever matched titles would hide exactly that.
+  it('finds a setting the words of which merely mention what was typed', () => {
+    // The text size explains that density is what handles control sizes, so it answers to the
+    // word without carrying it in its title. A search over titles alone would hide that.
+    expect(matchSettings('densité', translate).map(entry => entry.path)).toContain(
+      'appearance.fontScale',
+    )
   })
 
   // A search box demanding a circumflex is a search box nobody uses.
   it('ignores accents and case', () => {
-    expect(matchSettings('DENSITE', translate).map(entry => entry.path)).toEqual([
-      'appearance.density',
-    ])
+    expect(matchSettings('THEME', translate).map(entry => entry.path)).toContain('appearance.theme')
   })
 
   it('searches the description too, where the words a user knows actually are', () => {

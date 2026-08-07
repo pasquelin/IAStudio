@@ -49,8 +49,10 @@ const bridge: StudioBridge = {
     create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),
     open: path => ipcRenderer.invoke(CHANNELS.projectOpen, path),
     current: () => ipcRenderer.invoke(CHANNELS.projectCurrent),
-    pickFolder: () => ipcRenderer.invoke(CHANNELS.projectPickFolder),
     onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),
+  },
+  dialog: {
+    pickPath: kind => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),

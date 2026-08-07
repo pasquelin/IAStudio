@@ -5,7 +5,7 @@ import { useSettings } from './settings'
 
 const COMPACT: Settings = {
   ...DEFAULT_SETTINGS,
-  appearance: { theme: 'dark', density: 'compact' },
+  appearance: { ...DEFAULT_SETTINGS.appearance, density: 'compact' },
 }
 
 describe('settings store', () => {

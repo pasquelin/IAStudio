@@ -8,7 +8,13 @@ import type { SettingPath, SettingValue, ValueAt } from './settings-path'
  * Kinds arrive with the first setting that needs one — a branch nothing reaches is a branch
  * nothing tests.
  */
-export type SettingKind = 'choice' | 'number' | 'text'
+export type SettingKind = 'boolean' | 'choice' | 'color' | 'number' | 'path' | 'slider' | 'text'
+
+/** What a `path` setting points at, and therefore which native picker opens. */
+export type PathKind = 'file' | 'folder'
+
+/** The values beside the type, so zod enumerates them from here rather than retyping them. */
+export const PATH_KINDS: readonly PathKind[] = ['file', 'folder']
 
 /**
  * A screen of the settings window, and the two texts that name it. Declared here rather than
@@ -72,6 +78,13 @@ type Descriptor<P extends SettingPath> = {
   step?: number
   options?: readonly SettingOption<ValueAt<P>>[]
   placeholderKey?: string
+  /**
+   * Which native picker a `path` setting opens. Optional on the type and required in practice:
+   * `settings-registry.test.ts` refuses a `path` without one, the same way it refuses a numeric
+   * setting without bounds. Spelling it in the type would split `Descriptor` into a union and
+   * cost every reader a narrowing to get at `min` or `options`.
+   */
+  pathKind?: PathKind
 }
 
 /**
@@ -120,6 +133,30 @@ export const SETTING_REGISTRY = [
     })),
   }),
   setting({
+    path: 'appearance.accent',
+    kind: 'color',
+    section: 'appearance',
+    titleKey: 'settings.accent.title',
+    helpKey: 'settings.accent.help',
+  }),
+  setting({
+    path: 'appearance.fontScale',
+    kind: 'slider',
+    section: 'appearance',
+    titleKey: 'settings.fontScale.title',
+    helpKey: 'settings.fontScale.help',
+    min: 0.85,
+    max: 1.4,
+    step: 0.05,
+  }),
+  setting({
+    path: 'appearance.reduceMotion',
+    kind: 'boolean',
+    section: 'appearance',
+    titleKey: 'settings.reduceMotion.title',
+    helpKey: 'settings.reduceMotion.help',
+  }),
+  setting({
     path: 'generation.concurrentJobs',
     kind: 'number',
     section: 'generation',
@@ -139,7 +176,8 @@ export const SETTING_REGISTRY = [
   }),
   setting({
     path: 'media.ffmpegPath',
-    kind: 'text',
+    kind: 'path',
+    pathKind: 'file',
     section: 'media',
     titleKey: 'settings.ffmpegPath.title',
     helpKey: 'settings.ffmpegPath.help',

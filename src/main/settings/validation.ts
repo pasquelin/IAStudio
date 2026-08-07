@@ -11,9 +11,19 @@ import type { Credentials } from './store'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
+const scale = boundsOf('appearance.fontScale')
+
+// Six digits, not three and not eight: the value is handed to `--color-accent`, read back by
+// `tokenAsHex` for the canvas engines, and that one parses `#rrggbb` alone.
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i)
+
 const appearance = z.object({
   theme: z.enum(THEMES).optional(),
   density: z.enum(DENSITIES).optional(),
+  accent: hexColor.optional(),
+  // Not `.int()`, unlike the job counts: this one is a slider with a 0.05 step.
+  fontScale: z.number().min(scale.min).max(scale.max).optional(),
+  reduceMotion: z.boolean().optional(),
 })
 
 // Read from the registry, never restated: the bounds a screen offers and the ones this refuses

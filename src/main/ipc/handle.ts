@@ -25,7 +25,7 @@ type ChannelMethod = {
   [CHANNELS.projectCreate]: StudioBridge['project']['create']
   [CHANNELS.projectOpen]: StudioBridge['project']['open']
   [CHANNELS.projectCurrent]: StudioBridge['project']['current']
-  [CHANNELS.projectPickFolder]: StudioBridge['project']['pickFolder']
+  [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']

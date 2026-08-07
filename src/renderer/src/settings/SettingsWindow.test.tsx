@@ -24,7 +24,7 @@ describe('SettingsWindow', () => {
     const read = vi.fn((): Promise<Settings> =>
       Promise.resolve({
         ...DEFAULT_SETTINGS,
-        appearance: { theme: 'dark', density: 'compact' },
+        appearance: { ...DEFAULT_SETTINGS.appearance, density: 'compact' },
       }),
     )
     installFakeBridge({ settings: { read } })

@@ -42,6 +42,9 @@ export function resolveTheme(theme: Theme, systemDark: boolean): ResolvedTheme {
 export function useAppearance(): void {
   const theme = useSettings(state => state.settings.appearance.theme)
   const density = useSettings(state => state.settings.appearance.density)
+  const accent = useSettings(state => state.settings.appearance.accent)
+  const fontScale = useSettings(state => state.settings.appearance.fontScale)
+  const reduceMotion = useSettings(state => state.settings.appearance.reduceMotion)
 
   // Subscribed only while it can change anything: on an explicit theme the listener would wake
   // the renderer for a preference nothing reads. Changing the setting re-subscribes, and React
@@ -63,9 +66,19 @@ export function useAppearance(): void {
     const root = document.documentElement
     root.dataset['theme'] = THEME_ATTRIBUTE[resolved]
     root.dataset['density'] = density
+    root.dataset['reduceMotion'] = String(reduceMotion)
+    root.style.setProperty('--sc-font-scale', String(fontScale))
+
+    // An inline property, which outranks every theme block — and removed rather than blanked
+    // when unset, so the theme's own accent comes back instead of an empty value nothing can
+    // parse. `--color-primary` follows it: daisyUI paints the same blue for the same meaning.
+    for (const name of ['--color-accent', '--color-primary']) {
+      if (accent) root.style.setProperty(name, accent)
+      else root.style.removeProperty(name)
+    }
 
     // After the attributes, never before: the engines read the tokens back the moment they are
     // told, and `getComputedStyle` would hand them the palette they are leaving.
     refreshPalette()
-  }, [resolved, density])
+  }, [resolved, density, accent, fontScale, reduceMotion])
 }

@@ -6,6 +6,7 @@ import { availableParallelism } from 'node:os'
 import { delimiter, dirname } from 'node:path'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
+import type { PathKind } from '@shared/domain/settings-registry'
 import type { AuthState } from '@shared/domain/settings'
 import { TRANSLATIONS } from '@shared/i18n'
 import { resolveLanguage } from '@shared/i18n/languages'
@@ -43,7 +44,7 @@ export type Services = {
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Asset
   capabilities: () => MediaCapabilities
-  pickFolder: () => Promise<string | null>
+  pickPath: (kind: PathKind) => Promise<string | null>
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
@@ -61,8 +62,14 @@ async function openDialog(options: Electron.OpenDialogOptions): Promise<string[]
   return result.canceled ? [] : result.filePaths
 }
 
-async function pickFolder(): Promise<string | null> {
-  const picked = await openDialog({ properties: ['openDirectory', 'createDirectory'] })
+/**
+ * One picker for every path the interface asks for. `createDirectory` on a folder because the
+ * one being chosen often does not exist yet — where the projects will go.
+ */
+async function pickPath(kind: PathKind): Promise<string | null> {
+  const picked = await openDialog({
+    properties: kind === 'folder' ? ['openDirectory', 'createDirectory'] : ['openFile'],
+  })
   return picked[0] ?? null
 }
 
@@ -208,7 +215,7 @@ export function createServices(): Services {
       ffmpeg.invalidate()
       return { ffmpeg: ffmpeg.path() !== null }
     },
-    pickFolder,
+    pickPath,
     pickMedia,
     // Another key means another catalogue: keeping the cache would show the previous
     // account's models under the new one.

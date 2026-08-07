@@ -177,6 +177,8 @@
 }
 
 :root {
+  /* Overwritten inline by `useAppearance`; the value here is what an unstyled root falls to. */
+  --sc-font-scale: 1;
   --sc-control: 28px;
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;
@@ -213,8 +215,26 @@ body {
   background: var(--color-chassis);
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-size: 13px;
+  /* Every `rem` and every text size follows from this one; the gauges stay in pixels, because
+     a control has to keep hitting the same target size whatever the text does. */
+  font-size: calc(13px * var(--sc-font-scale));
   /* A studio never scrolls as a whole: every panel handles its own overflow. */
   overflow: hidden;
   user-select: none;
+}
+
+/*
+ * Not `prefers-reduced-motion`: that one is the system's answer, and this is the setting. The
+ * studio is where someone may want the interface still while the OS animates everywhere else.
+ *
+ * `1ms` rather than `0`: a zero-length transition never fires `transitionend`, and a component
+ * waiting on it to unmount would stay on screen for good.
+ */
+:root[data-reduce-motion='true'] *,
+:root[data-reduce-motion='true'] *::before,
+:root[data-reduce-motion='true'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
 }

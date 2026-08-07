@@ -4,18 +4,29 @@ import { useTranslation } from 'react-i18next'
 import { defaultAt, valueAt, type SettingValue } from '@shared/domain/settings-path'
 import { boundsOf, optionsOf, type SettingDescriptor } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
+import { useToken } from '@/hooks/useToken'
+import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 
 /**
  * What a numeric field may hand over. An emptied field is mid-edit, and a value zod would
- * refuse — a decimal, or one outside the declared bounds — must not be sent at all: the write
- * would reject in the main process and leave the field showing a number nothing stored.
+ * refuse — a decimal where one is not expected, or one outside the declared bounds — must not
+ * be sent at all: the write would reject in the main process and leave the field showing a
+ * number nothing stored.
+ *
+ * Sliders are the exception to the integer rule: theirs is a `step` below one, which is the
+ * whole reason they are sliders rather than counters.
  */
 function writableNumber(descriptor: SettingDescriptor, value: number): boolean {
-  if (!Number.isInteger(value)) return false
+  if (descriptor.kind !== 'slider' && !Number.isInteger(value)) return false
 
   const { min, max } = boundsOf(descriptor.path)
   return value >= min && value <= max
+}
+
+/** Decimals implied by the step, so `0.05` reads `1.15` and `1` reads `3`. */
+function decimalsOf(step: number | undefined): number {
+  return step && step < 1 ? (String(step).split('.')[1]?.length ?? 0) : 0
 }
 
 /** Text settings commit on blur; a controlled input fed by a write hands back a stale word. */
@@ -76,6 +87,77 @@ function TextControl({
   )
 }
 
+/**
+ * A path, with the native picker beside it. The field stays writable: a path can be pasted, and
+ * one typed before the binary is plugged in has to be storable — see `media.ffmpegPath`.
+ */
+function PathControl({
+  descriptor,
+  id,
+  describedBy,
+  stored,
+  onCommit,
+}: {
+  descriptor: SettingDescriptor
+  id: string
+  describedBy: string
+  stored: SettingValue | undefined
+  onCommit: (value: string) => void
+}) {
+  const { t } = useTranslation()
+
+  const browse = async (): Promise<void> => {
+    const picked = await getBridge()?.dialog.pickPath(descriptor.pathKind ?? 'file')
+    // Null is a cancelled dialog, which must not clear what is already stored.
+    if (picked) onCommit(picked)
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <TextControl
+        descriptor={descriptor}
+        id={id}
+        describedBy={describedBy}
+        stored={stored}
+        onCommit={onCommit}
+      />
+      <button type="button" className="btn btn-sm shrink-0" onClick={() => void browse()}>
+        {t('settings.browse')}
+      </button>
+    </div>
+  )
+}
+
+/**
+ * A colour, shown as the one currently in effect. An unset accent is not blank — it is whatever
+ * the theme declares, so that is what the swatch has to display, and `useToken` keeps it in step
+ * when the theme moves underneath.
+ */
+function ColorControl({
+  id,
+  describedBy,
+  value,
+  onChange,
+}: {
+  id: string
+  describedBy: string
+  value: SettingValue | undefined
+  onChange: (value: SettingValue) => void
+}) {
+  const themeAccent = useToken('--color-accent')
+
+  return (
+    <input
+      id={id}
+      aria-describedby={describedBy}
+      className="h-(--sc-control) w-16 cursor-pointer rounded-(--radius-sc-sm)"
+      type="color"
+      value={typeof value === 'string' ? value : themeAccent}
+      onChange={event => onChange(event.target.value)}
+    />
+  )
+}
+
 function Control({
   descriptor,
   id,
@@ -131,6 +213,57 @@ function Control({
             const next = event.target.valueAsNumber
             if (writableNumber(descriptor, next)) onChange(next)
           }}
+        />
+      )
+
+    case 'slider':
+      return (
+        <div className="flex items-center gap-2">
+          <input
+            id={id}
+            aria-describedby={describedBy}
+            className="range range-xs w-40"
+            type="range"
+            min={descriptor.min}
+            max={descriptor.max}
+            step={descriptor.step}
+            value={typeof value === 'number' ? value : 0}
+            onChange={event => {
+              const next = event.target.valueAsNumber
+              if (writableNumber(descriptor, next)) onChange(next)
+            }}
+          />
+          <span className="text-base-content/60 w-10 text-right text-xs tabular-nums">
+            {typeof value === 'number' ? value.toFixed(decimalsOf(descriptor.step)) : ''}
+          </span>
+        </div>
+      )
+
+    case 'boolean':
+      return (
+        <input
+          id={id}
+          aria-describedby={describedBy}
+          className="toggle toggle-sm"
+          type="checkbox"
+          checked={value === true}
+          onChange={event => onChange(event.target.checked)}
+        />
+      )
+
+    case 'color':
+      return <ColorControl id={id} describedBy={describedBy} value={value} onChange={onChange} />
+
+    case 'path':
+      return (
+        <PathControl
+          descriptor={descriptor}
+          id={id}
+          describedBy={describedBy}
+          stored={value}
+          // Empty means "unset": the key is dropped rather than stored blank, which is what
+          // lets ffmpeg fall back to the bundled binary and then to the PATH.
+          onCommit={typed => onChange(typed === '' ? undefined : typed)}
         />
       )
 
