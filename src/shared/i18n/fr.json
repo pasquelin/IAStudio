@@ -552,7 +552,7 @@
     },
     "ffmpegPath": {
       "title": "Chemin de ffmpeg",
-      "help": "Emplacement d’un programme ffmpeg à utiliser à la place de celui fourni avec l’application. Laissez vide, sauf si vous tenez à la vôtre.",
+      "help": "Emplacement d’un programme ffmpeg à utiliser à la place de celui fourni avec l’application. Laissez vide, sauf si vous tenez au vôtre.",
       "placeholder": "/opt/homebrew/bin/ffmpeg"
     },
     "defaultModel": "Modèle par défaut",

@@ -10,18 +10,27 @@
  *     node scripts/fetch-ffmpeg.mjs                        # this machine
  *     node scripts/fetch-ffmpeg.mjs --platform win32 --arch x64
  *
- * Extraction goes through `tar`, which reads zip as well as tar.xz on all three platforms —
- * one less dependency for a script that runs before anything is installed.
+ * Extraction goes through `tar`, then `unzip` if that fails: bsdtar reads zip (macOS, and
+ * Windows since 10/1803) while GNU tar, the default on Linux, reads tarballs only — and the
+ * Windows and macOS targets are zips, which a Linux CI has every reason to fetch.
  *
  * Licences differ per target and that is deliberate: LGPL builds exist for Windows and Linux,
  * none does for macOS. Both are fine here because ffmpeg is spawned as a separate program, but
  * the GPL ones oblige us to offer FFmpeg's sources — hence `SOURCES` in the written notice.
  */
 import { execFileSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DESTINATION = join(ROOT, 'resources', 'ffmpeg')
@@ -105,18 +114,26 @@ async function download(url, into) {
   writeFileSync(into, new Uint8Array(await response.arrayBuffer()))
 }
 
-/** Extracts one member and lands it under `resources/ffmpeg/` as `name`. */
 function extract(archive, member, name, work) {
   // `--strip-components` would need the depth of each member; pulling the exact path and
   // renaming afterwards works the same for a flat zip and for a nested tarball.
-  try {
-    execFileSync('tar', ['-xf', archive, '-C', work, member], { stdio: 'pipe' })
-  } catch (cause) {
-    // GNU tar, the default on Linux, reads tarballs only — the zip targets need bsdtar.
-    throw new Error(`Could not extract ${member}: ${cause.message}`)
+  const attempts = [
+    ['tar', ['-xf', archive, '-C', work, member]],
+    ['unzip', ['-o', archive, member, '-d', work]],
+  ]
+
+  const failures = []
+  for (const [tool, args] of attempts) {
+    try {
+      execFileSync(tool, args, { stdio: 'pipe' })
+      renameSync(join(work, member), join(DESTINATION, name))
+      chmodSync(join(DESTINATION, name), 0o755)
+      return
+    } catch (cause) {
+      failures.push(`${tool}: ${cause.message}`)
+    }
   }
-  renameSync(join(work, member), join(DESTINATION, name))
-  chmodSync(join(DESTINATION, name), 0o755)
+  throw new Error(`Could not extract ${member} from ${archive}\n${failures.join('\n')}`)
 }
 
 /**
@@ -130,7 +147,9 @@ export async function fetchFfmpeg(platform, arch) {
   const key = `${platform}-${arch}`
   const target = TARGETS[key]
   if (!target) {
-    throw new Error(`No ffmpeg build declared for ${key}. Known: ${Object.keys(TARGETS).join(', ')}`)
+    throw new Error(
+      `No ffmpeg build declared for ${key}. Known: ${Object.keys(TARGETS).join(', ')}`,
+    )
   }
 
   rmSync(DESTINATION, { recursive: true, force: true })
@@ -162,6 +181,11 @@ export async function fetchFfmpeg(platform, arch) {
         '',
       ].join('\n'),
     )
+  } catch (failure) {
+    // Half a fetch looks like a whole one: an `ffmpeg` without its `ffprobe` resolves fine and
+    // then fails per file. Leave nothing rather than something that reads as complete.
+    rmSync(DESTINATION, { recursive: true, force: true })
+    throw failure
   } finally {
     rmSync(work, { recursive: true, force: true })
   }
@@ -177,7 +201,7 @@ export async function fetchFfmpeg(platform, arch) {
 }
 
 // Run directly rather than imported by `before-pack.mjs`.
-if (process.argv[1] && process.argv[1].endsWith('fetch-ffmpeg.mjs')) {
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   await fetchFfmpeg(flag('platform', process.platform), flag('arch', process.arch)).catch(
     failure => {
       console.error(failure.message)

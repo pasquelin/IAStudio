@@ -8,16 +8,16 @@
  * fetch would produce a release with no encoder at all, silently.
  *
  * Hooked here rather than in `dist.sh` because this is the only place that knows which target
- * is being packed, and it runs once per target.
+ * is being packed, and it runs once per target. Targets are packed one after another
+ * (`concurrency.jobs` defaults to 1 and is not raised), so they never race over the folder.
  */
+import { Arch } from 'electron-builder'
 import { fetchFfmpeg } from './fetch-ffmpeg.mjs'
-
-/** electron-builder passes `Arch` as an enum ordinal; these are its members, in order. */
-const ARCHITECTURES = ['ia32', 'x64', 'armv7l', 'arm64', 'universal']
 
 export default async function beforePack(context) {
   const platform = context.electronPlatformName
-  const arch = ARCHITECTURES[context.arch]
+  // `context.arch` is an `Arch` ordinal; the enum names itself rather than a table to keep.
+  const arch = Arch[context.arch]
 
   if (!arch) throw new Error(`Unknown architecture ordinal ${context.arch}`)
 
