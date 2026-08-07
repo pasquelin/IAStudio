@@ -14,7 +14,7 @@ import {
   type Clip,
   type SequenceState,
 } from '@/engines/timeline/timeline-state'
-import { useAssets } from '@/stores/assets'
+import { assetsById, useAssets } from '@/stores/assets'
 import { useSequenceEdit } from './useSequenceEdit'
 
 export type ClipInspectorProps = { documentId: string; sequence: SequenceState; clip: Clip }
@@ -25,9 +25,7 @@ export type ClipInspectorProps = { documentId: string; sequence: SequenceState; 
  */
 export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps) {
   const { t } = useTranslation()
-  const name = useAssets(
-    state => state.items.find(asset => asset.id === clip.assetId)?.name ?? clip.assetId,
-  )
+  const name = useAssets(assetsById).get(clip.assetId)?.name ?? clip.assetId
 
   const track = trackOfClip(sequence, clip.id)
   const edit = useSequenceEdit(documentId)

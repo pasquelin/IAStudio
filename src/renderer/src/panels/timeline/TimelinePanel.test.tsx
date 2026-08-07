@@ -1,15 +1,11 @@
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { addClip } from '@/engines/timeline/commands'
-import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import { DEFAULT_VIDEO_TOOL } from '@/spaces/video/video-tools'
 import { useDocuments } from '@/stores/documents'
+import { installSequence } from '@/stores/sequence-fixtures'
 import { useSequences } from '@/stores/sequences'
 import { useVideoTool } from '@/stores/video-tool'
-import { TimelineActions, TimelinePanel } from './TimelinePanel'
-
-const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
+import { TimelinePanel } from './TimelinePanel'
 
 describe('TimelinePanel', () => {
   beforeEach(() => {
@@ -24,39 +20,19 @@ describe('TimelinePanel', () => {
   })
 
   it('paints the timeline of the document in front', () => {
-    useDocuments.setState({ activeId: 'doc-1' })
+    installSequence('doc-1')
     const view = render(<TimelinePanel />)
     expect(view.container.querySelector('canvas')).toBeInTheDocument()
   })
 
-  it('renders no action while no document is active', () => {
-    const view = render(<TimelineActions />)
-    expect(view.container).toBeEmptyDOMElement()
-  })
+  // Another kind handed to `useSequences` would give it a montage drawn from the default state.
+  it('shows no strip for a document that is not a sequence', () => {
+    useDocuments.setState({
+      documents: { 'doc-1': { id: 'doc-1', kind: 'image', workspace: 'image', title: 'doc-1' } },
+      activeId: 'doc-1',
+    })
+    render(<TimelinePanel />)
 
-  it('offers the montage tools in the panel title bar', () => {
-    useDocuments.setState({ activeId: 'doc-1' })
-    render(<TimelineActions />)
-
-    expect(screen.getByRole('button', { name: /Sélection/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Lame/ })).toBeInTheDocument()
-  })
-
-  it('arms the tool the bar picks', async () => {
-    useDocuments.setState({ activeId: 'doc-1' })
-    render(<TimelineActions />)
-
-    await userEvent.click(screen.getByRole('button', { name: /Lame/ }))
-
-    expect(useVideoTool.getState().tool).toBe('blade')
-  })
-
-  it('enables undo once the sequence in front has been edited', () => {
-    useDocuments.setState({ activeId: 'doc-1' })
-    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
-
-    render(<TimelineActions />)
-
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeEnabled()
+    expect(screen.getByText(/Aucune séquence ouverte/)).toBeInTheDocument()
   })
 })

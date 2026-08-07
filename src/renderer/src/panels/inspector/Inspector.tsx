@@ -5,8 +5,8 @@ import { EmptyState } from '@/design/EmptyState'
 import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
 import { clipById, trackById } from '@/engines/timeline/timeline-state'
 import { formatBytes } from '@/helpers/format'
-import { useAssets } from '@/stores/assets'
-import { activeIdOfKind, activeSceneId, useDocuments } from '@/stores/documents'
+import { assetsById, useAssets } from '@/stores/assets'
+import { activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { AssetInspector } from './AssetInspector'
@@ -34,13 +34,15 @@ export function Inspector() {
 function Face() {
   const selection = useSelection(state => state.selection)
   const sceneId = useDocuments(activeSceneId)
-  const sequenceId = useDocuments(state => activeIdOfKind(state, 'sequence'))
+  const sequenceId = useDocuments(activeSequenceId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
-  const assets = useAssets(state => state.items)
+  const byId = useAssets(assetsById)
 
   switch (selection.kind) {
     case 'asset': {
-      const chosen = assets.filter(asset => selection.ids.includes(asset.id))
+      // Keyed rather than filtered: a selection of a handful against a catalogue of thousands
+      // was scanning the whole of it, per render.
+      const chosen = selection.ids.flatMap(id => byId.get(id) ?? [])
       return chosen.length > 0 ? <AssetSelection assets={chosen} /> : <Empty />
     }
 
