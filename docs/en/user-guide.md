@@ -94,6 +94,7 @@ open nor closed, and the rail reopens a tool in one click.
 | **Explorer** | left, second half | all | the scene outliner in 3D. The project file tree is not written yet, and the panel says so in other workspaces |
 | **Models** | right, first half | all | the Scenario model catalogue, filtered to the active workspace |
 | **Generator** | right, first half | all | the form of the selected model |
+| **Inspector** | right, second half | 3D | everything that defines the selected node — transform, geometry, material, light — and lets you play with it |
 | **Inspector** | right, second half | 3D | everything that defines the selected node, adjustable live |
 | **Timeline** | bottom | Video | the sequence being edited |
 | **Assets** | bottom | all | everything the project holds |
@@ -282,6 +283,11 @@ Lights: ambient, directional, hemisphere, point, spot.
 
 **Explorer** shows the scene as a tree. Only the visible rows are rendered, so a heavy scene
 still scrolls smoothly, and the arrow keys walk it.
+
+**Inspector**, on the right, holds everything that defines the selected node and lets you change
+it: its transform, the parameters of its geometry, its material and its texture slots, or — for a
+light — its colour and intensity. What it shows follows what is selected; the fields come from
+the node's own kind rather than a form written for each one.
 
 <!-- SCREENSHOT: the 3D viewport with a selected mesh, the outliner and the meshes panel.
      Save to ../images/scene-3d.png -->

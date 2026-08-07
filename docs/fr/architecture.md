@@ -347,7 +347,9 @@ Les primitives, toutes dans `design/` :
 | `Row` | **la** ligne, partout — vignette ou icône, titre, sous-titre, actions, infobulle sur un nom tronqué |
 | `Collection`, `CollectionBar` | la liste virtualisée à deux vues, et sa barre de recherche/facettes/tri |
 | `MediaTile`, `Thumbnail` | la tuile carrée légendée, et la même image à taille fixe |
-| `Toolbar`, `ToolButton`, `UiIcon` | la barre partagée, ses boutons, l'unique porte des icônes |
+| `Toolbar`, `ToolButton`, `Button`, `UiIcon` | la barre partagée, ses boutons d'icône, ses boutons libellés, l'unique porte des icônes |
+| `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par la barre de jobs et l'import de médias |
+| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField` — ce dont l'inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | les chaînes de classes partagées par plus d'un composant : `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
@@ -449,7 +451,7 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d'éch
 
 ## Les tests
 
-**946 tests répartis sur 110 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
+**1087 tests répartis sur 124 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
 (`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout

@@ -96,6 +96,7 @@ ressemble ni à ouvert ni à fermé, et le rail rouvre un outil en un clic.
 | **Explorateur** | gauche, 2de moitié | partout | l'arbre de scène en 3D. L'arborescence de projet n'est pas encore écrite, et le panneau le dit dans les autres espaces |
 | **Modèles** | droite, 1re moitié | partout | le catalogue Scenario, filtré sur l'espace actif |
 | **Génération** | droite, 1re moitié | partout | le formulaire du modèle choisi |
+| **Inspecteur** | droite, 2de moitié | 3D | tout ce qui définit le nœud sélectionné — transformation, géométrie, matériau, lumière — et de quoi y toucher |
 | **Inspecteur** | droite, 2de moitié | 3D | tout ce qui définit le nœud sélectionné, réglable en direct |
 | **Timeline** | bas | Vidéo | la séquence en cours de montage |
 | **Assets** | bas | partout | tout ce que le projet contient |
@@ -287,6 +288,11 @@ sprite, texte. Lumières : ambiante, directionnelle, hémisphérique, ponctuelle
 
 L'**Explorateur** montre la scène en arbre. Seules les lignes visibles sont rendues, de sorte
 qu'une scène lourde défile quand même sans peine, et les flèches la parcourent.
+
+L'**Inspecteur**, à droite, tient tout ce qui définit le nœud sélectionné et permet d'y toucher :
+sa transformation, les paramètres de sa géométrie, son matériau et ses emplacements de texture,
+ou — pour une lumière — sa couleur et son intensité. Ce qu'il montre suit ce qui est sélectionné ;
+les champs viennent du type du nœud, pas d'un formulaire écrit pour chacun.
 
 <!-- CAPTURE : la vue 3D avec un maillage sélectionné, l'arbre de scène et le panneau Maillages.
      Vers ../images/scene-3d.png -->

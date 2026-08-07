@@ -16,6 +16,7 @@ import {
   visibleFields,
   type FormValues,
 } from '@/helpers/dynamic-form'
+import { Button } from './Button'
 import { FIELD } from './styles'
 import { ToolButton } from './ToolButton'
 
@@ -159,9 +160,9 @@ export function DynamicForm({ fields, onSubmit, submitLabel, busy = false }: Dyn
         </fieldset>
       ))}
 
-      <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
+      <Button type="submit" variant="primary" disabled={busy}>
         {submitLabel}
-      </button>
+      </Button>
     </form>
   )
 }

@@ -1,6 +1,7 @@
 import { mdiCloseCircleOutline } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { ProgressBar } from './ProgressBar'
 import { ToolButton } from './ToolButton'
 
 /** How a status reads. The caller names the meaning; the colour stays in the design system. */
@@ -39,21 +40,12 @@ export function ProgressRow({
   cancel,
   detail,
 }: ProgressRowProps) {
-  const percent = ratio === undefined ? null : Math.round(ratio * 100)
-
   return (
     <li className="flex flex-col gap-0.5 px-2 py-1 text-xs">
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate">{label}</span>
 
-        {percent !== null && (
-          <progress
-            className="progress w-24"
-            value={percent}
-            max={100}
-            aria-label={`${label} ${percent}%`}
-          />
-        )}
+        {ratio !== undefined && <ProgressBar ratio={ratio} label={label} className="w-24" />}
 
         <span className={cn('shrink-0 text-[11px]', TONE_CLASS[tone])}>{status}</span>
 

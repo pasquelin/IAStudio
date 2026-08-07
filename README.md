@@ -11,7 +11,7 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 [![three.js](https://img.shields.io/badge/three.js-0.185-2b2d30?logo=three.js&logoColor=ffffff)](https://threejs.org)
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.19-2b2d30?logo=javascript&logoColor=e8639b)](https://pixijs.com)
 [![Vite](https://img.shields.io/badge/Vite-7-2b2d30?logo=vite&logoColor=ffd028)](https://vite.dev)
-[![Tests](https://img.shields.io/badge/tests-946%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
+[![Tests](https://img.shields.io/badge/tests-1087%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
 [![License](https://img.shields.io/badge/license-proprietary-2b2d30)](#license)
 
 </div>
@@ -133,7 +133,7 @@ src/
 ## Quality bar
 
 `pnpm validate` must be green before any commit: typecheck, lint, format check, and the full
-test suite — **946 tests across 110 files** at the time of writing. Unit tests are colocated
+test suite — **1087 tests across 124 files** at the time of writing. Unit tests are colocated
 with the code they cover and written in the same movement, never after.
 
 Every change also goes through a reuse-and-simplification pass and an automated review before

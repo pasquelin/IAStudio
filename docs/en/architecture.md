@@ -337,7 +337,9 @@ Key primitives, all in `design/`:
 | `Row` | **the** line, everywhere — thumbnail or icon, title, subtitle, actions, tooltip on a truncated name |
 | `Collection`, `CollectionBar` | the virtualised two-view list, and its search/facet/sort bar |
 | `MediaTile`, `Thumbnail` | the captioned square tile, and the same picture at a fixed size |
-| `Toolbar`, `ToolButton`, `UiIcon` | the shared bar, its buttons, the only door icons come through |
+| `Toolbar`, `ToolButton`, `Button`, `UiIcon` | the shared bar, its icon buttons, its labelled ones, the only door icons come through |
+| `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the jobs bar and media import |
+| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
@@ -434,7 +436,7 @@ opaquely.
 
 ## Testing
 
-**946 tests across 110 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
+**1087 tests across 124 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.
