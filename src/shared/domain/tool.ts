@@ -38,11 +38,12 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'explorer', zone: 'left', slot: 'secondary' },
   { id: 'models', zone: 'right', slot: 'primary' },
   { id: 'generator', zone: 'right', slot: 'primary' },
+  // Same half as the asset shelf: a montage is read across the whole width, so the two take
+  // turns rather than share the strip. First of the half, because in the Video workspace it is
+  // what the strip is for.
+  { id: 'timeline', zone: 'bottom', slot: 'primary', workspaces: ['video'] },
   { id: 'assets', zone: 'bottom', slot: 'primary' },
   { id: 'jobs', zone: 'bottom', slot: 'primary' },
-  // Same half as the asset shelf: a montage is read across the whole width, so the two take
-  // turns rather than share the strip.
-  { id: 'timeline', zone: 'bottom', slot: 'primary', workspaces: ['video'] },
 ]
 
 /**
