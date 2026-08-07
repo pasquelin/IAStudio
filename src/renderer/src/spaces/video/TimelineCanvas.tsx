@@ -322,7 +322,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const target = hitTest(sequence, viewport, point)
     if (!target || target.kind === 'ruler') return
 
-    const asset = assetsById(useAssets.getState()).get(assetId) ?? null
+    const asset = byId.get(assetId) ?? null
     const start = xToTime(point.x, viewport)
     const clip = clipForAsset(assetId, asset, start, sequence.settings)
 

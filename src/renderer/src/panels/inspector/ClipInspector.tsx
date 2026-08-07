@@ -25,7 +25,9 @@ export type ClipInspectorProps = { documentId: string; sequence: SequenceState; 
  */
 export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps) {
   const { t } = useTranslation()
-  const name = useAssets(assetsById).get(clip.assetId)?.name ?? clip.assetId
+  // The name rather than the index: subscribing to the map re-renders on every catalogue
+  // refresh, and a job finishing renames nothing here.
+  const name = useAssets(state => assetsById(state).get(clip.assetId)?.name) ?? clip.assetId
 
   const track = trackOfClip(sequence, clip.id)
   const edit = useSequenceEdit(documentId)

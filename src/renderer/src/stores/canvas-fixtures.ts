@@ -1,21 +1,14 @@
 import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvas-state'
 import { useCanvases } from './canvases'
-import { useDocuments } from './documents'
+import { installDocument } from './document-fixtures'
 
 /**
- * Puts an image document in front of a panel under test, history cleared. It declares the
- * descriptor too: the layer panels resolve their document through `activeIdOfKind`, so an id
- * with no descriptor behind it reads as "nothing open".
+ * Puts an image document in front of a panel under test, history cleared.
  *
- * Mirrors `installScene`, and lives beside the stores rather than beside `layerFixture` for the
- * same reason: `engines/` must not reach for a store.
+ * Lives beside the stores rather than beside `layerFixture` for the same reason `installScene`
+ * does: `engines/` must not reach for a store.
  */
 export function installCanvas(documentId: string, state: CanvasState = DEFAULT_CANVAS): void {
   useCanvases.setState({ states: { [documentId]: state }, histories: {} })
-  useDocuments.setState({
-    documents: {
-      [documentId]: { id: documentId, kind: 'image', workspace: 'image', title: documentId },
-    },
-    activeId: documentId,
-  })
+  installDocument(documentId, 'image')
 }
