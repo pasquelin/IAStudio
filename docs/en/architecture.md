@@ -137,7 +137,7 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           returns typed data
 ```
 
-Forty-five channels are declared, in four families:
+Sixty channels are declared, in four families:
 
 | Family | What it carries |
 |---|---|
@@ -146,9 +146,9 @@ Forty-five channels are declared, in four families:
 | `scenario:*` | model search, model description, generation, job control |
 | `project:*` / `assets:*` | project lifecycle, catalogue queries, ingestion |
 
-Six of them travel the other way — main pushing to the renderer: job progress, log lines,
-project changes, and the native menu asking the UI to open a tool, run a command, or drop a node
-into the scene.
+Ten of them travel the other way — main pushing to the renderer: job and media progress, log
+lines, project and settings changes, window state, and the native menu asking the UI to open a
+tool or a settings section, run a command, or drop a node into the scene.
 
 Local files are served to the renderer over a custom `scenario://` protocol. The URL is derived
 from the asset identifier, so a grid of thumbnails costs no IPC at all — and the renderer still

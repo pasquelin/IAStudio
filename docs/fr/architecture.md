@@ -139,7 +139,7 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           renvoie des données typées
 ```
 
-Quarante-cinq canaux sont déclarés, en quatre familles :
+Soixante canaux sont déclarés, en quatre familles :
 
 | Famille | Ce qu'elle porte |
 |---|---|
@@ -148,9 +148,10 @@ Quarante-cinq canaux sont déclarés, en quatre familles :
 | `scenario:*` | recherche de modèles, description, génération, contrôle des jobs |
 | `project:*` / `assets:*` | cycle de vie du projet, requêtes de catalogue, ingestion |
 
-Six d'entre eux vont dans l'autre sens — le main poussant vers le renderer : progression des
-jobs, lignes de journal, changements de projet, et le menu natif qui demande à l'UI d'ouvrir un
-outil, d'exécuter une commande ou de déposer un nœud dans la scène.
+Dix d'entre eux vont dans l'autre sens — le main poussant vers le renderer : progression des jobs
+et des imports, lignes de journal, changements de projet et de réglages, état de fenêtre, et le
+menu natif qui demande à l'UI d'ouvrir un outil ou une section de réglages, d'exécuter une
+commande, ou de déposer un nœud dans la scène.
 
 Les fichiers locaux sont servis au renderer par un protocole `scenario://`. L'URL est dérivée de
 l'identifiant de l'asset : une grille de vignettes ne coûte donc aucun IPC — et le renderer ne
