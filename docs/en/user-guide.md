@@ -318,6 +318,10 @@ instead of fighting a second decoder.
 
 Drop an asset from the shelf onto the timeline to make it a clip.
 
+Each track can be renamed, and carries three states: **mute**, **solo** and **lock**. Select a
+clip or a track and the inspector on the right holds what defines it — in and out points, fades,
+speed, gain.
+
 <!-- SCREENSHOT: the video workspace, timeline with several clips and the monitor above.
      Save to ../images/timeline.png -->
 
@@ -325,7 +329,8 @@ Drop an asset from the shelf onto the timeline to make it a clip.
 
 ## Editing audio
 
-The Audio workspace opens a waveform and works on the selection you drag across it.
+Double-click an audio asset in the shelf to open it. The Audio workspace shows its waveform and
+works on the selection you drag across it.
 
 | Tool | What it does |
 |---|---|

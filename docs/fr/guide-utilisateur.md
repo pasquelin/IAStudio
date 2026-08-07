@@ -325,6 +325,10 @@ scrubbing fluide au lieu de le faire lutter contre un second décodeur.
 
 Déposez un asset de l'étagère sur la timeline pour en faire un clip.
 
+Chaque piste se renomme et porte trois états : **muet**, **solo** et **verrouillé**.
+Sélectionnez un clip ou une piste et l'inspecteur, à droite, tient ce qui les définit — points
+d'entrée et de sortie, fondus, vitesse, gain.
+
 <!-- CAPTURE : l'espace vidéo, timeline avec plusieurs clips et le moniteur au-dessus.
      Vers ../images/timeline.png -->
 
@@ -332,7 +336,8 @@ Déposez un asset de l'étagère sur la timeline pour en faire un clip.
 
 ## Travailler le son
 
-L'espace Audio ouvre une forme d'onde et travaille sur la sélection que vous y tirez.
+Double-cliquez sur un asset audio dans l'étagère pour l'ouvrir. L'espace Audio en montre la forme
+d'onde et travaille sur la sélection que vous y tirez.
 
 | Outil | Ce qu'il fait |
 |---|---|
