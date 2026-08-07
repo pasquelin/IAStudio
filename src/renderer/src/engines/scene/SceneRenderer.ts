@@ -295,7 +295,11 @@ export class SceneRenderer {
     if (this.grid) {
       this.scene.remove(this.grid)
       this.grid.dispose()
+      // Cleared, not merely disposed: with the grid hidden the reference would survive, and the
+      // next theme change would remove and dispose an object that is already gone.
+      this.grid = null
     }
+
     if (!this.viewport.showGrid) return
 
     // Divisions equal to the extent, so one square is one metre whatever the size.

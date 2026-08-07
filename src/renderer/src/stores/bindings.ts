@@ -23,8 +23,16 @@ export function currentOverrides(): BindingOverrides {
   return useSettings.getState().settings.shortcuts.overrides
 }
 
+/**
+ * Motion by signature, inverted once at module level rather than per keystroke: this is read on
+ * every keydown AND keyup, and holding a direction to fly the camera repeats keydown.
+ */
+const MOTION_BY_SIGNATURE: ReadonlyMap<Signature, MotionId> = new Map(
+  // `as`: `Object.entries` widens the key to `string`, and the table is keyed by `MotionId`.
+  (Object.entries(DEFAULT_MOTION) as [MotionId, Signature][]).map(([id, bound]) => [bound, id]),
+)
+
 /** Motion is held rather than fired, and is not remappable yet — see `DEFAULT_MOTION`. */
 export function motionFor(signature: Signature): MotionId | null {
-  const found = Object.entries(DEFAULT_MOTION).find(([, bound]) => bound === signature)
-  return found ? (found[0] as MotionId) : null
+  return MOTION_BY_SIGNATURE.get(signature) ?? null
 }
