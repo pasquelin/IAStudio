@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { cn } from '@/helpers/cn'
 import { UiIcon } from './UiIcon'
 
 export type RowProps = {
@@ -34,7 +33,7 @@ export function Row({ media, icon, title, subtitle, leading, actions, muted }: R
             case where hovering is the only way to read it. */}
         <p
           title={title}
-          className={cn('truncate text-[12px]', muted ? 'text-muted line-through' : 'text-text')}
+          className={`truncate text-[12px] ${muted ? 'text-muted line-through' : 'text-text'}`}
         >
           {title}
         </p>

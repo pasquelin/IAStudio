@@ -19,7 +19,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { token } from '../core/palette'
-import type { SceneNode, SceneState, Transform } from './scene-state'
+import type { Transform } from '@shared/domain/scene'
+import type { SceneNode, SceneState } from './scene-state'
 import { geometryFor, helperFor, lightFor, tuneViewHelper, type LightHelper } from './three-factory'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */

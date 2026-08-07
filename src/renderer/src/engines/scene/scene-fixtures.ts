@@ -1,9 +1,5 @@
-import {
-  DEFAULT_MATERIAL,
-  IDENTITY_TRANSFORM,
-  type LightDescriptor,
-  type SceneNode,
-} from './scene-state'
+import type { LightDescriptor } from '@shared/domain/scene'
+import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type SceneNode } from './scene-state'
 
 /**
  * Scene nodes for tests. Declared once so a new required field on `SceneNodeBase` breaks in one

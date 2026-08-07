@@ -21,7 +21,6 @@ import { MESH_ENTRIES, type GeometryDescriptor, type MeshKind } from '@shared/do
 
 export type MeshPrimitive = {
   kind: MeshKind
-  labelKey: string
   icon: string
   /** Declared but not buildable yet: every menu greys it rather than hiding it. */
   disabled: boolean
@@ -137,7 +136,6 @@ const MESH_BUILDERS: MeshBuilders = {
 /** The shared table, in its order, with the glyph and the builder the menu has no use for. */
 export const MESH_PRIMITIVES: readonly MeshPrimitive[] = MESH_ENTRIES.map(entry => ({
   kind: entry.kind,
-  labelKey: entry.labelKey,
   // One answer to "is this offered yet", derived rather than declared twice: the native menu
   // reads the shared flag and the in-app menus read this, and they must never disagree.
   disabled: entry.disabled ?? MESH_BUILDERS[entry.kind].create === undefined,

@@ -30,7 +30,7 @@ import {
   type Light,
 } from 'three'
 import type { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
-import type { GeometryDescriptor, LightDescriptor } from './scene-state'
+import type { GeometryDescriptor, LightDescriptor } from '@shared/domain/scene'
 
 /*
  * The three.js objects a descriptor maps to. Kept out of `SceneRenderer` on purpose: none of it

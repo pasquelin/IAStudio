@@ -9,7 +9,6 @@ import { LIGHT_ENTRIES, type LightDescriptor, type LightKind } from '@shared/dom
 
 export type LightType = {
   kind: LightKind
-  labelKey: string
   icon: string
   create: () => LightDescriptor
 }
@@ -70,7 +69,6 @@ const LIGHT_BUILDERS: LightBuilders = {
 
 export const LIGHT_TYPES: readonly LightType[] = LIGHT_ENTRIES.map(entry => ({
   kind: entry.kind,
-  labelKey: entry.labelKey,
   ...LIGHT_BUILDERS[entry.kind],
 }))
 

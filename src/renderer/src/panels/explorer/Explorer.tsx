@@ -1,19 +1,18 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { useDocuments } from '@/stores/documents'
+import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { SceneTree } from './SceneTree'
 
 /**
- * One panel whose content follows the active workspace. The file tree of a project is not
- * written yet; until it is, every other workspace keeps saying so rather than showing an
- * outliner that belongs to another space.
+ * One panel whose content follows the active workspace. The project file tree is not written
+ * yet, so every other workspace says so rather than showing an outliner from another space.
  */
 export function Explorer() {
   const { t } = useTranslation()
   const workspace = useLayouts(state => state.activeWorkspace)
-  const documentId = useDocuments(state => state.activeId)
+  const documentId = useDocuments(state => activeIdOfKind(state, 'scene'))
 
   if (workspace !== '3d')
     return <EmptyState icon={mdiFolderOpenOutline} message={t('project.none')} />

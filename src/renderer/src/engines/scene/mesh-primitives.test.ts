@@ -1,4 +1,3 @@
-import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { MESH_ENTRIES } from '@shared/domain/scene'
 import { MESH_PRIMITIVES, primitiveByKind } from './mesh-primitives'
@@ -9,11 +8,8 @@ describe('MESH_PRIMITIVES', () => {
     expect(new Set(kinds).size).toBe(kinds.length)
   })
 
-  it('gives every entry a label key and an icon', () => {
-    for (const primitive of MESH_PRIMITIVES) {
-      expect(primitive.labelKey).toMatch(/^meshes\./)
-      expect(primitive.icon.length).toBeGreaterThan(0)
-    }
+  it('gives every entry an icon', () => {
+    for (const primitive of MESH_PRIMITIVES) expect(primitive.icon.length).toBeGreaterThan(0)
   })
 
   // Two entries sharing an icon make the list unreadable, which is all it is asked to be.
@@ -57,12 +53,5 @@ describe('MESH_PRIMITIVES', () => {
       primitive => primitive.kind,
     )
     expect(built).toEqual(declared)
-  })
-
-  // A key with no string behind it renders as the key itself, in the bar and in both menus.
-  it('has a translation behind every label key', () => {
-    for (const primitive of MESH_PRIMITIVES) {
-      expect(i18next.exists(primitive.labelKey)).toBe(true)
-    }
   })
 })

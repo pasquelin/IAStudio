@@ -1,8 +1,8 @@
 import { mdiCubeOutline } from '@mdi/js'
 import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
-import { lightByKind, type LightType } from './light-types'
-import { primitiveByKind, type MeshPrimitive } from './mesh-primitives'
+import { lightByKind } from './light-types'
+import { primitiveByKind } from './mesh-primitives'
 import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type SceneNode } from './scene-state'
 
 /**
@@ -26,19 +26,10 @@ export function lightNode(light: LightDescriptor, position: Vector3): SceneNode 
   }
 }
 
-/** The registry entry for a kind, whichever registry knows it. */
-export function entryOf(kind: string): MeshPrimitive | LightType | null {
-  return primitiveByKind(kind) ?? lightByKind(kind)
-}
-
-/**
- * The glyph that says what a node is. It belongs to the registry entry, not to whichever panel
- * happens to draw the node: the outliner, the mesh panel and the light panel must not disagree
- * about what a sphere looks like.
- */
+/** The glyph belongs to the registry entry, not to whichever panel happens to draw the node. */
 export function iconOf(node: SceneNode): string {
   const kind = node.type === 'light' ? node.light.kind : node.geometry.kind
-  return entryOf(kind)?.icon ?? mdiCubeOutline
+  return (primitiveByKind(kind) ?? lightByKind(kind))?.icon ?? mdiCubeOutline
 }
 
 /**

@@ -4,9 +4,7 @@ import {
   mdiFolderOutline,
   mdiImageMultipleOutline,
   mdiLayersOutline,
-  mdiLightbulbOutline,
   mdiProgressClock,
-  mdiShapeOutline,
 } from '@mdi/js'
 import {
   placementOf,
@@ -17,6 +15,7 @@ import {
   type ToolZone,
 } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { NODE_KINDS } from '@/engines/scene/node-kinds'
 
 export type Tool = {
   id: ToolId
@@ -28,8 +27,9 @@ export type Tool = {
 
 const ICONS: Record<ToolId, string> = {
   layers: mdiLayersOutline,
-  meshes: mdiShapeOutline,
-  lights: mdiLightbulbOutline,
+  // From the scene registry: the rail icon and the panel's own empty state must not drift.
+  meshes: NODE_KINDS.mesh.icon,
+  lights: NODE_KINDS.light.icon,
   explorer: mdiFolderOutline,
   models: mdiCubeScan,
   generator: mdiCreationOutline,

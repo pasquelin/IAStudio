@@ -1,5 +1,11 @@
 import type { MenuItemConstructorOptions } from 'electron'
-import { LIGHT_ENTRIES, MESH_ENTRIES, type LightKind, type MeshKind } from '@shared/domain/scene'
+import {
+  LIGHT_ENTRIES,
+  MESH_ENTRIES,
+  type LightKind,
+  type MeshKind,
+  type SceneEntry,
+} from '@shared/domain/scene'
 import { TOOL_PLACEMENTS } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
@@ -35,12 +41,6 @@ export type MenuContext = {
    */
   developerTools: boolean
   actions: MenuActions
-}
-
-type SceneEntryOf<K extends MeshKind | LightKind> = {
-  kind: K
-  labelKey: string
-  disabled?: boolean
 }
 
 export function menuTemplate({
@@ -87,7 +87,7 @@ export function menuTemplate({
 
   const entryItem =
     <K extends MeshKind | LightKind>(labels: Record<K, string>) =>
-    (entry: SceneEntryOf<K>): MenuItemConstructorOptions => ({
+    (entry: SceneEntry<K>): MenuItemConstructorOptions => ({
       label: labels[entry.kind],
       enabled: !entry.disabled,
       click: () => actions.addNode({ kind: entry.kind }),

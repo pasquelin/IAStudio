@@ -5,18 +5,10 @@
  * The descriptors themselves live in `shared/domain/scene.ts`: they are what a saved document
  * contains, and the native menu builds its Add entries from the same kinds.
  */
-export type {
-  GeometryDescriptor,
-  LightDescriptor,
-  MaterialDescriptor,
-  Transform,
-  Vector3,
-} from '@shared/domain/scene'
-
 import type {
+  GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
-  GeometryDescriptor,
   Transform,
 } from '@shared/domain/scene'
 

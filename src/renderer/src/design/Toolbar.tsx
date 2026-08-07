@@ -1,13 +1,12 @@
 import { mdiRedo, mdiUndo } from '@mdi/js'
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
-import { Flyout } from './Flyout'
+import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
 import { Separator } from './Separator'
 import { tipFor, type TooltipFactory } from '@/helpers/tooltip'
 import { ToolButton } from './ToolButton'
-import { useHoverFlyout } from '../hooks/useHoverFlyout'
 
 export type ToolMode = {
   id: string
@@ -190,8 +189,6 @@ type ToolItemProps = {
  */
 function ToolItem({ tool, active, tip, modeTip, onTool, onMode }: ToolItemProps) {
   const { t } = useTranslation()
-  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
-  const flyout = useHoverFlyout(tool.modes?.length ?? 0)
 
   // The button wears the armed mode's icon: a shapes tool armed with the ellipse has to look
   // like an ellipse, or the bar stops saying what the next click will draw.
@@ -199,49 +196,42 @@ function ToolItem({ tool, active, tip, modeTip, onTool, onMode }: ToolItemProps)
   const description = armed?.descriptionKey ?? tool.descriptionKey
 
   return (
-    <div {...flyout.wrapProps} className="contents">
-      <ToolButton
-        ref={setAnchor}
-        icon={armed?.icon ?? tool.icon}
-        label={t(armed?.labelKey ?? tool.labelKey)}
-        description={description ? t(description) : undefined}
-        // No `??` onto the tool's own: a group's shortcut belongs to its first mode, and
-        // showing it on another one contradicts the menu row right below.
-        shortcut={tool.modes ? armed?.shortcut : tool.shortcut}
-        tooltip={tip}
-        active={active}
-        disabled={tool.disabled}
-        onClick={() => {
-          onTool(tool.id)
-          // A group with no armed mode is a menu of actions, not a choice of tool: nothing is
-          // armed by clicking it, so the click has to open what hovering would have.
-          if (tool.modes && tool.activeMode === undefined) flyout.open()
-        }}
-      />
-
-      {flyout.showing && (
-        <Flyout anchor={anchor} {...flyout.flyoutProps}>
-          {tool.modes?.map(mode => (
-            <MenuRow
-              key={mode.id}
-              label={t(mode.labelKey)}
-              icon={mode.icon}
-              shortcut={mode.shortcut}
-              disabled={mode.disabled}
-              checked={tool.activeMode === mode.id}
-              tip={modeTip(
-                t(mode.labelKey),
-                mode.shortcut,
-                mode.descriptionKey ? t(mode.descriptionKey) : undefined,
-              )}
-              onSelect={() => {
-                onMode?.(tool.id, mode.id)
-                flyout.close()
-              }}
-            />
-          ))}
-        </Flyout>
-      )}
-    </div>
+    <MenuButton
+      icon={armed?.icon ?? tool.icon}
+      label={t(armed?.labelKey ?? tool.labelKey)}
+      description={description ? t(description) : undefined}
+      // No `??` onto the tool's own: a group's shortcut belongs to its first mode, and
+      // showing it on another one contradicts the menu row right below.
+      shortcut={tool.modes ? armed?.shortcut : tool.shortcut}
+      tooltip={tip}
+      active={active}
+      disabled={tool.disabled}
+      rowCount={tool.modes?.length ?? 0}
+      // A group with no armed mode is a menu of actions, not a choice of tool: nothing is
+      // armed by clicking it, so the click has to open what hovering would have.
+      opensOnClick={tool.modes !== undefined && tool.activeMode === undefined}
+      onClick={() => onTool(tool.id)}
+      rows={close =>
+        tool.modes?.map(mode => (
+          <MenuRow
+            key={mode.id}
+            label={t(mode.labelKey)}
+            icon={mode.icon}
+            shortcut={mode.shortcut}
+            disabled={mode.disabled}
+            checked={tool.activeMode === mode.id}
+            tip={modeTip(
+              t(mode.labelKey),
+              mode.shortcut,
+              mode.descriptionKey ? t(mode.descriptionKey) : undefined,
+            )}
+            onSelect={() => {
+              onMode?.(tool.id, mode.id)
+              close()
+            }}
+          />
+        ))
+      }
+    />
   )
 }

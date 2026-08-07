@@ -9,29 +9,18 @@ import {
 } from '@mdi/js'
 import type { CommandId } from '@shared/domain/shortcut'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar'
-import { LIGHT_TYPES } from '@/engines/scene/light-types'
-import { MESH_PRIMITIVES } from '@/engines/scene/mesh-primitives'
+import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
 
 /** `command` is absent on a group that only offers modes: `add` acts through its rows. */
 export type SceneTool = ToolbarItem & { command?: CommandId }
 
-/**
- * Everything a scene can hold, meshes then lights, from the two registries and nowhere else.
- * An entry the registry cannot build yet stays greyed rather than hidden.
- */
-const ADD_MODES: readonly ToolMode[] = [
-  ...MESH_PRIMITIVES.map(primitive => ({
-    id: primitive.kind,
-    labelKey: primitive.labelKey,
-    icon: primitive.icon,
-    disabled: primitive.disabled,
-  })),
-  ...LIGHT_TYPES.map(light => ({
-    id: light.kind,
-    labelKey: light.labelKey,
-    icon: light.icon,
-  })),
-]
+/** Everything a scene can hold, from the registries and nowhere else. */
+const ADD_MODES: readonly ToolMode[] = ADD_ENTRIES.map(({ entry, labelKey }) => ({
+  id: entry.kind,
+  labelKey,
+  icon: entry.icon,
+  disabled: entry.disabled,
+}))
 
 /**
  * The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here.

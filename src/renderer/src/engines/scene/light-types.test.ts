@@ -18,11 +18,8 @@ describe('LIGHT_TYPES', () => {
     for (const light of LIGHT_TYPES) expect(light.create().kind).toBe(light.kind)
   })
 
-  it('gives every entry a label key and an icon', () => {
-    for (const light of LIGHT_TYPES) {
-      expect(light.labelKey).toMatch(/^lights\./)
-      expect(light.icon.length).toBeGreaterThan(0)
-    }
+  it('gives every entry an icon', () => {
+    for (const light of LIGHT_TYPES) expect(light.icon.length).toBeGreaterThan(0)
   })
 
   it('never reuses an icon', () => {

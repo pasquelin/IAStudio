@@ -78,10 +78,12 @@ export type MeshKind = GeometryDescriptor['kind'] | 'sprite' | 'text'
 
 export type LightKind = LightDescriptor['kind']
 
+/**
+ * An offered kind. The label is not carried: it is `<namespace>.<kind>` in both bundles, and a
+ * copy of that string per entry is 22 chances to mistype what nothing would catch.
+ */
 export type SceneEntry<K> = {
   kind: K
-  /** i18n key of the label — never the displayed text. */
-  labelKey: string
   /** Declared but not buildable yet: shown greyed, so no menu hides what is coming. */
   disabled?: boolean
 }
@@ -92,29 +94,29 @@ export type SceneEntry<K> = {
  * language changes.
  */
 export const MESH_ENTRIES: readonly SceneEntry<MeshKind>[] = [
-  { kind: 'box', labelKey: 'meshes.box' },
-  { kind: 'capsule', labelKey: 'meshes.capsule' },
-  { kind: 'circle', labelKey: 'meshes.circle' },
-  { kind: 'cylinder', labelKey: 'meshes.cylinder' },
-  { kind: 'dodecahedron', labelKey: 'meshes.dodecahedron' },
-  { kind: 'icosahedron', labelKey: 'meshes.icosahedron' },
-  { kind: 'lathe', labelKey: 'meshes.lathe' },
-  { kind: 'octahedron', labelKey: 'meshes.octahedron' },
-  { kind: 'plane', labelKey: 'meshes.plane' },
-  { kind: 'ring', labelKey: 'meshes.ring' },
-  { kind: 'sphere', labelKey: 'meshes.sphere' },
-  { kind: 'sprite', labelKey: 'meshes.sprite', disabled: true },
-  { kind: 'tetrahedron', labelKey: 'meshes.tetrahedron' },
-  { kind: 'text', labelKey: 'meshes.text', disabled: true },
-  { kind: 'torus', labelKey: 'meshes.torus' },
-  { kind: 'torusKnot', labelKey: 'meshes.torusKnot' },
-  { kind: 'tube', labelKey: 'meshes.tube' },
+  { kind: 'box' },
+  { kind: 'capsule' },
+  { kind: 'circle' },
+  { kind: 'cylinder' },
+  { kind: 'dodecahedron' },
+  { kind: 'icosahedron' },
+  { kind: 'lathe' },
+  { kind: 'octahedron' },
+  { kind: 'plane' },
+  { kind: 'ring' },
+  { kind: 'sphere' },
+  { kind: 'sprite', disabled: true },
+  { kind: 'tetrahedron' },
+  { kind: 'text', disabled: true },
+  { kind: 'torus' },
+  { kind: 'torusKnot' },
+  { kind: 'tube' },
 ]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [
-  { kind: 'ambient', labelKey: 'lights.ambient' },
-  { kind: 'directional', labelKey: 'lights.directional' },
-  { kind: 'hemisphere', labelKey: 'lights.hemisphere' },
-  { kind: 'point', labelKey: 'lights.point' },
-  { kind: 'spot', labelKey: 'lights.spot' },
+  { kind: 'ambient' },
+  { kind: 'directional' },
+  { kind: 'hemisphere' },
+  { kind: 'point' },
+  { kind: 'spot' },
 ]

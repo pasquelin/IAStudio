@@ -85,10 +85,8 @@ export const useKeymap = create<KeymapState>()(
     {
       name: 'scenario-studio:keymap',
       version: 1,
-      // Same reason as `stores/tools.ts`: a version bump must not cost the user their remaps.
-      migrate: persisted => (isRecord(persisted) ? persisted : undefined),
-      // Merged per table rather than per store, so adding a command needs no version bump:
-      // the new one arrives with its default and the user's remaps survive.
+      // Merged per table rather than per store, so adding a command needs no version bump and
+      // no migration: the new one arrives with its default and the user's remaps survive.
       merge: (persisted, current) => ({
         ...current,
         bindings: withDefaults(DEFAULT_BINDINGS, isRecord(persisted) ? persisted.bindings : null),

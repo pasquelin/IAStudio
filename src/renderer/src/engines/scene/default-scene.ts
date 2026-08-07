@@ -1,6 +1,7 @@
 import { LIGHT_TYPES } from './light-types'
 import { lightNode } from './node-factory'
-import { type LightDescriptor, type SceneState, type Vector3 } from './scene-state'
+import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
+import type { SceneState } from './scene-state'
 
 /** Which lights a new scene opens with, and where. A kind absent here is simply not one of them. */
 const DEFAULT_LIGHT_POSITIONS: ReadonlyMap<LightDescriptor['kind'], Vector3> = new Map([

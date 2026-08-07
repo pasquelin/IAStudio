@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import type { CollectionState } from '@/helpers/collection-state'
+import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 
 const GAP = 8
 const ROW_HEIGHT = 26
@@ -12,7 +12,8 @@ const PREFETCH_ROWS = 3
 
 export type CollectionProps<T extends { id: string }> = {
   items: readonly T[]
-  state: CollectionState
+  /** Absent for a panel with no collection bar: a plain virtualized list, never a grid. */
+  state?: CollectionState
   /**
    * Absent keeps the collection in list mode whatever `state.view` says: a panel with no
    * thumbnails has no card to draw, and inventing one so it is never called is noise.
@@ -85,7 +86,7 @@ function useGrid(host: { current: HTMLElement | null }, cardWidth: number, enabl
  */
 export function Collection<T extends { id: string }>({
   items,
-  state,
+  state = LIST_ONLY,
   renderCard,
   renderRow,
   selectedId,
