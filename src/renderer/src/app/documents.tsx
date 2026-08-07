@@ -10,8 +10,8 @@ export type DocumentPanelParams = { documentId: string }
 /**
  * Loaded when a document of that kind is first opened, not on startup.
  *
- * Between them these four reach three.js, PixiJS, wavesurfer and mediabunny, and importing
- * them here put all four in the chunk the splash screen waits for — five megabytes to open a
+ * Between them these reach three.js, PixiJS, wavesurfer and mediabunny, and importing them
+ * here put all of them in the chunk the splash screen waits for — five megabytes to open a
  * window that shows an empty centre. A studio session opens one or two of these spaces, and
  * the one it opens costs a few hundred milliseconds it was going to spend anyway.
  */
@@ -26,6 +26,9 @@ const SequenceDocument = lazy(async () => ({
 }))
 const AudioDocument = lazy(async () => ({
   default: (await import('@/spaces/audio/AudioDocument')).AudioDocument,
+}))
+const SkyboxDocument = lazy(async () => ({
+  default: (await import('@/spaces/skyboxes/SkyboxDocument')).SkyboxDocument,
 }))
 
 /** Every space is opened the same way: the tab checks its document still exists, then renders. */
@@ -47,6 +50,7 @@ export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps<Document
   scene: panelFor(SceneDocument),
   sequence: panelFor(SequenceDocument),
   audio: panelFor(AudioDocument),
+  skybox: panelFor(SkyboxDocument),
 }
 
 function Home() {

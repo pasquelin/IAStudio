@@ -34,6 +34,13 @@ export type ViewportEngineOptions = {
    * environment turns it on.
    */
   toneMapping?: boolean
+  /**
+   * `orbit` circles a target — the scene editor and a texture on its sphere. `none` leaves the
+   * camera where it is put, for a viewport whose camera sits at the centre and only turns its
+   * head; orbiting with the target pinned at the centre would need the distance locked to
+   * nearly zero, which costs the rotation its precision.
+   */
+  controls?: 'orbit' | 'none'
   fieldOfView?: number
   near?: number
   far?: number
@@ -76,9 +83,11 @@ export class ViewportEngine {
     renderer.toneMapping = this.options.toneMapping ? ACESFilmicToneMapping : NoToneMapping
     this.renderer = renderer
 
-    this.controls = new OrbitControls(this.camera, canvas)
-    this.controls.enableDamping = true
-    this.controls.addEventListener('change', this.requestRender)
+    if (this.options.controls !== 'none') {
+      this.controls = new OrbitControls(this.camera, canvas)
+      this.controls.enableDamping = true
+      this.controls.addEventListener('change', this.requestRender)
+    }
 
     this.observer = new ResizeObserver(this.onResize)
     this.observer.observe(canvas)

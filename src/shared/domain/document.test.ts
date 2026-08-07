@@ -19,9 +19,12 @@ describe('kindForWorkspace', () => {
     expect(kindForWorkspace('audio')).toBe('audio')
   })
 
+  it('gives the skyboxes workspace a sky to edit', () => {
+    expect(kindForWorkspace('skyboxes')).toBe('skybox')
+  })
+
   it('has no editable document for the workspaces without an editor yet', () => {
     expect(kindForWorkspace('textures')).toBeNull()
-    expect(kindForWorkspace('skyboxes')).toBeNull()
   })
 
   it('answers for every known workspace', () => {

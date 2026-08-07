@@ -19,6 +19,7 @@ export type ToolId =
   | 'inspector'
   | 'assets'
   | 'jobs'
+  | 'skybox'
 
 /**
  * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
@@ -54,6 +55,10 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // model is chosen and a prompt written, and in an editor the inspector is never the panel
   // you have to switch away to.
   { id: 'inspector', zone: 'right', slot: 'secondary' },
+  // Same half as the inspector, and for the same reason: a sky is graded while it is looked
+  // at. It takes turns with the inspector rather than with the generator, because reading the
+  // prompt that produced a sky and grading it are two different moments.
+  { id: 'skybox', zone: 'right', slot: 'secondary', workspaces: ['skyboxes'] },
   // The shelf sits in the side column rather than in the bottom strip, so that it and the
   // montage are on screen together: dragging a take onto a track is the gesture the video
   // space is built around, and two panels taking turns cannot be dragged between.

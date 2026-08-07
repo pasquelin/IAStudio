@@ -7,6 +7,7 @@ import {
   mdiProgressClock,
   mdiTuneVariant,
   mdiVideoVintage,
+  mdiWeatherPartlyCloudy,
 } from '@mdi/js'
 import {
   placementOf,
@@ -37,6 +38,7 @@ const ICONS: Record<ToolId, string> = {
   models: mdiCubeScan,
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,
+  skybox: mdiWeatherPartlyCloudy,
   assets: mdiImageMultipleOutline,
   jobs: mdiProgressClock,
 }

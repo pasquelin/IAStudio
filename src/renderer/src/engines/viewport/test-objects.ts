@@ -20,7 +20,16 @@ const SPHERE_RADIUS = 1
 const SPHERE_OFFSET = 1.4
 const GROUND_SIZE = 40
 
-export function createTestObjects(): TestObjects {
+export type TestObjectsOptions = {
+  /**
+   * How far in front of the origin the two spheres sit, along `+Z`. Zero for a camera that
+   * orbits them; a few units for one standing at the centre of the environment, which would
+   * otherwise be inside them. The ground stays centred either way — it is underfoot, not ahead.
+   */
+  probeDistance?: number
+}
+
+export function createTestObjects({ probeDistance = 0 }: TestObjectsOptions = {}): TestObjects {
   const group = new Group()
 
   const sphere = (): BufferGeometry =>
@@ -29,10 +38,10 @@ export function createTestObjects(): TestObjects {
   // Roughness just above zero rather than at it: a perfect mirror shows the environment's own
   // mip level 0, and any compression artefact in the source reads as a defect of the studio.
   const chrome = new Mesh(sphere(), new MeshStandardMaterial({ metalness: 1, roughness: 0.05 }))
-  chrome.position.set(-SPHERE_OFFSET, SPHERE_RADIUS, 0)
+  chrome.position.set(-SPHERE_OFFSET, SPHERE_RADIUS, probeDistance)
 
   const matte = new Mesh(sphere(), new MeshStandardMaterial({ metalness: 0, roughness: 0.9 }))
-  matte.position.set(SPHERE_OFFSET, SPHERE_RADIUS, 0)
+  matte.position.set(SPHERE_OFFSET, SPHERE_RADIUS, probeDistance)
 
   const ground = new Mesh(
     geometryFor({ kind: 'plane', width: GROUND_SIZE, height: GROUND_SIZE }),
