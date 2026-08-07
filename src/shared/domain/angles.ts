@@ -48,7 +48,10 @@ export function directionFromAngles({ elevation, azimuth }: SphericalAngles): Ve
  *
  * `fallback` answers the degenerate ray of no length, where no angle is more true than another.
  */
-export function anglesFromDirection(direction: Vector3, fallback: SphericalAngles): SphericalAngles {
+export function anglesFromDirection(
+  direction: Vector3,
+  fallback: SphericalAngles,
+): SphericalAngles {
   const { x, y, z } = direction
   const length = Math.hypot(x, y, z)
   if (length === 0) return fallback

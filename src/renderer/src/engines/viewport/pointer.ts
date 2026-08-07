@@ -18,7 +18,10 @@ export type PointerPosition = {
  * `null` for a zero-sized element rather than an `Infinity` that would send the ray nowhere:
  * a panel that is collapsed or still laying out has no surface to hit.
  */
-export function pointerNdc(pointer: PointerPosition, bounds: Bounds): { x: number; y: number } | null {
+export function pointerNdc(
+  pointer: PointerPosition,
+  bounds: Bounds,
+): { x: number; y: number } | null {
   if (bounds.width === 0 || bounds.height === 0) return null
 
   return {
