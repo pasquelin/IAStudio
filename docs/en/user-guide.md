@@ -20,9 +20,10 @@ Looking for how it is built instead? See [architecture.md](architecture.md).
 9. [Working in 3D](#working-in-3d)
 10. [Editing video](#editing-video)
 11. [Editing audio](#editing-audio)
-12. [Settings](#settings)
-13. [Keyboard reference](#keyboard-reference)
-14. [When something goes wrong](#when-something-goes-wrong)
+12. [Working on textures](#working-on-textures)
+13. [Settings](#settings)
+14. [Keyboard reference](#keyboard-reference)
+15. [When something goes wrong](#when-something-goes-wrong)
 
 ---
 
@@ -123,7 +124,7 @@ around one kind of work, and filters the model catalogue to the matching family.
 | **Video** | video | Timeline |
 | **3D** | 3d | Meshes, Lights, Inspector, and the scene outliner in Explorer |
 | **Audio** | audio | — (its editor is the waveform itself) |
-| **Textures** | image | — |
+| **Textures** | image | — (the preview is the editor) |
 | **Skyboxes** | image | — |
 
 A layout you arrange in one workspace stays there. What is open is remembered per zone, and a
@@ -359,6 +360,30 @@ works on the selection you drag across it.
 
 Nothing is written until you say so: **Apply** rewrites the asset, **Save as new** creates one
 beside it. A/B exists so you can hear what you changed before choosing between the two.
+
+---
+
+## Working on textures
+
+A texture is not a picture but a material, and a material cannot be judged flat. The Textures
+workspace puts it on a shape, under real light.
+
+Click **+** in the Textures workspace to open a document, then **drag a picture from the project
+onto the preview**: it becomes the base colour.
+
+| Setting | What it does |
+|---|---|
+| **Sphere · Cube · Cylinder · Plane · Knot** | the shape to judge it on. A plane reads the repeat, a sphere reads the lighting, a knot shows what happens where the surface folds back on itself |
+| **Background** | show the environment behind the subject, or use it only to light it |
+| **Auto spin** | turn the shape slowly, to read the relief |
+| **Lighting** | how strong the environment is |
+
+The default light is a neutral studio: nothing to download, and a material readable from the
+very first document. Once your project holds skyboxes, they can light it in turn.
+
+Everything is saved to a `.tex` file in your project's `documents/` folder, moments after your
+last move. Nothing is baked into the pixels: reopen the document in six months and every setting
+is still there, and still adjustable.
 
 ---
 

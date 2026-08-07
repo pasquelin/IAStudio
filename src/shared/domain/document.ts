@@ -1,10 +1,10 @@
-import type { WorkspaceId } from './workspace'
+import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
  * Document registry, shared by both processes: the native menu will need it for
  * "File ▸ New", and duplicating the type would degrade `DocumentKind` to `string`.
  */
-export type DocumentKind = 'image' | 'scene' | 'sequence' | 'audio' | 'skybox'
+export type DocumentKind = 'image' | 'scene' | 'sequence' | 'audio' | 'skybox' | 'texture'
 
 /** The values beside the type: a file read back off disk has to be checked against them. */
 export const DOCUMENT_KINDS: readonly DocumentKind[] = [
@@ -13,6 +13,7 @@ export const DOCUMENT_KINDS: readonly DocumentKind[] = [
   'sequence',
   'audio',
   'skybox',
+  'texture',
 ]
 
 export function isDocumentKind(value: unknown): value is DocumentKind {
@@ -31,7 +32,7 @@ const KIND_BY_WORKSPACE: Record<WorkspaceId, DocumentKind | null> = {
   '3d': 'scene',
   video: 'sequence',
   audio: 'audio',
-  textures: null,
+  textures: 'texture',
   skyboxes: 'skybox',
 }
 
@@ -40,7 +41,23 @@ export function kindForWorkspace(workspace: WorkspaceId): DocumentKind | null {
   return KIND_BY_WORKSPACE[workspace]
 }
 
-export const DOCUMENT_VERSION = 1
+/**
+ * The workspace a document belongs to. Searched rather than tabulated: a second table would be
+ * free to disagree with the first, and a document filed under a workspace that does not open it
+ * is a tab nothing can render.
+ *
+ * `null` while a kind exists without an editor — the same half-open state `kindForWorkspace`
+ * describes, read the other way round.
+ */
+export function workspaceForKind(kind: DocumentKind): WorkspaceId | null {
+  return WORKSPACE_IDS.find(workspace => KIND_BY_WORKSPACE[workspace] === kind) ?? null
+}
+
+/**
+ * 2 since the envelope moved onto a line of its own — see `DocumentFile`. A file written by
+ * version 1 is still read: its whole body is one JSON object, content included.
+ */
+export const DOCUMENT_VERSION = 2
 
 export const DOCUMENTS_FOLDER = 'documents'
 
@@ -58,6 +75,7 @@ export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
   sequence: '.seq',
   audio: '.aud',
   skybox: '.sky',
+  texture: '.tex',
 }
 
 /** Where a document lives inside its project. Relative: a project folder can be moved. */
@@ -66,12 +84,33 @@ export function documentPath(id: string, kind: DocumentKind): string {
 }
 
 /**
- * What an editor hands over to be saved. `content` is whatever that kind serializes — the file
- * layer never reads into it, so a new kind adds no case there.
+ * What a file name says the document is, read the other way round from `EXTENSION_BY_KIND`.
+ * Listing a project folder needs it: the folder is what says which documents exist, and the
+ * extension is all a directory entry carries.
+ *
+ * `null` for anything else in there — a stray note, an export, a staging copy.
+ *
+ * Case-sensitive on purpose: `documentPath` writes the extension in lower case, so a `.IMG`
+ * accepted here would be listed under a name that `read` then fails to find on a case-sensitive
+ * volume — an empty document, and a second file beside the first at the next save.
  */
-export type DocumentDraft<C = unknown> = {
+export function kindForExtension(extension: string): DocumentKind | null {
+  return DOCUMENT_KINDS.find(kind => EXTENSION_BY_KIND[kind] === extension) ?? null
+}
+
+/**
+ * What an editor hands over to be saved. `content` is already serialized, and that is the whole
+ * point: the file layer never reads into it, so it never pays for it either. `JSON.parse` of a
+ * scene of twenty thousand nodes is synchronous, and the main process owns every window.
+ *
+ * Every space already serializes to a string — `serializeScene`, `serializeCanvas`,
+ * `serializeSequence` — so this is the form they were in anyway.
+ *
+ * The empty string means a document that holds nothing yet: a tab opened and not typed in.
+ */
+export type DocumentDraft = {
   title: string
-  content: C
+  content: string
 }
 
 /**
@@ -81,9 +120,28 @@ export type DocumentDraft<C = unknown> = {
  *
  * `version` is the file format's, not the document's: it is what lets a project written by an
  * older build be migrated rather than refused.
+ *
+ * On disk, the envelope is the first line and the content is everything after it:
+ *
+ * ```
+ * {"version":2,"kind":"scene","title":"Level","updatedAt":"2026-08-07T…"}
+ * {"nodes":[…]}
+ * ```
+ *
+ * Two lines rather than one object, so that listing a project reads a short head per file
+ * instead of parsing every document in it — and a folder still reads by eye.
  */
-export type DocumentFile<C = unknown> = DocumentDraft<C> & {
+export type DocumentFile = DocumentDraft & {
   version: number
   kind: DocumentKind
   updatedAt: string
 }
+
+/** The envelope alone, which is all a listing needs. */
+export type DocumentEnvelope = Omit<DocumentFile, 'content'>
+
+/**
+ * How much of a file the envelope may take. It holds a capped title and three short fields; a
+ * head longer than this is not one, and reading further would be reading the document itself.
+ */
+export const ENVELOPE_LIMIT = 8 * 1024

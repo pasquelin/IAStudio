@@ -4,6 +4,8 @@ import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
 import { hasScene, markOf, sceneOf, useScenes } from '@/stores/scenes'
+import { newTexture, parseTexture } from '@/engines/texture/texture-state'
+import { hasTexture, markOf as textureMarkOf, textureOf, useTextures } from '@/stores/textures'
 
 /**
  * How a kind reaches the disk and comes back. One entry per space that has a serialized form; a
@@ -15,8 +17,8 @@ type DocumentIo = {
    * What to write, and how to record that it was written. The two are read together and before
    * the write, so an edit made while the file is on its way to disk is not counted as saved.
    */
-  capture: (documentId: string) => { content: unknown; commit: () => void }
-  install: (documentId: string, content: unknown) => void
+  capture: (documentId: string) => { content: string; commit: () => void }
+  install: (documentId: string, content: string) => void
   /** What an unsaved document holds until something is done to it. */
   createDefault: (documentId: string) => void
   /** Whether the document is already filled — a remount must not read over what is open. */
@@ -29,14 +31,16 @@ const SCENE_IO: DocumentIo = {
     const mark = markOf(scenes, documentId)
 
     return {
-      content: scenePayload(sceneOf(scenes, documentId)),
+      // Serialized here, in the window that owns the document: the file layer never parses a
+      // content, so the cost of a twenty-thousand-node scene never reaches the main thread.
+      content: JSON.stringify(scenePayload(sceneOf(scenes, documentId))),
       commit: () => useScenes.getState().markSaved(documentId, mark),
     }
   },
   install: (documentId, content) => {
     const scenes = useScenes.getState()
     // `replace`, not a command: loading a document is not something ⌘Z gives back.
-    scenes.replace(documentId, sceneFromPayload(content))
+    scenes.replace(documentId, sceneFromPayload(JSON.parse(content)))
     // What is on screen is now exactly what the disk holds, so the document opens clean.
     scenes.markSaved(documentId, markOf(useScenes.getState(), documentId))
   },
@@ -44,7 +48,30 @@ const SCENE_IO: DocumentIo = {
   holds: documentId => hasScene(useScenes.getState(), documentId),
 }
 
-const IO_BY_KIND: Partial<Record<DocumentKind, DocumentIo>> = { scene: SCENE_IO }
+const TEXTURE_IO: DocumentIo = {
+  capture: documentId => {
+    const textures = useTextures.getState()
+    const mark = textureMarkOf(textures, documentId)
+
+    return {
+      content: JSON.stringify(textureOf(textures, documentId)),
+      commit: () => useTextures.getState().markSaved(documentId, mark),
+    }
+  },
+  install: (documentId, content) => {
+    const textures = useTextures.getState()
+    // `replace`, not a command: loading a document is not something ⌘Z gives back.
+    textures.replace(documentId, parseTexture(JSON.parse(content)))
+    textures.markSaved(documentId, textureMarkOf(useTextures.getState(), documentId))
+  },
+  createDefault: documentId => useTextures.getState().ensure(documentId, newTexture),
+  holds: documentId => hasTexture(useTextures.getState(), documentId),
+}
+
+const IO_BY_KIND: Partial<Record<DocumentKind, DocumentIo>> = {
+  scene: SCENE_IO,
+  texture: TEXTURE_IO,
+}
 
 const ioOf = (documentId: string): DocumentIo | undefined => {
   const kind = useDocuments.getState().documents[documentId]?.kind

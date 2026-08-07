@@ -5,7 +5,7 @@ import {
   DOCUMENT_VERSION,
   isDocumentKind,
   type DocumentDraft,
-  type DocumentFile,
+  type DocumentEnvelope,
   type DocumentKind,
 } from '@shared/domain/document'
 import type { Manifest } from '@shared/domain/project'
@@ -95,36 +95,32 @@ export function parseDocumentKind(value: unknown): DocumentKind {
 const title = z.string().max(200)
 
 /*
- * Never inspected: what a kind stores is its editor's business, and validating it here would
- * put every editor's schema in the file layer.
+ * Never inspected, and now never parsed either: what a kind stores is its editor's business,
+ * and it crosses this boundary as the string that editor serialized.
  *
- * Optional, and it has to be: `JSON.stringify` drops a key whose value is `undefined`, so an
- * editor that serializes an untouched document to nothing writes a file with no `content` at
- * all. Required — which is what a bare `z.unknown()` is under zod 4 — that file would then
- * fail to parse on the way back in, and the document would be unreadable for good.
+ * Bounded all the same. The renderer is the sandboxed side, and a document is written to the
+ * user's disk: an unbounded string is a full partition away.
  */
-const content = z.unknown().optional()
+const MAX_CONTENT_BYTES = 256 * 1024 * 1024
+
+const content = z.string().max(MAX_CONTENT_BYTES)
 
 const documentDraft = z.object({ title, content })
 
-/** Puts the key back, so callers never have to tell "absent" from "holds nothing". */
 export function parseDocumentDraft(value: unknown): DocumentDraft {
-  const parsed = documentDraft.parse(value)
-  return { ...parsed, content: parsed.content }
+  return documentDraft.parse(value)
 }
 
-const documentFile = z.object({
+const documentEnvelope = z.object({
   // Capped, not merely floored: a file written by a later build must be refused rather than
   // read as if it were this one and silently flattened by the next save.
   version: z.number().int().min(1).max(DOCUMENT_VERSION),
   kind: documentKind,
   title,
   updatedAt: z.string().min(1),
-  content,
 })
 
 /** A document file is user territory, like the manifest: hand-edited, truncated, or older. */
-export function parseDocumentFile(value: unknown): DocumentFile {
-  const parsed = documentFile.parse(value)
-  return { ...parsed, content: parsed.content }
+export function parseDocumentEnvelope(value: unknown): DocumentEnvelope {
+  return documentEnvelope.parse(value)
 }

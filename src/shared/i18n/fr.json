@@ -805,5 +805,16 @@
       "title": "Magnétisme",
       "help": "Fait coller ce qu'on déplace aux repères, aux bords de l'image et à son centre, à quelques pixels près."
     }
+  },
+  "texture": {
+    "shapeSphere": "Sphère",
+    "shapeBox": "Cube",
+    "shapeCylinder": "Cylindre",
+    "shapePlane": "Plan",
+    "shapeKnot": "Nœud",
+    "showBackground": "Afficher le fond",
+    "autoSpin": "Rotation automatique",
+    "envIntensity": "Éclairage",
+    "dropSource": "Glissez une image du projet pour la poser en couleur de base"
   }
 }

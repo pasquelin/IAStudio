@@ -1,6 +1,11 @@
 import type { Asset, AssetQuery } from './domain/asset'
 import type { CommandId } from './domain/command'
-import type { DocumentDraft, DocumentFile, DocumentKind } from './domain/document'
+import type {
+  DocumentDescriptor,
+  DocumentDraft,
+  DocumentFile,
+  DocumentKind,
+} from './domain/document'
 import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -41,6 +46,7 @@ export type Channels = {
 
   dialogPickPath: 'dialog:pick-path'
 
+  documentList: 'document:list'
   documentRead: 'document:read'
   documentWrite: 'document:write'
   documentRemove: 'document:remove'
@@ -86,6 +92,7 @@ export const CHANNELS: Channels = {
 
   dialogPickPath: 'dialog:pick-path',
 
+  documentList: 'document:list',
   documentRead: 'document:read',
   documentWrite: 'document:write',
   documentRemove: 'document:remove',
@@ -210,6 +217,8 @@ export type StudioBridge = {
     pickPath: (kind: PathKind, startIn?: string) => Promise<string | null>
   }
   documents: {
+    /** Every document the open project holds, read off its folder — the one source of truth. */
+    list: () => Promise<DocumentDescriptor[]>
     /** `null` when nothing has been saved under that id yet. */
     read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
     /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */

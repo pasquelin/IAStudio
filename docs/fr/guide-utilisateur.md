@@ -20,9 +20,10 @@ Vous cherchez plutôt comment il est bâti ? Voir [architecture.md](architecture
 9. [Travailler en 3D](#travailler-en-3d)
 10. [Monter une vidéo](#monter-une-vidéo)
 11. [Travailler le son](#travailler-le-son)
-12. [Les réglages](#les-réglages)
-13. [Aide-mémoire clavier](#aide-mémoire-clavier)
-14. [Quand quelque chose cloche](#quand-quelque-chose-cloche)
+12. [Travailler une texture](#travailler-une-texture)
+13. [Les réglages](#les-réglages)
+14. [Aide-mémoire clavier](#aide-mémoire-clavier)
+15. [Quand quelque chose cloche](#quand-quelque-chose-cloche)
 
 ---
 
@@ -127,7 +128,7 @@ autour d'un type de travail, et filtre le catalogue sur la famille correspondant
 | **Vidéo** | video | Timeline |
 | **3D** | 3d | Maillages, Lumières, Inspecteur, et l'arbre de scène dans l'Explorateur |
 | **Audio** | audio | — (son éditeur est la forme d'onde elle-même) |
-| **Textures** | image | — |
+| **Textures** | image | — (son éditeur est l'aperçu lui-même) |
 | **Skyboxes** | image | — |
 
 Une disposition arrangée dans un espace y reste. Ce qui est ouvert est retenu par zone, et un
@@ -370,6 +371,31 @@ d'onde et travaille sur la sélection que vous y tirez.
 Rien n'est écrit tant que vous ne le dites pas : **Appliquer** réécrit l'asset, **Enregistrer
 comme nouveau** en crée un à côté. L'A/B existe pour entendre ce que vous avez changé avant de
 choisir entre les deux.
+
+---
+
+## Travailler une texture
+
+Une texture n'est pas une image : c'est une matière, et elle ne se juge pas à plat. L'espace
+Textures la pose sur une forme, sous une vraie lumière.
+
+Cliquez **+** dans l'espace Textures pour ouvrir un document, puis **glissez une image du projet
+sur l'aperçu** : elle devient la couleur de base.
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| **Sphère · Cube · Cylindre · Plan · Nœud** | la forme sur laquelle juger. Le plan montre la répétition, la sphère montre l'éclairage, le nœud montre ce qui se passe là où la surface se replie |
+| **Fond** | montrer l'environnement derrière le sujet, ou l'utiliser seulement pour éclairer |
+| **Rotation automatique** | faire tourner la forme lentement, pour lire le relief |
+| **Éclairage** | l'intensité de l'environnement |
+
+L'éclairage par défaut est un studio neutre : aucun fichier à télécharger, et une matière
+lisible dès le premier document. Le jour où votre projet contient des skyboxes, elles pourront
+servir de lumière à leur tour.
+
+Tout est enregistré dans un fichier `.tex` du dossier `documents/` de votre projet, quelques
+instants après votre dernier geste. Rien n'est cuit dans les pixels : rouvrez le document dans
+six mois, chaque réglage est encore là et se règle encore.
 
 ---
 

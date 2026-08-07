@@ -63,4 +63,38 @@ describe('layouts store', () => {
     expect(layouts.image).toBeUndefined()
     expect(layouts.audio?.panels).toHaveProperty('tracks')
   })
+
+  describe('adopt', () => {
+    // A panel is a document open, and the documents live in the project folder: kept across a
+    // change of project, the tabs of the previous one come back over a folder that has none.
+    it('drops the arrangement of the project being left', () => {
+      useLayouts.getState().adopt('/projects/first')
+      useLayouts.getState().remember('image', layout('generator'))
+
+      useLayouts.getState().adopt('/projects/second')
+
+      expect(useLayouts.getState().layouts.image).toBeUndefined()
+      expect(useLayouts.getState().projectPath).toBe('/projects/second')
+    })
+
+    // The main process reopens the last project on launch: taking that for a change of project
+    // would greet the user with an empty centre every single time.
+    it('keeps the arrangement when the same project comes back', () => {
+      useLayouts.getState().adopt('/projects/first')
+      useLayouts.getState().remember('image', layout('generator'))
+
+      useLayouts.getState().adopt('/projects/first')
+
+      expect(useLayouts.getState().layouts.image?.panels).toHaveProperty('generator')
+    })
+
+    it('drops the arrangement when no project is open any more', () => {
+      useLayouts.getState().adopt('/projects/first')
+      useLayouts.getState().remember('image', layout('generator'))
+
+      useLayouts.getState().adopt(null)
+
+      expect(useLayouts.getState().layouts.image).toBeUndefined()
+    })
+  })
 })

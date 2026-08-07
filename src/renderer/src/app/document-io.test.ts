@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DOCUMENT_VERSION } from '@shared/domain/document'
 import type {
   DocumentDescriptor,
   DocumentDraft,
@@ -16,11 +17,12 @@ import { restoreDocument, saveDocument } from './document-io'
 const box = meshNode('box-1')
 
 const savedFile = (): DocumentFile => ({
-  version: 1,
+  version: DOCUMENT_VERSION,
   kind: 'scene',
   title: 'Set dressing',
+  // Serialized, as it crosses the boundary: the file layer never parses a content.
+  content: JSON.stringify({ nodes: [box] }),
   updatedAt: '2026-08-07T10:00:00.000Z',
-  content: { nodes: [box] },
 })
 
 function scene(id: string): DocumentDescriptor {
@@ -35,8 +37,8 @@ beforeEach(() => {
 })
 
 describe('saveDocument', () => {
-  const openScene = (): string => {
-    const created = useDocuments.getState().create('3d')
+  const openScene = async (): Promise<string> => {
+    const created = await useDocuments.getState().create('3d')
     if (!created) throw new Error('expected a document')
     useScenes.getState().runCommand(created.id, addNode(box))
     return created.id
@@ -46,19 +48,19 @@ describe('saveDocument', () => {
     const write = vi.fn(() => Promise.resolve())
     installFakeBridge({ documents: { write } })
 
-    const documentId = openScene()
+    const documentId = await openScene()
     await saveDocument(documentId)
 
     expect(write).toHaveBeenCalledWith(documentId, 'scene', {
       title: expect.any(String),
-      content: { nodes: [box] },
+      content: JSON.stringify({ nodes: [box] }),
     })
   })
 
   it('marks the document clean once it is written', async () => {
     installFakeBridge({ documents: { write: () => Promise.resolve() } })
 
-    const documentId = openScene()
+    const documentId = await openScene()
     expect(isDirty(useScenes.getState(), documentId)).toBe(true)
 
     await saveDocument(documentId)
@@ -70,7 +72,7 @@ describe('saveDocument', () => {
   it('leaves the document modified when the write fails', async () => {
     installFakeBridge({ documents: { write: () => Promise.reject(new Error('no project')) } })
 
-    const documentId = openScene()
+    const documentId = await openScene()
     await expect(saveDocument(documentId)).rejects.toThrow()
     expect(isDirty(useScenes.getState(), documentId)).toBe(true)
   })
@@ -87,7 +89,7 @@ describe('saveDocument', () => {
       },
     })
 
-    const documentId = openScene()
+    const documentId = await openScene()
     const writing = saveDocument(documentId)
 
     useScenes.getState().runCommand(documentId, addNode(meshNode('box-2')))
@@ -129,7 +131,7 @@ describe('saveDocument', () => {
     const write = vi.fn(() => Promise.resolve())
     installFakeBridge({ documents: { write } })
 
-    const created = useDocuments.getState().create('image')
+    const created = await useDocuments.getState().create('image')
     if (!created) throw new Error('expected a document')
     await saveDocument(created.id)
 
@@ -248,7 +250,7 @@ describe('what reaches the bridge', () => {
       },
     })
 
-    const created = useDocuments.getState().create('3d')
+    const created = await useDocuments.getState().create('3d')
     if (!created) throw new Error('expected a document')
     useScenes.getState().runCommand(created.id, addNode(box))
     await saveDocument(created.id)
