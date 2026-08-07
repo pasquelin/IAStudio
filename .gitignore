@@ -15,3 +15,5 @@ docs/superpowers
 CLAUDE.md
 .idea/
 .vscode/
+# Worktrees des sessions Claude : ils vivent dans le dépôt, ils n'en sont pas le contenu
+.claude/worktrees/

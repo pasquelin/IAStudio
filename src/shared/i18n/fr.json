@@ -261,7 +261,18 @@
     "settings": "Réglages…",
     "tools": "Modules",
     "resetLayout": "Réinitialiser la disposition",
-    "fullScreen": "Plein écran"
+    "fullScreen": "Plein écran",
+    "help": "Aide",
+    "about": "À propos de Scenario Studio"
+  },
+  "about": {
+    "copyright": "© 2026 Alban Pasquelin. Scenario est une marque de Scenario Labs."
+  },
+  "splash": {
+    "starting": "Démarrage…",
+    "catalog": "Ouverture du catalogue…",
+    "project": "Restauration du dernier projet…",
+    "workspace": "Préparation de l'espace de travail…"
   },
   "settings": {
     "title": "Réglages",

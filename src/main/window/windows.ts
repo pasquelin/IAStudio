@@ -1,6 +1,7 @@
 import { app, BrowserWindow, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { WINDOW_CHROME_COLOR } from '@shared/constants'
+import { APP_ICON_PATH } from '@main/resources'
 import { trackWindowState } from './controls'
 
 /** Route the renderer reads to decide which window it is rendering. */
@@ -15,7 +16,16 @@ const WEB_PREFERENCES: WebPreferences = {
   contextIsolation: true,
   nodeIntegration: false,
   sandbox: true,
+  // Dropping the menu entries hides the command; this refuses the feature. A compromised
+  // dependency calling `openDevTools()` would otherwise still reach `window.studio`.
+  devTools: !app.isPackaged,
 }
+
+/**
+ * macOS reads the icon from the bundle and ignores this option; Windows and Linux need it
+ * spelled out, or the window wears the default Electron icon.
+ */
+const WINDOW_ICON: { icon?: string } = process.platform === 'darwin' ? {} : { icon: APP_ICON_PATH }
 
 function load(window: BrowserWindow, route?: string): void {
   const devUrl = process.env['ELECTRON_RENDERER_URL']
@@ -39,6 +49,7 @@ export function createMainWindow(): BrowserWindow {
     backgroundColor: WINDOW_CHROME_COLOR,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 14 },
+    ...WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
   })
 
@@ -73,6 +84,7 @@ export function openSettingsWindow(): BrowserWindow {
     // Not a document window: nothing here is worth a full screen, and macOS would otherwise
     // give it its own space, hiding the studio behind it.
     fullscreenable: false,
+    ...WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
   })
 

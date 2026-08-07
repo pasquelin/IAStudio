@@ -1,0 +1,57 @@
+appId: com.scenario.app
+productName: Scenario Studio
+copyright: © 2026 Alban Pasquelin
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+  # Read at runtime by `nativeImage`: window icon on Windows and Linux, About dialog.
+  - build/icon.png
+  - '!**/*.map'
+
+# A native module cannot be loaded from inside the asar archive.
+asarUnpack:
+  - '**/*.node'
+
+mac:
+  category: public.app-category.graphics-design
+  icon: build/icon.svg
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    # Not for distribution: electron-updater consumes the zip, and it is cheap to keep.
+    - target: zip
+      arch: [arm64, x64]
+
+dmg:
+  contents:
+    - x: 140
+      y: 190
+      type: file
+    - x: 400
+      y: 190
+      type: link
+      path: /Applications
+
+win:
+  icon: build/icon.svg
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+linux:
+  icon: build/icon.svg
+  category: Graphics
+  target: [AppImage, deb]

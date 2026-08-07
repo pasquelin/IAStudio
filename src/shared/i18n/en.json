@@ -261,7 +261,18 @@
     "settings": "Settings…",
     "tools": "Tool windows",
     "resetLayout": "Reset layout",
-    "fullScreen": "Full screen"
+    "fullScreen": "Full screen",
+    "help": "Help",
+    "about": "About Scenario Studio"
+  },
+  "about": {
+    "copyright": "© 2026 Alban Pasquelin. Scenario is a trademark of Scenario Labs."
+  },
+  "splash": {
+    "starting": "Starting…",
+    "catalog": "Opening the catalogue…",
+    "project": "Restoring the last project…",
+    "workspace": "Preparing the workspace…"
   },
   "settings": {
     "title": "Settings",

@@ -87,7 +87,11 @@ export const EVENTS = {
   openTool: 'evt:open-tool',
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
+  splashStep: 'evt:splash-step',
 }
+
+/** Startup stages, in order. The main process sends the label already translated. */
+export type SplashStep = 'starting' | 'catalog' | 'project' | 'workspace'
 
 export type Unsubscribe = () => void
 
