@@ -1,3 +1,4 @@
+import { registerMediaHandlers } from '@main/media/handlers'
 import { registerProjectHandlers } from '@main/project/handlers'
 import { registerScenarioHandlers } from '@main/scenario/handlers'
 import { registerSettingsHandlers } from '@main/settings/handlers'
@@ -10,4 +11,5 @@ export function registerIpc(services: Services): void {
   registerSettingsHandlers(services)
   registerScenarioHandlers(services)
   registerProjectHandlers(services)
+  registerMediaHandlers(services)
 }

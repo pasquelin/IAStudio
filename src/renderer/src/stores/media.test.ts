@@ -1,0 +1,103 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
+import type { IngestProgress } from '@shared/domain/media'
+import { installFakeBridge } from '@/services/fake-bridge'
+import { useAssets } from './assets'
+import { useMedia } from './media'
+
+const asset = (id: string): Asset => ({
+  id,
+  name: id,
+  type: 'video',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-07T10:00:00.000Z',
+  sourcePath: `/rushes/${id}.mov`,
+})
+
+const progress = (assetId: string, stage: IngestProgress['stage']): IngestProgress => ({
+  assetId,
+  stage,
+  ratio: 0.5,
+})
+
+describe('media store', () => {
+  beforeEach(() => {
+    useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
+    useAssets.setState({ items: [] })
+  })
+
+  it('shows the imported assets at once, without waiting for their ingest', async () => {
+    const refresh = vi.fn(async () => undefined)
+    useAssets.setState({ refresh })
+    installFakeBridge({ media: { ingest: () => Promise.resolve([asset('a'), asset('b')]) } })
+
+    await useMedia.getState().importMedia()
+
+    expect(refresh).toHaveBeenCalledOnce()
+  })
+
+  it('follows an ingest through its stages', () => {
+    useMedia.getState().apply(progress('a', 'proxy'))
+    expect(useMedia.getState().progress['a']).toMatchObject({ stage: 'proxy' })
+  })
+
+  it('refreshes the browser when an ingest lands, which is when the duration is known', async () => {
+    vi.useFakeTimers()
+    const refresh = vi.fn(async () => undefined)
+    useAssets.setState({ refresh })
+
+    useMedia.getState().apply(progress('a', 'done'))
+    await vi.runAllTimersAsync()
+
+    expect(refresh).toHaveBeenCalledOnce()
+    // Kept out of the map once finished: a bar that never leaves is a bar nobody reads.
+    expect(useMedia.getState().progress['a']).toBeUndefined()
+    vi.useRealTimers()
+  })
+
+  it('reads the catalogue once for a batch, not once per file that lands', async () => {
+    vi.useFakeTimers()
+    const refresh = vi.fn(async () => undefined)
+    useAssets.setState({ refresh })
+
+    // Forty rushes finishing would otherwise be forty synchronous SQLite queries in the main.
+    for (const id of ['a', 'b', 'c']) useMedia.getState().apply(progress(id, 'done'))
+    await vi.runAllTimersAsync()
+
+    expect(refresh).toHaveBeenCalledOnce()
+    vi.useRealTimers()
+  })
+
+  it('drops the row of a cancelled ingest, in every window and not only the one that asked', () => {
+    useMedia.getState().apply(progress('a', 'proxy'))
+    useMedia.getState().apply(progress('a', 'cancelled'))
+
+    expect(useMedia.getState().progress['a']).toBeUndefined()
+  })
+
+  it('keeps a failure on screen, since it is the only trace an import left', () => {
+    useMedia.getState().apply(progress('a', 'failed'))
+    expect(useMedia.getState().progress['a']).toMatchObject({ stage: 'failed' })
+  })
+
+  it('reads what the pipeline can do, so the interface can say what is missing', async () => {
+    installFakeBridge({ media: { capabilities: () => Promise.resolve({ ffmpeg: false }) } })
+
+    const stop = await useMedia.getState().connect()
+
+    expect(useMedia.getState().capabilities.ffmpeg).toBe(false)
+    stop()
+  })
+
+  it('drops the progress of an ingest it cancelled', async () => {
+    const cancel = vi.fn(() => Promise.resolve())
+    installFakeBridge({ media: { cancel } })
+    useMedia.getState().apply(progress('a', 'proxy'))
+
+    await useMedia.getState().cancel('a')
+
+    expect(cancel).toHaveBeenCalledWith('a')
+    expect(useMedia.getState().progress['a']).toBeUndefined()
+  })
+})

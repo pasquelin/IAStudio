@@ -1,9 +1,8 @@
-import { mdiCloseCircleOutline, mdiProgressClock } from '@mdi/js'
+import { mdiProgressClock } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
-import { cn } from '@/helpers/cn'
-import { ToolButton } from '@/design/ToolButton'
+import { ProgressRow } from '@/design/ProgressRow'
 import { failureMessageKey } from '@/services/failure-message'
 import { useJobs } from '@/stores/jobs'
 import { EmptyState } from '@/design/EmptyState'
@@ -21,42 +20,24 @@ const STATUS_COLOR: Record<Job['status'], string> = {
 const JobRow = memo(function JobRow({ job }: { job: Job }) {
   const { t } = useTranslation()
   const cancel = useJobs(state => state.cancel)
-  const percent = Math.round(job.progress * 100)
+  const finished = isFinished(job.status)
 
   return (
-    <li className="flex flex-col gap-0.5 px-2 py-1 text-xs">
-      <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate">{job.label}</span>
-
-        {job.status === 'running' && (
-          <progress
-            className="progress w-24"
-            value={percent}
-            max={100}
-            aria-label={`${job.label} ${percent}%`}
-          />
-        )}
-
-        <span className={cn('shrink-0 text-[11px]', STATUS_COLOR[job.status])}>
-          {t(`jobs.status.${job.status}`)}
-        </span>
-
-        {!isFinished(job.status) && (
-          <ToolButton
-            icon={mdiCloseCircleOutline}
-            label={t('jobs.cancel')}
-            variant="header"
-            onClick={() => void cancel(job.id)}
-          />
-        )}
-      </div>
-
-      {job.error && (
-        <span role="alert" className="text-danger text-[11px]">
-          {t(failureMessageKey(job.error))}
-        </span>
-      )}
-    </li>
+    <ProgressRow
+      label={job.label}
+      ratio={job.status === 'running' ? job.progress : undefined}
+      status={t(`jobs.status.${job.status}`)}
+      statusClassName={STATUS_COLOR[job.status]}
+      cancelLabel={finished ? undefined : t('jobs.cancel')}
+      onCancel={finished ? undefined : () => void cancel(job.id)}
+      detail={
+        job.error && (
+          <span role="alert" className="text-danger text-[11px]">
+            {t(failureMessageKey(job.error))}
+          </span>
+        )
+      }
+    />
   )
 })
 

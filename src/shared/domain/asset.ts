@@ -42,6 +42,26 @@ export type MediaProbe = {
   channels?: number
 }
 
+/**
+ * A probe from values its reader has already narrowed — ffprobe output on the way in, a
+ * catalogue column on the way back. One list of optional fields rather than two: a probe that
+ * gains a field must not be able to survive the ingest and vanish on the next read.
+ *
+ * Without a duration and a codec there is no probe: a clip built on one would have no length.
+ */
+export function mediaProbeOf(fields: Partial<MediaProbe>): MediaProbe | null {
+  const { duration, codec, width, height, fps, sampleRate, channels } = fields
+  if (duration === undefined || codec === undefined) return null
+
+  const probe: MediaProbe = { duration, codec }
+  if (width !== undefined) probe.width = width
+  if (height !== undefined) probe.height = height
+  if (fps !== undefined) probe.fps = fps
+  if (sampleRate !== undefined) probe.sampleRate = sampleRate
+  if (channels !== undefined) probe.channels = channels
+  return probe
+}
+
 export type Asset = {
   id: string
   name: string

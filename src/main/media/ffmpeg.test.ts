@@ -71,6 +71,10 @@ describe('ffmpeg arguments', () => {
     expect(proxyArgs('/in.mov', '/out.mp4').join(' ')).toContain('+faststart')
   })
 
+  it('silences the per-second progress line, which nobody reads and the runner would keep', () => {
+    expect(proxyArgs('/in.mov', '/out.mp4')).toContain('-nostats')
+  })
+
   it('asks for mono 16-bit PCM when extracting peaks', () => {
     const args = peaksArgs('/in.mov')
     expect(args).toContain('s16le')

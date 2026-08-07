@@ -6,7 +6,7 @@ import {
   DEFAULT_COLLECTION_STATE,
   type CollectionState,
 } from '@/helpers/collection-state'
-import { isRecord } from '@/helpers/guards'
+import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
 
 type AssetsState = {

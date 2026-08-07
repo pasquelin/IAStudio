@@ -1,5 +1,6 @@
 import {
   isAssetType,
+  mediaProbeOf,
   type Asset,
   type AssetQuery,
   type AssetType,
@@ -138,18 +139,20 @@ function parseProbe(raw: string | undefined): MediaProbe | undefined {
     if (!parsed || typeof parsed !== 'object') return undefined
 
     const fields: Record<string, unknown> = { ...parsed }
-    const { duration, codec, width, height, fps, sampleRate, channels } = fields
-    // A probe without those two says nothing usable, and a clip built on it would have no length.
-    if (typeof duration !== 'number' || typeof codec !== 'string') return undefined
+    const numberOf = (value: unknown): number | undefined =>
+      typeof value === 'number' ? value : undefined
 
-    const probe: MediaProbe = { duration, codec }
-    if (typeof width === 'number') probe.width = width
-    if (typeof height === 'number') probe.height = height
-    if (typeof fps === 'number') probe.fps = fps
-    if (typeof sampleRate === 'number') probe.sampleRate = sampleRate
-    if (typeof channels === 'number') probe.channels = channels
-
-    return probe
+    return (
+      mediaProbeOf({
+        duration: numberOf(fields.duration),
+        codec: typeof fields.codec === 'string' ? fields.codec : undefined,
+        width: numberOf(fields.width),
+        height: numberOf(fields.height),
+        fps: numberOf(fields.fps),
+        sampleRate: numberOf(fields.sampleRate),
+        channels: numberOf(fields.channels),
+      }) ?? undefined
+    )
   } catch {
     return undefined
   }

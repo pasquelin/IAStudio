@@ -32,6 +32,11 @@ export function probeArgs(source: string): string[] {
 export function proxyArgs(source: string, destination: string): string[] {
   return [
     '-y',
+    // Without these, ffmpeg writes a progress line to stderr every second of a long encode,
+    // and the runner keeps every one of them until the process exits.
+    '-v',
+    'error',
+    '-nostats',
     '-i',
     source,
     '-vf',

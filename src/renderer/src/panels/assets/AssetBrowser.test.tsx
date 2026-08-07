@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Project } from '@shared/domain/project'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { useAssets } from '@/stores/assets'
+import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { AssetBrowser, AssetBrowserActions } from './AssetBrowser'
 
@@ -39,6 +40,7 @@ describe('AssetBrowser', () => {
   beforeEach(() => {
     useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
     useProject.setState({ project: null })
+    useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
   })
 
   // Two situations, and the user can only act on one of them.
@@ -92,5 +94,48 @@ describe('AssetBrowser', () => {
 
     expect(screen.getByText('Clip')).toBeInTheDocument()
     expect(screen.queryByText('Sunset')).not.toBeInTheDocument()
+  })
+
+  it('imports a media file into the open project', async () => {
+    const importMedia = vi.fn(async () => undefined)
+    useProject.setState({ project: PROJECT })
+    useMedia.setState({ importMedia })
+    render(<Panel />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Importer un média/ }))
+
+    expect(importMedia).toHaveBeenCalledOnce()
+  })
+
+  it('offers no import while no project is open, since there is no catalogue to link into', () => {
+    render(<Panel />)
+    expect(screen.getByRole('button', { name: /Importer un média/ })).toBeDisabled()
+  })
+
+  it('shows what the ingest of an imported file is doing', () => {
+    useAssets.setState({ items: [asset('vid', { name: 'A001', type: 'video' })] })
+    useMedia.setState({
+      progress: { vid: { assetId: 'vid', stage: 'proxy', ratio: 0.5 } },
+    })
+    render(<Panel />)
+
+    // Named after the asset it prepares, not after its id: the row below says the same name.
+    expect(screen.getByLabelText('A001 50%')).toBeInTheDocument()
+    expect(screen.getByText('Proxy…')).toBeInTheDocument()
+  })
+
+  it('says what is unavailable rather than failing quietly when ffmpeg is missing', () => {
+    useMedia.setState({
+      capabilities: { ffmpeg: false },
+      progress: { vid: { assetId: 'vid', stage: 'probe', ratio: 0.1 } },
+    })
+    render(<Panel />)
+
+    expect(screen.getByText(/ffmpeg introuvable/)).toBeInTheDocument()
+  })
+
+  it('leaves the browser alone when nothing is being ingested', () => {
+    render(<Panel />)
+    expect(screen.queryByText(/ffmpeg introuvable/)).not.toBeInTheDocument()
   })
 })

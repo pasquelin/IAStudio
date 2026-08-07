@@ -24,6 +24,18 @@ describe('settings validation', () => {
     expect(() => parsePartialSettings({ generation: { concurrentJobs: 2.5 } })).toThrow()
   })
 
+  it('accepts a path to ffmpeg, which it never checks for existence', () => {
+    // The binary may be plugged in later; `resolveFfmpeg` falls through to the PATH meanwhile.
+    expect(parsePartialSettings({ media: { ffmpegPath: '/nowhere/yet/ffmpeg' } })).toEqual({
+      media: { ffmpegPath: '/nowhere/yet/ffmpeg' },
+    })
+  })
+
+  it('rejects an ffmpeg path that is not a usable string', () => {
+    expect(() => parsePartialSettings({ media: { ffmpegPath: '' } })).toThrow()
+    expect(() => parsePartialSettings({ media: { ffmpegPath: 42 } })).toThrow()
+  })
+
   it('rejects anything that is not an object', () => {
     expect(() => parsePartialSettings('compact')).toThrow()
     expect(() => parsePartialSettings(null)).toThrow()
