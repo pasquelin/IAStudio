@@ -2,9 +2,10 @@ import type { Command } from '../core/history'
 import {
   clipById,
   clipEnd,
+  editableTrack,
   insertClip,
+  newClipId,
   snapToFrame,
-  trackById,
   trackOfClip,
   type Clip,
   type SequenceState,
@@ -32,24 +33,19 @@ const withoutClip = (track: Track, clipId: string): Track => ({
   clips: track.clips.filter(clip => clip.id !== clipId),
 })
 
-/** A locked track refuses every edit, so every command starts by asking. */
-const editable = (state: SequenceState, trackId: string): Track | null => {
-  const track = trackById(state, trackId)
-  return track && !track.locked ? track : null
-}
-
 export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
   let selectedBefore: string | null = null
+  const tailId = newClipId()
 
   return {
     id: `add:${clip.id}`,
     apply: state => {
-      const track = editable(state, trackId)
+      const track = editableTrack(state, trackId)
       if (!track) return state
 
       selectedBefore = state.selectedId
       return {
-        ...mapTrack(state, trackId, current => insertClip(current, clip)),
+        ...mapTrack(state, trackId, current => insertClip(current, clip, tailId)),
         selectedId: clip.id,
       }
     },
@@ -62,20 +58,23 @@ export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
 
 export function moveClip(clipId: string, toTrackId: string, start: Us): Command<SequenceState> {
   let from: { trackId: string; clip: Clip; selectedId: string | null } | null = null
+  // Two ids, because the two directions are two insertions: reusing one would let the tail
+  // `apply` left behind meet the tail `revert` cuts loose.
+  const tailId = { forward: newClipId(), back: newClipId() }
 
   return {
     id: `move:${clipId}`,
     apply: state => {
       const source = trackOfClip(state, clipId)
       const clip = clipById(state, clipId)
-      const target = editable(state, toTrackId)
+      const target = editableTrack(state, toTrackId)
       if (!source || source.locked || !clip || !target) return state
 
       from = { trackId: source.id, clip, selectedId: state.selectedId }
       const moved: Clip = { ...clip, start: snapToFrame(start, state.settings) }
       const lifted = mapTrack(state, source.id, current => withoutClip(current, clipId))
       return {
-        ...mapTrack(lifted, toTrackId, current => insertClip(current, moved)),
+        ...mapTrack(lifted, toTrackId, current => insertClip(current, moved, tailId.forward)),
         selectedId: clipId,
       }
     },
@@ -84,7 +83,9 @@ export function moveClip(clipId: string, toTrackId: string, start: Us): Command<
       const origin = from
       const lifted = mapTrack(state, toTrackId, current => withoutClip(current, clipId))
       return {
-        ...mapTrack(lifted, origin.trackId, current => insertClip(current, origin.clip)),
+        ...mapTrack(lifted, origin.trackId, current =>
+          insertClip(current, origin.clip, tailId.back),
+        ),
         selectedId: origin.selectedId,
       }
     },
@@ -133,7 +134,9 @@ export function trimClip(clipId: string, edge: 'in' | 'out', at: Us): Command<Se
 }
 
 export function splitClip(clipId: string, at: Us): Command<SequenceState> {
-  let before: { clip: Clip; trackId: string; tailId: string } | null = null
+  let before: { clip: Clip; trackId: string } | null = null
+  // Minted once with the command, not on each apply: a redo must not rename the tail.
+  const tailId = newClipId()
 
   return {
     id: `split:${clipId}`,
@@ -145,8 +148,7 @@ export function splitClip(clipId: string, at: Us): Command<SequenceState> {
       const time = snapToFrame(at, state.settings)
       if (time <= clip.start || time >= clipEnd(clip)) return state
 
-      const tailId = `${clip.id}-b`
-      before = { clip, trackId: track.id, tailId }
+      before = { clip, trackId: track.id }
 
       const head: Clip = { ...clip, duration: time - clip.start }
       const tail: Clip = {
@@ -170,7 +172,7 @@ export function splitClip(clipId: string, at: Us): Command<SequenceState> {
       return mapTrack(state, origin.trackId, current => ({
         ...current,
         clips: current.clips
-          .filter(candidate => candidate.id !== origin.tailId)
+          .filter(candidate => candidate.id !== tailId)
           .map(candidate => (candidate.id === origin.clip.id ? origin.clip : candidate)),
       }))
     },

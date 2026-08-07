@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
+import type { IngestProgress } from '@shared/domain/media'
 import type { WindowState } from '@shared/domain/window'
 import {
   CHANNELS,
@@ -48,6 +49,12 @@ const bridge: StudioBridge = {
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
+  },
+  media: {
+    ingest: () => ipcRenderer.invoke(CHANNELS.mediaIngest),
+    cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),
+    capabilities: () => ipcRenderer.invoke(CHANNELS.mediaAvailable),
+    onProgress: callback => subscribe<IngestProgress>(EVENTS.mediaProgress, callback),
   },
   window: {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),

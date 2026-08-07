@@ -5,7 +5,7 @@ import type {
   TextureSlot,
   Vector3,
 } from '@shared/domain/scene'
-import { isRecord } from '@/helpers/guards'
+import { isRecord } from '@shared/guards'
 import type { NumericBounds } from '@/helpers/numeric'
 
 /*
@@ -180,5 +180,6 @@ function isFieldValue(value: unknown): value is FieldValue {
 }
 
 export function isVector3(value: unknown): value is Vector3 {
-  return isRecord(value) && ['x', 'y', 'z'].every(axis => typeof value[axis] === 'number')
+  if (!isRecord(value)) return false
+  return ['x', 'y', 'z'].every(axis => typeof value[axis] === 'number')
 }

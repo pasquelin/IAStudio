@@ -16,7 +16,8 @@ import {
   type ToolZone,
 } from '@shared/domain/tool'
 import { toolServes } from '@/helpers/tool-registry'
-import { Panel, ToolWindow } from './ToolWindow'
+import { Panel } from '@/design/Panel'
+import { ToolWindow } from './ToolWindow'
 import 'dockview-react/dist/styles/dockview.css'
 import './dockview-theme.css'
 

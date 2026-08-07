@@ -42,6 +42,27 @@ export type MediaProbe = {
   channels?: number
 }
 
+/**
+ * A probe from values its reader has already narrowed — ffprobe output on the way in, a
+ * catalogue column on the way back. One list of optional fields rather than two: a probe that
+ * gains a field must not be able to survive the ingest and vanish on the next read.
+ *
+ * Without a duration and a codec there is no probe: a clip built on one would have no length.
+ */
+export function mediaProbeOf(fields: Partial<MediaProbe>): MediaProbe | null {
+  const { duration, codec, ...rest } = fields
+  return duration === undefined || codec === undefined ? null : { duration, codec, ...rest }
+}
+
+/** ffprobe prints its numbers as strings, the catalogue stores them as numbers. Both here. */
+export function probeNumber(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (typeof value !== 'string') return undefined
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
 export type Asset = {
   id: string
   name: string
@@ -80,9 +101,13 @@ const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
  * Whether this asset is a picture the studio can serve from disk. One answer to the question,
  * because a browser that draws a thumbnail and a texture slot that offers one must not disagree
  * about which assets qualify.
+ *
+ * `sourcePath` counts as much as `path`: an imported still is linked where it lies, never copied
+ * into the project, and it has a picture all the same.
  */
 export function isLocalPicture(asset: Asset): boolean {
-  return PICTURES.includes(asset.type) && asset.location === 'local' && asset.path !== undefined
+  const onDisk = asset.path ?? asset.sourcePath
+  return PICTURES.includes(asset.type) && asset.location === 'local' && onDisk !== undefined
 }
 
 export type AssetQuery = {

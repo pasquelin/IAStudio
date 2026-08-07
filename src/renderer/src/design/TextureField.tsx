@@ -1,7 +1,7 @@
 import { mdiCheckboxBlankOutline, mdiClose, mdiTextureBox } from '@mdi/js'
 import { useMemo } from 'react'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { Thumbnail } from './MediaTile'
+import { Thumbnail } from './Thumbnail'
 import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
 import { FIELD_LABEL, FIELD_ROW } from './styles'
@@ -48,7 +48,7 @@ export function TextureField({
     <div className={FIELD_ROW}>
       <span className={FIELD_LABEL}>{label}</span>
 
-      <Thumbnail url={chosen?.url} shape={THUMBNAIL} />
+      <Thumbnail url={chosen?.url} className={THUMBNAIL} />
 
       <span className="text-muted min-w-0 flex-1 truncate">{chosen?.name ?? emptyLabel}</span>
 

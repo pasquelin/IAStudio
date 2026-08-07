@@ -82,6 +82,15 @@ export function wholeFrames(duration: Us, settings: SequenceSettings): Us {
   return Math.max(frame, Math.round(duration / frame) * frame)
 }
 
+/**
+ * A clip born from a cut needs an id of its own. Deriving it from the one it was cut out of
+ * collides as soon as that clip is cut a second time, and two clips sharing an id break every
+ * lookup, starting with selection.
+ */
+export function newClipId(): string {
+  return `clip_${crypto.randomUUID()}`
+}
+
 export function clipEnd(clip: Clip): Us {
   return clip.start + clip.duration
 }
@@ -99,6 +108,12 @@ export function trackById(state: SequenceState, id: string): Track | null {
   return state.tracks.find(track => track.id === id) ?? null
 }
 
+/** A locked track refuses every edit, whether it is a command applying or a clip being dropped. */
+export function editableTrack(state: SequenceState, id: string): Track | null {
+  const track = trackById(state, id)
+  return track && !track.locked ? track : null
+}
+
 export function trackOfClip(state: SequenceState, clipId: string): Track | null {
   return state.tracks.find(track => track.clips.some(clip => clip.id === clipId)) ?? null
 }
@@ -114,8 +129,12 @@ export function clipById(state: SequenceState, id: string): Clip | null {
 /**
  * Overwrite insertion: the dropped clip wins, and what it covers is trimmed, split or dropped.
  * This is what keeps "sorted by start, never overlapping" true without asking callers to care.
+ *
+ * `tailId` names the clip an insertion landing mid-neighbour cuts loose. It is an input rather
+ * than something minted here: a reducer that invents an id is no longer a pure function of its
+ * state, and this one runs on every pointer move of a drag.
  */
-export function insertClip(track: Track, clip: Clip): Track {
+export function insertClip(track: Track, clip: Clip, tailId: string): Track {
   const end = clipEnd(clip)
   const clips: Clip[] = []
 
@@ -135,7 +154,7 @@ export function insertClip(track: Track, clip: Clip): Track {
     if (existingEnd > end) {
       clips.push({
         ...existing,
-        id: existing.start < clip.start ? `${existing.id}-tail` : existing.id,
+        id: existing.start < clip.start ? tailId : existing.id,
         start: end,
         duration: existingEnd - end,
         inPoint: existing.inPoint + (end - existing.start),

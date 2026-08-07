@@ -85,6 +85,33 @@ describe('sequence commands', () => {
     })
   })
 
+  it('gives each insertion its own tail id, so two drops on one neighbour stay distinct', () => {
+    const first = addClip('V1', clip('b', 1_000, 1_000)).apply(withClips([clip('a', 0, 3_000)]))
+    const second = addClip('V1', clip('c', 200, 400)).apply(first)
+    const ids = second.tracks[0]?.clips.map(candidate => candidate.id) ?? []
+
+    expect(ids).toHaveLength(5)
+    expect(new Set(ids).size).toBe(5)
+  })
+
+  it('gives each cut its own tail id, so cutting the same clip twice keeps ids distinct', () => {
+    const once = splitClip('a', 2_000_000).apply(withClips([clip('a', 0, 4_000_000)]))
+    const twice = splitClip('a', 1_000_000).apply(once)
+    const ids = twice.tracks[0]?.clips.map(candidate => candidate.id) ?? []
+
+    expect(ids).toHaveLength(3)
+    expect(new Set(ids).size).toBe(3)
+  })
+
+  it('keeps the tail id stable across a redo, so nothing points at a clip that moved', () => {
+    const command = splitClip('a', 400_000)
+    const state = withClips([clip('a', 0, 1_000_000)])
+    const first = command.apply(state)
+    const again = command.apply(command.revert(first))
+
+    expect(again.tracks[0]?.clips[1]?.id).toBe(first.tracks[0]?.clips[1]?.id)
+  })
+
   it('refuses a split on an exact edge, which would produce an empty clip', () => {
     const state = withClips([clip('a', 0, 1_000_000)])
     expect(splitClip('a', 0).apply(state)).toEqual(state)

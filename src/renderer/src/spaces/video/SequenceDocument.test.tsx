@@ -1,7 +1,8 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
 import type { Clip } from '@/engines/timeline/timeline-state'
+import { useDocuments } from '@/stores/documents'
 import { useSequences } from '@/stores/sequences'
 import { SequenceDocument } from './SequenceDocument'
 
@@ -36,6 +37,7 @@ describe('SequenceDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useSequences.setState({ states: {}, histories: {} })
+    useDocuments.setState({ activeId: 'doc-1' })
   })
 
   it('shows the source and the program monitors, in that order', () => {
@@ -73,5 +75,32 @@ describe('SequenceDocument', () => {
     screen.getAllByRole('button', { name: /Lire/ })[1]?.click()
 
     expect(play).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts the program monitor on the space bar, which its tooltip promises', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    fireEvent.keyDown(window, { code: 'Space' })
+
+    expect(play).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves the space bar to the tab in front, since hidden tabs stay mounted', () => {
+    useDocuments.setState({ activeId: 'doc-2' })
+    render(<SequenceDocument documentId="doc-1" />)
+
+    fireEvent.keyDown(window, { code: 'Space' })
+
+    expect(play).not.toHaveBeenCalled()
+  })
+
+  it('leaves the source monitor to its button, so one space bar drives one picture', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    const names = screen
+      .getAllByRole('button', { name: /Lire/ })
+      .map(button => button.getAttribute('aria-label'))
+
+    expect(names).toEqual(['Lire', 'Lire (Space)'])
   })
 })

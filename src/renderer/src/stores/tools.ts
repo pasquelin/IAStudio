@@ -9,7 +9,7 @@ import {
   type ToolSlot,
   type ToolZone,
 } from '@shared/domain/tool'
-import { isRecord } from '@/helpers/guards'
+import { isRecord } from '@shared/guards'
 
 export const MIN_SIZE = 140
 

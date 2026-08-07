@@ -1,8 +1,9 @@
 import { mdiClose } from '@mdi/js'
-import { memo, type HTMLAttributes, type ReactNode } from 'react'
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { Panel } from '@/design/Panel'
+import { PanelHeader } from '@/design/PanelHeader'
 import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
 import { TOOL_COMPONENTS } from './tool-components'
@@ -76,26 +77,3 @@ export const ToolWindow = memo(function ToolWindow({
     </Panel>
   )
 })
-
-export function Panel({ children, className, ...rest }: HTMLAttributes<HTMLElement>) {
-  return (
-    <section
-      className={cn(
-        'bg-base flex min-h-0 shrink-0 flex-col overflow-hidden rounded-(--radius-sc-lg)',
-        className,
-      )}
-      {...rest}
-    >
-      {children}
-    </section>
-  )
-}
-
-function PanelHeader({ title, children }: { title: string; children?: ReactNode }) {
-  return (
-    <header className="flex h-(--sc-header) shrink-0 items-center gap-1 pr-1.5 pl-3">
-      <span className="text-text truncate text-[13px] font-semibold">{title}</span>
-      <span className="ml-auto flex items-center gap-0.5">{children}</span>
-    </header>
-  )
-}

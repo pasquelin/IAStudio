@@ -56,7 +56,28 @@
     "type": "Type",
     "count": "{{count}} asset",
     "count_other": "{{count}} assets",
-    "openProject": "Open a project to see its assets."
+    "openProject": "Open a project to see its assets.",
+    "import": "Import media",
+    "importHint": "Link a video, audio or image file — it stays where it is"
+  },
+  "dialog": {
+    "allMedia": "All media",
+    "video": "Video",
+    "audio": "Audio",
+    "image": "Image"
+  },
+  "ingest": {
+    "queued": "Waiting…",
+    "probe": "Probing…",
+    "hash": "Fingerprinting…",
+    "proxy": "Proxy…",
+    "peaks": "Waveform…",
+    "done": "Ready",
+    "cancelled": "Stopped",
+    "failed": "Failed",
+    "cancel": "Stop preparing this file",
+    "dismiss": "Remove from the list",
+    "noFfmpeg": "ffmpeg not found: no proxy, no waveform. Set its path in the settings."
   },
   "models": {
     "none": "No model in this workspace.",
@@ -412,6 +433,12 @@
     "familyUpscale": "Upscaling",
     "accountDescription": "API credentials, encrypted by the system keychain.",
     "appearanceDescription": "Theme and control density.",
-    "generationDescription": "Generation queue and default models, per family."
+    "generationDescription": "Generation queue and default models, per family.",
+    "media": "Media",
+    "mediaDescription": "Preparation of imported files: proxies and waveforms.",
+    "ffmpegPath": "Path to ffmpeg",
+    "ffmpegPlaceholder": "/opt/homebrew/bin/ffmpeg",
+    "ffmpegFound": "ffmpeg is available: proxies and waveforms will be prepared.",
+    "ffmpegMissing": "ffmpeg is still not found. Importing works, without proxy or waveform."
   }
 }
