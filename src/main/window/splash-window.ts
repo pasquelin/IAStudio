@@ -9,10 +9,6 @@ import { WEB_PREFERENCES, load } from './windows'
  *
  * Its own HTML entry, not a route of the main one: pulling in the renderer bundle would make
  * the splash as slow to appear as what it exists to cover.
- *
- * No progress steps. Startup is synchronous, so every stage would land in the same tick and
- * only the last could ever be painted — a channel, a preload and eight translations to show
- * one constant string. The bar is indeterminate instead, which is also the honest reading.
  */
 export function openSplashWindow(): Splash {
   let window: BrowserWindow | null = new BrowserWindow({
@@ -21,7 +17,14 @@ export function openSplashWindow(): Splash {
     frame: false,
     roundedCorners: true,
     resizable: false,
-    show: false,
+    // `show: true`, not the usual `ready-to-show` dance: that handler runs on the main loop,
+    // which synchronous startup holds from end to end. Waiting for it would surface the
+    // splash only once the work it covers is already done. `backgroundColor` is what keeps
+    // the first frame from flashing white.
+    show: true,
+    // Never takes focus: ⌘N while it is up would otherwise reach a window with no bridge and
+    // vanish — the silent drop `sendToFocused` exists to prevent.
+    focusable: false,
     center: true,
     skipTaskbar: true,
     backgroundColor: SPLASH_BACKGROUND_COLOR,
@@ -30,7 +33,6 @@ export function openSplashWindow(): Splash {
     webPreferences: { ...WEB_PREFERENCES, preload: undefined, devTools: false },
   })
 
-  window.once('ready-to-show', () => window?.show())
   load(window, { entry: 'splash.html', hash: `${app.getVersion()} · ${__COMMIT_HASH__}` })
 
   return createSplashController(

@@ -10,7 +10,6 @@ const options = (overrides: Partial<MenuOptions> = {}): MenuOptions => ({
     send: () => {},
     openSettings: () => {},
     toggleFullScreen: () => {},
-    showAbout: () => {},
   },
   ...overrides,
 })
@@ -44,5 +43,19 @@ describe('menuTemplate', () => {
 
   it('keeps them in development, where they are the only way in', () => {
     expect(rolesUnder(menuTemplate(options()), 'Affichage')).toContain('toggleDevTools')
+  })
+
+  it('interpolates the product name rather than spelling it out per language', () => {
+    const appMenu = menuTemplate(options())[0]
+    const about = Array.isArray(appMenu?.submenu) ? appMenu.submenu[0] : undefined
+    expect(about?.label).toBe('À propos de Scenario Studio')
+    expect(about?.label).not.toContain('{{name}}')
+  })
+
+  it('lets Electron render the About panel rather than hand-rolling a dialog', () => {
+    // Windows does have a native panel, fed by `setAboutPanelOptions` — the role suffices.
+    const help = menuTemplate(options({ isMac: false })).find(item => item.label === 'Aide')
+    const entries = Array.isArray(help?.submenu) ? help.submenu : []
+    expect(entries[0]?.role).toBe('about')
   })
 })

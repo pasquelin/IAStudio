@@ -4,17 +4,14 @@ export type KeyPress = {
   key: string
   control: boolean
   meta: boolean
+  alt: boolean
 }
 
-/**
- * `will-navigate` only fires when the URL changes, so `location.reload()` slips past the
- * navigation lock. Not a breach — unsaved editing state lost to a stray ⌘R.
- *
- * Its own module, importing nothing: a file that imports `electron` cannot be tested under
- * plain Node, which is where the main process suites run.
- */
+/** `location.reload()` keeps the URL, so it slips past the navigation lock untouched. */
 export function isReloadShortcut(input: KeyPress): boolean {
   if (input.type !== 'keyDown') return false
   if (input.key === 'F5') return true
-  return input.key.toLowerCase() === 'r' && (input.control || input.meta)
+  // `!alt` excludes AltGr, which Windows reports as Ctrl+Alt: AltGr+R types a character on
+  // Polish, Hungarian and Croatian layouts, and swallowing it would break their keyboard.
+  return input.key.toLowerCase() === 'r' && !input.alt && (input.control || input.meta)
 }

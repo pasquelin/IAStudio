@@ -2,19 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
-    <!-- V8 compiles at runtime. -->
+    <!--
+      V8 compiles at runtime. `allow-unsigned-executable-memory` is not granted: modern V8 no
+      longer needs W+X pages once JIT is allowed, and it is the widest hole in the hardened
+      runtime after library validation.
+
+      `disable-library-validation` is not granted either. @electron/osx-sign walks the whole
+      bundle and signs every Mach-O it finds, including the .node modules under
+      app.asar.unpacked — so better-sqlite3 carries our own Developer ID and validates.
+      Add it back only if a specific module is observed to fail.
+
+      No App Sandbox entitlements here: `com.apple.security.app-sandbox` is absent, as it must
+      be for direct DMG distribution, which makes `network.client` and `files.user-selected`
+      inert. Granting them would only suggest a confinement that does not exist.
+    -->
     <key>com.apple.security.cs.allow-jit</key>
-    <true/>
-    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-    <true/>
-    <!-- better-sqlite3 ships a native module Apple has not signed. -->
-    <key>com.apple.security.cs.disable-library-validation</key>
-    <true/>
-    <!-- Calls to the Scenario API leave from the main process. -->
-    <key>com.apple.security.network.client</key>
-    <true/>
-    <!-- The project folder picker. -->
-    <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
   </dict>
 </plist>

@@ -14,7 +14,7 @@ export function currentAboutInfo(language: Language): AboutInfo {
   })
 }
 
-/** Native on macOS and Linux. Windows has no such panel — the menu opens a dialog instead. */
+/** Electron renders the panel natively on all three platforms; `iconPath` is Linux and Windows only. */
 export function registerAboutPanel(language: Language): void {
   app.setAboutPanelOptions({ ...currentAboutInfo(language), iconPath: APP_ICON_PATH })
 }

@@ -23,11 +23,8 @@ export type AboutInfo = {
 }
 
 /**
- * `applicationVersion` carries the release and `version` the build — the split the native
- * panel expects, and the one that lets a bug report name the exact commit.
- *
- * Imports no Electron: a module that does cannot be tested under plain Node, which is where
- * the main process suites run. The wiring lives in `about-panel.ts`.
+ * `applicationVersion` carries the release and `version` the build. Electron only renders
+ * `version` on macOS, so elsewhere the commit reaches no one — accepted, not overlooked.
  */
 export function aboutInfo(language: Language, versions: RuntimeVersions): AboutInfo {
   return {

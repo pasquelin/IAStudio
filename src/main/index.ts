@@ -1,15 +1,16 @@
 import { app, BrowserWindow } from 'electron'
 import { APP_NAME } from '@shared/constants'
-import { resolveLanguage } from '@shared/i18n'
+import { resolveLanguage, type Language } from '@shared/i18n'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/about-panel'
 import { buildMenu } from '@main/menu'
 import { registerAssetScheme } from '@main/assets/protocol'
 import { broadcast } from '@main/ipc/broadcast'
 import { registerIpc } from '@main/ipc/register'
-import { mirrorLogsTo } from '@main/log'
+import { log, mirrorLogsTo } from '@main/log'
 import { createServices } from '@main/services'
 import { lockNavigation } from '@main/window/navigation'
+import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splash-window'
 import { createMainWindow } from '@main/window/windows'
 
@@ -21,14 +22,16 @@ app.setName(APP_NAME)
 // the CSP is never honoured, and every local thumbnail comes back blank.
 registerAssetScheme()
 
-// At module scope, not inside `whenReady`: this hooks `web-contents-created`, so any window
-// opened before it — the splash was — would be created outside the lock and keep none of it.
+// At module scope, not inside `whenReady`: this hooks `web-contents-created`, so a window
+// opened before it would be created outside the lock and keep none of it.
 lockNavigation()
 
-void app.whenReady().then(() => {
-  const language = resolveLanguage(app.getLocale())
-  const splash = openSplashWindow()
-
+/**
+ * Everything below blocks the main loop from end to end — `createServices()` opens SQLite
+ * synchronously. Deferred by one turn so the splash gets its frame first; without it the
+ * splash surfaces once the work it covers is already finished.
+ */
+function startUp(splash: Splash, language: Language): void {
   /**
    * The API calls leave from here, so they never appear in the renderer's Network tab; the
    * mirror is what makes them, and the failures behind a reduced code, visible in devtools.
@@ -42,15 +45,31 @@ void app.whenReady().then(() => {
   // Before the window: the renderer's first `invoke` must find its handlers registered.
   registerIpc(createServices())
 
-  // `did-finish-load` rather than `ready-to-show`: the main window is already visible by
-  // then, so the splash never leaves a gap behind it.
   const main = createMainWindow()
-  main.webContents.once('did-finish-load', () => splash.finish())
+
+  // `show`, not `did-finish-load`: Electron promises no order between the two, and closing
+  // the splash first would flash the desktop — the very gap it exists to cover.
+  main.once('show', () => splash.finish())
+
+  // Without this the window stays hidden forever: `window-all-closed` never fires, so the
+  // process lives on with no UI and macOS `activate` refuses to reopen anything.
+  main.webContents.once('did-fail-load', (_event, code, description) => {
+    log.error('renderer', `main window failed to load (${code}): ${description}`)
+    splash.finish()
+    if (!main.isDestroyed()) main.show()
+  })
 
   // After the window, so Chromium starts parsing the renderer bundle sooner. Neither the
   // application menu nor the About panel is reachable before a window exists.
   registerAboutPanel(language)
   buildMenu(language)
+}
+
+void app.whenReady().then(() => {
+  const language = resolveLanguage(app.getLocale())
+  const splash = openSplashWindow()
+
+  setImmediate(() => startUp(splash, language))
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

@@ -6,6 +6,7 @@ const press = (overrides: Partial<KeyPress> = {}): KeyPress => ({
   key: 'a',
   control: false,
   meta: false,
+  alt: false,
   ...overrides,
 })
 
@@ -26,5 +27,11 @@ describe('isReloadShortcut', () => {
 
   it('is case-insensitive, since Shift changes the reported key', () => {
     expect(isReloadShortcut(press({ key: 'R', meta: true }))).toBe(true)
+  })
+
+  it('lets AltGr+R through, which types a character on several layouts', () => {
+    // Windows reports AltGr as Ctrl+Alt. Swallowing it would break Polish, Hungarian and
+    // Croatian keyboards in the packaged build.
+    expect(isReloadShortcut(press({ key: 'r', control: true, alt: true }))).toBe(false)
   })
 })

@@ -8,8 +8,9 @@ import { trackWindowState } from './controls'
 export const SETTINGS_ROUTE = 'settings'
 
 /**
- * Identical for every window: a second window with weaker preferences would be a second, and
- * quieter, way to reach the bridge — see CLAUDE.md, invariant 1.
+ * The floor for every window: none may weaken these — a second window with looser settings
+ * would be a second, quieter way to reach the bridge (CLAUDE.md, invariant 1). The splash
+ * spreads them and tightens further, dropping the preload entirely.
  */
 export const WEB_PREFERENCES: WebPreferences = {
   preload: join(import.meta.dirname, '../preload/index.cjs'),

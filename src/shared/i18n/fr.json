@@ -263,7 +263,7 @@
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
     "help": "Aide",
-    "about": "À propos de Scenario Studio"
+    "about": "À propos de {{name}}"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"

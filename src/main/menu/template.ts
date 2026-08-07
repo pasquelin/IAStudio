@@ -11,7 +11,6 @@ export type MenuActions = {
   send: (channel: string, payload?: unknown) => void
   openSettings: () => void
   toggleFullScreen: () => void
-  showAbout: () => void
 }
 
 export type MenuOptions = {
@@ -38,6 +37,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const { language, isMac, isPackaged, actions } = options
   const t = TRANSLATIONS[language]
 
+  // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
+  // name to one place, and a hard-coded copy here would drift past it unnoticed.
+  const aboutLabel = t.menu.about.replace('{{name}}', APP_NAME)
+
   // Opened by the main process rather than routed through a renderer: settings are a window
   // now, and which window is focused has nothing to do with it.
   const settingsItem: MenuItemConstructorOptions = {
@@ -51,7 +54,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const appMenuItem: MenuItemConstructorOptions = {
     label: APP_NAME,
     submenu: [
-      { role: 'about', label: t.menu.about },
+      { role: 'about', label: aboutLabel },
       { type: 'separator' },
       settingsItem,
       { type: 'separator' },
@@ -70,11 +73,11 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     ? []
     : [settingsItem, { type: 'separator' }]
 
-  // `role: 'about'` does nothing on Windows, and there is no application menu to host it:
-  // a Help menu opening a dialog is the only way the version stays reachable there.
+  // Windows and Linux have no application menu to host About; Electron renders the panel
+  // itself on both, from `setAboutPanelOptions`, so the role is all that is needed.
   const helpMenu: MenuItemConstructorOptions[] = isMac
     ? []
-    : [{ label: t.menu.help, submenu: [{ label: t.menu.about, click: () => actions.showAbout() }] }]
+    : [{ label: t.menu.help, submenu: [{ role: 'about', label: aboutLabel }] }]
 
   return [
     ...(isMac ? [appMenuItem] : []),

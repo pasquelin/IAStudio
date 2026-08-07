@@ -14,6 +14,22 @@ files:
   # Read at runtime by `nativeImage`: window icon on Windows and Linux, About dialog.
   - build/icon.png
   - '!**/*.map'
+  # Redundant today — a whitelist already excludes it — but the exclusion must not depend on
+  # every other entry staying positive. An asar opens in a text editor; the API key is in here.
+  - '!secrets{,/**/*}'
+
+# `devTools: false` is a per-webContents preference; these are process-level switches that
+# would otherwise reopen the same door. `--remote-debugging-port` attaches CDP to the main
+# world where `window.studio` lives, and does so under the app's own signing identity —
+# which is what safeStorage ties the keychain entry to.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  enableEmbeddedAsarIntegrityValidation: true
+  # The signature must be reset after flipping fuses, or the binary no longer validates.
+  resetAdHocDarwinSignature: true
 
 # A native module cannot be loaded from inside the asar archive.
 asarUnpack:

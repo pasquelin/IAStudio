@@ -6,11 +6,13 @@
 # produces a signed, notarized build.
 set -euo pipefail
 
+# Only the three Apple variables are exported. `set -a` would also hand SCENARIO_API_KEY to
+# signtool, makensis and every afterPack hook — and builder-util only scrubs sensitive names
+# on non-Windows hosts.
 if [ -f secrets/.env ]; then
-  set -a
   # shellcheck disable=SC1091
   . secrets/.env
-  set +a
+  export APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
 fi
 
 exec pnpm exec electron-builder "$@"

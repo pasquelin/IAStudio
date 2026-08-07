@@ -22,20 +22,33 @@ export function createSplashController(timing: SplashTiming, close: () => void):
   const startedAt = timing.now()
   let closed = false
 
+  // Assigned below, but declared first: a `schedule` that fired synchronously would reach
+  // `closeOnce` before the binding existed, and the ReferenceError would surface inside a
+  // timer callback — unattributable, and the splash never closes.
+  let cancelSafety = (): void => {}
+  let cancelFloor = (): void => {}
+
   const closeOnce = (): void => {
     if (closed) return
     closed = true
     cancelSafety()
+    cancelFloor()
     close()
   }
 
-  const cancelSafety = timing.schedule(closeOnce, SPLASH_TIMEOUT_MS)
+  cancelSafety = timing.schedule(closeOnce, SPLASH_TIMEOUT_MS)
 
   return {
     finish: () => {
+      if (closed) return
       const remaining = SPLASH_MINIMUM_MS - (timing.now() - startedAt)
-      if (remaining <= 0) closeOnce()
-      else timing.schedule(closeOnce, remaining)
+      if (remaining <= 0) {
+        closeOnce()
+        return
+      }
+      // Replaces any previous floor timer rather than stacking one per call.
+      cancelFloor()
+      cancelFloor = timing.schedule(closeOnce, remaining)
     },
   }
 }
