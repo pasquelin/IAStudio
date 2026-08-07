@@ -251,6 +251,11 @@
     "empty": "Aucune lumière. La scène restera noire.",
     "noDocument": "Ouvrez une scène pour voir ses lumières."
   },
+  "scene": {
+    "root": "Scène",
+    "visible": "Afficher ou masquer",
+    "noDocument": "Ouvrez une scène pour voir son contenu."
+  },
   "sceneTools": {
     "translate": "Déplacer",
     "translateHint": "Déplacer l’objet sélectionné le long des axes",

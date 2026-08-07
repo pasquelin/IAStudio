@@ -251,6 +251,11 @@
     "empty": "No light. The scene will stay black.",
     "noDocument": "Open a scene to see its lights."
   },
+  "scene": {
+    "root": "Scene",
+    "visible": "Show or hide",
+    "noDocument": "Open a scene to see what is in it."
+  },
   "sceneTools": {
     "translate": "Move",
     "translateHint": "Move the selected object along the axes",
