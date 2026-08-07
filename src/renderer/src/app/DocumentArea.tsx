@@ -19,6 +19,15 @@ export function openDocument(document: DocumentDescriptor): void {
 }
 
 /**
+ * Follows what a document is called, and whether it has unsaved work. The bullet lives here
+ * rather than in each space: the tab is the only place a document can say it is not on disk,
+ * and every space that learns to save would otherwise pick its own glyph.
+ */
+export function setDocumentTitle(documentId: string, title: string, modified: boolean): void {
+  current?.getPanel(documentId)?.setTitle(modified ? `${title} •` : title)
+}
+
+/**
  * Dockview, remounted per workspace by its `key`: coming back to "3D" must restore that
  * workspace's tabs, not the ones from "Image".
  *

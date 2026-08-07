@@ -7,7 +7,10 @@ const store = createDocumentStore<SceneState>(EMPTY_SCENE)
 
 export const useScenes = store.use
 export const sceneOf = store.stateOf
+export const hasScene = store.hasState
 export const historyOf = store.historyOf
+export const markOf = store.markOf
+export const isDirty = store.isDirty
 
 /**
  * Selection stays out of the history, so it writes the whole scene back — and the scene has to

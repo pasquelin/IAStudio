@@ -1,18 +1,27 @@
 import { renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SceneAddRequest, Unsubscribe } from '@shared/ipc'
 import { installScene } from '@/stores/scene-fixtures'
+import type { CommandId } from '@shared/domain/command'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { useNativeMenu } from './useNativeMenu'
 
-/** Holds the listener the hook registers, so the test can play the native menu. */
-function captureSceneAdd(): { emit: (request: SceneAddRequest) => void } {
-  let listener: ((request: SceneAddRequest) => void) | null = null
+const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
+
+// What saving does is `document-io`'s own suite; what this one is about is the menu reaching it.
+vi.mock('@/app/document-io', () => ({
+  saveDocument: (documentId: string) => saveDocument(documentId),
+}))
+
+const { useNativeMenu } = await import('./useNativeMenu')
+
+/** Holds the listener the hook registers on a menu channel, so the test can play the menu. */
+function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand'): { emit: (payload: T) => void } {
+  let listener: ((payload: T) => void) | null = null
   installFakeBridge({
     menu: {
-      onSceneAdd: (callback: (request: SceneAddRequest) => void): Unsubscribe => {
+      [channel]: (callback: (payload: T) => void): Unsubscribe => {
         listener = callback
         return () => {
           listener = null
@@ -20,14 +29,18 @@ function captureSceneAdd(): { emit: (request: SceneAddRequest) => void } {
       },
     },
   })
-  return { emit: request => listener?.(request) }
+  return { emit: payload => listener?.(payload) }
 }
+
+const captureSceneAdd = () => captureMenu<SceneAddRequest>('onSceneAdd')
+const captureCommand = () => captureMenu<CommandId>('onCommand')
 
 function meshes() {
   return sceneOf(useScenes.getState(), 'doc-1').nodes.filter(node => node.type === 'mesh')
 }
 
 beforeEach(() => {
+  vi.clearAllMocks()
   installScene('doc-1')
 })
 
@@ -78,5 +91,36 @@ describe('useNativeMenu', () => {
     menu.emit({ kind: 'box' })
 
     expect(meshes()).toEqual([])
+  })
+
+  it('saves the document in front when the menu asks, and only that one', () => {
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    menu.emit('document.save')
+
+    expect(saveDocument).toHaveBeenCalledWith('doc-1')
+  })
+
+  // The menu is application-wide and knows nothing of tabs; saving with none in front would
+  // have to guess which document was meant.
+  it('saves nothing when no document is in front', () => {
+    useDocuments.setState({ activeId: null })
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    menu.emit('document.save')
+
+    expect(saveDocument).not.toHaveBeenCalled()
+  })
+
+  // A menu command runs outside React: an unhandled rejection is the only thing a failed one
+  // could produce, and the studio has no surface to report it on yet.
+  it('does not let a failed command raise an unhandled rejection', () => {
+    saveDocument.mockReturnValueOnce(Promise.reject(new Error('no project')))
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    expect(() => menu.emit('document.save')).not.toThrow()
   })
 })

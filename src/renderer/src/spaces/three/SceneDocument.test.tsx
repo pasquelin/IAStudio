@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -6,9 +6,18 @@ import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
 import { useDocuments } from '@/stores/documents'
+import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
 import { SceneDocument } from './SceneDocument'
+
+const setDocumentTitle = vi.fn()
+
+// Dockview owns the tabs and needs a layout engine; what matters here is what the space asks
+// of it.
+vi.mock('@/app/DocumentArea', () => ({
+  setDocumentTitle: (...args: unknown[]) => setDocumentTitle(...args),
+}))
 
 const setMode = vi.fn()
 const frameSelection = vi.fn()
@@ -39,8 +48,15 @@ function meshesOf(documentId: string): SceneNode[] {
 describe('SceneDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useScenes.setState({ states: {}, histories: {} })
-    useDocuments.setState({ activeId: 'doc-1' })
+    clearScenes()
+    // The descriptor, not just the id: a document restores itself through its kind, and
+    // `WithDocument` is what guarantees one exists before this component ever renders.
+    useDocuments.setState({
+      documents: {
+        'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set dressing' },
+      },
+      activeId: 'doc-1',
+    })
   })
 
   it('renders the shared toolbar with the scene tools', () => {
@@ -96,6 +112,11 @@ describe('SceneDocument', () => {
   })
 
   it('opens a new document on a lit scene rather than a black viewport', () => {
+    useDocuments.setState({
+      documents: {
+        'doc-fresh': { id: 'doc-fresh', kind: 'scene', workspace: '3d', title: 'Fresh' },
+      },
+    })
     render(<SceneDocument documentId="doc-fresh" />)
     const lights = sceneOf(useScenes.getState(), 'doc-fresh').nodes.filter(
       node => node.type === 'light',
@@ -164,5 +185,19 @@ describe('the viewport settings', () => {
     render(<SceneDocument documentId="doc-1" />)
 
     expect(configure).toHaveBeenCalledWith(expect.objectContaining({ flySpeed: 12 }))
+  })
+
+  // The tab title was read imperatively and captured: a renamed document kept its old label
+  // until the modified marker next flipped.
+  it('follows a document renamed while its tab is open', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await act(async () => {
+      useDocuments.setState({
+        documents: { 'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Renamed' } },
+      })
+    })
+
+    expect(setDocumentTitle).toHaveBeenLastCalledWith('doc-1', 'Renamed', expect.any(Boolean))
   })
 })

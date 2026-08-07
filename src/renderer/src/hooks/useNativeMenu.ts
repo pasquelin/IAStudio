@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { CommandId } from '@shared/domain/command'
+import { saveDocument } from '@/app/document-io'
 import { toolZoneIn } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { addNodeTo } from '@/hooks/useAddNode'
@@ -20,6 +21,14 @@ function runCommand(command: CommandId): void {
     case 'project.open':
       void useProject.getState().openPicked()
       return
+    case 'document.save': {
+      // The menu is application-wide and has no idea which tab is in front; the store does.
+      const documentId = useDocuments.getState().activeId
+      // Caught, not left to `void`: nothing logs an IPC rejection and the studio has no error
+      // surface, so the tab keeping its marker is the whole of what a failed save reports.
+      if (documentId) void saveDocument(documentId).catch(() => {})
+      return
+    }
   }
 }
 

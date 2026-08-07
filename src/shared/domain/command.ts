@@ -14,6 +14,7 @@ export type CommandScope = 'global' | 'scene' | 'sequence'
 export type CommandId =
   | 'project.new'
   | 'project.open'
+  | 'document.save'
   | 'layout.reset'
   | 'app.settings'
   | 'window.fullScreen'
@@ -75,6 +76,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.projectOpen.title',
     helpKey: 'commands.projectOpen.help',
     defaultBinding: 'Meta+KeyO',
+  }),
+  command({
+    id: 'document.save',
+    scope: 'global',
+    titleKey: 'commands.documentSave.title',
+    helpKey: 'commands.documentSave.help',
+    defaultBinding: 'Meta+KeyS',
   }),
   command({
     id: 'layout.reset',
