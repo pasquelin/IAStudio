@@ -70,6 +70,11 @@
    */
   --color-viewport: #33363b;
   --color-viewport-line: #494d54;
+  /*
+   * Untextured geometry. Its own token and not `--color-muted`, which is a TEXT colour: raising
+   * the contrast of a dimmed label would otherwise repaint every mesh in the scene.
+   */
+  --color-mesh: #868a91;
 
   --radius-sc-sm: 4px;
   --radius-sc-md: 6px;

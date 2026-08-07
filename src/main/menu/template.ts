@@ -1,34 +1,56 @@
 import type { MenuItemConstructorOptions } from 'electron'
-import { LIGHT_ENTRIES, MESH_ENTRIES, type SceneEntry } from '@shared/domain/scene'
+import { LIGHT_ENTRIES, MESH_ENTRIES, type LightKind, type MeshKind } from '@shared/domain/scene'
 import { TOOL_PLACEMENTS } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
-import { EVENTS } from '@shared/ipc'
+import type { MenuCommand, SceneAddRequest, ToolRequest } from '@shared/ipc'
 
 /**
- * What the template cannot know on its own. Passed in rather than reached for, so the whole
- * menu is a pure function of a language and a workspace — which is what makes it testable
- * without an Electron runtime.
+ * What the menu asks of the window it belongs to. One method per message rather than a
+ * `send(channel, payload)`: `shared/ipc.ts` types both ends of every channel, and a generic
+ * sender is the one hop where that guarantee would stop.
  */
 export type MenuActions = {
-  appName: string
   openSettings: () => void
   toggleFullScreen: () => void
-  /** Sends to the focused window. Broadcasting would add a cube in every open window. */
-  send: (channel: string, payload?: unknown) => void
+  openTool: (request: ToolRequest) => void
+  runCommand: (command: MenuCommand) => void
+  addNode: (request: SceneAddRequest) => void
+}
+
+/**
+ * Everything the template cannot know on its own. Passed in rather than reached for, so the
+ * whole menu is a pure function of its context — which is what makes it testable without an
+ * Electron runtime.
+ */
+export type MenuContext = {
+  language: Language
+  /** `null` when the focused window edits no workspace at all — the settings window. */
+  workspace: WorkspaceId | null
+  isMac: boolean
+  appName: string
   /**
    * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
    * build hands an attacker `setCredentials` through a self-XSS.
    */
   developerTools: boolean
+  actions: MenuActions
 }
 
-export function menuTemplate(
-  language: Language,
-  workspace: WorkspaceId,
-  isMac: boolean,
-  actions: MenuActions,
-): MenuItemConstructorOptions[] {
+type SceneEntryOf<K extends MeshKind | LightKind> = {
+  kind: K
+  labelKey: string
+  disabled?: boolean
+}
+
+export function menuTemplate({
+  language,
+  workspace,
+  isMac,
+  appName,
+  developerTools,
+  actions,
+}: MenuContext): MenuItemConstructorOptions[] {
   const t = TRANSLATIONS[language]
 
   // Opened by the main process rather than routed through a renderer: settings are a window
@@ -42,7 +64,7 @@ export function menuTemplate(
   // Spelled out rather than `role: 'appMenu'`: the built-in role has no Preferences entry,
   // and Cmd-, is where every macOS user looks for it first.
   const appMenuItem: MenuItemConstructorOptions = {
-    label: actions.appName,
+    label: appName,
     submenu: [
       { role: 'about' },
       { type: 'separator' },
@@ -64,11 +86,11 @@ export function menuTemplate(
     : [settingsItem, { type: 'separator' }]
 
   const entryItem =
-    (labels: Record<string, string>) =>
-    (entry: SceneEntry<string>): MenuItemConstructorOptions => ({
-      label: labels[entry.kind] ?? entry.kind,
+    <K extends MeshKind | LightKind>(labels: Record<K, string>) =>
+    (entry: SceneEntryOf<K>): MenuItemConstructorOptions => ({
+      label: labels[entry.kind],
       enabled: !entry.disabled,
-      click: () => actions.send(EVENTS.sceneAdd, { kind: entry.kind }),
+      click: () => actions.addNode({ kind: entry.kind }),
     })
 
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
@@ -78,14 +100,14 @@ export function menuTemplate(
           {
             label: t.menu.add,
             submenu: [
-              { label: t.menu.mesh, submenu: MESH_ENTRIES.map(entryItem(t.meshes)) },
-              { label: t.menu.light, submenu: LIGHT_ENTRIES.map(entryItem(t.lights)) },
+              { label: t.menu.mesh, submenu: MESH_ENTRIES.map(entryItem<MeshKind>(t.meshes)) },
+              { label: t.menu.light, submenu: LIGHT_ENTRIES.map(entryItem<LightKind>(t.lights)) },
             ],
           },
         ]
       : []
 
-  const developerItems: MenuItemConstructorOptions[] = actions.developerTools
+  const developerItems: MenuItemConstructorOptions[] = developerTools
     ? [{ type: 'separator' }, { role: 'toggleDevTools' }, { role: 'reload' }]
     : []
 
@@ -97,12 +119,12 @@ export function menuTemplate(
         {
           label: t.menu.newProject,
           accelerator: 'CmdOrCtrl+N',
-          click: () => actions.send(EVENTS.menuCommand, 'project:new'),
+          click: () => actions.runCommand('project:new'),
         },
         {
           label: t.menu.openProject,
           accelerator: 'CmdOrCtrl+O',
-          click: () => actions.send(EVENTS.menuCommand, 'project:open'),
+          click: () => actions.runCommand('project:open'),
         },
         { type: 'separator' },
         ...fileMenuSettings,
@@ -118,13 +140,12 @@ export function menuTemplate(
           label: t.menu.tools,
           submenu: TOOL_PLACEMENTS.map(placement => ({
             label: t.panels[placement.id],
-            click: () =>
-              actions.send(EVENTS.openTool, { zone: placement.zone, tool: placement.id }),
+            click: () => actions.openTool({ zone: placement.zone, tool: placement.id }),
           })),
         },
         {
           label: t.menu.resetLayout,
-          click: () => actions.send(EVENTS.menuCommand, 'layout:reset'),
+          click: () => actions.runCommand('layout:reset'),
         },
         { type: 'separator' },
         {

@@ -1,12 +1,14 @@
-import { mdiEye, mdiEyeOffOutline, mdiLayersOutline, mdiPlus, mdiTrashCanOutline } from '@mdi/js'
+import { mdiLayersOutline, mdiPlus, mdiTrashCanOutline } from '@mdi/js'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
-import { TIP_BOTTOM, TIP_RIGHT } from '@/helpers/tooltip'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { Row } from '@/design/Row'
 import { ToolButton } from '@/design/ToolButton'
 import { addLayer, removeLayer, selectLayer, setLayerVisible } from '@/engines/canvas/commands'
 import { EmptyState } from '@/design/EmptyState'
+import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 
@@ -90,10 +92,12 @@ function LayerStack({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const canvas = useCanvases(state => canvasOf(state, documentId))
   const store = useCanvases.getState()
+  // Not per render: selecting a layer changes `activeLayerId`, not the stack it is drawn from.
+  const stack = useMemo(() => [...canvas.layers].reverse(), [canvas.layers])
 
   return (
     <ul className="p-1">
-      {[...canvas.layers].reverse().map(layer => (
+      {stack.map(layer => (
         <li key={layer.id}>
           <div
             className={cn(
@@ -106,16 +110,11 @@ function LayerStack({ documentId }: { documentId: string }) {
               title={layer.name}
               muted={!layer.visible}
               leading={
-                <ToolButton
-                  icon={layer.visible ? mdiEye : mdiEyeOffOutline}
+                <VisibilityToggle
+                  visible={layer.visible}
                   label={t('layers.visible')}
                   description={t(layer.visible ? 'layers.hideHint' : 'layers.showHint')}
-                  tooltip={TIP_RIGHT}
-                  variant="header"
-                  // The row selects on pointer down, which fires before click: stopping the
-                  // click alone would still have let the eye steal the selection.
-                  onPointerDown={event => event.stopPropagation()}
-                  onClick={() =>
+                  onToggle={() =>
                     store.runCommand(documentId, setLayerVisible(layer.id, !layer.visible))
                   }
                 />

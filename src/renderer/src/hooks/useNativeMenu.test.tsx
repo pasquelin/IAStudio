@@ -39,7 +39,7 @@ describe('useNativeMenu', () => {
     menu.emit({ kind: 'box' })
 
     expect(meshes()).toHaveLength(1)
-    expect(meshes()[0]?.name).toBe('Cube')
+    expect(meshes()[0]?.name).toBe('Box')
   })
 
   // A kind that is announced but not buildable yet reaches the same guard as an unknown one,

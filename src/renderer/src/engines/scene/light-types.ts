@@ -5,8 +5,7 @@ import {
   mdiSpotlightBeam,
   mdiWeatherSunny,
 } from '@mdi/js'
-import { LIGHT_ENTRIES, type LightKind } from '@shared/domain/scene'
-import type { LightDescriptor } from './scene-state'
+import { LIGHT_ENTRIES, type LightDescriptor, type LightKind } from '@shared/domain/scene'
 
 export type LightType = {
   kind: LightKind

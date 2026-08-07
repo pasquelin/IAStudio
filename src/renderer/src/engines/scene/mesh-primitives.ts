@@ -17,8 +17,7 @@ import {
   mdiSphere,
   mdiSquareOutline,
 } from '@mdi/js'
-import { MESH_ENTRIES, type MeshKind } from '@shared/domain/scene'
-import type { GeometryDescriptor } from './scene-state'
+import { MESH_ENTRIES, type GeometryDescriptor, type MeshKind } from '@shared/domain/scene'
 
 export type MeshPrimitive = {
   kind: MeshKind

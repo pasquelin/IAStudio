@@ -1,21 +1,24 @@
 import { mdiCubeOutline } from '@mdi/js'
+import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
 import { lightByKind, type LightType } from './light-types'
 import { primitiveByKind, type MeshPrimitive } from './mesh-primitives'
-import {
-  DEFAULT_MATERIAL,
-  IDENTITY_TRANSFORM,
-  type LightDescriptor,
-  type SceneNode,
-  type Vector3,
-} from './scene-state'
+import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type SceneNode } from './scene-state'
 
-export function lightNode(light: LightDescriptor, position: Vector3, name?: string): SceneNode {
+/**
+ * A node is named after its class, as in the three.js editor — `Box`, `SpotLight` — and never
+ * after the translated menu row that made it: a name is document data, and a scene whose
+ * contents are called `Cube` in French and `Box` in English cannot be shared between the two.
+ */
+function classNameOf(kind: string): string {
+  return `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`
+}
+
+export function lightNode(light: LightDescriptor, position: Vector3): SceneNode {
   return {
     id: newId(),
     parentId: null,
-    // The three.js editor names a light after its class, and so does any scene exported from it.
-    name: name ?? `${light.kind.charAt(0).toUpperCase()}${light.kind.slice(1)}Light`,
+    name: `${classNameOf(light.kind)}Light`,
     visible: true,
     transform: { ...IDENTITY_TRANSFORM, position },
     type: 'light',
@@ -26,11 +29,6 @@ export function lightNode(light: LightDescriptor, position: Vector3, name?: stri
 /** The registry entry for a kind, whichever registry knows it. */
 export function entryOf(kind: string): MeshPrimitive | LightType | null {
   return primitiveByKind(kind) ?? lightByKind(kind)
-}
-
-/** i18n key of what a kind is called — never the text. */
-export function labelKeyOf(kind: string): string | null {
-  return entryOf(kind)?.labelKey ?? null
 }
 
 /**
@@ -48,11 +46,10 @@ export function iconOf(node: SceneNode): string {
  * and the native menu all add through here: three call sites building a node their own way is
  * three ways for a mesh to arrive without a material.
  *
- * The name comes from the caller because only it holds the translation — an engine that reached
- * for i18n would be an engine that knows about the interface. A kind no registry claims, or one
- * declared but not buildable yet, yields `null` rather than a node with nothing in it.
+ * A kind no registry claims, or one declared but not buildable yet, yields `null` rather than a
+ * node with nothing in it.
  */
-export function createNodeOf(kind: string, name: string): SceneNode | null {
+export function createNodeOf(kind: string): SceneNode | null {
   const primitive = primitiveByKind(kind)
   if (primitive) {
     const geometry = primitive.create?.()
@@ -60,7 +57,7 @@ export function createNodeOf(kind: string, name: string): SceneNode | null {
     return {
       id: newId(),
       parentId: null,
-      name,
+      name: classNameOf(kind),
       visible: true,
       transform: IDENTITY_TRANSFORM,
       type: 'mesh',
@@ -70,5 +67,5 @@ export function createNodeOf(kind: string, name: string): SceneNode | null {
   }
 
   const light = lightByKind(kind)
-  return light ? lightNode(light.create(), IDENTITY_TRANSFORM.position, name) : null
+  return light ? lightNode(light.create(), IDENTITY_TRANSFORM.position) : null
 }

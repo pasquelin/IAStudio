@@ -113,7 +113,7 @@ describe('SceneDocument', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: /Cube/ }))
 
     expect(meshesOf('doc-1')).toHaveLength(1)
-    expect(meshesOf('doc-1')[0]?.name).toBe('Cube')
+    expect(meshesOf('doc-1')[0]?.name).toBe('Box')
 
     await userEvent.click(screen.getByRole('button', { name: /Annuler/ }))
     expect(meshesOf('doc-1')).toHaveLength(0)

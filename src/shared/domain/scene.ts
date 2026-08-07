@@ -1,31 +1,82 @@
 /**
- * What a scene can be made of, shared by both processes. Like `domain/tool.ts`, it sits here
- * because the native menu needs the list and `shared/` cannot import from the renderer: the
- * registries live in `engines/`, which the main process must never reach into.
+ * What a scene is made of, shared by both processes. Like `domain/tool.ts`, it sits here
+ * because the native menu needs the list and `shared/` cannot import from the renderer.
  *
- * Only the kind and its label. The renderer enriches each entry with an icon and a descriptor
- * builder — the two halves the menu has no use for.
+ * The descriptors live here too, and not in `engines/`: they are the serialized form of a
+ * document, which is what `shared/domain` is for — and it is what lets `MeshKind` be *derived*
+ * from them instead of restated, so a geometry added without a menu entry fails to compile.
  */
-export type MeshKind =
-  | 'box'
-  | 'capsule'
-  | 'circle'
-  | 'cylinder'
-  | 'dodecahedron'
-  | 'icosahedron'
-  | 'lathe'
-  | 'octahedron'
-  | 'plane'
-  | 'ring'
-  | 'sphere'
-  | 'sprite'
-  | 'tetrahedron'
-  | 'text'
-  | 'torus'
-  | 'torusKnot'
-  | 'tube'
+export type Vector3 = { x: number; y: number; z: number }
 
-export type LightKind = 'ambient' | 'directional' | 'hemisphere' | 'point' | 'spot'
+export type Transform = {
+  position: Vector3
+  /** Euler angles, in radians. */
+  rotation: Vector3
+  scale: Vector3
+}
+
+/**
+ * Each primitive carries its own parameters rather than a shared bag of optionals: a sphere has
+ * no depth, and a type that lets it have one stops describing anything.
+ */
+export type GeometryDescriptor =
+  | { kind: 'box'; width: number; height: number; depth: number }
+  | { kind: 'capsule'; radius: number; height: number; capSegments: number; radialSegments: number }
+  | { kind: 'circle'; radius: number; segments: number }
+  | { kind: 'cylinder'; radiusTop: number; radiusBottom: number; height: number; segments: number }
+  | { kind: 'dodecahedron'; radius: number }
+  | { kind: 'icosahedron'; radius: number }
+  | { kind: 'lathe'; segments: number }
+  | { kind: 'octahedron'; radius: number }
+  | { kind: 'plane'; width: number; height: number }
+  | { kind: 'ring'; innerRadius: number; outerRadius: number; segments: number }
+  | { kind: 'sphere'; radius: number; widthSegments: number; heightSegments: number }
+  | { kind: 'tetrahedron'; radius: number }
+  | { kind: 'torus'; radius: number; tube: number; radialSegments: number; tubularSegments: number }
+  | {
+      kind: 'torusKnot'
+      radius: number
+      tube: number
+      tubularSegments: number
+      radialSegments: number
+      p: number
+      q: number
+    }
+  | { kind: 'tube'; radius: number; tubularSegments: number; radialSegments: number }
+
+export type MaterialDescriptor = {
+  kind: 'standard'
+  /** `null` means the studio's own colour, resolved from the palette when the mesh is built. */
+  color: string | null
+  roughness: number
+  metalness: number
+}
+
+/**
+ * `target` is a point, not an object. three.js aims a light at an `Object3D`, and the official
+ * editor shows that object in its outliner — but a node that cannot be renamed, hidden or
+ * deleted is a property that leaked into the tree, and it doubles the length of a lit scene.
+ */
+export type LightDescriptor =
+  | { kind: 'ambient'; color: string; intensity: number }
+  | { kind: 'directional'; color: string; intensity: number; target: Vector3 }
+  | { kind: 'hemisphere'; skyColor: string; groundColor: string; intensity: number }
+  | { kind: 'point'; color: string; intensity: number; distance: number; decay: number }
+  | {
+      kind: 'spot'
+      color: string
+      intensity: number
+      distance: number
+      angle: number
+      penumbra: number
+      decay: number
+      target: Vector3
+    }
+
+/** `sprite` and `text` are offered but not buildable yet: neither is a geometry. */
+export type MeshKind = GeometryDescriptor['kind'] | 'sprite' | 'text'
+
+export type LightKind = LightDescriptor['kind']
 
 export type SceneEntry<K> = {
   kind: K

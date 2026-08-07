@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useEffect } from 'react'
 import { placementOf } from '@shared/domain/tool'
 import type { MenuCommand } from '@shared/ipc'
 import { toolServes } from '@/helpers/tool-registry'
@@ -29,14 +28,8 @@ function runCommand(command: MenuCommand): void {
  * into the void and the menu entries would silently do nothing.
  */
 export function useNativeMenu(): void {
-  const { t } = useTranslation()
-  // Held in a ref rather than depended on: this hook sits at the app root, and re-subscribing
-  // three IPC listeners on every tab switch is three round-trips to refresh one closure.
-  const translate = useRef(t)
-  useEffect(() => {
-    translate.current = t
-  }, [t])
-
+  // Subscribed once for the lifetime of the app: every listener below reads its store at call
+  // time, so nothing here has to be torn down when a tab or a document changes.
   useEffect(() => {
     const bridge = getBridge()
     if (!bridge) return
@@ -64,7 +57,7 @@ export function useNativeMenu(): void {
       // Of the right kind: the menu is app-wide, and a node written under an image document
       // would give it a scene and a history it has no editor for.
       const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
-      if (documentId) addNodeTo(documentId, kind, translate.current)
+      if (documentId) addNodeTo(documentId, kind)
     })
 
     return () => {

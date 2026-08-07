@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu } from 'electron'
-import { DEFAULT_WORKSPACE, WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
-import { CHANNELS } from '@shared/ipc'
+import { CHANNELS, EVENTS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { toggleFullScreen } from '@main/window/controls'
 import { openSettingsWindow } from '@main/window/windows'
@@ -14,46 +14,85 @@ import { menuTemplate } from './template'
  * On macOS the app outlives its last window, so the menu stays usable with nothing focused;
  * we fall back to the first live window rather than dropping the command in silence.
  */
-function sendToFocused(channel: string, payload?: unknown): void {
+function focusedWindow(): BrowserWindow | null {
   const target = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
-  if (!target || target.isDestroyed()) return
-  target.webContents.send(channel, payload)
+  return target && !target.isDestroyed() ? target : null
 }
 
-/** The menu is rebuilt whenever the workspace changes, so the last one has to be remembered. */
-let workspace: WorkspaceId = DEFAULT_WORKSPACE
+function sendToFocused(channel: string, payload: unknown): void {
+  focusedWindow()?.webContents.send(channel, payload)
+}
+
+/**
+ * Which workspace each window is showing. Per window and not per app: the menu is a single
+ * application-wide object, so a second window in another space would otherwise decide what the
+ * first one is offered. A window that announces nothing — the settings window — has no entry,
+ * and the menu drops what only a workspace can do.
+ */
+const workspaces = new Map<number, WorkspaceId>()
+
+/** What the menu currently shows, so a focus change that alters nothing rebuilds nothing. */
+let shown: WorkspaceId | null = null
+
+function focusedWorkspace(): WorkspaceId | null {
+  const target = focusedWindow()
+  return target ? (workspaces.get(target.webContents.id) ?? null) : null
+}
 
 /**
  * Native application menu. Together with the icon rails, it is one of the two ways back for a
  * tool removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function buildMenu(): void {
+  shown = focusedWorkspace()
+
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
-      // Read here and not at module load: Electron only answers `getLocale` once it is ready,
-      // and this module is imported well before that.
-      menuTemplate(resolveLanguage(app.getLocale()), workspace, process.platform === 'darwin', {
+      menuTemplate({
+        // Read here and not at module load: Electron only answers `getLocale` once it is ready,
+        // and this module is imported well before that.
+        language: resolveLanguage(app.getLocale()),
+        workspace: shown,
+        isMac: process.platform === 'darwin',
         appName: app.name,
-        openSettings: () => void openSettingsWindow(),
-        toggleFullScreen: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
-        send: sendToFocused,
         developerTools: !app.isPackaged,
+        actions: {
+          openSettings: () => void openSettingsWindow(),
+          toggleFullScreen: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
+          openTool: request => sendToFocused(EVENTS.openTool, request),
+          runCommand: command => sendToFocused(EVENTS.menuCommand, command),
+          addNode: request => sendToFocused(EVENTS.sceneAdd, request),
+        },
       }),
     ),
   )
 }
 
+function rebuildIfStale(): void {
+  if (focusedWorkspace() !== shown) buildMenu()
+}
+
 /**
- * The menu shows what the active workspace can do, and only the renderer knows which one that
- * is. The renderer announces the restored workspace on startup and re-announces it on every
- * click of the space rail, including the space already up — hence the guard.
+ * The menu shows what the focused window can do, and only that window knows which workspace it
+ * is in. It announces the restored one on startup and again on every click of the space rail.
  */
 export function registerMenuHandlers(): void {
-  handle(CHANNELS.windowWorkspace, (_event, next) => {
+  handle(CHANNELS.windowWorkspace, (event, next) => {
     // Checked against the registry: this is the only main-process state a renderer sets, and a
     // preload from an older build could name a workspace this one has dropped.
-    if (next === workspace || !WORKSPACE_IDS.includes(next)) return
-    workspace = next
-    buildMenu()
+    if (!WORKSPACE_IDS.includes(next)) return
+    workspaces.set(event.sender.id, next)
+    rebuildIfStale()
+  })
+
+  app.on('browser-window-focus', rebuildIfStale)
+
+  app.on('browser-window-created', (_event, window) => {
+    // Captured now: after `closed` the web contents are gone and their id with them.
+    const id = window.webContents.id
+    window.on('closed', () => {
+      workspaces.delete(id)
+      rebuildIfStale()
+    })
   })
 }

@@ -209,7 +209,7 @@ export class SceneRenderer {
     const axis = token(canvas, '--color-muted')
     const line = token(canvas, '--color-viewport-line')
 
-    this.meshColor = token(canvas, '--color-muted')
+    this.meshColor = token(canvas, '--color-mesh')
     if (background) this.scene.background = new Color(background)
 
     if (this.grid) {
@@ -413,8 +413,13 @@ export class SceneRenderer {
      * trihedron erases the scene it sits on and the viewport stays black.
      */
     renderer.autoClear = false
-    this.viewHelper?.render(renderer)
-    renderer.autoClear = true
+    try {
+      this.viewHelper?.render(renderer)
+    } finally {
+      // In a `finally`: a throw in the helper would otherwise leave `autoClear` off for good,
+      // and every later frame would smear over the last.
+      renderer.autoClear = true
+    }
 
     if (moving || settling) this.requestRender()
   }

@@ -15,7 +15,7 @@ function nodes(type: SceneNodeType) {
 }
 
 function addCube() {
-  const cube = createNodeOf('box', 'Cube')
+  const cube = createNodeOf('box')
   if (cube) useScenes.getState().runCommand('doc-1', addNode(cube))
   return cube
 }
@@ -50,7 +50,7 @@ describe('meshes panel', () => {
     const cube = addCube()
     render(<Content />)
 
-    await userEvent.click(screen.getByText('Cube'))
+    await userEvent.click(screen.getByText('Box'))
 
     expect(sceneOf(useScenes.getState(), 'doc-1').selectedId).toBe(cube?.id)
   })
@@ -62,7 +62,7 @@ describe('meshes panel', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: /Cube/ }))
 
     expect(nodes('mesh')).toHaveLength(1)
-    expect(nodes('mesh')[0]?.name).toBe('Cube')
+    expect(nodes('mesh')[0]?.name).toBe('Box')
 
     useScenes.getState().undo('doc-1')
     expect(nodes('mesh')).toEqual([])
@@ -140,7 +140,7 @@ describe('lights panel', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: /Projecteur/ }))
 
     expect(nodes('light')).toHaveLength(4)
-    expect(nodes('light')[3]?.name).toBe('Projecteur')
+    expect(nodes('light')[3]?.name).toBe('SpotLight')
 
     useScenes.getState().undo('doc-1')
     expect(nodes('light')).toHaveLength(3)
