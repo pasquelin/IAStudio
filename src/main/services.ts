@@ -21,7 +21,7 @@ import { broadcast } from './ipc/broadcast'
 import { createJobManager, type JobManager } from './scenario/job-manager'
 import { runnerOf } from './scenario/runner'
 import { createProjectStore, type ProjectStore } from './project/store'
-import { openNativeDatabase } from './project/sqlite-native'
+import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
 import { createClientProvider, type ClientProvider } from './scenario/client'
 import { createFileSystemFallback, resolveCredentials } from './scenario/credentials'
@@ -40,7 +40,7 @@ export type Services = {
   newAssetId: () => string
   media: MediaService
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
-  link: (source: string, type: AssetType) => Asset
+  link: (source: string, type: AssetType) => Promise<Asset>
   capabilities: () => MediaCapabilities
   pickFolder: () => Promise<string | null>
   pickMedia: () => Promise<string[]>
@@ -108,7 +108,7 @@ export function createServices(): Services {
   const models = createModelRegistry({ catalog: () => catalogOf(client.require()) })
 
   const project = createProjectStore({
-    openDatabase: openNativeDatabase,
+    openCatalog: openCatalogThread,
     now: timestamp,
     onChange: current => {
       if (current) settings.write({ storage: { lastProject: current.path } })
@@ -136,11 +136,11 @@ export function createServices(): Services {
     run: (binary, args, signal) => runProcess(binary, args, { signal }),
     probe: (source, signal) => probeSource(companionPath(ffmpeg.path()), source, { signal }),
     hash: hashSource,
-    save: (assetId, fields) => {
+    save: async (assetId, fields) => {
       const catalog = project.catalog()
-      const current = catalog.find(assetId)
+      const current = await catalog.find(assetId)
       // The row may have been deleted while a twenty-minute proxy was encoding.
-      if (current) catalog.add({ ...current, ...fields })
+      if (current) await catalog.add({ ...current, ...fields })
     },
     writeFile: async (path, data) => {
       await mkdir(dirname(path), { recursive: true })
@@ -168,11 +168,11 @@ export function createServices(): Services {
     sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
   })
 
-  serveAssets(assetId => {
+  serveAssets(async assetId => {
     const current = project.current()
     if (!current) return null
 
-    const asset = project.catalog().find(assetId)
+    const asset = await project.catalog().find(assetId)
     return asset ? servedFileOf(current.path, asset) : null
   })
 
@@ -190,8 +190,10 @@ export function createServices(): Services {
     assets,
     newAssetId,
     media,
-    link: (source, type) =>
-      project.catalog().add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
+    link: async (source, type) =>
+      await project
+        .catalog()
+        .add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
     // Asked, not cached: this is what the settings pane consults after the user installed the
     // binary it just said was missing.
     capabilities: () => {

@@ -1,15 +1,15 @@
 /**
  * The database, reduced to what the catalogue uses.
  *
- * Two reasons, neither of them ABI: `better-sqlite3` v13 ships N-API prebuilds, so the same
- * binary does load under both Electron and Vitest.
+ * Not an ABI concern: `better-sqlite3` v13 ships N-API prebuilds, so the same binary loads
+ * under both Electron and Vitest. The port exists so the test suite stays free of a native
+ * module and never depends on `pnpm rebuild:native` having been run — tests bind
+ * `node:sqlite`, production binds `better-sqlite3`, and both are real SQLite, so the
+ * migrations and the queries are genuinely exercised either way.
  *
- * 1. Moving heavy queries onto a `worker_threads` pool swaps the driver rather than rewriting
- *    the catalogue — the catalogue is synchronous by nature, and blocking the main process
- *    blocks every window (CLAUDE.md, invariant 6).
- * 2. The test suite stays free of a native module, so it never depends on `pnpm rebuild:native`
- *    having been run. Tests bind `node:sqlite`, production binds `better-sqlite3` — both are
- *    real SQLite, so the migrations and the queries are genuinely exercised either way.
+ * It is NOT what keeps the main process responsive: swapping the driver could never do that,
+ * since every method here is synchronous. The whole catalogue runs on its own thread instead —
+ * see `catalog-thread.ts`.
  */
 /** What the catalogue binds. Deliberately narrower than what SQLite accepts. */
 export type SqlValue = string | number | null

@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createCatalog, type Catalog } from '@main/project/catalog'
-import { openMemoryDatabase } from '@main/project/sqlite-memory'
+import type { AsyncCatalog } from '@main/project/catalog-client'
+import { memoryCatalog } from '@main/project/catalog-fixtures'
 import {
   createLocalBackend,
   extensionOf,
@@ -44,7 +44,7 @@ describe('file naming', () => {
 
 describe('local backend', () => {
   let root: string
-  let catalog: Catalog
+  let catalog: AsyncCatalog
   let backend: LocalBackend
 
   beforeEach(async () => {
@@ -52,7 +52,7 @@ describe('local backend', () => {
     await mkdir(join(root, 'assets/img'), { recursive: true })
     await mkdir(join(root, 'assets/aud'), { recursive: true })
 
-    catalog = createCatalog(openMemoryDatabase())
+    catalog = memoryCatalog()
     backend = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
@@ -62,7 +62,7 @@ describe('local backend', () => {
   })
 
   afterEach(async () => {
-    catalog.close()
+    await catalog.close()
     await rm(root, { recursive: true, force: true })
   })
 
@@ -86,7 +86,7 @@ describe('local backend', () => {
     })
 
     expect(await readFile(join(root, 'assets/img/asset_1.png'))).toEqual(Buffer.from(BYTES))
-    expect(catalog.find('asset_1')).toEqual(asset)
+    await expect(catalog.find('asset_1')).resolves.toEqual(asset)
   })
 
   it('indexes nothing when the download fails', async () => {
@@ -107,7 +107,7 @@ describe('local backend', () => {
     ).rejects.toThrow('offline')
 
     // An asset in the catalogue with no file behind it is worse than no asset at all.
-    expect(catalog.find('asset_1')).toBeNull()
+    await expect(catalog.find('asset_1')).resolves.toBeNull()
   })
 
   it('writes bytes the renderer produced, such as an edited take', async () => {
@@ -129,7 +129,7 @@ describe('local backend', () => {
       derivedFrom: 'asset_1',
     })
     expect(await readFile(join(root, 'assets/aud/asset_2.wav'))).toEqual(Buffer.from(edited))
-    expect(catalog.find('asset_2')).toEqual(asset)
+    await expect(catalog.find('asset_2')).resolves.toEqual(asset)
   })
 
   it('overwrites an asset in place, keeping its identity', async () => {
@@ -169,7 +169,7 @@ describe('local backend', () => {
       new Uint8Array([1]),
     )
     // A waveform computed at ingest, describing the take before any edit.
-    catalog.add({ ...catalog.find('asset_4')!, peaksPath: '.index/peaks/old.bin' })
+    await catalog.add({ ...(await catalog.find('asset_4'))!, peaksPath: '.index/peaks/old.bin' })
 
     const replaced = await backend.replaceBytes('asset_4', new Uint8Array([4, 5]), '.wav', {
       duration: 6_000_000,
@@ -181,7 +181,7 @@ describe('local backend', () => {
     expect(replaced.probe?.duration).toBe(6_000_000)
     // Stale peaks would draw a shape the ear no longer hears.
     expect(replaced.peaksPath).toBeUndefined()
-    expect(catalog.find('asset_4')?.peaksPath).toBeUndefined()
+    expect((await catalog.find('asset_4'))?.peaksPath).toBeUndefined()
   })
 
   it('carries the probe of bytes written beside the source', async () => {

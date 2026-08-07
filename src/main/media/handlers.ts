@@ -9,7 +9,7 @@ import type { MediaService } from './service'
 export type MediaHandlerDeps = {
   media: MediaService
   /** Writes a catalogue row for a file left where it lies, and hands it back. */
-  link: (source: string, type: Asset['type']) => Asset
+  link: (source: string, type: Asset['type']) => Promise<Asset>
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
   pickMedia: () => Promise<string[]>
   capabilities: () => MediaCapabilities
@@ -28,7 +28,7 @@ export function registerMediaHandlers({
       const type = assetTypeOf(source)
       if (!type) continue
 
-      const asset = link(source, type)
+      const asset = await link(source, type)
       assets.push(asset)
       // Not awaited: the row exists, so the browser shows the file at once, while probing a
       // twenty-minute rush goes on reporting through `evt:media-progress`.

@@ -1,7 +1,7 @@
 import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { ASSET_FOLDERS, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
-import type { Catalog } from '@main/project/catalog'
+import type { AsyncCatalog } from '@main/project/catalog-client'
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {
   image: '.png',
@@ -17,7 +17,7 @@ export type Download = (url: string) => Promise<Uint8Array>
 export type LocalBackendDeps = {
   download: Download
   projectPath: () => string
-  catalog: () => Catalog
+  catalog: () => AsyncCatalog
   now: () => string
 }
 
@@ -111,7 +111,7 @@ export function createLocalBackend({
     if (request.remoteAssetId) asset.remoteAssetId = request.remoteAssetId
     if (request.derivedFrom) asset.derivedFrom = request.derivedFrom
 
-    return catalog().add(asset)
+    return await catalog().add(asset)
   }
 
   return {
@@ -124,7 +124,7 @@ export function createLocalBackend({
     importFromBytes: (request, bytes) => write(request, bytes),
 
     replaceBytes: async (assetId, bytes, extension, probe) => {
-      const existing = catalog().find(assetId)
+      const existing = await catalog().find(assetId)
       if (!existing?.path) throw new Error(`asset ${assetId} has no file to replace`)
 
       const relativePath = relativePathFor(assetId, extension, existing.type)
@@ -150,7 +150,7 @@ export function createLocalBackend({
       }
       delete rewritten.peaksPath
 
-      return catalog().add(rewritten)
+      return await catalog().add(rewritten)
     },
   }
 }

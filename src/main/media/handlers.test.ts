@@ -11,7 +11,7 @@ function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
   let linked = 0
   return {
     media: { ingest: vi.fn(async () => undefined), cancel: vi.fn() },
-    link: vi.fn((source: string, type: Asset['type']) =>
+    link: vi.fn(async (source: string, type: Asset['type']) =>
       linkedAsset(source, {
         id: `asset-${(linked += 1)}`,
         type,

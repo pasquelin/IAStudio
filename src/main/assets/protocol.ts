@@ -44,12 +44,13 @@ export function registerAssetScheme(): void {
   ])
 }
 
-export type AssetResolver = (assetId: string) => string | null
+/** Asynchronous since the catalogue moved to its own thread — see `catalog-thread.ts`. */
+export type AssetResolver = (assetId: string) => Promise<string | null>
 
 export function serveAssets(resolveAsset: AssetResolver): void {
-  protocol.handle(ASSET_SCHEME, request => {
+  protocol.handle(ASSET_SCHEME, async request => {
     const assetId = assetIdFromUrl(request.url)
-    const file = assetId ? resolveAsset(assetId) : null
+    const file = assetId ? await resolveAsset(assetId) : null
 
     if (!file) return new Response(null, { status: 404 })
     return net.fetch(pathToFileURL(file).toString())

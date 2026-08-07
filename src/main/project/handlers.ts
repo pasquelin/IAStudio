@@ -45,7 +45,7 @@ export function registerProjectHandlers({
   handle(CHANNELS.assetsSearch, (_event, query) => project.catalog().search(parseAssetQuery(query)))
 
   handle(CHANNELS.assetsPeaks, async (_event, assetId) => {
-    const asset = project.catalog().find(parseAssetId(assetId))
+    const asset = await project.catalog().find(parseAssetId(assetId))
     if (!asset?.peaksPath) return null
 
     // Through the same resolver the scheme uses: a stored path is user-editable territory.
