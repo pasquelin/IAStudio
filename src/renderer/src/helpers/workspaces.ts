@@ -52,7 +52,7 @@ const FAMILIES: Record<WorkspaceId, ModelFamily> = {
   video: 'video',
   '3d': '3d',
   audio: 'audio',
-  textures: 'image',
+  textures: 'texture',
   skyboxes: 'skybox',
 }
 

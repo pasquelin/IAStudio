@@ -111,6 +111,7 @@
     "video": "Video",
     "3d": "3D",
     "audio": "Audio",
+    "texture": "Texture",
     "skybox": "Sky",
     "upscale": "Upscaling",
     "background-removal": "Background removal",
@@ -132,7 +133,11 @@
     "3d23d": "3D to 3D",
     "txt2audio": "Text to audio",
     "audio2audio": "Audio to audio",
-    "video2audio": "Video to audio"
+    "video2audio": "Video to audio",
+    "txt2img_texture": "Text to texture",
+    "img2img_texture": "Image to texture",
+    "controlnet_texture": "Texture guidance",
+    "reference_texture": "Texture reference"
   },
   "assetTypes": {
     "image": "Image",
