@@ -8,10 +8,14 @@ import { describe, expect, it } from 'vitest'
  * tests run in jsdom, where no file can be read — and every directive below was added because
  * something broke without it, silently, in a way only the running application showed.
  */
-const policy = ((): string => {
-  const html = readFileSync(new URL('../../renderer/index.html', import.meta.url), 'utf8')
-  return /content="([^"]*)"/.exec(html)?.[1] ?? ''
-})()
+/** Anchored on the directive itself: any other `content=` attribute would otherwise match. */
+function policyOf(page: string): string {
+  const html = readFileSync(new URL(`../../renderer/${page}`, import.meta.url), 'utf8')
+  const meta = /<meta[^>]*http-equiv="Content-Security-Policy"[^>]*>/.exec(html)?.[0] ?? ''
+  return /content="([^"]*)"/.exec(meta)?.[1] ?? ''
+}
+
+const policy = policyOf('index.html')
 
 const directive = (name: string): string =>
   policy
@@ -22,6 +26,12 @@ const directive = (name: string): string =>
 describe('the window policy', () => {
   it('is declared at all', () => {
     expect(policy).not.toBe('')
+  })
+
+  // The splash has no scripts of its own and must stay that way — it shows before anything is
+  // trusted, and it is the one window that never needs to reach the network.
+  it('keeps the splash screen shut', () => {
+    expect(policyOf('splash.html')).toContain("default-src 'none'")
   })
 
   /**

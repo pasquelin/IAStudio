@@ -10,7 +10,7 @@ import type { PeaksResponse } from './peaks-protocol'
  *
  * Lazy, because most sessions never import a sound at all.
  */
-export function openPeaksProcess(): PeaksClient {
+export function openPeaksProcess(onExit: () => void = () => {}): PeaksClient {
   // Resolved beside the bundled main, where `peaks-worker` is its own entry point — see
   // `electron.vite.config.ts`.
   const child = utilityProcess.fork(join(__dirname, 'peaks-worker.js'))
@@ -21,9 +21,12 @@ export function openPeaksProcess(): PeaksClient {
       child.on('message', (response: PeaksResponse) => listener(response))
     },
     onFailure: listener => {
-      // A process that exits on its own leaves the same callers waiting as one that threw.
+      // Whatever the exit code: a process that is gone answers nothing, and a clean exit
+      // leaves the same callers waiting as a crash. The client rejects them; `onExit` has the
+      // next sound fork a new process rather than reject for the rest of the session.
       child.on('exit', (code: number) => {
-        if (code !== 0) listener(new Error(`waveform process exited with code ${code}`))
+        listener(new Error(`waveform process exited with code ${code}`))
+        onExit()
       })
     },
   }

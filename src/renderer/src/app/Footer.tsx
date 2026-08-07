@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
 
 export type FooterProps = {
   /** Breadcrumb: project, current document. */
@@ -13,11 +12,9 @@ export type FooterProps = {
  * shows applies to the whole application, not to a single panel.
  */
 export function Footer({ left, right }: FooterProps) {
-  const { t } = useTranslation()
-
   return (
     <footer className="text-muted flex h-6 shrink-0 items-center gap-3 px-3 text-[11px]">
-      <span className="truncate">{left ?? t('project.none')}</span>
+      <span className="truncate">{left}</span>
       <span className="ml-auto flex shrink-0 items-center gap-3">{right}</span>
     </footer>
   )

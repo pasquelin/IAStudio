@@ -1,9 +1,10 @@
-// First, and before any other Pixi import: Electron's CSP forbids `unsafe-eval`, and Pixi builds
-// its shaders with `new Function()`, so `Application.init` rejects inside a promise and the canvas
-// stays blank with a clean console. Despite the name, this ships static polyfills instead.
+// Electron's CSP forbids `unsafe-eval`, and Pixi builds its shaders with `new Function()`:
+// without this, `Application.init` rejects inside a promise and the canvas stays absent with a
+// clean console. Despite its name, this module ships static polyfills instead.
 //
-// Here rather than in each engine: the timeline's monitor went without it, and its Pixi
-// application never started at all — a blank monitor nothing in the test suite could see.
+// It patches Pixi's prototypes, so what matters is that it runs before any `init` — not before
+// any import. Here, that is structural: `mountApplication` is the only way an engine starts one.
+// The timeline's monitor went without it entirely, and never had a Pixi application at all.
 import 'pixi.js/unsafe-eval'
 import { Application, type ApplicationOptions } from 'pixi.js'
 

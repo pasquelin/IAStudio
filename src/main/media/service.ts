@@ -15,16 +15,8 @@ const DECODABLE_CODECS: readonly string[] = ['avc1', 'h264', 'vp8', 'vp9', 'av01
 export type MediaServiceDeps = {
   /** The resolved binary, or null when there is none — see `resolveFfmpeg`. */
   ffmpeg: () => string | null
-  /**
-   * The signal is aborted by `cancel`: a proxy of a twenty-minute rush must stop on demand.
-   * `onStdout`, when given, folds the output as it arrives instead of collecting it.
-   */
-  run: (
-    binary: string,
-    args: string[],
-    signal: AbortSignal,
-    onStdout?: (chunk: Uint8Array) => void,
-  ) => Promise<Buffer>
+  /** The signal is aborted by `cancel`: a proxy of a twenty-minute rush must stop on demand. */
+  run: (binary: string, args: string[], signal: AbortSignal) => Promise<Buffer>
   /** A missing ffprobe is not a failed import; a file ffprobe refuses is — see `ProbeOutcome`. */
   probe: (source: string, signal: AbortSignal) => Promise<ProbeOutcome>
   hash: (source: string) => Promise<string>

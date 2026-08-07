@@ -50,8 +50,8 @@ export type RunOptions = {
   onStdout?: (chunk: Uint8Array) => void
 }
 
-// `spawn` rather than the `utilityProcess` § 8.8 asks for: the work already happens in
-// ffmpeg's own process, and the main thread only waits on a pipe.
+// Plain `spawn`: this runs in the main process for a probe, which is short and only waits on
+// a pipe, and inside the waveform process for a decode, which is neither — see `peaks-worker`.
 export function runProcess(
   binary: string,
   args: readonly string[],

@@ -33,18 +33,20 @@ describe('Breadcrumb', () => {
     useDocuments.setState({
       activeId: 'doc-1',
       documents: {
-        'doc-1': { id: 'doc-1', kind: 'sequence', title: 'Séquence 1', workspace: 'video' },
+        'doc-1': { id: 'doc-1', kind: 'sequence', title: 'Sans titre 1', workspace: 'video' },
       },
     })
     render(<Breadcrumb />)
 
-    expect(screen.getByText('Reel — Séquence 1')).toBeInTheDocument()
+    expect(screen.getByText('Reel — Sans titre 1')).toBeInTheDocument()
   })
 
-  // The footer falls back to "no project open" on its own; saying it here as well would have
-  // the line claim it twice, and claim it wrongly the moment a project opens.
-  it('says nothing at all when no project is open', () => {
-    const { container } = render(<Breadcrumb />)
-    expect(container).toBeEmptyDOMElement()
+  /**
+   * The wording used to live in `Footer` as a fallback for an absent `left`. Passing a
+   * breadcrumb made it unreachable, and the status line went blank instead of saying anything.
+   */
+  it('says no project is open when none is', () => {
+    render(<Breadcrumb />)
+    expect(screen.getByText('Aucun projet ouvert')).toBeInTheDocument()
   })
 })
