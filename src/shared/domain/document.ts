@@ -7,7 +7,7 @@ import type { WorkspaceId } from './workspace'
 export type DocumentKind = 'image' | 'scene' | 'sequence' | 'audio' | 'skybox'
 
 /** The values beside the type: a file read back off disk has to be checked against them. */
-export const DOCUMENT_KINDS: readonly DocumentKind[] = ['image', 'scene', 'sequence']
+export const DOCUMENT_KINDS: readonly DocumentKind[] = ['image', 'scene', 'sequence', 'audio']
 
 export function isDocumentKind(value: unknown): value is DocumentKind {
   return DOCUMENT_KINDS.some(candidate => candidate === value)
@@ -50,6 +50,7 @@ export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
   image: '.img',
   scene: '.scene',
   sequence: '.seq',
+  audio: '.aud',
 }
 
 /** Where a document lives inside its project. Relative: a project folder can be moved. */
