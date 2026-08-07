@@ -4,13 +4,14 @@ import { addNode, setTransform } from '@/engines/scene/commands'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
-import { historyOf, sceneOf, useScenes } from './scenes'
+import { clearScenes } from './scene-fixtures'
+import { historyOf, isDirty, markOf, sceneOf, useScenes } from './scenes'
 
 const box = meshNode('box-1')
 
 describe('scenes store', () => {
   beforeEach(() => {
-    useScenes.setState({ states: {}, histories: {} })
+    clearScenes()
   })
 
   it('gives an empty scene for a document never opened', () => {
@@ -49,9 +50,65 @@ describe('scenes store', () => {
   })
 })
 
+describe('isDirty', () => {
+  const dirty = (documentId: string): boolean => isDirty(useScenes.getState(), documentId)
+
+  beforeEach(() => {
+    clearScenes()
+  })
+
+  it('calls a document that has never been written modified', () => {
+    useScenes.getState().ensure('doc-1', createDefaultScene)
+    expect(dirty('doc-1')).toBe(true)
+  })
+
+  it('calls a document clean the moment it is written', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    expect(dirty('doc-1')).toBe(false)
+  })
+
+  it('calls it modified again on the next command', () => {
+    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    expect(dirty('doc-1')).toBe(true)
+  })
+
+  // A counter of edits would keep calling this modified; what is on screen is what is on disk.
+  it('calls it clean again when an undo lands back on the saved state', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().runCommand('doc-1', addNode(meshNode('box-2')))
+
+    useScenes.getState().undo('doc-1')
+    expect(dirty('doc-1')).toBe(false)
+  })
+
+  it('calls it modified again once that undo is redone', () => {
+    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    useScenes.getState().undo('doc-1')
+    useScenes.getState().redo('doc-1')
+
+    expect(dirty('doc-1')).toBe(true)
+  })
+
+  it('reads each document on its own', () => {
+    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    expect(dirty('doc-1')).toBe(false)
+    expect(dirty('doc-2')).toBe(true)
+  })
+
+  it('forgets the mark when the document closes', () => {
+    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().drop('doc-1')
+    expect(dirty('doc-1')).toBe(true)
+  })
+})
+
 describe('ensure', () => {
   beforeEach(() => {
-    useScenes.setState({ states: {}, histories: {} })
+    clearScenes()
   })
 
   it('installs the default scene the first time a document is opened', () => {

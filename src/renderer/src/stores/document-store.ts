@@ -16,6 +16,8 @@ import {
 export type DocumentStoreState<S> = {
   states: Record<string, S>
   histories: Record<string, History<S>>
+  /** The command each document was written to disk at — see `markOf`. */
+  saved: Record<string, Command<S> | null>
   runCommand: (documentId: string, command: Command<S>) => void
   /**
    * Opens a gesture: from here until `endGesture`, successive commands of the same edit collapse
@@ -32,12 +34,18 @@ export type DocumentStoreState<S> = {
    * reset what is in it.
    */
   ensure: (documentId: string, create: () => S) => void
+  /**
+   * Records the history position a write put on disk. The position is read before the write and
+   * handed back after it — see `markOf` — so an edit made while the file was being written is
+   * not counted as saved.
+   */
+  markSaved: (documentId: string, at: Command<S> | null) => void
   undo: (documentId: string) => void
   redo: (documentId: string) => void
   drop: (documentId: string) => void
 }
 
-type Readable<S> = Pick<DocumentStoreState<S>, 'states' | 'histories'>
+type Readable<S> = Pick<DocumentStoreState<S>, 'states' | 'histories' | 'saved'>
 
 /**
  * The per-document state, history and undo/redo shared by every editable space. Canvases and
@@ -62,6 +70,21 @@ export function createDocumentStore<S>(defaultState: S) {
   const historyOf = (state: Readable<S>, documentId: string): History<S> =>
     state.histories[documentId] ?? NO_HISTORY
 
+  /**
+   * Where the document's history stands, as one value. The command it ended on, not a counter:
+   * undoing back to where the file was written makes the document clean again, which a counter
+   * would keep calling modified.
+   */
+  const markOf = (state: Readable<S>, documentId: string): Command<S> | null =>
+    historyOf(state, documentId).past.at(-1) ?? null
+
+  /**
+   * Whether anything has been done since the document was last written. A document with no mark
+   * at all reads `undefined`, which no history position ever equals — never saved is modified.
+   */
+  const isDirty = (state: Readable<S>, documentId: string): boolean =>
+    state.saved[documentId] !== markOf(state, documentId)
+
   const use = create<DocumentStoreState<S>>()((set, get) => {
     /**
      * `run`, `undo` and `redo` share one signature, so the three actions share one body: read
@@ -81,6 +104,7 @@ export function createDocumentStore<S>(defaultState: S) {
     return {
       states: {},
       histories: {},
+      saved: {},
 
       runCommand: (documentId, command) => {
         // `undefined` outside a gesture, `null` before its first command: neither is an id.
@@ -105,6 +129,9 @@ export function createDocumentStore<S>(defaultState: S) {
             : { states: { ...state.states, [documentId]: create() } },
         ),
 
+      markSaved: (documentId, at) =>
+        set(state => ({ saved: { ...state.saved, [documentId]: at } })),
+
       // Both close whatever gesture was open: the entry the next command would have merged into
       // is no longer the one the gesture started from.
       undo: documentId => {
@@ -123,12 +150,14 @@ export function createDocumentStore<S>(defaultState: S) {
 
           const states = { ...state.states }
           const histories = { ...state.histories }
+          const saved = { ...state.saved }
           delete states[documentId]
           delete histories[documentId]
-          return { states, histories }
+          delete saved[documentId]
+          return { states, histories, saved }
         }),
     }
   })
 
-  return { use, stateOf, historyOf }
+  return { use, stateOf, historyOf, markOf, isDirty }
 }
