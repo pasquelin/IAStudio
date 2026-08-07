@@ -7,7 +7,7 @@ import { PanelHeader } from '@/design/PanelHeader'
 import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
 import { TOOL_COMPONENTS } from './tool-components'
-import type { ToolId, ToolZone } from '@shared/domain/tool'
+import { isHorizontal, type ToolId, type ToolZone } from '@shared/domain/tool'
 import { toolTitleKey } from '@/helpers/tool-registry'
 import { ToolZoneProvider } from './tool-zone'
 
@@ -47,43 +47,44 @@ export const ToolWindow = memo(function ToolWindow({
   // The id comes from persisted state: an entry left over from an older version would
   // otherwise throw while rendering, with no error boundary above to catch it.
   if (!definition) return null
-  const { Content, Actions } = definition
+  const { Content, Actions, fillActions } = definition
 
   return (
-    // The zone owns its length: a half given one keeps it, the other takes what is left. Both
-    // sized here would make the pair overflow the zone the user dragged.
-    <Panel
-      aria-label={title}
-      onPointerDownCapture={onFocus}
-      // `shrink` overrides `Panel`'s own `shrink-0`: a half given a length must still give
-      // ground when the zone is shorter than the two halves ask for, or it overflows the column.
-      className={length === undefined ? 'flex-1 basis-0' : 'shrink'}
-      style={length === undefined ? undefined : { flexBasis: length }}
-    >
-      <PanelHeader
-        title={title}
-        trailing={
-          <>
-            {Actions !== undefined && <Separator />}
-            <ToolButton
-              icon={mdiClose}
-              label={t('actions.removeTool')}
-              tooltip={TIP_BOTTOM}
-              variant="header"
-              onClick={onClose}
-            />
-          </>
-        }
+    // Zone-wide, header included: a panel lays out differently in a narrow column and in a
+    // strip across the window, and its own row is part of what changes.
+    <ToolZoneProvider zone={zone}>
+      {/* The zone owns its length: a half given one keeps it, the other takes what is left. Both
+          sized here would make the pair overflow the zone the user dragged. */}
+      <Panel
+        aria-label={title}
+        onPointerDownCapture={onFocus}
+        // `shrink` overrides `Panel`'s own `shrink-0`: a half given a length must still give
+        // ground when the zone is shorter than the two halves ask for, or it overflows the column.
+        className={length === undefined ? 'flex-1 basis-0' : 'shrink'}
+        style={length === undefined ? undefined : { flexBasis: length }}
       >
-        {Actions !== undefined && <Actions />}
-      </PanelHeader>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {/* The panel is told which zone it is in: the same content lays out differently in a
-            narrow column and in a strip across the window. */}
-        <ToolZoneProvider zone={zone}>
+        <PanelHeader
+          title={title}
+          fillActions={fillActions === true && isHorizontal(zone)}
+          trailing={
+            <>
+              {Actions !== undefined && <Separator />}
+              <ToolButton
+                icon={mdiClose}
+                label={t('actions.removeTool')}
+                tooltip={TIP_BOTTOM}
+                variant="header"
+                onClick={onClose}
+              />
+            </>
+          }
+        >
+          {Actions !== undefined && <Actions />}
+        </PanelHeader>
+        <div className="min-h-0 flex-1 overflow-auto">
           <Content />
-        </ToolZoneProvider>
-      </div>
-    </Panel>
+        </div>
+      </Panel>
+    </ToolZoneProvider>
   )
 })
