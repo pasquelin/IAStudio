@@ -1,9 +1,43 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { documentsIn, useDocuments } from './documents'
+import { documentsIn, pruneDocuments, useDocuments } from './documents'
 
 describe('documents store', () => {
   beforeEach(() => {
+    localStorage.clear()
     useDocuments.setState({ documents: {} })
+  })
+
+  it('survives a reload, because the layout that reopens the tabs does', () => {
+    const created = useDocuments.getState().create('3d')
+    if (!created) throw new Error('expected a document')
+
+    // `stores/layouts.ts` persists the Dockview layout, so a reload brings the tab back.
+    // A descriptor left in memory made that tab come back empty.
+    const stored: unknown = JSON.parse(localStorage.getItem('scenario-studio:documents') ?? 'null')
+    expect(JSON.stringify(stored)).toContain(created.id)
+  })
+
+  it('keeps a document some layout still shows', () => {
+    const kept = useDocuments.getState().create('3d')
+    if (!kept) throw new Error('expected a document')
+
+    pruneDocuments({ '3d': { panels: { [kept.id]: {} } } })
+    expect(useDocuments.getState().documents[kept.id]).toBeDefined()
+  })
+
+  it('drops a document no layout shows any more', () => {
+    // Closing a tab rewrites its workspace layout without the panel; the descriptor would
+    // otherwise stay in storage for good, since it is now persisted.
+    const dropped = useDocuments.getState().create('3d')
+    if (!dropped) throw new Error('expected a document')
+
+    pruneDocuments({ '3d': { panels: {} } })
+    expect(useDocuments.getState().documents[dropped.id]).toBeUndefined()
+  })
+
+  it('survives a layout that has no panels recorded at all', () => {
+    useDocuments.getState().create('3d')
+    expect(() => pruneDocuments({ image: undefined })).not.toThrow()
   })
 
   it('creates a scene document in the 3d workspace', () => {
