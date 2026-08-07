@@ -50,7 +50,7 @@ describe('canvases store', () => {
     const { runCommand } = useCanvases.getState()
     runCommand('doc-1', renameLayer('layer-1', 'Sky'))
     expect(layerById(canvasOf(useCanvases.getState(), 'doc-1'), 'layer-1')?.name).toBe('Sky')
-    expect(layerById(canvasOf(useCanvases.getState(), 'doc-2'), 'layer-1')?.name).toBe('Layer 1')
+    expect(layerById(canvasOf(useCanvases.getState(), 'doc-2'), 'layer-1')?.name).toBe('Background')
   })
 
   it('forgets a canvas and its history when the document closes', () => {

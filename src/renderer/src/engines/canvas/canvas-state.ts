@@ -15,6 +15,11 @@ export type Layer = {
   /** 0 to 1. */
   opacity: number
   blend: BlendMode
+  /**
+   * Packed RGB painted edge to edge when the layer is born, and never again — this is what
+   * gives a new document its white page. Absent leaves the layer transparent.
+   */
+  fill?: number
 }
 
 export type CanvasState = {
@@ -27,13 +32,20 @@ export type CanvasState = {
 
 export const BLEND_MODES: readonly BlendMode[] = ['normal', 'multiply', 'screen', 'overlay']
 
+export const WHITE = 0xffffff
+
+/**
+ * The white page a new document opens on. It is a real layer, not a background colour: it can
+ * be hidden, faded or deleted like any other, and the transparency checker shows through it.
+ */
 const BASE_LAYER: Layer = {
   id: 'layer-1',
-  name: 'Layer 1',
+  name: 'Background',
   visible: true,
   locked: false,
   opacity: 1,
   blend: 'normal',
+  fill: WHITE,
 }
 
 /** A new document opens with one layer, already active: a canvas you cannot paint on is a bug. */

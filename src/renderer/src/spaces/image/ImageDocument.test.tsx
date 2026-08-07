@@ -32,19 +32,19 @@ describe('ImageDocument', () => {
 
   it('renders the shared toolbar with the image tools', () => {
     render(<ImageDocument documentId="doc-1" />)
-    expect(screen.getByRole('button', { name: 'Pinceau' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Main' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Pinceau/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Main/ })).toBeInTheDocument()
   })
 
   it('hands the chosen tool to the engine', async () => {
     render(<ImageDocument documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: 'Pipette' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Pipette/ }))
     expect(setTool).toHaveBeenCalledWith('picker')
   })
 
   it('opens the eraser modes on hover', async () => {
     render(<ImageDocument documentId="doc-1" />)
-    await userEvent.hover(screen.getByRole('button', { name: 'Gomme' }))
+    await userEvent.hover(screen.getByRole('button', { name: /^Gomme \(/ }))
     expect(await screen.findByRole('menuitem', { name: 'Gomme sélective' })).toBeInTheDocument()
   })
 

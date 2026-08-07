@@ -5,7 +5,7 @@ import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
-import { IMAGE_TOOLS, toolById } from './image-tools'
+import { hasBrushSettings, IMAGE_TOOLS, toolById } from './image-tools'
 import { LayersPanel } from './LayersPanel'
 
 export type ImageDocumentProps = { documentId: string }
@@ -92,6 +92,12 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           canUndo={undoable}
           canRedo={redoable}
         />
+
+        {hasBrushSettings(tool) && (
+          <div className="absolute top-2 left-16">
+            <ToolSettings brush={brush} onBrush={setBrush} />
+          </div>
+        )}
       </div>
 
       <aside
@@ -135,15 +141,49 @@ function BrushControls({
         }
         className={cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')}
       />
-      <input
-        type="range"
-        min={1}
-        max={200}
-        value={brush.size}
-        aria-label={t('imageTools.size')}
-        onChange={event => onBrush({ ...brush, size: Number(event.target.value) })}
-        className="h-(--sc-control) w-(--sc-control) cursor-pointer [writing-mode:vertical-lr]"
-      />
+    </div>
+  )
+}
+
+/**
+ * The active tool's settings, laid beside the bar rather than inside it: a form squeezed into
+ * a 28px column is unreadable, and the bar is furniture, not a panel.
+ */
+function ToolSettings({
+  brush,
+  onBrush,
+}: {
+  brush: BrushSettings
+  onBrush: (next: BrushSettings) => void
+}) {
+  const { t } = useTranslation()
+
+  const rows: { key: string; label: string; value: number; min: number; max: number }[] = [
+    { key: 'size', label: t('imageTools.size'), value: brush.size, min: 1, max: 200 },
+    { key: 'hardness', label: t('imageTools.hardness'), value: brush.hardness, min: 0, max: 1 },
+    { key: 'opacity', label: t('imageTools.opacity'), value: brush.opacity, min: 0, max: 1 },
+  ]
+
+  return (
+    <div className="border-border bg-surface flex items-center gap-3 rounded-(--radius-sc-lg) border px-3 py-1.5 shadow-(--sc-shadow-furniture)">
+      {rows.map(row => (
+        <label key={row.key} className="flex items-center gap-1.5">
+          <span className="text-muted text-[11px]">{row.label}</span>
+          <input
+            type="range"
+            min={row.min}
+            max={row.max}
+            step={row.max === 1 ? 0.01 : 1}
+            value={row.value}
+            aria-label={row.label}
+            onChange={event => onBrush({ ...brush, [row.key]: Number(event.target.value) })}
+            className="w-24 cursor-pointer"
+          />
+          <span className="text-text w-8 text-right text-[11px] tabular-nums">
+            {row.max === 1 ? Math.round(row.value * 100) : Math.round(row.value)}
+          </span>
+        </label>
+      ))}
     </div>
   )
 }

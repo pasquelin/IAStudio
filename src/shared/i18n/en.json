@@ -137,6 +137,10 @@
     "missing": "This document is no longer open."
   },
   "imageTools": {
+    "select": "Selection",
+    "selectRectangle": "Rectangular selection",
+    "selectLasso": "Lasso",
+    "move": "Move",
     "brush": "Brush",
     "eraser": "Eraser",
     "eraserPoint": "Point eraser",
@@ -145,6 +149,7 @@
     "hand": "Hand",
     "color": "Colour",
     "size": "Size",
+    "hardness": "Hardness",
     "opacity": "Opacity"
   },
   "layers": {

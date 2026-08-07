@@ -38,7 +38,7 @@ describe('LayersPanel', () => {
     useCanvases.getState().runCommand('doc-1', addLayer({ ...second }))
     render(<LayersPanel documentId="doc-1" />)
 
-    await userEvent.click(screen.getByText('Layer 1'))
+    await userEvent.click(screen.getByText('Background'))
     expect(canvasOf(useCanvases.getState(), 'doc-1').activeLayerId).toBe('layer-1')
   })
 

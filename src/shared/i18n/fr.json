@@ -137,6 +137,10 @@
     "missing": "Ce document n’est plus ouvert."
   },
   "imageTools": {
+    "select": "Sélection",
+    "selectRectangle": "Sélection rectangle",
+    "selectLasso": "Lasso",
+    "move": "Déplacement",
     "brush": "Pinceau",
     "eraser": "Gomme",
     "eraserPoint": "Gomme ponctuelle",
@@ -145,6 +149,7 @@
     "hand": "Main",
     "color": "Couleur",
     "size": "Taille",
+    "hardness": "Dureté",
     "opacity": "Opacité"
   },
   "layers": {

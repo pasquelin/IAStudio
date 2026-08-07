@@ -1,7 +1,7 @@
 import { Application, Container, Graphics, RenderTexture, Sprite, type BLEND_MODES } from 'pixi.js'
 import type { BlendMode, CanvasState, Layer } from './canvas-state'
 
-export type CanvasTool = 'brush' | 'eraser' | 'picker' | 'hand'
+export type CanvasTool = 'select' | 'move' | 'brush' | 'eraser' | 'picker' | 'hand'
 
 export type BrushSettings = {
   size: number
@@ -56,11 +56,18 @@ export class CanvasEngine {
   private activeLayerId: string | null = null
   private size = { width: 0, height: 0 }
 
+  private readonly marquee = new Graphics()
   private painting = false
   private last: { x: number; y: number } | null = null
   private panning = false
+  private moving = false
+  private selecting: { x: number; y: number; width: number; height: number } | null = null
+  /** Read off the canvas in `mount`, so the overlay follows the studio palette. */
+  private overlayColor = 0xffffff
   /** Set before `init` resolves so a fast unmount is not left with a live renderer. */
   private disposed = false
+  /** Last state handed over, replayed once the renderer exists. */
+  private pending: CanvasState | null = null
 
   constructor(private readonly options: CanvasEngineOptions) {}
 
@@ -87,17 +94,26 @@ export class CanvasEngine {
 
     this.app = app
     app.stage.addChild(this.world)
-    app.stage.eventMode = 'static'
-    app.stage.hitArea = app.screen
+    // Above the layers, inside the world: the marquee has to follow pan and zoom with them.
+    this.world.addChild(this.marquee)
+
+    const accent = getComputedStyle(canvas).getPropertyValue('--color-accent').trim()
+    if (accent) this.overlayColor = Number.parseInt(accent.replace('#', ''), 16)
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('pointermove', this.onPointerMove)
     window.addEventListener('pointerup', this.onPointerUp)
     canvas.addEventListener('wheel', this.onWheel, { passive: false })
+
+    // React pushed the state while `init` was still in flight, so the surfaces were built
+    // without a renderer to back them. Replaying it here is what makes the first stroke land —
+    // nothing else would call `apply` again until the stack changes.
+    if (this.pending) this.apply(this.pending)
   }
 
   /** Reflects a state it never computes: layers appear, reorder and fade from here only. */
   apply(state: CanvasState): void {
+    this.pending = state
     this.activeLayerId = state.activeLayerId
     this.size = { width: state.width, height: state.height }
 
@@ -117,6 +133,13 @@ export class CanvasEngine {
       const surface = this.surfaces.get(layer.id)
       if (surface) this.world.setChildIndex(surface.sprite, index)
     })
+
+    // Restacking the layers would otherwise bury the marquee under them.
+    if (this.marquee.parent === this.world) {
+      this.world.setChildIndex(this.marquee, this.world.children.length - 1)
+    }
+
+    this.app?.renderer.render(this.app.stage)
   }
 
   setTool(tool: CanvasTool): void {
@@ -139,6 +162,7 @@ export class CanvasEngine {
     for (const surface of this.surfaces.values()) surface.texture.destroy(true)
     this.surfaces.clear()
     this.stamp.destroy()
+    this.marquee.destroy()
 
     this.app?.destroy({ removeView: false }, { children: true, texture: true, textureSource: true })
     this.app = null
@@ -148,6 +172,10 @@ export class CanvasEngine {
     let surface = this.surfaces.get(layer.id)
 
     if (!surface) {
+      // Nothing is built before the renderer exists: a texture allocated against no GPU
+      // context would take a stroke and never show it. `mount` replays the state.
+      if (!this.app) return
+
       const texture = RenderTexture.create({
         width: this.size.width,
         height: this.size.height,
@@ -157,6 +185,8 @@ export class CanvasEngine {
       surface = { texture, sprite }
       this.surfaces.set(layer.id, surface)
       this.world.addChild(sprite)
+
+      if (layer.fill !== undefined) this.fill(surface, layer.fill)
     }
 
     surface.sprite.visible = layer.visible
@@ -168,12 +198,26 @@ export class CanvasEngine {
     const point = this.toWorld(event)
 
     if (this.tool === 'picker') return this.pick(point)
+    // Middle button pans whatever the tool: it is the one gesture no tool may take over.
     if (this.tool === 'hand' || event.button === 1) {
       this.panning = true
       this.last = { x: event.clientX, y: event.clientY }
       return
     }
     if (event.button !== 0) return
+
+    if (this.tool === 'move') {
+      this.moving = true
+      this.last = point
+      return
+    }
+
+    if (this.tool === 'select') {
+      this.selecting = { x: point.x, y: point.y, width: 0, height: 0 }
+      this.last = point
+      this.drawSelection()
+      return
+    }
 
     const surface = this.activeSurface()
     if (!surface) return
@@ -191,27 +235,80 @@ export class CanvasEngine {
       return
     }
 
+    const point = this.toWorld(event)
+
+    if (this.moving && this.last) {
+      const surface = this.activeSurface()
+      if (surface) {
+        surface.sprite.x += point.x - this.last.x
+        surface.sprite.y += point.y - this.last.y
+      }
+      this.last = point
+      return
+    }
+
+    if (this.selecting && this.last) {
+      this.selecting = {
+        x: Math.min(this.last.x, point.x),
+        y: Math.min(this.last.y, point.y),
+        width: Math.abs(point.x - this.last.x),
+        height: Math.abs(point.y - this.last.y),
+      }
+      this.drawSelection()
+      return
+    }
+
     if (!this.painting || !this.last) return
     const surface = this.activeSurface()
     if (!surface) return
 
-    this.stroke(surface, this.last, this.toWorld(event))
-    this.last = this.toWorld(event)
+    this.stroke(surface, this.last, point)
+    this.last = point
   }
 
   private readonly onPointerUp = (): void => {
-    const wasPainting = this.painting
+    const finished = this.painting || this.moving
     this.painting = false
     this.panning = false
+    this.moving = false
     this.last = null
     // One history entry per gesture: a command per dab would make ⌘Z useless.
-    if (wasPainting) this.options.onStrokeEnd()
+    if (finished) this.options.onStrokeEnd()
+  }
+
+  /**
+   * The marching-ants rectangle, drawn in the world so it follows pan and zoom. It is an
+   * overlay, never rendered into a layer — a selection is not paint.
+   */
+  private drawSelection(): void {
+    if (!this.selecting) return
+    this.marquee.clear()
+    this.marquee.rect(
+      this.selecting.x,
+      this.selecting.y,
+      this.selecting.width,
+      this.selecting.height,
+    )
+    this.marquee.stroke({ width: 1 / this.world.scale.x, color: this.overlayColor, alpha: 0.9 })
+    this.app?.renderer.render(this.app.stage)
   }
 
   private readonly onWheel = (event: WheelEvent): void => {
     event.preventDefault()
     const factor = event.deltaY > 0 ? 0.9 : 1.1
     this.world.scale.set(Math.min(16, Math.max(0.05, this.world.scale.x * factor)))
+  }
+
+  /** Paints a layer edge to edge, once, when it is born with a colour of its own. */
+  private fill(surface: LayerSurface, color: number): void {
+    const renderer = this.app?.renderer
+    if (!renderer) return
+
+    const sheet = new Graphics()
+    sheet.rect(0, 0, this.size.width, this.size.height)
+    sheet.fill({ color })
+    renderer.render({ container: sheet, target: surface.texture, clear: false })
+    sheet.destroy()
   }
 
   private activeSurface(): LayerSurface | null {
