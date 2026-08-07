@@ -25,6 +25,73 @@ describe('catalog', () => {
     catalog = createCatalog(driver)
   })
 
+  it('keeps the ingest columns through a round trip', () => {
+    catalog.add(
+      asset({
+        id: 'asset_rush',
+        name: 'rush.mov',
+        type: 'video',
+        sourcePath: '/Volumes/Rushes/rush.mov',
+        hash: 'abc123',
+        probe: { duration: 20_000_000, codec: 'prores', width: 3840, height: 2160, fps: 25 },
+        proxyPath: '.index/proxies/abc123.mp4',
+        peaksPath: '.index/peaks/abc123.bin',
+      }),
+    )
+
+    const found = catalog.find('asset_rush')
+    expect(found?.sourcePath).toBe('/Volumes/Rushes/rush.mov')
+    expect(found?.hash).toBe('abc123')
+    expect(found?.probe).toEqual({
+      duration: 20_000_000,
+      codec: 'prores',
+      width: 3840,
+      height: 2160,
+      fps: 25,
+    })
+    expect(found?.proxyPath).toBe('.index/proxies/abc123.mp4')
+    expect(found?.peaksPath).toBe('.index/peaks/abc123.bin')
+  })
+
+  it('leaves the ingest columns absent on an asset that has never been probed', () => {
+    catalog.add(asset())
+    const found = catalog.find('asset_1')
+    expect(found?.hash).toBeUndefined()
+    expect(found?.probe).toBeUndefined()
+  })
+
+  it('drops a probe that no longer parses rather than failing the whole read', () => {
+    catalog.add(asset({ id: 'asset_bad' }))
+    driver.prepare('UPDATE assets SET probe = ? WHERE id = ?').run('{ not json', 'asset_bad')
+    expect(catalog.find('asset_bad')?.probe).toBeUndefined()
+  })
+
+  it('opens a catalogue created before the ingest columns existed', () => {
+    // Append-only migrations: a project made yesterday has to open today.
+    const older = openMemoryDatabase()
+    older.exec(`
+      CREATE TABLE assets (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,
+        path TEXT, remote_asset_id TEXT, job_id TEXT, width INTEGER, height INTEGER,
+        bytes INTEGER, created_at TEXT NOT NULL, derived_from TEXT
+      );
+      CREATE TABLE asset_tags (
+        asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+        tag TEXT NOT NULL, PRIMARY KEY (asset_id, tag)
+      );
+      CREATE INDEX assets_type_idx       ON assets(type);
+      CREATE INDEX assets_created_at_idx ON assets(created_at DESC);
+      CREATE INDEX asset_tags_tag_idx    ON asset_tags(tag);
+      PRAGMA user_version = 1;
+    `)
+
+    migrate(older)
+    const upgraded = createCatalog(older)
+    upgraded.add(asset({ id: 'asset_old', hash: 'def456' }))
+
+    expect(upgraded.find('asset_old')?.hash).toBe('def456')
+  })
+
   it('reads back everything it stored', () => {
     catalog.add(
       asset({

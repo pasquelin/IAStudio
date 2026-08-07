@@ -5,6 +5,7 @@ import {
   mdiImageMultipleOutline,
   mdiLayersOutline,
   mdiProgressClock,
+  mdiVideoVintage,
 } from '@mdi/js'
 import {
   placementOf,
@@ -26,6 +27,7 @@ export type Tool = {
 
 const ICONS: Record<ToolId, string> = {
   layers: mdiLayersOutline,
+  timeline: mdiVideoVintage,
   explorer: mdiFolderOutline,
   models: mdiCubeScan,
   generator: mdiCreationOutline,

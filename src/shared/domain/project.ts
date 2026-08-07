@@ -29,5 +29,9 @@ export const PROJECT_FOLDERS: readonly string[] = [
   ...Object.values(ASSET_FOLDERS),
   'documents',
   '.index',
+  // Rebuildable cache, not user content: proxies, waveforms and filmstrips of ingested media.
+  '.index/proxies',
+  '.index/peaks',
+  '.index/filmstrips',
   'layouts',
 ]

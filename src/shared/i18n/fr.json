@@ -13,6 +13,7 @@
   },
   "panels": {
     "layers": "Calques",
+    "timeline": "Timeline",
     "explorer": "Explorateur",
     "models": "Modèles",
     "generator": "Génération",
@@ -250,6 +251,25 @@
     "visible": "Afficher ou masquer",
     "empty": "Aucune lumière. La scène restera noire.",
     "noDocument": "Ouvrez une scène pour voir ses lumières."
+  },
+  "transport": {
+    "play": "Lire",
+    "pause": "Pause",
+    "source": "Source",
+    "program": "Programme",
+    "noClip": "Sélectionnez un clip pour le voir ici.",
+    "rewind": "Retour au début"
+  },
+  "timeline": {
+    "noDocument": "Aucune séquence ouverte. Créez-en une pour monter."
+  },
+  "videoTools": {
+    "select": "Sélection",
+    "selectHint": "Sélectionner, déplacer et rogner un clip",
+    "blade": "Lame",
+    "bladeHint": "Couper un clip à la tête de lecture",
+    "hand": "Main",
+    "handHint": "Faire défiler la timeline — molette pour zoomer"
   },
   "sceneTools": {
     "translate": "Déplacer",

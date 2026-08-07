@@ -6,6 +6,7 @@ import { definition as generator } from '@/panels/generator'
 import { definition as jobs } from '@/panels/jobs'
 import { definition as layers } from '@/panels/layers'
 import { definition as models } from '@/panels/models'
+import { definition as timeline } from '@/panels/timeline'
 
 export type ToolDefinition = {
   Content: FC
@@ -19,6 +20,7 @@ export type ToolDefinition = {
  */
 export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
   layers,
+  timeline,
   explorer,
   models,
   generator,

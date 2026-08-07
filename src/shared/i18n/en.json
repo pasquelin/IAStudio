@@ -13,6 +13,7 @@
   },
   "panels": {
     "layers": "Layers",
+    "timeline": "Timeline",
     "explorer": "Explorer",
     "models": "Models",
     "generator": "Generate",
@@ -250,6 +251,25 @@
     "visible": "Show or hide",
     "empty": "No light. The scene will stay black.",
     "noDocument": "Open a scene to see its lights."
+  },
+  "transport": {
+    "play": "Play",
+    "pause": "Pause",
+    "source": "Source",
+    "program": "Program",
+    "noClip": "Select a clip to see it here.",
+    "rewind": "Back to start"
+  },
+  "timeline": {
+    "noDocument": "No sequence open. Create one to start editing."
+  },
+  "videoTools": {
+    "select": "Selection",
+    "selectHint": "Select, move and trim a clip",
+    "blade": "Blade",
+    "bladeHint": "Cut a clip at the playhead",
+    "hand": "Hand",
+    "handHint": "Scroll the timeline — wheel to zoom"
   },
   "sceneTools": {
     "translate": "Move",

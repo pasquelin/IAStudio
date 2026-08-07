@@ -1,9 +1,10 @@
 import { mdiImageMultipleOutline } from '@mdi/js'
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, assetUrl, type Asset } from '@shared/domain/asset'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
+import { startAssetDrag } from '@/helpers/asset-drag'
 import { filterLocally, isFiltered, type FacetDescriptor } from '@/helpers/collection-state'
 import { MediaTile } from '@/design/MediaTile'
 import { useAssets } from '@/stores/assets'
@@ -107,15 +108,30 @@ function preview(asset: Asset): string | undefined {
   return showable ? assetUrl(asset.id) : undefined
 }
 
+/** Wraps whatever the collection renders, so both views drag the same way. */
+function Draggable({ asset, children }: { asset: Asset; children: ReactNode }) {
+  return (
+    <div draggable onDragStart={event => startAssetDrag(event, asset.id)}>
+      {children}
+    </div>
+  )
+}
+
 function AssetCard({ asset }: { asset: Asset }) {
-  return <MediaTile url={preview(asset)} caption={asset.name} />
+  return (
+    <Draggable asset={asset}>
+      <MediaTile url={preview(asset)} caption={asset.name} />
+    </Draggable>
+  )
 }
 
 function AssetRow({ asset }: { asset: Asset }) {
   return (
-    <div className="flex h-(--sc-control) items-center gap-2 px-2 text-[12px]">
-      <span className="truncate">{asset.name}</span>
-      <span className="text-muted ml-auto shrink-0 text-[11px]">{asset.type}</span>
-    </div>
+    <Draggable asset={asset}>
+      <div className="flex h-(--sc-control) items-center gap-2 px-2 text-[12px]">
+        <span className="truncate">{asset.name}</span>
+        <span className="text-muted ml-auto shrink-0 text-[11px]">{asset.type}</span>
+      </div>
+    </Draggable>
   )
 }
