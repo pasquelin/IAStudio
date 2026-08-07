@@ -15,6 +15,14 @@ export type ResolvedTheme = 'dark' | 'light'
 export type Density = 'compact' | 'comfortable'
 export type AssetBackend = 'local' | 'cloud'
 
+/**
+ * How much the log says, from nothing to everything. Ordered from quietest to loudest, which is
+ * what lets a threshold be a simple comparison rather than a table.
+ */
+export type LogVerbosity = 'silent' | 'error' | 'warn' | 'info'
+
+export const LOG_VERBOSITIES: readonly LogVerbosity[] = ['silent', 'error', 'warn', 'info']
+
 /** What happens when the application opens with no file to show. */
 export type StartupBehaviour = 'lastProject' | 'nothing'
 
@@ -86,6 +94,10 @@ export type Settings = {
      */
     overrides: BindingOverrides
   }
+  advanced: {
+    /** How much the log says. `silent` keeps the terminal clean; `debug` keeps everything. */
+    logLevel: LogVerbosity
+  }
   media: {
     /**
      * An ffmpeg binary to use instead of the one on the PATH. Absent is the normal case: the
@@ -108,6 +120,7 @@ export const DEFAULT_SETTINGS: Settings = {
   three: { showGrid: true, gridSize: 20, flySpeed: 4, boostFactor: 3, fieldOfView: 60 },
   storage: { backend: 'local' },
   shortcuts: { overrides: {} },
+  advanced: { logLevel: 'info' },
   media: {},
 }
 
@@ -163,6 +176,7 @@ export type SettingsSectionId =
   | 'spaces.three'
   | 'shortcuts'
   | 'media'
+  | 'advanced'
 
 export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'general',
@@ -178,6 +192,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'spaces.three',
   'shortcuts',
   'media',
+  'advanced',
 ]
 
 /**

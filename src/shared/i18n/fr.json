@@ -594,6 +594,32 @@
     "fieldOfView": {
       "title": "Angle de vue",
       "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
+    },
+    "advanced": "Avancé",
+    "advancedDescription": "Ce dont on n’a besoin que pour comprendre un problème, ou pour repartir de zéro.",
+    "reveal": "Montrer",
+    "open": "Ouvrir",
+    "logLevel": {
+      "title": "Détail du journal",
+      "help": "Combien l’application raconte ce qu’elle fait, dans la console. « Rien » ne dit plus rien du tout ; « Erreurs » ne signale que ce qui a échoué ; « Tout » raconte chaque étape, ce qui est utile pour comprendre un problème et bavard le reste du temps.",
+      "silent": "Rien",
+      "error": "Erreurs seulement",
+      "warn": "Erreurs et avertissements",
+      "info": "Tout"
+    },
+    "openSettingsFile": {
+      "title": "Fichier de réglages",
+      "help": "Montre dans le gestionnaire de fichiers l’endroit où vos réglages sont enregistrés. Utile pour en faire une copie avant de changer de machine, ou pour l’envoyer à quelqu’un qui vous aide."
+    },
+    "openDevtools": {
+      "title": "Outils de développement",
+      "help": "Ouvre la console technique du navigateur intégré. Elle affiche les messages du journal et les erreurs. Réservé au dépannage : rien de ce qui s’y trouve n’est nécessaire pour se servir du logiciel."
+    },
+    "resetAll": {
+      "title": "Tout réinitialiser",
+      "help": "Remet TOUS les réglages dans l’état d’une installation neuve : thème, langue, raccourcis, tout. Vos projets, vos images et vos montages ne sont pas touchés — seuls les réglages le sont. C’est sans retour.",
+      "button": "Réinitialiser",
+      "confirm": "Remettre tous les réglages à zéro ? Vos projets ne sont pas touchés, mais ce retour en arrière est définitif."
     }
   },
   "commands": {

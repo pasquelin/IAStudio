@@ -1,5 +1,11 @@
 import { LANGUAGES } from '../i18n/languages'
-import { DENSITIES, STARTUP_BEHAVIOURS, THEMES, type SettingsSectionId } from './settings'
+import {
+  DENSITIES,
+  LOG_VERBOSITIES,
+  STARTUP_BEHAVIOURS,
+  THEMES,
+  type SettingsSectionId,
+} from './settings'
 import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 
 /**
@@ -90,6 +96,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     id: 'media',
     labelKey: 'settings.media',
     descriptionKey: 'settings.mediaDescription',
+  },
+  {
+    id: 'advanced',
+    labelKey: 'settings.advanced',
+    descriptionKey: 'settings.advancedDescription',
   },
 ]
 
@@ -313,6 +324,17 @@ export const SETTING_REGISTRY = [
     step: 5,
   }),
   setting({
+    path: 'advanced.logLevel',
+    kind: 'choice',
+    section: 'advanced',
+    titleKey: 'settings.logLevel.title',
+    helpKey: 'settings.logLevel.help',
+    options: LOG_VERBOSITIES.map(level => ({
+      value: level,
+      labelKey: `settings.logLevel.${level}`,
+    })),
+  }),
+  setting({
     path: 'media.ffmpegPath',
     kind: 'path',
     pathKind: 'file',
@@ -322,6 +344,60 @@ export const SETTING_REGISTRY = [
     placeholderKey: 'settings.ffmpegPath.placeholder',
   }),
 ]
+
+/**
+ * A button, not a setting. It has no path and no value, so forcing it into `Descriptor` would
+ * break the coverage check that makes this registry worth having — hence a table of its own,
+ * of the same shape: an id, a section, and the two texts that name and explain it.
+ */
+export type SettingActionId =
+  'advanced.openSettingsFile' | 'advanced.openDevtools' | 'advanced.reset'
+
+export type SettingAction = {
+  id: SettingActionId
+  section: SettingsSectionId
+  titleKey: string
+  helpKey: string
+  buttonKey: string
+  /**
+   * What is asked before acting. Present exactly where the action cannot be taken back — no
+   * Cancel button covers these, since they never pass through the editing buffer.
+   */
+  confirmKey?: string
+}
+
+export const ACTION_REGISTRY: readonly SettingAction[] = [
+  {
+    id: 'advanced.openSettingsFile',
+    section: 'advanced',
+    titleKey: 'settings.openSettingsFile.title',
+    helpKey: 'settings.openSettingsFile.help',
+    buttonKey: 'settings.reveal',
+  },
+  {
+    id: 'advanced.openDevtools',
+    section: 'advanced',
+    titleKey: 'settings.openDevtools.title',
+    helpKey: 'settings.openDevtools.help',
+    buttonKey: 'settings.open',
+  },
+  {
+    id: 'advanced.reset',
+    section: 'advanced',
+    titleKey: 'settings.resetAll.title',
+    helpKey: 'settings.resetAll.help',
+    buttonKey: 'settings.resetAll.button',
+    confirmKey: 'settings.resetAll.confirm',
+  },
+]
+
+export const SETTING_ACTION_IDS: readonly SettingActionId[] = ACTION_REGISTRY.map(
+  action => action.id,
+)
+
+export function actionsIn(section: SettingsSectionId): readonly SettingAction[] {
+  return ACTION_REGISTRY.filter(action => action.section === section)
+}
 
 /** Same trick as `setting`, for a plain list of paths. */
 function paths<P extends SettingPath[]>(...list: P): P {

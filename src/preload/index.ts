@@ -33,6 +33,7 @@ const bridge: StudioBridge = {
     authState: () => ipcRenderer.invoke(CHANNELS.settingsAuthState),
     forgetCredentials: () => ipcRenderer.invoke(CHANNELS.settingsForgetCredentials),
     open: section => ipcRenderer.invoke(CHANNELS.settingsOpen, section),
+    runAction: id => ipcRenderer.invoke(CHANNELS.settingsRunAction, id),
     onChange: callback => subscribe<Settings>(EVENTS.settingsChanged, callback),
     onSection: callback => subscribe<SettingsSectionId>(EVENTS.settingsSection, callback),
   },

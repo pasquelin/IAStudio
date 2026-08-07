@@ -2,13 +2,18 @@ import { z } from 'zod'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
 import {
   DENSITIES,
+  LOG_VERBOSITIES,
   SETTINGS_SECTION_IDS,
   STARTUP_BEHAVIOURS,
   THEMES,
   type PartialSettings,
   type SettingsSectionId,
 } from '@shared/domain/settings'
-import { boundsOf } from '@shared/domain/settings-registry'
+import {
+  boundsOf,
+  SETTING_ACTION_IDS,
+  type SettingActionId,
+} from '@shared/domain/settings-registry'
 import type { Credentials } from './store'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
@@ -77,6 +82,8 @@ const shortcuts = z.object({
   overrides: z.record(z.string().min(1), z.string().min(1)).optional(),
 })
 
+const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
+
 const partialSettings = z.object({
   general: general.optional(),
   appearance: appearance.optional(),
@@ -85,6 +92,7 @@ const partialSettings = z.object({
   three: three.optional(),
   shortcuts: shortcuts.optional(),
   media: media.optional(),
+  advanced: advanced.optional(),
 })
 
 /** Validates what the renderer sends. Throws: an out-of-bounds write must not be persisted. */
@@ -107,6 +115,13 @@ const settingsSection = z.enum(SETTINGS_SECTION_IDS)
 
 export function parseSettingsSection(value: unknown): SettingsSectionId {
   return settingsSection.parse(value)
+}
+
+// Throws rather than falling back: the id decides which action runs, and a renderer sends it.
+const settingAction = z.enum(SETTING_ACTION_IDS)
+
+export function parseSettingAction(value: unknown): SettingActionId {
+  return settingAction.parse(value)
 }
 
 // Trimmed before the length check: a key pasted from a web page carries a trailing newline,

@@ -2,7 +2,13 @@ import type { AuthState, SettingsSectionId } from '@shared/domain/settings'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import type { SettingsStore } from './store'
-import { parseCredentials, parsePartialSettings, parseSettingsSection } from './validation'
+import type { SettingActionId } from '@shared/domain/settings-registry'
+import {
+  parseCredentials,
+  parsePartialSettings,
+  parseSettingAction,
+  parseSettingsSection,
+} from './validation'
 
 export type SettingsHandlerDeps = {
   settings: SettingsStore
@@ -11,6 +17,8 @@ export type SettingsHandlerDeps = {
   authState: () => Promise<AuthState>
   /** Opens the settings window on a section — a panel saying the key is missing leads here. */
   openSettings: (section: SettingsSectionId) => void
+  /** Runs one of the settings window's buttons. Injected: each one touches Electron directly. */
+  runAction: (id: SettingActionId) => void
 }
 
 export function registerSettingsHandlers({
@@ -18,6 +26,7 @@ export function registerSettingsHandlers({
   onCredentialsChanged,
   authState,
   openSettings,
+  runAction,
 }: SettingsHandlerDeps): void {
   handle(CHANNELS.settingsRead, () => settings.read())
 
@@ -45,5 +54,13 @@ export function registerSettingsHandlers({
     onCredentialsChanged()
   })
 
-  handle(CHANNELS.settingsOpen, (_event, section) => openSettings(parseSettingsSection(section)))
+  // A block, not an expression: `openSettingsWindow` answers with the `BrowserWindow` it
+  // opened, and returning that from a handler hands an unclonable object to the IPC serializer.
+  handle(CHANNELS.settingsOpen, (_event, section) => {
+    openSettings(parseSettingsSection(section))
+  })
+
+  handle(CHANNELS.settingsRunAction, (_event, id) => {
+    runAction(parseSettingAction(id))
+  })
 }

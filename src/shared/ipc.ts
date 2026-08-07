@@ -6,7 +6,7 @@ import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
 import type { LightKind, MeshKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
-import type { PathKind } from './domain/settings-registry'
+import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { WindowState } from './domain/window'
 import type { WorkspaceId } from './domain/workspace'
@@ -24,6 +24,7 @@ export type Channels = {
   settingsAuthState: 'settings:auth-state'
   settingsForgetCredentials: 'settings:forget-credentials'
   settingsOpen: 'settings:open'
+  settingsRunAction: 'settings:run-action'
 
   scenarioSearchModels: 'scenario:search-models'
   scenarioModelPreviews: 'scenario:model-previews'
@@ -62,6 +63,7 @@ export const CHANNELS: Channels = {
   settingsAuthState: 'settings:auth-state',
   settingsForgetCredentials: 'settings:forget-credentials',
   settingsOpen: 'settings:open',
+  settingsRunAction: 'settings:run-action',
 
   scenarioSearchModels: 'scenario:search-models',
   scenarioModelPreviews: 'scenario:model-previews',
@@ -151,6 +153,12 @@ export type StudioBridge = {
     forgetCredentials: () => Promise<void>
     /** Opens the settings window on a section, or focuses it there if it is already up. */
     open: (section: SettingsSectionId) => Promise<void>
+    /**
+     * Runs one of the buttons of the settings window. A single channel rather than one per
+     * action: they differ only by which id is named, and the main process is what decides
+     * whether a given one is allowed to do anything.
+     */
+    runAction: (id: SettingActionId) => Promise<void>
     /**
      * Settings are owned by the main process and replicated by every window. Without this, a
      * theme changed in the settings window would only reach the studio on the next launch.

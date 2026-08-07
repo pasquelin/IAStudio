@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS, type AuthState, type SettingsSectionId } from '@shared/domain/settings'
+import type { SettingActionId } from '@shared/domain/settings-registry'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerSettingsHandlers } from './handlers'
@@ -13,6 +14,7 @@ describe('settings handlers', () => {
   let onCredentialsChanged: () => void
   let authState: () => Promise<AuthState>
   let openSettings: (section: SettingsSectionId) => void
+  let runAction: (id: SettingActionId) => void
 
   beforeEach(() => {
     resetHandlers()
@@ -20,7 +22,14 @@ describe('settings handlers', () => {
     onCredentialsChanged = vi.fn()
     authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
     openSettings = vi.fn()
-    registerSettingsHandlers({ settings, onCredentialsChanged, authState, openSettings })
+    runAction = vi.fn()
+    registerSettingsHandlers({
+      settings,
+      onCredentialsChanged,
+      authState,
+      openSettings,
+      runAction,
+    })
   })
 
   it('answers a read with the current settings', () => {

@@ -16,6 +16,8 @@ export type PersistenceAdapter = {
   remove: (key: string) => void
   encrypt: (plain: string) => string
   decrypt: (encrypted: string) => string
+  /** Where it writes, for the settings screen's "reveal the file" button. */
+  path: () => string
 }
 
 export type SettingsStore = {
@@ -27,6 +29,8 @@ export type SettingsStore = {
   discardUnreadableCredentials: () => void
   /** Main process only. Never expose over IPC — see spec § 4, invariant 1. */
   readCredentials: () => Credentials | null
+  /** Where the settings are written. */
+  path: () => string
 }
 
 const SETTINGS_KEY = 'settings'
@@ -41,6 +45,7 @@ function merge(base: Settings, partial: PartialSettings): Settings {
     three: { ...base.three, ...partial.three },
     shortcuts: { ...base.shortcuts, ...partial.shortcuts },
     media: { ...base.media, ...partial.media },
+    advanced: { ...base.advanced, ...partial.advanced },
   }
 }
 
@@ -102,5 +107,7 @@ export function createSettingsStore(
     },
 
     readCredentials,
+
+    path: adapter.path,
   }
 }

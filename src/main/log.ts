@@ -1,3 +1,4 @@
+import type { LogVerbosity } from '@shared/domain/settings'
 import type { LogEntry, LogLevel } from '@shared/ipc'
 
 /**
@@ -24,8 +25,23 @@ export function mirrorLogsTo(destination: Sink | null): void {
 
 const quiet = process.env['NODE_ENV'] === 'test'
 
+/**
+ * How loud each level is. A line is written when its rank is at or below the threshold, so the
+ * setting is a comparison rather than a table of what each level lets through.
+ */
+const RANK: Record<LogLevel, number> = { error: 1, warn: 2, info: 3 }
+
+const RANK_OF_VERBOSITY: Record<LogVerbosity, number> = { silent: 0, error: 1, warn: 2, info: 3 }
+
+let threshold = RANK_OF_VERBOSITY.info
+
+/** Set from the settings, and again whenever they change. */
+export function setLogVerbosity(verbosity: LogVerbosity): void {
+  threshold = RANK_OF_VERBOSITY[verbosity]
+}
+
 function write(level: LogLevel, scope: string, message: string): void {
-  if (quiet) return
+  if (quiet || RANK[level] > threshold) return
 
   const line = `[${scope}] ${message}`
 

@@ -15,6 +15,7 @@ import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 import { isDirty, useSettingsDraft } from '@/stores/settings-draft'
+import { SettingActions } from './SettingActions'
 import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
 
@@ -206,6 +207,7 @@ export function SettingsWindow() {
                   <p className="text-base-content/60 mb-4 text-xs">{t(section.descriptionKey)}</p>
                 )}
                 <SettingList descriptors={descriptorsIn(section.id)} />
+                <SettingActions section={section.id} />
                 {section.Content && <section.Content />}
               </>
             )

@@ -594,6 +594,32 @@
     "fieldOfView": {
       "title": "Field of view",
       "help": "How much the camera takes in, in degrees. A narrow angle pulls close and flattens, like a telephoto lens; a wide one shows far more but bends the edges. 60 is close to what an eye sees."
+    },
+    "advanced": "Advanced",
+    "advancedDescription": "What is only needed to understand a problem, or to start over.",
+    "reveal": "Reveal",
+    "open": "Open",
+    "logLevel": {
+      "title": "Log detail",
+      "help": "How much the application says about what it is doing, in the console. “Nothing” says nothing at all; “Errors” reports only what failed; “Everything” narrates each step, which helps to understand a problem and is chatty the rest of the time.",
+      "silent": "Nothing",
+      "error": "Errors only",
+      "warn": "Errors and warnings",
+      "info": "Everything"
+    },
+    "openSettingsFile": {
+      "title": "Settings file",
+      "help": "Shows where your settings are saved, in the file manager. Useful to copy them before moving to another machine, or to send them to someone helping you."
+    },
+    "openDevtools": {
+      "title": "Developer tools",
+      "help": "Opens the technical console of the embedded browser. It shows the log messages and the errors. For troubleshooting only: nothing in there is needed to use the software."
+    },
+    "resetAll": {
+      "title": "Reset everything",
+      "help": "Puts EVERY setting back to a fresh install: theme, language, shortcuts, all of it. Your projects, images and edits are untouched — only the settings are. There is no going back.",
+      "button": "Reset",
+      "confirm": "Reset every setting? Your projects are untouched, but this cannot be undone."
     }
   },
   "commands": {

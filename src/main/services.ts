@@ -19,6 +19,7 @@ import { companionPath, findOnPath, hashSource, probeSource, runProcess } from '
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { broadcast } from './ipc/broadcast'
+import { setLogVerbosity } from './log'
 import { createJobManager, type JobManager } from './scenario/job-manager'
 import { runnerOf } from './scenario/runner'
 import { createProjectStore, type ProjectStore } from './project/store'
@@ -111,6 +112,7 @@ export function createServices(): Services {
       // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
       // and Chromium only answers with the new value once `themeSource` has moved.
       applyTheme(current.appearance.theme)
+      setLogVerbosity(current.advanced.logLevel)
       // The native menu is built once and never re-reads anything: without this the window
       // changes language and the menu bar above it does not.
       buildMenu(
@@ -127,6 +129,7 @@ export function createServices(): Services {
   // The stored theme, before any window is painted: a window created on the OS preference and
   // corrected afterwards flashes the wrong colour for a frame.
   applyTheme(settings.read().appearance.theme)
+  setLogVerbosity(settings.read().advanced.logLevel)
 
   // A keychain the OS can no longer open leaves a blob that decrypts to nothing. Dropping it
   // at startup is what makes the account dialog ask again instead of claiming to be set up.
