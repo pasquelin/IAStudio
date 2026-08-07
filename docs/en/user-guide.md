@@ -85,6 +85,9 @@ grip to hunt for.
 Panels close, they do not collapse. A collapsed panel is a third state that looks like neither
 open nor closed, and the rail reopens a tool in one click.
 
+Narrow a panel far enough and its title row gives ground: the panel's own controls go first, and
+the close button never does — a panel you cannot leave would be worse than one missing a filter.
+
 ### The tools
 
 | Tool | Where | Shows in | What it is |

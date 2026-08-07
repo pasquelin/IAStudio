@@ -87,6 +87,10 @@ poignée ; il n'y a pas de prise séparée à viser.
 Un panneau se ferme, il ne se replie pas. Un panneau replié est un troisième état qui ne
 ressemble ni à ouvert ni à fermé, et le rail rouvre un outil en un clic.
 
+Rétrécissez assez un panneau et sa ligne de titre cède du terrain : ses propres contrôles partent
+les premiers, le bouton de fermeture jamais — un panneau dont on ne peut pas sortir serait pire
+qu'un panneau privé d'un filtre.
+
 ### Les outils
 
 | Outil | Où | Visible dans | Ce que c'est |

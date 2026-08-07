@@ -117,6 +117,13 @@ Toute tâche longue est **annulable**, **rapporte sa progression**, et tourne da
 `better-sqlite3` est synchrone : une requête lourde dans le processus principal bloque toutes les
 fenêtres, donc les requêtes de catalogue non triviales passent par `worker_threads`.
 
+Deux fils existent précisément pour cela. `main/project/catalog-worker.ts` détient la base et
+répond à une boucle de messages : une recherche parmi des milliers d'assets ne gèle plus aucune
+fenêtre. `renderer/src/engines/audio/audio.worker.ts` sort la chaîne sonore du thread de la
+fenêtre, les buffers d'échantillons étant **transférés** plutôt que copiés. Les deux ne sont que
+de la tuyauterie : le catalogue, le dispatch et l'arithmétique audio se testent seuls, sans
+worker.
+
 ---
 
 ## Traverser la frontière des processus
@@ -242,6 +249,11 @@ src/renderer/src/
 ```
 
 ### Le shell
+
+Les quatre éditeurs sont chargés à l'ouverture d'un document de leur type, jamais avant. Importés
+statiquement, ils atterriraient tous les quatre dans le morceau que l'écran de démarrage attend —
+cinq mégaoctets pour ouvrir une fenêtre au centre vide. Une session en ouvre un ou deux, et celui
+qu'elle ouvre coûte quelques centaines de millisecondes qu'elle allait dépenser de toute façon.
 
 Dockview tient le centre et **uniquement** le centre : les documents et leurs onglets. Les
 fenêtres d'outil sont posées sur la gouttière du châssis par le shell lui-même, parce que leur
@@ -457,7 +469,7 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d'éch
 
 ## Les tests
 
-**1288 tests répartis sur 137 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
+**1398 tests répartis sur 148 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
 (`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout

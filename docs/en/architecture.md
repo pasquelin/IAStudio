@@ -116,6 +116,12 @@ Every long task is **cancellable**, **reports progress**, and runs in a pool bou
 `better-sqlite3` is synchronous: a heavy query on the main process blocks every window, so
 non-trivial catalogue queries go through `worker_threads`.
 
+Two threads exist for exactly that reason. `main/project/catalog-worker.ts` owns the database
+and answers a message loop, so a search across thousands of assets never freezes a window.
+`renderer/src/engines/audio/audio.worker.ts` runs the sound chain off the window's thread, with
+sample buffers **transferred** rather than copied. Both are wiring only: the catalogue, the
+dispatch and the audio arithmetic are tested on their own, without a worker in sight.
+
 ---
 
 ## Crossing the process boundary
@@ -239,6 +245,11 @@ src/renderer/src/
 ```
 
 ### The shell
+
+The four editors are loaded when a document of their kind is opened, never before. Statically
+imported, all four would land in the chunk the splash screen waits for — five megabytes to open
+a window showing an empty centre. A session uses one or two of them, and the one it opens costs a
+few hundred milliseconds it was going to spend anyway.
 
 Dockview holds the centre and **only** the centre: documents and their tabs. Tool windows are
 laid over the chassis gutter by the shell itself, because their behaviour — a rail that switches
@@ -442,7 +453,7 @@ opaquely.
 
 ## Testing
 
-**1288 tests across 137 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
+**1398 tests across 148 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.
