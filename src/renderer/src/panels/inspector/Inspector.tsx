@@ -47,10 +47,11 @@ function Face() {
     // Both guarded on the owner: the sequence in front is not necessarily the one this was
     // selected in, and every sequence has a track called `V1`.
     case 'clip': {
-      const clip =
-        sequence && selection.ownerId === sequenceId
-          ? clipById(sequence, selection.ids[0] ?? '')
-          : null
+      // Which clip comes from the sequence rather than from the descriptor: `selectedId` is
+      // what the canvas highlights, and commands move it — dropping an asset selects the clip
+      // it creates. Reading the id here instead would leave the two showing different clips.
+      const chosen = sequence && selection.ownerId === sequenceId ? sequence.selectedId : null
+      const clip = sequence && chosen ? clipById(sequence, chosen) : null
       return sequenceId && sequence && clip ? (
         <ClipInspector documentId={sequenceId} sequence={sequence} clip={clip} />
       ) : (

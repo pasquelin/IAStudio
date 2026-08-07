@@ -34,6 +34,8 @@ export type WorkerPort = {
     type: 'message',
     listener: (event: MessageEvent<AudioWorkerResponse>) => void,
   ) => void
+  /** Assigned rather than added to: one renderer owns one worker, and reads its failures alone. */
+  onerror: ((event: ErrorEvent) => void) | null
   terminate: () => void
 }
 
@@ -81,6 +83,14 @@ export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
         wav: message.wav,
       })
     })
+
+    // A worker that dies — a take too long to allocate is the way it happens — answers nothing
+    // ever again. Without this the editor waits on that answer for as long as it is open.
+    opened.onerror = () => {
+      settle(latest, null)
+      port = null
+      opened.terminate()
+    }
 
     port = opened
     return opened

@@ -15,27 +15,36 @@ function fakePort(): {
   sent: { message: AudioWorkerRequest; transfer: Transferable[] }[]
   reply: (response: AudioWorkerResponse) => void
   terminated: () => number
+  fail: () => void
 } {
   const sent: { message: AudioWorkerRequest; transfer: Transferable[] }[] = []
   const listeners: ((event: MessageEvent<AudioWorkerResponse>) => void)[] = []
   let terminated = 0
 
+  const port: WorkerPort = {
+    onerror: null,
+    postMessage: (message, transfer) => {
+      sent.push({ message, transfer })
+    },
+    addEventListener: (_type, listener) => {
+      listeners.push(listener)
+    },
+    terminate: () => {
+      terminated++
+    },
+  }
+
   return {
+    port,
     sent,
     terminated: () => terminated,
-    // `as`: the renderer only ever reads `data` off the event, and jsdom's MessageEvent
-    // constructor is not available in the node project this file also runs under.
+    // `as`: the renderer only ever reads `data` off the event, and no MessageEvent constructor
+    // is worth building one of for it.
     reply: response => {
       for (const listener of listeners)
         listener({ data: response } as MessageEvent<AudioWorkerResponse>)
     },
-    port: {
-      postMessage: (message, transfer) => sent.push({ message, transfer }),
-      addEventListener: (_type, listener) => listeners.push(listener),
-      terminate: () => {
-        terminated++
-      },
-    },
+    fail: () => port.onerror?.(new ErrorEvent('error')),
   }
 }
 
@@ -241,5 +250,31 @@ describe('the worker it opens', () => {
     createAudioRenderer(() => port).dispose()
 
     expect(terminated()).toBe(0)
+  })
+})
+
+describe('a worker that dies', () => {
+  it('releases whoever was waiting rather than leaving the editor loading forever', async () => {
+    const { port, fail } = fakePort()
+    const renderer = createAudioRenderer(() => port)
+
+    const pending = renderer.render([{ kind: 'normalize', targetLufs: -14 }])
+    fail()
+
+    await expect(pending).resolves.toBeNull()
+  })
+
+  it('opens a fresh one for the next take rather than talking to the dead one', () => {
+    const first = fakePort()
+    const second = fakePort()
+    const ports = [first.port, second.port]
+    const renderer = createAudioRenderer(() => ports.shift() ?? second.port)
+
+    renderer.load(take([0, 1]))
+    first.fail()
+    renderer.load(take([1, 0]))
+
+    expect(first.terminated()).toBe(1)
+    expect(second.sent).toHaveLength(1)
   })
 })

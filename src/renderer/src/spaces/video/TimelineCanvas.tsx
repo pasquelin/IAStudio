@@ -92,13 +92,6 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     })
   }, [paint])
 
-  useEffect(
-    () => () => {
-      if (queued.current) cancelAnimationFrame(queued.current)
-    },
-    [],
-  )
-
   const byId = useMemo(() => new Map(assets.map(asset => [asset.id, asset])), [assets])
   const nameOf = useCallback(
     (clip: Clip): string => byId.get(clip.assetId)?.name ?? clip.assetId,
@@ -125,7 +118,13 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     [byId, repaint],
   )
 
-  useEffect(() => usePeaks.subscribe(repaint), [repaint])
+  useEffect(() => {
+    const stop = usePeaks.subscribe(repaint)
+    return () => {
+      stop()
+      if (queued.current) cancelAnimationFrame(queued.current)
+    }
+  }, [repaint])
 
   useEffect(() => {
     const canvas = canvasRef.current

@@ -28,14 +28,20 @@ type SelectionState = {
 
 const NONE: Selection = { kind: 'none' }
 
-/** True when a write would change nothing — see the guard on `selectClip`. */
-function sameAsBefore(current: Selection, kind: string, ownerId: string, id: string): boolean {
+/**
+ * Whether a write would say the same thing as what is already there.
+ *
+ * Worth asking on every one of them: the canvas re-selects the same clip on every pointer down
+ * of a drag, and an unguarded write would re-render the inspector on each of them.
+ */
+function unchanged(current: Selection, next: Selection): boolean {
+  if (current.kind !== next.kind) return false
+  if (current.kind === 'none' || next.kind === 'none') return true
+
   return (
-    current.kind === kind &&
-    'ownerId' in current &&
-    current.ownerId === ownerId &&
-    current.ids.length === 1 &&
-    current.ids[0] === id
+    current.ownerId === next.ownerId &&
+    current.ids.length === next.ids.length &&
+    current.ids.every((id, at) => id === next.ids[at])
   )
 }
 
@@ -44,27 +50,17 @@ function sameAsBefore(current: Selection, kind: string, ownerId: string, id: str
  * global rather than per document because one inspector serves every panel — the asset shelf,
  * the montage and the track headers all point it at what was touched last.
  */
-export const useSelection = create<SelectionState>()(set => ({
-  selection: NONE,
+export const useSelection = create<SelectionState>()(set => {
+  const point = (next: Selection): void =>
+    set(state => (unchanged(state.selection, next) ? state : { selection: next }))
 
-  selectAssets: ids =>
-    set({ selection: ids.length > 0 ? { kind: 'asset', ownerId: null, ids } : NONE }),
+  return {
+    selection: NONE,
 
-  // Guarded: the canvas re-selects the same clip on every pointer down of a drag, and an
-  // unguarded write would re-render the inspector on each of them.
-  selectClip: (documentId, clipId) =>
-    set(state =>
-      sameAsBefore(state.selection, 'clip', documentId, clipId)
-        ? state
-        : { selection: { kind: 'clip', ownerId: documentId, ids: [clipId] } },
-    ),
-
-  selectTrack: (documentId, trackId) =>
-    set(state =>
-      sameAsBefore(state.selection, 'track', documentId, trackId)
-        ? state
-        : { selection: { kind: 'track', ownerId: documentId, ids: [trackId] } },
-    ),
-
-  clear: () => set(state => (state.selection.kind === 'none' ? state : { selection: NONE })),
-}))
+    selectAssets: ids => point(ids.length > 0 ? { kind: 'asset', ownerId: null, ids } : NONE),
+    selectClip: (documentId, clipId) => point({ kind: 'clip', ownerId: documentId, ids: [clipId] }),
+    selectTrack: (documentId, trackId) =>
+      point({ kind: 'track', ownerId: documentId, ids: [trackId] }),
+    clear: () => point(NONE),
+  }
+})

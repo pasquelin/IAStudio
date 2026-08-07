@@ -28,32 +28,25 @@ const AudioDocument = lazy(async () => ({
   default: (await import('@/spaces/audio/AudioDocument')).AudioDocument,
 }))
 
+/** Every space is opened the same way: the tab checks its document still exists, then renders. */
+function panelFor(Space: FC<{ documentId: string }>): FC<IDockviewPanelProps<DocumentPanelParams>> {
+  return props => (
+    <WithDocument id={props.params.documentId}>
+      {() => <Space documentId={props.params.documentId} />}
+    </WithDocument>
+  )
+}
+
 /**
  * Document components handed to Dockview, keyed by `DocumentKind`. `home` is what an empty
  * center shows.
  */
 export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps<DocumentPanelParams>>> = {
   home: () => <Home />,
-  image: props => (
-    <WithDocument id={props.params.documentId}>
-      {() => <ImageDocument documentId={props.params.documentId} />}
-    </WithDocument>
-  ),
-  scene: props => (
-    <WithDocument id={props.params.documentId}>
-      {() => <SceneDocument documentId={props.params.documentId} />}
-    </WithDocument>
-  ),
-  sequence: props => (
-    <WithDocument id={props.params.documentId}>
-      {() => <SequenceDocument documentId={props.params.documentId} />}
-    </WithDocument>
-  ),
-  audio: props => (
-    <WithDocument id={props.params.documentId}>
-      {() => <AudioDocument documentId={props.params.documentId} />}
-    </WithDocument>
-  ),
+  image: panelFor(ImageDocument),
+  scene: panelFor(SceneDocument),
+  sequence: panelFor(SequenceDocument),
+  audio: panelFor(AudioDocument),
 }
 
 function Home() {
