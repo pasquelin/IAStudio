@@ -82,6 +82,22 @@ Le tuyau existe et une seule vanne est ouverte. Dans l'ordre :
    rejetée, et le renderer n'a aucune surface pour le dire. Un ⌘S qui échoue laisse la puce, et
    c'est tout ce qu'il raconte. Une ouverture qui échoue ne dit rien du tout.
 
+Deux comportements du mécanisme d'enregistrement à connaître avant d'y toucher — le second est
+un bug, le premier est délibéré :
+
+- **Un document dont le fichier a refusé de s'ouvrir ne s'enregistre plus du tout**, jusqu'à sa
+  prochaine ouverture (le `Set` `unreadable` dans `app/document-io.ts`). C'est voulu : l'éditeur
+  vide qu'une lecture ratée laisse est indistinguable d'un document neuf, et sans ce refus le
+  premier ⌘S écrirait `{ nodes: [] }` par-dessus la scène illisible. Mais combiné au point 4,
+  l'utilisateur voit un document qui refuse de s'enregistrer sans jamais savoir pourquoi. **Le
+  vrai remède est une surface d'erreur**, pas la levée du refus.
+- **La marque « modifié » peut mentir après plus de 100 modifications suivies d'une annulation
+  complète.** `markOf` vaut `past.at(-1) ?? null`, et `HISTORY_LIMIT` plafonne la pile à 100 :
+  au-delà, les plus anciennes commandes tombent, une annulation intégrale ramène `past` à vide,
+  donc à `null` — la valeur qu'un document enregistré alors que son historique était vide porte
+  aussi. Le document se dit propre alors qu'il ne l'est pas. Le remède est un jeton monotone par
+  commande, dans `engines/core/history.ts`, partagé par tous les espaces.
+
 ### Ensuite — l'éditeur 3D
 
 Ce qui existe : 17 primitives, 5 types de lumières, gizmo translate/rotate/scale, sélection par
@@ -96,7 +112,7 @@ Ce qui manque, vérifié sur `main` :
 | Groupes / reparentage | `parentId` existe, aucune commande ne le change |
 | Dupliquer, copier-coller | aucune commande dans `commands.ts` |
 | Magnétisme, pivot local/monde | aucun `setTranslationSnap`, aucun `setSpace` |
-| Import de modèles | aucun `GLTFLoader`, Draco ou KTX2 — alors que `mesh` est un `AssetType` |
+| Import de modèles | aucun `GLTFLoader`, Draco ou KTX2 — alors que `mesh` est un `AssetType`. **C'est lui qui fera franchir le plafond de ⌘S** — cf. la section Performance |
 | `sprite` et `text` | déclarés sans `create`, donc grisés |
 | Ombres | aucun `castShadow`, `receiveShadow`, `shadowMap` |
 | Environnement / IBL dans le viewport | `PMREMGenerator` n'existe que pour les skyboxes |
