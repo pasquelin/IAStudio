@@ -43,29 +43,37 @@ describe('documents store', () => {
     expect(localStorage.getItem('scenario-studio:documents')).toBeNull()
   })
 
-  it('writes a new document straight away, so an untouched tab survives a reload', async () => {
+  // A file per tab opened and never typed in would litter the project with empty documents
+  // that only a hand could remove. A document reaches the folder when it holds something.
+  it('writes nothing until the document holds something', async () => {
     const written: string[] = []
     installFakeBridge({
       documents: {
-        write: (id, kind) => {
-          written.push(`${id}:${kind}`)
+        write: id => {
+          written.push(id)
           return Promise.resolve()
         },
       },
     })
 
-    const created = await useDocuments.getState().create('3d')
-    expect(written).toEqual([`${created?.id}:scene`])
+    await useDocuments.getState().create('3d')
+    expect(written).toEqual([])
   })
 
-  // A tab announced before its file exists is a tab the next launch drops without a word.
-  it('opens no tab when the document could not be written', async () => {
+  // Counting the open tabs alone handed the same name twice: a document saved under "Sans
+  // titre 1" and closed is still called that, and the folder is what remembers it.
+  it('numbers a new document against the folder as much as against the tabs', async () => {
     installFakeBridge({
-      documents: { write: () => Promise.reject(new Error('read-only folder')) },
+      documents: {
+        list: () =>
+          Promise.resolve([
+            { id: 'saved-then-closed', kind: 'scene', title: 'Untitled 1', workspace: '3d' },
+          ]),
+      },
     })
 
-    await expect(useDocuments.getState().create('3d')).rejects.toThrow()
-    expect(Object.keys(useDocuments.getState().documents)).toHaveLength(0)
+    const created = await useDocuments.getState().create('3d')
+    expect(created?.title).not.toBe('Untitled 1')
   })
 
   describe('refresh', () => {

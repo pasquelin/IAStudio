@@ -8,6 +8,7 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { token } from '../core/palette'
+import { frameDelta } from './frame-clock'
 import { pointerNdc, type PointerPosition } from './pointer'
 
 /**
@@ -57,7 +58,8 @@ export class ViewportEngine {
   private controls: OrbitControls | null = null
   private observer: ResizeObserver | null = null
   private frame: number | null = null
-  private lastTime = 0
+  /** `null` while the loop is at rest: the next frame is a first frame, not a long one. */
+  private lastTime: number | null = null
 
   constructor(private readonly options: ViewportEngineOptions = {}) {
     this.camera = new PerspectiveCamera(
@@ -188,7 +190,10 @@ export class ViewportEngine {
     if (!renderer) return
 
     const now = performance.now()
-    const delta = Math.min((now - this.lastTime) / 1000, MAX_DELTA)
+    const delta = frameDelta({
+      since: this.lastTime === null ? null : now - this.lastTime,
+      cap: MAX_DELTA,
+    })
     this.lastTime = now
 
     const moving = this.options.onFrame?.(delta) ?? false

@@ -1,18 +1,21 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, open, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import {
   documentPath,
   DOCUMENTS_FOLDER,
   DOCUMENT_VERSION,
+  ENVELOPE_LIMIT,
   kindForExtension,
   workspaceForKind,
   type DocumentDescriptor,
   type DocumentDraft,
+  type DocumentEnvelope,
   type DocumentFile,
   type DocumentKind,
 } from '@shared/domain/document'
-import { parseDocumentFile } from './validation'
+import { isRecord } from '@shared/guards'
+import { parseDocumentEnvelope } from './validation'
 
 export type DocumentFiles = {
   /**
@@ -57,9 +60,52 @@ export type DocumentFilesDeps = {
   now: () => string
 }
 
+/**
+ * A file read back: the envelope off its first line, the content left as the string the editor
+ * wrote. Nothing here parses the content — that is the editor's business, on its own thread.
+ *
+ * A file written by version 1 has no line of its own: its whole body is one object, content
+ * included. It is put back into the current shape rather than refused — that is what the
+ * version field was for.
+ */
+export function splitDocument(body: string): DocumentFile {
+  const cut = body.indexOf('\n')
+  const head: unknown = JSON.parse(cut === -1 ? body : body.slice(0, cut))
+  const envelope = parseDocumentEnvelope(head)
+
+  if (envelope.version === 1) {
+    const legacy = isRecord(head) ? head.content : undefined
+    return { ...envelope, content: legacy === undefined ? '' : JSON.stringify(legacy) }
+  }
+
+  return { ...envelope, content: cut === -1 ? '' : body.slice(cut + 1) }
+}
+
 /** Node reports a missing path this way, and it is the one failure that is not an error here. */
 function isMissing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT'
+}
+
+/**
+ * The envelope of a file, without reading the document under it: a listing needs a title and a
+ * kind, and a project of heavy scenes would otherwise be read whole every time it is opened.
+ *
+ * A version 1 file has no first line, so its head is truncated and fails to parse; it falls
+ * back to the whole file, which is the only way to read one.
+ */
+async function headOf(file: string): Promise<DocumentEnvelope> {
+  const handle = await open(file, 'r')
+  try {
+    const buffer = Buffer.alloc(ENVELOPE_LIMIT)
+    const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
+    const head = buffer.toString('utf8', 0, bytesRead)
+    const cut = head.indexOf('\n')
+    if (cut !== -1) return parseDocumentEnvelope(JSON.parse(head.slice(0, cut)))
+  } finally {
+    await handle.close()
+  }
+
+  return splitDocument(await readFile(file, 'utf8'))
 }
 
 /**
@@ -91,6 +137,16 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
   /** The staging copies being written right now. Every window writes through this one map. */
   const staging = new Set<string>()
 
+  /**
+   * The envelope on its first line, the content on the rest. Concatenated rather than
+   * serialized as one object: the content arrives already serialized, and stringifying it again
+   * here would put the cost of every document back on the thread that owns every window.
+   */
+  const bodyOf = (document: DocumentFile): string => {
+    const { content, ...envelope } = document
+    return `${JSON.stringify(envelope)}\n${content}`
+  }
+
   const store = async (file: string, document: DocumentFile): Promise<void> => {
     // Unique per call: the staging copy of one window must not be the staging copy of another.
     const copy = `${file}.${randomUUID()}${STAGING_SUFFIX}`
@@ -101,9 +157,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     await mkdir(dirname(file), { recursive: true })
 
     try {
-      // No indentation: a scene of twenty thousand nodes doubles in size, and `stringify` is
-      // synchronous in the process every window's responsiveness sits on.
-      await writeFile(copy, JSON.stringify(document), 'utf8')
+      await writeFile(copy, bodyOf(document), 'utf8')
       // Renaming within a folder is atomic, so a crash mid-write can never leave a truncated
       // document where the user's work was. Durability across a power cut would want `fsync`.
       await rename(copy, file)
@@ -135,12 +189,12 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     if (!kind || !workspace) return null
 
     try {
-      const document = parseDocumentFile(JSON.parse(await readFile(join(folder, entry), 'utf8')))
+      const envelope = await headOf(join(folder, entry))
       // The folder's word beats the file's, exactly as `read` has it: an extension changed by
       // hand must not send a document to an editor that cannot open it.
-      if (document.kind !== kind) return null
+      if (envelope.kind !== kind) return null
 
-      return { id: basename(entry, extname(entry)), kind, title: document.title, workspace }
+      return { id: basename(entry, extname(entry)), kind, title: envelope.title, workspace }
     } catch {
       // One unreadable document must not cost the user the listing of all the others.
       return null
@@ -178,7 +232,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
 
       let document: DocumentFile
       try {
-        document = parseDocumentFile(JSON.parse(await readFile(file, 'utf8')))
+        document = splitDocument(await readFile(file, 'utf8'))
       } catch (error) {
         if (isMissing(error)) return null
         throw error

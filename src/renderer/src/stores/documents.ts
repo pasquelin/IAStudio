@@ -99,12 +99,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
   refresh: async () => {
     const mine = ++generation
-    let listed: DocumentDescriptor[] = []
-    try {
-      listed = (await getBridge()?.documents.list()) ?? []
-    } catch {
-      // No project open, or a folder that went away: an empty centre is the honest answer.
-    }
+    const found = await listed()
 
     // A second project opened while the first was still listing: the last answer to arrive is
     // not necessarily the one that was asked for last.
@@ -114,7 +109,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     // One `set` for both halves: the folder says which documents exist, the layout says which
     // are open, and between two writes every tab would paint and unpaint.
     const documents = Object.fromEntries(
-      listed.filter(document => shown.has(document.id)).map(document => [document.id, document]),
+      found.filter(document => shown.has(document.id)).map(document => [document.id, document]),
     )
 
     set(state => ({
@@ -130,21 +125,24 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     const kind = kindForWorkspace(workspace)
     if (!kind) return null
 
+    // Numbered against the folder as much as against the open tabs: a document saved and then
+    // closed still holds its name, and counting only what is open hands that name out twice.
+    const stored = await listed()
+    const taken = new Set([
+      ...stored.filter(document => document.workspace === workspace).map(document => document.id),
+      ...documentsIn(get(), workspace).map(document => document.id),
+    ])
+
     const document: DocumentDescriptor = {
       id: newId(),
       kind,
       workspace,
-      title: i18next.t('documents.untitled', { n: documentsIn(get(), workspace).length + 1 }),
+      title: i18next.t('documents.untitled', { n: taken.size + 1 }),
     }
 
-    // Written before it is announced, and empty: the project folder is what says a document
-    // exists, so a tab opened and not yet typed in must survive a reload like any other. A
-    // write that fails opens no tab rather than one the next launch would silently drop.
-    await getBridge()?.documents.write(document.id, kind, {
-      title: document.title,
-      content: undefined,
-    })
-
+    // Nothing is written yet, and nothing should be: a document appears in the folder when it
+    // holds something. A file per tab opened and never typed in would litter the project with
+    // empty documents that only a hand could remove.
     set(state => ({ documents: { ...state.documents, [document.id]: document } }))
     return document
   },
@@ -159,3 +157,16 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
 /** Bumped per refresh, so a listing that comes back late cannot install itself. */
 let generation = 0
+
+/**
+ * What the project folder holds, or nothing at all: no project open, or a folder that went away
+ * while one was. An empty centre is the honest answer to both, and neither is worth a throw
+ * nobody is placed to catch.
+ */
+async function listed(): Promise<DocumentDescriptor[]> {
+  try {
+    return (await getBridge()?.documents.list()) ?? []
+  } catch {
+    return []
+  }
+}

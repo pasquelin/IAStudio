@@ -52,7 +52,11 @@ export function workspaceForKind(kind: DocumentKind): WorkspaceId | null {
   return WORKSPACE_IDS.find(workspace => KIND_BY_WORKSPACE[workspace] === kind) ?? null
 }
 
-export const DOCUMENT_VERSION = 1
+/**
+ * 2 since the envelope moved onto a line of its own — see `DocumentFile`. A file written by
+ * version 1 is still read: its whole body is one JSON object, content included.
+ */
+export const DOCUMENT_VERSION = 2
 
 export const DOCUMENTS_FOLDER = 'documents'
 
@@ -93,12 +97,18 @@ export function kindForExtension(extension: string): DocumentKind | null {
 }
 
 /**
- * What an editor hands over to be saved. `content` is whatever that kind serializes — the file
- * layer never reads into it, so a new kind adds no case there.
+ * What an editor hands over to be saved. `content` is already serialized, and that is the whole
+ * point: the file layer never reads into it, so it never pays for it either. `JSON.parse` of a
+ * scene of twenty thousand nodes is synchronous, and the main process owns every window.
+ *
+ * Every space already serializes to a string — `serializeScene`, `serializeCanvas`,
+ * `serializeSequence` — so this is the form they were in anyway.
+ *
+ * The empty string means a document that holds nothing yet: a tab opened and not typed in.
  */
-export type DocumentDraft<C = unknown> = {
+export type DocumentDraft = {
   title: string
-  content: C
+  content: string
 }
 
 /**
@@ -108,9 +118,28 @@ export type DocumentDraft<C = unknown> = {
  *
  * `version` is the file format's, not the document's: it is what lets a project written by an
  * older build be migrated rather than refused.
+ *
+ * On disk, the envelope is the first line and the content is everything after it:
+ *
+ * ```
+ * {"version":2,"kind":"scene","title":"Level","updatedAt":"2026-08-07T…"}
+ * {"nodes":[…]}
+ * ```
+ *
+ * Two lines rather than one object, so that listing a project reads a short head per file
+ * instead of parsing every document in it — and a folder still reads by eye.
  */
-export type DocumentFile<C = unknown> = DocumentDraft<C> & {
+export type DocumentFile = DocumentDraft & {
   version: number
   kind: DocumentKind
   updatedAt: string
 }
+
+/** The envelope alone, which is all a listing needs. */
+export type DocumentEnvelope = Omit<DocumentFile, 'content'>
+
+/**
+ * How much of a file the envelope may take. It holds a capped title and three short fields; a
+ * head longer than this is not one, and reading further would be reading the document itself.
+ */
+export const ENVELOPE_LIMIT = 8 * 1024
