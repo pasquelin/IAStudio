@@ -1,18 +1,15 @@
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { DockviewApi } from 'dockview-react'
 
-/**
- * The handle on the open tabs, held outside the component that mounts them.
- *
- * Module-level rather than a context: the rail's button and the native menu both open
- * documents, and neither sits under `DocumentArea`. In its own file rather than beside that
- * component: a space reaching for `setDocumentTitle` would otherwise import the module that
- * imports every space.
- */
+// In its own file rather than beside `DocumentArea`: a space reaching for `setDocumentTitle`
+// would otherwise import the module that imports every space.
+
+// Module-level rather than a context: the rail's button and the native menu both open
+// documents, and neither sits under `DocumentArea`.
 let current: DockviewApi | null = null
 
 /** Called by `DocumentArea` once Dockview is ready — and again on every workspace remount. */
-export function holdDockviewApi(api: DockviewApi | null): void {
+export function setDockviewApi(api: DockviewApi | null): void {
   current = api
 }
 

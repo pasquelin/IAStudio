@@ -3,7 +3,7 @@ import { useCallback } from 'react'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { DOCUMENT_COMPONENTS } from './documents'
-import { holdDockviewApi } from './dockview-api'
+import { setDockviewApi } from './dockview-api'
 
 /**
  * Dockview, remounted per workspace by its `key`: coming back to "3D" must restore that
@@ -22,7 +22,7 @@ export function DocumentArea() {
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
-      holdDockviewApi(event.api)
+      setDockviewApi(event.api)
 
       const stored = useLayouts.getState().layouts[workspace]
       if (stored) event.api.fromJSON(stored)

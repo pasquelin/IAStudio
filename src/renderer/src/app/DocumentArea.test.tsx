@@ -3,6 +3,7 @@ import { Orientation } from 'dockview-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts, type SerializedLayout } from '@/stores/layouts'
+import { openDocument, setDocumentTitle } from './dockview-api'
 
 const addPanel = vi.fn()
 const setTitle = vi.fn()
@@ -84,7 +85,6 @@ describe('DocumentArea', () => {
 
   it('opens a panel for a document created after mount', async () => {
     const { DocumentArea } = await import('./DocumentArea')
-    const { openDocument } = await import('./dockview-api')
     render(<DocumentArea />)
 
     const created = await useDocuments.getState().create('3d')
@@ -102,7 +102,6 @@ describe('DocumentArea', () => {
 
   it('marks the tab of a document with unsaved work, and only that tab', async () => {
     const { DocumentArea } = await import('./DocumentArea')
-    const { setDocumentTitle } = await import('./dockview-api')
     render(<DocumentArea />)
     panels['doc-3'] = { setTitle }
 
