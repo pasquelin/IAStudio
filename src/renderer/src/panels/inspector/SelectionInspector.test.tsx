@@ -49,7 +49,7 @@ function openSequence(): void {
   })
 }
 
-describe('Inspector', () => {
+describe('Inspector, on what a panel selected', () => {
   beforeEach(() => {
     useSelection.setState({ selection: { kind: 'none' } })
     useAssets.setState({ items: [asset()] })
