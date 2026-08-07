@@ -1,8 +1,20 @@
 import { act, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
 import { useSequences } from '@/stores/sequences'
 import { SequenceDocument } from './SequenceDocument'
+
+// jsdom has neither WebGL nor WebCodecs: the engine is exercised by hand, not here. What this
+// covers is that the document wires the bar and the history to the right calls.
+vi.mock('@/engines/timeline/TimelineEngine', () => ({
+  TimelineEngine: class {
+    mount = vi.fn(() => Promise.resolve())
+    apply = vi.fn()
+    seek = vi.fn(() => Promise.resolve())
+    openDecoders = vi.fn(() => 0)
+    dispose = vi.fn()
+  },
+}))
 
 const clip = {
   id: 'a',

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { historyOf, useSequences } from '@/stores/sequences'
+import { ProgramMonitor } from './ProgramMonitor'
 import { TimelineCanvas } from './TimelineCanvas'
 import { DEFAULT_VIDEO_TOOL, VIDEO_TOOLS } from './video-tools'
 
@@ -18,7 +19,9 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="bg-chassis relative min-h-0 flex-1" />
+      <div className="bg-chassis relative min-h-0 flex-1">
+        <ProgramMonitor documentId={documentId} />
+      </div>
 
       <div className="border-border bg-base relative h-64 shrink-0 border-t">
         <TimelineCanvas documentId={documentId} tool={tool} />
