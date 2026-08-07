@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, net } from 'electron'
+import { app, BrowserWindow, dialog, net, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -7,6 +7,7 @@ import { delimiter, dirname } from 'node:path'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import type { AuthState } from '@shared/domain/settings'
+import { log } from './log'
 import { TRANSLATIONS } from '@shared/i18n'
 import { resolveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
@@ -50,6 +51,8 @@ export type Services = {
   link: (source: string, type: AssetType) => Promise<Asset>
   capabilities: () => Promise<MediaCapabilities>
   pickFolder: () => Promise<string | null>
+  /** Shows a file in the OS file manager. The path never leaves this process — invariant 1. */
+  reveal: (file: string) => void
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
@@ -140,7 +143,7 @@ export function createServices(): Services {
 
   const media = createMediaService({
     ffmpeg: ffmpeg.path,
-    run: (binary, args, signal) => runProcess(binary, args, { signal }),
+    run: (binary, args, signal, onStdout) => runProcess(binary, args, { signal, onStdout }),
     probe: (source, signal) => probeSource(companionPath(ffmpeg.path()), source, { signal }),
     hash: hashSource,
     duplicateExists: async (assetId, hash) => {
@@ -192,8 +195,14 @@ export function createServices(): Services {
 
   const lastProject = settings.read().storage.lastProject
   // Best effort: the folder may have been moved or deleted since the last session, and that
-  // is not a reason to refuse to start.
-  if (lastProject) void project.open(lastProject).catch(() => {})
+  // is not a reason to refuse to start. Said out loud all the same — swallowed, a catalogue
+  // that fails to open leaves every panel claiming no project is open while the folder is
+  // plainly still there, and nothing anywhere says why.
+  if (lastProject) {
+    void project.open(lastProject).catch((error: unknown) => {
+      log.warn('project', `reopening ${lastProject} failed: ${String(error)}`)
+    })
+  }
 
   return {
     settings,
@@ -216,6 +225,7 @@ export function createServices(): Services {
       return { ffmpeg: await binaryRuns(ffmpeg.path()) }
     },
     pickFolder,
+    reveal: file => shell.showItemInFolder(file),
     pickMedia,
     // Another key means another catalogue: keeping the cache would show the previous
     // account's models under the new one.

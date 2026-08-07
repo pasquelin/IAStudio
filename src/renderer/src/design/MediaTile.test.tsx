@@ -34,6 +34,13 @@ describe('MediaTile', () => {
     expect(screen.getByText('Scenario LLM')).toBeInTheDocument()
   })
 
+  // A sound has no thumbnail to fail at: the broken-image glyph reads as a bug in the browser.
+  it('draws the icon it was given rather than a broken picture', () => {
+    render(<MediaTile caption="pad.wav" fallbackIcon="M1 1" />)
+
+    expect(document.querySelector('path')).toHaveAttribute('d', 'M1 1')
+  })
+
   // The caption has to stay readable over a picture; it is never the picture's own text.
   it('keeps the caption when a badge is given too', () => {
     render(<MediaTile url="https://cdn/one.png" caption="Flux" badge={<span>Featured</span>} />)

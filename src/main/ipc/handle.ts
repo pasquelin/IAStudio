@@ -29,6 +29,7 @@ type ChannelMethod = {
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']
+  [CHANNELS.assetsReveal]: StudioBridge['assets']['reveal']
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
 
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']

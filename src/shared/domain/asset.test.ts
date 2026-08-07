@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { assetIdFromUrl, assetUrl, isAssetType, mediaDuration, type Asset } from './asset'
+import {
+  assetIdFromUrl,
+  assetUrl,
+  isAssetType,
+  mediaDuration,
+  withoutSourcePath,
+  type Asset,
+} from './asset'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -25,6 +32,22 @@ describe('asset URLs', () => {
     expect(assetIdFromUrl('scenario://other/asset_1')).toBeNull()
     expect(assetIdFromUrl('scenario://asset/')).toBeNull()
     expect(assetIdFromUrl('not a url')).toBeNull()
+  })
+})
+
+describe('what the renderer may see of an asset', () => {
+  it('drops the absolute path of the file behind it', () => {
+    const linked = asset({ sourcePath: '/Volumes/Rushes/A001/rush.mov', hash: 'abc' })
+    const seen = withoutSourcePath(linked)
+
+    expect(seen.sourcePath).toBeUndefined()
+    // Everything else survives: the window still shows the name, the probe and the hash.
+    expect(seen).toEqual({ ...linked, sourcePath: undefined })
+  })
+
+  it('leaves an asset with no path of its own untouched', () => {
+    const generated = asset({ path: 'assets/vid/one.mp4' })
+    expect(withoutSourcePath(generated)).toBe(generated)
   })
 })
 

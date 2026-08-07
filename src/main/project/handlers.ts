@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { CHANNELS } from '@shared/ipc'
-import { assetFilePath } from '@main/assets/protocol'
+import { withoutSourcePath } from '@shared/domain/asset'
+import { assetFilePath, servedFileOf } from '@main/assets/protocol'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { probeWav } from '@main/media/wav'
@@ -24,6 +25,8 @@ export type ProjectHandlerDeps = {
   newAssetId: () => string
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
   pickFolder: () => Promise<string | null>
+  /** Shows a file in the OS file manager — `shell.showItemInFolder`, injected for the same reason. */
+  reveal: (file: string) => void
 }
 
 export function registerProjectHandlers({
@@ -31,6 +34,7 @@ export function registerProjectHandlers({
   assets,
   newAssetId,
   pickFolder,
+  reveal,
 }: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, (_event, path, name) =>
     project.create(parseProjectPath(path), parseProjectName(name)),
@@ -42,7 +46,20 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.projectPickFolder, () => pickFolder())
 
-  handle(CHANNELS.assetsSearch, (_event, query) => project.catalog().search(parseAssetQuery(query)))
+  handle(CHANNELS.assetsSearch, async (_event, query) => {
+    const found = await project.catalog().search(parseAssetQuery(query))
+    return found.map(withoutSourcePath)
+  })
+
+  handle(CHANNELS.assetsReveal, async (_event, assetId) => {
+    const asset = await project.catalog().find(parseAssetId(assetId))
+    // The same resolver the scheme serves through, so a stored path cannot point outside.
+    const file = asset ? servedFileOf(project.path(), asset) : null
+    if (!file) return false
+
+    reveal(file)
+    return true
+  })
 
   handle(CHANNELS.assetsPeaks, async (_event, assetId) => {
     const asset = await project.catalog().find(parseAssetId(assetId))
@@ -67,19 +84,23 @@ export function registerProjectHandlers({
     const probe = probeWav(request.wav) ?? undefined
 
     if (request.replaces) {
-      return assets.replaceBytes(request.replaces, request.wav, WAV_EXTENSION, probe)
+      return withoutSourcePath(
+        await assets.replaceBytes(request.replaces, request.wav, WAV_EXTENSION, probe),
+      )
     }
 
-    return assets.importFromBytes(
-      {
-        id: newAssetId(),
-        name: request.name,
-        type: 'audio',
-        extension: WAV_EXTENSION,
-        ...(probe ? { probe } : {}),
-        ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
-      },
-      request.wav,
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: request.name,
+          type: 'audio',
+          extension: WAV_EXTENSION,
+          ...(probe ? { probe } : {}),
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+        },
+        request.wav,
+      ),
     )
   })
 }

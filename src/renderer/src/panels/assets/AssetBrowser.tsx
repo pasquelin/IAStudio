@@ -5,6 +5,7 @@ import { ASSET_TYPES, posterUrl, type Asset, type AssetType } from '@shared/doma
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { startAssetDrag } from '@/helpers/asset-drag'
+import { assetIcon } from '@/helpers/asset-icons'
 import { filterLocally, isFiltered, type FacetDescriptor } from '@/helpers/collection-state'
 import { MediaTile } from '@/design/MediaTile'
 import { Row } from '@/design/Row'
@@ -149,7 +150,11 @@ function Draggable({
 const AssetCard = memo(function AssetCard({ asset }: { asset: Asset }) {
   return (
     <Draggable asset={asset}>
-      <MediaTile url={posterUrl(asset) ?? undefined} caption={asset.name} />
+      <MediaTile
+        url={posterUrl(asset) ?? undefined}
+        caption={asset.name}
+        fallbackIcon={assetIcon(asset.type)}
+      />
     </Draggable>
   )
 })

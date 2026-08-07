@@ -11,6 +11,11 @@ export type MediaTileProps = {
   caption: string
   /** Overlaid at the top right — a standing or a state, never an action. */
   badge?: ReactNode
+  /**
+   * Drawn in place of the picture. Defaults to a broken image, which is only honest where one
+   * was expected: a sound has no thumbnail to fail at, and saying otherwise reads as a bug.
+   */
+  fallbackIcon?: string
 }
 
 /**
@@ -20,7 +25,12 @@ export type MediaTileProps = {
  * The caption stays legible over any picture through three layers — a gradient, a shadow and
  * white — because an example can be pale, dark or busy, and often is.
  */
-export function MediaTile({ url, caption, badge }: MediaTileProps) {
+export function MediaTile({
+  url,
+  caption,
+  badge,
+  fallbackIcon = mdiImageOffOutline,
+}: MediaTileProps) {
   const { src, onError } = useLoadable(url)
 
   return (
@@ -34,11 +44,7 @@ export function MediaTile({ url, caption, badge }: MediaTileProps) {
           className="absolute inset-0 size-full object-cover"
         />
       ) : (
-        <UiIcon
-          path={mdiImageOffOutline}
-          size={20}
-          className="text-muted/30 absolute inset-0 m-auto"
-        />
+        <UiIcon path={fallbackIcon} size={20} className="text-muted/30 absolute inset-0 m-auto" />
       )}
 
       {badge}

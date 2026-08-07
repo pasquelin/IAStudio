@@ -137,6 +137,22 @@ export function isLocalPicture(asset: Asset): boolean {
 }
 
 /**
+ * An asset as the renderer may see it: without the absolute path of the file behind it.
+ *
+ * The renderer has no filesystem, so a path there is only ever text on screen — and handing it
+ * every user's folder layout buys nothing while widening what a compromised dependency in the
+ * window could read (CLAUDE.md, invariant 1). What one actually does with a path — show the
+ * file in the Finder — is a main-process errand, `assets:reveal`.
+ */
+export function withoutSourcePath(asset: Asset): Asset {
+  if (asset.sourcePath === undefined) return asset
+
+  const rest = { ...asset }
+  delete rest.sourcePath
+  return rest
+}
+
+/**
  * How long the media itself runs, or null when it has no length of its own. A still picture
  * probes as `duration: 0` — a real value, not a missing one — and an asset nobody has probed
  * yet has no probe at all. Both are timeless, and both must reach a caller as the same answer.

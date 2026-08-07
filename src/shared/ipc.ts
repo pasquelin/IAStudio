@@ -37,6 +37,7 @@ export type Channels = {
 
   assetsSearch: 'assets:search'
   assetsPeaks: 'assets:peaks'
+  assetsReveal: 'assets:reveal'
   assetsSaveAudio: 'assets:save-audio'
 
   mediaIngest: 'media:ingest'
@@ -74,6 +75,7 @@ export const CHANNELS: Channels = {
 
   assetsSearch: 'assets:search',
   assetsPeaks: 'assets:peaks',
+  assetsReveal: 'assets:reveal',
   assetsSaveAudio: 'assets:save-audio',
 
   mediaIngest: 'media:ingest',
@@ -182,6 +184,14 @@ export type StudioBridge = {
      * asset carries no sound, or when ffmpeg was missing when it was brought in.
      */
     peaks: (assetId: string) => Promise<Float32Array | null>
+    /**
+     * Shows the asset's file in the OS file manager. The path itself stays in the main process
+     * — the renderer has no filesystem, so a path would only ever be text on screen, and
+     * broadcasting every user's folder layout to it buys nothing (CLAUDE.md, invariant 1).
+     *
+     * Answers whether there was a file to show: a cloud-only asset has none.
+     */
+    reveal: (assetId: string) => Promise<boolean>
     /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
     saveAudio: (request: SaveAudioRequest) => Promise<Asset>
   }

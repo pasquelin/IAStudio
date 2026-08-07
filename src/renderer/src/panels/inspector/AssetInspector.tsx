@@ -1,4 +1,4 @@
-import { mdiRefresh } from '@mdi/js'
+import { mdiFolderOpenOutline, mdiRefresh } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
@@ -8,6 +8,7 @@ import { formatBytes } from '@/helpers/format'
 import { generationOf } from '@/helpers/generation'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
+import { getBridge } from '@/services/bridge'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -50,12 +51,17 @@ export function AssetInspector({ asset }: { asset: Asset }) {
 
       {generation && <GenerationGroup generation={generation} />}
 
-      {(asset.path ?? asset.sourcePath) && (
+      {asset.location === 'local' && (
         <PropertyGroup title={t('inspector.file')}>
-          <PropertyRow label={t('inspector.path')} stacked>
-            <span className="text-muted font-mono text-[10px] break-all">
-              {asset.path ?? asset.sourcePath}
-            </span>
+          {/* The path itself stays in the main process — showing the file is what one does with
+              it anyway, and the window never learns the user's folder layout. */}
+          <PropertyRow label={t('inspector.onDisk')}>
+            <ToolButton
+              icon={mdiFolderOpenOutline}
+              label={t('inspector.reveal')}
+              tooltip={TIP_LEFT}
+              onClick={() => void getBridge()?.assets.reveal(asset.id)}
+            />
           </PropertyRow>
         </PropertyGroup>
       )}

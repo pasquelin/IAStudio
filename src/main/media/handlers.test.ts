@@ -37,10 +37,20 @@ describe('media handlers', () => {
     const assets = await invoke(CHANNELS.mediaIngest)
 
     expect(assets).toMatchObject([
-      { name: 'a', type: 'video', sourcePath: '/rushes/a.mov' },
-      { name: 'b', type: 'audio', sourcePath: '/takes/b.wav' },
+      { name: 'a', type: 'video' },
+      { name: 'b', type: 'audio' },
     ])
     expect(injected.link).toHaveBeenCalledTimes(2)
+  })
+
+  // The renderer has no filesystem: a path there is only ever text on screen, and handing the
+  // window every user's folder layout widens what a compromised dependency could read.
+  it('tells the window everything about a linked file except where it is', async () => {
+    registerMediaHandlers(deps({ pickMedia: async () => ['/Volumes/Rushes/a.mov'] }))
+
+    const assets = await invoke(CHANNELS.mediaIngest)
+
+    expect(assets).toEqual([expect.not.objectContaining({ sourcePath: expect.anything() })])
   })
 
   it('starts an ingest per linked file, without waiting for it to finish', async () => {

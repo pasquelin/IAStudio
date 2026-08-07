@@ -1,8 +1,8 @@
 import { PEAKS_PER_SECOND, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
 import { PEAKS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
-import { peaksArgs, proxyArgs } from './ffmpeg'
-import { decodePeaks, samplesOf } from './peaks'
+import { peaksArgs, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
+import { createPeakReducer } from './peaks'
 import type { ProbeOutcome } from './probe'
 
 /**
@@ -15,8 +15,16 @@ const DECODABLE_CODECS: readonly string[] = ['avc1', 'h264', 'vp8', 'vp9', 'av01
 export type MediaServiceDeps = {
   /** The resolved binary, or null when there is none — see `resolveFfmpeg`. */
   ffmpeg: () => string | null
-  /** The signal is aborted by `cancel`: a proxy of a twenty-minute rush must stop on demand. */
-  run: (binary: string, args: string[], signal: AbortSignal) => Promise<Buffer>
+  /**
+   * The signal is aborted by `cancel`: a proxy of a twenty-minute rush must stop on demand.
+   * `onStdout`, when given, folds the output as it arrives instead of collecting it.
+   */
+  run: (
+    binary: string,
+    args: string[],
+    signal: AbortSignal,
+    onStdout?: (chunk: Uint8Array) => void,
+  ) => Promise<Buffer>
   /** A missing ffprobe is not a failed import; a file ffprobe refuses is — see `ProbeOutcome`. */
   probe: (source: string, signal: AbortSignal) => Promise<ProbeOutcome>
   hash: (source: string) => Promise<string>
@@ -139,17 +147,20 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
           // reduced to one pair is a flat line that looks exactly like silence.
           if (probe.sampleRate && probe.duration > 0) {
             advance('peaks')
-            const pcm = await deps.run(binary, peaksArgs(sourcePath), controller.signal)
-            if (cancelled()) return
 
             const seconds = probe.duration / 1_000_000
             const buckets = Math.max(1, Math.round(seconds * PEAKS_PER_SECOND))
-            const relative = `${PEAKS_FOLDER}/${fields.hash}.bin`
+            // Folded as ffmpeg writes it: an hour of audio is 57 MB of PCM, and holding it to
+            // reduce it afterwards froze every window for the length of the reduction.
+            const reducer = createPeakReducer(buckets, PEAKS_SAMPLE_RATE / PEAKS_PER_SECOND)
 
-            await deps.writeFile(
-              `${project}/${relative}`,
-              new Uint8Array(decodePeaks(samplesOf(pcm), buckets).buffer),
+            await deps.run(binary, peaksArgs(sourcePath), controller.signal, chunk =>
+              reducer.push(chunk),
             )
+            if (cancelled()) return
+
+            const relative = `${PEAKS_FOLDER}/${fields.hash}.bin`
+            await deps.writeFile(`${project}/${relative}`, new Uint8Array(reducer.finish().buffer))
             fields.peaksPath = relative
           }
         }

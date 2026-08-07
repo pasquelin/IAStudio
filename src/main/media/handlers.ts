@@ -1,4 +1,4 @@
-import type { Asset } from '@shared/domain/asset'
+import { withoutSourcePath, type Asset } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
@@ -29,7 +29,8 @@ export function registerMediaHandlers({
       if (!type) continue
 
       const asset = await link(source, type)
-      assets.push(asset)
+      // The row keeps the path; the window is told everything but it — see `withoutSourcePath`.
+      assets.push(withoutSourcePath(asset))
       // Not awaited: the row exists, so the browser shows the file at once, while probing a
       // twenty-minute rush goes on reporting through `evt:media-progress`.
       void media.ingest(asset.id, source, type)

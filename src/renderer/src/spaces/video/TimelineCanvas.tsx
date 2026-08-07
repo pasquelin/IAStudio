@@ -23,6 +23,7 @@ import {
   type Size,
 } from '@/engines/timeline/viewport'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { cn } from '@/helpers/cn'
 import { cachedImage } from '@/helpers/image-cache'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useAssets } from '@/stores/assets'
@@ -38,6 +39,8 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
   const dragging = useRef<{ gesture: Gesture; base: SequenceState } | null>(null)
+  // Panning is not an edit: it moves the view, so it holds a viewport rather than a sequence.
+  const panning = useRef<{ from: Point; base: Viewport } | null>(null)
 
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const viewport = useTimelineView(state => viewportOf(state, documentId))
@@ -255,6 +258,12 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
     const point = pointAt(event)
 
+    if (tool === 'hand') {
+      event.currentTarget.setPointerCapture(event.pointerId)
+      panning.current = { from: point, base: viewport }
+      return
+    }
+
     if (tool === 'blade') {
       const target = hitTest(sequence, viewport, point)
       const clipId = target && 'clipId' in target ? target.clipId : null
@@ -288,6 +297,15 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
+    const pan = panning.current
+    if (pan) {
+      const point = pointAt(event)
+      // Measured from where the grab started, not from the last frame: accumulating deltas
+      // drifts, and the strip must sit exactly where the hand put it.
+      setViewport(scrollBy(pan.base, pan.from.x - point.x, pan.from.y - point.y))
+      return
+    }
+
     const current = dragging.current
     if (!current) return
 
@@ -302,6 +320,12 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }
 
   const onPointerUp = (event: PointerEvent<HTMLCanvasElement>): void => {
+    if (panning.current) {
+      panning.current = null
+      event.currentTarget.releasePointerCapture(event.pointerId)
+      return
+    }
+
     const current = dragging.current
     dragging.current = null
     if (!current) return
@@ -346,7 +370,10 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     <canvas
       ref={canvasRef}
       tabIndex={0}
-      className="block h-full w-full outline-none"
+      className={cn(
+        'block h-full w-full outline-none',
+        tool === 'hand' && 'cursor-grab active:cursor-grabbing',
+      )}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

@@ -130,6 +130,8 @@ export class TimelineEngine {
   private state: SequenceState = EMPTY_SEQUENCE
   /** Guards against two seeks interleaving their awaits and painting out of order. */
   private generation = 0
+  /** Set for good by `dispose`. A mount that resolves afterwards has nowhere left to attach. */
+  private disposed = false
 
   private readonly clock: Clock
   private frameHandle: number | null = null
@@ -186,8 +188,11 @@ export class TimelineEngine {
     const application = new Application()
     await application.init({ resizeTo: element, preference: 'webgl', backgroundAlpha: 0 })
 
-    // A mount cancelled while `init` was awaiting must not leave a canvas behind.
-    if (!element.isConnected) {
+    // A mount cancelled while `init` was awaiting must not leave a canvas behind. `disposed`
+    // rather than `isConnected` alone: React mounts, unmounts and remounts an effect on the
+    // very same element, so the element is still connected while this engine is already dead —
+    // and its canvas would stay on screen for the session, holding a WebGL context nobody owns.
+    if (this.disposed || !element.isConnected) {
       application.destroy(true, { children: true, texture: true })
       return
     }
@@ -250,6 +255,7 @@ export class TimelineEngine {
   }
 
   dispose(): void {
+    this.disposed = true
     this.pause()
     this.generation += 1
     this.pool.dispose()

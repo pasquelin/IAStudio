@@ -167,6 +167,29 @@ describe('TimelineCanvas', () => {
     expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(0)
   })
 
+  it('drags the view under the hand tool, which was declared and did nothing', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clipFixture('c', 0, 60_000_000)))
+    const canvas = paint('hand')
+
+    fireEvent.pointerDown(canvas, { clientX: 300, clientY: RULER_HEIGHT + 30 })
+    fireEvent.pointerMove(canvas, { clientX: 100, clientY: RULER_HEIGHT + 30 })
+
+    // Dragged left by 200 px: the strip moves right, so the view starts later in the montage.
+    expect(viewOf().offset).toBe(Math.round(200 / viewOf().scale))
+  })
+
+  it('leaves the montage untouched while the hand drags across a clip', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const before = clipsOf()
+    const canvas = paint('hand')
+
+    fireEvent.pointerDown(canvas, { clientX: 10, clientY: RULER_HEIGHT + 30 })
+    fireEvent.pointerMove(canvas, { clientX: 90, clientY: RULER_HEIGHT + 30 })
+    fireEvent.pointerUp(canvas, { clientX: 90, clientY: RULER_HEIGHT + 30 })
+
+    expect(clipsOf()).toEqual(before)
+  })
+
   it('undoes the last edit from the keyboard', () => {
     useSequences.getState().runCommand('doc-1', addClip('V1', clip))
 

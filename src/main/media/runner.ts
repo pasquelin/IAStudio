@@ -43,6 +43,11 @@ export type RunOptions = {
    * stopped by its signal instead; set on the short calls, where hanging is never legitimate.
    */
   timeoutMs?: number
+  /**
+   * Called with each chunk as it arrives, in order. Given, stdout is folded rather than kept,
+   * and the promise resolves empty — an hour of PCM is 57 MB nobody has to hold.
+   */
+  onStdout?: (chunk: Uint8Array) => void
 }
 
 // `spawn` rather than the `utilityProcess` § 8.8 asks for: the work already happens in
@@ -50,7 +55,7 @@ export type RunOptions = {
 export function runProcess(
   binary: string,
   args: readonly string[],
-  { signal, timeoutMs }: RunOptions = {},
+  { signal, timeoutMs, onStdout }: RunOptions = {},
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -79,7 +84,7 @@ export function runProcess(
       outcome()
     }
 
-    child.stdout.on('data', chunk => stdout.push(chunk))
+    child.stdout.on('data', chunk => (onStdout ? onStdout(chunk) : stdout.push(chunk)))
     child.stderr.on('data', chunk => stderr.push(chunk))
 
     // A pipe torn down under an in-flight read — which is what killing ffmpeg mid-stream does

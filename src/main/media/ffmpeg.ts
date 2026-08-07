@@ -82,7 +82,26 @@ export function proxyArgs(source: string, destination: string): string[] {
   ]
 }
 
+/**
+ * What the waveform is reduced from. Exported because the reducer needs it to know how many
+ * samples one peak covers: read from two places that could drift, the waveform would be the
+ * right shape drawn at the wrong speed.
+ */
+export const PEAKS_SAMPLE_RATE = 8_000
+
 /** Mono 16-bit PCM on stdout: the waveform is reduced from it once, never at paint time. */
 export function peaksArgs(source: string): string[] {
-  return ['-v', 'error', '-i', source, '-f', 's16le', '-ac', '1', '-ar', '8000', 'pipe:1']
+  return [
+    '-v',
+    'error',
+    '-i',
+    source,
+    '-f',
+    's16le',
+    '-ac',
+    '1',
+    '-ar',
+    `${PEAKS_SAMPLE_RATE}`,
+    'pipe:1',
+  ]
 }
