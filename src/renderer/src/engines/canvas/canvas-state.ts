@@ -1,3 +1,5 @@
+import { isRecord } from '@shared/guards'
+
 /**
  * An image document, as plain data. It holds no Pixi object on purpose: an engine is rebuilt
  * from its serialized state, never from its DOM, and jsdom has no WebGL context to test against.
@@ -84,7 +86,7 @@ export const IDENTITY: Transform = {
   originY: 0.5,
 }
 
-type LayerBase = {
+export type LayerBase = {
   id: string
   name: string
   visible: boolean
@@ -116,6 +118,8 @@ export type PixelLayer = LayerBase & {
 /** `pass-through` lets an adjustment inside the group reach what is under the group. */
 export type GroupIsolation = 'pass-through' | 'isolate'
 
+const GROUP_ISOLATIONS: readonly GroupIsolation[] = ['pass-through', 'isolate']
+
 export type GroupLayer = LayerBase & {
   kind: 'group'
   children: Layer[]
@@ -132,6 +136,8 @@ export type AdjustmentLayer = LayerBase & {
 
 export type Layer = PixelLayer | GroupLayer | AdjustmentLayer
 
+const GUIDE_AXES: readonly ('x' | 'y')[] = ['x', 'y']
+
 export type Guide = {
   id: string
   axis: 'x' | 'y'
@@ -139,7 +145,11 @@ export type Guide = {
   position: number
 }
 
+export const WHITE = 0xffffff
+
 export type ColorMode = 'rgb' | 'grayscale'
+
+const COLOR_MODES: readonly ColorMode[] = ['rgb', 'grayscale']
 export type BitDepth = 8 | 16 | 32
 
 export type CanvasState = {
@@ -155,25 +165,43 @@ export type CanvasState = {
   guides: Guide[]
 }
 
-export const WHITE = 0xffffff
+/**
+ * Every field a layer of any kind carries, at its default. Spelled once: a caller that forgets
+ * one gets a layer the compositor treats differently for no visible reason.
+ */
+export function layerBase(id: string, name: string): Omit<LayerBase, never> {
+  return {
+    id,
+    name,
+    visible: true,
+    locked: UNLOCKED,
+    opacity: 1,
+    fillOpacity: 1,
+    blend: 'normal',
+    clipped: false,
+    transform: IDENTITY,
+  }
+}
+
+export function pixelLayer(id: string, name: string, fill?: number): PixelLayer {
+  return { ...layerBase(id, name), kind: 'pixel', fill }
+}
+
+export function groupLayer(id: string, name: string, children: Layer[]): GroupLayer {
+  return {
+    ...layerBase(id, name),
+    kind: 'group',
+    children,
+    collapsed: false,
+    isolation: 'pass-through',
+  }
+}
 
 /**
  * The white page a new document opens on. It is a real layer, not a background colour: it can
  * be hidden, faded or deleted like any other, and the transparency checker shows through it.
  */
-const BASE_LAYER: PixelLayer = {
-  kind: 'pixel',
-  id: 'layer-1',
-  name: 'Background',
-  visible: true,
-  locked: UNLOCKED,
-  opacity: 1,
-  fillOpacity: 1,
-  blend: 'normal',
-  clipped: false,
-  transform: IDENTITY,
-  fill: WHITE,
-}
+const BASE_LAYER: PixelLayer = pixelLayer('layer-1', 'Background', WHITE)
 
 /** A new document opens with one layer, already active: a canvas you cannot paint on is a bug. */
 export const DEFAULT_CANVAS: CanvasState = {
@@ -204,6 +232,26 @@ export function layerById(state: CanvasState, id: string | null): Layer | null {
   return allLayers(state.layers).find(layer => layer.id === id) ?? null
 }
 
+/**
+ * The layers sharing a parent with `id`, rebuilt by `change`. Grouping made every neighbour
+ * operation — reorder, merge down, duplicate — a question about one level of the tree, not about
+ * `state.layers`, which is only the root.
+ *
+ * Returns the tree unchanged when nothing carries that id.
+ */
+export function updateSiblings(
+  layers: readonly Layer[],
+  id: string,
+  change: (siblings: readonly Layer[], index: number) => Layer[],
+): Layer[] {
+  const index = layers.findIndex(layer => layer.id === id)
+  if (index >= 0) return change(layers, index)
+
+  return layers.map(layer =>
+    isGroup(layer) ? { ...layer, children: updateSiblings(layer.children, id, change) } : layer,
+  )
+}
+
 /** Rebuilds the tree with one layer replaced, wherever it sits. `null` removes it. */
 export function mapLayers(
   layers: readonly Layer[],
@@ -229,14 +277,19 @@ export function serializeCanvas(state: CanvasState): string {
   return JSON.stringify(state)
 }
 
+/** A stored value narrowed back to what this build still accepts. */
+function oneOf<T extends string>(options: readonly T[], raw: unknown, fallback: T): T {
+  return options.find(option => option === raw) ?? fallback
+}
+
 /**
  * A layer read back from a file written by an older build. The stack predates `kind`, granular
  * locks and transforms, and a document saved then must still open — silently, with the same
  * pixels, not as an error dialog.
  */
-function reviveLayer(raw: unknown): Layer | null {
-  if (!raw || typeof raw !== 'object') return null
-  const source: Record<string, unknown> = { ...raw }
+function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
+  if (!isRecord(raw)) return null
+  const source = raw
   if (typeof source.id !== 'string') return null
 
   const base = {
@@ -246,7 +299,7 @@ function reviveLayer(raw: unknown): Layer | null {
     locked: reviveLocks(source.locked),
     opacity: typeof source.opacity === 'number' ? clampOpacity(source.opacity) : 1,
     fillOpacity: typeof source.fillOpacity === 'number' ? clampOpacity(source.fillOpacity) : 1,
-    blend: reviveBlend(source.blend),
+    blend: oneOf(BLEND_MODES, source.blend, 'normal'),
     clipped: source.clipped === true,
     transform: reviveTransform(source.transform),
     mask: reviveMask(source.mask),
@@ -256,53 +309,54 @@ function reviveLayer(raw: unknown): Layer | null {
     return {
       ...base,
       kind: 'group',
-      children: Array.isArray(source.children) ? reviveLayers(source.children) : [],
+      children: Array.isArray(source.children) ? reviveLayers(source.children, seen) : [],
       collapsed: source.collapsed === true,
-      isolation: source.isolation === 'isolate' ? 'isolate' : 'pass-through',
+      isolation: oneOf(GROUP_ISOLATIONS, source.isolation, 'pass-through'),
     }
   }
 
   if (source.kind === 'adjustment') {
-    return { ...base, kind: 'adjustment', adjustment: reviveAdjustment(source.adjustment) }
+    return {
+      ...base,
+      kind: 'adjustment',
+      adjustment: oneOf(ADJUSTMENT_KINDS, source.adjustment, 'levels'),
+    }
   }
 
   // No `kind` at all is the pre-groups format, where every layer was a pixel layer.
   return { ...base, kind: 'pixel', fill: typeof source.fill === 'number' ? source.fill : undefined }
 }
 
-function reviveLayers(raw: readonly unknown[]): Layer[] {
+/**
+ * `seen` spans the whole file, not one level: every lookup and every edit matches by id across
+ * the tree, so two layers sharing one would be renamed, hidden and painted together — and
+ * removing "it" would empty the stack the last-layer guard exists to protect.
+ */
+function reviveLayers(raw: readonly unknown[], seen: Set<string>): Layer[] {
   return raw.flatMap(entry => {
-    const layer = reviveLayer(entry)
-    return layer ? [layer] : []
+    const layer = reviveLayer(entry, seen)
+    if (!layer || seen.has(layer.id)) return []
+    seen.add(layer.id)
+    return [layer]
   })
 }
 
 function reviveLocks(raw: unknown): LayerLocks {
   // One boolean was the whole padlock before: it meant "nothing about this layer moves".
   if (raw === true) return { pixels: true, position: true, alpha: true }
-  if (!raw || typeof raw !== 'object') return UNLOCKED
-
-  const source: Record<string, unknown> = { ...raw }
+  if (!isRecord(raw)) return UNLOCKED
   return {
-    pixels: source.pixels === true,
-    position: source.position === true,
-    alpha: source.alpha === true,
+    pixels: raw.pixels === true,
+    position: raw.position === true,
+    alpha: raw.alpha === true,
   }
-}
-
-function reviveBlend(raw: unknown): BlendMode {
-  return BLEND_MODES.find(mode => mode === raw) ?? 'normal'
 }
 
 const ADJUSTMENT_KINDS: readonly AdjustmentKind[] = ['levels', 'curves', 'hsl', 'colorBalance']
 
-function reviveAdjustment(raw: unknown): AdjustmentKind {
-  return ADJUSTMENT_KINDS.find(kind => kind === raw) ?? 'levels'
-}
-
 function reviveTransform(raw: unknown): Transform {
-  if (!raw || typeof raw !== 'object') return IDENTITY
-  const source: Record<string, unknown> = { ...raw }
+  if (!isRecord(raw)) return IDENTITY
+  const source = raw
   const number = (key: keyof Transform): number =>
     typeof source[key] === 'number' ? source[key] : IDENTITY[key]
 
@@ -320,43 +374,46 @@ function reviveTransform(raw: unknown): Transform {
 }
 
 function reviveMask(raw: unknown): { enabled: boolean; linked: boolean } | undefined {
-  if (!raw || typeof raw !== 'object') return undefined
-  const source: Record<string, unknown> = { ...raw }
+  if (!isRecord(raw)) return undefined
+  const source = raw
   return { enabled: source.enabled !== false, linked: source.linked !== false }
 }
 
 function reviveGuides(raw: unknown): Guide[] {
   if (!Array.isArray(raw)) return []
   return raw.flatMap(entry => {
-    if (!entry || typeof entry !== 'object') return []
-    const source: Record<string, unknown> = { ...entry }
+    if (!isRecord(entry)) return []
+    const source = entry
     if (typeof source.id !== 'string' || typeof source.position !== 'number') return []
-    return [{ id: source.id, axis: source.axis === 'y' ? 'y' : 'x', position: source.position }]
+    return [{ id: source.id, axis: oneOf(GUIDE_AXES, source.axis, 'x'), position: source.position }]
   })
 }
 
 /** Unreadable input yields a fresh document: a blank canvas beats an uncaught throw. */
 export function deserializeCanvas(raw: string): CanvasState {
   try {
-    const parsed: unknown = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object') return DEFAULT_CANVAS
-
-    const source: Record<string, unknown> = { ...parsed }
-    const layers = Array.isArray(source.layers) ? reviveLayers(source.layers) : []
+    const source: unknown = JSON.parse(raw)
+    if (!isRecord(source)) return DEFAULT_CANVAS
+    const layers = Array.isArray(source.layers) ? reviveLayers(source.layers, new Set()) : []
     if (layers.length === 0) return DEFAULT_CANVAS
 
     const active = source.activeLayerId
-    const known = allLayers(layers).some(layer => layer.id === active)
+    // Paintable, not merely present: a group has no texture of its own, so arming one would
+    // swallow every stroke silently.
+    const known = allLayers(layers).some(layer => layer.id === active && !isGroup(layer))
 
     return {
       width: typeof source.width === 'number' ? source.width : DEFAULT_CANVAS.width,
       height: typeof source.height === 'number' ? source.height : DEFAULT_CANVAS.height,
       dpi: typeof source.dpi === 'number' ? source.dpi : DEFAULT_CANVAS.dpi,
-      colorMode: source.colorMode === 'grayscale' ? 'grayscale' : 'rgb',
+      colorMode: oneOf(COLOR_MODES, source.colorMode, 'rgb'),
       bitDepth: source.bitDepth === 16 || source.bitDepth === 32 ? source.bitDepth : 8,
       layers,
       // An id naming no layer would leave the document unpaintable, with no way back.
-      activeLayerId: known && typeof active === 'string' ? active : (layers[0]?.id ?? null),
+      activeLayerId:
+        known && typeof active === 'string'
+          ? active
+          : (allLayers(layers).find(layer => !isGroup(layer))?.id ?? null),
       guides: reviveGuides(source.guides),
     }
   } catch {

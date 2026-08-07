@@ -2,17 +2,19 @@ import type { Command } from '../core/history'
 import {
   allLayers,
   clampOpacity,
+  DEFAULT_CANVAS,
+  groupLayer,
   isGroup,
+  layerById,
   mapLayers,
-  IDENTITY,
-  UNLOCKED,
+  pixelLayer,
+  updateSiblings,
   type BlendMode,
   type CanvasState,
-  type GroupLayer,
   type Layer,
   type LayerLocks,
-  type PixelLayer,
   type Rect,
+  type Transform,
 } from './canvas-state'
 
 /**
@@ -34,54 +36,49 @@ export function addLayer(layer: Layer): Command<CanvasState> {
 }
 
 export function removeLayer(id: string): Command<CanvasState> {
-  let removed: Layer | null = null
-  let index = -1
-  let wasActive = false
+  // Restructuring: removing a group takes its whole subtree, which no field-by-field inverse
+  // would put back at the right depth.
+  return restructure(`layer:remove:${id}`, state => {
+    const target = layerById(state, id)
+    if (!target) return state
 
-  return {
-    id: `layer:remove:${id}`,
-    apply: state => {
-      index = state.layers.findIndex(layer => layer.id === id)
-      // The last layer never goes: a document with an empty stack cannot be painted on.
-      if (index < 0 || state.layers.length === 1) return state
+    // Counted across the tree, and only what can hold pixels: a root holding one group still
+    // holds every layer inside it, and a document with an empty stack cannot be painted on.
+    const paintable = allLayers(state.layers).filter(layer => !isGroup(layer))
+    if (!isGroup(target) && paintable.length <= 1) return state
 
-      removed = state.layers[index] ?? null
-      wasActive = state.activeLayerId === id
-      return withoutLayer(state, id)
-    },
-    revert: state => {
-      if (!removed || index < 0) return state
-      const layers = [...state.layers]
-      // Back at its original index: re-appending would silently restack the document.
-      layers.splice(index, 0, removed)
-      return { ...state, layers, activeLayerId: wasActive ? removed.id : state.activeLayerId }
-    },
-  }
+    return withoutLayer(state, id)
+  })
 }
 
-/** Removing the active layer moves the selection to a neighbour, never leaves it dangling. */
+/**
+ * Removing the active layer moves the selection to a neighbour, never leaves it dangling —
+ * checked against what survives, not against the id removed: taking a group takes its children
+ * with it, and one of those may be the armed one.
+ */
 function withoutLayer(state: CanvasState, id: string): CanvasState {
-  const flat = allLayers(state.layers)
-  const index = flat.findIndex(layer => layer.id === id)
+  const index = allLayers(state.layers).findIndex(layer => layer.id === id)
   const layers = mapLayers(state.layers, layer => (layer.id === id ? null : layer))
-  if (state.activeLayerId !== id) return { ...state, layers }
 
-  const remaining = allLayers(layers)
+  const remaining = allLayers(layers).filter(layer => !isGroup(layer))
+  if (remaining.some(layer => layer.id === state.activeLayerId)) return { ...state, layers }
+
   const neighbour = remaining[Math.min(index, remaining.length - 1)]
   return { ...state, layers, activeLayerId: neighbour?.id ?? null }
 }
 
+/** Within its own level: reordering never moves a layer in or out of the group holding it. */
 export function reorderLayer(id: string, toIndex: number): Command<CanvasState> {
-  let fromIndex = -1
-
-  return {
-    id: `layer:reorder:${id}`,
-    apply: state => {
-      fromIndex = state.layers.findIndex(layer => layer.id === id)
-      return fromIndex < 0 ? state : moved(state, fromIndex, toIndex)
-    },
-    revert: state => (fromIndex < 0 ? state : moved(state, toIndex, fromIndex)),
-  }
+  return restructure(`layer:reorder:${id}`, state =>
+    layerById(state, id)
+      ? {
+          ...state,
+          layers: updateSiblings(state.layers, id, (siblings, from) =>
+            moved(siblings, from, toIndex),
+          ),
+        }
+      : state,
+  )
 }
 
 export function setLayerBlend(id: string, blend: BlendMode): Command<CanvasState> {
@@ -100,12 +97,12 @@ export function setLayerClipped(id: string, clipped: boolean): Command<CanvasSta
   return patch(`layer:clip:${id}`, id, { clipped })
 }
 
-function moved(state: CanvasState, from: number, to: number): CanvasState {
-  const layers = [...state.layers]
+function moved(siblings: readonly Layer[], from: number, to: number): Layer[] {
+  const layers = [...siblings]
   const [layer] = layers.splice(from, 1)
-  if (!layer) return state
+  if (!layer) return [...siblings]
   layers.splice(Math.min(Math.max(to, 0), layers.length), 0, layer)
-  return { ...state, layers }
+  return layers
 }
 
 export function setLayerOpacity(id: string, opacity: number): Command<CanvasState> {
@@ -135,18 +132,7 @@ function patch(
     id: commandId,
     apply: state => {
       previous = allLayers(state.layers).find(layer => layer.id === id) ?? null
-      // Spread per kind rather than once over the union: TypeScript cannot see that spreading
-      // shared fields onto `Layer` leaves it in the union, and this repo takes no `as`.
-      return mapLayer(state, id, layer => {
-        switch (layer.kind) {
-          case 'group':
-            return { ...layer, ...fields }
-          case 'adjustment':
-            return { ...layer, ...fields }
-          default:
-            return { ...layer, ...fields }
-        }
-      })
+      return mapLayer(state, id, layer => ({ ...layer, ...fields }))
     },
     revert: state => (previous ? mapLayer(state, id, () => previous ?? undefined) : state),
   }
@@ -169,26 +155,6 @@ export function selectLayer(state: CanvasState, id: string | null): CanvasState 
 }
 
 /**
- * A pixel layer with every default filled in. Twelve fields to spell out otherwise, and every
- * caller that forgets one gets a layer the compositor treats differently for no visible reason.
- */
-export function pixelLayer(id: string, name: string, fill?: number): PixelLayer {
-  return {
-    kind: 'pixel',
-    id,
-    name,
-    visible: true,
-    locked: UNLOCKED,
-    opacity: 1,
-    fillOpacity: 1,
-    blend: 'normal',
-    clipped: false,
-    transform: IDENTITY,
-    fill,
-  }
-}
-
-/**
  * Restructuring commands — grouping, merging, flattening — revert by putting the stack back.
  *
  * A stack is metadata: ids, names, opacities. The pixels are not in it, they live in the
@@ -199,21 +165,16 @@ function restructure(
   commandId: string,
   change: (state: CanvasState) => CanvasState,
 ): Command<CanvasState> {
-  let before: Pick<CanvasState, 'layers' | 'activeLayerId'> | null = null
+  let before: CanvasState | null = null
 
   return {
     id: commandId,
     apply: state => {
-      before = { layers: state.layers, activeLayerId: state.activeLayerId }
+      before = state
       return change(state)
     },
-    revert: state => (before ? { ...state, ...before } : state),
+    revert: () => before ?? DEFAULT_CANVAS,
   }
-}
-
-/** The layers named, in stack order, and only those at the top level — a group moves whole. */
-function taken(layers: readonly Layer[], ids: ReadonlySet<string>): Layer[] {
-  return layers.filter(layer => ids.has(layer.id))
 }
 
 /**
@@ -229,23 +190,18 @@ export function groupLayers(
   const wanted = new Set(ids)
 
   return restructure(`layer:group:${groupId}`, state => {
-    const members = taken(state.layers, wanted)
+    // Top level only: a group moves whole, and pulling siblings out of one silently would be
+    // a restructure nobody asked for. The panel offers nothing else.
+    const members = state.layers.filter(layer => wanted.has(layer.id))
     if (members.length === 0) return state
 
-    const last = state.layers.findIndex(layer => layer.id === members.at(-1)?.id)
+    const last = state.layers.findLastIndex(layer => wanted.has(layer.id))
     const rest = state.layers.filter(layer => !wanted.has(layer.id))
-    const group: GroupLayer = {
-      ...pixelLayer(groupId, name),
-      kind: 'group',
-      children: members,
-      collapsed: false,
-      isolation: 'pass-through',
-    }
+    const group = groupLayer(groupId, name, members)
 
-    // Where the topmost member was, minus the members removed below it: the group must not
-    // jump above what used to cover it.
-    const below = state.layers.slice(0, last).filter(layer => wanted.has(layer.id)).length
-    const at = Math.max(0, last - below)
+    // Where the topmost member was, counted among the layers that stay: the group must not jump
+    // above what used to cover it.
+    const at = state.layers.slice(0, last).filter(layer => !wanted.has(layer.id)).length
     return {
       ...state,
       layers: [...rest.slice(0, at), group, ...rest.slice(at)],
@@ -257,15 +213,14 @@ export function groupLayers(
 /** Dissolves a group, leaving its children where it stood. */
 export function ungroupLayer(id: string): Command<CanvasState> {
   return restructure(`layer:ungroup:${id}`, state => {
-    const index = state.layers.findIndex(layer => layer.id === id)
-    const group = state.layers[index]
+    const group = layerById(state, id)
     if (!group || !isGroup(group)) return state
 
-    const layers = [
-      ...state.layers.slice(0, index),
+    const layers = updateSiblings(state.layers, id, (siblings, index) => [
+      ...siblings.slice(0, index),
       ...group.children,
-      ...state.layers.slice(index + 1),
-    ]
+      ...siblings.slice(index + 1),
+    ])
     return { ...state, layers, activeLayerId: group.children.at(-1)?.id ?? state.activeLayerId }
   })
 }
@@ -276,13 +231,19 @@ export function ungroupLayer(id: string): Command<CanvasState> {
  */
 export function mergeDown(id: string): Command<CanvasState> {
   return restructure(`layer:merge-down:${id}`, state => {
-    const index = state.layers.findIndex(layer => layer.id === id)
-    const below = state.layers[index - 1]
-    if (index < 1 || !below) return state
+    let merged: string | null = null
 
-    // The merged result takes the lower layer's identity, so its texture is the one kept.
-    const layers = state.layers.filter((_, at) => at !== index)
-    return { ...state, layers, activeLayerId: below.id }
+    // Within its own level: a layer merges into the one below it, not through the wall of the
+    // group it sits in.
+    const layers = updateSiblings(state.layers, id, (siblings, index) => {
+      const below = siblings[index - 1]
+      if (!below) return [...siblings]
+      // The result takes the lower layer's identity, so its texture is the one kept.
+      merged = below.id
+      return siblings.filter((_, at) => at !== index)
+    })
+
+    return merged ? { ...state, layers, activeLayerId: merged } : state
   })
 }
 
@@ -295,35 +256,68 @@ export function flatten(id: string, name: string): Command<CanvasState> {
   }))
 }
 
-export function duplicateLayer(id: string, copyId: string, name: string): Command<CanvasState> {
+/**
+ * Every id in the copy is fresh, children included. A shallow copy of a group would leave two
+ * layers sharing an id — and everything downstream matches by id: one rename would rename both,
+ * and `CanvasEngine` keys its textures that way, so painting one would paint the other.
+ */
+function copyOf(layer: Layer, id: string, name: string, newId: () => string): Layer {
+  const copy = { ...layer, id, name }
+  return isGroup(copy)
+    ? { ...copy, children: copy.children.map(child => copyOf(child, newId(), child.name, newId)) }
+    : copy
+}
+
+export function duplicateLayer(
+  id: string,
+  copyId: string,
+  name: string,
+  newId: () => string,
+): Command<CanvasState> {
   return restructure(`layer:duplicate:${id}`, state => {
-    const index = state.layers.findIndex(layer => layer.id === id)
-    const source = state.layers[index]
+    const source = layerById(state, id)
     if (!source) return state
 
-    const copy: Layer = { ...source, id: copyId, name }
-    const layers = [...state.layers]
-    layers.splice(index + 1, 0, copy)
+    const layers = updateSiblings(state.layers, id, (siblings, index) => {
+      const next = [...siblings]
+      next.splice(index + 1, 0, copyOf(source, copyId, name, newId))
+      return next
+    })
     return { ...state, layers, activeLayerId: copyId }
   })
 }
 
 /**
- * Changes the frame without touching a pixel. The layers keep their own position, so the anchor
+ * Moves every top-level layer, and only those: a group carries its children, so walking into it
+ * would shift a nested layer once per level of nesting and tear groups away from what surrounds
+ * them.
+ */
+function moveLayers(state: CanvasState, change: (transform: Transform) => Transform): Layer[] {
+  return state.layers.map(layer => ({ ...layer, transform: change(layer.transform) }))
+}
+
+/** A frame with no surface is not a frame. */
+function sided(value: number): number {
+  return Math.max(1, Math.round(value))
+}
+
+/**
+ * Changes the frame without touching a pixel. The layers keep their own position, so the offset
  * decides what slides out of view — this is `Canvas size`, not `Image size`.
  */
-export function resizeCanvas(width: number, height: number, anchor: Rect): Command<CanvasState> {
+export function resizeCanvas(
+  width: number,
+  height: number,
+  offset: { x: number; y: number },
+): Command<CanvasState> {
   return restructure('canvas:resize', state => ({
     ...state,
-    width: Math.max(1, Math.round(width)),
-    height: Math.max(1, Math.round(height)),
-    layers: mapLayers(state.layers, layer => ({
-      ...layer,
-      transform: {
-        ...layer.transform,
-        x: layer.transform.x + anchor.x,
-        y: layer.transform.y + anchor.y,
-      },
+    width: sided(width),
+    height: sided(height),
+    layers: moveLayers(state, transform => ({
+      ...transform,
+      x: transform.x + offset.x,
+      y: transform.y + offset.y,
     })),
   }))
 }
@@ -334,40 +328,25 @@ export function resizeCanvas(width: number, height: number, anchor: Rect): Comma
  */
 export function resizeImage(width: number, height: number): Command<CanvasState> {
   return restructure('canvas:resample', state => {
-    const next = { width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)) }
-    const scaleX = next.width / state.width
-    const scaleY = next.height / state.height
+    const scaleX = sided(width) / state.width
+    const scaleY = sided(height) / state.height
 
     return {
       ...state,
-      ...next,
-      layers: mapLayers(state.layers, layer => ({
-        ...layer,
-        transform: {
-          ...layer.transform,
-          x: layer.transform.x * scaleX,
-          y: layer.transform.y * scaleY,
-          scaleX: layer.transform.scaleX * scaleX,
-          scaleY: layer.transform.scaleY * scaleY,
-        },
+      width: sided(width),
+      height: sided(height),
+      layers: moveLayers(state, transform => ({
+        ...transform,
+        x: transform.x * scaleX,
+        y: transform.y * scaleY,
+        scaleX: transform.scaleX * scaleX,
+        scaleY: transform.scaleY * scaleY,
       })),
     }
   })
 }
 
-/** Crops to a rectangle in document coordinates — the frame moves onto it, the pixels do not. */
+/** Cropping is resizing the frame onto a rectangle: same gesture, offset the other way. */
 export function cropToRect(rect: Rect): Command<CanvasState> {
-  return restructure('canvas:crop', state => ({
-    ...state,
-    width: Math.max(1, Math.round(rect.width)),
-    height: Math.max(1, Math.round(rect.height)),
-    layers: mapLayers(state.layers, layer => ({
-      ...layer,
-      transform: {
-        ...layer.transform,
-        x: layer.transform.x - rect.x,
-        y: layer.transform.y - rect.y,
-      },
-    })),
-  }))
+  return resizeCanvas(rect.width, rect.height, { x: -rect.x, y: -rect.y })
 }

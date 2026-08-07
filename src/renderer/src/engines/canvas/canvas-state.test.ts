@@ -10,8 +10,8 @@ import {
   mapLayers,
   serializeCanvas,
   type CanvasState,
+  pixelLayer,
 } from './canvas-state'
-import { pixelLayer } from './commands'
 
 const populated: CanvasState = {
   ...DEFAULT_CANVAS,

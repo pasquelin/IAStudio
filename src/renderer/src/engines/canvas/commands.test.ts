@@ -8,7 +8,6 @@ import {
   flatten,
   groupLayers,
   mergeDown,
-  pixelLayer,
   removeLayer,
   renameLayer,
   reorderLayer,
@@ -131,6 +130,12 @@ const stack = (...names: string[]): CanvasState => ({
 
 const namesOf = (state: CanvasState): string[] => state.layers.map(layer => layer.id)
 
+/** Counted rather than random, so a duplicated subtree reads the same on every run. */
+function ids(): () => string {
+  let next = 0
+  return () => `copy-${(next += 1)}`
+}
+
 /** Runs a command and gives back both sides, so every test can check the undo too. */
 function roundTrip(state: CanvasState, command: Command<CanvasState>): [CanvasState, CanvasState] {
   const applied = command.apply(state)
@@ -218,7 +223,7 @@ describe('flatten', () => {
 
 describe('duplicateLayer', () => {
   it('drops the copy directly above its source and arms it', () => {
-    const [after] = roundTrip(stack('a', 'b'), duplicateLayer('a', 'a-copy', 'a copy'))
+    const [after] = roundTrip(stack('a', 'b'), duplicateLayer('a', 'a-copy', 'a copy', ids()))
 
     expect(namesOf(after)).toEqual(['a', 'a-copy', 'b'])
     expect(after.activeLayerId).toBe('a-copy')
@@ -230,7 +235,7 @@ describe('duplicateLayer', () => {
       layers: [{ ...pixelLayer('a', 'A'), opacity: 0.25, blend: 'multiply' }],
       activeLayerId: 'a',
     }
-    const [after] = roundTrip(before, duplicateLayer('a', 'copy', 'A copy'))
+    const [after] = roundTrip(before, duplicateLayer('a', 'copy', 'A copy', ids()))
     const copy = layerById(after, 'copy')
 
     expect(copy?.opacity).toBe(0.25)
@@ -244,10 +249,7 @@ describe('duplicateLayer', () => {
  */
 describe('resizeCanvas against resizeImage', () => {
   it('moves the frame without scaling anything', () => {
-    const [after] = roundTrip(
-      stack('a'),
-      resizeCanvas(400, 300, { x: 10, y: 20, width: 0, height: 0 }),
-    )
+    const [after] = roundTrip(stack('a'), resizeCanvas(400, 300, { x: 10, y: 20 }))
 
     expect([after.width, after.height]).toEqual([400, 300])
     expect(layerById(after, 'a')?.transform.scaleX).toBe(1)
@@ -263,7 +265,7 @@ describe('resizeCanvas against resizeImage', () => {
   })
 
   it('refuses a frame with no surface rather than producing one', () => {
-    const [after] = roundTrip(stack('a'), resizeCanvas(0, -5, { x: 0, y: 0, width: 0, height: 0 }))
+    const [after] = roundTrip(stack('a'), resizeCanvas(0, -5, { x: 0, y: 0 }))
 
     expect([after.width, after.height]).toEqual([1, 1])
   })
@@ -282,5 +284,111 @@ describe('cropToRect', () => {
 
     expect([after.width, after.height]).toEqual([100, 80])
     expect(layerById(after, 'a')?.transform.x).toBe(-30)
+  })
+})
+
+/**
+ * Grouping is what turned the stack into a tree, and every operation below used to read only its
+ * root. Each of these reproduces a bug that shipped in the first cut of the model.
+ */
+describe('operating inside a group', () => {
+  const nested = (): CanvasState =>
+    groupLayers(['a', 'b'], 'g', 'Group').apply(stack('a', 'b', 'c'))
+
+  it('removes a layer that sits inside a group', () => {
+    const [after] = roundTrip(nested(), removeLayer('a'))
+
+    expect(allLayers(after.layers).map(layer => layer.id)).toEqual(['g', 'b', 'c'])
+  })
+
+  it('duplicates a layer that sits inside a group, beside it', () => {
+    const [after] = roundTrip(nested(), duplicateLayer('a', 'a-copy', 'a copy', ids()))
+
+    expect(allLayers(after.layers).map(layer => layer.id)).toEqual(['g', 'a', 'a-copy', 'b', 'c'])
+  })
+
+  it('merges within the group rather than through its wall', () => {
+    const [after] = roundTrip(nested(), mergeDown('b'))
+
+    expect(allLayers(after.layers).map(layer => layer.id)).toEqual(['g', 'a', 'c'])
+    expect(after.activeLayerId).toBe('a')
+  })
+
+  it('reorders within the group, never out of it', () => {
+    const [after] = roundTrip(nested(), reorderLayer('a', 1))
+    const group = layerById(after, 'g')
+
+    expect(group && isGroup(group) ? group.children.map(child => child.id) : []).toEqual(['b', 'a'])
+  })
+
+  it('dissolves a group nested in another one', () => {
+    const outer = groupLayers(['g', 'c'], 'outer', 'Outer').apply(nested())
+    const [after] = roundTrip(outer, ungroupLayer('g'))
+
+    expect(allLayers(after.layers).map(layer => layer.id)).toEqual(['outer', 'a', 'b', 'c'])
+  })
+
+  // A group carries its children, so walking into it shifts a nested layer once per level.
+  it('moves a nested layer exactly as much as a top-level one', () => {
+    const [after] = roundTrip(nested(), resizeCanvas(400, 300, { x: 10, y: 20 }))
+
+    expect(layerById(after, 'a')?.transform.x).toBe(0)
+    expect(layerById(after, 'g')?.transform.x).toBe(10)
+    expect(layerById(after, 'c')?.transform.x).toBe(10)
+  })
+
+  it('scales a nested layer exactly as much as a top-level one', () => {
+    const [after] = roundTrip({ ...nested(), width: 100, height: 100 }, resizeImage(200, 200))
+
+    expect(layerById(after, 'a')?.transform.scaleX).toBe(1)
+    expect(layerById(after, 'g')?.transform.scaleX).toBe(2)
+  })
+
+  it('gives every copied child an id of its own', () => {
+    const [after] = roundTrip(nested(), duplicateLayer('g', 'g-copy', 'Group copy', ids()))
+    const all = allLayers(after.layers).map(layer => layer.id)
+
+    expect(new Set(all).size).toBe(all.length)
+  })
+
+  // The armed layer went with the group; leaving it pointing at nothing swallows every stroke.
+  it('rearms a survivor when the removed group held what was armed', () => {
+    const before = { ...nested(), activeLayerId: 'a' }
+    const [after] = roundTrip(before, removeLayer('g'))
+
+    expect(layerById(after, after.activeLayerId)).not.toBeNull()
+  })
+
+  // Counted across the tree: a root holding one group still holds every layer inside it.
+  it('still deletes when the root is a single group', () => {
+    const rooted = groupLayers(['a', 'b', 'c'], 'g', 'Group').apply(stack('a', 'b', 'c'))
+    const [after] = roundTrip(rooted, removeLayer('a'))
+
+    expect(allLayers(after.layers).map(layer => layer.id)).toEqual(['g', 'b', 'c'])
+  })
+
+  it('still refuses to take the last paintable layer', () => {
+    const before = stack('a')
+    const [after] = roundTrip(before, removeLayer('a'))
+
+    expect(after.layers).toHaveLength(1)
+  })
+})
+
+// The revert used to restore the layers and keep the new frame, and the test only read layers.
+describe('undoing a frame change', () => {
+  it('gives the frame back, not just the layers', () => {
+    const before = { ...stack('a'), width: 100, height: 100 }
+    const [, reverted] = roundTrip(before, resizeImage(400, 400))
+
+    expect([reverted.width, reverted.height]).toEqual([100, 100])
+  })
+
+  it('gives the frame back after a crop too', () => {
+    const before = { ...stack('a'), width: 100, height: 100 }
+    const [after, reverted] = roundTrip(before, cropToRect({ x: 10, y: 10, width: 50, height: 50 }))
+
+    expect([after.width, after.height]).toEqual([50, 50])
+    expect([reverted.width, reverted.height]).toEqual([100, 100])
   })
 })

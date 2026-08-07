@@ -12,7 +12,7 @@ import {
   type BLEND_MODES,
 } from 'pixi.js'
 import { onPaletteChange, tokenAsHex } from '../core/palette'
-import type { BlendMode, CanvasState, Layer } from './canvas-state'
+import { allLayers, isGroup, type BlendMode, type CanvasState, type Layer } from './canvas-state'
 import type { Point } from './shape-geometry'
 
 export type CanvasTool =
@@ -178,10 +178,13 @@ export class CanvasEngine {
     this.activeLayerId = state.activeLayerId
     this.size = { width: state.width, height: state.height }
 
-    for (const layer of state.layers) this.syncLayer(layer)
+    // The whole tree, not the root: a group holds layers, and a surface judged missing here is
+    // a texture destroyed on the GPU. Grouping two layers used to lose their pixels outright.
+    const layers = allLayers(state.layers).filter(layer => !isGroup(layer))
+    for (const layer of layers) this.syncLayer(layer)
 
     for (const [id, surface] of this.surfaces) {
-      if (state.layers.some(layer => layer.id === id)) continue
+      if (layers.some(layer => layer.id === id)) continue
       this.world.removeChild(surface.sprite)
       surface.sprite.destroy()
       // The texture lives on the GPU: dropping the reference is not enough.
@@ -190,7 +193,7 @@ export class CanvasEngine {
     }
 
     // Bottom first, so the last layer of the stack is the one the eye sees on top.
-    state.layers.forEach((layer, index) => {
+    layers.forEach((layer, index) => {
       const surface = this.surfaces.get(layer.id)
       if (surface) this.world.setChildIndex(surface.sprite, index)
     })
