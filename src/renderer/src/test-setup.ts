@@ -23,6 +23,21 @@ function polyfillDialog(): void {
   }
 }
 
+/**
+ * jsdom implements no canvas context and logs a "Not implemented" line on every call. Null is
+ * already what it ends up returning, and it is what the timeline checks for before painting —
+ * so this changes no behaviour, it only stops the noise.
+ */
+function polyfillCanvas(): void {
+  // `as`: the real method is overloaded per context id, and none of them accepts "always null".
+  HTMLCanvasElement.prototype.getContext = (() =>
+    null) as unknown as HTMLCanvasElement['getContext']
+}
+
+// At module scope, not in `beforeAll`: a component rendered while a test file is imported
+// would already have asked for a context by then.
+polyfillCanvas()
+
 const VIEWPORT_WIDTH = 640
 const VIEWPORT_HEIGHT = 800
 
