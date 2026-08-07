@@ -38,7 +38,8 @@ export const useAccounts = create<AccountsState>()((set, get) => {
     change: (accounts: StudioBridge['accounts']) => Promise<AccountsResult>,
   ): Promise<AccountSaveFailure | null> => {
     const bridge = getBridge()
-    if (!bridge) return null
+    // Answering null would read as "saved", and the form would clear the key just typed.
+    if (!bridge) return 'unexpected'
 
     const before = activeAccount(get().accounts)?.id ?? null
 

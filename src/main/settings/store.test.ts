@@ -143,13 +143,35 @@ describe('settings store', () => {
     expect(adapter.raw.get('accounts')).toBe('garbage')
   })
 
-  it('refuses to write over a book it could not read, rather than replacing it', () => {
+  it('refuses to write over a book the keychain would not hand back', () => {
     adapter.raw.set('accounts', 'garbage')
     const store = createSettingsStore(adapter)
 
     // The screen says "no account yet", so adding one is exactly what the user does next.
     expect(() => store.addAccount('Studio', { key: 'k', secret: 's' })).toThrow('store-unreadable')
     expect(adapter.raw.get('accounts')).toBe('garbage')
+  })
+
+  /*
+   * Decrypted fine, holds no book — a truncated write, a hand edit, a shape from another
+   * version. The keychain is healthy and the content is unrecoverable whatever we do, so
+   * refusing here would lock the user out of their own accounts for good, on every launch,
+   * while blaming a keychain that is working.
+   */
+  it('lets the user write over content that decrypted but holds no book', () => {
+    adapter.raw.set('accounts', 'enc:{"accounts":"nope"}')
+    const store = createSettingsStore(adapter, { newAccountId: countingIds() })
+
+    expect(() => store.addAccount('Studio', { key: 'k', secret: 's' })).not.toThrow()
+    expect(store.accounts()).toEqual([{ id: 'id-1', name: 'Studio', active: true }])
+  })
+
+  it('lets the user write over a blob whose JSON never parsed', () => {
+    adapter.raw.set('accounts', 'enc:{"accounts":[')
+    const store = createSettingsStore(adapter, { newAccountId: countingIds() })
+
+    expect(() => store.addAccount('Studio', { key: 'k', secret: 's' })).not.toThrow()
+    expect(store.hasCredentials()).toBe(true)
   })
 
   it('survives an activeId that names nothing, keeping the accounts', () => {
@@ -267,6 +289,22 @@ describe('carrying a single-credential install over', () => {
     expect(() => store.settleAccounts()).not.toThrow()
     expect(adapter.raw.has('credentials')).toBe(true)
     expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
+  })
+
+  /*
+   * The pair is the only copy of that key. Erasing it because a book happens to sit beside it
+   * destroys a key nothing ever read — the exact loss this migration exists to avoid.
+   */
+  it('keeps a pair it could not read, even once a book stands beside it', () => {
+    adapter.raw.set(
+      'accounts',
+      'enc:{"accounts":[{"id":"a","name":"Studio","credentials":{"key":"k","secret":"s"}}],"activeId":"a"}',
+    )
+    adapter.raw.set('credentials', 'garbage')
+
+    createSettingsStore(adapter).settleAccounts()
+
+    expect(adapter.raw.get('credentials')).toBe('garbage')
   })
 
   it('leaves an existing book alone, and drops the stale pair beside it', () => {

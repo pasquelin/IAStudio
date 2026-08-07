@@ -137,9 +137,8 @@ const storedCredentials = z.object({ key: credential, secret: credential })
 
 /**
  * Reads back what this process wrote, on the same `credential` schema as the input path. A
- * hand-rolled guard accepting `{key:'',secret:''}` made `hasCredentials()` answer true on a
- * blank pair, which `discardUnreadableCredentials` then refused to drop: the dialogue claimed
- * to be configured while every call answered 401.
+ * hand-rolled guard accepting `{key:'',secret:''}` once made `hasCredentials()` answer true on
+ * a blank pair: the account screen claimed to be configured while every call answered 401.
  */
 export function parseStoredCredentials(plain: string): Credentials | null {
   const parsed = storedCredentials.safeParse(JSON.parse(plain))

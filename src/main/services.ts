@@ -157,9 +157,8 @@ export function createSettings(): SettingsStore {
   setLogVerbosity(stored.advanced.logLevel)
   setWindowLanguage(effectiveLanguage(stored.general.language, app.getLocale()))
 
-  // Carries a pre-multi-account install over to a book, and drops a blob a keychain the OS can
-  // no longer open leaves behind — what makes the account screen ask again instead of claiming
-  // to be set up.
+  // Carries a pre-multi-account install over to a book of one. Erases nothing it has not read:
+  // a keychain the OS will not open this launch leaves every key exactly where it is.
   settings.settleAccounts()
 
   return settings

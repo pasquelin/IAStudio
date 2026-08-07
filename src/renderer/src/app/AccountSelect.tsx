@@ -46,8 +46,10 @@ export function AccountSelect() {
         ref={setAnchor}
         type="button"
         aria-label={t('accounts.switch')}
-        aria-haspopup="menu"
-        aria-expanded={flyout.showing}
+        // Only when there is one: with nothing stored the button opens the settings outright,
+        // and announcing a menu it will never show sends a screen reader looking for it.
+        aria-haspopup={flyout.hasFlyout ? 'menu' : undefined}
+        aria-expanded={flyout.hasFlyout ? flyout.showing : undefined}
         onClick={flyout.hasFlyout ? flyout.open : manage}
         className={cn(
           'flex h-(--sc-control) cursor-pointer items-center gap-1.5 rounded-(--radius-sc-md)',

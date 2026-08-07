@@ -60,8 +60,9 @@ export function Application() {
   useEffect(() => {
     /*
      * Watched on the store, not on the event: the first list arrives through `list()` and
-     * never through `onChange`, so an event-side watcher would still be holding `null` when
-     * the first broadcast lands and would clear the cache over an unrelated rename.
+     * never through `onChange`. A watcher on the event alone would therefore still hold `null`
+     * once the window is up, and would sit out the switch it exists to catch — leaving this
+     * window serving the previous account's models.
      */
     let active = activeAccount(useAccounts.getState().accounts)?.id ?? null
 
