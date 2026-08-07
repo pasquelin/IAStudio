@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { addObject } from '@/engines/scene/commands'
-import { IDENTITY_TRANSFORM, type SceneObject } from '@/engines/scene/scene-state'
+import { addNode } from '@/engines/scene/commands'
+import { meshNode } from '@/engines/scene/scene-fixtures'
+import type { SceneNode } from '@/engines/scene/scene-state'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { SceneDocument } from './SceneDocument'
 
@@ -23,7 +24,12 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
   },
 }))
 
-const box: SceneObject = { id: 'box-1', kind: 'box', name: 'Box', transform: IDENTITY_TRANSFORM }
+const box = meshNode('box-1')
+
+/** A new document is born with three lights; only the meshes are what these tests count. */
+function meshesOf(documentId: string): SceneNode[] {
+  return sceneOf(useScenes.getState(), documentId).nodes.filter(node => node.type === 'mesh')
+}
 
 describe('SceneDocument', () => {
   beforeEach(() => {
@@ -35,6 +41,16 @@ describe('SceneDocument', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Déplacer/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Tourner/ })).toBeInTheDocument()
+  })
+
+  /**
+   * A canvas React owns is reused across StrictMode's mount / unmount / mount, and the first
+   * engine's `dispose` purges the one WebGL context the second one then draws into — a viewport
+   * black for good. The engine makes its own canvas inside a plain host instead.
+   */
+  it('hands the renderer a host to fill, never a canvas of its own', () => {
+    const { container } = render(<SceneDocument documentId="doc-1" />)
+    expect(container.querySelector('canvas')).toBeNull()
   })
 
   it('switches the gizmo mode when a tool is clicked', async () => {
@@ -50,19 +66,33 @@ describe('SceneDocument', () => {
   })
 
   it('deletes the selected object on the bound key', async () => {
-    useScenes.getState().runCommand('doc-1', addObject(box))
+    useScenes.getState().runCommand('doc-1', addNode(box))
     render(<SceneDocument documentId="doc-1" />)
 
     await userEvent.keyboard('{Delete}')
-    expect(sceneOf(useScenes.getState(), 'doc-1').objects).toHaveLength(0)
+    expect(meshesOf('doc-1')).toHaveLength(0)
   })
 
   it('undoes through the toolbar', async () => {
-    useScenes.getState().runCommand('doc-1', addObject(box))
+    useScenes.getState().runCommand('doc-1', addNode(box))
     render(<SceneDocument documentId="doc-1" />)
 
     await userEvent.click(screen.getByRole('button', { name: /Annuler/ }))
-    expect(sceneOf(useScenes.getState(), 'doc-1').objects).toHaveLength(0)
+    expect(meshesOf('doc-1')).toHaveLength(0)
+  })
+
+  it('opens a new document on a lit scene rather than a black viewport', () => {
+    render(<SceneDocument documentId="doc-fresh" />)
+    const lights = sceneOf(useScenes.getState(), 'doc-fresh').nodes.filter(
+      node => node.type === 'light',
+    )
+    expect(lights).toHaveLength(3)
+  })
+
+  it('does not reset a scene that is already open', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    render(<SceneDocument documentId="doc-1" />)
+    expect(meshesOf('doc-1')).toHaveLength(1)
   })
 
   it('disables undo when there is nothing to undo', () => {

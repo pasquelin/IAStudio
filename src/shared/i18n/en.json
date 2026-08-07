@@ -13,6 +13,7 @@
   },
   "panels": {
     "layers": "Layers",
+    "timeline": "Timeline",
     "explorer": "Explorer",
     "models": "Models",
     "generator": "Generate",
@@ -210,6 +211,65 @@
     "hideHint": "Hide this layer without deleting it",
     "untitled": "Layer {{n}}",
     "noDocument": "Open an image to see its layers."
+  },
+  "meshes": {
+    "box": "Box",
+    "capsule": "Capsule",
+    "circle": "Circle",
+    "cylinder": "Cylinder",
+    "dodecahedron": "Dodecahedron",
+    "icosahedron": "Icosahedron",
+    "lathe": "Lathe",
+    "octahedron": "Octahedron",
+    "plane": "Plane",
+    "ring": "Ring",
+    "sphere": "Sphere",
+    "sprite": "Sprite",
+    "tetrahedron": "Tetrahedron",
+    "text": "Text",
+    "torus": "Torus",
+    "torusKnot": "Torus knot",
+    "tube": "Tube",
+    "add": "Add a mesh",
+    "addHint": "Drop a primitive at the origin of the scene",
+    "remove": "Delete mesh",
+    "removeHint": "Remove the selected mesh from the scene",
+    "visible": "Show or hide",
+    "empty": "No mesh yet. Add one to get started.",
+    "noDocument": "Open a scene to see its meshes."
+  },
+  "lights": {
+    "ambient": "Ambient",
+    "directional": "Directional",
+    "hemisphere": "Hemisphere",
+    "point": "Point",
+    "spot": "Spot",
+    "add": "Add a light",
+    "addHint": "Drop a light source into the scene",
+    "remove": "Delete light",
+    "removeHint": "Remove the selected light from the scene",
+    "visible": "Show or hide",
+    "empty": "No light. The scene will stay black.",
+    "noDocument": "Open a scene to see its lights."
+  },
+  "transport": {
+    "play": "Play",
+    "pause": "Pause",
+    "source": "Source",
+    "program": "Program",
+    "noClip": "Select a clip to see it here.",
+    "rewind": "Back to start"
+  },
+  "timeline": {
+    "noDocument": "No sequence open. Create one to start editing."
+  },
+  "videoTools": {
+    "select": "Selection",
+    "selectHint": "Select, move and trim a clip",
+    "blade": "Blade",
+    "bladeHint": "Cut a clip at the playhead",
+    "hand": "Hand",
+    "handHint": "Scroll the timeline — wheel to zoom"
   },
   "sceneTools": {
     "translate": "Move",

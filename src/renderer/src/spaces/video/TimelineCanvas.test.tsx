@@ -1,0 +1,134 @@
+import { fireEvent, render } from '@testing-library/react'
+import { beforeEach, describe, expect, it } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
+import { addClip } from '@/engines/timeline/commands'
+import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
+import { EMPTY_SEQUENCE, type Clip } from '@/engines/timeline/timeline-state'
+import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
+import { useAssets } from '@/stores/assets'
+import { sequenceOf, useSequences } from '@/stores/sequences'
+import { TimelineCanvas, UNPROBED_DURATION } from './TimelineCanvas'
+import type { VideoToolId } from './video-tools'
+
+const asset = (overrides: Partial<Asset> = {}): Asset => ({
+  id: 'asset-1',
+  name: 'rush.mp4',
+  type: 'video',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-07T10:00:00.000Z',
+  ...overrides,
+})
+
+const clip: Clip = {
+  id: 'clip-1',
+  assetId: 'asset-1',
+  start: 0,
+  duration: 1_000_000,
+  inPoint: 0,
+  speed: 1,
+}
+
+function dataTransfer(assetId: string): DataTransfer {
+  // jsdom builds no DataTransfer, and the drop handler reads exactly one format.
+  return {
+    getData: (format: string) => (format === ASSET_DRAG_TYPE ? assetId : ''),
+  } as DataTransfer
+}
+
+function paint(tool: VideoToolId = 'select') {
+  const view = render(<TimelineCanvas documentId="doc-1" tool={tool} />)
+  const canvas = view.container.querySelector('canvas')
+  if (!canvas) throw new Error('the timeline renders no canvas')
+  return canvas
+}
+
+const clipsOf = (): Clip[] => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips ?? []
+
+describe('TimelineCanvas', () => {
+  beforeEach(() => {
+    useSequences.setState({ states: {}, histories: {} })
+    useAssets.setState({ items: [asset()] })
+  })
+
+  it('turns a dropped asset into a clip on the track it landed on', () => {
+    fireEvent.drop(paint(), {
+      clientX: 200,
+      clientY: RULER_HEIGHT + 10,
+      dataTransfer: dataTransfer('asset-1'),
+    })
+
+    expect(clipsOf()).toHaveLength(1)
+    expect(clipsOf()[0]).toMatchObject({ assetId: 'asset-1', start: 2_000_000 })
+  })
+
+  it('gives a clip the probed duration of its asset', () => {
+    useAssets.setState({ items: [asset({ probe: { duration: 8_000_000, codec: 'avc1' } })] })
+
+    fireEvent.drop(paint(), {
+      clientX: 0,
+      clientY: RULER_HEIGHT + 10,
+      dataTransfer: dataTransfer('asset-1'),
+    })
+
+    expect(clipsOf()[0]?.duration).toBe(8_000_000)
+  })
+
+  it('falls back to a default length for an asset that has not been probed yet', () => {
+    fireEvent.drop(paint(), {
+      clientX: 0,
+      clientY: RULER_HEIGHT + 10,
+      dataTransfer: dataTransfer('asset-1'),
+    })
+
+    expect(clipsOf()[0]?.duration).toBe(UNPROBED_DURATION)
+  })
+
+  it('refuses a drop on the ruler, which holds no track', () => {
+    fireEvent.drop(paint(), { clientX: 200, clientY: 4, dataTransfer: dataTransfer('asset-1') })
+    expect(clipsOf()).toHaveLength(0)
+  })
+
+  it('ignores a drag that carries something other than an asset', () => {
+    fireEvent.drop(paint(), {
+      clientX: 200,
+      clientY: RULER_HEIGHT + 10,
+      dataTransfer: dataTransfer(''),
+    })
+
+    expect(clipsOf()).toHaveLength(0)
+  })
+
+  it('deletes the selected clip on Delete', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+
+    fireEvent.keyDown(paint(), { key: 'Delete' })
+
+    expect(clipsOf()).toHaveLength(0)
+  })
+
+  it('leaves the sequence alone on Delete with nothing selected', () => {
+    useSequences.setState({
+      states: {
+        'doc-1': { ...EMPTY_SEQUENCE, tracks: [{ ...EMPTY_SEQUENCE.tracks[0]!, clips: [clip] }] },
+      },
+    })
+
+    fireEvent.keyDown(paint(), { key: 'Delete' })
+
+    expect(clipsOf()).toHaveLength(1)
+  })
+
+  it('splits a clip under the blade', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+
+    fireEvent.pointerDown(paint('blade'), { clientX: 40, clientY: RULER_HEIGHT + 10 })
+
+    expect(clipsOf()).toHaveLength(2)
+  })
+
+  it('moves the playhead when the ruler is pressed', () => {
+    fireEvent.pointerDown(paint(), { clientX: 300, clientY: 4 })
+    expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(3_000_000)
+  })
+})

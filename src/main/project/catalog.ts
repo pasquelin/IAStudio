@@ -1,4 +1,10 @@
-import { isAssetType, type Asset, type AssetQuery, type AssetType } from '@shared/domain/asset'
+import {
+  isAssetType,
+  type Asset,
+  type AssetQuery,
+  type AssetType,
+  type MediaProbe,
+} from '@shared/domain/asset'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
 
 /**
@@ -31,6 +37,15 @@ const MIGRATIONS: readonly string[] = [
   CREATE INDEX assets_type_idx       ON assets(type);
   CREATE INDEX assets_created_at_idx ON assets(created_at DESC);
   CREATE INDEX asset_tags_tag_idx    ON asset_tags(tag);
+  `,
+  `
+  ALTER TABLE assets ADD COLUMN source_path TEXT;
+  ALTER TABLE assets ADD COLUMN hash        TEXT;
+  ALTER TABLE assets ADD COLUMN probe       TEXT;
+  ALTER TABLE assets ADD COLUMN proxy_path  TEXT;
+  ALTER TABLE assets ADD COLUMN peaks_path  TEXT;
+
+  CREATE INDEX assets_hash_idx ON assets(hash);
   `,
 ]
 
@@ -96,7 +111,48 @@ function assetOf(row: SqlRow, tags: string[]): Asset {
   if (height !== undefined) asset.height = height
   if (bytes !== undefined) asset.bytes = bytes
 
+  const sourcePath = optionalText(row, 'source_path')
+  const hash = optionalText(row, 'hash')
+  const probe = parseProbe(optionalText(row, 'probe'))
+  const proxyPath = optionalText(row, 'proxy_path')
+  const peaksPath = optionalText(row, 'peaks_path')
+
+  if (sourcePath !== undefined) asset.sourcePath = sourcePath
+  if (hash !== undefined) asset.hash = hash
+  if (probe !== undefined) asset.probe = probe
+  if (proxyPath !== undefined) asset.proxyPath = proxyPath
+  if (peaksPath !== undefined) asset.peaksPath = peaksPath
+
   return asset
+}
+
+/**
+ * The probe is stored as JSON: it is read whole, never filtered on, and giving each of its
+ * seven fields a column would mean a migration every time a codec exposes one more.
+ */
+function parseProbe(raw: string | undefined): MediaProbe | undefined {
+  if (raw === undefined) return undefined
+
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return undefined
+
+    const fields: Record<string, unknown> = { ...parsed }
+    const { duration, codec, width, height, fps, sampleRate, channels } = fields
+    // A probe without those two says nothing usable, and a clip built on it would have no length.
+    if (typeof duration !== 'number' || typeof codec !== 'string') return undefined
+
+    const probe: MediaProbe = { duration, codec }
+    if (typeof width === 'number') probe.width = width
+    if (typeof height === 'number') probe.height = height
+    if (typeof fps === 'number') probe.fps = fps
+    if (typeof sampleRate === 'number') probe.sampleRate = sampleRate
+    if (typeof channels === 'number') probe.channels = channels
+
+    return probe
+  } catch {
+    return undefined
+  }
 }
 
 /** `%` and `_` are wildcards: typed by a user they must match themselves, not everything. */
@@ -117,8 +173,8 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const insertAsset = driver.prepare(`
     INSERT OR REPLACE INTO assets
       (id, name, type, location, path, remote_asset_id, job_id, width, height, bytes,
-       created_at, derived_from)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       created_at, derived_from, source_path, hash, probe, proxy_path, peaks_path)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const deleteTags = driver.prepare('DELETE FROM asset_tags WHERE asset_id = ?')
   const insertTag = driver.prepare('INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?, ?)')
@@ -166,6 +222,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         asset.bytes ?? null,
         asset.createdAt,
         asset.derivedFrom ?? null,
+        asset.sourcePath ?? null,
+        asset.hash ?? null,
+        asset.probe ? JSON.stringify(asset.probe) : null,
+        asset.proxyPath ?? null,
+        asset.peaksPath ?? null,
       )
 
       deleteTags.run(asset.id)

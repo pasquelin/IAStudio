@@ -13,6 +13,7 @@
   },
   "panels": {
     "layers": "Calques",
+    "timeline": "Timeline",
     "explorer": "Explorateur",
     "models": "Modèles",
     "generator": "Génération",
@@ -210,6 +211,65 @@
     "hideHint": "Masquer ce calque sans le supprimer",
     "untitled": "Calque {{n}}",
     "noDocument": "Ouvrez une image pour voir ses calques."
+  },
+  "meshes": {
+    "box": "Cube",
+    "capsule": "Capsule",
+    "circle": "Cercle",
+    "cylinder": "Cylindre",
+    "dodecahedron": "Dodécaèdre",
+    "icosahedron": "Icosaèdre",
+    "lathe": "Révolution",
+    "octahedron": "Octaèdre",
+    "plane": "Plan",
+    "ring": "Anneau",
+    "sphere": "Sphère",
+    "sprite": "Sprite",
+    "tetrahedron": "Tétraèdre",
+    "text": "Texte",
+    "torus": "Tore",
+    "torusKnot": "Nœud de tore",
+    "tube": "Tube",
+    "add": "Ajouter une maille",
+    "addHint": "Poser une primitive à l’origine de la scène",
+    "remove": "Supprimer la maille",
+    "removeHint": "Retirer la maille sélectionnée de la scène",
+    "visible": "Afficher ou masquer",
+    "empty": "Aucune maille. Ajoutez-en une pour commencer.",
+    "noDocument": "Ouvrez une scène pour voir ses mailles."
+  },
+  "lights": {
+    "ambient": "Ambiante",
+    "directional": "Directionnelle",
+    "hemisphere": "Hémisphérique",
+    "point": "Ponctuelle",
+    "spot": "Projecteur",
+    "add": "Ajouter une lumière",
+    "addHint": "Poser une source lumineuse dans la scène",
+    "remove": "Supprimer la lumière",
+    "removeHint": "Retirer la lumière sélectionnée de la scène",
+    "visible": "Afficher ou masquer",
+    "empty": "Aucune lumière. La scène restera noire.",
+    "noDocument": "Ouvrez une scène pour voir ses lumières."
+  },
+  "transport": {
+    "play": "Lire",
+    "pause": "Pause",
+    "source": "Source",
+    "program": "Programme",
+    "noClip": "Sélectionnez un clip pour le voir ici.",
+    "rewind": "Retour au début"
+  },
+  "timeline": {
+    "noDocument": "Aucune séquence ouverte. Créez-en une pour monter."
+  },
+  "videoTools": {
+    "select": "Sélection",
+    "selectHint": "Sélectionner, déplacer et rogner un clip",
+    "blade": "Lame",
+    "bladeHint": "Couper un clip à la tête de lecture",
+    "hand": "Main",
+    "handHint": "Faire défiler la timeline — molette pour zoomer"
   },
   "sceneTools": {
     "translate": "Déplacer",

@@ -1,6 +1,7 @@
 import { mdiEye, mdiEyeOffOutline, mdiLayersOutline, mdiPlus, mdiTrashCanOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
+import { newId } from '@/helpers/ids'
 import { TIP_BOTTOM, TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { addLayer, removeLayer, selectLayer, setLayerVisible } from '@/engines/canvas/commands'
@@ -40,7 +41,7 @@ function StackActions({ documentId }: { documentId: string }) {
     store.runCommand(
       documentId,
       addLayer({
-        id: crypto.randomUUID(),
+        id: newId(),
         name: t('layers.untitled', { n: canvas.layers.length + 1 }),
         visible: true,
         locked: false,

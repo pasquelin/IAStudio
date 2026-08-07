@@ -63,6 +63,14 @@
   --color-text: #dfe1e5;
   --color-muted: #868a91;
 
+  /*
+   * The 3D viewport is neither a panel surface nor the chassis: it is a working space, and it
+   * sits LIGHTER than both. A scene judged against near-black reads darker than it is, and the
+   * grid it stands on disappears into the background.
+   */
+  --color-viewport: #33363b;
+  --color-viewport-line: #494d54;
+
   --radius-sc-sm: 4px;
   --radius-sc-md: 6px;
   --radius-sc-lg: 10px;

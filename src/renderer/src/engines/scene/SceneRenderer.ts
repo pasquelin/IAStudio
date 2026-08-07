@@ -1,28 +1,29 @@
 import {
-  BoxGeometry,
   Color,
   DirectionalLight,
   GridHelper,
-  HemisphereLight,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
-  PlaneGeometry,
   Raycaster,
   Scene,
-  SphereGeometry,
+  SpotLight,
   Vector2,
   Vector3 as ThreeVector3,
   WebGLRenderer,
-  type BufferGeometry,
+  type Light,
+  type Object3D,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
-import type { SceneObject, SceneState, Transform } from './scene-state'
+import { token } from '../core/palette'
+import type { SceneNode, SceneState, Transform } from './scene-state'
+import { geometryFor, helperFor, lightFor, tuneViewHelper, type LightHelper } from './three-factory'
 
-export type TransformMode = 'translate' | 'rotate' | 'scale'
+/** `select` clicks without arming a gizmo — the mode you come back to. */
+export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
 
 export type SceneRendererOptions = {
   onSelect: (id: string | null) => void
@@ -33,23 +34,10 @@ const FLY_SPEED = 4
 const BOOST_FACTOR = 3
 const GRID_SIZE = 20
 
-function geometryFor(kind: SceneObject['kind']): BufferGeometry {
-  if (kind === 'sphere') return new SphereGeometry(0.5, 32, 16)
-  if (kind === 'plane') return new PlaneGeometry(1, 1)
-  return new BoxGeometry(1, 1, 1)
-}
-
-/**
- * Reads a studio token off the mounted canvas. The palette is declared once, in `index.css`;
- * a hex value copied here would leave the viewport on the old grey the day it changes, and it
- * would be the one surface in the application that never follows.
- *
- * An empty string means the token is missing — the caller falls back to three's own default
- * rather than inventing a colour.
- */
-function token(styles: CSSStyleDeclaration, name: string): string {
-  return styles.getPropertyValue(name).trim()
-}
+/** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
+const forward = new ThreeVector3()
+const right = new ThreeVector3()
+const step = new ThreeVector3()
 
 /**
  * The three.js side of a scene. It owns no truth: `apply` reflects a state it never computes,
@@ -61,7 +49,10 @@ export class SceneRenderer {
   private readonly camera = new PerspectiveCamera(60, 1, 0.1, 1000)
   private readonly raycaster = new Raycaster()
   private readonly pointer = new Vector2()
-  private readonly meshes = new Map<string, Mesh>()
+  private readonly objects = new Map<string, Object3D>()
+  private readonly helpers = new Map<string, LightHelper>()
+  /** Last node applied per id, compared by reference to skip what has not changed. */
+  private readonly applied = new Map<string, SceneNode>()
   private readonly held = new Set<MotionId>()
 
   private renderer: WebGLRenderer | null = null
@@ -73,23 +64,29 @@ export class SceneRenderer {
   private frame: number | null = null
   private flying = false
   private lastTime = 0
+  private mode: TransformMode = 'select'
+  /** Held so leaving `select` can re-arm the gizmo without waiting for the next `apply`. */
+  private selectedId: string | null = null
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
 
   constructor(private readonly options: SceneRendererOptions) {
-    // Neutral studio lighting, not palette: a coloured key light would misreport every material
-    // the user is judging.
-    this.scene.add(new HemisphereLight(0xffffff, 0x444444, 2))
-
-    const sun = new DirectionalLight(0xffffff, 2)
-    sun.position.set(5, 10, 7)
-    this.scene.add(sun)
-
+    // No lights here: they are nodes of the state now, so the viewport shows what the outliner
+    // lists — and hiding one actually darkens the scene.
     this.camera.position.set(5, 5, 5)
     this.camera.lookAt(0, 0, 0)
   }
 
-  mount(canvas: HTMLCanvasElement): void {
+  /** Makes its own canvas: React must never own it — see the engine invariants in CLAUDE.md. */
+  mount(host: HTMLElement): void {
+    const canvas = document.createElement('canvas')
+    canvas.style.display = 'block'
+    canvas.style.width = '100%'
+    canvas.style.height = '100%'
+    // Appended before the palette is read: `getComputedStyle` only inherits the studio tokens
+    // once the element is actually in the document.
+    host.appendChild(canvas)
+
     this.applyPalette(canvas)
 
     const renderer = new WebGLRenderer({ canvas, antialias: true })
@@ -108,7 +105,9 @@ export class SceneRenderer {
     gizmo.addEventListener('mouseUp', this.onGizmoRelease)
     this.gizmo = gizmo
 
-    this.viewHelper = new ViewHelper(this.camera, canvas)
+    const viewHelper = new ViewHelper(this.camera, canvas)
+    tuneViewHelper(viewHelper)
+    this.viewHelper = viewHelper
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
@@ -124,25 +123,28 @@ export class SceneRenderer {
   }
 
   apply(state: SceneState): void {
-    for (const object of state.objects) this.syncMesh(object)
-
-    for (const [id, mesh] of this.meshes) {
-      if (state.objects.some(object => object.id === id)) continue
-      this.scene.remove(mesh)
-      mesh.geometry.dispose()
-      disposeMaterial(mesh)
-      this.meshes.delete(id)
+    // A Set rather than a `some` per object: `apply` runs on every state change, selection
+    // included, and the quadratic form costs milliseconds well before a scene gets large.
+    const alive = new Set<string>()
+    for (const node of state.nodes) {
+      alive.add(node.id)
+      this.syncNode(node)
     }
 
-    const selected = state.selectedId ? this.meshes.get(state.selectedId) : undefined
-    if (selected) this.gizmo?.attach(selected)
-    else this.gizmo?.detach()
+    let stale: string[] | null = null
+    for (const id of this.objects.keys()) if (!alive.has(id)) (stale ??= []).push(id)
+    if (stale) for (const id of stale) this.release(id)
 
+    this.selectedId = state.selectedId
+    this.attachGizmo()
     this.requestRender()
   }
 
   setMode(mode: TransformMode): void {
-    this.gizmo?.setMode(mode)
+    this.mode = mode
+    // `TransformControls` knows only three modes; `select` is ours, and means no gizmo at all.
+    if (mode !== 'select') this.gizmo?.setMode(mode)
+    this.attachGizmo()
     this.requestRender()
   }
 
@@ -187,49 +189,125 @@ export class SceneRenderer {
     this.viewHelper?.dispose()
     this.viewHelper = null
 
-    for (const mesh of this.meshes.values()) {
-      mesh.geometry.dispose()
-      disposeMaterial(mesh)
-    }
-    this.meshes.clear()
+    for (const id of [...this.objects.keys()]) this.release(id)
 
     this.grid?.dispose()
     this.grid = null
 
     this.renderer?.dispose()
     this.renderer = null
+
+    // The canvas goes with the engine that made it: left behind, the next mount would stack a
+    // second one on top of it and the host would keep growing a dead canvas per remount.
+    canvas?.remove()
   }
 
   /** Pulls the studio palette off the canvas, so the viewport follows a theme change with it. */
   private applyPalette(canvas: HTMLCanvasElement): void {
-    const styles = getComputedStyle(canvas)
-    const background = token(styles, '--color-base')
-    const line = token(styles, '--color-border')
-    const subdivision = token(styles, '--color-chassis')
+    const background = token(canvas, '--color-viewport')
+    // The centre axes take the muted token so they stand out from the grid rather than blend in.
+    const axis = token(canvas, '--color-muted')
+    const line = token(canvas, '--color-viewport-line')
 
-    this.meshColor = token(styles, '--color-muted')
+    this.meshColor = token(canvas, '--color-muted')
     if (background) this.scene.background = new Color(background)
 
-    if (this.grid) this.scene.remove(this.grid)
-    this.grid = new GridHelper(GRID_SIZE, GRID_SIZE, line || undefined, subdivision || undefined)
+    if (this.grid) {
+      this.scene.remove(this.grid)
+      this.grid.dispose()
+    }
+    this.grid = new GridHelper(GRID_SIZE, GRID_SIZE, axis || undefined, line || undefined)
     this.scene.add(this.grid)
   }
 
-  private syncMesh(object: SceneObject): void {
-    let mesh = this.meshes.get(object.id)
-    if (!mesh) {
-      const material = new MeshStandardMaterial()
-      if (this.meshColor) material.color = new Color(this.meshColor)
-      mesh = new Mesh(geometryFor(object.kind), material)
-      mesh.name = object.id
-      this.meshes.set(object.id, mesh)
-      this.scene.add(mesh)
+  /**
+   * Skips a node whose object is identical to the one already applied. Commands rebuild only the
+   * nodes they touch, so a selection — which rebuilds the state but not the array — costs nothing
+   * instead of re-deriving a quaternion per object and re-uploading a helper per light.
+   */
+  private syncNode(node: SceneNode): void {
+    if (this.applied.get(node.id) === node) return
+    this.applied.set(node.id, node)
+
+    let object = this.objects.get(node.id)
+    if (!object) {
+      object = node.type === 'mesh' ? this.buildMesh(node) : this.buildLight(node)
+      object.name = node.id
+      this.objects.set(node.id, object)
+      this.scene.add(object)
     }
 
-    const { position, rotation, scale } = object.transform
-    mesh.position.set(position.x, position.y, position.z)
-    mesh.rotation.set(rotation.x, rotation.y, rotation.z)
-    mesh.scale.set(scale.x, scale.y, scale.z)
+    const { position, rotation, scale } = node.transform
+    object.position.set(position.x, position.y, position.z)
+    object.rotation.set(rotation.x, rotation.y, rotation.z)
+    object.scale.set(scale.x, scale.y, scale.z)
+    object.visible = node.visible
+
+    const helper = this.helpers.get(node.id)
+    if (helper) {
+      helper.visible = node.visible
+      // After the move, never before: the helper draws where the light was until it is told.
+      helper.update()
+    }
+  }
+
+  private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
+    const material = new MeshStandardMaterial({
+      roughness: node.material.roughness,
+      metalness: node.material.metalness,
+    })
+    const color = node.material.color ?? this.meshColor
+    if (color) material.color = new Color(color)
+    return new Mesh(geometryFor(node.geometry), material)
+  }
+
+  private buildLight(node: SceneNode & { type: 'light' }): Light {
+    const light = lightFor(node.light)
+
+    // three.js only reads the target's world matrix once the target is in the scene.
+    if (light instanceof DirectionalLight || light instanceof SpotLight) {
+      this.scene.add(light.target)
+    }
+
+    const helper = helperFor(light)
+    if (helper) {
+      // The helper answers to the light's id, so a click on it selects the light itself.
+      helper.name = node.id
+      this.helpers.set(node.id, helper)
+      this.scene.add(helper)
+    }
+    return light
+  }
+
+  private release(id: string): void {
+    this.applied.delete(id)
+
+    const object = this.objects.get(id)
+    if (object) {
+      this.scene.remove(object)
+      if (object instanceof Mesh) {
+        object.geometry.dispose()
+        disposeMaterial(object)
+      }
+      if (object instanceof DirectionalLight || object instanceof SpotLight)
+        this.scene.remove(object.target)
+      this.objects.delete(id)
+    }
+
+    const helper = this.helpers.get(id)
+    if (helper) {
+      this.scene.remove(helper)
+      // A forgotten helper leaks a line geometry on every delete.
+      helper.dispose()
+      this.helpers.delete(id)
+    }
+  }
+
+  private attachGizmo(): void {
+    const id = this.selectedId
+    const selected = this.mode !== 'select' && id ? this.objects.get(id) : undefined
+    if (selected) this.gizmo?.attach(selected)
+    else this.gizmo?.detach()
   }
 
   private readonly onResize = (): void => {
@@ -264,8 +342,12 @@ export class SceneRenderer {
       -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
     )
     this.raycaster.setFromCamera(this.pointer, this.camera)
-    const hit = this.raycaster.intersectObjects([...this.meshes.values()], false)[0]
-    this.options.onSelect(hit ? hit.object.name : null)
+
+    // Helpers are what makes a light clickable, and recursively: it is one of their children
+    // that the ray actually meets. Both they and the light carry the node's id.
+    const targets = [...this.objects.values(), ...this.helpers.values()]
+    const hit = this.raycaster.intersectObjects(targets, true)[0]
+    this.options.onSelect(hit ? nodeIdOf(hit.object) : null)
   }
 
   private readonly onPointerUp = (event: PointerEvent): void => {
@@ -323,7 +405,16 @@ export class SceneRenderer {
     const settling = orbit !== null && orbit.enabled && orbit.update()
 
     renderer.render(this.scene, this.camera)
+
+    /**
+     * `autoClear` off for the overlay, as the official editor does before its own helpers.
+     * `ViewHelper.render` calls `renderer.render` internally, which clears the colour buffer
+     * first — and `gl.clear` ignores the viewport, so it wipes the whole frame. Left on, the
+     * trihedron erases the scene it sits on and the viewport stays black.
+     */
+    renderer.autoClear = false
     this.viewHelper?.render(renderer)
+    renderer.autoClear = true
 
     if (moving || settling) this.requestRender()
   }
@@ -331,11 +422,10 @@ export class SceneRenderer {
   private fly(delta: number): void {
     const speed = FLY_SPEED * delta * (this.held.has('boost') ? BOOST_FACTOR : 1)
 
-    const forward = new ThreeVector3()
     this.camera.getWorldDirection(forward)
-    const right = new ThreeVector3().crossVectors(forward, this.camera.up).normalize()
+    right.crossVectors(forward, this.camera.up).normalize()
 
-    const step = new ThreeVector3()
+    step.set(0, 0, 0)
     if (this.held.has('forward')) step.add(forward)
     if (this.held.has('back')) step.sub(forward)
     if (this.held.has('right')) step.add(right)
@@ -348,6 +438,16 @@ export class SceneRenderer {
     this.camera.position.add(step)
     this.orbit?.target.add(step)
   }
+}
+
+/** Walks up to whoever carries a node id: the ray meets a helper's child, not the helper. */
+function nodeIdOf(object: Object3D): string | null {
+  let current: Object3D | null = object
+  while (current) {
+    if (current.name) return current.name
+    current = current.parent
+  }
+  return null
 }
 
 function disposeMaterial(mesh: Mesh): void {
