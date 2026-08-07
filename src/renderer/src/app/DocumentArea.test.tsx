@@ -3,6 +3,8 @@ import { Orientation } from 'dockview-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts, type SerializedLayout } from '@/stores/layouts'
+import { DocumentArea } from './DocumentArea'
+import { openDocument, setDocumentTitle } from './dockview-api'
 
 const addPanel = vi.fn()
 const setTitle = vi.fn()
@@ -55,7 +57,6 @@ describe('DocumentArea', () => {
     const stored = layout()
     useLayouts.setState({ layouts: { '3d': stored } })
 
-    const { DocumentArea } = await import('./DocumentArea')
     render(<DocumentArea />)
 
     expect(fromJSON).toHaveBeenCalledWith(stored)
@@ -64,14 +65,12 @@ describe('DocumentArea', () => {
   it('does not restore another workspace layout', async () => {
     useLayouts.setState({ layouts: { image: layout() } })
 
-    const { DocumentArea } = await import('./DocumentArea')
     render(<DocumentArea />)
 
     expect(fromJSON).not.toHaveBeenCalled()
   })
 
   it('tells the store which document is in front, for the tool windows outside it', async () => {
-    const { DocumentArea } = await import('./DocumentArea')
     render(<DocumentArea />)
 
     // Panels sit in Dockview; a layer stack on the edge does not, and has no other way to know.
@@ -83,7 +82,6 @@ describe('DocumentArea', () => {
   })
 
   it('opens a panel for a document created after mount', async () => {
-    const { DocumentArea, openDocument } = await import('./DocumentArea')
     render(<DocumentArea />)
 
     const created = await useDocuments.getState().create('3d')
@@ -100,7 +98,6 @@ describe('DocumentArea', () => {
   })
 
   it('marks the tab of a document with unsaved work, and only that tab', async () => {
-    const { DocumentArea, setDocumentTitle } = await import('./DocumentArea')
     render(<DocumentArea />)
     panels['doc-3'] = { setTitle }
 

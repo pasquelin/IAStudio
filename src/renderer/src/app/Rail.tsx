@@ -9,7 +9,7 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
-import { openDocument } from './DocumentArea'
+import { openDocument } from './dockview-api'
 import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
 import {
   shownTool,
