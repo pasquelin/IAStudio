@@ -47,18 +47,11 @@ function useTypeFacet(labels: Map<AssetType, string>): FacetDescriptor[] {
   )
 }
 
-/**
- * The whole browser bar, rendered in the panel's title row rather than under it. The asset
- * dock is a shelf: a second row of controls would take from the only thing it is there to
- * show. Content browsers put search, filters and view options on the title line for that
- * reason, and the header already lays its children out from the right.
- */
+// Only what fits: 500 px of browser bar in this 320 px column header pushed the panel's own
+// close button out of the frame, so the bar sits under the title — as the model panel's does.
 export function AssetBrowserActions() {
   const { t } = useTranslation()
   const count = useAssets(state => state.items.length)
-  const collection = useAssets(state => state.collection)
-  const setCollection = useAssets(state => state.setCollection)
-  const facets = useTypeFacet(useTypeLabels())
   // A file cannot be linked into a catalogue that is not open.
   const project = useProject(state => state.project)
   const importMedia = useMedia(state => state.importMedia)
@@ -74,13 +67,6 @@ export function AssetBrowserActions() {
         disabled={!project}
         onClick={() => void importMedia()}
       />
-      <CollectionBar
-        state={collection}
-        onChange={setCollection}
-        facets={facets}
-        layout="inline"
-        className="border-b-0 p-0"
-      />
     </>
   )
 }
@@ -94,8 +80,10 @@ export function AssetBrowser() {
   const { t } = useTranslation()
   const items = useAssets(state => state.items)
   const collection = useAssets(state => state.collection)
+  const setCollection = useAssets(state => state.setCollection)
   const project = useProject(state => state.project)
   const typeLabels = useTypeLabels()
+  const facets = useTypeFacet(typeLabels)
 
   const shown = useMemo(
     () =>
@@ -114,9 +102,9 @@ export function AssetBrowser() {
       ? t('assets.none')
       : t('assets.openProject')
 
-  // The bar lives in the title row — see `AssetBrowserActions`.
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <CollectionBar state={collection} onChange={setCollection} facets={facets} />
       <ImportProgress />
       <Collection
         items={shown}
@@ -135,8 +123,8 @@ export function AssetBrowser() {
 /**
  * Wraps whatever the collection renders, so both views drag, select and open the same way.
  *
- * Double-click opens rather than drags because the shelf and the strip take turns in the
- * bottom dock: they are never both on screen, so there is no drag to make between them.
+ * Double-click opens as well as drags: the shelf shares the screen with the montage, so a take
+ * can be dragged onto a track — but reaching for one across the window is not always the gesture.
  */
 function Draggable({
   asset,

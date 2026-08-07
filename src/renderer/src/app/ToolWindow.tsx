@@ -56,20 +56,22 @@ export const ToolWindow = memo(function ToolWindow({
       className={length === undefined ? 'flex-1 basis-0' : 'shrink'}
       style={length === undefined ? undefined : { flexBasis: length }}
     >
-      <PanelHeader title={title}>
-        {Actions !== undefined && (
+      <PanelHeader
+        title={title}
+        trailing={
           <>
-            <Actions />
-            <Separator />
+            {Actions !== undefined && <Separator />}
+            <ToolButton
+              icon={mdiClose}
+              label={t('actions.removeTool')}
+              tooltip={TIP_BOTTOM}
+              variant="header"
+              onClick={onClose}
+            />
           </>
-        )}
-        <ToolButton
-          icon={mdiClose}
-          label={t('actions.removeTool')}
-          tooltip={TIP_BOTTOM}
-          variant="header"
-          onClick={onClose}
-        />
+        }
+      >
+        {Actions !== undefined && <Actions />}
       </PanelHeader>
       <div className="min-h-0 flex-1 overflow-auto">
         <Content />

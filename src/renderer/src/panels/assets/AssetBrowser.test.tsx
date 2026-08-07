@@ -26,7 +26,7 @@ function asset(id: string, overrides: Partial<Asset> = {}): Asset {
   }
 }
 
-/** Both halves, the way the tool window mounts them: the bar sits in the title row. */
+/** Both halves, the way the tool window mounts them. */
 function Panel() {
   return (
     <>
@@ -51,6 +51,15 @@ describe('AssetBrowser', () => {
     useProject.setState({ project: PROJECT })
     rerender(<Panel />)
     expect(screen.getByText(/Aucun asset/)).toBeInTheDocument()
+  })
+
+  // 500 px of bar in a 320 px column header shrank the panel's title to nothing and pushed its
+  // own close button out of the frame.
+  it('keeps the title row to what fits it: a count and an import button', () => {
+    render(<AssetBrowserActions />)
+
+    expect(screen.queryByLabelText('Rechercher…')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Importer un média')).toBeInTheDocument()
   })
 
   it('renders a window over the assets rather than all of them', () => {
