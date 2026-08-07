@@ -1,4 +1,5 @@
 import type { ToolId } from '@shared/domain/tool'
+import type { ToolDefinition } from '@/panels/definition'
 import { definition as assets } from '@/panels/assets'
 import { definition as explorer } from '@/panels/explorer'
 import { definition as generator } from '@/panels/generator'
@@ -9,7 +10,6 @@ import { definition as meshes } from '@/panels/meshes'
 import { definition as models } from '@/panels/models'
 import { definition as skybox } from '@/panels/skybox'
 import { definition as timeline } from '@/panels/timeline'
-import type { ToolDefinition } from '@/panels/definition'
 
 /**
  * Tool content table. Each panel publishes its own definition, so adding one is a folder and a

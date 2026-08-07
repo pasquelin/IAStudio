@@ -15,8 +15,7 @@ import {
   type SettingActionId,
 } from '@shared/domain/settings-registry'
 
-/** Defined here rather than in `store.ts`: that module imports this one, so a type travelling
- * back the other way closed a cycle. */
+/** Here rather than in `store.ts`, which imports this module: the type would close a cycle. */
 export type Credentials = {
   key: string
   secret: string
