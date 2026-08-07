@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   COMMAND_IDS,
+  COMMAND_SCOPES,
   DEFAULT_BINDINGS,
   DEFAULT_MOTION,
   MOTION_IDS,
@@ -59,12 +60,17 @@ describe('defaults', () => {
     expect(DEFAULT_MOTION.up).toBe('KeyE')
   })
 
-  it('overlaps motion and commands on exactly one key, which flight modality resolves', () => {
+  it('overlaps motion and scene commands on exactly one key, which flight modality resolves', () => {
     // KeyS is both "back" and "scale". Flight only answers while the right button is held,
     // so the two never listen at the same time. Documented here so a remap keeps it in mind.
+    //
+    // Only the scene is checked: motion is flight, flight is the scene, and a timeline command
+    // on the same key is resolved by its scope long before either of them is consulted.
     const motion = new Set(Object.values(DEFAULT_MOTION))
-    const shared = Object.values(DEFAULT_BINDINGS).filter(signature => motion.has(signature))
-    expect(shared).toEqual(['KeyS'])
+    const shared = COMMAND_IDS.filter(
+      command => COMMAND_SCOPES[command] === 'scene' && motion.has(DEFAULT_BINDINGS[command]),
+    )
+    expect(shared).toEqual(['scene.scale'])
   })
 })
 

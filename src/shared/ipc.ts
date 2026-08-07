@@ -36,6 +36,8 @@ export type Channels = {
   projectPickFolder: 'project:pick-folder'
 
   assetsSearch: 'assets:search'
+  assetsPeaks: 'assets:peaks'
+  assetsSaveAudio: 'assets:save-audio'
 
   mediaIngest: 'media:ingest'
   mediaCancel: 'media:cancel'
@@ -71,6 +73,8 @@ export const CHANNELS: Channels = {
   projectPickFolder: 'project:pick-folder',
 
   assetsSearch: 'assets:search',
+  assetsPeaks: 'assets:peaks',
+  assetsSaveAudio: 'assets:save-audio',
 
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
@@ -79,6 +83,17 @@ export const CHANNELS: Channels = {
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
   windowWorkspace: 'window:workspace',
+}
+
+/** An edited take on its way back to disk — see `StudioBridge['assets']['saveAudio']`. */
+export type SaveAudioRequest = {
+  /** The asset to overwrite. Absent creates a new one instead. */
+  replaces?: string
+  name: string
+  /** The take this one was edited from, so the two stay traceable to each other. */
+  derivedFrom?: string
+  /** 16-bit PCM WAV, encoded by the renderer that decoded it. */
+  wav: Uint8Array
 }
 
 export type LogLevel = 'info' | 'warn' | 'error'
@@ -153,6 +168,13 @@ export type StudioBridge = {
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
+    /**
+     * The waveform computed at ingest, as min/max pairs at `PEAKS_PER_SECOND`. Null when the
+     * asset carries no sound, or when ffmpeg was missing when it was brought in.
+     */
+    peaks: (assetId: string) => Promise<Float32Array | null>
+    /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
+    saveAudio: (request: SaveAudioRequest) => Promise<Asset>
   }
   media: {
     /**

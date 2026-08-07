@@ -28,6 +28,8 @@ type ChannelMethod = {
   [CHANNELS.projectPickFolder]: StudioBridge['project']['pickFolder']
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
+  [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']
+  [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
 
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
   [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']

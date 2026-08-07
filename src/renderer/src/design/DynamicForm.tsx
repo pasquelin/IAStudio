@@ -25,6 +25,12 @@ export type DynamicFormProps = {
   onSubmit: (body: FormValues) => void
   submitLabel: string
   busy?: boolean
+  /**
+   * Values to open on, over each field's own default. What "regenerate with these parameters"
+   * hands in; keys the model never declared are ignored, since a set kept from another model
+   * would reach fields that do not exist.
+   */
+  preset?: FormValues
 }
 
 function Control({
@@ -96,10 +102,16 @@ function Control({
  * Renders a form from the descriptors a model published. Nothing about any particular model
  * appears here: writing a form by hand for a given model is a bug, not a shortcut.
  */
-export function DynamicForm({ fields, onSubmit, submitLabel, busy = false }: DynamicFormProps) {
+export function DynamicForm({
+  fields,
+  onSubmit,
+  submitLabel,
+  busy = false,
+  preset,
+}: DynamicFormProps) {
   const { t } = useTranslation()
   const schema = useMemo(() => buildSchema(fields), [fields])
-  const initial = useMemo(() => defaultValues(fields), [fields])
+  const initial = useMemo(() => defaultValues(fields, preset), [fields, preset])
   const groups = useMemo(() => groupFields(fields), [fields])
   const dependencies = useMemo(() => dependencyKeys(fields), [fields])
 

@@ -19,7 +19,10 @@ const mount = (
   onCommand: (command: CommandId) => void,
   enabled = true,
   onMotionChange?: (held: Set<MotionId>) => void,
-) => renderHook(() => useShortcuts({ enabled, onCommand, onMotionChange }), { wrapper: Fixture })
+) =>
+  renderHook(() => useShortcuts({ scope: 'scene', enabled, onCommand, onMotionChange }), {
+    wrapper: Fixture,
+  })
 
 describe('useShortcuts', () => {
   it('fires the command bound to the pressed physical key', async () => {

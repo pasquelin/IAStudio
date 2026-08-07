@@ -36,6 +36,8 @@ export type Services = {
   jobs: JobManager
   project: ProjectStore
   assets: LocalBackend
+  /** Minted here so the collector and the audio editor cannot name assets differently. */
+  newAssetId: () => string
   media: MediaService
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Asset
@@ -182,6 +184,7 @@ export function createServices(): Services {
     jobs,
     project,
     assets,
+    newAssetId,
     media,
     link: (source, type) =>
       project.catalog().add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),

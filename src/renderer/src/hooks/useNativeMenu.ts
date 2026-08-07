@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { placementOf } from '@shared/domain/tool'
 import type { MenuCommand } from '@shared/ipc'
 import { toolServes } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
@@ -43,12 +42,7 @@ export function useNativeMenu(): void {
       // would accent a rail icon that is not drawn and show nothing.
       if (!toolServes(tool, useLayouts.getState().activeWorkspace)) return
 
-      const state = useTools.getState()
-      const slot = placementOf(tool)?.slot
-      // Only when it is not already up: `toggle` would otherwise close the very tool the menu
-      // asked for.
-      if (slot && state.open[zone]?.[slot] !== tool) state.toggle(zone, tool)
-      state.focus(zone)
+      useTools.getState().show(zone, tool)
     })
 
     const stopCommand = bridge.menu.onCommand(runCommand)

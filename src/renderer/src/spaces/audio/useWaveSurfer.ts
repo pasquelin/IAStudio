@@ -1,0 +1,139 @@
+import { useEffect, useRef, useState, type RefObject } from 'react'
+import WaveSurfer from 'wavesurfer.js'
+import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js'
+import { playbackToken } from '@/engines/timeline/playback'
+import type { AudioData } from '@/engines/audio/audio-data'
+import { durationOf } from '@/engines/audio/audio-data'
+import { encodeWav } from '@/engines/audio/wav'
+import type { Region } from '@/engines/audio/edits'
+import { SECOND, type Us } from '@/engines/timeline/timeline-state'
+
+export type WaveSurferHandle = {
+  playing: boolean
+  currentTime: Us
+  toggle: () => void
+}
+
+export type UseWaveSurferOptions = {
+  container: RefObject<HTMLDivElement | null>
+  /** The take to draw and play. Null while the asset is still being decoded. */
+  data: AudioData | null
+  /** Identifies this player to the single playback token — the document id does. */
+  owner: string
+  onRegionChange: (region: Region | null) => void
+}
+
+/** Bars rather than a continuous line: fewer paths per redraw, and easier to read at a glance. */
+const BAR_WIDTH = 2
+const BAR_GAP = 1
+const BAR_RADIUS = 2
+
+/**
+ * Wavesurfer, driven from the edit chain rather than from the file on disk.
+ *
+ * The peaks are handed over ready-made, so drawing costs no decode; the audible side comes
+ * from a blob of the rendered chain, which is what the editor is for — the file on disk is the
+ * take before any of it.
+ *
+ * It also takes the playback token like every other player (spec § 8.7), which is what stops
+ * the programme monitor and this editor from being audible at the same time.
+ */
+export function useWaveSurfer({
+  container,
+  data,
+  owner,
+  onRegionChange,
+}: UseWaveSurferOptions): WaveSurferHandle {
+  const surfer = useRef<WaveSurfer | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState<Us>(0)
+
+  // Kept in a ref so the listeners below never have to be re-subscribed when the callback
+  // identity changes — a re-subscription mid-drag drops the region being drawn.
+  const notify = useRef(onRegionChange)
+  useEffect(() => {
+    notify.current = onRegionChange
+  }, [onRegionChange])
+
+  // Created once per container. Kept out of the data effect below on purpose: rebuilding the
+  // instance on every edit would destroy the very region the pointer is dragging.
+  useEffect(() => {
+    const element = container.current
+    if (!element) return
+
+    const plugin = RegionsPlugin.create()
+    const instance = WaveSurfer.create({
+      container: element,
+      barWidth: BAR_WIDTH,
+      barGap: BAR_GAP,
+      barRadius: BAR_RADIUS,
+      height: 'auto',
+      plugins: [plugin],
+    })
+
+    surfer.current = instance
+    plugin.enableDragSelection({})
+
+    instance.on('play', () => setPlaying(true))
+    instance.on('pause', () => setPlaying(false))
+    instance.on('timeupdate', seconds => setCurrentTime(Math.round(seconds * SECOND)))
+
+    // One region at a time: the toolbar acts on "the selection", and two of them would leave
+    // it ambiguous which.
+    const only = (region: { start: number; end: number; remove: () => void }): void => {
+      for (const other of plugin.getRegions()) if (other !== region) other.remove()
+      notify.current({
+        from: Math.round(region.start * SECOND),
+        to: Math.round(region.end * SECOND),
+      })
+    }
+    plugin.on('region-created', only)
+    plugin.on('region-updated', only)
+
+    return () => {
+      playbackToken.release(owner)
+      instance.destroy()
+      surfer.current = null
+      setPlaying(false)
+    }
+  }, [container, owner])
+
+  /**
+   * The take itself, pushed in as a blob AND as peaks.
+   *
+   * The blob is what makes it audible: handed peaks and a duration alone, wavesurfer renders
+   * the waveform and plays nothing at all — there is no media behind it. The peaks ride along
+   * so the drawing still costs no second decode.
+   *
+   * It has to be a blob rather than the asset's own URL, because what is heard is the edit
+   * chain and not the file on disk.
+   */
+  useEffect(() => {
+    const instance = surfer.current
+    if (!instance || !data) return
+
+    const blob = new Blob([encodeWav(data)], { type: 'audio/wav' })
+    instance.loadBlob(blob, data.channels, durationOf(data) / SECOND).catch(() => {
+      // Rejects when the take is swapped mid-load, which is not a failure worth reporting.
+    })
+  }, [data])
+
+  return {
+    playing,
+    currentTime,
+
+    toggle: () => {
+      const instance = surfer.current
+      if (!instance) return
+
+      if (instance.isPlaying()) {
+        instance.pause()
+        return
+      }
+
+      // Taking the token revokes whoever held it: two audible streams is the bug this prevents.
+      playbackToken.acquire(owner, () => instance.pause())
+      void instance.play()
+    },
+  }
+}

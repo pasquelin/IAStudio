@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import {
+  clampFades,
+  clampTrackHeight,
   clipEnd,
   clipById,
+  DEFAULT_TRACK_HEIGHT,
   deserializeSequence,
   EMPTY_SEQUENCE,
   frameDuration,
   insertClip,
+  makeClip,
+  makeTrack,
+  MAX_TRACK_HEIGHT,
+  MIN_TRACK_HEIGHT,
   newClipId,
+  playsThrough,
   sequenceDuration,
   serializeSequence,
   snapToFrame,
@@ -20,23 +28,12 @@ import {
 /** Insertion takes the tail's id from its caller, so the tests can name it and read it back. */
 const TAIL = 'tail-1'
 
-const clip = (id: string, start: number, duration: number): Clip => ({
-  id,
-  assetId: `asset-${id}`,
-  start,
-  duration,
-  inPoint: 0,
-  speed: 1,
-})
+const clip = (id: string, start: number, duration: number): Clip =>
+  makeClip({ id, assetId: `asset-${id}`, start, duration })
 
-const track = (clips: Clip[]): Track => ({
-  id: 'V1',
-  kind: 'video',
-  index: 0,
-  muted: false,
-  locked: false,
-  clips,
-})
+const track = (clips: Clip[]): Track => makeTrack({ id: 'V1', kind: 'video', index: 0, clips })
+
+const settings = { width: 1920, height: 1080, fps: 25, sampleRate: 48000 }
 
 describe('sequence state', () => {
   it('opens on one video track and one audio track, both empty', () => {
@@ -45,25 +42,26 @@ describe('sequence state', () => {
     expect(EMPTY_SEQUENCE.playhead).toBe(0)
   })
 
+  it('names a track after its id until it is renamed', () => {
+    expect(EMPTY_SEQUENCE.tracks.map(candidate => candidate.name)).toEqual(['V1', 'A1'])
+  })
+
   it('derives a frame duration from the frame rate', () => {
-    expect(frameDuration({ width: 1920, height: 1080, fps: 25, sampleRate: 48000 })).toBe(40_000)
+    expect(frameDuration(settings)).toBe(40_000)
   })
 
   it('snaps a time to the nearest frame boundary', () => {
-    const settings = { width: 1920, height: 1080, fps: 25, sampleRate: 48000 }
     expect(snapToFrame(39_999, settings)).toBe(40_000)
     expect(snapToFrame(41_000, settings)).toBe(40_000)
     expect(snapToFrame(-10, settings)).toBe(0)
   })
 
   it('rounds a duration to a whole number of frames', () => {
-    const settings = { width: 1920, height: 1080, fps: 25, sampleRate: 48000 }
     expect(wholeFrames(3_510_000, settings)).toBe(3_520_000)
     expect(wholeFrames(480_000, settings)).toBe(480_000)
   })
 
   it('never rounds a duration down to nothing', () => {
-    const settings = { width: 1920, height: 1080, fps: 25, sampleRate: 48000 }
     expect(wholeFrames(1_000, settings)).toBe(40_000)
   })
 
@@ -106,6 +104,12 @@ describe('sequence state', () => {
     expect(next.clips[2]).toMatchObject({ start: 2_000, duration: 1_000, inPoint: 2_000 })
   })
 
+  it('shortens the fades of a neighbour an insertion trimmed', () => {
+    const long = { ...clip('a', 0, 2_000), fadeIn: 1_500 }
+    const next = insertClip(track([long]), clip('b', 500, 1_500), TAIL)
+    expect(next.clips[0]).toMatchObject({ id: 'a', duration: 500, fadeIn: 500 })
+  })
+
   it('mints an id nothing else carries, which is what a cut clip needs', () => {
     expect(newClipId()).not.toBe(newClipId())
   })
@@ -125,7 +129,92 @@ describe('sequence state', () => {
   it('computes the end of a clip from its start and duration', () => {
     expect(clipEnd(clip('a', 1_000, 500))).toBe(1_500)
   })
+})
 
+describe('clip defaults', () => {
+  it('gives a new clip untouched fades, gain and speed', () => {
+    expect(makeClip({ id: 'a', assetId: 'asset', start: 0, duration: 1_000 })).toMatchObject({
+      inPoint: 0,
+      speed: 1,
+      fadeIn: 0,
+      fadeOut: 0,
+      gain: 0,
+    })
+  })
+
+  it('lets an explicit value win over the default', () => {
+    expect(makeClip({ id: 'a', assetId: 'asset', start: 0, duration: 1_000, gain: -6 }).gain).toBe(
+      -6,
+    )
+  })
+
+  it('gives a new track the default height and no solo', () => {
+    expect(makeTrack({ id: 'A2', kind: 'audio', index: 0 })).toMatchObject({
+      name: 'A2',
+      height: DEFAULT_TRACK_HEIGHT,
+      solo: false,
+      muted: false,
+      locked: false,
+      clips: [],
+    })
+  })
+})
+
+describe('fades', () => {
+  it('leaves fades that fit alone, and shares nothing it does not have to', () => {
+    const fitting = { ...clip('a', 0, 1_000), fadeIn: 200, fadeOut: 300 }
+    expect(clampFades(fitting)).toBe(fitting)
+  })
+
+  it('caps a fade at the clip it belongs to', () => {
+    expect(clampFades({ ...clip('a', 0, 1_000), fadeIn: 4_000 })).toMatchObject({ fadeIn: 1_000 })
+  })
+
+  it('never lets two fades overlap, which would raise the middle instead of lowering the ends', () => {
+    const crossed = clampFades({ ...clip('a', 0, 1_000), fadeIn: 800, fadeOut: 800 })
+    expect(crossed.fadeIn + crossed.fadeOut).toBeLessThanOrEqual(1_000)
+    expect(crossed).toMatchObject({ fadeIn: 800, fadeOut: 200 })
+  })
+})
+
+describe('mute and solo', () => {
+  const audio = makeTrack({ id: 'A1', kind: 'audio', index: 0 })
+  const video = makeTrack({ id: 'V1', kind: 'video', index: 1 })
+
+  it('lets every unmuted track through while nothing is soloed', () => {
+    const state: SequenceState = { ...EMPTY_SEQUENCE, tracks: [audio, video] }
+    expect(state.tracks.every(candidate => playsThrough(state, candidate))).toBe(true)
+  })
+
+  it('silences a muted track', () => {
+    const muted = { ...audio, muted: true }
+    const state: SequenceState = { ...EMPTY_SEQUENCE, tracks: [muted, video] }
+    expect(playsThrough(state, muted)).toBe(false)
+  })
+
+  it('silences every track that is not soloed once one is', () => {
+    const soloed = { ...audio, solo: true }
+    const state: SequenceState = { ...EMPTY_SEQUENCE, tracks: [soloed, video] }
+    expect(playsThrough(state, soloed)).toBe(true)
+    expect(playsThrough(state, video)).toBe(false)
+  })
+
+  it('keeps a muted track silent even when it is soloed', () => {
+    const both = { ...audio, solo: true, muted: true }
+    const state: SequenceState = { ...EMPTY_SEQUENCE, tracks: [both] }
+    expect(playsThrough(state, both)).toBe(false)
+  })
+})
+
+describe('track height', () => {
+  it('clamps to the readable range', () => {
+    expect(clampTrackHeight(4)).toBe(MIN_TRACK_HEIGHT)
+    expect(clampTrackHeight(10_000)).toBe(MAX_TRACK_HEIGHT)
+    expect(clampTrackHeight(72.4)).toBe(72)
+  })
+})
+
+describe('reading a sequence back', () => {
   it('survives a serialize/deserialize round trip unchanged', () => {
     const state: SequenceState = { ...EMPTY_SEQUENCE, tracks: [track([clip('a', 0, 1_000)])] }
     expect(deserializeSequence(serializeSequence(state))).toEqual(state)
@@ -134,5 +223,83 @@ describe('sequence state', () => {
   it('falls back to an empty sequence rather than throwing on unreadable input', () => {
     expect(deserializeSequence('{ not json')).toEqual(EMPTY_SEQUENCE)
     expect(deserializeSequence('{"tracks":"nope"}')).toEqual(EMPTY_SEQUENCE)
+  })
+
+  it('fills in what a version written before fades and heights left out', () => {
+    const older = JSON.stringify({
+      settings: { width: 1920, height: 1080, fps: 25, sampleRate: 48_000 },
+      tracks: [
+        {
+          id: 'A1',
+          kind: 'audio',
+          index: 0,
+          muted: false,
+          locked: false,
+          clips: [{ id: 'a', assetId: 'asset-a', start: 0, duration: 1_000, inPoint: 0, speed: 1 }],
+        },
+      ],
+      playhead: 0,
+    })
+
+    const [restored] = deserializeSequence(older).tracks
+    expect(restored).toMatchObject({ name: 'A1', height: DEFAULT_TRACK_HEIGHT, solo: false })
+    expect(restored?.clips[0]).toMatchObject({ fadeIn: 0, fadeOut: 0, gain: 0 })
+  })
+
+  it('drops a clip with no source, no identity or no length rather than drawing nothing', () => {
+    const broken = JSON.stringify({
+      tracks: [
+        {
+          id: 'V1',
+          kind: 'video',
+          clips: [
+            { id: 'a', assetId: 'asset-a', start: 0, duration: 1_000 },
+            { id: 'b', assetId: '', start: 0, duration: 1_000 },
+            { id: 'c', assetId: 'asset-c', start: 0, duration: 0 },
+          ],
+        },
+      ],
+    })
+
+    expect(deserializeSequence(broken).tracks[0]?.clips.map(candidate => candidate.id)).toEqual([
+      'a',
+    ])
+  })
+
+  it('rebuilds a track whose stored clips overlap, because every later edit assumes they do not', () => {
+    const overlapping = JSON.stringify({
+      tracks: [
+        {
+          id: 'V1',
+          kind: 'video',
+          clips: [
+            { id: 'a', assetId: 'asset-a', start: 0, duration: 2_000 },
+            { id: 'b', assetId: 'asset-b', start: 1_000, duration: 2_000 },
+          ],
+        },
+      ],
+    })
+
+    const [restored] = deserializeSequence(overlapping).tracks
+    expect(restored?.clips).toMatchObject([
+      { id: 'a', start: 0, duration: 1_000 },
+      { id: 'b', start: 1_000, duration: 2_000 },
+    ])
+  })
+
+  it('refuses a frame rate of zero, which would divide by zero on every snap', () => {
+    const zero = JSON.stringify({
+      settings: { width: 1920, height: 1080, fps: 0, sampleRate: 0 },
+      tracks: [{ id: 'V1', kind: 'video', clips: [] }],
+    })
+    expect(deserializeSequence(zero).settings).toMatchObject({ fps: 25, sampleRate: 48_000 })
+  })
+
+  it('forgets a selection pointing at a clip the read discarded', () => {
+    const stale = JSON.stringify({
+      tracks: [{ id: 'V1', kind: 'video', clips: [] }],
+      selectedId: 'gone',
+    })
+    expect(deserializeSequence(stale).selectedId).toBeNull()
   })
 })

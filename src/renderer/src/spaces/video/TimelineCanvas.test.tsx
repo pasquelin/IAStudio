@@ -2,12 +2,16 @@ import { fireEvent, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
-import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
-import { EMPTY_SEQUENCE, type Clip } from '@/engines/timeline/timeline-state'
+import { RULER_HEIGHT, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { clipFixture } from '@/engines/timeline/timeline-fixtures'
+import type { Clip } from '@/engines/timeline/timeline-state'
+import { EMPTY_SEQUENCE } from '@/engines/timeline/timeline-state'
 import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
-import { TimelineCanvas, UNPROBED_DURATION } from './TimelineCanvas'
+import { useTimelineView, viewportOf } from '@/stores/timeline-view'
+import { UNPROBED_DURATION } from '@/engines/timeline/insert'
+import { TimelineCanvas } from './TimelineCanvas'
 import type { VideoToolId } from './video-tools'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
@@ -20,14 +24,7 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const clip: Clip = {
-  id: 'clip-1',
-  assetId: 'asset-1',
-  start: 0,
-  duration: 1_000_000,
-  inPoint: 0,
-  speed: 1,
-}
+const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
 
 function dataTransfer(assetId: string): DataTransfer {
   // jsdom builds no DataTransfer, and the drop handler reads exactly one format.
@@ -45,9 +42,12 @@ function paint(tool: VideoToolId = 'select') {
 
 const clipsOf = (): Clip[] => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips ?? []
 
+const viewOf = (): Viewport => viewportOf(useTimelineView.getState(), 'doc-1')
+
 describe('TimelineCanvas', () => {
   beforeEach(() => {
     useSequences.setState({ states: {}, histories: {} })
+    useTimelineView.setState({ viewports: {} })
     useAssets.setState({ items: [asset()] })
   })
 
@@ -102,7 +102,7 @@ describe('TimelineCanvas', () => {
   it('deletes the selected clip on Delete', () => {
     useSequences.getState().runCommand('doc-1', addClip('V1', clip))
 
-    fireEvent.keyDown(paint(), { key: 'Delete' })
+    fireEvent.keyDown(paint(), { code: 'Delete' })
 
     expect(clipsOf()).toHaveLength(0)
   })
@@ -114,7 +114,7 @@ describe('TimelineCanvas', () => {
       },
     })
 
-    fireEvent.keyDown(paint(), { key: 'Delete' })
+    fireEvent.keyDown(paint(), { code: 'Delete' })
 
     expect(clipsOf()).toHaveLength(1)
   })
@@ -130,5 +130,48 @@ describe('TimelineCanvas', () => {
   it('moves the playhead when the ruler is pressed', () => {
     fireEvent.pointerDown(paint(), { clientX: 300, clientY: 4 })
     expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(3_000_000)
+  })
+
+  it('splits whatever the playhead crosses, without asking for a selection first', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    useSequences.getState().replace('doc-1', {
+      ...sequenceOf(useSequences.getState(), 'doc-1'),
+      selectedId: null,
+      playhead: 400_000,
+    })
+
+    fireEvent.keyDown(paint(), { code: 'KeyS' })
+
+    expect(clipsOf()).toHaveLength(2)
+  })
+
+  it('zooms in and out around the middle of the strip', () => {
+    const canvas = paint()
+    const before = viewOf().scale
+
+    fireEvent.keyDown(canvas, { code: 'Equal', metaKey: true })
+    expect(viewOf().scale).toBeGreaterThan(before)
+
+    fireEvent.keyDown(canvas, { code: 'Minus', metaKey: true })
+    expect(viewOf().scale).toBeCloseTo(before)
+  })
+
+  it('sends the playhead to the start and to the end of the montage', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.keyDown(canvas, { code: 'End' })
+    expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(1_000_000)
+
+    fireEvent.keyDown(canvas, { code: 'Home' })
+    expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(0)
+  })
+
+  it('undoes the last edit from the keyboard', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+
+    fireEvent.keyDown(paint(), { code: 'KeyZ', metaKey: true })
+
+    expect(clipsOf()).toHaveLength(0)
   })
 })

@@ -1,4 +1,14 @@
 /**
+ * Reads back what `decodePeaks` wrote. Copied rather than viewed: a `Buffer` from `readFile`
+ * shares a pooled `ArrayBuffer` whose offset is rarely four-byte aligned, and `Float32Array`
+ * refuses an unaligned view outright.
+ */
+export function peaksFromBytes(bytes: Uint8Array): Float32Array {
+  const usable = bytes.byteLength - (bytes.byteLength % Float32Array.BYTES_PER_ELEMENT)
+  return new Float32Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + usable))
+}
+
+/**
  * An `Int16Array` cannot be laid over an odd byte offset, and a `Buffer` is a view into a
  * pooled allocation at whatever offset the pool gave it. `new Uint8Array(pcm)` rather than
  * `pcm.slice()`: on a `Buffer`, `slice` is an alias of `subarray` and returns the same offset.

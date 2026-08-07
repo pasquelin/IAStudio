@@ -15,8 +15,11 @@ describe('kindForWorkspace', () => {
     expect(kindForWorkspace('video')).toBe('sequence')
   })
 
+  it('gives the audio workspace a take to edit', () => {
+    expect(kindForWorkspace('audio')).toBe('audio')
+  })
+
   it('has no editable document for the workspaces without an editor yet', () => {
-    expect(kindForWorkspace('audio')).toBeNull()
     expect(kindForWorkspace('textures')).toBeNull()
     expect(kindForWorkspace('skyboxes')).toBeNull()
   })

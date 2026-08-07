@@ -1,4 +1,4 @@
-import { clipEnd, type SequenceState, type Us } from './timeline-state'
+import { clipEnd, playsThrough, type SequenceState, type Us } from './timeline-state'
 
 /** A slice of one clip's audio to be scheduled, already resolved against the window. */
 export type AudioChunk = {
@@ -20,7 +20,7 @@ export function audioChunksIn(state: SequenceState, from: Us, to: Us): AudioChun
   const chunks: AudioChunk[] = []
 
   for (const track of state.tracks) {
-    if (track.kind !== 'audio' || track.muted) continue
+    if (track.kind !== 'audio' || !playsThrough(state, track)) continue
 
     for (const clip of track.clips) {
       const start = Math.max(clip.start, from)

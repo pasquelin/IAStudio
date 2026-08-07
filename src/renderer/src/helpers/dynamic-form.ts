@@ -63,10 +63,13 @@ export function visibleFields(
   return fields.filter(field => isVisible(field, values))
 }
 
-export function defaultValues(fields: readonly FieldDescriptor[]): FormValues {
+export function defaultValues(fields: readonly FieldDescriptor[], preset?: FormValues): FormValues {
   const values: FormValues = {}
   for (const field of fields) {
-    if (field.default !== undefined) values[field.key] = field.default
+    // A preset wins over the descriptor's own default, but only for fields the model declares:
+    // parameters kept from another model would otherwise reach a form that never had them.
+    if (preset && field.key in preset) values[field.key] = preset[field.key]
+    else if (field.default !== undefined) values[field.key] = field.default
     else if (field.kind === 'boolean') values[field.key] = false
     else values[field.key] = ''
   }
