@@ -5,6 +5,7 @@ import {
   mdiImageMultipleOutline,
   mdiLayersOutline,
   mdiProgressClock,
+  mdiTuneVariant,
   mdiVideoVintage,
 } from '@mdi/js'
 import {
@@ -35,6 +36,7 @@ const ICONS: Record<ToolId, string> = {
   explorer: mdiFolderOutline,
   models: mdiCubeScan,
   generator: mdiCreationOutline,
+  inspector: mdiTuneVariant,
   assets: mdiImageMultipleOutline,
   jobs: mdiProgressClock,
 }

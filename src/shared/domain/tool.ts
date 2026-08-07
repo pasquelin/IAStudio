@@ -16,6 +16,7 @@ export type ToolId =
   | 'explorer'
   | 'models'
   | 'generator'
+  | 'inspector'
   | 'assets'
   | 'jobs'
 
@@ -49,6 +50,9 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'explorer', zone: 'left', slot: 'secondary' },
   { id: 'models', zone: 'right', slot: 'primary' },
   { id: 'generator', zone: 'right', slot: 'primary' },
+  // The other half of the column, so what is selected stays readable while a generation is set
+  // up: in an editor, the inspector is never the panel you have to switch away to.
+  { id: 'inspector', zone: 'right', slot: 'secondary', workspaces: ['3d'] },
   // Same half as the asset shelf: a montage is read across the whole width, so the two take
   // turns rather than share the strip. First of the half, because in the Video workspace it is
   // what the strip is for.
