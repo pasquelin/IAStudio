@@ -73,6 +73,7 @@
     "cancelled": "Interrompu",
     "failed": "Échec",
     "cancel": "Interrompre la préparation",
+    "dismiss": "Retirer de la liste",
     "noFfmpeg": "ffmpeg introuvable : ni proxy ni waveform. Indiquez son chemin dans les réglages."
   },
   "models": {

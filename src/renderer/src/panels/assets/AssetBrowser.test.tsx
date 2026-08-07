@@ -124,6 +124,17 @@ describe('AssetBrowser', () => {
     expect(screen.getByText('Proxy…')).toBeInTheDocument()
   })
 
+  it('lets a failed import be dismissed, since nothing else ever clears it', async () => {
+    const cancel = vi.fn(async () => undefined)
+    useAssets.setState({ items: [asset('vid', { name: 'A001', type: 'video' })] })
+    useMedia.setState({ progress: { vid: { assetId: 'vid', stage: 'failed', ratio: 1 } }, cancel })
+    render(<Panel />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Retirer de la liste/ }))
+
+    expect(cancel).toHaveBeenCalledWith('vid')
+  })
+
   it('says what is unavailable rather than failing quietly when ffmpeg is missing', () => {
     useMedia.setState({
       capabilities: { ffmpeg: false },

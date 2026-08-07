@@ -15,6 +15,10 @@ function streamsOf(raw: unknown): Record<string, unknown>[] {
   return raw.streams.filter(isRecord)
 }
 
+function isCoverArt(stream: Record<string, unknown>): boolean {
+  return isRecord(stream.disposition) && stream.disposition.attached_pic === 1
+}
+
 const SECOND = 1_000_000
 
 /**
@@ -23,7 +27,8 @@ const SECOND = 1_000_000
  */
 export function parseProbe(raw: unknown): MediaProbe | null {
   const streams = streamsOf(raw)
-  const video = streams.find(stream => stream.codec_type === 'video')
+  // Cover art is a video stream to ffprobe. Read as one, an MP3 earns a proxy of its artwork.
+  const video = streams.find(stream => stream.codec_type === 'video' && !isCoverArt(stream))
   const audio = streams.find(stream => stream.codec_type === 'audio')
   const carrier = video ?? audio
   if (!carrier || typeof carrier.codec_name !== 'string') return null

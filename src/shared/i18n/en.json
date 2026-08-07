@@ -73,6 +73,7 @@
     "cancelled": "Stopped",
     "failed": "Failed",
     "cancel": "Stop preparing this file",
+    "dismiss": "Remove from the list",
     "noFfmpeg": "ffmpeg not found: no proxy, no waveform. Set its path in the settings."
   },
   "models": {

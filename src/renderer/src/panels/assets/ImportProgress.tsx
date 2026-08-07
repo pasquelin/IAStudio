@@ -18,11 +18,12 @@ const Row = memo(function Row({ entry, name }: { entry: IngestProgress; name: st
       ratio={failed ? undefined : entry.ratio}
       status={t(`ingest.${entry.stage}`)}
       tone={failed ? 'danger' : 'muted'}
-      cancel={
-        failed
-          ? undefined
-          : { label: t('ingest.cancel'), onClick: () => void cancel(entry.assetId) }
-      }
+      // A failure has nothing left to stop, but it still has to be dismissable: nothing else
+      // ever clears it, and there is no retry — re-picking the file makes another row.
+      cancel={{
+        label: failed ? t('ingest.dismiss') : t('ingest.cancel'),
+        onClick: () => void cancel(entry.assetId),
+      }}
     />
   )
 })

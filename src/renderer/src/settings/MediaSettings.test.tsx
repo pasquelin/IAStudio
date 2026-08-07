@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -48,6 +48,37 @@ describe('MediaSettings', () => {
     await userEvent.tab()
 
     expect(write).toHaveBeenCalledExactlyOnceWith({ media: { ffmpegPath: undefined } })
+  })
+
+  it('shows a setting that arrived after it mounted, rather than an empty field', async () => {
+    installFakeBridge()
+    render(<MediaSettings />)
+
+    // The settings window loads its settings over IPC; the section may well render first.
+    act(() => {
+      useSettings.setState({
+        settings: { ...DEFAULT_SETTINGS, media: { ffmpegPath: '/opt/homebrew/bin/ffmpeg' } },
+      })
+    })
+
+    expect(screen.getByLabelText(/Chemin de ffmpeg/)).toHaveValue('/opt/homebrew/bin/ffmpeg')
+  })
+
+  it('never erases a stored path just because the field was never touched', async () => {
+    const write = vi.fn(async () => undefined)
+    installFakeBridge()
+    render(<MediaSettings />)
+
+    act(() => {
+      useSettings.setState({
+        settings: { ...DEFAULT_SETTINGS, media: { ffmpegPath: '/usr/bin/ffmpeg' } },
+        write,
+      })
+    })
+    await userEvent.click(screen.getByLabelText(/Chemin de ffmpeg/))
+    await userEvent.tab()
+
+    expect(write).not.toHaveBeenCalled()
   })
 
   it('says what is missing when no binary answers', async () => {

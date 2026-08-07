@@ -56,6 +56,27 @@ describe('ffprobe output', () => {
     expect(parseProbe({ streams, format: { duration: '1' } })?.fps).toBeUndefined()
   })
 
+  it('reads a track with cover art as audio, not as a one-frame video', () => {
+    // The commonest MP3 there is. Read as video, it earns an H.264 proxy of its artwork —
+    // which `servedFileOf` then hands the monitor instead of the sound.
+    const probe = parseProbe({
+      streams: [
+        {
+          codec_type: 'video',
+          codec_name: 'mjpeg',
+          width: 600,
+          height: 600,
+          disposition: { attached_pic: 1 },
+        },
+        { codec_type: 'audio', codec_name: 'mp3', sample_rate: '44100', channels: 2 },
+      ],
+      format: { duration: '180' },
+    })
+
+    expect(probe).toMatchObject({ codec: 'mp3', sampleRate: 44_100 })
+    expect(probe?.height).toBeUndefined()
+  })
+
   it('reads nothing from output carrying no stream, rather than inventing a duration', () => {
     expect(parseProbe({ streams: [], format: { duration: '5' } })).toBeNull()
     expect(parseProbe('not json at all')).toBeNull()

@@ -10,9 +10,16 @@ export function MediaSettings() {
   const resolved = useMedia(state => state.capabilities.ffmpeg)
   const refreshCapabilities = useMedia(state => state.refreshCapabilities)
 
-  // Committed on blur: a controlled input fed by a settings write hands back a stale value
-  // mid-word, and every keystroke would persist half a path.
-  const [typed, setTyped] = useState(stored ?? '')
+  /**
+   * Null until the field is touched, so a setting still on its way from the main process shows
+   * up when it lands — seeding the state once would display an empty field over a stored path,
+   * and blurring it would erase that path.
+   *
+   * Committed on blur rather than per keystroke: a controlled input fed by a settings write
+   * hands back a stale value mid-word.
+   */
+  const [typed, setTyped] = useState<string | null>(null)
+  const shown = typed ?? stored ?? ''
 
   // This window connects nothing, so the answer is asked for here — and again once changed.
   useEffect(() => {
@@ -20,6 +27,8 @@ export function MediaSettings() {
   }, [refreshCapabilities])
 
   const commit = async (): Promise<void> => {
+    if (typed === null) return
+
     const path = typed.trim()
     if (path === (stored ?? '')) return
 
@@ -36,7 +45,7 @@ export function MediaSettings() {
           className="input input-sm"
           type="text"
           placeholder={t('settings.ffmpegPlaceholder')}
-          value={typed}
+          value={shown}
           onChange={event => setTyped(event.target.value)}
           onBlur={() => void commit()}
           onKeyDown={event => {
