@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '@/app/tool-components'
+import type { ToolDefinition } from '@/panels/definition'
 import { LayersActions } from './LayersActions'
 import { LayersPanel } from './LayersPanel'
 

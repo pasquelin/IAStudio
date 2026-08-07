@@ -14,7 +14,12 @@ import {
   SETTING_ACTION_IDS,
   type SettingActionId,
 } from '@shared/domain/settings-registry'
-import type { Credentials } from './store'
+
+/** Here rather than in `store.ts`, which imports this module: the type would close a cycle. */
+export type Credentials = {
+  key: string
+  secret: string
+}
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.

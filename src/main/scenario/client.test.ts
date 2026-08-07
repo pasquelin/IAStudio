@@ -1,6 +1,6 @@
 import { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
-import type { Credentials } from '@main/settings/store'
+import type { Credentials } from '@main/settings/validation'
 import {
   createClientProvider,
   describeFailure,
