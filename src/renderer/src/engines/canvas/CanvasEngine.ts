@@ -1,7 +1,3 @@
-// First, and before any other Pixi import: Electron's CSP forbids `unsafe-eval`, and Pixi builds
-// its shaders with `new Function()`, so `Application.init` rejects inside a promise and the canvas
-// stays blank with a clean console. Despite the name, this ships static polyfills instead.
-import 'pixi.js/unsafe-eval'
 import {
   type Application,
   Container,
