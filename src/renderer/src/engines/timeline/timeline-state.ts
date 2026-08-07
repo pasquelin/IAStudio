@@ -2,7 +2,7 @@
  * A sequence, as plain data. It holds no decoder and no Pixi object: an engine is rebuilt from
  * its serialized state, never from its DOM, and jsdom has neither WebCodecs nor WebGL.
  */
-import { isRecord } from '@shared/guards'
+import { isRecord, readBoolean, readNumber, readString } from '@shared/guards'
 
 /** Timeline time, in microseconds. Never float seconds: drift accumulates over a long edit. */
 export type Us = number
@@ -308,20 +308,6 @@ export function serializeSequence(state: SequenceState): string {
   return JSON.stringify(state)
 }
 
-function readNumber(source: Record<string, unknown>, key: string, fallback: number): number {
-  const value = source[key]
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
-}
-
-function readString(source: Record<string, unknown>, key: string, fallback: string): string {
-  const value = source[key]
-  return typeof value === 'string' ? value : fallback
-}
-
-function readBoolean(source: Record<string, unknown>, key: string): boolean {
-  return source[key] === true
-}
-
 function readClip(raw: unknown): Clip | null {
   if (!isRecord(raw)) return null
 
@@ -366,9 +352,9 @@ function readTrack(raw: unknown, row: number): Track | null {
     index: readNumber(raw, 'index', row),
     name: readString(raw, 'name', id),
     height: clampTrackHeight(readNumber(raw, 'height', DEFAULT_TRACK_HEIGHT)),
-    muted: readBoolean(raw, 'muted'),
-    solo: readBoolean(raw, 'solo'),
-    locked: readBoolean(raw, 'locked'),
+    muted: readBoolean(raw, 'muted', false),
+    solo: readBoolean(raw, 'solo', false),
+    locked: readBoolean(raw, 'locked', false),
   })
 
   // Reinserted rather than trusted: a file edited by hand, or written by an older version,
