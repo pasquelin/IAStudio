@@ -85,6 +85,46 @@ describe('SettingsWindow', () => {
     expect(write).toHaveBeenCalledWith({ appearance: { density: 'compact' } })
   })
 
+  // What a list of sections cannot do: a user knows what they want, not which tab holds it.
+  it('finds a setting by what it does, wherever it lives', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'réseau')
+
+    expect(screen.getByLabelText(/Tentatives maximum/)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Clé API/)).not.toBeInTheDocument()
+  })
+
+  it('says which section a result came from', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'ffmpeg')
+
+    expect(screen.getByRole('heading', { name: 'Médias' })).toBeInTheDocument()
+  })
+
+  it('says so when nothing matches, rather than showing an empty page', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'crénage')
+
+    expect(screen.getByText(/Aucun réglage ne correspond/)).toBeInTheDocument()
+  })
+
+  it('drops the search when a section is picked, so the two never disagree', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'thème')
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Compte' }))
+
+    expect(screen.getByLabelText(/Clé API/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Rechercher un réglage')).toHaveValue('')
+  })
+
   it('records a default model per family, and forgets it when asked every time', async () => {
     const written: PartialSettings[] = []
     installFakeBridge({

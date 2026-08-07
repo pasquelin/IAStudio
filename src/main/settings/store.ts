@@ -41,7 +41,19 @@ function merge(base: Settings, partial: PartialSettings): Settings {
   }
 }
 
-export function createSettingsStore(adapter: PersistenceAdapter): SettingsStore {
+/**
+ * Every write goes through here, wherever it came from — the settings window, or the main
+ * process recording the project it just opened — so notifying from the store rather than from
+ * the IPC handler is what makes "one window changed a setting" reach all of them.
+ */
+export type SettingsStoreOptions = {
+  onChange?: (settings: Settings) => void
+}
+
+export function createSettingsStore(
+  adapter: PersistenceAdapter,
+  { onChange }: SettingsStoreOptions = {},
+): SettingsStore {
   const read = (): Settings =>
     merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
 
@@ -67,6 +79,7 @@ export function createSettingsStore(adapter: PersistenceAdapter): SettingsStore 
     write: partial => {
       const merged = merge(read(), partial)
       adapter.write(SETTINGS_KEY, merged)
+      onChange?.(merged)
       return merged
     },
 

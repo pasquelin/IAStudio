@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { memoryAdapter, type MemoryAdapter } from './memory-adapter'
 import { createSettingsStore } from './store'
 
@@ -44,6 +44,35 @@ describe('settings store', () => {
     store.write({ appearance: { theme: 'light' } })
 
     expect(store.read().media.ffmpegPath).toBe('/opt/homebrew/bin/ffmpeg')
+  })
+
+  // Without this, a theme changed in the settings window reaches the studio on next launch.
+  it('reports every write, so the other windows can follow', () => {
+    const changes: Settings[] = []
+    const store = createSettingsStore(adapter, { onChange: current => changes.push(current) })
+
+    store.write({ appearance: { density: 'compact' } })
+
+    expect(changes).toHaveLength(1)
+    expect(changes[0]?.appearance.density).toBe('compact')
+    // The whole state, not the partial: a window replicates settings, it does not patch them.
+    expect(changes[0]?.generation).toEqual(DEFAULT_SETTINGS.generation)
+  })
+
+  it('reports a write nobody asked for through the IPC, like the project it just opened', () => {
+    const changes: Settings[] = []
+    const store = createSettingsStore(adapter, { onChange: current => changes.push(current) })
+
+    store.write({ storage: { lastProject: '/tmp/demo' } })
+
+    expect(changes.at(-1)?.storage.lastProject).toBe('/tmp/demo')
+  })
+
+  it('says nothing on a read', () => {
+    const changes: Settings[] = []
+    createSettingsStore(adapter, { onChange: current => changes.push(current) }).read()
+
+    expect(changes).toEqual([])
   })
 
   it('never exposes credentials through the settings it returns', () => {

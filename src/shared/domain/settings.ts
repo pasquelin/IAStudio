@@ -48,13 +48,10 @@ export type Settings = {
 }
 
 /**
- * Bounds the main validates against and the renderer offers. One table, because the two are a
- * contract: a ceiling lowered on the zod side alone leaves the panel proposing a value the IPC
- * then rejects without a word. `concurrentJobs` sizes the JobManager semaphore.
+ * The defaults, and the only place they are written: `defaultAt` reads them through a path, so
+ * the registry describes settings without restating what they start at. A fresh install is
+ * exactly this.
  */
-export const CONCURRENT_JOBS_RANGE = { min: 1, max: 16 }
-export const MAX_RETRIES_RANGE = { min: 0, max: 10 }
-
 export const DEFAULT_SETTINGS: Settings = {
   appearance: { theme: 'dark', density: 'comfortable' },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },

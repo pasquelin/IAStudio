@@ -1,0 +1,170 @@
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import type { SettingPath, SettingValue } from '@shared/domain/settings-path'
+import { descriptorAt } from '@shared/domain/settings-registry'
+import { useSettings } from '@/stores/settings'
+import { SettingRow } from './SettingRow'
+
+function rowFor(path: SettingPath) {
+  const descriptor = descriptorAt(path)
+  if (!descriptor) throw new Error(`${path} is not described`)
+  return <SettingRow descriptor={descriptor} />
+}
+
+type Write = [SettingPath, SettingValue | undefined]
+
+function captureWrites(): Write[] {
+  const written: Write[] = []
+  useSettings.setState({
+    setValue: (path, value) => {
+      written.push([path, value])
+      return Promise.resolve()
+    },
+  })
+  return written
+}
+
+describe('SettingRow', () => {
+  beforeEach(() => {
+    useSettings.setState({ settings: DEFAULT_SETTINGS })
+  })
+
+  // The whole point of the registry: no setting reaches a screen without being explained.
+  it('names the setting and says what it does', () => {
+    render(rowFor('generation.maxRetries'))
+
+    expect(screen.getByLabelText(/Tentatives maximum/)).toBeInTheDocument()
+    expect(screen.getByText(/réessaie toute seule/)).toBeInTheDocument()
+  })
+
+  it('ties the description to the control, so it is read out with it', () => {
+    render(rowFor('appearance.theme'))
+
+    const control = screen.getByLabelText(/Thème/)
+    const description = document.getElementById(control.getAttribute('aria-describedby') ?? '')
+    expect(description?.textContent).toMatch(/repose les yeux/)
+  })
+
+  it('offers a choice as its declared options, translated', async () => {
+    const written = captureWrites()
+    render(rowFor('appearance.theme'))
+
+    await userEvent.selectOptions(screen.getByLabelText(/Thème/), 'light')
+
+    expect(written.at(-1)).toEqual(['appearance.theme', 'light'])
+  })
+
+  it('writes a number as it is changed', () => {
+    const written = captureWrites()
+    render(rowFor('generation.maxRetries'))
+
+    fireEvent.change(screen.getByLabelText(/Tentatives maximum/), { target: { value: '7' } })
+
+    expect(written).toEqual([['generation.maxRetries', 7]])
+  })
+
+  it('keeps every character typed into a path, which a write per keystroke would eat', async () => {
+    render(rowFor('media.ffmpegPath'))
+
+    const field = screen.getByLabelText(/Chemin de ffmpeg/)
+    await userEvent.type(field, '/opt/homebrew/bin/ffmpeg')
+
+    expect(field).toHaveValue('/opt/homebrew/bin/ffmpeg')
+  })
+
+  it('stores a path once, when the field is left', async () => {
+    const written = captureWrites()
+    render(rowFor('media.ffmpegPath'))
+
+    await userEvent.type(screen.getByLabelText(/Chemin de ffmpeg/), '/usr/bin/ffmpeg')
+    await userEvent.tab()
+
+    expect(written).toEqual([['media.ffmpegPath', '/usr/bin/ffmpeg']])
+  })
+
+  it('drops the setting when the field is emptied, rather than storing a blank', async () => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, media: { ffmpegPath: '/usr/bin/ffmpeg' } },
+    })
+    const written = captureWrites()
+    render(rowFor('media.ffmpegPath'))
+
+    await userEvent.clear(screen.getByLabelText(/Chemin de ffmpeg/))
+    await userEvent.tab()
+
+    // Unset, not blank: that is what lets ffmpeg fall back to the bundled binary, then to PATH.
+    expect(written).toEqual([['media.ffmpegPath', undefined]])
+  })
+
+  it('shows a value that arrived after it mounted, rather than an empty field', () => {
+    render(rowFor('media.ffmpegPath'))
+
+    // The settings window loads over IPC; the row may well render first.
+    act(() => {
+      useSettings.setState({
+        settings: { ...DEFAULT_SETTINGS, media: { ffmpegPath: '/opt/homebrew/bin/ffmpeg' } },
+      })
+    })
+
+    expect(screen.getByLabelText(/Chemin de ffmpeg/)).toHaveValue('/opt/homebrew/bin/ffmpeg')
+  })
+
+  it('never erases a stored path just because the field was never touched', async () => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, media: { ffmpegPath: '/usr/bin/ffmpeg' } },
+    })
+    const written = captureWrites()
+    render(rowFor('media.ffmpegPath'))
+
+    await userEvent.click(screen.getByLabelText(/Chemin de ffmpeg/))
+    await userEvent.tab()
+
+    expect(written).toEqual([])
+  })
+
+  // Restoring while the field held a typed word used to leave that word on screen.
+  it('clears a typed path once the value moves under the edit', async () => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, media: { ffmpegPath: '/usr/bin/ffmpeg' } },
+    })
+    render(rowFor('media.ffmpegPath'))
+
+    const field = screen.getByLabelText(/Chemin de ffmpeg/)
+    await userEvent.type(field, '/typed')
+
+    act(() => {
+      useSettings.setState({ settings: DEFAULT_SETTINGS })
+    })
+
+    expect(field).toHaveValue('')
+  })
+
+  it('offers no way back while the setting is still at its default', () => {
+    render(rowFor('appearance.theme'))
+    expect(screen.getByRole('button', { name: /Restaurer/ })).toBeDisabled()
+  })
+
+  it('restores the default of a setting that was changed', async () => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, appearance: { theme: 'light', density: 'comfortable' } },
+    })
+    const written = captureWrites()
+    render(rowFor('appearance.theme'))
+
+    await userEvent.click(screen.getByRole('button', { name: /Restaurer/ }))
+
+    expect(written).toEqual([['appearance.theme', 'dark']])
+  })
+
+  // An emptied number field is mid-edit, not a request to store nothing.
+  it('reports an emptied number as no change at all', () => {
+    const written = captureWrites()
+    render(rowFor('generation.maxRetries'))
+
+    fireEvent.change(screen.getByLabelText(/Tentatives maximum/), { target: { value: '' } })
+
+    expect(written).toEqual([])
+  })
+})

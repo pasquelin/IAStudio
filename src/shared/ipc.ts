@@ -98,6 +98,7 @@ export const EVENTS = {
   mediaProgress: 'evt:media-progress',
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
+  settingsChanged: 'evt:settings-changed',
   openTool: 'evt:open-tool',
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
@@ -126,6 +127,11 @@ export type StudioBridge = {
     setCredentials: (key: string, secret: string) => Promise<AuthState>
     authState: () => Promise<AuthState>
     forgetCredentials: () => Promise<void>
+    /**
+     * Settings are owned by the main process and replicated by every window. Without this, a
+     * theme changed in the settings window would only reach the studio on the next launch.
+     */
+    onChange: (callback: (settings: Settings) => void) => Unsubscribe
   }
   scenario: {
     searchModels: (query?: ModelQuery) => Promise<ModelPage>

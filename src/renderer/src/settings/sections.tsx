@@ -1,8 +1,7 @@
 import type { FC } from 'react'
 import type { ModelFamily } from '@shared/domain/model'
+import type { SettingSection } from '@shared/domain/settings-registry'
 import { AccountSettings } from './AccountSettings'
-import { AppearanceSettings } from './AppearanceSettings'
-import { GenerationSettings } from './GenerationSettings'
 import { MediaSettings } from './MediaSettings'
 import { ModelFamilySettings } from './ModelFamilySettings'
 
@@ -11,7 +10,10 @@ export type SettingsSection = {
   /** i18n key of the label — never the displayed text. */
   labelKey: string
   descriptionKey?: string
-  Content: FC
+  /** Settings this screen owns, rendered from the registry. */
+  registry?: SettingSection
+  /** What no descriptor can express: credentials, a catalogue picker, a resolved status. */
+  Content?: FC
   children?: readonly SettingsSection[]
 }
 
@@ -33,8 +35,9 @@ function familySection({ family, labelKey }: { family: ModelFamily; labelKey: st
 }
 
 /**
- * The settings tree: a column of sections on the left, the selected one on the right. Adding
- * a screen means adding an entry here — the window itself knows nothing about what it shows.
+ * The settings tree: a column of sections on the left, the selected one on the right. What a
+ * section shows is mostly `registry` — the settings themselves are declared in
+ * `settings-registry.ts`, never written out as a form here.
  *
  * Spec § 9 also lists Storage, Shortcuts, Performance and Advanced. They appear here as they
  * are built; an entry with nothing behind it would be worse than its absence.
@@ -50,19 +53,20 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     id: 'appearance',
     labelKey: 'settings.appearance',
     descriptionKey: 'settings.appearanceDescription',
-    Content: AppearanceSettings,
+    registry: 'appearance',
   },
   {
     id: 'generation',
     labelKey: 'settings.generation',
     descriptionKey: 'settings.generationDescription',
-    Content: GenerationSettings,
+    registry: 'generation',
     children: WORKSPACE_FAMILIES.map(familySection),
   },
   {
     id: 'media',
     labelKey: 'settings.media',
     descriptionKey: 'settings.mediaDescription',
+    registry: 'media',
     Content: MediaSettings,
   },
 ]

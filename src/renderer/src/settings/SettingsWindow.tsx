@@ -1,9 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  descriptorsIn,
+  matchSettings,
+  type SettingDescriptor,
+  type SettingSection,
+} from '@shared/domain/settings-registry'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { useDensity } from '@/hooks/useDensity'
 import { useSettings } from '@/stores/settings'
+import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
 
 function NavigationEntry({
@@ -52,6 +59,34 @@ function NavigationEntry({
   )
 }
 
+/** The label a section carries in the tree, so a result says where it was found. */
+function labelKeyOf(registry: SettingSection): string {
+  return SETTINGS_SECTIONS.find(section => section.registry === registry)?.labelKey ?? registry
+}
+
+function SearchResults({ found }: { found: readonly SettingDescriptor[] }) {
+  const { t } = useTranslation()
+
+  if (found.length === 0) {
+    return <p className="text-base-content/60 text-xs">{t('settings.noResult')}</p>
+  }
+
+  const sections = [...new Set(found.map(descriptor => descriptor.section))]
+
+  return (
+    <div className="flex flex-col gap-4">
+      {sections.map(section => (
+        <section key={section}>
+          <h3 className="text-base-content/60 mb-1 text-[11px] tracking-wide uppercase">
+            {t(labelKeyOf(section))}
+          </h3>
+          <SettingList descriptors={found.filter(entry => entry.section === section)} />
+        </section>
+      ))}
+    </div>
+  )
+}
+
 /**
  * The settings window: sections on the left, the selected one on the right. Its own window
  * rather than a panel — settings are not a document, they outlive the workspace being edited,
@@ -64,17 +99,24 @@ function NavigationEntry({
 export function SettingsWindow() {
   const { t } = useTranslation()
   const [selected, setSelected] = useState(SETTINGS_SECTIONS[0]?.id ?? '')
+  const [query, setQuery] = useState('')
 
-  const load = useSettings(state => state.load)
+  const connect = useSettings(state => state.connect)
   const density = useSettings(state => state.settings.appearance.density)
 
   useEffect(() => {
-    void load()
-  }, [load])
+    const subscription = connect()
+    return () => void subscription.then(stop => stop())
+  }, [connect])
 
   useDensity(density)
 
+  // Searched over the translated title and description, so `t` has to be a dependency: the
+  // same query finds different settings once the language changes.
+  const found = useMemo(() => matchSettings(query, t), [query, t])
+
   const section = findSection(selected)
+  const searching = query.trim() !== ''
 
   return (
     <div className="bg-base-200 text-base-content flex h-full flex-col">
@@ -88,30 +130,50 @@ export function SettingsWindow() {
       <div className="flex min-h-0 flex-1">
         <nav
           aria-label={t('settings.sections')}
-          className="border-base-300 w-56 shrink-0 overflow-auto border-r p-2"
+          className="border-base-300 flex w-56 shrink-0 flex-col gap-2 overflow-auto border-r p-2"
         >
+          <input
+            type="search"
+            className="input input-xs w-full"
+            aria-label={t('settings.search')}
+            placeholder={t('settings.search')}
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+          />
+
           <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
             {SETTINGS_SECTIONS.map(entry => (
               <NavigationEntry
                 key={entry.id}
                 section={entry}
                 depth={0}
-                selected={selected}
-                onSelect={setSelected}
+                selected={searching ? '' : selected}
+                onSelect={id => {
+                  setQuery('')
+                  setSelected(id)
+                }}
               />
             ))}
           </ul>
         </nav>
 
         <main className="min-w-0 flex-1 overflow-auto px-6 py-4">
-          {section && (
+          {searching ? (
             <>
-              <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
-              {section.descriptionKey && (
-                <p className="text-base-content/60 mb-4 text-xs">{t(section.descriptionKey)}</p>
-              )}
-              <section.Content />
+              <h2 className="mb-4 text-base font-semibold">{t('settings.results')}</h2>
+              <SearchResults found={found} />
             </>
+          ) : (
+            section && (
+              <>
+                <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
+                {section.descriptionKey && (
+                  <p className="text-base-content/60 mb-4 text-xs">{t(section.descriptionKey)}</p>
+                )}
+                {section.registry && <SettingList descriptors={descriptorsIn(section.registry)} />}
+                {section.Content && <section.Content />}
+              </>
+            )
           )}
         </main>
       </div>

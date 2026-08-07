@@ -5,6 +5,7 @@ import {
   type PartialSettings,
   type Settings,
 } from '@shared/domain/settings'
+import { partialFor, type SettingPath, type SettingValue } from '@shared/domain/settings-path'
 import { getBridge } from '@/services/bridge'
 
 const UNKNOWN_AUTH: AuthState = { authenticated: false, reason: 'missing' }
@@ -15,8 +16,11 @@ type SettingsState = {
   /** False until the main process has answered once — the defaults are a placeholder. */
   loaded: boolean
 
-  load: () => Promise<void>
+  /** Loads the settings and follows the changes other windows make. Returns the unsubscribe. */
+  connect: () => Promise<() => void>
   write: (partial: PartialSettings) => Promise<void>
+  /** Writes one leaf. Nothing outside this store has to know how a path becomes a partial. */
+  setValue: (path: SettingPath, value: SettingValue | undefined) => Promise<void>
   refreshAuth: () => Promise<AuthState>
   signIn: (key: string, secret: string) => Promise<AuthState>
   signOut: () => Promise<void>
@@ -31,15 +35,18 @@ export const useSettings = create<SettingsState>()((set, get) => ({
   auth: UNKNOWN_AUTH,
   loaded: false,
 
-  load: async () => {
+  connect: async () => {
     const bridge = getBridge()
-    if (!bridge) return
+    if (!bridge) return () => {}
+
+    const stop = bridge.settings.onChange(settings => set({ settings }))
 
     const [settings, auth] = await Promise.all([
       bridge.settings.read(),
       bridge.settings.authState(),
     ])
     set({ settings, auth, loaded: true })
+    return stop
   },
 
   write: async partial => {
@@ -47,6 +54,8 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     if (!bridge) return
     set({ settings: await bridge.settings.write(partial) })
   },
+
+  setValue: async (path, value) => get().write(partialFor(path, value)),
 
   refreshAuth: async () => {
     const bridge = getBridge()

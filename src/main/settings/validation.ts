@@ -1,11 +1,6 @@
 import { z } from 'zod'
-import {
-  CONCURRENT_JOBS_RANGE,
-  DENSITIES,
-  MAX_RETRIES_RANGE,
-  THEMES,
-  type PartialSettings,
-} from '@shared/domain/settings'
+import { DENSITIES, THEMES, type PartialSettings } from '@shared/domain/settings'
+import { boundsOf } from '@shared/domain/settings-registry'
 import type { Credentials } from './store'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
@@ -15,14 +10,14 @@ const appearance = z.object({
   density: z.enum(DENSITIES).optional(),
 })
 
+// Read from the registry, never restated: the bounds a screen offers and the ones this refuses
+// are the same numbers, so a ceiling can no longer be lowered on one side alone.
+const jobs = boundsOf('generation.concurrentJobs')
+const retries = boundsOf('generation.maxRetries')
+
 const generation = z.object({
-  concurrentJobs: z
-    .number()
-    .int()
-    .min(CONCURRENT_JOBS_RANGE.min)
-    .max(CONCURRENT_JOBS_RANGE.max)
-    .optional(),
-  maxRetries: z.number().int().min(MAX_RETRIES_RANGE.min).max(MAX_RETRIES_RANGE.max).optional(),
+  concurrentJobs: z.number().int().min(jobs.min).max(jobs.max).optional(),
+  maxRetries: z.number().int().min(retries.min).max(retries.max).optional(),
   // Keys are model families and values model ids, both free strings here: the API adds
   // families and models on its own schedule, and an unknown one must not fail the write.
   defaultModels: z.record(z.string().min(1), z.string().min(1)).optional(),

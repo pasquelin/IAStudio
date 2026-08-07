@@ -19,6 +19,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       setCredentials: () => Promise.resolve({ authenticated: true }),
       authState: () => Promise.resolve({ authenticated: false, reason: 'missing' }),
       forgetCredentials: () => Promise.resolve(),
+      onChange: noSubscription,
       ...overrides.settings,
     },
     scenario: {

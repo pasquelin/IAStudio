@@ -416,28 +416,47 @@
   },
   "settings": {
     "title": "Réglages",
+    "sections": "Sections de réglages",
+    "search": "Rechercher un réglage",
+    "results": "Résultats",
+    "noResult": "Aucun réglage ne correspond à cette recherche.",
+    "restoreDefault": "Restaurer la valeur par défaut",
     "account": "Compte",
     "appearance": "Apparence",
     "generation": "Génération",
-    "theme": "Thème",
-    "themeDark": "Sombre",
-    "themeLight": "Clair",
-    "density": "Densité",
-    "densityCompact": "Compact",
-    "densityComfortable": "Confort",
-    "concurrentJobs": "Tâches simultanées",
-    "sections": "Sections de réglages",
-    "maxRetries": "Tentatives maximum",
-    "defaultModel": "Modèle par défaut",
-    "noDefaultModel": "Demander à chaque fois",
-    "familyUpscale": "Agrandissement",
+    "media": "Médias",
     "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
     "appearanceDescription": "Thème et densité des contrôles.",
     "generationDescription": "File de génération et modèles par défaut, par famille.",
-    "media": "Médias",
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
-    "ffmpegPath": "Chemin de ffmpeg",
-    "ffmpegPlaceholder": "/opt/homebrew/bin/ffmpeg",
+    "theme": {
+      "title": "Thème",
+      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour.",
+      "dark": "Sombre",
+      "light": "Clair"
+    },
+    "density": {
+      "title": "Densité",
+      "help": "Règle la taille des boutons et la hauteur des lignes. « Compact » fait tenir plus de choses à l’écran ; « Confort » laisse plus d’air entre elles, ce qui les rend plus faciles à viser à la souris.",
+      "comfortable": "Confort",
+      "compact": "Compact"
+    },
+    "concurrentJobs": {
+      "title": "Générations simultanées",
+      "help": "Nombre de créations qui travaillent en même temps. Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut mettre plus longtemps à revenir, et le service peut refuser celles qui arrivent en trop. Trois est un bon équilibre."
+    },
+    "maxRetries": {
+      "title": "Tentatives maximum",
+      "help": "Quand une génération échoue à cause d’une coupure réseau ou d’un serveur occupé, l’application réessaie toute seule. Ce nombre dit combien de fois avant d’abandonner. À 0, elle n’essaie jamais deux fois. Une clé API invalide n’est jamais réessayée : réessayer ne la corrigerait pas."
+    },
+    "ffmpegPath": {
+      "title": "Chemin de ffmpeg",
+      "help": "Emplacement du programme ffmpeg, qui prépare les vidéos importées : une copie allégée pour naviguer sans à-coups, et le dessin de la bande son. Laissez vide pour que l’application le cherche elle-même. Sans lui, l’import fonctionne quand même, mais en moins confortable.",
+      "placeholder": "/opt/homebrew/bin/ffmpeg"
+    },
+    "defaultModel": "Modèle par défaut",
+    "noDefaultModel": "Demander à chaque fois",
+    "familyUpscale": "Agrandissement",
     "ffmpegFound": "ffmpeg est disponible : proxies et waveforms seront préparés.",
     "ffmpegMissing": "ffmpeg reste introuvable. L’import fonctionne, sans proxy ni waveform."
   }

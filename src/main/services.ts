@@ -91,7 +91,11 @@ async function download(url: string): Promise<Uint8Array> {
  * refuses before then.
  */
 export function createServices(): Services {
-  const settings = createSettingsStore(createElectronAdapter())
+  // Notified from the store rather than from the IPC handler: the project store writes
+  // `lastProject` on its own, and every window replicates these settings.
+  const settings = createSettingsStore(createElectronAdapter(), {
+    onChange: current => broadcast(EVENTS.settingsChanged, current),
+  })
 
   // A keychain the OS can no longer open leaves a blob that decrypts to nothing. Dropping it
   // at startup is what makes the account dialog ask again instead of claiming to be set up.

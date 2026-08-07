@@ -1,62 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMedia } from '@/stores/media'
 import { useSettings } from '@/stores/settings'
 
+/**
+ * What no descriptor can express: whether a binary actually answers. The path itself is a
+ * registry setting like any other — this only reports what came of it.
+ */
 export function MediaSettings() {
   const { t } = useTranslation()
-  const stored = useSettings(state => state.settings.media.ffmpegPath)
-  const write = useSettings(state => state.write)
+  const ffmpegPath = useSettings(state => state.settings.media.ffmpegPath)
   const resolved = useMedia(state => state.capabilities.ffmpeg)
   const refreshCapabilities = useMedia(state => state.refreshCapabilities)
 
-  /**
-   * Null until the field is touched, so a setting still on its way from the main process shows
-   * up when it lands — seeding the state once would display an empty field over a stored path,
-   * and blurring it would erase that path.
-   *
-   * Committed on blur rather than per keystroke: a controlled input fed by a settings write
-   * hands back a stale value mid-word.
-   */
-  const [typed, setTyped] = useState<string | null>(null)
-  const shown = typed ?? stored ?? ''
-
-  // This window connects nothing, so the answer is asked for here — and again once changed.
+  // Asked again whenever the path changes: this window connects nothing, and the answer is
+  // exactly what that field decides.
   useEffect(() => {
     void refreshCapabilities()
-  }, [refreshCapabilities])
-
-  const commit = async (): Promise<void> => {
-    if (typed === null) return
-
-    const path = typed.trim()
-    if (path === (stored ?? '')) return
-
-    // Empty means "the bundled one, or the PATH" — the key is dropped, not stored blank.
-    await write({ media: { ffmpegPath: path === '' ? undefined : path } })
-    await refreshCapabilities()
-  }
+  }, [refreshCapabilities, ffmpegPath])
 
   return (
-    <div className="flex max-w-md flex-col gap-3">
-      <label className="flex flex-col gap-1 text-xs">
-        {t('settings.ffmpegPath')}
-        <input
-          className="input input-sm"
-          type="text"
-          placeholder={t('settings.ffmpegPlaceholder')}
-          value={shown}
-          onChange={event => setTyped(event.target.value)}
-          onBlur={() => void commit()}
-          onKeyDown={event => {
-            if (event.key === 'Enter') void commit()
-          }}
-        />
-      </label>
-
-      <p className="text-muted text-xs">
-        {resolved ? t('settings.ffmpegFound') : t('settings.ffmpegMissing')}
-      </p>
-    </div>
+    <p className="text-base-content/60 mt-3 text-xs">
+      {resolved ? t('settings.ffmpegFound') : t('settings.ffmpegMissing')}
+    </p>
   )
 }

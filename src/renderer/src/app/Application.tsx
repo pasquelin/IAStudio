@@ -23,22 +23,18 @@ export function Application() {
     pruneDocuments(useLayouts.getState().layouts)
   }, [])
 
-  const load = useSettings(state => state.load)
+  const connectSettings = useSettings(state => state.connect)
   const connectProject = useProject(state => state.connect)
   const connectJobs = useJobs(state => state.connect)
   const connectMedia = useMedia(state => state.connect)
   const density = useSettings(state => state.settings.appearance.density)
 
   useEffect(() => {
-    void load()
-  }, [load])
-
-  useEffect(() => {
-    const subscriptions = [connectProject(), connectJobs(), connectMedia()]
+    const subscriptions = [connectSettings(), connectProject(), connectJobs(), connectMedia()]
     return () => {
       for (const subscription of subscriptions) void subscription.then(stop => stop())
     }
-  }, [connectProject, connectJobs, connectMedia])
+  }, [connectSettings, connectProject, connectJobs, connectMedia])
 
   useDensity(density)
 

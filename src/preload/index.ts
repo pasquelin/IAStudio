@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
+import type { Settings } from '@shared/domain/settings'
 import type { WindowState } from '@shared/domain/window'
 import {
   CHANNELS,
@@ -30,6 +31,7 @@ const bridge: StudioBridge = {
       ipcRenderer.invoke(CHANNELS.settingsSetCredentials, key, secret),
     authState: () => ipcRenderer.invoke(CHANNELS.settingsAuthState),
     forgetCredentials: () => ipcRenderer.invoke(CHANNELS.settingsForgetCredentials),
+    onChange: callback => subscribe<Settings>(EVENTS.settingsChanged, callback),
   },
   scenario: {
     searchModels: query => ipcRenderer.invoke(CHANNELS.scenarioSearchModels, query),
