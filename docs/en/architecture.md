@@ -281,6 +281,12 @@ Four of them, no React inside any one.
 | `SceneRenderer` | three.js 0.185 | the 3D scene: meshes, lights, gizmos, camera |
 | `TimelineEngine` | mediabunny + Canvas | the sequence: clips, playback, waveforms, filmstrips |
 | `engines/audio` | plain sample arrays | the sound edit: crop, fades, gain, normalise, trim silence |
+| `SkyboxRenderer` | `ViewportEngine` | the sky from the inside: sun, grading, probes |
+| `TextureRenderer` | `ViewportEngine` | the material on a shape: PBR channels, environment, tiling |
+
+The three that show 3D share `engines/viewport/` — canvas, camera, orbit, resizing, on-demand
+loop, image-based lighting. Each writing its own was three chances to disagree about a resize
+or a disposal.
 
 The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
@@ -335,6 +341,16 @@ can search thousands of items without touching the filesystem, and so a project 
 
 Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
 image is served to the renderer as `scenario://<id>`.
+
+**Documents** are JSON files under `documents/`, one per document, named after its id —
+`<id>.scene`, `<id>.seq`. The folder has the last word: a file whose header claims a kind its
+extension denies is refused rather than opened in the wrong editor. Writing goes through a
+staging file and a `rename`, which is atomic within one folder, so a crash mid-write can never
+leave a truncated document where the work was.
+
+The body belongs to the space that wrote it: the main process never reads into it, it stamps an
+envelope and hands it back untouched. A space that learns to save therefore needs no channel of
+its own. **Only 3D is wired today** — see `docs/REPRISE.md`.
 
 ---
 

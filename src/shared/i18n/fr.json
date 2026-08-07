@@ -228,6 +228,14 @@
     "color": "Couleur",
     "colorHint": "Couleur du pinceau, des formes et du remplissage"
   },
+  "imageView": {
+    "zoom": "Zoom",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "fit": "Ajuster",
+    "fitHint": "Ajuster l'image à la fenêtre",
+    "actualHint": "Taille réelle — un pixel de l'image pour un pixel d'écran"
+  },
   "layers": {
     "add": "Ajouter un calque",
     "addHint": "Ajouter un calque transparent au-dessus de la pile",
@@ -483,6 +491,14 @@
     "light": "Lumière",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "zoomFit": "Ajuster à la fenêtre",
+    "zoomActual": "Taille réelle",
+    "rulers": "Règles",
+    "guides": "Repères",
+    "clearGuides": "Effacer les repères",
+    "snap": "Magnétisme",
     "help": "Aide",
     "about": "À propos de {{name}}"
   },
@@ -759,6 +775,49 @@
     "sequenceEnd": {
       "title": "Aller à la fin",
       "help": "Envoie la tête de lecture tout à la fin du montage, après le dernier clip."
+    },
+    "canvasZoomIn": {
+      "title": "Zoom avant",
+      "help": "Agrandit la vue d'un cran, autour du centre de ce qui est visible. L'image n'est pas touchée, seulement la façon de la regarder."
+    },
+    "canvasZoomOut": {
+      "title": "Zoom arrière",
+      "help": "Réduit la vue d'un cran pour reprendre du recul sur l'ensemble de l'image."
+    },
+    "canvasZoomFit": {
+      "title": "Ajuster à la fenêtre",
+      "help": "Cadre l'image entière dans le panneau, avec une marge, et sans jamais l'agrandir au-delà de sa taille réelle."
+    },
+    "canvasZoomActual": {
+      "title": "Taille réelle",
+      "help": "Un pixel de l'image pour un pixel d'écran : la seule échelle où l'on juge la netteté."
+    },
+    "canvasRulers": {
+      "title": "Règles",
+      "help": "Affiche ou masque les deux règles graduées, en haut et à gauche. C'est d'elles qu'on tire les repères."
+    },
+    "canvasGuides": {
+      "title": "Repères",
+      "help": "Affiche ou masque les repères posés sur l'image. Les masquer ne les efface pas."
+    },
+    "canvasClearGuides": {
+      "title": "Effacer les repères",
+      "help": "Retire tous les repères de l'image. Annulable, comme toute autre modification."
+    },
+    "canvasSnap": {
+      "title": "Magnétisme",
+      "help": "Fait coller ce qu'on déplace aux repères, aux bords de l'image et à son centre, à quelques pixels près."
     }
+  },
+  "texture": {
+    "shapeSphere": "Sphère",
+    "shapeBox": "Cube",
+    "shapeCylinder": "Cylindre",
+    "shapePlane": "Plan",
+    "shapeKnot": "Nœud",
+    "showBackground": "Afficher le fond",
+    "autoSpin": "Rotation automatique",
+    "envIntensity": "Éclairage",
+    "dropSource": "Glissez une image du projet pour la poser en couleur de base"
   }
 }

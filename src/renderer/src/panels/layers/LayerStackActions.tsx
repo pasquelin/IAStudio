@@ -1,6 +1,7 @@
 import { mdiPlus, mdiTrashCanOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
+import { pixelLayer } from '@/engines/canvas/canvas-state'
 import { addLayer, removeLayer } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
@@ -15,14 +16,7 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
   const create = (): void => {
     store.runCommand(
       documentId,
-      addLayer({
-        id: newId(),
-        name: t('layers.untitled', { n: canvas.layers.length + 1 }),
-        visible: true,
-        locked: false,
-        opacity: 1,
-        blend: 'normal',
-      }),
+      addLayer(pixelLayer(newId(), t('layers.untitled', { n: canvas.layers.length + 1 }))),
     )
   }
 

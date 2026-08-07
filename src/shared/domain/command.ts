@@ -9,7 +9,7 @@ import type { Signature } from './shortcut'
  * offers. Its bindings are the only ones that may clash with everything else, so they are the
  * only ones a conflict check treats as competing with every scope.
  */
-export type CommandScope = 'global' | 'scene' | 'sequence'
+export type CommandScope = 'global' | 'scene' | 'sequence' | 'canvas'
 
 export type CommandId =
   | 'project.new'
@@ -36,6 +36,16 @@ export type CommandId =
   | 'sequence.end'
   | 'sequence.undo'
   | 'sequence.redo'
+  | 'canvas.zoomIn'
+  | 'canvas.zoomOut'
+  | 'canvas.zoomFit'
+  | 'canvas.zoomActual'
+  | 'canvas.rulers'
+  | 'canvas.guides'
+  | 'canvas.clearGuides'
+  | 'canvas.snap'
+  | 'canvas.undo'
+  | 'canvas.redo'
 
 /**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
@@ -237,9 +247,82 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
+
+  // Navigating an image. Same keys as the timeline's own zoom, and for the same reason they may
+  // be: only the surface in front is listening.
+  command({
+    id: 'canvas.zoomIn',
+    scope: 'canvas',
+    titleKey: 'commands.canvasZoomIn.title',
+    helpKey: 'commands.canvasZoomIn.help',
+    defaultBinding: 'Meta+Equal',
+  }),
+  command({
+    id: 'canvas.zoomOut',
+    scope: 'canvas',
+    titleKey: 'commands.canvasZoomOut.title',
+    helpKey: 'commands.canvasZoomOut.help',
+    defaultBinding: 'Meta+Minus',
+  }),
+  command({
+    id: 'canvas.zoomFit',
+    scope: 'canvas',
+    titleKey: 'commands.canvasZoomFit.title',
+    helpKey: 'commands.canvasZoomFit.help',
+    defaultBinding: 'Meta+Digit0',
+  }),
+  command({
+    id: 'canvas.zoomActual',
+    scope: 'canvas',
+    titleKey: 'commands.canvasZoomActual.title',
+    helpKey: 'commands.canvasZoomActual.help',
+    defaultBinding: 'Meta+Digit1',
+  }),
+  command({
+    id: 'canvas.rulers',
+    scope: 'canvas',
+    titleKey: 'commands.canvasRulers.title',
+    helpKey: 'commands.canvasRulers.help',
+    defaultBinding: 'Meta+KeyR',
+  }),
+  command({
+    id: 'canvas.guides',
+    scope: 'canvas',
+    titleKey: 'commands.canvasGuides.title',
+    helpKey: 'commands.canvasGuides.help',
+    defaultBinding: 'Meta+Semicolon',
+  }),
+  command({
+    id: 'canvas.clearGuides',
+    scope: 'canvas',
+    titleKey: 'commands.canvasClearGuides.title',
+    helpKey: 'commands.canvasClearGuides.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.snap',
+    scope: 'canvas',
+    titleKey: 'commands.canvasSnap.title',
+    helpKey: 'commands.canvasSnap.help',
+    defaultBinding: 'Shift+Meta+Semicolon',
+  }),
+  command({
+    id: 'canvas.undo',
+    scope: 'canvas',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'canvas.redo',
+    scope: 'canvas',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
 ]
 
-export const COMMAND_SCOPES: readonly CommandScope[] = ['global', 'scene', 'sequence']
+export const COMMAND_SCOPES: readonly CommandScope[] = ['global', 'scene', 'sequence', 'canvas']
 
 export function commandDescriptor(id: CommandId): CommandDescriptor | null {
   return COMMAND_REGISTRY.find(descriptor => descriptor.id === id) ?? null

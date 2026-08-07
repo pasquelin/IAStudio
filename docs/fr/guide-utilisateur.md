@@ -20,9 +20,10 @@ Vous cherchez plutôt comment il est bâti ? Voir [architecture.md](architecture
 9. [Travailler en 3D](#travailler-en-3d)
 10. [Monter une vidéo](#monter-une-vidéo)
 11. [Travailler le son](#travailler-le-son)
-12. [Les réglages](#les-réglages)
-13. [Aide-mémoire clavier](#aide-mémoire-clavier)
-14. [Quand quelque chose cloche](#quand-quelque-chose-cloche)
+12. [Travailler une texture](#travailler-une-texture)
+13. [Les réglages](#les-réglages)
+14. [Aide-mémoire clavier](#aide-mémoire-clavier)
+15. [Quand quelque chose cloche](#quand-quelque-chose-cloche)
 
 ---
 
@@ -127,7 +128,7 @@ autour d'un type de travail, et filtre le catalogue sur la famille correspondant
 | **Vidéo** | video | Timeline |
 | **3D** | 3d | Maillages, Lumières, Inspecteur, et l'arbre de scène dans l'Explorateur |
 | **Audio** | audio | — (son éditeur est la forme d'onde elle-même) |
-| **Textures** | image | — |
+| **Textures** | image | — (son éditeur est l'aperçu lui-même) |
 | **Skyboxes** | image | — |
 
 Une disposition arrangée dans un espace y reste. Ce qui est ouvert est retenu par zone, et un
@@ -308,6 +309,20 @@ les champs viennent du type du nœud, pas d'un formulaire écrit pour chacun.
 Ce n'est pas un panneau de la 3D : le même inspecteur lit un clip, une piste ou un asset quand
 c'est cela qui est sélectionné, et c'est pourquoi il reste ouvert dans tous les espaces.
 
+### Enregistrer une scène
+
+`⌘S` / `Ctrl+S` écrit la scène en avant dans le projet, sous `documents/`. Un onglet dont le
+travail n'est pas encore sur le disque porte **un point à côté de son nom** ; le point disparaît
+à l'enregistrement, et revient à la modification suivante. Annuler jusqu'au point où vous aviez
+enregistré le fait disparaître aussi — ce que vous voyez est alors bien ce que contient le
+fichier.
+
+Rouvrir le studio ramène l'onglet et relit sa scène. Un onglet jamais enregistré revient vide :
+rien n'avait été écrit pour lui.
+
+> Pour l'instant, seules les scènes 3D s'enregistrent. Les images, les séquences, les sons et les
+> ciels vivent encore dans la fenêtre — fermer leur onglet perd ce qu'ils contiennent.
+
 <!-- CAPTURE : la vue 3D avec un maillage sélectionné, l'arbre de scène et le panneau Maillages.
      Vers ../images/scene-3d.png -->
 
@@ -356,6 +371,31 @@ d'onde et travaille sur la sélection que vous y tirez.
 Rien n'est écrit tant que vous ne le dites pas : **Appliquer** réécrit l'asset, **Enregistrer
 comme nouveau** en crée un à côté. L'A/B existe pour entendre ce que vous avez changé avant de
 choisir entre les deux.
+
+---
+
+## Travailler une texture
+
+Une texture n'est pas une image : c'est une matière, et elle ne se juge pas à plat. L'espace
+Textures la pose sur une forme, sous une vraie lumière.
+
+Cliquez **+** dans l'espace Textures pour ouvrir un document, puis **glissez une image du projet
+sur l'aperçu** : elle devient la couleur de base.
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| **Sphère · Cube · Cylindre · Plan · Nœud** | la forme sur laquelle juger. Le plan montre la répétition, la sphère montre l'éclairage, le nœud montre ce qui se passe là où la surface se replie |
+| **Fond** | montrer l'environnement derrière le sujet, ou l'utiliser seulement pour éclairer |
+| **Rotation automatique** | faire tourner la forme lentement, pour lire le relief |
+| **Éclairage** | l'intensité de l'environnement |
+
+L'éclairage par défaut est un studio neutre : aucun fichier à télécharger, et une matière
+lisible dès le premier document. Le jour où votre projet contient des skyboxes, elles pourront
+servir de lumière à leur tour.
+
+Tout est enregistré dans un fichier `.tex` du dossier `documents/` de votre projet, quelques
+instants après votre dernier geste. Rien n'est cuit dans les pixels : rouvrez le document dans
+six mois, chaque réglage est encore là et se règle encore.
 
 ---
 
@@ -436,6 +476,7 @@ Tout y est lisible sauf les identifiants, qui sont chiffrés. Supprimer le fichi
 |---|---|
 | `⌘N` / `Ctrl+N` | nouveau projet |
 | `⌘O` / `Ctrl+O` | ouvrir un projet |
+| `⌘S` / `Ctrl+S` | enregistrer le document en avant |
 | `⌘,` / `Ctrl+,` | réglages |
 | `⌃⌘F` / `F11` | plein écran |
 | `⌘Z` / `⇧⌘Z` | annuler / rétablir, dans le document actif |

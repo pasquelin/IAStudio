@@ -4,7 +4,9 @@ import {
   documentPath,
   EXTENSION_BY_KIND,
   isDocumentKind,
+  kindForExtension,
   kindForWorkspace,
+  workspaceForKind,
 } from './document'
 import { WORKSPACE_IDS } from './workspace'
 
@@ -29,12 +31,62 @@ describe('kindForWorkspace', () => {
     expect(kindForWorkspace('skyboxes')).toBe('skybox')
   })
 
-  it('has no editable document for the workspaces without an editor yet', () => {
-    expect(kindForWorkspace('textures')).toBeNull()
+  it('gives the textures workspace a material to edit', () => {
+    expect(kindForWorkspace('textures')).toBe('texture')
+  })
+
+  // Every workspace opens a document of its own now. The `null` branch stays for the next one
+  // to arrive: a workspace whose editor does not exist yet disables the new-document button.
+  it('answers with a kind for every workspace the studio shows', () => {
+    for (const id of WORKSPACE_IDS) expect(kindForWorkspace(id)).not.toBeNull()
   })
 
   it('answers for every known workspace', () => {
     for (const id of WORKSPACE_IDS) expect(() => kindForWorkspace(id)).not.toThrow()
+  })
+})
+
+describe('workspaceForKind', () => {
+  it('sends every kind back to the workspace that opens it', () => {
+    expect(workspaceForKind('scene')).toBe('3d')
+    expect(workspaceForKind('image')).toBe('image')
+    expect(workspaceForKind('sequence')).toBe('video')
+    expect(workspaceForKind('audio')).toBe('audio')
+    expect(workspaceForKind('skybox')).toBe('skyboxes')
+  })
+
+  // A document filed under a workspace that does not open it is a tab nothing can render, and
+  // listing a project folder builds one descriptor per file from this answer alone.
+  it('agrees with kindForWorkspace on every kind', () => {
+    for (const kind of DOCUMENT_KINDS) {
+      const workspace = workspaceForKind(kind)
+      expect(workspace).not.toBeNull()
+      if (workspace) expect(kindForWorkspace(workspace)).toBe(kind)
+    }
+  })
+})
+
+describe('kindForExtension', () => {
+  it('reads back the extension every kind is written under', () => {
+    for (const kind of DOCUMENT_KINDS) {
+      expect(kindForExtension(EXTENSION_BY_KIND[kind])).toBe(kind)
+    }
+  })
+
+  // A project folder is the user's own: it holds notes, exports, and whatever else was dropped
+  // in there. Only what this build wrote is a document.
+  it('answers null for anything else in the folder', () => {
+    expect(kindForExtension('.txt')).toBeNull()
+    expect(kindForExtension('.tmp')).toBeNull()
+    expect(kindForExtension('')).toBeNull()
+    expect(kindForExtension('.obj')).toBeNull()
+  })
+
+  // `documentPath` writes in lower case: accepted here, a `.SCENE` would be listed under a name
+  // `read` cannot find on a case-sensitive volume, and saved beside the original rather than over
+  // it.
+  it('refuses an extension in capitals rather than listing a file it could not reopen', () => {
+    expect(kindForExtension('.SCENE')).toBeNull()
   })
 })
 
@@ -44,7 +96,7 @@ describe('isDocumentKind', () => {
   })
 
   it('rejects what a hand-edited file could hold', () => {
-    expect(isDocumentKind('texture')).toBe(false)
+    expect(isDocumentKind('material')).toBe(false)
     expect(isDocumentKind('')).toBe(false)
     expect(isDocumentKind(null)).toBe(false)
     expect(isDocumentKind(undefined)).toBe(false)

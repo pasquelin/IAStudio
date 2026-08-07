@@ -175,3 +175,23 @@ describe('the accelerators the menu advertises', () => {
     expect(fired).toEqual(['project.new'])
   })
 })
+
+/**
+ * `role: 'reload'` carries ⌘R implicitly, and ⌘R is the rulers of the image workspace. Two items
+ * of one submenu claiming a single key is served by whichever AppKit finds first.
+ */
+describe('accelerators within the View menu', () => {
+  it('never lets two items claim the same key', () => {
+    const items = submenuOf(menuTemplate(options()), 'Affichage')
+    const keys = items.flatMap(item =>
+      item.accelerator ? [item.accelerator] : item.role === 'reload' ? ['CmdOrCtrl+R'] : [],
+    )
+
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('keeps the developer reload reachable, one modifier further', () => {
+    const items = submenuOf(menuTemplate(options()), 'Affichage')
+    expect(items.find(item => item.role === 'reload')?.accelerator).toBe('Shift+CmdOrCtrl+R')
+  })
+})

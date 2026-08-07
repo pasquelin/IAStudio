@@ -51,7 +51,13 @@ export type MenuOptions = {
  */
 function developerItems(isDevelopment: boolean): MenuItemConstructorOptions[] {
   if (!isDevelopment) return []
-  return [{ type: 'separator' }, { role: 'toggleDevTools' }, { role: 'reload' }]
+  return [
+    { type: 'separator' },
+    { role: 'toggleDevTools' },
+    // ⌘R is the image workspace's rulers, and `role: 'reload'` carries ⌘R implicitly: two items
+    // of this very submenu would claim one key, and AppKit serves whichever it finds first.
+    { role: 'reload', accelerator: 'Shift+CmdOrCtrl+R' },
+  ]
 }
 
 /** One placement per tool: a tool declaring several must still appear once in the menu. */

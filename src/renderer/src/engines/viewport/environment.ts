@@ -6,6 +6,7 @@ import {
   type WebGLRenderer,
   type WebGLRenderTarget,
 } from 'three'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 
 /**
  * Image-based lighting for a viewport: the equirectangular picture behind the scene, and the
@@ -21,6 +22,12 @@ export type ViewportEnvironment = {
   setTexture: (texture: Texture | null) => void
   /** Expensive. Rebuilds the prefiltered map from the current texture — debounce the caller. */
   refresh: () => void
+  /**
+   * Neutral light with no picture behind it: three builds a small lit room and prefilters it,
+   * so the studio ships no HDRI at all and a brand new project still shows a material under
+   * usable light. A roughness judged under no light is not judged.
+   */
+  setStudio: () => void
   setIntensity: (intensity: number) => void
   /** Radians around Y. Turns the horizon and what the scene reflects together. */
   setRotation: (radians: number) => void
@@ -62,6 +69,18 @@ export function createEnvironment(
       scene.environment = prefiltered?.texture ?? null
       // Disposed after the new one is in place, never before: releasing the target still bound
       // to `scene.environment` leaves every material pointing at freed GPU memory for a frame.
+      previous?.dispose()
+      requestRender()
+    },
+
+    setStudio: () => {
+      const previous = prefiltered
+      const room = new RoomEnvironment()
+      prefiltered = generator.fromScene(room, 0.04)
+      // `fromScene` reads the room and leaves it alone: its dozen boxes and materials are ours.
+      room.dispose()
+
+      scene.environment = prefiltered.texture
       previous?.dispose()
       requestRender()
     },

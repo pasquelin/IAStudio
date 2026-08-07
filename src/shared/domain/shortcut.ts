@@ -64,7 +64,27 @@ export function shortcutLabel(signature: Signature | null): string {
   const parts = signature.split('+')
   const code = parts.at(-1) ?? ''
   const modifiers = parts.slice(0, -1).map(part => MODIFIER_GLYPHS[part] ?? part)
-  return [...modifiers, code.startsWith('Key') ? code.slice(3) : code].join('')
+  return [...modifiers, keyGlyph(code)].join('')
+}
+
+/**
+ * A code is a position, and what is printed on that key is what the user is looking for. The
+ * bindings that are neither letters nor named keys — the zoom's `=` and `-`, the guides' `;` —
+ * would otherwise read `⌘Equal` in a tooltip and in the shortcuts screen.
+ */
+const KEY_GLYPHS: Record<string, string> = {
+  Equal: '=',
+  Minus: '−',
+  Semicolon: ';',
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+}
+
+function keyGlyph(code: string): string {
+  if (code.startsWith('Key')) return code.slice(3)
+  if (code.startsWith('Digit')) return code.slice(5)
+  return KEY_GLYPHS[code] ?? code
 }
 
 export const DEFAULT_MOTION: Record<MotionId, Signature> = {

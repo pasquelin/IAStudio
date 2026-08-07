@@ -1,13 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { bindingOf, type CommandId } from '@shared/domain/command'
+import { shortcutLabel } from '@shared/domain/shortcut'
 import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { TIP_RIGHT } from '@/helpers/tooltip'
+import { useShortcuts } from '@/hooks/useShortcuts'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
+import { useBindingOverrides } from '@/stores/bindings'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
+import { useCanvasViews, viewOf } from '@/stores/canvas-views'
+import { useDocuments } from '@/stores/documents'
+import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
+import { guidePort } from './guide-port'
 import { canvasToolFor, cursorFor, DEFAULT_MODES, IMAGE_TOOLS } from './image-tools'
+import { layerPort } from './layer-port'
+import { pixelPort } from './pixel-port'
+import { ZoomBar } from './ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }
 
@@ -31,20 +42,32 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const [brush, setBrush] = useState<BrushSettings>(DEFAULT_BRUSH)
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
+  const view = useCanvasViews(state => viewOf(state, documentId))
   // Booleans rather than the history itself: a selector building an object on every call hands
   // React a new snapshot each render, and the loop never settles.
   const undoable = useCanvases(state => canUndo(historyOf(state, documentId)))
   const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
+  const bindings = useBindingOverrides()
+  const active = useDocuments(state => state.activeId === documentId)
 
   useEffect(() => {
     const element = hostRef.current
     if (!element) return
 
+    const views = () => useCanvasViews.getState()
+    // Read through the ref rather than captured: an undo can land after this engine has been
+    // replaced, and it is the current one that holds the tiles.
+    const pixels = pixelPort(documentId, () => engine.current)
     const created = new CanvasEngine({
       onPick: color => setBrush(current => ({ ...current, color })),
       // A stroke is one gesture, so it is one history entry — a command per dab would make
       // undo useless.
-      onStrokeEnd: () => undefined,
+      onPixels: pixels.record,
+      onPixelsDropped: pixels.drop,
+      onViewport: viewport => views().setViewport(documentId, viewport),
+      onHost: size => views().setHost(documentId, size),
+      guides: guidePort(documentId),
+      layers: layerPort(documentId),
     })
 
     engine.current = created
@@ -62,6 +85,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   }, [canvas])
 
   useEffect(() => {
+    engine.current?.setView(view)
+  }, [view])
+
+  useEffect(() => {
     engine.current?.setBrush(brush)
   }, [brush])
 
@@ -71,6 +98,47 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     const canvasTool = canvasToolFor(tool, mode)
     if (canvasTool) engine.current?.setTool(canvasTool)
   }, [tool, mode])
+
+  /**
+   * What a key press means here. One `switch`, as every other space has one: the surface that is
+   * listening is the one that answers, so `Meta+Equal` zooms an image here and stretches the
+   * timeline there without either knowing about the other.
+   */
+  const run = useCallback(
+    (command: CommandId) => {
+      switch (command) {
+        case 'canvas.zoomIn':
+          return zoomIn(documentId)
+        case 'canvas.zoomOut':
+          return zoomOut(documentId)
+        case 'canvas.zoomFit':
+          return zoomToFit(documentId)
+        case 'canvas.zoomActual':
+          return zoomToActual(documentId)
+        case 'canvas.rulers':
+          return toggleView(documentId, 'rulers')
+        case 'canvas.guides':
+          return toggleView(documentId, 'guides')
+        case 'canvas.snap':
+          return toggleView(documentId, 'snap')
+        case 'canvas.clearGuides':
+          return clearGuides(documentId)
+        case 'canvas.undo':
+          return useCanvases.getState().undo(documentId)
+        case 'canvas.redo':
+          return useCanvases.getState().redo(documentId)
+      }
+    },
+    [documentId],
+  )
+
+  useShortcuts({
+    scope: 'canvas',
+    // Dockview keeps hidden tabs mounted, and the hook swallows the keys it recognises: an
+    // image left in a background tab would eat the keys the space in front is listening for.
+    enabled: active,
+    onCommand: run,
+  })
 
   // Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
   // active has to hand over the ellipse, not merely remember it for later.
@@ -86,11 +154,24 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     [modes],
   )
 
+  // Read off the registry rather than written on the buttons: a key remapped in the settings
+  // has to move on the bar with it.
+  const shortcuts = useMemo(
+    () => ({
+      zoomIn: shortcutLabel(bindingOf('canvas.zoomIn', bindings)),
+      zoomOut: shortcutLabel(bindingOf('canvas.zoomOut', bindings)),
+      fit: shortcutLabel(bindingOf('canvas.zoomFit', bindings)),
+      actual: shortcutLabel(bindingOf('canvas.zoomActual', bindings)),
+    }),
+    [bindings],
+  )
+
   return (
     <div className="flex h-full min-h-0">
-      <div className={cn('relative min-w-0 flex-1', CHECKER)}>
-        {/* Pixi appends its own canvas here — see `CanvasEngine.mount`. The cursor goes on the
-            host rather than the canvas, which Pixi owns and replaces on every mount. */}
+      <div className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}>
+        {/* Pixi appends its own canvas here, and the overlay its own above it — see
+            `CanvasEngine.mount`. The cursor goes on the host rather than the canvas, which Pixi
+            owns and replaces on every mount. */}
         <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
 
         <Toolbar
@@ -100,10 +181,19 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           onTool={setTool}
           onMode={pick}
           extras={<BrushControls brush={brush} onBrush={setBrush} />}
-          onUndo={() => useCanvases.getState().undo(documentId)}
-          onRedo={() => useCanvases.getState().redo(documentId)}
+          onUndo={() => run('canvas.undo')}
+          onRedo={() => run('canvas.redo')}
           canUndo={undoable}
           canRedo={redoable}
+        />
+
+        <ZoomBar
+          scale={view.viewport.scale}
+          shortcuts={shortcuts}
+          onZoomIn={() => run('canvas.zoomIn')}
+          onZoomOut={() => run('canvas.zoomOut')}
+          onFit={() => run('canvas.zoomFit')}
+          onActual={() => run('canvas.zoomActual')}
         />
       </div>
     </div>

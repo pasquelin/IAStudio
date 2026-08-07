@@ -29,6 +29,7 @@ type ChannelMethod = {
   [CHANNELS.projectCurrent]: StudioBridge['project']['current']
   [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
 
+  [CHANNELS.documentList]: StudioBridge['documents']['list']
   [CHANNELS.documentRead]: StudioBridge['documents']['read']
   [CHANNELS.documentWrite]: StudioBridge['documents']['write']
   [CHANNELS.documentRemove]: StudioBridge['documents']['remove']

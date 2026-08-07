@@ -4,9 +4,7 @@ import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
-import { pruneDocuments } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
-import { useLayouts } from '@/stores/layouts'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -16,12 +14,6 @@ export function Application() {
   useMainLogs()
   useNativeMenu()
   useWindowFit()
-
-  // Once, before anything renders: a document closed in a previous session is still in the
-  // persisted store, and nothing else would ever drop it.
-  useEffect(() => {
-    pruneDocuments(useLayouts.getState().layouts)
-  }, [])
 
   const connectSettings = useSettings(state => state.connect)
   const connectProject = useProject(state => state.connect)
