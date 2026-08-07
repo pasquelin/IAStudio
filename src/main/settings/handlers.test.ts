@@ -69,6 +69,20 @@ describe('settings handlers', () => {
     expect(openSettings).toHaveBeenCalledWith('account')
   })
 
+  /**
+   * `openSettingsWindow` answers with the window it opened, and a `BrowserWindow` cannot be
+   * cloned across the boundary: handing it back rejected the call with "an object could not be
+   * cloned" while the window itself opened fine. The harness clones nothing, so the contract is
+   * pinned on the return value instead.
+   */
+  it('answers nothing, whatever the opener hands back', () => {
+    openSettings = vi.fn(() => ({ unclonable: () => {} }))
+    resetHandlers()
+    registerSettingsHandlers({ settings, onCredentialsChanged, authState, openSettings })
+
+    expect(invoke(CHANNELS.settingsOpen, 'account')).toBeUndefined()
+  })
+
   // The section ends up in the fragment the settings window loads, so it is never trusted.
   it('refuses to open a section it does not know', () => {
     expect(() => invoke(CHANNELS.settingsOpen, '../elsewhere')).toThrow()

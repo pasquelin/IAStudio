@@ -45,5 +45,10 @@ export function registerSettingsHandlers({
     onCredentialsChanged()
   })
 
-  handle(CHANNELS.settingsOpen, (_event, section) => openSettings(parseSettingsSection(section)))
+  // A block, not an expression: `openSettingsWindow` answers with the `BrowserWindow` it
+  // opened, and returning that from a handler hands an unclonable object to the IPC
+  // serializer — the window would open and the call would still reject.
+  handle(CHANNELS.settingsOpen, (_event, section) => {
+    openSettings(parseSettingsSection(section))
+  })
 }

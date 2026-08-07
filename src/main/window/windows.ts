@@ -1,10 +1,18 @@
-import { app, BrowserWindow, type WebPreferences } from 'electron'
+import { app, BrowserWindow, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { WINDOW_CHROME_COLOR } from '@shared/constants'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
 import { EVENTS } from '@shared/ipc'
 import { APP_ICON_PATH } from '@main/resources'
 import { trackWindowState } from './controls'
+
+/**
+ * The floor below which the layout stops being usable: the two rails take 96 px, the side
+ * columns roughly 250 and 300, and the video workspace puts a source and a program viewer side
+ * by side in what is left — under 1280 they become thumbnails. Height is the same argument
+ * stacked: workspace bar, tabs, viewer, timeline and status bar. Resolve asks for the same.
+ */
+const LAYOUT_FLOOR = { width: 1280, height: 720 }
 
 /**
  * The floor for every window: none may weaken these — a second window with looser settings
@@ -51,11 +59,25 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
  * over the other, is what a splash is supposed to prevent.
  */
 export function createMainWindow(options: { deferShow?: boolean } = {}): BrowserWindow {
+  /**
+   * The screen decides the size, not a number typed here: a studio opens filled.
+   *
+   * `workArea` and not `size`: the latter is the panel itself, menu bar and Dock included, and
+   * a window given those numbers hides part of itself behind both. Its `x`/`y` come along —
+   * on a second display the work area does not start at the origin.
+   *
+   * Not `maximize()`: that is a window STATE, and macOS restores out of it to whatever size
+   * was set before — which would be this same one. One mechanism, not two.
+   */
+  const { workArea } = screen.getPrimaryDisplay()
+
   const window = new BrowserWindow({
-    width: 1440,
-    height: 900,
-    minWidth: 1024,
-    minHeight: 640,
+    ...workArea,
+    // Never above the screen itself: Electron RAISES a window to its minimum size, so a floor
+    // wider than a 1024-wide display would push a quarter of the window off it, with no way to
+    // resize back. The floor is a limit on shrinking, not a demand for room that is not there.
+    minWidth: Math.min(LAYOUT_FLOOR.width, workArea.width),
+    minHeight: Math.min(LAYOUT_FLOOR.height, workArea.height),
     show: false,
     backgroundColor: WINDOW_CHROME_COLOR,
     titleBarStyle: 'hiddenInset',
@@ -66,11 +88,6 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
 
   trackWindowState(window)
 
-  // Filled, not full screen: a studio wants the whole screen, but macOS full screen moves the
-  // window to a space of its own, where the finder, the browser and the reference images the
-  // work is being done against are no longer reachable. The size above stays the restored one.
-  window.maximize()
-
   if (!options.deferShow) window.once('ready-to-show', () => window.show())
   load(window)
 
@@ -78,6 +95,22 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
 }
 
 let settingsWindow: BrowserWindow | null = null
+
+/**
+ * Names the section to the window's renderer, waiting for it to be loaded if it is not yet.
+ * `send` on a renderer still parsing its bundle is dropped without a trace — the subscription
+ * it would have reached does not exist until React has mounted.
+ */
+function showSection(window: BrowserWindow, section: SettingsSectionId): void {
+  const { webContents } = window
+
+  if (webContents.isLoading()) {
+    webContents.once('did-finish-load', () => webContents.send(EVENTS.settingsSection, section))
+    return
+  }
+
+  webContents.send(EVENTS.settingsSection, section)
+}
 
 /**
  * Settings live in their own window, opened by ⌘,. One at a time: a second copy of the
@@ -90,7 +123,11 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     // Already open, possibly on another section: reloading it would throw away a half-typed
     // key, so the window is told to move rather than sent back through its route.
-    if (section) settingsWindow.webContents.send(EVENTS.settingsSection, section)
+    if (section) showSection(settingsWindow, section)
+
+    // `focus()` alone is a no-op on a minimised window, on macOS and on Windows both: the
+    // button would look broken for anyone who parked the settings in the Dock.
+    if (settingsWindow.isMinimized()) settingsWindow.restore()
     settingsWindow.focus()
     return settingsWindow
   }
