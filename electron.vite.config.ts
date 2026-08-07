@@ -43,11 +43,12 @@ export default defineConfig(({ command }) => ({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        // The catalogue's worker is a second entry point: `new Worker(new URL(…))` resolves it
-        // beside the bundled main, so it must land there as its own file.
+        // The catalogue's thread and the waveform's process are entry points of their own:
+        // both are resolved beside the bundled main, so both must land there as their own file.
         input: {
           index: resolve('src/main/index.ts'),
           'catalog-worker': resolve('src/main/project/catalog-worker.ts'),
+          'peaks-worker': resolve('src/main/media/peaks-worker.ts'),
         },
         output: { entryFileNames: '[name].js' },
       },

@@ -23,6 +23,7 @@ function deps(overrides: Partial<MediaServiceDeps> = {}): MediaServiceDeps {
     run: vi.fn(async () => Buffer.alloc(0)),
     probe: probing(),
     hash: vi.fn(async () => 'abc123'),
+    computePeaks: vi.fn(async () => new Float32Array(2)),
     duplicateExists: vi.fn(async () => false),
     discard: vi.fn(async () => undefined),
     save: vi.fn(),

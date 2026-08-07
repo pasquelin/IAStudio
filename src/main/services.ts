@@ -26,6 +26,8 @@ import {
   probeSource,
   runProcess,
 } from './media/runner'
+import { openPeaksProcess } from './media/peaks-process'
+import type { PeaksClient } from './media/peaks-client'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { broadcast } from './ipc/broadcast'
@@ -202,11 +204,16 @@ export function createServices(settings: SettingsStore): Services {
     exists: existsSync,
   }))
 
+  // Forked on the first sound imported, then kept: most sessions never import one at all.
+  let peaks: PeaksClient | null = null
+  const peaksClient = (): PeaksClient => (peaks ??= openPeaksProcess())
+
   const media = createMediaService({
     ffmpeg: ffmpeg.path,
     run: (binary, args, signal, onStdout) => runProcess(binary, args, { signal, onStdout }),
     probe: (source, signal) => probeSource(companionPath(ffmpeg.path()), source, { signal }),
     hash: hashSource,
+    computePeaks: run => peaksClient().compute(run),
     duplicateExists: async (assetId, hash) => {
       const existing = await project.catalog().findByHash(hash)
       return existing !== null && existing.id !== assetId

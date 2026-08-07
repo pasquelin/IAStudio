@@ -2,7 +2,7 @@ import { PEAKS_PER_SECOND, type Asset, type AssetType, type MediaProbe } from '@
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
 import { PEAKS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
 import { peaksArgs, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
-import { createPeakReducer } from './peaks'
+import type { PeaksRun } from './peaks-client'
 import type { ProbeOutcome } from './probe'
 
 /**
@@ -28,6 +28,8 @@ export type MediaServiceDeps = {
   /** A missing ffprobe is not a failed import; a file ffprobe refuses is — see `ProbeOutcome`. */
   probe: (source: string, signal: AbortSignal) => Promise<ProbeOutcome>
   hash: (source: string) => Promise<string>
+  /** Reduces a source to a waveform off this process entirely — see `peaks-process`. */
+  computePeaks: (run: PeaksRun) => Promise<Float32Array>
   /** Whether the catalogue already holds another row with the same bytes. */
   duplicateExists: (assetId: string, hash: string) => Promise<boolean>
   /** Drops the row this pick minted. What the catalogue must not keep, it must not show. */
@@ -166,18 +168,19 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
             advance('peaks')
 
             const seconds = probe.duration / 1_000_000
-            const buckets = Math.max(1, Math.round(seconds * PEAKS_PER_SECOND))
-            // Folded as ffmpeg writes it: an hour of audio is 57 MB of PCM, and holding it to
-            // reduce it afterwards froze every window for the length of the reduction.
-            const reducer = createPeakReducer(buckets, PEAKS_SAMPLE_RATE / PEAKS_PER_SECOND)
-
-            await deps.run(binary, peaksArgs(sourcePath), controller.signal, chunk =>
-              reducer.push(chunk),
-            )
+            // ffmpeg and the reduction both run off this process: an hour of audio is 57 MB of
+            // PCM, and folding it here froze every window for the length of the fold.
+            const peaks = await deps.computePeaks({
+              binary,
+              args: peaksArgs(sourcePath),
+              buckets: Math.max(1, Math.round(seconds * PEAKS_PER_SECOND)),
+              samplesPerBucket: PEAKS_SAMPLE_RATE / PEAKS_PER_SECOND,
+              signal: controller.signal,
+            })
             if (cancelled()) return
 
             const relative = `${PEAKS_FOLDER}/${hash}.bin`
-            await deps.writeFile(`${project}/${relative}`, new Uint8Array(reducer.finish().buffer))
+            await deps.writeFile(`${project}/${relative}`, new Uint8Array(peaks.buffer))
             fields.peaksPath = relative
           }
         }
