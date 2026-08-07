@@ -77,6 +77,15 @@ export function clipEnd(clip: Clip): Us {
   return clip.start + clip.duration
 }
 
+/** Where the sequence stops: the last frame any track still shows something on. */
+export function sequenceDuration(state: SequenceState): Us {
+  let end: Us = 0
+  for (const track of state.tracks) {
+    for (const clip of track.clips) end = Math.max(end, clipEnd(clip))
+  }
+  return end
+}
+
 export function trackById(state: SequenceState, id: string): Track | null {
   return state.tracks.find(track => track.id === id) ?? null
 }

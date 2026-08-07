@@ -211,6 +211,10 @@
     "untitled": "Layer {{n}}",
     "noDocument": "Open an image to see its layers."
   },
+  "transport": {
+    "play": "Play",
+    "pause": "Pause"
+  },
   "videoTools": {
     "select": "Selection",
     "selectHint": "Select, move and trim a clip",

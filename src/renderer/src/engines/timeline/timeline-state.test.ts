@@ -6,6 +6,7 @@ import {
   EMPTY_SEQUENCE,
   frameDuration,
   insertClip,
+  sequenceDuration,
   serializeSequence,
   snapToFrame,
   trackOfClip,
@@ -89,6 +90,18 @@ describe('sequence state', () => {
     // lookup by id, starting with selection.
     expect(next.clips.map(candidate => candidate.id)).toEqual(['a', 'b', 'a-tail'])
     expect(next.clips[2]).toMatchObject({ start: 2_000, duration: 1_000, inPoint: 2_000 })
+  })
+
+  it('ends where the last clip of any track ends', () => {
+    const state: SequenceState = {
+      ...EMPTY_SEQUENCE,
+      tracks: [track([clip('a', 0, 1_000)]), { ...track([clip('b', 5_000, 2_000)]), id: 'A1' }],
+    }
+    expect(sequenceDuration(state)).toBe(7_000)
+  })
+
+  it('lasts nothing while it holds no clip', () => {
+    expect(sequenceDuration(EMPTY_SEQUENCE)).toBe(0)
   })
 
   it('computes the end of a clip from its start and duration', () => {

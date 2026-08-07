@@ -1,8 +1,11 @@
 import { Application, Sprite, Texture } from 'pixi.js'
+import { createClock, type Clock } from './clock'
 import { createDecoderPool, type DecoderPool, type SinkLike } from './decoder-pool'
+import { playbackToken } from './playback'
 import {
   clipEnd,
   EMPTY_SEQUENCE,
+  sequenceDuration,
   type Clip,
   type SequenceState,
   type Track,
@@ -44,6 +47,12 @@ export function createFrameSink({ upload }: { upload: (frame: VideoFrame) => voi
 export type TimelineEngineDeps = {
   openSink: (assetId: string) => Promise<SinkLike>
   maxDecoders: number
+  /** Identifies this player to the single playback token — the document id does. */
+  owner: string
+  /** Called on every played frame, so the document can follow with its playhead. */
+  onTime?: (time: Us) => void
+  /** `AudioContext.currentTime` while audio plays; absent falls back to the monotonic clock. */
+  audioTime?: () => number | null
 }
 
 /**
@@ -58,8 +67,51 @@ export class TimelineEngine {
   /** Guards against two seeks interleaving their awaits and painting out of order. */
   private generation = 0
 
-  constructor(deps: TimelineEngineDeps) {
+  private readonly clock: Clock
+  private frameHandle: number | null = null
+
+  constructor(private readonly deps: TimelineEngineDeps) {
     this.pool = createDecoderPool({ open: deps.openSink, maxDecoders: deps.maxDecoders })
+    this.clock = createClock({
+      audioTime: deps.audioTime ?? (() => null),
+      monotonic: () => performance.now(),
+    })
+  }
+
+  play(): void {
+    if (this.frameHandle !== null) return
+
+    // Taking the token revokes whoever held it: two streams at once is the bug this prevents.
+    playbackToken.acquire(this.deps.owner, () => this.pause())
+    this.clock.start(this.state.playhead)
+
+    const step = (): void => {
+      const time = this.clock.now()
+      if (time >= sequenceDuration(this.state)) {
+        this.pause()
+        return
+      }
+
+      this.deps.onTime?.(time)
+      void this.seek(time)
+      this.frameHandle = requestAnimationFrame(step)
+    }
+
+    this.frameHandle = requestAnimationFrame(step)
+  }
+
+  pause(): void {
+    if (this.frameHandle === null) return
+
+    cancelAnimationFrame(this.frameHandle)
+    this.frameHandle = null
+    this.clock.stop()
+    playbackToken.release(this.deps.owner)
+    this.deps.onTime?.(this.clock.now())
+  }
+
+  playing(): boolean {
+    return this.frameHandle !== null
   }
 
   async mount(element: HTMLElement): Promise<void> {
@@ -78,7 +130,8 @@ export class TimelineEngine {
 
   apply(state: SequenceState): void {
     this.state = state
-    void this.seek(state.playhead)
+    // While playing, the frame loop owns the playhead; seeking here too would fight it.
+    if (!this.playing()) void this.seek(state.playhead)
   }
 
   async seek(time: Us): Promise<void> {
@@ -121,6 +174,7 @@ export class TimelineEngine {
   }
 
   dispose(): void {
+    this.pause()
     this.generation += 1
     this.pool.dispose()
     this.application?.destroy(true, { children: true, texture: true })

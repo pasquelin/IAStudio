@@ -211,6 +211,10 @@
     "untitled": "Calque {{n}}",
     "noDocument": "Ouvrez une image pour voir ses calques."
   },
+  "transport": {
+    "play": "Lire",
+    "pause": "Pause"
+  },
   "videoTools": {
     "select": "Sélection",
     "selectHint": "Sélectionner, déplacer et rogner un clip",

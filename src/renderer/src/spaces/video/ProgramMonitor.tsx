@@ -5,7 +5,11 @@ import type { SinkLike } from '@/engines/timeline/decoder-pool'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 
-export type ProgramMonitorProps = { documentId: string }
+export type ProgramMonitorProps = {
+  documentId: string
+  /** Hands the engine to the document, which owns the transport. Null on unmount. */
+  onEngine?: (engine: TimelineEngine | null) => void
+}
 
 /** A consumer GPU offers two to four hardware decoders; three leaves one for everything else. */
 const MAX_DECODERS = 3
@@ -29,7 +33,7 @@ async function openSink(assetId: string): Promise<SinkLike> {
   return { getSample: seconds => sink.getSample(seconds), close: () => input.dispose() }
 }
 
-export function ProgramMonitor({ documentId }: ProgramMonitorProps) {
+export function ProgramMonitor({ documentId, onEngine }: ProgramMonitorProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
   const sequence = useSequences(state => sequenceOf(state, documentId))
@@ -38,15 +42,30 @@ export function ProgramMonitor({ documentId }: ProgramMonitorProps) {
     const element = hostRef.current
     if (!element) return
 
-    const created = new TimelineEngine({ openSink, maxDecoders: MAX_DECODERS })
+    const created = new TimelineEngine({
+      openSink,
+      maxDecoders: MAX_DECODERS,
+      owner: documentId,
+      // Playback is not an edit: the playhead goes through `replace`, which skips the history.
+      onTime: time =>
+        useSequences
+          .getState()
+          .replace(documentId, {
+            ...sequenceOf(useSequences.getState(), documentId),
+            playhead: time,
+          }),
+    })
+
     engine.current = created
+    onEngine?.(created)
     void created.mount(element)
 
     return () => {
       created.dispose()
       engine.current = null
+      onEngine?.(null)
     }
-  }, [documentId])
+  }, [documentId, onEngine])
 
   // The engine holds decoders and textures, never the stack: every state change is pushed in.
   useEffect(() => {
