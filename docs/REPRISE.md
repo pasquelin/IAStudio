@@ -32,7 +32,7 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**554 fichiers dans `src/`. 2059 tests verts sur 199 fichiers. 32 canaux IPC et 10 événements.
+**557 fichiers dans `src/`. 2088 tests verts sur 201 fichiers. 32 canaux IPC et 10 événements.
 6 espaces éditables. 2 types de documents sur 6 savent s'enregistrer.**
 
 `pnpm validate` est vert. L'application démarre par `pnpm start`.
@@ -60,6 +60,11 @@ des raccourcis ; un registre de réglages qui gouverne les préférences et la v
 **La persistance des documents** — écriture atomique, marque « modifié », puce sur l'onglet,
 relecture à l'ouverture. Le mécanisme est générique ; **deux espaces y sont branchés**, la 3D et les
 Textures.
+
+**L'entrée d'une image dans un ciel** — l'espace Skyboxes avait son moteur, son undo et son panneau,
+mais aucune porte. Trois l'ouvrent : le double-clic sur un asset, le dépôt depuis l'étagère, et la
+génération, qui retient le document d'où elle est partie et s'y pose seule. Les modèles de panorama
+ont leur famille, reconnue au tag `sc:skybox` — cf. § 3.5.
 
 ## Corrigé — ne pas le re-signaler
 
@@ -447,7 +452,47 @@ attend un projet ouvert.
 
 ---
 
-## 3.5 Dettes transverses
+## 3.5 Espace Skyboxes
+
+**Livré.** Une image entre par trois chemins et le ciel s'allume. Le moteur, l'étalonnage GPU, le
+soleil attrapable au raycast, les sondes et l'undo étaient déjà là depuis l'étape précédente ;
+`setSource` n'était simplement appelé de nulle part, et l'état vide promettait depuis le début
+« Générez-en une ou déposez un panorama » sans que rien ne tienne la promesse.
+
+**La famille `skybox` ne se déduit pas des capacités.** Vérifié contre l'API en ligne, pas supposé :
+l'énumération des capacités n'a **aucune** valeur skybox, et les trois modèles publics
+(`scenario-skybox-flux`, `scenario-skybox-gpt`, `hunyuan-world-image-to-skybox`) répondent `txt2img`
+et `img2img` comme n'importe quel modèle d'image. Le tag **`sc:skybox`** est le seul signal qui
+existe — d'où `familyOf(capabilities, tags)` qui consulte le tag en premier. Le même tag sert de
+pré-filtre serveur : garder trois modèles sur six cents en marchant le catalogue page par page coûte
+huit allers-retours pour remplir un écran. **`skybox-upscale` ne porte pas ce tag** et reste avec les
+images, ce qui est correct : un agrandisseur ne produit pas le document de l'espace.
+
+**Ce qu'il reste, dans l'ordre du coût croissant :**
+
+**1. Trois vues sur quatre sont des boutons morts.** `SKYBOX_VIEWS` en déclare quatre ; le renderer
+n'expose aucun `setView`. Le state de `SkyboxDocument.tsx` ne pilote que la couleur du bouton :
+`equirect`, `cross` et `faces` ne dessinent rien.
+
+**2. L'export n'existe pas, et son vocabulaire attend depuis le début.** `CUBE_FACES`, `FACE_LABELS`
+(`Rt`/`Lf`/`Up`…, ce que les moteurs attendent), `CROSS_CELLS`, `FACE_SIZES`, `isCubeFace` sont
+écrits et testés dans `shared/domain/skybox.ts` — et **référencés par leurs seuls tests**. Rien ne
+convertit l'équirectangulaire en six faces, alors que la conception promet « aperçu 360, export HDRI
+vers la 3D ». Le domaine a été écrit pour un export qui n'a pas suivi ; le faire, c'est une passe
+shader et un écrivain, pas une refonte.
+
+**3. Le `.sky` ne s'enregistre pas** — c'est l'un des quatre `DocumentIo` manquants du § 3.1, à
+traiter avec eux et non à part.
+
+**Un piège à connaître avant d'y toucher.** Un `.hdr` **n'est pas importable** : `IMPORTABLE_TYPES`
+(`main/media/link.ts`) ne connaît que vidéo, audio et image, et un `.exr` importé est catalogué
+`image`, jamais `skybox`. C'est sans conséquence aujourd'hui — le puits accepte toute image du
+projet, quelle que soit son étagère — mais quiconque cherchera « pourquoi mon HDRI n'apparaît pas
+dans l'import » cherchera là.
+
+---
+
+## 3.6 Dettes transverses
 
 **Les index du catalogue n'ont pas été posés.** `catalog.ts` déclare des index simples
 (`assets(type)`, `assets(created_at DESC)`, `asset_tags(tag)`, `assets(hash)`…). **Il manque l'index
@@ -463,6 +508,17 @@ demande que toute tâche longue soit annulable. À traiter **avec les index**, q
 brèves pour que la question se pose autrement.
 
 **Le décodage du clone IPC** — 73 % du coût d'un ⌘S, intouché. Cf. § 3.3.
+
+**Une commande asynchrone vole le geste en cours.** `document-store.ts` réécrit l'identifiant de
+coalescence du document à **chaque** `runCommand` dès qu'un geste est ouvert, y compris pour une
+commande venue d'ailleurs. Tant que toutes les écritures venaient de la main de l'utilisateur, elles
+partageaient le geste et personne ne le voyait. L'espace Skyboxes a introduit le premier écrivain
+**asynchrone** — une génération qui aboutit — et le rend atteignable : si un job se termine pendant
+qu'un curseur est tenu, la suite du glissement cesse de fusionner et l'annulation se fragmente en
+trois entrées au lieu d'une, dont la génération elle-même au milieu. Un ⌘Z fait alors disparaître
+l'image au lieu de continuer à défaire le réglage. La ligne fautive est antérieure et sert les cinq
+espaces : **la corriger touche l'historique de tous**, d'où son classement ici plutôt qu'un
+rustinage local.
 
 **Durabilité.** `documents.ts` renomme atomiquement, ce qui protège d'un crash **en cours
 d'écriture**, mais ne fait pas de `fsync` : une coupure de courant peut perdre l'écriture. C'est écrit
@@ -621,7 +677,7 @@ qui est en vol si le thread meurt** (sans quoi un worker qui plante laisse l'int
 promesse que plus personne ne réglera).
 
 **La recherche n'est pas devenue plus rapide — ce n'était pas l'objet.** C'est le même SQL, simplement
-plus sur le thread qui dessine les fenêtres. Le prochain gain est dans les index (§ 3.5).
+plus sur le thread qui dessine les fenêtres. Le prochain gain est dans les index (§ 3.6).
 
 **Reproduire :**
 
