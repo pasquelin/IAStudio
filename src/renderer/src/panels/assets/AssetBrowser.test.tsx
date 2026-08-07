@@ -132,11 +132,8 @@ describe('AssetBrowser', () => {
     expect(screen.queryByText(/ffmpeg introuvable/)).not.toBeInTheDocument()
   })
 
-  /**
-   * The shelf lies across the bottom strip in most workspaces and stands in the left column in
-   * Video. Its filter bar follows the shape of the zone rather than the workspace: no exception
-   * is coded for Video, and moving the shelf again costs nothing here.
-   */
+  // The bar follows the shape of the zone, not the workspace: no exception is coded for Video,
+  // where the shelf stands in a column rather than lying across the band.
   describe('the filter bar', () => {
     // The bar's own container: a row of controls when laid out, a column of rows when stacked.
     function bar(): HTMLElement {

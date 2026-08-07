@@ -153,7 +153,7 @@ export function shownTool(
   // belongs to the other column, the other half, or to a band no placement ever cuts.
   const placement = placementIn(tool, workspace)
   if (placement?.zone === zone && placement.slot === slot) {
-    return tool === 'generator' && !hasModel ? 'models' : tool
+    return canOffer(tool, hasModel) ? tool : 'models'
   }
 
   const substitute = toolsInZone(zone, workspace).find(

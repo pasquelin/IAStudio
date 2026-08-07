@@ -11,7 +11,13 @@ import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
 import { openDocument } from './DocumentArea'
 import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
-import { toolTitleKey, useAvailableTools, type Tool } from '@/helpers/tool-registry'
+import {
+  shownTool,
+  toolTitleKey,
+  useAvailableTools,
+  useHasModel,
+  type Tool,
+} from '@/helpers/tool-registry'
 
 export type RailProps = {
   /** Edge the rail sticks to. The left rail also carries the bottom strip's tools. */
@@ -113,36 +119,45 @@ function RailGroup({ zone }: { zone: ToolZone }) {
   // Reading the store here rather than receiving props keeps a rail click from re-rendering
   // the Shell — and with it the Dockview host at the center.
   const focusedZone = useTools(state => state.focusedZone)
-  const toggle = useTools(state => state.toggle)
   const workspace = useLayouts(state => state.activeWorkspace)
   const open = useTools(state => state.open)
+  const hasModel = useHasModel(workspace)
   const tools = useAvailableTools(zone, workspace)
+  // Actions are stable for the store's lifetime: subscribing to them would only add selectors
+  // re-run on every write.
+  const { show, close } = useTools.getState()
 
   return (
     <div className="flex flex-col items-center gap-1">
-      {halvesOf(tools).map(([slot, inSlot], index) => (
-        <Fragment key={`${zone}:${slot}`}>
-          {/* Only between two populated halves: a lone group has nothing to be cut from. */}
-          {index > 0 && <Separator orientation="horizontal" />}
+      {halvesOf(tools).map(([slot, inSlot], index) => {
+        // What the half draws, not what it stores: a panel standing in for one this section
+        // puts elsewhere is up, and its icon has to read — and close — as up.
+        const up = shownTool(open[zone]?.[slot] ?? null, zone, slot, workspace, hasModel)
 
-          {inSlot.map(tool => {
-            const isOpen = open[zone]?.[slot] === tool.id
-            return (
-              <ToolButton
-                key={tool.id}
-                icon={tool.icon}
-                iconSize={22}
-                label={t(toolTitleKey(tool.id))}
-                tooltip={TIP_RIGHT}
-                active={isOpen}
-                accented={isOpen && focusedZone === zone}
-                onClick={() => toggle(zone, tool.id)}
-                className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
-              />
-            )
-          })}
-        </Fragment>
-      ))}
+        return (
+          <Fragment key={`${zone}:${slot}`}>
+            {/* Only between two populated halves: a lone group has nothing to be cut from. */}
+            {index > 0 && <Separator orientation="horizontal" />}
+
+            {inSlot.map(tool => {
+              const isOpen = up === tool.id
+              return (
+                <ToolButton
+                  key={tool.id}
+                  icon={tool.icon}
+                  iconSize={22}
+                  label={t(toolTitleKey(tool.id))}
+                  tooltip={TIP_RIGHT}
+                  active={isOpen}
+                  accented={isOpen && focusedZone === zone}
+                  onClick={() => (isOpen ? close(zone, slot) : show(zone, tool.id))}
+                  className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
+                />
+              )
+            })}
+          </Fragment>
+        )
+      })}
     </div>
   )
 }

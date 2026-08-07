@@ -64,29 +64,29 @@ describe('tools store', () => {
   })
 
   it('opens a tool in the half its placement declares', () => {
-    useTools.getState().toggle('left', 'layers')
+    useTools.getState().show('left', 'layers')
     expect(useTools.getState().open.left).toEqual({ primary: 'layers' })
   })
 
   it('leaves the other half alone, so both show at once', () => {
-    const { toggle } = useTools.getState()
-    toggle('left', 'explorer')
-    toggle('left', 'layers')
+    const { show } = useTools.getState()
+    show('left', 'explorer')
+    show('left', 'layers')
 
     expect(useTools.getState().open.left).toEqual({ primary: 'layers', secondary: 'explorer' })
   })
 
   it('swaps within a half rather than stacking, when two tools share it', () => {
-    const { toggle } = useTools.getState()
-    toggle('right', 'generator')
-    toggle('right', 'models')
+    const { show } = useTools.getState()
+    show('right', 'generator')
+    show('right', 'models')
 
     expect(useTools.getState().open.right).toEqual({ primary: 'models' })
   })
 
-  it('closes the half when the tool already up is clicked again', () => {
+  it('empties the half it is asked to close', () => {
     useTools.setState({ open: { bottom: { primary: 'assets' } } })
-    useTools.getState().toggle('bottom', 'assets')
+    useTools.getState().close('bottom', 'primary')
     expect(useTools.getState().open.bottom?.primary).toBeUndefined()
   })
 

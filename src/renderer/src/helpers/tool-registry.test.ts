@@ -87,6 +87,14 @@ describe('what a half of a zone shows', () => {
     expect(shownTool('assets', 'bottom', 'secondary', 'image', true)).toBeNull()
   })
 
+  // Where several tools share a half, the substitute is the first the registry declares. The
+  // order of `TOOL_PLACEMENTS` is the choice, so it is spelled out here rather than left to
+  // whoever reorders that table next.
+  it('substitutes the first tool the half declares when several share it', () => {
+    expect(shownTool('layers', 'left', 'primary', '3d', true)).toBe('meshes')
+    expect(shownTool('skybox', 'right', 'primary', 'image', true)).toBe('models')
+  })
+
   it('falls back to the models panel where the generator has no model', () => {
     expect(shownTool('generator', 'right', 'primary', 'image', false)).toBe('models')
   })
