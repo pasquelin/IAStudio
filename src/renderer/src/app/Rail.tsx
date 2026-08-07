@@ -1,6 +1,5 @@
 import { mdiPlus } from '@mdi/js'
 import { kindForWorkspace } from '@shared/domain/document'
-import type { WorkspaceId } from '@shared/domain/workspace'
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Separator } from '@/design/Separator'
@@ -12,7 +11,7 @@ import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
 import { openDocument } from './DocumentArea'
 import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
-import { toolsInZone, toolTitleKey, type Tool } from '@/helpers/tool-registry'
+import { toolTitleKey, useAvailableTools, type Tool } from '@/helpers/tool-registry'
 
 export type RailProps = {
   /** Edge the rail sticks to. The left rail also carries the bottom strip's tools. */
@@ -47,9 +46,13 @@ export function Rail({ side }: RailProps) {
             <Separator orientation="horizontal" />
           </>
         )}
-        <RailGroup zones={top} />
+        {top.map(zone => (
+          <RailGroup key={zone} zone={zone} />
+        ))}
       </div>
-      {bottom.length > 0 && <RailGroup zones={bottom} />}
+      {bottom.map(zone => (
+        <RailGroup key={zone} zone={zone} />
+      ))}
     </div>
   )
 }
@@ -90,8 +93,7 @@ function NewDocumentButton() {
 }
 
 /** The zone's populated halves, in order. Empty ones never reach the rail. */
-function halvesOf(zone: ToolZone, workspace: WorkspaceId): [ToolSlot, Tool[]][] {
-  const tools = toolsInZone(zone, workspace)
+function halvesOf(tools: Tool[]): [ToolSlot, Tool[]][] {
   return TOOL_SLOTS.map((slot): [ToolSlot, Tool[]] => [
     slot,
     tools.filter(tool => tool.slot === slot),
@@ -100,9 +102,13 @@ function halvesOf(zone: ToolZone, workspace: WorkspaceId): [ToolSlot, Tool[]][] 
 
 /**
  * The zone's tools, cut the way the zone itself is cut: the icons above the separator open in
- * its first half, the ones below in its second. The rail is the legend of the column.
+ * its first half, the ones below in its second. On the right that cut is the AI's — choosing a
+ * model and filling its form above, everything else below. The rail is the legend of the column.
+ *
+ * One zone per group rather than a list: `useAvailableTools` is a hook, and the generator's
+ * presence depends on state — a loop over zones could not ask it.
  */
-function RailGroup({ zones }: { zones: ToolZone[] }) {
+function RailGroup({ zone }: { zone: ToolZone }) {
   const { t } = useTranslation()
   // Reading the store here rather than receiving props keeps a rail click from re-rendering
   // the Shell — and with it the Dockview host at the center.
@@ -110,34 +116,33 @@ function RailGroup({ zones }: { zones: ToolZone[] }) {
   const toggle = useTools(state => state.toggle)
   const workspace = useLayouts(state => state.activeWorkspace)
   const open = useTools(state => state.open)
+  const tools = useAvailableTools(zone, workspace)
 
   return (
     <div className="flex flex-col items-center gap-1">
-      {zones.flatMap(zone =>
-        halvesOf(zone, workspace).map(([slot, tools], index) => (
-          <Fragment key={`${zone}:${slot}`}>
-            {/* Only between two populated halves: a lone group has nothing to be cut from. */}
-            {index > 0 && <Separator orientation="horizontal" />}
+      {halvesOf(tools).map(([slot, inSlot], index) => (
+        <Fragment key={`${zone}:${slot}`}>
+          {/* Only between two populated halves: a lone group has nothing to be cut from. */}
+          {index > 0 && <Separator orientation="horizontal" />}
 
-            {tools.map(tool => {
-              const isOpen = open[zone]?.[slot] === tool.id
-              return (
-                <ToolButton
-                  key={tool.id}
-                  icon={tool.icon}
-                  iconSize={22}
-                  label={t(toolTitleKey(tool.id))}
-                  tooltip={TIP_RIGHT}
-                  active={isOpen}
-                  accented={isOpen && focusedZone === zone}
-                  onClick={() => toggle(zone, tool.id)}
-                  className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
-                />
-              )
-            })}
-          </Fragment>
-        )),
-      )}
+          {inSlot.map(tool => {
+            const isOpen = open[zone]?.[slot] === tool.id
+            return (
+              <ToolButton
+                key={tool.id}
+                icon={tool.icon}
+                iconSize={22}
+                label={t(toolTitleKey(tool.id))}
+                tooltip={TIP_RIGHT}
+                active={isOpen}
+                accented={isOpen && focusedZone === zone}
+                onClick={() => toggle(zone, tool.id)}
+                className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
+              />
+            )
+          })}
+        </Fragment>
+      ))}
     </div>
   )
 }

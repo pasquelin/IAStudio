@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { Rail } from './Rail'
 
@@ -16,6 +17,7 @@ describe('Rail', () => {
     installFakeBridge()
     useDocuments.setState({ documents: {} })
     useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
+    useModels.setState({ selected: {} })
     const stamp = '2026-08-07T10:00:00.000Z'
     useProject.setState({
       project: {
@@ -48,5 +50,19 @@ describe('Rail', () => {
   it('carries no new-document button on the right rail', () => {
     render(<Rail side="right" />)
     expect(screen.queryByRole('button', { name: 'Nouveau document' })).not.toBeInTheDocument()
+  })
+
+  // Generating without a model is impossible, so the icon is absent rather than dead: the rail
+  // says what the section can do.
+  it('offers no generator icon while no model is chosen', () => {
+    useModels.setState({ selected: {} })
+    render(<Rail side="right" />)
+    expect(screen.queryByRole('button', { name: 'Génération' })).not.toBeInTheDocument()
+  })
+
+  it('offers it as soon as one is', () => {
+    useModels.setState({ selected: { '3d': 'tripo-v3' } })
+    render(<Rail side="right" />)
+    expect(screen.getByRole('button', { name: 'Génération' })).toBeInTheDocument()
   })
 })
