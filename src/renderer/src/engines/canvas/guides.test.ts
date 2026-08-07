@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_CANVAS, type Guide } from './canvas-state'
-import { guideNear, snapTargets, snapValue } from './guides'
+import { boxEdges, guideNear, snapOffset, snapTargets, snapValue } from './guides'
 
 const GUIDES: Guide[] = [
   { id: 'a', axis: 'x', position: 300 },
@@ -27,6 +27,28 @@ describe('snapValue', () => {
 
   it('takes the nearest of two candidates, not the first declared', () => {
     expect(snapValue(299, [296, 300], 6)).toBe(300)
+  })
+})
+
+describe('boxEdges', () => {
+  it('offers both sides and the middle', () => {
+    expect(boxEdges(100, 400)).toEqual([100, 300, 500])
+  })
+})
+
+describe('snapOffset', () => {
+  it('nudges the box so its nearest edge lands on a target', () => {
+    expect(snapOffset([0, 200, 400], [403], 6)).toBe(3)
+  })
+
+  // A layer sticks by whichever edge reaches a guide first, not by a chosen one.
+  it('takes the closest pairing of any edge with any target', () => {
+    // The left edge is two away from its target where the right one is three away from its own.
+    expect(snapOffset([0, 200, 400], [-2, 403], 6)).toBe(-2)
+  })
+
+  it('leaves the box alone when nothing is close enough', () => {
+    expect(snapOffset([0, 200, 400], [420], 6)).toBe(0)
   })
 })
 

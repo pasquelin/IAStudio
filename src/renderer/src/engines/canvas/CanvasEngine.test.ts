@@ -16,6 +16,8 @@ const gpu = {
   renders: 0,
   texturesCreated: 0,
   texturesDestroyed: 0,
+  /** Every `setChildIndex`: the cost a restack pays, and the one a repaint must not. */
+  reorders: 0,
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -41,6 +43,7 @@ vi.mock('pixi.js', () => {
     }
 
     setChildIndex(child: object, index: number): void {
+      gpu.reorders += 1
       this.removeChild(child)
       this.children.splice(index, 0, child)
     }
@@ -81,10 +84,13 @@ vi.mock('pixi.js', () => {
     Graphics,
     Sprite: class extends Container {},
     Rectangle: class {},
+    Texture: class {},
     RenderTexture: {
       create: () => {
         gpu.texturesCreated += 1
         return {
+          // The patch store lifts sub-frames off it; what matters is that it is a stable object.
+          source: {},
           destroy: () => {
             gpu.texturesDestroyed += 1
           },
@@ -101,7 +107,10 @@ type Harness = {
   host: HTMLElement
   viewports: Viewport[]
   guides: { calls: string[] }
-  strokes: number
+  /** The ids of the patches the engine reported as one finished gesture each. */
+  patches: string[]
+  /** `translate:<id>:<x>:<y>` and the two ends of the drag, in the order they arrived. */
+  layers: string[]
 }
 
 function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
@@ -110,12 +119,13 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
 
   const viewports: Viewport[] = []
   const calls: string[] = []
+  const patches: string[] = []
+  const layers: string[] = []
   const harness: Harness = {
     engine: new CanvasEngine({
       onPick: () => undefined,
-      onStrokeEnd: () => {
-        harness.strokes += 1
-      },
+      onPixels: patchId => patches.push(patchId),
+      onPixelsDropped: () => undefined,
       onViewport: viewport => viewports.push(viewport),
       onHost: () => undefined,
       guides: {
@@ -128,11 +138,17 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
         beginDrag: () => calls.push('begin'),
         endDrag: () => calls.push('end'),
       },
+      layers: {
+        translate: (id, x, y) => layers.push(`translate:${id}:${Math.round(x)}:${Math.round(y)}`),
+        beginDrag: () => layers.push('begin'),
+        endDrag: () => layers.push('end'),
+      },
     }),
     host,
     viewports,
     guides: { calls },
-    strokes: 0,
+    patches,
+    layers,
   }
 
   harness.engine.setView(DEFAULT_VIEW)
@@ -160,10 +176,17 @@ function press(host: HTMLElement, x: number, y: number, button = 0): void {
   host.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, button }))
 }
 
+/** How many reorders happen from here on, read when the assertion needs it. */
+function reordersCounted(): () => number {
+  const before = gpu.reorders
+  return () => gpu.reorders - before
+}
+
 beforeEach(() => {
   gpu.renders = 0
   gpu.texturesCreated = 0
   gpu.texturesDestroyed = 0
+  gpu.reorders = 0
 })
 
 describe('mounting', () => {
@@ -195,6 +218,35 @@ describe('mounting', () => {
     engine.apply({ ...DEFAULT_CANVAS, layers: [pixelLayer('a', 'A')], activeLayerId: 'a' })
 
     expect(gpu.texturesDestroyed).toBe(1)
+  })
+
+  /**
+   * Dragging a layer rewrites `state.layers` sixty times a second without restacking it. Both
+   * passes are per-layer and one is quadratic in the surfaces: a fifty-layer document paid fifty
+   * reorders a frame for one layer that moved.
+   */
+  it('does not restack for a state whose layers are the same ones in the same order', async () => {
+    const stack = [pixelLayer('a', 'A'), pixelLayer('b', 'B')]
+    const { engine } = await mounted({ ...DEFAULT_CANVAS, layers: stack, activeLayerId: 'a' })
+    const world = reordersCounted()
+
+    engine.apply({
+      ...DEFAULT_CANVAS,
+      layers: stack.map(layer => ({ ...layer, transform: { ...layer.transform, x: 20 } })),
+      activeLayerId: 'a',
+    })
+
+    expect(world()).toBe(0)
+  })
+
+  it('restacks when the order actually changes', async () => {
+    const stack = [pixelLayer('a', 'A'), pixelLayer('b', 'B')]
+    const { engine } = await mounted({ ...DEFAULT_CANVAS, layers: stack, activeLayerId: 'a' })
+    const world = reordersCounted()
+
+    engine.apply({ ...DEFAULT_CANVAS, layers: [...stack].reverse(), activeLayerId: 'a' })
+
+    expect(world()).toBe(2)
   })
 
   // A guide drag rewrites the state on every pointer move and touches no pixel.
@@ -300,5 +352,153 @@ describe('the view', () => {
 
     host.dispatchEvent(new PointerEvent('pointermove', { clientX: 261, clientY: 200 }))
     expect(gpu.renders).toBeGreaterThan(0)
+  })
+})
+
+/** `pointermove` goes to the host, `pointerup` to the window — as the engine listens for them. */
+function drag(host: HTMLElement, x: number, y: number, shiftKey = false): void {
+  host.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, shiftKey }))
+}
+
+function release(x = 400, y = 400): void {
+  window.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y }))
+}
+
+describe('the move tool', () => {
+  // The layer position lives in the state, not on the sprite: anything else is lost to the next
+  // `apply` and invisible to the history.
+  it('writes the layer position into the state instead of nudging the sprite', async () => {
+    const { engine, host, layers } = await mounted()
+    engine.setTool('move')
+
+    press(host, 200, 200)
+    drag(host, 260, 230)
+    release()
+
+    expect(layers).toEqual(['begin', 'translate:layer-1:60:30', 'end'])
+  })
+
+  // Every step is absolute from where the layer stood, or merging the drag into one entry would
+  // rewind a single pointer move.
+  it('reports where the layer is, not how far the pointer went', async () => {
+    const { engine, host, layers } = await mounted()
+    engine.setTool('move')
+
+    press(host, 200, 200)
+    drag(host, 260, 200)
+    drag(host, 300, 200)
+
+    expect(layers).toEqual(['begin', 'translate:layer-1:60:0', 'translate:layer-1:100:0'])
+  })
+
+  it('sticks the layer edge to a guide the way a guide sticks to the frame', async () => {
+    const { engine, host, layers } = await mounted({
+      ...DEFAULT_CANVAS,
+      guides: [{ id: 'g', axis: 'x', position: 64 }],
+    })
+    engine.setView(VIEW_1_1)
+    engine.setTool('move')
+
+    press(host, 200, 200)
+    drag(host, 262, 200)
+
+    expect(layers.at(-1)).toBe('translate:layer-1:64:0')
+  })
+
+  it('refuses to move a layer whose position is padlocked', async () => {
+    const { engine, host, layers } = await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [pixelLayer('layer-1', 'Background')].map(layer => ({
+        ...layer,
+        locked: { pixels: false, position: true, alpha: false },
+      })),
+    })
+    engine.setTool('move')
+
+    press(host, 200, 200)
+    drag(host, 260, 230)
+
+    expect(layers).toEqual([])
+  })
+
+  it('closes the drag when a pan takes the pointer mid-gesture', async () => {
+    const { engine, host, layers } = await mounted()
+    engine.setTool('move')
+
+    press(host, 200, 200)
+    press(host, 220, 220, 1)
+
+    expect(layers.at(-1)).toBe('end')
+  })
+})
+
+describe('the pixel history', () => {
+  it('reports one patch for one stroke, not one per dab', async () => {
+    const { host, patches } = await mounted()
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    drag(host, 280, 280)
+    release()
+
+    expect(patches).toHaveLength(1)
+  })
+
+  it('reports one for a bucket fill, which is a gesture with no drag', async () => {
+    const { engine, host, patches } = await mounted()
+    engine.setTool('fill')
+
+    press(host, 200, 200)
+
+    expect(patches).toHaveLength(1)
+  })
+
+  it('gives each stroke its own patch', async () => {
+    const { host, patches } = await mounted()
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+    press(host, 300, 300)
+    drag(host, 340, 340)
+    release()
+
+    expect(new Set(patches).size).toBe(2)
+  })
+
+  // The layer holds the "after" pixels already; the undo is the first replay there is to do.
+  it('paints the tiles back into the layer the patch was recorded on', async () => {
+    const { engine, host, patches } = await mounted()
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    const patchId = patches[0]
+    expect(patchId).toBeDefined()
+    expect(engine.restorePixels(patchId ?? '', 'before')).toBe(true)
+  })
+
+  it('says so rather than pretending when asked for a patch it never recorded', async () => {
+    const { engine } = await mounted()
+
+    expect(engine.restorePixels('never-recorded', 'before')).toBe(false)
+  })
+
+  it('leaves a layer whose pixels are padlocked untouched', async () => {
+    const { host, patches } = await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [pixelLayer('layer-1', 'Background')].map(layer => ({
+        ...layer,
+        locked: { pixels: true, position: false, alpha: false },
+      })),
+    })
+    const renders = gpu.renders
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(patches).toEqual([])
+    expect(gpu.renders).toBe(renders)
   })
 })

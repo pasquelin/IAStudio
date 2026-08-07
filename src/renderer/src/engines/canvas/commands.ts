@@ -151,6 +151,59 @@ function mapLayer(
 }
 
 /**
+ * Where the moved layer ends up, as an absolute position rather than a step: commands merged
+ * into one gesture keep the first one's `revert` and the last one's `apply`, so a relative one
+ * would rewind a single pointer move.
+ */
+export function translateLayer(id: string, x: number, y: number): Command<CanvasState> {
+  let previous: Transform | null = null
+
+  return {
+    id: `layer:translate:${id}`,
+    apply: state => {
+      const target = layerById(state, id)
+      if (!target) return state
+      previous = target.transform
+      return mapLayer(state, id, layer => ({ ...layer, transform: { ...layer.transform, x, y } }))
+    },
+    revert: state =>
+      previous
+        ? mapLayer(state, id, layer => ({ ...layer, transform: previous ?? layer.transform }))
+        : state,
+  }
+}
+
+/** What the engine will be asked to paint back when this entry is stepped over. */
+export type PixelPort = {
+  /** `false` when the patch has been thrown away, and the entry can no longer be replayed. */
+  restore: (patchId: string, side: 'before' | 'after') => boolean
+}
+
+/**
+ * A stroke, as far as the history is concerned. The pixels are not in the state and never will
+ * be — the engine kept the tiles either side of the gesture, and this only tells it which way to
+ * replay them.
+ */
+export function paintPixels(patchId: string, port: PixelPort): Command<CanvasState> {
+  // The layer already holds the "after" pixels when the entry is pushed; blitting them back on
+  // that first apply would be a GPU pass for a texture that is already right.
+  let recorded = true
+
+  return {
+    id: `pixels:${patchId}`,
+    apply: state => {
+      if (recorded) recorded = false
+      else port.restore(patchId, 'after')
+      return state
+    },
+    revert: state => {
+      port.restore(patchId, 'before')
+      return state
+    },
+  }
+}
+
+/**
  * Idempotent on purpose: pulling a guide off a ruler and dragging it is one gesture, and the
  * commands it emits coalesce on this id. A second one has to move the guide it already laid
  * down, not stack another beside it.

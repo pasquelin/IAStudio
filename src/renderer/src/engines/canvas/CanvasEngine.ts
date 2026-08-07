@@ -11,11 +11,13 @@ import {
   Sprite,
   type BLEND_MODES,
 } from 'pixi.js'
+import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { onPaletteChange, token } from '../core/palette'
 import {
   allLayers,
   isGroup,
+  layerById,
   type BlendMode,
   type CanvasState,
   type Layer,
@@ -28,8 +30,19 @@ import {
   type OverlayContext,
   type OverlayScene,
 } from './CanvasOverlay'
-import { guideNear, GUIDE_GRAB, snapTargets, snapValue, SNAP_TOLERANCE, type Axis } from './guides'
+import {
+  boxEdges,
+  guideNear,
+  GUIDE_GRAB,
+  snapOffset,
+  snapTargets,
+  snapValue,
+  SNAP_TOLERANCE,
+  type Axis,
+} from './guides'
+import { PixelPatches, type PatchSide } from './PixelPatches'
 import { box, type Point } from './shape-geometry'
+import { brushRect } from './tiles'
 import {
   DEFAULT_VIEW,
   fitTo,
@@ -78,16 +91,33 @@ export type GuidePort = {
   endDrag: () => void
 }
 
+/**
+ * What the engine may do to the layer stack. Same shape and same reason as `GuidePort`: the
+ * engine knows where the pointer went, the document's history knows what that means.
+ */
+export type LayerPort = {
+  /** Absolute, not a step: the commands of one drag merge, and only the last one survives. */
+  translate: (id: string, x: number, y: number) => void
+  beginDrag: () => void
+  endDrag: () => void
+}
+
 export type CanvasEngineOptions = {
   /** Reports the colour under the pointer, so the picker can feed the swatch back. */
   onPick: (color: number) => void
-  /** Fires once a stroke is finished — one history entry per gesture, not per pixel. */
-  onStrokeEnd: () => void
+  /**
+   * Fires once a stroke is finished, with the id of the patch that can undo it — one history
+   * entry per gesture, not per pixel.
+   */
+  onPixels: (patchId: string) => void
+  /** The tiles of that patch have been thrown away: its history entry can no longer be replayed. */
+  onPixelsDropped: (patchId: string) => void
   /** Pan and zoom are session state: the engine moves them, React stores them. */
   onViewport: (viewport: Viewport) => void
   /** The host's size, which the zoom commands need: they centre on a panel they cannot see. */
   onHost: (size: Size) => void
   guides: GuidePort
+  layers: LayerPort
 }
 
 export const DEFAULT_BRUSH: BrushSettings = {
@@ -141,7 +171,8 @@ type Gesture =
   | { kind: 'pan'; from: Point }
   | { kind: 'guide'; id: string; axis: Axis }
   | { kind: 'paint'; from: Point }
-  | { kind: 'move'; from: Point }
+  /** `origin` is where the layer stood when the drag began: every step is absolute from it. */
+  | { kind: 'move'; id: string; from: Point; origin: Point }
   | { kind: 'select'; from: Point }
 
 const NO_GESTURE: Gesture = { kind: 'none' }
@@ -196,6 +227,8 @@ export class CanvasEngine {
   private readonly surfaces = new Map<string, LayerSurface>()
   private readonly stamp = new Graphics()
   private readonly overlay = new CanvasOverlay(() => this.scene())
+  /** Built with the renderer, in `mount`: a tile is a texture, and there is none before then. */
+  private patches: PixelPatches | null = null
   private resizer: ResizeObserver | null = null
   private stopPaletteWatch: (() => void) | null = null
 
@@ -207,6 +240,9 @@ export class CanvasEngine {
   private colors: OverlayColors = FALLBACK_COLORS
   /** Read on resize rather than per event: `getBoundingClientRect` forces a layout. */
   private bounds: DOMRect | null = null
+
+  /** The paintable ids in stack order, joined: what tells a restack apart from a repaint. */
+  private stacking = ''
 
   private gesture: Gesture = NO_GESTURE
   private pointer: Point | null = null
@@ -264,6 +300,7 @@ export class CanvasEngine {
 
     this.app = app
     this.host = host
+    this.patches = new PixelPatches(app.renderer, this.options.onPixelsDropped)
     app.stage.addChild(this.world)
     this.readPalette(canvas)
     // The theme can change while a document is open, and the overlay is the one surface that
@@ -317,6 +354,13 @@ export class CanvasEngine {
     // a texture destroyed on the GPU. Grouping two layers used to lose their pixels outright.
     const layers = allLayers(state.layers).filter(layer => !isGroup(layer))
     for (const layer of layers) this.syncLayer(layer)
+
+    // Dragging a layer rewrites the stack sixty times a second without restacking it. Both passes
+    // below are per-layer — one of them quadratic in the surfaces — and neither has anything to
+    // do when the same ids come back in the same order.
+    const stacking = layers.map(layer => layer.id).join(' ')
+    if (stacking === this.stacking) return
+    this.stacking = stacking
 
     for (const [id, surface] of this.surfaces) {
       if (layers.some(layer => layer.id === id)) continue
@@ -414,6 +458,8 @@ export class CanvasEngine {
     this.resizer?.disconnect()
     this.resizer = null
     this.overlay.dispose()
+    this.patches?.dispose()
+    this.patches = null
 
     for (const surface of this.surfaces.values()) surface.texture.destroy(true)
     this.surfaces.clear()
@@ -508,6 +554,27 @@ export class CanvasEngine {
     surface.sprite.visible = layer.visible
     surface.sprite.alpha = layer.opacity
     surface.sprite.blendMode = BLEND_BY_MODE[layer.blend] ?? 'normal'
+    // Read from the state, never written from here: a sprite nudged in place is a position the
+    // next `apply` throws away and no undo ever hears about.
+    surface.sprite.position.set(layer.transform.x, layer.transform.y)
+  }
+
+  /**
+   * Paints one end of a recorded gesture back into its layer. Called by the history, which holds
+   * the patch id and nothing else — the tiles themselves never leave this side of the line.
+   *
+   * `false` says the tiles are gone: the caller must drop the entry rather than show a ⌘Z that
+   * quietly does nothing.
+   */
+  restorePixels(patchId: string, side: PatchSide): boolean {
+    const patches = this.patches
+    const layerId = patches?.layerOf(patchId)
+    const surface = layerId ? this.surfaces.get(layerId) : null
+    if (!patches || !surface) return false
+
+    const done = patches.restore(patchId, side, surface.texture)
+    if (done) this.render()
+    return done
   }
 
   /**
@@ -533,6 +600,23 @@ export class CanvasEngine {
     // the left one.
     if (point.x < RULER_SIZE && point.y < RULER_SIZE) return 'corner'
     return point.y < RULER_SIZE ? 'y' : 'x'
+  }
+
+  /**
+   * Where a dragged layer wants to land. Both of its sides and its middle are candidates on each
+   * axis, so it sticks to a guide by whichever edge reaches it first — the same magnetism the
+   * guides themselves have, applied to a box rather than to a line.
+   */
+  private snappedMove(origin: Point, from: Point, to: Point): Point {
+    const raw = { x: origin.x + to.x - from.x, y: origin.y + to.y - from.y }
+    const state = this.state
+    if (!this.view.snap || !state) return raw
+
+    const tolerance = SNAP_TOLERANCE / this.view.viewport.scale
+    return {
+      x: raw.x + snapOffset(boxEdges(raw.x, state.width), snapTargets(state, 'x'), tolerance),
+      y: raw.y + snapOffset(boxEdges(raw.y, state.height), snapTargets(state, 'y'), tolerance),
+    }
   }
 
   /** Magnetism is a screen-space feeling: the tolerance shrinks in document units as you zoom. */
@@ -583,12 +667,15 @@ export class CanvasEngine {
     if (this.tool === 'picker') return this.pick(point)
 
     if (this.tool === 'fill') {
-      const surface = this.activeSurface()
-      if (!surface) return
+      const target = this.paintTarget()
+      const frame = target && this.beginPixels(target.layer.id, target.surface)
+      if (!target || !frame) return
+
+      this.patches?.touch(frame)
       // Edge to edge, not a flood fill from the click: that is what gives a layer a plain
       // white, black or red background in one gesture.
-      this.fill(surface, this.brush.color)
-      this.options.onStrokeEnd()
+      this.fill(target.surface, this.brush.color)
+      this.endPixels()
       return
     }
 
@@ -598,7 +685,16 @@ export class CanvasEngine {
     if (UNBUILT_TOOLS.has(this.tool)) return
 
     if (this.tool === 'move') {
-      this.gesture = { kind: 'move', from: point }
+      const layer = this.activeLayer()
+      if (!layer || layer.locked.position) return
+
+      this.options.layers.beginDrag()
+      this.gesture = {
+        kind: 'move',
+        id: layer.id,
+        from: point,
+        origin: { x: layer.transform.x, y: layer.transform.y },
+      }
       return
     }
 
@@ -609,11 +705,41 @@ export class CanvasEngine {
       return
     }
 
-    const surface = this.activeSurface()
-    if (!surface) return
+    const target = this.paintTarget()
+    if (!target) return
 
+    this.beginPixels(target.layer.id, target.surface)
     this.gesture = { kind: 'paint', from: point }
-    this.dab(surface, [point])
+    this.dab(target.surface, [point])
+  }
+
+  private activeLayer(): Layer | null {
+    return this.state ? layerById(this.state, this.state.activeLayerId) : null
+  }
+
+  /** The layer a stroke may land on: armed, able to hold pixels, and not padlocked. */
+  private paintTarget(): { layer: Layer; surface: LayerSurface } | null {
+    const layer = this.activeLayer()
+    const surface = this.activeSurface()
+    if (!layer || !surface || isGroup(layer) || layer.locked.pixels) return null
+    return { layer, surface }
+  }
+
+  private documentRect(): Rect | null {
+    const state = this.state
+    return state ? { x: 0, y: 0, width: state.width, height: state.height } : null
+  }
+
+  /** Returns the document's own rectangle, which the bucket then dirties whole. */
+  private beginPixels(layerId: string, surface: LayerSurface): Rect | null {
+    const frame = this.documentRect()
+    if (frame) this.patches?.begin(newId(), layerId, surface.texture, frame)
+    return frame
+  }
+
+  private endPixels(): void {
+    const patchId = this.patches?.end() ?? null
+    if (patchId) this.options.onPixels(patchId)
   }
 
   /** The guide under the pointer, tested in screen pixels so it stays grabbable at any zoom. */
@@ -659,13 +785,8 @@ export class CanvasEngine {
         return
       }
       case 'move': {
-        const surface = this.activeSurface()
-        if (surface) {
-          surface.sprite.x += point.x - gesture.from.x
-          surface.sprite.y += point.y - gesture.from.y
-          this.render()
-        }
-        this.gesture = { kind: 'move', from: point }
+        const to = this.snappedMove(gesture.origin, gesture.from, point)
+        this.options.layers.translate(gesture.id, to.x, to.y)
         return
       }
       case 'select': {
@@ -701,8 +822,9 @@ export class CanvasEngine {
       return
     }
 
-    // One history entry per gesture: a command per dab would make ⌘Z useless.
-    if (gesture.kind === 'paint' || gesture.kind === 'move') this.options.onStrokeEnd()
+    // One history entry per gesture: a command per dab, or per pointer move, would make ⌘Z useless.
+    if (gesture.kind === 'move') this.options.layers.endDrag()
+    if (gesture.kind === 'paint') this.endPixels()
   }
 
   private readonly onPointerLeave = (): void => {
@@ -804,6 +926,9 @@ export class CanvasEngine {
   private dab(surface: LayerSurface, points: readonly Point[]): void {
     const renderer = this.app?.renderer
     if (!renderer || points.length === 0) return
+
+    // Before a single pixel is written: what the tiles hold now is what an undo will put back.
+    this.patches?.touch(brushRect(points, this.brush.size / 2))
 
     const erasing = this.tool === 'eraser'
     this.stamp.clear()

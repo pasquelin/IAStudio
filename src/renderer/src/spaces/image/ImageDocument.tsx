@@ -16,6 +16,8 @@ import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
 import { canvasToolFor, cursorFor, DEFAULT_MODES, IMAGE_TOOLS } from './image-tools'
+import { layerPort } from './layer-port'
+import { pixelPort } from './pixel-port'
 import { ZoomBar } from './ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }
@@ -53,14 +55,19 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     if (!element) return
 
     const views = () => useCanvasViews.getState()
+    // Read through the ref rather than captured: an undo can land after this engine has been
+    // replaced, and it is the current one that holds the tiles.
+    const pixels = pixelPort(documentId, () => engine.current)
     const created = new CanvasEngine({
       onPick: color => setBrush(current => ({ ...current, color })),
       // A stroke is one gesture, so it is one history entry — a command per dab would make
       // undo useless.
-      onStrokeEnd: () => undefined,
+      onPixels: pixels.record,
+      onPixelsDropped: pixels.drop,
       onViewport: viewport => views().setViewport(documentId, viewport),
       onHost: size => views().setHost(documentId, size),
       guides: guidePort(documentId),
+      layers: layerPort(documentId),
     })
 
     engine.current = created

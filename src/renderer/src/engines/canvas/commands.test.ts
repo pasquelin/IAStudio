@@ -20,6 +20,8 @@ import {
   selectLayer,
   setLayerOpacity,
   setLayerVisible,
+  translateLayer,
+  paintPixels,
   ungroupLayer,
 } from './commands'
 import { layerFixture } from './canvas-fixtures'
@@ -462,5 +464,69 @@ describe('addGuide, applied twice', () => {
     const again = addGuide({ id: 'g1', axis: 'x', position: 400 })
 
     expect(again.revert(again.apply(laid)).guides).toEqual([{ id: 'g1', axis: 'x', position: 10 }])
+  })
+})
+
+describe('translateLayer', () => {
+  it('writes the layer position into the state the engine reads back', () => {
+    const moved = translateLayer('layer-1', 40, -12).apply(DEFAULT_CANVAS)
+
+    expect(layerById(moved, 'layer-1')?.transform).toMatchObject({ x: 40, y: -12 })
+  })
+
+  it('puts it back exactly where it started', () => {
+    const command = translateLayer('layer-1', 40, -12)
+
+    expect(command.revert(command.apply(DEFAULT_CANVAS))).toEqual(DEFAULT_CANVAS)
+  })
+
+  /**
+   * A drag emits one of these per pointer move, all merged into one entry: the merge keeps the
+   * first command's `revert` and the last one's `apply`, so a relative step would rewind a single
+   * frame of the gesture instead of the whole of it.
+   */
+  it('is absolute, so the steps of one drag can be merged', () => {
+    const first = translateLayer('layer-1', 10, 0)
+    const last = translateLayer('layer-1', 90, 0)
+    const dragged = last.apply(first.apply(DEFAULT_CANVAS))
+
+    expect(layerById(dragged, 'layer-1')?.transform.x).toBe(90)
+    expect(first.revert(dragged)).toEqual(DEFAULT_CANVAS)
+  })
+
+  it('leaves a stack that holds no such layer alone', () => {
+    expect(translateLayer('nope', 40, 40).apply(DEFAULT_CANVAS)).toBe(DEFAULT_CANVAS)
+  })
+})
+
+describe('paintPixels', () => {
+  function port() {
+    const calls: string[] = []
+    return { calls, restore: (id: string, side: string) => (calls.push(`${id}:${side}`), true) }
+  }
+
+  // The layer already holds the "after" pixels when the entry is pushed.
+  it('asks for nothing on the apply that pushes it', () => {
+    const spy = port()
+    paintPixels('p1', spy).apply(DEFAULT_CANVAS)
+
+    expect(spy.calls).toEqual([])
+  })
+
+  it('paints the tiles from before the gesture back on undo, and the ones after on redo', () => {
+    const spy = port()
+    const command = paintPixels('p1', spy)
+    command.apply(DEFAULT_CANVAS)
+    command.revert(DEFAULT_CANVAS)
+    command.apply(DEFAULT_CANVAS)
+
+    expect(spy.calls).toEqual(['p1:before', 'p1:after'])
+  })
+
+  // The pixels are the engine's; nothing about a stroke belongs in the serialized document.
+  it('leaves the state untouched', () => {
+    const command = paintPixels('p1', port())
+
+    expect(command.revert(DEFAULT_CANVAS)).toBe(DEFAULT_CANVAS)
   })
 })

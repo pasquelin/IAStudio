@@ -35,6 +35,13 @@ export type DocumentStoreState<S> = {
    */
   discardLast: (documentId: string) => void
   /**
+   * Drops an entry the engine can no longer replay, and everything the stack would have to step
+   * over to reach it. Undo is sequential, so an entry left behind a missing one is unreachable
+   * anyway — leaving it in place would show a ⌘Z that does nothing rather than one that has run
+   * out, which is the difference between a limit and a bug.
+   */
+  forgetThrough: (documentId: string, commandId: string) => void
+  /**
    * Installs a starting state on first open, built rather than shared: a scene needs its own
    * node ids, which a constant default cannot give it. Idempotent — reopening a tab must not
    * reset what is in it.
@@ -152,6 +159,25 @@ export function createDocumentStore<S>(defaultState: S) {
             command.revert(state),
             { past: history.past.slice(0, -1), future: history.future },
           ]
+        }),
+
+      forgetThrough: (documentId, commandId) =>
+        set(state => {
+          const history = historyOf(state, documentId)
+          const behind = history.past.findIndex(command => command.id === commandId)
+          const ahead = history.future.findIndex(command => command.id === commandId)
+          if (behind < 0 && ahead < 0) return state
+
+          return {
+            histories: {
+              ...state.histories,
+              [documentId]: {
+                past: behind < 0 ? history.past : history.past.slice(behind + 1),
+                // Redo runs forwards, so a hole in the future cuts everything past it instead.
+                future: ahead < 0 ? history.future : history.future.slice(0, ahead),
+              },
+            },
+          }
         }),
 
       // Both close whatever gesture was open: the entry the next command would have merged into

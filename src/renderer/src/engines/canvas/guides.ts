@@ -36,6 +36,37 @@ export function snapValue(value: number, targets: readonly number[], tolerance: 
   return best ?? value
 }
 
+/**
+ * How far a moving box has to be nudged for one of its `edges` to land on a target. Zero when
+ * none is close enough. A dragged layer has three candidate edges per axis — its two sides and
+ * its middle — and the nearest pairing of any edge with any target wins, which is why this
+ * cannot be `snapValue` applied to one of them.
+ */
+export function snapOffset(
+  edges: readonly number[],
+  targets: readonly number[],
+  tolerance: number,
+): number {
+  let best = 0
+  let bestDistance = tolerance
+
+  for (const edge of edges) {
+    for (const target of targets) {
+      const distance = Math.abs(target - edge)
+      if (distance <= bestDistance) {
+        best = target - edge
+        bestDistance = distance
+      }
+    }
+  }
+  return best
+}
+
+/** The three places a box of `extent` starting at `start` wants to stick by. */
+export function boxEdges(start: number, extent: number): number[] {
+  return [start, start + extent / 2, start + extent]
+}
+
 /** The guide under a pointer sitting at `position` on `axis`, nearest first. */
 export function guideNear(
   guides: readonly Guide[],
