@@ -1,3 +1,4 @@
+import type { AccountSummary, AccountsResult } from './domain/account'
 import type { Asset, AssetQuery } from './domain/asset'
 import type { CommandId } from './domain/command'
 import type {
@@ -26,12 +27,16 @@ import type { WorkspaceId } from './domain/workspace'
 export type Channels = {
   settingsRead: 'settings:read'
   settingsWrite: 'settings:write'
-  settingsSetCredentials: 'settings:set-credentials'
   settingsAuthState: 'settings:auth-state'
-  settingsForgetCredentials: 'settings:forget-credentials'
   settingsOpen: 'settings:open'
   settingsRunAction: 'settings:run-action'
   settingsPending: 'settings:pending'
+
+  accountsList: 'accounts:list'
+  accountsAdd: 'accounts:add'
+  accountsRename: 'accounts:rename'
+  accountsRemove: 'accounts:remove'
+  accountsActivate: 'accounts:activate'
 
   scenarioSearchModels: 'scenario:search-models'
   scenarioModelPreviews: 'scenario:model-previews'
@@ -72,12 +77,16 @@ export type Channels = {
 export const CHANNELS: Channels = {
   settingsRead: 'settings:read',
   settingsWrite: 'settings:write',
-  settingsSetCredentials: 'settings:set-credentials',
   settingsAuthState: 'settings:auth-state',
-  settingsForgetCredentials: 'settings:forget-credentials',
   settingsOpen: 'settings:open',
   settingsRunAction: 'settings:run-action',
   settingsPending: 'settings:pending',
+
+  accountsList: 'accounts:list',
+  accountsAdd: 'accounts:add',
+  accountsRename: 'accounts:rename',
+  accountsRemove: 'accounts:remove',
+  accountsActivate: 'accounts:activate',
 
   scenarioSearchModels: 'scenario:search-models',
   scenarioModelPreviews: 'scenario:model-previews',
@@ -142,6 +151,7 @@ export const EVENTS = {
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
   settingsChanged: 'evt:settings-changed',
+  accountsChanged: 'evt:accounts-changed',
   openTool: 'evt:open-tool',
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
@@ -168,9 +178,7 @@ export type StudioBridge = {
   settings: {
     read: () => Promise<Settings>
     write: (partial: PartialSettings) => Promise<Settings>
-    setCredentials: (key: string, secret: string) => Promise<AuthState>
     authState: () => Promise<AuthState>
-    forgetCredentials: () => Promise<void>
     /** Opens the settings window on a section, or focuses it there if it is already up. */
     open: (section: SettingsSectionId) => Promise<void>
     /**
@@ -191,6 +199,21 @@ export type StudioBridge = {
     onChange: (callback: (settings: Settings) => void) => Unsubscribe
     /** Section the settings window is asked to show while it is already open. */
     onSection: (callback: (section: SettingsSectionId) => void) => Unsubscribe
+  }
+  /**
+   * The stored API keys. An API key carries its own project and team — the API lists neither —
+   * so switching accounts is the only way to change which library the studio reads. The local
+   * project is untouched by any of it: it is the user's disk.
+   */
+  accounts: {
+    list: () => Promise<AccountSummary[]>
+    /** Stores a key under a name. The name is required and must not already be taken. */
+    add: (name: string, key: string, secret: string) => Promise<AccountsResult>
+    rename: (id: string, name: string) => Promise<AccountsResult>
+    remove: (id: string) => Promise<AccountsResult>
+    activate: (id: string) => Promise<AccountsResult>
+    /** Every window follows the switch: the account is owned by the main process. */
+    onChange: (callback: (accounts: AccountSummary[]) => void) => Unsubscribe
   }
   scenario: {
     searchModels: (query?: ModelQuery) => Promise<ModelPage>

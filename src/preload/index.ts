@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { AccountSummary } from '@shared/domain/account'
 import type { CommandId } from '@shared/domain/command'
 import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
@@ -28,15 +29,20 @@ const bridge: StudioBridge = {
   settings: {
     read: () => ipcRenderer.invoke(CHANNELS.settingsRead),
     write: partial => ipcRenderer.invoke(CHANNELS.settingsWrite, partial),
-    setCredentials: (key, secret) =>
-      ipcRenderer.invoke(CHANNELS.settingsSetCredentials, key, secret),
     authState: () => ipcRenderer.invoke(CHANNELS.settingsAuthState),
-    forgetCredentials: () => ipcRenderer.invoke(CHANNELS.settingsForgetCredentials),
     open: section => ipcRenderer.invoke(CHANNELS.settingsOpen, section),
     runAction: id => ipcRenderer.invoke(CHANNELS.settingsRunAction, id),
     setPending: pending => ipcRenderer.invoke(CHANNELS.settingsPending, pending),
     onChange: callback => subscribe<Settings>(EVENTS.settingsChanged, callback),
     onSection: callback => subscribe<SettingsSectionId>(EVENTS.settingsSection, callback),
+  },
+  accounts: {
+    list: () => ipcRenderer.invoke(CHANNELS.accountsList),
+    add: (name, key, secret) => ipcRenderer.invoke(CHANNELS.accountsAdd, name, key, secret),
+    rename: (id, name) => ipcRenderer.invoke(CHANNELS.accountsRename, id, name),
+    remove: id => ipcRenderer.invoke(CHANNELS.accountsRemove, id),
+    activate: id => ipcRenderer.invoke(CHANNELS.accountsActivate, id),
+    onChange: callback => subscribe<AccountSummary[]>(EVENTS.accountsChanged, callback),
   },
   scenario: {
     searchModels: query => ipcRenderer.invoke(CHANNELS.scenarioSearchModels, query),

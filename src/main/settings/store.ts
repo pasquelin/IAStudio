@@ -1,5 +1,20 @@
+import { randomUUID } from 'node:crypto'
+import type { AccountSummary } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
-import { parseStoredCredentials, salvagePartialSettings, type Credentials } from './validation'
+import {
+  AccountError,
+  activateAccount,
+  activeCredentials,
+  addAccount,
+  bookFromCredentials,
+  EMPTY_BOOK,
+  removeAccount,
+  renameAccount,
+  summariesOf,
+  type AccountBook,
+  type Credentials,
+} from './accounts'
+import { parseStoredAccounts, parseStoredCredentials, salvagePartialSettings } from './validation'
 
 /**
  * What the store needs in order to persist. Injected so tests need neither Electron nor a
@@ -15,6 +30,16 @@ export type PersistenceAdapter = {
   path: () => string
 }
 
+/**
+ * What a change to the account list did. `credentialsChanged` is derived from the book, not
+ * claimed by the caller: adding a second account or removing an idle one leaves the active key
+ * exactly where it was, and treating those as a switch would throw away every cache for nothing.
+ */
+export type AccountChange = {
+  accounts: AccountSummary[]
+  credentialsChanged: boolean
+}
+
 export type SettingsStore = {
   read: () => Settings
   write: (partial: PartialSettings) => Settings
@@ -24,10 +49,19 @@ export type SettingsStore = {
    * defaults to overwrite them, so they would survive the reset that promised to remove them.
    */
   reset: () => Settings
-  setCredentials: (credentials: Credentials) => void
-  forgetCredentials: () => void
+  /** Every held account, without its credentials — this is what may cross to a window. */
+  accounts: () => AccountSummary[]
+  /** All four throw an `AccountError`: a refused name, an unknown id, or a locked keychain. */
+  addAccount: (name: string, credentials: Credentials) => AccountChange
+  renameAccount: (id: string, name: string) => AccountChange
+  removeAccount: (id: string) => AccountChange
+  activateAccount: (id: string) => AccountChange
   hasCredentials: () => boolean
-  discardUnreadableCredentials: () => void
+  /**
+   * Carries a lone stored pair over into a book, once, at startup. Erases nothing it has not
+   * read: a locked keychain leaves everything exactly where it is.
+   */
+  settleAccounts: () => void
   /** Main process only. Never expose over IPC — see spec § 4, invariant 1. */
   readCredentials: () => Credentials | null
   /** Where the settings are written. */
@@ -36,6 +70,14 @@ export type SettingsStore = {
 
 const SETTINGS_KEY = 'settings'
 const CREDENTIALS_KEY = 'credentials'
+const ACCOUNTS_KEY = 'accounts'
+
+/**
+ * The id a migrated lone pair lands under. Fixed rather than generated: the migration is read
+ * before it is ever written, and a fresh id per read would hand every caller a different
+ * account for the same key.
+ */
+const MIGRATED_ACCOUNT_ID = 'account_migrated'
 
 function merge(base: Settings, partial: PartialSettings): Settings {
   return {
@@ -57,29 +99,107 @@ function merge(base: Settings, partial: PartialSettings): Settings {
  */
 export type SettingsStoreOptions = {
   onChange?: (settings: Settings) => void
+  /** Injected so a test can name the accounts it creates. */
+  newAccountId?: () => string
 }
 
 export function createSettingsStore(
   adapter: PersistenceAdapter,
-  { onChange }: SettingsStoreOptions = {},
+  { onChange, newAccountId = () => `account_${randomUUID()}` }: SettingsStoreOptions = {},
 ): SettingsStore {
   const read = (): Settings =>
     merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
 
-  /**
-   * Reads without side effects. Unreadable credentials are reported, not deleted: erasing
-   * from a predicate would make `hasCredentials()` destructive, and a transient keychain
-   * failure would silently cost the user their key.
-   */
-  const readCredentials = (): Credentials | null => {
-    const encrypted = adapter.read<string>(CREDENTIALS_KEY)
-    if (!encrypted) return null
+  const readRaw = (key: string): string | null => adapter.read<string>(key) ?? null
+
+  /** The plain text behind a stored blob, or null when the keychain would not hand it back. */
+  const decrypted = (raw: string): string | null => {
     try {
-      return parseStoredCredentials(adapter.decrypt(encrypted))
+      return adapter.decrypt(raw)
     } catch {
-      // Keychain changed, profile migrated, data corrupted.
       return null
     }
+  }
+
+  const decrypt = <T>(raw: string, parse: (plain: string) => T | null): T | null => {
+    const plain = decrypted(raw)
+    if (plain === null) return null
+    try {
+      return parse(plain)
+    } catch {
+      // Truncated JSON, or a shape from another version.
+      return null
+    }
+  }
+
+  /**
+   * Three states, not two, and the difference decides whether writing is allowed.
+   *
+   * `locked` — the keychain refused. The keys are still in there; the next launch will very
+   * likely read them, so nothing may be written over them and nothing may be erased.
+   * `corrupt` — decrypted fine, holds no book. The content is unrecoverable whatever we do, so
+   * writing over it is the only way out; refusing would wedge account management for good.
+   */
+  type StoredBook =
+    | { held: 'none' }
+    | { held: 'locked' }
+    | { held: 'corrupt' }
+    | { held: 'book'; book: AccountBook }
+
+  const storedBook = (): StoredBook => {
+    const raw = readRaw(ACCOUNTS_KEY)
+    if (!raw) return { held: 'none' }
+
+    const plain = decrypted(raw)
+    if (plain === null) return { held: 'locked' }
+
+    try {
+      const book = parseStoredAccounts(plain)
+      return book ? { held: 'book', book } : { held: 'corrupt' }
+    } catch {
+      return { held: 'corrupt' }
+    }
+  }
+
+  /**
+   * Reads without side effects. A book that cannot be read reads as empty so the screens ask
+   * for a key rather than claim to be set up — never as a reason to erase it.
+   *
+   * With no book at all, a lone pair from a single-credential install stands in for one, so
+   * an upgrade keeps working before `settleAccounts` has had a chance to carry it over.
+   */
+  const readBook = (): AccountBook => {
+    const stored = storedBook()
+    if (stored.held === 'book') return stored.book
+    if (stored.held !== 'none') return EMPTY_BOOK
+
+    const lone = readRaw(CREDENTIALS_KEY)
+    const credentials = lone && decrypt(lone, parseStoredCredentials)
+    return credentials ? bookFromCredentials(credentials, MIGRATED_ACCOUNT_ID) : EMPTY_BOOK
+  }
+
+  const writeBook = (book: AccountBook): void => {
+    adapter.write(ACCOUNTS_KEY, adapter.encrypt(JSON.stringify(book)))
+  }
+
+  /** Runs one change and reports whether it moved the active key — never guessed by a caller. */
+  const apply = (change: (book: AccountBook) => AccountBook): AccountChange => {
+    const stored = storedBook()
+
+    /*
+     * A write replaces the blob whole. Adding an account on top of keys we cannot see would
+     * leave a book of one where the user had several — and the screen invites exactly that,
+     * since an unreadable book reads as "no account yet". Only a locked keychain earns the
+     * refusal: its keys are intact and the next launch reads them fine. Corrupt content has
+     * nothing left to protect, and refusing there would lock the user out permanently.
+     */
+    if (stored.held === 'locked') throw new AccountError('store-unreadable')
+
+    const before = stored.held === 'book' ? stored.book : readBook()
+    const after = change(before)
+    writeBook(after)
+
+    return { accounts: summariesOf(after), credentialsChanged: before.activeId !== after.activeId }
   }
 
   return {
@@ -98,22 +218,51 @@ export function createSettingsStore(
       return DEFAULT_SETTINGS
     },
 
-    setCredentials: credentials => {
-      adapter.write(CREDENTIALS_KEY, adapter.encrypt(JSON.stringify(credentials)))
-    },
+    accounts: () => summariesOf(readBook()),
 
-    forgetCredentials: () => adapter.remove(CREDENTIALS_KEY),
+    addAccount: (name, credentials) =>
+      apply(book => addAccount(book, { id: newAccountId(), name, credentials })),
 
-    hasCredentials: () => readCredentials() !== null,
+    renameAccount: (id, name) => apply(book => renameAccount(book, id, name)),
 
-    /** Drops a stored blob that can no longer be read, so the user is asked again. */
-    discardUnreadableCredentials: () => {
-      if (adapter.read<string>(CREDENTIALS_KEY) && readCredentials() === null) {
+    removeAccount: id => apply(book => removeAccount(book, id)),
+
+    activateAccount: id => apply(book => activateAccount(book, id)),
+
+    hasCredentials: () => activeCredentials(readBook()) !== null,
+
+    settleAccounts: () => {
+      const stored = storedBook()
+
+      // Nothing is touched. This runs before the first window, where a keychain can be locked
+      // or unavailable for the launch: erasing the book would cost every key the user holds,
+      // and erasing the pair beside it would cost the one copy that migration may still need.
+      if (stored.held === 'locked') return
+
+      const lone = readRaw(CREDENTIALS_KEY)
+      // Read before erasing, always. A pair that will not decrypt today is still the only copy
+      // of that key, and the launch that reads it may be the next one.
+      const credentials = lone && decrypt(lone, parseStoredCredentials)
+
+      if (stored.held === 'book') {
+        // The book supersedes it, and left behind it would outlive "remove every account".
+        if (credentials) adapter.remove(CREDENTIALS_KEY)
+        return
+      }
+
+      if (!credentials) return
+
+      try {
+        writeBook(bookFromCredentials(credentials, MIGRATED_ACCOUNT_ID))
         adapter.remove(CREDENTIALS_KEY)
+      } catch {
+        // No keychain on this machine, so nothing can be encrypted. The pair stays where it
+        // is and `readBook` keeps standing in for it — failing the launch over a migration
+        // that can wait would be worse.
       }
     },
 
-    readCredentials,
+    readCredentials: () => activeCredentials(readBook()),
 
     path: adapter.path,
   }

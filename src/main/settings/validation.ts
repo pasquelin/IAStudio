@@ -14,12 +14,8 @@ import {
   SETTING_ACTION_IDS,
   type SettingActionId,
 } from '@shared/domain/settings-registry'
-
-/** Here rather than in `store.ts`, which imports this module: the type would close a cycle. */
-export type Credentials = {
-  key: string
-  secret: string
-}
+import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
+import { settleBook, type AccountBook, type Credentials } from './accounts'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
@@ -141,11 +137,59 @@ const storedCredentials = z.object({ key: credential, secret: credential })
 
 /**
  * Reads back what this process wrote, on the same `credential` schema as the input path. A
- * hand-rolled guard accepting `{key:'',secret:''}` made `hasCredentials()` answer true on a
- * blank pair, which `discardUnreadableCredentials` then refused to drop: the dialogue claimed
- * to be configured while every call answered 401.
+ * hand-rolled guard accepting `{key:'',secret:''}` once made `hasCredentials()` answer true on
+ * a blank pair: the account screen claimed to be configured while every call answered 401.
  */
 export function parseStoredCredentials(plain: string): Credentials | null {
   const parsed = storedCredentials.safeParse(JSON.parse(plain))
   return parsed.success ? parsed.data : null
+}
+
+const accountName = z.string().trim().min(1).max(ACCOUNT_NAME_MAX_LENGTH)
+const accountId = z.string().trim().min(1)
+
+/**
+ * A type guard, not the rule. `checkAccountName` owns what makes a name acceptable, and it
+ * answers a code the screen can translate — refusing here instead would surface a name that is
+ * merely too long as an unexplained rejected call.
+ */
+export function parseAccountName(value: unknown): string {
+  return z.string().parse(value)
+}
+
+/** Throws: the id names what gets written, and a renderer sends it. */
+export function parseAccountId(value: unknown): string {
+  return accountId.parse(value)
+}
+
+const storedAccount = z.object({
+  id: accountId,
+  name: accountName,
+  credentials: storedCredentials,
+})
+
+const storedBook = z.object({
+  // `catch` per entry rather than on the array: one unreadable account costs its own row, not
+  // every key the user holds.
+  accounts: z.array(storedAccount.nullable().catch(null)),
+  // Caught for the same reason as an entry: a corrupt `activeId` must cost the pointer, not
+  // the whole book. `settleBook` repoints it at the first account left.
+  activeId: z.string().min(1).nullable().catch(null),
+})
+
+/**
+ * Reads a book back from disk, keeping whatever still parses. `settleBook` then repairs what
+ * survived — a dangling `activeId`, a duplicate id.
+ *
+ * Null means the blob is not a book at all, which is what tells the caller to look for a lone
+ * pair to migrate instead.
+ */
+export function parseStoredAccounts(plain: string): AccountBook | null {
+  const parsed = storedBook.safeParse(JSON.parse(plain))
+  if (!parsed.success) return null
+
+  return settleBook({
+    accounts: parsed.data.accounts.filter(entry => entry !== null),
+    activeId: parsed.data.activeId,
+  })
 }

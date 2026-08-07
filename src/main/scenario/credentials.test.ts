@@ -103,7 +103,7 @@ describe('development credentials', () => {
 describe('credential resolution', () => {
   it('prefers what the user saved over the development fallback', () => {
     const settings = createSettingsStore(memoryAdapter())
-    settings.setCredentials({ key: 'saved_key', secret: 'saved_secret' })
+    settings.addAccount('Studio', { key: 'saved_key', secret: 'saved_secret' })
 
     expect(resolveCredentials(settings, fallback(DEV_ENV))).toEqual({
       key: 'saved_key',

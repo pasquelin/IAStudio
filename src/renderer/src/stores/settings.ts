@@ -23,8 +23,6 @@ type SettingsState = {
   /** Writes one leaf. Nothing outside this store has to know how a path becomes a partial. */
   setValue: (path: SettingPath, value: SettingValue | undefined) => Promise<void>
   refreshAuth: () => Promise<AuthState>
-  signIn: (key: string, secret: string) => Promise<AuthState>
-  signOut: () => Promise<void>
   /** Opens the settings window on a section — how a panel leads to what it says is missing. */
   openSection: (section: SettingsSectionId) => void
 }
@@ -80,24 +78,6 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     const auth = await bridge.settings.authState()
     set({ auth })
     return auth
-  },
-
-  signIn: async (key, secret) => {
-    const bridge = getBridge()
-    if (!bridge) return get().auth
-
-    const auth = await bridge.settings.setCredentials(key, secret)
-    set({ auth })
-    return auth
-  },
-
-  signOut: async () => {
-    const bridge = getBridge()
-    if (!bridge) return
-
-    await bridge.settings.forgetCredentials()
-    // Asking again rather than assuming `missing`: a development `.env` may still answer.
-    set({ auth: await bridge.settings.authState() })
   },
 
   openSection: section => {

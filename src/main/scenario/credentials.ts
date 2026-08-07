@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import type { Credentials } from '@main/settings/accounts'
 import type { SettingsStore } from '@main/settings/store'
-import type { Credentials } from '@main/settings/validation'
 
 /**
  * How the development fallback reaches the disk. Injected so the resolution order can be
