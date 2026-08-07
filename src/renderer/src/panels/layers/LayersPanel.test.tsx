@@ -18,7 +18,7 @@ const second: Layer = {
 
 describe('LayersPanel', () => {
   beforeEach(() => {
-    useCanvases.setState({ canvases: {}, histories: {} })
+    useCanvases.setState({ states: {}, histories: {} })
     // The panel sits on the edge, outside Dockview: it reads the document in front rather than
     // being handed one.
     useDocuments.setState({ activeId: 'doc-1' })

@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, assetUrl, type Asset } from '@shared/domain/asset'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
-import { filterLocally, isFiltered, type FacetDescriptor } from '@/design/collection-state'
+import { filterLocally, isFiltered, type FacetDescriptor } from '@/helpers/collection-state'
 import { MediaTile } from '@/design/MediaTile'
 import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
-import { EmptyState } from './EmptyState'
+import { EmptyState } from '@/design/EmptyState'
 
 const TYPE_FACET = 'type'
 

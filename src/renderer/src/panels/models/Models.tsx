@@ -3,20 +3,20 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ModelPage, ModelSummary } from '@shared/domain/model'
+import { MODEL_IDS_BATCH_LIMIT, type ModelPage, type ModelSummary } from '@shared/domain/model'
 import { failureKeyOf } from '@/services/failure-message'
-import { cn } from '@/design/cn'
+import { cn } from '@/helpers/cn'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
-import { isFiltered } from '@/design/collection-state'
+import { isFiltered } from '@/helpers/collection-state'
 import { MediaTile, Thumbnail } from '@/design/MediaTile'
 import { useDebounced } from '@/hooks/useDebounced'
 import { getBridge } from '@/services/bridge'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { workspaceById } from '@/app/workspaces'
-import { EmptyState } from './EmptyState'
+import { workspaceById } from '@/helpers/workspaces'
+import { EmptyState } from '@/design/EmptyState'
 import { facetsFor, queryFrom, sortOptions } from './model-filters'
 
 const SEARCH_DELAY_MS = 250
@@ -26,9 +26,6 @@ const ROW_HEIGHT = 40
 
 /** Long enough to gather a flick of the scrollbar, short enough to feel immediate. */
 const THUMBNAIL_GATHER_MS = 120
-
-/** The IPC channel refuses more, and a refused batch would be lost without a word. */
-const PREVIEW_BATCH = 100
 
 /**
  * How many pages the panel pulls on its own before it waits for the user. Not just the empty
@@ -72,7 +69,7 @@ function useLazyPreviews() {
     timer.current = setTimeout(() => {
       timer.current = null
       // Capped to what the channel accepts; the rest stays pending for the next window.
-      const batch = [...pending.current].slice(0, PREVIEW_BATCH)
+      const batch = [...pending.current].slice(0, MODEL_IDS_BATCH_LIMIT)
       for (const id of batch) pending.current.delete(id)
 
       void getBridge()

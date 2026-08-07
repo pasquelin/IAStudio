@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { UiIcon } from '@/design/UiIcon'
+import { UiIcon } from './UiIcon'
 
 export type EmptyStateProps = {
   icon: string

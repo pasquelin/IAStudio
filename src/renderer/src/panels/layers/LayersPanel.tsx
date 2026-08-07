@@ -1,10 +1,10 @@
 import { mdiEye, mdiEyeOffOutline, mdiLayersOutline, mdiPlus, mdiTrashCanOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/design/cn'
-import { TIP_BOTTOM, TIP_RIGHT } from '@/design/tooltip'
+import { cn } from '@/helpers/cn'
+import { TIP_BOTTOM, TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { addLayer, removeLayer, selectLayer, setLayerVisible } from '@/engines/canvas/commands'
-import { EmptyState } from '@/panels/EmptyState'
+import { EmptyState } from '@/design/EmptyState'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 
@@ -99,7 +99,7 @@ function LayerStack({ documentId }: { documentId: string }) {
               'h-(--sc-control) cursor-pointer',
               layer.id === canvas.activeLayerId ? 'bg-accent-soft' : 'hover:bg-elevated',
             )}
-            onPointerDown={() => store.setCanvas(documentId, selectLayer(canvas, layer.id))}
+            onPointerDown={() => store.replace(documentId, selectLayer(canvas, layer.id))}
           >
             <ToolButton
               icon={layer.visible ? mdiEye : mdiEyeOffOutline}

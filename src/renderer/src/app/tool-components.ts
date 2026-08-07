@@ -1,11 +1,11 @@
 import type { FC } from 'react'
-import { AssetBrowser, AssetBrowserActions } from '@/panels/AssetBrowser'
-import { Explorer } from '@/panels/Explorer'
-import { Generator } from '@/panels/Generator'
-import { Jobs } from '@/panels/Jobs'
-import { Models } from '@/panels/Models'
-import { LayersActions, LayersPanel } from '@/spaces/image/LayersPanel'
-import type { ToolId } from './tools'
+import type { ToolId } from '@shared/domain/tool'
+import { definition as assets } from '@/panels/assets'
+import { definition as explorer } from '@/panels/explorer'
+import { definition as generator } from '@/panels/generator'
+import { definition as jobs } from '@/panels/jobs'
+import { definition as layers } from '@/panels/layers'
+import { definition as models } from '@/panels/models'
 
 export type ToolDefinition = {
   Content: FC
@@ -13,12 +13,15 @@ export type ToolDefinition = {
   Actions?: FC
 }
 
-/** Tool content table, kept apart from the registry so `tools.ts` stays free of UI imports. */
+/**
+ * Tool content table. Each panel publishes its own definition, so adding one is a folder and a
+ * line here rather than an import and a pair recomposed by hand.
+ */
 export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
-  layers: { Content: LayersPanel, Actions: LayersActions },
-  explorer: { Content: Explorer },
-  models: { Content: Models },
-  generator: { Content: Generator },
-  assets: { Content: AssetBrowser, Actions: AssetBrowserActions },
-  jobs: { Content: Jobs },
+  layers,
+  explorer,
+  models,
+  generator,
+  assets,
+  jobs,
 }

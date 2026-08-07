@@ -2,11 +2,11 @@ import { mdiCloseCircleOutline, mdiProgressClock } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
-import { cn } from '@/design/cn'
+import { cn } from '@/helpers/cn'
 import { ToolButton } from '@/design/ToolButton'
 import { failureMessageKey } from '@/services/failure-message'
 import { useJobs } from '@/stores/jobs'
-import { EmptyState } from './EmptyState'
+import { EmptyState } from '@/design/EmptyState'
 
 const STATUS_COLOR: Record<Job['status'], string> = {
   queued: 'text-muted',

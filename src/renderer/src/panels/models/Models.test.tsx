@@ -7,7 +7,7 @@ import { installFakeBridge } from '@/services/fake-bridge'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { DEFAULT_COLLECTION_STATE } from '@/design/collection-state'
+import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { Models } from './Models'
 
 function model(id: string, overrides: Partial<ModelSummary> = {}): ModelSummary {
