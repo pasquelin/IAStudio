@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createDecoderPool, secondsToUs, usToSeconds } from './decoder-pool'
+import { createDecoderPool, secondsToUs, usToSeconds, type VideoSampleLike } from './decoder-pool'
 
 const fakeSink = (assetId: string) => ({
   getSample: vi.fn(async (seconds: number) => ({
@@ -85,6 +85,35 @@ describe('decoder pool', () => {
     })
 
     await expect(pool.frameAt('a', 0)).resolves.toBeNull()
+  })
+
+  it('returns null when decoding throws, rather than throwing into a paint loop', async () => {
+    const pool = createDecoderPool({
+      open: async () => ({
+        getSample: async () => {
+          throw new Error('truncated rush')
+        },
+        close: vi.fn(),
+      }),
+      maxDecoders: 3,
+    })
+
+    await expect(pool.frameAt('a', 0)).resolves.toBeNull()
+  })
+
+  it('keeps decoding an asset whose sample failed once', async () => {
+    const getSample = vi
+      .fn<(seconds: number) => Promise<VideoSampleLike | null>>()
+      .mockRejectedValueOnce(new Error('bad seek'))
+      .mockResolvedValue(null)
+    const open = vi.fn(async () => ({ getSample, close: vi.fn() }))
+    const pool = createDecoderPool({ open, maxDecoders: 3 })
+
+    await pool.frameAt('a', 0)
+    await pool.frameAt('a', 40_000)
+
+    // Unlike a failed open, one bad position does not condemn the rush for the session.
+    expect(getSample).toHaveBeenCalledTimes(2)
   })
 
   it('does not reopen an asset that failed on every frame', async () => {

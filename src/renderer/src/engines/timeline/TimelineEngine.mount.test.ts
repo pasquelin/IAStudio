@@ -8,16 +8,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * exercises the real `Sprite` and `Texture`.
  */
 const destroy = vi.fn()
+const render = vi.fn()
+const on = vi.fn<(event: string, listener: () => void) => void>()
+const off = vi.fn()
 let resolveInit: (() => void) | null = null
+let started: Record<string, unknown> | null = null
 
 vi.mock('pixi.js', () => ({
   Application: class {
     canvas = document.createElement('canvas')
     stage = { addChild: vi.fn() }
     screen = { width: 800, height: 450 }
-    renderer = { on: vi.fn(), off: vi.fn(), texture: { initSource: vi.fn() } }
+    renderer = { on, off, texture: { initSource: vi.fn() } }
     destroy = destroy
-    init = (): Promise<void> => new Promise(resolve => (resolveInit = () => resolve()))
+    render = render
+    init = (options: Record<string, unknown>): Promise<void> => {
+      started = options
+      return new Promise(resolve => (resolveInit = () => resolve()))
+    }
   },
   Container: class {
     addChild = vi.fn()
@@ -51,16 +59,19 @@ describe('mounting a monitor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resolveInit = null
+    started = null
     host = document.createElement('div')
     document.body.appendChild(host)
   })
 
-  it('attaches its canvas once Pixi is ready', async () => {
-    const engine = engineFor(host)
+  const mounted = async (engine: InstanceType<typeof TimelineEngine>): Promise<void> => {
     const mounting = engine.mount(host)
-
     resolveInit?.()
     await mounting
+  }
+
+  it('attaches its canvas once Pixi is ready', async () => {
+    await mounted(engineFor(host))
 
     expect(host.querySelector('canvas')).not.toBeNull()
   })
@@ -80,5 +91,57 @@ describe('mounting a monitor', () => {
 
     expect(host.querySelector('canvas')).toBeNull()
     expect(destroy).toHaveBeenCalled()
+  })
+
+  /**
+   * A paused sequence holds one still frame. Pixi's ticker defaults to on, and would redraw
+   * that frame sixty times a second for a monitor nobody is watching — Dockview keeps the tab
+   * mounted, so a background document would burn the GPU on its own.
+   */
+  it("never starts Pixi's own ticker", async () => {
+    await mounted(engineFor(host))
+
+    expect(started).toMatchObject({ autoStart: false })
+  })
+
+  it('draws once, when its canvas is attached', async () => {
+    await mounted(engineFor(host))
+
+    expect(render).toHaveBeenCalledTimes(1)
+  })
+
+  it('draws what a seek left on the stage', async () => {
+    const engine = engineFor(host)
+    await mounted(engine)
+    render.mockClear()
+
+    await engine.seek(0)
+
+    expect(render).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * Pixi renders itself right after emitting `resize`, so the listener only lays out. It must
+   * still come off by the same reference — one kept listener per remount is a leaked monitor.
+   */
+  it('takes its resize listener back off on dispose', async () => {
+    const engine = engineFor(host)
+    await mounted(engine)
+    engine.dispose()
+
+    const listener = on.mock.calls.find(([event]) => event === 'resize')?.[1]
+    expect(listener).toBeDefined()
+    expect(off).toHaveBeenCalledWith('resize', listener)
+  })
+
+  it('draws nothing once it is disposed', async () => {
+    const engine = engineFor(host)
+    await mounted(engine)
+    engine.dispose()
+    render.mockClear()
+
+    await engine.seek(0)
+
+    expect(render).not.toHaveBeenCalled()
   })
 })

@@ -182,7 +182,14 @@ export class TimelineEngine {
 
   async mount(element: HTMLElement): Promise<void> {
     const application = await mountApplication(
-      { resizeTo: element, preference: 'webgl', backgroundAlpha: 0 },
+      {
+        resizeTo: element,
+        preference: 'webgl',
+        backgroundAlpha: 0,
+        // A paused sequence holds one still frame: every change calls `draw`. Left on, Pixi would
+        // redraw that frame sixty times a second, even for a tab Dockview keeps mounted behind.
+        autoStart: false,
+      },
       () => this.disposed || !element.isConnected,
     )
     if (!application) return
@@ -190,10 +197,12 @@ export class TimelineEngine {
     element.appendChild(application.canvas)
     application.stage.addChild(this.frame)
     // The panel resizes without the window doing so, and a frame laid out once would drift.
+    // Pixi renders right after emitting this, so laying out is all this listener owes it.
     application.renderer.on('resize', this.layout)
 
     this.application = application
     this.layout()
+    this.draw()
   }
 
   apply(state: SequenceState): void {
@@ -237,6 +246,8 @@ export class TimelineEngine {
       }).push(frame)
       this.fit(sprite)
     }
+
+    this.draw()
   }
 
   openDecoders(): number {
@@ -252,6 +263,11 @@ export class TimelineEngine {
     this.application?.destroy(true, { children: true, texture: true })
     this.application = null
     this.sprites.clear()
+  }
+
+  /** Pixi's own ticker is off — see `mount`. Every visible change ends here. */
+  private draw(): void {
+    this.application?.render()
   }
 
   /** The sequence canvas, in its own pixels — what every layer is composited against. */
