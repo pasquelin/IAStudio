@@ -21,7 +21,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
       <div className="bg-chassis relative min-h-0 flex-1" />
 
       <div className="border-border bg-base relative h-64 shrink-0 border-t">
-        <TimelineCanvas documentId={documentId} />
+        <TimelineCanvas documentId={documentId} tool={tool} />
 
         <Toolbar
           className="absolute top-2 left-2 z-10"
