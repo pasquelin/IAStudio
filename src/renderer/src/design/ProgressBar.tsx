@@ -1,4 +1,5 @@
 import { cn } from '@/helpers/cn'
+import { clamp } from '@/helpers/numeric'
 
 export type ProgressBarProps = {
   /** 0 to 1. Clamped, because a job that reports 1.02 must not overflow its track. */
@@ -8,12 +9,9 @@ export type ProgressBarProps = {
   className?: string
 }
 
-/**
- * A determinate progress track. A native `<progress>` cannot be styled to the studio's tokens
- * across platforms, so the geometry is a div and the semantics are the ARIA role.
- */
+/** A native `<progress>` cannot be themed to the studio's tokens across platforms, hence a div. */
 export function ProgressBar({ ratio, label, className }: ProgressBarProps) {
-  const percent = Math.round(Math.min(1, Math.max(0, ratio)) * 100)
+  const percent = Math.round(clamp(ratio, 0, 1) * 100)
 
   return (
     <div

@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from '@/helpers/cn'
 import { withShortcut, type TooltipFactory } from '@/helpers/tooltip'
+import { BUTTON_BASE } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type ToolButtonProps = Omit<
@@ -61,11 +62,9 @@ export function ToolButton({
       ref={ref}
       aria-pressed={active}
       className={cn(
-        'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-(--radius-sc-md)',
-        'text-muted size-(--sc-control) border-none bg-transparent outline-none',
-        'hover:bg-elevated hover:text-text transition-colors',
-        'focus-visible:ring-accent focus-visible:ring-1',
-        'disabled:cursor-not-allowed disabled:opacity-40',
+        BUTTON_BASE,
+        'text-muted size-(--sc-control) shrink-0 bg-transparent',
+        'hover:bg-elevated hover:text-text',
         active && 'bg-elevated text-text',
         accented && 'bg-accent hover:bg-accent text-white',
         className,

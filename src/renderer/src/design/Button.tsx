@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, Ref } from 'react'
 import { cn } from '@/helpers/cn'
-import { FOCUS_RING } from './styles'
+import { BUTTON_BASE } from './styles'
 
 export type ButtonVariant = 'primary' | 'neutral'
 
@@ -15,10 +15,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   ref?: Ref<HTMLButtonElement>
 }
 
-/**
- * The labelled action button of the docks, next to `ToolButton` which carries an icon. Sized on
- * `--sc-control`, so it shrinks with the density like every other control.
- */
+/** The labelled action button of the docks, next to `ToolButton` which carries a glyph. */
 export function Button({
   variant = 'neutral',
   className,
@@ -32,11 +29,9 @@ export function Button({
       type={type}
       ref={ref}
       className={cn(
-        'inline-flex h-(--sc-control) cursor-pointer items-center justify-center',
-        'rounded-(--radius-sc-md) border-none px-3 text-[12px] font-medium transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-40',
+        BUTTON_BASE,
+        'h-(--sc-control) px-3 text-[12px] font-medium',
         VARIANT[variant],
-        FOCUS_RING,
         className,
       )}
       {...rest}
