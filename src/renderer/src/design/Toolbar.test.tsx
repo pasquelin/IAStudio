@@ -66,3 +66,63 @@ describe('Toolbar', () => {
     expect(screen.getByRole('toolbar')).toHaveAttribute('aria-orientation', 'horizontal')
   })
 })
+
+const WITH_MODES: Tool[] = [
+  {
+    id: 'eraser',
+    labelKey: 'actions.close',
+    icon: mdiPencil,
+    modes: [
+      { id: 'point', labelKey: 'actions.close', icon: mdiPencil },
+      { id: 'selection', labelKey: 'actions.generate', icon: mdiPencil },
+    ],
+  },
+]
+
+const SINGLE_MODE: Tool[] = [
+  {
+    id: 'eraser',
+    labelKey: 'actions.close',
+    icon: mdiPencil,
+    modes: [{ id: 'point', labelKey: 'actions.close', icon: mdiPencil }],
+  },
+]
+
+describe('Toolbar modes', () => {
+  it('opens the modes of a tool on hover', async () => {
+    render(<Toolbar tools={WITH_MODES} onTool={vi.fn()} onMode={vi.fn()} />)
+    await userEvent.hover(screen.getByRole('button', { name: 'Fermer' }))
+    expect(await screen.findByRole('menu')).toBeInTheDocument()
+  })
+
+  it('reports the chosen mode', async () => {
+    const onMode = vi.fn()
+    render(<Toolbar tools={WITH_MODES} onTool={vi.fn()} onMode={onMode} />)
+
+    await userEvent.hover(screen.getByRole('button', { name: 'Fermer' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Générer' }))
+    expect(onMode).toHaveBeenCalledWith('eraser', 'selection')
+  })
+
+  it('opens no menu for a tool with a single mode', async () => {
+    // One mode is nothing to choose: the button acts directly, as map3D's bar does.
+    render(<Toolbar tools={SINGLE_MODE} onTool={vi.fn()} onMode={vi.fn()} />)
+    await userEvent.hover(screen.getByRole('button', { name: 'Fermer' }))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('still acts on click when the tool has modes', async () => {
+    const onTool = vi.fn()
+    render(<Toolbar tools={WITH_MODES} onTool={onTool} onMode={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Fermer' }))
+    expect(onTool).toHaveBeenCalledWith('eraser')
+  })
+
+  it('closes the menu once a mode is chosen', async () => {
+    render(<Toolbar tools={WITH_MODES} onTool={vi.fn()} onMode={vi.fn()} />)
+
+    await userEvent.hover(screen.getByRole('button', { name: 'Fermer' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Générer' }))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+})
