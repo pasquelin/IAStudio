@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
+import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertyRow } from '@/design/PropertyRow'
 import { setClipFade, setClipGain, setClipSpeed } from '@/engines/timeline/commands'
 import { formatDuration, formatTimecode } from '@/engines/timeline/timecode'
 import {
