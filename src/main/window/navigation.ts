@@ -1,4 +1,5 @@
 import { app, shell } from 'electron'
+import { isReloadShortcut } from './shortcuts'
 
 /**
  * Locks navigation for every `webContents` the app will ever create.
@@ -22,6 +23,14 @@ export function lockNavigation(): void {
       openExternally(url)
       return { action: 'deny' }
     })
+
+    // The packaged menu no longer offers reload, which removes its accelerator; this closes
+    // the keyboard path Chromium still honours.
+    if (app.isPackaged) {
+      contents.on('before-input-event', (event, input) => {
+        if (isReloadShortcut(input)) event.preventDefault()
+      })
+    }
   })
 }
 

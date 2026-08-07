@@ -1,0 +1,131 @@
+import type { MenuItemConstructorOptions } from 'electron'
+import { describe, expect, it, vi } from 'vitest'
+import { LIGHT_ENTRIES, MESH_ENTRIES } from '@shared/domain/scene'
+import { menuTemplate, type MenuActions, type MenuOptions } from './template'
+
+const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
+  openSettings: () => {},
+  toggleFullScreen: () => {},
+  openTool: () => {},
+  runCommand: () => {},
+  addNode: () => {},
+  ...overrides,
+})
+
+const options = (overrides: Partial<MenuOptions> = {}): MenuOptions => ({
+  language: 'fr',
+  workspace: '3d',
+  isMac: true,
+  isPackaged: false,
+  actions: actions(),
+  ...overrides,
+})
+
+function submenuOf(
+  items: MenuItemConstructorOptions[],
+  label: string,
+): MenuItemConstructorOptions[] {
+  const found = items.find(item => item.label === label)?.submenu
+  return Array.isArray(found) ? found : []
+}
+
+/** The three arguments Electron hands a click are of no interest to any handler here. */
+function activate(item: MenuItemConstructorOptions | undefined): void {
+  item?.click?.(...([] as unknown as Parameters<NonNullable<MenuItemConstructorOptions['click']>>))
+}
+
+const labels = (template: MenuItemConstructorOptions[]): string[] =>
+  template.map(item => (typeof item.label === 'string' ? item.label : ''))
+
+function rolesUnder(template: MenuItemConstructorOptions[], label: string): (string | undefined)[] {
+  const menu = template.find(item => item.label === label)
+  return Array.isArray(menu?.submenu) ? menu.submenu.map(entry => entry.role) : []
+}
+
+describe('menuTemplate', () => {
+  it('names the application menu after the product, not the binary', () => {
+    expect(labels(menuTemplate(options()))[0]).toBe('Scenario Studio')
+  })
+
+  it('has no Help menu on macOS, where About lives in the application menu', () => {
+    expect(labels(menuTemplate(options()))).not.toContain('Aide')
+  })
+
+  it('adds a Help menu elsewhere, the only place About can be reached', () => {
+    expect(labels(menuTemplate(options({ isMac: false })))).toContain('Aide')
+  })
+
+  it('drops the developer items once packaged', () => {
+    const roles = rolesUnder(menuTemplate(options({ isPackaged: true })), 'Affichage')
+    expect(roles).not.toContain('toggleDevTools')
+    expect(roles).not.toContain('reload')
+  })
+
+  it('keeps them in development, where they are the only way in', () => {
+    expect(rolesUnder(menuTemplate(options()), 'Affichage')).toContain('toggleDevTools')
+  })
+
+  it('interpolates the product name rather than spelling it out per language', () => {
+    const appMenu = menuTemplate(options())[0]
+    const about = Array.isArray(appMenu?.submenu) ? appMenu.submenu[0] : undefined
+    expect(about?.label).toBe('À propos de Scenario Studio')
+    expect(about?.label).not.toContain('{{name}}')
+  })
+
+  it('lets Electron render the About panel rather than hand-rolling a dialog', () => {
+    // Windows does have a native panel, fed by `setAboutPanelOptions` — the role suffices.
+    const help = menuTemplate(options({ isMac: false })).find(item => item.label === 'Aide')
+    const entries = Array.isArray(help?.submenu) ? help.submenu : []
+    expect(entries[0]?.role).toBe('about')
+  })
+
+  it('offers Add only in the 3D workspace', () => {
+    expect(labels(menuTemplate(options({ workspace: 'image' })))).not.toContain('Ajouter')
+    expect(labels(menuTemplate(options()))).toContain('Ajouter')
+  })
+
+  // The settings window and the splash edit no workspace: neither is offered a scene menu.
+  it('offers no Add to a window that announced no workspace', () => {
+    expect(labels(menuTemplate(options({ workspace: null })))).not.toContain('Ajouter')
+  })
+
+  it('covers every primitive and every light', () => {
+    const add = submenuOf(menuTemplate(options()), 'Ajouter')
+
+    expect(submenuOf(add, 'Maille')).toHaveLength(MESH_ENTRIES.length)
+    expect(submenuOf(add, 'Lumière')).toHaveLength(LIGHT_ENTRIES.length)
+  })
+
+  it('greys out the announced primitives instead of hiding them', () => {
+    const meshes = submenuOf(submenuOf(menuTemplate(options()), 'Ajouter'), 'Maille')
+
+    expect(meshes.filter(item => item.enabled === false).map(item => item.label)).toEqual([
+      'Sprite',
+      'Texte',
+    ])
+  })
+
+  it('asks for the node by kind, so the payload cannot drift from the entry', () => {
+    const addNode = vi.fn()
+    const template = menuTemplate(options({ actions: actions({ addNode }) }))
+
+    activate(submenuOf(submenuOf(template, 'Ajouter'), 'Maille')[0])
+
+    expect(addNode).toHaveBeenCalledWith({ kind: 'box' })
+  })
+
+  it('keeps Add between Edit and View, where every editor puts it', () => {
+    const names = labels(menuTemplate(options()))
+
+    expect(names.indexOf('Ajouter')).toBeGreaterThan(names.indexOf('Édition'))
+    expect(names.indexOf('Ajouter')).toBeLessThan(names.indexOf('Affichage'))
+  })
+
+  it('names every tool window it can reopen', () => {
+    const tools = submenuOf(submenuOf(menuTemplate(options()), 'Affichage'), 'Modules')
+
+    expect(tools.map(item => item.label)).toContain('Mailles')
+    expect(tools.map(item => item.label)).toContain('Lumières')
+    expect(tools.map(item => item.label)).toContain('Timeline')
+  })
+})

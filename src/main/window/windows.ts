@@ -1,32 +1,49 @@
 import { app, BrowserWindow, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { WINDOW_CHROME_COLOR } from '@shared/constants'
+import { APP_ICON_PATH } from '@main/resources'
 import { trackWindowState } from './controls'
 
 /** Route the renderer reads to decide which window it is rendering. */
 export const SETTINGS_ROUTE = 'settings'
 
 /**
- * Identical for every window: a second window with weaker preferences would be a second, and
- * quieter, way to reach the bridge — see CLAUDE.md, invariant 1.
+ * The floor for every window: none may weaken these — a second window with looser settings
+ * would be a second, quieter way to reach the bridge (CLAUDE.md, invariant 1). The splash
+ * spreads them and tightens further, dropping the preload entirely.
  */
-const WEB_PREFERENCES: WebPreferences = {
+export const WEB_PREFERENCES: WebPreferences = {
   preload: join(import.meta.dirname, '../preload/index.cjs'),
   contextIsolation: true,
   nodeIntegration: false,
   sandbox: true,
+  // Dropping the menu entries hides the command; this refuses the feature. A compromised
+  // dependency calling `openDevTools()` would otherwise still reach `window.studio`.
+  devTools: !app.isPackaged,
 }
 
-function load(window: BrowserWindow, route?: string): void {
+/**
+ * macOS reads the icon from the bundle and ignores this option; Windows and Linux need it
+ * spelled out, or the window wears the default Electron icon.
+ */
+const WINDOW_ICON = process.platform === 'darwin' ? undefined : APP_ICON_PATH
+
+/**
+ * Where the renderer lives, in one place. Dev serves it, a packaged build reads it from disk,
+ * and both assume `out/renderer/` sits beside `out/main/` — an assumption worth stating once.
+ */
+export function load(window: BrowserWindow, options: { entry?: string; hash?: string } = {}): void {
+  const { entry = 'index.html', hash } = options
   const devUrl = process.env['ELECTRON_RENDERER_URL']
 
   if (!app.isPackaged && devUrl) {
-    void window.loadURL(route ? `${devUrl}#${route}` : devUrl)
+    const base = entry === 'index.html' ? devUrl : `${devUrl}/${entry}`
+    void window.loadURL(hash ? `${base}#${hash}` : base)
     return
   }
 
-  const file = join(import.meta.dirname, '../renderer/index.html')
-  void window.loadFile(file, route ? { hash: route } : {})
+  const file = join(import.meta.dirname, '../renderer', entry)
+  void window.loadFile(file, hash ? { hash } : {})
 }
 
 export function createMainWindow(): BrowserWindow {
@@ -39,6 +56,7 @@ export function createMainWindow(): BrowserWindow {
     backgroundColor: WINDOW_CHROME_COLOR,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 14 },
+    icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
   })
 
@@ -73,6 +91,7 @@ export function openSettingsWindow(): BrowserWindow {
     // Not a document window: nothing here is worth a full screen, and macOS would otherwise
     // give it its own space, hiding the studio behind it.
     fullscreenable: false,
+    icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
   })
 
@@ -82,7 +101,7 @@ export function openSettingsWindow(): BrowserWindow {
     settingsWindow = null
   })
 
-  load(window, SETTINGS_ROUTE)
+  load(window, { hash: SETTINGS_ROUTE })
   settingsWindow = window
   return window
 }

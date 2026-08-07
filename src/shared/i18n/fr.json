@@ -15,6 +15,7 @@
     "layers": "Calques",
     "meshes": "Mailles",
     "lights": "Lumières",
+    "timeline": "Timeline",
     "explorer": "Explorateur",
     "models": "Modèles",
     "generator": "Génération",
@@ -258,6 +259,25 @@
     "visible": "Afficher ou masquer",
     "noDocument": "Ouvrez une scène pour voir son contenu."
   },
+  "transport": {
+    "play": "Lire",
+    "pause": "Pause",
+    "source": "Source",
+    "program": "Programme",
+    "noClip": "Sélectionnez un clip pour le voir ici.",
+    "rewind": "Retour au début"
+  },
+  "timeline": {
+    "noDocument": "Aucune séquence ouverte. Créez-en une pour monter."
+  },
+  "videoTools": {
+    "select": "Sélection",
+    "selectHint": "Sélectionner, déplacer et rogner un clip",
+    "blade": "Lame",
+    "bladeHint": "Couper un clip à la tête de lecture",
+    "hand": "Main",
+    "handHint": "Faire défiler la timeline — molette pour zoomer"
+  },
   "sceneTools": {
     "select": "Sélectionner",
     "selectHint": "Choisir un objet sans armer de poignée",
@@ -315,7 +335,12 @@
     "mesh": "Maille",
     "light": "Lumière",
     "resetLayout": "Réinitialiser la disposition",
-    "fullScreen": "Plein écran"
+    "fullScreen": "Plein écran",
+    "help": "Aide",
+    "about": "À propos de {{name}}"
+  },
+  "about": {
+    "copyright": "© 2026 Alban Pasquelin"
   },
   "settings": {
     "title": "Réglages",

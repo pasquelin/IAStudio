@@ -1,0 +1,82 @@
+import { mdiVideoOutline } from '@mdi/js'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { EmptyState } from '@/design/EmptyState'
+import { Separator } from '@/design/Separator'
+import {
+  clipById,
+  EMPTY_SEQUENCE,
+  type SequenceState,
+  type Us,
+} from '@/engines/timeline/timeline-state'
+import { sequenceOf, useSequences } from '@/stores/sequences'
+import { Monitor } from './Monitor'
+
+export type SequenceDocumentProps = { documentId: string }
+
+/**
+ * Two monitors, Premiere and DaVinci convention: source on the left, program on the right. The
+ * montage itself is the `timeline` tool window — a strip the width of the app, not a corner of
+ * this tab.
+ */
+export function SequenceDocument({ documentId }: SequenceDocumentProps) {
+  const { t } = useTranslation()
+  const sequence = useSequences(state => sequenceOf(state, documentId))
+  const [sourceTime, setSourceTime] = useState<Us>(0)
+
+  const selected = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
+
+  // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
+  const source: SequenceState = useMemo(
+    () => ({
+      ...EMPTY_SEQUENCE,
+      settings: sequence.settings,
+      playhead: sourceTime,
+      tracks: selected
+        ? [
+            {
+              id: 'S1',
+              kind: 'video',
+              index: 1,
+              muted: false,
+              locked: true,
+              clips: [{ ...selected, start: 0 }],
+            },
+          ]
+        : [],
+    }),
+    [selected, sequence.settings, sourceTime],
+  )
+
+  const setProgramTime = useCallback(
+    (playhead: Us) => {
+      const store = useSequences.getState()
+      // Playback is not an edit: the playhead goes through `replace`, which skips the history.
+      store.replace(documentId, { ...sequenceOf(store, documentId), playhead })
+    },
+    [documentId],
+  )
+
+  return (
+    <div className="flex h-full min-h-0">
+      <Monitor
+        owner={`${documentId}:source`}
+        title={t('transport.source')}
+        sequence={source}
+        onTime={setSourceTime}
+        placeholder={
+          selected ? null : <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
+        }
+      />
+
+      <Separator orientation="vertical" />
+
+      <Monitor
+        owner={`${documentId}:program`}
+        title={t('transport.program')}
+        sequence={sequence}
+        onTime={setProgramTime}
+      />
+    </div>
+  )
+}

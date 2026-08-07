@@ -1,0 +1,75 @@
+appId: com.scenario.app
+# `productName` is deliberately absent: electron-builder would prefer it over the one in
+# package.json, which is the copy `shared/constants.test.ts` pins to APP_NAME. Declaring it
+# here would leave the shipped name unguarded.
+copyright: © 2026 Alban Pasquelin
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+  # Read at runtime by `nativeImage`: window icon on Windows and Linux, About dialog.
+  - build/icon.png
+  - '!**/*.map'
+  # Redundant today — a whitelist already excludes it — but the exclusion must not depend on
+  # every other entry staying positive. An asar opens in a text editor; the API key is in here.
+  - '!secrets{,/**/*}'
+
+# `devTools: false` is a per-webContents preference; these are process-level switches that
+# would otherwise reopen the same door. `--remote-debugging-port` attaches CDP to the main
+# world where `window.studio` lives, and does so under the app's own signing identity —
+# which is what safeStorage ties the keychain entry to.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  enableEmbeddedAsarIntegrityValidation: true
+  # The signature must be reset after flipping fuses, or the binary no longer validates.
+  resetAdHocDarwinSignature: true
+
+# A native module cannot be loaded from inside the asar archive.
+asarUnpack:
+  - '**/*.node'
+
+mac:
+  category: public.app-category.graphics-design
+  icon: build/icon.svg
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    # Not for distribution: electron-updater consumes the zip, and it is cheap to keep.
+    - target: zip
+      arch: [arm64, x64]
+
+dmg:
+  contents:
+    - x: 140
+      y: 190
+      type: file
+    - x: 400
+      y: 190
+      type: link
+      path: /Applications
+
+win:
+  icon: build/icon.svg
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+linux:
+  icon: build/icon.svg
+  category: Graphics
+  target: [AppImage, deb]

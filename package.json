@@ -1,13 +1,17 @@
 {
   "name": "scenario-studio",
+  "productName": "Scenario Studio",
   "version": "0.1.0",
+  "description": "Studio de création d'images, vidéos, modèles 3D, audio, textures et skyboxes sur l'API Scenario.",
+  "author": "Alban Pasquelin",
+  "license": "UNLICENSED",
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
     "start": "electron-vite dev --watch",
     "build": "pnpm typecheck && electron-vite build",
-    "dist": "pnpm build && electron-builder",
+    "dist": "pnpm build && bash scripts/dist.sh",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
@@ -27,6 +31,7 @@
     "@scenario-labs/sdk": "^2.7.0",
     "better-sqlite3": "^13.0.3",
     "electron-store": "^11.0.2",
+    "mediabunny": "^1.52.3",
     "pixi.js": "8.19.0",
     "three": "0.185.1"
   },

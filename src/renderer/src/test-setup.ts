@@ -23,6 +23,50 @@ function polyfillDialog(): void {
   }
 }
 
+/**
+ * jsdom implements no canvas context and logs a "Not implemented" line on every call. Null is
+ * already what it ends up returning, and it is what the timeline checks for before painting —
+ * so this changes no behaviour, it only stops the noise.
+ */
+function polyfillCanvas(): void {
+  // `as`: the real method is overloaded per context id, and none of them accepts "always null".
+  HTMLCanvasElement.prototype.getContext = (() =>
+    null) as unknown as HTMLCanvasElement['getContext']
+}
+
+/**
+ * jsdom implements neither pointer capture nor `DragEvent`; Chromium does, and the timeline
+ * needs both — capture to keep a drag alive when the pointer leaves the canvas, `DragEvent` to
+ * carry the asset dropped on it. Filled here rather than worked around in the component.
+ */
+function polyfillPointerAndDrag(): void {
+  const element = HTMLElement.prototype
+  if (typeof element.setPointerCapture !== 'function') {
+    element.setPointerCapture = () => undefined
+    element.releasePointerCapture = () => undefined
+    element.hasPointerCapture = () => false
+  }
+
+  if ('DragEvent' in globalThis) return
+
+  class DragEventPolyfill extends MouseEvent {
+    readonly dataTransfer: DataTransfer | null
+
+    constructor(type: string, init: MouseEventInit & { dataTransfer?: DataTransfer } = {}) {
+      super(type, init)
+      this.dataTransfer = init.dataTransfer ?? null
+    }
+  }
+
+  // `as`: the real constructor is wider than the two members any of our handlers reads.
+  globalThis.DragEvent = DragEventPolyfill as unknown as typeof globalThis.DragEvent
+}
+
+// At module scope, not in `beforeAll`: a component rendered while a test file is imported
+// would already have asked for a context by then.
+polyfillCanvas()
+polyfillPointerAndDrag()
+
 const VIEWPORT_WIDTH = 640
 const VIEWPORT_HEIGHT = 800
 

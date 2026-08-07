@@ -9,7 +9,15 @@ import type { WorkspaceId } from './workspace'
 export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
 
 export type ToolId =
-  'layers' | 'meshes' | 'lights' | 'explorer' | 'models' | 'generator' | 'assets' | 'jobs'
+  | 'layers'
+  | 'meshes'
+  | 'lights'
+  | 'timeline'
+  | 'explorer'
+  | 'models'
+  | 'generator'
+  | 'assets'
+  | 'jobs'
 
 /**
  * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
@@ -41,6 +49,10 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'explorer', zone: 'left', slot: 'secondary' },
   { id: 'models', zone: 'right', slot: 'primary' },
   { id: 'generator', zone: 'right', slot: 'primary' },
+  // Same half as the asset shelf: a montage is read across the whole width, so the two take
+  // turns rather than share the strip. First of the half, because in the Video workspace it is
+  // what the strip is for.
+  { id: 'timeline', zone: 'bottom', slot: 'primary', workspaces: ['video'] },
   { id: 'assets', zone: 'bottom', slot: 'primary' },
   { id: 'jobs', zone: 'bottom', slot: 'primary' },
 ]

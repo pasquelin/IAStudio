@@ -31,6 +31,17 @@ export const ASSET_FOLDERS: Record<AssetType, string> = {
 
 export type AssetLocation = 'local' | 'cloud'
 
+/** What probing a media file tells us. Durations are microseconds, like the timeline. */
+export type MediaProbe = {
+  duration: number
+  codec: string
+  width?: number
+  height?: number
+  fps?: number
+  sampleRate?: number
+  channels?: number
+}
+
 export type Asset = {
   id: string
   name: string
@@ -48,6 +59,18 @@ export type Asset = {
   createdAt: string
   /** Asset this one derives from — lets us trace a texture back to its source image. */
   derivedFrom?: string
+  /**
+   * Absolute path of a linked external media. A twenty-minute 4K rush is twenty gigabytes: it
+   * is linked, never copied into the project, which is why `hash` exists to relink it.
+   */
+  sourcePath?: string
+  /** Content hash — deduplication, cache key, and relink when a folder moves. */
+  hash?: string
+  probe?: MediaProbe
+  /** H.264 720p stand-in, relative to the project folder. */
+  proxyPath?: string
+  /** Precomputed waveform, relative to the project folder. */
+  peaksPath?: string
 }
 
 export type AssetQuery = {

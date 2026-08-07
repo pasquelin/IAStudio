@@ -1,4 +1,7 @@
+// `import type`, not `import { type … }`: with verbatimModuleSyntax the latter keeps a runtime
+// import of Electron, and this module could no longer be tested under plain Node.
 import type { MenuItemConstructorOptions } from 'electron'
+import { APP_NAME } from '@shared/constants'
 import {
   LIGHT_ENTRIES,
   MESH_ENTRIES,
@@ -26,47 +29,53 @@ export type MenuActions = {
 
 /**
  * Everything the template cannot know on its own. Passed in rather than reached for, so the
- * whole menu is a pure function of its context — which is what makes it testable without an
+ * whole menu is a pure function of its options — which is what makes it testable without an
  * Electron runtime.
  */
-export type MenuContext = {
+export type MenuOptions = {
   language: Language
   /** `null` when the focused window edits no workspace at all — the settings window. */
   workspace: WorkspaceId | null
   isMac: boolean
-  appName: string
-  /**
-   * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
-   * build hands an attacker `setCredentials` through a self-XSS.
-   */
-  developerTools: boolean
+  isPackaged: boolean
   actions: MenuActions
 }
 
-export function menuTemplate({
-  language,
-  workspace,
-  isMac,
-  appName,
-  developerTools,
-  actions,
-}: MenuContext): MenuItemConstructorOptions[] {
+/**
+ * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
+ * build hands an attacker `setCredentials` through a self-XSS.
+ */
+function developerItems(isPackaged: boolean): MenuItemConstructorOptions[] {
+  if (isPackaged) return []
+  return [{ type: 'separator' }, { role: 'toggleDevTools' }, { role: 'reload' }]
+}
+
+/**
+ * Native menu layout. Together with the icon rails, it is one of the two ways back for a tool
+ * removed with its close button — a panel closed with no way to reopen it would be lost.
+ */
+export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
+  const { language, workspace, isMac, isPackaged, actions } = options
   const t = TRANSLATIONS[language]
+
+  // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
+  // name to one place, and a hard-coded copy here would drift past it unnoticed.
+  const aboutLabel = t.menu.about.replace('{{name}}', APP_NAME)
 
   // Opened by the main process rather than routed through a renderer: settings are a window
   // now, and which window is focused has nothing to do with it.
   const settingsItem: MenuItemConstructorOptions = {
     label: t.menu.settings,
     accelerator: 'CmdOrCtrl+,',
-    click: actions.openSettings,
+    click: () => actions.openSettings(),
   }
 
   // Spelled out rather than `role: 'appMenu'`: the built-in role has no Preferences entry,
-  // and Cmd-, is where every macOS user looks for it first.
+  // and ⌘, is where every macOS user looks for it first.
   const appMenuItem: MenuItemConstructorOptions = {
-    label: appName,
+    label: APP_NAME,
     submenu: [
-      { role: 'about' },
+      { role: 'about', label: aboutLabel },
       { type: 'separator' },
       settingsItem,
       { type: 'separator' },
@@ -84,6 +93,12 @@ export function menuTemplate({
   const fileMenuSettings: MenuItemConstructorOptions[] = isMac
     ? []
     : [settingsItem, { type: 'separator' }]
+
+  // Windows and Linux have no application menu to host About; Electron renders the panel
+  // itself on both, from `setAboutPanelOptions`, so the role is all that is needed.
+  const helpMenu: MenuItemConstructorOptions[] = isMac
+    ? []
+    : [{ label: t.menu.help, submenu: [{ role: 'about', label: aboutLabel }] }]
 
   const entryItem =
     <K extends MeshKind | LightKind>(labels: Record<K, string>) =>
@@ -106,10 +121,6 @@ export function menuTemplate({
           },
         ]
       : []
-
-  const developerItems: MenuItemConstructorOptions[] = developerTools
-    ? [{ type: 'separator' }, { role: 'toggleDevTools' }, { role: 'reload' }]
-    : []
 
   return [
     ...(isMac ? [appMenuItem] : []),
@@ -151,11 +162,12 @@ export function menuTemplate({
         {
           label: t.menu.fullScreen,
           accelerator: isMac ? 'Ctrl+Cmd+F' : 'F11',
-          click: actions.toggleFullScreen,
+          click: () => actions.toggleFullScreen(),
         },
-        ...developerItems,
+        ...developerItems(isPackaged),
       ],
     },
     { role: 'windowMenu', label: t.menu.window },
+    ...helpMenu,
   ]
 }

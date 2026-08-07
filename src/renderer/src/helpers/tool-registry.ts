@@ -5,6 +5,7 @@ import {
   mdiImageMultipleOutline,
   mdiLayersOutline,
   mdiProgressClock,
+  mdiVideoVintage,
 } from '@mdi/js'
 import {
   placementOf,
@@ -30,6 +31,7 @@ const ICONS: Record<ToolId, string> = {
   // From the scene registry: the rail icon and the panel's own empty state must not drift.
   meshes: NODE_KINDS.mesh.icon,
   lights: NODE_KINDS.light.icon,
+  timeline: mdiVideoVintage,
   explorer: mdiFolderOutline,
   models: mdiCubeScan,
   generator: mdiCreationOutline,

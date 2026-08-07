@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'"
+    />
+    <title>Scenario Studio</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 100vw;
+        height: 100vh;
+        padding: 26px 28px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        /* Same stops as build/icon.svg: the splash and the Dock icon must read as one object. */
+        background: linear-gradient(158deg, #3b4256 0%, #22242a 55%, #191a1c 100%);
+        color: #dfe1e5;
+        font: 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        user-select: none;
+        cursor: default;
+        -webkit-app-region: drag;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .mark {
+        width: 54px;
+        height: 54px;
+        flex: none;
+      }
+      .name {
+        font-size: 19px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+      .version {
+        font-size: 11px;
+        color: #868a91;
+        margin-top: 3px;
+        font-variant-numeric: tabular-nums;
+      }
+      .track {
+        height: 2px;
+        background: #34363a;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      /* Indeterminate: startup is one synchronous block, so any percentage would be invented. */
+      .fill {
+        height: 100%;
+        width: 40%;
+        background: #3574f0;
+        border-radius: 2px;
+        animation: sweep 1.25s ease-in-out infinite;
+      }
+      @keyframes sweep {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(250%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .fill {
+          animation: none;
+          width: 100%;
+          opacity: 0.5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top">
+      <svg class="mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <path
+          fill="#fff"
+          opacity="1"
+          d="M 256.211609 219.877777 L 503.321014 365.44278 L 256.211609 511.007751 L 9.102222 365.44278 Z"
+        />
+        <path
+          fill="#fff"
+          opacity="0.78"
+          d="M 256.211609 147.059967 L 503.321014 292.624969 L 256.211609 438.189972 L 9.102222 292.624969 Z"
+        />
+        <path
+          fill="#fff"
+          opacity="0.6"
+          d="M 256.211609 74.312775 L 503.321014 219.877777 L 256.211609 365.44278 L 9.102222 219.877777 Z"
+        />
+        <path
+          fill="#fff"
+          opacity="0.42"
+          d="M 256.211609 1.494995 L 503.321014 147.059967 L 256.211609 292.624969 L 9.102222 147.059967 Z"
+        />
+      </svg>
+      <div>
+        <div class="name">Scenario Studio</div>
+        <div class="version" id="version"></div>
+      </div>
+    </div>
+    <div class="track"><div class="fill"></div></div>
+    <script type="module" src="/src/splash.ts"></script>
+  </body>
+</html>
