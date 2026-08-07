@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 import type { ModelFamily } from '@shared/domain/model'
-import type { SettingSection } from '@shared/domain/settings-registry'
+import { SETTING_SECTIONS, type SettingSectionId } from '@shared/domain/settings-registry'
 import { AccountSettings } from './AccountSettings'
 import { MediaSettings } from './MediaSettings'
 import { ModelFamilySettings } from './ModelFamilySettings'
@@ -11,10 +11,16 @@ export type SettingsSection = {
   labelKey: string
   descriptionKey?: string
   /** Settings this screen owns, rendered from the registry. */
-  registry?: SettingSection
+  registry?: SettingSectionId
   /** What no descriptor can express: credentials, a catalogue picker, a resolved status. */
   Content?: FC
   children?: readonly SettingsSection[]
+}
+
+/** What no descriptor can express, per section. Everything else comes from the registry. */
+const CONTENT: Partial<Record<SettingSectionId, FC>> = {
+  account: AccountSettings,
+  media: MediaSettings,
 }
 
 /** Families with a workspace of their own; their label is the workspace's. */
@@ -35,41 +41,21 @@ function familySection({ family, labelKey }: { family: ModelFamily; labelKey: st
 }
 
 /**
- * The settings tree: a column of sections on the left, the selected one on the right. What a
- * section shows is mostly `registry` — the settings themselves are declared in
- * `settings-registry.ts`, never written out as a form here.
+ * The settings tree: a column of sections on the left, the selected one on the right. The
+ * sections and their texts come from the registry — this only adds what belongs to React: the
+ * screens no descriptor can express, and the per-family children.
  *
  * Spec § 9 also lists Storage, Shortcuts, Performance and Advanced. They appear here as they
  * are built; an entry with nothing behind it would be worse than its absence.
  */
-export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
-  {
-    id: 'account',
-    labelKey: 'settings.account',
-    descriptionKey: 'settings.accountDescription',
-    Content: AccountSettings,
-  },
-  {
-    id: 'appearance',
-    labelKey: 'settings.appearance',
-    descriptionKey: 'settings.appearanceDescription',
-    registry: 'appearance',
-  },
-  {
-    id: 'generation',
-    labelKey: 'settings.generation',
-    descriptionKey: 'settings.generationDescription',
-    registry: 'generation',
-    children: WORKSPACE_FAMILIES.map(familySection),
-  },
-  {
-    id: 'media',
-    labelKey: 'settings.media',
-    descriptionKey: 'settings.mediaDescription',
-    registry: 'media',
-    Content: MediaSettings,
-  },
-]
+export const SETTINGS_SECTIONS: readonly SettingsSection[] = SETTING_SECTIONS.map(section => ({
+  id: section.id,
+  labelKey: section.labelKey,
+  descriptionKey: section.descriptionKey,
+  registry: section.id,
+  Content: CONTENT[section.id],
+  ...(section.id === 'generation' ? { children: WORKSPACE_FAMILIES.map(familySection) } : {}),
+}))
 
 export function findSection(id: string): SettingsSection | null {
   for (const section of SETTINGS_SECTIONS) {

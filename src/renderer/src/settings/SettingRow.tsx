@@ -89,30 +89,18 @@ function Control({
         </select>
       )
 
-    case 'boolean':
-      return (
-        <input
-          id={id}
-          aria-describedby={describedBy}
-          className="toggle toggle-sm"
-          type="checkbox"
-          checked={value === true}
-          onChange={event => onChange(event.target.checked)}
-        />
-      )
-
     case 'number':
-    case 'slider':
       return (
         <input
           id={id}
           aria-describedby={describedBy}
-          className={descriptor.kind === 'slider' ? 'range range-xs w-40' : 'input input-sm w-24'}
-          type={descriptor.kind === 'slider' ? 'range' : 'number'}
+          className="input input-sm w-24"
+          type="number"
           min={descriptor.min}
           max={descriptor.max}
           step={descriptor.step}
           value={typeof value === 'number' ? value : ''}
+          // An emptied field is mid-edit, not a request to store nothing.
           onChange={event => {
             const next = event.target.valueAsNumber
             if (Number.isFinite(next)) onChange(next)
@@ -120,7 +108,6 @@ function Control({
         />
       )
 
-    // `text` and `path` both land here.
     default:
       return (
         <TextControl
@@ -143,10 +130,11 @@ function Control({
  */
 export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   const { t } = useTranslation()
-  const settings = useSettings(state => state.settings)
+  // Selected down to the leaf, not the whole settings object: that one is rebuilt on every
+  // write, so a row would re-render whenever any other setting — or the open project — moved.
+  const value = useSettings(state => valueAt(state.settings, descriptor.path))
   const setValue = useSettings(state => state.setValue)
 
-  const value = valueAt(settings, descriptor.path)
   const fallback = defaultAt(descriptor.path)
   const modified = value !== fallback
 

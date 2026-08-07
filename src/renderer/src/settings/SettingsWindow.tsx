@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import {
   descriptorsIn,
   matchSettings,
+  sectionEntry,
   type SettingDescriptor,
-  type SettingSection,
 } from '@shared/domain/settings-registry'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
@@ -59,11 +59,6 @@ function NavigationEntry({
   )
 }
 
-/** The label a section carries in the tree, so a result says where it was found. */
-function labelKeyOf(registry: SettingSection): string {
-  return SETTINGS_SECTIONS.find(section => section.registry === registry)?.labelKey ?? registry
-}
-
 function SearchResults({ found }: { found: readonly SettingDescriptor[] }) {
   const { t } = useTranslation()
 
@@ -78,7 +73,7 @@ function SearchResults({ found }: { found: readonly SettingDescriptor[] }) {
       {sections.map(section => (
         <section key={section}>
           <h3 className="text-base-content/60 mb-1 text-[11px] tracking-wide uppercase">
-            {t(labelKeyOf(section))}
+            {t(sectionEntry(section)?.labelKey ?? '')}
           </h3>
           <SettingList descriptors={found.filter(entry => entry.section === section)} />
         </section>

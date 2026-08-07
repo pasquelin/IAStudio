@@ -7,23 +7,25 @@ export type SettingValue = string | number | boolean
 /**
  * Branches whose editor is a screen rather than a control per leaf — the default model of a
  * family is picked from a catalogue fetched at runtime, not from a list anyone can write down.
+ *
+ * Named by full path, not by key: excluding `'defaultModels'` wherever it appears would also
+ * swallow a future `appearance.defaultModels`, and a leaf missing from `SettingPath` is a leaf
+ * the coverage check can no longer notice.
  */
-type Dedicated = 'defaultModels'
-
-type Editable<T> = Exclude<keyof T & string, Dedicated>
+type DedicatedPath = 'generation.defaultModels'
 
 /**
  * Dotted paths to the leaves of `Settings`, derived rather than listed: a setting added to the
- * type and forgotten in the registry then fails the coverage test instead of quietly having no
+ * type and forgotten in the registry then fails the coverage check instead of quietly having no
  * screen, and a path with a typo stops compiling.
  */
 type LeafPaths<T> = {
-  [K in Editable<T>]: NonNullable<T[K]> extends SettingValue
+  [K in keyof T & string]: NonNullable<T[K]> extends SettingValue
     ? K
     : `${K}.${LeafPaths<NonNullable<T[K]>>}`
-}[Editable<T>]
+}[keyof T & string]
 
-export type SettingPath = LeafPaths<Settings>
+export type SettingPath = Exclude<LeafPaths<Settings>, `${DedicatedPath}${string}`>
 
 type Descend<T, P extends string> = P extends `${infer Key}.${infer Rest}`
   ? Key extends keyof T

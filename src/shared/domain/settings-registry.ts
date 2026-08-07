@@ -4,10 +4,51 @@ import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 /**
  * How a setting is edited. The control follows from the kind alone: no screen decides for
  * itself what a number looks like, so two numeric settings can never end up looking different.
+ *
+ * Kinds arrive with the first setting that needs one — a branch nothing reaches is a branch
+ * nothing tests.
  */
-export type SettingKind = 'choice' | 'boolean' | 'number' | 'slider' | 'text' | 'path'
+export type SettingKind = 'choice' | 'number' | 'text'
 
-export type SettingSection = 'account' | 'appearance' | 'generation' | 'media'
+export type SettingSectionId = 'account' | 'appearance' | 'generation' | 'media'
+
+/**
+ * A screen of the settings window, and the two texts that name it. Declared here rather than
+ * beside the React tree: an id, a label and a description are data, and having the renderer
+ * own them left a section able to disagree with the settings it holds.
+ */
+export type SettingSectionEntry = {
+  id: SettingSectionId
+  labelKey: string
+  descriptionKey: string
+}
+
+export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
+  {
+    id: 'account',
+    labelKey: 'settings.account',
+    descriptionKey: 'settings.accountDescription',
+  },
+  {
+    id: 'appearance',
+    labelKey: 'settings.appearance',
+    descriptionKey: 'settings.appearanceDescription',
+  },
+  {
+    id: 'generation',
+    labelKey: 'settings.generation',
+    descriptionKey: 'settings.generationDescription',
+  },
+  {
+    id: 'media',
+    labelKey: 'settings.media',
+    descriptionKey: 'settings.mediaDescription',
+  },
+]
+
+export function sectionEntry(id: SettingSectionId): SettingSectionEntry | null {
+  return SETTING_SECTIONS.find(section => section.id === id) ?? null
+}
 
 export type SettingOption<V extends SettingValue = SettingValue> = {
   value: V
@@ -17,7 +58,7 @@ export type SettingOption<V extends SettingValue = SettingValue> = {
 type Descriptor<P extends SettingPath> = {
   path: P
   kind: SettingKind
-  section: SettingSection
+  section: SettingSectionId
   titleKey: string
   /**
    * Never optional. A setting whose effect cannot be stated in a sentence is one nobody can
@@ -38,14 +79,6 @@ type Descriptor<P extends SettingPath> = {
 export type SettingDescriptor = { [P in SettingPath]: Descriptor<P> }[SettingPath]
 
 /**
- * What every setting is: its control, its bounds, and the two texts that name and explain it.
- * The screens read this, and so does the validation — bounds written here are the ones the
- * main process enforces, which is what keeps a panel from proposing a value the IPC rejects.
- *
- * Defaults are NOT repeated here: `DEFAULT_SETTINGS` holds them, and `defaultAt` reads them
- * through the path.
- */
-/**
  * Identity, but generic over the path: it is what keeps `'appearance.theme'` a literal through
  * inference instead of widening to `string`, which is what lets the coverage check see which
  * settings the registry actually describes.
@@ -54,6 +87,14 @@ function setting<P extends SettingPath>(descriptor: Descriptor<P>): Descriptor<P
   return descriptor
 }
 
+/**
+ * What every setting is: its control, its bounds, and the two texts that name and explain it.
+ * The screens read this, and so does the validation — bounds written here are the ones the
+ * main process enforces, which is what keeps a panel from proposing a value the IPC rejects.
+ *
+ * Defaults are NOT repeated here: `DEFAULT_SETTINGS` holds them, and `defaultAt` reads them
+ * through the path.
+ */
 export const SETTING_REGISTRY = [
   setting({
     path: 'appearance.theme',
@@ -84,7 +125,6 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.concurrentJobs.help',
     min: 1,
     max: 16,
-    step: 1,
   }),
   setting({
     path: 'generation.maxRetries',
@@ -94,11 +134,10 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.maxRetries.help',
     min: 0,
     max: 10,
-    step: 1,
   }),
   setting({
     path: 'media.ffmpegPath',
-    kind: 'path',
+    kind: 'text',
     section: 'media',
     titleKey: 'settings.ffmpegPath.title',
     helpKey: 'settings.ffmpegPath.help',
@@ -139,7 +178,7 @@ export function descriptorAt(path: SettingPath): SettingDescriptor | null {
   return SETTING_REGISTRY.find(descriptor => descriptor.path === path) ?? null
 }
 
-export function descriptorsIn(section: SettingSection): readonly SettingDescriptor[] {
+export function descriptorsIn(section: SettingSectionId): readonly SettingDescriptor[] {
   return SETTING_REGISTRY.filter(descriptor => descriptor.section === section)
 }
 
@@ -154,7 +193,6 @@ export function optionsOf(descriptor: SettingDescriptor): readonly SettingOption
 export type Bounds = {
   min: number
   max: number
-  step: number
 }
 
 /**
@@ -167,7 +205,6 @@ export function boundsOf(path: SettingPath): Bounds {
   return {
     min: descriptor?.min ?? Number.NEGATIVE_INFINITY,
     max: descriptor?.max ?? Number.POSITIVE_INFINITY,
-    step: descriptor?.step ?? 1,
   }
 }
 

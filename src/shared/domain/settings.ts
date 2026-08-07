@@ -5,17 +5,9 @@ export type Theme = 'dark' | 'light'
 export type Density = 'compact' | 'comfortable'
 export type AssetBackend = 'local' | 'cloud'
 
-/** The values beside the types: a `<select>` and a validator both need to enumerate them. */
+/** The values beside the types: the registry's options and zod both enumerate them from here. */
 export const THEMES: readonly Theme[] = ['dark', 'light']
 export const DENSITIES: readonly Density[] = ['comfortable', 'compact']
-
-export function isTheme(value: unknown): value is Theme {
-  return THEMES.some(candidate => candidate === value)
-}
-
-export function isDensity(value: unknown): value is Density {
-  return DENSITIES.some(candidate => candidate === value)
-}
 
 /**
  * Settings the renderer may read. API credentials NEVER appear here: the renderer asks
@@ -59,11 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
   media: {},
 }
 
-export type PartialSettings = {
-  appearance?: Partial<Settings['appearance']>
-  generation?: Partial<Settings['generation']>
-  storage?: Partial<Settings['storage']>
-  media?: Partial<Settings['media']>
-}
+/** Derived, so a section added to `Settings` is writable without being restated here. */
+export type PartialSettings = { [K in keyof Settings]?: Partial<Settings[K]> }
 
 export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }

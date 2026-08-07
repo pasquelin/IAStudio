@@ -8,7 +8,9 @@ import {
   descriptorsIn,
   matchSettings,
   optionsOf,
+  sectionEntry,
   SETTING_REGISTRY,
+  SETTING_SECTIONS,
   UNLISTED_PATHS,
 } from './settings-registry'
 
@@ -19,12 +21,15 @@ function resolve(bundle: unknown, key: string): unknown {
 }
 
 function keysOf(): string[] {
-  return SETTING_REGISTRY.flatMap(descriptor => [
-    descriptor.titleKey,
-    descriptor.helpKey,
-    ...(descriptor.placeholderKey ? [descriptor.placeholderKey] : []),
-    ...optionsOf(descriptor).map(option => option.labelKey),
-  ])
+  return [
+    ...SETTING_SECTIONS.flatMap(section => [section.labelKey, section.descriptionKey]),
+    ...SETTING_REGISTRY.flatMap(descriptor => [
+      descriptor.titleKey,
+      descriptor.helpKey,
+      ...(descriptor.placeholderKey ? [descriptor.placeholderKey] : []),
+      ...optionsOf(descriptor).map(option => option.labelKey),
+    ]),
+  ]
 }
 
 describe('settings registry', () => {
@@ -59,7 +64,7 @@ describe('settings registry', () => {
 
   it('bounds every numeric setting, so zod never falls back to infinity', () => {
     for (const descriptor of SETTING_REGISTRY) {
-      if (descriptor.kind !== 'number' && descriptor.kind !== 'slider') continue
+      if (descriptor.kind !== 'number') continue
 
       const bounds = boundsOf(descriptor.path)
       expect(Number.isFinite(bounds.min), `${descriptor.path} has no minimum`).toBe(true)
@@ -79,7 +84,7 @@ describe('settings registry', () => {
 
   it('keeps a numeric default within the bounds it declares', () => {
     for (const descriptor of SETTING_REGISTRY) {
-      if (descriptor.kind !== 'number' && descriptor.kind !== 'slider') continue
+      if (descriptor.kind !== 'number') continue
 
       const value = defaultAt(descriptor.path)
       const bounds = boundsOf(descriptor.path)
@@ -92,6 +97,22 @@ describe('settings registry', () => {
       'appearance.theme',
       'appearance.density',
     ])
+  })
+
+  // A descriptor pointing at a section that does not exist would render nowhere at all.
+  it('files every setting under a section that exists', () => {
+    const known = new Set(SETTING_SECTIONS.map(section => section.id))
+
+    for (const descriptor of SETTING_REGISTRY) {
+      expect(known, `${descriptor.path}`).toContain(descriptor.section)
+    }
+  })
+
+  it('names each section once, and finds it back', () => {
+    const ids = SETTING_SECTIONS.map(section => section.id)
+
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(sectionEntry('media')?.labelKey).toBe('settings.media')
   })
 
   it('finds a descriptor by path, and nothing for one it does not describe', () => {
