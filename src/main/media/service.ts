@@ -136,7 +136,7 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         if (timed && binary && project && probe) {
           if (needsProxy(probe)) {
             advance('proxy')
-            const relative = `${PROXIES_FOLDER}/${fields.hash}.mp4`
+            const relative = `${PROXIES_FOLDER}/${hash}.mp4`
             const destination = `${project}/${relative}`
             await deps.run(binary, proxyArgs(sourcePath, destination), controller.signal)
             if (cancelled()) return
@@ -159,7 +159,7 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
             )
             if (cancelled()) return
 
-            const relative = `${PEAKS_FOLDER}/${fields.hash}.bin`
+            const relative = `${PEAKS_FOLDER}/${hash}.bin`
             await deps.writeFile(`${project}/${relative}`, new Uint8Array(reducer.finish().buffer))
             fields.peaksPath = relative
           }
@@ -175,6 +175,7 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
 
         // Two outcomes leave nothing worth keeping: a file that is not media, and bytes the
         // catalogue already holds. Both drop the row this pick minted rather than write to it.
+        // `failed` is not one of them — a proxy that broke after a good probe keeps its row.
         if (stage === 'duplicate' || stage === 'unreadable') {
           await deps.discard(assetId)
         } else if (stage !== 'queued') {

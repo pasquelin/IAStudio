@@ -7,20 +7,18 @@ import {
   EMPTY_SEQUENCE,
   playsThrough,
   sequenceDuration,
+  sourceTimeAt,
   type Clip,
   type SequenceState,
   type Track,
   type Us,
 } from './timeline-state'
+import { tokenAsHex } from '../core/palette'
+import type { Size } from './viewport'
 
 /** The clip a track is playing at that instant, or nothing — a gap is a legitimate answer. */
 export function clipAt(track: Track, time: Us): Clip | null {
   return track.clips.find(clip => time >= clip.start && time < clipEnd(clip)) ?? null
-}
-
-/** Timeline time → time inside the source, through the in point and the speed. */
-export function sourceTimeAt(clip: Clip, time: Us): Us {
-  return clip.inPoint + Math.round((time - clip.start) * clip.speed)
 }
 
 /** Lowest index first: the sprite added last is the one the eye sees on top. */
@@ -40,8 +38,6 @@ export function swapTexture(target: { texture: Texture }, next: Texture): void {
   target.texture = next
   if (previous !== Texture.EMPTY) previous.destroy(true)
 }
-
-export type Size = { width: number; height: number }
 
 /** Where something sized lands once fitted: its top-left corner, and the factor to draw it by. */
 export type Placement = { x: number; y: number; scale: number }
@@ -69,12 +65,9 @@ function place(target: Container, placement: Placement): void {
   target.scale.set(placement.scale)
 }
 
-/**
- * The sequence canvas, behind every layer. Black rather than the window's grey: it is the
- * reference the eye judges the picture against, and the bars around a mismatched clip are part
- * of the frame, not part of the chrome.
- */
-const CANVAS_COLOUR = 0x000000
+/** The sequence canvas, behind every layer — see `--color-monitor`. */
+const CANVAS_TOKEN = '--color-monitor'
+const CANVAS_FALLBACK = 0x000000
 
 /** What a renderer must offer to take a frame now rather than at its next pass. */
 export type TextureUploader = { initSource: (source: TextureSource) => void }
@@ -132,6 +125,8 @@ export class TimelineEngine {
   private generation = 0
   /** Set for good by `dispose`. A mount that resolves afterwards has nowhere left to attach. */
   private disposed = false
+  /** The canvas and screen sizes the frame was last laid out for — see `layout`. */
+  private laidOut = ''
 
   private readonly clock: Clock
   private frameHandle: number | null = null
@@ -188,10 +183,9 @@ export class TimelineEngine {
     const application = new Application()
     await application.init({ resizeTo: element, preference: 'webgl', backgroundAlpha: 0 })
 
-    // A mount cancelled while `init` was awaiting must not leave a canvas behind. `disposed`
-    // rather than `isConnected` alone: React mounts, unmounts and remounts an effect on the
-    // very same element, so the element is still connected while this engine is already dead —
-    // and its canvas would stay on screen for the session, holding a WebGL context nobody owns.
+    // `disposed` rather than `isConnected` alone: React remounts an effect on the very same
+    // element, so it is still connected while this engine is already dead — the same trap
+    // `CanvasEngine.mount` documents at length, and a leaked WebGL context per monitor.
     if (this.disposed || !element.isConnected) {
       application.destroy(true, { children: true, texture: true })
       return
@@ -245,8 +239,7 @@ export class TimelineEngine {
         upload: uploaded =>
           swapTexture(sprite, uploadNow(Texture.from(uploaded), application.renderer.texture)),
       }).push(frame)
-      // After the swap: the placement is read off the texture that just landed.
-      place(sprite, fitInside(sprite.texture, this.canvas()))
+      this.fit(sprite)
     }
   }
 
@@ -270,14 +263,32 @@ export class TimelineEngine {
     return { width: this.state.settings.width, height: this.state.settings.height }
   }
 
-  /** Bound rather than a method: the renderer holds it as a listener across the engine's life. */
+  /**
+   * Bound rather than a method: the renderer holds it as a listener across the engine's life.
+   *
+   * Guarded because `apply` runs it, and `apply` runs on every pointer move of a trim — where
+   * re-tessellating the backdrop for a rectangle nobody resized is pure waste.
+   */
   private readonly layout = (): void => {
     const application = this.application
     if (!application) return
 
     const canvas = this.canvas()
-    this.backdrop.clear().rect(0, 0, canvas.width, canvas.height).fill(CANVAS_COLOUR)
+    const screen = application.screen
+    const shape = `${canvas.width}x${canvas.height}@${screen.width}x${screen.height}`
+    if (shape === this.laidOut) return
+    this.laidOut = shape
+
+    const colour = tokenAsHex(application.canvas, CANVAS_TOKEN, CANVAS_FALLBACK)
+    this.backdrop.clear().rect(0, 0, canvas.width, canvas.height).fill(colour)
     place(this.frame, fitInside(canvas, application.screen))
+
+    for (const sprite of this.sprites.values()) this.fit(sprite)
+  }
+
+  /** Letterboxes one layer in the sequence canvas. Only its texture's size can change this. */
+  private fit(sprite: Sprite): void {
+    place(sprite, fitInside(sprite.texture, this.canvas()))
   }
 
   private spriteFor(trackId: string): Sprite {

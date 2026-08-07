@@ -53,8 +53,6 @@ export function AssetInspector({ asset }: { asset: Asset }) {
 
       {asset.location === 'local' && (
         <PropertyGroup title={t('inspector.file')}>
-          {/* The path itself stays in the main process — showing the file is what one does with
-              it anyway, and the window never learns the user's folder layout. */}
           <PropertyRow label={t('inspector.onDisk')}>
             <ToolButton
               icon={mdiFolderOpenOutline}

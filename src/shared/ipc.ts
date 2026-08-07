@@ -185,11 +185,8 @@ export type StudioBridge = {
      */
     peaks: (assetId: string) => Promise<Float32Array | null>
     /**
-     * Shows the asset's file in the OS file manager. The path itself stays in the main process
-     * — the renderer has no filesystem, so a path would only ever be text on screen, and
-     * broadcasting every user's folder layout to it buys nothing (CLAUDE.md, invariant 1).
-     *
-     * Answers whether there was a file to show: a cloud-only asset has none.
+     * Shows the asset's file in the OS file manager — the errand the path itself never crosses
+     * this boundary for, see `withoutSourcePath`. False when there was no file to show.
      */
     reveal: (assetId: string) => Promise<boolean>
     /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */

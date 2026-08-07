@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { IngestProgress, MediaCapabilities } from '@shared/domain/media'
+import { hasEnded, type IngestProgress, type MediaCapabilities } from '@shared/domain/media'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
@@ -76,12 +76,8 @@ export const useMedia = create<MediaState>()((set, get) => ({
       useAssets.getState().invalidate()
     }
 
-    // A failure stays on screen: it is the only trace the import left. A duplicate leaves with
-    // it — the file is in the project, which is what the user wanted, and it is not an error.
-    const ended =
-      progress.stage === 'done' || progress.stage === 'cancelled' || progress.stage === 'duplicate'
     set(state =>
-      ended
+      hasEnded(progress.stage)
         ? { progress: without(state.progress, progress.assetId) }
         : { progress: { ...state.progress, [progress.assetId]: progress } },
     )

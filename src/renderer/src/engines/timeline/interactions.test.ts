@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { beginGesture, commandForGesture, snapCandidates, type MediaLengths } from './interactions'
+import {
+  beginGesture,
+  commandForGesture,
+  snapCandidates,
+  type Gesture,
+  type MediaLengths,
+} from './interactions'
 import { RULER_HEIGHT, type Point, type Viewport } from './timeline-geometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import { DEFAULT_TRACK_HEIGHT, trackOfClip, type Clip, type SequenceState } from './timeline-state'
@@ -25,9 +31,12 @@ const GRAB: Point = { x: 50, y: RULER_HEIGHT + 10 }
 /** No media bound here — how a trim reads its own is covered in `commands.test.ts`. */
 const TIMELESS: MediaLengths = () => null
 
+const commandFor = (gesture: Gesture, state: SequenceState, to: Point) =>
+  commandForGesture(gesture, state, viewport, to, TIMELESS)
+
 const dragTo = (state: SequenceState, to: Point): SequenceState => {
   const gesture = beginGesture(state, viewport, GRAB)
-  return commandForGesture(gesture!, state, viewport, to, TIMELESS)!.apply(state)
+  return commandFor(gesture!, state, to)!.apply(state)
 }
 
 describe('timeline interactions', () => {
@@ -58,13 +67,7 @@ describe('timeline interactions', () => {
   it('turns a drag into a move command that keeps the grab offset', () => {
     const state = stateWith([clip('a', 0, 1_000_000)])
     const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 30 })
-    const command = commandForGesture(
-      gesture!,
-      state,
-      viewport,
-      { x: 250, y: RULER_HEIGHT + 30 },
-      TIMELESS,
-    )
+    const command = commandFor(gesture!, state, { x: 250, y: RULER_HEIGHT + 30 })
     expect(command!.apply(state).tracks[0]?.clips[0]?.start).toBe(2_000_000)
   })
 
@@ -102,13 +105,7 @@ describe('timeline interactions', () => {
   it('turns a trim into a trim command', () => {
     const state = stateWith([clip('a', 0, 1_000_000)])
     const gesture = beginGesture(state, viewport, { x: 98, y: RULER_HEIGHT + 30 })
-    const command = commandForGesture(
-      gesture!,
-      state,
-      viewport,
-      { x: 60, y: RULER_HEIGHT + 30 },
-      TIMELESS,
-    )
+    const command = commandFor(gesture!, state, { x: 60, y: RULER_HEIGHT + 30 })
     expect(command!.apply(state).tracks[0]?.clips[0]?.duration).toBe(600_000)
   })
 
@@ -124,13 +121,7 @@ describe('timeline interactions', () => {
   it('turns a fade drag into the ramp length it was dragged to', () => {
     const state = stateWith([clip('a', 0, 1_000_000)])
     const gesture = beginGesture(state, viewport, { x: 2, y: RULER_HEIGHT + 4 })
-    const command = commandForGesture(
-      gesture!,
-      state,
-      viewport,
-      { x: 30, y: RULER_HEIGHT + 4 },
-      TIMELESS,
-    )
+    const command = commandFor(gesture!, state, { x: 30, y: RULER_HEIGHT + 4 })
     // 300 ms lands between two frames at 25 fps, and a ramp sits on the grid like every edge.
     expect(command!.apply(state).tracks[0]?.clips[0]?.fadeIn).toBe(320_000)
   })
@@ -138,21 +129,13 @@ describe('timeline interactions', () => {
   it('measures a fade out backwards from the clip end', () => {
     const state = stateWith([clip('a', 0, 1_000_000)])
     const gesture = beginGesture(state, viewport, { x: 99, y: RULER_HEIGHT + 4 })
-    const command = commandForGesture(
-      gesture!,
-      state,
-      viewport,
-      { x: 80, y: RULER_HEIGHT + 4 },
-      TIMELESS,
-    )
+    const command = commandFor(gesture!, state, { x: 80, y: RULER_HEIGHT + 4 })
     expect(command!.apply(state).tracks[0]?.clips[0]?.fadeOut).toBe(200_000)
   })
 
   it('produces no command for a scrub, which is not an edit', () => {
     const state = stateWith([])
-    expect(
-      commandForGesture({ kind: 'scrub' }, state, viewport, { x: 60, y: 4 }, TIMELESS),
-    ).toBeNull()
+    expect(commandFor({ kind: 'scrub' }, state, { x: 60, y: 4 })).toBeNull()
   })
 
   it('offers neighbour edges and the playhead as snap candidates, minus the dragged clip', () => {
@@ -165,13 +148,7 @@ describe('timeline interactions', () => {
     // puts the neighbour's tail off the grid, and the command realigns it — leaving a gap.
     const state = stateWith([clip('a', 0, 1_000_000), clip('b', 3_000_000, 480_000)])
     const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 30 })
-    const command = commandForGesture(
-      gesture!,
-      state,
-      viewport,
-      { x: 400, y: RULER_HEIGHT + 30 },
-      TIMELESS,
-    )
+    const command = commandFor(gesture!, state, { x: 400, y: RULER_HEIGHT + 30 })
     const next = command!.apply(state)
     expect(next.tracks[0]?.clips.map(candidate => candidate.id)).toEqual(['b', 'a'])
     expect(next.tracks[0]?.clips[1]?.start).toBe(3_480_000)

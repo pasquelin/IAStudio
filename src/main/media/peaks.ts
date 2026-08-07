@@ -1,5 +1,5 @@
 /**
- * Reads back what `decodePeaks` wrote. Copied rather than viewed: a `Buffer` from `readFile`
+ * Reads back what the reducer wrote. Copied rather than viewed: a `Buffer` from `readFile`
  * shares a pooled `ArrayBuffer` whose offset is rarely four-byte aligned, and `Float32Array`
  * refuses an unaligned view outright.
  */
@@ -16,57 +16,72 @@ export type PeakReducer = {
   finish: () => Float32Array
 }
 
+const FULL_SCALE = 32_768
+
 /**
  * Folds mono 16-bit PCM into min/max pairs as it streams past, rather than holding a whole
- * decode in memory and reducing it afterwards.
- *
- * An hour of the 8 kHz mono ffmpeg is asked for is 57 MB of PCM, and reducing it in one pass
- * measured 129 ms — 129 ms with every window of the studio frozen, since this runs on the main
- * process's own thread (CLAUDE.md, invariant 6). Chunk by chunk it is a fraction of a
- * millisecond at a time, and never more than one chunk is held.
+ * decode to reduce afterwards: an hour of the 8 kHz mono ffmpeg is asked for is 57 MB, and this
+ * runs on the main process's own thread (CLAUDE.md, invariant 6).
  *
  * The bucket width comes from the sample rate rather than from the total length, so each pair
- * covers exactly the same slice of time whether the file ran short or long of its probe.
+ * covers the same slice of time whether the file ran short or long of its probe.
  */
 export function createPeakReducer(buckets: number, samplesPerBucket: number): PeakReducer {
   const peaks = new Float32Array(buckets * 2)
   const width = Math.max(1, Math.round(samplesPerBucket))
+
+  // The running bucket is held in locals and written once, at its end: a division, two guarded
+  // reads and two writes per sample cost more than the whole rest of the loop.
+  let bucket = 0
+  let left = width
+  let min = 0
+  let max = 0
   // A chunk boundary falls anywhere, including between the two bytes of one sample.
-  let carry: number | null = null
-  let sample = 0
+  let carry = -1
 
   const fold = (value: number): void => {
-    const bucket = Math.floor(sample / width)
-    sample += 1
     if (bucket >= buckets) return
 
-    const level = value / 32_768
-    if (level < (peaks[bucket * 2] ?? 0)) peaks[bucket * 2] = level
-    if (level > (peaks[bucket * 2 + 1] ?? 0)) peaks[bucket * 2 + 1] = level
+    if (value < min) min = value
+    else if (value > max) max = value
+
+    if (--left > 0) return
+    peaks[bucket * 2] = min / FULL_SCALE
+    peaks[bucket * 2 + 1] = max / FULL_SCALE
+    bucket += 1
+    left = width
+    min = 0
+    max = 0
   }
 
-  // Little-endian and signed, as `s16le` says on the ffmpeg command line.
-  const signed = (low: number, high: number): number => {
-    const raw = low | (high << 8)
-    return raw >= 0x8000 ? raw - 0x10000 : raw
-  }
+  // Little-endian, as `s16le` says on the ffmpeg command line; `<< 16 >> 16` sign-extends.
+  const signed = (low: number, high: number): number => ((low | (high << 8)) << 16) >> 16
 
   return {
     push: chunk => {
       let index = 0
-      if (carry !== null && chunk.length > 0) {
+      if (carry >= 0 && chunk.length > 0) {
         fold(signed(carry, chunk[0] ?? 0))
-        carry = null
+        carry = -1
         index = 1
       }
 
-      for (; index + 1 < chunk.length; index += 2) {
+      const last = chunk.length - 1
+      for (; index < last; index += 2) {
         fold(signed(chunk[index] ?? 0, chunk[index + 1] ?? 0))
       }
 
-      if (index < chunk.length) carry = chunk[index] ?? 0
+      carry = index < chunk.length ? (chunk[index] ?? 0) : -1
     },
 
-    finish: () => peaks,
+    // The bucket in progress is written out: a file rarely ends on a bucket boundary, and
+    // dropping the tail would flatten the last fraction of a second to silence.
+    finish: () => {
+      if (left < width && bucket < buckets) {
+        peaks[bucket * 2] = min / FULL_SCALE
+        peaks[bucket * 2 + 1] = max / FULL_SCALE
+      }
+      return peaks
+    },
   }
 }

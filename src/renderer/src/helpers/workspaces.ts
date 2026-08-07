@@ -6,6 +6,7 @@ import {
   mdiVideoOutline,
   mdiVolumeHigh,
 } from '@mdi/js'
+import type { AssetType } from '@shared/domain/asset'
 import type { ModelFamily } from '@shared/domain/model'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 
@@ -23,6 +24,27 @@ const ICONS: Record<WorkspaceId, string> = {
   audio: mdiVolumeHigh,
   textures: mdiTextureBox,
   skyboxes: mdiPanoramaVariantOutline,
+}
+
+/**
+ * Which workspace an asset belongs to. `Record` both ways, so a seventh kind or a seventh
+ * workspace is a compile error rather than an asset drawn under the wrong glyph.
+ */
+const WORKSPACE_OF_TYPE: Record<AssetType, WorkspaceId> = {
+  image: 'image',
+  video: 'video',
+  audio: 'audio',
+  mesh: '3d',
+  texture: 'textures',
+  skybox: 'skyboxes',
+}
+
+/**
+ * What stands for an asset when there is no picture to show it by. Read off the workspace table
+ * rather than relisted: changing the video glyph in the rail must change it on the tiles too.
+ */
+export function assetIcon(type: AssetType): string {
+  return ICONS[WORKSPACE_OF_TYPE[type]]
 }
 
 const FAMILIES: Record<WorkspaceId, ModelFamily> = {

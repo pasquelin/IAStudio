@@ -29,7 +29,6 @@ export function registerMediaHandlers({
       if (!type) continue
 
       const asset = await link(source, type)
-      // The row keeps the path; the window is told everything but it — see `withoutSourcePath`.
       assets.push(withoutSourcePath(asset))
       // Not awaited: the row exists, so the browser shows the file at once, while probing a
       // twenty-minute rush goes on reporting through `evt:media-progress`.

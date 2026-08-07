@@ -17,6 +17,20 @@ export type IngestStage =
   /** ffprobe read the file and refused it — it is not media, whatever its extension says. */
   | 'unreadable'
 
+/** Nothing more will happen to this file: the row leaves the list of what is being prepared. */
+export const ENDED_STAGES: readonly IngestStage[] = ['done', 'cancelled', 'duplicate']
+
+export function hasEnded(stage: IngestStage): boolean {
+  return ENDED_STAGES.includes(stage)
+}
+
+/** Ended badly: the row stays on screen, in red, because it is the only trace the import left. */
+export const FAILED_STAGES: readonly IngestStage[] = ['failed', 'unreadable']
+
+export function hasFailed(stage: IngestStage): boolean {
+  return FAILED_STAGES.includes(stage)
+}
+
 export type IngestProgress = {
   assetId: string
   stage: IngestStage

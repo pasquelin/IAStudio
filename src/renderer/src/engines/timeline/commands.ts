@@ -40,7 +40,7 @@ const withoutClip = (track: Track, clipId: string): Track => ({
  * A media with no length of its own — a still — takes no bound: stretching one over a minute is
  * how a title card is made.
  */
-export function boundToMedia(clip: Clip, edge: ClipEdge, at: Us, length: Us | null): Us {
+function boundToMedia(clip: Clip, edge: ClipEdge, at: Us, length: Us | null): Us {
   const headroom = (source: Us): Us => Math.round(source / clip.speed)
 
   if (edge === 'in') return Math.max(at, clip.start - headroom(clip.inPoint))

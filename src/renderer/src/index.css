@@ -78,6 +78,12 @@
   --color-viewport: #33363b;
   --color-viewport-line: #494d54;
   /*
+   * The sequence canvas, and the bars around a clip that does not fill it. Black, unlike the 3D
+   * viewport: a picture is judged against the black it will be shown on, and the bars belong to
+   * the frame rather than to the chrome.
+   */
+  --color-monitor: #000000;
+  /*
    * Untextured geometry. Its own token and not `--color-muted`, which is a TEXT colour: raising
    * the contrast of a dimmed label would otherwise repaint every mesh in the scene.
    */

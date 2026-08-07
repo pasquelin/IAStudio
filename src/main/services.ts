@@ -19,6 +19,7 @@ import {
   binaryRuns,
   companionPath,
   findOnPath,
+  forgetBinaries,
   hashSource,
   probeSource,
   runProcess,
@@ -51,7 +52,7 @@ export type Services = {
   link: (source: string, type: AssetType) => Promise<Asset>
   capabilities: () => Promise<MediaCapabilities>
   pickFolder: () => Promise<string | null>
-  /** Shows a file in the OS file manager. The path never leaves this process — invariant 1. */
+  /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
@@ -222,6 +223,7 @@ export function createServices(): Services {
     // a binary built for the other architecture both exist on disk and encode nothing.
     capabilities: async () => {
       ffmpeg.invalidate()
+      forgetBinaries()
       return { ffmpeg: await binaryRuns(ffmpeg.path()) }
     },
     pickFolder,

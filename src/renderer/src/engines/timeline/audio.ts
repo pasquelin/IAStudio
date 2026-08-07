@@ -1,4 +1,4 @@
-import { clipEnd, playsThrough, type SequenceState, type Us } from './timeline-state'
+import { clipEnd, playsThrough, sourceTimeAt, type SequenceState, type Us } from './timeline-state'
 
 /** A slice of one clip's audio to be scheduled, already resolved against the window. */
 export type AudioChunk = {
@@ -32,7 +32,7 @@ export function audioChunksIn(state: SequenceState, from: Us, to: Us): AudioChun
         clipId: clip.id,
         assetId: clip.assetId,
         at: start,
-        sourceStart: clip.inPoint + Math.round((start - clip.start) * clip.speed),
+        sourceStart: sourceTimeAt(clip, start),
         duration: end - start,
       })
     }

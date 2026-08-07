@@ -73,15 +73,15 @@ export function runProcess(
     // rest of the session, and every file behind it waits on a process nobody is watching.
     const expiry =
       timeoutMs === undefined
-        ? null
+        ? undefined
         : setTimeout(() => {
             child.kill()
             reject(new Error(`${binary} gave no answer in ${timeoutMs} ms`))
           }, timeoutMs)
 
-    const settle = (outcome: () => void): void => {
-      if (expiry) clearTimeout(expiry)
-      outcome()
+    const fail = (error: Error): void => {
+      clearTimeout(expiry)
+      reject(error)
     }
 
     child.stdout.on('data', chunk => (onStdout ? onStdout(chunk) : stdout.push(chunk)))
@@ -90,15 +90,14 @@ export function runProcess(
     // A pipe torn down under an in-flight read — which is what killing ffmpeg mid-stream does
     // — emits on the stream itself. Unlistened, Node rethrows it and takes the main process,
     // and with it every window, down.
-    child.stdout.on('error', error => settle(() => reject(error)))
-    child.stderr.on('error', error => settle(() => reject(error)))
-    child.on('error', error => settle(() => reject(error)))
-    child.on('close', code =>
-      settle(() => {
-        if (code === 0) resolve(Buffer.concat(stdout))
-        else reject(new Error(`${binary} exited with ${code}: ${Buffer.concat(stderr).toString()}`))
-      }),
-    )
+    child.stdout.on('error', fail)
+    child.stderr.on('error', fail)
+    child.on('error', fail)
+    child.on('close', code => {
+      clearTimeout(expiry)
+      if (code === 0) resolve(Buffer.concat(stdout))
+      else fail(new Error(`${binary} exited with ${code}: ${Buffer.concat(stderr).toString()}`))
+    })
   })
 }
 
@@ -138,6 +137,13 @@ export function hashSource(path: string): Promise<string> {
 export const VERSION_TIMEOUT_MS = 5_000
 
 /**
+ * Answers already given, by binary path. A probe that fails asks this to tell a missing tool
+ * from a bad file, and a folder of a hundred unreadable files would otherwise spawn a hundred
+ * `-version` runs — 27 ms each here, serialized in the ingest pool.
+ */
+const RUNNABLE = new Map<string, Promise<boolean>>()
+
+/**
  * Whether a binary actually runs. Existing on disk is not the same thing: a half-written
  * download, a quarantined file, or a binary built for the other architecture all sit there
  * looking installed, and the interface must not announce a pipeline that cannot encode.
@@ -145,12 +151,20 @@ export const VERSION_TIMEOUT_MS = 5_000
 export async function binaryRuns(binary: string | null): Promise<boolean> {
   if (!binary) return false
 
-  try {
-    await runProcess(binary, ['-version'], { timeoutMs: VERSION_TIMEOUT_MS })
-    return true
-  } catch {
-    return false
-  }
+  const known = RUNNABLE.get(binary)
+  if (known) return known
+
+  const answer = runProcess(binary, ['-version'], { timeoutMs: VERSION_TIMEOUT_MS }).then(
+    () => true,
+    () => false,
+  )
+  RUNNABLE.set(binary, answer)
+  return answer
+}
+
+/** Forgets the answers. Invalidated with the resolver: ffmpeg may have been installed since. */
+export function forgetBinaries(): void {
+  RUNNABLE.clear()
 }
 
 /**
@@ -178,9 +192,9 @@ export async function probeSource(
     const probe = parseProbe(JSON.parse(output.toString('utf8')))
     return probe ? { kind: 'probed', probe } : { kind: 'unreadable' }
   } catch {
-    // Told apart only here, on the path that already failed, where one more spawn costs
-    // nothing: a configured path pointing at no binary is a missing tool, and every file
-    // behind it must import unprobed rather than be refused as if it were the file's fault.
+    // Told apart only on the path that already failed, and asked once per session: a configured
+    // path pointing at no binary is a missing tool, and every file behind it must import
+    // unprobed rather than be refused as if it were the file's own fault.
     return (await binaryRuns(ffprobe)) ? { kind: 'unreadable' } : { kind: 'unavailable' }
   }
 }

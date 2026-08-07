@@ -161,18 +161,22 @@ export function clipEnd(clip: Clip): Us {
   return clip.start + clip.duration
 }
 
+/** Timeline time → time inside the source, through the in point and the speed. */
+export function sourceTimeAt(clip: Clip, time: Us): Us {
+  return clip.inPoint + Math.round((time - clip.start) * clip.speed)
+}
+
 /**
- * The part of a clip that starts at `time`: it begins that much later in the source, at the
- * clip's own speed. Three edits need this and must agree — a trim of the in point, a split, and
- * the tail an insertion cuts loose — because a source offset off by a hair drifts the picture
- * against the sound for the rest of the take.
+ * The part of a clip that starts at `time`: it begins that much later in the source. Three edits
+ * need this and must agree — a trim of the in point, a split, and the tail an insertion cuts
+ * loose — because a source offset off by a hair drifts the picture against the sound.
  */
 export function clipFrom(clip: Clip, time: Us): Clip {
   return {
     ...clip,
     start: time,
     duration: clipEnd(clip) - time,
-    inPoint: clip.inPoint + Math.round((time - clip.start) * clip.speed),
+    inPoint: sourceTimeAt(clip, time),
   }
 }
 

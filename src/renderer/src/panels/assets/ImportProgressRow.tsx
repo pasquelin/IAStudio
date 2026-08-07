@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { IngestProgress } from '@shared/domain/media'
+import { hasFailed, type IngestProgress } from '@shared/domain/media'
 import { ProgressRow } from '@/design/ProgressRow'
 import { useMedia } from '@/stores/media'
 
@@ -20,8 +20,7 @@ export const ImportProgressRow = memo(function ImportProgressRow({
 }: ImportProgressRowProps) {
   const { t } = useTranslation()
   const cancel = useMedia(state => state.cancel)
-  // A file that is not media is a failure like any other, told apart only by its own wording.
-  const failed = entry.stage === 'failed' || entry.stage === 'unreadable'
+  const failed = hasFailed(entry.stage)
 
   return (
     <ProgressRow

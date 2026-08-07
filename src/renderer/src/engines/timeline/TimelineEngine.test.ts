@@ -4,7 +4,6 @@ import {
   clipAt,
   createFrameSink,
   fitInside,
-  sourceTimeAt,
   swapTexture,
   uploadNow,
   videoTracksByDepth,
@@ -33,14 +32,6 @@ describe('timeline engine', () => {
   it('treats the end of a clip as outside it, so a butt joint plays the next one', () => {
     const track = stateWith([clip('a', 0, 1_000_000)]).tracks[0]!
     expect(clipAt(track, 1_000_000)).toBeNull()
-  })
-
-  it('maps a timeline time to a source time through the in point', () => {
-    expect(sourceTimeAt(clip('a', 1_000_000, 1_000_000, 5_000_000), 1_400_000)).toBe(5_400_000)
-  })
-
-  it('accounts for speed when mapping to the source', () => {
-    expect(sourceTimeAt({ ...clip('a', 0, 1_000_000), speed: 2 }, 500_000)).toBe(1_000_000)
   })
 
   it('orders video tracks by index, so the highest one is composited last', () => {

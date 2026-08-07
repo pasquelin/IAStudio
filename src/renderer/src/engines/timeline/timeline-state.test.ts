@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { clipFixture } from './timeline-fixtures'
 import {
   clampFades,
+  clipFrom,
   clampTrackHeight,
   clipEnd,
   clipById,
@@ -18,6 +20,7 @@ import {
   sequenceDuration,
   serializeSequence,
   snapToFrame,
+  sourceTimeAt,
   trackOfClip,
   wholeFrames,
   type Clip,
@@ -34,6 +37,27 @@ const clip = (id: string, start: number, duration: number): Clip =>
 const track = (clips: Clip[]): Track => makeTrack({ id: 'V1', kind: 'video', index: 0, clips })
 
 const settings = { width: 1920, height: 1080, fps: 25, sampleRate: 48000 }
+
+describe('reading a clip against its source', () => {
+  const clip = (start: number, duration: number, extra: Partial<Clip> = {}): Clip =>
+    clipFixture('a', start, duration, extra)
+
+  it('maps a timeline time to a source time through the in point', () => {
+    expect(sourceTimeAt(clip(1_000_000, 1_000_000, { inPoint: 5_000_000 }), 1_400_000)).toBe(
+      5_400_000,
+    )
+  })
+
+  it('accounts for speed when mapping to the source', () => {
+    expect(sourceTimeAt(clip(0, 1_000_000, { speed: 2 }), 500_000)).toBe(1_000_000)
+  })
+
+  // The same offset the trim, the split and the insertion all read — see `clipFrom`.
+  it('gives the part starting later the source offset that goes with it', () => {
+    const tail = clipFrom(clip(0, 1_000_000, { inPoint: 2_000_000 }), 400_000)
+    expect(tail).toMatchObject({ start: 400_000, duration: 600_000, inPoint: 2_400_000 })
+  })
+})
 
 describe('sequence state', () => {
   it('opens on one video track and one audio track, both empty', () => {

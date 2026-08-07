@@ -25,7 +25,7 @@ export type ProjectHandlerDeps = {
   newAssetId: () => string
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
   pickFolder: () => Promise<string | null>
-  /** Shows a file in the OS file manager — `shell.showItemInFolder`, injected for the same reason. */
+  /** `shell.showItemInFolder`, injected for the same reason. */
   reveal: (file: string) => void
 }
 

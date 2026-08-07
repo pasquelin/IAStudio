@@ -13,11 +13,15 @@ const probe: MediaProbe = {
   channels: 2,
 }
 
+/** A probe that succeeded, `probe` with whatever the test needed to change. */
+const probing = (fields: Partial<MediaProbe> = {}) =>
+  vi.fn(async (): Promise<ProbeOutcome> => ({ kind: 'probed', probe: { ...probe, ...fields } }))
+
 function deps(overrides: Partial<MediaServiceDeps> = {}): MediaServiceDeps {
   return {
     ffmpeg: () => '/usr/bin/ffmpeg',
     run: vi.fn(async () => Buffer.alloc(0)),
-    probe: vi.fn(async (): Promise<ProbeOutcome> => ({ kind: 'probed', probe })),
+    probe: probing(),
     hash: vi.fn(async () => 'abc123'),
     duplicateExists: vi.fn(async () => false),
     discard: vi.fn(async () => undefined),
