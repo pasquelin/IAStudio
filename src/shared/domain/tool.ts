@@ -4,7 +4,7 @@
  * enriches it with icons and components. Duplicating it in the main process would degrade
  * `ToolId` to `string` and force a cast back on the other side.
  */
-import type { WorkspaceId } from './workspace'
+import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
 
@@ -18,8 +18,14 @@ export type ToolId =
   | 'generator'
   | 'inspector'
   | 'assets'
-  | 'jobs'
   | 'skybox'
+
+/**
+ * The panels the upper half of the right column is reserved for: choosing a model, filling its
+ * form, steering the sky it generates. Nothing else may sit there, and none of them sits
+ * anywhere else — `tool.test.ts` enforces both directions.
+ */
+export const AI_TOOLS: readonly ToolId[] = ['models', 'generator', 'skybox']
 
 /**
  * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
@@ -33,7 +39,7 @@ export type ToolSlot = 'primary' | 'secondary'
 /**
  * Where a tool sits. A tool may declare **more than one**, for disjoint sets of workspaces:
  * the asset shelf belongs in the bottom strip nearly everywhere, and beside the montage in
- * Video and Audio, where dragging a take onto a track is the gesture the space is built around.
+ * Video, where dragging a take onto a track is the gesture the space is built around.
  *
  * Two invariants hold across the placements of one tool, and `tool.test.ts` enforces them:
  * their workspaces never overlap, and they share a slot — a tool that changed half as well as
@@ -43,49 +49,48 @@ export type ToolPlacement = {
   id: ToolId
   zone: ToolZone
   slot: ToolSlot
-  /** Workspaces the tool belongs to. Absent means every one of them. */
-  workspaces?: readonly WorkspaceId[]
+  /** Workspaces the tool belongs to. Spelled out even when it is all of them: a panel that
+   * never chose is a panel nobody decided about. */
+  workspaces: readonly WorkspaceId[]
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
 
 /**
  * Tools sharing a zone AND a slot take turns; tools in different slots of the same zone show
- * together — stacked in a side column, side by side in a strip.
+ * together — stacked in a side column. A horizontal band has only a first half: it is read
+ * across the whole width, and cutting it leaves two panels too narrow to be either.
  */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'layers', zone: 'left', slot: 'primary', workspaces: ['image'] },
   { id: 'meshes', zone: 'left', slot: 'primary', workspaces: ['3d'] },
   { id: 'lights', zone: 'left', slot: 'primary', workspaces: ['3d'] },
-  { id: 'explorer', zone: 'left', slot: 'secondary' },
-  { id: 'models', zone: 'right', slot: 'primary' },
-  { id: 'generator', zone: 'right', slot: 'primary' },
-  // The other half of the right column, and always up: what is selected is read WHILE a
-  // model is chosen and a prompt written, and in an editor the inspector is never the panel
-  // you have to switch away to.
-  { id: 'inspector', zone: 'right', slot: 'secondary' },
+  // Where a take is dragged onto a track, the shelf and the montage have to be on screen
+  // together — and the montage owns the band. The upper left is free in Video, so the shelf
+  // takes it rather than the AI half of the right column.
+  { id: 'assets', zone: 'left', slot: 'primary', workspaces: ['video'] },
+  { id: 'explorer', zone: 'left', slot: 'secondary', workspaces: WORKSPACE_IDS },
+  { id: 'models', zone: 'right', slot: 'primary', workspaces: WORKSPACE_IDS },
+  { id: 'generator', zone: 'right', slot: 'primary', workspaces: WORKSPACE_IDS },
   // The generator's half, not the inspector's. The inspector serves every space — a node, an
   // asset, a clip — so putting the sky controls beside it would make the two chase each other
   // out of the same half. Here they take turns with choosing a model, which is the other
   // moment of the same work.
   { id: 'skybox', zone: 'right', slot: 'primary', workspaces: ['skyboxes'] },
-  // The shelf belongs in the bottom strip: it is a shelf, read across the width, and the side
+  // The other half of the right column, and always up: what is selected is read WHILE a
+  // model is chosen and a prompt written, and in an editor the inspector is never the panel
+  // you have to switch away to.
+  { id: 'inspector', zone: 'right', slot: 'secondary', workspaces: WORKSPACE_IDS },
+  // The shelf belongs in the bottom band: it is a shelf, read across the width, and the side
   // column is where the things that act on the document live.
   {
     id: 'assets',
     zone: 'bottom',
     slot: 'primary',
-    workspaces: ['image', '3d', 'textures', 'skyboxes'],
+    workspaces: ['image', '3d', 'textures', 'skyboxes', 'audio'],
   },
-  // Except where a take is dragged onto a track. There the shelf and the montage have to be on
-  // screen together, and the montage already owns the strip — two panels taking turns in one
-  // half cannot be dragged between.
-  { id: 'assets', zone: 'right', slot: 'primary', workspaces: ['video', 'audio'] },
-  // The strip is the montage's, across the whole width — that is how a montage is read.
+  // The band is the montage's, across the whole width — that is how a montage is read.
   { id: 'timeline', zone: 'bottom', slot: 'primary', workspaces: ['video'] },
-  // The other half of the strip, so it never takes the shelf's place: what is generating and
-  // what has been generated are read together, not one instead of the other.
-  { id: 'jobs', zone: 'bottom', slot: 'secondary' },
 ]
 
 /**
@@ -112,9 +117,8 @@ export function placementIn(id: unknown, workspace: WorkspaceId): ToolPlacement 
   return placementsOf(id).find(placement => servesWorkspace(placement, workspace)) ?? null
 }
 
-/** A tool with no `workspaces` belongs everywhere; one with a list belongs only to that list. */
 export function servesWorkspace(placement: ToolPlacement, workspace: WorkspaceId): boolean {
-  return placement.workspaces === undefined || placement.workspaces.includes(workspace)
+  return placement.workspaces.includes(workspace)
 }
 
 export const TOOL_ZONES: readonly ToolZone[] = ['left', 'right', 'top', 'bottom']
