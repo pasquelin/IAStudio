@@ -96,7 +96,6 @@ ressemble ni à ouvert ni à fermé, et le rail rouvre un outil en un clic.
 | **Explorateur** | gauche, 2de moitié | partout | l'arbre de scène en 3D. L'arborescence de projet n'est pas encore écrite, et le panneau le dit dans les autres espaces |
 | **Modèles** | droite, 1re moitié | partout | le catalogue Scenario, filtré sur l'espace actif |
 | **Génération** | droite, 1re moitié | partout | le formulaire du modèle choisi |
-| **Inspecteur** | droite, 2de moitié | 3D | tout ce qui définit le nœud sélectionné — transformation, géométrie, matériau, lumière — et de quoi y toucher |
 | **Inspecteur** | droite, 2de moitié | 3D | tout ce qui définit le nœud sélectionné, réglable en direct |
 | **Timeline** | bas | Vidéo | la séquence en cours de montage |
 | **Assets** | bas | partout | tout ce que le projet contient |

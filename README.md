@@ -89,12 +89,12 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 | Command | What it does |
 |---|---|
 | `pnpm dev` | electron-vite in watch mode, hot reload on main, preload and renderer |
-| `pnpm dev:debug` | same, plus the remote debugging port on 9222 |
-| `pnpm build` | typecheck, build, and package with electron-builder |
+| `pnpm build` | typecheck, then build the three targets |
+| `pnpm dist` | build, then package and sign with electron-builder |
 | `pnpm typecheck` | `tsc --noEmit` across the three targets |
-| `pnpm test` | vitest, single run |
-| `pnpm lint` | eslint over `src` |
-| `pnpm format` | prettier, write |
+| `pnpm test` · `pnpm test:watch` | vitest, single run or watching |
+| `pnpm lint` · `pnpm lint:fix` | eslint over `src` |
+| `pnpm format` · `pnpm format:check` | prettier, write or check |
 | `pnpm validate` | typecheck + lint + format check + tests |
 | `pnpm rebuild:native` | electron-rebuild — required after touching better-sqlite3 |
 | `pnpm docs:scenario` | regenerate the local copy of the Scenario API docs |

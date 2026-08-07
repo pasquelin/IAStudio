@@ -28,5 +28,6 @@ emplacement reste visible dans le markdown sous forme de commentaire HTML — ri
 
 ## Comment les prendre
 
-`pnpm dev:debug` lance l'application avec le port de debug 9222 ouvert, ce qui permet de piloter
-la fenêtre et de déclencher les captures depuis l'extérieur plutôt qu'à la main.
+`pnpm dev` lance l'application. Pour piloter la fenêtre depuis l'extérieur et déclencher les
+captures autrement qu'à la main, il faut le port de debug distant — aucun script du
+`package.json` ne l'ouvre aujourd'hui, il faut passer `--remote-debugging-port=9222` à la main.

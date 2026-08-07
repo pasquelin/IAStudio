@@ -94,7 +94,6 @@ open nor closed, and the rail reopens a tool in one click.
 | **Explorer** | left, second half | all | the scene outliner in 3D. The project file tree is not written yet, and the panel says so in other workspaces |
 | **Models** | right, first half | all | the Scenario model catalogue, filtered to the active workspace |
 | **Generator** | right, first half | all | the form of the selected model |
-| **Inspector** | right, second half | 3D | everything that defines the selected node — transform, geometry, material, light — and lets you play with it |
 | **Inspector** | right, second half | 3D | everything that defines the selected node, adjustable live |
 | **Timeline** | bottom | Video | the sequence being edited |
 | **Assets** | bottom | all | everything the project holds |
