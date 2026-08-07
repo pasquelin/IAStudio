@@ -119,7 +119,10 @@ export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset'
 /** Request to drop a node in the active scene, coming from the native menu. */
 export type SceneAddRequest = { kind: MeshKind | LightKind }
 
-/** What `window.studio` exposes. Every method maps to exactly one channel in `CHANNELS`. */
+/**
+ * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
+ * `CHANNELS`; every `on…` subscribes to exactly one entry of `EVENTS`.
+ */
 export type StudioBridge = {
   settings: {
     read: () => Promise<Settings>

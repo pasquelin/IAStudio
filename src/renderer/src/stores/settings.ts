@@ -39,13 +39,26 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     const bridge = getBridge()
     if (!bridge) return () => {}
 
-    const stop = bridge.settings.onChange(settings => set({ settings }))
+    let pushed = false
+    const stop = bridge.settings.onChange(settings => {
+      pushed = true
+      set({ settings })
+    })
 
-    const [settings, auth] = await Promise.all([
-      bridge.settings.read(),
-      bridge.settings.authState(),
-    ])
-    set({ settings, auth, loaded: true })
+    try {
+      const [settings, auth] = await Promise.all([
+        bridge.settings.read(),
+        bridge.settings.authState(),
+      ])
+
+      // A change landing while the read was in flight is newer than what the read answered:
+      // applying the snapshot on top of it would put the window back one version.
+      set({ auth, loaded: true, ...(pushed ? {} : { settings }) })
+    } catch {
+      // The defaults stay on screen, and the subscription still stands: throwing here would
+      // strand the listener with nobody holding the way to remove it.
+    }
+
     return stop
   },
 

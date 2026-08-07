@@ -167,4 +167,46 @@ describe('SettingRow', () => {
 
     expect(written).toEqual([])
   })
+
+  /**
+   * The main process refuses a decimal outright, and the rejected write would leave the field
+   * showing a number nothing stored — with nothing on screen to say so.
+   */
+  it('never sends a number the main process would refuse', () => {
+    const written = captureWrites()
+    render(rowFor('generation.maxRetries'))
+
+    const field = screen.getByLabelText(/Tentatives maximum/)
+    fireEvent.change(field, { target: { value: '3.5' } })
+    // Bounds are 0 to 10; the HTML attributes do not stop anyone typing past them.
+    fireEvent.change(field, { target: { value: '99' } })
+    fireEvent.change(field, { target: { value: '-1' } })
+
+    expect(written).toEqual([])
+  })
+
+  it('accepts a number inside the declared bounds', () => {
+    const written = captureWrites()
+    render(rowFor('generation.maxRetries'))
+
+    fireEvent.change(screen.getByLabelText(/Tentatives maximum/), { target: { value: '10' } })
+
+    expect(written).toEqual([['generation.maxRetries', 10]])
+  })
+
+  it('writes nothing when a path is retyped to what it already holds', async () => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, media: { ffmpegPath: '/usr/bin/ffmpeg' } },
+    })
+    const written = captureWrites()
+    render(rowFor('media.ffmpegPath'))
+
+    const field = screen.getByLabelText(/Chemin de ffmpeg/)
+    await userEvent.type(field, '  ')
+    await userEvent.tab()
+
+    expect(written).toEqual([])
+    // And the spaces do not survive on screen, where nothing else would ever clear them.
+    expect(field).toHaveValue('/usr/bin/ffmpeg')
+  })
 })

@@ -11,7 +11,9 @@ const appearance = z.object({
 })
 
 // Read from the registry, never restated: the bounds a screen offers and the ones this refuses
-// are the same numbers, so a ceiling can no longer be lowered on one side alone.
+// are the same numbers, so a ceiling can no longer be lowered on one side alone. The shape,
+// however, is still enumerated below — a leaf added to the registry and forgotten here is
+// stripped on write rather than validated.
 const jobs = boundsOf('generation.concurrentJobs')
 const retries = boundsOf('generation.maxRetries')
 

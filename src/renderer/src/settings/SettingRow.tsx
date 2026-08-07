@@ -2,9 +2,21 @@ import { mdiRestore } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { defaultAt, valueAt, type SettingValue } from '@shared/domain/settings-path'
-import { optionsOf, type SettingDescriptor } from '@shared/domain/settings-registry'
+import { boundsOf, optionsOf, type SettingDescriptor } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
 import { useSettings } from '@/stores/settings'
+
+/**
+ * What a numeric field may hand over. An emptied field is mid-edit, and a value zod would
+ * refuse — a decimal, or one outside the declared bounds — must not be sent at all: the write
+ * would reject in the main process and leave the field showing a number nothing stored.
+ */
+function writableNumber(descriptor: SettingDescriptor, value: number): boolean {
+  if (!Number.isInteger(value)) return false
+
+  const { min, max } = boundsOf(descriptor.path)
+  return value >= min && value <= max
+}
 
 /** Text settings commit on blur; a controlled input fed by a write hands back a stale word. */
 function TextControl({
@@ -36,7 +48,15 @@ function TextControl({
 
   const commit = (): void => {
     if (typed === null) return
-    onCommit(typed.trim())
+    const trimmed = typed.trim()
+
+    // Handing the field back to the stored value, so trailing spaces disappear on the way out
+    // rather than staying on screen — `stored` would not move, and nothing else clears this.
+    setTyped(null)
+
+    // Retyping what is already stored would cost a disk write and a broadcast to every
+    // window, to change nothing.
+    if (trimmed !== String(stored ?? '')) onCommit(trimmed)
   }
 
   return (
@@ -79,7 +99,14 @@ function Control({
           aria-describedby={describedBy}
           className="select select-sm w-full max-w-xs"
           value={String(value ?? '')}
-          onChange={event => onChange(event.target.value)}
+          // Handed back as the option declared it, not as the string the DOM carries: a
+          // numeric choice would otherwise be stored as `'3'` and refused by zod.
+          onChange={event =>
+            onChange(
+              optionsOf(descriptor).find(option => String(option.value) === event.target.value)
+                ?.value,
+            )
+          }
         >
           {optionsOf(descriptor).map(option => (
             <option key={String(option.value)} value={String(option.value)}>
@@ -100,10 +127,9 @@ function Control({
           max={descriptor.max}
           step={descriptor.step}
           value={typeof value === 'number' ? value : ''}
-          // An emptied field is mid-edit, not a request to store nothing.
           onChange={event => {
             const next = event.target.valueAsNumber
-            if (Number.isFinite(next)) onChange(next)
+            if (writableNumber(descriptor, next)) onChange(next)
           }}
         />
       )

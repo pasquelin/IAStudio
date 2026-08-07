@@ -20,8 +20,19 @@ function resolve(bundle: unknown, key: string): unknown {
     .reduce<unknown>((current, part) => (isRecord(current) ? current[part] : undefined), bundle)
 }
 
+/** The window's own furniture. Not in the registry, and just as unusable untranslated. */
+const CHROME_KEYS: readonly string[] = [
+  'settings.title',
+  'settings.sections',
+  'settings.search',
+  'settings.results',
+  'settings.noResult',
+  'settings.restoreDefault',
+]
+
 function keysOf(): string[] {
   return [
+    ...CHROME_KEYS,
     ...SETTING_SECTIONS.flatMap(section => [section.labelKey, section.descriptionKey]),
     ...SETTING_REGISTRY.flatMap(descriptor => [
       descriptor.titleKey,

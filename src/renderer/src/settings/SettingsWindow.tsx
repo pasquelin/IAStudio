@@ -87,9 +87,10 @@ function SearchResults({ found }: { found: readonly SettingDescriptor[] }) {
  * rather than a panel — settings are not a document, they outlive the workspace being edited,
  * and ⌘, is expected to open one.
  *
- * Changes are written as they are made rather than behind an Apply button: every setting here
- * is reversible and immediately visible, and a buffered form would add a dirty state to
- * reconcile against the other windows already replicating these settings.
+ * Changes are written as they are made rather than behind an Apply button — a text field when
+ * it is left, everything else on the spot. Every setting here is reversible and immediately
+ * visible, and a buffered form would add a dirty state to reconcile against the other windows
+ * already replicating these settings.
  */
 export function SettingsWindow() {
   const { t } = useTranslation()

@@ -53,6 +53,47 @@ describe('settings store', () => {
     expect(stop).toHaveBeenCalledOnce()
   })
 
+  /**
+   * The auth probe inside `connect` reaches the API, so the wait is a network round trip. A
+   * theme changed from the settings window during it must not be undone by the older snapshot.
+   */
+  it('keeps a change that landed while it was still loading', async () => {
+    const listeners: ((settings: Settings) => void)[] = []
+    installFakeBridge({
+      settings: {
+        onChange: callback => {
+          listeners.push(callback)
+          return () => {}
+        },
+        read: () => {
+          listeners[0]?.(COMPACT)
+          return Promise.resolve(DEFAULT_SETTINGS)
+        },
+      },
+    })
+
+    await useSettings.getState().connect()
+
+    expect(useSettings.getState().settings.appearance.density).toBe('compact')
+  })
+
+  // Throwing before handing back the unsubscribe would strand the listener for good.
+  it('still hands back the way to unsubscribe when the read fails', async () => {
+    const stop = vi.fn()
+    installFakeBridge({
+      settings: {
+        onChange: () => stop,
+        read: () => Promise.reject(new Error('no settings')),
+      },
+    })
+
+    const unsubscribe = await useSettings.getState().connect()
+    unsubscribe()
+
+    expect(stop).toHaveBeenCalledOnce()
+    expect(useSettings.getState().settings).toEqual(DEFAULT_SETTINGS)
+  })
+
   // Subscribing after the read would miss a change landing between the two.
   it('listens before it asks, so nothing slips through the gap', async () => {
     const order: string[] = []
