@@ -47,7 +47,7 @@ export const ToolWindow = memo(function ToolWindow({
   // The id comes from persisted state: an entry left over from an older version would
   // otherwise throw while rendering, with no error boundary above to catch it.
   if (!definition) return null
-  const { Content, Actions, stretchActions } = definition
+  const { Content, Actions, fillActions } = definition
 
   return (
     // Zone-wide, header included: a panel lays out differently in a narrow column and in a
@@ -65,7 +65,7 @@ export const ToolWindow = memo(function ToolWindow({
       >
         <PanelHeader
           title={title}
-          stretchActions={stretchActions === true && isHorizontal(zone)}
+          fillActions={fillActions === true && isHorizontal(zone)}
           trailing={
             <>
               {Actions !== undefined && <Separator />}

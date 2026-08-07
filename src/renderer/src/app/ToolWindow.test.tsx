@@ -36,6 +36,14 @@ describe('a panel lying in a band', () => {
     expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
   })
 
+  // A bar given `flex-1` weighs nothing when the row runs short, so every missing pixel is
+  // taken from whatever else can shrink. The panel's name is not what should pay for it.
+  it('keeps the panel name off the table when the row runs short', () => {
+    const { container } = renderShelf('bottom')
+
+    expect(container.querySelector('header > span')?.className).toContain('shrink-0')
+  })
+
   // The room is given to the panel that asked for it, not to the zone: the montage shares the
   // band and would otherwise see its own two buttons drift away from the close button.
   it('spreads the actions of the panel that declared it, and no other', () => {

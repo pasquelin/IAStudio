@@ -6,5 +6,5 @@ import { AssetBrowserActions } from './AssetBrowserActions'
 export const definition: ToolDefinition = {
   Content: AssetBrowser,
   Actions: AssetBrowserActions,
-  stretchActions: true,
+  fillActions: true,
 }

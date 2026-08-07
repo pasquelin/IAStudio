@@ -109,7 +109,14 @@ export function CollectionBar({
   const inline = layout !== 'stacked'
 
   const search = (
-    <label className={cn('relative flex items-center', inline ? 'w-56 shrink-0' : 'w-full')}>
+    <label
+      className={cn(
+        'relative flex items-center',
+        // In a header the row is shared with the panel's name and its way out, so the field is
+        // what gives ground — a narrow search box still searches, a clipped one is unreachable.
+        layout === 'header' ? 'w-56 min-w-16 shrink' : inline ? 'w-56 shrink-0' : 'w-full',
+      )}
+    >
       <UiIcon
         path={mdiMagnify}
         size={14}
