@@ -1,0 +1,48 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { installFakeBridge } from '@/services/fake-bridge'
+import { LicencesWindow } from './LicencesWindow'
+
+describe('LicencesWindow', () => {
+  beforeEach(() => {
+    installFakeBridge()
+  })
+
+  it('names every component the studio ships', () => {
+    render(<LicencesWindow />)
+
+    expect(screen.getByRole('button', { name: /FFmpeg/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /three/ })).toBeInTheDocument()
+  })
+
+  // A notice that needs a working network to be read is not a notice: the whole text is here.
+  it('unfolds the full text of a licence, not a link to it', async () => {
+    render(<LicencesWindow />)
+    const entry = screen.getByRole('button', { name: /three/ })
+
+    expect(entry).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(entry)
+
+    expect(entry).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText(/Copyright/)).toBeInTheDocument()
+  })
+
+  it('shows one at a time, so the list stays readable', async () => {
+    render(<LicencesWindow />)
+
+    await userEvent.click(screen.getByRole('button', { name: /three/ }))
+    await userEvent.click(screen.getByRole('button', { name: /FFmpeg/ }))
+
+    expect(screen.getByRole('button', { name: /three/ })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  // FFmpeg is the one whose licence asks for more than attribution: whoever receives the binary
+  // must be able to reach the sources it was built from.
+  it('offers the sources of the copyleft component', async () => {
+    render(<LicencesWindow />)
+    await userEvent.click(screen.getByRole('button', { name: /FFmpeg/ }))
+
+    expect(screen.getByText(/ffmpeg\.org\/download/)).toBeInTheDocument()
+  })
+})

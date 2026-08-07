@@ -5,6 +5,7 @@ import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   openSettings: () => {},
+  openLicences: () => {},
   toggleFullScreen: () => {},
   openTool: () => {},
   runCommand: () => {},
@@ -49,8 +50,9 @@ describe('menuTemplate', () => {
     expect(labels(menuTemplate(options()))[0]).toBe('Scenario Studio')
   })
 
-  it('has no Help menu on macOS, where About lives in the application menu', () => {
-    expect(labels(menuTemplate(options()))).not.toContain('Aide')
+  it('leaves About to the application menu on macOS, where it belongs', () => {
+    const entries = submenuOf(menuTemplate(options()), 'Aide')
+    expect(entries.map(entry => entry.role)).not.toContain('about')
   })
 
   it('adds a Help menu elsewhere, the only place About can be reached', () => {
@@ -79,6 +81,22 @@ describe('menuTemplate', () => {
     const help = menuTemplate(options({ isMac: false })).find(item => item.label === 'Aide')
     const entries = Array.isArray(help?.submenu) ? help.submenu : []
     expect(entries[0]?.role).toBe('about')
+  })
+
+  // Every shipped licence asks for its notice to travel with the binary; Help is where an
+  // application keeps it, on all three platforms.
+  it('offers the licences under Help, macOS included', () => {
+    for (const isMac of [true, false]) {
+      expect(labels(submenuOf(menuTemplate(options({ isMac })), 'Aide'))).toContain('Licences')
+    }
+  })
+
+  it('opens them through the main process, which owns the window', () => {
+    const openLicences = vi.fn()
+    const entries = submenuOf(menuTemplate(options({ actions: actions({ openLicences }) })), 'Aide')
+
+    activate(entries.find(entry => entry.label === 'Licences'))
+    expect(openLicences).toHaveBeenCalledOnce()
   })
 
   it('lists only the panels the section has', () => {

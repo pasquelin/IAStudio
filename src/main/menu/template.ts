@@ -23,6 +23,7 @@ import type { SceneAddRequest, ToolRequest } from '@shared/ipc'
  */
 export type MenuActions = {
   openSettings: () => void
+  openLicences: () => void
   toggleFullScreen: () => void
   openTool: (request: ToolRequest) => void
   runCommand: (command: CommandId) => void
@@ -127,11 +128,19 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     ? []
     : [settingsItem, { type: 'separator' }]
 
-  // Windows and Linux have no application menu to host About; Electron renders the panel
-  // itself on both, from `setAboutPanelOptions`, so the role is all that is needed.
-  const helpMenu: MenuItemConstructorOptions[] = isMac
-    ? []
-    : [{ label: t.menu.help, submenu: [{ role: 'about', label: aboutLabel }] }]
+  const licencesItem: MenuItemConstructorOptions = {
+    label: t.menu.licences,
+    click: () => actions.openLicences(),
+  }
+
+  // On macOS About lives in the application menu; Help exists here for the licences alone,
+  // which is where every macOS application keeps its notice.
+  const helpMenu: MenuItemConstructorOptions[] = [
+    {
+      label: t.menu.help,
+      submenu: isMac ? [licencesItem] : [{ role: 'about', label: aboutLabel }, licencesItem],
+    },
+  ]
 
   const entryItem =
     <K extends MeshKind | LightKind>(labels: Record<K, string>) =>
