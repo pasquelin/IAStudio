@@ -304,8 +304,9 @@ whole width, so the timeline and the asset shelf take turns there rather than sh
 | **Blade** | cut a clip where you click |
 | **Hand** | pan the timeline |
 
-Transport controls play, pause and rewind. Only one player is ever active at a time, so scrubbing
-stays smooth instead of fighting a second decoder.
+Transport controls play, pause and rewind — `Space` toggles between the first two without
+leaving the keyboard. Only one player is ever active at a time, so scrubbing stays smooth
+instead of fighting a second decoder.
 
 Drop an asset from the shelf onto the timeline to make it a clip.
 
@@ -410,6 +411,12 @@ folders.
 | `Delete` | delete the selection |
 | `W` `A` `S` `D` `Q` `E` | fly |
 | `Shift` | boost while flying |
+
+### Video
+
+| Shortcut | Action |
+|---|---|
+| `Space` | play / pause the sequence |
 
 Shortcuts are stored as physical key positions and can be rebound.
 

@@ -310,8 +310,9 @@ partager.
 | **Lame** | couper un clip là où vous cliquez |
 | **Main** | faire défiler la timeline |
 
-Les contrôles de transport lisent, mettent en pause et rembobinent. Un seul lecteur est actif à
-la fois, ce qui garde le scrubbing fluide au lieu de le faire lutter contre un second décodeur.
+Les contrôles de transport lisent, mettent en pause et rembobinent — `Espace` bascule entre les
+deux premiers sans quitter le clavier. Un seul lecteur est actif à la fois, ce qui garde le
+scrubbing fluide au lieu de le faire lutter contre un second décodeur.
 
 Déposez un asset de l'étagère sur la timeline pour en faire un clip.
 
@@ -416,6 +417,12 @@ Tout y est lisible sauf les identifiants, qui sont chiffrés. Supprimer le fichi
 | `Suppr` | supprimer la sélection |
 | `W` `A` `S` `D` `Q` `E` | voler |
 | `Shift` | accélérer en vol |
+
+### Vidéo
+
+| Raccourci | Action |
+|---|---|
+| `Espace` | lire / mettre en pause la séquence |
 
 Les raccourcis sont retenus comme des positions physiques de touche, et sont réassignables.
 
