@@ -9,7 +9,7 @@ import {
   type MeshKind,
   type SceneEntry,
 } from '@shared/domain/scene'
-import { TOOL_PLACEMENTS } from '@shared/domain/tool'
+import { TOOL_PLACEMENTS, type ToolPlacement } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
 import type { MenuCommand, SceneAddRequest, ToolRequest } from '@shared/ipc'
@@ -48,6 +48,13 @@ export type MenuOptions = {
 function developerItems(isPackaged: boolean): MenuItemConstructorOptions[] {
   if (isPackaged) return []
   return [{ type: 'separator' }, { role: 'toggleDevTools' }, { role: 'reload' }]
+}
+
+/** One placement per tool: a tool declaring several must still appear once in the menu. */
+function firstPlacements(): ToolPlacement[] {
+  return TOOL_PLACEMENTS.filter(
+    (placement, index) => TOOL_PLACEMENTS.findIndex(other => other.id === placement.id) === index,
+  )
 }
 
 /**
@@ -149,7 +156,11 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       submenu: [
         {
           label: t.menu.tools,
-          submenu: TOOL_PLACEMENTS.map(placement => ({
+          // One entry per tool, not per placement: a tool that sits in different zones
+          // depending on the workspace would otherwise appear twice under the same name. The
+          // zone sent here is only a starting point — the window resolves it against the
+          // workspace it is actually showing.
+          submenu: firstPlacements().map(placement => ({
             label: t.panels[placement.id],
             click: () => actions.openTool({ zone: placement.zone, tool: placement.id }),
           })),

@@ -1,8 +1,7 @@
 import { mdiCubeOutline, mdiWeatherSunny } from '@mdi/js'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
-import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { SphericalAngles } from '@shared/domain/angles'
 import {
   createSkyboxContent,
@@ -14,11 +13,10 @@ import {
 } from '@shared/domain/skybox'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
-import { setAdjustment, setSunAngles } from '@/engines/skybox/commands'
+import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { cn } from '@/helpers/cn'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
-import { AdjustmentSliders } from './AdjustmentSliders'
 
 /** i18n key of a view mode — never the label itself, as `SceneEntry` does for primitives. */
 const VIEW_LABELS: Record<SkyboxView, string> = {
@@ -80,72 +78,52 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     engine.current?.setProbesVisible(probes)
   }, [probes])
 
-  const store = useSkyboxes.getState.bind(useSkyboxes)
-
-  const onAdjust = useCallback(
-    (key: keyof AdjustmentStack, value: number) =>
-      store().runCommand(documentId, setAdjustment(key, value)),
-    [documentId, store],
-  )
-
   return (
-    <div className="flex size-full flex-col">
-      <div className="relative min-h-0 flex-1">
-        {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
-        <div ref={host} className="absolute inset-0" />
+    <div className="relative size-full">
+      {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
+      <div ref={host} className="absolute inset-0" />
 
-        {!content.source && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <EmptyState icon={mdiCubeOutline} message={t('skybox.noSource')} />
-          </div>
-        )}
-
-        <div className="bg-base/80 absolute top-2 left-2 flex items-center gap-1 rounded-(--radius-sc-md) p-1">
-          {SKYBOX_VIEWS.map(candidate => (
-            <button
-              key={candidate}
-              type="button"
-              onClick={() => setView(candidate)}
-              aria-pressed={view === candidate}
-              className={cn(
-                'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
-                view === candidate ? 'bg-elevated text-text' : 'text-muted bg-transparent',
-              )}
-            >
-              {t(VIEW_LABELS[candidate])}
-            </button>
-          ))}
-
-          <ToolButton
-            icon={mdiWeatherSunny}
-            label={t('skybox.testObjects')}
-            active={probes}
-            onClick={() => setProbes(current => !current)}
-          />
-
-          <label className="text-muted flex items-center gap-1 pl-2 text-xs">
-            {t('skybox.fieldOfView')}
-            <input
-              type="range"
-              min={MIN_FIELD_OF_VIEW}
-              max={MAX_FIELD_OF_VIEW}
-              step={1}
-              value={fieldOfView}
-              onChange={event => setFieldOfView(Number(event.target.value))}
-              className="accent-accent w-24"
-            />
-          </label>
+      {!content.source && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <EmptyState icon={mdiCubeOutline} message={t('skybox.noSource')} />
         </div>
-      </div>
+      )}
 
-      {/* Under the viewport, not beside it: grading is done while looking at the result. */}
-      <div className="border-border bg-base flex shrink-0 flex-col gap-1 border-t px-2 py-1">
-        <AdjustmentSliders
-          adjustments={content.adjustments}
-          onChange={onAdjust}
-          onGestureStart={() => store().beginGesture(documentId)}
-          onGestureEnd={() => store().endGesture(documentId)}
+      <div className="bg-base/80 absolute top-2 left-2 flex items-center gap-1 rounded-(--radius-sc-md) p-1">
+        {SKYBOX_VIEWS.map(candidate => (
+          <button
+            key={candidate}
+            type="button"
+            onClick={() => setView(candidate)}
+            aria-pressed={view === candidate}
+            className={cn(
+              'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
+              view === candidate ? 'bg-elevated text-text' : 'text-muted bg-transparent',
+            )}
+          >
+            {t(VIEW_LABELS[candidate])}
+          </button>
+        ))}
+
+        <ToolButton
+          icon={mdiWeatherSunny}
+          label={t('skybox.testObjects')}
+          active={probes}
+          onClick={() => setProbes(current => !current)}
         />
+
+        <label className="text-muted flex items-center gap-1 pl-2 text-xs">
+          {t('skybox.fieldOfView')}
+          <input
+            type="range"
+            min={MIN_FIELD_OF_VIEW}
+            max={MAX_FIELD_OF_VIEW}
+            step={1}
+            value={fieldOfView}
+            onChange={event => setFieldOfView(Number(event.target.value))}
+            className="accent-accent w-24"
+          />
+        </label>
       </div>
     </div>
   )

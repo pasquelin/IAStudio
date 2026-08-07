@@ -10,7 +10,7 @@ import {
   mdiWeatherPartlyCloudy,
 } from '@mdi/js'
 import {
-  placementOf,
+  placementIn,
   servesWorkspace,
   TOOL_PLACEMENTS,
   type ToolId,
@@ -74,8 +74,12 @@ export function toolsInZone(zone: ToolZone, workspace: WorkspaceId): Tool[] {
 }
 
 export function toolServes(id: ToolId, workspace: WorkspaceId): boolean {
-  const placement = placementOf(id)
-  return placement !== null && servesWorkspace(placement, workspace)
+  return placementIn(id, workspace) !== null
+}
+
+/** The zone a tool occupies here — the shelf does not live in the same one everywhere. */
+export function toolZoneIn(id: ToolId, workspace: WorkspaceId): ToolZone | null {
+  return placementIn(id, workspace)?.zone ?? null
 }
 
 /** i18n key of a tool's title — never the displayed text. */

@@ -30,6 +30,15 @@ export type ToolId =
  */
 export type ToolSlot = 'primary' | 'secondary'
 
+/**
+ * Where a tool sits. A tool may declare **more than one**, for disjoint sets of workspaces:
+ * the asset shelf belongs in the bottom strip nearly everywhere, and beside the montage in
+ * Video and Audio, where dragging a take onto a track is the gesture the space is built around.
+ *
+ * Two invariants hold across the placements of one tool, and `tool.test.ts` enforces them:
+ * their workspaces never overlap, and they share a slot — a tool that changed half as well as
+ * zone would land in a different row of the rail depending on where you came from.
+ */
 export type ToolPlacement = {
   id: ToolId
   zone: ToolZone
@@ -55,25 +64,50 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // model is chosen and a prompt written, and in an editor the inspector is never the panel
   // you have to switch away to.
   { id: 'inspector', zone: 'right', slot: 'secondary' },
-  // Same half as the inspector, and for the same reason: a sky is graded while it is looked
-  // at. It takes turns with the inspector rather than with the generator, because reading the
-  // prompt that produced a sky and grading it are two different moments.
-  { id: 'skybox', zone: 'right', slot: 'secondary', workspaces: ['skyboxes'] },
-  // The shelf sits in the side column rather than in the bottom strip, so that it and the
-  // montage are on screen together: dragging a take onto a track is the gesture the video
-  // space is built around, and two panels taking turns cannot be dragged between.
-  { id: 'assets', zone: 'right', slot: 'primary' },
+  // The generator's half, not the inspector's. The inspector serves every space — a node, an
+  // asset, a clip — so putting the sky controls beside it would make the two chase each other
+  // out of the same half. Here they take turns with choosing a model, which is the other
+  // moment of the same work.
+  { id: 'skybox', zone: 'right', slot: 'primary', workspaces: ['skyboxes'] },
+  // The shelf belongs in the bottom strip: it is a shelf, read across the width, and the side
+  // column is where the things that act on the document live.
+  {
+    id: 'assets',
+    zone: 'bottom',
+    slot: 'primary',
+    workspaces: ['image', '3d', 'textures', 'skyboxes'],
+  },
+  // Except where a take is dragged onto a track. There the shelf and the montage have to be on
+  // screen together, and the montage already owns the strip — two panels taking turns in one
+  // half cannot be dragged between.
+  { id: 'assets', zone: 'right', slot: 'primary', workspaces: ['video', 'audio'] },
   // The strip is the montage's, across the whole width — that is how a montage is read.
   { id: 'timeline', zone: 'bottom', slot: 'primary', workspaces: ['video'] },
   { id: 'jobs', zone: 'bottom', slot: 'primary' },
 ]
 
 /**
+ * Any placement of a tool, for the questions a workspace does not change — its slot, and
+ * whether the id is one this version still knows.
+ *
  * Takes `unknown` on purpose: it doubles as the guard for ids read back from persisted state,
  * where an entry left over from an older version must be dropped rather than trusted.
  */
 export function placementOf(id: unknown): ToolPlacement | null {
   return TOOL_PLACEMENTS.find(placement => placement.id === id) ?? null
+}
+
+export function placementsOf(id: unknown): ToolPlacement[] {
+  return TOOL_PLACEMENTS.filter(placement => placement.id === id)
+}
+
+/**
+ * Where a tool sits **in this workspace**, or `null` if it does not serve it. This is what a
+ * caller wants whenever it is about to open one: `placementOf` would answer with whichever
+ * placement was declared first, which for the asset shelf is the wrong zone half the time.
+ */
+export function placementIn(id: unknown, workspace: WorkspaceId): ToolPlacement | null {
+  return placementsOf(id).find(placement => servesWorkspace(placement, workspace)) ?? null
 }
 
 /** A tool with no `workspaces` belongs everywhere; one with a list belongs only to that list. */
