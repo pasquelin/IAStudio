@@ -6,9 +6,9 @@ import {
 import type { WorkspaceId } from '@shared/domain/workspace'
 import i18next from 'i18next'
 import { create as createStore } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { isRecord } from '@shared/guards'
+import { getBridge } from '@/services/bridge'
 import { newId } from '@/helpers/ids'
+import { useLayouts } from './layouts'
 
 type DocumentsState = {
   documents: Record<string, DocumentDescriptor>
@@ -17,12 +17,12 @@ type DocumentsState = {
    * to know which document they are inspecting — a layer stack has to follow the active tab.
    */
   activeId: string | null
+  /** Reads the open project's folder and keeps the documents a layout still shows. */
+  refresh: () => Promise<void>
   /** `null` when the workspace has no editable document kind yet. */
-  create: (workspace: WorkspaceId) => DocumentDescriptor | null
+  create: (workspace: WorkspaceId) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
   close: (id: string) => void
-  /** Drops every document not in `ids`. Called once at startup — see `pruneDocuments`. */
-  keepOnly: (ids: ReadonlySet<string>) => void
 }
 
 export type DocumentsSlice = Pick<DocumentsState, 'documents' | 'activeId'>
@@ -63,82 +63,96 @@ export function documentsIn(
 }
 
 /**
- * Drops the documents no layout shows any more, once at startup.
+ * The documents some layout still shows, across every workspace.
  *
- * Closing a tab cannot do this itself: switching workspace unmounts Dockview, which removes
- * every panel of the workspace being left — reacting to that would delete the documents the
- * user is coming back to. The persisted layouts are the reliable record of what is open.
+ * A tab cannot say this for itself: switching workspace unmounts Dockview, which removes every
+ * panel of the workspace being left — reading that would drop the documents the user is coming
+ * back to. The persisted layouts are the reliable record of what is open.
  */
-export function pruneDocuments(layouts: Record<string, { panels?: object } | undefined>): void {
+export function panelIds(layouts: Record<string, { panels?: object } | undefined>): Set<string> {
   const shown = new Set<string>()
   for (const layout of Object.values(layouts)) {
     for (const id of Object.keys(layout?.panels ?? {})) shown.add(id)
   }
-  useDocuments.getState().keepOnly(shown)
+  return shown
 }
 
 /**
  * The open documents.
  *
- * Persisted, and it has to be: `stores/layouts.ts` already persists the Dockview layout, so a
- * reload brings the tabs back. Keeping the descriptors in memory only made those tabs come
- * back empty — the tab was there, the page was not.
+ * Not persisted, and it must not be: which documents exist belongs to the project folder, not
+ * to the application. Kept in `localStorage`, the tabs of one project reappeared in the next —
+ * pointing at files that are not there, or worse, at a file of the same id in another project.
  *
- * What is persisted is the descriptor, not the content: the project folder still holds no
- * file. Reopening the app therefore restores a tab and a blank document, never stale pixels.
+ * So the folder says which documents exist and what they are called; the persisted layout says
+ * which of them are open. Loading is `load` plus `pruneDocuments`, in that order.
  */
-export const useDocuments = createStore<DocumentsState>()(
-  persist(
-    (set, get) => ({
-      documents: {},
+export const useDocuments = createStore<DocumentsState>()((set, get) => ({
+  documents: {},
+  activeId: null,
+
+  // Guarded: Dockview announces the active panel again on each workspace switch — usually the
+  // same value, and every `set` wakes every subscriber.
+  activate: id => {
+    if (get().activeId !== id) set({ activeId: id })
+  },
+
+  refresh: async () => {
+    const mine = ++generation
+    let listed: DocumentDescriptor[] = []
+    try {
+      listed = (await getBridge()?.documents.list()) ?? []
+    } catch {
+      // No project open, or a folder that went away: an empty centre is the honest answer.
+    }
+
+    // A second project opened while the first was still listing: the last answer to arrive is
+    // not necessarily the one that was asked for last.
+    if (mine !== generation) return
+
+    const shown = panelIds(useLayouts.getState().layouts)
+    set({
+      // One `set` for both halves: the folder says which documents exist, the layout says which
+      // are open, and between two writes every tab would paint and unpaint.
+      documents: Object.fromEntries(
+        listed.filter(document => shown.has(document.id)).map(document => [document.id, document]),
+      ),
+      // Nothing is in front until Dockview says so, and the previous project's tab certainly is
+      // not.
       activeId: null,
+    })
+  },
 
-      // Guarded: `persist` writes to localStorage on every `set`, and Dockview announces the
-      // active panel again on each workspace switch — usually the same value.
-      activate: id => {
-        if (get().activeId !== id) set({ activeId: id })
-      },
+  create: async workspace => {
+    const kind = kindForWorkspace(workspace)
+    if (!kind) return null
 
-      create: workspace => {
-        const kind = kindForWorkspace(workspace)
-        if (!kind) return null
+    const document: DocumentDescriptor = {
+      id: newId(),
+      kind,
+      workspace,
+      title: i18next.t('documents.untitled', { n: documentsIn(get(), workspace).length + 1 }),
+    }
 
-        const document: DocumentDescriptor = {
-          id: newId(),
-          kind,
-          workspace,
-          title: i18next.t('documents.untitled', { n: documentsIn(get(), workspace).length + 1 }),
-        }
+    // Written before it is announced, and empty: the project folder is what says a document
+    // exists, so a tab opened and not yet typed in must survive a reload like any other. A
+    // write that fails opens no tab rather than one the next launch would silently drop.
+    await getBridge()?.documents.write(document.id, kind, {
+      title: document.title,
+      content: undefined,
+    })
 
-        set(state => ({ documents: { ...state.documents, [document.id]: document } }))
-        return document
-      },
+    set(state => ({ documents: { ...state.documents, [document.id]: document } }))
+    return document
+  },
 
-      close: id =>
-        set(state => {
-          const remaining = { ...state.documents }
-          delete remaining[id]
-          return { documents: remaining, activeId: state.activeId === id ? null : state.activeId }
-        }),
-
-      keepOnly: ids =>
-        set(state => ({
-          documents: Object.fromEntries(
-            Object.entries(state.documents).filter(([id]) => ids.has(id)),
-          ),
-          // Same rule as `close`: a document that is gone cannot be the one in front.
-          activeId: state.activeId && ids.has(state.activeId) ? state.activeId : null,
-        })),
+  close: id =>
+    set(state => {
+      const remaining = { ...state.documents }
+      delete remaining[id]
+      return { documents: remaining, activeId: state.activeId === id ? null : state.activeId }
     }),
-    {
-      name: 'scenario-studio:documents',
-      version: 1,
-      // A version bump must not silently drop what the user has open. A descriptor whose `kind`
-      // no longer exists is handled at render time.
-      migrate: persisted => (isRecord(persisted) ? persisted : undefined),
-      // Which tab is in front is session state, like `focusedZone`: Dockview announces it on
-      // mount, and restoring a stale id would point the layer stack at a tab nobody opened.
-      partialize: state => ({ documents: state.documents }),
-    },
-  ),
-)
+}))
+
+/** Bumped per refresh, so a listing that comes back late cannot install itself. */
+let generation = 0

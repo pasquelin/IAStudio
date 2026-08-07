@@ -1,4 +1,4 @@
-import type { WorkspaceId } from './workspace'
+import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
  * Document registry, shared by both processes: the native menu will need it for
@@ -40,6 +40,18 @@ export function kindForWorkspace(workspace: WorkspaceId): DocumentKind | null {
   return KIND_BY_WORKSPACE[workspace]
 }
 
+/**
+ * The workspace a document belongs to. Searched rather than tabulated: a second table would be
+ * free to disagree with the first, and a document filed under a workspace that does not open it
+ * is a tab nothing can render.
+ *
+ * `null` while a kind exists without an editor — the same half-open state `kindForWorkspace`
+ * describes, read the other way round.
+ */
+export function workspaceForKind(kind: DocumentKind): WorkspaceId | null {
+  return WORKSPACE_IDS.find(workspace => KIND_BY_WORKSPACE[workspace] === kind) ?? null
+}
+
 export const DOCUMENT_VERSION = 1
 
 export const DOCUMENTS_FOLDER = 'documents'
@@ -63,6 +75,18 @@ export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
 /** Where a document lives inside its project. Relative: a project folder can be moved. */
 export function documentPath(id: string, kind: DocumentKind): string {
   return `${DOCUMENTS_FOLDER}/${id}${EXTENSION_BY_KIND[kind]}`
+}
+
+/**
+ * What a file name says the document is, read the other way round from `EXTENSION_BY_KIND`.
+ * Listing a project folder needs it: the folder is what says which documents exist, and the
+ * extension is all a directory entry carries.
+ *
+ * `null` for anything else in there — a stray note, an export, a staging copy.
+ */
+export function kindForExtension(extension: string): DocumentKind | null {
+  const lowered = extension.toLowerCase()
+  return DOCUMENT_KINDS.find(kind => EXTENSION_BY_KIND[kind] === lowered) ?? null
 }
 
 /**

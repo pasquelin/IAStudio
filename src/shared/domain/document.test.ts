@@ -4,7 +4,9 @@ import {
   documentPath,
   EXTENSION_BY_KIND,
   isDocumentKind,
+  kindForExtension,
   kindForWorkspace,
+  workspaceForKind,
 } from './document'
 import { WORKSPACE_IDS } from './workspace'
 
@@ -35,6 +37,47 @@ describe('kindForWorkspace', () => {
 
   it('answers for every known workspace', () => {
     for (const id of WORKSPACE_IDS) expect(() => kindForWorkspace(id)).not.toThrow()
+  })
+})
+
+describe('workspaceForKind', () => {
+  it('sends every kind back to the workspace that opens it', () => {
+    expect(workspaceForKind('scene')).toBe('3d')
+    expect(workspaceForKind('image')).toBe('image')
+    expect(workspaceForKind('sequence')).toBe('video')
+    expect(workspaceForKind('audio')).toBe('audio')
+    expect(workspaceForKind('skybox')).toBe('skyboxes')
+  })
+
+  // A document filed under a workspace that does not open it is a tab nothing can render, and
+  // listing a project folder builds one descriptor per file from this answer alone.
+  it('agrees with kindForWorkspace on every kind', () => {
+    for (const kind of DOCUMENT_KINDS) {
+      const workspace = workspaceForKind(kind)
+      expect(workspace).not.toBeNull()
+      if (workspace) expect(kindForWorkspace(workspace)).toBe(kind)
+    }
+  })
+})
+
+describe('kindForExtension', () => {
+  it('reads back the extension every kind is written under', () => {
+    for (const kind of DOCUMENT_KINDS) {
+      expect(kindForExtension(EXTENSION_BY_KIND[kind])).toBe(kind)
+    }
+  })
+
+  // A project folder is the user's own: it holds notes, exports, and whatever else was dropped
+  // in there. Only what this build wrote is a document.
+  it('answers null for anything else in the folder', () => {
+    expect(kindForExtension('.txt')).toBeNull()
+    expect(kindForExtension('.tmp')).toBeNull()
+    expect(kindForExtension('')).toBeNull()
+    expect(kindForExtension('.tex')).toBeNull()
+  })
+
+  it('reads an extension a hand or a file system put in capitals', () => {
+    expect(kindForExtension('.SCENE')).toBe('scene')
   })
 })
 

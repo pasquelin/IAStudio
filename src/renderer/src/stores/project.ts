@@ -4,6 +4,8 @@ import type { Project } from '@shared/domain/project'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
 import { useAssets } from './assets'
+import { useDocuments } from './documents'
+import { useLayouts } from './layouts'
 
 type ProjectState = {
   project: Project | null
@@ -12,6 +14,15 @@ type ProjectState = {
   connect: () => Promise<() => void>
   openPicked: () => Promise<void>
   createPicked: () => Promise<void>
+}
+
+/**
+ * What follows the project, in order: the arrangement first, since dropping the layouts of
+ * another project is what tells the documents which tabs are still open.
+ */
+async function followProject(project: Project | null): Promise<void> {
+  useLayouts.getState().adopt(project?.path ?? null)
+  await Promise.all([useAssets.getState().refresh(), useDocuments.getState().refresh()])
 }
 
 /**
@@ -25,15 +36,16 @@ export const useProject = create<ProjectState>()(set => ({
     const bridge = getBridge()
     if (!bridge) return () => {}
 
+    // Another project means another catalogue, another folder of documents, and another
+    // arrangement: nothing of the previous one may be left showing.
     const stop = bridge.project.onChange(project => {
       set({ project })
-      // Another project means another catalogue: the browser must not keep showing the
-      // previous one's assets.
-      void useAssets.getState().refresh()
+      void followProject(project)
     })
 
-    set({ project: await bridge.project.current() })
-    await useAssets.getState().refresh()
+    const current = await bridge.project.current()
+    set({ project: current })
+    await followProject(current)
     return stop
   },
 

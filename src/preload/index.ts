@@ -57,6 +57,7 @@ const bridge: StudioBridge = {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
   },
   documents: {
+    list: () => ipcRenderer.invoke(CHANNELS.documentList),
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
     write: (id, kind, file) => ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file),
     remove: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRemove, id, kind),

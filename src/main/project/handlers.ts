@@ -106,6 +106,8 @@ export function registerProjectHandlers({
     )
   })
 
+  handle(CHANNELS.documentList, () => documents.list())
+
   handle(CHANNELS.documentRead, (_event, id, kind) =>
     documents.read(parseDocumentId(id), parseDocumentKind(kind)),
   )

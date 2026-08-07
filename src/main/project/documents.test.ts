@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION } from '@shared/domain/document'
-import { createDocumentFiles, type DocumentFiles } from './documents'
+import { createDocumentFiles, orphanStagingCopies, type DocumentFiles } from './documents'
 
 const NOW = '2026-08-07T10:00:00.000Z'
 
@@ -135,5 +135,90 @@ describe('createDocumentFiles', () => {
     await documents.write('doc-1', 'scene', { title: 'After', content: 1 })
 
     expect((await documents.read('doc-1', 'scene'))?.title).toBe('After')
+  })
+
+  describe('list', () => {
+    // The project folder is what says which documents exist: a registry kept beside it would
+    // follow the application instead, and open the previous project's tabs in the next one.
+    it('answers with what the folder holds, kind and workspace included', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: null })
+      await documents.write('doc-2', 'image', { title: 'Poster', content: null })
+
+      expect(await documents.list()).toEqual(
+        expect.arrayContaining([
+          { id: 'doc-1', kind: 'scene', title: 'Level', workspace: '3d' },
+          { id: 'doc-2', kind: 'image', title: 'Poster', workspace: 'image' },
+        ]),
+      )
+    })
+
+    it('answers empty for a project that has never saved anything', async () => {
+      expect(await documents.list()).toEqual([])
+    })
+
+    it('ignores what is not a document of a kind this build knows', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: null })
+      await writeFile(join(root, 'documents', 'notes.txt'), 'a note', 'utf8')
+      await writeFile(join(root, 'documents', 'old.blend'), 'x', 'utf8')
+
+      expect((await documents.list()).map(entry => entry.id)).toEqual(['doc-1'])
+    })
+
+    // One document truncated by a crash must not cost the user the listing of all the others.
+    it('skips a document it cannot read and lists the rest', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: null })
+      await writeFile(join(root, 'documents', 'broken.scene'), '{ not json', 'utf8')
+
+      expect((await documents.list()).map(entry => entry.id)).toEqual(['doc-1'])
+    })
+
+    // The folder's word beats the file's, exactly as `read` has it.
+    it('skips a document whose extension disagrees with what it holds', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: null })
+      const written = await readFile(join(root, 'documents', 'doc-1.scene'), 'utf8')
+      await writeFile(join(root, 'documents', 'doc-2.img'), written, 'utf8')
+
+      expect((await documents.list()).map(entry => entry.id)).toEqual(['doc-1'])
+    })
+
+    // A crash between the write and the rename leaves a staging copy behind for good. Nothing
+    // else ever looks at that folder, so the listing is where it gets cleaned up.
+    it('sweeps a staging copy no write is holding', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: null })
+      await writeFile(
+        join(root, 'documents', 'doc-9.scene.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp'),
+        '{}',
+        'utf8',
+      )
+
+      await documents.list()
+      expect(await readdir(join(root, 'documents'))).toEqual(['doc-1.scene'])
+    })
+  })
+})
+
+describe('orphanStagingCopies', () => {
+  const first = 'doc-1.scene.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp'
+  const second = 'doc-2.img.7c9e0b21-4a5d-4f38-9b62-1d8e3f04a5c7.tmp'
+
+  it('picks the staging copies nobody is holding', () => {
+    expect(orphanStagingCopies([first, 'doc-1.scene', second, 'notes.txt'], new Set())).toEqual([
+      first,
+      second,
+    ])
+  })
+
+  // A save in flight in another window is not litter: swept, its rename would fail and the
+  // document the user was saving would be lost with it.
+  it('leaves alone a copy a write is holding', () => {
+    expect(orphanStagingCopies([first, second], new Set([first]))).toEqual([second])
+  })
+
+  // The project folder is the user's own, and a `.tmp` they left in there is not ours to
+  // delete: only what this module writes carries a uuid between the name and the suffix.
+  it('never picks a temporary file the studio did not write', () => {
+    const entries = ['render.tmp', 'notes.tmp', 'doc-1.scene', 'tmp.img', 'a.tmp.scene']
+
+    expect(orphanStagingCopies(entries, new Set())).toEqual([])
   })
 })

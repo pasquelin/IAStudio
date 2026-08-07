@@ -86,7 +86,7 @@ describe('DocumentArea', () => {
     const { DocumentArea, openDocument } = await import('./DocumentArea')
     render(<DocumentArea />)
 
-    const created = useDocuments.getState().create('3d')
+    const created = await useDocuments.getState().create('3d')
     if (!created) throw new Error('expected a document')
     openDocument(created)
 

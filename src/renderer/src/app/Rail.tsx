@@ -70,8 +70,10 @@ function NewDocumentButton() {
       tooltip={TIP_RIGHT}
       disabled={kindForWorkspace(workspace) === null}
       onClick={() => {
-        const created = useDocuments.getState().create(workspace)
-        if (created) openDocument(created)
+        void useDocuments
+          .getState()
+          .create(workspace)
+          .then(created => created && openDocument(created))
       }}
       // Filled, unlike every tool icon around it: this one acts, the others only switch what is
       // shown. A grey plus among grey glyphs is a plus nobody finds.
