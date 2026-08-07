@@ -379,6 +379,7 @@
     "connected": "Connecté",
     "signOut": "Se déconnecter",
     "checking": "Vérification…",
+    "configure": "Configurer les identifiants",
     "explanation": "Vos identifiants sont chiffrés par le trousseau du système et ne quittent jamais votre machine."
   },
   "errors": {

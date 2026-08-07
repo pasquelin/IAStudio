@@ -13,6 +13,7 @@ type ChannelMethod = {
   [CHANNELS.settingsSetCredentials]: StudioBridge['settings']['setCredentials']
   [CHANNELS.settingsAuthState]: StudioBridge['settings']['authState']
   [CHANNELS.settingsForgetCredentials]: StudioBridge['settings']['forgetCredentials']
+  [CHANNELS.settingsOpen]: StudioBridge['settings']['open']
 
   [CHANNELS.scenarioSearchModels]: StudioBridge['scenario']['searchModels']
   [CHANNELS.scenarioModelPreviews]: StudioBridge['scenario']['modelPreviews']

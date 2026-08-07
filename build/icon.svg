@@ -6,8 +6,13 @@
       <stop offset="1" stop-color="#191a1c"/>
     </linearGradient>
   </defs>
-  <rect width="1024" height="1024" fill="url(#chassis)"/>
-  <g transform="translate(192.747 192.697) scale(1.24605)">
+  <!--
+    Apple's macOS grid, not a full-bleed square: the system applies no mask of its own, so an
+    icon drawn edge to edge sits in the Dock as a hard rectangle among rounded neighbours.
+    824 of 1024, centred, corner radius 185.
+  -->
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#chassis)"/>
+  <g transform="translate(240.44 240.4) scale(1.0599)">
     <path fill="#ffffff" opacity="1" d="M 256.211609 219.877777 L 503.321014 365.44278 L 256.211609 511.007751 L 9.102222 365.44278 Z"/>
     <path fill="#ffffff" opacity="0.78" d="M 256.211609 147.059967 L 503.321014 292.624969 L 256.211609 438.189972 L 9.102222 292.624969 Z"/>
     <path fill="#ffffff" opacity="0.6" d="M 256.211609 74.312775 L 503.321014 219.877777 L 256.211609 365.44278 L 9.102222 219.877777 Z"/>

@@ -379,6 +379,7 @@
     "connected": "Connected",
     "signOut": "Sign out",
     "checking": "Checking…",
+    "configure": "Set up credentials",
     "explanation": "Your credentials are encrypted by the system keychain and never leave your machine."
   },
   "errors": {

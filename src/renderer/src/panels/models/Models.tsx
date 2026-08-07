@@ -19,6 +19,7 @@ import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 import { workspaceById } from '@/helpers/workspaces'
 import { EmptyState } from '@/design/EmptyState'
+import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { facetsFor, queryFrom, sortOptions } from './model-filters'
 
 const SEARCH_DELAY_MS = 250
@@ -185,9 +186,7 @@ export function Models() {
 
   const selected = selectedId ? (byId.get(selectedId) ?? null) : null
 
-  if (!authenticated) {
-    return <EmptyState icon={mdiCubeScan} message={t('generation.noCredentials')} />
-  }
+  if (!authenticated) return <MissingCredentials icon={mdiCubeScan} />
 
   // Without this the panel sits on "loading" forever when the API refuses the request.
   if (catalogue.isError) {

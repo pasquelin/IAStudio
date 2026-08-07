@@ -3,6 +3,7 @@ import { memoryAdapter } from '@main/settings/memory-adapter'
 import { createSettingsStore } from '@main/settings/store'
 import {
   parseEnvFile,
+  readEnvFile,
   readEnvironmentCredentials,
   resolveCredentials,
   type EnvironmentFallback,
@@ -31,6 +32,31 @@ describe('env file parsing', () => {
 
   it('skips a line with no assignment', () => {
     expect(parseEnvFile('nonsense\n=orphan\nA=1')).toEqual(new Map([['A', '1']]))
+  })
+})
+
+describe('locating the development env file', () => {
+  const disk =
+    (files: Record<string, string>) =>
+    (path: string): string | null =>
+      files[path] ?? null
+
+  it('reads the file beside the starting folder', () => {
+    expect(readEnvFile('/project', disk({ '/project/secrets/.env': 'here' }))).toBe('here')
+  })
+
+  it('climbs out of the bundled entry point folder', () => {
+    // What development actually looks like: `app.getAppPath()` is `<project>/out/main`.
+    expect(readEnvFile('/project/out/main', disk({ '/project/secrets/.env': 'here' }))).toBe('here')
+  })
+
+  it('stops at the root rather than looping', () => {
+    expect(readEnvFile('/project/out/main', disk({}))).toBeNull()
+  })
+
+  it('takes the nearest file when several are on the way up', () => {
+    const files = { '/project/secrets/.env': 'near', '/secrets/.env': 'far' }
+    expect(readEnvFile('/project/out/main', disk(files))).toBe('near')
   })
 })
 

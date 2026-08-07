@@ -13,6 +13,7 @@ import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
+import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 
 function useDescriptor(modelId: string | null) {
   return useQuery<ModelDescriptor | null>({
@@ -45,9 +46,7 @@ export function Generator() {
 
   const descriptor = useDescriptor(modelId)
 
-  if (!authenticated) {
-    return <EmptyState icon={mdiCreationOutline} message={t('generation.noCredentials')} />
-  }
+  if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
 
   if (!modelId) {
     return <EmptyState icon={mdiCreationOutline} message={t('generation.chooseModel')} />

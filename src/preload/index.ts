@@ -3,6 +3,7 @@ import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
 import type { WindowState } from '@shared/domain/window'
+import type { SettingsSectionId } from '@shared/domain/settings'
 import {
   CHANNELS,
   EVENTS,
@@ -30,6 +31,8 @@ const bridge: StudioBridge = {
       ipcRenderer.invoke(CHANNELS.settingsSetCredentials, key, secret),
     authState: () => ipcRenderer.invoke(CHANNELS.settingsAuthState),
     forgetCredentials: () => ipcRenderer.invoke(CHANNELS.settingsForgetCredentials),
+    open: section => ipcRenderer.invoke(CHANNELS.settingsOpen, section),
+    onSection: callback => subscribe<SettingsSectionId>(EVENTS.settingsSection, callback),
   },
   scenario: {
     searchModels: query => ipcRenderer.invoke(CHANNELS.scenarioSearchModels, query),

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { DEFAULT_SETTINGS_SECTION, sectionFromRoute } from '@shared/domain/settings'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { useDensity } from '@/hooks/useDensity'
+import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
 
@@ -63,7 +65,10 @@ function NavigationEntry({
  */
 export function SettingsWindow() {
   const { t } = useTranslation()
-  const [selected, setSelected] = useState(SETTINGS_SECTIONS[0]?.id ?? '')
+  // Opened from a panel rather than from ⌘,: the fragment names the section to land on.
+  const [selected, setSelected] = useState<string>(
+    () => sectionFromRoute(window.location.hash) ?? DEFAULT_SETTINGS_SECTION,
+  )
 
   const load = useSettings(state => state.load)
   const density = useSettings(state => state.settings.appearance.density)
@@ -71,6 +76,10 @@ export function SettingsWindow() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // Asked for while already open: the window moves instead of reloading, which would throw
+  // away a half-typed key.
+  useEffect(() => getBridge()?.settings.onSection(setSelected), [])
 
   useDensity(density)
 

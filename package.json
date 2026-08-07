@@ -23,7 +23,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "validate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "docs:scenario": "bash scripts/fetch-scenario-docs.sh",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3"
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "node scripts/dev-app-identity.mjs"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",

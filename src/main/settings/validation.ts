@@ -3,8 +3,10 @@ import {
   CONCURRENT_JOBS_RANGE,
   DENSITIES,
   MAX_RETRIES_RANGE,
+  SETTINGS_SECTION_IDS,
   THEMES,
   type PartialSettings,
+  type SettingsSectionId,
 } from '@shared/domain/settings'
 import type { Credentials } from './store'
 
@@ -57,6 +59,14 @@ export function parsePartialSettings(value: unknown): PartialSettings {
 export function salvagePartialSettings(value: unknown): PartialSettings {
   const parsed = partialSettings.safeParse(value)
   return parsed.success ? parsed.data : {}
+}
+
+// Throws rather than falling back to a default: the section ends up in the URL fragment the
+// settings window loads, so anything but a known name is refused outright.
+const settingsSection = z.enum(SETTINGS_SECTION_IDS)
+
+export function parseSettingsSection(value: unknown): SettingsSectionId {
+  return settingsSection.parse(value)
 }
 
 // Trimmed before the length check: a key pasted from a web page carries a trailing newline,

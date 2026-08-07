@@ -48,6 +48,17 @@ describe('Models panel', () => {
     expect(screen.getByText(/identifiants API/i)).toBeInTheDocument()
   })
 
+  // Saying the key is missing without a way to type it leaves the user hunting through menus.
+  it('leads to the account settings from the panel that reports the missing key', async () => {
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    const open = vi.fn(() => Promise.resolve())
+    installFakeBridge({ settings: { open } })
+    renderPanel()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Configurer les identifiants' }))
+    expect(open).toHaveBeenCalledWith('account')
+  })
+
   it('asks only for the models of the active workspace', async () => {
     const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
       Promise.resolve({ items: [], cursor: null }),

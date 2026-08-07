@@ -1,5 +1,6 @@
 import type { FC } from 'react'
 import type { ModelFamily } from '@shared/domain/model'
+import type { SettingsSectionId } from '@shared/domain/settings'
 import { AccountSettings } from './AccountSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { GenerationSettings } from './GenerationSettings'
@@ -38,8 +39,11 @@ function familySection({ family, labelKey }: { family: ModelFamily; labelKey: st
  *
  * Spec § 9 also lists Storage, Shortcuts, Performance and Advanced. They appear here as they
  * are built; an entry with nothing behind it would be worse than its absence.
+ *
+ * Top-level ids are the shared `SettingsSectionId`, so a section renamed here immediately
+ * fails to compile rather than quietly breaking every `settings.open` that names it.
  */
-export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
+export const SETTINGS_SECTIONS: readonly (SettingsSection & { id: SettingsSectionId })[] = [
   {
     id: 'account',
     labelKey: 'settings.account',
