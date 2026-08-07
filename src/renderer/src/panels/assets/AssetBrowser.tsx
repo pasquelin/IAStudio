@@ -8,6 +8,7 @@ import { startAssetDrag } from '@/helpers/asset-drag'
 import { filterLocally, isFiltered, type FacetDescriptor } from '@/helpers/collection-state'
 import { MediaTile } from '@/design/MediaTile'
 import { Row } from '@/design/Row'
+import { LIST_ROW_HEIGHT } from '@/design/styles'
 import { ToolButton } from '@/design/ToolButton'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
@@ -18,9 +19,6 @@ import { EmptyState } from '@/design/EmptyState'
 import { ImportProgress } from './ImportProgress'
 
 const TYPE_FACET = 'type'
-
-/** Matches the `--sc-control` gauge the rows are built on, at its tallest (comfortable). */
-const ROW_HEIGHT = 28
 
 /**
  * Six constant strings, resolved once for the whole panel. A row is remounted by the hundred
@@ -109,7 +107,7 @@ export function AssetBrowser() {
       <Collection
         items={shown}
         state={collection}
-        rowHeight={ROW_HEIGHT}
+        rowHeight={LIST_ROW_HEIGHT}
         renderCard={asset => <AssetCard asset={asset} />}
         renderRow={asset => (
           <AssetRow asset={asset} typeLabel={typeLabels.get(asset.type) ?? asset.type} />

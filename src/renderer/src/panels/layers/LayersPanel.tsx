@@ -1,128 +1,21 @@
-import { mdiLayersOutline, mdiPlus, mdiTrashCanOutline } from '@mdi/js'
-import { useMemo } from 'react'
+import { mdiLayersOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/helpers/cn'
-import { newId } from '@/helpers/ids'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
-import { Row } from '@/design/Row'
-import { ToolButton } from '@/design/ToolButton'
-import { addLayer, removeLayer, selectLayer, setLayerVisible } from '@/engines/canvas/commands'
 import { EmptyState } from '@/design/EmptyState'
-import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
-import { canvasOf, useCanvases } from '@/stores/canvases'
-import { useDocuments } from '@/stores/documents'
+import { activeImageId, useDocuments } from '@/stores/documents'
+import { LayerList } from './LayerList'
 
 /**
- * The layer stack of whatever document is in front. A tool window has no props — it sits on the
- * edge, outside Dockview — so it follows the active tab rather than being handed one.
+ * The layer stack of whatever image is in front. A tool window has no props — it sits on the
+ * edge, outside Dockview — so it follows the active tab rather than being handed one, and asks
+ * for the image kind: a scene handed to `useCanvases` would grow a phantom stack of its own.
  *
  * It renders no header and no scroller of its own: `ToolWindow` wraps every tool in both, and a
  * second copy of either shows up as a doubled title bar and nested scrollbars.
  */
 export function LayersPanel() {
   const { t } = useTranslation()
-  const documentId = useDocuments(state => state.activeId)
+  const documentId = useDocuments(activeImageId)
 
   if (!documentId) return <EmptyState icon={mdiLayersOutline} message={t('layers.noDocument')} />
-  return <LayerStack documentId={documentId} />
-}
-
-/** Add and delete, rendered by `ToolWindow` on the panel's own title bar. */
-export function LayersActions() {
-  const documentId = useDocuments(state => state.activeId)
-
-  if (!documentId) return null
-  return <StackActions documentId={documentId} />
-}
-
-function StackActions({ documentId }: { documentId: string }) {
-  const { t } = useTranslation()
-  const canvas = useCanvases(state => canvasOf(state, documentId))
-  const store = useCanvases.getState()
-
-  const create = (): void => {
-    store.runCommand(
-      documentId,
-      addLayer({
-        id: newId(),
-        name: t('layers.untitled', { n: canvas.layers.length + 1 }),
-        visible: true,
-        locked: false,
-        opacity: 1,
-        blend: 'normal',
-      }),
-    )
-  }
-
-  return (
-    <>
-      <ToolButton
-        icon={mdiPlus}
-        label={t('layers.add')}
-        description={t('layers.addHint')}
-        tooltip={TIP_BOTTOM}
-        variant="header"
-        onClick={create}
-      />
-      <ToolButton
-        icon={mdiTrashCanOutline}
-        label={t('layers.remove')}
-        description={t('layers.removeHint')}
-        tooltip={TIP_BOTTOM}
-        variant="header"
-        // The last layer never goes: a canvas with an empty stack cannot be painted on.
-        disabled={canvas.layers.length <= 1 || canvas.activeLayerId === null}
-        onClick={() =>
-          canvas.activeLayerId && store.runCommand(documentId, removeLayer(canvas.activeLayerId))
-        }
-      />
-    </>
-  )
-}
-
-/**
- * Top of the list first — what the eye sees on top is what the hand reaches first, and every
- * editor lays it out that way. The state stores it the other way round, bottom first, because
- * that is the order it is drawn in.
- *
- * Split from `LayersPanel` so the hooks below never run for a document that is not there: a
- * conditional return above a `useCanvases` call is what React forbids.
- */
-function LayerStack({ documentId }: { documentId: string }) {
-  const { t } = useTranslation()
-  const canvas = useCanvases(state => canvasOf(state, documentId))
-  const store = useCanvases.getState()
-  // Not per render: selecting a layer changes `activeLayerId`, not the stack it is drawn from.
-  const stack = useMemo(() => [...canvas.layers].reverse(), [canvas.layers])
-
-  return (
-    <ul className="p-1">
-      {stack.map(layer => (
-        <li key={layer.id}>
-          <div
-            className={cn(
-              'group h-(--sc-control) cursor-pointer rounded-(--radius-sc-md)',
-              layer.id === canvas.activeLayerId ? 'bg-accent-soft' : 'hover:bg-elevated',
-            )}
-            onPointerDown={() => store.replace(documentId, selectLayer(canvas, layer.id))}
-          >
-            <Row
-              title={layer.name}
-              muted={!layer.visible}
-              leading={
-                <VisibilityToggle
-                  visible={layer.visible}
-                  label={t('layers.visible')}
-                  description={t(layer.visible ? 'layers.hideHint' : 'layers.showHint')}
-                  onToggle={() =>
-                    store.runCommand(documentId, setLayerVisible(layer.id, !layer.visible))
-                  }
-                />
-              }
-            />
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
+  return <LayerList documentId={documentId} />
 }

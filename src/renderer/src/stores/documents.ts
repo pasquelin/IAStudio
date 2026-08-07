@@ -43,6 +43,10 @@ export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): strin
 export const activeSceneId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'scene')
 
+/** The image in front, as a selector. Same reason as `activeSceneId`, for the layer stack. */
+export const activeImageId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'image')
+
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,
   workspace: WorkspaceId,

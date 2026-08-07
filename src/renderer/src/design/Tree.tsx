@@ -2,7 +2,7 @@ import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { rowSkin } from './styles'
+import { LIST_ROW_HEIGHT, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type TreeNode = { id: string; parentId: string | null }
@@ -49,9 +49,6 @@ export type TreeProps<T extends TreeNode> = {
 
 const INDENT = 12
 
-/** Matches `--sc-control` at comfort density; the virtualizer only needs an estimate. */
-const ROW_HEIGHT = 28
-
 /**
  * A tree that does not know what it shows. It owns the geometry — indent, chevron, selection,
  * keyboard — and nothing else, so the scene outliner and a file browser can share it.
@@ -72,7 +69,7 @@ export function Tree<T extends TreeNode>({
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scroller.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => LIST_ROW_HEIGHT,
     overscan: 8,
   })
 

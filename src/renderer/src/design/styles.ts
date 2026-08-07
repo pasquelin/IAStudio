@@ -43,6 +43,13 @@ export function rowSkin(selected: boolean): string {
   )
 }
 
+/**
+ * What one line of a virtualized list measures — `--sc-control` at its tallest. The virtualizer
+ * needs a number and cannot read the gauge, so the four lists that estimate their rows read it
+ * from here rather than each carrying its own copy of 28.
+ */
+export const LIST_ROW_HEIGHT = 28
+
 /** One property row of an inspector: a label of fixed width, then the control it names. */
 export const FIELD_ROW = 'flex min-w-0 items-center gap-1 text-[11px]'
 
