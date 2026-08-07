@@ -186,9 +186,8 @@ export class TimelineEngine {
         resizeTo: element,
         preference: 'webgl',
         backgroundAlpha: 0,
-        // A paused sequence holds one still frame, and every change ends in `draw`. Left on,
-        // Pixi would redraw that frame sixty times a second — including for a tab Dockview
-        // keeps mounted behind another.
+        // A paused sequence holds one still frame: every change calls `draw`. Left on, Pixi would
+        // redraw that frame sixty times a second, even for a tab Dockview keeps mounted behind.
         autoStart: false,
       },
       () => this.disposed || !element.isConnected,
@@ -198,11 +197,10 @@ export class TimelineEngine {
     element.appendChild(application.canvas)
     application.stage.addChild(this.frame)
     // The panel resizes without the window doing so, and a frame laid out once would drift.
-    application.renderer.on('resize', this.resized)
+    application.renderer.on('resize', this.repaint)
 
     this.application = application
-    this.layout()
-    this.draw()
+    this.repaint()
   }
 
   apply(state: SequenceState): void {
@@ -259,7 +257,7 @@ export class TimelineEngine {
     this.pause()
     this.generation += 1
     this.pool.dispose()
-    this.application?.renderer.off('resize', this.resized)
+    this.application?.renderer.off('resize', this.repaint)
     this.application?.destroy(true, { children: true, texture: true })
     this.application = null
     this.sprites.clear()
@@ -271,11 +269,10 @@ export class TimelineEngine {
   }
 
   /**
-   * Bound like `layout`, and for the same reason. Drawn unconditionally: Pixi resizes the
-   * canvas itself, and a resized buffer is blank until something draws into it — even when the
-   * frame it holds is laid out exactly as before.
+   * Bound like `layout`, and for the same reason. Drawn even when the layout was a no-op: Pixi
+   * resizes the canvas itself, and a resized buffer is blank until something draws into it.
    */
-  private readonly resized = (): void => {
+  private readonly repaint = (): void => {
     this.layout()
     this.draw()
   }

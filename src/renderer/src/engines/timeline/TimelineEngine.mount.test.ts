@@ -10,7 +10,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const destroy = vi.fn()
 const render = vi.fn()
 const on = vi.fn<(event: string, listener: () => void) => void>()
-const off = vi.fn()
 let resolveInit: (() => void) | null = null
 let started: Record<string, unknown> | null = null
 
@@ -19,7 +18,7 @@ vi.mock('pixi.js', () => ({
     canvas = document.createElement('canvas')
     stage = { addChild: vi.fn() }
     screen = { width: 800, height: 450 }
-    renderer = { on, off, texture: { initSource: vi.fn() } }
+    renderer = { on, off: vi.fn(), texture: { initSource: vi.fn() } }
     destroy = destroy
     render = render
     init = (options: Record<string, unknown>): Promise<void> => {
@@ -71,11 +70,7 @@ describe('mounting a monitor', () => {
   }
 
   it('attaches its canvas once Pixi is ready', async () => {
-    const engine = engineFor(host)
-    const mounting = engine.mount(host)
-
-    resolveInit?.()
-    await mounting
+    await mounted(engineFor(host))
 
     expect(host.querySelector('canvas')).not.toBeNull()
   })
