@@ -32,12 +32,18 @@
   --dv-tabs-and-actions-container-font-size: 12px;
 }
 
+/* The strip keeps the panel's rounded corner clear: a tab starting flush against the edge
+   reads as clipped rather than as placed. */
+.dv-dockview .dv-tabs-container {
+  padding-left: var(--sc-gutter);
+}
+
 /* Center tabs take the surfaces' radius: a square tab inside a rounded panel reads as a
    foreign body. The horizontal margin is what separates them — touching tabs read as one
    segmented control rather than as several documents. */
 .dv-dockview .dv-tab {
   border-radius: var(--radius-sc-md);
-  margin: 3px 2px;
+  margin: 6px 2px;
   padding: 0 4px;
   transition: background-color 120ms ease;
 }
@@ -51,4 +57,25 @@
 .dv-dockview .dv-default-tab {
   height: 100%;
   padding: 0 4px;
+}
+
+/* The close affordance is a disc, and only under the pointer: a permanent hit area on every
+   tab competes with the tab's own name. */
+.dv-dockview .dv-default-tab-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 9999px;
+  background-color: transparent;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.dv-dockview .dv-default-tab-action:hover {
+  background-color: var(--color-elevated);
+  color: var(--color-text);
 }

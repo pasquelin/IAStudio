@@ -78,9 +78,9 @@
   --sc-rail-button: 36px;
   --sc-gutter: 6px;
   --sc-header: 40px;
-  /* Document tabs run thinner than a panel header: a tab strip is read at a glance, a header
-     carries controls. */
-  --sc-tab: 32px;
+  /* The strip, not the tab: the tab sits inside it with 6px of air above and below, so this
+     value is the pill's height plus that margin. */
+  --sc-tab: 40px;
   --sc-shadow-furniture: 0 1px 2px rgb(0 0 0 / 0.25);
   --sc-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.55);
 }
@@ -91,7 +91,7 @@
   --sc-rail-button: 32px;
   --sc-gutter: 4px;
   --sc-header: 28px;
-  --sc-tab: 26px;
+  --sc-tab: 32px;
 }
 
 html,
