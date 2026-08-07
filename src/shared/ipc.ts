@@ -189,7 +189,7 @@ export type StudioBridge = {
      * every path the interface asks for — where a project goes, where ffmpeg lives — because
      * they differ only by which picker opens.
      */
-    pickPath: (kind: PathKind) => Promise<string | null>
+    pickPath: (kind: PathKind, startIn?: string) => Promise<string | null>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>

@@ -103,6 +103,7 @@ describe('SettingsWindow', () => {
       '3D',
       'Raccourcis',
       'Médias',
+      'Stockage',
       'Avancé',
     ])
   })

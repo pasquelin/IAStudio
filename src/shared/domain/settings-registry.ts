@@ -98,6 +98,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     descriptionKey: 'settings.mediaDescription',
   },
   {
+    id: 'storage',
+    labelKey: 'settings.storage',
+    descriptionKey: 'settings.storageDescription',
+  },
+  {
     id: 'advanced',
     labelKey: 'settings.advanced',
     descriptionKey: 'settings.advancedDescription',
@@ -324,6 +329,14 @@ export const SETTING_REGISTRY = [
     step: 5,
   }),
   setting({
+    path: 'storage.projectsFolder',
+    kind: 'path',
+    pathKind: 'folder',
+    section: 'storage',
+    titleKey: 'settings.projectsFolder.title',
+    helpKey: 'settings.projectsFolder.help',
+  }),
+  setting({
     path: 'advanced.logLevel',
     kind: 'choice',
     section: 'advanced',
@@ -411,10 +424,9 @@ function paths<P extends SettingPath[]>(...list: P): P {
 export const UNLISTED_PATHS = paths(
   // Written by the main process every time a project opens: session state, not a preference.
   'storage.lastProject',
-  // Both belong to the Storage screen, which waits on the cloud backend actually existing —
-  // offering a backend nothing implements would be a promise the app cannot keep.
+  // Waits on the cloud backend actually existing: offering a choice nothing implements would
+  // be a promise the application cannot keep.
   'storage.backend',
-  'storage.projectsFolder',
 )
 
 /**

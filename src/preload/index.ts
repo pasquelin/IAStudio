@@ -53,7 +53,7 @@ const bridge: StudioBridge = {
     onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),
   },
   dialog: {
-    pickPath: kind => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind),
+    pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),

@@ -8,3 +8,10 @@ const pathKind = z.enum(PATH_KINDS)
 export function parsePathKind(value: unknown): PathKind {
   return pathKind.parse(value)
 }
+
+// Where the picker opens. Undefined is normal — it then opens wherever the OS last was.
+const startIn = z.string().min(1).optional()
+
+export function parseStartIn(value: unknown): string | undefined {
+  return startIn.parse(value)
+}

@@ -1,11 +1,11 @@
 import type { PathKind } from '@shared/domain/settings-registry'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
-import { parsePathKind } from './validation'
+import { parsePathKind, parseStartIn } from './validation'
 
 export type DialogHandlerDeps = {
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
-  pickPath: (kind: PathKind) => Promise<string | null>
+  pickPath: (kind: PathKind, startIn?: string) => Promise<string | null>
 }
 
 /**
@@ -14,5 +14,7 @@ export type DialogHandlerDeps = {
  * second dialog with slightly different options from appearing.
  */
 export function registerDialogHandlers({ pickPath }: DialogHandlerDeps): void {
-  handle(CHANNELS.dialogPickPath, (_event, kind) => pickPath(parsePathKind(kind)))
+  handle(CHANNELS.dialogPickPath, (_event, kind, startIn) =>
+    pickPath(parsePathKind(kind), parseStartIn(startIn)),
+  )
 }

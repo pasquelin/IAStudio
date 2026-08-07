@@ -2,6 +2,7 @@ import i18next from 'i18next'
 import { create } from 'zustand'
 import type { Project } from '@shared/domain/project'
 import { getBridge } from '@/services/bridge'
+import { useSettings } from './settings'
 import { useAssets } from './assets'
 
 type ProjectState = {
@@ -38,13 +39,19 @@ export const useProject = create<ProjectState>()(set => ({
 
   openPicked: async () => {
     const bridge = getBridge()
-    const folder = await bridge?.dialog.pickPath('folder')
+    const folder = await bridge?.dialog.pickPath(
+      'folder',
+      useSettings.getState().settings.storage.projectsFolder,
+    )
     if (bridge && folder) set({ project: await bridge.project.open(folder) })
   },
 
   createPicked: async () => {
     const bridge = getBridge()
-    const folder = await bridge?.dialog.pickPath('folder')
+    const folder = await bridge?.dialog.pickPath(
+      'folder',
+      useSettings.getState().settings.storage.projectsFolder,
+    )
     if (!bridge || !folder) return
 
     // The dialog picks where, not what to call it; renaming a project folder is the file

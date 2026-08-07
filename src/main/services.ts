@@ -70,9 +70,11 @@ async function openDialog(options: Electron.OpenDialogOptions): Promise<string[]
  * One picker for every path the interface asks for. `createDirectory` on a folder because the
  * one being chosen often does not exist yet — where the projects will go.
  */
-async function pickPath(kind: PathKind): Promise<string | null> {
+async function pickPath(kind: PathKind, startIn?: string): Promise<string | null> {
   const picked = await openDialog({
     properties: kind === 'folder' ? ['openDirectory', 'createDirectory'] : ['openFile'],
+    // Absent is normal: the dialog then opens wherever the OS last left it.
+    ...(startIn ? { defaultPath: startIn } : {}),
   })
   return picked[0] ?? null
 }

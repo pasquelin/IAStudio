@@ -176,6 +176,7 @@ export type SettingsSectionId =
   | 'spaces.three'
   | 'shortcuts'
   | 'media'
+  | 'storage'
   | 'advanced'
 
 export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
@@ -192,6 +193,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'spaces.three',
   'shortcuts',
   'media',
+  'storage',
   'advanced',
 ]
 

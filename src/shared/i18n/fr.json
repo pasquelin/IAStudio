@@ -620,6 +620,12 @@
       "help": "Remet TOUS les réglages dans l’état d’une installation neuve : thème, langue, raccourcis, tout. Vos projets, vos images et vos montages ne sont pas touchés — seuls les réglages le sont. C’est sans retour.",
       "button": "Réinitialiser",
       "confirm": "Remettre tous les réglages à zéro ? Vos projets ne sont pas touchés, mais ce retour en arrière est définitif."
+    },
+    "storage": "Stockage",
+    "storageDescription": "Où vos projets sont rangés sur le disque.",
+    "projectsFolder": {
+      "title": "Dossier des projets",
+      "help": "Le dossier que l’application vous propose quand vous créez ou ouvrez un projet. Cela ne déplace rien : les projets déjà créés restent où ils sont. Laissez vide pour repartir à chaque fois du dernier endroit visité."
     }
   },
   "commands": {

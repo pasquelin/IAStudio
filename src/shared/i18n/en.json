@@ -620,6 +620,12 @@
       "help": "Puts EVERY setting back to a fresh install: theme, language, shortcuts, all of it. Your projects, images and edits are untouched — only the settings are. There is no going back.",
       "button": "Reset",
       "confirm": "Reset every setting? Your projects are untouched, but this cannot be undone."
+    },
+    "storage": "Storage",
+    "storageDescription": "Where your projects are kept on disk.",
+    "projectsFolder": {
+      "title": "Projects folder",
+      "help": "The folder the application offers when you create or open a project. It moves nothing: projects already created stay where they are. Leave it empty to start from wherever you last were."
     }
   },
   "commands": {
