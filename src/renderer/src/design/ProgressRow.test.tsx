@@ -27,11 +27,11 @@ describe('ProgressRow', () => {
   })
 
   it('cancels through the caller, which owns what cancelling means', async () => {
-    const onCancel = vi.fn()
-    row({ ratio: 0.5, onCancel, cancelLabel: 'Interrompre' })
+    const onClick = vi.fn()
+    row({ ratio: 0.5, cancel: { label: 'Interrompre', onClick } })
 
     await userEvent.click(screen.getByRole('button', { name: /Interrompre/ }))
-    expect(onCancel).toHaveBeenCalledOnce()
+    expect(onClick).toHaveBeenCalledOnce()
   })
 
   it('shows the detail a failure is worth', () => {

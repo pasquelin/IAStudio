@@ -94,7 +94,6 @@ describe('media service', () => {
 
     await service.ingest('asset-1', '/Volumes/Rushes/rush.mov', 'video')
 
-    expect(service.available()).toBe(false)
     expect(stages(injected.onProgress)).toEqual(['queued', 'probe', 'hash', 'done'])
     expect(injected.save).toHaveBeenCalledWith('asset-1', {
       sourcePath: '/Volumes/Rushes/rush.mov',

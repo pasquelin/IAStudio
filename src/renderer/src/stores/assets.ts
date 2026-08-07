@@ -15,7 +15,15 @@ type AssetsState = {
 
   items: Asset[]
   refresh: () => Promise<void>
+  /**
+   * Says the catalogue changed and lets this store decide when to read it. `assets.search` is
+   * a synchronous SQLite query in the main process: forty rushes finishing their ingest would
+   * otherwise freeze every window forty times over.
+   */
+  invalidate: () => void
 }
+
+const COALESCE_MS = 200
 
 /** The shape the store persisted before it held a whole `CollectionState`. */
 function readView(persisted: unknown): CollectionState['view'] | null {
@@ -33,24 +41,36 @@ function readView(persisted: unknown): CollectionState['view'] | null {
  */
 export const useAssets = create<AssetsState>()(
   persist(
-    set => ({
-      collection: DEFAULT_COLLECTION_STATE,
-      setCollection: collection => set({ collection }),
+    (set, get) => {
+      let pending: ReturnType<typeof setTimeout> | null = null
 
-      items: [],
+      return {
+        collection: DEFAULT_COLLECTION_STATE,
+        setCollection: collection => set({ collection }),
 
-      refresh: async () => {
-        const bridge = getBridge()
-        if (!bridge) return
+        items: [],
 
-        try {
-          set({ items: await bridge.assets.search({}) })
-        } catch {
-          // No project open: the catalogue throws, and an empty list is the honest answer.
-          set({ items: [] })
-        }
-      },
-    }),
+        refresh: async () => {
+          const bridge = getBridge()
+          if (!bridge) return
+
+          try {
+            set({ items: await bridge.assets.search({}) })
+          } catch {
+            // No project open: the catalogue throws, and an empty list is the honest answer.
+            set({ items: [] })
+          }
+        },
+
+        invalidate: () => {
+          if (pending) clearTimeout(pending)
+          pending = setTimeout(() => {
+            pending = null
+            void get().refresh()
+          }, COALESCE_MS)
+        },
+      }
+    },
     {
       name: 'scenario-studio:assets',
       version: COLLECTION_PERSIST_VERSION,

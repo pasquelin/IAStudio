@@ -43,7 +43,7 @@ export type MediaFilter = { name: string; extensions: string[] }
 /** What the open dialog offers, named in the user's language — a native dialog shows them. */
 export function mediaFilters(labels: Record<'all' | ImportableType, string>): MediaFilter[] {
   return [
-    { name: labels.all, extensions: IMPORTABLE_TYPES.flatMap(type => [...EXTENSIONS[type]]) },
+    { name: labels.all, extensions: IMPORTABLE_TYPES.flatMap(type => EXTENSIONS[type]) },
     ...IMPORTABLE_TYPES.map(type => ({ name: labels[type], extensions: [...EXTENSIONS[type]] })),
   ]
 }

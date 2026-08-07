@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { IngestProgress, IngestStage, MediaCapabilities } from '@shared/domain/media'
+import type { IngestProgress, MediaCapabilities } from '@shared/domain/media'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
@@ -17,29 +17,14 @@ type MediaState = {
   apply: (progress: IngestProgress) => void
 }
 
-/** Stages that end an ingest. A failure stays on screen — it is the only trace it left. */
-const FINISHED: readonly IngestStage[] = ['done', 'cancelled']
-
-/**
- * One catalogue read for a batch rather than one per file. `assets.search` is a synchronous
- * SQLite query in the main process, and forty rushes finishing would freeze every window forty
- * times over.
- */
-let pending: ReturnType<typeof setTimeout> | null = null
-
-function refreshSoon(): void {
-  if (pending) clearTimeout(pending)
-  pending = setTimeout(() => {
-    pending = null
-    void useAssets.getState().refresh()
-  }, 200)
-}
-
 const without = (
   progress: Record<string, IngestProgress>,
   assetId: string,
-): Record<string, IngestProgress> =>
-  Object.fromEntries(Object.entries(progress).filter(([id]) => id !== assetId))
+): Record<string, IngestProgress> => {
+  const rest = { ...progress }
+  delete rest[assetId]
+  return rest
+}
 
 /**
  * Ingest lives in the main process; this replica is what lets the asset browser show a file the
@@ -54,7 +39,9 @@ export const useMedia = create<MediaState>()((set, get) => ({
     if (!bridge) return () => {}
 
     const stop = bridge.media.onProgress(progress => get().apply(progress))
-    await get().refreshCapabilities()
+    // Not awaited: the caller unsubscribes with what this returns, and holding it back for an
+    // IPC round trip leaves a second subscription alive next to the first.
+    void get().refreshCapabilities()
     return stop
   },
 
@@ -84,10 +71,12 @@ export const useMedia = create<MediaState>()((set, get) => ({
 
   apply: progress => {
     // The duration, the proxy and the waveform are all known only now.
-    if (progress.stage === 'done') refreshSoon()
+    if (progress.stage === 'done') useAssets.getState().invalidate()
 
+    // A failure stays on screen: it is the only trace the import left.
+    const ended = progress.stage === 'done' || progress.stage === 'cancelled'
     set(state =>
-      FINISHED.includes(progress.stage)
+      ended
         ? { progress: without(state.progress, progress.assetId) }
         : { progress: { ...state.progress, [progress.assetId]: progress } },
     )

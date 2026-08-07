@@ -20,13 +20,9 @@ export function assetFilePath(projectPath: string, relativePath: string): string
 }
 
 /**
- * Which file the scheme hands over for an asset: what the project owns, else the proxy of a
- * linked media, else the linked media itself.
- *
- * The proxy comes before the source on purpose — it exists precisely because the source is
- * something WebCodecs will not decode. A `sourcePath` is served from outside the project, so it
- * must be absolute: that is what a native picker returns, and it is what tells a linked file
- * apart from a catalogue row trying to walk out of the project.
+ * Which file the scheme hands over: what the project owns, else the proxy of a linked media,
+ * else the linked media itself. The proxy comes first because it exists precisely for sources
+ * WebCodecs will not decode; a linked path must be absolute, which is what a picker returns.
  */
 export function servedFileOf(projectPath: string, asset: Asset): string | null {
   if (asset.path) return assetFilePath(projectPath, asset.path)

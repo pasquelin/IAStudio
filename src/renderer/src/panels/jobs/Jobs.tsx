@@ -2,17 +2,17 @@ import { mdiProgressClock } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
-import { ProgressRow } from '@/design/ProgressRow'
+import { ProgressRow, type StatusTone } from '@/design/ProgressRow'
 import { failureMessageKey } from '@/services/failure-message'
 import { useJobs } from '@/stores/jobs'
 import { EmptyState } from '@/design/EmptyState'
 
-const STATUS_COLOR: Record<Job['status'], string> = {
-  queued: 'text-muted',
-  running: 'text-accent',
-  succeeded: 'text-success',
-  failed: 'text-danger',
-  cancelled: 'text-muted',
+const STATUS_TONE: Record<Job['status'], StatusTone> = {
+  queued: 'muted',
+  running: 'accent',
+  succeeded: 'success',
+  failed: 'danger',
+  cancelled: 'muted',
 }
 
 // Memoised because `apply` preserves the identity of every job it does not touch: a progress
@@ -27,9 +27,10 @@ const JobRow = memo(function JobRow({ job }: { job: Job }) {
       label={job.label}
       ratio={job.status === 'running' ? job.progress : undefined}
       status={t(`jobs.status.${job.status}`)}
-      statusClassName={STATUS_COLOR[job.status]}
-      cancelLabel={finished ? undefined : t('jobs.cancel')}
-      onCancel={finished ? undefined : () => void cancel(job.id)}
+      tone={STATUS_TONE[job.status]}
+      cancel={
+        finished ? undefined : { label: t('jobs.cancel'), onClick: () => void cancel(job.id) }
+      }
       detail={
         job.error && (
           <span role="alert" className="text-danger text-[11px]">

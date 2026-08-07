@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { peaksArgs, probeArgs, proxyArgs, resolveFfmpeg } from './ffmpeg'
+import { describe, expect, it, vi } from 'vitest'
+import { createFfmpegResolver, peaksArgs, probeArgs, proxyArgs, resolveFfmpeg } from './ffmpeg'
 
 describe('ffmpeg resolution', () => {
   it('prefers the bundled binary', () => {
@@ -65,6 +65,39 @@ describe('ffmpeg arguments', () => {
     const args = proxyArgs('/in.mov', '/out.mp4')
     expect(args).toContain('scale=-2:720')
     expect(args.at(-1)).toBe('/out.mp4')
+  })
+
+  it('walks the candidates once and remembers the answer', () => {
+    const candidates = vi.fn(() => ({
+      bundled: undefined,
+      configured: undefined,
+      onPath: '/usr/bin/ffmpeg',
+      exists: () => true,
+    }))
+    const resolver = createFfmpegResolver(candidates)
+
+    resolver.path()
+    resolver.path()
+
+    // Resolution is one `existsSync` per PATH entry, and the path is asked twice per file.
+    expect(candidates).toHaveBeenCalledOnce()
+  })
+
+  it('walks them again once invalidated, since ffmpeg may have been installed since', () => {
+    let installed = false
+    const resolver = createFfmpegResolver(() => ({
+      bundled: undefined,
+      configured: undefined,
+      onPath: '/usr/bin/ffmpeg',
+      exists: () => installed,
+    }))
+
+    expect(resolver.path()).toBeNull()
+    installed = true
+    expect(resolver.path()).toBeNull()
+
+    resolver.invalidate()
+    expect(resolver.path()).toBe('/usr/bin/ffmpeg')
   })
 
   it('produces a fast-start proxy, readable before the last byte is written', () => {

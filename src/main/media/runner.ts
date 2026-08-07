@@ -39,11 +39,8 @@ export function findOnPath(
 
 export type RunOptions = { signal?: AbortSignal }
 
-/**
- * `spawn` rather than the `utilityProcess` §8.8 asks for: the work happens in ffmpeg's own
- * process, so the main thread only waits on a pipe — a utility process would add an IPC hop
- * around a child process that already runs elsewhere.
- */
+// `spawn` rather than the `utilityProcess` § 8.8 asks for: the work already happens in
+// ffmpeg's own process, and the main thread only waits on a pipe.
 export function runProcess(
   binary: string,
   args: readonly string[],

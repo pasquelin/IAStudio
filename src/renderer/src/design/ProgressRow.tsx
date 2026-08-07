@@ -3,6 +3,16 @@ import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { ToolButton } from './ToolButton'
 
+/** How a status reads. The caller names the meaning; the colour stays in the design system. */
+export type StatusTone = 'muted' | 'accent' | 'success' | 'danger'
+
+const TONE_CLASS: Record<StatusTone, string> = {
+  muted: 'text-muted',
+  accent: 'text-accent',
+  success: 'text-success',
+  danger: 'text-danger',
+}
+
 export type ProgressRowProps = {
   /** What the row is about — a job's label, an asset's name. Truncated, never wrapped. */
   label: string
@@ -10,10 +20,9 @@ export type ProgressRowProps = {
   ratio?: number
   /** Short status text, at the right of the bar. */
   status: string
-  /** Colour class of the status — the caller owns the meaning, this owns the layout. */
-  statusClassName?: string
-  cancelLabel?: string
-  onCancel?: () => void
+  tone?: StatusTone
+  /** Both or neither: a labelless button is unreachable, a labelled one that does nothing lies. */
+  cancel?: { label: string; onClick: () => void }
   /** Rendered under the row, for a failure worth a sentence. */
   detail?: ReactNode
 }
@@ -26,9 +35,8 @@ export function ProgressRow({
   label,
   ratio,
   status,
-  statusClassName,
-  cancelLabel,
-  onCancel,
+  tone = 'muted',
+  cancel,
   detail,
 }: ProgressRowProps) {
   const percent = ratio === undefined ? null : Math.round(ratio * 100)
@@ -47,14 +55,14 @@ export function ProgressRow({
           />
         )}
 
-        <span className={cn('shrink-0 text-[11px]', statusClassName)}>{status}</span>
+        <span className={cn('shrink-0 text-[11px]', TONE_CLASS[tone])}>{status}</span>
 
-        {onCancel && cancelLabel && (
+        {cancel && (
           <ToolButton
             icon={mdiCloseCircleOutline}
-            label={cancelLabel}
+            label={cancel.label}
             variant="header"
-            onClick={onCancel}
+            onClick={cancel.onClick}
           />
         )}
       </div>

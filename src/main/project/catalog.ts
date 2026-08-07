@@ -1,6 +1,8 @@
+import { isRecord } from '@shared/guards'
 import {
   isAssetType,
   mediaProbeOf,
+  probeNumber,
   type Asset,
   type AssetQuery,
   type AssetType,
@@ -136,21 +138,17 @@ function parseProbe(raw: string | undefined): MediaProbe | undefined {
 
   try {
     const parsed: unknown = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object') return undefined
-
-    const fields: Record<string, unknown> = { ...parsed }
-    const numberOf = (value: unknown): number | undefined =>
-      typeof value === 'number' ? value : undefined
+    if (!isRecord(parsed)) return undefined
 
     return (
       mediaProbeOf({
-        duration: numberOf(fields.duration),
-        codec: typeof fields.codec === 'string' ? fields.codec : undefined,
-        width: numberOf(fields.width),
-        height: numberOf(fields.height),
-        fps: numberOf(fields.fps),
-        sampleRate: numberOf(fields.sampleRate),
-        channels: numberOf(fields.channels),
+        duration: probeNumber(parsed.duration),
+        codec: typeof parsed.codec === 'string' ? parsed.codec : undefined,
+        width: probeNumber(parsed.width),
+        height: probeNumber(parsed.height),
+        fps: probeNumber(parsed.fps),
+        sampleRate: probeNumber(parsed.sampleRate),
+        channels: probeNumber(parsed.channels),
       }) ?? undefined
     )
   } catch {

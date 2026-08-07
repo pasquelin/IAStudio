@@ -10,13 +10,11 @@ export function MediaSettings() {
   const resolved = useMedia(state => state.capabilities.ffmpeg)
   const refreshCapabilities = useMedia(state => state.refreshCapabilities)
 
-  // Typed locally and committed on blur. A controlled input fed by a settings write would hand
-  // back a stale value mid-word, and every keystroke would persist a path that resolves to
-  // nothing anyway.
+  // Committed on blur: a controlled input fed by a settings write hands back a stale value
+  // mid-word, and every keystroke would persist half a path.
   const [typed, setTyped] = useState(stored ?? '')
 
-  // The settings window is a renderer of its own and connects nothing, so the answer has to be
-  // asked for here — and asked again after the field below changed it.
+  // This window connects nothing, so the answer is asked for here — and again once changed.
   useEffect(() => {
     void refreshCapabilities()
   }, [refreshCapabilities])
@@ -25,8 +23,7 @@ export function MediaSettings() {
     const path = typed.trim()
     if (path === (stored ?? '')) return
 
-    // Empty means "the bundled one, or the PATH", which is the default — the key is dropped
-    // rather than storing a path that resolves to nothing.
+    // Empty means "the bundled one, or the PATH" — the key is dropped, not stored blank.
     await write({ media: { ffmpegPath: path === '' ? undefined : path } })
     await refreshCapabilities()
   }

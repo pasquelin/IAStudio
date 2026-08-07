@@ -4,15 +4,16 @@ import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { delimiter, dirname } from 'node:path'
-import type { Asset } from '@shared/domain/asset'
+import type { Asset, AssetType } from '@shared/domain/asset'
+import type { MediaCapabilities } from '@shared/domain/media'
 import type { AuthState } from '@shared/domain/settings'
 import { TRANSLATIONS } from '@shared/i18n'
 import { resolveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { createAssetCollector } from './assets/collector'
 import { serveAssets, servedFileOf } from './assets/protocol'
-import { resolveFfmpeg } from './media/ffmpeg'
-import { mediaFilters } from './media/link'
+import { createFfmpegResolver } from './media/ffmpeg'
+import { linkedAsset, mediaFilters } from './media/link'
 import { companionPath, findOnPath, hashSource, probeSource, runProcess } from './media/runner'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
@@ -36,11 +37,11 @@ export type Services = {
   project: ProjectStore
   assets: LocalBackend
   media: MediaService
-  addAsset: (asset: Asset) => Asset
+  /** Links a file into the open project — id, timestamp and catalogue row in one move. */
+  link: (source: string, type: AssetType) => Asset
+  capabilities: () => MediaCapabilities
   pickFolder: () => Promise<string | null>
   pickMedia: () => Promise<string[]>
-  newId: () => string
-  now: () => string
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
 }
@@ -116,31 +117,18 @@ export function createServices(): Services {
     now: timestamp,
   })
 
-  // Resolved once per configured path rather than per call: walking the PATH is a `existsSync`
-  // per entry, and `ffmpeg()` is asked twice per ingested file.
-  let resolved: { configured: string | undefined; binary: string | null } | null = null
-
-  const ffmpeg = ({ refresh = false } = {}): string | null => {
-    const configured = settings.read().media.ffmpegPath
-    const cached = resolved
-    if (!refresh && cached && cached.configured === configured) return cached.binary
-
-    const binary = resolveFfmpeg({
-      // No `resources/ffmpeg/` yet: the bundled binary is a task of its own — see spec § 4.
-      bundled: undefined,
-      configured,
-      onPath: findOnPath('ffmpeg', process.env.PATH, delimiter, existsSync),
-      exists: existsSync,
-    })
-
-    resolved = { configured, binary }
-    return binary
-  }
+  const ffmpeg = createFfmpegResolver(() => ({
+    // No `resources/ffmpeg/` yet: the bundled binary is a task of its own — see spec § 4.
+    bundled: undefined,
+    configured: settings.read().media.ffmpegPath,
+    onPath: findOnPath('ffmpeg', process.env.PATH, delimiter, existsSync),
+    exists: existsSync,
+  }))
 
   const media = createMediaService({
-    ffmpeg,
+    ffmpeg: ffmpeg.path,
     run: (binary, args, signal) => runProcess(binary, args, { signal }),
-    probe: (source, signal) => probeSource(companionPath(ffmpeg()), source, { signal }),
+    probe: (source, signal) => probeSource(companionPath(ffmpeg.path()), source, { signal }),
     hash: hashSource,
     save: (assetId, fields) => {
       const catalog = project.catalog()
@@ -195,11 +183,16 @@ export function createServices(): Services {
     project,
     assets,
     media,
-    addAsset: asset => project.catalog().add(asset),
+    link: (source, type) =>
+      project.catalog().add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
+    // Asked, not cached: this is what the settings pane consults after the user installed the
+    // binary it just said was missing.
+    capabilities: () => {
+      ffmpeg.invalidate()
+      return { ffmpeg: ffmpeg.path() !== null }
+    },
     pickFolder,
     pickMedia,
-    newId: newAssetId,
-    now: timestamp,
     // Another key means another catalogue: keeping the cache would show the previous
     // account's models under the new one.
     onCredentialsChanged: () => {

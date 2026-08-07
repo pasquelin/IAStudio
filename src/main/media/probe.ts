@@ -1,13 +1,5 @@
-import { mediaProbeOf, type MediaProbe } from '@shared/domain/asset'
+import { mediaProbeOf, probeNumber, type MediaProbe } from '@shared/domain/asset'
 import { isRecord } from '@shared/guards'
-
-function numberOf(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value !== 'string') return undefined
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
 
 /** ffprobe reports a frame rate as a rational — `30000/1001`, and `0/0` for a still picture. */
 function frameRateOf(value: unknown): number | undefined {
@@ -37,16 +29,16 @@ export function parseProbe(raw: unknown): MediaProbe | null {
   if (!carrier || typeof carrier.codec_name !== 'string') return null
 
   const format = isRecord(raw) && isRecord(raw.format) ? raw.format : {}
-  const seconds = numberOf(format.duration) ?? numberOf(carrier.duration)
+  const seconds = probeNumber(format.duration) ?? probeNumber(carrier.duration)
 
   return mediaProbeOf({
     duration: Math.round((seconds ?? 0) * SECOND),
     codec: carrier.codec_name,
-    width: numberOf(video?.width),
-    height: numberOf(video?.height),
+    width: probeNumber(video?.width),
+    height: probeNumber(video?.height),
     fps: frameRateOf(video?.r_frame_rate),
-    sampleRate: numberOf(audio?.sample_rate),
-    channels: numberOf(audio?.channels),
+    sampleRate: probeNumber(audio?.sample_rate),
+    channels: probeNumber(audio?.channels),
   })
 }
 

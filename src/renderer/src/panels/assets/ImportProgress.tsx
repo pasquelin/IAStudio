@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { IngestProgress } from '@shared/domain/media'
 import { ProgressRow } from '@/design/ProgressRow'
@@ -17,9 +17,12 @@ const Row = memo(function Row({ entry, name }: { entry: IngestProgress; name: st
       label={name}
       ratio={failed ? undefined : entry.ratio}
       status={t(`ingest.${entry.stage}`)}
-      statusClassName={failed ? 'text-danger' : 'text-muted'}
-      cancelLabel={failed ? undefined : t('ingest.cancel')}
-      onCancel={failed ? undefined : () => void cancel(entry.assetId)}
+      tone={failed ? 'danger' : 'muted'}
+      cancel={
+        failed
+          ? undefined
+          : { label: t('ingest.cancel'), onClick: () => void cancel(entry.assetId) }
+      }
     />
   )
 })
@@ -35,10 +38,6 @@ export function ImportProgress() {
   const items = useAssets(state => state.items)
   const entries = Object.values(progress)
 
-  // One pass over the catalogue for the whole list, rather than a scan per row on every store
-  // change — the browser holds the entire project.
-  const names = useMemo(() => new Map(items.map(item => [item.id, item.name])), [items])
-
   // The notice outlives the ingests: without ffmpeg one lasts a few hundred milliseconds, and
   // the explanation would vanish just as the user wonders where the waveform went.
   if (ffmpeg && entries.length === 0) return null
@@ -47,9 +46,10 @@ export function ImportProgress() {
     <div className="border-border border-b">
       {!ffmpeg && <p className="text-muted px-2 py-1 text-[11px]">{t('ingest.noFfmpeg')}</p>}
       <ul>
-        {entries.map(entry => (
-          <Row key={entry.assetId} entry={entry} name={names.get(entry.assetId) ?? entry.assetId} />
-        ))}
+        {entries.map(entry => {
+          const asset = items.find(item => item.id === entry.assetId)
+          return <Row key={entry.assetId} entry={entry} name={asset?.name ?? entry.assetId} />
+        })}
       </ul>
     </div>
   )

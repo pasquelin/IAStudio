@@ -50,16 +50,17 @@ export type MediaProbe = {
  * Without a duration and a codec there is no probe: a clip built on one would have no length.
  */
 export function mediaProbeOf(fields: Partial<MediaProbe>): MediaProbe | null {
-  const { duration, codec, width, height, fps, sampleRate, channels } = fields
-  if (duration === undefined || codec === undefined) return null
+  const { duration, codec, ...rest } = fields
+  return duration === undefined || codec === undefined ? null : { duration, codec, ...rest }
+}
 
-  const probe: MediaProbe = { duration, codec }
-  if (width !== undefined) probe.width = width
-  if (height !== undefined) probe.height = height
-  if (fps !== undefined) probe.fps = fps
-  if (sampleRate !== undefined) probe.sampleRate = sampleRate
-  if (channels !== undefined) probe.channels = channels
-  return probe
+/** ffprobe prints its numbers as strings, the catalogue stores them as numbers. Both here. */
+export function probeNumber(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (typeof value !== 'string') return undefined
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 export type Asset = {
