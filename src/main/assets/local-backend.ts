@@ -1,6 +1,6 @@
 import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
-import { ASSET_FOLDERS, type Asset, type AssetType } from '@shared/domain/asset'
+import { ASSET_FOLDERS, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
 import type { Catalog } from '@main/project/catalog'
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {
@@ -32,7 +32,11 @@ export type ImportRequest = {
 }
 
 /** An import whose bytes the caller already holds — an edited take, rather than a download. */
-export type WriteRequest = Omit<ImportRequest, 'url'> & { extension: string }
+export type WriteRequest = Omit<ImportRequest, 'url'> & {
+  extension: string
+  /** What the bytes say about themselves, when the caller could read it. */
+  probe?: MediaProbe
+}
 
 export type LocalBackend = {
   importFromUrl: (request: ImportRequest) => Promise<Asset>
@@ -42,7 +46,12 @@ export type LocalBackend = {
    * "apply" means in the audio editor: the same asset, edited. The extension follows the bytes,
    * so a take re-encoded on the way out is not left claiming to be what it no longer is.
    */
-  replaceBytes: (assetId: string, bytes: Uint8Array, extension: string) => Promise<Asset>
+  replaceBytes: (
+    assetId: string,
+    bytes: Uint8Array,
+    extension: string,
+    probe?: MediaProbe,
+  ) => Promise<Asset>
 }
 
 /**
@@ -97,6 +106,7 @@ export function createLocalBackend({
       createdAt: now(),
     }
 
+    if (request.probe) asset.probe = request.probe
     if (request.jobId) asset.jobId = request.jobId
     if (request.remoteAssetId) asset.remoteAssetId = request.remoteAssetId
     if (request.derivedFrom) asset.derivedFrom = request.derivedFrom
@@ -113,7 +123,7 @@ export function createLocalBackend({
 
     importFromBytes: (request, bytes) => write(request, bytes),
 
-    replaceBytes: async (assetId, bytes, extension) => {
+    replaceBytes: async (assetId, bytes, extension, probe) => {
       const existing = catalog().find(assetId)
       if (!existing?.path) throw new Error(`asset ${assetId} has no file to replace`)
 
@@ -126,9 +136,21 @@ export function createLocalBackend({
         await rm(join(projectPath(), existing.path), { force: true })
       }
 
-      // Through `add`, which upserts: the row keeps its id, its tags and its job, and only the
-      // file it points at and the room it takes change.
-      return catalog().add({ ...existing, path: relativePath, bytes: bytes.byteLength })
+      // Through `add`, which upserts: the row keeps its id, its tags and its job, and only what
+      // the new bytes changed is rewritten.
+      //
+      // `peaksPath` goes, always: the waveform on disk describes the take before the edit, and
+      // a stale one is worse than none — the strip would draw a shape the ear no longer hears.
+      // A fresh one comes back when the take is ingested again.
+      const rewritten: Asset = {
+        ...existing,
+        path: relativePath,
+        bytes: bytes.byteLength,
+        ...(probe ? { probe } : {}),
+      }
+      delete rewritten.peaksPath
+
+      return catalog().add(rewritten)
     },
   }
 }

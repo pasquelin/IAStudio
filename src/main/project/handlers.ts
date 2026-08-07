@@ -3,6 +3,7 @@ import { CHANNELS } from '@shared/ipc'
 import { assetFilePath } from '@main/assets/protocol'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
+import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
 import type { ProjectStore } from './store'
 import {
@@ -62,7 +63,12 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.assetsSaveAudio, async (_event, value) => {
     const request = parseSaveAudio(value)
-    if (request.replaces) return assets.replaceBytes(request.replaces, request.wav, WAV_EXTENSION)
+    // Read from the bytes rather than carried over: an edited take is rarely the length it was.
+    const probe = probeWav(request.wav) ?? undefined
+
+    if (request.replaces) {
+      return assets.replaceBytes(request.replaces, request.wav, WAV_EXTENSION, probe)
+    }
 
     return assets.importFromBytes(
       {
@@ -70,6 +76,7 @@ export function registerProjectHandlers({
         name: request.name,
         type: 'audio',
         extension: WAV_EXTENSION,
+        ...(probe ? { probe } : {}),
         ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
       },
       request.wav,

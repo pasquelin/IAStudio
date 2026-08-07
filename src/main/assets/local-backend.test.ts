@@ -162,4 +162,40 @@ describe('local backend', () => {
   it('refuses to replace an asset it has no file for', async () => {
     await expect(backend.replaceBytes('nobody', new Uint8Array([1]), '.wav')).rejects.toThrow()
   })
+
+  it('records what the new bytes say about themselves, and drops the stale waveform', async () => {
+    await backend.importFromBytes(
+      { id: 'asset_4', name: 'Take', type: 'audio', extension: '.wav' },
+      new Uint8Array([1]),
+    )
+    // A waveform computed at ingest, describing the take before any edit.
+    catalog.add({ ...catalog.find('asset_4')!, peaksPath: '.index/peaks/old.bin' })
+
+    const replaced = await backend.replaceBytes('asset_4', new Uint8Array([4, 5]), '.wav', {
+      duration: 6_000_000,
+      codec: 'pcm_s16le',
+      sampleRate: 48_000,
+      channels: 1,
+    })
+
+    expect(replaced.probe?.duration).toBe(6_000_000)
+    // Stale peaks would draw a shape the ear no longer hears.
+    expect(replaced.peaksPath).toBeUndefined()
+    expect(catalog.find('asset_4')?.peaksPath).toBeUndefined()
+  })
+
+  it('carries the probe of bytes written beside the source', async () => {
+    const asset = await backend.importFromBytes(
+      {
+        id: 'asset_5',
+        name: 'Take (edited)',
+        type: 'audio',
+        extension: '.wav',
+        probe: { duration: 2_000_000, codec: 'pcm_s16le', sampleRate: 48_000, channels: 2 },
+      },
+      new Uint8Array([1, 2]),
+    )
+
+    expect(asset.probe).toMatchObject({ duration: 2_000_000, channels: 2 })
+  })
 })
