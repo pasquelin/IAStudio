@@ -6,6 +6,7 @@ import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { DocumentArea } from './DocumentArea'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
+import { JobsStatus } from './JobsStatus'
 import { Rail } from './Rail'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { TitleBar } from './TitleBar'
@@ -58,7 +59,7 @@ export function Shell() {
         <Rail side="right" />
       </div>
 
-      <Footer left={<Breadcrumb />} />
+      <Footer left={<Breadcrumb />} right={<JobsStatus />} />
       <TooltipHost />
     </div>
   )

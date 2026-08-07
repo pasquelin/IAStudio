@@ -2,9 +2,13 @@ import { useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
 
+/** Which side of its anchor the menu hangs on. */
+export type FlyoutPlacement = 'right' | 'above'
+
 export type FlyoutProps = {
   anchor: HTMLElement | null
   children: ReactNode
+  placement?: FlyoutPlacement
   onPointerEnter?: () => void
   onPointerLeave?: () => void
 }
@@ -22,17 +26,31 @@ const OFFSET = 2
  * with its own overflow, and a menu drawn inside it gets clipped by its edge. Same rule as
  * map3D's anchored panels.
  */
-export function Flyout({ anchor, children, onPointerEnter, onPointerLeave }: FlyoutProps) {
+export function Flyout({
+  anchor,
+  children,
+  placement = 'right',
+  onPointerEnter,
+  onPointerLeave,
+}: FlyoutProps) {
   // Placed through a callback ref rather than state: measuring in an effect and storing the
   // result would render the menu once at the wrong place, then move it.
   const place = useCallback(
     (node: HTMLDivElement | null) => {
       if (!node || !anchor) return
       const box = anchor.getBoundingClientRect()
+
+      if (placement === 'above') {
+        // Right edges aligned: the status line anchors sit against the window edge, and a menu
+        // hung from their left would run off it.
+        node.style.top = `${box.top - node.offsetHeight - OFFSET}px`
+        node.style.left = `${box.right - node.offsetWidth}px`
+        return
+      }
       node.style.top = `${box.top}px`
       node.style.left = `${box.right + OFFSET}px`
     },
-    [anchor],
+    [anchor, placement],
   )
 
   if (!anchor) return null

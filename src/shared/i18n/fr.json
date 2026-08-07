@@ -21,7 +21,6 @@
     "generator": "Génération",
     "inspector": "Inspecteur",
     "assets": "Assets",
-    "jobs": "Tâches",
     "skybox": "Skybox"
   },
   "actions": {
@@ -42,6 +41,11 @@
   },
   "jobs": {
     "none": "Aucune tâche en cours.",
+    "running_one": "{{count}} génération",
+    "running_other": "{{count}} générations",
+    "failed_one": "{{count}} échec",
+    "failed_other": "{{count}} échecs",
+    "open": "Afficher les générations",
     "status": {
       "queued": "En file",
       "running": "En cours",

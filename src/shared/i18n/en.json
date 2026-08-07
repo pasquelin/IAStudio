@@ -21,7 +21,6 @@
     "generator": "Generate",
     "inspector": "Inspector",
     "assets": "Assets",
-    "jobs": "Jobs",
     "skybox": "Skybox"
   },
   "actions": {
@@ -42,6 +41,11 @@
   },
   "jobs": {
     "none": "No job running.",
+    "running_one": "{{count}} generation",
+    "running_other": "{{count}} generations",
+    "failed_one": "{{count}} failure",
+    "failed_other": "{{count}} failures",
+    "open": "Show generations",
     "status": {
       "queued": "Queued",
       "running": "Running",
