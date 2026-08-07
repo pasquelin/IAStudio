@@ -6,10 +6,7 @@ import { useLayouts } from '@/stores/layouts'
 import { DEFAULT_OPEN, useTools } from '@/stores/tools'
 import { Shell } from './Shell'
 
-vi.mock('./DocumentArea', () => ({
-  DocumentArea: () => null,
-  openDocument: vi.fn(),
-}))
+vi.mock('./DocumentArea', () => ({ DocumentArea: () => null }))
 
 // The rail carries one button per panel, labelled with the same title as the panel itself. It
 // has its own test; here it would only make every query ambiguous.

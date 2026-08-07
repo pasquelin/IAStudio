@@ -4,12 +4,12 @@ import type { DockviewApi } from 'dockview-react'
 // In its own file rather than beside `DocumentArea`: a space reaching for `setDocumentTitle`
 // would otherwise import the module that imports every space.
 
-// Module-level rather than a context: the rail's button and the native menu both open
-// documents, and neither sits under `DocumentArea`.
+// Module-level rather than a context: this is a handle on a layout engine, not state anything
+// re-renders on — and a space reaches for it from inside the panel Dockview owns.
 let current: DockviewApi | null = null
 
 /** Called by `DocumentArea` once Dockview is ready — and again on every workspace remount. */
-export function setDockviewApi(api: DockviewApi | null): void {
+export function setDockviewApi(api: DockviewApi): void {
   current = api
 }
 
