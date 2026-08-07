@@ -282,7 +282,8 @@ keys. Nothing to reconfigure.
 
 **Add** — from the toolbar, from the Meshes and Lights panels, or from the native menu under
 **Objects → Add**. Meshes: box, sphere, capsule, circle, cylinder, dodecahedron, icosahedron,
-octahedron, tetrahedron, plane, ring, torus, torus knot, tube, lathe, sprite, text.
+octahedron, tetrahedron, plane, ring, torus, torus knot, tube, lathe. Sprite and 3D text are
+declared but not buildable yet — the menu shows them greyed rather than hiding what is coming.
 Lights: ambient, directional, hemisphere, point, spot.
 
 **Explorer** shows the scene as a tree. Only the visible rows are rendered, so a heavy scene
@@ -386,14 +387,8 @@ queue exists so a burst is spread rather than rejected.
 The model the generator preselects for each family — image, video, 3D, audio. Leave one unset to
 be asked every time.
 
-### Storage
-
-| Setting | What it does |
-|---|---|
-| **Projects folder** | where the new-project dialog starts |
-| **Backend** | whether a generated asset is downloaded into the project (**local**) or left on Scenario (**cloud**) |
-
-The studio also remembers the last project you opened, and reopens it on launch.
+The studio remembers the last project you opened and reopens it on launch. That is not a setting
+you tick — it simply happens.
 
 ### Media
 

@@ -50,7 +50,7 @@ Electron, trois cibles, un dépôt.
         │  renderer     bac à sable, ni Node ni fs    │
         │                                             │
         │  · shell React 19 — rails, zones, docks     │
-        │  · moteurs : canvas, scène, timeline        │
+        │  · moteurs : canvas, scène, timeline, audio │
         │  · stores zustand, TanStack Query           │
         └─────────────────────────────────────────────┘
 ```
@@ -228,11 +228,12 @@ src/renderer/src/
 │   ├── TitleBar.tsx     espaces de travail, feux natifs
 │   └── documents.tsx    quel éditeur rend quel type de document
 ├── design/       le design system maison — voir plus bas
-├── engines/      canvas, scène, timeline, et l'historique partagé
+├── engines/      canvas, scène, timeline, audio, et l'historique partagé
 ├── spaces/       un éditeur par type de document
 │   ├── image/      le canvas Pixi et ses outils
 │   ├── three/      la vue three.js et ses outils
-│   └── video/      la timeline, le moniteur, ses outils
+│   ├── video/      la timeline, le moniteur, ses outils
+│   └── audio/      la forme d'onde, ses outils, le décodeur
 ├── panels/       les outils ancrables
 ├── stores/       zustand : documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        raccourcis, menu natif, densité, état de fenêtre, debounce…
@@ -267,13 +268,18 @@ principal a besoin de `{ id, zone }` pour restaurer un outil fermé, et le dupli
 
 ## Les moteurs
 
-Trois moteurs, aucun React à l'intérieur.
+Quatre, aucun React à l'intérieur d'aucun.
 
 | Moteur | Adossé à | Détient |
 |---|---|---|
 | `CanvasEngine` | PixiJS 8.19 | le document image : calques, formes, tracés |
 | `SceneRenderer` | three.js 0.185 | la scène 3D : maillages, lumières, gizmos, caméra |
 | `TimelineEngine` | mediabunny + Canvas | la séquence : clips, lecture, formes d'onde, vignettes |
+| `engines/audio` | tableaux d'échantillons | l'édition sonore : rogner, fondus, gain, normaliser, silences |
+
+Celui du son est une paire de modules plutôt qu'une classe — `audio-data.ts` fait le travail sur
+les échantillons, `edits.ts` tient un `AudioEditState` rejouable depuis le fichier source. Même
+invariant que les trois autres : l'édition est l'état, jamais le buffer en mémoire.
 
 Chacun va de pair avec un module d'état pur (`canvas-state.ts`, `scene-state.ts`,
 `timeline-state.ts`) et un module de commandes. Les commandes sont la seule voie par laquelle

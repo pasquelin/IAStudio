@@ -168,8 +168,8 @@ titre dit déjà quel espace est actif.
 - **Les facettes** trient par capacité (texte-vers-image, inpaint, controlnet, image-vers-3D…) et
   par période.
 - **Le tri** se fait par pertinence, du plus récent ou du plus ancien.
-- **Deux vues** — une grille de vignettes ou une liste dense. Le curseur redimensionne les
-  vignettes.
+- **Deux vues** — une grille de vignettes ou une liste dense. On en change depuis la barre ; le
+  curseur redimensionne les vignettes.
 
 Un clic choisit le modèle. Le choix est retenu par famille, et rappelé en haut du panneau : c'est
 lui que la génération, en dessous, fera tourner.
@@ -288,8 +288,10 @@ mêmes quatre touches. Rien à reconfigurer.
 
 **Ajouter** — depuis la barre d'outils, depuis les panneaux Maillages et Lumières, ou depuis le
 menu natif sous **Objets → Ajouter**. Maillages : boîte, sphère, capsule, cercle, cylindre,
-dodécaèdre, icosaèdre, octaèdre, tétraèdre, plan, anneau, tore, nœud de tore, tube, révolution,
-sprite, texte. Lumières : ambiante, directionnelle, hémisphérique, ponctuelle, spot.
+dodécaèdre, icosaèdre, octaèdre, tétraèdre, plan, anneau, tore, nœud de tore, tube,
+révolution. Le sprite et le texte 3D sont annoncés mais pas encore constructibles — le menu les
+grise plutôt que de cacher ce qui vient. Lumières : ambiante, directionnelle, hémisphérique,
+ponctuelle, spot.
 
 L'**Explorateur** montre la scène en arbre. Seules les lignes visibles sont rendues, de sorte
 qu'une scène lourde défile quand même sans peine, et les flèches la parcourent.
@@ -394,14 +396,8 @@ probable. La file existe pour étaler une rafale plutôt que de la faire rejeter
 Le modèle que la génération présélectionne pour chaque famille — image, vidéo, 3D, audio. Laissez
 une famille vide pour qu'elle demande à chaque fois.
 
-### Stockage
-
-| Réglage | Ce qu'il fait |
-|---|---|
-| **Dossier de projets** | l'endroit où s'ouvre la boîte de dialogue de nouveau projet |
-| **Emplacement** | un asset généré est-il téléchargé dans le projet (**local**) ou laissé chez Scenario (**cloud**) |
-
-Le studio retient aussi le dernier projet ouvert, et le rouvre au lancement.
+Le studio retient le dernier projet ouvert et le rouvre au lancement. Ce n'est pas un réglage à
+cocher — cela se fait tout seul.
 
 ### Médias
 

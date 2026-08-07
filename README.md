@@ -118,8 +118,8 @@ src/
 ├── renderer/src/
 │   ├── app/         the shell: rails, zones, tool windows, document area
 │   ├── design/      the in-house design system — every docked component
-│   ├── engines/     canvas, scene and timeline engines. No React in here
-│   ├── spaces/      one document editor per kind: image, three, video
+│   ├── engines/     canvas, scene, timeline and audio engines. No React in here
+│   ├── spaces/      one document editor per kind: image, three, video, audio
 │   ├── panels/      the dockable tools
 │   ├── stores/      zustand stores
 │   ├── hooks/       shared hooks

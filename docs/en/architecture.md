@@ -50,7 +50,7 @@ Electron, three targets, one repository.
         │  renderer      sandboxed, no Node, no fs    │
         │                                             │
         │  · React 19 shell — rails, zones, docks     │
-        │  · engines: canvas, scene, timeline         │
+        │  · engines: canvas, scene, timeline, audio  │
         │  · zustand stores, TanStack Query           │
         └─────────────────────────────────────────────┘
 ```
@@ -225,11 +225,12 @@ src/renderer/src/
 │   ├── TitleBar.tsx     workspace switcher, native traffic lights
 │   └── documents.tsx    which editor renders which document kind
 ├── design/       the in-house design system — see below
-├── engines/      canvas, scene, timeline, and shared history
+├── engines/      canvas, scene, timeline, audio, and shared history
 ├── spaces/       one editor per document kind
 │   ├── image/      Pixi-backed canvas and its tools
 │   ├── three/      the three.js viewport and its tools
-│   └── video/      the timeline canvas, the monitor, its tools
+│   ├── video/      the timeline canvas, the monitor, its tools
+│   └── audio/     the waveform, its tools, the decoder
 ├── panels/       the dockable tools
 ├── stores/       zustand: documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        shortcuts, native menu, density, window state, debounce…
@@ -261,13 +262,18 @@ That is why the tool registry lives in `shared/` and not in the renderer: the ma
 
 ## Engines
 
-Three engines, no React inside any of them.
+Four of them, no React inside any one.
 
 | Engine | Backed by | Owns |
 |---|---|---|
 | `CanvasEngine` | PixiJS 8.19 | the image document: layers, shapes, strokes |
 | `SceneRenderer` | three.js 0.185 | the 3D scene: meshes, lights, gizmos, camera |
 | `TimelineEngine` | mediabunny + Canvas | the sequence: clips, playback, waveforms, filmstrips |
+| `engines/audio` | plain sample arrays | the sound edit: crop, fades, gain, normalise, trim silence |
+
+The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
+`edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
+three: the edit is the state, never the buffer currently in memory.
 
 Each pairs with a plain state module (`canvas-state.ts`, `scene-state.ts`, `timeline-state.ts`)
 and a command module. Commands are the only way state changes, which is what makes undo a
