@@ -139,9 +139,21 @@
   "imageTools": {
     "brush": "Brush",
     "eraser": "Eraser",
-    "select": "Selection",
-    "crop": "Crop",
-    "text": "Text"
+    "eraserPoint": "Point eraser",
+    "eraserSelection": "Selective eraser",
+    "picker": "Eyedropper",
+    "hand": "Hand",
+    "color": "Colour",
+    "size": "Size",
+    "opacity": "Opacity"
+  },
+  "layers": {
+    "title": "Layers",
+    "add": "Add a layer",
+    "remove": "Delete layer",
+    "visible": "Show or hide",
+    "untitled": "Layer {{n}}",
+    "opacity": "Layer opacity"
   },
   "sceneTools": {
     "translate": "Move",

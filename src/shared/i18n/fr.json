@@ -139,9 +139,21 @@
   "imageTools": {
     "brush": "Pinceau",
     "eraser": "Gomme",
-    "select": "Sélection",
-    "crop": "Recadrer",
-    "text": "Texte"
+    "eraserPoint": "Gomme ponctuelle",
+    "eraserSelection": "Gomme sélective",
+    "picker": "Pipette",
+    "hand": "Main",
+    "color": "Couleur",
+    "size": "Taille",
+    "opacity": "Opacité"
+  },
+  "layers": {
+    "title": "Calques",
+    "add": "Ajouter un calque",
+    "remove": "Supprimer le calque",
+    "visible": "Afficher ou masquer",
+    "untitled": "Calque {{n}}",
+    "opacity": "Opacité du calque"
   },
   "sceneTools": {
     "translate": "Déplacer",

@@ -1,14 +1,40 @@
-import { mdiBrush, mdiCrop, mdiEraser, mdiFormatText, mdiSelection } from '@mdi/js'
+import {
+  mdiBrush,
+  mdiEraser,
+  mdiEyedropperVariant,
+  mdiHandBackRight,
+  mdiSelectionDrag,
+} from '@mdi/js'
+import type { CanvasTool } from '@/engines/canvas/CanvasEngine'
 import type { Tool } from '@/design/Toolbar'
 
+export type ImageTool = Tool & { tool: CanvasTool }
+
+/** Modes of the eraser, in the order the flyout shows them. */
+export type EraserMode = 'point' | 'selection'
+
 /**
- * Declared, visible, and inert: the canvas engine does not exist yet. A visible-but-disabled
- * bar says honestly where the software stands; an absent one suggests there will never be one.
+ * The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here.
+ *
+ * The eraser carries two modes, so it opens a flyout; the others act on click. That rule comes
+ * from map3D and lives in `useHoverFlyout`, not here.
  */
-export const IMAGE_TOOLS: readonly Tool[] = [
-  { id: 'brush', labelKey: 'imageTools.brush', icon: mdiBrush, disabled: true },
-  { id: 'eraser', labelKey: 'imageTools.eraser', icon: mdiEraser, disabled: true },
-  { id: 'select', labelKey: 'imageTools.select', icon: mdiSelection, disabled: true },
-  { id: 'crop', labelKey: 'imageTools.crop', icon: mdiCrop, disabled: true },
-  { id: 'text', labelKey: 'imageTools.text', icon: mdiFormatText, disabled: true },
+export const IMAGE_TOOLS: readonly ImageTool[] = [
+  { id: 'brush', tool: 'brush', labelKey: 'imageTools.brush', icon: mdiBrush },
+  {
+    id: 'eraser',
+    tool: 'eraser',
+    labelKey: 'imageTools.eraser',
+    icon: mdiEraser,
+    modes: [
+      { id: 'point', labelKey: 'imageTools.eraserPoint', icon: mdiEraser },
+      { id: 'selection', labelKey: 'imageTools.eraserSelection', icon: mdiSelectionDrag },
+    ],
+  },
+  { id: 'picker', tool: 'picker', labelKey: 'imageTools.picker', icon: mdiEyedropperVariant },
+  { id: 'hand', tool: 'hand', labelKey: 'imageTools.hand', icon: mdiHandBackRight },
 ]
+
+export function toolById(id: string): ImageTool | null {
+  return IMAGE_TOOLS.find(tool => tool.id === id) ?? null
+}
