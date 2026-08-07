@@ -772,6 +772,38 @@
     "sequenceEnd": {
       "title": "Go to end",
       "help": "Sends the playhead right to the end of the edit, past the last clip."
+    },
+    "canvasZoomIn": {
+      "title": "Zoom in",
+      "help": "Magnifies the view one step, around the middle of what is visible. The image itself is untouched — only the way it is looked at."
+    },
+    "canvasZoomOut": {
+      "title": "Zoom out",
+      "help": "Shrinks the view one step, to take in the whole image again."
+    },
+    "canvasZoomFit": {
+      "title": "Fit to window",
+      "help": "Frames the whole image in the panel, with a margin, and never magnifies it past its actual size."
+    },
+    "canvasZoomActual": {
+      "title": "Actual size",
+      "help": "One image pixel per screen pixel: the only scale at which sharpness can be judged."
+    },
+    "canvasRulers": {
+      "title": "Rulers",
+      "help": "Shows or hides the two graduated rulers, at the top and on the left. Guides are pulled off them."
+    },
+    "canvasGuides": {
+      "title": "Guides",
+      "help": "Shows or hides the guides laid on the image. Hiding them does not remove them."
+    },
+    "canvasClearGuides": {
+      "title": "Clear guides",
+      "help": "Removes every guide from the image. Undoable, like any other edit."
+    },
+    "canvasSnap": {
+      "title": "Snap",
+      "help": "Makes what is dragged stick to guides, to the image edges and to its centre, within a few pixels."
     }
   }
 }

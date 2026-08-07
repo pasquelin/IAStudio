@@ -4,15 +4,7 @@ import { DEFAULT_VIEW } from '@/engines/canvas/viewport'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useCanvasViews, viewOf } from '@/stores/canvas-views'
 import { useDocuments } from '@/stores/documents'
-import {
-  activeImageId,
-  clearGuides,
-  toggleView,
-  zoomIn,
-  zoomOut,
-  zoomToActual,
-  zoomToFit,
-} from './canvas-view'
+import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 
 const DOCUMENT = 'doc-1'
 const HOST = { width: 800, height: 600 }
@@ -32,24 +24,6 @@ function openImage(): void {
   })
   useCanvasViews.setState({ views: {}, hosts: { [DOCUMENT]: HOST } })
 }
-
-describe('activeImageId', () => {
-  beforeEach(openImage)
-
-  it('names the image document in front', () => {
-    expect(activeImageId()).toBe(DOCUMENT)
-  })
-
-  it('says nothing when what is in front is not an image', () => {
-    useDocuments.setState({
-      documents: {
-        [DOCUMENT]: { id: DOCUMENT, kind: 'scene', workspace: '3d', title: 'Scène' },
-      },
-    })
-
-    expect(activeImageId()).toBeNull()
-  })
-})
 
 describe('zooming', () => {
   beforeEach(openImage)

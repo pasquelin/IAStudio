@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { placementIn, placementOf, placementsOf, TOOL_PLACEMENTS, type ToolId } from './tool'
-import { servesWorkspace, WORKSPACE_IDS } from './workspace'
+import {
+  placementIn,
+  placementOf,
+  placementsOf,
+  servesWorkspace,
+  TOOL_PLACEMENTS,
+  type ToolId,
+} from './tool'
+import { WORKSPACE_IDS } from './workspace'
 
 const TOOL_IDS: ToolId[] = [...new Set(TOOL_PLACEMENTS.map(placement => placement.id))]
 

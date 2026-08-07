@@ -11,18 +11,12 @@ import {
 import { clearGuides as clearGuidesCommand } from '@/engines/canvas/commands'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { hostOf, useCanvasViews, viewOf, type ViewToggle } from '@/stores/canvas-views'
-import { activeIdOfKind, useDocuments } from '@/stores/documents'
 
 /**
- * Navigating an image document, from wherever the gesture comes: the native menu, the zoom bar,
- * or a key. Written once here rather than in each of them — a zoom step that centres differently
- * depending on which button was pressed is a bug nobody thinks to look for.
+ * Navigating an image document, from wherever the gesture comes: the zoom bar or a key. Written
+ * once here rather than in each of them — a zoom step that centres differently depending on
+ * which button was pressed is a bug nobody thinks to look for.
  */
-
-/** The image document in front, or `null` when what is in front is not one. */
-export function activeImageId(): string | null {
-  return activeIdOfKind(useDocuments.getState(), 'image')
-}
 
 /**
  * The panel this document is shown in, and how much of its top-left corner the rulers cover.

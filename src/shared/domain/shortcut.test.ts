@@ -113,21 +113,3 @@ describe('acceleratorOf', () => {
     expect(acceleratorOf(null)).toBeUndefined()
   })
 })
-
-describe('shortcutLabel, on the keys the view commands use', () => {
-  it('prints the cap rather than the code', () => {
-    expect(shortcutLabel('Meta+Equal')).toBe('⌘=')
-    expect(shortcutLabel('Meta+Minus')).toBe('⌘−')
-    expect(shortcutLabel('Meta+Digit0')).toBe('⌘0')
-    expect(shortcutLabel('Shift+Meta+Semicolon')).toBe('⇧⌘;')
-  })
-})
-
-// A menu item promising a key Electron cannot spell fires from neither side.
-describe('acceleratorFor, on punctuation', () => {
-  it('names the keys Electron takes as characters', () => {
-    expect(acceleratorFor('Meta+Equal')).toBe('CmdOrCtrl+=')
-    expect(acceleratorFor('Meta+Minus')).toBe('CmdOrCtrl+-')
-    expect(acceleratorFor('Shift+Meta+Semicolon')).toBe('Shift+CmdOrCtrl+;')
-  })
-})

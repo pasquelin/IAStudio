@@ -6,6 +6,8 @@ import { MAX_SCALE, MIN_SCALE } from '@/engines/canvas/viewport'
 
 export type ZoomBarProps = {
   scale: number
+  /** Read off the command registry by the caller: a remapped key has to move on the bar too. */
+  shortcuts: { zoomIn: string; zoomOut: string; fit: string; actual: string }
   onZoomIn: () => void
   onZoomOut: () => void
   onFit: () => void
@@ -23,7 +25,7 @@ export function zoomLabel(scale: number): string {
  * in a status bar: the document has no chrome of its own, and the eye looking for the zoom is
  * already on the image.
  */
-export function ZoomBar({ scale, onZoomIn, onZoomOut, onFit, onActual }: ZoomBarProps) {
+export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual }: ZoomBarProps) {
   const { t } = useTranslation()
 
   return (
@@ -31,6 +33,7 @@ export function ZoomBar({ scale, onZoomIn, onZoomOut, onFit, onActual }: ZoomBar
       <ToolButton
         icon={mdiMagnifyMinusOutline}
         label={t('imageView.zoomOut')}
+        shortcut={shortcuts.zoomOut}
         tooltip={TIP_TOP}
         variant="header"
         disabled={scale <= MIN_SCALE}
@@ -41,6 +44,7 @@ export function ZoomBar({ scale, onZoomIn, onZoomOut, onFit, onActual }: ZoomBar
       <ToolButton
         label={t('imageView.zoom')}
         description={t('imageView.actualHint')}
+        shortcut={shortcuts.actual}
         tooltip={TIP_TOP}
         variant="header"
         className="text-muted w-auto px-1 tabular-nums"
@@ -51,6 +55,7 @@ export function ZoomBar({ scale, onZoomIn, onZoomOut, onFit, onActual }: ZoomBar
       <ToolButton
         icon={mdiMagnifyPlusOutline}
         label={t('imageView.zoomIn')}
+        shortcut={shortcuts.zoomIn}
         tooltip={TIP_TOP}
         variant="header"
         disabled={scale >= MAX_SCALE}
@@ -60,6 +65,7 @@ export function ZoomBar({ scale, onZoomIn, onZoomOut, onFit, onActual }: ZoomBar
         icon={mdiFitToScreenOutline}
         label={t('imageView.fit')}
         description={t('imageView.fitHint')}
+        shortcut={shortcuts.fit}
         tooltip={TIP_TOP}
         variant="header"
         onClick={onFit}

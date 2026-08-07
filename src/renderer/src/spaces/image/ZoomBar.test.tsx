@@ -11,7 +11,8 @@ function mount(scale: number) {
     onFit: vi.fn(),
     onActual: vi.fn(),
   }
-  render(<ZoomBar scale={scale} {...handlers} />)
+  const shortcuts = { zoomIn: '⌘=', zoomOut: '⌘−', fit: '⌘0', actual: '⌘1' }
+  render(<ZoomBar scale={scale} shortcuts={shortcuts} {...handlers} />)
   return handlers
 }
 
@@ -39,7 +40,8 @@ describe('ZoomBar', () => {
     await userEvent.click(screen.getByRole('button', { name: /Zoom avant/ }))
     await userEvent.click(screen.getByRole('button', { name: /Zoom arrière/ }))
     await userEvent.click(screen.getByRole('button', { name: /Ajuster/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Zoom$/ }))
+    // The readout's accessible name carries its key, like every other button of the bars.
+    await userEvent.click(screen.getByRole('button', { name: 'Zoom (⌘1)' }))
 
     expect(handlers.onZoomIn).toHaveBeenCalledOnce()
     expect(handlers.onZoomOut).toHaveBeenCalledOnce()
