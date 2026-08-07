@@ -1,15 +1,25 @@
-import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
-import { removeClip, splitClip } from '@/engines/timeline/commands'
+import { useEffect, useRef, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react'
+import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
 import { paintTimeline } from '@/engines/timeline/painter'
 import { hitTest, xToTime, type Point, type Viewport } from '@/engines/timeline/timeline-geometry'
-import { snapToFrame, type SequenceState } from '@/engines/timeline/timeline-state'
+import {
+  snapToFrame,
+  wholeFrames,
+  type Clip,
+  type SequenceState,
+} from '@/engines/timeline/timeline-state'
+import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 
 export type TimelineCanvasProps = { documentId: string; tool: string }
 
 /** 100 px per second — the zoom this branch opens on. */
 export const DEFAULT_VIEWPORT: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
+
+/** What an asset still being probed is worth on the timeline, until its real duration lands. */
+export const UNPROBED_DURATION = 5_000_000
 
 export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -122,6 +132,31 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     store.runCommand(documentId, command)
   }
 
+  const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
+    event.preventDefault()
+
+    const assetId = assetIdFromDrag(event)
+    if (!assetId) return
+
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+    const target = hitTest(sequence, DEFAULT_VIEWPORT, point)
+    if (!target || target.kind === 'ruler') return
+
+    const asset = useAssets.getState().items.find(candidate => candidate.id === assetId)
+    const clip: Clip = {
+      id: `clip_${crypto.randomUUID()}`,
+      assetId,
+      start: snapToFrame(xToTime(point.x, DEFAULT_VIEWPORT), sequence.settings),
+      // A whole number of frames, so the clip's tail stays snappable — see `wholeFrames`.
+      duration: wholeFrames(asset?.probe?.duration ?? UNPROBED_DURATION, sequence.settings),
+      inPoint: 0,
+      speed: 1,
+    }
+
+    useSequences.getState().runCommand(documentId, addClip(target.trackId, clip))
+  }
+
   const onKeyDown = (event: KeyboardEvent<HTMLCanvasElement>): void => {
     if (event.key !== 'Delete' && event.key !== 'Backspace') return
     if (!sequence.selectedId) return
@@ -138,6 +173,8 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onKeyDown={onKeyDown}
+      onDragOver={event => event.preventDefault()}
+      onDrop={onDrop}
     />
   )
 }

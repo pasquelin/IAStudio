@@ -73,6 +73,15 @@ export function snapToFrame(time: Us, settings: SequenceSettings): Us {
   return Math.max(0, Math.round(time / frame) * frame)
 }
 
+/**
+ * A clip lasts a whole number of frames. Half a frame cannot be shown, and a duration off the
+ * grid puts the clip's tail off it too — which no neighbour can then be butt-joined against.
+ */
+export function wholeFrames(duration: Us, settings: SequenceSettings): Us {
+  const frame = frameDuration(settings)
+  return Math.max(frame, Math.round(duration / frame) * frame)
+}
+
 export function clipEnd(clip: Clip): Us {
   return clip.start + clip.duration
 }

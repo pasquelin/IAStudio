@@ -48,12 +48,10 @@ export function ProgramMonitor({ documentId, onEngine }: ProgramMonitorProps) {
       owner: documentId,
       // Playback is not an edit: the playhead goes through `replace`, which skips the history.
       onTime: time =>
-        useSequences
-          .getState()
-          .replace(documentId, {
-            ...sequenceOf(useSequences.getState(), documentId),
-            playhead: time,
-          }),
+        useSequences.getState().replace(documentId, {
+          ...sequenceOf(useSequences.getState(), documentId),
+          playhead: time,
+        }),
     })
 
     engine.current = created

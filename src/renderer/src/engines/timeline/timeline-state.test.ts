@@ -10,6 +10,7 @@ import {
   serializeSequence,
   snapToFrame,
   trackOfClip,
+  wholeFrames,
   type Clip,
   type SequenceState,
   type Track,
@@ -49,6 +50,17 @@ describe('sequence state', () => {
     expect(snapToFrame(39_999, settings)).toBe(40_000)
     expect(snapToFrame(41_000, settings)).toBe(40_000)
     expect(snapToFrame(-10, settings)).toBe(0)
+  })
+
+  it('rounds a duration to a whole number of frames', () => {
+    const settings = { width: 1920, height: 1080, fps: 25, sampleRate: 48000 }
+    expect(wholeFrames(3_510_000, settings)).toBe(3_520_000)
+    expect(wholeFrames(480_000, settings)).toBe(480_000)
+  })
+
+  it('never rounds a duration down to nothing', () => {
+    const settings = { width: 1920, height: 1080, fps: 25, sampleRate: 48000 }
+    expect(wholeFrames(1_000, settings)).toBe(40_000)
   })
 
   it('finds a clip and its track by clip id', () => {
