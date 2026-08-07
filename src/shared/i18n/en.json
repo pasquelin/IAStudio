@@ -271,6 +271,9 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale",
+    "noTexture": "None",
+    "chooseTexture": "Choose a texture",
+    "clearTexture": "Remove the texture",
     "fields": {
       "width": "Width",
       "height": "Height",
@@ -299,7 +302,12 @@
       "penumbra": "Penumbra",
       "target": "Target",
       "roughness": "Roughness",
-      "metalness": "Metalness"
+      "metalness": "Metalness",
+      "map": "Texture",
+      "normalMap": "Normals",
+      "roughnessMap": "Roughness map",
+      "metalnessMap": "Metalness map",
+      "aoMap": "Ambient occlusion"
     }
   },
   "transport": {

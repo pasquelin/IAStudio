@@ -1,10 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { Asset, AssetType } from '@shared/domain/asset'
+import { TEXTURE_SLOTS } from '@shared/domain/scene'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/node-factory'
 import { lightNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
-import { nodeById, type SceneNode, type SceneState } from '@/engines/scene/scene-state'
+import {
+  DEFAULT_MATERIAL,
+  nodeById,
+  type SceneNode,
+  type SceneState,
+} from '@/engines/scene/scene-state'
+import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { installScene } from '@/stores/scene-fixtures'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
@@ -231,6 +239,84 @@ describe('inspector panel', () => {
     expect(screen.getByLabelText('Rayon')).toBeInTheDocument()
     expect(screen.getByLabelText('Enroulements P')).toBeInTheDocument()
     expect(screen.getByLabelText('Segments tubulaires')).toBeInTheDocument()
+  })
+
+  describe('textures', () => {
+    const asset = (id: string, name: string, type: AssetType): Asset => ({
+      id,
+      name,
+      type,
+      location: 'local',
+      path: `assets/${id}.png`,
+      tags: [],
+      createdAt: '2026-08-07T00:00:00.000Z',
+    })
+
+    beforeEach(() => {
+      useAssets.setState({
+        items: [
+          asset('tex-1', 'Brique', 'texture'),
+          asset('img-1', 'Rendu', 'image'),
+          asset('vid-1', 'Rush', 'video'),
+        ],
+      })
+    })
+
+    // What the studio generates lands in `image` far more often than in `texture`.
+    it('offers the pictures of the project, whatever folder they were filed under', async () => {
+      render(<Content />)
+
+      await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
+
+      expect(await screen.findByRole('menuitem', { name: /Brique/ })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: /Rendu/ })).toBeInTheDocument()
+    })
+
+    it('leaves out what could never be loaded as a texture', async () => {
+      render(<Content />)
+
+      await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
+      await screen.findByRole('menuitem', { name: /Brique/ })
+
+      expect(screen.queryByRole('menuitem', { name: /Rush/ })).not.toBeInTheDocument()
+    })
+
+    // A texture is a reference to an asset, never an image: that is what a reopened scene can
+    // resolve again.
+    it('stores the asset identifier in the material', async () => {
+      render(<Content />)
+
+      await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
+      await userEvent.click(await screen.findByRole('menuitem', { name: /Brique/ }))
+
+      const node = nodeInStore('box-1')
+      expect(node?.type === 'mesh' && node.material.map).toEqual({ assetId: 'tex-1' })
+    })
+
+    it('empties the slot it is asked to clear, and undo puts it back', async () => {
+      install({
+        ...meshNode('box-1'),
+        material: { ...DEFAULT_MATERIAL, map: { assetId: 'tex-1' } },
+      })
+      render(<Content />)
+
+      await userEvent.click(screen.getAllByRole('button', { name: /Retirer la texture/ })[0]!)
+
+      const cleared = nodeInStore('box-1')
+      expect(cleared?.type === 'mesh' && cleared.material.map).toBeNull()
+
+      useScenes.getState().undo('doc-1')
+      const back = nodeInStore('box-1')
+      expect(back?.type === 'mesh' && back.material.map).toEqual({ assetId: 'tex-1' })
+    })
+
+    it('offers a slot per map a standard material reads', () => {
+      render(<Content />)
+
+      expect(screen.getAllByRole('button', { name: /Choisir une texture/ })).toHaveLength(
+        TEXTURE_SLOTS.length,
+      )
+    })
   })
 
   it('shows the node name, and renames it', async () => {

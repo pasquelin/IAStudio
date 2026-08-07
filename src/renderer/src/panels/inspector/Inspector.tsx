@@ -4,16 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { token } from '@/engines/core/palette'
 import { setGeometry, setLight, setMaterial } from '@/engines/scene/commands'
-import {
-  geometryFields,
-  lightFields,
-  materialFields,
-  withField,
-} from '@/engines/scene/property-fields'
+import { geometryFields, lightFields, withField } from '@/engines/scene/property-fields'
 import { nodeById, type SceneNode } from '@/engines/scene/scene-state'
 import { activeIdOfKind, useDocuments, type DocumentsSlice } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
+import { MaterialSection } from './MaterialSection'
 import { TransformSection } from './TransformSection'
 import { useSceneEdit } from './useSceneEdit'
 
@@ -63,12 +59,10 @@ function SelectedNode({ documentId }: { documentId: string }) {
             }
             gesture={edit}
           />
-          <DescriptorSection
-            title={t('inspector.material')}
-            fields={materialFields(node.material, meshColor)}
-            onChange={(name, value) =>
-              edit.run(setMaterial(node.id, withField(node.material, name, value)))
-            }
+          <MaterialSection
+            material={node.material}
+            fallbackColor={meshColor}
+            onChange={material => edit.run(setMaterial(node.id, material))}
             gesture={edit}
           />
         </>

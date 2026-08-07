@@ -5,7 +5,11 @@ import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type SceneNode } from './scene-st
  * Scene nodes for tests. Declared once so a new required field on `SceneNodeBase` breaks in one
  * place rather than in every suite that builds a node by hand.
  */
-export function meshNode(id: string, parentId: string | null = null): SceneNode {
+/** Narrowed rather than `SceneNode`: a test that dresses a mesh needs its material to exist. */
+export function meshNode(
+  id: string,
+  parentId: string | null = null,
+): Extract<SceneNode, { type: 'mesh' }> {
   return {
     id,
     parentId,

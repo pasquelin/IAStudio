@@ -13,7 +13,7 @@ import {
   setTransform,
 } from './commands'
 import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
-import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
+import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
 
 describe('addNode', () => {
   it('appends the node and selects it', () => {
@@ -126,7 +126,7 @@ describe('setMaterial', () => {
   it('replaces the material and comes back', () => {
     const start: SceneState = { nodes: [mesh('a')], selectedId: null }
     const command = setMaterial('a', {
-      kind: 'standard',
+      ...DEFAULT_MATERIAL,
       color: '#ff0000',
       roughness: 0.2,
       metalness: 1,
@@ -142,12 +142,7 @@ describe('setMaterial', () => {
 
   it('leaves the geometry it did not touch alone', () => {
     const start: SceneState = { nodes: [mesh('a')], selectedId: null }
-    const command = setMaterial('a', {
-      kind: 'standard',
-      color: null,
-      roughness: 0.5,
-      metalness: 0,
-    })
+    const command = setMaterial('a', { ...DEFAULT_MATERIAL, roughness: 0.5 })
 
     const node = command.apply(start).nodes[0]
     expect(node?.type === 'mesh' && node.geometry.kind).toBe('box')

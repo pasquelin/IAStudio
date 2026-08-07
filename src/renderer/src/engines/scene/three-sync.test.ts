@@ -9,6 +9,7 @@ import {
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { geometryFor } from './three-factory'
+import { DEFAULT_MATERIAL } from './scene-state'
 import { applyGeometry, applyLight, applyMaterial, standardMaterialOf } from './three-sync'
 
 describe('applyMaterial', () => {
@@ -17,7 +18,7 @@ describe('applyMaterial', () => {
 
     applyMaterial(
       material,
-      { kind: 'standard', color: '#ff0000', roughness: 0.25, metalness: 0.5 },
+      { ...DEFAULT_MATERIAL, color: '#ff0000', roughness: 0.25, metalness: 0.5 },
       '',
     )
 
@@ -31,11 +32,7 @@ describe('applyMaterial', () => {
     const material = new MeshStandardMaterial()
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }), material)
 
-    applyMaterial(
-      material,
-      { kind: 'standard', color: null, roughness: 1, metalness: 0 },
-      '#868a91',
-    )
+    applyMaterial(material, DEFAULT_MATERIAL, '#868a91')
 
     expect(mesh.material).toBe(material)
   })
@@ -43,11 +40,7 @@ describe('applyMaterial', () => {
   it('falls back to the studio colour when the descriptor carries none', () => {
     const material = new MeshStandardMaterial()
 
-    applyMaterial(
-      material,
-      { kind: 'standard', color: null, roughness: 1, metalness: 0 },
-      '#868a91',
-    )
+    applyMaterial(material, DEFAULT_MATERIAL, '#868a91')
 
     expect(material.color.getHexString()).toBe('868a91')
   })
@@ -58,7 +51,7 @@ describe('applyMaterial', () => {
     const material = new MeshStandardMaterial()
     material.color.set('#123456')
 
-    applyMaterial(material, { kind: 'standard', color: null, roughness: 1, metalness: 0 }, '')
+    applyMaterial(material, DEFAULT_MATERIAL, '')
 
     expect(material.color.getHexString()).toBe('123456')
   })

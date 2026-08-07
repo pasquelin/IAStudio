@@ -271,6 +271,9 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Échelle",
+    "noTexture": "Aucune",
+    "chooseTexture": "Choisir une texture",
+    "clearTexture": "Retirer la texture",
     "fields": {
       "width": "Largeur",
       "height": "Hauteur",
@@ -299,7 +302,12 @@
       "penumbra": "Pénombre",
       "target": "Cible",
       "roughness": "Rugosité",
-      "metalness": "Métallicité"
+      "metalness": "Métallicité",
+      "map": "Texture",
+      "normalMap": "Normales",
+      "roughnessMap": "Carte de rugosité",
+      "metalnessMap": "Carte de métallicité",
+      "aoMap": "Occlusion ambiante"
     }
   },
   "transport": {

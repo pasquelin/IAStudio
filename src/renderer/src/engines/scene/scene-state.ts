@@ -49,6 +49,11 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
   color: null,
   roughness: 1,
   metalness: 0,
+  map: null,
+  normalMap: null,
+  roughnessMap: null,
+  metalnessMap: null,
+  aoMap: null,
 }
 
 export const EMPTY_SCENE: SceneState = { nodes: [], selectedId: null }

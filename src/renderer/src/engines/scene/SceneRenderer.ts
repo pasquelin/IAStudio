@@ -9,6 +9,7 @@ import {
   Raycaster,
   Scene,
   SpotLight,
+  TextureLoader,
   Vector2,
   Vector3 as ThreeVector3,
   WebGLRenderer,
@@ -23,6 +24,8 @@ import type { Transform } from '@shared/domain/scene'
 import type { SceneNode, SceneState } from './scene-state'
 import { geometryFor, helperFor, lightFor, tuneViewHelper, type LightHelper } from './three-factory'
 import { applyGeometry, applyLight, applyMaterial, standardMaterialOf } from './three-sync'
+import { createMaterialTextures, type MaterialTextures } from './material-textures'
+import { createTextureCache } from './texture-cache'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
 export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
@@ -53,8 +56,13 @@ export class SceneRenderer {
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
   private readonly helpers = new Map<string, LightHelper>()
+  /** The texture slots of each mesh, and the references they hold on the cache. */
+  private readonly textures = new Map<string, MaterialTextures>()
   /** Last node applied per id, compared by reference to skip what has not changed. */
   private readonly applied = new Map<string, SceneNode>()
+  private readonly loader = new TextureLoader()
+  // One cache for the whole scene: ten meshes sharing a map upload it once.
+  private readonly textureCache = createTextureCache(url => this.loader.loadAsync(url))
   private readonly held = new Set<MotionId>()
 
   private renderer: WebGLRenderer | null = null
@@ -192,6 +200,7 @@ export class SceneRenderer {
     this.viewHelper = null
 
     for (const id of [...this.objects.keys()]) this.release(id)
+    this.textureCache.dispose()
 
     this.grid?.dispose()
     this.grid = null
@@ -275,6 +284,7 @@ export class SceneRenderer {
       const material = standardMaterialOf(object)
       if (material && before?.material !== node.material) {
         applyMaterial(material, node.material, this.meshColor)
+        this.textures.get(node.id)?.apply(node.material)
       }
       return
     }
@@ -288,7 +298,15 @@ export class SceneRenderer {
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
-    return new Mesh(geometryFor(node.geometry), material)
+
+    const mesh = new Mesh(geometryFor(node.geometry), material)
+    // A texture arrives long after the frame that asked for it: the render is requested again
+    // when it lands, or the viewport would show the mesh untextured until something else moved.
+    const textures = createMaterialTextures(this.textureCache, mesh, material, this.requestRender)
+    textures.apply(node.material)
+    this.textures.set(node.id, textures)
+
+    return mesh
   }
 
   private buildLight(node: SceneNode & { type: 'light' }): Light {
@@ -311,6 +329,14 @@ export class SceneRenderer {
 
   private release(id: string): void {
     this.applied.delete(id)
+
+    const textures = this.textures.get(id)
+    if (textures) {
+      // Before the material goes: the slots have to give their references back, or the cache
+      // keeps a 4K map alive for a mesh that no longer exists.
+      textures.dispose()
+      this.textures.delete(id)
+    }
 
     const object = this.objects.get(id)
     if (object) {
