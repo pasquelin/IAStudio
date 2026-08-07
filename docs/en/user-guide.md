@@ -311,17 +311,76 @@ Drop an asset from the shelf onto the timeline to make it a clip.
 
 ## Settings
 
-`⌘,` / `Ctrl+,`.
+`⌘,` / `Ctrl+,` opens the settings window.
 
-| Section | What you set |
-|---|---|
-| **Account** | your Scenario API key and secret, and whether they work |
-| **Appearance** | theme, and **density** — comfortable (28 px controls) or compact (24 px). The whole interface follows in one move |
-| **Generation** | how many jobs run at once (3 by default), how many times a failed request is retried (4 by default) |
-| **Model families** | the model each family reaches for by default |
+### Account
+
+Your Scenario API **key** and **secret**. They are checked as soon as you save them, and the
+window tells you whether they work.
+
+They are encrypted through your operating system's keychain and stored by the main process
+alone. If your OS offers no encryption, the studio **refuses to store them** rather than writing
+them in clear.
+
+### Appearance
+
+| Setting | Values | Default |
+|---|---|---|
+| **Theme** | dark, light | dark |
+| **Density** | comfortable (28 px controls), compact (24 px) | comfortable |
+
+Density reaches every control at once — rails, headers, rows, gutters — because they are all
+sized from the same gauges rather than from their own pixel values.
 
 The background stays opaque, deliberately, and there is no setting to change that: in a studio
 you judge colours, and a translucent background falsifies everything shown on top of it.
+
+### Generation
+
+| Setting | What it does | Default |
+|---|---|---|
+| **Concurrent jobs** | how many generations run at once | 3 |
+| **Max retries** | how many times a rate-limited or failed request is retried, with exponential backoff | 4 |
+
+Raising the concurrency does not make the API faster; it makes rate limiting more likely. The
+queue exists so a burst is spread rather than rejected.
+
+### Model families
+
+The model the generator preselects for each family — image, video, 3D, audio. Leave one unset to
+be asked every time.
+
+### Storage
+
+| Setting | What it does |
+|---|---|
+| **Projects folder** | where the new-project dialog starts |
+| **Backend** | whether a generated asset is downloaded into the project (**local**) or left on Scenario (**cloud**) |
+
+The studio also remembers the last project you opened, and reopens it on launch.
+
+### Media
+
+**ffmpeg path** — an ffmpeg binary to use instead of the one found automatically. Leaving it
+empty is the normal case.
+
+The studio looks in this order: **the bundled binary**, then **your configured path**, then
+**whatever is on your `PATH`**. If none resolves, importing still works — you lose the proxy and
+the waveform, and the asset shelf says exactly that instead of failing silently.
+
+### Where all this is stored
+
+A `settings.json` file in your user config directory, written by `electron-store`:
+
+| System | Path |
+|---|---|
+| macOS | `~/Library/Application Support/scenario-studio/settings.json` |
+| Windows | `%APPDATA%\scenario-studio\settings.json` |
+| Linux | `~/.config/scenario-studio/settings.json` |
+
+Everything in it is readable except the credentials, which are encrypted. Deleting the file
+resets the studio to its defaults; your projects are untouched, since they live in their own
+folders.
 
 ---
 

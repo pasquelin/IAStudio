@@ -317,17 +317,76 @@ Déposez un asset de l'étagère sur la timeline pour en faire un clip.
 
 ## Les réglages
 
-`⌘,` / `Ctrl+,`.
+`⌘,` / `Ctrl+,` ouvre la fenêtre de réglages.
 
-| Section | Ce que vous réglez |
-|---|---|
-| **Compte** | votre clé et votre secret d'API Scenario, et s'ils fonctionnent |
-| **Apparence** | le thème, et la **densité** — confort (contrôles à 28 px) ou compact (24 px). Toute l'interface suit d'un seul mouvement |
-| **Génération** | combien de jobs tournent à la fois (3 par défaut), combien de fois une requête échouée est réessayée (4 par défaut) |
-| **Familles de modèles** | le modèle par défaut de chaque famille |
+### Compte
+
+Votre **clé** et votre **secret** d'API Scenario. Ils sont vérifiés dès l'enregistrement, et la
+fenêtre vous dit s'ils fonctionnent.
+
+Ils sont chiffrés par le trousseau de votre système et détenus par le seul processus principal.
+Si votre système n'offre aucun chiffrement, le studio **refuse de les stocker** plutôt que de les
+écrire en clair.
+
+### Apparence
+
+| Réglage | Valeurs | Défaut |
+|---|---|---|
+| **Thème** | sombre, clair | sombre |
+| **Densité** | confort (contrôles à 28 px), compact (24 px) | confort |
+
+La densité atteint tous les contrôles d'un coup — rails, en-têtes, lignes, gouttières — parce
+qu'ils sont tous dimensionnés sur les mêmes gauges plutôt que sur leurs propres pixels.
 
 Le fond reste opaque, délibérément, et aucun réglage ne permet d'en changer : dans un studio on
 juge des couleurs, et un fond translucide fausse tout ce qui est affiché au-dessus.
+
+### Génération
+
+| Réglage | Ce qu'il fait | Défaut |
+|---|---|---|
+| **Jobs simultanés** | combien de générations tournent à la fois | 3 |
+| **Tentatives maximales** | combien de fois une requête limitée ou échouée est réessayée, avec recul exponentiel | 4 |
+
+Augmenter la concurrence n'accélère pas l'API ; cela rend seulement la limitation de débit plus
+probable. La file existe pour étaler une rafale plutôt que de la faire rejeter.
+
+### Familles de modèles
+
+Le modèle que la génération présélectionne pour chaque famille — image, vidéo, 3D, audio. Laissez
+une famille vide pour qu'elle demande à chaque fois.
+
+### Stockage
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| **Dossier de projets** | l'endroit où s'ouvre la boîte de dialogue de nouveau projet |
+| **Emplacement** | un asset généré est-il téléchargé dans le projet (**local**) ou laissé chez Scenario (**cloud**) |
+
+Le studio retient aussi le dernier projet ouvert, et le rouvre au lancement.
+
+### Médias
+
+**Chemin de ffmpeg** — un binaire ffmpeg à utiliser à la place de celui trouvé automatiquement.
+Le laisser vide est le cas normal.
+
+Le studio cherche dans cet ordre : **le binaire embarqué**, puis **votre chemin configuré**, puis
+**ce qui se trouve sur votre `PATH`**. Si aucun ne répond, l'import fonctionne quand même — vous
+perdez le proxy et la forme d'onde, et l'étagère le dit précisément au lieu d'échouer en silence.
+
+### Où tout cela est rangé
+
+Un fichier `settings.json` dans votre dossier de configuration utilisateur, écrit par
+`electron-store` :
+
+| Système | Chemin |
+|---|---|
+| macOS | `~/Library/Application Support/scenario-studio/settings.json` |
+| Windows | `%APPDATA%\scenario-studio\settings.json` |
+| Linux | `~/.config/scenario-studio/settings.json` |
+
+Tout y est lisible sauf les identifiants, qui sont chiffrés. Supprimer le fichier remet le studio
+à ses valeurs par défaut ; vos projets n'y sont pour rien, ils vivent dans leurs propres dossiers.
 
 ---
 

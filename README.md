@@ -74,7 +74,13 @@ pnpm dev
 Then open **Settings** (`⌘,` / `Ctrl+,`) and enter your API key and secret. They are encrypted
 with the OS keychain and never leave the main process.
 
-Full walkthrough: [user guide](docs/en/user-guide.md).
+In development you can drop them in `secrets/.env` instead (`SCENARIO_API_KEY`,
+`SCENARIO_API_SECRET`) — read at runtime, never bundled, and always outranked by what you save in
+Settings. See [`secrets/README.md`](secrets/README.md).
+
+Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained:
+[Settings](docs/en/user-guide.md#settings) · how configuration is layered:
+[Architecture](docs/en/architecture.md#configuration).
 
 ---
 
