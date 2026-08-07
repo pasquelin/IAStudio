@@ -1,12 +1,13 @@
 import { mdiImageMultipleOutline } from '@mdi/js'
-import { useMemo, type ReactNode } from 'react'
+import { memo, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ASSET_TYPES, assetUrl, type Asset } from '@shared/domain/asset'
+import { ASSET_TYPES, assetUrl, type Asset, type AssetType } from '@shared/domain/asset'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { filterLocally, isFiltered, type FacetDescriptor } from '@/helpers/collection-state'
 import { MediaTile } from '@/design/MediaTile'
+import { Row } from '@/design/Row'
 import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
 import { EmptyState } from '@/design/EmptyState'
@@ -16,7 +17,17 @@ const TYPE_FACET = 'type'
 /** Matches the `--sc-control` gauge the rows are built on, at its tallest (comfortable). */
 const ROW_HEIGHT = 28
 
-function useTypeFacet(): FacetDescriptor[] {
+/**
+ * Six constant strings, resolved once for the whole panel. A row is remounted by the hundred
+ * while scrolling, so translating inside one would run i18next per row and per frame.
+ */
+function useTypeLabels(): Map<AssetType, string> {
+  const { t } = useTranslation()
+
+  return useMemo(() => new Map(ASSET_TYPES.map(value => [value, t(`assetTypes.${value}`)])), [t])
+}
+
+function useTypeFacet(labels: Map<AssetType, string>): FacetDescriptor[] {
   const { t } = useTranslation()
 
   return useMemo(
@@ -24,10 +35,10 @@ function useTypeFacet(): FacetDescriptor[] {
       {
         key: TYPE_FACET,
         label: t('assets.type'),
-        options: ASSET_TYPES.map(value => ({ value, label: t(`assetTypes.${value}`) })),
+        options: ASSET_TYPES.map(value => ({ value, label: labels.get(value) ?? value })),
       },
     ],
-    [t],
+    [t, labels],
   )
 }
 
@@ -42,7 +53,7 @@ export function AssetBrowserActions() {
   const count = useAssets(state => state.items.length)
   const collection = useAssets(state => state.collection)
   const setCollection = useAssets(state => state.setCollection)
-  const facets = useTypeFacet()
+  const facets = useTypeFacet(useTypeLabels())
 
   return (
     <>
@@ -68,6 +79,7 @@ export function AssetBrowser() {
   const items = useAssets(state => state.items)
   const collection = useAssets(state => state.collection)
   const project = useProject(state => state.project)
+  const typeLabels = useTypeLabels()
 
   const shown = useMemo(
     () =>
@@ -93,7 +105,9 @@ export function AssetBrowser() {
       state={collection}
       rowHeight={ROW_HEIGHT}
       renderCard={asset => <AssetCard asset={asset} />}
-      renderRow={asset => <AssetRow asset={asset} />}
+      renderRow={asset => (
+        <AssetRow asset={asset} typeLabel={typeLabels.get(asset.type) ?? asset.type} />
+      )}
       empty={<EmptyState icon={mdiImageMultipleOutline} message={emptyMessage} />}
     />
   )
@@ -109,29 +123,41 @@ function preview(asset: Asset): string | undefined {
 }
 
 /** Wraps whatever the collection renders, so both views drag the same way. */
-function Draggable({ asset, children }: { asset: Asset; children: ReactNode }) {
+function Draggable({
+  asset,
+  className,
+  children,
+}: {
+  asset: Asset
+  className?: string
+  children: ReactNode
+}) {
   return (
-    <div draggable onDragStart={event => startAssetDrag(event, asset.id)}>
+    <div className={className} draggable onDragStart={event => startAssetDrag(event, asset.id)}>
       {children}
     </div>
   )
 }
 
-function AssetCard({ asset }: { asset: Asset }) {
+const AssetCard = memo(function AssetCard({ asset }: { asset: Asset }) {
   return (
     <Draggable asset={asset}>
       <MediaTile url={preview(asset)} caption={asset.name} />
     </Draggable>
   )
-}
+})
 
-function AssetRow({ asset }: { asset: Asset }) {
+/**
+ * Memoized, and given its label rather than translating it: a scroll re-renders every mounted
+ * row on each frame, and only the handful that actually changed should pay for it.
+ *
+ * `h-full` on the wrapper too — `Row` sizes itself against its parent, and the drag wrapper
+ * would otherwise collapse it to its content.
+ */
+const AssetRow = memo(function AssetRow({ asset, typeLabel }: { asset: Asset; typeLabel: string }) {
   return (
-    <Draggable asset={asset}>
-      <div className="flex h-(--sc-control) items-center gap-2 px-2 text-[12px]">
-        <span className="truncate">{asset.name}</span>
-        <span className="text-muted ml-auto shrink-0 text-[11px]">{asset.type}</span>
-      </div>
+    <Draggable asset={asset} className="h-full">
+      <Row title={asset.name} subtitle={typeLabel} />
     </Draggable>
   )
-}
+})

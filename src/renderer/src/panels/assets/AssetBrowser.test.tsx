@@ -82,6 +82,13 @@ describe('AssetBrowser', () => {
     expect(screen.getByText(/Aucun résultat pour ce filtre/)).toBeInTheDocument()
   })
 
+  it('names the asset type in the user language', () => {
+    useAssets.setState({ items: [asset('vid', { name: 'Clip', type: 'video' })] })
+    render(<Panel />)
+
+    expect(screen.getByText('Vidéo')).toBeInTheDocument()
+  })
+
   it('filters by asset type through the facet', async () => {
     useAssets.setState({
       items: [asset('img', { name: 'Sunset' }), asset('vid', { name: 'Clip', type: 'video' })],
