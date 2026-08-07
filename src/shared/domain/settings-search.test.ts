@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
 import { TRANSLATIONS } from '../i18n'
-import { matchSettings, sectionsOf, type SearchHit } from './settings-search'
+import { hitId, matchSettings, sectionsOf, type SearchHit } from './settings-search'
 
 function resolve(bundle: unknown, key: string): unknown {
   return key
@@ -13,14 +13,7 @@ const translate = (key: string): string => String(resolve(TRANSLATIONS.fr, key) 
 
 const search = (query: string): readonly SearchHit[] => matchSettings(query, translate)
 
-/** What a hit points at, whichever registry it came from. */
-function labelOf(hit: SearchHit): string {
-  if (hit.kind === 'setting') return hit.descriptor.path
-  if (hit.kind === 'action') return hit.action.id
-  return hit.command.id
-}
-
-const found = (query: string): string[] => search(query).map(labelOf)
+const found = (query: string): string[] => search(query).map(hitId)
 
 describe('searching the settings', () => {
   it('finds a setting by its title', () => {

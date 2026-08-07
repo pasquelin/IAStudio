@@ -1,7 +1,7 @@
 import { mdiRestore } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { defaultAt, valueAt, type SettingValue } from '@shared/domain/settings-path'
+import { defaultAt, type SettingValue } from '@shared/domain/settings-path'
 import {
   boundsOf,
   descriptorAt,
@@ -13,8 +13,7 @@ import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { useToken } from '@/hooks/useToken'
 import { getBridge } from '@/services/bridge'
-import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import { useSettingsDraft, useSettingValue } from '@/stores/settings-draft'
 
 /**
  * What a numeric field may hand over. An emptied field is mid-edit, and a value zod would
@@ -299,27 +298,16 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   const { t } = useTranslation()
   // Selected down to the leaf, not the whole settings object: that one is rebuilt on every
   // write, so a row would re-render whenever any other setting — or the open project — moved.
-  const stored = useSettings(state => valueAt(state.settings, descriptor.path))
-  // Two primitive selectors rather than one over the draft: the buffer changes on every
-  // keystroke anywhere in the window, and a row must only re-render for its own leaf.
+  const value = useSettingValue(descriptor.path)
   const staged = useSettingsDraft(state => state.touched.has(descriptor.path))
-  const pending = useSettingsDraft(state => valueAt(state.pending, descriptor.path))
   const stage = useSettingsDraft(state => state.stage)
 
-  // The value the condition is read against, buffer included: turning the grid off must grey
-  // its size immediately, not once the change has been applied.
+  // Read through the same rule as any other value, buffer included: turning the grid off must
+  // grey its size immediately, not once the change has been applied.
   const requirement = descriptor.dependsOn
-  const requiredStored = useSettings(state =>
-    requirement ? valueAt(state.settings, requirement.path) : undefined,
-  )
-  const requiredStaged = useSettingsDraft(state =>
-    requirement && state.touched.has(requirement.path)
-      ? valueAt(state.pending, requirement.path)
-      : undefined,
-  )
-  const enabled = !requirement || (requiredStaged ?? requiredStored) === requirement.equals
+  const required = useSettingValue(requirement?.path)
+  const enabled = !requirement || required === requirement.equals
 
-  const value = staged ? pending : stored
   const fallback = defaultAt(descriptor.path)
   // Two different ideas, and they used to share one affordance: `staged` is "changed, not yet
   // applied", `restorable` is "no longer what it ships with".

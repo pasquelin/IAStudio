@@ -1,5 +1,5 @@
 import { mdiAlertCircleOutline, mdiRestore } from '@mdi/js'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   bindingOf,
@@ -151,7 +151,8 @@ export function ShortcutsSettings() {
   const [capturing, setCapturing] = useState<CommandId | null>(null)
   const [query, setQuery] = useState<Signature | null>(null)
 
-  const clashing = new Set(conflicts(overrides))
+  // Rebuilt only when a binding moves, not on every keystroke of a capture.
+  const clashing = useMemo(() => new Set(conflicts(overrides)), [overrides])
 
   const bind = (id: CommandId, signature: Signature | null): void => {
     setCapturing(null)

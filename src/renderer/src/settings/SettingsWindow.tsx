@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { DEFAULT_SETTINGS_SECTION, sectionFromRoute } from '@shared/domain/settings'
 import type { SettingPath } from '@shared/domain/settings-path'
 import { descriptorsIn, sectionEntry, SETTING_REGISTRY } from '@shared/domain/settings-registry'
-import { matchSettings, sectionsOf, type SearchHit } from '@shared/domain/settings-search'
+import { hitId, matchSettings, sectionsOf, type SearchHit } from '@shared/domain/settings-search'
 import { bindingOf } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
 import { DRAGGABLE } from '@/helpers/app-region'
@@ -123,7 +123,7 @@ function SearchResults({
           {found
             .filter(hit => hit.section === section && hit.kind !== 'setting')
             .map(hit => (
-              <ResultRow key={labelOf(hit)} hit={hit} onGo={() => onGo(section)} />
+              <ResultRow key={hitId(hit)} hit={hit} onGo={() => onGo(section)} />
             ))}
         </section>
       ))}
@@ -154,12 +154,6 @@ function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
       <span className="text-base-content/60 max-w-lg text-xs">{t(entry.helpKey)}</span>
     </button>
   )
-}
-
-/** Stable identity for a hit, whichever registry it came from. */
-function labelOf(hit: SearchHit): string {
-  if (hit.kind === 'setting') return hit.descriptor.path
-  return hit.kind === 'action' ? hit.action.id : hit.command.id
 }
 
 /**

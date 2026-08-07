@@ -70,9 +70,8 @@ export function isDirty(state: Pick<DraftState, 'pending' | 'touched'>): boolean
 /**
  * What a control shows: the staged value where one was staged, the stored one everywhere else.
  *
- * This is also the collision rule with the other windows, and the only place it is written: a
- * write landing from elsewhere moves `settings` underneath, and the buffer keeps only the
- * leaves it was actually given.
+ * This is also the collision rule with the other windows: a write landing from elsewhere moves
+ * `settings` underneath, and the buffer keeps only the leaves it was actually given.
  */
 export function valueOf(
   draft: Pick<DraftState, 'pending' | 'touched'>,
@@ -80,4 +79,21 @@ export function valueOf(
   path: SettingPath,
 ): SettingValue | undefined {
   return draft.touched.has(path) ? valueAt(draft.pending, path) : stored
+}
+
+/**
+ * The value one control shows, and the ONLY place the rule above is applied — a row rewriting
+ * it inline is how the two drift apart.
+ *
+ * Three primitive selectors rather than one over each store: the buffer changes on every
+ * keystroke anywhere in the window, and a row must only re-render for its own leaf.
+ */
+export function useSettingValue(path: SettingPath | undefined): SettingValue | undefined {
+  const stored = useSettings(state => (path ? valueAt(state.settings, path) : undefined))
+  // `path` may be absent — a row with no dependency reads nothing — and a hook cannot be called
+  // conditionally, so the absence is handled here rather than at each call site.
+  const staged = useSettingsDraft(state => (path ? state.touched.has(path) : false))
+  const pending = useSettingsDraft(state => (path ? valueAt(state.pending, path) : undefined))
+
+  return staged ? pending : stored
 }

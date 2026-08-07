@@ -277,17 +277,34 @@ export function commandFor(
  * `global` one it always is, because the menu fires those wherever the focus sits.
  */
 export function conflicts(overrides: BindingOverrides): readonly CommandId[] {
-  const clashing = COMMAND_REGISTRY.filter(descriptor =>
-    COMMAND_REGISTRY.some(
-      other =>
-        other.id !== descriptor.id &&
-        bindingOf(other.id, overrides) !== null &&
-        bindingOf(other.id, overrides) === bindingOf(descriptor.id, overrides) &&
-        (other.scope === descriptor.scope ||
-          other.scope === 'global' ||
-          descriptor.scope === 'global'),
-    ),
-  )
+  // Grouped by signature in one pass rather than compared pairwise: the shortcuts screen
+  // recomputes this on every keystroke of a capture, and the pairwise form resolved each
+  // binding twice per pair.
+  const bySignature = new Map<Signature, CommandDescriptor[]>()
 
-  return clashing.map(descriptor => descriptor.id)
+  for (const descriptor of COMMAND_REGISTRY) {
+    const signature = bindingOf(descriptor.id, overrides)
+    // A command bound to nothing cannot clash with anything.
+    if (signature === null) continue
+    bySignature.set(signature, [...(bySignature.get(signature) ?? []), descriptor])
+  }
+
+  const clashing: CommandId[] = []
+
+  for (const sharing of bySignature.values()) {
+    if (sharing.length < 2) continue
+
+    for (const descriptor of sharing) {
+      const contested = sharing.some(
+        other =>
+          other.id !== descriptor.id &&
+          (other.scope === descriptor.scope ||
+            other.scope === 'global' ||
+            descriptor.scope === 'global'),
+      )
+      if (contested) clashing.push(descriptor.id)
+    }
+  }
+
+  return clashing
 }

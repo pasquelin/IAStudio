@@ -57,6 +57,12 @@ export function matchSettings(query: string, translate: Translate): readonly Sea
   ]
 }
 
+/** What a hit points at, whichever registry it came from — its key, and its identity. */
+export function hitId(hit: SearchHit): string {
+  if (hit.kind === 'setting') return hit.descriptor.path
+  return hit.kind === 'action' ? hit.action.id : hit.command.id
+}
+
 /** The sections a result set touches, in the order the navigation lists them. */
 export function sectionsOf(hits: readonly SearchHit[]): readonly SettingsSectionId[] {
   const found = new Set(hits.map(hit => hit.section))
