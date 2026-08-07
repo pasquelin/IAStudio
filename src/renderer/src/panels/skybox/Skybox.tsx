@@ -2,7 +2,6 @@ import { mdiWeatherPartlyCloudy } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { POLE_LIMIT } from '@shared/domain/angles'
-import { kindForWorkspace } from '@shared/domain/document'
 import type { SkyboxEnvironment, SunSettings } from '@shared/domain/skybox'
 import { ColorField } from '@/design/ColorField'
 import { EmptyState } from '@/design/EmptyState'
@@ -12,8 +11,7 @@ import { TextField } from '@/design/TextField'
 import { ToggleField } from '@/design/ToggleField'
 import { setAdjustment, setEnvironmentSetting, setSunSetting } from '@/engines/skybox/commands'
 import { AdjustmentSliders } from './AdjustmentSliders'
-import { useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { activeSkyboxId, useDocuments } from '@/stores/documents'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 
 const TWO_PI = Math.PI * 2
@@ -25,14 +23,9 @@ const TWO_PI = Math.PI * 2
 export function Skybox() {
   const { t } = useTranslation()
 
-  const workspace = useLayouts(state => state.activeWorkspace)
-  const activeId = useDocuments(state => state.activeId)
-  const document = useDocuments(state => (activeId ? state.documents[activeId] : undefined))
-
-  // The panel belongs to the workspace, but the document in the centre may be from another
-  // one: a skybox panel reading a sequence would render a sky that is not there.
-  const documentId = document && document.kind === kindForWorkspace(workspace) ? document.id : null
-
+  // The sky in front, and only if it is one: the panel belongs to a workspace, but the
+  // document in the centre may be of another kind, and grading a sequence means nothing.
+  const documentId = useDocuments(activeSkyboxId)
   const content = useSkyboxes(state => (documentId ? skyboxOf(state, documentId) : null))
 
   if (!documentId || !content) {
