@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
 import { TIP_BOTTOM, TIP_RIGHT } from '@/helpers/tooltip'
+import { Row } from '@/design/Row'
 import { ToolButton } from '@/design/ToolButton'
 import { addLayer, removeLayer, selectLayer, setLayerVisible } from '@/engines/canvas/commands'
 import { EmptyState } from '@/design/EmptyState'
@@ -96,36 +97,30 @@ function LayerStack({ documentId }: { documentId: string }) {
         <li key={layer.id}>
           <div
             className={cn(
-              'group flex items-center gap-1 rounded-(--radius-sc-md) px-1',
-              'h-(--sc-control) cursor-pointer',
+              'group h-(--sc-control) cursor-pointer rounded-(--radius-sc-md)',
               layer.id === canvas.activeLayerId ? 'bg-accent-soft' : 'hover:bg-elevated',
             )}
             onPointerDown={() => store.replace(documentId, selectLayer(canvas, layer.id))}
           >
-            <ToolButton
-              icon={layer.visible ? mdiEye : mdiEyeOffOutline}
-              label={t('layers.visible')}
-              description={t(layer.visible ? 'layers.hideHint' : 'layers.showHint')}
-              tooltip={TIP_RIGHT}
-              variant="header"
-              // The row selects on pointer down, which fires before click: stopping the
-              // click alone would still have let the eye steal the selection.
-              onPointerDown={event => event.stopPropagation()}
-              onClick={() =>
-                store.runCommand(documentId, setLayerVisible(layer.id, !layer.visible))
+            <Row
+              title={layer.name}
+              muted={!layer.visible}
+              leading={
+                <ToolButton
+                  icon={layer.visible ? mdiEye : mdiEyeOffOutline}
+                  label={t('layers.visible')}
+                  description={t(layer.visible ? 'layers.hideHint' : 'layers.showHint')}
+                  tooltip={TIP_RIGHT}
+                  variant="header"
+                  // The row selects on pointer down, which fires before click: stopping the
+                  // click alone would still have let the eye steal the selection.
+                  onPointerDown={event => event.stopPropagation()}
+                  onClick={() =>
+                    store.runCommand(documentId, setLayerVisible(layer.id, !layer.visible))
+                  }
+                />
               }
             />
-            {/* Tipped with its own name: the row truncates, and a truncated name is exactly
-                the case where hovering is the only way to read it. */}
-            <span
-              {...TIP_RIGHT(layer.name)}
-              className={cn(
-                'truncate text-[11px]',
-                layer.visible ? 'text-text' : 'text-muted line-through',
-              )}
-            >
-              {layer.name}
-            </span>
           </div>
         </li>
       ))}

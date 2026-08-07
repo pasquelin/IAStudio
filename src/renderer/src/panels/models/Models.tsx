@@ -10,6 +10,7 @@ import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { isFiltered } from '@/helpers/collection-state'
 import { MediaTile, Thumbnail } from '@/design/MediaTile'
+import { Row } from '@/design/Row'
 import { useDebounced } from '@/hooks/useDebounced'
 import { getBridge } from '@/services/bridge'
 import { useLayouts } from '@/stores/layouts'
@@ -298,14 +299,10 @@ function ModelRow({ model, picture }: { model: ModelSummary; picture?: string })
   const { t } = useTranslation()
 
   return (
-    <div className="flex h-full items-center gap-2 px-1">
-      <Thumbnail url={picture} shape="size-8 shrink-0" />
-      <div className="min-w-0 flex-1 leading-tight">
-        <p className="truncate text-[12px]" title={model.name}>
-          {model.name}
-        </p>
-        <p className="text-muted truncate text-[10px]">{subtitleOf(model, t)}</p>
-      </div>
-    </div>
+    <Row
+      media={<Thumbnail url={picture} shape="size-8 shrink-0" />}
+      title={model.name}
+      subtitle={subtitleOf(model, t)}
+    />
   )
 }
