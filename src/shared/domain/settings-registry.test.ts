@@ -4,11 +4,13 @@ import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import { defaultAt } from './settings-path'
 import {
   boundsOf,
+  childSections,
   descriptorAt,
   descriptorsIn,
   matchSettings,
   optionsOf,
   PATH_KINDS,
+  rootSections,
   sectionEntry,
   SETTING_REGISTRY,
   SETTING_SECTIONS,
@@ -35,12 +37,17 @@ const CHROME_KEYS: readonly string[] = [
 function keysOf(): string[] {
   return [
     ...CHROME_KEYS,
-    ...SETTING_SECTIONS.flatMap(section => [section.labelKey, section.descriptionKey]),
+    ...SETTING_SECTIONS.flatMap(section => [
+      section.labelKey,
+      // A sub-section leans on its parent's description rather than inventing one.
+      ...(section.descriptionKey ? [section.descriptionKey] : []),
+    ]),
     ...SETTING_REGISTRY.flatMap(descriptor => [
       descriptor.titleKey,
       descriptor.helpKey,
       ...(descriptor.placeholderKey ? [descriptor.placeholderKey] : []),
-      ...optionsOf(descriptor).map(option => option.labelKey),
+      // An option naming itself literally has no key to look up — see `optionLabel`.
+      ...optionsOf(descriptor).flatMap(option => (option.labelKey ? [option.labelKey] : [])),
     ]),
   ]
 }
@@ -88,6 +95,18 @@ describe('settings registry', () => {
     }
   })
 
+  // Neither would leave the control showing a raw value — `system`, or a path fragment.
+  it('gives every option a label, one way or the other', () => {
+    for (const descriptor of SETTING_REGISTRY) {
+      for (const option of optionsOf(descriptor)) {
+        expect(
+          option.label ?? option.labelKey,
+          `${descriptor.path} offers ${String(option.value)} with no label`,
+        ).toBeTruthy()
+      }
+    }
+  })
+
   // A default outside the list leaves the control showing a blank the user cannot restore.
   it('offers the default of every choice among its options', () => {
     for (const descriptor of SETTING_REGISTRY) {
@@ -125,6 +144,26 @@ describe('settings registry', () => {
     for (const descriptor of SETTING_REGISTRY) {
       expect(known, `${descriptor.path}`).toContain(descriptor.section)
     }
+  })
+
+  it('nests a sub-section under a parent that exists, and never under itself', () => {
+    const ids = new Set(SETTING_SECTIONS.map(section => section.id))
+
+    for (const section of SETTING_SECTIONS) {
+      if (!section.parent) continue
+      expect(ids, `${section.id} hangs off nothing`).toContain(section.parent)
+      expect(section.parent, `${section.id} is its own parent`).not.toBe(section.id)
+    }
+  })
+
+  // The navigation renders roots and their children; a section in neither would exist in the
+  // union, be openable by `settings.open`, and appear in no list.
+  it('accounts for every section as a root or as a child of one', () => {
+    const rendered = [...rootSections(), ...rootSections().flatMap(root => childSections(root.id))]
+
+    expect(rendered.map(section => section.id).sort()).toEqual(
+      SETTING_SECTIONS.map(section => section.id).sort(),
+    )
   })
 
   it('names each section once, and finds it back', () => {

@@ -9,7 +9,7 @@ import {
 } from '@shared/domain/settings-registry'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
-import { useAppearance } from '@/hooks/useAppearance'
+import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 import { SettingList } from './SettingList'
@@ -44,7 +44,7 @@ function NavigationEntry({
         {t(section.labelKey)}
       </button>
 
-      {section.children && (
+      {section.children.length > 0 && (
         <ul className="m-0 list-none p-0">
           {section.children.map(child => (
             <NavigationEntry
@@ -121,7 +121,7 @@ export function SettingsWindow() {
     [],
   )
 
-  useAppearance()
+  useAppliedSettings()
 
   // Searched over the translated title and description, so `t` has to be a dependency: the
   // same query finds different settings once the language changes.
@@ -182,7 +182,7 @@ export function SettingsWindow() {
                 {section.descriptionKey && (
                   <p className="text-base-content/60 mb-4 text-xs">{t(section.descriptionKey)}</p>
                 )}
-                {section.registry && <SettingList descriptors={descriptorsIn(section.registry)} />}
+                <SettingList descriptors={descriptorsIn(section.id)} />
                 {section.Content && <section.Content />}
               </>
             )

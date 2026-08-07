@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useAppearance } from '@/hooks/useAppearance'
+import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
@@ -35,7 +35,7 @@ export function Application() {
     }
   }, [connectSettings, connectProject, connectJobs, connectMedia])
 
-  useAppearance()
+  useAppliedSettings()
 
   const [client] = useState(
     () =>

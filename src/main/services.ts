@@ -8,8 +8,8 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import type { PathKind } from '@shared/domain/settings-registry'
 import type { AuthState } from '@shared/domain/settings'
-import { TRANSLATIONS } from '@shared/i18n'
-import { resolveLanguage } from '@shared/i18n/languages'
+import { TRANSLATIONS, type Language } from '@shared/i18n'
+import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { createAssetCollector } from './assets/collector'
 import { serveAssets, servedFileOf } from './assets/protocol'
@@ -29,6 +29,7 @@ import { createFileSystemFallback, resolveCredentials } from './scenario/credent
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type SettingsStore } from './settings/store'
+import { buildMenu } from './menu'
 import { applyTheme } from './window/theme'
 
 export type Services = {
@@ -44,6 +45,8 @@ export type Services = {
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Asset
   capabilities: () => MediaCapabilities
+  /** The language in force, machine locale included. Both the menu and the dialogs read it. */
+  language: () => Language
   pickPath: (kind: PathKind) => Promise<string | null>
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
@@ -74,8 +77,8 @@ async function pickPath(kind: PathKind): Promise<string | null> {
 }
 
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
-function pickMedia(): Promise<string[]> {
-  const t = TRANSLATIONS[resolveLanguage(app.getLocale())].dialog
+function pickMedia(language: Language): Promise<string[]> {
+  const t = TRANSLATIONS[language].dialog
   const filters = mediaFilters({
     all: t.allMedia,
     video: t.video,
@@ -108,9 +111,15 @@ export function createServices(): Services {
       // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
       // and Chromium only answers with the new value once `themeSource` has moved.
       applyTheme(current.appearance.theme)
+      // The native menu is built once and never re-reads anything: without this the window
+      // changes language and the menu bar above it does not.
+      buildMenu(effectiveLanguage(current.general.language, app.getLocale()))
       broadcast(EVENTS.settingsChanged, current)
     },
   })
+
+  const language = (): Language =>
+    effectiveLanguage(settings.read().general.language, app.getLocale())
 
   // The stored theme, before any window is painted: a window created on the OS preference and
   // corrected afterwards flashes the wrong colour for a frame.
@@ -193,7 +202,8 @@ export function createServices(): Services {
     return asset ? servedFileOf(current.path, asset) : null
   })
 
-  const lastProject = settings.read().storage.lastProject
+  const stored = settings.read()
+  const lastProject = stored.general.startup === 'lastProject' ? stored.storage.lastProject : null
   // Best effort: the folder may have been moved or deleted since the last session, and that
   // is not a reason to refuse to start.
   if (lastProject) void project.open(lastProject).catch(() => {})
@@ -215,8 +225,9 @@ export function createServices(): Services {
       ffmpeg.invalidate()
       return { ffmpeg: ffmpeg.path() !== null }
     },
+    language,
     pickPath,
-    pickMedia,
+    pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping the cache would show the previous
     // account's models under the new one.
     onCredentialsChanged: () => {

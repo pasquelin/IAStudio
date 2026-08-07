@@ -538,6 +538,19 @@
     "reduceMotion": {
       "title": "Limiter les animations",
       "help": "Coupe les petits mouvements de l’interface : les panneaux apparaissent d’un coup au lieu de glisser. Utile si les animations vous fatiguent ou vous donnent mal au cœur, et sur une machine un peu lente où elles saccadent."
+    },
+    "general": "Général",
+    "generalDescription": "Langue de l’application et ce qu’elle fait en s’ouvrant.",
+    "language": {
+      "title": "Langue",
+      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement est immédiat, il n’y a rien à relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
+      "system": "Système"
+    },
+    "startup": {
+      "title": "À l’ouverture",
+      "help": "Ce que l’application fait quand vous la lancez. « Rouvrir le dernier projet » vous remet là où vous vous étiez arrêté. « Ne rien ouvrir » démarre sur une fenêtre vide, ce qui est plus rapide et plus reposant si vous jonglez entre beaucoup de projets.",
+      "lastProject": "Rouvrir le dernier projet",
+      "nothing": "Ne rien ouvrir"
     }
   }
 }

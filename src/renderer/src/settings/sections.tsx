@@ -1,72 +1,58 @@
 import type { FC } from 'react'
-import type { ModelFamily } from '@shared/domain/model'
 import type { SettingsSectionId } from '@shared/domain/settings'
-import { SETTING_SECTIONS } from '@shared/domain/settings-registry'
+import {
+  childSections,
+  rootSections,
+  SETTING_SECTIONS,
+  type SettingSectionEntry,
+} from '@shared/domain/settings-registry'
 import { AccountSettings } from './AccountSettings'
 import { MediaSettings } from './MediaSettings'
 import { ModelFamilySettings } from './ModelFamilySettings'
 
-export type SettingsSection = {
-  id: string
-  /** i18n key of the label — never the displayed text. */
-  labelKey: string
-  descriptionKey?: string
-  /** Settings this screen owns, rendered from the registry. */
-  registry?: SettingsSectionId
+export type SettingsSection = SettingSectionEntry & {
   /** What no descriptor can express: credentials, a catalogue picker, a resolved status. */
   Content?: FC
-  children?: readonly SettingsSection[]
+  children: readonly SettingsSection[]
 }
 
-/** What no descriptor can express, per section. Everything else comes from the registry. */
+/**
+ * What no descriptor can express, per section. Everything else — the id, the two texts, the
+ * nesting — comes from the shared registry.
+ *
+ * The family screens are spelled out rather than derived from the id: reading `'image'` back
+ * out of `'generation.image'` would hand `ModelFamilySettings` a string the type cannot check,
+ * and a section renamed would fail here instead of failing silently.
+ */
 const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   account: AccountSettings,
   media: MediaSettings,
+  'generation.image': () => <ModelFamilySettings family="image" />,
+  'generation.video': () => <ModelFamilySettings family="video" />,
+  'generation.3d': () => <ModelFamilySettings family="3d" />,
+  'generation.audio': () => <ModelFamilySettings family="audio" />,
+  'generation.upscale': () => <ModelFamilySettings family="upscale" />,
 }
 
-/** Families with a workspace of their own; their label is the workspace's. */
-const WORKSPACE_FAMILIES: readonly { family: ModelFamily; labelKey: string }[] = [
-  { family: 'image', labelKey: 'workspaces.image' },
-  { family: 'video', labelKey: 'workspaces.video' },
-  { family: '3d', labelKey: 'workspaces.3d' },
-  { family: 'audio', labelKey: 'workspaces.audio' },
-  { family: 'upscale', labelKey: 'settings.familyUpscale' },
-]
-
-function familySection({ family, labelKey }: { family: ModelFamily; labelKey: string }) {
+function withContent(entry: SettingSectionEntry): SettingsSection {
   return {
-    id: `generation.${family}`,
-    labelKey,
-    Content: () => <ModelFamilySettings family={family} />,
+    ...entry,
+    Content: CONTENT[entry.id],
+    children: childSections(entry.id).map(withContent),
   }
 }
 
 /**
  * The settings tree: a column of sections on the left, the selected one on the right. The
- * sections and their texts come from the registry — this only adds what belongs to React: the
- * screens no descriptor can express, and the per-family children.
+ * sections, their texts and their nesting all come from the registry — this only adds what
+ * belongs to React.
  *
- * Spec § 9 also lists Storage, Shortcuts, Performance and Advanced. They appear here as they
- * are built; an entry with nothing behind it would be worse than its absence.
- *
- * Top-level ids are the shared `SettingsSectionId`, so a section renamed here immediately
- * fails to compile rather than quietly breaking every `settings.open` that names it.
+ * Spec § 9 also lists Storage, Shortcuts, Performance and Advanced. They appear as they are
+ * built; an entry with nothing behind it would be worse than its absence.
  */
-export const SETTINGS_SECTIONS: readonly (SettingsSection & { id: SettingsSectionId })[] =
-  SETTING_SECTIONS.map(section => ({
-    id: section.id,
-    labelKey: section.labelKey,
-    descriptionKey: section.descriptionKey,
-    registry: section.id,
-    Content: CONTENT[section.id],
-    ...(section.id === 'generation' ? { children: WORKSPACE_FAMILIES.map(familySection) } : {}),
-  }))
+export const SETTINGS_SECTIONS: readonly SettingsSection[] = rootSections().map(withContent)
 
 export function findSection(id: string): SettingsSection | null {
-  for (const section of SETTINGS_SECTIONS) {
-    if (section.id === id) return section
-    const child = section.children?.find(candidate => candidate.id === id)
-    if (child) return child
-  }
-  return null
+  const entry = SETTING_SECTIONS.find(section => section.id === id)
+  return entry ? withContent(entry) : null
 }

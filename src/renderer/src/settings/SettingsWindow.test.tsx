@@ -47,8 +47,8 @@ describe('SettingsWindow', () => {
     installFakeBridge()
     render(<SettingsWindow />)
 
-    expect(screen.getByRole('heading', { name: 'Compte' })).toBeInTheDocument()
-    expect(screen.getByLabelText(/Clé API/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Général' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Langue/)).toBeInTheDocument()
   })
 
   it('opens on the section the fragment names', () => {
@@ -73,7 +73,7 @@ describe('SettingsWindow', () => {
     })
 
     render(<SettingsWindow />)
-    expect(screen.getByRole('heading', { name: 'Compte' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Général' })).toBeInTheDocument()
 
     act(() => announce?.('appearance'))
     await waitFor(() => expect(screen.getByLabelText(/Thème/)).toBeInTheDocument())
@@ -85,6 +85,7 @@ describe('SettingsWindow', () => {
 
     const entries = within(navigation()).getAllByRole('button')
     expect(entries.map(entry => entry.textContent)).toEqual([
+      'Général',
       'Compte',
       'Apparence',
       'Génération',

@@ -1,4 +1,5 @@
-import { DENSITIES, THEMES, type SettingsSectionId } from './settings'
+import { LANGUAGES } from '../i18n/languages'
+import { DENSITIES, STARTUP_BEHAVIOURS, THEMES, type SettingsSectionId } from './settings'
 import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 
 /**
@@ -28,10 +29,32 @@ export const PATH_KINDS: readonly PathKind[] = ['file', 'folder']
 export type SettingSectionEntry = {
   id: SettingsSectionId
   labelKey: string
-  descriptionKey: string
+  /** Absent on a sub-section, whose parent's description already says what the screen is for. */
+  descriptionKey?: string
+  /** Set on a sub-section. The navigation builds its tree from this, and nothing else. */
+  parent?: SettingsSectionId
 }
 
+/**
+ * One screen per model family, each holding the default model of that family. Their labels are
+ * the workspaces' own: a family and the space that works with it are the same idea to the user.
+ *
+ * `upscale` has no workspace, so it carries a label of its own.
+ */
+const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
+  { id: 'generation.image', labelKey: 'workspaces.image', parent: 'generation' },
+  { id: 'generation.video', labelKey: 'workspaces.video', parent: 'generation' },
+  { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation' },
+  { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation' },
+  { id: 'generation.upscale', labelKey: 'settings.familyUpscale', parent: 'generation' },
+]
+
 export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
+  {
+    id: 'general',
+    labelKey: 'settings.general',
+    descriptionKey: 'settings.generalDescription',
+  },
   {
     id: 'account',
     labelKey: 'settings.account',
@@ -47,6 +70,7 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     labelKey: 'settings.generation',
     descriptionKey: 'settings.generationDescription',
   },
+  ...MODEL_FAMILY_SECTIONS,
   {
     id: 'media',
     labelKey: 'settings.media',
@@ -54,13 +78,36 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
   },
 ]
 
+/**
+ * Sections of a parent, in declared order. The navigation renders these under it; nothing else
+ * decides which screens nest.
+ */
+export function childSections(parent: SettingsSectionId): readonly SettingSectionEntry[] {
+  return SETTING_SECTIONS.filter(section => section.parent === parent)
+}
+
+export function rootSections(): readonly SettingSectionEntry[] {
+  return SETTING_SECTIONS.filter(section => !section.parent)
+}
+
 export function sectionEntry(id: SettingsSectionId): SettingSectionEntry | null {
   return SETTING_SECTIONS.find(section => section.id === id) ?? null
 }
 
 export type SettingOption<V extends SettingValue = SettingValue> = {
   value: V
-  labelKey: string
+  labelKey?: string
+  /**
+   * A literal label, for the rare option whose text is the same in every bundle: a language
+   * names itself in its own language, so `Français` reads `Français` on an English screen too.
+   * Exactly one of the two is set — `settings-registry.test.ts` refuses an option with neither.
+   */
+  label?: string
+}
+
+/** The one place an option's two ways of being named are reconciled. */
+export function optionLabel(option: SettingOption, translate: (key: string) => string): string {
+  return option.label ?? (option.labelKey ? translate(option.labelKey) : String(option.value))
 }
 
 type Descriptor<P extends SettingPath> = {
@@ -111,6 +158,30 @@ function setting<P extends SettingPath>(descriptor: Descriptor<P>): Descriptor<P
  * through the path.
  */
 export const SETTING_REGISTRY = [
+  setting({
+    path: 'general.language',
+    kind: 'choice',
+    section: 'general',
+    titleKey: 'settings.language.title',
+    helpKey: 'settings.language.help',
+    // A language names itself in its own language, so those labels are not translated — only
+    // `system` is. `LANGUAGES` already carries them; a copy in each bundle would be two.
+    options: [
+      { value: 'system', labelKey: 'settings.language.system' },
+      ...LANGUAGES.map(language => ({ value: language.code, label: language.name })),
+    ],
+  }),
+  setting({
+    path: 'general.startup',
+    kind: 'choice',
+    section: 'general',
+    titleKey: 'settings.startup.title',
+    helpKey: 'settings.startup.help',
+    options: STARTUP_BEHAVIOURS.map(behaviour => ({
+      value: behaviour,
+      labelKey: `settings.startup.${behaviour}`,
+    })),
+  }),
   setting({
     path: 'appearance.theme',
     kind: 'choice',

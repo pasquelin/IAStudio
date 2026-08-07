@@ -2,7 +2,12 @@ import { mdiRestore } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { defaultAt, valueAt, type SettingValue } from '@shared/domain/settings-path'
-import { boundsOf, optionsOf, type SettingDescriptor } from '@shared/domain/settings-registry'
+import {
+  boundsOf,
+  optionLabel,
+  optionsOf,
+  type SettingDescriptor,
+} from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
 import { useToken } from '@/hooks/useToken'
 import { getBridge } from '@/services/bridge'
@@ -192,7 +197,7 @@ function Control({
         >
           {optionsOf(descriptor).map(option => (
             <option key={String(option.value)} value={String(option.value)}>
-              {t(option.labelKey)}
+              {optionLabel(option, t)}
             </option>
           ))}
         </select>

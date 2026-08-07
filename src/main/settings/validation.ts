@@ -1,7 +1,9 @@
 import { z } from 'zod'
+import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
 import {
   DENSITIES,
   SETTINGS_SECTION_IDS,
+  STARTUP_BEHAVIOURS,
   THEMES,
   type PartialSettings,
   type SettingsSectionId,
@@ -51,7 +53,13 @@ const storage = z.object({
 // storable, and `resolveFfmpeg` falls through to the PATH when it does not resolve.
 const media = z.object({ ffmpegPath: z.string().min(1).optional() })
 
+const general = z.object({
+  language: z.enum(LANGUAGE_PREFERENCES).optional(),
+  startup: z.enum(STARTUP_BEHAVIOURS).optional(),
+})
+
 const partialSettings = z.object({
+  general: general.optional(),
   appearance: appearance.optional(),
   generation: generation.optional(),
   storage: storage.optional(),

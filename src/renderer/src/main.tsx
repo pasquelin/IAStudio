@@ -12,6 +12,8 @@ if (!root) throw new Error('Root element not found in index.html')
 
 // Same locale as the native menu, which the main process resolves from `app.getLocale()`:
 // an English menu above a French interface reads as a bug.
+// The machine's language, for the very first frame: the settings have not been read yet, and
+// `useAppliedSettings` corrects it as soon as they land.
 await initI18n(resolveLanguage(navigator.language))
 
 /**

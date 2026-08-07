@@ -1,6 +1,5 @@
 import { app, BrowserWindow } from 'electron'
 import { APP_NAME } from '@shared/constants'
-import { resolveLanguage, type Language } from '@shared/i18n'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/about-panel'
 import { APP_ICON_PATH } from '@main/resources'
@@ -32,7 +31,7 @@ lockNavigation()
  * synchronously. Deferred by one turn so the splash gets its frame first; without it the
  * splash surfaces once the work it covers is already finished.
  */
-function startUp(splash: Splash, language: Language): void {
+function startUp(splash: Splash): void {
   /**
    * The API calls leave from here, so they never appear in the renderer's Network tab; the
    * mirror is what makes them, and the failures behind a reduced code, visible in devtools.
@@ -49,7 +48,8 @@ function startUp(splash: Splash, language: Language): void {
   if (!app.isPackaged && process.platform === 'darwin') app.dock?.setIcon(APP_ICON_PATH)
 
   // Before the window: the renderer's first `invoke` must find its handlers registered.
-  registerIpc(createServices())
+  const services = createServices()
+  registerIpc(services)
 
   // `deferShow`: the window stays hidden until the splash is gone, so the two are never on
   // screen together — one appearing over the other is exactly what a splash should prevent.
@@ -72,15 +72,17 @@ function startUp(splash: Splash, language: Language): void {
 
   // After the window, so Chromium starts parsing the renderer bundle sooner. Neither the
   // application menu nor the About panel is reachable before a window exists.
+  const language = services.language()
   registerAboutPanel(language)
   buildMenu(language)
 }
 
 void app.whenReady().then(() => {
-  const language = resolveLanguage(app.getLocale())
   const splash = openSplashWindow()
 
-  setImmediate(() => startUp(splash, language))
+  // The language comes from the settings, which `createServices` is what opens — so it is read
+  // inside `startUp` rather than here.
+  setImmediate(() => startUp(splash))
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

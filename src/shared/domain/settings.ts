@@ -1,3 +1,4 @@
+import type { LanguagePreference } from '../i18n/languages'
 import type { ApiFailure } from './failure'
 import type { ModelFamily } from './model'
 
@@ -12,6 +13,11 @@ export type ResolvedTheme = 'dark' | 'light'
 
 export type Density = 'compact' | 'comfortable'
 export type AssetBackend = 'local' | 'cloud'
+
+/** What happens when the application opens with no file to show. */
+export type StartupBehaviour = 'lastProject' | 'nothing'
+
+export const STARTUP_BEHAVIOURS: readonly StartupBehaviour[] = ['lastProject', 'nothing']
 
 /** The values beside the types: the registry's options and zod both enumerate them from here. */
 export const THEMES: readonly Theme[] = ['dark', 'light', 'system']
@@ -32,6 +38,10 @@ export const THEME_ATTRIBUTE: Record<ResolvedTheme, string> = {
  * whether it is authenticated, not what the key is — see spec § 9.
  */
 export type Settings = {
+  general: {
+    language: LanguagePreference
+    startup: StartupBehaviour
+  }
   appearance: {
     theme: Theme
     density: Density
@@ -68,6 +78,7 @@ export type Settings = {
  * exactly this.
  */
 export const DEFAULT_SETTINGS: Settings = {
+  general: { language: 'system', startup: 'lastProject' },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
   storage: { backend: 'local' },
@@ -80,15 +91,35 @@ export type PartialSettings = { [K in keyof Settings]?: Partial<Settings[K]> }
 export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }
 
 /**
- * Top-level sections of the settings window, named so any surface can ask for one of them —
- * a panel that has just said the API key is missing is expected to lead to where it is typed.
+ * Sections of the settings window, named so any surface can ask for one of them — a panel that
+ * has just said the API key is missing is expected to lead to where it is typed.
+ *
+ * Sub-sections are part of the union rather than made up by the screen: an id the shared type
+ * does not know is refused by the IPC, so `settings.open('generation.image')` would fail on a
+ * name the navigation happily displayed.
  */
-export type SettingsSectionId = 'account' | 'appearance' | 'generation' | 'media'
+export type SettingsSectionId =
+  | 'general'
+  | 'account'
+  | 'appearance'
+  | 'generation'
+  | 'generation.image'
+  | 'generation.video'
+  | 'generation.3d'
+  | 'generation.audio'
+  | 'generation.upscale'
+  | 'media'
 
 export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
+  'general',
   'account',
   'appearance',
   'generation',
+  'generation.image',
+  'generation.video',
+  'generation.3d',
+  'generation.audio',
+  'generation.upscale',
   'media',
 ]
 
@@ -123,5 +154,9 @@ export function sectionFromRoute(hash: string): SettingsSectionId | null {
   return isSettingsSection(section) ? section : null
 }
 
-/** Where the window opens when nothing names a section — its own ⌘, shortcut included. */
-export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = 'account'
+/**
+ * Where the window opens when nothing names a section — its own ⌘, shortcut included. The top
+ * of the list, which is what a settings window is expected to do; a panel that needs the API
+ * key names `account` itself.
+ */
+export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = 'general'
