@@ -12,7 +12,13 @@ export type AudioWorkerRequest =
   | { kind: 'render'; id: number; edits: readonly AudioEdit[] }
 
 export type AudioWorkerResponse =
-  | { kind: 'rendered'; id: number; sampleRate: number; channels: Float32Array[]; wav: Uint8Array<ArrayBuffer> }
+  | {
+      kind: 'rendered'
+      id: number
+      sampleRate: number
+      channels: Float32Array[]
+      wav: Uint8Array<ArrayBuffer>
+    }
   | { kind: 'failed'; id: number; message: string }
 
 /** The take as the chain leaves it, with the bytes the editor plays and writes to disk. */
@@ -39,9 +45,15 @@ export type AudioRenderer = {
   dispose: () => void
 }
 
-export function createAudioRenderer(port: WorkerPort): AudioRenderer {
+/**
+ * `open` is called on the first take rather than here, so building the renderer is pure: React
+ * may run a state initialiser twice and throw one result away, and a worker spawned there
+ * would be the one nothing ever terminates.
+ */
+export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
   let nextId = 0
   let latest = -1
+  let port: WorkerPort | null = null
   const waiting = new Map<number, (result: RenderedAudio | null) => void>()
 
   const settle = (id: number, result: RenderedAudio | null): void => {
@@ -54,21 +66,29 @@ export function createAudioRenderer(port: WorkerPort): AudioRenderer {
     }
   }
 
-  port.addEventListener('message', event => {
-    const message = event.data
-    if (message.kind === 'failed') {
-      settle(message.id, null)
-      return
-    }
-    settle(message.id, {
-      data: { sampleRate: message.sampleRate, channels: message.channels },
-      wav: message.wav,
+  const ensure = (): WorkerPort => {
+    if (port) return port
+
+    const opened = open()
+    opened.addEventListener('message', event => {
+      const message = event.data
+      if (message.kind === 'failed') {
+        settle(message.id, null)
+        return
+      }
+      settle(message.id, {
+        data: { sampleRate: message.sampleRate, channels: message.channels },
+        wav: message.wav,
+      })
     })
-  })
+
+    port = opened
+    return opened
+  }
 
   return {
     load: source =>
-      port.postMessage(
+      ensure().postMessage(
         { kind: 'load', sampleRate: source.sampleRate, channels: source.channels },
         source.channels.map(channel => channel.buffer),
       ),
@@ -78,12 +98,13 @@ export function createAudioRenderer(port: WorkerPort): AudioRenderer {
         const id = nextId++
         latest = id
         waiting.set(id, resolve)
-        port.postMessage({ kind: 'render', id, edits }, [])
+        ensure().postMessage({ kind: 'render', id, edits }, [])
       }),
 
     dispose: () => {
       settle(latest, null)
-      port.terminate()
+      port?.terminate()
+      port = null
     },
   }
 }

@@ -120,7 +120,7 @@ describe('Inspector, on what a panel selected', () => {
         'doc-1',
         addClip('A1', clipFixture('clip-1', 0, 2_000_000, { assetId: 'asset-1' })),
       )
-    useSelection.getState().selectClip()
+    useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Inspector />)
 
     expect(screen.getByText('pad.wav')).toBeInTheDocument()
@@ -135,7 +135,7 @@ describe('Inspector, on what a panel selected', () => {
         'doc-1',
         addClip('V1', clipFixture('clip-1', 0, 2_000_000, { assetId: 'asset-1' })),
       )
-    useSelection.getState().selectClip()
+    useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Inspector />)
 
     expect(screen.queryByLabelText('Gain')).not.toBeInTheDocument()
@@ -149,7 +149,7 @@ describe('Inspector, on what a panel selected', () => {
         'doc-1',
         addClip('A1', clipFixture('clip-1', 0, 2_000_000, { assetId: 'asset-1' })),
       )
-    useSelection.getState().selectClip()
+    useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Inspector />)
 
     const field = screen.getByLabelText('Fondu d’entrée')
@@ -161,7 +161,7 @@ describe('Inspector, on what a panel selected', () => {
 
   it('reads out the track that was selected', () => {
     openSequence()
-    useSelection.getState().selectTrack('A1')
+    useSelection.getState().selectTrack('doc-1', 'A1')
     render(<Inspector />)
 
     expect(screen.getByText('A1')).toBeInTheDocument()
@@ -171,7 +171,49 @@ describe('Inspector, on what a panel selected', () => {
 
   it('falls back to the empty state when the selected track is gone', () => {
     openSequence()
-    useSelection.getState().selectTrack('nope')
+    useSelection.getState().selectTrack('doc-1', 'nope')
+    render(<Inspector />)
+
+    expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
+  })
+
+  it('says nothing rather than describing the track of the same name in another sequence', () => {
+    openSequence()
+    // Two montages, and every montage has a track called A1. The one that was clicked is in
+    // the tab behind; describing the one in front would be silently the wrong track.
+    useDocuments.setState({
+      documents: {
+        'doc-1': { id: 'doc-1', kind: 'sequence', title: 'Montage', workspace: 'video' },
+        'doc-2': { id: 'doc-2', kind: 'sequence', title: 'Autre', workspace: 'video' },
+      },
+      activeId: 'doc-2',
+    })
+    useSequences.setState({
+      states: {
+        'doc-1': sequenceWith([trackFixture('A1', 'audio')]),
+        'doc-2': sequenceWith([trackFixture('A1', 'audio', [], { name: 'Ambiance' })]),
+      },
+      histories: {},
+    })
+    useSelection.getState().selectTrack('doc-1', 'A1')
+
+    render(<Inspector />)
+
+    expect(screen.queryByText('Ambiance')).not.toBeInTheDocument()
+    expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
+  })
+
+  it('says nothing rather than reading a clip out of the sequence in front', () => {
+    openSequence()
+    useSequences
+      .getState()
+      .runCommand(
+        'doc-1',
+        addClip('A1', clipFixture('clip-1', 0, 2_000_000, { assetId: 'asset-1' })),
+      )
+    // Selected in a montage that is no longer the active tab.
+    useSelection.getState().selectClip('doc-other', 'clip-1')
+
     render(<Inspector />)
 
     expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()

@@ -44,8 +44,13 @@ function Face() {
       return chosen.length > 0 ? <AssetSelection assets={chosen} /> : <Empty />
     }
 
+    // Both guarded on the owner: the sequence in front is not necessarily the one this was
+    // selected in, and every sequence has a track called `V1`.
     case 'clip': {
-      const clip = sequence?.selectedId ? clipById(sequence, sequence.selectedId) : null
+      const clip =
+        sequence && selection.ownerId === sequenceId
+          ? clipById(sequence, selection.ids[0] ?? '')
+          : null
       return sequenceId && sequence && clip ? (
         <ClipInspector documentId={sequenceId} sequence={sequence} clip={clip} />
       ) : (
@@ -54,7 +59,10 @@ function Face() {
     }
 
     case 'track': {
-      const track = sequence ? trackById(sequence, selection.id) : null
+      const track =
+        sequence && selection.ownerId === sequenceId
+          ? trackById(sequence, selection.ids[0] ?? '')
+          : null
       return sequenceId && track ? (
         <TrackInspector documentId={sequenceId} track={track} />
       ) : (

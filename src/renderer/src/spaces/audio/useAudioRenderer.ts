@@ -5,18 +5,14 @@ import { createAudioRenderer, type AudioRenderer } from '@/engines/audio/audio-r
 /**
  * The editor's render worker, one per open take.
  *
- * Built in an effect rather than while rendering: React mounts a component twice in
- * development, and a worker created during render would be the one nothing ever terminates.
- * Null until it exists, which is one frame of the empty state the decode already shows.
+ * The renderer is built during render and the worker only when a take reaches it: React runs a
+ * state initialiser twice in development and keeps one of the two, and a worker spawned there
+ * would be the one nothing ever terminates.
  */
-export function useAudioRenderer(): AudioRenderer | null {
-  const [renderer, setRenderer] = useState<AudioRenderer | null>(null)
+export function useAudioRenderer(): AudioRenderer {
+  const [renderer] = useState(() => createAudioRenderer(() => new AudioWorker()))
 
-  useEffect(() => {
-    const created = createAudioRenderer(new AudioWorker())
-    setRenderer(created)
-    return () => created.dispose()
-  }, [])
+  useEffect(() => () => renderer.dispose(), [renderer])
 
   return renderer
 }

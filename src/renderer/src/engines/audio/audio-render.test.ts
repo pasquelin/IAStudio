@@ -26,7 +26,8 @@ function fakePort(): {
     // `as`: the renderer only ever reads `data` off the event, and jsdom's MessageEvent
     // constructor is not available in the node project this file also runs under.
     reply: response => {
-      for (const listener of listeners) listener({ data: response } as MessageEvent<AudioWorkerResponse>)
+      for (const listener of listeners)
+        listener({ data: response } as MessageEvent<AudioWorkerResponse>)
     },
     port: {
       postMessage: (message, transfer) => sent.push({ message, transfer }),
@@ -48,7 +49,7 @@ describe('createAudioRenderer', () => {
     const { port, sent } = fakePort()
     const source = take([0, 0.5, 1])
 
-    createAudioRenderer(port).load(source)
+    createAudioRenderer(() => port).load(source)
 
     expect(sent[0]?.message).toMatchObject({ kind: 'load', sampleRate: 48_000 })
     expect(sent[0]?.transfer).toEqual([source.channels[0]?.buffer])
@@ -56,7 +57,7 @@ describe('createAudioRenderer', () => {
 
   it('resolves a render with what the worker sent back', async () => {
     const { port, reply } = fakePort()
-    const renderer = createAudioRenderer(port)
+    const renderer = createAudioRenderer(() => port)
 
     const pending = renderer.render([{ kind: 'gain', db: 3 }])
     const channels = [new Float32Array([0.25])]
@@ -70,7 +71,7 @@ describe('createAudioRenderer', () => {
 
   it('drops a render the user has already overtaken', async () => {
     const { port, reply } = fakePort()
-    const renderer = createAudioRenderer(port)
+    const renderer = createAudioRenderer(() => port)
 
     const first = renderer.render([{ kind: 'gain', db: 3 }])
     const second = renderer.render([{ kind: 'gain', db: 6 }])
@@ -88,7 +89,7 @@ describe('createAudioRenderer', () => {
 
   it('resolves rather than hanging when the worker reports a failure', async () => {
     const { port, reply } = fakePort()
-    const pending = createAudioRenderer(port).render([])
+    const pending = createAudioRenderer(() => port).render([])
 
     reply({ kind: 'failed', id: 0, message: 'no take loaded' })
 
@@ -97,7 +98,7 @@ describe('createAudioRenderer', () => {
 
   it('releases whoever is still waiting when the editor closes', async () => {
     const { port, terminated } = fakePort()
-    const renderer = createAudioRenderer(port)
+    const renderer = createAudioRenderer(() => port)
 
     const pending = renderer.render([])
     renderer.dispose()
@@ -112,7 +113,11 @@ describe('handleRequest', () => {
     const state: AudioWorkerState = { source: null }
     handleRequest(state, { kind: 'load', sampleRate: 48_000, channels: [new Float32Array([1, 1])] })
 
-    const answer = handleRequest(state, { kind: 'render', id: 4, edits: [{ kind: 'gain', db: -6 }] })
+    const answer = handleRequest(state, {
+      kind: 'render',
+      id: 4,
+      edits: [{ kind: 'gain', db: -6 }],
+    })
 
     expect(answer?.response.kind).toBe('rendered')
     if (answer?.response.kind !== 'rendered') throw new Error('expected a rendered response')
@@ -156,7 +161,11 @@ describe('handleRequest', () => {
     handleRequest(state, { kind: 'load', sampleRate: 48_000, channels: [new Float32Array([1, 1])] })
 
     handleRequest(state, { kind: 'render', id: 0, edits: [] })
-    const second = handleRequest(state, { kind: 'render', id: 1, edits: [{ kind: 'gain', db: -6 }] })
+    const second = handleRequest(state, {
+      kind: 'render',
+      id: 1,
+      edits: [{ kind: 'gain', db: -6 }],
+    })
 
     if (second?.response.kind !== 'rendered') throw new Error('expected a rendered response')
     expect(second.response.channels[0]?.[0]).toBeCloseTo(0.501, 3)
@@ -188,18 +197,49 @@ describe('the worker entry', () => {
     await import('./audio.worker')
     const deliver = (request: AudioWorkerRequest): void => {
       // `as`: only `data` is read, and the node project has no MessageEvent constructor.
-      for (const listener of listeners) listener({ data: request } as MessageEvent<AudioWorkerRequest>)
+      for (const listener of listeners)
+        listener({ data: request } as MessageEvent<AudioWorkerRequest>)
     }
 
     deliver({ kind: 'load', sampleRate: 8_000, channels: [new Float32Array([1])] })
     expect(posted).not.toHaveBeenCalled()
 
     deliver({ kind: 'render', id: 7, edits: [] })
-    expect(posted).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'rendered', id: 7 }),
-      { transfer: expect.any(Array) },
-    )
+    expect(posted).toHaveBeenCalledWith(expect.objectContaining({ kind: 'rendered', id: 7 }), {
+      transfer: expect.any(Array),
+    })
 
     vi.unstubAllGlobals()
+  })
+})
+
+describe('the worker it opens', () => {
+  it('waits for a take rather than spawning one on construction', () => {
+    const open = vi.fn(() => fakePort().port)
+
+    createAudioRenderer(open)
+
+    // React runs a state initialiser twice and keeps one: a worker opened there would leak.
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('opens exactly one, however many takes and renders go through it', async () => {
+    const { port, reply } = fakePort()
+    const open = vi.fn(() => port)
+    const renderer = createAudioRenderer(open)
+
+    renderer.load(take([0, 1]))
+    const pending = renderer.render([])
+    reply({ kind: 'rendered', id: 0, sampleRate: 48_000, channels: [], wav: new Uint8Array() })
+    await pending
+
+    expect(open).toHaveBeenCalledTimes(1)
+  })
+
+  it('terminates nothing when the editor closes before a take arrives', () => {
+    const { port, terminated } = fakePort()
+    createAudioRenderer(() => port).dispose()
+
+    expect(terminated()).toBe(0)
   })
 })
