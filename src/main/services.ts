@@ -32,6 +32,7 @@ import { createModelRegistry, type ModelRegistry } from './scenario/model-regist
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
+import { setWindowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
 
 export type Services = {
@@ -133,6 +134,7 @@ export function createServices(): Services {
   // The stored theme, before any window is painted: a window created on the OS preference and
   // corrected afterwards flashes the wrong colour for a frame.
   applyTheme(settings.read().appearance.theme)
+  setWindowLanguage(language())
   setLogVerbosity(settings.read().advanced.logLevel)
 
   // A keychain the OS can no longer open leaves a blob that decrypts to nothing. Dropping it

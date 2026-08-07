@@ -26,6 +26,7 @@ export type Channels = {
   settingsForgetCredentials: 'settings:forget-credentials'
   settingsOpen: 'settings:open'
   settingsRunAction: 'settings:run-action'
+  settingsPending: 'settings:pending'
 
   scenarioSearchModels: 'scenario:search-models'
   scenarioModelPreviews: 'scenario:model-previews'
@@ -69,6 +70,7 @@ export const CHANNELS: Channels = {
   settingsForgetCredentials: 'settings:forget-credentials',
   settingsOpen: 'settings:open',
   settingsRunAction: 'settings:run-action',
+  settingsPending: 'settings:pending',
 
   scenarioSearchModels: 'scenario:search-models',
   scenarioModelPreviews: 'scenario:model-previews',
@@ -168,6 +170,11 @@ export type StudioBridge = {
      * whether a given one is allowed to do anything.
      */
     runAction: (id: SettingActionId) => Promise<void>
+    /**
+     * Whether the settings window holds changes nobody has applied. Told to the main process
+     * because closing a window is its decision, and it has no other way to know.
+     */
+    setPending: (pending: boolean) => Promise<void>
     /**
      * Settings are owned by the main process and replicated by every window. Without this, a
      * theme changed in the settings window would only reach the studio on the next launch.

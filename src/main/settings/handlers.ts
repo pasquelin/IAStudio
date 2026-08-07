@@ -19,6 +19,8 @@ export type SettingsHandlerDeps = {
   openSettings: (section: SettingsSectionId) => void
   /** Runs one of the settings window's buttons. Injected: each one touches Electron directly. */
   runAction: (id: SettingActionId) => void
+  /** Told the window is holding changes nobody applied, so closing it can ask first. */
+  setPending: (pending: boolean) => void
 }
 
 export function registerSettingsHandlers({
@@ -27,6 +29,7 @@ export function registerSettingsHandlers({
   authState,
   openSettings,
   runAction,
+  setPending,
 }: SettingsHandlerDeps): void {
   handle(CHANNELS.settingsRead, () => settings.read())
 
@@ -63,5 +66,9 @@ export function registerSettingsHandlers({
 
   handle(CHANNELS.settingsRunAction, (_event, id) => {
     runAction(parseSettingAction(id))
+  })
+
+  handle(CHANNELS.settingsPending, (_event, pending) => {
+    setPending(pending === true)
   })
 }

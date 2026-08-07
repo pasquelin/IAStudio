@@ -34,6 +34,7 @@ const bridge: StudioBridge = {
     forgetCredentials: () => ipcRenderer.invoke(CHANNELS.settingsForgetCredentials),
     open: section => ipcRenderer.invoke(CHANNELS.settingsOpen, section),
     runAction: id => ipcRenderer.invoke(CHANNELS.settingsRunAction, id),
+    setPending: pending => ipcRenderer.invoke(CHANNELS.settingsPending, pending),
     onChange: callback => subscribe<Settings>(EVENTS.settingsChanged, callback),
     onSection: callback => subscribe<SettingsSectionId>(EVENTS.settingsSection, callback),
   },

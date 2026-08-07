@@ -15,6 +15,7 @@ describe('settings handlers', () => {
   let authState: () => Promise<AuthState>
   let openSettings: (section: SettingsSectionId) => void
   let runAction: (id: SettingActionId) => void
+  let setPending: (pending: boolean) => void
 
   beforeEach(() => {
     resetHandlers()
@@ -23,12 +24,14 @@ describe('settings handlers', () => {
     authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
     openSettings = vi.fn()
     runAction = vi.fn()
+    setPending = vi.fn()
     registerSettingsHandlers({
       settings,
       onCredentialsChanged,
       authState,
       openSettings,
       runAction,
+      setPending,
     })
   })
 
@@ -93,6 +96,7 @@ describe('settings handlers', () => {
       authState,
       openSettings,
       runAction,
+      setPending,
     })
 
     expect(invoke(CHANNELS.settingsOpen, 'account')).toBeUndefined()
@@ -110,5 +114,22 @@ describe('settings handlers', () => {
 
     expect(settings.hasCredentials()).toBe(false)
     expect(onCredentialsChanged).toHaveBeenCalledOnce()
+  })
+
+  describe('the pending flag', () => {
+    // Closing a window is the main process's decision, and nothing else tells it that the
+    // settings window is holding work nobody applied.
+    it('passes on what the window says it is holding', () => {
+      invoke(CHANNELS.settingsPending, true)
+      expect(setPending).toHaveBeenCalledWith(true)
+
+      invoke(CHANNELS.settingsPending, false)
+      expect(setPending).toHaveBeenCalledWith(false)
+    })
+
+    it('reads anything but true as nothing pending, rather than trusting the sender', () => {
+      invoke(CHANNELS.settingsPending, 'yes')
+      expect(setPending).toHaveBeenCalledWith(false)
+    })
   })
 })

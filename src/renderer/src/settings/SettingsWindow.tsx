@@ -195,6 +195,13 @@ export function SettingsWindow() {
 
   useAppliedSettings()
 
+  // Published so the main process can ask before closing on work nobody applied: closing a
+  // window is its decision, and it has no other way to know.
+  const pending = useSettingsDraft(isDirty)
+  useEffect(() => {
+    void getBridge()?.settings.setPending(pending)
+  }, [pending])
+
   // Searched over the translated title and description, so `t` has to be a dependency: the
   // same query finds different settings once the language changes.
   const found = useMemo(() => matchSettings(query, t), [query, t])

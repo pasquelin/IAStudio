@@ -21,6 +21,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       forgetCredentials: () => Promise.resolve(),
       open: () => Promise.resolve(),
       runAction: () => Promise.resolve(),
+      setPending: () => Promise.resolve(),
       onChange: noSubscription,
       onSection: noSubscription,
       ...overrides.settings,

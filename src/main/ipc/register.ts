@@ -6,7 +6,7 @@ import { runSettingAction } from '@main/settings/actions'
 import { registerSettingsHandlers } from '@main/settings/handlers'
 import { registerWindowControls } from '@main/window/controls'
 import { registerDialogHandlers } from '@main/window/dialogs'
-import { openSettingsWindow } from '@main/window/windows'
+import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
 import type { Services } from '@main/services'
 
 /** Single place where the IPC surface is wired. Registered once, before any window loads. */
@@ -18,6 +18,7 @@ export function registerIpc(services: Services): void {
   registerSettingsHandlers({
     ...services,
     openSettings: openSettingsWindow,
+    setPending: markSettingsPending,
     runAction: runSettingAction({
       settings: services.settings,
       settingsPath: services.settings.path,

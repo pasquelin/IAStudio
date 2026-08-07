@@ -155,6 +155,23 @@ describe('SettingsWindow', () => {
     expect(screen.queryByRole('button', { name: 'Appliquer' })).not.toBeInTheDocument()
   })
 
+  // Closing on a pending buffer would throw the work away in silence; the main process is what
+  // asks, and it has no other way to know.
+  it('tells the main process when it is holding changes nobody applied', async () => {
+    const setPending = vi.fn(() => Promise.resolve())
+    installFakeBridge({ settings: { setPending } })
+
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Apparence' }))
+    await userEvent.selectOptions(screen.getByLabelText(/Densité/), 'compact')
+
+    expect(setPending).toHaveBeenLastCalledWith(true)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+
+    expect(setPending).toHaveBeenLastCalledWith(false)
+  })
+
   // What a list of sections cannot do: a user knows what they want, not which tab holds it.
   it('finds a setting by what it does, wherever it lives', async () => {
     installFakeBridge()
