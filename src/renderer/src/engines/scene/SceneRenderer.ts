@@ -2,6 +2,7 @@ import {
   Color,
   DirectionalLight,
   GridHelper,
+  Light,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
@@ -11,7 +12,6 @@ import {
   Vector2,
   Vector3 as ThreeVector3,
   WebGLRenderer,
-  type Light,
   type Object3D,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -22,6 +22,7 @@ import { token } from '../core/palette'
 import type { Transform } from '@shared/domain/scene'
 import type { SceneNode, SceneState } from './scene-state'
 import { geometryFor, helperFor, lightFor, tuneViewHelper, type LightHelper } from './three-factory'
+import { applyGeometry, applyLight, applyMaterial, standardMaterialOf } from './three-sync'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
 export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
@@ -227,7 +228,8 @@ export class SceneRenderer {
    * instead of re-deriving a quaternion per object and re-uploading a helper per light.
    */
   private syncNode(node: SceneNode): void {
-    if (this.applied.get(node.id) === node) return
+    const previous = this.applied.get(node.id)
+    if (previous === node) return
     this.applied.set(node.id, node)
 
     let object = this.objects.get(node.id)
@@ -236,6 +238,10 @@ export class SceneRenderer {
       object.name = node.id
       this.objects.set(node.id, object)
       this.scene.add(object)
+    } else {
+      // Only what an edit actually changed: rebuilding a geometry or recompiling a shader on
+      // every move of the gizmo would cost the drag its frame rate.
+      this.syncDescriptors(object, previous, node)
     }
 
     const { position, rotation, scale } = node.transform
@@ -252,13 +258,36 @@ export class SceneRenderer {
     }
   }
 
+  /**
+   * What an edit changed on the object already in the scene. Compared against the node last
+   * applied rather than against the three.js object: a descriptor is one reference, and an edit
+   * that did not touch the material must not walk it field by field.
+   */
+  private syncDescriptors(
+    object: Object3D,
+    previous: SceneNode | undefined,
+    node: SceneNode,
+  ): void {
+    if (node.type === 'mesh' && object instanceof Mesh) {
+      const before = previous?.type === 'mesh' ? previous : null
+      if (before?.geometry !== node.geometry) applyGeometry(object, node.geometry)
+
+      const material = standardMaterialOf(object)
+      if (material && before?.material !== node.material) {
+        applyMaterial(material, node.material, this.meshColor)
+      }
+      return
+    }
+
+    if (node.type === 'light' && object instanceof Light) {
+      const before = previous?.type === 'light' ? previous : null
+      if (before?.light !== node.light) applyLight(object, node.light)
+    }
+  }
+
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
-    const material = new MeshStandardMaterial({
-      roughness: node.material.roughness,
-      metalness: node.material.metalness,
-    })
-    const color = node.material.color ?? this.meshColor
-    if (color) material.color = new Color(color)
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, node.material, this.meshColor)
     return new Mesh(geometryFor(node.geometry), material)
   }
 
