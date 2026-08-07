@@ -83,7 +83,8 @@ describe('DocumentArea', () => {
   })
 
   it('opens a panel for a document created after mount', async () => {
-    const { DocumentArea, openDocument } = await import('./DocumentArea')
+    const { DocumentArea } = await import('./DocumentArea')
+    const { openDocument } = await import('./dockview-api')
     render(<DocumentArea />)
 
     const created = await useDocuments.getState().create('3d')
@@ -100,7 +101,8 @@ describe('DocumentArea', () => {
   })
 
   it('marks the tab of a document with unsaved work, and only that tab', async () => {
-    const { DocumentArea, setDocumentTitle } = await import('./DocumentArea')
+    const { DocumentArea } = await import('./DocumentArea')
+    const { setDocumentTitle } = await import('./dockview-api')
     render(<DocumentArea />)
     panels['doc-3'] = { setTitle }
 

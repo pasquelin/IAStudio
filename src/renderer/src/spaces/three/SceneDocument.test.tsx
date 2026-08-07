@@ -15,7 +15,7 @@ const setDocumentTitle = vi.fn()
 
 // Dockview owns the tabs and needs a layout engine; what matters here is what the space asks
 // of it.
-vi.mock('@/app/DocumentArea', () => ({
+vi.mock('@/app/dockview-api', () => ({
   setDocumentTitle: (...args: unknown[]) => setDocumentTitle(...args),
 }))
 

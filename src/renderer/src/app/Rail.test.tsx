@@ -10,7 +10,7 @@ import { useTools } from '@/stores/tools'
 import { Rail } from './Rail'
 
 const openDocument = vi.fn()
-vi.mock('./DocumentArea', () => ({ openDocument: (...args: unknown[]) => openDocument(...args) }))
+vi.mock('./dockview-api', () => ({ openDocument: (...args: unknown[]) => openDocument(...args) }))
 
 describe('Rail', () => {
   beforeEach(() => {
