@@ -135,6 +135,41 @@ describe('Collection', () => {
     expect(onSelect).toHaveBeenCalledWith({ id: 'row_0', name: 'Row 0' })
   })
 
+  // The eye of a layer or a node sits inside the row and answers Enter itself. Selecting on top
+  // of it is the keyboard version of the click theft `VisibilityToggle` was written to stop.
+  it('leaves the selection alone when a control inside the row takes the key', async () => {
+    const onSelect = vi.fn()
+    const onToggle = vi.fn()
+    renderCollection(
+      rows(4),
+      { view: 'list' },
+      {
+        onSelect,
+        // Stops the click the way `VisibilityToggle` does — the key press is the part the cell
+        // has to handle, since stopping a click never reaches it.
+        renderRow: (row: Row) => (
+          <span>
+            {row.name}
+            <button
+              onClick={event => {
+                event.stopPropagation()
+                onToggle()
+              }}
+            >
+              eye
+            </button>
+          </span>
+        ),
+      },
+    )
+
+    screen.getAllByRole('button', { name: 'eye' })[1]?.focus()
+    await userEvent.keyboard('{Enter}')
+
+    expect(onToggle).toHaveBeenCalled()
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
   it('leaves cells out of the tab order when nothing can be selected', () => {
     renderCollection(rows(4))
 

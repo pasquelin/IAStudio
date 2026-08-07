@@ -271,6 +271,10 @@ function CollectionCell({
       onClick={onSelect}
       onKeyDown={event => {
         if (event.key === 'Enter' || event.key === ' ') {
+          // Only when the cell itself holds the focus: a control inside the row — the visibility
+          // eye — answers the key on its own, and `VisibilityToggle` can stop a click but never
+          // a key press. Without this, reaching the eye by keyboard also moved the selection.
+          if (event.target !== event.currentTarget) return
           event.preventDefault()
           onSelect()
           return
