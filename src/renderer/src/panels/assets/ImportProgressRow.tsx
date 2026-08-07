@@ -20,7 +20,8 @@ export const ImportProgressRow = memo(function ImportProgressRow({
 }: ImportProgressRowProps) {
   const { t } = useTranslation()
   const cancel = useMedia(state => state.cancel)
-  const failed = entry.stage === 'failed'
+  // A file that is not media is a failure like any other, told apart only by its own wording.
+  const failed = entry.stage === 'failed' || entry.stage === 'unreadable'
 
   return (
     <ProgressRow

@@ -182,6 +182,29 @@ describe('catalog', () => {
     expect(driver.prepare('SELECT COUNT(*) AS total FROM asset_tags').get()?.['total']).toBe(0)
   })
 
+  it('finds a row by the bytes it holds, which is what a second import matches on', () => {
+    catalog.add(asset({ id: 'asset_rush', hash: 'abc123' }))
+
+    expect(catalog.findByHash('abc123')?.id).toBe('asset_rush')
+    expect(catalog.findByHash('other')).toBeNull()
+  })
+
+  it('answers with the oldest row when the same bytes were let in twice', () => {
+    catalog.add(asset({ id: 'asset_late', hash: 'abc123', createdAt: '2026-08-07T10:00:00.000Z' }))
+    catalog.add(asset({ id: 'asset_first', hash: 'abc123', createdAt: '2026-08-01T10:00:00.000Z' }))
+
+    // The row that has been there longest is the one carrying the tags and the proxy.
+    expect(catalog.findByHash('abc123')?.id).toBe('asset_first')
+  })
+
+  it('removes a row and the tags hanging off it', () => {
+    catalog.add(asset({ tags: ['stone', 'rock'] }))
+    catalog.remove('asset_1')
+
+    expect(catalog.find('asset_1')).toBeNull()
+    expect(driver.prepare('SELECT COUNT(*) AS total FROM asset_tags').get()?.['total']).toBe(0)
+  })
+
   it('migrates once and stays put when replayed', () => {
     const version = (): unknown => driver.prepare('PRAGMA user_version').get()?.['user_version']
     const before = version()

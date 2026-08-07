@@ -3,6 +3,7 @@ import type { IngestProgress, IngestStage } from '@shared/domain/media'
 import { PEAKS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
 import { peaksArgs, proxyArgs } from './ffmpeg'
 import { decodePeaks, samplesOf } from './peaks'
+import type { ProbeOutcome } from './probe'
 
 /**
  * What WebCodecs decodes without help. Anything else is montaged on a proxy. Both spellings of
@@ -16,9 +17,13 @@ export type MediaServiceDeps = {
   ffmpeg: () => string | null
   /** The signal is aborted by `cancel`: a proxy of a twenty-minute rush must stop on demand. */
   run: (binary: string, args: string[], signal: AbortSignal) => Promise<Buffer>
-  /** Null when nothing could read the file — a missing ffprobe is not a failed import. */
-  probe: (source: string, signal: AbortSignal) => Promise<MediaProbe | null>
+  /** A missing ffprobe is not a failed import; a file ffprobe refuses is — see `ProbeOutcome`. */
+  probe: (source: string, signal: AbortSignal) => Promise<ProbeOutcome>
   hash: (source: string) => Promise<string>
+  /** Whether the catalogue already holds another row with the same bytes. */
+  duplicateExists: (assetId: string, hash: string) => Promise<boolean>
+  /** Drops the row this pick minted. What the catalogue must not keep, it must not show. */
+  discard: (assetId: string) => Promise<void>
   save: (assetId: string, fields: Partial<Asset>) => void
   writeFile: (path: string, data: Uint8Array) => Promise<void>
   onProgress: (progress: IngestProgress) => void
@@ -49,6 +54,8 @@ const STAGE_RATIO: Record<IngestStage, number> = {
   done: 1,
   cancelled: 1,
   failed: 1,
+  duplicate: 1,
+  unreadable: 1,
 }
 
 export function createMediaService(deps: MediaServiceDeps): MediaService {
@@ -88,12 +95,30 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         if (cancelled()) return
 
         advance('probe')
-        const probe = await deps.probe(sourcePath, controller.signal)
-        if (probe) fields.probe = probe
+        const outcome = await deps.probe(sourcePath, controller.signal)
         if (cancelled()) return
 
+        // Refused by the tool that can read every format the picker offers: the file is not
+        // media, and a row saying otherwise is worse than no row at all.
+        if (outcome.kind === 'unreadable') {
+          stage = 'unreadable'
+          return
+        }
+
+        const probe = outcome.kind === 'probed' ? outcome.probe : null
+        if (probe) fields.probe = probe
+
         advance('hash')
-        fields.hash = await deps.hash(sourcePath)
+        const hash = await deps.hash(sourcePath)
+        fields.hash = hash
+        if (cancelled()) return
+
+        // The same bytes are already in the catalogue: the row that is there keeps its tags,
+        // its proxy and its waveform, and this second pick reuses it rather than doubling it.
+        if (await deps.duplicateExists(assetId, hash)) {
+          stage = 'duplicate'
+          return
+        }
         if (cancelled()) return
 
         const binary = deps.ffmpeg()
@@ -137,9 +162,17 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         release()
         running.delete(assetId)
 
-        // Saved whatever happened: a proxy that failed after the probe and the hash succeeded
-        // must not throw them away — there is no retry, and re-picking makes a new row.
-        if (stage !== 'queued') deps.save(assetId, fields)
+        // Two outcomes leave nothing worth keeping: a file that is not media, and bytes the
+        // catalogue already holds. Both drop the row this pick minted rather than write to it.
+        if (stage === 'duplicate' || stage === 'unreadable') {
+          await deps.discard(assetId)
+        } else if (stage !== 'queued') {
+          // Saved whatever else happened: a proxy that failed after the probe and the hash
+          // succeeded must not throw them away — there is no retry, and re-picking makes a
+          // new row.
+          deps.save(assetId, fields)
+        }
+
         advance(cancelled() ? 'cancelled' : stage)
       }
     },

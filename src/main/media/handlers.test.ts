@@ -19,7 +19,7 @@ function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
       }),
     ),
     pickMedia: vi.fn(async () => ['/Volumes/Rushes/A001.mov']),
-    capabilities: () => ({ ffmpeg: true }),
+    capabilities: async () => ({ ffmpeg: true }),
     ...overrides,
   }
 }
@@ -89,8 +89,8 @@ describe('media handlers', () => {
     expect(() => invoke(CHANNELS.mediaCancel, '')).toThrow()
   })
 
-  it('reports what the pipeline can do, so the interface can say what is missing', () => {
-    registerMediaHandlers(deps({ capabilities: () => ({ ffmpeg: false }) }))
-    expect(invoke(CHANNELS.mediaAvailable)).toEqual({ ffmpeg: false })
+  it('reports what the pipeline can do, so the interface can say what is missing', async () => {
+    registerMediaHandlers(deps({ capabilities: async () => ({ ffmpeg: false }) }))
+    await expect(invoke(CHANNELS.mediaAvailable)).resolves.toEqual({ ffmpeg: false })
   })
 })

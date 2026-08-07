@@ -11,13 +11,17 @@ import type { Asset, AssetQuery } from '@shared/domain/asset'
 export type CatalogRequest =
   | { id: number; op: 'add'; asset: Asset }
   | { id: number; op: 'find'; assetId: string }
+  | { id: number; op: 'findByHash'; hash: string }
   | { id: number; op: 'search'; query: AssetQuery }
+  | { id: number; op: 'remove'; assetId: string }
 
 /** What each operation answers, so the client can type its promise without a cast. */
 export type CatalogResults = {
   add: Asset
   find: Asset | null
+  findByHash: Asset | null
   search: Asset[]
+  remove: void
 }
 
 export type CatalogOp = CatalogRequest['op']

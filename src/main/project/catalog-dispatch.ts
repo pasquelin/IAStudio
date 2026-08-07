@@ -22,8 +22,12 @@ function valueOf(catalog: Catalog, request: CatalogRequest): CatalogResults[Cata
       return catalog.add(request.asset)
     case 'find':
       return catalog.find(request.assetId)
+    case 'findByHash':
+      return catalog.findByHash(request.hash)
     case 'search':
       return catalog.search(request.query)
+    case 'remove':
+      return catalog.remove(request.assetId)
   }
 }
 

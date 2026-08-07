@@ -4,7 +4,18 @@
  * cancellable, rather than absent from the screen until a slot frees up.
  */
 export type IngestStage =
-  'queued' | 'probe' | 'hash' | 'proxy' | 'peaks' | 'done' | 'cancelled' | 'failed'
+  | 'queued'
+  | 'probe'
+  | 'hash'
+  | 'proxy'
+  | 'peaks'
+  | 'done'
+  | 'cancelled'
+  | 'failed'
+  /** The same bytes are already in the catalogue: the row minted for this pick was dropped. */
+  | 'duplicate'
+  /** ffprobe read the file and refused it — it is not media, whatever its extension says. */
+  | 'unreadable'
 
 export type IngestProgress = {
   assetId: string

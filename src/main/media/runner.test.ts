@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { companionPath, findOnPath, runProcess } from './runner'
+import { binaryRuns, companionPath, findOnPath, probeSource, runProcess } from './runner'
 
 describe('binary on the PATH', () => {
   const exists = (candidate: string): boolean => candidate === '/opt/homebrew/bin/ffmpeg'
@@ -72,5 +72,49 @@ describe('process runner', () => {
     await expect(
       runProcess(process.execPath, ['-e', ''], { signal: controller.signal }),
     ).rejects.toThrow()
+  })
+
+  it('kills a binary that never answers, rather than holding its slot in the pool', async () => {
+    const hanging = runProcess(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], {
+      timeoutMs: 50,
+    })
+
+    await expect(hanging).rejects.toThrow(/no answer/)
+  })
+
+  it('leaves a run that answers in time alone', async () => {
+    const output = await runProcess(process.execPath, ['-e', 'process.stdout.write("ok")'], {
+      timeoutMs: 10_000,
+    })
+
+    expect(output.toString('utf8')).toBe('ok')
+  })
+})
+
+describe('probing a source', () => {
+  it('says the tool is missing when there is no probe to run', async () => {
+    expect(await probeSource(null, '/rush.mov')).toEqual({ kind: 'unavailable' })
+  })
+
+  // Otherwise a wrong path in the settings would refuse every file in the project as if each
+  // one of them were the broken thing.
+  it('says the tool is missing, not the file, when the configured path holds nothing', async () => {
+    expect(await probeSource('/nowhere/ffprobe', '/rush.mov')).toEqual({ kind: 'unavailable' })
+  })
+})
+
+describe('whether a binary runs', () => {
+  it('answers no for a path that holds nothing', async () => {
+    expect(await binaryRuns('/nowhere/ffmpeg')).toBe(false)
+  })
+
+  it('answers no when there is no path at all', async () => {
+    expect(await binaryRuns(null)).toBe(false)
+  })
+
+  // Existing on disk is not the same as running: a half-written download and a binary built
+  // for the other architecture both sit there looking installed and encode nothing.
+  it('answers no for a file that exists but exits non-zero', async () => {
+    expect(await binaryRuns(process.execPath)).toBe(false)
   })
 })

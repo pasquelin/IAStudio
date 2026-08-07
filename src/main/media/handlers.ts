@@ -12,7 +12,7 @@ export type MediaHandlerDeps = {
   link: (source: string, type: Asset['type']) => Promise<Asset>
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
   pickMedia: () => Promise<string[]>
-  capabilities: () => MediaCapabilities
+  capabilities: () => Promise<MediaCapabilities>
 }
 
 export function registerMediaHandlers({

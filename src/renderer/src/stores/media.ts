@@ -70,11 +70,16 @@ export const useMedia = create<MediaState>()((set, get) => ({
   },
 
   apply: progress => {
-    // The duration, the proxy and the waveform are all known only now.
-    if (progress.stage === 'done') useAssets.getState().invalidate()
+    // The duration, the proxy and the waveform are all known only now; a duplicate had its row
+    // dropped, and the browser still shows the one the import optimistically added.
+    if (progress.stage === 'done' || progress.stage === 'duplicate') {
+      useAssets.getState().invalidate()
+    }
 
-    // A failure stays on screen: it is the only trace the import left.
-    const ended = progress.stage === 'done' || progress.stage === 'cancelled'
+    // A failure stays on screen: it is the only trace the import left. A duplicate leaves with
+    // it — the file is in the project, which is what the user wanted, and it is not an error.
+    const ended =
+      progress.stage === 'done' || progress.stage === 'cancelled' || progress.stage === 'duplicate'
     set(state =>
       ended
         ? { progress: without(state.progress, progress.assetId) }

@@ -164,7 +164,10 @@ function escapeLike(text: string): string {
 export type Catalog = {
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
+  /** The row holding these exact bytes, if the project already imported them once. */
+  findByHash: (hash: string) => Asset | null
   search: (query: AssetQuery) => Asset[]
+  remove: (assetId: string) => void
   close: () => void
 }
 
@@ -181,6 +184,12 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const insertTag = driver.prepare('INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?, ?)')
   const selectTags = driver.prepare('SELECT tag FROM asset_tags WHERE asset_id = ? ORDER BY tag')
   const selectAsset = driver.prepare('SELECT * FROM assets WHERE id = ?')
+  // Oldest first: the row that has been there longest is the one carrying the tags and the
+  // proxy, and it is the one a second import of the same file must land on.
+  const selectByHash = driver.prepare(
+    'SELECT * FROM assets WHERE hash = ? ORDER BY created_at ASC, id ASC LIMIT 1',
+  )
+  const deleteAsset = driver.prepare('DELETE FROM assets WHERE id = ?')
 
   const tagsOf = (assetId: string): string[] => selectTags.all(assetId).map(row => text(row, 'tag'))
 
@@ -239,6 +248,16 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     find: assetId => {
       const row = selectAsset.get(assetId)
       return row ? assetOf(row, tagsOf(assetId)) : null
+    },
+
+    findByHash: hash => {
+      const row = selectByHash.get(hash)
+      return row ? assetOf(row, tagsOf(text(row, 'id'))) : null
+    },
+
+    remove: assetId => {
+      deleteTags.run(assetId)
+      deleteAsset.run(assetId)
     },
 
     search: query => {

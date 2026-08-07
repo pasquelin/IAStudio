@@ -75,6 +75,8 @@
     "done": "Prêt",
     "cancelled": "Interrompu",
     "failed": "Échec",
+    "duplicate": "Déjà dans le projet",
+    "unreadable": "Fichier illisible",
     "cancel": "Interrompre la préparation",
     "dismiss": "Retirer de la liste",
     "noFfmpeg": "ffmpeg introuvable : ni proxy ni waveform. Indiquez son chemin dans les réglages."

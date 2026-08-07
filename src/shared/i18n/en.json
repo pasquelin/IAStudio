@@ -75,6 +75,8 @@
     "done": "Ready",
     "cancelled": "Stopped",
     "failed": "Failed",
+    "duplicate": "Already in the project",
+    "unreadable": "Unreadable file",
     "cancel": "Stop preparing this file",
     "dismiss": "Remove from the list",
     "noFfmpeg": "ffmpeg not found: no proxy, no waveform. Set its path in the settings."

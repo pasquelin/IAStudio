@@ -14,7 +14,14 @@ import { createAssetCollector } from './assets/collector'
 import { serveAssets, servedFileOf } from './assets/protocol'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { linkedAsset, mediaFilters } from './media/link'
-import { companionPath, findOnPath, hashSource, probeSource, runProcess } from './media/runner'
+import {
+  binaryRuns,
+  companionPath,
+  findOnPath,
+  hashSource,
+  probeSource,
+  runProcess,
+} from './media/runner'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { broadcast } from './ipc/broadcast'
@@ -41,7 +48,7 @@ export type Services = {
   media: MediaService
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Promise<Asset>
-  capabilities: () => MediaCapabilities
+  capabilities: () => Promise<MediaCapabilities>
   pickFolder: () => Promise<string | null>
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
@@ -136,6 +143,13 @@ export function createServices(): Services {
     run: (binary, args, signal) => runProcess(binary, args, { signal }),
     probe: (source, signal) => probeSource(companionPath(ffmpeg.path()), source, { signal }),
     hash: hashSource,
+    duplicateExists: async (assetId, hash) => {
+      const existing = await project.catalog().findByHash(hash)
+      return existing !== null && existing.id !== assetId
+    },
+    discard: async assetId => {
+      await project.catalog().remove(assetId)
+    },
     save: async (assetId, fields) => {
       const catalog = project.catalog()
       const current = await catalog.find(assetId)
@@ -195,10 +209,11 @@ export function createServices(): Services {
         .catalog()
         .add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
     // Asked, not cached: this is what the settings pane consults after the user installed the
-    // binary it just said was missing.
-    capabilities: () => {
+    // binary it just said was missing. Run rather than looked for — a half-written download and
+    // a binary built for the other architecture both exist on disk and encode nothing.
+    capabilities: async () => {
       ffmpeg.invalidate()
-      return { ffmpeg: ffmpeg.path() !== null }
+      return { ffmpeg: await binaryRuns(ffmpeg.path()) }
     },
     pickFolder,
     pickMedia,

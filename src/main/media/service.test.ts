@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { MediaProbe } from '@shared/domain/asset'
+import type { ProbeOutcome } from './probe'
 import { createMediaService, needsProxy, type MediaServiceDeps } from './service'
 
 const probe: MediaProbe = {
@@ -16,8 +17,10 @@ function deps(overrides: Partial<MediaServiceDeps> = {}): MediaServiceDeps {
   return {
     ffmpeg: () => '/usr/bin/ffmpeg',
     run: vi.fn(async () => Buffer.alloc(0)),
-    probe: vi.fn(async () => probe),
+    probe: vi.fn(async (): Promise<ProbeOutcome> => ({ kind: 'probed', probe })),
     hash: vi.fn(async () => 'abc123'),
+    duplicateExists: vi.fn(async () => false),
+    discard: vi.fn(async () => undefined),
     save: vi.fn(),
     writeFile: vi.fn(async () => undefined),
     onProgress: vi.fn(),
@@ -82,7 +85,12 @@ describe('media service', () => {
   })
 
   it('skips the proxy for a file the browser can already decode', async () => {
-    const injected = deps({ probe: vi.fn(async () => ({ ...probe, codec: 'avc1', height: 1080 })) })
+    const injected = deps({
+      probe: vi.fn(async (): Promise<ProbeOutcome> => ({
+        kind: 'probed',
+        probe: { ...probe, codec: 'avc1', height: 1080 },
+      })),
+    })
     await createMediaService(injected).ingest('asset-1', '/clip.mp4', 'video')
 
     expect(stages(injected.onProgress)).toEqual(['queued', 'probe', 'hash', 'peaks', 'done'])
@@ -148,7 +156,10 @@ describe('media service', () => {
 
   it('neither proxies nor draws a waveform for a still, which has no time in it', async () => {
     const injected = deps({
-      probe: vi.fn(async () => ({ duration: 0, codec: 'png', width: 4000, height: 3000 })),
+      probe: vi.fn(async (): Promise<ProbeOutcome> => ({
+        kind: 'probed',
+        probe: { duration: 0, codec: 'png', width: 4000, height: 3000 },
+      })),
     })
 
     await createMediaService(injected).ingest('asset-1', '/plate.png', 'image')
@@ -172,7 +183,9 @@ describe('media service', () => {
   })
 
   it('imports a file it could not probe, which is what a missing ffprobe leaves', async () => {
-    const injected = deps({ probe: vi.fn(async () => null) })
+    const injected = deps({
+      probe: vi.fn(async (): Promise<ProbeOutcome> => ({ kind: 'unavailable' })),
+    })
 
     await createMediaService(injected).ingest('asset-1', '/clip.mp4', 'video')
 
@@ -202,12 +215,12 @@ describe('media service', () => {
     let peak = 0
     const injected = deps({
       concurrency: () => 2,
-      probe: vi.fn(async () => {
+      probe: vi.fn(async (): Promise<ProbeOutcome> => {
         running += 1
         peak = Math.max(peak, running)
         await Promise.resolve()
         running -= 1
-        return probe
+        return { kind: 'probed', probe }
       }),
     })
     const service = createMediaService(injected)
@@ -232,9 +245,36 @@ describe('media service', () => {
     expect(injected.probe).toHaveBeenCalledExactlyOnceWith('/a.mov', expect.anything())
   })
 
+  it('refuses a file ffprobe read and would not have, whatever its extension claimed', async () => {
+    const injected = deps({
+      probe: vi.fn(async (): Promise<ProbeOutcome> => ({ kind: 'unreadable' })),
+    })
+
+    await createMediaService(injected).ingest('asset-1', '/notes.mp4', 'video')
+
+    expect(stages(injected.onProgress)).toEqual(['queued', 'probe', 'unreadable'])
+    // A row saying a text file is a video is worse than no row: it plays nothing, forever.
+    expect(injected.discard).toHaveBeenCalledWith('asset-1')
+    expect(injected.save).not.toHaveBeenCalled()
+  })
+
+  it('drops a second pick of bytes the catalogue already holds', async () => {
+    const injected = deps({ duplicateExists: vi.fn(async () => true) })
+
+    await createMediaService(injected).ingest('asset-2', '/rush.mov', 'video')
+
+    expect(stages(injected.onProgress)).toEqual(['queued', 'probe', 'hash', 'duplicate'])
+    // The row already there keeps its tags, its proxy and its waveform.
+    expect(injected.discard).toHaveBeenCalledWith('asset-2')
+    expect(injected.run).not.toHaveBeenCalled()
+  })
+
   it('leaves an audio-less file without peaks', async () => {
     const injected = deps({
-      probe: vi.fn(async () => ({ duration: 1, codec: 'avc1', height: 720 })),
+      probe: vi.fn(async (): Promise<ProbeOutcome> => ({
+        kind: 'probed',
+        probe: { duration: 1, codec: 'avc1', height: 720 },
+      })),
     })
 
     await createMediaService(injected).ingest('asset-1', '/silent.mp4', 'video')

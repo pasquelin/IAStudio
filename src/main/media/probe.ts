@@ -47,6 +47,15 @@ export function parseProbe(raw: unknown): MediaProbe | null {
   })
 }
 
+/**
+ * What probing a file answered. The two failures are not the same failure: no ffprobe means the
+ * studio is missing a tool, and the file is imported unprobed; a refused file means the file
+ * itself is not media, and letting that one through is how a renamed text document ends up in
+ * the catalogue as a video that plays nothing.
+ */
+export type ProbeOutcome =
+  { kind: 'probed'; probe: MediaProbe } | { kind: 'unavailable' } | { kind: 'unreadable' }
+
 export type ByteRange = { offset: number; length: number }
 
 /**

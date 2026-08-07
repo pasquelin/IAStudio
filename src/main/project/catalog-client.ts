@@ -23,7 +23,9 @@ export type CatalogPort = {
 export type AsyncCatalog = {
   add: (asset: Asset) => Promise<Asset>
   find: (assetId: string) => Promise<Asset | null>
+  findByHash: (hash: string) => Promise<Asset | null>
   search: (query: AssetQuery) => Promise<Asset[]>
+  remove: (assetId: string) => Promise<void>
   close: () => Promise<void>
 }
 
@@ -83,7 +85,11 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
 
     find: assetId => send<'find'>(id => ({ id, op: 'find', assetId })),
 
+    findByHash: hash => send<'findByHash'>(id => ({ id, op: 'findByHash', hash })),
+
     search: query => send<'search'>(id => ({ id, op: 'search', query })),
+
+    remove: assetId => send<'remove'>(id => ({ id, op: 'remove', assetId })),
 
     close: async () => {
       closed = true
