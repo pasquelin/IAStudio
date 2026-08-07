@@ -49,6 +49,23 @@ export type MediaProbe = {
   channels?: number
 }
 
+/**
+ * How an asset was produced — what lets the inspector offer to run it again, and what ties a
+ * texture back to the prompt that made it.
+ *
+ * Optional on `Asset` and not written by the catalogue yet: the ingest side stores `jobId`, and
+ * the renderer reconstitutes the rest from the job it submitted. Declared here so that the day
+ * the catalogue records it, nothing downstream has to change.
+ */
+export type AssetGeneration = {
+  modelId: string
+  /** What the model is called, as the panel shows it — « ElevenLabs Music v2 ». */
+  modelLabel: string
+  prompt: string
+  params: Record<string, unknown>
+  seed?: number
+}
+
 export type Asset = {
   id: string
   name: string
@@ -78,6 +95,8 @@ export type Asset = {
   proxyPath?: string
   /** Precomputed waveform, relative to the project folder. */
   peaksPath?: string
+  /** Absent for an imported file, and for a generated one the catalogue predates. */
+  generation?: AssetGeneration
 }
 
 export type AssetQuery = {

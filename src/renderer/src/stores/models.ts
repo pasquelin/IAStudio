@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ModelFamily } from '@shared/domain/model'
+import type { FormValues } from '@/helpers/dynamic-form'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
@@ -14,8 +15,16 @@ type ModelsState = {
    */
   selected: Partial<Record<ModelFamily, string>>
   collection: CollectionState
+  /**
+   * Parameters the generator should open on, per family. Set by "regenerate with these" in the
+   * inspector; kept out of the persisted state, since it belongs to one gesture and not to a
+   * preference.
+   */
+  preset: Partial<Record<ModelFamily, FormValues>>
 
   select: (family: ModelFamily, modelId: string) => void
+  /** Picks the model AND the values to open its form on, in one write. */
+  prepare: (family: ModelFamily, modelId: string, params: FormValues) => void
   setCollection: (collection: CollectionState) => void
 }
 
@@ -28,9 +37,16 @@ export const useModels = create<ModelsState>()(
     set => ({
       selected: {},
       collection: DEFAULT_COLLECTION_STATE,
+      preset: {},
 
       select: (family, modelId) =>
         set(state => ({ selected: { ...state.selected, [family]: modelId } })),
+
+      prepare: (family, modelId, params) =>
+        set(state => ({
+          selected: { ...state.selected, [family]: modelId },
+          preset: { ...state.preset, [family]: params },
+        })),
 
       setCollection: collection => set({ collection }),
     }),

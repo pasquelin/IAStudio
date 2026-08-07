@@ -20,6 +20,7 @@ import {
 } from '@/engines/timeline/timeline-state'
 import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
+import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 
@@ -67,6 +68,7 @@ function TrackHeader({ documentId, sequence, track }: TrackHeaderProps) {
       className="flex flex-col justify-between px-1.5 py-1"
       style={{ height: track.height }}
       data-testid={`track-header-${track.id}`}
+      onPointerDown={() => useSelection.getState().selectTrack(track.id)}
     >
       <TrackName documentId={documentId} track={track} dimmed={!audible} />
 

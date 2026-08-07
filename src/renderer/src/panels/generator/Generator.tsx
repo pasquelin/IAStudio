@@ -36,6 +36,9 @@ export function Generator() {
 
   // The panel's choice wins over the preference: the preference is what to start from.
   const chosen = useModels(state => state.selected[family] ?? null)
+  // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
+  // undefined and every field opens on its own default.
+  const preset = useModels(state => state.preset[family])
   const preferred = useSettings(state => state.settings.generation.defaultModels[family] ?? null)
   const modelId = chosen ?? preferred
 
@@ -80,6 +83,7 @@ export function Generator() {
           onSubmit={generate}
           submitLabel={t('actions.generate')}
           busy={!project}
+          preset={preset}
         />
       )}
     </div>

@@ -34,6 +34,8 @@ type ToolsState = {
   /** Last clicked zone: the one whose rail icon gets accented. */
   focusedZone: ToolZone | null
   toggle: (zone: ToolZone, tool: ToolId) => void
+  /** Brings a tool up and focuses its zone, leaving it up when it already was — unlike `toggle`. */
+  show: (zone: ToolZone, tool: ToolId) => void
   close: (zone: ToolZone, slot: ToolSlot) => void
   focus: (zone: ToolZone | null) => void
   /** `available`: the container's dimension along the zone's axis. */
@@ -147,6 +149,18 @@ export const useTools = create<ToolsState>()(
           if (isZoneOpen(open, zone)) return { open, focusedZone: zone }
           // Emptying this zone must not steal the accent from whichever other zone had it.
           return { open, focusedZone: state.focusedZone === zone ? null : state.focusedZone }
+        }),
+
+      show: (zone, tool) =>
+        set(state => {
+          const slot = placementOf(tool)?.slot
+          if (!slot) return state
+          if (state.open[zone]?.[slot] === tool) return { focusedZone: zone }
+
+          return {
+            open: { ...state.open, [zone]: { ...(state.open[zone] ?? {}), [slot]: tool } },
+            focusedZone: zone,
+          }
         }),
 
       close: (zone, slot) =>

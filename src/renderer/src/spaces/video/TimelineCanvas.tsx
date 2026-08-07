@@ -36,6 +36,7 @@ import { cachedImage } from '@/helpers/image-cache'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useAssets } from '@/stores/assets'
 import { usePeaks } from '@/stores/peaks'
+import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import type { VideoToolId } from './video-tools'
@@ -251,6 +252,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const gesture = beginGesture(sequence, viewport, point)
     if (!gesture) {
       useSequences.getState().replace(documentId, { ...sequence, selectedId: null })
+      useSelection.getState().clear()
       return
     }
 
@@ -266,6 +268,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const base: SequenceState = { ...sequence, selectedId: gesture.clipId }
     dragging.current = { gesture, base }
     useSequences.getState().replace(documentId, base)
+    useSelection.getState().selectClip()
   }
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {

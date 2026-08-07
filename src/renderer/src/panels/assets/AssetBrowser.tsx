@@ -9,6 +9,7 @@ import { filterLocally, isFiltered, type FacetDescriptor } from '@/helpers/colle
 import { MediaTile } from '@/design/MediaTile'
 import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
+import { useSelection } from '@/stores/selection'
 import { addAssetToSequence } from '@/stores/sequences'
 import { EmptyState } from '@/design/EmptyState'
 
@@ -110,6 +111,7 @@ function Draggable({ asset, children }: { asset: Asset; children: ReactNode }) {
   return (
     <div
       draggable
+      onPointerDown={() => useSelection.getState().selectAssets([asset.id])}
       onDragStart={event => startAssetDrag(event, asset.id)}
       onDoubleClick={() => addAssetToSequence(asset)}
     >
