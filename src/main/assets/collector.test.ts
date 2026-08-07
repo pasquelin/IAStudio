@@ -63,7 +63,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => `asset_${++sequence}`,
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     expect(await collect(JOB, ['remote_1'])).toEqual(['asset_1'])
@@ -77,7 +77,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => `asset_${++sequence}`,
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['remote_1', 'remote_2'])
@@ -91,7 +91,7 @@ describe('asset collector', () => {
         Promise.resolve(remote(remoteAssetId === 'remote_caption' ? 'json' : 'image')),
       backend,
       newId: () => 'asset_1',
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     expect(await collect(JOB, ['remote_caption', 'remote_image'])).toEqual(['asset_1'])
@@ -104,7 +104,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('3d')),
       backend,
       newId: () => 'asset_1',
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -119,7 +119,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'texture-normal' }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -133,7 +133,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'texture-smoothness' }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -153,7 +153,7 @@ describe('asset collector', () => {
         }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: remoteAssetId => (remoteAssetId === 'remote_source' ? 'asset_source' : null),
+      localIdOf: async remoteAssetId => (remoteAssetId === 'remote_source' ? 'asset_source' : null),
     })
 
     await collect(JOB, ['remote_1'])
@@ -171,7 +171,7 @@ describe('asset collector', () => {
         }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -184,7 +184,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'inference-txt2img' }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -206,7 +206,7 @@ describe('asset collector', () => {
       }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: () => null,
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['a', 'b', 'c'])

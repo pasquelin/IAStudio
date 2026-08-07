@@ -23,6 +23,8 @@ export type CatalogPort = {
 export type AsyncCatalog = {
   add: (asset: Asset) => Promise<Asset>
   find: (assetId: string) => Promise<Asset | null>
+  /** The local row a generated asset landed in, looked up by its Scenario identifier. */
+  findByRemoteId: (remoteAssetId: string) => Promise<Asset | null>
   search: (query: AssetQuery) => Promise<Asset[]>
   close: () => Promise<void>
 }
@@ -82,6 +84,9 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     add: asset => send<'add'>(id => ({ id, op: 'add', asset })),
 
     find: assetId => send<'find'>(id => ({ id, op: 'find', assetId })),
+
+    findByRemoteId: remoteAssetId =>
+      send<'findByRemoteId'>(id => ({ id, op: 'findByRemoteId', remoteAssetId })),
 
     search: query => send<'search'>(id => ({ id, op: 'search', query })),
 

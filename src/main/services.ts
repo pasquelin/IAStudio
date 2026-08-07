@@ -168,7 +168,8 @@ export function createServices(): Services {
       },
       backend: assets,
       newId: newAssetId,
-      localIdOf: remoteAssetId => project.catalog().findByRemoteId(remoteAssetId)?.id ?? null,
+      localIdOf: async remoteAssetId =>
+        (await project.catalog().findByRemoteId(remoteAssetId))?.id ?? null,
     }),
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,

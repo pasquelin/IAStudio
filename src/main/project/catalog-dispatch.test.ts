@@ -39,6 +39,31 @@ describe('dispatchCatalogRequest', () => {
     expect(response).toEqual({ id: 3, ok: true, value: null })
   })
 
+  // What ties a generated channel to the image it was converted from: the API answers with a
+  // `parentId` of its own, and only the catalogue knows which local row that became.
+  it('finds an asset by the identifier the API gave it', () => {
+    const catalog = catalogOf()
+    dispatchCatalogRequest(catalog, {
+      id: 1,
+      op: 'add',
+      asset: { ...asset, remoteAssetId: 'remote-9' },
+    })
+
+    const found = dispatchCatalogRequest(catalog, {
+      id: 2,
+      op: 'findByRemoteId',
+      remoteAssetId: 'remote-9',
+    })
+    const absent = dispatchCatalogRequest(catalog, {
+      id: 3,
+      op: 'findByRemoteId',
+      remoteAssetId: 'remote-none',
+    })
+
+    expect(found).toEqual({ id: 2, ok: true, value: { ...asset, remoteAssetId: 'remote-9' } })
+    expect(absent).toEqual({ id: 3, ok: true, value: null })
+  })
+
   it('searches and answers the matching page', () => {
     const catalog = catalogOf()
     dispatchCatalogRequest(catalog, { id: 1, op: 'add', asset })
@@ -56,6 +81,7 @@ describe('dispatchCatalogRequest', () => {
         throw new Error('disk is full')
       },
       find: () => null,
+      findByRemoteId: () => null,
       search: () => [],
       close: () => {},
     }
@@ -69,6 +95,7 @@ describe('dispatchCatalogRequest', () => {
     const failing: Catalog = {
       add: () => asset,
       find: () => null,
+      findByRemoteId: () => null,
       search: () => {
         throw new Error('malformed query')
       },

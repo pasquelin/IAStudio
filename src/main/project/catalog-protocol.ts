@@ -11,12 +11,14 @@ import type { Asset, AssetQuery } from '@shared/domain/asset'
 export type CatalogRequest =
   | { id: number; op: 'add'; asset: Asset }
   | { id: number; op: 'find'; assetId: string }
+  | { id: number; op: 'findByRemoteId'; remoteAssetId: string }
   | { id: number; op: 'search'; query: AssetQuery }
 
 /** What each operation answers, so the client can type its promise without a cast. */
 export type CatalogResults = {
   add: Asset
   find: Asset | null
+  findByRemoteId: Asset | null
   search: Asset[]
 }
 

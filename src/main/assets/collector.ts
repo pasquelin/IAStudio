@@ -41,7 +41,7 @@ export type CollectorDeps = {
   backend: LocalBackend
   newId: () => string
   /** The local asset an API one became, or `null` when the parent never entered the project. */
-  localIdOf: (remoteAssetId: string) => string | null
+  localIdOf: (remoteAssetId: string) => Promise<string | null>
 }
 
 export function createAssetCollector({
@@ -65,7 +65,7 @@ export function createAssetCollector({
 
       // What the channels of one texture hang from. Absent when the parent never entered the
       // project — an image uploaded straight to the API, or converted before it was imported.
-      const derivedFrom = remote.parentId ? localIdOf(remote.parentId) : null
+      const derivedFrom = remote.parentId ? await localIdOf(remote.parentId) : null
 
       const asset = await backend.importFromUrl({
         id: newId(),
