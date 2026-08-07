@@ -11,7 +11,7 @@
  * removes a node in the scene and a clip on the timeline — and only one of them is listening
  * at a time. Without a scope the second binding would be unreachable rather than contextual.
  */
-export type CommandScope = 'scene' | 'timeline'
+export type CommandScope = 'scene' | 'sequence'
 
 export type CommandId =
   | 'scene.select'
@@ -22,16 +22,16 @@ export type CommandId =
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
-  | 'timeline.playPause'
-  | 'timeline.split'
-  | 'timeline.delete'
-  | 'timeline.zoomIn'
-  | 'timeline.zoomOut'
-  | 'timeline.fit'
-  | 'timeline.start'
-  | 'timeline.end'
-  | 'timeline.undo'
-  | 'timeline.redo'
+  | 'sequence.playPause'
+  | 'sequence.split'
+  | 'sequence.delete'
+  | 'sequence.zoomIn'
+  | 'sequence.zoomOut'
+  | 'sequence.fit'
+  | 'sequence.start'
+  | 'sequence.end'
+  | 'sequence.undo'
+  | 'sequence.redo'
 
 /** Held keys, read every frame while flying — not fired once like a command. */
 export type MotionId = 'forward' | 'back' | 'left' | 'right' | 'up' | 'down' | 'boost'
@@ -63,16 +63,16 @@ export const COMMAND_SCOPES: Record<CommandId, CommandScope> = {
   'scene.delete': 'scene',
   'scene.undo': 'scene',
   'scene.redo': 'scene',
-  'timeline.playPause': 'timeline',
-  'timeline.split': 'timeline',
-  'timeline.delete': 'timeline',
-  'timeline.zoomIn': 'timeline',
-  'timeline.zoomOut': 'timeline',
-  'timeline.fit': 'timeline',
-  'timeline.start': 'timeline',
-  'timeline.end': 'timeline',
-  'timeline.undo': 'timeline',
-  'timeline.redo': 'timeline',
+  'sequence.playPause': 'sequence',
+  'sequence.split': 'sequence',
+  'sequence.delete': 'sequence',
+  'sequence.zoomIn': 'sequence',
+  'sequence.zoomOut': 'sequence',
+  'sequence.fit': 'sequence',
+  'sequence.start': 'sequence',
+  'sequence.end': 'sequence',
+  'sequence.undo': 'sequence',
+  'sequence.redo': 'sequence',
 }
 
 export const COMMAND_IDS: readonly CommandId[] = [
@@ -84,16 +84,16 @@ export const COMMAND_IDS: readonly CommandId[] = [
   'scene.delete',
   'scene.undo',
   'scene.redo',
-  'timeline.playPause',
-  'timeline.split',
-  'timeline.delete',
-  'timeline.zoomIn',
-  'timeline.zoomOut',
-  'timeline.fit',
-  'timeline.start',
-  'timeline.end',
-  'timeline.undo',
-  'timeline.redo',
+  'sequence.playPause',
+  'sequence.split',
+  'sequence.delete',
+  'sequence.zoomIn',
+  'sequence.zoomOut',
+  'sequence.fit',
+  'sequence.start',
+  'sequence.end',
+  'sequence.undo',
+  'sequence.redo',
 ]
 
 export const MOTION_IDS: readonly MotionId[] = [
@@ -150,16 +150,16 @@ export const DEFAULT_BINDINGS: Record<CommandId, Signature> = {
 
   // Same keys as the scene where the gesture is the same. They only ever reach the surface
   // that is listening, which is what `CommandScope` is for.
-  'timeline.playPause': 'Space',
-  'timeline.split': 'KeyS',
-  'timeline.delete': 'Delete',
-  'timeline.zoomIn': 'Meta+Equal',
-  'timeline.zoomOut': 'Meta+Minus',
-  'timeline.fit': 'Shift+KeyZ',
-  'timeline.start': 'Home',
-  'timeline.end': 'End',
-  'timeline.undo': 'Meta+KeyZ',
-  'timeline.redo': 'Shift+Meta+KeyZ',
+  'sequence.playPause': 'Space',
+  'sequence.split': 'KeyS',
+  'sequence.delete': 'Delete',
+  'sequence.zoomIn': 'Meta+Equal',
+  'sequence.zoomOut': 'Meta+Minus',
+  'sequence.fit': 'Shift+KeyZ',
+  'sequence.start': 'Home',
+  'sequence.end': 'End',
+  'sequence.undo': 'Meta+KeyZ',
+  'sequence.redo': 'Shift+Meta+KeyZ',
 }
 
 export const DEFAULT_MOTION: Record<MotionId, Signature> = {

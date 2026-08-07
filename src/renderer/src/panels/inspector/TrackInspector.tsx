@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { NumberField } from '@/design/NumberField'
 import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -10,7 +11,6 @@ import {
   type Track,
 } from '@/engines/timeline/timeline-state'
 import { writeTrack } from '@/stores/sequences'
-import { NumberField } from './NumberField'
 
 export type TrackInspectorProps = { documentId: string; track: Track }
 
@@ -49,17 +49,14 @@ export function TrackInspector({ documentId, track }: TrackInspectorProps) {
             />
           </PropertyRow>
         ))}
-        <PropertyRow label={t('inspector.height')}>
-          <NumberField
-            label={t('inspector.height')}
-            value={track.height}
-            min={MIN_TRACK_HEIGHT}
-            max={MAX_TRACK_HEIGHT}
-            step={4}
-            unit="px"
-            onCommit={value => write(current => ({ ...current, height: clampTrackHeight(value) }))}
-          />
-        </PropertyRow>
+        <NumberField
+          label={t('inspector.height')}
+          value={track.height}
+          min={MIN_TRACK_HEIGHT}
+          max={MAX_TRACK_HEIGHT}
+          step={4}
+          onChange={value => write(current => ({ ...current, height: clampTrackHeight(value) }))}
+        />
       </PropertyGroup>
     </>
   )

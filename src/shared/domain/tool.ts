@@ -50,14 +50,16 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'explorer', zone: 'left', slot: 'secondary' },
   { id: 'models', zone: 'right', slot: 'primary' },
   { id: 'generator', zone: 'right', slot: 'primary' },
-  // The other half of the right column: what is selected is read WHILE a model is chosen and a
-  // prompt written, so the inspector shares the column rather than taking turns in it.
+  // The other half of the right column, and always up: what is selected is read WHILE a
+  // model is chosen and a prompt written, and in an editor the inspector is never the panel
+  // you have to switch away to.
   { id: 'inspector', zone: 'right', slot: 'secondary' },
-  // Same half as the asset shelf: a montage is read across the whole width, so the two take
-  // turns rather than share the strip. First of the half, because in the Video workspace it is
-  // what the strip is for.
+  // The shelf sits in the side column rather than in the bottom strip, so that it and the
+  // montage are on screen together: dragging a take onto a track is the gesture the video
+  // space is built around, and two panels taking turns cannot be dragged between.
+  { id: 'assets', zone: 'right', slot: 'primary' },
+  // The strip is the montage's, across the whole width — that is how a montage is read.
   { id: 'timeline', zone: 'bottom', slot: 'primary', workspaces: ['video'] },
-  { id: 'assets', zone: 'bottom', slot: 'primary' },
   { id: 'jobs', zone: 'bottom', slot: 'primary' },
 ]
 

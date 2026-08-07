@@ -5,7 +5,9 @@ import {
   clampSpeed,
   clipById,
   clipEnd,
+  editableTrack,
   insertClip,
+  newClipId,
   snapToFrame,
   trackById,
   trackOfClip,
@@ -52,12 +54,6 @@ function clampToNeighbour(track: Track, clip: Clip, edge: ClipEdge, at: Us): Us 
   return Math.max(at, floor)
 }
 
-/** A locked track refuses every edit, so every command starts by asking. */
-const editable = (state: SequenceState, trackId: string): Track | null => {
-  const track = trackById(state, trackId)
-  return track && !track.locked ? track : null
-}
-
 /**
  * Puts a track's clips back exactly as they were.
  *
@@ -70,16 +66,17 @@ const restore = (state: SequenceState, trackId: string, clips: Clip[]): Sequence
 
 export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
   let before: { clips: Clip[]; selectedId: string | null } | null = null
+  const tailId = newClipId()
 
   return {
     id: `add:${clip.id}`,
     apply: state => {
-      const track = editable(state, trackId)
+      const track = editableTrack(state, trackId)
       if (!track) return state
 
       before = { clips: track.clips, selectedId: state.selectedId }
       return {
-        ...updateTrack(state, trackId, current => insertClip(current, clip)),
+        ...updateTrack(state, trackId, current => insertClip(current, clip, tailId)),
         selectedId: clip.id,
       }
     },
@@ -98,13 +95,14 @@ export function moveClip(clipId: string, toTrackId: string, start: Us): Command<
     targetClips: Clip[]
     selectedId: string | null
   } | null = null
+  const tailId = newClipId()
 
   return {
     id: `move:${clipId}`,
     apply: state => {
       const source = trackOfClip(state, clipId)
       const clip = clipById(state, clipId)
-      const target = editable(state, toTrackId)
+      const target = editableTrack(state, toTrackId)
       if (!source || source.locked || !clip || !target) return state
 
       from = {
@@ -117,7 +115,7 @@ export function moveClip(clipId: string, toTrackId: string, start: Us): Command<
       const moved: Clip = { ...clip, start: snapToFrame(start, state.settings) }
       const lifted = updateTrack(state, source.id, current => withoutClip(current, clipId))
       return {
-        ...updateTrack(lifted, toTrackId, current => insertClip(current, moved)),
+        ...updateTrack(lifted, toTrackId, current => insertClip(current, moved, tailId)),
         selectedId: clipId,
       }
     },
@@ -184,7 +182,9 @@ export function trimClip(clipId: string, edge: 'in' | 'out', at: Us): Command<Se
 }
 
 export function splitClip(clipId: string, at: Us): Command<SequenceState> {
-  let before: { clip: Clip; trackId: string; tailId: string } | null = null
+  let before: { clip: Clip; trackId: string } | null = null
+  // Minted once with the command, not on each apply: a redo must not rename the tail.
+  const tailId = newClipId()
 
   return {
     id: `split:${clipId}`,
@@ -196,8 +196,7 @@ export function splitClip(clipId: string, at: Us): Command<SequenceState> {
       const time = snapToFrame(at, state.settings)
       if (time <= clip.start || time >= clipEnd(clip)) return state
 
-      const tailId = `${clip.id}-b`
-      before = { clip, trackId: track.id, tailId }
+      before = { clip, trackId: track.id }
 
       // The cut point gets no ramp: a split is a butt joint, and fading into it would dip the
       // level in the middle of what the ear still hears as one take.
@@ -224,7 +223,7 @@ export function splitClip(clipId: string, at: Us): Command<SequenceState> {
       return updateTrack(state, origin.trackId, current => ({
         ...current,
         clips: current.clips
-          .filter(candidate => candidate.id !== origin.tailId)
+          .filter(candidate => candidate.id !== tailId)
           .map(candidate => (candidate.id === origin.clip.id ? origin.clip : candidate)),
       }))
     },

@@ -44,13 +44,31 @@ export type GeometryDescriptor =
     }
   | { kind: 'tube'; radius: number; tubularSegments: number; radialSegments: number }
 
+/**
+ * A texture is a reference to an asset of the project, never an image and never a three.js
+ * object: an engine is rebuilt from its serialized state, so what a document stores has to be
+ * something a reload can resolve again. The engine loads it, caches it and frees it.
+ */
+export type TextureRef = { assetId: string }
+
+/** The maps a `MeshStandardMaterial` reads, in the order the inspector lists them. */
+export type TextureSlot = 'map' | 'normalMap' | 'roughnessMap' | 'metalnessMap' | 'aoMap'
+
+export const TEXTURE_SLOTS: readonly TextureSlot[] = [
+  'map',
+  'normalMap',
+  'roughnessMap',
+  'metalnessMap',
+  'aoMap',
+]
+
 export type MaterialDescriptor = {
   kind: 'standard'
   /** `null` means the studio's own colour, resolved from the palette when the mesh is built. */
   color: string | null
   roughness: number
   metalness: number
-}
+} & { [S in TextureSlot]: TextureRef | null }
 
 /**
  * `target` is a point, not an object. three.js aims a light at an `Object3D`, and the official

@@ -193,29 +193,29 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       const middle = size.current.width / 2
 
       switch (command) {
-        case 'timeline.playPause':
+        case 'sequence.playPause':
           return transports.toggle(programOwner(documentId))
-        case 'timeline.split': {
+        case 'sequence.split': {
           const target = clipUnderPlayhead(state)
           if (target) store.runCommand(documentId, splitClip(target.id, state.playhead))
           return
         }
-        case 'timeline.delete':
+        case 'sequence.delete':
           if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
           return
-        case 'timeline.zoomIn':
+        case 'sequence.zoomIn':
           return setViewport(zoomAt(current, ZOOM_STEP, middle))
-        case 'timeline.zoomOut':
+        case 'sequence.zoomOut':
           return setViewport(zoomAt(current, 1 / ZOOM_STEP, middle))
-        case 'timeline.fit':
+        case 'sequence.fit':
           return setViewport(fitToWidth(state, size.current.width))
-        case 'timeline.start':
+        case 'sequence.start':
           return seek(0)
-        case 'timeline.end':
+        case 'sequence.end':
           return seek(sequenceDuration(state))
-        case 'timeline.undo':
+        case 'sequence.undo':
           return store.undo(documentId)
-        case 'timeline.redo':
+        case 'sequence.redo':
           return store.redo(documentId)
         default:
           return
@@ -225,7 +225,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   )
 
   // The strip is only mounted for the document in front, so it always listens while it is there.
-  useShortcuts({ scope: 'timeline', enabled: true, onCommand: run })
+  useShortcuts({ scope: 'sequence', enabled: true, onCommand: run })
 
   const pointAt = (
     event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasElement>,

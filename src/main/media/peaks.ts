@@ -9,6 +9,20 @@ export function peaksFromBytes(bytes: Uint8Array): Float32Array {
 }
 
 /**
+ * An `Int16Array` cannot be laid over an odd byte offset, and a `Buffer` is a view into a
+ * pooled allocation at whatever offset the pool gave it. `new Uint8Array(pcm)` rather than
+ * `pcm.slice()`: on a `Buffer`, `slice` is an alias of `subarray` and returns the same offset.
+ */
+export function samplesOf(pcm: Uint8Array): Int16Array {
+  const aligned = pcm.byteOffset % Int16Array.BYTES_PER_ELEMENT === 0 ? pcm : new Uint8Array(pcm)
+  return new Int16Array(
+    aligned.buffer,
+    aligned.byteOffset,
+    Math.floor(aligned.length / Int16Array.BYTES_PER_ELEMENT),
+  )
+}
+
+/**
  * One min/max pair per bucket, normalised to -1..1. Computed once at ingest and written to
  * disk: recomputing a waveform while painting a timeline is how scrolling starts to stutter.
  */

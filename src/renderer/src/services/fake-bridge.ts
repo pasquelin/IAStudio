@@ -45,6 +45,13 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       saveAudio: () => Promise.reject(new Error('no project')),
       ...overrides.assets,
     },
+    media: {
+      ingest: () => Promise.resolve([]),
+      cancel: () => Promise.resolve(),
+      capabilities: () => Promise.resolve({ ffmpeg: true }),
+      onProgress: noSubscription,
+      ...overrides.media,
+    },
     window: {
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),

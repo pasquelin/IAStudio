@@ -9,7 +9,7 @@ import {
   type ToolSlot,
   type ToolZone,
 } from '@shared/domain/tool'
-import { isRecord } from '@/helpers/guards'
+import { isRecord } from '@shared/guards'
 
 export const MIN_SIZE = 140
 
@@ -58,8 +58,10 @@ export const DEFAULT_SPLIT = 240
 
 const DEFAULT_OPEN: OpenByZone = {
   left: { secondary: 'explorer' },
-  right: { primary: 'generator' },
-  bottom: { primary: 'assets' },
+  // The shelf rather than the generator: it is what a new project needs first, and it shares
+  // the column with the inspector.
+  right: { primary: 'assets', secondary: 'inspector' },
+  bottom: { primary: 'jobs' },
 }
 
 const OPPOSITE: Record<ToolZone, ToolZone> = {
@@ -223,8 +225,8 @@ export const useTools = create<ToolsState>()(
       // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
       // would reach `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on
       // startup. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
-      // mesh and light panels.
-      version: 4,
+      // mesh and light panels, and 4 the asset shelf moving out of the bottom strip.
+      version: 5,
       migrate: persisted => {
         if (typeof persisted !== 'object' || persisted === null) return undefined
         const sizes: unknown = Reflect.get(persisted, 'sizes')

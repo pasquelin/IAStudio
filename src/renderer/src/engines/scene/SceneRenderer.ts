@@ -2,16 +2,17 @@ import {
   Color,
   DirectionalLight,
   GridHelper,
+  Light,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
   Raycaster,
   Scene,
   SpotLight,
+  TextureLoader,
   Vector2,
   Vector3 as ThreeVector3,
   WebGLRenderer,
-  type Light,
   type Object3D,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -21,7 +22,16 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { token } from '../core/palette'
 import type { Transform } from '@shared/domain/scene'
 import type { SceneNode, SceneState } from './scene-state'
-import { geometryFor, helperFor, lightFor, tuneViewHelper, type LightHelper } from './three-factory'
+import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
+import {
+  applyGeometry,
+  applyLight,
+  applyMaterial,
+  lightFor,
+  standardMaterialOf,
+} from './three-sync'
+import { createMaterialTextures, type MaterialTextures } from './material-textures'
+import { createTextureCache } from './texture-cache'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
 export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
@@ -52,8 +62,13 @@ export class SceneRenderer {
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
   private readonly helpers = new Map<string, LightHelper>()
+  /** The texture slots of each mesh, and the references they hold on the cache. */
+  private readonly textures = new Map<string, MaterialTextures>()
   /** Last node applied per id, compared by reference to skip what has not changed. */
   private readonly applied = new Map<string, SceneNode>()
+  private readonly loader = new TextureLoader()
+  // One cache for the whole scene: ten meshes sharing a map upload it once.
+  private readonly textureCache = createTextureCache(url => this.loader.loadAsync(url))
   private readonly held = new Set<MotionId>()
 
   private renderer: WebGLRenderer | null = null
@@ -191,6 +206,7 @@ export class SceneRenderer {
     this.viewHelper = null
 
     for (const id of [...this.objects.keys()]) this.release(id)
+    this.textureCache.dispose()
 
     this.grid?.dispose()
     this.grid = null
@@ -227,7 +243,8 @@ export class SceneRenderer {
    * instead of re-deriving a quaternion per object and re-uploading a helper per light.
    */
   private syncNode(node: SceneNode): void {
-    if (this.applied.get(node.id) === node) return
+    const previous = this.applied.get(node.id)
+    if (previous === node) return
     this.applied.set(node.id, node)
 
     let object = this.objects.get(node.id)
@@ -236,6 +253,10 @@ export class SceneRenderer {
       object.name = node.id
       this.objects.set(node.id, object)
       this.scene.add(object)
+    } else {
+      // Only what an edit actually changed: rebuilding a geometry or recompiling a shader on
+      // every move of the gizmo would cost the drag its frame rate.
+      this.syncDescriptors(object, previous, node)
     }
 
     const { position, rotation, scale } = node.transform
@@ -252,14 +273,46 @@ export class SceneRenderer {
     }
   }
 
+  /**
+   * What an edit changed on the object already in the scene. Compared against the node last
+   * applied rather than against the three.js object: a descriptor is one reference, and an edit
+   * that did not touch the material must not walk it field by field.
+   */
+  private syncDescriptors(
+    object: Object3D,
+    previous: SceneNode | undefined,
+    node: SceneNode,
+  ): void {
+    if (node.type === 'mesh' && object instanceof Mesh) {
+      const before = previous?.type === 'mesh' ? previous : null
+      if (before?.geometry !== node.geometry) applyGeometry(object, node.geometry)
+
+      const material = standardMaterialOf(object)
+      if (material && before?.material !== node.material) {
+        applyMaterial(material, node.material, this.meshColor)
+        this.textures.get(node.id)?.apply(node.material)
+      }
+      return
+    }
+
+    if (node.type === 'light' && object instanceof Light) {
+      const before = previous?.type === 'light' ? previous : null
+      if (before?.light !== node.light) applyLight(object, node.light)
+    }
+  }
+
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
-    const material = new MeshStandardMaterial({
-      roughness: node.material.roughness,
-      metalness: node.material.metalness,
-    })
-    const color = node.material.color ?? this.meshColor
-    if (color) material.color = new Color(color)
-    return new Mesh(geometryFor(node.geometry), material)
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, node.material, this.meshColor)
+
+    const mesh = new Mesh(geometryFor(node.geometry), material)
+    // A texture arrives long after the frame that asked for it: the render is requested again
+    // when it lands, or the viewport would show the mesh untextured until something else moved.
+    const textures = createMaterialTextures(this.textureCache, mesh, material, this.requestRender)
+    textures.apply(node.material)
+    this.textures.set(node.id, textures)
+
+    return mesh
   }
 
   private buildLight(node: SceneNode & { type: 'light' }): Light {
@@ -282,6 +335,14 @@ export class SceneRenderer {
 
   private release(id: string): void {
     this.applied.delete(id)
+
+    const textures = this.textures.get(id)
+    if (textures) {
+      // Before the material goes: the slots have to give their references back, or the cache
+      // keeps a 4K map alive for a mesh that no longer exists.
+      textures.dispose()
+      this.textures.delete(id)
+    }
 
     const object = this.objects.get(id)
     if (object) {

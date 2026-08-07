@@ -1,25 +1,12 @@
 import { APIError } from '@scenario-labs/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
+import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerScenarioHandlers } from './handlers'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
 
-type Invoke = (...args: unknown[]) => unknown
-
-const { registered } = vi.hoisted(() => ({ registered: new Map<string, Invoke>() }))
-
-vi.mock('electron', () => ({
-  ipcMain: {
-    handle: (channel: string, handler: Invoke) => void registered.set(channel, handler),
-  },
-}))
-
-function invoke(channel: string, ...args: unknown[]): unknown {
-  const handler = registered.get(channel)
-  if (!handler) throw new Error(`no handler registered for ${channel}`)
-  return handler({}, ...args)
-}
+vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
 
 const LEAKY = 'Authorization: Basic YXBpX2tleTpzM2NyM3Q='
 
@@ -43,7 +30,7 @@ const jobs: JobManager = {
 
 describe('scenario handlers', () => {
   beforeEach(() => {
-    registered.clear()
+    resetHandlers()
   })
 
   // The same reduction the job manager applies: a rejection carries its message across, and an

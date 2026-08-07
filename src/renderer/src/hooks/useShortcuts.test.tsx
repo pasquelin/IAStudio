@@ -1,4 +1,4 @@
-import { renderHook, screen } from '@testing-library/react'
+import { fireEvent, renderHook, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -30,6 +30,17 @@ describe('useShortcuts', () => {
     mount(onCommand)
     await userEvent.keyboard('{g}')
     expect(onCommand).toHaveBeenCalledWith('scene.translate')
+  })
+
+  it('fires once for a key held down, not once per auto-repeat', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    fireEvent.keyDown(window, { code: 'KeyG' })
+    fireEvent.keyDown(window, { code: 'KeyG', repeat: true })
+    fireEvent.keyDown(window, { code: 'KeyG', repeat: true })
+
+    expect(onCommand).toHaveBeenCalledTimes(1)
   })
 
   it('ignores a key typed into a text field', async () => {

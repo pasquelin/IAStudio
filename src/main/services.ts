@@ -1,9 +1,21 @@
 import { app, BrowserWindow, dialog, net } from 'electron'
 import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { availableParallelism } from 'node:os'
+import { delimiter, dirname } from 'node:path'
+import type { Asset, AssetType } from '@shared/domain/asset'
+import type { MediaCapabilities } from '@shared/domain/media'
 import type { AuthState } from '@shared/domain/settings'
+import { TRANSLATIONS } from '@shared/i18n'
+import { resolveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { createAssetCollector } from './assets/collector'
-import { assetFilePath, serveAssets } from './assets/protocol'
+import { serveAssets, servedFileOf } from './assets/protocol'
+import { createFfmpegResolver } from './media/ffmpeg'
+import { linkedAsset, mediaFilters } from './media/link'
+import { companionPath, findOnPath, hashSource, probeSource, runProcess } from './media/runner'
+import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { broadcast } from './ipc/broadcast'
 import { createJobManager, type JobManager } from './scenario/job-manager'
@@ -26,26 +38,44 @@ export type Services = {
   assets: LocalBackend
   /** Minted here so the collector and the audio editor cannot name assets differently. */
   newAssetId: () => string
+  media: MediaService
+  /** Links a file into the open project — id, timestamp and catalogue row in one move. */
+  link: (source: string, type: AssetType) => Asset
+  capabilities: () => MediaCapabilities
   pickFolder: () => Promise<string | null>
+  pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
 }
 
 const timestamp = (): string => new Date().toISOString()
-
 const newAssetId = (): string => `asset_${randomUUID()}`
 
-async function pickFolder(): Promise<string | null> {
+async function openDialog(options: Electron.OpenDialogOptions): Promise<string[]> {
   const parent = BrowserWindow.getFocusedWindow()
-  const options: Electron.OpenDialogOptions = {
-    properties: ['openDirectory', 'createDirectory'],
-  }
-
   const result = parent
     ? await dialog.showOpenDialog(parent, options)
     : await dialog.showOpenDialog(options)
 
-  return result.canceled ? null : (result.filePaths[0] ?? null)
+  return result.canceled ? [] : result.filePaths
+}
+
+async function pickFolder(): Promise<string | null> {
+  const picked = await openDialog({ properties: ['openDirectory', 'createDirectory'] })
+  return picked[0] ?? null
+}
+
+/** Translated here, where the dialog opens: a native picker shows these names as they are. */
+function pickMedia(): Promise<string[]> {
+  const t = TRANSLATIONS[resolveLanguage(app.getLocale())].dialog
+  const filters = mediaFilters({
+    all: t.allMedia,
+    video: t.video,
+    audio: t.audio,
+    image: t.image,
+  })
+
+  return openDialog({ properties: ['openFile', 'multiSelections'], filters })
 }
 
 /** `net.fetch` rather than the global one: it goes through Electron's own network stack. */
@@ -89,6 +119,35 @@ export function createServices(): Services {
     now: timestamp,
   })
 
+  const ffmpeg = createFfmpegResolver(() => ({
+    // No `resources/ffmpeg/` yet: the bundled binary is a task of its own — see spec § 4.
+    bundled: undefined,
+    configured: settings.read().media.ffmpegPath,
+    onPath: findOnPath('ffmpeg', process.env.PATH, delimiter, existsSync),
+    exists: existsSync,
+  }))
+
+  const media = createMediaService({
+    ffmpeg: ffmpeg.path,
+    run: (binary, args, signal) => runProcess(binary, args, { signal }),
+    probe: (source, signal) => probeSource(companionPath(ffmpeg.path()), source, { signal }),
+    hash: hashSource,
+    save: (assetId, fields) => {
+      const catalog = project.catalog()
+      const current = catalog.find(assetId)
+      // The row may have been deleted while a twenty-minute proxy was encoding.
+      if (current) catalog.add({ ...current, ...fields })
+    },
+    writeFile: async (path, data) => {
+      await mkdir(dirname(path), { recursive: true })
+      await writeFile(path, data)
+    },
+    onProgress: progress => broadcast(EVENTS.mediaProgress, progress),
+    projectPath: () => project.current()?.path ?? null,
+    // Two cores left to the interface and to whatever else the machine is doing.
+    concurrency: () => Math.max(1, availableParallelism() - 2),
+  })
+
   const jobs = createJobManager({
     runner: runnerOf(() => client.require()),
     collect: createAssetCollector({
@@ -110,7 +169,7 @@ export function createServices(): Services {
     if (!current) return null
 
     const asset = project.catalog().find(assetId)
-    return asset?.path ? assetFilePath(current.path, asset.path) : null
+    return asset ? servedFileOf(current.path, asset) : null
   })
 
   const lastProject = settings.read().storage.lastProject
@@ -126,7 +185,17 @@ export function createServices(): Services {
     project,
     assets,
     newAssetId,
+    media,
+    link: (source, type) =>
+      project.catalog().add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
+    // Asked, not cached: this is what the settings pane consults after the user installed the
+    // binary it just said was missing.
+    capabilities: () => {
+      ffmpeg.invalidate()
+      return { ffmpeg: ffmpeg.path() !== null }
+    },
     pickFolder,
+    pickMedia,
     // Another key means another catalogue: keeping the cache would show the previous
     // account's models under the new one.
     onCredentialsChanged: () => {

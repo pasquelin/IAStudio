@@ -21,6 +21,7 @@ describe('keymap store', () => {
 
     const { bindings, motion } = useKeymap.getState()
     expect(bindings['scene.select']).toBe(DEFAULT_BINDINGS['scene.select'])
+    expect(bindings['sequence.playPause']).toBe(DEFAULT_BINDINGS['sequence.playPause'])
     expect(bindings['scene.rotate']).toBe('KeyX')
     expect(motion.forward).toBe(DEFAULT_MOTION.forward)
     localStorage.removeItem('scenario-studio:keymap')
@@ -58,7 +59,7 @@ describe('keymap store', () => {
   it('resolves the same signature to a different command on each surface', () => {
     const state = useKeymap.getState()
     expect(commandFor(state, 'Delete', 'scene')).toBe('scene.delete')
-    expect(commandFor(state, 'Delete', 'timeline')).toBe('timeline.delete')
+    expect(commandFor(state, 'Delete', 'sequence')).toBe('sequence.delete')
   })
 
   it('resolves nothing for a signature bound only on another surface', () => {

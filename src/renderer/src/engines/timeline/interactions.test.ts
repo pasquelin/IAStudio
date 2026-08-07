@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { beginGesture, commandForGesture, snapCandidates } from './interactions'
-import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
+import { RULER_HEIGHT, type Point, type Viewport } from './timeline-geometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
-import type { Clip, SequenceState } from './timeline-state'
+import { DEFAULT_TRACK_HEIGHT, trackOfClip, type Clip, type SequenceState } from './timeline-state'
 
 const viewport: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
 
@@ -10,6 +10,22 @@ const clip = clipFixture
 
 const stateWith = (clips: Clip[]): SequenceState =>
   sequenceWith([trackFixture('V1', 'video', clips)])
+
+const twoTracks = (clips: Clip[], secondLocked = false): SequenceState => {
+  const state = stateWith(clips)
+  return {
+    ...state,
+    tracks: [...state.tracks, trackFixture('V2', 'video', [], { index: 2, locked: secondLocked })],
+  }
+}
+
+/** Grab point of every drag below: the middle of a clip starting at zero. */
+const GRAB: Point = { x: 50, y: RULER_HEIGHT + 10 }
+
+const dragTo = (state: SequenceState, to: Point): SequenceState => {
+  const gesture = beginGesture(state, viewport, GRAB)
+  return commandForGesture(gesture!, state, viewport, to)!.apply(state)
+}
 
 describe('timeline interactions', () => {
   it('begins a drag on a clip body', () => {
@@ -41,6 +57,37 @@ describe('timeline interactions', () => {
     const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 30 })
     const command = commandForGesture(gesture!, state, viewport, { x: 250, y: RULER_HEIGHT + 30 })
     expect(command!.apply(state).tracks[0]?.clips[0]?.start).toBe(2_000_000)
+  })
+
+  it('drops a dragged clip on the track under the pointer, not the one it left', () => {
+    const state = twoTracks([clip('a', 0, 1_000_000)])
+    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + DEFAULT_TRACK_HEIGHT + 10 })
+
+    expect(trackOfClip(next, 'a')?.id).toBe('V2')
+  })
+
+  it('refuses to drop on a locked track, leaving the clip where it started', () => {
+    const state = twoTracks([clip('a', 0, 1_000_000)], true)
+    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + DEFAULT_TRACK_HEIGHT + 10 })
+
+    expect(trackOfClip(next, 'a')?.id).toBe('V1')
+    expect(next.tracks[0]?.clips[0]?.start).toBe(2_000_000)
+  })
+
+  it('refuses to drop a video clip on an audio track, where its picture would vanish', () => {
+    const state = sequenceWith([
+      trackFixture('V1', 'video', [clip('a', 0, 1_000_000)]),
+      trackFixture('A1', 'audio'),
+    ])
+    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + DEFAULT_TRACK_HEIGHT + 10 })
+
+    expect(trackOfClip(next, 'a')?.id).toBe('V1')
+  })
+
+  it('keeps the clip on its own track when the pointer leaves the tracks entirely', () => {
+    const state = twoTracks([clip('a', 0, 1_000_000)])
+
+    expect(trackOfClip(dragTo(state, { x: 250, y: 4 }), 'a')?.id).toBe('V1')
   })
 
   it('turns a trim into a trim command', () => {

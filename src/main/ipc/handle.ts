@@ -30,6 +30,10 @@ type ChannelMethod = {
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
 
+  [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
+  [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']
+  [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']
+
   [CHANNELS.windowToggleFullScreen]: StudioBridge['window']['toggleFullScreen']
   [CHANNELS.windowState]: StudioBridge['window']['state']
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']

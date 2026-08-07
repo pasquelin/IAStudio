@@ -1,20 +1,9 @@
 import { mdiImageOffOutline } from '@mdi/js'
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { useLoadable } from '@/hooks/useLoadable'
+import { MEDIA_FRAME } from './styles'
 import { UiIcon } from './UiIcon'
-
-const FRAME = 'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
-
-/**
- * A picture that fails to load leaves the browser's broken-image glyph in place. The URLs the
- * API signs expire, so this is not hypothetical — the placeholder has to take over.
- */
-function useLoadable(url?: string): { src?: string; onError: () => void } {
-  const [broken, setBroken] = useState<string | null>(null)
-  const usable = url && url !== broken ? url : undefined
-
-  return { src: usable, onError: () => setBroken(url ?? null) }
-}
 
 export type MediaTileProps = {
   url?: string
@@ -35,7 +24,7 @@ export function MediaTile({ url, caption, badge }: MediaTileProps) {
   const { src, onError } = useLoadable(url)
 
   return (
-    <figure className={cn(FRAME, 'relative m-0 aspect-square w-full')}>
+    <figure className={cn(MEDIA_FRAME, 'relative m-0 aspect-square w-full')}>
       {src ? (
         <img
           src={src}
@@ -65,28 +54,5 @@ export function MediaTile({ url, caption, badge }: MediaTileProps) {
         {caption}
       </figcaption>
     </figure>
-  )
-}
-
-/** The same picture at a fixed size, for a list row or a header. */
-export function Thumbnail({ url, shape }: { url?: string; shape: string }) {
-  const { src, onError } = useLoadable(url)
-
-  if (!src) {
-    return (
-      <div className={cn(FRAME, shape, 'flex items-center justify-center')}>
-        <UiIcon path={mdiImageOffOutline} size={16} className="text-muted/30" />
-      </div>
-    )
-  }
-
-  return (
-    <img
-      src={src}
-      alt=""
-      loading="lazy"
-      onError={onError}
-      className={cn(FRAME, shape, 'object-cover')}
-    />
   )
 }

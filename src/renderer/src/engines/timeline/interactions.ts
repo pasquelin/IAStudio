@@ -1,12 +1,14 @@
 import type { Command } from '../core/history'
 import { moveClip, setClipFade, trimClip } from './commands'
-import { hitTest, snap, xToTime, type Point, type Viewport } from './timeline-geometry'
+import { hitTest, rowAt, snap, xToTime, type Point, type Viewport } from './timeline-geometry'
 import {
   clipById,
   clipEnd,
   snapToFrame,
+  trackById,
   type ClipEdge,
   type SequenceState,
+  type Track,
   type Us,
 } from './timeline-state'
 
@@ -59,6 +61,12 @@ export function beginGesture(
   return null
 }
 
+/** A track takes a clip that came from a track of its own kind, and only if it is unlocked. */
+function dropTrack(state: SequenceState, viewport: Viewport, point: Point, from: Track): string {
+  const under = rowAt(state, viewport, point.y)?.track
+  return under && !under.locked && under.kind === from.kind ? under.id : from.id
+}
+
 export function commandForGesture(
   gesture: Gesture,
   state: SequenceState,
@@ -90,5 +98,9 @@ export function commandForGesture(
     return trimClip(gesture.clipId, gesture.edge, snap(raw, context))
   }
 
-  return moveClip(gesture.clipId, gesture.trackId, snap(raw - gesture.grabOffset, context))
+  const from = trackById(state, gesture.trackId)
+  if (!from) return null
+
+  const target = dropTrack(state, viewport, point, from)
+  return moveClip(gesture.clipId, target, snap(raw - gesture.grabOffset, context))
 }

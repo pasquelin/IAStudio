@@ -1,7 +1,7 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MODEL_IDS_BATCH_LIMIT, type ModelPage, type ModelSummary } from '@shared/domain/model'
 import { failureKeyOf } from '@/services/failure-message'
@@ -9,7 +9,8 @@ import { cn } from '@/helpers/cn'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { isFiltered } from '@/helpers/collection-state'
-import { MediaTile, Thumbnail } from '@/design/MediaTile'
+import { MediaTile } from '@/design/MediaTile'
+import { Thumbnail } from '@/design/Thumbnail'
 import { Row } from '@/design/Row'
 import { useDebounced } from '@/hooks/useDebounced'
 import { getBridge } from '@/services/bridge'
@@ -258,20 +259,26 @@ function subtitleOf(model: ModelSummary, t: TFunction): string {
 function SelectedModel({ model, picture }: { model: ModelSummary | null; picture?: string }) {
   const { t } = useTranslation()
 
+  // Height stated rather than grown into: `Row` sizes itself against its parent, and 56 px is
+  // what this header measured when it was written by hand. The bottom border eats a pixel of it.
   return (
-    <div className="border-border flex items-center gap-2 border-b p-2">
-      <Thumbnail url={picture} shape="size-10 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[12px]">{model?.name ?? t('models.noSelection')}</p>
-        <p className="text-muted truncate text-[11px]">
-          {model ? t(`families.${model.family}`) : t('models.pickOne')}
-        </p>
-      </div>
+    <div className="border-border h-14 border-b px-1 py-1.5">
+      <Row
+        media={<Thumbnail url={picture} className="size-10" />}
+        title={model?.name ?? t('models.noSelection')}
+        subtitle={model ? t(`families.${model.family}`) : t('models.pickOne')}
+      />
     </div>
   )
 }
 
-function ModelCard({ model, picture }: { model: ModelSummary; picture?: string }) {
+const ModelCard = memo(function ModelCard({
+  model,
+  picture,
+}: {
+  model: ModelSummary
+  picture?: string
+}) {
   const { t } = useTranslation()
 
   return (
@@ -293,16 +300,23 @@ function ModelCard({ model, picture }: { model: ModelSummary; picture?: string }
       }
     />
   )
-}
+})
 
-function ModelRow({ model, picture }: { model: ModelSummary; picture?: string }) {
+/** Memoized like the card: a scroll re-renders every mounted row on each frame. */
+const ModelRow = memo(function ModelRow({
+  model,
+  picture,
+}: {
+  model: ModelSummary
+  picture?: string
+}) {
   const { t } = useTranslation()
 
   return (
     <Row
-      media={<Thumbnail url={picture} shape="size-8 shrink-0" />}
+      media={<Thumbnail url={picture} className="size-8" />}
       title={model.name}
       subtitle={subtitleOf(model, t)}
     />
   )
-}
+})

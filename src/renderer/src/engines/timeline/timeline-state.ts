@@ -2,7 +2,7 @@
  * A sequence, as plain data. It holds no decoder and no Pixi object: an engine is rebuilt from
  * its serialized state, never from its DOM, and jsdom has neither WebCodecs nor WebGL.
  */
-import { isRecord } from '@/helpers/guards'
+import { isRecord } from '@shared/guards'
 
 /** Timeline time, in microseconds. Never float seconds: drift accumulates over a long edit. */
 export type Us = number
@@ -148,6 +148,15 @@ export function wholeFrames(duration: Us, settings: SequenceSettings): Us {
   return Math.max(frame, Math.round(duration / frame) * frame)
 }
 
+/**
+ * A clip born from a cut needs an id of its own. Deriving it from the one it was cut out of
+ * collides as soon as that clip is cut a second time, and two clips sharing an id break every
+ * lookup, starting with selection.
+ */
+export function newClipId(): string {
+  return `clip_${crypto.randomUUID()}`
+}
+
 export function clipEnd(clip: Clip): Us {
   return clip.start + clip.duration
 }
@@ -182,6 +191,12 @@ export function sequenceDuration(state: SequenceState): Us {
 
 export function trackById(state: SequenceState, id: string): Track | null {
   return state.tracks.find(track => track.id === id) ?? null
+}
+
+/** A locked track refuses every edit, whether it is a command applying or a clip being dropped. */
+export function editableTrack(state: SequenceState, id: string): Track | null {
+  const track = trackById(state, id)
+  return track && !track.locked ? track : null
 }
 
 export function trackOfClip(state: SequenceState, clipId: string): Track | null {
@@ -250,8 +265,12 @@ export function updateClip(
 /**
  * Overwrite insertion: the dropped clip wins, and what it covers is trimmed, split or dropped.
  * This is what keeps "sorted by start, never overlapping" true without asking callers to care.
+ *
+ * `tailId` names the clip an insertion landing mid-neighbour cuts loose. It is an input rather
+ * than something minted here: a reducer that invents an id is no longer a pure function of its
+ * state, and this one runs on every pointer move of a drag.
  */
-export function insertClip(track: Track, clip: Clip): Track {
+export function insertClip(track: Track, clip: Clip, tailId: string): Track {
   const end = clipEnd(clip)
   const clips: Clip[] = []
 
@@ -272,7 +291,7 @@ export function insertClip(track: Track, clip: Clip): Track {
       clips.push(
         clampFades({
           ...existing,
-          id: existing.start < clip.start ? `${existing.id}-tail` : existing.id,
+          id: existing.start < clip.start ? tailId : existing.id,
           start: end,
           duration: existingEnd - end,
           inPoint: existing.inPoint + (end - existing.start),
@@ -354,7 +373,7 @@ function readTrack(raw: unknown, row: number): Track | null {
 
   // Reinserted rather than trusted: a file edited by hand, or written by an older version,
   // can hold overlapping clips, and every later edit assumes they do not.
-  return clips.reduce((current, clip) => insertClip(current, clip), track)
+  return clips.reduce((current, clip) => insertClip(current, clip, newClipId()), track)
 }
 
 function readSettings(raw: unknown): SequenceSettings {

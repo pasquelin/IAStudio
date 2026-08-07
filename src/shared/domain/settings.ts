@@ -37,6 +37,14 @@ export type Settings = {
     projectsFolder?: string
     lastProject?: string
   }
+  media: {
+    /**
+     * An ffmpeg binary to use instead of the one on the PATH. Absent is the normal case: the
+     * bundled binary, then the PATH — see `resolveFfmpeg`. Without any of them, importing
+     * still works and the interface says what it cannot do.
+     */
+    ffmpegPath?: string
+  }
 }
 
 /**
@@ -51,12 +59,14 @@ export const DEFAULT_SETTINGS: Settings = {
   appearance: { theme: 'dark', density: 'comfortable' },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
   storage: { backend: 'local' },
+  media: {},
 }
 
 export type PartialSettings = {
   appearance?: Partial<Settings['appearance']>
   generation?: Partial<Settings['generation']>
   storage?: Partial<Settings['storage']>
+  media?: Partial<Settings['media']>
 }
 
 export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }

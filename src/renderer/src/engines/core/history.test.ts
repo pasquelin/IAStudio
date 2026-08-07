@@ -6,6 +6,7 @@ import {
   HISTORY_LIMIT,
   redo,
   run,
+  runCoalescing,
   undo,
   type Command,
 } from './history'
@@ -15,6 +16,20 @@ const add = (amount: number): Command<number> => ({
   apply: value => value + amount,
   revert: value => value - amount,
 })
+
+/** What a dragged field emits: an absolute value, captured as it is applied — like `editNode`. */
+const set = (value: number, id = 'set'): Command<number> => {
+  let previous: number | null = null
+
+  return {
+    id,
+    apply: current => {
+      previous = current
+      return value
+    },
+    revert: current => previous ?? current,
+  }
+}
 
 describe('history', () => {
   it('applies a command and remembers it', () => {
@@ -62,5 +77,58 @@ describe('history', () => {
       ;[value, history] = run(value, history, add(1))
     }
     expect(history.past).toHaveLength(HISTORY_LIMIT)
+  })
+})
+
+describe('runCoalescing', () => {
+  it('leaves one entry for a whole drag', () => {
+    let [value, history] = run(0, emptyHistory<number>(), set(1))
+    ;[value, history] = runCoalescing(value, history, set(2))
+    ;[value, history] = runCoalescing(value, history, set(3))
+
+    expect(value).toBe(3)
+    expect(history.past).toHaveLength(1)
+  })
+
+  // The point of the whole mechanism: ⌘Z gives back the value the gesture started from, not
+  // the one it passed through a frame earlier.
+  it('undoes the gesture back to where it began', () => {
+    let [value, history] = run(0, emptyHistory<number>(), set(1))
+    ;[value, history] = runCoalescing(value, history, set(2))
+    ;[value, history] = runCoalescing(value, history, set(3))
+
+    const [back, afterUndo] = undo(value, history)
+    expect(back).toBe(0)
+    expect(canUndo(afterUndo)).toBe(false)
+  })
+
+  it('redoes the gesture to where it ended', () => {
+    let [value, history] = run(0, emptyHistory<number>(), set(1))
+    ;[value, history] = runCoalescing(value, history, set(3))
+
+    const [back, afterUndo] = undo(value, history)
+    expect(redo(back, afterUndo)[0]).toBe(3)
+  })
+
+  it('opens a new entry when the edit is not the same one', () => {
+    const [applied, afterRun] = run(0, emptyHistory<number>(), set(1))
+    const [, history] = runCoalescing(applied, afterRun, set(2, 'other'))
+
+    expect(history.past).toHaveLength(2)
+  })
+
+  it('behaves like a plain run against an empty history', () => {
+    const [value, history] = runCoalescing(0, emptyHistory<number>(), set(4))
+
+    expect(value).toBe(4)
+    expect(history.past).toHaveLength(1)
+  })
+
+  it('drops the redo stack, like any other command', () => {
+    const [applied, afterRun] = run(0, emptyHistory<number>(), set(1))
+    const [reverted, afterUndo] = undo(applied, afterRun)
+    const [, history] = runCoalescing(reverted, afterUndo, set(2))
+
+    expect(canRedo(history)).toBe(false)
   })
 })

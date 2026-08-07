@@ -77,7 +77,9 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
       const command = commandFor(keymap, signature, scope)
       if (!command) return
       event.preventDefault()
-      handlers.current.onCommand(command)
+      // A held key repeats keydown. Space is held far more readily than ⌘Z, and a transport
+      // toggled thirty times a second is a strobe, not a shortcut.
+      if (!event.repeat) handlers.current.onCommand(command)
     }
 
     const onKeyUp = (event: KeyboardEvent) => {

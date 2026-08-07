@@ -11,6 +11,7 @@ import {
   type SequenceState,
   type Us,
 } from '@/engines/timeline/timeline-state'
+import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
 
@@ -25,6 +26,9 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const { t } = useTranslation()
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const [sourceTime, setSourceTime] = useState<Us>(0)
+  // Dockview keeps hidden tabs mounted: without this every open sequence would answer the
+  // space bar at once, and the playback token would arbitrate a fight nobody started.
+  const active = useDocuments(state => state.activeId === documentId)
 
   const selected = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
 
@@ -77,6 +81,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
         title={t('transport.program')}
         sequence={sequence}
         onTime={setProgramTime}
+        keyboard={active}
       />
     </div>
   )

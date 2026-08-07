@@ -53,17 +53,22 @@ describe('jobs store', () => {
     })
   })
 
-  it('refreshes the asset browser when a job succeeds, and only then', () => {
+  it('refreshes the asset browser when a job succeeds, and only then', async () => {
+    vi.useFakeTimers()
     installFakeBridge()
     const refresh = vi.fn(() => Promise.resolve())
     useAssets.setState({ refresh })
 
     useJobs.getState().apply({ id: 'job_1', status: 'running', progress: 0.9 })
+    await vi.runAllTimersAsync()
     expect(refresh).not.toHaveBeenCalled()
 
     useJobs.getState().apply({ id: 'job_1', status: 'succeeded', progress: 1, assetIds: ['a_1'] })
+    await vi.runAllTimersAsync()
+
     expect(refresh).toHaveBeenCalledOnce()
     expect(useJobs.getState().jobs[0]?.assetIds).toEqual(['a_1'])
+    vi.useRealTimers()
   })
 
   it('puts a freshly submitted job at the top of the list', async () => {

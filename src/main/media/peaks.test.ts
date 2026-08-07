@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decodePeaks, peaksFromBytes } from './peaks'
+import { decodePeaks, peaksFromBytes, samplesOf } from './peaks'
 
 describe('waveform peaks', () => {
   it('reduces samples to one min/max pair per bucket', () => {
@@ -53,5 +53,31 @@ describe('reading peaks back', () => {
 
   it('reads an empty file as no waveform at all', () => {
     expect(peaksFromBytes(new Uint8Array())).toHaveLength(0)
+  })
+})
+
+describe('sample view', () => {
+  it('reads samples straight out of an aligned buffer', () => {
+    const pcm = new Uint8Array(Int16Array.from([100, -100]).buffer)
+    expect([...samplesOf(pcm)]).toEqual([100, -100])
+  })
+
+  it('reads a buffer whose offset is odd, which no Int16Array can be laid over', () => {
+    const source = new Uint8Array(5)
+    source.set(new Uint8Array(Int16Array.from([100, -100]).buffer), 1)
+
+    expect([...samplesOf(source.subarray(1))]).toEqual([100, -100])
+  })
+
+  it('reads a Node Buffer at an odd offset, which is what ffmpeg output arrives as', () => {
+    // `Buffer.prototype.slice` is an alias of `subarray`: it would hand back the odd offset.
+    const source = Buffer.alloc(5)
+    source.set(new Uint8Array(Int16Array.from([100, -100]).buffer), 1)
+
+    expect([...samplesOf(source.subarray(1))]).toEqual([100, -100])
+  })
+
+  it('drops a trailing odd byte rather than reading past the buffer', () => {
+    expect(samplesOf(new Uint8Array(5))).toHaveLength(2)
   })
 })

@@ -7,7 +7,7 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import i18next from 'i18next'
 import { create as createStore } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { isRecord } from '@/helpers/guards'
+import { isRecord } from '@shared/guards'
 import { newId } from '@/helpers/ids'
 
 type DocumentsState = {
@@ -35,6 +35,13 @@ export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): strin
   const id = state.activeId
   return id !== null && state.documents[id]?.kind === kind ? id : null
 }
+
+/**
+ * The scene in front, as a selector. Shared rather than re-declared per panel: a selector built
+ * inside a component body is a new identity on every render, and zustand re-subscribes to it.
+ */
+export const activeSceneId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'scene')
 
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,

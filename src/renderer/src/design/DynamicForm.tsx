@@ -16,14 +16,8 @@ import {
   visibleFields,
   type FormValues,
 } from '@/helpers/dynamic-form'
-import { FOCUS_RING } from './styles'
+import { FIELD } from './styles'
 import { ToolButton } from './ToolButton'
-
-// Its own shape — a form field, not a bar control — but the same focus ring as everything else.
-const CONTROL = cn(
-  'bg-surface border-border h-(--sc-control) rounded-(--radius-sc-sm) border px-2',
-  FOCUS_RING,
-)
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
@@ -51,14 +45,14 @@ function Control({
 
   switch (field.kind) {
     case 'longText':
-      return <textarea rows={4} className={cn(CONTROL, 'h-auto py-1')} {...registration} />
+      return <textarea rows={4} className={cn(FIELD, 'h-auto py-1')} {...registration} />
 
     case 'boolean':
       return <input type="checkbox" className="size-4 self-start" {...registration} />
 
     case 'choice':
       return (
-        <select className={CONTROL} {...registration}>
+        <select className={FIELD} {...registration}>
           {!field.required && <option value="" />}
           {field.options?.map(option => (
             <option key={option.value} value={option.value}>
@@ -69,12 +63,12 @@ function Control({
       )
 
     case 'color':
-      return <input type="color" className={cn(CONTROL, 'px-1')} {...registration} />
+      return <input type="color" className={cn(FIELD, 'px-1')} {...registration} />
 
     case 'seed':
       return (
         <div className="flex items-center gap-1">
-          <input type="number" className={cn(CONTROL, 'min-w-0 flex-1')} {...registration} />
+          <input type="number" className={cn(FIELD, 'min-w-0 flex-1')} {...registration} />
           <ToolButton
             icon={mdiDiceMultipleOutline}
             label={t('generation.randomSeed')}
@@ -91,7 +85,7 @@ function Control({
           step={field.step ?? (field.kind === 'integer' ? 1 : 'any')}
           min={field.min}
           max={field.max}
-          className={CONTROL}
+          className={FIELD}
           {...registration}
         />
       )
@@ -99,7 +93,7 @@ function Control({
     // `image` and `raw` both land here. An unknown kind renders as a plain input rather than
     // making the form disappear — CLAUDE.md, invariant 5.
     default:
-      return <input type="text" className={CONTROL} {...registration} />
+      return <input type="text" className={FIELD} {...registration} />
   }
 }
 

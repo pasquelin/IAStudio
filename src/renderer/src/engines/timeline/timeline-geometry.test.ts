@@ -13,6 +13,7 @@ import {
   xToTime,
   type Viewport,
 } from './timeline-geometry'
+import { sequenceWith, trackFixture } from './timeline-fixtures'
 import {
   DEFAULT_TRACK_HEIGHT,
   EMPTY_SEQUENCE,
@@ -144,5 +145,23 @@ describe('hit testing', () => {
     const faded = { ...clip('a', 0, 1_000_000), fadeIn: 0, fadeOut: 0 }
     const target = hitTest(stateWith([faded]), viewport, { x: 2, y: RULER_HEIGHT + 30 })
     expect(target).toEqual({ kind: 'edge', clipId: 'a', trackId: 'V1', edge: 'in' })
+  })
+
+  it('reads the track a point lands on, whatever the clip beneath it', () => {
+    const state = stateWith([clip('a', 0, 1_000_000)])
+    expect(rowAt(state, viewport, RULER_HEIGHT + 10)?.track.id).toBe('V1')
+  })
+
+  it('reads no track on the ruler or below the last one', () => {
+    const state = stateWith([])
+    expect(rowAt(state, viewport, 4)).toBeNull()
+    expect(rowAt(state, viewport, 5_000)).toBeNull()
+  })
+
+  it('follows the vertical scroll, so a scrolled track is still the one under the pointer', () => {
+    const scrolled: Viewport = { ...viewport, scrollTop: DEFAULT_TRACK_HEIGHT }
+    const state = sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
+
+    expect(rowAt(state, scrolled, RULER_HEIGHT + 10)?.track.id).toBe('A1')
   })
 })

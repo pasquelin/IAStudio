@@ -30,7 +30,7 @@ import {
   type Light,
 } from 'three'
 import type { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
-import type { GeometryDescriptor, LightDescriptor } from '@shared/domain/scene'
+import type { GeometryDescriptor, LightKind } from '@shared/domain/scene'
 
 /*
  * The three.js objects a descriptor maps to. Kept out of `SceneRenderer` on purpose: none of it
@@ -115,37 +115,19 @@ export function geometryFor(descriptor: GeometryDescriptor): BufferGeometry {
   }
 }
 
-/** The aimed lights get their target placed here, where the descriptor is still narrowed. */
-export function lightFor(descriptor: LightDescriptor): Light {
-  switch (descriptor.kind) {
+/** The class a kind maps to, bare: what goes in it is `applyLight`'s job, in `three-sync`. */
+export function bareLight(kind: LightKind): Light {
+  switch (kind) {
     case 'ambient':
-      return new AmbientLight(descriptor.color, descriptor.intensity)
-    case 'directional': {
-      const light = new DirectionalLight(descriptor.color, descriptor.intensity)
-      light.target.position.set(descriptor.target.x, descriptor.target.y, descriptor.target.z)
-      return light
-    }
+      return new AmbientLight()
+    case 'directional':
+      return new DirectionalLight()
     case 'hemisphere':
-      return new HemisphereLight(descriptor.skyColor, descriptor.groundColor, descriptor.intensity)
+      return new HemisphereLight()
     case 'point':
-      return new PointLight(
-        descriptor.color,
-        descriptor.intensity,
-        descriptor.distance,
-        descriptor.decay,
-      )
-    case 'spot': {
-      const light = new SpotLight(
-        descriptor.color,
-        descriptor.intensity,
-        descriptor.distance,
-        descriptor.angle,
-        descriptor.penumbra,
-        descriptor.decay,
-      )
-      light.target.position.set(descriptor.target.x, descriptor.target.y, descriptor.target.z)
-      return light
-    }
+      return new PointLight()
+    case 'spot':
+      return new SpotLight()
   }
 }
 

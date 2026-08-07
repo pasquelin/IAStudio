@@ -1,6 +1,11 @@
 import type { Command } from '../core/history'
-import type { Transform } from '@shared/domain/scene'
-import { nodeById, type SceneNode, type SceneState } from './scene-state'
+import type {
+  GeometryDescriptor,
+  LightDescriptor,
+  MaterialDescriptor,
+  Transform,
+} from '@shared/domain/scene'
+import { nodeById, type MeshNode, type SceneNode, type SceneState } from './scene-state'
 
 /**
  * Scene edits, reimplemented in TypeScript from `mrdoob/three.js/editor/js/commands/` (MIT).
@@ -80,6 +85,49 @@ export function renameNode(id: string, name: string): Command<SceneState> {
 }
 
 /**
+ * The discriminated half of a node, edited. A node of the other type is left alone rather than
+ * patched: `type` is what forbids a light from holding a geometry, and an edit that wrote one
+ * anyway would produce a document that no longer loads.
+ */
+function editMesh(label: string, id: string, changes: MeshPatch): Command<SceneState> {
+  let previous: MeshPatch | null = null
+
+  return {
+    id: `${label}:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'mesh') return state
+      previous = { geometry: node.geometry, material: node.material }
+      return patchMesh(state, id, changes)
+    },
+    revert: state => (previous ? patchMesh(state, id, previous) : state),
+  }
+}
+
+export function setGeometry(id: string, geometry: GeometryDescriptor): Command<SceneState> {
+  return editMesh('geometry', id, { geometry })
+}
+
+export function setMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
+  return editMesh('material', id, { material })
+}
+
+export function setLight(id: string, light: LightDescriptor): Command<SceneState> {
+  let previous: LightDescriptor | null = null
+
+  return {
+    id: `light:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'light') return state
+      previous = node.light
+      return patchLight(state, id, light)
+    },
+    revert: state => (previous ? patchLight(state, id, previous) : state),
+  }
+}
+
+/**
  * Only the fields every node shares: patching a discriminated field would let a light take a
  * geometry, which is exactly what the union exists to forbid.
  */
@@ -89,6 +137,26 @@ function patch(state: SceneState, id: string, changes: NodePatch): SceneState {
   return {
     ...state,
     nodes: state.nodes.map(node => (node.id === id ? { ...node, ...changes } : node)),
+  }
+}
+
+type MeshPatch = Partial<Pick<MeshNode, 'geometry' | 'material'>>
+
+function patchMesh(state: SceneState, id: string, changes: MeshPatch): SceneState {
+  return {
+    ...state,
+    nodes: state.nodes.map(node =>
+      node.id === id && node.type === 'mesh' ? { ...node, ...changes } : node,
+    ),
+  }
+}
+
+function patchLight(state: SceneState, id: string, light: LightDescriptor): SceneState {
+  return {
+    ...state,
+    nodes: state.nodes.map(node =>
+      node.id === id && node.type === 'light' ? { ...node, light } : node,
+    ),
   }
 }
 

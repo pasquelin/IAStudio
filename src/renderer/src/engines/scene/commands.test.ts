@@ -6,11 +6,14 @@ import {
   removeNode,
   renameNode,
   selectNode,
+  setGeometry,
+  setLight,
+  setMaterial,
   setNodeVisible,
   setTransform,
 } from './commands'
-import { meshNode as mesh } from './scene-fixtures'
-import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
+import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
+import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
 
 describe('addNode', () => {
   it('appends the node and selects it', () => {
@@ -83,6 +86,88 @@ describe('setTransform', () => {
     const node = after.nodes[0]
     expect(node?.type).toBe('mesh')
     expect(node?.type === 'mesh' && node.geometry.kind).toBe('box')
+  })
+})
+
+describe('setGeometry', () => {
+  it('replaces the descriptor and comes back', () => {
+    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const command = setGeometry('a', {
+      kind: 'sphere',
+      radius: 2,
+      widthSegments: 8,
+      heightSegments: 6,
+    })
+
+    const applied = command.apply(start)
+    const node = applied.nodes[0]
+    expect(node?.type === 'mesh' && node.geometry.kind).toBe('sphere')
+
+    const back = command.revert(applied).nodes[0]
+    expect(back?.type === 'mesh' && back.geometry.kind).toBe('box')
+  })
+
+  // A light holding a geometry is what the union exists to forbid, and it would be a document
+  // that no longer loads.
+  it('refuses to give a light a geometry', () => {
+    const start: SceneState = { nodes: [light('a')], selectedId: null }
+    const command = setGeometry('a', {
+      kind: 'sphere',
+      radius: 1,
+      widthSegments: 8,
+      heightSegments: 6,
+    })
+
+    expect(command.apply(start)).toEqual(start)
+  })
+})
+
+describe('setMaterial', () => {
+  it('replaces the material and comes back', () => {
+    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const command = setMaterial('a', {
+      ...DEFAULT_MATERIAL,
+      color: '#ff0000',
+      roughness: 0.2,
+      metalness: 1,
+    })
+
+    const applied = command.apply(start)
+    const node = applied.nodes[0]
+    expect(node?.type === 'mesh' && node.material.color).toBe('#ff0000')
+
+    const back = command.revert(applied).nodes[0]
+    expect(back?.type === 'mesh' && back.material.roughness).toBe(1)
+  })
+
+  it('leaves the geometry it did not touch alone', () => {
+    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const command = setMaterial('a', { ...DEFAULT_MATERIAL, roughness: 0.5 })
+
+    const node = command.apply(start).nodes[0]
+    expect(node?.type === 'mesh' && node.geometry.kind).toBe('box')
+  })
+})
+
+describe('setLight', () => {
+  it('replaces the descriptor and comes back', () => {
+    const start: SceneState = { nodes: [light('a')], selectedId: null }
+    const command = setLight('a', { kind: 'ambient', color: '#ffffff', intensity: 0.5 })
+
+    const applied = command.apply(start)
+    const node = applied.nodes[0]
+    expect(node?.type === 'light' && node.light.intensity).toBe(0.5)
+
+    const back = command.revert(applied).nodes[0]
+    expect(back?.type === 'light' && back.light.intensity).toBe(1)
+  })
+
+  it('refuses to give a mesh a light', () => {
+    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+
+    expect(setLight('a', { kind: 'ambient', color: '#ffffff', intensity: 1 }).apply(start)).toEqual(
+      start,
+    )
   })
 })
 

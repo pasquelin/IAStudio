@@ -24,6 +24,31 @@ export function resolveFfmpeg({
   return null
 }
 
+export type FfmpegResolver = {
+  path: () => string | null
+  /** Forgets what was resolved — ffmpeg may have been installed since. */
+  invalidate: () => void
+}
+
+/**
+ * Resolution is a walk of the PATH with a `existsSync` per entry, and `path()` is asked twice
+ * per ingested file. Cached, then, and invalidated on the two events that can change the
+ * answer: the configured path being edited, and someone asking what the pipeline can do.
+ */
+export function createFfmpegResolver(candidates: () => FfmpegCandidates): FfmpegResolver {
+  let resolved: { binary: string | null } | null = null
+
+  return {
+    path: () => {
+      resolved ??= { binary: resolveFfmpeg(candidates()) }
+      return resolved.binary
+    },
+    invalidate: () => {
+      resolved = null
+    },
+  }
+}
+
 export function probeArgs(source: string): string[] {
   return ['-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', source]
 }
@@ -32,6 +57,11 @@ export function probeArgs(source: string): string[] {
 export function proxyArgs(source: string, destination: string): string[] {
   return [
     '-y',
+    // Without these, ffmpeg writes a progress line to stderr every second of a long encode,
+    // and the runner keeps every one of them until the process exits.
+    '-v',
+    'error',
+    '-nostats',
     '-i',
     source,
     '-vf',

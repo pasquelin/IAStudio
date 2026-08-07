@@ -1,25 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS, type AuthState } from '@shared/domain/settings'
 import { CHANNELS } from '@shared/ipc'
+import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerSettingsHandlers } from './handlers'
 import { memoryAdapter } from './memory-adapter'
 import { createSettingsStore, type SettingsStore } from './store'
 
-type Invoke = (...args: unknown[]) => unknown
-
-const { registered } = vi.hoisted(() => ({ registered: new Map<string, Invoke>() }))
-
-vi.mock('electron', () => ({
-  ipcMain: {
-    handle: (channel: string, handler: Invoke) => void registered.set(channel, handler),
-  },
-}))
-
-function invoke(channel: string, ...args: unknown[]): unknown {
-  const handler = registered.get(channel)
-  if (!handler) throw new Error(`no handler registered for ${channel}`)
-  return handler({}, ...args)
-}
+vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
 
 describe('settings handlers', () => {
   let settings: SettingsStore
@@ -27,7 +14,7 @@ describe('settings handlers', () => {
   let authState: () => Promise<AuthState>
 
   beforeEach(() => {
-    registered.clear()
+    resetHandlers()
     settings = createSettingsStore(memoryAdapter())
     onCredentialsChanged = vi.fn()
     authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))

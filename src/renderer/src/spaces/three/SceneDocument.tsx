@@ -7,6 +7,7 @@ import { createDefaultScene } from '@/engines/scene/default-scene'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { useAddNode } from '@/hooks/useAddNode'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { useDocuments } from '@/stores/documents'
 import { useKeymap } from '@/stores/keymap'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
@@ -23,6 +24,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
   const bindings = useKeymap(state => state.bindings)
   const addNodeOf = useAddNode(documentId)
+  const active = useDocuments(state => state.activeId === documentId)
 
   // Before the renderer mounts: a scene that arrives unlit shows nothing, and reads as a broken
   // viewport rather than as an empty document.
@@ -92,7 +94,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   useShortcuts({
     scope: 'scene',
-    enabled: true,
+    // Dockview keeps hidden tabs mounted, and the hook swallows the keys it recognises: a
+    // scene left in a background tab would eat the space bar the video space listens for.
+    enabled: active,
     // Pushed on change, not polled: the engine restarts its own loop while something moves, so
     // nothing has to tick when the keyboard is idle.
     onMotionChange: held => engine.current?.setMotion(held),

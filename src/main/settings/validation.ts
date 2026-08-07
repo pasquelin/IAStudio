@@ -34,10 +34,15 @@ const storage = z.object({
   lastProject: z.string().min(1).optional(),
 })
 
+// Not checked for existence here: a path typed while the binary is not plugged in yet must be
+// storable, and `resolveFfmpeg` falls through to the PATH when it does not resolve.
+const media = z.object({ ffmpegPath: z.string().min(1).optional() })
+
 const partialSettings = z.object({
   appearance: appearance.optional(),
   generation: generation.optional(),
   storage: storage.optional(),
+  media: media.optional(),
 })
 
 /** Validates what the renderer sends. Throws: an out-of-bounds write must not be persisted. */

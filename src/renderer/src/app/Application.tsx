@@ -7,6 +7,7 @@ import { useWindowFit } from '@/hooks/useWindowFit'
 import { pruneDocuments } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
+import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { Shell } from './Shell'
@@ -25,6 +26,7 @@ export function Application() {
   const load = useSettings(state => state.load)
   const connectProject = useProject(state => state.connect)
   const connectJobs = useJobs(state => state.connect)
+  const connectMedia = useMedia(state => state.connect)
   const density = useSettings(state => state.settings.appearance.density)
 
   useEffect(() => {
@@ -32,11 +34,11 @@ export function Application() {
   }, [load])
 
   useEffect(() => {
-    const subscriptions = [connectProject(), connectJobs()]
+    const subscriptions = [connectProject(), connectJobs(), connectMedia()]
     return () => {
       for (const subscription of subscriptions) void subscription.then(stop => stop())
     }
-  }, [connectProject, connectJobs])
+  }, [connectProject, connectJobs, connectMedia])
 
   useDensity(density)
 

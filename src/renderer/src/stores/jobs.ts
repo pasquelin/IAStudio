@@ -41,7 +41,7 @@ export const useJobs = create<JobsState>()((set, get) => ({
   apply: progress => {
     // A job only reaches `succeeded` once its assets are on disk and indexed, so this is the
     // exact moment the browser has something new to show.
-    if (progress.status === 'succeeded') void useAssets.getState().refresh()
+    if (progress.status === 'succeeded') useAssets.getState().invalidate()
 
     set(state => ({
       jobs: state.jobs.map(job =>

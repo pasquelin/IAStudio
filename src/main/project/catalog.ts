@@ -1,5 +1,8 @@
+import { isRecord } from '@shared/guards'
 import {
   isAssetType,
+  mediaProbeOf,
+  probeNumber,
   type Asset,
   type AssetQuery,
   type AssetType,
@@ -135,21 +138,19 @@ function parseProbe(raw: string | undefined): MediaProbe | undefined {
 
   try {
     const parsed: unknown = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object') return undefined
+    if (!isRecord(parsed)) return undefined
 
-    const fields: Record<string, unknown> = { ...parsed }
-    const { duration, codec, width, height, fps, sampleRate, channels } = fields
-    // A probe without those two says nothing usable, and a clip built on it would have no length.
-    if (typeof duration !== 'number' || typeof codec !== 'string') return undefined
-
-    const probe: MediaProbe = { duration, codec }
-    if (typeof width === 'number') probe.width = width
-    if (typeof height === 'number') probe.height = height
-    if (typeof fps === 'number') probe.fps = fps
-    if (typeof sampleRate === 'number') probe.sampleRate = sampleRate
-    if (typeof channels === 'number') probe.channels = channels
-
-    return probe
+    return (
+      mediaProbeOf({
+        duration: probeNumber(parsed.duration),
+        codec: typeof parsed.codec === 'string' ? parsed.codec : undefined,
+        width: probeNumber(parsed.width),
+        height: probeNumber(parsed.height),
+        fps: probeNumber(parsed.fps),
+        sampleRate: probeNumber(parsed.sampleRate),
+        channels: probeNumber(parsed.channels),
+      }) ?? undefined
+    )
   } catch {
     return undefined
   }
