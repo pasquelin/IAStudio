@@ -11,7 +11,6 @@ import {
 import { useMemo } from 'react'
 import {
   placementIn,
-  placementOf,
   servesWorkspace,
   TOOL_PLACEMENTS,
   type ToolId,
@@ -106,6 +105,15 @@ export function hasModelFor(workspace: WorkspaceId): boolean {
 }
 
 /**
+ * Whether a section can offer this panel at all. The generator is the only one whose presence
+ * depends on state rather than on the registry: generating without a model is impossible, so
+ * it is absent rather than disabled.
+ */
+function canOffer(id: ToolId, hasModel: boolean): boolean {
+  return id !== 'generator' || hasModel
+}
+
+/**
  * Same question, subscribed rather than read once: the rail has to redraw the moment a model is
  * picked, and `hasModelFor` alone would leave the generator's icon out until something else
  * happened to re-render.
@@ -135,18 +143,21 @@ export function useHasModel(workspace: WorkspaceId): boolean {
 export function shownTool(
   tool: ToolId | null,
   zone: ToolZone,
+  slot: ToolSlot,
   workspace: WorkspaceId,
   hasModel: boolean,
 ): ToolId | null {
   if (!tool) return null
-  const offered = (id: ToolId): ToolId => (id === 'generator' && !hasModel ? 'models' : id)
 
-  if (toolZoneIn(tool, workspace) === zone) return offered(tool)
+  // Zone AND half: a stored id that names neither is not this half's business, whether it
+  // belongs to the other column, the other half, or to a band no placement ever cuts.
+  const placement = placementIn(tool, workspace)
+  if (placement?.zone === zone && placement.slot === slot) {
+    return tool === 'generator' && !hasModel ? 'models' : tool
+  }
 
-  // Every placement of a tool shares one slot, so the stored id names the half on its own.
-  const slot = placementOf(tool)?.slot
   const substitute = toolsInZone(zone, workspace).find(
-    candidate => candidate.slot === slot && (candidate.id !== 'generator' || hasModel),
+    candidate => candidate.slot === slot && canOffer(candidate.id, hasModel),
   )
   return substitute ? substitute.id : null
 }
@@ -157,9 +168,9 @@ export function shownTool(
  */
 export function availableToolIds(workspace: WorkspaceId): ToolId[] {
   const hasModel = hasModelFor(workspace)
-  return TOOLS.filter(
-    tool => servesWorkspace(tool, workspace) && (tool.id !== 'generator' || hasModel),
-  ).map(tool => tool.id)
+  return TOOLS.filter(tool => servesWorkspace(tool, workspace) && canOffer(tool.id, hasModel)).map(
+    tool => tool.id,
+  )
 }
 
 /**
@@ -171,7 +182,7 @@ export function useAvailableTools(zone: ToolZone, workspace: WorkspaceId): Tool[
   const hasModel = useHasModel(workspace)
 
   return useMemo(
-    () => toolsInZone(zone, workspace).filter(tool => tool.id !== 'generator' || hasModel),
+    () => toolsInZone(zone, workspace).filter(tool => canOffer(tool.id, hasModel)),
     [zone, workspace, hasModel],
   )
 }

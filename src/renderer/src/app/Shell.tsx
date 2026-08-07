@@ -82,19 +82,16 @@ function Edge({ zone }: { zone: ToolZone }) {
   const hasModel = useHasModel(workspace)
 
   const shown = (slot: ToolSlot): ToolId | null =>
-    shownTool(slots?.[slot] ?? null, zone, workspace, hasModel)
+    shownTool(slots?.[slot] ?? null, zone, slot, workspace, hasModel)
 
-  const lying = isHorizontal(zone)
   const primary = shown('primary')
-  // A band is one surface, read across the whole width: no placement cuts one. A layout left
-  // over from a version that did would otherwise draw a half, and a divider, that nothing
-  // writes any more and nothing can put back.
-  const secondary = lying ? null : shown('secondary')
+  const secondary = shown('secondary')
   if (!primary && !secondary) return null
 
   // Actions are stable for the store's lifetime: subscribing to them would only add
   // selectors re-run on every write.
   const { resize, resplit } = useTools.getState()
+  const lying = isHorizontal(zone)
 
   const panel = (
     <div
