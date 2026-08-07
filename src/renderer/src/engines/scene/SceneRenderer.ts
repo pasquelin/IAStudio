@@ -1,40 +1,16 @@
 import {
-  AmbientLight,
-  BoxGeometry,
-  CapsuleGeometry,
-  CatmullRomCurve3,
-  CircleGeometry,
   Color,
-  CylinderGeometry,
   DirectionalLight,
-  DirectionalLightHelper,
-  DodecahedronGeometry,
   GridHelper,
-  HemisphereLight,
-  HemisphereLightHelper,
-  IcosahedronGeometry,
-  LatheGeometry,
   Mesh,
   MeshStandardMaterial,
-  OctahedronGeometry,
   PerspectiveCamera,
-  PlaneGeometry,
-  PointLight,
-  PointLightHelper,
   Raycaster,
-  RingGeometry,
   Scene,
-  SphereGeometry,
   SpotLight,
-  SpotLightHelper,
-  TetrahedronGeometry,
-  TorusGeometry,
-  TorusKnotGeometry,
-  TubeGeometry,
   Vector2,
   Vector3 as ThreeVector3,
   WebGLRenderer,
-  type BufferGeometry,
   type Light,
   type Object3D,
 } from 'three'
@@ -42,13 +18,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
-import type {
-  GeometryDescriptor,
-  LightDescriptor,
-  SceneNode,
-  SceneState,
-  Transform,
-} from './scene-state'
+import { token } from '../core/palette'
+import type { SceneNode, SceneState, Transform } from './scene-state'
+import { geometryFor, helperFor, lightFor, tuneViewHelper, type LightHelper } from './three-factory'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
 export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
@@ -61,139 +33,11 @@ export type SceneRendererOptions = {
 const FLY_SPEED = 4
 const BOOST_FACTOR = 3
 const GRID_SIZE = 20
-const HELPER_SIZE = 0.5
 
-/** Tube needs a path and Lathe a profile; both are fixed until a curve editor exists. */
-const DEFAULT_TUBE_CURVE = new CatmullRomCurve3([
-  new ThreeVector3(-0.5, 0, 0),
-  new ThreeVector3(0, 0.5, 0),
-  new ThreeVector3(0.5, 0, 0),
-])
-
-/**
- * Exhaustive on purpose: with no `default`, a primitive added to the registry without a geometry
- * here is a compile error rather than a silent cube.
- */
-function geometryFor(descriptor: GeometryDescriptor): BufferGeometry {
-  switch (descriptor.kind) {
-    case 'box':
-      return new BoxGeometry(descriptor.width, descriptor.height, descriptor.depth)
-    case 'capsule':
-      return new CapsuleGeometry(
-        descriptor.radius,
-        descriptor.height,
-        descriptor.capSegments,
-        descriptor.radialSegments,
-      )
-    case 'circle':
-      return new CircleGeometry(descriptor.radius, descriptor.segments)
-    case 'cylinder':
-      return new CylinderGeometry(
-        descriptor.radiusTop,
-        descriptor.radiusBottom,
-        descriptor.height,
-        descriptor.segments,
-      )
-    case 'dodecahedron':
-      return new DodecahedronGeometry(descriptor.radius)
-    case 'icosahedron':
-      return new IcosahedronGeometry(descriptor.radius)
-    case 'lathe':
-      return new LatheGeometry(undefined, descriptor.segments)
-    case 'octahedron':
-      return new OctahedronGeometry(descriptor.radius)
-    case 'plane':
-      return new PlaneGeometry(descriptor.width, descriptor.height)
-    case 'ring':
-      return new RingGeometry(descriptor.innerRadius, descriptor.outerRadius, descriptor.segments)
-    case 'sphere':
-      return new SphereGeometry(
-        descriptor.radius,
-        descriptor.widthSegments,
-        descriptor.heightSegments,
-      )
-    case 'tetrahedron':
-      return new TetrahedronGeometry(descriptor.radius)
-    case 'torus':
-      return new TorusGeometry(
-        descriptor.radius,
-        descriptor.tube,
-        descriptor.radialSegments,
-        descriptor.tubularSegments,
-      )
-    case 'torusKnot':
-      return new TorusKnotGeometry(
-        descriptor.radius,
-        descriptor.tube,
-        descriptor.tubularSegments,
-        descriptor.radialSegments,
-        descriptor.p,
-        descriptor.q,
-      )
-    case 'tube':
-      return new TubeGeometry(
-        DEFAULT_TUBE_CURVE,
-        descriptor.tubularSegments,
-        descriptor.radius,
-        descriptor.radialSegments,
-      )
-  }
-}
-
-function lightFor(descriptor: LightDescriptor): Light {
-  switch (descriptor.kind) {
-    case 'ambient':
-      return new AmbientLight(descriptor.color, descriptor.intensity)
-    case 'directional':
-      return new DirectionalLight(descriptor.color, descriptor.intensity)
-    case 'hemisphere':
-      return new HemisphereLight(descriptor.skyColor, descriptor.groundColor, descriptor.intensity)
-    case 'point':
-      return new PointLight(
-        descriptor.color,
-        descriptor.intensity,
-        descriptor.distance,
-        descriptor.decay,
-      )
-    case 'spot':
-      return new SpotLight(
-        descriptor.color,
-        descriptor.intensity,
-        descriptor.distance,
-        descriptor.angle,
-        descriptor.penumbra,
-        descriptor.decay,
-      )
-  }
-}
-
-/** The four helper classes share no interface, so the union is what gives `update` a type. */
-type LightHelper =
-  DirectionalLightHelper | HemisphereLightHelper | PointLightHelper | SpotLightHelper
-
-/**
- * A light with no helper is invisible, and therefore unselectable: there is nothing under the
- * cursor to intersect. Ambient light is the exception — it has no position to draw.
- */
-function helperFor(light: Light): LightHelper | null {
-  if (light instanceof DirectionalLight) return new DirectionalLightHelper(light, HELPER_SIZE)
-  if (light instanceof HemisphereLight) return new HemisphereLightHelper(light, HELPER_SIZE)
-  if (light instanceof PointLight) return new PointLightHelper(light, HELPER_SIZE)
-  if (light instanceof SpotLight) return new SpotLightHelper(light)
-  return null
-}
-
-/**
- * Reads a studio token off the mounted canvas. The palette is declared once, in `index.css`;
- * a hex value copied here would leave the viewport on the old grey the day it changes, and it
- * would be the one surface in the application that never follows.
- *
- * An empty string means the token is missing — the caller falls back to three's own default
- * rather than inventing a colour.
- */
-function token(styles: CSSStyleDeclaration, name: string): string {
-  return styles.getPropertyValue(name).trim()
-}
+/** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
+const forward = new ThreeVector3()
+const right = new ThreeVector3()
+const step = new ThreeVector3()
 
 /**
  * The three.js side of a scene. It owns no truth: `apply` reflects a state it never computes,
@@ -207,6 +51,8 @@ export class SceneRenderer {
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
   private readonly helpers = new Map<string, LightHelper>()
+  /** Last node applied per id, compared by reference to skip what has not changed. */
+  private readonly applied = new Map<string, SceneNode>()
   private readonly held = new Set<MotionId>()
 
   private renderer: WebGLRenderer | null = null
@@ -231,7 +77,16 @@ export class SceneRenderer {
     this.camera.lookAt(0, 0, 0)
   }
 
-  mount(canvas: HTMLCanvasElement): void {
+  /** Makes its own canvas: React must never own it — see the engine invariants in CLAUDE.md. */
+  mount(host: HTMLElement): void {
+    const canvas = document.createElement('canvas')
+    canvas.style.display = 'block'
+    canvas.style.width = '100%'
+    canvas.style.height = '100%'
+    // Appended before the palette is read: `getComputedStyle` only inherits the studio tokens
+    // once the element is actually in the document.
+    host.appendChild(canvas)
+
     this.applyPalette(canvas)
 
     const renderer = new WebGLRenderer({ canvas, antialias: true })
@@ -250,7 +105,9 @@ export class SceneRenderer {
     gizmo.addEventListener('mouseUp', this.onGizmoRelease)
     this.gizmo = gizmo
 
-    this.viewHelper = new ViewHelper(this.camera, canvas)
+    const viewHelper = new ViewHelper(this.camera, canvas)
+    tuneViewHelper(viewHelper)
+    this.viewHelper = viewHelper
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
@@ -266,12 +123,17 @@ export class SceneRenderer {
   }
 
   apply(state: SceneState): void {
-    for (const node of state.nodes) this.syncNode(node)
-
-    for (const id of [...this.objects.keys()]) {
-      if (state.nodes.some(node => node.id === id)) continue
-      this.release(id)
+    // A Set rather than a `some` per object: `apply` runs on every state change, selection
+    // included, and the quadratic form costs milliseconds well before a scene gets large.
+    const alive = new Set<string>()
+    for (const node of state.nodes) {
+      alive.add(node.id)
+      this.syncNode(node)
     }
+
+    let stale: string[] | null = null
+    for (const id of this.objects.keys()) if (!alive.has(id)) (stale ??= []).push(id)
+    if (stale) for (const id of stale) this.release(id)
 
     this.selectedId = state.selectedId
     this.attachGizmo()
@@ -334,24 +196,39 @@ export class SceneRenderer {
 
     this.renderer?.dispose()
     this.renderer = null
+
+    // The canvas goes with the engine that made it: left behind, the next mount would stack a
+    // second one on top of it and the host would keep growing a dead canvas per remount.
+    canvas?.remove()
   }
 
   /** Pulls the studio palette off the canvas, so the viewport follows a theme change with it. */
   private applyPalette(canvas: HTMLCanvasElement): void {
-    const styles = getComputedStyle(canvas)
-    const background = token(styles, '--color-base')
-    const line = token(styles, '--color-border')
-    const subdivision = token(styles, '--color-chassis')
+    const background = token(canvas, '--color-viewport')
+    // The centre axes take the muted token so they stand out from the grid rather than blend in.
+    const axis = token(canvas, '--color-muted')
+    const line = token(canvas, '--color-viewport-line')
 
-    this.meshColor = token(styles, '--color-muted')
+    this.meshColor = token(canvas, '--color-muted')
     if (background) this.scene.background = new Color(background)
 
-    if (this.grid) this.scene.remove(this.grid)
-    this.grid = new GridHelper(GRID_SIZE, GRID_SIZE, line || undefined, subdivision || undefined)
+    if (this.grid) {
+      this.scene.remove(this.grid)
+      this.grid.dispose()
+    }
+    this.grid = new GridHelper(GRID_SIZE, GRID_SIZE, axis || undefined, line || undefined)
     this.scene.add(this.grid)
   }
 
+  /**
+   * Skips a node whose object is identical to the one already applied. Commands rebuild only the
+   * nodes they touch, so a selection — which rebuilds the state but not the array — costs nothing
+   * instead of re-deriving a quaternion per object and re-uploading a helper per light.
+   */
   private syncNode(node: SceneNode): void {
+    if (this.applied.get(node.id) === node) return
+    this.applied.set(node.id, node)
+
     let object = this.objects.get(node.id)
     if (!object) {
       object = node.type === 'mesh' ? this.buildMesh(node) : this.buildLight(node)
@@ -387,11 +264,10 @@ export class SceneRenderer {
   private buildLight(node: SceneNode & { type: 'light' }): Light {
     const light = lightFor(node.light)
 
-    // three.js only reads the target's world matrix once it is in the scene.
-    if ((light instanceof DirectionalLight || light instanceof SpotLight) && 'target' in node.light)
-      light.target.position.set(node.light.target.x, node.light.target.y, node.light.target.z)
-    if (light instanceof DirectionalLight || light instanceof SpotLight)
+    // three.js only reads the target's world matrix once the target is in the scene.
+    if (light instanceof DirectionalLight || light instanceof SpotLight) {
       this.scene.add(light.target)
+    }
 
     const helper = helperFor(light)
     if (helper) {
@@ -404,6 +280,8 @@ export class SceneRenderer {
   }
 
   private release(id: string): void {
+    this.applied.delete(id)
+
     const object = this.objects.get(id)
     if (object) {
       this.scene.remove(object)
@@ -527,7 +405,16 @@ export class SceneRenderer {
     const settling = orbit !== null && orbit.enabled && orbit.update()
 
     renderer.render(this.scene, this.camera)
+
+    /**
+     * `autoClear` off for the overlay, as the official editor does before its own helpers.
+     * `ViewHelper.render` calls `renderer.render` internally, which clears the colour buffer
+     * first — and `gl.clear` ignores the viewport, so it wipes the whole frame. Left on, the
+     * trihedron erases the scene it sits on and the viewport stays black.
+     */
+    renderer.autoClear = false
     this.viewHelper?.render(renderer)
+    renderer.autoClear = true
 
     if (moving || settling) this.requestRender()
   }
@@ -535,11 +422,10 @@ export class SceneRenderer {
   private fly(delta: number): void {
     const speed = FLY_SPEED * delta * (this.held.has('boost') ? BOOST_FACTOR : 1)
 
-    const forward = new ThreeVector3()
     this.camera.getWorldDirection(forward)
-    const right = new ThreeVector3().crossVectors(forward, this.camera.up).normalize()
+    right.crossVectors(forward, this.camera.up).normalize()
 
-    const step = new ThreeVector3()
+    step.set(0, 0, 0)
     if (this.held.has('forward')) step.add(forward)
     if (this.held.has('back')) step.sub(forward)
     if (this.held.has('right')) step.add(right)

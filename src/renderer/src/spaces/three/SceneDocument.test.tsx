@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addNode } from '@/engines/scene/commands'
-import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type SceneNode } from '@/engines/scene/scene-state'
+import { meshNode } from '@/engines/scene/scene-fixtures'
+import type { SceneNode } from '@/engines/scene/scene-state'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { SceneDocument } from './SceneDocument'
 
@@ -23,16 +24,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
   },
 }))
 
-const box: SceneNode = {
-  id: 'box-1',
-  parentId: null,
-  name: 'Box',
-  visible: true,
-  transform: IDENTITY_TRANSFORM,
-  type: 'mesh',
-  geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
-  material: DEFAULT_MATERIAL,
-}
+const box = meshNode('box-1')
 
 /** A new document is born with three lights; only the meshes are what these tests count. */
 function meshesOf(documentId: string): SceneNode[] {
@@ -49,6 +41,16 @@ describe('SceneDocument', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Déplacer/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Tourner/ })).toBeInTheDocument()
+  })
+
+  /**
+   * A canvas React owns is reused across StrictMode's mount / unmount / mount, and the first
+   * engine's `dispose` purges the one WebGL context the second one then draws into — a viewport
+   * black for good. The engine makes its own canvas inside a plain host instead.
+   */
+  it('hands the renderer a host to fill, never a canvas of its own', () => {
+    const { container } = render(<SceneDocument documentId="doc-1" />)
+    expect(container.querySelector('canvas')).toBeNull()
   })
 
   it('switches the gizmo mode when a tool is clicked', async () => {

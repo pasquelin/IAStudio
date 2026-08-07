@@ -9,26 +9,8 @@ import {
   setNodeVisible,
   setTransform,
 } from './commands'
-import {
-  DEFAULT_MATERIAL,
-  EMPTY_SCENE,
-  IDENTITY_TRANSFORM,
-  type SceneNode,
-  type SceneState,
-} from './scene-state'
-
-function mesh(id: string): SceneNode {
-  return {
-    id,
-    parentId: null,
-    name: id,
-    visible: true,
-    transform: IDENTITY_TRANSFORM,
-    type: 'mesh',
-    geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
-    material: DEFAULT_MATERIAL,
-  }
-}
+import { meshNode as mesh } from './scene-fixtures'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
 
 describe('addNode', () => {
   it('appends the node and selects it', () => {

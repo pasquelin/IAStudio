@@ -22,23 +22,22 @@ describe('MESH_PRIMITIVES', () => {
 
   it('builds a descriptor whose kind matches its entry', () => {
     for (const primitive of MESH_PRIMITIVES) {
-      if (primitive.disabled) continue
+      if (!primitive.create) continue
       expect(primitive.create().kind).toBe(primitive.kind)
     }
   })
 
-  it('greys out text and sprite rather than hiding them', () => {
-    const greyed = MESH_PRIMITIVES.filter(primitive => primitive.disabled).map(
+  // Announced rather than hidden: the menu says what is coming instead of pretending.
+  it('leaves text and sprite without a builder', () => {
+    const announced = MESH_PRIMITIVES.filter(primitive => !primitive.create).map(
       primitive => primitive.kind,
     )
-    expect(greyed).toEqual(['sprite', 'text'])
+    expect(announced).toEqual(['sprite', 'text'])
   })
 
   it('returns a fresh descriptor on every call', () => {
     const box = primitiveByKind('box')
-    expect(box?.disabled).toBeFalsy()
-    if (box?.disabled) return
-    expect(box?.create()).not.toBe(box?.create())
+    expect(box?.create?.()).not.toBe(box?.create?.())
   })
 
   it('returns null for an unknown kind', () => {

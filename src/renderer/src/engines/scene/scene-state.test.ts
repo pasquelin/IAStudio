@@ -1,40 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
 import {
   childrenOf,
-  DEFAULT_MATERIAL,
   deserializeScene,
   EMPTY_SCENE,
-  IDENTITY_TRANSFORM,
   nodeById,
   serializeScene,
-  type SceneNode,
   type SceneState,
 } from './scene-state'
-
-function mesh(id: string, parentId: string | null = null): SceneNode {
-  return {
-    id,
-    parentId,
-    name: id,
-    visible: true,
-    transform: IDENTITY_TRANSFORM,
-    type: 'mesh',
-    geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
-    material: DEFAULT_MATERIAL,
-  }
-}
-
-function light(id: string): SceneNode {
-  return {
-    id,
-    parentId: null,
-    name: id,
-    visible: true,
-    transform: IDENTITY_TRANSFORM,
-    type: 'light',
-    light: { kind: 'ambient', color: '#222222', intensity: 1 },
-  }
-}
 
 describe('EMPTY_SCENE', () => {
   it('starts empty with nothing selected', () => {

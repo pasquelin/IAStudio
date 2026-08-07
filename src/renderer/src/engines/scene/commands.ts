@@ -46,43 +46,36 @@ export function removeNode(id: string): Command<SceneState> {
   }
 }
 
-export function setTransform(id: string, next: Transform): Command<SceneState> {
-  let previous: Transform | null = null
+/**
+ * One shape for every edit of a shared field: they all revert by putting the old values back.
+ * The whole shared trio is captured rather than the single field touched — the history is a
+ * linear stack, so nothing can change the node between `apply` and `revert`.
+ */
+function editNode(label: string, id: string, changes: NodePatch): Command<SceneState> {
+  let previous: NodePatch | null = null
 
   return {
-    id: `transform:${id}`,
+    id: `${label}:${id}`,
     apply: state => {
-      previous = nodeById(state, id)?.transform ?? null
-      return patch(state, id, { transform: next })
+      const node = nodeById(state, id)
+      if (!node) return state
+      previous = { name: node.name, visible: node.visible, transform: node.transform }
+      return patch(state, id, changes)
     },
-    revert: state => (previous ? patch(state, id, { transform: previous }) : state),
+    revert: state => (previous ? patch(state, id, previous) : state),
   }
+}
+
+export function setTransform(id: string, next: Transform): Command<SceneState> {
+  return editNode('transform', id, { transform: next })
 }
 
 export function setNodeVisible(id: string, visible: boolean): Command<SceneState> {
-  let previous: boolean | null = null
-
-  return {
-    id: `visible:${id}`,
-    apply: state => {
-      previous = nodeById(state, id)?.visible ?? null
-      return patch(state, id, { visible })
-    },
-    revert: state => (previous === null ? state : patch(state, id, { visible: previous })),
-  }
+  return editNode('visible', id, { visible })
 }
 
 export function renameNode(id: string, name: string): Command<SceneState> {
-  let previous: string | null = null
-
-  return {
-    id: `rename:${id}`,
-    apply: state => {
-      previous = nodeById(state, id)?.name ?? null
-      return patch(state, id, { name })
-    },
-    revert: state => (previous === null ? state : patch(state, id, { name: previous })),
-  }
+  return editNode('rename', id, { name })
 }
 
 /**

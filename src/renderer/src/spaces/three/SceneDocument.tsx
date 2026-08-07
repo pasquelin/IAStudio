@@ -11,7 +11,7 @@ import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
 
 export function SceneDocument({ documentId }: { documentId: string }) {
-  const canvas = useRef<HTMLCanvasElement>(null)
+  const host = useRef<HTMLDivElement>(null)
   const engine = useRef<SceneRenderer | null>(null)
   const [mode, setMode] = useState<TransformMode>('translate')
 
@@ -29,7 +29,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [documentId])
 
   useEffect(() => {
-    const element = canvas.current
+    const element = host.current
     if (!element) return
 
     const renderer = new SceneRenderer({
@@ -102,7 +102,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   return (
     <div className="relative size-full">
-      <canvas ref={canvas} className="block size-full" />
+      {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
+      <div ref={host} className="absolute inset-0" />
       <Toolbar
         className="absolute top-2 left-2"
         tools={tools}

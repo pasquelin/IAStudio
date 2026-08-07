@@ -2,24 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { addNode } from '@/engines/scene/commands'
 import { createDefaultScene } from '@/engines/scene/default-scene'
-import {
-  DEFAULT_MATERIAL,
-  EMPTY_SCENE,
-  IDENTITY_TRANSFORM,
-  type SceneNode,
-} from '@/engines/scene/scene-state'
+import { meshNode } from '@/engines/scene/scene-fixtures'
+import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 import { historyOf, sceneOf, useScenes } from './scenes'
 
-const box: SceneNode = {
-  id: 'box-1',
-  parentId: null,
-  name: 'Box',
-  visible: true,
-  transform: IDENTITY_TRANSFORM,
-  type: 'mesh',
-  geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
-  material: DEFAULT_MATERIAL,
-}
+const box = meshNode('box-1')
 
 describe('scenes store', () => {
   beforeEach(() => {

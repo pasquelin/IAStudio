@@ -4,6 +4,7 @@ import i18next from 'i18next'
 import { create as createStore } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { isRecord } from '@/helpers/guards'
+import { newId } from '@/helpers/ids'
 
 type DocumentsState = {
   documents: Record<string, DocumentDescriptor>
@@ -69,7 +70,7 @@ export const useDocuments = createStore<DocumentsState>()(
         if (!kind) return null
 
         const document: DocumentDescriptor = {
-          id: crypto.randomUUID(),
+          id: newId(),
           kind,
           workspace,
           title: i18next.t('documents.untitled', { n: documentsIn(get(), workspace).length + 1 }),

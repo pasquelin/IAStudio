@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDefaultScene, createNodeId } from './default-scene'
+import { createDefaultScene } from './default-scene'
 
 describe('createDefaultScene', () => {
   it('lights the scene, so a first mesh is visible', () => {
@@ -41,11 +41,5 @@ describe('createDefaultScene', () => {
 
   it('shows every light', () => {
     expect(createDefaultScene().nodes.every(node => node.visible)).toBe(true)
-  })
-})
-
-describe('createNodeId', () => {
-  it('never repeats', () => {
-    expect(createNodeId()).not.toBe(createNodeId())
   })
 })

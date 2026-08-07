@@ -1,4 +1,5 @@
-import { lightByKind, type LightType } from './light-types'
+import { newId } from '@/helpers/ids'
+import { LIGHT_TYPES } from './light-types'
 import {
   IDENTITY_TRANSFORM,
   type LightDescriptor,
@@ -7,18 +8,9 @@ import {
   type Vector3,
 } from './scene-state'
 
-export function createNodeId(): string {
-  return crypto.randomUUID()
-}
-
-/**
- * Takes the registry entry rather than its kind: a lookup here could miss, and the caller is
- * better placed to decide what a missing kind means than a constructor that would have to throw.
- */
-function lightNode(type: LightType, position: Vector3): SceneNode {
-  const light = type.create()
+export function lightNode(light: LightDescriptor, position: Vector3): SceneNode {
   return {
-    id: createNodeId(),
+    id: newId(),
     parentId: null,
     // The three.js editor names a light after its class, and so does any scene exported from it.
     name: `${light.kind.charAt(0).toUpperCase()}${light.kind.slice(1)}Light`,
@@ -29,24 +21,19 @@ function lightNode(type: LightType, position: Vector3): SceneNode {
   }
 }
 
-const DEFAULT_LIGHTS: readonly [LightDescriptor['kind'], Vector3][] = [
+/** Which lights a new scene opens with, and where. A kind absent here is simply not one of them. */
+const DEFAULT_LIGHT_POSITIONS: ReadonlyMap<LightDescriptor['kind'], Vector3> = new Map([
   ['ambient', { x: 0, y: 0, z: 0 }],
   ['directional', { x: 5, y: 10, z: 7.5 }],
   ['hemisphere', { x: 0, y: 10, z: 0 }],
-]
+])
 
-/**
- * A new scene is born lit, as in the official editor. An unlit one shows nothing at all, and
- * reads as a broken viewport rather than as an empty document.
- *
- * A kind the registry no longer knows is skipped rather than thrown on: `default-scene.test.ts`
- * is what catches a lost entry, and a new document must open whatever happens.
- */
+/** A new scene is born lit: an unlit one reads as a broken viewport, not as an empty document. */
 export function createDefaultScene(): SceneState {
   return {
-    nodes: DEFAULT_LIGHTS.flatMap(([kind, position]) => {
-      const type = lightByKind(kind)
-      return type ? [lightNode(type, position)] : []
+    nodes: LIGHT_TYPES.flatMap(type => {
+      const position = DEFAULT_LIGHT_POSITIONS.get(type.kind)
+      return position ? [lightNode(type.create(), position)] : []
     }),
     selectedId: null,
   }

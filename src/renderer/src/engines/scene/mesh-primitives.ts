@@ -19,23 +19,13 @@ import {
 } from '@mdi/js'
 import type { GeometryDescriptor } from './scene-state'
 
-type Buildable = {
-  kind: GeometryDescriptor['kind']
+export type MeshPrimitive = {
+  kind: GeometryDescriptor['kind'] | 'sprite' | 'text'
   labelKey: string
   icon: string
-  disabled?: false
-  create: () => GeometryDescriptor
+  /** Absent while the primitive is not buildable yet: the menu greys it rather than hiding it. */
+  create?: () => GeometryDescriptor
 }
-
-/** Declared but not buildable yet: shown greyed, so the menu never hides what is coming. */
-type Announced = {
-  kind: 'sprite' | 'text'
-  labelKey: string
-  icon: string
-  disabled: true
-}
-
-export type MeshPrimitive = Buildable | Announced
 
 /**
  * The primitives of `three.js/editor/js/Menubar.Add.js`, in its order — alphabetical in English,
@@ -120,11 +110,10 @@ export const MESH_PRIMITIVES: readonly MeshPrimitive[] = [
     create: () => ({ kind: 'sphere', radius: 0.5, widthSegments: 32, heightSegments: 16 }),
   },
   {
-    // Not a geometry but a camera-facing image, which is why it is announced rather than built.
+    // Not a geometry but a camera-facing image, hence no `create` yet.
     kind: 'sprite',
     labelKey: 'meshes.sprite',
     icon: mdiImageOutline,
-    disabled: true,
   },
   {
     // A tetrahedron is a triangular pyramid.
@@ -138,7 +127,6 @@ export const MESH_PRIMITIVES: readonly MeshPrimitive[] = [
     kind: 'text',
     labelKey: 'meshes.text',
     icon: mdiFormatText,
-    disabled: true,
   },
   {
     kind: 'torus',
