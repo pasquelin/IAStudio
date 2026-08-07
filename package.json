@@ -24,6 +24,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "validate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "docs:scenario": "bash scripts/fetch-scenario-docs.sh",
+    "ffmpeg:fetch": "node scripts/fetch-ffmpeg.mjs",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "postinstall": "node scripts/dev-app-identity.mjs"
   },
