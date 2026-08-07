@@ -9,10 +9,12 @@ import {
   type MeshKind,
   type SceneEntry,
 } from '@shared/domain/scene'
-import { TOOL_PLACEMENTS } from '@shared/domain/tool'
+import { TOOL_PLACEMENTS, type ToolPlacement } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { bindingOf, type BindingOverrides, type CommandId } from '@shared/domain/command'
+import { acceleratorOf } from '@shared/domain/shortcut'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
-import type { MenuCommand, SceneAddRequest, ToolRequest } from '@shared/ipc'
+import type { SceneAddRequest, ToolRequest } from '@shared/ipc'
 
 /**
  * What the menu asks of the window it belongs to. One method per message rather than a
@@ -23,7 +25,7 @@ export type MenuActions = {
   openSettings: () => void
   toggleFullScreen: () => void
   openTool: (request: ToolRequest) => void
-  runCommand: (command: MenuCommand) => void
+  runCommand: (command: CommandId) => void
   addNode: (request: SceneAddRequest) => void
 }
 
@@ -37,7 +39,9 @@ export type MenuOptions = {
   /** `null` when the focused window edits no workspace at all — the settings window. */
   workspace: WorkspaceId | null
   isMac: boolean
-  isPackaged: boolean
+  isDevelopment: boolean
+  /** What the user remapped, so the menu advertises the key it will actually answer to. */
+  overrides: BindingOverrides
   actions: MenuActions
 }
 
@@ -45,9 +49,16 @@ export type MenuOptions = {
  * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
  * build hands an attacker `setCredentials` through a self-XSS.
  */
-function developerItems(isPackaged: boolean): MenuItemConstructorOptions[] {
-  if (isPackaged) return []
+function developerItems(isDevelopment: boolean): MenuItemConstructorOptions[] {
+  if (!isDevelopment) return []
   return [{ type: 'separator' }, { role: 'toggleDevTools' }, { role: 'reload' }]
+}
+
+/** One placement per tool: a tool declaring several must still appear once in the menu. */
+function firstPlacements(): ToolPlacement[] {
+  return TOOL_PLACEMENTS.filter(
+    (placement, index) => TOOL_PLACEMENTS.findIndex(other => other.id === placement.id) === index,
+  )
 }
 
 /**
@@ -55,7 +66,15 @@ function developerItems(isPackaged: boolean): MenuItemConstructorOptions[] {
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, workspace, isMac, isPackaged, actions } = options
+  const { language, workspace, isMac, isDevelopment, overrides, actions } = options
+
+  /**
+   * The accelerator of a command, read off the registry. Written by hand until now, which is
+   * how the menu kept advertising a key a remapped command no longer answered to — and how a
+   * command could be fired by a shortcut the menu never mentioned.
+   */
+  const shortcut = (command: CommandId): string | undefined =>
+    acceleratorOf(bindingOf(command, overrides))
   const t = TRANSLATIONS[language]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
@@ -66,7 +85,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   // now, and which window is focused has nothing to do with it.
   const settingsItem: MenuItemConstructorOptions = {
     label: t.menu.settings,
-    accelerator: 'CmdOrCtrl+,',
+    accelerator: shortcut('app.settings'),
     click: () => actions.openSettings(),
   }
 
@@ -129,13 +148,13 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       submenu: [
         {
           label: t.menu.newProject,
-          accelerator: 'CmdOrCtrl+N',
-          click: () => actions.runCommand('project:new'),
+          accelerator: shortcut('project.new'),
+          click: () => actions.runCommand('project.new'),
         },
         {
           label: t.menu.openProject,
-          accelerator: 'CmdOrCtrl+O',
-          click: () => actions.runCommand('project:open'),
+          accelerator: shortcut('project.open'),
+          click: () => actions.runCommand('project.open'),
         },
         { type: 'separator' },
         ...fileMenuSettings,
@@ -149,22 +168,27 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       submenu: [
         {
           label: t.menu.tools,
-          submenu: TOOL_PLACEMENTS.map(placement => ({
+          // One entry per tool, not per placement: a tool that sits in different zones
+          // depending on the workspace would otherwise appear twice under the same name. The
+          // zone sent here is only a starting point — the window resolves it against the
+          // workspace it is actually showing.
+          submenu: firstPlacements().map(placement => ({
             label: t.panels[placement.id],
             click: () => actions.openTool({ zone: placement.zone, tool: placement.id }),
           })),
         },
         {
           label: t.menu.resetLayout,
-          click: () => actions.runCommand('layout:reset'),
+          accelerator: shortcut('layout.reset'),
+          click: () => actions.runCommand('layout.reset'),
         },
         { type: 'separator' },
         {
           label: t.menu.fullScreen,
-          accelerator: isMac ? 'Ctrl+Cmd+F' : 'F11',
+          accelerator: shortcut('window.fullScreen'),
           click: () => actions.toggleFullScreen(),
         },
-        ...developerItems(isPackaged),
+        ...developerItems(isDevelopment),
       ],
     },
     { role: 'windowMenu', label: t.menu.window },

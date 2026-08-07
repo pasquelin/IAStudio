@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useDensity } from '@/hooks/useDensity'
+import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
@@ -27,7 +27,6 @@ export function Application() {
   const connectProject = useProject(state => state.connect)
   const connectJobs = useJobs(state => state.connect)
   const connectMedia = useMedia(state => state.connect)
-  const density = useSettings(state => state.settings.appearance.density)
 
   useEffect(() => {
     const subscriptions = [connectSettings(), connectProject(), connectJobs(), connectMedia()]
@@ -36,7 +35,7 @@ export function Application() {
     }
   }, [connectSettings, connectProject, connectJobs, connectMedia])
 
-  useDensity(density)
+  useAppliedSettings()
 
   const [client] = useState(
     () =>

@@ -6,7 +6,7 @@ export function Panel({ children, className, ...rest }: HTMLAttributes<HTMLEleme
   return (
     <section
       className={cn(
-        'bg-base flex min-h-0 shrink-0 flex-col overflow-hidden rounded-(--radius-sc-lg)',
+        'bg-panel flex min-h-0 shrink-0 flex-col overflow-hidden rounded-(--radius-sc-lg)',
         className,
       )}
       {...rest}

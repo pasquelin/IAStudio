@@ -15,6 +15,7 @@ export function memoryAdapter(): MemoryAdapter {
     read: <T>(key: string) => raw.get(key) as T | undefined,
     write: (key, value) => void raw.set(key, value),
     remove: key => void raw.delete(key),
+    path: () => '(memory)',
     encrypt: plain => `enc:${plain}`,
     decrypt: encrypted => {
       if (!encrypted.startsWith('enc:')) throw new Error('unreadable')

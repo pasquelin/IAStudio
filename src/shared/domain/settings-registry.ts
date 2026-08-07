@@ -1,4 +1,11 @@
-import { DENSITIES, THEMES, type SettingsSectionId } from './settings'
+import { LANGUAGES } from '../i18n/languages'
+import {
+  DENSITIES,
+  LOG_VERBOSITIES,
+  STARTUP_BEHAVIOURS,
+  THEMES,
+  type SettingsSectionId,
+} from './settings'
 import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 
 /**
@@ -8,7 +15,13 @@ import type { SettingPath, SettingValue, ValueAt } from './settings-path'
  * Kinds arrive with the first setting that needs one — a branch nothing reaches is a branch
  * nothing tests.
  */
-export type SettingKind = 'choice' | 'number' | 'text'
+export type SettingKind = 'boolean' | 'choice' | 'color' | 'number' | 'path' | 'slider' | 'text'
+
+/** What a `path` setting points at, and therefore which native picker opens. */
+export type PathKind = 'file' | 'folder'
+
+/** The values beside the type, so zod enumerates them from here rather than retyping them. */
+export const PATH_KINDS: readonly PathKind[] = ['file', 'folder']
 
 /**
  * A screen of the settings window, and the two texts that name it. Declared here rather than
@@ -22,10 +35,32 @@ export type SettingKind = 'choice' | 'number' | 'text'
 export type SettingSectionEntry = {
   id: SettingsSectionId
   labelKey: string
-  descriptionKey: string
+  /** Absent on a sub-section, whose parent's description already says what the screen is for. */
+  descriptionKey?: string
+  /** Set on a sub-section. The navigation builds its tree from this, and nothing else. */
+  parent?: SettingsSectionId
 }
 
+/**
+ * One screen per model family, each holding the default model of that family. Their labels are
+ * the workspaces' own: a family and the space that works with it are the same idea to the user.
+ *
+ * `upscale` has no workspace, so it carries a label of its own.
+ */
+const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
+  { id: 'generation.image', labelKey: 'workspaces.image', parent: 'generation' },
+  { id: 'generation.video', labelKey: 'workspaces.video', parent: 'generation' },
+  { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation' },
+  { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation' },
+  { id: 'generation.upscale', labelKey: 'settings.familyUpscale', parent: 'generation' },
+]
+
 export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
+  {
+    id: 'general',
+    labelKey: 'settings.general',
+    descriptionKey: 'settings.generalDescription',
+  },
   {
     id: 'account',
     labelKey: 'settings.account',
@@ -41,12 +76,50 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     labelKey: 'settings.generation',
     descriptionKey: 'settings.generationDescription',
   },
+  ...MODEL_FAMILY_SECTIONS,
+  {
+    id: 'spaces',
+    labelKey: 'settings.spaces',
+    descriptionKey: 'settings.spacesDescription',
+  },
+  {
+    id: 'spaces.three',
+    labelKey: 'workspaces.3d',
+    parent: 'spaces',
+  },
+  {
+    id: 'shortcuts',
+    labelKey: 'settings.shortcuts',
+    descriptionKey: 'settings.shortcutsDescription',
+  },
   {
     id: 'media',
     labelKey: 'settings.media',
     descriptionKey: 'settings.mediaDescription',
   },
+  {
+    id: 'storage',
+    labelKey: 'settings.storage',
+    descriptionKey: 'settings.storageDescription',
+  },
+  {
+    id: 'advanced',
+    labelKey: 'settings.advanced',
+    descriptionKey: 'settings.advancedDescription',
+  },
 ]
+
+/**
+ * Sections of a parent, in declared order. The navigation renders these under it; nothing else
+ * decides which screens nest.
+ */
+export function childSections(parent: SettingsSectionId): readonly SettingSectionEntry[] {
+  return SETTING_SECTIONS.filter(section => section.parent === parent)
+}
+
+export function rootSections(): readonly SettingSectionEntry[] {
+  return SETTING_SECTIONS.filter(section => !section.parent)
+}
 
 export function sectionEntry(id: SettingsSectionId): SettingSectionEntry | null {
   return SETTING_SECTIONS.find(section => section.id === id) ?? null
@@ -54,7 +127,18 @@ export function sectionEntry(id: SettingsSectionId): SettingSectionEntry | null 
 
 export type SettingOption<V extends SettingValue = SettingValue> = {
   value: V
-  labelKey: string
+  labelKey?: string
+  /**
+   * A literal label, for the rare option whose text is the same in every bundle: a language
+   * names itself in its own language, so `Français` reads `Français` on an English screen too.
+   * Exactly one of the two is set — `settings-registry.test.ts` refuses an option with neither.
+   */
+  label?: string
+}
+
+/** The one place an option's two ways of being named are reconciled. */
+export function optionLabel(option: SettingOption, translate: (key: string) => string): string {
+  return option.label ?? (option.labelKey ? translate(option.labelKey) : String(option.value))
 }
 
 type Descriptor<P extends SettingPath> = {
@@ -72,6 +156,18 @@ type Descriptor<P extends SettingPath> = {
   step?: number
   options?: readonly SettingOption<ValueAt<P>>[]
   placeholderKey?: string
+  /**
+   * Which native picker a `path` setting opens. Optional on the type and required in practice:
+   * `settings-registry.test.ts` refuses a `path` without one, the same way it refuses a numeric
+   * setting without bounds. Spelling it in the type would split `Descriptor` into a union and
+   * cost every reader a narrowing to get at `min` or `options`.
+   */
+  pathKind?: PathKind
+  /**
+   * Greyed out, with the reason shown, while the condition is false. Declarative rather than a
+   * predicate: it stays testable, and `shared/` takes on no logic.
+   */
+  dependsOn?: { path: SettingPath; equals: SettingValue }
 }
 
 /**
@@ -99,6 +195,30 @@ function setting<P extends SettingPath>(descriptor: Descriptor<P>): Descriptor<P
  */
 export const SETTING_REGISTRY = [
   setting({
+    path: 'general.language',
+    kind: 'choice',
+    section: 'general',
+    titleKey: 'settings.language.title',
+    helpKey: 'settings.language.help',
+    // A language names itself in its own language, so those labels are not translated — only
+    // `system` is. `LANGUAGES` already carries them; a copy in each bundle would be two.
+    options: [
+      { value: 'system', labelKey: 'settings.language.system' },
+      ...LANGUAGES.map(language => ({ value: language.code, label: language.name })),
+    ],
+  }),
+  setting({
+    path: 'general.startup',
+    kind: 'choice',
+    section: 'general',
+    titleKey: 'settings.startup.title',
+    helpKey: 'settings.startup.help',
+    options: STARTUP_BEHAVIOURS.map(behaviour => ({
+      value: behaviour,
+      labelKey: `settings.startup.${behaviour}`,
+    })),
+  }),
+  setting({
     path: 'appearance.theme',
     kind: 'choice',
     section: 'appearance',
@@ -120,6 +240,30 @@ export const SETTING_REGISTRY = [
     })),
   }),
   setting({
+    path: 'appearance.accent',
+    kind: 'color',
+    section: 'appearance',
+    titleKey: 'settings.accent.title',
+    helpKey: 'settings.accent.help',
+  }),
+  setting({
+    path: 'appearance.fontScale',
+    kind: 'slider',
+    section: 'appearance',
+    titleKey: 'settings.fontScale.title',
+    helpKey: 'settings.fontScale.help',
+    min: 0.85,
+    max: 1.4,
+    step: 0.05,
+  }),
+  setting({
+    path: 'appearance.reduceMotion',
+    kind: 'boolean',
+    section: 'appearance',
+    titleKey: 'settings.reduceMotion.title',
+    helpKey: 'settings.reduceMotion.help',
+  }),
+  setting({
     path: 'generation.concurrentJobs',
     kind: 'number',
     section: 'generation',
@@ -138,14 +282,135 @@ export const SETTING_REGISTRY = [
     max: 10,
   }),
   setting({
+    path: 'three.showGrid',
+    kind: 'boolean',
+    section: 'spaces.three',
+    titleKey: 'settings.showGrid.title',
+    helpKey: 'settings.showGrid.help',
+  }),
+  setting({
+    path: 'three.gridSize',
+    kind: 'number',
+    section: 'spaces.three',
+    titleKey: 'settings.gridSize.title',
+    helpKey: 'settings.gridSize.help',
+    min: 2,
+    max: 500,
+    dependsOn: { path: 'three.showGrid', equals: true },
+  }),
+  setting({
+    path: 'three.flySpeed',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.flySpeed.title',
+    helpKey: 'settings.flySpeed.help',
+    min: 0.5,
+    max: 20,
+    step: 0.5,
+  }),
+  setting({
+    path: 'three.boostFactor',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.boostFactor.title',
+    helpKey: 'settings.boostFactor.help',
+    min: 1,
+    max: 10,
+    step: 0.5,
+  }),
+  setting({
+    path: 'three.fieldOfView',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.fieldOfView.title',
+    helpKey: 'settings.fieldOfView.help',
+    min: 30,
+    max: 100,
+    step: 5,
+  }),
+  setting({
+    path: 'storage.projectsFolder',
+    kind: 'path',
+    pathKind: 'folder',
+    section: 'storage',
+    titleKey: 'settings.projectsFolder.title',
+    helpKey: 'settings.projectsFolder.help',
+  }),
+  setting({
+    path: 'advanced.logLevel',
+    kind: 'choice',
+    section: 'advanced',
+    titleKey: 'settings.logLevel.title',
+    helpKey: 'settings.logLevel.help',
+    options: LOG_VERBOSITIES.map(level => ({
+      value: level,
+      labelKey: `settings.logLevel.${level}`,
+    })),
+  }),
+  setting({
     path: 'media.ffmpegPath',
-    kind: 'text',
+    kind: 'path',
+    pathKind: 'file',
     section: 'media',
     titleKey: 'settings.ffmpegPath.title',
     helpKey: 'settings.ffmpegPath.help',
     placeholderKey: 'settings.ffmpegPath.placeholder',
   }),
 ]
+
+/**
+ * A button, not a setting. It has no path and no value, so forcing it into `Descriptor` would
+ * break the coverage check that makes this registry worth having — hence a table of its own,
+ * of the same shape: an id, a section, and the two texts that name and explain it.
+ */
+export type SettingActionId =
+  'advanced.openSettingsFile' | 'advanced.openDevtools' | 'advanced.reset'
+
+export type SettingAction = {
+  id: SettingActionId
+  section: SettingsSectionId
+  titleKey: string
+  helpKey: string
+  buttonKey: string
+  /**
+   * What is asked before acting. Present exactly where the action cannot be taken back — no
+   * Cancel button covers these, since they never pass through the editing buffer.
+   */
+  confirmKey?: string
+}
+
+export const ACTION_REGISTRY: readonly SettingAction[] = [
+  {
+    id: 'advanced.openSettingsFile',
+    section: 'advanced',
+    titleKey: 'settings.openSettingsFile.title',
+    helpKey: 'settings.openSettingsFile.help',
+    buttonKey: 'settings.reveal',
+  },
+  {
+    id: 'advanced.openDevtools',
+    section: 'advanced',
+    titleKey: 'settings.openDevtools.title',
+    helpKey: 'settings.openDevtools.help',
+    buttonKey: 'settings.open',
+  },
+  {
+    id: 'advanced.reset',
+    section: 'advanced',
+    titleKey: 'settings.resetAll.title',
+    helpKey: 'settings.resetAll.help',
+    buttonKey: 'settings.resetAll.button',
+    confirmKey: 'settings.resetAll.confirm',
+  },
+]
+
+export const SETTING_ACTION_IDS: readonly SettingActionId[] = ACTION_REGISTRY.map(
+  action => action.id,
+)
+
+export function actionsIn(section: SettingsSectionId): readonly SettingAction[] {
+  return ACTION_REGISTRY.filter(action => action.section === section)
+}
 
 /** Same trick as `setting`, for a plain list of paths. */
 function paths<P extends SettingPath[]>(...list: P): P {
@@ -159,10 +424,9 @@ function paths<P extends SettingPath[]>(...list: P): P {
 export const UNLISTED_PATHS = paths(
   // Written by the main process every time a project opens: session state, not a preference.
   'storage.lastProject',
-  // Both belong to the Storage screen, which waits on the cloud backend actually existing —
-  // offering a backend nothing implements would be a promise the app cannot keep.
+  // Waits on the cloud backend actually existing: offering a choice nothing implements would
+  // be a promise the application cannot keep.
   'storage.backend',
-  'storage.projectsFolder',
 )
 
 /**
@@ -208,32 +472,4 @@ export function boundsOf(path: SettingPath): Bounds {
     min: descriptor?.min ?? Number.NEGATIVE_INFINITY,
     max: descriptor?.max ?? Number.POSITIVE_INFINITY,
   }
-}
-
-/**
- * Accents dropped and case folded, so "thème" is found by typing `theme` — a search box that
- * demands a circumflex is a search box nobody uses.
- */
-function fold(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-}
-
-/**
- * Settings matching what was typed, searched over what is on screen — title and description —
- * rather than over paths, which the user never sees. `translate` is injected because `shared/`
- * carries no i18n runtime.
- */
-export function matchSettings(
-  query: string,
-  translate: (key: string) => string,
-): readonly SettingDescriptor[] {
-  const needle = fold(query.trim())
-  if (needle === '') return []
-
-  return SETTING_REGISTRY.filter(descriptor =>
-    fold(`${translate(descriptor.titleKey)} ${translate(descriptor.helpKey)}`).includes(needle),
-  )
 }

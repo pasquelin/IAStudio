@@ -4,14 +4,17 @@ import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import { defaultAt } from './settings-path'
 import {
   boundsOf,
+  childSections,
   descriptorAt,
   descriptorsIn,
-  matchSettings,
   optionsOf,
+  PATH_KINDS,
+  rootSections,
   sectionEntry,
   SETTING_REGISTRY,
   SETTING_SECTIONS,
   UNLISTED_PATHS,
+  type SettingKind,
 } from './settings-registry'
 
 function resolve(bundle: unknown, key: string): unknown {
@@ -33,15 +36,23 @@ const CHROME_KEYS: readonly string[] = [
 function keysOf(): string[] {
   return [
     ...CHROME_KEYS,
-    ...SETTING_SECTIONS.flatMap(section => [section.labelKey, section.descriptionKey]),
+    ...SETTING_SECTIONS.flatMap(section => [
+      section.labelKey,
+      // A sub-section leans on its parent's description rather than inventing one.
+      ...(section.descriptionKey ? [section.descriptionKey] : []),
+    ]),
     ...SETTING_REGISTRY.flatMap(descriptor => [
       descriptor.titleKey,
       descriptor.helpKey,
       ...(descriptor.placeholderKey ? [descriptor.placeholderKey] : []),
-      ...optionsOf(descriptor).map(option => option.labelKey),
+      // An option naming itself literally has no key to look up — see `optionLabel`.
+      ...optionsOf(descriptor).flatMap(option => (option.labelKey ? [option.labelKey] : [])),
     ]),
   ]
 }
+
+/** The kinds a number stands behind, and therefore the ones zod bounds. */
+const NUMERIC: ReadonlySet<SettingKind> = new Set<SettingKind>(['number', 'slider'])
 
 describe('settings registry', () => {
   it('describes each setting once', () => {
@@ -75,11 +86,23 @@ describe('settings registry', () => {
 
   it('bounds every numeric setting, so zod never falls back to infinity', () => {
     for (const descriptor of SETTING_REGISTRY) {
-      if (descriptor.kind !== 'number') continue
+      if (!NUMERIC.has(descriptor.kind)) continue
 
       const bounds = boundsOf(descriptor.path)
       expect(Number.isFinite(bounds.min), `${descriptor.path} has no minimum`).toBe(true)
       expect(Number.isFinite(bounds.max), `${descriptor.path} has no maximum`).toBe(true)
+    }
+  })
+
+  // Neither would leave the control showing a raw value — `system`, or a path fragment.
+  it('gives every option a label, one way or the other', () => {
+    for (const descriptor of SETTING_REGISTRY) {
+      for (const option of optionsOf(descriptor)) {
+        expect(
+          option.label ?? option.labelKey,
+          `${descriptor.path} offers ${String(option.value)} with no label`,
+        ).toBeTruthy()
+      }
     }
   })
 
@@ -95,7 +118,7 @@ describe('settings registry', () => {
 
   it('keeps a numeric default within the bounds it declares', () => {
     for (const descriptor of SETTING_REGISTRY) {
-      if (descriptor.kind !== 'number') continue
+      if (!NUMERIC.has(descriptor.kind)) continue
 
       const value = defaultAt(descriptor.path)
       const bounds = boundsOf(descriptor.path)
@@ -103,11 +126,14 @@ describe('settings registry', () => {
     }
   })
 
-  it('groups settings by the screen that shows them', () => {
-    expect(descriptorsIn('appearance').map(descriptor => descriptor.path)).toEqual([
-      'appearance.theme',
-      'appearance.density',
-    ])
+  it('groups settings by the screen that shows them, in registry order', () => {
+    const shown = descriptorsIn('appearance')
+
+    expect(shown).toEqual(SETTING_REGISTRY.filter(entry => entry.section === 'appearance'))
+    // Put together, the sections account for the whole registry: none of them renders nowhere.
+    expect(SETTING_SECTIONS.flatMap(section => [...descriptorsIn(section.id)])).toHaveLength(
+      SETTING_REGISTRY.length,
+    )
   })
 
   // A descriptor pointing at a section that does not exist would render nowhere at all.
@@ -117,6 +143,26 @@ describe('settings registry', () => {
     for (const descriptor of SETTING_REGISTRY) {
       expect(known, `${descriptor.path}`).toContain(descriptor.section)
     }
+  })
+
+  it('nests a sub-section under a parent that exists, and never under itself', () => {
+    const ids = new Set(SETTING_SECTIONS.map(section => section.id))
+
+    for (const section of SETTING_SECTIONS) {
+      if (!section.parent) continue
+      expect(ids, `${section.id} hangs off nothing`).toContain(section.parent)
+      expect(section.parent, `${section.id} is its own parent`).not.toBe(section.id)
+    }
+  })
+
+  // The navigation renders roots and their children; a section in neither would exist in the
+  // union, be openable by `settings.open`, and appear in no list.
+  it('accounts for every section as a root or as a child of one', () => {
+    const rendered = [...rootSections(), ...rootSections().flatMap(root => childSections(root.id))]
+
+    expect(rendered.map(section => section.id).sort()).toEqual(
+      SETTING_SECTIONS.map(section => section.id).sort(),
+    )
   })
 
   it('names each section once, and finds it back', () => {
@@ -131,38 +177,25 @@ describe('settings registry', () => {
     expect(descriptorAt('storage.lastProject')).toBeNull()
   })
 
+  // A slider without a step lands on the browser's default of 1, which for a 0.85 to 1.4 range
+  // means three reachable values.
+  it('gives every slider a step, which is the reason it is a slider at all', () => {
+    for (const descriptor of SETTING_REGISTRY) {
+      if (descriptor.kind !== 'slider') continue
+      expect(descriptor.step, `${descriptor.path} has no step`).toBeGreaterThan(0)
+    }
+  })
+
+  // Without one the control has to guess which native picker to open, and guessing wrong sends
+  // someone hunting for a folder when they were asked for a binary.
+  it('says what every path setting points at', () => {
+    for (const descriptor of SETTING_REGISTRY) {
+      if (descriptor.kind !== 'path') continue
+      expect(PATH_KINDS, `${descriptor.path}`).toContain(descriptor.pathKind)
+    }
+  })
+
   it('leaves bounds open for a setting that declares none', () => {
     expect(boundsOf('media.ffmpegPath').max).toBe(Number.POSITIVE_INFINITY)
-  })
-})
-
-describe('settings search', () => {
-  const translate = (key: string): string => String(resolve(TRANSLATIONS.fr, key) ?? key)
-
-  it('finds a setting by its title', () => {
-    expect(matchSettings('densité', translate).map(entry => entry.path)).toEqual([
-      'appearance.density',
-    ])
-  })
-
-  // A search box demanding a circumflex is a search box nobody uses.
-  it('ignores accents and case', () => {
-    expect(matchSettings('DENSITE', translate).map(entry => entry.path)).toEqual([
-      'appearance.density',
-    ])
-  })
-
-  it('searches the description too, where the words a user knows actually are', () => {
-    expect(matchSettings('réseau', translate).map(entry => entry.path)).toEqual([
-      'generation.maxRetries',
-    ])
-  })
-
-  it('answers nothing to an empty query rather than everything', () => {
-    expect(matchSettings('   ', translate)).toEqual([])
-  })
-
-  it('answers nothing when no setting matches', () => {
-    expect(matchSettings('kerning', translate)).toEqual([])
   })
 })

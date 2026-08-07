@@ -32,7 +32,12 @@ function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}
     } as unknown as ProjectHandlerDeps['project'],
     assets: {} as ProjectHandlerDeps['assets'],
     newAssetId: () => 'asset-new',
-    pickFolder: async () => null,
+    // Untouched by the channels under test, which read the catalogue and show a file.
+    documents: {
+      read: vi.fn(async () => null),
+      write: vi.fn(async () => undefined),
+      remove: vi.fn(async () => undefined),
+    },
     reveal: vi.fn(),
     ...overrides,
   }

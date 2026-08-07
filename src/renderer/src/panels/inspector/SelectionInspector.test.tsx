@@ -9,6 +9,7 @@ import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { useModels } from '@/stores/models'
+import { installSequence } from '@/stores/sequence-fixtures'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { useTools } from '@/stores/tools'
@@ -35,18 +36,7 @@ const job: Job = {
 }
 
 function openSequence(): void {
-  useDocuments.setState({
-    documents: {
-      'doc-1': { id: 'doc-1', kind: 'sequence', title: 'Montage', workspace: 'video' },
-    },
-    activeId: 'doc-1',
-  })
-  useSequences.setState({
-    states: {
-      'doc-1': sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')]),
-    },
-    histories: {},
-  })
+  installSequence('doc-1', sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')]))
 }
 
 describe('Inspector, on what a panel selected', () => {

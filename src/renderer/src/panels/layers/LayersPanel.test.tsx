@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { addLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
 import { installCanvas } from '@/stores/canvas-fixtures'
+import { installDocument } from '@/stores/document-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 import { LayersPanel } from './LayersPanel'
@@ -24,9 +25,7 @@ describe('LayersPanel', () => {
 
   // A scene handed to `useCanvases` would grow a stack of its own, drawn from the default state.
   it('shows no stack for a document that is not an image', () => {
-    useDocuments.setState({
-      documents: { 'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'doc-1' } },
-    })
+    installDocument('doc-1', '3d')
     render(<LayersPanel />)
 
     expect(screen.getByText('Ouvrez une image pour voir ses calques.')).toBeInTheDocument()

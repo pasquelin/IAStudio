@@ -1,7 +1,7 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { activeIdOfKind, useDocuments } from '@/stores/documents'
+import { activeSceneId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { SceneTree } from './SceneTree'
 
@@ -12,7 +12,7 @@ import { SceneTree } from './SceneTree'
 export function Explorer() {
   const { t } = useTranslation()
   const workspace = useLayouts(state => state.activeWorkspace)
-  const documentId = useDocuments(state => activeIdOfKind(state, 'scene'))
+  const documentId = useDocuments(activeSceneId)
 
   if (workspace !== '3d')
     return <EmptyState icon={mdiFolderOpenOutline} message={t('project.none')} />

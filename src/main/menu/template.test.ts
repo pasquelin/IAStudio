@@ -12,13 +12,14 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   ...overrides,
 })
 
-const options = (overrides: Partial<MenuOptions> = {}): MenuOptions => ({
+const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   language: 'fr',
   workspace: '3d',
   isMac: true,
-  isPackaged: false,
+  isDevelopment: true,
+  overrides: {},
   actions: actions(),
-  ...overrides,
+  ...given,
 })
 
 function submenuOf(
@@ -56,7 +57,7 @@ describe('menuTemplate', () => {
   })
 
   it('drops the developer items once packaged', () => {
-    const roles = rolesUnder(menuTemplate(options({ isPackaged: true })), 'Affichage')
+    const roles = rolesUnder(menuTemplate(options({ isDevelopment: false })), 'Affichage')
     expect(roles).not.toContain('toggleDevTools')
     expect(roles).not.toContain('reload')
   })
@@ -127,5 +128,50 @@ describe('menuTemplate', () => {
     expect(tools.map(item => item.label)).toContain('Mailles')
     expect(tools.map(item => item.label)).toContain('Lumières')
     expect(tools.map(item => item.label)).toContain('Timeline')
+  })
+})
+
+describe('the accelerators the menu advertises', () => {
+  const fileItems = (given: Partial<MenuOptions> = {}) =>
+    submenuOf(menuTemplate(options(given)), 'Fichier')
+
+  it('reads them off the command registry rather than spelling them out', () => {
+    const item = fileItems().find(entry => entry.label === 'Nouveau projet…')
+
+    expect(item?.accelerator).toBe('CmdOrCtrl+N')
+  })
+
+  // The bug this replaces: the menu wrote its own accelerators, so it kept advertising a key
+  // the command no longer answered to — and the remap reached the window but never the menu.
+  it('follows a remap', () => {
+    const item = fileItems({ overrides: { 'project.new': 'Shift+Meta+KeyN' } }).find(
+      entry => entry.label === 'Nouveau projet…',
+    )
+
+    expect(item?.accelerator).toBe('Shift+CmdOrCtrl+N')
+  })
+
+  it('leaves a command bound to nothing without one, rather than an empty string', () => {
+    const view = submenuOf(menuTemplate(options()), 'Affichage')
+    const item = view.find(entry => entry.label === 'Réinitialiser la disposition')
+
+    expect(item?.accelerator).toBeUndefined()
+  })
+
+  it('fires the command the registry names, not a verb of its own', () => {
+    const fired: string[] = []
+    const item = submenuOf(
+      menuTemplate(
+        options({ actions: actions({ runCommand: command => void fired.push(command) }) }),
+      ),
+      'Fichier',
+    ).find(entry => entry.label === 'Nouveau projet…')
+
+    item?.click?.(
+      // The three arguments Electron hands a click handler, none of which this one reads.
+      ...([{}, undefined, {}] as Parameters<NonNullable<MenuItemConstructorOptions['click']>>),
+    )
+
+    expect(fired).toEqual(['project.new'])
   })
 })

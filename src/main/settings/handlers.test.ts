@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS, type AuthState, type SettingsSectionId } from '@shared/domain/settings'
+import type { SettingActionId } from '@shared/domain/settings-registry'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerSettingsHandlers } from './handlers'
@@ -13,6 +14,8 @@ describe('settings handlers', () => {
   let onCredentialsChanged: () => void
   let authState: () => Promise<AuthState>
   let openSettings: (section: SettingsSectionId) => void
+  let runAction: (id: SettingActionId) => void
+  let setPending: (pending: boolean) => void
 
   beforeEach(() => {
     resetHandlers()
@@ -20,7 +23,16 @@ describe('settings handlers', () => {
     onCredentialsChanged = vi.fn()
     authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
     openSettings = vi.fn()
-    registerSettingsHandlers({ settings, onCredentialsChanged, authState, openSettings })
+    runAction = vi.fn()
+    setPending = vi.fn()
+    registerSettingsHandlers({
+      settings,
+      onCredentialsChanged,
+      authState,
+      openSettings,
+      runAction,
+      setPending,
+    })
   })
 
   it('answers a read with the current settings', () => {
@@ -78,7 +90,14 @@ describe('settings handlers', () => {
   it('answers nothing, whatever the opener hands back', () => {
     openSettings = vi.fn(() => ({ unclonable: () => {} }))
     resetHandlers()
-    registerSettingsHandlers({ settings, onCredentialsChanged, authState, openSettings })
+    registerSettingsHandlers({
+      settings,
+      onCredentialsChanged,
+      authState,
+      openSettings,
+      runAction,
+      setPending,
+    })
 
     expect(invoke(CHANNELS.settingsOpen, 'account')).toBeUndefined()
   })
@@ -95,5 +114,22 @@ describe('settings handlers', () => {
 
     expect(settings.hasCredentials()).toBe(false)
     expect(onCredentialsChanged).toHaveBeenCalledOnce()
+  })
+
+  describe('the pending flag', () => {
+    // Closing a window is the main process's decision, and nothing else tells it that the
+    // settings window is holding work nobody applied.
+    it('passes on what the window says it is holding', () => {
+      invoke(CHANNELS.settingsPending, true)
+      expect(setPending).toHaveBeenCalledWith(true)
+
+      invoke(CHANNELS.settingsPending, false)
+      expect(setPending).toHaveBeenCalledWith(false)
+    })
+
+    it('reads anything but true as nothing pending, rather than trusting the sender', () => {
+      invoke(CHANNELS.settingsPending, 'yes')
+      expect(setPending).toHaveBeenCalledWith(false)
+    })
   })
 })

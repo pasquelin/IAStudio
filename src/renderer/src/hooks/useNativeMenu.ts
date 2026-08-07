@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import type { MenuCommand } from '@shared/ipc'
-import { toolServes } from '@/helpers/tool-registry'
+import type { CommandId } from '@shared/domain/command'
+import { toolZoneIn } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
@@ -8,15 +8,16 @@ import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
 
-function runCommand(command: MenuCommand): void {
+/** The global commands, which are the ones the native menu fires. The rest belong to a surface. */
+function runCommand(command: CommandId): void {
   switch (command) {
-    case 'layout:reset':
+    case 'layout.reset':
       useTools.getState().reset()
       return
-    case 'project:new':
+    case 'project.new':
       void useProject.getState().createPicked()
       return
-    case 'project:open':
+    case 'project.open':
       void useProject.getState().openPicked()
       return
   }
@@ -37,10 +38,13 @@ export function useNativeMenu(): void {
     // menu would sit on the default until the user switched spaces by hand.
     void bridge.window.setWorkspace(useLayouts.getState().activeWorkspace)
 
-    const stopTool = bridge.menu.onOpenTool(({ zone, tool }) => {
-      // A tool the active workspace does not serve is filtered out of the zone, so opening it
-      // would accent a rail icon that is not drawn and show nothing.
-      if (!toolServes(tool, useLayouts.getState().activeWorkspace)) return
+    const stopTool = bridge.menu.onOpenTool(({ tool }) => {
+      // The zone is resolved here rather than taken from the menu: a tool can sit in different
+      // zones depending on the workspace, and the menu is built once for the whole app. `null`
+      // means this workspace does not serve it — opening it would accent a rail icon that is
+      // not drawn and show nothing.
+      const zone = toolZoneIn(tool, useLayouts.getState().activeWorkspace)
+      if (!zone) return
 
       useTools.getState().show(zone, tool)
     })

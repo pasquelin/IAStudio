@@ -1,5 +1,5 @@
 import { app, BrowserWindow } from 'electron'
-import { SPLASH_BACKGROUND_COLOR } from '@shared/constants'
+import { splashColor } from './theme'
 import { createSplashController, type Splash } from './splash'
 import { WEB_PREFERENCES, load } from './windows'
 
@@ -27,7 +27,7 @@ export function openSplashWindow(): Splash {
     focusable: false,
     center: true,
     skipTaskbar: true,
-    backgroundColor: SPLASH_BACKGROUND_COLOR,
+    backgroundColor: splashColor(),
     // Spread rather than retyped: `WEB_PREFERENCES` carries the guarantee that no window
     // reaches the bridge with weaker settings. The splash needs no bridge at all.
     webPreferences: { ...WEB_PREFERENCES, preload: undefined, devTools: false },

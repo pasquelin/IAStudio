@@ -21,7 +21,8 @@
     "generator": "Génération",
     "inspector": "Inspecteur",
     "assets": "Assets",
-    "jobs": "Tâches"
+    "jobs": "Tâches",
+    "skybox": "Skybox"
   },
   "actions": {
     "undo": "Annuler",
@@ -75,11 +76,11 @@
     "done": "Prêt",
     "cancelled": "Interrompu",
     "failed": "Échec",
-    "duplicate": "Déjà dans le projet",
-    "unreadable": "Fichier illisible",
     "cancel": "Interrompre la préparation",
     "dismiss": "Retirer de la liste",
-    "noFfmpeg": "ffmpeg introuvable : ni proxy ni waveform. Indiquez son chemin dans les réglages."
+    "noFfmpeg": "ffmpeg introuvable : ni proxy ni waveform. Indiquez son chemin dans les réglages.",
+    "duplicate": "Déjà dans le projet",
+    "unreadable": "Fichier illisible"
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",
@@ -283,95 +284,95 @@
     "visible": "Afficher ou masquer",
     "noDocument": "Ouvrez une scène pour voir son contenu."
   },
-    "inspector": {
-      "noDocument": "Ouvrez une scène pour inspecter ce qu’elle contient.",
-      "noSelection": "Sélectionnez un objet pour voir ses propriétés.",
-      "transform": "Transformation",
-      "geometry": "Géométrie",
-      "material": "Matériau",
-      "light": "Lumière",
-      "name": "Nom",
-      "position": "Position",
-      "rotation": "Rotation",
-      "scale": "Échelle",
-      "noTexture": "Aucune",
-      "chooseTexture": "Choisir une texture",
-      "clearTexture": "Retirer la texture",
-      "fields": {
-        "width": "Largeur",
-        "height": "Hauteur",
-        "depth": "Profondeur",
-        "radius": "Rayon",
-        "radiusTop": "Rayon supérieur",
-        "radiusBottom": "Rayon inférieur",
-        "innerRadius": "Rayon intérieur",
-        "outerRadius": "Rayon extérieur",
-        "tube": "Tube",
-        "segments": "Segments",
-        "capSegments": "Segments de calotte",
-        "radialSegments": "Segments radiaux",
-        "tubularSegments": "Segments tubulaires",
-        "widthSegments": "Segments en largeur",
-        "heightSegments": "Segments en hauteur",
-        "p": "Enroulements P",
-        "q": "Enroulements Q",
-        "color": "Couleur",
-        "skyColor": "Couleur du ciel",
-        "groundColor": "Couleur du sol",
-        "intensity": "Intensité",
-        "distance": "Portée",
-        "decay": "Atténuation",
-        "angle": "Angle",
-        "penumbra": "Pénombre",
-        "target": "Cible",
-        "roughness": "Rugosité",
-        "metalness": "Métallicité",
-        "map": "Texture",
-        "normalMap": "Normales",
-        "roughnessMap": "Carte de rugosité",
-        "metalnessMap": "Carte de métallicité",
-        "aoMap": "Occlusion ambiante"
-      },
-      "empty": "Sélectionnez un élément pour voir ses propriétés.",
-      "identity": "Identité",
-      "selection": "Sélection",
-      "count": "Éléments",
-      "type": "Type",
-      "kind": "Nature",
-      "kind_video": "Image",
-      "kind_audio": "Son",
-      "duration": "Durée",
-      "dimensions": "Dimensions",
-      "size": "Taille",
-      "created": "Créé le",
-      "generation": "Génération",
-      "model": "Modèle",
-      "prompt": "Prompt",
-      "seed": "Graine",
-      "regenerate": "Régénérer",
-      "regenerateHint": "Ouvrir le générateur avec ces paramètres",
-      "file": "Fichier",
-      "onDisk": "Emplacement",
-      "reveal": "Révéler dans le gestionnaire de fichiers",
-      "fileMissing": "Fichier introuvable",
-      "clip": "Clip",
-      "source": "Source",
-      "track": "Piste",
-      "clips": "Clips",
-      "start": "Début",
-      "end": "Fin",
-      "inPoint": "Point d’entrée",
-      "shaping": "Mise en forme",
-      "fadeIn": "Fondu d’entrée",
-      "fadeOut": "Fondu de sortie",
-      "speed": "Vitesse",
-      "gain": "Gain",
-      "state": "État",
-      "muted": "Muette",
-      "solo": "Solo",
-      "locked": "Verrouillée",
-      "height": "Hauteur"
+  "inspector": {
+    "noDocument": "Ouvrez une scène pour inspecter ce qu’elle contient.",
+    "noSelection": "Sélectionnez un objet pour voir ses propriétés.",
+    "transform": "Transformation",
+    "geometry": "Géométrie",
+    "material": "Matériau",
+    "light": "Lumière",
+    "name": "Nom",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Échelle",
+    "noTexture": "Aucune",
+    "chooseTexture": "Choisir une texture",
+    "clearTexture": "Retirer la texture",
+    "fields": {
+      "width": "Largeur",
+      "height": "Hauteur",
+      "depth": "Profondeur",
+      "radius": "Rayon",
+      "radiusTop": "Rayon supérieur",
+      "radiusBottom": "Rayon inférieur",
+      "innerRadius": "Rayon intérieur",
+      "outerRadius": "Rayon extérieur",
+      "tube": "Tube",
+      "segments": "Segments",
+      "capSegments": "Segments de calotte",
+      "radialSegments": "Segments radiaux",
+      "tubularSegments": "Segments tubulaires",
+      "widthSegments": "Segments en largeur",
+      "heightSegments": "Segments en hauteur",
+      "p": "Enroulements P",
+      "q": "Enroulements Q",
+      "color": "Couleur",
+      "skyColor": "Couleur du ciel",
+      "groundColor": "Couleur du sol",
+      "intensity": "Intensité",
+      "distance": "Portée",
+      "decay": "Atténuation",
+      "angle": "Angle",
+      "penumbra": "Pénombre",
+      "target": "Cible",
+      "roughness": "Rugosité",
+      "metalness": "Métallicité",
+      "map": "Texture",
+      "normalMap": "Normales",
+      "roughnessMap": "Carte de rugosité",
+      "metalnessMap": "Carte de métallicité",
+      "aoMap": "Occlusion ambiante"
     },
+    "empty": "Sélectionnez un élément pour voir ses propriétés.",
+    "identity": "Identité",
+    "selection": "Sélection",
+    "count": "Éléments",
+    "type": "Type",
+    "kind": "Nature",
+    "kind_video": "Image",
+    "kind_audio": "Son",
+    "duration": "Durée",
+    "dimensions": "Dimensions",
+    "size": "Taille",
+    "created": "Créé le",
+    "generation": "Génération",
+    "model": "Modèle",
+    "prompt": "Prompt",
+    "seed": "Graine",
+    "regenerate": "Régénérer",
+    "regenerateHint": "Ouvrir le générateur avec ces paramètres",
+    "file": "Fichier",
+    "clip": "Clip",
+    "source": "Source",
+    "track": "Piste",
+    "clips": "Clips",
+    "start": "Début",
+    "end": "Fin",
+    "inPoint": "Point d’entrée",
+    "shaping": "Mise en forme",
+    "fadeIn": "Fondu d’entrée",
+    "fadeOut": "Fondu de sortie",
+    "speed": "Vitesse",
+    "gain": "Gain",
+    "state": "État",
+    "muted": "Muette",
+    "solo": "Solo",
+    "locked": "Verrouillée",
+    "height": "Hauteur",
+    "onDisk": "Emplacement",
+    "reveal": "Révéler dans le gestionnaire de fichiers",
+    "fileMissing": "Fichier introuvable"
+  },
   "transport": {
     "play": "Lire",
     "pause": "Pause",
@@ -501,9 +502,10 @@
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
     "theme": {
       "title": "Thème",
-      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour.",
+      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
       "dark": "Sombre",
-      "light": "Clair"
+      "light": "Clair",
+      "system": "Système"
     },
     "density": {
       "title": "Densité",
@@ -528,6 +530,227 @@
     "noDefaultModel": "Demander à chaque fois",
     "familyUpscale": "Agrandissement",
     "ffmpegFound": "ffmpeg est disponible : proxies et waveforms seront préparés.",
-    "ffmpegMissing": "ffmpeg reste introuvable. L’import fonctionne, sans proxy ni waveform."
+    "ffmpegMissing": "ffmpeg reste introuvable. L’import fonctionne, sans proxy ni waveform.",
+    "browse": "Parcourir…",
+    "accent": {
+      "title": "Couleur d’accent",
+      "help": "La couleur qui signale ce qui est sélectionné ou en cours : le contour d’un panneau actif, la tête de lecture de la timeline, le cadre d’une sélection. Elle ne change rien à ce que vous fabriquez, seulement à la façon dont l’application vous montre où vous en êtes. Laissez-la telle quelle pour garder celle du thème."
+    },
+    "fontScale": {
+      "title": "Taille du texte",
+      "help": "Agrandit ou réduit tous les textes de l’application d’un seul coup. 1 est la taille d’origine ; au-dessus, les mots deviennent plus gros et il en tient moins à l’écran ; en dessous, c’est l’inverse. Les boutons, eux, gardent leur taille : c’est la densité qui s’en occupe."
+    },
+    "reduceMotion": {
+      "title": "Limiter les animations",
+      "help": "Coupe les petits mouvements de l’interface : les panneaux apparaissent d’un coup au lieu de glisser. Utile si les animations vous fatiguent ou vous donnent mal au cœur, et sur une machine un peu lente où elles saccadent."
+    },
+    "general": "Général",
+    "generalDescription": "Langue de l’application et ce qu’elle fait en s’ouvrant.",
+    "language": {
+      "title": "Langue",
+      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement est immédiat, il n’y a rien à relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
+      "system": "Système"
+    },
+    "startup": {
+      "title": "À l’ouverture",
+      "help": "Ce que l’application fait quand vous la lancez. « Rouvrir le dernier projet » vous remet là où vous vous étiez arrêté. « Ne rien ouvrir » démarre sur une fenêtre vide, ce qui est plus rapide et plus reposant si vous jonglez entre beaucoup de projets.",
+      "lastProject": "Rouvrir le dernier projet",
+      "nothing": "Ne rien ouvrir"
+    },
+    "modified": "Modifié, pas encore appliqué",
+    "apply": "Appliquer",
+    "cancel": "Annuler",
+    "confirm": "OK",
+    "discardTitle": "Des réglages n’ont pas été appliqués",
+    "discardBody": "Vous avez changé des réglages sans les appliquer. Que voulez-vous faire ?",
+    "discard": "Ne pas appliquer",
+    "shortcuts": "Raccourcis",
+    "shortcutsDescription": "Les touches qui déclenchent chaque action. Cliquez sur une touche pour la remplacer.",
+    "pressAKey": "Appuyez…",
+    "unbound": "Aucune",
+    "shortcutConflict": "Deux actions se disputent cette touche : une seule répondra.",
+    "findByChord": "Chercher par touche",
+    "showAll": "Tout afficher",
+    "chordFree": "Aucune action n’utilise cette touche : elle est libre.",
+    "scope": {
+      "global": "Partout dans l’application",
+      "scene": "Dans la vue 3D",
+      "sequence": "Dans le montage"
+    },
+    "spaces": "Espaces de travail",
+    "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
+    "requires": "Sans effet tant que « {{setting}} » est désactivé.",
+    "showGrid": {
+      "title": "Afficher la grille",
+      "help": "Le quadrillage posé au sol de la vue 3D. Il ne fait pas partie de ce que vous fabriquez : c’est un repère pour savoir où sont les choses et à quelle hauteur. On le cache pour juger une image sans rien autour."
+    },
+    "gridSize": {
+      "title": "Taille de la grille",
+      "help": "Jusqu’où le quadrillage s’étend, en mètres, et donc combien de carreaux il compte — un carreau vaut toujours un mètre. Agrandissez-le pour une scène vaste, réduisez-le pour un petit objet posé près de la caméra."
+    },
+    "flySpeed": {
+      "title": "Vitesse de déplacement",
+      "help": "À quelle vitesse la caméra avance quand vous volez dans la vue 3D, en mètres par seconde. Trop lent, on met dix secondes à traverser la scène ; trop rapide, on la dépasse sans la voir."
+    },
+    "boostFactor": {
+      "title": "Accélération",
+      "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
+    },
+    "fieldOfView": {
+      "title": "Angle de vue",
+      "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
+    },
+    "advanced": "Avancé",
+    "advancedDescription": "Ce dont on n’a besoin que pour comprendre un problème, ou pour repartir de zéro.",
+    "reveal": "Montrer",
+    "open": "Ouvrir",
+    "logLevel": {
+      "title": "Détail du journal",
+      "help": "Combien l’application raconte ce qu’elle fait, dans la console. « Rien » ne dit plus rien du tout ; « Erreurs » ne signale que ce qui a échoué ; « Tout » raconte chaque étape, ce qui est utile pour comprendre un problème et bavard le reste du temps.",
+      "silent": "Rien",
+      "error": "Erreurs seulement",
+      "warn": "Erreurs et avertissements",
+      "info": "Tout"
+    },
+    "openSettingsFile": {
+      "title": "Fichier de réglages",
+      "help": "Montre dans le gestionnaire de fichiers l’endroit où vos réglages sont enregistrés. Utile pour en faire une copie avant de changer de machine, ou pour l’envoyer à quelqu’un qui vous aide."
+    },
+    "openDevtools": {
+      "title": "Outils de développement",
+      "help": "Ouvre la console technique du navigateur intégré. Elle affiche les messages du journal et les erreurs. Réservé au dépannage : rien de ce qui s’y trouve n’est nécessaire pour se servir du logiciel."
+    },
+    "resetAll": {
+      "title": "Tout réinitialiser",
+      "help": "Remet TOUS les réglages dans l’état d’une installation neuve : thème, langue, raccourcis, tout. Vos projets, vos images et vos montages ne sont pas touchés — seuls les réglages le sont. C’est sans retour.",
+      "button": "Réinitialiser",
+      "confirm": "Remettre tous les réglages à zéro ? Vos projets ne sont pas touchés, mais ce retour en arrière est définitif."
+    },
+    "storage": "Stockage",
+    "storageDescription": "Où vos projets sont rangés sur le disque.",
+    "projectsFolder": {
+      "title": "Dossier des projets",
+      "help": "Le dossier que l’application vous propose quand vous créez ou ouvrez un projet. Cela ne déplace rien : les projets déjà créés restent où ils sont. Laissez vide pour repartir à chaque fois du dernier endroit visité."
+    }
+  },
+  "skybox": {
+    "sun": "Soleil",
+    "elevation": "Élévation",
+    "azimuth": "Azimut",
+    "intensity": "Intensité",
+    "color": "Couleur",
+    "adjustments": "Ajustements",
+    "exposure": "Exposition",
+    "contrast": "Contraste",
+    "saturation": "Saturation",
+    "temperature": "Température",
+    "tint": "Teinte",
+    "rotation": "Rotation de l’horizon",
+    "blur": "Flou",
+    "environment": "Environnement",
+    "envIntensity": "Intensité IBL",
+    "showBackground": "Afficher le fond",
+    "showGround": "Sol de référence",
+    "generation": "Génération",
+    "prompt": "Prompt",
+    "seed": "Graine",
+    "model": "Modèle",
+    "regenerate": "Régénérer",
+    "reset": "Réinitialiser",
+    "empty": "Ouvrez une skybox pour la régler.",
+    "noSource": "Aucune skybox. Générez-en une ou déposez un panorama équirectangulaire.",
+    "views": "Vue",
+    "viewImmersive": "360°",
+    "viewEquirect": "Équirect",
+    "viewCross": "Croix",
+    "viewFaces": "6 faces",
+    "testObjects": "Objets de test",
+    "fieldOfView": "Champ de vision"
+  },
+  "commands": {
+    "projectNew": {
+      "title": "Nouveau projet",
+      "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."
+    },
+    "projectOpen": {
+      "title": "Ouvrir un projet",
+      "help": "Choisit un projet déjà existant sur votre disque et l’ouvre à la place de celui en cours. Le projet ouvert est enregistré au fur et à mesure, il n’y a rien à sauvegarder avant."
+    },
+    "layoutReset": {
+      "title": "Réinitialiser la disposition",
+      "help": "Remet les panneaux là où ils étaient au départ. Utile quand on a déplacé les fenêtres dans tous les sens et qu’on ne s’y retrouve plus. Votre travail n’est pas touché."
+    },
+    "appSettings": {
+      "title": "Réglages",
+      "help": "Ouvre la fenêtre des réglages, celle-ci même : la langue, les couleurs, le compte, les raccourcis et tout ce qui se règle."
+    },
+    "windowFullScreen": {
+      "title": "Plein écran",
+      "help": "Fait occuper tout l’écran à la fenêtre, sans barre ni bordure, pour travailler sans rien autour."
+    },
+    "sceneSelect": {
+      "title": "Sélectionner",
+      "help": "L’outil de base : cliquer sur un objet de la scène pour le choisir, sans rien lui faire. C’est celui sur lequel on revient entre deux manipulations."
+    },
+    "sceneTranslate": {
+      "title": "Déplacer",
+      "help": "Fait glisser l’objet choisi d’un endroit à un autre, en tirant sur les flèches de couleur — une par direction."
+    },
+    "sceneRotate": {
+      "title": "Pivoter",
+      "help": "Fait tourner l’objet choisi sur lui-même, en tirant sur les cercles de couleur — un par axe."
+    },
+    "sceneScale": {
+      "title": "Redimensionner",
+      "help": "Agrandit ou rétrécit l’objet choisi, en tirant sur les poignées. Maintenir la touche Maj garde ses proportions."
+    },
+    "sceneFrame": {
+      "title": "Cadrer la sélection",
+      "help": "Rapproche la caméra de l’objet choisi pour qu’il remplisse la vue. Pratique quand on s’est perdu ou qu’un objet est minuscule."
+    },
+    "sceneDelete": {
+      "title": "Supprimer",
+      "help": "Retire de la scène l’objet choisi. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
+    },
+    "undo": {
+      "title": "Annuler",
+      "help": "Défait la dernière chose que vous avez faite dans ce document. Chaque document a sa propre pile : annuler agit sur l’onglet en cours, pas sur les autres."
+    },
+    "redo": {
+      "title": "Rétablir",
+      "help": "Refait ce que vous venez d’annuler. Utile quand on annule une fois de trop."
+    },
+    "sequencePlayPause": {
+      "title": "Lire / Pause",
+      "help": "Lance la lecture du montage, ou l’arrête là où elle en est. Relancer repart d’où l’on s’était arrêté."
+    },
+    "sequenceSplit": {
+      "title": "Couper le clip",
+      "help": "Coupe le clip en deux à l’endroit où se trouve la tête de lecture, pour pouvoir traiter les deux morceaux séparément."
+    },
+    "sequenceDelete": {
+      "title": "Supprimer le clip",
+      "help": "Retire du montage le clip choisi. Le fichier d’origine, lui, reste dans vos assets."
+    },
+    "sequenceZoomIn": {
+      "title": "Zoomer",
+      "help": "Étale le montage pour voir le détail : les clips deviennent plus larges et on vise plus précisément."
+    },
+    "sequenceZoomOut": {
+      "title": "Dézoomer",
+      "help": "Resserre le montage pour en voir davantage d’un coup, quitte à perdre le détail."
+    },
+    "sequenceFit": {
+      "title": "Tout afficher",
+      "help": "Ajuste le zoom pour que le montage entier tienne à l’écran, d’un bout à l’autre."
+    },
+    "sequenceStart": {
+      "title": "Aller au début",
+      "help": "Ramène la tête de lecture tout au début du montage, sans rien déplacer d’autre."
+    },
+    "sequenceEnd": {
+      "title": "Aller à la fin",
+      "help": "Envoie la tête de lecture tout à la fin du montage, après le dernier clip."
+    }
   }
 }

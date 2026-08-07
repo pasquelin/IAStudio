@@ -7,11 +7,14 @@ import { PanelHeader } from '@/design/PanelHeader'
 import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
 import { TOOL_COMPONENTS } from './tool-components'
-import type { ToolId } from '@shared/domain/tool'
+import type { ToolId, ToolZone } from '@shared/domain/tool'
 import { toolTitleKey } from '@/helpers/tool-registry'
+import { ToolZoneProvider } from './tool-zone'
 
 export type ToolWindowProps = {
   tool: ToolId
+  /** The zone this window sits in, handed down to the panel so it can lay itself out for it. */
+  zone: ToolZone
   /** Length of its own along the zone's inner axis. Absent takes whatever the other half left. */
   length?: number
   onFocus: () => void
@@ -32,6 +35,7 @@ export type ToolWindowProps = {
  */
 export const ToolWindow = memo(function ToolWindow({
   tool,
+  zone,
   length,
   onFocus,
   onClose,
@@ -74,7 +78,11 @@ export const ToolWindow = memo(function ToolWindow({
         {Actions !== undefined && <Actions />}
       </PanelHeader>
       <div className="min-h-0 flex-1 overflow-auto">
-        <Content />
+        {/* The panel is told which zone it is in: the same content lays out differently in a
+            narrow column and in a strip across the window. */}
+        <ToolZoneProvider zone={zone}>
+          <Content />
+        </ToolZoneProvider>
       </div>
     </Panel>
   )

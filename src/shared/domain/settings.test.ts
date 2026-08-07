@@ -13,7 +13,7 @@ describe('settings sections', () => {
   })
 
   it('rejects anything else', () => {
-    expect(isSettingsSection('storage')).toBe(false)
+    expect(isSettingsSection('nowhere')).toBe(false)
     expect(isSettingsSection(undefined)).toBe(false)
   })
 })

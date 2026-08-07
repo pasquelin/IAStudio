@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { CommandId } from '@shared/domain/command'
 import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
@@ -9,7 +10,6 @@ import {
   CHANNELS,
   EVENTS,
   type LogEntry,
-  type MenuCommand,
   type SceneAddRequest,
   type StudioBridge,
   type ToolRequest,
@@ -33,6 +33,8 @@ const bridge: StudioBridge = {
     authState: () => ipcRenderer.invoke(CHANNELS.settingsAuthState),
     forgetCredentials: () => ipcRenderer.invoke(CHANNELS.settingsForgetCredentials),
     open: section => ipcRenderer.invoke(CHANNELS.settingsOpen, section),
+    runAction: id => ipcRenderer.invoke(CHANNELS.settingsRunAction, id),
+    setPending: pending => ipcRenderer.invoke(CHANNELS.settingsPending, pending),
     onChange: callback => subscribe<Settings>(EVENTS.settingsChanged, callback),
     onSection: callback => subscribe<SettingsSectionId>(EVENTS.settingsSection, callback),
   },
@@ -49,8 +51,15 @@ const bridge: StudioBridge = {
     create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),
     open: path => ipcRenderer.invoke(CHANNELS.projectOpen, path),
     current: () => ipcRenderer.invoke(CHANNELS.projectCurrent),
-    pickFolder: () => ipcRenderer.invoke(CHANNELS.projectPickFolder),
     onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),
+  },
+  dialog: {
+    pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
+  },
+  documents: {
+    read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
+    write: (id, kind, file) => ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file),
+    remove: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRemove, id, kind),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
@@ -72,7 +81,7 @@ const bridge: StudioBridge = {
   },
   menu: {
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
-    onCommand: callback => subscribe<MenuCommand>(EVENTS.menuCommand, callback),
+    onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
   },
   diagnostics: {

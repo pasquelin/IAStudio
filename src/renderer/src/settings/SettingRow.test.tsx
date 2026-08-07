@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { SettingPath, SettingValue } from '@shared/domain/settings-path'
 import { descriptorAt } from '@shared/domain/settings-registry'
 import { useSettings } from '@/stores/settings'
+import { useSettingsDraft } from '@/stores/settings-draft'
 import { SettingRow } from './SettingRow'
 
 function rowFor(path: SettingPath) {
@@ -15,20 +16,28 @@ function rowFor(path: SettingPath) {
 
 type Write = [SettingPath, SettingValue | undefined]
 
+/** The real staging, kept so a capture observes without replacing what the row actually does. */
+const stage = useSettingsDraft.getState().stage
+
 function captureWrites(): Write[] {
   const written: Write[] = []
-  useSettings.setState({
-    setValue: (path, value) => {
+  useSettingsDraft.setState({
+    stage: (path, value) => {
       written.push([path, value])
-      return Promise.resolve()
+      stage(path, value)
     },
   })
   return written
 }
 
+function resetDraft(): void {
+  useSettingsDraft.setState({ pending: {}, touched: new Set(), stage })
+}
+
 describe('SettingRow', () => {
   beforeEach(() => {
     useSettings.setState({ settings: DEFAULT_SETTINGS })
+    resetDraft()
   })
 
   // The whole point of the registry: no setting reaches a screen without being explained.
@@ -148,7 +157,10 @@ describe('SettingRow', () => {
 
   it('restores the default of a setting that was changed', async () => {
     useSettings.setState({
-      settings: { ...DEFAULT_SETTINGS, appearance: { theme: 'light', density: 'comfortable' } },
+      settings: {
+        ...DEFAULT_SETTINGS,
+        appearance: { ...DEFAULT_SETTINGS.appearance, theme: 'light' },
+      },
     })
     const written = captureWrites()
     render(rowFor('appearance.theme'))
@@ -208,5 +220,99 @@ describe('SettingRow', () => {
     expect(written).toEqual([])
     // And the spaces do not survive on screen, where nothing else would ever clear them.
     expect(field).toHaveValue('/usr/bin/ffmpeg')
+  })
+})
+
+describe('the controls a kind brings with it', () => {
+  beforeEach(() => {
+    useSettings.setState({ settings: DEFAULT_SETTINGS })
+    resetDraft()
+  })
+
+  it('writes a boolean as a boolean, not as the string a checkbox carries', () => {
+    const written = captureWrites()
+    render(rowFor('appearance.reduceMotion'))
+
+    fireEvent.click(screen.getByLabelText(/Limiter les animations/))
+
+    expect(written).toEqual([['appearance.reduceMotion', true]])
+  })
+
+  it('accepts the decimal step of a slider, which a whole-number field would refuse', () => {
+    const written = captureWrites()
+    render(rowFor('appearance.fontScale'))
+
+    fireEvent.change(screen.getByLabelText(/Taille du texte/), { target: { value: '1.15' } })
+
+    expect(written).toEqual([['appearance.fontScale', 1.15]])
+  })
+
+  it('shows the slider value, so a handle position is a number one can aim at', () => {
+    useSettings.setState({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        appearance: { ...DEFAULT_SETTINGS.appearance, fontScale: 1.2 },
+      },
+    })
+    render(rowFor('appearance.fontScale'))
+
+    expect(screen.getByText('1.20')).toBeInTheDocument()
+  })
+
+  it('clamps to the declared maximum rather than sending a value zod would refuse', () => {
+    const written = captureWrites()
+    render(rowFor('appearance.fontScale'))
+
+    fireEvent.change(screen.getByLabelText(/Taille du texte/), { target: { value: '9' } })
+
+    // The range input clamps on its own; what this pins is that the bounds it clamps to are
+    // the registry's, and therefore the same ones the main process enforces.
+    expect(written).toEqual([['appearance.fontScale', 1.4]])
+  })
+
+  it('shows the theme accent while none is set, rather than a colour nobody chose', () => {
+    document.documentElement.style.setProperty('--color-accent', '#3574f0')
+    render(rowFor('appearance.accent'))
+
+    expect(screen.getByLabelText(/Couleur d’accent/)).toHaveValue('#3574f0')
+  })
+
+  it('offers a picker beside a path, and keeps the field writable for a pasted one', () => {
+    render(rowFor('media.ffmpegPath'))
+
+    expect(screen.getByRole('button', { name: 'Parcourir…' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Chemin de ffmpeg/)).toBeEnabled()
+  })
+})
+
+describe('a setting that depends on another', () => {
+  beforeEach(() => {
+    useSettings.setState({ settings: DEFAULT_SETTINGS })
+    resetDraft()
+  })
+
+  it('is live while its condition holds', () => {
+    render(rowFor('three.gridSize'))
+
+    expect(screen.getByLabelText(/Taille de la grille/)).toBeEnabled()
+  })
+
+  it('says why it is inert, rather than being a dead end', () => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, three: { ...DEFAULT_SETTINGS.three, showGrid: false } },
+    })
+    render(rowFor('three.gridSize'))
+
+    expect(screen.getByText(/Afficher la grille/)).toBeInTheDocument()
+  })
+
+  // Turning the grid off must grey its size at once, not once the change has been applied.
+  it('follows the buffer, not only what is stored', () => {
+    render(rowFor('three.gridSize'))
+    act(() => {
+      useSettingsDraft.getState().stage('three.showGrid', false)
+    })
+
+    expect(screen.getByText(/Afficher la grille/)).toBeInTheDocument()
   })
 })

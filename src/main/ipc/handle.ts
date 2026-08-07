@@ -14,6 +14,8 @@ type ChannelMethod = {
   [CHANNELS.settingsAuthState]: StudioBridge['settings']['authState']
   [CHANNELS.settingsForgetCredentials]: StudioBridge['settings']['forgetCredentials']
   [CHANNELS.settingsOpen]: StudioBridge['settings']['open']
+  [CHANNELS.settingsRunAction]: StudioBridge['settings']['runAction']
+  [CHANNELS.settingsPending]: StudioBridge['settings']['setPending']
 
   [CHANNELS.scenarioSearchModels]: StudioBridge['scenario']['searchModels']
   [CHANNELS.scenarioModelPreviews]: StudioBridge['scenario']['modelPreviews']
@@ -25,7 +27,11 @@ type ChannelMethod = {
   [CHANNELS.projectCreate]: StudioBridge['project']['create']
   [CHANNELS.projectOpen]: StudioBridge['project']['open']
   [CHANNELS.projectCurrent]: StudioBridge['project']['current']
-  [CHANNELS.projectPickFolder]: StudioBridge['project']['pickFolder']
+  [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
+
+  [CHANNELS.documentRead]: StudioBridge['documents']['read']
+  [CHANNELS.documentWrite]: StudioBridge['documents']['write']
+  [CHANNELS.documentRemove]: StudioBridge['documents']['remove']
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']

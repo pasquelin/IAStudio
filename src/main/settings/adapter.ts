@@ -19,6 +19,8 @@ export function createElectronAdapter(): PersistenceAdapter {
 
     remove: key => store.delete(key),
 
+    path: () => store.path,
+
     encrypt: plain => {
       if (!safeStorage.isEncryptionAvailable()) {
         throw new Error('OS encryption is unavailable: refusing to store credentials in clear')

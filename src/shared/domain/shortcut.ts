@@ -6,35 +6,18 @@
  * the same four keys on QWERTY (WASD) and AZERTY (ZQSD), so one table serves both. `event.key`
  * would scatter them.
  */
-/**
- * Which surface a command belongs to. Two spaces legitimately want the same key — `Delete`
- * removes a node in the scene and a clip on the timeline — and only one of them is listening
- * at a time. Without a scope the second binding would be unreachable rather than contextual.
- */
-export type CommandScope = 'scene' | 'sequence'
-
-export type CommandId =
-  | 'scene.select'
-  | 'scene.translate'
-  | 'scene.rotate'
-  | 'scene.scale'
-  | 'scene.frame'
-  | 'scene.delete'
-  | 'scene.undo'
-  | 'scene.redo'
-  | 'sequence.playPause'
-  | 'sequence.split'
-  | 'sequence.delete'
-  | 'sequence.zoomIn'
-  | 'sequence.zoomOut'
-  | 'sequence.fit'
-  | 'sequence.start'
-  | 'sequence.end'
-  | 'sequence.undo'
-  | 'sequence.redo'
-
 /** Held keys, read every frame while flying — not fired once like a command. */
 export type MotionId = 'forward' | 'back' | 'left' | 'right' | 'up' | 'down' | 'boost'
+
+export const MOTION_IDS: readonly MotionId[] = [
+  'forward',
+  'back',
+  'left',
+  'right',
+  'up',
+  'down',
+  'boost',
+]
 
 export type Signature = string
 
@@ -49,62 +32,6 @@ export type KeyChord = {
   shiftKey: boolean
   metaKey: boolean
 }
-
-/**
- * A table rather than a prefix read off the id: the compiler then refuses a new command that
- * forgot to say where it lives, which a `startsWith` would silently file under the first scope.
- */
-export const COMMAND_SCOPES: Record<CommandId, CommandScope> = {
-  'scene.select': 'scene',
-  'scene.translate': 'scene',
-  'scene.rotate': 'scene',
-  'scene.scale': 'scene',
-  'scene.frame': 'scene',
-  'scene.delete': 'scene',
-  'scene.undo': 'scene',
-  'scene.redo': 'scene',
-  'sequence.playPause': 'sequence',
-  'sequence.split': 'sequence',
-  'sequence.delete': 'sequence',
-  'sequence.zoomIn': 'sequence',
-  'sequence.zoomOut': 'sequence',
-  'sequence.fit': 'sequence',
-  'sequence.start': 'sequence',
-  'sequence.end': 'sequence',
-  'sequence.undo': 'sequence',
-  'sequence.redo': 'sequence',
-}
-
-export const COMMAND_IDS: readonly CommandId[] = [
-  'scene.select',
-  'scene.translate',
-  'scene.rotate',
-  'scene.scale',
-  'scene.frame',
-  'scene.delete',
-  'scene.undo',
-  'scene.redo',
-  'sequence.playPause',
-  'sequence.split',
-  'sequence.delete',
-  'sequence.zoomIn',
-  'sequence.zoomOut',
-  'sequence.fit',
-  'sequence.start',
-  'sequence.end',
-  'sequence.undo',
-  'sequence.redo',
-]
-
-export const MOTION_IDS: readonly MotionId[] = [
-  'forward',
-  'back',
-  'left',
-  'right',
-  'up',
-  'down',
-  'boost',
-]
 
 /** Fixed modifier order, so one combination always produces one signature. */
 export function signatureOf(event: KeyChord): Signature {
@@ -129,37 +56,15 @@ const MODIFIER_GLYPHS: Record<string, string> = {
  * `KeyG` is a position, not a letter, but the letter is what is printed on the key in front of
  * the user, so that is what is displayed.
  */
-export function shortcutLabel(signature: Signature): string {
+export function shortcutLabel(signature: Signature | null): string {
+  // A command may be bound to nothing: listed and searchable, waiting for a key. Its tooltip
+  // simply shows no shortcut rather than an empty pair of brackets.
+  if (!signature) return ''
+
   const parts = signature.split('+')
   const code = parts.at(-1) ?? ''
   const modifiers = parts.slice(0, -1).map(part => MODIFIER_GLYPHS[part] ?? part)
   return [...modifiers, code.startsWith('Key') ? code.slice(3) : code].join('')
-}
-
-export const DEFAULT_BINDINGS: Record<CommandId, Signature> = {
-  // `KeyV` as in every editor that has a pointer tool. Not `KeyQ` or `KeyW`, which fly the
-  // camera: `useShortcuts` reads both tables on the same keydown, so one key would do both.
-  'scene.select': 'KeyV',
-  'scene.translate': 'KeyG',
-  'scene.rotate': 'KeyR',
-  'scene.scale': 'KeyS',
-  'scene.frame': 'KeyF',
-  'scene.delete': 'Delete',
-  'scene.undo': 'Meta+KeyZ',
-  'scene.redo': 'Shift+Meta+KeyZ',
-
-  // Same keys as the scene where the gesture is the same. They only ever reach the surface
-  // that is listening, which is what `CommandScope` is for.
-  'sequence.playPause': 'Space',
-  'sequence.split': 'KeyS',
-  'sequence.delete': 'Delete',
-  'sequence.zoomIn': 'Meta+Equal',
-  'sequence.zoomOut': 'Meta+Minus',
-  'sequence.fit': 'Shift+KeyZ',
-  'sequence.start': 'Home',
-  'sequence.end': 'End',
-  'sequence.undo': 'Meta+KeyZ',
-  'sequence.redo': 'Shift+Meta+KeyZ',
 }
 
 export const DEFAULT_MOTION: Record<MotionId, Signature> = {
@@ -170,4 +75,47 @@ export const DEFAULT_MOTION: Record<MotionId, Signature> = {
   down: 'KeyQ',
   up: 'KeyE',
   boost: 'ShiftLeft',
+}
+
+/**
+ * A signature as Electron spells an accelerator. The one place the two vocabularies meet: the
+ * native menu used to write `CmdOrCtrl+N` by hand, which is how a remapped command kept showing
+ * the key it no longer answered to.
+ *
+ * `CmdOrCtrl` rather than `Cmd`: `Meta` is the command key on macOS and the Windows key
+ * elsewhere, where Ctrl is what people actually press.
+ */
+const ACCELERATOR_MODIFIERS: Record<string, string> = {
+  Ctrl: 'Ctrl',
+  Alt: 'Alt',
+  Shift: 'Shift',
+  Meta: 'CmdOrCtrl',
+}
+
+/** Keys Electron names differently from `event.code`. Anything else passes through. */
+const ACCELERATOR_KEYS: Record<string, string> = {
+  Comma: ',',
+  Period: '.',
+  Equal: '=',
+  Minus: '-',
+  Slash: '/',
+  Backslash: '\\',
+  Space: 'Space',
+  Delete: 'Delete',
+  Backspace: 'Backspace',
+  Escape: 'Esc',
+  Enter: 'Return',
+  Home: 'Home',
+  End: 'End',
+}
+
+export function acceleratorOf(signature: Signature | null): string | undefined {
+  if (!signature) return undefined
+
+  const parts = signature.split('+')
+  const code = parts.at(-1) ?? ''
+  const modifiers = parts.slice(0, -1).map(part => ACCELERATOR_MODIFIERS[part] ?? part)
+
+  const key = ACCELERATOR_KEYS[code] ?? (code.startsWith('Key') ? code.slice(3) : code)
+  return [...modifiers, key].join('+')
 }

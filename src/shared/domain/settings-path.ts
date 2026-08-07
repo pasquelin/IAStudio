@@ -6,13 +6,14 @@ export type SettingValue = string | number | boolean
 
 /**
  * Branches whose editor is a screen rather than a control per leaf — the default model of a
- * family is picked from a catalogue fetched at runtime, not from a list anyone can write down.
+ * family is picked from a catalogue fetched at runtime, and a keyboard binding is captured by
+ * pressing it, neither of which is a list anyone can write down.
  *
  * Named by full path, not by key: excluding `'defaultModels'` wherever it appears would also
  * swallow a future `appearance.defaultModels`, and a leaf missing from `SettingPath` is a leaf
  * the coverage check can no longer notice.
  */
-type DedicatedPath = 'generation.defaultModels'
+type DedicatedPath = 'generation.defaultModels' | 'shortcuts.overrides'
 
 /**
  * Dotted paths to the leaves of `Settings`, derived rather than listed: a setting added to the
@@ -42,8 +43,14 @@ function isSettingValue(value: unknown): value is SettingValue {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 
-/** Reads one leaf. Absent means the setting is unset, which for an optional path is normal. */
-export function valueAt(settings: Settings, path: SettingPath): SettingValue | undefined {
+/**
+ * Reads one leaf. Absent means the setting is unset, which for an optional path is normal —
+ * and, over a partial, means the write simply says nothing about it.
+ */
+export function valueAt(
+  settings: Settings | PartialSettings,
+  path: SettingPath,
+): SettingValue | undefined {
   let current: unknown = settings
 
   for (const key of path.split('.')) {

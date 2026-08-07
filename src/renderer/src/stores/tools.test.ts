@@ -114,9 +114,26 @@ describe('fitSplit', () => {
 
 describe('openFrom', () => {
   it('migrates the single id version 2 stored into the slot its tool declares', () => {
-    expect(openFrom({ left: 'explorer', bottom: 'assets' })).toEqual({
-      left: { secondary: 'explorer' },
+    expect(openFrom({ left: 'explorer' })).toEqual({ left: { secondary: 'explorer' } })
+  })
+
+  it('opens a tool in every zone it sits in, so changing workspace never hides it', () => {
+    // The shelf lies in the bottom strip nearly everywhere and stands on the right in Video
+    // and Audio. Stored in one, it has to be open in the other, or the workspace that reads it
+    // elsewhere shows nothing where it belongs.
+    expect(openFrom({ right: { primary: 'assets' } })).toEqual({
+      right: { primary: 'assets' },
       bottom: { primary: 'assets' },
+    })
+  })
+
+  it('never displaces a tool an explicit layout already put there', () => {
+    const stored = { right: { primary: 'assets' }, bottom: { primary: 'jobs' } }
+    // `jobs` declares the secondary half today, so it lands there and leaves the primary free
+    // for the shelf rather than being overwritten by it.
+    expect(openFrom(stored)).toEqual({
+      right: { primary: 'assets' },
+      bottom: { primary: 'assets', secondary: 'jobs' },
     })
   })
 

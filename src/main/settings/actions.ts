@@ -1,0 +1,36 @@
+import { BrowserWindow, shell } from 'electron'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import type { SettingActionId } from '@shared/domain/settings-registry'
+import type { SettingsStore } from './store'
+
+export type ActionDeps = {
+  settings: SettingsStore
+  /** Where the settings file lives, so it can be revealed without guessing the path. */
+  settingsPath: () => string
+}
+
+/**
+ * What the buttons of the settings window do. Kept apart from the handlers: each one reaches
+ * straight into Electron, and the handler that routes them stays testable without it.
+ */
+export function runSettingAction({ settings, settingsPath }: ActionDeps) {
+  return (id: SettingActionId): void => {
+    switch (id) {
+      case 'advanced.openSettingsFile':
+        // Revealed rather than opened: the file is JSON, and whatever the OS opens it with is
+        // less useful than seeing where it sits — next to the rest of the profile.
+        shell.showItemInFolder(settingsPath())
+        return
+
+      case 'advanced.openDevtools':
+        BrowserWindow.getFocusedWindow()?.webContents.openDevTools({ mode: 'detach' })
+        return
+
+      case 'advanced.reset':
+        // Through the store, so the change is validated, persisted and broadcast like any
+        // other write — every window follows without being told.
+        settings.write(DEFAULT_SETTINGS)
+        return
+    }
+  }
+}

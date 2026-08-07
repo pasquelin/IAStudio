@@ -1,10 +1,13 @@
 import type { Asset, AssetQuery } from './domain/asset'
+import type { CommandId } from './domain/command'
+import type { DocumentDraft, DocumentFile, DocumentKind } from './domain/document'
 import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
 import type { LightKind, MeshKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
+import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { WindowState } from './domain/window'
 import type { WorkspaceId } from './domain/workspace'
@@ -22,6 +25,8 @@ export type Channels = {
   settingsAuthState: 'settings:auth-state'
   settingsForgetCredentials: 'settings:forget-credentials'
   settingsOpen: 'settings:open'
+  settingsRunAction: 'settings:run-action'
+  settingsPending: 'settings:pending'
 
   scenarioSearchModels: 'scenario:search-models'
   scenarioModelPreviews: 'scenario:model-previews'
@@ -33,7 +38,12 @@ export type Channels = {
   projectCreate: 'project:create'
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
-  projectPickFolder: 'project:pick-folder'
+
+  dialogPickPath: 'dialog:pick-path'
+
+  documentRead: 'document:read'
+  documentWrite: 'document:write'
+  documentRemove: 'document:remove'
 
   assetsSearch: 'assets:search'
   assetsPeaks: 'assets:peaks'
@@ -60,6 +70,8 @@ export const CHANNELS: Channels = {
   settingsAuthState: 'settings:auth-state',
   settingsForgetCredentials: 'settings:forget-credentials',
   settingsOpen: 'settings:open',
+  settingsRunAction: 'settings:run-action',
+  settingsPending: 'settings:pending',
 
   scenarioSearchModels: 'scenario:search-models',
   scenarioModelPreviews: 'scenario:model-previews',
@@ -71,7 +83,12 @@ export const CHANNELS: Channels = {
   projectCreate: 'project:create',
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
-  projectPickFolder: 'project:pick-folder',
+
+  dialogPickPath: 'dialog:pick-path',
+
+  documentRead: 'document:read',
+  documentWrite: 'document:write',
+  documentRemove: 'document:remove',
 
   assetsSearch: 'assets:search',
   assetsPeaks: 'assets:peaks',
@@ -133,9 +150,6 @@ export type ToolRequest = {
   tool: ToolId
 }
 
-/** Native menu commands with no payload, identified by a verb. */
-export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset'
-
 /** Request to drop a node in the active scene, coming from the native menu. */
 export type SceneAddRequest = { kind: MeshKind | LightKind }
 
@@ -152,6 +166,17 @@ export type StudioBridge = {
     forgetCredentials: () => Promise<void>
     /** Opens the settings window on a section, or focuses it there if it is already up. */
     open: (section: SettingsSectionId) => Promise<void>
+    /**
+     * Runs one of the buttons of the settings window. A single channel rather than one per
+     * action: they differ only by which id is named, and the main process is what decides
+     * whether a given one is allowed to do anything.
+     */
+    runAction: (id: SettingActionId) => Promise<void>
+    /**
+     * Whether the settings window holds changes nobody has applied. Told to the main process
+     * because closing a window is its decision, and it has no other way to know.
+     */
+    setPending: (pending: boolean) => Promise<void>
     /**
      * Settings are owned by the main process and replicated by every window. Without this, a
      * theme changed in the settings window would only reach the studio on the next launch.
@@ -174,8 +199,22 @@ export type StudioBridge = {
     create: (path: string, name: string) => Promise<Project>
     open: (path: string) => Promise<Project>
     current: () => Promise<Project | null>
-    pickFolder: () => Promise<string | null>
     onChange: (callback: (project: Project | null) => void) => Unsubscribe
+  }
+  dialog: {
+    /**
+     * A native picker, answering the chosen path or null when it was cancelled. One channel for
+     * every path the interface asks for — where a project goes, where ffmpeg lives — because
+     * they differ only by which picker opens.
+     */
+    pickPath: (kind: PathKind, startIn?: string) => Promise<string | null>
+  }
+  documents: {
+    /** `null` when nothing has been saved under that id yet. */
+    read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
+    /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */
+    write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
+    remove: (id: string, kind: DocumentKind) => Promise<void>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
@@ -212,7 +251,7 @@ export type StudioBridge = {
   }
   menu: {
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
-    onCommand: (callback: (command: MenuCommand) => void) => Unsubscribe
+    onCommand: (callback: (command: CommandId) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
   }
   diagnostics: {

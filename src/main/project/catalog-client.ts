@@ -24,6 +24,8 @@ export type AsyncCatalog = {
   add: (asset: Asset) => Promise<Asset>
   find: (assetId: string) => Promise<Asset | null>
   findByHash: (hash: string) => Promise<Asset | null>
+  /** The local row a generated asset landed in, looked up by its Scenario identifier. */
+  findByRemoteId: (remoteAssetId: string) => Promise<Asset | null>
   search: (query: AssetQuery) => Promise<Asset[]>
   remove: (assetId: string) => Promise<void>
   close: () => Promise<void>
@@ -86,6 +88,8 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     find: assetId => send<'find'>(id => ({ id, op: 'find', assetId })),
 
     findByHash: hash => send<'findByHash'>(id => ({ id, op: 'findByHash', hash })),
+    findByRemoteId: remoteAssetId =>
+      send<'findByRemoteId'>(id => ({ id, op: 'findByRemoteId', remoteAssetId })),
 
     search: query => send<'search'>(id => ({ id, op: 'search', query })),
 

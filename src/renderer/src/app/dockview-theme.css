@@ -3,10 +3,10 @@
  * redirect those rather than override its selectors, which change from version to version.
  */
 .dv-dockview {
-  --dv-background-color: var(--color-base);
-  --dv-group-view-background-color: var(--color-base);
+  --dv-background-color: var(--color-panel);
+  --dv-group-view-background-color: var(--color-panel);
 
-  --dv-tabs-and-actions-container-background-color: var(--color-base);
+  --dv-tabs-and-actions-container-background-color: var(--color-panel);
   --dv-tabs-container-scrollbar-color: var(--color-border);
 
   /* Only the visible tab carries a background: an editor strip reads by what is lit, not by

@@ -1,3 +1,5 @@
+import type { PbrChannel } from './texture'
+
 export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox'
 
 /** The values, beside the type: a validator and a row reader both need to enumerate them. */
@@ -104,6 +106,16 @@ export type Asset = {
   createdAt: string
   /** Asset this one derives from — lets us trace a texture back to its source image. */
   derivedFrom?: string
+  /**
+   * Which PBR channel this asset holds, when it holds one. Named `map` rather than `channel`
+   * because `probe.channels` already means audio channels, two fields apart.
+   *
+   * A texture is a set of channels, and Scenario returns each as an asset of its own: seven
+   * siblings under one `derivedFrom` are indistinguishable without this.
+   */
+  map?: PbrChannel
+  /** Set when the pixels read the other way round — a smoothness map stored as roughness. */
+  mapInverted?: boolean
   /**
    * Absolute path of a linked external media. A twenty-minute 4K rush is twenty gigabytes: it
    * is linked, never copied into the project, which is why `hash` exists to relink it.

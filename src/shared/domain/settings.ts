@@ -1,22 +1,64 @@
+import type { LanguagePreference } from '../i18n/languages'
+import type { BindingOverrides } from './command'
 import type { ApiFailure } from './failure'
 import type { ModelFamily } from './model'
 
-export type Theme = 'dark' | 'light'
+/**
+ * Spelled exactly as Electron's `nativeTheme.themeSource`, which takes these three words: the
+ * main process assigns the setting straight across, with no table in between to fall behind.
+ */
+export type Theme = 'dark' | 'light' | 'system'
+
+/** What `system` resolves to. The attribute on the root element carries one of these two. */
+export type ResolvedTheme = 'dark' | 'light'
+
 export type Density = 'compact' | 'comfortable'
 export type AssetBackend = 'local' | 'cloud'
 
+/**
+ * How much the log says, from nothing to everything. Ordered from quietest to loudest, which is
+ * what lets a threshold be a simple comparison rather than a table.
+ */
+export type LogVerbosity = 'silent' | 'error' | 'warn' | 'info'
+
+export const LOG_VERBOSITIES: readonly LogVerbosity[] = ['silent', 'error', 'warn', 'info']
+
+/** What happens when the application opens with no file to show. */
+export type StartupBehaviour = 'lastProject' | 'nothing'
+
+export const STARTUP_BEHAVIOURS: readonly StartupBehaviour[] = ['lastProject', 'nothing']
+
 /** The values beside the types: the registry's options and zod both enumerate them from here. */
-export const THEMES: readonly Theme[] = ['dark', 'light']
+export const THEMES: readonly Theme[] = ['dark', 'light', 'system']
 export const DENSITIES: readonly Density[] = ['comfortable', 'compact']
+
+/**
+ * The daisyUI theme names, which are also what `data-theme` carries: daisyUI selects a theme by
+ * matching that attribute against the name declared in `index.css`. Written once here so the
+ * stylesheet, the renderer that publishes the attribute and the tests all read the same word.
+ */
+export const THEME_ATTRIBUTE: Record<ResolvedTheme, string> = {
+  dark: 'scenario-dark',
+  light: 'scenario-light',
+}
 
 /**
  * Settings the renderer may read. API credentials NEVER appear here: the renderer asks
  * whether it is authenticated, not what the key is — see spec § 9.
  */
 export type Settings = {
+  general: {
+    language: LanguagePreference
+    startup: StartupBehaviour
+  }
   appearance: {
     theme: Theme
     density: Density
+    /** Overrides `--color-accent`. The theme's own accent when left unset. */
+    accent?: string
+    /** Multiplies the interface's base size. 1 is what the design was drawn at. */
+    fontScale: number
+    reduceMotion: boolean
   }
   generation: {
     concurrentJobs: number
@@ -28,6 +70,33 @@ export type Settings = {
     backend: AssetBackend
     projectsFolder?: string
     lastProject?: string
+  }
+  /**
+   * The 3D workspace. A branch of its own rather than nested under a `spaces` one: every branch
+   * of `Settings` is one level deep, which is what lets the store merge a write by spreading —
+   * a nested branch would be replaced wholesale by a write touching one of its leaves.
+   */
+  three: {
+    showGrid: boolean
+    /** Extent of the ground grid, in metres. */
+    gridSize: number
+    /** Metres per second while flying the viewport camera. */
+    flySpeed: number
+    /** What holding the boost key multiplies the fly speed by. */
+    boostFactor: number
+    /** Vertical field of view, in degrees. */
+    fieldOfView: number
+  }
+  shortcuts: {
+    /**
+     * Only the commands the user actually remapped. A command added by a new version arrives
+     * with its own default and needs no migration; a remap of one since removed is ignored.
+     */
+    overrides: BindingOverrides
+  }
+  advanced: {
+    /** How much the log says. `silent` keeps the terminal clean; `debug` keeps everything. */
+    logLevel: LogVerbosity
   }
   media: {
     /**
@@ -45,28 +114,87 @@ export type Settings = {
  * exactly this.
  */
 export const DEFAULT_SETTINGS: Settings = {
-  appearance: { theme: 'dark', density: 'comfortable' },
+  general: { language: 'system', startup: 'lastProject' },
+  appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
+  three: { showGrid: true, gridSize: 20, flySpeed: 4, boostFactor: 3, fieldOfView: 60 },
   storage: { backend: 'local' },
+  shortcuts: { overrides: {} },
+  advanced: { logLevel: 'info' },
   media: {},
 }
 
 /** Derived, so a section added to `Settings` is writable without being restated here. */
 export type PartialSettings = { [K in keyof Settings]?: Partial<Settings[K]> }
 
+/**
+ * The branches, read off the defaults rather than listed: a section added to `Settings` shows
+ * up here on its own, which is what `mergePartial` needs in order not to drop it.
+ */
+const BRANCHES: readonly (keyof Settings)[] = Object.keys(DEFAULT_SETTINGS).filter(
+  (key): key is keyof Settings => key in DEFAULT_SETTINGS,
+)
+
+/**
+ * Accumulates one write onto another, one branch deep — which is the whole depth of `Settings`.
+ *
+ * Not the same thing as the store's `merge`, which completes a partial onto a full `Settings`
+ * and therefore has the compiler check that no branch is missing. This one accumulates two
+ * partials, where an absent branch is normal: it is what an editing buffer is made of.
+ */
+export function mergePartial(base: PartialSettings, next: PartialSettings): PartialSettings {
+  const merged: PartialSettings = { ...base }
+
+  for (const branch of BRANCHES) {
+    if (next[branch]) merged[branch] = { ...base[branch], ...next[branch] }
+  }
+
+  return merged
+}
+
 export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }
 
 /**
- * Top-level sections of the settings window, named so any surface can ask for one of them —
- * a panel that has just said the API key is missing is expected to lead to where it is typed.
+ * Sections of the settings window, named so any surface can ask for one of them — a panel that
+ * has just said the API key is missing is expected to lead to where it is typed.
+ *
+ * Sub-sections are part of the union rather than made up by the screen: an id the shared type
+ * does not know is refused by the IPC, so `settings.open('generation.image')` would fail on a
+ * name the navigation happily displayed.
  */
-export type SettingsSectionId = 'account' | 'appearance' | 'generation' | 'media'
+export type SettingsSectionId =
+  | 'general'
+  | 'account'
+  | 'appearance'
+  | 'generation'
+  | 'generation.image'
+  | 'generation.video'
+  | 'generation.3d'
+  | 'generation.audio'
+  | 'generation.upscale'
+  | 'spaces'
+  | 'spaces.three'
+  | 'shortcuts'
+  | 'media'
+  | 'storage'
+  | 'advanced'
 
 export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
+  'general',
   'account',
   'appearance',
   'generation',
+  'generation.image',
+  'generation.video',
+  'generation.3d',
+  'generation.audio',
+  'generation.upscale',
+  'spaces',
+  'spaces.three',
+  'shortcuts',
   'media',
+  'storage',
+  'advanced',
 ]
 
 /**
@@ -100,5 +228,9 @@ export function sectionFromRoute(hash: string): SettingsSectionId | null {
   return isSettingsSection(section) ? section : null
 }
 
-/** Where the window opens when nothing names a section — its own ⌘, shortcut included. */
-export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = 'account'
+/**
+ * Where the window opens when nothing names a section — its own ⌘, shortcut included. The top
+ * of the list, which is what a settings window is expected to do; a panel that needs the API
+ * key names `account` itself.
+ */
+export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = 'general'

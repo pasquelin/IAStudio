@@ -24,10 +24,22 @@ function commitHash(): string {
   }
 }
 
-export default defineConfig({
+/**
+ * `command` rather than `app.isPackaged`: the dev run renames the Electron bundle AND its
+ * executable to the product's name (see `scripts/dev-app-identity.mjs`), and Electron decides
+ * `isPackaged` by comparing that executable's basename to `electron`. Renamed, it reports a
+ * packaged app in the middle of development — which sent the window looking for `out/renderer`
+ * instead of the dev server, and switched six other behaviours to their production side.
+ *
+ * `serve` is the `dev` command; `build` and `preview` run as `build`.
+ */
+export default defineConfig(({ command }) => ({
   main: {
     resolve: { alias: { '@shared': partage, '@main': principal } },
-    define: { __COMMIT_HASH__: JSON.stringify(commitHash()) },
+    define: {
+      __COMMIT_HASH__: JSON.stringify(commitHash()),
+      __DEV__: JSON.stringify(command === 'serve'),
+    },
     build: {
       externalizeDeps: true,
       rollupOptions: {
@@ -66,4 +78,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

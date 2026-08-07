@@ -1,10 +1,13 @@
-import { app, BrowserWindow, screen, type WebPreferences } from 'electron'
+import { BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
-import { WINDOW_CHROME_COLOR } from '@shared/constants'
+import { chromeColor } from './theme'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
+import { TRANSLATIONS } from '@shared/i18n'
 import { EVENTS } from '@shared/ipc'
 import { APP_ICON_PATH } from '@main/resources'
+import { isDevelopment } from '@main/environment'
 import { trackWindowState } from './controls'
+import { windowLanguage } from './language'
 
 /**
  * The floor below which the layout stops being usable: the two rails take 96 px, the side
@@ -26,7 +29,7 @@ export const WEB_PREFERENCES: WebPreferences = {
   sandbox: true,
   // Dropping the menu entries hides the command; this refuses the feature. A compromised
   // dependency calling `openDevTools()` would otherwise still reach `window.studio`.
-  devTools: !app.isPackaged,
+  devTools: isDevelopment,
 }
 
 /**
@@ -43,7 +46,7 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
   const { entry = 'index.html', hash } = options
   const devUrl = process.env['ELECTRON_RENDERER_URL']
 
-  if (!app.isPackaged && devUrl) {
+  if (isDevelopment && devUrl) {
     const base = entry === 'index.html' ? devUrl : `${devUrl}/${entry}`
     void window.loadURL(hash ? `${base}#${hash}` : base)
     return
@@ -79,7 +82,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
     minWidth: Math.min(LAYOUT_FLOOR.width, workArea.width),
     minHeight: Math.min(LAYOUT_FLOOR.height, workArea.height),
     show: false,
-    backgroundColor: WINDOW_CHROME_COLOR,
+    backgroundColor: chromeColor(),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 14 },
     icon: WINDOW_ICON,
@@ -119,6 +122,16 @@ function showSection(window: BrowserWindow, section: SettingsSectionId): void {
  * `section` is what a panel asks for when it sends the user here — the account form, from a
  * panel that has just said no API key is set.
  */
+/**
+ * Whether the settings window is holding changes nobody applied. Published by its renderer,
+ * because closing a window is the main process's decision and it has no other way to know.
+ */
+let settingsPending = false
+
+export function markSettingsPending(pending: boolean): void {
+  settingsPending = pending
+}
+
 export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     // Already open, possibly on another section: reloading it would throw away a half-typed
@@ -138,7 +151,7 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
     minWidth: 560,
     minHeight: 420,
     show: false,
-    backgroundColor: WINDOW_CHROME_COLOR,
+    backgroundColor: chromeColor(),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 12 },
     // Not a document window: nothing here is worth a full screen, and macOS would otherwise
@@ -150,7 +163,34 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
 
   trackWindowState(window)
   window.once('ready-to-show', () => window.show())
+
+  /**
+   * Nothing is written until Apply, so closing on a pending buffer throws the work away in
+   * silence. Two choices rather than three: applying from here would mean asking the renderer
+   * to do it and waiting for the answer, when going back and clicking Apply is one click.
+   *
+   * `showMessageBoxSync` because `close` cannot be awaited — the window would already be gone.
+   */
+  window.on('close', event => {
+    if (!settingsPending) return
+
+    const t = TRANSLATIONS[windowLanguage()].settings
+    const chosen = dialog.showMessageBoxSync(window, {
+      type: 'warning',
+      message: t.discardTitle,
+      detail: t.discardBody,
+      // Cancel first, and as the default: the safe answer is the one a stray Return should give.
+      buttons: [t.cancel, t.discard],
+      defaultId: 0,
+      cancelId: 0,
+    })
+
+    if (chosen === 0) event.preventDefault()
+    else settingsPending = false
+  })
+
   window.on('closed', () => {
+    settingsPending = false
     settingsWindow = null
   })
 

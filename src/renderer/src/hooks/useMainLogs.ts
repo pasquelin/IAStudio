@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { LogLevel } from '@shared/ipc'
+import { cachedToken } from '@/engines/core/palette'
 import { getBridge } from '@/services/bridge'
 
 /**
@@ -17,9 +18,9 @@ export function useMainLogs(): void {
 function print(level: LogLevel, scope: string, message: string): void {
   const line = `%c[main:${scope}]%c ${message}`
   // Read from the theme rather than repeated: the accent is a token, and a copy of it here
-  // would keep its old value the day the token moves.
-  const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent')
-  const badge = `color:${accent};font-weight:600`
+  // would keep its old value the day the token moves. Cached per theme — a burst of log lines
+  // must not resolve style over the whole shell once each.
+  const badge = `color:${cachedToken('--color-accent')};font-weight:600`
 
   /* eslint-disable no-console -- mirroring the main process's console is the whole point */
   if (level === 'error') console.error(line, badge, '')

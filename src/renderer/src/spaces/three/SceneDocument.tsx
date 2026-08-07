@@ -1,5 +1,6 @@
+import { bindingOf, type CommandId } from '@shared/domain/command'
+import { shortcutLabel } from '@shared/domain/shortcut'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { shortcutLabel, type CommandId } from '@shared/domain/shortcut'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { removeNode, selectNode, setTransform } from '@/engines/scene/commands'
@@ -8,7 +9,8 @@ import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer
 import { useAddNode } from '@/hooks/useAddNode'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
-import { useKeymap } from '@/stores/keymap'
+import { useSettings } from '@/stores/settings'
+import { useBindingOverrides } from '@/stores/bindings'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
 
@@ -22,9 +24,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // hands React a new snapshot each render, and the render loop never settles.
   const undoable = useScenes(state => canUndo(historyOf(state, documentId)))
   const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
-  const bindings = useKeymap(state => state.bindings)
+  const bindings = useBindingOverrides()
   const addNodeOf = useAddNode(documentId)
   const active = useDocuments(state => state.activeId === documentId)
+  const viewport = useSettings(state => state.settings.three)
 
   // Before the renderer mounts: a scene that arrives unlit shows nothing, and reads as a broken
   // viewport rather than as an empty document.
@@ -57,6 +60,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.apply(scene)
   }, [scene])
+
+  // Same for the viewport settings, which were three constants inside the engine.
+  useEffect(() => {
+    engine.current?.configure(viewport)
+  }, [viewport])
 
   useEffect(() => {
     engine.current?.setMode(mode)
@@ -110,7 +118,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     () =>
       SCENE_TOOLS.map(tool => ({
         ...tool,
-        shortcut: tool.command ? shortcutLabel(bindings[tool.command]) : undefined,
+        shortcut: tool.command ? shortcutLabel(bindingOf(tool.command, bindings)) : undefined,
         disabled: tool.command === 'scene.delete' && nothingSelected,
       })),
     [bindings, nothingSelected],
@@ -131,8 +139,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         onMode={(_toolId, kind) => addNodeOf(kind)}
         onUndo={() => run('scene.undo')}
         onRedo={() => run('scene.redo')}
-        undoShortcut={shortcutLabel(bindings['scene.undo'])}
-        redoShortcut={shortcutLabel(bindings['scene.redo'])}
+        undoShortcut={shortcutLabel(bindingOf('scene.undo', bindings))}
+        redoShortcut={shortcutLabel(bindingOf('scene.redo', bindings))}
         canUndo={undoable}
         canRedo={redoable}
       />

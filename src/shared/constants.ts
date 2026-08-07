@@ -1,14 +1,26 @@
-/**
- * Window chrome color, painted before the first render. It matches `--color-chassis`, the
- * outermost surface — not `--color-base`, which is the panels. Opaque on purpose: we judge
- * colors in this app, never through translucency (spec § 7).
- */
-export const WINDOW_CHROME_COLOR = '#2b2d30'
+import type { ResolvedTheme } from './domain/settings'
 
 /**
- * Painted behind the splash before its first frame. Darker than the chassis: the splash is a
+ * Window chrome color, painted before the first render. It matches `--color-chassis`, the
+ * outermost surface — not `--color-panel`, the surfaces laid on it. Opaque on purpose: we judge
+ * colors in this app, never through translucency (spec § 7).
+ *
+ * Per theme, and unavoidably a second copy of what `index.css` declares: the main process
+ * paints this before any stylesheet is parsed, so it cannot read the token. `theme.test.ts`
+ * pins the two against the stylesheet rather than trusting them to stay in step.
+ */
+export const WINDOW_CHROME_COLOR: Record<ResolvedTheme, string> = {
+  dark: '#2b2d30',
+  light: '#dcdde1',
+}
+
+/**
+ * Painted behind the splash before its first frame. Set apart from the chassis: the splash is a
  * standalone surface, not a panel sitting in the window frame.
  */
-export const SPLASH_BACKGROUND_COLOR = '#22242a'
+export const SPLASH_BACKGROUND_COLOR: Record<ResolvedTheme, string> = {
+  dark: '#22242a',
+  light: '#eceef1',
+}
 
 export const APP_NAME = 'Scenario Studio'

@@ -24,6 +24,8 @@ function valueOf(catalog: Catalog, request: CatalogRequest): CatalogResults[Cata
       return catalog.find(request.assetId)
     case 'findByHash':
       return catalog.findByHash(request.hash)
+    case 'findByRemoteId':
+      return catalog.findByRemoteId(request.remoteAssetId)
     case 'search':
       return catalog.search(request.query)
     case 'remove':

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import {
   isHorizontal,
   placementOf,
+  placementsOf,
   TOOL_SLOTS,
   TOOL_ZONES,
   type ToolId,
@@ -56,12 +57,18 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
 
 export const DEFAULT_SPLIT = 240
 
+/**
+ * The shelf appears in two zones on purpose, not by mistake: it is declared in the bottom
+ * strip for most workspaces and beside the montage in Video and Audio, and what is open is
+ * stored per zone rather than per workspace. Opening it in both lets each workspace show it
+ * where it belongs — `Shell` drops the one that does not apply.
+ */
 const DEFAULT_OPEN: OpenByZone = {
   left: { secondary: 'explorer' },
   // The shelf rather than the generator: it is what a new project needs first, and it shares
   // the column with the inspector.
   right: { primary: 'assets', secondary: 'inspector' },
-  bottom: { primary: 'jobs' },
+  bottom: { primary: 'assets', secondary: 'jobs' },
 }
 
 const OPPOSITE: Record<ToolZone, ToolZone> = {
@@ -109,7 +116,36 @@ export function openFrom(persisted: unknown): OpenByZone {
     const slots = slotsFrom(Reflect.get(persisted, zone))
     if (slots) open[zone] = slots
   }
-  return open
+  return openEverywhereItSits(open)
+}
+
+/**
+ * A tool open in one of its zones is open in all of them.
+ *
+ * Which zone a tool occupies can depend on the workspace — the asset shelf lies in the bottom
+ * strip nearly everywhere and stands beside the montage in Video and Audio — while what is
+ * open is stored per zone. Without this, a layout written while the shelf was on the right
+ * leaves it invisible in every workspace that reads it at the bottom, and the only way back
+ * is the rail.
+ *
+ * It never displaces a tool already there: an explicit choice outranks this repair.
+ */
+function openEverywhereItSits(open: OpenByZone): OpenByZone {
+  const next: OpenByZone = {}
+  for (const zone of TOOL_ZONES) if (open[zone]) next[zone] = { ...open[zone] }
+
+  for (const zone of TOOL_ZONES) {
+    for (const slot of TOOL_SLOTS) {
+      const tool = open[zone]?.[slot]
+      if (!tool) continue
+
+      for (const placement of placementsOf(tool)) {
+        const target = (next[placement.zone] ??= {})
+        target[placement.slot] ??= tool
+      }
+    }
+  }
+  return next
 }
 
 function slotsFrom(stored: unknown): ZoneSlots | null {
@@ -124,7 +160,10 @@ function slotsFrom(stored: unknown): ZoneSlots | null {
     // Through `placementOf`, so an id no version knows any more is dropped rather than
     // reaching `TOOL_COMPONENTS` and blanking the window.
     const placement = placementOf(Reflect.get(stored, slot))
-    if (placement) slots[slot] = placement.id
+    // Into the half it declares TODAY, not the one it was stored under — the same promise the
+    // version-2 branch above keeps. A tool that changed half would otherwise stay where an old
+    // layout put it, and hold the place of whoever declares that half now.
+    if (placement) slots[placement.slot] = placement.id
   }
   return slots
 }

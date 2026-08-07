@@ -21,7 +21,8 @@
     "generator": "Generate",
     "inspector": "Inspector",
     "assets": "Assets",
-    "jobs": "Jobs"
+    "jobs": "Jobs",
+    "skybox": "Skybox"
   },
   "actions": {
     "undo": "Undo",
@@ -75,11 +76,11 @@
     "done": "Ready",
     "cancelled": "Stopped",
     "failed": "Failed",
-    "duplicate": "Already in the project",
-    "unreadable": "Unreadable file",
     "cancel": "Stop preparing this file",
     "dismiss": "Remove from the list",
-    "noFfmpeg": "ffmpeg not found: no proxy, no waveform. Set its path in the settings."
+    "noFfmpeg": "ffmpeg not found: no proxy, no waveform. Set its path in the settings.",
+    "duplicate": "Already in the project",
+    "unreadable": "Unreadable file"
   },
   "models": {
     "none": "No model in this workspace.",
@@ -283,95 +284,95 @@
     "visible": "Show or hide",
     "noDocument": "Open a scene to see what is in it."
   },
-    "inspector": {
-      "noDocument": "Open a scene to inspect what is in it.",
-      "noSelection": "Select an object to see its properties.",
-      "transform": "Transform",
-      "geometry": "Geometry",
-      "material": "Material",
-      "light": "Light",
-      "name": "Name",
-      "position": "Position",
-      "rotation": "Rotation",
-      "scale": "Scale",
-      "noTexture": "None",
-      "chooseTexture": "Choose a texture",
-      "clearTexture": "Remove the texture",
-      "fields": {
-        "width": "Width",
-        "height": "Height",
-        "depth": "Depth",
-        "radius": "Radius",
-        "radiusTop": "Top radius",
-        "radiusBottom": "Bottom radius",
-        "innerRadius": "Inner radius",
-        "outerRadius": "Outer radius",
-        "tube": "Tube",
-        "segments": "Segments",
-        "capSegments": "Cap segments",
-        "radialSegments": "Radial segments",
-        "tubularSegments": "Tubular segments",
-        "widthSegments": "Width segments",
-        "heightSegments": "Height segments",
-        "p": "P windings",
-        "q": "Q windings",
-        "color": "Colour",
-        "skyColor": "Sky colour",
-        "groundColor": "Ground colour",
-        "intensity": "Intensity",
-        "distance": "Range",
-        "decay": "Decay",
-        "angle": "Angle",
-        "penumbra": "Penumbra",
-        "target": "Target",
-        "roughness": "Roughness",
-        "metalness": "Metalness",
-        "map": "Texture",
-        "normalMap": "Normals",
-        "roughnessMap": "Roughness map",
-        "metalnessMap": "Metalness map",
-        "aoMap": "Ambient occlusion"
-      },
-      "empty": "Select something to see its properties.",
-      "identity": "Identity",
-      "selection": "Selection",
-      "count": "Items",
-      "type": "Type",
-      "kind": "Kind",
-      "kind_video": "Picture",
-      "kind_audio": "Sound",
-      "duration": "Duration",
-      "dimensions": "Dimensions",
-      "size": "Size",
-      "created": "Created",
-      "generation": "Generation",
-      "model": "Model",
-      "prompt": "Prompt",
-      "seed": "Seed",
-      "regenerate": "Regenerate",
-      "regenerateHint": "Open the generator with these parameters",
-      "file": "File",
-      "onDisk": "Location",
-      "reveal": "Show in the file manager",
-      "fileMissing": "File not found",
-      "clip": "Clip",
-      "source": "Source",
-      "track": "Track",
-      "clips": "Clips",
-      "start": "Start",
-      "end": "End",
-      "inPoint": "In point",
-      "shaping": "Shaping",
-      "fadeIn": "Fade in",
-      "fadeOut": "Fade out",
-      "speed": "Speed",
-      "gain": "Gain",
-      "state": "State",
-      "muted": "Muted",
-      "solo": "Soloed",
-      "locked": "Locked",
-      "height": "Height"
+  "inspector": {
+    "noDocument": "Open a scene to inspect what is in it.",
+    "noSelection": "Select an object to see its properties.",
+    "transform": "Transform",
+    "geometry": "Geometry",
+    "material": "Material",
+    "light": "Light",
+    "name": "Name",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Scale",
+    "noTexture": "None",
+    "chooseTexture": "Choose a texture",
+    "clearTexture": "Remove the texture",
+    "fields": {
+      "width": "Width",
+      "height": "Height",
+      "depth": "Depth",
+      "radius": "Radius",
+      "radiusTop": "Top radius",
+      "radiusBottom": "Bottom radius",
+      "innerRadius": "Inner radius",
+      "outerRadius": "Outer radius",
+      "tube": "Tube",
+      "segments": "Segments",
+      "capSegments": "Cap segments",
+      "radialSegments": "Radial segments",
+      "tubularSegments": "Tubular segments",
+      "widthSegments": "Width segments",
+      "heightSegments": "Height segments",
+      "p": "P windings",
+      "q": "Q windings",
+      "color": "Colour",
+      "skyColor": "Sky colour",
+      "groundColor": "Ground colour",
+      "intensity": "Intensity",
+      "distance": "Range",
+      "decay": "Decay",
+      "angle": "Angle",
+      "penumbra": "Penumbra",
+      "target": "Target",
+      "roughness": "Roughness",
+      "metalness": "Metalness",
+      "map": "Texture",
+      "normalMap": "Normals",
+      "roughnessMap": "Roughness map",
+      "metalnessMap": "Metalness map",
+      "aoMap": "Ambient occlusion"
     },
+    "empty": "Select something to see its properties.",
+    "identity": "Identity",
+    "selection": "Selection",
+    "count": "Items",
+    "type": "Type",
+    "kind": "Kind",
+    "kind_video": "Picture",
+    "kind_audio": "Sound",
+    "duration": "Duration",
+    "dimensions": "Dimensions",
+    "size": "Size",
+    "created": "Created",
+    "generation": "Generation",
+    "model": "Model",
+    "prompt": "Prompt",
+    "seed": "Seed",
+    "regenerate": "Regenerate",
+    "regenerateHint": "Open the generator with these parameters",
+    "file": "File",
+    "clip": "Clip",
+    "source": "Source",
+    "track": "Track",
+    "clips": "Clips",
+    "start": "Start",
+    "end": "End",
+    "inPoint": "In point",
+    "shaping": "Shaping",
+    "fadeIn": "Fade in",
+    "fadeOut": "Fade out",
+    "speed": "Speed",
+    "gain": "Gain",
+    "state": "State",
+    "muted": "Muted",
+    "solo": "Soloed",
+    "locked": "Locked",
+    "height": "Height",
+    "onDisk": "Location",
+    "reveal": "Show in the file manager",
+    "fileMissing": "File not found"
+  },
   "transport": {
     "play": "Play",
     "pause": "Pause",
@@ -501,9 +502,10 @@
     "mediaDescription": "Preparation of imported files: proxies and waveforms.",
     "theme": {
       "title": "Theme",
-      "help": "Picks the colours of the whole application. The dark theme rests the eyes over a long session in a dimly lit room; the light one reads better in broad daylight.",
+      "help": "Picks the colours of the whole application. The dark theme rests the eyes over a long session in a dimly lit room; the light one reads better in broad daylight. “System” follows your computer's own setting and switches on its own, for instance when evening comes.",
       "dark": "Dark",
-      "light": "Light"
+      "light": "Light",
+      "system": "System"
     },
     "density": {
       "title": "Density",
@@ -528,6 +530,227 @@
     "noDefaultModel": "Ask every time",
     "familyUpscale": "Upscaling",
     "ffmpegFound": "ffmpeg is available: proxies and waveforms will be prepared.",
-    "ffmpegMissing": "ffmpeg is still not found. Importing works, without proxy or waveform."
+    "ffmpegMissing": "ffmpeg is still not found. Importing works, without proxy or waveform.",
+    "browse": "Browse…",
+    "accent": {
+      "title": "Accent colour",
+      "help": "The colour that marks what is selected or under way: the outline of the active panel, the timeline playhead, the frame around a selection. It changes nothing about what you make, only how the application shows you where you are. Leave it be to keep the theme's own."
+    },
+    "fontScale": {
+      "title": "Text size",
+      "help": "Makes every text in the application bigger or smaller at once. 1 is the size it was drawn at; above that words get larger and less fits on screen; below, the opposite. Buttons keep their size: density is what handles those."
+    },
+    "reduceMotion": {
+      "title": "Limit animations",
+      "help": "Turns off the small movements of the interface: panels appear at once instead of sliding in. Useful if animation tires you or makes you queasy, and on a slower machine where it stutters."
+    },
+    "general": "General",
+    "generalDescription": "The application's language, and what it does when it opens.",
+    "language": {
+      "title": "Language",
+      "help": "The language of every text in the application: menus, buttons, messages. “System” follows your computer's own language. The change is immediate — there is nothing to relaunch. It leaves your projects, and anything you write in them, alone.",
+      "system": "System"
+    },
+    "startup": {
+      "title": "On opening",
+      "help": "What the application does when you launch it. “Reopen the last project” puts you back where you left off. “Open nothing” starts on an empty window, which is quicker and calmer if you juggle a lot of projects.",
+      "lastProject": "Reopen the last project",
+      "nothing": "Open nothing"
+    },
+    "modified": "Changed, not applied yet",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "confirm": "OK",
+    "discardTitle": "Some settings have not been applied",
+    "discardBody": "You changed settings without applying them. What would you like to do?",
+    "discard": "Don't apply",
+    "shortcuts": "Shortcuts",
+    "shortcutsDescription": "The keys that trigger each action. Click a key to replace it.",
+    "pressAKey": "Press…",
+    "unbound": "None",
+    "shortcutConflict": "Two actions are fighting over this key: only one will answer.",
+    "findByChord": "Find by key",
+    "showAll": "Show all",
+    "chordFree": "No action uses this key: it is free.",
+    "scope": {
+      "global": "Anywhere in the application",
+      "scene": "In the 3D view",
+      "sequence": "In the edit"
+    },
+    "spaces": "Workspaces",
+    "spacesDescription": "What only makes sense inside one space: the 3D view, the edit, the image.",
+    "requires": "Has no effect while “{{setting}}” is off.",
+    "showGrid": {
+      "title": "Show the grid",
+      "help": "The squared floor of the 3D view. It is not part of what you are making: it is a landmark for where things are and how high. Hide it to judge an image with nothing around it."
+    },
+    "gridSize": {
+      "title": "Grid size",
+      "help": "How far the grid reaches, in metres, and therefore how many squares it has — a square is always one metre. Make it bigger for a wide scene, smaller for a little object sitting near the camera."
+    },
+    "flySpeed": {
+      "title": "Fly speed",
+      "help": "How fast the camera moves when you fly through the 3D view, in metres per second. Too slow and crossing the scene takes ten seconds; too fast and you shoot past it without seeing it."
+    },
+    "boostFactor": {
+      "title": "Boost",
+      "help": "What the speed is multiplied by while you hold the boost key. At 3 you go three times faster — enough to cross a large scene without changing the setting above."
+    },
+    "fieldOfView": {
+      "title": "Field of view",
+      "help": "How much the camera takes in, in degrees. A narrow angle pulls close and flattens, like a telephoto lens; a wide one shows far more but bends the edges. 60 is close to what an eye sees."
+    },
+    "advanced": "Advanced",
+    "advancedDescription": "What is only needed to understand a problem, or to start over.",
+    "reveal": "Reveal",
+    "open": "Open",
+    "logLevel": {
+      "title": "Log detail",
+      "help": "How much the application says about what it is doing, in the console. “Nothing” says nothing at all; “Errors” reports only what failed; “Everything” narrates each step, which helps to understand a problem and is chatty the rest of the time.",
+      "silent": "Nothing",
+      "error": "Errors only",
+      "warn": "Errors and warnings",
+      "info": "Everything"
+    },
+    "openSettingsFile": {
+      "title": "Settings file",
+      "help": "Shows where your settings are saved, in the file manager. Useful to copy them before moving to another machine, or to send them to someone helping you."
+    },
+    "openDevtools": {
+      "title": "Developer tools",
+      "help": "Opens the technical console of the embedded browser. It shows the log messages and the errors. For troubleshooting only: nothing in there is needed to use the software."
+    },
+    "resetAll": {
+      "title": "Reset everything",
+      "help": "Puts EVERY setting back to a fresh install: theme, language, shortcuts, all of it. Your projects, images and edits are untouched — only the settings are. There is no going back.",
+      "button": "Reset",
+      "confirm": "Reset every setting? Your projects are untouched, but this cannot be undone."
+    },
+    "storage": "Storage",
+    "storageDescription": "Where your projects are kept on disk.",
+    "projectsFolder": {
+      "title": "Projects folder",
+      "help": "The folder the application offers when you create or open a project. It moves nothing: projects already created stay where they are. Leave it empty to start from wherever you last were."
+    }
+  },
+  "skybox": {
+    "sun": "Sun",
+    "elevation": "Elevation",
+    "azimuth": "Azimuth",
+    "intensity": "Intensity",
+    "color": "Colour",
+    "adjustments": "Adjustments",
+    "exposure": "Exposure",
+    "contrast": "Contrast",
+    "saturation": "Saturation",
+    "temperature": "Temperature",
+    "tint": "Tint",
+    "rotation": "Horizon rotation",
+    "blur": "Blur",
+    "environment": "Environment",
+    "envIntensity": "IBL intensity",
+    "showBackground": "Show background",
+    "showGround": "Reference ground",
+    "generation": "Generation",
+    "prompt": "Prompt",
+    "seed": "Seed",
+    "model": "Model",
+    "regenerate": "Regenerate",
+    "reset": "Reset",
+    "empty": "Open a skybox to grade it.",
+    "noSource": "No skybox yet. Generate one or drop an equirectangular panorama.",
+    "views": "View",
+    "viewImmersive": "360°",
+    "viewEquirect": "Equirect",
+    "viewCross": "Cross",
+    "viewFaces": "6 faces",
+    "testObjects": "Test objects",
+    "fieldOfView": "Field of view"
+  },
+  "commands": {
+    "projectNew": {
+      "title": "New project",
+      "help": "Creates an empty project and opens it. A project is the folder holding everything you make: the images, the videos, the sounds, and how they are arranged."
+    },
+    "projectOpen": {
+      "title": "Open project",
+      "help": "Picks a project already on your disk and opens it in place of the current one. The open project is saved as you go, so there is nothing to save first."
+    },
+    "layoutReset": {
+      "title": "Reset layout",
+      "help": "Puts the panels back where they started. Useful once the windows have been dragged all over and nothing is where you expect. Your work is untouched."
+    },
+    "appSettings": {
+      "title": "Settings",
+      "help": "Opens the settings window — this one: the language, the colours, the account, the shortcuts, and everything else that is adjustable."
+    },
+    "windowFullScreen": {
+      "title": "Full screen",
+      "help": "Gives the window the whole screen, with no bar and no border, to work with nothing around it."
+    },
+    "sceneSelect": {
+      "title": "Select",
+      "help": "The plain tool: click an object in the scene to choose it, without doing anything to it. It is the one you come back to between manipulations."
+    },
+    "sceneTranslate": {
+      "title": "Move",
+      "help": "Drags the chosen object from one place to another, by pulling the coloured arrows — one per direction."
+    },
+    "sceneRotate": {
+      "title": "Rotate",
+      "help": "Turns the chosen object on itself, by pulling the coloured rings — one per axis."
+    },
+    "sceneScale": {
+      "title": "Scale",
+      "help": "Makes the chosen object bigger or smaller, by pulling its handles. Holding Shift keeps its proportions."
+    },
+    "sceneFrame": {
+      "title": "Frame selection",
+      "help": "Brings the camera close enough that the chosen object fills the view. Handy when you are lost, or when an object is tiny."
+    },
+    "sceneDelete": {
+      "title": "Delete",
+      "help": "Removes the chosen object from the scene. Nothing is lost for good: ⌘Z brings it back."
+    },
+    "undo": {
+      "title": "Undo",
+      "help": "Takes back the last thing you did in this document. Each document has its own stack: undo acts on the tab in front, not on the others."
+    },
+    "redo": {
+      "title": "Redo",
+      "help": "Does again what you have just undone. Handy after undoing once too often."
+    },
+    "sequencePlayPause": {
+      "title": "Play / Pause",
+      "help": "Starts playing the edit, or stops it where it is. Starting again picks up where you left off."
+    },
+    "sequenceSplit": {
+      "title": "Split clip",
+      "help": "Cuts the clip in two where the playhead sits, so each half can be handled on its own."
+    },
+    "sequenceDelete": {
+      "title": "Delete clip",
+      "help": "Removes the chosen clip from the edit. The original file stays in your assets."
+    },
+    "sequenceZoomIn": {
+      "title": "Zoom in",
+      "help": "Spreads the edit out to see detail: clips get wider and are easier to aim at."
+    },
+    "sequenceZoomOut": {
+      "title": "Zoom out",
+      "help": "Draws the edit together to see more of it at once, at the cost of the detail."
+    },
+    "sequenceFit": {
+      "title": "Fit to view",
+      "help": "Sets the zoom so the whole edit fits on screen, end to end."
+    },
+    "sequenceStart": {
+      "title": "Go to start",
+      "help": "Brings the playhead right back to the beginning of the edit, moving nothing else."
+    },
+    "sequenceEnd": {
+      "title": "Go to end",
+      "help": "Sends the playhead right to the end of the edit, past the last clip."
+    }
   }
 }

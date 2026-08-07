@@ -1,7 +1,50 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { partialFor, type SettingValue } from '@shared/domain/settings-path'
+import {
+  optionsOf,
+  SETTING_REGISTRY,
+  type SettingDescriptor,
+} from '@shared/domain/settings-registry'
 import { parsePartialSettings, salvagePartialSettings } from './validation'
 
+/** A value the descriptor itself says is acceptable — no second table of examples to maintain. */
+function acceptable(descriptor: SettingDescriptor): SettingValue {
+  switch (descriptor.kind) {
+    case 'boolean':
+      return true
+    case 'choice':
+      return optionsOf(descriptor)[0]?.value ?? ''
+    case 'color':
+      return '#3574f0'
+    case 'number':
+    case 'slider':
+      return descriptor.min ?? 1
+    default:
+      return '/some/path'
+  }
+}
+
 describe('settings validation', () => {
+  /*
+   * The shape is enumerated by hand in `validation.ts`, and zod STRIPS what it does not declare
+   * rather than refusing it. A branch added to `Settings` and forgotten there would therefore
+   * seem to save and be gone on the next launch — the worst of the two failures, because
+   * nothing reports it. Driven from the registry so this needs no upkeep of its own.
+   */
+  it('keeps every setting the registry describes, so none is silently stripped on write', () => {
+    for (const descriptor of SETTING_REGISTRY) {
+      const written = partialFor(descriptor.path, acceptable(descriptor))
+      expect(parsePartialSettings(written), `${descriptor.path} is stripped on write`).toEqual(
+        written,
+      )
+    }
+  })
+
+  it('keeps every branch of the defaults, which is what a fresh install writes back', () => {
+    expect(parsePartialSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS)
+  })
+
   it('accepts a partial and keeps only the sections it declares', () => {
     expect(parsePartialSettings({ appearance: { density: 'compact' } })).toEqual({
       appearance: { density: 'compact' },

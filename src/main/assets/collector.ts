@@ -1,4 +1,5 @@
 import type { AssetType } from '@shared/domain/asset'
+import { channelFromScenarioType } from '@shared/domain/texture'
 import type { AssetCollector } from '@main/scenario/job-manager'
 import type { LocalBackend } from './local-backend'
 
@@ -24,15 +25,31 @@ export function assetTypeOf(kind: string): AssetType | null {
   }
 }
 
-export type RemoteAsset = { url: string; kind: string }
+/**
+ * `metadataType` is `metadata.type` on the API side — where a PBR channel announces itself —
+ * and `parentId` the API asset this one was made from.
+ */
+export type RemoteAsset = {
+  url: string
+  kind: string
+  metadataType?: string
+  parentId?: string
+}
 
 export type CollectorDeps = {
   retrieve: (remoteAssetId: string) => Promise<RemoteAsset>
   backend: LocalBackend
   newId: () => string
+  /** The local asset an API one became, or `null` when the parent never entered the project. */
+  localIdOf: (remoteAssetId: string) => Promise<string | null>
 }
 
-export function createAssetCollector({ retrieve, backend, newId }: CollectorDeps): AssetCollector {
+export function createAssetCollector({
+  retrieve,
+  backend,
+  newId,
+  localIdOf,
+}: CollectorDeps): AssetCollector {
   return async (job, remoteAssetIds) => {
     const collected: string[] = []
 
@@ -40,8 +57,15 @@ export function createAssetCollector({ retrieve, backend, newId }: CollectorDeps
     // them all at once would fight the very concurrency the JobManager bounds.
     for (const [index, remoteAssetId] of remoteAssetIds.entries()) {
       const remote = await retrieve(remoteAssetId)
-      const type = assetTypeOf(remote.kind)
+      const source = channelFromScenarioType(remote.metadataType)
+      // A PBR channel lands as a texture whatever its `kind` says: one converter job answers
+      // with several pictures, and filing them as plain images would lose the whole material.
+      const type = source ? 'texture' : assetTypeOf(remote.kind)
       if (!type) continue
+
+      // What the channels of one texture hang from. Absent when the parent never entered the
+      // project — an image uploaded straight to the API, or converted before it was imported.
+      const derivedFrom = remote.parentId ? await localIdOf(remote.parentId) : null
 
       const asset = await backend.importFromUrl({
         id: newId(),
@@ -50,6 +74,10 @@ export function createAssetCollector({ retrieve, backend, newId }: CollectorDeps
         type,
         jobId: job.id,
         remoteAssetId,
+        ...(derivedFrom ? { derivedFrom } : {}),
+        // Absent rather than false: an ordinary map is not "a map that is not inverted".
+        ...(source ? { map: source.channel } : {}),
+        ...(source?.inverted ? { mapInverted: true } : {}),
       })
 
       collected.push(asset.id)

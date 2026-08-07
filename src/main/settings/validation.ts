@@ -1,19 +1,36 @@
 import { z } from 'zod'
+import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
 import {
   DENSITIES,
+  LOG_VERBOSITIES,
   SETTINGS_SECTION_IDS,
+  STARTUP_BEHAVIOURS,
   THEMES,
   type PartialSettings,
   type SettingsSectionId,
 } from '@shared/domain/settings'
-import { boundsOf } from '@shared/domain/settings-registry'
+import {
+  boundsOf,
+  SETTING_ACTION_IDS,
+  type SettingActionId,
+} from '@shared/domain/settings-registry'
 import type { Credentials } from './store'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
+const scale = boundsOf('appearance.fontScale')
+
+// Six digits, not three and not eight: the value is handed to `--color-accent`, read back by
+// `tokenAsHex` for the canvas engines, and that one parses `#rrggbb` alone.
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i)
+
 const appearance = z.object({
   theme: z.enum(THEMES).optional(),
   density: z.enum(DENSITIES).optional(),
+  accent: hexColor.optional(),
+  // Not `.int()`, unlike the job counts: this one is a slider with a 0.05 step.
+  fontScale: z.number().min(scale.min).max(scale.max).optional(),
+  reduceMotion: z.boolean().optional(),
 })
 
 // Read from the registry, never restated: the bounds a screen offers and the ones this refuses
@@ -41,11 +58,41 @@ const storage = z.object({
 // storable, and `resolveFfmpeg` falls through to the PATH when it does not resolve.
 const media = z.object({ ffmpegPath: z.string().min(1).optional() })
 
+const general = z.object({
+  language: z.enum(LANGUAGE_PREFERENCES).optional(),
+  startup: z.enum(STARTUP_BEHAVIOURS).optional(),
+})
+
+// Keys are command ids and values signatures, both free strings here: a build that no longer
+// knows a command ignores its remap rather than refusing the whole write.
+const grid = boundsOf('three.gridSize')
+const fly = boundsOf('three.flySpeed')
+const boost = boundsOf('three.boostFactor')
+const lens = boundsOf('three.fieldOfView')
+
+const three = z.object({
+  showGrid: z.boolean().optional(),
+  gridSize: z.number().int().min(grid.min).max(grid.max).optional(),
+  flySpeed: z.number().min(fly.min).max(fly.max).optional(),
+  boostFactor: z.number().min(boost.min).max(boost.max).optional(),
+  fieldOfView: z.number().min(lens.min).max(lens.max).optional(),
+})
+
+const shortcuts = z.object({
+  overrides: z.record(z.string().min(1), z.string().min(1)).optional(),
+})
+
+const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
+
 const partialSettings = z.object({
+  general: general.optional(),
   appearance: appearance.optional(),
   generation: generation.optional(),
   storage: storage.optional(),
+  three: three.optional(),
+  shortcuts: shortcuts.optional(),
   media: media.optional(),
+  advanced: advanced.optional(),
 })
 
 /** Validates what the renderer sends. Throws: an out-of-bounds write must not be persisted. */
@@ -68,6 +115,13 @@ const settingsSection = z.enum(SETTINGS_SECTION_IDS)
 
 export function parseSettingsSection(value: unknown): SettingsSectionId {
   return settingsSection.parse(value)
+}
+
+// Throws rather than falling back: the id decides which action runs, and a renderer sends it.
+const settingAction = z.enum(SETTING_ACTION_IDS)
+
+export function parseSettingAction(value: unknown): SettingActionId {
+  return settingAction.parse(value)
 }
 
 // Trimmed before the length check: a key pasted from a web page carries a trailing newline,

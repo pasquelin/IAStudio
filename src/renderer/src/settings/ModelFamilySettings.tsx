@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
+import { useSettingsDraft } from '@/stores/settings-draft'
 
 /**
  * A `<select>` is not a browser: past a hundred entries it stops being usable long before it
@@ -45,9 +46,13 @@ function useFamilyModels(family: ModelFamily): ModelSummary[] {
 export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const { t } = useTranslation()
   const models = useFamilyModels(family)
-  const defaultModels = useSettings(state => state.settings.generation.defaultModels)
-  const write = useSettings(state => state.write)
+  const stored = useSettings(state => state.settings.generation.defaultModels)
+  const stageBranch = useSettingsDraft(state => state.stageBranch)
+  // Staged like every other setting: this screen writes a branch no path can name, which is
+  // exactly what `stageBranch` exists for — it must not slip past Apply on its own.
+  const staged = useSettingsDraft(state => state.pending.generation?.defaultModels)
 
+  const defaultModels = staged ?? stored
   const selected = defaultModels[family] ?? ''
 
   return (
@@ -63,7 +68,7 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
             const next = { ...defaultModels }
             if (event.target.value) next[family] = event.target.value
             else delete next[family]
-            void write({ generation: { defaultModels: next } })
+            stageBranch({ generation: { defaultModels: next } })
           }}
         >
           <option value="">{t('settings.noDefaultModel')}</option>

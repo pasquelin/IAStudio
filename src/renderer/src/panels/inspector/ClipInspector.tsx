@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
+import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertyRow } from '@/design/PropertyRow'
 import { setClipFade, setClipGain, setClipSpeed } from '@/engines/timeline/commands'
 import { formatDuration, formatTimecode } from '@/engines/timeline/timecode'
 import {
@@ -14,7 +15,7 @@ import {
   type Clip,
   type SequenceState,
 } from '@/engines/timeline/timeline-state'
-import { useAssets } from '@/stores/assets'
+import { assetsById, useAssets } from '@/stores/assets'
 import { useSequenceEdit } from './useSequenceEdit'
 
 export type ClipInspectorProps = { documentId: string; sequence: SequenceState; clip: Clip }
@@ -25,9 +26,9 @@ export type ClipInspectorProps = { documentId: string; sequence: SequenceState; 
  */
 export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps) {
   const { t } = useTranslation()
-  const name = useAssets(
-    state => state.items.find(asset => asset.id === clip.assetId)?.name ?? clip.assetId,
-  )
+  // The name rather than the index: subscribing to the map re-renders on every catalogue
+  // refresh, and a job finishing renames nothing here.
+  const name = useAssets(state => assetsById(state).get(clip.assetId)?.name) ?? clip.assetId
 
   const track = trackOfClip(sequence, clip.id)
   const edit = useSequenceEdit(documentId)

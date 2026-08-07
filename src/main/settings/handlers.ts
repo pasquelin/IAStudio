@@ -2,7 +2,13 @@ import type { AuthState, SettingsSectionId } from '@shared/domain/settings'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import type { SettingsStore } from './store'
-import { parseCredentials, parsePartialSettings, parseSettingsSection } from './validation'
+import type { SettingActionId } from '@shared/domain/settings-registry'
+import {
+  parseCredentials,
+  parsePartialSettings,
+  parseSettingAction,
+  parseSettingsSection,
+} from './validation'
 
 export type SettingsHandlerDeps = {
   settings: SettingsStore
@@ -11,6 +17,10 @@ export type SettingsHandlerDeps = {
   authState: () => Promise<AuthState>
   /** Opens the settings window on a section — a panel saying the key is missing leads here. */
   openSettings: (section: SettingsSectionId) => void
+  /** Runs one of the settings window's buttons. Injected: each one touches Electron directly. */
+  runAction: (id: SettingActionId) => void
+  /** Told the window is holding changes nobody applied, so closing it can ask first. */
+  setPending: (pending: boolean) => void
 }
 
 export function registerSettingsHandlers({
@@ -18,6 +28,8 @@ export function registerSettingsHandlers({
   onCredentialsChanged,
   authState,
   openSettings,
+  runAction,
+  setPending,
 }: SettingsHandlerDeps): void {
   handle(CHANNELS.settingsRead, () => settings.read())
 
@@ -50,5 +62,13 @@ export function registerSettingsHandlers({
   // serializer — the window would open and the call would still reject.
   handle(CHANNELS.settingsOpen, (_event, section) => {
     openSettings(parseSettingsSection(section))
+  })
+
+  handle(CHANNELS.settingsRunAction, (_event, id) => {
+    runAction(parseSettingAction(id))
+  })
+
+  handle(CHANNELS.settingsPending, (_event, pending) => {
+    setPending(pending === true)
   })
 }

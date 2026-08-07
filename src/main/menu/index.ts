@@ -1,8 +1,10 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import type { BindingOverrides } from '@shared/domain/command'
 import { DEFAULT_LANGUAGE, type Language } from '@shared/i18n'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { isDevelopment } from '@main/environment'
 import { toggleFullScreen } from '@main/window/controls'
 import { openSettingsWindow } from '@main/window/windows'
 import { menuTemplate } from './template'
@@ -39,6 +41,11 @@ const workspaces = new Map<number, WorkspaceId>()
 /** What the menu currently shows, so a focus change that alters nothing rebuilds nothing. */
 let shown: WorkspaceId | null = null
 let language: Language = DEFAULT_LANGUAGE
+/**
+ * Remembered between builds, like the language: the menu is rebuilt whenever the focus moves
+ * between workspaces, and that rebuild must not drop the user's remaps.
+ */
+let overrides: BindingOverrides = {}
 
 function focusedWorkspace(): WorkspaceId | null {
   const target = focusedWindow()
@@ -49,15 +56,17 @@ function focusedWorkspace(): WorkspaceId | null {
  * Native application menu. Together with the icon rails, it is one of the two ways back for a
  * tool removed with its close button — a panel closed with no way to reopen it would be lost.
  */
-export function buildMenu(next: Language = language): void {
+export function buildMenu(next: Language = language, remapped: BindingOverrides = overrides): void {
   language = next
+  overrides = remapped
   shown = focusedWorkspace()
 
   const template = menuTemplate({
     language,
     workspace: shown,
     isMac: process.platform === 'darwin',
-    isPackaged: app.isPackaged,
+    isDevelopment,
+    overrides,
     actions: {
       openSettings: () => void openSettingsWindow(),
       toggleFullScreen: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),

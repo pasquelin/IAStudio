@@ -1,6 +1,6 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
-import { COMMAND_IDS } from '@shared/domain/shortcut'
+import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { LIGHT_TYPES } from '@/engines/scene/light-types'
 import { MESH_PRIMITIVES } from '@/engines/scene/mesh-primitives'
 import { SCENE_TOOLS } from './scene-tools'
@@ -10,7 +10,8 @@ const add = SCENE_TOOLS.find(tool => tool.id === 'add')
 describe('scene tools', () => {
   it('binds every command it declares to a known one', () => {
     for (const tool of SCENE_TOOLS) {
-      if (tool.command) expect(COMMAND_IDS).toContain(tool.command)
+      if (tool.command)
+        expect(COMMAND_REGISTRY.map(descriptor => descriptor.id)).toContain(tool.command)
     }
   })
 

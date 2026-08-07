@@ -6,11 +6,13 @@ import { availableParallelism } from 'node:os'
 import { delimiter, dirname } from 'node:path'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
+import type { PathKind } from '@shared/domain/settings-registry'
 import type { AuthState } from '@shared/domain/settings'
 import { log } from './log'
-import { TRANSLATIONS } from '@shared/i18n'
-import { resolveLanguage } from '@shared/i18n/languages'
+import { TRANSLATIONS, type Language } from '@shared/i18n'
+import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
+import { isDevelopment } from '@main/environment'
 import { createAssetCollector } from './assets/collector'
 import { serveAssets, servedFileOf } from './assets/protocol'
 import { createFfmpegResolver } from './media/ffmpeg'
@@ -27,8 +29,10 @@ import {
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { broadcast } from './ipc/broadcast'
+import { setLogVerbosity } from './log'
 import { createJobManager, type JobManager } from './scenario/job-manager'
 import { runnerOf } from './scenario/runner'
+import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
@@ -37,6 +41,9 @@ import { createFileSystemFallback, resolveCredentials } from './scenario/credent
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type SettingsStore } from './settings/store'
+import { buildMenu } from './menu'
+import { setWindowLanguage } from './window/language'
+import { applyTheme } from './window/theme'
 
 export type Services = {
   settings: SettingsStore
@@ -44,6 +51,7 @@ export type Services = {
   models: ModelRegistry
   jobs: JobManager
   project: ProjectStore
+  documents: DocumentFiles
   assets: LocalBackend
   /** Minted here so the collector and the audio editor cannot name assets differently. */
   newAssetId: () => string
@@ -51,7 +59,9 @@ export type Services = {
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Promise<Asset>
   capabilities: () => Promise<MediaCapabilities>
-  pickFolder: () => Promise<string | null>
+  /** The language in force, machine locale included. Both the menu and the dialogs read it. */
+  language: () => Language
+  pickPath: (kind: PathKind) => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   pickMedia: () => Promise<string[]>
@@ -71,14 +81,22 @@ async function openDialog(options: Electron.OpenDialogOptions): Promise<string[]
   return result.canceled ? [] : result.filePaths
 }
 
-async function pickFolder(): Promise<string | null> {
-  const picked = await openDialog({ properties: ['openDirectory', 'createDirectory'] })
+/**
+ * One picker for every path the interface asks for. `createDirectory` on a folder because the
+ * one being chosen often does not exist yet — where the projects will go.
+ */
+async function pickPath(kind: PathKind, startIn?: string): Promise<string | null> {
+  const picked = await openDialog({
+    properties: kind === 'folder' ? ['openDirectory', 'createDirectory'] : ['openFile'],
+    // Absent is normal: the dialog then opens wherever the OS last left it.
+    ...(startIn ? { defaultPath: startIn } : {}),
+  })
   return picked[0] ?? null
 }
 
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
-function pickMedia(): Promise<string[]> {
-  const t = TRANSLATIONS[resolveLanguage(app.getLocale())].dialog
+function pickMedia(language: Language): Promise<string[]> {
+  const t = TRANSLATIONS[language].dialog
   const filters = mediaFilters({
     all: t.allMedia,
     video: t.video,
@@ -107,14 +125,35 @@ export function createServices(): Services {
   // Notified from the store rather than from the IPC handler: the project store writes
   // `lastProject` on its own, and every window replicates these settings.
   const settings = createSettingsStore(createElectronAdapter(), {
-    onChange: current => broadcast(EVENTS.settingsChanged, current),
+    onChange: current => {
+      // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
+      // and Chromium only answers with the new value once `themeSource` has moved.
+      applyTheme(current.appearance.theme)
+      setLogVerbosity(current.advanced.logLevel)
+      // The native menu is built once and never re-reads anything: without this the window
+      // changes language and the menu bar above it does not.
+      buildMenu(
+        effectiveLanguage(current.general.language, app.getLocale()),
+        current.shortcuts.overrides,
+      )
+      broadcast(EVENTS.settingsChanged, current)
+    },
   })
+
+  const language = (): Language =>
+    effectiveLanguage(settings.read().general.language, app.getLocale())
+
+  // The stored theme, before any window is painted: a window created on the OS preference and
+  // corrected afterwards flashes the wrong colour for a frame.
+  applyTheme(settings.read().appearance.theme)
+  setWindowLanguage(language())
+  setLogVerbosity(settings.read().advanced.logLevel)
 
   // A keychain the OS can no longer open leaves a blob that decrypts to nothing. Dropping it
   // at startup is what makes the account dialog ask again instead of claiming to be set up.
   settings.discardUnreadableCredentials()
 
-  const fallback = createFileSystemFallback(app.getAppPath(), app.isPackaged)
+  const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
   const client = createClientProvider(() => resolveCredentials(settings, fallback))
   const models = createModelRegistry({ catalog: () => catalogOf(client.require()) })
 
@@ -131,6 +170,11 @@ export function createServices(): Services {
     download,
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
+    now: timestamp,
+  })
+
+  const documents = createDocumentFiles({
+    projectPath: () => project.path(),
     now: timestamp,
   })
 
@@ -173,10 +217,14 @@ export function createServices(): Services {
   const jobs = createJobManager({
     runner: runnerOf(() => client.require()),
     collect: createAssetCollector({
-      retrieve: async remoteAssetId =>
-        (await client.require().assets.retrieve(remoteAssetId)).asset,
+      retrieve: async remoteAssetId => {
+        const { asset } = await client.require().assets.retrieve(remoteAssetId)
+        return { ...asset, metadataType: asset.metadata.type, parentId: asset.metadata.parentId }
+      },
       backend: assets,
       newId: newAssetId,
+      localIdOf: async remoteAssetId =>
+        (await project.catalog().findByRemoteId(remoteAssetId))?.id ?? null,
     }),
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
@@ -194,7 +242,8 @@ export function createServices(): Services {
     return asset ? servedFileOf(current.path, asset) : null
   })
 
-  const lastProject = settings.read().storage.lastProject
+  const stored = settings.read()
+  const lastProject = stored.general.startup === 'lastProject' ? stored.storage.lastProject : null
   // Best effort: the folder may have been moved or deleted since the last session, and that
   // is not a reason to refuse to start. Said out loud all the same — swallowed, a catalogue
   // that fails to open leaves every panel claiming no project is open while the folder is
@@ -211,6 +260,7 @@ export function createServices(): Services {
     models,
     jobs,
     project,
+    documents,
     assets,
     newAssetId,
     media,
@@ -226,9 +276,10 @@ export function createServices(): Services {
       forgetBinaries()
       return { ffmpeg: await binaryRuns(ffmpeg.path()) }
     },
-    pickFolder,
+    language,
+    pickPath,
     reveal: file => shell.showItemInFolder(file),
-    pickMedia,
+    pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping the cache would show the previous
     // account's models under the new one.
     onCredentialsChanged: () => {
