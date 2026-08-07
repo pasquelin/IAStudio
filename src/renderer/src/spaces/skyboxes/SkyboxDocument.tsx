@@ -87,7 +87,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
 
     const assetId = assetIdFromDrag(event)
     const asset = assetId ? assetsById(useAssets.getState()).get(assetId) : undefined
-    if (asset) setSkyboxSource(asset)
+    if (asset) setSkyboxSource(documentId, asset)
   }
 
   return (

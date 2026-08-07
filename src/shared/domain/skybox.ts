@@ -1,3 +1,4 @@
+import type { AssetGeneration } from './asset'
 import type { AdjustmentStack } from './adjustments'
 import { NEUTRAL_ADJUSTMENTS } from './adjustments'
 import type { SphericalAngles } from './angles'
@@ -100,7 +101,12 @@ export type SkyboxContent = {
   adjustments: AdjustmentStack
   sun: SunSettings
   environment: SkyboxEnvironment
-  generation?: { modelId: string; modelLabel: string; prompt: string; seed?: number }
+  /**
+   * What produced the picture, stated once rather than respelled: the catalogue is expected to
+   * start recording `AssetGeneration`, and a field added there must reach a sky too. `params`
+   * is dropped because a document is not a form — "regenerate" reads the job, not this.
+   */
+  generation?: Omit<AssetGeneration, 'params'>
 }
 
 export function createSkyboxContent(): SkyboxContent {

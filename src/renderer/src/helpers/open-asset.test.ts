@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { Asset, AssetType } from '@shared/domain/asset'
+import type { Asset } from '@shared/domain/asset'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import { pushEdit } from '@/engines/audio/edits'
 import { canUndo } from '@/engines/core/history'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
@@ -18,15 +20,8 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const open = (kind: 'audio' | 'sequence' | 'skybox'): void => {
-  useDocuments.setState({
-    documents: { 'doc-1': { id: 'doc-1', kind, title: 'Doc', workspace: 'audio' } },
-    activeId: 'doc-1',
-  })
-}
-
-/** Every kind that decodes as an image — the same file may have arrived under any of them. */
-const PICTURE_TYPES: readonly AssetType[] = ['image', 'texture', 'skybox']
+/** The workspace, not the kind: `installDocument` derives the pairing the application uses. */
+const open = (workspace: WorkspaceId): void => installDocument('doc-1', workspace)
 
 const picture = (overrides: Partial<Asset> = {}): Asset =>
   asset({ id: 'asset-sky', name: 'dusk.png', type: 'image', ...overrides })
@@ -47,7 +42,7 @@ describe('opening an asset', () => {
   })
 
   it('adds to the montage when a sequence is in front', () => {
-    open('sequence')
+    open('video')
     openAsset(asset())
 
     expect(sequenceOf(useSequences.getState(), 'doc-1').tracks[1]?.clips).toHaveLength(1)
@@ -80,26 +75,23 @@ describe('opening an asset', () => {
   })
 
   it('hangs a picture in the sky when a skybox tab is in front', () => {
-    open('skybox')
+    open('skyboxes')
     openAsset(picture())
 
     expect(skyboxOf(useSkyboxes.getState(), 'doc-1').source).toEqual({ assetId: 'asset-sky' })
   })
 
-  // Every picture the project holds: an equirectangular one may have been imported as a plain
-  // image, generated as a skybox, or produced as a texture, and the three are the same file.
-  it('takes any picture, whichever shelf it came from', () => {
-    open('skybox')
+  // The same equirectangular file is an `image` when imported and a `skybox` when generated;
+  // which shelf it came from must not decide whether it can be hung.
+  it('takes a generated sky as readily as an imported picture', () => {
+    open('skyboxes')
+    openAsset(picture({ type: 'skybox' }))
 
-    for (const type of PICTURE_TYPES) {
-      useSkyboxes.setState({ states: {}, histories: {} })
-      openAsset(picture({ type }))
-      expect(skyboxOf(useSkyboxes.getState(), 'doc-1').source).not.toBeNull()
-    }
+    expect(skyboxOf(useSkyboxes.getState(), 'doc-1').source).toEqual({ assetId: 'asset-sky' })
   })
 
   it('refuses what does not decode as a picture', () => {
-    open('skybox')
+    open('skyboxes')
     openAsset(asset({ type: 'video' }))
 
     expect(skyboxOf(useSkyboxes.getState(), 'doc-1').source).toBeNull()
@@ -108,14 +100,14 @@ describe('opening an asset', () => {
   // A cloud asset has no file the engine could load: `assetUrl` resolves an id against the
   // catalogue, and one that is not on disk answers 404 into a black sky.
   it('refuses a picture that is not on disk', () => {
-    open('skybox')
+    open('skyboxes')
     openAsset(picture({ location: 'cloud' }))
 
     expect(skyboxOf(useSkyboxes.getState(), 'doc-1').source).toBeNull()
   })
 
   it('leaves the sky undoable back to the one before it', () => {
-    open('skybox')
+    open('skyboxes')
     openAsset(picture())
     openAsset(picture({ id: 'asset-dawn' }))
 

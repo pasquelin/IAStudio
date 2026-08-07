@@ -103,19 +103,19 @@ describe('translateSchema', () => {
 
 describe('familyOf', () => {
   it('classifies an image-to-video model as video, not image', () => {
-    expect(familyOf(['img2video', 'txt2video'])).toBe('video')
+    expect(familyOf(['img2video', 'txt2video'], [])).toBe('video')
   })
 
   it('recognizes 3D, audio and image', () => {
-    expect(familyOf(['img23d'])).toBe('3d')
-    expect(familyOf(['txt2audio'])).toBe('audio')
-    expect(familyOf(['txt2img', 'inpaint'])).toBe('image')
+    expect(familyOf(['img23d'], [])).toBe('3d')
+    expect(familyOf(['txt2audio'], [])).toBe('audio')
+    expect(familyOf(['txt2img', 'inpaint'], [])).toBe('image')
   })
 
   it('falls back to "other" with no usable capability', () => {
-    expect(familyOf([])).toBe('other')
-    expect(familyOf(undefined)).toBe('other')
-    expect(familyOf(['txt2txt'])).toBe('other')
+    expect(familyOf([], [])).toBe('other')
+    expect(familyOf(undefined, [])).toBe('other')
+    expect(familyOf(['txt2txt'], [])).toBe('other')
   })
 
   // The three public skybox models answer `txt2img`/`img2img` like any image model, so the

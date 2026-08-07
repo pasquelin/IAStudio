@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job, JobStatus } from '@shared/domain/job'
 import { useAssets } from './assets'
+import { installDocument } from './document-fixtures'
 import { useDocuments } from './documents'
 import { useJobs } from './jobs'
-import { claimGeneration, connectSkyboxGeneration, forgetGenerations } from './skybox-generation'
+import { claimOnSubmit, connectSkyboxGeneration } from './skybox-generation'
 import { skyboxOf, useSkyboxes } from './skyboxes'
 
 const panorama: Asset = {
@@ -56,28 +57,40 @@ const LOST: readonly JobStatus[] = ['failed', 'cancelled']
 const sourceOf = (documentId: string): { assetId: string } | null =>
   skyboxOf(useSkyboxes.getState(), documentId).source
 
+/** Submits from whatever tab is in front, the way the generator does — capture, then settle. */
+function submitFrom(jobId: string): void {
+  claimOnSubmit()(job({ id: jobId }))
+}
+
+/** Two skies open at once, `doc-1` in front — `installDocument` only ever installs one. */
+function openBoth(): void {
+  useDocuments.setState(state => ({
+    documents: {
+      ...state.documents,
+      'doc-2': { id: 'doc-2', kind: 'skybox', title: 'Other', workspace: 'skyboxes' },
+    },
+  }))
+}
+
 describe('landing a generation in the sky that asked for it', () => {
   let disconnect: () => void = () => {}
 
   beforeEach(() => {
-    forgetGenerations()
     useSkyboxes.setState({ states: {}, histories: {} })
     useAssets.setState({ items: [] })
     useJobs.setState({ jobs: [], bodies: {} })
     catalogueHolds([panorama])
-    useDocuments.setState({
-      documents: { 'doc-1': { id: 'doc-1', kind: 'skybox', title: 'Sky', workspace: 'skyboxes' } },
-      activeId: 'doc-1',
-    })
+    installDocument('doc-1', 'skyboxes')
     disconnect = connectSkyboxGeneration()
   })
 
+  // Disconnecting drops the claims with the subscription, which is also the reset between cases.
   afterEach(() => {
     disconnect()
   })
 
   it('hangs what the finished job produced', async () => {
-    claimGeneration('job-1')
+    submitFrom('job-1')
     await finish('succeeded')
 
     expect(sourceOf('doc-1')).toEqual({ assetId: 'asset-dusk' })
@@ -85,7 +98,7 @@ describe('landing a generation in the sky that asked for it', () => {
 
   it('records what produced it, from the body the renderer submitted', async () => {
     useJobs.setState({ bodies: { 'job-1': { prompt: 'a dusk over water', seed: 42 } } })
-    claimGeneration('job-1')
+    submitFrom('job-1')
     await finish('succeeded')
 
     expect(skyboxOf(useSkyboxes.getState(), 'doc-1').generation).toEqual({
@@ -97,51 +110,43 @@ describe('landing a generation in the sky that asked for it', () => {
   })
 
   it('leaves the sky alone until the job actually finishes', async () => {
-    claimGeneration('job-1')
+    submitFrom('job-1')
     useJobs.setState({ jobs: [job({ status: 'running', progress: 0.9 })] })
     await flush()
 
     expect(sourceOf('doc-1')).toBeNull()
   })
 
-  it('hangs nothing when the job failed or was cancelled', async () => {
-    for (const status of LOST) {
-      forgetGenerations()
-      useSkyboxes.setState({ states: {}, histories: {} })
-      claimGeneration('job-1')
-      await finish(status)
+  it.each(LOST)('hangs nothing when the job %s', async status => {
+    submitFrom('job-1')
+    await finish(status)
 
-      expect(sourceOf('doc-1')).toBeNull()
-    }
+    expect(sourceOf('doc-1')).toBeNull()
   })
 
   // The generator serves every workspace: a job launched from Image has nowhere to land, and
   // must not follow the user into a sky opened while it ran.
-  it('claims nothing when the document in front is not a sky', async () => {
-    useDocuments.setState({
-      documents: { 'doc-2': { id: 'doc-2', kind: 'image', title: 'Img', workspace: 'image' } },
-      activeId: 'doc-2',
-    })
-    claimGeneration('job-1')
+  it('claims nothing when the document submitted from is not a sky', async () => {
+    installDocument('doc-2', 'image')
+    submitFrom('job-1')
 
-    useDocuments.setState({
-      documents: { 'doc-1': { id: 'doc-1', kind: 'skybox', title: 'Sky', workspace: 'skyboxes' } },
-      activeId: 'doc-1',
-    })
+    installDocument('doc-1', 'skyboxes')
     await finish('succeeded')
 
     expect(sourceOf('doc-1')).toBeNull()
   })
 
-  it('writes into the sky it was launched from, not the one in front now', async () => {
-    claimGeneration('job-1')
-    useDocuments.setState({
-      documents: {
-        'doc-1': { id: 'doc-1', kind: 'skybox', title: 'Sky', workspace: 'skyboxes' },
-        'doc-2': { id: 'doc-2', kind: 'skybox', title: 'Other', workspace: 'skyboxes' },
-      },
-      activeId: 'doc-2',
-    })
+  /**
+   * The two halves are tested apart on purpose. `POST /generate` is a round trip, and the user
+   * who switches tabs during it started the work in the previous one: reading the target when
+   * the job id arrives would land the picture wherever they went.
+   */
+  it('writes into the sky it was launched from, not the one in front when the id arrives', async () => {
+    const claim = claimOnSubmit()
+
+    openBoth()
+    useDocuments.setState({ activeId: 'doc-2' })
+    claim(job({ id: 'job-1' }))
     await finish('succeeded')
 
     expect(sourceOf('doc-1')).toEqual({ assetId: 'asset-dusk' })
@@ -149,16 +154,16 @@ describe('landing a generation in the sky that asked for it', () => {
   })
 
   it('drops it silently when the tab was closed while the job ran', async () => {
-    claimGeneration('job-1')
+    submitFrom('job-1')
     useDocuments.setState({ documents: {}, activeId: null })
+    await finish('succeeded')
 
-    await expect(finish('succeeded')).resolves.toBeUndefined()
     expect(useSkyboxes.getState().states['doc-1']).toBeUndefined()
   })
 
   it('ignores an outcome that decodes as no picture', async () => {
     catalogueHolds([{ ...panorama, type: 'mesh' }])
-    claimGeneration('job-1')
+    submitFrom('job-1')
     await finish('succeeded')
 
     expect(sourceOf('doc-1')).toBeNull()
@@ -167,7 +172,7 @@ describe('landing a generation in the sky that asked for it', () => {
   // A settled claim is gone: a later event on the same job — the list refreshing, another
   // progress arriving — must not hang the picture a second time over an edited sky.
   it('lands once, not on every event that follows', async () => {
-    claimGeneration('job-1')
+    submitFrom('job-1')
     await finish('succeeded')
 
     useSkyboxes.getState().runCommand('doc-1', {

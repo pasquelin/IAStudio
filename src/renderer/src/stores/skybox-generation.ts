@@ -18,18 +18,20 @@ import { useSkyboxes } from './skyboxes'
 const claims = new Map<string, string>()
 
 /**
- * Remembers that the generation just submitted was meant for the sky in front. Nothing happens
- * when the document in front is of another kind — the generator is one panel for every
- * workspace, and only this one has somewhere for the result to land by itself.
+ * Takes note of the sky a generation is being launched from, and hands back what claims the
+ * job once its id is known.
+ *
+ * In two halves because the two moments are: the target has to be read at the click, while a
+ * job id only exists after `POST /generate` has answered — and a user who switches tabs during
+ * that round trip would otherwise have the result land wherever they went. The caller learns
+ * nothing of what was captured, which is what keeps the generator free of any one workspace.
  */
-export function claimGeneration(jobId: string): void {
+export function claimOnSubmit(): (job: Job | null) => void {
   const documentId = activeIdOfKind(useDocuments.getState(), 'skybox')
-  if (documentId) claims.set(jobId, documentId)
-}
 
-/** Drops every claim. The seam the tests reset through — nothing else has business here. */
-export function forgetGenerations(): void {
-  claims.clear()
+  return job => {
+    if (job && documentId) claims.set(job.id, documentId)
+  }
 }
 
 /** What a generation is worth remembering of itself, minus the parameters a sky has no use for. */
@@ -43,45 +45,54 @@ function provenanceOf(asset: Asset): SkyboxContent['generation'] {
 }
 
 /**
- * Hangs what a finished job produced in the sky that asked for it.
+ * Hangs what the finished jobs produced in the skies that asked for them.
  *
- * The catalogue is read again rather than waited on: `useJobs` coalesces its refresh over a
- * couple of hundred milliseconds so that forty finishing ingests do not freeze the window, and
- * the asset is not in the list yet at the moment the job reports success.
+ * The catalogue is read once for the whole batch rather than once per claim: `assets.search` is
+ * a synchronous SQLite query in the main process, and three jobs settling inside the same
+ * couple of hundred milliseconds would otherwise fire three identical reads at it.
  *
- * The job hands back Scenario's own asset ids; what the document stores is the id of the row
- * the collector wrote, so the two are joined on `jobId` — the only identifier both sides share.
+ * It is read at all — rather than waited on — because `useJobs` coalesces its own refresh over
+ * that same window, so the rows are not in the list yet at the moment a job reports success.
+ *
+ * The job hands back Scenario's own asset ids; what a document stores is the id of the row the
+ * collector wrote, so the two are joined on `jobId` — the only identifier both sides share.
  */
-async function hang(job: Job, documentId: string): Promise<void> {
+async function hang(settled: ReadonlyMap<string, string>): Promise<void> {
   await useAssets.getState().refresh()
 
-  // A generation can answer several pictures; the first that decodes is the sky. Anything else
-  // it produced stays on the shelf rather than being guessed at.
-  const asset = useAssets
-    .getState()
-    .items.find(candidate => candidate.jobId === job.id && isLocalPicture(candidate))
-  if (!asset) return
+  const { items } = useAssets.getState()
+  const { documents } = useDocuments.getState()
 
-  // The tab may have been closed while the job ran: writing into it would resurrect a document
-  // nothing shows, with a history nobody can reach.
-  if (!useDocuments.getState().documents[documentId]) return
+  for (const [jobId, documentId] of settled) {
+    // A generation can answer several pictures; the first that decodes is the sky. Anything
+    // else it produced stays on the shelf rather than being guessed at.
+    const asset = items.find(candidate => candidate.jobId === jobId && isLocalPicture(candidate))
+    // The tab may have been closed while the job ran: writing into it would resurrect a
+    // document nothing shows, with a history nobody can reach.
+    if (!asset || !documents[documentId]) continue
 
-  useSkyboxes
-    .getState()
-    .runCommand(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
+    useSkyboxes
+      .getState()
+      .runCommand(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
+  }
 }
 
 /** Every claim whose job has stopped running, settled and let go of. */
 function settle(jobs: readonly Job[]): void {
-  for (const [jobId, documentId] of [...claims]) {
-    const job = jobs.find(candidate => candidate.id === jobId)
-    if (!job || !isFinished(job.status)) continue
+  if (claims.size === 0) return
+
+  const succeeded = new Map<string, string>()
+  for (const job of jobs) {
+    const documentId = claims.get(job.id)
+    if (documentId === undefined || !isFinished(job.status)) continue
 
     // Dropped whatever the outcome: a failed or cancelled job has nothing to hang, and a claim
     // kept for it would outlive the window.
-    claims.delete(jobId)
-    if (job.status === 'succeeded') void hang(job, documentId)
+    claims.delete(job.id)
+    if (job.status === 'succeeded') succeeded.set(job.id, documentId)
   }
+
+  if (succeeded.size > 0) void hang(succeeded)
 }
 
 /**
@@ -89,5 +100,11 @@ function settle(jobs: readonly Job[]): void {
  * like the stores that connect to the main process — see `Application`.
  */
 export function connectSkyboxGeneration(): () => void {
-  return useJobs.subscribe(state => settle(state.jobs))
+  const stop = useJobs.subscribe(state => settle(state.jobs))
+  return () => {
+    stop()
+    // Nothing can land once nothing listens, so the claims go with the subscription rather
+    // than outliving it — which is also what lets a test reset by disconnecting.
+    claims.clear()
+  }
 }

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
 import { useAssets } from '@/stores/assets'
-import { useDocuments } from '@/stores/documents'
+import { installDocument } from '@/stores/document-fixtures'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { SkyboxDocument } from './SkyboxDocument'
 
@@ -49,10 +49,7 @@ describe('SkyboxDocument', () => {
     vi.clearAllMocks()
     useSkyboxes.setState({ states: {}, histories: {} })
     useAssets.setState({ items: [panorama] })
-    useDocuments.setState({
-      documents: { 'doc-1': { id: 'doc-1', kind: 'skybox', title: 'Sky', workspace: 'skyboxes' } },
-      activeId: 'doc-1',
-    })
+    installDocument('doc-1', 'skyboxes')
   })
 
   it('hangs a picture dropped from the shelf', () => {

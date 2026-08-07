@@ -14,8 +14,9 @@ import { setSkyboxSource } from '@/stores/skyboxes'
 export function openAsset(asset: Asset): void {
   const documents = useDocuments.getState()
 
-  if (activeIdOfKind(documents, 'skybox')) {
-    setSkyboxSource(asset)
+  const skyTab = activeIdOfKind(documents, 'skybox')
+  if (skyTab) {
+    setSkyboxSource(skyTab, asset)
     return
   }
 

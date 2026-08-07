@@ -117,7 +117,7 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
  */
 export function familyOf(
   capabilities: readonly string[] | undefined,
-  tags: readonly string[] = [],
+  tags: readonly string[],
 ): ModelFamily {
   if (tags.includes(SKYBOX_TAG)) return 'skybox'
   if (!capabilities?.length) return 'other'

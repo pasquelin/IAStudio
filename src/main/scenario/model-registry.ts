@@ -291,10 +291,12 @@ export function createModelRegistry({
    * tag are two different listings even at the same token.
    */
   const fetchPage = async (cursor: Cursor, query: ModelQuery): Promise<CatalogPage> => {
-    // The family is part of the key because `preFilter` below can turn it into a server-side
-    // tag: without it, the three models a skybox listing asked for would be served back to the
-    // next Image listing as if they were the whole catalogue.
-    const key = `${JSON.stringify(query.tags ?? [])}|${query.family ?? ''}|${query.sort ?? ''}|${query.origin ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`
+    // Keyed by the tag that actually leaves, never by what it was derived from. The family is
+    // one of its sources — a skybox listing narrows server-side, so its page holds three models
+    // and must not be served back to Image — but the eight families that resolve to no tag ask
+    // the identical question and go on sharing one page. Keying the family itself would have
+    // made each of them repay a walk the previous one had already downloaded.
+    const key = `${preFilter(query) ?? ''}|${query.sort ?? ''}|${query.origin ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`
     const cached = fresh(fetched.get(key))
     if (cached) return cached
 

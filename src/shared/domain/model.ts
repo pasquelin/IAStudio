@@ -134,9 +134,9 @@ export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   video: ['txt2video', 'img2video', 'video2video'],
   '3d': ['txt23d', 'img23d', '3d23d'],
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
-  // A panorama model answers the plain image capabilities: text for a sky out of nothing,
-  // image for a photograph wrapped into one. Nothing narrower exists to offer.
-  skybox: ['txt2img', 'img2img'],
+  // Empty like its tags and its publishers below, and for the same reason: the family is three
+  // models wide, and a two-option menu narrowing three rows only ever answers "fewer".
+  skybox: [],
   upscale: [],
   'background-removal': [],
   vectorization: [],
