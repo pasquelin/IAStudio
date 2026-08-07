@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { shortcutLabel, type CommandId } from '@shared/domain/shortcut'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
-import { removeObject, selectObject, setTransform } from '@/engines/scene/commands'
+import { removeNode, selectNode, setTransform } from '@/engines/scene/commands'
+import { createDefaultScene } from '@/engines/scene/default-scene'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useKeymap } from '@/stores/keymap'
@@ -21,6 +22,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
   const bindings = useKeymap(state => state.bindings)
 
+  // Before the renderer mounts: a scene that arrives unlit shows nothing, and reads as a broken
+  // viewport rather than as an empty document.
+  useEffect(() => {
+    useScenes.getState().ensure(documentId, createDefaultScene)
+  }, [documentId])
+
   useEffect(() => {
     const element = canvas.current
     if (!element) return
@@ -28,7 +35,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     const renderer = new SceneRenderer({
       onSelect: id => {
         const store = useScenes.getState()
-        store.replace(documentId, selectObject(sceneOf(store, documentId), id))
+        store.replace(documentId, selectNode(sceneOf(store, documentId), id))
       },
       onTransform: (id, transform) =>
         useScenes.getState().runCommand(documentId, setTransform(id, transform)),
@@ -67,7 +74,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return engine.current?.frameSelection()
         case 'scene.delete': {
           const selected = sceneOf(store, documentId).selectedId
-          if (selected) store.runCommand(documentId, removeObject(selected))
+          if (selected) store.runCommand(documentId, removeNode(selected))
           return
         }
         case 'scene.undo':

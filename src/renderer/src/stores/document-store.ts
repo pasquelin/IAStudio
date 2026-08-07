@@ -11,6 +11,12 @@ export type DocumentStoreState<S> = {
   runCommand: (documentId: string, command: Command<S>) => void
   /** Writes without touching the history — selection is not a command. */
   replace: (documentId: string, state: S) => void
+  /**
+   * Installs a starting state on first open, built rather than shared: a scene needs its own
+   * node ids, which a constant default cannot give it. Idempotent — reopening a tab must not
+   * reset what is in it.
+   */
+  ensure: (documentId: string, create: () => S) => void
   undo: (documentId: string) => void
   redo: (documentId: string) => void
   drop: (documentId: string) => void
@@ -58,6 +64,13 @@ export function createDocumentStore<S>(defaultState: S) {
 
       replace: (documentId, next) =>
         set(state => ({ states: { ...state.states, [documentId]: next } })),
+
+      ensure: (documentId, create) =>
+        set(state =>
+          state.states[documentId]
+            ? state
+            : { states: { ...state.states, [documentId]: create() } },
+        ),
 
       undo: documentId => step(documentId, undo),
 

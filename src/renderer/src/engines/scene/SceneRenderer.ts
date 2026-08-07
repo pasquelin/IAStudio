@@ -1,28 +1,57 @@
 import {
+  AmbientLight,
   BoxGeometry,
+  CapsuleGeometry,
+  CatmullRomCurve3,
+  CircleGeometry,
   Color,
+  CylinderGeometry,
   DirectionalLight,
+  DirectionalLightHelper,
+  DodecahedronGeometry,
   GridHelper,
   HemisphereLight,
+  HemisphereLightHelper,
+  IcosahedronGeometry,
+  LatheGeometry,
   Mesh,
   MeshStandardMaterial,
+  OctahedronGeometry,
   PerspectiveCamera,
   PlaneGeometry,
+  PointLight,
+  PointLightHelper,
   Raycaster,
+  RingGeometry,
   Scene,
   SphereGeometry,
+  SpotLight,
+  SpotLightHelper,
+  TetrahedronGeometry,
+  TorusGeometry,
+  TorusKnotGeometry,
+  TubeGeometry,
   Vector2,
   Vector3 as ThreeVector3,
   WebGLRenderer,
   type BufferGeometry,
+  type Light,
+  type Object3D,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
-import type { SceneObject, SceneState, Transform } from './scene-state'
+import type {
+  GeometryDescriptor,
+  LightDescriptor,
+  SceneNode,
+  SceneState,
+  Transform,
+} from './scene-state'
 
-export type TransformMode = 'translate' | 'rotate' | 'scale'
+/** `select` clicks without arming a gizmo — the mode you come back to. */
+export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
 
 export type SceneRendererOptions = {
   onSelect: (id: string | null) => void
@@ -32,11 +61,126 @@ export type SceneRendererOptions = {
 const FLY_SPEED = 4
 const BOOST_FACTOR = 3
 const GRID_SIZE = 20
+const HELPER_SIZE = 0.5
 
-function geometryFor(kind: SceneObject['kind']): BufferGeometry {
-  if (kind === 'sphere') return new SphereGeometry(0.5, 32, 16)
-  if (kind === 'plane') return new PlaneGeometry(1, 1)
-  return new BoxGeometry(1, 1, 1)
+/** Tube needs a path and Lathe a profile; both are fixed until a curve editor exists. */
+const DEFAULT_TUBE_CURVE = new CatmullRomCurve3([
+  new ThreeVector3(-0.5, 0, 0),
+  new ThreeVector3(0, 0.5, 0),
+  new ThreeVector3(0.5, 0, 0),
+])
+
+/**
+ * Exhaustive on purpose: with no `default`, a primitive added to the registry without a geometry
+ * here is a compile error rather than a silent cube.
+ */
+function geometryFor(descriptor: GeometryDescriptor): BufferGeometry {
+  switch (descriptor.kind) {
+    case 'box':
+      return new BoxGeometry(descriptor.width, descriptor.height, descriptor.depth)
+    case 'capsule':
+      return new CapsuleGeometry(
+        descriptor.radius,
+        descriptor.height,
+        descriptor.capSegments,
+        descriptor.radialSegments,
+      )
+    case 'circle':
+      return new CircleGeometry(descriptor.radius, descriptor.segments)
+    case 'cylinder':
+      return new CylinderGeometry(
+        descriptor.radiusTop,
+        descriptor.radiusBottom,
+        descriptor.height,
+        descriptor.segments,
+      )
+    case 'dodecahedron':
+      return new DodecahedronGeometry(descriptor.radius)
+    case 'icosahedron':
+      return new IcosahedronGeometry(descriptor.radius)
+    case 'lathe':
+      return new LatheGeometry(undefined, descriptor.segments)
+    case 'octahedron':
+      return new OctahedronGeometry(descriptor.radius)
+    case 'plane':
+      return new PlaneGeometry(descriptor.width, descriptor.height)
+    case 'ring':
+      return new RingGeometry(descriptor.innerRadius, descriptor.outerRadius, descriptor.segments)
+    case 'sphere':
+      return new SphereGeometry(
+        descriptor.radius,
+        descriptor.widthSegments,
+        descriptor.heightSegments,
+      )
+    case 'tetrahedron':
+      return new TetrahedronGeometry(descriptor.radius)
+    case 'torus':
+      return new TorusGeometry(
+        descriptor.radius,
+        descriptor.tube,
+        descriptor.radialSegments,
+        descriptor.tubularSegments,
+      )
+    case 'torusKnot':
+      return new TorusKnotGeometry(
+        descriptor.radius,
+        descriptor.tube,
+        descriptor.tubularSegments,
+        descriptor.radialSegments,
+        descriptor.p,
+        descriptor.q,
+      )
+    case 'tube':
+      return new TubeGeometry(
+        DEFAULT_TUBE_CURVE,
+        descriptor.tubularSegments,
+        descriptor.radius,
+        descriptor.radialSegments,
+      )
+  }
+}
+
+function lightFor(descriptor: LightDescriptor): Light {
+  switch (descriptor.kind) {
+    case 'ambient':
+      return new AmbientLight(descriptor.color, descriptor.intensity)
+    case 'directional':
+      return new DirectionalLight(descriptor.color, descriptor.intensity)
+    case 'hemisphere':
+      return new HemisphereLight(descriptor.skyColor, descriptor.groundColor, descriptor.intensity)
+    case 'point':
+      return new PointLight(
+        descriptor.color,
+        descriptor.intensity,
+        descriptor.distance,
+        descriptor.decay,
+      )
+    case 'spot':
+      return new SpotLight(
+        descriptor.color,
+        descriptor.intensity,
+        descriptor.distance,
+        descriptor.angle,
+        descriptor.penumbra,
+        descriptor.decay,
+      )
+  }
+}
+
+/** The four helper classes share no interface, so the union is what gives `update` a type. */
+type LightHelper =
+  DirectionalLightHelper | HemisphereLightHelper | PointLightHelper | SpotLightHelper
+
+/**
+ * A light with no helper is invisible, and therefore unselectable: there is nothing under the
+ * cursor to intersect. Ambient light is the exception — it has no position to draw.
+ */
+function helperFor(light: Light): LightHelper | null {
+  if (light instanceof DirectionalLight) return new DirectionalLightHelper(light, HELPER_SIZE)
+  if (light instanceof HemisphereLight) return new HemisphereLightHelper(light, HELPER_SIZE)
+  if (light instanceof PointLight) return new PointLightHelper(light, HELPER_SIZE)
+  if (light instanceof SpotLight) return new SpotLightHelper(light)
+  return null
 }
 
 /**
@@ -61,7 +205,8 @@ export class SceneRenderer {
   private readonly camera = new PerspectiveCamera(60, 1, 0.1, 1000)
   private readonly raycaster = new Raycaster()
   private readonly pointer = new Vector2()
-  private readonly meshes = new Map<string, Mesh>()
+  private readonly objects = new Map<string, Object3D>()
+  private readonly helpers = new Map<string, LightHelper>()
   private readonly held = new Set<MotionId>()
 
   private renderer: WebGLRenderer | null = null
@@ -73,18 +218,15 @@ export class SceneRenderer {
   private frame: number | null = null
   private flying = false
   private lastTime = 0
+  private mode: TransformMode = 'select'
+  /** Held so leaving `select` can re-arm the gizmo without waiting for the next `apply`. */
+  private selectedId: string | null = null
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
 
   constructor(private readonly options: SceneRendererOptions) {
-    // Neutral studio lighting, not palette: a coloured key light would misreport every material
-    // the user is judging.
-    this.scene.add(new HemisphereLight(0xffffff, 0x444444, 2))
-
-    const sun = new DirectionalLight(0xffffff, 2)
-    sun.position.set(5, 10, 7)
-    this.scene.add(sun)
-
+    // No lights here: they are nodes of the state now, so the viewport shows what the outliner
+    // lists — and hiding one actually darkens the scene.
     this.camera.position.set(5, 5, 5)
     this.camera.lookAt(0, 0, 0)
   }
@@ -124,25 +266,23 @@ export class SceneRenderer {
   }
 
   apply(state: SceneState): void {
-    for (const object of state.objects) this.syncMesh(object)
+    for (const node of state.nodes) this.syncNode(node)
 
-    for (const [id, mesh] of this.meshes) {
-      if (state.objects.some(object => object.id === id)) continue
-      this.scene.remove(mesh)
-      mesh.geometry.dispose()
-      disposeMaterial(mesh)
-      this.meshes.delete(id)
+    for (const id of [...this.objects.keys()]) {
+      if (state.nodes.some(node => node.id === id)) continue
+      this.release(id)
     }
 
-    const selected = state.selectedId ? this.meshes.get(state.selectedId) : undefined
-    if (selected) this.gizmo?.attach(selected)
-    else this.gizmo?.detach()
-
+    this.selectedId = state.selectedId
+    this.attachGizmo()
     this.requestRender()
   }
 
   setMode(mode: TransformMode): void {
-    this.gizmo?.setMode(mode)
+    this.mode = mode
+    // `TransformControls` knows only three modes; `select` is ours, and means no gizmo at all.
+    if (mode !== 'select') this.gizmo?.setMode(mode)
+    this.attachGizmo()
     this.requestRender()
   }
 
@@ -187,11 +327,7 @@ export class SceneRenderer {
     this.viewHelper?.dispose()
     this.viewHelper = null
 
-    for (const mesh of this.meshes.values()) {
-      mesh.geometry.dispose()
-      disposeMaterial(mesh)
-    }
-    this.meshes.clear()
+    for (const id of [...this.objects.keys()]) this.release(id)
 
     this.grid?.dispose()
     this.grid = null
@@ -215,21 +351,85 @@ export class SceneRenderer {
     this.scene.add(this.grid)
   }
 
-  private syncMesh(object: SceneObject): void {
-    let mesh = this.meshes.get(object.id)
-    if (!mesh) {
-      const material = new MeshStandardMaterial()
-      if (this.meshColor) material.color = new Color(this.meshColor)
-      mesh = new Mesh(geometryFor(object.kind), material)
-      mesh.name = object.id
-      this.meshes.set(object.id, mesh)
-      this.scene.add(mesh)
+  private syncNode(node: SceneNode): void {
+    let object = this.objects.get(node.id)
+    if (!object) {
+      object = node.type === 'mesh' ? this.buildMesh(node) : this.buildLight(node)
+      object.name = node.id
+      this.objects.set(node.id, object)
+      this.scene.add(object)
     }
 
-    const { position, rotation, scale } = object.transform
-    mesh.position.set(position.x, position.y, position.z)
-    mesh.rotation.set(rotation.x, rotation.y, rotation.z)
-    mesh.scale.set(scale.x, scale.y, scale.z)
+    const { position, rotation, scale } = node.transform
+    object.position.set(position.x, position.y, position.z)
+    object.rotation.set(rotation.x, rotation.y, rotation.z)
+    object.scale.set(scale.x, scale.y, scale.z)
+    object.visible = node.visible
+
+    const helper = this.helpers.get(node.id)
+    if (helper) {
+      helper.visible = node.visible
+      // After the move, never before: the helper draws where the light was until it is told.
+      helper.update()
+    }
+  }
+
+  private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
+    const material = new MeshStandardMaterial({
+      roughness: node.material.roughness,
+      metalness: node.material.metalness,
+    })
+    const color = node.material.color ?? this.meshColor
+    if (color) material.color = new Color(color)
+    return new Mesh(geometryFor(node.geometry), material)
+  }
+
+  private buildLight(node: SceneNode & { type: 'light' }): Light {
+    const light = lightFor(node.light)
+
+    // three.js only reads the target's world matrix once it is in the scene.
+    if ((light instanceof DirectionalLight || light instanceof SpotLight) && 'target' in node.light)
+      light.target.position.set(node.light.target.x, node.light.target.y, node.light.target.z)
+    if (light instanceof DirectionalLight || light instanceof SpotLight)
+      this.scene.add(light.target)
+
+    const helper = helperFor(light)
+    if (helper) {
+      // The helper answers to the light's id, so a click on it selects the light itself.
+      helper.name = node.id
+      this.helpers.set(node.id, helper)
+      this.scene.add(helper)
+    }
+    return light
+  }
+
+  private release(id: string): void {
+    const object = this.objects.get(id)
+    if (object) {
+      this.scene.remove(object)
+      if (object instanceof Mesh) {
+        object.geometry.dispose()
+        disposeMaterial(object)
+      }
+      if (object instanceof DirectionalLight || object instanceof SpotLight)
+        this.scene.remove(object.target)
+      this.objects.delete(id)
+    }
+
+    const helper = this.helpers.get(id)
+    if (helper) {
+      this.scene.remove(helper)
+      // A forgotten helper leaks a line geometry on every delete.
+      helper.dispose()
+      this.helpers.delete(id)
+    }
+  }
+
+  private attachGizmo(): void {
+    const id = this.selectedId
+    const selected = this.mode !== 'select' && id ? this.objects.get(id) : undefined
+    if (selected) this.gizmo?.attach(selected)
+    else this.gizmo?.detach()
   }
 
   private readonly onResize = (): void => {
@@ -264,8 +464,12 @@ export class SceneRenderer {
       -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
     )
     this.raycaster.setFromCamera(this.pointer, this.camera)
-    const hit = this.raycaster.intersectObjects([...this.meshes.values()], false)[0]
-    this.options.onSelect(hit ? hit.object.name : null)
+
+    // Helpers are what makes a light clickable, and recursively: it is one of their children
+    // that the ray actually meets. Both they and the light carry the node's id.
+    const targets = [...this.objects.values(), ...this.helpers.values()]
+    const hit = this.raycaster.intersectObjects(targets, true)[0]
+    this.options.onSelect(hit ? nodeIdOf(hit.object) : null)
   }
 
   private readonly onPointerUp = (event: PointerEvent): void => {
@@ -348,6 +552,16 @@ export class SceneRenderer {
     this.camera.position.add(step)
     this.orbit?.target.add(step)
   }
+}
+
+/** Walks up to whoever carries a node id: the ray meets a helper's child, not the helper. */
+function nodeIdOf(object: Object3D): string | null {
+  let current: Object3D | null = object
+  while (current) {
+    if (current.name) return current.name
+    current = current.parent
+  }
+  return null
 }
 
 function disposeMaterial(mesh: Mesh): void {

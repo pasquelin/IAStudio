@@ -1,47 +1,94 @@
 import { describe, expect, it } from 'vitest'
 import {
+  childrenOf,
+  DEFAULT_MATERIAL,
   deserializeScene,
   EMPTY_SCENE,
   IDENTITY_TRANSFORM,
-  objectById,
+  nodeById,
   serializeScene,
+  type SceneNode,
   type SceneState,
 } from './scene-state'
 
-const populated: SceneState = {
-  objects: [
-    { id: 'a', kind: 'box', name: 'Box', transform: IDENTITY_TRANSFORM },
-    {
-      id: 'b',
-      kind: 'sphere',
-      name: 'Sphere',
-      transform: { ...IDENTITY_TRANSFORM, position: { x: 1, y: 2, z: 3 } },
-    },
-  ],
-  selectedId: 'b',
+function mesh(id: string, parentId: string | null = null): SceneNode {
+  return {
+    id,
+    parentId,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    type: 'mesh',
+    geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
+    material: DEFAULT_MATERIAL,
+  }
 }
 
-describe('scene state', () => {
+function light(id: string): SceneNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    type: 'light',
+    light: { kind: 'ambient', color: '#222222', intensity: 1 },
+  }
+}
+
+describe('EMPTY_SCENE', () => {
   it('starts empty with nothing selected', () => {
-    expect(EMPTY_SCENE.objects).toHaveLength(0)
+    expect(EMPTY_SCENE.nodes).toHaveLength(0)
     expect(EMPTY_SCENE.selectedId).toBeNull()
   })
+})
 
-  it('finds an object by id', () => {
-    expect(objectById(populated, 'b')?.name).toBe('Sphere')
+describe('nodeById', () => {
+  it('finds a node by its id', () => {
+    const state: SceneState = { nodes: [mesh('a'), light('b')], selectedId: null }
+    expect(nodeById(state, 'b')?.type).toBe('light')
   })
 
   it('returns null for an unknown id', () => {
-    expect(objectById(populated, 'nope')).toBeNull()
+    expect(nodeById({ nodes: [mesh('a')], selectedId: null }, 'ghost')).toBeNull()
+  })
+})
+
+describe('childrenOf', () => {
+  it('keeps the declared order', () => {
+    const state: SceneState = { nodes: [mesh('a'), mesh('b'), mesh('c')], selectedId: null }
+    expect(childrenOf(state, null).map(node => node.id)).toEqual(['a', 'b', 'c'])
   })
 
-  it('survives a serialize/deserialize round trip unchanged', () => {
-    expect(deserializeScene(serializeScene(populated))).toEqual(populated)
+  it('separates roots from children', () => {
+    const state: SceneState = { nodes: [mesh('a'), mesh('b', 'a')], selectedId: null }
+    expect(childrenOf(state, null).map(node => node.id)).toEqual(['a'])
+    expect(childrenOf(state, 'a').map(node => node.id)).toEqual(['b'])
   })
 
-  it('falls back to an empty scene rather than throwing on unreadable input', () => {
+  it('answers with nothing for a childless parent', () => {
+    const state: SceneState = { nodes: [mesh('a')], selectedId: null }
+    expect(childrenOf(state, 'a')).toEqual([])
+  })
+})
+
+describe('deserializeScene', () => {
+  it('round-trips a serialized scene', () => {
+    const state: SceneState = { nodes: [mesh('a'), light('b')], selectedId: 'a' }
+    expect(deserializeScene(serializeScene(state))).toEqual(state)
+  })
+
+  it('yields an empty scene rather than throwing on unreadable input', () => {
     // The state comes from a store that may outlive a format change; a blank viewport beats
     // an unhandled throw with no error boundary above it.
     expect(deserializeScene('{ not json')).toEqual(EMPTY_SCENE)
+  })
+
+  it('yields an empty scene when nodes is not an array', () => {
+    expect(deserializeScene('{"nodes":"nope"}')).toEqual(EMPTY_SCENE)
+  })
+
+  it('drops a selection that is not a string', () => {
+    expect(deserializeScene('{"nodes":[],"selectedId":7}').selectedId).toBeNull()
   })
 })
