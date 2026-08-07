@@ -1,5 +1,5 @@
 import { mdiPause, mdiPlay } from '@mdi/js'
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { Toolbar } from '@/design/Toolbar'
@@ -34,18 +34,11 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
     const current = engine.current
     if (!current) return
 
+    // The engine reports back through `onPlayingChange`, which also fires when another player
+    // takes the token and pauses this one from under us.
     if (current.playing()) current.pause()
     else current.play()
-    setPlaying(current.playing())
   }, [])
-
-  // The engine can be paused from under us: another player taking the token revokes this one.
-  useEffect(() => {
-    if (!playing) return
-
-    const timer = setInterval(() => setPlaying(engine.current?.playing() ?? false), 250)
-    return () => clearInterval(timer)
-  }, [playing])
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key !== ' ') return
@@ -56,7 +49,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   return (
     <div className="flex h-full min-h-0 flex-col" onKeyDown={onKeyDown}>
       <div className="bg-chassis relative min-h-0 flex-1">
-        <ProgramMonitor documentId={documentId} onEngine={onEngine} />
+        <ProgramMonitor documentId={documentId} onEngine={onEngine} onPlayingChange={setPlaying} />
       </div>
 
       <div className="border-border bg-base relative h-64 shrink-0 border-t">

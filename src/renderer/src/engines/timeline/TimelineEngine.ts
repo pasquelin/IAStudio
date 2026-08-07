@@ -53,6 +53,8 @@ export type TimelineEngineDeps = {
   onTime?: (time: Us) => void
   /** `AudioContext.currentTime` while audio plays; absent falls back to the monotonic clock. */
   audioTime?: () => number | null
+  /** Fires on both sides of a transport change, including a pause forced by the token. */
+  onPlayingChange?: (playing: boolean) => void
 }
 
 /**
@@ -98,6 +100,7 @@ export class TimelineEngine {
     }
 
     this.frameHandle = requestAnimationFrame(step)
+    this.deps.onPlayingChange?.(true)
   }
 
   pause(): void {
@@ -108,6 +111,7 @@ export class TimelineEngine {
     this.clock.stop()
     playbackToken.release(this.deps.owner)
     this.deps.onTime?.(this.clock.now())
+    this.deps.onPlayingChange?.(false)
   }
 
   playing(): boolean {

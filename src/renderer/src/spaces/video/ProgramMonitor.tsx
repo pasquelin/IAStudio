@@ -9,6 +9,8 @@ export type ProgramMonitorProps = {
   documentId: string
   /** Hands the engine to the document, which owns the transport. Null on unmount. */
   onEngine?: (engine: TimelineEngine | null) => void
+  /** Follows the transport, including a pause the playback token forced on us. */
+  onPlayingChange?: (playing: boolean) => void
 }
 
 /** A consumer GPU offers two to four hardware decoders; three leaves one for everything else. */
@@ -33,7 +35,7 @@ async function openSink(assetId: string): Promise<SinkLike> {
   return { getSample: seconds => sink.getSample(seconds), close: () => input.dispose() }
 }
 
-export function ProgramMonitor({ documentId, onEngine }: ProgramMonitorProps) {
+export function ProgramMonitor({ documentId, onEngine, onPlayingChange }: ProgramMonitorProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
   const sequence = useSequences(state => sequenceOf(state, documentId))
@@ -47,11 +49,11 @@ export function ProgramMonitor({ documentId, onEngine }: ProgramMonitorProps) {
       maxDecoders: MAX_DECODERS,
       owner: documentId,
       // Playback is not an edit: the playhead goes through `replace`, which skips the history.
-      onTime: time =>
-        useSequences.getState().replace(documentId, {
-          ...sequenceOf(useSequences.getState(), documentId),
-          playhead: time,
-        }),
+      onTime: time => {
+        const store = useSequences.getState()
+        store.replace(documentId, { ...sequenceOf(store, documentId), playhead: time })
+      },
+      onPlayingChange,
     })
 
     engine.current = created
@@ -63,7 +65,7 @@ export function ProgramMonitor({ documentId, onEngine }: ProgramMonitorProps) {
       engine.current = null
       onEngine?.(null)
     }
-  }, [documentId, onEngine])
+  }, [documentId, onEngine, onPlayingChange])
 
   // The engine holds decoders and textures, never the stack: every state change is pushed in.
   useEffect(() => {

@@ -51,7 +51,9 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     return () => observer.disconnect()
   }, [sequence])
 
-  const pointAt = (event: PointerEvent<HTMLCanvasElement>): Point => {
+  const pointAt = (
+    event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasElement>,
+  ): Point => {
     const bounds = event.currentTarget.getBoundingClientRect()
     return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
   }
@@ -138,8 +140,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const assetId = assetIdFromDrag(event)
     if (!assetId) return
 
-    const bounds = event.currentTarget.getBoundingClientRect()
-    const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+    const point = pointAt(event)
     const target = hitTest(sequence, DEFAULT_VIEWPORT, point)
     if (!target || target.kind === 'ruler') return
 

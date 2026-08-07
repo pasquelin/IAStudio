@@ -10,10 +10,22 @@ import { clipEnd, type SequenceState } from './timeline-state'
 
 export type Size = { width: number; height: number }
 
-/** Reads the palette from CSS variables: a hex here would drift from `design/tokens`. */
-function token(name: string): string {
-  if (typeof document === 'undefined') return '#000'
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#000'
+type Palette = { ruler: string; clip: string; selected: string; playhead: string }
+
+/**
+ * Read once per paint, not once per clip: `getComputedStyle` forces a style resolution, and at
+ * five hundred clips sixty times a second that is the whole frame budget.
+ */
+function readPalette(): Palette {
+  const style = typeof document === 'undefined' ? null : getComputedStyle(document.documentElement)
+  const token = (name: string): string => style?.getPropertyValue(name).trim() || '#000'
+
+  return {
+    ruler: token('--color-surface'),
+    clip: token('--color-elevated'),
+    selected: token('--color-accent-soft'),
+    playhead: token('--color-accent'),
+  }
 }
 
 export function paintTimeline(
@@ -23,10 +35,11 @@ export function paintTimeline(
   size: Size,
 ): void {
   const [from, to] = visibleRange(viewport, size.width)
+  const palette = readPalette()
 
   context.clearRect(0, 0, size.width, size.height)
 
-  context.fillStyle = token('--color-surface')
+  context.fillStyle = palette.ruler
   context.fillRect(0, 0, size.width, RULER_HEIGHT)
 
   state.tracks.forEach((track, row) => {
@@ -38,13 +51,11 @@ export function paintTimeline(
       if (clipEnd(clip) < from || clip.start > to) continue
 
       const left = timeToX(clip.start, viewport)
-      context.fillStyle = token(
-        state.selectedId === clip.id ? '--color-accent-soft' : '--color-elevated',
-      )
+      context.fillStyle = state.selectedId === clip.id ? palette.selected : palette.clip
       context.fillRect(left, top, timeToX(clipEnd(clip), viewport) - left, TRACK_HEIGHT)
     }
   })
 
-  context.fillStyle = token('--color-accent')
+  context.fillStyle = palette.playhead
   context.fillRect(timeToX(state.playhead, viewport), 0, 1, size.height)
 }
