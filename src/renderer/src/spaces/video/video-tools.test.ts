@@ -1,6 +1,6 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_VIDEO_TOOL, VIDEO_TOOLS } from './video-tools'
+import { DEFAULT_VIDEO_TOOL, isVideoTool, VIDEO_TOOLS } from './video-tools'
 
 describe('video tools', () => {
   it('names every tool through i18n rather than a literal', () => {
@@ -30,5 +30,11 @@ describe('video tools', () => {
 
   it('opens on a tool that is actually in the bar', () => {
     expect(VIDEO_TOOLS.map(tool => tool.id)).toContain(DEFAULT_VIDEO_TOOL)
+  })
+
+  it('recognises its own ids and rejects anything else', () => {
+    for (const tool of VIDEO_TOOLS) expect(isVideoTool(tool.id)).toBe(true)
+    // The bar hands back a plain string, and another workspace's tool must not slip through.
+    expect(isVideoTool('translate')).toBe(false)
   })
 })

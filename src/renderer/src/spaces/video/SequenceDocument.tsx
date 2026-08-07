@@ -9,14 +9,14 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { historyOf, useSequences } from '@/stores/sequences'
 import { ProgramMonitor } from './ProgramMonitor'
 import { TimelineCanvas } from './TimelineCanvas'
-import { DEFAULT_VIDEO_TOOL, VIDEO_TOOLS } from './video-tools'
+import { DEFAULT_VIDEO_TOOL, isVideoTool, VIDEO_TOOLS, type VideoToolId } from './video-tools'
 
 export type SequenceDocumentProps = { documentId: string }
 
 /** Program monitor above, timeline below — the split lives inside the tab, never outside it. */
 export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const { t } = useTranslation()
-  const [tool, setTool] = useState(DEFAULT_VIDEO_TOOL)
+  const [tool, setTool] = useState<VideoToolId>(DEFAULT_VIDEO_TOOL)
   const [playing, setPlaying] = useState(false)
   const engine = useRef<TimelineEngine | null>(null)
 
@@ -59,7 +59,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
           className="absolute top-2 left-2 z-10"
           tools={[...VIDEO_TOOLS]}
           activeTool={tool}
-          onTool={setTool}
+          onTool={id => isVideoTool(id) && setTool(id)}
           extras={
             <ToolButton
               icon={playing ? mdiPause : mdiPlay}

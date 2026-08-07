@@ -1,4 +1,11 @@
-import { useEffect, useRef, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type DragEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
 import { paintTimeline } from '@/engines/timeline/painter'
@@ -12,8 +19,9 @@ import {
 import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
+import type { VideoToolId } from './video-tools'
 
-export type TimelineCanvasProps = { documentId: string; tool: string }
+export type TimelineCanvasProps = { documentId: string; tool: VideoToolId }
 
 /** 100 px per second — the zoom this branch opens on. */
 export const DEFAULT_VIEWPORT: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
@@ -27,29 +35,41 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const dragging = useRef<{ gesture: Gesture; base: SequenceState } | null>(null)
   const sequence = useSequences(state => sequenceOf(state, documentId))
 
-  useEffect(() => {
+  // Read by `paint`, which must stay stable: rebuilding the observer on every dragged pixel
+  // would tear down and re-create it sixty times a second.
+  const latest = useRef(sequence)
+
+  const paint = useCallback((): void => {
     const canvas = canvasRef.current
     const context = canvas?.getContext('2d')
     if (!canvas || !context) return
 
-    const paint = (): void => {
-      const ratio = window.devicePixelRatio
-      const width = canvas.clientWidth
-      const height = canvas.clientHeight
+    const ratio = window.devicePixelRatio
+    const width = canvas.clientWidth
+    const height = canvas.clientHeight
 
-      // Backing store in device pixels, drawing in CSS pixels: without this the ruler is soft
-      // on every retina display.
-      canvas.width = Math.round(width * ratio)
-      canvas.height = Math.round(height * ratio)
-      context.setTransform(ratio, 0, 0, ratio, 0, 0)
+    // Backing store in device pixels, drawing in CSS pixels: without this the ruler is soft on
+    // every retina display.
+    canvas.width = Math.round(width * ratio)
+    canvas.height = Math.round(height * ratio)
+    context.setTransform(ratio, 0, 0, ratio, 0, 0)
 
-      paintTimeline(context, sequence, DEFAULT_VIEWPORT, { width, height })
-    }
+    paintTimeline(context, latest.current, DEFAULT_VIEWPORT, { width, height })
+  }, [])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
 
     const observer = new ResizeObserver(paint)
     observer.observe(canvas)
     return () => observer.disconnect()
-  }, [sequence])
+  }, [paint])
+
+  useEffect(() => {
+    latest.current = sequence
+    paint()
+  }, [sequence, paint])
 
   const pointAt = (
     event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasElement>,

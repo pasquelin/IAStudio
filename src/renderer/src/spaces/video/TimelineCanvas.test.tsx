@@ -8,6 +8,7 @@ import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { TimelineCanvas, UNPROBED_DURATION } from './TimelineCanvas'
+import type { VideoToolId } from './video-tools'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -35,7 +36,7 @@ function dataTransfer(assetId: string): DataTransfer {
   } as DataTransfer
 }
 
-function paint(tool = 'select') {
+function paint(tool: VideoToolId = 'select') {
   const view = render(<TimelineCanvas documentId="doc-1" tool={tool} />)
   const canvas = view.container.querySelector('canvas')
   if (!canvas) throw new Error('the timeline renders no canvas')
