@@ -10,7 +10,7 @@ import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
-import { UNPROBED_DURATION } from '@/engines/timeline/insert'
+import { TIMELESS_DURATION } from '@/engines/timeline/insert'
 import { TimelineCanvas } from './TimelineCanvas'
 import type { VideoToolId } from './video-tools'
 
@@ -81,7 +81,7 @@ describe('TimelineCanvas', () => {
       dataTransfer: dataTransfer('asset-1'),
     })
 
-    expect(clipsOf()[0]?.duration).toBe(UNPROBED_DURATION)
+    expect(clipsOf()[0]?.duration).toBe(TIMELESS_DURATION)
   })
 
   it('refuses a drop on the ruler, which holds no track', () => {

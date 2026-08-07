@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { clipForAsset, trackForAsset, UNPROBED_DURATION } from './insert'
+import { clipForAsset, trackForAsset, TIMELESS_DURATION } from './insert'
 import { sequenceWith, trackFixture } from './timeline-fixtures'
 import { DEFAULT_SETTINGS } from './timeline-state'
 
@@ -21,7 +21,12 @@ describe('turning an asset into a clip', () => {
   })
 
   it('falls back to a usable length for an asset nobody has probed yet', () => {
-    expect(clipForAsset('asset-1', null, 0, DEFAULT_SETTINGS).duration).toBe(UNPROBED_DURATION)
+    expect(clipForAsset('asset-1', null, 0, DEFAULT_SETTINGS).duration).toBe(TIMELESS_DURATION)
+  })
+
+  it('gives a still the same usable length, though it probes as zero', () => {
+    const still = asset({ type: 'image', probe: { duration: 0, codec: 'png' } })
+    expect(clipForAsset('asset-1', still, 0, DEFAULT_SETTINGS).duration).toBe(TIMELESS_DURATION)
   })
 
   it('lands on the frame grid, wherever it was asked to start', () => {

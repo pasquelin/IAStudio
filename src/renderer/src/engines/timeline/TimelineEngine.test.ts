@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   clipAt,
   createFrameSink,
+  fitInside,
   sourceTimeAt,
   swapTexture,
   uploadNow,
@@ -49,6 +50,45 @@ describe('timeline engine', () => {
       trackFixture('V1', 'video'),
     ])
     expect(videoTracksByDepth(state).map(track => track.id)).toEqual(['V1', 'V2'])
+  })
+
+  it('centres a wider picture between horizontal bars', () => {
+    // 800×400 into 400×400: scaled by half, and the 200 leftover pixels split above and below.
+    expect(fitInside({ width: 800, height: 400 }, { width: 400, height: 400 })).toEqual({
+      x: 0,
+      y: 100,
+      scale: 0.5,
+    })
+  })
+
+  it('centres a taller picture between vertical bars', () => {
+    expect(fitInside({ width: 400, height: 800 }, { width: 400, height: 400 })).toEqual({
+      x: 100,
+      y: 0,
+      scale: 0.5,
+    })
+  })
+
+  it('enlarges a picture smaller than the frame rather than pinning it to a corner', () => {
+    expect(fitInside({ width: 100, height: 100 }, { width: 400, height: 200 })).toEqual({
+      x: 100,
+      y: 0,
+      scale: 2,
+    })
+  })
+
+  // A monitor is laid out before it is measured, and a texture is sized before it is decoded.
+  it('answers something finite when either side has no size yet', () => {
+    expect(fitInside({ width: 0, height: 0 }, { width: 400, height: 400 })).toEqual({
+      x: 0,
+      y: 0,
+      scale: 0,
+    })
+    expect(fitInside({ width: 800, height: 400 }, { width: 0, height: 0 })).toEqual({
+      x: 0,
+      y: 0,
+      scale: 0,
+    })
   })
 
   // Left to Pixi, the upload happens at the next render — long after the sink closed the frame

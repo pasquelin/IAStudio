@@ -1,4 +1,4 @@
-import { Application, Sprite, Texture, type TextureSource } from 'pixi.js'
+import { Application, Container, Graphics, Sprite, Texture, type TextureSource } from 'pixi.js'
 import { createClock, type Clock } from './clock'
 import { createDecoderPool, type DecoderPool, type SinkLike } from './decoder-pool'
 import { playbackToken } from './playback'
@@ -40,6 +40,41 @@ export function swapTexture(target: { texture: Texture }, next: Texture): void {
   target.texture = next
   if (previous !== Texture.EMPTY) previous.destroy(true)
 }
+
+export type Size = { width: number; height: number }
+
+/** Where something sized lands once fitted: its top-left corner, and the factor to draw it by. */
+export type Placement = { x: number; y: number; scale: number }
+
+/**
+ * Letterboxes `source` inside `frame`, centred, aspect ratio kept. A scale rather than a width
+ * and a height: stretching a 4:3 rush to fill a 16:9 sequence is the one thing a monitor judging
+ * a picture must never do. Anything unmeasured yields a zero scale — never a NaN on the stage.
+ */
+export function fitInside(source: Size, frame: Size): Placement {
+  const usable = source.width > 0 && source.height > 0 && frame.width > 0 && frame.height > 0
+  if (!usable) return { x: 0, y: 0, scale: 0 }
+
+  const scale = Math.min(frame.width / source.width, frame.height / source.height)
+  return {
+    x: (frame.width - source.width * scale) / 2,
+    y: (frame.height - source.height * scale) / 2,
+    scale,
+  }
+}
+
+/** Applies a placement to anything Pixi positions and scales. */
+function place(target: Container, placement: Placement): void {
+  target.position.set(placement.x, placement.y)
+  target.scale.set(placement.scale)
+}
+
+/**
+ * The sequence canvas, behind every layer. Black rather than the window's grey: it is the
+ * reference the eye judges the picture against, and the bars around a mismatched clip are part
+ * of the frame, not part of the chrome.
+ */
+const CANVAS_COLOUR = 0x000000
 
 /** What a renderer must offer to take a frame now rather than at its next pass. */
 export type TextureUploader = { initSource: (source: TextureSource) => void }
@@ -87,6 +122,9 @@ export type TimelineEngineDeps = {
  */
 export class TimelineEngine {
   private application: Application | null = null
+  /** The sequence canvas: laid out once against the screen, so layers stay registered to it. */
+  private readonly frame = new Container()
+  private readonly backdrop = new Graphics()
   private readonly sprites = new Map<string, Sprite>()
   private readonly pool: DecoderPool
   private state: SequenceState = EMPTY_SEQUENCE
@@ -97,6 +135,8 @@ export class TimelineEngine {
   private frameHandle: number | null = null
 
   constructor(private readonly deps: TimelineEngineDeps) {
+    // First child, so every layer added later composites over it.
+    this.frame.addChild(this.backdrop)
     this.pool = createDecoderPool({ open: deps.openSink, maxDecoders: deps.maxDecoders })
     this.clock = createClock({
       audioTime: deps.audioTime ?? (() => null),
@@ -153,11 +193,17 @@ export class TimelineEngine {
     }
 
     element.appendChild(application.canvas)
+    application.stage.addChild(this.frame)
+    // The panel resizes without the window doing so, and a frame laid out once would drift.
+    application.renderer.on('resize', this.layout)
+
     this.application = application
+    this.layout()
   }
 
   apply(state: SequenceState): void {
     this.state = state
+    this.layout()
     // While playing, the frame loop owns the playhead; seeking here too would fight it.
     if (!this.playing()) void this.seek(state.playhead)
   }
@@ -194,6 +240,8 @@ export class TimelineEngine {
         upload: uploaded =>
           swapTexture(sprite, uploadNow(Texture.from(uploaded), application.renderer.texture)),
       }).push(frame)
+      // After the swap: the placement is read off the texture that just landed.
+      place(sprite, fitInside(sprite.texture, this.canvas()))
     }
   }
 
@@ -205,9 +253,25 @@ export class TimelineEngine {
     this.pause()
     this.generation += 1
     this.pool.dispose()
+    this.application?.renderer.off('resize', this.layout)
     this.application?.destroy(true, { children: true, texture: true })
     this.application = null
     this.sprites.clear()
+  }
+
+  /** The sequence canvas, in its own pixels — what every layer is composited against. */
+  private canvas(): Size {
+    return { width: this.state.settings.width, height: this.state.settings.height }
+  }
+
+  /** Bound rather than a method: the renderer holds it as a listener across the engine's life. */
+  private readonly layout = (): void => {
+    const application = this.application
+    if (!application) return
+
+    const canvas = this.canvas()
+    this.backdrop.clear().rect(0, 0, canvas.width, canvas.height).fill(CANVAS_COLOUR)
+    place(this.frame, fitInside(canvas, application.screen))
   }
 
   private spriteFor(trackId: string): Sprite {
@@ -216,7 +280,7 @@ export class TimelineEngine {
 
     const sprite = new Sprite()
     this.sprites.set(trackId, sprite)
-    this.application?.stage.addChild(sprite)
+    this.frame.addChild(sprite)
     return sprite
   }
 }

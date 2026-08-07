@@ -162,6 +162,21 @@ export function clipEnd(clip: Clip): Us {
 }
 
 /**
+ * The part of a clip that starts at `time`: it begins that much later in the source, at the
+ * clip's own speed. Three edits need this and must agree — a trim of the in point, a split, and
+ * the tail an insertion cuts loose — because a source offset off by a hair drifts the picture
+ * against the sound for the rest of the take.
+ */
+export function clipFrom(clip: Clip, time: Us): Clip {
+  return {
+    ...clip,
+    start: time,
+    duration: clipEnd(clip) - time,
+    inPoint: clip.inPoint + Math.round((time - clip.start) * clip.speed),
+  }
+}
+
+/**
  * Fades that overlap would raise the level in the middle instead of lowering it at both ends.
  * Trimming a clip shorter than its own ramps is the ordinary way to get there.
  */
@@ -290,11 +305,8 @@ export function insertClip(track: Track, clip: Clip, tailId: string): Track {
     if (existingEnd > end) {
       clips.push(
         clampFades({
-          ...existing,
+          ...clipFrom(existing, end),
           id: existing.start < clip.start ? tailId : existing.id,
-          start: end,
-          duration: existingEnd - end,
-          inPoint: existing.inPoint + (end - existing.start),
         }),
       )
     }

@@ -136,6 +136,16 @@ export function isLocalPicture(asset: Asset): boolean {
   return PICTURES.includes(asset.type) && asset.location === 'local' && onDisk !== undefined
 }
 
+/**
+ * How long the media itself runs, or null when it has no length of its own. A still picture
+ * probes as `duration: 0` — a real value, not a missing one — and an asset nobody has probed
+ * yet has no probe at all. Both are timeless, and both must reach a caller as the same answer.
+ */
+export function mediaDuration(asset: Asset | null): number | null {
+  const duration = asset?.probe?.duration
+  return duration !== undefined && duration > 0 ? duration : null
+}
+
 export type AssetQuery = {
   type?: AssetType
   tags?: string[]

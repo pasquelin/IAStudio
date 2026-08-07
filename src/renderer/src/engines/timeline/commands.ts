@@ -5,6 +5,7 @@ import {
   clampSpeed,
   clipById,
   clipEnd,
+  clipFrom,
   editableTrack,
   insertClip,
   newClipId,
@@ -32,26 +33,18 @@ const withoutClip = (track: Track, clipId: string): Track => ({
 })
 
 /**
- * How far a trim may travel before it would run into the clip next door. The neighbour is
- * whichever clip sits immediately before or after on the same track; with none, the only
- * bound is the start of the sequence.
+ * How far a trim may travel before it would run past the media behind it. There is nothing to
+ * show before a source starts or after it ends, and a clip stretched there freezes on a frame
+ * while its sound goes silent.
+ *
+ * A media with no length of its own — a still — takes no bound: stretching one over a minute is
+ * how a title card is made.
  */
-function clampToNeighbour(track: Track, clip: Clip, edge: ClipEdge, at: Us): Us {
-  const others = track.clips.filter(candidate => candidate.id !== clip.id)
+export function boundToMedia(clip: Clip, edge: ClipEdge, at: Us, length: Us | null): Us {
+  const headroom = (source: Us): Us => Math.round(source / clip.speed)
 
-  if (edge === 'out') {
-    const after = others.filter(candidate => candidate.start >= clipEnd(clip))
-    const ceiling = after.reduce<Us | null>(
-      (nearest, candidate) =>
-        nearest === null ? candidate.start : Math.min(nearest, candidate.start),
-      null,
-    )
-    return ceiling === null ? at : Math.min(at, ceiling)
-  }
-
-  const before = others.filter(candidate => clipEnd(candidate) <= clip.start)
-  const floor = before.reduce((nearest, candidate) => Math.max(nearest, clipEnd(candidate)), 0)
-  return Math.max(at, floor)
+  if (edge === 'in') return Math.max(at, clip.start - headroom(clip.inPoint))
+  return length === null ? at : Math.min(at, clip.start + headroom(length - clip.inPoint))
 }
 
 /**
@@ -134,8 +127,23 @@ export function moveClip(clipId: string, toTrackId: string, start: Us): Command<
   }
 }
 
-export function trimClip(clipId: string, edge: 'in' | 'out', at: Us): Command<SequenceState> {
-  let before: { clip: Clip; trackId: string } | null = null
+/**
+ * Drags one edge of a clip. `mediaLength` is how long the source runs, or null for a still —
+ * the command reads the sequence, and the catalogue is not part of it.
+ *
+ * A trim grows over its neighbour rather than stopping at it, the way DaVinci and Premiere do it
+ * on their default tool: an editor lengthening a shot means the shot after it to give way.
+ */
+export function trimClip(
+  clipId: string,
+  edge: ClipEdge,
+  at: Us,
+  mediaLength: Us | null,
+): Command<SequenceState> {
+  let before: { clips: Clip[]; trackId: string } | null = null
+  // Minted once with the command: a trim landing mid-neighbour cuts a tail loose, and a redo
+  // must not rename it.
+  const tailId = newClipId()
 
   return {
     id: `trim:${clipId}:${edge}`,
@@ -144,39 +152,23 @@ export function trimClip(clipId: string, edge: 'in' | 'out', at: Us): Command<Se
       const clip = clipById(state, clipId)
       if (!track || track.locked || !clip) return state
 
-      // Bounded by the neighbour on the same track. A trim does not go through `insertClip`,
-      // so nothing else would stop it from growing over the clip next to it — and two
-      // overlapping clips are heard twice and painted on top of each other.
-      const time = clampToNeighbour(track, clip, edge, snapToFrame(at, state.settings))
+      const time = boundToMedia(clip, edge, snapToFrame(at, state.settings), mediaLength)
       const trimmed =
-        edge === 'out'
-          ? { ...clip, duration: time - clip.start }
-          : {
-              ...clip,
-              start: time,
-              duration: clipEnd(clip) - time,
-              inPoint: clip.inPoint + (time - clip.start),
-            }
+        edge === 'out' ? { ...clip, duration: time - clip.start } : clipFrom(clip, time)
 
       // Refused rather than clamped: a zero-length clip is not a shorter clip, it is a bug.
-      if (trimmed.duration <= 0 || trimmed.inPoint < 0) return state
+      if (trimmed.duration <= 0) return state
 
-      // Trimming shorter than the ramps would leave fades hanging past the clip's own ends.
-      const next = clampFades(trimmed)
-
-      before = { clip, trackId: track.id }
-      return updateTrack(state, track.id, current => ({
-        ...current,
-        clips: current.clips.map(candidate => (candidate.id === clipId ? next : candidate)),
-      }))
+      before = { clips: track.clips, trackId: track.id }
+      // Through the insertion, which is what keeps the track sorted and free of overlap when a
+      // grown clip covers the one next to it — trimmed, split or dropped, as a drop would.
+      return updateTrack(state, track.id, current =>
+        insertClip(withoutClip(current, clipId), clampFades(trimmed), tailId),
+      )
     },
     revert: state => {
       if (!before) return state
-      const origin = before
-      return updateTrack(state, origin.trackId, current => ({
-        ...current,
-        clips: current.clips.map(candidate => (candidate.id === clipId ? origin.clip : candidate)),
-      }))
+      return restore(state, before.trackId, before.clips)
     },
   }
 }
@@ -201,14 +193,7 @@ export function splitClip(clipId: string, at: Us): Command<SequenceState> {
       // The cut point gets no ramp: a split is a butt joint, and fading into it would dip the
       // level in the middle of what the ear still hears as one take.
       const head: Clip = clampFades({ ...clip, duration: time - clip.start, fadeOut: 0 })
-      const tail: Clip = clampFades({
-        ...clip,
-        id: tailId,
-        start: time,
-        duration: clipEnd(clip) - time,
-        inPoint: clip.inPoint + (time - clip.start),
-        fadeIn: 0,
-      })
+      const tail: Clip = clampFades({ ...clipFrom(clip, time), id: tailId, fadeIn: 0 })
 
       return updateTrack(state, track.id, current => ({
         ...current,

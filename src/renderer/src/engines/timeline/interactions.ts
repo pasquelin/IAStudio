@@ -67,11 +67,18 @@ function dropTrack(state: SequenceState, viewport: Viewport, point: Point, from:
   return under && !under.locked && under.kind === from.kind ? under.id : from.id
 }
 
+/**
+ * How long the media behind a clip runs, or null for a still. The catalogue is not part of the
+ * sequence, so a trim has to be told — see `trimClip`.
+ */
+export type MediaLengths = (assetId: string) => Us | null
+
 export function commandForGesture(
   gesture: Gesture,
   state: SequenceState,
   viewport: Viewport,
   point: Point,
+  mediaLengths: MediaLengths,
 ): Command<SequenceState> | null {
   if (gesture.kind === 'scrub') return null
 
@@ -95,7 +102,9 @@ export function commandForGesture(
   }
 
   if (gesture.kind === 'trim') {
-    return trimClip(gesture.clipId, gesture.edge, snap(raw, context))
+    const clip = clipById(state, gesture.clipId)
+    if (!clip) return null
+    return trimClip(gesture.clipId, gesture.edge, snap(raw, context), mediaLengths(clip.assetId))
   }
 
   const from = trackById(state, gesture.trackId)

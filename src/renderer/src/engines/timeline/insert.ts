@@ -1,4 +1,4 @@
-import type { Asset } from '@shared/domain/asset'
+import { mediaDuration, type Asset } from '@shared/domain/asset'
 import { newId } from '@/helpers/ids'
 import {
   makeClip,
@@ -12,8 +12,8 @@ import {
   type Us,
 } from './timeline-state'
 
-/** What an asset still being probed is worth on the timeline, until its real duration lands. */
-export const UNPROBED_DURATION: Us = 5_000_000
+/** What a media with no length of its own is worth on the strip — a still, or an unprobed asset. */
+export const TIMELESS_DURATION: Us = 5_000_000
 
 /**
  * The clip an asset becomes. Shared by the drop on the strip and by the shelf's own add
@@ -30,7 +30,7 @@ export function clipForAsset(
     assetId,
     start: snapToFrame(start, settings),
     // A whole number of frames, so the clip's tail stays snappable — see `wholeFrames`.
-    duration: wholeFrames(asset?.probe?.duration ?? UNPROBED_DURATION, settings),
+    duration: wholeFrames(mediaDuration(asset) ?? TIMELESS_DURATION, settings),
   })
 }
 

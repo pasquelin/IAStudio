@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, type DragEvent, type PointerEvent } from 'react'
-import { posterUrl } from '@shared/domain/asset'
+import { mediaDuration, posterUrl } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/shortcut'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
@@ -108,6 +108,12 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     peaks.request(clip.assetId)
     return peaks.byAsset[clip.assetId] ?? null
   }, [])
+
+  // A trim stops where the media does, and only the catalogue knows how long that is.
+  const mediaLengths = useCallback(
+    (assetId: string) => mediaDuration(byId.get(assetId) ?? null),
+    [byId],
+  )
 
   const posterOf = useCallback(
     (clip: Clip): CanvasImageSource | null => {
@@ -291,7 +297,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       return
     }
 
-    const command = commandForGesture(current.gesture, current.base, viewport, point)
+    const command = commandForGesture(current.gesture, current.base, viewport, point, mediaLengths)
     if (command) useSequences.getState().replace(documentId, command.apply(current.base))
   }
 
@@ -303,7 +309,13 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     event.currentTarget.releasePointerCapture(event.pointerId)
     if (current.gesture.kind === 'scrub') return
 
-    const command = commandForGesture(current.gesture, current.base, viewport, pointAt(event))
+    const command = commandForGesture(
+      current.gesture,
+      current.base,
+      viewport,
+      pointAt(event),
+      mediaLengths,
+    )
     if (!command) return
 
     const store = useSequences.getState()

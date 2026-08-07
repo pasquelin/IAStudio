@@ -45,13 +45,13 @@ describe('sequence commands', () => {
   })
 
   it('trims the out edge', () => {
-    const command = trimClip('a', 'out', 600_000)
+    const command = trimClip('a', 'out', 600_000, null)
     const next = command.apply(withClips([clip('a', 0, 1_000_000)]))
     expect(next.tracks[0]?.clips[0]).toMatchObject({ start: 0, duration: 600_000, inPoint: 0 })
   })
 
   it('trims the in edge, moving both start and in point', () => {
-    const command = trimClip('a', 'in', 200_000)
+    const command = trimClip('a', 'in', 200_000, null)
     const next = command.apply(withClips([clip('a', 0, 1_000_000)]))
     expect(next.tracks[0]?.clips[0]).toMatchObject({
       start: 200_000,
@@ -62,8 +62,8 @@ describe('sequence commands', () => {
 
   it('refuses a trim that would leave nothing rather than clamping it to zero', () => {
     const state = withClips([clip('a', 0, 1_000_000)])
-    expect(trimClip('a', 'out', 0).apply(state)).toEqual(state)
-    expect(trimClip('a', 'in', 1_000_000).apply(state)).toEqual(state)
+    expect(trimClip('a', 'out', 0, null).apply(state)).toEqual(state)
+    expect(trimClip('a', 'in', 1_000_000, null).apply(state)).toEqual(state)
   })
 
   it('splits a clip in two, the second one starting later in the source', () => {
@@ -128,24 +128,85 @@ describe('sequence commands', () => {
     expect(command.revert(command.apply(state)).selectedId).toBe('b')
   })
 
-  it('stops a trim at the neighbour rather than growing over it', () => {
+  it('grows a trim over the neighbour, which gives way as it would under a drop', () => {
     const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 1_000_000)])
-    const next = trimClip('a', 'out', 1_800_000).apply(state)
+    const next = trimClip('a', 'out', 1_800_000, null).apply(state)
 
-    // Two overlapping clips are heard twice and painted on top of each other.
-    expect(next.tracks[0]?.clips[0]).toMatchObject({ id: 'a', duration: 1_000_000 })
+    expect(next.tracks[0]?.clips[0]).toMatchObject({ id: 'a', duration: 1_800_000 })
+    // What is left of the neighbour starts later in the source, as a trimmed head does.
+    expect(next.tracks[0]?.clips[1]).toMatchObject({
+      id: 'b',
+      start: 1_800_000,
+      duration: 200_000,
+      inPoint: 800_000,
+    })
   })
 
-  it('stops a trim of the in point at the clip before it', () => {
-    const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 1_000_000)])
-    const next = trimClip('b', 'in', 400_000).apply(state)
+  it('swallows a neighbour a trim covers whole', () => {
+    const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 500_000)])
+    const next = trimClip('a', 'out', 2_000_000, null).apply(state)
 
-    expect(next.tracks[0]?.clips[1]).toMatchObject({ id: 'b', start: 1_000_000 })
+    expect(next.tracks[0]?.clips.map(candidate => candidate.id)).toEqual(['a'])
+  })
+
+  it('grows the in point over the clip before it too', () => {
+    const state = withClips([
+      clip('a', 0, 1_000_000),
+      clip('b', 1_000_000, 1_000_000, {
+        inPoint: 1_000_000,
+      }),
+    ])
+    const next = trimClip('b', 'in', 400_000, null).apply(state)
+
+    expect(next.tracks[0]?.clips[0]).toMatchObject({ id: 'a', duration: 400_000 })
+    expect(next.tracks[0]?.clips[1]).toMatchObject({ id: 'b', start: 400_000, inPoint: 400_000 })
+  })
+
+  it('puts back the neighbours a trim overwrote', () => {
+    const command = trimClip('a', 'out', 1_800_000, null)
+    const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 1_000_000)])
+
+    expect(command.revert(command.apply(state)).tracks[0]?.clips).toEqual(state.tracks[0]?.clips)
   })
 
   it('lets a trim run freely when there is no neighbour in the way', () => {
-    const next = trimClip('a', 'out', 3_000_000).apply(withClips([clip('a', 0, 1_000_000)]))
+    const next = trimClip('a', 'out', 3_000_000, null).apply(withClips([clip('a', 0, 1_000_000)]))
     expect(next.tracks[0]?.clips[0]?.duration).toBe(3_000_000)
+  })
+
+  it('stops the out point where the source ends', () => {
+    const state = withClips([clip('a', 0, 1_000_000)])
+    const next = trimClip('a', 'out', 9_000_000, 2_000_000).apply(state)
+
+    // A clip stretched past its source freezes on a frame while its sound goes silent.
+    expect(next.tracks[0]?.clips[0]?.duration).toBe(2_000_000)
+  })
+
+  it('counts the source from the in point, not from the clip start', () => {
+    const state = withClips([clip('a', 0, 1_000_000, { inPoint: 1_500_000 })])
+    const next = trimClip('a', 'out', 9_000_000, 2_000_000).apply(state)
+
+    expect(next.tracks[0]?.clips[0]?.duration).toBe(500_000)
+  })
+
+  it('measures the source at the clip speed, which is what the decoder reads at', () => {
+    const state = withClips([clip('a', 0, 1_000_000, { speed: 2 })])
+    const next = trimClip('a', 'out', 9_000_000, 2_000_000).apply(state)
+
+    // Two seconds of source run past in one second of timeline at double speed.
+    expect(next.tracks[0]?.clips[0]?.duration).toBe(1_000_000)
+  })
+
+  it('stops the in point where the source begins', () => {
+    const state = withClips([clip('a', 1_000_000, 1_000_000, { inPoint: 400_000 })])
+    const next = trimClip('a', 'in', 0, 5_000_000).apply(state)
+
+    expect(next.tracks[0]?.clips[0]).toMatchObject({ start: 600_000, inPoint: 0 })
+  })
+
+  it('leaves a still unbounded, which is how a title card is stretched', () => {
+    const next = trimClip('a', 'out', 9_000_000, null).apply(withClips([clip('a', 0, 1_000_000)]))
+    expect(next.tracks[0]?.clips[0]?.duration).toBe(9_000_000)
   })
 
   it('puts back the neighbours an added clip overwrote', () => {
