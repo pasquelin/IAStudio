@@ -2,7 +2,12 @@ import type { CommandId } from '@shared/domain/command'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { mediaDuration, posterUrl } from '@shared/domain/asset'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
-import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
+import {
+  beginGesture,
+  commandForGesture,
+  viewportForGesture,
+  type Gesture,
+} from '@/engines/timeline/interactions'
 import { clipForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
 import { hitTest, xToTime, type Point, type Viewport } from '@/engines/timeline/timeline-geometry'
@@ -39,8 +44,6 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
   const dragging = useRef<{ gesture: Gesture; base: SequenceState } | null>(null)
-  // Panning is not an edit: it moves the view, so it holds a viewport rather than a sequence.
-  const panning = useRef<{ from: Point; base: Viewport } | null>(null)
 
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const viewport = useTimelineView(state => viewportOf(state, documentId))
@@ -257,12 +260,6 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
     const point = pointAt(event)
 
-    if (tool === 'hand') {
-      event.currentTarget.setPointerCapture(event.pointerId)
-      panning.current = { from: point, base: viewport }
-      return
-    }
-
     if (tool === 'blade') {
       const target = hitTest(sequence, viewport, point)
       const clipId = target && 'clipId' in target ? target.clipId : null
@@ -273,7 +270,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       return
     }
 
-    const gesture = beginGesture(sequence, viewport, point)
+    const gesture = beginGesture(sequence, viewport, point, tool === 'hand')
     if (!gesture) {
       useSequences.getState().replace(documentId, { ...sequence, selectedId: null })
       useSelection.getState().clear()
@@ -282,9 +279,10 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
 
     event.currentTarget.setPointerCapture(event.pointerId)
 
-    if (gesture.kind === 'scrub') {
+    // Neither moves the montage, so neither selects anything either.
+    if (gesture.kind === 'scrub' || gesture.kind === 'pan') {
       dragging.current = { gesture, base: sequence }
-      scrubTo(sequence, point)
+      if (gesture.kind === 'scrub') scrubTo(sequence, point)
       return
     }
 
@@ -296,19 +294,14 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
-    const pan = panning.current
-    if (pan) {
-      const point = pointAt(event)
-      // Measured from where the grab started, not from the last frame: accumulating deltas
-      // drifts, and the strip must sit exactly where the hand put it.
-      setViewport(scrollBy(pan.base, pan.from.x - point.x, pan.from.y - point.y))
-      return
-    }
-
     const current = dragging.current
     if (!current) return
 
     const point = pointAt(event)
+
+    const view = viewportForGesture(current.gesture, point)
+    if (view) return setViewport(view)
+
     if (current.gesture.kind === 'scrub') {
       scrubTo(current.base, point)
       return
@@ -319,18 +312,13 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }
 
   const onPointerUp = (event: PointerEvent<HTMLCanvasElement>): void => {
-    if (panning.current) {
-      panning.current = null
-      event.currentTarget.releasePointerCapture(event.pointerId)
-      return
-    }
-
     const current = dragging.current
     dragging.current = null
     if (!current) return
 
     event.currentTarget.releasePointerCapture(event.pointerId)
-    if (current.gesture.kind === 'scrub') return
+    // Both moved something that is not the montage: there is no command to run.
+    if (current.gesture.kind === 'scrub' || current.gesture.kind === 'pan') return
 
     const command = commandForGesture(
       current.gesture,

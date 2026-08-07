@@ -1,6 +1,7 @@
 import type { Command } from '../core/history'
 import { moveClip, setClipFade, trimClip } from './commands'
 import { hitTest, rowAt, snap, xToTime, type Point, type Viewport } from './timeline-geometry'
+import { scrollBy } from './viewport'
 import {
   clipById,
   clipEnd,
@@ -18,6 +19,8 @@ import {
  */
 export type Gesture =
   | { kind: 'scrub' }
+  /** Moving the view, not the montage. Measured from where the grab started, so it cannot drift. */
+  | { kind: 'pan'; from: Point; base: Viewport }
   | { kind: 'drag'; clipId: string; trackId: string; grabOffset: Us }
   | { kind: 'trim'; clipId: string; edge: ClipEdge }
   | { kind: 'fade'; clipId: string; edge: ClipEdge }
@@ -38,7 +41,11 @@ export function beginGesture(
   state: SequenceState,
   viewport: Viewport,
   point: Point,
+  /** The hand tool drags the view wherever it is pressed, over a clip as much as over a gap. */
+  panning = false,
 ): Gesture | null {
+  if (panning) return { kind: 'pan', from: point, base: viewport }
+
   const target = hitTest(state, viewport, point)
   if (!target) return null
 
@@ -73,6 +80,15 @@ function dropTrack(state: SequenceState, viewport: Viewport, point: Point, from:
  */
 export type MediaLengths = (assetId: string) => Us | null
 
+/**
+ * Where a gesture leaves the view. Null for everything that edits instead — the counterpart of
+ * `commandForGesture`, so one call decides what a pointer move means and nothing else has to.
+ */
+export function viewportForGesture(gesture: Gesture, point: Point): Viewport | null {
+  if (gesture.kind !== 'pan') return null
+  return scrollBy(gesture.base, gesture.from.x - point.x, gesture.from.y - point.y)
+}
+
 export function commandForGesture(
   gesture: Gesture,
   state: SequenceState,
@@ -80,7 +96,7 @@ export function commandForGesture(
   point: Point,
   mediaLengths: MediaLengths,
 ): Command<SequenceState> | null {
-  if (gesture.kind === 'scrub') return null
+  if (gesture.kind === 'scrub' || gesture.kind === 'pan') return null
 
   const raw = xToTime(point.x, viewport)
 

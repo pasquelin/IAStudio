@@ -237,6 +237,17 @@ describe('catalog', () => {
     expect(catalog.findByHash('abc123')?.id).toBe('asset_first')
   })
 
+  // A child pointing at a parent that is gone reads back as a derivation from nothing.
+  it('cuts the derivation of what came from a removed asset', () => {
+    catalog.add(asset({ id: 'asset_source' }))
+    catalog.add(asset({ id: 'asset_child', derivedFrom: 'asset_source' }))
+
+    catalog.remove('asset_source')
+
+    expect(catalog.find('asset_child')?.derivedFrom).toBeUndefined()
+    expect(catalog.find('asset_child')?.id).toBe('asset_child')
+  })
+
   it('removes a row and the tags hanging off it', () => {
     catalog.add(asset({ tags: ['stone', 'rock'] }))
     catalog.remove('asset_1')

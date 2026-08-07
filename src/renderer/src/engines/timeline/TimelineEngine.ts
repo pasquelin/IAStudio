@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Sprite, Texture, type TextureSource } from 'pixi.js'
+import { Container, Graphics, Sprite, Texture, type Application, type TextureSource } from 'pixi.js'
 import { createClock, type Clock } from './clock'
 import { createDecoderPool, type DecoderPool, type SinkLike } from './decoder-pool'
 import { playbackToken } from './playback'
@@ -13,6 +13,7 @@ import {
   type Track,
   type Us,
 } from './timeline-state'
+import { mountApplication } from '../core/mount'
 import { tokenAsHex } from '../core/palette'
 import type { Size } from './viewport'
 
@@ -180,16 +181,11 @@ export class TimelineEngine {
   }
 
   async mount(element: HTMLElement): Promise<void> {
-    const application = new Application()
-    await application.init({ resizeTo: element, preference: 'webgl', backgroundAlpha: 0 })
-
-    // `disposed` rather than `isConnected` alone: React remounts an effect on the very same
-    // element, so it is still connected while this engine is already dead — the same trap
-    // `CanvasEngine.mount` documents at length, and a leaked WebGL context per monitor.
-    if (this.disposed || !element.isConnected) {
-      application.destroy(true, { children: true, texture: true })
-      return
-    }
+    const application = await mountApplication(
+      { resizeTo: element, preference: 'webgl', backgroundAlpha: 0 },
+      () => this.disposed || !element.isConnected,
+    )
+    if (!application) return
 
     element.appendChild(application.canvas)
     application.stage.addChild(this.frame)

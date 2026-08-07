@@ -187,6 +187,11 @@ export type Catalog = {
   /** The row holding these exact bytes, if the project already imported them once. */
   findByHash: (hash: string) => Asset | null
   search: (query: AssetQuery) => Asset[]
+  /**
+   * Drops a row and the references the catalogue itself holds to it. What lives on disk is the
+   * caller's business: the proxy and the waveform are named after a hash that other rows may
+   * share, so only the caller knows whether they are still wanted.
+   */
   remove: (assetId: string) => void
   close: () => void
 }
@@ -215,6 +220,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     'SELECT * FROM assets WHERE hash = ? ORDER BY created_at, id LIMIT 1',
   )
   const deleteAsset = driver.prepare('DELETE FROM assets WHERE id = ?')
+  // A child pointing at a parent that is gone reads back as a derivation from nothing, and
+  // every inspector that follows the link would have to guard against a row that cannot exist.
+  const orphanChildren = driver.prepare(
+    'UPDATE assets SET derived_from = NULL WHERE derived_from = ?',
+  )
 
   const tagsOf = (assetId: string): string[] => selectTags.all(assetId).map(row => text(row, 'tag'))
 
@@ -289,6 +299,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     },
 
     remove: assetId => {
+      orphanChildren.run(assetId)
       deleteTags.run(assetId)
       deleteAsset.run(assetId)
     },

@@ -3,6 +3,7 @@ import {
   beginGesture,
   commandForGesture,
   snapCandidates,
+  viewportForGesture,
   type Gesture,
   type MediaLengths,
 } from './interactions'
@@ -152,5 +153,39 @@ describe('timeline interactions', () => {
     const next = command!.apply(state)
     expect(next.tracks[0]?.clips.map(candidate => candidate.id)).toEqual(['b', 'a'])
     expect(next.tracks[0]?.clips[1]?.start).toBe(3_480_000)
+  })
+})
+
+describe('panning the view', () => {
+  const state = stateWith([clip('a', 0, 1_000_000)])
+
+  // The hand takes the press wherever it lands: over a clip, over a gap, over the ruler.
+  it('begins a pan over a clip rather than dragging it', () => {
+    const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 30 }, true)
+    expect(gesture).toMatchObject({ kind: 'pan', from: { x: 50 }, base: viewport })
+  })
+
+  it('begins one over empty space, where an edit gesture answers nothing at all', () => {
+    expect(
+      beginGesture(stateWith([]), viewport, { x: 50, y: RULER_HEIGHT + 30 }, true),
+    ).toMatchObject({ kind: 'pan' })
+  })
+
+  // Measured from the grab, not from the previous frame: accumulated deltas drift, and the
+  // strip has to sit exactly where the hand put it.
+  it('moves the view against the pointer, from where the grab started', () => {
+    const gesture = beginGesture(state, viewport, { x: 300, y: RULER_HEIGHT + 30 }, true)
+    const moved = viewportForGesture(gesture!, { x: 100, y: RULER_HEIGHT + 30 })
+
+    expect(moved?.offset).toBe(Math.round(200 / viewport.scale))
+  })
+
+  it('edits nothing while it pans', () => {
+    const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 30 }, true)
+    expect(commandFor(gesture!, state, { x: 200, y: RULER_HEIGHT + 30 })).toBeNull()
+  })
+
+  it('leaves the view alone for every gesture that is not a pan', () => {
+    expect(viewportForGesture({ kind: 'scrub' }, { x: 10, y: 10 })).toBeNull()
   })
 })

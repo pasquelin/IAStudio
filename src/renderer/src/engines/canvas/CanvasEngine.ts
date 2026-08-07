@@ -3,7 +3,7 @@
 // stays blank with a clean console. Despite the name, this ships static polyfills instead.
 import 'pixi.js/unsafe-eval'
 import {
-  Application,
+  type Application,
   Container,
   Graphics,
   Rectangle,
@@ -11,6 +11,7 @@ import {
   Sprite,
   type BLEND_MODES,
 } from 'pixi.js'
+import { mountApplication } from '../core/mount'
 import { onPaletteChange, tokenAsHex } from '../core/palette'
 import type { BlendMode, CanvasState, Layer } from './canvas-state'
 import type { Point } from './shape-geometry'
@@ -108,29 +109,18 @@ export class CanvasEngine {
 
   constructor(private readonly options: CanvasEngineOptions) {}
 
-  /**
-   * `Application.init` is asynchronous in Pixi v8 — it was not in v7. Everything after the
-   * `await` must therefore check `disposed`, or a component unmounted quickly ends up with a
-   * renderer bound to a canvas that no longer exists.
-   */
   async mount(host: HTMLElement): Promise<void> {
-    const app = new Application()
-    // Pixi makes its own canvas, which is then appended: sharing one element across mounts is
-    // what breaks under React's double-invoked effects in development. The first instance's
-    // `init` resolves after the second has already claimed the element, sees `disposed`, and
-    // tears down the context the second one is drawing into — leaving a canvas dead for good.
-    await app.init({
-      resizeTo: host,
-      backgroundAlpha: 0,
-      antialias: true,
-      autoDensity: true,
-      resolution: window.devicePixelRatio,
-    })
-
-    if (this.disposed) {
-      app.destroy({ removeView: true }, { children: true, texture: true, textureSource: true })
-      return
-    }
+    const app = await mountApplication(
+      {
+        resizeTo: host,
+        backgroundAlpha: 0,
+        antialias: true,
+        autoDensity: true,
+        resolution: window.devicePixelRatio,
+      },
+      () => this.disposed,
+    )
+    if (!app) return
 
     const canvas = app.canvas
     canvas.style.display = 'block'
