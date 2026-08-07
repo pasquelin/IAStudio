@@ -68,7 +68,7 @@ Scenario API key and secret from [app.scenario.com](https://app.scenario.com).
 ```bash
 pnpm install
 pnpm rebuild:native   # better-sqlite3 against this Electron build
-pnpm dev
+pnpm start
 ```
 
 Then open **Settings** (`⌘,` / `Ctrl+,`) and enter your API key and secret. They are encrypted
@@ -88,7 +88,8 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 
 | Command | What it does |
 |---|---|
-| `pnpm dev` | electron-vite in watch mode, hot reload on main, preload and renderer |
+| `pnpm start` | electron-vite in watch mode, hot reload on main, preload and renderer |
+| `pnpm start:debug` | same, with the remote debugging port on 9222 — what drives the app from outside |
 | `pnpm build` | typecheck, then build the three targets |
 | `pnpm dist` | build, then package and sign with electron-builder |
 | `pnpm typecheck` | `tsc --noEmit` across the three targets |
