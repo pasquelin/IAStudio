@@ -9,7 +9,8 @@ import { broadcast } from '@main/ipc/broadcast'
 import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
 import { log, mirrorLogsTo } from '@main/log'
-import { createServices } from '@main/services'
+import { createServices, createSettings } from '@main/services'
+import type { SettingsStore } from '@main/settings/store'
 import { lockNavigation } from '@main/window/navigation'
 import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splash-window'
@@ -32,7 +33,7 @@ lockNavigation()
  * synchronously. Deferred by one turn so the splash gets its frame first; without it the
  * splash surfaces once the work it covers is already finished.
  */
-function startUp(splash: Splash): void {
+function startUp(splash: Splash, settings: SettingsStore): void {
   /**
    * The API calls leave from here, so they never appear in the renderer's Network tab; the
    * mirror is what makes them, and the failures behind a reduced code, visible in devtools.
@@ -49,7 +50,7 @@ function startUp(splash: Splash): void {
   if (isDevelopment && process.platform === 'darwin') app.dock?.setIcon(APP_ICON_PATH)
 
   // Before the window: the renderer's first `invoke` must find its handlers registered.
-  const services = createServices()
+  const services = createServices(settings)
   registerIpc(services)
 
   // `deferShow`: the window stays hidden until the splash is gone, so the two are never on
@@ -79,11 +80,12 @@ function startUp(splash: Splash): void {
 }
 
 void app.whenReady().then(() => {
+  // Before the splash: it is painted from the theme, and reading the settings is a JSON file —
+  // the rest of the services open SQLite synchronously, far too late to decide what to paint.
+  const settings = createSettings()
   const splash = openSplashWindow()
 
-  // The language comes from the settings, which `createServices` is what opens — so it is read
-  // inside `startUp` rather than here.
-  setImmediate(() => startUp(splash))
+  setImmediate(() => startUp(splash, settings))
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

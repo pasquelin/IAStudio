@@ -1,5 +1,4 @@
 import { BrowserWindow, shell } from 'electron'
-import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { SettingActionId } from '@shared/domain/settings-registry'
 import type { SettingsStore } from './store'
 
@@ -27,9 +26,10 @@ export function runSettingAction({ settings, settingsPath }: ActionDeps) {
         return
 
       case 'advanced.reset':
-        // Through the store, so the change is validated, persisted and broadcast like any
-        // other write — every window follows without being told.
-        settings.write(DEFAULT_SETTINGS)
+        // `reset`, not `write(DEFAULT_SETTINGS)`: a write merges, and the settings with no
+        // default would have survived the reset. Broadcast like any other change, so every
+        // window follows without being told.
+        settings.reset()
         return
     }
   }

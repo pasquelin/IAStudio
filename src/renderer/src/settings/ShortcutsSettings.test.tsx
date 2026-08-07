@@ -139,3 +139,43 @@ describe('searching by chord', () => {
     expect(screen.getByText(/elle est libre/)).toBeInTheDocument()
   })
 })
+
+describe('only one thing listens at a time', () => {
+  /*
+   * The row and the search box each held their own listening state, so starting a search and
+   * then clicking a row left both live: one keypress was recorded as a binding AND used as a
+   * query.
+   */
+  it('stops the search when a row starts capturing', async () => {
+    render(<ShortcutsSettings />)
+    await userEvent.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await userEvent.click(rowFor('Déplacer'))
+
+    press('KeyT')
+
+    expect(staged()).toEqual({ 'scene.translate': 'KeyT' })
+    // The query never took it, so every command is still listed.
+    expect(rowFor('Pivoter')).toBeInTheDocument()
+  })
+
+  it('stops a capture when the search starts', async () => {
+    render(<ShortcutsSettings />)
+    await userEvent.click(rowFor('Déplacer'))
+    await userEvent.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+
+    press('KeyG')
+
+    expect(staged()).toBeUndefined()
+    expect(rowFor('Déplacer')).toBeInTheDocument()
+  })
+
+  it('leaves the capture when the same row is clicked again', async () => {
+    render(<ShortcutsSettings />)
+    await userEvent.click(rowFor('Déplacer'))
+    expect(rowFor('Déplacer')).toHaveTextContent('Appuyez…')
+
+    await userEvent.click(rowFor('Déplacer'))
+
+    expect(rowFor('Déplacer')).toHaveTextContent('G')
+  })
+})

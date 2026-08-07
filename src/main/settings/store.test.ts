@@ -140,3 +140,40 @@ describe('settings store', () => {
     expect(store.hasCredentials()).toBe(false)
   })
 })
+
+describe('resetting', () => {
+  /*
+   * A write MERGES, and the settings with no default — an accent, an ffmpeg path, a projects
+   * folder — have nothing in the defaults to overwrite them. Resetting with a write therefore
+   * left exactly the settings it promised to remove.
+   */
+  it('removes the settings that have no default to fall back on', () => {
+    const settings = createSettingsStore(memoryAdapter())
+    settings.write({ appearance: { accent: '#ff0000' }, media: { ffmpegPath: '/opt/ffmpeg' } })
+
+    expect(settings.reset()).toEqual(DEFAULT_SETTINGS)
+    expect(settings.read().appearance.accent).toBeUndefined()
+    expect(settings.read().media.ffmpegPath).toBeUndefined()
+  })
+
+  it('tells every window, like any other change', () => {
+    const seen: Settings[] = []
+    const settings = createSettingsStore(memoryAdapter(), {
+      onChange: next => void seen.push(next),
+    })
+
+    settings.reset()
+
+    expect(seen).toEqual([DEFAULT_SETTINGS])
+  })
+
+  // Credentials live behind their own channel and are not settings; signing out is its own act.
+  it('leaves the stored credentials alone', () => {
+    const settings = createSettingsStore(memoryAdapter())
+    settings.setCredentials({ key: 'k', secret: 's' })
+
+    settings.reset()
+
+    expect(settings.hasCredentials()).toBe(true)
+  })
+})
