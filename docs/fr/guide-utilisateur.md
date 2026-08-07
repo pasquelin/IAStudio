@@ -397,8 +397,8 @@ probable. La file existe pour étaler une rafale plutôt que de la faire rejeter
 
 ### Familles de modèles
 
-Le modèle que la génération présélectionne pour chaque famille — image, vidéo, 3D, audio. Laissez
-une famille vide pour qu'elle demande à chaque fois.
+Le modèle que la génération présélectionne pour chaque famille — image, vidéo, 3D, audio,
+upscale. Laissez une famille vide pour qu'elle demande à chaque fois.
 
 Le studio retient le dernier projet ouvert et le rouvre au lancement. Ce n'est pas un réglage à
 cocher — cela se fait tout seul.

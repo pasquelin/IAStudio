@@ -356,7 +356,7 @@ Key primitives, all in `design/`:
 | `MediaTile`, `Thumbnail` | the captioned square tile, and the same picture at a fixed size |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | the shared bar, its icon buttons, its labelled ones, the only door icons come through |
 | `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the jobs bar and media import |
-| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField` — what the inspector is built from |
+| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |

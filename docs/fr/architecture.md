@@ -368,7 +368,7 @@ Les primitives, toutes dans `design/` :
 | `MediaTile`, `Thumbnail` | la tuile carrée légendée, et la même image à taille fixe |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | la barre partagée, ses boutons d'icône, ses boutons libellés, l'unique porte des icônes |
 | `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par la barre de jobs et l'import de médias |
-| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField` — ce dont l'inspecteur est fait |
+| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField`, `PropertyRow` — ce dont l'inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | les chaînes de classes partagées par plus d'un composant : `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |

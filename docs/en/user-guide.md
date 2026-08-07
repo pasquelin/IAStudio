@@ -387,8 +387,8 @@ queue exists so a burst is spread rather than rejected.
 
 ### Model families
 
-The model the generator preselects for each family — image, video, 3D, audio. Leave one unset to
-be asked every time.
+The model the generator preselects for each family — image, video, 3D, audio, upscale. Leave one
+unset to be asked every time.
 
 The studio remembers the last project you opened and reopens it on launch. That is not a setting
 you tick — it simply happens.
