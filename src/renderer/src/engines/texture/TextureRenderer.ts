@@ -9,7 +9,6 @@ import {
   type ColorSpace,
   type Texture,
 } from 'three'
-import { assetUrl } from '@shared/domain/asset'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
@@ -20,8 +19,6 @@ import { slotFor, type MaterialSlot, type PreviewShape, type TextureState } from
 export type TextureRendererOptions = {
   /** Injected: jsdom decodes no image, and the engine is built the same way in both. */
   loadTexture: TextureSource
-  /** Resolves a skybox asset to the picture the environment is built from. */
-  urlOf?: (assetId: string) => string
 }
 
 /** Radians per second of auto spin — slow enough to read a normal map, fast enough to see. */
@@ -43,7 +40,6 @@ export class TextureRenderer {
   private readonly material = new MeshStandardMaterial()
   private readonly mesh = new Mesh(previewGeometry('sphere', false), this.material)
   private readonly cache: TextureCache
-  private readonly urlOf: (assetId: string) => string
 
   private environment: ViewportEnvironment | null = null
 
@@ -60,7 +56,6 @@ export class TextureRenderer {
 
   constructor(options: TextureRendererOptions) {
     this.cache = createTextureCache(options.loadTexture)
-    this.urlOf = options.urlOf ?? assetUrl
     this.viewport.camera.position.set(0, 0.6, 3.2)
     this.viewport.scene.add(this.mesh)
   }
@@ -213,7 +208,7 @@ export class TextureRenderer {
       return
     }
 
-    const loaded = await this.cache.acquire(this.urlOf(wanted), SRGBColorSpace)
+    const loaded = await this.cache.acquire(wanted, SRGBColorSpace)
     // Another environment was chosen while this one was decoding.
     if (this.skybox !== wanted || !loaded) return
 
