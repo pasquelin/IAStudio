@@ -87,9 +87,49 @@ describe('catalog', () => {
 
     migrate(older)
     const upgraded = createCatalog(older)
-    upgraded.add(asset({ id: 'asset_old', hash: 'def456' }))
+    upgraded.add(asset({ id: 'asset_old', hash: 'def456', map: 'normal' }))
 
     expect(upgraded.find('asset_old')?.hash).toBe('def456')
+    expect(upgraded.find('asset_old')?.map).toBe('normal')
+  })
+
+  it('keeps a channel and its reading direction through a round trip', () => {
+    catalog.add(asset({ id: 'asset_rough', map: 'roughness', mapInverted: true }))
+    catalog.add(asset({ id: 'asset_norm', map: 'normal' }))
+
+    expect(catalog.find('asset_rough')).toMatchObject({ map: 'roughness', mapInverted: true })
+    expect(catalog.find('asset_norm')?.map).toBe('normal')
+    // Absent rather than false: an ordinary map is not "a map that is not inverted".
+    expect(catalog.find('asset_norm')?.mapInverted).toBeUndefined()
+  })
+
+  it('leaves a picture that carries no channel alone', () => {
+    catalog.add(asset({ id: 'asset_plain' }))
+    expect(catalog.find('asset_plain')?.map).toBeUndefined()
+  })
+
+  it('finds the local asset an API one became', () => {
+    catalog.add(asset({ id: 'asset_local', remoteAssetId: 'remote_1' }))
+    expect(catalog.findByRemoteId('remote_1')?.id).toBe('asset_local')
+    expect(catalog.findByRemoteId('remote_unknown')).toBeNull()
+  })
+
+  // Re-importing the same API asset must not move where its channels point.
+  it('answers with the oldest local asset when one was imported twice', () => {
+    catalog.add(asset({ id: 'asset_b', remoteAssetId: 'remote_1', createdAt: '2026-08-07T00:00Z' }))
+    catalog.add(asset({ id: 'asset_a', remoteAssetId: 'remote_1', createdAt: '2026-08-06T00:00Z' }))
+
+    expect(catalog.findByRemoteId('remote_1')?.id).toBe('asset_a')
+  })
+
+  // The column is a free string, and a catalogue outlives the build that wrote it.
+  it('ignores a channel this build no longer knows rather than failing the read', () => {
+    catalog.add(asset({ id: 'asset_odd', map: 'normal' }))
+    driver.prepare('UPDATE assets SET map = ? WHERE id = ?').run('cavity', 'asset_odd')
+
+    const found = catalog.find('asset_odd')
+    expect(found?.map).toBeUndefined()
+    expect(found?.id).toBe('asset_odd')
   })
 
   it('reads back everything it stored', () => {

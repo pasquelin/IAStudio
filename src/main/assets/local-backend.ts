@@ -1,6 +1,7 @@
 import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { ASSET_FOLDERS, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
+import type { PbrChannel } from '@shared/domain/texture'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {
@@ -29,6 +30,8 @@ export type ImportRequest = {
   jobId?: string
   remoteAssetId?: string
   derivedFrom?: string
+  map?: PbrChannel
+  mapInverted?: boolean
 }
 
 /** An import whose bytes the caller already holds — an edited take, rather than a download. */
@@ -110,6 +113,12 @@ export function createLocalBackend({
     if (request.jobId) asset.jobId = request.jobId
     if (request.remoteAssetId) asset.remoteAssetId = request.remoteAssetId
     if (request.derivedFrom) asset.derivedFrom = request.derivedFrom
+    // Nested: the flag says how to read a channel, so it means nothing without one — and the
+    // catalogue only reads it back inside a valid channel anyway.
+    if (request.map) {
+      asset.map = request.map
+      if (request.mapInverted) asset.mapInverted = true
+    }
 
     return await catalog().add(asset)
   }

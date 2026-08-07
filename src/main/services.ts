@@ -162,10 +162,13 @@ export function createServices(): Services {
   const jobs = createJobManager({
     runner: runnerOf(() => client.require()),
     collect: createAssetCollector({
-      retrieve: async remoteAssetId =>
-        (await client.require().assets.retrieve(remoteAssetId)).asset,
+      retrieve: async remoteAssetId => {
+        const { asset } = await client.require().assets.retrieve(remoteAssetId)
+        return { ...asset, metadataType: asset.metadata.type, parentId: asset.metadata.parentId }
+      },
       backend: assets,
       newId: newAssetId,
+      localIdOf: remoteAssetId => project.catalog().findByRemoteId(remoteAssetId)?.id ?? null,
     }),
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
