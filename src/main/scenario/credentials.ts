@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { Credentials, SettingsStore } from '@main/settings/store'
 
 /**
@@ -63,16 +63,40 @@ export function resolveCredentials(
   return settings.readCredentials() ?? readEnvironmentCredentials(fallback)
 }
 
-export function createFileSystemFallback(rootPath: string, packaged: boolean): EnvironmentFallback {
+/**
+ * Reads `secrets/.env` from `start` or any folder above it.
+ *
+ * Reading beside `start` alone is what made the file unreachable: in development electron-vite
+ * runs the bundled entry point, so `app.getAppPath()` is `<project>/out/main`, two levels below
+ * the folder the secrets live in.
+ */
+export function readEnvFile(start: string, read: (path: string) => string | null): string | null {
+  let current = start
+
+  for (;;) {
+    const content = read(join(current, ENV_FILE))
+    if (content !== null) return content
+
+    const parent = dirname(current)
+    // No development secrets anywhere above: the user is expected to type their own.
+    if (parent === current) return null
+    current = parent
+  }
+}
+
+export function createFileSystemFallback(
+  startPath: string,
+  packaged: boolean,
+): EnvironmentFallback {
   return {
     packaged,
-    read: () => {
-      try {
-        return readFileSync(join(rootPath, ENV_FILE), 'utf8')
-      } catch {
-        // No development secrets: the user is expected to type their own.
-        return null
-      }
-    },
+    read: () =>
+      readEnvFile(startPath, path => {
+        try {
+          return readFileSync(path, 'utf8')
+        } catch {
+          return null
+        }
+      }),
   }
 }

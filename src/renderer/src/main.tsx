@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { isSettingsRoute } from '@shared/domain/settings'
 import { resolveLanguage } from '@shared/i18n'
 import { Application } from '@/app/Application'
 import { initI18n } from '@/i18n'
@@ -19,8 +20,8 @@ await initI18n(resolveLanguage(navigator.language))
  * fragment is only ever what the main process loaded. The splash is the one exception — it
  * has its own entry precisely so it never pulls this bundle in.
  */
-const isSettings = window.location.hash === '#settings'
-
 createRoot(root).render(
-  <StrictMode>{isSettings ? <SettingsWindow /> : <Application />}</StrictMode>,
+  <StrictMode>
+    {isSettingsRoute(window.location.hash) ? <SettingsWindow /> : <Application />}
+  </StrictMode>,
 )

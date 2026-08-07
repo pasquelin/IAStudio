@@ -19,7 +19,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       setCredentials: () => Promise.resolve({ authenticated: true }),
       authState: () => Promise.resolve({ authenticated: false, reason: 'missing' }),
       forgetCredentials: () => Promise.resolve(),
+      open: () => Promise.resolve(),
       onChange: noSubscription,
+      onSection: noSubscription,
       ...overrides.settings,
     },
     scenario: {
@@ -42,6 +44,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     assets: {
       search: () => Promise.resolve([]),
+      peaks: () => Promise.resolve(null),
+      saveAudio: () => Promise.reject(new Error('no project')),
       ...overrides.assets,
     },
     media: {

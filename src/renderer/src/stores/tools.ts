@@ -34,6 +34,8 @@ type ToolsState = {
   /** Last clicked zone: the one whose rail icon gets accented. */
   focusedZone: ToolZone | null
   toggle: (zone: ToolZone, tool: ToolId) => void
+  /** Brings a tool up and focuses its zone, leaving it up when it already was — unlike `toggle`. */
+  show: (zone: ToolZone, tool: ToolId) => void
   close: (zone: ToolZone, slot: ToolSlot) => void
   focus: (zone: ToolZone | null) => void
   /** `available`: the container's dimension along the zone's axis. */
@@ -56,8 +58,10 @@ export const DEFAULT_SPLIT = 240
 
 const DEFAULT_OPEN: OpenByZone = {
   left: { secondary: 'explorer' },
-  right: { primary: 'generator' },
-  bottom: { primary: 'assets' },
+  // The shelf rather than the generator: it is what a new project needs first, and it shares
+  // the column with the inspector.
+  right: { primary: 'assets', secondary: 'inspector' },
+  bottom: { primary: 'jobs' },
 }
 
 const OPPOSITE: Record<ToolZone, ToolZone> = {
@@ -149,6 +153,18 @@ export const useTools = create<ToolsState>()(
           return { open, focusedZone: state.focusedZone === zone ? null : state.focusedZone }
         }),
 
+      show: (zone, tool) =>
+        set(state => {
+          const slot = placementOf(tool)?.slot
+          if (!slot) return state
+          if (state.open[zone]?.[slot] === tool) return { focusedZone: zone }
+
+          return {
+            open: { ...state.open, [zone]: { ...(state.open[zone] ?? {}), [slot]: tool } },
+            focusedZone: zone,
+          }
+        }),
+
       close: (zone, slot) =>
         set(state => {
           const next = { ...(state.open[zone] ?? {}) }
@@ -209,8 +225,8 @@ export const useTools = create<ToolsState>()(
       // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
       // would reach `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on
       // startup. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
-      // mesh and light panels.
-      version: 4,
+      // mesh and light panels, and 4 the asset shelf moving out of the bottom strip.
+      version: 5,
       migrate: persisted => {
         if (typeof persisted !== 'object' || persisted === null) return undefined
         const sizes: unknown = Reflect.get(persisted, 'sizes')

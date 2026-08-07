@@ -1,10 +1,12 @@
 import type { Command } from '../core/history'
-import { moveClip, trimClip } from './commands'
-import { hitTest, snap, trackAt, xToTime, type Point, type Viewport } from './timeline-geometry'
+import { moveClip, setClipFade, trimClip } from './commands'
+import { hitTest, rowAt, snap, xToTime, type Point, type Viewport } from './timeline-geometry'
 import {
   clipById,
   clipEnd,
+  snapToFrame,
   trackById,
+  type ClipEdge,
   type SequenceState,
   type Track,
   type Us,
@@ -17,7 +19,8 @@ import {
 export type Gesture =
   | { kind: 'scrub' }
   | { kind: 'drag'; clipId: string; trackId: string; grabOffset: Us }
-  | { kind: 'trim'; clipId: string; edge: 'in' | 'out' }
+  | { kind: 'trim'; clipId: string; edge: ClipEdge }
+  | { kind: 'fade'; clipId: string; edge: ClipEdge }
 
 /** Neighbour edges and the playhead — a dragged clip must not stick to itself. */
 export function snapCandidates(state: SequenceState, excludeClipId: string | null): Us[] {
@@ -40,6 +43,7 @@ export function beginGesture(
   if (!target) return null
 
   if (target.kind === 'ruler') return { kind: 'scrub' }
+  if (target.kind === 'fade') return { kind: 'fade', clipId: target.clipId, edge: target.edge }
   if (target.kind === 'edge') return { kind: 'trim', clipId: target.clipId, edge: target.edge }
 
   if (target.kind === 'clip') {
@@ -59,7 +63,7 @@ export function beginGesture(
 
 /** A track takes a clip that came from a track of its own kind, and only if it is unlocked. */
 function dropTrack(state: SequenceState, viewport: Viewport, point: Point, from: Track): string {
-  const under = trackAt(state, viewport, point)
+  const under = rowAt(state, viewport, point.y)?.track
   return under && !under.locked && under.kind === from.kind ? under.id : from.id
 }
 
@@ -72,6 +76,18 @@ export function commandForGesture(
   if (gesture.kind === 'scrub') return null
 
   const raw = xToTime(point.x, viewport)
+
+  if (gesture.kind === 'fade') {
+    const clip = clipById(state, gesture.clipId)
+    if (!clip) return null
+
+    // The frame grid only: a ramp has no reason to stick to a neighbour's edge, and snapping
+    // it there would make a short fade jump to zero as soon as the clips are butt-joined.
+    const at = snapToFrame(raw, state.settings)
+    const length = gesture.edge === 'in' ? at - clip.start : clipEnd(clip) - at
+    return setClipFade(gesture.clipId, gesture.edge, length)
+  }
+
   const context = {
     settings: state.settings,
     viewport,

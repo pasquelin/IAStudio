@@ -1,13 +1,7 @@
 import { mdiFileImportOutline, mdiImageMultipleOutline } from '@mdi/js'
 import { memo, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  ASSET_TYPES,
-  assetUrl,
-  isLocalPicture,
-  type Asset,
-  type AssetType,
-} from '@shared/domain/asset'
+import { ASSET_TYPES, posterUrl, type Asset, type AssetType } from '@shared/domain/asset'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { startAssetDrag } from '@/helpers/asset-drag'
@@ -18,6 +12,8 @@ import { ToolButton } from '@/design/ToolButton'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
+import { openAsset } from '@/helpers/open-asset'
+import { useSelection } from '@/stores/selection'
 import { EmptyState } from '@/design/EmptyState'
 import { ImportProgress } from './ImportProgress'
 
@@ -137,14 +133,11 @@ export function AssetBrowser() {
 }
 
 /**
- * A local file is served over `scenario://`. The URL is derived from the identifier, not asked
- * for: the renderer still never handles a file path, and a grid of thumbnails costs no IPC.
+ * Wraps whatever the collection renders, so both views drag, select and open the same way.
+ *
+ * Double-click opens rather than drags because the shelf and the strip take turns in the
+ * bottom dock: they are never both on screen, so there is no drag to make between them.
  */
-function preview(asset: Asset): string | undefined {
-  return isLocalPicture(asset) ? assetUrl(asset.id) : undefined
-}
-
-/** Wraps whatever the collection renders, so both views drag the same way. */
 function Draggable({
   asset,
   className,
@@ -155,7 +148,13 @@ function Draggable({
   children: ReactNode
 }) {
   return (
-    <div className={className} draggable onDragStart={event => startAssetDrag(event, asset.id)}>
+    <div
+      className={className}
+      draggable
+      onPointerDown={() => useSelection.getState().selectAssets([asset.id])}
+      onDragStart={event => startAssetDrag(event, asset.id)}
+      onDoubleClick={() => openAsset(asset)}
+    >
       {children}
     </div>
   )
@@ -164,7 +163,7 @@ function Draggable({
 const AssetCard = memo(function AssetCard({ asset }: { asset: Asset }) {
   return (
     <Draggable asset={asset}>
-      <MediaTile url={preview(asset)} caption={asset.name} />
+      <MediaTile url={posterUrl(asset) ?? undefined} caption={asset.name} />
     </Draggable>
   )
 })

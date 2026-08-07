@@ -1,4 +1,4 @@
-import type { Asset, AssetType, MediaProbe } from '@shared/domain/asset'
+import { PEAKS_PER_SECOND, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
 import { PEAKS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
 import { peaksArgs, proxyArgs } from './ffmpeg'
@@ -10,9 +10,6 @@ import { decodePeaks, samplesOf } from './peaks'
  * `av01`, and a probe read through the wrong one asks for a proxy nobody needs.
  */
 const DECODABLE_CODECS: readonly string[] = ['avc1', 'h264', 'vp8', 'vp9', 'av01', 'av1']
-
-/** One peak pair per 20 ms of sound: fine enough to read a transient at any usable zoom. */
-const PEAKS_PER_SECOND = 50
 
 export type MediaServiceDeps = {
   /** The resolved binary, or null when there is none — see `resolveFfmpeg`. */

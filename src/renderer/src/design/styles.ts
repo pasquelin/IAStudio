@@ -10,6 +10,17 @@ import { cn } from '@/helpers/cn'
 export const FOCUS_RING = 'outline-none focus-visible:ring-accent focus-visible:ring-1'
 
 /**
+ * The chrome every button of the docks shares, whether it carries a glyph or a label. Its own
+ * gauge is left to the caller: `ToolButton` is square, `Button` is as wide as its word.
+ */
+export const BUTTON_BASE = cn(
+  'inline-flex cursor-pointer items-center justify-center rounded-(--radius-sc-md)',
+  'border-none transition-colors',
+  'disabled:cursor-not-allowed disabled:opacity-40',
+  FOCUS_RING,
+)
+
+/**
  * The control language shared by the bars: same height token, so the density setting reaches
  * every one of them at once, and the same focus ring, so no bar ends up being the one control
  * a keyboard user cannot see.

@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import type { ModelFamily } from '@shared/domain/model'
-import { SETTING_SECTIONS, type SettingSectionId } from '@shared/domain/settings-registry'
+import type { SettingsSectionId } from '@shared/domain/settings'
+import { SETTING_SECTIONS } from '@shared/domain/settings-registry'
 import { AccountSettings } from './AccountSettings'
 import { MediaSettings } from './MediaSettings'
 import { ModelFamilySettings } from './ModelFamilySettings'
@@ -11,14 +12,14 @@ export type SettingsSection = {
   labelKey: string
   descriptionKey?: string
   /** Settings this screen owns, rendered from the registry. */
-  registry?: SettingSectionId
+  registry?: SettingsSectionId
   /** What no descriptor can express: credentials, a catalogue picker, a resolved status. */
   Content?: FC
   children?: readonly SettingsSection[]
 }
 
 /** What no descriptor can express, per section. Everything else comes from the registry. */
-const CONTENT: Partial<Record<SettingSectionId, FC>> = {
+const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   account: AccountSettings,
   media: MediaSettings,
 }
@@ -47,15 +48,19 @@ function familySection({ family, labelKey }: { family: ModelFamily; labelKey: st
  *
  * Spec § 9 also lists Storage, Shortcuts, Performance and Advanced. They appear here as they
  * are built; an entry with nothing behind it would be worse than its absence.
+ *
+ * Top-level ids are the shared `SettingsSectionId`, so a section renamed here immediately
+ * fails to compile rather than quietly breaking every `settings.open` that names it.
  */
-export const SETTINGS_SECTIONS: readonly SettingsSection[] = SETTING_SECTIONS.map(section => ({
-  id: section.id,
-  labelKey: section.labelKey,
-  descriptionKey: section.descriptionKey,
-  registry: section.id,
-  Content: CONTENT[section.id],
-  ...(section.id === 'generation' ? { children: WORKSPACE_FAMILIES.map(familySection) } : {}),
-}))
+export const SETTINGS_SECTIONS: readonly (SettingsSection & { id: SettingsSectionId })[] =
+  SETTING_SECTIONS.map(section => ({
+    id: section.id,
+    labelKey: section.labelKey,
+    descriptionKey: section.descriptionKey,
+    registry: section.id,
+    Content: CONTENT[section.id],
+    ...(section.id === 'generation' ? { children: WORKSPACE_FAMILIES.map(familySection) } : {}),
+  }))
 
 export function findSection(id: string): SettingsSection | null {
   for (const section of SETTINGS_SECTIONS) {

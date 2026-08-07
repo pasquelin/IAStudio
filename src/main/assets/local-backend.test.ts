@@ -26,15 +26,19 @@ describe('file naming', () => {
 
   // The API controls the URL; the file name must come from an identifier we minted.
   it('names the file after our own identifier, never after the URL', () => {
-    expect(relativePathFor('asset_1', 'https://cdn.example/../../evil.png', 'image')).toBe(
-      'assets/img/asset_1.png',
-    )
+    const extension = extensionOf('https://cdn.example/../../evil.png', 'image')
+    expect(relativePathFor('asset_1', extension, 'image')).toBe('assets/img/asset_1.png')
+  })
+
+  it('refuses an extension that would climb out of the project', () => {
+    expect(relativePathFor('a', '/../../.ssh/id_rsa', 'audio')).toBe('assets/aud/a.mp3')
+    expect(relativePathFor('a', '.wav/../..', 'audio')).toBe('assets/aud/a.mp3')
   })
 
   it('files each type under its own folder', () => {
-    expect(relativePathFor('a', 'https://x/y.glb', 'mesh')).toBe('assets/3d/a.glb')
-    expect(relativePathFor('a', 'https://x/y.wav', 'audio')).toBe('assets/aud/a.wav')
-    expect(relativePathFor('a', 'https://x/y.hdr', 'skybox')).toBe('assets/sky/a.hdr')
+    expect(relativePathFor('a', '.glb', 'mesh')).toBe('assets/3d/a.glb')
+    expect(relativePathFor('a', '.wav', 'audio')).toBe('assets/aud/a.wav')
+    expect(relativePathFor('a', '.hdr', 'skybox')).toBe('assets/sky/a.hdr')
   })
 })
 
@@ -46,6 +50,7 @@ describe('local backend', () => {
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'scenario-assets-'))
     await mkdir(join(root, 'assets/img'), { recursive: true })
+    await mkdir(join(root, 'assets/aud'), { recursive: true })
 
     catalog = createCatalog(openMemoryDatabase())
     backend = createLocalBackend({
@@ -103,5 +108,94 @@ describe('local backend', () => {
 
     // An asset in the catalogue with no file behind it is worse than no asset at all.
     expect(catalog.find('asset_1')).toBeNull()
+  })
+
+  it('writes bytes the renderer produced, such as an edited take', async () => {
+    const edited = new Uint8Array([9, 9, 9])
+    const asset = await backend.importFromBytes(
+      {
+        id: 'asset_2',
+        name: 'Pad (edited)',
+        type: 'audio',
+        extension: '.wav',
+        derivedFrom: 'asset_1',
+      },
+      edited,
+    )
+
+    expect(asset).toMatchObject({
+      path: 'assets/aud/asset_2.wav',
+      bytes: 3,
+      derivedFrom: 'asset_1',
+    })
+    expect(await readFile(join(root, 'assets/aud/asset_2.wav'))).toEqual(Buffer.from(edited))
+    expect(catalog.find('asset_2')).toEqual(asset)
+  })
+
+  it('overwrites an asset in place, keeping its identity', async () => {
+    await backend.importFromBytes(
+      { id: 'asset_2', name: 'Pad', type: 'audio', extension: '.wav', jobId: 'job_1' },
+      new Uint8Array([1, 2, 3]),
+    )
+
+    const replaced = await backend.replaceBytes('asset_2', new Uint8Array([4, 5]), '.wav')
+
+    expect(replaced).toMatchObject({ id: 'asset_2', name: 'Pad', jobId: 'job_1', bytes: 2 })
+    expect(await readFile(join(root, 'assets/aud/asset_2.wav'))).toEqual(Buffer.from([4, 5]))
+  })
+
+  // An edited take goes back as a wav; leaving it under its old name would hand every reader
+  // a file whose extension lies about what is inside it.
+  it('renames the file when the bytes are no longer of the same kind, and drops the old one', async () => {
+    await backend.importFromBytes(
+      { id: 'asset_3', name: 'Import', type: 'audio', extension: '.mp3' },
+      new Uint8Array([1]),
+    )
+
+    const replaced = await backend.replaceBytes('asset_3', new Uint8Array([4, 5]), '.wav')
+
+    expect(replaced.path).toBe('assets/aud/asset_3.wav')
+    expect(await readFile(join(root, 'assets/aud/asset_3.wav'))).toEqual(Buffer.from([4, 5]))
+    await expect(readFile(join(root, 'assets/aud/asset_3.mp3'))).rejects.toThrow()
+  })
+
+  it('refuses to replace an asset it has no file for', async () => {
+    await expect(backend.replaceBytes('nobody', new Uint8Array([1]), '.wav')).rejects.toThrow()
+  })
+
+  it('records what the new bytes say about themselves, and drops the stale waveform', async () => {
+    await backend.importFromBytes(
+      { id: 'asset_4', name: 'Take', type: 'audio', extension: '.wav' },
+      new Uint8Array([1]),
+    )
+    // A waveform computed at ingest, describing the take before any edit.
+    catalog.add({ ...catalog.find('asset_4')!, peaksPath: '.index/peaks/old.bin' })
+
+    const replaced = await backend.replaceBytes('asset_4', new Uint8Array([4, 5]), '.wav', {
+      duration: 6_000_000,
+      codec: 'pcm_s16le',
+      sampleRate: 48_000,
+      channels: 1,
+    })
+
+    expect(replaced.probe?.duration).toBe(6_000_000)
+    // Stale peaks would draw a shape the ear no longer hears.
+    expect(replaced.peaksPath).toBeUndefined()
+    expect(catalog.find('asset_4')?.peaksPath).toBeUndefined()
+  })
+
+  it('carries the probe of bytes written beside the source', async () => {
+    const asset = await backend.importFromBytes(
+      {
+        id: 'asset_5',
+        name: 'Take (edited)',
+        type: 'audio',
+        extension: '.wav',
+        probe: { duration: 2_000_000, codec: 'pcm_s16le', sampleRate: 48_000, channels: 2 },
+      },
+      new Uint8Array([1, 2]),
+    )
+
+    expect(asset.probe).toMatchObject({ duration: 2_000_000, channels: 2 })
   })
 })

@@ -1,32 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { beginGesture, commandForGesture, snapCandidates } from './interactions'
-import { RULER_HEIGHT, TRACK_HEIGHT, type Point, type Viewport } from './timeline-geometry'
-import { EMPTY_SEQUENCE, trackOfClip, type Clip, type SequenceState } from './timeline-state'
+import { RULER_HEIGHT, type Point, type Viewport } from './timeline-geometry'
+import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import { DEFAULT_TRACK_HEIGHT, trackOfClip, type Clip, type SequenceState } from './timeline-state'
 
 const viewport: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
 
-const clip = (id: string, start: number, duration: number): Clip => ({
-  id,
-  assetId: `asset-${id}`,
-  start,
-  duration,
-  inPoint: 0,
-  speed: 1,
-})
+const clip = clipFixture
 
-const stateWith = (clips: Clip[]): SequenceState => ({
-  ...EMPTY_SEQUENCE,
-  tracks: [{ id: 'V1', kind: 'video', index: 1, muted: false, locked: false, clips }],
-})
+const stateWith = (clips: Clip[]): SequenceState =>
+  sequenceWith([trackFixture('V1', 'video', clips)])
 
 const twoTracks = (clips: Clip[], secondLocked = false): SequenceState => {
   const state = stateWith(clips)
   return {
     ...state,
-    tracks: [
-      ...state.tracks,
-      { id: 'V2', kind: 'video', index: 2, muted: false, locked: secondLocked, clips: [] },
-    ],
+    tracks: [...state.tracks, trackFixture('V2', 'video', [], { index: 2, locked: secondLocked })],
   }
 }
 
@@ -42,7 +31,7 @@ describe('timeline interactions', () => {
   it('begins a drag on a clip body', () => {
     const gesture = beginGesture(stateWith([clip('a', 0, 1_000_000)]), viewport, {
       x: 50,
-      y: RULER_HEIGHT + 10,
+      y: RULER_HEIGHT + 30,
     })
     expect(gesture).toMatchObject({ kind: 'drag', clipId: 'a', grabOffset: 500_000 })
   })
@@ -50,7 +39,7 @@ describe('timeline interactions', () => {
   it('begins a trim on a clip edge', () => {
     const gesture = beginGesture(stateWith([clip('a', 0, 1_000_000)]), viewport, {
       x: 98,
-      y: RULER_HEIGHT + 10,
+      y: RULER_HEIGHT + 30,
     })
     expect(gesture).toMatchObject({ kind: 'trim', clipId: 'a', edge: 'out' })
   })
@@ -60,47 +49,37 @@ describe('timeline interactions', () => {
   })
 
   it('begins nothing on empty track space', () => {
-    expect(beginGesture(stateWith([]), viewport, { x: 50, y: RULER_HEIGHT + 10 })).toBeNull()
+    expect(beginGesture(stateWith([]), viewport, { x: 50, y: RULER_HEIGHT + 30 })).toBeNull()
   })
 
   it('turns a drag into a move command that keeps the grab offset', () => {
     const state = stateWith([clip('a', 0, 1_000_000)])
-    const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 10 })
-    const command = commandForGesture(gesture!, state, viewport, { x: 250, y: RULER_HEIGHT + 10 })
+    const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 30 })
+    const command = commandForGesture(gesture!, state, viewport, { x: 250, y: RULER_HEIGHT + 30 })
     expect(command!.apply(state).tracks[0]?.clips[0]?.start).toBe(2_000_000)
   })
 
   it('drops a dragged clip on the track under the pointer, not the one it left', () => {
     const state = twoTracks([clip('a', 0, 1_000_000)])
-    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + TRACK_HEIGHT + 10 })
+    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + DEFAULT_TRACK_HEIGHT + 10 })
 
     expect(trackOfClip(next, 'a')?.id).toBe('V2')
   })
 
   it('refuses to drop on a locked track, leaving the clip where it started', () => {
     const state = twoTracks([clip('a', 0, 1_000_000)], true)
-    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + TRACK_HEIGHT + 10 })
+    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + DEFAULT_TRACK_HEIGHT + 10 })
 
     expect(trackOfClip(next, 'a')?.id).toBe('V1')
     expect(next.tracks[0]?.clips[0]?.start).toBe(2_000_000)
   })
 
   it('refuses to drop a video clip on an audio track, where its picture would vanish', () => {
-    const state: SequenceState = {
-      ...EMPTY_SEQUENCE,
-      tracks: [
-        {
-          id: 'V1',
-          kind: 'video',
-          index: 1,
-          muted: false,
-          locked: false,
-          clips: [clip('a', 0, 1_000_000)],
-        },
-        { id: 'A1', kind: 'audio', index: 0, muted: false, locked: false, clips: [] },
-      ],
-    }
-    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + TRACK_HEIGHT + 10 })
+    const state = sequenceWith([
+      trackFixture('V1', 'video', [clip('a', 0, 1_000_000)]),
+      trackFixture('A1', 'audio'),
+    ])
+    const next = dragTo(state, { x: 250, y: RULER_HEIGHT + DEFAULT_TRACK_HEIGHT + 10 })
 
     expect(trackOfClip(next, 'a')?.id).toBe('V1')
   })
@@ -113,9 +92,33 @@ describe('timeline interactions', () => {
 
   it('turns a trim into a trim command', () => {
     const state = stateWith([clip('a', 0, 1_000_000)])
-    const gesture = beginGesture(state, viewport, { x: 98, y: RULER_HEIGHT + 10 })
-    const command = commandForGesture(gesture!, state, viewport, { x: 60, y: RULER_HEIGHT + 10 })
+    const gesture = beginGesture(state, viewport, { x: 98, y: RULER_HEIGHT + 30 })
+    const command = commandForGesture(gesture!, state, viewport, { x: 60, y: RULER_HEIGHT + 30 })
     expect(command!.apply(state).tracks[0]?.clips[0]?.duration).toBe(600_000)
+  })
+
+  it('begins a fade along the top of a clip, where the trim would take the same corner lower', () => {
+    const state = stateWith([clip('a', 0, 1_000_000)])
+    expect(beginGesture(state, viewport, { x: 2, y: RULER_HEIGHT + 4 })).toMatchObject({
+      kind: 'fade',
+      clipId: 'a',
+      edge: 'in',
+    })
+  })
+
+  it('turns a fade drag into the ramp length it was dragged to', () => {
+    const state = stateWith([clip('a', 0, 1_000_000)])
+    const gesture = beginGesture(state, viewport, { x: 2, y: RULER_HEIGHT + 4 })
+    const command = commandForGesture(gesture!, state, viewport, { x: 30, y: RULER_HEIGHT + 4 })
+    // 300 ms lands between two frames at 25 fps, and a ramp sits on the grid like every edge.
+    expect(command!.apply(state).tracks[0]?.clips[0]?.fadeIn).toBe(320_000)
+  })
+
+  it('measures a fade out backwards from the clip end', () => {
+    const state = stateWith([clip('a', 0, 1_000_000)])
+    const gesture = beginGesture(state, viewport, { x: 99, y: RULER_HEIGHT + 4 })
+    const command = commandForGesture(gesture!, state, viewport, { x: 80, y: RULER_HEIGHT + 4 })
+    expect(command!.apply(state).tracks[0]?.clips[0]?.fadeOut).toBe(200_000)
   })
 
   it('produces no command for a scrub, which is not an edit', () => {
@@ -132,8 +135,8 @@ describe('timeline interactions', () => {
     // 480 ms is twelve whole frames at 25 fps. A duration that is not a whole number of frames
     // puts the neighbour's tail off the grid, and the command realigns it — leaving a gap.
     const state = stateWith([clip('a', 0, 1_000_000), clip('b', 3_000_000, 480_000)])
-    const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 10 })
-    const command = commandForGesture(gesture!, state, viewport, { x: 400, y: RULER_HEIGHT + 10 })
+    const gesture = beginGesture(state, viewport, { x: 50, y: RULER_HEIGHT + 30 })
+    const command = commandForGesture(gesture!, state, viewport, { x: 400, y: RULER_HEIGHT + 30 })
     const next = command!.apply(state)
     expect(next.tracks[0]?.clips.map(candidate => candidate.id)).toEqual(['b', 'a'])
     expect(next.tracks[0]?.clips[1]?.start).toBe(3_480_000)

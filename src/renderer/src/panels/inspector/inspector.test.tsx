@@ -45,13 +45,11 @@ beforeEach(() => {
 })
 
 describe('inspector panel', () => {
-  it('says so when no scene is in front', () => {
+  it('asks for a selection when no document can offer one', () => {
     useDocuments.setState({ activeId: null })
     render(<Content />)
 
-    expect(
-      screen.getByText('Ouvrez une scène pour inspecter ce qu’elle contient.'),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
   })
 
   it('says so when nothing is selected', () => {

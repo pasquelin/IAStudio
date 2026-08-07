@@ -4,7 +4,7 @@ import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
 import type { LightKind, MeshKind } from './domain/scene'
-import type { AuthState, PartialSettings, Settings } from './domain/settings'
+import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { WindowState } from './domain/window'
 import type { WorkspaceId } from './domain/workspace'
@@ -21,6 +21,7 @@ export type Channels = {
   settingsSetCredentials: 'settings:set-credentials'
   settingsAuthState: 'settings:auth-state'
   settingsForgetCredentials: 'settings:forget-credentials'
+  settingsOpen: 'settings:open'
 
   scenarioSearchModels: 'scenario:search-models'
   scenarioModelPreviews: 'scenario:model-previews'
@@ -35,6 +36,8 @@ export type Channels = {
   projectPickFolder: 'project:pick-folder'
 
   assetsSearch: 'assets:search'
+  assetsPeaks: 'assets:peaks'
+  assetsSaveAudio: 'assets:save-audio'
 
   mediaIngest: 'media:ingest'
   mediaCancel: 'media:cancel'
@@ -55,6 +58,7 @@ export const CHANNELS: Channels = {
   settingsSetCredentials: 'settings:set-credentials',
   settingsAuthState: 'settings:auth-state',
   settingsForgetCredentials: 'settings:forget-credentials',
+  settingsOpen: 'settings:open',
 
   scenarioSearchModels: 'scenario:search-models',
   scenarioModelPreviews: 'scenario:model-previews',
@@ -69,6 +73,8 @@ export const CHANNELS: Channels = {
   projectPickFolder: 'project:pick-folder',
 
   assetsSearch: 'assets:search',
+  assetsPeaks: 'assets:peaks',
+  assetsSaveAudio: 'assets:save-audio',
 
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
@@ -77,6 +83,17 @@ export const CHANNELS: Channels = {
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
   windowWorkspace: 'window:workspace',
+}
+
+/** An edited take on its way back to disk — see `StudioBridge['assets']['saveAudio']`. */
+export type SaveAudioRequest = {
+  /** The asset to overwrite. Absent creates a new one instead. */
+  replaces?: string
+  name: string
+  /** The take this one was edited from, so the two stay traceable to each other. */
+  derivedFrom?: string
+  /** 16-bit PCM WAV, encoded by the renderer that decoded it. */
+  wav: Uint8Array
 }
 
 export type LogLevel = 'info' | 'warn' | 'error'
@@ -103,6 +120,7 @@ export const EVENTS = {
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
   sceneAdd: 'evt:scene-add',
+  settingsSection: 'evt:settings-section',
 }
 
 export type Unsubscribe = () => void
@@ -130,11 +148,15 @@ export type StudioBridge = {
     setCredentials: (key: string, secret: string) => Promise<AuthState>
     authState: () => Promise<AuthState>
     forgetCredentials: () => Promise<void>
+    /** Opens the settings window on a section, or focuses it there if it is already up. */
+    open: (section: SettingsSectionId) => Promise<void>
     /**
      * Settings are owned by the main process and replicated by every window. Without this, a
      * theme changed in the settings window would only reach the studio on the next launch.
      */
     onChange: (callback: (settings: Settings) => void) => Unsubscribe
+    /** Section the settings window is asked to show while it is already open. */
+    onSection: (callback: (section: SettingsSectionId) => void) => Unsubscribe
   }
   scenario: {
     searchModels: (query?: ModelQuery) => Promise<ModelPage>
@@ -155,6 +177,13 @@ export type StudioBridge = {
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
+    /**
+     * The waveform computed at ingest, as min/max pairs at `PEAKS_PER_SECOND`. Null when the
+     * asset carries no sound, or when ffmpeg was missing when it was brought in.
+     */
+    peaks: (assetId: string) => Promise<Float32Array | null>
+    /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
+    saveAudio: (request: SaveAudioRequest) => Promise<Asset>
   }
   media: {
     /**

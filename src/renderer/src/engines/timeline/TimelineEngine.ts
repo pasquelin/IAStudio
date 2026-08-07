@@ -5,6 +5,7 @@ import { playbackToken } from './playback'
 import {
   clipEnd,
   EMPTY_SEQUENCE,
+  playsThrough,
   sequenceDuration,
   type Clip,
   type SequenceState,
@@ -157,7 +158,9 @@ export class TimelineEngine {
 
     for (const track of videoTracksByDepth(this.state)) {
       const sprite = this.spriteFor(track.id)
-      const clip = clipAt(track, time)
+      // Asked here rather than by filtering the list: a track dropped from it would keep the
+      // sprite it last painted on screen, which is the opposite of muting it.
+      const clip = playsThrough(this.state, track) ? clipAt(track, time) : null
       if (!clip) {
         sprite.visible = false
         continue

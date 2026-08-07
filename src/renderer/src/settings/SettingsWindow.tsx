@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { DEFAULT_SETTINGS_SECTION, sectionFromRoute } from '@shared/domain/settings'
 import {
   descriptorsIn,
   matchSettings,
@@ -9,6 +10,7 @@ import {
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { useDensity } from '@/hooks/useDensity'
+import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
@@ -94,7 +96,10 @@ function SearchResults({ found }: { found: readonly SettingDescriptor[] }) {
  */
 export function SettingsWindow() {
   const { t } = useTranslation()
-  const [selected, setSelected] = useState(SETTINGS_SECTIONS[0]?.id ?? '')
+  // Opened from a panel rather than from ⌘,: the fragment names the section to land on.
+  const [selected, setSelected] = useState<string>(
+    () => sectionFromRoute(window.location.hash) ?? DEFAULT_SETTINGS_SECTION,
+  )
   const [query, setQuery] = useState('')
 
   const connect = useSettings(state => state.connect)
@@ -104,6 +109,18 @@ export function SettingsWindow() {
     const subscription = connect()
     return () => void subscription.then(stop => stop())
   }, [connect])
+
+  // Asked for while already open: the window moves instead of reloading, which would throw
+  // away a half-typed key. The search is dropped with it — results shown over a section the
+  // user was just sent to would hide the very thing a panel asked to show them.
+  useEffect(
+    () =>
+      getBridge()?.settings.onSection(section => {
+        setQuery('')
+        setSelected(section)
+      }),
+    [],
+  )
 
   useDensity(density)
 

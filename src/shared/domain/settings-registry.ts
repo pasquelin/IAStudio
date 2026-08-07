@@ -1,4 +1,4 @@
-import { DENSITIES, THEMES } from './settings'
+import { DENSITIES, THEMES, type SettingsSectionId } from './settings'
 import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 
 /**
@@ -10,15 +10,17 @@ import type { SettingPath, SettingValue, ValueAt } from './settings-path'
  */
 export type SettingKind = 'choice' | 'number' | 'text'
 
-export type SettingSectionId = 'account' | 'appearance' | 'generation' | 'media'
-
 /**
  * A screen of the settings window, and the two texts that name it. Declared here rather than
  * beside the React tree: an id, a label and a description are data, and having the renderer
  * own them left a section able to disagree with the settings it holds.
+ *
+ * The id is the union `settings.ts` already declares — the one a panel names to open this
+ * window on a section, and the one the route is validated against. Two unions for one idea is
+ * what this registry exists to prevent.
  */
 export type SettingSectionEntry = {
-  id: SettingSectionId
+  id: SettingsSectionId
   labelKey: string
   descriptionKey: string
 }
@@ -46,7 +48,7 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
   },
 ]
 
-export function sectionEntry(id: SettingSectionId): SettingSectionEntry | null {
+export function sectionEntry(id: SettingsSectionId): SettingSectionEntry | null {
   return SETTING_SECTIONS.find(section => section.id === id) ?? null
 }
 
@@ -58,7 +60,7 @@ export type SettingOption<V extends SettingValue = SettingValue> = {
 type Descriptor<P extends SettingPath> = {
   path: P
   kind: SettingKind
-  section: SettingSectionId
+  section: SettingsSectionId
   titleKey: string
   /**
    * Never optional. A setting whose effect cannot be stated in a sentence is one nobody can
@@ -178,7 +180,7 @@ export function descriptorAt(path: SettingPath): SettingDescriptor | null {
   return SETTING_REGISTRY.find(descriptor => descriptor.path === path) ?? null
 }
 
-export function descriptorsIn(section: SettingSectionId): readonly SettingDescriptor[] {
+export function descriptorsIn(section: SettingsSectionId): readonly SettingDescriptor[] {
   return SETTING_REGISTRY.filter(descriptor => descriptor.section === section)
 }
 

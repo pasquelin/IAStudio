@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
+  COMMAND_SCOPES,
   DEFAULT_BINDINGS,
   DEFAULT_MOTION,
   type CommandId,
+  type CommandScope,
   type MotionId,
   type Signature,
 } from '@shared/domain/shortcut'
@@ -50,19 +52,35 @@ function withDefaults<K extends string>(
   return merged
 }
 
-export function commandFor(state: Readable, signature: Signature): CommandId | null {
-  return entriesOf(state.bindings).find(([, bound]) => bound === signature)?.[0] ?? null
+/**
+ * The command a signature fires on one surface. Scoped, because the same key means different
+ * things on the timeline and in the scene, and only one of the two is ever listening.
+ */
+export function commandFor(
+  state: Readable,
+  signature: Signature,
+  scope: CommandScope,
+): CommandId | null {
+  return (
+    entriesOf(state.bindings).find(
+      ([command, bound]) => bound === signature && COMMAND_SCOPES[command] === scope,
+    )?.[0] ?? null
+  )
 }
 
 export function motionFor(state: Readable, signature: Signature): MotionId | null {
   return entriesOf(state.motion).find(([, bound]) => bound === signature)?.[0] ?? null
 }
 
-/** Commands sharing a signature with another one — what the settings screen will show in red. */
+/**
+ * Commands sharing a signature with another one **on the same surface** — what the settings
+ * screen will show in red. Across surfaces a shared key is the design, not a clash.
+ */
 export function conflicts(state: Readable): CommandId[] {
-  const counted = new Map<Signature, CommandId[]>()
+  const counted = new Map<string, CommandId[]>()
   for (const [command, signature] of entriesOf(state.bindings)) {
-    counted.set(signature, [...(counted.get(signature) ?? []), command])
+    const key = `${COMMAND_SCOPES[command]} ${signature}`
+    counted.set(key, [...(counted.get(key) ?? []), command])
   }
   return [...counted.values()].filter(commands => commands.length > 1).flat()
 }

@@ -1,20 +1,23 @@
-import type { AuthState } from '@shared/domain/settings'
+import type { AuthState, SettingsSectionId } from '@shared/domain/settings'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import type { SettingsStore } from './store'
-import { parseCredentials, parsePartialSettings } from './validation'
+import { parseCredentials, parsePartialSettings, parseSettingsSection } from './validation'
 
 export type SettingsHandlerDeps = {
   settings: SettingsStore
   /** Called whenever the stored credentials change, so a cached API client can be dropped. */
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
+  /** Opens the settings window on a section — a panel saying the key is missing leads here. */
+  openSettings: (section: SettingsSectionId) => void
 }
 
 export function registerSettingsHandlers({
   settings,
   onCredentialsChanged,
   authState,
+  openSettings,
 }: SettingsHandlerDeps): void {
   handle(CHANNELS.settingsRead, () => settings.read())
 
@@ -41,4 +44,6 @@ export function registerSettingsHandlers({
     settings.forgetCredentials()
     onCredentialsChanged()
   })
+
+  handle(CHANNELS.settingsOpen, (_event, section) => openSettings(parseSettingsSection(section)))
 }

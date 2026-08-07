@@ -1,23 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { audioChunksIn } from './audio'
-import { EMPTY_SEQUENCE, type Clip, type SequenceState } from './timeline-state'
+import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import type { Clip, SequenceState } from './timeline-state'
 
-const clip = (id: string, start: number, duration: number, inPoint = 0): Clip => ({
-  id,
-  assetId: `asset-${id}`,
-  start,
-  duration,
-  inPoint,
-  speed: 1,
-})
+const clip = (id: string, start: number, duration: number, inPoint = 0): Clip =>
+  clipFixture(id, start, duration, { inPoint })
 
-const withAudio = (clips: Clip[], muted = false): SequenceState => ({
-  ...EMPTY_SEQUENCE,
-  tracks: [
-    { id: 'V1', kind: 'video', index: 1, muted: false, locked: false, clips: [] },
-    { id: 'A1', kind: 'audio', index: 0, muted, locked: false, clips },
-  ],
-})
+const withAudio = (clips: Clip[], muted = false): SequenceState =>
+  sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio', clips, { muted })])
 
 describe('audio scheduling', () => {
   it('plans nothing when the window holds no clip', () => {
@@ -56,19 +46,7 @@ describe('audio scheduling', () => {
   })
 
   it('ignores video tracks: the picture is not scheduled, it is painted', () => {
-    const state: SequenceState = {
-      ...EMPTY_SEQUENCE,
-      tracks: [
-        {
-          id: 'V1',
-          kind: 'video',
-          index: 1,
-          muted: false,
-          locked: false,
-          clips: [clip('v', 0, 1)],
-        },
-      ],
-    }
+    const state = sequenceWith([trackFixture('V1', 'video', [clip('v', 0, 1)])])
     expect(audioChunksIn(state, 0, 2_000_000)).toEqual([])
   })
 

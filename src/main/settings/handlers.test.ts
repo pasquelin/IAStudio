@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SETTINGS, type AuthState } from '@shared/domain/settings'
+import { DEFAULT_SETTINGS, type AuthState, type SettingsSectionId } from '@shared/domain/settings'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerSettingsHandlers } from './handlers'
@@ -12,13 +12,15 @@ describe('settings handlers', () => {
   let settings: SettingsStore
   let onCredentialsChanged: () => void
   let authState: () => Promise<AuthState>
+  let openSettings: (section: SettingsSectionId) => void
 
   beforeEach(() => {
     resetHandlers()
     settings = createSettingsStore(memoryAdapter())
     onCredentialsChanged = vi.fn()
     authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
-    registerSettingsHandlers({ settings, onCredentialsChanged, authState })
+    openSettings = vi.fn()
+    registerSettingsHandlers({ settings, onCredentialsChanged, authState, openSettings })
   })
 
   it('answers a read with the current settings', () => {
@@ -60,6 +62,17 @@ describe('settings handlers', () => {
 
   it('answers the auth state without touching the store', async () => {
     await expect(invoke(CHANNELS.settingsAuthState)).resolves.toEqual({ authenticated: true })
+  })
+
+  it('opens the settings window on the requested section', () => {
+    invoke(CHANNELS.settingsOpen, 'account')
+    expect(openSettings).toHaveBeenCalledWith('account')
+  })
+
+  // The section ends up in the fragment the settings window loads, so it is never trusted.
+  it('refuses to open a section it does not know', () => {
+    expect(() => invoke(CHANNELS.settingsOpen, '../elsewhere')).toThrow()
+    expect(openSettings).not.toHaveBeenCalled()
   })
 
   it('forgets credentials and announces the change', () => {

@@ -1,7 +1,12 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
+import {
+  DEFAULT_SETTINGS,
+  type PartialSettings,
+  type Settings,
+  type SettingsSectionId,
+} from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
 import { SettingsWindow } from './SettingsWindow'
@@ -44,6 +49,34 @@ describe('SettingsWindow', () => {
 
     expect(screen.getByRole('heading', { name: 'Compte' })).toBeInTheDocument()
     expect(screen.getByLabelText(/Clé API/)).toBeInTheDocument()
+  })
+
+  it('opens on the section the fragment names', () => {
+    window.location.hash = '#settings/media'
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    expect(screen.getByRole('heading', { name: 'Médias' })).toBeInTheDocument()
+    window.location.hash = ''
+  })
+
+  // Already open, on another section: reloading it would throw away a half-typed key.
+  it('moves to the section asked for while it is already open', async () => {
+    let announce: ((section: SettingsSectionId) => void) | null = null
+    installFakeBridge({
+      settings: {
+        onSection: callback => {
+          announce = callback
+          return () => {}
+        },
+      },
+    })
+
+    render(<SettingsWindow />)
+    expect(screen.getByRole('heading', { name: 'Compte' })).toBeInTheDocument()
+
+    act(() => announce?.('appearance'))
+    await waitFor(() => expect(screen.getByLabelText(/Thème/)).toBeInTheDocument())
   })
 
   it('lists the families a generation can be configured for', () => {
@@ -112,6 +145,27 @@ describe('SettingsWindow', () => {
     await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'crénage')
 
     expect(screen.getByText(/Aucun réglage ne correspond/)).toBeInTheDocument()
+  })
+
+  // A panel sends the user here to show them something; results over it would hide it.
+  it('drops the search when a panel asks for a section', async () => {
+    const listeners: ((section: SettingsSectionId) => void)[] = []
+    installFakeBridge({
+      settings: {
+        onSection: callback => {
+          listeners.push(callback)
+          return () => {}
+        },
+      },
+    })
+
+    render(<SettingsWindow />)
+    await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'thème')
+
+    act(() => listeners[0]?.('account'))
+
+    expect(screen.getByLabelText(/Clé API/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Rechercher un réglage')).toHaveValue('')
   })
 
   it('drops the search when a section is picked, so the two never disagree', async () => {

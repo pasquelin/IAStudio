@@ -8,6 +8,7 @@ import { VIDEO_TOOLS, isVideoTool } from '@/spaces/video/video-tools'
 import { useDocuments } from '@/stores/documents'
 import { historyOf, useSequences } from '@/stores/sequences'
 import { useVideoTool } from '@/stores/video-tool'
+import { TrackHeaders } from './TrackHeaders'
 
 /**
  * The montage of whatever sequence is in front. A tool window has no props — it sits on the
@@ -19,7 +20,15 @@ export function TimelinePanel() {
   const tool = useVideoTool(state => state.tool)
 
   if (!documentId) return <EmptyState icon={mdiVideoVintage} message={t('timeline.noDocument')} />
-  return <TimelineCanvas documentId={documentId} tool={tool} />
+
+  return (
+    <div className="flex h-full min-h-0">
+      <TrackHeaders documentId={documentId} />
+      <div className="min-w-0 flex-1">
+        <TimelineCanvas documentId={documentId} tool={tool} />
+      </div>
+    </div>
+  )
 }
 
 /** The montage tools and the history, rendered by `ToolWindow` on the panel's own title bar. */

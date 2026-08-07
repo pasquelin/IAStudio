@@ -19,8 +19,9 @@ cherchez plutôt comment *s'en servir* ? Voir [guide-utilisateur.md](guide-utili
 8. [Projets et catalogue](#projets-et-catalogue)
 9. [Le design system](#le-design-system)
 10. [Internationalisation](#internationalisation)
-11. [Les tests](#les-tests)
-12. [Ajouter quelque chose](#ajouter-quelque-chose)
+11. [La configuration](#la-configuration)
+12. [Les tests](#les-tests)
+13. [Ajouter quelque chose](#ajouter-quelque-chose)
 
 ---
 
@@ -346,7 +347,9 @@ Les primitives, toutes dans `design/` :
 | `Row` | **la** ligne, partout — vignette ou icône, titre, sous-titre, actions, infobulle sur un nom tronqué |
 | `Collection`, `CollectionBar` | la liste virtualisée à deux vues, et sa barre de recherche/facettes/tri |
 | `MediaTile`, `Thumbnail` | la tuile carrée légendée, et la même image à taille fixe |
-| `Toolbar`, `ToolButton`, `UiIcon` | la barre partagée, ses boutons, l'unique porte des icônes |
+| `Toolbar`, `ToolButton`, `Button`, `UiIcon` | la barre partagée, ses boutons d'icône, ses boutons libellés, l'unique porte des icônes |
+| `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par la barre de jobs et l'import de médias |
+| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField` — ce dont l'inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | les chaînes de classes partagées par plus d'un composant : `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
@@ -390,9 +393,65 @@ pas gratuit.
 
 ---
 
+## La configuration
+
+Trois couches, qui ne se mélangent jamais : ce que règle l'utilisateur, ce que règle un
+développeur, et ce dont le build a besoin.
+
+### Ce que règle l'utilisateur
+
+`shared/domain/settings.ts` déclare la forme entière — apparence, génération, stockage, médias.
+C'est le contrat, et c'est délibérément le **seul** type de réglages que le renderer puisse
+voir : **les identifiants d'API n'y figurent jamais**. Le renderer lit un `AuthState`, pas une
+clé.
+
+La persistance passe par un port `PersistenceAdapter`. La production branche `electron-store`
+et `safeStorage` (`settings/adapter.ts`) ; les tests branchent un adaptateur en mémoire. Les
+valeurs simples atterrissent dans `settings.json`, dans le dossier de configuration de
+l'utilisateur ; les identifiants sont chiffrés d'abord, puis rangés en base64 — `safeStorage`
+rend des octets, et un fichier JSON tient des chaînes.
+
+Si `safeStorage.isEncryptionAvailable()` est faux, l'enregistrement des identifiants **lève**
+plutôt que de retomber sur du texte clair. Ce refus *est* la fonctionnalité.
+
+Tout ce qui est relu est validé (`settings/validation.ts`) : un fichier de configuration est
+non typé par nature, et une valeur éditée à la main ou héritée d'une version antérieure doit
+être écartée, pas crue.
+
+### Ce que règle un développeur
+
+`secrets/.env`, lu **à l'exécution** par le processus principal, **en développement seulement**
+(`app.isPackaged === false`). Il n'est jamais passé au bundler : injecter un secret à la
+compilation le graverait dans `out/`, et un `.asar` s'ouvre avec un éditeur de texte.
+
+| Variable | Qui s'en sert |
+|---|---|
+| `SCENARIO_API_KEY`, `SCENARIO_API_SECRET` | le client API, en repli |
+| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | le packaging uniquement — jamais à l'exécution |
+
+Les identifiants enregistrés dans les réglages **priment** sur ceux du `.env`. Le fichier est une
+commodité de développement, pas une seconde source de vérité.
+
+`ELECTRON_RENDERER_URL` est posée par electron-vite en mode watch : c'est elle qui fait charger
+la fenêtre depuis le serveur de développement plutôt que depuis le disque.
+
+### Ce dont le build a besoin
+
+`scripts/dist.sh` charge `secrets/.env` et appelle electron-builder. Laissées vides, les trois
+variables Apple lui font sauter la signature et la notarisation — il le journalise, et
+`pnpm dist` produit quand même une application. Elle n'est simplement pas signée, et Gatekeeper
+le signalera à la première ouverture. Les renseigner active la chaîne complète, sans toucher au
+code.
+
+Le binaire ffmpeg se résout dans un ordre fixe — **embarqué**, puis **configuré**, puis le
+**`PATH`** — et rend null plutôt que de lever quand aucun des trois ne répond. L'interface sait
+alors quelle partie du pipeline est indisponible, et peut le dire au lieu d'échouer opaquement.
+
+---
+
 ## Les tests
 
-**946 tests répartis sur 110 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
+**1087 tests répartis sur 124 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
 (`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout

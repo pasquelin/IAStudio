@@ -28,5 +28,5 @@ emplacement reste visible dans le markdown sous forme de commentaire HTML — ri
 
 ## Comment les prendre
 
-`pnpm dev:debug` lance l'application avec le port de debug 9222 ouvert, ce qui permet de piloter
-la fenêtre et de déclencher les captures depuis l'extérieur plutôt qu'à la main.
+`pnpm start:debug` lance l'application avec le port de debug 9222 ouvert, ce qui permet de
+piloter la fenêtre et de déclencher les captures depuis l'extérieur plutôt qu'à la main.

@@ -31,6 +31,13 @@ export const ASSET_FOLDERS: Record<AssetType, string> = {
 
 export type AssetLocation = 'local' | 'cloud'
 
+/**
+ * Peak pairs per second in the waveform written at ingest. Shared because it is the contract
+ * between the process that writes the file and the one that paints it: a mismatch would not
+ * fail, it would draw the right shape at the wrong speed.
+ */
+export const PEAKS_PER_SECOND = 50
+
 /** What probing a media file tells us. Durations are microseconds, like the timeline. */
 export type MediaProbe = {
   duration: number
@@ -40,6 +47,23 @@ export type MediaProbe = {
   fps?: number
   sampleRate?: number
   channels?: number
+}
+
+/**
+ * How an asset was produced — what lets the inspector offer to run it again, and what ties a
+ * texture back to the prompt that made it.
+ *
+ * Optional on `Asset` and not written by the catalogue yet: the ingest side stores `jobId`, and
+ * the renderer reconstitutes the rest from the job it submitted. Declared here so that the day
+ * the catalogue records it, nothing downstream has to change.
+ */
+export type AssetGeneration = {
+  modelId: string
+  /** What the model is called, as the panel shows it — « ElevenLabs Music v2 ». */
+  modelLabel: string
+  prompt: string
+  params: Record<string, unknown>
+  seed?: number
 }
 
 /**
@@ -92,6 +116,8 @@ export type Asset = {
   proxyPath?: string
   /** Precomputed waveform, relative to the project folder. */
   peaksPath?: string
+  /** Absent for an imported file, and for a generated one the catalogue predates. */
+  generation?: AssetGeneration
 }
 
 /** The kinds that decode as an image — the only ones a thumbnail or a texture slot can use. */
@@ -131,6 +157,15 @@ const ASSET_HOST = 'asset'
  */
 export function assetUrl(assetId: string): string {
   return `${ASSET_SCHEME}://${ASSET_HOST}/${encodeURIComponent(assetId)}`
+}
+
+/**
+ * The still that stands for an asset — in a browser cell, on a timeline clip. Only pictures
+ * have one today: a video's poster frame is produced at ingest, which is still to come, and
+ * decoding one here would open a hardware decoder per visible clip.
+ */
+export function posterUrl(asset: Asset): string | null {
+  return isLocalPicture(asset) ? assetUrl(asset.id) : null
 }
 
 /** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */

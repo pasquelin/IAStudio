@@ -13,6 +13,7 @@ import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
+import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 
 function useDescriptor(modelId: string | null) {
   return useQuery<ModelDescriptor | null>({
@@ -36,6 +37,13 @@ export function Generator() {
 
   // The panel's choice wins over the preference: the preference is what to start from.
   const chosen = useModels(state => state.selected[family] ?? null)
+  // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
+  // undefined and every field opens on its own default.
+  //
+  // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
+  // preset changes, so dropping it would blank the form under the hand that is filling it. It
+  // stays until the next "regenerate" replaces it, which reads as the last settings used.
+  const preset = useModels(state => state.preset[family])
   const preferred = useSettings(state => state.settings.generation.defaultModels[family] ?? null)
   const modelId = chosen ?? preferred
 
@@ -45,9 +53,7 @@ export function Generator() {
 
   const descriptor = useDescriptor(modelId)
 
-  if (!authenticated) {
-    return <EmptyState icon={mdiCreationOutline} message={t('generation.noCredentials')} />
-  }
+  if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
 
   if (!modelId) {
     return <EmptyState icon={mdiCreationOutline} message={t('generation.chooseModel')} />
@@ -80,6 +86,7 @@ export function Generator() {
           onSubmit={generate}
           submitLabel={t('actions.generate')}
           busy={!project}
+          preset={preset}
         />
       )}
     </div>

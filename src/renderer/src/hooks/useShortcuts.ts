@@ -1,8 +1,15 @@
 import { useEffect, useRef, type RefObject } from 'react'
-import { signatureOf, type CommandId, type MotionId } from '@shared/domain/shortcut'
+import {
+  signatureOf,
+  type CommandId,
+  type CommandScope,
+  type MotionId,
+} from '@shared/domain/shortcut'
 import { commandFor, motionFor, useKeymap } from '@/stores/keymap'
 
 export type ShortcutsOptions = {
+  /** Which surface is listening: the same key means different things on each. */
+  scope: CommandScope
   /** A document only listens while it is the visible tab. */
   enabled: boolean
   onCommand: (command: CommandId) => void
@@ -30,7 +37,7 @@ function isTyping(target: EventTarget | null): boolean {
  * The set is also exposed as a mutable ref, for a consumer that already runs a loop and would
  * rather read it than be called.
  */
-export function useShortcuts({ enabled, onCommand, onMotionChange }: ShortcutsOptions): {
+export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: ShortcutsOptions): {
   heldMotion: RefObject<Set<MotionId>>
 } {
   const heldMotion = useRef<Set<MotionId>>(new Set())
@@ -67,7 +74,7 @@ export function useShortcuts({ enabled, onCommand, onMotionChange }: ShortcutsOp
         handlers.current.onMotionChange?.(held)
       }
 
-      const command = commandFor(keymap, signature)
+      const command = commandFor(keymap, signature, scope)
       if (!command) return
       event.preventDefault()
       // A held key repeats keydown. Space is held far more readily than ⌘Z, and a transport
@@ -93,7 +100,7 @@ export function useShortcuts({ enabled, onCommand, onMotionChange }: ShortcutsOp
       window.removeEventListener('blur', onBlur)
       release()
     }
-  }, [enabled])
+  }, [enabled, scope])
 
   return { heldMotion }
 }

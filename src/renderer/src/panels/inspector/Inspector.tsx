@@ -1,80 +1,94 @@
 import { mdiTuneVariant } from '@mdi/js'
-import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
-import { token } from '@/engines/core/palette'
-import { setGeometry, setLight, setMaterial } from '@/engines/scene/commands'
-import { geometryFields, lightFields, withField } from '@/engines/scene/property-fields'
-import { selectedNode } from '@/engines/scene/scene-state'
-import { activeSceneId, useDocuments } from '@/stores/documents'
-import { sceneOf, useScenes } from '@/stores/scenes'
-import { DescriptorSection } from './DescriptorSection'
-import { MaterialSection } from './MaterialSection'
-import { TransformSection } from './TransformSection'
-import { useSceneEdit } from './useSceneEdit'
+import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
+import { clipById, trackById } from '@/engines/timeline/timeline-state'
+import { formatBytes } from '@/helpers/format'
+import { useAssets } from '@/stores/assets'
+import { activeIdOfKind, activeSceneId, useDocuments } from '@/stores/documents'
+import { sequenceOf, useSequences } from '@/stores/sequences'
+import { useSelection } from '@/stores/selection'
+import { AssetInspector } from './AssetInspector'
+import { ClipInspector } from './ClipInspector'
+import { SceneInspector } from './SceneInspector'
+import { TrackInspector } from './TrackInspector'
 
-/** Everything that defines the selected node, and lets it be played with. */
+/**
+ * What the selection is, read out.
+ *
+ * It owns no state: every face reads the store that holds the thing it describes, so two
+ * panels showing the same clip cannot disagree about it. One panel for the whole studio — a
+ * scene node, an asset, a clip, a track — because "what is selected" is one question, and an
+ * inspector per space would be four panels to learn to find.
+ */
 export function Inspector() {
-  const { t } = useTranslation()
-  const documentId = useDocuments(activeSceneId)
-
-  if (!documentId) {
-    return <EmptyState icon={mdiTuneVariant} message={t('inspector.noDocument')} />
-  }
-  return <SelectedNode documentId={documentId} />
-}
-
-function SelectedNode({ documentId }: { documentId: string }) {
-  const { t } = useTranslation()
-  // The node itself, not a copy: `nodeById` hands back what the state holds, so a selection
-  // that changed nothing else gives React the same reference and nothing re-renders.
-  const node = useScenes(state => selectedNode(sceneOf(state, documentId)))
-  const edit = useSceneEdit(documentId)
-  // Frozen on mount: `getComputedStyle` is not something to call on every frame of a drag.
-  const [meshColor] = useState(() => token(document.body, '--color-mesh'))
-
-  const mesh = node?.type === 'mesh' ? node : null
-  const light = node?.type === 'light' ? node : null
-  // The descriptors keep their identity across every edit that does not touch them, so the
-  // fields of a material survive a whole drag of the position.
-  const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
-  const lit = useMemo(() => (light ? lightFields(light.light) : []), [light])
-
-  if (!node) return <EmptyState icon={mdiTuneVariant} message={t('inspector.noSelection')} />
-
+  // The scroller belongs here rather than to each face: one of them used to forget it.
   return (
     <div className="h-full overflow-y-auto">
-      <TransformSection node={node} edit={edit} />
-
-      {mesh && (
-        <>
-          <DescriptorSection
-            title={t('inspector.geometry')}
-            fields={geometry}
-            onChange={(name, value) =>
-              edit.run(setGeometry(mesh.id, withField(mesh.geometry, name, value)))
-            }
-            gesture={edit.gesture}
-          />
-          <MaterialSection
-            material={mesh.material}
-            fallbackColor={meshColor}
-            onChange={material => edit.run(setMaterial(mesh.id, material))}
-            gesture={edit.gesture}
-          />
-        </>
-      )}
-
-      {light && (
-        <DescriptorSection
-          title={t('inspector.light')}
-          fields={lit}
-          onChange={(name, value) =>
-            edit.run(setLight(light.id, withField(light.light, name, value)))
-          }
-          gesture={edit.gesture}
-        />
-      )}
+      <Face />
     </div>
+  )
+}
+
+function Face() {
+  const selection = useSelection(state => state.selection)
+  const sceneId = useDocuments(activeSceneId)
+  const sequenceId = useDocuments(state => activeIdOfKind(state, 'sequence'))
+  const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
+  const assets = useAssets(state => state.items)
+
+  switch (selection.kind) {
+    case 'asset': {
+      const chosen = assets.filter(asset => selection.ids.includes(asset.id))
+      return chosen.length > 0 ? <AssetSelection assets={chosen} /> : <Empty />
+    }
+
+    case 'clip': {
+      const clip = sequence?.selectedId ? clipById(sequence, sequence.selectedId) : null
+      return sequenceId && sequence && clip ? (
+        <ClipInspector documentId={sequenceId} sequence={sequence} clip={clip} />
+      ) : (
+        <Empty />
+      )
+    }
+
+    case 'track': {
+      const track = sequence ? trackById(sequence, selection.id) : null
+      return sequenceId && track ? (
+        <TrackInspector documentId={sequenceId} track={track} />
+      ) : (
+        <Empty />
+      )
+    }
+
+    // Nothing was clicked in a panel, so the scene speaks for itself: which node is selected
+    // is held by the scene state rather than announced to the selection store.
+    default:
+      return sceneId ? <SceneInspector documentId={sceneId} /> : <Empty />
+  }
+}
+
+function Empty() {
+  const { t } = useTranslation()
+  return <EmptyState icon={mdiTuneVariant} message={t('inspector.empty')} />
+}
+
+/**
+ * Several assets at once are summarised rather than detailed: showing the first one's prompt
+ * for a selection of twelve is how someone regenerates the wrong thing.
+ */
+function AssetSelection({ assets }: { assets: Asset[] }) {
+  const { t } = useTranslation()
+
+  const [only] = assets
+  if (assets.length === 1 && only) return <AssetInspector asset={only} />
+
+  const total = assets.reduce((bytes, asset) => bytes + (asset.bytes ?? 0), 0)
+  return (
+    <PropertyGroup title={t('inspector.selection')}>
+      <PropertyRow label={t('inspector.count')}>{assets.length}</PropertyRow>
+      {total > 0 && <PropertyRow label={t('inspector.size')}>{formatBytes(total)}</PropertyRow>}
+    </PropertyGroup>
   )
 }

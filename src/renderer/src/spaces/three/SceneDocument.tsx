@@ -93,6 +93,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   )
 
   useShortcuts({
+    scope: 'scene',
     // Dockview keeps hidden tabs mounted, and the hook swallows the keys it recognises: a
     // scene left in a background tab would eat the space bar the video space listens for.
     enabled: active,

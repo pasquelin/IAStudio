@@ -11,7 +11,7 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 [![three.js](https://img.shields.io/badge/three.js-0.185-2b2d30?logo=three.js&logoColor=ffffff)](https://threejs.org)
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.19-2b2d30?logo=javascript&logoColor=e8639b)](https://pixijs.com)
 [![Vite](https://img.shields.io/badge/Vite-7-2b2d30?logo=vite&logoColor=ffd028)](https://vite.dev)
-[![Tests](https://img.shields.io/badge/tests-946%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
+[![Tests](https://img.shields.io/badge/tests-1087%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
 [![License](https://img.shields.io/badge/license-proprietary-2b2d30)](#license)
 
 </div>
@@ -68,13 +68,19 @@ Scenario API key and secret from [app.scenario.com](https://app.scenario.com).
 ```bash
 pnpm install
 pnpm rebuild:native   # better-sqlite3 against this Electron build
-pnpm dev
+pnpm start
 ```
 
 Then open **Settings** (`⌘,` / `Ctrl+,`) and enter your API key and secret. They are encrypted
 with the OS keychain and never leave the main process.
 
-Full walkthrough: [user guide](docs/en/user-guide.md).
+In development you can drop them in `secrets/.env` instead (`SCENARIO_API_KEY`,
+`SCENARIO_API_SECRET`) — read at runtime, never bundled, and always outranked by what you save in
+Settings. See [`secrets/README.md`](secrets/README.md).
+
+Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained:
+[Settings](docs/en/user-guide.md#settings) · how configuration is layered:
+[Architecture](docs/en/architecture.md#configuration).
 
 ---
 
@@ -82,13 +88,14 @@ Full walkthrough: [user guide](docs/en/user-guide.md).
 
 | Command | What it does |
 |---|---|
-| `pnpm dev` | electron-vite in watch mode, hot reload on main, preload and renderer |
-| `pnpm dev:debug` | same, plus the remote debugging port on 9222 |
-| `pnpm build` | typecheck, build, and package with electron-builder |
+| `pnpm start` | electron-vite in watch mode, hot reload on main, preload and renderer |
+| `pnpm start:debug` | same, with the remote debugging port on 9222 — what drives the app from outside |
+| `pnpm build` | typecheck, then build the three targets |
+| `pnpm dist` | build, then package and sign with electron-builder |
 | `pnpm typecheck` | `tsc --noEmit` across the three targets |
-| `pnpm test` | vitest, single run |
-| `pnpm lint` | eslint over `src` |
-| `pnpm format` | prettier, write |
+| `pnpm test` · `pnpm test:watch` | vitest, single run or watching |
+| `pnpm lint` · `pnpm lint:fix` | eslint over `src` |
+| `pnpm format` · `pnpm format:check` | prettier, write or check |
 | `pnpm validate` | typecheck + lint + format check + tests |
 | `pnpm rebuild:native` | electron-rebuild — required after touching better-sqlite3 |
 | `pnpm docs:scenario` | regenerate the local copy of the Scenario API docs |
@@ -127,7 +134,7 @@ src/
 ## Quality bar
 
 `pnpm validate` must be green before any commit: typecheck, lint, format check, and the full
-test suite — **946 tests across 110 files** at the time of writing. Unit tests are colocated
+test suite — **1087 tests across 124 files** at the time of writing. Unit tests are colocated
 with the code they cover and written in the same movement, never after.
 
 Every change also goes through a reuse-and-simplification pass and an automated review before

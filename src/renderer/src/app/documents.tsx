@@ -3,6 +3,7 @@ import type { IDockviewPanelProps } from 'dockview-react'
 import type { FC, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
+import { AudioDocument } from '@/spaces/audio/AudioDocument'
 import { ImageDocument } from '@/spaces/image/ImageDocument'
 import { SceneDocument } from '@/spaces/three/SceneDocument'
 import { SequenceDocument } from '@/spaces/video/SequenceDocument'
@@ -29,6 +30,11 @@ export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps<Document
   sequence: props => (
     <WithDocument id={props.params.documentId}>
       {() => <SequenceDocument documentId={props.params.documentId} />}
+    </WithDocument>
+  ),
+  audio: props => (
+    <WithDocument id={props.params.documentId}>
+      {() => <AudioDocument documentId={props.params.documentId} />}
     </WithDocument>
   ),
 }

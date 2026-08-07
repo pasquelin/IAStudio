@@ -4,6 +4,7 @@ import {
   type AuthState,
   type PartialSettings,
   type Settings,
+  type SettingsSectionId,
 } from '@shared/domain/settings'
 import { partialFor, type SettingPath, type SettingValue } from '@shared/domain/settings-path'
 import { getBridge } from '@/services/bridge'
@@ -24,6 +25,8 @@ type SettingsState = {
   refreshAuth: () => Promise<AuthState>
   signIn: (key: string, secret: string) => Promise<AuthState>
   signOut: () => Promise<void>
+  /** Opens the settings window on a section — how a panel leads to what it says is missing. */
+  openSection: (section: SettingsSectionId) => void
 }
 
 /**
@@ -95,5 +98,9 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     await bridge.settings.forgetCredentials()
     // Asking again rather than assuming `missing`: a development `.env` may still answer.
     set({ auth: await bridge.settings.authState() })
+  },
+
+  openSection: section => {
+    void getBridge()?.settings.open(section)
   },
 }))

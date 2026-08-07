@@ -55,3 +55,50 @@ export const DEFAULT_SETTINGS: Settings = {
 export type PartialSettings = { [K in keyof Settings]?: Partial<Settings[K]> }
 
 export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }
+
+/**
+ * Top-level sections of the settings window, named so any surface can ask for one of them —
+ * a panel that has just said the API key is missing is expected to lead to where it is typed.
+ */
+export type SettingsSectionId = 'account' | 'appearance' | 'generation' | 'media'
+
+export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
+  'account',
+  'appearance',
+  'generation',
+  'media',
+]
+
+/**
+ * The section travels to the settings window inside the URL fragment its renderer reads, so
+ * what a renderer sends is checked against the list rather than trusted — see invariant 1.
+ */
+export function isSettingsSection(value: unknown): value is SettingsSectionId {
+  return SETTINGS_SECTION_IDS.some(candidate => candidate === value)
+}
+
+/** URL fragment that tells the shared bundle it is rendering the settings window. */
+export const SETTINGS_ROUTE = 'settings'
+
+/**
+ * The route the settings window loads, section included. Written by the main process and read
+ * by the renderer, so both sides live here: a fragment built in one place and parsed in
+ * another is a contract nothing checks.
+ */
+export function settingsRoute(section?: SettingsSectionId): string {
+  return section ? `${SETTINGS_ROUTE}/${section}` : SETTINGS_ROUTE
+}
+
+export function isSettingsRoute(hash: string): boolean {
+  const route = hash.replace(/^#/, '')
+  return route === SETTINGS_ROUTE || route.startsWith(`${SETTINGS_ROUTE}/`)
+}
+
+/** The section named by the fragment, `null` for a route naming none or naming an unknown. */
+export function sectionFromRoute(hash: string): SettingsSectionId | null {
+  const section = hash.split('/')[1]
+  return isSettingsSection(section) ? section : null
+}
+
+/** Where the window opens when nothing names a section — its own ⌘, shortcut included. */
+export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = 'account'

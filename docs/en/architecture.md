@@ -19,8 +19,9 @@ up. Looking for how to *use* it? See [user-guide.md](user-guide.md).
 8. [Projects and the catalogue](#projects-and-the-catalogue)
 9. [The design system](#the-design-system)
 10. [Internationalisation](#internationalisation)
-11. [Testing](#testing)
-12. [Adding things](#adding-things)
+11. [Configuration](#configuration)
+12. [Testing](#testing)
+13. [Adding things](#adding-things)
 
 ---
 
@@ -336,7 +337,9 @@ Key primitives, all in `design/`:
 | `Row` | **the** line, everywhere — thumbnail or icon, title, subtitle, actions, tooltip on a truncated name |
 | `Collection`, `CollectionBar` | the virtualised two-view list, and its search/facet/sort bar |
 | `MediaTile`, `Thumbnail` | the captioned square tile, and the same picture at a fixed size |
-| `Toolbar`, `ToolButton`, `UiIcon` | the shared bar, its buttons, the only door icons come through |
+| `Toolbar`, `ToolButton`, `Button`, `UiIcon` | the shared bar, its icon buttons, its labelled ones, the only door icons come through |
+| `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the jobs bar and media import |
+| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
@@ -377,9 +380,63 @@ re-renders every mounted row on each frame, and `useTranslation()` is not free.
 
 ---
 
+## Configuration
+
+Three layers, and they never mix: what the user sets, what a developer sets, and what the build
+needs.
+
+### What the user sets
+
+`shared/domain/settings.ts` declares the whole shape — appearance, generation, storage, media.
+It is the contract, and it is deliberately the **only** settings type the renderer can see:
+**API credentials never appear in it**. The renderer reads `AuthState`, not a key.
+
+Persistence goes through a `PersistenceAdapter` port. Production binds `electron-store` plus
+`safeStorage` (`settings/adapter.ts`); tests bind an in-memory adapter. Plain values land in
+`settings.json` in the user's config directory; credentials are encrypted first, then stored
+base64-encoded — `safeStorage` yields bytes, and a JSON file holds strings.
+
+If `safeStorage.isEncryptionAvailable()` is false, storing credentials **throws** rather than
+falling back to clear text. That refusal is the feature.
+
+Everything read back is validated (`settings/validation.ts`): a config file is untyped by
+nature, and a value edited by hand or left over from an older build must be dropped, not
+trusted.
+
+### What a developer sets
+
+`secrets/.env`, read **at runtime** by the main process, **in development only**
+(`app.isPackaged === false`). It is never handed to the bundler: injecting a secret at build time
+would carve it into `out/`, and an `.asar` opens in a text editor.
+
+| Variable | Used by |
+|---|---|
+| `SCENARIO_API_KEY`, `SCENARIO_API_SECRET` | the API client, as a fallback |
+| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | packaging only — never at runtime |
+
+Credentials saved in the settings **win** over the ones in `.env`. The file is a convenience for
+development, not a second source of truth.
+
+`ELECTRON_RENDERER_URL` is set by electron-vite in watch mode and is what makes the window load
+from the dev server rather than from disk.
+
+### What the build needs
+
+`scripts/dist.sh` loads `secrets/.env` and calls electron-builder. Left empty, the three Apple
+variables make it skip signing and notarisation — it logs that it did, and `pnpm dist` still
+produces an application. It is simply unsigned, and Gatekeeper will say so on first open.
+Filling them in enables the full chain with no code change.
+
+The ffmpeg binary resolves in a fixed order — **bundled**, then **configured**, then the
+**`PATH`** — and returns null rather than throwing when none of the three answers. The interface
+is then told which part of the pipeline is unavailable, so it can say so instead of failing
+opaquely.
+
+---
+
 ## Testing
 
-**946 tests across 110 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
+**1087 tests across 124 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.

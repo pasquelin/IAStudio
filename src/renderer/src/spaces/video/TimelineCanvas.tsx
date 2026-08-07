@@ -1,44 +1,93 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
+  useState,
   type DragEvent,
-  type KeyboardEvent,
   type PointerEvent,
 } from 'react'
+import { posterUrl } from '@shared/domain/asset'
+import type { CommandId } from '@shared/domain/shortcut'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
+import { programOwner, transports } from '@/engines/timeline/playback'
+import { clipForAsset } from '@/engines/timeline/insert'
 import { paintTimeline } from '@/engines/timeline/painter'
 import { hitTest, xToTime, type Point, type Viewport } from '@/engines/timeline/timeline-geometry'
 import {
-  newClipId,
+  clipUnderPlayhead,
+  sequenceDuration,
   snapToFrame,
-  wholeFrames,
   type Clip,
   type SequenceState,
 } from '@/engines/timeline/timeline-state'
+import {
+  clampViewport,
+  fitToWidth,
+  revealTime,
+  scrollBy,
+  zoomAt,
+  ZOOM_STEP,
+  type Size,
+} from '@/engines/timeline/viewport'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { cachedImage } from '@/helpers/image-cache'
+import { useShortcuts } from '@/hooks/useShortcuts'
 import { useAssets } from '@/stores/assets'
+import { usePeaks } from '@/stores/peaks'
+import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences } from '@/stores/sequences'
+import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import type { VideoToolId } from './video-tools'
 
 export type TimelineCanvasProps = { documentId: string; tool: VideoToolId }
-
-/** 100 px per second — the zoom this branch opens on. */
-export const DEFAULT_VIEWPORT: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
-
-/** What an asset still being probed is worth on the timeline, until its real duration lands. */
-export const UNPROBED_DURATION = 5_000_000
 
 export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
   const dragging = useRef<{ gesture: Gesture; base: SequenceState } | null>(null)
+
   const sequence = useSequences(state => sequenceOf(state, documentId))
+  const viewport = useTimelineView(state => viewportOf(state, documentId))
+  const assets = useAssets(state => state.items)
+
+  const byId = useMemo(() => new Map(assets.map(asset => [asset.id, asset])), [assets])
+  const nameOf = useCallback(
+    (clip: Clip): string => byId.get(clip.assetId)?.name ?? clip.assetId,
+    [byId],
+  )
+
+  const peaksByAsset = usePeaks(state => state.byAsset)
+
+  const peaksOf = useCallback(
+    (clip: Clip): Float32Array | null => {
+      // Asked for while painting, answered on a later frame: the fetch is one round trip, and
+      // the clip draws as a rectangle until it lands.
+      usePeaks.getState().request(clip.assetId)
+      return peaksByAsset[clip.assetId] ?? null
+    },
+    [peaksByAsset],
+  )
+
+  // A poster decodes after the frame that asked for it, so it needs one more frame to appear.
+  // Counted rather than pushed through a ref, which a hook may not write to.
+  const [decoded, setDecoded] = useState(0)
+  const onDecoded = useCallback(() => setDecoded(count => count + 1), [])
+
+  const posterOf = useCallback(
+    (clip: Clip): CanvasImageSource | null => {
+      const asset = byId.get(clip.assetId)
+      const url = asset ? posterUrl(asset) : null
+      return url ? cachedImage(url, onDecoded) : null
+    },
+    [byId, onDecoded],
+  )
 
   // Read by `paint`, which must stay stable: rebuilding the observer on every dragged pixel
   // would tear down and re-create it sixty times a second.
-  const latest = useRef(sequence)
+  const latest = useRef({ sequence, viewport, nameOf, peaksOf, posterOf })
+  const size = useRef<Size>({ width: 0, height: 0 })
 
   const paint = useCallback((): void => {
     const canvas = canvasRef.current
@@ -48,14 +97,26 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const ratio = window.devicePixelRatio
     const width = canvas.clientWidth
     const height = canvas.clientHeight
+    size.current = { width, height }
 
     // Backing store in device pixels, drawing in CSS pixels: without this the ruler is soft on
-    // every retina display.
-    canvas.width = Math.round(width * ratio)
-    canvas.height = Math.round(height * ratio)
+    // every retina display. Only when it actually changed — assigning `width` at all throws
+    // away the GPU texture and reallocates several megabytes, even for the same value.
+    const backing = { width: Math.round(width * ratio), height: Math.round(height * ratio) }
+    if (canvas.width !== backing.width || canvas.height !== backing.height) {
+      canvas.width = backing.width
+      canvas.height = backing.height
+    }
     context.setTransform(ratio, 0, 0, ratio, 0, 0)
 
-    paintTimeline(context, latest.current, DEFAULT_VIEWPORT, { width, height })
+    const current = latest.current
+    paintTimeline(
+      context,
+      current.sequence,
+      current.viewport,
+      { width, height },
+      { labelOf: current.nameOf, peaksOf: current.peaksOf, posterOf: current.posterOf },
+    )
   }, [])
 
   useEffect(() => {
@@ -68,9 +129,103 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }, [paint])
 
   useEffect(() => {
-    latest.current = sequence
+    latest.current = { sequence, viewport, nameOf, peaksOf, posterOf }
     paint()
-  }, [sequence, paint])
+    // `decoded` is not read here: it is what a poster arriving late repaints for.
+  }, [sequence, viewport, nameOf, peaksOf, posterOf, decoded, paint])
+
+  const setViewport = useCallback(
+    (next: Viewport): void => {
+      const clamped = clampViewport(next, latest.current.sequence, size.current)
+      useTimelineView.getState().set(documentId, clamped)
+    },
+    [documentId],
+  )
+
+  // Native and non-passive: React delivers `wheel` passively, where `preventDefault` is a no-op
+  // and the whole window scrolls behind the timeline instead.
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const onWheel = (event: WheelEvent): void => {
+      event.preventDefault()
+      const current = latest.current.viewport
+
+      if (event.ctrlKey || event.metaKey) {
+        const bounds = canvas.getBoundingClientRect()
+        setViewport(
+          zoomAt(
+            current,
+            event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP,
+            event.clientX - bounds.left,
+          ),
+        )
+        return
+      }
+
+      // Shift turns a vertical wheel horizontal, as every editor does for a single-axis mouse.
+      const horizontal = event.shiftKey ? event.deltaY : event.deltaX
+      const vertical = event.shiftKey ? 0 : event.deltaY
+      setViewport(scrollBy(current, horizontal, vertical))
+    }
+
+    canvas.addEventListener('wheel', onWheel, { passive: false })
+    return () => canvas.removeEventListener('wheel', onWheel)
+  }, [setViewport])
+
+  const seek = useCallback(
+    (time: number): void => {
+      const store = useSequences.getState()
+      const state = sequenceOf(store, documentId)
+      const playhead = Math.max(0, Math.min(sequenceDuration(state), time))
+      store.replace(documentId, { ...state, playhead })
+      setViewport(revealTime(latest.current.viewport, playhead, size.current.width))
+    },
+    [documentId, setViewport],
+  )
+
+  const run = useCallback(
+    (command: CommandId): void => {
+      const store = useSequences.getState()
+      const state = sequenceOf(store, documentId)
+      const current = latest.current.viewport
+      const middle = size.current.width / 2
+
+      switch (command) {
+        case 'sequence.playPause':
+          return transports.toggle(programOwner(documentId))
+        case 'sequence.split': {
+          const target = clipUnderPlayhead(state)
+          if (target) store.runCommand(documentId, splitClip(target.id, state.playhead))
+          return
+        }
+        case 'sequence.delete':
+          if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
+          return
+        case 'sequence.zoomIn':
+          return setViewport(zoomAt(current, ZOOM_STEP, middle))
+        case 'sequence.zoomOut':
+          return setViewport(zoomAt(current, 1 / ZOOM_STEP, middle))
+        case 'sequence.fit':
+          return setViewport(fitToWidth(state, size.current.width))
+        case 'sequence.start':
+          return seek(0)
+        case 'sequence.end':
+          return seek(sequenceDuration(state))
+        case 'sequence.undo':
+          return store.undo(documentId)
+        case 'sequence.redo':
+          return store.redo(documentId)
+        default:
+          return
+      }
+    },
+    [documentId, seek, setViewport],
+  )
+
+  // The strip is only mounted for the document in front, so it always listens while it is there.
+  useShortcuts({ scope: 'sequence', enabled: true, onCommand: run })
 
   const pointAt = (
     event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasElement>,
@@ -80,7 +235,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }
 
   const scrubTo = (base: SequenceState, point: Point): void => {
-    const playhead = snapToFrame(xToTime(point.x, DEFAULT_VIEWPORT), base.settings)
+    const playhead = snapToFrame(xToTime(point.x, viewport), base.settings)
     // The playhead is not an edit: it goes through `replace`, which skips the history.
     useSequences.getState().replace(documentId, { ...base, playhead })
   }
@@ -89,18 +244,19 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const point = pointAt(event)
 
     if (tool === 'blade') {
-      const target = hitTest(sequence, DEFAULT_VIEWPORT, point)
+      const target = hitTest(sequence, viewport, point)
       const clipId = target && 'clipId' in target ? target.clipId : null
       if (clipId) {
-        const at = xToTime(point.x, DEFAULT_VIEWPORT)
+        const at = xToTime(point.x, viewport)
         useSequences.getState().runCommand(documentId, splitClip(clipId, at))
       }
       return
     }
 
-    const gesture = beginGesture(sequence, DEFAULT_VIEWPORT, point)
+    const gesture = beginGesture(sequence, viewport, point)
     if (!gesture) {
       useSequences.getState().replace(documentId, { ...sequence, selectedId: null })
+      useSelection.getState().clear()
       return
     }
 
@@ -116,6 +272,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const base: SequenceState = { ...sequence, selectedId: gesture.clipId }
     dragging.current = { gesture, base }
     useSequences.getState().replace(documentId, base)
+    useSelection.getState().selectClip()
   }
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
@@ -128,7 +285,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       return
     }
 
-    const command = commandForGesture(current.gesture, current.base, DEFAULT_VIEWPORT, point)
+    const command = commandForGesture(current.gesture, current.base, viewport, point)
     if (command) useSequences.getState().replace(documentId, command.apply(current.base))
   }
 
@@ -140,12 +297,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     event.currentTarget.releasePointerCapture(event.pointerId)
     if (current.gesture.kind === 'scrub') return
 
-    const command = commandForGesture(
-      current.gesture,
-      current.base,
-      DEFAULT_VIEWPORT,
-      pointAt(event),
-    )
+    const command = commandForGesture(current.gesture, current.base, viewport, pointAt(event))
     if (!command) return
 
     const store = useSequences.getState()
@@ -162,28 +314,14 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     if (!assetId) return
 
     const point = pointAt(event)
-    const target = hitTest(sequence, DEFAULT_VIEWPORT, point)
+    const target = hitTest(sequence, viewport, point)
     if (!target || target.kind === 'ruler') return
 
-    const asset = useAssets.getState().items.find(candidate => candidate.id === assetId)
-    const clip: Clip = {
-      id: newClipId(),
-      assetId,
-      start: snapToFrame(xToTime(point.x, DEFAULT_VIEWPORT), sequence.settings),
-      // A whole number of frames, so the clip's tail stays snappable — see `wholeFrames`.
-      duration: wholeFrames(asset?.probe?.duration ?? UNPROBED_DURATION, sequence.settings),
-      inPoint: 0,
-      speed: 1,
-    }
+    const asset = useAssets.getState().items.find(candidate => candidate.id === assetId) ?? null
+    const start = xToTime(point.x, viewport)
+    const clip = clipForAsset(assetId, asset, start, sequence.settings)
 
     useSequences.getState().runCommand(documentId, addClip(target.trackId, clip))
-  }
-
-  const onKeyDown = (event: KeyboardEvent<HTMLCanvasElement>): void => {
-    if (event.key !== 'Delete' && event.key !== 'Backspace') return
-    if (!sequence.selectedId) return
-    event.preventDefault()
-    useSequences.getState().runCommand(documentId, removeClip(sequence.selectedId))
   }
 
   return (
@@ -194,7 +332,6 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onKeyDown={onKeyDown}
       onDragOver={event => event.preventDefault()}
       onDrop={onDrop}
     />

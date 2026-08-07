@@ -6,7 +6,7 @@ import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { DocumentArea } from './DocumentArea'
 import { Footer } from './Footer'
 import { Rail } from './Rail'
-import { ResizeHandle } from './ResizeHandle'
+import { ResizeHandle } from '@/design/ResizeHandle'
 import { TitleBar } from './TitleBar'
 import {
   isHorizontal,

@@ -1,11 +1,10 @@
 import { app, BrowserWindow, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { WINDOW_CHROME_COLOR } from '@shared/constants'
+import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
+import { EVENTS } from '@shared/ipc'
 import { APP_ICON_PATH } from '@main/resources'
 import { trackWindowState } from './controls'
-
-/** Route the renderer reads to decide which window it is rendering. */
-export const SETTINGS_ROUTE = 'settings'
 
 /**
  * The floor for every window: none may weaken these — a second window with looser settings
@@ -66,6 +65,12 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
   })
 
   trackWindowState(window)
+
+  // Filled, not full screen: a studio wants the whole screen, but macOS full screen moves the
+  // window to a space of its own, where the finder, the browser and the reference images the
+  // work is being done against are no longer reachable. The size above stays the restored one.
+  window.maximize()
+
   if (!options.deferShow) window.once('ready-to-show', () => window.show())
   load(window)
 
@@ -77,9 +82,15 @@ let settingsWindow: BrowserWindow | null = null
 /**
  * Settings live in their own window, opened by ⌘,. One at a time: a second copy of the
  * account form could save a different key than the one the first is still showing.
+ *
+ * `section` is what a panel asks for when it sends the user here — the account form, from a
+ * panel that has just said no API key is set.
  */
-export function openSettingsWindow(): BrowserWindow {
+export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
+    // Already open, possibly on another section: reloading it would throw away a half-typed
+    // key, so the window is told to move rather than sent back through its route.
+    if (section) settingsWindow.webContents.send(EVENTS.settingsSection, section)
     settingsWindow.focus()
     return settingsWindow
   }
@@ -106,7 +117,7 @@ export function openSettingsWindow(): BrowserWindow {
     settingsWindow = null
   })
 
-  load(window, { hash: SETTINGS_ROUTE })
+  load(window, { hash: settingsRoute(section) })
   settingsWindow = window
   return window
 }

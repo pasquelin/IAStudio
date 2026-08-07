@@ -2,6 +2,7 @@ import { isAbsolute } from 'node:path'
 import { z } from 'zod'
 import { isAssetType, type AssetQuery, type AssetType } from '@shared/domain/asset'
 import type { Manifest } from '@shared/domain/project'
+import type { SaveAudioRequest } from '@shared/ipc'
 
 const manifest = z.object({
   version: z.number().int().min(1),
@@ -56,4 +57,19 @@ const assetId = z.string().trim().min(1)
 
 export function parseAssetId(value: unknown): string {
   return assetId.parse(value)
+}
+
+// An edited take crosses the boundary as bytes. Bounded rather than trusted: the renderer is
+// the sandboxed side, and an unbounded buffer written to disk is a full partition away.
+const MAX_AUDIO_BYTES = 512 * 1024 * 1024
+
+const saveAudio = z.object({
+  replaces: assetId.optional(),
+  name: z.string().trim().min(1).max(200),
+  derivedFrom: assetId.optional(),
+  wav: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= MAX_AUDIO_BYTES),
+})
+
+export function parseSaveAudio(value: unknown): SaveAudioRequest {
+  return saveAudio.parse(value)
 }
