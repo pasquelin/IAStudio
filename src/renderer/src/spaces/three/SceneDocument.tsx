@@ -5,6 +5,7 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { removeNode, selectNode, setTransform } from '@/engines/scene/commands'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
+import { useAddNode } from '@/hooks/useAddNode'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useKeymap } from '@/stores/keymap'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
@@ -13,7 +14,7 @@ import { SCENE_TOOLS } from './scene-tools'
 export function SceneDocument({ documentId }: { documentId: string }) {
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<SceneRenderer | null>(null)
-  const [mode, setMode] = useState<TransformMode>('translate')
+  const [mode, setMode] = useState<TransformMode>('select')
 
   const scene = useScenes(state => sceneOf(state, documentId))
   // Booleans rather than the history itself: a selector that builds an object on every call
@@ -21,6 +22,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const undoable = useScenes(state => canUndo(historyOf(state, documentId)))
   const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
   const bindings = useKeymap(state => state.bindings)
+  const addNodeOf = useAddNode(documentId)
 
   // Before the renderer mounts: a scene that arrives unlit shows nothing, and reads as a broken
   // viewport rather than as an empty document.
@@ -64,6 +66,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     (command: CommandId) => {
       const store = useScenes.getState()
       switch (command) {
+        case 'scene.select':
+          return setMode('select')
         case 'scene.translate':
           return setMode('translate')
         case 'scene.rotate':
@@ -96,7 +100,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   const tools = SCENE_TOOLS.map(tool => ({
     ...tool,
-    shortcut: shortcutLabel(bindings[tool.command]),
+    shortcut: tool.command ? shortcutLabel(bindings[tool.command]) : undefined,
     disabled: tool.command === 'scene.delete' && scene.selectedId === null,
   }))
 
@@ -109,9 +113,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         tools={tools}
         activeTool={mode}
         onTool={id => {
-          const tool = SCENE_TOOLS.find(candidate => candidate.id === id)
-          if (tool) run(tool.command)
+          const command = SCENE_TOOLS.find(candidate => candidate.id === id)?.command
+          if (command) run(command)
         }}
+        onMode={(_toolId, kind) => addNodeOf(kind)}
         onUndo={() => run('scene.undo')}
         onRedo={() => run('scene.redo')}
         undoShortcut={shortcutLabel(bindings['scene.undo'])}

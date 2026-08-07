@@ -259,6 +259,10 @@
     "noDocument": "Open a scene to see what is in it."
   },
   "sceneTools": {
+    "select": "Select",
+    "selectHint": "Pick an object without arming a handle",
+    "add": "Add",
+    "addHint": "Drop a mesh or a light into the scene",
     "translate": "Move",
     "translateHint": "Move the selected object along the axes",
     "rotate": "Rotate",

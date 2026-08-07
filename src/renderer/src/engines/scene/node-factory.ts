@@ -24,6 +24,11 @@ export function lightNode(light: LightDescriptor, position: Vector3, name?: stri
 
 const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
 
+/** i18n key of what a kind is called, from whichever registry knows it — never the text. */
+export function labelKeyOf(kind: string): string | null {
+  return primitiveByKind(kind)?.labelKey ?? lightByKind(kind)?.labelKey ?? null
+}
+
 /**
  * One node from one registry entry, whichever registry knows the kind. The toolbar, the panels
  * and the native menu all add through here: three call sites building a node their own way is

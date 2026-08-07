@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { Flyout } from '@/design/Flyout'
 import { MenuRow } from '@/design/MenuRow'
 import { ToolButton } from '@/design/ToolButton'
-import { addNode, removeNode } from '@/engines/scene/commands'
-import { createNodeOf } from '@/engines/scene/node-factory'
+import { removeNode } from '@/engines/scene/commands'
 import { nodeById, type SceneNodeType } from '@/engines/scene/scene-state'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { useAddNode } from '@/hooks/useAddNode'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { sceneOf, useScenes } from '@/stores/scenes'
 
@@ -50,16 +50,11 @@ export function NodeActions({
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const flyout = useHoverFlyout(entries.length)
   const selectedId = useScenes(state => sceneOf(state, documentId).selectedId)
+  const addNodeOf = useAddNode(documentId)
 
   const selected = selectedId
     ? nodeById(sceneOf(useScenes.getState(), documentId), selectedId)
     : null
-
-  const add = (entry: RegistryEntry): void => {
-    const node = createNodeOf(entry.kind, t(entry.labelKey))
-    if (node) useScenes.getState().runCommand(documentId, addNode(node))
-    flyout.close()
-  }
 
   return (
     <>
@@ -81,7 +76,10 @@ export function NodeActions({
                 icon={entry.icon}
                 disabled={entry.create === undefined}
                 tip={TIP_BOTTOM(t(entry.labelKey))}
-                onSelect={() => add(entry)}
+                onSelect={() => {
+                  addNodeOf(entry.kind)
+                  flyout.close()
+                }}
               />
             ))}
           </Flyout>

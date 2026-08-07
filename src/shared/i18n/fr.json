@@ -259,6 +259,10 @@
     "noDocument": "Ouvrez une scène pour voir son contenu."
   },
   "sceneTools": {
+    "select": "Sélectionner",
+    "selectHint": "Choisir un objet sans armer de poignée",
+    "add": "Ajouter",
+    "addHint": "Poser une maille ou une lumière dans la scène",
     "translate": "Déplacer",
     "translateHint": "Déplacer l’objet sélectionné le long des axes",
     "rotate": "Tourner",

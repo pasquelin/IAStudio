@@ -1,30 +1,54 @@
-import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
-import { COMMAND_IDS } from '@shared/domain/shortcut'
+import { LIGHT_TYPES } from '@/engines/scene/light-types'
+import { MESH_PRIMITIVES } from '@/engines/scene/mesh-primitives'
 import { SCENE_TOOLS } from './scene-tools'
 
-describe('scene tools', () => {
-  it('binds every tool to a known command', () => {
-    for (const tool of SCENE_TOOLS) expect(COMMAND_IDS).toContain(tool.command)
+const add = SCENE_TOOLS.find(tool => tool.id === 'add')
+
+describe('SCENE_TOOLS', () => {
+  it('offers every primitive and every light under one Add button', () => {
+    expect(add?.modes).toHaveLength(MESH_PRIMITIVES.length + LIGHT_TYPES.length)
   })
 
-  it('names every tool through i18n rather than a literal', () => {
-    for (const tool of SCENE_TOOLS) expect(tool.labelKey).toMatch(/^sceneTools\./)
+  it('keeps the greyed primitives greyed', () => {
+    expect(add?.modes?.filter(mode => mode.disabled).map(mode => mode.id)).toEqual([
+      'sprite',
+      'text',
+    ])
   })
 
-  it('gives every tool an icon', () => {
-    for (const tool of SCENE_TOOLS) expect(tool.icon).toBeTruthy()
+  it('keeps the three transform modes as three reachable buttons', () => {
+    const ids = SCENE_TOOLS.map(tool => tool.id)
+
+    expect(ids).toContain('translate')
+    expect(ids).toContain('rotate')
+    expect(ids).toContain('scale')
   })
 
-  it('explains every tool, so no tooltip merely repeats the button’s own name', () => {
-    for (const tool of SCENE_TOOLS) expect(tool.descriptionKey).toMatch(/^sceneTools\..+Hint$/)
+  // Switched several times a minute: a flyout would cost a hover before every change.
+  it('gives none of the three transform buttons a flyout', () => {
+    const transforms = SCENE_TOOLS.filter(tool =>
+      ['translate', 'rotate', 'scale'].includes(tool.id),
+    )
+
+    expect(transforms.every(tool => tool.modes === undefined)).toBe(true)
   })
 
-  it('has a translation behind every key it declares', () => {
-    // A key with no string behind it renders as the key itself: the bar would tip `sceneTools.x`.
-    for (const tool of SCENE_TOOLS) {
-      expect(i18next.exists(tool.labelKey)).toBe(true)
-      expect(i18next.exists(tool.descriptionKey ?? '')).toBe(true)
-    }
+  it('arms selection first, so a click never grabs a handle by surprise', () => {
+    expect(SCENE_TOOLS[0]?.id).toBe('select')
+  })
+
+  it('reads as three groups rather than a run of seven icons', () => {
+    expect(SCENE_TOOLS.filter(tool => tool.separatorBefore).map(tool => tool.id)).toEqual([
+      'frame',
+      'add',
+    ])
+  })
+
+  // A group that only offers modes acts through its rows, never on its own click.
+  it('gives every button but Add a command', () => {
+    const commandless = SCENE_TOOLS.filter(tool => tool.command === undefined)
+
+    expect(commandless.map(tool => tool.id)).toEqual(['add'])
   })
 })
