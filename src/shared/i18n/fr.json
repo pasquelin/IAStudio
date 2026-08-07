@@ -21,7 +21,8 @@
     "generator": "Génération",
     "inspector": "Inspecteur",
     "assets": "Assets",
-    "jobs": "Tâches"
+    "jobs": "Tâches",
+    "skybox": "Skybox"
   },
   "actions": {
     "undo": "Annuler",
@@ -627,6 +628,40 @@
       "title": "Dossier des projets",
       "help": "Le dossier que l’application vous propose quand vous créez ou ouvrez un projet. Cela ne déplace rien : les projets déjà créés restent où ils sont. Laissez vide pour repartir à chaque fois du dernier endroit visité."
     }
+  },
+  "skybox": {
+    "sun": "Soleil",
+    "elevation": "Élévation",
+    "azimuth": "Azimut",
+    "intensity": "Intensité",
+    "color": "Couleur",
+    "adjustments": "Ajustements",
+    "exposure": "Exposition",
+    "contrast": "Contraste",
+    "saturation": "Saturation",
+    "temperature": "Température",
+    "tint": "Teinte",
+    "rotation": "Rotation de l’horizon",
+    "blur": "Flou",
+    "environment": "Environnement",
+    "envIntensity": "Intensité IBL",
+    "showBackground": "Afficher le fond",
+    "showGround": "Sol de référence",
+    "generation": "Génération",
+    "prompt": "Prompt",
+    "seed": "Graine",
+    "model": "Modèle",
+    "regenerate": "Régénérer",
+    "reset": "Réinitialiser",
+    "empty": "Ouvrez une skybox pour la régler.",
+    "noSource": "Aucune skybox. Générez-en une ou déposez un panorama équirectangulaire.",
+    "views": "Vue",
+    "viewImmersive": "360°",
+    "viewEquirect": "Équirect",
+    "viewCross": "Croix",
+    "viewFaces": "6 faces",
+    "testObjects": "Objets de test",
+    "fieldOfView": "Champ de vision"
   },
   "commands": {
     "projectNew": {

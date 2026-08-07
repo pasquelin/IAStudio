@@ -1,25 +1,20 @@
 import { mdiMusicNoteOutline, mdiPause, mdiPlay } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { Toolbar } from '@/design/Toolbar'
-import { durationOf, type AudioData } from '@/engines/audio/audio-data'
-import {
-  clampRegion,
-  pushEdit,
-  renderEdits,
-  type AudioEdit,
-  type Region,
-} from '@/engines/audio/edits'
-import { encodeWav } from '@/engines/audio/wav'
+import { durationOf } from '@/engines/audio/audio-data'
+import type { RenderedAudio } from '@/engines/audio/audio-render'
+import { clampRegion, pushEdit, type AudioEdit, type Region } from '@/engines/audio/edits'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
-import { useAssets } from '@/stores/assets'
+import { assetsById, useAssets } from '@/stores/assets'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
+import { useAudioRenderer } from './useAudioRenderer'
 import { useWaveSurfer } from './useWaveSurfer'
 
 export type AudioDocumentProps = { documentId: string }
@@ -40,43 +35,61 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   const state = useAudioEdits(current => audioEditsOf(current, documentId))
   const history = useAudioEdits(current => audioHistoryOf(current, documentId))
-  const assets = useAssets(current => current.items)
+  const byId = useAssets(assetsById)
 
-  // Tagged with the asset it belongs to rather than reset when that changes: clearing it would
-  // mean writing state from inside an effect, and would show the previous take for one frame.
-  const [decoded, setDecoded] = useState<{ assetId: string; data: AudioData | null } | null>(null)
+  const renderer = useAudioRenderer()
 
-  const asset = assets.find(candidate => candidate.id === state.assetId) ?? null
+  // Both tagged with the asset they belong to rather than reset when that changes: clearing
+  // them would mean writing state from inside an effect, and would show the previous take for
+  // one frame.
+  const [loaded, setLoaded] = useState<{ assetId: string; ok: boolean } | null>(null)
+  const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio } | null>(null)
+
+  const asset = state.assetId ? (byId.get(state.assetId) ?? null) : null
 
   useEffect(() => {
     const assetId = state.assetId
-    if (!assetId) return
+    if (!assetId || !renderer) return
 
     let live = true
     decodeAsset(assetId)
-      .then(data => {
-        if (live) setDecoded({ assetId, data })
+      .then(source => {
+        if (!live) return
+        // The samples move into the worker here: nothing on this side reads them again.
+        renderer.load(source)
+        setLoaded({ assetId, ok: true })
       })
       .catch(() => {
-        if (live) setDecoded({ assetId, data: null })
+        if (live) setLoaded({ assetId, ok: false })
       })
 
     // A tab closed mid-decode must not write into a component that is gone.
     return () => {
       live = false
     }
-  }, [state.assetId])
+  }, [state.assetId, renderer])
 
-  const current = decoded?.assetId === state.assetId ? decoded : null
-  const source = current?.data ?? null
-  const failed = current !== null && current.data === null
+  const settled = loaded?.assetId === state.assetId ? loaded : null
+  const failed = settled?.ok === false
 
-  // Only what `audibleData` actually reads. Keyed on the whole state it would replay the chain
-  // on every pointer move of a region drag — seventy megabytes, on the UI thread.
-  const rendered = useMemo(
-    () => (source ? renderEdits(source, state.bypassed ? [] : state.edits) : null),
-    [source, state.edits, state.bypassed],
-  )
+  // The chain is replayed in the worker, never here: five steps over a three-minute take is
+  // 287 ms, and encoding the result another 206 ms — § 8.8 puts both off this thread.
+  useEffect(() => {
+    const assetId = state.assetId
+    if (!renderer || !assetId || settled?.ok !== true) return
+
+    let live = true
+    void renderer.render(state.bypassed ? [] : state.edits).then(audio => {
+      // Null means a newer render overtook this one, and its answer is the one worth showing.
+      if (live && audio) setOutput({ assetId, audio })
+    })
+
+    return () => {
+      live = false
+    }
+  }, [renderer, settled, state.assetId, state.edits, state.bypassed])
+
+  const rendered = output?.assetId === state.assetId ? output.audio : null
 
   const onRegionChange = useCallback(
     (region: Region | null) => {
@@ -90,7 +103,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   const player = useWaveSurfer({
     container: waveform,
-    data: rendered,
+    rendered,
     owner: `audio:${documentId}`,
     onRegionChange,
   })
@@ -105,13 +118,14 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     await bridge.assets.saveAudio({
       ...(replaces ? { replaces } : { derivedFrom: asset.id }),
       name: replaces ? asset.name : t('audio.copyName', { name: asset.name }),
-      wav: encodeWav(rendered),
+      // Already encoded, by the worker that replayed the chain.
+      wav: rendered.wav,
     })
     await useAssets.getState().refresh()
   }
 
   const act = (id: AudioToolId): void => {
-    const region = rendered && state.region ? clampRegion(state.region, rendered) : null
+    const region = rendered && state.region ? clampRegion(state.region, rendered.data) : null
 
     switch (id) {
       case 'crop':
@@ -180,7 +194,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
         extras={
           <span className="text-muted px-1 font-mono text-[11px]">
             {formatDuration(player.currentTime)}
-            {rendered && ` / ${formatDuration(durationOf(rendered))}`}
+            {rendered && ` / ${formatDuration(durationOf(rendered.data))}`}
           </span>
         }
       />

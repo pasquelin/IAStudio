@@ -41,21 +41,40 @@ describe('locating the development env file', () => {
     (path: string): string | null =>
       files[path] ?? null
 
+  const PROJECT = { '/project/package.json': '{}' }
+
   it('reads the file beside the starting folder', () => {
-    expect(readEnvFile('/project', disk({ '/project/secrets/.env': 'here' }))).toBe('here')
+    expect(readEnvFile('/project', disk({ ...PROJECT, '/project/secrets/.env': 'here' }))).toBe(
+      'here',
+    )
   })
 
   it('climbs out of the bundled entry point folder', () => {
     // What development actually looks like: `app.getAppPath()` is `<project>/out/main`.
-    expect(readEnvFile('/project/out/main', disk({ '/project/secrets/.env': 'here' }))).toBe('here')
+    const files = { ...PROJECT, '/project/secrets/.env': 'here' }
+    expect(readEnvFile('/project/out/main', disk(files))).toBe('here')
   })
 
-  it('stops at the root rather than looping', () => {
+  it('stops at the volume root rather than looping', () => {
     expect(readEnvFile('/project/out/main', disk({}))).toBeNull()
   })
 
-  it('takes the nearest file when several are on the way up', () => {
-    const files = { '/project/secrets/.env': 'near', '/secrets/.env': 'far' }
+  /**
+   * The whole point of stopping at the project root: another project's key spent silently is
+   * worse than no key at all, which at least says so.
+   */
+  it('never reaches a secrets file living above the project', () => {
+    const files = { ...PROJECT, '/secrets/.env': 'someone else' }
+    expect(readEnvFile('/project/out/main', disk(files))).toBeNull()
+  })
+
+  it('takes the root nearest the starting folder', () => {
+    const files = {
+      '/project/out/package.json': '{}',
+      '/project/out/secrets/.env': 'near',
+      ...PROJECT,
+      '/project/secrets/.env': 'far',
+    }
     expect(readEnvFile('/project/out/main', disk(files))).toBe('near')
   })
 })

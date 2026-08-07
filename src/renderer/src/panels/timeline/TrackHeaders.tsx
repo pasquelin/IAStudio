@@ -59,7 +59,7 @@ function TrackHeader({ documentId, sequence, track }: TrackHeaderProps) {
       className="flex flex-col justify-between px-1.5 py-1"
       style={{ height: track.height }}
       data-testid={`track-header-${track.id}`}
-      onPointerDown={() => useSelection.getState().selectTrack(track.id)}
+      onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
     >
       <TrackName documentId={documentId} track={track} dimmed={!audible} />
 

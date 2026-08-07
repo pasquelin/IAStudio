@@ -121,7 +121,8 @@ Deux ombres, et deux seulement : `--sc-shadow-furniture` pour les meubles (barre
   `CONTROL` (les contrôles de barre), `MEDIA_FRAME` (le cadre des images). Une forme propre à un
   seul composant reste chez lui.
 
-Dans `app/` : `Rail`, `ToolWindow`, `ResizeHandle`, `TitleBar`, `Footer`.
+Dans `app/` : `Shell`, `Rail`, `ToolWindow`, `DocumentArea`, `TitleBar`, `Footer`. `ResizeHandle`
+et `Panel` ont rejoint `design/`.
 
 ### Trois règles non négociables
 

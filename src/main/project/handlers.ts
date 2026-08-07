@@ -5,10 +5,14 @@ import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
+import type { DocumentFiles } from './documents'
 import type { ProjectStore } from './store'
 import {
   parseAssetId,
   parseAssetQuery,
+  parseDocumentDraft,
+  parseDocumentId,
+  parseDocumentKind,
   parseProjectName,
   parseProjectPath,
   parseSaveAudio,
@@ -22,9 +26,15 @@ export type ProjectHandlerDeps = {
   /** Where an edited take is written back. Injected, like everything that touches the disk. */
   assets: LocalBackend
   newAssetId: () => string
+  documents: DocumentFiles
 }
 
-export function registerProjectHandlers({ project, assets, newAssetId }: ProjectHandlerDeps): void {
+export function registerProjectHandlers({
+  project,
+  assets,
+  newAssetId,
+  documents,
+}: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, (_event, path, name) =>
     project.create(parseProjectPath(path), parseProjectName(name)),
   )
@@ -36,7 +46,7 @@ export function registerProjectHandlers({ project, assets, newAssetId }: Project
   handle(CHANNELS.assetsSearch, (_event, query) => project.catalog().search(parseAssetQuery(query)))
 
   handle(CHANNELS.assetsPeaks, async (_event, assetId) => {
-    const asset = project.catalog().find(parseAssetId(assetId))
+    const asset = await project.catalog().find(parseAssetId(assetId))
     if (!asset?.peaksPath) return null
 
     // Through the same resolver the scheme uses: a stored path is user-editable territory.
@@ -73,4 +83,16 @@ export function registerProjectHandlers({ project, assets, newAssetId }: Project
       request.wav,
     )
   })
+
+  handle(CHANNELS.documentRead, (_event, id, kind) =>
+    documents.read(parseDocumentId(id), parseDocumentKind(kind)),
+  )
+
+  handle(CHANNELS.documentWrite, (_event, id, kind, draft) =>
+    documents.write(parseDocumentId(id), parseDocumentKind(kind), parseDocumentDraft(draft)),
+  )
+
+  handle(CHANNELS.documentRemove, (_event, id, kind) =>
+    documents.remove(parseDocumentId(id), parseDocumentKind(kind)),
+  )
 }

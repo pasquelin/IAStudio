@@ -77,7 +77,7 @@ function computePalette(): Palette {
 
   return {
     ruler: read('--color-chassis'),
-    track: read('--color-base'),
+    track: read('--color-panel'),
     trackAlt: read('--color-surface'),
     border: read('--color-border'),
     clip: read('--color-elevated'),

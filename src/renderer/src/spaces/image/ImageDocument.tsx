@@ -17,7 +17,7 @@ export type ImageDocumentProps = { documentId: string }
  */
 const CHECKER = cn(
   'bg-[length:16px_16px]',
-  'bg-[image:repeating-conic-gradient(var(--color-chassis)_0_25%,var(--color-base)_0_50%)]',
+  'bg-[image:repeating-conic-gradient(var(--color-chassis)_0_25%,var(--color-panel)_0_50%)]',
 )
 
 export function ImageDocument({ documentId }: ImageDocumentProps) {

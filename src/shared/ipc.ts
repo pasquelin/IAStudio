@@ -1,5 +1,6 @@
 import type { Asset, AssetQuery } from './domain/asset'
 import type { CommandId } from './domain/command'
+import type { DocumentDraft, DocumentFile, DocumentKind } from './domain/document'
 import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -39,6 +40,10 @@ export type Channels = {
 
   dialogPickPath: 'dialog:pick-path'
 
+  documentRead: 'document:read'
+  documentWrite: 'document:write'
+  documentRemove: 'document:remove'
+
   assetsSearch: 'assets:search'
   assetsPeaks: 'assets:peaks'
   assetsSaveAudio: 'assets:save-audio'
@@ -77,6 +82,10 @@ export const CHANNELS: Channels = {
   projectCurrent: 'project:current',
 
   dialogPickPath: 'dialog:pick-path',
+
+  documentRead: 'document:read',
+  documentWrite: 'document:write',
+  documentRemove: 'document:remove',
 
   assetsSearch: 'assets:search',
   assetsPeaks: 'assets:peaks',
@@ -190,6 +199,13 @@ export type StudioBridge = {
      * they differ only by which picker opens.
      */
     pickPath: (kind: PathKind, startIn?: string) => Promise<string | null>
+  }
+  documents: {
+    /** `null` when nothing has been saved under that id yet. */
+    read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
+    /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */
+    write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
+    remove: (id: string, kind: DocumentKind) => Promise<void>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>

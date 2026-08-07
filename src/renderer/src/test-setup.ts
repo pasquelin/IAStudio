@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach, beforeAll } from 'vitest'
+import {
+  handleRequest,
+  type AudioWorkerRequest,
+  type AudioWorkerState,
+} from '@/engines/audio/audio-render'
 import { initI18n } from '@/i18n'
 
 /**
@@ -62,10 +67,41 @@ function polyfillPointerAndDrag(): void {
   globalThis.DragEvent = DragEventPolyfill as unknown as typeof globalThis.DragEvent
 }
 
+/**
+ * jsdom ships no `Worker`, and the audio editor replays its chain in one. Rather than mock the
+ * editor's own module — which would leave the protocol between the two sides untested — the
+ * audio worker runs in process here, through the same `handleRequest` the real one wires to
+ * `self`. It is the only worker in the app; a second one would need a router in front of this.
+ */
+function polyfillWorker(): void {
+  if ('Worker' in globalThis) return
+
+  class InProcessWorker extends EventTarget {
+    private readonly state: AudioWorkerState = { source: null }
+
+    postMessage(message: AudioWorkerRequest): void {
+      const answer = handleRequest(this.state, message)
+      if (!answer) return
+      // Answered on a later tick like the real one, so a component that waits for a render
+      // has to do it from an effect rather than from the call that asked for it.
+      queueMicrotask(() =>
+        this.dispatchEvent(new MessageEvent('message', { data: answer.response })),
+      )
+    }
+
+    terminate(): void {}
+  }
+
+  // `as`: the real constructor also carries `onmessage`, `onerror` and `postMessage` overloads
+  // that nothing in the studio reaches for.
+  globalThis.Worker = InProcessWorker as unknown as typeof Worker
+}
+
 // At module scope, not in `beforeAll`: a component rendered while a test file is imported
 // would already have asked for a context by then.
 polyfillCanvas()
 polyfillPointerAndDrag()
+polyfillWorker()
 
 const VIEWPORT_WIDTH = 640
 const VIEWPORT_HEIGHT = 800

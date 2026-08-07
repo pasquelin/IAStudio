@@ -1,5 +1,6 @@
-import { createDocumentStore } from './document-store'
+import { selectLayer } from '@/engines/canvas/commands'
 import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvas-state'
+import { createDocumentStore } from './document-store'
 
 /**
  * One layer stack per document. The pixels are not here — they live in a GPU texture per layer,
@@ -10,3 +11,13 @@ const store = createDocumentStore<CanvasState>(DEFAULT_CANVAS)
 export const useCanvases = store.use
 export const canvasOf = store.stateOf
 export const historyOf = store.historyOf
+
+/**
+ * Selection stays out of the history, so it writes the whole canvas back — and the canvas has
+ * to be read at call time, not from the render that drew the row: a copy taken before whatever
+ * command ran in between would undo it.
+ */
+export function selectLayerIn(documentId: string, id: string | null): void {
+  const state = useCanvases.getState()
+  state.replace(documentId, selectLayer(canvasOf(state, documentId), id))
+}

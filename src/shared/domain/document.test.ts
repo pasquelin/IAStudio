@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { kindForWorkspace } from './document'
+import {
+  DOCUMENT_KINDS,
+  documentPath,
+  EXTENSION_BY_KIND,
+  isDocumentKind,
+  kindForWorkspace,
+} from './document'
 import { WORKSPACE_IDS } from './workspace'
 
 describe('kindForWorkspace', () => {
@@ -19,12 +25,49 @@ describe('kindForWorkspace', () => {
     expect(kindForWorkspace('audio')).toBe('audio')
   })
 
+  it('gives the skyboxes workspace a sky to edit', () => {
+    expect(kindForWorkspace('skyboxes')).toBe('skybox')
+  })
+
   it('has no editable document for the workspaces without an editor yet', () => {
     expect(kindForWorkspace('textures')).toBeNull()
-    expect(kindForWorkspace('skyboxes')).toBeNull()
   })
 
   it('answers for every known workspace', () => {
     for (const id of WORKSPACE_IDS) expect(() => kindForWorkspace(id)).not.toThrow()
+  })
+})
+
+describe('isDocumentKind', () => {
+  it('accepts every declared kind', () => {
+    for (const kind of DOCUMENT_KINDS) expect(isDocumentKind(kind)).toBe(true)
+  })
+
+  it('rejects what a hand-edited file could hold', () => {
+    expect(isDocumentKind('texture')).toBe(false)
+    expect(isDocumentKind('')).toBe(false)
+    expect(isDocumentKind(null)).toBe(false)
+    expect(isDocumentKind(undefined)).toBe(false)
+    expect(isDocumentKind(3)).toBe(false)
+  })
+})
+
+describe('documentPath', () => {
+  // Relative, and under the folder the project creates: a project folder can be moved.
+  it('names the file after the kind, so a project folder reads by eye', () => {
+    expect(documentPath('a3f1', 'scene')).toBe('documents/a3f1.scene')
+    expect(documentPath('a3f1', 'image')).toBe('documents/a3f1.img')
+    expect(documentPath('a3f1', 'sequence')).toBe('documents/a3f1.seq')
+  })
+
+  it('gives every kind an extension of its own', () => {
+    const paths = DOCUMENT_KINDS.map(kind => documentPath('id', kind))
+    expect(new Set(paths).size).toBe(DOCUMENT_KINDS.length)
+  })
+
+  // The compiler keeps `EXTENSION_BY_KIND` complete; nothing keeps `DOCUMENT_KINDS` complete,
+  // and a kind missing from it is refused at the IPC boundary without a word.
+  it('lists every kind the extension table knows', () => {
+    expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSION_BY_KIND).sort())
   })
 })

@@ -1,4 +1,5 @@
 import type { ToolDefinition } from '@/app/tool-components'
-import { AssetBrowser, AssetBrowserActions } from './AssetBrowser'
+import { AssetBrowser } from './AssetBrowser'
+import { AssetBrowserActions } from './AssetBrowserActions'
 
 export const definition: ToolDefinition = { Content: AssetBrowser, Actions: AssetBrowserActions }

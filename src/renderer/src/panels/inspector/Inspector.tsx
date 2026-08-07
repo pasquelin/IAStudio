@@ -1,12 +1,12 @@
 import { mdiTuneVariant } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import type { Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
-import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
+import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertyRow } from '@/design/PropertyRow'
 import { clipById, trackById } from '@/engines/timeline/timeline-state'
 import { formatBytes } from '@/helpers/format'
-import { useAssets } from '@/stores/assets'
-import { activeIdOfKind, activeSceneId, useDocuments } from '@/stores/documents'
+import { assetsById, useAssets } from '@/stores/assets'
+import { activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { AssetInspector } from './AssetInspector'
@@ -34,18 +34,23 @@ export function Inspector() {
 function Face() {
   const selection = useSelection(state => state.selection)
   const sceneId = useDocuments(activeSceneId)
-  const sequenceId = useDocuments(state => activeIdOfKind(state, 'sequence'))
+  const sequenceId = useDocuments(activeSequenceId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
-  const assets = useAssets(state => state.items)
 
   switch (selection.kind) {
-    case 'asset': {
-      const chosen = assets.filter(asset => selection.ids.includes(asset.id))
-      return chosen.length > 0 ? <AssetSelection assets={chosen} /> : <Empty />
-    }
+    // The catalogue is read by the face that needs it, not here: subscribing to it from `Face`
+    // re-rendered the clip and track inspectors on every catalogue refresh too.
+    case 'asset':
+      return <AssetSelection ids={selection.ids} />
 
+    // Both guarded on the owner: the sequence in front is not necessarily the one this was
+    // selected in, and every sequence has a track called `V1`.
     case 'clip': {
-      const clip = sequence?.selectedId ? clipById(sequence, sequence.selectedId) : null
+      // Which clip comes from the sequence rather than from the descriptor: `selectedId` is
+      // what the canvas highlights, and commands move it — dropping an asset selects the clip
+      // it creates. Reading the id here instead would leave the two showing different clips.
+      const chosen = sequence && selection.ownerId === sequenceId ? sequence.selectedId : null
+      const clip = sequence && chosen ? clipById(sequence, chosen) : null
       return sequenceId && sequence && clip ? (
         <ClipInspector documentId={sequenceId} sequence={sequence} clip={clip} />
       ) : (
@@ -54,7 +59,10 @@ function Face() {
     }
 
     case 'track': {
-      const track = sequence ? trackById(sequence, selection.id) : null
+      const track =
+        sequence && selection.ownerId === sequenceId
+          ? trackById(sequence, selection.ids[0] ?? '')
+          : null
       return sequenceId && track ? (
         <TrackInspector documentId={sequenceId} track={track} />
       ) : (
@@ -78,10 +86,16 @@ function Empty() {
  * Several assets at once are summarised rather than detailed: showing the first one's prompt
  * for a selection of twelve is how someone regenerates the wrong thing.
  */
-function AssetSelection({ assets }: { assets: Asset[] }) {
+function AssetSelection({ ids }: { ids: readonly string[] }) {
   const { t } = useTranslation()
+  const byId = useAssets(assetsById)
+
+  // Keyed rather than filtered: a selection of a handful against a catalogue of thousands was
+  // scanning the whole of it, per render.
+  const assets = ids.flatMap(id => byId.get(id) ?? [])
 
   const [only] = assets
+  if (assets.length === 0) return <Empty />
   if (assets.length === 1 && only) return <AssetInspector asset={only} />
 
   const total = assets.reduce((bytes, asset) => bytes + (asset.bytes ?? 0), 0)

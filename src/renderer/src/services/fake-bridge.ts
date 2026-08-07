@@ -46,6 +46,12 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       pickPath: () => Promise.resolve(null),
       ...overrides.dialog,
     },
+    documents: {
+      read: () => Promise.resolve(null),
+      write: () => Promise.resolve(),
+      remove: () => Promise.resolve(),
+      ...overrides.documents,
+    },
     assets: {
       search: () => Promise.resolve([]),
       peaks: () => Promise.resolve(null),

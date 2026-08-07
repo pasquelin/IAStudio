@@ -116,6 +116,12 @@ Every long task is **cancellable**, **reports progress**, and runs in a pool bou
 `better-sqlite3` is synchronous: a heavy query on the main process blocks every window, so
 non-trivial catalogue queries go through `worker_threads`.
 
+Two threads exist for exactly that reason. `main/project/catalog-worker.ts` owns the database
+and answers a message loop, so a search across thousands of assets never freezes a window.
+`renderer/src/engines/audio/audio.worker.ts` runs the sound chain off the window's thread, with
+sample buffers **transferred** rather than copied. Both are wiring only: the catalogue, the
+dispatch and the audio arithmetic are tested on their own, without a worker in sight.
+
 ---
 
 ## Crossing the process boundary
@@ -131,7 +137,7 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           returns typed data
 ```
 
-Forty-five channels are declared, in four families:
+Sixty channels are declared, in four families:
 
 | Family | What it carries |
 |---|---|
@@ -140,9 +146,9 @@ Forty-five channels are declared, in four families:
 | `scenario:*` | model search, model description, generation, job control |
 | `project:*` / `assets:*` | project lifecycle, catalogue queries, ingestion |
 
-Six of them travel the other way — main pushing to the renderer: job progress, log lines,
-project changes, and the native menu asking the UI to open a tool, run a command, or drop a node
-into the scene.
+Ten of them travel the other way — main pushing to the renderer: job and media progress, log
+lines, project and settings changes, window state, and the native menu asking the UI to open a
+tool or a settings section, run a command, or drop a node into the scene.
 
 Local files are served to the renderer over a custom `scenario://` protocol. The URL is derived
 from the asset identifier, so a grid of thumbnails costs no IPC at all — and the renderer still
@@ -239,6 +245,11 @@ src/renderer/src/
 ```
 
 ### The shell
+
+The four editors are loaded when a document of their kind is opened, never before. Statically
+imported, all four would land in the chunk the splash screen waits for — five megabytes to open
+a window showing an empty centre. A session uses one or two of them, and the one it opens costs a
+few hundred milliseconds it was going to spend anyway.
 
 Dockview holds the centre and **only** the centre: documents and their tabs. Tool windows are
 laid over the chassis gutter by the shell itself, because their behaviour — a rail that switches
@@ -345,7 +356,7 @@ Key primitives, all in `design/`:
 | `MediaTile`, `Thumbnail` | the captioned square tile, and the same picture at a fixed size |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | the shared bar, its icon buttons, its labelled ones, the only door icons come through |
 | `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the jobs bar and media import |
-| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField` — what the inspector is built from |
+| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
@@ -442,7 +453,7 @@ opaquely.
 
 ## Testing
 
-**1288 tests across 137 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
+**1398 tests across 148 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.

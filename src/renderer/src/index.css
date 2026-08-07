@@ -15,7 +15,9 @@
  */
 @theme {
   --color-chassis: #2b2d30;
-  --color-base: #191a1c;
+  /* `panel`, not `base`: a colour named `base` steals Tailwind's `text-base`, which then
+     paints text in this very colour instead of sizing it — invisible, on this very surface. */
+  --color-panel: #191a1c;
   --color-surface: #202124;
   --color-elevated: #3c3f44;
   --color-border: #34363a;
@@ -155,7 +157,7 @@
   --noise: 0;
 
   --color-chassis: #dcdde1;
-  --color-base: #ffffff;
+  --color-panel: #ffffff;
   --color-surface: #f5f6f8;
   --color-elevated: #e4e6ea;
   --color-border: #c9cbd1;

@@ -2,7 +2,7 @@ import type { ResolvedTheme } from './domain/settings'
 
 /**
  * Window chrome color, painted before the first render. It matches `--color-chassis`, the
- * outermost surface — not `--color-base`, which is the panels. Opaque on purpose: we judge
+ * outermost surface — not `--color-panel`, the surfaces laid on it. Opaque on purpose: we judge
  * colors in this app, never through translucency (spec § 7).
  *
  * Per theme, and unavoidably a second copy of what `index.css` declares: the main process

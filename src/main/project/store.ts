@@ -8,8 +8,8 @@ import {
   PROJECT_FOLDERS,
   type Project,
 } from '@shared/domain/project'
-import { createCatalog, type Catalog } from './catalog'
-import type { SqliteDriver } from './sqlite'
+import { log } from '@main/log'
+import type { AsyncCatalog } from './catalog-client'
 import { parseManifest } from './validation'
 
 /** Thrown when a channel needing a project is reached before one is open. */
@@ -21,7 +21,8 @@ export class NoProjectError extends Error {
 }
 
 export type ProjectStoreDeps = {
-  openDatabase: (file: string) => SqliteDriver
+  /** Resolves once the database is open and migrated — see `openCatalogThread`. */
+  openCatalog: (file: string) => Promise<AsyncCatalog>
   now: () => string
   onChange: (project: Project | null) => void
 }
@@ -33,7 +34,7 @@ export type ProjectStore = {
   /** The open project's folder. Throws rather than letting a write land outside a project. */
   path: () => string
   /** The open project's catalogue. Throws rather than answering an empty one. */
-  catalog: () => Catalog
+  catalog: () => AsyncCatalog
   close: () => void
 }
 
@@ -41,16 +42,16 @@ async function ensureFolders(root: string): Promise<void> {
   await Promise.all(PROJECT_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
 }
 
-export function createProjectStore({
-  openDatabase,
-  now,
-  onChange,
-}: ProjectStoreDeps): ProjectStore {
+export function createProjectStore({ openCatalog, now, onChange }: ProjectStoreDeps): ProjectStore {
   let project: Project | null = null
-  let catalog: Catalog | null = null
+  let catalog: AsyncCatalog | null = null
 
   const close = (): void => {
-    catalog?.close()
+    // The thread is told to stop, but nothing waits for it: a project is closed from menus and
+    // from IPC handlers that have no use for the moment a thread actually exits.
+    void catalog?.close().catch((error: unknown) => {
+      log.warn('project', `closing the catalogue failed: ${String(error)}`)
+    })
     catalog = null
     project = null
   }
@@ -64,7 +65,7 @@ export function createProjectStore({
     const file = join(opened.path, CATALOG_FILE)
     await mkdir(dirname(file), { recursive: true })
 
-    const opening = createCatalog(openDatabase(file))
+    const opening = await openCatalog(file)
 
     close()
     catalog = opening

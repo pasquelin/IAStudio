@@ -43,6 +43,18 @@ export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): strin
 export const activeSceneId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'scene')
 
+/** The image in front, as a selector. Same reason as `activeSceneId`, for the layer stack. */
+export const activeImageId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'image')
+
+/** The sequence in front, as a selector. Same reason again, for the montage and its inspector. */
+export const activeSequenceId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'sequence')
+
+/** The sky in front, as a selector. Same reason again, for the skybox panel. */
+export const activeSkyboxId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'skybox')
+
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,
   workspace: WorkspaceId,

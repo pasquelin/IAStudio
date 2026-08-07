@@ -28,7 +28,18 @@ export default defineConfig({
   main: {
     resolve: { alias: { '@shared': partage, '@main': principal } },
     define: { __COMMIT_HASH__: JSON.stringify(commitHash()) },
-    build: { externalizeDeps: true, rollupOptions: { input: resolve('src/main/index.ts') } },
+    build: {
+      externalizeDeps: true,
+      rollupOptions: {
+        // The catalogue's worker is a second entry point: `new Worker(new URL(…))` resolves it
+        // beside the bundled main, so it must land there as its own file.
+        input: {
+          index: resolve('src/main/index.ts'),
+          'catalog-worker': resolve('src/main/project/catalog-worker.ts'),
+        },
+        output: { entryFileNames: '[name].js' },
+      },
+    },
   },
   preload: {
     resolve: { alias: { '@shared': partage } },

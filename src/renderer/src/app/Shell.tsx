@@ -15,7 +15,7 @@ import {
   type ToolSlot,
   type ToolZone,
 } from '@shared/domain/tool'
-import { toolServes } from '@/helpers/tool-registry'
+import { toolZoneIn } from '@/helpers/tool-registry'
 import { Panel } from '@/design/Panel'
 import { ToolWindow } from './ToolWindow'
 import 'dockview-react/dist/styles/dockview.css'
@@ -80,9 +80,13 @@ function Edge({ zone }: { zone: ToolZone }) {
 
   // A layout arranged in one workspace must not drag its panels into the next: what is open is
   // stored per zone, not per workspace, so what this one has no use for is dropped here.
+  //
+  // Compared against the zone, not merely against the workspace: a tool can sit in a different
+  // zone depending on the space — the asset shelf does — and a layout persisted while it was
+  // elsewhere would otherwise keep showing it in the zone it no longer belongs to.
   const shown = (slot: ToolSlot): ToolId | null => {
     const tool = slots?.[slot] ?? null
-    return tool && toolServes(tool, workspace) ? tool : null
+    return tool && toolZoneIn(tool, workspace) === zone ? tool : null
   }
 
   const primary = shown('primary')
@@ -101,7 +105,9 @@ function Edge({ zone }: { zone: ToolZone }) {
       className={cn('flex min-h-0 min-w-0', lying ? 'flex-row' : 'flex-col')}
       style={{ [lying ? 'height' : 'width']: size }}
     >
-      {primary && <ToolWindow tool={primary} onFocus={focusZone} onClose={closePrimary} />}
+      {primary && (
+        <ToolWindow tool={primary} zone={zone} onFocus={focusZone} onClose={closePrimary} />
+      )}
 
       {/* Only between two open halves: a lone panel has nothing to be dragged against. */}
       {primary && secondary && (
@@ -116,6 +122,7 @@ function Edge({ zone }: { zone: ToolZone }) {
       {secondary && (
         <ToolWindow
           tool={secondary}
+          zone={zone}
           // The second half keeps a length of its own only while the first is there to take the
           // rest; alone, it fills the zone.
           length={primary ? split : undefined}

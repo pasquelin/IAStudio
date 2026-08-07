@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { layerFixture } from './canvas-fixtures'
 import {
   clampOpacity,
   DEFAULT_CANVAS,
@@ -12,8 +13,8 @@ const populated: CanvasState = {
   width: 800,
   height: 600,
   layers: [
-    { id: 'a', name: 'Background', visible: true, locked: true, opacity: 1, blend: 'normal' },
-    { id: 'b', name: 'Paint', visible: false, locked: false, opacity: 0.5, blend: 'multiply' },
+    layerFixture({ id: 'a', name: 'Background', locked: true }),
+    layerFixture({ id: 'b', visible: false, opacity: 0.5, blend: 'multiply' }),
   ],
   activeLayerId: 'b',
 }

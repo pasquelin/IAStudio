@@ -1,4 +1,5 @@
 import { ASSET_FOLDERS } from './asset'
+import { DOCUMENTS_FOLDER } from './document'
 
 export const MANIFEST_VERSION = 1
 
@@ -36,7 +37,7 @@ export const FILMSTRIPS_FOLDER = '.index/filmstrips'
 export const PROJECT_FOLDERS: readonly string[] = [
   'assets',
   ...Object.values(ASSET_FOLDERS),
-  'documents',
+  DOCUMENTS_FOLDER,
   '.index',
   PROXIES_FOLDER,
   PEAKS_FOLDER,

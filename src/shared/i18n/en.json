@@ -21,7 +21,8 @@
     "generator": "Generate",
     "inspector": "Inspector",
     "assets": "Assets",
-    "jobs": "Jobs"
+    "jobs": "Jobs",
+    "skybox": "Skybox"
   },
   "actions": {
     "undo": "Undo",
@@ -627,6 +628,40 @@
       "title": "Projects folder",
       "help": "The folder the application offers when you create or open a project. It moves nothing: projects already created stay where they are. Leave it empty to start from wherever you last were."
     }
+  },
+  "skybox": {
+    "sun": "Sun",
+    "elevation": "Elevation",
+    "azimuth": "Azimuth",
+    "intensity": "Intensity",
+    "color": "Colour",
+    "adjustments": "Adjustments",
+    "exposure": "Exposure",
+    "contrast": "Contrast",
+    "saturation": "Saturation",
+    "temperature": "Temperature",
+    "tint": "Tint",
+    "rotation": "Horizon rotation",
+    "blur": "Blur",
+    "environment": "Environment",
+    "envIntensity": "IBL intensity",
+    "showBackground": "Show background",
+    "showGround": "Reference ground",
+    "generation": "Generation",
+    "prompt": "Prompt",
+    "seed": "Seed",
+    "model": "Model",
+    "regenerate": "Regenerate",
+    "reset": "Reset",
+    "empty": "Open a skybox to grade it.",
+    "noSource": "No skybox yet. Generate one or drop an equirectangular panorama.",
+    "views": "View",
+    "viewImmersive": "360°",
+    "viewEquirect": "Equirect",
+    "viewCross": "Cross",
+    "viewFaces": "6 faces",
+    "testObjects": "Test objects",
+    "fieldOfView": "Field of view"
   },
   "commands": {
     "projectNew": {

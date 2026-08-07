@@ -17,8 +17,11 @@ export async function decodeAsset(assetId: string): Promise<AudioData> {
     const buffer = await context.decodeAudioData(await response.arrayBuffer())
     return {
       sampleRate: buffer.sampleRate,
+      // Copied out of the `AudioBuffer` rather than viewed into it: these arrays are handed to
+      // the render worker, which takes ownership of their buffers, and detaching storage the
+      // decoder still holds is not something to find out about at runtime.
       channels: Array.from({ length: buffer.numberOfChannels }, (_unused, channel) =>
-        buffer.getChannelData(channel),
+        buffer.getChannelData(channel).slice(),
       ),
     }
   } finally {

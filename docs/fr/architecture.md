@@ -117,6 +117,13 @@ Toute tâche longue est **annulable**, **rapporte sa progression**, et tourne da
 `better-sqlite3` est synchrone : une requête lourde dans le processus principal bloque toutes les
 fenêtres, donc les requêtes de catalogue non triviales passent par `worker_threads`.
 
+Deux fils existent précisément pour cela. `main/project/catalog-worker.ts` détient la base et
+répond à une boucle de messages : une recherche parmi des milliers d'assets ne gèle plus aucune
+fenêtre. `renderer/src/engines/audio/audio.worker.ts` sort la chaîne sonore du thread de la
+fenêtre, les buffers d'échantillons étant **transférés** plutôt que copiés. Les deux ne sont que
+de la tuyauterie : le catalogue, le dispatch et l'arithmétique audio se testent seuls, sans
+worker.
+
 ---
 
 ## Traverser la frontière des processus
@@ -132,7 +139,7 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           renvoie des données typées
 ```
 
-Quarante-cinq canaux sont déclarés, en quatre familles :
+Soixante canaux sont déclarés, en quatre familles :
 
 | Famille | Ce qu'elle porte |
 |---|---|
@@ -141,9 +148,10 @@ Quarante-cinq canaux sont déclarés, en quatre familles :
 | `scenario:*` | recherche de modèles, description, génération, contrôle des jobs |
 | `project:*` / `assets:*` | cycle de vie du projet, requêtes de catalogue, ingestion |
 
-Six d'entre eux vont dans l'autre sens — le main poussant vers le renderer : progression des
-jobs, lignes de journal, changements de projet, et le menu natif qui demande à l'UI d'ouvrir un
-outil, d'exécuter une commande ou de déposer un nœud dans la scène.
+Dix d'entre eux vont dans l'autre sens — le main poussant vers le renderer : progression des jobs
+et des imports, lignes de journal, changements de projet et de réglages, état de fenêtre, et le
+menu natif qui demande à l'UI d'ouvrir un outil ou une section de réglages, d'exécuter une
+commande, ou de déposer un nœud dans la scène.
 
 Les fichiers locaux sont servis au renderer par un protocole `scenario://`. L'URL est dérivée de
 l'identifiant de l'asset : une grille de vignettes ne coûte donc aucun IPC — et le renderer ne
@@ -242,6 +250,11 @@ src/renderer/src/
 ```
 
 ### Le shell
+
+Les quatre éditeurs sont chargés à l'ouverture d'un document de leur type, jamais avant. Importés
+statiquement, ils atterriraient tous les quatre dans le morceau que l'écran de démarrage attend —
+cinq mégaoctets pour ouvrir une fenêtre au centre vide. Une session en ouvre un ou deux, et celui
+qu'elle ouvre coûte quelques centaines de millisecondes qu'elle allait dépenser de toute façon.
 
 Dockview tient le centre et **uniquement** le centre : les documents et leurs onglets. Les
 fenêtres d'outil sont posées sur la gouttière du châssis par le shell lui-même, parce que leur
@@ -355,7 +368,7 @@ Les primitives, toutes dans `design/` :
 | `MediaTile`, `Thumbnail` | la tuile carrée légendée, et la même image à taille fixe |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | la barre partagée, ses boutons d'icône, ses boutons libellés, l'unique porte des icônes |
 | `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par la barre de jobs et l'import de médias |
-| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField` — ce dont l'inspecteur est fait |
+| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField`, `PropertyRow` — ce dont l'inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | les chaînes de classes partagées par plus d'un composant : `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
@@ -457,7 +470,7 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d'éch
 
 ## Les tests
 
-**1288 tests répartis sur 137 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
+**1398 tests répartis sur 148 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
 (`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout

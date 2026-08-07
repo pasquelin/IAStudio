@@ -1,7 +1,8 @@
 import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { ASSET_FOLDERS, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
-import type { Catalog } from '@main/project/catalog'
+import type { PbrChannel } from '@shared/domain/texture'
+import type { AsyncCatalog } from '@main/project/catalog-client'
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {
   image: '.png',
@@ -17,7 +18,7 @@ export type Download = (url: string) => Promise<Uint8Array>
 export type LocalBackendDeps = {
   download: Download
   projectPath: () => string
-  catalog: () => Catalog
+  catalog: () => AsyncCatalog
   now: () => string
 }
 
@@ -29,6 +30,8 @@ export type ImportRequest = {
   jobId?: string
   remoteAssetId?: string
   derivedFrom?: string
+  map?: PbrChannel
+  mapInverted?: boolean
 }
 
 /** An import whose bytes the caller already holds — an edited take, rather than a download. */
@@ -110,8 +113,14 @@ export function createLocalBackend({
     if (request.jobId) asset.jobId = request.jobId
     if (request.remoteAssetId) asset.remoteAssetId = request.remoteAssetId
     if (request.derivedFrom) asset.derivedFrom = request.derivedFrom
+    // Nested: the flag says how to read a channel, so it means nothing without one — and the
+    // catalogue only reads it back inside a valid channel anyway.
+    if (request.map) {
+      asset.map = request.map
+      if (request.mapInverted) asset.mapInverted = true
+    }
 
-    return catalog().add(asset)
+    return await catalog().add(asset)
   }
 
   return {
@@ -124,7 +133,7 @@ export function createLocalBackend({
     importFromBytes: (request, bytes) => write(request, bytes),
 
     replaceBytes: async (assetId, bytes, extension, probe) => {
-      const existing = catalog().find(assetId)
+      const existing = await catalog().find(assetId)
       if (!existing?.path) throw new Error(`asset ${assetId} has no file to replace`)
 
       const relativePath = relativePathFor(assetId, extension, existing.type)
@@ -150,7 +159,7 @@ export function createLocalBackend({
       }
       delete rewritten.peaksPath
 
-      return catalog().add(rewritten)
+      return await catalog().add(rewritten)
     },
   }
 }

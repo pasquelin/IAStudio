@@ -2,16 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { canvasOf, historyOf, useCanvases } from './canvases'
 import { canUndo, canRedo } from '@/engines/core/history'
 import { addLayer, renameLayer } from '@/engines/canvas/commands'
-import { DEFAULT_CANVAS, layerById, type Layer } from '@/engines/canvas/canvas-state'
+import { layerFixture } from '@/engines/canvas/canvas-fixtures'
+import { DEFAULT_CANVAS, layerById } from '@/engines/canvas/canvas-state'
 
-const layer: Layer = {
-  id: 'layer-2',
-  name: 'Paint',
-  visible: true,
-  locked: false,
-  opacity: 1,
-  blend: 'normal',
-}
+const layer = layerFixture()
 
 describe('canvases store', () => {
   beforeEach(() => {

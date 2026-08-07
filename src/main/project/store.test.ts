@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PROJECT_FOLDERS } from '@shared/domain/project'
 import { createProjectStore, NoProjectError, type ProjectStore } from './store'
-import { openMemoryDatabase } from './sqlite-memory'
+import { memoryCatalog } from './catalog-fixtures'
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -26,7 +26,7 @@ describe('project store', () => {
     store = createProjectStore({
       // In memory: the catalogue's own tests cover the SQL, and a project test has no reason
       // to leave a database file behind.
-      openDatabase: () => openMemoryDatabase(),
+      openCatalog: async () => memoryCatalog(),
       now: () => '2026-08-06T10:00:00.000Z',
       onChange,
     })
@@ -88,9 +88,9 @@ describe('project store', () => {
   it('keeps the open project when the next one fails to open', async () => {
     let failNext = false
     const fragile = createProjectStore({
-      openDatabase: () => {
+      openCatalog: async () => {
         if (failNext) throw new Error('database is locked')
-        return openMemoryDatabase()
+        return memoryCatalog()
       },
       now: () => '2026-08-06T10:00:00.000Z',
       onChange,
@@ -117,7 +117,7 @@ describe('project store', () => {
 
   it('indexes into the project that is open, and only that one', async () => {
     await store.create(root, 'First')
-    store.catalog().add({
+    await store.catalog().add({
       id: 'asset_1',
       name: 'Boulder',
       type: 'image',
@@ -127,6 +127,6 @@ describe('project store', () => {
     })
 
     await store.create(root, 'Second')
-    expect(store.catalog().search({})).toEqual([])
+    await expect(store.catalog().search({})).resolves.toEqual([])
   })
 })

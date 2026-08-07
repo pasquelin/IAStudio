@@ -2,13 +2,11 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
+import { LIST_ROW_HEIGHT } from '@/design/styles'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
 import { nodesOfType, type SceneNodeType } from '@/engines/scene/scene-state'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SceneNodeRow } from './SceneNodeRow'
-
-/** The `--sc-control` gauge at its tallest, which is what a row measures in the outliner too. */
-const ROW_HEIGHT = 28
 
 /** The meshes or the lights of the scene in front, listed. */
 export function NodeList({ documentId, type }: { documentId: string; type: SceneNodeType }) {
@@ -28,7 +26,7 @@ export function NodeList({ documentId, type }: { documentId: string; type: Scene
       items={shown}
       selectedId={selectedId}
       onSelect={node => selectIn(documentId, node.id)}
-      rowHeight={ROW_HEIGHT}
+      rowHeight={LIST_ROW_HEIGHT}
       renderRow={node => (
         <SceneNodeRow documentId={documentId} node={node} visibleLabel={visibleLabel} />
       )}

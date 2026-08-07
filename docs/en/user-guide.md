@@ -85,6 +85,9 @@ grip to hunt for.
 Panels close, they do not collapse. A collapsed panel is a third state that looks like neither
 open nor closed, and the rail reopens a tool in one click.
 
+Narrow a panel far enough and its title row gives ground: the panel's own controls go first, and
+the close button never does — a panel you cannot leave would be worse than one missing a filter.
+
 ### The tools
 
 | Tool | Where | Shows in | What it is |
@@ -384,8 +387,8 @@ queue exists so a burst is spread rather than rejected.
 
 ### Model families
 
-The model the generator preselects for each family — image, video, 3D, audio. Leave one unset to
-be asked every time.
+The model the generator preselects for each family — image, video, 3D, audio, upscale. Leave one
+unset to be asked every time.
 
 The studio remembers the last project you opened and reopens it on launch. That is not a setting
 you tick — it simply happens.

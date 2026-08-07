@@ -1,7 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
+import { TimelinePanel } from '@/panels/timeline/TimelinePanel'
 import { useDocuments } from '@/stores/documents'
 import { useSequences } from '@/stores/sequences'
 import { SequenceDocument } from './SequenceDocument'
@@ -43,6 +45,22 @@ describe('SequenceDocument', () => {
   it('gives each monitor its own transport', () => {
     render(<SequenceDocument documentId="doc-1" />)
     expect(screen.getAllByRole('button', { name: /Lire/ })).toHaveLength(2)
+  })
+
+  it('answers the space bar once when the montage strip is open beside the monitors', async () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+
+    render(
+      <>
+        <SequenceDocument documentId="doc-1" />
+        <TimelinePanel />
+      </>,
+    )
+    await userEvent.keyboard(' ')
+
+    // Both surfaces listen on the `sequence` scope and drive the same transport by name. When
+    // both handled the key, one started the programme monitor and the other stopped it.
+    expect(play).toHaveBeenCalledTimes(1)
   })
 
   it('shows a timecode for each monitor', () => {

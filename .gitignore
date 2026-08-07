@@ -15,5 +15,8 @@ docs/superpowers
 CLAUDE.md
 .idea/
 .vscode/
-# Worktrees des sessions Claude : ils vivent dans le dépôt, ils n'en sont pas le contenu
-.claude/worktrees/
+# Outillage des sessions Claude : il vit dans le dépôt, il n'en est pas le contenu.
+# Les worktrees pèsent des gigaoctets et `skills/` n'est qu'un lien vers hors du dépôt.
+.claude/
+# Sorties d'exécution, jamais du code
+logs/

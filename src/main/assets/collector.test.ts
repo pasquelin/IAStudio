@@ -63,6 +63,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => `asset_${++sequence}`,
+      localIdOf: async () => null,
     })
 
     expect(await collect(JOB, ['remote_1'])).toEqual(['asset_1'])
@@ -76,6 +77,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => `asset_${++sequence}`,
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['remote_1', 'remote_2'])
@@ -89,6 +91,7 @@ describe('asset collector', () => {
         Promise.resolve(remote(remoteAssetId === 'remote_caption' ? 'json' : 'image')),
       backend,
       newId: () => 'asset_1',
+      localIdOf: async () => null,
     })
 
     expect(await collect(JOB, ['remote_caption', 'remote_image'])).toEqual(['asset_1'])
@@ -101,10 +104,92 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('3d')),
       backend,
       newId: () => 'asset_1',
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
     expect(imported[0]).toMatchObject({ remoteAssetId: 'remote_1', type: 'mesh' })
+  })
+
+  // One converter job answers with several pictures. Filed as plain images, the material
+  // would be lost: the channel a picture carries is what makes it part of one.
+  it('files a PBR channel as a texture, whatever its kind says', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'texture-normal' }),
+      backend,
+      newId: () => 'asset_1',
+      localIdOf: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(imported[0]).toMatchObject({ type: 'texture', map: 'normal' })
+    expect(imported[0]?.mapInverted).toBeUndefined()
+  })
+
+  it('remembers that a smoothness map reads the other way round', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'texture-smoothness' }),
+      backend,
+      newId: () => 'asset_1',
+      localIdOf: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(imported[0]).toMatchObject({ map: 'roughness', mapInverted: true })
+  })
+
+  // Without this the seven channels of one job land as seven unrelated assets, and the
+  // material they belong to cannot be put back together.
+  it('hangs a channel from the local asset its parent became', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () =>
+        Promise.resolve({
+          ...remote('image'),
+          metadataType: 'texture-normal',
+          parentId: 'remote_source',
+        }),
+      backend,
+      newId: () => 'asset_1',
+      localIdOf: async remoteAssetId => (remoteAssetId === 'remote_source' ? 'asset_source' : null),
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(imported[0]?.derivedFrom).toBe('asset_source')
+  })
+
+  it('leaves a channel unattached when its parent never entered the project', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () =>
+        Promise.resolve({
+          ...remote('image'),
+          metadataType: 'texture-normal',
+          parentId: 'remote_never_imported',
+        }),
+      backend,
+      newId: () => 'asset_1',
+      localIdOf: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(imported[0]?.derivedFrom).toBeUndefined()
+  })
+
+  it('leaves an ordinary generation without a channel', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'inference-txt2img' }),
+      backend,
+      newId: () => 'asset_1',
+      localIdOf: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(imported[0]?.type).toBe('image')
+    expect(imported[0]?.map).toBeUndefined()
   })
 
   it('downloads one output at a time', async () => {
@@ -121,6 +206,7 @@ describe('asset collector', () => {
       }),
       backend,
       newId: () => 'asset_1',
+      localIdOf: async () => null,
     })
 
     await collect(JOB, ['a', 'b', 'c'])

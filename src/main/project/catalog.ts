@@ -8,6 +8,7 @@ import {
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
+import { isPbrChannel } from '@shared/domain/texture'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
 
 /**
@@ -49,6 +50,15 @@ const MIGRATIONS: readonly string[] = [
   ALTER TABLE assets ADD COLUMN peaks_path  TEXT;
 
   CREATE INDEX assets_hash_idx ON assets(hash);
+  `,
+  `
+  ALTER TABLE assets ADD COLUMN map          TEXT;
+  ALTER TABLE assets ADD COLUMN map_inverted INTEGER;
+
+  -- The channels of one texture are read together, from the asset they derive from.
+  CREATE INDEX assets_derived_from_idx ON assets(derived_from);
+  -- Resolving an API parent to the local asset it became, when a generation reports one.
+  CREATE INDEX assets_remote_asset_id_idx ON assets(remote_asset_id);
   `,
 ]
 
@@ -119,12 +129,20 @@ function assetOf(row: SqlRow, tags: string[]): Asset {
   const probe = parseProbe(optionalText(row, 'probe'))
   const proxyPath = optionalText(row, 'proxy_path')
   const peaksPath = optionalText(row, 'peaks_path')
+  const map = optionalText(row, 'map')
 
   if (sourcePath !== undefined) asset.sourcePath = sourcePath
   if (hash !== undefined) asset.hash = hash
   if (probe !== undefined) asset.probe = probe
   if (proxyPath !== undefined) asset.proxyPath = proxyPath
   if (peaksPath !== undefined) asset.peaksPath = peaksPath
+
+  // The column is a free string in SQLite; a channel this build no longer knows leaves the
+  // asset as an ordinary picture rather than making the whole row unreadable.
+  if (isPbrChannel(map)) {
+    asset.map = map
+    if (optionalNumber(row, 'map_inverted') === 1) asset.mapInverted = true
+  }
 
   return asset
 }
@@ -164,6 +182,8 @@ function escapeLike(text: string): string {
 export type Catalog = {
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
+  /** The local asset an API one became, so a generation's parent can be tied to its channels. */
+  findByRemoteId: (remoteAssetId: string) => Asset | null
   search: (query: AssetQuery) => Asset[]
   close: () => void
 }
@@ -174,13 +194,18 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const insertAsset = driver.prepare(`
     INSERT OR REPLACE INTO assets
       (id, name, type, location, path, remote_asset_id, job_id, width, height, bytes,
-       created_at, derived_from, source_path, hash, probe, proxy_path, peaks_path)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       created_at, derived_from, source_path, hash, probe, proxy_path, peaks_path,
+       map, map_inverted)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const deleteTags = driver.prepare('DELETE FROM asset_tags WHERE asset_id = ?')
   const insertTag = driver.prepare('INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?, ?)')
   const selectTags = driver.prepare('SELECT tag FROM asset_tags WHERE asset_id = ? ORDER BY tag')
   const selectAsset = driver.prepare('SELECT * FROM assets WHERE id = ?')
+  // Oldest first: re-importing the same API asset must not move where its children point.
+  const selectByRemoteId = driver.prepare(
+    'SELECT * FROM assets WHERE remote_asset_id = ? ORDER BY created_at, id LIMIT 1',
+  )
 
   const tagsOf = (assetId: string): string[] => selectTags.all(assetId).map(row => text(row, 'tag'))
 
@@ -228,6 +253,8 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         asset.probe ? JSON.stringify(asset.probe) : null,
         asset.proxyPath ?? null,
         asset.peaksPath ?? null,
+        asset.map ?? null,
+        asset.mapInverted ? 1 : null,
       )
 
       deleteTags.run(asset.id)
@@ -239,6 +266,12 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     find: assetId => {
       const row = selectAsset.get(assetId)
       return row ? assetOf(row, tagsOf(assetId)) : null
+    },
+
+    findByRemoteId: remoteAssetId => {
+      const row = selectByRemoteId.get(remoteAssetId)
+      if (!row) return null
+      return assetOf(row, tagsOf(text(row, 'id')))
     },
 
     search: query => {
