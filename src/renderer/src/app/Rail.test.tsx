@@ -26,7 +26,7 @@ describe('Rail', () => {
   })
 
   it('disables the button in a workspace without an editor', () => {
-    useLayouts.setState({ activeWorkspace: 'audio' })
+    useLayouts.setState({ activeWorkspace: 'textures' })
     render(<Rail side="left" />)
     expect(screen.getByRole('button', { name: 'Nouveau document' })).toBeDisabled()
   })

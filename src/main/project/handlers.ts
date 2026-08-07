@@ -3,16 +3,31 @@ import { CHANNELS } from '@shared/ipc'
 import { assetFilePath } from '@main/assets/protocol'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
+import type { LocalBackend } from '@main/assets/local-backend'
 import type { ProjectStore } from './store'
-import { parseAssetId, parseAssetQuery, parseProjectName, parseProjectPath } from './validation'
+import {
+  parseAssetId,
+  parseAssetQuery,
+  parseProjectName,
+  parseProjectPath,
+  parseSaveAudio,
+} from './validation'
 
 export type ProjectHandlerDeps = {
   project: ProjectStore
+  /** Where an edited take is written back. Injected, like everything that touches the disk. */
+  assets: LocalBackend
+  newAssetId: () => string
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
   pickFolder: () => Promise<string | null>
 }
 
-export function registerProjectHandlers({ project, pickFolder }: ProjectHandlerDeps): void {
+export function registerProjectHandlers({
+  project,
+  assets,
+  newAssetId,
+  pickFolder,
+}: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, (_event, path, name) =>
     project.create(parseProjectPath(path), parseProjectName(name)),
   )
@@ -40,5 +55,21 @@ export function registerProjectHandlers({ project, pickFolder }: ProjectHandlerD
       // paints as a rectangle.
       return null
     }
+  })
+
+  handle(CHANNELS.assetsSaveAudio, async (_event, value) => {
+    const request = parseSaveAudio(value)
+    if (request.replaces) return assets.replaceBytes(request.replaces, request.wav)
+
+    return assets.importFromBytes(
+      {
+        id: newAssetId(),
+        name: request.name,
+        type: 'audio',
+        extension: '.wav',
+        ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+      },
+      request.wav,
+    )
   })
 }

@@ -28,6 +28,7 @@ type ChannelMethod = {
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']
+  [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
 
   [CHANNELS.windowToggleFullScreen]: StudioBridge['window']['toggleFullScreen']
   [CHANNELS.windowState]: StudioBridge['window']['state']

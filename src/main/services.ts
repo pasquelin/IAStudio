@@ -24,12 +24,16 @@ export type Services = {
   jobs: JobManager
   project: ProjectStore
   assets: LocalBackend
+  /** Minted here so the collector and the audio editor cannot name assets differently. */
+  newAssetId: () => string
   pickFolder: () => Promise<string | null>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
 }
 
 const timestamp = (): string => new Date().toISOString()
+
+const newAssetId = (): string => `asset_${randomUUID()}`
 
 async function pickFolder(): Promise<string | null> {
   const parent = BrowserWindow.getFocusedWindow()
@@ -91,7 +95,7 @@ export function createServices(): Services {
       retrieve: async remoteAssetId =>
         (await client.require().assets.retrieve(remoteAssetId)).asset,
       backend: assets,
-      newId: () => `asset_${randomUUID()}`,
+      newId: newAssetId,
     }),
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
@@ -121,6 +125,7 @@ export function createServices(): Services {
     jobs,
     project,
     assets,
+    newAssetId,
     pickFolder,
     // Another key means another catalogue: keeping the cache would show the previous
     // account's models under the new one.

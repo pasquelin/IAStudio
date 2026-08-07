@@ -268,6 +268,29 @@
     "noClip": "Select a clip to see it here.",
     "rewind": "Back to start"
   },
+  "audio": {
+    "noAsset": "No sound open. Double-click an audio asset to edit it.",
+    "unreadable": "This file could not be decoded.",
+    "copyName": "{{name}} (edited)"
+  },
+  "audioTools": {
+    "crop": "Crop",
+    "cropHint": "Keep the selection and nothing else",
+    "fadeIn": "Fade in",
+    "fadeInHint": "Rise from silence across the selection",
+    "fadeOut": "Fade out",
+    "fadeOutHint": "Fall to silence across the selection",
+    "normalize": "Normalise",
+    "normalizeHint": "Bring the level to −14 LUFS",
+    "trimSilence": "Trim silence",
+    "trimSilenceHint": "Remove the silence at each end",
+    "compare": "A/B",
+    "compareHint": "Hear the source, without undoing anything",
+    "apply": "Apply",
+    "applyHint": "Write the edits back over the asset",
+    "saveAs": "Save as new",
+    "saveAsHint": "Create an asset beside the source"
+  },
   "inspector": {
     "empty": "Select something to see its properties.",
     "identity": "Identity",

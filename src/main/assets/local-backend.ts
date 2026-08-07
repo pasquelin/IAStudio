@@ -31,8 +31,28 @@ export type ImportRequest = {
   derivedFrom?: string
 }
 
+/** An import whose bytes the caller already holds — an edited take, rather than a download. */
+export type WriteRequest = Omit<ImportRequest, 'url'> & { extension: string }
+
 export type LocalBackend = {
   importFromUrl: (request: ImportRequest) => Promise<Asset>
+  importFromBytes: (request: WriteRequest, bytes: Uint8Array) => Promise<Asset>
+  /**
+   * Overwrites an asset's own file, keeping its id, its name and its place in the catalogue.
+   * What "apply" means in the audio editor: the same asset, edited.
+   */
+  replaceBytes: (assetId: string, bytes: Uint8Array) => Promise<Asset>
+}
+
+/**
+ * Anything that is not a plain extension is refused, and the kind's own is used instead.
+ *
+ * The refusal is the point, and it lives here rather than at each caller: the string comes
+ * from an API response or from the renderer, and `../../.ssh/id_rsa` appended to an asset id
+ * would write outside the project entirely.
+ */
+function safeExtension(extension: string, type: AssetType): string {
+  return /^\.[a-z0-9]{1,8}$/i.test(extension) ? extension.toLowerCase() : FALLBACK_EXTENSION[type]
 }
 
 /**
@@ -41,15 +61,14 @@ export type LocalBackend = {
  */
 export function extensionOf(url: string, type: AssetType): string {
   try {
-    const extension = extname(new URL(url).pathname)
-    return /^\.[a-z0-9]{1,8}$/i.test(extension) ? extension.toLowerCase() : FALLBACK_EXTENSION[type]
+    return safeExtension(extname(new URL(url).pathname), type)
   } catch {
     return FALLBACK_EXTENSION[type]
   }
 }
 
-export function relativePathFor(id: string, url: string, type: AssetType): string {
-  return `${ASSET_FOLDERS[type]}/${id}${extensionOf(url, type)}`
+export function relativePathFor(id: string, extension: string, type: AssetType): string {
+  return `${ASSET_FOLDERS[type]}/${id}${safeExtension(extension, type)}`
 }
 
 /**
@@ -62,28 +81,45 @@ export function createLocalBackend({
   catalog,
   now,
 }: LocalBackendDeps): LocalBackend {
+  const write = async (request: WriteRequest, bytes: Uint8Array): Promise<Asset> => {
+    const relativePath = relativePathFor(request.id, request.extension, request.type)
+    await writeFile(join(projectPath(), relativePath), bytes)
+
+    const asset: Asset = {
+      id: request.id,
+      name: request.name,
+      type: request.type,
+      location: 'local',
+      path: relativePath,
+      bytes: bytes.byteLength,
+      tags: [],
+      createdAt: now(),
+    }
+
+    if (request.jobId) asset.jobId = request.jobId
+    if (request.remoteAssetId) asset.remoteAssetId = request.remoteAssetId
+    if (request.derivedFrom) asset.derivedFrom = request.derivedFrom
+
+    return catalog().add(asset)
+  }
+
   return {
-    importFromUrl: async request => {
-      const relativePath = relativePathFor(request.id, request.url, request.type)
-      const bytes = await download(request.url)
-      await writeFile(join(projectPath(), relativePath), bytes)
+    importFromUrl: async request =>
+      write(
+        { ...request, extension: extensionOf(request.url, request.type) },
+        await download(request.url),
+      ),
 
-      const asset: Asset = {
-        id: request.id,
-        name: request.name,
-        type: request.type,
-        location: 'local',
-        path: relativePath,
-        bytes: bytes.byteLength,
-        tags: [],
-        createdAt: now(),
-      }
+    importFromBytes: (request, bytes) => write(request, bytes),
 
-      if (request.jobId) asset.jobId = request.jobId
-      if (request.remoteAssetId) asset.remoteAssetId = request.remoteAssetId
-      if (request.derivedFrom) asset.derivedFrom = request.derivedFrom
+    replaceBytes: async (assetId, bytes) => {
+      const existing = catalog().find(assetId)
+      if (!existing?.path) throw new Error(`asset ${assetId} has no file to replace`)
 
-      return catalog().add(asset)
+      await writeFile(join(projectPath(), existing.path), bytes)
+      // Through `add`, which upserts: the row keeps its id, its tags and its job, and only the
+      // size it now occupies changes.
+      return catalog().add({ ...existing, bytes: bytes.byteLength })
     },
   }
 }

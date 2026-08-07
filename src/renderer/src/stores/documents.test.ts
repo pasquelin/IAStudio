@@ -47,7 +47,7 @@ describe('documents store', () => {
   })
 
   it('creates nothing in a workspace without an editor', () => {
-    expect(useDocuments.getState().create('audio')).toBeNull()
+    expect(useDocuments.getState().create('textures')).toBeNull()
     expect(Object.keys(useDocuments.getState().documents)).toHaveLength(0)
   })
 

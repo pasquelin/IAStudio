@@ -4,7 +4,7 @@ import type { WorkspaceId } from './workspace'
  * Document registry, shared by both processes: the native menu will need it for
  * "File ▸ New", and duplicating the type would degrade `DocumentKind` to `string`.
  */
-export type DocumentKind = 'image' | 'scene' | 'sequence'
+export type DocumentKind = 'image' | 'scene' | 'sequence' | 'audio'
 
 export type DocumentDescriptor = {
   id: string
@@ -17,7 +17,7 @@ const KIND_BY_WORKSPACE: Record<WorkspaceId, DocumentKind | null> = {
   image: 'image',
   '3d': 'scene',
   video: 'sequence',
-  audio: null,
+  audio: 'audio',
   textures: null,
   skyboxes: null,
 }

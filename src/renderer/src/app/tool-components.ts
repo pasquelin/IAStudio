@@ -3,6 +3,7 @@ import type { ToolId } from '@shared/domain/tool'
 import { definition as assets } from '@/panels/assets'
 import { definition as explorer } from '@/panels/explorer'
 import { definition as generator } from '@/panels/generator'
+import { definition as inspector } from '@/panels/inspector'
 import { definition as jobs } from '@/panels/jobs'
 import { definition as layers } from '@/panels/layers'
 import { definition as lights } from '@/panels/lights'
@@ -28,6 +29,7 @@ export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
   explorer,
   models,
   generator,
+  inspector,
   assets,
   jobs,
 }

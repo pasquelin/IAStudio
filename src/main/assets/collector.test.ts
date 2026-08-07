@@ -17,6 +17,9 @@ const JOB: Job = {
 function backendSpy(): { backend: LocalBackend; imported: ImportRequest[] } {
   const imported: ImportRequest[] = []
   const backend: LocalBackend = {
+    // The collector only ever downloads; the two write paths belong to the audio editor.
+    importFromBytes: () => Promise.reject(new Error('not used by the collector')),
+    replaceBytes: () => Promise.reject(new Error('not used by the collector')),
     importFromUrl: request => {
       imported.push(request)
       const asset: Asset = {
