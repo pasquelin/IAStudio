@@ -23,6 +23,12 @@ export type PersistenceAdapter = {
 export type SettingsStore = {
   read: () => Settings
   write: (partial: PartialSettings) => Settings
+  /**
+   * Back to a fresh install. Not `write(DEFAULT_SETTINGS)`: a write MERGES, and the settings
+   * with no default — an accent, an ffmpeg path, a projects folder — have nothing in the
+   * defaults to overwrite them, so they would survive the reset that promised to remove them.
+   */
+  reset: () => Settings
   setCredentials: (credentials: Credentials) => void
   forgetCredentials: () => void
   hasCredentials: () => boolean
@@ -89,6 +95,12 @@ export function createSettingsStore(
       adapter.write(SETTINGS_KEY, merged)
       onChange?.(merged)
       return merged
+    },
+
+    reset: () => {
+      adapter.write(SETTINGS_KEY, DEFAULT_SETTINGS)
+      onChange?.(DEFAULT_SETTINGS)
+      return DEFAULT_SETTINGS
     },
 
     setCredentials: credentials => {

@@ -148,14 +148,21 @@ function CommandRow({
 export function ShortcutsSettings() {
   const { t } = useTranslation()
   const [overrides, setOverrides] = useOverrides()
-  const [capturing, setCapturing] = useState<CommandId | null>(null)
+  /**
+   * What is listening, if anything. ONE state rather than one per listener: a row and the
+   * search box each holding their own meant a keypress could be recorded as a binding and used
+   * as a query at the same time.
+   */
+  const [listening, setListening] = useState<CommandId | 'search' | null>(null)
   const [query, setQuery] = useState<Signature | null>(null)
+
+  const capturing = listening === 'search' ? null : listening
 
   // Rebuilt only when a binding moves, not on every keystroke of a capture.
   const clashing = useMemo(() => new Set(conflicts(overrides)), [overrides])
 
   const bind = (id: CommandId, signature: Signature | null): void => {
-    setCapturing(null)
+    setListening(null)
 
     const next = { ...overrides }
     // Removed rather than set to the default value: the row then reads as "not remapped", and
@@ -172,7 +179,15 @@ export function ShortcutsSettings() {
 
   return (
     <div className="mt-3 flex flex-col gap-4">
-      <SearchByChord query={query} onQuery={setQuery} />
+      <SearchByChord
+        query={query}
+        listening={listening === 'search'}
+        onListen={() => setListening(listening === 'search' ? null : 'search')}
+        onQuery={signature => {
+          setListening(null)
+          setQuery(signature)
+        }}
+      />
 
       {COMMAND_SCOPES.map(scope => (
         <Scope
@@ -182,7 +197,7 @@ export function ShortcutsSettings() {
           overrides={overrides}
           clashing={clashing}
           capturing={capturing}
-          onCapture={setCapturing}
+          onCapture={setListening}
           onBind={bind}
         />
       ))}
@@ -208,7 +223,7 @@ function Scope({
   overrides: BindingOverrides
   clashing: ReadonlySet<CommandId>
   capturing: CommandId | null
-  onCapture: (id: CommandId | null) => void
+  onCapture: (id: CommandId | 'search' | null) => void
   onBind: (id: CommandId, signature: Signature | null) => void
 }) {
   const { t } = useTranslation()
@@ -239,25 +254,25 @@ function Scope({
 /** Searches by pressing the combination rather than by naming it. */
 function SearchByChord({
   query,
+  listening,
+  onListen,
   onQuery,
 }: {
   query: Signature | null
+  listening: boolean
+  onListen: () => void
   onQuery: (signature: Signature | null) => void
 }) {
   const { t } = useTranslation()
-  const [listening, setListening] = useState(false)
 
-  useCapture(signature => {
-    setListening(false)
-    onQuery(signature === '' ? null : signature)
-  }, listening)
+  useCapture(signature => onQuery(signature === '' ? null : signature), listening)
 
   return (
     <div className="flex items-center gap-2">
       <button
         type="button"
         className={cn('btn btn-sm font-mono', listening && 'btn-primary')}
-        onClick={() => setListening(true)}
+        onClick={onListen}
       >
         {listening ? t('settings.pressAKey') : shortcutLabel(query) || t('settings.findByChord')}
       </button>

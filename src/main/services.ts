@@ -119,11 +119,17 @@ async function download(url: string): Promise<Uint8Array> {
  * reaches for a singleton and every collaborator stays injectable in tests.
  *
  * Called after `app.whenReady()`: it registers the asset protocol handler, which Electron
- * refuses before then.
+ * refuses before then. The settings are built before it and handed in — see `createSettings`.
  */
-export function createServices(): Services {
-  // Notified from the store rather than from the IPC handler: the project store writes
-  // `lastProject` on its own, and every window replicates these settings.
+/**
+ * The settings, on their own and before anything else. Built apart from the rest because the
+ * first window is painted from them: the splash takes its colour from the theme, and the rest
+ * of `createServices` opens SQLite synchronously — far too late to decide what to paint.
+ *
+ * Notified from the store rather than from the IPC handler: the project store writes
+ * `lastProject` on its own, and every window replicates these settings.
+ */
+export function createSettings(): SettingsStore {
   const settings = createSettingsStore(createElectronAdapter(), {
     onChange: current => {
       // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
@@ -132,27 +138,37 @@ export function createServices(): Services {
       setLogVerbosity(current.advanced.logLevel)
       // The native menu is built once and never re-reads anything: without this the window
       // changes language and the menu bar above it does not.
-      buildMenu(
-        effectiveLanguage(current.general.language, app.getLocale()),
-        current.shortcuts.overrides,
-      )
+      const spoken = effectiveLanguage(current.general.language, app.getLocale())
+      setWindowLanguage(spoken)
+      buildMenu(spoken, current.shortcuts.overrides)
       broadcast(EVENTS.settingsChanged, current)
     },
   })
 
-  const language = (): Language =>
-    effectiveLanguage(settings.read().general.language, app.getLocale())
+  const stored = settings.read()
 
-  // The stored theme, before any window is painted: a window created on the OS preference and
-  // corrected afterwards flashes the wrong colour for a frame.
-  applyTheme(settings.read().appearance.theme)
-  setWindowLanguage(language())
-  setLogVerbosity(settings.read().advanced.logLevel)
+  // Before any window is painted: one created on the OS preference and corrected afterwards
+  // flashes the wrong colour for a frame — the splash did exactly that.
+  applyTheme(stored.appearance.theme)
+  setLogVerbosity(stored.advanced.logLevel)
+  setWindowLanguage(effectiveLanguage(stored.general.language, app.getLocale()))
 
   // A keychain the OS can no longer open leaves a blob that decrypts to nothing. Dropping it
   // at startup is what makes the account dialog ask again instead of claiming to be set up.
   settings.discardUnreadableCredentials()
 
+  return settings
+}
+
+/**
+ * Composition root of the main process. Everything stateful is built here, once, so no module
+ * reaches for a singleton and every collaborator stays injectable in tests.
+ */
+export function createServices(settings: SettingsStore): Services {
+  const language = (): Language =>
+    effectiveLanguage(settings.read().general.language, app.getLocale())
+
+  // `isDevelopment`, arrived on main: the fallback reads a `.env` only outside a packaged run.
   const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
   const client = createClientProvider(() => resolveCredentials(settings, fallback))
   const models = createModelRegistry({ catalog: () => catalogOf(client.require()) })
