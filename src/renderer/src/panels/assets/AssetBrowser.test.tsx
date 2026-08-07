@@ -7,7 +7,8 @@ import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
-import { AssetBrowser, AssetBrowserActions } from './AssetBrowser'
+import { AssetBrowser } from './AssetBrowser'
+import { AssetBrowserActions } from './AssetBrowserActions'
 
 const PROJECT: Project = {
   path: '/tmp/project',
