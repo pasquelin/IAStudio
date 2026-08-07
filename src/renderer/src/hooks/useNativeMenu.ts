@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { MenuCommand } from '@shared/ipc'
+import type { CommandId } from '@shared/domain/command'
 import { toolServes } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { addNodeTo } from '@/hooks/useAddNode'
@@ -8,15 +8,16 @@ import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
 
-function runCommand(command: MenuCommand): void {
+/** The global commands, which are the ones the native menu fires. The rest belong to a surface. */
+function runCommand(command: CommandId): void {
   switch (command) {
-    case 'layout:reset':
+    case 'layout.reset':
       useTools.getState().reset()
       return
-    case 'project:new':
+    case 'project.new':
       void useProject.getState().createPicked()
       return
-    case 'project:open':
+    case 'project.open':
       void useProject.getState().openPicked()
       return
   }

@@ -1,4 +1,5 @@
 import type { Asset, AssetQuery } from './domain/asset'
+import type { CommandId } from './domain/command'
 import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -134,9 +135,6 @@ export type ToolRequest = {
   tool: ToolId
 }
 
-/** Native menu commands with no payload, identified by a verb. */
-export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset'
-
 /** Request to drop a node in the active scene, coming from the native menu. */
 export type SceneAddRequest = { kind: MeshKind | LightKind }
 
@@ -215,7 +213,7 @@ export type StudioBridge = {
   }
   menu: {
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
-    onCommand: (callback: (command: MenuCommand) => void) => Unsubscribe
+    onCommand: (callback: (command: CommandId) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
   }
   diagnostics: {

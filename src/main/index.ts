@@ -74,7 +74,7 @@ function startUp(splash: Splash): void {
   // application menu nor the About panel is reachable before a window exists.
   const language = services.language()
   registerAboutPanel(language)
-  buildMenu(language)
+  buildMenu(language, services.settings.read().shortcuts.overrides)
 }
 
 void app.whenReady().then(() => {

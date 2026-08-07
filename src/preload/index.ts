@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { CommandId } from '@shared/domain/command'
 import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
@@ -9,7 +10,6 @@ import {
   CHANNELS,
   EVENTS,
   type LogEntry,
-  type MenuCommand,
   type SceneAddRequest,
   type StudioBridge,
   type ToolRequest,
@@ -73,7 +73,7 @@ const bridge: StudioBridge = {
   },
   menu: {
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
-    onCommand: callback => subscribe<MenuCommand>(EVENTS.menuCommand, callback),
+    onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
   },
   diagnostics: {

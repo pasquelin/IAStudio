@@ -113,7 +113,10 @@ export function createServices(): Services {
       applyTheme(current.appearance.theme)
       // The native menu is built once and never re-reads anything: without this the window
       // changes language and the menu bar above it does not.
-      buildMenu(effectiveLanguage(current.general.language, app.getLocale()))
+      buildMenu(
+        effectiveLanguage(current.general.language, app.getLocale()),
+        current.shortcuts.overrides,
+      )
       broadcast(EVENTS.settingsChanged, current)
     },
   })
