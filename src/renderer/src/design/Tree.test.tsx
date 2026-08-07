@@ -116,4 +116,26 @@ describe('Tree', () => {
     const reachable = screen.getAllByRole('treeitem').filter(row => row.tabIndex === 0)
     expect(reachable).toHaveLength(1)
   })
+
+  // A scene of a few hundred nodes is a few thousand elements, reconciled on every click.
+  it('renders a window over the rows rather than all of them', () => {
+    const many = Array.from({ length: 2000 }, (_, index) => ({
+      id: `node_${index}`,
+      parentId: null,
+    }))
+    render(
+      <Tree
+        nodes={many}
+        selectedId={null}
+        expandedIds={new Set()}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const rendered = screen.getAllByRole('treeitem')
+    expect(rendered.length).toBeGreaterThan(0)
+    expect(rendered.length).toBeLessThan(200)
+  })
 })

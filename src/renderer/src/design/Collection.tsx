@@ -143,6 +143,36 @@ export function Collection<T extends { id: string }>({
     if (shown.length) onVisible(shown)
   }, [onVisible, items, firstVisible, lastRow, columns])
 
+  /**
+   * One tab stop for the whole collection, then the arrows — the roving pattern `Tree` uses.
+   * A cell per tab makes a catalogue of five hundred models five hundred presses deep.
+   */
+  const selectedIndex = selectedId ? items.findIndex(item => item.id === selectedId) : -1
+  const tabStop = Math.max(0, selectedIndex)
+
+  const focusCell = (index: number): void => {
+    const bounded = Math.max(0, Math.min(index, items.length - 1))
+    virtualizer.scrollToIndex(Math.floor(bounded / columns))
+
+    const focus = (): void => {
+      scroller.current?.querySelector<HTMLElement>(`[data-cell="${bounded}"]`)?.focus()
+    }
+    // Twice: the cell is already mounted in the common case, and only a scroll that revealed a
+    // new row needs the frame the virtualizer takes to render it.
+    focus()
+    requestAnimationFrame(focus)
+  }
+
+  const onCellKeyDown = (index: number, event: KeyboardEvent): void => {
+    if (event.key === 'ArrowRight') focusCell(index + 1)
+    else if (event.key === 'ArrowLeft') focusCell(index - 1)
+    else if (event.key === 'ArrowDown') focusCell(index + columns)
+    else if (event.key === 'ArrowUp') focusCell(index - columns)
+    else return
+
+    event.preventDefault()
+  }
+
   return (
     <div ref={scroller} className="h-full overflow-auto p-2">
       {items.length === 0 ? (
@@ -167,17 +197,23 @@ export function Collection<T extends { id: string }>({
                   grid ? 'grid items-start' : 'flex',
                 )}
               >
-                {slice.map(item => (
-                  <CollectionCell
-                    key={item.id}
-                    selected={item.id === selectedId}
-                    // A list row spans the collection; a card is sized by its grid column.
-                    className={grid ? undefined : 'h-full w-full'}
-                    onSelect={onSelect ? () => onSelect(item) : undefined}
-                  >
-                    {card ? card(item) : renderRow(item)}
-                  </CollectionCell>
-                ))}
+                {slice.map((item, column) => {
+                  const index = row.index * columns + column
+                  return (
+                    <CollectionCell
+                      key={item.id}
+                      index={index}
+                      selected={item.id === selectedId}
+                      tabbable={index === tabStop}
+                      // A list row spans the collection; a card is sized by its grid column.
+                      className={grid ? undefined : 'h-full w-full'}
+                      onSelect={onSelect ? () => onSelect(item) : undefined}
+                      onArrow={event => onCellKeyDown(index, event)}
+                    >
+                      {card ? card(item) : renderRow(item)}
+                    </CollectionCell>
+                  )
+                })}
               </div>
             )
           })}
@@ -189,8 +225,13 @@ export function Collection<T extends { id: string }>({
 }
 
 type CollectionCellProps = {
+  /** Position in `items`, so the arrows can name the cell they want focused. */
+  index: number
   selected: boolean
+  /** The collection's single tab stop. Every other cell is reached with the arrows. */
+  tabbable: boolean
   onSelect?: () => void
+  onArrow: (event: KeyboardEvent) => void
   className?: string
   children: ReactNode
 }
@@ -199,7 +240,15 @@ type CollectionCellProps = {
  * Selection and keyboard reach belong to the collection, not to the cards: a caller that had
  * to wire them itself would wire them differently in each panel.
  */
-function CollectionCell({ selected, onSelect, className, children }: CollectionCellProps) {
+function CollectionCell({
+  index,
+  selected,
+  tabbable,
+  onSelect,
+  onArrow,
+  className,
+  children,
+}: CollectionCellProps) {
   /**
    * Hover and selection are painted here rather than by the rendered item: a background set
    * inside the cell would sit on top of this one and swallow it on hover.
@@ -215,14 +264,17 @@ function CollectionCell({ selected, onSelect, className, children }: CollectionC
   return (
     <div
       role="option"
-      tabIndex={0}
+      data-cell={index}
+      tabIndex={tabbable ? 0 : -1}
       aria-selected={selected}
       onClick={onSelect}
       onKeyDown={event => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault()
           onSelect()
+          return
         }
+        onArrow(event.nativeEvent)
       }}
       // The ring marks keyboard focus alone: it and selection are different states.
       className={cn(

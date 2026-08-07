@@ -1,4 +1,5 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { UiIcon } from './UiIcon'
@@ -47,6 +48,9 @@ export type TreeProps<T extends TreeNode> = {
 
 const INDENT = 12
 
+/** Matches `--sc-control` at comfort density; the virtualizer only needs an estimate. */
+const ROW_HEIGHT = 28
+
 /**
  * A tree that does not know what it shows. It owns the geometry — indent, chevron, selection,
  * keyboard — and nothing else, so the scene outliner and a file browser can share it.
@@ -59,14 +63,29 @@ export function Tree<T extends TreeNode>({
   onToggle,
   renderRow,
 }: TreeProps<T>) {
-  const list = useRef<HTMLUListElement>(null)
+  const scroller = useRef<HTMLDivElement>(null)
   const rows = useMemo(() => flattenTree(nodes, expandedIds), [nodes, expandedIds])
 
-  // Each row is one `<li>` wrapping one treeitem, so the index is enough — a `querySelectorAll`
-  // per arrow press would rescan the subtree at key-autorepeat rate.
+  // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,
+  // and every one of them would be reconciled on each selection click.
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scroller.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 8,
+  })
+
   const focusRow = (index: number): void => {
-    const item = list.current?.children[index]?.firstElementChild
-    if (item instanceof HTMLElement) item.focus()
+    const bounded = Math.max(0, Math.min(index, rows.length - 1))
+    virtualizer.scrollToIndex(bounded)
+
+    const focus = (): void => {
+      scroller.current?.querySelector<HTMLElement>(`[data-row="${bounded}"]`)?.focus()
+    }
+    // Twice: the row is already mounted in the common case, and only a scroll that revealed a
+    // new one needs the frame the virtualizer takes to render it.
+    focus()
+    requestAnimationFrame(focus)
   }
 
   // Roving tab stop: one entry into the tree, then the arrows. Every row reachable by tab
@@ -88,46 +107,62 @@ export function Tree<T extends TreeNode>({
   }
 
   return (
-    <ul ref={list} role="tree" className="p-1">
-      {rows.map((row, index) => (
-        <li key={row.node.id}>
-          <div
-            role="treeitem"
-            tabIndex={index === tabStop ? 0 : -1}
-            aria-selected={row.node.id === selectedId}
-            aria-expanded={row.hasChildren ? row.expanded : undefined}
-            style={{ paddingLeft: row.depth * INDENT }}
-            className={cn(
-              'group flex items-center gap-1 rounded-(--radius-sc-md) px-1',
-              'h-(--sc-control) cursor-pointer outline-none',
-              row.node.id === selectedId ? 'bg-accent-soft' : 'hover:bg-elevated',
-              'focus-visible:ring-accent focus-visible:ring-1',
-            )}
-            onPointerDown={() => onSelect(row.node.id)}
-            onKeyDown={event => onRowKeyDown(row, index, event.nativeEvent)}
-          >
-            {/* The chevron keeps its column even on a leaf: rows whose content shifts by a
+    <div ref={scroller} className="h-full overflow-auto p-1">
+      <ul role="tree" style={{ height: virtualizer.getTotalSize() }} className="relative">
+        {virtualizer.getVirtualItems().map(virtual => {
+          const row = rows[virtual.index]
+          if (!row) return null
+          const index = virtual.index
+
+          return (
+            <li
+              key={row.node.id}
+              style={{
+                transform: `translateY(${virtual.start}px)`,
+                height: virtual.size,
+              }}
+              className="absolute inset-x-0 top-0"
+            >
+              <div
+                role="treeitem"
+                data-row={index}
+                tabIndex={index === tabStop ? 0 : -1}
+                aria-selected={row.node.id === selectedId}
+                aria-expanded={row.hasChildren ? row.expanded : undefined}
+                style={{ paddingLeft: row.depth * INDENT }}
+                className={cn(
+                  'group flex items-center gap-1 rounded-(--radius-sc-md) px-1',
+                  'h-(--sc-control) cursor-pointer outline-none',
+                  row.node.id === selectedId ? 'bg-accent-soft' : 'hover:bg-elevated',
+                  'focus-visible:ring-accent focus-visible:ring-1',
+                )}
+                onPointerDown={() => onSelect(row.node.id)}
+                onKeyDown={event => onRowKeyDown(row, index, event.nativeEvent)}
+              >
+                {/* The chevron keeps its column even on a leaf: rows whose content shifts by a
                 glyph are unreadable as a list. It is not a control — the row already carries
                 `aria-expanded`, and the arrows already toggle it. */}
-            <span
-              aria-hidden="true"
-              className="flex w-3.5 shrink-0 justify-center"
-              onPointerDown={event => {
-                if (!row.hasChildren) return
-                // The row selects on pointer down, which fires before click: stopping the
-                // click alone would still have let the chevron steal the selection.
-                event.stopPropagation()
-                onToggle(row.node.id)
-              }}
-            >
-              {row.hasChildren && (
-                <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
-              )}
-            </span>
-            {renderRow(row)}
-          </div>
-        </li>
-      ))}
-    </ul>
+                <span
+                  aria-hidden="true"
+                  className="flex w-3.5 shrink-0 justify-center"
+                  onPointerDown={event => {
+                    if (!row.hasChildren) return
+                    // The row selects on pointer down, which fires before click: stopping the
+                    // click alone would still have let the chevron steal the selection.
+                    event.stopPropagation()
+                    onToggle(row.node.id)
+                  }}
+                >
+                  {row.hasChildren && (
+                    <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
+                  )}
+                </span>
+                {renderRow(row)}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }

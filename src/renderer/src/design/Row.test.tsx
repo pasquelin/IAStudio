@@ -1,6 +1,7 @@
 import { mdiCube } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { Row } from './Row'
 
 describe('Row', () => {
@@ -11,10 +12,19 @@ describe('Row', () => {
     expect(screen.getByText('Mesh')).toBeInTheDocument()
   })
 
-  it('titles the row with its own name, since it truncates', () => {
+  // The studio tooltip, not the native `title`: the rest of the app is instant and themed.
+  it('tips the row with its own name, since it truncates', () => {
     render(<Row icon={mdiCube} title="A rather long name" />)
 
-    expect(screen.getByTitle('A rather long name')).toBeInTheDocument()
+    const name = screen.getByText('A rather long name')
+    expect(name).toHaveAttribute('data-tooltip-content', 'A rather long name')
+    expect(name).toHaveAttribute('data-tooltip-place', 'right')
+  })
+
+  it('follows the placement its list asks for', () => {
+    render(<Row icon={mdiCube} title="Cube" tip={TIP_BOTTOM} />)
+
+    expect(screen.getByText('Cube')).toHaveAttribute('data-tooltip-place', 'bottom')
   })
 
   it('strikes through what is muted', () => {

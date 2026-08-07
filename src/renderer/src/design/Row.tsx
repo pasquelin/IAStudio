@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { TIP_RIGHT, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
 export type RowProps = {
@@ -14,6 +15,8 @@ export type RowProps = {
   actions?: ReactNode
   /** Struck through and dimmed: a hidden layer, an invisible mesh. */
   muted?: boolean
+  /** Placement of the name's tooltip. Rows live in side panels, so it goes right by default. */
+  tip?: TooltipFactory
 }
 
 /**
@@ -23,16 +26,26 @@ export type RowProps = {
  * It paints no background: selection and hover belong to whatever list holds it — `Collection`
  * does it in its cell, and a background set here would sit on top and swallow it.
  */
-export function Row({ media, icon, title, subtitle, leading, actions, muted }: RowProps) {
+export function Row({
+  media,
+  icon,
+  title,
+  subtitle,
+  leading,
+  actions,
+  muted,
+  tip = TIP_RIGHT,
+}: RowProps) {
   return (
     <div className="flex h-full items-center gap-2 px-1">
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
       <div className="min-w-0 flex-1 leading-tight">
-        {/* Titled with its own name: the row truncates, and a truncated name is exactly the
-            case where hovering is the only way to read it. */}
+        {/* Tipped with its own name: the row truncates, and a truncated name is exactly the
+            case where hovering is the only way to read it. The studio tooltip and not `title`,
+            which comes with the OS delay and none of the theme. */}
         <p
-          title={title}
+          {...tip(title)}
           className={`truncate text-[12px] ${muted ? 'text-muted line-through' : 'text-text'}`}
         >
           {title}
