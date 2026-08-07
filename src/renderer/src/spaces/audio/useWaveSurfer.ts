@@ -2,9 +2,8 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js'
 import { playbackToken } from '@/engines/timeline/playback'
-import type { AudioData } from '@/engines/audio/audio-data'
 import { durationOf } from '@/engines/audio/audio-data'
-import { encodeWav } from '@/engines/audio/wav'
+import type { RenderedAudio } from '@/engines/audio/audio-render'
 import type { Region } from '@/engines/audio/edits'
 import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 
@@ -16,8 +15,8 @@ export type WaveSurferHandle = {
 
 export type UseWaveSurferOptions = {
   container: RefObject<HTMLDivElement | null>
-  /** The take to draw and play. Null while the asset is still being decoded. */
-  data: AudioData | null
+  /** The take to draw and play, already encoded. Null while it is still being rendered. */
+  rendered: RenderedAudio | null
   /** Identifies this player to the single playback token — the document id does. */
   owner: string
   onRegionChange: (region: Region | null) => void
@@ -40,7 +39,7 @@ const BAR_RADIUS = 2
  */
 export function useWaveSurfer({
   container,
-  data,
+  rendered,
   owner,
   onRegionChange,
 }: UseWaveSurferOptions): WaveSurferHandle {
@@ -106,17 +105,20 @@ export function useWaveSurfer({
    * so the drawing still costs no second decode.
    *
    * It has to be a blob rather than the asset's own URL, because what is heard is the edit
-   * chain and not the file on disk.
+   * chain and not the file on disk. The WAV arrives already encoded, from the worker that
+   * replayed the chain: encoding it here would put 206 ms back on the window's thread.
    */
   useEffect(() => {
     const instance = surfer.current
-    if (!instance || !data) return
+    if (!instance || !rendered) return
 
-    const blob = new Blob([encodeWav(data)], { type: 'audio/wav' })
-    instance.loadBlob(blob, data.channels, durationOf(data) / SECOND).catch(() => {
-      // Rejects when the take is swapped mid-load, which is not a failure worth reporting.
-    })
-  }, [data])
+    const blob = new Blob([rendered.wav], { type: 'audio/wav' })
+    instance
+      .loadBlob(blob, rendered.data.channels, durationOf(rendered.data) / SECOND)
+      .catch(() => {
+        // Rejects when the take is swapped mid-load, which is not a failure worth reporting.
+      })
+  }, [rendered])
 
   return {
     playing,

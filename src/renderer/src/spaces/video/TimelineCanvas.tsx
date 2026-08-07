@@ -11,7 +11,6 @@ import { posterUrl } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/shortcut'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
-import { programOwner, transports } from '@/engines/timeline/playback'
 import { clipForAsset } from '@/engines/timeline/insert'
 import { paintTimeline } from '@/engines/timeline/painter'
 import { hitTest, xToTime, type Point, type Viewport } from '@/engines/timeline/timeline-geometry'
@@ -193,8 +192,8 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       const middle = size.current.width / 2
 
       switch (command) {
-        case 'sequence.playPause':
-          return transports.toggle(programOwner(documentId))
+        // `sequence.playPause` is deliberately absent: the programme monitor listens on the
+        // same scope and drives the same transport, and both handling it played then paused.
         case 'sequence.split': {
           const target = clipUnderPlayhead(state)
           if (target) store.runCommand(documentId, splitClip(target.id, state.playhead))

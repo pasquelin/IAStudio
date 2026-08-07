@@ -44,7 +44,9 @@ async function openTake(): Promise<void> {
     histories: {},
   })
   render(<AudioDocument documentId="doc-1" />)
-  await waitFor(() => expect(screen.getByRole('button', { name: /Normaliser/ })).toBeEnabled())
+  // The chain is replayed off this thread now, so the take is not there on the first render:
+  // a tool clicked while it still says "loading" would act on nothing.
+  await waitFor(() => expect(screen.queryByText(/Chargement/)).not.toBeInTheDocument())
 }
 
 describe('AudioDocument', () => {
