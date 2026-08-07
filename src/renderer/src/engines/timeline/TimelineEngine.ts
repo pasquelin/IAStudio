@@ -182,7 +182,15 @@ export class TimelineEngine {
 
   async mount(element: HTMLElement): Promise<void> {
     const application = await mountApplication(
-      { resizeTo: element, preference: 'webgl', backgroundAlpha: 0 },
+      {
+        resizeTo: element,
+        preference: 'webgl',
+        backgroundAlpha: 0,
+        // A paused sequence holds one still frame, and every change ends in `draw`. Left on,
+        // Pixi would redraw that frame sixty times a second — including for a tab Dockview
+        // keeps mounted behind another.
+        autoStart: false,
+      },
       () => this.disposed || !element.isConnected,
     )
     if (!application) return
@@ -190,10 +198,11 @@ export class TimelineEngine {
     element.appendChild(application.canvas)
     application.stage.addChild(this.frame)
     // The panel resizes without the window doing so, and a frame laid out once would drift.
-    application.renderer.on('resize', this.layout)
+    application.renderer.on('resize', this.resized)
 
     this.application = application
     this.layout()
+    this.draw()
   }
 
   apply(state: SequenceState): void {
@@ -237,6 +246,8 @@ export class TimelineEngine {
       }).push(frame)
       this.fit(sprite)
     }
+
+    this.draw()
   }
 
   openDecoders(): number {
@@ -248,10 +259,25 @@ export class TimelineEngine {
     this.pause()
     this.generation += 1
     this.pool.dispose()
-    this.application?.renderer.off('resize', this.layout)
+    this.application?.renderer.off('resize', this.resized)
     this.application?.destroy(true, { children: true, texture: true })
     this.application = null
     this.sprites.clear()
+  }
+
+  /** Pixi's own ticker is off — see `mount`. Every visible change ends here. */
+  private draw(): void {
+    this.application?.render()
+  }
+
+  /**
+   * Bound like `layout`, and for the same reason. Drawn unconditionally: Pixi resizes the
+   * canvas itself, and a resized buffer is blank until something draws into it — even when the
+   * frame it holds is laid out exactly as before.
+   */
+  private readonly resized = (): void => {
+    this.layout()
+    this.draw()
   }
 
   /** The sequence canvas, in its own pixels — what every layer is composited against. */
