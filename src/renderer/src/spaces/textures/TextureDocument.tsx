@@ -1,5 +1,5 @@
 import { mdiRotate3dVariant, mdiTextureBox, mdiWeatherSunny } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
 import { assetUrl, isLocalPicture } from '@shared/domain/asset'
@@ -7,15 +7,10 @@ import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { setChannel, setPreview } from '@/engines/texture/commands'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
-import {
-  newTexture,
-  parseTexture,
-  PREVIEW_SHAPES,
-  type PreviewShape,
-} from '@/engines/texture/texture-state'
+import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
+import { restoreDocument } from '@/app/document-io'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
-import { useDocumentFile } from '@/hooks/useDocumentFile'
 import { assetsById, useAssets } from '@/stores/assets'
 import { textureOf, useTextures } from '@/stores/textures'
 
@@ -40,20 +35,11 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const texture = useTextures(state => textureOf(state, documentId))
   const byId = useAssets(assetsById)
 
+  // Fills the tab from the project when a file is there, from the default otherwise — and it is
+  // what saving reads back, so the two never disagree about what this document holds.
   useEffect(() => {
-    useTextures.getState().ensure(documentId, newTexture)
+    void restoreDocument(documentId)
   }, [documentId])
-
-  useDocumentFile({
-    documentId,
-    kind: 'texture',
-    state: texture,
-    load: useCallback(
-      (content: string) => useTextures.getState().replace(documentId, parseTexture(content)),
-      [documentId],
-    ),
-    serialize: useCallback((state: typeof texture) => JSON.stringify(state), []),
-  })
 
   useEffect(() => {
     const element = host.current

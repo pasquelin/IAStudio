@@ -6,4 +6,7 @@ const store = createDocumentStore<TextureState>(newTexture())
 
 export const useTextures = store.use
 export const textureOf = store.stateOf
+export const hasTexture = store.hasState
 export const historyOf = store.historyOf
+export const markOf = store.markOf
+export const isDirty = store.isDirty
