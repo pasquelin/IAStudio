@@ -461,31 +461,3 @@ export function boundsOf(path: SettingPath): Bounds {
     max: descriptor?.max ?? Number.POSITIVE_INFINITY,
   }
 }
-
-/**
- * Accents dropped and case folded, so "thème" is found by typing `theme` — a search box that
- * demands a circumflex is a search box nobody uses.
- */
-function fold(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-}
-
-/**
- * Settings matching what was typed, searched over what is on screen — title and description —
- * rather than over paths, which the user never sees. `translate` is injected because `shared/`
- * carries no i18n runtime.
- */
-export function matchSettings(
-  query: string,
-  translate: (key: string) => string,
-): readonly SettingDescriptor[] {
-  const needle = fold(query.trim())
-  if (needle === '') return []
-
-  return SETTING_REGISTRY.filter(descriptor =>
-    fold(`${translate(descriptor.titleKey)} ${translate(descriptor.helpKey)}`).includes(needle),
-  )
-}

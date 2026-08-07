@@ -2,13 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_SETTINGS_SECTION, sectionFromRoute } from '@shared/domain/settings'
 import type { SettingPath } from '@shared/domain/settings-path'
-import {
-  descriptorsIn,
-  matchSettings,
-  sectionEntry,
-  SETTING_REGISTRY,
-  type SettingDescriptor,
-} from '@shared/domain/settings-registry'
+import { descriptorsIn, sectionEntry, SETTING_REGISTRY } from '@shared/domain/settings-registry'
+import { matchSettings, sectionsOf, type SearchHit } from '@shared/domain/settings-search'
+import { bindingOf } from '@shared/domain/command'
+import { shortcutLabel } from '@shared/domain/shortcut'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
@@ -85,27 +82,84 @@ function NavigationEntry({
   )
 }
 
-function SearchResults({ found }: { found: readonly SettingDescriptor[] }) {
+/**
+ * What was found, grouped by the screen it lives on and labelled so a hit can be acted upon
+ * without first working out what kind of thing it is.
+ *
+ * A command is not editable here: it is shown with its key, and the section it belongs to says
+ * where to go. Rendering a capture button in a result list would give two places to remap from.
+ */
+function SearchResults({
+  found,
+  onGo,
+}: {
+  found: readonly SearchHit[]
+  onGo: (id: string) => void
+}) {
   const { t } = useTranslation()
 
   if (found.length === 0) {
     return <p className="text-base-content/60 text-xs">{t('settings.noResult')}</p>
   }
 
-  const sections = [...new Set(found.map(descriptor => descriptor.section))]
-
   return (
     <div className="flex flex-col gap-4">
-      {sections.map(section => (
+      {sectionsOf(found).map(section => (
         <section key={section}>
-          <h3 className="text-base-content/60 mb-1 text-[11px] tracking-wide uppercase">
+          <button
+            type="button"
+            onClick={() => onGo(section)}
+            className="text-base-content/60 hover:text-base-content mb-1 text-[11px] tracking-wide uppercase"
+          >
             {t(sectionEntry(section)?.labelKey ?? '')}
-          </h3>
-          <SettingList descriptors={found.filter(entry => entry.section === section)} />
+          </button>
+
+          <SettingList
+            descriptors={found.flatMap(hit =>
+              hit.section === section && hit.kind === 'setting' ? [hit.descriptor] : [],
+            )}
+          />
+
+          {found
+            .filter(hit => hit.section === section && hit.kind !== 'setting')
+            .map(hit => (
+              <ResultRow key={labelOf(hit)} hit={hit} onGo={() => onGo(section)} />
+            ))}
         </section>
       ))}
     </div>
   )
+}
+
+/** A hit that is not a setting: a button, or a command with the key it answers to. */
+function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
+  const { t } = useTranslation()
+  const overrides = useSettings(state => state.settings.shortcuts.overrides)
+
+  if (hit.kind === 'setting') return null
+
+  const entry = hit.kind === 'action' ? hit.action : hit.command
+  const key = hit.kind === 'command' ? shortcutLabel(bindingOf(hit.command.id, overrides)) : ''
+
+  return (
+    <button
+      type="button"
+      onClick={onGo}
+      className="border-base-300 hover:bg-base-300 flex w-full flex-col gap-1 border-b py-3 text-left last:border-b-0"
+    >
+      <span className="flex items-center justify-between gap-4">
+        <span className="text-xs font-medium">{t(entry.titleKey)}</span>
+        {key && <span className="shrink-0 font-mono text-xs">{key}</span>}
+      </span>
+      <span className="text-base-content/60 max-w-lg text-xs">{t(entry.helpKey)}</span>
+    </button>
+  )
+}
+
+/** Stable identity for a hit, whichever registry it came from. */
+function labelOf(hit: SearchHit): string {
+  if (hit.kind === 'setting') return hit.descriptor.path
+  return hit.kind === 'action' ? hit.action.id : hit.command.id
 }
 
 /**
@@ -197,7 +251,13 @@ export function SettingsWindow() {
           {searching ? (
             <>
               <h2 className="mb-4 text-base font-semibold">{t('settings.results')}</h2>
-              <SearchResults found={found} />
+              <SearchResults
+                found={found}
+                onGo={id => {
+                  setQuery('')
+                  setSelected(id)
+                }}
+              />
             </>
           ) : (
             section && (

@@ -7,7 +7,6 @@ import {
   childSections,
   descriptorAt,
   descriptorsIn,
-  matchSettings,
   optionsOf,
   PATH_KINDS,
   rootSections,
@@ -198,42 +197,5 @@ describe('settings registry', () => {
 
   it('leaves bounds open for a setting that declares none', () => {
     expect(boundsOf('media.ffmpegPath').max).toBe(Number.POSITIVE_INFINITY)
-  })
-})
-
-describe('settings search', () => {
-  const translate = (key: string): string => String(resolve(TRANSLATIONS.fr, key) ?? key)
-
-  it('finds a setting by its title', () => {
-    expect(matchSettings('thème', translate).map(entry => entry.path)).toContain('appearance.theme')
-  })
-
-  // The text size explains that density is what handles control sizes, so it legitimately
-  // answers to the word. A search that only ever matched titles would hide exactly that.
-  it('finds a setting the words of which merely mention what was typed', () => {
-    // The text size explains that density is what handles control sizes, so it answers to the
-    // word without carrying it in its title. A search over titles alone would hide that.
-    expect(matchSettings('densité', translate).map(entry => entry.path)).toContain(
-      'appearance.fontScale',
-    )
-  })
-
-  // A search box demanding a circumflex is a search box nobody uses.
-  it('ignores accents and case', () => {
-    expect(matchSettings('THEME', translate).map(entry => entry.path)).toContain('appearance.theme')
-  })
-
-  it('searches the description too, where the words a user knows actually are', () => {
-    expect(matchSettings('réseau', translate).map(entry => entry.path)).toEqual([
-      'generation.maxRetries',
-    ])
-  })
-
-  it('answers nothing to an empty query rather than everything', () => {
-    expect(matchSettings('   ', translate)).toEqual([])
-  })
-
-  it('answers nothing when no setting matches', () => {
-    expect(matchSettings('kerning', translate)).toEqual([])
   })
 })

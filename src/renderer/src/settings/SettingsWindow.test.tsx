@@ -165,13 +165,28 @@ describe('SettingsWindow', () => {
     expect(screen.queryByLabelText(/Clé API/)).not.toBeInTheDocument()
   })
 
-  it('says which section a result came from', async () => {
+  it('says which section a result came from, and goes there when asked', async () => {
     installFakeBridge()
     render(<SettingsWindow />)
 
     await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'ffmpeg')
+    // The section name is the way there: knowing where a setting lives is half the answer.
+    // Taken from the results, not the navigation, which lists the same name.
+    await userEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Médias' }))
 
     expect(screen.getByRole('heading', { name: 'Médias' })).toBeInTheDocument()
+  })
+
+  // The window is three registries, and a search finding only the sliders sends people hunting
+  // through tabs for the button or the shortcut they came for.
+  it('finds a button and a shortcut, not only a setting', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'réinitialiser')
+
+    expect(screen.getByText('Tout réinitialiser')).toBeInTheDocument()
+    expect(screen.getByText('Réinitialiser la disposition')).toBeInTheDocument()
   })
 
   it('says so when nothing matches, rather than showing an empty page', async () => {
