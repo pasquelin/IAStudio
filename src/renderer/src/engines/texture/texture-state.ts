@@ -147,7 +147,13 @@ Object.freeze(DEFAULT_TEXTURE_MATERIAL)
 /** The shapes a texture is judged on. A plane reads tiling, a sphere reads lighting. */
 export type PreviewShape = 'sphere' | 'box' | 'cylinder' | 'plane' | 'torusKnot'
 
-const PREVIEW_SHAPES: readonly PreviewShape[] = ['sphere', 'box', 'cylinder', 'plane', 'torusKnot']
+export const PREVIEW_SHAPES: readonly PreviewShape[] = [
+  'sphere',
+  'box',
+  'cylinder',
+  'plane',
+  'torusKnot',
+]
 
 function isPreviewShape(value: unknown): value is PreviewShape {
   return PREVIEW_SHAPES.some(candidate => candidate === value)

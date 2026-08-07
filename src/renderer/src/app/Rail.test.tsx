@@ -37,12 +37,6 @@ describe('Rail', () => {
     expect(openDocument).toHaveBeenCalledWith(documents[0])
   })
 
-  it('disables the button in a workspace without an editor', () => {
-    useLayouts.setState({ activeWorkspace: 'textures' })
-    render(<Rail side="left" />)
-    expect(screen.getByRole('button', { name: 'Nouveau document' })).toBeDisabled()
-  })
-
   // A document is a file in a project folder: with none open there is nowhere to write it, and
   // the click would fail after the fact rather than never being offered.
   it('disables the button while no project is open', () => {

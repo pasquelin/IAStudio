@@ -31,8 +31,14 @@ describe('kindForWorkspace', () => {
     expect(kindForWorkspace('skyboxes')).toBe('skybox')
   })
 
-  it('has no editable document for the workspaces without an editor yet', () => {
-    expect(kindForWorkspace('textures')).toBeNull()
+  it('gives the textures workspace a material to edit', () => {
+    expect(kindForWorkspace('textures')).toBe('texture')
+  })
+
+  // Every workspace opens a document of its own now. The `null` branch stays for the next one
+  // to arrive: a workspace whose editor does not exist yet disables the new-document button.
+  it('answers with a kind for every workspace the studio shows', () => {
+    for (const id of WORKSPACE_IDS) expect(kindForWorkspace(id)).not.toBeNull()
   })
 
   it('answers for every known workspace', () => {
@@ -73,7 +79,7 @@ describe('kindForExtension', () => {
     expect(kindForExtension('.txt')).toBeNull()
     expect(kindForExtension('.tmp')).toBeNull()
     expect(kindForExtension('')).toBeNull()
-    expect(kindForExtension('.tex')).toBeNull()
+    expect(kindForExtension('.obj')).toBeNull()
   })
 
   // `documentPath` writes in lower case: accepted here, a `.SCENE` would be listed under a name
@@ -90,7 +96,7 @@ describe('isDocumentKind', () => {
   })
 
   it('rejects what a hand-edited file could hold', () => {
-    expect(isDocumentKind('texture')).toBe(false)
+    expect(isDocumentKind('material')).toBe(false)
     expect(isDocumentKind('')).toBe(false)
     expect(isDocumentKind(null)).toBe(false)
     expect(isDocumentKind(undefined)).toBe(false)

@@ -142,9 +142,9 @@ describe('documents store', () => {
     expect(created?.workspace).toBe('3d')
   })
 
-  it('creates nothing in a workspace without an editor', async () => {
-    expect(await useDocuments.getState().create('textures')).toBeNull()
-    expect(Object.keys(useDocuments.getState().documents)).toHaveLength(0)
+  it('creates a texture document in the textures workspace', async () => {
+    const created = await useDocuments.getState().create('textures')
+    expect(created?.kind).toBe('texture')
   })
 
   it('numbers untitled documents per workspace', async () => {

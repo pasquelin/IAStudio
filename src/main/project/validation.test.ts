@@ -40,7 +40,7 @@ describe('parseDocumentKind', () => {
   })
 
   it('refuses a kind no editor answers for', () => {
-    expect(() => parseDocumentKind('texture')).toThrow()
+    expect(() => parseDocumentKind('material')).toThrow()
     expect(() => parseDocumentKind(null)).toThrow()
   })
 })

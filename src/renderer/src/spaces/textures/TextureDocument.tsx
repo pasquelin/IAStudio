@@ -1,0 +1,185 @@
+import { mdiRotate3dVariant, mdiTextureBox, mdiWeatherSunny } from '@mdi/js'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { TextureLoader, type Texture } from 'three'
+import { assetUrl, isLocalPicture } from '@shared/domain/asset'
+import { EmptyState } from '@/design/EmptyState'
+import { ToolButton } from '@/design/ToolButton'
+import { setChannel, setPreview } from '@/engines/texture/commands'
+import { TextureRenderer } from '@/engines/texture/TextureRenderer'
+import {
+  newTexture,
+  parseTexture,
+  PREVIEW_SHAPES,
+  type PreviewShape,
+} from '@/engines/texture/texture-state'
+import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { cn } from '@/helpers/cn'
+import { useDocumentFile } from '@/hooks/useDocumentFile'
+import { assetsById, useAssets } from '@/stores/assets'
+import { textureOf, useTextures } from '@/stores/textures'
+
+/** i18n key of a shape — never the label itself, as the scene registry does for its primitives. */
+const SHAPE_LABELS: Record<PreviewShape, string> = {
+  sphere: 'texture.shapeSphere',
+  box: 'texture.shapeBox',
+  cylinder: 'texture.shapeCylinder',
+  plane: 'texture.shapePlane',
+  torusKnot: 'texture.shapeKnot',
+}
+
+/** jsdom decodes no image; the engine takes its loader as a port for exactly that reason. */
+const loadTexture = (url: string): Promise<Texture> => new TextureLoader().loadAsync(url)
+
+export function TextureDocument({ documentId }: { documentId: string }) {
+  const { t } = useTranslation()
+  const host = useRef<HTMLDivElement>(null)
+  const engine = useRef<TextureRenderer | null>(null)
+  const [over, setOver] = useState(false)
+
+  const texture = useTextures(state => textureOf(state, documentId))
+  const byId = useAssets(assetsById)
+
+  useEffect(() => {
+    useTextures.getState().ensure(documentId, newTexture)
+  }, [documentId])
+
+  useDocumentFile({
+    documentId,
+    kind: 'texture',
+    state: texture,
+    load: useCallback(
+      (content: string) => useTextures.getState().replace(documentId, parseTexture(content)),
+      [documentId],
+    ),
+    serialize: useCallback((state: typeof texture) => JSON.stringify(state), []),
+  })
+
+  useEffect(() => {
+    const element = host.current
+    if (!element) return
+
+    const renderer = new TextureRenderer({ loadTexture })
+    renderer.mount(element)
+    engine.current = renderer
+
+    return () => {
+      renderer.dispose()
+      engine.current = null
+    }
+  }, [documentId])
+
+  // The engine holds no truth: every change is pushed back into it.
+  useEffect(() => {
+    engine.current?.apply(texture)
+  }, [texture])
+
+  const run = useTextures(state => state.runCommand)
+  const preview = texture.preview
+
+  /**
+   * A picture dropped on the viewport becomes the base colour. It is the one channel a texture
+   * cannot be judged without, and the strip of the other seven is what the next step brings.
+   */
+  const onDrop = useMemo(
+    () => (event: React.DragEvent) => {
+      event.preventDefault()
+      setOver(false)
+
+      const assetId = assetIdFromDrag(event)
+      const asset = assetId ? byId.get(assetId) : null
+      if (!asset || !isLocalPicture(asset)) return
+
+      run(
+        documentId,
+        setChannel('baseColor', {
+          assetId: asset.id,
+          origin: 'imported',
+          width: asset.width ?? 0,
+          height: asset.height ?? 0,
+        }),
+      )
+    },
+    [byId, documentId, run],
+  )
+
+  const base = texture.channels.baseColor
+
+  return (
+    <div
+      className="relative size-full"
+      onDragOver={event => {
+        event.preventDefault()
+        setOver(true)
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={onDrop}
+    >
+      {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
+      <div ref={host} className="absolute inset-0" />
+
+      {!base && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <EmptyState icon={mdiTextureBox} message={t('texture.dropSource')} />
+        </div>
+      )}
+
+      {over && <div className="border-accent pointer-events-none absolute inset-0 border-2" />}
+
+      <div className="bg-panel/80 absolute top-2 left-2 flex items-center gap-1 rounded-(--radius-sc-md) p-1">
+        {PREVIEW_SHAPES.map(shape => (
+          <button
+            key={shape}
+            type="button"
+            onClick={() => run(documentId, setPreview('shape', shape))}
+            aria-pressed={preview.shape === shape}
+            className={cn(
+              'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
+              preview.shape === shape ? 'bg-elevated text-text' : 'text-muted bg-transparent',
+            )}
+          >
+            {t(SHAPE_LABELS[shape])}
+          </button>
+        ))}
+
+        <ToolButton
+          icon={mdiWeatherSunny}
+          label={t('texture.showBackground')}
+          active={preview.showBackground}
+          onClick={() => run(documentId, setPreview('showBackground', !preview.showBackground))}
+        />
+        <ToolButton
+          icon={mdiRotate3dVariant}
+          label={t('texture.autoSpin')}
+          active={preview.autoSpin}
+          onClick={() => run(documentId, setPreview('autoSpin', !preview.autoSpin))}
+        />
+
+        <label className="text-muted flex items-center gap-1 pl-2 text-xs">
+          {t('texture.envIntensity')}
+          <input
+            type="range"
+            min={0}
+            max={3}
+            step={0.05}
+            value={preview.envIntensity}
+            onChange={event =>
+              run(documentId, setPreview('envIntensity', Number(event.target.value)))
+            }
+            className="accent-accent w-24"
+          />
+        </label>
+      </div>
+
+      {base && (
+        <div className="bg-panel/80 text-muted absolute right-2 bottom-2 rounded-(--radius-sc-md) px-2 py-1 text-xs">
+          <img
+            src={assetUrl(base.assetId)}
+            alt=""
+            className="size-16 rounded-(--radius-sc-sm) object-cover"
+          />
+        </div>
+      )}
+    </div>
+  )
+}

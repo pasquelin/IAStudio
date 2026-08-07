@@ -805,5 +805,16 @@
       "title": "Snap",
       "help": "Makes what is dragged stick to guides, to the image edges and to its centre, within a few pixels."
     }
+  },
+  "texture": {
+    "shapeSphere": "Sphere",
+    "shapeBox": "Cube",
+    "shapeCylinder": "Cylinder",
+    "shapePlane": "Plane",
+    "shapeKnot": "Knot",
+    "showBackground": "Show background",
+    "autoSpin": "Auto spin",
+    "envIntensity": "Lighting",
+    "dropSource": "Drop a picture from the project to use it as the base colour"
   }
 }

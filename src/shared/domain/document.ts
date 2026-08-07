@@ -4,7 +4,7 @@ import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
  * Document registry, shared by both processes: the native menu will need it for
  * "File ▸ New", and duplicating the type would degrade `DocumentKind` to `string`.
  */
-export type DocumentKind = 'image' | 'scene' | 'sequence' | 'audio' | 'skybox'
+export type DocumentKind = 'image' | 'scene' | 'sequence' | 'audio' | 'skybox' | 'texture'
 
 /** The values beside the type: a file read back off disk has to be checked against them. */
 export const DOCUMENT_KINDS: readonly DocumentKind[] = [
@@ -13,6 +13,7 @@ export const DOCUMENT_KINDS: readonly DocumentKind[] = [
   'sequence',
   'audio',
   'skybox',
+  'texture',
 ]
 
 export function isDocumentKind(value: unknown): value is DocumentKind {
@@ -31,7 +32,7 @@ const KIND_BY_WORKSPACE: Record<WorkspaceId, DocumentKind | null> = {
   '3d': 'scene',
   video: 'sequence',
   audio: 'audio',
-  textures: null,
+  textures: 'texture',
   skyboxes: 'skybox',
 }
 
@@ -74,6 +75,7 @@ export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
   sequence: '.seq',
   audio: '.aud',
   skybox: '.sky',
+  texture: '.tex',
 }
 
 /** Where a document lives inside its project. Relative: a project folder can be moved. */
