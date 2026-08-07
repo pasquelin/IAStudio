@@ -1,6 +1,7 @@
 import { Texture } from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { ViewportEngine } from '../viewport/ViewportEngine'
+import type { ViewportEnvironment } from '../viewport/environment'
 import { TextureRenderer } from './TextureRenderer'
 import { newTexture, type TextureState } from './texture-state'
 
@@ -10,15 +11,18 @@ import { newTexture, type TextureState } from './texture-state'
  * the viewport's mount and its `gl` accessor is enough — nothing here dereferences the renderer.
  */
 vi.mock('../viewport/environment', () => ({
-  createEnvironment: () => ({
-    setTexture: vi.fn(),
-    refresh: vi.fn(),
-    setStudio: vi.fn(),
-    setIntensity: vi.fn(),
-    setRotation: vi.fn(),
-    setBackgroundVisible: vi.fn(),
-    dispose: vi.fn(),
-  }),
+  // `satisfies`: a member added to the port and called by the engine must fail to compile here,
+  // rather than at run time on an opaque "is not a function".
+  createEnvironment: () =>
+    ({
+      setTexture: vi.fn(),
+      refresh: vi.fn(),
+      setStudio: vi.fn(),
+      setIntensity: vi.fn(),
+      setRotation: vi.fn(),
+      setBackgroundVisible: vi.fn(),
+      dispose: vi.fn(),
+    }) satisfies ViewportEnvironment,
 }))
 
 const skyOf = (assetId: string): TextureState => {
@@ -63,10 +67,20 @@ describe('the environment of a texture preview', () => {
    * The cache takes an asset id and builds the URL itself. Handing it one already built made it
    * encode the whole `scenario://` URL as an id, and the sky could never load.
    */
-  it('asks for the sky by asset id, not by an URL it built itself', async () => {
+  it('asks for the sky by asset id, not by a URL it built itself', async () => {
     await applied(mounted(), skyOf('sky-1'))
 
     expect(loadTexture).toHaveBeenCalledWith('scenario://asset/sky-1')
+  })
+
+  /** The branch a refactor would silently regress by moving the release inside the sky path. */
+  it('frees its sky when the preview goes back to the studio', async () => {
+    const renderer = mounted()
+    await applied(renderer, skyOf('sky-1'))
+
+    renderer.apply(newTexture())
+
+    expect(freed[0]).toHaveBeenCalled()
   })
 
   it('loads a sky once, however many times the same state comes back', async () => {
