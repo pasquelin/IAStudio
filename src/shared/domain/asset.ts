@@ -31,6 +31,13 @@ export const ASSET_FOLDERS: Record<AssetType, string> = {
 
 export type AssetLocation = 'local' | 'cloud'
 
+/**
+ * Peak pairs per second in the waveform written at ingest. Shared because it is the contract
+ * between the process that writes the file and the one that paints it: a mismatch would not
+ * fail, it would draw the right shape at the wrong speed.
+ */
+export const PEAKS_PER_SECOND = 50
+
 /** What probing a media file tells us. Durations are microseconds, like the timeline. */
 export type MediaProbe = {
   duration: number
@@ -94,6 +101,16 @@ const ASSET_HOST = 'asset'
  */
 export function assetUrl(assetId: string): string {
   return `${ASSET_SCHEME}://${ASSET_HOST}/${encodeURIComponent(assetId)}`
+}
+
+/**
+ * The still that stands for an asset — in a browser cell, on a timeline clip. Only pictures
+ * have one today: a video's poster frame is produced at ingest, which is still to come, and
+ * decoding one here would open a hardware decoder per visible clip.
+ */
+export function posterUrl(asset: Asset): string | null {
+  const showable = asset.type === 'image' && asset.location === 'local' && asset.path
+  return showable ? assetUrl(asset.id) : null
 }
 
 /** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */

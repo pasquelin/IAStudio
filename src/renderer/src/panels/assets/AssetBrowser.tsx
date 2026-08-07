@@ -1,7 +1,7 @@
 import { mdiImageMultipleOutline } from '@mdi/js'
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ASSET_TYPES, assetUrl, type Asset } from '@shared/domain/asset'
+import { ASSET_TYPES, posterUrl, type Asset } from '@shared/domain/asset'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { startAssetDrag } from '@/helpers/asset-drag'
@@ -99,15 +99,6 @@ export function AssetBrowser() {
   )
 }
 
-/**
- * A local file is served over `scenario://`. The URL is derived from the identifier, not asked
- * for: the renderer still never handles a file path, and a grid of thumbnails costs no IPC.
- */
-function preview(asset: Asset): string | undefined {
-  const showable = asset.type === 'image' && asset.location === 'local' && asset.path
-  return showable ? assetUrl(asset.id) : undefined
-}
-
 /** Wraps whatever the collection renders, so both views drag the same way. */
 function Draggable({ asset, children }: { asset: Asset; children: ReactNode }) {
   return (
@@ -120,7 +111,7 @@ function Draggable({ asset, children }: { asset: Asset; children: ReactNode }) {
 function AssetCard({ asset }: { asset: Asset }) {
   return (
     <Draggable asset={asset}>
-      <MediaTile url={preview(asset)} caption={asset.name} />
+      <MediaTile url={posterUrl(asset) ?? undefined} caption={asset.name} />
     </Draggable>
   )
 }

@@ -34,6 +34,7 @@ export type Channels = {
   projectPickFolder: 'project:pick-folder'
 
   assetsSearch: 'assets:search'
+  assetsPeaks: 'assets:peaks'
 
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
@@ -64,6 +65,7 @@ export const CHANNELS: Channels = {
   projectPickFolder: 'project:pick-folder',
 
   assetsSearch: 'assets:search',
+  assetsPeaks: 'assets:peaks',
 
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
@@ -136,6 +138,11 @@ export type StudioBridge = {
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
+    /**
+     * The waveform computed at ingest, as min/max pairs at `PEAKS_PER_SECOND`. Null when the
+     * asset carries no sound, or when ffmpeg was missing when it was brought in.
+     */
+    peaks: (assetId: string) => Promise<Float32Array | null>
   }
   window: {
     toggleFullScreen: () => Promise<void>

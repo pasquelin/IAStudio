@@ -1,12 +1,9 @@
-import type { Asset, MediaProbe } from '@shared/domain/asset'
+import { PEAKS_PER_SECOND, type Asset, type MediaProbe } from '@shared/domain/asset'
 import { peaksArgs, proxyArgs } from './ffmpeg'
 import { decodePeaks } from './peaks'
 
 /** What WebCodecs decodes without help. Anything else is montaged on a proxy. */
 const DECODABLE_CODECS: readonly string[] = ['avc1', 'h264', 'vp8', 'vp9', 'av01']
-
-/** One peak pair per 20 ms of sound: fine enough to read a transient at any usable zoom. */
-const PEAKS_PER_SECOND = 50
 
 export type IngestStage = 'probe' | 'hash' | 'proxy' | 'peaks' | 'done' | 'failed'
 

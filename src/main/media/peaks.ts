@@ -1,4 +1,14 @@
 /**
+ * Reads back what `decodePeaks` wrote. Copied rather than viewed: a `Buffer` from `readFile`
+ * shares a pooled `ArrayBuffer` whose offset is rarely four-byte aligned, and `Float32Array`
+ * refuses an unaligned view outright.
+ */
+export function peaksFromBytes(bytes: Uint8Array): Float32Array {
+  const usable = bytes.byteLength - (bytes.byteLength % Float32Array.BYTES_PER_ELEMENT)
+  return new Float32Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + usable))
+}
+
+/**
  * One min/max pair per bucket, normalised to -1..1. Computed once at ingest and written to
  * disk: recomputing a waveform while painting a timeline is how scrolling starts to stutter.
  */

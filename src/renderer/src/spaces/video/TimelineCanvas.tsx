@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, type DragEvent, type PointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type PointerEvent,
+} from 'react'
+import { posterUrl } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/shortcut'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
@@ -24,8 +33,10 @@ import {
   type Size,
 } from '@/engines/timeline/viewport'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { cachedImage } from '@/helpers/image-cache'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useAssets } from '@/stores/assets'
+import { usePeaks } from '@/stores/peaks'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import type { VideoToolId } from './video-tools'
@@ -44,14 +55,41 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const viewport = useTimelineView(state => viewportOf(state, documentId))
   const assets = useAssets(state => state.items)
 
-  const nameOf = useMemo(() => {
-    const names = new Map(assets.map(asset => [asset.id, asset.name]))
-    return (clip: Clip): string => names.get(clip.assetId) ?? clip.assetId
-  }, [assets])
+  const byId = useMemo(() => new Map(assets.map(asset => [asset.id, asset])), [assets])
+  const nameOf = useCallback(
+    (clip: Clip): string => byId.get(clip.assetId)?.name ?? clip.assetId,
+    [byId],
+  )
+
+  const peaksByAsset = usePeaks(state => state.byAsset)
+
+  const peaksOf = useCallback(
+    (clip: Clip): Float32Array | null => {
+      // Asked for while painting, answered on a later frame: the fetch is one round trip, and
+      // the clip draws as a rectangle until it lands.
+      usePeaks.getState().request(clip.assetId)
+      return peaksByAsset[clip.assetId] ?? null
+    },
+    [peaksByAsset],
+  )
+
+  // A poster decodes after the frame that asked for it, so it needs one more frame to appear.
+  // Counted rather than pushed through a ref, which a hook may not write to.
+  const [decoded, setDecoded] = useState(0)
+  const onDecoded = useCallback(() => setDecoded(count => count + 1), [])
+
+  const posterOf = useCallback(
+    (clip: Clip): CanvasImageSource | null => {
+      const asset = byId.get(clip.assetId)
+      const url = asset ? posterUrl(asset) : null
+      return url ? cachedImage(url, onDecoded) : null
+    },
+    [byId, onDecoded],
+  )
 
   // Read by `paint`, which must stay stable: rebuilding the observer on every dragged pixel
   // would tear down and re-create it sixty times a second.
-  const latest = useRef({ sequence, viewport, nameOf })
+  const latest = useRef({ sequence, viewport, nameOf, peaksOf, posterOf })
   const size = useRef<Size>({ width: 0, height: 0 })
 
   const paint = useCallback((): void => {
@@ -76,9 +114,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       current.sequence,
       current.viewport,
       { width, height },
-      {
-        labelOf: current.nameOf,
-      },
+      { labelOf: current.nameOf, peaksOf: current.peaksOf, posterOf: current.posterOf },
     )
   }, [])
 
@@ -92,9 +128,10 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }, [paint])
 
   useEffect(() => {
-    latest.current = { sequence, viewport, nameOf }
+    latest.current = { sequence, viewport, nameOf, peaksOf, posterOf }
     paint()
-  }, [sequence, viewport, nameOf, paint])
+    // `decoded` is not read here: it is what a poster arriving late repaints for.
+  }, [sequence, viewport, nameOf, peaksOf, posterOf, decoded, paint])
 
   const setViewport = useCallback(
     (next: Viewport): void => {

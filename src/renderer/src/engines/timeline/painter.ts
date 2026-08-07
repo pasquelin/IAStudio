@@ -15,12 +15,20 @@ import {
   type Track,
   type Us,
 } from './timeline-state'
+import { waveformColumns, type WaveColumn } from './waveform'
 
 export type Size = { width: number; height: number }
+
+/** Poster width, as a multiple of the row height. Sixteen by nine, near enough to read a shot. */
+const POSTER_RATIO = 16 / 9
 
 export type PaintOptions = {
   /** What a clip is called. Absent falls back to its asset id, which is always available. */
   labelOf?: (clip: Clip) => string
+  /** The waveform of a clip's source, when one has been read back. */
+  peaksOf?: (clip: Clip) => Float32Array | null
+  /** The still that stands for a clip, once it is decoded. */
+  posterOf?: (clip: Clip) => CanvasImageSource | null
 }
 
 type Palette = {
@@ -154,6 +162,48 @@ function paintFades(
   }
 }
 
+/**
+ * The waveform, filling the row under the label. Drawn as one path rather than a rectangle per
+ * column: five hundred `fillRect` calls per clip is what a long montage cannot afford.
+ */
+function paintWaveform(
+  context: CanvasRenderingContext2D,
+  columns: readonly WaveColumn[],
+  top: number,
+  height: number,
+  colour: string,
+): void {
+  if (columns.length === 0) return
+
+  const middle = top + height / 2
+  const reach = height / 2 - 1
+
+  context.fillStyle = colour
+  context.beginPath()
+  for (const column of columns) context.lineTo(column.x, middle - column.max * reach)
+  // Back along the bottom, so the outline closes into the filled body of the wave.
+  for (let index = columns.length - 1; index >= 0; index--) {
+    const column = columns[index]
+    if (column) context.lineTo(column.x, middle - column.min * reach)
+  }
+  context.closePath()
+  context.fill()
+}
+
+/** The poster, covering the head of a clip: enough to recognise a shot, never the whole width. */
+function paintPoster(
+  context: CanvasRenderingContext2D,
+  poster: CanvasImageSource,
+  left: number,
+  right: number,
+  top: number,
+  height: number,
+): void {
+  const width = Math.min(height * POSTER_RATIO, right - left)
+  if (width <= 0) return
+  context.drawImage(poster, left, top, width, height)
+}
+
 function paintClip(
   context: CanvasRenderingContext2D,
   clip: Clip,
@@ -165,6 +215,7 @@ function paintClip(
   height: number,
   selected: boolean,
   palette: Palette,
+  options: PaintOptions,
 ): void {
   const boxTop = top + CLIP_INSET
   const boxHeight = height - CLIP_INSET * 2 - 1
@@ -176,6 +227,20 @@ function paintClip(
   context.beginPath()
   context.rect(left, boxTop, right - left, boxHeight)
   context.clip()
+
+  const poster = options.posterOf?.(clip) ?? null
+  if (poster) paintPoster(context, poster, left, right, boxTop, boxHeight)
+
+  const peaks = options.peaksOf?.(clip) ?? null
+  if (peaks) {
+    paintWaveform(
+      context,
+      waveformColumns(clip, peaks, viewport, left, right),
+      boxTop,
+      boxHeight,
+      selected ? palette.text : palette.muted,
+    )
+  }
 
   paintFades(context, clip, viewport, left, right, boxTop, boxHeight, palette)
 
@@ -226,6 +291,7 @@ export function paintTimeline(
         track.height,
         state.selectedId === clip.id,
         palette,
+        options,
       )
     }
   }

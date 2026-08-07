@@ -41,6 +41,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     assets: {
       search: () => Promise.resolve([]),
+      peaks: () => Promise.resolve(null),
       ...overrides.assets,
     },
     window: {

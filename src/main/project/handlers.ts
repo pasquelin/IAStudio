@@ -1,7 +1,10 @@
+import { readFile } from 'node:fs/promises'
 import { CHANNELS } from '@shared/ipc'
+import { assetFilePath } from '@main/assets/protocol'
 import { handle } from '@main/ipc/handle'
+import { peaksFromBytes } from '@main/media/peaks'
 import type { ProjectStore } from './store'
-import { parseAssetQuery, parseProjectName, parseProjectPath } from './validation'
+import { parseAssetId, parseAssetQuery, parseProjectName, parseProjectPath } from './validation'
 
 export type ProjectHandlerDeps = {
   project: ProjectStore
@@ -21,4 +24,21 @@ export function registerProjectHandlers({ project, pickFolder }: ProjectHandlerD
   handle(CHANNELS.projectPickFolder, () => pickFolder())
 
   handle(CHANNELS.assetsSearch, (_event, query) => project.catalog().search(parseAssetQuery(query)))
+
+  handle(CHANNELS.assetsPeaks, async (_event, assetId) => {
+    const asset = project.catalog().find(parseAssetId(assetId))
+    if (!asset?.peaksPath) return null
+
+    // Through the same resolver the scheme uses: a stored path is user-editable territory.
+    const file = assetFilePath(project.path(), asset.peaksPath)
+    if (!file) return null
+
+    try {
+      return peaksFromBytes(await readFile(file))
+    } catch {
+      // A project folder can be moved or pruned under us; a clip without its waveform still
+      // paints as a rectangle.
+      return null
+    }
+  })
 }
