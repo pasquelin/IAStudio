@@ -3,6 +3,8 @@ import { placementOf } from '@shared/domain/tool'
 import type { MenuCommand } from '@shared/ipc'
 import { toolServes } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
+import { addNodeTo } from '@/hooks/useAddNode'
+import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
@@ -26,9 +28,15 @@ function runCommand(command: MenuCommand): void {
  * into the void and the menu entries would silently do nothing.
  */
 export function useNativeMenu(): void {
+  // Subscribed once for the lifetime of the app: every listener below reads its store at call
+  // time, so nothing here has to be torn down when a tab or a document changes.
   useEffect(() => {
     const bridge = getBridge()
     if (!bridge) return
+
+    // The persisted workspace is restored without going through `setActiveWorkspace`, so the
+    // menu would sit on the default until the user switched spaces by hand.
+    void bridge.window.setWorkspace(useLayouts.getState().activeWorkspace)
 
     const stopTool = bridge.menu.onOpenTool(({ zone, tool }) => {
       // A tool the active workspace does not serve is filtered out of the zone, so opening it
@@ -44,10 +52,18 @@ export function useNativeMenu(): void {
     })
 
     const stopCommand = bridge.menu.onCommand(runCommand)
+    // The same path the toolbar and the panels take: two ways of adding a node would drift.
+    const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => {
+      // Of the right kind: the menu is app-wide, and a node written under an image document
+      // would give it a scene and a history it has no editor for.
+      const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
+      if (documentId) addNodeTo(documentId, kind)
+    })
 
     return () => {
       stopTool()
       stopCommand()
+      stopSceneAdd()
     }
   }, [])
 }

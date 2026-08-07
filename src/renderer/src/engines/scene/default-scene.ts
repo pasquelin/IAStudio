@@ -1,25 +1,7 @@
-import { newId } from '@/helpers/ids'
 import { LIGHT_TYPES } from './light-types'
-import {
-  IDENTITY_TRANSFORM,
-  type LightDescriptor,
-  type SceneNode,
-  type SceneState,
-  type Vector3,
-} from './scene-state'
-
-export function lightNode(light: LightDescriptor, position: Vector3): SceneNode {
-  return {
-    id: newId(),
-    parentId: null,
-    // The three.js editor names a light after its class, and so does any scene exported from it.
-    name: `${light.kind.charAt(0).toUpperCase()}${light.kind.slice(1)}Light`,
-    visible: true,
-    transform: { ...IDENTITY_TRANSFORM, position },
-    type: 'light',
-    light,
-  }
-}
+import { lightNode } from './node-factory'
+import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
+import type { SceneState } from './scene-state'
 
 /** Which lights a new scene opens with, and where. A kind absent here is simply not one of them. */
 const DEFAULT_LIGHT_POSITIONS: ReadonlyMap<LightDescriptor['kind'], Vector3> = new Map([

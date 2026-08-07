@@ -2,19 +2,40 @@
 // import of Electron, and this module could no longer be tested under plain Node.
 import type { MenuItemConstructorOptions } from 'electron'
 import { APP_NAME } from '@shared/constants'
-import { TRANSLATIONS, type Language } from '@shared/i18n'
+import {
+  LIGHT_ENTRIES,
+  MESH_ENTRIES,
+  type LightKind,
+  type MeshKind,
+  type SceneEntry,
+} from '@shared/domain/scene'
 import { TOOL_PLACEMENTS } from '@shared/domain/tool'
-import { EVENTS } from '@shared/ipc'
+import type { WorkspaceId } from '@shared/domain/workspace'
+import { TRANSLATIONS, type Language } from '@shared/i18n'
+import type { MenuCommand, SceneAddRequest, ToolRequest } from '@shared/ipc'
 
-/** What the menu can do, injected so the template stays a pure function of its options. */
+/**
+ * What the menu asks of the window it belongs to. One method per message rather than a
+ * `send(channel, payload)`: `shared/ipc.ts` types both ends of every channel, and a generic
+ * sender is the one hop where that guarantee would stop.
+ */
 export type MenuActions = {
-  send: (channel: string, payload?: unknown) => void
   openSettings: () => void
   toggleFullScreen: () => void
+  openTool: (request: ToolRequest) => void
+  runCommand: (command: MenuCommand) => void
+  addNode: (request: SceneAddRequest) => void
 }
 
+/**
+ * Everything the template cannot know on its own. Passed in rather than reached for, so the
+ * whole menu is a pure function of its options — which is what makes it testable without an
+ * Electron runtime.
+ */
 export type MenuOptions = {
   language: Language
+  /** `null` when the focused window edits no workspace at all — the settings window. */
+  workspace: WorkspaceId | null
   isMac: boolean
   isPackaged: boolean
   actions: MenuActions
@@ -34,7 +55,7 @@ function developerItems(isPackaged: boolean): MenuItemConstructorOptions[] {
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, isMac, isPackaged, actions } = options
+  const { language, workspace, isMac, isPackaged, actions } = options
   const t = TRANSLATIONS[language]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
@@ -79,6 +100,28 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     ? []
     : [{ label: t.menu.help, submenu: [{ role: 'about', label: aboutLabel }] }]
 
+  const entryItem =
+    <K extends MeshKind | LightKind>(labels: Record<K, string>) =>
+    (entry: SceneEntry<K>): MenuItemConstructorOptions => ({
+      label: labels[entry.kind],
+      enabled: !entry.disabled,
+      click: () => actions.addNode({ kind: entry.kind }),
+    })
+
+  /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
+  const addMenu: MenuItemConstructorOptions[] =
+    workspace === '3d'
+      ? [
+          {
+            label: t.menu.add,
+            submenu: [
+              { label: t.menu.mesh, submenu: MESH_ENTRIES.map(entryItem<MeshKind>(t.meshes)) },
+              { label: t.menu.light, submenu: LIGHT_ENTRIES.map(entryItem<LightKind>(t.lights)) },
+            ],
+          },
+        ]
+      : []
+
   return [
     ...(isMac ? [appMenuItem] : []),
     {
@@ -87,12 +130,12 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         {
           label: t.menu.newProject,
           accelerator: 'CmdOrCtrl+N',
-          click: () => actions.send(EVENTS.menuCommand, 'project:new'),
+          click: () => actions.runCommand('project:new'),
         },
         {
           label: t.menu.openProject,
           accelerator: 'CmdOrCtrl+O',
-          click: () => actions.send(EVENTS.menuCommand, 'project:open'),
+          click: () => actions.runCommand('project:open'),
         },
         { type: 'separator' },
         ...fileMenuSettings,
@@ -100,6 +143,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ],
     },
     { role: 'editMenu', label: t.menu.edit },
+    ...addMenu,
     {
       label: t.menu.view,
       submenu: [
@@ -107,13 +151,12 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           label: t.menu.tools,
           submenu: TOOL_PLACEMENTS.map(placement => ({
             label: t.panels[placement.id],
-            click: () =>
-              actions.send(EVENTS.openTool, { zone: placement.zone, tool: placement.id }),
+            click: () => actions.openTool({ zone: placement.zone, tool: placement.id }),
           })),
         },
         {
           label: t.menu.resetLayout,
-          click: () => actions.send(EVENTS.menuCommand, 'layout:reset'),
+          click: () => actions.runCommand('layout:reset'),
         },
         { type: 'separator' },
         {

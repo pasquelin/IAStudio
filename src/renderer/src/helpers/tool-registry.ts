@@ -16,6 +16,7 @@ import {
   type ToolZone,
 } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { NODE_KINDS } from '@/engines/scene/node-kinds'
 
 export type Tool = {
   id: ToolId
@@ -27,6 +28,9 @@ export type Tool = {
 
 const ICONS: Record<ToolId, string> = {
   layers: mdiLayersOutline,
+  // From the scene registry: the rail icon and the panel's own empty state must not drift.
+  meshes: NODE_KINDS.mesh.icon,
+  lights: NODE_KINDS.light.icon,
   timeline: mdiVideoVintage,
   explorer: mdiFolderOutline,
   models: mdiCubeScan,

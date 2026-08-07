@@ -1,5 +1,6 @@
 import type { Command } from '../core/history'
-import { nodeById, type SceneNode, type SceneState, type Transform } from './scene-state'
+import type { Transform } from '@shared/domain/scene'
+import { nodeById, type SceneNode, type SceneState } from './scene-state'
 
 /**
  * Scene edits, reimplemented in TypeScript from `mrdoob/three.js/editor/js/commands/` (MIT).

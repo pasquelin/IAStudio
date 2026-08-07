@@ -41,6 +41,19 @@ describe('Collection', () => {
     expect(screen.getAllByText(/^Row \d+$/).length).toBeLessThan(200)
   })
 
+  // A panel with no thumbnails would otherwise show a grid of empty squares.
+  it('stays a list when no card renderer is given, whatever the state says', () => {
+    render(
+      <Collection
+        items={rows(3)}
+        state={{ ...DEFAULT_COLLECTION_STATE, view: 'grid' }}
+        renderRow={item => <span>row {item.name}</span>}
+      />,
+    )
+
+    expect(screen.getByText('row Row 0')).toBeInTheDocument()
+  })
+
   it('lays out more columns as the thumbnails shrink', () => {
     const { rerender } = renderCollection(rows(500), { thumbnailSize: 200 })
     const wide = screen.getAllByText(/^Row \d+$/).length
@@ -126,5 +139,55 @@ describe('Collection', () => {
     renderCollection(rows(4))
 
     expect(screen.queryByRole('option')).not.toBeInTheDocument()
+  })
+
+  // A cell per tab makes a catalogue of five hundred models five hundred presses deep.
+  it('offers a single tab stop, whatever the collection holds', () => {
+    renderCollection(rows(200), { view: 'list' }, { onSelect: vi.fn() })
+
+    const reachable = screen.getAllByRole('option').filter(cell => cell.tabIndex === 0)
+    expect(reachable).toHaveLength(1)
+  })
+
+  it('puts that tab stop on the selected item, so tab lands where the eye is', () => {
+    renderCollection(rows(20), { view: 'list' }, { onSelect: vi.fn(), selectedId: 'row_3' })
+
+    const reachable = screen.getAllByRole('option').find(cell => cell.tabIndex === 0)
+    expect(reachable).toHaveTextContent('Row 3')
+  })
+
+  it('walks the cells with the arrows, since only one of them takes a tab', async () => {
+    renderCollection(rows(20), { view: 'list' }, { onSelect: vi.fn() })
+
+    await userEvent.tab()
+    await userEvent.keyboard('{ArrowDown}')
+
+    expect(screen.getByText('Row 1').closest('[role="option"]')).toHaveFocus()
+
+    await userEvent.keyboard('{ArrowUp}')
+    expect(screen.getByText('Row 0').closest('[role="option"]')).toHaveFocus()
+  })
+
+  it('moves one card sideways and a whole row down, in a grid', async () => {
+    renderCollection(rows(40), { view: 'grid' }, { onSelect: vi.fn() })
+
+    await userEvent.tab()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByText('Row 1').closest('[role="option"]')).toHaveFocus()
+
+    // A row down lands a full row further, whatever width jsdom decided to measure.
+    const before = document.activeElement?.getAttribute('data-cell')
+    await userEvent.keyboard('{ArrowDown}')
+    const after = document.activeElement?.getAttribute('data-cell')
+    expect(Number(after) - Number(before)).toBeGreaterThan(1)
+  })
+
+  it('stops at the edges rather than wrapping around', async () => {
+    renderCollection(rows(5), { view: 'list' }, { onSelect: vi.fn() })
+
+    await userEvent.tab()
+    await userEvent.keyboard('{ArrowUp}')
+
+    expect(screen.getByText('Row 0').closest('[role="option"]')).toHaveFocus()
   })
 })

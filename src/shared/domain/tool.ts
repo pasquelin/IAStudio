@@ -8,7 +8,16 @@ import type { WorkspaceId } from './workspace'
 
 export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
 
-export type ToolId = 'layers' | 'timeline' | 'explorer' | 'models' | 'generator' | 'assets' | 'jobs'
+export type ToolId =
+  | 'layers'
+  | 'meshes'
+  | 'lights'
+  | 'timeline'
+  | 'explorer'
+  | 'models'
+  | 'generator'
+  | 'assets'
+  | 'jobs'
 
 /**
  * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
@@ -35,6 +44,8 @@ export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
  */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'layers', zone: 'left', slot: 'primary', workspaces: ['image'] },
+  { id: 'meshes', zone: 'left', slot: 'primary', workspaces: ['3d'] },
+  { id: 'lights', zone: 'left', slot: 'primary', workspaces: ['3d'] },
   { id: 'explorer', zone: 'left', slot: 'secondary' },
   { id: 'models', zone: 'right', slot: 'primary' },
   { id: 'generator', zone: 'right', slot: 'primary' },

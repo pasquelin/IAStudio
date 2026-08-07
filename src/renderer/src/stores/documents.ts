@@ -1,4 +1,8 @@
-import { kindForWorkspace, type DocumentDescriptor } from '@shared/domain/document'
+import {
+  kindForWorkspace,
+  type DocumentDescriptor,
+  type DocumentKind,
+} from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import i18next from 'i18next'
 import { create as createStore } from 'zustand'
@@ -19,6 +23,17 @@ type DocumentsState = {
   close: (id: string) => void
   /** Drops every document not in `ids`. Called once at startup — see `pruneDocuments`. */
   keepOnly: (ids: ReadonlySet<string>) => void
+}
+
+export type DocumentsSlice = Pick<DocumentsState, 'documents' | 'activeId'>
+
+/**
+ * The document in front, when it is one of a given kind. A scene panel handed an image
+ * document would give `useScenes` a state and a history for a document that has no scene.
+ */
+export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): string | null {
+  const id = state.activeId
+  return id !== null && state.documents[id]?.kind === kind ? id : null
 }
 
 export function documentsIn(

@@ -13,6 +13,8 @@
   },
   "panels": {
     "layers": "Layers",
+    "meshes": "Meshes",
+    "lights": "Lights",
     "timeline": "Timeline",
     "explorer": "Explorer",
     "models": "Models",
@@ -252,6 +254,11 @@
     "empty": "No light. The scene will stay black.",
     "noDocument": "Open a scene to see its lights."
   },
+  "scene": {
+    "root": "Scene",
+    "visible": "Show or hide",
+    "noDocument": "Open a scene to see what is in it."
+  },
   "transport": {
     "play": "Play",
     "pause": "Pause",
@@ -272,6 +279,10 @@
     "handHint": "Scroll the timeline — wheel to zoom"
   },
   "sceneTools": {
+    "select": "Select",
+    "selectHint": "Pick an object without arming a handle",
+    "add": "Add",
+    "addHint": "Drop a mesh or a light into the scene",
     "translate": "Move",
     "translateHint": "Move the selected object along the axes",
     "rotate": "Rotate",
@@ -320,6 +331,9 @@
     "openProject": "Open project…",
     "settings": "Settings…",
     "tools": "Tool windows",
+    "add": "Add",
+    "mesh": "Mesh",
+    "light": "Light",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
     "help": "Help",

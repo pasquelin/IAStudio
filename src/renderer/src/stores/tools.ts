@@ -208,8 +208,9 @@ export const useTools = create<ToolsState>()(
       name: 'scenario-studio:tools',
       // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
       // would reach `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on
-      // startup. Version 1 held a `collapsed` map, and 2 one tool per zone.
-      version: 3,
+      // startup. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
+      // mesh and light panels.
+      version: 4,
       migrate: persisted => {
         if (typeof persisted !== 'object' || persisted === null) return undefined
         const sizes: unknown = Reflect.get(persisted, 'sizes')

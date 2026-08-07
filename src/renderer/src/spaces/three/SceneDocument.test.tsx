@@ -99,4 +99,43 @@ describe('SceneDocument', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Annuler/ })).toBeDisabled()
   })
+
+  // Armed by default, and the one mode that leaves the gizmo off the selection.
+  it('opens on the selection tool', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    expect(setMode).toHaveBeenCalledWith('select')
+  })
+
+  it('adds the primitive chosen in the Add flyout, and undo removes it', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Cube/ }))
+
+    expect(meshesOf('doc-1')).toHaveLength(1)
+    expect(meshesOf('doc-1')[0]?.name).toBe('Box')
+
+    await userEvent.click(screen.getByRole('button', { name: /Annuler/ }))
+    expect(meshesOf('doc-1')).toHaveLength(0)
+  })
+
+  it('adds a light from the same flyout', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Projecteur/ }))
+
+    const lights = sceneOf(useScenes.getState(), 'doc-1').nodes.filter(
+      node => node.type === 'light',
+    )
+    expect(lights).toHaveLength(4)
+  })
+
+  it('adds nothing for a primitive that is not buildable yet', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
+    expect(await screen.findByRole('menuitem', { name: /Texte/ })).toBeDisabled()
+    expect(meshesOf('doc-1')).toHaveLength(0)
+  })
 })

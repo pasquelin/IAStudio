@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import type { CollectionState } from '@/helpers/collection-state'
+import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 
 const GAP = 8
 const ROW_HEIGHT = 26
@@ -12,8 +12,13 @@ const PREFETCH_ROWS = 3
 
 export type CollectionProps<T extends { id: string }> = {
   items: readonly T[]
-  state: CollectionState
-  renderCard: (item: T) => ReactNode
+  /** Absent for a panel with no collection bar: a plain virtualized list, never a grid. */
+  state?: CollectionState
+  /**
+   * Absent keeps the collection in list mode whatever `state.view` says: a panel with no
+   * thumbnails has no card to draw, and inventing one so it is never called is noise.
+   */
+  renderCard?: (item: T) => ReactNode
   renderRow: (item: T) => ReactNode
   selectedId?: string | null
   onSelect?: (item: T) => void
@@ -43,12 +48,14 @@ type Grid = {
  * so no separate first measurement is needed; until it fires, one column is the honest answer
  * rather than a guess.
  */
-function useGrid(host: { current: HTMLElement | null }, cardWidth: number): Grid {
+function useGrid(host: { current: HTMLElement | null }, cardWidth: number, enabled: boolean): Grid {
   const [grid, setGrid] = useState<Grid>({ columns: 1, columnWidth: cardWidth })
 
   useEffect(() => {
     const element = host.current
-    if (!element) return
+    // A list-only collection never reads this, and `columnWidth` is a float that changes with
+    // every pixel of a splitter drag — the observer would re-render the window twice a frame.
+    if (!element || !enabled) return
 
     const observer = new ResizeObserver(entries => {
       const width = entries[0]?.contentRect.width
@@ -67,7 +74,7 @@ function useGrid(host: { current: HTMLElement | null }, cardWidth: number): Grid
 
     observer.observe(element)
     return () => observer.disconnect()
-  }, [host, cardWidth])
+  }, [host, cardWidth, enabled])
 
   return grid
 }
@@ -79,7 +86,7 @@ function useGrid(host: { current: HTMLElement | null }, cardWidth: number): Grid
  */
 export function Collection<T extends { id: string }>({
   items,
-  state,
+  state = LIST_ONLY,
   renderCard,
   renderRow,
   selectedId,
@@ -91,8 +98,10 @@ export function Collection<T extends { id: string }>({
   rowHeight = ROW_HEIGHT,
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
-  const grid = state.view === 'grid'
-  const fitting = useGrid(scroller, state.thumbnailSize)
+  // Kept as the narrowed function rather than a boolean, so the cell below needs no second guard.
+  const card = state.view === 'grid' ? renderCard : undefined
+  const grid = card !== undefined
+  const fitting = useGrid(scroller, state.thumbnailSize, grid)
 
   const columns = grid ? fitting.columns : 1
   const rows = Math.ceil(items.length / columns)
@@ -134,6 +143,36 @@ export function Collection<T extends { id: string }>({
     if (shown.length) onVisible(shown)
   }, [onVisible, items, firstVisible, lastRow, columns])
 
+  /**
+   * One tab stop for the whole collection, then the arrows — the roving pattern `Tree` uses.
+   * A cell per tab makes a catalogue of five hundred models five hundred presses deep.
+   */
+  const selectedIndex = selectedId ? items.findIndex(item => item.id === selectedId) : -1
+  const tabStop = Math.max(0, selectedIndex)
+
+  const focusCell = (index: number): void => {
+    const bounded = Math.max(0, Math.min(index, items.length - 1))
+    virtualizer.scrollToIndex(Math.floor(bounded / columns))
+
+    const focus = (): void => {
+      scroller.current?.querySelector<HTMLElement>(`[data-cell="${bounded}"]`)?.focus()
+    }
+    // Twice: the cell is already mounted in the common case, and only a scroll that revealed a
+    // new row needs the frame the virtualizer takes to render it.
+    focus()
+    requestAnimationFrame(focus)
+  }
+
+  const onCellKeyDown = (index: number, event: KeyboardEvent): void => {
+    if (event.key === 'ArrowRight') focusCell(index + 1)
+    else if (event.key === 'ArrowLeft') focusCell(index - 1)
+    else if (event.key === 'ArrowDown') focusCell(index + columns)
+    else if (event.key === 'ArrowUp') focusCell(index - columns)
+    else return
+
+    event.preventDefault()
+  }
+
   return (
     <div ref={scroller} className="h-full overflow-auto p-2">
       {items.length === 0 ? (
@@ -158,17 +197,23 @@ export function Collection<T extends { id: string }>({
                   grid ? 'grid items-start' : 'flex',
                 )}
               >
-                {slice.map(item => (
-                  <CollectionCell
-                    key={item.id}
-                    selected={item.id === selectedId}
-                    // A list row spans the collection; a card is sized by its grid column.
-                    className={grid ? undefined : 'h-full w-full'}
-                    onSelect={onSelect ? () => onSelect(item) : undefined}
-                  >
-                    {grid ? renderCard(item) : renderRow(item)}
-                  </CollectionCell>
-                ))}
+                {slice.map((item, column) => {
+                  const index = row.index * columns + column
+                  return (
+                    <CollectionCell
+                      key={item.id}
+                      index={index}
+                      selected={item.id === selectedId}
+                      tabbable={index === tabStop}
+                      // A list row spans the collection; a card is sized by its grid column.
+                      className={grid ? undefined : 'h-full w-full'}
+                      onSelect={onSelect ? () => onSelect(item) : undefined}
+                      onArrow={event => onCellKeyDown(index, event)}
+                    >
+                      {card ? card(item) : renderRow(item)}
+                    </CollectionCell>
+                  )
+                })}
               </div>
             )
           })}
@@ -180,8 +225,13 @@ export function Collection<T extends { id: string }>({
 }
 
 type CollectionCellProps = {
+  /** Position in `items`, so the arrows can name the cell they want focused. */
+  index: number
   selected: boolean
+  /** The collection's single tab stop. Every other cell is reached with the arrows. */
+  tabbable: boolean
   onSelect?: () => void
+  onArrow: (event: KeyboardEvent) => void
   className?: string
   children: ReactNode
 }
@@ -190,7 +240,15 @@ type CollectionCellProps = {
  * Selection and keyboard reach belong to the collection, not to the cards: a caller that had
  * to wire them itself would wire them differently in each panel.
  */
-function CollectionCell({ selected, onSelect, className, children }: CollectionCellProps) {
+function CollectionCell({
+  index,
+  selected,
+  tabbable,
+  onSelect,
+  onArrow,
+  className,
+  children,
+}: CollectionCellProps) {
   /**
    * Hover and selection are painted here rather than by the rendered item: a background set
    * inside the cell would sit on top of this one and swallow it on hover.
@@ -206,14 +264,17 @@ function CollectionCell({ selected, onSelect, className, children }: CollectionC
   return (
     <div
       role="option"
-      tabIndex={0}
+      data-cell={index}
+      tabIndex={tabbable ? 0 : -1}
       aria-selected={selected}
       onClick={onSelect}
       onKeyDown={event => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault()
           onSelect()
+          return
         }
+        onArrow(event.nativeEvent)
       }}
       // The ring marks keyboard focus alone: it and selection are different states.
       className={cn(

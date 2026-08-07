@@ -7,6 +7,7 @@ import {
   EVENTS,
   type LogEntry,
   type MenuCommand,
+  type SceneAddRequest,
   type StudioBridge,
   type ToolRequest,
   type Unsubscribe,
@@ -52,10 +53,12 @@ const bridge: StudioBridge = {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
     state: () => ipcRenderer.invoke(CHANNELS.windowState),
     onState: callback => subscribe<WindowState>(EVENTS.windowState, callback),
+    setWorkspace: workspace => ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace),
   },
   menu: {
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
     onCommand: callback => subscribe<MenuCommand>(EVENTS.menuCommand, callback),
+    onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),

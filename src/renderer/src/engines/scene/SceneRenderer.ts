@@ -19,7 +19,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { token } from '../core/palette'
-import type { SceneNode, SceneState, Transform } from './scene-state'
+import type { Transform } from '@shared/domain/scene'
+import type { SceneNode, SceneState } from './scene-state'
 import { geometryFor, helperFor, lightFor, tuneViewHelper, type LightHelper } from './three-factory'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
@@ -209,7 +210,7 @@ export class SceneRenderer {
     const axis = token(canvas, '--color-muted')
     const line = token(canvas, '--color-viewport-line')
 
-    this.meshColor = token(canvas, '--color-muted')
+    this.meshColor = token(canvas, '--color-mesh')
     if (background) this.scene.background = new Color(background)
 
     if (this.grid) {
@@ -413,8 +414,13 @@ export class SceneRenderer {
      * trihedron erases the scene it sits on and the viewport stays black.
      */
     renderer.autoClear = false
-    this.viewHelper?.render(renderer)
-    renderer.autoClear = true
+    try {
+      this.viewHelper?.render(renderer)
+    } finally {
+      // In a `finally`: a throw in the helper would otherwise leave `autoClear` off for good,
+      // and every later frame would smear over the last.
+      renderer.autoClear = true
+    }
 
     if (moving || settling) this.requestRender()
   }

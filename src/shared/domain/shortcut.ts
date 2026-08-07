@@ -7,6 +7,7 @@
  * would scatter them.
  */
 export type CommandId =
+  | 'scene.select'
   | 'scene.translate'
   | 'scene.rotate'
   | 'scene.scale'
@@ -33,6 +34,7 @@ export type KeyChord = {
 }
 
 export const COMMAND_IDS: readonly CommandId[] = [
+  'scene.select',
   'scene.translate',
   'scene.rotate',
   'scene.scale',
@@ -83,6 +85,9 @@ export function shortcutLabel(signature: Signature): string {
 }
 
 export const DEFAULT_BINDINGS: Record<CommandId, Signature> = {
+  // `KeyV` as in every editor that has a pointer tool. Not `KeyQ` or `KeyW`, which fly the
+  // camera: `useShortcuts` reads both tables on the same keydown, so one key would do both.
+  'scene.select': 'KeyV',
   'scene.translate': 'KeyG',
   'scene.rotate': 'KeyR',
   'scene.scale': 'KeyS',

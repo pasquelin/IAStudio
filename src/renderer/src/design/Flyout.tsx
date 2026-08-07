@@ -46,6 +46,9 @@ export function Flyout({ anchor, children, onPointerEnter, onPointerLeave }: Fly
       className={cn(
         'border-border bg-surface fixed z-50 flex min-w-40 flex-col gap-0.5',
         'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
+        // The scene's Add menu is 22 rows: unbounded it runs off the bottom of the window,
+        // and the rows past the edge are unreachable.
+        'max-h-[min(60vh,32rem)] overflow-y-auto',
       )}
     >
       {children}

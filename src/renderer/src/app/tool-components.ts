@@ -5,6 +5,8 @@ import { definition as explorer } from '@/panels/explorer'
 import { definition as generator } from '@/panels/generator'
 import { definition as jobs } from '@/panels/jobs'
 import { definition as layers } from '@/panels/layers'
+import { definition as lights } from '@/panels/lights'
+import { definition as meshes } from '@/panels/meshes'
 import { definition as models } from '@/panels/models'
 import { definition as timeline } from '@/panels/timeline'
 
@@ -20,6 +22,8 @@ export type ToolDefinition = {
  */
 export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
   layers,
+  meshes,
+  lights,
   timeline,
   explorer,
   models,

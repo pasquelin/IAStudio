@@ -13,6 +13,8 @@
   },
   "panels": {
     "layers": "Calques",
+    "meshes": "Mailles",
+    "lights": "Lumières",
     "timeline": "Timeline",
     "explorer": "Explorateur",
     "models": "Modèles",
@@ -252,6 +254,11 @@
     "empty": "Aucune lumière. La scène restera noire.",
     "noDocument": "Ouvrez une scène pour voir ses lumières."
   },
+  "scene": {
+    "root": "Scène",
+    "visible": "Afficher ou masquer",
+    "noDocument": "Ouvrez une scène pour voir son contenu."
+  },
   "transport": {
     "play": "Lire",
     "pause": "Pause",
@@ -272,6 +279,10 @@
     "handHint": "Faire défiler la timeline — molette pour zoomer"
   },
   "sceneTools": {
+    "select": "Sélectionner",
+    "selectHint": "Choisir un objet sans armer de poignée",
+    "add": "Ajouter",
+    "addHint": "Poser une maille ou une lumière dans la scène",
     "translate": "Déplacer",
     "translateHint": "Déplacer l’objet sélectionné le long des axes",
     "rotate": "Tourner",
@@ -320,6 +331,9 @@
     "openProject": "Ouvrir un projet…",
     "settings": "Réglages…",
     "tools": "Modules",
+    "add": "Ajouter",
+    "mesh": "Maille",
+    "light": "Lumière",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
     "help": "Aide",
