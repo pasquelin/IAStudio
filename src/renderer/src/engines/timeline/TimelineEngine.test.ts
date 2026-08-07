@@ -5,6 +5,7 @@ import {
   createFrameSink,
   sourceTimeAt,
   swapTexture,
+  uploadNow,
   videoTracksByDepth,
 } from './TimelineEngine'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
@@ -48,6 +49,16 @@ describe('timeline engine', () => {
       trackFixture('V1', 'video'),
     ])
     expect(videoTracksByDepth(state).map(track => track.id)).toEqual(['V1', 'V2'])
+  })
+
+  // Left to Pixi, the upload happens at the next render — long after the sink closed the frame
+  // behind it, and the monitor then paints nothing at all, for every media.
+  it('puts a texture on the GPU rather than waiting for the next render', () => {
+    const initSource = vi.fn()
+    const texture = new Texture()
+
+    expect(uploadNow(texture, { initSource })).toBe(texture)
+    expect(initSource).toHaveBeenCalledWith(texture.source)
   })
 
   it('closes every frame it uploads', () => {

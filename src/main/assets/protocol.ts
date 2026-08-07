@@ -39,7 +39,16 @@ export function registerAssetScheme(): void {
   protocol.registerSchemesAsPrivileged([
     {
       scheme: ASSET_SCHEME,
-      privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        // The window loads on another origin, so reading an asset is a cross-origin request.
+        // Without this `<img>` still paints and only the decoder fails — which reads as a
+        // broken monitor rather than as a refusal.
+        corsEnabled: true,
+        stream: true,
+      },
     },
   ])
 }

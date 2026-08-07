@@ -1,4 +1,4 @@
-import { Application, Sprite, Texture } from 'pixi.js'
+import { Application, Sprite, Texture, type TextureSource } from 'pixi.js'
 import { createClock, type Clock } from './clock'
 import { createDecoderPool, type DecoderPool, type SinkLike } from './decoder-pool'
 import { playbackToken } from './playback'
@@ -39,6 +39,18 @@ export function swapTexture(target: { texture: Texture }, next: Texture): void {
   const previous = target.texture
   target.texture = next
   if (previous !== Texture.EMPTY) previous.destroy(true)
+}
+
+/** What a renderer must offer to take a frame now rather than at its next pass. */
+export type TextureUploader = { initSource: (source: TextureSource) => void }
+
+/**
+ * Puts a texture on the GPU now, and hands it back. Pixi uploads a source at its next render —
+ * by which time the sink has closed the frame behind it, and the monitor paints nothing at all.
+ */
+export function uploadNow(texture: Texture, uploader: TextureUploader): Texture {
+  uploader.initSource(texture.source)
+  return texture
 }
 
 export type FrameSink = { push: (frame: VideoFrame) => void }
@@ -151,7 +163,8 @@ export class TimelineEngine {
   }
 
   async seek(time: Us): Promise<void> {
-    if (!this.application) return
+    const application = this.application
+    if (!application) return
 
     this.generation += 1
     const generation = this.generation
@@ -178,7 +191,8 @@ export class TimelineEngine {
 
       sprite.visible = true
       createFrameSink({
-        upload: uploaded => swapTexture(sprite, Texture.from(uploaded)),
+        upload: uploaded =>
+          swapTexture(sprite, uploadNow(Texture.from(uploaded), application.renderer.texture)),
       }).push(frame)
     }
   }
