@@ -1,5 +1,4 @@
 import { app, BrowserWindow } from 'electron'
-import { resolveLanguage } from '@shared/i18n'
 import { EVENTS } from '@shared/ipc'
 import { buildMenu } from '@main/menu'
 import { registerAssetScheme } from '@main/assets/protocol'
@@ -26,7 +25,7 @@ void app.whenReady().then(() => {
    */
   if (!app.isPackaged) mirrorLogsTo(entry => broadcast(EVENTS.log, entry))
   registerIpc(createServices())
-  buildMenu(resolveLanguage(app.getLocale()))
+  buildMenu()
   createMainWindow()
 
   app.on('activate', () => {

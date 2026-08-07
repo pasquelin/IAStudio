@@ -39,7 +39,7 @@ export type TreeProps<T extends TreeNode> = {
   nodes: readonly T[]
   selectedId: string | null
   expandedIds: ReadonlySet<string>
-  onSelect: (id: string | null) => void
+  onSelect: (id: string) => void
   onToggle: (id: string) => void
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
@@ -62,14 +62,30 @@ export function Tree<T extends TreeNode>({
   const list = useRef<HTMLUListElement>(null)
   const rows = useMemo(() => flattenTree(nodes, expandedIds), [nodes, expandedIds])
 
+  // Each row is one `<li>` wrapping one treeitem, so the index is enough — a `querySelectorAll`
+  // per arrow press would rescan the subtree at key-autorepeat rate.
   const focusRow = (index: number): void => {
-    list.current?.querySelectorAll<HTMLElement>('[role="treeitem"]')[index]?.focus()
+    const item = list.current?.children[index]?.firstElementChild
+    if (item instanceof HTMLElement) item.focus()
   }
 
   // Roving tab stop: one entry into the tree, then the arrows. Every row reachable by tab
   // would make a scene of two hundred nodes two hundred presses deep.
-  const selectedIndex = rows.findIndex(row => row.node.id === selectedId)
-  const tabStop = selectedIndex < 0 ? 0 : selectedIndex
+  const tabStop = Math.max(
+    0,
+    rows.findIndex(row => row.node.id === selectedId),
+  )
+
+  const onRowKeyDown = (row: TreeRow<T>, index: number, event: KeyboardEvent): void => {
+    if (event.key === 'ArrowRight' && row.hasChildren && !row.expanded) onToggle(row.node.id)
+    else if (event.key === 'ArrowLeft' && row.expanded) onToggle(row.node.id)
+    else if (event.key === 'ArrowDown') focusRow(Math.min(index + 1, rows.length - 1))
+    else if (event.key === 'ArrowUp') focusRow(Math.max(index - 1, 0))
+    else if (event.key === 'Enter' || event.key === ' ') onSelect(row.node.id)
+    else return
+
+    event.preventDefault()
+  }
 
   return (
     <ul ref={list} role="tree" className="p-1">
@@ -88,22 +104,7 @@ export function Tree<T extends TreeNode>({
               'focus-visible:ring-accent focus-visible:ring-1',
             )}
             onPointerDown={() => onSelect(row.node.id)}
-            onKeyDown={event => {
-              if (event.key === 'ArrowRight' && row.hasChildren && !row.expanded) {
-                onToggle(row.node.id)
-              } else if (event.key === 'ArrowLeft' && row.expanded) {
-                onToggle(row.node.id)
-              } else if (event.key === 'ArrowDown') {
-                focusRow(Math.min(index + 1, rows.length - 1))
-              } else if (event.key === 'ArrowUp') {
-                focusRow(Math.max(index - 1, 0))
-              } else if (event.key === 'Enter' || event.key === ' ') {
-                onSelect(row.node.id)
-              } else {
-                return
-              }
-              event.preventDefault()
-            }}
+            onKeyDown={event => onRowKeyDown(row, index, event.nativeEvent)}
           >
             {/* The chevron keeps its column even on a leaf: rows whose content shifts by a
                 glyph are unreadable as a list. It is not a control — the row already carries

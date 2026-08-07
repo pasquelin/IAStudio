@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createDefaultScene } from '@/engines/scene/default-scene'
+import { installScene } from '@/engines/scene/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { SceneTree } from './SceneTree'
 
@@ -10,7 +10,7 @@ function scene() {
 }
 
 beforeEach(() => {
-  useScenes.setState({ states: { 'doc-1': createDefaultScene() }, histories: {} })
+  installScene('doc-1')
 })
 
 describe('SceneTree', () => {

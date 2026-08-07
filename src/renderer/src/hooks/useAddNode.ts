@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { addNode } from '@/engines/scene/commands'
@@ -11,16 +12,20 @@ import { useScenes } from '@/stores/scenes'
  *
  * A kind no registry claims, or one declared but not buildable yet, adds nothing.
  */
+export function addNodeTo(documentId: string, kind: string, t: TFunction): void {
+  const labelKey = labelKeyOf(kind)
+  // The node is named after the menu row that made it, as the three.js editor does.
+  const node = createNodeOf(kind, labelKey ? t(labelKey) : kind)
+  if (node) useScenes.getState().runCommand(documentId, addNode(node))
+}
+
+/** The same, bound to a document a component already holds. */
 export function useAddNode(documentId: string | null): (kind: string) => void {
   const { t } = useTranslation()
 
   return useCallback(
     (kind: string) => {
-      if (!documentId) return
-      const labelKey = labelKeyOf(kind)
-      // The node is named after the menu row that made it, as the three.js editor does.
-      const node = createNodeOf(kind, labelKey ? t(labelKey) : kind)
-      if (node) useScenes.getState().runCommand(documentId, addNode(node))
+      if (documentId) addNodeTo(documentId, kind, t)
     },
     [documentId, t],
   )

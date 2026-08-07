@@ -1,4 +1,3 @@
-import type { ToolDefinition } from '@/app/tool-components'
-import { LightsActions, LightsPanel } from './LightsPanel'
+import { nodePanel } from '../shared/node-panel'
 
-export const definition: ToolDefinition = { Content: LightsPanel, Actions: LightsActions }
+export const definition = nodePanel('light')

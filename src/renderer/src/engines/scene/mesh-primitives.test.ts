@@ -1,4 +1,6 @@
+import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
+import { MESH_ENTRIES } from '@shared/domain/scene'
 import { MESH_PRIMITIVES, primitiveByKind } from './mesh-primitives'
 
 describe('MESH_PRIMITIVES', () => {
@@ -42,5 +44,25 @@ describe('MESH_PRIMITIVES', () => {
 
   it('returns null for an unknown kind', () => {
     expect(primitiveByKind('teapot')).toBeNull()
+  })
+
+  /**
+   * The native menu greys from the shared flag and cannot see the builders; the in-app menus
+   * grey from `disabled`. Let the two drift and a primitive is offered in one and not the
+   * other, with nothing failing to compile.
+   */
+  it('greys exactly what the shared table declares as not offered yet', () => {
+    const declared = MESH_ENTRIES.filter(entry => entry.disabled).map(entry => entry.kind)
+    const built = MESH_PRIMITIVES.filter(primitive => primitive.disabled).map(
+      primitive => primitive.kind,
+    )
+    expect(built).toEqual(declared)
+  })
+
+  // A key with no string behind it renders as the key itself, in the bar and in both menus.
+  it('has a translation behind every label key', () => {
+    for (const primitive of MESH_PRIMITIVES) {
+      expect(i18next.exists(primitive.labelKey)).toBe(true)
+    }
   })
 })

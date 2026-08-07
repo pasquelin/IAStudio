@@ -75,6 +75,10 @@ export const LIGHT_TYPES: readonly LightType[] = LIGHT_ENTRIES.map(entry => ({
   ...LIGHT_BUILDERS[entry.kind],
 }))
 
+const BY_KIND: ReadonlyMap<string, LightType> = new Map(
+  LIGHT_TYPES.map(light => [light.kind, light]),
+)
+
 export function lightByKind(kind: string): LightType | null {
-  return LIGHT_TYPES.find(light => light.kind === kind) ?? null
+  return BY_KIND.get(kind) ?? null
 }

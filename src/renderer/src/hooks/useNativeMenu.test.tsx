@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { SceneAddRequest, Unsubscribe } from '@shared/ipc'
-import { createDefaultScene } from '@/engines/scene/default-scene'
+import { installScene } from '@/engines/scene/scene-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -28,7 +28,7 @@ function meshes() {
 }
 
 beforeEach(() => {
-  useScenes.setState({ states: { 'doc-1': createDefaultScene() }, histories: {} })
+  installScene('doc-1')
   useDocuments.setState({ activeId: 'doc-1' })
 })
 
@@ -43,11 +43,13 @@ describe('useNativeMenu', () => {
     expect(meshes()[0]?.name).toBe('Cube')
   })
 
-  it('adds nothing for a kind no registry knows', () => {
+  // A kind that is announced but not buildable yet reaches the same guard as an unknown one,
+  // which `node-factory.test.ts` pins; here it must simply leave the scene alone.
+  it('adds nothing for a primitive that is not buildable yet', () => {
     const menu = captureSceneAdd()
     renderHook(() => useNativeMenu())
 
-    menu.emit({ kind: 'teapot' })
+    menu.emit({ kind: 'text' })
 
     expect(meshes()).toEqual([])
   })

@@ -24,7 +24,7 @@ const ADD_MODES: readonly ToolMode[] = [
     id: primitive.kind,
     labelKey: primitive.labelKey,
     icon: primitive.icon,
-    disabled: primitive.create === undefined,
+    disabled: primitive.disabled,
   })),
   ...LIGHT_TYPES.map(light => ({
     id: light.kind,

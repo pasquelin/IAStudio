@@ -2,6 +2,7 @@ import type { Asset, AssetQuery } from './domain/asset'
 import type { Job, JobProgress } from './domain/job'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
+import type { LightKind, MeshKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings } from './domain/settings'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { WindowState } from './domain/window'
@@ -104,12 +105,8 @@ export type ToolRequest = {
 /** Native menu commands with no payload, identified by a verb. */
 export type MenuCommand = 'project:new' | 'project:open' | 'layout:reset'
 
-/**
- * Request to drop a node in the active scene, coming from the native menu. `kind` stays a
- * string: `MeshKind | LightKind` would make the boundary reject a kind the renderer knows and
- * this build of the menu does not.
- */
-export type SceneAddRequest = { kind: string }
+/** Request to drop a node in the active scene, coming from the native menu. */
+export type SceneAddRequest = { kind: MeshKind | LightKind }
 
 /** What `window.studio` exposes. Every method maps to exactly one channel in `CHANNELS`. */
 export type StudioBridge = {

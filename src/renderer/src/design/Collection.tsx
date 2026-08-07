@@ -47,12 +47,14 @@ type Grid = {
  * so no separate first measurement is needed; until it fires, one column is the honest answer
  * rather than a guess.
  */
-function useGrid(host: { current: HTMLElement | null }, cardWidth: number): Grid {
+function useGrid(host: { current: HTMLElement | null }, cardWidth: number, enabled: boolean): Grid {
   const [grid, setGrid] = useState<Grid>({ columns: 1, columnWidth: cardWidth })
 
   useEffect(() => {
     const element = host.current
-    if (!element) return
+    // A list-only collection never reads this, and `columnWidth` is a float that changes with
+    // every pixel of a splitter drag — the observer would re-render the window twice a frame.
+    if (!element || !enabled) return
 
     const observer = new ResizeObserver(entries => {
       const width = entries[0]?.contentRect.width
@@ -71,7 +73,7 @@ function useGrid(host: { current: HTMLElement | null }, cardWidth: number): Grid
 
     observer.observe(element)
     return () => observer.disconnect()
-  }, [host, cardWidth])
+  }, [host, cardWidth, enabled])
 
   return grid
 }
@@ -95,8 +97,10 @@ export function Collection<T extends { id: string }>({
   rowHeight = ROW_HEIGHT,
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
-  const grid = state.view === 'grid' && renderCard !== undefined
-  const fitting = useGrid(scroller, state.thumbnailSize)
+  // Kept as the narrowed function rather than a boolean, so the cell below needs no second guard.
+  const card = state.view === 'grid' ? renderCard : undefined
+  const grid = card !== undefined
+  const fitting = useGrid(scroller, state.thumbnailSize, grid)
 
   const columns = grid ? fitting.columns : 1
   const rows = Math.ceil(items.length / columns)
@@ -170,7 +174,7 @@ export function Collection<T extends { id: string }>({
                     className={grid ? undefined : 'h-full w-full'}
                     onSelect={onSelect ? () => onSelect(item) : undefined}
                   >
-                    {grid && renderCard ? renderCard(item) : renderRow(item)}
+                    {card ? card(item) : renderRow(item)}
                   </CollectionCell>
                 ))}
               </div>

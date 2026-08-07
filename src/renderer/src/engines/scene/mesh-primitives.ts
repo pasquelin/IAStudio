@@ -24,7 +24,8 @@ export type MeshPrimitive = {
   kind: MeshKind
   labelKey: string
   icon: string
-  /** Absent while the primitive is not buildable yet: the menu greys it rather than hiding it. */
+  /** Declared but not buildable yet: every menu greys it rather than hiding it. */
+  disabled: boolean
   create?: () => GeometryDescriptor
 }
 
@@ -138,9 +139,18 @@ const MESH_BUILDERS: MeshBuilders = {
 export const MESH_PRIMITIVES: readonly MeshPrimitive[] = MESH_ENTRIES.map(entry => ({
   kind: entry.kind,
   labelKey: entry.labelKey,
+  // One answer to "is this offered yet", derived rather than declared twice: the native menu
+  // reads the shared flag and the in-app menus read this, and they must never disagree.
+  disabled: entry.disabled ?? MESH_BUILDERS[entry.kind].create === undefined,
   ...MESH_BUILDERS[entry.kind],
 }))
 
+// Indexed: the panels look a kind up per visible row per render, and a linear scan over
+// seventeen entries inside a virtualized list is paid on every frame of a drag.
+const BY_KIND: ReadonlyMap<string, MeshPrimitive> = new Map(
+  MESH_PRIMITIVES.map(primitive => [primitive.kind, primitive]),
+)
+
 export function primitiveByKind(kind: string): MeshPrimitive | null {
-  return MESH_PRIMITIVES.find(primitive => primitive.kind === kind) ?? null
+  return BY_KIND.get(kind) ?? null
 }

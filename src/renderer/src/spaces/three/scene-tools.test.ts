@@ -1,9 +1,44 @@
+import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
+import { COMMAND_IDS } from '@shared/domain/shortcut'
 import { LIGHT_TYPES } from '@/engines/scene/light-types'
 import { MESH_PRIMITIVES } from '@/engines/scene/mesh-primitives'
 import { SCENE_TOOLS } from './scene-tools'
 
 const add = SCENE_TOOLS.find(tool => tool.id === 'add')
+
+describe('scene tools', () => {
+  it('binds every command it declares to a known one', () => {
+    for (const tool of SCENE_TOOLS) {
+      if (tool.command) expect(COMMAND_IDS).toContain(tool.command)
+    }
+  })
+
+  it('names every tool through i18n rather than a literal', () => {
+    for (const tool of SCENE_TOOLS) expect(tool.labelKey).toMatch(/^sceneTools\./)
+  })
+
+  it('gives every tool an icon', () => {
+    for (const tool of SCENE_TOOLS) expect(tool.icon).toBeTruthy()
+  })
+
+  it('explains every tool, so no tooltip merely repeats the button’s own name', () => {
+    for (const tool of SCENE_TOOLS) expect(tool.descriptionKey).toMatch(/^sceneTools\..+Hint$/)
+  })
+
+  // A key with no string behind it renders as the key itself: the bar would tip `sceneTools.x`.
+  it('has a translation behind every key it declares, flyout rows included', () => {
+    for (const tool of SCENE_TOOLS) {
+      expect(i18next.exists(tool.labelKey)).toBe(true)
+      expect(i18next.exists(tool.descriptionKey ?? '')).toBe(true)
+      for (const mode of tool.modes ?? []) expect(i18next.exists(mode.labelKey)).toBe(true)
+    }
+  })
+
+  it('gives every flyout row an icon', () => {
+    for (const mode of add?.modes ?? []) expect(mode.icon).toBeTruthy()
+  })
+})
 
 describe('SCENE_TOOLS', () => {
   it('offers every primitive and every light under one Add button', () => {

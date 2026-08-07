@@ -1,4 +1,3 @@
-import type { ToolDefinition } from '@/app/tool-components'
-import { MeshesActions, MeshesPanel } from './MeshesPanel'
+import { nodePanel } from '../shared/node-panel'
 
-export const definition: ToolDefinition = { Content: MeshesPanel, Actions: MeshesActions }
+export const definition = nodePanel('mesh')

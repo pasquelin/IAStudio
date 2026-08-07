@@ -1,6 +1,7 @@
+import { mdiCubeOutline } from '@mdi/js'
 import { newId } from '@/helpers/ids'
-import { lightByKind } from './light-types'
-import { primitiveByKind } from './mesh-primitives'
+import { lightByKind, type LightType } from './light-types'
+import { primitiveByKind, type MeshPrimitive } from './mesh-primitives'
 import {
   DEFAULT_MATERIAL,
   IDENTITY_TRANSFORM,
@@ -22,11 +23,24 @@ export function lightNode(light: LightDescriptor, position: Vector3, name?: stri
   }
 }
 
-const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
+/** The registry entry for a kind, whichever registry knows it. */
+export function entryOf(kind: string): MeshPrimitive | LightType | null {
+  return primitiveByKind(kind) ?? lightByKind(kind)
+}
 
-/** i18n key of what a kind is called, from whichever registry knows it — never the text. */
+/** i18n key of what a kind is called — never the text. */
 export function labelKeyOf(kind: string): string | null {
-  return primitiveByKind(kind)?.labelKey ?? lightByKind(kind)?.labelKey ?? null
+  return entryOf(kind)?.labelKey ?? null
+}
+
+/**
+ * The glyph that says what a node is. It belongs to the registry entry, not to whichever panel
+ * happens to draw the node: the outliner, the mesh panel and the light panel must not disagree
+ * about what a sphere looks like.
+ */
+export function iconOf(node: SceneNode): string {
+  const kind = node.type === 'light' ? node.light.kind : node.geometry.kind
+  return entryOf(kind)?.icon ?? mdiCubeOutline
 }
 
 /**
@@ -41,7 +55,8 @@ export function labelKeyOf(kind: string): string | null {
 export function createNodeOf(kind: string, name: string): SceneNode | null {
   const primitive = primitiveByKind(kind)
   if (primitive) {
-    if (!primitive.create) return null
+    const geometry = primitive.create?.()
+    if (!geometry) return null
     return {
       id: newId(),
       parentId: null,
@@ -49,11 +64,11 @@ export function createNodeOf(kind: string, name: string): SceneNode | null {
       visible: true,
       transform: IDENTITY_TRANSFORM,
       type: 'mesh',
-      geometry: primitive.create(),
+      geometry,
       material: DEFAULT_MATERIAL,
     }
   }
 
   const light = lightByKind(kind)
-  return light ? lightNode(light.create(), ORIGIN, name) : null
+  return light ? lightNode(light.create(), IDENTITY_TRANSFORM.position, name) : null
 }

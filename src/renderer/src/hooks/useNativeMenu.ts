@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { placementOf } from '@shared/domain/tool'
 import type { MenuCommand } from '@shared/ipc'
 import { toolServes } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
-import { useAddNode } from '@/hooks/useAddNode'
+import { addNodeTo } from '@/hooks/useAddNode'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
@@ -28,12 +29,21 @@ function runCommand(command: MenuCommand): void {
  * into the void and the menu entries would silently do nothing.
  */
 export function useNativeMenu(): void {
-  const documentId = useDocuments(state => state.activeId)
-  const addNodeOf = useAddNode(documentId)
+  const { t } = useTranslation()
+  // Held in a ref rather than depended on: this hook sits at the app root, and re-subscribing
+  // three IPC listeners on every tab switch is three round-trips to refresh one closure.
+  const translate = useRef(t)
+  useEffect(() => {
+    translate.current = t
+  }, [t])
 
   useEffect(() => {
     const bridge = getBridge()
     if (!bridge) return
+
+    // The persisted workspace is restored without going through `setActiveWorkspace`, so the
+    // menu would sit on the default until the user switched spaces by hand.
+    void bridge.window.setWorkspace(useLayouts.getState().activeWorkspace)
 
     const stopTool = bridge.menu.onOpenTool(({ zone, tool }) => {
       // A tool the active workspace does not serve is filtered out of the zone, so opening it
@@ -50,12 +60,15 @@ export function useNativeMenu(): void {
 
     const stopCommand = bridge.menu.onCommand(runCommand)
     // The same path the toolbar and the panels take: two ways of adding a node would drift.
-    const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => addNodeOf(kind))
+    const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => {
+      const documentId = useDocuments.getState().activeId
+      if (documentId) addNodeTo(documentId, kind, translate.current)
+    })
 
     return () => {
       stopTool()
       stopCommand()
       stopSceneAdd()
     }
-  }, [addNodeOf])
+  }, [])
 }

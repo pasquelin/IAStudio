@@ -10,51 +10,25 @@ import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useAddNode } from '@/hooks/useAddNode'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { sceneOf, useScenes } from '@/stores/scenes'
-
-/**
- * What both scene registries have in common. `create` is only read for its absence — an entry
- * declared but not buildable yet is greyed, never hidden.
- */
-export type RegistryEntry = {
-  kind: string
-  labelKey: string
-  icon: string
-  create?: () => unknown
-}
-
-export type NodeActionsProps = {
-  documentId: string
-  /** Which half of the scene the panel owns: it must not delete the other's selection. */
-  type: SceneNodeType
-  entries: readonly RegistryEntry[]
-  addKey: string
-  addHintKey: string
-  removeKey: string
-  removeHintKey: string
-}
+import { NODE_KINDS } from './node-kinds'
 
 /**
  * Add and delete, on the panel's own title bar. Shared by the mesh and light panels, which
  * differ only by the registry that fills the flyout and by the node type they may remove.
  */
-export function NodeActions({
-  documentId,
-  type,
-  entries,
-  addKey,
-  addHintKey,
-  removeKey,
-  removeHintKey,
-}: NodeActionsProps) {
+export function NodeActions({ documentId, type }: { documentId: string; type: SceneNodeType }) {
   const { t } = useTranslation()
+  const { entries, namespace } = NODE_KINDS[type]
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const flyout = useHoverFlyout(entries.length)
-  const selectedId = useScenes(state => sceneOf(state, documentId).selectedId)
   const addNodeOf = useAddNode(documentId)
 
-  const selected = selectedId
-    ? nodeById(sceneOf(useScenes.getState(), documentId), selectedId)
-    : null
+  // A boolean rather than the node: the panel owns half the scene, and must not delete the
+  // other half's selection.
+  const removable = useScenes(state => {
+    const scene = sceneOf(state, documentId)
+    return scene.selectedId !== null && nodeById(scene, scene.selectedId)?.type === type
+  })
 
   return (
     <>
@@ -62,8 +36,8 @@ export function NodeActions({
         <ToolButton
           ref={setAnchor}
           icon={mdiPlus}
-          label={t(addKey)}
-          description={t(addHintKey)}
+          label={t(`${namespace}.add`)}
+          description={t(`${namespace}.addHint`)}
           tooltip={TIP_BOTTOM}
           variant="header"
         />
@@ -74,8 +48,7 @@ export function NodeActions({
                 key={entry.kind}
                 label={t(entry.labelKey)}
                 icon={entry.icon}
-                disabled={entry.create === undefined}
-                tip={TIP_BOTTOM(t(entry.labelKey))}
+                disabled={entry.disabled}
                 onSelect={() => {
                   addNodeOf(entry.kind)
                   flyout.close()
@@ -88,14 +61,15 @@ export function NodeActions({
 
       <ToolButton
         icon={mdiTrashCanOutline}
-        label={t(removeKey)}
-        description={t(removeHintKey)}
+        label={t(`${namespace}.remove`)}
+        description={t(`${namespace}.removeHint`)}
         tooltip={TIP_BOTTOM}
         variant="header"
-        disabled={selected?.type !== type}
-        onClick={() =>
-          selectedId && useScenes.getState().runCommand(documentId, removeNode(selectedId))
-        }
+        disabled={!removable}
+        onClick={() => {
+          const selectedId = sceneOf(useScenes.getState(), documentId).selectedId
+          if (selectedId) useScenes.getState().runCommand(documentId, removeNode(selectedId))
+        }}
       />
     </>
   )
