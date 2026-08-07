@@ -255,8 +255,12 @@ export type StudioBridge = {
     toggleFullScreen: () => Promise<void>
     state: () => Promise<WindowState>
     onState: (callback: (state: WindowState) => void) => Unsubscribe
-    /** Tells the main process which workspace is up, so the menu can follow it. */
-    setWorkspace: (workspace: WorkspaceId) => Promise<void>
+    /**
+     * Tells the main process which workspace is up and which panels it can currently open, so
+     * the menu can follow both. The panels travel with it because the main process cannot
+     * work them out: whether the generator exists depends on a model being chosen.
+     */
+    setWorkspace: (workspace: WorkspaceId, tools: readonly ToolId[]) => Promise<void>
   }
   menu: {
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe

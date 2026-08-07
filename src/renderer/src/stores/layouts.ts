@@ -2,7 +2,6 @@ import type { SerializedDockview } from 'dockview-react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
-import { getBridge } from '@/services/bridge'
 
 /** Serialized Dockview layout. Its shape belongs to Dockview; we never read it back. */
 export type SerializedLayout = SerializedDockview
@@ -33,12 +32,9 @@ export const useLayouts = create<LayoutsState>()(
       activeWorkspace: DEFAULT_WORKSPACE,
       layouts: {},
       projectPath: null,
-      setActiveWorkspace: workspace => {
-        set({ activeWorkspace: workspace })
-        // The native menu shows what the active space can do; nothing else tells the main
-        // process which one that is.
-        void getBridge()?.window.setWorkspace(workspace)
-      },
+      // The native menu follows this through `useNativeMenu`, which subscribes: what it may
+      // offer depends on more than the space, so the space alone is not what gets published.
+      setActiveWorkspace: workspace => set({ activeWorkspace: workspace }),
       remember: (workspace, layout) =>
         set(state => ({ layouts: { ...state.layouts, [workspace]: layout } })),
       forget: workspace =>

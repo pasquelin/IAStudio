@@ -136,6 +136,17 @@ export function shownTool(
 }
 
 /**
+ * Every panel this section can currently open, across all zones. What the native menu is told,
+ * since it lives in the main process and cannot ask a store.
+ */
+export function availableToolIds(workspace: WorkspaceId): ToolId[] {
+  const hasModel = hasModelFor(workspace)
+  return TOOLS.filter(
+    tool => servesWorkspace(tool, workspace) && (tool.id !== 'generator' || hasModel),
+  ).map(tool => tool.id)
+}
+
+/**
  * The tools of a zone this section can actually offer. Generating without a model is
  * impossible, so the generator is not merely disabled there — it is absent, and the rail shows
  * what the section can do rather than what it cannot.

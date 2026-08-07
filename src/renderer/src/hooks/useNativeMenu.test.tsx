@@ -3,8 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SceneAddRequest, Unsubscribe } from '@shared/ipc'
 import { installScene } from '@/stores/scene-fixtures'
 import type { CommandId } from '@shared/domain/command'
+import type { ToolId } from '@shared/domain/tool'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
+import { useLayouts } from '@/stores/layouts'
+import { useModels } from '@/stores/models'
 import { sceneOf, useScenes } from '@/stores/scenes'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
@@ -122,5 +125,51 @@ describe('useNativeMenu', () => {
     renderHook(() => useNativeMenu())
 
     expect(() => menu.emit('document.save')).not.toThrow()
+  })
+})
+
+describe('what the native menu is told', () => {
+  const setWorkspace = vi.fn(() => Promise.resolve())
+
+  function lastPublished(): { workspace: string; tools: readonly ToolId[] } {
+    // Typed by the stub rather than by the bridge; the call is what the hook actually sent.
+    const [workspace, tools] = (setWorkspace.mock.lastCall ?? []) as unknown as [
+      string,
+      readonly ToolId[],
+    ]
+    return { workspace, tools }
+  }
+
+  beforeEach(() => {
+    installFakeBridge({ window: { setWorkspace } })
+    useLayouts.setState({ activeWorkspace: 'image' })
+    useModels.setState({ selected: {} })
+  })
+
+  // Published on mount rather than on the first switch: the workspace is restored from the
+  // persisted state without ever going through `setActiveWorkspace`.
+  it('announces the restored section without waiting for a switch', () => {
+    renderHook(() => useNativeMenu())
+    expect(lastPublished().workspace).toBe('image')
+  })
+
+  it('follows a change of section', () => {
+    renderHook(() => useNativeMenu())
+    useLayouts.getState().setActiveWorkspace('3d')
+    expect(lastPublished().workspace).toBe('3d')
+  })
+
+  it('leaves the generator out while the section has no model', () => {
+    renderHook(() => useNativeMenu())
+    expect(lastPublished().tools).toContain('models')
+    expect(lastPublished().tools).not.toContain('generator')
+  })
+
+  // The section did not change, but what it can do did — and the menu is built app-wide, so
+  // nothing else would tell it.
+  it('announces the generator as soon as a model is chosen', () => {
+    renderHook(() => useNativeMenu())
+    useModels.getState().select('image', 'flux-dev')
+    expect(lastPublished().tools).toContain('generator')
   })
 })

@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import { placementOf, type ToolId } from '@shared/domain/tool'
 import type { BindingOverrides } from '@shared/domain/command'
 import { DEFAULT_LANGUAGE, type Language } from '@shared/i18n'
 import { CHANNELS, EVENTS } from '@shared/ipc'
@@ -38,8 +39,12 @@ function sendToFocused(channel: string, payload: unknown): void {
  */
 const workspaces = new Map<number, WorkspaceId>()
 
+/** The panels each window reported it can open. Same per-window reasoning as `workspaces`. */
+const availableTools = new Map<number, readonly ToolId[]>()
+
 /** What the menu currently shows, so a focus change that alters nothing rebuilds nothing. */
 let shown: WorkspaceId | null = null
+let shownTools: readonly ToolId[] = []
 let language: Language = DEFAULT_LANGUAGE
 /**
  * Remembered between builds, like the language: the menu is rebuilt whenever the focus moves
@@ -52,6 +57,11 @@ function focusedWorkspace(): WorkspaceId | null {
   return target ? (workspaces.get(target.webContents.id) ?? null) : null
 }
 
+function focusedTools(): readonly ToolId[] {
+  const target = focusedWindow()
+  return (target && availableTools.get(target.webContents.id)) || []
+}
+
 /**
  * Native application menu. Together with the icon rails, it is one of the two ways back for a
  * tool removed with its close button — a panel closed with no way to reopen it would be lost.
@@ -60,10 +70,12 @@ export function buildMenu(next: Language = language, remapped: BindingOverrides 
   language = next
   overrides = remapped
   shown = focusedWorkspace()
+  shownTools = focusedTools()
 
   const template = menuTemplate({
     language,
     workspace: shown,
+    tools: shownTools,
     isMac: process.platform === 'darwin',
     isDevelopment,
     overrides,
@@ -79,8 +91,12 @@ export function buildMenu(next: Language = language, remapped: BindingOverrides 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
+function sameTools(tools: readonly ToolId[]): boolean {
+  return tools.length === shownTools.length && tools.every((id, index) => id === shownTools[index])
+}
+
 function rebuildIfStale(): void {
-  if (focusedWorkspace() !== shown) buildMenu()
+  if (focusedWorkspace() !== shown || !sameTools(focusedTools())) buildMenu()
 }
 
 /**
@@ -88,11 +104,15 @@ function rebuildIfStale(): void {
  * is in. It announces the restored one on startup and again on every click of the space rail.
  */
 export function registerMenuHandlers(): void {
-  handle(CHANNELS.windowWorkspace, (event, next) => {
+  handle(CHANNELS.windowWorkspace, (event, next, tools) => {
     // Checked against the registry: this is the only main-process state a renderer sets, and a
     // preload from an older build could name a workspace this one has dropped.
     if (!WORKSPACE_IDS.includes(next)) return
     workspaces.set(event.sender.id, next)
+    availableTools.set(
+      event.sender.id,
+      tools.filter(id => placementOf(id) !== null),
+    )
     rebuildIfStale()
   })
 
@@ -103,6 +123,7 @@ export function registerMenuHandlers(): void {
     const id = window.webContents.id
     window.on('closed', () => {
       workspaces.delete(id)
+      availableTools.delete(id)
       rebuildIfStale()
     })
   })
