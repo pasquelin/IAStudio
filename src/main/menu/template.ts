@@ -1,6 +1,7 @@
 // `import type`, not `import { type … }`: with verbatimModuleSyntax the latter keeps a runtime
 // import of Electron, and this module could no longer be tested under plain Node.
 import type { MenuItemConstructorOptions } from 'electron'
+import { APP_NAME } from '@shared/constants'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
 import { TOOL_PLACEMENTS } from '@shared/domain/tool'
 import { EVENTS } from '@shared/ipc'
@@ -17,7 +18,6 @@ export type MenuOptions = {
   language: Language
   isMac: boolean
   isPackaged: boolean
-  appName: string
   actions: MenuActions
 }
 
@@ -35,7 +35,7 @@ function developerItems(isPackaged: boolean): MenuItemConstructorOptions[] {
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, isMac, isPackaged, appName, actions } = options
+  const { language, isMac, isPackaged, actions } = options
   const t = TRANSLATIONS[language]
 
   // Opened by the main process rather than routed through a renderer: settings are a window
@@ -49,7 +49,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   // Spelled out rather than `role: 'appMenu'`: the built-in role has no Preferences entry,
   // and ⌘, is where every macOS user looks for it first.
   const appMenuItem: MenuItemConstructorOptions = {
-    label: appName,
+    label: APP_NAME,
     submenu: [
       { role: 'about', label: t.menu.about },
       { type: 'separator' },

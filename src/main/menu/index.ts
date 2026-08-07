@@ -1,7 +1,6 @@
 import { app, BrowserWindow, dialog, Menu, nativeImage } from 'electron'
 import { type Language } from '@shared/i18n'
-import { aboutInfo } from '@main/about'
-import { runtimeVersions } from '@main/about-panel'
+import { currentAboutInfo } from '@main/about-panel'
 import { APP_ICON_PATH } from '@main/resources'
 import { toggleFullScreen } from '@main/window/controls'
 import { openSettingsWindow } from '@main/window/windows'
@@ -22,7 +21,7 @@ function sendToFocused(channel: string, payload?: unknown): void {
 
 /** Windows has no About panel role: a message box is the only way the version is reachable. */
 function showAboutDialog(language: Language): void {
-  const info = aboutInfo(language, runtimeVersions())
+  const info = currentAboutInfo(language)
   void dialog.showMessageBox({
     type: 'none',
     icon: nativeImage.createFromPath(APP_ICON_PATH),
@@ -37,7 +36,6 @@ export function buildMenu(language: Language): void {
     language,
     isMac: process.platform === 'darwin',
     isPackaged: app.isPackaged,
-    appName: app.name,
     actions: {
       send: sendToFocused,
       openSettings: () => void openSettingsWindow(),

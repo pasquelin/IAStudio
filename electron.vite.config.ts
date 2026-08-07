@@ -8,8 +8,16 @@ const partage = resolve('src/shared')
 const principal = resolve('src/main')
 
 function commitHash(): string {
+  // CI hands it over for free; elsewhere ask git, silencing stderr since the catch already
+  // handles the failure and `fatal: not a git repository` would only pollute the terminal.
+  const fromCi = process.env['GITHUB_SHA']
+  if (fromCi) return fromCi.slice(0, 7)
+
   try {
-    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
+    return execSync('git rev-parse --short HEAD', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
   } catch {
     // Built from an archive, or without git: a missing hash is no reason to fail the build.
     return 'dev'
@@ -27,13 +35,10 @@ export default defineConfig({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        input: {
-          index: resolve('src/preload/index.ts'),
-          splash: resolve('src/preload/splash.ts'),
-        },
+        input: resolve('src/preload/index.ts'),
         // A sandboxed preload MUST be CommonJS: Electron refuses to load an ESM module, and
         // the `window.studio` bridge is then never installed — silently.
-        output: { format: 'cjs', entryFileNames: '[name].cjs' },
+        output: { format: 'cjs', entryFileNames: 'index.cjs' },
       },
     },
   },

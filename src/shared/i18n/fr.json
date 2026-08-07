@@ -268,12 +268,6 @@
   "about": {
     "copyright": "© 2026 Alban Pasquelin. Scenario est une marque de Scenario Labs."
   },
-  "splash": {
-    "starting": "Démarrage…",
-    "catalog": "Ouverture du catalogue…",
-    "project": "Restauration du dernier projet…",
-    "workspace": "Préparation de l'espace de travail…"
-  },
   "settings": {
     "title": "Réglages",
     "account": "Compte",

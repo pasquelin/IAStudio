@@ -10,7 +10,7 @@ import { registerIpc } from '@main/ipc/register'
 import { mirrorLogsTo } from '@main/log'
 import { createServices } from '@main/services'
 import { lockNavigation } from '@main/window/navigation'
-import { openSplashWindow } from '@main/window/splash'
+import { openSplashWindow } from '@main/window/splash-window'
 import { createMainWindow } from '@main/window/windows'
 
 // Before anything reads `app.getPath('userData')`: that path derives from the name, and a
@@ -21,11 +21,14 @@ app.setName(APP_NAME)
 // the CSP is never honoured, and every local thumbnail comes back blank.
 registerAssetScheme()
 
+// At module scope, not inside `whenReady`: this hooks `web-contents-created`, so any window
+// opened before it — the splash was — would be created outside the lock and keep none of it.
+lockNavigation()
+
 void app.whenReady().then(() => {
   const language = resolveLanguage(app.getLocale())
-  const splash = openSplashWindow(language)
+  const splash = openSplashWindow()
 
-  lockNavigation()
   /**
    * The API calls leave from here, so they never appear in the renderer's Network tab; the
    * mirror is what makes them, and the failures behind a reduced code, visible in devtools.
@@ -36,17 +39,18 @@ void app.whenReady().then(() => {
    */
   if (!app.isPackaged) mirrorLogsTo(entry => broadcast(EVENTS.log, entry))
 
-  splash.step('catalog')
+  // Before the window: the renderer's first `invoke` must find its handlers registered.
   registerIpc(createServices())
 
-  splash.step('project')
-  registerAboutPanel(language)
-  buildMenu(language)
-
-  splash.step('workspace')
   // `did-finish-load` rather than `ready-to-show`: the main window is already visible by
   // then, so the splash never leaves a gap behind it.
-  createMainWindow().webContents.once('did-finish-load', () => splash.finish())
+  const main = createMainWindow()
+  main.webContents.once('did-finish-load', () => splash.finish())
+
+  // After the window, so Chromium starts parsing the renderer bundle sooner. Neither the
+  // application menu nor the About panel is reachable before a window exists.
+  registerAboutPanel(language)
+  buildMenu(language)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

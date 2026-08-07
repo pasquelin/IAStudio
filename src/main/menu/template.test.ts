@@ -6,7 +6,6 @@ const options = (overrides: Partial<MenuOptions> = {}): MenuOptions => ({
   language: 'fr',
   isMac: true,
   isPackaged: false,
-  appName: 'Scenario Studio',
   actions: {
     send: () => {},
     openSettings: () => {},

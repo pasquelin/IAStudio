@@ -6,7 +6,7 @@ import {
   type SplashTiming,
 } from './splash'
 
-type Scheduled = { callback: () => void; delay: number }
+type Scheduled = { callback: () => void; delay: number; cancelled: boolean }
 
 function fakeTiming(): {
   timing: SplashTiming
@@ -24,7 +24,11 @@ function fakeTiming(): {
     timing: {
       now: () => clock,
       schedule: (callback, delay) => {
-        scheduled.push({ callback, delay })
+        const entry: Scheduled = { callback, delay, cancelled: false }
+        scheduled.push(entry)
+        return () => {
+          entry.cancelled = true
+        }
       },
     },
   }
@@ -70,6 +74,19 @@ describe('createSplashController', () => {
     expect(safety).toBeDefined()
     safety?.callback()
     expect(closed).toBe(1)
+  })
+
+  it('disarms the safety timer on a normal close', () => {
+    // Left armed, it holds the window — and this whole scope — alive for twenty seconds,
+    // exactly while the renderer needs the CPU.
+    const { timing, scheduled, advance } = fakeTiming()
+    const controller = createSplashController(timing, () => {})
+
+    advance(SPLASH_MINIMUM_MS + 1)
+    controller.finish()
+
+    const safety = scheduled.find(entry => entry.delay === SPLASH_TIMEOUT_MS)
+    expect(safety?.cancelled).toBe(true)
   })
 
   it('closes exactly once, whatever fires first', () => {
