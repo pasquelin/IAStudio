@@ -83,10 +83,13 @@ export function documentPath(id: string, kind: DocumentKind): string {
  * extension is all a directory entry carries.
  *
  * `null` for anything else in there — a stray note, an export, a staging copy.
+ *
+ * Case-sensitive on purpose: `documentPath` writes the extension in lower case, so a `.IMG`
+ * accepted here would be listed under a name that `read` then fails to find on a case-sensitive
+ * volume — an empty document, and a second file beside the first at the next save.
  */
 export function kindForExtension(extension: string): DocumentKind | null {
-  const lowered = extension.toLowerCase()
-  return DOCUMENT_KINDS.find(kind => EXTENSION_BY_KIND[kind] === lowered) ?? null
+  return DOCUMENT_KINDS.find(kind => EXTENSION_BY_KIND[kind] === extension) ?? null
 }
 
 /**

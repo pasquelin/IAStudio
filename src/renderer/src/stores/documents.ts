@@ -111,16 +111,19 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     if (mine !== generation) return
 
     const shown = panelIds(useLayouts.getState().layouts)
-    set({
-      // One `set` for both halves: the folder says which documents exist, the layout says which
-      // are open, and between two writes every tab would paint and unpaint.
-      documents: Object.fromEntries(
-        listed.filter(document => shown.has(document.id)).map(document => [document.id, document]),
-      ),
-      // Nothing is in front until Dockview says so, and the previous project's tab certainly is
-      // not.
-      activeId: null,
-    })
+    // One `set` for both halves: the folder says which documents exist, the layout says which
+    // are open, and between two writes every tab would paint and unpaint.
+    const documents = Object.fromEntries(
+      listed.filter(document => shown.has(document.id)).map(document => [document.id, document]),
+    )
+
+    set(state => ({
+      documents,
+      // Kept when the tab survived the load: Dockview announces the active panel on mount, and
+      // that happens before this listing comes back — clearing it here would leave every tool
+      // window looking at nothing while a document is plainly open.
+      activeId: state.activeId && documents[state.activeId] ? state.activeId : null,
+    }))
   },
 
   create: async workspace => {

@@ -36,14 +36,23 @@ export const useProject = create<ProjectState>()(set => ({
     const bridge = getBridge()
     if (!bridge) return () => {}
 
+    // The main process reopens the last project on launch without waiting for it, so the answer
+    // to `current()` can be the `null` of a moment already gone by the time it arrives. An
+    // announcement wins over it, always: it is the later truth, and taking the stale `null`
+    // dropped the persisted arrangement of a project that was in fact open.
+    let announced = false
+
     // Another project means another catalogue, another folder of documents, and another
     // arrangement: nothing of the previous one may be left showing.
     const stop = bridge.project.onChange(project => {
+      announced = true
       set({ project })
       void followProject(project)
     })
 
     const current = await bridge.project.current()
+    if (announced) return stop
+
     set({ project: current })
     await followProject(current)
     return stop

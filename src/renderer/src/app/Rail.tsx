@@ -8,6 +8,7 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
 import { openDocument } from './DocumentArea'
 import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
@@ -61,6 +62,9 @@ export function Rail({ side }: RailProps) {
 function NewDocumentButton() {
   const { t } = useTranslation()
   const workspace = useLayouts(state => state.activeWorkspace)
+  // A document is a file in a project folder: with no project open there is nowhere to write it,
+  // and the create would fail after the click rather than before it.
+  const project = useProject(state => state.project)
 
   return (
     <ToolButton
@@ -68,12 +72,15 @@ function NewDocumentButton() {
       iconSize={22}
       label={t('documents.new')}
       tooltip={TIP_RIGHT}
-      disabled={kindForWorkspace(workspace) === null}
+      disabled={kindForWorkspace(workspace) === null || !project}
       onClick={() => {
         void useDocuments
           .getState()
           .create(workspace)
           .then(created => created && openDocument(created))
+          // A folder gone read-only, or removed under us: no tab opens, which is the honest
+          // outcome, and the studio has nowhere to say more until it grows a notification.
+          .catch(() => {})
       }}
       // Filled, unlike every tool icon around it: this one acts, the others only switch what is
       // shown. A grey plus among grey glyphs is a plus nobody finds.

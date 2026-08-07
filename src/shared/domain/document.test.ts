@@ -76,8 +76,11 @@ describe('kindForExtension', () => {
     expect(kindForExtension('.tex')).toBeNull()
   })
 
-  it('reads an extension a hand or a file system put in capitals', () => {
-    expect(kindForExtension('.SCENE')).toBe('scene')
+  // `documentPath` writes in lower case: accepted here, a `.SCENE` would be listed under a name
+  // `read` cannot find on a case-sensitive volume, and saved beside the original rather than over
+  // it.
+  it('refuses an extension in capitals rather than listing a file it could not reopen', () => {
+    expect(kindForExtension('.SCENE')).toBeNull()
   })
 })
 

@@ -162,8 +162,15 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
 
       await sweep(folder, entries)
 
-      const found = await Promise.all(entries.map(entry => descriptorOf(folder, entry)))
-      return found.filter(descriptor => descriptor !== null)
+      // One at a time rather than all at once: a folder of a few thousand documents opened in
+      // parallel runs the process out of file descriptors, and every failed read would come
+      // back as a document silently missing from the list.
+      const found: DocumentDescriptor[] = []
+      for (const entry of entries) {
+        const descriptor = await descriptorOf(folder, entry)
+        if (descriptor) found.push(descriptor)
+      }
+      return found
     },
 
     read: async (id, kind) => {

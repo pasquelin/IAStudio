@@ -37,6 +37,10 @@ export function setDocumentTitle(documentId: string, title: string, modified: bo
  */
 export function DocumentArea() {
   const workspace = useLayouts(state => state.activeWorkspace)
+  // Keyed by the project too: Dockview holds its panels itself, and dropping the stored layout
+  // of the project being left would otherwise leave its tabs on screen — then persist them
+  // again, under the project that never had them, on the first layout change.
+  const projectPath = useLayouts(state => state.projectPath)
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
@@ -59,5 +63,11 @@ export function DocumentArea() {
     [workspace],
   )
 
-  return <DockviewReact key={workspace} components={DOCUMENT_COMPONENTS} onReady={onReady} />
+  return (
+    <DockviewReact
+      key={`${projectPath ?? ''}:${workspace}`}
+      components={DOCUMENT_COMPONENTS}
+      onReady={onReady}
+    />
+  )
 }
