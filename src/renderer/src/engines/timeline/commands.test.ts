@@ -100,4 +100,47 @@ describe('sequence commands', () => {
     const command = addClip('V1', clip('a', 5_000, 1_000))
     expect(command.revert(command.apply(state)).selectedId).toBe('b')
   })
+
+  it('stops a trim at the neighbour rather than growing over it', () => {
+    const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 1_000_000)])
+    const next = trimClip('a', 'out', 1_800_000).apply(state)
+
+    // Two overlapping clips are heard twice and painted on top of each other.
+    expect(next.tracks[0]?.clips[0]).toMatchObject({ id: 'a', duration: 1_000_000 })
+  })
+
+  it('stops a trim of the in point at the clip before it', () => {
+    const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 1_000_000)])
+    const next = trimClip('b', 'in', 400_000).apply(state)
+
+    expect(next.tracks[0]?.clips[1]).toMatchObject({ id: 'b', start: 1_000_000 })
+  })
+
+  it('lets a trim run freely when there is no neighbour in the way', () => {
+    const next = trimClip('a', 'out', 3_000_000).apply(withClips([clip('a', 0, 1_000_000)]))
+    expect(next.tracks[0]?.clips[0]?.duration).toBe(3_000_000)
+  })
+
+  it('puts back the neighbours an added clip overwrote', () => {
+    const command = addClip('V1', clip('b', 500_000, 1_000_000))
+    const state = withClips([clip('a', 0, 2_000_000)])
+
+    const after = command.apply(state)
+    expect(after.tracks[0]?.clips).toHaveLength(3)
+
+    // Undo has to give back the state it was pressed from, not just remove the newcomer.
+    expect(command.revert(after).tracks[0]?.clips).toEqual(state.tracks[0]?.clips)
+  })
+
+  it('puts back the neighbours a moved clip overwrote on the track it landed on', () => {
+    const state = withClips([clip('a', 0, 500_000)])
+    const seeded = addClip('V2', clip('x', 1_000_000, 2_000_000)).apply(state)
+
+    const command = moveClip('a', 'V2', 1_500_000)
+    const after = command.apply(seeded)
+    const back = command.revert(after)
+
+    expect(back.tracks[1]?.clips).toEqual(seeded.tracks[1]?.clips)
+    expect(back.tracks[0]?.clips).toEqual(seeded.tracks[0]?.clips)
+  })
 })

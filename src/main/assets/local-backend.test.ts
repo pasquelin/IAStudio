@@ -115,7 +115,7 @@ describe('local backend', () => {
     const asset = await backend.importFromBytes(
       {
         id: 'asset_2',
-        name: 'Nappe (montée)',
+        name: 'Pad (edited)',
         type: 'audio',
         extension: '.wav',
         derivedFrom: 'asset_1',
@@ -134,13 +134,13 @@ describe('local backend', () => {
 
   it('overwrites an asset in place, keeping its identity', async () => {
     await backend.importFromBytes(
-      { id: 'asset_2', name: 'Nappe', type: 'audio', extension: '.wav', jobId: 'job_1' },
+      { id: 'asset_2', name: 'Pad', type: 'audio', extension: '.wav', jobId: 'job_1' },
       new Uint8Array([1, 2, 3]),
     )
 
     const replaced = await backend.replaceBytes('asset_2', new Uint8Array([4, 5]), '.wav')
 
-    expect(replaced).toMatchObject({ id: 'asset_2', name: 'Nappe', jobId: 'job_1', bytes: 2 })
+    expect(replaced).toMatchObject({ id: 'asset_2', name: 'Pad', jobId: 'job_1', bytes: 2 })
     expect(await readFile(join(root, 'assets/aud/asset_2.wav'))).toEqual(Buffer.from([4, 5]))
   })
 

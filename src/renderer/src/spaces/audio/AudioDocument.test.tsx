@@ -29,7 +29,7 @@ vi.mock('@/services/bridge', () => ({
 
 const asset: Asset = {
   id: 'asset-1',
-  name: 'nappe.wav',
+  name: 'pad.wav',
   type: 'audio',
   location: 'local',
   tags: [],
@@ -103,7 +103,7 @@ describe('AudioDocument', () => {
     await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
 
     await waitFor(() => expect(saveAudio).toHaveBeenCalled())
-    expect(saveAudio.mock.calls[0]?.[0]).toMatchObject({ replaces: 'asset-1', name: 'nappe.wav' })
+    expect(saveAudio.mock.calls[0]?.[0]).toMatchObject({ replaces: 'asset-1', name: 'pad.wav' })
   })
 
   it('writes beside the source on save as, and keeps them traceable', async () => {
@@ -113,7 +113,7 @@ describe('AudioDocument', () => {
     await waitFor(() => expect(saveAudio).toHaveBeenCalled())
     expect(saveAudio.mock.calls[0]?.[0]).toMatchObject({
       derivedFrom: 'asset-1',
-      name: 'nappe.wav (édité)',
+      name: 'pad.wav (édité)',
     })
   })
 

@@ -16,7 +16,7 @@ import { Inspector } from './Inspector'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
-  name: 'nappe.wav',
+  name: 'pad.wav',
   type: 'audio',
   location: 'local',
   tags: [],
@@ -67,7 +67,7 @@ describe('Inspector', () => {
     useSelection.getState().selectAssets(['asset-1'])
     render(<Inspector />)
 
-    expect(screen.getByText('nappe.wav')).toBeInTheDocument()
+    expect(screen.getByText('pad.wav')).toBeInTheDocument()
     expect(screen.getByText('Audio')).toBeInTheDocument()
   })
 
@@ -77,16 +77,16 @@ describe('Inspector', () => {
     render(<Inspector />)
 
     expect(screen.getByText('2')).toBeInTheDocument()
-    expect(screen.queryByText('nappe.wav')).not.toBeInTheDocument()
+    expect(screen.queryByText('pad.wav')).not.toBeInTheDocument()
   })
 
   it('shows the prompt behind a generated asset, whole', () => {
     useAssets.setState({ items: [asset({ jobId: 'job-1' })] })
-    useJobs.setState({ jobs: [job], bodies: { 'job-1': { prompt: 'une nappe très douce' } } })
+    useJobs.setState({ jobs: [job], bodies: { 'job-1': { prompt: 'a very soft pad' } } })
     useSelection.getState().selectAssets(['asset-1'])
     render(<Inspector />)
 
-    expect(screen.getByText('une nappe très douce')).toBeInTheDocument()
+    expect(screen.getByText('a very soft pad')).toBeInTheDocument()
     expect(screen.getByText('ElevenLabs Music v2')).toBeInTheDocument()
   })
 
@@ -123,7 +123,7 @@ describe('Inspector', () => {
     useSelection.getState().selectClip()
     render(<Inspector />)
 
-    expect(screen.getByText('nappe.wav')).toBeInTheDocument()
+    expect(screen.getByText('pad.wav')).toBeInTheDocument()
     expect(screen.getByLabelText('Fondu d’entrée')).toBeInTheDocument()
   })
 

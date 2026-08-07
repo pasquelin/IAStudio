@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
+import { pushEdit } from '@/engines/audio/edits'
+import { canUndo } from '@/engines/core/history'
+import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { openAsset } from './open-asset'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
-  name: 'nappe.wav',
+  name: 'pad.wav',
   type: 'audio',
   location: 'local',
   tags: [],
@@ -53,5 +55,29 @@ describe('opening an asset', () => {
   it('does nothing at all when no document can take it', () => {
     expect(() => openAsset(asset())).not.toThrow()
     expect(useSequences.getState().states).toEqual({})
+  })
+
+  it('drops the chain when the editor is pointed at another take', () => {
+    open('audio')
+    openAsset(asset())
+    useAudioEdits.getState().runCommand('doc-1', pushEdit({ kind: 'trimSilence' }))
+
+    openAsset(asset({ id: 'asset-2', name: 'pad.wav' }))
+
+    // A crop measured against one take describes nothing on the next, and "apply" would write
+    // that nothing over the file.
+    const edits = audioEditsOf(useAudioEdits.getState(), 'doc-1')
+    expect(edits).toMatchObject({ assetId: 'asset-2', edits: [], region: null, bypassed: false })
+    expect(canUndo(audioHistoryOf(useAudioEdits.getState(), 'doc-1'))).toBe(false)
+  })
+
+  it('keeps the chain when the same take is opened again', () => {
+    open('audio')
+    openAsset(asset())
+    useAudioEdits.getState().runCommand('doc-1', pushEdit({ kind: 'trimSilence' }))
+
+    openAsset(asset())
+
+    expect(audioEditsOf(useAudioEdits.getState(), 'doc-1').edits).toHaveLength(1)
   })
 })

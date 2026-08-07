@@ -25,8 +25,6 @@ type ModelsState = {
   select: (family: ModelFamily, modelId: string) => void
   /** Picks the model AND the values to open its form on, in one write. */
   prepare: (family: ModelFamily, modelId: string, params: FormValues) => void
-  /** Drops the preset once the form has opened on it — it belongs to one gesture, not to a session. */
-  consumePreset: (family: ModelFamily) => void
   setCollection: (collection: CollectionState) => void
 }
 
@@ -49,14 +47,6 @@ export const useModels = create<ModelsState>()(
           selected: { ...state.selected, [family]: modelId },
           preset: { ...state.preset, [family]: params },
         })),
-
-      consumePreset: family =>
-        set(state => {
-          if (!state.preset[family]) return state
-          const preset = { ...state.preset }
-          delete preset[family]
-          return { preset }
-        }),
 
       setCollection: collection => set({ collection }),
     }),

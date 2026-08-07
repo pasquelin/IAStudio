@@ -5,7 +5,7 @@ import { generationOf } from './generation'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
-  name: 'nappe.wav',
+  name: 'pad.wav',
   type: 'audio',
   location: 'local',
   tags: [],
@@ -42,12 +42,12 @@ describe('where an asset came from', () => {
   })
 
   it('reconstitutes it from the job this session submitted', () => {
-    const bodies = { 'job-1': { prompt: 'une nappe douce', seed: 42 } }
+    const bodies = { 'job-1': { prompt: 'a soft pad', seed: 42 } }
 
     expect(generationOf(asset({ jobId: 'job-1' }), [job()], bodies)).toMatchObject({
       modelId: 'eleven-music-v2',
       modelLabel: 'ElevenLabs Music v2',
-      prompt: 'une nappe douce',
+      prompt: 'a soft pad',
       seed: 42,
     })
   })
@@ -63,9 +63,9 @@ describe('where an asset came from', () => {
   })
 
   it('finds the prompt whichever of the usual keys the model named it', () => {
-    const bodies = { 'job-1': { text: 'sous un autre nom' } }
+    const bodies = { 'job-1': { text: 'under another name' } }
     expect(generationOf(asset({ jobId: 'job-1' }), [job()], bodies)?.prompt).toBe(
-      'sous un autre nom',
+      'under another name',
     )
   })
 

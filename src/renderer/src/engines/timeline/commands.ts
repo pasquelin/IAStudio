@@ -29,14 +29,47 @@ const withoutClip = (track: Track, clipId: string): Track => ({
   clips: track.clips.filter(clip => clip.id !== clipId),
 })
 
+/**
+ * How far a trim may travel before it would run into the clip next door. The neighbour is
+ * whichever clip sits immediately before or after on the same track; with none, the only
+ * bound is the start of the sequence.
+ */
+function clampToNeighbour(track: Track, clip: Clip, edge: ClipEdge, at: Us): Us {
+  const others = track.clips.filter(candidate => candidate.id !== clip.id)
+
+  if (edge === 'out') {
+    const after = others.filter(candidate => candidate.start >= clipEnd(clip))
+    const ceiling = after.reduce<Us | null>(
+      (nearest, candidate) =>
+        nearest === null ? candidate.start : Math.min(nearest, candidate.start),
+      null,
+    )
+    return ceiling === null ? at : Math.min(at, ceiling)
+  }
+
+  const before = others.filter(candidate => clipEnd(candidate) <= clip.start)
+  const floor = before.reduce((nearest, candidate) => Math.max(nearest, clipEnd(candidate)), 0)
+  return Math.max(at, floor)
+}
+
 /** A locked track refuses every edit, so every command starts by asking. */
 const editable = (state: SequenceState, trackId: string): Track | null => {
   const track = trackById(state, trackId)
   return track && !track.locked ? track : null
 }
 
+/**
+ * Puts a track's clips back exactly as they were.
+ *
+ * Insertion overwrites — it trims, splits and drops whatever the newcomer covers — so undoing
+ * it by removing that one clip again leaves the neighbours it ate still eaten. Restoring the
+ * whole list is the only way back to the state the user pressed undo from.
+ */
+const restore = (state: SequenceState, trackId: string, clips: Clip[]): SequenceState =>
+  updateTrack(state, trackId, current => ({ ...current, clips }))
+
 export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
-  let selectedBefore: string | null = null
+  let before: { clips: Clip[]; selectedId: string | null } | null = null
 
   return {
     id: `add:${clip.id}`,
@@ -44,21 +77,27 @@ export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
       const track = editable(state, trackId)
       if (!track) return state
 
-      selectedBefore = state.selectedId
+      before = { clips: track.clips, selectedId: state.selectedId }
       return {
         ...updateTrack(state, trackId, current => insertClip(current, clip)),
         selectedId: clip.id,
       }
     },
-    revert: state => ({
-      ...updateTrack(state, trackId, current => withoutClip(current, clip.id)),
-      selectedId: selectedBefore,
-    }),
+    revert: state => {
+      const origin = before
+      if (!origin) return state
+      return { ...restore(state, trackId, origin.clips), selectedId: origin.selectedId }
+    },
   }
 }
 
 export function moveClip(clipId: string, toTrackId: string, start: Us): Command<SequenceState> {
-  let from: { trackId: string; clip: Clip; selectedId: string | null } | null = null
+  let from: {
+    trackId: string
+    sourceClips: Clip[]
+    targetClips: Clip[]
+    selectedId: string | null
+  } | null = null
 
   return {
     id: `move:${clipId}`,
@@ -68,7 +107,13 @@ export function moveClip(clipId: string, toTrackId: string, start: Us): Command<
       const target = editable(state, toTrackId)
       if (!source || source.locked || !clip || !target) return state
 
-      from = { trackId: source.id, clip, selectedId: state.selectedId }
+      from = {
+        trackId: source.id,
+        sourceClips: source.clips,
+        targetClips: target.clips,
+        selectedId: state.selectedId,
+      }
+
       const moved: Clip = { ...clip, start: snapToFrame(start, state.settings) }
       const lifted = updateTrack(state, source.id, current => withoutClip(current, clipId))
       return {
@@ -77,11 +122,14 @@ export function moveClip(clipId: string, toTrackId: string, start: Us): Command<
       }
     },
     revert: state => {
-      if (!from) return state
       const origin = from
-      const lifted = updateTrack(state, toTrackId, current => withoutClip(current, clipId))
+      if (!origin) return state
+
+      // The target first: moving within one track makes both of these the same track, and the
+      // source is the list that was there before anything moved.
+      const restored = restore(state, toTrackId, origin.targetClips)
       return {
-        ...updateTrack(lifted, origin.trackId, current => insertClip(current, origin.clip)),
+        ...restore(restored, origin.trackId, origin.sourceClips),
         selectedId: origin.selectedId,
       }
     },
@@ -98,7 +146,10 @@ export function trimClip(clipId: string, edge: 'in' | 'out', at: Us): Command<Se
       const clip = clipById(state, clipId)
       if (!track || track.locked || !clip) return state
 
-      const time = snapToFrame(at, state.settings)
+      // Bounded by the neighbour on the same track. A trim does not go through `insertClip`,
+      // so nothing else would stop it from growing over the clip next to it — and two
+      // overlapping clips are heard twice and painted on top of each other.
+      const time = clampToNeighbour(track, clip, edge, snapToFrame(at, state.settings))
       const trimmed =
         edge === 'out'
           ? { ...clip, duration: time - clip.start }

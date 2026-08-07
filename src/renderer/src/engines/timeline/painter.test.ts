@@ -85,10 +85,10 @@ describe('timeline painter', () => {
   it('labels a clip with what the caller calls it, not with its asset id', () => {
     const { context, texts } = spyContext()
     paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size, {
-      labelOf: () => 'Nappe douce',
+      labelOf: () => 'Soft pad',
     })
 
-    expect(texts.map(entry => entry.text)).toContain('Nappe douce')
+    expect(texts.map(entry => entry.text)).toContain('Soft pad')
   })
 
   it('graduates the ruler in timecode', () => {
@@ -187,6 +187,7 @@ describe('timeline painter', () => {
 
   it('lays a poster across the head of a clip, never across the whole of it', () => {
     const { context, images } = spyContext()
+    // A stand-in: the painter only ever hands it to `drawImage`, which the spy records.
     const poster = {} as CanvasImageSource
     paintTimeline(context, stateWith([clip('a', 0, 10_000_000)]), viewport, size, {
       posterOf: () => poster,
@@ -198,6 +199,7 @@ describe('timeline painter', () => {
 
   it('never lets a poster spill past a clip shorter than it', () => {
     const { context, images } = spyContext()
+    // Same stand-in as above.
     const poster = {} as CanvasImageSource
     // 100 ms is 10 px wide, narrower than the poster would like to be.
     paintTimeline(context, stateWith([clip('a', 0, 100_000)]), viewport, size, {

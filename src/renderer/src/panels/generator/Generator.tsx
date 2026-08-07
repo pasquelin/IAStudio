@@ -38,6 +38,10 @@ export function Generator() {
   const chosen = useModels(state => state.selected[family] ?? null)
   // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
   // undefined and every field opens on its own default.
+  //
+  // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
+  // preset changes, so dropping it would blank the form under the hand that is filling it. It
+  // stays until the next "regenerate" replaces it, which reads as the last settings used.
   const preset = useModels(state => state.preset[family])
   const preferred = useSettings(state => state.settings.generation.defaultModels[family] ?? null)
   const modelId = chosen ?? preferred
@@ -68,9 +72,6 @@ export function Generator() {
 
   const generate = (body: FormValues): void => {
     void submit(modelId, body)
-    // The preset belongs to the gesture that set it. Dropped once it has been generated from,
-    // not when the form opens: clearing it earlier would reset the very fields it just filled.
-    useModels.getState().consumePreset(family)
   }
 
   return (

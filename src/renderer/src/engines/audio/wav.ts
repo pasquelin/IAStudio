@@ -11,7 +11,7 @@ const BITS_PER_SAMPLE = 16
  * already been through one. Encoding it here also keeps ffmpeg out of the audio editor
  * entirely — the browser decoded it, the browser writes it back.
  */
-export function encodeWav(data: AudioData): Uint8Array {
+export function encodeWav(data: AudioData): Uint8Array<ArrayBuffer> {
   const channels = Math.max(1, data.channels.length)
   const frames = frameCount(data)
   const blockAlign = channels * (BITS_PER_SAMPLE / 8)

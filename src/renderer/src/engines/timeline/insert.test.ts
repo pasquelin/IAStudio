@@ -6,7 +6,7 @@ import { DEFAULT_SETTINGS } from './timeline-state'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
-  name: 'nappe.wav',
+  name: 'pad.wav',
   type: 'audio',
   location: 'local',
   tags: [],

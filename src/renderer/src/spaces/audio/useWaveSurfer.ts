@@ -4,6 +4,7 @@ import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js'
 import { playbackToken } from '@/engines/timeline/playback'
 import type { AudioData } from '@/engines/audio/audio-data'
 import { durationOf } from '@/engines/audio/audio-data'
+import { encodeWav } from '@/engines/audio/wav'
 import type { Region } from '@/engines/audio/edits'
 import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 
@@ -28,11 +29,11 @@ const BAR_GAP = 1
 const BAR_RADIUS = 2
 
 /**
- * Wavesurfer, driven from the edit chain rather than from a URL.
+ * Wavesurfer, driven from the edit chain rather than from the file on disk.
  *
- * It is handed the rendered samples directly — `peaks` plus `duration` — so it never decodes
- * anything: the studio has already done that, and asking the library to fetch the file again
- * would mean two copies of a seventy-megabyte take in memory.
+ * The peaks are handed over ready-made, so drawing costs no decode; the audible side comes
+ * from a blob of the rendered chain, which is what the editor is for — the file on disk is the
+ * take before any of it.
  *
  * It also takes the playback token like every other player (spec § 8.7), which is what stops
  * the programme monitor and this editor from being audible at the same time.
@@ -97,11 +98,24 @@ export function useWaveSurfer({
     }
   }, [container, owner])
 
-  // The take itself, pushed in. `setOptions` redraws the bars without touching the instance,
-  // its listeners or the region being drawn.
+  /**
+   * The take itself, pushed in as a blob AND as peaks.
+   *
+   * The blob is what makes it audible: handed peaks and a duration alone, wavesurfer renders
+   * the waveform and plays nothing at all — there is no media behind it. The peaks ride along
+   * so the drawing still costs no second decode.
+   *
+   * It has to be a blob rather than the asset's own URL, because what is heard is the edit
+   * chain and not the file on disk.
+   */
   useEffect(() => {
-    if (!data) return
-    surfer.current?.setOptions({ peaks: data.channels, duration: durationOf(data) / SECOND })
+    const instance = surfer.current
+    if (!instance || !data) return
+
+    const blob = new Blob([encodeWav(data)], { type: 'audio/wav' })
+    instance.loadBlob(blob, data.channels, durationOf(data) / SECOND).catch(() => {
+      // Rejects when the take is swapped mid-load, which is not a failure worth reporting.
+    })
   }, [data])
 
   return {

@@ -65,9 +65,9 @@ describe('TrackHeaders', () => {
 
     await userEvent.dblClick(screen.getByText('V1'))
     await userEvent.clear(screen.getByLabelText('Nom de la piste'))
-    await userEvent.type(screen.getByLabelText('Nom de la piste'), 'Plan large{Enter}')
+    await userEvent.type(screen.getByLabelText('Nom de la piste'), 'Wide shot{Enter}')
 
-    expect(trackOf('V1')?.name).toBe('Plan large')
+    expect(trackOf('V1')?.name).toBe('Wide shot')
     expect(canUndo(historyOf(useSequences.getState(), 'doc-1'))).toBe(true)
   })
 
@@ -75,7 +75,7 @@ describe('TrackHeaders', () => {
     render(<TrackHeaders documentId="doc-1" />)
 
     await userEvent.dblClick(screen.getByText('V1'))
-    await userEvent.type(screen.getByLabelText('Nom de la piste'), 'jeté{Escape}')
+    await userEvent.type(screen.getByLabelText('Nom de la piste'), 'discarded{Escape}')
 
     expect(trackOf('V1')?.name).toBe('V1')
   })
