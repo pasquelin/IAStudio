@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { historyOf, useSequences } from '@/stores/sequences'
+import { TimelineCanvas } from './TimelineCanvas'
 import { DEFAULT_VIDEO_TOOL, VIDEO_TOOLS } from './video-tools'
 
 export type SequenceDocumentProps = { documentId: string }
@@ -20,6 +21,8 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
       <div className="bg-chassis relative min-h-0 flex-1" />
 
       <div className="border-border bg-base relative h-64 shrink-0 border-t">
+        <TimelineCanvas documentId={documentId} />
+
         <Toolbar
           className="absolute top-2 left-2 z-10"
           tools={[...VIDEO_TOOLS]}
