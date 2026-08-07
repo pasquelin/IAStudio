@@ -532,7 +532,8 @@
     "clearGuides": "Effacer les repères",
     "snap": "Magnétisme",
     "help": "Aide",
-    "about": "À propos de {{name}}"
+    "about": "À propos de {{name}}",
+    "licences": "Licences"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
@@ -851,5 +852,10 @@
     "autoSpin": "Rotation automatique",
     "envIntensity": "Éclairage",
     "dropSource": "Glissez une image du projet pour la poser en couleur de base"
+  },
+  "licences": {
+    "title": "Licences",
+    "intro": "Scenario Studio est livré avec les logiciels ci-dessous. Chacun garde sa propre licence, reproduite ici en entier.",
+    "sources": "Sources correspondantes :"
   }
 }

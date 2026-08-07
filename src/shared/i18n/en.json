@@ -532,7 +532,8 @@
     "clearGuides": "Clear guides",
     "snap": "Snap",
     "help": "Help",
-    "about": "About {{name}}"
+    "about": "About {{name}}",
+    "licences": "Licences"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
@@ -851,5 +852,10 @@
     "autoSpin": "Auto spin",
     "envIntensity": "Lighting",
     "dropSource": "Drop a picture from the project to use it as the base colour"
+  },
+  "licences": {
+    "title": "Licences",
+    "intro": "Scenario Studio ships with the software below. Each keeps its own licence, reproduced here in full.",
+    "sources": "Corresponding sources:"
   }
 }

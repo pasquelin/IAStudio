@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { chromeColor } from './theme'
+import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
 import { TRANSLATIONS } from '@shared/i18n'
 import { EVENTS } from '@shared/ipc'
@@ -196,5 +197,42 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
 
   load(window, { hash: settingsRoute(section) })
   settingsWindow = window
+  return window
+}
+
+let licencesWindow: BrowserWindow | null = null
+
+/**
+ * The notice the licences of everything shipped ask for, as its own window rather than a
+ * settings section: it is read once, printed or copied from, and belongs beside About in Help
+ * — not among things one changes.
+ */
+export function openLicencesWindow(): BrowserWindow {
+  if (licencesWindow && !licencesWindow.isDestroyed()) {
+    if (licencesWindow.isMinimized()) licencesWindow.restore()
+    licencesWindow.focus()
+    return licencesWindow
+  }
+
+  const window = new BrowserWindow({
+    width: 720,
+    height: 600,
+    minWidth: 480,
+    minHeight: 360,
+    show: false,
+    backgroundColor: chromeColor(),
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 12, y: 12 },
+    fullscreenable: false,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  window.on('closed', () => (licencesWindow = null))
+
+  load(window, { hash: LICENCES_ROUTE })
+  licencesWindow = window
   return window
 }
