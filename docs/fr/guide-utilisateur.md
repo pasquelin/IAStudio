@@ -212,6 +212,18 @@ de titre plutôt qu'en dessous : l'étagère est là pour montrer des assets, pa
 
 Le filtrage est local : le catalogue du projet est déjà indexé en mémoire.
 
+### Importer vos propres médias
+
+Le bouton **importer**, sur la ligne de titre de l'étagère, fait entrer des fichiers depuis votre
+disque. Chacun passe par un court pipeline, et un bandeau au-dessus du navigateur dit où il en
+est : **analyse** (lire ce que le fichier est réellement), **empreinte**, **proxy** (une copie
+allégée, pour que le scrubbing reste fluide), **waveform** (pour que l'audio se dessine).
+Chacune est interruptible — le proxy d'un rush de vingt minutes n'a pas à être attendu.
+
+Si ffmpeg est introuvable, le bandeau le dit : l'import fonctionne quand même, vous n'avez
+simplement ni proxy ni waveform. Indiquez le chemin de votre ffmpeg dans les réglages pour les
+retrouver.
+
 ---
 
 ## Éditer une image

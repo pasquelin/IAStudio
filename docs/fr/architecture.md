@@ -170,8 +170,8 @@ src/main/
 │   ├── sqlite-native.ts   better-sqlite3 — production
 │   └── sqlite-memory.ts   node:sqlite — tests
 ├── settings/              le store chiffré, son adaptateur, ses handlers
-├── assets/                l'ingestion et le protocole scenario://
-├── media/                 le travail adossé à ffmpeg
+├── assets/                les enregistrements d'assets et le protocole scenario://
+├── media/                 importer un fichier : sonde, hachage, proxy, forme d'onde
 ├── menu/                  le menu natif, bâti depuis les registres partagés
 └── window/                cycle de vie et verrouillage de la navigation
 ```
@@ -187,6 +187,22 @@ pour une barre de progression, inutilisable pour une génération vidéo. Le `Jo
 réglable) et le backoff exponentiel sur 429 et 5xx — aucun seuil de débit n'est publié, donc
 aucun n'est supposé. Contourner la file par un appel direct au SDK, c'est ainsi qu'on récolte une
 rafale de 429.
+
+### L'import de médias
+
+Importer un fichier est un pipeline à étapes nommées — `probe`, `hash`, `proxy`, `peaks` —
+chacune rapportant un ratio sur l'import *entier*, pas sur elle-même : une barre de progression
+veut donc dire la même chose à toutes les étapes. Il est annulable à tout moment : le proxy d'un
+rush de vingt minutes doit pouvoir s'arrêter sur demande.
+
+`ffprobe` lit ce que le fichier est réellement ; le codec décide de la suite. Ce que WebCodecs
+décode nativement se lit directement, le reste reçoit un proxy — les deux orthographes de chaque
+codec sont reconnues (`h264` et `avc1`, `av1` et `av01`), parce qu'une sonde lue par la mauvaise
+réclame un proxy dont personne n'a besoin.
+
+ffmpeg est résolu à l'exécution et peut être absent. Dans ce cas l'import fonctionne quand même —
+on perd le proxy et la forme d'onde, et l'interface sait exactement quelle partie est
+indisponible plutôt que d'échouer opaquement.
 
 ### SQLite derrière un port
 
@@ -376,7 +392,7 @@ pas gratuit.
 
 ## Les tests
 
-**838 tests répartis sur 103 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
+**946 tests répartis sur 110 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
 (`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout

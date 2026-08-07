@@ -208,6 +208,17 @@ rather than under it — the shelf is there to show assets, not chrome.
 
 Filtering happens locally, because the whole project catalogue is already indexed in memory.
 
+### Importing your own media
+
+The **import** button on the shelf's title row brings files in from your disk. Each one goes
+through a short pipeline, and a notice above the browser says where it is: **analysing**
+(reading what the file actually is), **fingerprinting**, **proxy** (a lighter copy, so scrubbing
+stays smooth), **waveform** (so audio can be drawn). Interrupt any of them — a proxy of a
+twenty-minute rush does not have to be waited out.
+
+If ffmpeg cannot be found, the notice says so: importing still works, you simply get no proxy
+and no waveform. Point the settings at your ffmpeg to get them back.
+
 ---
 
 ## Editing images

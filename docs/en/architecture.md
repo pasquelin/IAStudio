@@ -169,8 +169,8 @@ src/main/
 │   ├── sqlite-native.ts   better-sqlite3 — production
 │   └── sqlite-memory.ts   node:sqlite — tests
 ├── settings/              the encrypted store, its adapter, its handlers
-├── assets/                ingestion and the scenario:// protocol
-├── media/                 ffmpeg-backed work
+├── assets/                asset records and the scenario:// protocol
+├── media/                 ingesting a file: probe, hash, proxy, waveform
 ├── menu/                  the native menu, built from the shared registries
 └── window/                lifecycle and navigation lockdown
 ```
@@ -184,6 +184,22 @@ seconds, and pushes progress to the renderer over `evt:job-progress`.
 **Polling anywhere else is a bug.** The manager also owns the concurrency (three by default,
 settable) and the exponential backoff on 429 and 5xx — no published rate limit exists, so none
 is assumed. Bypassing the queue with a direct SDK call is how you get a burst of 429s.
+
+### Ingesting media
+
+Importing a file is a pipeline with named stages — `probe`, `hash`, `proxy`, `peaks` — each
+reporting a ratio across the *whole* ingest, not within itself, so a progress bar means the same
+thing at every stage. It is cancellable at any point: a proxy of a twenty-minute rush must stop
+on demand.
+
+`ffprobe` reads what the file actually is; the codec decides the rest. What WebCodecs decodes
+natively is played directly, and anything else gets a proxy — both spellings of each codec are
+matched (`h264` and `avc1`, `av1` and `av01`), because a probe read through the wrong one asks
+for a proxy nobody needs.
+
+ffmpeg is resolved at runtime and may be absent. When it is, importing still works — you lose
+the proxy and the waveform, and the interface is told exactly which part is unavailable rather
+than failing opaquely.
 
 ### SQLite through a port
 
@@ -363,7 +379,7 @@ re-renders every mounted row on each frame, and `useTranslation()` is not free.
 
 ## Testing
 
-**838 tests across 103 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
+**946 tests across 110 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.
