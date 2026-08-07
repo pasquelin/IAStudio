@@ -6,141 +6,160 @@ Copier-coller le bloc ci-dessous au début d'une nouvelle session.
 > [guide de l'utilisateur](fr/guide-utilisateur.md) et la [doc d'architecture](fr/architecture.md),
 > tous deux également [en anglais](en/).
 
+**Dernière mise à jour : 7 août 2026**, à `b3434ab`.
+
 ---
 
 Je reprends le développement de **Scenario Studio**, dans `/Users/pasquelin/Applications/scenario`.
 
 ## Avant toute chose, lis dans cet ordre
 
-1. `CLAUDE.md` — conventions et invariants. **La règle de langue est en tête : tout le code de `src/` est en anglais**, identifiants ET commentaires. Seules exceptions : `src/shared/i18n/fr.json` et les libellés attendus dans les tests qui viennent du bundle i18n.
+1. `CLAUDE.md` — conventions et invariants. **La règle de langue est en tête : tout le code de
+   `src/` est en anglais**, identifiants ET commentaires. Seules exceptions :
+   `src/shared/i18n/fr.json` et les libellés attendus dans les tests qui viennent du bundle i18n.
 2. `docs/specs/2026-08-06-scenario-studio-design.md` — la conception validée, 13 sections.
-3. `docs/superpowers/plans/2026-08-06-socle.md` — le plan du socle, dont les tâches 1 à 10 sont faites.
-4. `docs/scenario-api/README.md` — l'index de la doc API Scenario aspirée en local (209 pages). **La consulter avant d'aller sur le web.**
+3. La spec du domaine que tu touches : `docs/specs/2026-08-07-espace-3d-design.md`,
+   `docs/specs/2026-08-07-configuration-design.md`.
+4. `docs/scenario-api/README.md` — l'index de la doc API Scenario aspirée en local (209 pages).
+   **La consulter avant d'aller sur le web.**
+5. `docs/perf/` — les audits déjà menés. **Leurs conclusions sont acquises : ne pas refaire ces
+   mesures.**
 
-Puis : `git log --oneline -15`, `find src -type f -name '*.ts*' | sort`, et `pnpm validate` pour partir d'une base verte.
+Puis : `git log --oneline -15`, `find src -type f -name '*.ts*' | sort`, et `pnpm validate` pour
+partir d'une base verte.
+
+## L'état, en quatre chiffres
+
+**511 fichiers dans `src/`, 1806 tests verts, 72 canaux IPC, 5 espaces éditables.**
+`pnpm validate` est vert. L'application démarre par `pnpm start`.
 
 ## Ce qui est fait
 
-Le **socle applicatif** est complet et testé : 62 tests verts, `pnpm validate` vert, l'application démarre par `pnpm dev` (hot reload sur main, preload et renderer).
+**Le socle** — Electron + electron-vite + React 19 + TypeScript, shell à docks type IDE, design
+system maison (`renderer/src/design/`), i18n fr/en partagé entre le menu natif et l'UI, contrat
+IPC typé des deux côtés, `contextIsolation`/`sandbox` actifs, navigation verrouillée.
 
-- **Electron + electron-vite + React 19 + TypeScript**, trois cibles, alias `@/`, `@shared/`, `@main/`.
-- **Shell type IDE** : rails d'icônes aux bords, quatre zones dockables (`left`/`right`/`top`/`bottom`), une fenêtre d'outil par zone, redimensionnement borné qui réserve la place du centre, repli, Dockview au centre pour les documents uniquement, barre de titre custom avec feux natifs, ligne d'état.
-- **Design system maison** (`renderer/src/design/`) : `ToolButton`, `Toolbar` (slots, transposée de map3D), `UiIcon`, `Separator`, `TooltipHost`, `cn`.
-- **i18n** français/anglais, un JSON par langue dans `shared/i18n/`, partagé entre le menu natif et l'UI.
-- **Contrat IPC typé des deux côtés** : `shared/ipc.ts` déclare `CHANNELS` en types littéraux et `StudioBridge` ; `main/ipc/handle.ts` dérive la signature de chaque handler du canal lui-même.
-- **Sécurité** : `contextIsolation`/`sandbox` actifs, navigation verrouillée au niveau `app` (`main/window/navigation.ts`), `openExternal` filtré sur `https:`, DevTools retirés des builds packagés.
-- **Prêt mais pas câblé** : `main/settings/store.ts` (chiffrement `safeStorage`, testé) et `main/scenario/schema.ts` (`translateSchema`, `familyOf`, testé) ne sont importés nulle part.
+**La chaîne de génération** — réglages chiffrés par `safeStorage`, client `@scenario-labs/sdk`
+dans le main, `ModelRegistry` avec auto-pagination et cache, `JobManager` qui poll seul et borne
+la concurrence, `DynamicForm` construit depuis les descripteurs. Aucun formulaire de génération
+écrit à la main (invariant 5).
 
-Le code a passé `/simplify` et une revue en cinq angles ; les corrections sont appliquées et commitées.
+**Les projets** — un dossier, un manifeste, un catalogue SQLite. Le catalogue tourne sur son
+propre `worker_threads` : de 16 blocages du thread principal à 0 (`docs/perf/2026-08-08-catalogue-worker.md`).
 
-## Où ça s'arrête exactement
+**Les cinq espaces** — Image (PixiJS), 3D (three.js), Vidéo (timeline, moniteur, ffmpeg), Audio,
+Skyboxes. Un éditeur par type de document, chargé à l'ouverture, jamais avant.
 
-**Deux handlers IPC sur dix-huit canaux déclarés.** Seuls `window:state` et `window:toggle-full-screen` existent côté main. Les canaux `settings:*`, `scenario:*`, `project:*` et `assets:*` sont déclarés, typés, exposés par le preload — et rejettent à l'appel.
+**La configuration** — un registre de commandes unique lu par le menu natif, le clavier et
+l'écran des raccourcis ; un registre de réglages qui gouverne l'écran des préférences et la
+validation côté main.
 
-Conséquence : on ne peut ni saisir ses identifiants, ni lister les modèles, ni générer. Les panneaux Génération et Assets affichent leur état vide parce qu'il n'y a rien derrière.
+**La persistance des documents** — `main/project/documents.ts` écrit un document dans
+`documents/<id>.<ext>`, atomiquement (fichier de transit puis `rename`) et en file d'attente par
+fichier. **Seul l'espace 3D y est branché** : ⌘S écrit la scène, un onglet rouvert la relit, et
+la puce sur l'onglet dit ce qui n'est pas sur le disque.
 
-## Ce que je veux faire maintenant
+## Ce qu'il reste à faire
 
-Rendre l'application testable de bout en bout : **saisir mes identifiants, voir la liste de mes modèles Scenario, et générer une image**.
+### D'abord — les documents ne sont pas finis
 
-Dans cet ordre :
+Le tuyau existe et une seule vanne est ouverte. Dans l'ordre :
 
-1. **Réglages** — un `PersistenceAdapter` réel (`electron-store` + `safeStorage`), instancier `createSettingsStore`, câbler les 5 canaux `settings:*`.
-2. **Client Scenario** — `@scenario-labs/sdk` dans le main, lisant les identifiants du store, avec repli sur `secrets/.env` en développement (le fichier existe déjà, lu **à l'exécution**, jamais bundlé — voir `secrets/README.md`). Traduire les `Scenario.APIError` en codes de `AuthFailure`, jamais en texte brut.
-3. **ModelRegistry** — `GET /models` avec auto-pagination et cache, `GET /models/{id}` → `translateSchema` (déjà écrit et testé) → `ModelDescriptor`. Câbler `scenario:list-models` et `scenario:describe-model`.
-4. **UI** — un panneau Compte pour saisir clé et secret, et le panneau Génération qui liste les modèles de la famille de l'espace actif (`workspaces.ts` porte déjà `family`).
-5. **JobManager** — file bornée, backoff exponentiel sur 429/5xx, `job.wait()` du SDK, progression poussée par `evt:job-progress`.
-6. **DynamicForm** — le formulaire construit depuis `FieldDescriptor[]`, avec `react-hook-form` + `zod`. **Aucun formulaire de génération écrit à la main** (invariant 5).
+1. **Les documents appartiennent à un projet.** Aujourd'hui `useDocuments` est persisté sans clé
+   de projet, et `documents.write` résout le chemin via le projet *courant*. Projet A ouvert,
+   onglet enregistré, on ouvre B : ⌘S écrit la scène de A dans `B/documents/`. Pire au
+   rechargement — la lecture dans B rend `null` et l'onglet reçoit la scène par défaut par-dessus
+   ce que l'utilisateur croit être son document. **C'est une perte de données, et c'est le point
+   le plus urgent du dépôt.** Le remède touche les cinq espaces : changer de projet ferme les
+   onglets.
+2. **Fermer un onglet ne demande rien** et laisse son fichier orphelin. Personne n'appelle
+   `useDocuments.close` ni `documents.remove` ; `pruneDocuments` ne nettoie qu'au démarrage
+   suivant. La puce « modifié » existe mais n'est consultée nulle part à la fermeture.
+3. **Les quatre autres espaces ne savent pas s'enregistrer.** `IO_BY_KIND` dans
+   `app/document-io.ts` n'a qu'une entrée. Chacun a besoin de sa paire
+   sérialiser / relire-et-valider ; le reste — marque, puce, ⌘S — est déjà générique.
+4. **Rien ne rapporte une erreur à l'utilisateur.** `handle` ne journalise pas une promesse
+   rejetée, et le renderer n'a aucune surface pour le dire. Un ⌘S qui échoue laisse la puce, et
+   c'est tout ce qu'il raconte. Une ouverture qui échoue ne dit rien du tout.
 
-## Thème et design system — ne pas réinventer
+### Ensuite — l'éditeur 3D
 
-La direction visuelle est **calquée sur une interface JetBrains**, validée capture à l'appui. Elle
-est déjà en place dans `src/renderer/src/index.css` : **ne pas toucher à la palette, ne pas écrire de
-valeur hexadécimale dans un composant, ne pas ajouter de bibliothèque de composants.**
+Ce qui existe : 17 primitives, 5 types de lumières, gizmo translate/rotate/scale, sélection par
+raycast, inspecteur dérivé des descripteurs, undo avec coalescing par geste, 5 slots de textures
+PBR, outliner, vol libre, et l'enregistrement.
 
-### La règle qui gouverne le reste
+Ce qui manque, vérifié sur `main` :
 
-**Le châssis est plus CLAIR que les surfaces.** C'est l'inverse de l'habitude web, et c'est
-précisément ce qui donne la lecture « panneaux posés » d'un IDE : un fond gris moyen qui sert de
-gouttière, et des surfaces plus sombres, arrondies, flottant dessus.
+| Manque | Preuve |
+|---|---|
+| Sélection multiple | `SceneState.selectedId` est un `string \| null` |
+| Groupes / reparentage | `parentId` existe, aucune commande ne le change |
+| Dupliquer, copier-coller | aucune commande dans `commands.ts` |
+| Magnétisme, pivot local/monde | aucun `setTranslationSnap`, aucun `setSpace` |
+| Import de modèles | aucun `GLTFLoader`, Draco ou KTX2 — alors que `mesh` est un `AssetType` |
+| `sprite` et `text` | déclarés sans `create`, donc grisés |
+| Ombres | aucun `castShadow`, `receiveShadow`, `shadowMap` |
+| Environnement / IBL dans le viewport | `PMREMGenerator` n'existe que pour les skyboxes |
+| Caméra ortho, vues normalisées, filaire | rien dans le viewport |
+| Instanciation, LOD, BVH pour le picking | le raycast parcourt tous les objets |
 
-| Jeton | Valeur | Rôle |
-|---|---|---|
-| `chassis` | `#2b2d30` | fond de fenêtre, gouttière entre les surfaces |
-| `base` | `#191a1c` | surfaces : panneaux, centre |
-| `surface` | `#202124` | contenus à l'intérieur d'une surface |
-| `elevated` | `#3c3f44` | survol, état actif d'un bouton |
-| `border` | `#34363a` | séparateurs |
-| `accent` / `accent-soft` | `#3574f0` / `#2e436e` | zone focalisée, sélection |
-| `danger` | `#ff715b` | destructif, échec de job |
-| `text` / `muted` | `#dfe1e5` / `#868a91` | — |
+L'ordre conseillé : **sélection multiple** tant que le code est petit — elle touche l'état,
+l'inspecteur, le gizmo et l'outliner — puis **magnétisme et pivot** (deux appels d'API
+`TransformControls`, gain d'ergonomie immédiat), puis **l'import glTF**, puis **ombres et HDRI**,
+et enfin groupes, duplication, modes d'affichage, export.
 
-Rayons : `--radius-sc-sm/md/lg` = 4 / 6 / 10 px. Police : Inter (UI), SF Mono (valeurs).
+### Ce qui traîne ailleurs
 
-### Gabarits, pilotés par la densité
+- **Le catalogue n'a pas d'index composite `(type, created_at DESC)` ni de FTS5.** Les requêtes
+  coûteuses tombées sous la milliseconde qu'annonce l'audit ne sont pas encore gagnées : le
+  worker a déplacé le coût, les index le supprimeraient.
+- **Une recherche engagée ne s'interrompt pas** : six frappes produisent six recherches. Elles ne
+  bloquent plus rien mais occupent le thread.
+- **`pnpm start` charge `out/renderer/` au lieu du serveur Vite**, parce que
+  `scripts/dev-app-identity.mjs` renomme le bundle Electron et met `app.isPackaged` à `true` en
+  développement. La fenêtre est vide. Contournement : `pnpm exec electron-vite build` puis
+  `pnpm exec electron .`. Le remède est de comparer `process.defaultApp` plutôt que
+  `app.isPackaged` dans `main/window/windows.ts`.
 
-Tout est en variables CSS, jamais en dur. `[data-density='compact']` les réduit en bloc, posé par
-`useDensity` sur l'élément racine.
+## Performance — les règles non négociables
 
-| Variable | Confort | Compact |
-|---|---|---|
-| `--sc-control` | 28 px | 24 px |
-| `--sc-rail` / `--sc-rail-button` | 48 / 36 px | 42 / 32 px |
-| `--sc-gutter` | 6 px | 4 px |
-| `--sc-header` | 32 px | 28 px |
+**Invariant 6 : le thread UI ne fait que de l'UI.** Deux seuils, pas un :
 
-Deux ombres, et deux seulement : `--sc-shadow-furniture` pour les meubles (barres, docks) et
-`--sc-shadow-floating` pour ce qui vient de s'ouvrir par-dessus.
+- **8,33 ms** — le budget par frame du renderer sur un écran 120 Hz. C'est le chiffre qui compte,
+  pas les 16,7 ms d'un écran 60 Hz.
+- **16 ms** — au-delà, une opération synchrone dans le **main** gèle TOUTES les fenêtres, y
+  compris les détachées.
 
-### Primitives existantes — les réutiliser
+Ce qui part hors du thread UI, dans l'ordre du réflexe : GPU, Web Worker, OffscreenCanvas +
+Worker, `utilityProcess`. Toute tâche longue est **annulable**, **rapporte sa progression**, et
+tourne dans un pool borné à `hardwareConcurrency − 2`.
 
-`src/renderer/src/design/` :
+**Une optimisation non mesurée est une complexité gratuite.** Mesurer en build de **production**,
+jamais en dev : le profil dev est dominé par `jsxDEV` et `validateProperty`, qui n'existent pas en
+production. `pnpm bench` rejoue les micro-benchmarks ; `docs/perf/` porte le protocole complet et
+ses pièges.
 
-- **`ToolButton`** — le bouton d'outil. Icône `@mdi/js`, états `active` (fond neutre) et
-  `accented` (fond bleu, quand la zone a le focus), variante `header` pour les barres de titre de
-  panneau, nom accessible portant le raccourci. **Tout bouton d'icône passe par lui.**
-- **`Toolbar`** — la barre partagée, transposée de map3D : sections en slots (`false` masque, un
-  `ReactNode` remplace), `extras` pour les outils de l'espace, annuler/rétablir intégrés.
-- **`UiIcon`** — unique porte d'entrée des icônes. **Aucun SVG inline dans un composant.**
-- **`Separator`**, **`TooltipHost`** (infobulle partagée montée une fois à la racine),
-  **`tooltip.ts`** (instances `TIP_TOP` / `TIP_RIGHT` / `TIP_BOTTOM` — ne jamais fabriquer une
-  infobulle dans un corps de composant), **`cn`**, **`slots.ts`**.
-- **`Panel`** — la surface arrondie sombre dont le studio est fait, et **`PanelHeader`**, sa
-  ligne de titre sur la gauge `--sc-header`.
-- **`Row`** — **la** ligne, partout : vignette ou icône, titre, sous-titre, actions, infobulle
-  sur le nom tronqué. Le stack de calques, l'outliner, les panneaux maillages et lumières, les
-  modèles et les assets en dépendent. Une ligne écrite à la main est un bug de style.
-- **`Collection`** — la liste virtualisée à deux vues (grille et lignes), et **`CollectionBar`**,
-  sa barre de recherche, de facettes et de tri.
-- **`MediaTile`** (la tuile carrée légendée) et **`Thumbnail`** (la même image à taille fixe,
-  pour une ligne ou un en-tête). Les deux partagent `useLoadable` — une URL signée expire, le
-  placeholder doit prendre la relève.
-- **`EmptyState`**, **`DynamicForm`** (le seul formulaire de génération : cf. invariant 5),
-  **`Tree`**, **`Flyout`**, **`MenuButton`**, **`MenuRow`**, **`Timecode`**.
-- **`styles.ts`** — les chaînes de classes partagées par plus d'un composant : `FOCUS_RING`,
-  `CONTROL` (les contrôles de barre), `MEDIA_FRAME` (le cadre des images). Une forme propre à un
-  seul composant reste chez lui.
+Deux plafonds déjà chiffrés, à ne pas redécouvrir :
 
-Dans `app/` : `Shell`, `Rail`, `ToolWindow`, `DocumentArea`, `TitleBar`, `Footer`. `ResizeHandle`
-et `Panel` ont rejoint `design/`.
-
-### Trois règles non négociables
-
-1. **Le fond reste opaque.** Pas de vibrancy, pas de transparence de fenêtre. Dans un studio on
-   juge des couleurs : un fond translucide fausse la perception de tout ce qui est au-dessus.
-   C'est une décision de métier, pas d'esthétique — ne pas la « améliorer ».
-2. **Si le composant vit dans un dock, il est maison.** DaisyUI est réservé aux surfaces où
-   l'application redevient une application : préférences, dialogues, clés API, onboarding.
-3. **Les onglets appartiennent au centre.** Un document a un nom, donc un onglet. Un outil a une
-   icône, donc une place sur un rail. Aucune fenêtre d'outil n'entre dans le centre.
-
-Icônes : `@mdi/js` + `@mdi/react` exclusivement, via `UiIcon`.
+- Le chemin chaud de l'inspecteur 3D **n'est pas un problème** : 3,31 ms sur 8,33 ms au pire cas,
+  zéro frame perdue sur 299.
+- **Un ⌘S gèle toutes les fenêtres au-delà de ~5 500 nœuds**, et c'est le décodage du clone IPC —
+  73 % du coût — pas la sérialisation. Inatteignable au menu Ajouter, atteignable à l'import glTF.
 
 ## Contraintes à ne pas perdre de vue
 
-- La clé API ne quitte jamais le process main. Le renderer demande « suis-je authentifié ? », jamais « quelle est ma clé ? ».
-- Tout handler qui prend des arguments venant du renderer doit les **valider à l'exécution** (`zod` est déjà en dépendance) : le contrat TypeScript est effacé au runtime, et `main/ipc/handle.ts` est le point de passage naturel pour ça.
-- Zéro `any`, pas de `as const`, `type` plutôt qu'`interface`, pas de `as` sans le pourquoi en commentaire d'une ligne.
-- **Definition of done** : les tests unitaires accompagnent le code dans le même mouvement, puis `pnpm validate`, puis `/simplify`, puis `/code-review`, puis seulement on annonce la livraison.
+- La clé API ne quitte jamais le process main. Le renderer demande « suis-je authentifié ? »,
+  jamais « quelle est ma clé ? ».
+- Tout handler qui prend des arguments venant du renderer les **valide à l'exécution** (`zod`) :
+  le contrat TypeScript est effacé au runtime.
+- Zéro `any`, pas de `as const`, `type` plutôt qu'`interface`, pas de `as` sans le pourquoi en
+  commentaire d'une ligne.
+- **Une feature = une branche = un worktree**, dans `.claude/worktrees/`, partant de `main`.
+  Plusieurs sessions travaillent en parallèle dans ce clone : `git add` par chemin explicite,
+  jamais `git add -A`, jamais de `git stash` nu. Préfixe chaque commande par le chemin absolu de
+  ton worktree — le shell retombe ailleurs entre deux appels, et un build lancé au mauvais endroit
+  écrase le `out/` du voisin.
+- **Definition of done** : les tests unitaires accompagnent le code dans le même mouvement, puis
+  `pnpm validate`, puis `/simplify`, puis `/code-review`, puis seulement on annonce la livraison.
 
 Commence par me proposer ton plan avant de coder.

@@ -300,6 +300,19 @@ the node's own kind rather than a form written for each one.
 It is not a 3D panel: the same inspector reads a clip, a track or an asset when one of those is
 what you selected, which is why it stays open across every workspace.
 
+### Saving a scene
+
+`⌘S` / `Ctrl+S` writes the scene in front into the project, under `documents/`. A tab whose work
+is not on disk yet carries **a dot beside its name**; the dot goes when you save, and comes back
+on the next edit. Undoing back to the point where you saved clears it too — what you see is then
+exactly what the file holds.
+
+Reopening the studio brings the tab back and reads its scene again. A tab that was never saved
+comes back empty: nothing had been written for it.
+
+> For now, only 3D scenes save. Images, sequences, sounds and skies still live in the window —
+> closing their tab loses what they hold.
+
 <!-- SCREENSHOT: the 3D viewport with a selected mesh, the outliner and the meshes panel.
      Save to ../images/scene-3d.png -->
 
@@ -426,6 +439,7 @@ folders.
 |---|---|
 | `⌘N` / `Ctrl+N` | new project |
 | `⌘O` / `Ctrl+O` | open project |
+| `⌘S` / `Ctrl+S` | save the document in front |
 | `⌘,` / `Ctrl+,` | settings |
 | `⌃⌘F` / `F11` | full screen |
 | `⌘Z` / `⇧⌘Z` | undo / redo, in the active document |

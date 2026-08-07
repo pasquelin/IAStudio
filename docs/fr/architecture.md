@@ -347,6 +347,16 @@ pour qu'un projet reste transportable — supprimez `.index/` et il se reconstru
 Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez Scenario).
 Une image locale est servie au renderer sous la forme `scenario://<id>`.
 
+Les **documents** sont des fichiers JSON dans `documents/`, un par document, nommé d'après son
+identifiant — `<id>.scene`, `<id>.seq`. Le dossier fait foi : un fichier dont l'en-tête annonce un
+type que son extension dément est refusé plutôt qu'ouvert dans le mauvais éditeur. L'écriture
+passe par un fichier de transit puis un `rename`, atomique dans un même dossier, de sorte qu'une
+coupure en cours d'écriture ne laisse jamais un document tronqué là où était le travail.
+
+Le corps du fichier appartient à l'espace qui l'a écrit : le processus principal ne le lit pas, il
+l'estampille et le rend tel quel. Un espace qui apprend à s'enregistrer n'a donc pas de canal à
+lui. **Aujourd'hui seule la 3D est branchée** — cf. `docs/REPRISE.md`.
+
 ---
 
 ## Le design system

@@ -336,6 +336,16 @@ can search thousands of items without touching the filesystem, and so a project 
 Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
 image is served to the renderer as `scenario://<id>`.
 
+**Documents** are JSON files under `documents/`, one per document, named after its id —
+`<id>.scene`, `<id>.seq`. The folder has the last word: a file whose header claims a kind its
+extension denies is refused rather than opened in the wrong editor. Writing goes through a
+staging file and a `rename`, which is atomic within one folder, so a crash mid-write can never
+leave a truncated document where the work was.
+
+The body belongs to the space that wrote it: the main process never reads into it, it stamps an
+envelope and hands it back untouched. A space that learns to save therefore needs no channel of
+its own. **Only 3D is wired today** — see `docs/REPRISE.md`.
+
 ---
 
 ## The design system

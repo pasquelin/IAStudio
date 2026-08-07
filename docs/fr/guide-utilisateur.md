@@ -308,6 +308,20 @@ les champs viennent du type du nœud, pas d'un formulaire écrit pour chacun.
 Ce n'est pas un panneau de la 3D : le même inspecteur lit un clip, une piste ou un asset quand
 c'est cela qui est sélectionné, et c'est pourquoi il reste ouvert dans tous les espaces.
 
+### Enregistrer une scène
+
+`⌘S` / `Ctrl+S` écrit la scène en avant dans le projet, sous `documents/`. Un onglet dont le
+travail n'est pas encore sur le disque porte **un point à côté de son nom** ; le point disparaît
+à l'enregistrement, et revient à la modification suivante. Annuler jusqu'au point où vous aviez
+enregistré le fait disparaître aussi — ce que vous voyez est alors bien ce que contient le
+fichier.
+
+Rouvrir le studio ramène l'onglet et relit sa scène. Un onglet jamais enregistré revient vide :
+rien n'avait été écrit pour lui.
+
+> Pour l'instant, seules les scènes 3D s'enregistrent. Les images, les séquences, les sons et les
+> ciels vivent encore dans la fenêtre — fermer leur onglet perd ce qu'ils contiennent.
+
 <!-- CAPTURE : la vue 3D avec un maillage sélectionné, l'arbre de scène et le panneau Maillages.
      Vers ../images/scene-3d.png -->
 
@@ -436,6 +450,7 @@ Tout y est lisible sauf les identifiants, qui sont chiffrés. Supprimer le fichi
 |---|---|
 | `⌘N` / `Ctrl+N` | nouveau projet |
 | `⌘O` / `Ctrl+O` | ouvrir un projet |
+| `⌘S` / `Ctrl+S` | enregistrer le document en avant |
 | `⌘,` / `Ctrl+,` | réglages |
 | `⌃⌘F` / `F11` | plein écran |
 | `⌘Z` / `⇧⌘Z` | annuler / rétablir, dans le document actif |
