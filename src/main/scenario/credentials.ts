@@ -12,6 +12,8 @@ export type EnvironmentFallback = {
 }
 
 const ENV_FILE = join('secrets', '.env')
+/** What marks the project root, and so how far up the search for the secrets may go. */
+const MANIFEST_FILE = 'package.json'
 const KEY_VARIABLE = 'SCENARIO_API_KEY'
 const SECRET_VARIABLE = 'SCENARIO_API_SECRET'
 
@@ -64,21 +66,25 @@ export function resolveCredentials(
 }
 
 /**
- * Reads `secrets/.env` from `start` or any folder above it.
+ * Reads `secrets/.env` from the project root — the nearest folder at or above `start` holding
+ * a `package.json`.
  *
- * Reading beside `start` alone is what made the file unreachable: in development electron-vite
- * runs the bundled entry point, so `app.getAppPath()` is `<project>/out/main`, two levels below
- * the folder the secrets live in.
+ * The climb is what makes the file reachable at all: in development electron-vite runs the
+ * bundled entry point, so `app.getAppPath()` is `<project>/out/main`, two levels below the
+ * folder the secrets live in.
+ *
+ * The climb STOPS at that root rather than walking to the volume's: a stray `secrets/.env` in
+ * a parent folder would otherwise be picked up in silence, and the studio would spend another
+ * project's API key without ever saying whose.
  */
 export function readEnvFile(start: string, read: (path: string) => string | null): string | null {
   let current = start
 
   for (;;) {
-    const content = read(join(current, ENV_FILE))
-    if (content !== null) return content
+    if (read(join(current, MANIFEST_FILE)) !== null) return read(join(current, ENV_FILE))
 
     const parent = dirname(current)
-    // No development secrets anywhere above: the user is expected to type their own.
+    // No project root above: the user is expected to type their own credentials.
     if (parent === current) return null
     current = parent
   }
