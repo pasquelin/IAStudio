@@ -2,6 +2,7 @@ import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type TreeNode = { id: string; parentId: string | null }
@@ -131,10 +132,8 @@ export function Tree<T extends TreeNode>({
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
                 style={{ paddingLeft: row.depth * INDENT }}
                 className={cn(
-                  'group flex items-center gap-1 rounded-(--radius-sc-md) px-1',
-                  'h-(--sc-control) cursor-pointer outline-none',
-                  row.node.id === selectedId ? 'bg-accent-soft' : 'hover:bg-elevated',
-                  'focus-visible:ring-accent focus-visible:ring-1',
+                  'group flex h-(--sc-control) cursor-pointer items-center gap-1 px-1',
+                  rowSkin(row.node.id === selectedId),
                 )}
                 onPointerDown={() => onSelect(row.node.id)}
                 onKeyDown={event => onRowKeyDown(row, index, event.nativeEvent)}

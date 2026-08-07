@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
+import { rowSkin } from './styles'
 
 const GAP = 8
 const ROW_HEIGHT = 26
@@ -174,7 +175,9 @@ export function Collection<T extends { id: string }>({
   }
 
   return (
-    <div ref={scroller} className="h-full overflow-auto p-2">
+    // A list is inset like the tree is, so the same row sits at the same distance from the
+    // panel edge in both; only a grid of cards needs room to breathe.
+    <div ref={scroller} className={cn('h-full overflow-auto', grid ? 'p-2' : 'p-1')}>
       {items.length === 0 ? (
         empty
       ) : (
@@ -251,13 +254,11 @@ function CollectionCell({
 }: CollectionCellProps) {
   /**
    * Hover and selection are painted here rather than by the rendered item: a background set
-   * inside the cell would sit on top of this one and swallow it on hover.
+   * inside the cell would sit on top of this one and swallow it on hover. The three states come
+   * from `rowSkin`, which the tree draws its own rows with — the same line must not light up
+   * differently depending on which panel it is listed in.
    */
-  const skin = cn(
-    'min-w-0 rounded-(--radius-sc-sm)',
-    selected ? 'bg-accent-soft' : 'hover:bg-surface',
-    className,
-  )
+  const skin = cn('min-w-0', rowSkin(selected), className)
 
   if (!onSelect) return <div className={skin}>{children}</div>
 
@@ -276,11 +277,7 @@ function CollectionCell({
         }
         onArrow(event.nativeEvent)
       }}
-      // The ring marks keyboard focus alone: it and selection are different states.
-      className={cn(
-        skin,
-        'focus-visible:ring-accent cursor-pointer outline-none focus-visible:ring-1',
-      )}
+      className={cn(skin, 'cursor-pointer')}
     >
       {children}
     </div>

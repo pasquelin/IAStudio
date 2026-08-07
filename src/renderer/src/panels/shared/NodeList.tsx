@@ -7,8 +7,8 @@ import { nodesOfType, type SceneNodeType } from '@/engines/scene/scene-state'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SceneNodeRow } from './SceneNodeRow'
 
-/** A row carries an eye and a name — no thumbnail, so one line is enough. */
-const ROW_HEIGHT = 24
+/** The `--sc-control` gauge at its tallest, which is what a row measures in the outliner too. */
+const ROW_HEIGHT = 28
 
 /** The meshes or the lights of the scene in front, listed. */
 export function NodeList({ documentId, type }: { documentId: string; type: SceneNodeType }) {
