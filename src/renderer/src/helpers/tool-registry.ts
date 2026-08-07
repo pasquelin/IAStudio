@@ -117,6 +117,25 @@ export function useHasModel(workspace: WorkspaceId): boolean {
 }
 
 /**
+ * What a half of a zone actually draws, given what it holds.
+ *
+ * Two things are settled here rather than in the store. A layout arranged in one section must
+ * not drag its panels into the next: what is open is stored per zone, and a tool this section
+ * puts elsewhere — the shelf does — would otherwise show up in the zone it no longer belongs
+ * to. And a generator without a model gives way to the Models panel: the choice stays in the
+ * persisted state, so returning to a section that has one restores it.
+ */
+export function shownTool(
+  tool: ToolId | null,
+  zone: ToolZone,
+  workspace: WorkspaceId,
+  hasModel: boolean,
+): ToolId | null {
+  if (!tool || toolZoneIn(tool, workspace) !== zone) return null
+  return tool === 'generator' && !hasModel ? 'models' : tool
+}
+
+/**
  * The tools of a zone this section can actually offer. Generating without a model is
  * impossible, so the generator is not merely disabled there — it is absent, and the rail shows
  * what the section can do rather than what it cannot.

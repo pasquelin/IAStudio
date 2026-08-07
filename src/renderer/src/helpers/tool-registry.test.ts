@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { ModelFamily } from '@shared/domain/model'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { hasModelFor, useAvailableTools } from './tool-registry'
+import { hasModelFor, shownTool, useAvailableTools } from './tool-registry'
 
 function preferModel(family: ModelFamily, modelId: string): void {
   useSettings.setState({
@@ -48,5 +48,29 @@ describe('the generator', () => {
 
   it('is the only panel its absence removes', () => {
     expect(idsOf('right', 'image')).toEqual(['models', 'inspector'])
+  })
+})
+
+describe('what a half of a zone shows', () => {
+  it('shows the tool it holds', () => {
+    expect(shownTool('inspector', 'right', 'image', false)).toBe('inspector')
+  })
+
+  it('shows nothing where the section does not serve that tool', () => {
+    expect(shownTool('layers', 'left', 'audio', true)).toBeNull()
+  })
+
+  it('shows nothing where the tool sits in another zone in this section', () => {
+    // The shelf is in the left column in Video, so the bottom band must not draw it too.
+    expect(shownTool('assets', 'bottom', 'video', true)).toBeNull()
+    expect(shownTool('assets', 'left', 'video', true)).toBe('assets')
+  })
+
+  it('falls back to the models panel where the generator has no model', () => {
+    expect(shownTool('generator', 'right', 'image', false)).toBe('models')
+  })
+
+  it('shows the generator again as soon as one is there', () => {
+    expect(shownTool('generator', 'right', 'image', true)).toBe('generator')
   })
 })
