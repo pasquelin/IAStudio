@@ -11,6 +11,7 @@ import {
 import { useMemo } from 'react'
 import {
   placementIn,
+  placementOf,
   servesWorkspace,
   TOOL_PLACEMENTS,
   type ToolId,
@@ -119,11 +120,17 @@ export function useHasModel(workspace: WorkspaceId): boolean {
 /**
  * What a half of a zone actually draws, given what it holds.
  *
- * Two things are settled here rather than in the store. A layout arranged in one section must
- * not drag its panels into the next: what is open is stored per zone, and a tool this section
- * puts elsewhere — the shelf does — would otherwise show up in the zone it no longer belongs
- * to. And a generator without a model gives way to the Models panel: the choice stays in the
- * persisted state, so returning to a section that has one restores it.
+ * Two substitutions are settled here rather than in the store, which knows what is open per
+ * zone and nothing about sections.
+ *
+ * A half holding a tool this section puts elsewhere — or does not have at all — shows what the
+ * section does put there. What the user opened is a zone, and it stays that zone: the bottom
+ * band is the shelf in Image and the montage in Video, without either of them being reopened
+ * by hand on every switch. Closing the half still empties it everywhere, which is the one
+ * thing the click actually said.
+ *
+ * And a generator without a model gives way to the Models panel. Both substitutions leave the
+ * persisted state alone, so a section that has what was asked for restores it.
  */
 export function shownTool(
   tool: ToolId | null,
@@ -131,8 +138,17 @@ export function shownTool(
   workspace: WorkspaceId,
   hasModel: boolean,
 ): ToolId | null {
-  if (!tool || toolZoneIn(tool, workspace) !== zone) return null
-  return tool === 'generator' && !hasModel ? 'models' : tool
+  if (!tool) return null
+  const offered = (id: ToolId): ToolId => (id === 'generator' && !hasModel ? 'models' : id)
+
+  if (toolZoneIn(tool, workspace) === zone) return offered(tool)
+
+  // Every placement of a tool shares one slot, so the stored id names the half on its own.
+  const slot = placementOf(tool)?.slot
+  const substitute = toolsInZone(zone, workspace).find(
+    candidate => candidate.slot === slot && (candidate.id !== 'generator' || hasModel),
+  )
+  return substitute ? substitute.id : null
 }
 
 /**

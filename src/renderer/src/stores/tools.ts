@@ -58,13 +58,12 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
 export const DEFAULT_SPLIT = 240
 
 /**
- * The shelf appears in two zones on purpose, not by mistake: it is declared in the bottom
- * strip for most workspaces and beside the montage in Video and Audio, and what is open is
- * stored per zone rather than per workspace. Opening it in both lets each workspace show it
- * where it belongs — `Shell` drops the one that does not apply.
+ * Which halves start open, not what each section draws in them: an entry names a half, and
+ * `shownTool` reads it as the panel this section puts there — the band is the shelf in Image
+ * and the montage in Video, the upper left is the layers, the meshes, or the shelf again.
  */
-const DEFAULT_OPEN: OpenByZone = {
-  left: { secondary: 'explorer' },
+export const DEFAULT_OPEN: OpenByZone = {
+  left: { primary: 'assets', secondary: 'explorer' },
   // Models rather than the generator: nothing is chosen on a first run, and the generator does
   // not exist without a model.
   right: { primary: 'models', secondary: 'inspector' },

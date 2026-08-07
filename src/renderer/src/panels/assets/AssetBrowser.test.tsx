@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Project } from '@shared/domain/project'
+import { ToolZoneProvider } from '@/app/tool-zone'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
@@ -129,5 +130,40 @@ describe('AssetBrowser', () => {
   it('leaves the browser alone when nothing is being ingested', () => {
     render(<AssetBrowser />)
     expect(screen.queryByText(/ffmpeg introuvable/)).not.toBeInTheDocument()
+  })
+
+  /**
+   * The shelf lies across the bottom strip in most workspaces and stands in the left column in
+   * Video. Its filter bar follows the shape of the zone rather than the workspace: no exception
+   * is coded for Video, and moving the shelf again costs nothing here.
+   */
+  describe('the filter bar', () => {
+    // The bar's own container: a row of controls when laid out, a column of rows when stacked.
+    function bar(): HTMLElement {
+      const field = screen.getByRole('searchbox').closest('label')
+      const container = field?.parentElement
+      if (!container) throw new Error('filter bar not found')
+      return container
+    }
+
+    it('lays its controls along a band', () => {
+      render(
+        <ToolZoneProvider zone="bottom">
+          <AssetBrowser />
+        </ToolZoneProvider>,
+      )
+
+      expect(bar().className).not.toContain('flex-col')
+    })
+
+    it('stacks them in a side column', () => {
+      render(
+        <ToolZoneProvider zone="left">
+          <AssetBrowser />
+        </ToolZoneProvider>,
+      )
+
+      expect(bar().className).toContain('flex-col')
+    })
   })
 })

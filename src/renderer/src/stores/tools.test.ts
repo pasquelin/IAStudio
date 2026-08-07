@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { fitZoneSize, fitSplit, MIN_CENTER, MIN_SIZE, MIN_SPLIT, openFrom, useTools } from './tools'
+import {
+  DEFAULT_OPEN,
+  fitZoneSize,
+  fitSplit,
+  MIN_CENTER,
+  MIN_SIZE,
+  MIN_SPLIT,
+  openFrom,
+  useTools,
+} from './tools'
 
 describe('fitZoneSize', () => {
   it('leaves room for the documents area', () => {
@@ -159,6 +168,6 @@ describe('openFrom', () => {
   })
 
   it('falls back to the defaults when there is nothing to read', () => {
-    expect(openFrom(null).left).toEqual({ secondary: 'explorer' })
+    expect(openFrom(null)).toBe(DEFAULT_OPEN)
   })
 })

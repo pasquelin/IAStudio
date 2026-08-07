@@ -56,14 +56,27 @@ describe('what a half of a zone shows', () => {
     expect(shownTool('inspector', 'right', 'image', false)).toBe('inspector')
   })
 
-  it('shows nothing where the section does not serve that tool', () => {
-    expect(shownTool('layers', 'left', 'audio', true)).toBeNull()
+  // What the user opened is a zone, and it stays that zone across sections: the band holds the
+  // montage in Video and the shelf everywhere else, neither reopened by hand on every switch.
+  it('shows what this section puts there when the tool it holds sits elsewhere', () => {
+    expect(shownTool('assets', 'bottom', 'video', true)).toBe('timeline')
+    expect(shownTool('timeline', 'bottom', 'image', true)).toBe('assets')
   })
 
-  it('shows nothing where the tool sits in another zone in this section', () => {
-    // The shelf is in the left column in Video, so the bottom band must not draw it too.
-    expect(shownTool('assets', 'bottom', 'video', true)).toBeNull()
+  it('leaves a tool alone in the zone this section gives it', () => {
     expect(shownTool('assets', 'left', 'video', true)).toBe('assets')
+    expect(shownTool('assets', 'bottom', 'image', true)).toBe('assets')
+  })
+
+  it('substitutes within the half, never across the separator', () => {
+    // Layers is an upper-left panel; Audio has nothing there, and the explorer below is not a
+    // candidate — it would jump the separator the rail draws.
+    expect(shownTool('layers', 'left', 'audio', true)).toBeNull()
+    expect(shownTool('layers', 'left', 'video', true)).toBe('assets')
+  })
+
+  it('never substitutes a generator a section cannot offer', () => {
+    expect(shownTool('skybox', 'right', 'image', false)).toBe('models')
   })
 
   it('falls back to the models panel where the generator has no model', () => {

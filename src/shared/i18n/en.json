@@ -33,7 +33,6 @@
     "removeTool": "Remove tool"
   },
   "generation": {
-    "chooseModel": "Choose a model",
     "noParameter": "This model takes no parameters.",
     "randomSeed": "Random",
     "noProject": "Open a project to generate.",

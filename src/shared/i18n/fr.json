@@ -33,7 +33,6 @@
     "removeTool": "Retirer le module"
   },
   "generation": {
-    "chooseModel": "Choisir un modèle",
     "noParameter": "Ce modèle n’attend aucun paramètre.",
     "randomSeed": "Aléatoire",
     "noProject": "Ouvrez un projet pour générer.",
