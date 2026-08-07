@@ -1,4 +1,5 @@
 import type { Asset, AssetQuery } from './domain/asset'
+import type { DocumentDraft, DocumentFile, DocumentKind } from './domain/document'
 import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -34,6 +35,10 @@ export type Channels = {
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
   projectPickFolder: 'project:pick-folder'
+
+  documentRead: 'document:read'
+  documentWrite: 'document:write'
+  documentRemove: 'document:remove'
 
   assetsSearch: 'assets:search'
   assetsPeaks: 'assets:peaks'
@@ -71,6 +76,10 @@ export const CHANNELS: Channels = {
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
   projectPickFolder: 'project:pick-folder',
+
+  documentRead: 'document:read',
+  documentWrite: 'document:write',
+  documentRemove: 'document:remove',
 
   assetsSearch: 'assets:search',
   assetsPeaks: 'assets:peaks',
@@ -174,6 +183,13 @@ export type StudioBridge = {
     current: () => Promise<Project | null>
     pickFolder: () => Promise<string | null>
     onChange: (callback: (project: Project | null) => void) => Unsubscribe
+  }
+  documents: {
+    /** `null` when nothing has been saved under that id yet. */
+    read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
+    /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */
+    write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
+    remove: (id: string, kind: DocumentKind) => Promise<void>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>

@@ -42,6 +42,12 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onChange: noSubscription,
       ...overrides.project,
     },
+    documents: {
+      read: () => Promise.resolve(null),
+      write: () => Promise.resolve(),
+      remove: () => Promise.resolve(),
+      ...overrides.documents,
+    },
     assets: {
       search: () => Promise.resolve([]),
       peaks: () => Promise.resolve(null),

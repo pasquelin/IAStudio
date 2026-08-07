@@ -20,6 +20,7 @@ import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { broadcast } from './ipc/broadcast'
 import { createJobManager, type JobManager } from './scenario/job-manager'
 import { runnerOf } from './scenario/runner'
+import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
@@ -35,6 +36,7 @@ export type Services = {
   models: ModelRegistry
   jobs: JobManager
   project: ProjectStore
+  documents: DocumentFiles
   assets: LocalBackend
   /** Minted here so the collector and the audio editor cannot name assets differently. */
   newAssetId: () => string
@@ -123,6 +125,11 @@ export function createServices(): Services {
     now: timestamp,
   })
 
+  const documents = createDocumentFiles({
+    projectPath: () => project.path(),
+    now: timestamp,
+  })
+
   const ffmpeg = createFfmpegResolver(() => ({
     // No `resources/ffmpeg/` yet: the bundled binary is a task of its own — see spec § 4.
     bundled: undefined,
@@ -187,6 +194,7 @@ export function createServices(): Services {
     models,
     jobs,
     project,
+    documents,
     assets,
     newAssetId,
     media,

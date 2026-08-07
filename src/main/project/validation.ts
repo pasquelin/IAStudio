@@ -1,6 +1,13 @@
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
 import { isAssetType, type AssetQuery, type AssetType } from '@shared/domain/asset'
+import {
+  DOCUMENT_VERSION,
+  isDocumentKind,
+  type DocumentDraft,
+  type DocumentFile,
+  type DocumentKind,
+} from '@shared/domain/document'
 import type { Manifest } from '@shared/domain/project'
 import type { SaveAudioRequest } from '@shared/ipc'
 
@@ -21,8 +28,9 @@ export function parseManifest(value: unknown): Manifest {
 // launched from — so `project:open('..')` would reach a folder nobody chose.
 const projectPath = z.string().trim().min(1).refine(isAbsolute)
 
-// Anything that would create a nested folder, or escape into one, is not a project name.
-const projectName = z
+// One name inside one folder. Anything that would create a nested folder, or escape into one,
+// is not one — and both users of this come from the renderer and end up in a `join`.
+const pathSegment = z
   .string()
   .trim()
   .min(1)
@@ -34,7 +42,7 @@ export function parseProjectPath(value: unknown): string {
 }
 
 export function parseProjectName(value: unknown): string {
-  return projectName.parse(value)
+  return pathSegment.parse(value)
 }
 
 // `z.custom` rather than `z.enum`: the values live in `shared/domain/asset.ts`, and zod's enum
@@ -72,4 +80,51 @@ const saveAudio = z.object({
 
 export function parseSaveAudio(value: unknown): SaveAudioRequest {
   return saveAudio.parse(value)
+}
+
+export function parseDocumentId(value: unknown): string {
+  return pathSegment.parse(value)
+}
+
+const documentKind = z.custom<DocumentKind>(isDocumentKind)
+
+export function parseDocumentKind(value: unknown): DocumentKind {
+  return documentKind.parse(value)
+}
+
+const title = z.string().max(200)
+
+/*
+ * Never inspected: what a kind stores is its editor's business, and validating it here would
+ * put every editor's schema in the file layer.
+ *
+ * Optional, and it has to be: `JSON.stringify` drops a key whose value is `undefined`, so an
+ * editor that serializes an untouched document to nothing writes a file with no `content` at
+ * all. Required — which is what a bare `z.unknown()` is under zod 4 — that file would then
+ * fail to parse on the way back in, and the document would be unreadable for good.
+ */
+const content = z.unknown().optional()
+
+const documentDraft = z.object({ title, content })
+
+/** Puts the key back, so callers never have to tell "absent" from "holds nothing". */
+export function parseDocumentDraft(value: unknown): DocumentDraft {
+  const parsed = documentDraft.parse(value)
+  return { ...parsed, content: parsed.content }
+}
+
+const documentFile = z.object({
+  // Capped, not merely floored: a file written by a later build must be refused rather than
+  // read as if it were this one and silently flattened by the next save.
+  version: z.number().int().min(1).max(DOCUMENT_VERSION),
+  kind: documentKind,
+  title,
+  updatedAt: z.string().min(1),
+  content,
+})
+
+/** A document file is user territory, like the manifest: hand-edited, truncated, or older. */
+export function parseDocumentFile(value: unknown): DocumentFile {
+  const parsed = documentFile.parse(value)
+  return { ...parsed, content: parsed.content }
 }

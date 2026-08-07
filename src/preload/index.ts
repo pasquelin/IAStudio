@@ -52,6 +52,11 @@ const bridge: StudioBridge = {
     pickFolder: () => ipcRenderer.invoke(CHANNELS.projectPickFolder),
     onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),
   },
+  documents: {
+    read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
+    write: (id, kind, file) => ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file),
+    remove: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRemove, id, kind),
+  },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
     peaks: assetId => ipcRenderer.invoke(CHANNELS.assetsPeaks, assetId),
