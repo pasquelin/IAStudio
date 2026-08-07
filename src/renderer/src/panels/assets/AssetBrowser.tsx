@@ -2,6 +2,7 @@ import { mdiFileImportOutline, mdiImageMultipleOutline } from '@mdi/js'
 import { memo, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, posterUrl, type Asset, type AssetType } from '@shared/domain/asset'
+import { useToolLying } from '@/app/tool-zone'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { startAssetDrag } from '@/helpers/asset-drag'
@@ -82,6 +83,7 @@ export function AssetBrowser() {
   const project = useProject(state => state.project)
   const typeLabels = useTypeLabels()
   const facets = useTypeFacet(typeLabels)
+  const lying = useToolLying()
 
   const shown = useMemo(
     () =>
@@ -102,7 +104,14 @@ export function AssetBrowser() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <CollectionBar state={collection} onChange={setCollection} facets={facets} />
+      {/* Laid out along the bar in the bottom strip, stacked in a side column: this shelf now
+          appears in both, and stacking across the window strands one dropdown at full width. */}
+      <CollectionBar
+        state={collection}
+        onChange={setCollection}
+        facets={facets}
+        layout={lying ? 'inline' : 'stacked'}
+      />
       <ImportProgress />
       <Collection
         items={shown}

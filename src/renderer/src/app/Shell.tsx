@@ -105,7 +105,9 @@ function Edge({ zone }: { zone: ToolZone }) {
       className={cn('flex min-h-0 min-w-0', lying ? 'flex-row' : 'flex-col')}
       style={{ [lying ? 'height' : 'width']: size }}
     >
-      {primary && <ToolWindow tool={primary} onFocus={focusZone} onClose={closePrimary} />}
+      {primary && (
+        <ToolWindow tool={primary} zone={zone} onFocus={focusZone} onClose={closePrimary} />
+      )}
 
       {/* Only between two open halves: a lone panel has nothing to be dragged against. */}
       {primary && secondary && (
@@ -120,6 +122,7 @@ function Edge({ zone }: { zone: ToolZone }) {
       {secondary && (
         <ToolWindow
           tool={secondary}
+          zone={zone}
           // The second half keeps a length of its own only while the first is there to take the
           // rest; alone, it fills the zone.
           length={primary ? split : undefined}
