@@ -42,13 +42,35 @@ describe('createSplashController', () => {
       closed += 1
     })
 
-    controller.finish()
+    void controller.finish()
     expect(closed).toBe(0)
 
     const pending = scheduled.find(entry => entry.delay === SPLASH_MINIMUM_MS)
     expect(pending).toBeDefined()
     pending?.callback()
     expect(closed).toBe(1)
+  })
+
+  it('resolves only once the splash is gone, so the window shows after it', async () => {
+    const { timing, scheduled } = fakeTiming()
+    const order: string[] = []
+    const controller = createSplashController(timing, () => order.push('splash closed'))
+
+    const shown = controller.finish().then(() => order.push('window shown'))
+    scheduled.find(entry => entry.delay === SPLASH_MINIMUM_MS)?.callback()
+    await shown
+
+    expect(order).toEqual(['splash closed', 'window shown'])
+  })
+
+  it('resolves on the safety timeout too, so a stalled startup still hands the screen back', async () => {
+    const { timing, scheduled } = fakeTiming()
+    const controller = createSplashController(timing, () => {})
+
+    const settled = controller.finish()
+    scheduled.find(entry => entry.delay === SPLASH_TIMEOUT_MS)?.callback()
+
+    await expect(settled).resolves.toBeUndefined()
   })
 
   it('closes at once when startup already outlasted the floor', () => {
@@ -59,7 +81,7 @@ describe('createSplashController', () => {
     })
 
     advance(SPLASH_MINIMUM_MS + 1)
-    controller.finish()
+    void controller.finish()
     expect(closed).toBe(1)
   })
 
@@ -83,7 +105,7 @@ describe('createSplashController', () => {
     const controller = createSplashController(timing, () => {})
 
     advance(SPLASH_MINIMUM_MS + 1)
-    controller.finish()
+    void controller.finish()
 
     const safety = scheduled.find(entry => entry.delay === SPLASH_TIMEOUT_MS)
     expect(safety?.cancelled).toBe(true)
@@ -97,9 +119,9 @@ describe('createSplashController', () => {
     })
 
     advance(SPLASH_MINIMUM_MS + 1)
-    controller.finish()
+    void controller.finish()
     scheduled.forEach(entry => entry.callback())
-    controller.finish()
+    void controller.finish()
     expect(closed).toBe(1)
   })
 })

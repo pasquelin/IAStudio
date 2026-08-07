@@ -46,7 +46,12 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
   void window.loadFile(file, hash ? { hash } : {})
 }
 
-export function createMainWindow(): BrowserWindow {
+/**
+ * `deferShow` hands the decision to the caller instead of showing on `ready-to-show`. Startup
+ * uses it so the window waits for the splash to be gone: two windows on screen at once, one
+ * over the other, is what a splash is supposed to prevent.
+ */
+export function createMainWindow(options: { deferShow?: boolean } = {}): BrowserWindow {
   const window = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -61,7 +66,7 @@ export function createMainWindow(): BrowserWindow {
   })
 
   trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
+  if (!options.deferShow) window.once('ready-to-show', () => window.show())
   load(window)
 
   return window

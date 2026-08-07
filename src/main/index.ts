@@ -45,18 +45,23 @@ function startUp(splash: Splash, language: Language): void {
   // Before the window: the renderer's first `invoke` must find its handlers registered.
   registerIpc(createServices())
 
-  const main = createMainWindow()
+  // `deferShow`: the window stays hidden until the splash is gone, so the two are never on
+  // screen together — one appearing over the other is exactly what a splash should prevent.
+  const main = createMainWindow({ deferShow: true })
 
-  // `show`, not `did-finish-load`: Electron promises no order between the two, and closing
-  // the splash first would flash the desktop — the very gap it exists to cover.
-  main.once('show', () => splash.finish())
+  const reveal = (): void => {
+    void splash.finish().then(() => {
+      if (!main.isDestroyed()) main.show()
+    })
+  }
 
-  // Without this the window stays hidden forever: `window-all-closed` never fires, so the
-  // process lives on with no UI and macOS `activate` refuses to reopen anything.
+  main.once('ready-to-show', reveal)
+
+  // Without this the window would stay hidden forever: `window-all-closed` never fires, so
+  // the process lives on with no UI and macOS `activate` refuses to reopen anything.
   main.webContents.once('did-fail-load', (_event, code, description) => {
     log.error('renderer', `main window failed to load (${code}): ${description}`)
-    splash.finish()
-    if (!main.isDestroyed()) main.show()
+    reveal()
   })
 
   // After the window, so Chromium starts parsing the renderer bundle sooner. Neither the
