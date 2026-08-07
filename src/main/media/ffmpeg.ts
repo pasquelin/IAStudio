@@ -1,16 +1,3 @@
-import { join } from 'node:path'
-
-/**
- * Where the shipped encoder sits, per platform. The studio carries its own rather than asking
- * for one: an import that needs a proxy is not the moment to teach someone what a codec is.
- *
- * `root` is `process.resourcesPath` once packaged, and the project's `resources/` in
- * development — where `scripts/fetch-ffmpeg.mjs` puts it.
- */
-export function bundledFfmpeg(root: string, platform: NodeJS.Platform): string {
-  return join(root, 'ffmpeg', platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
-}
-
 export type FfmpegCandidates = {
   /** Shipped beside the app, when there is one. */
   bundled: string | undefined

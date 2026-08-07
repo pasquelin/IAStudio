@@ -15,8 +15,8 @@ import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createAssetCollector } from './assets/collector'
 import { serveAssets, servedFileOf } from './assets/protocol'
-import { bundledFfmpeg, createFfmpegResolver } from './media/ffmpeg'
-import { resourcesRoot } from './resources'
+import { createFfmpegResolver } from './media/ffmpeg'
+import { bundledFfmpeg, resourcesRoot } from './resources'
 import { linkedAsset, mediaFilters } from './media/link'
 import {
   binaryRuns,

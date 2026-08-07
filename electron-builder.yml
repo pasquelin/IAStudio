@@ -35,8 +35,11 @@ electronFuses:
 asarUnpack:
   - '**/*.node'
 
-# The encoder the studio ships with, put there by `pnpm ffmpeg:fetch` for the target being
-# packaged. Outside the asar on purpose: a binary has to be executable on disk to be spawned.
+# The encoder the studio ships with. `beforePack` fetches the one matching the target about to
+# be packed, so a run building several of them gives each its own. Outside the asar on purpose:
+# a binary has to be executable on disk to be spawned.
+beforePack: scripts/before-pack.mjs
+
 extraResources:
   - from: resources/ffmpeg
     to: ffmpeg

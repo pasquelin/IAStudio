@@ -98,7 +98,9 @@ function flag(name, fallback) {
 }
 
 async function download(url, into) {
-  const response = await fetch(url, { redirect: 'follow' })
+  const response = await fetch(url, { redirect: 'follow' }).catch(cause => {
+    throw new Error(`Could not reach ${url}: ${cause.message}`)
+  })
   if (!response.ok) throw new Error(`${url} answered ${response.status}`)
   writeFileSync(into, new Uint8Array(await response.arrayBuffer()))
 }
@@ -107,61 +109,79 @@ async function download(url, into) {
 function extract(archive, member, name, work) {
   // `--strip-components` would need the depth of each member; pulling the exact path and
   // renaming afterwards works the same for a flat zip and for a nested tarball.
-  execFileSync('tar', ['-xf', archive, '-C', work, member], { stdio: 'pipe' })
+  try {
+    execFileSync('tar', ['-xf', archive, '-C', work, member], { stdio: 'pipe' })
+  } catch (cause) {
+    // GNU tar, the default on Linux, reads tarballs only — the zip targets need bsdtar.
+    throw new Error(`Could not extract ${member}: ${cause.message}`)
+  }
   renameSync(join(work, member), join(DESTINATION, name))
   chmodSync(join(DESTINATION, name), 0o755)
 }
 
-const platform = flag('platform', process.platform)
-const arch = flag('arch', process.arch)
-const key = `${platform}-${arch}`
-const target = TARGETS[key]
-
-if (!target) {
-  console.error(`No ffmpeg build declared for ${key}. Known: ${Object.keys(TARGETS).join(', ')}`)
-  process.exit(1)
-}
-
-mkdirSync(DESTINATION, { recursive: true })
-const work = mkdtempSync(join(tmpdir(), 'scenario-ffmpeg-'))
-
-try {
-  for (const archive of target.archives) {
-    const file = join(work, 'archive')
-    console.log(`Fetching ${archive.url}`)
-    await download(archive.url, file)
-
-    for (const [name, member] of Object.entries(archive.members)) {
-      extract(file, member, name, work)
-      console.log(`  → resources/ffmpeg/${name}`)
-    }
-    rmSync(file)
+/**
+ * Puts the binaries for one target in `resources/ffmpeg/`, replacing whatever was there.
+ *
+ * The folder is emptied first: the names differ per platform (`ffmpeg` vs `ffmpeg.exe`), so
+ * fetching for a second target would otherwise leave the first one's binaries behind, and
+ * `extraResources` ships the whole folder.
+ */
+export async function fetchFfmpeg(platform, arch) {
+  const key = `${platform}-${arch}`
+  const target = TARGETS[key]
+  if (!target) {
+    throw new Error(`No ffmpeg build declared for ${key}. Known: ${Object.keys(TARGETS).join(', ')}`)
   }
 
-  writeFileSync(
-    join(DESTINATION, 'NOTICE.txt'),
-    [
-      `FFmpeg for ${key}`,
-      `Licence: ${target.licence}`,
-      `Build: ${target.source}`,
-      `Corresponding sources: ${SOURCES}`,
-      '',
-      'FFmpeg is a separate program, spawned by Scenario Studio. It is not linked into it.',
-      '',
-    ].join('\n'),
+  rmSync(DESTINATION, { recursive: true, force: true })
+  mkdirSync(DESTINATION, { recursive: true })
+  const work = mkdtempSync(join(tmpdir(), 'scenario-ffmpeg-'))
+
+  try {
+    for (const archive of target.archives) {
+      const file = join(work, 'archive')
+      console.log(`Fetching ${archive.url}`)
+      await download(archive.url, file)
+
+      for (const [name, member] of Object.entries(archive.members)) {
+        extract(file, member, name, work)
+        console.log(`  \u2192 resources/ffmpeg/${name}`)
+      }
+      rmSync(file)
+    }
+
+    writeFileSync(
+      join(DESTINATION, 'NOTICE.txt'),
+      [
+        `FFmpeg for ${key}`,
+        `Licence: ${target.licence}`,
+        `Build: ${target.source}`,
+        `Corresponding sources: ${SOURCES}`,
+        '',
+        'FFmpeg is a separate program, spawned by Scenario Studio. It is not linked into it.',
+        '',
+      ].join('\n'),
+    )
+  } finally {
+    rmSync(work, { recursive: true, force: true })
+  }
+
+  const binary = join(DESTINATION, platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
+  if (!existsSync(binary)) throw new Error(`Nothing landed at ${binary}`)
+
+  // Only meaningful when fetching for this machine; a cross-fetched binary cannot be run here.
+  if (platform === process.platform && arch === process.arch) {
+    console.log(execFileSync(binary, ['-version'], { encoding: 'utf8' }).split('\n')[0])
+  }
+  return binary
+}
+
+// Run directly rather than imported by `before-pack.mjs`.
+if (process.argv[1] && process.argv[1].endsWith('fetch-ffmpeg.mjs')) {
+  await fetchFfmpeg(flag('platform', process.platform), flag('arch', process.arch)).catch(
+    failure => {
+      console.error(failure.message)
+      process.exit(1)
+    },
   )
-} finally {
-  rmSync(work, { recursive: true, force: true })
-}
-
-const binary = join(DESTINATION, platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
-if (!existsSync(binary)) {
-  console.error(`Nothing landed at ${binary}`)
-  process.exit(1)
-}
-
-// Only meaningful when fetching for this machine; a cross-fetched binary cannot be run here.
-if (platform === process.platform && arch === process.arch) {
-  const version = execFileSync(binary, ['-version'], { encoding: 'utf8' }).split('\n')[0]
-  console.log(version)
 }

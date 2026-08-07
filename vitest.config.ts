@@ -23,6 +23,7 @@ export default defineConfig({
           name: 'node',
           environment: 'node',
           include: ['src/{main,preload,shared}/**/*.test.ts'],
+          setupFiles: ['src/main/test-setup.ts'],
         },
       },
       {
