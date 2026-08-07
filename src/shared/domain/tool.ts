@@ -40,9 +40,9 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'generator', zone: 'right', slot: 'primary' },
   { id: 'assets', zone: 'bottom', slot: 'primary' },
   { id: 'jobs', zone: 'bottom', slot: 'primary' },
-  // Second half of the bottom strip, so the timeline and the asset shelf show together: a clip
-  // is dragged from one onto the other, and a montage needs the full width to be read.
-  { id: 'timeline', zone: 'bottom', slot: 'secondary', workspaces: ['video'] },
+  // Same half as the asset shelf: a montage is read across the whole width, so the two take
+  // turns rather than share the strip.
+  { id: 'timeline', zone: 'bottom', slot: 'primary', workspaces: ['video'] },
 ]
 
 /**
