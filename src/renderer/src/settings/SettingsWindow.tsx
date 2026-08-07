@@ -9,7 +9,7 @@ import {
 } from '@shared/domain/settings-registry'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
-import { useDensity } from '@/hooks/useDensity'
+import { useAppearance } from '@/hooks/useAppearance'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 import { SettingList } from './SettingList'
@@ -103,7 +103,6 @@ export function SettingsWindow() {
   const [query, setQuery] = useState('')
 
   const connect = useSettings(state => state.connect)
-  const density = useSettings(state => state.settings.appearance.density)
 
   useEffect(() => {
     const subscription = connect()
@@ -122,7 +121,7 @@ export function SettingsWindow() {
     [],
   )
 
-  useDensity(density)
+  useAppearance()
 
   // Searched over the translated title and description, so `t` has to be a dependency: the
   // same query finds different settings once the language changes.

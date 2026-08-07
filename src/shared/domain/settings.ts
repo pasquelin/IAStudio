@@ -1,13 +1,31 @@
 import type { ApiFailure } from './failure'
 import type { ModelFamily } from './model'
 
-export type Theme = 'dark' | 'light'
+/**
+ * Spelled exactly as Electron's `nativeTheme.themeSource`, which takes these three words: the
+ * main process assigns the setting straight across, with no table in between to fall behind.
+ */
+export type Theme = 'dark' | 'light' | 'system'
+
+/** What `system` resolves to. The attribute on the root element carries one of these two. */
+export type ResolvedTheme = 'dark' | 'light'
+
 export type Density = 'compact' | 'comfortable'
 export type AssetBackend = 'local' | 'cloud'
 
 /** The values beside the types: the registry's options and zod both enumerate them from here. */
-export const THEMES: readonly Theme[] = ['dark', 'light']
+export const THEMES: readonly Theme[] = ['dark', 'light', 'system']
 export const DENSITIES: readonly Density[] = ['comfortable', 'compact']
+
+/**
+ * The daisyUI theme names, which are also what `data-theme` carries: daisyUI selects a theme by
+ * matching that attribute against the name declared in `index.css`. Written once here so the
+ * stylesheet, the renderer that publishes the attribute and the tests all read the same word.
+ */
+export const THEME_ATTRIBUTE: Record<ResolvedTheme, string> = {
+  dark: 'scenario-dark',
+  light: 'scenario-light',
+}
 
 /**
  * Settings the renderer may read. API credentials NEVER appear here: the renderer asks

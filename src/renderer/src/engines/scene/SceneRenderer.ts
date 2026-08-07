@@ -19,7 +19,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
-import { token } from '../core/palette'
+import { onPaletteChange, token } from '../core/palette'
 import type { Transform } from '@shared/domain/scene'
 import type { SceneNode, SceneState } from './scene-state'
 import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
@@ -85,6 +85,7 @@ export class SceneRenderer {
   private selectedId: string | null = null
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
+  private stopPaletteWatch: (() => void) | null = null
 
   constructor(private readonly options: SceneRendererOptions) {
     // No lights here: they are nodes of the state now, so the viewport shows what the outliner
@@ -104,6 +105,7 @@ export class SceneRenderer {
     host.appendChild(canvas)
 
     this.applyPalette(canvas)
+    this.stopPaletteWatch = onPaletteChange(this.onPaletteChanged)
 
     const renderer = new WebGLRenderer({ canvas, antialias: true })
     renderer.setPixelRatio(window.devicePixelRatio)
@@ -180,6 +182,9 @@ export class SceneRenderer {
   }
 
   dispose(): void {
+    this.stopPaletteWatch?.()
+    this.stopPaletteWatch = null
+
     if (this.frame !== null) cancelAnimationFrame(this.frame)
     this.frame = null
 
@@ -217,6 +222,25 @@ export class SceneRenderer {
     // The canvas goes with the engine that made it: left behind, the next mount would stack a
     // second one on top of it and the host would keep growing a dead canvas per remount.
     canvas?.remove()
+  }
+
+  /**
+   * The theme moved. The background, the grid and the axes are rebuilt from the new tokens, but
+   * the meshes are not: their materials were built with the previous `--color-mesh`, and
+   * `syncNode` compares by reference — every one of them would be skipped. Emptying what has
+   * been applied is what makes them repaint, and it costs nothing outside this rare moment.
+   */
+  private readonly onPaletteChanged = (): void => {
+    const canvas = this.renderer?.domElement
+    if (!canvas) return
+
+    this.applyPalette(canvas)
+
+    const nodes = [...this.applied.values()]
+    this.applied.clear()
+    for (const node of nodes) this.syncNode(node)
+
+    this.requestRender()
   }
 
   /** Pulls the studio palette off the canvas, so the viewport follows a theme change with it. */

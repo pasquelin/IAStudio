@@ -4,52 +4,14 @@
 }
 
 /*
- * DaisyUI's own theme, fed the studio palette. Without it its components carry no colour at
- * all, and the "DaisyUI at the margins" rule — preferences, dialogs, API keys — has nothing
- * to stand on. The values repeat the tokens below on purpose: this is the token layer, the
- * only place a hex value is allowed.
- */
-@plugin 'daisyui/theme' {
-  name: 'scenario';
-  default: true;
-  prefersdark: true;
-  color-scheme: dark;
-
-  --color-base-100: #202124;
-  --color-base-200: #191a1c;
-  --color-base-300: #2b2d30;
-  --color-base-content: #dfe1e5;
-  --color-primary: #3574f0;
-  --color-primary-content: #f4f6fa;
-  --color-secondary: #3c3f44;
-  --color-secondary-content: #dfe1e5;
-  --color-accent: #2e436e;
-  --color-accent-content: #dfe1e5;
-  --color-neutral: #34363a;
-  --color-neutral-content: #dfe1e5;
-  --color-info: #3574f0;
-  --color-info-content: #f4f6fa;
-  --color-success: #57a773;
-  --color-success-content: #12180f;
-  --color-warning: #e0a350;
-  --color-warning-content: #1d1608;
-  --color-error: #ff715b;
-  --color-error-content: #2a0d08;
-
-  --radius-selector: 4px;
-  --radius-field: 4px;
-  --radius-box: 6px;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
-}
-
-/*
  * Palette matched to the reference interface: a mid-grey background acting as a gutter, with
  * DARKER rounded surfaces laid on top. The opposite of the usual web convention, and what
  * gives an IDE its "floating panels" reading.
+ *
+ * These are the DARK values, and they are the reference. They live in `@theme` because that is
+ * what makes `bg-chassis` and friends exist at all; the light theme restates every one of them
+ * further down, inside its own daisyUI theme block. Nothing else in the application may hold a
+ * hex value — the engines read these tokens through `engines/core/palette.ts`.
  */
 @theme {
   --color-chassis: #2b2d30;
@@ -89,6 +51,129 @@
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+/*
+ * DaisyUI's own theme, fed the studio palette. Without it its components carry no colour at
+ * all, and the "DaisyUI at the margins" rule — preferences, dialogs, API keys — has nothing
+ * to stand on. The values repeat the tokens above on purpose: this is the token layer, the
+ * only place a hex value is allowed.
+ *
+ * The name is what `data-theme` carries — see `THEME_ATTRIBUTE` in `shared/domain/settings.ts`.
+ * `default` is what paints the window before the renderer has published the attribute.
+ */
+@plugin 'daisyui/theme' {
+  name: 'scenario-dark';
+  default: true;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #202124;
+  --color-base-200: #191a1c;
+  --color-base-300: #2b2d30;
+  --color-base-content: #dfe1e5;
+  --color-primary: #3574f0;
+  --color-primary-content: #f4f6fa;
+  --color-secondary: #3c3f44;
+  --color-secondary-content: #dfe1e5;
+  /*
+   * daisyUI and the studio tokens share one namespace, and both wanted `--color-accent`. There
+   * is only ever one variable: daisyUI's value won on layer order, which quietly made every
+   * `bg-accent`, the timeline playhead and the canvas marquee paint `accent-soft` instead of the
+   * accent. It is the studio's value that stands, because that is the one eight surfaces read;
+   * no daisyUI component uses `accent` at all.
+   */
+  --color-accent: #3574f0;
+  --color-accent-content: #f4f6fa;
+  --color-neutral: #34363a;
+  --color-neutral-content: #dfe1e5;
+  --color-info: #3574f0;
+  --color-info-content: #f4f6fa;
+  --color-success: #57a773;
+  --color-success-content: #12180f;
+  --color-warning: #e0a350;
+  --color-warning-content: #1d1608;
+  --color-error: #ff715b;
+  --color-error-content: #2a0d08;
+
+  --radius-selector: 4px;
+  --radius-field: 4px;
+  --radius-box: 6px;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/*
+ * The light theme — the MIRROR of the dark one, not its inversion.
+ *
+ * The rule that gives the interface its IDE reading is "surfaces stand apart from the chassis".
+ * In the dark theme they do it by being darker; here they do it by being LIGHTER, with the
+ * chassis as a grey gutter around white panels. Inverting the dark values numerically would
+ * have produced a muddy grey on grey, which is the usual way a light theme is got wrong.
+ *
+ * Both the studio tokens and daisyUI's are restated here: a theme that only overrode half of
+ * them would leave the panels white and the viewport dark.
+ */
+@plugin 'daisyui/theme' {
+  name: 'scenario-light';
+  color-scheme: light;
+
+  --color-base-100: #f5f6f8;
+  --color-base-200: #ffffff;
+  --color-base-300: #dcdde1;
+  --color-base-content: #1f2124;
+  --color-primary: #3574f0;
+  --color-primary-content: #ffffff;
+  --color-secondary: #e4e6ea;
+  --color-secondary-content: #1f2124;
+  /* One variable for daisyUI and the studio alike — see the dark theme above. */
+  --color-accent: #3574f0;
+  --color-accent-content: #ffffff;
+  --color-neutral: #c9cbd1;
+  --color-neutral-content: #1f2124;
+  --color-info: #3574f0;
+  --color-info-content: #ffffff;
+  --color-success: #2f7d4f;
+  --color-success-content: #ffffff;
+  /* Darkened from the dark theme's amber: #e0a350 on white carries no text and reads as beige. */
+  --color-warning: #a86a08;
+  --color-warning-content: #ffffff;
+  /* Same reason: the dark theme's coral is a highlight on black and a pastel on white. */
+  --color-error: #d0342c;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 4px;
+  --radius-field: 4px;
+  --radius-box: 6px;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+
+  --color-chassis: #dcdde1;
+  --color-base: #ffffff;
+  --color-surface: #f5f6f8;
+  --color-elevated: #e4e6ea;
+  --color-border: #c9cbd1;
+  --color-accent-soft: #d3e1fb;
+  --color-danger: #d0342c;
+  --color-create: #c65b4b;
+  --color-create-hover: #b04f40;
+  --color-text: #1f2124;
+  --color-muted: #6b7078;
+
+  /*
+   * The viewport stays a working space rather than becoming part of the page: here that means
+   * DARKER than the surfaces around it, where the dark theme made it lighter. A scene floating
+   * in white reads washed out, and the grid standing on it disappears.
+   */
+  --color-viewport: #babdc4;
+  --color-viewport-line: #9aa0a8;
+  --color-mesh: #6b7078;
 }
 
 :root {

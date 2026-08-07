@@ -11,6 +11,7 @@ import {
   Sprite,
   type BLEND_MODES,
 } from 'pixi.js'
+import { onPaletteChange, tokenAsHex } from '../core/palette'
 import type { BlendMode, CanvasState, Layer } from './canvas-state'
 import type { Point } from './shape-geometry'
 
@@ -99,6 +100,7 @@ export class CanvasEngine {
   private selecting: { x: number; y: number; width: number; height: number } | null = null
   /** Read off the canvas in `mount`, so the overlay follows the studio palette. */
   private overlayColor = 0xffffff
+  private stopPaletteWatch: (() => void) | null = null
   /** Set before `init` resolves so a fast unmount is not left with a live renderer. */
   private disposed = false
   /** Last state handed over, replayed once the renderer exists. */
@@ -141,8 +143,8 @@ export class CanvasEngine {
     // Above the layers, inside the world: the marquee has to follow pan and zoom with them.
     this.world.addChild(this.marquee)
 
-    const accent = getComputedStyle(canvas).getPropertyValue('--color-accent').trim()
-    if (accent) this.overlayColor = Number.parseInt(accent.replace('#', ''), 16)
+    this.applyPalette(canvas)
+    this.stopPaletteWatch = onPaletteChange(() => this.applyPalette(canvas))
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('pointermove', this.onPointerMove)
@@ -194,8 +196,20 @@ export class CanvasEngine {
     this.brush = settings
   }
 
+  /**
+   * The marquee borrows the accent colour. Only the value is refreshed, not the drawing: the
+   * marquee exists solely while a selection is being dragged, and nothing is on screen to
+   * repaint at the moment a theme changes.
+   */
+  private applyPalette(canvas: HTMLCanvasElement): void {
+    this.overlayColor = tokenAsHex(canvas, '--color-accent', 0xffffff)
+  }
+
   dispose(): void {
     this.disposed = true
+
+    this.stopPaletteWatch?.()
+    this.stopPaletteWatch = null
 
     const canvas = this.app?.canvas
     canvas?.removeEventListener('pointerdown', this.onPointerDown)

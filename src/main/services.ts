@@ -28,6 +28,7 @@ import { createFileSystemFallback, resolveCredentials } from './scenario/credent
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type SettingsStore } from './settings/store'
+import { applyTheme } from './window/theme'
 
 export type Services = {
   settings: SettingsStore
@@ -96,8 +97,17 @@ export function createServices(): Services {
   // Notified from the store rather than from the IPC handler: the project store writes
   // `lastProject` on its own, and every window replicates these settings.
   const settings = createSettingsStore(createElectronAdapter(), {
-    onChange: current => broadcast(EVENTS.settingsChanged, current),
+    onChange: current => {
+      // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
+      // and Chromium only answers with the new value once `themeSource` has moved.
+      applyTheme(current.appearance.theme)
+      broadcast(EVENTS.settingsChanged, current)
+    },
   })
+
+  // The stored theme, before any window is painted: a window created on the OS preference and
+  // corrected afterwards flashes the wrong colour for a frame.
+  applyTheme(settings.read().appearance.theme)
 
   // A keychain the OS can no longer open leaves a blob that decrypts to nothing. Dropping it
   // at startup is what makes the account dialog ask again instead of claiming to be set up.

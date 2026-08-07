@@ -497,9 +497,10 @@
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
     "theme": {
       "title": "Thème",
-      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour.",
+      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
       "dark": "Sombre",
-      "light": "Clair"
+      "light": "Clair",
+      "system": "Système"
     },
     "density": {
       "title": "Densité",

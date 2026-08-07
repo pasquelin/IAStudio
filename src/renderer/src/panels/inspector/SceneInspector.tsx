@@ -1,11 +1,11 @@
 import { mdiTuneVariant } from '@mdi/js'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { token } from '@/engines/core/palette'
 import { setGeometry, setLight, setMaterial } from '@/engines/scene/commands'
 import { geometryFields, lightFields, withField } from '@/engines/scene/property-fields'
 import { selectedNode } from '@/engines/scene/scene-state'
+import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
 import { MaterialSection } from './MaterialSection'
@@ -26,8 +26,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // that changed nothing else gives React the same reference and nothing re-renders.
   const node = useScenes(state => selectedNode(sceneOf(state, documentId)))
   const edit = useSceneEdit(documentId)
-  // Frozen on mount: `getComputedStyle` is not something to call on every frame of a drag.
-  const [meshColor] = useState(() => token(document.body, '--color-mesh'))
+  // Cached per theme, not per render: this component re-renders on every frame of a drag.
+  const meshColor = useToken('--color-mesh')
 
   const mesh = node?.type === 'mesh' ? node : null
   const light = node?.type === 'light' ? node : null

@@ -15,6 +15,7 @@ import {
   type Track,
   type Us,
 } from './timeline-state'
+import { onPaletteChange, token } from '../core/palette'
 import { waveformColumns, type WaveColumn } from './waveform'
 
 export type Size = { width: number; height: number }
@@ -64,20 +65,26 @@ export function forgetPalette(): void {
   cached = null
 }
 
+// Subscribed here rather than called from the hook that publishes the theme: the timeline is
+// the one that knows it caches, and a module nobody imported has no cache to drop.
+onPaletteChange(forgetPalette)
+
 function computePalette(): Palette {
-  const style = typeof document === 'undefined' ? null : getComputedStyle(document.documentElement)
-  const token = (name: string): string => style?.getPropertyValue(name).trim() || '#000'
+  // Absent under a test that never built a DOM; black is what an unreadable token falls back
+  // to everywhere, rather than each caller inventing its own.
+  const root = typeof document === 'undefined' ? null : document.documentElement
+  const read = (name: string): string => (root ? token(root, name) : '') || '#000'
 
   return {
-    ruler: token('--color-chassis'),
-    track: token('--color-base'),
-    trackAlt: token('--color-surface'),
-    border: token('--color-border'),
-    clip: token('--color-elevated'),
-    selected: token('--color-accent-soft'),
-    playhead: token('--color-accent'),
-    text: token('--color-text'),
-    muted: token('--color-muted'),
+    ruler: read('--color-chassis'),
+    track: read('--color-base'),
+    trackAlt: read('--color-surface'),
+    border: read('--color-border'),
+    clip: read('--color-elevated'),
+    selected: read('--color-accent-soft'),
+    playhead: read('--color-accent'),
+    text: read('--color-text'),
+    muted: read('--color-muted'),
   }
 }
 
