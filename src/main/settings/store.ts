@@ -1,10 +1,5 @@
 import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
-import { parseStoredCredentials, salvagePartialSettings } from './validation'
-
-export type Credentials = {
-  key: string
-  secret: string
-}
+import { parseStoredCredentials, salvagePartialSettings, type Credentials } from './validation'
 
 /**
  * What the store needs in order to persist. Injected so tests need neither Electron nor a
