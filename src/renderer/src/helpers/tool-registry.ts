@@ -4,11 +4,11 @@ import {
   mdiFolderOutline,
   mdiImageMultipleOutline,
   mdiLayersOutline,
-  mdiProgressClock,
   mdiTuneVariant,
   mdiVideoVintage,
   mdiWeatherPartlyCloudy,
 } from '@mdi/js'
+import { useMemo } from 'react'
 import {
   placementIn,
   servesWorkspace,
@@ -19,13 +19,16 @@ import {
 } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
+import { useModels } from '@/stores/models'
+import { useSettings } from '@/stores/settings'
+import { workspaceById } from './workspaces'
 
 export type Tool = {
   id: ToolId
   icon: string
   zone: ToolZone
   slot: ToolSlot
-  workspaces?: readonly WorkspaceId[]
+  workspaces: readonly WorkspaceId[]
 }
 
 const ICONS: Record<ToolId, string> = {
@@ -40,7 +43,6 @@ const ICONS: Record<ToolId, string> = {
   inspector: mdiTuneVariant,
   skybox: mdiWeatherPartlyCloudy,
   assets: mdiImageMultipleOutline,
-  jobs: mdiProgressClock,
 }
 
 /**
@@ -85,4 +87,45 @@ export function toolZoneIn(id: ToolId, workspace: WorkspaceId): ToolZone | null 
 /** i18n key of a tool's title — never the displayed text. */
 export function toolTitleKey(id: ToolId): string {
   return `panels.${id}`
+}
+
+/**
+ * Whether this section has a model to generate with — one chosen in the Models panel, or one
+ * preferred in the settings, which is what that preference is for.
+ *
+ * This is the single placement rule the shared registry cannot answer: it depends on state, and
+ * `shared/` holds no runtime dependency. Hence a layer here, above the registry rather than in
+ * it.
+ */
+export function hasModelFor(workspace: WorkspaceId): boolean {
+  const { family } = workspaceById(workspace)
+  const { selected } = useModels.getState()
+  const { defaultModels } = useSettings.getState().settings.generation
+  return Boolean(selected[family] ?? defaultModels[family])
+}
+
+/**
+ * Same question, subscribed rather than read once: the rail has to redraw the moment a model is
+ * picked, and `hasModelFor` alone would leave the generator's icon out until something else
+ * happened to re-render.
+ */
+export function useHasModel(workspace: WorkspaceId): boolean {
+  const { family } = workspaceById(workspace)
+  const chosen = useModels(state => state.selected[family])
+  const preferred = useSettings(state => state.settings.generation.defaultModels[family])
+  return Boolean(chosen ?? preferred)
+}
+
+/**
+ * The tools of a zone this section can actually offer. Generating without a model is
+ * impossible, so the generator is not merely disabled there — it is absent, and the rail shows
+ * what the section can do rather than what it cannot.
+ */
+export function useAvailableTools(zone: ToolZone, workspace: WorkspaceId): Tool[] {
+  const hasModel = useHasModel(workspace)
+
+  return useMemo(
+    () => toolsInZone(zone, workspace).filter(tool => tool.id !== 'generator' || hasModel),
+    [zone, workspace, hasModel],
+  )
 }
