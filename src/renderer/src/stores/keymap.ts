@@ -7,7 +7,7 @@ import {
   type MotionId,
   type Signature,
 } from '@shared/domain/shortcut'
-import { isRecord } from '@/helpers/guards'
+import { isRecord } from '@shared/guards'
 
 type KeymapState = {
   bindings: Record<CommandId, Signature>

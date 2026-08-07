@@ -60,6 +60,7 @@ describe('SettingsWindow', () => {
       '3D',
       'Audio',
       'Agrandissement',
+      'Médias',
     ])
   })
 

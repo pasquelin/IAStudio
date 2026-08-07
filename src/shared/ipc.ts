@@ -1,5 +1,6 @@
 import type { Asset, AssetQuery } from './domain/asset'
 import type { Job, JobProgress } from './domain/job'
+import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
 import type { LightKind, MeshKind } from './domain/scene'
@@ -35,6 +36,10 @@ export type Channels = {
 
   assetsSearch: 'assets:search'
 
+  mediaIngest: 'media:ingest'
+  mediaCancel: 'media:cancel'
+  mediaAvailable: 'media:available'
+
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
   windowWorkspace: 'window:workspace'
@@ -65,6 +70,10 @@ export const CHANNELS: Channels = {
 
   assetsSearch: 'assets:search',
 
+  mediaIngest: 'media:ingest',
+  mediaCancel: 'media:cancel',
+  mediaAvailable: 'media:available',
+
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
   windowWorkspace: 'window:workspace',
@@ -86,6 +95,7 @@ export type LogEntry = {
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
   jobProgress: 'evt:job-progress',
+  mediaProgress: 'evt:media-progress',
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
   openTool: 'evt:open-tool',
@@ -136,6 +146,17 @@ export type StudioBridge = {
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
+  }
+  media: {
+    /**
+     * Opens the native picker and links what was chosen — the file is never copied, so a
+     * twenty-minute rush costs a catalogue row. Resolves once the assets exist, while their
+     * ingest runs on and reports through `onProgress`.
+     */
+    ingest: () => Promise<Asset[]>
+    cancel: (assetId: string) => Promise<void>
+    capabilities: () => Promise<MediaCapabilities>
+    onProgress: (callback: (progress: IngestProgress) => void) => Unsubscribe
   }
   window: {
     toggleFullScreen: () => Promise<void>

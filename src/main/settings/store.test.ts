@@ -29,6 +29,23 @@ describe('settings store', () => {
     expect(settings.generation).toEqual(DEFAULT_SETTINGS.generation)
   })
 
+  it('reads a config file written before the media section existed', () => {
+    // Every release adds settings; a file from the previous one must not lose the rest.
+    adapter.write('settings', { appearance: { density: 'compact' } })
+
+    const settings = createSettingsStore(adapter).read()
+    expect(settings.media).toEqual({})
+    expect(settings.appearance.density).toBe('compact')
+  })
+
+  it('keeps the ffmpeg path across another section being written', () => {
+    const store = createSettingsStore(adapter)
+    store.write({ media: { ffmpegPath: '/opt/homebrew/bin/ffmpeg' } })
+    store.write({ appearance: { theme: 'light' } })
+
+    expect(store.read().media.ffmpegPath).toBe('/opt/homebrew/bin/ffmpeg')
+  })
+
   it('never exposes credentials through the settings it returns', () => {
     const store = createSettingsStore(adapter)
     store.setCredentials({ key: 'api_k', secret: 's3cr3t' })

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
+import { useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { SceneDocument } from './SceneDocument'
 
@@ -35,6 +36,7 @@ describe('SceneDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useScenes.setState({ states: {}, histories: {} })
+    useDocuments.setState({ activeId: 'doc-1' })
   })
 
   it('renders the shared toolbar with the scene tools', () => {
@@ -71,6 +73,14 @@ describe('SceneDocument', () => {
 
     await userEvent.keyboard('{Delete}')
     expect(meshesOf('doc-1')).toHaveLength(0)
+  })
+
+  it('lets the keyboard alone while another tab is in front, since hidden tabs stay mounted', async () => {
+    useDocuments.setState({ activeId: 'doc-2' })
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{r}')
+    expect(setMode).not.toHaveBeenCalledWith('rotate')
   })
 
   it('undoes through the toolbar', async () => {

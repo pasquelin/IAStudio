@@ -1,5 +1,12 @@
+import { Texture } from 'pixi.js'
 import { describe, expect, it, vi } from 'vitest'
-import { clipAt, createFrameSink, sourceTimeAt, videoTracksByDepth } from './TimelineEngine'
+import {
+  clipAt,
+  createFrameSink,
+  sourceTimeAt,
+  swapTexture,
+  videoTracksByDepth,
+} from './TimelineEngine'
 import { EMPTY_SEQUENCE, type Clip, type SequenceState } from './timeline-state'
 
 const clip = (id: string, start: number, duration: number, inPoint = 0): Clip => ({
@@ -58,6 +65,24 @@ describe('timeline engine', () => {
     createFrameSink({ upload: vi.fn() }).push(frame(close))
     // A frame kept past its upload leaks GPU memory, and it shows in seconds, not minutes.
     expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('destroys the texture it replaces, which held a frame nobody will show again', () => {
+    const previous = new Texture()
+    const destroy = vi.spyOn(previous, 'destroy')
+    const target = { texture: previous }
+
+    swapTexture(target, Texture.EMPTY)
+    expect(destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves the empty texture alone, which every sprite in the application starts on', () => {
+    const destroy = vi.spyOn(Texture.EMPTY, 'destroy')
+    const target = { texture: Texture.EMPTY }
+
+    swapTexture(target, new Texture())
+    expect(destroy).not.toHaveBeenCalled()
+    destroy.mockRestore()
   })
 
   it('still closes the frame when the upload throws', () => {

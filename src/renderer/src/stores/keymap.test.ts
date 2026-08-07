@@ -21,6 +21,7 @@ describe('keymap store', () => {
 
     const { bindings, motion } = useKeymap.getState()
     expect(bindings['scene.select']).toBe(DEFAULT_BINDINGS['scene.select'])
+    expect(bindings['sequence.playPause']).toBe(DEFAULT_BINDINGS['sequence.playPause'])
     expect(bindings['scene.rotate']).toBe('KeyX')
     expect(motion.forward).toBe(DEFAULT_MOTION.forward)
     localStorage.removeItem('scenario-studio:keymap')

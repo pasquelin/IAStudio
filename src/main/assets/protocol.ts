@@ -1,7 +1,7 @@
 import { net, protocol } from 'electron'
 import { isAbsolute, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { ASSET_SCHEME, assetIdFromUrl } from '@shared/domain/asset'
+import { ASSET_SCHEME, assetIdFromUrl, type Asset } from '@shared/domain/asset'
 
 /**
  * Resolves an asset's stored path inside its project, or refuses.
@@ -17,6 +17,18 @@ export function assetFilePath(projectPath: string, relativePath: string): string
   const file = resolve(root, relativePath)
 
   return file.startsWith(root + sep) ? file : null
+}
+
+/**
+ * Which file the scheme hands over: what the project owns, else the proxy of a linked media,
+ * else the linked media itself. The proxy comes first because it exists precisely for sources
+ * WebCodecs will not decode; a linked path must be absolute, which is what a picker returns.
+ */
+export function servedFileOf(projectPath: string, asset: Asset): string | null {
+  if (asset.path) return assetFilePath(projectPath, asset.path)
+  if (asset.proxyPath) return assetFilePath(projectPath, asset.proxyPath)
+  if (asset.sourcePath) return isAbsolute(asset.sourcePath) ? asset.sourcePath : null
+  return null
 }
 
 /**

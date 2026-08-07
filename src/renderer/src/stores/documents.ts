@@ -7,7 +7,7 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import i18next from 'i18next'
 import { create as createStore } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { isRecord } from '@/helpers/guards'
+import { isRecord } from '@shared/guards'
 import { newId } from '@/helpers/ids'
 
 type DocumentsState = {

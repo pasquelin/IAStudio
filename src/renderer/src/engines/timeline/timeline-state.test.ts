@@ -6,6 +6,7 @@ import {
   EMPTY_SEQUENCE,
   frameDuration,
   insertClip,
+  newClipId,
   sequenceDuration,
   serializeSequence,
   snapToFrame,
@@ -15,6 +16,9 @@ import {
   type SequenceState,
   type Track,
 } from './timeline-state'
+
+/** Insertion takes the tail's id from its caller, so the tests can name it and read it back. */
+const TAIL = 'tail-1'
 
 const clip = (id: string, start: number, duration: number): Clip => ({
   id,
@@ -72,36 +76,38 @@ describe('sequence state', () => {
 
   it('keeps clips sorted by start when inserting', () => {
     const target = track([clip('a', 2_000, 1_000)])
-    const next = insertClip(target, clip('b', 0, 1_000))
+    const next = insertClip(target, clip('b', 0, 1_000), TAIL)
     expect(next.clips.map(candidate => candidate.id)).toEqual(['b', 'a'])
   })
 
   it('trims the neighbour an inserted clip overlaps on its tail', () => {
     const target = track([clip('a', 0, 2_000)])
-    const next = insertClip(target, clip('b', 1_000, 2_000))
+    const next = insertClip(target, clip('b', 1_000, 2_000), TAIL)
     expect(next.clips[0]).toMatchObject({ id: 'a', start: 0, duration: 1_000 })
     expect(next.clips[1]).toMatchObject({ id: 'b', start: 1_000 })
   })
 
   it('trims the neighbour an inserted clip overlaps on its head, moving its in point', () => {
     const target = track([{ ...clip('a', 1_000, 2_000), inPoint: 500 }])
-    const next = insertClip(target, clip('b', 0, 1_500))
+    const next = insertClip(target, clip('b', 0, 1_500), TAIL)
     expect(next.clips[1]).toMatchObject({ id: 'a', start: 1_500, duration: 1_500, inPoint: 1_000 })
   })
 
   it('drops a neighbour an inserted clip covers entirely', () => {
     const target = track([clip('a', 500, 500)])
-    const next = insertClip(target, clip('b', 0, 2_000))
+    const next = insertClip(target, clip('b', 0, 2_000), TAIL)
     expect(next.clips.map(candidate => candidate.id)).toEqual(['b'])
   })
 
-  it('splits a neighbour an inserted clip lands inside', () => {
+  it('splits a neighbour an inserted clip lands inside, naming the tail as asked', () => {
     const target = track([clip('a', 0, 3_000)])
-    const next = insertClip(target, clip('b', 1_000, 1_000))
-    // The tail is a new clip and needs its own id: two clips sharing one would break every
-    // lookup by id, starting with selection.
-    expect(next.clips.map(candidate => candidate.id)).toEqual(['a', 'b', 'a-tail'])
+    const next = insertClip(target, clip('b', 1_000, 1_000), TAIL)
+    expect(next.clips.map(candidate => candidate.id)).toEqual(['a', 'b', TAIL])
     expect(next.clips[2]).toMatchObject({ start: 2_000, duration: 1_000, inPoint: 2_000 })
+  })
+
+  it('mints an id nothing else carries, which is what a cut clip needs', () => {
+    expect(newClipId()).not.toBe(newClipId())
   })
 
   it('ends where the last clip of any track ends', () => {

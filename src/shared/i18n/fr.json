@@ -55,7 +55,28 @@
     "type": "Type",
     "count": "{{count}} asset",
     "count_other": "{{count}} assets",
-    "openProject": "Ouvrez un projet pour voir ses assets."
+    "openProject": "Ouvrez un projet pour voir ses assets.",
+    "import": "Importer un média",
+    "importHint": "Lier un fichier vidéo, audio ou image — il reste où il est"
+  },
+  "dialog": {
+    "allMedia": "Tous les médias",
+    "video": "Vidéo",
+    "audio": "Audio",
+    "image": "Image"
+  },
+  "ingest": {
+    "queued": "En attente…",
+    "probe": "Analyse…",
+    "hash": "Empreinte…",
+    "proxy": "Proxy…",
+    "peaks": "Waveform…",
+    "done": "Prêt",
+    "cancelled": "Interrompu",
+    "failed": "Échec",
+    "cancel": "Interrompre la préparation",
+    "dismiss": "Retirer de la liste",
+    "noFfmpeg": "ffmpeg introuvable : ni proxy ni waveform. Indiquez son chemin dans les réglages."
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",
@@ -361,6 +382,12 @@
     "familyUpscale": "Agrandissement",
     "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
     "appearanceDescription": "Thème et densité des contrôles.",
-    "generationDescription": "File de génération et modèles par défaut, par famille."
+    "generationDescription": "File de génération et modèles par défaut, par famille.",
+    "media": "Médias",
+    "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
+    "ffmpegPath": "Chemin de ffmpeg",
+    "ffmpegPlaceholder": "/opt/homebrew/bin/ffmpeg",
+    "ffmpegFound": "ffmpeg est disponible : proxies et waveforms seront préparés.",
+    "ffmpegMissing": "ffmpeg reste introuvable. L’import fonctionne, sans proxy ni waveform."
   }
 }

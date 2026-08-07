@@ -43,6 +43,13 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       search: () => Promise.resolve([]),
       ...overrides.assets,
     },
+    media: {
+      ingest: () => Promise.resolve([]),
+      cancel: () => Promise.resolve(),
+      capabilities: () => Promise.resolve({ ffmpeg: true }),
+      onProgress: noSubscription,
+      ...overrides.media,
+    },
     window: {
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),

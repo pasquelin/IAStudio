@@ -15,6 +15,7 @@ export type CommandId =
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
+  | 'sequence.playPause'
 
 /** Held keys, read every frame while flying — not fired once like a command. */
 export type MotionId = 'forward' | 'back' | 'left' | 'right' | 'up' | 'down' | 'boost'
@@ -42,6 +43,7 @@ export const COMMAND_IDS: readonly CommandId[] = [
   'scene.delete',
   'scene.undo',
   'scene.redo',
+  'sequence.playPause',
 ]
 
 export const MOTION_IDS: readonly MotionId[] = [
@@ -95,6 +97,7 @@ export const DEFAULT_BINDINGS: Record<CommandId, Signature> = {
   'scene.delete': 'Delete',
   'scene.undo': 'Meta+KeyZ',
   'scene.redo': 'Shift+Meta+KeyZ',
+  'sequence.playPause': 'Space',
 }
 
 export const DEFAULT_MOTION: Record<MotionId, Signature> = {

@@ -3,6 +3,7 @@ import type { ModelFamily } from '@shared/domain/model'
 import { AccountSettings } from './AccountSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { GenerationSettings } from './GenerationSettings'
+import { MediaSettings } from './MediaSettings'
 import { ModelFamilySettings } from './ModelFamilySettings'
 
 export type SettingsSection = {
@@ -57,6 +58,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     descriptionKey: 'settings.generationDescription',
     Content: GenerationSettings,
     children: WORKSPACE_FAMILIES.map(familySection),
+  },
+  {
+    id: 'media',
+    labelKey: 'settings.media',
+    descriptionKey: 'settings.mediaDescription',
+    Content: MediaSettings,
   },
 ]
 

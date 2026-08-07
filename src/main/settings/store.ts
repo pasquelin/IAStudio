@@ -37,6 +37,7 @@ function merge(base: Settings, partial: PartialSettings): Settings {
     appearance: { ...base.appearance, ...partial.appearance },
     generation: { ...base.generation, ...partial.generation },
     storage: { ...base.storage, ...partial.storage },
+    media: { ...base.media, ...partial.media },
   }
 }
 

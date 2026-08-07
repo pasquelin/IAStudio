@@ -1,7 +1,14 @@
 import type { Command } from '../core/history'
 import { moveClip, trimClip } from './commands'
-import { hitTest, snap, xToTime, type Point, type Viewport } from './timeline-geometry'
-import { clipById, clipEnd, type SequenceState, type Us } from './timeline-state'
+import { hitTest, snap, trackAt, xToTime, type Point, type Viewport } from './timeline-geometry'
+import {
+  clipById,
+  clipEnd,
+  trackById,
+  type SequenceState,
+  type Track,
+  type Us,
+} from './timeline-state'
 
 /**
  * A gesture is data, not component state: that is what makes dragging, trimming and scrubbing
@@ -50,6 +57,12 @@ export function beginGesture(
   return null
 }
 
+/** A track takes a clip that came from a track of its own kind, and only if it is unlocked. */
+function dropTrack(state: SequenceState, viewport: Viewport, point: Point, from: Track): string {
+  const under = trackAt(state, viewport, point)
+  return under && !under.locked && under.kind === from.kind ? under.id : from.id
+}
+
 export function commandForGesture(
   gesture: Gesture,
   state: SequenceState,
@@ -69,5 +82,9 @@ export function commandForGesture(
     return trimClip(gesture.clipId, gesture.edge, snap(raw, context))
   }
 
-  return moveClip(gesture.clipId, gesture.trackId, snap(raw - gesture.grabOffset, context))
+  const from = trackById(state, gesture.trackId)
+  if (!from) return null
+
+  const target = dropTrack(state, viewport, point, from)
+  return moveClip(gesture.clipId, target, snap(raw - gesture.grabOffset, context))
 }

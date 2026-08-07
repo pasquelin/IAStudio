@@ -28,6 +28,10 @@ type ChannelMethod = {
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
 
+  [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
+  [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']
+  [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']
+
   [CHANNELS.windowToggleFullScreen]: StudioBridge['window']['toggleFullScreen']
   [CHANNELS.windowState]: StudioBridge['window']['state']
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']

@@ -29,6 +29,17 @@ export function videoTracksByDepth(state: SequenceState): Track[] {
     .sort((left, right) => left.index - right.index)
 }
 
+/**
+ * Swaps a decoded frame in and disposes of the texture it replaces — never `Texture.EMPTY`,
+ * which every sprite starts on and the whole application shares. Pixi 8 happens to no-op its
+ * `destroy`, but destroying what one did not create is not something to lean on a library for.
+ */
+export function swapTexture(target: { texture: Texture }, next: Texture): void {
+  const previous = target.texture
+  target.texture = next
+  if (previous !== Texture.EMPTY) previous.destroy(true)
+}
+
 export type FrameSink = { push: (frame: VideoFrame) => void }
 
 /** Uploads then closes, always in that order and always both. */
@@ -164,11 +175,7 @@ export class TimelineEngine {
 
       sprite.visible = true
       createFrameSink({
-        upload: uploaded => {
-          const previous = sprite.texture
-          sprite.texture = Texture.from(uploaded)
-          previous.destroy(true)
-        },
+        upload: uploaded => swapTexture(sprite, Texture.from(uploaded)),
       }).push(frame)
     }
   }

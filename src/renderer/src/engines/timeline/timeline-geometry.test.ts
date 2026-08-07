@@ -5,6 +5,7 @@ import {
   snap,
   timeToX,
   TRACK_HEIGHT,
+  trackAt,
   trackTop,
   visibleRange,
   xToTime,
@@ -93,5 +94,30 @@ describe('timeline geometry', () => {
 
   it('hits nothing below the last track', () => {
     expect(hitTest(stateWith([]), viewport, { x: 50, y: 5_000 })).toBeNull()
+  })
+
+  it('reads the track a point lands on, whatever the clip beneath it', () => {
+    const state = stateWith([clip('a', 0, 1_000_000)])
+    expect(trackAt(state, viewport, { x: 50, y: RULER_HEIGHT + 10 })?.id).toBe('V1')
+    expect(trackAt(state, viewport, { x: 5_000, y: RULER_HEIGHT + 10 })?.id).toBe('V1')
+  })
+
+  it('reads no track on the ruler or below the last one', () => {
+    const state = stateWith([])
+    expect(trackAt(state, viewport, { x: 50, y: 4 })).toBeNull()
+    expect(trackAt(state, viewport, { x: 50, y: 5_000 })).toBeNull()
+  })
+
+  it('follows the vertical scroll, so a scrolled track is still the one under the pointer', () => {
+    const scrolled: Viewport = { ...viewport, scrollTop: TRACK_HEIGHT }
+    const state: SequenceState = {
+      ...EMPTY_SEQUENCE,
+      tracks: [
+        { id: 'V1', kind: 'video', index: 1, muted: false, locked: false, clips: [] },
+        { id: 'A1', kind: 'audio', index: 0, muted: false, locked: false, clips: [] },
+      ],
+    }
+
+    expect(trackAt(state, scrolled, { x: 50, y: RULER_HEIGHT + 10 })?.id).toBe('A1')
   })
 })

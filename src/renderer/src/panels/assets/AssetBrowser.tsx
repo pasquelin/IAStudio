@@ -1,4 +1,4 @@
-import { mdiImageMultipleOutline } from '@mdi/js'
+import { mdiFileImportOutline, mdiImageMultipleOutline } from '@mdi/js'
 import { memo, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, assetUrl, type Asset, type AssetType } from '@shared/domain/asset'
@@ -8,9 +8,12 @@ import { startAssetDrag } from '@/helpers/asset-drag'
 import { filterLocally, isFiltered, type FacetDescriptor } from '@/helpers/collection-state'
 import { MediaTile } from '@/design/MediaTile'
 import { Row } from '@/design/Row'
+import { ToolButton } from '@/design/ToolButton'
 import { useAssets } from '@/stores/assets'
+import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { EmptyState } from '@/design/EmptyState'
+import { ImportProgress } from './ImportProgress'
 
 const TYPE_FACET = 'type'
 
@@ -54,10 +57,21 @@ export function AssetBrowserActions() {
   const collection = useAssets(state => state.collection)
   const setCollection = useAssets(state => state.setCollection)
   const facets = useTypeFacet(useTypeLabels())
+  // A file cannot be linked into a catalogue that is not open.
+  const project = useProject(state => state.project)
+  const importMedia = useMedia(state => state.importMedia)
 
   return (
     <>
       <span className="text-muted mr-1 text-[11px]">{t('assets.count', { count })}</span>
+      <ToolButton
+        icon={mdiFileImportOutline}
+        label={t('assets.import')}
+        description={t('assets.importHint')}
+        variant="header"
+        disabled={!project}
+        onClick={() => void importMedia()}
+      />
       <CollectionBar
         state={collection}
         onChange={setCollection}
@@ -100,16 +114,19 @@ export function AssetBrowser() {
 
   // The bar lives in the title row — see `AssetBrowserActions`.
   return (
-    <Collection
-      items={shown}
-      state={collection}
-      rowHeight={ROW_HEIGHT}
-      renderCard={asset => <AssetCard asset={asset} />}
-      renderRow={asset => (
-        <AssetRow asset={asset} typeLabel={typeLabels.get(asset.type) ?? asset.type} />
-      )}
-      empty={<EmptyState icon={mdiImageMultipleOutline} message={emptyMessage} />}
-    />
+    <div className="flex h-full min-h-0 flex-col">
+      <ImportProgress />
+      <Collection
+        items={shown}
+        state={collection}
+        rowHeight={ROW_HEIGHT}
+        renderCard={asset => <AssetCard asset={asset} />}
+        renderRow={asset => (
+          <AssetRow asset={asset} typeLabel={typeLabels.get(asset.type) ?? asset.type} />
+        )}
+        empty={<EmptyState icon={mdiImageMultipleOutline} message={emptyMessage} />}
+      />
+    </div>
   )
 }
 
@@ -118,8 +135,12 @@ export function AssetBrowser() {
  * for: the renderer still never handles a file path, and a grid of thumbnails costs no IPC.
  */
 function preview(asset: Asset): string | undefined {
-  const showable = asset.type === 'image' && asset.location === 'local' && asset.path
-  return showable ? assetUrl(asset.id) : undefined
+  // `sourcePath` counts as much as `path`: an imported still is linked where it lies, never
+  // copied into the project, and it has a thumbnail all the same.
+  const onDisk = asset.path ?? asset.sourcePath
+  return asset.type === 'image' && asset.location === 'local' && onDisk
+    ? assetUrl(asset.id)
+    : undefined
 }
 
 /** Wraps whatever the collection renders, so both views drag the same way. */
