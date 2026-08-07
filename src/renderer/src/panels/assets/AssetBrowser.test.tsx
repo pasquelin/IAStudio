@@ -135,32 +135,25 @@ describe('AssetBrowser', () => {
   // The bar follows the shape of the zone, not the workspace: no exception is coded for Video,
   // where the shelf stands in a column rather than lying across the band.
   describe('the filter bar', () => {
-    // The bar's own container: a row of controls when laid out, a column of rows when stacked.
-    function bar(): HTMLElement {
-      const field = screen.getByRole('searchbox').closest('label')
-      const container = field?.parentElement
-      if (!container) throw new Error('filter bar not found')
-      return container
-    }
-
-    it('lays its controls along a band', () => {
+    it('leaves it to the title row in a band, where the window draws it', () => {
       render(
         <ToolZoneProvider zone="bottom">
           <AssetBrowser />
         </ToolZoneProvider>,
       )
 
-      expect(bar().className).not.toContain('flex-col')
+      expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
     })
 
-    it('stacks them in a side column', () => {
+    it('stacks it under the title in a side column, where that row has no room', () => {
       render(
         <ToolZoneProvider zone="left">
           <AssetBrowser />
         </ToolZoneProvider>,
       )
 
-      expect(bar().className).toContain('flex-col')
+      const bar = screen.getByRole('searchbox').closest('label')?.parentElement
+      expect(bar?.className).toContain('flex-col')
     })
   })
 })
