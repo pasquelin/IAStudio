@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { Separator } from '@/design/Separator'
+import { programOwner } from '@/engines/timeline/playback'
 import {
   clipById,
   EMPTY_SEQUENCE,
@@ -72,7 +73,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
       <Separator orientation="vertical" />
 
       <Monitor
-        owner={`${documentId}:program`}
+        owner={programOwner(documentId)}
         title={t('transport.program')}
         sequence={sequence}
         onTime={setProgramTime}

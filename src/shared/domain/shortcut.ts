@@ -6,6 +6,13 @@
  * the same four keys on QWERTY (WASD) and AZERTY (ZQSD), so one table serves both. `event.key`
  * would scatter them.
  */
+/**
+ * Which surface a command belongs to. Two spaces legitimately want the same key — `Delete`
+ * removes a node in the scene and a clip on the timeline — and only one of them is listening
+ * at a time. Without a scope the second binding would be unreachable rather than contextual.
+ */
+export type CommandScope = 'scene' | 'timeline'
+
 export type CommandId =
   | 'scene.select'
   | 'scene.translate'
@@ -15,6 +22,16 @@ export type CommandId =
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
+  | 'timeline.playPause'
+  | 'timeline.split'
+  | 'timeline.delete'
+  | 'timeline.zoomIn'
+  | 'timeline.zoomOut'
+  | 'timeline.fit'
+  | 'timeline.start'
+  | 'timeline.end'
+  | 'timeline.undo'
+  | 'timeline.redo'
 
 /** Held keys, read every frame while flying — not fired once like a command. */
 export type MotionId = 'forward' | 'back' | 'left' | 'right' | 'up' | 'down' | 'boost'
@@ -33,6 +50,31 @@ export type KeyChord = {
   metaKey: boolean
 }
 
+/**
+ * A table rather than a prefix read off the id: the compiler then refuses a new command that
+ * forgot to say where it lives, which a `startsWith` would silently file under the first scope.
+ */
+export const COMMAND_SCOPES: Record<CommandId, CommandScope> = {
+  'scene.select': 'scene',
+  'scene.translate': 'scene',
+  'scene.rotate': 'scene',
+  'scene.scale': 'scene',
+  'scene.frame': 'scene',
+  'scene.delete': 'scene',
+  'scene.undo': 'scene',
+  'scene.redo': 'scene',
+  'timeline.playPause': 'timeline',
+  'timeline.split': 'timeline',
+  'timeline.delete': 'timeline',
+  'timeline.zoomIn': 'timeline',
+  'timeline.zoomOut': 'timeline',
+  'timeline.fit': 'timeline',
+  'timeline.start': 'timeline',
+  'timeline.end': 'timeline',
+  'timeline.undo': 'timeline',
+  'timeline.redo': 'timeline',
+}
+
 export const COMMAND_IDS: readonly CommandId[] = [
   'scene.select',
   'scene.translate',
@@ -42,6 +84,16 @@ export const COMMAND_IDS: readonly CommandId[] = [
   'scene.delete',
   'scene.undo',
   'scene.redo',
+  'timeline.playPause',
+  'timeline.split',
+  'timeline.delete',
+  'timeline.zoomIn',
+  'timeline.zoomOut',
+  'timeline.fit',
+  'timeline.start',
+  'timeline.end',
+  'timeline.undo',
+  'timeline.redo',
 ]
 
 export const MOTION_IDS: readonly MotionId[] = [
@@ -95,6 +147,19 @@ export const DEFAULT_BINDINGS: Record<CommandId, Signature> = {
   'scene.delete': 'Delete',
   'scene.undo': 'Meta+KeyZ',
   'scene.redo': 'Shift+Meta+KeyZ',
+
+  // Same keys as the scene where the gesture is the same. They only ever reach the surface
+  // that is listening, which is what `CommandScope` is for.
+  'timeline.playPause': 'Space',
+  'timeline.split': 'KeyS',
+  'timeline.delete': 'Delete',
+  'timeline.zoomIn': 'Meta+Equal',
+  'timeline.zoomOut': 'Meta+Minus',
+  'timeline.fit': 'Shift+KeyZ',
+  'timeline.start': 'Home',
+  'timeline.end': 'End',
+  'timeline.undo': 'Meta+KeyZ',
+  'timeline.redo': 'Shift+Meta+KeyZ',
 }
 
 export const DEFAULT_MOTION: Record<MotionId, Signature> = {

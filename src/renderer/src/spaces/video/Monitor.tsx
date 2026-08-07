@@ -5,6 +5,7 @@ import { assetUrl } from '@shared/domain/asset'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
 import type { SinkLike } from '@/engines/timeline/decoder-pool'
+import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
 
@@ -76,12 +77,19 @@ export function Monitor({ owner, title, sequence, onTime, placeholder }: Monitor
     engine.current?.apply(sequence)
   }, [sequence])
 
-  const toggle = useCallback(() => {
-    const current = engine.current
-    if (!current) return
-    if (current.playing()) current.pause()
-    else current.play()
-  }, [])
+  // Published by name so the timeline strip can drive it: the space bar is pressed on a tool
+  // window, and neither tree contains the other.
+  useEffect(
+    () =>
+      transports.register(owner, {
+        play: () => engine.current?.play(),
+        pause: () => engine.current?.pause(),
+        playing: () => engine.current?.playing() ?? false,
+      }),
+    [owner],
+  )
+
+  const toggle = useCallback(() => transports.toggle(owner), [owner])
 
   const rewind = useCallback(() => {
     engine.current?.pause()

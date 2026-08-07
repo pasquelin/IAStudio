@@ -209,6 +209,26 @@ export function clipById(state: SequenceState, id: string): Clip | null {
   return null
 }
 
+/**
+ * The clip a key press acts on. The selection wins while the playhead is inside it — that is
+ * the one the user is looking at — and otherwise whatever the playhead crosses, so a blade
+ * works without selecting first.
+ */
+export function clipUnderPlayhead(state: SequenceState): Clip | null {
+  const spans = (clip: Clip): boolean =>
+    state.playhead > clip.start && state.playhead < clipEnd(clip)
+
+  const selected = state.selectedId ? clipById(state, state.selectedId) : null
+  if (selected && spans(selected)) return selected
+
+  for (const track of state.tracks) {
+    if (track.locked) continue
+    const found = track.clips.find(spans)
+    if (found) return found
+  }
+  return null
+}
+
 /** Rewrites one track in place. The single spot that knows how to keep the others untouched. */
 export function updateTrack(
   state: SequenceState,

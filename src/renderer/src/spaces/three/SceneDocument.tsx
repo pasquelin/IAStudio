@@ -91,6 +91,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   )
 
   useShortcuts({
+    scope: 'scene',
     enabled: true,
     // Pushed on change, not polled: the engine restarts its own loop while something moves, so
     // nothing has to tick when the keyboard is idle.

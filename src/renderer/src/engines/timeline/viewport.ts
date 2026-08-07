@@ -1,0 +1,94 @@
+import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timeline-geometry'
+import { sequenceDuration, type SequenceState, type Us } from './timeline-state'
+
+/**
+ * What the user can see of a sequence, and how the wheel and the zoom keys move it. Pure, and
+ * kept out of `SequenceState` on purpose: where one is looking is not an edit, and pushing it
+ * through the history would make undo step back through scroll positions.
+ */
+export type Size = { width: number; height: number }
+
+/** One pixel a second: a twenty-minute rush still fits across a wide strip. */
+export const MIN_SCALE = 1 / 1_000_000
+/** Two thousand pixels a second: a couple of frames fill the strip, which is as far as trimming needs. */
+export const MAX_SCALE = 2_000 / 1_000_000
+export const DEFAULT_SCALE = 100 / 1_000_000
+
+export const DEFAULT_VIEWPORT: Viewport = { scale: DEFAULT_SCALE, offset: 0, scrollTop: 0 }
+
+/** One press of the zoom key. A quarter step reads as a move without losing one's place. */
+export const ZOOM_STEP = 1.25
+
+export function clampScale(scale: number): number {
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale))
+}
+
+/**
+ * How far right the view may go: far enough to bring the end of the sequence to the middle of
+ * the strip, so there is room to drop a clip after the last one, and no further — scrolling
+ * into unbounded emptiness loses the montage off the left edge.
+ */
+export function maxOffset(state: SequenceState, viewport: Viewport, width: number): Us {
+  const span = Math.round(width / viewport.scale)
+  return Math.max(0, sequenceDuration(state) - Math.round(span / 2))
+}
+
+export function maxScrollTop(state: SequenceState, height: number): number {
+  return Math.max(0, tracksHeight(state) - (height - RULER_HEIGHT))
+}
+
+export function clampViewport(viewport: Viewport, state: SequenceState, size: Size): Viewport {
+  const scale = clampScale(viewport.scale)
+  const scaled = { ...viewport, scale }
+  return {
+    scale,
+    offset: Math.max(
+      0,
+      Math.min(maxOffset(state, scaled, size.width), Math.round(viewport.offset)),
+    ),
+    scrollTop: Math.max(
+      0,
+      Math.min(maxScrollTop(state, size.height), Math.round(viewport.scrollTop)),
+    ),
+  }
+}
+
+/**
+ * Zoom around a pixel: the instant under the cursor stays under the cursor. Zooming around the
+ * left edge instead is what makes a timeline feel like it runs away while you look at it.
+ */
+export function zoomAt(viewport: Viewport, factor: number, anchorX: number): Viewport {
+  const scale = clampScale(viewport.scale * factor)
+  if (scale === viewport.scale) return viewport
+
+  const anchored = viewport.offset + anchorX / viewport.scale
+  return { ...viewport, scale, offset: Math.max(0, Math.round(anchored - anchorX / scale)) }
+}
+
+export function scrollBy(viewport: Viewport, deltaX: number, deltaY: number): Viewport {
+  return {
+    ...viewport,
+    offset: Math.max(0, Math.round(viewport.offset + deltaX / viewport.scale)),
+    scrollTop: Math.max(0, Math.round(viewport.scrollTop + deltaY)),
+  }
+}
+
+/** The whole sequence across the strip, with a margin so the last frame is not flush to the edge. */
+export function fitToWidth(state: SequenceState, width: number): Viewport {
+  const duration = sequenceDuration(state)
+  if (duration <= 0 || width <= 0) return DEFAULT_VIEWPORT
+
+  return { scale: clampScale((width * 0.96) / duration), offset: 0, scrollTop: 0 }
+}
+
+/**
+ * Brings an instant into view without changing the zoom, and only when it is out of it: a
+ * playhead reached by playback must not drag the view on every frame it is already visible in.
+ */
+export function revealTime(viewport: Viewport, time: Us, width: number): Viewport {
+  const [from, to] = visibleRange(viewport, width)
+  if (time >= from && time <= to) return viewport
+
+  const span = to - from
+  return { ...viewport, offset: Math.max(0, Math.round(time - span / 2)) }
+}

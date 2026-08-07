@@ -33,16 +33,16 @@ describe('keymap store', () => {
     )
     useKeymap.persist.rehydrate()
 
-    expect(commandFor(useKeymap.getState(), 'KeyT')).toBeNull()
+    expect(commandFor(useKeymap.getState(), 'KeyT', 'scene')).toBeNull()
     localStorage.removeItem('scenario-studio:keymap')
   })
 
   it('resolves a signature to its command', () => {
-    expect(commandFor(useKeymap.getState(), 'KeyG')).toBe('scene.translate')
+    expect(commandFor(useKeymap.getState(), 'KeyG', 'scene')).toBe('scene.translate')
   })
 
   it('resolves nothing for an unbound signature', () => {
-    expect(commandFor(useKeymap.getState(), 'KeyP')).toBeNull()
+    expect(commandFor(useKeymap.getState(), 'KeyP', 'scene')).toBeNull()
   })
 
   it('resolves a signature to its motion', () => {
@@ -51,11 +51,21 @@ describe('keymap store', () => {
 
   it('follows a rebound command and drops the old signature', () => {
     useKeymap.getState().rebind('scene.translate', 'KeyT')
-    expect(commandFor(useKeymap.getState(), 'KeyT')).toBe('scene.translate')
-    expect(commandFor(useKeymap.getState(), 'KeyG')).toBeNull()
+    expect(commandFor(useKeymap.getState(), 'KeyT', 'scene')).toBe('scene.translate')
+    expect(commandFor(useKeymap.getState(), 'KeyG', 'scene')).toBeNull()
   })
 
-  it('reports no conflict on the defaults', () => {
+  it('resolves the same signature to a different command on each surface', () => {
+    const state = useKeymap.getState()
+    expect(commandFor(state, 'Delete', 'scene')).toBe('scene.delete')
+    expect(commandFor(state, 'Delete', 'timeline')).toBe('timeline.delete')
+  })
+
+  it('resolves nothing for a signature bound only on another surface', () => {
+    expect(commandFor(useKeymap.getState(), 'Space', 'scene')).toBeNull()
+  })
+
+  it('reports no conflict on the defaults, where shared keys sit on different surfaces', () => {
     expect(conflicts(useKeymap.getState())).toEqual([])
   })
 
