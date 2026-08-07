@@ -1,23 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { addClip, moveClip, removeClip, splitClip, trimClip } from './commands'
-import { EMPTY_SEQUENCE, type Clip, type SequenceState } from './timeline-state'
+import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import type { Clip, SequenceState } from './timeline-state'
 
-const clip = (id: string, start: number, duration: number): Clip => ({
-  id,
-  assetId: `asset-${id}`,
-  start,
-  duration,
-  inPoint: 0,
-  speed: 1,
-})
+const clip = clipFixture
 
-const withClips = (clips: Clip[], locked = false): SequenceState => ({
-  ...EMPTY_SEQUENCE,
-  tracks: [
-    { id: 'V1', kind: 'video', index: 1, muted: false, locked, clips },
-    { id: 'V2', kind: 'video', index: 2, muted: false, locked: false, clips: [] },
-  ],
-})
+const withClips = (clips: Clip[], locked = false): SequenceState =>
+  sequenceWith([
+    trackFixture('V1', 'video', clips, { locked }),
+    trackFixture('V2', 'video', [], { index: 2 }),
+  ])
 
 describe('sequence commands', () => {
   it('adds a clip and selects it', () => {

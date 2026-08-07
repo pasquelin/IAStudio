@@ -1,17 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { addClip } from '@/engines/timeline/commands'
+import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import { EMPTY_SEQUENCE, type Clip } from '@/engines/timeline/timeline-state'
 import { historyOf, sequenceOf, useSequences } from './sequences'
 
-const clip: Clip = {
-  id: 'clip-1',
-  assetId: 'asset-1',
-  start: 0,
-  duration: 1_000_000,
-  inPoint: 0,
-  speed: 1,
-}
+const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
 
 const clipsOf = (documentId: string): Clip[] =>
   sequenceOf(useSequences.getState(), documentId).tracks[0]?.clips ?? []

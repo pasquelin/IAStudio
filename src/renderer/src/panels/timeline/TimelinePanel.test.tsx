@@ -2,21 +2,14 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
-import type { Clip } from '@/engines/timeline/timeline-state'
+import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import { DEFAULT_VIDEO_TOOL } from '@/spaces/video/video-tools'
 import { useDocuments } from '@/stores/documents'
 import { useSequences } from '@/stores/sequences'
 import { useVideoTool } from '@/stores/video-tool'
 import { TimelineActions, TimelinePanel } from './TimelinePanel'
 
-const clip: Clip = {
-  id: 'clip-1',
-  assetId: 'asset-1',
-  start: 0,
-  duration: 1_000_000,
-  inPoint: 0,
-  speed: 1,
-}
+const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
 
 describe('TimelinePanel', () => {
   beforeEach(() => {

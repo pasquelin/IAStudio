@@ -11,6 +11,7 @@ import { beginGesture, commandForGesture, type Gesture } from '@/engines/timelin
 import { paintTimeline } from '@/engines/timeline/painter'
 import { hitTest, xToTime, type Point, type Viewport } from '@/engines/timeline/timeline-geometry'
 import {
+  makeClip,
   snapToFrame,
   wholeFrames,
   type Clip,
@@ -165,15 +166,13 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     if (!target || target.kind === 'ruler') return
 
     const asset = useAssets.getState().items.find(candidate => candidate.id === assetId)
-    const clip: Clip = {
+    const clip: Clip = makeClip({
       id: `clip_${crypto.randomUUID()}`,
       assetId,
       start: snapToFrame(xToTime(point.x, DEFAULT_VIEWPORT), sequence.settings),
       // A whole number of frames, so the clip's tail stays snappable — see `wholeFrames`.
       duration: wholeFrames(asset?.probe?.duration ?? UNPROBED_DURATION, sequence.settings),
-      inPoint: 0,
-      speed: 1,
-    }
+    })
 
     useSequences.getState().runCommand(documentId, addClip(target.trackId, clip))
   }

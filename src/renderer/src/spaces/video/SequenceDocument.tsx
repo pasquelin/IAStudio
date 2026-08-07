@@ -6,6 +6,7 @@ import { Separator } from '@/design/Separator'
 import {
   clipById,
   EMPTY_SEQUENCE,
+  makeTrack,
   type SequenceState,
   type Us,
 } from '@/engines/timeline/timeline-state'
@@ -34,14 +35,13 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
       playhead: sourceTime,
       tracks: selected
         ? [
-            {
+            makeTrack({
               id: 'S1',
               kind: 'video',
               index: 1,
-              muted: false,
               locked: true,
               clips: [{ ...selected, start: 0 }],
-            },
+            }),
           ]
         : [],
     }),

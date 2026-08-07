@@ -1,10 +1,16 @@
 import {
   clipEnd,
   snapToFrame,
+  CLIP_EDGES,
+  type Clip,
+  type ClipEdge,
   type SequenceSettings,
   type SequenceState,
+  type Track,
   type Us,
 } from './timeline-state'
+
+export type { ClipEdge }
 
 /**
  * What the timeline canvas paints and what the pointer lands on, as pure functions: jsdom has
@@ -24,14 +30,20 @@ export type HitTarget =
   | { kind: 'ruler' }
   | { kind: 'track'; trackId: string }
   | { kind: 'clip'; clipId: string; trackId: string }
-  | { kind: 'edge'; clipId: string; trackId: string; edge: 'in' | 'out' }
+  | { kind: 'edge'; clipId: string; trackId: string; edge: ClipEdge }
+  | { kind: 'fade'; clipId: string; trackId: string; edge: ClipEdge }
 
 export const RULER_HEIGHT = 24
-export const TRACK_HEIGHT = 56
 /** Pixels around a clip edge that grab the edge rather than the body. */
 export const EDGE_GRAB = 6
+/** Pixels around a fade handle that grab it. */
+export const FADE_GRAB = 7
+/** Depth of the strip along a clip's top where fade handles win over everything else. */
+export const FADE_BAND = 12
 /** Pixels within which a snap candidate wins over the frame grid. */
 export const SNAP_THRESHOLD = 8
+/** Inset of a clip's rectangle inside its row, so neighbouring rows stay readable. */
+export const CLIP_INSET = 2
 
 export type SnapContext = {
   settings: SequenceSettings
@@ -48,12 +60,55 @@ export function xToTime(x: number, viewport: Viewport): Us {
   return Math.round(x / viewport.scale + viewport.offset)
 }
 
-export function trackTop(index: number, viewport: Viewport): number {
-  return RULER_HEIGHT + index * TRACK_HEIGHT - viewport.scrollTop
+export type TrackRow = {
+  track: Track
+  /** Distance from the top of the first row, before the ruler and the scroll are applied. */
+  offset: number
+}
+
+/**
+ * Rows are stacked in track order with their own heights, so every reader — painter, hit test,
+ * header column — derives a position the same way instead of each cumulating its own.
+ */
+export function trackRows(state: SequenceState): TrackRow[] {
+  const rows: TrackRow[] = []
+  let offset = 0
+  for (const track of state.tracks) {
+    rows.push({ track, offset })
+    offset += track.height
+  }
+  return rows
+}
+
+export function tracksHeight(state: SequenceState): number {
+  return state.tracks.reduce((total, track) => total + track.height, 0)
+}
+
+export function trackTop(state: SequenceState, index: number, viewport: Viewport): number {
+  const rows = trackRows(state)
+  const row = rows[index]
+  const offset = row ? row.offset : tracksHeight(state)
+  return RULER_HEIGHT + offset - viewport.scrollTop
+}
+
+/** The row under a vertical coordinate, or nothing below the last track. */
+export function rowAt(state: SequenceState, viewport: Viewport, y: number): TrackRow | null {
+  const from = y + viewport.scrollTop - RULER_HEIGHT
+  if (from < 0) return null
+
+  for (const row of trackRows(state)) {
+    if (from < row.offset + row.track.height) return row
+  }
+  return null
 }
 
 export function visibleRange(viewport: Viewport, width: number): [Us, Us] {
   return [viewport.offset, viewport.offset + Math.round(width / viewport.scale)]
+}
+
+/** Where a fade handle sits: at the end of its ramp, which is the clip corner while it is zero. */
+export function fadeHandleTime(clip: Clip, edge: ClipEdge): Us {
+  return edge === 'in' ? clip.start + clip.fadeIn : clipEnd(clip) - clip.fadeOut
 }
 
 export function snap(time: Us, context: SnapContext): Us {
@@ -72,14 +127,27 @@ export function snap(time: Us, context: SnapContext): Us {
 export function hitTest(state: SequenceState, viewport: Viewport, point: Point): HitTarget | null {
   if (point.y < RULER_HEIGHT) return { kind: 'ruler' }
 
-  const row = Math.floor((point.y + viewport.scrollTop - RULER_HEIGHT) / TRACK_HEIGHT)
-  const track = state.tracks[row]
-  if (!track) return null
+  const row = rowAt(state, viewport, point.y)
+  if (!row) return null
+
+  const { track } = row
+  const top = RULER_HEIGHT + row.offset - viewport.scrollTop
+  const inBand = point.y - top <= FADE_BAND
 
   for (const clip of track.clips) {
     const left = timeToX(clip.start, viewport)
     const right = timeToX(clipEnd(clip), viewport)
     if (point.x < left || point.x > right) continue
+
+    // Fades win in the top band only: below it the same corner has to stay grabbable for a trim.
+    if (inBand) {
+      for (const edge of CLIP_EDGES) {
+        const handle = timeToX(fadeHandleTime(clip, edge), viewport)
+        if (Math.abs(point.x - handle) <= FADE_GRAB) {
+          return { kind: 'fade', clipId: clip.id, trackId: track.id, edge }
+        }
+      }
+    }
 
     if (point.x <= left + EDGE_GRAB) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'in' }

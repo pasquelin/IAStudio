@@ -1,24 +1,22 @@
 import { describe, expect, it, vi } from 'vitest'
 import { paintTimeline } from './painter'
-import { RULER_HEIGHT, TRACK_HEIGHT, type Viewport } from './timeline-geometry'
-import { EMPTY_SEQUENCE, type Clip, type SequenceState } from './timeline-state'
+import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
+import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import {
+  DEFAULT_TRACK_HEIGHT,
+  EMPTY_SEQUENCE,
+  type Clip,
+  type SequenceState,
+} from './timeline-state'
 
 const viewport: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
 const size = { width: 800, height: 200 }
+const TRACK_HEIGHT = DEFAULT_TRACK_HEIGHT
 
-const clip = (id: string, start: number, duration: number): Clip => ({
-  id,
-  assetId: `asset-${id}`,
-  start,
-  duration,
-  inPoint: 0,
-  speed: 1,
-})
+const clip = clipFixture
 
-const stateWith = (clips: Clip[]): SequenceState => ({
-  ...EMPTY_SEQUENCE,
-  tracks: [{ id: 'V1', kind: 'video', index: 1, muted: false, locked: false, clips }],
-})
+const stateWith = (clips: Clip[]): SequenceState =>
+  sequenceWith([trackFixture('V1', 'video', clips)])
 
 type Rect = { x: number; y: number; width: number; height: number }
 
@@ -61,11 +59,25 @@ describe('timeline painter', () => {
     })
   })
 
-  it('names every track it paints', () => {
-    const { context, texts } = spyContext()
-    paintTimeline(context, EMPTY_SEQUENCE, viewport, size)
+  it('gives each row the height its own track carries', () => {
+    const { context, rects } = spyContext()
+    const uneven = sequenceWith([
+      trackFixture('V1', 'video', [], { height: 40 }),
+      trackFixture('A1', 'audio', [], { height: 80 }),
+    ])
+    paintTimeline(context, uneven, viewport, size)
 
-    expect(texts.map(entry => entry.text)).toEqual(expect.arrayContaining(['V1', 'A1']))
+    expect(rects).toContainEqual({ x: 0, y: RULER_HEIGHT, width: size.width, height: 40 })
+    expect(rects).toContainEqual({ x: 0, y: RULER_HEIGHT + 40, width: size.width, height: 80 })
+  })
+
+  it('labels a clip with what the caller calls it, not with its asset id', () => {
+    const { context, texts } = spyContext()
+    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size, {
+      labelOf: () => 'Nappe douce',
+    })
+
+    expect(texts.map(entry => entry.text)).toContain('Nappe douce')
   })
 
   it('graduates the ruler in timecode', () => {

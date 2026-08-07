@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
 import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
-import { EMPTY_SEQUENCE, type Clip } from '@/engines/timeline/timeline-state'
+import { clipFixture } from '@/engines/timeline/timeline-fixtures'
+import type { Clip } from '@/engines/timeline/timeline-state'
+import { EMPTY_SEQUENCE } from '@/engines/timeline/timeline-state'
 import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -20,14 +22,7 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const clip: Clip = {
-  id: 'clip-1',
-  assetId: 'asset-1',
-  start: 0,
-  duration: 1_000_000,
-  inPoint: 0,
-  speed: 1,
-}
+const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
 
 function dataTransfer(assetId: string): DataTransfer {
   // jsdom builds no DataTransfer, and the drop handler reads exactly one format.

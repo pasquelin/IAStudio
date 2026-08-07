@@ -1,20 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { clipAt, createFrameSink, sourceTimeAt, videoTracksByDepth } from './TimelineEngine'
-import { EMPTY_SEQUENCE, type Clip, type SequenceState } from './timeline-state'
+import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import type { Clip, SequenceState } from './timeline-state'
 
-const clip = (id: string, start: number, duration: number, inPoint = 0): Clip => ({
-  id,
-  assetId: `asset-${id}`,
-  start,
-  duration,
-  inPoint,
-  speed: 1,
-})
+const clip = (id: string, start: number, duration: number, inPoint = 0): Clip =>
+  clipFixture(id, start, duration, { inPoint })
 
-const stateWith = (clips: Clip[]): SequenceState => ({
-  ...EMPTY_SEQUENCE,
-  tracks: [{ id: 'V1', kind: 'video', index: 1, muted: false, locked: false, clips }],
-})
+const stateWith = (clips: Clip[]): SequenceState =>
+  sequenceWith([trackFixture('V1', 'video', clips)])
 
 const frame = (close: () => void): VideoFrame =>
   // jsdom has no VideoFrame; the engine only ever calls `close` on it.
@@ -42,14 +35,11 @@ describe('timeline engine', () => {
   })
 
   it('orders video tracks by index, so the highest one is composited last', () => {
-    const state: SequenceState = {
-      ...EMPTY_SEQUENCE,
-      tracks: [
-        { id: 'V2', kind: 'video', index: 2, muted: false, locked: false, clips: [] },
-        { id: 'A1', kind: 'audio', index: 0, muted: false, locked: false, clips: [] },
-        { id: 'V1', kind: 'video', index: 1, muted: false, locked: false, clips: [] },
-      ],
-    }
+    const state = sequenceWith([
+      trackFixture('V2', 'video', [], { index: 2 }),
+      trackFixture('A1', 'audio'),
+      trackFixture('V1', 'video'),
+    ])
     expect(videoTracksByDepth(state).map(track => track.id)).toEqual(['V1', 'V2'])
   })
 
