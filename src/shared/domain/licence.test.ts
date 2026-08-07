@@ -5,6 +5,34 @@ import manifest from '../../../package.json'
 
 const entries: Licence[] = licences
 
+/** Declared, never shipped: they run on the machine that builds and never reach a user. */
+const BUILD_ONLY = new Set([
+  '@electron/rebuild',
+  '@eslint/js',
+  '@tailwindcss/vite',
+  '@testing-library/jest-dom',
+  '@testing-library/react',
+  '@testing-library/user-event',
+  '@types/better-sqlite3',
+  '@types/node',
+  '@types/react',
+  '@types/react-dom',
+  '@types/three',
+  '@vitejs/plugin-react',
+  '@vitest/coverage-v8',
+  'electron-builder',
+  'electron-vite',
+  'eslint',
+  'eslint-plugin-react-hooks',
+  'jsdom',
+  'prettier',
+  'prettier-plugin-tailwindcss',
+  'typescript',
+  'typescript-eslint',
+  'vite',
+  'vitest',
+])
+
 describe('the licences route', () => {
   it('answers to the hash the main process loads', () => {
     expect(isLicencesRoute(`#${LICENCES_ROUTE}`)).toBe(true)
@@ -13,7 +41,7 @@ describe('the licences route', () => {
 
   it('leaves every other window alone', () => {
     expect(isLicencesRoute('')).toBe(false)
-    expect(isLicencesRoute('#/settings')).toBe(false)
+    expect(isLicencesRoute('#settings')).toBe(false)
   })
 })
 
@@ -36,15 +64,19 @@ describe('the collected notice', () => {
   })
 
   /**
-   * A runtime dependency added without a line in `SHIPPED` would ship unattributed, and the
-   * notice would look complete while missing it. The generated file is what proves the script
-   * was run — comparing it against the manifest is what proves the script knows everything.
+   * Every declared dependency is either shipped — hence in the notice — or a tool that never
+   * leaves the machine that built it. A new one is neither until someone says which, and this
+   * is what asks: reading `dependencies` alone would miss the twenty packages Vite bundles out
+   * of `devDependencies`, which is most of what the notice owes.
    */
-  it('covers every runtime dependency the manifest declares', () => {
-    const dependencies = Object.keys(manifest.dependencies)
-    expect(dependencies.length).toBeGreaterThan(0)
+  it('accounts for every declared dependency, as shipped or as a build tool', () => {
+    const declared = [
+      ...Object.keys(manifest.dependencies),
+      ...Object.keys(manifest.devDependencies),
+    ]
+    expect(declared.length).toBeGreaterThan(20)
 
-    const covered = new Set(entries.map(entry => entry.name))
-    expect(dependencies.filter(name => !covered.has(name))).toEqual([])
+    const shipped = new Set(entries.map(entry => entry.name))
+    expect(declared.filter(name => !shipped.has(name) && !BUILD_ONLY.has(name))).toEqual([])
   })
 })

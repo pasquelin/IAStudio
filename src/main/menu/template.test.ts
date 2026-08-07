@@ -51,8 +51,7 @@ describe('menuTemplate', () => {
   })
 
   it('leaves About to the application menu on macOS, where it belongs', () => {
-    const help = menuTemplate(options()).find(item => item.label === 'Aide')
-    const entries = Array.isArray(help?.submenu) ? help.submenu : []
+    const entries = submenuOf(menuTemplate(options()), 'Aide')
     expect(entries.map(entry => entry.role)).not.toContain('about')
   })
 
@@ -88,25 +87,15 @@ describe('menuTemplate', () => {
   // application keeps it, on all three platforms.
   it('offers the licences under Help, macOS included', () => {
     for (const isMac of [true, false]) {
-      const help = menuTemplate(options({ isMac })).find(item => item.label === 'Aide')
-      const entries = Array.isArray(help?.submenu) ? help.submenu : []
-      expect(entries.map(entry => entry.label)).toContain('Licences')
+      expect(labels(submenuOf(menuTemplate(options({ isMac })), 'Aide'))).toContain('Licences')
     }
   })
 
   it('opens them through the main process, which owns the window', () => {
     const openLicences = vi.fn()
-    const help = menuTemplate(options({ actions: actions({ openLicences }) })).find(
-      item => item.label === 'Aide',
-    )
-    const entries = Array.isArray(help?.submenu) ? help.submenu : []
-    const item = entries.find(entry => entry.label === 'Licences')
+    const entries = submenuOf(menuTemplate(options({ actions: actions({ openLicences }) })), 'Aide')
 
-    item?.click?.(
-      {} as Parameters<NonNullable<MenuItemConstructorOptions['click']>>[0],
-      undefined,
-      {} as Parameters<NonNullable<MenuItemConstructorOptions['click']>>[2],
-    )
+    activate(entries.find(entry => entry.label === 'Licences'))
     expect(openLicences).toHaveBeenCalledOnce()
   })
 

@@ -82,13 +82,7 @@ function collect(name) {
   const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
   const spdx = typeof manifest.license === 'string' ? manifest.license : 'UNKNOWN'
 
-  return {
-    name,
-    version: manifest.version,
-    spdx,
-    text: licenceText(root),
-    ...(typeof manifest.homepage === 'string' ? { homepage: manifest.homepage } : {}),
-  }
+  return { name, version: manifest.version, spdx, text: licenceText(root) }
 }
 
 /**
@@ -97,8 +91,10 @@ function collect(name) {
  * is read from the binary itself when it is there.
  */
 function ffmpegLicence() {
-  const notice = join(ROOT, 'resources', 'ffmpeg', 'NOTICE.txt')
-  const binary = join(ROOT, 'resources', 'ffmpeg', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
+  const noticeFile = join(ROOT, 'resources', 'ffmpeg', 'NOTICE.txt')
+  const name = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+  const binary = join(ROOT, 'resources', 'ffmpeg', name)
+  const notice = existsSync(noticeFile) ? readFileSync(noticeFile, 'utf8') : null
 
   let version = 'shipped with the application'
   if (existsSync(binary)) {
@@ -109,11 +105,10 @@ function ffmpegLicence() {
   return {
     name: 'FFmpeg',
     version,
-    spdx: existsSync(notice) ? (readFileSync(notice, 'utf8').match(/Licence: (.+)/)?.[1] ?? 'LGPL-2.1-or-later') : 'LGPL-2.1-or-later',
-    text: existsSync(notice)
-      ? readFileSync(notice, 'utf8').trim()
-      : 'Fetch it with `pnpm ffmpeg:fetch` to record the exact terms of the shipped build.',
-    homepage: 'https://ffmpeg.org',
+    spdx: notice?.match(/Licence: (.+)/)?.[1] ?? 'LGPL-2.1-or-later',
+    text:
+      notice?.trim() ??
+      'Fetch it with `pnpm ffmpeg:fetch` to record the exact terms of the shipped build.',
     sources: 'https://ffmpeg.org/download.html',
   }
 }

@@ -1,11 +1,10 @@
-import { StrictMode } from 'react'
+import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { resolveLanguage } from '@shared/i18n'
 import { Application } from '@/app/Application'
 import { initI18n } from '@/i18n'
-import { LicencesWindow } from '@/licences/LicencesWindow'
 import { SettingsWindow } from '@/settings/SettingsWindow'
 import './index.css'
 
@@ -24,9 +23,23 @@ await initI18n(resolveLanguage(navigator.language))
  * fragment is only ever what the main process loaded. The splash is the one exception — it
  * has its own entry precisely so it never pulls this bundle in.
  */
+/**
+ * The whole notice — every shipped licence, in full — is fifty kilobytes nobody reads in a
+ * usual session, and a static import puts it in the chunk the splash waits for.
+ */
+const LicencesWindow = lazy(async () => ({
+  default: (await import('@/licences/LicencesWindow')).LicencesWindow,
+}))
+
 function Route({ hash }: { hash: string }) {
   if (isSettingsRoute(hash)) return <SettingsWindow />
-  if (isLicencesRoute(hash)) return <LicencesWindow />
+  if (isLicencesRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <LicencesWindow />
+      </Suspense>
+    )
+  }
   return <Application />
 }
 
