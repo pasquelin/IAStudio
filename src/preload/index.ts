@@ -78,7 +78,8 @@ const bridge: StudioBridge = {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
     state: () => ipcRenderer.invoke(CHANNELS.windowState),
     onState: callback => subscribe<WindowState>(EVENTS.windowState, callback),
-    setWorkspace: workspace => ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace),
+    setWorkspace: (workspace, tools) =>
+      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools),
   },
   menu: {
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),

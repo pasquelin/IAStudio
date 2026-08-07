@@ -40,6 +40,7 @@ export type ModelFamily =
   | 'video'
   | '3d'
   | 'audio'
+  | 'texture'
   | 'skybox'
   | 'upscale'
   | 'background-removal'
@@ -51,6 +52,7 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
   'video',
   '3d',
   'audio',
+  'texture',
   'skybox',
   'upscale',
   'background-removal',
@@ -134,6 +136,7 @@ export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   video: ['txt2video', 'img2video', 'video2video'],
   '3d': ['txt23d', 'img23d', '3d23d'],
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
+  texture: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
   // Empty like its tags and its publishers below, and for the same reason: the family is three
   // models wide, and a two-option menu narrowing three rows only ever answers "fewer".
   skybox: [],
@@ -174,6 +177,9 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   ],
   '3d': ['Image to 3D', 'Text to 3D', '3D to 3D', 'PBR', 'Multiview', 'Motion'],
   audio: ['Audio', 'TTS', 'Music', 'Text to Music', 'Text to Speech'],
+  // Empty until the same count is run over the family: it was split out of `image` on its
+  // capabilities, and borrowing that list would offer tags no texture model may carry.
+  texture: [],
   // Left empty on purpose: the family is three models wide — `SKYBOX_TAG` already selected
   // them — and a facet menu narrowing three rows offers a filter whose only answer is fewer.
   skybox: [],
@@ -198,6 +204,7 @@ export const PUBLISHERS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   video: ['Kling', 'Vidu', 'Alibaba', 'Wan', 'Bytedance', 'Luma', 'Google', 'Grok'],
   '3d': ['Tripo', 'Tencent', 'Meshy', 'Hunyuan', 'Rodin'],
   audio: ['ElevenLabs', 'Google', 'Bytedance'],
+  texture: [],
   // Empty for the same reason as its tags: Scenario, BFL and Tencent publish one model each.
   skybox: [],
   upscale: [],

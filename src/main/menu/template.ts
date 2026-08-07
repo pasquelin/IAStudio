@@ -9,7 +9,7 @@ import {
   type MeshKind,
   type SceneEntry,
 } from '@shared/domain/scene'
-import { TOOL_PLACEMENTS, type ToolPlacement } from '@shared/domain/tool'
+import { placementIn, type ToolId, type ToolPlacement } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { bindingOf, type BindingOverrides, type CommandId } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
@@ -38,6 +38,12 @@ export type MenuOptions = {
   language: Language
   /** `null` when the focused window edits no workspace at all — the settings window. */
   workspace: WorkspaceId | null
+  /**
+   * The panels the focused window can currently open, as it reported them. Not derived from the
+   * registry here: whether the generator exists depends on a model being chosen, which only the
+   * renderer knows.
+   */
+  tools: readonly ToolId[]
   isMac: boolean
   isDevelopment: boolean
   /** What the user remapped, so the menu advertises the key it will actually answer to. */
@@ -60,11 +66,13 @@ function developerItems(isDevelopment: boolean): MenuItemConstructorOptions[] {
   ]
 }
 
-/** One placement per tool: a tool declaring several must still appear once in the menu. */
-function firstPlacements(): ToolPlacement[] {
-  return TOOL_PLACEMENTS.filter(
-    (placement, index) => TOOL_PLACEMENTS.findIndex(other => other.id === placement.id) === index,
-  )
+/**
+ * Where each reported panel sits in this section. A window that announced no workspace — the
+ * settings window, the splash — gets nothing: there is no column to open a panel into.
+ */
+function placementsFor(tools: readonly ToolId[], workspace: WorkspaceId | null): ToolPlacement[] {
+  if (!workspace) return []
+  return tools.flatMap(id => placementIn(id, workspace) ?? [])
 }
 
 /**
@@ -72,7 +80,7 @@ function firstPlacements(): ToolPlacement[] {
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, workspace, isMac, isDevelopment, overrides, actions } = options
+  const { language, workspace, tools, isMac, isDevelopment, overrides, actions } = options
 
   /**
    * The accelerator of a command, read off the registry. Written by hand until now, which is
@@ -180,11 +188,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       submenu: [
         {
           label: t.menu.tools,
-          // One entry per tool, not per placement: a tool that sits in different zones
-          // depending on the workspace would otherwise appear twice under the same name. The
-          // zone sent here is only a starting point — the window resolves it against the
+          // The zone sent here is only a starting point — the window resolves it against the
           // workspace it is actually showing.
-          submenu: firstPlacements().map(placement => ({
+          submenu: placementsFor(tools, workspace).map(placement => ({
             label: t.panels[placement.id],
             click: () => actions.openTool({ zone: placement.zone, tool: placement.id }),
           })),

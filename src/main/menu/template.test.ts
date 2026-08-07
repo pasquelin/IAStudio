@@ -15,6 +15,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
 const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   language: 'fr',
   workspace: '3d',
+  tools: ['meshes', 'lights', 'explorer', 'models', 'generator', 'inspector', 'assets'],
   isMac: true,
   isDevelopment: true,
   overrides: {},
@@ -80,6 +81,25 @@ describe('menuTemplate', () => {
     expect(entries[0]?.role).toBe('about')
   })
 
+  it('lists only the panels the section has', () => {
+    const items = submenuOf(submenuOf(menuTemplate(options()), 'Affichage'), 'Modules')
+    expect(labels(items)).toContain('Mailles')
+    expect(labels(items)).not.toContain('Calques')
+  })
+
+  // The renderer is the only side that knows whether a model was chosen, and generating
+  // without one is impossible: a menu entry offering it would open an empty panel.
+  it('leaves out a panel the renderer did not report', () => {
+    const tools = options().tools.filter(id => id !== 'generator')
+    const items = submenuOf(submenuOf(menuTemplate(options({ tools })), 'Affichage'), 'Modules')
+    expect(labels(items)).not.toContain('Génération')
+  })
+
+  it('offers no panel to a window that announced no workspace', () => {
+    const view = submenuOf(menuTemplate(options({ workspace: null })), 'Affichage')
+    expect(submenuOf(view, 'Modules')).toHaveLength(0)
+  })
+
   it('offers Add only in the 3D workspace', () => {
     expect(labels(menuTemplate(options({ workspace: 'image' })))).not.toContain('Ajouter')
     expect(labels(menuTemplate(options()))).toContain('Ajouter')
@@ -122,12 +142,11 @@ describe('menuTemplate', () => {
     expect(names.indexOf('Ajouter')).toBeLessThan(names.indexOf('Affichage'))
   })
 
-  it('names every tool window it can reopen', () => {
+  it('names every panel it lists — an unnamed entry is a way back nobody finds', () => {
     const tools = submenuOf(submenuOf(menuTemplate(options()), 'Affichage'), 'Modules')
 
-    expect(tools.map(item => item.label)).toContain('Mailles')
-    expect(tools.map(item => item.label)).toContain('Lumières')
-    expect(tools.map(item => item.label)).toContain('Timeline')
+    expect(tools).toHaveLength(options().tools.length)
+    for (const item of tools) expect(item.label).toBeTruthy()
   })
 })
 

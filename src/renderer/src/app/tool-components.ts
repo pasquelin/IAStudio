@@ -4,7 +4,6 @@ import { definition as assets } from '@/panels/assets'
 import { definition as explorer } from '@/panels/explorer'
 import { definition as generator } from '@/panels/generator'
 import { definition as inspector } from '@/panels/inspector'
-import { definition as jobs } from '@/panels/jobs'
 import { definition as layers } from '@/panels/layers'
 import { definition as lights } from '@/panels/lights'
 import { definition as meshes } from '@/panels/meshes'
@@ -33,5 +32,4 @@ export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
   inspector,
   skybox,
   assets,
-  jobs,
 }

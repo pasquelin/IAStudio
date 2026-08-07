@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
+import { useTools } from '@/stores/tools'
 import { Rail } from './Rail'
 
 const openDocument = vi.fn()
@@ -16,6 +18,7 @@ describe('Rail', () => {
     installFakeBridge()
     useDocuments.setState({ documents: {} })
     useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
+    useModels.setState({ selected: {} })
     const stamp = '2026-08-07T10:00:00.000Z'
     useProject.setState({
       project: {
@@ -48,5 +51,48 @@ describe('Rail', () => {
   it('carries no new-document button on the right rail', () => {
     render(<Rail side="right" />)
     expect(screen.queryByRole('button', { name: 'Nouveau document' })).not.toBeInTheDocument()
+  })
+
+  // Generating without a model is impossible, so the icon is absent rather than dead: the rail
+  // says what the section can do.
+  it('offers no generator icon while no model is chosen', () => {
+    useModels.setState({ selected: {} })
+    render(<Rail side="right" />)
+    expect(screen.queryByRole('button', { name: 'Génération' })).not.toBeInTheDocument()
+  })
+
+  it('offers it as soon as one is', () => {
+    useModels.setState({ selected: { '3d': 'tripo-v3' } })
+    render(<Rail side="right" />)
+    expect(screen.getByRole('button', { name: 'Génération' })).toBeInTheDocument()
+  })
+
+  // Spec § 2, rule 2: the upper right is the AI's, and the separator is where that stops. The
+  // rail is the legend of the column, so it has to draw the same cut.
+  it('cuts the right rail where the column is cut: the AI above, the rest below', () => {
+    useModels.setState({ selected: { '3d': 'tripo-v3' } })
+    const { container } = render(<Rail side="right" />)
+
+    // The separator is decorative, hence hidden from assistive tech — it is read here as a
+    // position in the rail, not as a control.
+    const marks = [...container.querySelectorAll('button, span[aria-hidden="true"]')].map(
+      node => node.getAttribute('aria-label') ?? 'separator',
+    )
+
+    expect(marks).toEqual(['Modèles', 'Génération', 'separator', 'Inspecteur'])
+  })
+
+  // The panel a section stands in for another is the one that is up, so its icon is the one
+  // that reads as up — and a click on it closes the half instead of merely restating it.
+  it('accents the icon of the panel the half actually shows', async () => {
+    useLayouts.setState({ activeWorkspace: 'video' })
+    useTools.setState({ open: { bottom: { primary: 'assets' } } })
+    render(<Rail side="left" />)
+
+    const montage = screen.getByRole('button', { name: 'Timeline' })
+    expect(montage).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(montage)
+    expect(useTools.getState().open.bottom?.primary).toBeUndefined()
   })
 })

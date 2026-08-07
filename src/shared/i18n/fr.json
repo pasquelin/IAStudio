@@ -21,7 +21,6 @@
     "generator": "Génération",
     "inspector": "Inspecteur",
     "assets": "Assets",
-    "jobs": "Tâches",
     "skybox": "Skybox"
   },
   "actions": {
@@ -34,7 +33,6 @@
     "removeTool": "Retirer le module"
   },
   "generation": {
-    "chooseModel": "Choisir un modèle",
     "noParameter": "Ce modèle n’attend aucun paramètre.",
     "randomSeed": "Aléatoire",
     "noProject": "Ouvrez un projet pour générer.",
@@ -42,6 +40,11 @@
   },
   "jobs": {
     "none": "Aucune tâche en cours.",
+    "running_one": "{{count}} génération",
+    "running_other": "{{count}} générations",
+    "failed_one": "{{count}} échec",
+    "failed_other": "{{count}} échecs",
+    "open": "Afficher les générations",
     "status": {
       "queued": "En file",
       "running": "En cours",
@@ -111,6 +114,7 @@
     "video": "Vidéo",
     "3d": "3D",
     "audio": "Audio",
+    "texture": "Texture",
     "skybox": "Ciel",
     "upscale": "Agrandissement",
     "background-removal": "Détourage",
@@ -132,7 +136,11 @@
     "3d23d": "3D vers 3D",
     "txt2audio": "Texte vers audio",
     "audio2audio": "Audio vers audio",
-    "video2audio": "Vidéo vers audio"
+    "video2audio": "Vidéo vers audio",
+    "txt2img_texture": "Texte vers texture",
+    "img2img_texture": "Image vers texture",
+    "controlnet_texture": "Guidage de texture",
+    "reference_texture": "Texture de référence"
   },
   "assetTypes": {
     "image": "Image",

@@ -1,12 +1,14 @@
 import { useEffect } from 'react'
 import type { CommandId } from '@shared/domain/command'
 import { saveDocument } from '@/app/document-io'
-import { toolZoneIn } from '@/helpers/tool-registry'
+import { availableToolIds, toolZoneIn } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
+import { useSettings } from '@/stores/settings'
 import { useTools } from '@/stores/tools'
 
 /** The global commands, which are the ones the native menu fires. The rest belong to a surface. */
@@ -33,6 +35,16 @@ function runCommand(command: CommandId): void {
 }
 
 /**
+ * Tells the main process what the menu should offer. Published from here rather than from
+ * `setActiveWorkspace`, because it depends on more than the section: choosing a model brings
+ * the generator into existence, and the menu has to learn it at that moment.
+ */
+function publishMenuContext(): void {
+  const workspace = useLayouts.getState().activeWorkspace
+  void getBridge()?.window.setWorkspace(workspace, availableToolIds(workspace))
+}
+
+/**
  * Wires the native menu to the shell. Without this listener, "View ▸ Tool windows" would emit
  * into the void and the menu entries would silently do nothing.
  */
@@ -45,7 +57,12 @@ export function useNativeMenu(): void {
 
     // The persisted workspace is restored without going through `setActiveWorkspace`, so the
     // menu would sit on the default until the user switched spaces by hand.
-    void bridge.window.setWorkspace(useLayouts.getState().activeWorkspace)
+    publishMenuContext()
+    // The main process drops a rebuild that changes nothing, so publishing on every write of
+    // these three stores costs a comparison rather than a menu.
+    const stopPublishing = [useLayouts, useModels, useSettings].map(store =>
+      store.subscribe(publishMenuContext),
+    )
 
     const stopTool = bridge.menu.onOpenTool(({ tool }) => {
       // The zone is resolved here rather than taken from the menu: a tool can sit in different
@@ -71,6 +88,7 @@ export function useNativeMenu(): void {
       stopTool()
       stopCommand()
       stopSceneAdd()
+      for (const stop of stopPublishing) stop()
     }
   }, [])
 }

@@ -56,9 +56,9 @@ export function Generator() {
 
   if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
 
-  if (!modelId) {
-    return <EmptyState icon={mdiCreationOutline} message={t('generation.chooseModel')} />
-  }
+  // Unreachable: a section without a model offers no generator at all — the rail drops its icon
+  // and `shownTool` puts Models in this half. The guard is what makes `modelId` a string below.
+  if (!modelId) return null
 
   if (descriptor.isPending) {
     return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />

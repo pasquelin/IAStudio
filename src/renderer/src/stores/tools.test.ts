@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { fitZoneSize, fitSplit, MIN_CENTER, MIN_SIZE, MIN_SPLIT, openFrom, useTools } from './tools'
+import {
+  DEFAULT_OPEN,
+  fitZoneSize,
+  fitSplit,
+  MIN_CENTER,
+  MIN_SIZE,
+  MIN_SPLIT,
+  openFrom,
+  useTools,
+} from './tools'
 
 describe('fitZoneSize', () => {
   it('leaves room for the documents area', () => {
@@ -55,29 +64,29 @@ describe('tools store', () => {
   })
 
   it('opens a tool in the half its placement declares', () => {
-    useTools.getState().toggle('left', 'layers')
+    useTools.getState().show('left', 'layers')
     expect(useTools.getState().open.left).toEqual({ primary: 'layers' })
   })
 
   it('leaves the other half alone, so both show at once', () => {
-    const { toggle } = useTools.getState()
-    toggle('left', 'explorer')
-    toggle('left', 'layers')
+    const { show } = useTools.getState()
+    show('left', 'explorer')
+    show('left', 'layers')
 
     expect(useTools.getState().open.left).toEqual({ primary: 'layers', secondary: 'explorer' })
   })
 
   it('swaps within a half rather than stacking, when two tools share it', () => {
-    const { toggle } = useTools.getState()
-    toggle('right', 'generator')
-    toggle('right', 'models')
+    const { show } = useTools.getState()
+    show('right', 'generator')
+    show('right', 'models')
 
     expect(useTools.getState().open.right).toEqual({ primary: 'models' })
   })
 
-  it('closes the half when the tool already up is clicked again', () => {
+  it('empties the half it is asked to close', () => {
     useTools.setState({ open: { bottom: { primary: 'assets' } } })
-    useTools.getState().toggle('bottom', 'assets')
+    useTools.getState().close('bottom', 'primary')
     expect(useTools.getState().open.bottom?.primary).toBeUndefined()
   })
 
@@ -118,23 +127,34 @@ describe('openFrom', () => {
   })
 
   it('opens a tool in every zone it sits in, so changing workspace never hides it', () => {
-    // The shelf lies in the bottom strip nearly everywhere and stands on the right in Video
-    // and Audio. Stored in one, it has to be open in the other, or the workspace that reads it
+    // The shelf lies in the bottom band nearly everywhere and stands in the left column in
+    // Video. Stored in one, it has to be open in the other, or the workspace that reads it
     // elsewhere shows nothing where it belongs.
-    expect(openFrom({ right: { primary: 'assets' } })).toEqual({
-      right: { primary: 'assets' },
+    expect(openFrom({ left: { primary: 'assets' } })).toEqual({
+      left: { primary: 'assets' },
       bottom: { primary: 'assets' },
     })
   })
 
-  it('never displaces a tool an explicit layout already put there', () => {
-    const stored = { right: { primary: 'assets' }, bottom: { primary: 'jobs' } }
-    // `jobs` declares the secondary half today, so it lands there and leaves the primary free
-    // for the shelf rather than being overwritten by it.
-    expect(openFrom(stored)).toEqual({
-      right: { primary: 'assets' },
-      bottom: { primary: 'assets', secondary: 'jobs' },
+  it('lands a tool in the zone it declares today, not the one it was stored under', () => {
+    // The shelf was on the right until version 5; the half it held there is the AI's now.
+    const open = openFrom({ right: { primary: 'assets' } })
+    expect(open.right?.primary).toBeUndefined()
+    expect(open.left?.primary).toBe('assets')
+    expect(open.bottom?.primary).toBe('assets')
+  })
+
+  it('drops the jobs panel, which is no longer a tool window', () => {
+    expect(openFrom({ bottom: { primary: 'assets', secondary: 'jobs' } }).bottom).toEqual({
+      primary: 'assets',
     })
+  })
+
+  it('never leaves a second half in a horizontal band — a band is never cut', () => {
+    const stored = { bottom: { primary: 'timeline', secondary: 'explorer' } }
+    expect(openFrom(stored).bottom?.secondary).toBeUndefined()
+    // The explorer is not lost with the half it was stored in: it goes back to the column.
+    expect(openFrom(stored).left?.secondary).toBe('explorer')
   })
 
   it('reads its own shape back unchanged', () => {
@@ -148,6 +168,6 @@ describe('openFrom', () => {
   })
 
   it('falls back to the defaults when there is nothing to read', () => {
-    expect(openFrom(null).left).toEqual({ secondary: 'explorer' })
+    expect(openFrom(null)).toBe(DEFAULT_OPEN)
   })
 })

@@ -104,7 +104,8 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
   { pattern: /video$/, family: 'video' },
   { pattern: /3d$/, family: '3d' },
   { pattern: /audio$/, family: 'audio' },
-  { pattern: /img|inpaint|outpaint|reference|texture/, family: 'image' },
+  { pattern: /texture/, family: 'texture' },
+  { pattern: /img|inpaint|outpaint|reference/, family: 'image' },
 ]
 
 /**
