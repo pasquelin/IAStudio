@@ -78,21 +78,3 @@ export function childrenOf(state: SceneState, parentId: string | null): SceneNod
 export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): SceneNode[] {
   return nodes.filter(node => node.type === type)
 }
-
-export function serializeScene(state: SceneState): string {
-  return JSON.stringify(state)
-}
-
-/** Unreadable input yields an empty scene: a blank viewport beats an uncaught throw. */
-export function deserializeScene(raw: string): SceneState {
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object' || !('nodes' in parsed)) return EMPTY_SCENE
-    // The two guards above established the shape; `JSON.parse` can only hand back `unknown`.
-    const { nodes, selectedId } = parsed as Partial<SceneState>
-    if (!Array.isArray(nodes)) return EMPTY_SCENE
-    return { nodes, selectedId: typeof selectedId === 'string' ? selectedId : null }
-  } catch {
-    return EMPTY_SCENE
-  }
-}

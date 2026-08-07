@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
-import {
-  childrenOf,
-  deserializeScene,
-  EMPTY_SCENE,
-  nodeById,
-  serializeScene,
-  type SceneState,
-} from './scene-state'
+import { childrenOf, EMPTY_SCENE, nodeById, type SceneState } from './scene-state'
 
 describe('EMPTY_SCENE', () => {
   it('starts empty with nothing selected', () => {
@@ -42,26 +35,5 @@ describe('childrenOf', () => {
   it('answers with nothing for a childless parent', () => {
     const state: SceneState = { nodes: [mesh('a')], selectedId: null }
     expect(childrenOf(state, 'a')).toEqual([])
-  })
-})
-
-describe('deserializeScene', () => {
-  it('round-trips a serialized scene', () => {
-    const state: SceneState = { nodes: [mesh('a'), light('b')], selectedId: 'a' }
-    expect(deserializeScene(serializeScene(state))).toEqual(state)
-  })
-
-  it('yields an empty scene rather than throwing on unreadable input', () => {
-    // The state comes from a store that may outlive a format change; a blank viewport beats
-    // an unhandled throw with no error boundary above it.
-    expect(deserializeScene('{ not json')).toEqual(EMPTY_SCENE)
-  })
-
-  it('yields an empty scene when nodes is not an array', () => {
-    expect(deserializeScene('{"nodes":"nope"}')).toEqual(EMPTY_SCENE)
-  })
-
-  it('drops a selection that is not a string', () => {
-    expect(deserializeScene('{"nodes":[],"selectedId":7}').selectedId).toBeNull()
   })
 })

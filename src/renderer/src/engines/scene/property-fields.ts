@@ -46,7 +46,7 @@ const RING_SEGMENTS: PropertySpec = { control: 'number', min: 3, max: 128, step:
 const SEGMENTS: PropertySpec = { control: 'number', min: 1, max: 128, step: 1 }
 const WINDING: PropertySpec = { control: 'number', min: 1, max: 20, step: 1 }
 
-const GEOMETRY_SPECS: SpecsOf<GeometryDescriptor> = {
+export const GEOMETRY_SPECS: SpecsOf<GeometryDescriptor> = {
   box: { width: SIZE, height: SIZE, depth: SIZE },
   capsule: {
     radius: SIZE,
@@ -99,7 +99,7 @@ const RANGE: PropertySpec = { control: 'number', min: 0, step: 0.5 }
 const DECAY: PropertySpec = { control: 'number', min: 0, max: 4, step: 0.1 }
 const TARGET: PropertySpec = { control: 'vector3', step: 0.1 }
 
-const LIGHT_SPECS: SpecsOf<LightDescriptor> = {
+export const LIGHT_SPECS: SpecsOf<LightDescriptor> = {
   ambient: { color: COLOR, intensity: INTENSITY },
   directional: { color: COLOR, intensity: INTENSITY, target: TARGET },
   hemisphere: { skyColor: COLOR, groundColor: COLOR, intensity: INTENSITY },
@@ -123,7 +123,7 @@ type MaterialSpecs = {
   [F in Exclude<keyof MaterialDescriptor, 'kind' | TextureSlot>]: PropertySpec
 }
 
-const MATERIAL_SPECS: MaterialSpecs = {
+export const MATERIAL_SPECS: MaterialSpecs = {
   color: COLOR,
   roughness: UNIT,
   metalness: UNIT,
