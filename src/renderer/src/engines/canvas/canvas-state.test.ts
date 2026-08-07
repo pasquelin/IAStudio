@@ -1,19 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { layerFixture } from './canvas-fixtures'
 import {
+  allLayers,
   clampOpacity,
   DEFAULT_CANVAS,
   deserializeCanvas,
+  IDENTITY,
   layerById,
+  mapLayers,
   serializeCanvas,
   type CanvasState,
 } from './canvas-state'
+import { pixelLayer } from './commands'
 
 const populated: CanvasState = {
+  ...DEFAULT_CANVAS,
   width: 800,
   height: 600,
   layers: [
-    layerFixture({ id: 'a', name: 'Background', locked: true }),
+    layerFixture({
+      id: 'a',
+      name: 'Background',
+      locked: { pixels: true, position: true, alpha: true },
+    }),
     layerFixture({ id: 'b', visible: false, opacity: 0.5, blend: 'multiply' }),
   ],
   activeLayerId: 'b',
@@ -66,5 +75,110 @@ describe('clampOpacity', () => {
 
   it('treats an unreadable value as fully opaque', () => {
     expect(clampOpacity(Number.NaN)).toBe(1)
+  })
+})
+
+/**
+ * A document written before groups, granular locks and transforms existed must still open —
+ * silently, with the same pixels, not as an error dialog.
+ */
+describe('reading back an older document', () => {
+  const legacy = JSON.stringify({
+    width: 640,
+    height: 480,
+    layers: [
+      { id: 'a', name: 'Background', visible: true, locked: true, opacity: 1, blend: 'normal' },
+      { id: 'b', name: 'Paint', visible: true, locked: false, opacity: 0.5, blend: 'multiply' },
+    ],
+    activeLayerId: 'b',
+  })
+
+  it('keeps the stack and what was armed', () => {
+    const state = deserializeCanvas(legacy)
+
+    expect(state.layers.map(layer => layer.id)).toEqual(['a', 'b'])
+    expect(state.activeLayerId).toBe('b')
+    expect([state.width, state.height]).toEqual([640, 480])
+  })
+
+  it('reads every layer as a pixel layer, which is all there was', () => {
+    expect(deserializeCanvas(legacy).layers.every(layer => layer.kind === 'pixel')).toBe(true)
+  })
+
+  // One boolean was the whole padlock: it meant nothing about the layer moved.
+  it('spreads the old single lock across the three padlocks', () => {
+    const state = deserializeCanvas(legacy)
+
+    expect(layerById(state, 'a')?.locked).toEqual({ pixels: true, position: true, alpha: true })
+    expect(layerById(state, 'b')?.locked).toEqual({ pixels: false, position: false, alpha: false })
+  })
+
+  it('fills in what the old format had no field for', () => {
+    const layer = layerById(deserializeCanvas(legacy), 'b')
+
+    expect(layer?.fillOpacity).toBe(1)
+    expect(layer?.transform).toEqual(IDENTITY)
+    expect(layer?.clipped).toBe(false)
+  })
+
+  it('keeps a blend mode it still knows, and drops one it does not', () => {
+    expect(layerById(deserializeCanvas(legacy), 'b')?.blend).toBe('multiply')
+
+    const odd = JSON.stringify({ layers: [{ id: 'a', blend: 'plaid' }] })
+    expect(layerById(deserializeCanvas(odd), 'a')?.blend).toBe('normal')
+  })
+})
+
+describe('reading back a document with groups', () => {
+  const nested = JSON.stringify({
+    layers: [
+      {
+        id: 'g',
+        kind: 'group',
+        children: [{ id: 'a', kind: 'pixel' }],
+        collapsed: true,
+        isolation: 'isolate',
+      },
+    ],
+    activeLayerId: 'a',
+  })
+
+  it('finds a layer nested inside a group', () => {
+    expect(layerById(deserializeCanvas(nested), 'a')?.id).toBe('a')
+  })
+
+  it('lists the group and its children, bottom first', () => {
+    expect(allLayers(deserializeCanvas(nested).layers).map(layer => layer.id)).toEqual(['g', 'a'])
+  })
+
+  it('keeps a nested layer armed rather than resetting to the top level', () => {
+    expect(deserializeCanvas(nested).activeLayerId).toBe('a')
+  })
+
+  // An id naming no layer leaves the document unpaintable, with no way back to a usable state.
+  it('arms the first layer when the stored id names none', () => {
+    const orphan = JSON.stringify({ layers: [{ id: 'a' }], activeLayerId: 'gone' })
+
+    expect(deserializeCanvas(orphan).activeLayerId).toBe('a')
+  })
+})
+
+describe('mapLayers', () => {
+  const tree = deserializeCanvas(
+    JSON.stringify({ layers: [{ id: 'g', kind: 'group', children: [{ id: 'a' }] }, { id: 'b' }] }),
+  )
+
+  it('reaches a layer nested in a group', () => {
+    const renamed = mapLayers(tree.layers, layer =>
+      layer.id === 'a' ? { ...layer, name: 'Renamed' } : layer,
+    )
+
+    expect(layerById({ ...tree, layers: renamed }, 'a')?.name).toBe('Renamed')
+  })
+
+  it('removes a nested layer without touching the group around it', () => {
+    const pruned = mapLayers(tree.layers, layer => (layer.id === 'a' ? null : layer))
+
+    expect(allLayers(pruned).map(layer => layer.id)).toEqual(['g', 'b'])
   })
 })

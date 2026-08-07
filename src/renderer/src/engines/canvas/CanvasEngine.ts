@@ -62,11 +62,26 @@ const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>([
   'comment',
 ])
 
-const BLEND_BY_MODE: Record<BlendMode, BLEND_MODES> = {
+/**
+ * Pixi's own name for each mode. Partial: `hue` has no Pixi equivalent and waits for a filter of
+ * its own, so it falls back to `normal` rather than compositing as something it is not.
+ */
+const BLEND_BY_MODE: Partial<Record<BlendMode, BLEND_MODES>> = {
   normal: 'normal',
   multiply: 'multiply',
   screen: 'screen',
   overlay: 'overlay',
+  darken: 'darken',
+  lighten: 'lighten',
+  'color-dodge': 'color-dodge',
+  'color-burn': 'color-burn',
+  'hard-light': 'hard-light',
+  'soft-light': 'soft-light',
+  difference: 'difference',
+  exclusion: 'exclusion',
+  saturation: 'saturation',
+  color: 'color',
+  luminosity: 'luminosity',
 }
 
 type LayerSurface = {
@@ -246,12 +261,12 @@ export class CanvasEngine {
       this.surfaces.set(layer.id, surface)
       this.world.addChild(sprite)
 
-      if (layer.fill !== undefined) this.fill(surface, layer.fill)
+      if (layer.kind === 'pixel' && layer.fill !== undefined) this.fill(surface, layer.fill)
     }
 
     surface.sprite.visible = layer.visible
     surface.sprite.alpha = layer.opacity
-    surface.sprite.blendMode = BLEND_BY_MODE[layer.blend]
+    surface.sprite.blendMode = BLEND_BY_MODE[layer.blend] ?? 'normal'
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
