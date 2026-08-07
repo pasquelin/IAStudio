@@ -211,7 +211,12 @@ function ToolItem({ tool, active, tip, modeTip, onTool, onMode }: ToolItemProps)
         tooltip={tip}
         active={active}
         disabled={tool.disabled}
-        onClick={() => onTool(tool.id)}
+        onClick={() => {
+          onTool(tool.id)
+          // A group with no armed mode is a menu of actions, not a choice of tool: nothing is
+          // armed by clicking it, so the click has to open what hovering would have.
+          if (tool.modes && tool.activeMode === undefined) flyout.open()
+        }}
       />
 
       {flyout.showing && (

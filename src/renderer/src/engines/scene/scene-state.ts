@@ -119,8 +119,8 @@ export function childrenOf(state: SceneState, parentId: string | null): SceneNod
 }
 
 /** The half of the scene a panel is about — meshes or lights. */
-export function nodesOfType(state: SceneState, type: SceneNodeType): SceneNode[] {
-  return state.nodes.filter(node => node.type === type)
+export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): SceneNode[] {
+  return nodes.filter(node => node.type === type)
 }
 
 export function serializeScene(state: SceneState): string {

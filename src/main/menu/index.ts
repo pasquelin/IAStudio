@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu } from 'electron'
-import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
-import { resolveLanguage, type Language } from '@shared/i18n'
+import { DEFAULT_WORKSPACE, WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import { resolveLanguage } from '@shared/i18n'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { toggleFullScreen } from '@main/window/controls'
@@ -20,11 +20,7 @@ function sendToFocused(channel: string, payload?: unknown): void {
   target.webContents.send(channel, payload)
 }
 
-/**
- * The menu is rebuilt whenever the workspace changes, so what it last showed has to be
- * remembered here: the renderer announces the workspace, and nothing else knows the language.
- */
-const language: Language = resolveLanguage(app.getLocale())
+/** The menu is rebuilt whenever the workspace changes, so the last one has to be remembered. */
 let workspace: WorkspaceId = DEFAULT_WORKSPACE
 
 /**
@@ -34,7 +30,9 @@ let workspace: WorkspaceId = DEFAULT_WORKSPACE
 export function buildMenu(): void {
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
-      menuTemplate(language, workspace, process.platform === 'darwin', {
+      // Read here and not at module load: Electron only answers `getLocale` once it is ready,
+      // and this module is imported well before that.
+      menuTemplate(resolveLanguage(app.getLocale()), workspace, process.platform === 'darwin', {
         appName: app.name,
         openSettings: () => void openSettingsWindow(),
         toggleFullScreen: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
@@ -52,7 +50,9 @@ export function buildMenu(): void {
  */
 export function registerMenuHandlers(): void {
   handle(CHANNELS.windowWorkspace, (_event, next) => {
-    if (next === workspace) return
+    // Checked against the registry: this is the only main-process state a renderer sets, and a
+    // preload from an older build could name a workspace this one has dropped.
+    if (next === workspace || !WORKSPACE_IDS.includes(next)) return
     workspace = next
     buildMenu()
   })

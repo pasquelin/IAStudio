@@ -40,6 +40,8 @@ export function NodeActions({ documentId, type }: { documentId: string; type: Sc
           description={t(`${namespace}.addHint`)}
           tooltip={TIP_BOTTOM}
           variant="header"
+          // Hovering is not a keyboard gesture: without this the button is unreachable by tab.
+          onClick={flyout.open}
         />
         {flyout.showing && (
           <Flyout anchor={anchor} {...flyout.flyoutProps}>

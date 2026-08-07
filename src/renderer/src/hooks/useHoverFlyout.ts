@@ -8,6 +8,8 @@ export type HoverFlyout = {
   wrapProps: { onPointerEnter: () => void; onPointerLeave: () => void }
   /** Goes on the menu itself — without it, reaching the rows closes them. */
   flyoutProps: { onPointerEnter: () => void; onPointerLeave: () => void }
+  /** For a button whose only job is its menu: hovering is not a keyboard gesture. */
+  open: () => void
   close: () => void
 }
 
@@ -50,6 +52,7 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
     showing: hasFlyout && open,
     wrapProps: { onPointerEnter: enter, onPointerLeave: leave },
     flyoutProps: { onPointerEnter: enter, onPointerLeave: leave },
+    open: enter,
     close,
   }
 }

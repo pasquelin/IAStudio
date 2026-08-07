@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/node-factory'
-import { installScene } from '@/engines/scene/scene-fixtures'
+import { installScene } from '@/stores/scene-fixtures'
 import { nodesOfType, EMPTY_SCENE, type SceneNodeType } from '@/engines/scene/scene-state'
 import { useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -11,7 +11,7 @@ import { definition as lights } from '@/panels/lights'
 import { definition as meshes } from '@/panels/meshes'
 
 function nodes(type: SceneNodeType) {
-  return nodesOfType(sceneOf(useScenes.getState(), 'doc-1'), type)
+  return nodesOfType(sceneOf(useScenes.getState(), 'doc-1').nodes, type)
 }
 
 function addCube() {
@@ -22,7 +22,6 @@ function addCube() {
 
 beforeEach(() => {
   installScene('doc-1')
-  useDocuments.setState({ activeId: 'doc-1' })
 })
 
 describe('meshes panel', () => {
@@ -77,6 +76,15 @@ describe('meshes panel', () => {
 
     expect(await screen.findByRole('menuitem', { name: /Texte/ })).toBeDisabled()
     expect(screen.getByRole('menuitem', { name: /Sprite/ })).toBeDisabled()
+  })
+
+  // Hovering is not a keyboard gesture: the flyout has to open on the click too.
+  it('opens the add menu on a click, not only on hover', async () => {
+    render(<Actions />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une maille/ }))
+
+    expect(await screen.findByRole('menuitem', { name: /Cube/ })).toBeInTheDocument()
   })
 
   it('offers no delete while nothing is selected', () => {

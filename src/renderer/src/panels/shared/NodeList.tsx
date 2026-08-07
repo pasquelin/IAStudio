@@ -29,7 +29,7 @@ export function NodeList({ documentId, type }: { documentId: string; type: Scene
   const selectedId = useScenes(state => sceneOf(state, documentId).selectedId)
   const store = useScenes.getState()
 
-  const shown = useMemo(() => nodesOfType({ nodes, selectedId }, type), [nodes, selectedId, type])
+  const shown = useMemo(() => nodesOfType(nodes, type), [nodes, type])
   const visibleLabel = t(`${namespace}.visible`)
 
   return (

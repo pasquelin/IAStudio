@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { SceneAddRequest, Unsubscribe } from '@shared/ipc'
-import { installScene } from '@/engines/scene/scene-fixtures'
+import { installScene } from '@/stores/scene-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -29,7 +29,6 @@ function meshes() {
 
 beforeEach(() => {
   installScene('doc-1')
-  useDocuments.setState({ activeId: 'doc-1' })
 })
 
 describe('useNativeMenu', () => {
@@ -50,6 +49,23 @@ describe('useNativeMenu', () => {
     renderHook(() => useNativeMenu())
 
     menu.emit({ kind: 'text' })
+
+    expect(meshes()).toEqual([])
+  })
+
+  // The menu is app-wide: a node written under an image document would give it a scene and a
+  // history it has no editor for.
+  it('adds nothing when the document in front is not a scene', () => {
+    useDocuments.setState({
+      documents: {
+        'doc-1': { id: 'doc-1', kind: 'image', workspace: 'image', title: 'Sans titre' },
+      },
+      activeId: 'doc-1',
+    })
+    const menu = captureSceneAdd()
+    renderHook(() => useNativeMenu())
+
+    menu.emit({ kind: 'box' })
 
     expect(meshes()).toEqual([])
   })

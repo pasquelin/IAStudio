@@ -5,7 +5,7 @@ import type { MenuCommand } from '@shared/ipc'
 import { toolServes } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { addNodeTo } from '@/hooks/useAddNode'
-import { useDocuments } from '@/stores/documents'
+import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
@@ -61,7 +61,9 @@ export function useNativeMenu(): void {
     const stopCommand = bridge.menu.onCommand(runCommand)
     // The same path the toolbar and the panels take: two ways of adding a node would drift.
     const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => {
-      const documentId = useDocuments.getState().activeId
+      // Of the right kind: the menu is app-wide, and a node written under an image document
+      // would give it a scene and a history it has no editor for.
+      const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
       if (documentId) addNodeTo(documentId, kind, translate.current)
     })
 

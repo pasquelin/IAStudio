@@ -1,13 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { installScene } from '@/engines/scene/scene-fixtures'
+import { installScene } from '@/stores/scene-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { Explorer } from './Explorer'
 
 beforeEach(() => {
   installScene('doc-1')
-  useDocuments.setState({ activeId: 'doc-1' })
   useLayouts.setState({ activeWorkspace: '3d' })
 })
 

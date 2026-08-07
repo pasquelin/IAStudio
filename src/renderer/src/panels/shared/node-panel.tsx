@@ -2,8 +2,10 @@ import { useTranslation } from 'react-i18next'
 import type { ToolDefinition } from '@/app/tool-components'
 import { EmptyState } from '@/design/EmptyState'
 import type { SceneNodeType } from '@/engines/scene/scene-state'
-import { useDocuments } from '@/stores/documents'
+import { activeIdOfKind, useDocuments, type DocumentsSlice } from '@/stores/documents'
 import { NODE_KINDS } from './node-kinds'
+
+const activeSceneId = (state: DocumentsSlice): string | null => activeIdOfKind(state, 'scene')
 import { NodeActions } from './NodeActions'
 import { NodeList } from './NodeList'
 
@@ -19,14 +21,14 @@ export function nodePanel(type: SceneNodeType): Required<ToolDefinition> {
 
   function Content() {
     const { t } = useTranslation()
-    const documentId = useDocuments(state => state.activeId)
+    const documentId = useDocuments(activeSceneId)
 
     if (!documentId) return <EmptyState icon={icon} message={t(`${namespace}.noDocument`)} />
     return <NodeList documentId={documentId} type={type} />
   }
 
   function Actions() {
-    const documentId = useDocuments(state => state.activeId)
+    const documentId = useDocuments(activeSceneId)
 
     if (!documentId) return null
     return <NodeActions documentId={documentId} type={type} />
