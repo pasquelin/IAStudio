@@ -86,6 +86,30 @@ describe('the waveform client', () => {
     await expect(pending).rejects.toThrow(/exited with code 1/)
   })
 
+  // Between the process dying and its `exit` reaching us, `postMessage` is a silent no-op:
+  // a run posted then would wait for an answer that can never come, holding its pool slot.
+  it('refuses a new run once the process is known to be gone', async () => {
+    const { port, fail, sent } = fakePort()
+    const client = createPeaksClient(port)
+
+    fail(new Error('waveform process exited with code 1'))
+
+    await expect(client.compute(run)).rejects.toThrow(/gone/)
+    expect(sent).toEqual([])
+  })
+
+  it('forgets a run the port refused to carry', async () => {
+    const port: PeaksPort = {
+      postMessage: () => {
+        throw new Error('channel closed')
+      },
+      onMessage: () => {},
+      onFailure: () => {},
+    }
+
+    await expect(createPeaksClient(port).compute(run)).rejects.toThrow(/channel closed/)
+  })
+
   it('ignores an answer to a run already settled', async () => {
     const { port, answer } = fakePort()
     const pending = createPeaksClient(port).compute(run)

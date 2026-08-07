@@ -30,6 +30,9 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
     { resolve: (peaks: Float32Array) => void; reject: (error: Error) => void }
   >()
   let nextId = 1
+  // A dead process swallows `postMessage` without a word, so a run posted into one would hold
+  // its slot in the ingest pool for good. Same guard `catalog-client` carries, same reason.
+  let closed = false
 
   port.onMessage(response => {
     const slot = pending.get(response.id)
@@ -41,6 +44,7 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
   })
 
   port.onFailure(error => {
+    closed = true
     const waiting = [...pending.values()]
     pending.clear()
     for (const slot of waiting) slot.reject(error)
@@ -49,6 +53,10 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
   return {
     compute: ({ binary, args, buckets, samplesPerBucket, signal }) =>
       new Promise((resolve, reject) => {
+        if (closed) {
+          reject(new Error('the waveform process is gone'))
+          return
+        }
         if (signal?.aborted) {
           reject(new Error('waveform cancelled before it started'))
           return
@@ -56,12 +64,18 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
 
         const id = nextId++
         pending.set(id, { resolve, reject })
-        // Cancelling tells the worker to kill ffmpeg; the promise settles on its answer, so a
-        // cancelled run frees its slot in the ingest pool like any other.
-        signal?.addEventListener('abort', () => port.postMessage({ id, cancel: true }), {
-          once: true,
-        })
-        port.postMessage({ id, binary, args, buckets, samplesPerBucket })
+
+        try {
+          // Cancelling tells the worker to kill ffmpeg; the promise settles on its answer, so a
+          // cancelled run frees its slot in the ingest pool like any other.
+          signal?.addEventListener('abort', () => port.postMessage({ id, cancel: true }), {
+            once: true,
+          })
+          port.postMessage({ id, binary, args, buckets, samplesPerBucket })
+        } catch (error) {
+          pending.delete(id)
+          reject(error instanceof Error ? error : new Error(String(error)))
+        }
       }),
   }
 }
