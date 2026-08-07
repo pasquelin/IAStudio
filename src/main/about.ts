@@ -1,7 +1,12 @@
 import { APP_NAME } from '@shared/constants'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
 
-/** Everything the panel says about what is running. Injected so the shape stays testable. */
+/**
+ * What is running. Injected so the shape stays testable.
+ *
+ * `electron`, `chrome` and `node` are collected but deliberately not shown — the panel names
+ * the product, not its plumbing. They stay here so surfacing them again is a one-line change.
+ */
 export type RuntimeVersions = {
   app: string
   commit: string
@@ -15,7 +20,6 @@ export type AboutInfo = {
   applicationVersion: string
   version: string
   copyright: string
-  credits: string
 }
 
 /**
@@ -31,6 +35,5 @@ export function aboutInfo(language: Language, versions: RuntimeVersions): AboutI
     applicationVersion: versions.app,
     version: versions.commit,
     copyright: TRANSLATIONS[language].about.copyright,
-    credits: `Electron ${versions.electron} · Chromium ${versions.chrome} · Node ${versions.node}`,
   }
 }

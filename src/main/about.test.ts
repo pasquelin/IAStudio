@@ -20,14 +20,13 @@ describe('aboutInfo', () => {
     expect(info.version).toBe('b61e8c0')
   })
 
-  it('credits the runtime the app actually ships', () => {
-    expect(aboutInfo('fr', versions).credits).toBe(
-      'Electron 43.3.0 · Chromium 140.0.0 · Node 22.9.0',
-    )
+  it('names the product without its plumbing', () => {
+    // The runtime versions are collected but never shown: an About panel is not a bug report.
+    expect(Object.values(aboutInfo('fr', versions)).join(' ')).not.toContain('43.3.0')
   })
 
   it('takes the copyright from the requested language', () => {
-    expect(aboutInfo('fr', versions).copyright).toContain('marque de Scenario Labs')
-    expect(aboutInfo('en', versions).copyright).toContain('trademark of Scenario Labs')
+    expect(aboutInfo('fr', versions).copyright).toBe('© 2026 Alban Pasquelin')
+    expect(aboutInfo('en', versions).copyright).toBe('© 2026 Alban Pasquelin')
   })
 })

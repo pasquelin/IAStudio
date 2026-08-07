@@ -27,7 +27,7 @@ function showAboutDialog(language: Language): void {
     icon: nativeImage.createFromPath(APP_ICON_PATH),
     title: info.applicationName,
     message: `${info.applicationName} ${info.applicationVersion}`,
-    detail: `${info.version}\n${info.credits}\n\n${info.copyright}`,
+    detail: `${info.version}\n\n${info.copyright}`,
   })
 }
 
