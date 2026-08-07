@@ -10,6 +10,7 @@ import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
+import { useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
 import { isDirty, useSettingsDraft } from '@/stores/settings-draft'
 import { SettingActions } from './SettingActions'
@@ -175,11 +176,16 @@ export function SettingsWindow() {
   const [query, setQuery] = useState('')
 
   const connect = useSettings(state => state.connect)
+  const connectAccounts = useAccounts(state => state.connect)
 
+  // Connected here rather than from the account section: a subscription opened by a leaf is
+  // torn down and rebuilt every time the user walks the section tree.
   useEffect(() => {
-    const subscription = connect()
-    return () => void subscription.then(stop => stop())
-  }, [connect])
+    const subscriptions = [connect(), connectAccounts()]
+    return () => {
+      for (const subscription of subscriptions) void subscription.then(stop => stop())
+    }
+  }, [connect, connectAccounts])
 
   // Asked for while already open: the window moves instead of reloading, which would throw
   // away a half-typed key. The search is dropped with it — results shown over a section the

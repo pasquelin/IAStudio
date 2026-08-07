@@ -1,24 +1,30 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AccountsResult, AccountSummary } from '@shared/domain/account'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { AuthState } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
 import { AccountSettings } from './AccountSettings'
 
 const KEY = 'api_key_visible'
 const SECRET = 's3cr3t_visible'
 
-async function signIn(): Promise<void> {
+const studio: AccountSummary = { id: 'a', name: 'Studio', active: true }
+
+async function fillAndAdd(name = 'Studio'): Promise<void> {
+  await userEvent.type(screen.getByLabelText(/Nom/), name)
   await userEvent.type(screen.getByLabelText(/Clé API/), KEY)
   await userEvent.type(screen.getByLabelText(/Secret API/), SECRET)
-  await userEvent.click(screen.getByRole('button', { name: 'Se connecter' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Ajouter un compte' }))
 }
 
 describe('AccountSettings', () => {
   beforeEach(() => {
     useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    useAccounts.setState({ accounts: [] })
   })
 
   afterEach(() => {
@@ -33,19 +39,74 @@ describe('AccountSettings', () => {
     await waitFor(() => expect(authState).toHaveBeenCalled())
   })
 
-  it('sends the credentials and reports success without echoing them back', async () => {
-    const setCredentials = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
-    installFakeBridge({ settings: { setCredentials } })
+  // The subscription lives in `SettingsWindow`: a leaf that opened one would tear it down and
+  // rebuild it every time the user walks the section tree.
+  it('shows the accounts the store holds', () => {
+    installFakeBridge()
+    useAccounts.setState({ accounts: [studio] })
 
     render(<AccountSettings />)
-    await signIn()
+    expect(screen.getByText('Studio')).toBeInTheDocument()
+  })
 
-    expect(setCredentials).toHaveBeenCalledWith(KEY, SECRET)
-    await screen.findByText('Connecté')
+  it('says so when nothing is stored yet', async () => {
+    installFakeBridge()
+    render(<AccountSettings />)
+
+    expect(await screen.findByText(/Aucun compte pour l’instant/)).toBeInTheDocument()
+  })
+
+  it('sends the account and clears the fields, without echoing the credentials back', async () => {
+    const add = vi.fn((): Promise<AccountsResult> => Promise.resolve({ accounts: [studio] }))
+    installFakeBridge({ accounts: { add } })
+
+    render(<AccountSettings />)
+    await fillAndAdd()
+
+    expect(add).toHaveBeenCalledWith('Studio', KEY, SECRET)
+    await screen.findByText('Studio')
 
     // Nothing typed may survive in the rendered tree, input values included.
     expect(document.body.innerHTML).not.toContain(SECRET)
     expect(document.body.innerHTML).not.toContain(KEY)
+  })
+
+  it('keeps what was typed when the name is refused', async () => {
+    installFakeBridge({
+      accounts: { add: () => Promise.resolve({ accounts: [], failure: 'duplicate' }) },
+    })
+
+    render(<AccountSettings />)
+    await fillAndAdd()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Un autre compte porte déjà ce nom.')
+    // Retyping a key because a name clashed would be its own small punishment.
+    expect(screen.getByLabelText(/Clé API/)).toHaveValue(KEY)
+  })
+
+  it('refuses to submit a name the list already holds, before asking the main process', async () => {
+    const add = vi.fn((): Promise<AccountsResult> => Promise.resolve({ accounts: [] }))
+    installFakeBridge({ accounts: { add } })
+    useAccounts.setState({ accounts: [studio] })
+
+    render(<AccountSettings />)
+    await userEvent.type(screen.getByLabelText(/Nom/), 'studio')
+    await userEvent.type(screen.getByLabelText(/Clé API/), KEY)
+    await userEvent.type(screen.getByLabelText(/Secret API/), SECRET)
+
+    expect(screen.getByRole('button', { name: 'Ajouter un compte' })).toBeDisabled()
+    expect(add).not.toHaveBeenCalled()
+  })
+
+  it('reports a refusal from the main process rather than clearing the fields', async () => {
+    installFakeBridge({ accounts: { add: () => Promise.reject(new Error('no keychain')) } })
+
+    render(<AccountSettings />)
+    await fillAndAdd()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Le compte n’a pas pu être enregistré.',
+    )
   })
 
   it.each<[ApiFailure, string]>([
@@ -57,34 +118,56 @@ describe('AccountSettings', () => {
     ['unexpected', 'Une erreur inattendue est survenue.'],
   ])('translates the %s failure into its own message', async (reason, message) => {
     installFakeBridge({
-      settings: { setCredentials: () => Promise.resolve({ authenticated: false, reason }) },
+      settings: { authState: () => Promise.resolve({ authenticated: false, reason }) },
     })
+    useAccounts.setState({ accounts: [studio] })
 
     render(<AccountSettings />)
-    await signIn()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(message)
   })
 
-  it('says nothing before an attempt has been made', () => {
+  it('says nothing about authentication while no account is stored', async () => {
     installFakeBridge()
     render(<AccountSettings />)
 
+    await screen.findByText(/Aucun compte/)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('re-asks the main process after signing out, rather than assuming the answer', async () => {
-    const authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
-    const forgetCredentials = vi.fn(() => Promise.resolve())
-    installFakeBridge({ settings: { authState, forgetCredentials } })
+  it('switches to another account on demand', async () => {
+    const activate = vi.fn((): Promise<AccountsResult> => Promise.resolve({ accounts: [] }))
+    installFakeBridge({ accounts: { activate } })
+    useAccounts.setState({ accounts: [studio, { id: 'b', name: 'Client X', active: false }] })
 
-    useSettings.setState({ auth: { authenticated: true } })
     render(<AccountSettings />)
+    await userEvent.click(screen.getByRole('button', { name: 'Utiliser ce compte' }))
+    expect(activate).toHaveBeenCalledWith('b')
+  })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }))
+  it('renames an account in place', async () => {
+    const rename = vi.fn((): Promise<AccountsResult> => Promise.resolve({ accounts: [studio] }))
+    installFakeBridge({ accounts: { rename } })
+    useAccounts.setState({ accounts: [studio] })
 
-    expect(forgetCredentials).toHaveBeenCalledOnce()
-    // A development `secrets/.env` may still answer: only the main process knows.
-    await waitFor(() => expect(authState).toHaveBeenCalled())
+    render(<AccountSettings />)
+    await userEvent.click(screen.getByRole('button', { name: 'Renommer' }))
+    // Scoped to the row: the add form carries a name field of its own.
+    const field = within(screen.getByRole('listitem')).getByLabelText('Nom')
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Client X')
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }))
+
+    expect(rename).toHaveBeenCalledWith('a', 'Client X')
+  })
+
+  it('removes an account on demand', async () => {
+    const remove = vi.fn((): Promise<AccountsResult> => Promise.resolve({ accounts: [] }))
+    installFakeBridge({ accounts: { remove } })
+    useAccounts.setState({ accounts: [studio] })
+
+    render(<AccountSettings />)
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer' }))
+    expect(remove).toHaveBeenCalledWith('a')
   })
 })

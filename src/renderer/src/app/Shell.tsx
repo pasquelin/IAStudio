@@ -9,6 +9,7 @@ import { Footer } from './Footer'
 import { JobsStatus } from './JobsStatus'
 import { Rail } from './Rail'
 import { ResizeHandle } from '@/design/ResizeHandle'
+import { AccountSelect } from './AccountSelect'
 import { TitleBar } from './TitleBar'
 import {
   isHorizontal,
@@ -37,7 +38,11 @@ export function Shell() {
 
   return (
     <div className="bg-chassis flex h-full flex-col">
-      <TitleBar activeWorkspace={activeWorkspace} onWorkspace={setActiveWorkspace} />
+      <TitleBar
+        activeWorkspace={activeWorkspace}
+        onWorkspace={setActiveWorkspace}
+        actions={<AccountSelect />}
+      />
 
       <div className="flex min-h-0 flex-1">
         <Rail side="left" />

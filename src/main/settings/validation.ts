@@ -14,7 +14,8 @@ import {
   SETTING_ACTION_IDS,
   type SettingActionId,
 } from '@shared/domain/settings-registry'
-import type { Credentials } from './store'
+import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
+import { settleBook, type AccountBook, type Credentials } from './accounts'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
@@ -143,4 +144,51 @@ const storedCredentials = z.object({ key: credential, secret: credential })
 export function parseStoredCredentials(plain: string): Credentials | null {
   const parsed = storedCredentials.safeParse(JSON.parse(plain))
   return parsed.success ? parsed.data : null
+}
+
+const accountName = z.string().trim().min(1).max(ACCOUNT_NAME_MAX_LENGTH)
+const accountId = z.string().trim().min(1)
+
+/**
+ * A type guard, not the rule. `checkAccountName` owns what makes a name acceptable, and it
+ * answers a code the screen can translate — refusing here instead would surface a name that is
+ * merely too long as an unexplained rejected call.
+ */
+export function parseAccountName(value: unknown): string {
+  return z.string().parse(value)
+}
+
+/** Throws: the id names what gets written, and a renderer sends it. */
+export function parseAccountId(value: unknown): string {
+  return accountId.parse(value)
+}
+
+const storedAccount = z.object({
+  id: accountId,
+  name: accountName,
+  credentials: storedCredentials,
+})
+
+const storedBook = z.object({
+  // `catch` per entry rather than on the array: one unreadable account costs its own row, not
+  // every key the user holds.
+  accounts: z.array(storedAccount.nullable().catch(null)),
+  activeId: z.string().min(1).nullable(),
+})
+
+/**
+ * Reads a book back from disk, keeping whatever still parses. `settleBook` then repairs what
+ * survived — a dangling `activeId`, a duplicate id.
+ *
+ * Null means the blob is not a book at all, which is what tells the caller to look for a lone
+ * pair to migrate instead.
+ */
+export function parseStoredAccounts(plain: string): AccountBook | null {
+  const parsed = storedBook.safeParse(JSON.parse(plain))
+  if (!parsed.success) return null
+
+  return settleBook({
+    accounts: parsed.data.accounts.filter(entry => entry !== null),
+    activeId: parsed.data.activeId,
+  })
 }

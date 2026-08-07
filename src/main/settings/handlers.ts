@@ -1,9 +1,13 @@
+import type { AccountsResult, AccountSummary } from '@shared/domain/account'
 import type { AuthState, SettingsSectionId } from '@shared/domain/settings'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
-import type { SettingsStore } from './store'
+import { AccountError } from './accounts'
+import type { AccountChange, SettingsStore } from './store'
 import type { SettingActionId } from '@shared/domain/settings-registry'
 import {
+  parseAccountId,
+  parseAccountName,
   parseCredentials,
   parsePartialSettings,
   parseSettingAction,
@@ -12,9 +16,11 @@ import {
 
 export type SettingsHandlerDeps = {
   settings: SettingsStore
-  /** Called whenever the stored credentials change, so a cached API client can be dropped. */
+  /** Called whenever the active credentials change, so a cached API client can be dropped. */
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
+  /** Pushes the account list to every window: the active account is owned by this process. */
+  broadcastAccounts: (accounts: AccountSummary[]) => void
   /** Opens the settings window on a section — a panel saying the key is missing leads here. */
   openSettings: (section: SettingsSectionId) => void
   /** Runs one of the settings window's buttons. Injected: each one touches Electron directly. */
@@ -27,6 +33,7 @@ export function registerSettingsHandlers({
   settings,
   onCredentialsChanged,
   authState,
+  broadcastAccounts,
   openSettings,
   runAction,
   setPending,
@@ -37,25 +44,48 @@ export function registerSettingsHandlers({
   // is a renderer: what arrives here is `unknown` until zod says otherwise.
   handle(CHANNELS.settingsWrite, (_event, partial) => settings.write(parsePartialSettings(partial)))
 
-  handle(CHANNELS.settingsSetCredentials, async (_event, key, secret) => {
-    try {
-      settings.setCredentials(parseCredentials(key, secret))
-    } catch {
-      // Keychain unavailable, or an empty field. Either way nothing was stored, and the
-      // dialog must say so rather than report an authentication that never happened.
-      return { authenticated: false, reason: 'unexpected' }
-    }
-
-    onCredentialsChanged()
-    return await authState()
-  })
-
   handle(CHANNELS.settingsAuthState, () => authState())
 
-  handle(CHANNELS.settingsForgetCredentials, () => {
-    settings.forgetCredentials()
-    onCredentialsChanged()
+  /**
+   * Runs one change to the account list. A refusal comes back as a code rather than a rejected
+   * call: a duplicate name is an answer the screen shows in place, not a failure.
+   */
+  const mutate = (change: () => AccountChange): AccountsResult => {
+    let result: AccountChange
+
+    try {
+      result = change()
+    } catch (error) {
+      if (error instanceof AccountError)
+        return { accounts: settings.accounts(), failure: error.failure }
+      // Keychain unavailable, disk full: nothing was stored, and the screen must not be told
+      // the list changed.
+      throw error
+    }
+
+    if (result.credentialsChanged) onCredentialsChanged()
+    broadcastAccounts(result.accounts)
+    return { accounts: result.accounts }
+  }
+
+  handle(CHANNELS.accountsList, () => settings.accounts())
+
+  handle(CHANNELS.accountsAdd, (_event, name, key, secret) => {
+    const credentials = parseCredentials(key, secret)
+    return mutate(() => settings.addAccount(parseAccountName(name), credentials))
   })
+
+  handle(CHANNELS.accountsRename, (_event, id, name) =>
+    mutate(() => settings.renameAccount(parseAccountId(id), parseAccountName(name))),
+  )
+
+  handle(CHANNELS.accountsRemove, (_event, id) =>
+    mutate(() => settings.removeAccount(parseAccountId(id))),
+  )
+
+  handle(CHANNELS.accountsActivate, (_event, id) =>
+    mutate(() => settings.activateAccount(parseAccountId(id))),
+  )
 
   // A block, not an expression: `openSettingsWindow` answers with the `BrowserWindow` it
   // opened, and returning that from a handler hands an unclonable object to the IPC

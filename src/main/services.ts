@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { delimiter, dirname } from 'node:path'
+import type { AccountSummary } from '@shared/domain/account'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import type { PathKind } from '@shared/domain/settings-registry'
@@ -69,6 +70,7 @@ export type Services = {
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
+  broadcastAccounts: (accounts: AccountSummary[]) => void
 }
 
 const timestamp = (): string => new Date().toISOString()
@@ -155,9 +157,10 @@ export function createSettings(): SettingsStore {
   setLogVerbosity(stored.advanced.logLevel)
   setWindowLanguage(effectiveLanguage(stored.general.language, app.getLocale()))
 
-  // A keychain the OS can no longer open leaves a blob that decrypts to nothing. Dropping it
-  // at startup is what makes the account dialog ask again instead of claiming to be set up.
-  settings.discardUnreadableCredentials()
+  // Carries a pre-multi-account install over to a book, and drops a blob a keychain the OS can
+  // no longer open leaves behind — what makes the account screen ask again instead of claiming
+  // to be set up.
+  settings.settleAccounts()
 
   return settings
 }
@@ -314,5 +317,8 @@ export function createServices(settings: SettingsStore): Services {
       models.invalidate()
     },
     authState: () => client.authState(),
+    // Every window carries the switch, not just the one that made it: the studio and the
+    // settings window both show which account is active.
+    broadcastAccounts: accounts => broadcast(EVENTS.accountsChanged, accounts),
   }
 }

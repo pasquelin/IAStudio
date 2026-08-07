@@ -4,6 +4,8 @@ import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
+import { getBridge } from '@/services/bridge'
+import { activeAccount, useAccounts } from '@/stores/accounts'
 import { useJobs } from '@/stores/jobs'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
@@ -17,16 +19,23 @@ export function Application() {
   useWindowFit()
 
   const connectSettings = useSettings(state => state.connect)
+  const connectAccounts = useAccounts(state => state.connect)
   const connectProject = useProject(state => state.connect)
   const connectJobs = useJobs(state => state.connect)
   const connectMedia = useMedia(state => state.connect)
 
   useEffect(() => {
-    const subscriptions = [connectSettings(), connectProject(), connectJobs(), connectMedia()]
+    const subscriptions = [
+      connectSettings(),
+      connectAccounts(),
+      connectProject(),
+      connectJobs(),
+      connectMedia(),
+    ]
     return () => {
       for (const subscription of subscriptions) void subscription.then(stop => stop())
     }
-  }, [connectSettings, connectProject, connectJobs, connectMedia])
+  }, [connectSettings, connectAccounts, connectProject, connectJobs, connectMedia])
 
   // Store to store rather than through the main process, so it subscribes on its own: what a
   // generation launched from the Skyboxes workspace produced lands in the sky that asked.
@@ -40,6 +49,28 @@ export function Application() {
         defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
       }),
   )
+
+  /*
+   * Everything cached from the API belongs to the account that was active when it was fetched,
+   * and none of the query keys say which. Without this, switching accounts leaves the previous
+   * one's models and their signed previews on screen — nothing refetches them, since the keys
+   * did not change and `refetchOnWindowFocus` is off.
+   *
+   * The main process clears its own caches on the same event (`onCredentialsChanged`).
+   */
+  useEffect(() => {
+    // Tracked here rather than read from the store: the two subscribe to the same event, and
+    // nothing orders them — reading the store back could see either version.
+    let active = activeAccount(useAccounts.getState().accounts)?.id ?? null
+
+    return getBridge()?.accounts.onChange(accounts => {
+      const next = activeAccount(accounts)?.id ?? null
+      if (next === active) return
+
+      active = next
+      client.clear()
+    })
+  }, [client])
 
   return (
     <QueryClientProvider client={client}>

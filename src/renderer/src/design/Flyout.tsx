@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
 
 /** Which side of its anchor the menu hangs on. */
-export type FlyoutPlacement = 'right' | 'above'
+export type FlyoutPlacement = 'right' | 'above' | 'below'
 
 export type FlyoutProps = {
   anchor: HTMLElement | null
@@ -40,15 +40,17 @@ export function Flyout({
       if (!node || !anchor) return
       const box = anchor.getBoundingClientRect()
 
-      if (placement === 'above') {
-        // Right edges aligned: the status line anchors sit against the window edge, and a menu
-        // hung from their left would run off it.
-        node.style.top = `${box.top - node.offsetHeight - OFFSET}px`
-        node.style.left = `${box.right - node.offsetWidth}px`
+      if (placement === 'right') {
+        node.style.top = `${box.top}px`
+        node.style.left = `${box.right + OFFSET}px`
         return
       }
-      node.style.top = `${box.top}px`
-      node.style.left = `${box.right + OFFSET}px`
+
+      // Both stacked placements align right edges: the status line and the title bar anchor
+      // against the window edge, and a menu hung from their left would run off it.
+      const above = placement === 'above'
+      node.style.top = `${above ? box.top - node.offsetHeight - OFFSET : box.bottom + OFFSET}px`
+      node.style.left = `${box.right - node.offsetWidth}px`
     },
     [anchor, placement],
   )

@@ -1,7 +1,7 @@
 import Scenario, { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { AuthState } from '@shared/domain/settings'
-import type { Credentials } from '@main/settings/store'
+import type { Credentials } from '@main/settings/accounts'
 
 /** Thrown when a channel needing the API is reached without usable credentials. */
 export class NotAuthenticatedError extends Error {

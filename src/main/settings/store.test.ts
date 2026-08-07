@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { DEFAULT_ACCOUNT_NAME } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { memoryAdapter, type MemoryAdapter } from './memory-adapter'
-import { createSettingsStore } from './store'
+import { createSettingsStore, type SettingsStore } from './store'
+
+/** Ids are generated; naming them is what lets a test assert on the stored blob. */
+function countingIds(): () => string {
+  let next = 0
+  return () => `id-${++next}`
+}
 
 describe('settings store', () => {
   let adapter: MemoryAdapter
@@ -9,6 +16,12 @@ describe('settings store', () => {
   beforeEach(() => {
     adapter = memoryAdapter()
   })
+
+  const storeWithAccount = (): SettingsStore => {
+    const store = createSettingsStore(adapter, { newAccountId: countingIds() })
+    store.addAccount('Studio', { key: 'api_k', secret: 's3cr3t' })
+    return store
+  }
 
   it('returns the defaults when nothing is stored', () => {
     expect(createSettingsStore(adapter).read()).toEqual(DEFAULT_SETTINGS)
@@ -76,68 +89,151 @@ describe('settings store', () => {
   })
 
   it('never exposes credentials through the settings it returns', () => {
-    const store = createSettingsStore(adapter)
-    store.setCredentials({ key: 'api_k', secret: 's3cr3t' })
+    const store = storeWithAccount()
     expect(JSON.stringify(store.read())).not.toContain('s3cr3t')
   })
 
-  it('stores credentials encrypted, never in clear', () => {
-    createSettingsStore(adapter).setCredentials({ key: 'api_k', secret: 's3cr3t' })
-    expect(String(adapter.raw.get('credentials'))).toBe('enc:{"key":"api_k","secret":"s3cr3t"}')
+  it('stores the whole book encrypted, never in clear', () => {
+    storeWithAccount()
+    expect(String(adapter.raw.get('accounts'))).toBe(
+      'enc:{"accounts":[{"id":"id-1","name":"Studio","credentials":{"key":"api_k","secret":"s3cr3t"}}],"activeId":"id-1"}',
+    )
   })
 
-  it('reads back what it stored', () => {
-    const store = createSettingsStore(adapter)
-    store.setCredentials({ key: 'api_k', secret: 's3cr3t' })
+  it('reads back the credentials of the active account', () => {
+    const store = storeWithAccount()
     expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
     expect(store.hasCredentials()).toBe(true)
   })
 
-  it('reports unreadable credentials without deleting them', () => {
-    adapter.raw.set('credentials', 'garbage')
+  it('follows a switch to another account', () => {
+    const store = storeWithAccount()
+    store.addAccount('Client X', { key: 'other_k', secret: 'other_s' })
+
+    // Adding does not switch: the user was configuring, not moving.
+    expect(store.readCredentials()?.key).toBe('api_k')
+
+    store.activateAccount('id-2')
+    expect(store.readCredentials()?.key).toBe('other_k')
+  })
+
+  it('reports an unreadable book without deleting it', () => {
+    adapter.raw.set('accounts', 'garbage')
     const store = createSettingsStore(adapter)
 
     expect(store.hasCredentials()).toBe(false)
-    // A transient keychain failure must not cost the user their key.
-    expect(adapter.raw.has('credentials')).toBe(true)
+    expect(store.accounts()).toEqual([])
+    // A transient keychain failure must not cost the user every key they hold.
+    expect(adapter.raw.has('accounts')).toBe(true)
   })
 
-  it('drops an unreadable blob only when asked explicitly', () => {
-    adapter.raw.set('credentials', 'garbage')
-    const store = createSettingsStore(adapter)
-    store.discardUnreadableCredentials()
-    expect(adapter.raw.has('credentials')).toBe(false)
+  it('drops an unreadable book only when asked explicitly', () => {
+    adapter.raw.set('accounts', 'garbage')
+    createSettingsStore(adapter).settleAccounts()
+    expect(adapter.raw.has('accounts')).toBe(false)
   })
 
-  it('rejects a decryptable blob of the wrong shape', () => {
-    adapter.raw.set('credentials', 'enc:{"key":"only"}')
-    expect(createSettingsStore(adapter).readCredentials()).toBeNull()
+  it('keeps the accounts that still parse when one entry is broken', () => {
+    adapter.raw.set(
+      'accounts',
+      'enc:{"accounts":[{"id":"a","name":"Studio","credentials":{"key":"k","secret":"s"}},{"id":"b"}],"activeId":"a"}',
+    )
+
+    expect(createSettingsStore(adapter).accounts()).toEqual([
+      { id: 'a', name: 'Studio', active: true },
+    ])
   })
 
-  it('reads a blank pair as unconfigured, and discards it', () => {
-    adapter.raw.set('credentials', 'enc:{"key":"","secret":""}')
+  it('reads a blank pair as unconfigured', () => {
+    adapter.raw.set(
+      'accounts',
+      'enc:{"accounts":[{"id":"a","name":"Studio","credentials":{"key":"","secret":""}}],"activeId":"a"}',
+    )
     const store = createSettingsStore(adapter)
 
     expect(store.readCredentials()).toBeNull()
     expect(store.hasCredentials()).toBe(false)
-
-    store.discardUnreadableCredentials()
-    expect(adapter.raw.has('credentials')).toBe(false)
   })
 
   it('trims a stored pair, as the input path does', () => {
-    adapter.raw.set('credentials', 'enc:{"key":"api_k\\n","secret":" s3cr3t "}')
+    adapter.raw.set(
+      'accounts',
+      'enc:{"accounts":[{"id":"a","name":"Studio","credentials":{"key":"api_k\\n","secret":" s3cr3t "}}],"activeId":"a"}',
+    )
+
     expect(createSettingsStore(adapter).readCredentials()).toEqual({
       key: 'api_k',
       secret: 's3cr3t',
     })
   })
 
-  it('forgets credentials on demand', () => {
-    const store = createSettingsStore(adapter)
-    store.setCredentials({ key: 'api_k', secret: 's3cr3t' })
-    store.forgetCredentials()
+  it('forgets an account on demand', () => {
+    const store = storeWithAccount()
+    store.removeAccount('id-1')
+
     expect(store.hasCredentials()).toBe(false)
+    expect(store.accounts()).toEqual([])
+  })
+})
+
+describe('carrying a single-credential install over', () => {
+  let adapter: MemoryAdapter
+
+  beforeEach(() => {
+    adapter = memoryAdapter()
+  })
+
+  // The pair stored by every release before accounts existed. Losing it would sign the user
+  // out on upgrade, with no way to get the key back.
+  it('reads a lone stored pair as one active account, before any write', () => {
+    adapter.raw.set('credentials', 'enc:{"key":"api_k","secret":"s3cr3t"}')
+    const store = createSettingsStore(adapter)
+
+    expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
+    expect(store.accounts()).toEqual([
+      { id: 'account_migrated', name: DEFAULT_ACCOUNT_NAME, active: true },
+    ])
+  })
+
+  it('names the same account on every read, so callers agree on its id', () => {
+    adapter.raw.set('credentials', 'enc:{"key":"api_k","secret":"s3cr3t"}')
+    const store = createSettingsStore(adapter)
+
+    expect(store.accounts()[0]?.id).toBe(store.accounts()[0]?.id)
+  })
+
+  it('writes the book and drops the old pair when settled', () => {
+    adapter.raw.set('credentials', 'enc:{"key":"api_k","secret":"s3cr3t"}')
+    const store = createSettingsStore(adapter)
+    store.settleAccounts()
+
+    expect(adapter.raw.has('credentials')).toBe(false)
+    expect(String(adapter.raw.get('accounts'))).toContain('"name":"Scenario"')
+    expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
+  })
+
+  it('leaves an existing book alone, and drops the stale pair beside it', () => {
+    adapter.raw.set(
+      'accounts',
+      'enc:{"accounts":[{"id":"a","name":"Studio","credentials":{"key":"k","secret":"s"}}],"activeId":"a"}',
+    )
+    adapter.raw.set('credentials', 'enc:{"key":"old_k","secret":"old_s"}')
+
+    const store = createSettingsStore(adapter)
+    store.settleAccounts()
+
+    expect(store.readCredentials()).toEqual({ key: 'k', secret: 's' })
+    expect(store.accounts()).toHaveLength(1)
+    // Left behind, it would outlive "remove every account" — a secret nothing erases any more.
+    expect(adapter.raw.has('credentials')).toBe(false)
+  })
+
+  it('writes nothing when there is nothing at all to carry over', () => {
+    const store = createSettingsStore(adapter)
+    store.settleAccounts()
+
+    // Runs before the first paint at every launch: it must not touch the disk for nothing.
+    expect(adapter.raw.size).toBe(0)
   })
 })
 
@@ -167,13 +263,14 @@ describe('resetting', () => {
     expect(seen).toEqual([DEFAULT_SETTINGS])
   })
 
-  // Credentials live behind their own channel and are not settings; signing out is its own act.
-  it('leaves the stored credentials alone', () => {
+  // Accounts live behind their own channels and are not settings; removing one is its own act.
+  it('leaves the stored accounts alone', () => {
     const settings = createSettingsStore(memoryAdapter())
-    settings.setCredentials({ key: 'k', secret: 's' })
+    settings.addAccount('Studio', { key: 'k', secret: 's' })
 
     settings.reset()
 
     expect(settings.hasCredentials()).toBe(true)
+    expect(settings.accounts()).toHaveLength(1)
   })
 })

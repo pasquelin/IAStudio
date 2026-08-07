@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ACCOUNT_NAME_MAX_LENGTH, type AccountSummary } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type AuthState, type SettingsSectionId } from '@shared/domain/settings'
 import type { SettingActionId } from '@shared/domain/settings-registry'
 import { CHANNELS } from '@shared/ipc'
@@ -13,6 +14,7 @@ describe('settings handlers', () => {
   let settings: SettingsStore
   let onCredentialsChanged: () => void
   let authState: () => Promise<AuthState>
+  let broadcastAccounts: (accounts: AccountSummary[]) => void
   let openSettings: (section: SettingsSectionId) => void
   let runAction: (id: SettingActionId) => void
   let setPending: (pending: boolean) => void
@@ -22,6 +24,7 @@ describe('settings handlers', () => {
     settings = createSettingsStore(memoryAdapter())
     onCredentialsChanged = vi.fn()
     authState = vi.fn((): Promise<AuthState> => Promise.resolve({ authenticated: true }))
+    broadcastAccounts = vi.fn()
     openSettings = vi.fn()
     runAction = vi.fn()
     setPending = vi.fn()
@@ -29,6 +32,7 @@ describe('settings handlers', () => {
       settings,
       onCredentialsChanged,
       authState,
+      broadcastAccounts,
       openSettings,
       runAction,
       setPending,
@@ -50,26 +54,6 @@ describe('settings handlers', () => {
   it('rejects a malformed write without persisting anything', () => {
     expect(() => invoke(CHANNELS.settingsWrite, { generation: { concurrentJobs: 999 } })).toThrow()
     expect(settings.read().generation).toEqual(DEFAULT_SETTINGS.generation)
-  })
-
-  it('stores credentials, drops the cached client, then reports the authentication', async () => {
-    await expect(invoke(CHANNELS.settingsSetCredentials, '  api_k\n', 's3cr3t')).resolves.toEqual({
-      authenticated: true,
-    })
-
-    expect(settings.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
-    expect(onCredentialsChanged).toHaveBeenCalledOnce()
-  })
-
-  it('reports a failure instead of an authentication when nothing could be stored', async () => {
-    await expect(invoke(CHANNELS.settingsSetCredentials, '', 's3cr3t')).resolves.toEqual({
-      authenticated: false,
-      reason: 'unexpected',
-    })
-
-    expect(settings.hasCredentials()).toBe(false)
-    expect(onCredentialsChanged).not.toHaveBeenCalled()
-    expect(authState).not.toHaveBeenCalled()
   })
 
   it('answers the auth state without touching the store', async () => {
@@ -94,6 +78,7 @@ describe('settings handlers', () => {
       settings,
       onCredentialsChanged,
       authState,
+      broadcastAccounts,
       openSettings,
       runAction,
       setPending,
@@ -108,12 +93,128 @@ describe('settings handlers', () => {
     expect(openSettings).not.toHaveBeenCalled()
   })
 
-  it('forgets credentials and announces the change', () => {
-    settings.setCredentials({ key: 'api_k', secret: 's3cr3t' })
-    invoke(CHANNELS.settingsForgetCredentials)
+  describe('the accounts', () => {
+    const add = (name: string, key = 'api_k', secret = 's3cr3t'): unknown =>
+      invoke(CHANNELS.accountsAdd, name, key, secret)
 
-    expect(settings.hasCredentials()).toBe(false)
-    expect(onCredentialsChanged).toHaveBeenCalledOnce()
+    it('stores a key under its name, drops the cached client, and tells every window', () => {
+      expect(add('Studio', '  api_k\n')).toEqual({
+        accounts: [{ id: expect.any(String), name: 'Studio', active: true }],
+      })
+
+      expect(settings.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
+      expect(onCredentialsChanged).toHaveBeenCalledOnce()
+      expect(broadcastAccounts).toHaveBeenCalledOnce()
+    })
+
+    it('refuses a blank key without storing anything', () => {
+      expect(() => add('Studio', '')).toThrow()
+
+      expect(settings.hasCredentials()).toBe(false)
+      expect(onCredentialsChanged).not.toHaveBeenCalled()
+      expect(broadcastAccounts).not.toHaveBeenCalled()
+    })
+
+    // A name already taken is an answer the screen shows in place, not a rejected call.
+    it('answers a duplicate name as a failure, leaving the list untouched', () => {
+      add('Studio')
+      vi.mocked(broadcastAccounts).mockClear()
+
+      expect(add('studio', 'other_k', 'other_s')).toEqual({
+        accounts: [{ id: expect.any(String), name: 'Studio', active: true }],
+        failure: 'duplicate',
+      })
+
+      expect(settings.accounts()).toHaveLength(1)
+      expect(broadcastAccounts).not.toHaveBeenCalled()
+    })
+
+    it('answers a failure for an account it does not hold', () => {
+      expect(invoke(CHANNELS.accountsActivate, 'ghost')).toEqual({
+        accounts: [],
+        failure: 'unknown-account',
+      })
+    })
+
+    it('lists what it holds', () => {
+      add('Studio')
+      expect(invoke(CHANNELS.accountsList)).toEqual([
+        { id: expect.any(String), name: 'Studio', active: true },
+      ])
+    })
+
+    // Renaming leaves the credentials valid: dropping the client would cost a rebuild for
+    // nothing, and a round trip to the API on every keystroke's worth of correction.
+    it('renames without dropping the cached client', () => {
+      add('Studio')
+      const id = settings.accounts()[0]?.id ?? ''
+      vi.mocked(onCredentialsChanged).mockClear()
+
+      expect(invoke(CHANNELS.accountsRename, id, 'Client X')).toEqual({
+        accounts: [{ id, name: 'Client X', active: true }],
+      })
+
+      expect(onCredentialsChanged).not.toHaveBeenCalled()
+      expect(broadcastAccounts).toHaveBeenCalled()
+    })
+
+    it('removes an account and drops the cached client', () => {
+      add('Studio')
+      const id = settings.accounts()[0]?.id ?? ''
+      vi.mocked(onCredentialsChanged).mockClear()
+
+      expect(invoke(CHANNELS.accountsRemove, id)).toEqual({ accounts: [] })
+      expect(onCredentialsChanged).toHaveBeenCalledOnce()
+    })
+
+    it('switches the active account and drops the cached client', () => {
+      add('Studio')
+      add('Client X', 'other_k', 'other_s')
+      const [, second] = settings.accounts()
+      vi.mocked(onCredentialsChanged).mockClear()
+
+      invoke(CHANNELS.accountsActivate, second?.id)
+
+      expect(settings.readCredentials()?.key).toBe('other_k')
+      expect(onCredentialsChanged).toHaveBeenCalledOnce()
+    })
+
+    // A blank name comes back as its own code, not as a rejected call: the screen has an exact
+    // message for it, and a thrown IPC error would surface as "could not be saved".
+    it('answers a blank name as a failure of its own', () => {
+      expect(add('  ')).toEqual({ accounts: [], failure: 'empty' })
+      expect(settings.accounts()).toEqual([])
+    })
+
+    it('answers an over-long name as a failure of its own', () => {
+      expect(add('x'.repeat(ACCOUNT_NAME_MAX_LENGTH + 1))).toEqual({
+        accounts: [],
+        failure: 'too-long',
+      })
+    })
+
+    // Adding a second key is configuring, not switching: throwing away the cached client and
+    // the whole model catalogue for it would cost a full refetch for no change.
+    it('leaves the cached client alone when the added account is not the active one', () => {
+      add('Studio')
+      vi.mocked(onCredentialsChanged).mockClear()
+
+      add('Client X', 'other_k', 'other_s')
+
+      expect(onCredentialsChanged).not.toHaveBeenCalled()
+      expect(broadcastAccounts).toHaveBeenCalled()
+    })
+
+    it('leaves the cached client alone when an idle account is removed', () => {
+      add('Studio')
+      add('Client X', 'other_k', 'other_s')
+      const [, idle] = settings.accounts()
+      vi.mocked(onCredentialsChanged).mockClear()
+
+      invoke(CHANNELS.accountsRemove, idle?.id)
+
+      expect(onCredentialsChanged).not.toHaveBeenCalled()
+    })
   })
 
   describe('the pending flag', () => {

@@ -10,12 +10,16 @@ import type { CHANNELS, StudioBridge } from '@shared/ipc'
 type ChannelMethod = {
   [CHANNELS.settingsRead]: StudioBridge['settings']['read']
   [CHANNELS.settingsWrite]: StudioBridge['settings']['write']
-  [CHANNELS.settingsSetCredentials]: StudioBridge['settings']['setCredentials']
   [CHANNELS.settingsAuthState]: StudioBridge['settings']['authState']
-  [CHANNELS.settingsForgetCredentials]: StudioBridge['settings']['forgetCredentials']
   [CHANNELS.settingsOpen]: StudioBridge['settings']['open']
   [CHANNELS.settingsRunAction]: StudioBridge['settings']['runAction']
   [CHANNELS.settingsPending]: StudioBridge['settings']['setPending']
+
+  [CHANNELS.accountsList]: StudioBridge['accounts']['list']
+  [CHANNELS.accountsAdd]: StudioBridge['accounts']['add']
+  [CHANNELS.accountsRename]: StudioBridge['accounts']['rename']
+  [CHANNELS.accountsRemove]: StudioBridge['accounts']['remove']
+  [CHANNELS.accountsActivate]: StudioBridge['accounts']['activate']
 
   [CHANNELS.scenarioSearchModels]: StudioBridge['scenario']['searchModels']
   [CHANNELS.scenarioModelPreviews]: StudioBridge['scenario']['modelPreviews']
