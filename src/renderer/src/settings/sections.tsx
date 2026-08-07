@@ -8,6 +8,7 @@ import {
 } from '@shared/domain/settings-registry'
 import { AccountSettings } from './AccountSettings'
 import { MediaSettings } from './MediaSettings'
+import { ShortcutsSettings } from './ShortcutsSettings'
 import { ModelFamilySettings } from './ModelFamilySettings'
 
 export type SettingsSection = SettingSectionEntry & {
@@ -26,6 +27,7 @@ export type SettingsSection = SettingSectionEntry & {
  */
 const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   account: AccountSettings,
+  shortcuts: ShortcutsSettings,
   media: MediaSettings,
   'generation.image': () => <ModelFamilySettings family="image" />,
   'generation.video': () => <ModelFamilySettings family="video" />,

@@ -72,6 +72,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
   },
   ...MODEL_FAMILY_SECTIONS,
   {
+    id: 'shortcuts',
+    labelKey: 'settings.shortcuts',
+    descriptionKey: 'settings.shortcutsDescription',
+  },
+  {
     id: 'media',
     labelKey: 'settings.media',
     descriptionKey: 'settings.mediaDescription',

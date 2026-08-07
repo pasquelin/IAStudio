@@ -558,7 +558,20 @@
     "confirm": "OK",
     "discardTitle": "Des réglages n’ont pas été appliqués",
     "discardBody": "Vous avez changé des réglages sans les appliquer. Que voulez-vous faire ?",
-    "discard": "Ne pas appliquer"
+    "discard": "Ne pas appliquer",
+    "shortcuts": "Raccourcis",
+    "shortcutsDescription": "Les touches qui déclenchent chaque action. Cliquez sur une touche pour la remplacer.",
+    "pressAKey": "Appuyez…",
+    "unbound": "Aucune",
+    "shortcutConflict": "Deux actions se disputent cette touche : une seule répondra.",
+    "findByChord": "Chercher par touche",
+    "showAll": "Tout afficher",
+    "chordFree": "Aucune action n’utilise cette touche : elle est libre.",
+    "scope": {
+      "global": "Partout dans l’application",
+      "scene": "Dans la vue 3D",
+      "sequence": "Dans le montage"
+    }
   },
   "commands": {
     "projectNew": {

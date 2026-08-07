@@ -142,6 +142,7 @@ export type SettingsSectionId =
   | 'generation.3d'
   | 'generation.audio'
   | 'generation.upscale'
+  | 'shortcuts'
   | 'media'
 
 export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
@@ -154,6 +155,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'generation.3d',
   'generation.audio',
   'generation.upscale',
+  'shortcuts',
   'media',
 ]
 

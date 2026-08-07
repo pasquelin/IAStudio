@@ -558,7 +558,20 @@
     "confirm": "OK",
     "discardTitle": "Some settings have not been applied",
     "discardBody": "You changed settings without applying them. What would you like to do?",
-    "discard": "Don't apply"
+    "discard": "Don't apply",
+    "shortcuts": "Shortcuts",
+    "shortcutsDescription": "The keys that trigger each action. Click a key to replace it.",
+    "pressAKey": "Press…",
+    "unbound": "None",
+    "shortcutConflict": "Two actions are fighting over this key: only one will answer.",
+    "findByChord": "Find by key",
+    "showAll": "Show all",
+    "chordFree": "No action uses this key: it is free.",
+    "scope": {
+      "global": "Anywhere in the application",
+      "scene": "In the 3D view",
+      "sequence": "In the edit"
+    }
   },
   "commands": {
     "projectNew": {
