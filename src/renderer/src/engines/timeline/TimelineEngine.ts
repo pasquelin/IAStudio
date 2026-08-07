@@ -197,10 +197,12 @@ export class TimelineEngine {
     element.appendChild(application.canvas)
     application.stage.addChild(this.frame)
     // The panel resizes without the window doing so, and a frame laid out once would drift.
-    application.renderer.on('resize', this.repaint)
+    // Pixi renders right after emitting this, so laying out is all this listener owes it.
+    application.renderer.on('resize', this.layout)
 
     this.application = application
-    this.repaint()
+    this.layout()
+    this.draw()
   }
 
   apply(state: SequenceState): void {
@@ -257,7 +259,7 @@ export class TimelineEngine {
     this.pause()
     this.generation += 1
     this.pool.dispose()
-    this.application?.renderer.off('resize', this.repaint)
+    this.application?.renderer.off('resize', this.layout)
     this.application?.destroy(true, { children: true, texture: true })
     this.application = null
     this.sprites.clear()
@@ -266,15 +268,6 @@ export class TimelineEngine {
   /** Pixi's own ticker is off — see `mount`. Every visible change ends here. */
   private draw(): void {
     this.application?.render()
-  }
-
-  /**
-   * Bound like `layout`, and for the same reason. Drawn even when the layout was a no-op: Pixi
-   * resizes the canvas itself, and a resized buffer is blank until something draws into it.
-   */
-  private readonly repaint = (): void => {
-    this.layout()
-    this.draw()
   }
 
   /** The sequence canvas, in its own pixels — what every layer is composited against. */

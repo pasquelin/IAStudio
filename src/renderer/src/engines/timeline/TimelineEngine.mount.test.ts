@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const destroy = vi.fn()
 const render = vi.fn()
 const on = vi.fn<(event: string, listener: () => void) => void>()
+const off = vi.fn()
 let resolveInit: (() => void) | null = null
 let started: Record<string, unknown> | null = null
 
@@ -18,7 +19,7 @@ vi.mock('pixi.js', () => ({
     canvas = document.createElement('canvas')
     stage = { addChild: vi.fn() }
     screen = { width: 800, height: 450 }
-    renderer = { on, off: vi.fn(), texture: { initSource: vi.fn() } }
+    renderer = { on, off, texture: { initSource: vi.fn() } }
     destroy = destroy
     render = render
     init = (options: Record<string, unknown>): Promise<void> => {
@@ -97,7 +98,7 @@ describe('mounting a monitor', () => {
    * that frame sixty times a second for a monitor nobody is watching — Dockview keeps the tab
    * mounted, so a background document would burn the GPU on its own.
    */
-  it('never starts Pixi own ticker', async () => {
+  it("never starts Pixi's own ticker", async () => {
     await mounted(engineFor(host))
 
     expect(started).toMatchObject({ autoStart: false })
@@ -119,16 +120,18 @@ describe('mounting a monitor', () => {
     expect(render).toHaveBeenCalledTimes(1)
   })
 
-  /** Pixi resizes the canvas itself, and a resized buffer is blank until something draws. */
-  it('draws again after the renderer resizes', async () => {
-    await mounted(engineFor(host))
-    render.mockClear()
+  /**
+   * Pixi renders itself right after emitting `resize`, so the listener only lays out. It must
+   * still come off by the same reference — one kept listener per remount is a leaked monitor.
+   */
+  it('takes its resize listener back off on dispose', async () => {
+    const engine = engineFor(host)
+    await mounted(engine)
+    engine.dispose()
 
-    const resized = on.mock.calls.find(([event]) => event === 'resize')?.[1]
-    expect(resized).toBeDefined()
-    resized?.()
-
-    expect(render).toHaveBeenCalledTimes(1)
+    const listener = on.mock.calls.find(([event]) => event === 'resize')?.[1]
+    expect(listener).toBeDefined()
+    expect(off).toHaveBeenCalledWith('resize', listener)
   })
 
   it('draws nothing once it is disposed', async () => {

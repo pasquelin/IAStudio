@@ -96,12 +96,19 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
       const sink = await sinkFor(assetId)
       if (!sink) return null
 
-      const sample = await sink.getSample(usToSeconds(time))
-      if (!sample) return null
+      try {
+        const sample = await sink.getSample(usToSeconds(time))
+        if (!sample) return null
 
-      const frame = sample.toVideoFrame()
-      sample.close()
-      return frame
+        const frame = sample.toVideoFrame()
+        sample.close()
+        return frame
+      } catch {
+        // Same promise as a failed open, for the same reason: a throw here reaches the caller
+        // mid-paint, and the frames it already swapped in would never be drawn. Not remembered
+        // as undecodable — one position failing does not condemn the rush.
+        return null
+      }
     },
 
     openCount: () => sinks.size,
