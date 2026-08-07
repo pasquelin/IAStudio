@@ -13,7 +13,9 @@ type AssetsState = {
   collection: CollectionState
   setCollection: (collection: CollectionState) => void
 
-  items: Asset[]
+  // Readonly so nothing can mutate it in place: `assetsById` keys off its identity, and a push
+  // that kept the same array would leave the index short of an asset with nothing to say so.
+  items: readonly Asset[]
   refresh: () => Promise<void>
   /**
    * Says the catalogue changed and lets this store decide when to read it. `assets.search` is

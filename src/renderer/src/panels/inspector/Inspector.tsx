@@ -1,6 +1,5 @@
 import { mdiTuneVariant } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import type { Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
 import { clipById, trackById } from '@/engines/timeline/timeline-state'
@@ -36,15 +35,12 @@ function Face() {
   const sceneId = useDocuments(activeSceneId)
   const sequenceId = useDocuments(activeSequenceId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
-  const byId = useAssets(assetsById)
 
   switch (selection.kind) {
-    case 'asset': {
-      // Keyed rather than filtered: a selection of a handful against a catalogue of thousands
-      // was scanning the whole of it, per render.
-      const chosen = selection.ids.flatMap(id => byId.get(id) ?? [])
-      return chosen.length > 0 ? <AssetSelection assets={chosen} /> : <Empty />
-    }
+    // The catalogue is read by the face that needs it, not here: subscribing to it from `Face`
+    // re-rendered the clip and track inspectors on every catalogue refresh too.
+    case 'asset':
+      return <AssetSelection ids={selection.ids} />
 
     // Both guarded on the owner: the sequence in front is not necessarily the one this was
     // selected in, and every sequence has a track called `V1`.
@@ -89,10 +85,16 @@ function Empty() {
  * Several assets at once are summarised rather than detailed: showing the first one's prompt
  * for a selection of twelve is how someone regenerates the wrong thing.
  */
-function AssetSelection({ assets }: { assets: Asset[] }) {
+function AssetSelection({ ids }: { ids: readonly string[] }) {
   const { t } = useTranslation()
+  const byId = useAssets(assetsById)
+
+  // Keyed rather than filtered: a selection of a handful against a catalogue of thousands was
+  // scanning the whole of it, per render.
+  const assets = ids.flatMap(id => byId.get(id) ?? [])
 
   const [only] = assets
+  if (assets.length === 0) return <Empty />
   if (assets.length === 1 && only) return <AssetInspector asset={only} />
 
   const total = assets.reduce((bytes, asset) => bytes + (asset.bytes ?? 0), 0)
