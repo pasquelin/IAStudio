@@ -1,4 +1,4 @@
-import { DEFAULT_CANVAS, type CanvasState, type Layer } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvas-state'
 import { useCanvases } from './canvases'
 import { useDocuments } from './documents'
 
@@ -7,7 +7,8 @@ import { useDocuments } from './documents'
  * descriptor too: the layer panels resolve their document through `activeIdOfKind`, so an id
  * with no descriptor behind it reads as "nothing open".
  *
- * Mirrors `installScene`, and lives beside the stores for the same reason.
+ * Mirrors `installScene`, and lives beside the stores rather than beside `layerFixture` for the
+ * same reason: `engines/` must not reach for a store.
  */
 export function installCanvas(documentId: string, state: CanvasState = DEFAULT_CANVAS): void {
   useCanvases.setState({ states: { [documentId]: state }, histories: {} })
@@ -17,17 +18,4 @@ export function installCanvas(documentId: string, state: CanvasState = DEFAULT_C
     },
     activeId: documentId,
   })
-}
-
-/** A layer with every required field filled, so adding one breaks a single place. */
-export function layerFixture(overrides: Partial<Layer> = {}): Layer {
-  return {
-    id: 'layer-2',
-    name: 'Paint',
-    visible: true,
-    locked: false,
-    opacity: 1,
-    blend: 'normal',
-    ...overrides,
-  }
 }

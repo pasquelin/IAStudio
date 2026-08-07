@@ -9,16 +9,10 @@ import {
   setLayerOpacity,
   setLayerVisible,
 } from './commands'
-import { DEFAULT_CANVAS, layerById, type CanvasState, type Layer } from './canvas-state'
+import { layerFixture } from './canvas-fixtures'
+import { DEFAULT_CANVAS, layerById, type CanvasState } from './canvas-state'
 
-const second: Layer = {
-  id: 'layer-2',
-  name: 'Paint',
-  visible: true,
-  locked: false,
-  opacity: 1,
-  blend: 'normal',
-}
+const second = layerFixture()
 
 const withTwo: CanvasState = addLayer(second).apply(DEFAULT_CANVAS)
 
