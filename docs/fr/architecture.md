@@ -451,7 +451,7 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d'éch
 
 ## Les tests
 
-**1087 tests répartis sur 124 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
+**1288 tests répartis sur 137 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
 (`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout

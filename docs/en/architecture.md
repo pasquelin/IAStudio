@@ -436,7 +436,7 @@ opaquely.
 
 ## Testing
 
-**1087 tests across 124 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
+**1288 tests across 137 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.

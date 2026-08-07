@@ -19,9 +19,10 @@ Looking for how it is built instead? See [architecture.md](architecture.md).
 8. [Editing images](#editing-images)
 9. [Working in 3D](#working-in-3d)
 10. [Editing video](#editing-video)
-11. [Settings](#settings)
-12. [Keyboard reference](#keyboard-reference)
-13. [When something goes wrong](#when-something-goes-wrong)
+11. [Editing audio](#editing-audio)
+12. [Settings](#settings)
+13. [Keyboard reference](#keyboard-reference)
+14. [When something goes wrong](#when-something-goes-wrong)
 
 ---
 
@@ -94,10 +95,14 @@ open nor closed, and the rail reopens a tool in one click.
 | **Explorer** | left, second half | all | the scene outliner in 3D. The project file tree is not written yet, and the panel says so in other workspaces |
 | **Models** | right, first half | all | the Scenario model catalogue, filtered to the active workspace |
 | **Generator** | right, first half | all | the form of the selected model |
-| **Inspector** | right, second half | 3D | everything that defines the selected node, adjustable live |
+| **Assets** | right, first half | all | everything the project holds |
+| **Inspector** | right, second half | all | whatever is selected — a 3D node, a clip, a track, an asset — adjustable live |
 | **Timeline** | bottom | Video | the sequence being edited |
-| **Assets** | bottom | all | everything the project holds |
 | **Jobs** | bottom | all | what is generating right now |
+
+The asset shelf sits in the side column rather than the bottom strip, so that it and the montage
+are on screen together: dragging a take onto a track is the gesture the Video workspace is built
+around, and two panels taking turns cannot be dragged between.
 
 Use **View → Tools** in the menu bar to reopen anything you closed, and **View → Reset layout**
 to put every panel back where it started.
@@ -114,7 +119,7 @@ around one kind of work, and filters the model catalogue to the matching family.
 | **Image** | image | Layers |
 | **Video** | video | Timeline |
 | **3D** | 3d | Meshes, Lights, Inspector, and the scene outliner in Explorer |
-| **Audio** | audio | — |
+| **Audio** | audio | — (its editor is the waveform itself) |
 | **Textures** | image | — |
 | **Skyboxes** | image | — |
 
@@ -288,6 +293,9 @@ it: its transform, the parameters of its geometry, its material and its texture 
 light — its colour and intensity. What it shows follows what is selected; the fields come from
 the node's own kind rather than a form written for each one.
 
+It is not a 3D panel: the same inspector reads a clip, a track or an asset when one of those is
+what you selected, which is why it stays open across every workspace.
+
 <!-- SCREENSHOT: the 3D viewport with a selected mesh, the outliner and the meshes panel.
      Save to ../images/scene-3d.png -->
 
@@ -312,6 +320,23 @@ Drop an asset from the shelf onto the timeline to make it a clip.
 
 <!-- SCREENSHOT: the video workspace, timeline with several clips and the monitor above.
      Save to ../images/timeline.png -->
+
+---
+
+## Editing audio
+
+The Audio workspace opens a waveform and works on the selection you drag across it.
+
+| Tool | What it does |
+|---|---|
+| **Crop** | keep only the selection |
+| **Fade in** / **Fade out** | rise from, or fall to, silence across the selection |
+| **Normalize** | bring the level to −14 LUFS |
+| **Trim silence** | remove the silence at the head and the tail |
+| **A/B** | listen to the source, undoing nothing |
+
+Nothing is written until you say so: **Apply** rewrites the asset, **Save as new** creates one
+beside it. A/B exists so you can hear what you changed before choosing between the two.
 
 ---
 

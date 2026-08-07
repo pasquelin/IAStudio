@@ -19,9 +19,10 @@ Vous cherchez plutôt comment il est bâti ? Voir [architecture.md](architecture
 8. [Éditer une image](#éditer-une-image)
 9. [Travailler en 3D](#travailler-en-3d)
 10. [Monter une vidéo](#monter-une-vidéo)
-11. [Les réglages](#les-réglages)
-12. [Aide-mémoire clavier](#aide-mémoire-clavier)
-13. [Quand quelque chose cloche](#quand-quelque-chose-cloche)
+11. [Travailler le son](#travailler-le-son)
+12. [Les réglages](#les-réglages)
+13. [Aide-mémoire clavier](#aide-mémoire-clavier)
+14. [Quand quelque chose cloche](#quand-quelque-chose-cloche)
 
 ---
 
@@ -96,10 +97,15 @@ ressemble ni à ouvert ni à fermé, et le rail rouvre un outil en un clic.
 | **Explorateur** | gauche, 2de moitié | partout | l'arbre de scène en 3D. L'arborescence de projet n'est pas encore écrite, et le panneau le dit dans les autres espaces |
 | **Modèles** | droite, 1re moitié | partout | le catalogue Scenario, filtré sur l'espace actif |
 | **Génération** | droite, 1re moitié | partout | le formulaire du modèle choisi |
-| **Inspecteur** | droite, 2de moitié | 3D | tout ce qui définit le nœud sélectionné, réglable en direct |
+| **Assets** | droite, 1re moitié | partout | tout ce que le projet contient |
+| **Inspecteur** | droite, 2de moitié | partout | ce qui est sélectionné — nœud 3D, clip, piste, asset — réglable en direct |
 | **Timeline** | bas | Vidéo | la séquence en cours de montage |
-| **Assets** | bas | partout | tout ce que le projet contient |
 | **Jobs** | bas | partout | ce qui est en train de générer |
+
+L'étagère à assets siège dans la colonne latérale plutôt que dans la bande basse, pour qu'elle et
+le montage tiennent l'écran ensemble : déposer une prise sur une piste est le geste autour duquel
+l'espace Vidéo est bâti, et deux panneaux qui prennent leur tour ne se glissent pas l'un dans
+l'autre.
 
 **Affichage → Outils** rouvre ce que vous avez fermé, **Affichage → Réinitialiser la disposition**
 remet chaque panneau à sa place d'origine.
@@ -116,7 +122,7 @@ autour d'un type de travail, et filtre le catalogue sur la famille correspondant
 | **Image** | image | Calques |
 | **Vidéo** | video | Timeline |
 | **3D** | 3d | Maillages, Lumières, Inspecteur, et l'arbre de scène dans l'Explorateur |
-| **Audio** | audio | — |
+| **Audio** | audio | — (son éditeur est la forme d'onde elle-même) |
 | **Textures** | image | — |
 | **Skyboxes** | image | — |
 
@@ -293,6 +299,9 @@ sa transformation, les paramètres de sa géométrie, son matériau et ses empla
 ou — pour une lumière — sa couleur et son intensité. Ce qu'il montre suit ce qui est sélectionné ;
 les champs viennent du type du nœud, pas d'un formulaire écrit pour chacun.
 
+Ce n'est pas un panneau de la 3D : le même inspecteur lit un clip, une piste ou un asset quand
+c'est cela qui est sélectionné, et c'est pourquoi il reste ouvert dans tous les espaces.
+
 <!-- CAPTURE : la vue 3D avec un maillage sélectionné, l'arbre de scène et le panneau Maillages.
      Vers ../images/scene-3d.png -->
 
@@ -318,6 +327,24 @@ Déposez un asset de l'étagère sur la timeline pour en faire un clip.
 
 <!-- CAPTURE : l'espace vidéo, timeline avec plusieurs clips et le moniteur au-dessus.
      Vers ../images/timeline.png -->
+
+---
+
+## Travailler le son
+
+L'espace Audio ouvre une forme d'onde et travaille sur la sélection que vous y tirez.
+
+| Outil | Ce qu'il fait |
+|---|---|
+| **Rogner** | ne garder que la sélection |
+| **Fondu d'entrée** / **de sortie** | monter depuis le silence, ou y descendre, sur la sélection |
+| **Normaliser** | ramener le niveau à −14 LUFS |
+| **Couper les silences** | retirer le silence au début et à la fin |
+| **A/B** | écouter la source, sans rien annuler |
+
+Rien n'est écrit tant que vous ne le dites pas : **Appliquer** réécrit l'asset, **Enregistrer
+comme nouveau** en crée un à côté. L'A/B existe pour entendre ce que vous avez changé avant de
+choisir entre les deux.
 
 ---
 
