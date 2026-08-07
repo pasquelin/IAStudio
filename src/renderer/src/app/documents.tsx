@@ -16,7 +16,9 @@ export type DocumentPanelParams = { documentId: string }
 export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps<DocumentPanelParams>>> = {
   home: () => <Home />,
   image: props => (
-    <WithDocument id={props.params.documentId}>{() => <ImageDocument />}</WithDocument>
+    <WithDocument id={props.params.documentId}>
+      {() => <ImageDocument documentId={props.params.documentId} />}
+    </WithDocument>
   ),
   scene: props => (
     <WithDocument id={props.params.documentId}>
