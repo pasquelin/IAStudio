@@ -24,11 +24,16 @@ describe('Explorer', () => {
     expect(screen.getByText('Ouvrez une scène pour voir son contenu.')).toBeInTheDocument()
   })
 
-  // The project file tree is not written yet: an outliner from another space would be a lie.
-  it('shows no outliner outside the 3D space', () => {
+  /**
+   * The project file tree is not written yet, so an outliner from another space would be a lie
+   * — but so was the wording. It borrowed `project.none`, and the Image workspace announced
+   * "no project open" over a project that was plainly open.
+   */
+  it('says the explorer follows a scene, rather than that no project is open', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
     render(<Explorer />)
 
-    expect(screen.getByText('Aucun projet ouvert')).toBeInTheDocument()
+    expect(screen.getByText(/L’explorateur suit une scène 3D/)).toBeInTheDocument()
+    expect(screen.queryByText('Aucun projet ouvert')).not.toBeInTheDocument()
   })
 })

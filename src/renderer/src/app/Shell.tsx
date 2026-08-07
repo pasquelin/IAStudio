@@ -4,6 +4,7 @@ import { TooltipHost } from '@/design/TooltipHost'
 import { useLayouts } from '@/stores/layouts'
 import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { DocumentArea } from './DocumentArea'
+import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
 import { Rail } from './Rail'
 import { ResizeHandle } from '@/design/ResizeHandle'
@@ -57,7 +58,7 @@ export function Shell() {
         <Rail side="right" />
       </div>
 
-      <Footer />
+      <Footer left={<Breadcrumb />} />
       <TooltipHost />
     </div>
   )

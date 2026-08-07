@@ -284,6 +284,9 @@
     "visible": "Show or hide",
     "noDocument": "Open a scene to see what is in it."
   },
+  "explorer": {
+    "otherWorkspace": "The explorer follows a 3D scene. Open the 3D workspace to see its contents."
+  },
   "inspector": {
     "noDocument": "Open a scene to inspect what is in it.",
     "noSelection": "Select an object to see its properties.",
