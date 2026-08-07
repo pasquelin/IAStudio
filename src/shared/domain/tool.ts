@@ -83,7 +83,9 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'assets', zone: 'right', slot: 'primary', workspaces: ['video', 'audio'] },
   // The strip is the montage's, across the whole width — that is how a montage is read.
   { id: 'timeline', zone: 'bottom', slot: 'primary', workspaces: ['video'] },
-  { id: 'jobs', zone: 'bottom', slot: 'primary' },
+  // The other half of the strip, so it never takes the shelf's place: what is generating and
+  // what has been generated are read together, not one instead of the other.
+  { id: 'jobs', zone: 'bottom', slot: 'secondary' },
 ]
 
 /**
