@@ -12,14 +12,13 @@ import type { CommandId } from '@shared/domain/shortcut'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import { beginGesture, commandForGesture, type Gesture } from '@/engines/timeline/interactions'
 import { programOwner, transports } from '@/engines/timeline/playback'
+import { clipForAsset } from '@/engines/timeline/insert'
 import { paintTimeline } from '@/engines/timeline/painter'
 import { hitTest, xToTime, type Point, type Viewport } from '@/engines/timeline/timeline-geometry'
 import {
   clipUnderPlayhead,
-  makeClip,
   sequenceDuration,
   snapToFrame,
-  wholeFrames,
   type Clip,
   type SequenceState,
 } from '@/engines/timeline/timeline-state'
@@ -42,9 +41,6 @@ import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import type { VideoToolId } from './video-tools'
 
 export type TimelineCanvasProps = { documentId: string; tool: VideoToolId }
-
-/** What an asset still being probed is worth on the timeline, until its real duration lands. */
-export const UNPROBED_DURATION = 5_000_000
 
 export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -314,14 +310,9 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const target = hitTest(sequence, viewport, point)
     if (!target || target.kind === 'ruler') return
 
-    const asset = useAssets.getState().items.find(candidate => candidate.id === assetId)
-    const clip: Clip = makeClip({
-      id: `clip_${crypto.randomUUID()}`,
-      assetId,
-      start: snapToFrame(xToTime(point.x, viewport), sequence.settings),
-      // A whole number of frames, so the clip's tail stays snappable — see `wholeFrames`.
-      duration: wholeFrames(asset?.probe?.duration ?? UNPROBED_DURATION, sequence.settings),
-    })
+    const asset = useAssets.getState().items.find(candidate => candidate.id === assetId) ?? null
+    const start = xToTime(point.x, viewport)
+    const clip = clipForAsset(assetId, asset, start, sequence.settings)
 
     useSequences.getState().runCommand(documentId, addClip(target.trackId, clip))
   }

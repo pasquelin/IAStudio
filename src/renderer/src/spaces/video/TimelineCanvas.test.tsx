@@ -10,7 +10,8 @@ import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
-import { TimelineCanvas, UNPROBED_DURATION } from './TimelineCanvas'
+import { UNPROBED_DURATION } from '@/engines/timeline/insert'
+import { TimelineCanvas } from './TimelineCanvas'
 import type { VideoToolId } from './video-tools'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({

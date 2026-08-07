@@ -268,7 +268,12 @@
     "rewind": "Retour au début"
   },
   "timeline": {
-    "noDocument": "Aucune séquence ouverte. Créez-en une pour monter."
+    "noDocument": "Aucune séquence ouverte. Créez-en une pour monter.",
+    "mute": "Rendre muette la piste {{name}}",
+    "solo": "Écouter seule la piste {{name}}",
+    "lock": "Verrouiller la piste {{name}}",
+    "rename": "Nom de la piste",
+    "renameHint": "Double-cliquer pour renommer"
   },
   "videoTools": {
     "select": "Sélection",

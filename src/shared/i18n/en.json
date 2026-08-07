@@ -268,7 +268,12 @@
     "rewind": "Back to start"
   },
   "timeline": {
-    "noDocument": "No sequence open. Create one to start editing."
+    "noDocument": "No sequence open. Create one to start editing.",
+    "mute": "Mute the {{name}} track",
+    "solo": "Solo the {{name}} track",
+    "lock": "Lock the {{name}} track",
+    "rename": "Track name",
+    "renameHint": "Double-click to rename"
   },
   "videoTools": {
     "select": "Selection",

@@ -9,6 +9,7 @@ import { filterLocally, isFiltered, type FacetDescriptor } from '@/helpers/colle
 import { MediaTile } from '@/design/MediaTile'
 import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
+import { addAssetToSequence } from '@/stores/sequences'
 import { EmptyState } from '@/design/EmptyState'
 
 const TYPE_FACET = 'type'
@@ -99,10 +100,19 @@ export function AssetBrowser() {
   )
 }
 
-/** Wraps whatever the collection renders, so both views drag the same way. */
+/**
+ * Wraps whatever the collection renders, so both views drag and open the same way.
+ *
+ * Double-click adds to the montage because the shelf and the strip take turns in the bottom
+ * dock: they are never both on screen, so there is no drag to make between them.
+ */
 function Draggable({ asset, children }: { asset: Asset; children: ReactNode }) {
   return (
-    <div draggable onDragStart={event => startAssetDrag(event, asset.id)}>
+    <div
+      draggable
+      onDragStart={event => startAssetDrag(event, asset.id)}
+      onDoubleClick={() => addAssetToSequence(asset)}
+    >
       {children}
     </div>
   )
