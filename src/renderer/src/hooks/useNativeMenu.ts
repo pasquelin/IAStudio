@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { CommandId } from '@shared/domain/command'
+import { saveDocument } from '@/app/document-io'
 import { toolZoneIn } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { addNodeTo } from '@/hooks/useAddNode'
@@ -7,6 +8,15 @@ import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
+
+/**
+ * A menu command that failed. The main process logs the cause; the studio has no surface to
+ * report it on yet, and a save that failed still says so — the tab keeps its modified marker.
+ * Caught rather than left to `void`, which would raise an unhandled rejection instead.
+ */
+function swallow(running: Promise<void>): void {
+  void running.catch(() => {})
+}
 
 /** The global commands, which are the ones the native menu fires. The rest belong to a surface. */
 function runCommand(command: CommandId): void {
@@ -20,6 +30,12 @@ function runCommand(command: CommandId): void {
     case 'project.open':
       void useProject.getState().openPicked()
       return
+    case 'document.save': {
+      // The menu is application-wide and has no idea which tab is in front; the store does.
+      const documentId = useDocuments.getState().activeId
+      if (documentId) swallow(saveDocument(documentId))
+      return
+    }
   }
 }
 

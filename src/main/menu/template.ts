@@ -157,6 +157,12 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           click: () => actions.runCommand('project.open'),
         },
         { type: 'separator' },
+        {
+          label: t.menu.saveDocument,
+          accelerator: shortcut('document.save'),
+          click: () => actions.runCommand('document.save'),
+        },
+        { type: 'separator' },
         ...fileMenuSettings,
         { role: isMac ? 'close' : 'quit' },
       ],

@@ -4,14 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { removeNode, selectNode, setTransform } from '@/engines/scene/commands'
-import { createDefaultScene } from '@/engines/scene/default-scene'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
+import { restoreDocument } from '@/app/document-io'
+import { setDocumentTitle } from '@/app/DocumentArea'
 import { useAddNode } from '@/hooks/useAddNode'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
-import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
+import { historyOf, isDirty, sceneOf, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
 
 export function SceneDocument({ documentId }: { documentId: string }) {
@@ -24,16 +25,22 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // hands React a new snapshot each render, and the render loop never settles.
   const undoable = useScenes(state => canUndo(historyOf(state, documentId)))
   const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
+  const modified = useScenes(state => isDirty(state, documentId))
   const bindings = useBindingOverrides()
   const addNodeOf = useAddNode(documentId)
   const active = useDocuments(state => state.activeId === documentId)
   const viewport = useSettings(state => state.settings.three)
 
-  // Before the renderer mounts: a scene that arrives unlit shows nothing, and reads as a broken
-  // viewport rather than as an empty document.
+  // Before the renderer mounts: a saved document comes back from the project, a new one from
+  // the default scene — an unlit viewport reads as broken rather than as empty.
   useEffect(() => {
-    useScenes.getState().ensure(documentId, createDefaultScene)
+    void restoreDocument(documentId)
   }, [documentId])
+
+  useEffect(() => {
+    const document = useDocuments.getState().documents[documentId]
+    if (document) setDocumentTitle(documentId, document.title, modified)
+  }, [documentId, modified])
 
   useEffect(() => {
     const element = host.current

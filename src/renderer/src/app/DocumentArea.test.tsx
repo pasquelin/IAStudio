@@ -5,6 +5,10 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts, type SerializedLayout } from '@/stores/layouts'
 
 const addPanel = vi.fn()
+const setTitle = vi.fn()
+/** Panels Dockview is pretending to hold, so the tab marker has something to write on. */
+let panels: Record<string, { setTitle: (title: string) => void }> = {}
+const getPanel = vi.fn((id: string) => panels[id])
 const toJSON = vi.fn()
 const fromJSON = vi.fn()
 const onDidLayoutChange = vi.fn(() => ({ dispose: vi.fn() }))
@@ -21,7 +25,7 @@ vi.mock('dockview-react', () => ({
   Orientation: { HORIZONTAL: 'HORIZONTAL', VERTICAL: 'VERTICAL' },
   DockviewReact: (props: { onReady: (event: { api: unknown }) => void }) => {
     props.onReady({
-      api: { addPanel, toJSON, fromJSON, onDidLayoutChange, onDidActivePanelChange },
+      api: { addPanel, getPanel, toJSON, fromJSON, onDidLayoutChange, onDidActivePanelChange },
     })
     return <div data-testid="dockview" />
   },
@@ -42,6 +46,7 @@ function layout(): SerializedLayout {
 describe('DocumentArea', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    panels = {}
     useDocuments.setState({ documents: {}, activeId: null })
     useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
   })
@@ -92,5 +97,17 @@ describe('DocumentArea', () => {
         params: { documentId: created.id },
       }),
     )
+  })
+
+  it('marks the tab of a document with unsaved work, and only that tab', async () => {
+    const { DocumentArea, setDocumentTitle } = await import('./DocumentArea')
+    render(<DocumentArea />)
+    panels['doc-3'] = { setTitle }
+
+    setDocumentTitle('doc-3', 'Set dressing', true)
+    expect(setTitle).toHaveBeenCalledWith('Set dressing •')
+
+    setDocumentTitle('doc-3', 'Set dressing', false)
+    expect(setTitle).toHaveBeenLastCalledWith('Set dressing')
   })
 })

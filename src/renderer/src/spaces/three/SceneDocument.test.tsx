@@ -6,6 +6,7 @@ import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
 import { useDocuments } from '@/stores/documents'
+import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
 import { SceneDocument } from './SceneDocument'
@@ -39,8 +40,15 @@ function meshesOf(documentId: string): SceneNode[] {
 describe('SceneDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useScenes.setState({ states: {}, histories: {} })
-    useDocuments.setState({ activeId: 'doc-1' })
+    clearScenes()
+    // The descriptor, not just the id: a document restores itself through its kind, and
+    // `WithDocument` is what guarantees one exists before this component ever renders.
+    useDocuments.setState({
+      documents: {
+        'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set dressing' },
+      },
+      activeId: 'doc-1',
+    })
   })
 
   it('renders the shared toolbar with the scene tools', () => {
@@ -96,6 +104,11 @@ describe('SceneDocument', () => {
   })
 
   it('opens a new document on a lit scene rather than a black viewport', () => {
+    useDocuments.setState({
+      documents: {
+        'doc-fresh': { id: 'doc-fresh', kind: 'scene', workspace: '3d', title: 'Fresh' },
+      },
+    })
     render(<SceneDocument documentId="doc-fresh" />)
     const lights = sceneOf(useScenes.getState(), 'doc-fresh').nodes.filter(
       node => node.type === 'light',

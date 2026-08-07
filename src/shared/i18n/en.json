@@ -472,6 +472,7 @@
     "window": "Window",
     "newProject": "New project…",
     "openProject": "Open project…",
+    "saveDocument": "Save",
     "settings": "Settings…",
     "tools": "Tool windows",
     "add": "Add",
@@ -675,6 +676,10 @@
     "projectOpen": {
       "title": "Open project",
       "help": "Picks a project already on your disk and opens it in place of the current one. The open project is saved as you go, so there is nothing to save first."
+    },
+    "documentSave": {
+      "title": "Save document",
+      "help": "Writes the document in front into the project. A 3D scene lives in the window until it is saved: the tab carries a dot for as long as what is on screen is not what is on disk."
     },
     "layoutReset": {
       "title": "Reset layout",

@@ -472,6 +472,7 @@
     "window": "Fenêtre",
     "newProject": "Nouveau projet…",
     "openProject": "Ouvrir un projet…",
+    "saveDocument": "Enregistrer",
     "settings": "Réglages…",
     "tools": "Modules",
     "add": "Ajouter",
@@ -675,6 +676,10 @@
     "projectOpen": {
       "title": "Ouvrir un projet",
       "help": "Choisit un projet déjà existant sur votre disque et l’ouvre à la place de celui en cours. Le projet ouvert est enregistré au fur et à mesure, il n’y a rien à sauvegarder avant."
+    },
+    "documentSave": {
+      "title": "Enregistrer le document",
+      "help": "Écrit le document en avant dans le projet. Une scène 3D vit dans la fenêtre tant qu'elle n'est pas enregistrée : l'onglet porte un point tant que ce qui est à l'écran n'est pas ce qui est sur le disque."
     },
     "layoutReset": {
       "title": "Réinitialiser la disposition",
