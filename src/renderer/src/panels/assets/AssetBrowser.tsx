@@ -147,17 +147,16 @@ const AssetCard = memo(function AssetCard({ asset }: { asset: Asset }) {
   )
 })
 
-/**
- * Memoized, and given its label rather than translating it: a scroll re-renders every mounted
- * row on each frame, and only the handful that actually changed should pay for it.
- *
- * `h-full` on the wrapper too — `Row` sizes itself against its parent, and the drag wrapper
- * would otherwise collapse it to its content.
- */
+// The type ends the line rather than sitting under the name: a subtitle would stack two lines
+// into the 28 px this shelf gives a row, and `Row` is never told to size itself down.
 const AssetRow = memo(function AssetRow({ asset, typeLabel }: { asset: Asset; typeLabel: string }) {
   return (
+    // `h-full` on the wrapper: `Row` sizes itself against its parent, which is this div.
     <Draggable asset={asset} className="h-full">
-      <Row title={asset.name} subtitle={typeLabel} />
+      <Row
+        title={asset.name}
+        actions={<span className="text-muted shrink-0 text-[11px]">{typeLabel}</span>}
+      />
     </Draggable>
   )
 })

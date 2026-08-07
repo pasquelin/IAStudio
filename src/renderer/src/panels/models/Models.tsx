@@ -259,10 +259,10 @@ function subtitleOf(model: ModelSummary, t: TFunction): string {
 function SelectedModel({ model, picture }: { model: ModelSummary | null; picture?: string }) {
   const { t } = useTranslation()
 
-  // Height stated rather than grown into: `Row` sizes itself against its parent. 56 px is the
-  // 40 px thumbnail plus the padding this header had when it was written by hand.
+  // Height stated rather than grown into: `Row` sizes itself against its parent, and 56 px is
+  // what this header measured when it was written by hand. The bottom border eats a pixel of it.
   return (
-    <div className="border-border h-14 border-b px-1 py-2">
+    <div className="border-border h-14 border-b px-1 py-1.5">
       <Row
         media={<Thumbnail url={picture} className="size-10" />}
         title={model?.name ?? t('models.noSelection')}
