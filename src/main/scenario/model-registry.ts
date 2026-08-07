@@ -2,6 +2,7 @@ import {
   FEATURED_TAG,
   OFFICIAL_TAG,
   PERIOD_DAYS,
+  SKYBOX_TAG,
   type ModelDescriptor,
   type ModelPage,
   type ModelPeriod,
@@ -112,7 +113,7 @@ function summaryOf(model: RemoteModel): ModelSummary {
     id: model.id,
     // An unnamed model is still usable; showing its id beats showing nothing.
     name: model.name ?? model.id,
-    family: familyOf(model.capabilities),
+    family: familyOf(model.capabilities, tags),
     source: model.source ?? 'other',
     origin: tags.includes(OFFICIAL_TAG) ? 'official' : 'community',
     featured: tags.includes(FEATURED_TAG),
@@ -229,6 +230,19 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
   return true
 }
 
+/**
+ * The one tag the listing is narrowed by server-side, ahead of `matches`.
+ *
+ * A chosen tag comes first — it is what the user asked for. Failing that, a skybox listing is
+ * worth asking the API for by tag: three models carry `SKYBOX_TAG` out of six hundred, and
+ * walking the public catalogue page by page to keep three of them costs eight round trips to
+ * fill one screen. Every other family is dense enough that the local filter settles it.
+ */
+function preFilter(query: ModelQuery): string | undefined {
+  if (query.tags?.[0]) return query.tags[0]
+  return query.family === 'skybox' ? SKYBOX_TAG : undefined
+}
+
 type Cached<T> = { at: number; value: T }
 
 /**
@@ -277,10 +291,14 @@ export function createModelRegistry({
    * tag are two different listings even at the same token.
    */
   const fetchPage = async (cursor: Cursor, query: ModelQuery): Promise<CatalogPage> => {
-    const key = `${JSON.stringify(query.tags ?? [])}|${query.sort ?? ''}|${query.origin ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`
+    // The family is part of the key because `preFilter` below can turn it into a server-side
+    // tag: without it, the three models a skybox listing asked for would be served back to the
+    // next Image listing as if they were the whole catalogue.
+    const key = `${JSON.stringify(query.tags ?? [])}|${query.family ?? ''}|${query.sort ?? ''}|${query.origin ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`
     const cached = fresh(fetched.get(key))
     if (cached) return cached
 
+    const tag = preFilter(query)
     const page =
       cursor.mode === 'search'
         ? await catalog().search({
@@ -293,7 +311,7 @@ export function createModelRegistry({
             pageSize: PAGE_SIZE,
             sort: query.sort ?? 'relevance',
             official: query.origin === 'official',
-            ...(query.tags?.[0] ? { tag: query.tags[0] } : {}),
+            ...(tag ? { tag } : {}),
             ...(query.since ? { createdAfter: cutoff(query.since, now()) } : {}),
             ...(cursor.token ? { token: cursor.token } : {}),
           })

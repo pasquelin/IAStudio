@@ -111,6 +111,7 @@
     "video": "Video",
     "3d": "3D",
     "audio": "Audio",
+    "skybox": "Sky",
     "upscale": "Upscaling",
     "background-removal": "Background removal",
     "vectorization": "Vectorization",

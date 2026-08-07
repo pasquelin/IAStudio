@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SKYBOX_TAG } from '@shared/domain/model'
 import { familyOf, translateSchema, type ScenarioInput } from './schema'
 
 describe('translateSchema', () => {
@@ -115,5 +116,23 @@ describe('familyOf', () => {
     expect(familyOf([])).toBe('other')
     expect(familyOf(undefined)).toBe('other')
     expect(familyOf(['txt2txt'])).toBe('other')
+  })
+
+  // The three public skybox models answer `txt2img`/`img2img` like any image model, so the
+  // capabilities alone put them in the wrong workspace. Only the tag tells them apart.
+  it('classifies a tagged panorama model as skybox, not image', () => {
+    expect(familyOf(['txt2img', 'img2img'], [SKYBOX_TAG])).toBe('skybox')
+    expect(familyOf(['img2img'], ['panorama', '360', SKYBOX_TAG])).toBe('skybox')
+  })
+
+  it('leaves an untagged image model where it was', () => {
+    expect(familyOf(['txt2img'], ['panorama'])).toBe('image')
+    expect(familyOf(['txt2img'], [])).toBe('image')
+  })
+
+  // `skybox-upscale`, which carries no `sc:skybox`: an upscaler belongs with the pictures it
+  // enlarges, not in a workspace whose documents it cannot produce.
+  it('does not claim a skybox upscaler', () => {
+    expect(familyOf(['img2img'], ['sc:scenario', 'skybox-upscale'])).toBe('image')
   })
 })

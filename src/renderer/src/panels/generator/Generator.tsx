@@ -11,6 +11,7 @@ import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
+import { claimGeneration } from '@/stores/skybox-generation'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
@@ -69,8 +70,12 @@ export function Generator() {
     return <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
   }
 
+  // The job is claimed rather than routed from here: this panel serves every workspace, and
+  // which of them has somewhere to put a result is not its business to know.
   const generate = (body: FormValues): void => {
-    void submit(modelId, body)
+    void submit(modelId, body).then(job => {
+      if (job) claimGeneration(job.id)
+    })
   }
 
   return (

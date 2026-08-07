@@ -36,13 +36,22 @@ export type FieldDescriptor = {
 }
 
 export type ModelFamily =
-  'image' | 'video' | '3d' | 'audio' | 'upscale' | 'background-removal' | 'vectorization' | 'other'
+  | 'image'
+  | 'video'
+  | '3d'
+  | 'audio'
+  | 'skybox'
+  | 'upscale'
+  | 'background-removal'
+  | 'vectorization'
+  | 'other'
 
 export const MODEL_FAMILIES: readonly ModelFamily[] = [
   'image',
   'video',
   '3d',
   'audio',
+  'skybox',
   'upscale',
   'background-removal',
   'vectorization',
@@ -68,6 +77,14 @@ export const OFFICIAL_TAG = 'sc:scenario'
 
 /** Scenario's own highlight, and the badge their grid shows: 23 of the 642 public models. */
 export const FEATURED_TAG = 'sc:featured'
+
+/**
+ * What marks a model as producing 360 panoramas. The ONLY signal there is: the capability enum
+ * holds no skybox value — measured against `models.list`'s own enum — and these models answer
+ * `txt2img`/`img2img` like any image model. Skyboxes are a `jobType` of the generation API, not
+ * a category of the catalogue, so without this tag the workspace could not tell them apart.
+ */
+export const SKYBOX_TAG = 'sc:skybox'
 
 export type ModelSummary = {
   id: string
@@ -117,6 +134,9 @@ export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   video: ['txt2video', 'img2video', 'video2video'],
   '3d': ['txt23d', 'img23d', '3d23d'],
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
+  // A panorama model answers the plain image capabilities: text for a sky out of nothing,
+  // image for a photograph wrapped into one. Nothing narrower exists to offer.
+  skybox: ['txt2img', 'img2img'],
   upscale: [],
   'background-removal': [],
   vectorization: [],
@@ -154,6 +174,9 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   ],
   '3d': ['Image to 3D', 'Text to 3D', '3D to 3D', 'PBR', 'Multiview', 'Motion'],
   audio: ['Audio', 'TTS', 'Music', 'Text to Music', 'Text to Speech'],
+  // Left empty on purpose: the family is three models wide — `SKYBOX_TAG` already selected
+  // them — and a facet menu narrowing three rows offers a filter whose only answer is fewer.
+  skybox: [],
   upscale: [],
   'background-removal': [],
   vectorization: [],
@@ -175,6 +198,8 @@ export const PUBLISHERS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   video: ['Kling', 'Vidu', 'Alibaba', 'Wan', 'Bytedance', 'Luma', 'Google', 'Grok'],
   '3d': ['Tripo', 'Tencent', 'Meshy', 'Hunyuan', 'Rodin'],
   audio: ['ElevenLabs', 'Google', 'Bytedance'],
+  // Empty for the same reason as its tags: Scenario, BFL and Tencent publish one model each.
+  skybox: [],
   upscale: [],
   'background-removal': [],
   vectorization: [],

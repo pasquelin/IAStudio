@@ -1,3 +1,4 @@
+import { SKYBOX_TAG } from '@shared/domain/model'
 import type { FieldDescriptor, FieldKind, ModelFamily } from '@shared/domain/model'
 
 /**
@@ -109,8 +110,16 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
 /**
  * Infers a model's family from its capabilities. Order matters: `img2video` is a video model,
  * not an image one, and suffixes must win over broader patterns.
+ *
+ * The tag is consulted first, and only skyboxes need it: a panorama model answers `txt2img`
+ * like every other image model, so the capabilities alone would file the whole workspace under
+ * Image. See `SKYBOX_TAG` — it is the only signal the API offers.
  */
-export function familyOf(capabilities: readonly string[] | undefined): ModelFamily {
+export function familyOf(
+  capabilities: readonly string[] | undefined,
+  tags: readonly string[] = [],
+): ModelFamily {
+  if (tags.includes(SKYBOX_TAG)) return 'skybox'
   if (!capabilities?.length) return 'other'
   for (const { pattern, family } of FAMILY_BY_CAPABILITY) {
     if (capabilities.some(capability => pattern.test(capability))) return family

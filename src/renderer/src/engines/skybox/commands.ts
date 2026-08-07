@@ -73,3 +73,27 @@ export function setEnvironmentSetting<K extends keyof SkyboxEnvironment>(
 export function setSource(source: TextureRef | null): Command<SkyboxContent> {
   return replaceSection('source', 'source', () => source)
 }
+
+/**
+ * What a finished generation leaves behind: the picture and the prompt that made it, in ONE
+ * entry. Two commands would be two undo steps, and stepping back through the middle one would
+ * leave a prompt describing a sky that is no longer on screen.
+ *
+ * An absent provenance is written as absent rather than skipped: keeping the previous prompt
+ * beside a new picture would credit it with something it did not make.
+ */
+export function applyGeneration(
+  source: TextureRef,
+  generation: SkyboxContent['generation'],
+): Command<SkyboxContent> {
+  let before: Pick<SkyboxContent, 'source' | 'generation'> | null = null
+
+  return {
+    id: 'generation',
+    apply: content => {
+      before = { source: content.source, generation: content.generation }
+      return { ...content, source, generation }
+    },
+    revert: content => (before ? { ...content, ...before } : content),
+  }
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import { createSkyboxContent } from '@shared/domain/skybox'
 import {
+  applyGeneration,
   resetAdjustments,
   setAdjustment,
   setEnvironmentSetting,
@@ -98,6 +99,43 @@ describe('the source', () => {
     const command = setSource({ assetId: 'asset_2' })
 
     expect(command.revert(command.apply(first)).source).toEqual({ assetId: 'asset_1' })
+  })
+})
+
+describe('a generated sky', () => {
+  const provenance = { modelId: 'model_sky', modelLabel: 'Scenario Skybox Flux.1', prompt: 'dusk' }
+
+  it('lands with what produced it, in one entry', () => {
+    const command = applyGeneration({ assetId: 'asset_1' }, provenance)
+    const after = command.apply(createSkyboxContent())
+
+    expect(after.source).toEqual({ assetId: 'asset_1' })
+    expect(after.generation).toEqual(provenance)
+  })
+
+  // Undoing them apart would leave a prompt describing a picture that is no longer there.
+  it('takes back the picture and its provenance together', () => {
+    const first = applyGeneration({ assetId: 'asset_1' }, provenance).apply(createSkyboxContent())
+    const command = applyGeneration({ assetId: 'asset_2' }, { ...provenance, prompt: 'dawn' })
+
+    const reverted = command.revert(command.apply(first))
+    expect(reverted.source).toEqual({ assetId: 'asset_1' })
+    expect(reverted.generation?.prompt).toBe('dusk')
+  })
+
+  // Keeping the old prompt beside a new picture would credit it with what it did not make.
+  it('clears a provenance it cannot establish', () => {
+    const known = applyGeneration({ assetId: 'asset_1' }, provenance).apply(createSkyboxContent())
+    const after = applyGeneration({ assetId: 'asset_2' }, undefined).apply(known)
+
+    expect(after.generation).toBeUndefined()
+  })
+
+  it('leaves the grading and the sun where they were', () => {
+    const graded = setSunSetting('intensity', 4).apply(createSkyboxContent())
+    const after = applyGeneration({ assetId: 'asset_1' }, provenance).apply(graded)
+
+    expect(after.sun.intensity).toBe(4)
   })
 })
 

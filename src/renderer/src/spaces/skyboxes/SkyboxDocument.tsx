@@ -1,5 +1,5 @@
 import { mdiCubeOutline, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
 import type { SphericalAngles } from '@shared/domain/angles'
@@ -15,8 +15,10 @@ import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
+import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
-import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { assetsById, useAssets } from '@/stores/assets'
+import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 
 /** i18n key of a view mode — never the label itself, as `SceneEntry` does for primitives. */
 const VIEW_LABELS: Record<SkyboxView, string> = {
@@ -78,8 +80,22 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     engine.current?.setProbesVisible(probes)
   }, [probes])
 
+  // Dropped from the shelf, which is shown in this workspace like every other. The asset is
+  // read from the catalogue rather than carried by the drag: only its id crosses.
+  const onDrop = (event: DragEvent<HTMLDivElement>): void => {
+    event.preventDefault()
+
+    const assetId = assetIdFromDrag(event)
+    const asset = assetId ? assetsById(useAssets.getState()).get(assetId) : undefined
+    if (asset) setSkyboxSource(asset)
+  }
+
   return (
-    <div className="relative size-full">
+    <div
+      className="relative size-full"
+      onDragOver={event => event.preventDefault()}
+      onDrop={onDrop}
+    >
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 

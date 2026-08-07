@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { OFFICIAL_TAG } from '@shared/domain/model'
+import { OFFICIAL_TAG, SKYBOX_TAG } from '@shared/domain/model'
 import {
   createModelRegistry,
   type ListRequest,
@@ -24,6 +24,14 @@ const FLUX: RemoteModel = {
 }
 
 const VEO: RemoteModel = { id: 'model_veo', name: 'Veo', capabilities: ['txt2video'] }
+
+/** Shaped after `model_scenario-skybox-flux`: a panorama model answers the image capabilities. */
+const SKY: RemoteModel = {
+  id: 'model_sky',
+  name: 'Scenario Skybox Flux.1',
+  capabilities: ['txt2img', 'img2img'],
+  tags: [SKYBOX_TAG, 'panorama'],
+}
 
 type Catalogue = {
   private?: readonly RemoteModel[]
@@ -52,7 +60,12 @@ function spiedCatalog(catalogue: Catalogue): Spied {
     list: request => {
       lists.push(request)
       const held = (catalogue[request.privacy] ?? []).filter(
-        model => !request.official || (model.tags ?? []).includes(OFFICIAL_TAG),
+        model =>
+          (!request.official || (model.tags ?? []).includes(OFFICIAL_TAG)) &&
+          // Narrowed server-side, as the real endpoint does: a page fetched under a tag holds
+          // fewer models than the same page without one, which is what makes it a page of its
+          // own rather than a slice of the catalogue.
+          (!request.tag || (model.tags ?? []).includes(request.tag)),
       )
       const start = request.token ? Number(request.token) : 0
       const models = held.slice(start, start + request.pageSize)
@@ -260,6 +273,37 @@ describe('model registry', () => {
     await registry.search({ tags: ['I2V', 'Video'] })
 
     expect(spied.lists.at(-1)?.tag).toBe('I2V')
+  })
+
+  /**
+   * Three models out of six hundred carry the tag, so the local filter alone would walk the
+   * whole public catalogue to keep three rows. The chosen tag still wins: it is what the user
+   * asked for, and the family narrows what comes back anyway.
+   */
+  it('asks the API for the skybox tag when the workspace wants that family', async () => {
+    const spied = spiedCatalog({ public: [SKY] })
+    const registry = createModelRegistry({ catalog: spied.catalog })
+
+    await registry.search({ family: 'skybox' })
+    expect(spied.lists.at(-1)?.tag).toBe(SKYBOX_TAG)
+
+    await registry.search({ family: 'skybox', tags: ['panorama'] })
+    expect(spied.lists.at(-1)?.tag).toBe('panorama')
+
+    await registry.search({ family: 'image' })
+    expect(spied.lists.at(-1)?.tag).toBeUndefined()
+  })
+
+  // The pre-filter makes a page family-specific, so the pages cache has to be too. Without the
+  // family in its key, these three models answered the Image listing that came next.
+  it('does not serve a skybox page back to another family', async () => {
+    const spied = spiedCatalog({ public: [SKY, FLUX] })
+    const registry = createModelRegistry({ catalog: spied.catalog })
+
+    await registry.search({ family: 'skybox' })
+    const images = await registry.search({ family: 'image' })
+
+    expect(images.items.map(item => item.id)).toEqual(['model_flux'])
   })
 
   // Resolved here, against the main process's clock: a date built in the renderer would move
