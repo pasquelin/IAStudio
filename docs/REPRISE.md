@@ -101,9 +101,23 @@ Deux ombres, et deux seulement : `--sc-shadow-furniture` pour les meubles (barre
 - **`Separator`**, **`TooltipHost`** (infobulle partagée montée une fois à la racine),
   **`tooltip.ts`** (instances `TIP_TOP` / `TIP_RIGHT` / `TIP_BOTTOM` — ne jamais fabriquer une
   infobulle dans un corps de composant), **`cn`**, **`slots.ts`**.
+- **`Panel`** — la surface arrondie sombre dont le studio est fait, et **`PanelHeader`**, sa
+  ligne de titre sur la gauge `--sc-header`.
+- **`Row`** — **la** ligne, partout : vignette ou icône, titre, sous-titre, actions, infobulle
+  sur le nom tronqué. Le stack de calques, l'outliner, les panneaux maillages et lumières, les
+  modèles et les assets en dépendent. Une ligne écrite à la main est un bug de style.
+- **`Collection`** — la liste virtualisée à deux vues (grille et lignes), et **`CollectionBar`**,
+  sa barre de recherche, de facettes et de tri.
+- **`MediaTile`** (la tuile carrée légendée) et **`Thumbnail`** (la même image à taille fixe,
+  pour une ligne ou un en-tête). Les deux partagent `useLoadable` — une URL signée expire, le
+  placeholder doit prendre la relève.
+- **`EmptyState`**, **`DynamicForm`** (le seul formulaire de génération : cf. invariant 5),
+  **`Tree`**, **`Flyout`**, **`MenuButton`**, **`MenuRow`**, **`Timecode`**.
+- **`styles.ts`** — les chaînes de classes partagées par plus d'un composant : `FOCUS_RING`,
+  `CONTROL` (les contrôles de barre), `MEDIA_FRAME` (le cadre des images). Une forme propre à un
+  seul composant reste chez lui.
 
-Dans `app/` : `Panel` et `PanelHeader` (la surface arrondie et son en-tête), `Rail`,
-`ToolWindow`, `ResizeHandle`, `TitleBar`, `Footer`.
+Dans `app/` : `Rail`, `ToolWindow`, `ResizeHandle`, `TitleBar`, `Footer`.
 
 ### Trois règles non négociables
 
