@@ -1,6 +1,5 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAssets } from '@/stores/assets'
+import { assetsById, useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { ImportProgressRow } from './ImportProgressRow'
 
@@ -12,15 +11,9 @@ export function ImportProgress() {
   const { t } = useTranslation()
   const progress = useMedia(state => state.progress)
   const ffmpeg = useMedia(state => state.capabilities.ffmpeg)
-  const items = useAssets(state => state.items)
+  const byId = useAssets(assetsById)
 
   const entries = Object.values(progress)
-  // Indexed rather than scanned per row, and only while something is being imported: with no
-  // ingest running this component renders on every catalogue refresh and needs no names at all.
-  const names = useMemo(
-    () => (entries.length === 0 ? null : new Map(items.map(item => [item.id, item.name]))),
-    [items, entries.length],
-  )
 
   // The notice outlives the ingests: without ffmpeg one lasts a few hundred milliseconds, and
   // the explanation would vanish just as the user wonders where the waveform went.
@@ -34,7 +27,7 @@ export function ImportProgress() {
           <ImportProgressRow
             key={entry.assetId}
             entry={entry}
-            name={names?.get(entry.assetId) ?? entry.assetId}
+            name={byId.get(entry.assetId)?.name ?? entry.assetId}
           />
         ))}
       </ul>

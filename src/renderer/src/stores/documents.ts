@@ -47,6 +47,10 @@ export const activeSceneId = (state: DocumentsSlice): string | null =>
 export const activeImageId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'image')
 
+/** The sequence in front, as a selector. Same reason again, for the montage and its inspector. */
+export const activeSequenceId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'sequence')
+
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,
   workspace: WorkspaceId,

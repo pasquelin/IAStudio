@@ -13,7 +13,9 @@ type AssetsState = {
   collection: CollectionState
   setCollection: (collection: CollectionState) => void
 
-  items: Asset[]
+  // Readonly so nothing can mutate it in place: `assetsById` keys off its identity, and a push
+  // that kept the same array would leave the index short of an asset with nothing to say so.
+  items: readonly Asset[]
   refresh: () => Promise<void>
   /**
    * Says the catalogue changed and lets this store decide when to read it. `assets.search` is
@@ -24,6 +26,24 @@ type AssetsState = {
 }
 
 const COALESCE_MS = 200
+
+/**
+ * The catalogue keyed by id, derived from `items` rather than stored beside it: a second field
+ * would have to be kept in step by every writer, and one that forgot would hand back a stale
+ * asset with nothing to say so.
+ *
+ * The result is cached on the identity of `items`, so it is a stable value for zustand — a
+ * fresh Map per call would re-render every subscriber on every notification. Five panels were
+ * scanning the whole list for one asset, per render and per catalogue event.
+ */
+let indexed: { items: readonly Asset[]; byId: ReadonlyMap<string, Asset> } | null = null
+
+export function assetsById(state: Pick<AssetsState, 'items'>): ReadonlyMap<string, Asset> {
+  if (!indexed || indexed.items !== state.items) {
+    indexed = { items: state.items, byId: new Map(state.items.map(asset => [asset.id, asset])) }
+  }
+  return indexed.byId
+}
 
 /** The shape the store persisted before it held a whole `CollectionState`. */
 function readView(persisted: unknown): CollectionState['view'] | null {

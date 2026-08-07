@@ -10,7 +10,7 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
-import { useAssets } from '@/stores/assets'
+import { assetsById, useAssets } from '@/stores/assets'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
@@ -35,7 +35,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   const state = useAudioEdits(current => audioEditsOf(current, documentId))
   const history = useAudioEdits(current => audioHistoryOf(current, documentId))
-  const assets = useAssets(current => current.items)
+  const byId = useAssets(assetsById)
 
   const renderer = useAudioRenderer()
 
@@ -45,7 +45,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const [loaded, setLoaded] = useState<{ assetId: string; ok: boolean } | null>(null)
   const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio } | null>(null)
 
-  const asset = assets.find(candidate => candidate.id === state.assetId) ?? null
+  const asset = state.assetId ? (byId.get(state.assetId) ?? null) : null
 
   useEffect(() => {
     const assetId = state.assetId

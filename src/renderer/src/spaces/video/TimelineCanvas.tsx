@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, type DragEvent, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { posterUrl } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/shortcut'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
@@ -25,7 +25,7 @@ import {
 import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { cachedImage } from '@/helpers/image-cache'
 import { useShortcuts } from '@/hooks/useShortcuts'
-import { useAssets } from '@/stores/assets'
+import { assetsById, useAssets } from '@/stores/assets'
 import { usePeaks } from '@/stores/peaks'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -41,7 +41,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
 
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const viewport = useTimelineView(state => viewportOf(state, documentId))
-  const assets = useAssets(state => state.items)
+  const byId = useAssets(assetsById)
 
   // Read by `paint`, which must stay stable: rebuilding the observer on every dragged pixel
   // would tear down and re-create it sixty times a second.
@@ -92,7 +92,6 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     })
   }, [paint])
 
-  const byId = useMemo(() => new Map(assets.map(asset => [asset.id, asset])), [assets])
   const nameOf = useCallback(
     (clip: Clip): string => byId.get(clip.assetId)?.name ?? clip.assetId,
     [byId],
@@ -323,7 +322,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const target = hitTest(sequence, viewport, point)
     if (!target || target.kind === 'ruler') return
 
-    const asset = useAssets.getState().items.find(candidate => candidate.id === assetId) ?? null
+    const asset = byId.get(assetId) ?? null
     const start = xToTime(point.x, viewport)
     const clip = clipForAsset(assetId, asset, start, sequence.settings)
 
