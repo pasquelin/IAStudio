@@ -6,8 +6,8 @@
  * it was meant to move away (CLAUDE.md, invariant 6). Only the finished pairs come back.
  */
 
-export type PeaksRequest = {
-  id: number
+/** One waveform to reduce. Declared once: the request adds an id, the run adds a signal. */
+export type PeaksJob = {
   binary: string
   args: string[]
   /** How many min/max pairs the waveform holds — derived from the probed duration. */
@@ -15,6 +15,8 @@ export type PeaksRequest = {
   /** How many samples one pair covers, from the rate ffmpeg is asked to resample to. */
   samplesPerBucket: number
 }
+
+export type PeaksRequest = PeaksJob & { id: number }
 
 /** Cancels a request by id. A twenty-minute rush must stop on demand, mid-decode. */
 export type PeaksCancel = { id: number; cancel: true }

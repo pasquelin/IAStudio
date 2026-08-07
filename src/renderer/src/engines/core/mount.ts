@@ -1,25 +1,16 @@
-// Electron's CSP forbids `unsafe-eval`, and Pixi builds its shaders with `new Function()`:
-// without this, `Application.init` rejects inside a promise and the canvas stays absent with a
-// clean console. Despite its name, this module ships static polyfills instead.
-//
-// It patches Pixi's prototypes, so what matters is that it runs before any `init` — not before
-// any import. Here, that is structural: `mountApplication` is the only way an engine starts one.
-// The timeline's monitor went without it entirely, and never had a Pixi application at all.
+// Pixi builds its shaders with `new Function()`, which the CSP forbids: without this, `init`
+// rejects inside a promise and the canvas stays absent with a clean console. It patches
+// prototypes, so it must run before any `init` — which holding the only one guarantees.
 import 'pixi.js/unsafe-eval'
 import { Application, type ApplicationOptions } from 'pixi.js'
 
 /**
- * Starts a Pixi application for a host element, or nothing if the engine died while it was
- * starting.
+ * Starts a Pixi application, or nothing if the engine died while it was starting. The only
+ * `new Application()` in the renderer.
  *
- * `Application.init` is asynchronous in Pixi v8 — it was not in v7 — and React mounts,
- * unmounts and remounts an effect on the very same element in development. Left unguarded,
- * the first instance resolves after the second has claimed the element and appends a second
- * canvas: a WebGL context leaked for the session, per engine, per tab. Every engine needs the
- * same guard, and two copies of it have already drifted apart.
- *
- * `cancelled` is read *after* the await, which is the whole point: it is the engine's own
- * `disposed` flag, and it can only have been set while `init` was in flight.
+ * `init` is asynchronous in Pixi v8, and React remounts an effect on the very same element: the
+ * first instance would resolve after the second claimed it and leave a canvas behind, holding a
+ * WebGL context for the session.
  */
 export async function mountApplication(
   options: Partial<ApplicationOptions>,
@@ -28,6 +19,7 @@ export async function mountApplication(
   const application = new Application()
   await application.init(options)
 
+  // Read after the await on purpose: the engine can only have died while `init` was in flight.
   if (!cancelled()) return application
 
   application.destroy({ removeView: true }, { children: true, texture: true, textureSource: true })

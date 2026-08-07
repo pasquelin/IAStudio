@@ -1,4 +1,4 @@
-import type { PeaksMessage, PeaksResponse } from './peaks-protocol'
+import type { PeaksJob, PeaksMessage, PeaksResponse } from './peaks-protocol'
 
 /**
  * The worker process, reduced to what the client needs. Injected rather than imported so the
@@ -11,13 +11,7 @@ export type PeaksPort = {
   onFailure: (listener: (error: Error) => void) => void
 }
 
-export type PeaksRun = {
-  binary: string
-  args: string[]
-  buckets: number
-  samplesPerBucket: number
-  signal?: AbortSignal
-}
+export type PeaksRun = PeaksJob & { signal?: AbortSignal }
 
 /** Reduces PCM to a waveform, off this process entirely. */
 export type PeaksClient = {
@@ -51,7 +45,7 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
   })
 
   return {
-    compute: ({ binary, args, buckets, samplesPerBucket, signal }) =>
+    compute: ({ signal, ...job }) =>
       new Promise((resolve, reject) => {
         if (closed) {
           reject(new Error('the waveform process is gone'))
@@ -71,7 +65,7 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
           signal?.addEventListener('abort', () => port.postMessage({ id, cancel: true }), {
             once: true,
           })
-          port.postMessage({ id, binary, args, buckets, samplesPerBucket })
+          port.postMessage({ id, ...job })
         } catch (error) {
           pending.delete(id)
           reject(error instanceof Error ? error : new Error(String(error)))

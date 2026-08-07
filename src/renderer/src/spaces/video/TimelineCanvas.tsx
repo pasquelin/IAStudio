@@ -317,8 +317,6 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     if (!current) return
 
     event.currentTarget.releasePointerCapture(event.pointerId)
-    // Both moved something that is not the montage: there is no command to run.
-    if (current.gesture.kind === 'scrub' || current.gesture.kind === 'pan') return
 
     const command = commandForGesture(
       current.gesture,

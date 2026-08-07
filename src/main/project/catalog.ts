@@ -299,9 +299,18 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     },
 
     remove: assetId => {
-      orphanChildren.run(assetId)
-      deleteTags.run(assetId)
-      deleteAsset.run(assetId)
+      // One statement's worth of atomicity: a crash between the two would leave children
+      // pointing at a row that is gone. The tags follow on their own — `asset_tags` is
+      // `ON DELETE CASCADE`, and both drivers turn foreign keys on.
+      driver.exec('BEGIN')
+      try {
+        orphanChildren.run(assetId)
+        deleteAsset.run(assetId)
+        driver.exec('COMMIT')
+      } catch (error) {
+        driver.exec('ROLLBACK')
+        throw error
+      }
     },
 
     search: query => {

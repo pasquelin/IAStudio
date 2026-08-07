@@ -68,6 +68,10 @@ describe('decoder pool', () => {
     await pool.frameAt('b', 0)
     pool.dispose()
 
+    // The pool holds openings, not opened sinks, so closing waits on the one microtask an
+    // opening still in flight would need — see `closeLater`.
+    await Promise.resolve()
+
     expect(sinks.every(sink => sink.close.mock.calls.length === 1)).toBe(true)
     expect(pool.openCount()).toBe(0)
   })
@@ -110,9 +114,44 @@ describe('decoder pool', () => {
     await pool.frameAt('a', 0)
     await pool.frameAt('b', 0)
     pool.release('a')
+    await Promise.resolve()
 
     expect(pool.openCount()).toBe(1)
     expect(sinks.get('a')?.close).toHaveBeenCalled()
     expect(sinks.get('b')?.close).not.toHaveBeenCalled()
+  })
+})
+
+describe('two seeks racing for the same asset', () => {
+  /**
+   * A rush on two video tracks, or a seek a frame after the previous one: both miss while the
+   * first is still opening. Awaiting before storing had each open a decoder and the second
+   * overwrite the first — a hardware decoder held by nothing, on a count the OS caps low.
+   */
+  it('opens one decoder, not two', async () => {
+    let release: (sink: ReturnType<typeof fakeSink>) => void = () => {}
+    const open = vi.fn(
+      () => new Promise<ReturnType<typeof fakeSink>>(resolve => (release = resolve)),
+    )
+    const pool = createDecoderPool({ open, maxDecoders: 3 })
+
+    const first = pool.frameAt('a', 0)
+    const second = pool.frameAt('a', 40_000)
+    release(fakeSink('a'))
+    await Promise.all([first, second])
+
+    expect(open).toHaveBeenCalledTimes(1)
+    expect(pool.openCount()).toBe(1)
+  })
+
+  it('forgets an opening that failed, so the pool does not hold a rejection', async () => {
+    const open = vi.fn(async () => {
+      throw new Error('undecodable')
+    })
+    const pool = createDecoderPool({ open, maxDecoders: 3 })
+
+    await Promise.all([pool.frameAt('a', 0), pool.frameAt('a', 40_000)])
+
+    expect(pool.openCount()).toBe(0)
   })
 })

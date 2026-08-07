@@ -39,14 +39,21 @@ export function maxScrollTop(state: SequenceState, height: number): number {
 
 export function clampViewport(viewport: Viewport, state: SequenceState, size: Size): Viewport {
   const scale = clampScale(viewport.scale)
-  return {
-    scale,
-    offset: Math.max(0, Math.min(maxOffset(state, scale, size.width), Math.round(viewport.offset))),
-    scrollTop: Math.max(
-      0,
-      Math.min(maxScrollTop(state, size.height), Math.round(viewport.scrollTop)),
-    ),
+  const offset = Math.max(
+    0,
+    Math.min(maxOffset(state, scale, size.width), Math.round(viewport.offset)),
+  )
+  const scrollTop = Math.max(
+    0,
+    Math.min(maxScrollTop(state, size.height), Math.round(viewport.scrollTop)),
+  )
+
+  // The same viewport back when nothing moved, as `zoomAt` and `revealTime` already do: panning
+  // against an edge would otherwise write to the store and repaint the strip on every pixel.
+  if (scale === viewport.scale && offset === viewport.offset && scrollTop === viewport.scrollTop) {
+    return viewport
   }
+  return { scale, offset, scrollTop }
 }
 
 /**

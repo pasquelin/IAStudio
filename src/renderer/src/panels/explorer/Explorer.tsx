@@ -14,10 +14,11 @@ export function Explorer() {
   const workspace = useLayouts(state => state.activeWorkspace)
   const documentId = useDocuments(activeSceneId)
 
-  // Its own wording, not the project's: an explorer that says "no project open" in the Image
+  // Its own wording, both times: an explorer that says "no project open" in the Image
   // workspace has the user hunting for a project that is right there.
   if (workspace !== '3d')
     return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.otherWorkspace')} />
-  if (!documentId) return <EmptyState icon={mdiFolderOpenOutline} message={t('scene.noDocument')} />
+  if (!documentId)
+    return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.noDocument')} />
   return <SceneTree documentId={documentId} />
 }

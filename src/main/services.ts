@@ -204,20 +204,20 @@ export function createServices(settings: SettingsStore): Services {
     exists: existsSync,
   }))
 
-  // Forked on the first sound imported, then kept: most sessions never import one at all.
-  // Forgotten when it exits, so a crash costs the file being ingested and not the session.
+  // Forked on the first sound imported, then kept: most sessions never import one at all, and
+  // the ingest pool already bounds how many run at once. Forgotten when it exits, so a crash
+  // costs the file being ingested and not the session.
   let peaks: PeaksClient | null = null
-  const peaksClient = (): PeaksClient =>
-    (peaks ??= openPeaksProcess(() => {
-      peaks = null
-    }))
 
   const media = createMediaService({
     ffmpeg: ffmpeg.path,
     run: (binary, args, signal) => runProcess(binary, args, { signal }),
     probe: (source, signal) => probeSource(companionPath(ffmpeg.path()), source, { signal }),
     hash: hashSource,
-    computePeaks: run => peaksClient().compute(run),
+    computePeaks: run =>
+      (peaks ??= openPeaksProcess(() => {
+        peaks = null
+      })).compute(run),
     duplicateExists: async (assetId, hash) => {
       const existing = await project.catalog().findByHash(hash)
       return existing !== null && existing.id !== assetId

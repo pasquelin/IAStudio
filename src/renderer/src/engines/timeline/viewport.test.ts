@@ -108,3 +108,19 @@ describe('revealing an instant', () => {
     expect(revealTime(scrolled, 1_000_000, size.width).offset).toBe(0)
   })
 })
+
+describe('a viewport that did not move', () => {
+  const state = sequenceWith([trackFixture('V1', 'video', [clipFixture('a', 0, 60_000_000)])])
+  const size = { width: 800, height: 400 }
+
+  // Panning against an edge would otherwise write to the store and repaint on every pixel.
+  it('is handed back as it was, rather than as a new object', () => {
+    const clamped = clampViewport(DEFAULT_VIEWPORT, state, size)
+    expect(clampViewport(clamped, state, size)).toBe(clamped)
+  })
+
+  it('is still clamped when it did move', () => {
+    const past = { ...DEFAULT_VIEWPORT, offset: -100 }
+    expect(clampViewport(past, state, size).offset).toBe(0)
+  })
+})

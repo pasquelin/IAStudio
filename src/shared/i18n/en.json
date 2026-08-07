@@ -281,11 +281,11 @@
   },
   "scene": {
     "root": "Scene",
-    "visible": "Show or hide",
-    "noDocument": "Open a scene to see what is in it."
+    "visible": "Show or hide"
   },
   "explorer": {
-    "otherWorkspace": "The explorer follows a 3D scene. Open the 3D workspace to see its contents."
+    "otherWorkspace": "The explorer follows a 3D scene. Open the 3D workspace to see its contents.",
+    "noDocument": "Open a scene to see what is in it."
   },
   "inspector": {
     "noDocument": "Open a scene to inspect what is in it.",

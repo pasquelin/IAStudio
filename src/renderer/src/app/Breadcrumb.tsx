@@ -2,13 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 
-/**
- * What the status line says on its left: the open project, then the document in front.
- *
- * It carries the "no project" wording too. Left to `Footer` as a fallback, the wording was
- * unreachable the moment anything was passed for it to fall back from — and the line went
- * blank instead.
- */
+/** The status line's left: the open project, the document in front, or neither. */
 export function Breadcrumb() {
   const { t } = useTranslation()
   const project = useProject(state => state.project)

@@ -41,10 +41,8 @@ describe('Breadcrumb', () => {
     expect(screen.getByText('Reel — Sans titre 1')).toBeInTheDocument()
   })
 
-  /**
-   * The wording used to live in `Footer` as a fallback for an absent `left`. Passing a
-   * breadcrumb made it unreachable, and the status line went blank instead of saying anything.
-   */
+  // The wording used to be `Footer`'s fallback for an absent `left`, which a breadcrumb made
+  // unreachable: the line went blank instead of saying anything.
   it('says no project is open when none is', () => {
     render(<Breadcrumb />)
     expect(screen.getByText('Aucun projet ouvert')).toBeInTheDocument()

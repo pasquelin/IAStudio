@@ -16,11 +16,8 @@ const reply = (response: PeaksResponse): void => {
   process.parentPort.postMessage(response)
 }
 
-/**
- * Never throws, for the reason `catalog-dispatch` gives: a message loop that dies leaves the
- * main process holding promises nobody settles. Here it would take down every waveform running
- * at that moment, not just the file that caused it — one process serves them all.
- */
+// Never throws — see `catalog-dispatch`. One process serves every waveform at once, so a loop
+// that dies takes them all down, not just the file that caused it.
 process.parentPort.on('message', event => {
   const message: PeaksMessage = event.data
 

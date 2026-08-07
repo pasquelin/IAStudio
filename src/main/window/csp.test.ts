@@ -2,15 +2,12 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 /**
- * The window's Content Security Policy, read off the document that carries it.
- *
- * Read as data, and from the main process for the same reasons as `theme.test.ts`: the renderer
- * tests run in jsdom, where no file can be read — and every directive below was added because
- * something broke without it, silently, in a way only the running application showed.
+ * The policies, read as data — and from the main process for the reasons `theme.test.ts` gives.
+ * Every directive below was added because something broke silently without it.
  */
-/** Anchored on the directive itself: any other `content=` attribute would otherwise match. */
 function policyOf(page: string): string {
   const html = readFileSync(new URL(`../../renderer/${page}`, import.meta.url), 'utf8')
+  // Anchored on the directive: any other `content=` attribute would otherwise match first.
   const meta = /<meta[^>]*http-equiv="Content-Security-Policy"[^>]*>/.exec(html)?.[0] ?? ''
   return /content="([^"]*)"/.exec(meta)?.[1] ?? ''
 }
