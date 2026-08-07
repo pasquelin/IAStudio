@@ -8,7 +8,7 @@ import type { WorkspaceId } from './workspace'
 
 export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
 
-export type ToolId = 'layers' | 'explorer' | 'models' | 'generator' | 'assets' | 'jobs'
+export type ToolId = 'layers' | 'timeline' | 'explorer' | 'models' | 'generator' | 'assets' | 'jobs'
 
 /**
  * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
@@ -40,6 +40,9 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'generator', zone: 'right', slot: 'primary' },
   { id: 'assets', zone: 'bottom', slot: 'primary' },
   { id: 'jobs', zone: 'bottom', slot: 'primary' },
+  // Second half of the bottom strip, so the timeline and the asset shelf show together: a clip
+  // is dragged from one onto the other, and a montage needs the full width to be read.
+  { id: 'timeline', zone: 'bottom', slot: 'secondary', workspaces: ['video'] },
 ]
 
 /**

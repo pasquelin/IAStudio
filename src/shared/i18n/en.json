@@ -13,6 +13,7 @@
   },
   "panels": {
     "layers": "Layers",
+    "timeline": "Timeline",
     "explorer": "Explorer",
     "models": "Models",
     "generator": "Generate",
@@ -213,7 +214,14 @@
   },
   "transport": {
     "play": "Play",
-    "pause": "Pause"
+    "pause": "Pause",
+    "source": "Source",
+    "program": "Program",
+    "noClip": "Select a clip to see it here.",
+    "rewind": "Back to start"
+  },
+  "timeline": {
+    "noDocument": "No sequence open. Create one to start editing."
   },
   "videoTools": {
     "select": "Selection",

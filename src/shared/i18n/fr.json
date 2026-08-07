@@ -13,6 +13,7 @@
   },
   "panels": {
     "layers": "Calques",
+    "timeline": "Timeline",
     "explorer": "Explorateur",
     "models": "Modèles",
     "generator": "Génération",
@@ -213,7 +214,14 @@
   },
   "transport": {
     "play": "Lire",
-    "pause": "Pause"
+    "pause": "Pause",
+    "source": "Source",
+    "program": "Programme",
+    "noClip": "Sélectionnez un clip pour le voir ici.",
+    "rewind": "Retour au début"
+  },
+  "timeline": {
+    "noDocument": "Aucune séquence ouverte. Créez-en une pour monter."
   },
   "videoTools": {
     "select": "Sélection",

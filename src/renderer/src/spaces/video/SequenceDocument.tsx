@@ -1,80 +1,82 @@
-import { mdiPause, mdiPlay } from '@mdi/js'
-import { useCallback, useRef, useState, type KeyboardEvent } from 'react'
+import { mdiVideoOutline } from '@mdi/js'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
-import { Toolbar } from '@/design/Toolbar'
-import { canRedo, canUndo } from '@/engines/core/history'
-import type { TimelineEngine } from '@/engines/timeline/TimelineEngine'
-import { TIP_RIGHT } from '@/helpers/tooltip'
-import { historyOf, useSequences } from '@/stores/sequences'
-import { ProgramMonitor } from './ProgramMonitor'
-import { TimelineCanvas } from './TimelineCanvas'
-import { DEFAULT_VIDEO_TOOL, isVideoTool, VIDEO_TOOLS, type VideoToolId } from './video-tools'
+import { EmptyState } from '@/design/EmptyState'
+import { Separator } from '@/design/Separator'
+import {
+  clipById,
+  EMPTY_SEQUENCE,
+  type SequenceState,
+  type Us,
+} from '@/engines/timeline/timeline-state'
+import { sequenceOf, useSequences } from '@/stores/sequences'
+import { Monitor } from './Monitor'
 
 export type SequenceDocumentProps = { documentId: string }
 
-/** Program monitor above, timeline below — the split lives inside the tab, never outside it. */
+/**
+ * Two monitors, Premiere and DaVinci convention: source on the left, program on the right. The
+ * montage itself is the `timeline` tool window — a strip the width of the app, not a corner of
+ * this tab.
+ */
 export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const { t } = useTranslation()
-  const [tool, setTool] = useState<VideoToolId>(DEFAULT_VIDEO_TOOL)
-  const [playing, setPlaying] = useState(false)
-  const engine = useRef<TimelineEngine | null>(null)
+  const sequence = useSequences(state => sequenceOf(state, documentId))
+  const [sourceTime, setSourceTime] = useState<Us>(0)
 
-  // Booleans rather than the history itself: a selector building an object on every call hands
-  // React a new snapshot each render, and the loop never settles.
-  const undoable = useSequences(state => canUndo(historyOf(state, documentId)))
-  const redoable = useSequences(state => canRedo(historyOf(state, documentId)))
+  const selected = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
 
-  const onEngine = useCallback((created: TimelineEngine | null) => {
-    engine.current = created
-    if (!created) setPlaying(false)
-  }, [])
+  // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
+  const source: SequenceState = useMemo(
+    () => ({
+      ...EMPTY_SEQUENCE,
+      settings: sequence.settings,
+      playhead: sourceTime,
+      tracks: selected
+        ? [
+            {
+              id: 'S1',
+              kind: 'video',
+              index: 1,
+              muted: false,
+              locked: true,
+              clips: [{ ...selected, start: 0 }],
+            },
+          ]
+        : [],
+    }),
+    [selected, sequence.settings, sourceTime],
+  )
 
-  const toggle = useCallback(() => {
-    const current = engine.current
-    if (!current) return
-
-    // The engine reports back through `onPlayingChange`, which also fires when another player
-    // takes the token and pauses this one from under us.
-    if (current.playing()) current.pause()
-    else current.play()
-  }, [])
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== ' ') return
-    event.preventDefault()
-    toggle()
-  }
+  const setProgramTime = useCallback(
+    (playhead: Us) => {
+      const store = useSequences.getState()
+      // Playback is not an edit: the playhead goes through `replace`, which skips the history.
+      store.replace(documentId, { ...sequenceOf(store, documentId), playhead })
+    },
+    [documentId],
+  )
 
   return (
-    <div className="flex h-full min-h-0 flex-col" onKeyDown={onKeyDown}>
-      <div className="bg-chassis relative min-h-0 flex-1">
-        <ProgramMonitor documentId={documentId} onEngine={onEngine} onPlayingChange={setPlaying} />
-      </div>
+    <div className="flex h-full min-h-0">
+      <Monitor
+        owner={`${documentId}:source`}
+        title={t('transport.source')}
+        sequence={source}
+        onTime={setSourceTime}
+        placeholder={
+          selected ? null : <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
+        }
+      />
 
-      <div className="border-border bg-base relative h-64 shrink-0 border-t">
-        <TimelineCanvas documentId={documentId} tool={tool} />
+      <Separator orientation="vertical" />
 
-        <Toolbar
-          className="absolute top-2 left-2 z-10"
-          tools={[...VIDEO_TOOLS]}
-          activeTool={tool}
-          onTool={id => isVideoTool(id) && setTool(id)}
-          extras={
-            <ToolButton
-              icon={playing ? mdiPause : mdiPlay}
-              label={playing ? t('transport.pause') : t('transport.play')}
-              tooltip={TIP_RIGHT}
-              shortcut="Space"
-              onClick={toggle}
-            />
-          }
-          onUndo={() => useSequences.getState().undo(documentId)}
-          onRedo={() => useSequences.getState().redo(documentId)}
-          canUndo={undoable}
-          canRedo={redoable}
-        />
-      </div>
+      <Monitor
+        owner={`${documentId}:program`}
+        title={t('transport.program')}
+        sequence={sequence}
+        onTime={setProgramTime}
+      />
     </div>
   )
 }
