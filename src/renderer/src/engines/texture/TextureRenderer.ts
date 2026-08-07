@@ -84,11 +84,19 @@ export class TextureRenderer {
   dispose(): void {
     for (const slot of this.holding.keys()) this.release(slot)
     this.holding.clear()
+    this.releaseSkybox()
+    this.cache.dispose()
 
     this.mesh.geometry.dispose()
     this.material.dispose()
     this.environment?.dispose()
     this.viewport.dispose()
+  }
+
+  /** Like `SkyboxRenderer.releaseSource`: a sky still held is GPU memory nothing displays. */
+  private releaseSkybox(): void {
+    if (this.skybox) this.cache.release(this.skybox, SRGBColorSpace)
+    this.skybox = null
   }
 
   private spin(delta: number): boolean {
@@ -200,6 +208,7 @@ export class TextureRenderer {
 
     const wanted = preview.environment.kind === 'skybox' ? preview.environment.assetId : null
     if (wanted === this.skybox) return
+    this.releaseSkybox()
     this.skybox = wanted
 
     if (!wanted) {
