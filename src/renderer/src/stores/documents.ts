@@ -36,6 +36,13 @@ export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): strin
   return id !== null && state.documents[id]?.kind === kind ? id : null
 }
 
+/**
+ * The scene in front, as a selector. Shared rather than re-declared per panel: a selector built
+ * inside a component body is a new identity on every render, and zustand re-subscribes to it.
+ */
+export const activeSceneId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'scene')
+
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,
   workspace: WorkspaceId,

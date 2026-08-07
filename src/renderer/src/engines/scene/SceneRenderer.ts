@@ -22,8 +22,14 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { token } from '../core/palette'
 import type { Transform } from '@shared/domain/scene'
 import type { SceneNode, SceneState } from './scene-state'
-import { geometryFor, helperFor, lightFor, tuneViewHelper, type LightHelper } from './three-factory'
-import { applyGeometry, applyLight, applyMaterial, standardMaterialOf } from './three-sync'
+import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
+import {
+  applyGeometry,
+  applyLight,
+  applyMaterial,
+  lightFor,
+  standardMaterialOf,
+} from './three-sync'
 import { createMaterialTextures, type MaterialTextures } from './material-textures'
 import { createTextureCache } from './texture-cache'
 

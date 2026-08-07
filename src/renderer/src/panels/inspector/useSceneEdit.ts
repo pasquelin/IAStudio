@@ -1,16 +1,13 @@
 import { useMemo } from 'react'
+import type { GestureProps } from '@/design/styles'
 import type { Command } from '@/engines/core/history'
 import type { SceneState } from '@/engines/scene/scene-state'
 import { useScenes } from '@/stores/scenes'
 
-/** The two ends of a gesture, as the design system's controls report them. */
-export type Gesture = {
-  onGestureStart: () => void
-  onGestureEnd: () => void
-}
-
-export type SceneEdit = Gesture & {
+export type SceneEdit = {
   run: (command: Command<SceneState>) => void
+  /** Spread onto a field, which reports both ends of what the user did in one go. */
+  gesture: Required<GestureProps>
 }
 
 /**
@@ -22,8 +19,10 @@ export function useSceneEdit(documentId: string): SceneEdit {
   return useMemo(
     () => ({
       run: command => useScenes.getState().runCommand(documentId, command),
-      onGestureStart: () => useScenes.getState().beginGesture(documentId),
-      onGestureEnd: () => useScenes.getState().endGesture(documentId),
+      gesture: {
+        onGestureStart: () => useScenes.getState().beginGesture(documentId),
+        onGestureEnd: () => useScenes.getState().endGesture(documentId),
+      },
     }),
     [documentId],
   )

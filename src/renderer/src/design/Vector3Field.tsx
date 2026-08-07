@@ -1,14 +1,14 @@
 import type { Vector3 } from '@shared/domain/scene'
 import type { NumericBounds } from '@/helpers/numeric'
 import { NumberField } from './NumberField'
+import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
-export type Vector3FieldProps = NumericBounds & {
-  label: string
-  value: Vector3
-  onChange: (value: Vector3) => void
-  onGestureStart?: () => void
-  onGestureEnd?: () => void
-}
+export type Vector3FieldProps = NumericBounds &
+  GestureProps & {
+    label: string
+    value: Vector3
+    onChange: (value: Vector3) => void
+  }
 
 const AXES: readonly (keyof Vector3)[] = ['x', 'y', 'z']
 
@@ -26,8 +26,8 @@ export function Vector3Field({
   ...bounds
 }: Vector3FieldProps) {
   return (
-    <div className="flex min-w-0 items-center gap-1 text-[11px]">
-      <span className="text-muted w-16 shrink-0 truncate">{label}</span>
+    <div className={FIELD_ROW}>
+      <span className={FIELD_LABEL}>{label}</span>
 
       <div className="grid min-w-0 flex-1 grid-cols-3 gap-1">
         {AXES.map(axis => (

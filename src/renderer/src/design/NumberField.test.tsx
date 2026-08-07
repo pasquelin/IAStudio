@@ -1,7 +1,32 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { NumberField } from './NumberField'
+
+/**
+ * The field is controlled, so a test that pins `value` never sees the second keystroke of a
+ * number: the guard against re-emitting an unchanged value would swallow it, exactly as it
+ * refuses to re-emit during a drag.
+ */
+function Controlled({
+  onChange,
+  ...props
+}: Partial<Parameters<typeof NumberField>[0]> & { onChange: (value: number) => void }) {
+  const [value, setValue] = useState(props.value ?? 1)
+
+  return (
+    <NumberField
+      label="Radius"
+      {...props}
+      value={value}
+      onChange={next => {
+        setValue(next)
+        onChange(next)
+      }}
+    />
+  )
+}
 
 function renderField(props: Partial<Parameters<typeof NumberField>[0]> = {}) {
   const onChange = vi.fn()
@@ -40,12 +65,15 @@ describe('NumberField', () => {
       expect(onChange).toHaveBeenLastCalledWith(0.5)
     })
 
+    // Nothing to report when the value cannot go further: an unchanged value is not an edit.
     it('stops at the bound', async () => {
-      const { onChange } = renderField({ value: 1, min: 0, max: 1, step: 0.1 })
+      const onChange = vi.fn()
+      render(<Controlled value={1} min={0} max={1} step={0.1} onChange={onChange} />)
 
       await userEvent.type(screen.getByLabelText('Radius'), '{ArrowUp}')
 
-      expect(onChange).toHaveBeenLastCalledWith(1)
+      expect(onChange).not.toHaveBeenCalled()
+      expect(screen.getByLabelText('Radius')).toHaveValue('1')
     })
   })
 
@@ -70,12 +98,24 @@ describe('NumberField', () => {
   })
 
   it('holds the value inside its bounds', async () => {
-    const { onChange } = renderField({ value: 1, min: 0, max: 1 })
+    const onChange = vi.fn()
+    render(<Controlled value={0} min={0} max={1} onChange={onChange} />)
 
     await userEvent.clear(screen.getByLabelText('Radius'))
     await userEvent.type(screen.getByLabelText('Radius'), '5')
 
     expect(onChange).toHaveBeenLastCalledWith(1)
+  })
+
+  // A drag crosses many pixels per step, and a vertical one crosses none: each of those frames
+  // would otherwise rebuild the geometry and re-render the panel for an identical value.
+  it('says nothing when the value has not moved', () => {
+    const { onChange, handle } = renderField({ value: 0, step: 1 })
+
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 0 })
+
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('snaps what is typed to the step', async () => {
@@ -158,6 +198,16 @@ describe('NumberField', () => {
       fireEvent.pointerMove(handle, { pointerId: 1, clientX: 500 })
 
       expect(onChange).toHaveBeenLastCalledWith(1)
+    })
+
+    it('emits once for a drag that crosses the same step twice', () => {
+      const { onChange, handle } = renderField({ value: 0, step: 1 })
+
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 2 })
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 2 })
+
+      expect(onChange).toHaveBeenCalledTimes(1)
     })
   })
 })

@@ -3,14 +3,14 @@ import { NumberField } from '@/design/NumberField'
 import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
 import { Vector3Field } from '@/design/Vector3Field'
+import type { GestureProps } from '@/design/styles'
 import { isVector3, type FieldValue, type PropertyField } from '@/engines/scene/property-fields'
-import type { Gesture } from './useSceneEdit'
 
 export type PropertyControlProps = {
   field: PropertyField
   label: string
   onChange: (value: FieldValue) => void
-  gesture: Gesture
+  gesture: GestureProps
 }
 
 /**
@@ -38,8 +38,18 @@ export function PropertyControl({ field, label, onChange, gesture }: PropertyCon
       )
     }
 
-    const bounds = spec?.control === 'number' ? spec : {}
-    return <NumberField label={label} value={value} {...bounds} onChange={onChange} {...gesture} />
+    const { min, max } = spec?.control === 'number' ? spec : {}
+    return (
+      <NumberField
+        label={label}
+        value={value}
+        min={min}
+        max={max}
+        step={spec?.control === 'number' ? spec.step : undefined}
+        onChange={onChange}
+        {...gesture}
+      />
+    )
   }
 
   if (isVector3(value)) {

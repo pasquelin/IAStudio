@@ -83,7 +83,8 @@ export function createDocumentStore<S>(defaultState: S) {
       histories: {},
 
       runCommand: (documentId, command) => {
-        const merging = gestures.has(documentId) && gestures.get(documentId) === command.id
+        // `undefined` outside a gesture, `null` before its first command: neither is an id.
+        const merging = gestures.get(documentId) === command.id
         step(documentId, (state, history) =>
           merging ? runCoalescing(state, history, command) : run(state, history, command),
         )

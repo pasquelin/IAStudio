@@ -2,8 +2,11 @@ import type {
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
+  TextureSlot,
   Vector3,
 } from '@shared/domain/scene'
+import { isRecord } from '@/helpers/guards'
+import type { NumericBounds } from '@/helpers/numeric'
 
 /*
  * What each field of a descriptor is, so the inspector can be derived from a descriptor rather
@@ -15,7 +18,7 @@ import type {
  */
 
 export type PropertySpec =
-  | { control: 'number'; min?: number; max?: number; step: number }
+  | ({ control: 'number' } & NumericBounds & { step: number })
   /** A value with both ends: how far along its range it sits is what the user is judging. */
   | { control: 'slider'; min: number; max: number; step: number }
   | { control: 'color' }
@@ -115,7 +118,12 @@ const LIGHT_SPECS: SpecsOf<LightDescriptor> = {
 
 const UNIT: PropertySpec = { control: 'slider', min: 0, max: 1, step: 0.01 }
 
-const MATERIAL_SPECS: Record<string, PropertySpec> = {
+/** Exhaustive like its two neighbours, minus the texture slots, which no control describes. */
+type MaterialSpecs = {
+  [F in Exclude<keyof MaterialDescriptor, 'kind' | TextureSlot>]: PropertySpec
+}
+
+const MATERIAL_SPECS: MaterialSpecs = {
   color: COLOR,
   roughness: UNIT,
   metalness: UNIT,
@@ -172,6 +180,5 @@ function isFieldValue(value: unknown): value is FieldValue {
 }
 
 export function isVector3(value: unknown): value is Vector3 {
-  if (typeof value !== 'object' || value === null) return false
-  return ['x', 'y', 'z'].every(axis => typeof Reflect.get(value, axis) === 'number')
+  return isRecord(value) && ['x', 'y', 'z'].every(axis => typeof value[axis] === 'number')
 }

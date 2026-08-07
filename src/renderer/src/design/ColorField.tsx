@@ -1,20 +1,14 @@
 import { cn } from '@/helpers/cn'
-import { FOCUS_RING } from './styles'
+import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
 
-export type ColorFieldProps = {
+export type ColorFieldProps = GestureProps & {
   label: string
   /** Hexadecimal, `#rrggbb` — what the OS picker speaks and what a descriptor stores. */
   value: string
   onChange: (value: string) => void
-  onGestureStart?: () => void
-  onGestureEnd?: () => void
 }
 
-/**
- * A colour swatch that opens the OS picker. The swatch is the input itself rather than a
- * button beside it: two elements for one value is two things to keep in step, and the native
- * control already draws the colour it holds.
- */
+/** A colour swatch that opens the OS picker — the input itself, which already draws its value. */
 export function ColorField({
   label,
   value,
@@ -23,8 +17,8 @@ export function ColorField({
   onGestureEnd,
 }: ColorFieldProps) {
   return (
-    <label className="flex min-w-0 items-center gap-1 text-[11px]">
-      <span className="text-muted w-16 shrink-0 truncate">{label}</span>
+    <label className={FIELD_ROW}>
+      <span className={FIELD_LABEL}>{label}</span>
 
       <input
         type="color"

@@ -15,7 +15,8 @@ import {
 import { describe, expect, it } from 'vitest'
 import { LIGHT_TYPES } from './light-types'
 import { MESH_PRIMITIVES } from './mesh-primitives'
-import { geometryFor, helperFor, lightFor } from './three-factory'
+import { geometryFor, helperFor } from './three-factory'
+import { lightFor } from './three-sync'
 
 describe('geometryFor', () => {
   it('builds every primitive the registry offers', () => {

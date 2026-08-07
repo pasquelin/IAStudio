@@ -14,20 +14,31 @@ export const CONTROL = cn(
 )
 
 /**
- * Hover, selection and keyboard focus of one line in a list — the same three states whether the
- * line sits in a `Tree` or in a `Collection`. Written once because it was written twice: the
- * outliner and the mesh panel draw the very same `SceneNodeRow`, and they were highlighting it
- * in two different greys, with two different corners.
- *
- * The line's content paints no background of its own; this is what sits under it.
+ * Hover, selection and keyboard focus of one line in a list. The same line must not light up
+ * differently depending on whether a `Tree` or a `Collection` is holding it.
  */
 export function rowSkin(selected: boolean): string {
+  // `elevated` is the studio's hover token — what a toolbar button lights up with.
   return cn(
     'rounded-(--radius-sc-sm)',
-    // `elevated` is the studio's hover token — the same one a toolbar button lights up with.
     selected ? 'bg-accent-soft' : 'hover:bg-elevated',
     FOCUS_RING,
   )
+}
+
+/** One property row of an inspector: a label of fixed width, then the control it names. */
+export const FIELD_ROW = 'flex min-w-0 items-center gap-1 text-[11px]'
+
+/** Fixed, so the controls of a section line up rather than each starting where its name ends. */
+export const FIELD_LABEL = 'text-muted w-16 shrink-0 truncate'
+
+/**
+ * Both ends of one gesture. Everything a field emits between them is one thing the user did,
+ * and whoever owns the value is expected to keep exactly one history entry for it.
+ */
+export type GestureProps = {
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
 }
 
 /**

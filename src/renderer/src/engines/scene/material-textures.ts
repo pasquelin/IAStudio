@@ -1,6 +1,7 @@
 import { SRGBColorSpace, type Mesh, type MeshStandardMaterial, type Texture } from 'three'
 import { TEXTURE_SLOTS, type MaterialDescriptor, type TextureSlot } from '@shared/domain/scene'
 import type { TextureCache } from './texture-cache'
+import { giveSecondUvSet } from './three-sync'
 
 export type MaterialTextures = {
   apply: (descriptor: MaterialDescriptor) => void
@@ -9,12 +10,9 @@ export type MaterialTextures = {
 }
 
 /**
- * The texture slots of one mesh, kept in line with its descriptor.
- *
- * Loading is asynchronous, so what a slot wants can change while what it asked for is still in
- * flight: three textures picked in a row must not leave the first one overwriting the third.
- * Each slot therefore holds exactly one reference — on the asset it currently wants, loaded or
- * not — and an arrival for anything else is dropped rather than installed.
+ * The texture slots of one mesh, kept in line with its descriptor. Loading is asynchronous, so
+ * a slot can change its mind while what it asked for is in flight: each holds exactly one
+ * reference — on the asset it wants now, loaded or not — and drops any other arrival.
  */
 export function createMaterialTextures(
   cache: TextureCache,
@@ -29,7 +27,9 @@ export function createMaterialTextures(
     // The base colour map is authored in sRGB; every other map carries data, not colour, and
     // converting it would wash out the normals and lighten the roughness.
     if (slot === 'map') texture.colorSpace = SRGBColorSpace
-    if (slot === 'aoMap') giveSecondUvSet(mesh)
+    // Ambient occlusion reads the second UV set, which no primitive of the studio carries: left
+    // alone, ticking an AO map would do nothing at all.
+    if (slot === 'aoMap') giveSecondUvSet(mesh.geometry)
 
     material[slot] = texture
     // A slot that goes from empty to filled changes the shader program itself.
@@ -70,15 +70,4 @@ export function createMaterialTextures(
       for (const slot of TEXTURE_SLOTS) clear(slot)
     },
   }
-}
-
-/**
- * Ambient occlusion reads the second UV set, which none of the studio's primitives carry: left
- * alone, ticking an AO map would do nothing at all. The first set is what a generated texture
- * is authored against anyway.
- */
-function giveSecondUvSet(mesh: Mesh): void {
-  const { attributes } = mesh.geometry
-  const uv = attributes.uv
-  if (uv && !attributes.uv1) mesh.geometry.setAttribute('uv1', uv)
 }

@@ -1,5 +1,6 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useState, type ReactNode } from 'react'
+import { cn } from '@/helpers/cn'
 import { FOCUS_RING } from './styles'
 import { UiIcon } from './UiIcon'
 
@@ -10,11 +11,7 @@ export type PropertySectionProps = {
   defaultOpen?: boolean
 }
 
-/**
- * One group of properties under a heading that folds. Folding is session state and stays in the
- * component: what a panel had open is not part of the document, and restoring it from a saved
- * scene would fold sections the user never touched.
- */
+/** One group of properties under a heading that folds. What is open is session state. */
 export function PropertySection({ title, children, defaultOpen = true }: PropertySectionProps) {
   const [open, setOpen] = useState(defaultOpen)
 
@@ -24,7 +21,11 @@ export function PropertySection({ title, children, defaultOpen = true }: Propert
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(current => !current)}
-        className={`text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-1 border-none bg-transparent px-2 text-left text-[11px] font-medium tracking-wide uppercase ${FOCUS_RING}`}
+        className={cn(
+          'text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-1',
+          'border-none bg-transparent px-2 text-left text-[11px] font-medium tracking-wide uppercase',
+          FOCUS_RING,
+        )}
       >
         <UiIcon path={open ? mdiChevronDown : mdiChevronRight} size={14} />
         {title}

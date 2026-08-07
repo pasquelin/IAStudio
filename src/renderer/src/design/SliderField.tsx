@@ -1,22 +1,19 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@/helpers/numeric'
-import { FOCUS_RING } from './styles'
+import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
 
-export type SliderFieldProps = {
+export type SliderFieldProps = GestureProps & {
   label: string
   value: number
   min: number
   max: number
   step: number
   onChange: (value: number) => void
-  onGestureStart?: () => void
-  onGestureEnd?: () => void
 }
 
 /**
- * A bounded value — roughness, metalness, the penumbra of a spot. A slider says how far along
- * its range a value sits, which a number field cannot; the number is kept beside it because
- * "somewhere past the middle" is not a value anyone can write down.
+ * A bounded value — roughness, metalness, the penumbra of a spot. The number stays beside the
+ * slider: "somewhere past the middle" is not a value anyone can write down.
  */
 export function SliderField({
   label,
@@ -29,8 +26,8 @@ export function SliderField({
   onGestureEnd,
 }: SliderFieldProps) {
   return (
-    <label className="flex min-w-0 items-center gap-1 text-[11px]">
-      <span className="text-muted w-16 shrink-0 truncate">{label}</span>
+    <label className={FIELD_ROW}>
+      <span className={FIELD_LABEL}>{label}</span>
 
       <input
         type="range"

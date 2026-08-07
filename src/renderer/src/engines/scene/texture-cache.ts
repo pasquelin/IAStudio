@@ -1,11 +1,7 @@
 import type { Texture } from 'three'
 import { assetUrl } from '@shared/domain/asset'
 
-/**
- * How a texture is actually fetched. A port rather than a hard-wired `TextureLoader`, for the
- * same reason `SqliteDriver` is one: jsdom decodes no image, and the cache's whole job — who
- * still holds what, and what to free — is exactly what has to be tested.
- */
+/** A port rather than a hard-wired `TextureLoader`, like `SqliteDriver`: jsdom decodes no image. */
 export type TextureSource = (url: string) => Promise<Texture>
 
 export type TextureCache = {
@@ -28,9 +24,8 @@ type Entry = {
 }
 
 /**
- * One texture per asset, however many materials point at it: a project whose ten meshes share
- * one 4K map should upload it once. Reference counted rather than kept forever, because the
- * GPU memory of a texture nobody displays is memory the viewport does not have.
+ * One texture per asset, however many materials point at it. Reference counted rather than kept
+ * for the session: the GPU memory of a texture nobody displays is memory the viewport lacks.
  */
 export function createTextureCache(load: TextureSource): TextureCache {
   const entries = new Map<string, Entry>()
@@ -41,15 +36,14 @@ export function createTextureCache(load: TextureSource): TextureCache {
   }
 
   return {
-    acquire: async assetId => {
+    acquire: assetId => {
       const existing = entries.get(assetId)
       if (existing) {
         existing.references += 1
         return existing.loading
       }
 
-      const entry: Entry = { references: 1, loading: Promise.resolve(null), texture: null }
-      entry.loading = load(assetUrl(assetId)).then(
+      const loading = load(assetUrl(assetId)).then(
         texture => {
           // Released while it was in flight: freed here rather than kept for a holder that no
           // longer exists.
@@ -68,8 +62,9 @@ export function createTextureCache(load: TextureSource): TextureCache {
         },
       )
 
+      const entry: Entry = { references: 1, loading, texture: null }
       entries.set(assetId, entry)
-      return entry.loading
+      return loading
     },
 
     release: assetId => {

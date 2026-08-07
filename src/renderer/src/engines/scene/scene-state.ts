@@ -58,8 +58,16 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
 
 export const EMPTY_SCENE: SceneState = { nodes: [], selectedId: null }
 
+export type MeshNode = Extract<SceneNode, { type: 'mesh' }>
+export type LightNode = Extract<SceneNode, { type: 'light' }>
+
 export function nodeById(state: SceneState, id: string): SceneNode | null {
   return state.nodes.find(node => node.id === id) ?? null
+}
+
+/** What the panels act on: the node the selection points at, or nothing. */
+export function selectedNode(state: SceneState): SceneNode | null {
+  return state.selectedId ? nodeById(state, state.selectedId) : null
 }
 
 export function childrenOf(state: SceneState, parentId: string | null): SceneNode[] {

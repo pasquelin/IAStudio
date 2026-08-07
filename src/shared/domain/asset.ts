@@ -73,6 +73,18 @@ export type Asset = {
   peaksPath?: string
 }
 
+/** The kinds that decode as an image — the only ones a thumbnail or a texture slot can use. */
+const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
+
+/**
+ * Whether this asset is a picture the studio can serve from disk. One answer to the question,
+ * because a browser that draws a thumbnail and a texture slot that offers one must not disagree
+ * about which assets qualify.
+ */
+export function isLocalPicture(asset: Asset): boolean {
+  return PICTURES.includes(asset.type) && asset.location === 'local' && asset.path !== undefined
+}
+
 export type AssetQuery = {
   type?: AssetType
   tags?: string[]

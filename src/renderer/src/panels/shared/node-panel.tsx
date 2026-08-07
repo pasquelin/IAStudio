@@ -3,11 +3,9 @@ import type { ToolDefinition } from '@/app/tool-components'
 import { EmptyState } from '@/design/EmptyState'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
 import type { SceneNodeType } from '@/engines/scene/scene-state'
-import { activeIdOfKind, useDocuments, type DocumentsSlice } from '@/stores/documents'
+import { activeSceneId, useDocuments } from '@/stores/documents'
 import { NodeActions } from './NodeActions'
 import { NodeList } from './NodeList'
-
-const activeSceneId = (state: DocumentsSlice): string | null => activeIdOfKind(state, 'scene')
 
 /**
  * A panel over one half of the scene. Both halves behave identically — only the registry, the

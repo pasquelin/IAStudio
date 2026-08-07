@@ -4,6 +4,7 @@ import {
   MeshStandardMaterial,
   PointLight,
   SpotLight,
+  type BufferGeometry,
   type Light,
   type Mesh,
 } from 'three'
@@ -13,7 +14,7 @@ import type {
   MaterialDescriptor,
   Vector3,
 } from '@shared/domain/scene'
-import { geometryFor } from './three-factory'
+import { bareLight, geometryFor } from './three-factory'
 
 /*
  * Bringing an existing three.js object in line with an edited descriptor — the other half of
@@ -36,31 +37,44 @@ export function applyMaterial(
   material.metalness = descriptor.metalness
 }
 
+/** The second UV set an occlusion map needs. Absent from every primitive the studio builds. */
+export function giveSecondUvSet(geometry: BufferGeometry): void {
+  const uv = geometry.attributes.uv
+  if (uv && !geometry.attributes.uv1) geometry.setAttribute('uv1', uv)
+}
+
 /**
  * A geometry cannot be mutated into another shape, so this one swaps it — and disposes the one
  * it replaces. Left behind, every character typed in a radius field leaks a buffer on the GPU.
  */
 export function applyGeometry(mesh: Mesh, descriptor: GeometryDescriptor): void {
   const previous = mesh.geometry
-  mesh.geometry = geometryFor(descriptor)
+  const next = geometryFor(descriptor)
+  // The new shape inherits the second UV set, or an occlusion map already in place would stop
+  // doing anything the moment a radius is nudged.
+  if (previous.attributes.uv1) giveSecondUvSet(next)
+
+  mesh.geometry = next
   previous.dispose()
 }
 
+/** A light of the right class, carrying what its descriptor says. */
+export function lightFor(descriptor: LightDescriptor): Light {
+  const light = bareLight(descriptor.kind)
+  applyLight(light, descriptor)
+  return light
+}
+
 /**
- * The light's own parameters. A descriptor never changes kind — the inspector edits a light, it
- * does not convert one — but each branch still checks the class it is about to write to rather
- * than casting: a mismatch leaves the light alone instead of throwing at the user.
+ * The light's own parameters. Each branch checks the class it writes to rather than casting: a
+ * mismatch leaves the light alone instead of throwing at the user.
  */
 export function applyLight(light: Light, descriptor: LightDescriptor): void {
   light.intensity = descriptor.intensity
+  if (descriptor.kind !== 'hemisphere') light.color.set(descriptor.color)
 
   switch (descriptor.kind) {
-    case 'ambient':
-      light.color.set(descriptor.color)
-      return
-
     case 'directional':
-      light.color.set(descriptor.color)
       if (light instanceof DirectionalLight) applyTarget(light, descriptor.target)
       return
 
@@ -71,14 +85,12 @@ export function applyLight(light: Light, descriptor: LightDescriptor): void {
       return
 
     case 'point':
-      light.color.set(descriptor.color)
       if (!(light instanceof PointLight)) return
       light.distance = descriptor.distance
       light.decay = descriptor.decay
       return
 
     case 'spot':
-      light.color.set(descriptor.color)
       if (!(light instanceof SpotLight)) return
       light.distance = descriptor.distance
       light.angle = descriptor.angle

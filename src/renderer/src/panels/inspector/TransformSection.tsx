@@ -22,8 +22,6 @@ function scaled(vector: Vector3, factor: number): Vector3 {
 export function TransformSection({ node, edit }: { node: SceneNode; edit: SceneEdit }) {
   const { t } = useTranslation()
   const { transform } = node
-  const gesture = { onGestureStart: edit.onGestureStart, onGestureEnd: edit.onGestureEnd }
-
   const move = (changes: Partial<Transform>): void =>
     edit.run(setTransform(node.id, { ...transform, ...changes }))
 
@@ -33,7 +31,7 @@ export function TransformSection({ node, edit }: { node: SceneNode; edit: SceneE
         label={t('inspector.name')}
         value={node.name}
         onChange={name => edit.run(renameNode(node.id, name))}
-        {...gesture}
+        {...edit.gesture}
       />
 
       <Vector3Field
@@ -41,7 +39,7 @@ export function TransformSection({ node, edit }: { node: SceneNode; edit: SceneE
         value={transform.position}
         step={0.1}
         onChange={position => move({ position })}
-        {...gesture}
+        {...edit.gesture}
       />
 
       <Vector3Field
@@ -49,7 +47,7 @@ export function TransformSection({ node, edit }: { node: SceneNode; edit: SceneE
         value={scaled(transform.rotation, PER_RADIAN)}
         step={1}
         onChange={degrees => move({ rotation: scaled(degrees, 1 / PER_RADIAN) })}
-        {...gesture}
+        {...edit.gesture}
       />
 
       <Vector3Field
@@ -57,7 +55,7 @@ export function TransformSection({ node, edit }: { node: SceneNode; edit: SceneE
         value={transform.scale}
         step={0.1}
         onChange={scale => move({ scale })}
-        {...gesture}
+        {...edit.gesture}
       />
     </PropertySection>
   )

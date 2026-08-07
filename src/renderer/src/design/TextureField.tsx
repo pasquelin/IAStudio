@@ -1,8 +1,10 @@
 import { mdiCheckboxBlankOutline, mdiClose, mdiTextureBox } from '@mdi/js'
+import { useMemo } from 'react'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { Thumbnail } from './MediaTile'
 import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
+import { FIELD_LABEL, FIELD_ROW } from './styles'
 import { ToolButton } from './ToolButton'
 
 export type TextureOption = {
@@ -28,10 +30,8 @@ export type TextureFieldProps = {
 const THUMBNAIL = 'size-(--sc-control)'
 
 /**
- * One texture slot: what it holds, and a menu of what the project can put in it.
- *
- * What travels is the asset's identifier and never an image — the engine is what loads, caches
- * and frees the picture, so a scene reopened tomorrow resolves the same reference again.
+ * One texture slot: what it holds, and a menu of what the project can put in it. What travels
+ * is the asset's identifier and never an image — the engine loads, caches and frees the picture.
  */
 export function TextureField({
   label,
@@ -42,11 +42,11 @@ export function TextureField({
   clearLabel,
   chooseLabel,
 }: TextureFieldProps) {
-  const chosen = options.find(option => option.id === value)
+  const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
 
   return (
-    <div className="flex min-w-0 items-center gap-1 text-[11px]">
-      <span className="text-muted w-16 shrink-0 truncate">{label}</span>
+    <div className={FIELD_ROW}>
+      <span className={FIELD_LABEL}>{label}</span>
 
       <Thumbnail url={chosen?.url} shape={THUMBNAIL} />
 

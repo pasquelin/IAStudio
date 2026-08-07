@@ -1,15 +1,12 @@
 import type { LightDescriptor } from '@shared/domain/scene'
-import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type SceneNode } from './scene-state'
+import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type LightNode, type MeshNode } from './scene-state'
 
 /**
  * Scene nodes for tests. Declared once so a new required field on `SceneNodeBase` breaks in one
- * place rather than in every suite that builds a node by hand.
+ * place rather than in every suite that builds a node by hand. Narrowed rather than `SceneNode`:
+ * a test that dresses a mesh needs its material to exist.
  */
-/** Narrowed rather than `SceneNode`: a test that dresses a mesh needs its material to exist. */
-export function meshNode(
-  id: string,
-  parentId: string | null = null,
-): Extract<SceneNode, { type: 'mesh' }> {
+export function meshNode(id: string, parentId: string | null = null): MeshNode {
   return {
     id,
     parentId,
@@ -25,7 +22,7 @@ export function meshNode(
 export function lightNodeFixture(
   id: string,
   light: LightDescriptor = { kind: 'ambient', color: '#222222', intensity: 1 },
-): SceneNode {
+): LightNode {
   return {
     id,
     parentId: null,

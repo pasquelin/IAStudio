@@ -5,7 +5,7 @@ import type {
   MaterialDescriptor,
   Transform,
 } from '@shared/domain/scene'
-import { nodeById, type SceneNode, type SceneState } from './scene-state'
+import { nodeById, type MeshNode, type SceneNode, type SceneState } from './scene-state'
 
 /**
  * Scene edits, reimplemented in TypeScript from `mrdoob/three.js/editor/js/commands/` (MIT).
@@ -140,7 +140,7 @@ function patch(state: SceneState, id: string, changes: NodePatch): SceneState {
   }
 }
 
-type MeshPatch = Partial<Pick<Extract<SceneNode, { type: 'mesh' }>, 'geometry' | 'material'>>
+type MeshPatch = Partial<Pick<MeshNode, 'geometry' | 'material'>>
 
 function patchMesh(state: SceneState, id: string, changes: MeshPatch): SceneState {
   return {

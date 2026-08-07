@@ -6,34 +6,26 @@ import {
 } from 'react'
 import { cn } from '@/helpers/cn'
 import { bound, type NumericBounds } from '@/helpers/numeric'
-import { FIELD } from './styles'
+import { FIELD, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
-export type NumberFieldProps = NumericBounds & {
-  label: string
-  value: number
-  onChange: (value: number) => void
-  /**
-   * Both ends of one gesture. Everything the field emits between them is one thing the user
-   * did, and the history is expected to keep exactly one entry for it.
-   */
-  onGestureStart?: () => void
-  onGestureEnd?: () => void
-  /** `inline` shrinks the label to the width of an axis letter, for the fields of a vector. */
-  layout?: 'row' | 'inline'
-}
+export type NumberFieldProps = NumericBounds &
+  GestureProps & {
+    label: string
+    value: number
+    onChange: (value: number) => void
+    /** `inline` shrinks the label to the width of an axis letter, for a vector's three fields. */
+    layout?: 'row' | 'inline'
+  }
 
 /** Units per pixel dragged, for a field that declares no step of its own. */
 const DEFAULT_STEP = 0.1
 
-type Drag = { pointerId: number; x: number; from: number }
+type Drag = { pointerId: number; x: number; from: number; last: number }
 
 /**
- * A number that can be typed or dragged sideways on its label — the gesture of Blender and of
- * Unity, and what makes a viewport adjustable instead of merely fillable. Dragging the label
- * rather than the field leaves the field itself free to be clicked into and typed in.
- *
- * It knows nothing of scenes or of history: it reports where a gesture starts and ends, and
- * whoever owns the value decides what that means.
+ * A number that can be typed, stepped with the arrows, or dragged sideways on its label — the
+ * gesture of Blender and of Unity. It knows nothing of scenes or of history: it reports a value
+ * and the two ends of a gesture, and whoever owns the value decides what that means.
  */
 export function NumberField({
   label,
@@ -54,25 +46,37 @@ export function NumberField({
    */
   const [typed, setTyped] = useState<string | null>(null)
 
-  const bounds: NumericBounds = { min, max, step }
-
   const emit = (raw: number): void => {
-    if (Number.isFinite(raw)) onChange(bound(raw, bounds))
+    if (!Number.isFinite(raw)) return
+    const next = bound(raw, { min, max, step })
+    if (next !== value) onChange(next)
   }
 
   const onPointerDown = (event: ReactPointerEvent<HTMLSpanElement>): void => {
     if (event.button !== 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
-    drag.current = { pointerId: event.pointerId, x: event.clientX, from: value }
+    drag.current = { pointerId: event.pointerId, x: event.clientX, from: value, last: value }
     onGestureStart?.()
   }
 
   const onPointerMove = (event: ReactPointerEvent<HTMLSpanElement>): void => {
     const started = drag.current
     if (!started || started.pointerId !== event.pointerId) return
+
     // From where the drag began rather than from the current value: accumulating deltas drifts,
     // because each one is snapped to the step before it comes back.
-    emit(started.from + (event.clientX - started.x) * (step ?? DEFAULT_STEP))
+    const next = bound(started.from + (event.clientX - started.x) * (step ?? DEFAULT_STEP), {
+      min,
+      max,
+      step,
+    })
+    // A drag crosses many pixels per step, and a vertical one crosses none. Compared against
+    // what the drag last emitted, not the prop: several moves can land before React re-renders,
+    // and each repeat would rebuild the geometry and the whole panel for the same number.
+    if (next === started.last) return
+
+    started.last = next
+    onChange(next)
   }
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>): void => {
@@ -92,13 +96,9 @@ export function NumberField({
   }
 
   return (
-    <div className="flex min-w-0 items-center gap-1 text-[11px]">
-      {/*
-        The label is the drag handle, and deliberately not a `<label>` bound to the field:
-        clicking a bound label focuses what it names, so every drag would leave the field in
-        edit mode. It carries no name for assistive tech either — the input holds that, and
-        the arrow keys are the keyboard's version of the gesture.
-      */}
+    <div className={FIELD_ROW}>
+      {/* Deliberately not a `<label>` bound to the field: a bound label focuses what it names,
+          so every drag would leave the field in edit mode. The input carries the name. */}
       <span
         aria-hidden
         onPointerDown={onPointerDown}
@@ -107,17 +107,14 @@ export function NumberField({
         onPointerCancel={endDrag}
         className={cn(
           'text-muted shrink-0 cursor-ew-resize touch-none select-none',
-          layout === 'row' ? 'w-16 truncate' : '',
+          layout === 'row' && FIELD_LABEL,
         )}
       >
         {label}
       </span>
 
-      {/*
-        Text rather than `number`: an input of that type discards what it cannot parse, so "0."
-        comes back empty and the dot is eaten as it is typed. It also carries spinners no studio
-        wants — the arrow keys below give back what they were for.
-      */}
+      {/* Text rather than `number`, which discards what it cannot parse: "0." would come back
+          empty and the dot would be eaten as it is typed. */}
       <input
         type="text"
         inputMode="decimal"
@@ -139,7 +136,7 @@ export function NumberField({
           setTyped(null)
           onGestureEnd?.()
         }}
-        className={cn(FIELD, 'w-full min-w-0 flex-1 text-[11px]')}
+        className={cn(FIELD, 'min-w-0 flex-1 text-[11px]')}
       />
     </div>
   )

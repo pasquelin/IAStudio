@@ -3,6 +3,8 @@
  * the components so the panels that own this state — and drive a server query from it — can
  * be tested without rendering a virtualized grid.
  */
+import { clamp } from './numeric'
+
 export type CollectionView = 'grid' | 'list'
 
 export type FacetOption = {
@@ -49,10 +51,6 @@ export const DEFAULT_COLLECTION_STATE: CollectionState = {
 
 /** For panels with no grid and no filters: a fixed state, never persisted. */
 export const LIST_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, view: 'list' }
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(high, Math.max(low, value))
-}
 
 export function resizeThumbnails(state: CollectionState, delta: number): CollectionState {
   const thumbnailSize = clamp(state.thumbnailSize + delta, MIN_THUMBNAIL, MAX_THUMBNAIL)
