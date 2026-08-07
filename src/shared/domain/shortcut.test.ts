@@ -113,3 +113,24 @@ describe('acceleratorOf', () => {
     expect(acceleratorOf(null)).toBeUndefined()
   })
 })
+
+describe('shortcutLabel, on the keys that are neither letters nor named', () => {
+  it('prints what the key cap prints', () => {
+    expect(shortcutLabel('Meta+Equal')).toBe('⌘=')
+    expect(shortcutLabel('Meta+Minus')).toBe('⌘−')
+    expect(shortcutLabel('Shift+Meta+Semicolon')).toBe('⇧⌘;')
+    expect(shortcutLabel('Meta+Comma')).toBe('⌘,')
+  })
+
+  it('drops the `Digit` prefix a number key carries', () => {
+    expect(shortcutLabel('Meta+Digit0')).toBe('⌘0')
+  })
+
+  // Every binding the registry ships has to be readable, or the shortcuts screen lists codes.
+  it('never leaves a raw code in a shipped binding', () => {
+    for (const descriptor of COMMAND_REGISTRY) {
+      if (!descriptor.defaultBinding) continue
+      expect(shortcutLabel(descriptor.defaultBinding)).not.toMatch(/Key|Digit|Equal|Minus|Semi/)
+    }
+  })
+})
