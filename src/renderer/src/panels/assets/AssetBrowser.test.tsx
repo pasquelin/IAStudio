@@ -8,7 +8,6 @@ import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { AssetBrowser } from './AssetBrowser'
-import { AssetBrowserActions } from './AssetBrowserActions'
 
 const PROJECT: Project = {
   path: '/tmp/project',
@@ -27,16 +26,6 @@ function asset(id: string, overrides: Partial<Asset> = {}): Asset {
   }
 }
 
-/** Both halves, the way the tool window mounts them. */
-function Panel() {
-  return (
-    <>
-      <AssetBrowserActions />
-      <AssetBrowser />
-    </>
-  )
-}
-
 describe('AssetBrowser', () => {
   beforeEach(() => {
     useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
@@ -46,26 +35,17 @@ describe('AssetBrowser', () => {
 
   // Two situations, and the user can only act on one of them.
   it('tells a project with no asset from no project at all', () => {
-    const { rerender } = render(<Panel />)
+    const { rerender } = render(<AssetBrowser />)
     expect(screen.getByText(/Ouvrez un projet/)).toBeInTheDocument()
 
     useProject.setState({ project: PROJECT })
-    rerender(<Panel />)
+    rerender(<AssetBrowser />)
     expect(screen.getByText(/Aucun asset/)).toBeInTheDocument()
-  })
-
-  // 500 px of bar in a 320 px column header shrank the panel's title to nothing and pushed its
-  // own close button out of the frame.
-  it('keeps the title row to what fits it: a count and an import button', () => {
-    render(<AssetBrowserActions />)
-
-    expect(screen.queryByLabelText('Rechercher…')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Importer un média')).toBeInTheDocument()
   })
 
   it('renders a window over the assets rather than all of them', () => {
     useAssets.setState({ items: Array.from({ length: 2000 }, (_, i) => asset(`a${i}`)) })
-    render(<Panel />)
+    render(<AssetBrowser />)
 
     const shown = screen.getAllByText(/^Asset a\d+$/)
     expect(shown.length).toBeGreaterThan(0)
@@ -76,7 +56,7 @@ describe('AssetBrowser', () => {
     useAssets.setState({
       items: [asset('one', { name: 'Sunset' }), asset('two', { name: 'Robot' })],
     })
-    render(<Panel />)
+    render(<AssetBrowser />)
 
     await userEvent.type(screen.getByLabelText('Rechercher…'), 'sun')
 
@@ -87,7 +67,7 @@ describe('AssetBrowser', () => {
   it('distinguishes a filter that matched nothing from an empty project', async () => {
     useProject.setState({ project: PROJECT })
     useAssets.setState({ items: [asset('one', { name: 'Sunset' })] })
-    render(<Panel />)
+    render(<AssetBrowser />)
 
     await userEvent.type(screen.getByLabelText('Rechercher…'), 'zzz')
 
@@ -96,7 +76,7 @@ describe('AssetBrowser', () => {
 
   it('names the asset type in the user language', () => {
     useAssets.setState({ items: [asset('vid', { name: 'Clip', type: 'video' })] })
-    render(<Panel />)
+    render(<AssetBrowser />)
 
     expect(screen.getByText('Vidéo')).toBeInTheDocument()
   })
@@ -105,7 +85,7 @@ describe('AssetBrowser', () => {
     useAssets.setState({
       items: [asset('img', { name: 'Sunset' }), asset('vid', { name: 'Clip', type: 'video' })],
     })
-    render(<Panel />)
+    render(<AssetBrowser />)
 
     await userEvent.selectOptions(screen.getByLabelText('Type'), 'video')
 
@@ -113,28 +93,12 @@ describe('AssetBrowser', () => {
     expect(screen.queryByText('Sunset')).not.toBeInTheDocument()
   })
 
-  it('imports a media file into the open project', async () => {
-    const importMedia = vi.fn(async () => undefined)
-    useProject.setState({ project: PROJECT })
-    useMedia.setState({ importMedia })
-    render(<Panel />)
-
-    await userEvent.click(screen.getByRole('button', { name: /Importer un média/ }))
-
-    expect(importMedia).toHaveBeenCalledOnce()
-  })
-
-  it('offers no import while no project is open, since there is no catalogue to link into', () => {
-    render(<Panel />)
-    expect(screen.getByRole('button', { name: /Importer un média/ })).toBeDisabled()
-  })
-
   it('shows what the ingest of an imported file is doing', () => {
     useAssets.setState({ items: [asset('vid', { name: 'A001', type: 'video' })] })
     useMedia.setState({
       progress: { vid: { assetId: 'vid', stage: 'proxy', ratio: 0.5 } },
     })
-    render(<Panel />)
+    render(<AssetBrowser />)
 
     // Named after the asset it prepares, not after its id: the row below says the same name.
     expect(screen.getByLabelText('A001 50%')).toBeInTheDocument()
@@ -145,7 +109,7 @@ describe('AssetBrowser', () => {
     const cancel = vi.fn(async () => undefined)
     useAssets.setState({ items: [asset('vid', { name: 'A001', type: 'video' })] })
     useMedia.setState({ progress: { vid: { assetId: 'vid', stage: 'failed', ratio: 1 } }, cancel })
-    render(<Panel />)
+    render(<AssetBrowser />)
 
     await userEvent.click(screen.getByRole('button', { name: /Retirer de la liste/ }))
 
@@ -157,13 +121,13 @@ describe('AssetBrowser', () => {
       capabilities: { ffmpeg: false },
       progress: { vid: { assetId: 'vid', stage: 'probe', ratio: 0.1 } },
     })
-    render(<Panel />)
+    render(<AssetBrowser />)
 
     expect(screen.getByText(/ffmpeg introuvable/)).toBeInTheDocument()
   })
 
   it('leaves the browser alone when nothing is being ingested', () => {
-    render(<Panel />)
+    render(<AssetBrowser />)
     expect(screen.queryByText(/ffmpeg introuvable/)).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
+import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
