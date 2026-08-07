@@ -17,18 +17,36 @@ export type IngestStage =
   /** ffprobe read the file and refused it — it is not media, whatever its extension says. */
   | 'unreadable'
 
-/** Nothing more will happen to this file: the row leaves the list of what is being prepared. */
-export const ENDED_STAGES: readonly IngestStage[] = ['done', 'cancelled', 'duplicate']
+/**
+ * Nothing more will happen to this file. Every one of these left the catalogue different from
+ * how it found it — a length and a waveform filled in, or the row dropped outright.
+ */
+export const TERMINAL_STAGES: readonly IngestStage[] = [
+  'done',
+  'cancelled',
+  'failed',
+  'duplicate',
+  'unreadable',
+]
 
-export function hasEnded(stage: IngestStage): boolean {
-  return ENDED_STAGES.includes(stage)
+export function isTerminal(stage: IngestStage): boolean {
+  return TERMINAL_STAGES.includes(stage)
 }
 
-/** Ended badly: the row stays on screen, in red, because it is the only trace the import left. */
+/** Ended badly. Shown in red, and there is no retry — re-picking the file makes another row. */
 export const FAILED_STAGES: readonly IngestStage[] = ['failed', 'unreadable']
 
 export function hasFailed(stage: IngestStage): boolean {
   return FAILED_STAGES.includes(stage)
+}
+
+/**
+ * Stays on screen until the user clears it, because it is the only trace the import left: a
+ * failure, and a file that was already in the project. Five picked with three already there
+ * would otherwise leave three rows vanishing in silence, and no new asset to show for them.
+ */
+export function needsDismissing(stage: IngestStage): boolean {
+  return hasFailed(stage) || stage === 'duplicate'
 }
 
 export type IngestProgress = {

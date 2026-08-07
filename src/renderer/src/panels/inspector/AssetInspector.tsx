@@ -1,4 +1,5 @@
 import { mdiFolderOpenOutline, mdiRefresh } from '@mdi/js'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { PropertyGroup, PropertyRow } from '@/design/PropertyRow'
@@ -22,6 +23,16 @@ export function AssetInspector({ asset }: { asset: Asset }) {
   const { t } = useTranslation()
   const jobs = useJobs(state => state.jobs)
   const bodies = useJobs(state => state.bodies)
+  const [missing, setMissing] = useState(false)
+
+  // Answers false when the file has moved since it was linked, and rejects when the project
+  // closed under us: a button that silently does nothing reads as a broken button.
+  const reveal = (): void => {
+    void getBridge()
+      ?.assets.reveal(asset.id)
+      .then(shown => setMissing(!shown))
+      .catch(() => setMissing(true))
+  }
 
   const generation = generationOf(asset, jobs, bodies)
   const probe = asset.probe
@@ -54,12 +65,16 @@ export function AssetInspector({ asset }: { asset: Asset }) {
       {asset.location === 'local' && (
         <PropertyGroup title={t('inspector.file')}>
           <PropertyRow label={t('inspector.onDisk')}>
-            <ToolButton
-              icon={mdiFolderOpenOutline}
-              label={t('inspector.reveal')}
-              tooltip={TIP_LEFT}
-              onClick={() => void getBridge()?.assets.reveal(asset.id)}
-            />
+            {missing ? (
+              <span className="text-muted text-[11px]">{t('inspector.fileMissing')}</span>
+            ) : (
+              <ToolButton
+                icon={mdiFolderOpenOutline}
+                label={t('inspector.reveal')}
+                tooltip={TIP_LEFT}
+                onClick={reveal}
+              />
+            )}
           </PropertyRow>
         </PropertyGroup>
       )}

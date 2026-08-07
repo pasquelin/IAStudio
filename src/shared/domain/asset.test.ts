@@ -4,6 +4,7 @@ import {
   assetUrl,
   isAssetType,
   mediaDuration,
+  posterUrl,
   withoutSourcePath,
   type Asset,
 } from './asset'
@@ -32,6 +33,27 @@ describe('asset URLs', () => {
     expect(assetIdFromUrl('scenario://other/asset_1')).toBeNull()
     expect(assetIdFromUrl('scenario://asset/')).toBeNull()
     expect(assetIdFromUrl('not a url')).toBeNull()
+  })
+})
+
+describe('which assets have a picture to show', () => {
+  // The renderer is not told where a linked still sits, so a poster that waited for a path
+  // would never come — the whole asset browser would fall back to its icons.
+  it('offers a poster for a linked still, whose path the window never sees', () => {
+    expect(posterUrl(asset({ type: 'image' }))).toBe(assetUrl('asset-1'))
+  })
+
+  it('offers one for a still copied into the project too', () => {
+    expect(posterUrl(asset({ type: 'image', path: 'assets/img/one.png' }))).not.toBeNull()
+  })
+
+  it('offers none for what does not decode as a picture', () => {
+    expect(posterUrl(asset({ type: 'video' }))).toBeNull()
+    expect(posterUrl(asset({ type: 'audio' }))).toBeNull()
+  })
+
+  it('offers none for an asset that only exists in the cloud', () => {
+    expect(posterUrl(asset({ type: 'image', location: 'cloud' }))).toBeNull()
   })
 })
 

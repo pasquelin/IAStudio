@@ -27,8 +27,23 @@ export function assetFilePath(projectPath: string, relativePath: string): string
 export function servedFileOf(projectPath: string, asset: Asset): string | null {
   if (asset.path) return assetFilePath(projectPath, asset.path)
   if (asset.proxyPath) return assetFilePath(projectPath, asset.proxyPath)
-  if (asset.sourcePath) return isAbsolute(asset.sourcePath) ? asset.sourcePath : null
-  return null
+  return linkedFileOf(asset)
+}
+
+/**
+ * The file the user would call theirs: what the project holds, else the media they linked —
+ * never the proxy, which is ours and which they never put there. This is what "show it in the
+ * Finder" means; the scheme wants the opposite order, and that is `servedFileOf`.
+ */
+export function ownFileOf(projectPath: string, asset: Asset): string | null {
+  if (asset.path) return assetFilePath(projectPath, asset.path)
+  return linkedFileOf(asset)
+}
+
+/** A linked media sits outside the project, so only an absolute path can name it. */
+function linkedFileOf(asset: Asset): string | null {
+  if (!asset.sourcePath) return null
+  return isAbsolute(asset.sourcePath) ? asset.sourcePath : null
 }
 
 /**

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath } from '@shared/domain/asset'
-import { assetFilePath, servedFileOf } from '@main/assets/protocol'
+import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { probeWav } from '@main/media/wav'
@@ -53,8 +53,9 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.assetsReveal, async (_event, assetId) => {
     const asset = await project.catalog().find(parseAssetId(assetId))
-    // The same resolver the scheme serves through, so a stored path cannot point outside.
-    const file = asset ? servedFileOf(project.path(), asset) : null
+    // Their file, not our proxy: showing someone `.index/proxies/ab12….mp4` in place of the
+    // rush they linked is showing them a file they never made.
+    const file = asset ? ownFileOf(project.path(), asset) : null
     if (!file) return false
 
     reveal(file)

@@ -70,6 +70,12 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
   const running = new Map<string, AbortController>()
   const waiting: (() => void)[] = []
   let active = 0
+  /**
+   * Hashes being ingested right now. The catalogue cannot answer for them: a row only gains its
+   * hash once its ingest ends, so two picks of the same bytes in one batch would both find
+   * nothing — and then write the same proxy file from two ffmpeg processes at once.
+   */
+  const claimed = new Set<string>()
 
   // A pool, not a burst: forty rushes picked at once would be forty ffmpeg processes.
   const acquire = async (): Promise<void> => {
@@ -90,6 +96,8 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
       const cancelled = (): boolean => controller.signal.aborted
       const fields: Partial<Asset> = { sourcePath }
       let stage: IngestStage = 'queued'
+      /** The hash this ingest claimed, to be released whatever happens to it. */
+      let mine: string | null = null
 
       const advance = (next: IngestStage): void => {
         stage = next
@@ -121,8 +129,17 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         fields.hash = hash
         if (cancelled()) return
 
-        // The same bytes are already in the catalogue: the row that is there keeps its tags,
-        // its proxy and its waveform, and this second pick reuses it rather than doubling it.
+        // Claimed before the catalogue is asked, and without an await in between: the question
+        // and the answer must not be separated, or two picks of the same bytes both hear "no".
+        if (claimed.has(hash)) {
+          stage = 'duplicate'
+          return
+        }
+        claimed.add(hash)
+        mine = hash
+
+        // The row already in the catalogue keeps its tags, its proxy and its waveform, and this
+        // second pick reuses it rather than doubling it.
         if (await deps.duplicateExists(assetId, hash)) {
           stage = 'duplicate'
           return
@@ -172,12 +189,15 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
       } finally {
         release()
         running.delete(assetId)
+        if (mine) claimed.delete(mine)
 
         // Two outcomes leave nothing worth keeping: a file that is not media, and bytes the
         // catalogue already holds. Both drop the row this pick minted rather than write to it.
         // `failed` is not one of them — a proxy that broke after a good probe keeps its row.
         if (stage === 'duplicate' || stage === 'unreadable') {
-          await deps.discard(assetId)
+          // Swallowed: this runs in a `finally`, and the project may have been closed while the
+          // file was being read — a throw here would escape the ingest nobody is awaiting.
+          await deps.discard(assetId).catch(() => {})
         } else if (stage !== 'queued') {
           // Saved whatever else happened: a proxy that failed after the probe and the hash
           // succeeded must not throw them away — there is no retry, and re-picking makes a

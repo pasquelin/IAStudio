@@ -128,12 +128,13 @@ const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
  * because a browser that draws a thumbnail and a texture slot that offers one must not disagree
  * about which assets qualify.
  *
- * `sourcePath` counts as much as `path`: an imported still is linked where it lies, never copied
- * into the project, and it has a picture all the same.
+ * The file is not named here: the main process resolves it from the id, for a still copied into
+ * the project as much as for one linked where it lies — and the renderer is never told where
+ * either sits (`withoutSourcePath`). A file gone missing answers 404, which every consumer of
+ * `posterUrl` already falls back from.
  */
 export function isLocalPicture(asset: Asset): boolean {
-  const onDisk = asset.path ?? asset.sourcePath
-  return PICTURES.includes(asset.type) && asset.location === 'local' && onDisk !== undefined
+  return PICTURES.includes(asset.type) && asset.location === 'local'
 }
 
 /**

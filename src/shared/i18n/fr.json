@@ -353,6 +353,7 @@
       "file": "Fichier",
       "onDisk": "Emplacement",
       "reveal": "Révéler dans le gestionnaire de fichiers",
+      "fileMissing": "Fichier introuvable",
       "clip": "Clip",
       "source": "Source",
       "track": "Piste",

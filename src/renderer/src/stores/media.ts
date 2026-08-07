@@ -1,5 +1,10 @@
 import { create } from 'zustand'
-import { hasEnded, type IngestProgress, type MediaCapabilities } from '@shared/domain/media'
+import {
+  isTerminal,
+  needsDismissing,
+  type IngestProgress,
+  type MediaCapabilities,
+} from '@shared/domain/media'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
@@ -70,14 +75,13 @@ export const useMedia = create<MediaState>()((set, get) => ({
   },
 
   apply: progress => {
-    // The duration, the proxy and the waveform are all known only now; a duplicate had its row
-    // dropped, and the browser still shows the one the import optimistically added.
-    if (progress.stage === 'done' || progress.stage === 'duplicate') {
-      useAssets.getState().invalidate()
-    }
+    // Every outcome changed the catalogue: a finished ingest filled in the duration, the proxy
+    // and the waveform, and a duplicate or an unreadable file had the row the import
+    // optimistically added dropped from under it.
+    if (isTerminal(progress.stage)) useAssets.getState().invalidate()
 
     set(state =>
-      hasEnded(progress.stage)
+      isTerminal(progress.stage) && !needsDismissing(progress.stage)
         ? { progress: without(state.progress, progress.assetId) }
         : { progress: { ...state.progress, [progress.assetId]: progress } },
     )

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { IngestProgress } from '@shared/domain/media'
+import type { IngestProgress, IngestStage } from '@shared/domain/media'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from './assets'
 import { useMedia } from './media'
@@ -99,5 +99,24 @@ describe('media store', () => {
 
     expect(cancel).toHaveBeenCalledWith('a')
     expect(useMedia.getState().progress['a']).toBeUndefined()
+  })
+
+  it('refreshes the browser on every outcome, since each one changed the catalogue', () => {
+    const outcomes: IngestStage[] = ['done', 'duplicate', 'unreadable', 'failed', 'cancelled']
+    for (const stage of outcomes) {
+      const invalidate = vi.spyOn(useAssets.getState(), 'invalidate')
+      useMedia.getState().apply({ assetId: 'asset-1', stage, ratio: 1 })
+      expect(invalidate, stage).toHaveBeenCalled()
+      invalidate.mockRestore()
+    }
+  })
+
+  // The row was minted optimistically by the import and the main process has since dropped it.
+  it('keeps a duplicate on screen, and takes a finished file off', () => {
+    useMedia.getState().apply({ assetId: 'asset-1', stage: 'duplicate', ratio: 1 })
+    expect(useMedia.getState().progress['asset-1']?.stage).toBe('duplicate')
+
+    useMedia.getState().apply({ assetId: 'asset-2', stage: 'done', ratio: 1 })
+    expect(useMedia.getState().progress['asset-2']).toBeUndefined()
   })
 })

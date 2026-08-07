@@ -273,6 +273,32 @@ describe('media service', () => {
     expect(injected.run).not.toHaveBeenCalled()
   })
 
+  // Two picks of the same bytes in one batch: the catalogue cannot tell them apart, since a
+  // row only gains its hash once its ingest ends — and both would then write the same proxy.
+  it('drops the second of two identical files picked together', async () => {
+    const injected = deps({ concurrency: () => 2 })
+    const service = createMediaService(injected)
+
+    await Promise.all([
+      service.ingest('asset-1', '/A001.mov', 'video'),
+      service.ingest('asset-2', '/A001 copy.mov', 'video'),
+    ])
+
+    expect(injected.discard).toHaveBeenCalledTimes(1)
+    expect(injected.save).toHaveBeenCalledTimes(1)
+  })
+
+  it('lets the same bytes through again once the first ingest is over', async () => {
+    const injected = deps()
+    const service = createMediaService(injected)
+
+    await service.ingest('asset-1', '/A001.mov', 'video')
+    await service.ingest('asset-2', '/A001.mov', 'video')
+
+    // Nothing claimed any more: only the catalogue decides now, and this one says no duplicate.
+    expect(injected.discard).not.toHaveBeenCalled()
+  })
+
   it('leaves an audio-less file without peaks', async () => {
     const injected = deps({
       probe: vi.fn(async (): Promise<ProbeOutcome> => ({

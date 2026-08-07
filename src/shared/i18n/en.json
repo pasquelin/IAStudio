@@ -353,6 +353,7 @@
       "file": "File",
       "onDisk": "Location",
       "reveal": "Show in the file manager",
+      "fileMissing": "File not found",
       "clip": "Clip",
       "source": "Source",
       "track": "Track",
