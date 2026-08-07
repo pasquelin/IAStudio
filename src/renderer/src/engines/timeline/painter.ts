@@ -70,7 +70,7 @@ function computePalette(): Palette {
 
   return {
     ruler: token('--color-chassis'),
-    track: token('--color-base'),
+    track: token('--color-panel'),
     trackAlt: token('--color-surface'),
     border: token('--color-border'),
     clip: token('--color-elevated'),
