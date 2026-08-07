@@ -13,6 +13,8 @@
   },
   "panels": {
     "layers": "Layers",
+    "meshes": "Meshes",
+    "lights": "Lights",
     "explorer": "Explorer",
     "models": "Models",
     "generator": "Generate",

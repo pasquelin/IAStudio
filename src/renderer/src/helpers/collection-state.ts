@@ -47,6 +47,9 @@ export const DEFAULT_COLLECTION_STATE: CollectionState = {
   selections: {},
 }
 
+/** For panels with no grid and no filters: a fixed state, never persisted. */
+export const LIST_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, view: 'list' }
+
 function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value))
 }

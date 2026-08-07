@@ -41,6 +41,19 @@ describe('Collection', () => {
     expect(screen.getAllByText(/^Row \d+$/).length).toBeLessThan(200)
   })
 
+  // A panel with no thumbnails would otherwise show a grid of empty squares.
+  it('stays a list when no card renderer is given, whatever the state says', () => {
+    render(
+      <Collection
+        items={rows(3)}
+        state={{ ...DEFAULT_COLLECTION_STATE, view: 'grid' }}
+        renderRow={item => <span>row {item.name}</span>}
+      />,
+    )
+
+    expect(screen.getByText('row Row 0')).toBeInTheDocument()
+  })
+
   it('lays out more columns as the thumbnails shrink', () => {
     const { rerender } = renderCollection(rows(500), { thumbnailSize: 200 })
     const wide = screen.getAllByText(/^Row \d+$/).length

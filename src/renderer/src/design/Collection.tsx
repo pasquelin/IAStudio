@@ -13,7 +13,11 @@ const PREFETCH_ROWS = 3
 export type CollectionProps<T extends { id: string }> = {
   items: readonly T[]
   state: CollectionState
-  renderCard: (item: T) => ReactNode
+  /**
+   * Absent keeps the collection in list mode whatever `state.view` says: a panel with no
+   * thumbnails has no card to draw, and inventing one so it is never called is noise.
+   */
+  renderCard?: (item: T) => ReactNode
   renderRow: (item: T) => ReactNode
   selectedId?: string | null
   onSelect?: (item: T) => void
@@ -91,7 +95,7 @@ export function Collection<T extends { id: string }>({
   rowHeight = ROW_HEIGHT,
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
-  const grid = state.view === 'grid'
+  const grid = state.view === 'grid' && renderCard !== undefined
   const fitting = useGrid(scroller, state.thumbnailSize)
 
   const columns = grid ? fitting.columns : 1
@@ -166,7 +170,7 @@ export function Collection<T extends { id: string }>({
                     className={grid ? undefined : 'h-full w-full'}
                     onSelect={onSelect ? () => onSelect(item) : undefined}
                   >
-                    {grid ? renderCard(item) : renderRow(item)}
+                    {grid && renderCard ? renderCard(item) : renderRow(item)}
                   </CollectionCell>
                 ))}
               </div>

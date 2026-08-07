@@ -4,7 +4,9 @@ import {
   mdiFolderOutline,
   mdiImageMultipleOutline,
   mdiLayersOutline,
+  mdiLightbulbOutline,
   mdiProgressClock,
+  mdiShapeOutline,
 } from '@mdi/js'
 import {
   placementOf,
@@ -26,6 +28,8 @@ export type Tool = {
 
 const ICONS: Record<ToolId, string> = {
   layers: mdiLayersOutline,
+  meshes: mdiShapeOutline,
+  lights: mdiLightbulbOutline,
   explorer: mdiFolderOutline,
   models: mdiCubeScan,
   generator: mdiCreationOutline,

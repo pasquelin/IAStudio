@@ -13,6 +13,8 @@
   },
   "panels": {
     "layers": "Calques",
+    "meshes": "Mailles",
+    "lights": "Lumières",
     "explorer": "Explorateur",
     "models": "Modèles",
     "generator": "Génération",
