@@ -4,6 +4,7 @@ import { Explorer } from '@/panels/Explorer'
 import { Generator } from '@/panels/Generator'
 import { Jobs } from '@/panels/Jobs'
 import { Models } from '@/panels/Models'
+import { LayersActions, LayersPanel } from '@/spaces/image/LayersPanel'
 import type { ToolId } from './tools'
 
 export type ToolDefinition = {
@@ -14,6 +15,7 @@ export type ToolDefinition = {
 
 /** Tool content table, kept apart from the registry so `tools.ts` stays free of UI imports. */
 export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
+  layers: { Content: LayersPanel, Actions: LayersActions },
   explorer: { Content: Explorer },
   models: { Content: Models },
   generator: { Content: Generator },

@@ -18,8 +18,11 @@ export function canvasOf(state: Readable, documentId: string): CanvasState {
   return state.canvases[documentId] ?? DEFAULT_CANVAS
 }
 
+// Shared: `historyOf` runs on every selector pass, and a fresh pair per call is garbage.
+const NO_HISTORY: History<CanvasState> = emptyHistory<CanvasState>()
+
 export function historyOf(state: Readable, documentId: string): History<CanvasState> {
-  return state.histories[documentId] ?? emptyHistory<CanvasState>()
+  return state.histories[documentId] ?? NO_HISTORY
 }
 
 /**

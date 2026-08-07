@@ -1,5 +1,5 @@
 import type { Command } from '../core/history'
-import { clampOpacity, type BlendMode, type CanvasState, type Layer } from './canvas-state'
+import { clampOpacity, type CanvasState, type Layer } from './canvas-state'
 
 /**
  * Layer edits, on the same Command model as the scene ones. `engines/core/history` runs them —
@@ -82,14 +82,6 @@ export function setLayerOpacity(id: string, opacity: number): Command<CanvasStat
 
 export function setLayerVisible(id: string, visible: boolean): Command<CanvasState> {
   return patch(`layer:visible:${id}`, id, { visible })
-}
-
-export function setLayerLocked(id: string, locked: boolean): Command<CanvasState> {
-  return patch(`layer:locked:${id}`, id, { locked })
-}
-
-export function setLayerBlend(id: string, blend: BlendMode): Command<CanvasState> {
-  return patch(`layer:blend:${id}`, id, { blend })
 }
 
 export function renameLayer(id: string, name: string): Command<CanvasState> {

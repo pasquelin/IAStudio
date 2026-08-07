@@ -4,22 +4,56 @@
  * enriches it with icons and components. Duplicating it in the main process would degrade
  * `ToolId` to `string` and force a cast back on the other side.
  */
+import type { WorkspaceId } from './workspace'
+
 export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
 
-export type ToolId = 'explorer' | 'models' | 'generator' | 'assets' | 'jobs'
+export type ToolId = 'layers' | 'explorer' | 'models' | 'generator' | 'assets' | 'jobs'
+
+/**
+ * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
+ * a separator: icons above it open in the first half, icons below in the second.
+ *
+ * `primary` is the half nearest the window edge the zone hangs from — the top of a side column,
+ * the left of the bottom strip.
+ */
+export type ToolSlot = 'primary' | 'secondary'
 
 export type ToolPlacement = {
   id: ToolId
   zone: ToolZone
+  slot: ToolSlot
+  /** Workspaces the tool belongs to. Absent means every one of them. */
+  workspaces?: readonly WorkspaceId[]
 }
 
+export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
+
+/**
+ * Tools sharing a zone AND a slot take turns; tools in different slots of the same zone show
+ * together — stacked in a side column, side by side in a strip.
+ */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
-  { id: 'explorer', zone: 'left' },
-  { id: 'models', zone: 'right' },
-  { id: 'generator', zone: 'right' },
-  { id: 'assets', zone: 'bottom' },
-  { id: 'jobs', zone: 'bottom' },
+  { id: 'layers', zone: 'left', slot: 'primary', workspaces: ['image'] },
+  { id: 'explorer', zone: 'left', slot: 'secondary' },
+  { id: 'models', zone: 'right', slot: 'primary' },
+  { id: 'generator', zone: 'right', slot: 'primary' },
+  { id: 'assets', zone: 'bottom', slot: 'primary' },
+  { id: 'jobs', zone: 'bottom', slot: 'primary' },
 ]
+
+/**
+ * Takes `unknown` on purpose: it doubles as the guard for ids read back from persisted state,
+ * where an entry left over from an older version must be dropped rather than trusted.
+ */
+export function placementOf(id: unknown): ToolPlacement | null {
+  return TOOL_PLACEMENTS.find(placement => placement.id === id) ?? null
+}
+
+/** A tool with no `workspaces` belongs everywhere; one with a list belongs only to that list. */
+export function servesWorkspace(placement: ToolPlacement, workspace: WorkspaceId): boolean {
+  return placement.workspaces === undefined || placement.workspaces.includes(workspace)
+}
 
 export const TOOL_ZONES: readonly ToolZone[] = ['left', 'right', 'top', 'bottom']
 

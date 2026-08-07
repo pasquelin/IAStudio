@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/design/cn'
 import { Toolbar } from '@/design/Toolbar'
+import { TIP_RIGHT } from '@/design/tooltip'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
-import { hasBrushSettings, IMAGE_TOOLS, toolById } from './image-tools'
-import { LayersPanel } from './LayersPanel'
+import { canvasToolFor, cursorFor, DEFAULT_MODES, IMAGE_TOOLS } from './image-tools'
 
 export type ImageDocumentProps = { documentId: string }
 
@@ -20,12 +20,13 @@ const CHECKER = cn(
 )
 
 export function ImageDocument({ documentId }: ImageDocumentProps) {
-  const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<CanvasEngine | null>(null)
 
-  const [tool, setTool] = useState('brush')
-  const [eraserMode, setEraserMode] = useState('point')
+  const [tool, setTool] = useState('paint')
+  // One armed mode per group, not one state per tool: a new group would otherwise mean a new
+  // `useState` and a new branch in the mapping below.
+  const [modes, setModes] = useState<Record<string, string>>(DEFAULT_MODES)
   const [brush, setBrush] = useState<BrushSettings>(DEFAULT_BRUSH)
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
@@ -63,23 +64,33 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     engine.current?.setBrush(brush)
   }, [brush])
 
+  const mode = modes[tool]
+
   useEffect(() => {
-    const selected = toolById(tool)
-    if (selected) engine.current?.setTool(selected.tool)
-  }, [tool])
+    const canvasTool = canvasToolFor(tool, mode)
+    if (canvasTool) engine.current?.setTool(canvasTool)
+  }, [tool, mode])
 
-  const pick = useCallback((_toolId: string, modeId: string) => setEraserMode(modeId), [])
+  // Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
+  // active has to hand over the ellipse, not merely remember it for later.
+  const pick = useCallback((toolId: string, modeId: string) => {
+    setModes(current => ({ ...current, [toolId]: modeId }))
+    setTool(toolId)
+  }, [])
 
-  const tools = IMAGE_TOOLS.map(entry => ({
-    ...entry,
-    activeMode: entry.id === 'eraser' ? eraserMode : undefined,
-  }))
+  // The colour input fires continuously while the swatch is dragged; without this every frame
+  // of that drag rebuilds one object per group for a list that did not change.
+  const tools = useMemo(
+    () => IMAGE_TOOLS.map(entry => ({ ...entry, activeMode: modes[entry.id] })),
+    [modes],
+  )
 
   return (
     <div className="flex h-full min-h-0">
       <div className={cn('relative min-w-0 flex-1', CHECKER)}>
-        {/* Pixi appends its own canvas here — see `CanvasEngine.mount`. */}
-        <div ref={hostRef} className="absolute inset-0" />
+        {/* Pixi appends its own canvas here — see `CanvasEngine.mount`. The cursor goes on the
+            host rather than the canvas, which Pixi owns and replaces on every mount. */}
+        <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
 
         <Toolbar
           className="absolute top-2 left-2"
@@ -93,20 +104,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           canUndo={undoable}
           canRedo={redoable}
         />
-
-        {hasBrushSettings(tool) && (
-          <div className="absolute top-2 left-16">
-            <ToolSettings brush={brush} onBrush={setBrush} />
-          </div>
-        )}
       </div>
-
-      <aside
-        className="border-border bg-base w-52 shrink-0 border-l"
-        aria-label={t('layers.title')}
-      >
-        <LayersPanel documentId={documentId} />
-      </aside>
     </div>
   )
 }
@@ -135,56 +133,13 @@ function BrushControls({
       */}
       <input
         type="color"
-        aria-label={t('imageTools.color')}
+        {...TIP_RIGHT(t('imageTools.color'), undefined, t('imageTools.colorHint'))}
         value={`#${brush.color.toString(16).padStart(6, '0')}`}
         onChange={event =>
           onBrush({ ...brush, color: Number.parseInt(event.target.value.slice(1), 16) })
         }
         className={cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')}
       />
-    </div>
-  )
-}
-
-/**
- * The active tool's settings, laid beside the bar rather than inside it: a form squeezed into
- * a 28px column is unreadable, and the bar is furniture, not a panel.
- */
-function ToolSettings({
-  brush,
-  onBrush,
-}: {
-  brush: BrushSettings
-  onBrush: (next: BrushSettings) => void
-}) {
-  const { t } = useTranslation()
-
-  const rows: { key: string; label: string; value: number; min: number; max: number }[] = [
-    { key: 'size', label: t('imageTools.size'), value: brush.size, min: 1, max: 200 },
-    { key: 'hardness', label: t('imageTools.hardness'), value: brush.hardness, min: 0, max: 1 },
-    { key: 'opacity', label: t('imageTools.opacity'), value: brush.opacity, min: 0, max: 1 },
-  ]
-
-  return (
-    <div className="border-border bg-surface flex items-center gap-3 rounded-(--radius-sc-lg) border px-3 py-1.5 shadow-(--sc-shadow-furniture)">
-      {rows.map(row => (
-        <label key={row.key} className="flex items-center gap-1.5">
-          <span className="text-muted text-[11px]">{row.label}</span>
-          <input
-            type="range"
-            min={row.min}
-            max={row.max}
-            step={row.max === 1 ? 0.01 : 1}
-            value={row.value}
-            aria-label={row.label}
-            onChange={event => onBrush({ ...brush, [row.key]: Number(event.target.value) })}
-            className="w-24 cursor-pointer"
-          />
-          <span className="text-text w-8 text-right text-[11px] tabular-nums">
-            {row.max === 1 ? Math.round(row.value * 100) : Math.round(row.value)}
-          </span>
-        </label>
-      ))}
     </div>
   )
 }

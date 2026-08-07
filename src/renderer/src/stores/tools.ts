@@ -1,25 +1,44 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { isHorizontal, type ToolId, type ToolZone } from '@shared/domain/tool'
+import {
+  isHorizontal,
+  placementOf,
+  TOOL_SLOTS,
+  TOOL_ZONES,
+  type ToolId,
+  type ToolSlot,
+  type ToolZone,
+} from '@shared/domain/tool'
 
 export const MIN_SIZE = 140
 
 /** Room the documents area must keep, whatever the side panels ask for. */
 export const MIN_CENTER = 240
 
-type OpenByZone = Partial<Record<ToolZone, ToolId | null>>
+/** Room a split keeps for the half it is taken from. */
+export const MIN_SPLIT = 100
+
+/** One tool per half, so an icon click swaps rather than stacks. An absent key is a closed
+ * half — there is no second way to say it. */
+type ZoneSlots = Partial<Record<ToolSlot, ToolId>>
+type OpenByZone = Partial<Record<ToolZone, ZoneSlots>>
 type SizesByZone = Partial<Record<ToolZone, number>>
 
 type ToolsState = {
   open: OpenByZone
+  /** The zone's own length: a width for the side columns, a height for the strips. */
   sizes: SizesByZone
+  /** Length the second half takes inside its zone, along the zone's other axis. */
+  splits: SizesByZone
   /** Last clicked zone: the one whose rail icon gets accented. */
   focusedZone: ToolZone | null
   toggle: (zone: ToolZone, tool: ToolId) => void
-  close: (zone: ToolZone) => void
+  close: (zone: ToolZone, slot: ToolSlot) => void
   focus: (zone: ToolZone | null) => void
   /** `available`: the container's dimension along the zone's axis. */
   resize: (zone: ToolZone, size: number, available: number) => void
+  /** Moves the divider between a zone's two halves. */
+  resplit: (zone: ToolZone, size: number, available: number) => void
   /** Re-clamps every zone after the window changed size. */
   fit: (width: number, height: number) => void
   reset: () => void
@@ -32,10 +51,12 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
   bottom: 240,
 }
 
+export const DEFAULT_SPLIT = 240
+
 const DEFAULT_OPEN: OpenByZone = {
-  left: 'explorer',
-  right: 'generator',
-  bottom: 'assets',
+  left: { secondary: 'explorer' },
+  right: { primary: 'generator' },
+  bottom: { primary: 'assets' },
 }
 
 const OPPOSITE: Record<ToolZone, ToolZone> = {
@@ -55,8 +76,56 @@ export function clamp(size: number, available: number, opposite: number): number
   return Math.min(ceiling, Math.max(MIN_SIZE, Math.round(size)))
 }
 
+/** Same idea one level down: neither half of a zone may swallow the other. */
+export function clampSplit(size: number, available: number): number {
+  const ceiling = Math.max(MIN_SPLIT, Math.round(available - MIN_SPLIT))
+  return Math.min(ceiling, Math.max(MIN_SPLIT, Math.round(size)))
+}
+
+/** True once either half holds something: an empty zone takes no room at all. */
+function isZoneOpen(open: OpenByZone, zone: ToolZone): boolean {
+  const slots = open[zone] ?? {}
+  return TOOL_SLOTS.some(slot => slots[slot] !== undefined)
+}
+
 function sizeOf(sizes: SizesByZone, zone: ToolZone, open: OpenByZone): number {
-  return open[zone] ? (sizes[zone] ?? DEFAULT_SIZES[zone]) : 0
+  return isZoneOpen(open, zone) ? (sizes[zone] ?? DEFAULT_SIZES[zone]) : 0
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+/**
+ * Reads what version 2 wrote — one bare id per zone — and lands it in the slot that tool
+ * declares today. A version bump must not cost someone the layout they arranged.
+ */
+export function openFrom(persisted: unknown): OpenByZone {
+  if (!isRecord(persisted)) return DEFAULT_OPEN
+
+  const open: OpenByZone = {}
+  for (const zone of TOOL_ZONES) {
+    const slots = slotsFrom(Reflect.get(persisted, zone))
+    if (slots) open[zone] = slots
+  }
+  return open
+}
+
+function slotsFrom(stored: unknown): ZoneSlots | null {
+  if (typeof stored === 'string') {
+    const placement = placementOf(stored)
+    return placement ? { [placement.slot]: placement.id } : {}
+  }
+  if (!isRecord(stored)) return null
+
+  const slots: ZoneSlots = {}
+  for (const slot of TOOL_SLOTS) {
+    // Through `placementOf`, so an id no version knows any more is dropped rather than
+    // reaching `TOOL_COMPONENTS` and blanking the window.
+    const placement = placementOf(Reflect.get(stored, slot))
+    if (placement) slots[slot] = placement.id
+  }
+  return slots
 }
 
 export const useTools = create<ToolsState>()(
@@ -64,63 +133,95 @@ export const useTools = create<ToolsState>()(
     set => ({
       open: DEFAULT_OPEN,
       sizes: {},
+      splits: {},
       focusedZone: null,
 
       toggle: (zone, tool) =>
         set(state => {
-          const alreadyOpen = state.open[zone] === tool
+          const slot = placementOf(tool)?.slot
+          if (!slot) return state
+
+          // Clicking the tool already up closes its half; clicking another swaps that half.
+          const next = { ...(state.open[zone] ?? {}) }
+          if (next[slot] === tool) delete next[slot]
+          else next[slot] = tool
+
+          const open = { ...state.open, [zone]: next }
+          if (isZoneOpen(open, zone)) return { open, focusedZone: zone }
+          // Emptying this zone must not steal the accent from whichever other zone had it.
+          return { open, focusedZone: state.focusedZone === zone ? null : state.focusedZone }
+        }),
+
+      close: (zone, slot) =>
+        set(state => {
+          const next = { ...(state.open[zone] ?? {}) }
+          delete next[slot]
+          const open = { ...state.open, [zone]: next }
           return {
-            open: { ...state.open, [zone]: alreadyOpen ? null : tool },
-            focusedZone: alreadyOpen ? null : zone,
+            open,
+            focusedZone:
+              !isZoneOpen(open, zone) && state.focusedZone === zone ? null : state.focusedZone,
           }
         }),
 
-      close: zone =>
-        set(state => ({
-          open: { ...state.open, [zone]: null },
-          focusedZone: state.focusedZone === zone ? null : state.focusedZone,
-        })),
+      focus: zone => set(state => (state.focusedZone === zone ? state : { focusedZone: zone })),
 
-      focus: zone => set({ focusedZone: zone }),
-
+      // Both guarded: `persist` writes localStorage on every `set`, and a drag past the ceiling
+      // clamps to the same number for as long as the pointer keeps going.
       resize: (zone, size, available) =>
-        set(state => ({
-          sizes: {
-            ...state.sizes,
-            [zone]: clamp(size, available, sizeOf(state.sizes, OPPOSITE[zone], state.open)),
-          },
-        })),
+        set(state => {
+          const next = clamp(size, available, sizeOf(state.sizes, OPPOSITE[zone], state.open))
+          if (next === state.sizes[zone]) return state
+          return { sizes: { ...state.sizes, [zone]: next } }
+        }),
+
+      resplit: (zone, size, available) =>
+        set(state => {
+          const next = clampSplit(size, available)
+          if (next === state.splits[zone]) return state
+          return { splits: { ...state.splits, [zone]: next } }
+        }),
 
       fit: (width, height) =>
         set(state => {
           const sizes = { ...state.sizes }
-          for (const zone of Object.keys(OPPOSITE) as ToolZone[]) {
+          const splits = { ...state.splits }
+          for (const zone of TOOL_ZONES) {
             const stored = sizes[zone]
             if (stored === undefined) continue
             const available = isHorizontal(zone) ? height : width
             sizes[zone] = clamp(stored, available, sizeOf(state.sizes, OPPOSITE[zone], state.open))
+
+            // The divider lives inside the zone, along its other axis: left unclamped it ends up
+            // past the bottom of a shrunken column, with no way to drag it back.
+            const divider = splits[zone]
+            if (divider === undefined) continue
+            splits[zone] = clampSplit(divider, isHorizontal(zone) ? width : height)
           }
-          return { sizes }
+          return { sizes, splits }
         }),
 
-      reset: () => set({ open: DEFAULT_OPEN, sizes: {}, focusedZone: null }),
+      reset: () => set({ open: DEFAULT_OPEN, sizes: {}, splits: {}, focusedZone: null }),
     }),
     {
       name: 'scenario-studio:tools',
       // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
       // would reach `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on
-      // startup. Version 1 also held a `collapsed` map, which no longer exists.
-      version: 2,
-      /**
-       * Without this, zustand discards the whole persisted state on a version bump — and with
-       * it which tool is open in each zone and the size the user gave every panel. Dropping a
-       * field should not cost someone their layout: the fields that survived are kept, and the
-       * one that went is simply not read.
-       */
-      migrate: persisted => (typeof persisted === 'object' ? persisted : undefined),
+      // startup. Version 1 held a `collapsed` map, and 2 one tool per zone.
+      version: 3,
+      migrate: persisted => {
+        if (typeof persisted !== 'object' || persisted === null) return undefined
+        const sizes: unknown = Reflect.get(persisted, 'sizes')
+        const splits: unknown = Reflect.get(persisted, 'splits')
+        return {
+          open: openFrom(Reflect.get(persisted, 'open')),
+          sizes: isRecord(sizes) ? sizes : {},
+          splits: isRecord(splits) ? splits : {},
+        }
+      },
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.
-      partialize: state => ({ open: state.open, sizes: state.sizes }),
+      partialize: state => ({ open: state.open, sizes: state.sizes, splits: state.splits }),
     },
   ),
 )

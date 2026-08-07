@@ -51,8 +51,10 @@ const FACETS_BEFORE_FOLD = 2
 function Dropdown({ label, options, value, onPick, anyLabel, className }: DropdownProps) {
   return (
     <div className={cn('relative flex min-w-0 items-center', className)}>
+      {/* Tipped with the facet's name: once a value is picked, the closed control shows the
+          value and the name it filters on is nowhere on screen. */}
       <select
-        aria-label={label}
+        {...TIP_BOTTOM(label)}
         value={value}
         onChange={event => onPick(event.target.value)}
         className={cn(
@@ -117,7 +119,8 @@ export function CollectionBar({
       <input
         type="search"
         value={state.search}
-        aria-label={t('collection.search')}
+        // The placeholder says it, but only until the field is typed in.
+        {...TIP_BOTTOM(t('collection.search'), undefined, t('collection.searchHint'))}
         placeholder={t('collection.search')}
         onChange={event => onChange({ ...state, search: event.target.value })}
         className={cn(CONTROL, 'w-full py-0 pr-2 pl-7')}

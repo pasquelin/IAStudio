@@ -1,5 +1,7 @@
 import { mdiPlus } from '@mdi/js'
 import { kindForWorkspace } from '@shared/domain/document'
+import type { WorkspaceId } from '@shared/domain/workspace'
+import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Separator } from '@/design/Separator'
 import { TIP_RIGHT } from '@/design/tooltip'
@@ -8,7 +10,14 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useTools } from '@/stores/tools'
 import { openDocument } from './DocumentArea'
-import { toolsInZone, toolTitleKey, type ToolZone } from './tools'
+import {
+  TOOL_SLOTS,
+  toolsInZone,
+  toolTitleKey,
+  type Tool,
+  type ToolSlot,
+  type ToolZone,
+} from './tools'
 
 export type RailProps = {
   /** Edge the rail sticks to. The left rail also carries the bottom strip's tools. */
@@ -77,33 +86,54 @@ function NewDocumentButton() {
   )
 }
 
+/** The zone's populated halves, in order. Empty ones never reach the rail. */
+function halvesOf(zone: ToolZone, workspace: WorkspaceId): [ToolSlot, Tool[]][] {
+  const tools = toolsInZone(zone, workspace)
+  return TOOL_SLOTS.map((slot): [ToolSlot, Tool[]] => [
+    slot,
+    tools.filter(tool => tool.slot === slot),
+  ]).filter(([, inSlot]) => inSlot.length > 0)
+}
+
+/**
+ * The zone's tools, cut the way the zone itself is cut: the icons above the separator open in
+ * its first half, the ones below in its second. The rail is the legend of the column.
+ */
 function RailGroup({ zones }: { zones: ToolZone[] }) {
   const { t } = useTranslation()
   // Reading the store here rather than receiving props keeps a rail click from re-rendering
   // the Shell — and with it the Dockview host at the center.
-  const open = useTools(state => state.open)
   const focusedZone = useTools(state => state.focusedZone)
   const toggle = useTools(state => state.toggle)
+  const workspace = useLayouts(state => state.activeWorkspace)
+  const open = useTools(state => state.open)
 
   return (
     <div className="flex flex-col items-center gap-1">
       {zones.flatMap(zone =>
-        toolsInZone(zone).map(tool => {
-          const isOpen = open[zone] === tool.id
-          return (
-            <ToolButton
-              key={tool.id}
-              icon={tool.icon}
-              iconSize={22}
-              label={t(toolTitleKey(tool.id))}
-              tooltip={TIP_RIGHT}
-              active={isOpen}
-              accented={isOpen && focusedZone === zone}
-              onClick={() => toggle(zone, tool.id)}
-              className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
-            />
-          )
-        }),
+        halvesOf(zone, workspace).map(([slot, tools], index) => (
+          <Fragment key={`${zone}:${slot}`}>
+            {/* Only between two populated halves: a lone group has nothing to be cut from. */}
+            {index > 0 && <Separator orientation="horizontal" />}
+
+            {tools.map(tool => {
+              const isOpen = open[zone]?.[slot] === tool.id
+              return (
+                <ToolButton
+                  key={tool.id}
+                  icon={tool.icon}
+                  iconSize={22}
+                  label={t(toolTitleKey(tool.id))}
+                  tooltip={TIP_RIGHT}
+                  active={isOpen}
+                  accented={isOpen && focusedZone === zone}
+                  onClick={() => toggle(zone, tool.id)}
+                  className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
+                />
+              )
+            })}
+          </Fragment>
+        )),
       )}
     </div>
   )

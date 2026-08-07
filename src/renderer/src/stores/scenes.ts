@@ -18,8 +18,11 @@ export function sceneOf(state: Readable, documentId: string): SceneState {
   return state.scenes[documentId] ?? EMPTY_SCENE
 }
 
+// Shared: `historyOf` runs on every selector pass, and a fresh pair per call is garbage.
+const NO_HISTORY: History<SceneState> = emptyHistory<SceneState>()
+
 export function historyOf(state: Readable, documentId: string): History<SceneState> {
-  return state.histories[documentId] ?? emptyHistory<SceneState>()
+  return state.histories[documentId] ?? NO_HISTORY
 }
 
 /**

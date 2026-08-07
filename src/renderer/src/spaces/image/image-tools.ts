@@ -1,13 +1,30 @@
 import {
+  mdiArrowTopRight,
   mdiBrush,
+  mdiCardOutline,
+  mdiCircleOutline,
+  mdiCommentOutline,
+  mdiCropFree,
   mdiCursorMove,
+  mdiEllipse,
   mdiEraser,
+  mdiFormatTextVariant,
+  mdiFountainPen,
+  mdiKnife,
   mdiEyedropperVariant,
   mdiFormatColorFill,
+  mdiFormatText,
   mdiHandBackRight,
+  mdiImagePlusOutline,
   mdiLasso,
+  mdiPencil,
+  mdiRectangleOutline,
+  mdiResize,
   mdiSelectDrag,
   mdiSelectionDrag,
+  mdiStarOutline,
+  mdiTriangleOutline,
+  mdiVectorLine,
 } from '@mdi/js'
 import type { CanvasTool } from '@/engines/canvas/CanvasEngine'
 import type { Tool } from '@/design/Toolbar'
@@ -17,41 +34,255 @@ export type ImageTool = Tool & { tool: CanvasTool }
 /**
  * The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here.
  *
- * Tools with two or more modes open a flyout on hover; the others act on click. That rule comes
- * from map3D and lives in `useHoverFlyout`, not here.
- *
- * `move` and `hand` are two different tools, as in Photoshop: one drags the content, the other
- * drags the view. Conflating them costs a gesture nobody can get back.
+ * Grouped the way Figma groups its own: what points, what frames, what draws a shape, what
+ * paints, what types. Hovering a group opens the rest of it; the button itself arms the mode
+ * already showing, so an armed tool never needs the menu to be reachable.
  */
 export const IMAGE_TOOLS: readonly ImageTool[] = [
   {
-    id: 'select',
-    tool: 'select',
-    labelKey: 'imageTools.select',
-    icon: mdiSelectDrag,
-    shortcut: 'M',
+    id: 'pointer',
+    tool: 'move',
+    labelKey: 'imageTools.pointer',
+    descriptionKey: 'imageTools.pointerHint',
+    icon: mdiCursorMove,
     modes: [
-      { id: 'rectangle', labelKey: 'imageTools.selectRectangle', icon: mdiSelectionDrag },
-      { id: 'lasso', labelKey: 'imageTools.selectLasso', icon: mdiLasso },
+      {
+        id: 'move',
+        labelKey: 'imageTools.move',
+        descriptionKey: 'imageTools.moveHint',
+        icon: mdiCursorMove,
+        shortcut: 'V',
+      },
+      {
+        id: 'hand',
+        labelKey: 'imageTools.hand',
+        descriptionKey: 'imageTools.handHint',
+        icon: mdiHandBackRight,
+        shortcut: 'H',
+      },
+      {
+        id: 'scale',
+        labelKey: 'imageTools.scale',
+        descriptionKey: 'imageTools.scaleHint',
+        icon: mdiResize,
+        shortcut: 'K',
+        // The engine has no scale gesture: armed, it would silently drag the layer instead.
+        disabled: true,
+      },
     ],
   },
-  { id: 'move', tool: 'move', labelKey: 'imageTools.move', icon: mdiCursorMove, shortcut: 'V' },
-  { id: 'brush', tool: 'brush', labelKey: 'imageTools.brush', icon: mdiBrush, shortcut: 'B' },
+  {
+    id: 'frame',
+    tool: 'crop',
+    labelKey: 'imageTools.frame',
+    descriptionKey: 'imageTools.frameHint',
+    icon: mdiCropFree,
+    modes: [
+      {
+        id: 'crop',
+        labelKey: 'imageTools.crop',
+        descriptionKey: 'imageTools.cropHint',
+        icon: mdiCropFree,
+        shortcut: 'F',
+      },
+      {
+        id: 'section',
+        labelKey: 'imageTools.section',
+        descriptionKey: 'imageTools.sectionHint',
+        icon: mdiCardOutline,
+        shortcut: '⇧S',
+        disabled: true,
+      },
+      {
+        id: 'slice',
+        labelKey: 'imageTools.slice',
+        descriptionKey: 'imageTools.sliceHint',
+        icon: mdiKnife,
+        shortcut: 'S',
+        disabled: true,
+      },
+    ],
+  },
+  {
+    id: 'region',
+    tool: 'select',
+    labelKey: 'imageTools.region',
+    descriptionKey: 'imageTools.regionHint',
+    icon: mdiSelectDrag,
+    modes: [
+      {
+        id: 'rectangle',
+        labelKey: 'imageTools.selectRectangle',
+        descriptionKey: 'imageTools.selectRectangleHint',
+        icon: mdiSelectionDrag,
+        shortcut: 'M',
+      },
+      {
+        id: 'ellipse',
+        labelKey: 'imageTools.selectEllipse',
+        descriptionKey: 'imageTools.selectEllipseHint',
+        icon: mdiEllipse,
+      },
+      {
+        id: 'lasso',
+        labelKey: 'imageTools.selectLasso',
+        descriptionKey: 'imageTools.selectLassoHint',
+        icon: mdiLasso,
+        shortcut: 'L',
+      },
+    ],
+  },
+  {
+    id: 'shape',
+    tool: 'shape',
+    labelKey: 'imageTools.shape',
+    descriptionKey: 'imageTools.shapeHint',
+    icon: mdiRectangleOutline,
+    separatorBefore: true,
+    modes: [
+      {
+        id: 'rectangle',
+        labelKey: 'imageTools.shapeRectangle',
+        descriptionKey: 'imageTools.shapeRectangleHint',
+        icon: mdiRectangleOutline,
+        shortcut: 'R',
+      },
+      {
+        id: 'line',
+        labelKey: 'imageTools.shapeLine',
+        descriptionKey: 'imageTools.shapeLineHint',
+        icon: mdiVectorLine,
+        shortcut: 'L',
+      },
+      {
+        id: 'arrow',
+        labelKey: 'imageTools.shapeArrow',
+        descriptionKey: 'imageTools.shapeArrowHint',
+        icon: mdiArrowTopRight,
+        shortcut: '⇧L',
+      },
+      {
+        id: 'ellipse',
+        labelKey: 'imageTools.shapeEllipse',
+        descriptionKey: 'imageTools.shapeEllipseHint',
+        icon: mdiCircleOutline,
+        shortcut: 'O',
+      },
+      {
+        id: 'polygon',
+        labelKey: 'imageTools.shapePolygon',
+        descriptionKey: 'imageTools.shapePolygonHint',
+        icon: mdiTriangleOutline,
+      },
+      {
+        id: 'star',
+        labelKey: 'imageTools.shapeStar',
+        descriptionKey: 'imageTools.shapeStarHint',
+        icon: mdiStarOutline,
+      },
+      {
+        id: 'image',
+        labelKey: 'imageTools.shapeImage',
+        descriptionKey: 'imageTools.shapeImageHint',
+        icon: mdiImagePlusOutline,
+        shortcut: '⇧⌘K',
+        // Placing an asset needs the catalogue, which this space does not reach yet. Shown
+        // greyed rather than hidden: the bar says what is coming instead of pretending.
+        disabled: true,
+      },
+    ],
+  },
+  {
+    id: 'paint',
+    tool: 'brush',
+    labelKey: 'imageTools.paint',
+    descriptionKey: 'imageTools.paintHint',
+    icon: mdiBrush,
+    modes: [
+      {
+        id: 'brush',
+        labelKey: 'imageTools.brush',
+        descriptionKey: 'imageTools.brushHint',
+        icon: mdiBrush,
+        shortcut: 'P',
+      },
+      {
+        id: 'pencil',
+        labelKey: 'imageTools.pencil',
+        descriptionKey: 'imageTools.pencilHint',
+        icon: mdiPencil,
+        shortcut: '⇧P',
+      },
+      {
+        id: 'pen',
+        labelKey: 'imageTools.pen',
+        descriptionKey: 'imageTools.penHint',
+        icon: mdiFountainPen,
+        // A vector path is not a raster stroke: it needs a path model the engine has no notion
+        // of yet. Shown greyed rather than hidden, so the bar says what is coming.
+        disabled: true,
+      },
+    ],
+  },
+  {
+    id: 'text',
+    tool: 'text',
+    labelKey: 'imageTools.text',
+    descriptionKey: 'imageTools.textHint',
+    icon: mdiFormatText,
+    modes: [
+      {
+        id: 'text',
+        labelKey: 'imageTools.text',
+        descriptionKey: 'imageTools.textHint',
+        icon: mdiFormatText,
+        shortcut: 'T',
+      },
+      {
+        id: 'path',
+        labelKey: 'imageTools.textPath',
+        descriptionKey: 'imageTools.textPathHint',
+        icon: mdiFormatTextVariant,
+        disabled: true,
+      },
+    ],
+  },
+  {
+    id: 'comment',
+    tool: 'comment',
+    labelKey: 'imageTools.comment',
+    descriptionKey: 'imageTools.commentHint',
+    icon: mdiCommentOutline,
+    shortcut: 'C',
+  },
   {
     id: 'eraser',
     tool: 'eraser',
     labelKey: 'imageTools.eraser',
+    descriptionKey: 'imageTools.eraserHint',
     icon: mdiEraser,
-    shortcut: 'E',
+    separatorBefore: true,
     modes: [
-      { id: 'point', labelKey: 'imageTools.eraserPoint', icon: mdiEraser },
-      { id: 'selection', labelKey: 'imageTools.eraserSelection', icon: mdiSelectionDrag },
+      {
+        id: 'point',
+        labelKey: 'imageTools.eraserPoint',
+        descriptionKey: 'imageTools.eraserPointHint',
+        icon: mdiEraser,
+        shortcut: 'E',
+      },
+      {
+        id: 'selection',
+        labelKey: 'imageTools.eraserSelection',
+        descriptionKey: 'imageTools.eraserSelectionHint',
+        icon: mdiSelectionDrag,
+      },
     ],
   },
   {
     id: 'fill',
     tool: 'fill',
     labelKey: 'imageTools.fill',
+    descriptionKey: 'imageTools.fillHint',
     icon: mdiFormatColorFill,
     shortcut: 'G',
   },
@@ -59,17 +290,54 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
     id: 'picker',
     tool: 'picker',
     labelKey: 'imageTools.picker',
+    descriptionKey: 'imageTools.pickerHint',
     icon: mdiEyedropperVariant,
     shortcut: 'I',
   },
-  { id: 'hand', tool: 'hand', labelKey: 'imageTools.hand', icon: mdiHandBackRight, shortcut: 'H' },
 ]
 
 export function toolById(id: string): ImageTool | null {
   return IMAGE_TOOLS.find(tool => tool.id === id) ?? null
 }
 
-/** Tools whose settings the bar's form shows. The others have nothing to set yet. */
-export function hasBrushSettings(id: string): boolean {
-  return id === 'brush' || id === 'eraser'
+/**
+ * What the engine is actually asked to do. A group's modes do not always mean the same tool —
+ * the pointer group holds both dragging the content and dragging the view, which are different
+ * gestures on the same button.
+ */
+export function canvasToolFor(toolId: string, modeId?: string): CanvasTool | null {
+  if (toolId === 'pointer') return modeId === 'hand' ? 'hand' : 'move'
+  return toolById(toolId)?.tool ?? null
+}
+
+/** The mode each group opens armed with — its first row, as Figma's groups do. */
+export const DEFAULT_MODES: Readonly<Record<string, string>> = Object.fromEntries(
+  IMAGE_TOOLS.flatMap(tool => (tool.modes?.[0] ? [[tool.id, tool.modes[0].id]] : [])),
+)
+
+/**
+ * What the pointer becomes over the canvas. No native keyword says `eyedropper` or `bucket`,
+ * so those two are drawn from the icon the bar already shows for them — read off the registry,
+ * so changing a tool's icon changes its cursor with it.
+ */
+export function cursorFor(toolId: string, modeId?: string): string {
+  if (toolId === 'pointer') return modeId === 'hand' ? 'grab' : 'move'
+  if (toolId === 'text') return 'text'
+  return DRAWN_CURSORS[toolId] ?? 'crosshair'
+}
+
+/** Built once: the string is ~450 characters, and `cursorFor` runs on every render. */
+const DRAWN_CURSORS: Record<string, string> = {
+  fill: iconCursor('fill', 4, 20),
+  picker: iconCursor('picker', 3, 21),
+}
+
+function iconCursor(toolId: string, hotspotX: number, hotspotY: number): string {
+  const path = toolById(toolId)?.icon ?? ''
+  // White fill on a dark outline, so the cursor stays visible on either. `crosshair` is the
+  // fallback for the platforms that refuse an image cursor rather than leaving none.
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">` +
+    `<path d="${path}" fill="#fff" stroke="#000" stroke-width="1"/></svg>`
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}") ${hotspotX} ${hotspotY}, crosshair`
 }

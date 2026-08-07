@@ -6,8 +6,14 @@ import { persist } from 'zustand/middleware'
 
 type DocumentsState = {
   documents: Record<string, DocumentDescriptor>
+  /**
+   * The document the centre is showing. Tool windows sit outside Dockview and have no other way
+   * to know which document they are inspecting — a layer stack has to follow the active tab.
+   */
+  activeId: string | null
   /** `null` when the workspace has no editable document kind yet. */
   create: (workspace: WorkspaceId) => DocumentDescriptor | null
+  activate: (id: string | null) => void
   close: (id: string) => void
   /** Drops every document not in `ids`. Called once at startup — see `pruneDocuments`. */
   keepOnly: (ids: ReadonlySet<string>) => void
@@ -49,6 +55,13 @@ export const useDocuments = createStore<DocumentsState>()(
   persist(
     (set, get) => ({
       documents: {},
+      activeId: null,
+
+      // Guarded: `persist` writes to localStorage on every `set`, and Dockview announces the
+      // active panel again on each workspace switch — usually the same value.
+      activate: id => {
+        if (get().activeId !== id) set({ activeId: id })
+      },
 
       create: workspace => {
         const kind = kindForWorkspace(workspace)
@@ -69,7 +82,7 @@ export const useDocuments = createStore<DocumentsState>()(
         set(state => {
           const remaining = { ...state.documents }
           delete remaining[id]
-          return { documents: remaining }
+          return { documents: remaining, activeId: state.activeId === id ? null : state.activeId }
         }),
 
       keepOnly: ids =>
@@ -77,14 +90,19 @@ export const useDocuments = createStore<DocumentsState>()(
           documents: Object.fromEntries(
             Object.entries(state.documents).filter(([id]) => ids.has(id)),
           ),
+          // Same rule as `close`: a document that is gone cannot be the one in front.
+          activeId: state.activeId && ids.has(state.activeId) ? state.activeId : null,
         })),
     }),
     {
       name: 'scenario-studio:documents',
       version: 1,
-      // Same reason as `stores/tools.ts`: a version bump must not silently drop what the user
-      // has open. A descriptor whose `kind` no longer exists is handled at render time.
+      // A version bump must not silently drop what the user has open. A descriptor whose `kind`
+      // no longer exists is handled at render time.
       migrate: persisted => (typeof persisted === 'object' ? persisted : undefined),
+      // Which tab is in front is session state, like `focusedZone`: Dockview announces it on
+      // mount, and restoring a stale id would point the layer stack at a tab nobody opened.
+      partialize: state => ({ documents: state.documents }),
     },
   ),
 )

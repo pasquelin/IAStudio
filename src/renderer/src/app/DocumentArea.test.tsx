@@ -8,6 +8,11 @@ const addPanel = vi.fn()
 const toJSON = vi.fn()
 const fromJSON = vi.fn()
 const onDidLayoutChange = vi.fn(() => ({ dispose: vi.fn() }))
+let announceActivePanel: ((change: { panel?: { id: string } }) => void) | null = null
+const onDidActivePanelChange = vi.fn((listener: (change: { panel?: { id: string } }) => void) => {
+  announceActivePanel = listener
+  return { dispose: vi.fn() }
+})
 
 // Dockview needs a real layout engine and a DOM box to lay panels out; the shell only cares
 // that it hands the API over, restores, and remembers. `Orientation` is re-exposed because the
@@ -15,7 +20,9 @@ const onDidLayoutChange = vi.fn(() => ({ dispose: vi.fn() }))
 vi.mock('dockview-react', () => ({
   Orientation: { HORIZONTAL: 'HORIZONTAL', VERTICAL: 'VERTICAL' },
   DockviewReact: (props: { onReady: (event: { api: unknown }) => void }) => {
-    props.onReady({ api: { addPanel, toJSON, fromJSON, onDidLayoutChange } })
+    props.onReady({
+      api: { addPanel, toJSON, fromJSON, onDidLayoutChange, onDidActivePanelChange },
+    })
     return <div data-testid="dockview" />
   },
 }))
@@ -35,7 +42,7 @@ function layout(): SerializedLayout {
 describe('DocumentArea', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useDocuments.setState({ documents: {} })
+    useDocuments.setState({ documents: {}, activeId: null })
     useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
   })
 
@@ -56,6 +63,18 @@ describe('DocumentArea', () => {
     render(<DocumentArea />)
 
     expect(fromJSON).not.toHaveBeenCalled()
+  })
+
+  it('tells the store which document is in front, for the tool windows outside it', async () => {
+    const { DocumentArea } = await import('./DocumentArea')
+    render(<DocumentArea />)
+
+    // Panels sit in Dockview; a layer stack on the edge does not, and has no other way to know.
+    announceActivePanel?.({ panel: { id: 'doc-7' } })
+    expect(useDocuments.getState().activeId).toBe('doc-7')
+
+    announceActivePanel?.({})
+    expect(useDocuments.getState().activeId).toBeNull()
   })
 
   it('opens a panel for a document created after mount', async () => {

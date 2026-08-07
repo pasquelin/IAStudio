@@ -1,6 +1,7 @@
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { DockviewReact, type DockviewApi, type DockviewReadyEvent } from 'dockview-react'
 import { useCallback } from 'react'
+import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { DOCUMENT_COMPONENTS } from './documents'
 
@@ -37,6 +38,13 @@ export function DocumentArea() {
 
       event.api.onDidLayoutChange(() => {
         useLayouts.getState().remember(workspace, event.api.toJSON())
+      })
+
+      // Tool windows live outside Dockview: without this, a layer stack on the edge has no way
+      // of knowing which tab it is looking at.
+      useDocuments.getState().activate(event.api.activePanel?.id ?? null)
+      event.api.onDidActivePanelChange(change => {
+        useDocuments.getState().activate(change.panel?.id ?? null)
       })
     },
     [workspace],

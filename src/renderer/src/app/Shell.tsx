@@ -1,12 +1,21 @@
+import { useCallback } from 'react'
+import { cn } from '@/design/cn'
 import { TooltipHost } from '@/design/TooltipHost'
 import { useLayouts } from '@/stores/layouts'
-import { DEFAULT_SIZES, useTools } from '@/stores/tools'
+import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { DocumentArea } from './DocumentArea'
 import { Footer } from './Footer'
 import { Rail } from './Rail'
 import { ResizeHandle } from './ResizeHandle'
 import { TitleBar } from './TitleBar'
-import { isLeading, type ToolZone } from './tools'
+import {
+  isHorizontal,
+  isLeading,
+  toolServes,
+  type ToolId,
+  type ToolSlot,
+  type ToolZone,
+} from './tools'
 import { Panel, ToolWindow } from './ToolWindow'
 import 'dockview-react/dist/styles/dockview.css'
 import './dockview-theme.css'
@@ -54,31 +63,71 @@ export function Shell() {
 }
 
 /**
- * A tool window and its resize handle, ordered by the zone. `left` and `top` put the panel
- * first; the opposite zones put the handle first, because they grow backwards.
+ * A zone's two halves and its resize handle, ordered by the zone. `left` and `top` put the
+ * panels first; the opposite zones put the handle first, because they grow backwards.
  */
 function Edge({ zone }: { zone: ToolZone }) {
-  const tool = useTools(state => state.open[zone] ?? null)
-  const size = useTools(state => state.sizes[zone] ?? DEFAULT_SIZES[zone])
+  // Stable across the whole drag, so the memoized panels skip a size change entirely.
+  const focusZone = useCallback(() => useTools.getState().focus(zone), [zone])
+  const closePrimary = useCallback(() => useTools.getState().close(zone, 'primary'), [zone])
+  const closeSecondary = useCallback(() => useTools.getState().close(zone, 'secondary'), [zone])
 
-  if (!tool) return null
+  const slots = useTools(state => state.open[zone])
+  const size = useTools(state => state.sizes[zone] ?? DEFAULT_SIZES[zone])
+  const split = useTools(state => state.splits[zone] ?? DEFAULT_SPLIT)
+  const workspace = useLayouts(state => state.activeWorkspace)
+
+  // A layout arranged in one workspace must not drag its panels into the next: what is open is
+  // stored per zone, not per workspace, so what this one has no use for is dropped here.
+  const shown = (slot: ToolSlot): ToolId | null => {
+    const tool = slots?.[slot] ?? null
+    return tool && toolServes(tool, workspace) ? tool : null
+  }
+
+  const primary = shown('primary')
+  const secondary = shown('secondary')
+  if (!primary && !secondary) return null
 
   // Actions are stable for the store's lifetime: subscribing to them would only add
   // selectors re-run on every write.
-  const { close, focus, resize } = useTools.getState()
+  const { resize, resplit } = useTools.getState()
+  const lying = isHorizontal(zone)
 
   const panel = (
-    <ToolWindow
-      zone={zone}
-      tool={tool}
-      size={size}
-      onFocus={() => focus(zone)}
-      onClose={() => close(zone)}
-    />
+    <div
+      // No gap: the handle between the two halves already occupies the gutter, exactly as the
+      // zone handles do outside. Adding one here spaces them by three gutters.
+      className={cn('flex min-h-0 min-w-0', lying ? 'flex-row' : 'flex-col')}
+      style={{ [lying ? 'height' : 'width']: size }}
+    >
+      {primary && <ToolWindow tool={primary} onFocus={focusZone} onClose={closePrimary} />}
+
+      {/* Only between two open halves: a lone panel has nothing to be dragged against. */}
+      {primary && secondary && (
+        <ResizeHandle
+          axis={lying ? 'horizontal' : 'vertical'}
+          invert
+          size={split}
+          onSize={(value, available) => resplit(zone, value, available)}
+        />
+      )}
+
+      {secondary && (
+        <ToolWindow
+          tool={secondary}
+          // The second half keeps a length of its own only while the first is there to take the
+          // rest; alone, it fills the zone.
+          length={primary ? split : undefined}
+          onFocus={focusZone}
+          onClose={closeSecondary}
+        />
+      )}
+    </div>
   )
   const handle = (
     <ResizeHandle
-      zone={zone}
+      axis={lying ? 'vertical' : 'horizontal'}
+      invert={!isLeading(zone)}
       size={size}
       onSize={(value, available) => resize(zone, value, available)}
     />

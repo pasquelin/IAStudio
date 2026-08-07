@@ -1,7 +1,31 @@
-import { Application, Container, Graphics, RenderTexture, Sprite, type BLEND_MODES } from 'pixi.js'
+// First, and before any other Pixi import: Electron's CSP forbids `unsafe-eval`, and Pixi builds
+// its shaders with `new Function()`, so `Application.init` rejects inside a promise and the canvas
+// stays blank with a clean console. Despite the name, this ships static polyfills instead.
+import 'pixi.js/unsafe-eval'
+import {
+  Application,
+  Container,
+  Graphics,
+  Rectangle,
+  RenderTexture,
+  Sprite,
+  type BLEND_MODES,
+} from 'pixi.js'
 import type { BlendMode, CanvasState, Layer } from './canvas-state'
+import type { Point } from './shape-geometry'
 
-export type CanvasTool = 'select' | 'move' | 'brush' | 'eraser' | 'fill' | 'picker' | 'hand'
+export type CanvasTool =
+  | 'select'
+  | 'move'
+  | 'crop'
+  | 'shape'
+  | 'brush'
+  | 'text'
+  | 'comment'
+  | 'eraser'
+  | 'fill'
+  | 'picker'
+  | 'hand'
 
 export type BrushSettings = {
   size: number
@@ -25,6 +49,17 @@ export const DEFAULT_BRUSH: BrushSettings = {
   opacity: 1,
   color: 0x000000,
 }
+
+/**
+ * Declared by the bar, not implemented here. Kept in the union so the registry stays typed, and
+ * kept in one place so wiring one is a single deletion.
+ */
+const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>([
+  'crop',
+  'shape',
+  'text',
+  'comment',
+])
 
 const BLEND_BY_MODE: Record<BlendMode, BLEND_MODES> = {
   normal: 'normal',
@@ -58,7 +93,7 @@ export class CanvasEngine {
 
   private readonly marquee = new Graphics()
   private painting = false
-  private last: { x: number; y: number } | null = null
+  private last: Point | null = null
   private panning = false
   private moving = false
   private selecting: { x: number; y: number; width: number; height: number } | null = null
@@ -227,6 +262,11 @@ export class CanvasEngine {
     }
     if (event.button !== 0) return
 
+    // Below the middle-button branch on purpose: panning is the one gesture no tool may take
+    // over, and these must not paint either — falling through would land them on the brush
+    // path, so arming `Rectangle` would leave a dab.
+    if (UNBUILT_TOOLS.has(this.tool)) return
+
     if (this.tool === 'move') {
       this.moving = true
       this.last = point
@@ -245,7 +285,7 @@ export class CanvasEngine {
 
     this.painting = true
     this.last = point
-    this.dab(surface, point)
+    this.dab(surface, [point])
   }
 
   private readonly onPointerMove = (event: PointerEvent): void => {
@@ -336,7 +376,7 @@ export class CanvasEngine {
     return this.activeLayerId ? (this.surfaces.get(this.activeLayerId) ?? null) : null
   }
 
-  private toWorld(event: PointerEvent): { x: number; y: number } {
+  private toWorld(event: PointerEvent): Point {
     const canvas = this.app?.canvas
     if (!canvas) return { x: 0, y: 0 }
 
@@ -351,31 +391,36 @@ export class CanvasEngine {
    * A fast drag delivers a handful of `pointermove` for a long distance; drawing only at those
    * points leaves a dotted line. One dab every quarter-radius closes it.
    */
-  private stroke(
-    surface: LayerSurface,
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-  ): void {
+  private stroke(surface: LayerSurface, from: Point, to: Point): void {
     const distance = Math.hypot(to.x - from.x, to.y - from.y)
     const step = Math.max(1, this.brush.size / 4)
     const count = Math.ceil(distance / step)
 
+    const points: Point[] = []
     for (let index = 1; index <= count; index += 1) {
       const ratio = index / count
-      this.dab(surface, {
+      points.push({
         x: from.x + (to.x - from.x) * ratio,
         y: from.y + (to.y - from.y) * ratio,
       })
     }
+    this.dab(surface, points)
   }
 
-  private dab(surface: LayerSurface, point: { x: number; y: number }): void {
+  /**
+   * Every point of the segment in ONE render pass. A pass per point meant a framebuffer bind and
+   * a draw call per interpolated dab — up to several hundred inside a single `pointermove`.
+   *
+   * It is also the only way the opacity comes out right: separate passes composite the dabs onto
+   * each other, so a half-opaque stroke darkened at every joint.
+   */
+  private dab(surface: LayerSurface, points: readonly Point[]): void {
     const renderer = this.app?.renderer
-    if (!renderer) return
+    if (!renderer || points.length === 0) return
 
     const erasing = this.tool === 'eraser'
     this.stamp.clear()
-    this.stamp.circle(point.x, point.y, this.brush.size / 2)
+    for (const point of points) this.stamp.circle(point.x, point.y, this.brush.size / 2)
     this.stamp.fill({ color: erasing ? 0xffffff : this.brush.color, alpha: this.brush.opacity })
     // Erasing is the same stroke in `erase` blend: on a transparent layer, painting white
     // would just paint white.
@@ -386,20 +431,25 @@ export class CanvasEngine {
     renderer.render({ container: this.stamp, target: surface.texture, clear: false })
   }
 
-  private pick(point: { x: number; y: number }): void {
+  private pick(point: Point): void {
     const renderer = this.app?.renderer
     const surface = this.activeSurface()
     if (!renderer || !surface) return
 
-    const pixels = renderer.extract.pixels({ target: surface.sprite })
     const x = Math.floor(point.x)
     const y = Math.floor(point.y)
-    if (x < 0 || y < 0 || x >= pixels.width || y >= pixels.height) return
+    if (x < 0 || y < 0 || x >= this.size.width || y >= this.size.height) return
 
-    const offset = (y * pixels.width + x) * 4
-    const red = pixels.pixels[offset] ?? 0
-    const green = pixels.pixels[offset + 1] ?? 0
-    const blue = pixels.pixels[offset + 2] ?? 0
+    // One pixel, not the whole layer: extracting a 1024² sprite to read a single colour means a
+    // 4 MB allocation and a synchronous `readPixels` that stalls the pipeline on every click.
+    const pixels = renderer.extract.pixels({
+      target: surface.sprite,
+      frame: new Rectangle(x, y, 1, 1),
+    })
+
+    const red = pixels.pixels[0] ?? 0
+    const green = pixels.pixels[1] ?? 0
+    const blue = pixels.pixels[2] ?? 0
     this.options.onPick((red << 16) | (green << 8) | blue)
   }
 }

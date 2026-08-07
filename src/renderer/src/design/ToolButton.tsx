@@ -14,6 +14,8 @@ export type ToolButtonProps = Omit<
   icon?: string
   /** Accessible name and tooltip content. */
   label: string
+  /** Shown in the tooltip in place of the label — for a control whose name is already on screen. */
+  description?: string
   /** Tooltip factory of the host bar. When absent, the `aria-label` is still set. */
   tooltip?: TooltipFactory
   shortcut?: string | false
@@ -37,6 +39,7 @@ export type ToolButtonProps = Omit<
 export function ToolButton({
   icon,
   label,
+  description,
   tooltip,
   shortcut,
   active,
@@ -49,7 +52,7 @@ export function ToolButton({
   ...rest
 }: ToolButtonProps) {
   const naming = tooltip
-    ? tooltip(label, shortcut)
+    ? tooltip(label, shortcut, description)
     : { 'aria-label': withShortcut(label, shortcut) }
 
   return (

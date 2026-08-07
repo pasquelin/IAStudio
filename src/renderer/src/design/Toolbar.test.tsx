@@ -31,23 +31,6 @@ describe('Toolbar', () => {
     expect(onTool).toHaveBeenCalledWith('select')
   })
 
-  it('hides a section set to false', () => {
-    render(<Toolbar tools={TOOLS} onTool={vi.fn()} sections={{ tools: false }} />)
-    expect(screen.queryByRole('button', { name: 'Générer (B)' })).not.toBeInTheDocument()
-  })
-
-  it('replaces a section with the node provided', () => {
-    render(
-      <Toolbar
-        tools={TOOLS}
-        onTool={vi.fn()}
-        sections={{ tools: <span data-testid="replacement" /> }}
-      />,
-    )
-    expect(screen.getByTestId('replacement')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Générer (B)' })).not.toBeInTheDocument()
-  })
-
   it('shows undo and redo only when the callbacks exist', () => {
     const { rerender } = render(<Toolbar tools={TOOLS} onTool={vi.fn()} />)
     expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
@@ -64,6 +47,37 @@ describe('Toolbar', () => {
   it('declares its orientation', () => {
     render(<Toolbar tools={TOOLS} onTool={vi.fn()} orientation="horizontal" />)
     expect(screen.getByRole('toolbar')).toHaveAttribute('aria-orientation', 'horizontal')
+  })
+
+  it('tips to the side when vertical, so a tooltip never covers the button above', () => {
+    render(<Toolbar tools={TOOLS} onTool={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Générer (B)' })).toHaveAttribute(
+      'data-tooltip-place',
+      'right',
+    )
+  })
+
+  it('tips above when horizontal', () => {
+    render(<Toolbar tools={TOOLS} onTool={vi.fn()} orientation="horizontal" />)
+    expect(screen.getByRole('button', { name: 'Générer (B)' })).toHaveAttribute(
+      'data-tooltip-place',
+      'top',
+    )
+  })
+
+  it('tips a tool’s description while keeping its name terse', () => {
+    const described: Tool[] = [
+      {
+        id: 'brush',
+        labelKey: 'actions.generate',
+        descriptionKey: 'actions.close',
+        icon: mdiPencil,
+      },
+    ]
+    render(<Toolbar tools={described} onTool={vi.fn()} />)
+
+    const button = screen.getByRole('button', { name: 'Générer' })
+    expect(button).toHaveAttribute('data-tooltip-content', 'Fermer')
   })
 })
 

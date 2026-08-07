@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { clamp, MIN_CENTER, MIN_SIZE, useTools } from './tools'
+import { clamp, clampSplit, MIN_CENTER, MIN_SIZE, MIN_SPLIT, openFrom, useTools } from './tools'
 
 describe('clamp', () => {
   it('leaves room for the documents area', () => {
@@ -27,17 +27,19 @@ describe('clamp', () => {
 
 describe('tools store', () => {
   beforeEach(() => {
-    useTools.setState({ open: {}, sizes: {}, focusedZone: null })
+    useTools.setState({ open: {}, sizes: {}, splits: {}, focusedZone: null })
   })
 
   it('clamps the stored size on resize', () => {
-    useTools.setState({ open: { bottom: 'assets' } })
+    useTools.setState({ open: { bottom: { primary: 'assets' } } })
     useTools.getState().resize('bottom', 900, 800)
     expect(useTools.getState().sizes.bottom).toBe(800 - MIN_CENTER)
   })
 
   it('keeps the center alive when both sides are dragged wide', () => {
-    useTools.setState({ open: { left: 'explorer', right: 'generator' } })
+    useTools.setState({
+      open: { left: { secondary: 'explorer' }, right: { primary: 'generator' } },
+    })
     const { resize } = useTools.getState()
     resize('left', 900, 1000)
     resize('right', 900, 1000)
@@ -47,20 +49,88 @@ describe('tools store', () => {
   })
 
   it('re-clamps every zone when the window shrinks', () => {
-    useTools.setState({ open: { left: 'explorer' }, sizes: { left: 600 } })
+    useTools.setState({ open: { left: { secondary: 'explorer' } }, sizes: { left: 600 } })
     useTools.getState().fit(800, 600)
     expect(useTools.getState().sizes.left).toBe(800 - MIN_CENTER)
   })
 
-  it('closes the zone when an expanded tool icon is clicked again', () => {
-    useTools.setState({ open: { bottom: 'assets' } })
-    useTools.getState().toggle('bottom', 'assets')
-    expect(useTools.getState().open.bottom).toBeNull()
+  it('opens a tool in the half its placement declares', () => {
+    useTools.getState().toggle('left', 'layers')
+    expect(useTools.getState().open.left).toEqual({ primary: 'layers' })
   })
 
-  it('drops focus from the zone being closed', () => {
-    useTools.setState({ open: { left: 'explorer' }, focusedZone: 'left' })
-    useTools.getState().close('left')
+  it('leaves the other half alone, so both show at once', () => {
+    const { toggle } = useTools.getState()
+    toggle('left', 'explorer')
+    toggle('left', 'layers')
+
+    expect(useTools.getState().open.left).toEqual({ primary: 'layers', secondary: 'explorer' })
+  })
+
+  it('swaps within a half rather than stacking, when two tools share it', () => {
+    const { toggle } = useTools.getState()
+    toggle('right', 'generator')
+    toggle('right', 'models')
+
+    expect(useTools.getState().open.right).toEqual({ primary: 'models' })
+  })
+
+  it('closes the half when the tool already up is clicked again', () => {
+    useTools.setState({ open: { bottom: { primary: 'assets' } } })
+    useTools.getState().toggle('bottom', 'assets')
+    expect(useTools.getState().open.bottom?.primary).toBeUndefined()
+  })
+
+  it('drops focus only once both halves are empty', () => {
+    useTools.setState({
+      open: { left: { primary: 'layers', secondary: 'explorer' } },
+      focusedZone: 'left',
+    })
+    const { close } = useTools.getState()
+
+    close('left', 'secondary')
+    expect(useTools.getState().focusedZone).toBe('left')
+
+    close('left', 'primary')
     expect(useTools.getState().focusedZone).toBeNull()
+  })
+
+  it('clamps the divider between the two halves', () => {
+    useTools.setState({ open: { left: { primary: 'layers', secondary: 'explorer' } } })
+    useTools.getState().resplit('left', 900, 400)
+    expect(useTools.getState().splits.left).toBe(400 - MIN_SPLIT)
+  })
+})
+
+describe('clampSplit', () => {
+  it('leaves the other half something to live on', () => {
+    expect(clampSplit(500, 400)).toBe(400 - MIN_SPLIT)
+  })
+
+  it('honours the minimum, even in a zone too short for two', () => {
+    expect(clampSplit(10, 120)).toBe(MIN_SPLIT)
+  })
+})
+
+describe('openFrom', () => {
+  it('migrates the single id version 2 stored into the slot its tool declares', () => {
+    expect(openFrom({ left: 'explorer', bottom: 'assets' })).toEqual({
+      left: { secondary: 'explorer' },
+      bottom: { primary: 'assets' },
+    })
+  })
+
+  it('reads its own shape back unchanged', () => {
+    const stored = { left: { primary: 'layers', secondary: 'explorer' } }
+    expect(openFrom(stored)).toEqual(stored)
+  })
+
+  it('drops an id no version knows any more', () => {
+    expect(openFrom({ left: { primary: 'ghost' } })).toEqual({ left: {} })
+    expect(openFrom({ left: 'ghost' })).toEqual({ left: {} })
+  })
+
+  it('falls back to the defaults when there is nothing to read', () => {
+    expect(openFrom(null).left).toEqual({ secondary: 'explorer' })
   })
 })

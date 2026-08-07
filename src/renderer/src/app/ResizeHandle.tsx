@@ -1,9 +1,11 @@
 import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { cn } from '@/design/cn'
-import { isHorizontal, type ToolZone } from './tools'
 
 export type ResizeHandleProps = {
-  zone: ToolZone
+  /** `vertical` moves up and down and sets a height; `horizontal` sets a width. */
+  axis: 'vertical' | 'horizontal'
+  /** The panel grows as the pointer moves backwards — true for a right, bottom or lower half. */
+  invert?: boolean
   size: number
   onSize: (size: number, available: number) => void
 }
@@ -11,15 +13,18 @@ export type ResizeHandleProps = {
 type Drag = { pointerId: number; position: number; size: number; available: number }
 
 /**
- * Resize handle for a tool zone. Captures the pointer so the gesture survives a cursor
- * leaving the handle — without capture, a fast drag detaches.
+ * Resize handle. Captures the pointer so the gesture survives a cursor leaving the handle —
+ * without capture, a fast drag detaches.
  *
  * It also measures the container when the gesture starts and passes that dimension along: it
  * is the one that knows what is available, the store knows nothing about the DOM.
+ *
+ * It takes an axis rather than a zone because it serves both cuts: the one between a zone and
+ * the documents area, and the one between a zone's two halves.
  */
-export function ResizeHandle({ zone, size, onSize }: ResizeHandleProps) {
+export function ResizeHandle({ axis, invert = false, size, onSize }: ResizeHandleProps) {
   const drag = useRef<Drag | null>(null)
-  const lying = isHorizontal(zone)
+  const lying = axis === 'vertical'
 
   const onMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -31,11 +36,9 @@ export function ResizeHandle({ zone, size, onSize }: ResizeHandleProps) {
 
       const position = lying ? event.clientY : event.clientX
       const delta = position - current.position
-      // `right` and `bottom` zones grow as the pointer moves backwards.
-      const direction = zone === 'right' || zone === 'bottom' ? -1 : 1
-      onSize(current.size + delta * direction, current.available)
+      onSize(current.size + delta * (invert ? -1 : 1), current.available)
     },
-    [lying, onSize, zone],
+    [invert, lying, onSize],
   )
 
   return (
