@@ -211,6 +211,14 @@
     "untitled": "Calque {{n}}",
     "noDocument": "Ouvrez une image pour voir ses calques."
   },
+  "videoTools": {
+    "select": "Sélection",
+    "selectHint": "Sélectionner, déplacer et rogner un clip",
+    "blade": "Lame",
+    "bladeHint": "Couper un clip à la tête de lecture",
+    "hand": "Main",
+    "handHint": "Faire défiler la timeline — molette pour zoomer"
+  },
   "sceneTools": {
     "translate": "Déplacer",
     "translateHint": "Déplacer l’objet sélectionné le long des axes",
