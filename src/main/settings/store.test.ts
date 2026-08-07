@@ -127,10 +127,40 @@ describe('settings store', () => {
     expect(adapter.raw.has('accounts')).toBe(true)
   })
 
-  it('drops an unreadable book only when asked explicitly', () => {
+  /*
+   * A keychain can be locked, or resolve to another backend for one launch. `settleAccounts`
+   * runs before the first window, so erasing there is permanent and silent: the user comes
+   * back with every key gone. Reading empty is enough to make the screens ask for one.
+   */
+  it('never erases an unreadable book, however it is read', () => {
     adapter.raw.set('accounts', 'garbage')
-    createSettingsStore(adapter).settleAccounts()
-    expect(adapter.raw.has('accounts')).toBe(false)
+    const store = createSettingsStore(adapter)
+
+    store.settleAccounts()
+    void store.accounts()
+    void store.hasCredentials()
+
+    expect(adapter.raw.get('accounts')).toBe('garbage')
+  })
+
+  it('refuses to write over a book it could not read, rather than replacing it', () => {
+    adapter.raw.set('accounts', 'garbage')
+    const store = createSettingsStore(adapter)
+
+    // The screen says "no account yet", so adding one is exactly what the user does next.
+    expect(() => store.addAccount('Studio', { key: 'k', secret: 's' })).toThrow('store-unreadable')
+    expect(adapter.raw.get('accounts')).toBe('garbage')
+  })
+
+  it('survives an activeId that names nothing, keeping the accounts', () => {
+    adapter.raw.set(
+      'accounts',
+      'enc:{"accounts":[{"id":"a","name":"Studio","credentials":{"key":"k","secret":"s"}}],"activeId":42}',
+    )
+
+    expect(createSettingsStore(adapter).accounts()).toEqual([
+      { id: 'a', name: 'Studio', active: true },
+    ])
   })
 
   it('keeps the accounts that still parse when one entry is broken', () => {
@@ -209,6 +239,33 @@ describe('carrying a single-credential install over', () => {
 
     expect(adapter.raw.has('credentials')).toBe(false)
     expect(String(adapter.raw.get('accounts'))).toContain('"name":"Scenario"')
+    expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
+  })
+
+  // The pair is the only copy of the key. Dropping it before it is safely inside a book means
+  // the upgrade this whole migration exists for is what destroys it.
+  it('keeps a pair it could not decrypt, rather than dropping it unmigrated', () => {
+    adapter.raw.set('credentials', 'garbage')
+    const store = createSettingsStore(adapter)
+
+    store.settleAccounts()
+
+    expect(adapter.raw.get('credentials')).toBe('garbage')
+    expect(adapter.raw.has('accounts')).toBe(false)
+  })
+
+  it('keeps the pair when the keychain cannot encrypt the book it would write', () => {
+    adapter.raw.set('credentials', 'enc:{"key":"api_k","secret":"s3cr3t"}')
+    const store = createSettingsStore({
+      ...adapter,
+      encrypt: () => {
+        throw new Error('no keychain on this machine')
+      },
+    })
+
+    // Refusing to launch over a migration that can wait would be worse than postponing it.
+    expect(() => store.settleAccounts()).not.toThrow()
+    expect(adapter.raw.has('credentials')).toBe(true)
     expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
   })
 

@@ -173,7 +173,9 @@ const storedBook = z.object({
   // `catch` per entry rather than on the array: one unreadable account costs its own row, not
   // every key the user holds.
   accounts: z.array(storedAccount.nullable().catch(null)),
-  activeId: z.string().min(1).nullable(),
+  // Caught for the same reason as an entry: a corrupt `activeId` must cost the pointer, not
+  // the whole book. `settleBook` repoints it at the first account left.
+  activeId: z.string().min(1).nullable().catch(null),
 })
 
 /**

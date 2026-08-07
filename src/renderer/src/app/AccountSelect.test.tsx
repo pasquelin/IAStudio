@@ -34,10 +34,23 @@ describe('AccountSelect', () => {
     expect(screen.getByRole('button', { name: 'Compte Scenario' })).toHaveTextContent('Studio')
   })
 
-  it('says it is not connected while nothing is stored', () => {
+  it('says it is not connected while nothing is stored and nothing answers', () => {
+    given([], false)
     render(<AccountSelect />)
+
     expect(screen.getByRole('button', { name: 'Compte Scenario' })).toHaveTextContent(
       'Non connecté',
+    )
+  })
+
+  // Authenticated with nothing stored means `secrets/.env` answered. Calling that "not
+  // connected" while every API call succeeds sends the reader hunting for the wrong problem.
+  it('names the development fallback rather than claiming to be disconnected', () => {
+    given([], true)
+    render(<AccountSelect />)
+
+    expect(screen.getByRole('button', { name: 'Compte Scenario' })).toHaveTextContent(
+      'Développement',
     )
   })
 

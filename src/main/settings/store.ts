@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { AccountSummary } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
 import {
+  AccountError,
   activateAccount,
   activeCredentials,
   addAccount,
@@ -121,16 +122,30 @@ export function createSettingsStore(
   }
 
   /**
-   * Reads without side effects. An unreadable book is reported empty, not deleted: erasing
-   * from a read would make `accounts()` destructive, and a transient keychain failure would
-   * silently cost the user every key they hold.
+   * A stored book that would not decrypt is kept apart from one that is simply not there. The
+   * two look alike to a reader and could not be more different to a writer: a locked keychain
+   * must never be answered by writing over the keys it is holding.
+   */
+  type StoredBook = { held: 'none' } | { held: 'unreadable' } | { held: 'book'; book: AccountBook }
+
+  const storedBook = (): StoredBook => {
+    const raw = readRaw(ACCOUNTS_KEY)
+    if (!raw) return { held: 'none' }
+
+    const book = decrypt(raw, parseStoredAccounts)
+    return book ? { held: 'book', book } : { held: 'unreadable' }
+  }
+
+  /**
+   * Reads without side effects. An unreadable book reads as empty so the screens ask for a key
+   * rather than claim to be set up — never as a reason to erase it.
    *
    * With no book at all, a lone pair from a single-credential install stands in for one, so
    * an upgrade keeps working before `settleAccounts` has had a chance to carry it over.
    */
   const readBook = (): AccountBook => {
-    const stored = readRaw(ACCOUNTS_KEY)
-    if (stored) return decrypt(stored, parseStoredAccounts) ?? EMPTY_BOOK
+    const stored = storedBook()
+    if (stored.held !== 'none') return stored.held === 'book' ? stored.book : EMPTY_BOOK
 
     const lone = readRaw(CREDENTIALS_KEY)
     const credentials = lone && decrypt(lone, parseStoredCredentials)
@@ -143,7 +158,17 @@ export function createSettingsStore(
 
   /** Runs one change and reports whether it moved the active key — never guessed by a caller. */
   const apply = (change: (book: AccountBook) => AccountBook): AccountChange => {
-    const before = readBook()
+    const stored = storedBook()
+
+    /*
+     * A write replaces the blob whole. Adding an account on top of a book we could not read
+     * would therefore leave a book of one where the user had several — and the screen invites
+     * exactly that, since an unreadable book reads as "no account yet". Refusing is the only
+     * answer that keeps the keys: the next launch, with the keychain back, reads them fine.
+     */
+    if (stored.held === 'unreadable') throw new AccountError('store-unreadable')
+
+    const before = stored.held === 'book' ? stored.book : readBook()
     const after = change(before)
     writeBook(after)
 
@@ -180,21 +205,34 @@ export function createSettingsStore(
     hasCredentials: () => activeCredentials(readBook()) !== null,
 
     settleAccounts: () => {
-      const stored = readRaw(ACCOUNTS_KEY)
+      const stored = storedBook()
 
-      if (stored) {
-        // Unreadable rather than merely empty: keeping it would leave every future write
-        // merging onto a blob nothing can read.
-        if (decrypt(stored, parseStoredAccounts) === null) adapter.remove(ACCOUNTS_KEY)
-      } else {
-        const book = readBook()
-        if (book.accounts.length > 0) writeBook(book)
+      // Nothing is touched. This runs before the first window, where a keychain can be locked
+      // or unavailable for the launch: erasing the book would cost every key the user holds,
+      // and erasing the pair beside it would cost the one copy that migration may still need.
+      if (stored.held === 'unreadable') return
+
+      // A readable book is proof the pair was superseded. Left behind, it would outlive
+      // "remove every account", which no longer touches it.
+      if (stored.held === 'book') {
+        if (readRaw(CREDENTIALS_KEY)) adapter.remove(CREDENTIALS_KEY)
+        return
       }
 
-      // Whichever branch ran: the pair was either carried over just now or superseded by a
-      // book long ago. Leaving it would keep a secret that removing every account no longer
-      // erases — and the read is what keeps a startup with nothing stored off the disk.
-      if (readRaw(CREDENTIALS_KEY)) adapter.remove(CREDENTIALS_KEY)
+      const lone = readRaw(CREDENTIALS_KEY)
+      const credentials = lone && decrypt(lone, parseStoredCredentials)
+      // An undecryptable pair is kept for the same reason as an unreadable book: it is the
+      // only copy of the key, and the next launch may well read it.
+      if (!credentials) return
+
+      try {
+        writeBook(bookFromCredentials(credentials, MIGRATED_ACCOUNT_ID))
+        adapter.remove(CREDENTIALS_KEY)
+      } catch {
+        // No keychain on this machine, so nothing can be encrypted. The pair stays where it
+        // is and `readBook` keeps standing in for it — failing the launch over a migration
+        // that can wait would be worse.
+      }
     },
 
     readCredentials: () => activeCredentials(readBook()),

@@ -16,8 +16,13 @@ export const DEFAULT_ACCOUNT_NAME = 'Scenario'
 /** Why a name was refused. */
 export type AccountNameFailure = 'empty' | 'too-long' | 'duplicate'
 
-/** Why a change to the account list was refused. Crosses the boundary as a code. */
-export type AccountFailure = AccountNameFailure | 'unknown-account'
+/**
+ * Why a change to the account list was refused. Crosses the boundary as a code.
+ *
+ * `store-unreadable` means the keychain would not give the stored accounts back. Writing then
+ * would replace them all with the one being saved, so the change is refused instead.
+ */
+export type AccountFailure = AccountNameFailure | 'unknown-account' | 'store-unreadable'
 
 /** Named accounts, whatever else the caller holds about them. */
 type Named = { id: string; name: string }

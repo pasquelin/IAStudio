@@ -33,8 +33,12 @@ export function AccountSelect() {
   const flyout = useHoverFlyout(accounts.length + 1)
 
   const active = activeAccount(accounts)
-  const label = active?.name ?? t('accounts.notConnected')
   const manage = (): void => openSection('account')
+
+  // Authenticated with nothing stored means `secrets/.env` answered — the development fallback
+  // in `resolveCredentials`. Calling that "not connected" while every call succeeds would send
+  // the reader hunting for a key that is not the problem.
+  const label = active?.name ?? t(authenticated ? 'accounts.development' : 'accounts.notConnected')
 
   return (
     <div {...flyout.wrapProps} className="contents">
@@ -55,8 +59,9 @@ export function AccountSelect() {
           aria-hidden
           className={cn(
             'size-1.5 shrink-0 rounded-full',
-            // Only the account in use can be probed, so an idle one is never called wrong.
-            active && authenticated ? 'bg-success' : 'bg-muted',
+            // Follows the probe alone: it answers for whatever credentials the main process
+            // resolved, which is the active account or the development fallback behind it.
+            authenticated ? 'bg-success' : 'bg-muted',
           )}
         />
         <span className="truncate">{label}</span>

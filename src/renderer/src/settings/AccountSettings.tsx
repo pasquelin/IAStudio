@@ -13,6 +13,7 @@ const FAILURE_KEYS: Record<AccountSaveFailure, string> = {
   'too-long': 'accounts.errors.too-long',
   duplicate: 'accounts.errors.duplicate',
   'unknown-account': 'accounts.errors.unknown-account',
+  'store-unreadable': 'accounts.errors.store-unreadable',
   unexpected: 'accounts.errors.unexpected',
 }
 
@@ -37,7 +38,11 @@ export function AccountSettings() {
   return (
     <div className="flex max-w-lg flex-col gap-4">
       {accounts.length === 0 ? (
-        <p className="text-base-content/60 text-xs">{t('accounts.none')}</p>
+        // Authenticated with nothing stored means `secrets/.env` answered, and saying "no
+        // account" alone would leave a working studio looking unconfigured.
+        <p className="text-base-content/60 text-xs">
+          {t(auth.authenticated ? 'accounts.developmentFallback' : 'accounts.none')}
+        </p>
       ) : (
         <ul className="flex flex-col gap-1">
           {accounts.map(account => (
@@ -73,8 +78,7 @@ function AccountRow({ account, authenticated }: AccountRowProps) {
   const remove = useAccounts(state => state.remove)
   const activate = useAccounts(state => state.activate)
 
-  // One state, not two: a draft that exists IS the editing mode, so the two cannot disagree —
-  // and a rename landing from another window cannot leave a stale draft behind.
+  // One state, not two: a draft that exists IS the editing mode, so the two cannot disagree.
   const [draft, setDraft] = useState<string | null>(null)
   const [failure, setFailure] = useState<AccountSaveFailure | null>(null)
 

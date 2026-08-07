@@ -4,7 +4,6 @@ import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
-import { getBridge } from '@/services/bridge'
 import { activeAccount, useAccounts } from '@/stores/accounts'
 import { useJobs } from '@/stores/jobs'
 import { useMedia } from '@/stores/media'
@@ -59,16 +58,21 @@ export function Application() {
    * The main process clears its own caches on the same event (`onCredentialsChanged`).
    */
   useEffect(() => {
-    // Tracked here rather than read from the store: the two subscribe to the same event, and
-    // nothing orders them — reading the store back could see either version.
+    /*
+     * Watched on the store, not on the event: the first list arrives through `list()` and
+     * never through `onChange`, so an event-side watcher would still be holding `null` when
+     * the first broadcast lands and would clear the cache over an unrelated rename.
+     */
     let active = activeAccount(useAccounts.getState().accounts)?.id ?? null
 
-    return getBridge()?.accounts.onChange(accounts => {
-      const next = activeAccount(accounts)?.id ?? null
+    return useAccounts.subscribe(state => {
+      const next = activeAccount(state.accounts)?.id ?? null
       if (next === active) return
 
+      // Nothing was fetched under "no account", so arriving at one has nothing to drop.
+      const switched = active !== null
       active = next
-      client.clear()
+      if (switched) client.clear()
     })
   }, [client])
 

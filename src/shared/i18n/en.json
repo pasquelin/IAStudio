@@ -483,12 +483,15 @@
     "switch": "Scenario account",
     "manage": "Manage accounts…",
     "notConnected": "Not connected",
+    "development": "Development",
+    "developmentFallback": "No account stored: the development credentials (secrets/.env) are in use.",
     "explanation": "Each API key carries its own Scenario project. Switching accounts changes the library you browse — never the files in your local project.",
     "errors": {
       "empty": "A name is required.",
       "too-long": "This name is too long.",
       "duplicate": "Another account already uses this name.",
       "unknown-account": "This account no longer exists.",
+      "store-unreadable": "The keychain did not give your accounts back. Try again once it is unlocked — nothing was changed.",
       "unexpected": "The account could not be saved."
     }
   },
