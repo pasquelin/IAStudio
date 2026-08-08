@@ -81,6 +81,18 @@ export function isActivityTopic(value: unknown): value is ActivityTopic {
  */
 export const ACTIVITY_RETENTION = 2000
 
+/**
+ * How many of those a window holds.
+ *
+ * Wider than a screenful — the panel shows about fifteen — and far short of the retention: the
+ * whole two thousand is half a megabyte deserialised on a UI thread that draws none of it.
+ *
+ * The same bound on both sides of a window's life, the read and the lines that arrive after:
+ * a failure count computed over two hundred rows at one moment and two thousand at another is
+ * a count that seems to lose failures on its own.
+ */
+export const ACTIVITY_WINDOW = 200
+
 /** Whether a line passes a filter. An absent list and an empty one both let everything through. */
 export function matchesActivity(entry: ActivityDraft, filter: ActivityFilter): boolean {
   const levels = filter.levels ?? []

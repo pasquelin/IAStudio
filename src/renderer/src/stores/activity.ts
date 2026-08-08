@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import {
-  ACTIVITY_RETENTION,
+  ACTIVITY_WINDOW,
   matchesActivity,
   type ActivityEntry,
   type ActivityFilter,
@@ -58,18 +58,15 @@ export const useActivity = create<ActivityState>()((set, get) => ({
     return stop
   },
 
-  // A screenful and then some, not the whole retention: the journal keeps two thousand lines and
-  // the flyout shows fifteen, so asking for all of them was half a megabyte deserialised on the
-  // UI thread of every window that opened, for a panel that draws none of it.
   reload: async () => {
-    set({ entries: (await getBridge()?.activity.read({})) ?? [] })
+    set({ entries: (await getBridge()?.activity.read({ limit: ACTIVITY_WINDOW })) ?? [] })
   },
 
   // Prepended rather than refetched: the batch that just arrived IS the newest, and re-reading
   // would throw away the list the panel is scrolled through.
   append: entries =>
     set(state => ({
-      entries: [...[...entries].reverse(), ...state.entries].slice(0, ACTIVITY_RETENTION),
+      entries: [...[...entries].reverse(), ...state.entries].slice(0, ACTIVITY_WINDOW),
       unread: [...entries.filter(entry => entry.level === 'error'), ...state.unread].slice(
         0,
         TOAST_LIMIT,

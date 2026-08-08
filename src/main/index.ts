@@ -51,8 +51,17 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
   // The journal batches, so up to a flush's worth of it is still in memory at any moment — and
   // the most ordinary way to lose it is the one that matters: an export fails, the user quits.
-  app.on('before-quit', () => {
-    void services.journal.flush()
+  //
+  // Electron only waits for this if it is told to. Without the `preventDefault`, the process is
+  // torn down while the round trip to the catalogue thread is still out, and the line this is
+  // here to save is the one that goes.
+  let leaving = false
+  app.on('before-quit', event => {
+    if (leaving) return
+
+    event.preventDefault()
+    leaving = true
+    void services.journal.flush().finally(() => app.quit())
   })
 
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over

@@ -32,7 +32,10 @@ async function followProject(project: Project | null): Promise<void> {
   // nothing to say about this one, and a failure here is news again.
   forgetReportedFailures()
   // The journal lives in the project's own catalogue, so it is another project's account of
-  // itself: left alone, its lines and its failure count would carry over into this one.
+  // itself: left alone, its lines and its failure count would carry over into this one. The
+  // toasts too — they never expire, so one raised by the project being left would hang over
+  // the one being opened, naming an asset that is no longer anywhere.
+  useActivity.getState().dismissAll()
   await Promise.all([
     useAssets.getState().refresh(),
     useDocuments.getState().refresh(),

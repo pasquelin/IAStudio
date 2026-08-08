@@ -8,6 +8,9 @@ type Broadcast = (entries: readonly ActivityEntry[]) => void
 
 const spy = () => vi.fn<Broadcast>()
 
+/** Lets whatever was started reach its first await. */
+const settled = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
+
 describe('the studio recording what it did', () => {
   let catalog: AsyncCatalog
   let broadcast: ReturnType<typeof spy>
@@ -178,5 +181,45 @@ describe('a journal that has been disposed', () => {
     await journal.flush()
 
     expect(broadcast).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * `flush` is what the shutdown path and a project change both call before the catalogue stops
+ * answering. Waiting only on what is queued would leave a batch already on its way to be
+ * rejected by the close that follows.
+ */
+describe('flushing while a write is already on its way', () => {
+  it('waits for the batch in flight, not only for what is still queued', async () => {
+    let release: (() => void) | undefined
+    const written: string[] = []
+    const held = memoryCatalog()
+
+    const journal = createActivityLog({
+      catalog: () => ({
+        ...held,
+        appendActivity: async entries => {
+          if (!release) await new Promise<void>(resolve => (release = resolve))
+          written.push(...entries.map(entry => entry.messageKey))
+          return held.appendActivity(entries)
+        },
+      }),
+      broadcast: spy(),
+      now: () => '2026-08-08T10:00:00.000Z',
+    })
+
+    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.first' })
+    const inFlight = journal.flush()
+    await settled()
+
+    // Lands behind a write that has not come back yet.
+    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.second' })
+    const settling = journal.flush()
+    await settled()
+
+    release?.()
+    await Promise.all([inFlight, settling])
+
+    expect(written).toEqual(['activity.first', 'activity.second'])
   })
 })

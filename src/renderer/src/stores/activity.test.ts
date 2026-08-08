@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ACTIVITY_RETENTION, type ActivityEntry } from '@shared/domain/activity'
+import { ACTIVITY_WINDOW, type ActivityEntry } from '@shared/domain/activity'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { failureCount, useActivity, visibleActivity } from './activity'
 
@@ -43,10 +43,10 @@ describe('the journal, as the window holds it', () => {
     expect(state().entries.map(one => one.id)).toEqual([3, 2, 1])
   })
 
-  it('keeps no more than a project does', () => {
-    state().append(Array.from({ length: ACTIVITY_RETENTION + 50 }, (_, id) => entry({ id })))
+  it('keeps no more than a window shows', () => {
+    state().append(Array.from({ length: ACTIVITY_WINDOW + 50 }, (_, id) => entry({ id })))
 
-    expect(state().entries).toHaveLength(ACTIVITY_RETENTION)
+    expect(state().entries).toHaveLength(ACTIVITY_WINDOW)
   })
 
   it('survives having no bridge at all, as a plain browser has none', async () => {
@@ -151,5 +151,35 @@ describe('what gets shown as a toast', () => {
     state().dismissAll()
 
     expect(state().entries).toHaveLength(1)
+  })
+})
+
+/**
+ * The journal belongs to the project's own catalogue. Everything it holds is another project's
+ * account of itself, and the toasts never expire on their own.
+ */
+describe('changing project', () => {
+  beforeEach(() => {
+    useActivity.setState({ entries: [], levels: [], topics: [], unread: [] })
+  })
+
+  it('reads the new project journal rather than keeping the last one', async () => {
+    useActivity.setState({ entries: [entry({ id: 1, messageKey: 'from.a' })] })
+    installFakeBridge({ activity: { read: () => Promise.resolve([entry({ id: 2 })]) } })
+
+    await state().reload()
+
+    expect(state().entries.map(one => one.messageKey)).toEqual(['activity.pushFailed'])
+  })
+
+  // A toast raised by the project being left would hang over the one being opened, naming an
+  // asset that is no longer anywhere.
+  it('takes down a toast the project it belonged to is gone', () => {
+    state().append([entry({ id: 1, level: 'error' })])
+    expect(state().unread).toHaveLength(1)
+
+    state().dismissAll()
+
+    expect(state().unread).toEqual([])
   })
 })

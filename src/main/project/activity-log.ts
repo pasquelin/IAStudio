@@ -48,6 +48,8 @@ export type ActivityLog = {
 export function createActivityLog(deps: ActivityLogDeps): ActivityLog {
   const queue: ActivityDraft[] = []
   let timer: ReturnType<typeof setTimeout> | null = null
+  /** A write already on its way. `flush` has to wait for it, not merely for what is queued. */
+  let inFlight: Promise<void> | null = null
   let disposed = false
 
   // Ids for lines no catalogue took. SQLite counts up from 1, so counting down from 0 can never
@@ -74,6 +76,14 @@ export function createActivityLog(deps: ActivityLogDeps): ActivityLog {
     }
   }
 
+  const start = (): Promise<void> => {
+    const running = write().finally(() => {
+      if (inFlight === running) inFlight = null
+    })
+    inFlight = running
+    return running
+  }
+
   const schedule = (): void => {
     if (timer !== null || disposed) return
 
@@ -81,7 +91,7 @@ export function createActivityLog(deps: ActivityLogDeps): ActivityLog {
     // lines, and the catalogue thread answers in the order it was asked — nothing to serialise.
     timer = setTimeout(() => {
       timer = null
-      void write()
+      void start()
     }, ACTIVITY_FLUSH_MS)
 
     // Node keeps the process alive for a pending timer; a journal must never be the reason the
@@ -105,7 +115,10 @@ export function createActivityLog(deps: ActivityLogDeps): ActivityLog {
         timer = null
       }
 
-      await write()
+      // The one already on its way first: the catalogue is about to stop answering, and closing
+      // it rejects everything still pending — including a batch this would otherwise not wait for.
+      await inFlight
+      await start()
     },
 
     dispose: () => {

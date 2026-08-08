@@ -167,3 +167,69 @@ describe('a journal written by a build that knew more than this one', () => {
     expect(catalog.readActivity({})[0]?.params).toEqual({ name: 'moss', size: 2 })
   })
 })
+
+/**
+ * The ids come back from the database and are paired onto the drafts the caller still holds.
+ * The pairing has to survive the prune eating the head of the very batch that triggered it.
+ */
+describe('pairing a batch with the ids it was given', () => {
+  let catalog: Catalog
+
+  beforeEach(() => {
+    catalog = createCatalog(openMemoryDatabase())
+  })
+
+  it('gives each line of a batch the id its own row got', () => {
+    const written = catalog.appendActivity([
+      line({ messageKey: 'activity.a' }),
+      line({ messageKey: 'activity.b' }),
+      line({ messageKey: 'activity.c' }),
+    ])
+
+    for (const entry of written) {
+      const stored = catalog.readActivity({}).find(one => one.id === entry.id)
+      expect(stored?.messageKey).toBe(entry.messageKey)
+    }
+  })
+
+  it('keeps pairing right when the journal was already full', () => {
+    catalog.appendActivity(
+      Array.from({ length: ACTIVITY_RETENTION }, (_, index) =>
+        line({ messageKey: `old.${index}` }),
+      ),
+    )
+
+    const written = catalog.appendActivity([
+      line({ messageKey: 'new.a' }),
+      line({ messageKey: 'new.b' }),
+    ])
+
+    expect(written.map(entry => entry.messageKey)).toEqual(['new.a', 'new.b'])
+    for (const entry of written) {
+      expect(catalog.readActivity({}).find(one => one.id === entry.id)?.messageKey).toBe(
+        entry.messageKey,
+      )
+    }
+  })
+
+  // The prune runs inside the same transaction, so a batch longer than the retention loses its
+  // own oldest lines: what comes back must be the tail that survived, still correctly paired.
+  it('answers only the tail of a batch longer than the whole retention', () => {
+    const written = catalog.appendActivity(
+      Array.from({ length: ACTIVITY_RETENTION + 5 }, (_, index) =>
+        line({ messageKey: `n.${index}` }),
+      ),
+    )
+
+    expect(written).toHaveLength(ACTIVITY_RETENTION)
+    expect(written[0]?.messageKey).toBe('n.5')
+    expect(written.at(-1)?.messageKey).toBe(`n.${ACTIVITY_RETENTION + 4}`)
+
+    for (const entry of [written[0], written.at(-1)]) {
+      expect(
+        catalog.readActivity({ limit: ACTIVITY_RETENTION }).find(one => one.id === entry?.id)
+          ?.messageKey,
+      ).toBe(entry?.messageKey)
+    }
+  })
+})
