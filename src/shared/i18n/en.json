@@ -1214,5 +1214,11 @@
     "alreadyEnglish": "This text is already in English.",
     "describeStyle": "Describe the style of the references",
     "noReference": "Drop a reference picture to describe its style."
+  },
+  "units": {
+    "byte": "B",
+    "kibibyte": "KiB",
+    "mebibyte": "MiB",
+    "gibibyte": "GiB"
   }
 }

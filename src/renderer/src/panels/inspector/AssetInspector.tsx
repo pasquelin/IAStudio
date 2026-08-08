@@ -21,7 +21,7 @@ import { useModels } from '@/stores/models'
  * rather than a wall of thumbnails.
  */
 export function AssetInspector({ asset }: { asset: Asset }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const jobs = useJobs(state => state.jobs)
   const bodies = useJobs(state => state.bodies)
   const [missing, setMissing] = useState(false)
@@ -54,10 +54,13 @@ export function AssetInspector({ asset }: { asset: Asset }) {
           </PropertyRow>
         )}
         {asset.bytes !== undefined && (
-          <PropertyRow label={t('inspector.size')}>{formatBytes(asset.bytes)}</PropertyRow>
+          <PropertyRow label={t('inspector.size')}>
+            {formatBytes(asset.bytes, unit => t(`units.${unit}`))}
+          </PropertyRow>
         )}
         <PropertyRow label={t('inspector.created')}>
-          {new Date(asset.createdAt).toLocaleString()}
+          {/* The studio's language, not the machine's — the two differ. */}
+          {new Date(asset.createdAt).toLocaleString(i18n.language)}
         </PropertyRow>
       </PropertyGroup>
 

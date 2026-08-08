@@ -117,7 +117,11 @@ function AssetSelection({ ids }: { ids: readonly string[] }) {
   return (
     <PropertyGroup title={t('inspector.selection')}>
       <PropertyRow label={t('inspector.count')}>{assets.length}</PropertyRow>
-      {total > 0 && <PropertyRow label={t('inspector.size')}>{formatBytes(total)}</PropertyRow>}
+      {total > 0 && (
+        <PropertyRow label={t('inspector.size')}>
+          {formatBytes(total, unit => t(`units.${unit}`))}
+        </PropertyRow>
+      )}
     </PropertyGroup>
   )
 }

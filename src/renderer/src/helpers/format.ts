@@ -1,11 +1,24 @@
-/** Kibibytes, like every file manager on every desktop the studio runs on. */
-export function formatBytes(bytes: number): string {
-  const units = ['o', 'Kio', 'Mio', 'Gio']
+/** The four the studio ever reaches: an asset larger than a tebibyte is not a thing it makes. */
+export type ByteUnit = 'byte' | 'kibibyte' | 'mebibyte' | 'gibibyte'
+
+export const BYTE_UNITS: readonly ByteUnit[] = ['byte', 'kibibyte', 'mebibyte', 'gibibyte']
+
+/**
+ * Kibibytes, like every file manager on every desktop the studio runs on.
+ *
+ * The unit is named by the caller rather than written here: `Mio` and `MiB` are the same size
+ * in two languages, and the abbreviations lived in this file in French only.
+ */
+export function formatBytes(bytes: number, unitName: (unit: ByteUnit) => string): string {
   let value = bytes
-  let unit = 0
-  while (value >= 1024 && unit < units.length - 1) {
+  let unit: ByteUnit = 'byte'
+
+  for (const next of BYTE_UNITS.slice(1)) {
+    if (value < 1024) break
     value /= 1024
-    unit += 1
+    unit = next
   }
-  return `${value < 10 && unit > 0 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`
+
+  const rounded = value < 10 && unit !== 'byte' ? value.toFixed(1) : Math.round(value)
+  return `${rounded} ${unitName(unit)}`
 }
