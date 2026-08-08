@@ -1,6 +1,9 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
+import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { LIGHT_ENTRIES, MESH_ENTRIES } from '@shared/domain/scene'
+import { TRANSLATIONS } from '@shared/i18n'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
@@ -65,6 +68,8 @@ describe('the Image menu', () => {
       'Rotation horaire',
       'Rotation antihoraire',
       '',
+      'Faire un masque de la sélection',
+      '',
       'Régénérer la zone',
       'Étendre',
       'Détourer',
@@ -114,6 +119,84 @@ describe('the Image menu', () => {
     activate(entries.find(entry => entry.label === 'Rotation horaire'))
 
     expect(runCommand).toHaveBeenCalledWith('canvas.rotateCw')
+  })
+})
+
+describe('every command the studio declares', () => {
+  /**
+   * A command with no default key and no menu row cannot be run at all. Four of them were in
+   * that state — the guides, the snapping and the mask from a selection — implemented, tested,
+   * and unreachable. The registry is where a command is declared; this is where it earns a way in.
+   */
+  it('can be reached, by a key or by a row', () => {
+    const rows = new Set<string>()
+    const collect = (items: readonly MenuItemConstructorOptions[]): void => {
+      for (const item of items) {
+        if (item.label) rows.add(String(item.label))
+        if (Array.isArray(item.submenu)) collect(item.submenu)
+      }
+    }
+
+    // Every workspace posts its own rows, so the union is what the studio actually offers.
+    const spaces: WorkspaceId[] = ['image', '3d', 'video', 'audio', 'textures', 'skyboxes']
+    for (const workspace of spaces) collect(menuTemplate(options({ workspace })))
+
+    const titles = TRANSLATIONS.fr.commands
+    const stranded = COMMAND_REGISTRY.filter(descriptor => {
+      if (descriptor.defaultBinding) return false
+      const key = descriptor.titleKey.replace('commands.', '').replace('.title', '')
+      const label = titles[key as keyof typeof titles]?.title
+      return !label || !rows.has(label)
+    })
+
+    expect(stranded.map(descriptor => descriptor.id)).toEqual([])
+  })
+})
+
+describe('the Edit menu', () => {
+  /**
+   * `role: 'editMenu'` registers ⌘Z with the system: AppKit served the key to the menu and the
+   * window never saw it, so `canvas.undo`, `scene.undo` and `sequence.undo` were unreachable by
+   * keyboard in all three spaces — an application that appeared to have no undo at all.
+   */
+  it('binds undo to the surface the workspace edits', () => {
+    const cases: [WorkspaceId, string][] = [
+      ['image', 'canvas.undo'],
+      ['3d', 'scene.undo'],
+      ['video', 'sequence.undo'],
+    ]
+
+    for (const [workspace, expected] of cases) {
+      const runCommand = vi.fn()
+      const entries = submenuOf(
+        menuTemplate(options({ workspace, actions: actions({ runCommand }) })),
+        'Édition',
+      )
+
+      activate(entries.find(entry => entry.label === 'Annuler'))
+      expect(runCommand).toHaveBeenCalledWith(expected)
+    }
+  })
+
+  // Nothing is undoable there, so the platform keeps the key rather than a command answering
+  // for a history that does not exist.
+  it('leaves undo to the platform where nothing is undoable', () => {
+    const entries = submenuOf(menuTemplate(options({ workspace: 'audio' })), 'Édition')
+
+    expect(entries[0]?.role).toBe('undo')
+  })
+
+  /**
+   * The clipboard rows keep their native roles — a text field has to go on copying — but must
+   * not reserve the key: `scene.copy` is bound to ⌘C too, and `useShortcuts` is what decides
+   * between the two by looking at whether text is highlighted.
+   */
+  it('shows the clipboard keys without reserving them', () => {
+    const entries = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Édition')
+    const clipboard = entries.filter(entry => ['cut', 'copy', 'paste'].includes(String(entry.role)))
+
+    expect(clipboard).toHaveLength(3)
+    expect(clipboard.map(entry => entry.registerAccelerator)).toEqual([false, false, false])
   })
 })
 

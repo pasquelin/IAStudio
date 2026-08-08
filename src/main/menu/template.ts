@@ -14,7 +14,13 @@ import {
 } from '@shared/domain/scene'
 import { placementIn, type ToolId, type ToolPlacement } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import { bindingOf, type BindingOverrides, type CommandId } from '@shared/domain/command'
+import {
+  bindingOf,
+  commandIn,
+  scopeOfWorkspace,
+  type BindingOverrides,
+  type CommandId,
+} from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
 import type { SceneAddRequest, SceneExportCommand, ToolRequest } from '@shared/ipc'
@@ -181,6 +187,62 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     click: () => actions.runCommand(command),
   })
 
+  /**
+   * Built by hand rather than `role: 'editMenu'`, and the reason is ⌘Z.
+   *
+   * A native role registers its accelerator with the system: AppKit then serves the key to the
+   * menu and the window never sees it. Undo, Redo, Cut, Copy and Paste were all swallowed that
+   * way — `canvas.undo`, `scene.undo` and `sequence.undo` could not be reached by keyboard in
+   * any of the three spaces, and the studio read as an application without undo.
+   *
+   * Undo and Redo are ordinary command rows now: the menu catches the key and hands the command
+   * to the surface in front. The clipboard keeps its native roles — a text field must go on
+   * copying — but with `registerAccelerator: false`, so the key reaches the window and
+   * `useShortcuts` decides: highlighted text keeps ⌘C, everything else is the scene's.
+   */
+  // Where no history exists, the platform keeps the keys — its own undo is the only one there is.
+  const nativeHistory: MenuItemConstructorOptions[] = [{ role: 'undo' }, { role: 'redo' }]
+  const surface = scopeOfWorkspace(workspace)
+  const undo = surface && commandIn(surface, 'undo')
+  const redo = surface && commandIn(surface, 'redo')
+
+  const editMenu: MenuItemConstructorOptions = {
+    label: t.menu.edit,
+    submenu: [
+      ...(undo && redo
+        ? [commandItem(undo, t.commands.undo.title), commandItem(redo, t.commands.redo.title)]
+        : nativeHistory),
+      { type: 'separator' },
+      { role: 'cut', registerAccelerator: false },
+      { role: 'copy', registerAccelerator: false },
+      { role: 'paste', registerAccelerator: false },
+      { role: 'selectAll' },
+    ],
+  }
+
+  /**
+   * The canvas's own view: zoom, rulers, guides, snapping.
+   *
+   * Their labels had been translated in both bundles and never posted anywhere — eight rows
+   * prepared and forgotten. The commands behind them all work; only the way in was missing, and
+   * the four that carry no default key had no way in at all.
+   */
+  const canvasViewMenu: MenuItemConstructorOptions[] =
+    workspace === 'image'
+      ? [
+          { type: 'separator' },
+          commandItem('canvas.zoomIn', t.menu.zoomIn),
+          commandItem('canvas.zoomOut', t.menu.zoomOut),
+          commandItem('canvas.zoomFit', t.menu.zoomFit),
+          commandItem('canvas.zoomActual', t.menu.zoomActual),
+          { type: 'separator' },
+          commandItem('canvas.rulers', t.menu.rulers),
+          commandItem('canvas.guides', t.menu.guides),
+          commandItem('canvas.clearGuides', t.menu.clearGuides),
+          commandItem('canvas.snap', t.menu.snap),
+        ]
+      : []
+
   /** Only where a picture is what is being edited: turning a scene is another gesture entirely. */
   const imageMenu: MenuItemConstructorOptions[] =
     workspace === 'image'
@@ -196,6 +258,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
               { type: 'separator' },
               commandItem('canvas.rotateCw', t.commands.canvasRotateCw.title),
               commandItem('canvas.rotateCcw', t.commands.canvasRotateCcw.title),
+              { type: 'separator' },
+              // Implemented, tested, and reachable by nothing at all until now: no default key
+              // and no row anywhere.
+              commandItem('canvas.maskFromSelection', t.commands.canvasMaskFromSelection.title),
               { type: 'separator' },
               // The only way in: none of the five carries a default shortcut, deliberately —
               // they spend credit, and a key pressed by accident has no business spending any.
@@ -254,7 +320,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         { role: isMac ? 'close' : 'quit' },
       ],
     },
-    { role: 'editMenu', label: t.menu.edit },
+    editMenu,
     ...imageMenu,
     ...addMenu,
     {
@@ -274,6 +340,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('layout.reset'),
           click: () => actions.runCommand('layout.reset'),
         },
+        ...canvasViewMenu,
         { type: 'separator' },
         {
           label: t.menu.fullScreen,

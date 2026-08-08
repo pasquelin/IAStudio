@@ -536,6 +536,29 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
 
 export const COMMAND_SCOPES: readonly CommandScope[] = ['global', 'scene', 'sequence', 'canvas']
 
+/**
+ * What each workspace edits, when it edits something undoable. The three absent ones — Audio,
+ * Textures, Skyboxes — have no history of their own, so the native undo keeps the key.
+ *
+ * Declared rather than derived: the menu is built in the main process from a workspace id, and
+ * it has to name the exact command the surface in front is listening for.
+ */
+const SCOPE_BY_WORKSPACE: Record<string, CommandScope> = {
+  image: 'canvas',
+  '3d': 'scene',
+  video: 'sequence',
+}
+
+/** The surface a workspace edits through, or `null` where nothing is undoable. */
+export function scopeOfWorkspace(workspace: string | null): CommandScope | null {
+  return workspace ? (SCOPE_BY_WORKSPACE[workspace] ?? null) : null
+}
+
+/** The command of that scope, when it declares one — `undo` and `redo` exist on all three. */
+export function commandIn(scope: CommandScope, suffix: string): CommandId | null {
+  return commandsIn(scope).find(descriptor => descriptor.id.endsWith(`.${suffix}`))?.id ?? null
+}
+
 export function commandDescriptor(id: CommandId): CommandDescriptor | null {
   return COMMAND_REGISTRY.find(descriptor => descriptor.id === id) ?? null
 }
