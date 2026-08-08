@@ -102,9 +102,7 @@ function bootstrap(): void {
   })
 }
 
-/**
- * One studio per machine: two would share one settings file, one WAL catalogue opened without
- * a busy timeout, and would each run the job queue the preferences bound once.
- */
+// One studio per machine: two would share one settings file and one WAL catalogue opened
+// without a busy timeout. Must stay below `setName` — the lock file lives under `userData`.
 if (app.requestSingleInstanceLock()) bootstrap()
 else app.quit()

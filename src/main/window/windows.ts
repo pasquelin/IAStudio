@@ -99,7 +99,10 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
   load(window)
 
   mainWindow = window
-  window.on('closed', () => (mainWindow = null))
+  // Identity-checked: an older window closing must not clear a slot a newer one now holds.
+  window.on('closed', () => {
+    if (mainWindow === window) mainWindow = null
+  })
 
   return window
 }
@@ -109,7 +112,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
  * Dock, so there may be nothing left to reveal.
  */
 export function showMainWindow(): void {
-  if (mainWindow) revealWindow(mainWindow)
+  if (mainWindow && !mainWindow.isDestroyed()) revealWindow(mainWindow)
   else createMainWindow()
 }
 
