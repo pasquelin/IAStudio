@@ -8,6 +8,7 @@
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",
+  "packageManager": "pnpm@11.16.0",
   "scripts": {
     "start": "electron-vite dev --watch",
     "start:debug": "electron-vite dev --watch --remoteDebuggingPort 9222",

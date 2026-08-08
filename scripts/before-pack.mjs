@@ -8,8 +8,9 @@
  * fetch would produce a release with no encoder at all, silently.
  *
  * Hooked here rather than in `dist.sh` because this is the only place that knows which target
- * is being packed, and it runs once per target. Targets are packed one after another
- * (`concurrency.jobs` defaults to 1 and is not raised), so they never race over the folder.
+ * is being packed, and it runs once per target. Targets are packed one after another —
+ * `concurrency.jobs: 1` is declared in `electron-builder.yml` for that reason — so they never
+ * race over the folder.
  */
 import { Arch } from 'electron-builder'
 import { fetchFfmpeg } from './fetch-ffmpeg.mjs'
