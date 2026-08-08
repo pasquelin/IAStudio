@@ -21,7 +21,8 @@
     "generator": "Génération",
     "inspector": "Inspecteur",
     "assets": "Assets",
-    "skybox": "Skybox"
+    "skybox": "Skybox",
+    "scene": "Scène"
   },
   "actions": {
     "undo": "Annuler",
@@ -403,11 +404,13 @@
   },
   "scene": {
     "root": "Scène",
-    "visible": "Afficher ou masquer"
+    "visible": "Afficher ou masquer",
+    "noDocument": "Ouvrez une scène pour voir son contenu."
   },
   "explorer": {
-    "otherWorkspace": "L’explorateur suit une scène 3D. Ouvrez l’espace 3D pour en voir le contenu.",
-    "noDocument": "Ouvrez une scène pour voir son contenu."
+    "noProject": "Aucun projet ouvert. Créez-en un ou ouvrez-en un pour voir ses documents.",
+    "noDocuments": "Ce projet ne contient encore aucun document enregistré.",
+    "open": "Ouvert"
   },
   "objects": {
     "sprite": "Sprite",

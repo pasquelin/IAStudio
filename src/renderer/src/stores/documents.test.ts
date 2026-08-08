@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { documentsIn, panelIds, useDocuments } from './documents'
-import { Orientation } from 'dockview-react'
-import { useLayouts, type SerializedLayout } from './layouts'
+import { showPanels } from './layout-fixtures'
+import { useLayouts } from './layouts'
 
 const POSTER: DocumentDescriptor = {
   id: 'from-disk',
@@ -12,19 +12,7 @@ const POSTER: DocumentDescriptor = {
   workspace: 'image',
 }
 
-/** A layout holding one panel per id, in the shape Dockview persists. Only `panels` is read. */
-function showing(...ids: readonly string[]): void {
-  const layout: SerializedLayout = {
-    grid: {
-      root: { type: 'branch', data: [] },
-      width: 0,
-      height: 0,
-      orientation: Orientation.HORIZONTAL,
-    },
-    panels: Object.fromEntries(ids.map(id => [id, { id }])),
-  }
-  useLayouts.setState({ layouts: { image: layout } })
-}
+const showing = (...ids: readonly string[]): void => showPanels('image', ...ids)
 
 describe('documents store', () => {
   beforeEach(() => {

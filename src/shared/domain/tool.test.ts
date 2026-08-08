@@ -148,7 +148,7 @@ describe('the left column', () => {
 describe('the rail order of the upper right', () => {
   it('reads layers then explorer in Image, and explorer before the scene panels in 3D', () => {
     expect(upperRightIn('image')).toEqual(['layers', 'explorer'])
-    expect(upperRightIn('3d')).toEqual(['explorer', 'lights', 'meshes'])
+    expect(upperRightIn('3d')).toEqual(['explorer', 'scene', 'lights', 'meshes'])
   })
 
   it('puts the shelf first where a take is dragged onto a track', () => {

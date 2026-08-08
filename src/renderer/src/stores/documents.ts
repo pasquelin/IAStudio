@@ -17,11 +17,25 @@ type DocumentsState = {
    * to know which document they are inspecting — a layer stack has to follow the active tab.
    */
   activeId: string | null
-  /** Reads the open project's folder and keeps the documents a layout still shows. */
+  /**
+   * Everything the project folder holds, open or not — what the Explorer lists.
+   *
+   * Beside `documents` rather than derived from it: `documents` is what the window is showing,
+   * and a document closed and gone from every layout would vanish from the folder listing too,
+   * which is exactly the document one needs the Explorer to find.
+   */
+  stored: DocumentDescriptor[]
+  /** Reads the open project's folder: the whole listing, and the documents a layout still shows. */
   refresh: () => Promise<void>
   /** `null` when the workspace has no editable document kind yet. */
   create: (workspace: WorkspaceId) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
+  /**
+   * Takes in a document the folder holds but no tab shows yet — what the Explorer hands over
+   * when one of its rows is opened. Idempotent, and it never overwrites: the open descriptor is
+   * the one the tab has been renaming, and the listing it came from is a snapshot.
+   */
+  adopt: (document: DocumentDescriptor) => void
   close: (id: string) => void
 }
 
@@ -89,6 +103,7 @@ export function panelIds(layouts: Record<string, { panels?: object } | undefined
  */
 export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   documents: {},
+  stored: [],
   activeId: null,
 
   // Guarded: Dockview announces the active panel again on each workspace switch — usually the
@@ -114,6 +129,9 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
     set(state => ({
       documents,
+      // Sorted by title rather than by whatever order the folder was read in: a listing that
+      // reshuffles between two refreshes is a list nobody can point at.
+      stored: [...found].sort((left, right) => left.title.localeCompare(right.title)),
       // Kept when the tab survived the load: Dockview announces the active panel on mount, and
       // that happens before this listing comes back — clearing it here would leave every tool
       // window looking at nothing while a document is plainly open.
@@ -146,6 +164,13 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     set(state => ({ documents: { ...state.documents, [document.id]: document } }))
     return document
   },
+
+  adopt: document =>
+    set(state =>
+      state.documents[document.id]
+        ? state
+        : { documents: { ...state.documents, [document.id]: document } },
+    ),
 
   close: id =>
     set(state => {

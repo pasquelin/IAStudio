@@ -14,6 +14,7 @@ export type ToolId =
   | 'lights'
   | 'timeline'
   | 'explorer'
+  | 'scene'
   | 'models'
   | 'generator'
   | 'inspector'
@@ -81,6 +82,9 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // together — and the montage owns the band, so the shelf takes the column.
   { id: 'assets', zone: 'right', slot: 'primary', workspaces: ['video', 'audio'] },
   { id: 'explorer', zone: 'right', slot: 'primary', workspaces: WORKSPACE_IDS },
+  // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
+  // lists the documents of the project in all six, which is a different question.
+  { id: 'scene', zone: 'right', slot: 'primary', workspaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', workspaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', workspaces: ['3d'] },
 

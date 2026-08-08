@@ -23,7 +23,7 @@ export function DocumentArea() {
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
-      setDockviewApi(event.api)
+      setDockviewApi(workspace, event.api)
 
       const stored = useLayouts.getState().layouts[workspace]
       if (stored) {
