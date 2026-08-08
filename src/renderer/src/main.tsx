@@ -5,7 +5,7 @@ import { isSettingsRoute } from '@shared/domain/settings'
 import { resolveLanguage } from '@shared/i18n'
 import { Application } from '@/app/Application'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
-import { WindowFailure } from '@/design/WindowFailure'
+import { Failure } from '@/design/Failure'
 import { initI18n } from '@/i18n'
 import { SettingsWindow } from '@/settings/SettingsWindow'
 import './index.css'
@@ -47,10 +47,10 @@ function Route({ hash }: { hash: string }) {
 
 createRoot(root).render(
   <StrictMode>
-    {/* Above the routes, not inside: the per-panel boundaries cover the docks, and everything
-        holding them — shell, rails, title bar, settings — would otherwise unmount to a blank
-        window. Retry remounts the tree, which is the whole recovery a renderer can offer. */}
-    <ErrorBoundary fallback={retry => <WindowFailure onRetry={retry} />}>
+    {/* Above the routes: the per-panel boundaries cover the docks, not the shell holding them.
+        Renders only — a throw while this module is evaluated happens before the boundary
+        exists, and leaves the empty window no React can catch. */}
+    <ErrorBoundary fallback={retry => <Failure scope="window" onRetry={retry} />}>
       <Route hash={window.location.hash} />
     </ErrorBoundary>
   </StrictMode>,

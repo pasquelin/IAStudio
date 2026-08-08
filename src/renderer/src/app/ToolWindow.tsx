@@ -83,7 +83,7 @@ export const ToolWindow = memo(function ToolWindow({
           {/* Its own boundary, and an empty one: actions that throw must not take the close
               button with them, and a failure notice does not fit on a header row. */}
           {Actions !== undefined && (
-            <ErrorBoundary key={tool} fallback={null}>
+            <ErrorBoundary key={tool} fallback={() => null}>
               <Actions />
             </ErrorBoundary>
           )}

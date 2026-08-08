@@ -1,13 +1,13 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { PanelFailure } from './PanelFailure'
+import { Failure } from './Failure'
 
 export type ErrorBoundaryProps = {
   children: ReactNode
   /**
-   * Shown instead of the panel notice: a node for a surface too small to explain itself — a
-   * header — or a function, for a caller that wants to offer its own way back.
+   * Shown instead of the panel notice. Always a function, so `() => null` says "nothing" —
+   * a bare `null` would be indistinguishable from the prop being left out.
    */
-  fallback?: ReactNode | ((retry: () => void) => ReactNode)
+  fallback?: (retry: () => void) => ReactNode
 }
 
 type ErrorBoundaryState = {
@@ -34,11 +34,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   override render(): ReactNode {
     if (!this.state.failed) return this.props.children
-    // `in`, not `??` nor a comparison: both `null` and `undefined` are ways of asking for
-    // nothing, and either would otherwise read as "not given" and put the notice back.
-    if (!('fallback' in this.props)) return <PanelFailure onRetry={this.retry} />
 
     const { fallback } = this.props
-    return typeof fallback === 'function' ? fallback(this.retry) : fallback
+    return fallback ? fallback(this.retry) : <Failure scope="panel" onRetry={this.retry} />
   }
 }
