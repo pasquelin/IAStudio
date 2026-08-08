@@ -15,13 +15,32 @@ export type Command<S> = {
 export type History<S> = {
   past: Command<S>[]
   future: Command<S>[]
+  /**
+   * The most recent command the stack has dropped, and the reason `markOf` is not simply the
+   * last of `past`.
+   *
+   * Past the limit the oldest commands fall off, and undoing everything left then empties
+   * `past` — which used to read as "back where the file was written", the state an untouched
+   * document is in. It is not: the commands that fell off are still applied. This says which
+   * one the empty stack now stands on, so the two cannot compare equal.
+   */
+  dropped: Command<S> | null
 }
 
 /** A session's worth of undo. Unbounded, the stack keeps every closure alive with it. */
 export const HISTORY_LIMIT = 100
 
 export function emptyHistory<S>(): History<S> {
-  return { past: [], future: [] }
+  return { past: [], future: [], dropped: null }
+}
+
+/**
+ * Where the history stands, as one value: the command it ended on, or the last one it dropped
+ * when nothing is left. Identity, never a count — undoing back to where the file was written
+ * makes the document clean again, which a counter would keep calling modified.
+ */
+export function markOf<S>(history: History<S>): Command<S> | null {
+  return history.past.at(-1) ?? history.dropped
 }
 
 export function canUndo<S>(history: History<S>): boolean {
@@ -33,8 +52,11 @@ export function canRedo<S>(history: History<S>): boolean {
 }
 
 export function run<S>(state: S, history: History<S>, command: Command<S>): [S, History<S>] {
-  const past = [...history.past, command].slice(-HISTORY_LIMIT)
-  return [command.apply(state), { past, future: [] }]
+  const kept = [...history.past, command]
+  const past = kept.slice(-HISTORY_LIMIT)
+  // What fell off this time, or what had already fallen off before it.
+  const dropped = kept.at(-HISTORY_LIMIT - 1) ?? history.dropped
+  return [command.apply(state), { past, future: [], dropped }]
 }
 
 /**
@@ -56,7 +78,11 @@ export function runCoalescing<S>(
 
   return [
     command.apply(state),
-    { past: [...history.past.slice(0, -1), coalesce(last, command)], future: [] },
+    {
+      ...history,
+      past: [...history.past.slice(0, -1), coalesce(last, command)],
+      future: [],
+    },
   ]
 }
 
@@ -74,12 +100,12 @@ export function undo<S>(state: S, history: History<S>): [S, History<S>] {
   if (!command) return [state, history]
   return [
     command.revert(state),
-    { past: history.past.slice(0, -1), future: [command, ...history.future] },
+    { ...history, past: history.past.slice(0, -1), future: [command, ...history.future] },
   ]
 }
 
 export function redo<S>(state: S, history: History<S>): [S, History<S>] {
   const [command, ...rest] = history.future
   if (!command) return [state, history]
-  return [command.apply(state), { past: [...history.past, command], future: rest }]
+  return [command.apply(state), { ...history, past: [...history.past, command], future: rest }]
 }

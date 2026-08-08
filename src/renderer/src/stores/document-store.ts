@@ -1,6 +1,7 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import {
   emptyHistory,
+  markOf as historyMark,
   redo,
   run,
   runCoalescing,
@@ -101,13 +102,9 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
   const historyOf = (state: Readable<S>, documentId: string): History<S> =>
     state.histories[documentId] ?? NO_HISTORY
 
-  /**
-   * Where the document's history stands, as one value. The command it ended on, not a counter:
-   * undoing back to where the file was written makes the document clean again, which a counter
-   * would keep calling modified.
-   */
+  /** Where the document's history stands, as one value — see `markOf` in `history.ts`. */
   const markOf = (state: Readable<S>, documentId: string): Command<S> | null =>
-    historyOf(state, documentId).past.at(-1) ?? null
+    historyMark(historyOf(state, documentId))
 
   /**
    * Whether anything has been done since the document was last written. A document with no mark
@@ -171,7 +168,7 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
           if (!command) return [state, history]
           return [
             command.revert(state),
-            { past: history.past.slice(0, -1), future: history.future },
+            { ...history, past: history.past.slice(0, -1), future: history.future },
           ]
         }),
 
@@ -189,6 +186,9 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
                 past: behind < 0 ? history.past : history.past.slice(behind + 1),
                 // Redo runs forwards, so a hole in the future cuts everything past it instead.
                 future: ahead < 0 ? history.future : history.future.slice(0, ahead),
+                // The cut drops commands that are still applied, exactly as the limit does: the
+                // stack it leaves must not compare equal to the one an untouched document has.
+                dropped: behind < 0 ? history.dropped : (history.past[behind] ?? history.dropped),
               },
             },
           }

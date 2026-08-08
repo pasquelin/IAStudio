@@ -6,9 +6,11 @@ import {
   HISTORY_LIMIT,
   redo,
   run,
+  markOf,
   runCoalescing,
   undo,
   type Command,
+  type History,
 } from './history'
 
 const add = (amount: number): Command<number> => ({
@@ -77,6 +79,75 @@ describe('history', () => {
       ;[value, history] = run(value, history, add(1))
     }
     expect(history.past).toHaveLength(HISTORY_LIMIT)
+  })
+})
+
+/**
+ * What says whether a document is on disk. The trap it now avoids: past the limit the oldest
+ * commands fall off, so undoing everything left empties the stack while those commands are
+ * still applied — and an empty stack used to read exactly like an untouched document. A save
+ * made when the history was empty then called that state clean, and the work was lost with the
+ * bullet gone from the tab.
+ */
+describe('markOf', () => {
+  const many = (count: number): History<number> => {
+    let value = 0
+    let history = emptyHistory<number>()
+    for (let index = 0; index < count; index += 1) [value, history] = run(value, history, add(1))
+    return history
+  }
+
+  const undoAll = (history: History<number>): History<number> => {
+    let value = 0
+    let current = history
+    while (canUndo(current)) [value, current] = undo(value, current)
+    return current
+  }
+
+  it('reads nothing for a history nothing has been done to', () => {
+    expect(markOf(emptyHistory<number>())).toBeNull()
+  })
+
+  it('reads the command the history ended on', () => {
+    const command = add(1)
+    const [, history] = run(0, emptyHistory<number>(), command)
+    expect(markOf(history)).toBe(command)
+  })
+
+  it('comes back to where a save was made once an undo returns there', () => {
+    const [value, saved] = run(0, emptyHistory<number>(), add(1))
+    const at = markOf(saved)
+    const [, moved] = run(value, saved, add(2))
+
+    expect(markOf(moved)).not.toBe(at)
+    expect(markOf(undo(0, moved)[1])).toBe(at)
+  })
+
+  it('reads nothing again when every command is undone within the limit', () => {
+    expect(markOf(undoAll(many(3)))).toBeNull()
+  })
+
+  // The bug: those first commands are still applied, so this is NOT an untouched document.
+  it('does not read as untouched once the stack has dropped a command', () => {
+    expect(markOf(undoAll(many(HISTORY_LIMIT + 1)))).not.toBeNull()
+  })
+
+  it('keeps naming the same dropped command however many more are run', () => {
+    const first = markOf(undoAll(many(HISTORY_LIMIT + 1)))
+    const later = markOf(undoAll(many(HISTORY_LIMIT + 5)))
+
+    expect(first).not.toBeNull()
+    expect(later).not.toBeNull()
+    // Different runs build different commands; what matters is that neither reads as untouched.
+    expect(later).not.toBe(first)
+  })
+
+  it('survives a redo: replaying the stack lands on the same mark it left', () => {
+    const history = many(3)
+    const at = markOf(history)
+    const undone = undo(0, history)[1]
+
+    expect(markOf(redo(0, undone)[1])).toBe(at)
   })
 })
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { canRedo, canUndo } from '@/engines/core/history'
+import { canRedo, canUndo, HISTORY_LIMIT } from '@/engines/core/history'
 import { addNode, setTransform } from '@/engines/scene/commands'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
@@ -97,6 +97,26 @@ describe('isDirty', () => {
     useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
     expect(dirty('doc-1')).toBe(false)
     expect(dirty('doc-2')).toBe(true)
+  })
+
+  /**
+   * Past `HISTORY_LIMIT` the oldest commands fall off the stack. Undoing everything left then
+   * empties it — and an empty stack used to read exactly like the one a document saved with no
+   * history has, so the document called itself clean while the dropped commands were still
+   * applied. The bullet vanished from the tab and the work went with the next close.
+   */
+  it('stays modified after an undo that only reached the end of a truncated stack', () => {
+    useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
+    expect(dirty('doc-1')).toBe(false)
+
+    for (let index = 0; index < HISTORY_LIMIT + 1; index += 1) {
+      useScenes.getState().runCommand('doc-1', addNode(meshNode(`box-${index}`)))
+    }
+    while (canUndo(historyOf(useScenes.getState(), 'doc-1'))) useScenes.getState().undo('doc-1')
+
+    expect(historyOf(useScenes.getState(), 'doc-1').past).toHaveLength(0)
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).not.toHaveLength(0)
+    expect(dirty('doc-1')).toBe(true)
   })
 
   it('forgets the mark when the document closes', () => {
