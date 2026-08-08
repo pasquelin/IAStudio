@@ -1,7 +1,7 @@
 import type Scenario from '@scenario-labs/sdk'
 import { OFFICIAL_TAG, type ModelSort } from '@shared/domain/model'
 import { log } from '@main/log'
-import { tokenAfter } from './cursor'
+import { offsetAfter, tokenAfter } from './cursor'
 import type { CatalogPage, ListRequest, ModelCatalog, SearchRequest } from './model-registry'
 
 /**
@@ -73,13 +73,9 @@ export function catalogOf(client: Scenario): ModelCatalog {
       const page = await client.search.modelSearch(params)
       log.info('scenario', `POST /search/models → ${page.hits.length}/${page.estimatedTotalHits}`)
 
-      const next = offset + page.hits.length
-
       return {
         models: page.hits,
-        // `estimatedTotalHits` is an estimate and can exceed what the index really holds; an
-        // empty page would otherwise hand back the very offset it was asked for, forever.
-        token: page.hits.length > 0 && next < page.estimatedTotalHits ? String(next) : null,
+        token: offsetAfter(offset, page.hits.length, page.estimatedTotalHits),
       }
     },
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chunk, COLLECTION_ITEMS_MAX, DELETE_MAX, GET_BULK_MAX } from './limits'
+import { chunk, DELETE_MAX, GET_BULK_MAX } from './limits'
 
 describe('chunk', () => {
   it('cuts a list into runs of at most the given size, in order', () => {
@@ -31,8 +31,5 @@ describe('chunk', () => {
 
     expect(chunk(ids, GET_BULK_MAX).map(batch => batch.length)).toEqual([200, 50])
     expect(chunk(ids, DELETE_MAX).map(batch => batch.length)).toEqual([100, 100, 50])
-    expect(chunk(ids, COLLECTION_ITEMS_MAX).map(batch => batch.length)).toEqual([
-      49, 49, 49, 49, 49, 5,
-    ])
   })
 })

@@ -1,3 +1,4 @@
+import { isForeignTwin } from '@shared/domain/asset'
 import type { SyncAction, SyncPlan, SyncPolicy } from '@shared/domain/sync'
 
 /**
@@ -52,12 +53,8 @@ function actionFor(side: SyncSide, policy: SyncPolicy, activeOwnerId: string | n
 
   // A twin under another project is not out of date, it is out of reach: the identifier means
   // nothing under this key, and pushing would upload a second copy into the wrong library.
-  if (
-    remoteAssetId !== undefined &&
-    activeOwnerId !== null &&
-    side.remoteOwnerId !== undefined &&
-    side.remoteOwnerId !== activeOwnerId
-  ) {
+  // Through the same reader the badge uses, so the two can never say different things.
+  if (remoteAssetId !== undefined && isForeignTwin(side, activeOwnerId)) {
     return { kind: 'skip', assetId, reason: 'other-account' }
   }
 

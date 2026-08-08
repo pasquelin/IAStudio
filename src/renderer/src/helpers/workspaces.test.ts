@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { ASSET_TYPES } from '@shared/domain/asset'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
-import { assetIcon, workspaceById, workspaceLabelKey, WORKSPACES } from './workspaces'
+import {
+  assetIcon,
+  assetTypesOf,
+  workspaceById,
+  workspaceLabelKey,
+  workspaceOfType,
+  WORKSPACES,
+} from './workspaces'
 
 describe('workspaces', () => {
   it('gives every workspace a translatable label key', () => {
@@ -44,5 +51,15 @@ describe('what stands for an asset with no picture', () => {
     expect(assetIcon('video')).toBe(workspaceById('video').icon)
     expect(assetIcon('mesh')).toBe(workspaceById('3d').icon)
     expect(assetIcon('skybox')).toBe(workspaceById('skyboxes').icon)
+  })
+})
+
+describe('what a space uses against what it produces', () => {
+  // The two tables answer different questions, so they are not merged — but a space must at
+  // least accept the kind it makes, and only reading both together says so.
+  it('lets every space use the kind it produces', () => {
+    for (const type of ASSET_TYPES) {
+      expect(assetTypesOf(workspaceOfType(type))).toContain(type)
+    }
   })
 })

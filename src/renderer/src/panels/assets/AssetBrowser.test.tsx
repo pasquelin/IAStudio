@@ -227,33 +227,44 @@ describe('the kinds a space has any use for', () => {
     useProject.setState({ project: PROJECT })
     useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
     useAssets.setState({
-      items: [asset('a', { name: 'Boulder' }), asset('b', { name: 'Take', type: 'audio' })],
+      items: [asset('a', { name: 'Boulder' })],
       collection: DEFAULT_COLLECTION_STATE,
+      scope: null,
     })
   })
 
-  it('keeps takes out of the way while painting', () => {
-    useLayouts.setState({ activeWorkspace: 'image' })
+  // Asked OF the catalogue, so the header count and the empty message describe the same list.
+  it('asks the catalogue only for what the space can use', () => {
+    const setScope = vi.fn()
+    useAssets.setState({ setScope })
+    useLayouts.setState({ activeWorkspace: 'audio' })
+
     render(<AssetBrowser />)
 
-    expect(screen.getByText('Boulder')).toBeInTheDocument()
-    expect(screen.queryByText('Take')).not.toBeInTheDocument()
+    expect(setScope).toHaveBeenCalledWith(['audio'])
   })
 
-  it('shows them where they belong', () => {
-    useLayouts.setState({ activeWorkspace: 'audio' })
+  it('asks for pictures, materials and skies while painting', () => {
+    const setScope = vi.fn()
+    useAssets.setState({ setScope })
+    useLayouts.setState({ activeWorkspace: 'image' })
+
     render(<AssetBrowser />)
 
-    expect(screen.getByText('Take')).toBeInTheDocument()
-    expect(screen.queryByText('Boulder')).not.toBeInTheDocument()
+    expect(setScope).toHaveBeenCalledWith(['image', 'texture', 'skybox'])
   })
 
   // A default, not a wall: the intersection of two filters reads as a broken filter.
-  it('steps out of the way once a kind is asked for by name', async () => {
+  it('drops the scope once a kind is asked for by name', () => {
+    const setScope = vi.fn()
+    useAssets.setState({
+      setScope,
+      collection: { ...DEFAULT_COLLECTION_STATE, selections: { type: ['audio'] } },
+    })
     useLayouts.setState({ activeWorkspace: 'image' })
-    render(<AssetBrowser />)
-    await userEvent.selectOptions(screen.getByLabelText('Type'), 'audio')
 
-    expect(screen.getByText('Take')).toBeInTheDocument()
+    render(<AssetBrowser />)
+
+    expect(setScope).toHaveBeenCalledWith(null)
   })
 })

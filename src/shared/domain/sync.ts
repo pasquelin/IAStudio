@@ -7,11 +7,8 @@
 
 export type SyncPolicy = 'push' | 'pull' | 'two-way'
 
+/** The values, beside the type: the boundary parses against them with `z.enum`. */
 export const SYNC_POLICIES: readonly SyncPolicy[] = ['push', 'pull', 'two-way']
-
-export function isSyncPolicy(value: unknown): value is SyncPolicy {
-  return SYNC_POLICIES.some(candidate => candidate === value)
-}
 
 export type SkipReason =
   /** The twin belongs to a project this key does not open onto. */

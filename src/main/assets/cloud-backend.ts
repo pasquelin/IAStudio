@@ -1,9 +1,11 @@
+import { extname } from 'node:path'
 import type { Asset } from '@shared/domain/asset'
 import { UPLOAD_KIND_BY_TYPE, uploadMimeTypeOf, type UploadKind } from '@shared/domain/asset-mime'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
+import { defined } from '@shared/guards'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import type { DownloadFormat, RemoteAssetCatalog } from '@main/scenario/asset-catalog'
-import type { LocalBackend } from './local-backend'
+import { twinOf, type LocalBackend } from './local-backend'
 
 /**
  * Sending a file the API cannot take in one request. Everything but a small picture goes this
@@ -25,9 +27,15 @@ export type CloudBackendDeps = {
   small: SmallUpload
   local: LocalBackend
   catalog: () => AsyncCatalog
-  /** Absolute path of a file inside the project, from the path the catalogue stores. */
-  resolve: (relativePath: string) => string
+  /**
+   * The file an asset owns — `ownFileOf`, which contains the path inside the project and
+   * refuses anything that escapes it. Injected rather than joined here: the catalogue is a file
+   * a user can edit, and a row naming `../../.ssh/id_rsa` must not become an upload.
+   */
+  fileOf: (asset: Asset) => string | null
   readFile: (absolutePath: string) => Promise<Uint8Array>
+  /** How big a file is, without reading it. Only asked when the catalogue does not know. */
+  sizeOf: (absolutePath: string) => Promise<number>
   newId: () => string
   now: () => string
   /** Past this, base64 is refused and the multipart flow takes over. */
@@ -57,14 +65,35 @@ function base64Of(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString('base64')
 }
 
+/**
+ * Whether this one can travel as base64 in a single request.
+ *
+ * Sound and moving pictures never can — `POST /assets` takes an `image` field and nothing else,
+ * so their size is not even worth asking for. For the rest the catalogue usually knows the size
+ * already; a linked media whose row predates the column is the only case worth a `stat`, and it
+ * is still cheaper than reading the file.
+ */
+async function fitsInOneRequest(
+  asset: Asset,
+  file: string,
+  limit: number,
+  sizeOf: (path: string) => Promise<number>,
+): Promise<boolean> {
+  if (asset.type === 'video' || asset.type === 'audio') return false
+
+  const bytes = asset.bytes ?? (await sizeOf(file))
+  return bytes <= limit
+}
+
 export function createCloudBackend({
   remote,
   multipart,
   small,
   local,
   catalog,
-  resolve,
+  fileOf,
   readFile,
+  sizeOf,
   newId,
   now,
   smallUploadLimit,
@@ -95,37 +124,42 @@ export function createCloudBackend({
       const asset = await catalog().find(assetId)
       if (!asset) throw new Error(`asset ${assetId} is not in the catalogue`)
 
-      // What is pushed is the file the project holds. An asset that lives only in the library
-      // has nothing to send, and a linked rush is sent from where it lies.
-      const relativePath = asset.path ?? asset.sourcePath
-      if (!relativePath) throw new Error(`asset ${assetId} has no file to send`)
+      // What is pushed is the file the project holds, or the media it links to. An asset that
+      // lives only in the library has nothing to send.
+      const absolutePath = fileOf(asset)
+      if (!absolutePath) throw new Error(`asset ${assetId} has no file to send`)
 
-      const absolutePath = asset.path ? resolve(asset.path) : relativePath
-      const fileName = `${asset.name.replace(/[/\\]/g, '-')}${extensionOf(absolutePath)}`
+      // The name becomes a file name on the way up; a separator in it would name another path.
+      const fileName = `${asset.name.replace(/[/\\]/g, '-')}${extname(absolutePath)}`
       const contentType = uploadMimeTypeOf(absolutePath)
       // Refused here rather than after the transfer: the API validates the content type once the
       // whole file has arrived, which for a rush is minutes of upload spent to be told no.
       if (!contentType) throw new Error(`the API does not accept ${fileName}`)
 
-      const bytes = await readFile(absolutePath)
-      const twin =
-        asset.type !== 'video' && asset.type !== 'audio' && bytes.byteLength <= smallUploadLimit
-          ? { assetId: await small(fileName, base64Of(bytes)) }
-          : await multipart({
-              file: absolutePath,
-              fileName,
-              contentType,
-              kind: UPLOAD_KIND_BY_TYPE[asset.type],
-            })
+      // Decided BEFORE reading. The multipart helper takes a path and streams it itself, so
+      // loading the file here would pull a two-gigabyte rush into the main process only to
+      // throw it away — and `cloudPush` walks up to two hundred assets in a row.
+      const twin = (await fitsInOneRequest(asset, absolutePath, smallUploadLimit, sizeOf))
+        ? { assetId: await small(fileName, base64Of(await readFile(absolutePath))) }
+        : await multipart({
+            file: absolutePath,
+            fileName,
+            contentType,
+            kind: UPLOAD_KIND_BY_TYPE[asset.type],
+          })
 
       const at = now()
+      // Through the same reader an import uses: which stamp is the baseline and which fields
+      // are conditional is one definition, not two that must be changed together.
       const pushed: Asset = {
         ...asset,
-        remoteAssetId: twin.assetId,
-        syncStatus: 'synced',
-        remoteSyncedAt: at,
-        ...(twin.ownerId ? { remoteOwnerId: twin.ownerId } : {}),
-        ...(twin.updatedAt ? { remoteUpdatedAt: twin.updatedAt } : {}),
+        ...twinOf(
+          {
+            remoteAssetId: twin.assetId,
+            ...defined({ remoteOwnerId: twin.ownerId, remoteUpdatedAt: twin.updatedAt }),
+          },
+          at,
+        ),
       }
       // The error of a previous attempt goes with the success, or the badge keeps explaining a
       // failure that no longer happened.
@@ -134,9 +168,4 @@ export function createCloudBackend({
       return await catalog().add(pushed)
     },
   }
-}
-
-function extensionOf(path: string): string {
-  const dot = path.lastIndexOf('.')
-  return dot === -1 ? '' : path.slice(dot)
 }

@@ -32,6 +32,29 @@ function isTextureType(metadataType: string): boolean {
   return metadataType === 'texture' || metadataType.endsWith('-texture')
 }
 
+/**
+ * What a provenance PRODUCED, read off the end of its name.
+ *
+ * The eighty values are overwhelmingly `<in>2<out>` or `<verb>-<out>`, so the output is the
+ * suffix: `img23d` makes a mesh, `video2audio` makes a take, `audio2video` makes a clip. Reading
+ * the tail is a rule, not a list — which matters because `kind` is absent from every search hit,
+ * and without this a mesh found by search came back as nothing at all.
+ *
+ * Order counts: `video23d` ends in both `23d` and `video`, and what it yields is the mesh.
+ */
+const OUTPUT_SUFFIXES: readonly { suffixes: readonly string[]; type: AssetType }[] = [
+  { suffixes: ['23d', '2splat', '-3d'], type: 'mesh' },
+  { suffixes: ['2video', '-video'], type: 'video' },
+  { suffixes: ['2audio', '-audio', 'voice-clone'], type: 'audio' },
+]
+
+function producedType(metadataType: string): AssetType | null {
+  for (const { suffixes, type } of OUTPUT_SUFFIXES) {
+    if (suffixes.some(suffix => metadataType.endsWith(suffix))) return type
+  }
+  return null
+}
+
 const TYPE_BY_KIND: Record<string, AssetType> = {
   image: 'image',
   // HDR images are what the skybox space consumes, and nothing else produces them.
@@ -59,10 +82,12 @@ const TYPE_BY_MIME_PREFIX: Record<string, AssetType> = {
  * 1. A PBR channel is a texture whatever its `kind` says. One converter job answers with seven
  *    pictures, and filing them as plain images would lose the whole material.
  * 2. An explicit non-image `kind` is trusted next: it is the API's own coarse answer.
- * 3. Only then `metadata.type`, which is what rescues the skyboxes. A 360 produced by
- *    `skybox-base-360` is `kind: 'image'` — trusting `kind` alone filed every LDR skybox as an
- *    ordinary picture, and the skybox space never saw the thing it had just generated.
- * 4. `mimeType` last, for search hits, which carry no `kind` at all.
+ * 3. Only then `metadata.type`, which is what rescues the skyboxes and everything a search hit
+ *    reports. A 360 produced by `skybox-base-360` is `kind: 'image'` — trusting `kind` alone
+ *    filed every LDR skybox as an ordinary picture, and the skybox space never saw the thing it
+ *    had just generated. The same step reads what a provenance produced from its suffix, which
+ *    is the only thing left on a hit, where `kind` is absent.
+ * 4. `mimeType` last, for the hits whose provenance says nothing either.
  *
  * The eighty values are not enumerated. Only the prefixes that change the answer are, because
  * the API adds types without warning and an unknown one must land somewhere sensible rather
@@ -81,6 +106,9 @@ export function assetTypeOfRemote({
   if (metadataType !== undefined) {
     if (isSkyboxType(metadataType)) return 'skybox'
     if (isTextureType(metadataType)) return 'texture'
+
+    const produced = producedType(metadataType)
+    if (produced !== null) return produced
   }
 
   if (byKind !== undefined) return byKind
@@ -90,6 +118,8 @@ export function assetTypeOfRemote({
   // a picture, because the record it came from still describes the image it was made from.
   if (kind !== undefined) return null
 
-  const prefix = Object.keys(TYPE_BY_MIME_PREFIX).find(candidate => mimeType?.startsWith(candidate))
-  return prefix === undefined ? null : (TYPE_BY_MIME_PREFIX[prefix] ?? null)
+  for (const [prefix, type] of Object.entries(TYPE_BY_MIME_PREFIX)) {
+    if (mimeType?.startsWith(prefix)) return type
+  }
+  return null
 }

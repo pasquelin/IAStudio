@@ -1,9 +1,8 @@
 import type Scenario from '@scenario-labs/sdk'
-import { isRecord } from '@shared/guards'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { log } from '@main/log'
 import { cloudAssetOfHit, cloudAssetOfListing } from './asset-normalizer'
-import { tokenAfter } from './cursor'
+import { offsetAfter, tokenAfter } from './cursor'
 import { chunk, DELETE_MAX, GET_BULK_MAX, PAGE_SIZE_MAX } from './limits'
 
 /**
@@ -33,7 +32,6 @@ export type DownloadFormat = NonNullable<
 export type AssetBackend = {
   list: (params: ListParams) => Promise<{ assets: unknown[]; nextPaginationToken?: string }>
   search: (params: SearchParams) => Promise<{ hits: unknown[]; estimatedTotalHits: number }>
-  retrieve: (assetId: string) => Promise<unknown>
   getBulk: (params: { assetIds: string[] }) => Promise<{ assets: unknown[] }>
   updateTags: (assetId: string, body: TagsBody) => Promise<unknown>
   deleteMultiple: (body: { assetIds: string[] }) => Promise<unknown>
@@ -55,9 +53,6 @@ export type AssetListRequest = {
   /** `metadata.type` values — the only axis `GET /assets` filters on. */
   types?: readonly RemoteAssetType[]
   collectionId?: string
-  /** Children of one asset: how the channels of a PBR pack are found again. */
-  parentAssetId?: string
-  sort?: 'recent' | 'oldest'
 }
 
 export type AssetSearchRequest = {
@@ -78,7 +73,6 @@ export type AssetSearchRequest = {
 export type RemoteAssetCatalog = {
   list: (request: AssetListRequest) => Promise<RemoteAssetPage>
   search: (request: AssetSearchRequest) => Promise<RemoteAssetPage>
-  retrieve: (assetId: string) => Promise<CloudAsset | null>
   getBulk: (assetIds: readonly string[]) => Promise<CloudAsset[]>
   updateTags: (assetId: string, add: readonly string[], remove: readonly string[]) => Promise<void>
   deleteMany: (assetIds: readonly string[]) => Promise<void>
@@ -90,11 +84,6 @@ export type RemoteAssetCatalog = {
   downloadUrl: (assetId: string, targetFormat?: DownloadFormat) => Promise<string>
 }
 
-function sortParams(sort: AssetListRequest['sort']): Record<string, string> {
-  if (sort === undefined) return {}
-  return { sortBy: 'createdAt', sortDirection: sort === 'oldest' ? 'asc' : 'desc' }
-}
-
 /**
  * The real SDK, narrowed to the port above. The only place the two shapes meet — everything
  * else, tests included, takes the port.
@@ -103,7 +92,6 @@ export function assetBackendOf(client: Scenario): AssetBackend {
   return {
     list: params => client.assets.list(params),
     search: params => client.search.assetSearch(params),
-    retrieve: assetId => client.assets.retrieve(assetId),
     getBulk: params => client.assets.getBulk(params),
     updateTags: (assetId, body) => client.assets.updateTags(assetId, body),
     deleteMultiple: body => client.assets.deleteMultiple(body),
@@ -114,14 +102,12 @@ export function assetBackendOf(client: Scenario): AssetBackend {
 /** Binds the studio's narrow catalogue to whatever answers for the API. */
 export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
   return {
-    list: async ({ pageSize, token, types, collectionId, parentAssetId, sort }) => {
+    list: async ({ pageSize, token, types, collectionId }) => {
       const params = {
         pageSize: Math.min(pageSize, PAGE_SIZE_MAX),
         ...(token ? { paginationToken: token } : {}),
         ...(types?.length ? { types: [...types] } : {}),
         ...(collectionId ? { collectionId } : {}),
-        ...(parentAssetId ? { parentAssetId } : {}),
-        ...sortParams(sort),
       }
 
       log.info('scenario', `GET /assets ${JSON.stringify(params)}`)
@@ -155,22 +141,10 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
       const page = await backend.search(params)
       log.info('scenario', `POST /search/assets → ${page.hits.length}/${page.estimatedTotalHits}`)
 
-      const next = offset + page.hits.length
-
       return {
         assets: page.hits.map(cloudAssetOfHit).filter(asset => asset !== null),
-        // `estimatedTotalHits` is an estimate and can exceed what the index really holds; an
-        // empty page would otherwise hand back the very offset it was asked for, forever.
-        token: page.hits.length > 0 && next < page.estimatedTotalHits ? String(next) : null,
+        token: offsetAfter(offset, page.hits.length, page.estimatedTotalHits),
       }
-    },
-
-    retrieve: async assetId => {
-      log.info('scenario', `GET /assets/${assetId}`)
-      // `GET /assets/{id}` wraps its answer in `{ asset }`, unlike the listing which is already
-      // an array of them. Handing the envelope to the normaliser reads as an asset with no id.
-      const response = await backend.retrieve(assetId)
-      return cloudAssetOfListing(isRecord(response) ? response.asset : null)
     },
 
     getBulk: async assetIds => {

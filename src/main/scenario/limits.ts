@@ -6,7 +6,7 @@
  * with a 4xx that says nothing about which limit was crossed.
  *
  * Sources, in `docs/scenario-api/reference/`: `assets.get_bulk.md`, `assets.delete_multiple.md`,
- * `collections.assets.add.md`, `assets.download.request_batch.md`, `assets.list.md`.
+ * `assets.list.md`. The collection and batch-download caps join them when those endpoints do.
  */
 
 /** `POST /assets/get-bulk` */
@@ -14,12 +14,6 @@ export const GET_BULK_MAX = 200
 
 /** `DELETE /assets` — the only way to delete, there is no single-asset endpoint. */
 export const DELETE_MAX = 100
-
-/** `PUT|DELETE /collections/{id}/assets`, and the same for models. */
-export const COLLECTION_ITEMS_MAX = 49
-
-/** `POST /assets/download` */
-export const BATCH_DOWNLOAD_MAX = 1000
 
 /** `pageSize` on every cursor-paginated listing. Jobs allow 200; assets do not. */
 export const PAGE_SIZE_MAX = 100

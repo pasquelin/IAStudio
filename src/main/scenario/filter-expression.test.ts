@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import type { AssetType } from '@shared/domain/asset'
+import { assetTypeOfRemote } from '@shared/domain/asset-kind'
 import { filterExpression } from './filter-expression'
 import { remoteTypesFor } from './remote-types'
 
@@ -82,5 +84,20 @@ describe('the provenance values that stand for our kinds', () => {
 describe('a listing narrowed to one collection', () => {
   it('names no kinds when none were asked for', () => {
     expect(filterExpression({ collectionId: 'col_1', types: [] })).toBe('collectionIds = "col_1"')
+  })
+})
+
+describe('the round trip between what we ask for and what comes back', () => {
+  // The two directions are not inverses — eighty values collapse into six on the way in — but
+  // a value we send as a filter must come back as the kind we asked for, or the shelf shows
+  // what it did not request. Nothing enforced that before this test.
+  it('reads every filtered provenance back as the kind it stands for', () => {
+    const kinds: AssetType[] = ['texture', 'skybox', 'mesh', 'video', 'audio']
+
+    for (const kind of kinds) {
+      for (const remoteType of remoteTypesFor([kind]) ?? []) {
+        expect(assetTypeOfRemote({ metadataType: remoteType })).toBe(kind)
+      }
+    }
   })
 })

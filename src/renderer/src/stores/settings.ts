@@ -31,16 +31,6 @@ type SettingsState = {
  * Renderer-side replica of the settings held by the main process. Credentials are absent by
  * construction: the only thing the renderer learns about them is whether they work.
  */
-/**
- * The project the active key opens onto, or `null` while nothing has said which.
- *
- * Derived rather than stored: it comes from the library's own answers, and a badge that read a
- * copy would keep judging ownership against the previous key for as long as it went unrefreshed.
- */
-export function activeOwnerId(state: Pick<SettingsState, 'auth'>): string | null {
-  return state.auth.authenticated ? (state.auth.ownerId ?? null) : null
-}
-
 export const useSettings = create<SettingsState>()((set, get) => ({
   settings: DEFAULT_SETTINGS,
   auth: UNKNOWN_AUTH,
@@ -94,3 +84,13 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     void getBridge()?.settings.open(section)
   },
 }))
+
+/**
+ * The project the active key opens onto, or `null` while nothing has said which.
+ *
+ * Derived rather than stored: it comes from the library's own answers, and a badge that read a
+ * copy would keep judging ownership against the previous key for as long as it went unrefreshed.
+ */
+export function activeOwnerId(state: Pick<SettingsState, 'auth'>): string | null {
+  return state.auth.authenticated ? (state.auth.ownerId ?? null) : null
+}

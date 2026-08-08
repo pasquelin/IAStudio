@@ -1,4 +1,4 @@
-import { isRecord } from '@shared/guards'
+import { defined, isRecord } from '@shared/guards'
 import { probeNumber, type AssetGeneration } from '@shared/domain/asset'
 import { assetTypeOfRemote } from '@shared/domain/asset-kind'
 import type { AssetPrivacy, CloudAsset } from '@shared/domain/cloud-asset'
@@ -53,7 +53,7 @@ export function generationOfMetadata(value: unknown): AssetGeneration | undefine
     // runtime (invariant 5), so there is no list to pick from here, and the form only ever
     // reads the keys its own descriptors name.
     params: metadata,
-    ...(seed === undefined ? {} : { seed }),
+    ...defined({ seed }),
   }
 }
 
@@ -71,18 +71,21 @@ function nameOf(metadata: Record<string, unknown>, id: string): string {
   return prompt === undefined ? id : prompt.slice(0, 80)
 }
 
-type Shape = { kind?: string; properties?: Record<string, unknown> }
-
 /**
- * The half the two responses agree on. `kind` and `properties` are handed in by the caller
- * because that is precisely where they differ.
+ * One reader for both response shapes.
+ *
+ * A search hit differs from a listing by absence — no `kind`, no `properties` — and absence is
+ * what reading straight off the record already yields. Two functions and a shape parameter said
+ * the same thing at the cost of a wrapper that rebuilt the object it had just destructured.
  */
-function cloudAssetOf(value: unknown, { kind, properties }: Shape): CloudAsset | null {
+export function cloudAssetOf(value: unknown): CloudAsset | null {
   if (!isRecord(value)) return null
 
   const id = text(value, 'id')
   if (id === undefined) return null
 
+  const kind = text(value, 'kind')
+  const properties = isRecord(value.properties) ? value.properties : undefined
   const metadata = isRecord(value.metadata) ? value.metadata : {}
   const mimeType = text(value, 'mimeType')
   const remoteType = text(metadata, 'type') ?? 'unknown'
@@ -90,7 +93,7 @@ function cloudAssetOf(value: unknown, { kind, properties }: Shape): CloudAsset |
   const type = assetTypeOfRemote({
     kind: kind ?? text(metadata, 'kind'),
     metadataType: remoteType,
-    ...(mimeType === undefined ? {} : { mimeType }),
+    ...defined({ mimeType }),
   })
   // Not everything in the library belongs on a shelf: a captioning job's JSON output is data
   // about an asset, not an asset.
@@ -115,33 +118,16 @@ function cloudAssetOf(value: unknown, { kind, properties }: Shape): CloudAsset |
     privacy: privacyOf(value.privacy),
     tags: strings(value.tags),
     collectionIds: strings(value.collectionIds),
-    ...(url === undefined ? {} : { url }),
-    ...(thumbnailUrl === undefined ? {} : { thumbnailUrl }),
-    ...(width === undefined ? {} : { width }),
-    ...(height === undefined ? {} : { height }),
-    ...(bytes === undefined ? {} : { bytes }),
-    ...(durationSeconds === undefined ? {} : { durationSeconds }),
-    ...(generation === undefined ? {} : { generation }),
+    ...defined({ url, thumbnailUrl, width, height, bytes, durationSeconds, generation }),
   }
 }
 
-/** From `GET /assets`, `GET /assets/{id}` and `POST /assets/get-bulk`, which share one schema. */
-export function cloudAssetOfListing(value: unknown): CloudAsset | null {
-  if (!isRecord(value)) return null
-
-  const kind = text(value, 'kind')
-  return cloudAssetOf(value, {
-    ...(kind === undefined ? {} : { kind }),
-    ...(isRecord(value.properties) ? { properties: value.properties } : {}),
-  })
-}
+/** From `GET /assets`, `GET /assets/{id}` and `POST /assets/get-bulk`. */
+export const cloudAssetOfListing = cloudAssetOf
 
 /**
- * From `POST /search/assets`, whose hits carry neither `kind` nor `properties`.
- *
- * The dimensions are not lost with `properties`: they are duplicated in `metadata` for anything
- * generated, which is what the shared reader falls back to.
+ * From `POST /search/assets`, whose hits carry neither `kind` nor `properties`. The dimensions
+ * are not lost with them: they are duplicated in `metadata` for anything generated, which is
+ * what the reader falls back to.
  */
-export function cloudAssetOfHit(value: unknown): CloudAsset | null {
-  return cloudAssetOf(value, {})
-}
+export const cloudAssetOfHit = cloudAssetOf

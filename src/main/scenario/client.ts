@@ -2,6 +2,7 @@ import Scenario, { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { AuthState } from '@shared/domain/settings'
 import type { Credentials } from '@main/settings/accounts'
+import { log } from '@main/log'
 import type { WatchCredentials } from './credentials-watch'
 
 /** Thrown when a channel needing the API is reached without usable credentials. */
@@ -87,6 +88,29 @@ export type ClientProvider = {
  * Holds the SDK client. Building one is cheap, but it caches nothing useful across
  * credentials, so it is rebuilt lazily and dropped whenever they change.
  */
+/**
+ * Runs an API call and lets nothing of it cross the IPC boundary but a code.
+ *
+ * An SDK message embeds the request that produced it — headers included, so the key. The cause
+ * stays attached for the main process alone: Electron serializes `message`, `name` and `stack`
+ * of a rejected handler, never `cause`.
+ *
+ * A factory rather than a function per handler family: three of them had copied the same six
+ * lines, and the rule that matters here is the one it would take one forgetful copy to break.
+ */
+export function reducedBy(scope: string) {
+  return async <T>(action: () => Promise<T>): Promise<T> => {
+    try {
+      return await action()
+    } catch (error) {
+      // Logged where the credentials already live: reduced to a code, neither the renderer nor
+      // anyone reading a bug report could say which call the API refused.
+      log.error(scope, describeFailure(error))
+      throw new Error(failureOf(error), { cause: error })
+    }
+  }
+}
+
 export function createClientProvider(
   resolve: () => Credentials | null,
   watch: WatchCredentials,

@@ -59,6 +59,25 @@ describe('assetTypeOfRemote', () => {
     expect(assetTypeOfRemote({ kind: 'image', metadataType: 'background-removal' })).toBe('image')
   })
 
+  // Without this a mesh found by search came back as nothing: `kind` is absent from every hit,
+  // and `img23d` alone said nothing to the reader.
+  it('reads what a provenance produced off the end of its name', () => {
+    expect(assetTypeOfRemote({ metadataType: 'img23d' })).toBe('mesh')
+    expect(assetTypeOfRemote({ metadataType: 'uploaded-3d' })).toBe('mesh')
+    expect(assetTypeOfRemote({ metadataType: 'img2splat' })).toBe('mesh')
+    expect(assetTypeOfRemote({ metadataType: 'txt2video' })).toBe('video')
+    expect(assetTypeOfRemote({ metadataType: 'upscale-video' })).toBe('video')
+    expect(assetTypeOfRemote({ metadataType: 'txt2audio' })).toBe('audio')
+    expect(assetTypeOfRemote({ metadataType: 'voice-clone' })).toBe('audio')
+  })
+
+  it('follows what a conversion produced, not what it consumed', () => {
+    expect(assetTypeOfRemote({ metadataType: 'video2audio' })).toBe('audio')
+    expect(assetTypeOfRemote({ metadataType: 'audio2video' })).toBe('video')
+    // Ends in both `23d` and `video`; what it yields is the mesh.
+    expect(assetTypeOfRemote({ metadataType: 'video23d' })).toBe('mesh')
+  })
+
   it('falls back to the mime type when the kind is missing, as it is on a search hit', () => {
     expect(assetTypeOfRemote({ metadataType: 'txt2img', mimeType: 'image/png' })).toBe('image')
     expect(assetTypeOfRemote({ mimeType: 'video/mp4' })).toBe('video')

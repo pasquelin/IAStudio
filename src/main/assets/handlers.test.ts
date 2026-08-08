@@ -76,7 +76,6 @@ function setup(
       searched.push(request)
       return Promise.resolve({ assets: [cloudAsset('remote_2')], token: null })
     },
-    retrieve: () => Promise.resolve(null),
     getBulk: ids => Promise.resolve(ids.map(cloudAsset)),
     updateTags: (assetId, add, remove) => {
       tagged.push({ assetId, add, remove })
@@ -143,6 +142,26 @@ describe('browsing the library', () => {
   it('takes the search index for free text', async () => {
     await invoke(CHANNELS.cloudBrowse, { text: 'boulder' })
     expect(harness.searched[0]).toMatchObject({ query: 'boulder' })
+  })
+
+  it('narrows a search too, not only a listing', async () => {
+    // The index knows the API's eight media classes, not our six: asking for skies through it
+    // comes back as every image, and only this filter tells them apart.
+    setup({
+      remote: {
+        search: () =>
+          Promise.resolve({
+            assets: [{ ...cloudAsset('a'), type: 'skybox' }, cloudAsset('b')],
+            token: null,
+          }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudBrowse, {
+      text: 'sunset',
+      types: ['skybox'],
+    })
+    expect(page.assets.map(asset => asset.id)).toEqual(['a'])
   })
 
   it('narrows here what the API could not narrow itself', async () => {
@@ -344,26 +363,50 @@ describe('what a plan reads off an asset', () => {
 })
 
 describe('walking through the pages of the library', () => {
-  it('hands the listing back the opaque cursor it was given', async () => {
+  it('hands the listing back the token it gave out', async () => {
     const paged = setup()
-    await invoke(CHANNELS.cloudBrowse, { cursor: 'page-2' })
+    await invoke(CHANNELS.cloudBrowse, { cursor: 't:page-2' })
 
     expect(paged.listed[0]).toMatchObject({ token: 'page-2' })
   })
 
   it('reads the search cursor as the offset it is', async () => {
-    // The index paginates by offset where the listing uses a token; both travel as one string.
     const paged = setup()
-    await invoke(CHANNELS.cloudBrowse, { text: 'moss', cursor: '40' })
+    await invoke(CHANNELS.cloudBrowse, { text: 'moss', cursor: 'o:40' })
 
     expect(paged.searched[0]).toMatchObject({ offset: 40 })
   })
 
-  it('starts at the beginning when the cursor is not a number', async () => {
+  // Clearing the search box while holding a page used to hand "40" to the listing as a token.
+  it('ignores a cursor the other side produced', async () => {
     const paged = setup()
-    await invoke(CHANNELS.cloudBrowse, { text: 'moss', cursor: 'not-a-number' })
+    await invoke(CHANNELS.cloudBrowse, { cursor: 'o:40' })
+    await invoke(CHANNELS.cloudBrowse, { text: 'moss', cursor: 't:page-2' })
+
+    expect(paged.listed[0]).not.toHaveProperty('token')
+    expect(paged.searched[0]).toMatchObject({ offset: 0 })
+  })
+
+  it('starts at the beginning when the cursor makes no sense', async () => {
+    const paged = setup()
+    await invoke(CHANNELS.cloudBrowse, { text: 'moss', cursor: 'o:not-a-number' })
 
     expect(paged.searched[0]).toMatchObject({ offset: 0 })
+  })
+
+  it('says which side a cursor came from, so the next page goes back to it', async () => {
+    setup({
+      remote: {
+        list: () => Promise.resolve({ assets: [], token: 'page-3' }),
+        search: () => Promise.resolve({ assets: [], token: '60' }),
+      },
+    })
+
+    const listed = await invoke<{ cursor: string | null }>(CHANNELS.cloudBrowse, {})
+    const searched = await invoke<{ cursor: string | null }>(CHANNELS.cloudBrowse, { text: 'a' })
+
+    expect(listed.cursor).toBe('t:page-3')
+    expect(searched.cursor).toBe('o:60')
   })
 
   it('narrows a listing to a collection', async () => {

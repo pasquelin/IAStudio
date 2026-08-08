@@ -1,9 +1,9 @@
 import { app, BrowserWindow, dialog, net, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
-import { delimiter, dirname, join } from 'node:path'
+import { delimiter, dirname } from 'node:path'
 import type { AccountSummary } from '@shared/domain/account'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
@@ -16,7 +16,7 @@ import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
-import { serveAssets, servedFileOf } from './assets/protocol'
+import { assetFilePath, ownFileOf, serveAssets, servedFileOf } from './assets/protocol'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, resourcesRoot } from './resources'
 import { linkedAsset, mediaFilters } from './media/link'
@@ -53,7 +53,6 @@ import { generationOfMetadata } from './scenario/asset-normalizer'
 import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
 import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
 import { isRecord } from '@shared/guards'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { createClientProvider, type ClientProvider } from './scenario/client'
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
@@ -349,23 +348,24 @@ export function createServices(settings: SettingsStore): Services {
 
   const ownerScope = createOwnerScope(credentials.watch)
 
-  // The one door to the API for assets, wrapped so that every answer teaches the scope which
-  // project this key opens onto — there is no endpoint that would simply say.
+  /**
+   * The one door to the API for assets, wrapped so that listing it teaches the scope which
+   * project this key opens onto — there is no endpoint that would simply say.
+   *
+   * ONLY the listing. `getBulk` fetches ids the renderer chose, and a public asset belonging to
+   * someone else would plant the wrong project for the rest of the session: every local asset
+   * would then badge as foreign and every push would be refused. A listing is scoped to the key
+   * by construction, so it is the only answer that can speak for it.
+   */
   const remoteAssets = (): RemoteAssetCatalog => {
     const catalogue = assetCatalogOf(assetBackendOf(client.require()))
-    const observed = <T extends { assets: CloudAsset[] }>(page: T): T => {
-      ownerScope.observe(page.assets)
-      return page
-    }
 
     return {
       ...catalogue,
-      list: async request => observed(await catalogue.list(request)),
-      search: async request => observed(await catalogue.search(request)),
-      getBulk: async assetIds => {
-        const found = await catalogue.getBulk(assetIds)
-        ownerScope.observe(found)
-        return found
+      list: async request => {
+        const page = await catalogue.list(request)
+        ownerScope.observe(page.assets)
+        return page
       },
     }
   }
@@ -388,8 +388,9 @@ export function createServices(settings: SettingsStore): Services {
     small: (name, image) => uploads.upload(name, image),
     local: assets,
     catalog: () => project.catalog(),
-    resolve: relativePath => join(project.path(), relativePath),
+    fileOf: asset => ownFileOf(project.path(), asset),
     readFile: path => readFile(path),
+    sizeOf: async path => (await stat(path)).size,
     newId: newAssetId,
     now: timestamp,
     smallUploadLimit: MAX_UPLOAD_BYTES,
@@ -403,7 +404,10 @@ export function createServices(settings: SettingsStore): Services {
     const current = project.current()
     if (!current || !asset.path) return
 
-    await rm(join(current.path, asset.path), { force: true })
+    // Through the same containment the scheme uses: a stored path is user-editable territory,
+    // and `rm` on one that escaped the project would delete a file nobody asked about.
+    const file = assetFilePath(current.path, asset.path)
+    if (file) await rm(file, { force: true })
   }
 
   const jobs = createJobManager({

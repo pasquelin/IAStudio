@@ -47,6 +47,11 @@ export function assetIcon(type: AssetType): string {
   return ICONS[WORKSPACE_OF_TYPE[type]]
 }
 
+/** Where a kind is made — the space its generator belongs to. */
+export function workspaceOfType(type: AssetType): WorkspaceId {
+  return WORKSPACE_OF_TYPE[type]
+}
+
 /**
  * What each space has any use for — which is not the reverse of the table above.
  *

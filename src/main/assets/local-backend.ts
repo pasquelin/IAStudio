@@ -105,7 +105,7 @@ export function relativePathFor(id: string, extension: string, type: AssetType):
  * just downloaded from the very asset being pointed at, so the two sides cannot differ yet.
  * `remoteSyncedAt` is the baseline both later stamps are measured against.
  */
-function twinOf(
+export function twinOf(
   request: Pick<ImportRequest, 'remoteAssetId' | 'remoteOwnerId' | 'remoteUpdatedAt'>,
   at: string,
 ): Partial<Asset> {

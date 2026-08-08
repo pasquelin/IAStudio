@@ -1,5 +1,4 @@
 import { mdiCloudUploadOutline, mdiFileImportOutline } from '@mdi/js'
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useToolLying } from '@/app/tool-zone'
 import { CollectionBar } from '@/design/CollectionBar'
@@ -9,8 +8,8 @@ import { useCloud } from '@/stores/cloud'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSelection } from '@/stores/selection'
-import { useLocationFacet } from './location-facet'
-import { useTypeFacet, useTypeLabels } from './type-facet'
+import { useAssetFacets } from './facets'
+import { useTypeLabels } from './type-facet'
 
 // The bar rides here in a band, where the row is wide and a second one would cost height the
 // zone cannot spare. Not in a column: 500 px of bar in a 320 px header pushed the close button
@@ -24,9 +23,7 @@ export function AssetBrowserActions() {
   const project = useProject(state => state.project)
   const importMedia = useMedia(state => state.importMedia)
   const typeLabels = useTypeLabels()
-  const typeFacet = useTypeFacet(typeLabels)
-  const locationFacet = useLocationFacet()
-  const facets = useMemo(() => [...typeFacet, ...locationFacet], [typeFacet, locationFacet])
+  const facets = useAssetFacets(typeLabels)
   const lying = useToolLying()
 
   const selection = useSelection(state => state.selection)

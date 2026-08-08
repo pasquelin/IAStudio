@@ -1,4 +1,5 @@
 import type { AssetType } from '@shared/domain/asset'
+import type { UploadKind } from '@shared/domain/asset-mime'
 
 /**
  * The filter `POST /search/assets` takes, in its Meilisearch-style syntax.
@@ -12,8 +13,14 @@ import type { AssetType } from '@shared/domain/asset'
  * listing, which does filter on `types`, stays the path taken whenever tags are not involved.
  */
 
-/** The API's eight media classes, from our six. Several of ours share one. */
-const KIND_BY_TYPE: Record<AssetType, string> = {
+/**
+ * The API's media classes, from our six. Several of ours share one.
+ *
+ * Typed against the same union the upload table uses rather than `string`: a typo here compiles
+ * and produces a filter that silently matches nothing, which is the one failure mode a filter
+ * expression cannot signal.
+ */
+const KIND_BY_TYPE: Record<AssetType, UploadKind> = {
   image: 'image',
   texture: 'image',
   skybox: 'image',
@@ -49,9 +56,10 @@ export function filterExpression({ tags, types, collectionId }: FilterTerms): st
   for (const tag of tags ?? []) clauses.push(`tags = ${quoted(tag)}`)
 
   const kinds = [...new Set((types ?? []).map(type => KIND_BY_TYPE[type]))]
-  if (kinds.length === 1) clauses.push(`kind = ${quoted(kinds[0] ?? '')}`)
-  if (kinds.length > 1)
-    clauses.push(`(${kinds.map(kind => `kind = ${quoted(kind)}`).join(' OR ')})`)
+  if (kinds.length > 0) {
+    const group = kinds.map(kind => `kind = ${quoted(kind)}`).join(' OR ')
+    clauses.push(kinds.length === 1 ? group : `(${group})`)
+  }
 
   if (collectionId !== undefined) clauses.push(`collectionIds = ${quoted(collectionId)}`)
 

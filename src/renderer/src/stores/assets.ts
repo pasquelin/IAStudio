@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Asset } from '@shared/domain/asset'
+import type { Asset, AssetType } from '@shared/domain/asset'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
@@ -16,6 +16,13 @@ type AssetsState = {
   // Readonly so nothing can mutate it in place: `assetsById` keys off its identity, and a push
   // that kept the same array would leave the index short of an asset with nothing to say so.
   items: readonly Asset[]
+  /**
+   * The kinds the catalogue is asked for. Set by whichever space is in front, so the query is
+   * narrowed in SQL rather than after the fact — which is also what keeps the count in the
+   * header and the "no asset" message honest about what is being looked at.
+   */
+  scope: readonly AssetType[] | null
+  setScope: (scope: readonly AssetType[] | null) => void
   refresh: () => Promise<void>
   /**
    * Says the catalogue changed and lets this store decide when to read it. `assets.search` is
@@ -26,6 +33,15 @@ type AssetsState = {
 }
 
 const COALESCE_MS = 200
+
+/** Two scopes that ask for the same kinds, so a re-render does not re-read the catalogue. */
+function sameScope(
+  current: readonly AssetType[] | null,
+  next: readonly AssetType[] | null,
+): boolean {
+  if (current === null || next === null) return current === next
+  return current.length === next.length && current.every((type, index) => type === next[index])
+}
 
 /**
  * The catalogue keyed by id, derived from `items` rather than stored beside it: a second field
@@ -70,6 +86,16 @@ export const useAssets = create<AssetsState>()(
         setCollection: collection => set({ collection }),
 
         items: [],
+        scope: null,
+
+        // A change of space changes what the catalogue is asked for, so the rows follow at once
+        // rather than on the next invalidation.
+        setScope: scope => {
+          if (sameScope(get().scope, scope)) return
+
+          set({ scope })
+          void get().refresh()
+        },
 
         // Callers that need the rows NOW share the read already in flight rather than opening a
         // second one: `assets.search` is a synchronous SQLite query in the main process, and
@@ -81,8 +107,9 @@ export const useAssets = create<AssetsState>()(
             const bridge = getBridge()
             if (!bridge) return
 
+            const scope = get().scope
             try {
-              set({ items: await bridge.assets.search({}) })
+              set({ items: await bridge.assets.search(scope ? { types: [...scope] } : {}) })
             } catch {
               // No project open: the catalogue throws, and an empty list is the honest answer.
               set({ items: [] })

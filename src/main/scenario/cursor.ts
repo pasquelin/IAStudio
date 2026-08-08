@@ -10,3 +10,18 @@
 export function tokenAfter(token: string | undefined, received: number): string | null {
   return token && received > 0 ? token : null
 }
+
+/**
+ * The next offset for an index that paginates by one, or `null` at the end.
+ *
+ * `estimatedTotalHits` is an estimate and can exceed what the index really holds; without the
+ * emptiness check, an empty page hands back the very offset it was asked for, forever.
+ */
+export function offsetAfter(
+  offset: number,
+  received: number,
+  estimatedTotal: number,
+): string | null {
+  const next = offset + received
+  return received > 0 && next < estimatedTotal ? String(next) : null
+}

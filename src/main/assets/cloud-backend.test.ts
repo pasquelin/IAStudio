@@ -63,7 +63,6 @@ function harness(overrides: Partial<CloudBackendDeps> = {}): Harness {
   const remote: RemoteAssetCatalog = {
     list: () => Promise.resolve({ assets: [], token: null }),
     search: () => Promise.resolve({ assets: [], token: null }),
-    retrieve: () => Promise.resolve(null),
     getBulk: () => Promise.resolve([]),
     updateTags: () => Promise.resolve(),
     deleteMany: () => Promise.resolve(),
@@ -85,8 +84,9 @@ function harness(overrides: Partial<CloudBackendDeps> = {}): Harness {
       smalls.push({ name, base64 })
       return Promise.resolve('remote_small')
     },
-    resolve: relativePath => `/project/${relativePath}`,
+    fileOf: asset => (asset.path ? `/project/${asset.path}` : (asset.sourcePath ?? null)),
     readFile: () => Promise.resolve(new Uint8Array([1, 2, 3])),
+    sizeOf: () => Promise.resolve(3),
     newId: () => 'asset_new',
     now: () => '2026-08-06T12:00:00.000Z',
     smallUploadLimit: SMALL_LIMIT,
@@ -187,8 +187,48 @@ describe('sending an asset up', () => {
     })
   })
 
+  it('never reads a file it is only going to stream', async () => {
+    // The multipart helper takes a path and streams it: reading here would pull a two-gigabyte
+    // rush into the main process to throw it away, once per asset of a two-hundred-long push.
+    let read = false
+    const streamed = harness({
+      readFile: () => {
+        read = true
+        return Promise.resolve(new Uint8Array())
+      },
+    })
+    await streamed.catalog.add(localAsset({ type: 'video', path: 'assets/vid/asset_1.mp4' }))
+    await streamed.backend.push('asset_1')
+
+    expect(streamed.multiparts).toHaveLength(1)
+    expect(read).toBe(false)
+  })
+
+  it('trusts the size the catalogue already knows rather than asking the disk', async () => {
+    let stated = false
+    const known = harness({
+      sizeOf: () => {
+        stated = true
+        return Promise.resolve(1)
+      },
+    })
+    await known.catalog.add(localAsset({ bytes: SMALL_LIMIT + 1 }))
+    await known.backend.push('asset_1')
+
+    expect(stated).toBe(false)
+    expect(known.multiparts).toHaveLength(1)
+  })
+
+  it('asks the disk for a linked media whose row predates the column', async () => {
+    const linked = harness({ sizeOf: () => Promise.resolve(10) })
+    await linked.catalog.add(localAsset({ bytes: undefined }))
+    await linked.backend.push('asset_1')
+
+    expect(linked.smalls).toHaveLength(1)
+  })
+
   it('sends a picture too large for one request through multipart', async () => {
-    const big = harness({ readFile: () => Promise.resolve(new Uint8Array(SMALL_LIMIT + 1)) })
+    const big = harness({ sizeOf: () => Promise.resolve(SMALL_LIMIT + 1) })
     await big.catalog.add(localAsset())
     await big.backend.push('asset_1')
 
@@ -251,7 +291,7 @@ describe('what the library leaves unsaid', () => {
   it('records a push whose upload reported nothing but an id', async () => {
     const bare = harness({
       multipart: () => Promise.resolve({ assetId: 'remote_bare' }),
-      readFile: () => Promise.resolve(new Uint8Array(SMALL_LIMIT + 1)),
+      sizeOf: () => Promise.resolve(SMALL_LIMIT + 1),
     })
     await bare.catalog.add({
       id: 'asset_1',

@@ -1,10 +1,11 @@
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { defined } from '@shared/guards'
 import type { CloudPage, CloudQuery } from '@shared/domain/cloud-asset'
 import type { SyncOutcome } from '@shared/domain/sync'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
-import { describeFailure, failureOf } from '@main/scenario/client'
+import { describeFailure, failureOf, reducedBy } from '@main/scenario/client'
 import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
 import { filterExpression } from '@main/scenario/filter-expression'
 import { remoteTypesFor } from '@main/scenario/remote-types'
@@ -32,19 +33,7 @@ export type AssetHandlerDeps = {
   activeOwnerId: () => string | null
 }
 
-/**
- * A rejection crossing the boundary carries its message to the renderer, and an SDK message
- * embeds the request that produced it — hence the key. Reduced to a code, exactly as the
- * scenario handlers and the job manager already do.
- */
-async function reduced<T>(action: () => Promise<T>): Promise<T> {
-  try {
-    return await action()
-  } catch (error) {
-    log.error('assets', describeFailure(error))
-    throw new Error(failureOf(error), { cause: error })
-  }
-}
+const reduced = reducedBy('assets')
 
 /**
  * Whether this query has to go through the search index rather than the plain listing.
@@ -56,50 +45,85 @@ function needsSearch(query: CloudQuery): boolean {
   return Boolean(query.text) || Boolean(query.tags?.length)
 }
 
+/**
+ * Which side produced a cursor, carried in the cursor itself.
+ *
+ * The two endpoints paginate differently — the listing by opaque token, the index by numeric
+ * offset — and both answers come back through one `CloudPage`. Unmarked, clearing the search
+ * box while holding a page would hand `"40"` to the listing as a pagination token. Marking is
+ * five characters and makes that impossible to write.
+ */
+const TOKEN_CURSOR = 't:'
+const OFFSET_CURSOR = 'o:'
+
+function offsetFrom(cursor: string | undefined): number {
+  if (cursor === undefined || !cursor.startsWith(OFFSET_CURSOR)) return 0
+
+  const offset = Number(cursor.slice(OFFSET_CURSOR.length))
+  return Number.isFinite(offset) && offset > 0 ? offset : 0
+}
+
+function tokenFrom(cursor: string | undefined): string | undefined {
+  return cursor?.startsWith(TOKEN_CURSOR) ? cursor.slice(TOKEN_CURSOR.length) : undefined
+}
+
+function marked(prefix: string, token: string | null): string | null {
+  return token === null ? null : `${prefix}${token}`
+}
+
 async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<CloudPage> {
   const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX)
 
-  if (needsSearch(query)) {
-    const filter = filterExpression(query)
-    // The search index paginates by offset where the listing uses an opaque cursor. Both travel
-    // back as the same string: the caller hands us whatever the last page gave it.
-    const offset = Number(query.cursor ?? '0')
-    const page = await remote.search({
-      ...(query.text ? { query: query.text } : {}),
-      ...(filter ? { filter } : {}),
-      limit: pageSize,
-      offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
-    })
-    return { assets: page.assets, cursor: page.token }
-  }
+  const page = needsSearch(query)
+    ? await remote
+        .search({
+          ...(query.text ? { query: query.text } : {}),
+          ...defined({ filter: filterExpression(query) }),
+          limit: pageSize,
+          offset: offsetFrom(query.cursor),
+        })
+        .then(found => ({ ...found, cursor: marked(OFFSET_CURSOR, found.token) }))
+    : await remote
+        .list({
+          pageSize,
+          ...defined({
+            token: tokenFrom(query.cursor),
+            types: remoteTypesFor(query.types),
+            collectionId: query.collectionId,
+          }),
+        })
+        .then(found => ({ ...found, cursor: marked(TOKEN_CURSOR, found.token) }))
 
-  const types = remoteTypesFor(query.types)
-  const page = await remote.list({
-    pageSize,
-    ...(query.cursor ? { token: query.cursor } : {}),
-    ...(types ? { types } : {}),
-    ...(query.collectionId ? { collectionId: query.collectionId } : {}),
-  })
-
-  // What the API could not narrow, narrowed here. Asking for pictures sends no `types` filter
-  // at all, so a page may hold meshes; a short page is the price, and the cursor still walks.
+  // Applied to both branches, and after them. Neither endpoint narrows the way the studio does:
+  // the listing sends no `types` at all for pictures, and the index only knows the API's eight
+  // media classes, so a search for skies comes back as every image. A short page is the price;
+  // the cursor still walks, and one filter here beats one per branch — the next source would
+  // otherwise start over.
   const wanted = query.types
   const assets = wanted?.length
     ? page.assets.filter(asset => wanted.includes(asset.type))
     : page.assets
 
-  return { assets, cursor: page.token }
+  return { assets, cursor: page.cursor }
+}
+
+/** The rows behind a list of ids, minus the ones the catalogue no longer holds. */
+async function findMany(catalog: () => AsyncCatalog, ids: readonly string[]): Promise<Asset[]> {
+  const found = await Promise.all(ids.map(id => catalog().find(id)))
+  return found.filter(asset => asset !== null)
 }
 
 function sideOf(asset: Asset): SyncSide {
   return {
     assetId: asset.id,
     hasLocalFile: Boolean(asset.path ?? asset.sourcePath),
-    ...(asset.remoteAssetId ? { remoteAssetId: asset.remoteAssetId } : {}),
-    ...(asset.remoteOwnerId ? { remoteOwnerId: asset.remoteOwnerId } : {}),
-    ...(asset.remoteUpdatedAt ? { remoteUpdatedAt: asset.remoteUpdatedAt } : {}),
-    ...(asset.remoteSyncedAt ? { remoteSyncedAt: asset.remoteSyncedAt } : {}),
-    ...(asset.localChangedAt ? { localChangedAt: asset.localChangedAt } : {}),
+    ...defined({
+      remoteAssetId: asset.remoteAssetId,
+      remoteOwnerId: asset.remoteOwnerId,
+      remoteUpdatedAt: asset.remoteUpdatedAt,
+      remoteSyncedAt: asset.remoteSyncedAt,
+      localChangedAt: asset.localChangedAt,
+    }),
   }
 }
 
@@ -141,9 +165,7 @@ export function registerAssetHandlers({
     const ids = parseAssetIds(assetIds)
     const wipeRemote = parseAlsoRemote(alsoRemote)
 
-    const found = (await Promise.all(ids.map(id => catalog().find(id)))).filter(
-      asset => asset !== null,
-    )
+    const found = await findMany(catalog, ids)
 
     if (wipeRemote) {
       const twins = found.map(asset => asset.remoteAssetId).filter(id => id !== undefined)
@@ -199,9 +221,7 @@ export function registerAssetHandlers({
 
   handle(CHANNELS.cloudPlan, async (_event, assetIds, policy) => {
     const ids = parseAssetIds(assetIds)
-    const found = (await Promise.all(ids.map(id => catalog().find(id)))).filter(
-      asset => asset !== null,
-    )
+    const found = await findMany(catalog, ids)
 
     return planSync(found.map(sideOf), parseSyncPolicy(policy), activeOwnerId())
   })

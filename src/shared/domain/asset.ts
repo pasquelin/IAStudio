@@ -209,6 +209,36 @@ export type AssetBadge =
   'local-only' | 'synced' | 'to-push' | 'to-pull' | 'conflict' | 'error' | 'other-account'
 
 /**
+ * Whether this asset's twin lives in a project the active key does not open onto.
+ *
+ * Shared by the badge and by the sync planner, which is the point: the tile saying "in sync"
+ * while the plan says "skipped, other account" is a disagreement nothing would have caught.
+ *
+ * A `null` account means nothing has said which project is open yet — judged as "do not judge"
+ * rather than as a mismatch, since guessing would strand every asset behind a false warning.
+ */
+export function isForeignTwin(
+  twin: Pick<Asset, 'remoteOwnerId'>,
+  activeOwnerId: string | null,
+): boolean {
+  return (
+    activeOwnerId !== null &&
+    twin.remoteOwnerId !== undefined &&
+    twin.remoteOwnerId !== activeOwnerId
+  )
+}
+
+export const ASSET_BADGES: readonly AssetBadge[] = [
+  'local-only',
+  'synced',
+  'to-push',
+  'to-pull',
+  'conflict',
+  'error',
+  'other-account',
+]
+
+/**
  * The badge an asset wears, derived rather than stored: it depends on which account is active,
  * and the catalogue outlives the choice of account. Storing it would mean rewriting every row
  * on every key change — and showing a stale answer between the change and the rewrite.
@@ -219,13 +249,7 @@ export type AssetBadge =
  */
 export function assetBadgeOf(asset: Asset, activeOwnerId: string | null): AssetBadge {
   if (asset.remoteAssetId === undefined) return 'local-only'
-  if (
-    activeOwnerId !== null &&
-    asset.remoteOwnerId !== undefined &&
-    asset.remoteOwnerId !== activeOwnerId
-  ) {
-    return 'other-account'
-  }
+  if (isForeignTwin(asset, activeOwnerId)) return 'other-account'
 
   switch (asset.syncStatus) {
     case 'synced':

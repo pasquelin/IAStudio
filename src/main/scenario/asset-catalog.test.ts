@@ -30,7 +30,6 @@ function backendSpy(overrides: Partial<AssetBackend> = {}): {
       return Promise.resolve({ assets: [] })
     },
     search: () => Promise.resolve({ hits: [], estimatedTotalHits: 0 }),
-    retrieve: () => Promise.resolve(null),
     getBulk: params => {
       recorded.getBulk.push(params)
       return Promise.resolve({ assets: params.assetIds.map(id => listing(id)) })
@@ -82,17 +81,6 @@ describe('listing the library', () => {
 
     expect(recorded.list[0]).toMatchObject({ pageSize: 100 })
   })
-
-  it('asks for a date order only when one was chosen', async () => {
-    const { backend, recorded } = backendSpy()
-    const catalog = assetCatalogOf(backend)
-
-    await catalog.list({ pageSize: 10 })
-    await catalog.list({ pageSize: 10, sort: 'oldest' })
-
-    expect(recorded.list[0]).not.toHaveProperty('sortBy')
-    expect(recorded.list[1]).toMatchObject({ sortBy: 'createdAt', sortDirection: 'asc' })
-  })
 })
 
 describe('searching the library', () => {
@@ -113,25 +101,6 @@ describe('searching the library', () => {
     })
 
     expect((await assetCatalogOf(backend).search({ limit: 20, offset: 0 })).token).toBe('1')
-  })
-})
-
-describe('fetching one asset', () => {
-  it('unwraps the envelope the API answers a single asset with', () => {
-    // `GET /assets/{id}` answers `{ asset }` where the listing answers an array. Handing the
-    // envelope straight to the normaliser reads as a record with no id, and gives back nothing.
-    const { backend } = backendSpy({
-      retrieve: () => Promise.resolve({ asset: listing('asset_1') }),
-    })
-
-    return expect(assetCatalogOf(backend).retrieve('asset_1')).resolves.toMatchObject({
-      id: 'asset_1',
-    })
-  })
-
-  it('answers nothing for a response it cannot read', async () => {
-    const { backend } = backendSpy({ retrieve: () => Promise.resolve(null) })
-    expect(await assetCatalogOf(backend).retrieve('asset_1')).toBeNull()
   })
 })
 
