@@ -524,6 +524,7 @@
     "layerKind_pixel": "Pixels",
     "layerKind_group": "Group",
     "layerKind_adjustment": "Adjustment",
+    "layerKind_text": "Text",
     "compositing": "Compositing",
     "blend": "Blend",
     "fillOpacity": "Fill opacity",
