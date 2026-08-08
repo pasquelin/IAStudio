@@ -145,8 +145,7 @@ const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>([
  * must be a compile error, not a layer that quietly composites as `normal`.
  *
  * `hue` is the one exception, and it is deliberate: Pixi 8.19 commented it out of its own union
- * and ships no filter for it, and the pieces to write one — `BlendModeFilter`, `hslgl` — are not
- * public exports.
+ * and ships no filter for it, so the literal would not even typecheck.
  */
 export const BLEND_BY_MODE: Record<BlendMode, BLEND_MODES> = {
   normal: 'normal',
