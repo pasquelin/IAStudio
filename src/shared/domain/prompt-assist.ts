@@ -20,6 +20,18 @@ export type PromptSuggestion = {
   rationale?: string
 }
 
+/**
+ * A draft carried into the language the models are trained in.
+ *
+ * Distinct from a suggestion on purpose: nothing is proposed here, the text simply changes
+ * language. It replaces what was written rather than sitting beside it as an option.
+ */
+export type PromptTranslation = {
+  text: string
+  /** What the API recognized the draft as. Already English means nothing was lost. */
+  detectedLanguage: string
+}
+
 /** What the renderer asks for when it wants a draft rewritten. */
 export type SuggestPromptsRequest = {
   modelId: string

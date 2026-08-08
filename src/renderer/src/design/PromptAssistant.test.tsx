@@ -2,30 +2,31 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { PromptSuggestion } from '@shared/domain/prompt-assist'
-import { PromptSuggestions, type PromptSuggestionsProps } from './PromptSuggestions'
+import { PromptAssistant, type PromptAssistantProps } from './PromptAssistant'
 
 const SUGGESTION: PromptSuggestion = {
   text: 'Photorealistic close-up of a mossy boulder',
   parameters: { resolution: '4K', numOutputs: 2 },
 }
 
-function draw(overrides: Partial<PromptSuggestionsProps> = {}) {
-  const props: PromptSuggestionsProps = {
+function draw(overrides: Partial<PromptAssistantProps> = {}) {
+  const props: PromptAssistantProps = {
     readDraft: () => 'a boulder',
     request: () => Promise.resolve([SUGGESTION]),
+    translate: draft => Promise.resolve({ text: draft, detectedLanguage: 'english' }),
     onAdoptText: vi.fn(),
     onAdoptCall: vi.fn(),
     failureMessage: () => 'Trop de requêtes.',
     ...overrides,
   }
 
-  render(<PromptSuggestions {...props} />)
+  render(<PromptAssistant {...props} />)
   return props
 }
 
 const suggest = (): HTMLElement => screen.getByRole('button', { name: 'Proposer des variantes' })
 
-describe('prompt suggestions, drawn', () => {
+describe('the prompt assistant, drawn', () => {
   it('asks for nothing until it is asked to', () => {
     const request = vi.fn(() => Promise.resolve([]))
     draw({ request })
@@ -161,5 +162,54 @@ describe('prompt suggestions, drawn', () => {
 
     await userEvent.click(suggest())
     expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  describe('translating the draft', () => {
+    const translateButton = (): HTMLElement =>
+      screen.getByRole('button', { name: 'Traduire en anglais' })
+
+    it('replaces the draft with what came back', async () => {
+      const onAdoptText = vi.fn()
+      draw({
+        onAdoptText,
+        translate: () => Promise.resolve({ text: 'a mossy boulder', detectedLanguage: 'french' }),
+        readDraft: () => 'un rocher moussu',
+      })
+
+      await userEvent.click(translateButton())
+
+      await waitFor(() => expect(onAdoptText).toHaveBeenCalledWith('a mossy boulder'))
+    })
+
+    // Rewriting what the user wrote, for no gain, is worse than saying nothing changed.
+    it('leaves an english draft alone and says so', async () => {
+      const onAdoptText = vi.fn()
+      draw({
+        onAdoptText,
+        translate: () => Promise.resolve({ text: 'reworded', detectedLanguage: 'English' }),
+      })
+
+      await userEvent.click(translateButton())
+
+      expect(await screen.findByRole('status')).toHaveTextContent('déjà en anglais')
+      expect(onAdoptText).not.toHaveBeenCalled()
+    })
+
+    it('asks nothing of the API when there is nothing written', async () => {
+      const translate = vi.fn(() => Promise.resolve({ text: '', detectedLanguage: 'english' }))
+      draw({ translate, readDraft: () => '   ' })
+
+      await userEvent.click(translateButton())
+
+      expect(translate).not.toHaveBeenCalled()
+    })
+
+    it('says what went wrong rather than staying silent', async () => {
+      draw({ translate: () => Promise.reject(new Error('rate-limited')) })
+
+      await userEvent.click(translateButton())
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Trop de requêtes.')
+    })
   })
 })

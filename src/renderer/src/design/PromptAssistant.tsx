@@ -1,15 +1,16 @@
-import { mdiCreationOutline } from '@mdi/js'
+import { mdiCreationOutline, mdiTranslate } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { PromptSuggestion } from '@shared/domain/prompt-assist'
+import type { PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { cn } from '@/helpers/cn'
 import { Button } from './Button'
 import { ToolButton } from './ToolButton'
 
-export type PromptSuggestionsProps = {
+export type PromptAssistantProps = {
   /** Reads the draft at the moment it is asked for — never during a render. */
   readDraft: () => string
   request: (draft: string) => Promise<PromptSuggestion[]>
+  translate: (draft: string) => Promise<PromptTranslation>
   /** Adopts the text alone, leaving every other field as the user set it. */
   onAdoptText: (text: string) => void
   /** Adopts the text and the settings that came with it. */
@@ -18,19 +19,24 @@ export type PromptSuggestionsProps = {
   failureMessage: (error: unknown) => string
 }
 
+/** What the API answers with when the draft was already in the language the models read. */
+const ENGLISH = 'english'
+
 /**
- * The prompt assistance that sits under the field the model marks as its prompt.
+ * The prompt assistance that sits under the field the model marks as its prompt: rewriting into
+ * variants, and carrying a draft into the language the models are trained in.
  *
  * Two adoptions rather than one: the settings are worth having, but overwriting a ratio the
  * user has just chosen — without being asked — is not something a suggestion gets to do.
  */
-export function PromptSuggestions({
+export function PromptAssistant({
   readDraft,
   request,
+  translate,
   onAdoptText,
   onAdoptCall,
   failureMessage,
-}: PromptSuggestionsProps) {
+}: PromptAssistantProps) {
   const { t } = useTranslation()
   const [suggestions, setSuggestions] = useState<PromptSuggestion[]>([])
   const [pending, setPending] = useState(false)
@@ -53,9 +59,40 @@ export function PromptSuggestions({
       .finally(() => setPending(false))
   }
 
+  const carryOver = (): void => {
+    const draft = readDraft()
+    // Nothing to carry, and the channel refuses blank text anyway.
+    if (draft.trim() === '') return
+
+    setPending(true)
+    setFailure(null)
+
+    void translate(draft)
+      .then(({ text, detectedLanguage }) => {
+        // Already on the right side: replacing the text would rewrite what the user wrote for
+        // no gain, so it is left alone and said so.
+        if (detectedLanguage.toLowerCase() === ENGLISH) {
+          setFailure(t('prompt.alreadyEnglish'))
+          return
+        }
+
+        onAdoptText(text)
+        setFailure(null)
+      })
+      .catch((error: unknown) => setFailure(failureMessage(error)))
+      .finally(() => setPending(false))
+  }
+
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-1">
+        <ToolButton
+          icon={mdiTranslate}
+          label={t('prompt.translate')}
+          variant="header"
+          disabled={pending}
+          onClick={carryOver}
+        />
         <ToolButton
           icon={mdiCreationOutline}
           label={t('prompt.suggest')}

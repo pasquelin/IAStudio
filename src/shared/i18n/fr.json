@@ -1189,6 +1189,8 @@
     "suggesting": "Rédaction des variantes…",
     "noSuggestion": "Aucune variante proposée.",
     "useText": "Utiliser le texte",
-    "useTextAndSettings": "Texte + réglages"
+    "useTextAndSettings": "Texte + réglages",
+    "translate": "Traduire en anglais",
+    "alreadyEnglish": "Ce texte est déjà en anglais."
   }
 }

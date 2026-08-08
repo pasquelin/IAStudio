@@ -35,7 +35,11 @@ const jobs: JobManager = {
 }
 
 function assistant(overrides: Partial<PromptAssist> = {}): PromptAssist {
-  return { suggest: () => Promise.reject(new Error('unused')), ...overrides }
+  return {
+    suggest: () => Promise.reject(new Error('unused')),
+    translate: () => Promise.reject(new Error('unused')),
+    ...overrides,
+  }
 }
 
 const prompts = assistant()

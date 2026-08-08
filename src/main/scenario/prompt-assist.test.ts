@@ -19,9 +19,11 @@ const FIELDS: FieldDescriptor[] = [
   { key: 'numOutputs', kind: 'integer', label: 'Outputs', required: false, min: 1, max: 4 },
 ]
 
+const unusedTranslate = (): Promise<never> => Promise.reject(new Error('unused'))
+
 function assist(answer: RemotePrompts, fields: readonly FieldDescriptor[] = FIELDS) {
   const prompt = vi.fn(async () => answer)
-  const api: PromptAssistApi = { prompt }
+  const api: PromptAssistApi = { prompt, translate: unusedTranslate }
   return { prompt, assist: createPromptAssist({ api: () => api, fields: async () => fields }) }
 }
 
@@ -95,6 +97,7 @@ describe('createPromptAssist', () => {
         prompts: ['a close-up'],
         calls: [{ modelId: MODEL, parameters: { resolution: '4K' } }],
       }),
+      translate: unusedTranslate,
     }
     const subject = createPromptAssist({
       api: () => api,
@@ -171,6 +174,44 @@ describe('createPromptAssist', () => {
         mode: 'contextual-v2',
         modelId: MODEL,
         numResults: 1,
+      })
+    })
+  })
+
+  describe('translate', () => {
+    it('carries the draft over and says what it recognized', async () => {
+      const translate = vi.fn(async () => ({
+        translation: 'a mossy boulder',
+        detectedLanguage: 'french',
+      }))
+      const subject = createPromptAssist({
+        api: () => ({ prompt: async () => ({ prompts: [] }), translate }),
+        fields: async () => FIELDS,
+      })
+
+      await expect(subject.translate('un rocher moussu')).resolves.toEqual({
+        text: 'a mossy boulder',
+        detectedLanguage: 'french',
+      })
+      expect(translate).toHaveBeenCalledWith({ prompt: 'un rocher moussu' })
+    })
+
+    // Nothing is proposed here: what the API answers is the text, whatever it recognized.
+    it('reports a draft that was already english without changing it', async () => {
+      const subject = createPromptAssist({
+        api: () => ({
+          prompt: async () => ({ prompts: [] }),
+          translate: async () => ({
+            translation: 'a mossy boulder',
+            detectedLanguage: 'english',
+          }),
+        }),
+        fields: async () => FIELDS,
+      })
+
+      await expect(subject.translate('a mossy boulder')).resolves.toEqual({
+        text: 'a mossy boulder',
+        detectedLanguage: 'english',
       })
     })
   })

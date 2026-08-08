@@ -2,11 +2,11 @@ import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { ModelDescriptor } from '@shared/domain/model'
-import type { PromptSuggestion } from '@shared/domain/prompt-assist'
+import type { PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { workspaceById } from '@/helpers/workspaces'
 import type { FormValues } from '@/helpers/dynamic-form'
 import { DynamicForm } from '@/design/DynamicForm'
-import { PromptSuggestions } from '@/design/PromptSuggestions'
+import { PromptAssistant } from '@/design/PromptAssistant'
 import { failureKeyOf } from '@/services/failure-message'
 import { getBridge } from '@/services/bridge'
 import { useJobs } from '@/stores/jobs'
@@ -26,6 +26,13 @@ function suggestPrompts(modelId: string, draft: string): Promise<PromptSuggestio
   const bridge = getBridge()
   if (!bridge) return Promise.resolve([])
   return bridge.scenario.suggestPrompts({ modelId, prompt: draft })
+}
+
+/** Carries a draft into the language the models read. Nothing is proposed: the text changes. */
+function translateDraft(draft: string): Promise<PromptTranslation> {
+  const bridge = getBridge()
+  if (!bridge) return Promise.resolve({ text: draft, detectedLanguage: 'english' })
+  return bridge.scenario.translatePrompt(draft)
 }
 
 function useDescriptor(modelId: string | null) {
@@ -118,9 +125,10 @@ export function Generator() {
           // The API marks the field its assistance rewrites; every other one gets nothing.
           accessory={(field, handle) =>
             field.promptSpark === true && (
-              <PromptSuggestions
+              <PromptAssistant
                 readDraft={() => (typeof handle.read() === 'string' ? String(handle.read()) : '')}
                 request={draft => suggestPrompts(modelId, draft)}
+                translate={translateDraft}
                 onAdoptText={handle.write}
                 onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
                 failureMessage={error => t(failureKeyOf(error))}

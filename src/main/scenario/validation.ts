@@ -107,3 +107,10 @@ const suggestPrompts = z.object({
 export function parseSuggestPrompts(value: unknown): SuggestPromptsRequest {
   return suggestPrompts.parse(value)
 }
+
+/** Bounded like the draft above, and non-empty: there is nothing to translate in blank text. */
+const promptDraft = z.string().trim().min(1).max(PROMPT_INPUT_MAX)
+
+export function parsePromptDraft(value: unknown): string {
+  return promptDraft.parse(value)
+}

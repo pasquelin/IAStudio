@@ -13,7 +13,11 @@ import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
-import type { PromptSuggestion, SuggestPromptsRequest } from './domain/prompt-assist'
+import type {
+  PromptSuggestion,
+  PromptTranslation,
+  SuggestPromptsRequest,
+} from './domain/prompt-assist'
 import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
@@ -47,6 +51,7 @@ export type Channels = {
   scenarioModelPreviews: 'scenario:model-previews'
   scenarioDescribeModel: 'scenario:describe-model'
   scenarioSuggestPrompts: 'scenario:suggest-prompts'
+  scenarioTranslatePrompt: 'scenario:translate-prompt'
   scenarioGenerate: 'scenario:generate'
   scenarioUploadAsset: 'scenario:upload-asset'
   scenarioCancelJob: 'scenario:cancel-job'
@@ -119,6 +124,7 @@ export const CHANNELS: Channels = {
   scenarioModelPreviews: 'scenario:model-previews',
   scenarioDescribeModel: 'scenario:describe-model',
   scenarioSuggestPrompts: 'scenario:suggest-prompts',
+  scenarioTranslatePrompt: 'scenario:translate-prompt',
   scenarioGenerate: 'scenario:generate',
   scenarioUploadAsset: 'scenario:upload-asset',
   scenarioCancelJob: 'scenario:cancel-job',
@@ -341,6 +347,11 @@ export type StudioBridge = {
      * back a job, but its result is in the response, so nothing here is polled.
      */
     suggestPrompts: (request: SuggestPromptsRequest) => Promise<PromptSuggestion[]>
+    /**
+     * Carries a draft into the language the models are trained in, and says what it recognized
+     * it as. Replaces the text rather than proposing beside it — nothing is invented here.
+     */
+    translatePrompt: (draft: string) => Promise<PromptTranslation>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
     uploadAsset: (name: string, image: string) => Promise<string>

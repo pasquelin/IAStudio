@@ -1189,6 +1189,8 @@
     "suggesting": "Writing variants…",
     "noSuggestion": "No variant proposed.",
     "useText": "Use the text",
-    "useTextAndSettings": "Text + settings"
+    "useTextAndSettings": "Text + settings",
+    "translate": "Translate to English",
+    "alreadyEnglish": "This text is already in English."
   }
 }

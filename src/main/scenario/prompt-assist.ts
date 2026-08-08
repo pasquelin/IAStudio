@@ -1,5 +1,9 @@
 import type { FieldDescriptor } from '@shared/domain/model'
-import { PROMPT_SUGGESTIONS_MAX, type PromptSuggestion } from '@shared/domain/prompt-assist'
+import {
+  PROMPT_SUGGESTIONS_MAX,
+  type PromptSuggestion,
+  type PromptTranslation,
+} from '@shared/domain/prompt-assist'
 import { adoptableParameters } from './call-parameters'
 
 /**
@@ -31,6 +35,12 @@ export type PromptAssistApi = {
     images?: readonly string[]
     numResults?: number
   }) => Promise<RemotePrompts>
+  translate: (params: { prompt: string }) => Promise<RemoteTranslation>
+}
+
+export type RemoteTranslation = {
+  translation: string
+  detectedLanguage: string
 }
 
 export type SuggestRequest = {
@@ -50,6 +60,7 @@ export type PromptAssistDeps = {
 
 export type PromptAssist = {
   suggest: (request: SuggestRequest) => Promise<PromptSuggestion[]>
+  translate: (draft: string) => Promise<PromptTranslation>
 }
 
 /**
@@ -80,6 +91,11 @@ export function createPromptAssist({ api, fields }: PromptAssistDeps): PromptAss
       return answer.prompts.map((text, index) =>
         suggestionOf(text, answer.calls?.[index], modelId, descriptors),
       )
+    },
+
+    translate: async draft => {
+      const { translation, detectedLanguage } = await api().translate({ prompt: draft })
+      return { text: translation, detectedLanguage }
     },
   }
 }
