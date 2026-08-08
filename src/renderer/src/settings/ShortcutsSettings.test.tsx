@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import userEvent, { PointerEventsCheckLevel, type UserEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from '@/stores/settings'
@@ -17,21 +17,25 @@ const staged = () => useSettingsDraft.getState().pending.shortcuts?.overrides
  */
 const rowFor = (title: string): HTMLElement => screen.getByLabelText(title)
 
-/** The button that arms the chord search. Its own text is its accessible name. */
+/**
+ * The button that arms the chord search. Its own text is its accessible name — and the only
+ * element carrying it, unlike the command titles, which a `getByText` would find on their
+ * label `span` rather than on their button.
+ */
 const searchButton = (): HTMLElement => screen.getByText('Chercher par touche')
 
 function press(code: string, modifiers: Partial<KeyboardEventInit> = {}): void {
   fireEvent.keyDown(window, { code, ...modifiers })
 }
 
-let user: ReturnType<typeof userEvent.setup>
+let user: UserEvent
 
 beforeEach(() => {
-  // A session rather than the direct API, and without its two defaults: the delay between
-  // events, and a pointer-events check walking the ancestors of every target. Neither buys
-  // anything under jsdom, which has no layout, and both are paid on every interaction.
-  // `0` is `PointerEventsCheckLevel.Never`.
-  user = userEvent.setup({ delay: null, pointerEventsCheck: 0 })
+  // A session rather than the direct API, whose defaults are paid on every interaction: a
+  // delay between events, and a pointer-events check walking the ancestors of every target.
+  // The latter is inert here anyway — the renderer tests load no stylesheet, so nothing can
+  // be covered (`vitest.config.ts` limits `css.include` to `index.css?raw`).
+  user = userEvent.setup({ delay: null, pointerEventsCheck: PointerEventsCheckLevel.Never })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
   useSettingsDraft.setState({ pending: {}, touched: new Set() })
 })
@@ -150,6 +154,11 @@ describe('searching by chord', () => {
 
   it('says a key is free rather than showing an empty screen', async () => {
     render(<ShortcutsSettings />)
+
+    // `SearchByChord` is not a `CommandRow`: the role asserted above says nothing about it, and
+    // a click would work just as well on a `div`. `toHaveRole` costs 3 ms where a named
+    // `getByRole` costs 370.
+    expect(searchButton()).toHaveRole('button')
     await user.click(searchButton())
 
     press('KeyJ', { metaKey: true, altKey: true })
