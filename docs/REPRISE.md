@@ -342,9 +342,16 @@ préexistant, dont le recadrage n'était qu'un symptôme.
 **Ce qui reste à rebrancher.** Les cinq commandes existent et sont testées ; il leur manque leur
 entrée d'interface :
 
-- **Fusionner, Aplatir, Miroir, Quart de tour** — quatre commandes de menu, sans geste. Il leur faut
-  un descripteur dans `COMMAND_REGISTRY`, deux clés i18n fr **et** en, et un `case` dans
-  `ImageDocument`. C'est le lot le plus court qui reste sur cet espace.
+- **Miroir et quart de tour : faits.** Quatre entrées de registre, un menu **Image** dans
+  `main/menu/template.ts` — conditionné à l'espace comme le menu Ajouter de la 3D. À savoir avant
+  d'ajouter une commande d'espace : **le menu natif n'exposait aucune commande de scope `canvas`**,
+  toutes passaient par le clavier. Une commande sans raccourci par défaut et sans entrée de menu
+  est injoignable.
+- **Fusionner et Aplatir** — pas du câblage. `flatten` remplace la pile par un calque neuf dont la
+  texture naît vide, et `mergeDown` garde la texture du dessous sans y composer celle du dessus. Il
+  leur faut une étape de composition dans le moteur, sur le modèle de `pendingMaskFills` /
+  `drainPendingMask` : la React demande la composition **avant** de lancer la commande, le moteur la
+  garde en attente, et la verse quand la surface naît.
 - **Recadrer** — plus lourd : `54730cc` a retiré **tout le chemin de recadrage du moteur**, il ne
   reste que le littéral `'crop'` dans l'union et dans `UNBUILT_TOOLS`. Le rebrancher, c'est réécrire
   le geste : glisser un cadre, l'afficher dans l'overlay, valider au relâchement.
