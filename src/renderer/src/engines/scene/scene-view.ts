@@ -148,9 +148,12 @@ export function applyWireOverlay(object: Object3D, on: boolean, material: Materi
   for (const mesh of meshes) {
     const edges = new LineSegments(new WireframeGeometry(mesh.geometry), material)
     edges.name = OVERLAY_NAME
-    // Never in a shadow map, and never in the box a framing is computed from: it is decoration.
+    // Decoration, and kept out of everything that reads the scene as content. The ray above all:
+    // a line is met within a whole world unit of itself, so left pickable the overlay wraps every
+    // edge in a halo that size, and a click into the void beside a cube would select the cube.
     edges.castShadow = false
     edges.receiveShadow = false
+    edges.raycast = () => {}
     mesh.add(edges)
   }
 }
