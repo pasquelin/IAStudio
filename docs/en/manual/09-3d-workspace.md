@@ -460,6 +460,11 @@ follows the chosen format.
 light markers are not part of the scene: they are display aids. The file holds only what the
 Explorer lists. The edges of the "shaded and wireframe" mode are not in it either.
 
+**A sprite does not come out either.** Neither in glTF nor in USDZ: neither format has an object
+that always turns to face the camera, and three.js simply leaves it out — without a word. In glTF
+the file keeps its name and its place, but nothing is drawn there; in USDZ nothing of it remains at
+all. A flat image that has to survive the export is made with a plane and a texture.
+
 **A nested selection keeps its place.** Exporting an object filed inside a group writes it where it
 stands in the scene, not where it stands inside its group.
 
