@@ -50,6 +50,7 @@ export type CommandId =
   | 'canvas.enlarge'
   | 'canvas.vectorize'
   | 'canvas.extend'
+  | 'canvas.export'
   | 'canvas.flipHorizontal'
   | 'canvas.flipVertical'
   | 'canvas.rotateClockwise'
@@ -358,6 +359,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasExtend.title',
     helpKey: 'commands.canvasExtend.help',
     defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.export',
+    scope: 'canvas',
+    titleKey: 'commands.canvasExport.title',
+    helpKey: 'commands.canvasExport.help',
+    defaultBinding: 'Shift+Meta+KeyE',
   }),
   command({
     id: 'canvas.flipHorizontal',

@@ -31,6 +31,7 @@ import {
 } from './image-tools'
 import { layerPort } from './layer-port'
 import { prepareEdit, type AiEdit } from './ai-actions'
+import { exportPicture } from './export-picture'
 import { maskFromSelection } from './mask-actions'
 import { placeAsset } from './place-asset'
 import { revealAssets } from './reveal-panel'
@@ -181,6 +182,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return toggleView(documentId, 'snap')
         case 'canvas.clearGuides':
           return clearGuides(documentId)
+        case 'canvas.export': {
+          const host = engine.current
+          // Swallowed here rather than left unhandled: a shortcut has nowhere to report to, and
+          // the dialog it opens is what says whether anything was written.
+          if (host) void exportPicture(documentId, host).catch(() => undefined)
+          return
+        }
         case 'canvas.flipHorizontal':
           return edit(flipImage('horizontal'))
         case 'canvas.flipVertical':

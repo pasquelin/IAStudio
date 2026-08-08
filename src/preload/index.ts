@@ -62,6 +62,7 @@ const bridge: StudioBridge = {
   },
   dialog: {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
+    exportPicture: (name, image) => ipcRenderer.invoke(CHANNELS.dialogExportPicture, name, image),
   },
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),

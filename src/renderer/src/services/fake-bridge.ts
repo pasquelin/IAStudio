@@ -52,6 +52,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       ...overrides.project,
     },
     dialog: {
+      exportPicture: () => Promise.resolve(null),
       pickPath: () => Promise.resolve(null),
       ...overrides.dialog,
     },

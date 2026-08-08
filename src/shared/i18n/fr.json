@@ -928,6 +928,10 @@
     "canvasRotateCounterClockwise": {
       "title": "Pivoter à gauche",
       "help": "Faire tourner l’image d’un quart de tour dans l’autre sens"
+    },
+    "canvasExport": {
+      "title": "Exporter l’image",
+      "help": "Écrire le document aplati sur le disque, au format PNG"
     }
   },
   "texture": {

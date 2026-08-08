@@ -51,6 +51,7 @@ export type Channels = {
   projectCurrent: 'project:current'
 
   dialogPickPath: 'dialog:pick-path'
+  dialogExportPicture: 'dialog:export-picture'
 
   documentList: 'document:list'
   documentRead: 'document:read'
@@ -102,6 +103,7 @@ export const CHANNELS: Channels = {
   projectCurrent: 'project:current',
 
   dialogPickPath: 'dialog:pick-path',
+  dialogExportPicture: 'dialog:export-picture',
 
   documentList: 'document:list',
   documentRead: 'document:read',
@@ -242,6 +244,11 @@ export type StudioBridge = {
      * they differ only by which picker opens.
      */
     pickPath: (kind: PathKind, startIn?: string) => Promise<string | null>
+    /**
+     * Asks where to put a picture and writes it there. Base64 in, path out — the renderer has
+     * no filesystem, and the bytes are what it has.
+     */
+    exportPicture: (name: string, image: string) => Promise<string | null>
   }
   documents: {
     /** Every document the open project holds, read off its folder — the one source of truth. */

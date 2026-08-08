@@ -75,6 +75,7 @@ export type Services = {
   /** The language in force, machine locale included. Both the menu and the dialogs read it. */
   language: () => Language
   pickPath: (kind: PathKind) => Promise<string | null>
+  savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   pickMedia: () => Promise<string[]>
@@ -106,6 +107,23 @@ async function pickPath(kind: PathKind, startIn?: string): Promise<string | null
     ...(startIn ? { defaultPath: startIn } : {}),
   })
   return picked[0] ?? null
+}
+
+/**
+ * Asks where a picture goes and writes it there. The renderer has no filesystem, so the bytes
+ * come across and the path never goes back the other way beyond the one it chose.
+ */
+async function savePicture(name: string, bytes: Uint8Array): Promise<string | null> {
+  const parent = BrowserWindow.getFocusedWindow()
+  const options: Electron.SaveDialogOptions = { defaultPath: name }
+  const result = parent
+    ? await dialog.showSaveDialog(parent, options)
+    : await dialog.showSaveDialog(options)
+
+  if (result.canceled || !result.filePath) return null
+
+  await writeFile(result.filePath, bytes)
+  return result.filePath
 }
 
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
@@ -351,6 +369,7 @@ export function createServices(settings: SettingsStore): Services {
     },
     language,
     pickPath,
+    savePicture,
     reveal: file => shell.showItemInFolder(file),
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's

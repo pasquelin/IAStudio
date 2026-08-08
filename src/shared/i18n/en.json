@@ -928,6 +928,10 @@
     "canvasRotateCounterClockwise": {
       "title": "Rotate left",
       "help": "Turn the image a quarter turn the other way, frame and all"
+    },
+    "canvasExport": {
+      "title": "Export the image",
+      "help": "Write the flattened document to disk, as a PNG"
     }
   },
   "texture": {

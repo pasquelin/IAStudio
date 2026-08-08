@@ -35,7 +35,10 @@ const base64 = z
   .min(1)
   // Only the head: the payload is megabytes long, and a data URL prefix — the one mistake this
   // catches — is at the front. The size is checked before it, in the uploader.
-  .refine(value => /^[A-Za-z0-9+/]{1,64}/.test(value), 'expected raw base64')
+  // The head alone: the payload is megabytes long, and the one mistake worth catching — a
+  // `data:image/png;base64,` prefix — is at the front. An unanchored class would match `data`
+  // and let the rest through.
+  .refine(value => /^[A-Za-z0-9+/=]+$/.test(value.slice(0, 64)), 'expected raw base64')
 
 export function parseBase64(value: unknown): string {
   return base64.parse(value)
