@@ -58,8 +58,10 @@ This is the field that matters. A few principles, in order of importance.
 ### Write in English if you can
 
 The great majority of models were trained on English descriptions. A prompt in another language
-sometimes works, but less well. An online translator is plenty — grammar counts for little, words
-count for a lot.
+sometimes works, but less well. Grammar counts for little, words count for a lot.
+
+**You do not need a translator elsewhere**: the **Translate to English** button, above the field,
+does it. See the next section.
 
 ### Describe what is there
 
@@ -93,6 +95,59 @@ soft morning light, photographic
 
 Stacking forty adjectives does not make the image forty times better. Beyond thirty words or so,
 most models dilute. One accurate sentence beats three vague ones.
+
+---
+
+## Getting help writing the prompt
+
+Three buttons sit above the field. They are not on every form: **the model is the one naming the
+field to assist**, and the studio follows. A model that does not flag one shows no buttons — the
+studio does not try to guess which of its fields is a prompt.
+
+| Button | What it does |
+|---|---|
+| **Suggest variants** | has your draft rewritten by the model that will read it |
+| **Translate to English** | rewrites your text in the language the models learned on |
+| **Describe the style of the references** | reads the pictures already on the form and writes what they have in common |
+
+While it works, "Writing variants…" appears and all three buttons are inactive.
+
+### What a variant offers, and how you take it
+
+Each variant appears in its own box, with up to three things:
+
+- **the rewritten text**, the one you will adopt;
+- **the reason** for the rewrite, in italics, when the model gives one;
+- **the settings** it suggests alongside the text — a ratio, a step count — listed in plain sight
+  below the proposal.
+
+Two buttons, and the difference between them matters:
+
+| Button | Effect |
+|---|---|
+| **Use the text** | replaces the prompt, **and nothing else** |
+| **Text + settings** | replaces the prompt **and** applies the suggested settings |
+
+**The second only appears when there are settings to apply.** Separating the two gestures is
+deliberate: overwriting a ratio you have just chosen is not a decision a suggestion makes on its
+own.
+
+> Suggested settings are **filtered against what the model declares it accepts** before being
+> applied. A value out of bounds is dropped, never forced back into range.
+
+### The two refusals you will meet
+
+| Message | What it means |
+|---|---|
+| "This text is already in English." | translation has nothing to do — the studio checks the language before calling |
+| "Drop a reference picture to describe its style." | the form carries no picture to read |
+
+Neither is a failure, and nothing is spent when they appear.
+
+> **These requests are immediate**, unlike a generation: they do not enter the queue, do not show
+> in the status line, and there is nothing to cancel. **Suggesting variants costs no creative
+> units** — that is measured, not assumed. For translation and style reading the studio measures
+> nothing: treat them as ordinary calls.
 
 ---
 

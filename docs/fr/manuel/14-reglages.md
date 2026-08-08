@@ -290,6 +290,18 @@ Plus ce nombre est grand, plus vous en lancez d'un coup — mais chacune peut me
 > soit l'espace de travail d'où elles partent. Il n'y a pas de moyen de la contourner, et c'est
 > voulu : c'est ce qui empêche une rafale de demandes de se faire refuser en bloc.
 
+### Décrire les assets rapatriés
+
+**Case à cocher.**
+
+Nomme automatiquement une image qui arrive **sans nom utile**, en demandant à l'API ce qu'elle y
+voit.
+
+> **C'est le seul endroit où le studio dépense sans qu'on le lui ait demandé**, et c'est
+> exactement pourquoi ce réglage existe : décochez-le, et plus rien ne part de lui-même. Le
+> nommage travaille en lots, sous une file bornée, et chaque résultat prend sa ligne dans le
+> journal d'activité.
+
 ### Tentatives maximum
 
 **Nombre entier. De 0 à 10. Départ : 4.**
@@ -581,6 +593,7 @@ Ce que vous avez sur une installation neuve, d'un coup d'œil.
 | Apparence | Taille du texte | 1 | 0,85 à 1,40 |
 | Apparence | Limiter les animations | décochée | — |
 | Génération | Générations simultanées | 3 | 1 à 16 |
+| Génération | Décrire les assets rapatriés | — | — |
 | Génération | Tentatives maximum | 4 | 0 à 10 |
 | Génération | Modèle par défaut ×5 | Demander à chaque fois | — |
 | 3D | Afficher la grille | cochée | — |
