@@ -1891,7 +1891,7 @@ export class CanvasEngine {
       case 'handle': {
         const next =
           gesture.handle === 'rotate'
-            ? rotateBy(gesture.origin, gesture.box, gesture.from, point)
+            ? rotateBy(gesture.origin, gesture.box, gesture.from, point, event.shiftKey)
             : resizeBy(gesture.origin, gesture.handle, this.documentSize(), point, event.shiftKey)
         this.options.layers.transform(gesture.id, next)
         return

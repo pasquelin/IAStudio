@@ -4,6 +4,7 @@ import { fireEvent, renderHook, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { publishCommand } from '@/services/command-bus'
 import { useShortcuts } from './useShortcuts'
 
 /** The hook listens on `window`; the field is here so a test can move focus into one. */
@@ -67,6 +68,41 @@ describe('useShortcuts', () => {
     selection?.removeAllRanges()
     fireEvent.keyDown(window, { code: 'KeyC', metaKey: true })
     expect(onCommand).toHaveBeenCalledWith('scene.copy')
+  })
+
+  /**
+   * The native menu fires a command, never a key — and on macOS the menu is what hears an
+   * accelerator it declared, so the window never sees it. Both doors lead to the surface, or a
+   * menu row does nothing: eleven of them did.
+   */
+  it('runs a command the menu published for its own scope', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    publishCommand('scene.frame')
+
+    expect(onCommand).toHaveBeenCalledWith('scene.frame')
+  })
+
+  // Two surfaces are mounted at once — a scene tab and an image tab — and the same command must
+  // not run on both. The scope is what tells them apart.
+  it('leaves alone a command belonging to another surface', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    publishCommand('canvas.flatten')
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
+  // A hidden tab stays mounted: it must not run what the tab in front was handed.
+  it('ignores a published command while disabled', () => {
+    const onCommand = vi.fn()
+    mount(onCommand, false)
+
+    publishCommand('scene.frame')
+
+    expect(onCommand).not.toHaveBeenCalled()
   })
 
   it('stays silent when disabled', async () => {

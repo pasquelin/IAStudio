@@ -139,4 +139,29 @@ describe('turning by the rotation grip', () => {
 
     expect(after.rotation).toBeCloseTo(Math.PI + Math.PI / 2)
   })
+
+  /**
+   * Free to the degree is the default on purpose: straightening a horizon is most of what a
+   * rotation grip is used for, and steps would make that the one thing it cannot do.
+   */
+  it('follows the hand exactly, at whatever angle it lands on', () => {
+    const after = rotateBy(IDENTITY, BOX, { x: 200, y: 50 }, { x: 260, y: 60 })
+
+    expect(after.rotation % (Math.PI / 12)).not.toBeCloseTo(0)
+  })
+
+  it('clicks into fifteen-degree steps while Shift is held', () => {
+    const after = rotateBy(IDENTITY, BOX, { x: 200, y: 50 }, { x: 260, y: 60 }, true)
+
+    expect(after.rotation / (Math.PI / 12)).toBeCloseTo(Math.round(after.rotation / (Math.PI / 12)))
+  })
+
+  // The step lands on the resulting angle, not on the turn: snapping the delta would carry the
+  // fraction the layer already held, and the box would never come out straight.
+  it('straightens a layer that was already askew', () => {
+    const askew = { ...IDENTITY, rotation: 0.05 }
+    const after = rotateBy(askew, BOX, { x: 200, y: 50 }, { x: 200, y: 50 }, true)
+
+    expect(after.rotation).toBeCloseTo(0)
+  })
 })

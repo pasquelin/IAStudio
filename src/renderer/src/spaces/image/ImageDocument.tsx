@@ -16,6 +16,7 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { registerFace } from '@/engines/canvas/canvas-fonts'
 import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
+import { RULER_SIZE } from '@/engines/canvas/CanvasOverlay'
 import { useBindingOverrides } from '@/stores/bindings'
 import {
   addLayer,
@@ -84,6 +85,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
   const view = useCanvasViews(state => viewOf(state, documentId))
+  // What the rulers take from the top and the left when they are on, and nothing when they are off.
+  const rulerInset = view.rulers ? RULER_SIZE : 0
   const selection = useCanvasViews(state => selectionOf(state, documentId))
   // Booleans rather than the history itself: a selector building an object on every call hands
   // React a new snapshot each render, and the loop never settles.
@@ -335,8 +338,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
             owns and replaces on every mount. */}
         <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
 
+        {/* Inside the rulers rather than over them: the toolbar covered the first twenty pixels
+            of both graduations — the corner one reads a position from. A margin, so the gap the
+            class already sets is kept, and the engine's own constant stays the only truth about
+            how thick a ruler is. */}
         <Toolbar
           className="absolute top-2 left-2"
+          style={{ marginTop: rulerInset, marginLeft: rulerInset }}
           tools={tools}
           activeTool={tool}
           onTool={setTool}

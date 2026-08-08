@@ -1,7 +1,8 @@
 import { type CommandId, type CommandScope } from '@shared/domain/command'
 import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
-import { commandFor } from '@shared/domain/command'
+import { commandDescriptor, commandFor } from '@shared/domain/command'
+import { subscribeToCommands } from '@/services/command-bus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
 
 export type ShortcutsOptions = {
@@ -91,10 +92,18 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
     // flying after an ⌘Tab.
     const onBlur = release
 
+    // The same surface, reached the other way: the native menu fires a command outright rather
+    // than a key, and on macOS it is the menu — never the window — that hears an accelerator it
+    // declared. Both doors have to lead here, or a row of the menu does nothing.
+    const stopBus = subscribeToCommands(command => {
+      if (commandDescriptor(command)?.scope === scope) handlers.current.onCommand(command)
+    })
+
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
     window.addEventListener('blur', onBlur)
     return () => {
+      stopBus()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
