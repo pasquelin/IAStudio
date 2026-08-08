@@ -70,6 +70,26 @@ export type CommandId =
   | 'canvas.rotateCw'
   | 'canvas.rotateCcw'
   | 'canvas.snap'
+  | 'canvas.toolMove'
+  | 'canvas.toolHand'
+  | 'canvas.toolScale'
+  | 'canvas.toolCrop'
+  | 'canvas.toolSelectRectangle'
+  | 'canvas.toolSelectEllipse'
+  | 'canvas.toolSelectLasso'
+  | 'canvas.toolShapeRectangle'
+  | 'canvas.toolShapeLine'
+  | 'canvas.toolShapeArrow'
+  | 'canvas.toolShapeEllipse'
+  | 'canvas.toolShapePolygon'
+  | 'canvas.toolShapeStar'
+  | 'canvas.toolBrush'
+  | 'canvas.toolPencil'
+  | 'canvas.toolText'
+  | 'canvas.toolEraser'
+  | 'canvas.toolEraserSelection'
+  | 'canvas.toolFill'
+  | 'canvas.toolPicker'
   | 'canvas.undo'
   | 'canvas.redo'
   | 'skybox.view'
@@ -522,6 +542,157 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasSnap.title',
     helpKey: 'commands.canvasSnap.help',
     defaultBinding: 'Shift+Meta+Semicolon',
+  }),
+  /*
+   * Arming a tool. Declared here rather than as strings on the bar, so a key can be remapped
+   * in the settings and the button follows — and so the shortcuts screen lists them at all.
+   *
+   * `L` goes to the lasso, as it does in every editor that has one; the line takes `Shift+R`
+   * from the rectangle it belongs beside. They both claimed `L` while nothing listened, and
+   * a registry is where that stops being possible.
+   *
+   * A tool the engine drops every event of gets no command: an unbuilt gesture with a key is
+   * a key that does nothing.
+   */
+  command({
+    id: 'canvas.toolMove',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolMove.title',
+    helpKey: 'commands.canvasToolMove.help',
+    defaultBinding: 'KeyV',
+  }),
+  command({
+    id: 'canvas.toolHand',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolHand.title',
+    helpKey: 'commands.canvasToolHand.help',
+    defaultBinding: 'KeyH',
+  }),
+  command({
+    id: 'canvas.toolScale',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolScale.title',
+    helpKey: 'commands.canvasToolScale.help',
+    defaultBinding: 'KeyK',
+  }),
+  command({
+    id: 'canvas.toolCrop',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolCrop.title',
+    helpKey: 'commands.canvasToolCrop.help',
+    defaultBinding: 'KeyF',
+  }),
+  command({
+    id: 'canvas.toolSelectRectangle',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolSelectRectangle.title',
+    helpKey: 'commands.canvasToolSelectRectangle.help',
+    defaultBinding: 'KeyM',
+  }),
+  command({
+    id: 'canvas.toolSelectEllipse',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolSelectEllipse.title',
+    helpKey: 'commands.canvasToolSelectEllipse.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.toolSelectLasso',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolSelectLasso.title',
+    helpKey: 'commands.canvasToolSelectLasso.help',
+    defaultBinding: 'KeyL',
+  }),
+  command({
+    id: 'canvas.toolShapeRectangle',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeRectangle.title',
+    helpKey: 'commands.canvasToolShapeRectangle.help',
+    defaultBinding: 'KeyR',
+  }),
+  command({
+    id: 'canvas.toolShapeLine',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeLine.title',
+    helpKey: 'commands.canvasToolShapeLine.help',
+    defaultBinding: 'Shift+KeyR',
+  }),
+  command({
+    id: 'canvas.toolShapeArrow',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeArrow.title',
+    helpKey: 'commands.canvasToolShapeArrow.help',
+    defaultBinding: 'KeyA',
+  }),
+  command({
+    id: 'canvas.toolShapeEllipse',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeEllipse.title',
+    helpKey: 'commands.canvasToolShapeEllipse.help',
+    defaultBinding: 'KeyO',
+  }),
+  command({
+    id: 'canvas.toolShapePolygon',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapePolygon.title',
+    helpKey: 'commands.canvasToolShapePolygon.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.toolShapeStar',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeStar.title',
+    helpKey: 'commands.canvasToolShapeStar.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.toolBrush',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolBrush.title',
+    helpKey: 'commands.canvasToolBrush.help',
+    defaultBinding: 'KeyP',
+  }),
+  command({
+    id: 'canvas.toolPencil',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolPencil.title',
+    helpKey: 'commands.canvasToolPencil.help',
+    defaultBinding: 'Shift+KeyP',
+  }),
+  command({
+    id: 'canvas.toolText',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolText.title',
+    helpKey: 'commands.canvasToolText.help',
+    defaultBinding: 'KeyT',
+  }),
+  command({
+    id: 'canvas.toolEraser',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolEraser.title',
+    helpKey: 'commands.canvasToolEraser.help',
+    defaultBinding: 'KeyE',
+  }),
+  command({
+    id: 'canvas.toolEraserSelection',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolEraserSelection.title',
+    helpKey: 'commands.canvasToolEraserSelection.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.toolFill',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolFill.title',
+    helpKey: 'commands.canvasToolFill.help',
+    defaultBinding: 'KeyG',
+  }),
+  command({
+    id: 'canvas.toolPicker',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolPicker.title',
+    helpKey: 'commands.canvasToolPicker.help',
+    defaultBinding: 'KeyI',
   }),
   command({
     id: 'canvas.undo',

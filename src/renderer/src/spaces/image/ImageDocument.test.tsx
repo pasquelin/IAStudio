@@ -15,6 +15,7 @@ import { useTools } from '@/stores/tools'
 import { ImageDocument } from './ImageDocument'
 
 const setTool = vi.fn()
+const setShape = vi.fn()
 const setBrush = vi.fn()
 const applyCrop = vi.fn()
 const dropCrop = vi.fn()
@@ -37,6 +38,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       loadInto = vi.fn(() => Promise.resolve())
       setSelection = vi.fn()
       setSelectionShape = vi.fn()
+      setShape = setShape
       snapshot = vi.fn(() => Promise.resolve('data:image/png;base64,AAAA'))
       applyCrop = applyCrop
       dropCrop = dropCrop
@@ -94,6 +96,86 @@ describe('ImageDocument', () => {
 
     expect(setTool).toHaveBeenLastCalledWith('hand')
     expect(screen.getByRole('button', { name: /^Main/ })).toBeInTheDocument()
+  })
+
+  /**
+   * The path the user actually takes: a key on the window, and the tool armed as a result.
+   *
+   * Asserting that the bar carries the right label would prove nothing — it carried them all
+   * along while `IMAGE_TOOLS` held plain strings and no one listened on the other side. Sixteen
+   * keys were advertised on the buttons and not one of them did anything.
+   */
+  // Through `fireEvent`, which wraps the dispatch in `act`: a bare `dispatchEvent` leaves the
+  // state React set behind it unflushed, and the effect that hands the tool over never runs.
+  const press = (key: string, shiftKey = false): void => {
+    fireEvent.keyDown(window, { code: key, shiftKey })
+  }
+
+  /**
+   * Only the document in front listens: Dockview keeps hidden tabs mounted, and one left behind
+   * would eat the keys the space in front is waiting for.
+   */
+  const armed = (): void => {
+    useDocuments.setState({ activeId: 'doc-1' })
+    render(<ImageDocument documentId="doc-1" />)
+  }
+
+  it('arms the brush when its key is pressed', () => {
+    armed()
+
+    press('KeyP')
+
+    expect(setTool).toHaveBeenLastCalledWith('brush')
+  })
+
+  it('arms the eyedropper, the bucket and the eraser by their own keys', () => {
+    armed()
+
+    press('KeyI')
+    expect(setTool).toHaveBeenLastCalledWith('picker')
+
+    press('KeyG')
+    expect(setTool).toHaveBeenLastCalledWith('fill')
+
+    press('KeyE')
+    expect(setTool).toHaveBeenLastCalledWith('eraser')
+  })
+
+  // The bar has to follow the key: an armed tool the buttons disagree with is worse than none.
+  it('moves the armed button with the key, not just the engine', () => {
+    armed()
+
+    press('KeyP')
+
+    expect(screen.getByRole('button', { name: /^Pinceau/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^Déplacement/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  /**
+   * `L` was claimed by the lasso and by the line at once, which a registry makes impossible.
+   * The lasso keeps it, as it does in every editor that has one; the line takes Shift and the
+   * rectangle's key, since that is the group it belongs to.
+   */
+  it('gives L to the lasso and Shift+R to the line', () => {
+    armed()
+
+    press('KeyL')
+    expect(setTool).toHaveBeenLastCalledWith('select')
+
+    press('KeyR', true)
+    expect(setTool).toHaveBeenLastCalledWith('shape')
+    expect(setShape).toHaveBeenLastCalledWith('line')
+  })
+
+  // Read off the registry rather than written on the button, so a remapped key moves with it.
+  it('wears the key the registry gives it', () => {
+    render(<ImageDocument documentId="doc-1" />)
+
+    expect(screen.getByRole('button', { name: 'Pinceau (P)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pipette (I)' })).toBeInTheDocument()
   })
 
   it('offers a colour input', () => {

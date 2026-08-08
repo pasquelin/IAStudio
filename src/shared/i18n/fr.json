@@ -710,7 +710,8 @@
     "snap": "Magnétisme",
     "help": "Aide",
     "about": "À propos de {{name}}",
-    "licences": "Licences"
+    "licences": "Licences",
+    "imageTools": "Outils"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
@@ -1153,6 +1154,86 @@
     "skyboxProbes": {
       "title": "Sondes de lumière",
       "help": "Montre ou cache les sphères témoins. Un ciel se juge à ce qu'il éclaire, pas à sa propre image."
+    },
+    "canvasToolMove": {
+      "title": "Outil Déplacement",
+      "help": "Arme le pointeur : un glissement déplace le calque actif, et ses poignées le redimensionnent ou le font tourner."
+    },
+    "canvasToolHand": {
+      "title": "Outil Main",
+      "help": "Arme la main : un glissement fait défiler la vue sans rien toucher au document. La barre d'espace fait la même chose sans changer d'outil."
+    },
+    "canvasToolScale": {
+      "title": "Outil Échelle",
+      "help": "Arme la mise à l'échelle : les poignées du calque actif le redimensionnent, et MAJ conserve ses proportions."
+    },
+    "canvasToolCrop": {
+      "title": "Outil Recadrage",
+      "help": "Arme le cadre de recadrage. Poser un cadre, puis ⏎ pour rogner ou ⎋ pour abandonner."
+    },
+    "canvasToolSelectRectangle": {
+      "title": "Sélection rectangulaire",
+      "help": "Arme la sélection rectangulaire. Ce qui est sélectionné borne le pinceau, la gomme et le pot."
+    },
+    "canvasToolSelectEllipse": {
+      "title": "Sélection elliptique",
+      "help": "Arme la sélection elliptique : un glissement inscrit l'ellipse dans le rectangle parcouru, et MAJ en fait un cercle."
+    },
+    "canvasToolSelectLasso": {
+      "title": "Lasso",
+      "help": "Arme le lasso : la sélection suit la main, à main levée."
+    },
+    "canvasToolShapeRectangle": {
+      "title": "Forme Rectangle",
+      "help": "Arme le tracé d'un rectangle sur le calque actif ; MAJ en fait un carré."
+    },
+    "canvasToolShapeLine": {
+      "title": "Forme Ligne",
+      "help": "Arme le tracé d'une ligne. Dans le même groupe que le rectangle, d'où sa touche augmentée de MAJ."
+    },
+    "canvasToolShapeArrow": {
+      "title": "Forme Flèche",
+      "help": "Arme le tracé d'une flèche, de son point de départ vers l'endroit où la main relâche."
+    },
+    "canvasToolShapeEllipse": {
+      "title": "Forme Ellipse",
+      "help": "Arme le tracé d'une ellipse sur le calque actif ; MAJ en fait un cercle."
+    },
+    "canvasToolShapePolygon": {
+      "title": "Forme Polygone",
+      "help": "Arme le tracé d'un polygone régulier, dont le nombre de côtés se règle dans l'inspecteur avant de tracer."
+    },
+    "canvasToolShapeStar": {
+      "title": "Forme Étoile",
+      "help": "Arme le tracé d'une étoile, dont le nombre de branches se règle dans l'inspecteur avant de tracer."
+    },
+    "canvasToolBrush": {
+      "title": "Outil Pinceau",
+      "help": "Arme le pinceau, aux bords adoucis. Il peint sur le calque actif, borné par la sélection s'il y en a une."
+    },
+    "canvasToolPencil": {
+      "title": "Outil Crayon",
+      "help": "Arme le crayon, aux bords nets : le même geste que le pinceau, sans l'adoucissement des bords."
+    },
+    "canvasToolText": {
+      "title": "Outil Texte",
+      "help": "Arme le texte : un clic pose une légende, dont les mots se saisissent dans l'inspecteur."
+    },
+    "canvasToolEraser": {
+      "title": "Outil Gomme",
+      "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s'il y en a une."
+    },
+    "canvasToolEraserSelection": {
+      "title": "Gomme de la sélection",
+      "help": "Arme la gomme de sélection : un clic efface d'un coup tout ce que la sélection enferme, au lieu de le frotter."
+    },
+    "canvasToolFill": {
+      "title": "Outil Pot de peinture",
+      "help": "Arme le pot : un clic remplit le calque, ou la sélection s'il y en a une."
+    },
+    "canvasToolPicker": {
+      "title": "Outil Pipette",
+      "help": "Arme la pipette : un clic prend la couleur sous le pointeur et la donne au pinceau."
     }
   },
   "texture": {
