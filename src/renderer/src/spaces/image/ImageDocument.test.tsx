@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_DRAG_TYPE, startAssetDrag } from '@/helpers/asset-drag'
+import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { canvasOf, useCanvases } from '@/stores/canvases'
@@ -15,6 +16,7 @@ const setTool = vi.fn()
 const setBrush = vi.fn()
 const applyCrop = vi.fn()
 const dropCrop = vi.fn()
+const mergeInto = vi.fn()
 
 // jsdom has no WebGL context: the engine is exercised by hand, not here. What this covers is
 // that the document wires the bar to the right calls.
@@ -36,6 +38,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       snapshot = vi.fn(() => Promise.resolve('data:image/png;base64,AAAA'))
       applyCrop = applyCrop
       dropCrop = dropCrop
+      mergeInto = mergeInto
       pixelSnapshots = vi.fn(() => Promise.resolve([]))
       restoreSnapshot = vi.fn(() => Promise.resolve())
     },
@@ -176,6 +179,55 @@ describe('ImageDocument', () => {
 
     expect(useTools.getState().focusedZone).toBe('bottom')
     expect(setTool).not.toHaveBeenCalledWith('shape')
+  })
+})
+
+describe('merging the layer below', () => {
+  const DOCUMENT = 'doc-merge'
+
+  // Three flat layers, so `layerBelow` has an unambiguous answer for each of them.
+  const open = (activeLayerId: string) => {
+    useDocuments.setState({
+      activeId: DOCUMENT,
+      documents: {
+        [DOCUMENT]: { id: DOCUMENT, kind: 'image', workspace: 'image', title: 'Poster' },
+      },
+    })
+    useCanvases.setState({
+      states: {
+        [DOCUMENT]: {
+          ...DEFAULT_CANVAS,
+          layers: [pixelLayer('a', 'A'), pixelLayer('b', 'B'), pixelLayer('c', 'C')],
+          activeLayerId,
+        },
+      },
+      histories: {},
+    })
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('composes the layer selected now, not the one selected when the space opened', () => {
+    open('b')
+    render(<ImageDocument documentId={DOCUMENT} />)
+
+    // The whole point of the shortcut: the selection moves long after the space was mounted.
+    act(() => open('c'))
+    fireEvent.keyDown(window, { code: 'KeyE', metaKey: true })
+
+    expect(mergeInto).toHaveBeenCalledWith('b', 'c')
+  })
+
+  it('offers nothing at the bottom of the stack', () => {
+    open('b')
+    render(<ImageDocument documentId={DOCUMENT} />)
+
+    act(() => open('a'))
+    fireEvent.keyDown(window, { code: 'KeyE', metaKey: true })
+
+    expect(mergeInto).not.toHaveBeenCalled()
   })
 })
 
