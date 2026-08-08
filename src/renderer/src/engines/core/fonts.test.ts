@@ -3,6 +3,7 @@ import { EMBEDDED_FONTS, type FontRef } from '@shared/domain/font'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { createFontLibrary, type FontSource } from './fonts'
+import source from './fonts.ts?raw'
 
 /**
  * `parse` is stubbed rather than fed a real face: reading one would need a filesystem, which the
@@ -148,5 +149,21 @@ describe('a face nothing can produce', () => {
     await library.load(installed)
 
     expect(failures.entries()).toHaveLength(1)
+  })
+})
+
+/**
+ * Read from the source because nothing else would say it: the build is green either way, and the
+ * weight only shows up in a bundle measurement nobody takes on the way past.
+ */
+describe('where the parser is reached for', () => {
+  it('is named here at all, so the rule below cannot pass on a renamed import', () => {
+    expect(source).toContain("'opentype.js'")
+  })
+
+  // Half a megabyte, and the inspector's font row — which only ever lists family names — is on
+  // the first screen. A value import from here ships the whole parser there with it.
+  it('never as a value at module scope', () => {
+    expect(source).not.toMatch(/^import\s+(?!type\b)[^\n]*'opentype\.js'/m)
   })
 })
