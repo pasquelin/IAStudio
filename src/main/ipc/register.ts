@@ -1,3 +1,4 @@
+import { registerAssetHandlers } from '@main/assets/handlers'
 import { registerDiagnosticsHandlers } from '@main/diagnostics/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
@@ -30,6 +31,13 @@ export function registerIpc(services: Services): void {
   })
   registerScenarioHandlers(services)
   registerProjectHandlers(services)
+  registerAssetHandlers({
+    catalog: () => services.project.catalog(),
+    remote: services.remote,
+    cloud: services.cloud,
+    removeFile: services.removeAssetFile,
+    activeOwnerId: services.ownerScope.current,
+  })
   registerMediaHandlers(services)
   registerDialogHandlers(services)
   registerSceneHandlers(services)

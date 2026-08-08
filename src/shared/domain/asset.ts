@@ -289,6 +289,16 @@ export type AssetQuery = {
   offset?: number
 }
 
+/**
+ * What may be changed about an asset from the interface. An absent field is left alone, which is
+ * what lets a rename and a retagging travel through the same channel without one erasing the
+ * other — tags are replaced wholesale, so `[]` genuinely means « no tags ».
+ */
+export type AssetChanges = {
+  name?: string
+  tags?: readonly string[]
+}
+
 export const ASSET_SCHEME = 'scenario'
 const ASSET_HOST = 'asset'
 

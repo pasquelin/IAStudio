@@ -1,3 +1,5 @@
+import type { SyncAction, SyncPlan, SyncPolicy } from '@shared/domain/sync'
+
 /**
  * Deciding what would move, without moving anything.
  *
@@ -11,9 +13,10 @@
  * were recorded for, and leaving it out until it is needed is how it ends up being bolted on.
  */
 
-export type SyncPolicy = 'push' | 'pull' | 'two-way'
-
-/** What the planner needs to know about one asset. A row of the catalogue, narrowed. */
+/**
+ * What the planner needs to know about one asset — a row of the catalogue, narrowed. Local to
+ * the main process: the renderer asks for a plan, it does not assemble one.
+ */
 export type SyncSide = {
   assetId: string
   /** Whether the project actually holds the bytes. A cloud-only row does not. */
@@ -25,27 +28,6 @@ export type SyncSide = {
   /** When the two sides were last reconciled. The baseline both other stamps are read against. */
   remoteSyncedAt?: string
   localChangedAt?: string
-}
-
-export type SkipReason =
-  /** The twin belongs to a project this key does not open onto. */
-  | 'other-account'
-  /** Nothing to send: there are no bytes here. */
-  | 'no-local-file'
-  /** Nothing to fetch: this asset has no twin. */
-  | 'no-twin'
-  | 'nothing-to-do'
-
-export type SyncAction =
-  | { kind: 'push'; assetId: string }
-  | { kind: 'pull'; assetId: string; remoteAssetId: string }
-  /** Both sides moved since they last agreed. Never resolved here — only reported. */
-  | { kind: 'conflict'; assetId: string; remoteAssetId: string }
-  | { kind: 'skip'; assetId: string; reason: SkipReason }
-
-export type SyncPlan = {
-  actions: SyncAction[]
-  summary: Record<SyncAction['kind'], number>
 }
 
 /**

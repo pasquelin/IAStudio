@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { planSync, type SyncPolicy, type SyncSide } from './sync-plan'
+import type { SyncPolicy } from '@shared/domain/sync'
+import { planSync, type SyncSide } from './sync-plan'
 
 const OWNER = 'proj_current'
 

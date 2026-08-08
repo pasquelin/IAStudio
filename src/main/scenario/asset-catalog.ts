@@ -95,6 +95,22 @@ function sortParams(sort: AssetListRequest['sort']): Record<string, string> {
   return { sortBy: 'createdAt', sortDirection: sort === 'oldest' ? 'asc' : 'desc' }
 }
 
+/**
+ * The real SDK, narrowed to the port above. The only place the two shapes meet — everything
+ * else, tests included, takes the port.
+ */
+export function assetBackendOf(client: Scenario): AssetBackend {
+  return {
+    list: params => client.assets.list(params),
+    search: params => client.search.assetSearch(params),
+    retrieve: assetId => client.assets.retrieve(assetId),
+    getBulk: params => client.assets.getBulk(params),
+    updateTags: (assetId, body) => client.assets.updateTags(assetId, body),
+    deleteMultiple: body => client.assets.deleteMultiple(body),
+    requestDownload: (assetId, body) => client.assets.download.request(assetId, body),
+  }
+}
+
 /** Binds the studio's narrow catalogue to whatever answers for the API. */
 export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
   return {

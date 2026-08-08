@@ -48,6 +48,30 @@ export type CloudAsset = {
   generation?: AssetGeneration
 }
 
+/**
+ * What the browser asks the library for.
+ *
+ * `text` and `tags` are what force the search endpoint rather than the plain listing: filtering
+ * one's own assets by tag is documented as impossible on `GET /assets`, which honours `tags`
+ * for public assets only.
+ */
+export type CloudQuery = {
+  text?: string
+  tags?: readonly string[]
+  /** Our own six kinds; translated to the API's eighty on the way out. */
+  types?: readonly AssetType[]
+  collectionId?: string
+  /** Opaque, straight from the previous page. */
+  cursor?: string
+  pageSize?: number
+}
+
+export type CloudPage = {
+  assets: CloudAsset[]
+  /** `null` at the end of the listing. There is no total to report — the API gives none. */
+  cursor: string | null
+}
+
 /** How large a preview should come down. The CDN resizes; downloading a 4K to draw 112 px does not. */
 export type PreviewSize = { width?: number; quality?: number }
 

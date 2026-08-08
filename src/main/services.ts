@@ -1,9 +1,9 @@
 import { app, BrowserWindow, dialog, net, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
-import { delimiter, dirname } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import type { AccountSummary } from '@shared/domain/account'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
@@ -47,7 +47,13 @@ import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
-import { createAssetUploader, type AssetUploader } from './scenario/uploader'
+import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
+import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/asset-catalog'
+import { generationOfMetadata } from './scenario/asset-normalizer'
+import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
+import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
+import { isRecord } from '@shared/guards'
+import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { createClientProvider, type ClientProvider } from './scenario/client'
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
@@ -64,6 +70,12 @@ export type Services = {
   models: ModelRegistry
   jobs: JobManager
   uploads: AssetUploader
+  /** The library, as the studio asks about it. Rebuilt per call: the key may have changed. */
+  remote: () => RemoteAssetCatalog
+  cloud: () => CloudBackend
+  ownerScope: OwnerScope
+  /** Drops the file an asset owns, leaving a linked one where it lies. */
+  removeAssetFile: (asset: Asset) => Promise<void>
   project: ProjectStore
   documents: DocumentFiles
   assets: LocalBackend
@@ -310,7 +322,18 @@ export function createServices(settings: SettingsStore): Services {
     createAssetCollector({
       retrieve: async remoteAssetId => {
         const { asset } = await scenario.assets.retrieve(remoteAssetId)
-        return { ...asset, metadataType: asset.metadata.type, parentId: asset.metadata.parentId }
+        const generation = generationOfMetadata(asset.metadata)
+        return {
+          ...asset,
+          metadataType: asset.metadata.type,
+          parentId: asset.metadata.parentId,
+          ownerId: asset.ownerId,
+          updatedAt: asset.updatedAt,
+          ...(asset.metadata.outputIndex === undefined
+            ? {}
+            : { outputIndex: asset.metadata.outputIndex }),
+          ...(generation ? { generation } : {}),
+        }
       },
       backend: assets,
       newId: newAssetId,
@@ -323,6 +346,65 @@ export function createServices(settings: SettingsStore): Services {
   let bound: { scenario: Scenario; account: JobAccount } | null = null
 
   const uploads = createAssetUploader(() => client.require().assets)
+
+  const ownerScope = createOwnerScope(credentials.watch)
+
+  // The one door to the API for assets, wrapped so that every answer teaches the scope which
+  // project this key opens onto — there is no endpoint that would simply say.
+  const remoteAssets = (): RemoteAssetCatalog => {
+    const catalogue = assetCatalogOf(assetBackendOf(client.require()))
+    const observed = <T extends { assets: CloudAsset[] }>(page: T): T => {
+      ownerScope.observe(page.assets)
+      return page
+    }
+
+    return {
+      ...catalogue,
+      list: async request => observed(await catalogue.list(request)),
+      search: async request => observed(await catalogue.search(request)),
+      getBulk: async assetIds => {
+        const found = await catalogue.getBulk(assetIds)
+        ownerScope.observe(found)
+        return found
+      },
+    }
+  }
+
+  const cloudAssets = createCloudBackend({
+    remote: remoteAssets,
+    multipart: async params => {
+      // The helper's return type narrows on a literal `kind`; ours is a value, so what comes
+      // back is the union of an asset and a model. Read rather than asserted.
+      const result: unknown = await client.require().uploads.uploadFile(params)
+      const asset = isRecord(result) && isRecord(result.asset) ? result.asset : null
+      if (!asset || typeof asset.id !== 'string') throw new Error('upload-incomplete')
+
+      return {
+        assetId: asset.id,
+        ...(typeof asset.ownerId === 'string' ? { ownerId: asset.ownerId } : {}),
+        ...(typeof asset.updatedAt === 'string' ? { updatedAt: asset.updatedAt } : {}),
+      }
+    },
+    small: (name, image) => uploads.upload(name, image),
+    local: assets,
+    catalog: () => project.catalog(),
+    resolve: relativePath => join(project.path(), relativePath),
+    readFile: path => readFile(path),
+    newId: newAssetId,
+    now: timestamp,
+    smallUploadLimit: MAX_UPLOAD_BYTES,
+  })
+
+  /**
+   * Drops the file an asset owns. A linked rush is only ever unlinked: the file belongs to
+   * whoever pointed at it, and deleting it would take away a take the project never copied.
+   */
+  const removeAssetFile = async (asset: Asset): Promise<void> => {
+    const current = project.current()
+    if (!current || !asset.path) return
+
+    await rm(join(current.path, asset.path), { force: true })
+  }
 
   const jobs = createJobManager({
     // Read once per job and kept, so a switch mid-flight does not have the new key asked about
@@ -374,6 +456,10 @@ export function createServices(settings: SettingsStore): Services {
     models,
     jobs,
     uploads,
+    remote: remoteAssets,
+    cloud: () => cloudAssets,
+    ownerScope,
+    removeAssetFile,
     project,
     documents,
     assets,

@@ -34,7 +34,10 @@ export default defineConfig({
       thresholds: {
         'src/shared/**': { statements: -6, branches: -20 },
         'src/main/settings/**': { statements: -30, branches: -12 },
-        'src/main/scenario/**': { statements: -85, branches: -65 },
+        // Raised by five for `assetBackendOf`, the asset half of the SDK adapter: like
+        // `model-catalog` and `runner` beside it, it is pure delegation that no test can reach
+        // without standing up a whole `Scenario`. Everything with logic in it took a port instead.
+        'src/main/scenario/**': { statements: -85, branches: -70 },
         'src/main/project/**': { statements: -115, branches: -60 },
         'src/main/media/**': { statements: -70, branches: -32 },
         // Where the library meets the disk. Tight on purpose: nothing here needs a GPU or a

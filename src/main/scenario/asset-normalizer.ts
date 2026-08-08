@@ -39,9 +39,8 @@ function nestedUrl(value: unknown): string | undefined {
  * Without a model there is no generation: an uploaded file has none, and `modelLabel` is left
  * as the id because the API never names its models — the panel resolves that separately.
  */
-export function generationOfMetadata(
-  metadata: Record<string, unknown>,
-): AssetGeneration | undefined {
+export function generationOfMetadata(value: unknown): AssetGeneration | undefined {
+  const metadata = isRecord(value) ? value : {}
   const modelId = text(metadata, 'modelId')
   if (modelId === undefined) return undefined
 

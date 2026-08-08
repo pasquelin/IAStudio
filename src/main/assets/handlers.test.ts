@@ -1,0 +1,386 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { CHANNELS } from '@shared/ipc'
+import type { Asset } from '@shared/domain/asset'
+import type { CloudAsset } from '@shared/domain/cloud-asset'
+import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
+import { memoryCatalog } from '@main/project/catalog-fixtures'
+import type { AsyncCatalog } from '@main/project/catalog-client'
+import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
+import { registerAssetHandlers } from './handlers'
+import type { CloudBackend } from './cloud-backend'
+
+vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+
+function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
+  return Promise.resolve(invokeChannel(channel, ...args)) as Promise<T>
+}
+
+function localAsset(overrides: Partial<Asset> = {}): Asset {
+  return {
+    id: 'asset_1',
+    name: 'Boulder',
+    type: 'image',
+    location: 'local',
+    path: 'assets/img/asset_1.png',
+    tags: [],
+    createdAt: '2026-08-06T10:00:00.000Z',
+    ...overrides,
+  }
+}
+
+function cloudAsset(id: string): CloudAsset {
+  return {
+    id,
+    name: 'Boulder',
+    type: 'image',
+    remoteType: 'txt2img',
+    ownerId: 'proj_a',
+    createdAt: '2026-08-06T10:00:00.000Z',
+    updatedAt: '2026-08-06T10:00:00.000Z',
+    privacy: 'private',
+    tags: [],
+    collectionIds: [],
+  }
+}
+
+type Harness = {
+  catalog: AsyncCatalog
+  listed: unknown[]
+  searched: unknown[]
+  tagged: unknown[]
+  deleted: string[][]
+  pulled: string[]
+  pushed: string[]
+  removedFiles: string[]
+}
+
+function setup(
+  overrides: { remote?: Partial<RemoteAssetCatalog>; push?: CloudBackend['push'] } = {},
+): Harness {
+  resetHandlers()
+  const catalog = memoryCatalog()
+  const listed: unknown[] = []
+  const searched: unknown[] = []
+  const tagged: unknown[] = []
+  const deleted: string[][] = []
+  const pulled: string[] = []
+  const pushed: string[] = []
+  const removedFiles: string[] = []
+
+  const remote: RemoteAssetCatalog = {
+    list: request => {
+      listed.push(request)
+      return Promise.resolve({ assets: [cloudAsset('remote_1')], token: null })
+    },
+    search: request => {
+      searched.push(request)
+      return Promise.resolve({ assets: [cloudAsset('remote_2')], token: null })
+    },
+    retrieve: () => Promise.resolve(null),
+    getBulk: ids => Promise.resolve(ids.map(cloudAsset)),
+    updateTags: (assetId, add, remove) => {
+      tagged.push({ assetId, add, remove })
+      return Promise.resolve()
+    },
+    deleteMany: ids => {
+      deleted.push([...ids])
+      return Promise.resolve()
+    },
+    downloadUrl: () => Promise.resolve('https://cdn/fresh'),
+    ...overrides.remote,
+  }
+
+  const cloud: CloudBackend = {
+    pull: async asset => {
+      pulled.push(asset.id)
+      return await catalog.add(localAsset({ id: `local_${asset.id}`, remoteAssetId: asset.id }))
+    },
+    push:
+      overrides.push ??
+      (async assetId => {
+        pushed.push(assetId)
+        const asset = await catalog.find(assetId)
+        if (!asset) throw new Error('missing')
+        return asset
+      }),
+  }
+
+  registerAssetHandlers({
+    catalog: () => catalog,
+    remote: () => remote,
+    cloud: () => cloud,
+    removeFile: async asset => {
+      removedFiles.push(asset.id)
+    },
+    activeOwnerId: () => 'proj_a',
+  })
+
+  return { catalog, listed, searched, tagged, deleted, pulled, pushed, removedFiles }
+}
+
+describe('browsing the library', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setup()
+  })
+
+  it('takes the plain listing when nothing needs the search index', async () => {
+    await invoke(CHANNELS.cloudBrowse, { types: ['mesh'] })
+
+    expect(harness.searched).toHaveLength(0)
+    expect(harness.listed[0]).toMatchObject({ types: expect.arrayContaining(['img23d']) })
+  })
+
+  it('takes the search index for a tag, which the listing cannot answer', async () => {
+    // `GET /assets?tags=` honours tags for public assets only — search is the only way.
+    await invoke(CHANNELS.cloudBrowse, { tags: ['hero'] })
+
+    expect(harness.listed).toHaveLength(0)
+    expect(harness.searched[0]).toMatchObject({ filter: 'tags = "hero"' })
+  })
+
+  it('takes the search index for free text', async () => {
+    await invoke(CHANNELS.cloudBrowse, { text: 'boulder' })
+    expect(harness.searched[0]).toMatchObject({ query: 'boulder' })
+  })
+
+  it('narrows here what the API could not narrow itself', async () => {
+    // Asking for pictures sends no type filter at all, so the page may hold other kinds.
+    setup({
+      remote: {
+        list: () =>
+          Promise.resolve({
+            assets: [cloudAsset('a'), { ...cloudAsset('b'), type: 'mesh' }],
+            token: null,
+          }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudBrowse, { types: ['image'] })
+    expect(page.assets.map(asset => asset.id)).toEqual(['a'])
+  })
+
+  it('refuses a page larger than the API allows', async () => {
+    await expect(invoke(CHANNELS.cloudBrowse, { pageSize: 5000 })).rejects.toThrow()
+  })
+})
+
+describe('renaming and tagging', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setup()
+  })
+
+  it('changes only what was named', async () => {
+    await harness.catalog.add(localAsset({ tags: ['stone'] }))
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { name: 'Rock' })
+
+    expect(updated).toMatchObject({ name: 'Rock', tags: ['stone'] })
+  })
+
+  it('tells the library which tags moved, not the whole set', async () => {
+    await harness.catalog.add(localAsset({ tags: ['stone', 'draft'], remoteAssetId: 'remote_1' }))
+    await invoke(CHANNELS.assetsUpdate, 'asset_1', { tags: ['stone', 'hero'] })
+
+    expect(harness.tagged[0]).toEqual({ assetId: 'remote_1', add: ['hero'], remove: ['draft'] })
+  })
+
+  it('keeps the local change when the library cannot be told', async () => {
+    // The tags are the project's own first; a network that is down must not lose the edit.
+    const offline = setup({
+      remote: { updateTags: () => Promise.reject(new Error('offline')) },
+    })
+    await offline.catalog.add(localAsset({ remoteAssetId: 'remote_1' }))
+
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { tags: ['hero'] })
+    expect(updated.tags).toEqual(['hero'])
+  })
+
+  it('says so rather than inventing a row for an asset that is gone', async () => {
+    await expect(invoke(CHANNELS.assetsUpdate, 'asset_gone', { name: 'x' })).rejects.toThrow()
+  })
+})
+
+describe('removing assets', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setup()
+  })
+
+  it('drops the row and the file it owns', async () => {
+    await harness.catalog.add(localAsset())
+    await invoke(CHANNELS.assetsRemove, ['asset_1'], false)
+
+    expect(harness.removedFiles).toEqual(['asset_1'])
+    expect(await harness.catalog.find('asset_1')).toBeNull()
+  })
+
+  it('leaves the library alone unless it was asked', async () => {
+    await harness.catalog.add(localAsset({ remoteAssetId: 'remote_1' }))
+    await invoke(CHANNELS.assetsRemove, ['asset_1'], false)
+
+    expect(harness.deleted).toHaveLength(0)
+  })
+
+  it('deletes the twins before the rows that point at them', async () => {
+    // A row dropped first leaves nothing saying what to delete on the other side.
+    await harness.catalog.add(localAsset({ remoteAssetId: 'remote_1' }))
+    await invoke(CHANNELS.assetsRemove, ['asset_1'], true)
+
+    expect(harness.deleted).toEqual([['remote_1']])
+    expect(await harness.catalog.find('asset_1')).toBeNull()
+  })
+})
+
+describe('moving assets between the two sides', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setup()
+  })
+
+  it('brings down each asset in turn rather than all at once', async () => {
+    await invoke(CHANNELS.cloudPull, ['remote_1', 'remote_2'])
+    expect(harness.pulled).toEqual(['remote_1', 'remote_2'])
+  })
+
+  it('reports what each push did, successes and failures alike', async () => {
+    const flaky = setup({
+      push: assetId => {
+        if (assetId === 'asset_2') return Promise.reject(new Error('upload-too-large'))
+        return Promise.resolve(localAsset({ id: assetId }))
+      },
+    })
+    await flaky.catalog.add(localAsset({ id: 'asset_1' }))
+    await flaky.catalog.add(localAsset({ id: 'asset_2' }))
+
+    const outcomes = await invoke<{ assetId: string; ok: boolean }[]>(CHANNELS.cloudPush, [
+      'asset_1',
+      'asset_2',
+    ])
+
+    // One refusal does not hide the one that went up.
+    expect(outcomes.map(one => [one.assetId, one.ok])).toEqual([
+      ['asset_1', true],
+      ['asset_2', false],
+    ])
+  })
+
+  it('records on the asset why its push failed', async () => {
+    const failing = setup({ push: () => Promise.reject(new Error('upload-too-large')) })
+    await failing.catalog.add(localAsset())
+
+    await invoke(CHANNELS.cloudPush, ['asset_1'])
+
+    const asset = await failing.catalog.find('asset_1')
+    expect(asset?.syncStatus).toBe('error')
+    expect(asset?.syncError).toBeTruthy()
+  })
+
+  it('plans without sending anything', async () => {
+    await harness.catalog.add(localAsset())
+    const plan = await invoke<{ summary: Record<string, number> }>(
+      CHANNELS.cloudPlan,
+      ['asset_1'],
+      'push',
+    )
+
+    expect(plan.summary).toMatchObject({ push: 1 })
+    expect(harness.pushed).toHaveLength(0)
+  })
+
+  it('refuses a policy it does not know', async () => {
+    await expect(invoke(CHANNELS.cloudPlan, ['asset_1'], 'mirror')).rejects.toThrow()
+  })
+})
+
+describe('what a plan reads off an asset', () => {
+  it('carries every stamp the catalogue holds', async () => {
+    const full = setup()
+    await full.catalog.add(
+      localAsset({
+        remoteAssetId: 'remote_1',
+        remoteOwnerId: 'proj_a',
+        remoteUpdatedAt: '2026-08-06T09:00:00.000Z',
+        remoteSyncedAt: '2026-08-06T09:00:00.000Z',
+        localChangedAt: '2026-08-06T12:00:00.000Z',
+      }),
+    )
+
+    const plan = await invoke<{ summary: Record<string, number> }>(
+      CHANNELS.cloudPlan,
+      ['asset_1'],
+      'two-way',
+    )
+
+    // Edited here since the two agreed, untouched there: it goes up.
+    expect(plan.summary).toMatchObject({ push: 1, pull: 0, conflict: 0 })
+  })
+
+  it('reads an asset that holds no file as one to fetch', async () => {
+    const cloudOnly = setup()
+    await cloudOnly.catalog.add(
+      localAsset({ path: undefined, location: 'cloud', remoteAssetId: 'remote_1' }),
+    )
+
+    const plan = await invoke<{ summary: Record<string, number> }>(
+      CHANNELS.cloudPlan,
+      ['asset_1'],
+      'pull',
+    )
+
+    expect(plan.summary).toMatchObject({ pull: 1 })
+  })
+
+  it('skips an asset the catalogue no longer holds rather than failing the plan', async () => {
+    setup()
+    const plan = await invoke<{ actions: unknown[] }>(CHANNELS.cloudPlan, ['asset_gone'], 'push')
+
+    expect(plan.actions).toEqual([])
+  })
+})
+
+describe('walking through the pages of the library', () => {
+  it('hands the listing back the opaque cursor it was given', async () => {
+    const paged = setup()
+    await invoke(CHANNELS.cloudBrowse, { cursor: 'page-2' })
+
+    expect(paged.listed[0]).toMatchObject({ token: 'page-2' })
+  })
+
+  it('reads the search cursor as the offset it is', async () => {
+    // The index paginates by offset where the listing uses a token; both travel as one string.
+    const paged = setup()
+    await invoke(CHANNELS.cloudBrowse, { text: 'moss', cursor: '40' })
+
+    expect(paged.searched[0]).toMatchObject({ offset: 40 })
+  })
+
+  it('starts at the beginning when the cursor is not a number', async () => {
+    const paged = setup()
+    await invoke(CHANNELS.cloudBrowse, { text: 'moss', cursor: 'not-a-number' })
+
+    expect(paged.searched[0]).toMatchObject({ offset: 0 })
+  })
+
+  it('narrows a listing to a collection', async () => {
+    const scoped = setup()
+    await invoke(CHANNELS.cloudBrowse, { collectionId: 'col_1' })
+
+    expect(scoped.listed[0]).toMatchObject({ collectionId: 'col_1' })
+  })
+})
+
+describe('removing assets that were never sent up', () => {
+  it('asks the library for nothing when none of them has a twin', async () => {
+    const local = setup()
+    await local.catalog.add(localAsset())
+    await invoke(CHANNELS.assetsRemove, ['asset_1'], true)
+
+    expect(local.deleted).toHaveLength(0)
+    expect(await local.catalog.find('asset_1')).toBeNull()
+  })
+})
