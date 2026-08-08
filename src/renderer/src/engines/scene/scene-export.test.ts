@@ -1,12 +1,14 @@
 import {
   BoxGeometry,
+  CompressedTexture,
   GridHelper,
   LineBasicMaterial,
   Mesh,
   MeshStandardMaterial,
   Scene,
+  Texture,
 } from 'three'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { applyWireOverlay } from './scene-view'
 import { exportObjects } from './scene-export'
 
@@ -130,6 +132,44 @@ describe('exportObjects', () => {
     const file = await gltfOf([])
 
     expect(file.nodes ?? []).toEqual([])
+  })
+})
+
+/**
+ * KTX2 is wired into the model loader, so an imported model routinely wears textures glTF cannot
+ * hold. Both exporters throw on one rather than skip it — the whole file is lost over a picture —
+ * so the decoder the renderer supplies has to reach them.
+ */
+describe('exportObjects with a compressed texture', () => {
+  function boxWearing(map: Texture): Mesh {
+    const material = new MeshStandardMaterial()
+    material.map = map
+    return new Mesh(new BoxGeometry(), material)
+  }
+
+  /**
+   * What is pinned is that the texture reaches the decoder instead of throwing at it. The export
+   * cannot then finish: a decoded texture is canvas-backed, and jsdom encodes no canvas.
+   */
+  it('hands it to the decoder', async () => {
+    const decompress = vi.fn(() => new Texture())
+    const mesh = boxWearing(new CompressedTexture([], 4, 4))
+
+    await exportObjects([mesh], 'gltf', { decompress }).catch(() => {})
+
+    expect(decompress).toHaveBeenCalled()
+  })
+
+  // The default is the wired one, not none: an export must never be the exporter refusing to try.
+  it('carries a decoder without being handed one', async () => {
+    const mesh = boxWearing(new CompressedTexture([], 4, 4))
+
+    const refusal = await exportObjects([mesh], 'gltf').then(
+      () => '',
+      (error: unknown) => String(error),
+    )
+
+    expect(refusal).not.toMatch(/setTextureUtils/)
   })
 })
 

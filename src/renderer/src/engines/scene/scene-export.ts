@@ -1,6 +1,7 @@
-import { Group, type Object3D } from 'three'
+import { Group, type Object3D, type Texture } from 'three'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import { USDZExporter } from 'three/addons/exporters/USDZExporter.js'
+import { decompress } from 'three/addons/utils/WebGLTextureUtils.js'
 import type { ExportFormat } from '@shared/domain/scene'
 
 /**
@@ -20,21 +21,42 @@ import type { ExportFormat } from '@shared/domain/scene'
 
 const OVERLAY_NAME = 'wireframe-overlay'
 
+/**
+ * How a compressed texture becomes one an exporter can write. Neither format holds a GPU
+ * compression scheme, and neither exporter skips what it cannot write — both throw, losing the
+ * whole file over a picture. KTX2 is wired into the model loader, so an imported model wearing
+ * one is ordinary rather than exotic.
+ */
+export type TextureDecoder = { decompress: (texture: Texture) => Texture }
+
+/**
+ * Decoded on a renderer of its own, made and thrown away inside the call — which is what handing
+ * `decompress` no renderer asks it to do. The viewport's own must not be handed over: `decompress`
+ * calls `setSize` on whatever it is given, and would resize the canvas being looked at.
+ */
+const compressedTextureDecoder: TextureDecoder = {
+  decompress: texture => decompress(texture),
+}
+
 export async function exportObjects(
   objects: readonly Object3D[],
   format: ExportFormat,
+  decoder: TextureDecoder = compressedTextureDecoder,
 ): Promise<Uint8Array> {
   const roots = objects.map(placedCopy)
 
-  if (format !== 'usdz') return toGltf(roots, format)
+  if (format !== 'usdz') return toGltf(roots, format, decoder)
+
+  const exporter = new USDZExporter()
+  exporter.setTextureUtils(decoder)
 
   // `USDZExporter` takes one root, so several are handed to it under a group of no consequence.
   const [only] = roots
-  if (roots.length === 1 && only) return new USDZExporter().parseAsync(only)
+  if (roots.length === 1 && only) return exporter.parseAsync(only)
 
   const root = new Group()
   root.add(...roots)
-  return new USDZExporter().parseAsync(root)
+  return exporter.parseAsync(root)
 }
 
 /**
@@ -64,11 +86,15 @@ function dropOverlays(object: Object3D): void {
 async function toGltf(
   roots: readonly Object3D[],
   format: Exclude<ExportFormat, 'usdz'>,
+  decoder: TextureDecoder,
 ): Promise<Uint8Array> {
   const binary = format === 'glb'
+  const exporter = new GLTFExporter()
+  exporter.setTextureUtils(decoder)
+
   // An array, not a wrapper group: `GLTFExporter` takes several roots, and wrapping them would
   // add a node the document never held.
-  const result = await new GLTFExporter().parseAsync([...roots], { binary })
+  const result = await exporter.parseAsync([...roots], { binary })
 
   if (result instanceof ArrayBuffer) return new Uint8Array(result)
   // `.gltf` is JSON, and what a text file holds is its bytes: the encoding is the writer's, and

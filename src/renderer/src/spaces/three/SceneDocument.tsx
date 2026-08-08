@@ -34,6 +34,10 @@ import { SCENE_TOOLS } from './scene-tools'
 /**
  * Encoded here, written by the main process: the renderer has no `fs`, and where the file lands
  * is decided by the save dialog it never sees the answer of — only the name it was given.
+ *
+ * The encoding is inside the guard, not only the write: nothing awaits this call, so an exporter
+ * that refuses a texture would otherwise reject into no one's hands and leave a menu click
+ * looking exactly like a dismissed dialog.
  */
 async function exportScene(
   documentId: string,
@@ -44,13 +48,13 @@ async function exportScene(
   const bridge = getBridge()
   if (!engine || !bridge) return
 
-  const data = await engine.exportTo(format, scope)
-  const name = useDocuments.getState().documents[documentId]?.title ?? 'scene'
-  // Reported rather than thrown on: nothing awaits this, and a disk that refused the write would
-  // otherwise leave a dismissed dialog and an unwritten file looking exactly alike.
-  await bridge.scene.export({ name, format, data }).catch(error => {
+  try {
+    const data = await engine.exportTo(format, scope)
+    const name = useDocuments.getState().documents[documentId]?.title ?? 'scene'
+    await bridge.scene.export({ name, format, data })
+  } catch (error) {
     reportFailure('scene.export', format, error)
-  })
+  }
 }
 
 const MESHES: readonly AssetType[] = ['mesh']
