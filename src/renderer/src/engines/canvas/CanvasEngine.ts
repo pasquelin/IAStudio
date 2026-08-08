@@ -45,23 +45,8 @@ import {
 } from './canvas-selection'
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
 import { compose, invert, layerMatrix, mapRect, type Affine } from './layer-space'
-import {
-  handleAt,
-  HANDLE_GRAB,
-  HANDLE_IDS,
-  gripRects,
-  layerBoxOf,
-  resizeBy,
-  rotateBy,
-  type HandleId,
-} from './handles'
-import {
-  CanvasOverlay,
-  RULER_SIZE,
-  type OverlayColors,
-  type OverlayContext,
-  type OverlayScene,
-} from './CanvasOverlay'
+import { handleAt, HANDLE_GRAB, layerBoxOf, resizeBy, rotateBy, type HandleId } from './handles'
+import { CanvasOverlay, RULER_SIZE, type OverlayColors, type OverlayScene } from './CanvasOverlay'
 import {
   boxEdges,
   guideNear,
@@ -73,12 +58,11 @@ import {
   type Axis,
 } from './guides'
 import { PixelPatches, type PatchSide } from './PixelPatches'
-import { cropChrome, cropRect, resizeCrop } from './crop'
+import { cropRect, resizeCrop } from './crop'
 import {
   paintShape,
   shapeBounds,
   shapeGeometry,
-  shapeOutline,
   type Point,
   type ShapeGeometry,
   type ShapeKind,
@@ -90,7 +74,6 @@ import {
   fitTo,
   sameViewport,
   toDocument,
-  toScreen,
   zoomAt,
   type CanvasView,
   type Size,
@@ -1271,105 +1254,22 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
-      // Unconditional: every painter below already returns on nothing to draw, and a gate
-      // repeating those guards is one a new decoration gets forgotten from — silently, since
-      // nothing would fail, it would simply never appear.
-      paint: this.paintOverlay,
+      // Handed over whole rather than gated here: every painter already returns on nothing to
+      // draw, and a gate repeating those guards is one a new decoration gets forgotten from —
+      // silently, since nothing would fail, it would simply never appear.
+      tools: {
+        crop: this.cropping,
+        handles: this.handleBox(),
+        pending: this.pending,
+        selection: this.selection,
+      },
     }
   }
 
-  /**
-   * The marquee, in screen space: a selection is chrome, and chrome never scales. One polyline
-   * for the three shapes — the ellipse arrives already flattened, so the overlay's context needs
-   * to know nothing beyond `moveTo` and `lineTo`.
-   */
-  /** The marquee and the shape being dragged, both chrome and both in screen space. */
-  private readonly paintOverlay = (context: OverlayContext): void => {
-    this.paintSelection(context)
-    this.paintPending(context)
-    this.paintCrop(context)
-    this.paintHandles(context)
-  }
-
-  /**
-   * Nothing here outlives the gesture: the frame applies on release, so one still on screen
-   * afterwards would promise an adjustment step that does not exist.
-   */
-  private readonly paintCrop = (context: OverlayContext): void => {
-    const rect = this.cropping
-    if (!rect) return
-
-    const { scrim, frame, grips } = cropChrome(rect, this.view.viewport, this.documentSize())
-
-    context.fillStyle = this.colors.scrim
-    for (const band of scrim) context.fillRect(band.x, band.y, band.width, band.height)
-
-    context.strokeStyle = this.colors.accent
-    context.strokeRect(frame.x, frame.y, frame.width, frame.height)
-
-    context.fillStyle = this.colors.accent
-    for (const grip of grips) context.fillRect(grip.x, grip.y, grip.width, grip.height)
-  }
-
-  /**
-   * The nine grips of the armed layer, drawn only while the move tool holds them — Pixi ships no
-   * transformer, so these are ours.
-   */
-  private readonly paintHandles = (context: OverlayContext): void => {
+  /** The box the move tool offers grips on — none for another tool, none for a pinned layer. */
+  private handleBox(): Rect | null {
     const layer = this.tool === 'move' ? this.activeLayer() : null
-    const box = layer && !layer.locked.position ? this.boxOf(layer) : null
-    if (!box) return
-
-    const grips = gripRects(box, this.view.viewport)
-    context.strokeStyle = this.colors.accent
-    context.fillStyle = this.colors.accent
-
-    for (const id of HANDLE_IDS) {
-      const grip = grips[id]
-      context.fillRect(grip.x, grip.y, grip.width, grip.height)
-    }
-  }
-
-  /** The shape under the hand, outlined until it is committed to the layer. */
-  private readonly paintPending = (context: OverlayContext): void => {
-    const shape = this.pending
-    if (!shape) return
-
-    context.strokeStyle = this.colors.accent
-    this.strokePath(context, shapeOutline(shape))
-  }
-
-  private readonly paintSelection = (context: OverlayContext): void => {
-    const outline = selectionOutline(this.selection)
-    if (outline.length === 0) return
-
-    context.strokeStyle = this.colors.accent
-    context.setLineDash([4, 4])
-    this.strokePath(context, outline)
-    context.setLineDash([])
-  }
-
-  /** A closed polyline, in screen space: a selection is chrome, and chrome never scales. */
-  private strokePath(context: OverlayContext, outline: readonly Point[]): void {
-    const first = outline[0]
-    if (!first) return
-
-    const at = (point: Point): Point => {
-      const screen = toScreen(this.view.viewport, point)
-      return { x: Math.round(screen.x) + 0.5, y: Math.round(screen.y) + 0.5 }
-    }
-
-    context.beginPath()
-    const start = at(first)
-    context.moveTo(start.x, start.y)
-    for (const point of outline.slice(1)) {
-      const screen = at(point)
-      context.lineTo(screen.x, screen.y)
-    }
-    // Closed by hand rather than with `closePath`: a lasso is left open by the hand that drew it,
-    // and the region it stands for is the closed one.
-    context.lineTo(start.x, start.y)
-    context.stroke()
+    return layer && !layer.locked.position ? this.boxOf(layer) : null
   }
 
   private render(): void {

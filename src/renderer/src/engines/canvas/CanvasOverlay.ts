@@ -1,6 +1,9 @@
-import type { Guide } from './canvas-state'
+import { selectionOutline, type CanvasSelection } from './canvas-selection'
+import type { Guide, Rect } from './canvas-state'
+import { cropChrome } from './crop'
+import { gripRects, HANDLE_IDS } from './handles'
 import { rulerStep, tickLabel, ticks } from './rulers'
-import type { Point } from './shape-geometry'
+import { shapeOutline, type Point, type ShapeGeometry } from './shape-geometry'
 import { crisp, toScreen, visibleRect, type Size, type Viewport } from './viewport'
 
 /**
@@ -52,6 +55,21 @@ export const RULER_SIZE = 20
 /** How far a minor tick reaches into the ruler band. */
 const MINOR_TICK = 4
 
+/**
+ * What the active tool has on screen right now, in DOCUMENT units — the engine hands over its
+ * state rather than a painter closed over itself. That is what makes the chrome readable from a
+ * test: jsdom hands out no 2D context, so a painter the engine kept could never be run.
+ */
+export type ToolChrome = {
+  /** The crop frame once placed. It outlives its drag, which is what makes the grips real. */
+  crop: Rect | null
+  /** The armed layer's box — `null` unless the move tool holds a layer free to move. */
+  handles: Rect | null
+  /** The shape under the hand, outlined until it is committed to the layer. */
+  pending: ShapeGeometry | null
+  selection: CanvasSelection
+}
+
 export type OverlayScene = {
   viewport: Viewport
   host: Size
@@ -65,7 +83,7 @@ export type OverlayScene = {
   pointer: Point | null
   colors: OverlayColors
   /** The active tool's own chrome, drawn last and in screen space. */
-  paint?: (context: OverlayContext) => void
+  tools: ToolChrome
 }
 
 function line(context: OverlayContext, x1: number, y1: number, x2: number, y2: number): void {
@@ -88,7 +106,7 @@ export function drawOverlay(context: OverlayContext, scene: OverlayScene): void 
 
   drawFrame(context, scene)
   if (scene.showGuides) drawGuides(context, scene)
-  scene.paint?.(context)
+  drawTools(context, scene)
   if (scene.showRulers) drawRulers(context, scene)
 
   context.restore()
@@ -121,6 +139,87 @@ function drawGuides(context: OverlayContext, scene: OverlayScene): void {
       line(context, 0, y, scene.host.width, y)
     }
   }
+}
+
+function drawTools(context: OverlayContext, scene: OverlayScene): void {
+  drawSelection(context, scene)
+  drawPending(context, scene)
+  drawCrop(context, scene)
+  drawGrips(context, scene)
+}
+
+function drawSelection(context: OverlayContext, scene: OverlayScene): void {
+  const outline = selectionOutline(scene.tools.selection)
+  if (outline.length === 0) return
+
+  context.strokeStyle = scene.colors.accent
+  context.setLineDash([4, 4])
+  strokePath(context, scene.viewport, outline)
+  context.setLineDash([])
+}
+
+function drawPending(context: OverlayContext, scene: OverlayScene): void {
+  const shape = scene.tools.pending
+  if (!shape) return
+
+  context.strokeStyle = scene.colors.accent
+  strokePath(context, scene.viewport, shapeOutline(shape))
+}
+
+function drawCrop(context: OverlayContext, scene: OverlayScene): void {
+  const rect = scene.tools.crop
+  if (!rect) return
+
+  const { scrim, frame, grips } = cropChrome(rect, scene.viewport, scene.document)
+
+  context.fillStyle = scene.colors.scrim
+  for (const band of scrim) context.fillRect(band.x, band.y, band.width, band.height)
+
+  context.strokeStyle = scene.colors.accent
+  context.strokeRect(frame.x, frame.y, frame.width, frame.height)
+
+  context.fillStyle = scene.colors.accent
+  for (const grip of grips) context.fillRect(grip.x, grip.y, grip.width, grip.height)
+}
+
+/**
+ * The nine grips of the armed layer, drawn only while the move tool holds them — Pixi ships no
+ * transformer, so these are ours.
+ */
+function drawGrips(context: OverlayContext, scene: OverlayScene): void {
+  const box = scene.tools.handles
+  if (!box) return
+
+  const grips = gripRects(box, scene.viewport)
+  context.fillStyle = scene.colors.accent
+
+  for (const id of HANDLE_IDS) {
+    const grip = grips[id]
+    context.fillRect(grip.x, grip.y, grip.width, grip.height)
+  }
+}
+
+/** A closed polyline, in screen space: a selection is chrome, and chrome never scales. */
+function strokePath(context: OverlayContext, viewport: Viewport, outline: readonly Point[]): void {
+  const first = outline[0]
+  if (!first) return
+
+  const at = (point: Point): Point => {
+    const screen = toScreen(viewport, point)
+    return { x: crisp(screen.x), y: crisp(screen.y) }
+  }
+
+  context.beginPath()
+  const start = at(first)
+  context.moveTo(start.x, start.y)
+  for (const point of outline.slice(1)) {
+    const screen = at(point)
+    context.lineTo(screen.x, screen.y)
+  }
+  // Closed by hand rather than with `closePath`: a lasso is left open by the hand that drew it,
+  // and the region it stands for is the closed one.
+  context.lineTo(start.x, start.y)
+  context.stroke()
 }
 
 /**
