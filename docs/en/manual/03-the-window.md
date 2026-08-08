@@ -105,7 +105,7 @@ From top to bottom:
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace |
 | *separator* | |
-| The **left column** icons | Layers, Meshes, Lights, Assets (depending on the workspace), then Explorer |
+| The **left column** icons | Models, then Generate — the same two in all six workspaces |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
 
 The **+** button is solid and blue, where all the others are grey glyphs. That is because it
@@ -116,7 +116,8 @@ The **+** button is solid and blue, where all the others are grey glyphs. That i
 
 ### The right rail
 
-The **right column** icons: Models, Generate, Skybox (in the Skyboxes workspace), then Inspector.
+The **right column** icons: Skybox, Layers, Assets, Explorer, Lights, Meshes — whichever ones the
+workspace declares, in that order — then, below the separator, Inspector.
 
 ### The rail only shows what the workspace can do
 
@@ -155,7 +156,8 @@ no tiny grip to aim at pixel-perfect.
 The studio always keeps **at least 240 pixels** for the document zone in the centre, and at least
 140 pixels for each side zone. So you cannot crush the centre by accident by dragging too far.
 
-Starting sizes: left column 260 px, right column 320 px, bottom strip 240 px.
+Starting sizes: left column 320 px, right column 260 px, bottom strip 240 px. The left one is the
+wider of the two: it holds a model's form, and a 260 px column wraps every field onto two lines.
 
 ### Closing, reopening, putting everything back
 
@@ -189,32 +191,35 @@ instead.
 
 | Panel | Zone | Half | Visible in | What it is |
 |---|---|---|---|---|
-| **Layers** | left | 1st | Image | the layer stack of the open image |
-| **Meshes** | left | 1st | 3D | the scene's objects, and the button that adds one |
-| **Lights** | left | 1st | 3D | the scene's light sources |
-| **Assets** | left | 1st | Video | the project's shelf |
-| **Explorer** | left | 2nd | everywhere | the 3D scene tree |
-| **Models** | right | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
-| **Generate** | right | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
+| **Models** | left | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
+| **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
 | **Skybox** | right | 1st | Skyboxes | the open sky's settings |
+| **Layers** | right | 1st | Image | the layer stack of the open image |
+| **Assets** | right | 1st | Video, Audio | the project's shelf, as a column |
+| **Explorer** | right | 1st | everywhere | the 3D scene tree |
+| **Lights** | right | 1st | 3D | the scene's light sources |
+| **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
-| **Assets** | bottom | 1st | Image, 3D, Audio, Textures, Skyboxes | the same shelf, as a strip |
-| **Timeline** | bottom | 1st | Video | the sequence being edited |
+| **Assets** | bottom | 1st | Image, 3D, Textures, Skyboxes | the same shelf, as a strip |
+| **Timeline** | bottom | 1st | Video, Audio | the sequence being edited |
 
-**The upper half of the right column is reserved.** Only three panels may sit there — **Models**,
-**Generate**, **Skybox** — and none of them appears anywhere else. It is the "making" half:
-choosing a model, filling in its form, steering the sky it produces. Those are three moments of the
-same work, so they take turns.
+**The left column is generation, and nothing else.** Only two panels may sit there — **Models**
+and **Generate** — and neither appears anywhere else. Generating is the one thing all six
+workspaces do, so it gets the same place in all six, right under the **+** button that makes a
+document. They are two moments of the same work, choosing then filling in, so they take turns in
+the same half.
 
-**The Inspector holds the other half, and always the lower one.** You read what is selected **while**
+**The right column belongs to the open document**: what it holds, what lights it, what is
+selected. Its panels take turns in the upper half — no workspace declares all six at once — and
+the **Inspector** holds the other half, always the lower one. You read what is selected **while**
 a model is being chosen and a prompt written: in an editor, the inspector is never the panel you
 have to switch away from to see something else.
 
 **Why the asset shelf moves.** In most workspaces it sits at the bottom: it is a shelf, it reads
-across, and the side column is reserved for what acts on the document. But in the **Video**
-workspace the bottom strip belongs to the edit, which needs the full width. The shelf then moves to
-the **left column**, whose upper half is free there, so that the edit and the shelf hold the screen
-**together**: dragging a take onto a track is the gesture that workspace is built around.
+across, and the side column is reserved for what acts on the document. But in the **Video** and
+**Audio** workspaces the bottom strip belongs to the edit, which needs the full width. The shelf
+then moves to the **right column**, so that the edit and the shelf hold the screen **together**:
+dragging a take onto a track is the gesture those two workspaces are built around.
 
 ### A half shows what the workspace puts there
 

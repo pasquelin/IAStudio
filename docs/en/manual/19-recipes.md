@@ -51,8 +51,8 @@ Remember those three lines and nothing will block you.
 **This is the basic path**, detailed in [First steps](02-first-steps.md). In short:
 
 1. **Image** workspace;
-2. **Models** panel, on the right: click a thumbnail;
-3. **Generate** panel, just below: write your sentence in the **prompt**;
+2. **Models** panel, on the left: click a thumbnail;
+3. **Generate** panel, which takes its place: write your sentence in the **prompt**;
 4. **Generate**. The status line, bottom right, follows the progress;
 5. the result arrives in the **Assets** panel, and in `assets/img/` on your disk.
 

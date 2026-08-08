@@ -84,11 +84,12 @@ At the top of the window, six tabs: **Image**, **Video**, **3D**, **Audio**, **T
 **Skyboxes**. Click **Image**.
 
 **4. Choose a model.**
-On the right, the **Models** panel shows the catalogue. Click a thumbnail you like. The chosen
+On the left, the **Models** panel shows the catalogue. Click a thumbnail you like. The chosen
 model's name appears at the top of the panel.
 
 **5. Describe what you want.**
-Just below, the **Generate** panel shows a form. The most important field is called the
+The **Generate** icon has just appeared in the left rail: click it, and the **Generate** panel
+takes the place of Models and shows a form. The most important field is called the
 **prompt**: it is your instruction sentence, preferably in English.
 For example: `a small red lighthouse on a cliff, morning light`.
 

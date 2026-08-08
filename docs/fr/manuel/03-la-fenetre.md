@@ -108,7 +108,7 @@ De haut en bas :
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l'espace actif |
 | *séparateur* | |
-| Les icônes de la **colonne de gauche** | Calques, Mailles, Lumières, Assets (selon l'espace), puis Explorateur |
+| Les icônes de la **colonne de gauche** | Modèles, puis Génération — les mêmes dans les six espaces |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l'espace |
 
 Le bouton **+** est plein et bleu, quand tous les autres sont des glyphes gris. C'est parce
@@ -119,8 +119,8 @@ qu'il **agit** — il crée quelque chose — alors que les autres ne font que m
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Modèles, Génération, Skybox (dans l'espace Skyboxes), puis
-Inspecteur.
+Les icônes de la **colonne de droite** : Skybox, Calques, Assets, Explorateur, Lumières, Mailles —
+celles que l'espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
 
 ### Le rail ne montre que ce que l'espace sait faire
 
@@ -160,7 +160,9 @@ Le studio garde toujours **au moins 240 pixels** pour la zone des documents au c
 moins 140 pixels pour chaque zone latérale. Vous ne pouvez donc pas écraser le centre par
 accident en tirant trop loin.
 
-Tailles de départ : colonne de gauche 260 px, colonne de droite 320 px, bande basse 240 px.
+Tailles de départ : colonne de gauche 320 px, colonne de droite 260 px, bande basse 240 px. La
+gauche est la plus large des deux : elle porte le formulaire du modèle, et un formulaire à
+260 px replie ses champs les uns sous les autres.
 
 ### Fermer, rouvrir, tout remettre en place
 
@@ -196,33 +198,36 @@ premier, donc il garde sa taille et c'est la barre qui se resserre.
 
 | Panneau | Zone | Moitié | Visible dans | Ce que c'est |
 |---|---|---|---|---|
-| **Calques** | gauche | 1re | Image | la pile de calques de l'image ouverte |
-| **Mailles** | gauche | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
-| **Lumières** | gauche | 1re | 3D | les sources lumineuses de la scène |
-| **Assets** | gauche | 1re | Vidéo | l'étagère du projet |
-| **Explorateur** | gauche | 2de | partout | l'arbre de la scène 3D |
-| **Modèles** | droite | 1re | partout | le catalogue Scenario, filtré sur l'espace actif |
-| **Génération** | droite | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
+| **Modèles** | gauche | 1re | partout | le catalogue Scenario, filtré sur l'espace actif |
+| **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
 | **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
+| **Calques** | droite | 1re | Image | la pile de calques de l'image ouverte |
+| **Assets** | droite | 1re | Vidéo, Audio | l'étagère du projet, en colonne |
+| **Explorateur** | droite | 1re | partout | l'arbre de la scène 3D |
+| **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
+| **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
-| **Assets** | bas | 1re | Image, 3D, Audio, Textures, Skyboxes | la même étagère, en bande |
-| **Timeline** | bas | 1re | Vidéo | la séquence en cours de montage |
+| **Assets** | bas | 1re | Image, 3D, Textures, Skyboxes | la même étagère, en bande |
+| **Timeline** | bas | 1re | Vidéo, Audio | la séquence en cours de montage |
 
-**La moitié haute de la colonne de droite est réservée.** Trois panneaux seulement y ont le
-droit — **Modèles**, **Génération**, **Skybox** — et aucun d'eux ne s'affiche ailleurs. C'est la
-moitié « fabriquer » : choisir un modèle, remplir son formulaire, régler le ciel qu'il produit.
-Ce sont trois moments du même travail, donc ils se relaient.
+**La colonne de gauche est la génération, et rien d'autre.** Deux panneaux seulement y ont le
+droit — **Modèles** et **Génération** — et aucun des deux ne s'affiche ailleurs. Générer est la
+seule chose que les six espaces font tous : elle a donc la même place dans les six, juste sous le
+bouton **+** qui crée un document. Ce sont deux moments du même travail, choisir puis remplir,
+donc ils se relaient dans la même moitié.
 
-**L'Inspecteur occupe l'autre moitié, et toujours en bas.** On lit ce qui est sélectionné
-**pendant** qu'on choisit un modèle et qu'on écrit un prompt : dans un éditeur, l'inspecteur n'est
-jamais le panneau qu'il faut quitter pour voir autre chose.
+**La colonne de droite est celle du document ouvert** : ce qu'il contient, ce qui l'éclaire, ce
+qui est sélectionné. Les panneaux y prennent leur tour dans la moitié haute — un espace ne
+déclare jamais les six à la fois — et l'**Inspecteur** occupe l'autre moitié, toujours en bas.
+On lit ce qui est sélectionné **pendant** qu'on choisit un modèle et qu'on écrit un prompt :
+dans un éditeur, l'inspecteur n'est jamais le panneau qu'il faut quitter pour voir autre chose.
 
 **Pourquoi l'étagère à assets change de place.** Dans la plupart des espaces, elle est en bas :
 c'est une étagère, elle se lit en largeur, et la colonne latérale est réservée à ce qui agit sur le
-document. Mais dans l'espace **Vidéo**, la bande basse appartient au montage, qui a besoin de toute
-la largeur. L'étagère passe alors dans la **colonne de gauche**, dont la moitié haute est libre là,
-pour que le montage et elle tiennent l'écran **ensemble** : glisser une prise sur une piste est le
-geste autour duquel cet espace est bâti.
+document. Mais en **Vidéo** et en **Audio**, la bande basse appartient au montage, qui a besoin de
+toute la largeur. L'étagère passe alors dans la **colonne de droite**, pour que le montage et elle
+tiennent l'écran **ensemble** : glisser une prise sur une piste est le geste autour duquel ces
+deux espaces sont bâtis.
 
 ### Une moitié montre ce que l'espace y met
 

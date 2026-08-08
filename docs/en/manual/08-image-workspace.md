@@ -241,7 +241,7 @@ The chapter [What does not exist yet](18-limits.md) gives the complete list.
 
 ## Layers
 
-The **Layers** panel, in the left column.
+The **Layers** panel, in the right column.
 
 A layer is a transparent sheet stacked on the others. The top layer covers those below. You paint
 on the one that is **active** — click its name to choose it.

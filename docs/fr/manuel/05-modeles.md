@@ -20,7 +20,8 @@ rendent en dix secondes, d'autres en trois minutes.
 
 ## Le panneau Modèles
 
-Il est dans la colonne de droite. Il liste le catalogue **pour l'espace où vous êtes** : dans
+Il est dans la colonne de gauche, au même endroit dans les six espaces. Il liste le catalogue
+**pour l'espace où vous êtes** : dans
 l'espace Image, les modèles d'image ; dans l'espace 3D, les modèles 3D.
 
 Il n'y a pas d'onglets de type à choisir : la barre de titre dit déjà dans quel espace vous

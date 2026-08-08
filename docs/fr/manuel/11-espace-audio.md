@@ -7,6 +7,19 @@ volume.
 
 ---
 
+## Comment l'espace est disposé
+
+Comme en Vidéo, la **bande basse appartient au montage** et l'étagère à assets prend la moitié
+haute de la **colonne de droite**, pour qu'une prise se glisse de l'une vers l'autre sans avoir à
+changer de panneau. La colonne de gauche porte les Modèles et la Génération, comme partout
+ailleurs.
+
+> **La bande basse est réservée, pas encore remplie.** Le montage multipiste de l'espace Audio
+> n'existe pas : le panneau y affiche l'état vide de la Timeline tant qu'aucune séquence n'est en
+> avant. La place lui est gardée ; ce chapitre décrit l'éditeur d'une prise à la fois.
+
+---
+
 ## Ouvrir un son
 
 **Deux gestes, dans cet ordre, et l'ordre compte :**

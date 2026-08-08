@@ -86,11 +86,12 @@ En haut de la fenêtre, six onglets : **Image**, **Vidéo**, **3D**, **Audio**, 
 **Skyboxes**. Cliquez **Image**.
 
 **4. Choisissez un modèle.**
-À droite, le panneau **Modèles** montre le catalogue. Cliquez sur une vignette qui vous plaît.
+À gauche, le panneau **Modèles** montre le catalogue. Cliquez sur une vignette qui vous plaît.
 Le nom du modèle choisi s'affiche en haut du panneau.
 
 **5. Décrivez ce que vous voulez.**
-Juste en dessous, le panneau **Génération** affiche un formulaire. Le champ le plus important
+L'icône **Génération** vient d'apparaître dans le rail de gauche : cliquez-la, le panneau
+**Génération** prend la place des Modèles et affiche un formulaire. Le champ le plus important
 s'appelle le **prompt** : c'est votre phrase de commande, en anglais de préférence.
 Par exemple : `a small red lighthouse on a cliff, morning light`.
 

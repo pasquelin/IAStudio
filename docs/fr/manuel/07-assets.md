@@ -16,13 +16,13 @@ laquelle vous piochez.
 
 | Espace | Où se trouve l'étagère |
 |---|---|
-| Image, 3D, Audio, Textures, Skyboxes | dans la **bande basse** |
-| Vidéo | dans la **colonne de gauche**, moitié haute |
+| Image, 3D, Textures, Skyboxes | dans la **bande basse** |
+| Vidéo, Audio | dans la **colonne de droite**, moitié haute |
 
-Ce n'est pas un caprice : dans l'espace Vidéo, la bande basse appartient au montage, qui a besoin
-de toute la largeur. Il faut pourtant que l'étagère et le montage tiennent l'écran **ensemble**
-pour qu'on puisse glisser une prise de l'une vers l'autre — l'étagère prend donc la moitié haute
-de la colonne de gauche, qui est libre dans cet espace.
+Ce n'est pas un caprice : dans les espaces Vidéo et Audio, la bande basse appartient au montage,
+qui a besoin de toute la largeur. Il faut pourtant que l'étagère et le montage tiennent l'écran
+**ensemble** pour qu'on puisse glisser une prise de l'une vers l'autre — l'étagère prend donc la
+moitié haute de la colonne de droite, celle des panneaux qui servent le document ouvert.
 
 ---
 

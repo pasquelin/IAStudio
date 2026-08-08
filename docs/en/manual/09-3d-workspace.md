@@ -323,7 +323,7 @@ Three things worth knowing:
 
 ## The Explorer — the scene tree
 
-The **Explorer** panel, in the left column, shows everything the scene contains, as a tree.
+The **Explorer** panel, in the right column, shows everything the scene contains, as a tree.
 
 - **Click** a line to select the object — with `⇧`, `⌘` or `Ctrl` to pick several, exactly as in
   the view.
