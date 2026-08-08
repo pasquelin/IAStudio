@@ -4,6 +4,7 @@ import { saveDocument } from '@/app/document-io'
 import { revealTool } from '@/helpers/reveal-panel'
 import { availableToolIds } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
+import { publishCommand } from '@/services/command-bus'
 import { reportFailure } from '@/services/diagnostics'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
@@ -36,6 +37,11 @@ function runCommand(command: CommandId): void {
       }
       return
     }
+    default:
+      // Everything else belongs to a surface — the canvas, the scene, the timeline — and only
+      // the document in front knows how to run it. Without this the whole Image menu fired into
+      // nothing: eleven rows that looked live and did strictly nothing when clicked.
+      publishCommand(command)
   }
 }
 
