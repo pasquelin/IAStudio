@@ -100,11 +100,9 @@ Elle est en haut du document. Les outils sont **groupés**, comme dans Figma :
 
 Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 
-> **Les touches indiquées ci-dessous ne sont pas encore actives.** `V`, `P`, `E`… sont affichées
-> dans les menus et les infobulles, mais **rien ne les écoute** : un outil se choisit à la souris.
-> Ce sont les touches prévues, pas des raccourcis en service. Celles qui fonctionnent vraiment
-> dans l'espace Image sont dans [Tous les raccourcis](15-raccourcis.md) — zoom, règles, repères,
-> sélection, éditions par le modèle, export, annuler.
+> **Les touches ci-dessous arment l'outil**, et elles se remappent comme toutes les autres : chaque
+> outil est une commande à part entière, listée dans **Réglages ▸ Raccourcis**. Voir
+> [Tous les raccourcis](15-raccourcis.md).
 
 ### Groupe Curseur
 
@@ -190,8 +188,8 @@ Le cadre ne sort jamais de l'image — un recadrage rogne, il n'agrandit pas.
 | Outil | Raccourci | Ce qu'il fait |
 |---|---|---|
 | **Rectangle** | `R` | Maj pour un carré |
-| **Trait** | `L` | Maj pour le contraindre à 45° |
-| **Flèche** | `⇧L` | Maj pour la contraindre à 45° |
+| **Trait** | `⇧R` | Maj pour le contraindre à 45° |
+| **Flèche** | `A` | Maj pour la contraindre à 45° |
 | **Ellipse** | `O` | Maj pour un cercle |
 | **Polygone** | — | tracé depuis son centre |
 | **Étoile** | — | tracée depuis son centre |

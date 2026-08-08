@@ -87,18 +87,17 @@ n'existent pas. Le Commentaire a été le dernier à rentrer dans le rang : il s
 autres, changeait le curseur, et laissait le moteur jeter chaque clic — un bouton qui avait l'air
 vivant sans l'être.
 
-### Les touches des outils ne sont pas écoutées
+### En Vidéo, les touches des outils ne sont pas écoutées
 
-La barre d'outils affiche une touche à côté de chaque outil — `V` pour le déplacement, `P` pour le
-pinceau, `E` pour la gomme. **Aucune n'est active.** Elles apparaissent dans les menus et les
-infobulles, et rien dans le studio ne les résout : un outil se choisit à la souris.
+La barre du montage affiche `V`, `C` et `H` à côté de ses trois outils. **Aucune n'est active** :
+elles apparaissent dans les infobulles, et rien ne les résout — un outil s'y choisit à la souris.
 
-Le même écart existe dans l'espace **Vidéo**, pour `V`, `C` et `H`.
+**L'espace Image, lui, a réglé la question** : ses vingt outils sont devenus des commandes à part
+entière, donc leurs touches arment vraiment, se remappent, et apparaissent dans l'écran des
+raccourcis. C'est le modèle que le montage n'a pas encore suivi.
 
-Ce ne sont donc pas des raccourcis mais des **intentions affichées**. Les touches réellement en
-service passent toutes par le registre de commandes, et ce sont celles — et seulement celles — que
-liste [Tous les raccourcis](15-raccourcis.md) : elles se remappent, elles apparaissent dans
-l'écran des réglages, et elles répondent.
+La règle générale reste la même : ce qui passe par le registre de commandes répond, ce qui n'y
+passe pas est une intention affichée.
 
 ### Le recadrage ne rend pas ses pixels à l'annulation
 
