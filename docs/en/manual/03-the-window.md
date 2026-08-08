@@ -409,7 +409,35 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 | **View** | Tool windows (reopen a panel), Reset layout, Full screen, and image zoom |
 | **Objects** | Add ▸ Mesh, Add ▸ Light — in the 3D workspace |
 | **Window** | the system's window commands |
-| **Help** | About Scenario Studio, Licences |
+| **Help** | About Scenario Studio, Usage…, Licences |
+
+### The usage window
+
+**Help ▸ Usage…** opens a window of its own, saying **what your keys have spent**.
+
+Top right, the period: **7, 31 or 120 days**, 31 by default. Four sections down the left:
+
+| Section | What it shows |
+|---|---|
+| **Overview** | the total spent over the period, discounts, how many generations, and the spend per day and per account |
+| **Models** | which models cost what, how many generations each served, and the share that went through an API key |
+| **Activities** | what was done, and the assets that came out of it |
+| **Journal** | every billed event, newest first, by pages |
+
+Three warnings are shown there, and none is decorative:
+
+- **there is no balance.** The Scenario API only exposes what has been spent, never what is
+  left. No figure in this window will tell you how much you can still generate;
+- **the euro amount is indicative.** It is computed from the public prepaid pack grid, which is
+  tiered and says nothing about a subscription's own rate. It is an order of magnitude, not an
+  invoice;
+- **the total mixes accounts billed separately.** With several keys, the sum shown matches no
+  real invoice — the Overview section breaks it down per account.
+
+**A key that does not answer does not skew the figures silently**: the window names the keys that
+stayed quiet and says the totals are the others'.
+
+With no key stored at all, the window says so and points to the preferences.
 
 ### The licences window
 

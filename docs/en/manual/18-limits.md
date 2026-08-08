@@ -345,6 +345,10 @@ but not create new content.
 Every generation consumes credit on your Scenario account. The studio bills you nothing: it forwards.
 But your account does count.
 
+**And it cannot tell you what is left.** The **Help ▸ Usage…** window shows what has been spent
+over 7, 31 or 120 days — never a balance, because the Scenario API exposes none. The euro amount
+beside it is computed from the public prepaid pack grid: an order of magnitude, not your invoice.
+
 ### It does not replace Photoshop, Blender or Premiere
 
 It does a useful part of each, in the same place, **around generation**. It is a tool for assisted
