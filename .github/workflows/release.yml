@@ -188,11 +188,12 @@ jobs:
             exit 1
           fi
 
-          # Each manifest names the blockmap it expects; a missing one hangs the client rather
-          # than degrading to a full download.
-          for blockmap in $(grep -ho '[^ ]*\.blockmap' dist/latest*.yml | sort -u); do
-            [ -f "dist/$blockmap" ] || {
-              echo "::error::Manifest references a missing blockmap: $blockmap"
+          # A manifest never names its blockmaps: electron-updater derives each one by appending
+          # .blockmap to the file URL. A missing one hangs the client on "Download block maps"
+          # instead of degrading to a full download, so check every file the manifests list.
+          for file in $(grep -ho 'url: .*' dist/latest*.yml | cut -d' ' -f2 | sort -u); do
+            [ -f "dist/$file.blockmap" ] || {
+              echo "::error::No blockmap for $file, which the manifests list."
               exit 1
             }
           done
