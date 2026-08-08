@@ -200,6 +200,14 @@ The frame never leaves the picture — a crop trims, it does not grow.
 | **Text** | `T` | places text on the active layer |
 | **Text on path** | — | *not available yet* |
 
+A text layer stays text: you can fix a typo in it, and it stays sharp at any zoom. The inspector
+sets its **content**, its **size** and its **font**.
+
+**The font list is the 3D workspace's list**, deliberately: the three fonts the studio ships
+first, then your machine's. A caption written here and a text in volume over there are set in the
+same family, under the same name. What [the 3D workspace](09-3d-workspace.md#the-fonts-on-offer)
+says about missing fonts holds word for word here.
+
 ### Eraser group
 
 | Tool | Shortcut | What it does |

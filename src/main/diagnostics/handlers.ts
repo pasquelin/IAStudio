@@ -19,6 +19,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'image.export': 'document',
   'document.save': 'document',
   'assets.reveal': 'library',
+  // A face that will not open is read where the document it was set in is read: the caption is
+  // still there, drawn in the fallback, and this is what says why it does not look right.
+  'font.face': 'document',
 }
 
 /**

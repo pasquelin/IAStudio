@@ -206,6 +206,14 @@ Le cadre ne sort jamais de l'image — un recadrage rogne, il n'agrandit pas.
 | **Texte** | `T` | pose du texte sur le calque actif |
 | **Texte sur chemin** | — | *pas encore disponible* |
 
+Un calque texte reste du texte : il se corrige, et il reste net à tous les zooms. L'inspecteur en
+règle le **contenu**, le **corps** et la **police**.
+
+**La liste des polices est celle de l'espace 3D**, et c'est voulu : les trois polices que le
+studio embarque d'abord, puis celles de votre machine. Une légende écrite ici et un texte en
+volume là-bas se règlent dans la même famille, sous le même nom. Ce que dit
+[l'espace 3D](09-espace-3d.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
+
 ### Groupe Gomme
 
 | Outil | Raccourci | Ce qu'il fait |

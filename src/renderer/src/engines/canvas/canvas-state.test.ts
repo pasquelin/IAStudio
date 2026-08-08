@@ -270,6 +270,24 @@ describe('reading back the kinds this build added', () => {
     expect(layer).toMatchObject({ kind: 'text', text: '', size: DEFAULT_TEXT_SIZE, color: 0 })
   })
 
+  // The same reference a 3D text stores, read the same way — see `domain/font`.
+  it('reads the face a caption was set in, and keeps a system one as written', () => {
+    const written = { id: 'a', kind: 'text', font: { source: 'system', family: 'Futura' } }
+
+    const [layer] = read([written]).layers
+
+    expect(layer).toMatchObject({ font: { source: 'system', family: 'Futura' } })
+  })
+
+  it.each([
+    ['a document written before captions had a face', undefined],
+    ['a family the studio no longer ships', { source: 'embedded', family: 'Helvetiker' }],
+  ])('sets a caption in a shipped face for %s', (_case, font) => {
+    const [layer] = read([{ id: 'a', kind: 'text', font }]).layers
+
+    expect(layer).toMatchObject({ font: { source: 'embedded', family: 'Lato' } })
+  })
+
   // Its presence is what owns a texture; `enabled` only says whether it hides anything.
   it('reads a mask back, defaulting both of its flags to on', () => {
     const [layer] = read([{ id: 'a', mask: {} }]).layers

@@ -1,4 +1,5 @@
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
+import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
 import type { Point } from './shape-geometry'
 
@@ -181,6 +182,12 @@ export function adjustmentLayer(
 export type TextLayer = LayerBase & {
   kind: 'text'
   text: string
+  /**
+   * What it is set in. The same reference a 3D text stores, from the same list — see
+   * `domain/font`: a studio where the two workspaces name their typefaces differently is a
+   * studio where the same caption cannot be moved from one to the other.
+   */
+  font: FontRef
   /** Points at 1:1, before the layer's own scale. */
   size: number
   /** Packed RGB, the form Pixi takes. */
@@ -194,6 +201,7 @@ export function textLayer(id: string, text: string, at: Point): TextLayer {
     ...layerBase(id, text),
     kind: 'text',
     text,
+    font: DEFAULT_FONT,
     size: DEFAULT_TEXT_SIZE,
     color: 0x000000,
     transform: { ...IDENTITY, x: at.x, y: at.y },
@@ -405,6 +413,9 @@ function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
       ...base,
       kind: 'text',
       text: typeof source.text === 'string' ? source.text : '',
+      // Read rather than trusted, exactly as a scene reads a text node's face: a family the
+      // studio no longer ships falls back to one it does.
+      font: readFontRef(source.font),
       size: typeof source.size === 'number' ? source.size : DEFAULT_TEXT_SIZE,
       color: typeof source.color === 'number' ? source.color : 0x000000,
     }

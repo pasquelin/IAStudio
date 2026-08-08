@@ -13,6 +13,7 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { canRedo, canUndo } from '@/engines/core/history'
+import { registerFace } from '@/engines/canvas/canvas-fonts'
 import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
@@ -124,6 +125,9 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
       guides: guidePort(documentId),
       layers: layerPort(documentId),
+      // Named here rather than defaulted inside the engine: jsdom has no `FontFace`, so
+      // every test hands its own, and a default would be a path nothing ever walks.
+      addFace: registerFace,
     })
 
     engine.current = created

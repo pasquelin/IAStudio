@@ -572,6 +572,12 @@ viennent donc d'`opentype.js` en dépendance, deviennent des `Shape` et sont ext
 scène qui les emploie s'ouvre à l'identique partout. Les polices du système s'ajoutent, lues par
 le main — `fonts:list` et `fonts:read` — parce que le renderer n'a pas `fs`.
 
+**Les deux espaces qui écrivent du texte partagent la référence, pas la machinerie.** Un
+`FontRef` et une liste (`shared/domain/font.ts`, `services/fonts.ts`), le même `FontField` dans
+les deux inspecteurs — mais la 3D veut des contours parsés et l'espace Image une `FontFace` posée
+dans la page : un visage en chemins ne sert à rien à `Text`, et une `FontFace` ne sert à rien à
+`ExtrudeGeometry`. Le calque texte de l'espace Image ne code donc plus `sans-serif` en dur.
+
 Cinq choses apprises en le construisant, toutes trouvées en revue ou sur la vraie machine :
 
 - **le main lit la table `name` par plages, jamais le fichier entier** : 267 familles en 200 ms.

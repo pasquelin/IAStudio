@@ -27,6 +27,7 @@ import {
 import { cn } from '@/helpers/cn'
 import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { useCanvases } from '@/stores/canvases'
+import { FontField } from './FontField'
 import { useDocumentEdit } from './useDocumentEdit'
 
 export type LayerInspectorProps = { documentId: string; layer: Layer }
@@ -141,6 +142,13 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             step={1}
             onChange={size => edit.run(setLayerText(layer.id, { size }))}
             {...edit.gesture}
+          />
+          {/* The very field a 3D text uses, from the very list: the same caption reads the same
+              in both workspaces, or neither is worth having. */}
+          <FontField
+            label={t('inspector.font')}
+            value={layer.font}
+            onChange={font => edit.run(setLayerText(layer.id, { font }))}
           />
         </PropertyGroup>
       )}
