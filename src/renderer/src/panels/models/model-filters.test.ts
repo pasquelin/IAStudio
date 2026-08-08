@@ -75,6 +75,16 @@ describe('model filters', () => {
     expect(tag?.options).toContainEqual({ value: 'I2V', label: 'I2V' })
   })
 
+  /**
+   * `image-upscale` was offered here while it named a family of its own: the listing had already
+   * excluded every model the facet could match, so the menu's only possible answer was none.
+   */
+  it('offers no tag that names a family of its own', () => {
+    const tag = facetsFor('image', identity).find(facet => facet.key === TAG_FACET)
+
+    expect(tag?.options.map(option => option.value)).not.toContain('image-upscale')
+  })
+
   it('sorts by the API score first, which is what popularity means here', () => {
     expect(sortOptions(identity)[0]?.value).toBe('relevance')
   })

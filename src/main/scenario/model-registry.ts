@@ -2,7 +2,7 @@ import {
   FEATURED_TAG,
   OFFICIAL_TAG,
   PERIOD_DAYS,
-  SKYBOX_TAG,
+  tagOfFamily,
   type ModelDescriptor,
   type ModelPage,
   type ModelPeriod,
@@ -235,14 +235,14 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
 /**
  * The one tag the listing is narrowed by server-side, ahead of `matches`.
  *
- * A chosen tag comes first — it is what the user asked for. Failing that, a skybox listing is
- * worth asking the API for by tag: three models carry `SKYBOX_TAG` out of six hundred, and
- * walking the public catalogue page by page to keep three of them costs eight round trips to
- * fill one screen. Every other family is dense enough that the local filter settles it.
+ * A chosen tag comes first — it is what the user asked for. Failing that, the four families a
+ * tag defines are worth asking the API for by it: each is nine or ten models out of six
+ * hundred, and walking the public catalogue page by page to keep them costs eight round trips
+ * to fill one screen. Every other family is dense enough that the local filter settles it.
  */
 function preFilter(query: ModelQuery): string | undefined {
   if (query.tags?.[0]) return query.tags[0]
-  return query.family === 'skybox' ? SKYBOX_TAG : undefined
+  return query.family ? tagOfFamily(query.family) : undefined
 }
 
 type Cached<T> = { at: number; value: T }
@@ -296,7 +296,7 @@ export function createModelRegistry({
   const fetchPage = async (cursor: Cursor, query: ModelQuery): Promise<CatalogPage> => {
     // Keyed by the tag that actually leaves, never by what it was derived from. The family is
     // one of its sources — a skybox listing narrows server-side, so its page holds three models
-    // and must not be served back to Image — but the eight families that resolve to no tag ask
+    // and must not be served back to Image — but the six families that resolve to no tag ask
     // the identical question and go on sharing one page. Keying the family itself would have
     // made each of them repay a walk the previous one had already downloaded.
     const key = `${preFilter(query) ?? ''}|${query.sort ?? ''}|${query.origin ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`

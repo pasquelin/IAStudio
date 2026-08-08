@@ -1,4 +1,4 @@
-import { SKYBOX_TAG } from '@shared/domain/model'
+import { FAMILY_TAGS, SKYBOX_TAG } from '@shared/domain/model'
 import type { FieldDescriptor, FieldKind, ModelFamily } from '@shared/domain/model'
 
 /**
@@ -118,9 +118,14 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
  * Infers a model's family from its capabilities. Order matters: `img2video` is a video model,
  * not an image one, and suffixes must win over broader patterns.
  *
- * The tag is consulted first, and only skyboxes need it: a panorama model answers `txt2img`
- * like every other image model, so the capabilities alone would file the whole workspace under
- * Image. See `SKYBOX_TAG` — it is the only signal the API offers.
+ * `SKYBOX_TAG` is trusted on its own, ahead of everything: it belongs to Scenario's own `sc:`
+ * namespace, so only the platform posts it, and it is the only signal there is — a panorama
+ * model answers `txt2img` like every other image model.
+ *
+ * The three other tagged families are settled AFTER the capabilities, and only when those
+ * answered `image`. Their tags are authors' words, which land where they please: two of the
+ * nine models carrying `remove-background` remove it from video, and the canvas cannot use
+ * them. Trusting that tag first would file them under cutout.
  */
 export function familyOf(
   capabilities: readonly string[] | undefined,
@@ -128,8 +133,14 @@ export function familyOf(
 ): ModelFamily {
   if (tags.includes(SKYBOX_TAG)) return 'skybox'
   if (!capabilities?.length) return 'other'
-  for (const { pattern, family } of FAMILY_BY_CAPABILITY) {
-    if (capabilities.some(capability => pattern.test(capability))) return family
-  }
-  return 'other'
+
+  const matched = FAMILY_BY_CAPABILITY.find(({ pattern }) =>
+    capabilities.some(capability => pattern.test(capability)),
+  )
+  if (!matched) return 'other'
+  if (matched.family !== 'image') return matched.family
+
+  // The skybox entry is unreachable here — the tag above already answered — but it is what the
+  // registry narrows a listing by, so the table carries it.
+  return FAMILY_TAGS.find(entry => tags.includes(entry.tag))?.family ?? matched.family
 }
