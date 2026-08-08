@@ -38,7 +38,7 @@ The studio files each action under a **context** — the surface where it makes 
 surface listens at a time, the one you are looking at. A key shared between two contexts can
 therefore never be ambiguous.
 
-Four contexts:
+Five contexts:
 
 | Context | Where it applies |
 |---|---|
@@ -46,6 +46,7 @@ Four contexts:
 | **In the 3D view** | the viewport of the 3D workspace |
 | **In the edit** | the timeline of the Video and Audio workspaces |
 | **In the image** | the canvas of the Image workspace |
+| **In the sky** | the view of the Skyboxes workspace |
 
 One context is special: **Anywhere in the application**. Its keys go through the operating system's
 menu, which catches them before anybody else. They are therefore the only ones that can never be
@@ -267,6 +268,26 @@ You can give them one in [settings](14-settings.md).
 
 ---
 
+## In the sky
+
+The Skyboxes workspace answers the keyboard like the others.
+
+| Action | Key | What it does |
+|---|---|---|
+| **Change the view** | `V` | cycles through the four ways of looking at the sky: immersive, panoramic, cross, faces |
+| **Light probes** | `P` | shows or hides the witness spheres |
+| **Undo** | `⌘Z` | |
+| **Redo** | `⇧⌘Z` | |
+
+> **The probes are not a gadget.** A sky is judged by what it lights, not by its own picture: the
+> witness spheres show what your panorama does to a matte surface and to a mirror one.
+
+> **`V` does cycle through all four views, but three of them draw nothing yet.** Only the
+> immersive view is wired; Equirect, Cross and 6 faces change which button is active and nothing
+> else. See [The Skyboxes workspace](13-skyboxes-workspace.md).
+
+---
+
 ## One important thing about ⌘Z
 
 **Each document has its own undo stack.**
@@ -277,6 +298,13 @@ image has not moved.
 
 > **"⌘Z seems to do nothing."** It is almost always this: the action you have in mind belongs to
 > another tab. Activate the tab, then undo.
+
+**While you are typing, `⌘Z` undoes your text.** Rename a layer or a track, make a typo, press
+`⌘Z`: the word you have just typed steps back, not the last brush stroke. The studio stands aside
+as long as the caret is in a text field, and takes over again the moment you leave it.
+
+The same holds for `⌘X`, `⌘C` and `⌘V`: in a field they work on the text; anywhere else, on what
+the workspace has selected.
 
 ---
 
@@ -341,40 +369,43 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 
 ## Crib sheet, all on one page
 
-| Key | Anywhere | 3D view | Edit | Image |
-|---|---|---|---|---|
-| `⌘N` | New project | | | |
-| `⌘O` | Open project | | | |
-| `⌘S` | Save | | | |
-| `⌘,` | Settings | | | |
-| `⌃⌘F` | Full screen | | | |
-| `⌘Z` | | Undo | Undo | Undo |
-| `⇧⌘Z` | | Redo | Redo | Redo |
-| `⌘G` | | Group | | |
-| `⌘D` | | Duplicate | | Deselect |
-| `⌘C` / `⌘X` / `⌘V` | | Copy / Cut / Paste | | |
-| `O` | | Projection | | |
-| `Z` | | Display | | |
-| `V` | | Select | | |
-| `G` | | Move | | |
-| `R` | | Rotate | | |
-| `S` | | Scale *(and back up)* | Split clip | |
-| `F` | | Frame selection | | |
-| `Del` | | Delete object | Delete clip | |
-| `W A S D` | | Fly | | |
-| `Q` / `E` | | Down / Up | | |
-| left `⇧` | | Boost | | |
-| `Space` | | | Play / Pause | |
-| `Home` / `End` | | | Start / End of edit | |
-| `⌘=` | | | Zoom in | Zoom in |
-| `⌘−` | | | Zoom out | Zoom out |
-| `⇧Z` | | | Fit to view | |
-| `⌘0` | | | | Fit to window |
-| `⌘1` | | | | Actual size |
-| `⌘R` | | | | Rulers |
-| `⌘;` | | | | Guides |
-| `⇧⌘;` | | | | Snap |
-| `⇧⌘E` | | | | Export the image |
+| Key | Anywhere | 3D view | Edit | Image | Sky |
+|---|---|---|---|---|---|
+| `⌘N` | New project | | | | |
+| `⌘O` | Open project | | | | |
+| `⌘S` | Save | | | | |
+| `⌘,` | Settings | | | | |
+| `⌃⌘F` | Full screen | | | | |
+| `⌘Z` | | Undo | Undo | Undo | Undo |
+| `⇧⌘Z` | | Redo | Redo | Redo | Redo |
+| `⌘G` | | Group | | | |
+| `⌘D` | | Duplicate | | Deselect | |
+| `⌘C` / `⌘X` / `⌘V` | | Copy / Cut / Paste | | | |
+| `O` | | Projection | | | |
+| `Z` | | Display | | | |
+| `V` | | Select | | | Change the view |
+| `P` | | | | | Light probes |
+| `G` | | Move | | | |
+| `R` | | Rotate | | | |
+| `S` | | Scale *(and back up)* | Split clip | | |
+| `M` | | Snapping | | | |
+| `L` | | Local frame | | | |
+| `F` | | Frame selection | | | |
+| `Del` | | Delete object | Delete clip | | |
+| `W A S D` | | Fly | | | |
+| `Q` / `E` | | Down / Up | | | |
+| left `⇧` | | Boost | | | |
+| `Space` | | | Play / Pause | | |
+| `Home` / `End` | | | Start / End of edit | | |
+| `⌘=` | | | Zoom in | Zoom in | |
+| `⌘−` | | | Zoom out | Zoom out | |
+| `⇧Z` | | | Fit to view | | |
+| `⌘0` | | | | Fit to window | |
+| `⌘1` | | | | Actual size | |
+| `⌘R` | | | | Rulers | |
+| `⌘;` | | | | Guides | |
+| `⇧⌘;` | | | | Snap | |
+| `⇧⌘E` | | | | Export the image | |
 
 ---
 
