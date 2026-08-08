@@ -100,6 +100,12 @@ Elle est en haut du document. Les outils sont **groupés**, comme dans Figma :
 
 Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 
+> **Les touches indiquées ci-dessous ne sont pas encore actives.** `V`, `P`, `E`… sont affichées
+> dans les menus et les infobulles, mais **rien ne les écoute** : un outil se choisit à la souris.
+> Ce sont les touches prévues, pas des raccourcis en service. Celles qui fonctionnent vraiment
+> dans l'espace Image sont dans [Tous les raccourcis](15-raccourcis.md) — zoom, règles, repères,
+> sélection, éditions par le modèle, export, annuler.
+
 ### Groupe Curseur
 
 | Outil | Raccourci | Ce qu'il fait |

@@ -72,6 +72,10 @@ Dans les deux cas, le studio décide de deux choses :
 | **Lame** | `C` | coupe un clip là où vous cliquez |
 | **Main** | `H` | fait défiler la timeline — molette pour zoomer |
 
+> **Ces trois touches ne sont pas encore actives** : elles s'affichent dans les infobulles, mais
+> rien ne les écoute. Un outil se choisit à la souris. Les touches en service dans le montage —
+> `Espace`, `S`, `Suppr`, les zooms — sont dans [Tous les raccourcis](15-raccourcis.md).
+
 ### Avec l'outil Sélection
 
 | Geste | Effet |
@@ -201,11 +205,11 @@ se remarque surtout sur un portable : le ventilateur se tait, la batterie tient.
 
 ## Ce qui manque encore
 
-> **Une séquence ne s'enregistre pas encore sur le disque.** Fermer son onglet perd le montage.
-> Les assets, eux, restent dans le projet.
+> **Une séquence s'enregistre** en `.seq` par `⌘S`, et se rouvre telle quelle : pistes, clips,
+> fondus et gains. Ce qui ne revient pas, c'est l'historique d'annulation.
 >
-> Il n'y a pas non plus d'**export** : on ne peut pas encore écrire un fichier vidéo final. Voir
-> [Ce qui n'existe pas encore](18-limites.md).
+> Il n'y a en revanche toujours pas d'**export** : on ne peut pas encore écrire un fichier vidéo
+> final. Voir [Ce qui n'existe pas encore](18-limites.md).
 
 ---
 

@@ -117,9 +117,23 @@ est :
 Cette extension est là pour que le dossier **se lise à l'œil**. `a3f1.scene` à côté de
 `b204.tex` dit ce qu'est chacun ; `a3f1.json` à côté de `b204.json` ne dit rien.
 
-> **Aujourd'hui, seuls les documents `.scene` et `.tex` savent réellement s'enregistrer.** Les
-> images, les séquences, les sons et les ciels vivent encore dans la fenêtre : fermer leur
-> onglet perd ce qu'ils contiennent. Voir [Ce qui n'existe pas encore](18-limites.md).
+> **Les six types savent s'enregistrer**, et le panneau **Explorateur** liste ce que le dossier
+> contient — c'est par là qu'on rouvre un document fermé. Fermer un onglet dont le travail n'est
+> pas écrit pose la question avant de le perdre.
+
+### Rouvrir un document — le panneau Explorateur
+
+La disposition retient les onglets ouverts, mais un document fermé alors qu'aucune disposition
+ne le portait n'est plus atteignable par les onglets. C'est ce que le panneau **Explorateur**
+sert à retrouver : il liste **tout ce que le dossier `documents/` contient**, ouvert ou non.
+
+- un **double-clic** sur une ligne ouvre le document, en changeant d'espace s'il appartient à un
+  autre — une séquence ouverte depuis l'espace Image bascule en Vidéo ;
+- les lignes déjà à l'écran sont marquées **Ouvert** ;
+- l'icône dit de quel espace le document relève, la même que dans le rail.
+
+Il n'y a pas de dialogue « Ouvrir un fichier », et il n'en est pas prévu : le studio n'ouvre que
+ce qui est dans le projet.
 
 ### Comment un document est écrit
 

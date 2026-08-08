@@ -153,9 +153,13 @@ ces défauts : il est propre par construction.
 Ce qui reste utile sur un son généré, c'est de le raccourcir, de l'amener au bon niveau et de le
 faire entrer et sortir proprement. C'est exactement ce que fait cet espace.
 
-> **Un son édité ne se réenregistre pas comme document.** L'espace Audio écrit directement des
-> assets, via Appliquer ou Enregistrer comme nouveau. Il n'y a pas de fichier `.aud` sur le
-> disque pour l'instant — voir [Ce qui n'existe pas encore](18-limites.md).
+> **Deux gestes différents, et il faut les distinguer.** `⌘S` enregistre le **document** — vos
+> coupes, vos fondus, vos réglages — dans un fichier `.aud` du projet, qui se rouvre tel quel.
+> **Appliquer** et **Enregistrer comme nouveau** écrivent un **asset audio**, c'est-à-dire un son
+> utilisable ailleurs, avec les réglages fondus dedans.
+>
+> Autrement dit : `⌘S` garde votre travail modifiable, Appliquer en sort le résultat. Une seule
+> chose ne revient pas d'un document rouvert : l'écoute A/B, qui repart toujours sur la chaîne.
 
 ---
 

@@ -20,10 +20,10 @@ phrase et où l'on télécharge une image, c'est **tout ce qui vient après** :
   restent attachés à chaque fichier, et un bouton les rejoue ;
 - **rien ne repart** : vos fichiers restent chez vous.
 
-> **Une chose que le studio ne sait pas encore faire**, et qu'il vaut mieux savoir tout de suite :
-> **la moitié des documents ne s'enregistrent pas.** Un montage, un son édité, un ciel réglé :
-> fermer l'onglet les perd. Les images, les scènes 3D et les matières, elles, s'écrivent sur le
-> disque et se rouvrent telles quelles. La liste complète et honnête de ces manques est le chapitre
+> **Une chose à savoir tout de suite :** les six types de documents s'enregistrent dans le
+> dossier du projet et se rouvrent tels quels, et fermer un onglet qui a du travail non
+> enregistré pose la question avant de le perdre. Ce qui ne revient jamais, c'est l'historique
+> d'annulation. La liste complète et honnête de ce qui manque encore est le chapitre
 > [Ce qui n'existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
 
 ## Six façons de travailler

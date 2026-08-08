@@ -26,48 +26,49 @@ Trois catégories, à ne pas confondre :
 
 ---
 
-## La limite qui compte le plus : l'enregistrement
+## L'enregistrement : les six types y sont
 
-**Trois types de documents sur six ne s'enregistrent pas encore.**
+**Ce chapitre a longtemps commencé par « trois documents sur six ne s'enregistrent pas ». Ce
+n'est plus vrai.** Les six s'écrivent dans le dossier du projet et se rouvrent tels quels.
 
 | Document | Extension | S'enregistre ? |
 |---|---|---|
 | Scène 3D | `.scene` | **oui** |
 | Matière | `.tex` | **oui** |
 | Image en calques | `.img` | **oui** |
-| Séquence vidéo | `.seq` | non |
-| Son édité | `.aud` | non |
-| Ciel | `.sky` | non |
+| Séquence vidéo | `.seq` | **oui** |
+| Son édité | `.aud` | **oui** |
+| Ciel | `.sky` | **oui** |
 
-**Ce que cela veut dire concrètement.** Vous montez une séquence, vous éditez un son, vous réglez
-un ciel. Vous fermez l'onglet. **Tout ce travail est perdu.** Les *assets* d'origine sont toujours
-dans le projet — c'est votre travail dessus qui disparaît. L'image et la scène 3D, elles, se
-rouvrent telles quelles.
+**Ce qui ne s'enregistre pas, et c'est délibéré :**
 
-**Ce qui n'est jamais perdu :**
+- **l'historique d'annulation** — rouvrir un document, c'est repartir sans `⌘Z` ;
+- **la façon dont on regarde** — zoom, cadrage, vue d'un ciel, sélection : c'est de l'état de
+  session, pas ce que le document *est*. Un document rouvert ne discute pas avec la fenêtre qui
+  l'ouvre ;
+- **en Audio, l'écoute A/B** : un document rouvert écoute la chaîne, jamais la source.
 
-- les **assets** — tout ce qui a été généré ou importé reste dans le projet, quoi qu'il arrive ;
-- les **scènes 3D** et les **matières**, qui s'écrivent bien sur le disque ;
-- en Audio, ce que vous validez par **Appliquer** ou **Enregistrer comme nouveau** : cet espace
-  écrit directement des assets, sans passer par un document.
-
-**En attendant :** ne fermez pas l'onglet tant que le travail compte, et notez ailleurs ce qui
-mérite d'être refait — le *prompt*, la *graine*, le modèle.
+**Fermer un onglet demande maintenant.** Si le document a du travail non enregistré, le studio
+pose la question — Enregistrer, Ne pas enregistrer, Annuler — et *Annuler* est ce que répond une
+touche `⎋` frappée sans lire.
 
 ---
 
 ## Espace Image
 
-### Un document image ne s'ouvre pas *sur* un fichier
+### Il n'y a pas de menu « Ouvrir », et il n'en faut pas
 
-Une image de l'étagère **entre** bien dans un document — glissée sur la toile, double-cliquée, ou
+Une image de l'étagère **entre** dans un document — glissée sur la toile, double-cliquée, ou
 choisie par l'outil **Image…** (`⇧⌘K`) : elle y devient un calque. Voir
 [Espace Image](08-espace-image.md).
 
-Ce qui n'existe pas, c'est le geste inverse : **rouvrir plus tard le document qu'on a composé**.
-Il n'y a pas de menu « Ouvrir », parce qu'il n'y a rien à rouvrir — la pile de calques ne
-s'enregistre nulle part. `⇧⌘E` sort un `.png` aplati ; ce PNG, réimporté, revient comme une image
-et non comme ses calques.
+Rouvrir un document composé plus tôt passe par le panneau **Explorateur**, qui liste les
+documents du projet : un double-clic sur une ligne l'ouvre, en changeant d'espace s'il le faut.
+C'est la porte, et il n'y a pas de dialogue de fichiers — le studio n'ouvre que ce qui est dans
+le projet.
+
+`⇧⌘E` sort toujours un `.png` aplati ; ce PNG, réimporté, revient comme une image et non comme
+ses calques — c'est un export, pas un enregistrement.
 
 ### Outils annoncés mais inactifs
 
@@ -79,10 +80,25 @@ Ils sont visibles dans la barre d'outils, en gris.
 | **Découpe** (`S`) | Cadre |
 | **Plume** | Dessin |
 | **Texte sur chemin** | Texte |
+| **Commentaire** (`C`) | seul de son groupe |
 
-**Le Commentaire (`C`) est le seul qui ne soit pas grisé.** Il s'arme comme les autres, et il ne
-fait rien : cliquer dans l'image ne pose aucune note. C'est le seul bouton du studio qui ait l'air
-vivant sans l'être — les autres disent leur état par leur gris.
+**Ils disent tous leur état par leur gris**, et c'est la seule chose qu'on leur demande tant qu'ils
+n'existent pas. Le Commentaire a été le dernier à rentrer dans le rang : il s'armait comme les
+autres, changeait le curseur, et laissait le moteur jeter chaque clic — un bouton qui avait l'air
+vivant sans l'être.
+
+### Les touches des outils ne sont pas écoutées
+
+La barre d'outils affiche une touche à côté de chaque outil — `V` pour le déplacement, `P` pour le
+pinceau, `E` pour la gomme. **Aucune n'est active.** Elles apparaissent dans les menus et les
+infobulles, et rien dans le studio ne les résout : un outil se choisit à la souris.
+
+Le même écart existe dans l'espace **Vidéo**, pour `V`, `C` et `H`.
+
+Ce ne sont donc pas des raccourcis mais des **intentions affichées**. Les touches réellement en
+service passent toutes par le registre de commandes, et ce sont celles — et seulement celles — que
+liste [Tous les raccourcis](15-raccourcis.md) : elles se remappent, elles apparaissent dans
+l'écran des réglages, et elles répondent.
 
 ### Le recadrage ne rend pas ses pixels à l'annulation
 
@@ -121,8 +137,9 @@ disparaissent définitivement.
 `⇧⌘E` écrit le document **aplati** en `.png` où vous voulez : une seule image, les calques fondus
 ensemble. Ce n'est pas une sauvegarde — c'est une sortie.
 
-Pour garder la pile de calques, c'est `⌘S` : un document image **s'enregistre** depuis peu, en
-dossier `.img`. Les deux gestes ne servent pas à la même chose et aucun ne remplace l'autre.
+Pour garder la pile de calques, c'est `⌘S` : le document s'écrit en dossier `.img`, masques
+compris, et se rouvre tel quel. Les deux gestes ne servent pas à la même chose et aucun ne
+remplace l'autre. Ce qui ne revient dans aucun des deux : l'historique d'annulation.
 
 ---
 
@@ -162,14 +179,12 @@ raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
 
 ## Espace Vidéo
 
-### Pas d'enregistrement, pas d'export
+### Pas d'export
 
-**Une séquence ne s'écrit pas sur le disque** : fermer l'onglet perd le montage.
+Une séquence s'enregistre désormais en `.seq` et se rouvre telle quelle.
 
-**Il n'y a pas d'export** : on ne peut pas encore produire un fichier vidéo final. C'est la limite
-la plus lourde du studio à ce jour, parce qu'elle empêche de livrer.
-
-Les *assets* qui composaient le montage, eux, restent dans le projet.
+**Il n'y a toujours pas d'export** : on ne peut pas encore produire un fichier vidéo final. C'est
+la limite la plus lourde du studio à ce jour, parce qu'elle empêche de livrer.
 
 ### Les réglages d'une séquence sont figés
 
@@ -243,13 +258,14 @@ nulle part dans le panneau.
 En attendant, on recopie le prompt et la graine à la main dans le panneau **Génération**, ce qui
 revient au même en trois gestes de plus.
 
-### Pas d'enregistrement, pas d'export
+### Pas d'export
 
-Un ciel ne s'écrit pas dans un fichier `.sky` : **fermer l'onglet perd les réglages** —
-l'exposition, la rotation de l'horizon, la position du soleil.
+Un ciel s'enregistre désormais en `.sky` — l'exposition, la rotation de l'horizon et la position
+du soleil se rouvrent telles quelles. Ce que le document ne garde pas : la vue et le champ de
+vision, qui disent comment on le regardait et non ce qu'il est.
 
-Et l'on ne peut pas exporter les six faces d'un cube, ni un *HDRI* utilisable dans un autre
-logiciel.
+En revanche, on ne peut toujours pas exporter les six faces d'un cube, ni un *HDRI* utilisable
+dans un autre logiciel.
 
 ---
 
@@ -372,8 +388,8 @@ ne peut pas divulguer votre compte.
 
 Si vous ne deviez retenir que cinq choses de ce chapitre :
 
-1. **Les séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le travail ;
-   l'image et la scène 3D, elles, se rouvrent telles quelles ;
+1. **Les six documents s'enregistrent maintenant**, et fermer un onglet demande avant de perdre
+   quoi que ce soit ; ce qui ne revient pas, c'est l'historique d'annulation ;
 2. **un recadrage ne se défait qu'à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;

@@ -50,10 +50,7 @@ import {
   cornersOfRect,
   hitTest,
   HANDLE_GRAB,
-  HANDLE_IDS,
-  gripRects,
   layerCornersOf,
-  outlinePoints,
   resizeBy,
   rotateBy,
   ROTATE_REACH,
@@ -62,14 +59,7 @@ import {
   type HandleId,
 } from './handles'
 import { resizeCursor, rotateCursor, UPRIGHT, type Facing } from './cursors'
-import {
-  ants,
-  CanvasOverlay,
-  RULER_SIZE,
-  type OverlayColors,
-  type OverlayContext,
-  type OverlayScene,
-} from './CanvasOverlay'
+import { CanvasOverlay, RULER_SIZE, type OverlayColors, type OverlayScene } from './CanvasOverlay'
 import {
   boxEdges,
   guideNear,
@@ -81,12 +71,11 @@ import {
   type Axis,
 } from './guides'
 import { PixelPatches, type PatchSide } from './PixelPatches'
-import { cropChrome, cropRect, resizeCrop } from './crop'
+import { cropRect, resizeCrop } from './crop'
 import {
   paintShape,
   shapeBounds,
   shapeGeometry,
-  shapeOutline,
   type Point,
   type ShapeGeometry,
   type ShapeKind,
@@ -98,7 +87,6 @@ import {
   fitTo,
   sameViewport,
   toDocument,
-  toScreen,
   zoomAt,
   type CanvasView,
   type Size,
@@ -1348,142 +1336,28 @@ export class CanvasEngine {
       pointer: this.pointer,
       colors: this.colors,
       marching: this.marching(),
-      // Unconditional: every painter below already returns on nothing to draw, and a gate
-      // repeating those guards is one a new decoration gets forgotten from — silently, since
-      // nothing would fail, it would simply never appear.
-      paint: this.paintOverlay,
+      // Handed over whole rather than gated here: every painter already returns on nothing to
+      // draw, and a gate repeating those guards is one a new decoration gets forgotten from —
+      // silently, since nothing would fail, it would simply never appear.
+      tools: {
+        crop: this.cropping,
+        handles: this.activeCorners(),
+        lit: this.hover?.kind === 'handle' ? this.hover.id : null,
+        pending: this.pending,
+        selection: this.selection,
+      },
     }
   }
 
   /**
-   * The marquee, in screen space: a selection is chrome, and chrome never scales. One polyline
-   * for the three shapes — the ellipse arrives already flattened, so the overlay's context needs
-   * to know nothing beyond `moveTo` and `lineTo`.
-   */
-  /** The marquee and the shape being dragged, both chrome and both in screen space. */
-  private readonly paintOverlay = (context: OverlayContext, phase: number): void => {
-    this.paintSelection(context, phase)
-    this.paintPending(context, phase)
-    this.paintCrop(context, phase)
-    this.paintHandles(context)
-  }
-
-  /**
-   * Whether anything on screen is dashed, which is what keeps the frame loop alive. Kept beside
-   * the three that draw ants: a fourth that forgot to say so would simply stand still.
+   * Whether anything on screen is dashed, which is what keeps the overlay's frame loop alive.
+   * Kept beside what draws the ants: a fourth dashed surface that forgot to say so would simply
+   * stand still.
    */
   private marching(): boolean {
     return (
       selectionOutline(this.selection).length > 0 || this.pending !== null || this.cropping !== null
     )
-  }
-
-  /**
-   * Nothing here outlives the gesture: the frame applies on release, so one still on screen
-   * afterwards would promise an adjustment step that does not exist.
-   */
-  private readonly paintCrop = (context: OverlayContext, phase: number): void => {
-    const rect = this.cropping
-    if (!rect) return
-
-    const { scrim, frame, grips } = cropChrome(rect, this.view.viewport, this.documentSize())
-
-    context.fillStyle = this.colors.scrim
-    for (const band of scrim) context.fillRect(band.x, band.y, band.width, band.height)
-
-    // The same ants as a selection: what a frame promises to keep and what a marquee encloses are
-    // the same kind of statement, and the eye should not have to learn two ways of reading it.
-    ants(
-      context,
-      () => {
-        context.beginPath()
-        context.moveTo(frame.x, frame.y)
-        context.lineTo(frame.x + frame.width, frame.y)
-        context.lineTo(frame.x + frame.width, frame.y + frame.height)
-        context.lineTo(frame.x, frame.y + frame.height)
-        context.lineTo(frame.x, frame.y)
-      },
-      phase,
-      this.colors,
-    )
-
-    context.fillStyle = this.colors.accent
-    for (const grip of grips) context.fillRect(grip.x, grip.y, grip.width, grip.height)
-  }
-
-  /**
-   * The armed layer's outline and its eight grips, drawn only while the move tool holds them —
-   * Pixi ships no transformer, so these are ours.
-   *
-   * The outline comes first and matters as much as the grips: eight squares with nothing between
-   * them said where the corners were without ever saying what was selected.
-   */
-  private readonly paintHandles = (context: OverlayContext): void => {
-    const corners = this.activeCorners()
-    if (!corners) return
-
-    context.strokeStyle = this.colors.accent
-    context.fillStyle = this.colors.accent
-    this.strokePath(context, outlinePoints(corners))
-
-    const grips = gripRects(corners, this.view.viewport)
-    const lit = this.hover?.kind === 'handle' ? this.hover.id : null
-
-    for (const id of HANDLE_IDS) {
-      const grip = grips[id]
-      // The one under the pointer grows by a pixel on each side: it is the only feedback saying
-      // the grip is actually within reach before the button goes down.
-      const grow = id === lit ? 1 : 0
-      context.fillRect(grip.x - grow, grip.y - grow, grip.width + grow * 2, grip.height + grow * 2)
-    }
-  }
-
-  /** The shape under the hand, outlined until it is committed to the layer. */
-  private readonly paintPending = (context: OverlayContext, phase: number): void => {
-    const shape = this.pending
-    if (!shape) return
-
-    const outline = shapeOutline(shape)
-    ants(context, () => this.tracePath(context, outline), phase, this.colors)
-  }
-
-  private readonly paintSelection = (context: OverlayContext, phase: number): void => {
-    const outline = selectionOutline(this.selection)
-    if (outline.length === 0) return
-
-    ants(context, () => this.tracePath(context, outline), phase, this.colors)
-  }
-
-  /**
-   * A closed polyline, in screen space: a selection is chrome, and chrome never scales.
-   *
-   * Laid down without being stroked, because the marching ants stroke the same path twice — the
-   * light pass and the dark dashed one over it.
-   */
-  private tracePath(context: OverlayContext, outline: readonly Point[]): void {
-    const first = outline[0]
-    if (!first) return
-
-    const at = (point: Point): Point => {
-      const screen = toScreen(this.view.viewport, point)
-      return { x: Math.round(screen.x) + 0.5, y: Math.round(screen.y) + 0.5 }
-    }
-
-    context.beginPath()
-    const start = at(first)
-    context.moveTo(start.x, start.y)
-    for (const point of outline.slice(1)) {
-      const screen = at(point)
-      context.lineTo(screen.x, screen.y)
-    }
-    // Closed by hand rather than with `closePath`: a lasso is left open by the hand that drew it,
-    // and the region it stands for is the closed one.
-    context.lineTo(start.x, start.y)
-  }
-
-  private strokePath(context: OverlayContext, outline: readonly Point[]): void {
-    this.tracePath(context, outline)
-    context.stroke()
   }
 
   private render(): void {

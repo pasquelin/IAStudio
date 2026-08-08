@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { documentsIn, panelIds, useDocuments } from './documents'
-import { Orientation } from 'dockview-react'
-import { useLayouts, type SerializedLayout } from './layouts'
+import { showPanels } from './layout-fixtures'
+import { useLayouts } from './layouts'
 
 const POSTER: DocumentDescriptor = {
   id: 'from-disk',
@@ -12,19 +12,7 @@ const POSTER: DocumentDescriptor = {
   workspace: 'image',
 }
 
-/** A layout holding one panel per id, in the shape Dockview persists. Only `panels` is read. */
-function showing(...ids: readonly string[]): void {
-  const layout: SerializedLayout = {
-    grid: {
-      root: { type: 'branch', data: [] },
-      width: 0,
-      height: 0,
-      orientation: Orientation.HORIZONTAL,
-    },
-    panels: Object.fromEntries(ids.map(id => [id, { id }])),
-  }
-  useLayouts.setState({ layouts: { image: layout } })
-}
+const showing = (...ids: readonly string[]): void => showPanels('image', ...ids)
 
 describe('documents store', () => {
   beforeEach(() => {
@@ -190,5 +178,108 @@ describe('panelIds', () => {
 
   it('survives a layout that has no panels recorded at all', () => {
     expect(panelIds({ image: undefined })).toEqual(new Set())
+  })
+})
+
+/**
+ * `relist` reads the folder and settles nothing else. That separation is the whole point: a
+ * panel that wants a listing must not decide which tabs are open, because `create` posts a
+ * descriptor without writing a file and a reconciliation would evict it mid-session.
+ */
+describe('relist', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useDocuments.setState({ documents: {}, stored: [], activeId: null })
+    useLayouts.setState({ layouts: {}, projectPath: null })
+  })
+
+  it('reads what the folder holds, open or not', async () => {
+    installFakeBridge({ documents: { list: () => Promise.resolve([POSTER]) } })
+
+    await useDocuments.getState().relist()
+    expect(useDocuments.getState().stored).toEqual([POSTER])
+  })
+
+  it('leaves the open documents exactly as they were', async () => {
+    const unwritten: DocumentDescriptor = {
+      id: 'unwritten',
+      kind: 'scene',
+      title: 'Untitled 1',
+      workspace: '3d',
+    }
+    useDocuments.setState({ documents: { unwritten } })
+    installFakeBridge({ documents: { list: () => Promise.resolve([POSTER]) } })
+
+    await useDocuments.getState().relist()
+    expect(useDocuments.getState().documents).toEqual({ unwritten })
+  })
+
+  // A list that reshuffles between two reads is a list nobody can point at.
+  it('sorts by title', async () => {
+    const zulu: DocumentDescriptor = { id: 'z', kind: 'scene', title: 'Zulu', workspace: '3d' }
+    const alpha: DocumentDescriptor = { id: 'a', kind: 'scene', title: 'Alpha', workspace: '3d' }
+    installFakeBridge({ documents: { list: () => Promise.resolve([zulu, alpha]) } })
+
+    await useDocuments.getState().relist()
+    expect(useDocuments.getState().stored.map(document => document.title)).toEqual([
+      'Alpha',
+      'Zulu',
+    ])
+  })
+
+  /**
+   * The two questions have their own counter. Sharing one looked harmless and was not: the
+   * Explorer relists from a mount effect while `followProject` is still awaiting its own read,
+   * and the relist made the refresh abandon — leaving every restored tab without its descriptor.
+   */
+  it('does not make a refresh in flight abandon', async () => {
+    // The refresh's own read is the slow one; the relist that overtakes it answers at once.
+    let answerRefresh = (documents: DocumentDescriptor[]): void => void documents
+    let reads = 0
+    installFakeBridge({
+      documents: {
+        list: () => {
+          reads += 1
+          if (reads > 1) return Promise.resolve([POSTER])
+          return new Promise<DocumentDescriptor[]>(resolve => (answerRefresh = resolve))
+        },
+      },
+    })
+    showing(POSTER.id)
+
+    const refreshing = useDocuments.getState().refresh()
+    await useDocuments.getState().relist()
+    answerRefresh([POSTER])
+    await refreshing
+
+    expect(Object.keys(useDocuments.getState().documents)).toEqual([POSTER.id])
+  })
+
+  it('answers an empty list when no project is open', async () => {
+    installFakeBridge({ documents: { list: () => Promise.reject(new Error('no project')) } })
+
+    await useDocuments.getState().relist()
+    expect(useDocuments.getState().stored).toEqual([])
+  })
+})
+
+describe('adopt', () => {
+  beforeEach(() => {
+    useDocuments.setState({ documents: {}, stored: [], activeId: null })
+  })
+
+  it('takes in a document no tab was showing', () => {
+    useDocuments.getState().adopt(POSTER)
+    expect(useDocuments.getState().documents[POSTER.id]).toBe(POSTER)
+  })
+
+  // The open descriptor is the one the tab has been renaming; the listing it came from is a
+  // snapshot, and overwriting would hand back the name the file had when it was last read.
+  it('never overwrites the descriptor a tab is already holding', () => {
+    const renamed: DocumentDescriptor = { ...POSTER, title: 'Renamed' }
+    useDocuments.setState({ documents: { [POSTER.id]: renamed } })
+
+    useDocuments.getState().adopt(POSTER)
+    expect(useDocuments.getState().documents[POSTER.id]).toBe(renamed)
   })
 })

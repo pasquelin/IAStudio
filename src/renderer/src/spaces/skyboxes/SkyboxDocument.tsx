@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
 import type { SphericalAngles } from '@shared/domain/angles'
 import {
-  createSkyboxContent,
   DEFAULT_FIELD_OF_VIEW,
   MAX_FIELD_OF_VIEW,
   MIN_FIELD_OF_VIEW,
@@ -20,6 +19,7 @@ import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { chipSkin } from '@/design/styles'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { useDocuments } from '@/stores/documents'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import type { CommandId } from '@shared/domain/command'
 
@@ -50,9 +50,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   // A skybox is judged by what it lights, not by its own picture — so the probes start on.
   const [probes, setProbes] = useState(true)
 
-  useEffect(() => {
-    useSkyboxes.getState().ensure(documentId, createSkyboxContent)
-  }, [documentId])
+  useRestoredDocument(documentId)
 
   useEffect(() => {
     const element = host.current

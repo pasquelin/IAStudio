@@ -1,4 +1,8 @@
-import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
+import {
+  NEUTRAL_ADJUSTMENTS,
+  readAdjustments,
+  type AdjustmentStack,
+} from '@shared/domain/adjustments'
 import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
 import type { Point } from './shape-geometry'
@@ -426,7 +430,7 @@ function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
       ...base,
       kind: 'adjustment',
       adjustment: reviveAdjustment(source.adjustment),
-      values: reviveAdjustmentValues(source.values),
+      values: readAdjustments(source.values),
     }
   }
 
@@ -481,25 +485,6 @@ function reviveAdjustment(raw: unknown): AdjustmentKind {
     return RETIRED_ADJUSTMENTS[raw] ?? 'exposure'
   }
   return oneOf(ADJUSTMENT_KINDS, raw, 'exposure')
-}
-
-/** A stack read back from a file: every dial narrowed to a number, missing ones left neutral. */
-function reviveAdjustmentValues(raw: unknown): AdjustmentStack {
-  if (!isRecord(raw)) return NEUTRAL_ADJUSTMENTS
-  const source = raw
-
-  const number = (key: keyof AdjustmentStack): number =>
-    typeof source[key] === 'number' ? source[key] : NEUTRAL_ADJUSTMENTS[key]
-
-  return {
-    exposure: number('exposure'),
-    contrast: number('contrast'),
-    saturation: number('saturation'),
-    temperature: number('temperature'),
-    tint: number('tint'),
-    rotationY: number('rotationY'),
-    blur: number('blur'),
-  }
 }
 
 function reviveTransform(raw: unknown): Transform {

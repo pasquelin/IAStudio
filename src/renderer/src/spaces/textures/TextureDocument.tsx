@@ -9,10 +9,10 @@ import { ToolButton } from '@/design/ToolButton'
 import { setPreview } from '@/engines/texture/commands'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
-import { restoreDocument } from '@/app/document-io'
 import { chipSkin } from '@/design/styles'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
 /** i18n key of a shape — never the label itself, as the scene registry does for its primitives. */
 const SHAPE_LABELS: Record<PreviewShape, string> = {
@@ -33,11 +33,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
 
   const texture = useTextures(state => textureOf(state, documentId))
 
-  // Fills the tab from the project when a file is there, from the default otherwise — and it is
-  // what saving reads back, so the two never disagree about what this document holds.
-  useEffect(() => {
-    void restoreDocument(documentId)
-  }, [documentId])
+  useRestoredDocument(documentId)
 
   useEffect(() => {
     const element = host.current

@@ -116,7 +116,7 @@ The **+** button is solid and blue, where all the others are grey glyphs. That i
 
 ### The right rail
 
-The **right column** icons: Skybox, Layers, Assets, Explorer, Lights, Meshes — whichever ones the
+The **right column** icons: Skybox, Layers, Assets, Explorer, Scene, Lights, Meshes — whichever ones the
 workspace declares, in that order — then, below the separator, Inspector.
 
 ### The rail only shows what the workspace can do
@@ -196,7 +196,8 @@ instead.
 | **Skybox** | right | 1st | Skyboxes | the open sky's settings |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
 | **Assets** | right | 1st | Video, Audio | the project's shelf, as a column |
-| **Explorer** | right | 1st | everywhere | the 3D scene tree |
+| **Explorer** | right | 1st | everywhere | the documents of the project, open or not |
+| **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
@@ -258,9 +259,10 @@ would impose one workspace's answer on the other five.
 As soon as you click an icon, that half remembers **your** choice, and does not move again until
 you click another — or reset the layout.
 
-**Why the Explorer is visible everywhere when it only serves 3D.** It is meant to become the
-project tree. Until then, in other workspaces, it shows a message explaining what it is waiting for
-rather than disappearing.
+**Why the Explorer is visible everywhere.** It lists the documents of the project folder, open or
+not, and that is the same question in all six workspaces: double-clicking a row opens the
+document, switching workspace if it belongs to another. It long showed the 3D scene tree — that
+now has its own panel, **Scene**.
 
 ---
 
@@ -285,8 +287,37 @@ The dot disappears on save (`⌘S` / `Ctrl+S`), and comes back on the next chang
 to the exact point where you saved, it disappears too: what you see is then indeed what the file
 holds.
 
-> **Not every document can save yet.** Today, **images**, **3D scenes** and **materials** are
-> written to disk. See [What does not exist yet](18-limits.md).
+> **All six document kinds save** — images, 3D scenes, materials, sequences, edited sounds and
+> skies. What does not survive one save to the next is the undo history. See
+> [What does not exist yet](18-limits.md).
+
+### Closing a tab
+
+The tab's cross closes the document. **If it carries the dot**, the studio first asks what to do
+with what is not written:
+
+- **Save** writes the document and then closes — that is what `⏎` picks;
+- **Don't save** closes and loses the work done since the last `⌘S`;
+- **Cancel** closes nothing — and it is also what `⎋` answers, so that a key struck without
+  reading can never throw work away.
+
+If the write fails, the tab stays open and the reason goes to the activity journal: closing
+anyway would lose exactly what the question had just promised to keep.
+
+### A tab's menu
+
+**Right-clicking** a tab opens three gestures:
+
+| Row | What it does |
+|---|---|
+| **Close tab** | like the cross, question included |
+| **Close other tabs** | closes them one by one; a *Cancel* stops the run |
+| **Delete document…** | **removes the file from the project folder** |
+
+**Deleting cannot be undone**, and it is the only gesture in the studio that erases a file you
+made. The studio asks for confirmation, and this time *Cancel* is the default button. A document
+being deleted is never offered a save on the way out: writing it and erasing it in the same
+breath would make no sense.
 
 ### Each workspace has its own tabs
 

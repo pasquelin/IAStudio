@@ -1,6 +1,7 @@
 import {
   mdiCreationOutline,
   mdiCubeScan,
+  mdiFileTreeOutline,
   mdiFolderOutline,
   mdiImageMultipleOutline,
   mdiLayersOutline,
@@ -38,6 +39,7 @@ const ICONS: Record<ToolId, string> = {
   lights: NODE_KINDS.light.icon,
   timeline: mdiVideoVintage,
   explorer: mdiFolderOutline,
+  scene: mdiFileTreeOutline,
   models: mdiCubeScan,
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,

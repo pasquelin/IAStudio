@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import type { CloseChoice } from '@shared/domain/document'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { LogEntry, StudioBridge } from '@shared/ipc'
 
@@ -45,6 +46,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       cancelJob: () => Promise.resolve(),
       listJobs: () => Promise.resolve([]),
       onProgress: noSubscription,
+      usageReport: () => Promise.reject(new Error('no usage')),
+      usageEvents: () => Promise.reject(new Error('no usage')),
       ...overrides.scenario,
     },
     project: {
@@ -64,6 +67,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       read: () => Promise.resolve(null),
       write: () => Promise.resolve(),
       remove: () => Promise.resolve(),
+      // Cancel and refuse: a test that does not stub these cannot lose a document by omission.
+      confirmClose: () => Promise.resolve<CloseChoice>('cancel'),
+      confirmDelete: () => Promise.resolve(false),
       ...overrides.documents,
     },
     assets: {

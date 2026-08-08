@@ -5,6 +5,7 @@ import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
 import type { PromptAssist } from './prompt-assist'
 import type { AssetUploader } from './uploader'
+import type { UsageReader } from './usage'
 import {
   parseAssetName,
   parseBase64,
@@ -16,6 +17,8 @@ import {
   parsePromptDraft,
   parseReferenceImages,
   parseSuggestPrompts,
+  parseUsageCursors,
+  parseUsagePeriod,
 } from './validation'
 
 export type ScenarioHandlerDeps = {
@@ -23,6 +26,7 @@ export type ScenarioHandlerDeps = {
   jobs: JobManager
   prompts: PromptAssist
   uploads: AssetUploader
+  usage: UsageReader
 }
 
 const reduced = reducedBy('scenario')
@@ -32,7 +36,16 @@ export function registerScenarioHandlers({
   jobs,
   prompts,
   uploads,
+  usage,
 }: ScenarioHandlerDeps): void {
+  handle(CHANNELS.scenarioUsageReport, (_event, period) =>
+    reduced(() => usage.report(parseUsagePeriod(period))),
+  )
+
+  handle(CHANNELS.scenarioUsageEvents, (_event, period, cursors) =>
+    reduced(() => usage.events(parseUsagePeriod(period), parseUsageCursors(cursors))),
+  )
+
   handle(CHANNELS.scenarioSearchModels, (_event, query) =>
     reduced(() => models.search(parseModelQuery(query))),
   )

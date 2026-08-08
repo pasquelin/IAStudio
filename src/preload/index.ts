@@ -59,6 +59,9 @@ const bridge: StudioBridge = {
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
     listJobs: () => ipcRenderer.invoke(CHANNELS.scenarioListJobs),
     onProgress: callback => subscribe<JobProgress>(EVENTS.jobProgress, callback),
+    usageReport: period => ipcRenderer.invoke(CHANNELS.scenarioUsageReport, period),
+    usageEvents: (period, cursors) =>
+      ipcRenderer.invoke(CHANNELS.scenarioUsageEvents, period, cursors),
   },
   project: {
     create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),
@@ -75,6 +78,8 @@ const bridge: StudioBridge = {
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
     write: (id, kind, file) => ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file),
     remove: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRemove, id, kind),
+    confirmClose: title => ipcRenderer.invoke(CHANNELS.documentConfirmClose, title),
+    confirmDelete: title => ipcRenderer.invoke(CHANNELS.documentConfirmDelete, title),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),

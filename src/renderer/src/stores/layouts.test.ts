@@ -1,20 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Orientation } from 'dockview-react'
+import { layoutShowing } from './layout-fixtures'
 import { useLayouts, type SerializedLayout } from './layouts'
 
-function layout(marker: string): SerializedLayout {
-  // Minimal shape: the store never reads a layout back, it only stores and returns it.
-  const value: SerializedLayout = {
-    grid: {
-      root: { type: 'branch', data: [] },
-      width: 0,
-      height: 0,
-      orientation: Orientation.HORIZONTAL,
-    },
-    panels: { [marker]: { id: marker, contentComponent: marker } },
-  }
-  return value
-}
+// The store never reads a layout back, it only stores and returns it — the marker is what
+// tells two of them apart.
+const layout = (marker: string): SerializedLayout => layoutShowing(marker)
 
 describe('layouts store', () => {
   beforeEach(() => {

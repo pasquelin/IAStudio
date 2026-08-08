@@ -6,6 +6,7 @@ import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
+import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
 import type { DocumentFiles } from './documents'
 import type { ProjectStore } from './store'
 import {
@@ -14,6 +15,7 @@ import {
   parseDocumentDraft,
   parseDocumentId,
   parseDocumentKind,
+  parseDocumentTitle,
   parseProjectName,
   parseProjectPath,
   parseSaveAudio,
@@ -30,6 +32,8 @@ export type ProjectHandlerDeps = {
   documents: DocumentFiles
   /** `shell.showItemInFolder`, injected rather than imported: it needs a live app. */
   reveal: (file: string) => void
+  /** `dialog.showMessageBox`, injected for the same reason — see `document-dialogs`. */
+  askUser: AskUser
 }
 
 export function registerProjectHandlers({
@@ -38,6 +42,7 @@ export function registerProjectHandlers({
   newAssetId,
   documents,
   reveal,
+  askUser,
 }: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, (_event, path, name) =>
     project.create(parseProjectPath(path), parseProjectName(name)),
@@ -118,5 +123,13 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.documentRemove, (_event, id, kind) =>
     documents.remove(parseDocumentId(id), parseDocumentKind(kind)),
+  )
+
+  handle(CHANNELS.documentConfirmClose, (_event, title) =>
+    askCloseChoice(askUser, parseDocumentTitle(title)),
+  )
+
+  handle(CHANNELS.documentConfirmDelete, (_event, title) =>
+    askDeleteDocument(askUser, parseDocumentTitle(title)),
   )
 }

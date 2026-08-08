@@ -14,9 +14,9 @@ import {
   rootedIn,
 } from '@/engines/scene/commands'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
-import { restoreDocument } from '@/app/document-io'
 import { setDocumentTitle } from '@/app/dockview-api'
 import { useAddNode } from '@/hooks/useAddNode'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { getBridge } from '@/services/bridge'
@@ -84,9 +84,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   // Before the renderer mounts: a saved document comes back from the project, a new one from
   // the default scene — an unlit viewport reads as broken rather than as empty.
-  useEffect(() => {
-    void restoreDocument(documentId)
-  }, [documentId])
+  useRestoredDocument(documentId)
 
   useEffect(() => {
     if (title) setDocumentTitle(documentId, title, modified)

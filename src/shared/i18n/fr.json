@@ -21,7 +21,8 @@
     "generator": "Génération",
     "inspector": "Inspecteur",
     "assets": "Assets",
-    "skybox": "Skybox"
+    "skybox": "Skybox",
+    "scene": "Scène"
   },
   "actions": {
     "undo": "Annuler",
@@ -103,7 +104,10 @@
       "image.export": "L’export de l’image a échoué",
       "document.save": "L’enregistrement du document a échoué",
       "assets.reveal": "Le fichier n’a pas pu être montré",
-      "font.face": "Une police n’a pas pu être chargée"
+      "font.face": "Une police n’a pas pu être chargée",
+      "document.close": "La fermeture du document a échoué",
+      "document.delete": "La suppression du document a échoué",
+      "document.load": "Le document n’a pas pu être ouvert"
     }
   },
   "updates": {
@@ -241,7 +245,18 @@
     "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer.",
     "untitled": "Sans titre {{n}}",
     "new": "Nouveau document",
-    "missing": "Ce document n’est plus ouvert."
+    "missing": "Ce document n’est plus ouvert.",
+    "close": "Fermer l’onglet",
+    "closeOthers": "Fermer les autres onglets",
+    "delete": "Supprimer le document…",
+    "saveTitle": "Enregistrer les modifications de « {{title}} » ?",
+    "saveBody": "Si vous ne les enregistrez pas, elles seront perdues.",
+    "save": "Enregistrer",
+    "dontSave": "Ne pas enregistrer",
+    "cancel": "Annuler",
+    "deleteTitle": "Supprimer « {{title}} » du projet ?",
+    "deleteBody": "Le fichier est retiré du dossier du projet. Cette action est irréversible.",
+    "deleteConfirm": "Supprimer"
   },
   "imageTools": {
     "pointer": "Curseur",
@@ -389,11 +404,13 @@
   },
   "scene": {
     "root": "Scène",
-    "visible": "Afficher ou masquer"
+    "visible": "Afficher ou masquer",
+    "noDocument": "Ouvrez une scène pour voir son contenu."
   },
   "explorer": {
-    "otherWorkspace": "L’explorateur suit une scène 3D. Ouvrez l’espace 3D pour en voir le contenu.",
-    "noDocument": "Ouvrez une scène pour voir son contenu."
+    "noProject": "Aucun projet ouvert. Créez-en un ou ouvrez-en un pour voir ses documents.",
+    "noDocuments": "Ce projet ne contient encore aucun document enregistré.",
+    "open": "Ouvert"
   },
   "objects": {
     "sprite": "Sprite",
@@ -711,8 +728,8 @@
     "help": "Aide",
     "about": "À propos de {{name}}",
     "licences": "Licences",
-    "imageTools": "Outils"
-  },
+    "imageTools": "Outils",
+    "usage": "Consommation…"  },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
   },
@@ -1251,6 +1268,56 @@
     "title": "Licences",
     "intro": "Scenario Studio est livré avec les logiciels ci-dessous. Chacun garde sa propre licence, reproduite ici en entier.",
     "sources": "Sources correspondantes :"
+  },
+  "usage": {
+    "title": "Consommation",
+    "sections": {
+      "overview": "Vue d'ensemble",
+      "models": "Modèles",
+      "activities": "Activités",
+      "journal": "Journal"
+    },
+    "descriptions": {
+      "overview": "Ce que toutes vos clés ont dépensé sur la période.",
+      "models": "Quels modèles ont coûté, et combien de générations chacun a servi.",
+      "activities": "Ce qui a été fait, et ce qui en est sorti.",
+      "journal": "Chaque événement facturé, du plus récent au plus ancien."
+    },
+    "period": {
+      "label": "Période",
+      "short": "{{count}} j"
+    },
+    "refresh": "Actualiser",
+    "loading": "Lecture de la consommation…",
+    "failure": "La consommation n'a pas pu être lue.",
+    "retry": "Réessayer",
+    "empty": "Aucune activité sur cette période.",
+    "noAccount": "Aucune clé API enregistrée. Ajoutez-en une dans les préférences pour voir votre consommation.",
+    "noBalance": "L'API Scenario n'expose pas de solde : ces chiffres sont ce qui a été dépensé, jamais ce qu'il reste.",
+    "mixedAccounts": "Le total additionne des clés facturées séparément — il ne correspond à aucune facture.",
+    "total": "Total consommé",
+    "discount": "Remises",
+    "jobs": "Générations",
+    "units": "UC",
+    "indicative": "Montant indicatif, calculé sur la grille publique des packs prépayés.",
+    "daily": "Par jour",
+    "perAccount": "Par compte",
+    "silent": "Ces clés n'ont pas répondu : {{names}}. Les chiffres ci-dessus sont ceux des autres.",
+    "columns": {
+      "model": "Modèle",
+      "units": "Unités",
+      "jobs": "Générations",
+      "apiKey": "Dont clé API",
+      "action": "Action",
+      "count": "Nombre",
+      "kind": "Type d'asset",
+      "time": "Date",
+      "account": "Compte"
+    },
+    "assets": "Assets produits",
+    "actions": "Actions",
+    "loadMore": "Charger la suite",
+    "free": "gratuit"
   },
   "blend": {
     "normal": "Normal",

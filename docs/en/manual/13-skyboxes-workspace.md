@@ -170,7 +170,6 @@ place. Two ways to carry on:
 - **three views out of four** — Equirect, Cross and 6 faces are buttons that draw nothing yet;
 - **the Regenerate and Reset buttons** — announced in the translations, never placed in the panel;
 - **export** — you cannot yet write the six faces of a cube, nor an HDRI usable elsewhere;
-- **saving** — a sky is not yet written into a `.sky` file. Closing the tab loses the settings;
 - **importing a `.hdr`** — the studio only imports ordinary images. An imported `.exr` is catalogued
   as an image, not as a sky. It still works as a source, but you have to go and find it among the
   images.

@@ -25,46 +25,47 @@ Three categories, not to be confused:
 
 ---
 
-## The limit that matters most: saving
+## Saving: all six types are there
 
-**Three document types out of six do not save yet.**
+**This chapter long opened with "three documents out of six do not save". That is no longer
+true.** All six write into the project folder and open back exactly as they were.
 
 | Document | Extension | Saves? |
 |---|---|---|
 | 3D scene | `.scene` | **yes** |
 | Material | `.tex` | **yes** |
 | Layered image | `.img` | **yes** |
-| Video sequence | `.seq` | no |
-| Edited sound | `.aud` | no |
-| Sky | `.sky` | no |
+| Video sequence | `.seq` | **yes** |
+| Edited sound | `.aud` | **yes** |
+| Sky | `.sky` | **yes** |
 
-**What that means in practice.** You cut a sequence, you edit a sound, you set up a sky. You close
-the tab. **All that work is lost.** The original *assets* are still in the project — it is your work
-on them that disappears. Images and 3D scenes, on the other hand, open back exactly as they were.
+**What does not save, and that is deliberate:**
 
-**What is never lost:**
+- **the undo history** — reopening a document means starting again without `⌘Z`;
+- **how you were looking at it** — zoom, framing, a sky's view, a selection: that is session
+  state, not what the document *is*. A reopened document does not argue with the window that
+  opens it;
+- **in Audio, the A/B monitoring**: a reopened document listens to the chain, never the source.
 
-- the **assets** — everything generated or imported stays in the project, whatever happens;
-- the **3D scenes** and the **materials**, which do write to disk;
-- in Audio, what you commit with **Apply** or **Save as new**: that workspace writes assets directly,
-  without going through a document.
-
-**In the meantime:** do not close the tab while the work matters, and note elsewhere what deserves to
-be redone — the *prompt*, the *seed*, the model.
+**Closing a tab now asks.** If the document holds unsaved work, the studio puts the question —
+Save, Don't save, Cancel — and *Cancel* is what an `⎋` struck without reading answers.
 
 ---
 
 ## Image workspace
 
-### An image document does not open *onto* a file
+### There is no "Open" menu, and none is needed
 
-A picture from the shelf does come **in** — dragged onto the canvas, double-clicked, or chosen
-with the **Image…** tool (`⇧⌘K`): it becomes a layer. See
-[Image workspace](08-image-workspace.md).
+A picture from the shelf comes **in** — dragged onto the canvas, double-clicked, or chosen with
+the **Image…** tool (`⇧⌘K`): it becomes a layer. See [Image workspace](08-image-workspace.md).
 
-What does not exist is the reverse gesture: **reopening later the document you composed**. There
-is no "Open" menu because there is nothing to reopen — the layer stack saves nowhere. `⇧⌘E`
-writes a flattened `.png`; reimported, that PNG comes back as a picture, not as its layers.
+Reopening a document composed earlier goes through the **Explorer** panel, which lists the
+documents of the project: double-clicking a row opens it, switching workspace if it belongs to
+another. That is the door, and there is no file dialog — the studio only opens what is in the
+project.
+
+`⇧⌘E` still writes a flattened `.png`; reimported, that PNG comes back as a picture and not as
+its layers — that is an export, not a save.
 
 ### Tools announced but inactive
 
@@ -76,10 +77,23 @@ They are visible in the toolbar, greyed out.
 | **Cut** (`S`) | Frame |
 | **Pen** | Drawing |
 | **Text on path** | Text |
+| **Comment** (`C`) | alone in its group |
 
-**Comment (`C`) is the only one not greyed out.** It arms like the others, and does nothing:
-clicking in the image places no note. It is the studio's only button that looks alive without
-being so — the others say their state by their grey.
+**They all say their state by their grey**, which is the only thing asked of them until they
+exist. Comment was the last to fall into line: it armed like the others, changed the cursor, and
+left the engine dropping every click — a button that looked alive without being so.
+
+### Tool keys are not listened for
+
+The toolbar shows a key beside each tool — `V` for move, `P` for the brush, `E` for the eraser.
+**None of them is active.** They appear in the menus and tooltips, and nothing in the studio
+resolves them: a tool is picked with the mouse.
+
+The same gap exists in the **Video** workspace, for `V`, `C` and `H`.
+
+So they are not shortcuts but **stated intentions**. The keys actually in service all go through
+the command registry, and those — and only those — are what [Every shortcut](15-shortcuts.md)
+lists: they can be remapped, they appear in the settings screen, and they answer.
 
 ### Cropping does not give its pixels back on undo
 
@@ -358,8 +372,8 @@ cannot leak your account.
 
 If you only remember five things from this chapter:
 
-1. **sequences, sounds and skies do not save** — closing the tab loses the work; images and 3D
-   scenes open back exactly as they were;
+1. **all six documents save now**, and closing a tab asks before losing anything; what does not
+   come back is the undo history;
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;
 3. **there is no video export** — the studio cannot yet deliver a final file;

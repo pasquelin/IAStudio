@@ -33,8 +33,9 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 # 1. L'état
 
 **793 fichiers dans `src/`, dont 310 de test — plus de 3700 cas y sont déclarés. 6 espaces
-éditables. 3 types de documents sur 6 savent s'enregistrer — l'image a rejoint la scène 3D et la
-matière. L'espace Image est complet : ses cinq gestes sont offerts, recadrage compris.**
+éditables. **Les six types de documents s'enregistrent**, et fermer un onglet demande avant de
+perdre quoi que ce soit. L'espace Image est complet : ses cinq gestes sont offerts, recadrage
+compris.**
 
 > Le compte de fichiers est vérifié, celui des cas est **déclaré** : les `it.each` en exécutent
 > plusieurs chacun, donc `pnpm test` en annonce davantage. Ne pas recopier un total sans l'avoir
@@ -215,14 +216,19 @@ Ces quatre points traînaient dans les anciennes notes de reprise. Ils sont rég
 
 # 2. Le plus urgent
 
-**La couche documents.** Trois genres sur six ne savent toujours pas s'enregistrer — `sequence`,
-`audio`, `skybox` — et fermer un onglet ne demande rien, laissant son fichier orphelin. Tout ce qui
-manque est écrit en détail au § 3.1 : le mécanisme est générique et éprouvé, brancher un espace
-c'est écrire son `DocumentIo`, pas toucher au socle.
+**La couche documents n'est plus ici : elle est livrée** (`feat/documents-erreurs`, 8 août 2026).
+Les six genres s'enregistrent, fermer un onglet demande, un document se supprime, et l'Explorateur
+rouvre ce qui a été fermé. Le détail est au § 3.1, avec ce que la revue a laissé ouvert.
 
-C'est ce qui bloque le plus de choses en aval : un montage qu'on ne peut pas rouvrir demain n'est
-pas un montage, et l'espace Audio ne peut pas devenir multipiste tant que son document ne survit
-pas à la fermeture de l'onglet.
+**Ce qui prend la place, à trancher :** le § 3.6 — aucune borne de DÉBIT sur les appels à l'API
+(100 requêtes/minute par projet, trois bornes de concurrence et zéro borne de débit), et un job qui
+ne survit pas à la fermeture de l'application, donc du travail payé et perdu. Les deux sont les
+étapes 2 et 3 du plan `feat/workflows`, en cours dans son propre worktree : **vérifier ce qu'il en
+reste avant de les rouvrir.**
+
+À défaut, le prochain manque fonctionnel par ordre de valeur est l'espace **Textures**, § 3.4 :
+livré jusqu'à l'étape 3, les étapes 4 à 8 (panneau matériau, bande de canaux, dérivations en
+shader, tiling, export) sont écrites et non commencées.
 
 > **La surface d'erreur n'est plus ici, et il ne faut pas l'y remettre.** Elle occupait ce
 > paragraphe depuis longtemps : `handle` ne journalisait pas une promesse rejetée, et le renderer
@@ -262,27 +268,55 @@ propriété à ne pas casser. Trois pièges y ont été payés, inutile de les r
   fait des chemins : `isPartName` n'accepte ni séparateur ni remontée, et le rôle passe DEVANT
   l'identifiant (`p_`, `m_`) pour que le nommage reste injectif.
 
-**1. Trois types de documents ne savent pas s'enregistrer** — `sequence` (vidéo), `audio`,
-`skybox`. Chacun a besoin de sa paire **sérialiser / relire-et-valider** et d'une entrée dans
-`IO_BY_KIND`. Le reste est déjà générique : brancher un espace, c'est écrire son `DocumentIo`, pas
-toucher au mécanisme. Prendre `SCENE_IO` et `TEXTURE_IO` comme modèles ; la validation à la relecture
-n'est pas facultative, un fichier sur disque est une entrée non fiable.
+### Les quatre points de ce paragraphe sont livrés — `feat/documents-erreurs`, 8 août 2026
 
-**2. Fermer un onglet ne demande rien et laisse son fichier orphelin.** `useDocuments.close` existe
-et **personne ne l'appelle**. `documents.remove` est exposé jusque dans `preload/index.ts` et n'a
-**aucun appelant côté renderer**. La puce « modifié » existe mais n'est consultée nulle part à la
-fermeture. À faire ensemble : la confirmation à la fermeture, l'appel à `close`, et le menu
-contextuel d'onglet qui offre de supprimer le document.
+**1. Les six genres s'enregistrent.** `IO_BY_KIND` est un `Record` complet, plus un `Partial`, et
+un test itère `DOCUMENT_KINDS` pour le verrouiller. Les cinq genres qu'une chaîne contient passent
+par **une fabrique unique**, `textDocumentIo` : la comptabilité autour du passage — lire la marque
+avant l'écriture, la rendre après, charger hors historique, ouvrir propre — était écrite deux fois
+et allait l'être cinq. **La traversée JSON appartient à la fabrique**, pas aux appelants : c'est le
+`SyntaxError` d'un fichier qui n'est pas du JSON qui arme le refus d'écraser, et un lecteur qui
+l'avalerait perdrait la protection sans rien pour l'attraper. `serializeSequence` et ses pareils
+n'existent plus.
 
-> Au passage : le commentaire de `stores/documents.ts` dit « Loading is `load` plus
-> `pruneDocuments`, in that order » — **`pruneDocuments` n'existe plus**. Un commentaire qui décrit
-> un comportement disparu est un défaut à part entière.
+**2. Fermer un onglet demande.** La croix de Dockview est masquée — elle retire un panneau et rien
+d'autre — et celle qui la remplace passe par `closeDocument`. La question est posée par l'OS
+(`main/project/document-dialogs.ts`), le renderer ne la formule pas. Le clic droit sur un onglet
+offre fermer / fermer les autres / **supprimer le document**, qui est le seul geste du studio qui
+efface un fichier de l'utilisateur.
 
-**3. Rien ne rouvre un document que le layout ne montre pas.** Le listage existe
-(`documents.list()`), c'est l'écran qui manque : un explorateur des documents du projet. Sans lui, un
-document fermé sans être dans un layout persisté est inatteignable autrement que par le disque.
+**L'ordre est le contrat** : la question précède l'écriture, l'écriture précède l'oubli, et
+`saveDocument` répond désormais *si* l'écriture a eu lieu — un refus (fichier illisible) laisse
+l'onglet ouvert au lieu de fermer sur du travail qui n'a jamais atteint le disque.
 
-**4. Rien ne rapporte une erreur à l'utilisateur** — cf. § 2.
+**3. L'Explorateur liste les documents du projet**, ouverts ou non, dans les six espaces ; un
+double-clic ouvre en changeant d'espace si besoin. L'arbre de scène a pris son propre panneau,
+`scene`. Deux pièges payés : Dockview est remonté par espace, donc un panneau ajouté à l'API
+sortante est jeté par le `fromJSON` du suivant — la file d'attente se vide **après** la
+restauration ; et `relist` (lister) est séparé de `refresh` (réconcilier), avec **un compteur de
+génération chacun**, sans quoi un listage déclenché par le panneau faisait abandonner la
+réconciliation du projet et tous les onglets restaient sans descripteur.
+
+**4. Les erreurs se voient.** La chaîne `reportFailure` → journal → toast existait ; ce qui
+manquait était que la déduplication rendait muet le second échec du **même geste**. Elle ne vaut
+plus que pour ce que personne n'a demandé (`GESTURE_SCOPES` dans `services/diagnostics.ts` — pas
+dans `shared/ipc.ts`, rien n'en traverse la frontière). Un chargement de document raté était
+totalement silencieux dans les six espaces : il est rapporté depuis `restoreDocument`, seul endroit
+qui sache qu'une lecture a échoué.
+
+**Ce qui reste ouvert sur ce chantier**, relevé en revue et non traité :
+
+- **l'Explorateur détourne `selectedIds` de `Collection`** pour dire « ouvert ». `Collection`
+  place l'ancre et le tab stop sur la dernière ligne sélectionnée : ses lignes sont les seules du
+  studio sans accès clavier. Le mécanisme qui manque est « activer une ligne » (double-clic,
+  Entrée) dans `Collection` — `DraggableAsset` a déjà le même `onDoubleClick` fait main ;
+- **le double-clic sur un asset ne traverse pas les espaces**, là où l'Explorateur le fait
+  (`helpers/asset-intents.ts` exige un onglet déjà ouvert et refuse en silence sinon). Deux
+  réponses différentes à la même question, à trancher ;
+- **`src/renderer/src/app/**` et `panels/**` ne sont sous aucun budget de couverture** : c'est ce
+  qui a laissé cinq fichiers neufs y atterrir sans qu'aucun seuil ne bouge ;
+- **`src/main/project/**` est à marge NULLE** (115/115 statements) et `document-io.ts` à une
+  branche près.
 
 ### Deux comportements à connaître avant d'y toucher
 
@@ -292,10 +326,14 @@ Le premier est délibéré, le second est un bug.
 prochaine ouverture — le `Set` `unreadable` dans `app/document-io.ts`, dont la JSDoc porte le
 pourquoi. C'est voulu : l'éditeur vide qu'une lecture ratée laisse est indistinguable d'un document
 neuf, et sans ce refus le premier ⌘S écrirait `{ nodes: [] }` par-dessus la scène illisible. Le
-fichier est la seule copie. **Ne pas lever ce refus** — le vrai remède est la surface d'erreur.
+fichier est la seule copie. **Ne pas lever ce refus** — et depuis `feat/documents-erreurs`, la
+raison part au journal et répondre « Enregistrer » à la fermeture ne ferme plus l'onglet.
 
-**La marque « modifié » peut mentir** après plus de 100 modifications suivies d'une annulation
-complète. `markOf` vaut `past.at(-1) ?? null`, et `HISTORY_LIMIT` plafonne la pile à 100 : au-delà,
+**La marque « modifié » mentait** après plus de 100 modifications suivies d'une annulation
+complète — **corrigé**, `History` retient la dernière commande qu'il a laissée tomber (`dropped`),
+et `markOf` vaut « la dernière de la pile, ou celle-là quand il n'en reste aucune ». Le récit
+ci-dessous est gardé parce qu'il explique le champ. `markOf` valait `past.at(-1) ?? null`, et
+`HISTORY_LIMIT` plafonne la pile à 100 : au-delà,
 les plus anciennes commandes tombent, une annulation intégrale ramène `past` à vide, donc à `null` —
 la valeur que porte aussi un document enregistré alors que son historique était vide. Le document se
 dit propre alors qu'il ne l'est pas. Le remède est un **jeton monotone par commande** dans

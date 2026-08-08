@@ -7,6 +7,7 @@ import { createDocumentStore } from './document-store'
  */
 const store = createDocumentStore<AudioEditState>(EMPTY_AUDIO_EDIT)
 
+export const audioEditStore = store
 export const useAudioEdits = store.use
 export const audioEditsOf = store.stateOf
 export const audioHistoryOf = store.historyOf

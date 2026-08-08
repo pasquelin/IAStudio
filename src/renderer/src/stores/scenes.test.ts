@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { canRedo, canUndo } from '@/engines/core/history'
+import { canRedo, canUndo, HISTORY_LIMIT } from '@/engines/core/history'
 import { addNode, setTransform } from '@/engines/scene/commands'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
 import { clearScenes } from './scene-fixtures'
-import { historyOf, isDirty, markOf, sceneOf, useScenes } from './scenes'
+import { historyOf, isDirty, sceneOf, sceneStore, useScenes } from './scenes'
 
 const box = meshNode('box-1')
 
@@ -64,12 +64,12 @@ describe('isDirty', () => {
 
   it('calls a document clean the moment it is written', () => {
     useScenes.getState().runCommand('doc-1', addNode(box))
-    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
     expect(dirty('doc-1')).toBe(false)
   })
 
   it('calls it modified again on the next command', () => {
-    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
     useScenes.getState().runCommand('doc-1', addNode(box))
     expect(dirty('doc-1')).toBe(true)
   })
@@ -77,7 +77,7 @@ describe('isDirty', () => {
   // A counter of edits would keep calling this modified; what is on screen is what is on disk.
   it('calls it clean again when an undo lands back on the saved state', () => {
     useScenes.getState().runCommand('doc-1', addNode(box))
-    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
     useScenes.getState().runCommand('doc-1', addNode(meshNode('box-2')))
 
     useScenes.getState().undo('doc-1')
@@ -85,7 +85,7 @@ describe('isDirty', () => {
   })
 
   it('calls it modified again once that undo is redone', () => {
-    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
     useScenes.getState().runCommand('doc-1', addNode(box))
     useScenes.getState().undo('doc-1')
     useScenes.getState().redo('doc-1')
@@ -94,13 +94,29 @@ describe('isDirty', () => {
   })
 
   it('reads each document on its own', () => {
-    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
     expect(dirty('doc-1')).toBe(false)
     expect(dirty('doc-2')).toBe(true)
   })
 
+  // What `history.ts` calls `dropped`, seen from the store: the bullet used to vanish from the
+  // tab while the commands the stack dropped were still applied.
+  it('stays modified after an undo that only reached the end of a truncated stack', () => {
+    useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
+    expect(dirty('doc-1')).toBe(false)
+
+    for (let index = 0; index < HISTORY_LIMIT + 1; index += 1) {
+      useScenes.getState().runCommand('doc-1', addNode(meshNode(`box-${index}`)))
+    }
+    while (canUndo(historyOf(useScenes.getState(), 'doc-1'))) useScenes.getState().undo('doc-1')
+
+    expect(historyOf(useScenes.getState(), 'doc-1').past).toHaveLength(0)
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).not.toHaveLength(0)
+    expect(dirty('doc-1')).toBe(true)
+  })
+
   it('forgets the mark when the document closes', () => {
-    useScenes.getState().markSaved('doc-1', markOf(useScenes.getState(), 'doc-1'))
+    useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
     useScenes.getState().drop('doc-1')
     expect(dirty('doc-1')).toBe(true)
   })

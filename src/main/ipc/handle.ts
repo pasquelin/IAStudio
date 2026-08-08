@@ -31,6 +31,8 @@ type ChannelMethod = {
   [CHANNELS.scenarioUploadAsset]: StudioBridge['scenario']['uploadAsset']
   [CHANNELS.scenarioCancelJob]: StudioBridge['scenario']['cancelJob']
   [CHANNELS.scenarioListJobs]: StudioBridge['scenario']['listJobs']
+  [CHANNELS.scenarioUsageReport]: StudioBridge['scenario']['usageReport']
+  [CHANNELS.scenarioUsageEvents]: StudioBridge['scenario']['usageEvents']
 
   [CHANNELS.projectCreate]: StudioBridge['project']['create']
   [CHANNELS.projectOpen]: StudioBridge['project']['open']
@@ -42,6 +44,8 @@ type ChannelMethod = {
   [CHANNELS.documentRead]: StudioBridge['documents']['read']
   [CHANNELS.documentWrite]: StudioBridge['documents']['write']
   [CHANNELS.documentRemove]: StudioBridge['documents']['remove']
+  [CHANNELS.documentConfirmClose]: StudioBridge['documents']['confirmClose']
+  [CHANNELS.documentConfirmDelete]: StudioBridge['documents']['confirmDelete']
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']

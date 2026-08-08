@@ -279,12 +279,12 @@ Inspector — acts on the **whole** selection, not only on the last object click
 **`⌘G`**, or the toolbar's **Group** button.
 
 A group files several objects under one parent. **Moving the group moves them all**, and it folds
-away with one click in the Explorer — a scene of thirty objects becomes readable again.
+away with one click in the Scene panel — a scene of thirty objects becomes readable again.
 
 Two ways to undo or redo a filing:
 
 - **`⌘Z`** takes the grouping back, like any other action;
-- **dragging one line onto another**, in the Explorer, files it underneath. To take an object
+- **dragging one line onto another**, in the Scene panel, files it underneath. To take an object
   **out** of its group, release it on the **first line**, the one carrying the scene's name: that
   is the root.
 
@@ -321,9 +321,11 @@ Three things worth knowing:
 
 ---
 
-## The Explorer — the scene tree
+## The Scene panel — the scene tree
 
-The **Explorer** panel, in the right column, shows everything the scene contains, as a tree.
+The **Scene** panel, in the right column, shows everything the scene contains, as a tree. It used
+to be the Explorer; that one now lists the documents of the project, which is a different
+question and holds in all six workspaces.
 
 - **Click** a line to select the object — with `⇧`, `⌘` or `Ctrl` to pick several, exactly as in
   the view.

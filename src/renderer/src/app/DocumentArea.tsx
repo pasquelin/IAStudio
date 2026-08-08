@@ -2,6 +2,7 @@ import { DockviewReact, type DockviewReadyEvent } from 'dockview-react'
 import { useCallback } from 'react'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { DocumentTab } from './DocumentTab'
 import { DOCUMENT_COMPONENTS } from './documents'
 import { setDockviewApi } from './dockview-api'
 
@@ -22,8 +23,6 @@ export function DocumentArea() {
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
-      setDockviewApi(event.api)
-
       const stored = useLayouts.getState().layouts[workspace]
       if (stored) {
         try {
@@ -36,6 +35,11 @@ export function DocumentArea() {
           useLayouts.getState().forget(workspace)
         }
       }
+
+      // AFTER the stored layout is restored, never before: handing the api over drains the
+      // documents waiting for this workspace, and `fromJSON` clears the panels it did not name —
+      // a document opened from another workspace would be added and then thrown away.
+      setDockviewApi(workspace, event.api)
 
       event.api.onDidLayoutChange(() => {
         useLayouts.getState().remember(workspace, event.api.toJSON())
@@ -55,6 +59,9 @@ export function DocumentArea() {
     <DockviewReact
       key={`${projectPath ?? ''}:${workspace}`}
       components={DOCUMENT_COMPONENTS}
+      // Every tab, not a per-panel choice: closing a document has to ask about unsaved work
+      // whichever space opened it.
+      defaultTabComponent={DocumentTab}
       onReady={onReady}
     />
   )

@@ -70,6 +70,10 @@ Either way, the studio settles two things:
 | **Blade** | `C` | cuts a clip where you click |
 | **Hand** | `H` | scrolls the timeline — wheel to zoom |
 
+> **These three keys are not active yet**: they appear in the tooltips, but nothing listens for
+> them. A tool is picked with the mouse. The keys in service in the edit — `Space`, `S`,
+> `Delete`, the zooms — are in [Every shortcut](15-shortcuts.md).
+
 ### With the Select tool
 
 | Gesture | Effect |
@@ -198,8 +202,8 @@ laptop: the fan goes quiet, the battery lasts.
 
 ## What is still missing
 
-> **A sequence does not save to disk yet.** Closing its tab loses the edit. The assets themselves
-> stay in the project.
+> **A sequence saves** as `.seq` with `⌘S`, and opens back as it was: tracks, clips, fades and
+> gains. What does not come back is the undo history.
 >
 > There is no **export** either: you cannot yet write a final video file. See
 > [What does not exist yet](18-limits.md).
