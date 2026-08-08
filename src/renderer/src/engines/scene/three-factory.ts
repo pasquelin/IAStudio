@@ -151,14 +151,15 @@ const AXIS_KNOB_SCALE = 0.6
 
 /**
  * `ViewHelper` offers no size option, so its knobs — sprites, unlike the mesh axes — are shrunk
- * in place, and the three unlit ones marking negative axes are hidden: the coloured ones already
- * identify them. Hidden rather than removed, so `dispose()` still frees the material they share.
+ * in place.
+ *
+ * All six are shown, the three unlit ones included. They were hidden while the trihedron was
+ * only a readout: the coloured knobs already name the axes, and the unlit ones added nothing.
+ * They are buttons now, and the helper raycasts them whether or not they are drawn — hiding half
+ * of a control while keeping it clickable is how a click lands on nothing anyone can see.
  */
 export function tuneViewHelper(helper: ViewHelper): void {
   for (const child of helper.children) {
-    if (!(child instanceof Sprite)) continue
-    const axis = child.userData.type
-    if (typeof axis === 'string' && axis.startsWith('neg')) child.visible = false
-    else child.scale.setScalar(AXIS_KNOB_SCALE)
+    if (child instanceof Sprite) child.scale.setScalar(AXIS_KNOB_SCALE)
   }
 }

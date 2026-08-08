@@ -3,10 +3,11 @@ import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
 import { lightByKind } from './light-types'
 import { primitiveByKind } from './mesh-primitives'
-import { GROUP_ICON, MODEL_ICON, SPRITE_ICON } from './node-kinds'
+import { GROUP_ICON, MODEL_ICON, SPRITE_ICON, TEXT_ICON } from './node-kinds'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
+  DEFAULT_TEXT,
   IDENTITY_TRANSFORM,
   shadowDefaults,
   type SceneNode,
@@ -70,6 +71,24 @@ export function spriteNode(): SceneNode {
   }
 }
 
+/**
+ * Words as a solid. Born with something written in it rather than empty: a text node that draws
+ * nothing until someone finds the field is a node the Add menu appears to have failed at.
+ */
+export function textNode(): SceneNode {
+  return {
+    id: newId(),
+    parentId: null,
+    name: 'Text',
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'text' }),
+    type: 'text',
+    text: DEFAULT_TEXT,
+    material: DEFAULT_MATERIAL,
+  }
+}
+
 /** An empty node others hang from. Its transform moves everything under it, and nothing else. */
 export function groupNode(transform = IDENTITY_TRANSFORM): SceneNode {
   return {
@@ -90,6 +109,7 @@ export function iconOf(node: SceneNode): string {
   if (node.type === 'model') return MODEL_ICON
   if (node.type === 'group') return GROUP_ICON
   if (node.type === 'sprite') return SPRITE_ICON
+  if (node.type === 'text') return TEXT_ICON
 
   const kind = node.type === 'light' ? node.light.kind : node.geometry.kind
   return (primitiveByKind(kind) ?? lightByKind(kind))?.icon ?? mdiCubeOutline
@@ -120,6 +140,7 @@ export function createNodeOf(kind: string): SceneNode | null {
   }
 
   if (kind === 'sprite') return spriteNode()
+  if (kind === 'text') return textNode()
 
   const light = lightByKind(kind)
   return light ? lightNode(light.create(), IDENTITY_TRANSFORM.position) : null

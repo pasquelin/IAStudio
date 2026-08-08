@@ -55,6 +55,9 @@ type ChannelMethod = {
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
 
+  [CHANNELS.fontsList]: StudioBridge['fonts']['list']
+  [CHANNELS.fontsRead]: StudioBridge['fonts']['read']
+
   [CHANNELS.diagnosticsReport]: StudioBridge['diagnostics']['report']
 
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']

@@ -550,9 +550,8 @@ construit en worker pour le picking.
 
 | Manque | Pourquoi il reste |
 |---|---|
-| `text` 3D | `TextGeometry` exige une police au format typeface. **Tranché le 8 août** : `opentype.js` autorisé, polices libres embarquées **et** polices du système, la typographie partagée pour que l'espace Image en profite — son calque texte code `fontFamily: 'sans-serif'` en dur. Pas encore codé |
 | Instanciation, LOD | écartés par le plan tant qu'aucun cas réel ne les réclame : le seul coût mesuré était le picking, et il est réglé |
-| Clic du `ViewHelper` | son animation déplace la caméra sans prévenir `OrbitControls` ; la cible de l'orbite divergerait |
+| Graisses d'une police | une seule coupe par famille est offerte, le romain. Un sélecteur de graisse demande d'indexer les faces par famille au lieu d'une par famille — mécanique, pas conceptuel |
 | three livré deux fois | le chunk du worker BVH pèse 490 ko parce qu'il embarque three, déjà dans le bundle principal. Chargé à la demande et en local, donc supportable — mais c'est du poids d'installation en double |
 
 **Comblé depuis** — l'export d'un sprite est documenté (ni glTF ni USDZ n'ont d'objet face à la
@@ -560,6 +559,52 @@ caméra, vérifié dans le code des exporteurs) ; le chapitre 09 a ses sections 
 le repère local, les ombres et l'environnement ; **Draco et KTX2 sont branchés**, décodeurs
 copiés depuis three au postinstall et servis depuis `public/` — le chemin absolu qu'on croit
 naturel casse en `file://`, il fallait le relatif, vérifié sur le build empaqueté.
+
+### Le texte 3D, et la typographie que les deux espaces partagent
+
+**`TextGeometry` n'est pas employé.** Il lit une police au format typeface de three, dont aucun
+projet ne contient d'asset et dont le studio n'embarque rien ; le `TTFLoader` qui convertirait
+va chercher `opentype.js` sur un CDN, ce que la politique de la fenêtre interdit. Les contours
+viennent donc d'`opentype.js` en dépendance, deviennent des `Shape` et sont extrudés directement
+— ce que `TextGeometry` fait de toute façon.
+
+**Trois polices OFL sont commitées** dans `src/renderer/public/fonts/`, licences à côté : une
+scène qui les emploie s'ouvre à l'identique partout. Les polices du système s'ajoutent, lues par
+le main — `fonts:list` et `fonts:read` — parce que le renderer n'a pas `fs`.
+
+**Les deux espaces qui écrivent du texte partagent la référence, pas la machinerie.** Un
+`FontRef` et une liste (`shared/domain/font.ts`, `services/fonts.ts`), le même `FontField` dans
+les deux inspecteurs — mais la 3D veut des contours parsés et l'espace Image une `FontFace` posée
+dans la page : un visage en chemins ne sert à rien à `Text`, et une `FontFace` ne sert à rien à
+`ExtrudeGeometry`. Le calque texte de l'espace Image ne code donc plus `sans-serif` en dur.
+
+Cinq choses apprises en le construisant, toutes trouvées en revue ou sur la vraie machine :
+
+- **le main lit la table `name` par plages, jamais le fichier entier** : 267 familles en 200 ms.
+  Une lecture entière coûterait 192 Mo rien que pour `Apple Color Emoji.ttc` ;
+- **une longueur non bornée lue dans un fichier de police tue le processus main.** Node *assert*
+  qu'une longueur de lecture tient dans un entier 32 bits signé, et l'assertion native passe sous
+  tout `catch` : un seul fichier corrompu dans `~/Library/Fonts` empêchait le studio de démarrer.
+  Les lectures sont bornées à la taille réelle du fichier, et un test le verrouille ;
+- **`opentype.js` refuse la signature `ttcf`**, or macOS livre l'essentiel de ses polices en
+  collections. Une face en est extraite table par table, directory réécrit ;
+- **un nom de police est localisé** : sans préférence pour l'anglais, la police système d'Apple
+  s'offrait sous le nom « Tipus de lletra del sistema » ;
+- **89 % des polices d'une machine Apple se parsent**, pas 100 : les faces héritées emploient des
+  formats de `cmap` qu'`opentype.js` ne lit pas. L'échec est dit dans le journal (`font.face`) et
+  le texte retombe sur la police par défaut — le document, lui, garde le nom qu'il portait.
+
+### Le clic du trièdre aboutit à `viewFrom`
+
+`ViewHelper.handleClick` sert à savoir **quel côté** a été cliqué, rien de plus : son animation
+est épuisée en un pas, la caméra remise où elle était, et le déplacement laissé à `viewFrom` —
+qui garde la distance, écarte les pôles de l'axe et prévient `OrbitControls`.
+
+Deux pièges trouvés en revue : le helper est bâti **sur la caméra que le viewport avait au
+montage**, et un passage en orthographique la remplace — il est donc reconstruit à chaque
+changement de projection ; et une caméra posée exactement sur sa cible ne donne aucune direction,
+d'où l'écart avant lecture. Les trois boutons des axes négatifs, jusque-là masqués, sont
+réaffichés : le helper les teste au rayon qu'ils soient dessinés ou non.
 
 ### Les échecs de la 3D ne sont plus silencieux
 
@@ -647,9 +692,15 @@ les sous-agents en pleine revue de l'étape 8 ; `/simplify` et `/code-review` on
 main pour `sprite`, les modes d'affichage, l'export et le BVH, puis une dernière fois avant la
 fusion sur les résolutions de rebase. Les bugs trouvés à ces relectures sont écrits dans le plan,
 étape par étape — mais un seul regard n'en vaut pas deux, et c'est là qu'une lecture humaine
-rapporte le plus. **Les deux résolutions de rebase à regarder en premier** : la réunion de
-`generation-claims.ts`, créé des deux côtés, et l'extraction de `saveDialog` dans `services.ts`,
-où un export d'image et un export de scène partagent désormais un dialogue.
+rapporte le plus.
+
+**Les deux résolutions de rebase sont relues.** `image-generation.ts` réimplémentait
+`generation-landing.ts` — 91 lignes contre 15, mêmes claims, même settle, à une différence de
+comportement près : l'espace Image pose *tous* les assets d'un lot, les autres le premier. Cette
+différence est devenue un champ, `takes: 'first' | 'every'`, et les quatre espaces passent par le
+même mécanisme. L'extraction de `saveDialog` dans `services.ts` est propre ; **une asymétrie
+confirmée et laissée telle quelle** : `pickSavePath` pose un filtre d'extension, `savePicture`
+n'en pose aucun — on peut donc enregistrer des octets PNG sous un nom que rien ne contraint.
 
 Second point : **sur Windows et Linux, un raccourci qu'une surface écoute elle-même attend la
 touche Windows, pas `Ctrl`** — `signatureOf` lit `event.metaKey`. C'est la convention de tout

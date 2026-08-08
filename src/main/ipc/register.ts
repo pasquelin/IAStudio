@@ -1,5 +1,7 @@
 import { registerAssetHandlers } from '@main/assets/handlers'
 import { registerDiagnosticsHandlers } from '@main/diagnostics/handlers'
+import { createInstalledFonts } from '@main/fonts/disk'
+import { registerFontHandlers } from '@main/fonts/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
 import { registerProjectHandlers } from '@main/project/handlers'
@@ -43,4 +45,7 @@ export function registerIpc(services: Services): void {
   registerDialogHandlers(services)
   registerSceneHandlers(services)
   registerUpdateHandlers(services)
+  // Built here rather than held by `Services`: the index reads nothing until a picker asks, so
+  // it costs a closure at startup and a folder walk the first time someone opens the list.
+  registerFontHandlers(createInstalledFonts())
 }

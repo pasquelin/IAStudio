@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
+import type { FontRef } from '@shared/domain/font'
+import type { FaceRegistrar } from './canvas-fonts'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { layerFixture } from './canvas-fixtures'
 import {
@@ -313,6 +315,8 @@ type Harness = {
   dropped: string[]
   /** `translate:<id>:<x>:<y>` and the two ends of the drag, in the order they arrived. */
   layers: string[]
+  /** The families the engine asked the page for, in the order it asked. */
+  faces: string[]
 }
 
 /**
@@ -323,6 +327,7 @@ type Harness = {
 function mounted(
   state: CanvasState = DEFAULT_CANVAS,
   tool: CanvasTool = 'brush',
+  addFace?: FaceRegistrar,
 ): Promise<Harness> {
   const host = document.createElement('div')
   document.body.appendChild(host)
@@ -335,6 +340,8 @@ function mounted(
   const patches: string[] = []
   const dropped: string[] = []
   const layers: string[] = []
+  const faces: string[] = []
+  const defaultFace: FaceRegistrar = async family => void faces.push(family)
   const harness: Harness = {
     engine: new CanvasEngine({
       onPick: () => undefined,
@@ -364,6 +371,7 @@ function mounted(
         beginDrag: () => layers.push('begin'),
         endDrag: () => layers.push('end'),
       },
+      addFace: addFace ?? defaultFace,
     }),
     host,
     viewports,
@@ -374,6 +382,7 @@ function mounted(
     patches,
     dropped,
     layers,
+    faces,
   }
 
   mountedEngines.push(harness.engine)
@@ -437,6 +446,11 @@ function groupContainer(id: string): Placed | undefined {
  * alive answers the next test's keys as well: a crop frame placed here and never applied was
  * being cropped by the ⏎ of the test after it.
  */
+/** A harness whose page refuses every face, which is what a missing or unreadable file is. */
+function mountedWithoutFace(): Promise<Harness> {
+  return mounted(DEFAULT_CANVAS, 'brush', () => Promise.reject(new Error('no such file')))
+}
+
 const mountedEngines: InstanceType<typeof CanvasEngine>[] = []
 
 afterEach(() => {
@@ -1752,6 +1766,96 @@ describe('captions', () => {
     expect(captions).toEqual([{ x: 300, y: 250 }])
   })
 
+  /**
+   * The face a caption is set in has to be in the page before the browser can draw with it. The
+   * same reference a 3D text stores — see `domain/font` — and the studio's own three are files
+   * beside the bundle rather than anything the machine has installed.
+   */
+  it('asks the page for the face a caption is set in', async () => {
+    const { engine, faces } = await mounted()
+
+    engine.apply(caption('Hello'))
+    await flushMicrotasks()
+
+    expect(faces).toEqual(['Lato'])
+  })
+
+  // A document of twenty captions in one font must not fetch it twenty times.
+  it('asks for a face once, whatever is set in it', async () => {
+    const { engine, faces } = await mounted()
+
+    engine.apply(caption('Hello'))
+    await flushMicrotasks()
+    engine.apply(caption('Goodbye'))
+    await flushMicrotasks()
+
+    expect(faces).toEqual(['Lato'])
+  })
+
+  /**
+   * The redraw is decided by a key built from what the caption says. Left out of it, the face was
+   * an edit the screen never showed — the words stayed in the old font for good, and the page was
+   * never asked for the new one.
+   */
+  it('redraws and asks for the face when only the font changed', async () => {
+    const { engine, faces } = await mounted()
+    engine.apply(caption('Hello'))
+    await flushMicrotasks()
+    gpu.painted = []
+
+    const mono: FontRef = { source: 'embedded', family: 'IBM Plex Mono' }
+    const refaced = stacked([
+      pixelLayer('layer-1', 'Background'),
+      { ...textLayer('t', 'Hello', { x: 10, y: 20 }), font: mono },
+    ])
+    engine.apply(refaced)
+    await flushMicrotasks()
+
+    expect(gpu.painted).toContain(1)
+    expect(faces).toEqual(['Lato', 'IBM Plex Mono'])
+  })
+
+  /**
+   * A face the page refuses is said once and left alone: retrying on every reconciliation would
+   * fetch a file that is not there once per frame, and `familyStack` has already put a generic
+   * behind it, so the caption stays readable.
+   */
+  it('says a face it could not put in the page, once, and draws in the generic', async () => {
+    const logs = bridgeWatchingLogs()
+    const { engine } = await mountedWithoutFace()
+
+    engine.apply(caption('Hello'))
+    await flushMicrotasks()
+    engine.apply(caption('Goodbye'))
+    await flushMicrotasks()
+
+    expect(logs.entries().filter(entry => entry.scope === 'font.face')).toHaveLength(1)
+  })
+
+  // The caption may have been retyped in another face while the file was on its way: what the
+  // state holds now is what decides, never what asked.
+  it('leaves a caption alone when it was refaced while its file was on its way', async () => {
+    const { engine, faces } = await mounted()
+
+    engine.apply(caption('Hello'))
+    engine.apply(stacked([pixelLayer('layer-1', 'Background')]))
+    await flushMicrotasks()
+
+    expect(faces).toEqual(['Lato'])
+  })
+
+  // Nothing to fetch: the browser already resolves an installed family by name.
+  it('asks the page for nothing when the face is one the machine has', async () => {
+    const { engine, faces } = await mounted()
+    const font: FontRef = { source: 'system', family: 'Futura' }
+    const installed = stacked([{ ...textLayer('t', 'Hello', { x: 10, y: 20 }), font }])
+
+    engine.apply(installed)
+    await flushMicrotasks()
+
+    expect(faces).toEqual([])
+  })
+
   it('rasterizes the words into the layer that holds them', async () => {
     const { engine } = await mounted()
     gpu.painted = []
@@ -1957,6 +2061,7 @@ describe('the view', () => {
 function silentOptions(): ConstructorParameters<typeof CanvasEngine>[0] {
   const nothing = (): void => undefined
   return {
+    addFace: () => Promise.resolve(),
     onPick: nothing,
     onPixels: nothing,
     onPixelsDropped: nothing,

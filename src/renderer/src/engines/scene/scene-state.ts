@@ -13,8 +13,10 @@ import {
   type MaterialDescriptor,
   type ModelRef,
   type SpriteDescriptor,
+  type TextDescriptor,
   type Transform,
 } from '@shared/domain/scene'
+import { DEFAULT_FONT } from '@shared/domain/font'
 
 export type SceneNodeBase = {
   id: string
@@ -35,6 +37,9 @@ export type SceneNode = SceneNodeBase &
     | { type: 'light'; light: LightDescriptor }
     | { type: 'model'; model: ModelRef }
     | { type: 'sprite'; sprite: SpriteDescriptor }
+    // A solid like a mesh, and lit like one — so it wears the same material, and the inspector's
+    // material section serves it without knowing it exists.
+    | { type: 'text'; text: TextDescriptor; material: MaterialDescriptor }
     // Nothing of its own: a group is a transform others hang from, and a name to find it by.
     | { type: 'group' }
   )
@@ -125,6 +130,18 @@ export const DEFAULT_SPRITE: SpriteDescriptor = {
   map: null,
 }
 
+/**
+ * A metre tall and slightly thick, in a face the studio ships: a text dropped into a scene reads
+ * against the grid straight away, and opens the same on whatever machine it travels to.
+ */
+export const DEFAULT_TEXT: TextDescriptor = {
+  value: 'Text',
+  font: DEFAULT_FONT,
+  size: 1,
+  depth: 0.2,
+  curveSegments: 6,
+}
+
 export const EMPTY_SCENE: SceneState = {
   nodes: [],
   selectedIds: [],
@@ -135,6 +152,7 @@ export type MeshNode = Extract<SceneNode, { type: 'mesh' }>
 export type LightNode = Extract<SceneNode, { type: 'light' }>
 export type ModelNode = Extract<SceneNode, { type: 'model' }>
 export type SpriteNode = Extract<SceneNode, { type: 'sprite' }>
+export type TextNode = Extract<SceneNode, { type: 'text' }>
 export type GroupNode = Extract<SceneNode, { type: 'group' }>
 
 export function nodeById(state: SceneState, id: string): SceneNode | null {

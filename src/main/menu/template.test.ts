@@ -175,13 +175,11 @@ describe('menuTemplate', () => {
     expect(submenuOf(add, 'Lumière')).toHaveLength(LIGHT_ENTRIES.length)
   })
 
-  it('greys out the announced objects instead of hiding them', () => {
+  it('offers both objects, both of them reachable', () => {
     const objects = submenuOf(submenuOf(menuTemplate(options()), 'Ajouter'), 'Objet')
 
     expect(objects.map(item => item.label)).toEqual(['Sprite', 'Texte'])
-    expect(objects.filter(item => item.enabled === false).map(item => item.label)).toEqual([
-      'Texte',
-    ])
+    expect(objects.filter(item => item.enabled === false)).toEqual([])
   })
 
   // Every mesh the table declares is buildable: what is not lives under Object.

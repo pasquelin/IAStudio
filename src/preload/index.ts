@@ -95,6 +95,10 @@ const bridge: StudioBridge = {
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),
   },
+  fonts: {
+    list: () => ipcRenderer.invoke(CHANNELS.fontsList),
+    read: family => ipcRenderer.invoke(CHANNELS.fontsRead, family),
+  },
   media: {
     ingest: () => ipcRenderer.invoke(CHANNELS.mediaIngest),
     cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),

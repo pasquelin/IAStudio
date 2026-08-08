@@ -12,12 +12,14 @@ import {
   type BLEND_MODES,
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
+import { fontKey } from '@shared/domain/font'
 import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
 import { onPaletteChange, token } from '../core/palette'
 import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
+import { captionSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvas-fonts'
 import {
   allLayers,
   IDENTITY,
@@ -169,6 +171,8 @@ export type CanvasEngineOptions = {
   onCrop: (rect: Rect) => void
   guides: GuidePort
   layers: LayerPort
+  /** Puts an embedded face in the page. Injected because jsdom has no `FontFace` to put it with. */
+  addFace: FaceRegistrar
 }
 
 export const DEFAULT_BRUSH: BrushSettings = {
@@ -350,6 +354,8 @@ export class CanvasEngine {
   private host: HTMLElement | null = null
   private readonly world = new Container()
   private readonly surfaces = new Map<string, LayerSurface>()
+  /** Families already asked of the page, whether they arrived or not — see `registerFace`. */
+  private readonly faces = new Set<string>()
   private readonly groups = new Map<string, Container>()
   /** One per clipped layer, keyed by it: a run of three on one base takes three proxies. */
   private readonly clips = new Map<string, ClipProxy>()
@@ -1374,8 +1380,13 @@ export class CanvasEngine {
     // Read before the build: a picture is drawn once, when its surface comes into existence —
     // which is also the only moment the engine can know the layer at all.
     const born = !this.surfaces.has(layer.id)
-    // Words are redrawn whenever they change, unlike pixels, which are what the layer holds.
-    const wording = layer.kind === 'text' ? `${layer.text}|${layer.size}|${layer.color}` : null
+    // Words are redrawn whenever they change, unlike pixels, which are what the layer holds. The
+    // face counts as a change: without it, setting a caption in another font is an edit the
+    // screen never shows, and a face the page was never asked for.
+    const wording =
+      layer.kind === 'text'
+        ? `${layer.text}|${layer.size}|${layer.color}|${fontKey(layer.font)}`
+        : null
     const surface = this.buildSurface(layer.id, layer.kind === 'pixel' ? layer.fill : undefined)
     if (!surface) return
 
@@ -1428,11 +1439,43 @@ export class CanvasEngine {
 
     const text = new Text({
       text: layer.text,
-      style: { fontFamily: 'sans-serif', fontSize: layer.size, fill: layer.color },
+      style: { fontFamily: familyStack(layer.font), fontSize: layer.size, fill: layer.color },
     })
     renderer.render({ container: text, target: surface.texture, clear: true })
     text.destroy()
     this.render()
+
+    // The face the caption asks for may not be in the page yet. Registered once, and the caption
+    // drawn again when it lands — until then the browser has drawn it in the generic beside it.
+    void this.registerFace(surface, layer)
+  }
+
+  /**
+   * Puts an embedded face in the page, and redraws whatever was set in it.
+   *
+   * Once per family, whatever asks: a document of twenty captions in one font must not fetch it
+   * twenty times, and a face already in the page is one `drawText` needs nothing more from.
+   */
+  private async registerFace(surface: LayerSurface, layer: TextLayer): Promise<void> {
+    const url = faceUrlOf(layer.font)
+    const family = layer.font.family
+    if (!url || this.faces.has(family)) return
+
+    this.faces.add(family)
+    try {
+      await this.options.addFace(family, url)
+    } catch (error) {
+      // Kept in the set: retrying on every reconciliation would fetch a file that is not there
+      // once per frame. The caption stays in the generic, and the failure is said once.
+      reportFailure('font.face', family, error)
+      return
+    }
+
+    // The surface is the one `drawText` was given: a living layer never gets another, and a layer
+    // that is gone takes its surface with it — in which case `captionSetIn` finds nothing. After
+    // a dispose the texture is destroyed but `drawText` bails on the renderer before touching it.
+    const current = captionSetIn(this.state, layer.id, family)
+    if (current) this.drawText(surface, current)
   }
 
   /** A document-sized texture and the sprite that shows it, built once and kept. */

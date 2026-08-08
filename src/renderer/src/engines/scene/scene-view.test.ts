@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyDisplayMode,
   applyWireOverlay,
+  directionOf,
   isDisplayMode,
   isViewDirection,
   viewPosition,
@@ -51,6 +52,40 @@ describe('isViewDirection', () => {
   it('accepts a side and refuses anything else', () => {
     expect(isViewDirection('top')).toBe(true)
     expect(isViewDirection('sideways')).toBe(false)
+  })
+})
+
+/**
+ * What the trihedron's click is read through. It is the inverse of `viewPosition`, so the two are
+ * tested against each other: a sign flipped in either would make them disagree.
+ */
+describe('directionOf', () => {
+  it('names the side of every place a normalised view stands', () => {
+    for (const direction of VIEW_DIRECTIONS) {
+      const { x, y, z } = viewPosition(direction, ORIGIN, 10)
+
+      expect(directionOf(new Vector3(x, y, z))).toBe(direction)
+    }
+  })
+
+  it('names it from wherever the view was turning around', () => {
+    const target = new Vector3(1, 2, 3)
+    const { x, y, z } = viewPosition('left', target, 4)
+
+    expect(directionOf(new Vector3(x - target.x, y - target.y, z - target.z))).toBe('left')
+  })
+
+  it('names no side for a direction that points between two', () => {
+    expect(directionOf(new Vector3(1, 1, 0))).toBeNull()
+  })
+
+  // The camera sitting exactly on its target names no side rather than an arbitrary one.
+  it('names no side for a direction of no length', () => {
+    expect(directionOf(new Vector3(0, 0, 0))).toBeNull()
+  })
+
+  it('forgives the wobble a nudged pole leaves behind', () => {
+    expect(directionOf(new Vector3(0, 10, 0.001))).toBe('top')
   })
 })
 

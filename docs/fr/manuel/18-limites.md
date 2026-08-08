@@ -126,14 +126,22 @@ haut, « Ce que cela veut dire concrètement ».
 
 ## Espace 3D
 
-### Le texte 3D est annoncé mais non constructible
+### Le texte 3D n'offre qu'une graisse par famille
 
-**Texte** apparaît grisé dans le menu **Ajouter**.
+**Ajouter ▸ Objet ▸ Texte** fonctionne — voir [l'espace 3D](09-espace-3d.md). Deux réserves.
 
-three.js construit un texte en volume à partir d'un **fichier de police** converti. Le studio n'en
-embarque aucun, et le catalogue d'un projet ne connaît pas ce genre d'asset : ni image, ni vidéo,
-ni son, ni modèle 3D. Tant que l'un des deux n'existe pas, l'entrée reste grisée plutôt que de
-promettre ce qu'aucun chemin ne peut tenir.
+**Une seule coupe par famille.** La liste offre le romain de chaque police et rien d'autre : pas
+de gras, pas d'italique. Une famille qui installe neuf graisses n'occupe donc qu'une ligne, ce
+qui est le bon compromis tant que le studio n'a pas de sélecteur de graisse.
+
+**Une police du système ne voyage pas.** Elle reste écrite dans le document, mais une machine qui
+ne l'a pas dessine les lettres dans la police embarquée par défaut, en marquant le nom manquant
+dans la liste. Les trois polices que le studio embarque, elles, s'ouvrent partout à l'identique.
+
+**Et quelques polices anciennes ne s'ouvrent pas du tout** : la bibliothèque de lecture de polices
+que le studio emploie ne connaît pas tous les formats de table que les faces héritées d'avant les
+années 2000 emploient. Sur une machine Apple, cela concerne une police sur dix environ. Le texte
+retombe alors sur la police par défaut, et le journal dit laquelle a échoué.
 
 ### Le raccourci `S` fait deux choses à la fois
 

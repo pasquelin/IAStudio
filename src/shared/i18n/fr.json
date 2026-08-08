@@ -444,7 +444,10 @@
       "normalMap": "Normales",
       "roughnessMap": "Carte de rugosité",
       "metalnessMap": "Carte de métallicité",
-      "aoMap": "Occlusion ambiante"
+      "aoMap": "Occlusion ambiante",
+      "value": "Contenu",
+      "size": "Corps",
+      "curveSegments": "Segments de courbe"
     },
     "empty": "Sélectionnez un élément pour voir ses propriétés.",
     "identity": "Identité",
@@ -510,7 +513,11 @@
     "sky": "Ciel",
     "studio": "Studio",
     "chooseSky": "Choisir un ciel",
-    "clearSky": "Revenir au studio"
+    "clearSky": "Revenir au studio",
+    "font": "Police",
+    "noFont": "Aucune",
+    "chooseFont": "Choisir une police",
+    "fontMissing": "{{family}} (absente)"
   },
   "transport": {
     "play": "Lire",
