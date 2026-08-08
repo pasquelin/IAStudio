@@ -61,6 +61,37 @@ describe('a horizontal band', () => {
   })
 })
 
+// What a fresh install shows, and what "Reset layout" restores. The stored layout is the same in
+// all six sections; each reads its own first panel into every half.
+describe('the default layout', () => {
+  it('opens Image on the layers, the inspector and the shelf', () => {
+    useTools.setState({ open: DEFAULT_OPEN })
+    renderShell()
+
+    expect(screen.getByLabelText('Calques')).toBeInTheDocument()
+    expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
+    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Explorateur')).not.toBeInTheDocument()
+  })
+
+  it('opens Video on the montage and the shelf beside it', () => {
+    useLayouts.setState({ activeWorkspace: 'video' })
+    useTools.setState({ open: DEFAULT_OPEN })
+    renderShell()
+
+    expect(screen.getByLabelText('Timeline')).toBeInTheDocument()
+    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
+  })
+
+  it('opens Skyboxes on the sky controls', () => {
+    useLayouts.setState({ activeWorkspace: 'skyboxes' })
+    useTools.setState({ open: DEFAULT_OPEN })
+    renderShell()
+
+    expect(screen.getByLabelText('Skybox')).toBeInTheDocument()
+  })
+})
+
 // Spec § 3: the band belongs to the montage in Video, and the shelf moves to the right column
 // so a take can be dragged onto a track.
 describe('the Video layout', () => {

@@ -20,9 +20,15 @@ export const MIN_CENTER = 240
 /** Room a split keeps for the half it is taken from. */
 export const MIN_SPLIT = 100
 
-/** One tool per half, so an icon click swaps rather than stacks. An absent key is a closed
- * half — there is no second way to say it. */
-type ZoneSlots = Partial<Record<ToolSlot, ToolId>>
+/**
+ * One tool per half, so an icon click swaps rather than stacks. Key absent, the half is closed;
+ * `null`, it is open on no panel in particular; an id, on the panel the user chose.
+ *
+ * That third state earns its keep: what is open is stored once for all six sections, while the
+ * panel that comes first in a half differs in each — the layers in Image, the shelf in Video,
+ * the sky in Skyboxes. An id there would impose one section's answer on the other five.
+ */
+type ZoneSlots = Partial<Record<ToolSlot, ToolId | null>>
 
 /** Which tool each half of each zone currently shows. */
 export type OpenByZone = Partial<Record<ToolZone, ZoneSlots>>
@@ -61,18 +67,14 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
 export const DEFAULT_SPLIT = 240
 
 /**
- * Which halves start open, not what each section draws in them: an entry names a half, and
- * `shownTool` reads it as the panel this section puts there — the band is the shelf in Image
- * and the montage in Video, the upper right is the layers, the meshes, or the shelf again.
+ * Which halves start open — and nothing about what they draw. Every one of them is `null`, so
+ * each section opens on the panel it declares first: the layers in Image, the shelf in Video,
+ * the sky in Skyboxes, the models on the left everywhere.
  */
 export const DEFAULT_OPEN: OpenByZone = {
-  // Models rather than the generator: nothing is chosen on a first run, and the generator does
-  // not exist without a model.
-  left: { primary: 'models' },
-  // The explorer rather than the layers or the meshes: it is the one panel every space has, and
-  // on a first run it is where a document comes from.
-  right: { primary: 'explorer', secondary: 'inspector' },
-  bottom: { primary: 'assets' },
+  left: { primary: null },
+  right: { primary: null, secondary: null },
+  bottom: { primary: null },
 }
 
 const OPPOSITE: Record<ToolZone, ToolZone> = {
@@ -146,13 +148,36 @@ function openEverywhereItSits(open: OpenByZone): OpenByZone {
   for (const zone of TOOL_ZONES) {
     for (const slot of TOOL_SLOTS) {
       const tool = open[zone]?.[slot]
-      if (!tool) continue
+      if (tool === undefined) continue
+
+      // A half open on no panel in particular has no placement to follow: it stays where it was
+      // opened, and every section reads it as the first panel it puts there.
+      if (tool === null) {
+        const target = (next[zone] ??= {})
+        target[slot] ??= null
+        continue
+      }
 
       for (const placement of placementsOf(tool)) {
         const target = (next[placement.zone] ??= {})
+        // `??=`, so a named panel wins the half over one merely left on its default.
         target[placement.slot] ??= tool
       }
     }
+  }
+  return next
+}
+
+/** The same halves, open on no panel in particular — which section decides is then the section's. */
+export function unchosen(open: OpenByZone): OpenByZone {
+  const next: OpenByZone = {}
+  for (const zone of TOOL_ZONES) {
+    const slots = open[zone]
+    if (!slots) continue
+
+    const cleared: ZoneSlots = {}
+    for (const slot of TOOL_SLOTS) if (slot in slots) cleared[slot] = null
+    next[zone] = cleared
   }
   return next
 }
@@ -166,9 +191,17 @@ function slotsFrom(stored: unknown): ZoneSlots | null {
 
   const slots: ZoneSlots = {}
   for (const slot of TOOL_SLOTS) {
+    const value: unknown = Reflect.get(stored, slot)
+    // An open half with no panel named keeps the half it was written in — there is no placement
+    // to move it by, and every section answers it on its own.
+    if (value === null) {
+      slots[slot] = null
+      continue
+    }
+
     // Through `placementOf`, so an id no version knows any more is dropped rather than
     // reaching `TOOL_COMPONENTS` and blanking the window.
-    const placement = placementOf(Reflect.get(stored, slot))
+    const placement = placementOf(value)
     if (placement) slots[placement.slot] = placement.id
   }
   return slots
@@ -256,14 +289,19 @@ export const useTools = create<ToolsState>()(
       // startup. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
       // mesh and light panels, and 4 the asset shelf moving out of the bottom strip. 5 still
       // cut that strip in two and knew a `jobs` panel, which the status line carries now, and
-      // 6 had the generation panels on the right, where everything else sits today.
-      version: 7,
-      migrate: persisted => {
+      // 6 had the generation panels on the right, where everything else sits today, and 7 named
+      // a panel in every default half, which imposed one section's answer on the other five.
+      version: 8,
+      migrate: (persisted, version) => {
         if (typeof persisted !== 'object' || persisted === null) return undefined
         const sizes: unknown = Reflect.get(persisted, 'sizes')
         const splits: unknown = Reflect.get(persisted, 'splits')
+        const open = openFrom(Reflect.get(persisted, 'open'))
         return {
-          open: openFrom(Reflect.get(persisted, 'open')),
+          // Up to version 7 every half named a panel, including the ones nobody had ever clicked
+          // — the default did the naming. Kept as chosen, an untouched Image would still open on
+          // the explorer rather than its layers, and no update would ever fix it.
+          open: version < 8 ? unchosen(open) : open,
           sizes: isRecord(sizes) ? sizes : {},
           splits: isRecord(splits) ? splits : {},
         }

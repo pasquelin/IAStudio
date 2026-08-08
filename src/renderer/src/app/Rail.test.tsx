@@ -6,7 +6,7 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
-import { useTools } from '@/stores/tools'
+import { DEFAULT_OPEN, useTools } from '@/stores/tools'
 import { Rail } from './Rail'
 
 const openDocument = vi.fn()
@@ -100,6 +100,20 @@ describe('Rail', () => {
       'separator',
       'Inspecteur',
     ])
+  })
+
+  // On the default layout no half names a panel, so the icon that reads as up is the first one
+  // the section declares — the layers in Image, never the explorer under them.
+  it('marks the section-first panel as up on the default layout', () => {
+    useLayouts.setState({ activeWorkspace: 'image' })
+    useTools.setState({ open: DEFAULT_OPEN })
+    render(<Rail side="right" />)
+
+    expect(screen.getByRole('button', { name: 'Calques' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Explorateur' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
   })
 
   // The panel a section stands in for another is the one that is up, so its icon is the one
