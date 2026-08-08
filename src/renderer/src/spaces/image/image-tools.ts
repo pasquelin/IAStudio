@@ -27,6 +27,7 @@ import {
   mdiVectorLine,
 } from '@mdi/js'
 import type { SelectionShape } from '@/engines/canvas/canvas-selection'
+import { SHAPE_KINDS, type ShapeKind } from '@/engines/canvas/shape-geometry'
 import type { CanvasTool } from '@/engines/canvas/CanvasEngine'
 import type { ToolbarItem } from '@/design/Toolbar'
 
@@ -317,6 +318,12 @@ export function selectionShapeFor(toolId: string, modeId?: string): SelectionSha
   if (modeId === 'ellipse') return 'ellipse'
   if (modeId === 'lasso') return 'lasso'
   return 'rect'
+}
+
+/** Which of the six the shapes tool draws. `image` is not one: it opens the shelf instead. */
+export function shapeKindFor(toolId: string, modeId?: string): ShapeKind | null {
+  if (toolId !== 'shape') return null
+  return SHAPE_KINDS.find(kind => kind === modeId) ?? null
 }
 
 /** The mode each group opens armed with — its first row, as Figma's groups do. */

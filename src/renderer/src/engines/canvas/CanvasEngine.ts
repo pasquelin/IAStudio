@@ -33,6 +33,7 @@ import {
   dragSelection,
   extendLasso,
   isEmptySelection,
+  selectionBounds,
   selectionOutline,
   type CanvasSelection,
   type SelectionShape,
@@ -56,7 +57,15 @@ import {
   type Axis,
 } from './guides'
 import { PixelPatches, type PatchSide } from './PixelPatches'
-import type { Point } from './shape-geometry'
+import {
+  paintShape,
+  shapeBounds,
+  shapeGeometry,
+  shapeOutline,
+  type Point,
+  type ShapeGeometry,
+  type ShapeKind,
+} from './shape-geometry'
 import { brushRect } from './tiles'
 import {
   containIn,
@@ -134,6 +143,8 @@ export type CanvasEngineOptions = {
   onSelection: (selection: CanvasSelection) => void
   /** The host's size, which the zoom commands need: they centre on a panel they cannot see. */
   onHost: (size: Size) => void
+  /** A crop is a command on the stack, and the stack lives on the React side. */
+  onCrop: (rect: Rect) => void
   guides: GuidePort
   layers: LayerPort
 }
@@ -149,12 +160,7 @@ export const DEFAULT_BRUSH: BrushSettings = {
  * Declared by the bar, not implemented here. Kept in the union so the registry stays typed, and
  * kept in one place so wiring one is a single deletion.
  */
-const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>([
-  'crop',
-  'shape',
-  'text',
-  'comment',
-])
+const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['text', 'comment'])
 
 /**
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
@@ -217,6 +223,9 @@ type Gesture =
   /** `origin` is where the layer stood when the drag began: every step is absolute from it. */
   | { kind: 'move'; id: string; from: Point; origin: Point }
   | { kind: 'select'; from: Point }
+  /** `from` is where the drag began; the shape is redrawn from it on every move. */
+  | { kind: 'shape'; from: Point; target: BrushTarget }
+  | { kind: 'crop'; from: Point }
 
 const NO_GESTURE: Gesture = { kind: 'none' }
 
@@ -304,6 +313,10 @@ export class CanvasEngine {
   private selection: CanvasSelection = null
   /** Which of the three the region tool draws. Pushed in by the bar, like the tool itself. */
   private selectionShape: SelectionShape = 'rect'
+  private shapeKind: ShapeKind = 'rectangle'
+  private shapeSides = 5
+  /** The shape being dragged, drawn in the overlay until the hand comes up. */
+  private pending: ShapeGeometry | null = null
   /** Wrapped, so a pending `null` is told apart from nothing pending — see `publishSelection`. */
   private publishingSelection: { selection: CanvasSelection } | null = null
   private selectionFrame = 0
@@ -815,6 +828,12 @@ export class CanvasEngine {
     this.selectionShape = shape
   }
 
+  /** Rectangle, line, arrow, ellipse, polygon or star — the six the bar offers. */
+  setShape(kind: ShapeKind, sides = this.shapeSides): void {
+    this.shapeKind = kind
+    this.shapeSides = sides
+  }
+
   /** Session state, so React owns it: the engine draws it and clips strokes to it. */
   setSelection(selection: CanvasSelection): void {
     this.selection = selection
@@ -921,7 +940,7 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
-      paint: this.selection ? this.paintSelection : undefined,
+      paint: this.selection || this.pending ? this.paintOverlay : undefined,
     }
   }
 
@@ -930,20 +949,42 @@ export class CanvasEngine {
    * for the three shapes — the ellipse arrives already flattened, so the overlay's context needs
    * to know nothing beyond `moveTo` and `lineTo`.
    */
+  /** The marquee and the shape being dragged, both chrome and both in screen space. */
+  private readonly paintOverlay = (context: OverlayContext): void => {
+    this.paintSelection(context)
+    this.paintPending(context)
+  }
+
+  /** The shape under the hand, outlined until it is committed to the layer. */
+  private readonly paintPending = (context: OverlayContext): void => {
+    const shape = this.pending
+    if (!shape) return
+
+    context.strokeStyle = this.colors.accent
+    this.strokePath(context, shapeOutline(shape))
+  }
+
   private readonly paintSelection = (context: OverlayContext): void => {
     const outline = selectionOutline(this.selection)
-    const first = outline[0]
-    if (!first) return
+    if (outline.length === 0) return
 
     context.strokeStyle = this.colors.accent
     context.setLineDash([4, 4])
-    context.beginPath()
+    this.strokePath(context, outline)
+    context.setLineDash([])
+  }
+
+  /** A closed polyline, in screen space: a selection is chrome, and chrome never scales. */
+  private strokePath(context: OverlayContext, outline: readonly Point[]): void {
+    const first = outline[0]
+    if (!first) return
 
     const at = (point: Point): Point => {
       const screen = toScreen(this.view.viewport, point)
       return { x: Math.round(screen.x) + 0.5, y: Math.round(screen.y) + 0.5 }
     }
 
+    context.beginPath()
     const start = at(first)
     context.moveTo(start.x, start.y)
     for (const point of outline.slice(1)) {
@@ -953,9 +994,7 @@ export class CanvasEngine {
     // Closed by hand rather than with `closePath`: a lasso is left open by the hand that drew it,
     // and the region it stands for is the closed one.
     context.lineTo(start.x, start.y)
-
     context.stroke()
-    context.setLineDash([])
   }
 
   private render(): void {
@@ -1176,6 +1215,21 @@ export class CanvasEngine {
       return
     }
 
+    if (this.tool === 'crop') {
+      this.gesture = { kind: 'crop', from: point }
+      this.publishSelection(dragSelection('rect', point, point, false))
+      return
+    }
+
+    if (this.tool === 'shape') {
+      const target = this.paintTarget()
+      if (!target) return
+
+      this.beginPixels(target)
+      this.gesture = { kind: 'shape', from: point, target }
+      return
+    }
+
     if (this.tool === 'select') {
       this.gesture = { kind: 'select', from: point }
       this.publishSelection(dragSelection(this.selectionShape, point, point, false))
@@ -1307,6 +1361,20 @@ export class CanvasEngine {
         this.gesture = { kind: 'paint', from: point }
         return
       }
+      case 'crop': {
+        this.publishSelection(dragSelection('rect', gesture.from, point, event.shiftKey))
+        return
+      }
+      case 'shape': {
+        // Previewed in the overlay, not in the layer: drawing into the texture on every move
+        // would leave every intermediate shape behind, since a texture keeps what it is given.
+        this.pending = shapeGeometry(this.shapeKind, gesture.from, point, {
+          sides: this.shapeSides,
+          constrain: event.shiftKey,
+        })
+        this.overlay.invalidate()
+        return
+      }
     }
   }
 
@@ -1332,6 +1400,9 @@ export class CanvasEngine {
     // One history entry per gesture: a command per dab, or per pointer move, would make ⌘Z useless.
     if (gesture.kind === 'move') this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
+    if (gesture.kind === 'shape') this.commitShape(gesture.target)
+    // A crop that carved nothing out is a click, and a click crops nothing.
+    if (gesture.kind === 'crop') this.commitCrop()
     // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
     // selection is a stencil nothing gets through, and the document stops taking paint at all.
     if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)
@@ -1502,6 +1573,46 @@ export class CanvasEngine {
 
     // With `children`: what stays inside is the stencil alone, which belongs to the pass.
     holder.destroy({ children: true })
+  }
+
+  /** Draws the previewed shape into the armed layer, once, when the hand comes up. */
+  private commitShape(target: BrushTarget): void {
+    const renderer = this.app?.renderer
+    const shape = this.pending
+    this.pending = null
+    this.overlay.invalidate()
+    if (!renderer || !shape) return
+
+    const drawing = new Graphics()
+    paintShape(drawing, shape)
+    // Stroked rather than filled for the two that have no inside; the brush size is the width,
+    // which is the one control the bar already offers.
+    if (shape.kind === 'line' || shape.kind === 'arrow') {
+      drawing.stroke({
+        color: this.brush.color,
+        width: this.brush.size / 4,
+        alpha: this.brush.opacity,
+      })
+    } else {
+      drawing.fill({ color: this.brush.color, alpha: this.brush.opacity })
+    }
+
+    this.patches?.touch(shapeBounds(shape, this.brush.size))
+    renderer.render({
+      container: this.clipped(drawing),
+      target: target.surface.texture,
+      clear: false,
+    })
+    drawing.destroy()
+    this.endPixels()
+    this.render()
+  }
+
+  /** Crops the document to what the gesture carved out, through the command that owns the stack. */
+  private commitCrop(): void {
+    const rect = selectionBounds(this.selection)
+    this.publishSelection(null)
+    if (rect && rect.width > 0 && rect.height > 0) this.options.onCrop(rect)
   }
 
   private pick(point: Point): void {

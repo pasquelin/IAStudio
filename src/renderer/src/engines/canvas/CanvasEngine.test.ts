@@ -11,6 +11,7 @@ import {
   pixelLayer,
   type CanvasState,
   type Layer,
+  type Rect,
   type Transform,
 } from './canvas-state'
 import type { CanvasSelection } from './canvas-selection'
@@ -253,6 +254,8 @@ type Harness = {
   viewports: Viewport[]
   /** Every selection the engine carved out, in the order it published them. */
   selections: CanvasSelection[]
+  /** Every crop the engine asked the stack for. */
+  crops: Rect[]
   guides: { calls: string[] }
   /** The ids of the patches the engine reported as one finished gesture each. */
   patches: string[]
@@ -266,6 +269,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
 
   const viewports: Viewport[] = []
   const selections: CanvasSelection[] = []
+  const crops: Rect[] = []
   const calls: string[] = []
   const patches: string[] = []
   const layers: string[] = []
@@ -276,6 +280,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
       onPixelsDropped: () => undefined,
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
+      onCrop: rect => crops.push(rect),
       onHost: () => undefined,
       guides: {
         add: (axis, position) => {
@@ -296,6 +301,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
     host,
     viewports,
     selections,
+    crops,
     guides: { calls },
     patches,
     layers,
@@ -1216,6 +1222,105 @@ describe('adjustment layers', () => {
     engine.apply(stacked([pixelLayer('layer-1', 'Background')]))
 
     expect(groupContainer('grade')?.children).toHaveLength(0)
+  })
+})
+
+describe('drawing a shape', () => {
+  it('draws into the armed layer when the hand comes up, and not before', async () => {
+    const { engine, host } = await mounted()
+    engine.setTool('shape')
+    gpu.painted = []
+
+    press(host, 200, 200)
+    drag(host, 300, 260)
+    // The undo tiles are photographed on the way, into textures of their own; what must not be
+    // written yet is the layer, or every intermediate shape would stay behind.
+    expect(gpu.painted).not.toContain(0)
+
+    release()
+    expect(gpu.painted).toContain(0)
+  })
+
+  it('reports one patch, so one shape undoes in one go', async () => {
+    const { engine, host, patches } = await mounted()
+    engine.setTool('shape')
+
+    press(host, 200, 200)
+    drag(host, 300, 260)
+    release()
+
+    expect(patches).toHaveLength(1)
+  })
+
+  // Six modes, one tool: the bar says which shape the next drag draws.
+  it('draws whichever of the six was armed', async () => {
+    const { engine, host } = await mounted()
+    engine.setTool('shape')
+    engine.setShape('star', 5)
+    gpu.painted = []
+
+    press(host, 200, 200)
+    drag(host, 300, 260)
+    release()
+
+    expect(gpu.painted).toContain(0)
+  })
+
+  it('draws nothing on a layer whose pixels are padlocked', async () => {
+    const { engine, host, patches } = await mounted(
+      stacked([
+        {
+          ...pixelLayer('layer-1', 'Background'),
+          locked: { pixels: true, position: false, alpha: false },
+        },
+      ]),
+    )
+    engine.setTool('shape')
+    gpu.painted = []
+
+    press(host, 200, 200)
+    drag(host, 300, 260)
+    release()
+
+    expect(gpu.painted).not.toContain(0)
+    expect(patches).toEqual([])
+  })
+})
+
+describe('cropping', () => {
+  it('asks the stack for the region the drag carved out', async () => {
+    const { engine, host, crops } = await mounted()
+    engine.setTool('crop')
+
+    press(host, 100, 100)
+    drag(host, 300, 250)
+    release()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 200, height: 150 }])
+  })
+
+  // A click carves nothing, and a crop to nothing would leave a document with no pixels at all.
+  it('crops nothing for a click', async () => {
+    const { engine, host, crops } = await mounted()
+    engine.setTool('crop')
+
+    press(host, 200, 200)
+    release()
+
+    expect(crops).toEqual([])
+  })
+
+  // The marquee was the gesture, not the result: leaving it up would clip every later stroke.
+  it('drops the marquee once the crop is asked for', async () => {
+    const { engine, host, selections } = await mounted()
+    engine.setTool('crop')
+
+    press(host, 100, 100)
+    drag(host, 300, 250)
+    release()
+    await nextFrame()
+
+    expect(selections.at(-1)).toBeNull()
   })
 })
 

@@ -12,6 +12,7 @@ import { getBridge } from '@/services/bridge'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
+import { cropToRect } from '@/engines/canvas/commands'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
 import { assetsById, useAssets } from '@/stores/assets'
@@ -24,6 +25,7 @@ import {
   DEFAULT_MODES,
   IMAGE_TOOLS,
   selectionShapeFor,
+  shapeKindFor,
 } from './image-tools'
 import { layerPort } from './layer-port'
 import { prepareEdit, type AiEdit } from './ai-actions'
@@ -92,6 +94,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       onViewport: viewport => views().setViewport(documentId, viewport),
       onSelection: selection => views().setSelection(documentId, selection),
       onHost: size => views().setHost(documentId, size),
+      onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
       guides: guidePort(documentId),
       layers: layerPort(documentId),
     })
@@ -128,8 +131,11 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     const canvasTool = canvasToolFor(tool, mode)
     if (canvasTool) engine.current?.setTool(canvasTool)
     // The region group holds three gestures behind one tool; the bar says which is armed.
-    const shape = selectionShapeFor(tool, mode)
-    if (shape) engine.current?.setSelectionShape(shape)
+    const region = selectionShapeFor(tool, mode)
+    if (region) engine.current?.setSelectionShape(region)
+    // Same for the shapes group, whose six modes are one tool drawing six things.
+    const shape = shapeKindFor(tool, mode)
+    if (shape) engine.current?.setShape(shape)
   }, [tool, mode])
 
   /**
