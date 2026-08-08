@@ -703,9 +703,8 @@ studio fait trente triangles et se marche plus vite qu'un arbre ne se construit.
 ### La dette de relecture des étapes 8 à 11 est payée
 
 **Les quatre sujets ont eu leur seconde lecture** (`feat/3d-dette`) : `sprite`, les modes
-d'affichage, l'export et le BVH. Elle a rendu **trois défauts confirmés, tous corrigés avec le
-test qui les verrouille**, et deux hypothèses écartées qui valent d'être écrites pour ne pas être
-reprises.
+d'affichage, l'export et le BVH. Elle a rendu **sept défauts confirmés et corrigés**, chacun avec le
+test qui le verrouille, et une liste de constats vérifiés mais non traités, écrits plus bas.
 
 **Ce qui a été trouvé.**
 
@@ -745,14 +744,49 @@ reprises.
 
 Le reste de ce qui avait été trouvé au premier regard est écrit dans le plan, étape par étape.
 
-**La portée exacte de cette relecture, pour ne pas la surestimer.** C'est bien une seconde lecture
-— elle n'est pas de l'auteur des onze étapes — mais elle est d'**un seul relecteur**. Les quatre
-passes adverses déléguées, une par sujet, n'ont rien rendu d'exploitable : elles signalent leur
-existence mais n'ont laissé aucun transcript et n'ont répondu à aucune relance. Le contrôle croisé
-que le chantier visait n'a donc pas eu lieu. Concrètement : les trois défauts corrigés sont
-solides, chacun reproduit avant correction ; en revanche **« rien trouvé » sur le sprite et sur le
-BVH vaut ce que vaut un seul regard**, et ces deux sujets restent les mieux placés pour rendre
-quelque chose à qui les reprendra.
+**Quatre défauts de plus, trouvés par les passes adverses et corrigés ensuite.**
+
+- **Le picking d'un modèle importé était faux dès que le fichier entrelaçait ses attributs.**
+  `GLTFLoader` entrelace dès que le pas d'octets le dit, et l'`array` d'un attribut entrelacé est
+  le tampon **entier** — normales et uv compris. Envoyé tel quel au worker, l'arbre décrivait un
+  maillage inexistant et les clics rataient ce qu'ils touchaient, seulement une fois l'arbre
+  arrivé. Les coordonnées sont lues attribut par attribut.
+- **Un index en `SHORT` corrompait l'affichage.** Abandonné parce que ni `Uint16` ni `Uint32`, il
+  faisait prendre la géométrie pour non indexée ; le worker rendait un index d'une autre longueur
+  que `deserialize` écrivait par-dessus le vivant aussi loin qu'il portait, sans rien lever. Il est
+  élargi.
+- **L'export USDZ posait une sélection imbriquée au mauvais endroit.** `clone` recopie `matrix`, et
+  décomposer la matrice monde écrit à côté d'elle ; `GLTFExporter` rafraîchit avant de lire,
+  `USDZExporter` non. La correction de l'étape 10 ne valait donc que pour glTF.
+- **Le gizmo gardait la caméra perspective après un passage en orthographique.** Il en reçoit une
+  au montage et lance son rayon de prise depuis elle : poignées à la mauvaise taille, un tirer en
+  bord de vue partait dans l'orbite, un tirer plus au centre écrivait une translation sur le
+  **mauvais axe** dans le document. Il se rebranche comme le trièdre.
+
+### Ce que la relecture a trouvé et que personne n'a encore traité
+
+Vérifié, non corrigé, par ordre de gravité. Chaque ligne est actionnable telle quelle.
+
+| Où | Quoi |
+|---|---|
+| `shadows.ts:42` via `SceneRenderer.ts:617` | `applyShadowFlags(deep)` traverse **au-delà des nœuds enfants** : régler une ombre sur un parent écrase les drapeaux de ses enfants, que `syncNode` ne répare jamais (`previous === node`). Un changement de thème rejoue l'écrasement sur toute la scène. Corriger en arrêtant la traversée sur tout enfant portant l'id d'un nœud connu |
+| `bvh-builder.ts:34-45` | `dispose()` n'est pas définitif : `workerOf()` respawne sans condition, donc la boucle série de `accelerate` fait naître un worker **après** le démontage du moteur, que rien ne terminera. Un drapeau `disposed` suffit |
+| `bvh.worker.ts` | Aucun canal d'échec — pas de `try/catch`, pas de variante d'erreur, et le builder n'écoute ni `'error'` ni `'messageerror'`. Une exception laisse la promesse suspendue, garde la géométrie dans `building` pour toujours et bloque les mailles suivantes |
+| `SceneRenderer.ts:772` | `void this.accelerate(holder)` avale ses rejets alors que `scene.model` est branché vingt lignes plus haut |
+| `main/scene/export.ts:24` | Le message d'erreur de `writeFile` **livre le chemin absolu au renderer** (invariant 1) : un `EPERM` traverse la frontière et part au journal. À trancher avec l'asymétrie connue de `savePicture`, qui rend déjà le chemin |
+| `SceneRenderer.ts:599` | Le fichier exporté porte des **UUID** en guise de noms : `object.name = node.id`, et le `name` du document n'atteint jamais le fichier. Le test qui semblait le prouver utilisait une fixture dont l'id vaut le nom |
+| `scene-export.ts` | Une lumière directionnelle ou spot **perd son orientation** : la cible est sœur des nœuds, non exportée, et three prévient elle-même |
+| `SceneRenderer.ts:389` | Un nœud **caché** produit un fichier vide, écrit sans un mot (`onlyVisible` vaut `true` chez les deux exporteurs) |
+| `scene-export.ts` | Un GLB **riggé** sort en glTF invalide, `"joints":[null,null]` : `SkinnedMesh.copy` partage le squelette de l'original, hors du sous-arbre exporté. `model-cache.ts:28` a le même défaut — une instance riggée est pilotée par les os du cache |
+| `scene-export.ts:37` | Le décodeur de textures compressées crée un `WebGLRenderer` **par slot de map**, pas par texture (le cache de `GLTFExporter` n'indexe pas la compressée), et laisse derrière lui des écouteurs `dispose` morts plus un singleton de module qui retient la dernière texture. Coût sur le thread UI, et rétention |
+| `services/diagnostics.ts` | `reportFailure` dédoublonne par `scope:subject`, et le sujet de l'export est le **format** : le second export raté du même format est muet. Insuffisant pour une action relancée à la main |
+| `three-sync.ts:68` | Le mode `rotate` s'arme sur un sprite et n'a aucun effet — le shader ne lit que les longueurs de colonnes — mais salit le document et empile un undo vide |
+| `scene-document.ts:160` | `isSprite` est le seul garde non dérivé de sa table : un champ ajouté au descripteur ne sera pas vérifié à la relecture |
+| `ViewportEngine.ts:105-120` | Le passage ortho → perspective jette le zoom accumulé ; `frameSelection` ne redimensionne pas le tronc orthographique, donc `F` en ortho ne change rien à l'écran |
+
+**Sur le sprite, l'export et le BVH, « rien trouvé » n'est plus le verdict** : les passes ont rendu
+sur les trois. Ce qui reste ci-dessus n'a pas été traité faute de périmètre, pas faute d'avoir
+regardé.
 
 **Les deux résolutions de rebase sont relues.** `image-generation.ts` réimplémentait
 `generation-landing.ts` — 91 lignes contre 15, mêmes claims, même settle, à une différence de
