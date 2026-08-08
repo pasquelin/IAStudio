@@ -113,3 +113,25 @@ describe('conflicts', () => {
     expect(conflicts({ 'scene.frame': undefined })).not.toContain('layout.reset')
   })
 })
+
+describe('every scope the registry declares', () => {
+  /**
+   * The shortcuts screen groups the commands by scope and names each group from the bundle.
+   * `canvas` had no label at all: its whole group was headed by the raw key. A scope added
+   * without one is a heading nobody can read.
+   */
+  it('is named in both bundles', () => {
+    for (const language of LANGUAGES) {
+      const labels = TRANSLATIONS[language.code].settings.scope
+      const unnamed = COMMAND_SCOPES.filter(scope => !labels[scope])
+
+      expect(unnamed).toEqual([])
+    }
+  })
+
+  it('holds at least one command, or it is a heading over nothing', () => {
+    const empty = COMMAND_SCOPES.filter(scope => commandsIn(scope).length === 0)
+
+    expect(empty).toEqual([])
+  })
+})

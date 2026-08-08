@@ -807,7 +807,9 @@
     "scope": {
       "global": "Anywhere in the application",
       "scene": "In the 3D view",
-      "sequence": "In the edit"
+      "sequence": "In the edit",
+      "canvas": "In the picture",
+      "skybox": "In the sky"
     },
     "spaces": "Workspaces",
     "spacesDescription": "What only makes sense inside one space: the 3D view, the edit, the image.",
@@ -1142,6 +1144,14 @@
     "canvasExport": {
       "title": "Export the image",
       "help": "Write the flattened document to disk, as a PNG"
+    },
+    "skyboxView": {
+      "title": "Change the view",
+      "help": "Cycles through the four ways of looking at the sky: immersive, panoramic, cross, faces."
+    },
+    "skyboxProbes": {
+      "title": "Light probes",
+      "help": "Shows or hides the witness spheres. A sky is judged by what it lights, not by its own picture."
     }
   },
   "texture": {

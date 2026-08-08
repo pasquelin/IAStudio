@@ -10,7 +10,7 @@ import type { WorkspaceId } from './workspace'
  * offers. Its bindings are the only ones that may clash with everything else, so they are the
  * only ones a conflict check treats as competing with every scope.
  */
-export type CommandScope = 'global' | 'scene' | 'sequence' | 'canvas'
+export type CommandScope = 'global' | 'scene' | 'sequence' | 'canvas' | 'skybox'
 
 export type CommandId =
   | 'project.new'
@@ -72,6 +72,10 @@ export type CommandId =
   | 'canvas.snap'
   | 'canvas.undo'
   | 'canvas.redo'
+  | 'skybox.view'
+  | 'skybox.probes'
+  | 'skybox.undo'
+  | 'skybox.redo'
 
 /**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
@@ -533,9 +537,43 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
+  command({
+    id: 'skybox.view',
+    scope: 'skybox',
+    titleKey: 'commands.skyboxView.title',
+    helpKey: 'commands.skyboxView.help',
+    defaultBinding: 'KeyV',
+  }),
+  command({
+    id: 'skybox.probes',
+    scope: 'skybox',
+    titleKey: 'commands.skyboxProbes.title',
+    helpKey: 'commands.skyboxProbes.help',
+    defaultBinding: 'KeyP',
+  }),
+  command({
+    id: 'skybox.undo',
+    scope: 'skybox',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'skybox.redo',
+    scope: 'skybox',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
 ]
 
-export const COMMAND_SCOPES: readonly CommandScope[] = ['global', 'scene', 'sequence', 'canvas']
+export const COMMAND_SCOPES: readonly CommandScope[] = [
+  'global',
+  'scene',
+  'sequence',
+  'canvas',
+  'skybox',
+]
 
 /**
  * What each workspace edits, when it edits something undoable. The three absent ones — Audio,
@@ -548,6 +586,7 @@ const SCOPE_BY_WORKSPACE: Partial<Record<WorkspaceId, CommandScope>> = {
   image: 'canvas',
   '3d': 'scene',
   video: 'sequence',
+  skyboxes: 'skybox',
 }
 
 /** The surface a workspace edits through, or `null` where nothing is undoable. */
