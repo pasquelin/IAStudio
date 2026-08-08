@@ -378,6 +378,22 @@ tous deux non testés. **Un budget de couverture qui déborde nomme souvent le d
 
 - [ ] Livrée
 
+> **Le point 4 est déjà livré, par quelqu'un d'autre.** `feat/usage-window` a été fusionnée dans
+> `develop` le 8 août 2026 et donne à la consommation de chaque clé **sa propre fenêtre**
+> (`renderer/src/usage/`, `main/scenario/usage.ts`, `usage-aggregate.ts`) : `usages.list`,
+> `pricing.oscu.retrievePrices`, un journal paginé par compte, une période dans la barre de titre.
+> **Ne pas refaire « `usages.list` dans Réglages > Compte »** — c'est fait, mieux et ailleurs. Le
+> texte ci-dessous a été écrit avant.
+>
+> Restent les points 1 à 3, dont rien n'existe : `grep -rn dryRun src/` ne rend toujours rien. Le
+> code de `cost.ts` et de ses cinq tests est écrit et conservé dans `REPRISE-workflows.md`, avec
+> l'avertissement qu'il n'a pas été revérifié depuis que `develop` a pris trente commits.
+>
+> **Un piège pour le point 3 :** `usage-aggregate.ts` lit déjà `creativeUnitsCost`, mais sur les
+> **événements de facturation**. Le coût d'un job se capte ailleurs et à un seul instant — sur la
+> réponse de soumission, que `runnerOf` jette aujourd'hui en ne gardant que `.job`. Deux chemins
+> vers la même grandeur : ne pas les confondre.
+
 **Le meilleur rapport valeur/effort du plan, et un prérequis d'ergonomie du node editor** : un
 graphe sans coût par node est un graphe qu'on n'ose pas lancer.
 
