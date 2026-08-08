@@ -147,9 +147,13 @@ clean by construction.
 What stays useful on a generated sound is to shorten it, bring it to the right level, and make it
 come in and go out cleanly. That is exactly what this workspace does.
 
-> **An edited sound is not saved as a document.** The Audio workspace writes assets directly, via
-> Apply or Save as new. There is no `.aud` file on disk for now — see
-> [What does not exist yet](18-limits.md).
+> **Two different gestures, and they are worth telling apart.** `⌘S` saves the **document** —
+> your cuts, your fades, your settings — into an `.aud` file in the project, which reopens just as
+> it was. **Apply** and **Save as new** write an **audio asset**, a sound usable elsewhere, with
+> the settings baked in.
+>
+> In other words: `⌘S` keeps your work editable, Apply gets the result out. One thing does not
+> come back from a reopened document: the A/B listening, which always restarts on the chain.
 
 ---
 

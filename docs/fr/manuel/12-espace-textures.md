@@ -142,8 +142,9 @@ fichier `.tex` du dossier `documents/` de votre projet.
 **Rien n'est cuit dans les pixels.** Rouvrez le document dans six mois : chaque réglage est
 encore là, et se règle encore. Ce qui est écrit, ce sont vos décisions, pas leur résultat.
 
-Les textures sont, avec les scènes 3D, l'un des deux seuls types de documents qui savent
-s'enregistrer aujourd'hui.
+**Les six types de documents s'enregistrent désormais**, mais la matière garde une particularité :
+elle est la seule à s'écrire **toute seule**. Ailleurs, c'est `⌘S` qui décide du moment, et la
+puce sur l'onglet dit ce qui attend encore d'être écrit.
 
 ---
 
