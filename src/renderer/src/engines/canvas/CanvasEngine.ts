@@ -18,6 +18,7 @@ import { mountApplication } from '../core/mount'
 import { onPaletteChange, token } from '../core/palette'
 import {
   allLayers,
+  IDENTITY,
   isGroup,
   layerById,
   type BlendMode,
@@ -27,7 +28,7 @@ import {
   type Rect,
   type Transform,
 } from './canvas-state'
-import { composite, placement, type CompositeNode } from './compositor'
+import { composite, maskKey, placement, type CompositeNode } from './compositor'
 import {
   CanvasOverlay,
   RULER_SIZE,
@@ -178,6 +179,12 @@ type LayerSurface = {
   sprite: Sprite
 }
 
+/** Which of a layer's two surfaces the brush writes on. */
+export type PaintSurface = 'pixels' | 'mask'
+
+/** A surface a gesture may write to, with the key its undo patches are filed under. */
+type BrushTarget = { key: string; surface: LayerSurface }
+
 /** What the pointer is doing, if anything: the gestures are exclusive by construction. */
 type Gesture =
   | { kind: 'none' }
@@ -249,6 +256,7 @@ export class CanvasEngine {
   private stopPaletteWatch: (() => void) | null = null
 
   private tool: CanvasTool = 'brush'
+  private painting: PaintSurface = 'pixels'
   private brush: BrushSettings = DEFAULT_BRUSH
   private state: CanvasState | null = null
   private view: CanvasView = DEFAULT_VIEW
@@ -387,8 +395,15 @@ export class CanvasEngine {
 
   /** Frees what the stack no longer holds. A layer that left took its pixels with it. */
   private dropDeparted(layers: readonly Layer[]): void {
+    const kept = new Set<string>()
+    for (const layer of layers) {
+      kept.add(layer.id)
+      // Its presence, not `enabled`: unticking the box hides a mask, it does not erase it.
+      if (layer.mask) kept.add(maskKey(layer.id))
+    }
+
     for (const [id, surface] of this.surfaces) {
-      if (layers.some(layer => layer.id === id)) continue
+      if (kept.has(id)) continue
       surface.sprite.destroy()
       // The texture lives on the GPU: dropping the reference is not enough.
       surface.texture.destroy(true)
@@ -396,7 +411,7 @@ export class CanvasEngine {
     }
 
     for (const [id, container] of this.groups) {
-      if (layers.some(layer => layer.id === id)) continue
+      if (kept.has(id)) continue
       // Emptied first, and destroyed without `children`: ungrouping keeps the layers, and
       // taking their sprites down with the container is the same lost-pixels bug in reverse.
       container.removeChildren()
@@ -419,7 +434,16 @@ export class CanvasEngine {
       }
 
       const surface = this.surfaces.get(node.id)
-      if (surface) parent.addChild(surface.sprite)
+      if (!surface) continue
+
+      const mask =
+        node.maskedBy === null ? null : (this.surfaces.get(maskKey(node.maskedBy)) ?? null)
+      // Pixi reads the alpha of whatever it is handed, and only if that object is in the tree:
+      // the mask sprite is attached alongside the layer it hides, and never drawn on its own.
+      if (mask) parent.addChild(mask.sprite)
+      surface.sprite.mask = mask?.sprite ?? null
+
+      parent.addChild(surface.sprite)
     }
   }
 
@@ -494,6 +518,14 @@ export class CanvasEngine {
 
   setBrush(settings: BrushSettings): void {
     this.brush = settings
+  }
+
+  /**
+   * Aims the brush at the layer's pixels or at its mask. A mask is painted with the same tools as
+   * anything else — that is the point of it being a surface like the others.
+   */
+  setPaintTarget(target: PaintSurface): void {
+    this.painting = target
   }
 
   /**
@@ -604,30 +636,42 @@ export class CanvasEngine {
   }
 
   private syncLayer(layer: Layer): void {
-    let surface = this.surfaces.get(layer.id)
-
-    if (!surface) {
-      // Nothing is built before the renderer exists: a texture allocated against no GPU
-      // context would take a stroke and never show it. `mount` replays the state.
-      if (!this.app || !this.state) return
-
-      const texture = RenderTexture.create({
-        width: this.state.width,
-        height: this.state.height,
-        resolution: 1,
-      })
-      const sprite = new Sprite(texture)
-      surface = { texture, sprite }
-      this.surfaces.set(layer.id, surface)
-      // Attached by `attach`, which is the only place that knows which container holds it.
-
-      if (layer.kind === 'pixel' && layer.fill !== undefined) this.fill(surface, layer.fill)
-    }
+    const surface = this.buildSurface(layer.id, layer.kind === 'pixel' ? layer.fill : undefined)
+    if (!surface) return
 
     surface.sprite.visible = layer.visible
     surface.sprite.alpha = layer.opacity
     surface.sprite.blendMode = BLEND_BY_MODE[layer.blend]
     this.place(surface.sprite, layer.transform, surface.texture)
+
+    // Allocated only where the state asks for one: a mask per layer, built ahead, would double
+    // the document's GPU memory for a feature most layers never use.
+    if (!layer.mask) return
+    const mask = this.buildSurface(maskKey(layer.id))
+    // Unlinked means the mask does not follow the layer: it stays where it was painted.
+    if (mask) this.place(mask.sprite, layer.mask.linked ? layer.transform : IDENTITY, mask.texture)
+  }
+
+  /** A document-sized texture and the sprite that shows it, built once and kept. */
+  private buildSurface(key: string, fill?: number): LayerSurface | null {
+    const existing = this.surfaces.get(key)
+    if (existing) return existing
+
+    // Nothing is built before the renderer exists: a texture allocated against no GPU context
+    // would take a stroke and never show it. `mount` replays the state.
+    if (!this.app || !this.state) return null
+
+    const texture = RenderTexture.create({
+      width: this.state.width,
+      height: this.state.height,
+      resolution: 1,
+    })
+    // Attached by `attach`, which is the only place that knows which container holds it.
+    const surface: LayerSurface = { texture, sprite: new Sprite(texture) }
+    this.surfaces.set(key, surface)
+
+    if (fill !== undefined) this.fill(surface, fill)
+    return surface
   }
 
   /**
@@ -661,8 +705,8 @@ export class CanvasEngine {
    */
   restorePixels(patchId: string, side: PatchSide): boolean {
     const patches = this.patches
-    const layerId = patches?.layerOf(patchId)
-    const surface = layerId ? this.surfaces.get(layerId) : null
+    const surfaceId = patches?.surfaceOf(patchId)
+    const surface = surfaceId ? this.surfaces.get(surfaceId) : null
     if (!patches || !surface) return false
 
     const done = patches.restore(patchId, side, surface.texture)
@@ -761,7 +805,7 @@ export class CanvasEngine {
 
     if (this.tool === 'fill') {
       const target = this.paintTarget()
-      const frame = target && this.beginPixels(target.layer.id, target.surface)
+      const frame = target && this.beginPixels(target)
       if (!target || !frame) return
 
       this.patches?.touch(frame)
@@ -801,7 +845,7 @@ export class CanvasEngine {
     const target = this.paintTarget()
     if (!target) return
 
-    this.beginPixels(target.layer.id, target.surface)
+    this.beginPixels(target)
     this.gesture = { kind: 'paint', from: point }
     this.dab(target.surface, [point])
   }
@@ -810,12 +854,16 @@ export class CanvasEngine {
     return this.state ? layerById(this.state, this.state.activeLayerId) : null
   }
 
-  /** The layer a stroke may land on: armed, able to hold pixels, and not padlocked. */
-  private paintTarget(): { layer: Layer; surface: LayerSurface } | null {
+  /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
+  private paintTarget(): BrushTarget | null {
     const layer = this.activeLayer()
-    const surface = this.activeSurface()
-    if (!layer || !surface || isGroup(layer) || layer.locked.pixels) return null
-    return { layer, surface }
+    if (!layer || isGroup(layer) || layer.locked.pixels) return null
+
+    const key = this.paintKey(layer.id)
+    const surface = this.surfaces.get(key)
+    // No surface under that key means the layer carries no mask while the brush aims at one:
+    // there is nothing to paint, and nothing to say about it either.
+    return surface ? { key, surface } : null
   }
 
   private documentRect(): Rect | null {
@@ -824,9 +872,9 @@ export class CanvasEngine {
   }
 
   /** Returns the document's own rectangle, which the bucket then dirties whole. */
-  private beginPixels(layerId: string, surface: LayerSurface): Rect | null {
+  private beginPixels(target: BrushTarget): Rect | null {
     const frame = this.documentRect()
-    if (frame) this.patches?.begin(newId(), layerId, surface.texture, frame)
+    if (frame) this.patches?.begin(newId(), target.key, target.surface.texture, frame)
     return frame
   }
 
@@ -984,9 +1032,14 @@ export class CanvasEngine {
     sheet.destroy()
   }
 
+  /** Where the brush writes on the active layer: its own pixels, or the mask that hides them. */
   private activeSurface(): LayerSurface | null {
     const id = this.state?.activeLayerId
-    return id ? (this.surfaces.get(id) ?? null) : null
+    return id ? (this.surfaces.get(this.paintKey(id)) ?? null) : null
+  }
+
+  private paintKey(layerId: string): string {
+    return this.painting === 'mask' ? maskKey(layerId) : layerId
   }
 
   /**

@@ -17,6 +17,14 @@ export type CompositeNode =
     }
   | { kind: 'group'; id: string; isolated: boolean; children: CompositeNode[] }
 
+/**
+ * Where a layer's mask lives among the surfaces. One namespace for both, so an undo patch filed
+ * under a key finds its way back without knowing which of the two it recorded.
+ */
+export function maskKey(layerId: string): string {
+  return `${layerId}:mask`
+}
+
 /** Bottom first, like the stack itself: the last node is the one the eye sees on top. */
 export function composite(layers: readonly Layer[]): CompositeNode[] {
   return layers.map((layer, index) => {

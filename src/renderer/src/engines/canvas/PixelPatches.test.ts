@@ -147,8 +147,8 @@ describe('recording', () => {
     patches.touch({ x: 0, y: 0, width: 4, height: 4 })
     patches.end()
 
-    expect(patches.layerOf('p1')).toBe('layer-7')
-    expect(patches.layerOf('nope')).toBeNull()
+    expect(patches.surfaceOf('p1')).toBe('layer-7')
+    expect(patches.surfaceOf('nope')).toBeNull()
   })
 })
 

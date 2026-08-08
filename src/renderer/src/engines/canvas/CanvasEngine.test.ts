@@ -51,6 +51,8 @@ const gpu: {
   sprites: Placed[]
   /** Every container built, groups included — they are found back by their label. */
   containers: Placed[]
+  /** The id of every texture a render was aimed at: which surface a stroke actually wrote to. */
+  painted: number[]
 } = {
   renders: 0,
   texturesCreated: 0,
@@ -59,6 +61,7 @@ const gpu: {
   init: {},
   sprites: [],
   containers: [],
+  painted: [],
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -142,8 +145,9 @@ vi.mock('pixi.js', () => {
       readonly canvas = document.createElement('canvas')
       readonly stage = new Container()
       readonly renderer = {
-        render: () => {
+        render: (options?: { target?: { id: number } }) => {
           gpu.renders += 1
+          if (options?.target) gpu.painted.push(options.target.id)
         },
         extract: { pixels: () => ({ pixels: [0, 0, 0, 0] }) },
       }
@@ -171,8 +175,10 @@ vi.mock('pixi.js', () => {
     Texture: class {},
     RenderTexture: {
       create: (options: { width: number; height: number }) => {
+        const id = gpu.texturesCreated
         gpu.texturesCreated += 1
         return {
+          id,
           width: options.width,
           height: options.height,
           // The patch store lifts sub-frames off it; what matters is that it is a stable object.
@@ -281,6 +287,7 @@ beforeEach(() => {
   gpu.init = {}
   gpu.sprites = []
   gpu.containers = []
+  gpu.painted = []
 })
 
 describe('the blend table', () => {
@@ -450,6 +457,131 @@ describe('groups', () => {
     engine.apply({ ...DEFAULT_CANVAS, layers: [pixelLayer('a', 'A')], activeLayerId: 'a' })
 
     expect(groupContainer('g')?.children).toHaveLength(0)
+  })
+})
+
+describe('layer masks', () => {
+  const withMask = (mask?: { enabled: boolean; linked: boolean }): CanvasState => ({
+    ...DEFAULT_CANVAS,
+    layers: [{ ...pixelLayer('layer-1', 'Background'), mask }],
+    activeLayerId: 'layer-1',
+  })
+
+  // A mask per layer allocated ahead would double the GPU memory of every document.
+  it('costs nothing at all on a layer that carries no mask', async () => {
+    await mounted(withMask())
+
+    expect(gpu.texturesCreated).toBe(1)
+  })
+
+  it('gives a masked layer a texture and a sprite of its own', async () => {
+    await mounted(withMask({ enabled: true, linked: true }))
+
+    expect(gpu.texturesCreated).toBe(2)
+    expect(gpu.sprites[0]?.mask).toBe(gpu.sprites[1])
+  })
+
+  // Unticking the box hides a mask; it does not erase it. The pixels are the point of the toggle.
+  it('takes a disabled mask off the sprite while keeping its pixels', async () => {
+    const { engine } = await mounted(withMask({ enabled: true, linked: true }))
+
+    engine.apply(withMask({ enabled: false, linked: true }))
+
+    expect(gpu.sprites[0]?.mask).toBeNull()
+    expect(gpu.texturesDestroyed).toBe(0)
+  })
+
+  it('frees the mask texture when the mask itself leaves the state', async () => {
+    const { engine } = await mounted(withMask({ enabled: true, linked: true }))
+
+    engine.apply(withMask())
+
+    expect(gpu.texturesDestroyed).toBe(1)
+  })
+
+  // Unlinked means the mask does not follow the layer: it stays where it was painted.
+  it('leaves an unlinked mask behind when the layer moves', async () => {
+    const moved = { ...IDENTITY, x: 40, y: 60 }
+    await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [
+        {
+          ...pixelLayer('layer-1', 'Background'),
+          transform: moved,
+          mask: { enabled: true, linked: false },
+        },
+      ],
+      activeLayerId: 'layer-1',
+    })
+
+    expect(gpu.sprites[0]?.position).toMatchObject({ x: 40 + 512, y: 60 + 512 })
+    expect(gpu.sprites[1]?.position).toMatchObject({ x: 512, y: 512 })
+  })
+})
+
+describe('painting into a mask', () => {
+  const masked: CanvasState = {
+    ...DEFAULT_CANVAS,
+    layers: [{ ...pixelLayer('layer-1', 'Background'), mask: { enabled: true, linked: true } }],
+    activeLayerId: 'layer-1',
+  }
+
+  /** The layer's texture is built first, its mask second. */
+  const LAYER = 0
+  const MASK = 1
+
+  it('writes to the layer while the brush is aimed at its pixels', async () => {
+    const { host } = await mounted(masked)
+    gpu.painted = []
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(gpu.painted).toContain(LAYER)
+    expect(gpu.painted).not.toContain(MASK)
+  })
+
+  it('writes to the mask once the brush is aimed at it', async () => {
+    const { engine, host } = await mounted(masked)
+    engine.setPaintTarget('mask')
+    gpu.painted = []
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(gpu.painted).toContain(MASK)
+    expect(gpu.painted).not.toContain(LAYER)
+  })
+
+  it('files the undo patch against the mask, so the stroke can be taken back', async () => {
+    const { engine, host, patches } = await mounted(masked)
+    engine.setPaintTarget('mask')
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    const patchId = patches[0]
+    expect(patchId).toBeDefined()
+    gpu.painted = []
+    expect(engine.restorePixels(patchId ?? '', 'before')).toBe(true)
+    expect(gpu.painted).toContain(MASK)
+  })
+
+  // A layer with no mask has nothing to paint into: the stroke lands nowhere rather than on it.
+  it('paints nothing when the layer aimed at carries no mask', async () => {
+    const { engine, host, patches } = await mounted()
+    engine.setPaintTarget('mask')
+    gpu.painted = []
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(gpu.painted).toEqual([])
+    expect(patches).toEqual([])
   })
 })
 
