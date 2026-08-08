@@ -361,6 +361,11 @@ retoucher, monter, enregistrer — mais pas créer de nouveau contenu.
 Chaque génération consomme le crédit de votre compte Scenario. Le studio ne vous facture rien : il
 transmet. Mais votre compte, lui, compte.
 
+**Et il ne peut pas vous dire ce qu'il vous reste.** La fenêtre **Aide ▸ Consommation…** montre ce
+qui a été dépensé sur 7, 31 ou 120 jours — jamais un solde, parce que l'API Scenario n'en expose
+aucun. Le montant en euros qui l'accompagne est calculé sur la grille publique des packs
+prépayés : un ordre de grandeur, pas votre facture.
+
 ### Il ne remplace pas Photoshop, Blender ni Premiere
 
 Il en fait une part utile, au même endroit, **autour de la génération**. C'est un outil de

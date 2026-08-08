@@ -426,7 +426,36 @@ Le menu du système — en haut de l'écran sur macOS, en haut de la fenêtre ai
 | **Affichage** | Modules (rouvrir un panneau), Réinitialiser la disposition, Plein écran, et le zoom de l'image |
 | **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l'espace 3D |
 | **Fenêtre** | les commandes de fenêtre du système |
-| **Aide** | À propos de Scenario Studio, Licences |
+| **Aide** | À propos de Scenario Studio, Consommation…, Licences |
+
+### La fenêtre de consommation
+
+**Aide ▸ Consommation…** ouvre une fenêtre à part, qui dit **ce que vos clés ont dépensé**.
+
+En haut à droite, la période : **7, 31 ou 120 jours**, sur 31 par défaut. Quatre sections dans la
+colonne de gauche :
+
+| Section | Ce qu'elle montre |
+|---|---|
+| **Vue d'ensemble** | le total consommé sur la période, les remises, le nombre de générations, la dépense par jour et par compte |
+| **Modèles** | quels modèles ont coûté, combien de générations chacun a servi, et la part passée par une clé API |
+| **Activités** | ce qui a été fait, et les assets qui en sont sortis |
+| **Journal** | chaque événement facturé, du plus récent au plus ancien, par pages |
+
+Trois avertissements y sont affichés, et aucun n'est décoratif :
+
+- **il n'y a pas de solde.** L'API Scenario n'expose que ce qui a été dépensé, jamais ce qui
+  reste. Aucun chiffre de cette fenêtre ne vous dira combien vous pouvez encore générer ;
+- **le montant en euros est indicatif.** Il est calculé sur la grille publique des packs
+  prépayés, qui est par paliers et ne dit rien du tarif d'un abonnement. C'est un ordre de
+  grandeur, pas une facture ;
+- **le total mélange des comptes facturés séparément.** Si vous avez plusieurs clés, la somme
+  affichée ne correspond à aucune facture réelle — la section Vue d'ensemble détaille par compte.
+
+**Une clé qui ne répond pas ne fausse pas les chiffres en silence** : la fenêtre nomme les clés
+restées muettes et précise que les totaux sont ceux des autres.
+
+Sans aucune clé enregistrée, la fenêtre le dit et renvoie aux préférences.
 
 ### La fenêtre des licences
 
