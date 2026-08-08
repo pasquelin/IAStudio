@@ -257,6 +257,27 @@ Quatre par défaut.
 > **Une clé API invalide n'est jamais réessayée.** Réessayer ne la corrigerait pas. Le studio
 > distingue ce qui vaut la peine d'être retenté de ce qui ne le vaut pas.
 
+### Fermer le studio n'annule pas une génération
+
+**Une génération lancée continue chez Scenario, que le studio soit ouvert ou non.** Ce qui manquait
+jusqu'ici, c'est qu'il sache la retrouver au retour : c'est fait. En quittant, il note les
+demandes encore en cours ; au lancement suivant, il les reprend là où elles en sont et leur
+résultat rejoint vos assets comme si de rien n'était.
+
+Trois précisions qui décident de ce que vous verrez :
+
+- **la reprise est par projet.** Rouvrez le projet d'où partait la demande, et elle réapparaît
+  dans la ligne d'état. Un autre projet ne montre pas les tâches du premier, et ne les perd pas
+  non plus ;
+- **la reprise est par compte.** Une demande est réinterrogée avec la clé qui l'a lancée — une
+  autre clé recevrait une fin de non-recevoir, et aucune reprise ne répare cela ;
+- **au-delà d'une semaine, une demande oubliée est balayée.** C'est assez long pour l'entraînement
+  d'un modèle, qui dure des heures, et assez court pour qu'un projet abandonné en pleine
+  génération ne traîne pas ses notes indéfiniment.
+
+**Une annulation, elle, arrête vraiment la demande** — chez Scenario, pas seulement dans
+l'affichage.
+
 ### Changer de compte n'interrompt pas une génération en cours
 
 **Une tâche finit sur le compte qui l'a lancée.** Elle retient sa clé au moment où vous appuyez sur
