@@ -10,6 +10,7 @@ import { isRecord } from '@shared/guards'
 import { changedFields } from '@/helpers/objects'
 import { applySelection, type SelectionMode } from '@/helpers/selection'
 import { isVector3, withField, type FieldValue } from './property-fields'
+import { newId } from '@/helpers/ids'
 import { groupNode } from './node-factory'
 import {
   canCastShadow,
@@ -32,15 +33,7 @@ import {
  * re-captures, so a command survives being replayed.
  */
 export function addNode(node: SceneNode): Command<SceneState> {
-  return {
-    id: `add:${node.id}`,
-    apply: state => ({ ...state, nodes: [...state.nodes, node], selectedIds: [node.id] }),
-    revert: state => ({
-      ...state,
-      nodes: state.nodes.filter(candidate => candidate.id !== node.id),
-      selectedIds: deselect(state.selectedIds, node.id),
-    }),
-  }
+  return addNodes([node])
 }
 
 export function removeNode(id: string): Command<SceneState> {
@@ -361,6 +354,74 @@ function hang(state: SceneState, id: string, parentId: string | null): SceneStat
   return {
     ...state,
     nodes: state.nodes.map(node => (node.id === id ? { ...node, parentId } : node)),
+  }
+}
+
+/**
+ * Copies of the given nodes, with fresh ids and their parents rewritten to point at the copies.
+ *
+ * A subtree is duplicated whole: copying a group has to copy what hangs from it, and a child
+ * whose `parentId` still named the original would end up shared between the two — moving one
+ * would move the other's child. What falls outside the set keeps its parent, which is what puts
+ * a copy beside its original rather than at the root.
+ */
+export function copiesOf(nodes: readonly SceneNode[], picked: readonly SceneNode[]): SceneNode[] {
+  const carried = picked.flatMap(node => subtreeOf(nodes, node.id))
+  const fresh = [...new Map(carried.map(node => [node.id, node])).values()].map(node => ({
+    node,
+    id: newId(),
+  }))
+  const renamed = new Map(fresh.map(({ node, id }) => [node.id, id]))
+
+  return fresh.map(({ node, id }) => ({
+    ...node,
+    id,
+    parentId: node.parentId === null ? null : (renamed.get(node.parentId) ?? node.parentId),
+  }))
+}
+
+/**
+ * The same copies, with any parent the destination does not hold cut loose.
+ *
+ * `copiesOf` keeps a parent that falls outside the set, which is what lands a duplicate beside
+ * its original. Pasted into another scene, that parent names nothing: the outliner drops a node
+ * whose parent is missing while the viewport still draws it, and it becomes unreachable.
+ */
+export function rootedIn(
+  copies: readonly SceneNode[],
+  nodes: readonly SceneNode[],
+): readonly SceneNode[] {
+  const known = new Set([...nodes, ...copies].map(node => node.id))
+
+  return copies.map(copy =>
+    copy.parentId !== null && !known.has(copy.parentId) ? { ...copy, parentId: null } : copy,
+  )
+}
+
+/**
+ * Puts copies of the given nodes into the scene, and selects them — what was just made is what
+ * the next gesture acts on, in every editor there is.
+ */
+export function addNodes(copies: readonly SceneNode[]): Command<SceneState> {
+  return {
+    id: commandId(
+      'add',
+      copies.map(node => node.id),
+    ),
+    // Nothing to put down clears no selection: an empty add is a no-op, not a deselect.
+    apply: state =>
+      copies.length === 0
+        ? state
+        : {
+            ...state,
+            nodes: [...state.nodes, ...copies],
+            selectedIds: copies.map(copy => copy.id),
+          },
+    revert: state => ({
+      ...state,
+      nodes: state.nodes.filter(node => !copies.some(copy => copy.id === node.id)),
+      selectedIds: copies.reduce((ids, copy) => deselect(ids, copy.id), state.selectedIds),
+    }),
   }
 }
 

@@ -3,6 +3,10 @@ import {
   mdiArrowAll,
   mdiAxisArrow,
   mdiAxisArrowLock,
+  mdiContentCopy,
+  mdiContentCut,
+  mdiContentDuplicate,
+  mdiContentPaste,
   mdiCropFree,
   mdiCursorDefaultOutline,
   mdiDelete,
@@ -101,6 +105,37 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     labelKey: 'sceneTools.group',
     descriptionKey: 'sceneTools.groupHint',
     icon: mdiFolderPlusOutline,
+  },
+  // Shown rather than left to the keyboard: the native Edit menu carries Copy and Paste of its
+  // own, which act on text, and nothing else would say the scene has its own.
+  {
+    id: 'duplicate',
+    command: 'scene.duplicate',
+    labelKey: 'sceneTools.duplicate',
+    descriptionKey: 'sceneTools.duplicateHint',
+    icon: mdiContentDuplicate,
+    separatorBefore: true,
+  },
+  {
+    id: 'copy',
+    command: 'scene.copy',
+    labelKey: 'sceneTools.copy',
+    descriptionKey: 'sceneTools.copyHint',
+    icon: mdiContentCopy,
+  },
+  {
+    id: 'cut',
+    command: 'scene.cut',
+    labelKey: 'sceneTools.cut',
+    descriptionKey: 'sceneTools.cutHint',
+    icon: mdiContentCut,
+  },
+  {
+    id: 'paste',
+    command: 'scene.paste',
+    labelKey: 'sceneTools.paste',
+    descriptionKey: 'sceneTools.pasteHint',
+    icon: mdiContentPaste,
   },
   {
     id: 'delete',

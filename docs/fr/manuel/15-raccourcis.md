@@ -20,10 +20,10 @@ Les touches sont écrites avec des symboles, les mêmes partout dans le studio.
 `⌘Z` se lit donc « Commande + Z » sur un Mac, et « Ctrl + Z » ailleurs. Les symboles s'écrivent
 collés : `⇧⌘Z` veut dire les trois touches ensemble.
 
-> **Sur Windows et Linux, l'affichage montre encore `⌘`.** Le raccourci **fonctionne** avec
-> `Ctrl` — c'est le menu du système qui a raison — mais l'infobulle et l'écran des raccourcis
-> dessinent le symbole du Mac. C'est un défaut d'affichage connu, listé dans
-> [Ce qui n'existe pas encore](18-limites.md).
+> **Sur Windows et Linux, `⌘` est pris au pied de la lettre.** L'infobulle et l'écran des
+> raccourcis dessinent le symbole du Mac partout ; et si les raccourcis du menu du système
+> répondent bien à `Ctrl`, ceux qu'une surface écoute elle-même attendent la touche Windows. Les
+> deux défauts sont listés dans [Ce qui n'existe pas encore](18-limites.md).
 
 ---
 
@@ -90,6 +90,19 @@ plus bas).
 | **Repère local** | `L` | aligne les poignées sur l'orientation de l'objet plutôt que sur celle du monde |
 | **Cadrer la sélection** | `F` | rapproche la caméra pour que l'objet remplisse la vue |
 | **Supprimer** | `Suppr` | retire tout ce qui est sélectionné. `⌘Z` le fait revenir |
+
+### Assembler et dupliquer
+
+| Action | Touche | Ce qu'elle fait |
+|---|---|---|
+| **Grouper** | `⌘G` | range les objets sélectionnés sous un même groupe |
+| **Dupliquer** | `⌘D` | pose une copie de la sélection au même endroit, et la sélectionne |
+| **Copier** | `⌘C` | retient la sélection, sans toucher à la scène |
+| **Couper** | `⌘X` | la retient et la retire de la scène |
+| **Coller** | `⌘V` | pose ce qui a été retenu dans la scène en cours |
+
+> Ce presse-papiers est celui du studio : il ne touche pas à celui du système, et `⌘C` laisse la
+> main dès que du texte est sélectionné à l'écran.
 
 ### Annuler et rétablir
 
@@ -293,6 +306,9 @@ figées pour l'instant. Voir [Ce qui n'existe pas encore](18-limites.md).
 | `⌃⌘F` | Plein écran | | | |
 | `⌘Z` | | Annuler | Annuler | Annuler |
 | `⇧⌘Z` | | Rétablir | Rétablir | Rétablir |
+| `⌘G` | | Grouper | | |
+| `⌘D` | | Dupliquer | | |
+| `⌘C` / `⌘X` / `⌘V` | | Copier / Couper / Coller | | |
 | `V` | | Sélectionner | | |
 | `G` | | Déplacer | | |
 | `R` | | Pivoter | | |

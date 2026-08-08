@@ -116,10 +116,10 @@ haut, « Ce que cela veut dire concrètement ».
 
 ### Ce qui manque
 
-- **les groupes** et le reparentage — on ne peut pas assembler des objets en un sous-ensemble ;
-- **le copier-coller** et la duplication ;
-- **l'éclairage par image** (*IBL*) dans le viewport — une *skybox* n'éclaire pas encore une
-  scène 3D, alors qu'elle éclaire bien l'aperçu de l'espace Skyboxes.
+- **les vues normalisées** (dessus, face, côté) et la **caméra orthographique** — la vue est
+  toujours en perspective, ce qui rend un alignement précis difficile à juger ;
+- **l'export** d'une scène vers un fichier `.glb` ou `.usdz` — on peut importer un modèle et le
+  mettre en scène, pas ressortir la scène montée.
 
 ### Deux objets annoncés mais non constructibles
 
@@ -319,12 +319,17 @@ second n'est pas implémenté**, et le choix n'est donc offert nulle part dans l
 
 Offrir un bouton qui ne mène nulle part serait une promesse que le logiciel ne peut pas tenir.
 
-### Sur Windows et Linux, l'affichage montre `⌘`
+### Sur Windows et Linux, `⌘` est pris au pied de la lettre
 
-Les raccourcis **fonctionnent** avec `Ctrl` — le menu du système est correct. Mais les infobulles
-et l'écran des raccourcis dessinent le symbole `⌘` du Mac au lieu de `Ctrl`.
+Deux défauts distincts, l'un d'affichage, l'autre de fonctionnement.
 
-C'est un défaut d'affichage, pas de fonctionnement.
+**L'affichage** : les infobulles et l'écran des raccourcis dessinent le symbole `⌘` du Mac au lieu
+de `Ctrl`, partout.
+
+**Le fonctionnement** : les raccourcis portés par le menu du système — `⌘Z`, `⌘S`, `⌘N` — répondent
+bien à `Ctrl`, c'est le menu qui les déclenche. Mais ceux qu'une surface écoute elle-même, comme
+`⌘D` dans la vue 3D, attendent la touche **Windows** et non `Ctrl` : ils sont pour l'instant hors
+d'atteinte ailleurs que sur un Mac.
 
 ### Un intitulé de contexte manque dans l'écran des raccourcis
 

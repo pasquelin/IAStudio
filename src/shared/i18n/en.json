@@ -510,6 +510,14 @@
     "spaceHint": "Line the handles up with the object's own orientation; when it is off, they follow the world axes",
     "group": "Group",
     "groupHint": "File the selected objects under one group",
+    "duplicate": "Duplicate",
+    "duplicateHint": "Put down a copy of whatever is selected",
+    "copy": "Copy",
+    "copyHint": "Hold whatever is selected, to paste later",
+    "cut": "Cut",
+    "cutHint": "Hold whatever is selected and take it out of the scene",
+    "paste": "Paste",
+    "pasteHint": "Put what was copied into this scene",
     "delete": "Delete",
     "deleteHint": "Remove whatever is selected from the scene"
   },
@@ -857,6 +865,22 @@
     "sceneGroup": {
       "title": "Group",
       "help": "Files the selected objects under one group. Moving the group moves them all, and ⌘Z takes the grouping back."
+    },
+    "sceneDuplicate": {
+      "title": "Duplicate",
+      "help": "Puts a copy of the selection under the same parent and at the very same place, then selects it. A group duplicates whole, with everything hanging from it."
+    },
+    "sceneCopy": {
+      "title": "Copy",
+      "help": "Holds on to the selection so it can be pasted, here or in another scene. This is the studio's own clipboard: it leaves the system one alone."
+    },
+    "sceneCut": {
+      "title": "Cut",
+      "help": "Holds on to the selection and takes it out of the scene. ⌘Z brings it back."
+    },
+    "scenePaste": {
+      "title": "Paste",
+      "help": "Puts what was copied into the scene in front, and selects it. Pasting twice makes two separate copies."
     },
     "sceneDelete": {
       "title": "Delete",

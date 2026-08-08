@@ -79,7 +79,16 @@ describe('SCENE_TOOLS', () => {
       'snap',
       'frame',
       'add',
+      'duplicate',
     ])
+  })
+
+  // Copy and Paste answer to the same keys as the native Edit menu, which acts on text: a
+  // button of the scene's own is the only thing that says the scene has them too.
+  it('offers the clipboard gestures as buttons, not to the keyboard alone', () => {
+    const ids = SCENE_TOOLS.map(tool => tool.id)
+
+    expect(ids).toEqual(expect.arrayContaining(['duplicate', 'copy', 'cut', 'paste']))
   })
 
   // They qualify the armed tool rather than replacing it, so they follow it in their own group.

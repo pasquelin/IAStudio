@@ -143,6 +143,31 @@ faible pour que les ombres ne soient pas complètement noires. C'est la recette 
 
 ---
 
+## Dupliquer, copier, coller
+
+Quatre boutons en fin de barre d'outils, et les quatre raccourcis que vous connaissez déjà.
+
+| Geste | Raccourci | Ce qu'il fait |
+|---|---|---|
+| **Dupliquer** | `⌘D` | pose une copie de la sélection au même endroit, et la sélectionne |
+| **Copier** | `⌘C` | retient la sélection sans toucher à la scène |
+| **Couper** | `⌘X` | la retient et la retire de la scène |
+| **Coller** | `⌘V` | pose ce qui a été retenu dans la scène en cours |
+
+Trois choses valent d'être sues :
+
+- **Un groupe se duplique entier**, avec tout ce qui pend dessous. Copier un enfant seul le copie
+  seul, et il retrouve son parent — sauf si vous le collez dans une scène qui n'a pas ce parent,
+  où il se pose alors à la racine.
+- **La copie tombe exactement sur l'original.** Elle est sélectionnée : la déplacer est le geste
+  suivant, pas une manœuvre de rattrapage.
+- **Ce presse-papiers est celui du studio**, pas celui du système. Copier un objet ne jette pas le
+  texte que vous aviez en réserve, et vous pouvez coller dans une autre scène. Il se vide en
+  revanche quand vous changez de projet : un objet importé y nomme un asset qui n'existe nulle
+  part ailleurs.
+
+---
+
 ## L'Explorateur — l'arbre de la scène
 
 Le panneau **Explorateur**, dans la colonne de gauche, montre tout ce que la scène contient,
@@ -268,9 +293,9 @@ rien n'avait été écrit pour lui.
 
 L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
 
-- les **groupes** et le reparentage ;
-- le **copier-coller** et la duplication ;
-- l'**éclairage par image** (HDRI) dans le viewport.
+- **Sprite** et **Texte** — les deux entrées grisées du menu **Ajouter** ;
+- les **vues normalisées** (dessus, face, côté) et la **caméra orthographique** ;
+- l'**export** d'une scène vers un fichier `.glb` ou `.usdz`.
 
 Le détail est dans [Ce qui n'existe pas encore](18-limites.md).
 

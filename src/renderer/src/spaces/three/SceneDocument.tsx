@@ -3,7 +3,14 @@ import { shortcutLabel } from '@shared/domain/shortcut'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
-import { groupNodes, moveNodes, removeNodes } from '@/engines/scene/commands'
+import {
+  addNodes,
+  copiesOf,
+  groupNodes,
+  moveNodes,
+  removeNodes,
+  rootedIn,
+} from '@/engines/scene/commands'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { restoreDocument } from '@/app/document-io'
 import { setDocumentTitle } from '@/app/dockview-api'
@@ -15,6 +22,7 @@ import { useBindingOverrides } from '@/stores/bindings'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { assetsById, useAssets } from '@/stores/assets'
 import { selectedNodes } from '@/engines/scene/scene-state'
+import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
 
@@ -96,6 +104,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const run = useCallback(
     (command: CommandId) => {
       const store = useScenes.getState()
+      const { nodes, selectedIds } = sceneOf(store, documentId)
+      const picked = selectedNodes(nodes, selectedIds)
+
       switch (command) {
         case 'scene.select':
           return setMode('select')
@@ -111,17 +122,30 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return setSnapping(current => !current)
         case 'scene.space':
           return setLocalFrame(current => !current)
-        case 'scene.delete': {
-          const { nodes, selectedIds } = sceneOf(store, documentId)
+        case 'scene.delete':
           if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
           return
-        }
-        case 'scene.group': {
-          const { nodes, selectedIds } = sceneOf(store, documentId)
-          const chosen = selectedNodes(nodes, selectedIds)
-          if (chosen.length > 0) store.runCommand(documentId, groupNodes(chosen))
+        case 'scene.duplicate':
+          if (picked.length > 0) store.runCommand(documentId, addNodes(copiesOf(nodes, picked)))
+          return
+        case 'scene.copy':
+          if (picked.length > 0) useSceneClipboard.getState().copy(copiesOf(nodes, picked))
+          return
+        case 'scene.cut':
+          if (picked.length === 0) return
+          useSceneClipboard.getState().copy(copiesOf(nodes, picked))
+          store.runCommand(documentId, removeNodes(nodes, selectedIds))
+          return
+        case 'scene.paste': {
+          // Copied again on the way out: pasting twice must not put the same ids in twice.
+          const held = useSceneClipboard.getState().nodes
+          if (held.length === 0) return
+          store.runCommand(documentId, addNodes(rootedIn(copiesOf(held, held), nodes)))
           return
         }
+        case 'scene.group':
+          if (picked.length > 0) store.runCommand(documentId, groupNodes(picked))
+          return
         case 'scene.undo':
           return store.undo(documentId)
         case 'scene.redo':
@@ -142,10 +166,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     onCommand: run,
   })
 
-  // Rebuilt only when something the bar shows moves — a shortcut, the delete button's
-  // availability, a toggle: the document re-renders on every transform release, and each item
-  // carries the 22-entry Add flyout.
+  // Rebuilt only when something the bar shows moves — a shortcut, a button's availability, a
+  // toggle: the document re-renders on every transform release, and each item carries the
+  // 22-entry Add flyout.
   const nothingSelected = scene.selectedIds.length === 0
+  const nothingHeld = useSceneClipboard(state => state.nodes.length === 0)
   const tools = useMemo(() => {
     // Keyed by command rather than by tool id, so a renamed command fails to compile instead of
     // quietly leaving a toggle unlit.
@@ -153,14 +178,21 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.snap': snapping,
       'scene.space': localFrame,
     }
+    const unavailable: Partial<Record<CommandId, boolean>> = {
+      'scene.delete': nothingSelected,
+      'scene.duplicate': nothingSelected,
+      'scene.copy': nothingSelected,
+      'scene.cut': nothingSelected,
+      'scene.paste': nothingHeld,
+    }
 
     return SCENE_TOOLS.map(tool => ({
       ...tool,
       shortcut: tool.command ? shortcutLabel(bindingOf(tool.command, bindings)) : undefined,
-      disabled: tool.command === 'scene.delete' && nothingSelected,
+      disabled: tool.command ? unavailable[tool.command] : undefined,
       pressed: tool.command ? pressed[tool.command] : undefined,
     }))
-  }, [bindings, nothingSelected, snapping, localFrame])
+  }, [bindings, nothingSelected, nothingHeld, snapping, localFrame])
 
   return (
     <div

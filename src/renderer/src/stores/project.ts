@@ -6,6 +6,7 @@ import { useSettings } from './settings'
 import { useAssets } from './assets'
 import { useDocuments } from './documents'
 import { useLayouts } from './layouts'
+import { useSceneClipboard } from './scene-clipboard'
 
 type ProjectState = {
   project: Project | null
@@ -22,6 +23,9 @@ type ProjectState = {
  */
 async function followProject(project: Project | null): Promise<void> {
   useLayouts.getState().adopt(project?.path ?? null)
+  // A copied model names an asset of the project it came from: pasted into another one, it
+  // would list in the outliner and draw nothing, with no way to tell why.
+  useSceneClipboard.setState({ nodes: [] })
   await Promise.all([useAssets.getState().refresh(), useDocuments.getState().refresh()])
 }
 

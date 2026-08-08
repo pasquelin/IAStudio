@@ -24,6 +24,10 @@ export type CommandId =
   | 'scene.scale'
   | 'scene.frame'
   | 'scene.group'
+  | 'scene.duplicate'
+  | 'scene.copy'
+  | 'scene.cut'
+  | 'scene.paste'
   | 'scene.snap'
   | 'scene.space'
   | 'scene.delete'
@@ -187,6 +191,37 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneGroup.title',
     helpKey: 'commands.sceneGroup.help',
     defaultBinding: 'Meta+KeyG',
+  }),
+  // The four gestures every editor shares, on the keys every editor uses. `role: 'editMenu'`
+  // carries the same three for text fields; a scene tab is not one, and `isTyping` keeps them
+  // apart when it is.
+  command({
+    id: 'scene.duplicate',
+    scope: 'scene',
+    titleKey: 'commands.sceneDuplicate.title',
+    helpKey: 'commands.sceneDuplicate.help',
+    defaultBinding: 'Meta+KeyD',
+  }),
+  command({
+    id: 'scene.copy',
+    scope: 'scene',
+    titleKey: 'commands.sceneCopy.title',
+    helpKey: 'commands.sceneCopy.help',
+    defaultBinding: 'Meta+KeyC',
+  }),
+  command({
+    id: 'scene.cut',
+    scope: 'scene',
+    titleKey: 'commands.sceneCut.title',
+    helpKey: 'commands.sceneCut.help',
+    defaultBinding: 'Meta+KeyX',
+  }),
+  command({
+    id: 'scene.paste',
+    scope: 'scene',
+    titleKey: 'commands.scenePaste.title',
+    helpKey: 'commands.scenePaste.help',
+    defaultBinding: 'Meta+KeyV',
   }),
   command({
     id: 'scene.delete',

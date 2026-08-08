@@ -526,7 +526,59 @@ le premier jour, sa JSDoc le dit (« Reparenting is not offered yet »).
 
 ## Étape 7 — Dupliquer, copier-coller
 
-- [ ] Livrée
+- [x] Livrée
+
+**Ce qui existe maintenant.** `copiesOf(nodes, picked)` cloné un sous-arbre entier en réécrivant les
+`parentId` vers les nouveaux identifiants, `rootedIn(copies, nodes)` coupe ce qui pend dans le vide,
+`addNodes` les pose et les sélectionne. Le presse-papiers est un store du studio
+(`stores/scene-clipboard.ts`). Quatre commandes — `scene.duplicate`, `scene.copy`, `scene.cut`,
+`scene.paste` — au clavier (`⌘D` `⌘C` `⌘X` `⌘V`) et en quatre boutons de barre d'outils.
+
+**Décisions prises seul, et pourquoi.**
+
+- *Pas de décalage à la duplication.* Le plan l'offrait en option. La copie tombe exactement sur
+  l'original et **est sélectionnée** : le geste suivant est de la déplacer, avec la poignée déjà
+  armée. Un décalage arbitraire en unités de scène n'a de sens ni sur une maille de 0,1 ni sur un
+  modèle de 40 — et il ferait mentir « à côté », qui dans un arbre veut dire « sous le même
+  parent ».
+- *`addNode` est devenu `addNodes([node])`.* Les deux étaient identiques ligne à ligne, id de
+  commande compris.
+- *`⌘C` / `⌘X` / `⌘V` malgré `role: 'editMenu'`* (`src/main/menu/template.ts`). Vérifié plutôt que
+  supposé : Chromium délivre `keydown` à la page **avant** les accélérateurs de menu, et
+  `useShortcuts` fait `preventDefault()` — c'est le même profil que `scene.undo` contre le rôle
+  `undo`, qui fonctionne. Dans un champ de saisie, `isTyping` sort sans consommer et l'édition
+  native reprend la main.
+- *`⌘C` s'efface devant une sélection de texte.* Le raccourci est écouté sur `window` : sans cela,
+  copier un nom d'asset ou une ligne de journal pendant qu'un onglet 3D est actif devenait
+  impossible. `copiesText(signature)` dans `shared/domain/shortcut.ts` nomme les deux accords
+  concernés.
+- *Le presse-papiers se vide au changement de projet.* Un nœud `model` nomme un `assetId` du
+  catalogue d'origine : collé ailleurs, il se listerait dans l'outliner sans rien dessiner.
+- *Les quatre gestes ont un bouton.* Le menu Édition natif affiche Copier/Couper/Coller qui agissent
+  sur le texte : sans bouton de la scène, rien ne dirait qu'elle a les siens.
+
+**Bugs trouvés en revue et corrigés.**
+
+- *Le nœud orphelin au collage.* `copiesOf` conserve volontairement un `parentId` hors du set copié
+  — c'est ce qui pose un `⌘D` sous le même parent. Mais collé dans une autre scène, ce parent ne
+  nomme rien : `flattenTree` retire le nœud de l'outliner **pendant que le viewport le dessine**, et
+  il devient injoignable, indélébile et sauvegardé. D'où `rootedIn`, appliqué à la destination.
+- *`addNodes([])` vidait la sélection* et posait une entrée d'historique `add:` vide, qui aurait
+  coalescé avec la suivante. Un tableau vide rend l'état inchangé.
+
+**Une limite constatée, laissée telle quelle et documentée.** Sur Windows et Linux, `signatureOf`
+lit `event.metaKey` : un raccourci `Meta+…` écouté par une surface attend la touche Windows, pas
+`Ctrl`. Ce n'est pas propre à cette étape — c'est la convention de tout `COMMAND_REGISTRY`, `⌘Z`
+compris — et la corriger touche la résolution des raccourcis de toute l'application. Hors du
+périmètre du plan, donc : le manuel disait « c'est un défaut d'affichage, pas de fonctionnement »,
+ce qui était faux, et dit maintenant la vérité (§ 15 et § 18, les deux langues).
+
+**Manuel.** Le chapitre 09 a gagné « Dupliquer, copier, coller », le chapitre 15 la table des
+raccourcis correspondante. Sa liste « Ce qui manque encore » annonçait encore comme absents les
+groupes, l'IBL et la sélection multiple, livrés aux étapes 1, 2 et 5 : corrigée, ici et au
+chapitre 18. **Reste à faire en fin de chantier** : le chapitre 09 n'a toujours aucune section sur
+le magnétisme, le repère local, les ombres ni l'environnement — les étapes 1 à 6 ont corrigé ce qui
+était faux, pas comblé ce qui manque.
 
 Aucune commande dans `commands.ts` aujourd'hui.
 

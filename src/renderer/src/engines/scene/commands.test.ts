@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { emptyHistory, run, undo } from '../core/history'
 import {
   addNode,
+  addNodes,
   batch,
+  copiesOf,
   groupNodes,
   moveNodes,
   reparentNode,
   multi,
   removeNode,
   removeNodes,
+  rootedIn,
   renameNode,
   setGeometry,
   setLight,
@@ -379,6 +382,92 @@ describe('groupNodes', () => {
   it('is one entry in the history, whatever it moved', () => {
     const command = groupNodes([mesh('a'), mesh('b')])
     expect(command.revert(command.apply(start)).nodes).toEqual(start.nodes)
+  })
+})
+
+describe('copiesOf', () => {
+  // a > b, and c beside them
+  const nodes = [mesh('a'), mesh('b', 'a'), mesh('c')]
+
+  it('gives every copy an id of its own', () => {
+    const copies = copiesOf(nodes, [mesh('c')])
+
+    expect(copies).toHaveLength(1)
+    expect(copies[0]?.id).not.toBe('c')
+  })
+
+  // A child still naming the original would be shared between the two: moving one would move
+  // the other's child.
+  it('carries a subtree whole, with its parents rewritten to the copies', () => {
+    const copies = copiesOf(nodes, [nodes[0]!])
+
+    expect(copies).toHaveLength(2)
+    expect(copies[1]?.parentId).toBe(copies[0]?.id)
+  })
+
+  // What falls outside the set keeps its parent, which is what puts a copy beside its original.
+  it('leaves a parent outside the copy pointing where it did', () => {
+    const copies = copiesOf(nodes, [nodes[1]!])
+    expect(copies[0]?.parentId).toBe('a')
+  })
+
+  it('copies a node once when both it and its parent are picked', () => {
+    expect(copiesOf(nodes, [nodes[0]!, nodes[1]!])).toHaveLength(2)
+  })
+
+  it('keeps everything else of the node, so a copy looks like what it came from', () => {
+    const dressed = { ...mesh('c'), name: 'Socle', visible: false }
+    const [copy] = copiesOf([dressed], [dressed])
+
+    expect(copy).toMatchObject({ name: 'Socle', visible: false, type: 'mesh' })
+  })
+})
+
+describe('addNodes', () => {
+  const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
+
+  it('puts the copies in and selects them, since that is what the next gesture acts on', () => {
+    const copies = copiesOf(start.nodes, start.nodes)
+    const pasted = addNodes(copies).apply(start)
+
+    expect(pasted.nodes).toHaveLength(2)
+    expect(pasted.selectedIds).toEqual(copies.map(node => node.id))
+  })
+
+  it('takes them back out, and the selection with them', () => {
+    const command = addNodes(copiesOf(start.nodes, start.nodes))
+    const back = command.revert(command.apply(start))
+
+    expect(back.nodes).toEqual(start.nodes)
+    expect(back.selectedIds).toEqual([])
+  })
+
+  // Nothing to put down clears no selection: an empty add is a no-op, not a deselect.
+  it('leaves the scene exactly as it was when given nothing', () => {
+    expect(addNodes([]).apply(start)).toBe(start)
+  })
+})
+
+describe('rootedIn', () => {
+  const nodes = [mesh('a'), mesh('b', 'a')]
+
+  it('cuts loose a parent the destination does not hold', () => {
+    const [stray] = rootedIn(copiesOf(nodes, [nodes[1]!]), [mesh('elsewhere')])
+
+    expect(stray?.parentId).toBeNull()
+  })
+
+  it('leaves a parent the destination does hold alone', () => {
+    const [carried] = rootedIn(copiesOf(nodes, [nodes[1]!]), nodes)
+
+    expect(carried?.parentId).toBe('a')
+  })
+
+  // The copies name each other: a parent inside the set is held by the paste itself.
+  it('keeps a parent that comes along in the same paste', () => {
+    const copies = rootedIn(copiesOf(nodes, [nodes[0]!]), [])
+
+    expect(copies[1]?.parentId).toBe(copies[0]?.id)
   })
 })
 

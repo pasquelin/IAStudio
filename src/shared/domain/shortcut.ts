@@ -44,6 +44,23 @@ export function signatureOf(event: KeyChord): Signature {
   return parts.join('+')
 }
 
+/**
+ * The chords the platform also runs on any highlighted text, editable or not.
+ *
+ * A command bound to one of them steps aside while something is selected: the copy the user
+ * meant is the text they just highlighted, and taking it would leave them no way to get it.
+ */
+const TEXT_CHORDS: ReadonlySet<Signature> = new Set([
+  'Meta+KeyC',
+  'Meta+KeyX',
+  'Ctrl+KeyC',
+  'Ctrl+KeyX',
+])
+
+export function copiesText(signature: Signature): boolean {
+  return TEXT_CHORDS.has(signature)
+}
+
 const MODIFIER_GLYPHS: Record<string, string> = {
   Ctrl: '⌃',
   Alt: '⌥',

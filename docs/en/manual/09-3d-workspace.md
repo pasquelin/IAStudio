@@ -142,6 +142,30 @@ not completely black. That is the classic recipe.
 
 ---
 
+## Duplicate, copy, paste
+
+Four buttons at the end of the toolbar, and the four shortcuts you already know.
+
+| Gesture | Shortcut | What it does |
+|---|---|---|
+| **Duplicate** | `⌘D` | puts a copy of the selection at the same place, and selects it |
+| **Copy** | `⌘C` | holds the selection without touching the scene |
+| **Cut** | `⌘X` | holds it and takes it out of the scene |
+| **Paste** | `⌘V` | puts what was held into the current scene |
+
+Three things worth knowing:
+
+- **A group duplicates whole**, with everything hanging from it. Copying a lone child copies it
+  alone, and it finds its parent again — unless you paste it into a scene that has no such parent,
+  where it lands at the root instead.
+- **The copy falls exactly on the original.** It is selected: moving it is the next gesture, not a
+  recovery manoeuvre.
+- **This clipboard is the studio's**, not the system's. Copying an object does not throw away the
+  text you had in reserve, and you can paste into another scene. It does empty when you switch
+  projects, though: an imported object there names an asset that exists nowhere else.
+
+---
+
 ## The Explorer — the scene tree
 
 The **Explorer** panel, in the left column, shows everything the scene contains, as a tree.
@@ -263,11 +287,9 @@ nothing had been written for it.
 
 The 3D workspace is functional but young. Do not look yet for:
 
-- **multiple selection** — one object at a time;
-- **groups** and reparenting;
-- **copy-paste** and duplication;
-- **image-based lighting** (HDRI) in the viewport;
-- **snapping** and local pivot.
+- **Sprite** and **Text** — the two greyed-out entries of the **Add** menu;
+- the **normalised views** (top, front, side) and the **orthographic camera**;
+- **exporting** a scene to a `.glb` or `.usdz` file.
 
 The detail is in [What does not exist yet](18-limits.md).
 

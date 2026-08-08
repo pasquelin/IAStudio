@@ -510,6 +510,14 @@
     "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
     "group": "Grouper",
     "groupHint": "Ranger les objets sélectionnés sous un même groupe",
+    "duplicate": "Dupliquer",
+    "duplicateHint": "Poser une copie de ce qui est sélectionné",
+    "copy": "Copier",
+    "copyHint": "Retenir ce qui est sélectionné pour le coller ensuite",
+    "cut": "Couper",
+    "cutHint": "Retenir ce qui est sélectionné et le retirer de la scène",
+    "paste": "Coller",
+    "pasteHint": "Poser dans cette scène ce qui a été copié",
     "delete": "Supprimer",
     "deleteHint": "Retirer de la scène ce qui est sélectionné"
   },
@@ -857,6 +865,22 @@
     "sceneGroup": {
       "title": "Grouper",
       "help": "Range les objets sélectionnés sous un même groupe. Déplacer le groupe les déplace tous, et ⌘Z défait le rangement."
+    },
+    "sceneDuplicate": {
+      "title": "Dupliquer",
+      "help": "Pose une copie de ce qui est sélectionné, sous le même parent et exactement au même endroit, puis la sélectionne. Un groupe se duplique entier, avec tout ce qui pend dessous."
+    },
+    "sceneCopy": {
+      "title": "Copier",
+      "help": "Retient ce qui est sélectionné pour le coller ensuite, ici ou dans une autre scène. Ce presse-papiers est celui du studio : il ne touche pas à celui du système."
+    },
+    "sceneCut": {
+      "title": "Couper",
+      "help": "Retient ce qui est sélectionné puis le retire de la scène. ⌘Z le fait revenir."
+    },
+    "scenePaste": {
+      "title": "Coller",
+      "help": "Pose ce qui a été copié dans la scène en cours, et le sélectionne. Coller deux fois pose deux copies distinctes."
     },
     "sceneDelete": {
       "title": "Supprimer",

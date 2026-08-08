@@ -113,10 +113,10 @@ practice", above.
 
 ### What is missing
 
-- **groups** and reparenting — you cannot assemble objects into a subset;
-- **copy-paste** and duplication;
-- **image-based lighting** (*IBL*) in the viewport — a *skybox* does not yet light a 3D scene, even
-  though it does light the Skyboxes workspace preview.
+- the **normalised views** (top, front, side) and the **orthographic camera** — the view is always
+  in perspective, which makes a precise alignment hard to judge;
+- **exporting** a scene to a `.glb` or `.usdz` file — you can import a model and stage it, not get
+  the staged scene back out.
 
 ### Two objects announced but not buildable
 
@@ -311,12 +311,17 @@ not implemented**, and the choice is therefore offered nowhere in the interface.
 
 Offering a button that leads nowhere would be a promise the software cannot keep.
 
-### On Windows and Linux, the display shows `⌘`
+### On Windows and Linux, `⌘` is taken literally
 
-The shortcuts **work** with `Ctrl` — the system menu is correct. But the tooltips and the shortcuts
-screen draw the Mac `⌘` symbol instead of `Ctrl`.
+Two separate defects, one of display, one of function.
 
-It is a display defect, not a functional one.
+**Display**: the tooltips and the shortcuts screen draw the Mac `⌘` symbol instead of `Ctrl`,
+everywhere.
+
+**Function**: the shortcuts the system menu carries — `⌘Z`, `⌘S`, `⌘N` — do answer to `Ctrl`, since
+it is the menu that fires them. But the ones a surface listens for itself, such as `⌘D` in the 3D
+view, expect the **Windows** key rather than `Ctrl`: for now they are out of reach anywhere but on
+a Mac.
 
 ### One context heading is missing from the shortcuts screen
 
