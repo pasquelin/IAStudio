@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_TOPICS } from '../domain/activity'
 import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
 import { isRecord } from '../guards'
+import { LOG_SCOPES } from '../ipc'
 import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES, MODEL_PERIODS, MODEL_SORTS } from '../domain/model'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 
@@ -75,6 +76,9 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),
   ...ACTIVITY_TOPICS.map(topic => `activity.topics.${topic}`),
+  // Written by the main process into the journal, so the miss surfaces long after the failure
+  // that caused it — `font.face` shipped untranslated and read as its own key on screen.
+  ...LOG_SCOPES.map(scope => `activity.scope.${scope}`),
 ]
 
 describe('the keys the interface composes', () => {

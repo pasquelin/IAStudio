@@ -102,7 +102,8 @@
       "canvas.layer": "Un calque n’a pas pu être chargé",
       "image.export": "L’export de l’image a échoué",
       "document.save": "L’enregistrement du document a échoué",
-      "assets.reveal": "Le fichier n’a pas pu être montré"
+      "assets.reveal": "Le fichier n’a pas pu être montré",
+      "font.face": "Une police n’a pas pu être chargée"
     }
   },
   "updates": {
