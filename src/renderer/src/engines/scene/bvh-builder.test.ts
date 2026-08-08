@@ -155,6 +155,21 @@ describe('createBvhBuilder', () => {
     expect(mesh.geometry.boundsTree).toBeUndefined()
   })
 
+  // Duplicating a model gives two nodes one geometry: the tree is asked for once, not twice.
+  it('asks for one tree when two meshes share a geometry', async () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+    const first = dense()
+    const second = new Mesh(first.geometry)
+
+    const done = Promise.all([builder.accelerate(first), builder.accelerate(second)])
+    await scripted.settle()
+    await done
+
+    expect(scripted.sent).toHaveLength(1)
+    expect(second.geometry.boundsTree).toBeDefined()
+  })
+
   // Nothing dense has been seen yet: a worker started at mount would cost a thread for nothing.
   it('starts no worker until something is worth accelerating', async () => {
     const spawn = vi.fn(() => scriptedWorker().spawn())

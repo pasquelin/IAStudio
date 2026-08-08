@@ -27,8 +27,9 @@ const WORTH_A_TREE = 20_000
 export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
   let worker: Worker | null = null
   let nextId = 0
-  /** Resolved with nothing when the engine goes: an awaited promise nobody answers never ends. */
   const pending = new Map<number, (response: BvhResponse | null) => void>()
+  /** Builds already asked for. Two nodes of one model share their geometry — and their tree. */
+  const building = new Map<BufferGeometry, Promise<void>>()
 
   const workerOf = (): Worker => {
     if (worker) return worker
@@ -43,33 +44,45 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
     return started
   }
 
+  const build = async (mesh: Mesh, geometry: BufferGeometry): Promise<void> => {
+    const position = geometry.getAttribute('position')
+    if (!(position.array instanceof Float32Array)) return
+
+    const id = (nextId += 1)
+    const request: BvhRequest = {
+      id,
+      // Copies: the buffers are transferred, and the live geometry has to keep drawing while the
+      // build runs. What comes back replaces the index anyway.
+      position: position.array.slice(),
+      index: indexOf(geometry),
+    }
+
+    const response = await new Promise<BvhResponse | null>(resolve => {
+      pending.set(id, resolve)
+      workerOf().postMessage(request, transferablesOf(request))
+    })
+
+    // The mesh may have been thrown away while the tree was being built — the same race a
+    // texture runs, and the same answer: what nobody wants any more is dropped. `null` is the
+    // engine going: an awaited promise nobody answers never ends.
+    if (!response || mesh.geometry !== geometry) return
+    // A variable, not a literal: the library's own type omits the `version` its code reads.
+    geometry.boundsTree = MeshBVH.deserialize(response.bvh, geometry)
+  }
+
   return {
-    accelerate: async mesh => {
+    accelerate: mesh => {
       const geometry = mesh.geometry
-      if (geometry.boundsTree || triangleCount(geometry) < WORTH_A_TREE) return
+      if (geometry.boundsTree || triangleCount(geometry) < WORTH_A_TREE) return Promise.resolve()
 
-      const position = geometry.getAttribute('position')
-      if (!(position.array instanceof Float32Array)) return
+      // Asked for once per geometry: duplicating a model gives two nodes one geometry, and both
+      // would otherwise send the same megabytes across for the same tree.
+      const started = building.get(geometry)
+      if (started) return started
 
-      const id = (nextId += 1)
-      const request: BvhRequest = {
-        id,
-        // Copies: the buffers are transferred, and the live geometry has to keep drawing while
-        // the build runs. What comes back replaces the index anyway.
-        position: position.array.slice(),
-        index: indexOf(geometry),
-      }
-
-      const response = await new Promise<BvhResponse | null>(resolve => {
-        pending.set(id, resolve)
-        workerOf().postMessage(request, transferablesOf(request))
-      })
-
-      // The mesh may have been thrown away while the tree was being built — the same race a
-      // texture runs, and the same answer: what nobody wants any more is dropped.
-      if (!response || mesh.geometry !== geometry) return
-      // A variable, not a literal: the library's own type omits the `version` its code reads.
-      geometry.boundsTree = MeshBVH.deserialize(response.bvh, geometry)
+      const running = build(mesh, geometry).finally(() => building.delete(geometry))
+      building.set(geometry, running)
+      return running
     },
 
     dispose: () => {
@@ -77,6 +90,7 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
       worker = null
       for (const resolve of pending.values()) resolve(null)
       pending.clear()
+      building.clear()
     },
   }
 }

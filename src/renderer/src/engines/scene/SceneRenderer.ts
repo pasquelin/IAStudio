@@ -59,6 +59,7 @@ import {
   type DisplayMode,
   type ViewDirection,
 } from './scene-view'
+import BvhWorker from './bvh.worker?worker'
 import { createBvhBuilder, type BvhBuilder } from './bvh-builder'
 import { exportObjects } from './scene-export'
 import { snapSteps } from './snap-steps'
@@ -203,9 +204,7 @@ export class SceneRenderer {
 
   /** One line material for every overlay: they all draw the same edges in the same colour. */
   private readonly wireMaterial = new LineBasicMaterial()
-  private readonly bvh: BvhBuilder = createBvhBuilder(
-    () => new Worker(new URL('./bvh-worker.ts', import.meta.url), { type: 'module' }),
-  )
+  private readonly bvh: BvhBuilder = createBvhBuilder(() => new BvhWorker())
   private stopPaletteWatch: (() => void) | null = null
 
   constructor(private readonly options: SceneRendererOptions) {
@@ -365,8 +364,8 @@ export class SceneRenderer {
    * nodes rather than children, so none of them is reachable from here.
    */
   exportTo(format: ExportFormat, scope: 'scene' | 'selection'): Promise<Uint8Array> {
-    const wanted = scope === 'selection' ? this.selectedIds : [...this.objects.keys()]
-    const roots = wanted.filter(id => !this.hasExportedAncestor(id, wanted))
+    const wanted = new Set(scope === 'selection' ? this.selectedIds : this.objects.keys())
+    const roots = [...wanted].filter(id => !this.hasExportedAncestor(id, wanted))
 
     return exportObjects(
       roots.flatMap(id => this.objects.get(id) ?? []),
@@ -375,10 +374,10 @@ export class SceneRenderer {
   }
 
   /** A node whose parent is going out too travels with it, and must not be handed over twice. */
-  private hasExportedAncestor(id: string, wanted: readonly string[]): boolean {
+  private hasExportedAncestor(id: string, wanted: ReadonlySet<string>): boolean {
     let parentId = this.applied.get(id)?.parentId
     while (parentId) {
-      if (wanted.includes(parentId)) return true
+      if (wanted.has(parentId)) return true
       parentId = this.applied.get(parentId)?.parentId
     }
     return false
