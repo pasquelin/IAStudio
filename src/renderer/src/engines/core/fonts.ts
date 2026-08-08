@@ -1,4 +1,4 @@
-import { parse, type Font } from 'opentype.js'
+import type { Font } from 'opentype.js'
 import { EMBEDDED_FONTS, fontKey, type FontRef } from '@shared/domain/font'
 import { reportFailure } from '@/services/diagnostics'
 
@@ -44,6 +44,10 @@ export function createFontLibrary(source: FontSource): FontLibrary {
     try {
       const bytes = await source.bytes(ref)
       if (!bytes) throw new Error('no outlines under that name')
+
+      // Fetched, not imported: the parser is half a megabyte, and the field that lists families
+      // never parses one — a static import puts it all on the first screen for a list of names.
+      const { parse } = await import('opentype.js')
 
       // A copy, not the view: `parse` reads the whole buffer, and a `Uint8Array` that arrived as
       // a slice of a larger one would have it read the neighbours as tables.

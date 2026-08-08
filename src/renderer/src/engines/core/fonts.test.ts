@@ -3,6 +3,7 @@ import { EMBEDDED_FONTS, type FontRef } from '@shared/domain/font'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { createFontLibrary, type FontSource } from './fonts'
+import moduleSource from './fonts.ts?raw'
 
 /**
  * `parse` is stubbed rather than fed a real face: reading one would need a filesystem, which the
@@ -148,5 +149,21 @@ describe('a face nothing can produce', () => {
     await library.load(installed)
 
     expect(failures.entries()).toHaveLength(1)
+  })
+})
+
+// Read from the source rather than from behaviour: the build is green either way, and the weight
+// only shows up in a bundle measurement nobody takes on the way past.
+describe('the opentype.js import', () => {
+  it('is found at all, so the rule below cannot pass on a renamed import', () => {
+    expect(moduleSource).toContain("'opentype.js'")
+  })
+
+  // What it costs to get this wrong is beside the dynamic import itself, in `fonts.ts`.
+  it('is never a value import at module scope', () => {
+    expect(moduleSource).not.toMatch(/^import (?!type\b).*'opentype\.js'/m)
+    // Both halves, or hoisting the `import()` to module scope would pass the line above while
+    // fetching the parser as soon as this module is evaluated — which is on the first screen.
+    expect(moduleSource).toMatch(/await import\('opentype\.js'\)/)
   })
 })
