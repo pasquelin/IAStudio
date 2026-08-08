@@ -85,6 +85,11 @@ export function assetTypeOfRemote({
 
   if (byKind !== undefined) return byKind
 
+  // A kind that was stated and is not a medium settles it: `json`, `text` and `document` are
+  // data about assets. Falling through to the mime type here would file a captioning result as
+  // a picture, because the record it came from still describes the image it was made from.
+  if (kind !== undefined) return null
+
   const prefix = Object.keys(TYPE_BY_MIME_PREFIX).find(candidate => mimeType?.startsWith(candidate))
   return prefix === undefined ? null : (TYPE_BY_MIME_PREFIX[prefix] ?? null)
 }

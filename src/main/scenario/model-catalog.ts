@@ -1,6 +1,7 @@
 import type Scenario from '@scenario-labs/sdk'
 import { OFFICIAL_TAG, type ModelSort } from '@shared/domain/model'
 import { log } from '@main/log'
+import { tokenAfter } from './cursor'
 import type { CatalogPage, ListRequest, ModelCatalog, SearchRequest } from './model-registry'
 
 /**
@@ -21,16 +22,6 @@ function sortParams(sort: ModelSort): SortParams {
   if (sort === 'recent') return NEWEST_FIRST
   if (sort === 'oldest') return OLDEST_FIRST
   return { sortBy: 'score' }
-}
-
-/**
- * The cursor is empty rather than absent once a listing is exhausted. A SHORT page is not the
- * same thing: with a server-side tag or date filter, the API returns fewer than `pageSize`
- * and still hands back a token, and treating that as the end truncated the catalogue silently.
- * An empty page is the end — that is the guard the SDK's own paginator applies.
- */
-function tokenAfter(token: string | undefined, received: number): string | null {
-  return token && received > 0 ? token : null
 }
 
 /**

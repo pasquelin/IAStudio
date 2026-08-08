@@ -80,6 +80,14 @@ describe('assetTypeOfRemote', () => {
     expect(assetTypeOfRemote({})).toBeNull()
   })
 
+  it('turns away a stated non-media kind even when the mime type looks like a medium', () => {
+    // A captioning result carries the mime type of the picture it describes. Falling back to
+    // it would file the caption as that picture.
+    expect(
+      assetTypeOfRemote({ kind: 'json', metadataType: 'img2txt', mimeType: 'image/png' }),
+    ).toBeNull()
+  })
+
   it('lets a type this build has never heard of land on its kind', () => {
     // The API adds types without warning; an unknown one must not make the asset vanish.
     expect(assetTypeOfRemote({ kind: 'image', metadataType: 'txt2hologram' })).toBe('image')
