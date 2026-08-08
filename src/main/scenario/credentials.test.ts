@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { memoryAdapter } from '@main/settings/memory-adapter'
-import { createSettingsStore } from '@main/settings/store'
+import { ACCOUNT_NAME_MAX_LENGTH, ENVIRONMENT_ACCOUNT_ID } from '@shared/domain/account'
 import {
+  environmentAccount,
   parseEnvFile,
   readEnvFile,
-  readEnvironmentCredentials,
-  resolveCredentials,
   type EnvironmentFallback,
 } from './credentials'
 
@@ -79,46 +77,51 @@ describe('locating the development env file', () => {
   })
 })
 
-describe('development credentials', () => {
-  it('reads both variables from the file', () => {
-    expect(readEnvironmentCredentials(fallback(DEV_ENV))).toEqual({
+describe('the development account', () => {
+  it('reads the credentials from the file', () => {
+    expect(environmentAccount(fallback(DEV_ENV))?.credentials).toEqual({
       key: 'env_key',
       secret: 'env_secret',
     })
+  })
+
+  // The origin is what decides both the permission and whether it may be persisted, and the id
+  // is fixed because activating it has to survive a relaunch.
+  it('carries its origin and keeps a fixed id', () => {
+    const account = environmentAccount(fallback(DEV_ENV))
+
+    expect(account).toMatchObject({ id: ENVIRONMENT_ACCOUNT_ID, origin: 'environment' })
+  })
+
+  it('takes its name from the file', () => {
+    const named = `${DEV_ENV}SCENARIO_ACCOUNT_NAME=Développement\n`
+
+    expect(environmentAccount(fallback(named))?.name).toBe('Développement')
+  })
+
+  it('falls back to a default name when the file does not give one', () => {
+    expect(environmentAccount(fallback(DEV_ENV))?.name).toBe('Development')
+    expect(environmentAccount(fallback(`${DEV_ENV}SCENARIO_ACCOUNT_NAME=   \n`))?.name).toBe(
+      'Development',
+    )
+  })
+
+  // A `.env` to tidy up is never a reason to withhold the only key a fresh checkout has.
+  it('clamps a name too long rather than refusing the account', () => {
+    const long = `${DEV_ENV}SCENARIO_ACCOUNT_NAME=${'n'.repeat(200)}\n`
+
+    expect(environmentAccount(fallback(long))?.name).toHaveLength(ACCOUNT_NAME_MAX_LENGTH)
   })
 
   it('never reads the file once the application is packaged', () => {
-    expect(readEnvironmentCredentials(fallback(DEV_ENV, true))).toBeNull()
+    expect(environmentAccount(fallback(DEV_ENV, true))).toBeNull()
   })
 
   it('ignores a file that only carries half the pair', () => {
-    expect(readEnvironmentCredentials(fallback('SCENARIO_API_KEY=env_key'))).toBeNull()
+    expect(environmentAccount(fallback('SCENARIO_API_KEY=env_key'))).toBeNull()
   })
 
   it('tolerates a missing file', () => {
-    expect(readEnvironmentCredentials(fallback(null))).toBeNull()
-  })
-})
-
-describe('credential resolution', () => {
-  it('prefers what the user saved over the development fallback', () => {
-    const settings = createSettingsStore(memoryAdapter())
-    settings.addAccount('Studio', { key: 'saved_key', secret: 'saved_secret' })
-
-    expect(resolveCredentials(settings, fallback(DEV_ENV))).toEqual({
-      key: 'saved_key',
-      secret: 'saved_secret',
-    })
-  })
-
-  it('falls back to the development file when nothing is saved', () => {
-    expect(resolveCredentials(createSettingsStore(memoryAdapter()), fallback(DEV_ENV))).toEqual({
-      key: 'env_key',
-      secret: 'env_secret',
-    })
-  })
-
-  it('resolves to nothing when neither source has credentials', () => {
-    expect(resolveCredentials(createSettingsStore(memoryAdapter()), fallback(null))).toBeNull()
+    expect(environmentAccount(fallback(null))).toBeNull()
   })
 })

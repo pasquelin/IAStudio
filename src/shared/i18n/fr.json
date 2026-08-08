@@ -483,8 +483,7 @@
     "switch": "Compte Scenario",
     "manage": "Gérer les comptes…",
     "notConnected": "Non connecté",
-    "development": "Développement",
-    "developmentFallback": "Aucun compte enregistré : les identifiants de développement (secrets/.env) sont utilisés.",
+    "fromEnvFile": "secrets/.env",
     "explanation": "Chaque clé API porte son propre projet Scenario. Changer de compte change la bibliothèque que vous parcourez — jamais les fichiers de votre projet local.",
     "errors": {
       "empty": "Un nom est obligatoire.",
@@ -492,6 +491,7 @@
       "duplicate": "Un autre compte porte déjà ce nom.",
       "unknown-account": "Ce compte n’existe plus.",
       "store-unreadable": "Le trousseau n’a pas rendu vos comptes. Réessayez après l’avoir déverrouillé — rien n’a été modifié.",
+      "read-only-account": "Ce compte vient de secrets/.env : modifiez ce fichier pour le renommer ou le retirer.",
       "unexpected": "Le compte n’a pas pu être enregistré."
     }
   },

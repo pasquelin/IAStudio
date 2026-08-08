@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { Credentials } from '@main/settings/accounts'
-import type { SettingsStore } from '@main/settings/store'
+import {
+  ACCOUNT_NAME_MAX_LENGTH,
+  DEFAULT_ENVIRONMENT_ACCOUNT_NAME,
+  ENVIRONMENT_ACCOUNT_ID,
+} from '@shared/domain/account'
+import type { StoredAccount } from '@main/settings/accounts'
 
 /**
  * How the development fallback reaches the disk. Injected so the resolution order can be
@@ -17,6 +21,8 @@ const ENV_FILE = join('secrets', '.env')
 const MANIFEST_FILE = 'package.json'
 const KEY_VARIABLE = 'SCENARIO_API_KEY'
 const SECRET_VARIABLE = 'SCENARIO_API_SECRET'
+/** Optional: what the development account is called in the switch, beside the stored ones. */
+const NAME_VARIABLE = 'SCENARIO_ACCOUNT_NAME'
 
 function unquote(value: string): string {
   const quoted = /^(["'])(.*)\1$/.exec(value)
@@ -41,11 +47,15 @@ export function parseEnvFile(content: string): Map<string, string> {
 }
 
 /**
- * Reads `secrets/.env`, in development only. The file is read at runtime and never passed to
- * the bundler: a secret injected at build time is written into `out/`, and an `.asar` opens
- * in a text editor.
+ * The account `secrets/.env` stands for, in development only. The file is read at runtime and
+ * never passed to the bundler: a secret injected at build time is written into `out/`, and an
+ * `.asar` opens in a text editor.
+ *
+ * An account rather than a bare pair, so that a checkout with a `.env` and a machine holding
+ * several stored keys are the same situation — one list, one switch — instead of a fallback
+ * that works while showing nothing anywhere.
  */
-export function readEnvironmentCredentials(fallback: EnvironmentFallback): Credentials | null {
+export function environmentAccount(fallback: EnvironmentFallback): StoredAccount | null {
   if (fallback.packaged) return null
 
   const content = fallback.read()
@@ -54,16 +64,18 @@ export function readEnvironmentCredentials(fallback: EnvironmentFallback): Crede
   const variables = parseEnvFile(content)
   const key = variables.get(KEY_VARIABLE)
   const secret = variables.get(SECRET_VARIABLE)
+  if (!key || !secret) return null
 
-  return key && secret ? { key, secret } : null
-}
+  // Clamped, not refused: a name too long is a `.env` to tidy up, never a reason to withhold
+  // the only key a fresh checkout has.
+  const named = variables.get(NAME_VARIABLE)?.trim().slice(0, ACCOUNT_NAME_MAX_LENGTH)
 
-/** Saved credentials win over the development fallback — what the user typed is the truth. */
-export function resolveCredentials(
-  settings: SettingsStore,
-  fallback: EnvironmentFallback,
-): Credentials | null {
-  return settings.readCredentials() ?? readEnvironmentCredentials(fallback)
+  return {
+    id: ENVIRONMENT_ACCOUNT_ID,
+    name: named || DEFAULT_ENVIRONMENT_ACCOUNT_NAME,
+    credentials: { key, secret },
+    origin: 'environment',
+  }
 }
 
 /**

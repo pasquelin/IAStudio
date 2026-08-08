@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ACCOUNT_NAME } from '@shared/domain/account'
+import { DEFAULT_ACCOUNT_NAME, ENVIRONMENT_ACCOUNT_ID } from '@shared/domain/account'
 import {
   activateAccount,
   activeCredentials,
@@ -10,6 +10,8 @@ import {
   renameAccount,
   settleBook,
   summariesOf,
+  withEnvironment,
+  withoutEnvironment,
   type AccountBook,
   type StoredAccount,
 } from '@main/settings/accounts'
@@ -160,5 +162,89 @@ describe('settleBook', () => {
 
   it('empties the active id of an empty book', () => {
     expect(settleBook(EMPTY_BOOK)).toEqual(EMPTY_BOOK)
+  })
+})
+
+/**
+ * The account `secrets/.env` stands for. It is composed on every read and stripped before every
+ * write: the file is the truth about it, so a copy in the keychain could only go stale.
+ */
+describe('the development account', () => {
+  const environment: StoredAccount = {
+    id: ENVIRONMENT_ACCOUNT_ID,
+    name: 'Development',
+    credentials: { key: 'env_key', secret: 'env_secret' },
+    origin: 'environment',
+  }
+
+  /** As the store reads it: composed, then repaired — the order the two run in. */
+  const composed = (book: AccountBook): AccountBook =>
+    settleBook(withEnvironment(book, environment))
+
+  it('leads the list and takes the switch when nothing else was chosen', () => {
+    const book = composed({ ...bookOf('Studio'), activeId: null })
+
+    expect(book.accounts.map(entry => entry.name)).toEqual(['Development', 'Studio'])
+    expect(book.activeId).toBe(ENVIRONMENT_ACCOUNT_ID)
+  })
+
+  it('leaves a stored account that was chosen exactly where it is', () => {
+    const book = composed({ ...bookOf('Studio', 'Client X'), activeId: 'id-1' })
+
+    expect(book.activeId).toBe('id-1')
+  })
+
+  // A `.env` gone since the last launch: the choice it left behind names nothing.
+  it('repoints a stored choice that no longer names an account', () => {
+    const orphaned = { ...bookOf('Studio'), activeId: ENVIRONMENT_ACCOUNT_ID }
+
+    expect(settleBook(withEnvironment(orphaned, null)).activeId).toBe('id-0')
+  })
+
+  it('changes nothing outside development', () => {
+    const stored = bookOf('Studio')
+    expect(withEnvironment(stored, null)).toEqual(stored)
+  })
+
+  it('never reaches what gets persisted', () => {
+    const book = composed(bookOf('Studio'))
+
+    expect(withoutEnvironment(book).accounts.map(entry => entry.id)).toEqual(['id-0'])
+  })
+
+  // The choice outlives the account it names: the file is very likely there again next launch,
+  // and repointing it early is what would send that launch to the wrong key.
+  it('keeps the choice of it when stripping, so activating it survives a relaunch', () => {
+    const book = composed({ ...bookOf('Studio'), activeId: null })
+
+    expect(withoutEnvironment(book).activeId).toBe(ENVIRONMENT_ACCOUNT_ID)
+  })
+
+  // The window is told the permission, never where the key is kept.
+  it('is announced to the renderer as read-only', () => {
+    expect(summariesOf(composed(bookOf('Studio')))).toEqual([
+      { id: ENVIRONMENT_ACCOUNT_ID, name: 'Development', active: false, readOnly: true },
+      { id: 'id-0', name: 'Studio', active: true },
+    ])
+  })
+
+  it('refuses to be renamed or removed — that is what the file is for', () => {
+    const book = composed(EMPTY_BOOK)
+
+    expect(() => renameAccount(book, ENVIRONMENT_ACCOUNT_ID, 'Mine')).toThrow('read-only-account')
+    expect(() => removeAccount(book, ENVIRONMENT_ACCOUNT_ID)).toThrow('read-only-account')
+  })
+
+  it('is switched to like any other', () => {
+    const book = composed({ ...bookOf('Studio'), activeId: 'id-0' })
+
+    expect(activateAccount(book, ENVIRONMENT_ACCOUNT_ID).activeId).toBe(ENVIRONMENT_ACCOUNT_ID)
+  })
+
+  // It is in the book, so it takes part in the uniqueness the header switch depends on.
+  it('holds its name against a stored account taking the same one', () => {
+    expect(() => addAccount(composed(EMPTY_BOOK), account('id-9', 'Development'))).toThrow(
+      'duplicate',
+    )
   })
 })

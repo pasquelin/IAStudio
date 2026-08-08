@@ -43,17 +43,6 @@ describe('AccountSelect', () => {
     )
   })
 
-  // Authenticated with nothing stored means `secrets/.env` answered. Calling that "not
-  // connected" while every API call succeeds sends the reader hunting for the wrong problem.
-  it('names the development fallback rather than claiming to be disconnected', () => {
-    given([], true)
-    render(<AccountSelect />)
-
-    expect(screen.getByRole('button', { name: 'Compte Scenario' })).toHaveTextContent(
-      'Développement',
-    )
-  })
-
   it('lists every account, ticking the one in use', async () => {
     given([studio, client])
     render(<AccountSelect />)

@@ -15,7 +15,6 @@ function registry(overrides: Partial<ModelRegistry> = {}): ModelRegistry {
     search: () => Promise.resolve({ items: [], cursor: null }),
     previews: () => Promise.resolve({}),
     describe: () => Promise.reject(new Error('unused')),
-    invalidate: () => {},
     ...overrides,
   }
 }

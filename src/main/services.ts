@@ -34,14 +34,21 @@ import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { broadcast } from './ipc/broadcast'
 import { setLogVerbosity } from './log'
-import { createJobManager, type JobManager } from './scenario/job-manager'
+import type Scenario from '@scenario-labs/sdk'
+import {
+  createJobManager,
+  type AssetCollector,
+  type JobAccount,
+  type JobManager,
+} from './scenario/job-manager'
 import { runnerOf } from './scenario/runner'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
 import { createClientProvider, type ClientProvider } from './scenario/client'
-import { createFileSystemFallback, resolveCredentials } from './scenario/credentials'
+import { createCredentialsWatch } from './scenario/credentials-watch'
+import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type SettingsStore } from './settings/store'
@@ -135,7 +142,12 @@ async function download(url: string): Promise<Uint8Array> {
  * `lastProject` on its own, and every window replicates these settings.
  */
 export function createSettings(): SettingsStore {
+  // `isDevelopment`, arrived on main: the fallback reads a `.env` only outside a packaged run.
+  const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
+
   const settings = createSettingsStore(createElectronAdapter(), {
+    // Read afresh on every account read, so editing the file is enough to change the account.
+    environmentAccount: () => environmentAccount(fallback),
     onChange: current => {
       // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
       // and Chromium only answers with the new value once `themeSource` has moved.
@@ -173,10 +185,15 @@ export function createServices(settings: SettingsStore): Services {
   const language = (): Language =>
     effectiveLanguage(settings.read().general.language, app.getLocale())
 
-  // `isDevelopment`, arrived on main: the fallback reads a `.env` only outside a packaged run.
-  const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
-  const client = createClientProvider(() => resolveCredentials(settings, fallback))
-  const models = createModelRegistry({ catalog: () => catalogOf(client.require()) })
+  // Every cache the API fills belongs to one account. They subscribe where they are built, so
+  // that a cache added later cannot be left out of a purge list nobody thinks to reread.
+  const credentials = createCredentialsWatch()
+
+  const client = createClientProvider(() => settings.readCredentials(), credentials.watch)
+  const models = createModelRegistry({
+    catalog: () => catalogOf(client.require()),
+    watch: credentials.watch,
+  })
 
   const project = createProjectStore({
     openCatalog: openCatalogThread,
@@ -245,18 +262,38 @@ export function createServices(settings: SettingsStore): Services {
     concurrency: () => Math.max(1, availableParallelism() - 2),
   })
 
-  const jobs = createJobManager({
-    runner: runnerOf(() => client.require()),
-    collect: createAssetCollector({
+  const collectorOf = (scenario: Scenario): AssetCollector =>
+    createAssetCollector({
       retrieve: async remoteAssetId => {
-        const { asset } = await client.require().assets.retrieve(remoteAssetId)
+        const { asset } = await scenario.assets.retrieve(remoteAssetId)
         return { ...asset, metadataType: asset.metadata.type, parentId: asset.metadata.parentId }
       },
       backend: assets,
       newId: newAssetId,
       localIdOf: async remoteAssetId =>
         (await project.catalog().findByRemoteId(remoteAssetId))?.id ?? null,
-    }),
+    })
+
+  // Rebuilt only when the client is, so every job of one account shares a single graph rather
+  // than allocating its own — what matters is that a job holds ONE binding, not a fresh one.
+  let bound: { scenario: Scenario; account: JobAccount } | null = null
+
+  const jobs = createJobManager({
+    // Read once per job and kept, so a switch mid-flight does not have the new key asked about
+    // the previous account's job id — see `JobAccount`.
+    account: () => {
+      const scenario = client.get()
+      if (!scenario) return null
+
+      if (bound?.scenario !== scenario) {
+        bound = {
+          scenario,
+          account: { runner: runnerOf(scenario), collect: collectorOf(scenario) },
+        }
+      }
+
+      return bound.account
+    },
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
     onProgress: progress => broadcast(EVENTS.jobProgress, progress),
@@ -311,12 +348,9 @@ export function createServices(settings: SettingsStore): Services {
     pickPath,
     reveal: file => shell.showItemInFolder(file),
     pickMedia: () => pickMedia(language()),
-    // Another key means another catalogue: keeping the cache would show the previous
-    // account's models under the new one.
-    onCredentialsChanged: () => {
-      client.invalidate()
-      models.invalidate()
-    },
+    // Another key means another catalogue: keeping a cache would show the previous account's
+    // contents under the new one.
+    onCredentialsChanged: credentials.changed,
     authState: () => client.authState(),
     // Every window carries the switch, not just the one that made it: the studio and the
     // settings window both show which account is active.

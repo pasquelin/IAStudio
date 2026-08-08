@@ -6,6 +6,7 @@ Ce dossier est **ignoré par git**. Il ne contient que des identifiants de déve
 |---|---|
 | `SCENARIO_API_KEY` | Clé API Scenario |
 | `SCENARIO_API_SECRET` | Secret API Scenario |
+| `SCENARIO_ACCOUNT_NAME` | Nom du compte de développement dans le sélecteur. Optionnel — « Development » par défaut |
 | `APPLE_ID` | Identifiant Apple Developer, pour la notarisation macOS |
 | `APPLE_APP_SPECIFIC_PASSWORD` | Mot de passe d'application dédié, créé sur appleid.apple.com |
 | `APPLE_TEAM_ID` | Identifiant d'équipe Apple Developer |
@@ -26,8 +27,13 @@ complète — aucun code à changer.
 (`app.isPackaged === false`). Il n'est jamais passé au bundler : injecter un secret à la
 compilation le graverait dans `out/`, et un `.asar` se lit avec un éditeur de texte.
 
-Ils servent de repli quand aucun identifiant n'a encore été saisi dans les réglages. Dès que
-l'utilisateur en enregistre, ce sont ceux-là qui priment — chiffrés par le trousseau du
-système via `safeStorage`.
+Ils forment un **compte à part entière** — celui d'un dépôt fraîchement cloné. Il apparaît
+dans la liste des comptes et dans le sélecteur du header, en tête, et il est actif tant
+qu'aucun autre n'a été choisi. Les comptes saisis dans les réglages viennent à côté, pas à la
+place : basculer de l'un à l'autre est un clic, et le choix est retenu d'un lancement à l'autre.
+
+Ce compte est en **lecture seule** : il ne se renomme et ne se supprime pas depuis l'application,
+puisque ce fichier est ce qui le décrit. Il n'entre **jamais** dans le trousseau — modifier
+`secrets/.env` suffit à le changer, et l'effacer le fait disparaître sans rien laisser derrière.
 
 Le renderer ne les voit jamais. Il demande « suis-je authentifié ? », pas « quelle est ma clé ? ».
