@@ -49,6 +49,7 @@ type ChannelMethod = {
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
   [CHANNELS.assetsUpdate]: StudioBridge['assets']['update']
   [CHANNELS.assetsRemove]: StudioBridge['assets']['remove']
+  [CHANNELS.assetsDescribe]: StudioBridge['assets']['describe']
   [CHANNELS.cloudBrowse]: StudioBridge['cloud']['browse']
   [CHANNELS.cloudPull]: StudioBridge['cloud']['pull']
   [CHANNELS.cloudPush]: StudioBridge['cloud']['push']

@@ -88,6 +88,9 @@
     "pushFailed": "Impossible d’envoyer « {{name}} »",
     "pushed": "{{count}} asset envoyé",
     "pushed_other": "{{count}} assets envoyés",
+    "captioned": "{{count}} asset nommé",
+    "captioned_other": "{{count}} assets nommés",
+    "captionFailed": "La description automatique a échoué",
     "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
     "apiRefused": "L’API Scenario a refusé une requête",
     "scope": {
@@ -125,6 +128,9 @@
       "error": "Le dernier envoi a échoué",
       "other-account": "Appartient à un autre projet"
     },
+    "describe": "Décrire {{count}} asset",
+    "describe_other": "Décrire {{count}} assets",
+    "describeHint": "Nommer les images choisies d'après ce que l'API y voit",
     "location": "Emplacement",
     "push": "Envoyer {{count}} asset",
     "push_other": "Envoyer {{count}} assets",
@@ -739,6 +745,10 @@
     "concurrentJobs": {
       "title": "Générations simultanées",
       "help": "Nombre de créations qui travaillent en même temps. Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut mettre plus longtemps à revenir, et le service peut refuser celles qui arrivent en trop. Trois est un bon équilibre."
+    },
+    "captionArrivals": {
+      "title": "Décrire les assets rapatriés",
+      "help": "Nommer automatiquement une image qui arrive sans nom utile. Consomme des unités créatives."
     },
     "maxRetries": {
       "title": "Tentatives maximum",

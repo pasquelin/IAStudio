@@ -1,5 +1,6 @@
 import type {
   PromptAssistApi,
+  RemoteCaptions,
   RemotePrompts,
   RemoteStyle,
   RemoteTranslation,
@@ -24,6 +25,7 @@ export type PromptEndpoints = {
     }) => Promise<RemotePrompts>
     translate: (params: { prompt: string }) => Promise<RemoteTranslation>
     describeStyle: (params: { images: string[] }) => Promise<RemoteStyle>
+    caption: (params: { images: string[] }) => Promise<RemoteCaptions>
   }
 }
 
@@ -56,6 +58,11 @@ export function promptAssistApiOf(client: PromptEndpoints): PromptAssistApi {
         images: [...images],
       })
       return { description, synthesis }
+    },
+
+    caption: async ({ images }) => {
+      const { captions } = await client.generate.caption({ images: [...images] })
+      return { captions }
     },
   }
 }

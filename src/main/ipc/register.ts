@@ -40,6 +40,8 @@ export function registerIpc(services: Services): void {
     removeFile: services.removeAssetFile,
     activeOwnerId: services.ownerScope.current,
     journal: () => services.journal,
+    captionArrivals: services.captionArrivals,
+    describeAssets: services.describeAssets,
   })
   registerMediaHandlers(services)
   registerDialogHandlers(services)

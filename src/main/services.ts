@@ -16,6 +16,7 @@ import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
+import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
 import { assetFilePath, ownFileOf, serveAssets, servedFileOf } from './assets/protocol'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, resourcesRoot } from './resources'
@@ -58,6 +59,7 @@ import { createClientProvider, recordFailuresTo, type ClientProvider } from './s
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
+import { createAssistQueue } from './scenario/assist-queue'
 import { createPromptAssist, type PromptAssist } from './scenario/prompt-assist'
 import { promptAssistApiOf } from './scenario/prompt-assist-api'
 import { createElectronAdapter } from './settings/adapter'
@@ -72,6 +74,10 @@ export type Services = {
   models: ModelRegistry
   jobs: JobManager
   prompts: PromptAssist
+  /** Names what arrives without a useful name. Never throws, never blocks its caller. */
+  captionArrivals: AutoCaption
+  /** Names a chosen selection, whatever it is already called. */
+  describeAssets: DescribeAssets
   uploads: AssetUploader
   /** The library, as the studio asks about it. Rebuilt per call: the key may have changed. */
   remote: () => RemoteAssetCatalog
@@ -254,6 +260,14 @@ export function createServices(settings: SettingsStore): Services {
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
+  })
+
+  // Bounded and separate from the `JobManager`: none of this produces an asset or has a status
+  // to poll, and a library fetch of three hundred must not become three hundred calls.
+  const assistQueue = createAssistQueue({
+    concurrency: () => settings.read().generation.concurrentJobs,
+    maxRetries: () => settings.read().generation.maxRetries,
+    sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
   })
 
   const prompts = createPromptAssist({
@@ -477,6 +491,14 @@ export function createServices(settings: SettingsStore): Services {
     sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
   })
 
+  const captioner = createCaptioner({
+    queue: assistQueue.run,
+    caption: images => prompts.caption(images),
+    save: asset => project.catalog().add(asset),
+    record: report => journal.record(report),
+    enabled: () => settings.read().generation.captionArrivals,
+  })
+
   serveAssets(async assetId => {
     const current = project.current()
     if (!current) return null
@@ -503,6 +525,8 @@ export function createServices(settings: SettingsStore): Services {
     models,
     jobs,
     prompts,
+    captionArrivals: captioner.onArrival,
+    describeAssets: captioner.describe,
     uploads,
     remote: remoteAssets,
     cloud: () => cloudAssets,

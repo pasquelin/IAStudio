@@ -1,6 +1,7 @@
-import { mdiCloudUploadOutline, mdiFileImportOutline } from '@mdi/js'
+import { mdiCloudUploadOutline, mdiFileImportOutline, mdiTextBoxOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { useToolLying } from '@/app/tool-zone'
+import { getBridge } from '@/services/bridge'
 import { CollectionBar } from '@/design/CollectionBar'
 import { ToolButton } from '@/design/ToolButton'
 import { useAssets } from '@/stores/assets'
@@ -10,6 +11,11 @@ import { useProject } from '@/stores/project'
 import { useSelection } from '@/stores/selection'
 import { useAssetFacets } from './facets'
 import { useTypeLabels } from './type-facet'
+
+/** Names the chosen pictures from what the API sees in them. Nothing happens without a click. */
+async function describeSelection(assetIds: readonly string[]): Promise<void> {
+  await getBridge()?.assets.describe(assetIds)
+}
 
 // The bar rides here in a band, where the row is wide and a second one would cost height the
 // zone cannot spare. Not in a column: 500 px of bar in a 320 px header pushed the close button
@@ -27,6 +33,7 @@ export function AssetBrowserActions() {
   const lying = useToolLying()
 
   const selection = useSelection(state => state.selection)
+  const refresh = useAssets(state => state.refresh)
   const push = useCloud(state => state.push)
   const busy = useCloud(state => state.busy)
   // Only assets can be sent, and only the ones that are selected: pushing a whole project by
@@ -51,6 +58,15 @@ export function AssetBrowserActions() {
         variant="header"
         disabled={!project}
         onClick={() => void importMedia()}
+      />
+      <ToolButton
+        icon={mdiTextBoxOutline}
+        label={t('assets.describe', { count: selected.length })}
+        description={t('assets.describeHint')}
+        variant="header"
+        disabled={!project || selected.length === 0}
+        // The names land in the catalogue, which the panel only re-reads when asked.
+        onClick={() => void describeSelection(selected).then(refresh)}
       />
       <ToolButton
         icon={mdiCloudUploadOutline}

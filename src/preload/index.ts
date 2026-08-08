@@ -84,6 +84,7 @@ const bridge: StudioBridge = {
     update: (assetId, changes) => ipcRenderer.invoke(CHANNELS.assetsUpdate, assetId, changes),
     remove: (assetIds, alsoRemote) =>
       ipcRenderer.invoke(CHANNELS.assetsRemove, assetIds, alsoRemote),
+    describe: assetIds => ipcRenderer.invoke(CHANNELS.assetsDescribe, assetIds),
   },
   cloud: {
     browse: query => ipcRenderer.invoke(CHANNELS.cloudBrowse, query),

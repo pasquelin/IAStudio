@@ -7,6 +7,7 @@ function endpoints(overrides: Partial<PromptEndpoints['generate']> = {}): Prompt
       prompt: async () => ({ prompts: [] }),
       translate: async () => ({ translation: '', detectedLanguage: 'english' }),
       describeStyle: async () => ({ description: '', synthesis: '' }),
+      caption: async () => ({ captions: [] }),
       ...overrides,
     },
   }

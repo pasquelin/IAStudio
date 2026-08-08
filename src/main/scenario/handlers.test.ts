@@ -43,6 +43,7 @@ function assistant(overrides: Partial<PromptAssist> = {}): PromptAssist {
     suggest: () => Promise.reject(new Error('unused')),
     translate: () => Promise.reject(new Error('unused')),
     describeStyle: () => Promise.reject(new Error('unused')),
+    caption: () => Promise.reject(new Error('unused')),
     ...overrides,
   }
 }

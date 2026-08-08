@@ -21,10 +21,16 @@ const FIELDS: FieldDescriptor[] = [
 
 const unusedTranslate = (): Promise<never> => Promise.reject(new Error('unused'))
 const unusedStyle = (): Promise<never> => Promise.reject(new Error('unused'))
+const unusedCaption = (): Promise<never> => Promise.reject(new Error('unused'))
 
 function assist(answer: RemotePrompts, fields: readonly FieldDescriptor[] = FIELDS) {
   const prompt = vi.fn(async () => answer)
-  const api: PromptAssistApi = { prompt, translate: unusedTranslate, describeStyle: unusedStyle }
+  const api: PromptAssistApi = {
+    prompt,
+    translate: unusedTranslate,
+    describeStyle: unusedStyle,
+    caption: unusedCaption,
+  }
   return { prompt, assist: createPromptAssist({ api: () => api, fields: async () => fields }) }
 }
 
@@ -100,6 +106,7 @@ describe('createPromptAssist', () => {
       }),
       translate: unusedTranslate,
       describeStyle: unusedStyle,
+      caption: unusedCaption,
     }
     const subject = createPromptAssist({
       api: () => api,
@@ -191,6 +198,7 @@ describe('createPromptAssist', () => {
           prompt: async () => ({ prompts: [] }),
           translate,
           describeStyle: unusedStyle,
+          caption: unusedCaption,
         }),
         fields: async () => FIELDS,
       })
@@ -212,6 +220,7 @@ describe('createPromptAssist', () => {
             detectedLanguage: 'english',
           }),
           describeStyle: unusedStyle,
+          caption: unusedCaption,
         }),
         fields: async () => FIELDS,
       })
@@ -234,6 +243,7 @@ describe('createPromptAssist', () => {
           prompt: async () => ({ prompts: [] }),
           translate: unusedTranslate,
           describeStyle,
+          caption: unusedCaption,
         }),
         fields: async () => FIELDS,
       })

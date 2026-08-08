@@ -66,6 +66,13 @@ export type Settings = {
     maxRetries: number
     /** Model preselected by the generator, per family. Absent means "ask every time". */
     defaultModels: Partial<Record<ModelFamily, string>>
+    /**
+     * Whether an asset arriving without a useful name gets described on its own.
+     *
+     * The one place the studio spends creative units without being asked, which is why it is
+     * the one that can be turned off.
+     */
+    captionArrivals: boolean
   }
   storage: {
     backend: AssetBackend
@@ -130,7 +137,7 @@ export type Settings = {
 export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject' },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
-  generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
+  generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {}, captionArrivals: true },
   three: {
     showGrid: true,
     gridSize: 20,

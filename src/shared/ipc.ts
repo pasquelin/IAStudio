@@ -77,6 +77,7 @@ export type Channels = {
   assetsSaveAudio: 'assets:save-audio'
   assetsUpdate: 'assets:update'
   assetsRemove: 'assets:remove'
+  assetsDescribe: 'assets:describe'
 
   cloudBrowse: 'cloud:browse'
   cloudPull: 'cloud:pull'
@@ -151,6 +152,7 @@ export const CHANNELS: Channels = {
   assetsSaveAudio: 'assets:save-audio',
   assetsUpdate: 'assets:update',
   assetsRemove: 'assets:remove',
+  assetsDescribe: 'assets:describe',
 
   cloudBrowse: 'cloud:browse',
   cloudPull: 'cloud:pull',
@@ -415,6 +417,13 @@ export type StudioBridge = {
      * so the confirmation belongs to whoever calls this.
      */
     remove: (assetIds: readonly string[], alsoRemote: boolean) => Promise<void>
+    /**
+     * Names the chosen pictures from what the API sees in them, and answers how many it named.
+     *
+     * Only pictures the library already knows can be described — captioning takes an asset id —
+     * so a selection of local-only files is answered with zero rather than an error.
+     */
+    describe: (assetIds: readonly string[]) => Promise<number>
   }
   /**
    * The account's library, which is not the project's catalogue.

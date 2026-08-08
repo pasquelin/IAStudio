@@ -38,6 +38,12 @@ export type PromptAssistApi = {
   }) => Promise<RemotePrompts>
   translate: (params: { prompt: string }) => Promise<RemoteTranslation>
   describeStyle: (params: { images: readonly string[] }) => Promise<RemoteStyle>
+  caption: (params: { images: readonly string[] }) => Promise<RemoteCaptions>
+}
+
+export type RemoteCaptions = {
+  /** In the order the images were given — the API says so, and the pairing depends on it. */
+  captions: readonly string[]
 }
 
 export type RemoteStyle = {
@@ -69,6 +75,8 @@ export type PromptAssist = {
   suggest: (request: SuggestRequest) => Promise<PromptSuggestion[]>
   translate: (draft: string) => Promise<PromptTranslation>
   describeStyle: (images: readonly string[]) => Promise<PromptStyle>
+  /** One caption per image, in the order they were given. */
+  caption: (images: readonly string[]) => Promise<string[]>
 }
 
 /**
@@ -110,6 +118,8 @@ export function createPromptAssist({ api, fields }: PromptAssistDeps): PromptAss
       const { description, synthesis } = await api().describeStyle({ images })
       return { description, synthesis }
     },
+
+    caption: async images => [...(await api().caption({ images })).captions],
   }
 }
 

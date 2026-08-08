@@ -48,6 +48,7 @@ const generation = z.object({
   // Keys are model families and values model ids, both free strings here: the API adds
   // families and models on its own schedule, and an unknown one must not fail the write.
   defaultModels: z.record(z.string().min(1), z.string().min(1)).optional(),
+  captionArrivals: z.boolean().optional(),
 })
 
 const storage = z.object({
