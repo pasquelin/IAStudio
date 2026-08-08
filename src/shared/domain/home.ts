@@ -121,6 +121,71 @@ export function visibleHomeSections(
     .map(setting => setting.id)
 }
 
+/**
+ * The stored order, complete and cleaned — what a write starts from.
+ *
+ * Every mutation below goes through it rather than through the raw array: a user reordering a
+ * home whose settings predate a section would otherwise write that section out of existence.
+ */
+export function homeSections(stored: readonly HomeSectionSetting[]): HomeSectionSetting[] {
+  return reconciled(stored)
+}
+
+/** Which way a section is being moved. Positions are settings, not ids, so this is enough. */
+export type HomeMove = 'up' | 'down'
+
+/**
+ * The order after a section has been moved one place. Unchanged at either end: a section that
+ * cannot move is a disabled row in the menu, never a write that quietly does nothing.
+ */
+export function movedHomeSection(
+  stored: readonly HomeSectionSetting[],
+  id: HomeSectionId,
+  move: HomeMove,
+): HomeSectionSetting[] {
+  const sections = reconciled(stored)
+  const from = sections.findIndex(setting => setting.id === id)
+  const to = move === 'up' ? from - 1 : from + 1
+
+  if (from === -1 || to < 0 || to >= sections.length) return sections
+
+  const moving = sections[from]
+  const displaced = sections[to]
+  if (!moving || !displaced) return sections
+
+  sections[to] = moving
+  sections[from] = displaced
+  return sections
+}
+
+export function shownHomeSection(
+  stored: readonly HomeSectionSetting[],
+  id: HomeSectionId,
+  visible: boolean,
+): HomeSectionSetting[] {
+  return reconciled(stored).map(setting => (setting.id === id ? { ...setting, visible } : setting))
+}
+
+/** Clamped rather than refused: the menu offers a few values, and nothing else may reach here. */
+export function limitedHomeSection(
+  stored: readonly HomeSectionSetting[],
+  id: HomeSectionId,
+  limit: number,
+): HomeSectionSetting[] {
+  const bounded = Math.min(HOME_LIMIT_MAX, Math.max(HOME_LIMIT_MIN, Math.round(limit)))
+
+  return reconciled(stored).map(setting =>
+    setting.id === id ? { ...setting, limit: bounded } : setting,
+  )
+}
+
+/** Sections the user hid, so the home can offer them back without a trip to the preferences. */
+export function hiddenHomeSections(stored: readonly HomeSectionSetting[]): HomeSectionId[] {
+  return reconciled(stored)
+    .filter(setting => !setting.visible && homeSectionOf(setting.id)?.pinned !== true)
+    .map(setting => setting.id)
+}
+
 /** How many items a section asks for, the stored number winning over the registry's default. */
 export function homeSectionLimit(
   stored: readonly HomeSectionSetting[],

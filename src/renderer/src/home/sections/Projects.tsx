@@ -45,7 +45,7 @@ export function Projects() {
   }
 
   return (
-    <Section title={t('home.sections.projects')}>
+    <Section id="projects" title={t('home.sections.projects')}>
       <Carousel
         items={cards}
         itemWidth={CARD_WIDTH}

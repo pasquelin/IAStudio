@@ -29,7 +29,7 @@ export function Activity() {
   if (shown.length === 0) return null
 
   return (
-    <Section title={t('home.sections.activity')}>
+    <Section id="activity" title={t('home.sections.activity')}>
       <ul className="bg-surface m-0 flex list-none flex-col rounded-(--radius-sc-lg) p-2">
         {shown.map(entry => (
           <li key={entry.id} className="flex items-center gap-2 px-1 py-1">

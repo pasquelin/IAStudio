@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
+import { DEFAULT_HOME_SECTIONS, visibleHomeSections } from '@shared/domain/home'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -90,5 +91,44 @@ describe('the home', () => {
     render(<HomeView />)
 
     expect(screen.getByText('Créer ou explorer. Un clic vers la suite.')).toBeInTheDocument()
+  })
+})
+
+describe('customising the home', () => {
+  /**
+   * Every titled band carries the menu, pinned ones included: reordering is what all of them
+   * can do, and only hiding is refused. The spotlight is the exception and stays one — it is
+   * the page's opening banner, it has no heading to hang a menu from, and being moved out of
+   * first place is not something an opening banner does.
+   */
+  it('carries a menu on every titled band', () => {
+    render(<HomeView />)
+
+    const titled = visibleHomeSections(DEFAULT_HOME_SECTIONS, {
+      authenticated: false,
+      hasProject: false,
+    }).filter(id => id !== 'spotlight')
+
+    expect(screen.getAllByRole('button', { name: 'Personnaliser cette section' })).toHaveLength(
+      titled.length,
+    )
+  })
+
+  it('says how many sections are hidden, and takes them back', async () => {
+    setSettings(
+      DEFAULT_HOME_SECTIONS.map(section =>
+        section.id === 'documents' ? { ...section, visible: false } : section,
+      ),
+    )
+    useProject.setState({ project: PROJECT })
+    render(<HomeView />)
+
+    expect(screen.queryByText('Documents ouverts')).not.toBeInTheDocument()
+    expect(screen.getByText('1 section masquée')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Les réafficher' }))
+
+    const written = useSettings.getState().settings.home.sections
+    expect(written.find(section => section.id === 'documents')?.visible).toBe(true)
   })
 })

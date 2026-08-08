@@ -1443,6 +1443,15 @@
     "closing": {
       "title": "Créer ou explorer. Un clic vers la suite.",
       "action": "Commencer à créer"
-    }
+    },
+    "customise": "Personnaliser cette section",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "hide": "Masquer cette section",
+    "showCount_one": "Afficher {{count}} élément",
+    "showCount_other": "Afficher {{count}} éléments",
+    "hidden_one": "{{count}} section masquée",
+    "hidden_other": "{{count}} sections masquées",
+    "restore": "Les réafficher"
   }
 }

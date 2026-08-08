@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_HOME_SECTIONS,
+  HOME_LIMIT_MAX,
+  HOME_LIMIT_MIN,
   HOME_SECTIONS,
+  hiddenHomeSections,
   homeSectionLimit,
   homeSectionOf,
+  limitedHomeSection,
+  movedHomeSection,
   needsCredentials,
+  shownHomeSection,
   visibleHomeSections,
   type HomeContext,
   type HomeSectionSetting,
@@ -109,6 +115,53 @@ describe('how many items a section asks for', () => {
 
     expect(homeSectionLimit(stored, 'projects')).toBe(3)
     expect(homeSectionLimit([], 'projects')).toBe(homeSectionOf('projects')?.defaultLimit)
+  })
+})
+
+describe('rearranging the home', () => {
+  it('swaps a section with its neighbour', () => {
+    const moved = movedHomeSection(DEFAULT_HOME_SECTIONS, 'projects', 'up')
+
+    expect(moved.map(setting => setting.id).slice(0, 3)).toEqual(['spotlight', 'projects', 'tools'])
+  })
+
+  it('leaves the order alone at either end', () => {
+    const first = HOME_SECTIONS[0]?.id ?? 'spotlight'
+    const last = HOME_SECTIONS.at(-1)?.id ?? 'activity'
+
+    expect(movedHomeSection(DEFAULT_HOME_SECTIONS, first, 'up').map(s => s.id)).toEqual(
+      DEFAULT_HOME_SECTIONS.map(s => s.id),
+    )
+    expect(movedHomeSection(DEFAULT_HOME_SECTIONS, last, 'down').map(s => s.id)).toEqual(
+      DEFAULT_HOME_SECTIONS.map(s => s.id),
+    )
+  })
+
+  it('keeps every section when the stored list predates one', () => {
+    const partial: HomeSectionSetting[] = [{ id: 'activity', visible: true }]
+
+    expect(movedHomeSection(partial, 'activity', 'up')).toHaveLength(HOME_SECTIONS.length)
+  })
+
+  it('hides and shows a section, and offers the hidden ones back', () => {
+    const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'documents', false)
+
+    expect(hiddenHomeSections(hidden)).toEqual(['documents'])
+    expect(hiddenHomeSections(shownHomeSection(hidden, 'documents', true))).toEqual([])
+  })
+
+  it('never offers a pinned section back, since it was never taken away', () => {
+    const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'tools', false)
+
+    expect(hiddenHomeSections(hidden)).toEqual([])
+  })
+
+  it('clamps a limit to what the settings would accept', () => {
+    const tiny = limitedHomeSection(DEFAULT_HOME_SECTIONS, 'projects', 1)
+    const huge = limitedHomeSection(DEFAULT_HOME_SECTIONS, 'projects', 9000)
+
+    expect(homeSectionLimit(tiny, 'projects')).toBe(HOME_LIMIT_MIN)
+    expect(homeSectionLimit(huge, 'projects')).toBe(HOME_LIMIT_MAX)
   })
 })
 

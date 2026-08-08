@@ -1443,6 +1443,15 @@
     "closing": {
       "title": "Create or explore. One click to what comes next.",
       "action": "Start creating"
-    }
+    },
+    "customise": "Customise this section",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "hide": "Hide this section",
+    "showCount_one": "Show {{count}} item",
+    "showCount_other": "Show {{count}} items",
+    "hidden_one": "{{count}} section hidden",
+    "hidden_other": "{{count}} sections hidden",
+    "restore": "Show them again"
   }
 }

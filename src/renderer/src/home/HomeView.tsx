@@ -1,6 +1,16 @@
 import { useTranslation } from 'react-i18next'
+import {
+  hiddenHomeSections,
+  homeSections,
+  shownHomeSection,
+  type HomeSectionId,
+  type HomeSectionSetting,
+} from '@shared/domain/home'
 import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
+import { FOCUS_RING } from '@/design/styles'
+import { cn } from '@/helpers/cn'
+import { useSettings } from '@/stores/settings'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { HOME_COMPONENTS } from './home-registry'
 import { enterWorkspace } from './open'
@@ -44,6 +54,46 @@ function Closing() {
     <div className="flex flex-col items-center gap-3 py-8">
       <p className="text-muted m-0 text-center text-[12px]">{t('home.closing.title')}</p>
       <Button onClick={() => enterWorkspace(DEFAULT_WORKSPACE)}>{t('home.closing.action')}</Button>
+      <Hidden />
     </div>
   )
+}
+
+/**
+ * The way back from hiding a section, offered where the sections are rather than in the
+ * preferences: a control that removes something must say where it went, or the studio grows a
+ * setting whose only symptom is a shelf that stopped appearing.
+ */
+function Hidden() {
+  const { t } = useTranslation()
+  const stored = useSettings(state => state.settings.home.sections)
+
+  const hidden = hiddenHomeSections(stored)
+  if (hidden.length === 0) return null
+
+  const restore = (): void => {
+    const sections = hidden.reduce(shownAgain, homeSections(stored))
+    void useSettings.getState().write({ home: { sections } })
+  }
+
+  return (
+    <p className="text-muted m-0 flex items-center gap-2 text-[11px]">
+      {t('home.hidden', { count: hidden.length })}
+      <button
+        type="button"
+        onClick={restore}
+        className={cn(
+          'text-accent cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
+          'p-0 text-[11px] underline',
+          FOCUS_RING,
+        )}
+      >
+        {t('home.restore')}
+      </button>
+    </p>
+  )
+}
+
+function shownAgain(sections: HomeSectionSetting[], id: HomeSectionId): HomeSectionSetting[] {
+  return shownHomeSection(sections, id, true)
 }

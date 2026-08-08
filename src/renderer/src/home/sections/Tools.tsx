@@ -59,7 +59,7 @@ export function Tools() {
   ]
 
   return (
-    <Section title={t('home.sections.tools')}>
+    <Section id="tools" title={t('home.sections.tools')}>
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-[2fr_1fr]">
         <Group
           title={t('home.tools.createGroup')}

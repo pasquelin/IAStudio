@@ -19,7 +19,7 @@ export function Jobs() {
   if (running.length === 0) return null
 
   return (
-    <Section title={t('home.sections.jobs')}>
+    <Section id="jobs" title={t('home.sections.jobs')}>
       <div className="bg-surface flex flex-col gap-1 rounded-(--radius-sc-lg) p-2">
         {running.map(job => (
           <ProgressRow

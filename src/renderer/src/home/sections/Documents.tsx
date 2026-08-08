@@ -28,7 +28,7 @@ export function Documents() {
   const cards = Object.values(documents).slice(0, limit)
 
   return (
-    <Section title={t('home.sections.documents')}>
+    <Section id="documents" title={t('home.sections.documents')}>
       <Carousel
         items={cards}
         itemWidth={CARD_WIDTH}
