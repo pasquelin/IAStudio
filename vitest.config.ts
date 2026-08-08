@@ -16,27 +16,26 @@ export default defineConfig({
     __COMMIT_HASH__: JSON.stringify('test'),
   },
   test: {
-    /**
-     * Floors, not targets, and only where a regression would cost something: the IPC contract,
-     * the stores and their undo history, the pure part of the engines, the project files.
-     * No global threshold — one turns "cover what matters" into "write a test for the getter".
-     *
-     * `include` is what makes them mean anything. Without it a file no test imports is simply
-     * absent from the report, so deleting its tests RAISES the percentage. Counting everything
-     * moved the honest figure from 88 % to 76 %; these floors sit under the second one.
-     */
+    // Without `include`, a file no test imports is absent from the report — deleting its tests
+    // would RAISE the percentage. Budgets of uncovered items, not percentages: a percentage
+    // buys 7 statements of slack in `helpers` and 133 in `engines`, and widens on its own as
+    // well-covered files land. Only the modules the checklist names; no global threshold.
     coverage: {
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['**/*.test.{ts,tsx}', '**/*.bench.ts', 'src/**/test-setup.ts'],
+      exclude: ['**/*.bench.ts', '**/*-fixtures.ts', '**/test-harness.ts', '**/fake-bridge.ts'],
+      reporter: ['text-summary', 'html'],
+      // Negative = how many uncovered statements/branches a module may carry. Today's counts
+      // sit ~15 % under each, which pays for a refactor but not for dropping a test file.
       thresholds: {
-        'src/shared/**': { statements: 97, branches: 90 },
-        'src/main/settings/**': { statements: 87, branches: 88 },
-        'src/main/scenario/**': { statements: 83, branches: 82 },
-        'src/main/project/**': { statements: 72, branches: 72 },
-        'src/main/media/**': { statements: 81, branches: 83 },
-        'src/renderer/src/stores/**': { statements: 82, branches: 71 },
-        'src/renderer/src/engines/**': { statements: 70, branches: 66 },
-        'src/renderer/src/helpers/**': { statements: 88, branches: 83 },
+        'src/shared/**': { statements: -6, branches: -20 },
+        'src/main/settings/**': { statements: -30, branches: -12 },
+        'src/main/scenario/**': { statements: -85, branches: -65 },
+        'src/main/project/**': { statements: -115, branches: -60 },
+        'src/main/media/**': { statements: -70, branches: -32 },
+        'src/renderer/src/stores/**': { statements: -90, branches: -82 },
+        'src/renderer/src/engines/**': { statements: -900, branches: -520 },
+        'src/renderer/src/helpers/**': { statements: -30, branches: -28 },
+        'src/renderer/src/hooks/**': { statements: -38, branches: -20 },
       },
     },
     projects: [
