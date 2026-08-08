@@ -54,17 +54,21 @@ describe('layouts store', () => {
   })
 
   // Only Dockview can read a layout back, so a build whose Dockview — or whose set of document
-  // kinds — has moved on cannot know whether a stored one still loads. It throws on restore if
+  // kinds — has moved on cannot tell whether a stored one still loads. It throws on restore if
   // it does not, which is why the stamp exists rather than a migration.
   describe('persisted format', () => {
-    it('is stamped with the Dockview major version that wrote it', () => {
-      expect(useLayouts.persist.getOptions().version).toBe(7)
-    })
+    it('drops what an older build stored instead of handing it to Dockview', async () => {
+      localStorage.setItem(
+        'scenario-studio:layouts',
+        JSON.stringify({
+          state: { activeWorkspace: 'image', layouts: { image: layout('generator') } },
+          version: 0,
+        }),
+      )
 
-    it('drops anything stored under an older stamp instead of rewriting it', () => {
-      const migrate = useLayouts.persist.getOptions().migrate
+      await useLayouts.persist.rehydrate()
 
-      expect(migrate?.({ layouts: { image: layout('generator') } }, 6)).toBeUndefined()
+      expect(useLayouts.getState().layouts).toEqual({})
     })
   })
 
