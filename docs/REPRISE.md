@@ -729,6 +729,74 @@ ses propres yeux, avec un projet ouvert et le MCP `electron` après `pnpm start:
 
 Un jalon visuel validé uniquement par des tests unitaires n'est validé qu'à moitié — § 5.
 
+### La revue de code de `feat/textures-materiau` est INACHEVÉE — à reprendre avant toute fusion
+
+`/simplify` est passé et ses corrections sont appliquées (dont le défaut majeur : `applyTransform`
+réuploadait 128 Mo par frame de glissement). **`/code-review` a été interrompu : deux angles sur cinq
+ont rendu, trois ont été arrêtés en cours.** Ce qui suit est ce qu'ils ont trouvé et qui **n'est pas
+corrigé**. La branche ne doit pas être fusionnée avant que ce soit traité.
+
+**Un vrai bug de rendu, le plus grave de la liste.** `spaceOf` (`TextureRenderer.ts`) rend
+`NoColorSpace` pour tout ce qui n'est pas `baseColor` — or **`emissive` est une couleur**, et three
+attend un `emissiveMap` en sRGB comme un `map` (c'est ce que fait `GLTFLoader`, ligne 835 contre les
+slots de données). Un canal émissif sort assombri et désaturé. Le commentaire qui justifie la
+fonction est recopié de `engines/scene/material-textures.ts`, où il était **vrai** : là-bas
+`TEXTURE_SLOTS` n'a aucune carte de couleur hors `map`. `spaceOf` est antérieur à ce lot, mais
+**c'est ce lot qui rend le canal émissif posable** — le bug passe de théorique à atteignable, donc il
+lui appartient. Aucun test ne vérifie l'espace colorimétrique d'un canal.
+
+**Les bornes ne sont unifiées qu'à moitié.** `MATERIAL_BOUNDS` couvre `normalScale`, `heightScale` et
+`emissiveIntensity`, et sa JSDoc promet « each setting a slider drives ». Or **`rotation`** est piloté
+par un curseur 0–360 et relu par un `readNumber` nu : un `.tex` édité à la main à `rotation: 100`
+reproduit exactement le scénario que la JSDoc décrit. Même classe : `preview.envIntensity` (curseur
+0–3 contre `readPositive` sans maximum), `preview.envRotation`, et `tiling` (`VectorField min={0.01}`
+contre un `readVector` non borné — un `tiling.x` nul ou négatif est stockable).
+
+**Un dépôt qui ne fait rien, en silence.** Les huit tuiles passent `accepts={PICTURES}`, qui ignore
+la localisation, alors que `DraggableAsset` rend **tout** asset glissable : une image cloud fait
+peindre le liseré d'acceptation, puis `placeTextureChannel` répond `false` et rien ne se passe. La
+JSDoc d'`AssetDropTarget` dit elle-même « a drop that silently does nothing is worse than one that
+lands somewhere sensible », et celle de `place-channel.ts` renvoie à `ASSET_INTENTS` — dont le `ready`
+ne filtre que le double-clic et le menu contextuel, **jamais le glissement**. Le menu de la tuile, lui,
+est correctement filtré. Le trou existait sur le dépôt du viewport ; ce lot en ajoute huit.
+
+**Cohérence visuelle.** La tuile inspectée est marquée `ring-accent ring-2` — **seule occurrence de
+`ring-accent` du dépôt hors de `FOCUS_RING`**. La sélection du studio est `bg-accent-soft` via
+`rowSkin()`, et la JSDoc de `chipSkin` consigne cette exacte dérive, déjà survenue une fois.
+
+**Deux contrats contredits.**
+
+- Le slot `badge` de `MediaTile` est documenté « Overlaid at the top right », et la tuile place le
+  sien **en haut à gauche** (le bouton de menu occupe l'autre coin). `AssetBadge` renvoie
+  explicitement à ce contrat. À trancher : déplacer le badge, ou corriger la JSDoc de `MediaTile` —
+  mais pas la laisser fausse.
+- `MediaTile` rend une `<figure>` avec sa `<figcaption>`, et la tuile la met **dans un `<button>`**,
+  qui n'accepte que du contenu phrasé. L'imbrication bouton-dans-bouton avait été posée en question,
+  celle-ci non.
+
+**Trois défauts dans ce que ce lot a écrit lui-même :**
+
+- un `as` sans le commentaire d'une ligne que `CLAUDE.md` exige, dans `texture-state.test.ts` ;
+- `forgetDocument` appelle `useTextureViews.forget`, et **aucun test ne l'exerce** : la branche utile
+  du store n'est jamais exécutée. Par ailleurs `useDocuments.refresh()` (changement de projet) ne
+  passe pas par `forgetDocument`, donc les entrées y survivent ;
+- `TextureInspector.test.tsx` cherche l'absence du libellé « Brillance », **qu'aucun bundle ne
+  contient** : le test passera toujours. Et `roughnessRange` / `metalnessRange` portent le **même**
+  libellé (« Remappage »), donc deux lignes homonymes dans le même panneau.
+
+**Deux comptes faux dans mes propres commentaires** : « The three that already read through
+`readUnit` » sont **quatre** (`roughness`, `metalness`, `aoIntensity`, `edgeIntensity`), et « thirteen
+of the fifteen sliders » sont **douze**, la garde couvrant trois champs.
+
+**Ce que la revue a vérifié et déclaré exact**, pour ne pas le re-soupçonner : les quatre ancres du
+patch GLSL contre le vrai `ShaderLib.physical` de three 0.185.1 ; `texelRoughness.g` et
+`texelMetalness.b` en portée sous le bon `#ifdef` ; le masque de cavité épargne réellement les
+spéculaires ; `mix(1,0,v) === 1-v` et aucun define à recompiler pour une inversion ; « Never fewer
+than two » sur le compte de lignes du menu ; « Once per anchor per engine » ; « nothing above affects
+the PROGRAM » pour les quinze réglages ; la garde `sameTransform` (aucune écriture ne mute `tiling`
+en place, donc elle ne peut pas être aveuglée) ; et `DEFAULT_TEXTURE_MATERIAL` reste gelé, aucune
+écriture nulle part.
+
 ---
 
 ## 3.5 Espace Skyboxes
