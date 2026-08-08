@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import type { UsageReport } from '@shared/domain/usage'
-import { UsageNotes } from './UsageNotes'
 import { formatDay, formatMoney, formatUnits } from './format'
 
 export function UsageOverview({ report }: { report: UsageReport }) {
@@ -76,8 +75,6 @@ export function UsageOverview({ report }: { report: UsageReport }) {
           </ul>
         </section>
       )}
-
-      <UsageNotes report={report} />
     </div>
   )
 }

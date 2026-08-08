@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { UsageReport, UsageTally } from '@shared/domain/usage'
-import { UsageNotes } from './UsageNotes'
+import { HeadCell, Row, UsageTable } from './UsageTable'
 import { formatUnits } from './format'
 
 /** What was done, rather than which model did it: the same spend read from the other side. */
@@ -29,8 +29,6 @@ export function UsageActivities({ report }: { report: UsageReport }) {
           rows={report.assets}
         />
       )}
-
-      <UsageNotes report={report} />
     </div>
   )
 }
@@ -48,31 +46,26 @@ function Tallies({ title, nameHeader, rows, withUnits = false }: TalliesProps) {
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-xs font-medium">{title}</h2>
-      <table className="w-full text-xs">
-        <thead className="text-base-content/60">
-          <tr className="border-base-300 border-b text-left">
-            <th className="py-1.5 font-medium">{nameHeader}</th>
-            <th className="py-1.5 text-right font-medium">{t('usage.columns.count')}</th>
+      <h3 className="text-xs font-medium">{title}</h3>
+      <UsageTable
+        head={
+          <>
+            <HeadCell label={nameHeader} />
+            <HeadCell label={t('usage.columns.count')} numeric />
+            {withUnits && <HeadCell label={t('usage.columns.units')} numeric />}
+          </>
+        }
+      >
+        {rows.map(row => (
+          <Row key={row.label}>
+            <td className="py-1.5">{row.label}</td>
+            <td className="py-1.5 text-right font-mono">{formatUnits(row.count, locale)}</td>
             {withUnits && (
-              <th className="py-1.5 text-right font-medium">{t('usage.columns.units')}</th>
+              <td className="py-1.5 text-right font-mono">{formatUnits(row.units ?? 0, locale)}</td>
             )}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(row => (
-            <tr key={row.label} className="border-base-300 border-b last:border-b-0">
-              <td className="py-1.5">{row.label}</td>
-              <td className="py-1.5 text-right font-mono">{formatUnits(row.count, locale)}</td>
-              {withUnits && (
-                <td className="py-1.5 text-right font-mono">
-                  {formatUnits(row.units ?? 0, locale)}
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </Row>
+        ))}
+      </UsageTable>
     </section>
   )
 }

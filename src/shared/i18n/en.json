@@ -1200,7 +1200,6 @@
     },
     "period": {
       "label": "Period",
-      "days": "{{count}} days",
       "short": "{{count}}d"
     },
     "refresh": "Refresh",

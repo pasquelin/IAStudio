@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { UsagePeriod } from '@shared/domain/usage'
+import { HeadCell, Row, UsageTable } from './UsageTable'
 import { formatMoment, formatUnits } from './format'
 import { useUsageEvents } from './useUsageReport'
 
@@ -22,39 +23,35 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <table className="w-full text-xs">
-        <thead className="text-base-content/60">
-          <tr className="border-base-300 border-b text-left">
-            <th className="py-1.5 font-medium">{t('usage.columns.time')}</th>
-            <th className="py-1.5 font-medium">{t('usage.columns.action')}</th>
-            <th className="py-1.5 font-medium">{t('usage.columns.model')}</th>
-            <th className="py-1.5 font-medium">{t('usage.columns.account')}</th>
-            <th className="py-1.5 text-right font-medium">{t('usage.columns.units')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {page.events.map((event, index) => (
-            <tr
-              key={`${event.time}-${event.jobId ?? index}`}
-              className="border-base-300 border-b last:border-b-0"
-            >
-              <td className="py-1.5 whitespace-nowrap">{formatMoment(event.time, locale)}</td>
-              <td className="py-1.5">{event.action}</td>
-              <td className="max-w-48 truncate py-1.5" title={event.modelName}>
-                {event.modelName ?? '—'}
-              </td>
-              <td className="py-1.5">{event.accountName}</td>
-              <td className="py-1.5 text-right font-mono">
-                {event.units === 0 ? (
-                  <span className="text-base-content/60">{t('usage.free')}</span>
-                ) : (
-                  formatUnits(event.units, locale)
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <UsageTable
+        head={
+          <>
+            <HeadCell label={t('usage.columns.time')} />
+            <HeadCell label={t('usage.columns.action')} />
+            <HeadCell label={t('usage.columns.model')} />
+            <HeadCell label={t('usage.columns.account')} />
+            <HeadCell label={t('usage.columns.units')} numeric />
+          </>
+        }
+      >
+        {page.events.map((event, index) => (
+          <Row key={`${event.time}-${event.jobId ?? index}`}>
+            <td className="py-1.5 whitespace-nowrap">{formatMoment(event.time, locale)}</td>
+            <td className="py-1.5">{event.action}</td>
+            <td className="max-w-48 truncate py-1.5" title={event.modelName}>
+              {event.modelName ?? '—'}
+            </td>
+            <td className="py-1.5">{event.accountName}</td>
+            <td className="py-1.5 text-right font-mono">
+              {event.units === 0 ? (
+                <span className="text-base-content/60">{t('usage.free')}</span>
+              ) : (
+                formatUnits(event.units, locale)
+              )}
+            </td>
+          </Row>
+        ))}
+      </UsageTable>
 
       {page.more && (
         <button type="button" className="btn btn-xs self-start" onClick={more} disabled={loading}>

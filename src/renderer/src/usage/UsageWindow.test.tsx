@@ -105,14 +105,37 @@ describe('UsageWindow', () => {
   })
 
   it('reports an empty period as empty rather than as a failure', async () => {
-    install(
-      report({ units: 0, jobs: 0, daily: [], accounts: [], models: [], actions: [], assets: [] }),
-    )
+    install(report({ units: 0, jobs: 0, daily: [], models: [], actions: [], assets: [] }))
     render(<UsageWindow />)
 
     await userEvent.click(await screen.findByRole('button', { name: 'Modèles' }))
 
     expect(screen.getByText('Aucune activité sur cette période.')).toBeInTheDocument()
+  })
+
+  // Zeros because nothing was spent, or because there is no key to ask? A table of zeros reads
+  // as the first when it is the second.
+  it('says no key is stored rather than showing a table of zeros', async () => {
+    install(
+      report({ units: 0, jobs: 0, daily: [], accounts: [], models: [], actions: [], assets: [] }),
+    )
+    render(<UsageWindow />)
+
+    expect(await screen.findByText(/Aucune clé API enregistrée/)).toBeInTheDocument()
+    expect(screen.queryByText('Aucune activité sur cette période.')).not.toBeInTheDocument()
+  })
+
+  // A key that answered with nothing is not the same as no key at all.
+  it('keeps showing the figures when a key answered but another refused', async () => {
+    install(
+      report({
+        accounts: [],
+        silent: [{ accountId: 'acc-2', name: 'Revoked', failure: 'invalid-credentials' }],
+      }),
+    )
+    render(<UsageWindow />)
+
+    expect(await screen.findByText(/Revoked/)).toBeInTheDocument()
   })
 
   // Nobody reads the raw log first, and over 120 days it is the one call heavy enough to hurt.
