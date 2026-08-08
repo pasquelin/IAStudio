@@ -173,10 +173,10 @@ describe('cropChrome', () => {
     const { grips } = cropChrome(FRAME, VIEW_1_1, DOCUMENT)
 
     expect(grips).toHaveLength(8)
-    // The north-west grip, centred on the corner: 6 px of grab either side of x = 100.
-    expect(grips[0]).toEqual({ x: 94.5, y: 44.5, width: 12, height: 12 })
+    // The north-west grip, centred on the corner: 4 px of square either side of x = 100.
+    expect(grips[0]).toEqual({ x: 96.5, y: 46.5, width: 8, height: 8 })
     // None of them sits above the frame, which is where a rotate grip would be.
-    expect(grips.every(grip => grip.y >= 44.5)).toBe(true)
+    expect(grips.every(grip => grip.y >= 46.5)).toBe(true)
   })
 
   /**
@@ -187,6 +187,6 @@ describe('cropChrome', () => {
     const zoomed = cropChrome(FRAME, { x: 10, y: 20, scale: 2 }, DOCUMENT)
 
     expect(zoomed.frame).toEqual({ x: 210.5, y: 120.5, width: 400, height: 200 })
-    expect(zoomed.grips[0]).toEqual({ x: 204.5, y: 114.5, width: 12, height: 12 })
+    expect(zoomed.grips[0]).toEqual({ x: 206.5, y: 116.5, width: 8, height: 8 })
   })
 })

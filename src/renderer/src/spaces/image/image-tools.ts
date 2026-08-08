@@ -26,12 +26,58 @@ import {
   mdiTriangleOutline,
   mdiVectorLine,
 } from '@mdi/js'
+import type { CommandId } from '@shared/domain/command'
 import type { SelectionShape } from '@/engines/canvas/canvas-selection'
 import { SHAPE_KINDS, type ShapeKind } from '@/engines/canvas/shape-geometry'
 import type { CanvasTool } from '@/engines/canvas/CanvasEngine'
 import type { ToolbarItem } from '@/design/Toolbar'
 
 export type ImageTool = ToolbarItem & { tool: CanvasTool }
+
+/**
+ * Which command arms which button. The bar carries no key of its own: it reads them off the
+ * registry through this table, so a key remapped in the settings moves on the button with it.
+ *
+ * Written out rather than derived from the ids: a button and a command are two vocabularies, and
+ * guessing one from the other would make renaming either a silent breakage.
+ */
+export type ToolCommand = { command: CommandId; tool: string; mode?: string }
+
+export const TOOL_COMMANDS: readonly ToolCommand[] = [
+  { command: 'canvas.toolMove', tool: 'pointer', mode: 'move' },
+  { command: 'canvas.toolHand', tool: 'pointer', mode: 'hand' },
+  { command: 'canvas.toolScale', tool: 'pointer', mode: 'scale' },
+  { command: 'canvas.toolCrop', tool: 'frame', mode: 'crop' },
+  { command: 'canvas.toolSelectRectangle', tool: 'region', mode: 'rectangle' },
+  { command: 'canvas.toolSelectEllipse', tool: 'region', mode: 'ellipse' },
+  { command: 'canvas.toolSelectLasso', tool: 'region', mode: 'lasso' },
+  { command: 'canvas.toolShapeRectangle', tool: 'shape', mode: 'rectangle' },
+  { command: 'canvas.toolShapeLine', tool: 'shape', mode: 'line' },
+  { command: 'canvas.toolShapeArrow', tool: 'shape', mode: 'arrow' },
+  { command: 'canvas.toolShapeEllipse', tool: 'shape', mode: 'ellipse' },
+  { command: 'canvas.toolShapePolygon', tool: 'shape', mode: 'polygon' },
+  { command: 'canvas.toolShapeStar', tool: 'shape', mode: 'star' },
+  { command: 'canvas.toolBrush', tool: 'paint', mode: 'brush' },
+  { command: 'canvas.toolPencil', tool: 'paint', mode: 'pencil' },
+  { command: 'canvas.toolText', tool: 'text', mode: 'text' },
+  { command: 'canvas.toolEraser', tool: 'eraser', mode: 'point' },
+  { command: 'canvas.toolEraserSelection', tool: 'eraser', mode: 'selection' },
+  { command: 'canvas.toolFill', tool: 'fill' },
+  { command: 'canvas.toolPicker', tool: 'picker' },
+]
+
+/** The command that arms a button, so the bar can ask the registry what key it wears. */
+export function armingCommand(toolId: string, modeId?: string): CommandId | null {
+  const found = TOOL_COMMANDS.find(
+    entry => entry.tool === toolId && (entry.mode ?? undefined) === modeId,
+  )
+  return found?.command ?? null
+}
+
+/** What a command arms, for the one handler that answers all of them. */
+export function armedBy(command: CommandId): ToolCommand | null {
+  return TOOL_COMMANDS.find(entry => entry.command === command) ?? null
+}
 
 /**
  * The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here.
@@ -53,21 +99,18 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.move',
         descriptionKey: 'imageTools.moveHint',
         icon: mdiCursorMove,
-        shortcut: 'V',
       },
       {
         id: 'hand',
         labelKey: 'imageTools.hand',
         descriptionKey: 'imageTools.handHint',
         icon: mdiHandBackRight,
-        shortcut: 'H',
       },
       {
         id: 'scale',
         labelKey: 'imageTools.scale',
         descriptionKey: 'imageTools.scaleHint',
         icon: mdiResize,
-        shortcut: 'K',
       },
     ],
   },
@@ -83,14 +126,12 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.crop',
         descriptionKey: 'imageTools.cropHint',
         icon: mdiCropFree,
-        shortcut: 'F',
       },
       {
         id: 'section',
         labelKey: 'imageTools.section',
         descriptionKey: 'imageTools.sectionHint',
         icon: mdiCardOutline,
-        shortcut: '⇧S',
         disabled: true,
       },
       {
@@ -98,7 +139,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.slice',
         descriptionKey: 'imageTools.sliceHint',
         icon: mdiKnife,
-        shortcut: 'S',
         disabled: true,
       },
     ],
@@ -115,7 +155,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.selectRectangle',
         descriptionKey: 'imageTools.selectRectangleHint',
         icon: mdiSelectionDrag,
-        shortcut: 'M',
       },
       {
         id: 'ellipse',
@@ -128,7 +167,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.selectLasso',
         descriptionKey: 'imageTools.selectLassoHint',
         icon: mdiLasso,
-        shortcut: 'L',
       },
     ],
   },
@@ -145,28 +183,24 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.shapeRectangle',
         descriptionKey: 'imageTools.shapeRectangleHint',
         icon: mdiRectangleOutline,
-        shortcut: 'R',
       },
       {
         id: 'line',
         labelKey: 'imageTools.shapeLine',
         descriptionKey: 'imageTools.shapeLineHint',
         icon: mdiVectorLine,
-        shortcut: 'L',
       },
       {
         id: 'arrow',
         labelKey: 'imageTools.shapeArrow',
         descriptionKey: 'imageTools.shapeArrowHint',
         icon: mdiArrowTopRight,
-        shortcut: '⇧L',
       },
       {
         id: 'ellipse',
         labelKey: 'imageTools.shapeEllipse',
         descriptionKey: 'imageTools.shapeEllipseHint',
         icon: mdiCircleOutline,
-        shortcut: 'O',
       },
       {
         id: 'polygon',
@@ -185,7 +219,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.shapeImage',
         descriptionKey: 'imageTools.shapeImageHint',
         icon: mdiImagePlusOutline,
-        shortcut: '⇧⌘K',
       },
     ],
   },
@@ -201,14 +234,12 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.brush',
         descriptionKey: 'imageTools.brushHint',
         icon: mdiBrush,
-        shortcut: 'P',
       },
       {
         id: 'pencil',
         labelKey: 'imageTools.pencil',
         descriptionKey: 'imageTools.pencilHint',
         icon: mdiPencil,
-        shortcut: '⇧P',
       },
       {
         id: 'pen',
@@ -233,7 +264,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.text',
         descriptionKey: 'imageTools.textHint',
         icon: mdiFormatText,
-        shortcut: 'T',
       },
       {
         id: 'path',
@@ -254,7 +284,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
     labelKey: 'imageTools.comment',
     descriptionKey: 'imageTools.commentHint',
     icon: mdiCommentOutline,
-    shortcut: 'C',
   },
   {
     id: 'eraser',
@@ -269,7 +298,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.eraserPoint',
         descriptionKey: 'imageTools.eraserPointHint',
         icon: mdiEraser,
-        shortcut: 'E',
       },
       {
         id: 'selection',
@@ -285,7 +313,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
     labelKey: 'imageTools.fill',
     descriptionKey: 'imageTools.fillHint',
     icon: mdiFormatColorFill,
-    shortcut: 'G',
   },
   {
     id: 'picker',
@@ -293,7 +320,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
     labelKey: 'imageTools.picker',
     descriptionKey: 'imageTools.pickerHint',
     icon: mdiEyedropperVariant,
-    shortcut: 'I',
   },
 ]
 

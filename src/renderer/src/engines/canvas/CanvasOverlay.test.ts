@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { cornersOfRect } from './handles'
 import {
+  ants,
+  antPhase,
+  CanvasOverlay,
   drawOverlay,
   RULER_SIZE,
   type OverlayContext,
@@ -21,7 +25,7 @@ function recorder(): { context: OverlayContext; calls: Call[] } {
       calls.push({ op, args })
     }
 
-  const style = { lineWidth: 0, strokeStyle: '', fillStyle: '', font: '' }
+  const style = { lineWidth: 0, lineDashOffset: 0, strokeStyle: '', fillStyle: '', font: '' }
 
   const context: OverlayContext = {
     save: record('save'),
@@ -44,6 +48,14 @@ function recorder(): { context: OverlayContext; calls: Call[] } {
     set lineWidth(value: number) {
       style.lineWidth = value
       calls.push({ op: 'lineWidth', args: [value] })
+    },
+    // Recorded, since how far the ants have marched is the one thing that says they move at all.
+    get lineDashOffset() {
+      return style.lineDashOffset
+    },
+    set lineDashOffset(value: number) {
+      style.lineDashOffset = value
+      calls.push({ op: 'lineDashOffset', args: [value] })
     },
     get strokeStyle() {
       return style.strokeStyle
@@ -79,10 +91,18 @@ const COLORS = {
   rulerText: '#text',
   rulerTick: '#tick',
   accent: '#accent',
+  marqueeLight: '#light',
+  marqueeDark: '#dark',
   scrim: '#scrim',
 }
 
-const NO_TOOL: ToolChrome = { crop: null, handles: null, pending: null, selection: null }
+const NO_TOOL: ToolChrome = {
+  crop: null,
+  handles: null,
+  lit: null,
+  pending: null,
+  selection: null,
+}
 
 const RECT = { x: 10, y: 20, width: 30, height: 40 }
 
@@ -103,6 +123,7 @@ function scene(overrides: Partial<OverlayScene> = {}): OverlayScene {
     activeGuideId: null,
     pointer: null,
     colors: COLORS,
+    marching: false,
     tools: NO_TOOL,
     ...overrides,
   }
@@ -207,6 +228,93 @@ describe('drawOverlay', () => {
   })
 })
 
+describe('the marching ants', () => {
+  it('strokes the same path twice, light under dark', () => {
+    const { context, calls } = recorder()
+    let traced = 0
+
+    ants(context, () => (traced += 1), 0, COLORS)
+
+    expect(traced).toBe(2)
+    expect(opsOf(calls, 'stroke')).toHaveLength(2)
+  })
+
+  /**
+   * A single dashed stroke vanishes against a background of its own colour, and the document
+   * underneath can be any colour at all. The alternation is the whole mechanism.
+   */
+  it('dashes only the second stroke, leaving the first solid', () => {
+    const { context, calls } = recorder()
+
+    ants(context, () => undefined, 3, COLORS)
+
+    const dashes = opsOf(calls, 'setLineDash')
+    expect(dashes[0]).toEqual([[]])
+    expect(dashes[1]).toEqual([[5, 4]])
+  })
+
+  it('offsets the dash by the phase, against the way the path was traced', () => {
+    const { context, calls } = recorder()
+
+    ants(context, () => undefined, 3, COLORS)
+
+    expect(opsOf(calls, 'lineDashOffset')).toContainEqual([-3])
+  })
+
+  // Left as it was found: the ruler ticks and the frame are drawn by the same context after it.
+  it('puts the dash and its offset back when it is done', () => {
+    const { context, calls } = recorder()
+
+    ants(context, () => undefined, 3, COLORS)
+
+    expect(opsOf(calls, 'setLineDash').at(-1)).toEqual([[]])
+    expect(opsOf(calls, 'lineDashOffset').at(-1)).toEqual([0])
+  })
+
+  /** From a clock, not a frame counter: the ants crawl at one speed whatever the frame rate. */
+  it('walks one full pattern per period and starts over', () => {
+    expect(antPhase(0)).toBe(0)
+    expect(antPhase(250)).toBeCloseTo(4.5)
+    expect(antPhase(500)).toBe(0)
+  })
+
+  it('reaches the same place a period later', () => {
+    expect(antPhase(1700)).toBeCloseTo(antPhase(200))
+  })
+})
+
+describe('the frame loop of the ants', () => {
+  /**
+   * The one thing that would keep a `requestAnimationFrame` alive for the life of a document if
+   * it were wrong. Booking is decided from the scene, not from the canvas, so it can be read back
+   * where jsdom hands out no 2D context at all.
+   */
+  function booksAfterOneFrame(marching: boolean): number {
+    const frames: FrameRequestCallback[] = []
+    const booked = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+      frames.push(callback)
+      return frames.length
+    })
+
+    const overlay = new CanvasOverlay(() => scene({ marching }))
+    overlay.mount(document.createElement('div'))
+    frames.shift()?.(0)
+    const again = frames.length
+
+    overlay.dispose()
+    booked.mockRestore()
+    return again
+  }
+
+  it('books the next step while something is dashed', () => {
+    expect(booksAfterOneFrame(true)).toBe(1)
+  })
+
+  it('lets the loop die once nothing is', () => {
+    expect(booksAfterOneFrame(false)).toBe(0)
+  })
+})
+
 describe('the tool chrome', () => {
   it('draws nothing of its own when no tool holds anything', () => {
     const { context, calls } = recorder()
@@ -222,22 +330,27 @@ describe('the tool chrome', () => {
     const { context, calls } = recorder()
     drawOverlay(context, toolScene({ selection: { kind: 'rect', rect: RECT } }))
 
-    expect(opsOf(calls, 'moveTo')).toEqual([[27.5, 51.5]])
-    expect(opsOf(calls, 'lineTo')).toEqual([
+    // Twice round: the ants stroke the same path a light pass then a dark dashed one.
+    expect(opsOf(calls, 'moveTo')).toEqual([
+      [27.5, 51.5],
+      [27.5, 51.5],
+    ])
+    expect(opsOf(calls, 'lineTo').slice(0, 4)).toEqual([
       [87.5, 51.5],
       [87.5, 131.5],
       [27.5, 131.5],
       [27.5, 51.5],
     ])
-    // The frame's own colour, then the marquee's: the right box in the wrong ink reads as a bug.
-    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#accent']])
+    // The frame's own colour, then the two of the marquee: the right box in the wrong ink
+    // reads as a bug, and a single-colour marquee vanishes over a document of that colour.
+    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#light'], ['#dark']])
   })
 
-  it('dashes the marquee and puts the dash back for whoever draws next', () => {
+  it('dashes the second pass only, and puts the dash back for whoever draws next', () => {
     const { context, calls } = recorder()
     drawOverlay(context, toolScene({ selection: { kind: 'rect', rect: RECT } }))
 
-    expect(opsOf(calls, 'setLineDash')).toEqual([[[]], [[4, 4]], [[]]])
+    expect(opsOf(calls, 'setLineDash')).toEqual([[[]], [[]], [[5, 4]], [[]]])
   })
 
   it('leaves a lasso of no point alone', () => {
@@ -248,20 +361,23 @@ describe('the tool chrome', () => {
     expect(opsOf(calls, 'setLineDash')).toEqual([[[]]])
   })
 
-  it('outlines the shape under the hand without dashing it', () => {
+  it('outlines the shape under the hand with the same ants as a selection', () => {
     const { context, calls } = recorder()
     drawOverlay(
       context,
       toolScene({ pending: { kind: 'line', from: { x: 10, y: 20 }, to: { x: 40, y: 60 } } }),
     )
 
-    expect(opsOf(calls, 'moveTo')).toEqual([[27.5, 51.5]])
-    expect(opsOf(calls, 'lineTo')).toEqual([
+    expect(opsOf(calls, 'moveTo')).toEqual([
+      [27.5, 51.5],
+      [27.5, 51.5],
+    ])
+    expect(opsOf(calls, 'lineTo').slice(0, 2)).toEqual([
       [87.5, 131.5],
       [27.5, 51.5],
     ])
-    expect(opsOf(calls, 'setLineDash')).toEqual([[[]]])
-    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#accent']])
+    expect(opsOf(calls, 'setLineDash')).toEqual([[[]], [[]], [[5, 4]], [[]]])
+    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#light'], ['#dark']])
   })
 
   it('lays the marquee down first, then the shape, then the crop over both', () => {
@@ -305,7 +421,8 @@ describe('the tool chrome', () => {
     ])
     // Eight grips, not nine: a crop does not turn the document.
     expect(fills).toHaveLength(12)
-    expect(opsOf(calls, 'strokeRect')).toContainEqual([27.5, 51.5, 60, 80])
+    // The frame is traced rather than stroked as a rectangle: the ants stroke it twice.
+    expect(opsOf(calls, 'moveTo')).toContainEqual([27.5, 51.5])
   })
 
   it('dims in the scrim colour and grips in the accent one', () => {
@@ -313,30 +430,49 @@ describe('the tool chrome', () => {
     drawOverlay(context, toolScene({ crop: RECT }))
 
     expect(opsOf(calls, 'fillStyle')).toEqual([['#scrim'], ['#accent']])
-    expect(opsOf(calls, 'strokeStyle').at(-1)).toEqual(['#accent'])
+    // The frame wears the ants, like every other dashed outline in the space.
+    expect(opsOf(calls, 'strokeStyle').at(-1)).toEqual(['#dark'])
   })
 
-  it('offers nine grips on the armed layer, the ninth above it to turn it by', () => {
+  // Eight, not nine: the rotation is a zone outside each corner now, and a square floating above
+  // the box was indistinguishable from the eight that resize it.
+  it('offers eight grips on the armed layer, and no ninth to turn it by', () => {
     const { context, calls } = recorder()
-    drawOverlay(context, toolScene({ handles: RECT }))
+    drawOverlay(context, toolScene({ handles: cornersOfRect(RECT) }))
 
     const fills = opsOf(calls, 'fillRect')
-    expect(fills).toHaveLength(9)
+    expect(fills).toHaveLength(8)
     // North-west corner: (10,20) projected, then backed off by half the grip size.
-    expect(fills[0]).toEqual([21.5, 45.5, 12, 12])
-    // The rotate grip is offset in document units, so its 24 reads as 48 at twice the zoom.
-    expect(fills.at(-1)).toEqual([51.5, -2.5, 12, 12])
+    expect(fills[0]).toEqual([23.5, 47.5, 8, 8])
+    // Nothing sits above the box: every grip is on it.
+    expect(fills.every(fill => Number(fill[1]) >= 47.5)).toBe(true)
+  })
+
+  // The outline says what is selected; eight squares with nothing between them only said where
+  // the corners were.
+  it('draws the outline of the box along with its grips', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, toolScene({ handles: cornersOfRect(RECT) }))
+
+    expect(opsOf(calls, 'moveTo')).toContainEqual([27.5, 51.5])
+  })
+
+  it('lights the grip under the pointer, and only that one', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, toolScene({ handles: cornersOfRect(RECT), lit: 'nw' }))
+
+    const fills = opsOf(calls, 'fillRect')
+    expect(fills[0]).toEqual([22.5, 46.5, 10, 10])
+    expect(fills[1]).toEqual([53.5, 47.5, 8, 8])
   })
 
   it('paints the crop before the grips, so the dimming never lands on top of one', () => {
     const { context, calls } = recorder()
-    drawOverlay(context, toolScene({ crop: RECT, handles: RECT }))
+    drawOverlay(context, toolScene({ crop: RECT, handles: cornersOfRect(RECT) }))
 
     const fills = opsOf(calls, 'fillRect')
-    // Twelve for the crop — four bands and eight grips — then the layer's own nine.
-    expect(fills).toHaveLength(21)
+    // Twelve for the crop — four bands and eight grips — then the layer's own eight.
+    expect(fills).toHaveLength(20)
     expect(fills[0]).toEqual([7, 11, 200, 40])
-    // Only the move tool offers a rotate grip, so its arriving last places the whole group last.
-    expect(fills.at(-1)).toEqual([51.5, -2.5, 12, 12])
   })
 })

@@ -728,8 +728,8 @@
     "help": "Help",
     "about": "About {{name}}",
     "licences": "Licences",
-    "usage": "Usage…"
-  },
+    "imageTools": "Tools",
+    "usage": "Usage…"  },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
   },
@@ -1171,6 +1171,86 @@
     "skyboxProbes": {
       "title": "Light probes",
       "help": "Shows or hides the witness spheres. A sky is judged by what it lights, not by its own picture."
+    },
+    "canvasToolMove": {
+      "title": "Move tool",
+      "help": "Arms the pointer: a drag moves the armed layer, and its grips resize or turn it."
+    },
+    "canvasToolHand": {
+      "title": "Hand tool",
+      "help": "Arms the hand: a drag pans the view without touching the document. Holding space does the same without changing tool."
+    },
+    "canvasToolScale": {
+      "title": "Scale tool",
+      "help": "Arms scaling: the armed layer's grips resize it, and Shift keeps its proportions."
+    },
+    "canvasToolCrop": {
+      "title": "Crop tool",
+      "help": "Arms the crop frame. Draw a frame, then ⏎ to crop or ⎋ to drop it."
+    },
+    "canvasToolSelectRectangle": {
+      "title": "Rectangular selection",
+      "help": "Arms the rectangular selection. What is selected bounds the brush, the eraser and the bucket."
+    },
+    "canvasToolSelectEllipse": {
+      "title": "Elliptical selection",
+      "help": "Arms the elliptical selection: a drag inscribes the ellipse in the rectangle swept, and Shift makes it a circle."
+    },
+    "canvasToolSelectLasso": {
+      "title": "Lasso",
+      "help": "Arms the lasso: the selection follows the hand, freehand."
+    },
+    "canvasToolShapeRectangle": {
+      "title": "Rectangle shape",
+      "help": "Arms drawing a rectangle on the armed layer; Shift makes it a square."
+    },
+    "canvasToolShapeLine": {
+      "title": "Line shape",
+      "help": "Arms drawing a line. Same group as the rectangle, hence its key with Shift added."
+    },
+    "canvasToolShapeArrow": {
+      "title": "Arrow shape",
+      "help": "Arms drawing an arrow, from where the drag began to where the hand lets go."
+    },
+    "canvasToolShapeEllipse": {
+      "title": "Ellipse shape",
+      "help": "Arms drawing an ellipse on the armed layer; Shift makes it a circle."
+    },
+    "canvasToolShapePolygon": {
+      "title": "Polygon shape",
+      "help": "Arms drawing a regular polygon, whose number of sides is set in the inspector before drawing."
+    },
+    "canvasToolShapeStar": {
+      "title": "Star shape",
+      "help": "Arms drawing a star, whose number of points is set in the inspector before drawing."
+    },
+    "canvasToolBrush": {
+      "title": "Brush tool",
+      "help": "Arms the brush, with a softened edge. It paints on the armed layer, bounded by the selection when there is one."
+    },
+    "canvasToolPencil": {
+      "title": "Pencil tool",
+      "help": "Arms the pencil, with a hard edge: the same gesture as the brush, without the softening."
+    },
+    "canvasToolText": {
+      "title": "Text tool",
+      "help": "Arms text: a click places a caption, whose words are typed in the inspector."
+    },
+    "canvasToolEraser": {
+      "title": "Eraser tool",
+      "help": "Arms the point eraser: it clears where the hand passes, bounded by the selection when there is one."
+    },
+    "canvasToolEraserSelection": {
+      "title": "Erase the selection",
+      "help": "Arms the selection eraser: one click clears everything the selection encloses at once, rather than rubbing it out."
+    },
+    "canvasToolFill": {
+      "title": "Paint bucket tool",
+      "help": "Arms the bucket: a click fills the layer, or the selection when there is one."
+    },
+    "canvasToolPicker": {
+      "title": "Eyedropper tool",
+      "help": "Arms the eyedropper: a click takes the colour under the pointer and hands it to the brush."
     }
   },
   "texture": {

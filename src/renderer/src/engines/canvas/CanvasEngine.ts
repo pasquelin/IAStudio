@@ -45,7 +45,20 @@ import {
 } from './canvas-selection'
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
 import { compose, invert, layerMatrix, mapRect, type Affine } from './layer-space'
-import { handleAt, HANDLE_GRAB, layerBoxOf, resizeBy, rotateBy, type HandleId } from './handles'
+import {
+  centerOf,
+  cornersOfRect,
+  hitTest,
+  HANDLE_GRAB,
+  layerCornersOf,
+  resizeBy,
+  rotateBy,
+  ROTATE_REACH,
+  type Corners,
+  type HandleHit,
+  type HandleId,
+} from './handles'
+import { resizeCursor, rotateCursor, UPRIGHT, type Facing } from './cursors'
 import { CanvasOverlay, RULER_SIZE, type OverlayColors, type OverlayScene } from './CanvasOverlay'
 import {
   boxEdges,
@@ -275,13 +288,35 @@ type Gesture =
   /** Drawing a fresh crop frame from `from`; the frame itself lives on past the drag. */
   | { kind: 'crop'; from: Point }
   /** Pulling one grip of the placed crop frame. `origin` is the frame the drag started on. */
-  | { kind: 'cropHandle'; handle: Exclude<HandleId, 'rotate'>; origin: Rect }
+  | { kind: 'cropHandle'; handle: HandleId; origin: Rect }
   /** `from` is where the drag began; the shape is redrawn from it on every move. */
   | { kind: 'shape'; from: Point; target: BrushTarget }
   /** `origin` is the transform the layer had when the drag began: every step is absolute. */
-  | { kind: 'handle'; id: string; handle: HandleId; box: Rect; from: Point; origin: Transform }
+  | { kind: 'handle'; id: string; handle: HandleId; from: Point; origin: Transform }
+  /** Turning by the zone outside a corner. `center` is the middle the layer pivots about. */
+  | { kind: 'rotate'; id: string; center: Point; from: Point; origin: Transform }
 
 const NO_GESTURE: Gesture = { kind: 'none' }
+
+/** Which gestures hold a layer open in the history, so releasing one closes its entry. */
+const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate'])
+
+/** Both arms carry `id`, so two hovers compare without pairing their kinds again. */
+function sameHit(one: HandleHit | null, other: HandleHit | null): boolean {
+  if (!one || !other) return one === other
+  return one.kind === other.kind && one.id === other.id
+}
+
+/** What a hover or a press may take hold of, and how the cursor over it should be turned. */
+type HoverBox = { corners: Corners; reach: number; facing: Facing }
+
+/**
+ * The layer's own rotation and mirroring turn the arrow, never the geometry of the box: a grip
+ * pulls along its nominal direction, and the box's proportions have nothing to say about it.
+ */
+function cursorFor(hit: HandleHit, facing: Facing): string {
+  return hit.kind === 'rotate' ? rotateCursor(hit.id, facing) : resizeCursor(hit.id, facing)
+}
 
 /** Where a surface's picture starts when nothing displaced it — see `resurface`. */
 const ORIGIN: Point = { x: 0, y: 0 }
@@ -290,10 +325,16 @@ const ORIGIN: Point = { x: 0, y: 0 }
 const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
   frame: '--color-border',
   guide: '--color-accent-soft',
-  rulerBackground: '--color-chassis',
+  // A step above the chassis, not level with it: the bands sit on the darkest surface of the
+  // studio, and at chassis they read as a continuation of it rather than as a scale to measure
+  // against. The ticks come up with the background — `border` on `elevated` is barely a shade
+  // apart, and graduations nobody can see are the same as no rulers at all.
+  rulerBackground: '--color-elevated',
   rulerText: '--color-muted',
-  rulerTick: '--color-border',
+  rulerTick: '--color-muted',
   accent: '--color-accent',
+  marqueeLight: '--color-marquee-light',
+  marqueeDark: '--color-marquee-dark',
   scrim: '--color-scrim',
 }
 
@@ -301,10 +342,12 @@ const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
 const FALLBACK_COLORS: OverlayColors = {
   frame: '#34363a',
   guide: '#2e436e',
-  rulerBackground: '#2b2d30',
+  rulerBackground: '#3c3f44',
   rulerText: '#868a91',
-  rulerTick: '#34363a',
+  rulerTick: '#868a91',
   accent: '#3574f0',
+  marqueeLight: '#ffffff',
+  marqueeDark: '#000000',
   scrim: '#00000099',
 }
 
@@ -319,6 +362,8 @@ function readColors(element: HTMLElement): OverlayColors {
     rulerText: read('rulerText'),
     rulerTick: read('rulerTick'),
     accent: read('accent'),
+    marqueeLight: read('marqueeLight'),
+    marqueeDark: read('marqueeDark'),
     scrim: read('scrim'),
   }
 }
@@ -391,6 +436,15 @@ export class CanvasEngine {
   private stacking = ''
 
   private gesture: Gesture = NO_GESTURE
+  private hover: HandleHit | null = null
+  /**
+   * The armed layer's corners, derived once per state. Reaching a layer flattens the whole tree,
+   * and both the hover test and the overlay frame want the same answer on the same pointer move.
+   *
+   * Keyed on the state's identity, as `apply` keys its own work: `apply` replaces it wholesale,
+   * so the document's size and the armed id ride along with the tree.
+   */
+  private corners: { of: CanvasState | null; box: Corners | null } = { of: null, box: null }
   private pointer: Point | null = null
   private selection: CanvasSelection = null
   /** Which of the three the region tool draws. Pushed in by the bar, like the tool itself. */
@@ -490,6 +544,10 @@ export class CanvasEngine {
     const resized = previous?.width !== state.width || previous?.height !== state.height
     this.state = state
     this.overlay.invalidate()
+
+    // Above the guard below on purpose: arming another layer keeps `layers` identical, so this
+    // is the one path a box can move under a still pointer without the tree changing at all.
+    if (previous !== state) this.forgetHover()
 
     // Dragging a guide rewrites the state sixty times a second and touches no pixel: walking the
     // tree and re-rendering the stage for it would be a full GPU frame per pointer move.
@@ -836,6 +894,9 @@ export class CanvasEngine {
     const { x, y, scale } = this.view.viewport
     this.world.position.set(x, y)
     this.world.scale.set(scale)
+    // A zoom slides the grips out from under a still hand. Not while a gesture is open: that one
+    // owns the cursor — a pan holds `grabbing` across every frame it moves the view by.
+    if (this.gesture.kind === 'none') this.forgetHover()
     this.overlay.invalidate()
     this.render()
   }
@@ -868,6 +929,26 @@ export class CanvasEngine {
     // bound to a crop nothing on screen still explains.
     if (tool !== 'crop') this.dropCrop()
     this.tool = tool
+    // The chrome belongs to the tool that draws it: without this the move tool's grips stayed on
+    // screen under the brush until something else happened to invalidate.
+    this.forgetHover()
+  }
+
+  /**
+   * Drops what the pointer was over, and repaints without it.
+   *
+   * Called wherever the box may have moved out from under a still hand — a tool change, the end
+   * of a drag, a zoom, a fresh state. The hover is recomputed on the next move rather than
+   * guessed at from before: a lit grip that no longer sits under the pointer is worse than none.
+   */
+  private forgetHover(): void {
+    if (!this.hover) return
+    this.hover = null
+    // Never over a cursor something else owns: a gesture holds its own for as long as it runs —
+    // a pan keeps `grabbing` across every frame it moves the view by — and space held is a pan
+    // in waiting that `releaseSpace` will give back.
+    if (this.gesture.kind === 'none' && !this.spacing) this.setCursor('')
+    this.overlay.invalidate()
   }
 
   setBrush(settings: BrushSettings): void {
@@ -1254,22 +1335,29 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
+      marching: this.marching(),
       // Handed over whole rather than gated here: every painter already returns on nothing to
       // draw, and a gate repeating those guards is one a new decoration gets forgotten from —
       // silently, since nothing would fail, it would simply never appear.
       tools: {
         crop: this.cropping,
-        handles: this.handleBox(),
+        handles: this.activeCorners(),
+        lit: this.hover?.kind === 'handle' ? this.hover.id : null,
         pending: this.pending,
         selection: this.selection,
       },
     }
   }
 
-  /** The box the move tool offers grips on — none for another tool, none for a pinned layer. */
-  private handleBox(): Rect | null {
-    const layer = this.tool === 'move' ? this.activeLayer() : null
-    return layer && !layer.locked.position ? this.boxOf(layer) : null
+  /**
+   * Whether anything on screen is dashed, which is what keeps the overlay's frame loop alive.
+   * Kept beside what draws the ants: a fourth dashed surface that forgot to say so would simply
+   * stand still.
+   */
+  private marching(): boolean {
+    return (
+      selectionOutline(this.selection).length > 0 || this.pending !== null || this.cropping !== null
+    )
   }
 
   private render(): void {
@@ -1547,19 +1635,23 @@ export class CanvasEngine {
       const layer = this.activeLayer()
       if (!layer || layer.locked.position) return
 
-      // The grips first: they sit on the layer, and a drag on one is not a drag of the layer.
-      const box = this.boxOf(layer)
-      const handle = box && handleAt(box, point, HANDLE_GRAB / this.view.viewport.scale)
-      if (box && handle) {
+      // The chrome first: a drag on a grip, or in the ring outside a corner, is not a drag of
+      // the layer. Answered by the same test the cursor asked, so the two cannot disagree.
+      const box = this.hoverBox()
+      const hit = box && this.chromeAt(box, point)
+      if (box && hit) {
+        const corners = box.corners
         this.options.layers.beginDrag()
-        this.gesture = {
-          kind: 'handle',
-          id: layer.id,
-          handle,
-          box,
-          from: point,
-          origin: layer.transform,
-        }
+        this.gesture =
+          hit.kind === 'handle'
+            ? { kind: 'handle', id: layer.id, handle: hit.id, from: point, origin: layer.transform }
+            : {
+                kind: 'rotate',
+                id: layer.id,
+                center: centerOf(corners),
+                from: point,
+                origin: layer.transform,
+              }
         return
       }
 
@@ -1592,10 +1684,10 @@ export class CanvasEngine {
     if (this.tool === 'crop') {
       // The grips of a placed frame come first, exactly as the move tool's do: a press on one
       // adjusts the frame, a press anywhere else starts a new one over it.
-      const reach = HANDLE_GRAB / this.view.viewport.scale
-      const grip = this.cropping && handleAt(this.cropping, point, reach)
-      if (this.cropping && grip && grip !== 'rotate') {
-        this.gesture = { kind: 'cropHandle', handle: grip, origin: this.cropping }
+      const frame = this.hoverBox()
+      const grip = frame && this.chromeAt(frame, point)
+      if (this.cropping && grip) {
+        this.gesture = { kind: 'cropHandle', handle: grip.id, origin: this.cropping }
         return
       }
 
@@ -1652,9 +1744,24 @@ export class CanvasEngine {
   }
 
   /** `null` for a group, which has no texture of its own and so no box to grab. */
-  private boxOf(layer: Layer): Rect | null {
+  private cornersOf(layer: Layer): Corners | null {
     if (!this.state || isGroup(layer)) return null
-    return layerBoxOf(layer.transform, this.documentSize())
+    return layerCornersOf(layer.transform, this.documentSize())
+  }
+
+  /**
+   * The corners of the armed layer, when there is one a grip may be taken on. Memoised on the
+   * tree's identity and the armed id: an idle hover would otherwise flatten the layer tree twice
+   * per pointer move, and pay for every layer in the document to answer about one.
+   */
+  private activeCorners(): Corners | null {
+    if (this.tool !== 'move') return null
+    if (this.corners.of === this.state) return this.corners.box
+
+    const layer = this.activeLayer()
+    const box = layer && !layer.locked.position ? this.cornersOf(layer) : null
+    this.corners = { of: this.state, box }
+    return box
   }
 
   /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
@@ -1745,7 +1852,7 @@ export class CanvasEngine {
     if (this.view.rulers) this.overlay.invalidate()
 
     const gesture = this.gesture
-    if (gesture.kind === 'none') return
+    if (gesture.kind === 'none') return this.hovering(host)
 
     if (gesture.kind === 'pan') {
       const viewport = this.view.viewport
@@ -1789,10 +1896,18 @@ export class CanvasEngine {
         return
       }
       case 'handle': {
-        const next =
-          gesture.handle === 'rotate'
-            ? rotateBy(gesture.origin, gesture.box, gesture.from, point, event.shiftKey)
-            : resizeBy(gesture.origin, gesture.handle, this.documentSize(), point, event.shiftKey)
+        const next = resizeBy(
+          gesture.origin,
+          gesture.handle,
+          this.documentSize(),
+          point,
+          event.shiftKey,
+        )
+        this.options.layers.transform(gesture.id, next)
+        return
+      }
+      case 'rotate': {
+        const next = rotateBy(gesture.origin, gesture.center, gesture.from, point, event.shiftKey)
         this.options.layers.transform(gesture.id, next)
         return
       }
@@ -1829,7 +1944,7 @@ export class CanvasEngine {
   private readonly onPointerUp = (event: PointerEvent): void => {
     // The corner counts: a guide dropped anywhere on the chrome is a guide thrown away.
     const onChrome = this.inRuler(this.toHost(event)) !== null
-    this.setCursor('')
+    this.forgetHover()
     this.endGesture(onChrome)
   }
 
@@ -1846,7 +1961,7 @@ export class CanvasEngine {
     }
 
     // One history entry per gesture: a command per dab, or per pointer move, would make ⌘Z useless.
-    if (gesture.kind === 'move' || gesture.kind === 'handle') this.options.layers.endDrag()
+    if (LAYER_DRAGS.has(gesture.kind)) this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
     if (gesture.kind === 'shape') this.commitShape(gesture.target)
     // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
@@ -1854,9 +1969,53 @@ export class CanvasEngine {
     if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)
   }
 
+  /**
+   * What an idle pointer is over, and what the cursor says about it. Repaints only when the
+   * answer changed: a hand resting on the canvas must not buy a frame of overlay per event.
+   *
+   * Space held wins over everything — it is a pan in waiting, and `releaseSpace` gives the
+   * cursor back.
+   */
+  private hovering(host: Point): void {
+    const box = this.spacing ? null : this.hoverBox()
+    const next = box && this.chromeAt(box, toDocument(this.view.viewport, host))
+    if (sameHit(next, this.hover)) return
+
+    this.hover = next
+    if (!this.spacing) this.setCursor(box && next ? cursorFor(next, box.facing) : '')
+    this.overlay.invalidate()
+  }
+
+  /**
+   * The chrome a press or a hover may take hold of — the armed layer's box, or the crop frame.
+   * Never both: the two tools that draw grips are mutually exclusive.
+   *
+   * A crop does not turn the document, so its rotation ring has no reach at all. Spelling that as
+   * a zero rather than as a second code path is what keeps the frame's grips and the layer's
+   * answering to one hit test.
+   */
+  private hoverBox(): HoverBox | null {
+    if (this.tool === 'crop') {
+      return this.cropping
+        ? { corners: cornersOfRect(this.cropping), reach: 0, facing: UPRIGHT }
+        : null
+    }
+
+    const corners = this.activeCorners()
+    const facing = this.activeLayer()?.transform
+    if (!corners || !facing) return null
+    return { corners, reach: ROTATE_REACH, facing }
+  }
+
+  /** Both tolerances are screen pixels, so a grip stays as easy to take at 5% as at 800%. */
+  private chromeAt(box: HoverBox, point: Point): HandleHit | null {
+    const scale = this.view.viewport.scale
+    return hitTest(box.corners, point, HANDLE_GRAB / scale, box.reach / scale)
+  }
+
   private readonly onPointerLeave = (): void => {
     this.pointer = null
-    this.overlay.invalidate()
+    this.forgetHover()
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -1875,7 +2034,14 @@ export class CanvasEngine {
 
   private releaseSpace(): void {
     this.spacing = false
-    if (this.gesture.kind !== 'pan') this.setCursor('')
+    if (this.gesture.kind === 'pan') return
+
+    this.setCursor('')
+    // What the pointer was over was left standing while space held the cursor. Dropped rather
+    // than kept: the hover is only recomputed when it *changes*, so a grip the hand never left
+    // would compare equal on the next move and its arrow would never come back.
+    this.hover = null
+    this.overlay.invalidate()
   }
 
   private setCursor(cursor: string): void {

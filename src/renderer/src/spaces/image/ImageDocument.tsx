@@ -33,6 +33,8 @@ import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
 import {
+  armedBy,
+  armingCommand,
   canvasToolFor,
   cursorFor,
   DEFAULT_MODES,
@@ -182,12 +184,29 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   }, [tool, mode])
 
   /**
+   * Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
+   * active has to hand over the ellipse, not merely remember it for later.
+   */
+  const pick = useCallback((toolId: string, modeId?: string) => {
+    // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
+    if (modeId === 'image') return revealAssets()
+
+    if (modeId) setModes(current => ({ ...current, [toolId]: modeId }))
+    setTool(toolId)
+  }, [])
+
+  /**
    * What a key press means here. One `switch`, as every other space has one: the surface that is
    * listening is the one that answers, so `Meta+Equal` zooms an image here and stretches the
    * timeline there without either knowing about the other.
    */
   const run = useCallback(
     (command: CommandId) => {
+      // Twenty commands that all do the same thing, answered by the table rather than by twenty
+      // cases: a tool added to the bar is one row there, and never a branch forgotten here.
+      const arming = armedBy(command)
+      if (arming) return pick(arming.tool, arming.mode)
+
       switch (command) {
         case 'canvas.zoomIn':
           return zoomIn(documentId)
@@ -281,7 +300,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return useCanvases.getState().redo(documentId)
       }
     },
-    [documentId, t],
+    [documentId, pick, t],
   )
 
   useShortcuts({
@@ -295,22 +314,28 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   /** A picture dropped on the canvas becomes a layer of its own, on top and armed. */
   const onDrop = (asset: Asset): void => placeAsset(documentId, asset)
 
-  // Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
-  // active has to hand over the ellipse, not merely remember it for later.
-  const pick = useCallback((toolId: string, modeId: string) => {
-    // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
-    if (modeId === 'image') return revealAssets()
+  /**
+   * The colour input fires continuously while the swatch is dragged; without this every frame of
+   * that drag rebuilds one object per group for a list that did not change.
+   *
+   * Every key shown is read off the registry, never written on the button: a key remapped in the
+   * settings has to move on the bar with it, exactly as `ZoomBar`'s already do.
+   */
+  const tools = useMemo(() => {
+    // Absent rather than empty when a gesture has no key: a button says nothing instead of
+    // wearing a blank where a shortcut is meant to be.
+    const keyOf = (toolId: string, modeId?: string): string | undefined => {
+      const command = armingCommand(toolId, modeId)
+      return command ? label(bindingOf(command, bindings)) || undefined : undefined
+    }
 
-    setModes(current => ({ ...current, [toolId]: modeId }))
-    setTool(toolId)
-  }, [])
-
-  // The colour input fires continuously while the swatch is dragged; without this every frame
-  // of that drag rebuilds one object per group for a list that did not change.
-  const tools = useMemo(
-    () => IMAGE_TOOLS.map(entry => ({ ...entry, activeMode: modes[entry.id] })),
-    [modes],
-  )
+    return IMAGE_TOOLS.map(entry => ({
+      ...entry,
+      activeMode: modes[entry.id],
+      shortcut: keyOf(entry.id),
+      modes: entry.modes?.map(item => ({ ...item, shortcut: keyOf(entry.id, item.id) })),
+    }))
+  }, [modes, bindings, label])
 
   // Read off the registry rather than written on the buttons: a key remapped in the settings
   // has to move on the bar with it.

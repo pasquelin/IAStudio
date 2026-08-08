@@ -1,7 +1,7 @@
 import { selectionOutline, type CanvasSelection } from './canvas-selection'
 import type { Guide, Rect } from './canvas-state'
 import { cropChrome } from './crop'
-import { gripRects, HANDLE_IDS } from './handles'
+import { gripRects, HANDLE_IDS, outlinePoints, type Corners, type HandleId } from './handles'
 import { rulerStep, tickLabel, ticks } from './rulers'
 import { shapeOutline, type Point, type ShapeGeometry } from './shape-geometry'
 import { crisp, toScreen, visibleRect, type Size, type Viewport } from './viewport'
@@ -30,6 +30,7 @@ export type OverlayContext = Pick<
   | 'strokeRect'
   | 'fillText'
   | 'setLineDash'
+  | 'lineDashOffset'
   | 'lineWidth'
   | 'strokeStyle'
   | 'fillStyle'
@@ -46,8 +47,59 @@ export type OverlayColors = {
   rulerText: string
   rulerTick: string
   accent: string
+  /** The two strokes of the marching ants — see the tokens for why they are white and black. */
+  marqueeLight: string
+  marqueeDark: string
   /** Translucent: it dims what a crop is about to cut away without hiding it. */
   scrim: string
+}
+
+/** The dash pattern of the marching ants, in screen pixels, and how long one period lasts. */
+const ANT_DASH = 5
+const ANT_GAP = 4
+const ANT_PERIOD_MS = 500
+
+/**
+ * How far along its pattern the dash has marched, from a clock rather than from a frame counter:
+ * the ants have to crawl at the same speed on a screen that drops frames as on one that does not.
+ */
+export function antPhase(time: number): number {
+  return ((time % ANT_PERIOD_MS) / ANT_PERIOD_MS) * (ANT_DASH + ANT_GAP)
+}
+
+/**
+ * The marching ants, in the one place every dashed outline goes through.
+ *
+ * Two strokes over the same path: a plain light one, then a dark dashed one that marches over it.
+ * The alternation is what keeps the outline readable over anything the document holds — a single
+ * dashed stroke disappears against a background of its own colour, whichever colour that is.
+ *
+ * One helper for all three surfaces that dash — the selection, the crop frame, the shape being
+ * drawn — so drift between them is not merely unlikely but impossible.
+ */
+export function ants(
+  context: OverlayContext,
+  trace: () => void,
+  phase: number,
+  colors: OverlayColors,
+): void {
+  context.lineWidth = 1.5
+
+  context.setLineDash([])
+  context.strokeStyle = colors.marqueeLight
+  trace()
+  context.stroke()
+
+  context.setLineDash([ANT_DASH, ANT_GAP])
+  // Negative, so the dashes travel the way the path was traced rather than against it.
+  context.lineDashOffset = -phase
+  context.strokeStyle = colors.marqueeDark
+  trace()
+  context.stroke()
+
+  context.setLineDash([])
+  context.lineDashOffset = 0
+  context.lineWidth = 1
 }
 
 export const RULER_SIZE = 20
@@ -63,8 +115,14 @@ const MINOR_TICK = 4
 export type ToolChrome = {
   /** The crop frame once placed. It outlives its drag, which is what makes the grips real. */
   crop: Rect | null
-  /** The armed layer's box — `null` unless the move tool holds a layer free to move. */
-  handles: Rect | null
+  /**
+   * The armed layer's box, as its four corners — `null` unless the move tool holds a layer free
+   * to move. Corners rather than a rectangle: under a rotation the box is not one, and grips
+   * derived from an axis-aligned rectangle floated beside the picture they claimed to hold.
+   */
+  handles: Corners | null
+  /** The grip under the pointer, drawn a pixel wider. `null` when the hand is elsewhere. */
+  lit: HandleId | null
   /** The shape under the hand, outlined until it is committed to the layer. */
   pending: ShapeGeometry | null
   selection: CanvasSelection
@@ -82,6 +140,12 @@ export type OverlayScene = {
   /** Where the pointer is, in screen pixels — the rulers echo it. `null` once it leaves. */
   pointer: Point | null
   colors: OverlayColors
+  /**
+   * Whether anything on screen is dashed. The frame loop keeps booking frames while it is true
+   * and stops the moment it is not: ants that marched on an empty canvas would be a rAF running
+   * for the life of the document, which the UI thread has better uses for.
+   */
+  marching: boolean
   /** The active tool's own chrome, drawn last and in screen space. */
   tools: ToolChrome
 }
@@ -97,7 +161,7 @@ function line(context: OverlayContext, x1: number, y1: number, x2: number, y2: n
  * One frame of the overlay. Pure in everything but the context: the scene decides, this only
  * puts it on screen — which is what lets it be tested without a GPU.
  */
-export function drawOverlay(context: OverlayContext, scene: OverlayScene): void {
+export function drawOverlay(context: OverlayContext, scene: OverlayScene, phase = 0): void {
   context.clearRect(0, 0, scene.host.width, scene.host.height)
   context.save()
   // Every stroke here is chrome, so nothing scales with the zoom.
@@ -106,7 +170,7 @@ export function drawOverlay(context: OverlayContext, scene: OverlayScene): void 
 
   drawFrame(context, scene)
   if (scene.showGuides) drawGuides(context, scene)
-  drawTools(context, scene)
+  drawTools(context, scene, phase)
   if (scene.showRulers) drawRulers(context, scene)
 
   context.restore()
@@ -141,32 +205,29 @@ function drawGuides(context: OverlayContext, scene: OverlayScene): void {
   }
 }
 
-function drawTools(context: OverlayContext, scene: OverlayScene): void {
-  drawSelection(context, scene)
-  drawPending(context, scene)
-  drawCrop(context, scene)
+function drawTools(context: OverlayContext, scene: OverlayScene, phase: number): void {
+  drawSelection(context, scene, phase)
+  drawPending(context, scene, phase)
+  drawCrop(context, scene, phase)
   drawGrips(context, scene)
 }
 
-function drawSelection(context: OverlayContext, scene: OverlayScene): void {
+function drawSelection(context: OverlayContext, scene: OverlayScene, phase: number): void {
   const outline = selectionOutline(scene.tools.selection)
   if (outline.length === 0) return
 
-  context.strokeStyle = scene.colors.accent
-  context.setLineDash([4, 4])
-  strokePath(context, scene.viewport, outline)
-  context.setLineDash([])
+  ants(context, () => tracePath(context, scene.viewport, outline), phase, scene.colors)
 }
 
-function drawPending(context: OverlayContext, scene: OverlayScene): void {
+function drawPending(context: OverlayContext, scene: OverlayScene, phase: number): void {
   const shape = scene.tools.pending
   if (!shape) return
 
-  context.strokeStyle = scene.colors.accent
-  strokePath(context, scene.viewport, shapeOutline(shape))
+  const outline = shapeOutline(shape)
+  ants(context, () => tracePath(context, scene.viewport, outline), phase, scene.colors)
 }
 
-function drawCrop(context: OverlayContext, scene: OverlayScene): void {
+function drawCrop(context: OverlayContext, scene: OverlayScene, phase: number): void {
   const rect = scene.tools.crop
   if (!rect) return
 
@@ -175,32 +236,58 @@ function drawCrop(context: OverlayContext, scene: OverlayScene): void {
   context.fillStyle = scene.colors.scrim
   for (const band of scrim) context.fillRect(band.x, band.y, band.width, band.height)
 
-  context.strokeStyle = scene.colors.accent
-  context.strokeRect(frame.x, frame.y, frame.width, frame.height)
+  // The same ants as a selection: what a frame promises to keep and what a marquee encloses are
+  // the same kind of statement, and the eye should not have to learn two ways of reading it.
+  ants(context, () => traceRect(context, frame), phase, scene.colors)
 
   context.fillStyle = scene.colors.accent
   for (const grip of grips) context.fillRect(grip.x, grip.y, grip.width, grip.height)
 }
 
 /**
- * The nine grips of the armed layer, drawn only while the move tool holds them — Pixi ships no
- * transformer, so these are ours.
+ * The armed layer's outline and its eight grips, drawn only while the move tool holds them —
+ * Pixi ships no transformer, so these are ours.
+ *
+ * The outline matters as much as the grips: eight squares with nothing between them said where
+ * the corners were without ever saying what was selected.
  */
 function drawGrips(context: OverlayContext, scene: OverlayScene): void {
-  const box = scene.tools.handles
-  if (!box) return
+  const corners = scene.tools.handles
+  if (!corners) return
 
-  const grips = gripRects(box, scene.viewport)
+  context.strokeStyle = scene.colors.accent
   context.fillStyle = scene.colors.accent
+  tracePath(context, scene.viewport, outlinePoints(corners))
+  context.stroke()
+
+  const grips = gripRects(corners, scene.viewport)
 
   for (const id of HANDLE_IDS) {
     const grip = grips[id]
-    context.fillRect(grip.x, grip.y, grip.width, grip.height)
+    // The one under the pointer grows by a pixel on each side: it is the only feedback saying
+    // the grip is within reach before the button goes down.
+    const grow = id === scene.tools.lit ? 1 : 0
+    context.fillRect(grip.x - grow, grip.y - grow, grip.width + grow * 2, grip.height + grow * 2)
   }
 }
 
-/** A closed polyline, in screen space: a selection is chrome, and chrome never scales. */
-function strokePath(context: OverlayContext, viewport: Viewport, outline: readonly Point[]): void {
+/** The four sides of a rectangle, laid down for `ants` to stroke twice. */
+function traceRect(context: OverlayContext, rect: Rect): void {
+  context.beginPath()
+  context.moveTo(rect.x, rect.y)
+  context.lineTo(rect.x + rect.width, rect.y)
+  context.lineTo(rect.x + rect.width, rect.y + rect.height)
+  context.lineTo(rect.x, rect.y + rect.height)
+  context.lineTo(rect.x, rect.y)
+}
+
+/**
+ * A closed polyline, in screen space: a selection is chrome, and chrome never scales.
+ *
+ * Laid down without being stroked, because the marching ants stroke the same path twice — the
+ * light pass and the dark dashed one over it.
+ */
+function tracePath(context: OverlayContext, viewport: Viewport, outline: readonly Point[]): void {
   const first = outline[0]
   if (!first) return
 
@@ -219,7 +306,6 @@ function strokePath(context: OverlayContext, viewport: Viewport, outline: readon
   // Closed by hand rather than with `closePath`: a lasso is left open by the hand that drew it,
   // and the region it stands for is the closed one.
   context.lineTo(start.x, start.y)
-  context.stroke()
 }
 
 /**
@@ -346,9 +432,15 @@ export class CanvasOverlay {
     this.canvas.remove()
   }
 
-  private readonly draw = (): void => {
+  private readonly draw = (time: number): void => {
     this.frame = 0
     const scene = this.scene()
-    if (scene && this.context) drawOverlay(this.context, scene)
+    if (!scene) return
+
+    if (this.context) drawOverlay(this.context, scene, antPhase(time))
+    // Ants keep marching, and nothing else keeps the loop alive: a frame is booked for the next
+    // step only while something on screen is actually dashed. Decided from the scene rather than
+    // from the context, so what governs the loop is what is on screen and nothing else.
+    if (scene.marching) this.invalidate()
   }
 }

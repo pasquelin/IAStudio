@@ -1,28 +1,32 @@
 import type { Rect, Transform } from './canvas-state'
+import { applyTo, layerMatrix } from './layer-space'
 import type { Point } from './shape-geometry'
 import { crisp, toScreen, type Size, type Viewport } from './viewport'
 
 /**
- * The nine grips of a transform box: eight on the edge, one above it for rotation. Pixi ships no
- * transformer, so the geometry is ours — and being plain arithmetic it belongs here, where it can
- * be tested without a GPU.
+ * The eight grips of a transform box. Pixi ships no transformer, so the geometry is ours — and
+ * being plain arithmetic it belongs here, where it can be tested without a GPU.
+ *
+ * There is no ninth grip for rotation: it is a zone just outside each corner, as in Figma and
+ * Photoshop. A square floating above the box was indistinguishable from the eight others.
  */
-export type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rotate'
+export type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 
-export const HANDLE_IDS: readonly HandleId[] = [
-  'nw',
-  'n',
-  'ne',
-  'e',
-  'se',
-  's',
-  'sw',
-  'w',
-  'rotate',
-]
+export const HANDLE_IDS: readonly HandleId[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
+
+/** The four corners, in the order that walks the outline. */
+export type CornerId = 'nw' | 'ne' | 'se' | 'sw'
+
+export const CORNER_IDS: readonly CornerId[] = ['nw', 'ne', 'se', 'sw']
+
+/**
+ * A box as its four corners rather than as an origin and a size: under a rotation it is not an
+ * axis-aligned rectangle at all, and every grip has to sit on the shape actually on screen.
+ */
+export type Corners = Readonly<Record<CornerId, Point>>
 
 /** Which corner each grip pulls against: the opposite one stays put, as it does everywhere. */
-export const ANCHOR: Readonly<Record<Exclude<HandleId, 'rotate'>, { x: number; y: number }>> = {
+export const ANCHOR: Readonly<Record<HandleId, { x: number; y: number }>> = {
   nw: { x: 1, y: 1 },
   n: { x: 0.5, y: 1 },
   ne: { x: 0, y: 1 },
@@ -33,16 +37,32 @@ export const ANCHOR: Readonly<Record<Exclude<HandleId, 'rotate'>, { x: number; y
   w: { x: 1, y: 0.5 },
 }
 
-/** How far above the box the rotation grip floats, in document units at 1:1. */
-export const ROTATE_OFFSET = 24
+/**
+ * Which way a grip pulls, before the layer is turned: `nw` goes up and left, `e` goes right.
+ * Read off `ANCHOR` rather than tabled again — the anchor is the opposite corner, so the
+ * direction is what points away from it.
+ */
+export function handleDirection(handle: HandleId): Point {
+  const anchor = ANCHOR[handle]
+  return { x: 1 - 2 * anchor.x, y: 1 - 2 * anchor.y }
+}
 
-/** Half the side of a grip's hit square, in screen pixels — grips do not scale with the zoom. */
-export const HANDLE_GRAB = 6
+/** Half the side of the square a grip is drawn as, in screen pixels — grips ignore the zoom. */
+const HANDLE_SIZE = 4
+
+/** Half the side of a grip's hit square, in screen pixels. Larger than what is drawn: aiming at
+ * eight pixels is what made the box feel like it demanded a surgeon. */
+export const HANDLE_GRAB = 8
+
+/** How far past a corner the rotation zone reaches, in screen pixels. */
+export const ROTATE_REACH = 22
 
 /**
- * Where a layer stands, in document units. Its texture is document-sized, so the box is the
- * document under the layer's own scale — grown about the origin it is pinned by, which is what
- * `place` does when it sets a pivot and compensates the position.
+ * The frame `resizeBy` solves in: axis-aligned, and therefore **ignoring both rotation and
+ * skew**. It is an intermediate coordinate space, not a rival to `layerCornersOf` — anything
+ * drawn, grabbed or measured against the picture wants the corners.
+ *
+ * Exported for the tests, which read a scale back off it rather than asserting on nine numbers.
  */
 export function layerBoxOf(transform: Transform, document: Size): Rect {
   const width = document.width * transform.scaleX
@@ -56,23 +76,54 @@ export function layerBoxOf(transform: Transform, document: Size): Rect {
   }
 }
 
-/** Where each grip sits, in document coordinates, for a layer occupying `box`. */
-export function handlePoints(box: Rect): Readonly<Record<HandleId, Point>> {
-  const right = box.x + box.width
-  const bottom = box.y + box.height
-  const middleX = box.x + box.width / 2
-  const middleY = box.y + box.height / 2
+/**
+ * The four corners a layer actually occupies, rotation and skew included.
+ *
+ * Taken through `layerMatrix` rather than derived here: that matrix is what Pixi composes for the
+ * sprite, and a second formula for the same thing is a box that drifts from the picture under it.
+ */
+export function layerCornersOf(transform: Transform, document: Size): Corners {
+  const matrix = layerMatrix(transform, document)
 
   return {
-    nw: { x: box.x, y: box.y },
-    n: { x: middleX, y: box.y },
-    ne: { x: right, y: box.y },
-    e: { x: right, y: middleY },
+    nw: applyTo(matrix, { x: 0, y: 0 }),
+    ne: applyTo(matrix, { x: document.width, y: 0 }),
+    se: applyTo(matrix, { x: document.width, y: document.height }),
+    sw: applyTo(matrix, { x: 0, y: document.height }),
+  }
+}
+
+/** The corners of an axis-aligned rectangle — what the crop frame, which never turns, hands in. */
+export function cornersOfRect(rect: Rect): Corners {
+  const right = rect.x + rect.width
+  const bottom = rect.y + rect.height
+
+  return {
+    nw: { x: rect.x, y: rect.y },
+    ne: { x: right, y: rect.y },
     se: { x: right, y: bottom },
-    s: { x: middleX, y: bottom },
-    sw: { x: box.x, y: bottom },
-    w: { x: box.x, y: middleY },
-    rotate: { x: middleX, y: box.y - ROTATE_OFFSET },
+    sw: { x: rect.x, y: bottom },
+  }
+}
+
+export function centerOf(corners: Corners): Point {
+  return {
+    x: (corners.nw.x + corners.ne.x + corners.se.x + corners.sw.x) / 4,
+    y: (corners.nw.y + corners.ne.y + corners.se.y + corners.sw.y) / 4,
+  }
+}
+
+/** Where each grip sits, in document coordinates: the four corners, and the middle of each edge. */
+export function handlePoints(corners: Corners): Readonly<Record<HandleId, Point>> {
+  return {
+    nw: corners.nw,
+    n: middle(corners.nw, corners.ne),
+    ne: corners.ne,
+    e: middle(corners.ne, corners.se),
+    se: corners.se,
+    s: middle(corners.se, corners.sw),
+    sw: corners.sw,
+    w: middle(corners.sw, corners.nw),
   }
 }
 
@@ -81,17 +132,17 @@ export function handlePoints(box: Rect): Readonly<Record<HandleId, Point>> {
  * with the zoom would be unclickable on a document seen at 5%.
  *
  * Here rather than at each call site because two of them draw grips — the move tool's box and the
- * crop frame — and the grab size and the half-pixel offset have to agree between them.
+ * crop frame — and the size and the half-pixel offset have to agree between them.
  */
-export function gripRects(box: Rect, viewport: Viewport): Readonly<Record<HandleId, Rect>> {
-  const points = handlePoints(box)
+export function gripRects(corners: Corners, viewport: Viewport): Readonly<Record<HandleId, Rect>> {
+  const points = handlePoints(corners)
   const square = (id: HandleId): Rect => {
     const screen = toScreen(viewport, points[id])
     return {
-      x: crisp(screen.x - HANDLE_GRAB),
-      y: crisp(screen.y - HANDLE_GRAB),
-      width: HANDLE_GRAB * 2,
-      height: HANDLE_GRAB * 2,
+      x: crisp(screen.x - HANDLE_SIZE),
+      y: crisp(screen.y - HANDLE_SIZE),
+      width: HANDLE_SIZE * 2,
+      height: HANDLE_SIZE * 2,
     }
   }
 
@@ -104,20 +155,104 @@ export function gripRects(box: Rect, viewport: Viewport): Readonly<Record<Handle
     s: square('s'),
     sw: square('sw'),
     w: square('w'),
-    rotate: square('rotate'),
   }
 }
 
-/** The grip under the point, tested in document units at the tolerance the caller scaled. */
-export function handleAt(box: Rect, point: Point, tolerance: number): HandleId | null {
-  const points = handlePoints(box)
+/** The outline of the box, in document units — the four corners, in the order that walks them. */
+export function outlinePoints(corners: Corners): readonly Point[] {
+  return CORNER_IDS.map(id => corners[id])
+}
 
-  return (
-    HANDLE_IDS.find(id => {
-      const grip = points[id]
-      return Math.abs(grip.x - point.x) <= tolerance && Math.abs(grip.y - point.y) <= tolerance
-    }) ?? null
-  )
+/**
+ * What the chrome of a transform box offers at a point: a grip to pull, a corner to turn by, or
+ * nothing.
+ *
+ * One function rather than one per gesture, because the press and the cursor have to agree. They
+ * used to be written twice — the same two tolerances and the same precedence — and the failure of
+ * a drift between them is a cursor promising a gesture the press then refuses.
+ */
+export type HandleHit = { kind: 'handle'; id: HandleId } | { kind: 'rotate'; id: CornerId }
+
+export function hitTest(
+  corners: Corners,
+  point: Point,
+  grab: number,
+  reach: number,
+): HandleHit | null {
+  const points = handlePoints(corners)
+  const grip = HANDLE_IDS.find(id => {
+    const at = points[id]
+    return Math.abs(at.x - point.x) <= grab && Math.abs(at.y - point.y) <= grab
+  })
+  if (grip) return { kind: 'handle', id: grip }
+
+  const corner = rotationCornerAt(corners, point, reach)
+  return corner ? { kind: 'rotate', id: corner } : null
+}
+
+/** The two corners each one shares an edge with — what says which way is out of the box. */
+const EDGES_FROM: Readonly<Record<CornerId, readonly [CornerId, CornerId]>> = {
+  nw: ['ne', 'sw'],
+  ne: ['se', 'nw'],
+  se: ['sw', 'ne'],
+  sw: ['nw', 'se'],
+}
+
+/**
+ * The corner whose rotation zone holds the point: the quarter-disc just *outside* a corner, which
+ * is where Figma and Photoshop both put it.
+ *
+ * Outside means behind **both** edges that leave the corner — the quadrant they point away from.
+ * Measured against the edges themselves rather than against the middle of the box, which would
+ * describe the outside of the circumscribed circle instead: on a 1000×100 layer that circle's
+ * tangent runs almost vertical at the corner, and the whole ring along the long edge would be
+ * classed as inside, leaving nowhere to grab the rotation from.
+ */
+export function rotationCornerAt(corners: Corners, point: Point, reach: number): CornerId | null {
+  for (const id of CORNER_IDS) {
+    const corner = corners[id]
+    // Not "nearest corner, then test": zoomed out, two corners can both be within reach, and the
+    // one that fails this has to let the next be tried.
+    if (distance(point, corner) > reach) continue
+
+    const [along, down] = EDGES_FROM[id]
+    if (beyond(point, corner, corners[along]) && beyond(point, corner, corners[down])) return id
+  }
+
+  return null
+}
+
+/** Whether the point lies on the far side of the corner from an edge leaving it. */
+function beyond(point: Point, corner: Point, neighbour: Point): boolean {
+  const edgeX = neighbour.x - corner.x
+  const edgeY = neighbour.y - corner.y
+  return (point.x - corner.x) * edgeX + (point.y - corner.y) * edgeY <= 0
+}
+
+/**
+ * A point of the box as it stands on screen, brought back into the un-turned box `layerBoxOf`
+ * describes.
+ *
+ * Both matrices send the pivot to the same place — the rotation is applied about it — so undoing
+ * the turn is one rotation of `-rotation` about that point, with no matrix to build. Skew is
+ * untouched by design: it belongs to the inner matrix the rotation is applied *after*.
+ */
+export function unrotated(transform: Transform, document: Size, point: Point): Point {
+  if (transform.rotation === 0) return point
+
+  const pivot = {
+    x: transform.x + transform.originX * document.width,
+    y: transform.y + transform.originY * document.height,
+  }
+  const dx = point.x - pivot.x
+  const dy = point.y - pivot.y
+  const cos = Math.cos(-transform.rotation)
+  const sin = Math.sin(-transform.rotation)
+
+  return {
+    x: cos * dx - sin * dy + pivot.x,
+    y: sin * dx + cos * dy + pivot.y,
+  }
 }
 
 /**
@@ -126,15 +261,20 @@ export function handleAt(box: Rect, point: Point, tolerance: number): HandleId |
  * something else on the canvas.
  *
  * `uniform` is the shift key: the shorter side follows the longer, so a picture keeps its shape.
+ *
+ * The pointer is un-turned before anything else: the whole solution below is in axis-aligned
+ * space, and on a rotated layer a drag along the visible edge would otherwise be read as a pull
+ * across it.
  */
 export function resizeBy(
   transform: Transform,
-  handle: Exclude<HandleId, 'rotate'>,
+  handle: HandleId,
   document: Size,
   to: Point,
   uniform: boolean,
 ): Transform {
   const box = layerBoxOf(transform, document)
+  const straight = unrotated(transform, document, to)
   const anchor = ANCHOR[handle]
   const fixed = { x: box.x + box.width * anchor.x, y: box.y + box.height * anchor.y }
 
@@ -142,8 +282,8 @@ export function resizeBy(
   const pullsX = anchor.x !== 0.5
   const pullsY = anchor.y !== 0.5
 
-  let scaleX = pullsX ? ratio(to.x - fixed.x, box.width * (anchor.x === 1 ? -1 : 1)) : 1
-  let scaleY = pullsY ? ratio(to.y - fixed.y, box.height * (anchor.y === 1 ? -1 : 1)) : 1
+  let scaleX = pullsX ? ratio(straight.x - fixed.x, box.width * (anchor.x === 1 ? -1 : 1)) : 1
+  let scaleY = pullsY ? ratio(straight.y - fixed.y, box.height * (anchor.y === 1 ? -1 : 1)) : 1
 
   if (uniform && pullsX && pullsY) {
     const side = Math.max(Math.abs(scaleX), Math.abs(scaleY))
@@ -157,13 +297,21 @@ export function resizeBy(
     scaleY: floored(transform.scaleY * scaleY),
   }
 
-  // Solved through `layerBoxOf` rather than against `transform.x`: the two differ by the origin
-  // term, and reading the transform directly let the anchored edge drift as the layer resized.
-  const grown = layerBoxOf(scaled, document)
+  // Re-anchored where the layer is actually drawn, never inside the un-turned box: `x` and `y`
+  // carry the point the rotation is applied about, so a correction solved before the turn moves
+  // that point too, and the anchored edge swings away by `(I − R) · correction`. At a quarter
+  // turn that is the whole displacement — the edge one is pulling against left the screen.
+  //
+  // Exact in one step: the matrix is affine in `x`/`y` with a unit coefficient, so translating
+  // the transform translates the rendered point by the same amount.
+  const held = { x: anchor.x * document.width, y: anchor.y * document.height }
+  const before = applyTo(layerMatrix(transform, document), held)
+  const after = applyTo(layerMatrix(scaled, document), held)
+
   return {
     ...scaled,
-    x: scaled.x + (fixed.x - (grown.x + grown.width * anchor.x)),
-    y: scaled.y + (fixed.y - (grown.y + grown.height * anchor.y)),
+    x: scaled.x + before.x - after.x,
+    y: scaled.y + before.y - after.y,
   }
 }
 
@@ -176,21 +324,20 @@ export function resizeBy(
 const ROTATION_STEP = Math.PI / 12
 
 /**
- * The angle from the box's middle to the pointer, which is what the rotation grip reads.
+ * The angle the hand swept about `center`, added to what the layer already held.
  *
  * Free to the degree unless `constrain` says otherwise — a rotation that always clicked into
  * steps could not be used to straighten a horizon, which is most of what one rotates for.
  */
 export function rotateBy(
   transform: Transform,
-  box: Rect,
+  center: Point,
   from: Point,
   to: Point,
   constrain = false,
 ): Transform {
-  const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-  const before = Math.atan2(from.y - middle.y, from.x - middle.x)
-  const after = Math.atan2(to.y - middle.y, to.x - middle.x)
+  const before = Math.atan2(from.y - center.y, from.x - center.x)
+  const after = Math.atan2(to.y - center.y, to.x - center.x)
   const rotation = transform.rotation + after - before
 
   return {
@@ -205,6 +352,14 @@ export function rotateBy(
  * small has no box left to grab, and only ⌘Z would bring it back.
  */
 const MIN_SCALE = 0.01
+
+function middle(one: Point, other: Point): Point {
+  return { x: (one.x + other.x) / 2, y: (one.y + other.y) / 2 }
+}
+
+function distance(one: Point, other: Point): number {
+  return Math.hypot(one.x - other.x, one.y - other.y)
+}
 
 function ratio(moved: number, extent: number): number {
   // Near-zero, not exactly zero: a box that has already collapsed would divide by ~1e-17.

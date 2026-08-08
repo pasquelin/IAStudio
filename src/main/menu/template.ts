@@ -263,6 +263,49 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ]
       : []
 
+  /**
+   * Every tool of the image space, in the order the bar stacks them.
+   *
+   * The bar is where a tool is picked in practice, so this is not the fast path — it is what
+   * makes each of them a command: remappable in the settings, listed in the shortcuts screen,
+   * and reachable at all for the four that carry no default key.
+   */
+  const toolsMenu: MenuItemConstructorOptions[] =
+    workspace === 'image'
+      ? [
+          {
+            label: t.menu.imageTools,
+            submenu: [
+              commandItem('canvas.toolMove', t.commands.canvasToolMove.title),
+              commandItem('canvas.toolHand', t.commands.canvasToolHand.title),
+              commandItem('canvas.toolScale', t.commands.canvasToolScale.title),
+              { type: 'separator' },
+              commandItem('canvas.toolCrop', t.commands.canvasToolCrop.title),
+              { type: 'separator' },
+              commandItem('canvas.toolSelectRectangle', t.commands.canvasToolSelectRectangle.title),
+              commandItem('canvas.toolSelectEllipse', t.commands.canvasToolSelectEllipse.title),
+              commandItem('canvas.toolSelectLasso', t.commands.canvasToolSelectLasso.title),
+              { type: 'separator' },
+              commandItem('canvas.toolShapeRectangle', t.commands.canvasToolShapeRectangle.title),
+              commandItem('canvas.toolShapeLine', t.commands.canvasToolShapeLine.title),
+              commandItem('canvas.toolShapeArrow', t.commands.canvasToolShapeArrow.title),
+              commandItem('canvas.toolShapeEllipse', t.commands.canvasToolShapeEllipse.title),
+              commandItem('canvas.toolShapePolygon', t.commands.canvasToolShapePolygon.title),
+              commandItem('canvas.toolShapeStar', t.commands.canvasToolShapeStar.title),
+              { type: 'separator' },
+              commandItem('canvas.toolBrush', t.commands.canvasToolBrush.title),
+              commandItem('canvas.toolPencil', t.commands.canvasToolPencil.title),
+              commandItem('canvas.toolEraser', t.commands.canvasToolEraser.title),
+              commandItem('canvas.toolEraserSelection', t.commands.canvasToolEraserSelection.title),
+              commandItem('canvas.toolFill', t.commands.canvasToolFill.title),
+              { type: 'separator' },
+              commandItem('canvas.toolText', t.commands.canvasToolText.title),
+              commandItem('canvas.toolPicker', t.commands.canvasToolPicker.title),
+            ],
+          },
+        ]
+      : []
+
   /** Only where a picture is what is being edited: turning a scene is another gesture entirely. */
   const imageMenu: MenuItemConstructorOptions[] =
     workspace === 'image'
@@ -341,6 +384,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ],
     },
     editMenu,
+    ...toolsMenu,
     ...imageMenu,
     ...addMenu,
     {

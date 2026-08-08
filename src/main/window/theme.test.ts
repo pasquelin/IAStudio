@@ -45,7 +45,16 @@ describe('the light theme', () => {
     // Deliberately shared: the accent reads on either background, the create button keeps its
     // warm colour, and the monitor stays black because a picture is judged against the black it
     // will be shown on — not against the studio's chrome.
-    const shared = ['--color-accent', '--color-create', '--color-create-hover', '--color-monitor']
+    // The marquee joins them for the monitor's reason: its two strokes are drawn over the
+    // document, which does not turn light with the studio around it.
+    const shared = [
+      '--color-accent',
+      '--color-create',
+      '--color-create-hover',
+      '--color-monitor',
+      '--color-marquee-light',
+      '--color-marquee-dark',
+    ]
     const unchanged = [...reference]
       .filter(([name, value]) => light.get(name) === value)
       .map(([name]) => name)
