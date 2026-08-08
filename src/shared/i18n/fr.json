@@ -511,6 +511,12 @@
     "snap": "Magnétisme",
     "snapHint": "Faire avancer les poignées par pas réguliers, réglables dans les préférences",
     "space": "Repère local",
+    "projection": "Projection",
+    "projectionHint": "Basculer entre perspective et projection orthographique",
+    "view": "Se placer",
+    "viewHint": "Regarder la scène par l’un de ses six côtés",
+    "display": "Affichage",
+    "displayHint": "Dessiner les surfaces, leurs arêtes, ou les deux",
     "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
     "group": "Grouper",
     "groupHint": "Ranger les objets sélectionnés sous un même groupe",
@@ -524,6 +530,19 @@
     "pasteHint": "Poser dans cette scène ce qui a été copié",
     "delete": "Supprimer",
     "deleteHint": "Retirer de la scène ce qui est sélectionné"
+  },
+  "sceneViews": {
+    "front": "De face",
+    "back": "De dos",
+    "left": "De gauche",
+    "right": "De droite",
+    "top": "De dessus",
+    "bottom": "De dessous"
+  },
+  "sceneDisplay": {
+    "shaded": "Rendu",
+    "wireframe": "Filaire",
+    "both": "Rendu et filaire"
   },
   "project": {
     "none": "Aucun projet ouvert",
@@ -866,6 +885,14 @@
     "sceneSpace": {
       "title": "Repère local",
       "help": "Aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde. Sur un objet tourné, c’est ce qui permet de le déplacer « vers son avant » plutôt que vers le nord."
+    },
+    "sceneProjection": {
+      "title": "Projection",
+      "help": "Bascule entre la perspective, où les fuyantes convergent, et la projection orthographique, où les parallèles restent parallèles. C’est ce qui permet de juger un alignement à l’œil."
+    },
+    "sceneDisplay": {
+      "title": "Affichage",
+      "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
     },
     "sceneGroup": {
       "title": "Grouper",

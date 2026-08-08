@@ -678,7 +678,55 @@ régression. Le noter ici plutôt que de la bâcler.
 
 ## Étape 9 — Caméra orthographique, vues normalisées, filaire
 
-- [ ] Livrée
+- [x] Livrée
+
+**Les trois y sont.** La projection bascule (`O`), la caméra va se poser sur l'un des six côtés, et
+le viewport dessine les surfaces, leurs arêtes, ou les deux (`Z`, comme dans Blender). Tout cela
+est de l'**état de session**, dans un store `scene-views` calqué sur `canvas-views` : par document,
+jamais enregistré, jamais dans l'historique.
+
+**Qui d'autre lit `viewport.camera`, vérifié avant d'y toucher** : `SkyboxRenderer`,
+`TextureRenderer` et `SceneRenderer`. La bascule ne leur impose rien — `ViewportEngine` garde ses
+deux caméras, `camera` devient un accesseur sur celle qui dessine, et les deux autres espaces ne
+touchent jamais à `setProjection`. Une seule ligne a dû bouger ailleurs : `SceneRenderer` écrivait
+`camera.fov` directement, il passe maintenant par `viewport.setFieldOfView` — le tronc
+orthographique est dérivé de ce champ de vision, il doit se redimensionner avec lui.
+
+**Décisions prises seul.**
+
+- *Le clic du `ViewHelper` n'est pas câblé*, alors que le plan le suggérait. Son animation déplace
+  la caméra autour de son propre `center` sans rien dire à `OrbitControls` : la cible de l'orbite
+  et la caméra divergeraient, et le premier glisser suivant ramènerait la vue ailleurs. Les six
+  côtés passent donc par `viewFrom`, qui repose la caméra puis appelle `orbit.update()`. Câbler le
+  helper demanderait de tenir son `center` et la cible de l'orbite en phase : à faire un jour, pas
+  au prix d'une vue qui saute.
+- *Les vues de dessus et de dessous sont décalées d'un dix-millième de la distance.* Un angle
+  polaire de zéro exact n'a pas d'azimut : `OrbitControls` lit la position en coordonnées
+  sphériques, et le glisser suivant collerait la vue sur un côté arbitraire.
+- *Le troisième mode d'affichage est une surcouche, pas un second passage de rendu* — comme le plan
+  l'exigeait. Un matériau filaire ne dessine aucune surface : « rendu **et** filaire » ne peut donc
+  pas être un drapeau de matériau. Ce sont des `LineSegments` accrochés sous chaque maille,
+  construits quand le mode s'allume et jetés quand il s'éteint, plutôt que gardés en vie pour un
+  mode que personne ne laisse allumé.
+- *Le bouton Affichage porte une commande*, contrairement à Ajouter et aux six côtés. Un bouton qui
+  affiche le mode en cours n'ouvre pas son menu au clic — c'est la règle de `Toolbar` — et il
+  serait resté un clic mort. Il fait donc défiler les trois modes, et son menu permet toujours de
+  choisir directement.
+
+**Trois bugs trouvés à la relecture et corrigés.**
+
+- *Un modèle qui atterrit après la bascule n'avait pas ses arêtes.* Un GLB arrive longtemps après
+  la frame qui l'a demandé : le mode avait été appliqué à un porteur encore vide. Corrigé au même
+  endroit, et pour la même raison, que les drapeaux d'ombre.
+- *Les arêtes fuyaient à la suppression d'un nœud.* Elles sont un enfant de la maille, avec leur
+  propre tampon ; `release` ne disposait que la géométrie de la maille elle-même.
+- *Le tronc orthographique se calculait depuis une position périmée.* Un redimensionnement de
+  fenêtre pendant que la perspective est active lisait la place où la caméra orthographique était
+  au dernier échange. Il lit maintenant celle qui dessine.
+
+**Manuel.** Le chapitre 09 gagne « Regarder la scène autrement », le chapitre 15 ses raccourcis. La
+table anglaise des outils avait perdu Magnétisme et Repère local depuis l'étape 1 : remise en
+accord avec la française au passage.
 
 Rien de tout cela n'existe dans le viewport.
 

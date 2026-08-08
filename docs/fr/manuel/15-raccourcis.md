@@ -88,6 +88,8 @@ plus bas).
 | **Redimensionner** | `S` | tirer sur les poignées. `⇧` garde les proportions |
 | **Magnétisme** | `M` | fait avancer les poignées par pas réguliers. Les pas se règlent dans les préférences |
 | **Repère local** | `L` | aligne les poignées sur l'orientation de l'objet plutôt que sur celle du monde |
+| **Projection** | `O` | bascule entre perspective et projection orthographique |
+| **Affichage** | `Z` | fait défiler rendu, filaire, rendu et filaire |
 | **Cadrer la sélection** | `F` | rapproche la caméra pour que l'objet remplisse la vue |
 | **Supprimer** | `Suppr` | retire tout ce qui est sélectionné. `⌘Z` le fait revenir |
 
@@ -309,6 +311,8 @@ figées pour l'instant. Voir [Ce qui n'existe pas encore](18-limites.md).
 | `⌘G` | | Grouper | | |
 | `⌘D` | | Dupliquer | | |
 | `⌘C` / `⌘X` / `⌘V` | | Copier / Couper / Coller | | |
+| `O` | | Projection | | |
+| `Z` | | Affichage | | |
 | `V` | | Sélectionner | | |
 | `G` | | Déplacer | | |
 | `R` | | Pivoter | | |

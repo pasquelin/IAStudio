@@ -1,0 +1,134 @@
+import {
+  LineSegments,
+  Mesh,
+  WireframeGeometry,
+  type Material,
+  type Object3D,
+  type Vector3,
+} from 'three'
+
+/**
+ * How a scene is being looked at, and drawn. Session state, like an image document's zoom: it is
+ * never saved with the document and ⌘Z never touches it — the scene did not change, the view did.
+ */
+
+/** The six sides of the box a set is judged from. */
+export type ViewDirection = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
+
+export const VIEW_DIRECTIONS: readonly ViewDirection[] = [
+  'front',
+  'back',
+  'left',
+  'right',
+  'top',
+  'bottom',
+]
+
+/** A toolbar row carries a plain string: this is what turns it back into a direction. */
+export function isViewDirection(value: string): value is ViewDirection {
+  return VIEW_DIRECTIONS.some(direction => direction === value)
+}
+
+/** Unit vectors, in the studio's Y-up right-handed frame: front looks down −Z, from +Z. */
+const AXES: Record<ViewDirection, [number, number, number]> = {
+  front: [0, 0, 1],
+  back: [0, 0, -1],
+  left: [-1, 0, 0],
+  right: [1, 0, 0],
+  top: [0, 1, 0],
+  bottom: [0, -1, 0],
+}
+
+/**
+ * Where the camera goes to look at `target` from a given side, keeping the distance it had.
+ *
+ * Straight up and straight down are nudged off the axis on purpose: orbit controls read the
+ * camera's placement as spherical coordinates around the target, and a polar angle of exactly
+ * zero has no azimuth — the very next drag would snap the view to an arbitrary side.
+ */
+export function viewPosition(
+  direction: ViewDirection,
+  target: Vector3,
+  distance: number,
+): { x: number; y: number; z: number } {
+  const [x, y, z] = AXES[direction]
+  const nudge = y === 0 ? 0 : distance * 0.0001
+
+  return {
+    x: target.x + x * distance,
+    y: target.y + y * distance,
+    z: target.z + z * distance + nudge,
+  }
+}
+
+/** What the viewport draws: the surfaces, their edges, or both. */
+export type DisplayMode = 'shaded' | 'wireframe' | 'both'
+
+export const DISPLAY_MODES: readonly DisplayMode[] = ['shaded', 'wireframe', 'both']
+
+/** The next mode in the list, wrapping — what one key does when three modes share it. */
+export function nextDisplayMode(mode: DisplayMode): DisplayMode {
+  const at = DISPLAY_MODES.indexOf(mode)
+  return DISPLAY_MODES[(at + 1) % DISPLAY_MODES.length] ?? 'shaded'
+}
+
+export function isDisplayMode(value: string): value is DisplayMode {
+  return DISPLAY_MODES.some(mode => mode === value)
+}
+
+/**
+ * Wireframe on the materials themselves, never as a second pass over the scene: a pass would
+ * redraw every triangle a second time, and this is a flag the shader already reads.
+ *
+ * `both` is the one mode a material cannot express — a wireframe material draws no surface — so
+ * it is left to the overlay the renderer hangs under each mesh.
+ */
+export function applyDisplayMode(object: Object3D, mode: DisplayMode): void {
+  object.traverse(child => {
+    if (!(child instanceof Mesh)) return
+    for (const material of materialsOf(child)) {
+      // Structural: `Material` itself declares no `wireframe`, though every mesh material has one.
+      if ('wireframe' in material) material.wireframe = mode === 'wireframe'
+    }
+  })
+}
+
+function materialsOf(mesh: Mesh): readonly Material[] {
+  return Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+}
+
+/** Names the edges the renderer hangs under a mesh, so removing them is a test rather than a map. */
+const OVERLAY_NAME = 'wireframe-overlay'
+
+/**
+ * The edges drawn over a shaded mesh, for the one mode a material cannot express.
+ *
+ * Built on demand and thrown away with the mode: a `WireframeGeometry` is its own buffer, and
+ * keeping one alive per mesh of an imported model would cost the scene twice its geometry for a
+ * mode nobody left on.
+ */
+export function applyWireOverlay(object: Object3D, on: boolean, material: Material): void {
+  // Collected first: `traverse` walks what it is given, and adding a child mid-walk would visit
+  // the overlay just added, then the one added to it.
+  const meshes: Mesh[] = []
+  const overlays: Object3D[] = []
+  object.traverse(child => {
+    if (child.name === OVERLAY_NAME) overlays.push(child)
+    else if (child instanceof Mesh) meshes.push(child)
+  })
+
+  for (const overlay of overlays) {
+    if (overlay instanceof LineSegments) overlay.geometry.dispose()
+    overlay.removeFromParent()
+  }
+  if (!on) return
+
+  for (const mesh of meshes) {
+    const edges = new LineSegments(new WireframeGeometry(mesh.geometry), material)
+    edges.name = OVERLAY_NAME
+    // Never in a shadow map, and never in the box a framing is computed from: it is decoration.
+    edges.castShadow = false
+    edges.receiveShadow = false
+    mesh.add(edges)
+  }
+}

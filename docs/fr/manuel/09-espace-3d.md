@@ -170,6 +170,49 @@ faible pour que les ombres ne soient pas complètement noires. C'est la recette 
 
 ---
 
+## Regarder la scène autrement
+
+Trois boutons, entre les bascules et le cadrage. Ils ne changent rien à la scène : ils changent la
+façon de la regarder. Rien de tout cela n'est enregistré avec le document, et `⌘Z` n'y touche pas.
+
+### Projection — `O`
+
+En **perspective**, les fuyantes convergent : c'est ce que voit un œil, et c'est le réglage par
+défaut. En **orthographique**, les parallèles restent parallèles et un objet garde sa taille quelle
+que soit sa distance.
+
+C'est ce qui permet de juger un alignement. Deux cubes posés côte à côte semblent décalés en
+perspective ; en orthographique, ils le sont ou ils ne le sont pas.
+
+La bascule ne bouge pas la vue : la caméra reprend exactement sa place, et le tronc de la
+projection est calculé pour que ce qui est au centre garde sa taille.
+
+### Se placer — les six côtés
+
+**De face**, **de dos**, **de gauche**, **de droite**, **de dessus**, **de dessous**. La caméra va
+se poser sur l'axe correspondant, à la distance qu'elle avait déjà, et regarde le point autour
+duquel elle tournait.
+
+Combiné à la projection orthographique, c'est la vue de plan classique — celle sur laquelle on
+aligne.
+
+### Affichage — `Z`
+
+| Mode | Ce qui est dessiné |
+|---|---|
+| **Rendu** | les surfaces, éclairées et texturées |
+| **Filaire** | les arêtes seules, à travers l'objet |
+| **Rendu et filaire** | les deux : les surfaces, et leurs arêtes par-dessus |
+
+Le bouton porte le mode en cours et le fait défiler à chaque clic ; son menu permet d'en choisir un
+directement. `Z` fait la même chose au clavier, comme dans Blender.
+
+Le troisième mode est le plus coûteux : les arêtes sont un objet de plus par maille, construit
+quand on l'allume et jeté quand on l'éteint. Sur un modèle importé de plusieurs milliers de
+mailles, cela se sent.
+
+---
+
 ## Dupliquer, copier, coller
 
 Quatre boutons en fin de barre d'outils, et les quatre raccourcis que vous connaissez déjà.
@@ -321,7 +364,6 @@ rien n'avait été écrit pour lui.
 L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
 
 - le **Texte** 3D — l'entrée grisée du menu **Ajouter** ;
-- les **vues normalisées** (dessus, face, côté) et la **caméra orthographique** ;
 - l'**export** d'une scène vers un fichier `.glb` ou `.usdz`.
 
 Le détail est dans [Ce qui n'existe pas encore](18-limites.md).

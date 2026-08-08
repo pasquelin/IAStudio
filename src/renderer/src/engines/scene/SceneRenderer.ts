@@ -2,6 +2,7 @@ import {
   DirectionalLight,
   GridHelper,
   Light,
+  LineBasicMaterial,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -21,7 +22,7 @@ import type { ShadowQuality } from '@shared/domain/scene'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
-import { ViewportEngine } from '../viewport/ViewportEngine'
+import { ViewportEngine, type ProjectionKind } from '../viewport/ViewportEngine'
 import {
   canReceiveShadow,
   type ModelNode,
@@ -49,6 +50,13 @@ import { createGltfSource } from './gltf-source'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
 import { applyShadowFlags, applyShadowQuality, fitShadowCamera, resizeShadowMap } from './shadows'
+import {
+  applyDisplayMode,
+  applyWireOverlay,
+  viewPosition,
+  type DisplayMode,
+  type ViewDirection,
+} from './scene-view'
 import { snapSteps } from './snap-steps'
 import { createTextureCache, type TextureCache, type TextureSource } from './texture-cache'
 
@@ -116,6 +124,9 @@ const step = new ThreeVector3()
  * own: they are the shared `ViewportEngine`, so what this file holds is what makes a scene
  * *editor* — gizmos, selection, the trihedron, the grid and keyboard flight.
  */
+/** Where a normalised view stands when the camera already sits on its target and has no distance. */
+const DEFAULT_VIEW_DISTANCE = 8
+
 export class SceneRenderer {
   private readonly viewport = new ViewportEngine({
     onFrame: delta => this.advance(delta),
@@ -175,6 +186,10 @@ export class SceneRenderer {
   private selectedIds: readonly string[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
+  private display: DisplayMode = 'shaded'
+
+  /** One line material for every overlay: they all draw the same edges in the same colour. */
+  private readonly wireMaterial = new LineBasicMaterial()
   private stopPaletteWatch: (() => void) | null = null
 
   constructor(private readonly options: SceneRendererOptions) {
@@ -312,6 +327,36 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  /** Looks at the scene from one of the six sides, keeping the distance the view already had. */
+  viewFrom(direction: ViewDirection): void {
+    const orbit = this.viewport.orbit
+    if (!orbit) return
+
+    const camera = this.viewport.camera
+    const distance = camera.position.distanceTo(orbit.target) || DEFAULT_VIEW_DISTANCE
+    const { x, y, z } = viewPosition(direction, orbit.target, distance)
+
+    camera.position.set(x, y, z)
+    orbit.update()
+    this.viewport.requestRender()
+  }
+
+  setProjection(kind: ProjectionKind): void {
+    this.viewport.setProjection(kind)
+  }
+
+  /** Surfaces, edges, or both. Session state: nothing of the document moves. */
+  setDisplayMode(mode: DisplayMode): void {
+    if (mode === this.display) return
+    this.display = mode
+
+    for (const object of this.objects.values()) {
+      applyDisplayMode(object, mode)
+      applyWireOverlay(object, mode === 'both', this.wireMaterial)
+    }
+    this.viewport.requestRender()
+  }
+
   setMotion(held: Set<MotionId>): void {
     this.held.clear()
     for (const motion of held) this.held.add(motion)
@@ -347,6 +392,7 @@ export class SceneRenderer {
     this.environment = null
     this.textureCache.dispose()
     this.modelCache.dispose()
+    this.wireMaterial.dispose()
 
     this.grid?.dispose()
     this.grid = null
@@ -367,10 +413,9 @@ export class SceneRenderer {
 
     this.view = next
 
-    if (lensMoved) {
-      this.viewport.camera.fov = next.fieldOfView
-      this.viewport.camera.updateProjectionMatrix()
-    }
+    // Through the viewport rather than onto the camera: the orthographic frustum is derived
+    // from this very field of view, and has to be resized with it.
+    if (lensMoved) this.viewport.setFieldOfView(next.fieldOfView)
 
     // Unconditional: a step changed while snapping is off has to be waiting when it comes on.
     this.applySnap()
@@ -471,6 +516,9 @@ export class SceneRenderer {
       object.name = node.id
       this.objects.set(node.id, object)
       this.viewport.scene.add(object)
+      // A node built while a display mode is on has to arrive in it, or it would be the one
+      // object in the scene still drawn shaded.
+      if (this.display !== 'shaded') this.applyDisplay(object)
     } else {
       // Only what an edit actually changed: rebuilding a geometry or recompiling a shader on
       // every move of the gizmo would cost the drag its frame rate.
@@ -518,7 +566,12 @@ export class SceneRenderer {
   ): void {
     if (node.type === 'mesh' && object instanceof Mesh) {
       const before = previous?.type === 'mesh' ? previous : null
-      if (before?.geometry !== node.geometry) applyGeometry(object, node.geometry)
+      if (before?.geometry !== node.geometry) {
+        applyGeometry(object, node.geometry)
+        // The edges were built from the shape that just went: rebuilt, or they outline a mesh
+        // that no longer exists.
+        if (this.display === 'both') this.applyDisplay(object)
+      }
 
       const material = standardMaterialOf(object)
       if (material && before?.material !== node.material) {
@@ -572,10 +625,18 @@ export class SceneRenderer {
       // and the next one skips an unchanged node — the model would throw nothing until edited.
       const applied = this.applied.get(node.id) ?? node
       applyShadowFlags(holder, applied.castShadow, receivesShadow(applied))
+      // Same reason, same place: what the file brought was not there when the mode was applied,
+      // and a model landing into a wireframe scene would be the one thing still drawn shaded.
+      if (this.display !== 'shaded') this.applyDisplay(holder)
       this.viewport.requestRender()
     })
 
     return holder
+  }
+
+  private applyDisplay(object: Object3D): void {
+    applyDisplayMode(object, this.display)
+    applyWireOverlay(object, this.display === 'both', this.wireMaterial)
   }
 
   /** What a light's shadow is sized against: the settings for the map, the grid for the reach. */
@@ -680,6 +741,8 @@ export class SceneRenderer {
 
     const object = this.objects.get(id)
     if (object) {
+      // Its own buffer, and a child of the mesh rather than the mesh: nothing else frees it.
+      applyWireOverlay(object, false, this.wireMaterial)
       // Not `scene.remove`: mid-drag the object hangs off the pivot, and the scene would not
       // find it to remove.
       object.removeFromParent()

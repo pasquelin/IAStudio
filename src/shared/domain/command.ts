@@ -30,6 +30,8 @@ export type CommandId =
   | 'scene.paste'
   | 'scene.snap'
   | 'scene.space'
+  | 'scene.projection'
+  | 'scene.display'
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
@@ -183,6 +185,21 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneSpace.title',
     helpKey: 'commands.sceneSpace.help',
     defaultBinding: 'KeyL',
+  }),
+  command({
+    id: 'scene.projection',
+    scope: 'scene',
+    titleKey: 'commands.sceneProjection.title',
+    helpKey: 'commands.sceneProjection.help',
+    defaultBinding: 'KeyO',
+  }),
+  // `Z` as in Blender, where it is the key that changes what the viewport draws.
+  command({
+    id: 'scene.display',
+    scope: 'scene',
+    titleKey: 'commands.sceneDisplay.title',
+    helpKey: 'commands.sceneDisplay.help',
+    defaultBinding: 'KeyZ',
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
   command({

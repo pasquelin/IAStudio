@@ -24,6 +24,8 @@ import { assetsById, useAssets } from '@/stores/assets'
 import { selectedNodes } from '@/engines/scene/scene-state'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { useSceneViews, viewOf } from '@/stores/scene-views'
+import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
 import { SCENE_TOOLS } from './scene-tools'
 
 export function SceneDocument({ documentId }: { documentId: string }) {
@@ -46,6 +48,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const addNodeOf = useAddNode(documentId)
   const active = useDocuments(state => state.activeId === documentId)
   const viewport = useSettings(state => state.settings.three)
+  const view = useSceneViews(state => viewOf(state, documentId))
 
   // Before the renderer mounts: a saved document comes back from the project, a new one from
   // the default scene — an unlit viewport reads as broken rather than as empty.
@@ -99,6 +102,16 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setSpace(localFrame ? 'local' : 'world')
   }, [localFrame])
 
+  // Session state, pushed like the rest: the engine is rebuilt from it after a remount, which is
+  // what keeps an orthographic view orthographic when a panel is detached.
+  useEffect(() => {
+    engine.current?.setProjection(view.projection)
+  }, [view.projection])
+
+  useEffect(() => {
+    engine.current?.setDisplayMode(view.display)
+  }, [view.display])
+
   // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
   // tool is declared once in `SCENE_TOOLS` and handled once here.
   const run = useCallback(
@@ -122,6 +135,15 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return setSnapping(current => !current)
         case 'scene.space':
           return setLocalFrame(current => !current)
+        case 'scene.display':
+          return useSceneViews.getState().setDisplay(documentId, nextDisplayMode(view.display))
+        case 'scene.projection':
+          return useSceneViews
+            .getState()
+            .setProjection(
+              documentId,
+              view.projection === 'perspective' ? 'orthographic' : 'perspective',
+            )
         case 'scene.delete':
           if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
           return
@@ -152,7 +174,19 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return store.redo(documentId)
       }
     },
-    [documentId],
+    [documentId, view],
+  )
+
+  /** A flyout row: the Add rows name a node kind, the others a side to stand at or a way to draw. */
+  const runMode = useCallback(
+    (toolId: string, modeId: string) => {
+      if (toolId === 'view' && isViewDirection(modeId)) return engine.current?.viewFrom(modeId)
+      if (toolId === 'display' && isDisplayMode(modeId)) {
+        return useSceneViews.getState().setDisplay(documentId, modeId)
+      }
+      addNodeOf(modeId)
+    },
+    [documentId, addNodeOf],
   )
 
   useShortcuts({
@@ -177,6 +211,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     const pressed: Partial<Record<CommandId, boolean>> = {
       'scene.snap': snapping,
       'scene.space': localFrame,
+      'scene.projection': view.projection === 'orthographic',
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
@@ -189,10 +224,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     return SCENE_TOOLS.map(tool => ({
       ...tool,
       shortcut: tool.command ? shortcutLabel(bindingOf(tool.command, bindings)) : undefined,
+      activeMode: tool.id === 'display' ? view.display : undefined,
       disabled: tool.command ? unavailable[tool.command] : undefined,
       pressed: tool.command ? pressed[tool.command] : undefined,
     }))
-  }, [bindings, nothingSelected, nothingHeld, snapping, localFrame])
+  }, [bindings, nothingSelected, nothingHeld, snapping, localFrame, view])
 
   return (
     <div
@@ -219,7 +255,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           const command = SCENE_TOOLS.find(candidate => candidate.id === id)?.command
           if (command) run(command)
         }}
-        onMode={(_toolId, kind) => addNodeOf(kind)}
+        onMode={(toolId, modeId) => runMode(toolId, modeId)}
         onUndo={() => run('scene.undo')}
         onRedo={() => run('scene.redo')}
         undoShortcut={shortcutLabel(bindingOf('scene.undo', bindings))}

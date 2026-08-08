@@ -2,6 +2,7 @@ import {
   ACESFilmicToneMapping,
   Color,
   NoToneMapping,
+  OrthographicCamera,
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
@@ -56,9 +57,20 @@ export type ViewportEngineOptions = {
 /** Seconds. Longer than this and a background tab would fly the camera across the scene. */
 const MAX_DELTA = 0.1
 
+/**
+ * How a viewport projects. Perspective everywhere by default: only the scene editor offers the
+ * other one, where parallel edges have to read as parallel to judge an alignment.
+ */
+export type ProjectionKind = 'perspective' | 'orthographic'
+
+export type ViewportCamera = PerspectiveCamera | OrthographicCamera
+
 export class ViewportEngine {
   readonly scene = new Scene()
-  readonly camera: PerspectiveCamera
+  /** The perspective one is the default, and the only one the two other 3D spaces ever draw with. */
+  readonly perspective: PerspectiveCamera
+  readonly orthographic = new OrthographicCamera()
+  private projection: ProjectionKind = 'perspective'
 
   private renderer: WebGLRenderer | null = null
   private controls: OrbitControls | null = null
@@ -68,12 +80,67 @@ export class ViewportEngine {
   private lastTime: number | null = null
 
   constructor(private readonly options: ViewportEngineOptions = {}) {
-    this.camera = new PerspectiveCamera(
+    this.perspective = new PerspectiveCamera(
       options.fieldOfView ?? 60,
       1,
       options.near ?? 0.1,
       options.far ?? 1000,
     )
+    this.orthographic.near = options.near ?? 0.1
+    this.orthographic.far = options.far ?? 1000
+  }
+
+  /** What the viewport draws with, and what a raycast has to be set from. */
+  get camera(): ViewportCamera {
+    return this.projection === 'perspective' ? this.perspective : this.orthographic
+  }
+
+  /**
+   * Swaps the projection, keeping the view still: the new camera takes the old one's placement,
+   * and its frustum is sized so that what sits at the orbit target keeps the size it had.
+   *
+   * The controls are re-aimed rather than rebuilt — an orbit rebuilt mid-session would lose its
+   * target, and with it the point the whole gesture turns around.
+   */
+  setProjection(kind: ProjectionKind): void {
+    if (kind === this.projection) return
+
+    const previous = this.camera
+    this.projection = kind
+    const next = this.camera
+    next.position.copy(previous.position)
+    next.quaternion.copy(previous.quaternion)
+    // Orbiting an orthographic camera changes its `zoom`, never its distance: carried over, a
+    // zoom from an earlier swap would apply again on top of the frustum just sized for it.
+    next.zoom = 1
+
+    this.fitProjection()
+    if (this.controls) this.controls.object = next
+    this.requestRender()
+  }
+
+  /**
+   * The orthographic frustum, taken from the perspective one it stands in for: as tall at the
+   * orbit target as the field of view makes it at that distance.
+   */
+  private fitProjection(): void {
+    const canvas = this.renderer?.domElement
+    const aspect = canvas && canvas.clientHeight > 0 ? canvas.clientWidth / canvas.clientHeight : 1
+
+    // Read off the camera that is drawing: while the perspective one is active, the other's
+    // placement is one swap out of date, and a resize would size the frustum from where the
+    // view used to be.
+    const camera = this.camera
+    const target = this.controls?.target
+    const distance = target ? camera.position.distanceTo(target) : camera.position.length()
+    const height = 2 * distance * Math.tan((this.perspective.fov * Math.PI) / 360)
+    const width = height * aspect
+
+    this.orthographic.top = height / 2
+    this.orthographic.bottom = -height / 2
+    this.orthographic.right = width / 2
+    this.orthographic.left = -width / 2
+    this.orthographic.updateProjectionMatrix()
   }
 
   /** Makes its own canvas: React must never own it — see the engine invariants in CLAUDE.md. */
@@ -148,9 +215,11 @@ export class ViewportEngine {
   }
 
   setFieldOfView(degrees: number): void {
-    if (this.camera.fov === degrees) return
-    this.camera.fov = degrees
-    this.camera.updateProjectionMatrix()
+    if (this.perspective.fov === degrees) return
+    this.perspective.fov = degrees
+    this.perspective.updateProjectionMatrix()
+    // The orthographic frustum is derived from the field of view, so it moves with it.
+    this.fitProjection()
     this.requestRender()
   }
 
@@ -182,8 +251,9 @@ export class ViewportEngine {
     if (clientWidth === 0 || clientHeight === 0) return
 
     this.renderer.setSize(clientWidth, clientHeight, false)
-    this.camera.aspect = clientWidth / clientHeight
-    this.camera.updateProjectionMatrix()
+    this.perspective.aspect = clientWidth / clientHeight
+    this.perspective.updateProjectionMatrix()
+    this.fitProjection()
     this.requestRender()
   }
 

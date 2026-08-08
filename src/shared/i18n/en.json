@@ -511,6 +511,12 @@
     "snap": "Snap",
     "snapHint": "Move the handles in regular steps, as coarse as the preferences say",
     "space": "Local frame",
+    "projection": "Projection",
+    "projectionHint": "Switch between perspective and orthographic projection",
+    "view": "Stand at",
+    "viewHint": "Look at the scene from one of its six sides",
+    "display": "Display",
+    "displayHint": "Draw the surfaces, their edges, or both",
     "spaceHint": "Line the handles up with the object's own orientation; when it is off, they follow the world axes",
     "group": "Group",
     "groupHint": "File the selected objects under one group",
@@ -524,6 +530,19 @@
     "pasteHint": "Put what was copied into this scene",
     "delete": "Delete",
     "deleteHint": "Remove whatever is selected from the scene"
+  },
+  "sceneViews": {
+    "front": "Front",
+    "back": "Back",
+    "left": "Left",
+    "right": "Right",
+    "top": "Top",
+    "bottom": "Bottom"
+  },
+  "sceneDisplay": {
+    "shaded": "Shaded",
+    "wireframe": "Wireframe",
+    "both": "Shaded and wireframe"
   },
   "project": {
     "none": "No project open",
@@ -866,6 +885,14 @@
     "sceneSpace": {
       "title": "Local frame",
       "help": "Lines the handles up with the object's own orientation rather than the world's. On a turned object, that is what lets you move it “towards its front” rather than north."
+    },
+    "sceneProjection": {
+      "title": "Projection",
+      "help": "Switches between perspective, where receding lines converge, and orthographic projection, where parallels stay parallel. That is what lets an alignment be judged by eye."
+    },
+    "sceneDisplay": {
+      "title": "Display",
+      "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button's menu picks one directly."
     },
     "sceneGroup": {
       "title": "Group",

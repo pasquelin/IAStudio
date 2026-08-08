@@ -84,6 +84,10 @@ and you can assign one to it (see below).
 | **Move** | `G` | drag the coloured arrows to slide it |
 | **Rotate** | `R` | drag the coloured circles to turn it |
 | **Scale** | `S` | drag the handles. `⇧` keeps its proportions |
+| **Magnet** | `M` | steps the handles by regular amounts, set in the preferences |
+| **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
+| **Projection** | `O` | switches between perspective and orthographic projection |
+| **Display** | `Z` | cycles shaded, wireframe, shaded and wireframe |
 | **Frame selection** | `F` | brings the camera in so the object fills the view |
 | **Delete** | `Del` | removes the chosen object. `⌘Z` brings it back |
 
@@ -300,6 +304,8 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 | `⌘G` | | Group | | |
 | `⌘D` | | Duplicate | | |
 | `⌘C` / `⌘X` / `⌘V` | | Copy / Cut / Paste | | |
+| `O` | | Projection | | |
+| `Z` | | Display | | |
 | `V` | | Select | | |
 | `G` | | Move | | |
 | `R` | | Rotate | | |

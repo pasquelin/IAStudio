@@ -166,6 +166,46 @@ not completely black. That is the classic recipe.
 
 ---
 
+## Looking at the scene differently
+
+Three buttons, between the toggles and the framing. They change nothing of the scene: they change
+how it is looked at. None of it is saved with the document, and `⌘Z` never touches it.
+
+### Projection — `O`
+
+In **perspective**, receding lines converge: that is what an eye sees, and it is the default. In
+**orthographic**, parallels stay parallel and an object keeps its size whatever its distance.
+
+That is what lets an alignment be judged. Two cubes set side by side look offset in perspective; in
+orthographic they either are or they are not.
+
+The swap does not move the view: the camera takes its exact place back, and the frustum is sized so
+that whatever sits at the centre keeps the size it had.
+
+### Stand at — the six sides
+
+**Front**, **back**, **left**, **right**, **top**, **bottom**. The camera goes and stands on the
+matching axis, at the distance it already had, looking at the point it was turning around.
+
+Together with the orthographic projection, that is the classic plan view — the one you align on.
+
+### Display — `Z`
+
+| Mode | What is drawn |
+|---|---|
+| **Shaded** | the surfaces, lit and textured |
+| **Wireframe** | the edges alone, through the object |
+| **Shaded and wireframe** | both: the surfaces, and their edges over them |
+
+The button wears the current mode and cycles it on each click; its menu picks one directly. `Z`
+does the same from the keyboard, as in Blender.
+
+The third mode is the costly one: the edges are one more object per mesh, built when it is turned
+on and thrown away when it is turned off. On an imported model of several thousand meshes, it
+shows.
+
+---
+
 ## Duplicate, copy, paste
 
 Four buttons at the end of the toolbar, and the four shortcuts you already know.
@@ -312,7 +352,6 @@ nothing had been written for it.
 The 3D workspace is functional but young. Do not look yet for:
 
 - the 3D **Text** — the greyed-out entry of the **Add** menu;
-- the **normalised views** (top, front, side) and the **orthographic camera**;
 - **exporting** a scene to a `.glb` or `.usdz` file.
 
 The detail is in [What does not exist yet](18-limits.md).

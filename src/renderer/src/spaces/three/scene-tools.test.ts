@@ -37,6 +37,13 @@ describe('scene tools', () => {
     }
   })
 
+  // A missing string renders as `sceneViews.top` in the flyout, and nothing else would catch it.
+  it('has a translation behind every row label', () => {
+    for (const tool of SCENE_TOOLS) {
+      for (const mode of tool.modes ?? []) expect(i18next.exists(mode.labelKey)).toBe(true)
+    }
+  })
+
   it('gives every flyout row an icon', () => {
     for (const mode of add?.modes ?? []) expect(mode.icon).toBeTruthy()
   })
@@ -77,6 +84,7 @@ describe('SCENE_TOOLS', () => {
   it('reads as groups rather than a run of icons', () => {
     expect(SCENE_TOOLS.filter(tool => tool.separatorBefore).map(tool => tool.id)).toEqual([
       'snap',
+      'projection',
       'frame',
       'add',
       'duplicate',
@@ -99,10 +107,19 @@ describe('SCENE_TOOLS', () => {
     expect(ids.indexOf('space')).toBe(ids.indexOf('snap') + 1)
   })
 
-  // A group that only offers modes acts through its rows, never on its own click.
-  it('gives every button but Add a command', () => {
+  // A button with a flyout acts through its rows, never on its own click — and the reverse:
+  // a button with neither command nor rows would do nothing at all.
+  it('gives every button either a command or a flyout, and never neither', () => {
+    const idle = SCENE_TOOLS.filter(tool => tool.command === undefined && tool.modes === undefined)
+
+    expect(idle).toEqual([])
+  })
+
+  // Add and the six sides do nothing on their own; Display draws something, so its click
+  // cycles what it draws rather than sitting dead under an open flyout.
+  it('leaves a flyout commandless only where the button itself does nothing', () => {
     const commandless = SCENE_TOOLS.filter(tool => tool.command === undefined)
 
-    expect(commandless.map(tool => tool.id)).toEqual(['add'])
+    expect(commandless.map(tool => tool.id)).toEqual(['view', 'add'])
   })
 })

@@ -116,8 +116,6 @@ haut, « Ce que cela veut dire concrètement ».
 
 ### Ce qui manque
 
-- **les vues normalisées** (dessus, face, côté) et la **caméra orthographique** — la vue est
-  toujours en perspective, ce qui rend un alignement précis difficile à juger ;
 - **l'export** d'une scène vers un fichier `.glb` ou `.usdz` — on peut importer un modèle et le
   mettre en scène, pas ressortir la scène montée.
 

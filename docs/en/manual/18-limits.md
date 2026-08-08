@@ -113,8 +113,6 @@ practice", above.
 
 ### What is missing
 
-- the **normalised views** (top, front, side) and the **orthographic camera** — the view is always
-  in perspective, which makes a precise alignment hard to judge;
 - **exporting** a scene to a `.glb` or `.usdz` file — you can import a model and stage it, not get
   the staged scene back out.
 

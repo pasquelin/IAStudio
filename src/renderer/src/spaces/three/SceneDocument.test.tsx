@@ -6,6 +6,7 @@ import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
 import { useDocuments } from '@/stores/documents'
+import { useSceneViews, viewOf } from '@/stores/scene-views'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
@@ -24,6 +25,9 @@ const frameSelection = vi.fn()
 const configure = vi.fn()
 const setSnapping = vi.fn()
 const setSpace = vi.fn()
+const setProjection = vi.fn()
+const setDisplayMode = vi.fn()
+const viewFrom = vi.fn()
 
 // jsdom has no WebGL context: the renderer is exercised by hand, not here. What this test
 // covers is that the document wires the toolbar and the keyboard to the right calls.
@@ -38,6 +42,9 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setMode = setMode
     setSnapping = setSnapping
     setSpace = setSpace
+    setProjection = setProjection
+    setDisplayMode = setDisplayMode
+    viewFrom = viewFrom
     frameSelection = frameSelection
   },
 }))
@@ -55,6 +62,7 @@ function meshesOf(documentId: string): SceneNode[] {
 beforeEach(() => {
   vi.clearAllMocks()
   clearScenes()
+  useSceneViews.setState({ views: {} })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
   // The descriptor, not just the id: a document restores itself through its kind, and
   // `WithDocument` is what guarantees one exists before this component ever renders.
@@ -278,5 +286,68 @@ describe('the viewport settings', () => {
     })
 
     expect(setDocumentTitle).toHaveBeenLastCalledWith('doc-1', 'Renamed', expect.any(Boolean))
+  })
+})
+
+describe('how the scene is looked at', () => {
+  it('swaps the projection from the toolbar, and lights the button', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+
+    expect(setProjection).toHaveBeenCalledWith('orthographic')
+    expect(screen.getByRole('button', { name: /Projection/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('swaps it back on the second click', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+
+    expect(setProjection).toHaveBeenLastCalledWith('perspective')
+  })
+
+  it('stands the camera at the side a flyout row names', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /Se placer/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /De dessus/ }))
+
+    expect(viewFrom).toHaveBeenCalledWith('top')
+  })
+
+  // The button wears the mode it draws, so it is the mode's own name that names it.
+  it('changes what the viewport draws from the flyout', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /Rendu/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /^Filaire/ }))
+
+    expect(setDisplayMode).toHaveBeenCalledWith('wireframe')
+  })
+
+  it('cycles through the three modes on the bound key', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{z}')
+    expect(setDisplayMode).toHaveBeenLastCalledWith('wireframe')
+
+    await userEvent.keyboard('{z}')
+    expect(setDisplayMode).toHaveBeenLastCalledWith('both')
+
+    await userEvent.keyboard('{z}')
+    expect(setDisplayMode).toHaveBeenLastCalledWith('shaded')
+  })
+
+  // Session state, per document: two scenes side by side are two points of view.
+  it('leaves the view of another document alone', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+
+    expect(viewOf(useSceneViews.getState(), 'doc-2').projection).toBe('perspective')
   })
 })
