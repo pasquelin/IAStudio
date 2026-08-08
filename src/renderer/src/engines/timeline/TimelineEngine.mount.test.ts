@@ -14,7 +14,11 @@ const off = vi.fn()
 let resolveInit: (() => void) | null = null
 let started: Record<string, unknown> | null = null
 
+vi.mock('pixi.js/advanced-blend-modes', () => ({}))
+
 vi.mock('pixi.js', () => ({
+  // `mount` sets the global filter resolution on import, for the advanced blend modes.
+  Filter: { defaultOptions: { resolution: 1 } },
   Application: class {
     canvas = document.createElement('canvas')
     stage = { addChild: vi.fn() }

@@ -125,15 +125,23 @@ describe('masks', () => {
   it('names the mask a layer carries, and none for a layer without one', () => {
     const nodes = byId(composite([masked('a'), pixelLayer('b', 'B')]))
 
-    expect(nodes.get('a')).toMatchObject({ maskedBy: 'a' })
-    expect(nodes.get('b')).toMatchObject({ maskedBy: null })
+    expect(nodes.get('a')).toMatchObject({ maskedBy: 'a', maskEnabled: true })
+    expect(nodes.get('b')).toMatchObject({ maskedBy: null, maskEnabled: false })
   })
 
-  it('keeps a disabled mask off the sprite while its pixels stay in the state', () => {
+  // The two are told apart on purpose: presence is what owns a texture, and unticking the box
+  // must not read as "this layer has no mask" — that is how the pixels used to be freed.
+  it('names a disabled mask all the same, and says it hides nothing', () => {
     const off: Layer = { ...pixelLayer('a', 'A'), mask: { enabled: false, linked: true } }
     const nodes = byId(composite([off]))
 
-    expect(nodes.get('a')).toMatchObject({ maskedBy: null })
+    expect(nodes.get('a')).toMatchObject({ maskedBy: 'a', maskEnabled: false })
+  })
+
+  it('changes the placement when a mask is removed, disabled or not', () => {
+    const off: Layer = { ...pixelLayer('a', 'A'), mask: { enabled: false, linked: true } }
+
+    expect(placement(composite([off]))).not.toBe(placement(composite([pixelLayer('a', 'A')])))
   })
 
   it('survives a mask and a clip meeting inside a group', () => {

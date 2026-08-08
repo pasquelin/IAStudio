@@ -1,11 +1,7 @@
-// Without it Pixi knows none of the separable modes past `screen`: eleven of the sixteen fell
-// back to `normal` silently, compositing wrongly with nothing to say so.
-import 'pixi.js/advanced-blend-modes'
 import {
   AlphaFilter,
   type Application,
   Container,
-  Filter,
   Graphics,
   Rectangle,
   RenderTexture,
@@ -27,6 +23,7 @@ import {
   type Layer,
   type Rect,
   type Transform,
+  WHITE,
 } from './canvas-state'
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
 import {
@@ -148,6 +145,9 @@ const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>([
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
  * must be a compile error, not a layer that quietly composites as `normal`.
  *
+ * Only `normal`, `multiply` and `screen` are native GL blends; the other twelve come from
+ * `pixi.js/advanced-blend-modes`, which `mount` imports.
+ *
  * `hue` is the one exception, and it is deliberate: Pixi 8.19 commented it out of its own union
  * and ships no filter for it, so the literal would not even typecheck.
  */
@@ -169,10 +169,6 @@ export const BLEND_BY_MODE: Record<BlendMode, BLEND_MODES> = {
   color: 'color',
   luminosity: 'luminosity',
 }
-
-// The advanced modes are filters, and a filter renders at resolution 1 by default: on a retina
-// canvas the blended layer came out clipped and half-scaled.
-Filter.defaultOptions.resolution = 'inherit'
 
 type LayerSurface = {
   texture: RenderTexture
@@ -431,10 +427,7 @@ export class CanvasEngine {
     const clipping = new Set(layers.filter(layer => layer.clipped).map(layer => layer.id))
     for (const [id, clip] of this.clips) {
       if (clipping.has(id) && this.surfaces.has(clip.baseId)) continue
-      clip.host.removeChildren()
-      // Without its texture: the proxy is the one sprite that borrows another layer's.
-      clip.sprite.destroy()
-      clip.host.destroy()
+      this.destroyClip(clip)
       this.clips.delete(id)
     }
   }
@@ -461,7 +454,9 @@ export class CanvasEngine {
       const holder = clip ?? parent
 
       const mask =
-        node.maskedBy === null ? null : (this.surfaces.get(maskKey(node.maskedBy)) ?? null)
+        node.maskedBy === null || !node.maskEnabled
+          ? null
+          : (this.surfaces.get(maskKey(node.maskedBy)) ?? null)
       // Pixi reads the alpha of whatever it is handed, and only if that object is in the tree:
       // the mask sprite is attached alongside the layer it hides, and never drawn on its own.
       if (mask) holder.addChild(mask.sprite)
@@ -483,15 +478,15 @@ export class CanvasEngine {
 
     let clip = this.clips.get(layerId)
     if (clip?.baseId !== baseId) {
-      clip?.host.removeChildren()
-      clip?.sprite.destroy()
-      clip?.host.destroy()
+      if (clip) this.destroyClip(clip)
       // The base is already being drawn: an object cannot be both the picture and the stencil,
       // so the proxy shares its texture and nothing else. Three clipped layers on one base take
       // three proxies, and all three stay visible.
       const sprite = new Sprite(base.texture)
       const host = new Container()
-      host.mask = sprite
+      // On the alpha, not on the default red channel: what cuts a clipped layer out is where the
+      // base has pixels, not how red they are. A base painted pure blue would cut out nothing.
+      host.setMask({ mask: sprite, channel: 'alpha' })
       clip = { baseId, sprite, host }
       this.clips.set(layerId, clip)
     }
@@ -499,6 +494,15 @@ export class CanvasEngine {
     clip.host.removeChildren()
     clip.host.addChild(clip.sprite)
     return clip.host
+  }
+
+  private destroyClip(clip: ClipProxy): void {
+    clip.host.removeChildren()
+    // Cleared first: `destroy` drops the effect without handing it back to Pixi's pool.
+    clip.host.mask = null
+    clip.host.destroy()
+    // Without its texture: the proxy is the one sprite that borrows another layer's.
+    clip.sprite.destroy()
   }
 
   /** The proxies follow their base: a stencil a frame behind the layer it cuts would show a seam. */
@@ -509,8 +513,14 @@ export class CanvasEngine {
     for (const clip of this.clips.values()) {
       const base = this.surfaces.get(clip.baseId)
       const layer = layerById(state, clip.baseId)
+      if (!base || !layer) continue
+
       // From the state, through the one placement path the engine has: a second one would drift.
-      if (base && layer) this.place(clip.sprite, layer.transform, base.texture)
+      this.place(clip.sprite, layer.transform, base.texture)
+      // A stencil is only as strong as the base it stands for: hiding the base has to hide what
+      // is clipped to it, and fading the base has to fade it.
+      clip.sprite.visible = layer.visible
+      clip.sprite.alpha = layer.opacity * layer.fillOpacity
     }
   }
 
@@ -524,15 +534,17 @@ export class CanvasEngine {
     container.visible = layer.visible
     container.alpha = layer.opacity
     container.blendMode = BLEND_BY_MODE[layer.blend]
-    // An isolated group composites on itself before the stack sees it, which is what an offscreen
-    // pass does — and a neutral filter is the only way v8 offers to ask for one. Empty otherwise:
-    // a filter on every group would cost a render target per group for nothing.
+    // A group composites on itself before the stack sees it, which is what an offscreen pass
+    // does — and a neutral filter is the only way v8 offers to ask for one. Without it a
+    // container's `blendMode` is merely inherited, and every child overwrites it with its own;
+    // its `alpha` multiplies per child, so two overlapping layers show through each other.
     //
+    // Only where it would show, because the pass costs a render target per group.
+    const composed = layer.isolation === 'isolate' || layer.blend !== 'normal' || layer.opacity < 1
     // Written only when it turns: Pixi copies and freezes the array on every assignment, and
     // this runs for every group of the document on every state it is handed.
-    const isolated = layer.isolation === 'isolate'
-    if (isolated !== (container.filters ?? []).length > 0) {
-      container.filters = isolated ? [this.isolationPass()] : []
+    if (composed !== (container.filters ?? []).length > 0) {
+      container.filters = composed ? [this.isolationPass()] : []
     }
     // A group holds no texture, so the document is the box its origin is a fraction of.
     this.place(container, layer.transform, box)
@@ -637,9 +649,12 @@ export class CanvasEngine {
 
     for (const surface of this.surfaces.values()) surface.texture.destroy(true)
     this.surfaces.clear()
+    // The tree is gone, so no placement holds: kept, it would make the replay in a remount find
+    // the signature unchanged and skip the `attach` that is now the only way anything is hung.
+    this.stacking = ''
     for (const container of this.groups.values()) container.destroy()
     this.groups.clear()
-    for (const clip of this.clips.values()) clip.host.destroy()
+    for (const clip of this.clips.values()) this.destroyClip(clip)
     this.clips.clear()
     this.isolation?.destroy()
     this.isolation = null
@@ -724,7 +739,10 @@ export class CanvasEngine {
     // Allocated only where the state asks for one: a mask per layer, built ahead, would double
     // the document's GPU memory for a feature most layers never use.
     if (!layer.mask) return
-    const mask = this.buildSurface(maskKey(layer.id))
+    // White, so a mask reveals everything until something is painted into it. Born cleared, it
+    // would hide the layer whole the moment the box is ticked. The channel is Pixi's default red,
+    // which is what makes the mask read like Photoshop's: paint black to hide, white to reveal.
+    const mask = this.buildSurface(maskKey(layer.id), WHITE)
     // Unlinked means the mask does not follow the layer: it stays where it was painted.
     if (mask) this.place(mask.sprite, layer.mask.linked ? layer.transform : IDENTITY, mask.texture)
   }

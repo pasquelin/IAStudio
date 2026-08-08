@@ -153,7 +153,7 @@ export class PixelPatches {
     for (const capture of recording.captured.values()) capture.before.destroy(true)
   }
 
-  /** A tile of the layer, lifted into a texture of its own. */
+  /** A tile of the surface, lifted into a texture of its own. */
   private copyOut(tile: Tile, source: RenderTexture): RenderTexture {
     const texture = RenderTexture.create({
       width: tile.width,
@@ -172,7 +172,7 @@ export class PixelPatches {
   }
 
   /**
-   * A tile painted back over the layer. `erase` first, then the tile: compositing it on top would
+   * A tile painted back over the surface. `erase` first, then the tile: compositing it on top would
    * blend the old stroke with the new one instead of replacing what is there.
    */
   private copyIn(source: RenderTexture, tile: Tile, target: RenderTexture): void {

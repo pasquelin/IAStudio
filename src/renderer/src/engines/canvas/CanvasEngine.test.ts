@@ -40,6 +40,7 @@ type Placed = {
   label: string
   filters: object[]
   mask: object | null
+  maskChannel: string
 }
 
 const gpu: {
@@ -101,6 +102,7 @@ vi.mock('pixi.js', () => {
     label = ''
     filters: object[] = []
     mask: object | null = null
+    maskChannel = 'red'
 
     constructor(options: { label?: string } = {}) {
       this.label = options.label ?? ''
@@ -122,6 +124,11 @@ vi.mock('pixi.js', () => {
       gpu.mutations += 1
       child.parent = null
       this.children.splice(at, 1)
+    }
+
+    setMask(options: { mask: Container | null; channel?: string }): void {
+      this.mask = options.mask
+      this.maskChannel = options.channel ?? 'red'
     }
 
     removeChildren(): void {
@@ -346,6 +353,22 @@ describe('mounting', () => {
     expect(gpu.texturesCreated).toBe(1)
   })
 
+  /**
+   * `attach` is now the only thing that hangs a sprite in the world, and it only runs when the
+   * placement changes. A signature kept across `dispose` made the replay find it unchanged, so a
+   * remount onto the same engine rebuilt every texture and hung none of them.
+   */
+  it('hangs the document again after a dispose and a second mount', async () => {
+    const { engine } = await mounted()
+    engine.dispose()
+
+    const second = document.createElement('div')
+    document.body.appendChild(second)
+    await engine.mount(second)
+
+    expect(gpu.sprites.at(-1)?.parent).not.toBeNull()
+  })
+
   it('builds one per paintable layer, groups excluded', async () => {
     await mounted({
       ...DEFAULT_CANVAS,
@@ -457,15 +480,31 @@ describe('groups', () => {
   // Isolation is an offscreen pass, and a neutral filter is how v8 asks for one.
   it('isolates only the group that asks for it', async () => {
     const passing = groupLayer('g', 'G', [pixelLayer('a', 'A')])
-    const { engine } = await mounted({ ...DEFAULT_CANVAS, layers: [passing], activeLayerId: 'a' })
+    const { engine } = await mounted(stacked([passing]))
     expect(groupContainer('g')?.filters).toEqual([])
 
-    engine.apply({
-      ...DEFAULT_CANVAS,
-      layers: [{ ...passing, isolation: 'isolate' }],
-      activeLayerId: 'a',
-    })
+    engine.apply(stacked([{ ...passing, isolation: 'isolate' }]))
     expect(groupContainer('g')?.filters).toHaveLength(1)
+  })
+
+  /**
+   * A container's `blendMode` is only inherited, and every child overwrites it with its own; its
+   * `alpha` multiplies per child, so two overlapping layers showed through each other. Both only
+   * mean what they say once the subtree is composited offscreen.
+   */
+  it('composites offscreen as soon as its blend or its opacity would show', async () => {
+    const plain = groupLayer('g', 'G', [pixelLayer('a', 'A')])
+    const { engine } = await mounted(stacked([plain]))
+    expect(groupContainer('g')?.filters).toEqual([])
+
+    engine.apply(stacked([{ ...plain, blend: 'multiply' }]))
+    expect(groupContainer('g')?.filters).toHaveLength(1)
+
+    engine.apply(stacked([{ ...plain, opacity: 0.5 }]))
+    expect(groupContainer('g')?.filters).toHaveLength(1)
+
+    engine.apply(stacked([plain]))
+    expect(groupContainer('g')?.filters).toEqual([])
   })
 
   it('drops the container of a group that left the stack', async () => {
@@ -496,6 +535,18 @@ describe('clipping', () => {
     expect(new Set(proxies).size).toBe(3)
   })
 
+  /**
+   * Pixi reads the red channel of a sprite mask by default, which its own docs point out. What
+   * cuts a clipped layer out is where the base has pixels, not how red they are: a base painted
+   * pure blue cut out nothing at all.
+   */
+  it('cuts on the coverage of the base, not on how red it is', async () => {
+    await mounted(stacked([pixelLayer('base', 'Base'), clipped('a')]))
+
+    const proxy = gpu.sprites.at(-1)
+    expect(proxy?.parent?.maskChannel).toBe('alpha')
+  })
+
   it('leaves an unclipped stack without a single stencil', async () => {
     await mounted(stacked([pixelLayer('a', 'A'), pixelLayer('b', 'B')]))
 
@@ -517,6 +568,16 @@ describe('clipping', () => {
     engine.apply(stacked([pixelLayer('base', 'Base'), pixelLayer('a', 'a')]))
 
     expect(gpu.sprites.at(-1)?.parent).toBeNull()
+  })
+
+  // A stencil is only as strong as the base it stands for: hiding the base used to leave the
+  // layers clipped to it floating at full strength over nothing.
+  it('takes the visibility and the opacity of the base along with its place', async () => {
+    const base = { ...pixelLayer('base', 'Base'), visible: false, opacity: 0.4 }
+    await mounted(stacked([base, clipped('a')]))
+
+    const proxy = gpu.sprites.at(-1)
+    expect(proxy).toMatchObject({ visible: false, alpha: 0.4 })
   })
 
   // A stencil a frame behind the layer it cuts would show a seam down the side of it.
@@ -587,8 +648,34 @@ describe('layer masks', () => {
     expect(gpu.texturesDestroyed).toBe(0)
   })
 
+  // A mask is born revealing everything. Left cleared, ticking the box made the layer vanish
+  // whole, and there was no way to bring it back but to flood the mask by hand.
+  it('reveals the whole layer until something is painted into it', async () => {
+    const { engine } = await mounted(withMask())
+    gpu.painted = []
+
+    engine.apply(withMask({ enabled: true, linked: true }))
+
+    // The second texture is the mask, and it is filled at birth like a new document's page.
+    expect(gpu.painted).toContain(1)
+  })
+
   it('frees the mask texture when the mask itself leaves the state', async () => {
     const { engine } = await mounted(withMask({ enabled: true, linked: true }))
+
+    engine.apply(withMask())
+
+    expect(gpu.texturesDestroyed).toBe(1)
+  })
+
+  /**
+   * The texture is allocated on the mask's presence, so the placement has to encode presence too.
+   * Keyed on `enabled` alone, removing a disabled mask left the string unchanged, the drop pass
+   * never ran, and a later mask was handed the old one's pixels back.
+   */
+  it('frees it just the same when the mask it drops was disabled', async () => {
+    const { engine } = await mounted(withMask({ enabled: false, linked: true }))
+    expect(gpu.texturesCreated).toBe(2)
 
     engine.apply(withMask())
 

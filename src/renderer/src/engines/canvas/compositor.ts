@@ -12,8 +12,10 @@ export type CompositeNode =
       id: string
       /** The layer whose alpha cuts this one out, or `null` when nothing does. */
       clippedBy: string | null
-      /** The layer whose mask texture hides part of this one. Today always itself. */
+      /** The layer whose mask texture this one carries. Today always itself. */
       maskedBy: string | null
+      /** Whether that mask hides anything: unticking the box keeps its pixels on the GPU. */
+      maskEnabled: boolean
     }
   | { kind: 'group'; id: string; children: CompositeNode[] }
 
@@ -46,7 +48,8 @@ export function composite(layers: readonly Layer[]): CompositeNode[] {
       kind: 'surface',
       id: layer.id,
       clippedBy,
-      maskedBy: layer.mask?.enabled === true ? layer.id : null,
+      maskedBy: layer.mask ? layer.id : null,
+      maskEnabled: layer.mask?.enabled === true,
     }
   })
 }
@@ -60,7 +63,7 @@ export function placement(nodes: readonly CompositeNode[]): string {
     .map(node =>
       node.kind === 'group'
         ? `${node.id}(${placement(node.children)})`
-        : `${node.id}:${node.clippedBy ?? ''}:${node.maskedBy ?? ''}`,
+        : `${node.id}:${node.clippedBy ?? ''}:${node.maskedBy ?? ''}${node.maskEnabled ? '!' : ''}`,
     )
     .join(' ')
 }

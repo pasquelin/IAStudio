@@ -2,7 +2,15 @@
 // rejects inside a promise and the canvas stays absent with a clean console. It patches
 // prototypes, so it must run before any `init` — which holding the only one guarantees.
 import 'pixi.js/unsafe-eval'
-import { Application, type ApplicationOptions } from 'pixi.js'
+// Without it Pixi knows none of the separable modes past `screen`: twelve of the sixteen the
+// canvas offers fell back to `normal` silently, compositing wrongly with nothing to say so.
+import 'pixi.js/advanced-blend-modes'
+import { Application, Filter, type ApplicationOptions } from 'pixi.js'
+
+// Global, and deliberately here rather than in the engine that needs it: the advanced modes are
+// filters, and a filter renders at resolution 1 by default, so a blended layer came out clipped
+// and half-scaled on a retina canvas.
+Filter.defaultOptions.resolution = 'inherit'
 
 /**
  * Starts a Pixi application, or nothing if the engine died while it was starting. The only
