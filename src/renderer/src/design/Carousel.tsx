@@ -112,6 +112,11 @@ export function Carousel<T extends { id: string }>({
 
   useEffect(() => () => cancelAnimationFrame(pending.current), [])
 
+  // An empty shelf draws no rail at all, so there is nothing to observe until the first item
+  // arrives — and a list fetched from disk starts empty. Without this dependency the observer
+  // is never installed for such a shelf, and it keeps its arrows and dots for good.
+  const railed = items.length > 0
+
   useEffect(() => {
     const element = rail.current
     if (!element) return
@@ -122,7 +127,7 @@ export function Carousel<T extends { id: string }>({
     observer.observe(element)
     if (element.firstElementChild) observer.observe(element.firstElementChild)
     return () => observer.disconnect()
-  }, [measure])
+  }, [measure, railed])
 
   const virtualItems = virtualizer.getVirtualItems()
 

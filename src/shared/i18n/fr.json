@@ -734,7 +734,8 @@
     "about": "À propos de {{name}}",
     "licences": "Licences",
     "imageTools": "Outils",
-    "usage": "Consommation…"  },
+    "usage": "Consommation…"
+  },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
   },
@@ -1396,7 +1397,7 @@
       "spotlight": "Où vous en étiez",
       "tools": "Outils",
       "projects": "Vos projets",
-      "documents": "Documents ouverts",
+      "documents": "Vos documents",
       "jobs": "En cours",
       "activity": "Activité récente"
     },
@@ -1421,7 +1422,7 @@
       "none": "Créer votre premier projet"
     },
     "documents": {
-      "none": "Rien d’ouvert pour l’instant. Choisissez un outil ci-dessus."
+      "none": "Ce projet ne contient encore aucun document. Choisissez un outil ci-dessus."
     },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",

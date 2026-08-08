@@ -146,3 +146,27 @@ describe('reduced motion', () => {
     }
   })
 })
+
+/**
+ * A shelf whose items are fetched starts empty, draws no rail, and therefore has nothing to
+ * observe. The observer has to be installed when the first item lands, or that shelf keeps its
+ * arrows and its dots for good — which is every shelf the home fills from disk.
+ */
+describe('a shelf that fills up later', () => {
+  it('measures itself once it has a rail', async () => {
+    const { rerender } = renderCarousel([])
+
+    rerender(
+      <Carousel
+        items={cards(500)}
+        renderCard={item => <span>{item.name}</span>}
+        itemWidth={160}
+        itemHeight={120}
+        label="Shelf"
+      />,
+    )
+
+    expect(await screen.findByRole('button', { name: 'Faire défiler' })).toBeInTheDocument()
+    expect(await screen.findAllByRole('button', { name: /^Page \d+$/ })).toHaveLength(5)
+  })
+})

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { homeSectionLimit } from '@shared/domain/home'
@@ -15,13 +16,22 @@ function iconOf(document: DocumentDescriptor): string {
   return WORKSPACES.find(workspace => workspace.id === document.workspace)?.icon ?? ''
 }
 
-/** What is already open in this project, one click from being in front again. */
+/**
+ * The documents this project holds, one click from being in front.
+ *
+ * Ordered by name rather than by recency: a `DocumentDescriptor` carries no date, and inventing
+ * one from the order a `Record` happens to be keyed in would be a lie the shelf tells daily.
+ */
 export function Documents() {
   const { t } = useTranslation()
-  const documents = useDocuments(state => state.documents)
+  const stored = useDocuments(state => state.stored)
   const sections = useSettings(state => state.settings.home.sections)
 
-  const cards = Object.values(documents).slice(0, homeSectionLimit(sections, 'documents'))
+  // What the folder holds, not what happens to be open: at launch no tab is, and a shelf that
+  // read the tabs would tell someone with a month of work that they have nothing.
+  useEffect(() => void useDocuments.getState().relist(), [])
+
+  const cards = stored.slice(0, homeSectionLimit(sections, 'documents'))
 
   return (
     <Section id="documents" title={t('home.sections.documents')}>

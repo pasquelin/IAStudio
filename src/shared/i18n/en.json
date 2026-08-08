@@ -734,7 +734,8 @@
     "about": "About {{name}}",
     "licences": "Licences",
     "imageTools": "Tools",
-    "usage": "Usage…"  },
+    "usage": "Usage…"
+  },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
   },
@@ -1396,7 +1397,7 @@
       "spotlight": "Where you were",
       "tools": "Tools",
       "projects": "Your projects",
-      "documents": "Open documents",
+      "documents": "Your documents",
       "jobs": "Running now",
       "activity": "Recent activity"
     },
@@ -1421,7 +1422,7 @@
       "none": "Create your first project"
     },
     "documents": {
-      "none": "Nothing open yet. Pick a tool above to make something."
+      "none": "This project holds no document yet. Pick a tool above to make one."
     },
     "spotlight": {
       "resume": "Pick up where you left off",

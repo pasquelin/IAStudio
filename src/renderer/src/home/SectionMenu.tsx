@@ -32,9 +32,10 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
     void useSettings.getState().write({ home: { sections } })
   }
 
-  // A shelf with no item count has nothing to cap; a pinned one has nothing to hide. Both are
-  // still worth a menu — moving is what every section can do.
-  const rowCount = 2 + (entry?.pinned === true ? 0 : 1) + (entry?.defaultLimit ? LIMITS.length : 0)
+  // `MenuButton` only asks whether there is more than one row — a lone row makes the button act
+  // directly instead of opening. Moving up and moving down are always offered, so there always
+  // are, whatever else the section allows.
+  const rowCount = 2
 
   return (
     <MenuButton

@@ -1,12 +1,20 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { DocumentDescriptor } from '@shared/domain/document'
 import { DEFAULT_HOME_SECTIONS, visibleHomeSections } from '@shared/domain/home'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { HomeView } from './HomeView'
+
+const POSTER_DOCUMENT: DocumentDescriptor = {
+  id: 'a',
+  kind: 'image',
+  title: 'Poster',
+  workspace: 'image',
+}
 
 const PROJECT = {
   path: '/projects/summer',
@@ -33,7 +41,7 @@ beforeEach(() => {
   installFakeBridge()
   setSettings()
   useProject.setState({ project: null })
-  useDocuments.setState({ documents: {} })
+  useDocuments.setState({ documents: {}, stored: [], activeId: null })
 })
 
 describe('the home', () => {
@@ -64,11 +72,13 @@ describe('the home', () => {
   it('offers the documents of the project once one is open', () => {
     useProject.setState({ project: PROJECT })
     useDocuments.setState({
-      documents: { a: { id: 'a', kind: 'image', title: 'Poster', workspace: 'image' } },
+      documents: { a: POSTER_DOCUMENT },
+      stored: [POSTER_DOCUMENT],
+      activeId: 'a',
     })
     render(<HomeView />)
 
-    expect(screen.getByText('Documents ouverts')).toBeInTheDocument()
+    expect(screen.getByText('Vos documents')).toBeInTheDocument()
     expect(screen.getByText('Poster')).toBeInTheDocument()
     expect(screen.getByText('Reprendre où vous en étiez')).toBeInTheDocument()
   })
@@ -121,9 +131,10 @@ describe('customising the home', () => {
       ),
     )
     useProject.setState({ project: PROJECT })
+    useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     render(<HomeView />)
 
-    expect(screen.queryByText('Documents ouverts')).not.toBeInTheDocument()
+    expect(screen.queryByText('Vos documents')).not.toBeInTheDocument()
     expect(screen.getByText('1 section masquée')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Les réafficher' }))
