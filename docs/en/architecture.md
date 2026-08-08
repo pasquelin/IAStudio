@@ -458,6 +458,24 @@ Key primitives, all in `design/`:
 
 Writing a row, a panel surface or a picture frame by hand is a style bug, not a shortcut.
 
+### What the design system took back from a library
+
+**Failure toasts no longer come from `react-toastify`**, which has left the dependencies. A toast
+is a floating panel of this studio: a library brought its own surface, its own radius and its own
+animation to fight the tokens with — exactly why a dock carries no DaisyUI control.
+`ActivityToasts` reuses `MENU_SURFACE`, so a toast and a menu look alike because they share the
+same class string.
+
+Two libraries went the other way and came in, each for something one does not write oneself:
+
+| | |
+|---|---|
+| `recharts` | the curves in the usage window — spend per day, per account |
+| `opentype.js` | reading a typeface's tables, for 3D text and an image's caption |
+
+`opentype.js` is **loaded on demand**: it does not weigh on the first screen, which has no
+typeface to dissect.
+
 ### Tokens and density
 
 Colours live in the `@theme` block of `src/renderer/src/index.css`; the `--sc-*` gauges live in
