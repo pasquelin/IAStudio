@@ -474,6 +474,25 @@ Les primitives, toutes dans `design/` :
 Écrire à la main une ligne, une surface de panneau ou un cadre d'image est un bug de style, pas
 un raccourci.
 
+### Ce que le design system a repris à une bibliothèque
+
+**Les bulles d'échec ne viennent plus de `react-toastify`**, qui a quitté les dépendances. Une
+bulle est un panneau flottant de ce studio : une bibliothèque apportait sa propre surface, son
+propre rayon et sa propre animation, à combattre contre les jetons — exactement la raison pour
+laquelle un dock ne porte pas de contrôle DaisyUI. `ActivityToasts` réutilise `MENU_SURFACE`,
+donc une bulle et un menu ont le même aspect parce qu'ils partagent la même chaîne de classes.
+
+Deux bibliothèques ont fait le chemin inverse et sont entrées, chacune pour une chose qu'on
+n'écrit pas soi-même :
+
+| | |
+|---|---|
+| `recharts` | les courbes de la fenêtre de consommation — dépense par jour, par compte |
+| `opentype.js` | la lecture des tables d'une police, pour le texte en volume et la légende d'une image |
+
+`opentype.js` est **chargé à la demande** : il ne pèse pas sur le premier écran, qui n'a aucune
+police à disséquer.
+
 ### Jetons et densité
 
 Les couleurs vivent dans le bloc `@theme` de `src/renderer/src/index.css` ; les gauges `--sc-*`
