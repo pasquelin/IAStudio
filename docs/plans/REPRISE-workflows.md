@@ -71,8 +71,22 @@
 
 ## L'état exact au moment d'écrire
 
-**Trois étapes livrées et fusionnées dans `develop`**, chacune avec `pnpm validate` vert,
-`/simplify` et `/code-review` — **21 défauts confirmés et corrigés** au total.
+**Trois étapes livrées, chacune avec `pnpm validate` vert, `/simplify` et `/code-review`** —
+**21 défauts confirmés et corrigés** au total.
+
+> **⚠️ Rien n'est encore fusionné dans `develop`.** La session précédente s'est arrêtée juste
+> avant, faute de contexte. **Deux choses à faire avant de reprendre l'étape 4 :**
+>
+> 1. Une revue de **cohérence de la branche entière** a été lancée et son résultat n'a jamais été
+>    lu. La relancer : `/code-review` sur `git diff develop...HEAD`, en cherchant uniquement ce
+>    qu'une revue par étape ne voit pas — deux notions du même concept entre étapes, ce qu'une
+>    étape a cassé dans une autre (la rafale de reprise de l'étape 3 passe-t-elle correctement
+>    sous le limiteur de l'étape 2 ? un job repris peut-il prendre le 429 de synthèse pour un
+>    échec définitif ?), la duplication d'écriture atomique entre `job-store.ts` et
+>    `project/documents.ts`, et les contradictions entre les deux documents.
+> 2. Puis **fusionner dans `develop`** — `git merge --no-ff feat/workflows`, **depuis le dépôt
+>    principal** `/Users/pasquelin/Applications/scenario`, où `develop` est sorti : git refuse de
+>    la sortir deux fois. Ne rien pousser.
 
 | Étape | Commit | Ce qu'elle a livré |
 |---|---|---|
