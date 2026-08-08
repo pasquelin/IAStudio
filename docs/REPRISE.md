@@ -32,21 +32,26 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**669 fichiers dans `src/`. 2900 tests sur 251 fichiers. 6 espaces éditables. 2 types de
+**673 fichiers dans `src/`. 2937 tests verts sur 253 fichiers. 6 espaces éditables. 2 types de
 documents sur 6 savent s'enregistrer — l'espace Image, lui, exporte mais ne s'enregistre pas encore.**
 
-`pnpm validate` lance `test:coverage`, dont les seuils sont des **budgets d'éléments non couverts**
-par glob (`vitest.config.ts`), pas des pourcentages. Un module ajouté sans tests casse la
-validation — c'est voulu. **Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas
-où élargir est légitime (un glob dont la marge de croissance est du GPU intestable).
+`pnpm validate` est vert, **budget de couverture compris** : il lance `test:coverage`, dont les
+seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
+pourcentages.
 
-> **`pnpm validate` sort en 1 aujourd'hui, et ce n'est pas la faute de l'espace Image.**
-> `engines/{scene,skybox,viewport,texture,gpu}/**` est à **367 branches non couvertes pour 310
-> permises** depuis la fusion de `feat/3d-completion` (`722a258`). Mesuré sur `main` seul : chiffre
-> identique. Tout le reste — typecheck, lint, format, tests — est vert. **À couvrir par qui connaît
-> l'espace 3D** ; élargir le budget de quelqu'un d'autre serait le mauvais remède.
->
-> Second grain de sable, environnemental : **`src/renderer/src/settings/ShortcutsSettings.test.tsx`
+**Le plus tendu n'a aucune marge** : `engines/{scene,skybox,viewport,texture,gpu}/**` est à
+**310 branches non couvertes pour 310 permises**. Il était à 367 le 8 août — rouge, sur `main`,
+depuis la fusion des espaces Image et 3D — et les 57 branches qui n'étaient pas du GPU ont été
+couvertes plutôt qu'absoutes. Ce qui reste au-dessous est du moteur WebGL que jsdom n'exécute
+pas : `SceneRenderer` en porte 189 à lui seul. **Toute étape qui ajoute du code là doit le
+couvrir, ou élargir en le justifiant** — le commentaire du fichier dit le seul cas où élargir est
+légitime (un glob dont la marge de croissance est du GPU intestable).
+
+`engines/{timeline,canvas,audio,core}/**` suit à 241 pour 250. Deux globs sont à **zéro** :
+`main/diagnostics/**` et `renderer/src/services/**`, le canal qui dit les échecs — une branche
+que personne n'exerce y serait un échec que personne ne lirait.
+
+> **Un grain de sable environnemental subsiste : `src/renderer/src/settings/ShortcutsSettings.test.tsx`
 > dépasse son budget de 5 s par test quand la machine porte plusieurs sessions** — des
 > sous-ensembles différents à chaque passage, verts en isolation. C'est `userEvent` qui est lent,
 > pas une régression. Il rend `validate` capricieux pour tout le monde tant que plusieurs worktrees
@@ -509,32 +514,42 @@ construit en worker pour le picking.
 
 | Manque | Pourquoi il reste |
 |---|---|
-| `text` 3D | `TextGeometry` exige une police convertie : le catalogue ne connaît pas ce genre d'asset, aucun convertisseur hors ligne, et la police livrée par three dérive d'Helvetica — décision de licence, pas décision technique |
+| `text` 3D | `TextGeometry` exige une police au format typeface. **Tranché le 8 août** : `opentype.js` autorisé, polices libres embarquées **et** polices du système, la typographie partagée pour que l'espace Image en profite — son calque texte code `fontFamily: 'sans-serif'` en dur. Pas encore codé |
 | Instanciation, LOD | écartés par le plan tant qu'aucun cas réel ne les réclame : le seul coût mesuré était le picking, et il est réglé |
 | Clic du `ViewHelper` | son animation déplace la caméra sans prévenir `OrbitControls` ; la cible de l'orbite divergerait |
-| Export d'un sprite | ni glTF ni USDZ n'ont d'objet toujours face à la caméra ; three l'ignore en silence, et le manuel ne le dit pas |
-| Sections du manuel | le chapitre 09 n'a rien sur le magnétisme, le repère local, les ombres ni l'environnement — les étapes ont corrigé ce qui était faux, pas comblé ce qui manquait |
-| Draco et KTX2 | un `.glb` compressé échoue comme un fichier illisible ; ~700 ko de wasm à servir, et l'endroit d'où on les sert diffère entre le serveur de dev et l'app empaquetée. `createGltfSource` est la seule fonction à brancher |
 | three livré deux fois | le chunk du worker BVH pèse 490 ko parce qu'il embarque three, déjà dans le bundle principal. Chargé à la demande et en local, donc supportable — mais c'est du poids d'installation en double |
 
-### Les échecs de la 3D sont silencieux, et le plan n'a pas pu tenir son minimum
+**Comblé depuis** — l'export d'un sprite est documenté (ni glTF ni USDZ n'ont d'objet face à la
+caméra, vérifié dans le code des exporteurs) ; le chapitre 09 a ses sections sur le magnétisme,
+le repère local, les ombres et l'environnement ; **Draco et KTX2 sont branchés**, décodeurs
+copiés depuis three au postinstall et servis depuis `public/` — le chemin absolu qu'on croit
+naturel casse en `file://`, il fallait le relatif, vérifié sur le build empaqueté.
 
-Le plan exigeait que chaque étape **journalise au moins ses échecs côté main**, pour qu'ils soient
-trouvables sans surface d'erreur. **Aucune ne l'a fait, et aucune ne le pouvait** : `diagnostics.onLog`
-va du main vers le renderer, et il n'existe pas de canal en sens inverse. Or les trois échecs de cet
-espace naissent tous dans le renderer.
+### Les échecs de la 3D ne sont plus silencieux
 
-Ce qui se perd aujourd'hui, vérifié dans le code :
+`diagnostics:report` va du renderer vers le main, en regard de `diagnostics.onLog` qui fait
+l'inverse. Le main préfixe le domaine par `renderer/` à l'arrivée et n'accepte qu'un domaine de
+la liste partagée `LOG_SCOPES` : une ligne ne peut pas se faire passer pour lui.
 
-- **Un `.glb` illisible ou compressé** — `ref-cache.ts` attrape le rejet, retire l'entrée et rend
-  `null`. Le nœud reste dans l'outliner, le viewport ne dessine rien, rien n'est dit.
-- **Une texture introuvable** — même chemin, même cache, même silence.
-- **Un export qui échoue à l'écriture** — `SceneDocument` lance `void exportScene(...)` : la
-  promesse rejetée n'est rattrapée nulle part.
+Six échecs y sont branchés : un `.glb` illisible, une texture introuvable — sous un nom par
+espace, 3D, Textures et Skyboxes —, un export de scène ou d'image que le disque refuse, et un
+enregistrement de document qui échoue.
 
-C'est le chantier « surface d'erreur » du § 2, et il a désormais son point d'entrée précis : **un
-canal renderer → main pour le journal**. Tant qu'il n'existe pas, ces trois-là resteront muets, et
-le remède local — un `catch` qui écrit dans la console du renderer — est interdit par CLAUDE.md.
+Trois choses apprises en le construisant, toutes trouvées en revue :
+
+- **le cache de textures est construit par trois moteurs**, et annonçait `scene.texture` pour les
+  trois. Il reçoit son rapporteur comme il reçoit déjà son chargeur ;
+- **un échec périmé accusait un fichier que la scène allait dessiner** : relâcher puis reprendre
+  une clé pendant que le premier chargement volait encore, et son rejet était rapporté alors que
+  le second allait aboutir — la déduplication gravait ensuite ce fantôme et aurait tu le vrai ;
+- **un rapport est dit une fois par sujet**, sinon un moteur reconstruit à chaque panneau détaché
+  remplit le journal. La mémoire s'efface au changement de projet.
+
+**Ce qui reste du chantier « surface d'erreur »** : rien ne s'affiche encore à l'écran, et six
+autres avaleurs de rejets attendent (`Rail`, `peaks`, `prepareEdit`, `decoder-pool`,
+`useWaveSurfer`, `Models`). Une piste écartée volontairement : journaliser dans `handle()` couvrirait
+les quarante canaux d'un coup, mais une erreur du SDK embarque la clé API — il faudrait la réduire
+avant, et `log.ts` l'écrit en gros.
 
 ### Le plafond du décodage IPC a été contourné, pas résolu
 
