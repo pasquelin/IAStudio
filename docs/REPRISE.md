@@ -53,11 +53,16 @@ qui dit les échecs — une branche que personne n'exerce y serait un échec que
 **Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas où élargir est légitime
 (un glob dont la marge de croissance est du GPU intestable).
 
-> **Un grain de sable environnemental subsiste : `src/renderer/src/settings/ShortcutsSettings.test.tsx`
-> dépasse son budget de 5 s par test quand la machine porte plusieurs sessions** — des
-> sous-ensembles différents à chaque passage, verts en isolation. C'est `userEvent` qui est lent,
-> pas une régression. Il rend `validate` capricieux pour tout le monde tant que plusieurs worktrees
-> tournent en parallèle.
+> **Un grain de sable environnemental subsiste : les tests qui pilotent `userEvent` dépassent leur
+> budget de 5 s quand la machine porte plusieurs sessions** — des sous-ensembles différents à
+> chaque passage, verts en isolation. C'est `userEvent` qui est lent, pas une régression. Il rend
+> `validate` capricieux pour tout le monde tant que plusieurs worktrees tournent en parallèle.
+>
+> **Ce n'est pas un seul fichier.** `settings/ShortcutsSettings.test.tsx` a été le premier nommé ;
+> `licences/LicencesWindow.test.tsx` est tombé le 8 août pour la même raison, à 5,25 s en charge et
+> 5,11 s seul — la marge est le vrai sujet, pas le fichier. Devant un échec de ce genre, le
+> réflexe est `vitest run <le fichier>` en isolation, ou `vitest run --coverage --maxWorkers=2`
+> pour toute la passe, avant de chercher une cause dans le code.
 
 L'application démarre par `pnpm start`.
 
@@ -695,14 +700,59 @@ studio fait trente triangles et se marche plus vite qu'un arbre ne se construit.
 
 **Le chemin chaud de l'inspecteur n'est pas un sujet** — audité, chiffré, clos. Cf. § 5.
 
-### À revoir en priorité
+### La dette de relecture des étapes 8 à 11 est payée
 
-**Les étapes 8 à 11 n'ont été relues que par leur auteur.** La limite hebdomadaire de l'API a coupé
-les sous-agents en pleine revue de l'étape 8 ; `/simplify` et `/code-review` ont été menés à la
-main pour `sprite`, les modes d'affichage, l'export et le BVH, puis une dernière fois avant la
-fusion sur les résolutions de rebase. Les bugs trouvés à ces relectures sont écrits dans le plan,
-étape par étape — mais un seul regard n'en vaut pas deux, et c'est là qu'une lecture humaine
-rapporte le plus.
+**Les quatre sujets ont eu leur seconde lecture** (`feat/3d-dette`) : `sprite`, les modes
+d'affichage, l'export et le BVH. Elle a rendu **trois défauts confirmés, tous corrigés avec le
+test qui les verrouille**, et deux hypothèses écartées qui valent d'être écrites pour ne pas être
+reprises.
+
+**Ce qui a été trouvé.**
+
+- **Un rejet d'export n'atteignait personne.** Le `.catch` de `SceneDocument` était posé autour du
+  seul appel au bridge, pas autour de l'encodage, et l'appel part en `void` : un `parseAsync` qui
+  refuse laissait le clic de menu indistinguable d'un dialogue annulé — ni journal, ni écran.
+  L'encodage est passé sous le même garde.
+- **Aucun modèle à textures KTX2 ne s'exportait**, dans aucun des trois formats. `GLTFExporter` et
+  `USDZExporter` **lèvent** sur une texture compressée au lieu de la sauter, et ni l'un ni l'autre
+  ne recevait `setTextureUtils` — or le `KTX2Loader` est branché sur le chargeur de modèles depuis
+  `feat/3d-finition`, donc un GLB qui en porte est ordinaire. Les deux reçoivent désormais un
+  décodeur. **Il décode sur un renderer à lui, jamais celui du viewport** : `decompress` appelle
+  `setSize` sur celui qu'on lui donne, et lui passer le viewport redimensionnerait le canvas qu'on
+  regarde.
+- **La surcouche filaire était sous le pointeur.** Une ligne est touchée à un **monde entier**
+  d'elle-même (`Raycaster.params.Line.threshold` vaut 1), et la surcouche pend sous chaque maille :
+  en mode « rendu + filaire », chaque arête de la scène portait un halo cliquable de cette taille,
+  et un clic dans le vide à côté d'un cube le sélectionnait au lieu de vider la sélection. Elle est
+  désormais aveugle au rayon, comme elle était déjà absente de la carte d'ombres.
+
+**Ce qui a été cherché et écarté — ne pas le refaire.**
+
+- **Le BVH et les groupes de matériaux.** `three-mesh-bvh` construit exprès une racine par plage de
+  groupe pour qu'un triangle ne change jamais de groupe au réordonnancement. Le worker, lui,
+  reconstruit une géométrie nue — position et index — donc sans `groups` ni `drawRange` : l'index
+  qu'il renvoie est réordonné sur une seule plage, et `MeshBVH.deserialize` le repose sur la
+  géométrie vivante (`setIndex` vaut `true` par défaut). Une géométrie à plusieurs groupes verrait
+  donc ses matériaux appliqués aux mauvais triangles. **Non atteignable aujourd'hui** :
+  `accelerate` n'est appelé que depuis `buildModel`, et `GLTFLoader` ne produit jamais de `groups`
+  — il fait une maille par primitive. À traiter le jour où un arbre sera construit ailleurs que
+  sur un modèle importé.
+- **Un changement de type sur un id stable.** `syncNode` ne libère et ne rebâtit que sur un
+  `model` devenu autre chose ; tout autre changement de type garderait l'objet three.js du type
+  précédent, muet. **Non atteignable** : chaque commande qui crée un nœud bat un id neuf, et un
+  document se relit dans un moteur vide. Laissé tel quel plutôt que gardé contre un état que rien
+  ne produit.
+
+Le reste de ce qui avait été trouvé au premier regard est écrit dans le plan, étape par étape.
+
+**La portée exacte de cette relecture, pour ne pas la surestimer.** C'est bien une seconde lecture
+— elle n'est pas de l'auteur des onze étapes — mais elle est d'**un seul relecteur**. Les quatre
+passes adverses déléguées, une par sujet, n'ont rien rendu d'exploitable : elles signalent leur
+existence mais n'ont laissé aucun transcript et n'ont répondu à aucune relance. Le contrôle croisé
+que le chantier visait n'a donc pas eu lieu. Concrètement : les trois défauts corrigés sont
+solides, chacun reproduit avant correction ; en revanche **« rien trouvé » sur le sprite et sur le
+BVH vaut ce que vaut un seul regard**, et ces deux sujets restent les mieux placés pour rendre
+quelque chose à qui les reprendra.
 
 **Les deux résolutions de rebase sont relues.** `image-generation.ts` réimplémentait
 `generation-landing.ts` — 91 lignes contre 15, mêmes claims, même settle, à une différence de
