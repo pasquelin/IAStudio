@@ -508,6 +508,25 @@ Les libellés utilisés dans une liste virtualisée sont résolus **une fois par
 par ligne : un défilement re-rend chaque ligne montée à chaque frame, et `useTranslation()` n'est
 pas gratuit.
 
+### Ce qui est traduit va plus loin que les phrases
+
+Quatre choses passent par les bundles sans en avoir l'air, et chacune répond à un défaut constaté :
+
+- **les noms de touches** — `Espace`, `Suppr`, `Début` ne sont pas des libellés anglais laissés en
+  place : l'écran des raccourcis les résout comme le reste ;
+- **les unités et les dates** — `formatBytes` calcule une taille mais **ne la nomme pas** : le
+  nom de l'unité est fourni par l'appelant, parce que `Mio` et `MiB` sont la même taille dans deux
+  langues et que les abréviations avaient fini par vivre en français dans un fichier de calcul ;
+- **les portées du journal** — une ligne d'activité affiche une phrase, jamais la clé qui la
+  désigne ;
+- **la langue du document lui-même** — `document.documentElement.lang` suit la langue choisie.
+  `index.html` la portait en dur : un lecteur d'écran choisit sa voix dessus, et une interface
+  anglaise sous `lang="fr"` était lue avec une phonétique française.
+
+La parité des deux bundles est **vérifiée par un test**, clé par clé, et le même test refuse une
+chaîne visible écrite en dur dans un composant. C'est ce qui empêche une langue de dériver de
+l'autre au fil des ajouts.
+
 ---
 
 ## La configuration

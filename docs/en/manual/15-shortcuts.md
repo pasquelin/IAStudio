@@ -90,7 +90,7 @@ and you can assign one to it (see below).
 | **Projection** | `O` | switches between perspective and orthographic projection |
 | **Display** | `Z` | cycles shaded, wireframe, shaded and wireframe |
 | **Frame selection** | `F` | brings the camera in so the object fills the view |
-| **Delete** | `Del` | removes the chosen object. `⌘Z` brings it back |
+| **Delete** | `Delete` | removes the chosen object. `⌘Z` brings it back |
 
 ### Assemble and duplicate
 
@@ -165,7 +165,7 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 | Action | Key | What it does |
 |---|---|---|
 | **Split clip** | `S` | cuts in two at the playhead |
-| **Delete clip** | `Del` | removes the clip from the edit. The original file stays in the assets |
+| **Delete clip** | `Delete` | removes the clip from the edit. The original file stays in the assets |
 
 ### Zoom
 
@@ -391,7 +391,7 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 | `M` | | Snapping | | | |
 | `L` | | Local frame | | | |
 | `F` | | Frame selection | | | |
-| `Del` | | Delete object | Delete clip | | |
+| `Delete` | | Delete object | Delete clip | | |
 | `W A S D` | | Fly | | | |
 | `Q` / `E` | | Down / Up | | | |
 | left `⇧` | | Boost | | | |
