@@ -1,5 +1,5 @@
 import { mdiCubeOutline, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
 import type { SphericalAngles } from '@shared/domain/angles'
@@ -19,6 +19,9 @@ import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { chipSkin } from '@/design/styles'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { useDocuments } from '@/stores/documents'
+import { useShortcuts } from '@/hooks/useShortcuts'
+import type { CommandId } from '@shared/domain/command'
 
 /** i18n key of a view mode — never the label itself, as `SceneEntry` does for primitives. */
 const VIEW_LABELS: Record<SkyboxView, string> = {
@@ -37,6 +40,8 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   const engine = useRef<SkyboxRenderer | null>(null)
 
   const content = useSkyboxes(state => skyboxOf(state, documentId))
+  // A hidden tab stays mounted: without this, two skies would answer the same key.
+  const active = useDocuments(state => state.activeId === documentId)
 
   // Session state, not document state: how a sky is being looked at right now is not what it
   // is, and persisting it would make a reopened document argue with the window it opens in.
@@ -81,6 +86,33 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   }, [probes])
 
   const onDrop = (asset: Asset): void => setSkyboxSource(documentId, asset)
+
+  /**
+   * The keyboard this space never had. Its history existed and worked — the sun is moved by a
+   * command — but nothing listened, so ⌘Z fell through to the platform and undid nothing at all.
+   */
+  const run = useCallback(
+    (command: CommandId): void => {
+      switch (command) {
+        case 'skybox.view':
+          // Cycles rather than one key per view: four modes, and a key each would spend four
+          // letters on a space that has two other things to offer.
+          return setView(current => {
+            const next = SKYBOX_VIEWS.indexOf(current) + 1
+            return SKYBOX_VIEWS[next % SKYBOX_VIEWS.length] ?? current
+          })
+        case 'skybox.probes':
+          return setProbes(current => !current)
+        case 'skybox.undo':
+          return useSkyboxes.getState().undo(documentId)
+        case 'skybox.redo':
+          return useSkyboxes.getState().redo(documentId)
+      }
+    },
+    [documentId],
+  )
+
+  useShortcuts({ scope: 'skybox', enabled: active, onCommand: run })
 
   return (
     <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">

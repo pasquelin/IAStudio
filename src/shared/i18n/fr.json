@@ -807,7 +807,9 @@
     "scope": {
       "global": "Partout dans l’application",
       "scene": "Dans la vue 3D",
-      "sequence": "Dans le montage"
+      "sequence": "Dans le montage",
+      "canvas": "Dans l'image",
+      "skybox": "Dans le ciel"
     },
     "spaces": "Espaces de travail",
     "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
@@ -1119,7 +1121,7 @@
       "help": "Réunir le calque actif et celui juste en dessous en un seul, qui garde le nom du dessous"
     },
     "canvasFlatten": {
-      "title": "Aplatir l\u2019image",
+      "title": "Aplatir l’image",
       "help": "Réduire toute la pile à un seul calque : les calques masqués sont perdus, pas fusionnés",
       "layerName": "Arrière-plan"
     },
@@ -1133,15 +1135,23 @@
     },
     "canvasRotateCw": {
       "title": "Rotation horaire",
-      "help": "Pivoter le document d\u2019un quart de tour vers la droite : le cadre pivote avec lui"
+      "help": "Pivoter le document d’un quart de tour vers la droite : le cadre pivote avec lui"
     },
     "canvasRotateCcw": {
       "title": "Rotation antihoraire",
-      "help": "Pivoter le document d\u2019un quart de tour vers la gauche : le cadre pivote avec lui"
+      "help": "Pivoter le document d’un quart de tour vers la gauche : le cadre pivote avec lui"
     },
     "canvasExport": {
       "title": "Exporter l’image",
       "help": "Écrire le document aplati sur le disque, au format PNG"
+    },
+    "skyboxView": {
+      "title": "Changer de vue",
+      "help": "Fait défiler les quatre façons de regarder le ciel : immersive, panoramique, croix, faces."
+    },
+    "skyboxProbes": {
+      "title": "Sondes de lumière",
+      "help": "Montre ou cache les sphères témoins. Un ciel se juge à ce qu'il éclaire, pas à sa propre image."
     }
   },
   "texture": {

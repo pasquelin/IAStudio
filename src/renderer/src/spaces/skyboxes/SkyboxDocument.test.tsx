@@ -6,7 +6,17 @@ import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { installDocument } from '@/stores/document-fixtures'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { SKYBOX_VIEWS, type SkyboxView } from '@shared/domain/skybox'
+import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxDocument } from './SkyboxDocument'
+
+/** Read off the French bundle, like every other label a test looks a control up by. */
+const LABELS: Record<SkyboxView, string> = {
+  immersive: '360°',
+  equirect: 'Équirect',
+  cross: 'Croix',
+  faces: '6 faces',
+}
 
 // jsdom has no WebGL context: what the engine draws is exercised by hand, not here. This
 // covers the document handing it the right state — same reason as `SceneDocument.test`.
@@ -83,5 +93,61 @@ describe('SkyboxDocument', () => {
   it('hands the renderer a host to fill, never a canvas of its own', () => {
     const { container } = render(<SkyboxDocument documentId="doc-1" />)
     expect(container.querySelector('canvas')).toBeNull()
+  })
+})
+
+describe('the keyboard of a sky', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useSkyboxes.setState({ states: {}, histories: {} })
+    useAssets.setState({ items: [panorama] })
+    installDocument('doc-1', 'skyboxes')
+  })
+
+  /**
+   * The history was there and worked — moving the sun is a command — but nothing listened, so
+   * ⌘Z fell through to the platform and undid nothing at all.
+   */
+  it('undoes the sun the keyboard just moved', () => {
+    render(<SkyboxDocument documentId="doc-1" />)
+    const before = skyboxOf(useSkyboxes.getState(), 'doc-1').sun
+
+    useSkyboxes.getState().runCommand('doc-1', setSunAngles({ azimuth: 1.2, elevation: 0.4 }))
+    expect(skyboxOf(useSkyboxes.getState(), 'doc-1').sun).not.toEqual(before)
+
+    fireEvent.keyDown(window, { code: 'KeyZ', metaKey: true })
+
+    expect(skyboxOf(useSkyboxes.getState(), 'doc-1').sun).toEqual(before)
+  })
+
+  it('puts back what it just undid', () => {
+    render(<SkyboxDocument documentId="doc-1" />)
+    const moved = { azimuth: 1.2, elevation: 0.4 }
+
+    useSkyboxes.getState().runCommand('doc-1', setSunAngles(moved))
+    fireEvent.keyDown(window, { code: 'KeyZ', metaKey: true })
+    fireEvent.keyDown(window, { code: 'KeyZ', metaKey: true, shiftKey: true })
+
+    expect(skyboxOf(useSkyboxes.getState(), 'doc-1').sun).toMatchObject(moved)
+  })
+
+  // Four views and one key: a letter each would spend four of them on a space that has two
+  // other things to offer.
+  it('cycles through the views and comes back round', () => {
+    const { getByRole } = render(<SkyboxDocument documentId="doc-1" />)
+    const pressed = (): string | undefined =>
+      SKYBOX_VIEWS.find(view => {
+        const button = getByRole('button', { name: LABELS[view] })
+        return button.getAttribute('aria-pressed') === 'true'
+      })
+
+    expect(pressed()).toBe('immersive')
+    fireEvent.keyDown(window, { code: 'KeyV' })
+    expect(pressed()).toBe(SKYBOX_VIEWS[1])
+
+    for (let step = 1; step < SKYBOX_VIEWS.length; step += 1) {
+      fireEvent.keyDown(window, { code: 'KeyV' })
+    }
+    expect(pressed()).toBe('immersive')
   })
 })

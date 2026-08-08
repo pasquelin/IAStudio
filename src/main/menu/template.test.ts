@@ -164,6 +164,7 @@ describe('the Edit menu', () => {
       ['image', 'canvas.undo'],
       ['3d', 'scene.undo'],
       ['video', 'sequence.undo'],
+      ['skyboxes', 'skybox.undo'],
     ]
 
     for (const [workspace, expected] of cases) {
