@@ -119,8 +119,8 @@ qu'il **agit** — il crée quelque chose — alors que les autres ne font que m
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Skybox, Calques, Assets, Explorateur, Scène, Lumières,
-Mailles — celles que l'espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+Les icônes de la **colonne de droite** : Skybox, Calques, Canaux, Assets, Explorateur, Scène,
+Lumières, Mailles — celles que l'espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
 
 ### Le rail ne montre que ce que l'espace sait faire
 

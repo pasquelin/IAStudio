@@ -126,14 +126,16 @@ flat.
 2. the **+** button on the left rail;
 3. **drag a picture from the project onto the preview** — a blue frame confirms the drop will be
    taken. It becomes the **base colour**;
-4. choose the preview shape — **sphere**, box, cylinder, plane or torus knot — and look at it
-   under the studio lighting. The **sphere** shows the light best, the **plane** shows the
-   pattern's repetition best;
-5. `⌘S` **saves**. This is one of only two document kinds that can.
+4. **Inspector** → **Preview** section: choose the shape — **sphere**, box, cylinder, plane or
+   torus knot. The **sphere** shows the light best, the **plane** shows the pattern's repetition
+   best;
+5. **Inspector** → **Material** section: set roughness, metalness, relief and emission. If the
+   material looks uniformly average, the **remap** is what to open — see below;
+6. **Channels** panel: drop a picture onto the thumbnail of each channel you want to fill;
+7. `⌘S` **saves**.
 
-**The catch.** Only the base colour can be placed today. The other seven channels — normal,
-roughness, metalness… — are explained in [chapter 12](12-textures-workspace.md) but not wired up
-yet.
+**The catch.** A picture dropped on the **preview** always goes to the base colour — that is
+deliberate. To aim at normals or roughness, drop onto **their thumbnail** in the Channels panel.
 
 ---
 

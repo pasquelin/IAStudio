@@ -222,16 +222,24 @@ travail, et il est complet.
 
 ### Ce qui manque
 
-- **le panneau de matière** — rugosité, métallicité, relief, répétition, émission, réglables en
-  direct ;
-- **la bande des huit canaux**, avec leurs vignettes et leur import individuel ;
-- **les dérivations automatiques** — fabriquer les *normales* depuis la *hauteur*, par exemple ;
+- **les dérivations automatiques** — fabriquer les *normales* depuis la *hauteur*, par exemple. Le
+  badge « dérivé » existe, et le studio sait quel canal dérive de quel autre ; c'est le calcul qui
+  manque, pas le vocabulaire ;
+- **l'import d'un fichier du disque** directement dans un canal. Le détour existe : importez
+  l'image dans le projet, puis posez-la sur la vignette du canal ;
 - **l'aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures visibles ;
 - **l'export** vers glTF, Unity, Unreal, Roblox.
 
-Ce qui fonctionne aujourd'hui : générer une matière, la regarder sur cinq formes différentes sous
-un éclairage neutre, et l'enregistrer. C'est déjà le geste central — juger une matière sur un
-objet éclairé plutôt que sur un carré à plat.
+Ce qui fonctionne aujourd'hui : générer une matière, poser une image dans chacun de ses huit
+canaux, régler tout ce dont elle est faite — rugosité et métal avec leur remappage, relief,
+émission, répétition —, la regarder sur cinq formes sous l'éclairage de votre choix, inspecter
+chaque canal à plat, et l'enregistrer.
+
+### L'opacité d'un canal ne se règle pas
+
+Un canal est posé ou il ne l'est pas. Il n'y a pas de mélange partiel entre deux images dans le
+même canal, ni de fondu entre la valeur d'ensemble et la carte : le remappage règle la **plage**
+dans laquelle la carte est relue, ce qui est une autre question.
 
 ---
 

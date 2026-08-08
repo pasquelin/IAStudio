@@ -32,14 +32,15 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**793 fichiers dans `src/`, dont 310 de test — plus de 3700 cas y sont déclarés. 6 espaces
+**852 fichiers dans `src/`, dont 335 de test — `pnpm validate` en exécute 4326. 6 espaces
 éditables. **Les six types de documents s'enregistrent**, et fermer un onglet demande avant de
 perdre quoi que ce soit. L'espace Image est complet : ses cinq gestes sont offerts, recadrage
 compris.**
 
-> Le compte de fichiers est vérifié, celui des cas est **déclaré** : les `it.each` en exécutent
-> plusieurs chacun, donc `pnpm test` en annonce davantage. Ne pas recopier un total sans l'avoir
-> relancé.
+> Les deux comptes sont **relevés sur une passe réelle** du 8 août, pas déclarés : les `it.each`
+> exécutent plusieurs cas chacun, donc le total d'un `describe` ne se lit pas dans le fichier. Ne
+> recopier aucun de ces trois nombres sans avoir relancé `pnpm validate` — plusieurs sessions
+> fusionnent dans la journée.
 
 `pnpm validate` est vert, **budget de couverture compris** : il lance `test:coverage`, dont les
 seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
@@ -100,8 +101,10 @@ qui reste.
 des raccourcis ; un registre de réglages qui gouverne les préférences et la validation côté main.
 
 **La persistance des documents** — écriture atomique, marque « modifié », puce sur l'onglet,
-relecture à l'ouverture. Le mécanisme est générique ; **trois genres y sont branchés** — `scene`,
-`texture` et `image` — et `IO_BY_KIND` est la seule liste qui fasse foi.
+relecture à l'ouverture. Le mécanisme est générique et **les six genres y sont branchés** depuis
+`feat/documents-erreurs` : `IO_BY_KIND` est un `Record` complet, seule liste qui fasse foi, et un
+test itère `DOCUMENT_KINDS` pour le verrouiller. Cette ligne annonçait encore trois genres après la
+fusion qui l'a démentie — le § 3.1 disait déjà l'inverse.
 
 **Le manuel utilisateur** — 19 chapitres, fr et en (`docs/fr/manuel/`, `docs/en/manual/`). Il ne se
 relit pas, il **se vérifie** : les registres (`COMMAND_REGISTRY`, `IMAGE_TOOLS`, `UNBUILT_TOOLS`,
@@ -226,9 +229,10 @@ ne survit pas à la fermeture de l'application, donc du travail payé et perdu. 
 étapes 2 et 3 du plan `feat/workflows`, en cours dans son propre worktree : **vérifier ce qu'il en
 reste avant de les rouvrir.**
 
-À défaut, le prochain manque fonctionnel par ordre de valeur est l'espace **Textures**, § 3.4 :
-livré jusqu'à l'étape 3, les étapes 4 à 8 (panneau matériau, bande de canaux, dérivations en
-shader, tiling, export) sont écrites et non commencées.
+L'espace **Textures** a avancé de deux étapes le 8 août : le panneau matériau et la bande de canaux
+sont livrés (§ 3.4). Il lui reste les **étapes 6 à 8** — dérivations en shader, tiling, export —
+écrites et non commencées, et c'est le prochain manque fonctionnel par ordre de valeur hors
+workflows.
 
 > **La surface d'erreur n'est plus ici, et il ne faut pas l'y remettre.** Elle occupait ce
 > paragraphe depuis longtemps : `handle` ne journalisait pas une promesse rejetée, et le renderer
@@ -631,22 +635,69 @@ résolution des raccourcis de toute l'application. Documenté aux chapitres 15 e
 
 ## 3.4 Espace Textures
 
-**Livré (étape 3 mergée).** Le document `.tex`, les huit canaux comme domaine, le viewport partagé,
-l'espace lui-même : une image glissée devient la couleur de base, la forme se choisit, l'environnement
-studio éclaire, et tout s'enregistre dans le dossier du projet.
+**Livré jusqu'à l'étape 5** (`feat/textures-materiau`, 8 août 2026). Le document `.tex`, les huit
+canaux comme domaine, le viewport partagé, le panneau matériau, la bande de canaux — et la
+vérification à l'écran reste due, cf. la fin de ce §.
 
-**4 — Panneau matériau.** Tous les réglages du § 4 du brief, câblés en direct : rugosité, métal,
-relief, tiling, émission. Réutiliser `SliderField`, `NumberField`, `PropertySection`, `ColorField` —
-**ils existent**. Le seul contrôle neuf est le **double curseur de remap** (`design/RangeField.tsx`),
-deux poignées sur un rail, plage surlignée. Le remap rugosité/métal passe par `onBeforeCompile` —
-**vérifier les noms de chunks sur three 0.185 avant d'écrire**, ils bougent entre versions.
-« Brillance » est l'**inverse** de la rugosité : inverser à l'affichage, stocker la rugosité. Une face
-de plus dans `panels/inspector/`, **pas un panneau à part** : `main` a posé la règle d'un inspecteur
-unique pour tout le studio.
+### Les étapes 4 et 5 sont livrées
 
-**5 — Bande de canaux.** Huit vignettes 96 px (`Thumbnail`, `MediaTile`, `Flyout`/`MenuRow`), badge
-généré / dérivé / importé, import de fichier, vue 2D par canal. Un canal **dérivé** se recalcule quand
-sa source change ; un **généré** est figé — la distinction doit se voir.
+**4 — Panneau matériau.** Les treize réglages que `MaterialSettings` portait depuis l'étape 3 ont
+leur surface : `panels/inspector/TextureInspector.tsx`, quatre sections (Matériau, Relief, Émission,
+Répétition) plus l'Aperçu. **Une face de l'inspecteur, pas un panneau** — et elle répond sur la
+branche `default`, celle de la scène : `activeIdOfKind` ne rend qu'un genre à la fois, donc les deux
+sont exclusives et l'ordre n'est pas une priorité (une mutation l'a prouvé, l'inverser ne cassait
+rien).
+
+Trois choses que ce lot a apprises et qu'il ne faut pas redécouvrir :
+
+- **`ChannelMap.inverted` n'était lu par personne.** Le convertisseur de Scenario répond en
+  *smoothness* là où le studio stocke la rugosité ; le drapeau existait depuis l'étape 3 et le
+  moteur l'ignorait, donc tout canal `texture-smoothness` s'affichait à l'envers. L'inversion se
+  replie dans le remap — `mix(1, 0, v)` EST `1 - v` — donc **aucune branche de shader et aucun
+  define à recompiler**. C'est `remapOf` dans `engines/texture/material-shader.ts`.
+- **`edgeIntensity` avait sa JSDoc et aucun lecteur.** Le masque de cavité n'a **aucun slot** dans
+  `MeshStandardMaterial` : il passe par un uniform à lui, avec sa **propre matrice d'uv** et le
+  define `USE_UV`, parce que three ne construit la matrice que d'une carte qu'elle connaît. Sans
+  elle, le masque glisse hors de l'image dès qu'on change le tiling — et rien ne le disait, la
+  mutation correspondante était verte au premier passage.
+- **Une ancre de chunk que three renommerait est rapportée, pas avalée** (`texture.shader` dans
+  `LOG_SCOPES`) : le rendu continue sans son remap plutôt que de sortir une sphère noire. Les noms
+  vérifiés sur three 0.185 sont `roughnessmap_fragment`, `metalnessmap_fragment`, `aomap_fragment`
+  et `void main() {` — et `material-shader.test.ts` les teste contre `ShaderLib.physical`, donc un
+  renommage amont fait rougir un test au lieu d'un écran.
+
+**Rugosité, jamais brillance** — tranché : le fichier, three et la face 3D disent tous rugosité. Le
+manuel porte l'équivalence pour qui vient de Substance.
+
+**Deux réutilisations plutôt que deux copies.** `EnvironmentSection` est **partagée avec l'espace
+3D** (elle reçoit un `onChange` au lieu d'un `SceneEdit`), et `Vector3Field` est devenu
+**`VectorField`**, générique sur ses axes — un tiling en a deux, et un composant écrit pour lui
+aurait été celui-là moins une ligne.
+
+**5 — Bande de canaux.** `ToolId` `channels`, **colonne de droite** et non bande du bas : le bas
+appartient à l'étagère dans cet espace, et déposer une image sur un canal exige que les deux soient
+visibles ensemble. Les huit tuiles s'enroulent sur deux colonnes. Badge d'origine par tuile, dépôt
+par tuile, et **un canal se regarde à plat en le cliquant** — vue posée PAR-DESSUS le viewport,
+jamais à sa place : un contexte WebGL ne survit pas à sa reconstruction pour un coup d'œil.
+`stores/texture-views.ts` tient cet état, non persisté, hors historique.
+
+Deux pièges payés ici :
+
+- **`MenuButton` agit directement quand il n'a qu'une ligne** (`useHoverFlyout(rowCount)`). Un
+  projet ne contenant qu'une image ne pouvait donc pas ouvrir le menu d'un canal. « Vider » est
+  devenu l'une des lignes, comme `TextureField` le fait déjà ;
+- **le nom accessible d'une tuile venait de sa légende**, qui dit quel canal c'est et rien de ce que
+  le clic fait. Un `aria-label` explicite le remplace.
+
+**Ce qui reste de l'étape 5** : l'import d'un fichier du disque **directement** dans un canal. Le
+détour existe (importer dans le projet, puis déposer sur la vignette) et il est écrit au manuel.
+`IMPORTABLE_TYPES` ne connaît pas les canaux, donc c'est un chemin à ouvrir, pas un bug.
+
+**Une lacune d'accessibilité trouvée en passant et NON corrigée** : `design/MenuRow.tsx` dessine sa
+coche mais n'expose aucun `aria-checked`. Un lecteur d'écran ne dit donc pas quelle ligne est active,
+dans **tous** les menus du studio. Le rôle juste serait `menuitemradio`, ce qui casse toutes les
+suites interrogeant `getByRole('menuitem')` — d'où le report plutôt qu'un passage en force depuis un
+chantier Textures.
 
 **6 — Dérivations en shader.** `engines/texture/derive/` : quad plein écran, `WebGLRenderTarget`,
 **port injectable** (jsdom n'a pas de WebGL). Sobel height→normal d'abord. **Aucune boucle JS sur des
@@ -663,10 +714,20 @@ mêmes valeurs**, sinon ils se désalignent.
 Metallic=B) **en une passe shader**. L'écriture disque passe par le main. `GLTFExporter` vient de
 `three/addons`. C'est ici que « aperçu en 1024, export en pleine résolution » s'applique.
 
-**Vérifié à l'écran** : l'espace s'ouvre, le document se crée, la barre d'outils répond, l'état vide
-s'affiche. **Non vérifié** : la sphère éclairée et une image posée en couleur de base — le viewport
-noir constaté venait de l'environnement studio manquant, corrigé depuis, mais la confirmation visuelle
-attend un projet ouvert.
+**Ce qui n'est TOUJOURS pas vérifié à l'écran, et qui devrait l'être avant l'étape 6.** L'espace
+s'ouvre, le document se crée, l'état vide s'affiche — c'était acquis avant ce lot. Restent à voir de
+ses propres yeux, avec un projet ouvert et le MCP `electron` après `pnpm start:debug` :
+
+- **la sphère éclairée** et une image posée en couleur de base (le viewport noir d'avant venait de
+  l'environnement studio manquant, corrigé depuis) ;
+- **le remap** : un canal de rugosité plat, les deux poignées écartées, et le contraste qui apparaît.
+  jsdom ne compile aucun shader, donc les 13 tests de `material-shader.test.ts` prouvent le texte du
+  GLSL et **pas** ce qu'il dessine ;
+- **le masque de cavité**, pour la même raison, et parce que c'est le seul uniform à porter sa propre
+  matrice d'uv ;
+- **la vue à plat** d'un canal, en `image-rendering: pixelated`.
+
+Un jalon visuel validé uniquement par des tests unitaires n'est validé qu'à moitié — § 5.
 
 ---
 

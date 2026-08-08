@@ -116,7 +116,7 @@ The **+** button is solid and blue, where all the others are grey glyphs. That i
 
 ### The right rail
 
-The **right column** icons: Skybox, Layers, Assets, Explorer, Scene, Lights, Meshes — whichever ones the
+The **right column** icons: Skybox, Layers, Channels, Assets, Explorer, Scene, Lights, Meshes — whichever ones the
 workspace declares, in that order — then, below the separator, Inspector.
 
 ### The rail only shows what the workspace can do
