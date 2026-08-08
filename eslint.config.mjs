@@ -42,6 +42,10 @@ export default defineConfig([
       // Red in the editor, not only in CI: a dependency array that lies costs a stale value at
       // the moment the user acts, which is the hardest kind of bug to reproduce afterwards.
       'react-hooks/exhaustive-deps': 'error',
+      // Decided rather than inherited: `lint` runs at zero warnings, so every rule this config
+      // leaves at `warn` blocks a merge without anyone having chosen it. Unlike its neighbour
+      // above, this one is answerable — the syntax it names can be rewritten.
+      'react-hooks/unsupported-syntax': 'error',
     },
   },
   {

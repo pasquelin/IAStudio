@@ -4,10 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_DRAG_TYPE, startAssetDrag } from '@/helpers/asset-drag'
 import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
+import { canUndo } from '@/engines/core/history'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
-import { canvasOf, useCanvases } from '@/stores/canvases'
+import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { useTools } from '@/stores/tools'
@@ -216,6 +217,9 @@ describe('merging the layer below', () => {
     fireEvent.keyDown(window, { code: 'KeyE', metaKey: true })
 
     expect(mergeInto).not.toHaveBeenCalled()
+    // The history too: `run` stacks a command whether or not it changed anything, so a merge that
+    // let the command through at the bottom would leave a ⌘Z that undoes nothing.
+    expect(canUndo(historyOf(useCanvases.getState(), DOCUMENT))).toBe(false)
   })
 })
 
