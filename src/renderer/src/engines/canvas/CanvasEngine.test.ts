@@ -11,6 +11,7 @@ import {
   type Layer,
   type Transform,
 } from './canvas-state'
+import type { CanvasSelection } from './canvas-selection'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, type Viewport } from './viewport'
 
@@ -153,6 +154,12 @@ vi.mock('pixi.js', () => {
     clear(): this {
       return this
     }
+    moveTo(): this {
+      return this
+    }
+    lineTo(): this {
+      return this
+    }
     circle(): this {
       return this
     }
@@ -228,6 +235,8 @@ type Harness = {
   engine: InstanceType<typeof CanvasEngine>
   host: HTMLElement
   viewports: Viewport[]
+  /** Every selection the engine carved out, in the order it published them. */
+  selections: CanvasSelection[]
   guides: { calls: string[] }
   /** The ids of the patches the engine reported as one finished gesture each. */
   patches: string[]
@@ -240,6 +249,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
   document.body.appendChild(host)
 
   const viewports: Viewport[] = []
+  const selections: CanvasSelection[] = []
   const calls: string[] = []
   const patches: string[] = []
   const layers: string[] = []
@@ -249,6 +259,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
       onPixels: patchId => patches.push(patchId),
       onPixelsDropped: () => undefined,
       onViewport: viewport => viewports.push(viewport),
+      onSelection: selection => selections.push(selection),
       onHost: () => undefined,
       guides: {
         add: (axis, position) => {
@@ -268,6 +279,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
     }),
     host,
     viewports,
+    selections,
     guides: { calls },
     patches,
     layers,
@@ -866,6 +878,101 @@ describe('loading a picture into a layer', () => {
     await loading
 
     expect(gpu.painted).toEqual([])
+  })
+})
+
+describe('carving out a selection', () => {
+  it('publishes a box drawn between the two corners of a drag', async () => {
+    const { engine, host, selections } = await mounted()
+    engine.setTool('select')
+
+    press(host, 100, 100)
+    drag(host, 300, 200)
+    release()
+
+    expect(selections.at(-1)).toEqual({
+      kind: 'rect',
+      rect: { x: 100, y: 100, width: 200, height: 100 },
+    })
+  })
+
+  it('draws an ellipse when that is the armed mode', async () => {
+    const { engine, host, selections } = await mounted()
+    engine.setTool('select')
+    engine.setSelectionShape('ellipse')
+
+    press(host, 100, 100)
+    drag(host, 300, 200)
+
+    expect(selections.at(-1)?.kind).toBe('ellipse')
+  })
+
+  // A lasso follows the hand rather than spanning a box: every move adds a point.
+  it('grows a lasso point by point', async () => {
+    const { engine, host, selections } = await mounted()
+    engine.setTool('select')
+    engine.setSelectionShape('lasso')
+
+    press(host, 100, 100)
+    drag(host, 120, 130)
+    drag(host, 160, 180)
+
+    const last = selections.at(-1)
+    expect(last?.kind).toBe('lasso')
+    expect(last?.kind === 'lasso' && last.points).toHaveLength(4)
+  })
+
+  // The three modes are one tool; only the bar knows which gesture is armed.
+  it('draws whatever shape was armed last', async () => {
+    const { engine, host, selections } = await mounted()
+    engine.setTool('select')
+    engine.setSelectionShape('lasso')
+    engine.setSelectionShape('rect')
+
+    press(host, 120, 120)
+    drag(host, 160, 160)
+
+    expect(selections.at(-1)?.kind).toBe('rect')
+  })
+})
+
+describe('painting inside a selection', () => {
+  /** How many objects the engine handed the renderer for the last pass. */
+  const stencilled = (): boolean => gpu.containers.some(container => container.mask !== null)
+
+  it('paints straight onto the layer when nothing is selected', async () => {
+    const { host } = await mounted()
+    gpu.containers = []
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(stencilled()).toBe(false)
+  })
+
+  // Cut on the GPU rather than tested per dab: the shape is a stencil.
+  it('cuts the stroke to the selection when there is one', async () => {
+    const { engine, host } = await mounted()
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 100, height: 100 } })
+    gpu.containers = []
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(stencilled()).toBe(true)
+  })
+
+  it('cuts the bucket the same way, which is what makes it fill a region', async () => {
+    const { engine, host } = await mounted()
+    engine.setTool('fill')
+    engine.setSelection({ kind: 'ellipse', rect: { x: 0, y: 0, width: 100, height: 100 } })
+    gpu.containers = []
+
+    press(host, 200, 200)
+
+    expect(stencilled()).toBe(true)
   })
 })
 

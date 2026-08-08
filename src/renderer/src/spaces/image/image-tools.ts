@@ -26,6 +26,7 @@ import {
   mdiTriangleOutline,
   mdiVectorLine,
 } from '@mdi/js'
+import type { SelectionShape } from '@/engines/canvas/canvas-selection'
 import type { CanvasTool } from '@/engines/canvas/CanvasEngine'
 import type { ToolbarItem } from '@/design/Toolbar'
 
@@ -305,6 +306,17 @@ export function toolById(id: string): ImageTool | null {
 export function canvasToolFor(toolId: string, modeId?: string): CanvasTool | null {
   if (toolId === 'pointer') return modeId === 'hand' ? 'hand' : 'move'
   return toolById(toolId)?.tool ?? null
+}
+
+/**
+ * Which shape the region tool draws. Its three modes are one tool with three gestures, the same
+ * way the pointer group holds both dragging the content and dragging the view.
+ */
+export function selectionShapeFor(toolId: string, modeId?: string): SelectionShape | null {
+  if (toolId !== 'region') return null
+  if (modeId === 'ellipse') return 'ellipse'
+  if (modeId === 'lasso') return 'lasso'
+  return 'rect'
 }
 
 /** The mode each group opens armed with — its first row, as Figma's groups do. */

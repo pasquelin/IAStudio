@@ -27,6 +27,13 @@ import {
   type Transform,
   WHITE,
 } from './canvas-state'
+import {
+  dragSelection,
+  extendLasso,
+  selectionOutline,
+  type CanvasSelection,
+  type SelectionShape,
+} from './canvas-selection'
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
 import {
   CanvasOverlay,
@@ -46,7 +53,7 @@ import {
   type Axis,
 } from './guides'
 import { PixelPatches, type PatchSide } from './PixelPatches'
-import { box, type Point } from './shape-geometry'
+import type { Point } from './shape-geometry'
 import { brushRect } from './tiles'
 import {
   containIn,
@@ -120,6 +127,8 @@ export type CanvasEngineOptions = {
   onPixelsDropped: (patchId: string) => void
   /** Pan and zoom are session state: the engine moves them, React stores them. */
   onViewport: (viewport: Viewport) => void
+  /** So is the selection: the engine carves it out, React holds it. */
+  onSelection: (selection: CanvasSelection) => void
   /** The host's size, which the zoom commands need: they centre on a panel they cannot see. */
   onHost: (size: Size) => void
   guides: GuidePort
@@ -252,6 +261,8 @@ export class CanvasEngine {
   private readonly clips = new Map<string, ClipProxy>()
   /** Built on the first isolated group, and only then: most documents never hold one. */
   private isolation: AlphaFilter | null = null
+  /** The stencil of the last clipped pass, kept only so the next one can free it. */
+  private clipping: Container | null = null
   private readonly stamp = new Graphics()
   private readonly overlay = new CanvasOverlay(() => this.scene())
   /** Built with the renderer, in `mount`: a tile is a texture, and there is none before then. */
@@ -274,7 +285,9 @@ export class CanvasEngine {
 
   private gesture: Gesture = NO_GESTURE
   private pointer: Point | null = null
-  private selection: Rect | null = null
+  private selection: CanvasSelection = null
+  /** Which of the three the region tool draws. Pushed in by the bar, like the tool itself. */
+  private selectionShape: SelectionShape = 'rect'
   /** Moved locally, published to React once a frame — see `moveTo`. */
   private publishing: Viewport | null = null
   /** The last one React was told about, so its echo can be told apart from a command. */
@@ -641,6 +654,46 @@ export class CanvasEngine {
   }
 
   /**
+   * Fills a layer's mask with the selection: what is inside stays visible, everything else is
+   * hidden. The mask and the inpainting mask are the same object, so this is also how a region
+   * becomes something to regenerate.
+   *
+   * The layer must already carry a mask — the command that gives it one runs on the React side,
+   * and the surface follows on the next `apply`.
+   */
+  fillMaskFromSelection(layerId: string): void {
+    const renderer = this.app?.renderer
+    const mask = this.surfaces.get(maskKey(layerId))
+    const outline = selectionOutline(this.selection)
+    const first = outline[0]
+    if (!renderer || !mask || !first || !this.state) return
+
+    const sheet = new Graphics()
+    // Black over the whole document, then the region in white: the mask reads its red channel,
+    // so black hides and white reveals, exactly as painting into it by hand does.
+    sheet.rect(0, 0, this.state.width, this.state.height)
+    sheet.fill({ color: 0x000000 })
+    sheet.moveTo(first.x, first.y)
+    for (const point of outline.slice(1)) sheet.lineTo(point.x, point.y)
+    sheet.fill({ color: WHITE })
+
+    renderer.render({ container: sheet, target: mask.texture, clear: true })
+    sheet.destroy()
+    this.render()
+  }
+
+  /** Rectangle, ellipse or lasso: three gestures behind one tool, as the bar offers them. */
+  setSelectionShape(shape: SelectionShape): void {
+    this.selectionShape = shape
+  }
+
+  /** Session state, so React owns it: the engine draws it and clips strokes to it. */
+  setSelection(selection: CanvasSelection): void {
+    this.selection = selection
+    this.overlay.invalidate()
+  }
+
+  /**
    * Aims the brush at the layer's pixels or at its mask. A mask is painted with the same tools as
    * anything else — that is the point of it being a surface like the others.
    */
@@ -691,6 +744,10 @@ export class CanvasEngine {
     this.groups.clear()
     for (const clip of this.clips.values()) this.destroyClip(clip)
     this.clips.clear()
+    // Without `children`: the stamp is the engine's own and outlives every pass.
+    this.clipping?.removeChildren()
+    this.clipping?.destroy()
+    this.clipping = null
     this.isolation?.destroy()
     this.isolation = null
     this.stamp.destroy()
@@ -737,22 +794,36 @@ export class CanvasEngine {
     }
   }
 
-  /** The marquee, in screen space: a selection is chrome, and chrome never scales. */
+  /**
+   * The marquee, in screen space: a selection is chrome, and chrome never scales. One polyline
+   * for the three shapes — the ellipse arrives already flattened, so the overlay's context needs
+   * to know nothing beyond `moveTo` and `lineTo`.
+   */
   private readonly paintSelection = (context: OverlayContext): void => {
-    const rect = this.selection
-    if (!rect) return
-
-    const start = toScreen(this.view.viewport, rect)
-    const end = toScreen(this.view.viewport, { x: rect.x + rect.width, y: rect.y + rect.height })
+    const outline = selectionOutline(this.selection)
+    const first = outline[0]
+    if (!first) return
 
     context.strokeStyle = this.colors.accent
     context.setLineDash([4, 4])
-    context.strokeRect(
-      Math.round(start.x) + 0.5,
-      Math.round(start.y) + 0.5,
-      Math.round(end.x - start.x),
-      Math.round(end.y - start.y),
-    )
+    context.beginPath()
+
+    const at = (point: Point): Point => {
+      const screen = toScreen(this.view.viewport, point)
+      return { x: Math.round(screen.x) + 0.5, y: Math.round(screen.y) + 0.5 }
+    }
+
+    const start = at(first)
+    context.moveTo(start.x, start.y)
+    for (const point of outline.slice(1)) {
+      const screen = at(point)
+      context.lineTo(screen.x, screen.y)
+    }
+    // Closed by hand rather than with `closePath`: a lasso is left open by the hand that drew it,
+    // and the region it stands for is the closed one.
+    context.lineTo(start.x, start.y)
+
+    context.stroke()
     context.setLineDash([])
   }
 
@@ -972,8 +1043,7 @@ export class CanvasEngine {
 
     if (this.tool === 'select') {
       this.gesture = { kind: 'select', from: point }
-      this.selection = { x: point.x, y: point.y, width: 0, height: 0 }
-      this.overlay.invalidate()
+      this.publishSelection(dragSelection(this.selectionShape, point, point, false))
       return
     }
 
@@ -983,6 +1053,13 @@ export class CanvasEngine {
     this.beginPixels(target)
     this.gesture = { kind: 'paint', from: point }
     this.dab(target.surface, [point])
+  }
+
+  /** Moved locally and told to React, as the viewport is: the overlay must not wait a commit. */
+  private publishSelection(selection: CanvasSelection): void {
+    this.selection = selection
+    this.overlay.invalidate()
+    this.options.onSelection(selection)
   }
 
   private activeLayer(): Layer | null {
@@ -1065,8 +1142,13 @@ export class CanvasEngine {
         return
       }
       case 'select': {
-        this.selection = box(gesture.from, point, event.shiftKey)
-        this.overlay.invalidate()
+        // A lasso follows the hand; the other two are a box between where it started and where
+        // it is now, so only the lasso needs what came before.
+        this.publishSelection(
+          this.selectionShape === 'lasso'
+            ? extendLasso(this.selection, point)
+            : dragSelection(this.selectionShape, gesture.from, point, event.shiftKey),
+        )
         return
       }
       case 'paint': {
@@ -1162,7 +1244,7 @@ export class CanvasEngine {
     const sheet = new Graphics()
     sheet.rect(0, 0, this.state.width, this.state.height)
     sheet.fill({ color })
-    renderer.render({ container: sheet, target: surface.texture, clear: false })
+    renderer.render({ container: this.clipped(sheet), target: surface.texture, clear: false })
     sheet.destroy()
   }
 
@@ -1220,8 +1302,34 @@ export class CanvasEngine {
 
     // `clear: false`, or every dab would wipe the stroke that came before it. And `target`,
     // not the `renderTexture` option, which v8 deprecated.
-    renderer.render({ container: this.stamp, target: surface.texture, clear: false })
+    renderer.render({ container: this.clipped(this.stamp), target: surface.texture, clear: false })
     this.render()
+  }
+
+  /**
+   * What to render so a stroke stops at the selection's edge. Cut on the GPU rather than tested
+   * per dab: the shape is a stencil, and the same one serves the brush, the eraser and the
+   * bucket. Handed back unchanged when nothing is selected, which is the common case.
+   */
+  private clipped(container: Container): Container {
+    const outline = selectionOutline(this.selection)
+    const first = outline[0]
+    if (!first) return container
+
+    const shape = new Graphics()
+    shape.moveTo(first.x, first.y)
+    for (const point of outline.slice(1)) shape.lineTo(point.x, point.y)
+    shape.fill({ color: 0xffffff })
+
+    const holder = new Container()
+    holder.addChild(shape)
+    holder.addChild(container)
+    holder.mask = shape
+    // Rebuilt per pass rather than kept: a stroke that reaches the selection's edge is the
+    // uncommon case, and a held stencil would have to be invalidated on every selection change.
+    this.clipping?.destroy({ children: true })
+    this.clipping = holder
+    return holder
   }
 
   private pick(point: Point): void {

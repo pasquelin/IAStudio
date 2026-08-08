@@ -12,12 +12,18 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
-import { useCanvasViews, viewOf } from '@/stores/canvas-views'
+import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
-import { canvasToolFor, cursorFor, DEFAULT_MODES, IMAGE_TOOLS } from './image-tools'
+import {
+  canvasToolFor,
+  cursorFor,
+  DEFAULT_MODES,
+  IMAGE_TOOLS,
+  selectionShapeFor,
+} from './image-tools'
 import { layerPort } from './layer-port'
 import { placeAsset } from './place-asset'
 import { revealAssets } from './reveal-assets'
@@ -47,6 +53,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
   const view = useCanvasViews(state => viewOf(state, documentId))
+  const selection = useCanvasViews(state => selectionOf(state, documentId))
   // Booleans rather than the history itself: a selector building an object on every call hands
   // React a new snapshot each render, and the loop never settles.
   const undoable = useCanvases(state => canUndo(historyOf(state, documentId)))
@@ -71,6 +78,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       onPixels: pixels.record,
       onPixelsDropped: pixels.drop,
       onViewport: viewport => views().setViewport(documentId, viewport),
+      onSelection: selection => views().setSelection(documentId, selection),
       onHost: size => views().setHost(documentId, size),
       guides: guidePort(documentId),
       layers: layerPort(documentId),
@@ -95,6 +103,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   }, [view])
 
   useEffect(() => {
+    engine.current?.setSelection(selection)
+  }, [selection])
+
+  useEffect(() => {
     engine.current?.setBrush(brush)
   }, [brush])
 
@@ -103,6 +115,9 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   useEffect(() => {
     const canvasTool = canvasToolFor(tool, mode)
     if (canvasTool) engine.current?.setTool(canvasTool)
+    // The region group holds three gestures behind one tool; the bar says which is armed.
+    const shape = selectionShapeFor(tool, mode)
+    if (shape) engine.current?.setSelectionShape(shape)
   }, [tool, mode])
 
   /**

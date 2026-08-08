@@ -118,6 +118,17 @@ export function renameLayer(id: string, name: string): Command<CanvasState> {
   return patch(`layer:rename:${id}`, id, { name })
 }
 
+/**
+ * Gives a layer a mask, or takes it away. Its pixels belong to the engine like the layer's own;
+ * what the stack records is only that there is one, and whether it is hiding anything.
+ */
+export function setLayerMask(
+  id: string,
+  mask: { enabled: boolean; linked: boolean } | undefined,
+): Command<CanvasState> {
+  return patch(`layer:mask:${id}`, id, { mask })
+}
+
 /** The whole transform at once: the inspector's fields all write into the same object. */
 export function setLayerTransform(id: string, transform: Transform): Command<CanvasState> {
   return patch(`layer:transform:${id}`, id, { transform })
