@@ -82,6 +82,9 @@ export type Channels = {
 
   sceneExport: 'scene:export'
 
+  fontsList: 'fonts:list'
+  fontsRead: 'fonts:read'
+
   diagnosticsReport: 'diagnostics:report'
 
   windowToggleFullScreen: 'window:toggle-full-screen'
@@ -150,6 +153,9 @@ export const CHANNELS: Channels = {
 
   sceneExport: 'scene:export',
 
+  fontsList: 'fonts:list',
+  fontsRead: 'fonts:read',
+
   diagnosticsReport: 'diagnostics:report',
 
   windowToggleFullScreen: 'window:toggle-full-screen',
@@ -199,6 +205,7 @@ export type LogScope =
   | 'image.export'
   | 'document.save'
   | 'assets.reveal'
+  | 'font.face'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -210,6 +217,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'image.export',
   'document.save',
   'assets.reveal',
+  'font.face',
 ]
 
 /** `LogEntry.scope` is a free string — the main process logs under its own names too. */
@@ -427,6 +435,19 @@ export type StudioBridge = {
      * a file sits is the main process's business, exactly as for an asset.
      */
     export: (request: SceneExportRequest) => Promise<string | null>
+  }
+  /**
+   * The typefaces the machine has installed. The studio's own three are not here: they ship
+   * inside it, and `EMBEDDED_FONTS` names them without anyone having to ask.
+   */
+  fonts: {
+    /** Every installed family, sorted, one cut each — see `system-fonts`. */
+    list: () => Promise<string[]>
+    /**
+     * A face's outlines, as a font file the renderer can parse. `null` when the machine no
+     * longer has that family, which is the missing-font hole a shared document opens.
+     */
+    read: (family: string) => Promise<Uint8Array | null>
   }
   media: {
     /**

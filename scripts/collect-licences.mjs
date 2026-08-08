@@ -32,6 +32,7 @@ const SHIPPED = [
   'electron-store',
   'electron-updater',
   'mediabunny',
+  'opentype.js',
   'pixi.js',
   'three',
   'three-mesh-bvh',
@@ -118,7 +119,28 @@ function ffmpegLicence() {
   }
 }
 
-const licences = [ffmpegLicence(), ...SHIPPED.map(collect)].sort((one, other) =>
+/**
+ * The typefaces the studio ships so that a 3D text has outlines to extrude without asking the
+ * network. Not npm packages: they sit beside the renderer's bundle, and the Open Font License
+ * asks that its terms travel with the files — which they do, in the very same folder.
+ */
+function fontLicences() {
+  const folder = join(ROOT, 'src', 'renderer', 'public', 'fonts')
+
+  return [
+    ['Lato', 'Lato-OFL.txt', 'https://fonts.google.com/specimen/Lato'],
+    ['IBM Plex Serif', 'IBMPlex-OFL.txt', 'https://fonts.google.com/specimen/IBM+Plex+Serif'],
+    ['IBM Plex Mono', 'IBMPlex-OFL.txt', 'https://fonts.google.com/specimen/IBM+Plex+Mono'],
+  ].map(([name, notice, sources]) => ({
+    name,
+    version: 'shipped with the application',
+    spdx: 'OFL-1.1',
+    text: readFileSync(join(folder, notice), 'utf8').trim(),
+    sources,
+  }))
+}
+
+const licences = [ffmpegLicence(), ...fontLicences(), ...SHIPPED.map(collect)].sort((one, other) =>
   one.name.localeCompare(other.name),
 )
 
