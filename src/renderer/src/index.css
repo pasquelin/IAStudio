@@ -52,6 +52,12 @@
    * the contrast of a dimmed label would otherwise repaint every mesh in the scene.
    */
   --color-mesh: #868a91;
+  /*
+   * What dims the part of a document a crop is about to throw away. Translucent black rather
+   * than a flat grey: the picture underneath has to stay readable, or the frame cannot be
+   * placed against what it cuts.
+   */
+  --color-scrim: #00000099;
 
   --radius-sc-sm: 4px;
   --radius-sc-md: 6px;
@@ -187,6 +193,11 @@
    * on, whatever the studio's own chrome is doing — the same trade the opaque window makes.
    */
   --color-monitor: #000000;
+  /*
+   * Lighter than its dark counterpart: on a light document the same black would read as a hole
+   * rather than as a dimmed part of the picture.
+   */
+  --color-scrim: #0000004d;
 }
 
 :root {

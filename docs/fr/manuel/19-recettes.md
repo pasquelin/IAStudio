@@ -325,7 +325,7 @@ encore, et rien à l'écran ne le dit sur le moment.
 | **importer un `.hdr`**, un `.obj` ou un `.fbx` | il est refusé | seul le `.glb` entre, côté 3D |
 | **détourer ou vectoriser** une image | le panneau Modèles s'ouvre, et rien de plus | il manque le moyen de choisir le modèle |
 | **exporter une vidéo** | aucun bouton | l'export vidéo n'est pas écrit — l'image, elle, sort par `⇧⌘E` |
-| **recadrer, retourner ou pivoter** une image | les outils sont gris | les pixels ne suivraient pas le cadre |
+| **annuler un recadrage** | la taille revient, les pixels rognés non | l'historique ne garde pas l'image d'avant en entier |
 
 Tout est détaillé, sans rien cacher, dans
 [Ce qui n'existe pas encore](18-limites.md).

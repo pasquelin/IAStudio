@@ -14,7 +14,14 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
-import { addLayer, flatten, flipImage, mergeDown, rotateImage } from '@/engines/canvas/commands'
+import {
+  addLayer,
+  cropToRect,
+  flatten,
+  flipImage,
+  mergeDown,
+  rotateImage,
+} from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
@@ -114,6 +121,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         useCanvases
           .getState()
           .runCommand(documentId, addLayer(textLayer(newId(), caption.current, at))),
+      onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
       guides: guidePort(documentId),
       layers: layerPort(documentId),
     })

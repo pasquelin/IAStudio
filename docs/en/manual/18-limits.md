@@ -74,7 +74,6 @@ They are visible in the toolbar, greyed out.
 
 | Tool | Group |
 |---|---|
-| **Crop** (`F`) | Frame |
 | **Slice** (`⇧S`) | Frame |
 | **Cut** (`S`) | Frame |
 | **Pen** | Drawing |
@@ -84,14 +83,22 @@ They are visible in the toolbar, greyed out.
 clicking in the image places no note. It is the studio's only button that looks alive without
 being so — the others say their state by their grey.
 
-### Cropping is not offered
+### Cropping does not give its pixels back on undo
 
-**Merge down, Flatten, mirroring and the quarter turn now are** — the **Image** menu. What blocked
-them was a layer's surface not following its document; it follows it now.
+**All five are offered** — Merge down, Flatten, mirroring, the quarter turn, and now the **crop**
+(`F`). What blocked them was a layer's surface not following its document; it follows it now.
 
-Only the **crop** is left, and for another reason: the gesture itself does not exist. Drawing the
-frame, seeing it, committing it — none of it is written. A button that damages the document is
-worse than a button that is not there.
+The crop does come with a limit worth knowing before you use it: **shrinking the document throws
+away for good whatever falls outside the frame**. `⌘Z` restores the original size, but the removed
+area comes back empty, and the brush strokes it held do not come back either. This is Photoshop's
+behaviour with "Delete cropped pixels" ticked — except that its history can give them back.
+
+**The reason.** Pixels do not live in the document but in GPU textures, and the history only keeps
+512 px tiles of them, capped at 256 MB. A hard crop would remove more tiles than that cap allows.
+Keeping the whole picture from before would mean full-size snapshots in the undo stack, which the
+studio rules out precisely so `⌘Z` stays instant on heavy documents.
+
+**What to do:** press `⇧⌘E` before a wide crop, if you may want to come back.
 
 ### Fill is not a paint bucket
 
@@ -379,8 +386,8 @@ If you only remember five things from this chapter:
 
 1. **images, sequences, sounds and skies do not save** — closing the tab loses the work; in the
    Image workspace, `⇧⌘E` at least gets a PNG out before you close;
-2. **cropping a picture is not offered** — merging, flattening, mirroring and the quarter turn
-   are, from the Image menu;
+2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
+   before cropping hard;
 3. **there is no video export** — the studio cannot yet deliver a final file;
 4. **Cut out, Enlarge and Vectorize cannot complete** — there is no way to choose their model;
 5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.

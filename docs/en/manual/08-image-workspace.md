@@ -139,9 +139,21 @@ it, as long as the document has not changed size in between.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Crop** | `F` | *not available yet* |
+| **Crop** | `F` | drag a frame over the picture; on release, the document is brought down to it |
 | **Slice** | `⇧S` | *not available yet* |
 | **Cut** | `S` | *not available yet* |
+
+While you drag, whatever falls outside the frame is **dimmed**: that is exactly what the crop is
+about to remove. Hold `⇧` to constrain the frame to a square. The frame never leaves the picture —
+a crop trims, it does not grow.
+
+**The crop applies on release**, with no confirmation step. To correct it, press `⌘Z` and start
+again; to abandon it mid-gesture, press the **middle mouse button** before letting go.
+
+> ⚠️ **`⌘Z` gives the frame back, not the cropped pixels.** Shrinking the document throws away
+> what fell outside for good: undo restores the original size, but the removed area comes back
+> empty. This is Photoshop's behaviour with "Delete cropped pixels" ticked — except that
+> Photoshop can give them back. **Export before cropping hard** if you may want to return to it.
 
 ### Selection group
 

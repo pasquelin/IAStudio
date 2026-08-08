@@ -307,11 +307,29 @@ describe('resizeCanvas against resizeImage', () => {
 })
 
 describe('cropToRect', () => {
-  it('brings the frame onto the rectangle and slides the layers under it', () => {
+  it('brings the frame onto the rectangle', () => {
     const [after] = roundTrip(stack('a'), cropToRect({ x: 30, y: 40, width: 100, height: 80 }))
 
     expect([after.width, after.height]).toEqual([100, 80])
-    expect(layerById(after, 'a')?.transform.x).toBe(-30)
+  })
+
+  /**
+   * The pixels move, the layers do not. A surface is document-sized and `CanvasEngine.resurface`
+   * recuts it to the kept region, so the picture already starts where the new frame expects it —
+   * sliding the transforms as well would displace it twice and empty one side of the document.
+   */
+  it('leaves the layer transforms where they were, since the surfaces carry the move', () => {
+    const before = stack('a')
+    const [after] = roundTrip(before, cropToRect({ x: 30, y: 40, width: 100, height: 80 }))
+
+    expect(layerById(after, 'a')?.transform).toEqual(layerById(before, 'a')?.transform)
+  })
+
+  it('gives the frame back on undo', () => {
+    const before = { ...stack('a'), width: 100, height: 100 }
+    const [, reverted] = roundTrip(before, cropToRect({ x: 30, y: 40, width: 50, height: 50 }))
+
+    expect([reverted.width, reverted.height]).toEqual([100, 100])
   })
 })
 

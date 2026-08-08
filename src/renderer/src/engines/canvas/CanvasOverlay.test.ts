@@ -69,6 +69,7 @@ const COLORS = {
   rulerText: '#text',
   rulerTick: '#tick',
   accent: '#accent',
+  scrim: '#scrim',
 }
 
 function scene(overrides: Partial<OverlayScene> = {}): OverlayScene {

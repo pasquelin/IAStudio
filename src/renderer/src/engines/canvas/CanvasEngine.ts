@@ -47,8 +47,8 @@ import {
   handleAt,
   HANDLE_GRAB,
   HANDLE_IDS,
+  gripRects,
   layerBoxOf,
-  handlePoints,
   resizeBy,
   rotateBy,
   type HandleId,
@@ -71,6 +71,7 @@ import {
   type Axis,
 } from './guides'
 import { PixelPatches, type PatchSide } from './PixelPatches'
+import { cropChrome, cropRect } from './crop'
 import {
   paintShape,
   shapeBounds,
@@ -161,6 +162,11 @@ export type CanvasEngineOptions = {
   onHost: (size: Size) => void
   /** Where a caption was asked for. The layer it becomes is the stack's to make. */
   onText: (at: Point) => void
+  /**
+   * The frame a crop drag settled on, in document units. Same split as `onText`: the engine
+   * knows where the pointer went, the document's history knows what that means.
+   */
+  onCrop: (rect: Rect) => void
   guides: GuidePort
   layers: LayerPort
 }
@@ -179,7 +185,7 @@ export const DEFAULT_BRUSH: BrushSettings = {
  * Exported so the bar's registry can be crossed against it: a tool listed here whose button is
  * not greyed arms a gesture `onPointerDown` drops on the floor.
  */
-export const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['crop', 'comment'])
+export const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['comment'])
 
 /**
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
@@ -268,12 +274,17 @@ type Gesture =
   /** `origin` is where the layer stood when the drag began: every step is absolute from it. */
   | { kind: 'move'; id: string; from: Point; origin: Point }
   | { kind: 'select'; from: Point }
+  /** `rect` is the frame as it stands, already clamped: the chrome and the commit share it. */
+  | { kind: 'crop'; from: Point; rect: Rect | null }
   /** `from` is where the drag began; the shape is redrawn from it on every move. */
   | { kind: 'shape'; from: Point; target: BrushTarget }
   /** `origin` is the transform the layer had when the drag began: every step is absolute. */
   | { kind: 'handle'; id: string; handle: HandleId; box: Rect; from: Point; origin: Transform }
 
 const NO_GESTURE: Gesture = { kind: 'none' }
+
+/** Where a surface's picture starts when nothing displaced it — see `resurface`. */
+const ORIGIN: Point = { x: 0, y: 0 }
 
 /** Which token each part of the overlay is painted with. The values live in `index.css`. */
 const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
@@ -283,6 +294,7 @@ const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
   rulerText: '--color-muted',
   rulerTick: '--color-border',
   accent: '--color-accent',
+  scrim: '--color-scrim',
 }
 
 /** Legible on the studio's greys, and only ever used before a canvas exists to read from. */
@@ -293,6 +305,7 @@ const FALLBACK_COLORS: OverlayColors = {
   rulerText: '#868a91',
   rulerTick: '#34363a',
   accent: '#3574f0',
+  scrim: '#00000099',
 }
 
 function readColors(element: HTMLElement): OverlayColors {
@@ -306,6 +319,7 @@ function readColors(element: HTMLElement): OverlayColors {
     rulerText: read('rulerText'),
     rulerTick: read('rulerTick'),
     accent: read('accent'),
+    scrim: read('scrim'),
   }
 }
 
@@ -482,18 +496,27 @@ export class CanvasEngine {
    * when the layer was born, and never grew: a quarter turn left the layers outside the frame,
    * and merging or flattening had nowhere document-sized to compose into.
    *
-   * The copy lands at the origin, with no offset. `resizeCanvas` already moves every layer's
-   * transform by the frame's own displacement, and that transform is what places the sprite —
-   * shifting the pixels here as well would apply the same move twice.
+   * `from` is the corner the kept picture starts at. A crop moves it; a resample or a quarter
+   * turn leaves it at the origin. It has to be carried here rather than through the layer
+   * transforms: a surface is document-sized, so the new one only has room for the kept region,
+   * and a copy landing at the origin would keep the document's top-left corner instead — the
+   * frame would then come out empty wherever `from` pushed past the new width.
+   *
+   * A surface already at that size is left alone: the crop recuts the pixels before the command
+   * that reports the new frame, and the `apply` that follows must not undo its work.
    *
    * Shrinking loses what falls outside, and the undo tiles go with it: the frame comes back on
    * ⌘Z, the pixels it cut away do not.
    */
-  private resurface(size: Size): void {
+  private resurface(size: Size, from: Point = ORIGIN): void {
     const renderer = this.app?.renderer
     if (!renderer || this.surfaces.size === 0) return
 
+    let recut = false
     for (const surface of this.surfaces.values()) {
+      if (surface.texture.width === size.width && surface.texture.height === size.height) continue
+      recut = true
+
       const texture = RenderTexture.create({
         width: size.width,
         height: size.height,
@@ -501,6 +524,7 @@ export class CanvasEngine {
       })
 
       const carried = new Sprite(surface.texture)
+      carried.position.set(-from.x, -from.y)
       renderer.render({ container: carried, target: texture, clear: true })
       // The old texture is destroyed just below, so its source must not go with the sprite.
       carried.destroy({ texture: false, textureSource: false })
@@ -510,7 +534,7 @@ export class CanvasEngine {
       surface.texture = texture
     }
 
-    this.patches?.dropAll()
+    if (recut) this.patches?.dropAll()
   }
 
   /** The stack, made real on the GPU: one texture per paintable layer, in the stack's order. */
@@ -1150,7 +1174,10 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
-      paint: this.selection || this.pending || this.tool === 'move' ? this.paintOverlay : undefined,
+      // Unconditional: every painter below already returns on nothing to draw, and a gate
+      // repeating those guards is one a new decoration gets forgotten from — silently, since
+      // nothing would fail, it would simply never appear.
+      paint: this.paintOverlay,
     }
   }
 
@@ -1163,33 +1190,46 @@ export class CanvasEngine {
   private readonly paintOverlay = (context: OverlayContext): void => {
     this.paintSelection(context)
     this.paintPending(context)
+    this.paintCrop(context)
     this.paintHandles(context)
   }
 
   /**
+   * Nothing here outlives the gesture: the frame applies on release, so one still on screen
+   * afterwards would promise an adjustment step that does not exist.
+   */
+  private readonly paintCrop = (context: OverlayContext): void => {
+    const rect = this.gesture.kind === 'crop' ? this.gesture.rect : null
+    if (!rect) return
+
+    const { scrim, frame, grips } = cropChrome(rect, this.view.viewport, this.documentSize())
+
+    context.fillStyle = this.colors.scrim
+    for (const band of scrim) context.fillRect(band.x, band.y, band.width, band.height)
+
+    context.strokeStyle = this.colors.accent
+    context.strokeRect(frame.x, frame.y, frame.width, frame.height)
+
+    context.fillStyle = this.colors.accent
+    for (const grip of grips) context.fillRect(grip.x, grip.y, grip.width, grip.height)
+  }
+
+  /**
    * The nine grips of the armed layer, drawn only while the move tool holds them — Pixi ships no
-   * transformer, so these are ours. Fixed-size squares: a grip that shrank with the zoom would be
-   * unclickable on a document seen at 5%.
+   * transformer, so these are ours.
    */
   private readonly paintHandles = (context: OverlayContext): void => {
     const layer = this.tool === 'move' ? this.activeLayer() : null
     const box = layer && !layer.locked.position ? this.boxOf(layer) : null
     if (!box) return
 
-    const points = handlePoints(box)
+    const grips = gripRects(box, this.view.viewport)
     context.strokeStyle = this.colors.accent
     context.fillStyle = this.colors.accent
 
     for (const id of HANDLE_IDS) {
-      const grip = points[id]
-      const screen = toScreen(this.view.viewport, grip)
-      const side = HANDLE_GRAB * 2
-      context.fillRect(
-        Math.round(screen.x - HANDLE_GRAB) + 0.5,
-        Math.round(screen.y - HANDLE_GRAB) + 0.5,
-        side,
-        side,
-      )
+      const grip = grips[id]
+      context.fillRect(grip.x, grip.y, grip.width, grip.height)
     }
   }
 
@@ -1420,10 +1460,22 @@ export class CanvasEngine {
     const point = toDocument(this.view.viewport, host)
     this.pointer = host
 
+    const panning = event.button === 1 || this.spacing || this.tool === 'hand'
+
+    // A crop interrupted is a crop abandoned, and it is the one gesture that has to be: reaching
+    // for the pan or for the context menu is not a way to accept a frame, and accepting one
+    // throws pixels away that ⌘Z does not give back. Dropped before `endGesture` sees it, since
+    // that is what would commit it — every other gesture does want to be closed rather than lost.
+    if ((panning || event.button !== 0) && this.gesture.kind === 'crop') {
+      this.gesture = NO_GESTURE
+      this.overlay.invalidate()
+    }
+
     // Middle button pans whatever the tool: it is the one gesture no tool may take over. It can
-    // land mid-drag, so whatever was open is closed rather than abandoned — a guide gesture left
-    // open would make the next drag of that guide re-create it instead of moving it.
-    if (event.button === 1 || this.spacing || this.tool === 'hand') {
+    // land mid-drag, so whatever was open is closed rather than abandoned — the crop excepted,
+    // just above — since a guide gesture left open would make the next drag of that guide
+    // re-create it instead of moving it.
+    if (panning) {
       this.endGesture()
       this.gesture = { kind: 'pan', from: host }
       this.setCursor('grabbing')
@@ -1509,6 +1561,11 @@ export class CanvasEngine {
 
       this.beginPixels(target)
       this.gesture = { kind: 'shape', from: point, target }
+      return
+    }
+
+    if (this.tool === 'crop') {
+      this.gesture = { kind: 'crop', from: point, rect: null }
       return
     }
 
@@ -1703,6 +1760,13 @@ export class CanvasEngine {
         this.options.layers.transform(gesture.id, next)
         return
       }
+      case 'crop': {
+        // Clamped here rather than at the drop, so the frame drawn is the frame applied.
+        const rect = cropRect(gesture.from, point, this.documentSize(), event.shiftKey)
+        this.gesture = { kind: 'crop', from: gesture.from, rect }
+        this.overlay.invalidate()
+        return
+      }
       case 'shape': {
         // Previewed in the overlay, not in the layer: drawing into the texture on every move
         // would leave every intermediate shape behind, since a texture keeps what it is given.
@@ -1723,7 +1787,10 @@ export class CanvasEngine {
     this.endGesture(onChrome)
   }
 
-  /** Closes whatever gesture is open, exactly once, whether it ended or was taken over. */
+  /**
+   * Closes whatever gesture is open, exactly once, whether it ended or was taken over. A crop
+   * taken over never reaches here: `onPointerDown` drops it first, because closing one commits it.
+   */
   private endGesture(dropped = false): void {
     const gesture = this.gesture
     this.gesture = NO_GESTURE
@@ -1739,6 +1806,21 @@ export class CanvasEngine {
     if (gesture.kind === 'move' || gesture.kind === 'handle') this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
     if (gesture.kind === 'shape') this.commitShape(gesture.target)
+    // One history entry, and only for a frame that carved something out: a click carries `null`.
+    if (gesture.kind === 'crop') {
+      this.overlay.invalidate()
+      if (gesture.rect) {
+        // Dropped first: a marquee is in document coordinates, and the crop moves the picture
+        // under it. Left standing it would stencil the wrong pixels — or, once the frame no
+        // longer reaches it, none at all, and the brush would go silently dead.
+        this.publishSelection(null)
+        // The pixels before the state: `resurface` recuts every surface to the kept region, and
+        // the `apply` the command triggers then finds them already the right size.
+        const { width, height } = gesture.rect
+        this.resurface({ width, height }, gesture.rect)
+        this.options.onCrop(gesture.rect)
+      }
+    }
     // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
     // selection is a stencil nothing gets through, and the document stops taking paint at all.
     if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)

@@ -615,7 +615,12 @@ export function rotateImage(clockwise: boolean): Command<CanvasState> {
   })
 }
 
-/** Cropping is resizing the frame onto a rectangle: same gesture, offset the other way. */
+/**
+ * Cropping is the frame closing onto a rectangle. The layers deliberately do NOT move with it:
+ * a surface is document-sized, and `CanvasEngine.resurface` recuts each one to the kept region,
+ * so the picture is already where the new frame expects it. Displacing the transforms as well
+ * would apply the same move twice and empty one side of the document.
+ */
 export function cropToRect(rect: Rect): Command<CanvasState> {
-  return resizeCanvas(rect.width, rect.height, { x: -rect.x, y: -rect.y })
+  return resizeCanvas(rect.width, rect.height, { x: 0, y: 0 })
 }

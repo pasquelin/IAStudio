@@ -318,7 +318,7 @@ on screen says so at the moment you try.
 | **import an `.hdr`**, an `.obj` or an `.fbx` | it is refused | on the 3D side, only `.glb` comes in |
 | **cut out or vectorize** a picture | the Models panel opens, and no more | there is no way to choose the model |
 | **export a video** | no button | video export is not written — a picture does go out with `⇧⌘E` |
-| **crop, flip or rotate** a picture | the tools are greyed out | the pixels would not follow the frame |
+| **undo a crop** | the size comes back, the cropped pixels do not | the history does not keep the whole picture from before |
 
 All of it is spelled out, with nothing hidden, in
 [What does not exist yet](18-limits.md).
