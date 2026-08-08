@@ -328,7 +328,13 @@ export class CanvasEngine {
   /** Built on the first isolated group, and only then: most documents never hold one. */
   private isolation: AlphaFilter | null = null
   /** The stencil of the last clipped pass, kept only so the next one can free it. */
-  private clipping: Container | null = null
+  /**
+   * The stencil pass in flight, and the stencil it owns. Held as the pair because they are not
+   * the same thing to free: the holder's other children are borrowed — the brush's stamp lives
+   * as long as the engine, a tool's drawing is freed by the tool — and only the stencil is the
+   * pass's own.
+   */
+  private clipping: { holder: Container; stencil: Graphics } | null = null
   /** One grading pass per adjustment layer, holding the filter it applies. */
   private readonly adjustments = new Map<string, AdjustPass>()
   /** What each text layer was last drawn with, so unchanged words cost no rasterization. */
@@ -962,8 +968,6 @@ export class CanvasEngine {
     this.clips.clear()
     this.pendingMaskFills.clear()
     this.wordings.clear()
-    // The stamp is the engine's own and is destroyed below, so it leaves the holder first.
-    this.clipping?.removeChild(this.stamp)
     this.dropClipping()
     this.isolation?.destroy()
     this.isolation = null
@@ -1744,35 +1748,39 @@ export class CanvasEngine {
     const outline = selectionOutline(this.selection)
     const first = outline[0]
     if (!first) {
-      // Freed here rather than never: the stamp has already been reparented by whoever renders
-      // it next, so the holder and its stencil are the only things left.
       this.dropClipping()
       return container
     }
 
-    const shape = new Graphics()
-    shape.moveTo(first.x, first.y)
-    for (const point of outline.slice(1)) shape.lineTo(point.x, point.y)
-    shape.fill({ color: 0xffffff })
+    const stencil = new Graphics()
+    stencil.moveTo(first.x, first.y)
+    for (const point of outline.slice(1)) stencil.lineTo(point.x, point.y)
+    stencil.fill({ color: 0xffffff })
 
     const holder = new Container()
-    holder.addChild(shape)
+    holder.addChild(stencil)
     holder.addChild(container)
-    holder.mask = shape
+    holder.mask = stencil
     // Rebuilt per pass rather than kept: a held stencil would have to be invalidated on every
-    // selection change, and the stamp is reparented into the new holder before the old is freed.
+    // selection change.
     this.dropClipping()
-    this.clipping = holder
+    this.clipping = { holder, stencil }
     return holder
   }
 
+  /**
+   * Frees the pass, and only the pass. Its borrowed children leave first: a holder freed with
+   * its subtree took the brush's stamp with it, and the stamp is built once with the engine —
+   * so the first stroke after a marquee was dropped killed the brush for the whole session.
+   */
   private dropClipping(): void {
-    const holder = this.clipping
+    const clipping = this.clipping
     this.clipping = null
-    if (!holder) return
+    if (!clipping) return
 
-    // With `children`: what stays inside is the stencil alone, which belongs to the pass.
-    holder.destroy({ children: true })
+    clipping.holder.removeChildren()
+    clipping.stencil.destroy()
+    clipping.holder.destroy()
   }
 
   /** Draws the previewed shape into the armed layer, once, when the hand comes up. */

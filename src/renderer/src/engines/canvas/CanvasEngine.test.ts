@@ -47,6 +47,7 @@ type Placed = {
   mask: object | null
   maskChannel: string
   size: { width: number; height: number } | null
+  destroyed: boolean
   matrix: { a: number; b: number; c: number; d: number; tx: number; ty: number } | null
 }
 
@@ -136,6 +137,7 @@ vi.mock('pixi.js', () => {
     mask: object | null = null
     maskChannel = 'red'
     size: { width: number; height: number } | null = null
+    destroyed = false
     matrix: { a: number; b: number; c: number; d: number; tx: number; ty: number } | null = null
 
     constructor(options: { label?: string } = {}) {
@@ -186,7 +188,11 @@ vi.mock('pixi.js', () => {
       this.children.length = 0
     }
 
-    destroy(): void {}
+    /** Recorded, and passed down: `destroy({ children: true })` takes the subtree with it. */
+    destroy(options?: { children?: boolean }): void {
+      this.destroyed = true
+      if (options?.children) for (const child of this.children) child.destroy(options)
+    }
   }
 
   class Graphics extends Container {
@@ -897,6 +903,59 @@ describe('painting a transformed layer', () => {
 
     expect(paintSpace()?.matrix?.tx).toBeCloseTo(0, 10)
     expect(paintSpace()?.matrix?.ty).toBeCloseTo(0, 10)
+  })
+})
+
+/**
+ * The stencil holder is rebuilt per pass and the old one freed with its children. The brush's
+ * stamp is not one of its children to keep — it is built once, with the engine, and lives as long
+ * as it does.
+ */
+describe('the stencil holder and the stamp it borrows', () => {
+  const paintSpace = (): Placed | undefined => gpu.containers.find(container => container.matrix)
+
+  /** With nothing selected the stamp goes straight into the paint space: that is how it is found. */
+  function stampAfterAPlainDab(host: HTMLElement): Placed {
+    press(host, 200, 200)
+    release(200, 200)
+    const stamp = paintSpace()?.children[0]
+    if (!stamp) throw new Error('a dab always draws through the paint space')
+    return stamp
+  }
+
+  it('keeps the stamp alive when a selection is dropped between two strokes', async () => {
+    const { engine, host } = await mounted()
+    const stamp = stampAfterAPlainDab(host)
+
+    // Inside a marquee the stamp is reparented into a holder, which is what the stencil masks.
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 100, height: 100 } })
+    press(host, 50, 50)
+    release(50, 50)
+
+    // Deselecting frees that holder. The stamp must not go with it, or the brush is dead for
+    // the rest of the session: it is built once and never rebuilt.
+    engine.setSelection(null)
+    press(host, 200, 200)
+    release(200, 200)
+
+    expect(stamp.destroyed).toBe(false)
+  })
+
+  it('keeps the stamp alive when another tool borrows the stencil next', async () => {
+    const { engine, host } = await mounted()
+    const stamp = stampAfterAPlainDab(host)
+
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 100, height: 100 } })
+    press(host, 50, 50)
+    release(50, 50)
+
+    // The bucket cuts on the same stencil, and hands `clipped` a sheet of its own: the holder
+    // holding the stamp is freed by a pass the stamp is not part of.
+    engine.setTool('fill')
+    press(host, 60, 60)
+    release(60, 60)
+
+    expect(stamp.destroyed).toBe(false)
   })
 })
 
