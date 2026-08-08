@@ -59,9 +59,6 @@ export type SuggestPromptsRequest = {
  */
 export const PROMPT_SUGGESTIONS_MAX = 5
 
-/** Enough to compare without scrolling a panel that is a third of a window wide. */
-export const PROMPT_SUGGESTIONS_DEFAULT = 3
-
 /**
  * How many references one rewrite may be conditioned on. `contextual-v2` accepts fifteen where
  * the other modes stop at five — see `docs/scenario-api/reference/generate.prompt.md`.

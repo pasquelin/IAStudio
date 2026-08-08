@@ -1,6 +1,6 @@
 import { APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
-import { createAssistQueue, QueueClearedError, type AssistQueueDeps } from './assist-queue'
+import { createAssistQueue, type AssistQueueDeps } from './assist-queue'
 
 function queueOf(overrides: Partial<AssistQueueDeps> = {}) {
   return createAssistQueue({
@@ -106,54 +106,5 @@ describe('createAssistQueue', () => {
     })
 
     await expect(queue.run(task)).resolves.toBe(3)
-  })
-
-  describe('clearing out', () => {
-    it('abandons what has not started', async () => {
-      const queue = queueOf({ concurrency: () => 1 })
-      const first = held('one')
-      const abandoned = vi.fn(async () => 'two')
-
-      const running = queue.run(first.task)
-      const waiting = queue.run(abandoned)
-
-      queue.clear()
-
-      await expect(waiting).rejects.toBeInstanceOf(QueueClearedError)
-      expect(abandoned).not.toHaveBeenCalled()
-
-      first.release()
-      await expect(running).resolves.toBe('one')
-    })
-
-    it('leaves what already started to finish', async () => {
-      const queue = queueOf({ concurrency: () => 1 })
-      const first = held('one')
-
-      const running = queue.run(first.task)
-      queue.clear()
-      first.release()
-
-      await expect(running).resolves.toBe('one')
-    })
-  })
-
-  describe('size', () => {
-    it('counts what is waiting as well as what is running', async () => {
-      const queue = queueOf({ concurrency: () => 1 })
-      const first = held('one')
-      const second = held('two')
-
-      expect(queue.size()).toBe(0)
-
-      const running = [queue.run(first.task), queue.run(second.task)]
-      expect(queue.size()).toBe(2)
-
-      first.release()
-      second.release()
-      await Promise.all(running)
-
-      expect(queue.size()).toBe(0)
-    })
   })
 })

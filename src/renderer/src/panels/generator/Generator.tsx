@@ -28,6 +28,11 @@ function suggestPrompts(modelId: string, draft: string): Promise<PromptSuggestio
   return bridge.scenario.suggestPrompts({ modelId, prompt: draft })
 }
 
+/** A field's value as text. Anything else reads as an empty draft rather than as `[object …]`. */
+function textOf(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
 /** Carries a draft into the language the models read. Nothing is proposed: the text changes. */
 function translateDraft(draft: string): Promise<PromptTranslation> {
   const bridge = getBridge()
@@ -133,7 +138,7 @@ export function Generator() {
           accessory={(field, handle) =>
             field.promptSpark === true && (
               <PromptAssistant
-                readDraft={() => (typeof handle.read() === 'string' ? String(handle.read()) : '')}
+                readDraft={() => textOf(handle.read())}
                 request={draft => suggestPrompts(modelId, draft)}
                 translate={translateDraft}
                 describeStyle={describeStyle}

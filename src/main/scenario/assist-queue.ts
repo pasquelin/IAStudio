@@ -13,23 +13,6 @@ export type AssistQueue = {
    * queue only decides when work runs, never what a failure means.
    */
   run: <T>(task: () => Promise<T>) => Promise<T>
-  /** Abandons everything still waiting. Work already started is left to finish. */
-  clear: () => void
-  /** How many tasks are waiting or running — what tells a caller the queue is idle. */
-  size: () => number
-}
-
-/** Thrown into a waiting task's caller when the queue is cleared out from under it. */
-export class QueueClearedError extends Error {
-  constructor() {
-    super('queue-cleared')
-    this.name = 'QueueClearedError'
-  }
-}
-
-type Waiting = {
-  start: () => void
-  abandon: () => void
 }
 
 /**
@@ -48,7 +31,7 @@ export function createAssistQueue({
   sleep,
   backoffBaseMs,
 }: AssistQueueDeps): AssistQueue {
-  const waiting: Waiting[] = []
+  const waiting: (() => void)[] = []
   const retry: Retry = createRetry({
     maxRetries,
     sleep,
@@ -58,11 +41,11 @@ export function createAssistQueue({
 
   const pump = (): void => {
     while (running < concurrency()) {
-      const next = waiting.shift()
-      if (!next) return
+      const start = waiting.shift()
+      if (!start) return
 
       running++
-      next.start()
+      start()
     }
   }
 
@@ -70,35 +53,26 @@ export function createAssistQueue({
     run: <T>(task: () => Promise<T>): Promise<T> =>
       new Promise<T>((resolve, reject) => {
         // The slot is given back BEFORE the caller is answered: settling first would let a
-        // caller resume — and read the queue — while its own task still counted as running.
+        // caller resume — and queue more work — while its own task still counted as running.
         const release = (): void => {
           running--
           pump()
         }
 
-        waiting.push({
-          start: () => {
-            void retry(task).then(
-              value => {
-                release()
-                resolve(value)
-              },
-              (error: unknown) => {
-                release()
-                reject(error)
-              },
-            )
-          },
-          abandon: () => reject(new QueueClearedError()),
+        waiting.push(() => {
+          void retry(task).then(
+            value => {
+              release()
+              resolve(value)
+            },
+            (error: unknown) => {
+              release()
+              reject(error)
+            },
+          )
         })
 
         pump()
       }),
-
-    clear: () => {
-      for (const task of waiting.splice(0)) task.abandon()
-    },
-
-    size: () => waiting.length + running,
   }
 }

@@ -48,45 +48,40 @@ export function PromptAssistant({
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
 
-  const ask = (): void => {
+  /** The waiting, the clearing and the failure handling all three actions share. */
+  const perform = (action: () => Promise<void>): void => {
     setPending(true)
+    // Cleared as the request goes out rather than when it comes back: what is on screen belongs
+    // to the previous answer, and leaving it there through a refusal would attribute it to this.
     setFailure(null)
+    setSuggestions([])
 
-    void request(readDraft())
-      .then(answer => {
-        setSuggestions(answer)
-        // An answer with nothing in it is not a failure, and must not read as one.
-        setFailure(answer.length === 0 ? t('prompt.noSuggestion') : null)
-      })
-      .catch((error: unknown) => {
-        setSuggestions([])
-        setFailure(failureMessage(error))
-      })
+    void action()
+      .catch((error: unknown) => setFailure(failureMessage(error)))
       .finally(() => setPending(false))
   }
+
+  const ask = (): void =>
+    perform(async () => {
+      const answer = await request(readDraft())
+      setSuggestions(answer)
+      // An answer with nothing in it is not a failure, and must not read as one.
+      if (answer.length === 0) setFailure(t('prompt.noSuggestion'))
+    })
 
   const carryOver = (): void => {
     const draft = readDraft()
     // Nothing to carry, and the channel refuses blank text anyway.
     if (draft.trim() === '') return
 
-    setPending(true)
-    setFailure(null)
+    perform(async () => {
+      const { text, detectedLanguage } = await translate(draft)
 
-    void translate(draft)
-      .then(({ text, detectedLanguage }) => {
-        // Already on the right side: replacing the text would rewrite what the user wrote for
-        // no gain, so it is left alone and said so.
-        if (detectedLanguage.toLowerCase() === ENGLISH) {
-          setFailure(t('prompt.alreadyEnglish'))
-          return
-        }
-
-        onAdoptText(text)
-        setFailure(null)
-      })
-      .catch((error: unknown) => setFailure(failureMessage(error)))
-      .finally(() => setPending(false))
+      // Already on the right side: replacing the text would rewrite what the user wrote for no
+      // gain, so it is left alone and said so.
+      if (detectedLanguage.toLowerCase() === ENGLISH) setFailure(t('prompt.alreadyEnglish'))
+      else onAdoptText(text)
+    })
   }
 
   const readStyle = (): void => {
@@ -97,16 +92,7 @@ export function PromptAssistant({
       return
     }
 
-    setPending(true)
-    setFailure(null)
-
-    void describeStyle(references)
-      .then(({ description }) => {
-        onAdoptText(description)
-        setFailure(null)
-      })
-      .catch((error: unknown) => setFailure(failureMessage(error)))
-      .finally(() => setPending(false))
+    perform(async () => onAdoptText((await describeStyle(references)).description))
   }
 
   return (
