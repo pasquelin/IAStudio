@@ -135,15 +135,21 @@ export function createLocalBackend({
     await writeFile(join(projectPath(), relativePath), bytes)
 
     const at = now()
+    // What the row already held survives being written again. Pulling a twin a second time
+    // lands on the same id on purpose, and rebuilding the asset from the request alone dropped
+    // the tags the user had put on it and moved its creation date to now — which also sent it
+    // back to the top of a shelf sorted newest first, for a file that had not changed.
+    const existing = await catalog().find(request.id)
     const asset: Asset = {
+      ...existing,
       id: request.id,
       name: request.name,
       type: request.type,
       location: 'local',
       path: relativePath,
       bytes: bytes.byteLength,
-      tags: [],
-      createdAt: at,
+      tags: existing?.tags ?? [],
+      createdAt: existing?.createdAt ?? at,
       localChangedAt: at,
       ...(request.probe ? { probe: request.probe } : {}),
       ...(request.jobId ? { jobId: request.jobId } : {}),

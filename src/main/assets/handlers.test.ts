@@ -11,8 +11,11 @@ import type { CloudBackend } from './cloud-backend'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
 
-function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
-  return Promise.resolve(invokeChannel(channel, ...args)) as Promise<T>
+async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
+  // The harness answers `unknown`, and every caller knows the shape its own channel returns.
+  // A guard here would be a second copy of the contract `shared/ipc.ts` already states.
+  const answer: unknown = await invokeChannel(channel, ...args)
+  return answer as T
 }
 
 function localAsset(overrides: Partial<Asset> = {}): Asset {
@@ -45,6 +48,7 @@ function cloudAsset(id: string): CloudAsset {
 
 type Harness = {
   catalog: AsyncCatalog
+  cloud: CloudBackend
   listed: unknown[]
   searched: unknown[]
   tagged: unknown[]
@@ -114,7 +118,7 @@ function setup(
     activeOwnerId: () => 'proj_a',
   })
 
-  return { catalog, listed, searched, tagged, deleted, pulled, pushed, removedFiles }
+  return { catalog, cloud, listed, searched, tagged, deleted, pulled, pushed, removedFiles }
 }
 
 describe('browsing the library', () => {
@@ -264,6 +268,28 @@ describe('moving assets between the two sides', () => {
   it('brings down each asset in turn rather than all at once', async () => {
     await invoke(CHANNELS.cloudPull, ['remote_1', 'remote_2'])
     expect(harness.pulled).toEqual(['remote_1', 'remote_2'])
+  })
+
+  it('keeps the assets it did bring down when one of them fails', async () => {
+    // The bytes of the first are already on disk and its row already added; a single rejection
+    // would leave the caller unable to say which ids made it.
+    const flaky = setup()
+    flaky.cloud.pull = asset => {
+      if (asset.id === 'remote_2') return Promise.reject(new Error('not-found'))
+      return Promise.resolve(localAsset({ id: `local_${asset.id}` }))
+    }
+
+    const outcomes = await invoke<{ assetId: string; ok: boolean }[]>(CHANNELS.cloudPull, [
+      'remote_1',
+      'remote_2',
+      'remote_3',
+    ])
+
+    expect(outcomes.map(one => [one.assetId, one.ok])).toEqual([
+      ['remote_1', true],
+      ['remote_2', false],
+      ['remote_3', true],
+    ])
   })
 
   it('reports what each push did, successes and failures alike', async () => {

@@ -381,8 +381,12 @@ export type StudioBridge = {
   cloud: {
     /** One page of the library. The cursor is opaque, and null once there is no more. */
     browse: (query: CloudQuery) => Promise<CloudPage>
-    /** Brings assets into the project, bytes and all. Answers the rows they became. */
-    pull: (remoteAssetIds: readonly string[]) => Promise<Asset[]>
+    /**
+     * Brings assets into the project, bytes and all. Answers what each one did — a download
+     * that fails halfway has already written the ones before it, and a rejection would lose
+     * that. The rows themselves arrive through the catalogue, which the store re-reads.
+     */
+    pull: (remoteAssetIds: readonly string[]) => Promise<SyncOutcome[]>
     /** Sends local assets up. Answers what each one did, successes and failures alike. */
     push: (assetIds: readonly string[]) => Promise<SyncOutcome[]>
     /** What a push or a pull would do, before it costs a single request. */

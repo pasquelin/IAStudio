@@ -78,10 +78,29 @@ describe('moving assets between the project and the library', () => {
     expect(useCloud.getState().busy).toBe(false)
   })
 
+  it('reports what each fetch did, exactly as a push does', async () => {
+    installFakeBridge({
+      cloud: {
+        pull: () =>
+          Promise.resolve([
+            { assetId: 'remote_1', ok: true },
+            { assetId: 'remote_2', ok: false, error: 'not-found' },
+          ]),
+      },
+    })
+
+    await useCloud.getState().pull(['remote_1', 'remote_2'])
+
+    // A download that fails halfway has already written the ones before it to disk.
+    expect(failedCount(useCloud.getState())).toBe(1)
+  })
+
   it('lets the shelf go again after a failure', async () => {
     installFakeBridge({ cloud: { pull: () => Promise.reject(new Error('offline')) } })
 
-    await expect(useCloud.getState().pull(['remote_1'])).rejects.toThrow()
+    await useCloud.getState().pull(['remote_1'])
+
+    expect(failedCount(useCloud.getState())).toBe(1)
     expect(useCloud.getState().busy).toBe(false)
   })
 

@@ -80,6 +80,8 @@ export const useAssets = create<AssetsState>()(
     (set, get) => {
       let pending: ReturnType<typeof setTimeout> | null = null
       let reading: Promise<void> | null = null
+      // Which scope the read in flight is answering for.
+      let readingScope: readonly AssetType[] | null = null
 
       return {
         collection: DEFAULT_COLLECTION_STATE,
@@ -101,13 +103,18 @@ export const useAssets = create<AssetsState>()(
         // second one: `assets.search` is a synchronous SQLite query in the main process, and
         // three generations finishing together asked for the same answer three times over.
         refresh: async () => {
-          if (reading) return reading
+          // Shared only when it answers the same question. A read in flight for the previous
+          // space would otherwise be handed back for the new one, leaving the shelf showing
+          // what the space one had just left uses.
+          if (reading && sameScope(readingScope, get().scope)) return reading
+
+          const scope = get().scope
+          readingScope = scope
 
           reading = (async () => {
             const bridge = getBridge()
             if (!bridge) return
 
-            const scope = get().scope
             try {
               set({ items: await bridge.assets.search(scope ? { types: [...scope] } : {}) })
             } catch {

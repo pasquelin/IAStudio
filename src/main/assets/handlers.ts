@@ -186,14 +186,23 @@ export function registerAssetHandlers({
 
   handle(CHANNELS.cloudPull, async (_event, remoteAssetIds) => {
     const ids = parseAssetIds(remoteAssetIds)
-    return await reduced(async () => {
-      const found = await remote().getBulk(ids)
-      const pulled: Asset[] = []
-      // One at a time: a pull of forty assets is forty downloads, and firing them together
-      // would fight the very concurrency the job manager exists to bound.
-      for (const cloudAsset of found) pulled.push(await cloud().pull(cloudAsset))
-      return pulled.map(withoutSourcePath)
-    })
+    const found = await reduced(() => remote().getBulk(ids))
+    const outcomes: SyncOutcome[] = []
+
+    // One at a time, and one outcome each — the same shape a push answers with. A download that
+    // fails halfway has already written the ones before it to disk and added their rows; a
+    // single rejection would throw that away as far as the caller can tell.
+    for (const cloudAsset of found) {
+      try {
+        await cloud().pull(cloudAsset)
+        outcomes.push({ assetId: cloudAsset.id, ok: true })
+      } catch (error) {
+        log.error('assets', describeFailure(error))
+        outcomes.push({ assetId: cloudAsset.id, ok: false, error: failureOf(error) })
+      }
+    }
+
+    return outcomes
   })
 
   handle(CHANNELS.cloudPush, async (_event, assetIds) => {

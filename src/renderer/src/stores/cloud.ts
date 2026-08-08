@@ -51,7 +51,11 @@ export const useCloud = create<CloudState>()((set, get) => ({
 
     set({ busy: true, outcomes: [] })
     try {
-      await bridge.cloud.pull(remoteAssetIds)
+      set({ outcomes: await bridge.cloud.pull(remoteAssetIds) })
+    } catch {
+      // The boundary itself refused — a bad selection, or no project. What failed per asset
+      // comes back in `outcomes`, exactly as it does for a push.
+      set({ outcomes: remoteAssetIds.map(assetId => ({ assetId, ok: false })) })
     } finally {
       set({ busy: false })
       useAssets.getState().invalidate()
