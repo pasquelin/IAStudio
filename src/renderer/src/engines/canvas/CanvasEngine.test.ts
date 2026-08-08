@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import type { FontRef } from '@shared/domain/font'
 import type { FaceRegistrar } from './canvas-fonts'
@@ -22,7 +22,7 @@ import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from './shape-geometry'
 import { RULER_SIZE } from './CanvasOverlay'
-import { DEFAULT_VIEW, type Viewport } from './viewport'
+import { DEFAULT_VIEW, toDocument, type Viewport } from './viewport'
 
 /**
  * jsdom has no WebGL context, so Pixi is doubled. What is tested here is what the engine
@@ -76,6 +76,10 @@ const gpu: {
   refuseLoad: boolean
   /** Every extraction, so what a snapshot framed and at what scale can be asserted. */
   extracted: { frame?: unknown; resolution?: number }[]
+  /** Every frame the eyedropper read, so what it sampled — and how much of it — can be asserted. */
+  sampled: { x: number; y: number; width: number; height: number }[]
+  /** What the renderer hands back, so a test can name the colour standing under the pointer. */
+  pixels: number[]
 } = {
   renders: 0,
   texturesCreated: 0,
@@ -88,6 +92,8 @@ const gpu: {
   loaded: [],
   refuseLoad: false,
   extracted: [],
+  sampled: [],
+  pixels: [0, 0, 0, 0],
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -234,7 +240,12 @@ vi.mock('pixi.js', () => {
           if (options?.target) gpu.painted.push(options.target.id)
         },
         extract: {
-          pixels: () => ({ pixels: [0, 0, 0, 0] }),
+          pixels: (options: {
+            frame?: { x: number; y: number; width: number; height: number }
+          }) => {
+            if (options.frame) gpu.sampled.push(options.frame)
+            return { pixels: gpu.pixels }
+          },
           base64: (options: { frame?: unknown; resolution?: number }) => {
             gpu.extracted.push(options)
             return Promise.resolve('data:image/png;base64,QUJD')
@@ -275,7 +286,15 @@ vi.mock('pixi.js', () => {
       },
     },
     Text: class extends Container {},
-    Rectangle: class {},
+    // Carries its four numbers: the eyedropper's whole point is which frame it asks for.
+    Rectangle: class {
+      constructor(
+        readonly x: number,
+        readonly y: number,
+        readonly width: number,
+        readonly height: number,
+      ) {}
+    },
     Texture: class {},
     RenderTexture: {
       create: (options: { width: number; height: number }) => {
@@ -317,6 +336,8 @@ type Harness = {
   layers: string[]
   /** The families the engine asked the page for, in the order it asked. */
   faces: string[]
+  /** Every colour the eyedropper handed back, packed as the document stores one. */
+  picks: number[]
 }
 
 /**
@@ -341,10 +362,11 @@ function mounted(
   const dropped: string[] = []
   const layers: string[] = []
   const faces: string[] = []
+  const picks: number[] = []
   const defaultFace: FaceRegistrar = async family => void faces.push(family)
   const harness: Harness = {
     engine: new CanvasEngine({
-      onPick: () => undefined,
+      onPick: color => picks.push(color),
       onPixels: patchId => patches.push(patchId),
       onPixelsDropped: patchId => dropped.push(patchId),
       onViewport: viewport => viewports.push(viewport),
@@ -383,6 +405,7 @@ function mounted(
     dropped,
     layers,
     faces,
+    picks,
   }
 
   mountedEngines.push(harness.engine)
@@ -469,6 +492,8 @@ beforeEach(() => {
   gpu.painted = []
   gpu.loaded = []
   gpu.extracted = []
+  gpu.sampled = []
+  gpu.pixels = [0, 0, 0, 0]
 })
 
 describe('the blend table', () => {
@@ -2545,5 +2570,216 @@ describe('a layer whose picture never arrives', () => {
     )
     expect(engine).toBeDefined()
     gpu.refuseLoad = false
+  })
+})
+
+/** The cursor the engine set. It writes on Pixi's canvas, which `mount` puts inside the host. */
+function cursorOf(host: HTMLElement): string {
+  return host.querySelector('canvas')?.style.cursor ?? ''
+}
+
+function wheel(host: HTMLElement, init: WheelEventInit): void {
+  host.dispatchEvent(new WheelEvent('wheel', { cancelable: true, ...init }))
+}
+
+function key(type: 'keydown' | 'keyup', init: KeyboardEventInit): void {
+  window.dispatchEvent(new KeyboardEvent(type, init))
+}
+
+describe('the eyedropper', () => {
+  it('hands the colour standing under the pointer to the document', async () => {
+    gpu.pixels = [0x33, 0x66, 0x99, 255]
+    const { host, picks } = await mounted(DEFAULT_CANVAS, 'picker')
+
+    press(host, 40, 50)
+
+    expect(picks).toEqual([0x336699])
+  })
+
+  // A buffer shorter than three channels reads as black rather than as a colour made up from
+  // whatever the missing ones defaulted to — an opaque white, say, which `?? 255` would give.
+  it('reads a channel it was not given as none of it', async () => {
+    gpu.pixels = []
+    const { host, picks } = await mounted(DEFAULT_CANVAS, 'picker')
+
+    press(host, 40, 50)
+
+    expect(picks).toEqual([0])
+  })
+
+  // One pixel, not the layer: extracting a 1024² sprite to read a single colour is a 4 MB
+  // allocation and a synchronous read, on every click.
+  it('reads a single pixel, where it was pressed', async () => {
+    const { host } = await mounted(DEFAULT_CANVAS, 'picker')
+
+    press(host, 40, 50)
+
+    expect(gpu.sampled).toEqual([{ x: 40, y: 50, width: 1, height: 1 }])
+  })
+
+  /**
+   * At 1:1 unpanned a screen point and a document point are the same number, so every other test
+   * here would pass on an eyedropper that never converted at all. Zoomed, they part company: 41
+   * screen pixels are 20.5 document ones, and the pixel holding them is 20.
+   */
+  it('reads the pixel under the pointer, whatever the zoom', async () => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'picker')
+    engine.setView({ ...VIEW_1_1, snap: false, viewport: { x: 0, y: 0, scale: 2 } })
+
+    press(host, 41, 51)
+
+    expect(gpu.sampled).toEqual([{ x: 20, y: 25, width: 1, height: 1 }])
+  })
+
+  /**
+   * Rulers off: their bands cover the first 20 px of each axis and take a press before any tool
+   * sees it, so a point at or outside the origin is unreachable with them on.
+   */
+  it.each([
+    { where: 'left of', x: -5, y: 50 },
+    { where: 'above', x: 40, y: -5 },
+    { where: 'right of', x: 1024, y: 50 },
+    { where: 'below', x: 40, y: 1024 },
+  ])('says nothing about a point $where the document', async ({ x, y }) => {
+    const { engine, host, picks } = await mounted(DEFAULT_CANVAS, 'picker')
+    engine.setView({ ...VIEW_1_1, snap: false, rulers: false })
+
+    press(host, x, y)
+
+    expect(picks).toEqual([])
+    expect(gpu.sampled).toEqual([])
+  })
+
+  // The other side of the same guard: pressed from the outside alone, tightening it to `x < 1` or
+  // `x >= width - 1` would take the first and last row of the document away without a test noticing.
+  it.each([
+    { corner: 'first', x: 0, y: 0 },
+    { corner: 'last', x: 1023, y: 1023 },
+  ])('reads the $corner pixel of the document', async ({ x, y }) => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'picker')
+    engine.setView({ ...VIEW_1_1, snap: false, rulers: false })
+
+    press(host, x, y)
+
+    expect(gpu.sampled).toEqual([{ x, y, width: 1, height: 1 }])
+  })
+
+  it('says nothing when no layer is armed', async () => {
+    const { host, picks } = await mounted({ ...DEFAULT_CANVAS, activeLayerId: null }, 'picker')
+
+    press(host, 40, 50)
+
+    expect(picks).toEqual([])
+    expect(gpu.sampled).toEqual([])
+  })
+})
+
+describe('holding space to pan', () => {
+  it('arms the hand, and gives the cursor back on the way up', async () => {
+    const { host } = await mounted()
+
+    key('keydown', { code: 'Space' })
+    expect(cursorOf(host)).toBe('grab')
+
+    key('keyup', { code: 'Space' })
+    expect(cursorOf(host)).toBe('')
+  })
+
+  // A space typed into a prompt is a space, not a pan.
+  it('leaves a space typed into a field alone', async () => {
+    const { host } = await mounted()
+    const field = document.createElement('input')
+    document.body.appendChild(field)
+    // Booked rather than removed after the assertion: a failing expect would leave the field in
+    // the page for every test after it, which is the kind of residue shuffling makes unreadable.
+    onTestFinished(() => field.remove())
+
+    field.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
+
+    expect(cursorOf(host)).toBe('')
+  })
+
+  it('ignores a key that is not the space bar', async () => {
+    const { host } = await mounted()
+
+    key('keydown', { code: 'KeyB' })
+
+    expect(cursorOf(host)).toBe('')
+  })
+
+  // Held down, the key repeats. Re-arming on each repeat would take the grabbing cursor off a
+  // pan that is still open and put the idle hand back over it.
+  it('ignores the repeats of a key already held', async () => {
+    const { host } = await mounted()
+    key('keydown', { code: 'Space' })
+    press(host, 40, 50)
+
+    key('keydown', { code: 'Space', repeat: true })
+
+    expect(cursorOf(host)).toBe('grabbing')
+  })
+
+  it('holds the hand through another key coming up', async () => {
+    const { host } = await mounted()
+    key('keydown', { code: 'Space' })
+
+    key('keyup', { code: 'KeyB' })
+
+    expect(cursorOf(host)).toBe('grab')
+  })
+
+  // ⌘Tab while space is held: the key up never arrives, and the hand would stay for good.
+  it('gives the cursor back when the window loses focus', async () => {
+    const { host } = await mounted()
+    key('keydown', { code: 'Space' })
+
+    window.dispatchEvent(new Event('blur'))
+
+    expect(cursorOf(host)).toBe('')
+  })
+
+  // The key going up mid-drag ends the hold, not the gesture: the pan runs to the pointer up.
+  it('leaves the grabbing cursor alone while a pan is still open', async () => {
+    const { host } = await mounted()
+    key('keydown', { code: 'Space' })
+    press(host, 40, 50)
+
+    key('keyup', { code: 'Space' })
+
+    expect(cursorOf(host)).toBe('grabbing')
+  })
+})
+
+describe('the wheel', () => {
+  // A trackpad sends a pinch as a wheel with `ctrlKey`, which is also how ⌘/Ctrl + wheel arrives.
+  it.each([
+    { how: 'ctrl', ctrlKey: true, metaKey: false },
+    { how: 'meta', ctrlKey: false, metaKey: true },
+  ])('zooms with $how held, around the pointer', async ({ ctrlKey, metaKey }) => {
+    const { host, viewports } = await mounted()
+
+    wheel(host, { clientX: 200, clientY: 100, deltaY: -100, ctrlKey, metaKey })
+    await nextFrame()
+
+    // Falling back to the identity rather than asserting non-null: a wheel that published nothing
+    // fails the scale below instead of throwing something unreadable.
+    const next = viewports.at(-1) ?? { x: 0, y: 0, scale: 1 }
+    expect(next.scale).toBeGreaterThan(1)
+    // Whatever sat under the pointer is still under it — scaling without an anchor drags the
+    // document away from the cursor, which is the regression this line exists for.
+    const under = toDocument(next, { x: 200, y: 100 })
+    expect(under.x).toBeCloseTo(200)
+    expect(under.y).toBeCloseTo(100)
+  })
+
+  // Bare, it scrolls as it does in Figma: the document moves under a still pointer rather than
+  // jumping a zoom step per notch.
+  it('scrolls the document on its own', async () => {
+    const { host, viewports } = await mounted()
+
+    wheel(host, { deltaX: 30, deltaY: 40 })
+    await nextFrame()
+
+    expect(viewports.at(-1)).toMatchObject({ x: -30, y: -40, scale: 1 })
   })
 })
