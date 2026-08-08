@@ -188,7 +188,7 @@ export type Asset = {
 }
 
 /** The kinds that decode as an image — the only ones a thumbnail or a texture slot can use. */
-const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
+export const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
 
 /**
  * Whether this asset is a picture the studio can serve from disk. One answer to the question,

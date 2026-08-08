@@ -6,7 +6,7 @@ import {
   mdiVideoOutline,
   mdiVolumeHigh,
 } from '@mdi/js'
-import { isLocalPicture, type Asset, type AssetType } from '@shared/domain/asset'
+import { isLocalPicture, PICTURES, type Asset, type AssetType } from '@shared/domain/asset'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { loadTake } from '@/spaces/audio/load-take'
 import { placeAsset } from '@/spaces/image/place-asset'
@@ -44,8 +44,6 @@ export type AssetIntent = {
   ready: () => boolean
   run: (asset: Asset) => void
 }
-
-const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
 
 function activeId(kind: Parameters<typeof activeIdOfKind>[1]): string | null {
   return activeIdOfKind(useDocuments.getState(), kind)

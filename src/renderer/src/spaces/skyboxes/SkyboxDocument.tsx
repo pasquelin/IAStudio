@@ -1,5 +1,5 @@
 import { mdiCubeOutline, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
 import type { SphericalAngles } from '@shared/domain/angles'
@@ -11,11 +11,12 @@ import {
   SKYBOX_VIEWS,
   type SkyboxView,
 } from '@shared/domain/skybox'
+import { PICTURES } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { cn } from '@/helpers/cn'
 import { assetsById, useAssets } from '@/stores/assets'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
@@ -82,19 +83,16 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
 
   // Dropped from the shelf, which is shown in this workspace like every other. The asset is
   // read from the catalogue rather than carried by the drag: only its id crosses.
-  const onDrop = (event: DragEvent<HTMLDivElement>): void => {
-    event.preventDefault()
-
-    const assetId = assetIdFromDrag(event)
-    const asset = assetId ? assetsById(useAssets.getState()).get(assetId) : undefined
+  const onDrop = (assetId: string): void => {
+    const asset = assetsById(useAssets.getState()).get(assetId)
     if (asset) setSkyboxSource(documentId, asset)
   }
 
   return (
-    <div
-      className="relative size-full"
-      onDragOver={event => event.preventDefault()}
+    <AssetDropTarget
+      accepts={type => type === null || PICTURES.includes(type)}
       onDrop={onDrop}
+      className="relative size-full"
     >
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
@@ -141,6 +139,6 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
           />
         </label>
       </div>
-    </div>
+    </AssetDropTarget>
   )
 }

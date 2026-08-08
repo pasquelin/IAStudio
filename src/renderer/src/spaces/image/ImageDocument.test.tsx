@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
+import { ASSET_DRAG_TYPE, startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { canvasOf, useCanvases } from '@/stores/canvases'
@@ -147,9 +147,22 @@ describe('ImageDocument', () => {
       const { container } = render(<ImageDocument documentId="doc-1" />)
       const surface = container.querySelector('.relative.min-w-0')
       expect(surface).not.toBeNull()
+
+      const dataTransfer = dragTransfer()
+      startAssetDrag({ dataTransfer }, { id: 'asset-1', type: 'image' })
+      if (surface) fireEvent.dragOver(surface, { dataTransfer })
+
+      expect(container.querySelector('.outline-accent')).not.toBeNull()
+    })
+
+    // It used to light up for anything at all, which also meant it swallowed files dragged in
+    // from the desktop — the drop then did nothing, silently.
+    it('stays quiet for a drag that is not one of ours', () => {
+      const { container } = render(<ImageDocument documentId="doc-1" />)
+      const surface = container.querySelector('.relative.min-w-0')
       if (surface) fireEvent.dragOver(surface, { dataTransfer: dragTransfer() })
 
-      expect(container.querySelector('.border-accent')).not.toBeNull()
+      expect(container.querySelector('.outline-accent')).toBeNull()
     })
   })
 

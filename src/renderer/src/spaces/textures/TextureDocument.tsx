@@ -1,15 +1,16 @@
 import { mdiRotate3dVariant, mdiTextureBox, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
 import { assetUrl } from '@shared/domain/asset'
+import { PICTURES } from '@shared/domain/asset'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { setPreview } from '@/engines/texture/commands'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
 import { restoreDocument } from '@/app/document-io'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 import { assetsById, useAssets } from '@/stores/assets'
 import { textureOf, useTextures } from '@/stores/textures'
@@ -31,7 +32,6 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<TextureRenderer | null>(null)
-  const [over, setOver] = useState(false)
 
   const texture = useTextures(state => textureOf(state, documentId))
   const byId = useAssets(assetsById)
@@ -69,12 +69,8 @@ export function TextureDocument({ documentId }: { documentId: string }) {
    * cannot be judged without, and the strip of the other seven is what the next step brings.
    */
   const onDrop = useMemo(
-    () => (event: React.DragEvent) => {
-      event.preventDefault()
-      setOver(false)
-
-      const assetId = assetIdFromDrag(event)
-      const asset = assetId ? byId.get(assetId) : null
+    () => (assetId: string) => {
+      const asset = byId.get(assetId)
       if (asset) placeTextureChannel(documentId, asset)
     },
     [byId, documentId],
@@ -83,14 +79,10 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const base = texture.channels.baseColor
 
   return (
-    <div
-      className="relative size-full"
-      onDragOver={event => {
-        event.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
+    <AssetDropTarget
+      accepts={type => type === null || PICTURES.includes(type)}
       onDrop={onDrop}
+      className="relative size-full"
     >
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
@@ -100,8 +92,6 @@ export function TextureDocument({ documentId }: { documentId: string }) {
           <EmptyState icon={mdiTextureBox} message={t('texture.dropSource')} />
         </div>
       )}
-
-      {over && <div className="border-accent pointer-events-none absolute inset-0 border-2" />}
 
       <div className="bg-panel/80 absolute top-2 left-2 flex items-center gap-1 rounded-(--radius-sc-md) p-1">
         {PREVIEW_SHAPES.map(shape => (
@@ -157,6 +147,6 @@ export function TextureDocument({ documentId }: { documentId: string }) {
           />
         </div>
       )}
-    </div>
+    </AssetDropTarget>
   )
 }
