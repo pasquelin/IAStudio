@@ -99,7 +99,7 @@ describe('Inspector, on what a panel selected', () => {
     const models = useModels.getState()
     expect(models.selected.image).toBe('eleven-music-v2')
     expect(models.preset.image).toEqual({ prompt: 'x', guidance: 7 })
-    expect(useTools.getState().open.right?.primary).toBe('generator')
+    expect(useTools.getState().open.left?.primary).toBe('generator')
   })
 
   it('reads out the clip the montage has selected', () => {

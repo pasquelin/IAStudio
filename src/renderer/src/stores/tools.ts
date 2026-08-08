@@ -49,9 +49,11 @@ type ToolsState = {
   reset: () => void
 }
 
+// The wider column is the one holding the generator: it renders a model's own form, and a
+// narrow one wraps every field onto two lines.
 export const DEFAULT_SIZES: Record<ToolZone, number> = {
-  left: 260,
-  right: 320,
+  left: 320,
+  right: 260,
   top: 180,
   bottom: 240,
 }
@@ -61,13 +63,15 @@ export const DEFAULT_SPLIT = 240
 /**
  * Which halves start open, not what each section draws in them: an entry names a half, and
  * `shownTool` reads it as the panel this section puts there — the band is the shelf in Image
- * and the montage in Video, the upper left is the layers, the meshes, or the shelf again.
+ * and the montage in Video, the upper right is the layers, the meshes, or the shelf again.
  */
 export const DEFAULT_OPEN: OpenByZone = {
-  left: { primary: 'assets', secondary: 'explorer' },
   // Models rather than the generator: nothing is chosen on a first run, and the generator does
   // not exist without a model.
-  right: { primary: 'models', secondary: 'inspector' },
+  left: { primary: 'models' },
+  // The explorer rather than the layers or the meshes: it is the one panel every space has, and
+  // on a first run it is where a document comes from.
+  right: { primary: 'explorer', secondary: 'inspector' },
   bottom: { primary: 'assets' },
 }
 
@@ -123,10 +127,11 @@ export function openFrom(persisted: unknown): OpenByZone {
  * Re-hangs every stored tool on the placements it declares today, and nowhere else.
  *
  * Two things ride on this. A tool open in one of its zones must be open in all of them: the
- * shelf lies in the bottom band nearly everywhere and stands in the left column in Video, while
- * what is open is stored per zone — a layout written in one workspace would otherwise leave it
- * invisible in the others. And a tool must leave the zones it no longer declares: the shelf
- * held the upper right until version 5, which belongs to the AI panels now.
+ * shelf lies in the bottom band nearly everywhere and stands in the right column in Video and
+ * Audio, while what is open is stored per zone — a layout written in one workspace would
+ * otherwise leave it invisible in the others. And a tool must leave the zones it no longer
+ * declares: the generation panels held the upper right until version 6, and own the left
+ * column now.
  *
  * Rebuilding from the placements rather than filtering the stored map is what makes the second
  * one free, and what keeps a horizontal band whole — no placement cuts one.
@@ -250,8 +255,9 @@ export const useTools = create<ToolsState>()(
       // would reach `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on
       // startup. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
       // mesh and light panels, and 4 the asset shelf moving out of the bottom strip. 5 still
-      // cut that strip in two and knew a `jobs` panel, which the status line carries now.
-      version: 6,
+      // cut that strip in two and knew a `jobs` panel, which the status line carries now, and
+      // 6 had the generation panels on the right, where everything else sits today.
+      version: 7,
       migrate: persisted => {
         if (typeof persisted !== 'object' || persisted === null) return undefined
         const sizes: unknown = Reflect.get(persisted, 'sizes')

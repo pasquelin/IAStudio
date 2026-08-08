@@ -8,13 +8,13 @@ import { ToolButton } from '@/design/ToolButton'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { formatBytes } from '@/helpers/format'
 import { generationOf } from '@/helpers/generation'
+import { revealTool } from '@/helpers/reveal-panel'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
-import { useTools } from '@/stores/tools'
 
 /**
  * One asset, read out — and the prompt behind it, which is what makes the shelf navigable
@@ -95,7 +95,7 @@ function GenerationGroup({ generation }: { generation: AssetGeneration }) {
     const { family } = workspaceById(workspace)
     useModels.getState().prepare(family, generation.modelId, generation.params)
     // The generator may well be closed — it is a tool window like any other.
-    useTools.getState().show('right', 'generator')
+    revealTool('generator')
   }
 
   return (

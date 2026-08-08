@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import type { CommandId } from '@shared/domain/command'
 import { saveDocument } from '@/app/document-io'
-import { availableToolIds, toolZoneIn } from '@/helpers/tool-registry'
+import { revealTool } from '@/helpers/reveal-panel'
+import { availableToolIds } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { addNodeTo } from '@/hooks/useAddNode'
@@ -68,16 +69,9 @@ export function useNativeMenu(): void {
       store.subscribe(publishMenuContext),
     )
 
-    const stopTool = bridge.menu.onOpenTool(({ tool }) => {
-      // The zone is resolved here rather than taken from the menu: a tool can sit in different
-      // zones depending on the workspace, and the menu is built once for the whole app. `null`
-      // means this workspace does not serve it — opening it would accent a rail icon that is
-      // not drawn and show nothing.
-      const zone = toolZoneIn(tool, useLayouts.getState().activeWorkspace)
-      if (!zone) return
-
-      useTools.getState().show(zone, tool)
-    })
+    // Through `revealTool`, which resolves the zone: a tool sits in different ones depending on
+    // the workspace, and the menu is built once for the whole app.
+    const stopTool = bridge.menu.onOpenTool(({ tool }) => revealTool(tool))
 
     const stopCommand = bridge.menu.onCommand(runCommand)
     // The same path the toolbar and the panels take: two ways of adding a node would drift.

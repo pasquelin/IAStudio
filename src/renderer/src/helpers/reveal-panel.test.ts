@@ -9,7 +9,7 @@ beforeEach(() => {
 })
 
 /**
- * The shelf is the bottom band in Image and the left column in Video. A half whose placement
+ * The shelf is the bottom band in Image and the right column in Video. A half whose placement
  * does not match its zone renders a different panel altogether, so opening it in the wrong one
  * shows the layers instead — and quietly rewrites the user's layout on the way.
  */
@@ -18,7 +18,7 @@ describe('revealing the shelf', () => {
     revealAssets()
 
     expect(useTools.getState().open.bottom?.primary).toBe('assets')
-    expect(useTools.getState().open.left).toBeUndefined()
+    expect(useTools.getState().open.right).toBeUndefined()
   })
 
   it('follows the workspace rather than a fixed corner', () => {
@@ -26,7 +26,7 @@ describe('revealing the shelf', () => {
 
     revealAssets()
 
-    expect(useTools.getState().open.left?.primary).toBe('assets')
+    expect(useTools.getState().open.right?.primary).toBe('assets')
   })
 
   it('focuses the band rather than reopening it when it is already there', () => {

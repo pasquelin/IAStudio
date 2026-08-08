@@ -4,7 +4,7 @@ import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 import { fillEditFields } from './ai-fields'
-import { revealTool } from './reveal-panel'
+import { revealTool } from '@/helpers/reveal-panel'
 
 /** The engine, seen from an edit: it flattens, and it hands back the mask it was painted. */
 export type EditHost = {
