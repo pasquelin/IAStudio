@@ -30,7 +30,8 @@
     "redoHint": "Redo the action that was undone",
     "generate": "Generate",
     "close": "Close",
-    "removeTool": "Remove tool"
+    "removeTool": "Remove tool",
+    "retry": "Try again"
   },
   "generation": {
     "noParameter": "This model takes no parameters.",
@@ -506,7 +507,8 @@
     "unexpected": "An unexpected error occurred.",
     "invalidValue": "Invalid value.",
     "rejected": "The generation failed.",
-    "storage": "Could not save the result to disk."
+    "storage": "Could not save the result to disk.",
+    "panelCrashed": "This panel ran into an error."
   },
   "menu": {
     "file": "File",

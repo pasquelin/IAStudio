@@ -2,6 +2,7 @@ import { mdiClose } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Panel } from '@/design/Panel'
 import { PanelHeader } from '@/design/PanelHeader'
 import { Separator } from '@/design/Separator'
@@ -44,8 +45,9 @@ export const ToolWindow = memo(function ToolWindow({
   const definition = TOOL_COMPONENTS[tool]
   const title = t(toolTitleKey(tool))
 
-  // The id comes from persisted state: an entry left over from an older version would
-  // otherwise throw while rendering, with no error boundary above to catch it.
+  // The id comes from persisted state: an entry left over from an older version names no
+  // component. Dropped rather than left to the boundary below, which would show a failure
+  // where there is only a tool this version no longer has.
   if (!definition) return null
   const { Content, Actions, fillActions } = definition
 
@@ -82,7 +84,11 @@ export const ToolWindow = memo(function ToolWindow({
           {Actions !== undefined && <Actions />}
         </PanelHeader>
         <div className="min-h-0 flex-1 overflow-auto">
-          <Content />
+          {/* Inside the panel, not around it: a tool that throws keeps its header, so the
+              user can still close it — which is the only way out of a tool that never renders. */}
+          <ErrorBoundary>
+            <Content />
+          </ErrorBoundary>
         </div>
       </Panel>
     </ToolZoneProvider>

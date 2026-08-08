@@ -3,6 +3,7 @@ import type { IDockviewPanelProps } from 'dockview-react'
 import { lazy, Suspense, type FC, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
+import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { useDocuments } from '@/stores/documents'
 
 export type DocumentPanelParams = { documentId: string }
@@ -37,9 +38,13 @@ const TextureDocument = lazy(async () => ({
 /** Every space is opened the same way: the tab checks its document still exists, then renders. */
 function panelFor(Space: FC<{ documentId: string }>): FC<IDockviewPanelProps<DocumentPanelParams>> {
   return props => (
-    <WithDocument id={props.params.documentId}>
-      {() => <Space documentId={props.params.documentId} />}
-    </WithDocument>
+    // Above the `Suspense` below, so it catches a chunk that fails to load as well as a space
+    // that throws while rendering — a rejected `lazy()` import is an error, not a fallback.
+    <ErrorBoundary>
+      <WithDocument id={props.params.documentId}>
+        {() => <Space documentId={props.params.documentId} />}
+      </WithDocument>
+    </ErrorBoundary>
   )
 }
 
@@ -69,7 +74,8 @@ function Loading() {
 
 /**
  * The layout is persisted, the documents are not: a tab restored on startup outlives its
- * document. It must render something closable, not throw with no error boundary above it.
+ * document. Says so plainly rather than throwing — the boundary above would call an ordinary
+ * restore a failure.
  */
 function WithDocument({ id, children }: { id: string; children: () => ReactNode }) {
   const { t } = useTranslation()
