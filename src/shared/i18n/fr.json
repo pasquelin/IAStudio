@@ -298,7 +298,7 @@
     "add": "Ajouter une maille",
     "addHint": "Poser une primitive à l’origine de la scène",
     "remove": "Supprimer la maille",
-    "removeHint": "Retirer la maille sélectionnée de la scène",
+    "removeHint": "Retirer de la scène les mailles sélectionnées",
     "visible": "Afficher ou masquer",
     "empty": "Aucune maille. Ajoutez-en une pour commencer.",
     "noDocument": "Ouvrez une scène pour voir ses mailles."
@@ -312,7 +312,7 @@
     "add": "Ajouter une lumière",
     "addHint": "Poser une source lumineuse dans la scène",
     "remove": "Supprimer la lumière",
-    "removeHint": "Retirer la lumière sélectionnée de la scène",
+    "removeHint": "Retirer de la scène les lumières sélectionnées",
     "visible": "Afficher ou masquer",
     "empty": "Aucune lumière. La scène restera noire.",
     "noDocument": "Ouvrez une scène pour voir ses lumières."
@@ -496,7 +496,7 @@
     "frame": "Cadrer la sélection",
     "frameHint": "Recentrer la caméra sur l’objet sélectionné",
     "delete": "Supprimer",
-    "deleteHint": "Retirer l’objet sélectionné de la scène"
+    "deleteHint": "Retirer de la scène ce qui est sélectionné"
   },
   "project": {
     "none": "Aucun projet ouvert",
@@ -811,7 +811,7 @@
     },
     "sceneDelete": {
       "title": "Supprimer",
-      "help": "Retire de la scène l’objet choisi. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
+      "help": "Retire de la scène tout ce qui est sélectionné. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
     },
     "undo": {
       "title": "Annuler",

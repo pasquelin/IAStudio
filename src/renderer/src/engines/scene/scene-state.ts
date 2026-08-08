@@ -35,8 +35,12 @@ export type SceneNode = SceneNodeBase &
  */
 export type SceneState = {
   nodes: SceneNode[]
-  selectedId: string | null
+  /** Ordered, and the last one is the anchor: what the inspector reads out. See `helpers/selection`. */
+  selectedIds: readonly string[]
 }
+
+/** Where a node ended up, reported by whatever moved it — a gizmo drag moves a whole selection. */
+export type NodeMove = { id: string; transform: Transform }
 
 export const IDENTITY_TRANSFORM: Transform = {
   position: { x: 0, y: 0, z: 0 },
@@ -56,7 +60,7 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
   aoMap: null,
 }
 
-export const EMPTY_SCENE: SceneState = { nodes: [], selectedId: null }
+export const EMPTY_SCENE: SceneState = { nodes: [], selectedIds: [] }
 
 export type MeshNode = Extract<SceneNode, { type: 'mesh' }>
 export type LightNode = Extract<SceneNode, { type: 'light' }>
@@ -65,9 +69,19 @@ export function nodeById(state: SceneState, id: string): SceneNode | null {
   return state.nodes.find(node => node.id === id) ?? null
 }
 
-/** What the panels act on: the node the selection points at, or nothing. */
-export function selectedNode(state: SceneState): SceneNode | null {
-  return state.selectedId ? nodeById(state, state.selectedId) : null
+/**
+ * What an edit acts on, in the order the selection was built — so the last one is the anchor the
+ * inspector reads out. Ids nothing answers to are dropped rather than reported as holes.
+ *
+ * The two halves are taken apart rather than a whole `SceneState`: every caller reads them as two
+ * selectors, precisely so that selecting a node does not re-render what only watches the nodes.
+ */
+export function selectedNodes(
+  nodes: readonly SceneNode[],
+  selectedIds: readonly string[],
+): SceneNode[] {
+  const byId = new Map(nodes.map(node => [node.id, node]))
+  return selectedIds.flatMap(id => byId.get(id) ?? [])
 }
 
 export function childrenOf(state: SceneState, parentId: string | null): SceneNode[] {

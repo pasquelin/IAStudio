@@ -8,10 +8,12 @@ import { createNodeOf } from '@/engines/scene/node-factory'
 import { lightNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
 import {
   DEFAULT_MATERIAL,
+  IDENTITY_TRANSFORM,
   nodeById,
   type SceneNode,
   type SceneState,
 } from '@/engines/scene/scene-state'
+import type { Transform } from '@shared/domain/scene'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useDocuments } from '@/stores/documents'
@@ -23,9 +25,17 @@ import { definition } from '.'
 const { Content } = definition
 
 function install(node: SceneNode, selected = true): SceneState {
-  const state: SceneState = { nodes: [node], selectedId: selected ? node.id : null }
+  const state: SceneState = { nodes: [node], selectedIds: selected ? [node.id] : [] }
   installScene('doc-1', state)
   return state
+}
+
+function moved(x: number, y: number, z: number): Transform {
+  return { ...IDENTITY_TRANSFORM, position: { x, y, z } }
+}
+
+function turned(x: number, y: number, z: number): Transform {
+  return { ...IDENTITY_TRANSFORM, rotation: { x, y, z } }
 }
 
 function nodeInStore(id: string): SceneNode | null {
@@ -90,7 +100,7 @@ describe('inspector panel', () => {
   it('follows the selection', () => {
     installScene('doc-1', {
       nodes: [meshNode('box-1'), lightNodeFixture('light-1')],
-      selectedId: 'light-1',
+      selectedIds: ['light-1'],
     })
     render(<Content />)
 
@@ -337,6 +347,108 @@ describe('inspector panel', () => {
     await userEvent.type(name, 'Socle')
 
     expect(nodeInStore('box-1')?.name).toBe('Socle')
+  })
+
+  // The anchor is what the fields read out; what they write to is the whole selection.
+  describe('several nodes at once', () => {
+    function installPair(): void {
+      installScene('doc-1', {
+        nodes: [meshNode('box-1'), meshNode('box-2'), lightNodeFixture('light-1')],
+        selectedIds: ['box-2', 'box-1'],
+      })
+    }
+
+    it('reads out the anchor, which is the last node picked', () => {
+      installPair()
+      render(<Content />)
+
+      expect(screen.getByLabelText('Nom')).toHaveValue('box-1')
+    })
+
+    it('writes a typed geometry parameter onto every selected mesh, as one entry', async () => {
+      installPair()
+      render(<Content />)
+
+      const width = screen.getByLabelText('Largeur')
+      await userEvent.clear(width)
+      await userEvent.type(width, '4')
+      await userEvent.tab()
+
+      for (const id of ['box-1', 'box-2']) {
+        const node = nodeInStore(id)
+        expect(node?.type === 'mesh' && node.geometry).toMatchObject({ width: 4 })
+      }
+      expect(entries()).toBe(1)
+
+      useScenes.getState().undo('doc-1')
+      const back = nodeInStore('box-2')
+      expect(back?.type === 'mesh' && back.geometry).toMatchObject({ width: 1 })
+    })
+
+    it('writes only the axis it was given, so the others keep their own values', () => {
+      installScene('doc-1', {
+        nodes: [
+          { ...meshNode('box-1'), transform: moved(1, 0, 0) },
+          { ...meshNode('box-2'), transform: moved(5, 0, 0) },
+        ],
+        selectedIds: ['box-2', 'box-1'],
+      })
+      render(<Content />)
+      const handle = axisHandle('Y')
+
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 20 })
+
+      expect(nodeInStore('box-1')?.transform.position).toMatchObject({ x: 1, y: 2 })
+      expect(nodeInStore('box-2')?.transform.position).toMatchObject({ x: 5, y: 2 })
+    })
+
+    // A sphere and a box share no width, and writing one into the other changes a shape nobody
+    // looked at.
+    it('leaves a node of another kind alone', () => {
+      installPair()
+      render(<Content />)
+
+      fireEvent.change(screen.getByLabelText('Couleur'), { target: { value: '#ff0000' } })
+
+      const light = nodeInStore('light-1')
+      expect(light?.type).toBe('light')
+      const other = nodeInStore('box-2')
+      expect(other?.type === 'mesh' && other.material.color).toBe('#ff0000')
+    })
+
+    // The field reports degrees and the document stores radians; diffing after the conversion
+    // back declared untouched axes moved, and wrote the anchor's own angle onto everyone else.
+    it('turns one axis without carrying the anchor over the others', () => {
+      installScene('doc-1', {
+        nodes: [
+          { ...meshNode('box-1'), transform: turned(0.1, 0, 0) },
+          { ...meshNode('box-2'), transform: turned(1.5, 0, 0) },
+        ],
+        selectedIds: ['box-2', 'box-1'],
+      })
+      render(<Content />)
+      const handle = axisHandle('Y', 1)
+
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 90 })
+
+      expect(nodeInStore('box-1')?.transform.rotation.x).toBeCloseTo(0.1)
+      expect(nodeInStore('box-2')?.transform.rotation.x).toBeCloseTo(1.5)
+      expect(nodeInStore('box-2')?.transform.rotation.y).toBeCloseTo(Math.PI / 2)
+    })
+
+    it('renames the anchor only: three nodes of one name is not a rename', async () => {
+      installPair()
+      render(<Content />)
+
+      const name = screen.getByLabelText('Nom')
+      await userEvent.clear(name)
+      await userEvent.type(name, 'Socle')
+
+      expect(nodeInStore('box-1')?.name).toBe('Socle')
+      expect(nodeInStore('box-2')?.name).toBe('box-2')
+    })
   })
 
   it('adds nothing to the history for a node added elsewhere', () => {

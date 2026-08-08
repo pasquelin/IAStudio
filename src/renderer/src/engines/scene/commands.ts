@@ -5,7 +5,17 @@ import type {
   MaterialDescriptor,
   Transform,
 } from '@shared/domain/scene'
-import { nodeById, type MeshNode, type SceneNode, type SceneState } from './scene-state'
+import { isRecord } from '@shared/guards'
+import { changedFields } from '@/helpers/objects'
+import { applySelection, type SelectionMode } from '@/helpers/selection'
+import { isVector3, withField, type FieldValue } from './property-fields'
+import {
+  nodeById,
+  type MeshNode,
+  type NodeMove,
+  type SceneNode,
+  type SceneState,
+} from './scene-state'
 
 /**
  * Scene edits, reimplemented in TypeScript from `mrdoob/three.js/editor/js/commands/` (MIT).
@@ -19,10 +29,10 @@ import { nodeById, type MeshNode, type SceneNode, type SceneState } from './scen
 export function addNode(node: SceneNode): Command<SceneState> {
   return {
     id: `add:${node.id}`,
-    apply: state => ({ nodes: [...state.nodes, node], selectedId: node.id }),
+    apply: state => ({ nodes: [...state.nodes, node], selectedIds: [node.id] }),
     revert: state => ({
       nodes: state.nodes.filter(candidate => candidate.id !== node.id),
-      selectedId: state.selectedId === node.id ? null : state.selectedId,
+      selectedIds: deselect(state.selectedIds, node.id),
     }),
   }
 }
@@ -39,7 +49,7 @@ export function removeNode(id: string): Command<SceneState> {
       removed = state.nodes[index] ?? null
       return {
         nodes: state.nodes.filter(node => node.id !== id),
-        selectedId: state.selectedId === id ? null : state.selectedId,
+        selectedIds: deselect(state.selectedIds, id),
       }
     },
     revert: state => {
@@ -170,7 +180,123 @@ export function multi(id: string, commands: Command<SceneState>[]): Command<Scen
   }
 }
 
+/**
+ * The same edit run over a selection, as one entry in the history: three nodes nudged together
+ * must cost one ⌘Z, not three. A node the edit does not apply to answers `null` and is skipped.
+ *
+ * The id names the nodes rather than the count, so a gesture that keeps editing the same
+ * selection keeps coalescing — and a selection of one produces the very id the single-node
+ * command would have, which is what leaves the common case untouched.
+ */
+export function batch<T extends { id: string }>(
+  label: string,
+  targets: readonly T[],
+  make: (target: T) => Command<SceneState> | null,
+): Command<SceneState> {
+  return multi(
+    commandId(
+      label,
+      targets.map(target => target.id),
+    ),
+    targets.flatMap(target => make(target) ?? []),
+  )
+}
+
+/**
+ * A geometry parameter typed into the inspector, written onto every selected mesh built from the
+ * same primitive. A box has no radius, and `withField` writes by computed key without checking —
+ * so a node of another kind is left alone rather than silently given a field it never had.
+ */
+export function setGeometryOn(
+  nodes: readonly SceneNode[],
+  anchor: GeometryDescriptor,
+  name: string,
+  value: FieldValue,
+): Command<SceneState> {
+  return batch('geometry', nodes, node =>
+    node.type === 'mesh' && node.geometry.kind === anchor.kind
+      ? setGeometry(
+          node.id,
+          withField(node.geometry, name, spread(anchor, node.geometry, name, value)),
+        )
+      : null,
+  )
+}
+
+/** The same, for a light. Kinds differ in what they even have to set. */
+export function setLightOn(
+  nodes: readonly SceneNode[],
+  anchor: LightDescriptor,
+  name: string,
+  value: FieldValue,
+): Command<SceneState> {
+  return batch('light', nodes, node =>
+    node.type === 'light' && node.light.kind === anchor.kind
+      ? setLight(node.id, withField(node.light, name, spread(anchor, node.light, name, value)))
+      : null,
+  )
+}
+
+/**
+ * The value to write on one node of a selection. A vector field reports all three axes though the
+ * user moved one, so only the axes that differ from the anchor's are carried — otherwise nudging
+ * the X of a spot's target would drop every other spot's Y and Z onto the anchor's.
+ */
+function spread(anchor: object, target: object, name: string, value: FieldValue): FieldValue {
+  if (!isVector3(value)) return value
+
+  const before = readField(anchor, name)
+  const here = readField(target, name)
+  if (!isVector3(before) || !isVector3(here)) return value
+  return { ...here, ...changedFields(before, value) }
+}
+
+function readField(descriptor: object, name: string): unknown {
+  return isRecord(descriptor) ? descriptor[name] : undefined
+}
+
+/**
+ * Material fields onto every selected mesh. Only what the inspector moved is carried: the whole
+ * descriptor would take the anchor's texture slots with it, onto meshes that never showed them.
+ */
+export function setMaterialOn(
+  nodes: readonly SceneNode[],
+  changes: Partial<MaterialDescriptor>,
+): Command<SceneState> {
+  return batch('material', nodes, node =>
+    node.type === 'mesh' ? setMaterial(node.id, { ...node.material, ...changes }) : null,
+  )
+}
+
+/** Deleting a selection is one gesture, so it is one entry in the history. */
+export function removeNodes(ids: readonly string[]): Command<SceneState> {
+  return multi(commandId('remove', ids), ids.map(removeNode))
+}
+
+/** Where a drag left every node it carried. One drag, one entry, however many nodes moved. */
+export function moveNodes(moves: readonly NodeMove[]): Command<SceneState> {
+  return batch('transform', moves, move => setTransform(move.id, move.transform))
+}
+
+/**
+ * One convention for what a history entry is called, in one place: the coalescing of a gesture
+ * turns on two consecutive commands sharing an id, and a format that drifted by a character
+ * would break it silently — a drag would cost one undo per frame.
+ */
+function commandId(label: string, ids: readonly string[]): string {
+  return `${label}:${ids.join(',')}`
+}
+
 /** Selection stays out of the history: nobody wants ⌘Z to give them back a selection. */
-export function selectNode(state: SceneState, id: string | null): SceneState {
-  return { ...state, selectedId: id }
+export function setSelection(
+  state: SceneState,
+  ids: readonly string[],
+  mode: SelectionMode = 'replace',
+): SceneState {
+  return { ...state, selectedIds: applySelection(state.selectedIds, ids, mode) }
+}
+
+/** Identity kept when nothing was selected: a delete elsewhere must not re-render every panel. */
+function deselect(ids: readonly string[], id: string): readonly string[] {
+  return applySelection(ids, ids.includes(id) ? [id] : [], 'toggle')
 }

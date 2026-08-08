@@ -298,7 +298,7 @@
     "add": "Add a mesh",
     "addHint": "Drop a primitive at the origin of the scene",
     "remove": "Delete mesh",
-    "removeHint": "Remove the selected mesh from the scene",
+    "removeHint": "Remove the selected meshes from the scene",
     "visible": "Show or hide",
     "empty": "No mesh yet. Add one to get started.",
     "noDocument": "Open a scene to see its meshes."
@@ -312,7 +312,7 @@
     "add": "Add a light",
     "addHint": "Drop a light source into the scene",
     "remove": "Delete light",
-    "removeHint": "Remove the selected light from the scene",
+    "removeHint": "Remove the selected lights from the scene",
     "visible": "Show or hide",
     "empty": "No light. The scene will stay black.",
     "noDocument": "Open a scene to see its lights."
@@ -496,7 +496,7 @@
     "frame": "Frame selection",
     "frameHint": "Recentre the camera on the selected object",
     "delete": "Delete",
-    "deleteHint": "Remove the selected object from the scene"
+    "deleteHint": "Remove whatever is selected from the scene"
   },
   "project": {
     "none": "No project open",
@@ -811,7 +811,7 @@
     },
     "sceneDelete": {
       "title": "Delete",
-      "help": "Removes the chosen object from the scene. Nothing is lost for good: ⌘Z brings it back."
+      "help": "Removes everything selected from the scene. Nothing is lost for good: ⌘Z brings it back."
     },
     "undo": {
       "title": "Undo",

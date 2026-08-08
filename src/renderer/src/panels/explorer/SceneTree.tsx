@@ -15,7 +15,7 @@ type SceneItem = TreeNode & { node: SceneNode | null }
 export function SceneTree({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-  const selectedId = useScenes(state => sceneOf(state, documentId).selectedId)
+  const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   // Folding is session state: nobody wants Cmd-Z to give them back a collapsed branch.
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set([SCENE_ROOT]))
 
@@ -30,9 +30,12 @@ export function SceneTree({ documentId }: { documentId: string }) {
   return (
     <Tree
       nodes={items}
-      selectedId={selectedId}
+      selectedIds={selectedIds}
       expandedIds={expandedIds}
-      onSelect={id => selectIn(documentId, id === SCENE_ROOT ? null : id)}
+      // The root is a row but not a node: clicking it selects nothing, and a range that spans
+      // it steps over it rather than selecting a thing the scene has never heard of.
+      selectable={item => item.node !== null}
+      onSelect={(ids, mode) => selectIn(documentId, ids, mode)}
       onToggle={id =>
         setExpandedIds(current => {
           const next = new Set(current)

@@ -17,6 +17,6 @@ export function createDefaultScene(): SceneState {
       const position = DEFAULT_LIGHT_POSITIONS.get(type.kind)
       return position ? [lightNode(type.create(), position)] : []
     }),
-    selectedId: null,
+    selectedIds: [],
   }
 }

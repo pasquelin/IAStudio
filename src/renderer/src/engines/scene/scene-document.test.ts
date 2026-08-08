@@ -15,15 +15,15 @@ const nodeWith = (fields: object): unknown => ({ ...mesh('a'), ...fields })
 
 describe('scenePayload', () => {
   it('carries the nodes and leaves the selection behind', () => {
-    const state: SceneState = { nodes: [mesh('a')], selectedId: 'a' }
+    const state: SceneState = { nodes: [mesh('a')], selectedIds: ['a'] }
     expect(scenePayload(state)).toEqual({ nodes: [mesh('a')] })
   })
 })
 
 describe('sceneFromPayload', () => {
   it('round-trips a scene through what is written to disk', () => {
-    const state: SceneState = { nodes: [mesh('a'), light('b')], selectedId: 'a' }
-    expect(reread(state)).toEqual({ nodes: [mesh('a'), light('b')], selectedId: null })
+    const state: SceneState = { nodes: [mesh('a'), light('b')], selectedIds: ['a'] }
+    expect(reread(state)).toEqual({ nodes: [mesh('a'), light('b')], selectedIds: [] })
   })
 
   it('round-trips every primitive the studio can build', () => {
@@ -31,14 +31,14 @@ describe('sceneFromPayload', () => {
       primitive.create ? [{ ...mesh(`mesh-${index}`), geometry: primitive.create() }] : [],
     )
 
-    expect(reread({ nodes, selectedId: null }).nodes).toHaveLength(
+    expect(reread({ nodes, selectedIds: [] }).nodes).toHaveLength(
       MESH_ENTRIES.filter(entry => !entry.disabled).length,
     )
   })
 
   it('round-trips every kind of light', () => {
     const nodes = LIGHT_TYPES.map((type, index) => light(`light-${index}`, type.create()))
-    expect(reread({ nodes, selectedId: null }).nodes).toHaveLength(nodes.length)
+    expect(reread({ nodes, selectedIds: [] }).nodes).toHaveLength(nodes.length)
   })
 
   it('keeps a material dressed with textures', () => {
@@ -51,7 +51,7 @@ describe('sceneFromPayload', () => {
       },
     }
 
-    expect(reread({ nodes: [dressed], selectedId: null }).nodes).toEqual([dressed])
+    expect(reread({ nodes: [dressed], selectedIds: [] }).nodes).toEqual([dressed])
   })
 
   it('yields an empty scene for a payload that is not one', () => {
@@ -61,7 +61,7 @@ describe('sceneFromPayload', () => {
   })
 
   it('opens with nothing selected, whatever the file says', () => {
-    expect(sceneFromPayload({ nodes: [], selectedId: 'a' }).selectedId).toBeNull()
+    expect(sceneFromPayload({ nodes: [], selectedIds: ['a'] }).selectedIds).toEqual([])
   })
 
   it.each([

@@ -22,7 +22,7 @@ describe('createDefaultScene', () => {
   })
 
   it('selects nothing', () => {
-    expect(createDefaultScene().selectedId).toBeNull()
+    expect(createDefaultScene().selectedIds).toEqual([])
   })
 
   it('gives every node its own id', () => {

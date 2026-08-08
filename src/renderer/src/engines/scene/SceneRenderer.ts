@@ -4,20 +4,20 @@ import {
   Light,
   Mesh,
   MeshStandardMaterial,
+  Object3D,
   Raycaster,
   SpotLight,
   TextureLoader,
   Vector2,
   Vector3 as ThreeVector3,
-  type Object3D,
 } from 'three'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
-import type { Transform } from '@shared/domain/scene'
+import type { SelectionMode } from '@/helpers/selection'
 import { ViewportEngine } from '../viewport/ViewportEngine'
-import type { SceneNode, SceneState } from './scene-state'
+import type { NodeMove, SceneNode, SceneState } from './scene-state'
 import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
 import {
   applyGeometry,
@@ -27,14 +27,19 @@ import {
   standardMaterialOf,
 } from './three-sync'
 import { createMaterialTextures, type MaterialTextures } from './material-textures'
+import { carry, centreOf, placePivot, release, transformOf } from './pivot'
 import { createTextureCache } from './texture-cache'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
 export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
 
 export type SceneRendererOptions = {
-  onSelect: (id: string | null) => void
-  onTransform: (id: string, transform: Transform) => void
+  /**
+   * What the click asked for, in the shape `Tree` reports it — a click in the void is an empty
+   * list. The mode says what the modifier keys meant; a viewport draws no rows, so never a range.
+   */
+  onSelect: (ids: readonly string[], mode: SelectionMode) => void
+  onTransform: (moves: readonly NodeMove[]) => void
 }
 
 /**
@@ -49,6 +54,9 @@ export type ViewportOptions = {
   boostFactor: number
   fieldOfView: number
 }
+
+/** How far the pointer may wander between press and release and still count as a click, in px. */
+const CLICK_SLOP = 4
 
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
 const forward = new ThreeVector3()
@@ -92,13 +100,20 @@ export class SceneRenderer {
   private readonly textureCache = createTextureCache(url => this.loader.loadAsync(url))
   private readonly held = new Set<MotionId>()
 
+  /** What the gizmo holds when more than one node is selected. See `pivot.ts`. */
+  private readonly pivot = new Object3D()
+  /** Whether the gesture in progress has moved anything at all. A bare click has not. */
+  private dragged = false
+  /** Where the left button went down, so the release can tell a click from an orbit. */
+  private pressed: { x: number; y: number } | null = null
+
   private gizmo: TransformControls | null = null
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
   private flying = false
   private mode: TransformMode = 'select'
   /** Held so leaving `select` can re-arm the gizmo without waiting for the next `apply`. */
-  private selectedId: string | null = null
+  private selectedIds: readonly string[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
   private stopPaletteWatch: (() => void) | null = null
@@ -121,11 +136,14 @@ export class SceneRenderer {
 
     this.applyPalette()
 
+    this.viewport.scene.add(this.pivot)
+
     const gizmo = new TransformControls(camera, canvas)
     // Since r169 the controls are not an Object3D; the helper is what goes into the scene.
     this.viewport.scene.add(gizmo.getHelper())
     gizmo.addEventListener('dragging-changed', this.onDraggingChanged)
-    gizmo.addEventListener('objectChange', this.viewport.requestRender)
+    gizmo.addEventListener('objectChange', this.onGizmoChange)
+    gizmo.addEventListener('mouseDown', this.onGizmoGrab)
     gizmo.addEventListener('mouseUp', this.onGizmoRelease)
     this.gizmo = gizmo
 
@@ -155,7 +173,7 @@ export class SceneRenderer {
     for (const id of this.objects.keys()) if (!alive.has(id)) (stale ??= []).push(id)
     if (stale) for (const id of stale) this.release(id)
 
-    this.selectedId = state.selectedId
+    this.selectedIds = state.selectedIds
     this.attachGizmo()
     this.viewport.requestRender()
   }
@@ -168,12 +186,15 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  /** Frames whatever is selected, gizmo or not: a mode with no gizmo still has a selection. */
   frameSelection(): void {
-    const target = this.gizmo?.object
+    const objects = this.selectedObjects()
     const orbit = this.viewport.orbit
-    if (!target || !orbit) return
-    orbit.target.copy(target.position)
-    this.viewport.camera.position.copy(target.position).add(new ThreeVector3(4, 4, 4))
+    if (objects.length === 0 || !orbit) return
+
+    const centre = centreOf(objects, new ThreeVector3())
+    orbit.target.copy(centre)
+    this.viewport.camera.position.copy(centre).add(new ThreeVector3(4, 4, 4))
     orbit.update()
     this.viewport.requestRender()
   }
@@ -194,11 +215,15 @@ export class SceneRenderer {
     window.removeEventListener('pointerup', this.onPointerUp)
 
     this.gizmo?.removeEventListener('dragging-changed', this.onDraggingChanged)
-    this.gizmo?.removeEventListener('objectChange', this.viewport.requestRender)
+    this.gizmo?.removeEventListener('objectChange', this.onGizmoChange)
+    this.gizmo?.removeEventListener('mouseDown', this.onGizmoGrab)
     this.gizmo?.removeEventListener('mouseUp', this.onGizmoRelease)
     this.gizmo?.detach()
     this.gizmo?.dispose()
     this.gizmo = null
+
+    release(this.pivot, this.viewport.scene)
+    this.pivot.removeFromParent()
 
     this.viewHelper?.dispose()
     this.viewHelper = null
@@ -297,10 +322,15 @@ export class SceneRenderer {
       this.syncDescriptors(object, previous, node)
     }
 
-    const { position, rotation, scale } = node.transform
-    object.position.set(position.x, position.y, position.z)
-    object.rotation.set(rotation.x, rotation.y, rotation.z)
-    object.scale.set(scale.x, scale.y, scale.z)
+    // A carried object holds a transform relative to the pivot, and the state holds one relative
+    // to the scene: writing the second into the first mid-drag teleports it. The release puts
+    // the truth back, so an undo during a gesture repaints everything but where things are.
+    if (object.parent !== this.pivot) {
+      const { position, rotation, scale } = node.transform
+      object.position.set(position.x, position.y, position.z)
+      object.rotation.set(rotation.x, rotation.y, rotation.z)
+      object.scale.set(scale.x, scale.y, scale.z)
+    }
     object.visible = node.visible
 
     const helper = this.helpers.get(node.id)
@@ -389,7 +419,9 @@ export class SceneRenderer {
 
     const object = this.objects.get(id)
     if (object) {
-      this.viewport.scene.remove(object)
+      // Not `scene.remove`: mid-drag the object hangs off the pivot, and the scene would not
+      // find it to remove.
+      object.removeFromParent()
       if (object instanceof Mesh) {
         object.geometry.dispose()
         disposeMaterial(object)
@@ -408,11 +440,79 @@ export class SceneRenderer {
     }
   }
 
+  private selectedObjects(): Object3D[] {
+    return this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
+  }
+
   private attachGizmo(): void {
-    const id = this.selectedId
-    const selected = this.mode !== 'select' && id ? this.objects.get(id) : undefined
-    if (selected) this.gizmo?.attach(selected)
-    else this.gizmo?.detach()
+    const gizmo = this.gizmo
+    if (!gizmo) return
+    // Nothing is re-aimed mid-gesture. Detaching would swallow the `mouseUp` that hands the
+    // selection back to the scene, and re-centring the pivot while it carries that selection
+    // would drag it to the origin — a mode key pressed during a drag must not move anything.
+    if (gizmo.dragging) return
+
+    const objects = this.mode === 'select' ? [] : this.selectedObjects()
+    const [first] = objects
+    if (!first) {
+      gizmo.detach()
+      return
+    }
+    // One node attaches straight to its object: routing a single move through the pivot would
+    // round-trip its transform through two matrices for nothing.
+    if (objects.length === 1) {
+      gizmo.attach(first)
+      return
+    }
+
+    placePivot(this.pivot, objects)
+    gizmo.attach(this.pivot)
+  }
+
+  private readonly onGizmoGrab = (): void => {
+    this.dragged = false
+    if (this.gizmo?.object !== this.pivot) return
+    carry(this.pivot, this.selectedObjects(), this.viewport.scene)
+  }
+
+  private readonly onGizmoChange = (): void => {
+    this.dragged = true
+    this.viewport.requestRender()
+  }
+
+  /**
+   * The move is reported once the gesture ends, not on every frame of it: one drag must cost one
+   * undo, and the meshes already show the truth while the gizmo holds them.
+   */
+  private readonly onGizmoRelease = (): void => {
+    const moves = release(this.pivot, this.viewport.scene)
+
+    // A click that armed an axis without moving it still round-tripped every carried node
+    // through a matrix decomposition, which does not always give the same Euler back — and a
+    // negative scale never does. Nothing is reported; the objects are put back from the state.
+    if (!this.dragged) {
+      if (moves) this.resync(moves)
+      return
+    }
+
+    if (moves) {
+      this.options.onTransform(moves)
+      return
+    }
+
+    const target = this.gizmo?.object
+    if (target) this.options.onTransform([{ id: target.name, transform: transformOf(target) }])
+  }
+
+  /** Redraws nodes from what was last applied, undoing what a gesture moved without meaning to. */
+  private resync(moves: readonly NodeMove[]): void {
+    for (const move of moves) {
+      const node = this.applied.get(move.id)
+      if (!node) continue
+      this.applied.delete(move.id)
+      this.syncNode(node)
+    }
+    this.viewport.requestRender()
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
@@ -426,6 +526,26 @@ export class SceneRenderer {
       return
     }
     if (event.button !== 0 || this.gizmo?.dragging) return
+    // Held, not acted on: `OrbitControls` pans on left-drag with any of the three modifiers, and
+    // those are the very keys that add to a selection. Picking on release, and only if the
+    // pointer never moved, is what stops a recentring gesture from unpicking what it passes over.
+    this.pressed = { x: event.clientX, y: event.clientY }
+  }
+
+  private readonly onPointerUp = (event: PointerEvent): void => {
+    if (event.button === 2) {
+      this.flying = false
+      this.held.clear()
+      const orbit = this.viewport.orbit
+      if (orbit) orbit.enabled = true
+      return
+    }
+    if (event.button !== 0) return
+
+    const pressed = this.pressed
+    this.pressed = null
+    if (!pressed || Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > CLICK_SLOP)
+      return
 
     const ndc = this.viewport.pointerNdcOf(event)
     if (!ndc) return
@@ -437,15 +557,10 @@ export class SceneRenderer {
     // that the ray actually meets. Both they and the light carry the node's id.
     const targets = [...this.objects.values(), ...this.helpers.values()]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
-    this.options.onSelect(hit ? nodeIdOf(hit.object) : null)
-  }
-
-  private readonly onPointerUp = (event: PointerEvent): void => {
-    if (event.button !== 2) return
-    this.flying = false
-    this.held.clear()
-    const orbit = this.viewport.orbit
-    if (orbit) orbit.enabled = true
+    const id = hit ? nodeIdOf(hit.object) : null
+    // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
+    const extending = event.shiftKey || event.metaKey || event.ctrlKey
+    this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
   }
 
   // Without this the OS menu opens on the very gesture that starts flying.
@@ -454,20 +569,6 @@ export class SceneRenderer {
   private readonly onDraggingChanged = (event: { value: unknown }): void => {
     const orbit = this.viewport.orbit
     if (orbit) orbit.enabled = event.value !== true && !this.flying
-  }
-
-  /**
-   * The move is reported once the gesture ends, not on every frame of it: one drag must cost one
-   * undo, and the mesh already shows the truth while the gizmo holds it.
-   */
-  private readonly onGizmoRelease = (): void => {
-    const target = this.gizmo?.object
-    if (!target) return
-    this.options.onTransform(target.name, {
-      position: { x: target.position.x, y: target.position.y, z: target.position.z },
-      rotation: { x: target.rotation.x, y: target.rotation.y, z: target.rotation.z },
-      scale: { x: target.scale.x, y: target.scale.y, z: target.scale.z },
-    })
   }
 
   /** Reports whether the camera is still flying, which is what keeps the loop alive. */

@@ -3,7 +3,7 @@ import { shortcutLabel } from '@shared/domain/shortcut'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
-import { removeNode, selectNode, setTransform } from '@/engines/scene/commands'
+import { moveNodes, removeNodes } from '@/engines/scene/commands'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { restoreDocument } from '@/app/document-io'
 import { setDocumentTitle } from '@/app/dockview-api'
@@ -12,7 +12,7 @@ import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
-import { historyOf, isDirty, sceneOf, useScenes } from '@/stores/scenes'
+import { historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
 
 export function SceneDocument({ documentId }: { documentId: string }) {
@@ -47,12 +47,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     if (!element) return
 
     const renderer = new SceneRenderer({
-      onSelect: id => {
-        const store = useScenes.getState()
-        store.replace(documentId, selectNode(sceneOf(store, documentId), id))
-      },
-      onTransform: (id, transform) =>
-        useScenes.getState().runCommand(documentId, setTransform(id, transform)),
+      // A click in the void with a modifier held keeps the selection: `toggle` of nothing is
+      // nothing, which is what stops a near miss from undoing the picking that came before it.
+      onSelect: (ids, mode) => selectIn(documentId, ids, mode),
+      onTransform: moves => useScenes.getState().runCommand(documentId, moveNodes(moves)),
     })
 
     renderer.mount(element)
@@ -94,8 +92,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         case 'scene.frame':
           return engine.current?.frameSelection()
         case 'scene.delete': {
-          const selected = sceneOf(store, documentId).selectedId
-          if (selected) store.runCommand(documentId, removeNode(selected))
+          const { selectedIds } = sceneOf(store, documentId)
+          if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(selectedIds))
           return
         }
         case 'scene.undo':
@@ -120,7 +118,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   // Rebuilt only when a shortcut or the delete button's availability moves: the document
   // re-renders on every transform release, and each item carries the 22-entry Add flyout.
-  const nothingSelected = scene.selectedId === null
+  const nothingSelected = scene.selectedIds.length === 0
   const tools = useMemo(
     () =>
       SCENE_TOOLS.map(tool => ({

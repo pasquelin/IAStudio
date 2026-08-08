@@ -1,5 +1,6 @@
-import { selectNode } from '@/engines/scene/commands'
+import { setSelection } from '@/engines/scene/commands'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/scene-state'
+import type { SelectionMode } from '@/helpers/selection'
 import { createDocumentStore } from './document-store'
 
 /** One scene per document, in memory like the documents themselves. */
@@ -17,7 +18,11 @@ export const isDirty = store.isDirty
  * be read at call time, not from the render that drew the row: a copy taken before whatever
  * command ran in between would undo it.
  */
-export function selectIn(documentId: string, id: string | null): void {
+export function selectIn(
+  documentId: string,
+  ids: readonly string[],
+  mode: SelectionMode = 'replace',
+): void {
   const state = useScenes.getState()
-  state.replace(documentId, selectNode(sceneOf(state, documentId), id))
+  state.replace(documentId, setSelection(sceneOf(state, documentId), ids, mode))
 }

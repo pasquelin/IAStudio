@@ -39,7 +39,7 @@ export function sceneFromPayload(payload: unknown): SceneState {
   if (!isRecord(payload) || !Array.isArray(payload.nodes)) return EMPTY_SCENE
 
   const nodes: readonly unknown[] = payload.nodes
-  return { nodes: nodes.filter(isSceneNode), selectedId: null }
+  return { nodes: nodes.filter(isSceneNode), selectedIds: [] }
 }
 
 /** Keyed by kind rather than by shape, which is what makes an unknown kind a refusal. */

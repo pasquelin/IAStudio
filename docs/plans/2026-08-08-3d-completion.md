@@ -63,7 +63,71 @@ besoin, elle se traitera par une commande « éclater le modèle » explicite �
 
 ## Étape 1 — Sélection multiple
 
-- [ ] Livrée
+- [x] Livrée
+
+**Ce qui a été fait, et où le plan a été suivi de biais.**
+
+`selectedIds: readonly string[]` remplace `selectedId`, le dernier est l'ancre. Le pivot du gizmo
+est en place, l'inspecteur écrit sur toute la sélection en une entrée d'historique, l'outliner et
+les panneaux Mailles/Lumières partagent le même geste (⌘ bascule, ⇧ étend). 2282 → 2345 tests.
+
+Quatre écarts assumés :
+
+1. **Deux modes de sélection, pas trois.** Le plan annonçait `'replace' | 'toggle' | 'range'` dans
+   `selectIn`. Le mode `range` n'existe pas : une plage n'a de sens que dans l'ordre où les lignes
+   sont *dessinées*, que seul le composant qui les dessine connaît. `Tree` et `Collection` la
+   résolvent donc eux-mêmes via `helpers/selection.ts` (`pickFrom`) et ne transmettent qu'un
+   tableau déjà calculé. Le store n'a plus à connaître un ordre visuel qu'il ne peut pas voir.
+2. **`setSelection(state, ids, mode)` plutôt que `setSelection` / `toggleSelection`.** Deux
+   fonctions dont l'une est l'autre avec un drapeau.
+3. **`selectedNode` a été supprimé**, pas conservé. `selectedNodes(nodes, ids)` rend la liste dans
+   l'ordre de sélection ; l'ancre est son dernier élément. Une fonction de moins pour la même
+   information, et la signature prend les deux moitiés de l'état plutôt qu'un `SceneState` — les
+   appelants lisent deux sélecteurs séparés, précisément pour ne pas re-rendre sur ce qu'ils ne
+   regardent pas.
+4. **`Collection` a suivi `Tree`.** Le plan ne le demandait pas, mais laisser les panneaux
+   Mailles/Lumières afficher une seule ligne surlignée sur trois était une incohérence visible.
+   Les deux composants du design system ont désormais une seule notion de sélection.
+
+**Une valeur tapée est absolue, un geste est relatif.** Taper une hauteur l'écrit sur tous les
+nœuds sélectionnés (comme Unity) ; tirer le gizmo applique un delta. Seul l'**axe** touché est
+écrit : trois cubes à qui l'on donne une hauteur gardent les colonnes où ils sont posés. Le nom
+fait exception et reste sur l'ancre — trois nœuds du même nom n'est pas un renommage.
+
+**Le piège du gizmo, résolu par parentage temporaire.** `engines/scene/pivot.ts` : la sélection est
+accrochée à un `Object3D` non rendu le temps du glissement, `attach` préservant la transformation
+monde dans les deux sens. Aucun delta calculé à la main, donc aucune dérive accumulée. Le module
+est testé sans WebGL (c'est de l'arithmétique d'objets), ce qui donne enfin une couverture au
+morceau le plus délicat de `SceneRenderer`, qui n'en a jamais eu.
+
+**Cinq bugs trouvés par `/code-review` et corrigés.** Trois reproduits par exécution :
+
+- la rotation d'un axe écrasait les deux autres sur toute la sélection — l'aller-retour
+  radians→degrés→radians n'est pas exact à ~13 %, et les axes intacts passaient pour modifiés.
+  Le diff se fait maintenant dans l'unité affichée ;
+- une touche de mode pressée **pendant** un glissement rappelait `attachGizmo`, qui recentrait le
+  pivot alors qu'il portait la sélection : celle-ci sautait à l'origine, et le relâchement écrivait
+  ce saut dans le document. `attachGizmo` ne fait plus rien tant que le gizmo tient quelque chose,
+  et `syncNode` ne réécrit pas un objet que le pivot porte ;
+- un clic sec sur un axe du gizmo faisait passer chaque nœud par une décomposition de matrice qui
+  ne rend pas toujours le même Euler (ni une échelle négative) : une entrée d'historique que
+  personne n'avait demandée. Rien n'est rapporté tant que rien n'a bougé ;
+- ⇧/⌘/Ctrl + glisser gauche est le **pan** d'`OrbitControls`, et ce sont les mêmes touches que
+  l'ajout à une sélection : recadrer la vue défaisait la sélection qu'on venait de construire. Le
+  picking se fait désormais au relâchement, et seulement si le pointeur n'a pas bougé ;
+- l'œil de visibilité volait la sélection au clavier dans l'arbre — le correctif de `3f70ad5`
+  n'avait été posé que dans `Collection`.
+
+**Deux limites connues, laissées telles quelles :**
+
+- mettre à l'échelle sur un seul axe un groupe contenant un nœud tourné produit un cisaillement
+  qu'une décomposition TRS ne sait pas représenter : la forme obtenue diffère légèrement de ce que
+  le glissement affichait. C'est inhérent à l'approche par pivot — l'éditeur three.js a la même —
+  et la corriger demanderait de stocker des matrices plutôt que des TRS, ce qui changerait le
+  format du document ;
+- `SceneRenderer` n'a toujours pas de test (pas de contexte WebGL sous jsdom). Ce qui pouvait en
+  être extrait l'a été dans `pivot.ts` ; le reste — le passage du picking au relâchement, la garde
+  de glissement — n'est vérifié qu'à la lecture.
 
 **Pourquoi en premier.** Elle touche l'état, l'inspecteur, le gizmo et l'outliner d'un coup. Chaque
 étape suivante ajoute du code autour de `selectedId` ; plus elle attend, plus elle coûte.

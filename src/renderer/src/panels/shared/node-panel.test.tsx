@@ -52,7 +52,7 @@ describe('meshes panel', () => {
 
     await userEvent.click(screen.getByText('Box'))
 
-    expect(sceneOf(useScenes.getState(), 'doc-1').selectedId).toBe(cube?.id)
+    expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual([cube?.id])
   })
 
   it('adds the primitive chosen in the flyout, and undo removes it', async () => {
@@ -107,7 +107,7 @@ describe('meshes panel', () => {
     const light = nodes('light')[0]
     installScene('doc-1', {
       ...sceneOf(useScenes.getState(), 'doc-1'),
-      selectedId: light?.id ?? null,
+      selectedIds: light ? [light.id] : [],
     })
     render(<Actions />)
 
@@ -165,6 +165,6 @@ describe('lights panel', () => {
     const eyes = screen.getAllByRole('button', { name: 'Afficher ou masquer' })
     await userEvent.click(eyes[1] as HTMLElement)
 
-    expect(sceneOf(useScenes.getState(), 'doc-1').selectedId).toBeNull()
+    expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual([])
   })
 })

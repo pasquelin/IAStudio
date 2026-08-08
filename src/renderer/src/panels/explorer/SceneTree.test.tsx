@@ -28,7 +28,33 @@ describe('SceneTree', () => {
 
     await userEvent.click(screen.getByText('AmbientLight'))
 
-    expect(scene().selectedId).toBe(scene().nodes[0]?.id)
+    expect(scene().selectedIds).toEqual([scene().nodes[0]?.id])
+  })
+
+  it('adds a node to the selection on a command-click, and removes it on the next', async () => {
+    const user = userEvent.setup()
+    render(<SceneTree documentId="doc-1" />)
+
+    await user.click(screen.getByText('AmbientLight'))
+    await user.keyboard('{Meta>}')
+    await user.click(screen.getByText('HemisphereLight'))
+    expect(scene().selectedIds).toHaveLength(2)
+
+    await user.click(screen.getByText('HemisphereLight'))
+    await user.keyboard('{/Meta}')
+    expect(scene().selectedIds).toEqual([scene().nodes[0]?.id])
+  })
+
+  it('selects everything between the anchor and a shift-clicked node', async () => {
+    const user = userEvent.setup()
+    render(<SceneTree documentId="doc-1" />)
+
+    await user.click(screen.getByText('AmbientLight'))
+    await user.keyboard('{Shift>}')
+    await user.click(screen.getByText('HemisphereLight'))
+    await user.keyboard('{/Shift}')
+
+    expect(scene().selectedIds).toEqual(scene().nodes.map(node => node.id))
   })
 
   // The root is drawn, but it is not a node: selecting it means selecting nothing.
@@ -38,7 +64,20 @@ describe('SceneTree', () => {
     await userEvent.click(screen.getByText('AmbientLight'))
     await userEvent.click(screen.getByText('Scène'))
 
-    expect(scene().selectedId).toBeNull()
+    expect(scene().selectedIds).toEqual([])
+  })
+
+  // Extending to a row that cannot be selected has nowhere to land: it clears, like a plain click.
+  it('never puts the root into a selection, whatever modifier is held', async () => {
+    const user = userEvent.setup()
+    render(<SceneTree documentId="doc-1" />)
+
+    await user.click(screen.getByText('HemisphereLight'))
+    await user.keyboard('{Shift>}')
+    await user.click(screen.getByText('Scène'))
+    await user.keyboard('{/Shift}')
+
+    expect(scene().selectedIds).toEqual([])
   })
 
   it('offers no eye on the root, which has nothing to hide', () => {
@@ -64,7 +103,7 @@ describe('SceneTree', () => {
     const eyes = screen.getAllByRole('button', { name: 'Afficher ou masquer' })
     await userEvent.click(eyes[1] as HTMLElement)
 
-    expect(scene().selectedId).toBeNull()
+    expect(scene().selectedIds).toEqual([])
   })
 
   it('folds the root away, which is session state and not an edit', async () => {

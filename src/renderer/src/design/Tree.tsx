@@ -2,6 +2,7 @@ import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { LIST_ROW_HEIGHT, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
 
@@ -39,10 +40,17 @@ export function flattenTree<T extends TreeNode>(
 
 export type TreeProps<T extends TreeNode> = {
   nodes: readonly T[]
-  selectedId: string | null
+  /** Ordered; the last one is the anchor a shift-click extends from. */
+  selectedIds: readonly string[]
   expandedIds: ReadonlySet<string>
-  onSelect: (id: string) => void
+  /** What the click asked for, already resolved against the rows on screen. */
+  onSelect: (ids: readonly string[], mode: SelectionMode) => void
   onToggle: (id: string) => void
+  /**
+   * Which rows a selection may hold. A synthetic header answers `false` and is left out of a
+   * range rather than filtered off afterwards by whoever stores the result.
+   */
+  selectable?: (node: T) => boolean
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
 }
@@ -55,10 +63,11 @@ const INDENT = 12
  */
 export function Tree<T extends TreeNode>({
   nodes,
-  selectedId,
+  selectedIds,
   expandedIds,
   onSelect,
   onToggle,
+  selectable,
   renderRow,
 }: TreeProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
@@ -86,20 +95,42 @@ export function Tree<T extends TreeNode>({
     requestAnimationFrame(focus)
   }
 
+  const selected = new Set(selectedIds)
+  const anchor = selectedIds.at(-1)
+
   // Roving tab stop: one entry into the tree, then the arrows. Every row reachable by tab
   // would make a scene of two hundred nodes two hundred presses deep.
   const tabStop = Math.max(
     0,
-    rows.findIndex(row => row.node.id === selectedId),
+    rows.findIndex(row => row.node.id === anchor),
   )
+
+  const pick = (node: T, modifiers: Modifiers): void => {
+    // An unselectable row selects nothing rather than itself — clicking a header clears.
+    if (selectable && !selectable(node)) return onSelect([], 'replace')
+
+    const reachable = rows.map(row => row.node).filter(candidate => selectable?.(candidate) ?? true)
+    const { ids, mode } = pickFrom(
+      reachable.map(candidate => candidate.id),
+      anchor,
+      node.id,
+      modifiers,
+    )
+    onSelect(ids, mode)
+  }
 
   const onRowKeyDown = (row: TreeRow<T>, index: number, event: KeyboardEvent): void => {
     if (event.key === 'ArrowRight' && row.hasChildren && !row.expanded) onToggle(row.node.id)
     else if (event.key === 'ArrowLeft' && row.expanded) onToggle(row.node.id)
     else if (event.key === 'ArrowDown') focusRow(Math.min(index + 1, rows.length - 1))
     else if (event.key === 'ArrowUp') focusRow(Math.max(index - 1, 0))
-    else if (event.key === 'Enter' || event.key === ' ') onSelect(row.node.id)
-    else return
+    else if (event.key === 'Enter' || event.key === ' ') {
+      // Only when the row itself holds the focus, the guard `Collection` already carries: a
+      // control inside the row — the visibility eye — answers the key on its own, and
+      // `VisibilityToggle` can stop a click but never a key press.
+      if (event.target !== event.currentTarget) return
+      pick(row.node, event)
+    } else return
 
     event.preventDefault()
   }
@@ -125,14 +156,14 @@ export function Tree<T extends TreeNode>({
                 role="treeitem"
                 data-row={index}
                 tabIndex={index === tabStop ? 0 : -1}
-                aria-selected={row.node.id === selectedId}
+                aria-selected={selected.has(row.node.id)}
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
                 style={{ paddingLeft: row.depth * INDENT }}
                 className={cn(
                   'group flex h-(--sc-control) cursor-pointer items-center gap-1 px-1',
-                  rowSkin(row.node.id === selectedId),
+                  rowSkin(selected.has(row.node.id)),
                 )}
-                onPointerDown={() => onSelect(row.node.id)}
+                onPointerDown={event => pick(row.node, event)}
                 onKeyDown={event => onRowKeyDown(row, index, event.nativeEvent)}
               >
                 {/* The chevron keeps its column even on a leaf: rows whose content shifts by a

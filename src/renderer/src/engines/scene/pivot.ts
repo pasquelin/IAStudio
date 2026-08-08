@@ -1,0 +1,68 @@
+/**
+ * Moving several nodes with one gizmo.
+ *
+ * `TransformControls` attaches a single `Object3D`, so a selection of several is briefly parented
+ * to a pivot placed at its centre. `Object3D.attach` preserves world transforms in both
+ * directions — which is what turns one gesture into the right move for every node, without a
+ * delta derived by hand and without the drift that deriving one accumulates over a drag.
+ *
+ * None of this needs a WebGL context: it is object maths, and it is tested as such.
+ */
+import { Vector3, type Object3D } from 'three'
+import type { Transform } from '@shared/domain/scene'
+import type { NodeMove } from './scene-state'
+
+const corner = new Vector3()
+
+/** The average of where the objects stand, in world space, written into `out`. */
+export function centreOf(objects: readonly Object3D[], out: Vector3): Vector3 {
+  out.set(0, 0, 0)
+  if (objects.length === 0) return out
+
+  for (const object of objects) out.add(object.getWorldPosition(corner))
+  return out.divideScalar(objects.length)
+}
+
+/**
+ * Puts the pivot at the centre of the selection, square with the world — so a rotation turns the
+ * group around its own centre rather than around whatever the last drag left it pointing at.
+ */
+export function placePivot(pivot: Object3D, objects: readonly Object3D[]): void {
+  centreOf(objects, pivot.position)
+  pivot.rotation.set(0, 0, 0)
+  pivot.scale.set(1, 1, 1)
+  pivot.updateMatrixWorld()
+}
+
+/** The drag starts: the selection rides the pivot until it ends. */
+export function carry(pivot: Object3D, objects: readonly Object3D[], scene: Object3D): void {
+  // `attach` reads world matrices, and nothing has rendered since the pivot was placed.
+  scene.updateMatrixWorld()
+  for (const object of objects) pivot.attach(object)
+}
+
+/**
+ * Hands the selection back to the scene and reads where it ended up, or `null` if the pivot was
+ * carrying nothing.
+ *
+ * What is carried is read off the pivot rather than off a list kept beside it: a node deleted
+ * mid-drag would leave that list holding an object the scene must never be handed back.
+ */
+export function release(pivot: Object3D, scene: Object3D): NodeMove[] | null {
+  const carried = [...pivot.children]
+  if (carried.length === 0) return null
+
+  scene.updateMatrixWorld()
+  return carried.map(object => {
+    scene.attach(object)
+    return { id: object.name, transform: transformOf(object) }
+  })
+}
+
+export function transformOf(object: Object3D): Transform {
+  return {
+    position: { x: object.position.x, y: object.position.y, z: object.position.z },
+    rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
+    scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
+  }
+}

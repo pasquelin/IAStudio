@@ -2,9 +2,10 @@ import { mdiTuneVariant } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { setGeometry, setLight, setMaterial } from '@/engines/scene/commands'
-import { geometryFields, lightFields, withField } from '@/engines/scene/property-fields'
-import { selectedNode } from '@/engines/scene/scene-state'
+import { setGeometryOn, setLightOn, setMaterialOn } from '@/engines/scene/commands'
+import { geometryFields, lightFields } from '@/engines/scene/property-fields'
+import { selectedNodes } from '@/engines/scene/scene-state'
+import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
@@ -15,16 +16,25 @@ import { useSceneEdit } from './useSceneEdit'
 export type SceneInspectorProps = { documentId: string }
 
 /**
- * Everything that defines the selected node, and lets it be played with.
+ * Everything that defines the selected nodes, and lets them be played with.
  *
- * One face of the inspector rather than the whole of it: which document is in front, and
- * whether anything is selected at all, is decided by `Inspector`.
+ * The anchor — the last node picked — is what the fields read out; typing into one writes the
+ * value onto every selected node built the same way, as one entry in the history. Which nodes
+ * those are is a rule about the scene, so it lives in the commands rather than here. The name is
+ * the one field that stays on the anchor: three nodes of one name is not a rename.
+ *
+ * One face of the inspector rather than the whole of it: which document is in front is decided
+ * by `Inspector`.
  */
 export function SceneInspector({ documentId }: SceneInspectorProps) {
   const { t } = useTranslation()
-  // The node itself, not a copy: `nodeById` hands back what the state holds, so a selection
-  // that changed nothing else gives React the same reference and nothing re-renders.
-  const node = useScenes(state => selectedNode(sceneOf(state, documentId)))
+  // Two stable selectors, then derived: a selector that builds an array hands React a new
+  // snapshot on every call, and the render loop never settles.
+  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
+  const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
+  const selection = useMemo(() => selectedNodes(nodes, selectedIds), [nodes, selectedIds])
+  const node = selection.at(-1) ?? null
+
   const edit = useSceneEdit(documentId)
   // Cached per theme, not per render: this component re-renders on every frame of a drag.
   const meshColor = useToken('--color-mesh')
@@ -40,7 +50,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
 
   return (
     <>
-      <TransformSection node={node} edit={edit} />
+      <TransformSection node={node} selection={selection} edit={edit} />
 
       {mesh && (
         <>
@@ -48,14 +58,16 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             title={t('inspector.geometry')}
             fields={geometry}
             onChange={(name, value) =>
-              edit.run(setGeometry(mesh.id, withField(mesh.geometry, name, value)))
+              edit.run(setGeometryOn(selection, mesh.geometry, name, value))
             }
             gesture={edit.gesture}
           />
           <MaterialSection
             material={mesh.material}
             fallbackColor={meshColor}
-            onChange={material => edit.run(setMaterial(mesh.id, material))}
+            onChange={material =>
+              edit.run(setMaterialOn(selection, changedFields(mesh.material, material)))
+            }
             gesture={edit.gesture}
           />
         </>
@@ -65,9 +77,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         <DescriptorSection
           title={t('inspector.light')}
           fields={lit}
-          onChange={(name, value) =>
-            edit.run(setLight(light.id, withField(light.light, name, value)))
-          }
+          onChange={(name, value) => edit.run(setLightOn(selection, light.light, name, value))}
           gesture={edit.gesture}
         />
       )}
