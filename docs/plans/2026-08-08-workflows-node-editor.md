@@ -163,8 +163,12 @@ c'est ce qui garantit qu'aucun appelant ne peut l'oublier.
 une clé porte son projet (`owner-scope.ts`). Et l'attente est **annulable** — un job annulé pendant
 qu'il attend un jeton ne doit pas consommer sa place.
 
-**Ce qui existe déjà et qu'il ne faut pas dupliquer** : `withRetry` réessaie les 429 en backoff
-exponentiel. Le limiteur ne le remplace pas, il évite d'y arriver.
+**Ce qui existe déjà et qu'il ne faut pas dupliquer.** `createRetry` (`scenario/retry.ts`, sorti du
+`JobManager` par `feat/prompt-assist`) réessaie les 429 en backoff exponentiel : le limiteur ne le
+remplace pas, il évite d'y arriver. Et `assist-queue.ts` borne la concurrence de l'assistance de
+fond — c'est une **troisième** borne de concurrence, à côté de celle du `JobManager` et des lots de
+`limits.ts`, et sa JSDoc dit qu'elle ne décide que *quand* le travail tourne. Le limiteur se place
+donc au-dessus des trois, dans `reducedBy`, et non à côté.
 
 **Fin d'étape** : test à horloge injectée (jamais `Date.now()` réel dans un test) — 100 appels
 passent, le 101ᵉ attend, la fenêtre glisse, un appel annulé libère sa place.

@@ -936,7 +936,12 @@ la **concurrence**. Ce sont trois grandeurs différentes : dix jobs concurrents 
 deux secondes font déjà 300 requêtes par minute à eux seuls, et par-dessus s'ajoutent le catalogue,
 les vignettes de modèles par lots de 100 ids, les previews, et une synchro d'assets.
 
-Ce qui tient aujourd'hui, et pourquoi ce n'est pas une solution : `withRetry` réessaie les 429 en
+Depuis `feat/prompt-assist`, il y a une **troisième** source d'appels : `assist-queue.ts` borne la
+concurrence de l'assistance de fond, et sa JSDoc dit elle-même qu'elle « décide seulement quand le
+travail tourne » — donc pas le débit. Trois bornes de concurrence, toujours zéro borne de débit.
+
+Ce qui tient aujourd'hui, et pourquoi ce n'est pas une solution : le `retry` de `scenario/retry.ts`
+— sorti du `JobManager` par cette même branche, et désormais partagé — réessaie les 429 en
 backoff exponentiel. **Le studio dégrade au lieu de casser** — mais un limiteur est ce qui évite d'y
 arriver, et un backoff sous rafale rallonge chaque génération de la file. Il faut un seau à jetons
 (100/60 s) **au-dessus du client SDK**, donc traversé par tout le monde : `reducedBy` est déjà le
