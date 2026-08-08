@@ -1,7 +1,7 @@
 # Scenario Studio — reprise
 
 **Le seul document de travail du projet.** État, ce qu'il reste à faire, les mesures acquises, la
-méthode. Vérifié dans le code le 7 août 2026.
+méthode. Vérifié dans le code le 8 août 2026.
 
 Les conventions et les invariants sont dans **`CLAUDE.md`**, à la racine — ce fichier ne les répète
 pas. Pour *comprendre* le logiciel plutôt que reprendre son développement :
@@ -32,10 +32,17 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**617 fichiers dans `src/`. 2529 tests verts sur 230 fichiers. 6 espaces éditables. 2 types de
+**623 fichiers dans `src/`. 2584 tests verts sur 233 fichiers. 6 espaces éditables. 2 types de
 documents sur 6 savent s'enregistrer — l'espace Image, lui, exporte mais ne s'enregistre pas encore.**
 
-`pnpm validate` est vert. L'application démarre par `pnpm start`.
+`pnpm validate` est vert, **budget de couverture compris** : il lance `test:coverage`, dont les
+seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
+pourcentages. Le plus tendu est `engines/{timeline,canvas,audio,core}/**` : **238 branches non
+couvertes pour 250 permises**, douze de marge. Un module ajouté là-dedans sans tests casse la
+validation — c'est voulu. **Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas
+où élargir est légitime (un glob dont la marge de croissance est du GPU intestable).
+
+L'application démarre par `pnpm start`.
 
 ## Ce qui est fait
 
@@ -54,12 +61,22 @@ la main (invariant 5).
 **Les six espaces** — Image (PixiJS), 3D (three.js), Vidéo (timeline, moniteur, ffmpeg), Audio,
 Skyboxes, Textures. Un éditeur par type de document, chargé à l'ouverture, jamais avant.
 
+**L'espace Image édite pour de bon** — calques, groupes, masques, seize modes de fusion,
+sélection qui borne les outils, poignées de transformation, formes, texte, calques de réglage,
+cinq éditions IA et l'export PNG. Une image de l'étagère y entre par trois portes : le dépôt sur
+la toile, le double-clic, et l'outil Image… (`⇧⌘K`). Cf. § 3.2 pour ce qui reste.
+
 **La configuration** — un registre de commandes unique lu par le menu natif, le clavier et l'écran
 des raccourcis ; un registre de réglages qui gouverne les préférences et la validation côté main.
 
 **La persistance des documents** — écriture atomique, marque « modifié », puce sur l'onglet,
 relecture à l'ouverture. Le mécanisme est générique ; **deux espaces y sont branchés**, la 3D et les
 Textures.
+
+**Le manuel utilisateur** — 19 chapitres, fr et en (`docs/fr/manuel/`, `docs/en/manual/`), vérifiés
+contre le code le 8 août 2026 après la fusion de l'espace Image. Il ne se relit pas, il **se
+vérifie** : les registres (`COMMAND_REGISTRY`, `IMAGE_TOOLS`, `UNBUILT_TOOLS`, `TOOL_PLACEMENTS`,
+`IO_BY_KIND`) et le bundle i18n disent ce que le logiciel fait — l'impression qu'on en a, non.
 
 **L'entrée d'une image dans un ciel** — l'espace Skyboxes avait son moteur, son undo et son panneau,
 mais aucune porte. Trois l'ouvrent : le double-clic sur un asset, le dépôt depuis l'étagère, et la
@@ -83,52 +100,11 @@ Ces quatre points traînaient dans les anciennes notes de reprise. Ils sont rég
   Supprimé. **Ne pas recommencer** — cf. § 3.2.
 - **`reconcile` ne parcourait pas l'arbre entier** dans le moteur canvas, ce qui détruisait les
   textures des enfants de groupe. Corrigé — **ne pas le recasser**.
+- **L'étagère à assets était à droite dans tous les espaces**, où elle mangeait la largeur du
+  canvas. `TOOL_PLACEMENTS` (`shared/domain/tool.ts`) la pose désormais en **bande du bas** partout
+  sauf en Vidéo, où la colonne de gauche la porte — la timeline occupe le bas.
 
 ---
-
-# 1 bis. `feat/image` — rebasée, il reste trois gestes
-
-**Worktree** `.claude/worktrees/image`, branche `feat/image`, **rebasée sur `main` (`fcb67ab`)**,
-32 commits. Point de retour si besoin : la branche `feat/image-avant-rebase` pointe sur l'état
-d'avant.
-
-## Ce qui reste, dans l'ordre
-
-**1. Formater, valider, commiter.** Un seul fichier est modifié et non commité :
-`src/renderer/src/engines/canvas/canvas-state.test.ts` — onze tests de désérialisation ajoutés
-(genres retirés d'un réglage, valeurs manquantes, légendes, masques, `source`, guides illisibles).
-Ils passent ; il leur manque `pnpm format`.
-
-    pnpm format && pnpm validate
-    git add src/renderer/src/engines/canvas/canvas-state.test.ts
-    git commit -m "Un document d'une version antérieure s'ouvre sur ce que ce build sait lire"
-
-**2. Le budget de couverture.** `pnpm validate` lance désormais `test:coverage`, et le rebase a fait
-apparaître son seuil : `engines/{timeline,canvas,audio,core}/**` était à **284 branches non
-couvertes pour 250 permises**. Les tests du point 1 ont été écrits pour ça — `canvas-state.ts` était
-à 63 % de branches, le plus bas du dossier. **Vérifier que le compte est repassé sous 250.** S'il
-reste au-dessus, les candidats suivants sont `canvas-views.ts` (58 %) et les gardes de
-`CanvasEngine` ; élargir le budget est le dernier recours, et son propre commentaire dans
-`vitest.config.ts` explique quand c'est légitime — « a glob whose room to grow is mostly untestable
-GPU needs a wider budget ».
-
-**3. Fusionner.** Depuis le **dépôt principal**, pas depuis le worktree — `main` y est *checked
-out*, ce qui interdit la fusion d'ailleurs :
-
-    cd /Users/pasquelin/Applications/scenario
-    git status                     # doit être propre ; sinon commiter d'abord
-    git merge feat/image -m "Fusion de feat/image : l'espace Image édite des calques"
-    pnpm validate
-    git worktree remove .claude/worktrees/image
-    git branch -d feat/image-avant-rebase
-
-> **Avertissement, vérifié le 8 août 2026 :** le dépôt principal portait alors **33 fichiers de
-> documentation modifiés et non commités**, dont quatre que cette branche modifie aussi
-> (`08-espace-image.md`, `18-limites.md`, et leurs versions anglaises). Ils se contredisaient :
-> l'autre travail documentait que « on ne peut pas ouvrir une image existante », ce que le lot 2 de
-> cette branche a précisément implémenté. **En cas de conflit sur ces quatre fichiers, la version de
-> la branche est la juste** sur l'espace Image — elle décrit le logiciel après ce travail. Reprendre
-> de l'autre côté tout ce qui ne le concerne pas.
 
 # 2. Le plus urgent
 
@@ -282,10 +258,10 @@ conclure qu'un moteur ne se teste pas.
 5. **Le `blendMode` d'un `Container` n'est qu'hérité**, et chaque enfant écrit le sien : un groupe
    ne compose vraiment qu'à travers une passe hors écran.
 
-### Ce que la branche `feat/image` a livré
+### Ce que `feat/image` a livré — fusionnée dans `main` le 8 août 2026
 
-Vingt-huit commits, `pnpm validate` vert (230 fichiers de test, 2529 tests). Les jalons 4, 6, 7, 9 et
-10 sont **largement faits** ; ce qui reste est listé plus bas, avec sa raison.
+Trente-quatre commits, fusionnés (`dbc65f8`) ; la branche et son worktree n'existent plus. Les
+jalons 4, 6, 7, 9 et 10 sont **largement faits** ; ce qui reste est listé plus bas, avec sa raison.
 
 **Compositing (jalon 4).** Les seize modes de fusion fusionnent vraiment — il manquait
 `import 'pixi.js/advanced-blend-modes'`, sans lequel onze des seize retombaient silencieusement sur
@@ -614,11 +590,6 @@ rustinage local.
 d'écriture**, mais ne fait pas de `fsync` : une coupure de courant peut perdre l'écriture. C'est écrit
 dans son propre commentaire, et assumé.
 
-**Le panneau assets est à droite dans tous les espaces**, Image compris, où il mange la largeur du
-canvas pour rien. `TOOL_PLACEMENTS` (`shared/domain/tool.ts`) supporte déjà `workspaces` — le
-correctif a été proposé et jamais appliqué : `workspaces: ['video', 'audio']` sur l'entrée droite, plus
-une entrée `bottom` pour les autres.
-
 **Le double dispatch des accélérateurs Electron n'a jamais été vérifié en conditions réelles.** macOS
 consomme probablement la frappe avant le renderer, Windows/Linux non. Personne ne l'a mesuré sur les
 trois plateformes.
@@ -661,6 +632,20 @@ conflits grossissent vite et deviennent des collisions de conception : **deux se
 le panneau des calques et le registre de commandes en même temps**. Corollaire pratique : préfixer
 chaque commande par le chemin absolu de son worktree — le shell retombe ailleurs entre deux appels, et
 un build lancé au mauvais endroit écrase le `out/` du voisin.
+
+**Une fusion sans conflit n'est pas une fusion sans contradiction.** La fusion de `feat/image` en a
+fait la démonstration : un autre travail avait documenté, dans huit chapitres du manuel, que
+« l'espace Image ne sait pas ouvrir une image existante » — au moment précis où cette branche
+l'implémentait. Les deux textes touchaient des lignes différentes, donc **git les a mêlés
+proprement, sans rien signaler**, et le manuel décrivait deux logiciels à la fois.
+
+La règle qui en sort : **après toute fusion touchant à la fois du code et de la documentation,
+relire ce que la doc affirme sur ce que le code vient de changer** — un grep sur les tournures de
+manque (« ne sait pas », « pas encore », « rien du tout », « aucun bouton ») trouve en trente
+secondes ce qu'aucun outil de fusion ne verra jamais. Et vérifier chaque affirmation dans le code
+plutôt qu'au jugé : sur les quatre limites suspectes de ce lot, **trois étaient tombées, une
+tenait encore** — le recadrage, toujours dans `UNBUILT_TOOLS`. Supprimer la quatrième aurait fait
+mentir la doc dans l'autre sens.
 
 ---
 
