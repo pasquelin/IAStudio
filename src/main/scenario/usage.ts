@@ -2,8 +2,8 @@ import type { UnitPrice, UsageEventPage, UsagePeriod, UsageReport } from '@share
 import { USAGE_EVENT_PAGE_SIZE } from '@shared/domain/usage'
 import type { Credentials } from '@main/settings/accounts'
 import type { KeyedAccount } from '@main/settings/store'
+import type { AssistQueue } from './assist-queue'
 import { failureOf } from './client'
-import type { Retry } from './retry'
 import {
   aggregate,
   eventsOf,
@@ -40,34 +40,14 @@ export type UsageReaderDeps = {
   /** Every stored account, credentials included — see `SettingsStore.keyedAccounts`. */
   accounts: () => readonly KeyedAccount[]
   clientFor: (credentials: Credentials) => UsageClient
-  retry: Retry
-  now: () => Date
   /**
-   * How many accounts are queried at once. Low on purpose: no rate limit is published, and a
-   * burst of keys hitting the same endpoint is exactly what earns a 429.
+   * Bounds how many keys are queried at once, and retries what waiting can fix.
+   *
+   * Its own queue rather than the one background assistance uses: sharing would let a library
+   * fetch of three hundred captions starve this, and it starve them back.
    */
-  concurrency?: number
-}
-
-const DEFAULT_CONCURRENCY = 4
-
-/** Runs tasks with at most `limit` in flight, preserving input order in the result. */
-async function mapBounded<In, Out>(
-  items: readonly In[],
-  limit: number,
-  run: (item: In) => Promise<Out>,
-): Promise<Out[]> {
-  const results: Out[] = []
-  // One iterator shared by every worker: draining it is how the work is handed out, and it
-  // keeps each result at its input index without indexing back into `items`.
-  const queue = items.entries()
-
-  const worker = async (): Promise<void> => {
-    for (const [index, item] of queue) results[index] = await run(item)
-  }
-
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
-  return results
+  queue: AssistQueue
+  now: () => Date
 }
 
 /**
@@ -92,38 +72,39 @@ export function priceOf(list: PriceList): UnitPrice | null {
 export function createUsageReader({
   accounts,
   clientFor,
-  retry,
+  queue,
   now,
-  concurrency = DEFAULT_CONCURRENCY,
 }: UsageReaderDeps): UsageReader {
   /**
-   * Asks every account at once, and lets a refused key answer with its reason.
+   * Asks every account, and lets a refused key answer with its reason.
    *
-   * A rejected `Promise.all` would be wrong here: a revoked or expired key is the ordinary
-   * case, and one of them must not cost the user the figures the other keys did return.
+   * The rejection is caught per account rather than around the whole set: a revoked or expired
+   * key is the ordinary case, and one of them must not cost the user the figures the other keys
+   * did return.
    */
-  const collect = async (query: UsageQuery): Promise<AccountUsage[]> =>
-    mapBounded(accounts(), concurrency, async account => {
-      try {
-        const client = clientFor(account.credentials)
-        const data = await retry(() => client.usages.list(query))
-        return { accountId: account.id, name: account.name, data }
-      } catch (error) {
-        return {
-          accountId: account.id,
-          name: account.name,
-          data: null,
-          failure: failureOf(error),
-        }
-      }
-    })
+  const collect = (query: UsageQuery): Promise<AccountUsage[]> =>
+    Promise.all(
+      accounts().map(account =>
+        queue
+          .run(() => clientFor(account.credentials).usages.list(query))
+          .then(data => ({ accountId: account.id, name: account.name, data }))
+          .catch((error: unknown) => ({
+            accountId: account.id,
+            name: account.name,
+            data: null,
+            failure: failureOf(error),
+          })),
+      ),
+    )
 
   const priceList = async (): Promise<UnitPrice | null> => {
     const [first] = accounts()
     if (!first) return null
 
     try {
-      return priceOf(await retry(() => clientFor(first.credentials).pricing.oscu.retrievePrices()))
+      return priceOf(
+        await queue.run(() => clientFor(first.credentials).pricing.oscu.retrievePrices()),
+      )
     } catch {
       // The grid is a convenience: without it the window shows units alone rather than nothing.
       return null

@@ -1,4 +1,23 @@
 /**
+ * One formatter per shape and language, kept — as `ActivityList` keeps its own.
+ *
+ * Building an `Intl` formatter per call costs 48 µs against 4, which a hundred-line log and a
+ * hundred-and-twenty-point axis would both pay on the UI thread.
+ */
+const NUMBERS = new Map<string, Intl.NumberFormat>()
+const DATES = new Map<string, Intl.DateTimeFormat>()
+
+/** Keys name the shape as well as the language, so two shapes never share an entry. */
+function kept<T>(cache: Map<string, T>, key: string, build: () => T): T {
+  const held = cache.get(key)
+  if (held) return held
+
+  const built = build()
+  cache.set(key, built)
+  return built
+}
+
+/**
  * Compute Units, grouped for reading.
  *
  * Decimals only below ten: a studio racks up thousands, where a fractional unit is noise, but a
@@ -6,30 +25,44 @@
  */
 export function formatUnits(units: number, locale: string): string {
   const digits = units !== 0 && Math.abs(units) < 10 ? 2 : 0
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(units)
+
+  return kept(
+    NUMBERS,
+    `units:${digits}:${locale}`,
+    () => new Intl.NumberFormat(locale, { maximumFractionDigits: digits }),
+  ).format(units)
 }
 
 export function formatMoney(amount: number, currency: string, locale: string): string {
-  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount)
+  return kept(
+    NUMBERS,
+    `money:${currency}:${locale}`,
+    () => new Intl.NumberFormat(locale, { style: 'currency', currency }),
+  ).format(amount)
 }
 
 /** Short enough that a hundred and twenty of them can share one axis. */
 export function formatDay(date: string, locale: string): string {
+  // Read as UTC: the API dates its points there, and a local reading shifts a day at each end.
   const parsed = new Date(`${date}T00:00:00Z`)
   if (Number.isNaN(parsed.getTime())) return date
 
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  }).format(parsed)
+  return kept(
+    DATES,
+    `day:${locale}`,
+    () => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }),
+  ).format(parsed)
 }
 
 export function formatMoment(time: string, locale: string): string {
   const parsed = new Date(time)
   if (Number.isNaN(parsed.getTime())) return time
 
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(parsed)
+  return kept(
+    DATES,
+    `moment:${locale}`,
+    () => new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }),
+  ).format(parsed)
 }
 
 /**

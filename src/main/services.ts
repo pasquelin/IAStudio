@@ -62,8 +62,10 @@ import {
   recordFailuresTo,
   type ClientProvider,
 } from './scenario/client'
-import { createRetry } from './scenario/retry'
 import { createUsageReader, type UsageReader } from './scenario/usage'
+
+/** Keys queried at once when reading usage. Fixed and low: the API publishes no rate limit. */
+const USAGE_CONCURRENCY = 4
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
@@ -298,11 +300,13 @@ export function createServices(settings: SettingsStore): Services {
   })
 
   // Its own client per account rather than the shared one: reading usage asks every stored key
-  // at once and must leave the active account exactly as it found it.
+  // at once and must leave the active account exactly as it found it. Its own queue too, small
+  // and fixed: no rate limit is published, and a burst of keys on one endpoint earns a 429.
   const usage = createUsageReader({
     accounts: () => settings.keyedAccounts(),
     clientFor: clientForCredentials,
-    retry: createRetry({
+    queue: createAssistQueue({
+      concurrency: () => USAGE_CONCURRENCY,
       maxRetries: () => settings.read().generation.maxRetries,
       sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
     }),

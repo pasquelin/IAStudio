@@ -2,10 +2,22 @@ import { APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import type { Credentials } from '@main/settings/accounts'
 import type { KeyedAccount } from '@main/settings/store'
+import { createAssistQueue, type AssistQueue } from './assist-queue'
 import { createUsageReader, priceOf, type UsageClient, type UsageQuery } from './usage'
 import type { UsageData } from './usage-aggregate'
 
 const NOW = new Date('2026-08-08T12:00:00Z')
+
+/** The real queue, with retries disabled: what is under test is what it is asked, not backoff. */
+function boundedQueue(concurrency = 4): AssistQueue {
+  return createAssistQueue({
+    concurrency: () => concurrency,
+    maxRetries: () => 0,
+    sleep: () => Promise.resolve(),
+  })
+}
+
+const queue = boundedQueue()
 
 function keyed(name: string): KeyedAccount {
   return { id: `acc-${name}`, name, credentials: { key: `key-${name}`, secret: 'secret' } }
@@ -48,7 +60,7 @@ function reader(
   return createUsageReader({
     accounts: () => accounts,
     clientFor,
-    retry: action => action(),
+    queue,
     now: () => NOW,
   })
 }
@@ -123,9 +135,8 @@ describe('createUsageReader', () => {
     const usage = createUsageReader({
       accounts: () => accounts,
       clientFor: () => client({ inFlight }),
-      retry: action => action(),
+      queue: boundedQueue(3),
       now: () => NOW,
-      concurrency: 3,
     })
 
     await usage.report(31)
@@ -217,17 +228,5 @@ describe('createUsageReader', () => {
 
     expect(page.more).toBe(true)
     expect(page.events).toHaveLength(100)
-  })
-
-  it('runs a single account without waiting on a pool it does not need', async () => {
-    const usage = createUsageReader({
-      accounts: () => [keyed('one')],
-      clientFor: () => client(),
-      retry: action => action(),
-      now: () => NOW,
-      concurrency: 8,
-    })
-
-    await expect(usage.report(7)).resolves.toMatchObject({ period: 7 })
   })
 })

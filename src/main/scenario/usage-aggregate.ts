@@ -201,12 +201,11 @@ function jobsOf(accounts: readonly AccountUsage[]): number {
 
 function accountSpendOf(accounts: readonly AccountUsage[]): AccountSpend[] {
   return accounts
-    .filter(account => account.data !== null)
-    .map(account => {
-      // Narrowed by the filter above, but TypeScript cannot see through it.
-      const spend = account.data ? spendOf(account.data) : { units: 0, discount: 0 }
-      return { accountId: account.accountId, name: account.name, ...spend }
-    })
+    .flatMap(account =>
+      account.data
+        ? [{ accountId: account.accountId, name: account.name, ...spendOf(account.data) }]
+        : [],
+    )
     .sort((left, right) => right.units - left.units)
 }
 
