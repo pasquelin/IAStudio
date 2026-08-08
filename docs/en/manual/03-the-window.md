@@ -285,8 +285,8 @@ The dot disappears on save (`⌘S` / `Ctrl+S`), and comes back on the next chang
 to the exact point where you saved, it disappears too: what you see is then indeed what the file
 holds.
 
-> **Not every document can save yet.** Today, only **3D scenes** and **materials** are written to
-> disk. See [What does not exist yet](18-limits.md).
+> **Not every document can save yet.** Today, **images**, **3D scenes** and **materials** are
+> written to disk. See [What does not exist yet](18-limits.md).
 
 ### Each workspace has its own tabs
 
@@ -334,6 +334,36 @@ with the last running generation is a failure nobody would have read.
 **Clicking opens the list**, in a small window above the status line: one line per job, its model,
 its state, its bar, and the button that cancels it. It is the content of the former panel, one click
 away instead of a permanent piece of surface.
+
+### The journal, next to it
+
+A second icon on the same line: the **activity journal**. It keeps what the studio has done and
+what it has failed to do — a generation, an import, an upload to the library, a document save.
+
+**It is always there**, unlike the generations, which vanish when nothing is running. A studio
+showing nothing until something breaks leaves the user with nowhere to look **before** it does.
+
+| What you see | Situation |
+|---|---|
+| a small grey clock | all is well, the journal can be read |
+| an alert and "2 failures" in red | two things failed and have not been read yet |
+
+**One click opens the list and marks everything read** — opening it is reading it. Two filters
+wait there: the **level** (information, warning, failure) and the **topic** (generation, import,
+library, document). A **Show everything** button releases them.
+
+### The toasts that do not fade
+
+A failure raises a **toast** in the bottom-right corner, above the status line.
+
+Two decisions show through, both against the usual habit:
+
+- **Only failures raise one.** An asset imported successfully gets its line in the journal, not a
+  toast: a toast per happy event would train you to look away from the corner where the problems
+  appear.
+- **They do not go away on their own.** No four-second fade — a toast that faded is a toast
+  somebody looking at their canvas never saw. It leaves when you close it, and closing it is what
+  marks it read.
 
 ---
 

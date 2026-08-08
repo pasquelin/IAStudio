@@ -47,16 +47,17 @@ Six asset types:
 | Zone | Where they are |
 |---|---|
 | **Bottom strip** | on the **title line**, beside the panel's name |
-| **Left column** (Video workspace) | on their **own line**, below the title |
+| **Right column** (Video and Audio workspaces) | on their **own line**, below the title |
 
 In a strip the row is wide and mostly empty: putting the bar there saves a whole row, and the
-shelf is there to show assets, not buttons. In a 320-pixel column, the same bar would push the
-close button out of the frame — so it drops back below the title.
+shelf is there to show assets, not buttons. In a narrow column, the same bar would push the close
+button out of the frame — so it drops back below the title.
 
 | Control | What it does |
 |---|---|
 | **Search…** | filters on the asset's **name**, as you type |
 | **Type** | keeps only one or more kinds of asset |
+| **Location** | keeps only assets in a given state with respect to the library |
 | **Icons** / **List** | grid of thumbnails, or dense list |
 | **Smaller** / **Larger** | the thumbnail size |
 
@@ -84,7 +85,34 @@ The message says which of the three cases you are in, because they call for diff
 |---|---|
 | **Click** | selects — the Inspector, on the right, shows its information |
 | **Double-click** | sends the asset into **the tab in front of you** |
+| **Right-click** | lists **every** destination it has |
 | **Drag and drop** | drops the asset wherever you release it |
+
+### Right-click says what double-click keeps quiet about
+
+Double-click takes **the first applicable destination** and says nothing about the others.
+Right-click lists them all, always in the same order — the one double-click follows:
+
+| Row | Where it sends the asset | For which types |
+|---|---|---|
+| **Use as sky** | the open sky, Skyboxes workspace | pictures |
+| **Add to the scene** | the open 3D scene | meshes |
+| **Open in the audio editor** | the open take, Audio workspace | sounds |
+| **Place as a layer** | the open image, Image workspace | pictures |
+| **Add to the montage** | the open sequence, Video workspace | all |
+| **Use as base colour** | the open material, Textures workspace | pictures |
+| **Show in Finder** | opens the folder holding the file | all |
+
+Each row carries its workspace's icon, the same one as in the title bar. The menu only shows
+destinations able to take **that type**: right-clicking a sound does not offer to lay it out as a
+sky.
+
+**A destination whose workspace has no open document does stay listed, but greyed out.** That is
+deliberate: a menu whose length changes with what is open is a menu you cannot learn. A greyed row
+tells you what to do — open a document in that workspace — where a missing row tells you nothing.
+
+It is also the answer to the double-click trap: when nothing moves, right-click shows in one go
+what this asset can do, and what is missing for it to do it.
 
 ### Double-click does not do what you think
 
@@ -142,6 +170,62 @@ your file manager.
 
 > "**File not found**" means a linked medium has been moved or deleted from its original location.
 > See the next section.
+
+---
+
+## Your account's library
+
+Your project is a folder on your disk. Your Scenario account has a library of its own, online.
+The two exist separately, and **nothing travels between them unless you ask**.
+
+### What a thumbnail's badge tells you
+
+Every thumbnail carries a small mark saying where that asset stands with respect to the library:
+
+| Badge | What it means |
+|---|---|
+| **Local only** | the file is on your machine, the library knows nothing about it |
+| **In sync with the library** | both sides hold the same version |
+| **Changed here — to send** | your copy has moved since the last upload |
+| **Changed in the library — to fetch** | the other side is the one that moved |
+| **Changed on both sides** | the two versions have diverged |
+| **The last upload failed** | the previous attempt did not go through |
+| **Belongs to another project** | the online twin answers to a different API key than the active one |
+
+The badge is not stored, it is **recomputed**: it depends on the active account, and an API key
+opens onto one project and one only. Switch accounts in the title bar and the badges are read
+again — same file, different library on the other end.
+
+> **Four of those seven badges are out of reach today**, and consistently so: as long as
+> transfers are triggered by hand, nothing can change the online version behind your back. "To
+> fetch", "changed on both sides" and "another project" will only appear with automatic syncing,
+> once it exists. The **Location** filter therefore offers only the four states actually
+> reachable: *local only*, *in sync*, *to send* and *failed*.
+
+### Sending a selection
+
+The **Send** button, on the shelf's title line, uploads the **selected** assets to your account's
+library.
+
+Three things describe it better than an introduction would:
+
+- **it never leaves on its own** — it takes a selection, and a click;
+- **it refuses to run twice**: during a transfer the button is inactive, so a second click cannot
+  push over the first;
+- **it reports asset by asset.** What went through went through; what failed takes the *failed*
+  badge and a line in the journal — an upload is not all-or-nothing.
+
+An unselected asset, or a closed project, leaves the button greyed out.
+
+> **There is no Fetch button yet**, and no screen for browsing the library from the studio. The
+> studio knows how — the mechanism is written and tested — but nothing triggers it for now. So
+> the transfer runs one way only: from you to the library.
+
+### Naming from what the API sees
+
+The **Describe** button, next to it, asks the API to look at the selected pictures and give them a
+name drawn from their content. Nothing leaves without the click, and the names land in the
+project's catalogue.
 
 ---
 
