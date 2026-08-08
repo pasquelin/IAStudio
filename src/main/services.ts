@@ -486,7 +486,13 @@ export function createServices(settings: SettingsStore): Services {
     // Another key means another catalogue: keeping a cache would show the previous account's
     // contents under the new one.
     onCredentialsChanged: credentials.changed,
-    authState: () => client.authState(),
+    authState: async () => {
+      const state = await client.authState()
+      const owner = ownerScope.current()
+      // Attached here rather than probed for: the scope fills in as the library answers, and
+      // asking the API again would cost a call to learn something it already told us.
+      return state.authenticated && owner !== null ? { ...state, ownerId: owner } : state
+    },
     // Every window carries the switch, not just the one that made it: the studio and the
     // settings window both show which account is active.
     broadcastAccounts: accounts => broadcast(EVENTS.accountsChanged, accounts),

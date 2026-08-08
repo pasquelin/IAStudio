@@ -177,7 +177,19 @@ export function mergePartial(base: PartialSettings, next: PartialSettings): Part
   return merged
 }
 
-export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }
+export type AuthState =
+  | {
+      authenticated: true
+      /**
+       * The project this key opens onto, once the library has named it — there is no endpoint
+       * that would simply say, so it is learned from the first assets that come back.
+       *
+       * Absent means "not known yet", which every reader treats as "do not judge ownership"
+       * rather than as a mismatch.
+       */
+      ownerId?: string
+    }
+  | { authenticated: false; reason: ApiFailure }
 
 /**
  * Sections of the settings window, named so any surface can ask for one of them — a panel that

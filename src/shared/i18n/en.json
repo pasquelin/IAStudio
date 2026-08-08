@@ -69,7 +69,17 @@
     "count_other": "{{count}} assets",
     "openProject": "Open a project to see its assets.",
     "import": "Import media",
-    "importHint": "Link a video, audio or image file — it stays where it is"
+    "importHint": "Link a video, audio or image file — it stays where it is",
+    "badge": {
+      "local-only": "Local only",
+      "synced": "In sync with the library",
+      "to-push": "Changed here — to send",
+      "to-pull": "Changed in the library — to fetch",
+      "conflict": "Changed on both sides",
+      "error": "The last upload failed",
+      "other-account": "Belongs to another project"
+    },
+    "location": "Location"
   },
   "dialog": {
     "allMedia": "All media",

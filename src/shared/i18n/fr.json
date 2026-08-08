@@ -69,7 +69,17 @@
     "count_other": "{{count}} assets",
     "openProject": "Ouvrez un projet pour voir ses assets.",
     "import": "Importer un média",
-    "importHint": "Lier un fichier vidéo, audio ou image — il reste où il est"
+    "importHint": "Lier un fichier vidéo, audio ou image — il reste où il est",
+    "badge": {
+      "local-only": "Local seulement",
+      "synced": "Synchronisé avec la bibliothèque",
+      "to-push": "Modifié ici — à envoyer",
+      "to-pull": "Modifié dans la bibliothèque — à rapatrier",
+      "conflict": "Modifié des deux côtés",
+      "error": "Le dernier envoi a échoué",
+      "other-account": "Appartient à un autre projet"
+    },
+    "location": "Emplacement"
   },
   "dialog": {
     "allMedia": "Tous les médias",
