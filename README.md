@@ -143,6 +143,22 @@ it is called done.
 
 ---
 
+## Releasing
+
+A `git tag vX.Y.Z` builds and packages the three platforms, and opens a draft GitHub Release.
+
+| | |
+|---|---|
+| [docs/ci/RELEASE.md](docs/ci/RELEASE.md) | The checklist to publish a version, and how to roll one back |
+| [docs/ci/SECRETS.md](docs/ci/SECRETS.md) | Code-signing secrets: what each one is, how to obtain it, when it expires |
+| [docs/ci/TROUBLESHOOTING.md](docs/ci/TROUBLESHOOTING.md) | Symptom, cause, fix — for when the pipeline breaks |
+
+The decisions behind the pipeline are recorded in [docs/ci/adr/](docs/ci/adr/). Builds are
+currently **unsigned**: macOS and Windows both warn on first launch until the certificates of
+`SECRETS.md` are provisioned.
+
+---
+
 ## License
 
 Proprietary. All rights reserved.
