@@ -37,7 +37,8 @@
     "noParameter": "This model takes no parameters.",
     "randomSeed": "Random",
     "noProject": "Open a project to generate.",
-    "noCredentials": "Enter your API credentials to see your models."
+    "noCredentials": "Enter your API credentials to see your models.",
+    "dropPicture": "Drop a picture, or paste its id"
   },
   "jobs": {
     "none": "No job running.",

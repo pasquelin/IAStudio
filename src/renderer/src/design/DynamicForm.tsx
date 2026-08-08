@@ -17,6 +17,7 @@ import {
   type FormValues,
 } from '@/helpers/dynamic-form'
 import { Button } from './Button'
+import { AssetDropField } from './AssetDropField'
 import { FIELD } from './styles'
 import { ToolButton } from './ToolButton'
 
@@ -91,8 +92,17 @@ function Control({
         />
       )
 
-    // `image` and `raw` both land here. An unknown kind renders as a plain input rather than
-    // making the form disappear — CLAUDE.md, invariant 5.
+    case 'image':
+      return (
+        <AssetDropField
+          registration={registration}
+          initial={typeof field.default === 'string' ? field.default : undefined}
+          placeholder={t('generation.dropPicture')}
+        />
+      )
+
+    // An unknown kind renders as a plain input rather than making the form disappear —
+    // CLAUDE.md, invariant 5.
     default:
       return <input type="text" className={FIELD} {...registration} />
   }

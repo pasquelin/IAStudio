@@ -15,6 +15,8 @@ export type ScenarioInput = {
   placeholder?: string
   group?: string
   kind?: string
+  /** On a mask input: the name of the file input it masks. */
+  maskFrom?: string
   color?: boolean
   prompt?: boolean
   default?: unknown
@@ -92,6 +94,10 @@ export function translateSchema(inputs: readonly ScenarioInput[] | undefined): F
     if (input.min !== undefined) descriptor.min = input.min
     if (input.max !== undefined) descriptor.max = input.max
     if (input.step !== undefined) descriptor.step = input.step
+
+    // The pairing Scenario declares between a mask and the picture it masks: carried through so
+    // an edit action can fill both without knowing either model's field names.
+    if (input.maskFrom !== undefined) descriptor.maskFrom = input.maskFrom
 
     const options = optionsOf(input)
     if (options) descriptor.options = options

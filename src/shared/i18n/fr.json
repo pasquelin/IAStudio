@@ -37,7 +37,8 @@
     "noParameter": "Ce modèle n’attend aucun paramètre.",
     "randomSeed": "Aléatoire",
     "noProject": "Ouvrez un projet pour générer.",
-    "noCredentials": "Renseignez vos identifiants API pour voir vos modèles."
+    "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
+    "dropPicture": "Déposez une image, ou collez son identifiant"
   },
   "jobs": {
     "none": "Aucune tâche en cours.",

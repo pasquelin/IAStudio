@@ -33,6 +33,12 @@ export type FieldDescriptor = {
   options?: FieldOption[]
   group?: string
   dependsOn?: { key: string; value: unknown }
+  /**
+   * The file input this one masks, when the model takes an inpainting mask — Scenario calls it
+   * "the name of the file input field to use as the mask source". Present only on the mask
+   * field itself, which is what lets an edit action fill the pair without naming either.
+   */
+  maskFrom?: string
 }
 
 export type ModelFamily =
