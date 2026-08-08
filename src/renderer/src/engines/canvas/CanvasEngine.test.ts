@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import type { FontRef } from '@shared/domain/font'
 import type { FaceRegistrar } from './canvas-fonts'
@@ -22,7 +22,7 @@ import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from './shape-geometry'
 import { RULER_SIZE } from './CanvasOverlay'
-import { DEFAULT_VIEW, type Viewport } from './viewport'
+import { DEFAULT_VIEW, toDocument, type Viewport } from './viewport'
 
 /**
  * jsdom has no WebGL context, so Pixi is doubled. What is tested here is what the engine
@@ -2596,8 +2596,8 @@ describe('the eyedropper', () => {
     expect(picks).toEqual([0x336699])
   })
 
-  // A channel the renderer did not hand back reads as none of it. Packing an `undefined` would
-  // hand the document a `NaN`, which is not a colour any layer can be painted with.
+  // A buffer shorter than three channels reads as black rather than as a colour made up from
+  // whatever the missing ones defaulted to — an opaque white, say, which `?? 255` would give.
   it('reads a channel it was not given as none of it', async () => {
     gpu.pixels = []
     const { host, picks } = await mounted(DEFAULT_CANVAS, 'picker')
@@ -2618,6 +2618,20 @@ describe('the eyedropper', () => {
   })
 
   /**
+   * At 1:1 unpanned a screen point and a document point are the same number, so every other test
+   * here would pass on an eyedropper that never converted at all. Zoomed, they part company: 41
+   * screen pixels are 20.5 document ones, and the pixel holding them is 20.
+   */
+  it('reads the pixel under the pointer, whatever the zoom', async () => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'picker')
+    engine.setView({ ...VIEW_1_1, snap: false, viewport: { x: 0, y: 0, scale: 2 } })
+
+    press(host, 41, 51)
+
+    expect(gpu.sampled).toEqual([{ x: 20, y: 25, width: 1, height: 1 }])
+  })
+
+  /**
    * Rulers off: their bands cover the first 20 px of each axis and take a press before any tool
    * sees it, so a point at or outside the origin is unreachable with them on.
    */
@@ -2634,6 +2648,20 @@ describe('the eyedropper', () => {
 
     expect(picks).toEqual([])
     expect(gpu.sampled).toEqual([])
+  })
+
+  // The other side of the same guard: pressed from the outside alone, tightening it to `x < 1` or
+  // `x >= width - 1` would take the first and last row of the document away without a test noticing.
+  it.each([
+    { corner: 'first', x: 0, y: 0 },
+    { corner: 'last', x: 1023, y: 1023 },
+  ])('reads the $corner pixel of the document', async ({ x, y }) => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'picker')
+    engine.setView({ ...VIEW_1_1, snap: false, rulers: false })
+
+    press(host, x, y)
+
+    expect(gpu.sampled).toEqual([{ x, y, width: 1, height: 1 }])
   })
 
   it('says nothing when no layer is armed', async () => {
@@ -2662,11 +2690,13 @@ describe('holding space to pan', () => {
     const { host } = await mounted()
     const field = document.createElement('input')
     document.body.appendChild(field)
+    // Booked rather than removed after the assertion: a failing expect would leave the field in
+    // the page for every test after it, which is the kind of residue shuffling makes unreadable.
+    onTestFinished(() => field.remove())
 
     field.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
 
     expect(cursorOf(host)).toBe('')
-    field.remove()
   })
 
   it('ignores a key that is not the space bar', async () => {
@@ -2725,13 +2755,21 @@ describe('the wheel', () => {
   it.each([
     { how: 'ctrl', ctrlKey: true, metaKey: false },
     { how: 'meta', ctrlKey: false, metaKey: true },
-  ])('zooms with $how held', async ({ ctrlKey, metaKey }) => {
+  ])('zooms with $how held, around the pointer', async ({ ctrlKey, metaKey }) => {
     const { host, viewports } = await mounted()
 
-    wheel(host, { deltaY: -100, ctrlKey, metaKey })
+    wheel(host, { clientX: 200, clientY: 100, deltaY: -100, ctrlKey, metaKey })
     await nextFrame()
 
-    expect(viewports.at(-1)?.scale).toBeGreaterThan(1)
+    // Falling back to the identity rather than asserting non-null: a wheel that published nothing
+    // fails the scale below instead of throwing something unreadable.
+    const next = viewports.at(-1) ?? { x: 0, y: 0, scale: 1 }
+    expect(next.scale).toBeGreaterThan(1)
+    // Whatever sat under the pointer is still under it — scaling without an anchor drags the
+    // document away from the cursor, which is the regression this line exists for.
+    const under = toDocument(next, { x: 200, y: 100 })
+    expect(under.x).toBeCloseTo(200)
+    expect(under.y).toBeCloseTo(100)
   })
 
   // Bare, it scrolls as it does in Figma: the document moves under a still pointer rather than
