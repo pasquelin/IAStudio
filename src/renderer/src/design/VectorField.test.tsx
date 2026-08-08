@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { Vector3Field } from './Vector3Field'
+import { VectorField } from './VectorField'
 
 function renderField() {
   const onChange = vi.fn()
@@ -8,7 +8,7 @@ function renderField() {
   const onGestureEnd = vi.fn()
 
   render(
-    <Vector3Field
+    <VectorField
       label="Position"
       value={{ x: 1, y: 2, z: 3 }}
       step={1}
@@ -21,7 +21,7 @@ function renderField() {
   return { onChange, onGestureStart, onGestureEnd }
 }
 
-describe('Vector3Field', () => {
+describe('VectorField', () => {
   it('shows one field per axis', () => {
     renderField()
 
@@ -59,5 +59,46 @@ describe('Vector3Field', () => {
 
     expect(onGestureStart).toHaveBeenCalledTimes(1)
     expect(onGestureEnd).toHaveBeenCalledTimes(1)
+  })
+
+  /** A tiling has two components, and a field built for it would have been this one, less a line. */
+  describe('on a value of two axes', () => {
+    const renderPair = () => {
+      const onChange = vi.fn()
+      render(<VectorField label="Tiling" value={{ x: 2, y: 3 }} step={1} onChange={onChange} />)
+      return { onChange }
+    }
+
+    it('shows only the axes the value has', () => {
+      renderPair()
+
+      expect(screen.getByLabelText('X')).toHaveValue('2')
+      expect(screen.getByLabelText('Y')).toHaveValue('3')
+      expect(screen.queryByLabelText('Z')).toBeNull()
+    })
+
+    it('reports both components when one moves', () => {
+      const { onChange } = renderPair()
+
+      fireEvent.change(screen.getByLabelText('X'), { target: { value: '5' } })
+
+      expect(onChange).toHaveBeenCalledWith({ x: 5, y: 3 })
+    })
+
+    it('shows the axes it is told to, in the order it is told', () => {
+      const onChange = vi.fn()
+      render(
+        <VectorField
+          label="Repeat"
+          value={{ u: 1, v: 4 }}
+          axes={['v', 'u']}
+          step={1}
+          onChange={onChange}
+        />,
+      )
+
+      const labels = screen.getAllByText(/^[UV]$/).map(node => node.textContent)
+      expect(labels).toEqual(['V', 'U'])
+    })
   })
 })

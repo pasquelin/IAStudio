@@ -19,6 +19,7 @@ import { installCanvas } from '@/stores/canvas-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
 import { installScene } from '@/stores/scene-fixtures'
+import { installTexture } from '@/stores/texture-fixtures'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
@@ -567,5 +568,48 @@ describe('inspector panel', () => {
     render(<Content />)
 
     expect(screen.queryByText('Composition')).not.toBeInTheDocument()
+  })
+
+  /**
+   * A texture has nothing to select: the material IS the document, so its face shows on the same
+   * default branch a scene does — and nothing has to be clicked first.
+   */
+  describe('the document in front, when nothing was picked', () => {
+    // Cleared on purpose: the suite above points the selection at a layer, and a face chosen by
+    // `selection.kind` would answer that instead of the document this describes.
+    beforeEach(() => {
+      useSelection.getState().clear()
+    })
+
+    it('describes the material of a texture', () => {
+      installTexture('doc-1')
+      render(<Content />)
+
+      expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
+    })
+
+    /**
+     * Not a matter of precedence: `activeIdOfKind` answers for one kind, so a document is a scene
+     * or a texture and never both. What this pins is that adding the second face left the first
+     * one answering — the same branch now has two ways out.
+     */
+    it('shows the scene face for a 3D document, not the texture one', () => {
+      install(meshNode('mesh-1'), false)
+      render(<Content />)
+
+      // `Rugosité` belongs to the material of a texture; a mesh material says `Rugosité` nowhere.
+      expect(screen.queryByLabelText('Rugosité')).toBeNull()
+      expect(screen.getByRole('button', { name: /Environnement/ })).toBeInTheDocument()
+    })
+
+    it('says nothing at all when the document in front is neither', () => {
+      installCanvas('doc-1')
+      render(<Content />)
+
+      expect(
+        screen.getByText('Sélectionnez un élément pour voir ses propriétés.'),
+      ).toBeInTheDocument()
+      expect(screen.queryByLabelText('Rugosité')).toBeNull()
+    })
   })
 })

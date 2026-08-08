@@ -2,7 +2,7 @@ import { ColorField } from '@/design/ColorField'
 import { NumberField } from '@/design/NumberField'
 import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
-import { Vector3Field } from '@/design/Vector3Field'
+import { VectorField } from '@/design/VectorField'
 import type { GestureProps } from '@/design/styles'
 import { isVector3, type FieldValue, type PropertyField } from '@/engines/scene/property-fields'
 
@@ -54,7 +54,7 @@ export function PropertyControl({ field, label, onChange, gesture }: PropertyCon
 
   if (isVector3(value)) {
     const step = spec?.control === 'vector3' ? spec.step : undefined
-    return <Vector3Field label={label} value={value} step={step} onChange={onChange} {...gesture} />
+    return <VectorField label={label} value={value} step={step} onChange={onChange} {...gesture} />
   }
 
   // A hexadecimal is a colour whether or not a table said so — and anything else is text.

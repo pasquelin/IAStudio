@@ -8,13 +8,20 @@ import { formatBytes } from '@/helpers/format'
 import { assetsById, useAssets } from '@/stores/assets'
 import { layerById, type Layer } from '@/engines/canvas/canvas-state'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { activeImageId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
+import {
+  activeImageId,
+  activeSceneId,
+  activeSequenceId,
+  activeTextureId,
+  useDocuments,
+} from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { AssetInspector } from './AssetInspector'
 import { ClipInspector } from './ClipInspector'
 import { LayerInspector } from './LayerInspector'
 import { SceneInspector } from './SceneInspector'
+import { TextureInspector } from './TextureInspector'
 import { TrackInspector } from './TrackInspector'
 
 /**
@@ -39,6 +46,7 @@ function Face() {
   const sceneId = useDocuments(activeSceneId)
   const sequenceId = useDocuments(activeSequenceId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
+  const textureId = useDocuments(activeTextureId)
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
@@ -85,10 +93,16 @@ function Face() {
       )
     }
 
-    // Nothing was clicked in a panel, so the scene speaks for itself: which node is selected
-    // is held by the scene state rather than announced to the selection store.
+    // Nothing was clicked in a panel, so the document in front speaks for itself: a scene says
+    // which node is selected from its own state, and a texture has nothing to select at all —
+    // the material IS the document.
+    //
+    // At most one of the two is set, `activeIdOfKind` answering for a single kind: the order
+    // below is reading order, not precedence.
     default:
-      return sceneId ? <SceneInspector documentId={sceneId} /> : <Empty />
+      if (sceneId) return <SceneInspector documentId={sceneId} />
+      if (textureId) return <TextureInspector documentId={textureId} />
+      return <Empty />
   }
 }
 

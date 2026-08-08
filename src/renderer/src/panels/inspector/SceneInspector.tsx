@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  setEnvironment,
   setGeometryOn,
   setLightOn,
   setMaterialOn,
@@ -61,7 +62,10 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // it is what keeps the panel from being empty when nothing is selected, in place of a message.
   return (
     <>
-      <EnvironmentSection environment={environment} edit={edit} />
+      <EnvironmentSection
+        environment={environment}
+        onChange={next => edit.run(setEnvironment(next))}
+      />
 
       {node && (
         <>
