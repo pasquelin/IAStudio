@@ -144,9 +144,29 @@ le document n'a pas changé de taille entre-temps.
 
 | Outil | Raccourci | Ce qu'il fait |
 |---|---|---|
-| **Recadrage** | `F` | *pas encore disponible* |
+| **Recadrage** | `F` | glissez un cadre sur l'image, ajustez-le, puis `⏎` pour rogner |
 | **Section** | `⇧S` | *pas encore disponible* |
 | **Découpe** | `S` | *pas encore disponible* |
+
+Le geste se fait en trois temps :
+
+1. **Glissez** un cadre sur l'image. Ce qui en sort est **assombri** — c'est exactement ce que le
+   recadrage va retirer. `⇧` pendant le glissement contraint le cadre au carré.
+2. **Ajustez-le.** Le cadre reste à l'écran quand vous relâchez, avec ses huit poignées : tirez
+   un coin ou une arête pour le corriger. Glisser ailleurs recommence un cadre neuf.
+3. **`⏎` applique**, `⎋` abandonne.
+
+Rien n'est modifié avant `⏎` : vous pouvez zoomer, faire glisser la vue au bouton du milieu, et
+revenir au cadre. Changer d'outil l'abandonne ; redimensionner ou pivoter l'image aussi, puisque
+le cadre ne désignerait plus la même chose.
+
+Le cadre ne sort jamais de l'image — un recadrage rogne, il n'agrandit pas.
+
+> ⚠️ **`⌘Z` rend le cadre, pas les pixels rognés.** Rétrécir le document jette pour de bon ce
+> qui tombait dehors : l'annulation rétablit la taille d'origine, mais la zone retirée revient
+> vide. C'est le comportement de Photoshop lorsque « Supprimer les pixels rognés » est coché —
+> à ceci près que Photoshop, lui, sait les rendre. **Exportez avant de rogner large** si vous
+> comptez revenir en arrière.
 
 ### Groupe Sélection
 

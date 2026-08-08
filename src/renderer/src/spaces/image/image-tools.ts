@@ -73,9 +73,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
   },
   {
     id: 'frame',
-    // Greyed on the group, not only on its rows: `Toolbar` does not inherit a mode's `disabled`,
-    // so the button armed a tool the engine refuses — a live-looking button that does nothing.
-    disabled: true,
     tool: 'crop',
     labelKey: 'imageTools.frame',
     descriptionKey: 'imageTools.frameHint',
@@ -87,10 +84,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         descriptionKey: 'imageTools.cropHint',
         icon: mdiCropFree,
         shortcut: 'F',
-        // Resizing the frame moves every layer, but a layer's texture keeps the document's old
-        // size — so after a crop the brush writes at the offset the crop introduced. Greyed
-        // rather than hidden, as the bar does for everything else that is coming.
-        disabled: true,
       },
       {
         id: 'section',
@@ -253,8 +246,9 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
   },
   {
     id: 'comment',
-    // Greyed for the same reason the frame group is: the engine drops every pointer event of an
-    // unbuilt tool, so the button armed a mode that changed the cursor and did nothing.
+    // Greyed on the group, not only on its rows: `Toolbar` does not inherit a mode's `disabled`,
+    // so the button armed a tool the engine drops every pointer event of — a live-looking button
+    // that changed the cursor and did nothing.
     disabled: true,
     tool: 'comment',
     labelKey: 'imageTools.comment',

@@ -185,6 +185,16 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 
 ## In the image
 
+### Cropping
+
+These two keys act **only** while a crop frame is placed on the picture, and only in the tab in
+front. Everywhere else they keep their usual meaning.
+
+| Action | Key | What it does |
+|---|---|---|
+| **Apply the crop** | `⏎` | trims the document to the frame. `⌘Z` gives the frame back, not the pixels |
+| **Abandon the crop** | `⎋` | takes the frame away without trimming anything |
+
 ### Zoom and framing
 
 | Action | Key | What it does |

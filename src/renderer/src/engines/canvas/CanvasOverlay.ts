@@ -1,7 +1,7 @@
 import type { Guide } from './canvas-state'
 import { rulerStep, tickLabel, ticks } from './rulers'
 import type { Point } from './shape-geometry'
-import { toScreen, visibleRect, type Size, type Viewport } from './viewport'
+import { crisp, toScreen, visibleRect, type Size, type Viewport } from './viewport'
 
 /**
  * The 2D overlay drawn above the Pixi canvas. It holds no pixel of the document: everything here
@@ -43,6 +43,8 @@ export type OverlayColors = {
   rulerText: string
   rulerTick: string
   accent: string
+  /** Translucent: it dims what a crop is about to cut away without hiding it. */
+  scrim: string
 }
 
 export const RULER_SIZE = 20
@@ -64,11 +66,6 @@ export type OverlayScene = {
   colors: OverlayColors
   /** The active tool's own chrome, drawn last and in screen space. */
   paint?: (context: OverlayContext) => void
-}
-
-/** Half-pixel offset, or a one-pixel line spreads over two and comes out grey. */
-function crisp(value: number): number {
-  return Math.round(value) + 0.5
 }
 
 function line(context: OverlayContext, x1: number, y1: number, x2: number, y2: number): void {

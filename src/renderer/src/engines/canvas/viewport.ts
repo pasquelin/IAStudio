@@ -50,6 +50,15 @@ export function clampScale(scale: number): number {
   return clamp(scale, MIN_SCALE, MAX_SCALE)
 }
 
+/**
+ * Half-pixel offset, or a one-pixel line spreads over two and comes out grey. Here rather than
+ * with the painters: the overlay, the crop chrome and the grips all snap to the same grid, and
+ * the convention belongs beside the screen-space maths it applies to.
+ */
+export function crisp(value: number): number {
+  return Math.round(value) + 0.5
+}
+
 export function toScreen(viewport: Viewport, point: Point): Point {
   return { x: point.x * viewport.scale + viewport.x, y: point.y * viewport.scale + viewport.y }
 }

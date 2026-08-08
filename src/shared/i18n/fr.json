@@ -1007,6 +1007,14 @@
       "title": "Désélectionner",
       "help": "Abandonner la région sélectionnée : le pinceau retrouve tout le calque"
     },
+    "canvasCropApply": {
+      "title": "Appliquer le recadrage",
+      "help": "Rogner le document au cadre posé. ⌘Z rend le cadre, pas les pixels retirés"
+    },
+    "canvasCropCancel": {
+      "title": "Abandonner le recadrage",
+      "help": "Retirer le cadre de recadrage sans rien rogner du tout"
+    },
     "canvasMaskFromSelection": {
       "title": "Faire un masque de la sélection",
       "help": "Masquer le calque actif hors de la région sélectionnée"

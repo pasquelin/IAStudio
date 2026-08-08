@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { layerFixture } from './canvas-fixtures'
@@ -13,6 +13,7 @@ import {
   textLayer,
   type CanvasState,
   type Layer,
+  type Rect,
   type Transform,
 } from './canvas-state'
 import type { CanvasTool } from './CanvasEngine'
@@ -303,6 +304,8 @@ type Harness = {
   selections: CanvasSelection[]
   /** Where a caption was asked for, in document coordinates. */
   captions: Point[]
+  /** The frames the engine settled a crop drag on, each of which becomes one history entry. */
+  crops: Rect[]
   guides: { calls: string[] }
   /** The ids of the patches the engine reported as one finished gesture each. */
   patches: string[]
@@ -327,6 +330,7 @@ function mounted(
   const viewports: Viewport[] = []
   const selections: CanvasSelection[] = []
   const captions: Point[] = []
+  const crops: Rect[] = []
   const calls: string[] = []
   const patches: string[] = []
   const dropped: string[] = []
@@ -339,6 +343,7 @@ function mounted(
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
       onText: at => captions.push(at),
+      onCrop: rect => crops.push(rect),
       onHost: () => undefined,
       guides: {
         add: (axis, position) => {
@@ -364,12 +369,14 @@ function mounted(
     viewports,
     selections,
     captions,
+    crops,
     guides: { calls },
     patches,
     dropped,
     layers,
   }
 
+  mountedEngines.push(harness.engine)
   harness.engine.setView(DEFAULT_VIEW)
   harness.engine.setTool(tool)
   // The order React uses: the state is pushed while `mount` is still awaiting Pixi's `init`.
@@ -424,6 +431,18 @@ function firstPaintable(layers: readonly Layer[]): string | null {
 function groupContainer(id: string): Placed | undefined {
   return gpu.containers.find(container => container.label === id)
 }
+
+/**
+ * Every engine a test mounted. They listen on `window` for `pointerup` and `keydown`, so one left
+ * alive answers the next test's keys as well: a crop frame placed here and never applied was
+ * being cropped by the ⏎ of the test after it.
+ */
+const mountedEngines: InstanceType<typeof CanvasEngine>[] = []
+
+afterEach(() => {
+  for (const engine of mountedEngines) engine.dispose()
+  mountedEngines.length = 0
+})
 
 beforeEach(() => {
   gpu.renders = 0
@@ -1877,6 +1896,222 @@ function drag(host: HTMLElement, x: number, y: number, shiftKey = false): void {
 function release(x = 400, y = 400): void {
   window.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y }))
 }
+
+describe('the crop tool', () => {
+  /** A frame is placed by the drag and applied by ⏎: the release is not what commits it. */
+  it('places a frame on release without cropping anything yet', async () => {
+    const { host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    expect(crops).toEqual([])
+  })
+
+  it('crops to the placed frame on ⏎', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 300, height: 200 }])
+  })
+
+  it('takes the frame off screen on ⎋, and crops nothing', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.dropCrop()
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  it('ignores ⏎ when no frame is placed', async () => {
+    const { engine, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  /** The grips are real: this is the whole reason the frame outlives its drag. */
+  it('adjusts the placed frame when a grip is dragged', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    // The east grip sits at x = 400, halfway down the frame.
+    press(host, 400, 200)
+    drag(host, 500, 200)
+    release(500, 200)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 400, height: 200 }])
+  })
+
+  it('starts a fresh frame when the press lands away from every grip', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    press(host, 600, 600)
+    drag(host, 700, 660)
+    release(700, 660)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 600, y: 600, width: 100, height: 60 }])
+  })
+
+  it('places nothing for a press the hand never dragged', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 200, 200)
+    release(200, 200)
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  it('clamps a drag that runs off the document, so a crop never grows the frame', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 900, 900)
+    drag(host, 2000, 2000)
+    release(2000, 2000)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 900, y: 900, width: 124, height: 124 }])
+  })
+
+  it('squares the frame while shift is held', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 200, true)
+    release(400, 200)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 300, height: 300 }])
+  })
+
+  /**
+   * The frame is not a gesture: panning to see what a crop would keep is the point, and a middle
+   * click used to be a way to commit one by accident.
+   */
+  it('keeps the frame through a middle-button pan', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    press(host, 400, 300, 1)
+    release(400, 300)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 300, height: 200 }])
+  })
+
+  /**
+   * The engine hears the keyboard on `window`, so a second image left with a frame up would crop
+   * itself from behind. Arming another tool is what takes the frame down.
+   */
+  it('drops the frame when another tool is armed', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.setTool('brush')
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  it('leaves a key typed into a prompt alone', async () => {
+    const { host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    const field = document.createElement('input')
+    document.body.appendChild(field)
+    field.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', bubbles: true }))
+    field.remove()
+
+    expect(crops).toEqual([])
+  })
+
+  /**
+   * The one that decides whether a crop keeps the picture. A surface is document-sized, so the
+   * new one only fits the kept region — carrying the old texture in at the origin would copy the
+   * document's top-left corner instead, and the frame would come out blank wherever `rect.x`
+   * pushed past the new width.
+   */
+  it('carries the kept region into the new surface, not the document’s corner', async () => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'crop')
+    gpu.sprites.length = 0
+
+    press(host, 900, 900)
+    drag(host, 2000, 2000)
+    release(2000, 2000)
+    engine.applyCrop()
+
+    expect(gpu.sprites[0]?.position).toEqual({ x: -900, y: -900 })
+  })
+
+  /**
+   * A frame is placed against the document it was drawn on. A quarter turn or a resample under it
+   * would leave it pointing outside the picture, and applying it would recut every surface to
+   * nothing — with the undo tiles thrown away in the same move.
+   */
+  it('drops the frame when the document changes size under it', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 800, 100)
+    drag(host, 1000, 400)
+    release(1000, 400)
+    engine.apply({ ...DEFAULT_CANVAS, width: 512, height: 2048 })
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  it('gives the new surface the frame’s own size', async () => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'crop')
+    const before = gpu.texturesCreated
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.applyCrop()
+
+    expect(gpu.texturesCreated).toBeGreaterThan(before)
+    expect(gpu.painted.length).toBeGreaterThan(0)
+  })
+
+  // The tool draws a frame and nothing else: it must never reach the brush path below it.
+  it('leaves the pixels alone', async () => {
+    const { host, patches } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    expect(patches).toEqual([])
+  })
+})
 
 describe('the move tool', () => {
   // The layer position lives in the state, not on the sprite: anything else is lost to the next

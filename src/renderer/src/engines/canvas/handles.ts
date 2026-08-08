@@ -1,6 +1,6 @@
 import type { Rect, Transform } from './canvas-state'
 import type { Point } from './shape-geometry'
-import type { Size } from './viewport'
+import { crisp, toScreen, type Size, type Viewport } from './viewport'
 
 /**
  * The nine grips of a transform box: eight on the edge, one above it for rotation. Pixi ships no
@@ -22,7 +22,7 @@ export const HANDLE_IDS: readonly HandleId[] = [
 ]
 
 /** Which corner each grip pulls against: the opposite one stays put, as it does everywhere. */
-const ANCHOR: Readonly<Record<Exclude<HandleId, 'rotate'>, { x: number; y: number }>> = {
+export const ANCHOR: Readonly<Record<Exclude<HandleId, 'rotate'>, { x: number; y: number }>> = {
   nw: { x: 1, y: 1 },
   n: { x: 0.5, y: 1 },
   ne: { x: 0, y: 1 },
@@ -73,6 +73,38 @@ export function handlePoints(box: Rect): Readonly<Record<HandleId, Point>> {
     sw: { x: box.x, y: bottom },
     w: { x: box.x, y: middleY },
     rotate: { x: middleX, y: box.y - ROTATE_OFFSET },
+  }
+}
+
+/**
+ * The squares each grip is drawn as, in screen pixels. Fixed-size on purpose: a grip that shrank
+ * with the zoom would be unclickable on a document seen at 5%.
+ *
+ * Here rather than at each call site because two of them draw grips — the move tool's box and the
+ * crop frame — and the grab size and the half-pixel offset have to agree between them.
+ */
+export function gripRects(box: Rect, viewport: Viewport): Readonly<Record<HandleId, Rect>> {
+  const points = handlePoints(box)
+  const square = (id: HandleId): Rect => {
+    const screen = toScreen(viewport, points[id])
+    return {
+      x: crisp(screen.x - HANDLE_GRAB),
+      y: crisp(screen.y - HANDLE_GRAB),
+      width: HANDLE_GRAB * 2,
+      height: HANDLE_GRAB * 2,
+    }
+  }
+
+  return {
+    nw: square('nw'),
+    n: square('n'),
+    ne: square('ne'),
+    e: square('e'),
+    se: square('se'),
+    s: square('s'),
+    sw: square('sw'),
+    w: square('w'),
+    rotate: square('rotate'),
   }
 }
 

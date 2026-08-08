@@ -190,6 +190,16 @@ La vitesse et l'accélération se règlent dans les [réglages](14-reglages.md#e
 
 ## Dans l'image
 
+### Recadrage
+
+Ces deux touches n'agissent **que** tant qu'un cadre de recadrage est posé sur l'image, et
+seulement dans l'onglet en avant. Ailleurs elles gardent leur sens habituel.
+
+| Action | Touche | Ce qu'elle fait |
+|---|---|---|
+| **Appliquer le recadrage** | `⏎` | rogne le document au cadre. `⌘Z` rend le cadre, pas les pixels |
+| **Abandonner le recadrage** | `⎋` | retire le cadre sans rien rogner |
+
 ### Zoom et cadrage
 
 | Action | Touche | Ce qu'elle fait |

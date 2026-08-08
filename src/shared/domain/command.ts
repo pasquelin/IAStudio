@@ -53,6 +53,8 @@ export type CommandId =
   | 'canvas.guides'
   | 'canvas.clearGuides'
   | 'canvas.deselect'
+  | 'canvas.cropApply'
+  | 'canvas.cropCancel'
   | 'canvas.maskFromSelection'
   | 'canvas.regenerate'
   | 'canvas.cutout'
@@ -440,6 +442,25 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasDeselect.title',
     helpKey: 'commands.canvasDeselect.help',
     defaultBinding: 'Meta+KeyD',
+  }),
+  /**
+   * Both mean nothing without a crop frame on screen, exactly as `deselect` means nothing without
+   * a selection: the handler answers that, not the table. Being commands is what gates them on the
+   * document in front — a frame left up on a background tab would otherwise eat the key.
+   */
+  command({
+    id: 'canvas.cropApply',
+    scope: 'canvas',
+    titleKey: 'commands.canvasCropApply.title',
+    helpKey: 'commands.canvasCropApply.help',
+    defaultBinding: 'Enter',
+  }),
+  command({
+    id: 'canvas.cropCancel',
+    scope: 'canvas',
+    titleKey: 'commands.canvasCropCancel.title',
+    helpKey: 'commands.canvasCropCancel.help',
+    defaultBinding: 'Escape',
   }),
   command({
     id: 'canvas.maskFromSelection',

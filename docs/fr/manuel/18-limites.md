@@ -76,7 +76,6 @@ Ils sont visibles dans la barre d'outils, en gris.
 
 | Outil | Groupe |
 |---|---|
-| **Recadrage** (`F`) | Cadre |
 | **Section** (`⇧S`) | Cadre |
 | **Découpe** (`S`) | Cadre |
 | **Plume** | Dessin |
@@ -86,14 +85,25 @@ Ils sont visibles dans la barre d'outils, en gris.
 fait rien : cliquer dans l'image ne pose aucune note. C'est le seul bouton du studio qui ait l'air
 vivant sans l'être — les autres disent leur état par leur gris.
 
-### Le recadrage n'est pas offert
+### Le recadrage ne rend pas ses pixels à l'annulation
 
-**Fusionner, Aplatir, le miroir et le quart de tour le sont désormais** — menu **Image**. Ce qui les
-bloquait était qu'une surface de calque ne suivait pas son document ; elle le suit maintenant.
+**Les cinq sont offerts** — Fusionner, Aplatir, le miroir, le quart de tour, et depuis peu le
+**recadrage** (`F`). Ce qui les bloquait était qu'une surface de calque ne suivait pas son
+document ; elle le suit maintenant.
 
-Il ne reste que le **recadrage**, et pour une autre raison : le geste lui-même n'existe pas. Le
-dessiner, le voir, le valider — rien de tout cela n'est écrit. Un bouton qui abîme le document est
-pire qu'un bouton absent.
+Le recadrage a en revanche une limite qu'il faut connaître avant de s'en servir : **rétrécir le
+document jette pour de bon ce qui tombe hors du cadre**. `⌘Z` rétablit la taille d'origine, mais
+la zone retirée revient vide, et les traits de pinceau qu'elle contenait ne reviennent pas non
+plus. C'est le comportement de Photoshop quand « Supprimer les pixels rognés » est coché — sauf
+que son historique à lui sait les rendre.
+
+**La raison.** Les pixels ne vivent pas dans le document mais dans des textures GPU, et
+l'historique n'en garde que des tuiles de 512 px, plafonnées à 256 Mo. Un recadrage sévère
+retirerait plus de tuiles que ce plafond n'en autorise. Garder l'intégralité de l'image d'avant
+demanderait des instantanés pleine taille dans la pile d'annulation, ce que le studio s'interdit
+justement pour que `⌘Z` reste instantané sur des documents lourds.
+
+**Ce qu'il faut faire :** `⇧⌘E` avant un recadrage large, si vous pensez revenir en arrière.
 
 ### Remplir n'est pas un pot de peinture
 
@@ -388,8 +398,8 @@ Si vous ne deviez retenir que cinq choses de ce chapitre :
 
 1. **Les images, séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le
    travail ; dans l'espace Image, `⇧⌘E` sort au moins un PNG avant de fermer ;
-2. **recadrer une image n'est pas offert** — fusionner, aplatir, le miroir et le quart de tour le
-   sont, par le menu Image ;
+2. **un recadrage ne se défait qu'à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
+   exportez avant de rogner large ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
 4. **Détourer, Agrandir et Vectoriser ne peuvent pas aboutir** — il manque le moyen de choisir
    leur modèle ;
