@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
+import type { ActivityEntry } from '@shared/domain/activity'
 import type { CommandId } from '@shared/domain/command'
 import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
@@ -86,6 +87,10 @@ const bridge: StudioBridge = {
     pull: remoteAssetIds => ipcRenderer.invoke(CHANNELS.cloudPull, remoteAssetIds),
     push: assetIds => ipcRenderer.invoke(CHANNELS.cloudPush, assetIds),
     plan: (assetIds, policy) => ipcRenderer.invoke(CHANNELS.cloudPlan, assetIds, policy),
+  },
+  activity: {
+    read: query => ipcRenderer.invoke(CHANNELS.activityRead, query),
+    onEntries: callback => subscribe<readonly ActivityEntry[]>(EVENTS.activity, callback),
   },
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),

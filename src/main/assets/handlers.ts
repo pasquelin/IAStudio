@@ -11,9 +11,11 @@ import { filterExpression } from '@main/scenario/filter-expression'
 import { remoteTypesFor } from '@main/scenario/remote-types'
 import { PAGE_SIZE_MAX } from '@main/scenario/limits'
 import type { AsyncCatalog } from '@main/project/catalog-client'
+import type { ActivityLog } from '@main/project/activity-log'
 import type { CloudBackend } from './cloud-backend'
 import { planSync, type SyncSide } from './sync-plan'
 import {
+  parseActivityQuery,
   parseAlsoRemote,
   parseAssetChanges,
   parseAssetIds,
@@ -31,6 +33,8 @@ export type AssetHandlerDeps = {
   removeFile: (asset: Asset) => Promise<void>
   /** The project the active key opens onto, or null while nothing is authenticated. */
   activeOwnerId: () => string | null
+  /** Where a failure goes now that it has somewhere to go. */
+  journal: () => ActivityLog
 }
 
 const reduced = reducedBy('assets')
@@ -133,7 +137,9 @@ export function registerAssetHandlers({
   cloud,
   removeFile,
   activeOwnerId,
+  journal,
 }: AssetHandlerDeps): void {
+  handle(CHANNELS.activityRead, (_event, query) => journal().read(parseActivityQuery(query)))
   handle(CHANNELS.assetsUpdate, async (_event, assetId, changes) => {
     const parsed = parseAssetChanges(changes)
     const asset = await catalog().find(assetId)
@@ -155,6 +161,16 @@ export function registerAssetHandlers({
         await remote().updateTags(asset.remoteAssetId, added, removed)
       } catch (error) {
         log.warn('assets', describeFailure(error))
+        // A warning rather than an error: the rename landed here, which is what the user asked
+        // for. Only its twin in the library still says the old thing.
+        journal().record({
+          level: 'warn',
+          topic: 'library',
+          messageKey: 'activity.tagsNotSynced',
+          params: { name: updated.name },
+          detail: describeFailure(error),
+          assetId: asset.id,
+        })
       }
     }
 
@@ -198,8 +214,27 @@ export function registerAssetHandlers({
         outcomes.push({ assetId: cloudAsset.id, ok: true })
       } catch (error) {
         log.error('assets', describeFailure(error))
+        journal().record({
+          level: 'error',
+          topic: 'library',
+          messageKey: 'activity.pullFailed',
+          params: { name: cloudAsset.name },
+          // `describeFailure` and never `error.message`: an SDK message embeds the request that
+          // produced it, so it carries the API key, and a journal is a file one may well send on.
+          detail: describeFailure(error),
+        })
         outcomes.push({ assetId: cloudAsset.id, ok: false, error: failureOf(error) })
       }
+    }
+
+    const pulled = outcomes.filter(outcome => outcome.ok).length
+    if (pulled > 0) {
+      journal().record({
+        level: 'info',
+        topic: 'library',
+        messageKey: 'activity.pulled',
+        params: { count: pulled },
+      })
     }
 
     return outcomes
@@ -222,7 +257,26 @@ export function registerAssetHandlers({
 
         const asset = await catalog().find(assetId)
         if (asset) await catalog().add({ ...asset, syncStatus: 'error', syncError: failure })
+
+        journal().record({
+          level: 'error',
+          topic: 'library',
+          messageKey: 'activity.pushFailed',
+          params: { name: asset?.name ?? assetId },
+          detail: describeFailure(error),
+          assetId,
+        })
       }
+    }
+
+    const pushed = outcomes.filter(outcome => outcome.ok).length
+    if (pushed > 0) {
+      journal().record({
+        level: 'info',
+        topic: 'library',
+        messageKey: 'activity.pushed',
+        params: { count: pushed },
+      })
     }
 
     return outcomes

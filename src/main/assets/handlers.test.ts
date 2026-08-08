@@ -3,6 +3,7 @@ import { CHANNELS } from '@shared/ipc'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
+import { createActivityLog, type ActivityLog } from '@main/project/activity-log'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
@@ -49,6 +50,7 @@ function cloudAsset(id: string): CloudAsset {
 type Harness = {
   catalog: AsyncCatalog
   cloud: CloudBackend
+  journal: ActivityLog
   listed: unknown[]
   searched: unknown[]
   tagged: unknown[]
@@ -108,6 +110,15 @@ function setup(
       }),
   }
 
+  // The real one, on the same in-memory catalogue: what reaches the journal is part of what a
+  // handler does, and a spy would only prove the call was made.
+  const journal = createActivityLog({
+    catalog: () => catalog,
+    broadcast: () => {},
+    now: () => '2026-08-08T10:00:00.000Z',
+    flushMs: 0,
+  })
+
   registerAssetHandlers({
     catalog: () => catalog,
     remote: () => remote,
@@ -116,9 +127,21 @@ function setup(
       removedFiles.push(asset.id)
     },
     activeOwnerId: () => 'proj_a',
+    journal: () => journal,
   })
 
-  return { catalog, cloud, listed, searched, tagged, deleted, pulled, pushed, removedFiles }
+  return {
+    catalog,
+    cloud,
+    journal,
+    listed,
+    searched,
+    tagged,
+    deleted,
+    pulled,
+    pushed,
+    removedFiles,
+  }
 }
 
 describe('browsing the library', () => {

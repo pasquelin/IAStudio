@@ -80,6 +80,11 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
         Promise.resolve({ actions: [], summary: { push: 0, pull: 0, conflict: 0, skip: 0 } }),
       ...overrides.cloud,
     },
+    activity: {
+      read: () => Promise.resolve([]),
+      onEntries: () => () => {},
+      ...overrides.activity,
+    },
     scene: {
       export: () => Promise.resolve(null),
       ...overrides.scene,

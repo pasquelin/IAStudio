@@ -1,5 +1,14 @@
 import { defined, isRecord } from '@shared/guards'
 import {
+  ACTIVITY_RETENTION,
+  isActivityLevel,
+  isActivityTopic,
+  type ActivityDraft,
+  type ActivityEntry,
+  type ActivityParams,
+  type ActivityQuery,
+} from '@shared/domain/activity'
+import {
   isAssetType,
   isSyncStatus,
   mediaProbeOf,
@@ -92,6 +101,28 @@ const MIGRATIONS: readonly string[] = [
   CREATE INDEX assets_sync_state_idx ON assets(sync_state);
   -- Paired: a twin is only meaningful under the project whose key opens onto it.
   CREATE INDEX assets_remote_owner_idx ON assets(remote_owner_id, remote_asset_id);
+  `,
+  `
+  -- What the studio did, and what it failed to do. Append-only: a line is a fact about a moment,
+  -- and rewriting one would make the journal argue with what the user saw.
+  --
+  -- The message is a KEY and its parameters rather than a sentence, so a journal written in one
+  -- language reads in whichever the interface is in later. \`detail\` carries \`describeFailure\`
+  -- and nothing else — an SDK message embeds the request that produced it, hence the API key.
+  CREATE TABLE activity (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    at          TEXT NOT NULL,
+    level       TEXT NOT NULL,
+    topic       TEXT NOT NULL,
+    message_key TEXT NOT NULL,
+    params      TEXT,
+    detail      TEXT,
+    asset_id    TEXT
+  );
+
+  -- The panel opens on "what just happened", and filters by level from there.
+  CREATE INDEX activity_id_idx    ON activity(id DESC);
+  CREATE INDEX activity_level_idx ON activity(level);
   `,
 ]
 
@@ -236,6 +267,54 @@ function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, character => `\\${character}`)
 }
 
+/** What the panel opens on. Wider than a screenful, so filtering does not need a round trip. */
+const DEFAULT_ACTIVITY_LIMIT = 200
+
+/**
+ * The interpolations of a message key, back from the JSON they were stored as.
+ *
+ * Anything else is dropped rather than trusted: a value that is neither a string nor a number
+ * would reach `t()` as `[object Object]`, and a line nobody can read is worse than one missing
+ * a number.
+ */
+function activityParams(row: SqlRow): ActivityParams | undefined {
+  const raw = optionalText(row, 'params')
+  if (raw === undefined) return undefined
+
+  const parsed: unknown = JSON.parse(raw)
+  if (!isRecord(parsed)) return undefined
+
+  const params: ActivityParams = {}
+  for (const [key, value] of Object.entries(parsed)) {
+    if (typeof value === 'string' || typeof value === 'number') params[key] = value
+  }
+  return params
+}
+
+/**
+ * One row, read back. `level` and `topic` are closed unions in the domain and free strings in
+ * SQLite: a line written by a build that knew one more of either is read as an ordinary line
+ * rather than taking the panel down with it.
+ */
+function activityOf(row: SqlRow): ActivityEntry {
+  const level = text(row, 'level')
+  const topic = text(row, 'topic')
+  const params = activityParams(row)
+  const detail = optionalText(row, 'detail')
+  const assetId = optionalText(row, 'asset_id')
+
+  return {
+    id: optionalNumber(row, 'id') ?? 0,
+    at: text(row, 'at'),
+    level: isActivityLevel(level) ? level : 'info',
+    topic: isActivityTopic(topic) ? topic : 'document',
+    messageKey: text(row, 'message_key'),
+    ...(params && { params }),
+    ...(detail !== undefined && { detail }),
+    ...(assetId !== undefined && { assetId }),
+  }
+}
+
 export type Catalog = {
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
@@ -250,6 +329,16 @@ export type Catalog = {
    * share, so only the caller knows whether they are still wanted.
    */
   remove: (assetId: string) => void
+  /**
+   * Writes lines to the journal, in one transaction, and trims it back to its bound.
+   *
+   * A batch rather than one line at a time: a push of two hundred assets writes two hundred
+   * lines, and two hundred transactions on a synchronous driver is the sort of thing that shows
+   * up as a frozen window.
+   */
+  appendActivity: (entries: readonly ActivityDraft[]) => ActivityEntry[]
+  /** Newest first, which is the order the panel opens on. */
+  readActivity: (query: ActivityQuery) => ActivityEntry[]
   close: () => void
 }
 
@@ -280,6 +369,16 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const selectByHash = driver.prepare(
     'SELECT * FROM assets WHERE hash = ? ORDER BY created_at, id LIMIT 1',
   )
+  const insertActivity = driver.prepare(`
+    INSERT INTO activity (at, level, topic, message_key, params, detail, asset_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `)
+  // By id rather than by age: the journal is append-only, so the id IS the order, and a clock
+  // that went backwards between two launches would otherwise decide what to keep.
+  const pruneActivity = driver.prepare(`
+    DELETE FROM activity
+    WHERE id <= (SELECT MAX(id) FROM activity) - ?
+  `)
   const deleteAsset = driver.prepare('DELETE FROM assets WHERE id = ?')
   // A child pointing at a parent that is gone reads back as a derivation from nothing, and
   // every inspector that follows the link would have to guard against a row that cannot exist.
@@ -450,6 +549,68 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
       const tags = tagsByAsset(rows.map(row => text(row, 'id')))
       return rows.map(row => assetOf(row, tags.get(text(row, 'id')) ?? []))
+    },
+
+    appendActivity: entries => {
+      if (entries.length === 0) return []
+
+      // One transaction for the whole batch: a push of two hundred assets writes two hundred
+      // lines, and two hundred commits on a synchronous driver is a window that stops drawing.
+      driver.exec('BEGIN')
+      try {
+        for (const entry of entries) {
+          insertActivity.run(
+            entry.at,
+            entry.level,
+            entry.topic,
+            entry.messageKey,
+            entry.params === undefined ? null : JSON.stringify(entry.params),
+            entry.detail ?? null,
+            entry.assetId ?? null,
+          )
+        }
+
+        // Trimmed here rather than on a timer: this is the only place the journal grows, and a
+        // bound nobody enforces is a bound written in a comment.
+        pruneActivity.run(ACTIVITY_RETENTION)
+        driver.exec('COMMIT')
+      } catch (error) {
+        driver.exec('ROLLBACK')
+        throw error
+      }
+
+      // Read back rather than counted forward: the ids come from the database, and a batch
+      // longer than the retention has already lost its own oldest lines by now.
+      return driver
+        .prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?')
+        .all(entries.length)
+        .map(activityOf)
+        .reverse()
+    },
+
+    readActivity: query => {
+      const conditions: string[] = []
+      const params: SqlValue[] = []
+
+      // An empty list is "no filter", not "nothing": a panel whose filters were just cleared
+      // must show everything, which is the rule `matchesActivity` states for the other side.
+      if (query.levels?.length) {
+        conditions.push(`level IN (${query.levels.map(() => '?').join(', ')})`)
+        params.push(...query.levels)
+      }
+
+      if (query.topics?.length) {
+        conditions.push(`topic IN (${query.topics.map(() => '?').join(', ')})`)
+        params.push(...query.topics)
+      }
+
+      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+      params.push(query.limit ?? DEFAULT_ACTIVITY_LIMIT)
+
+      return driver
+        .prepare(`SELECT * FROM activity ${where} ORDER BY id DESC LIMIT ?`)
+        .all(...params)
+        .map(activityOf)
     },
 
     close: () => driver.close(),

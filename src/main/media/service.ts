@@ -1,9 +1,11 @@
+import { basename } from 'node:path'
 import { PEAKS_PER_SECOND, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
 import { PEAKS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
 import { peaksArgs, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
 import type { PeaksRun } from './peaks-client'
 import type { ProbeOutcome } from './probe'
+import type { ActivityReport } from '@main/project/activity-log'
 
 /**
  * What WebCodecs decodes without help. Anything else is montaged on a proxy. Both spellings of
@@ -29,6 +31,8 @@ export type MediaServiceDeps = {
   save: (assetId: string, fields: Partial<Asset>) => void
   writeFile: (path: string, data: Uint8Array) => Promise<void>
   onProgress: (progress: IngestProgress) => void
+  /** Where an import says what became of it, once the bar that showed it is gone. */
+  record: (report: ActivityReport) => void
   projectPath: () => string | null
   /** How many ingests may run at once — `hardwareConcurrency - 2`, per CLAUDE.md § 6. */
   concurrency: () => number
@@ -80,6 +84,39 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
   const release = (): void => {
     active -= 1
     waiting.shift()?.()
+  }
+
+  /**
+   * What an import leaves behind once its progress row is gone.
+   *
+   * The file name only, never its path: what a source sits on the disk is this process's
+   * business, the same rule `withoutSourcePath` states for an asset crossing the boundary.
+   *
+   * Silent on a cancellation and on a duplicate: the user did the first, and the second is not
+   * a problem — the bytes are already in the project.
+   */
+  const journal = (sourcePath: string, outcome: IngestStage): void => {
+    const name = basename(sourcePath)
+
+    if (outcome === 'done') {
+      deps.record({
+        level: 'info',
+        topic: 'import',
+        messageKey: 'activity.imported',
+        params: { name },
+      })
+      return
+    }
+
+    if (outcome === 'unreadable' || outcome === 'failed') {
+      deps.record({
+        level: 'error',
+        topic: 'import',
+        messageKey:
+          outcome === 'unreadable' ? 'activity.importUnreadable' : 'activity.importFailed',
+        params: { name },
+      })
+    }
   }
 
   return {
@@ -209,7 +246,9 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
           deps.save(assetId, fields)
         }
 
-        advance(cancelled() ? 'cancelled' : stage)
+        const outcome = cancelled() ? 'cancelled' : stage
+        advance(outcome)
+        journal(sourcePath, outcome)
       }
     },
 

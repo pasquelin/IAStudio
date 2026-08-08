@@ -56,6 +56,46 @@
     },
     "cancel": "Annuler la tâche"
   },
+  "activity": {
+    "open": "Afficher le journal",
+    "title": "Journal",
+    "none": "Rien à signaler.",
+    "noMatch": "Rien ne correspond à ce filtre.",
+    "failures_one": "{{count}} échec",
+    "failures_other": "{{count}} échecs",
+    "level": "Niveau",
+    "topic": "Sujet",
+    "clearFilters": "Tout afficher",
+    "dismiss": "Masquer",
+    "dismissAll": "Tout masquer",
+    "levels": {
+      "info": "Information",
+      "warn": "Avertissement",
+      "error": "Échec"
+    },
+    "topics": {
+      "generation": "Génération",
+      "import": "Import",
+      "library": "Bibliothèque",
+      "document": "Document"
+    },
+    "jobFailed": "La génération « {{name}} » a échoué",
+    "jobCancelled": "Génération « {{name}} » annulée",
+    "generated": "{{count}} asset généré",
+    "generated_other": "{{count}} assets générés",
+    "importFailed": "Impossible d’importer « {{name}} »",
+    "imported": "{{name}} importé",
+    "importUnreadable": "« {{name}} » est illisible",
+    "pullFailed": "Impossible de rapatrier « {{name}} »",
+    "pulled": "{{count}} asset rapatrié",
+    "pulled_other": "{{count}} assets rapatriés",
+    "pushFailed": "Impossible d’envoyer « {{name}} »",
+    "pushed": "{{count}} asset envoyé",
+    "pushed_other": "{{count}} assets envoyés",
+    "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
+    "saveFailed": "Impossible d’enregistrer « {{name}} »",
+    "saved": "{{name}} enregistré"
+  },
   "updates": {
     "available": "Version {{version}} disponible",
     "downloading": "Téléchargement de la version {{version}}",

@@ -1,3 +1,4 @@
+import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 
 /**
@@ -15,6 +16,8 @@ export type CatalogRequest =
   | { id: number; op: 'findByRemoteId'; remoteAssetId: string }
   | { id: number; op: 'search'; query: AssetQuery }
   | { id: number; op: 'remove'; assetId: string }
+  | { id: number; op: 'appendActivity'; entries: readonly ActivityDraft[] }
+  | { id: number; op: 'readActivity'; query: ActivityQuery }
 
 /** What each operation answers, so the client can type its promise without a cast. */
 export type CatalogResults = {
@@ -24,6 +27,8 @@ export type CatalogResults = {
   findByRemoteId: Asset | null
   search: Asset[]
   remove: void
+  appendActivity: ActivityEntry[]
+  readActivity: ActivityEntry[]
 }
 
 export type CatalogOp = CatalogRequest['op']

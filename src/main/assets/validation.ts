@@ -1,6 +1,13 @@
 import { z } from 'zod'
+import {
+  ACTIVITY_LEVELS,
+  ACTIVITY_RETENTION,
+  ACTIVITY_TOPICS,
+  type ActivityQuery,
+} from '@shared/domain/activity'
 import { ASSET_TYPES, type AssetChanges } from '@shared/domain/asset'
 import type { CloudQuery } from '@shared/domain/cloud-asset'
+
 import { SYNC_POLICIES, type SyncPolicy } from '@shared/domain/sync'
 import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
 
@@ -54,4 +61,18 @@ export function parseSyncPolicy(value: unknown): SyncPolicy {
 
 export function parseAlsoRemote(value: unknown): boolean {
   return z.boolean().parse(value)
+}
+
+/**
+ * What the journal panel may ask for. The limit is bounded because the answer crosses the
+ * boundary in one message, and a project keeps `ACTIVITY_RETENTION` lines at most anyway.
+ */
+const activityQuery = z.object({
+  levels: z.array(z.enum(ACTIVITY_LEVELS)).max(ACTIVITY_LEVELS.length).optional(),
+  topics: z.array(z.enum(ACTIVITY_TOPICS)).max(ACTIVITY_TOPICS.length).optional(),
+  limit: z.number().int().min(1).max(ACTIVITY_RETENTION).optional(),
+})
+
+export function parseActivityQuery(value: unknown): ActivityQuery {
+  return activityQuery.parse(value)
 }

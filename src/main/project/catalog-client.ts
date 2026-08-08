@@ -1,3 +1,4 @@
+import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { CatalogRequest, CatalogResponse, CatalogResults } from './catalog-protocol'
 
@@ -28,6 +29,9 @@ export type AsyncCatalog = {
   findByRemoteId: (remoteAssetId: string) => Promise<Asset | null>
   search: (query: AssetQuery) => Promise<Asset[]>
   remove: (assetId: string) => Promise<void>
+  /** Writes a batch of journal lines and answers them with the ids the database gave them. */
+  appendActivity: (entries: readonly ActivityDraft[]) => Promise<ActivityEntry[]>
+  readActivity: (query: ActivityQuery) => Promise<ActivityEntry[]>
   close: () => Promise<void>
 }
 
@@ -94,6 +98,10 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     search: query => send<'search'>(id => ({ id, op: 'search', query })),
 
     remove: assetId => send<'remove'>(id => ({ id, op: 'remove', assetId })),
+
+    appendActivity: entries =>
+      send<'appendActivity'>(id => ({ id, op: 'appendActivity', entries })),
+    readActivity: query => send<'readActivity'>(id => ({ id, op: 'readActivity', query })),
 
     close: async () => {
       closed = true

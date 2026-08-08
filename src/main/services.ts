@@ -45,6 +45,7 @@ import {
 import { runnerOf } from './scenario/runner'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
+import { createActivityLog, type ActivityLog } from './project/activity-log'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
@@ -76,6 +77,8 @@ export type Services = {
   /** Drops the file an asset owns, leaving a linked one where it lies. */
   removeAssetFile: (asset: Asset) => Promise<void>
   project: ProjectStore
+  /** What the studio did, and what it failed to do — the surface it had none of. */
+  journal: ActivityLog
   documents: DocumentFiles
   assets: LocalBackend
   /** Minted here so the collector and the audio editor cannot name assets differently. */
@@ -259,6 +262,14 @@ export function createServices(settings: SettingsStore): Services {
     },
   })
 
+  // Reads the catalogue per flush rather than holding one: a project can close and another open
+  // while lines are still queued, and a line belongs to whichever project is open when it lands.
+  const journal = createActivityLog({
+    catalog: () => (project.current() ? project.catalog() : null),
+    broadcast: entries => broadcast(EVENTS.activity, entries),
+    now: timestamp,
+  })
+
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
@@ -312,6 +323,7 @@ export function createServices(settings: SettingsStore): Services {
       await writeFile(path, data)
     },
     onProgress: progress => broadcast(EVENTS.mediaProgress, progress),
+    record: report => journal.record(report),
     projectPath: () => project.current()?.path ?? null,
     // Two cores left to the interface and to whatever else the machine is doing.
     concurrency: () => Math.max(1, availableParallelism() - 2),
@@ -429,6 +441,7 @@ export function createServices(settings: SettingsStore): Services {
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
     onProgress: progress => broadcast(EVENTS.jobProgress, progress),
+    record: report => journal.record(report),
     now: timestamp,
     newId: () => `job_${randomUUID()}`,
     sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
@@ -465,6 +478,7 @@ export function createServices(settings: SettingsStore): Services {
     ownerScope,
     removeAssetFile,
     project,
+    journal,
     documents,
     assets,
     newAssetId,

@@ -1,0 +1,155 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ACTIVITY_RETENTION, type ActivityEntry } from '@shared/domain/activity'
+import { installFakeBridge } from '@/services/fake-bridge'
+import { failureCount, useActivity, visibleActivity } from './activity'
+
+const entry = (overrides: Partial<ActivityEntry> = {}): ActivityEntry => ({
+  id: 1,
+  at: '2026-08-08T10:00:00.000Z',
+  level: 'error',
+  topic: 'library',
+  messageKey: 'activity.pushFailed',
+  ...overrides,
+})
+
+const state = () => useActivity.getState()
+
+describe('the journal, as the window holds it', () => {
+  beforeEach(() => {
+    useActivity.setState({ entries: [], levels: [], topics: [], unread: [] })
+  })
+
+  it('reads the journal back and follows what is written next', async () => {
+    const onEntries = vi.fn<(callback: (entries: readonly ActivityEntry[]) => void) => () => void>(
+      () => () => {},
+    )
+    installFakeBridge({
+      activity: { read: () => Promise.resolve([entry()]), onEntries },
+    })
+
+    await state().connect()
+
+    expect(state().entries).toEqual([entry()])
+    expect(onEntries).toHaveBeenCalled()
+  })
+
+  // The batch that just arrived IS the newest; re-reading would throw away the list the panel
+  // is scrolled through.
+  it('puts a new batch on top, newest first, without asking again', () => {
+    useActivity.setState({ entries: [entry({ id: 1 })] })
+
+    state().append([entry({ id: 2 }), entry({ id: 3 })])
+
+    expect(state().entries.map(one => one.id)).toEqual([3, 2, 1])
+  })
+
+  it('keeps no more than a project does', () => {
+    state().append(Array.from({ length: ACTIVITY_RETENTION + 50 }, (_, id) => entry({ id })))
+
+    expect(state().entries).toHaveLength(ACTIVITY_RETENTION)
+  })
+
+  it('survives having no bridge at all, as a plain browser has none', async () => {
+    vi.unstubAllGlobals()
+
+    const stop = await state().connect()
+
+    expect(state().entries).toEqual([])
+    expect(stop).toBeTypeOf('function')
+  })
+})
+
+describe('what the panel shows', () => {
+  beforeEach(() => {
+    useActivity.setState({ entries: [], levels: [], topics: [], unread: [] })
+  })
+
+  it('shows everything until a filter says otherwise', () => {
+    useActivity.setState({ entries: [entry({ level: 'info' }), entry({ level: 'error' })] })
+
+    expect(visibleActivity(state())).toHaveLength(2)
+  })
+
+  it('filters what it already holds, so changing a filter costs no round trip', () => {
+    useActivity.setState({
+      entries: [entry({ id: 1, level: 'info' }), entry({ id: 2, level: 'error' })],
+    })
+
+    state().setLevels(['error'])
+
+    expect(visibleActivity(state()).map(one => one.id)).toEqual([2])
+  })
+
+  it('filters by topic as well, and by both at once', () => {
+    useActivity.setState({
+      entries: [
+        entry({ id: 1, level: 'error', topic: 'import' }),
+        entry({ id: 2, level: 'error', topic: 'library' }),
+        entry({ id: 3, level: 'info', topic: 'import' }),
+      ],
+    })
+
+    state().setTopics(['import'])
+    expect(visibleActivity(state()).map(one => one.id)).toEqual([1, 3])
+
+    state().setLevels(['error'])
+    expect(visibleActivity(state()).map(one => one.id)).toEqual([1])
+  })
+
+  it('counts the failures, which is what the status line says', () => {
+    useActivity.setState({
+      entries: [entry({ level: 'error' }), entry({ level: 'warn' }), entry({ level: 'error' })],
+    })
+
+    expect(failureCount(state())).toBe(2)
+  })
+})
+
+describe('what gets shown as a toast', () => {
+  beforeEach(() => {
+    useActivity.setState({ entries: [], levels: [], topics: [], unread: [] })
+  })
+
+  it('raises a failure, and stays quiet about the rest', () => {
+    state().append([entry({ id: 1, level: 'error' }), entry({ id: 2, level: 'info' })])
+
+    expect(state().unread.map(one => one.id)).toEqual([1])
+  })
+
+  // A key that expired mid-push is forty lines and one problem; past a few, the toasts would
+  // cover the work they report on.
+  it('stops stacking a burst of the same trouble', () => {
+    state().append(Array.from({ length: 40 }, (_, id) => entry({ id, level: 'error' })))
+
+    expect(state().unread.length).toBeLessThanOrEqual(3)
+  })
+
+  it('raises a failure the current filter would have hidden', () => {
+    state().setLevels(['info'])
+
+    state().append([entry({ id: 7, level: 'error' })])
+
+    expect(state().unread.map(one => one.id)).toEqual([7])
+    expect(visibleActivity(state())).toEqual([])
+  })
+
+  it('lets one be dismissed, and all of them at once', () => {
+    state().append([entry({ id: 1 }), entry({ id: 2 })])
+
+    state().dismiss(1)
+    expect(state().unread.map(one => one.id)).toEqual([2])
+
+    state().dismissAll()
+    expect(state().unread).toEqual([])
+  })
+
+  // Dismissing is not forgetting: the line stays in the journal, which is where one goes to
+  // read what went wrong after the toast is gone.
+  it('leaves the journal alone when a toast is dismissed', () => {
+    state().append([entry({ id: 1 })])
+
+    state().dismissAll()
+
+    expect(state().entries).toHaveLength(1)
+  })
+})

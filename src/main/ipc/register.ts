@@ -37,6 +37,7 @@ export function registerIpc(services: Services): void {
     cloud: services.cloud,
     removeFile: services.removeAssetFile,
     activeOwnerId: services.ownerScope.current,
+    journal: () => services.journal,
   })
   registerMediaHandlers(services)
   registerDialogHandlers(services)

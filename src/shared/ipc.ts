@@ -1,4 +1,5 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
+import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetQuery } from './domain/asset'
 import type { CloudPage, CloudQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
@@ -73,6 +74,8 @@ export type Channels = {
   cloudPush: 'cloud:push'
   cloudPlan: 'cloud:plan'
 
+  activityRead: 'activity:read'
+
   mediaIngest: 'media:ingest'
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
@@ -138,6 +141,8 @@ export const CHANNELS: Channels = {
   cloudPull: 'cloud:pull',
   cloudPush: 'cloud:push',
   cloudPlan: 'cloud:plan',
+
+  activityRead: 'activity:read',
 
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
@@ -247,6 +252,7 @@ export const EVENTS = {
   sceneExport: 'evt:scene-export',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
+  activity: 'evt:activity',
 }
 
 export type Unsubscribe = () => void
@@ -393,6 +399,21 @@ export type StudioBridge = {
     push: (assetIds: readonly string[]) => Promise<SyncOutcome[]>
     /** What a push or a pull would do, before it costs a single request. */
     plan: (assetIds: readonly string[], policy: SyncPolicy) => Promise<SyncPlan>
+  }
+  /**
+   * What the studio did, and what it failed to do — the surface it had none of.
+   *
+   * A line carries an i18n KEY and its parameters, never a sentence: the journal outlives the
+   * language the interface was in when it was written. `detail` is `describeFailure` output and
+   * nothing else, because an SDK message embeds the request, hence the API key.
+   */
+  activity: {
+    read: (query: ActivityQuery) => Promise<ActivityEntry[]>
+    /**
+     * Lines as they are written, in batches. A push of two hundred assets is one message, not
+     * two hundred — the same coalescing the ingest bar does with its progress.
+     */
+    onEntries: (callback: (entries: readonly ActivityEntry[]) => void) => Unsubscribe
   }
   scene: {
     /**

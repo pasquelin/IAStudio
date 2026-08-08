@@ -18,6 +18,8 @@ export function memoryCatalog(file = ':memory:'): AsyncCatalog {
     findByRemoteId: async remoteAssetId => catalog.findByRemoteId(remoteAssetId),
     search: async query => catalog.search(query),
     remove: async assetId => catalog.remove(assetId),
+    appendActivity: async entries => catalog.appendActivity(entries),
+    readActivity: async query => catalog.readActivity(query),
     close: async () => catalog.close(),
   }
 }

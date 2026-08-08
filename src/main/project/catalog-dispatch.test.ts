@@ -85,6 +85,8 @@ describe('dispatchCatalogRequest', () => {
       findByRemoteId: () => null,
       search: () => [],
       remove: () => {},
+      appendActivity: () => [],
+      readActivity: () => [],
       close: () => {},
     }
 
@@ -103,6 +105,8 @@ describe('dispatchCatalogRequest', () => {
         throw new Error('malformed query')
       },
       remove: () => {},
+      appendActivity: () => [],
+      readActivity: () => [],
       close: () => {},
     }
 

@@ -29,6 +29,7 @@ function deps(overrides: Partial<MediaServiceDeps> = {}): MediaServiceDeps {
     save: vi.fn(),
     writeFile: vi.fn(async () => undefined),
     onProgress: vi.fn(),
+    record: vi.fn(),
     projectPath: () => '/tmp/project',
     concurrency: () => 4,
     ...overrides,
@@ -311,5 +312,67 @@ describe('media service', () => {
     await createMediaService(injected).ingest('asset-1', '/silent.mp4', 'video')
 
     expect(stages(injected.onProgress)).toEqual(['queued', 'probe', 'hash', 'done'])
+  })
+})
+
+/**
+ * A twenty-minute rush is prepared while the user works elsewhere: the progress row is gone by
+ * the time it ends, and a file that never arrived was a silence nobody could explain.
+ */
+describe('what an import leaves behind to read', () => {
+  it('records the file that landed, by name and never by path', async () => {
+    const record = vi.fn()
+    const service = createMediaService(deps({ record, probe: probing({ codec: 'avc1' }) }))
+
+    await service.ingest('asset_1', '/Users/someone/Movies/rush.mp4', 'video')
+
+    expect(record).toHaveBeenCalledWith({
+      level: 'info',
+      topic: 'import',
+      messageKey: 'activity.imported',
+      params: { name: 'rush.mp4' },
+    })
+  })
+
+  it('records a file the probe refused as a failure of its own', async () => {
+    const record = vi.fn()
+    const service = createMediaService(
+      deps({ record, probe: vi.fn(async (): Promise<ProbeOutcome> => ({ kind: 'unreadable' })) }),
+    )
+
+    await service.ingest('asset_1', '/tmp/notes.txt', 'video')
+
+    expect(record).toHaveBeenCalledWith({
+      level: 'error',
+      topic: 'import',
+      messageKey: 'activity.importUnreadable',
+      params: { name: 'notes.txt' },
+    })
+  })
+
+  // The user did it: telling them about it is telling them what they already know.
+  it('says nothing about an import that was cancelled', async () => {
+    const record = vi.fn()
+    const service = createMediaService(
+      deps({ record, hash: vi.fn(async () => 'abc123'), probe: probing({ codec: 'avc1' }) }),
+    )
+
+    const running = service.ingest('asset_1', '/tmp/rush.mp4', 'video')
+    service.cancel('asset_1')
+    await running
+
+    expect(record).not.toHaveBeenCalled()
+  })
+
+  // Not a problem: the bytes are already in the project, which is what the user wanted.
+  it('says nothing about bytes the project already holds', async () => {
+    const record = vi.fn()
+    const service = createMediaService(
+      deps({ record, duplicateExists: vi.fn(async () => true), probe: probing({ codec: 'avc1' }) }),
+    )
+
+    await service.ingest('asset_1', '/tmp/rush.mp4', 'video')
+
+    expect(record).not.toHaveBeenCalled()
   })
 })

@@ -51,6 +51,8 @@ type ChannelMethod = {
   [CHANNELS.cloudPush]: StudioBridge['cloud']['push']
   [CHANNELS.cloudPlan]: StudioBridge['cloud']['plan']
 
+  [CHANNELS.activityRead]: StudioBridge['activity']['read']
+
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
 
   [CHANNELS.diagnosticsReport]: StudioBridge['diagnostics']['report']

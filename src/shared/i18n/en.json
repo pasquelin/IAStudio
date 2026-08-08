@@ -56,6 +56,46 @@
     },
     "cancel": "Cancel job"
   },
+  "activity": {
+    "open": "Show the journal",
+    "title": "Journal",
+    "none": "Nothing to report.",
+    "noMatch": "Nothing matches this filter.",
+    "failures_one": "{{count}} failure",
+    "failures_other": "{{count}} failures",
+    "level": "Level",
+    "topic": "Subject",
+    "clearFilters": "Show everything",
+    "dismiss": "Dismiss",
+    "dismissAll": "Dismiss all",
+    "levels": {
+      "info": "Information",
+      "warn": "Warning",
+      "error": "Failure"
+    },
+    "topics": {
+      "generation": "Generation",
+      "import": "Import",
+      "library": "Library",
+      "document": "Document"
+    },
+    "jobFailed": "Generation \"{{name}}\" failed",
+    "jobCancelled": "Generation \"{{name}}\" cancelled",
+    "generated": "{{count}} asset generated",
+    "generated_other": "{{count}} assets generated",
+    "importFailed": "Could not import \"{{name}}\"",
+    "imported": "{{name}} imported",
+    "importUnreadable": "\"{{name}}\" is unreadable",
+    "pullFailed": "Could not fetch \"{{name}}\"",
+    "pulled": "{{count}} asset fetched",
+    "pulled_other": "{{count}} assets fetched",
+    "pushFailed": "Could not send \"{{name}}\"",
+    "pushed": "{{count}} asset sent",
+    "pushed_other": "{{count}} assets sent",
+    "tagsNotSynced": "The tags of \"{{name}}\" did not reach the library",
+    "saveFailed": "Could not save \"{{name}}\"",
+    "saved": "{{name}} saved"
+  },
   "updates": {
     "available": "Version {{version}} available",
     "downloading": "Downloading version {{version}}",

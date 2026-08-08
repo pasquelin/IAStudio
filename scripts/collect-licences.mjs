@@ -49,7 +49,6 @@ const SHIPPED = [
   'react-dom',
   'react-hook-form',
   'react-i18next',
-  'react-toastify',
   'react-tooltip',
   'tailwind-merge',
   'tailwindcss',
