@@ -32,15 +32,25 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**623 fichiers dans `src/`. 2584 tests verts sur 233 fichiers. 6 espaces éditables. 2 types de
+**669 fichiers dans `src/`. 2900 tests sur 251 fichiers. 6 espaces éditables. 2 types de
 documents sur 6 savent s'enregistrer — l'espace Image, lui, exporte mais ne s'enregistre pas encore.**
 
-`pnpm validate` est vert, **budget de couverture compris** : il lance `test:coverage`, dont les
-seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
-pourcentages. Le plus tendu est `engines/{timeline,canvas,audio,core}/**` : **238 branches non
-couvertes pour 250 permises**, douze de marge. Un module ajouté là-dedans sans tests casse la
+`pnpm validate` lance `test:coverage`, dont les seuils sont des **budgets d'éléments non couverts**
+par glob (`vitest.config.ts`), pas des pourcentages. Un module ajouté sans tests casse la
 validation — c'est voulu. **Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas
 où élargir est légitime (un glob dont la marge de croissance est du GPU intestable).
+
+> **`pnpm validate` sort en 1 aujourd'hui, et ce n'est pas la faute de l'espace Image.**
+> `engines/{scene,skybox,viewport,texture,gpu}/**` est à **367 branches non couvertes pour 310
+> permises** depuis la fusion de `feat/3d-completion` (`722a258`). Mesuré sur `main` seul : chiffre
+> identique. Tout le reste — typecheck, lint, format, tests — est vert. **À couvrir par qui connaît
+> l'espace 3D** ; élargir le budget de quelqu'un d'autre serait le mauvais remède.
+>
+> Second grain de sable, environnemental : **`src/renderer/src/settings/ShortcutsSettings.test.tsx`
+> dépasse son budget de 5 s par test quand la machine porte plusieurs sessions** — des
+> sous-ensembles différents à chaque passage, verts en isolation. C'est `userEvent` qui est lent,
+> pas une régression. Il rend `validate` capricieux pour tout le monde tant que plusieurs worktrees
+> tournent en parallèle.
 
 L'application démarre par `pnpm start`.
 
@@ -64,7 +74,10 @@ Skyboxes, Textures. Un éditeur par type de document, chargé à l'ouverture, ja
 **L'espace Image édite pour de bon** — calques, groupes, masques, seize modes de fusion,
 sélection qui borne les outils, poignées de transformation, formes, texte, calques de réglage,
 cinq éditions IA et l'export PNG. Une image de l'étagère y entre par trois portes : le dépôt sur
-la toile, le double-clic, et l'outil Image… (`⇧⌘K`). Cf. § 3.2 pour ce qui reste.
+la toile, le double-clic, et l'outil Image… (`⇧⌘K`). **Il s'ouvre sur le pointeur, jamais sur le
+pinceau** : le premier clic sur une image ne doit pas pouvoir y laisser une trace. Le pinceau écrit
+là où le curseur est, y compris sur un calque déplacé, mis à l'échelle ou pivoté. Cf. § 3.2 pour ce
+qui reste.
 
 **La configuration** — un registre de commandes unique lu par le menu natif, le clavier et l'écran
 des raccourcis ; un registre de réglages qui gouverne les préférences et la validation côté main.
@@ -308,11 +321,40 @@ paraissait vivant et ne faisait rien ; il porte désormais son propre `disabled`
 recadrage a été retiré du moteur plutôt que laissé injoignable. Un calque texte refusait aussi le
 pinceau *dans son masque*, alors que seule sa propre texture est réécrite à chaque lettre.
 
-### Le blocage qui commande tout le reste
+### Le blocage qui commandait tout le reste — levé
 
-**Une surface ne suit pas son document.** La texture d'un calque est allouée à la taille qu'avait le
-document et n'est **jamais recréée**. Cinq fonctionnalités sont écrites, testées, et volontairement
-non offertes pour cette seule raison :
+**`resurface` existe** (`CanvasEngine`, branché sur la détection de cadre déplacé d'`apply`). Il
+recrée chaque texture à la nouvelle taille, **masques compris**, y recopie l'ancienne image à
+l'origine — sans décalage, `resizeCanvas` déplaçant déjà les transforms — et jette les tuiles
+d'annulation en signalant chacune, une capture nommant sa tuile dans les coordonnées de sa surface.
+
+Avec lui, la peinture en espace calque (`layer-space.ts`) : le pinceau, la gomme, les formes, le pot
+borné et le masque de sélection traversent un conteneur portant la matrice inverse du calque. Sans
+ça, peindre sur un calque déplacé, mis à l'échelle ou pivoté tombait à côté du curseur — général et
+préexistant, dont le recadrage n'était qu'un symptôme.
+
+> Photoshop évite la question en interdisant la combinaison : un calque raster n'y porte aucune
+> matrice, seulement un rectangle en coordonnées de canevas, et le seul type qui garde une transform
+> vivante — l'objet dynamique — est celui que le pinceau refuse. Figma ne se la pose pas, ses brosses
+> produisant du vecteur. Ce dépôt a choisi l'autre modèle, assumé dans la JSDoc de `flipImage` ; il
+> le finit donc.
+
+**Ce qui reste à rebrancher.** Les cinq commandes existent et sont testées ; il leur manque leur
+entrée d'interface :
+
+- **Fusionner, Aplatir, Miroir, Quart de tour** — quatre commandes de menu, sans geste. Il leur faut
+  un descripteur dans `COMMAND_REGISTRY`, deux clés i18n fr **et** en, et un `case` dans
+  `ImageDocument`. C'est le lot le plus court qui reste sur cet espace.
+- **Recadrer** — plus lourd : `54730cc` a retiré **tout le chemin de recadrage du moteur**, il ne
+  reste que le littéral `'crop'` dans l'union et dans `UNBUILT_TOOLS`. Le rebrancher, c'est réécrire
+  le geste : glisser un cadre, l'afficher dans l'overlay, valider au relâchement.
+
+**Une conséquence à écrire dans le manuel le jour où le recadrage est offert** : rétrécir perd ce qui
+tombe hors du cadre, et les tuiles d'annulation partent avec. Le cadre revient sur ⌘Z, les pixels
+retirés non. C'est le comportement de Photoshop « Supprimer les pixels rognés » **coché**, sauf que
+son historique à lui les rend.
+
+<!-- Conservé pour mémoire : ce que chacune cassait avant `resurface`. -->
 
 | Fonctionnalité | Ce qui casse sans `resurface` |
 |---|---|
@@ -322,19 +364,13 @@ non offertes pour cette seule raison :
 | Aplatir | Le document devient transparent, et ⌘Z ne rend pas les pixels |
 | Persistance | Une sauvegarde qui perd les traits de pinceau |
 
-**Ce qu'il faut écrire :** un `resurface(size: Size)` sur `CanvasEngine`, qui recrée chaque
-`RenderTexture` à la nouvelle taille et y recopie l'ancienne au bon décalage, plus une extraction par
-calque — `snapshot()` sait déjà le faire pour le document entier. **Une seule pièce débloque les
-cinq.** C'est le premier chantier à ouvrir sur cet espace.
-
-Les commandes correspondantes existent et sont testées dans `engines/canvas/commands.ts`
-(`cropToRect`, `flipImage`, `rotateImage`, `mergeDown`, `flatten`) ; ce sont leurs entrées d'interface
-qui sont retirées. **Ne pas les rebrancher avant `resurface`** — un bouton qui vide le document est
-pire qu'un bouton absent.
+Les commandes correspondantes vivent dans `engines/canvas/commands.ts` (`cropToRect`, `flipImage`,
+`rotateImage`, `mergeDown`, `flatten`).
 
 ### Ce qui reste, par ordre de valeur
 
-1. **`resurface`**, ci-dessus. Débloque cinq fonctionnalités d'un coup.
+1. **Rebrancher les cinq**, ci-dessus : les quatre commandes de menu d'abord, le geste de recadrage
+   ensuite.
 2. **La persistance** (jalon 10). Le format est tranché : un dossier `<nom>.img/` avec le JSON et un
    PNG par calque, inspectable et réparable à la main. `serializeCanvas` / `deserializeCanvas`
    existent et ne sont appelés que par leurs propres tests ; `PixelLayer.source` et `loadInto`
@@ -396,6 +432,10 @@ pire qu'un bouton absent.
   calculé dans la boucle de synchronisation existante supprimerait l'allocation.
 - **Les textures d'images placées ne sont jamais déchargées** du cache de Pixi : une par image posée,
   pour toute la session.
+- **La pipette n'a pas suivi le passage en espace calque.** `pick` extrait depuis `surface.sprite`
+  avec un cadre en coordonnées document ; l'espace que Pixi donne à ce cadre quand la cible est un
+  sprite transformé ne s'établit pas sans GPU. Laissée telle quelle plutôt que corrigée au jugé —
+  à trancher avec le MCP `electron`, en même temps que les quatre dettes de compositing.
 - **`maskKey` partage l'espace de noms des ids de calque** (`${id}:mask`). Les ids de l'application
   sont des UUID, mais `deserializeCanvas` accepte n'importe quelle chaîne.
 - **Le glisser-déposer d'asset est copié dans quatre espaces** (image, texture, skybox, timeline) :
