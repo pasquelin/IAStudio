@@ -466,6 +466,27 @@ construit en worker pour le picking.
 | Clic du `ViewHelper` | son animation déplace la caméra sans prévenir `OrbitControls` ; la cible de l'orbite divergerait |
 | Export d'un sprite | ni glTF ni USDZ n'ont d'objet toujours face à la caméra ; three l'ignore en silence, et le manuel ne le dit pas |
 | Sections du manuel | le chapitre 09 n'a rien sur le magnétisme, le repère local, les ombres ni l'environnement — les étapes ont corrigé ce qui était faux, pas comblé ce qui manquait |
+| Draco et KTX2 | un `.glb` compressé échoue comme un fichier illisible ; ~700 ko de wasm à servir, et l'endroit d'où on les sert diffère entre le serveur de dev et l'app empaquetée. `createGltfSource` est la seule fonction à brancher |
+| three livré deux fois | le chunk du worker BVH pèse 490 ko parce qu'il embarque three, déjà dans le bundle principal. Chargé à la demande et en local, donc supportable — mais c'est du poids d'installation en double |
+
+### Les échecs de la 3D sont silencieux, et le plan n'a pas pu tenir son minimum
+
+Le plan exigeait que chaque étape **journalise au moins ses échecs côté main**, pour qu'ils soient
+trouvables sans surface d'erreur. **Aucune ne l'a fait, et aucune ne le pouvait** : `diagnostics.onLog`
+va du main vers le renderer, et il n'existe pas de canal en sens inverse. Or les trois échecs de cet
+espace naissent tous dans le renderer.
+
+Ce qui se perd aujourd'hui, vérifié dans le code :
+
+- **Un `.glb` illisible ou compressé** — `ref-cache.ts` attrape le rejet, retire l'entrée et rend
+  `null`. Le nœud reste dans l'outliner, le viewport ne dessine rien, rien n'est dit.
+- **Une texture introuvable** — même chemin, même cache, même silence.
+- **Un export qui échoue à l'écriture** — `SceneDocument` lance `void exportScene(...)` : la
+  promesse rejetée n'est rattrapée nulle part.
+
+C'est le chantier « surface d'erreur » du § 2, et il a désormais son point d'entrée précis : **un
+canal renderer → main pour le journal**. Tant qu'il n'existe pas, ces trois-là resteront muets, et
+le remède local — un `catch` qui écrit dans la console du renderer — est interdit par CLAUDE.md.
 
 ### Le plafond du décodage IPC a été contourné, pas résolu
 
@@ -524,9 +545,12 @@ studio fait trente triangles et se marche plus vite qu'un arbre ne se construit.
 
 **Les étapes 8 à 11 n'ont été relues que par leur auteur.** La limite hebdomadaire de l'API a coupé
 les sous-agents en pleine revue de l'étape 8 ; `/simplify` et `/code-review` ont été menés à la
-main pour `sprite`, les modes d'affichage, l'export et le BVH. Les bugs trouvés à ces relectures
-sont écrits dans le plan, étape par étape — mais un seul regard n'en vaut pas deux, et c'est là
-qu'une lecture humaine rapporte le plus.
+main pour `sprite`, les modes d'affichage, l'export et le BVH, puis une dernière fois avant la
+fusion sur les résolutions de rebase. Les bugs trouvés à ces relectures sont écrits dans le plan,
+étape par étape — mais un seul regard n'en vaut pas deux, et c'est là qu'une lecture humaine
+rapporte le plus. **Les deux résolutions de rebase à regarder en premier** : la réunion de
+`generation-claims.ts`, créé des deux côtés, et l'extraction de `saveDialog` dans `services.ts`,
+où un export d'image et un export de scène partagent désormais un dialogue.
 
 Second point : **sur Windows et Linux, un raccourci qu'une surface écoute elle-même attend la
 touche Windows, pas `Ctrl`** — `signatureOf` lit `event.metaKey`. C'est la convention de tout
