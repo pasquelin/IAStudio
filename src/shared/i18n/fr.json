@@ -1026,6 +1026,15 @@
       "title": "Étendre",
       "help": "Demander au modèle de peindre au-delà des bords de l’image aplatie"
     },
+    "canvasMergeDown": {
+      "title": "Fusionner vers le bas",
+      "help": "Réunir le calque actif et celui juste en dessous en un seul, qui garde le nom du dessous"
+    },
+    "canvasFlatten": {
+      "title": "Aplatir l\u2019image",
+      "help": "Réduire toute la pile à un seul calque : les calques masqués sont perdus, pas fusionnés",
+      "layerName": "Arrière-plan"
+    },
     "canvasFlipHorizontal": {
       "title": "Miroir horizontal",
       "help": "Retourner tout le document de gauche à droite, calques compris"

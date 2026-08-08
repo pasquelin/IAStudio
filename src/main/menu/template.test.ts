@@ -52,10 +52,13 @@ describe('the Image menu', () => {
    * the registry that nothing surfaces is a command that cannot be run — the defect the image
    * toolbar has already shown twice.
    */
-  it('offers the four turns where a picture is being edited', () => {
+  it('offers the whole-document operations where a picture is being edited', () => {
     const entries = labels(submenuOf(menuTemplate(options({ workspace: 'image' })), 'Image'))
 
     expect(entries).toEqual([
+      'Fusionner vers le bas',
+      'Aplatir l’image',
+      '',
       'Miroir horizontal',
       'Miroir vertical',
       '',

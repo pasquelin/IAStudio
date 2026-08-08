@@ -84,20 +84,14 @@ They are visible in the toolbar, greyed out.
 clicking in the image places no note. It is the studio's only button that looks alive without
 being so — the others say their state by their grey.
 
-### Cropping, merging and flattening are not offered
+### Cropping is not offered
 
-**Mirroring and the quarter turn now are** — the **Image** menu. What blocked them was a layer's
-surface not following its document; it follows it now.
+**Merge down, Flatten, mirroring and the quarter turn now are** — the **Image** menu. What blocked
+them was a layer's surface not following its document; it follows it now.
 
-Three gestures are still missing, each for its own reason:
-
-| Gesture | What is missing |
-|---|---|
-| **Crop** | the gesture itself: drawing the frame, seeing it, committing it |
-| **Merge down** | the lower layer would keep its pixels without receiving the upper one's |
-| **Flatten** | the single layer would be born empty, and the document would turn transparent |
-
-A button that damages the document is worse than a button that is not there.
+Only the **crop** is left, and for another reason: the gesture itself does not exist. Drawing the
+frame, seeing it, committing it — none of it is written. A button that damages the document is
+worse than a button that is not there.
 
 ### Fill is not a paint bucket
 
@@ -385,8 +379,8 @@ If you only remember five things from this chapter:
 
 1. **images, sequences, sounds and skies do not save** — closing the tab loses the work; in the
    Image workspace, `⇧⌘E` at least gets a PNG out before you close;
-2. **cropping, merging and flattening a picture are not offered** — mirroring and the quarter
-   turn are, from the Image menu;
+2. **cropping a picture is not offered** — merging, flattening, mirroring and the quarter turn
+   are, from the Image menu;
 3. **there is no video export** — the studio cannot yet deliver a final file;
 4. **Cut out, Enlarge and Vectorize cannot complete** — there is no way to choose their model;
 5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.

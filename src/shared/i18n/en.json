@@ -1026,6 +1026,15 @@
       "title": "Extend",
       "help": "Ask the model to paint beyond the edges of the flattened image"
     },
+    "canvasMergeDown": {
+      "title": "Merge down",
+      "help": "Join the active layer and the one just below it into one, keeping the lower one's name"
+    },
+    "canvasFlatten": {
+      "title": "Flatten image",
+      "help": "Reduce the whole stack to a single layer: hidden layers are dropped, not merged",
+      "layerName": "Background"
+    },
     "canvasFlipHorizontal": {
       "title": "Flip horizontal",
       "help": "Mirror the whole document left to right, layers included"

@@ -60,6 +60,8 @@ export type CommandId =
   | 'canvas.vectorize'
   | 'canvas.extend'
   | 'canvas.export'
+  | 'canvas.mergeDown'
+  | 'canvas.flatten'
   | 'canvas.flipHorizontal'
   | 'canvas.flipVertical'
   | 'canvas.rotateCw'
@@ -368,6 +370,20 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasZoomActual.title',
     helpKey: 'commands.canvasZoomActual.help',
     defaultBinding: 'Meta+Digit1',
+  }),
+  command({
+    id: 'canvas.mergeDown',
+    scope: 'canvas',
+    titleKey: 'commands.canvasMergeDown.title',
+    helpKey: 'commands.canvasMergeDown.help',
+    defaultBinding: 'Meta+KeyE',
+  }),
+  command({
+    id: 'canvas.flatten',
+    scope: 'canvas',
+    titleKey: 'commands.canvasFlatten.title',
+    helpKey: 'commands.canvasFlatten.help',
+    defaultBinding: null,
   }),
   command({
     id: 'canvas.flipHorizontal',

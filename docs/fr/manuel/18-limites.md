@@ -86,20 +86,14 @@ Ils sont visibles dans la barre d'outils, en gris.
 fait rien : cliquer dans l'image ne pose aucune note. C'est le seul bouton du studio qui ait l'air
 vivant sans l'être — les autres disent leur état par leur gris.
 
-### Recadrer, fusionner et aplatir ne sont pas offerts
+### Le recadrage n'est pas offert
 
-**Le miroir et le quart de tour, eux, le sont désormais** — menu **Image**. Ce qui les bloquait était
-qu'une surface de calque ne suivait pas son document ; elle le suit maintenant.
+**Fusionner, Aplatir, le miroir et le quart de tour le sont désormais** — menu **Image**. Ce qui les
+bloquait était qu'une surface de calque ne suivait pas son document ; elle le suit maintenant.
 
-Trois gestes restent absents, chacun pour sa propre raison :
-
-| Geste | Ce qui manque |
-|---|---|
-| **Recadrer** | le geste lui-même : dessiner le cadre, le voir, le valider |
-| **Fusionner vers le bas** | le calque du dessous garderait ses pixels sans recevoir ceux du dessus |
-| **Aplatir** | le calque unique naîtrait vide, et le document deviendrait transparent |
-
-Un bouton qui abîme le document est pire qu'un bouton absent.
+Il ne reste que le **recadrage**, et pour une autre raison : le geste lui-même n'existe pas. Le
+dessiner, le voir, le valider — rien de tout cela n'est écrit. Un bouton qui abîme le document est
+pire qu'un bouton absent.
 
 ### Remplir n'est pas un pot de peinture
 
@@ -394,8 +388,8 @@ Si vous ne deviez retenir que cinq choses de ce chapitre :
 
 1. **Les images, séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le
    travail ; dans l'espace Image, `⇧⌘E` sort au moins un PNG avant de fermer ;
-2. **recadrer, fusionner ou aplatir une image n'est pas offert** — le miroir et le quart de tour
-   le sont, par le menu Image ;
+2. **recadrer une image n'est pas offert** — fusionner, aplatir, le miroir et le quart de tour le
+   sont, par le menu Image ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
 4. **Détourer, Agrandir et Vectoriser ne peuvent pas aboutir** — il manque le moyen de choisir
    leur modèle ;

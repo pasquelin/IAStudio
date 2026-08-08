@@ -1,7 +1,7 @@
 import { Container } from 'pixi.js'
 import { describe, expect, it } from 'vitest'
 import { IDENTITY, type Transform } from './canvas-state'
-import { applyTo, invert, layerMatrix, mapRect, type Affine } from './layer-space'
+import { applyTo, compose, invert, layerMatrix, mapRect, type Affine } from './layer-space'
 
 const BOX = { width: 200, height: 120 }
 
@@ -80,6 +80,39 @@ describe('layer space', () => {
 
       expect(painted.x).toBeCloseTo(texel.x, 8)
       expect(painted.y).toBeCloseTo(texel.y, 8)
+    })
+  })
+
+  describe('composing two maps', () => {
+    const moving = layerMatrix(moved({ x: 10, y: 20 }), BOX)
+    const turning = layerMatrix(moved({ rotation: Math.PI / 2 }), BOX)
+
+    it('takes a point through both, in order', () => {
+      const point = { x: 7, y: 3 }
+      const stepByStep = applyTo(moving, applyTo(turning, point))
+
+      expect(applyTo(compose(moving, turning), point)).toEqual(stepByStep)
+    })
+
+    it('is the identity when a map meets its own inverse', () => {
+      // This is the merge in one line: place the upper layer's pixels in the document, then take
+      // them back into the lower layer's own — the pair has to cancel where the two agree.
+      const back = invert(turning)
+      if (!back) throw new Error('a quarter turn is invertible')
+      const round = compose(back, turning)
+
+      expect(round.a).toBeCloseTo(1, 10)
+      expect(round.d).toBeCloseTo(1, 10)
+      expect(round.tx).toBeCloseTo(0, 10)
+      expect(round.ty).toBeCloseTo(0, 10)
+    })
+
+    it('does not commute, so the order is the contract', () => {
+      const point = { x: 7, y: 3 }
+      const one = applyTo(compose(moving, turning), point)
+      const other = applyTo(compose(turning, moving), point)
+
+      expect(one).not.toEqual(other)
     })
   })
 

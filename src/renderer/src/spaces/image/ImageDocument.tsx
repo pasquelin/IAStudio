@@ -10,10 +10,10 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { canRedo, canUndo } from '@/engines/core/history'
-import { textLayer } from '@/engines/canvas/canvas-state'
+import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
-import { addLayer, flipImage, rotateImage } from '@/engines/canvas/commands'
+import { addLayer, flatten, flipImage, mergeDown, rotateImage } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
@@ -208,6 +208,27 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           // to report to, and the panel it opens is what says whether anything was prepared.
           void prepareEdit(documentId, edit, host, bridge.scenario).catch(() => undefined)
           return
+        }
+        case 'canvas.mergeDown': {
+          const host = engine.current
+          const active = canvas.activeLayerId
+          const below = active ? layerBelow(canvas.layers, active) : null
+          // Nothing under it at its own level: no merge to offer, and nothing to say about it.
+          if (!host || !active || !below) return
+          // Composed before the command, which is the last moment the upper layer's pixels exist.
+          host.mergeInto(below.id, active)
+          return useCanvases.getState().runCommand(documentId, mergeDown(active))
+        }
+        case 'canvas.flatten': {
+          const host = engine.current
+          if (!host) return
+          const id = newId()
+          // Same order, and for the same reason: once the stack is one layer, the picture it was
+          // made of no longer exists to be composed.
+          host.flattenInto(id)
+          return useCanvases
+            .getState()
+            .runCommand(documentId, flatten(id, t('commands.canvasFlatten.layerName')))
         }
         case 'canvas.flipHorizontal':
           return useCanvases.getState().runCommand(documentId, flipImage('horizontal'))

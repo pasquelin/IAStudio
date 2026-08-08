@@ -188,6 +188,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           {
             label: t.menu.image,
             submenu: [
+              commandItem('canvas.mergeDown', t.commands.canvasMergeDown.title),
+              commandItem('canvas.flatten', t.commands.canvasFlatten.title),
+              { type: 'separator' },
               commandItem('canvas.flipHorizontal', t.commands.canvasFlipHorizontal.title),
               commandItem('canvas.flipVertical', t.commands.canvasFlipVertical.title),
               { type: 'separator' },

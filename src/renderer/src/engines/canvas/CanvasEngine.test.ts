@@ -921,6 +921,77 @@ describe('painting a transformed layer', () => {
 })
 
 /**
+ * Merging and flattening record that layers became one; the pixels are the engine's to compose,
+ * and there is exactly one moment it can — before the command drops what they are made of.
+ */
+describe('composing a merge and a flatten', () => {
+  const paintSpace = (): Placed | undefined => gpu.containers.find(container => container.matrix)
+
+  const twoLayers = (transform: Partial<Transform> = {}): CanvasState =>
+    stacked([
+      pixelLayer('below', 'Below'),
+      { ...pixelLayer('above', 'Above'), transform: { ...IDENTITY, ...transform } },
+    ])
+
+  /** The layers are built bottom first, so the lower one owns texture 0. */
+  const BELOW = 0
+
+  it('draws the upper layer into the lower one, which is the texture the merge keeps', async () => {
+    const { engine } = await mounted(twoLayers())
+    gpu.painted = []
+
+    engine.mergeInto('below', 'above')
+
+    expect(gpu.painted).toContain(BELOW)
+  })
+
+  it('carries the upper layer through the document and back into the lower one', async () => {
+    const { engine } = await mounted(twoLayers({ x: 40, y: 25 }))
+
+    engine.mergeInto('below', 'above')
+
+    // The upper layer sits 40 by 25 further along; the lower one has not moved, so its pixels
+    // must receive the picture at that same offset rather than at the origin.
+    expect(paintSpace()?.matrix?.tx).toBeCloseTo(40, 10)
+    expect(paintSpace()?.matrix?.ty).toBeCloseTo(25, 10)
+  })
+
+  it('composes nothing when either layer has no surface', async () => {
+    const { engine } = await mounted(twoLayers())
+    gpu.painted = []
+
+    engine.mergeInto('below', 'gone')
+
+    expect(gpu.painted).toEqual([])
+  })
+
+  it('hands the flattened picture to the layer that replaces the stack', async () => {
+    const { engine } = await mounted(twoLayers())
+
+    // Composed while the stack still exists, held for a layer that does not exist yet.
+    engine.flattenInto('flat')
+    const built = gpu.texturesCreated
+    gpu.painted = []
+    engine.apply(stacked([pixelLayer('flat', 'Background')]))
+
+    // The new surface is built, then the held picture is poured into it: born empty, the
+    // document would come out transparent, which is what kept Flatten off the menu.
+    expect(gpu.painted).toContain(built)
+  })
+
+  it('leaves a layer that was not flattened into alone', async () => {
+    const { engine } = await mounted(twoLayers())
+
+    engine.flattenInto('flat')
+    const built = gpu.texturesCreated
+    gpu.painted = []
+    engine.apply(stacked([pixelLayer('other', 'Other')]))
+
+    expect(gpu.painted).not.toContain(built)
+  })
+})
+
+/**
  * A texture used to be allocated once, at whatever size the document had when its layer was
  * born, and never grew. Five features were written against that and left unoffered for it: crop,
  * mirror, quarter turn, merge down and flatten.

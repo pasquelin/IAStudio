@@ -61,6 +61,22 @@ export function invert(matrix: Affine): Affine | null {
   }
 }
 
+/**
+ * `outer` after `inner` — the map that takes a point through both, in that order. What carries one
+ * layer's pixels into another's: place them in the document with `inner`, then take them back into
+ * the target's own pixels with `outer`.
+ */
+export function compose(outer: Affine, inner: Affine): Affine {
+  return {
+    a: outer.a * inner.a + outer.c * inner.b,
+    b: outer.b * inner.a + outer.d * inner.b,
+    c: outer.a * inner.c + outer.c * inner.d,
+    d: outer.b * inner.c + outer.d * inner.d,
+    tx: outer.a * inner.tx + outer.c * inner.ty + outer.tx,
+    ty: outer.b * inner.tx + outer.d * inner.ty + outer.ty,
+  }
+}
+
 export function applyTo(matrix: Affine, point: Point): Point {
   return {
     x: matrix.a * point.x + matrix.c * point.y + matrix.tx,
