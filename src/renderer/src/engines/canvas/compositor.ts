@@ -15,7 +15,7 @@ export type CompositeNode =
       /** The layer whose mask texture hides part of this one. Today always itself. */
       maskedBy: string | null
     }
-  | { kind: 'group'; id: string; isolated: boolean; children: CompositeNode[] }
+  | { kind: 'group'; id: string; children: CompositeNode[] }
 
 /**
  * Where a layer's mask lives among the surfaces. One namespace for both, so an undo patch filed
@@ -27,20 +27,25 @@ export function maskKey(layerId: string): string {
 
 /** Bottom first, like the stack itself: the last node is the one the eye sees on top. */
 export function composite(layers: readonly Layer[]): CompositeNode[] {
-  return layers.map((layer, index) => {
+  // The base a clipped layer is cut out of: the last unclipped one below it, carried forward as
+  // the level is walked. A run of clipped layers shares one base, as it does in Photoshop.
+  let base: string | null = null
+
+  return layers.map(layer => {
     if (isGroup(layer)) {
-      return {
-        kind: 'group',
-        id: layer.id,
-        isolated: layer.isolation === 'isolate',
-        children: composite(layer.children),
-      }
+      if (!layer.clipped) base = layer.id
+      return { kind: 'group', id: layer.id, children: composite(layer.children) }
     }
+
+    // `null` when nothing lies under it: a clipped layer with no base is not clipped at all, and
+    // hiding it would lose its pixels for a reason nobody could see.
+    const clippedBy = layer.clipped ? base : null
+    if (!layer.clipped) base = layer.id
 
     return {
       kind: 'surface',
       id: layer.id,
-      clippedBy: clipBase(layers, index),
+      clippedBy,
       maskedBy: layer.mask?.enabled === true ? layer.id : null,
     }
   })
@@ -58,21 +63,4 @@ export function placement(nodes: readonly CompositeNode[]): string {
         : `${node.id}:${node.clippedBy ?? ''}:${node.maskedBy ?? ''}`,
     )
     .join(' ')
-}
-
-/**
- * The first unclipped layer below this one, among its siblings only: a run of clipped layers
- * shares one base, as it does in Photoshop, and a group is a stack of its own.
- *
- * `null` when nothing lies under it — a clipped layer with no base is not clipped at all, and
- * hiding it would lose its pixels for a reason nobody could see.
- */
-function clipBase(siblings: readonly Layer[], index: number): string | null {
-  if (siblings[index]?.clipped !== true) return null
-
-  for (let below = index - 1; below >= 0; below -= 1) {
-    const candidate = siblings[below]
-    if (candidate && !candidate.clipped) return candidate.id
-  }
-  return null
 }

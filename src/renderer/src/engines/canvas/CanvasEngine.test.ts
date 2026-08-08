@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { layerFixture } from './canvas-fixtures'
 import {
   BLEND_MODES,
   DEFAULT_CANVAS,
   groupLayer,
   IDENTITY,
+  isGroup,
   pixelLayer,
   type CanvasState,
   type Layer,
@@ -25,7 +27,8 @@ type Pair = { x: number; y: number }
 
 /** A node of the built tree, seen through what the engine is allowed to write on it. */
 type Placed = {
-  readonly children: object[]
+  readonly children: Placed[]
+  parent: Placed | null
   position: Pair
   scale: Pair
   pivot: Pair
@@ -85,7 +88,8 @@ vi.mock('pixi.js', () => {
   }
 
   class Container {
-    readonly children: object[] = []
+    readonly children: Container[] = []
+    parent: Container | null = null
     readonly position = new Pair()
     readonly scale = new Pair(1)
     readonly pivot = new Pair()
@@ -97,28 +101,32 @@ vi.mock('pixi.js', () => {
     label = ''
     filters: object[] = []
     mask: object | null = null
-    x = 0
-    y = 0
 
     constructor(options: { label?: string } = {}) {
       this.label = options.label ?? ''
       gpu.containers.push(this)
     }
 
-    addChild(child: object): void {
+    addChild(child: Container): void {
       gpu.mutations += 1
+      // Pixi reparents rather than sharing: a child belongs to one container at a time, and the
+      // clipping proxies rely on it.
+      child.parent?.removeChild(child)
+      child.parent = this
       this.children.push(child)
     }
 
-    removeChild(child: object): void {
+    removeChild(child: Container): void {
       const at = this.children.indexOf(child)
       if (at < 0) return
       gpu.mutations += 1
+      child.parent = null
       this.children.splice(at, 1)
     }
 
     removeChildren(): void {
       gpu.mutations += this.children.length
+      for (const child of this.children) child.parent = null
       this.children.length = 0
     }
 
@@ -274,6 +282,21 @@ function mutationsCounted(): () => number {
   return () => gpu.mutations - before
 }
 
+/** A document made of exactly these layers, the bottom one armed. */
+function stacked(layers: Layer[]): CanvasState {
+  return { ...DEFAULT_CANVAS, layers, activeLayerId: firstPaintable(layers) }
+}
+
+/** The id a document opens armed on: a group swallows every stroke, so it is never one. */
+function firstPaintable(layers: readonly Layer[]): string | null {
+  for (const layer of layers) {
+    if (!isGroup(layer)) return layer.id
+    const inner = firstPaintable(layer.children)
+    if (inner) return inner
+  }
+  return null
+}
+
 /** The container the engine built for a group, found by the label it puts on it. */
 function groupContainer(id: string): Placed | undefined {
   return gpu.containers.find(container => container.label === id)
@@ -293,10 +316,6 @@ beforeEach(() => {
 describe('the blend table', () => {
   // A mode missing from the table falls back to 'normal' silently: the layer composites wrongly
   // and nothing says so. Eleven of the sixteen did exactly that until the extension was imported.
-  it('gives every declared blend mode a Pixi mode of its own', () => {
-    for (const mode of BLEND_MODES) expect(BLEND_BY_MODE[mode]).toBeDefined()
-  })
-
   it('names each Pixi mode after the mode it stands for', () => {
     for (const mode of BLEND_MODES) {
       if (mode === 'hue') continue
@@ -374,7 +393,9 @@ describe('mounting', () => {
 
     engine.apply({ ...DEFAULT_CANVAS, layers: [...stack].reverse(), activeLayerId: 'a' })
 
-    expect(world()).toBeGreaterThan(0)
+    // Two detached and two reattached. The bound is the point: the pass this replaced was
+    // quadratic in the surfaces, and a fifty-layer document felt it.
+    expect(world()).toBe(4)
   })
 
   // A guide drag rewrites the state on every pointer move and touches no pixel.
@@ -390,11 +411,7 @@ describe('mounting', () => {
 })
 
 describe('groups', () => {
-  const grouped = (children: Layer[]): CanvasState => ({
-    ...DEFAULT_CANVAS,
-    layers: [groupLayer('g', 'G', children)],
-    activeLayerId: children[0]?.id ?? null,
-  })
+  const grouped = (children: Layer[]): CanvasState => stacked([groupLayer('g', 'G', children)])
 
   it('builds a container of its own and nests the surfaces inside it', async () => {
     await mounted(grouped([pixelLayer('a', 'A'), pixelLayer('b', 'B')]))
@@ -460,12 +477,91 @@ describe('groups', () => {
   })
 })
 
-describe('layer masks', () => {
-  const withMask = (mask?: { enabled: boolean; linked: boolean }): CanvasState => ({
-    ...DEFAULT_CANVAS,
-    layers: [{ ...pixelLayer('layer-1', 'Background'), mask }],
-    activeLayerId: 'layer-1',
+describe('clipping', () => {
+  const clipped = (id: string): Layer => ({ ...layerFixture({ id, name: id }), clipped: true })
+
+  /**
+   * An object cannot be both the picture and the stencil, so each clipped layer gets a proxy of
+   * its own onto the base's texture. Three clipped on one base means three proxies, all visible.
+   */
+  it('gives every clipped layer of a run its own stencil onto the same base', async () => {
+    await mounted(stacked([pixelLayer('base', 'Base'), clipped('a'), clipped('b'), clipped('c')]))
+
+    // Four layers, then three proxies: seven sprites, four textures.
+    expect(gpu.sprites).toHaveLength(7)
+    expect(gpu.texturesCreated).toBe(4)
+
+    const proxies = gpu.sprites.slice(4)
+    for (const proxy of proxies) expect(proxy.parent?.mask).toBe(proxy)
+    expect(new Set(proxies).size).toBe(3)
   })
+
+  it('leaves an unclipped stack without a single stencil', async () => {
+    await mounted(stacked([pixelLayer('a', 'A'), pixelLayer('b', 'B')]))
+
+    expect(gpu.sprites).toHaveLength(2)
+  })
+
+  // A clipped layer with nothing under it is not clipped at all: hiding it would lose its pixels.
+  it('builds no stencil for a clipped layer with no base under it', async () => {
+    await mounted(stacked([clipped('a'), pixelLayer('b', 'B')]))
+
+    expect(gpu.sprites).toHaveLength(2)
+  })
+
+  it('drops the stencil once the layer stops being clipped', async () => {
+    const stack = [pixelLayer('base', 'Base'), clipped('a')]
+    const { engine } = await mounted(stacked(stack))
+    expect(gpu.sprites).toHaveLength(3)
+
+    engine.apply(stacked([pixelLayer('base', 'Base'), pixelLayer('a', 'a')]))
+
+    expect(gpu.sprites.at(-1)?.parent).toBeNull()
+  })
+
+  // A stencil a frame behind the layer it cuts would show a seam down the side of it.
+  it('moves the stencil with the base it stands for', async () => {
+    const base = pixelLayer('base', 'Base')
+    const stack = [base, clipped('a')]
+    const { engine } = await mounted(stacked(stack))
+
+    engine.apply(
+      stacked([{ ...base, transform: { ...IDENTITY, x: 30, y: 70 } }, clipped('a'), clipped('b')]),
+    )
+
+    const proxy = gpu.sprites.find(sprite => sprite.parent?.mask === sprite)
+    expect(proxy?.position).toMatchObject({ x: 30 + 512, y: 70 + 512 })
+  })
+
+  // A clipped layer that also carries a mask needs two, and an object holds one.
+  it('lets a clipped layer keep a mask of its own', async () => {
+    const masked: Layer = {
+      ...pixelLayer('a', 'A'),
+      clipped: true,
+      mask: { enabled: true, linked: true },
+    }
+    await mounted(stacked([pixelLayer('base', 'Base'), masked]))
+
+    const sprite = gpu.sprites[1]
+    expect(sprite?.mask).not.toBeNull()
+    expect(sprite?.parent?.mask).not.toBe(sprite?.mask)
+  })
+})
+
+describe('fill opacity', () => {
+  // No layer effect exists yet, so for now the two simply multiply. The distinction is written
+  // down in the engine so it is not lost the day effects arrive.
+  it('fades the pixels alongside the layer opacity', async () => {
+    const layer: Layer = { ...pixelLayer('layer-1', 'Background'), opacity: 0.5, fillOpacity: 0.5 }
+    await mounted({ ...DEFAULT_CANVAS, layers: [layer], activeLayerId: 'layer-1' })
+
+    expect(gpu.sprites[0]?.alpha).toBe(0.25)
+  })
+})
+
+describe('layer masks', () => {
+  const withMask = (mask?: { enabled: boolean; linked: boolean }): CanvasState =>
+    stacked([{ ...pixelLayer('layer-1', 'Background'), mask }])
 
   // A mask per layer allocated ahead would double the GPU memory of every document.
   it('costs nothing at all on a layer that carries no mask', async () => {

@@ -185,6 +185,9 @@ export type PaintSurface = 'pixels' | 'mask'
 /** A surface a gesture may write to, with the key its undo patches are filed under. */
 type BrushTarget = { key: string; surface: LayerSurface }
 
+/** The stencil that cuts a clipped layer out of the one below it, and what holds the pair. */
+type ClipProxy = { baseId: string; sprite: Sprite; host: Container }
+
 /** What the pointer is doing, if anything: the gestures are exclusive by construction. */
 type Gesture =
   | { kind: 'none' }
@@ -246,6 +249,8 @@ export class CanvasEngine {
   private readonly world = new Container()
   private readonly surfaces = new Map<string, LayerSurface>()
   private readonly groups = new Map<string, Container>()
+  /** One per clipped layer, keyed by it: a run of three on one base takes three proxies. */
+  private readonly clips = new Map<string, ClipProxy>()
   /** Built on the first isolated group, and only then: most documents never hold one. */
   private isolation: AlphaFilter | null = null
   private readonly stamp = new Graphics()
@@ -265,7 +270,7 @@ export class CanvasEngine {
   /** Read on resize rather than per event: `getBoundingClientRect` forces a layout. */
   private bounds: DOMRect | null = null
 
-  /** The paintable ids in stack order, joined: what tells a restack apart from a repaint. */
+  /** The tree's shape, as `placement` spells it: what tells a restack apart from a repaint. */
   private stacking = ''
 
   private gesture: Gesture = NO_GESTURE
@@ -372,7 +377,7 @@ export class CanvasEngine {
     // a texture destroyed on the GPU. Grouping two layers used to lose their pixels outright.
     const layers = allLayers(state.layers)
     for (const layer of layers) {
-      if (isGroup(layer)) this.syncGroup(layer)
+      if (isGroup(layer)) this.syncGroup(layer, state)
       else this.syncLayer(layer)
     }
 
@@ -384,13 +389,17 @@ export class CanvasEngine {
     // pass below detaches and reattaches every node of the document.
     const nodes = composite(state.layers)
     const stacking = placement(nodes)
-    if (stacking === this.stacking) return
-    this.stacking = stacking
+    if (stacking !== this.stacking) {
+      this.stacking = stacking
+      // The tree first: it leaves whatever departed orphaned, so nothing is destroyed while it
+      // is still someone's child.
+      this.attach(nodes, this.world)
+      this.dropDeparted(layers)
+    }
 
-    // The tree first: it leaves whatever departed orphaned, so nothing is destroyed while it is
-    // still someone's child.
-    this.attach(nodes, this.world)
-    this.dropDeparted(layers)
+    // Last, and outside the guard: `attach` is where a proxy is born, and a base that moved
+    // without restacking still has to drag its stencil along.
+    this.refreshClips()
   }
 
   /** Frees what the stack no longer holds. A layer that left took its pixels with it. */
@@ -418,6 +427,16 @@ export class CanvasEngine {
       container.destroy()
       this.groups.delete(id)
     }
+
+    const clipping = new Set(layers.filter(layer => layer.clipped).map(layer => layer.id))
+    for (const [id, clip] of this.clips) {
+      if (clipping.has(id) && this.surfaces.has(clip.baseId)) continue
+      clip.host.removeChildren()
+      // Without its texture: the proxy is the one sprite that borrows another layer's.
+      clip.sprite.destroy()
+      clip.host.destroy()
+      this.clips.delete(id)
+    }
   }
 
   /** Bottom first, so the last node of a level is the one the eye sees on top. */
@@ -436,18 +455,66 @@ export class CanvasEngine {
       const surface = this.surfaces.get(node.id)
       if (!surface) continue
 
+      // A clipped layer hangs in a container of its own: an object carries one mask, and a
+      // clipped layer that also has a mask of its own needs two.
+      const clip = node.clippedBy === null ? null : this.clipProxy(node.id, node.clippedBy)
+      const holder = clip ?? parent
+
       const mask =
         node.maskedBy === null ? null : (this.surfaces.get(maskKey(node.maskedBy)) ?? null)
       // Pixi reads the alpha of whatever it is handed, and only if that object is in the tree:
       // the mask sprite is attached alongside the layer it hides, and never drawn on its own.
-      if (mask) parent.addChild(mask.sprite)
+      if (mask) holder.addChild(mask.sprite)
       surface.sprite.mask = mask?.sprite ?? null
 
-      parent.addChild(surface.sprite)
+      holder.addChild(surface.sprite)
+      if (clip) parent.addChild(clip)
     }
   }
 
-  private syncGroup(layer: GroupLayer): void {
+  /**
+   * The container that cuts a clipped layer out of the one below it, emptied and ready to be
+   * filled. `null` when the base holds no pixels — a clipped layer with nothing under it is not
+   * clipped at all, and hiding it would lose its pixels for a reason nobody could see.
+   */
+  private clipProxy(layerId: string, baseId: string): Container | null {
+    const base = this.surfaces.get(baseId)
+    if (!base) return null
+
+    let clip = this.clips.get(layerId)
+    if (clip?.baseId !== baseId) {
+      clip?.host.removeChildren()
+      clip?.sprite.destroy()
+      clip?.host.destroy()
+      // The base is already being drawn: an object cannot be both the picture and the stencil,
+      // so the proxy shares its texture and nothing else. Three clipped layers on one base take
+      // three proxies, and all three stay visible.
+      const sprite = new Sprite(base.texture)
+      const host = new Container()
+      host.mask = sprite
+      clip = { baseId, sprite, host }
+      this.clips.set(layerId, clip)
+    }
+
+    clip.host.removeChildren()
+    clip.host.addChild(clip.sprite)
+    return clip.host
+  }
+
+  /** The proxies follow their base: a stencil a frame behind the layer it cuts would show a seam. */
+  private refreshClips(): void {
+    const state = this.state
+    if (!state) return
+
+    for (const clip of this.clips.values()) {
+      const base = this.surfaces.get(clip.baseId)
+      const layer = layerById(state, clip.baseId)
+      // From the state, through the one placement path the engine has: a second one would drift.
+      if (base && layer) this.place(clip.sprite, layer.transform, base.texture)
+    }
+  }
+
+  private syncGroup(layer: GroupLayer, box: Size): void {
     let container = this.groups.get(layer.id)
     if (!container) {
       container = new Container({ label: layer.id })
@@ -460,9 +527,15 @@ export class CanvasEngine {
     // An isolated group composites on itself before the stack sees it, which is what an offscreen
     // pass does — and a neutral filter is the only way v8 offers to ask for one. Empty otherwise:
     // a filter on every group would cost a render target per group for nothing.
-    container.filters = layer.isolation === 'isolate' ? [this.isolationPass()] : []
+    //
+    // Written only when it turns: Pixi copies and freezes the array on every assignment, and
+    // this runs for every group of the document on every state it is handed.
+    const isolated = layer.isolation === 'isolate'
+    if (isolated !== (container.filters ?? []).length > 0) {
+      container.filters = isolated ? [this.isolationPass()] : []
+    }
     // A group holds no texture, so the document is the box its origin is a fraction of.
-    this.place(container, layer.transform, this.documentSize())
+    this.place(container, layer.transform, box)
   }
 
   private isolationPass(): AlphaFilter {
@@ -566,6 +639,8 @@ export class CanvasEngine {
     this.surfaces.clear()
     for (const container of this.groups.values()) container.destroy()
     this.groups.clear()
+    for (const clip of this.clips.values()) clip.host.destroy()
+    this.clips.clear()
     this.isolation?.destroy()
     this.isolation = null
     this.stamp.destroy()
@@ -640,7 +715,9 @@ export class CanvasEngine {
     if (!surface) return
 
     surface.sprite.visible = layer.visible
-    surface.sprite.alpha = layer.opacity
+    // `fillOpacity` is meant to fade the pixels while leaving the effects drawn around them at
+    // full strength. No layer effect exists yet, so for now the two simply multiply.
+    surface.sprite.alpha = layer.opacity * layer.fillOpacity
     surface.sprite.blendMode = BLEND_BY_MODE[layer.blend]
     this.place(surface.sprite, layer.transform, surface.texture)
 
@@ -690,10 +767,6 @@ export class CanvasEngine {
     target.rotation = transform.rotation
     target.scale.set(transform.scaleX, transform.scaleY)
     target.skew.set(transform.skewX, transform.skewY)
-  }
-
-  private documentSize(): Size {
-    return { width: this.state?.width ?? 0, height: this.state?.height ?? 0 }
   }
 
   /**
@@ -859,11 +932,10 @@ export class CanvasEngine {
     const layer = this.activeLayer()
     if (!layer || isGroup(layer) || layer.locked.pixels) return null
 
-    const key = this.paintKey(layer.id)
-    const surface = this.surfaces.get(key)
-    // No surface under that key means the layer carries no mask while the brush aims at one:
-    // there is nothing to paint, and nothing to say about it either.
-    return surface ? { key, surface } : null
+    const surface = this.activeSurface()
+    // No surface means the layer carries no mask while the brush aims at one: there is nothing
+    // to paint, and nothing to say about it either.
+    return surface ? { key: this.paintKey(layer.id), surface } : null
   }
 
   private documentRect(): Rect | null {

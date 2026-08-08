@@ -37,15 +37,6 @@ describe('groups', () => {
     expect(group?.kind === 'group' && group.children.map(child => child.id)).toEqual(['a', 'b'])
   })
 
-  it('reports the isolated ones, which composite on themselves before the stack sees them', () => {
-    const passing = groupLayer('p', 'P', [])
-    const isolated = { ...groupLayer('i', 'I', []), isolation: 'isolate' } satisfies Layer
-    const nodes = byId(composite([passing, isolated]))
-
-    expect(nodes.get('p')).toMatchObject({ isolated: false })
-    expect(nodes.get('i')).toMatchObject({ isolated: true })
-  })
-
   // A group is a stack of its own: its first child has nothing of the outer stack under it.
   it('does not let a clipped child reach past its group for a base', () => {
     const nodes = composite([pixelLayer('base', 'Base'), groupLayer('g', 'G', [clipped('a')])])
@@ -78,6 +69,16 @@ describe('clipping', () => {
     const nodes = byId(composite([clipped('a'), pixelLayer('b', 'B')]))
 
     expect(nodes.get('a')).toMatchObject({ clippedBy: null })
+  })
+
+  // A group holds no texture, so the engine finds no stencil and declines — but it is the layer
+  // under it all the same, and skipping it would let the clip reach further down than it should.
+  it('lets a group be the base a clipped layer names', () => {
+    const nodes = byId(
+      composite([pixelLayer('deep', 'Deep'), groupLayer('g', 'G', []), clipped('a')]),
+    )
+
+    expect(nodes.get('a')).toMatchObject({ clippedBy: 'g' })
   })
 
   it('starts a new run at the next unclipped layer', () => {
