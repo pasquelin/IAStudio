@@ -1,6 +1,7 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
+import { OBJECT_ENTRIES } from '@shared/domain/scene'
 import { LIGHT_TYPES } from '@/engines/scene/light-types'
 import { MESH_PRIMITIVES } from '@/engines/scene/mesh-primitives'
 import { SCENE_TOOLS } from './scene-tools'
@@ -36,21 +37,27 @@ describe('scene tools', () => {
     }
   })
 
+  // A missing string renders as `sceneViews.top` in the flyout, and nothing else would catch it.
+  it('has a translation behind every row label', () => {
+    for (const tool of SCENE_TOOLS) {
+      for (const mode of tool.modes ?? []) expect(i18next.exists(mode.labelKey)).toBe(true)
+    }
+  })
+
   it('gives every flyout row an icon', () => {
     for (const mode of add?.modes ?? []) expect(mode.icon).toBeTruthy()
   })
 })
 
 describe('SCENE_TOOLS', () => {
-  it('offers every primitive and every light under one Add button', () => {
-    expect(add?.modes).toHaveLength(MESH_PRIMITIVES.length + LIGHT_TYPES.length)
+  it('offers every primitive, every light and every object under one Add button', () => {
+    expect(add?.modes).toHaveLength(
+      MESH_PRIMITIVES.length + LIGHT_TYPES.length + OBJECT_ENTRIES.length,
+    )
   })
 
-  it('keeps the greyed primitives greyed', () => {
-    expect(add?.modes?.filter(mode => mode.disabled).map(mode => mode.id)).toEqual([
-      'sprite',
-      'text',
-    ])
+  it('keeps the greyed kinds greyed', () => {
+    expect(add?.modes?.filter(mode => mode.disabled).map(mode => mode.id)).toEqual(['text'])
   })
 
   it('keeps the three transform modes as three reachable buttons', () => {
@@ -74,17 +81,45 @@ describe('SCENE_TOOLS', () => {
     expect(SCENE_TOOLS[0]?.id).toBe('select')
   })
 
-  it('reads as three groups rather than a run of seven icons', () => {
+  it('reads as groups rather than a run of icons', () => {
     expect(SCENE_TOOLS.filter(tool => tool.separatorBefore).map(tool => tool.id)).toEqual([
+      'snap',
+      'projection',
       'frame',
       'add',
+      'duplicate',
     ])
   })
 
-  // A group that only offers modes acts through its rows, never on its own click.
-  it('gives every button but Add a command', () => {
+  // Copy and Paste answer to the same keys as the native Edit menu, which acts on text: a
+  // button of the scene's own is the only thing that says the scene has them too.
+  it('offers the clipboard gestures as buttons, not to the keyboard alone', () => {
+    const ids = SCENE_TOOLS.map(tool => tool.id)
+
+    expect(ids).toEqual(expect.arrayContaining(['duplicate', 'copy', 'cut', 'paste']))
+  })
+
+  // They qualify the armed tool rather than replacing it, so they follow it in their own group.
+  it('puts the two toggles next to the transform modes they qualify', () => {
+    const ids = SCENE_TOOLS.map(tool => tool.id)
+
+    expect(ids.indexOf('snap')).toBe(ids.indexOf('scale') + 1)
+    expect(ids.indexOf('space')).toBe(ids.indexOf('snap') + 1)
+  })
+
+  // A button with a flyout acts through its rows, never on its own click — and the reverse:
+  // a button with neither command nor rows would do nothing at all.
+  it('gives every button either a command or a flyout, and never neither', () => {
+    const idle = SCENE_TOOLS.filter(tool => tool.command === undefined && tool.modes === undefined)
+
+    expect(idle).toEqual([])
+  })
+
+  // Add and the six sides do nothing on their own; Display draws something, so its click
+  // cycles what it draws rather than sitting dead under an open flyout.
+  it('leaves a flyout commandless only where the button itself does nothing', () => {
     const commandless = SCENE_TOOLS.filter(tool => tool.command === undefined)
 
-    expect(commandless.map(tool => tool.id)).toEqual(['add'])
+    expect(commandless.map(tool => tool.id)).toEqual(['view', 'add'])
   })
 })

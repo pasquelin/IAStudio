@@ -52,7 +52,7 @@ describe('meshes panel', () => {
 
     await userEvent.click(screen.getByText('Box'))
 
-    expect(sceneOf(useScenes.getState(), 'doc-1').selectedId).toBe(cube?.id)
+    expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual([cube?.id])
   })
 
   it('adds the primitive chosen in the flyout, and undo removes it', async () => {
@@ -68,14 +68,18 @@ describe('meshes panel', () => {
     expect(nodes('mesh')).toEqual([])
   })
 
-  // A primitive that is not buildable yet is shown, so the menu never hides what is coming.
-  it('greys the announced primitives instead of hiding them', async () => {
+  // The panel adds what it lists. A sprite is a node of its own, offered by the toolbar's Add
+  // and by the native menu, and listing it here would add a row this panel never shows.
+  it('offers meshes alone, every one of them buildable', async () => {
     render(<Actions />)
 
     await userEvent.hover(screen.getByRole('button', { name: /Ajouter une maille/ }))
 
-    expect(await screen.findByRole('menuitem', { name: /Texte/ })).toBeDisabled()
-    expect(screen.getByRole('menuitem', { name: /Sprite/ })).toBeDisabled()
+    expect(await screen.findByRole('menuitem', { name: /Cube/ })).toBeEnabled()
+    expect(screen.queryByRole('menuitem', { name: /Sprite/ })).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('menuitem').filter(item => item.ariaDisabled === 'true')).toEqual(
+      [],
+    )
   })
 
   // Hovering is not a keyboard gesture: the flyout has to open on the click too.
@@ -107,7 +111,7 @@ describe('meshes panel', () => {
     const light = nodes('light')[0]
     installScene('doc-1', {
       ...sceneOf(useScenes.getState(), 'doc-1'),
-      selectedId: light?.id ?? null,
+      selectedIds: light ? [light.id] : [],
     })
     render(<Actions />)
 
@@ -165,6 +169,6 @@ describe('lights panel', () => {
     const eyes = screen.getAllByRole('button', { name: 'Afficher ou masquer' })
     await userEvent.click(eyes[1] as HTMLElement)
 
-    expect(sceneOf(useScenes.getState(), 'doc-1').selectedId).toBeNull()
+    expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual([])
   })
 })

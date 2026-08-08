@@ -203,7 +203,7 @@ export function Models() {
         <Collection
           items={items}
           state={collection}
-          selectedId={selectedId}
+          selectedIds={selectedId ? [selectedId] : []}
           onSelect={model => select(family, model.id)}
           onReachEnd={loadMore}
           onVisible={onVisible}

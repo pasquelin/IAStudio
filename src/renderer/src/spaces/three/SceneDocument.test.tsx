@@ -6,6 +6,7 @@ import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
 import { useDocuments } from '@/stores/documents'
+import { useSceneViews, viewOf } from '@/stores/scene-views'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
@@ -22,6 +23,11 @@ vi.mock('@/app/dockview-api', () => ({
 const setMode = vi.fn()
 const frameSelection = vi.fn()
 const configure = vi.fn()
+const setSnapping = vi.fn()
+const setSpace = vi.fn()
+const setProjection = vi.fn()
+const setDisplayMode = vi.fn()
+const viewFrom = vi.fn()
 
 // jsdom has no WebGL context: the renderer is exercised by hand, not here. What this test
 // covers is that the document wires the toolbar and the keyboard to the right calls.
@@ -34,6 +40,11 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setMotion = vi.fn()
     configure = configure
     setMode = setMode
+    setSnapping = setSnapping
+    setSpace = setSpace
+    setProjection = setProjection
+    setDisplayMode = setDisplayMode
+    viewFrom = viewFrom
     frameSelection = frameSelection
   },
 }))
@@ -45,20 +56,25 @@ function meshesOf(documentId: string): SceneNode[] {
   return sceneOf(useScenes.getState(), documentId).nodes.filter(node => node.type === 'mesh')
 }
 
-describe('SceneDocument', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    clearScenes()
-    // The descriptor, not just the id: a document restores itself through its kind, and
-    // `WithDocument` is what guarantees one exists before this component ever renders.
-    useDocuments.setState({
-      documents: {
-        'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set dressing' },
-      },
-      activeId: 'doc-1',
-    })
+// Every block, not one of them: a describe that leaned on its neighbour's setup only passed
+// because the store leaked, and `active` — which gates the whole keyboard — was one of the
+// things it leaked.
+beforeEach(() => {
+  vi.clearAllMocks()
+  clearScenes()
+  useSceneViews.setState({ views: {} })
+  useSettings.setState({ settings: DEFAULT_SETTINGS })
+  // The descriptor, not just the id: a document restores itself through its kind, and
+  // `WithDocument` is what guarantees one exists before this component ever renders.
+  useDocuments.setState({
+    documents: {
+      'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set dressing' },
+    },
+    activeId: 'doc-1',
   })
+})
 
+describe('SceneDocument', () => {
   it('renders the shared toolbar with the scene tools', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Déplacer/ })).toBeInTheDocument()
@@ -175,6 +191,77 @@ describe('SceneDocument', () => {
   })
 })
 
+// Neither is a transform mode: they qualify one, and both are session state — a document that
+// remembered its snapping would impose it on whoever opens it next.
+describe('snapping and the coordinate frame', () => {
+  it('opens with both off, so nothing is quietly constrained', () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    expect(setSnapping).toHaveBeenCalledWith(false)
+    expect(setSpace).toHaveBeenCalledWith('world')
+  })
+
+  it('toggles snapping from the toolbar and back off on the next click', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    const button = screen.getByRole('button', { name: /Magnétisme/ })
+
+    await userEvent.click(button)
+    expect(setSnapping).toHaveBeenLastCalledWith(true)
+
+    await userEvent.click(button)
+    expect(setSnapping).toHaveBeenLastCalledWith(false)
+  })
+
+  it('toggles snapping on the bound key', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{m}')
+    expect(setSnapping).toHaveBeenLastCalledWith(true)
+  })
+
+  it('swaps the coordinate frame from the toolbar', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    const button = screen.getByRole('button', { name: /Repère local/ })
+
+    await userEvent.click(button)
+    expect(setSpace).toHaveBeenLastCalledWith('local')
+
+    await userEvent.click(button)
+    expect(setSpace).toHaveBeenLastCalledWith('world')
+  })
+
+  it('swaps the coordinate frame on the bound key', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{l}')
+    expect(setSpace).toHaveBeenLastCalledWith('local')
+  })
+
+  // Held down, not armed: turning snapping on must not disarm the transform mode.
+  it('draws a toggle as pressed without unarming the tool', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Tourner/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Magnétisme/ }))
+
+    expect(screen.getByRole('button', { name: /Magnétisme/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: /Tourner/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('carries the snap steps into the engine with the rest of the viewport settings', () => {
+    configure.mockClear()
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, three: { ...DEFAULT_SETTINGS.three, snapRotate: 45 } },
+    })
+
+    render(<SceneDocument documentId="doc-1" />)
+
+    expect(configure).toHaveBeenCalledWith(expect.objectContaining({ snapRotate: 45 }))
+  })
+})
+
 describe('the viewport settings', () => {
   it('pushes them into the engine, which holds no truth of its own', () => {
     configure.mockClear()
@@ -199,5 +286,68 @@ describe('the viewport settings', () => {
     })
 
     expect(setDocumentTitle).toHaveBeenLastCalledWith('doc-1', 'Renamed', expect.any(Boolean))
+  })
+})
+
+describe('how the scene is looked at', () => {
+  it('swaps the projection from the toolbar, and lights the button', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+
+    expect(setProjection).toHaveBeenCalledWith('orthographic')
+    expect(screen.getByRole('button', { name: /Projection/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('swaps it back on the second click', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+
+    expect(setProjection).toHaveBeenLastCalledWith('perspective')
+  })
+
+  it('stands the camera at the side a flyout row names', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /Se placer/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /De dessus/ }))
+
+    expect(viewFrom).toHaveBeenCalledWith('top')
+  })
+
+  // The button wears the mode it draws, so it is the mode's own name that names it.
+  it('changes what the viewport draws from the flyout', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /Rendu/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /^Filaire/ }))
+
+    expect(setDisplayMode).toHaveBeenCalledWith('wireframe')
+  })
+
+  it('cycles through the three modes on the bound key', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{z}')
+    expect(setDisplayMode).toHaveBeenLastCalledWith('wireframe')
+
+    await userEvent.keyboard('{z}')
+    expect(setDisplayMode).toHaveBeenLastCalledWith('both')
+
+    await userEvent.keyboard('{z}')
+    expect(setDisplayMode).toHaveBeenLastCalledWith('shaded')
+  })
+
+  // Session state, per document: two scenes side by side are two points of view.
+  it('leaves the view of another document alone', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+
+    expect(viewOf(useSceneViews.getState(), 'doc-2').projection).toBe('perspective')
   })
 })

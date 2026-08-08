@@ -11,6 +11,7 @@ import {
 } from 'three'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
+import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { previewGeometry } from './preview-geometry'
@@ -52,10 +53,11 @@ export class TextureRenderer {
   private shape: PreviewShape = 'sphere'
   private displaced = false
   private spinning = false
-  private skybox: string | null = null
+  private readonly sky: SkyBinding
 
   constructor(options: TextureRendererOptions) {
     this.cache = createTextureCache(options.loadTexture)
+    this.sky = createSkyBinding(this.cache, () => this.paintBackground())
     this.viewport.camera.position.set(0, 0.6, 3.2)
     this.viewport.scene.add(this.mesh)
   }
@@ -69,7 +71,7 @@ export class TextureRenderer {
     this.environment = createEnvironment(renderer, this.viewport.scene, this.viewport.requestRender)
     this.environment.setStudio()
     // The studio preset has no picture behind it, so the backdrop is the viewport's own colour.
-    this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
+    this.paintBackground()
   }
 
   /** The engine holds no truth: everything it shows comes back through here. */
@@ -84,19 +86,13 @@ export class TextureRenderer {
   dispose(): void {
     for (const slot of this.holding.keys()) this.release(slot)
     this.holding.clear()
-    this.releaseSkybox()
+    this.sky.release()
     this.cache.dispose()
 
     this.mesh.geometry.dispose()
     this.material.dispose()
     this.environment?.dispose()
     this.viewport.dispose()
-  }
-
-  /** Like `SkyboxRenderer.releaseSource`: a sky still held is GPU memory nothing displays. */
-  private releaseSkybox(): void {
-    if (this.skybox) this.cache.release(this.skybox, SRGBColorSpace)
-    this.skybox = null
   }
 
   private spin(delta: number): boolean {
@@ -206,23 +202,13 @@ export class TextureRenderer {
     this.spinning = preview.autoSpin
     if (preview.autoSpin) this.viewport.resetClock()
 
-    const wanted = preview.environment.kind === 'skybox' ? preview.environment.assetId : null
-    if (wanted === this.skybox) return
-    this.releaseSkybox()
-    this.skybox = wanted
+    await this.sky.apply(environment, preview.environment)
+  }
 
-    if (!wanted) {
-      environment.setTexture(null)
-      environment.setStudio()
-      return
-    }
-
-    const loaded = await this.cache.acquire(wanted, SRGBColorSpace)
-    // Another environment was chosen while this one was decoding.
-    if (this.skybox !== wanted || !loaded) return
-
-    environment.setTexture(loaded)
-    environment.refresh()
+  /** The backdrop, unless a sky is hanging behind the subject — in which case the sky is it. */
+  private paintBackground(): void {
+    if (this.sky.showsSky()) return
+    this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
   }
 }
 

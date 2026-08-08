@@ -157,7 +157,10 @@ Le bouton **Importer un média**, sur la ligne de titre de l'étagère.
 | **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
 
-> **Les fichiers 3D (`.glb`, `.obj`, `.fbx`) et les HDRI (`.hdr`) ne s'importent pas encore.**
+> **Les modèles 3D s'importent au format `.glb`.** Le `.gltf` séparé (avec ses fichiers `.bin`
+> et ses textures à côté) ne s'importe pas : le studio sert chaque asset seul, sans son
+> voisinage, et les fichiers liés resteraient introuvables. `.obj`, `.fbx` et les HDRI (`.hdr`)
+> ne s'importent pas encore.
 > Un `.exr` importé est catalogué comme une image, pas comme un ciel. Voir
 > [Ce qui n'existe pas encore](18-limites.md).
 

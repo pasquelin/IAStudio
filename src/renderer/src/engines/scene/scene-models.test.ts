@@ -1,0 +1,168 @@
+import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D } from 'three'
+import { describe, expect, it, vi } from 'vitest'
+import { nodeIdOf, SceneRenderer } from './SceneRenderer'
+import { modelNodeFixture } from './scene-fixtures'
+import type { SceneState } from './scene-state'
+import { EMPTY_SCENE } from '@/engines/scene/scene-state'
+
+/**
+ * The model path, driven through the loader port — the whole point of that port existing. jsdom
+ * has no WebGL, so nothing is mounted: `apply` reflects a state without needing a canvas, which
+ * is exactly what invariant 3 promises.
+ */
+function source(): Object3D {
+  const root = new Object3D()
+  root.add(new Mesh(new BoxGeometry(), new MeshStandardMaterial()))
+  return root
+}
+
+function withModels(...ids: string[]): SceneState {
+  return {
+    ...EMPTY_SCENE,
+    nodes: ids.map(id => modelNodeFixture(id, `asset-${id}`)),
+    selectedIds: [],
+  }
+}
+
+function rendererLoading(load: (url: string) => Promise<Object3D>) {
+  return new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn(), loadModel: load })
+}
+
+describe('a model node', () => {
+  it('reads its file once, and puts what came back into the scene', async () => {
+    const load = vi.fn(async () => source())
+    const renderer = rendererLoading(load)
+
+    renderer.apply(withModels('a'))
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1))
+
+    renderer.dispose()
+  })
+
+  it('reads one file for two nodes pointing at the same asset', async () => {
+    const load = vi.fn(async () => source())
+    const renderer = rendererLoading(load)
+
+    renderer.apply({
+      ...EMPTY_SCENE,
+      nodes: [modelNodeFixture('a', 'shared'), modelNodeFixture('b', 'shared')],
+    })
+    await vi.waitFor(() => expect(load).toHaveBeenCalled())
+
+    expect(load).toHaveBeenCalledTimes(1)
+    renderer.dispose()
+  })
+
+  /**
+   * The reference belongs to `release` alone. When the callback let go as well, deleting one of
+   * two nodes sharing an asset dropped the count to zero and freed a source the other was still
+   * cloning — a model that vanished from the viewport for no reason the user could see.
+   */
+  it('keeps the shared source alive when one of two nodes goes', async () => {
+    const parsed = source()
+    const mesh = parsed.children[0]
+    const dispose = mesh instanceof Mesh ? vi.spyOn(mesh.geometry, 'dispose') : null
+    const load = vi.fn(async () => parsed)
+    const renderer = rendererLoading(load)
+
+    renderer.apply({
+      ...EMPTY_SCENE,
+      nodes: [modelNodeFixture('a', 'shared'), modelNodeFixture('b', 'shared')],
+    })
+    await vi.waitFor(() => expect(load).toHaveBeenCalled())
+
+    renderer.apply({ ...EMPTY_SCENE, nodes: [modelNodeFixture('b', 'shared')], selectedIds: [] })
+    expect(dispose).not.toHaveBeenCalled()
+
+    renderer.apply({ ...EMPTY_SCENE, nodes: [], selectedIds: [] })
+    expect(dispose).toHaveBeenCalled()
+
+    renderer.dispose()
+  })
+
+  // A node deleted while its file is still being read must not leave a reference behind.
+  it('lets go of a model whose node went before it arrived', async () => {
+    let settle = (object: Object3D): void => void object
+    const load = vi.fn(() => new Promise<Object3D>(resolve => (settle = resolve)))
+    const renderer = rendererLoading(load)
+
+    renderer.apply(withModels('a'))
+    renderer.apply({ ...EMPTY_SCENE, nodes: [], selectedIds: [] })
+    settle(source())
+
+    // Asking again reads the file rather than handing back what nobody holds.
+    renderer.apply(withModels('a'))
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2))
+
+    renderer.dispose()
+  })
+
+  /**
+   * A model fills its holder long after the sync that built it, and the next sync skips a node
+   * that has not changed — so flagging only in `syncNode` left an imported model throwing no
+   * shadow at all until somebody edited it.
+   */
+  it('throws a shadow as soon as its file lands, without waiting to be edited', async () => {
+    // The scene gets a clone, which a test cannot reach — so the source hands back a known one.
+    const copy = source()
+    const parsed = source()
+    parsed.clone = () => copy
+
+    const renderer = rendererLoading(async () => parsed)
+    renderer.apply(withModels('a'))
+    await vi.waitFor(() => expect(copy.parent).not.toBeNull())
+
+    expect(copy.children[0]?.castShadow).toBe(true)
+    expect(copy.children[0]?.receiveShadow).toBe(true)
+    renderer.dispose()
+  })
+
+  it('leaves the rest of the scene standing when a file cannot be read', async () => {
+    const load = vi.fn(async () => {
+      throw new Error('gone')
+    })
+    const renderer = rendererLoading(load)
+
+    renderer.apply(withModels('a'))
+    await vi.waitFor(() => expect(load).toHaveBeenCalled())
+
+    // The node is still there, holding its reference: a project whose assets moved still opens.
+    expect(() => renderer.apply(withModels('a'))).not.toThrow()
+    renderer.dispose()
+  })
+})
+
+/**
+ * `GLTFLoader` names every mesh it builds, so a name alone proves nothing: before this, a click
+ * on an imported model reported `mesh_0`, and the selection became an id the scene had never
+ * heard of — written into the document, and into the undo stack with it.
+ */
+describe('picking through what a file brought', () => {
+  const holder = new Object3D()
+  holder.name = 'node-1'
+
+  const inner = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+  inner.name = 'mesh_0'
+  const named = new Object3D()
+  named.name = 'Scene'
+  named.add(inner)
+  holder.add(named)
+
+  const isNode = (name: string): boolean => name === 'node-1'
+
+  it('answers the node, not the name the loader gave the mesh under the ray', () => {
+    expect(nodeIdOf(inner, isNode)).toBe('node-1')
+  })
+
+  it('answers nothing for an object no node stands behind', () => {
+    expect(nodeIdOf(named, () => false)).toBeNull()
+  })
+
+  it('still finds a light through its helper, which carries the node id', () => {
+    const helper = new Object3D()
+    helper.name = 'node-1'
+    helper.add(new Object3D())
+
+    expect(nodeIdOf(helper.children[0] ?? helper, isNode)).toBe('node-1')
+  })
+})

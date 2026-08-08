@@ -3,6 +3,7 @@ import { EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { placeAsset } from '@/spaces/image/place-asset'
+import { addModelTo } from '@/stores/scenes'
 import { addAssetToSequence } from '@/stores/sequences'
 import { setSkyboxSource } from '@/stores/skyboxes'
 
@@ -21,6 +22,9 @@ export function openAsset(asset: Asset): void {
     setSkyboxSource(skyTab, asset)
     return
   }
+
+  const sceneTab = activeIdOfKind(documents, 'scene')
+  if (sceneTab && addModelTo(sceneTab, asset)) return
 
   const audioTab = activeIdOfKind(documents, 'audio')
   if (audioTab && asset.type === 'audio') {

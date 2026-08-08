@@ -4,9 +4,12 @@ import type { MenuItemConstructorOptions } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import {
   LIGHT_ENTRIES,
+  EXPORT_FORMATS,
   MESH_ENTRIES,
+  OBJECT_ENTRIES,
   type LightKind,
   type MeshKind,
+  type ObjectKind,
   type SceneEntry,
 } from '@shared/domain/scene'
 import { placementIn, type ToolId, type ToolPlacement } from '@shared/domain/tool'
@@ -14,7 +17,7 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import { bindingOf, type BindingOverrides, type CommandId } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
-import type { SceneAddRequest, ToolRequest } from '@shared/ipc'
+import type { SceneAddRequest, SceneExportCommand, ToolRequest } from '@shared/ipc'
 
 /**
  * What the menu asks of the window it belongs to. One method per message rather than a
@@ -28,6 +31,7 @@ export type MenuActions = {
   openTool: (request: ToolRequest) => void
   runCommand: (command: CommandId) => void
   addNode: (request: SceneAddRequest) => void
+  exportScene: (command: SceneExportCommand) => void
 }
 
 /**
@@ -143,12 +147,29 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   ]
 
   const entryItem =
-    <K extends MeshKind | LightKind>(labels: Record<K, string>) =>
+    <K extends MeshKind | LightKind | ObjectKind>(labels: Record<K, string>) =>
     (entry: SceneEntry<K>): MenuItemConstructorOptions => ({
       label: labels[entry.kind],
       enabled: !entry.disabled,
       click: () => actions.addNode({ kind: entry.kind }),
     })
+
+  /** A format per row rather than a chooser: the save dialog has no such control to offer. */
+  const exportItems = (scope: 'scene' | 'selection'): MenuItemConstructorOptions[] =>
+    EXPORT_FORMATS.map(format => ({
+      label: t.exportFormats[format],
+      click: () => actions.exportScene({ format, scope }),
+    }))
+
+  /** Only where a scene is what is being edited: exporting an image document is another errand. */
+  const exportMenu: MenuItemConstructorOptions[] =
+    workspace === '3d'
+      ? [
+          { type: 'separator' },
+          { label: t.menu.exportScene, submenu: exportItems('scene') },
+          { label: t.menu.exportSelection, submenu: exportItems('selection') },
+        ]
+      : []
 
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
   const addMenu: MenuItemConstructorOptions[] =
@@ -159,6 +180,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
             submenu: [
               { label: t.menu.mesh, submenu: MESH_ENTRIES.map(entryItem<MeshKind>(t.meshes)) },
               { label: t.menu.light, submenu: LIGHT_ENTRIES.map(entryItem<LightKind>(t.lights)) },
+              {
+                label: t.menu.object,
+                submenu: OBJECT_ENTRIES.map(entryItem<ObjectKind>(t.objects)),
+              },
             ],
           },
         ]
@@ -185,6 +210,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('document.save'),
           click: () => actions.runCommand('document.save'),
         },
+        ...exportMenu,
         { type: 'separator' },
         ...fileMenuSettings,
         { role: isMac ? 'close' : 'quit' },

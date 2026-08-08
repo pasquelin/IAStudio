@@ -2,6 +2,7 @@ import type { LanguagePreference } from '../i18n/languages'
 import type { BindingOverrides } from './command'
 import type { ApiFailure } from './failure'
 import type { ModelFamily } from './model'
+import type { ShadowQuality } from './scene'
 
 /**
  * Spelled exactly as Electron's `nativeTheme.themeSource`, which takes these three words: the
@@ -86,6 +87,19 @@ export type Settings = {
     boostFactor: number
     /** Vertical field of view, in degrees. */
     fieldOfView: number
+    /**
+     * The steps snapping moves by, when it is on. Whether it is on is a session thing — the
+     * toolbar toggles it per document — but how coarse it is belongs to the person, not to the
+     * moment. Nothing here is applied while snapping is off.
+     */
+    snapTranslate: number
+    /** In degrees, like the inspector: radians are stored, never typed. */
+    snapRotate: number
+    snapScale: number
+    /** How soft a shadow edge is. Which objects throw one is a property of the node. */
+    shadowQuality: ShadowQuality
+    /** Side of the square map each casting light allocates. Doubling it costs four times as much. */
+    shadowMapSize: number
   }
   shortcuts: {
     /**
@@ -117,7 +131,18 @@ export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject' },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
-  three: { showGrid: true, gridSize: 20, flySpeed: 4, boostFactor: 3, fieldOfView: 60 },
+  three: {
+    showGrid: true,
+    gridSize: 20,
+    flySpeed: 4,
+    boostFactor: 3,
+    fieldOfView: 60,
+    snapTranslate: 0.5,
+    snapRotate: 15,
+    snapScale: 0.1,
+    shadowQuality: 'soft',
+    shadowMapSize: 2048,
+  },
   storage: { backend: 'local' },
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },

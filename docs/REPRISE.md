@@ -443,37 +443,96 @@ pire qu'un bouton absent.
 
 ## 3.3 Espace 3D
 
-**Ce qui existe** — 17 primitives, 5 types de lumières, gizmo translate/rotate/scale, sélection par
-raycast, inspecteur dérivé des descripteurs, undo avec coalescing par geste, 5 slots de textures PBR,
-outliner, vol libre, et l'enregistrement du document.
+> **Livré sur `feat/3d-completion`, pas encore fusionné.** Onze étapes, douze commits, rebasés sur
+> `main` après la fusion de l'espace Image. Ce qui suit décrit la branche ; tant qu'elle n'est pas
+> fusionnée, `main` n'a que la colonne « Ce qui existait avant ». Le plan et son journal étape par
+> étape : [`docs/plans/2026-08-08-3d-completion.md`](plans/2026-08-08-3d-completion.md).
 
-| Manque | Preuve dans le code |
+**Ce qui existait avant** — 17 primitives, 5 types de lumières, gizmo translate/rotate/scale,
+sélection par raycast, inspecteur dérivé des descripteurs, undo avec coalescing par geste, 5 slots
+de textures PBR, outliner, vol libre, enregistrement du document.
+
+**Ce que la branche ajoute** — sélection multiple, groupes et reparentage, import glTF/GLB,
+magnétisme et repère local, ombres réglables par nœud, environnement IBL depuis une skybox du
+projet, glisser-déposer d'un asset dans le viewport, dupliquer/copier/coller, `sprite`, caméra
+orthographique, six vues normalisées, trois modes d'affichage, export glTF/GLB/USDZ, et un BVH
+construit en worker pour le picking.
+
+### Ce qui manque encore
+
+| Manque | Pourquoi il reste |
 |---|---|
-| Sélection multiple | `SceneState.selectedId` est un `string \| null` |
-| Groupes / reparentage | `parentId` existe, aucune commande ne le change |
-| Dupliquer, copier-coller | aucune commande dans `commands.ts` |
-| Magnétisme, pivot local/monde | aucun `setTranslationSnap`, aucun `setSpace` |
-| Import de modèles | aucun `GLTFLoader`, Draco ou KTX2 — alors que `mesh` est un `AssetType` |
-| `sprite` et `text` | déclarés sans `create`, donc grisés |
-| Ombres | aucun `castShadow`, `receiveShadow`, `shadowMap` |
-| Environnement / IBL dans le viewport | `PMREMGenerator` n'existe que pour les skyboxes |
-| Caméra ortho, vues normalisées, filaire | rien dans le viewport |
-| Instanciation, LOD, BVH pour le picking | le raycast parcourt tous les objets |
+| `text` 3D | `TextGeometry` exige une police convertie : le catalogue ne connaît pas ce genre d'asset, aucun convertisseur hors ligne, et la police livrée par three dérive d'Helvetica — décision de licence, pas décision technique |
+| Instanciation, LOD | écartés par le plan tant qu'aucun cas réel ne les réclame : le seul coût mesuré était le picking, et il est réglé |
+| Clic du `ViewHelper` | son animation déplace la caméra sans prévenir `OrbitControls` ; la cible de l'orbite divergerait |
+| Export d'un sprite | ni glTF ni USDZ n'ont d'objet toujours face à la caméra ; three l'ignore en silence, et le manuel ne le dit pas |
+| Sections du manuel | le chapitre 09 n'a rien sur le magnétisme, le repère local, les ombres ni l'environnement — les étapes ont corrigé ce qui était faux, pas comblé ce qui manquait |
 
-**L'ordre conseillé.** **Sélection multiple** en premier, tant que le code est petit — elle touche
-l'état, l'inspecteur, le gizmo et l'outliner d'un coup, et plus elle attend plus elle coûte. Puis
-**magnétisme et pivot** (deux appels d'API `TransformControls`, gain d'ergonomie immédiat pour un coût
-quasi nul), puis **l'import glTF**, puis **ombres et HDRI**, et enfin groupes, duplication, modes
-d'affichage, export.
+### Le plafond du décodage IPC a été contourné, pas résolu
 
-**L'import glTF fera franchir un plafond mesuré.** Un GLB apporte ses maillages par milliers, pas par
-unités. Or **⌘S gèle toutes les fenêtres au-delà de ~5 500 nœuds**, et c'est le **décodage du clone
-IPC** qui l'y amène — 73 % du coût, deux fois et demie la sérialisation, intouché. Aujourd'hui le menu
-Ajouter ne permet pas d'y arriver à la main, donc rien n'a été déplacé hors du main : pour un gain de
-0,13 ms, un `utilityProcess` coûterait un canal de plus, une frontière moins typée et un chemin
-d'erreur supplémentaire. Le jour où un import pose 5 500 nœuds, **s'attaquer au décodage d'abord**.
+**⌘S gèle toutes les fenêtres au-delà de ~5 500 nœuds**, et c'est le **décodage du clone IPC** qui
+l'y amène — 73 % du coût, deux fois et demie la sérialisation, intouché.
+
+L'import glTF aurait dû faire franchir ce plafond : un GLB apporte ses maillages par milliers. Il
+ne le fait pas, parce que **le modèle importé est un seul nœud portant une référence**, jamais un
+sous-arbre de nœuds. Le document grossit d'une ligne quel que soit le poids du fichier. Le prix est
+que l'intérieur d'un modèle ne s'édite pas ; une commande « éclater » est ce qui lèverait la
+limite le jour où elle gênera. **Le décodage reste à traiter avant tout ce qui poserait des nœuds
+par milliers.**
+
+### Ce que la nuit a appris
+
+- **Un helper de lumière porte l'identifiant de sa lumière** pour qu'un clic dessus la sélectionne.
+  Il est donc posé dans le viewport **à côté** des nœuds, comme la grille, le trièdre, le gizmo et
+  la cible d'une directionnelle. L'export s'en sort par construction — il ne reçoit que les objets
+  des nœuds — et c'est vérifié sur le fichier produit, pas supposé.
+- **`GLTFLoader` nomme chaque maille qu'il ramène.** Le picking rendait donc `mesh_0` comme
+  identifiant de nœud, écrivant un fantôme dans la sélection, l'historique et le document.
+  `nodeIdOf` n'accepte plus qu'un nom que le moteur a lui-même posé.
+- **Un type de nœud ignoré du chargeur disparaît en silence.** `isSceneNode` ne connaissait pas
+  `group` : une scène groupée rouvrait sans ses groupes, leurs enfants pendant à un parent que
+  rien ne nommait. Le même piège attendait `sprite`. **Tout nouveau type de nœud se teste par un
+  aller-retour disque.**
+- **Les exporteurs écrivent une transformation locale.** Exporter une sélection imbriquée sans
+  aplatir la place où elle est dans son parent, pas où elle est dans la scène.
+- **`SpriteMaterial` naît transparent** — three l'écrase exprès. L'éteindre à pleine opacité fait
+  dessiner le carré entier de toute image à canal alpha.
+- **Un `Sprite` n'est pas un `Mesh`** : toute branche de libération gardée par `instanceof Mesh`
+  laisse fuir son matériau.
+- **La conversion rad→deg→rad n'est pas exacte.** Diffé en radians, un axe intact était déclaré
+  bougé à 13 % près : une rotation écrasait les deux autres axes de la sélection.
+- **Un `SettingRow` de genre `number` refuse les décimales** — deux réglages de magnétisme étaient
+  inatteignables, leur propre défaut compris. Un test verrouille la règle pour tout futur réglage.
+
+### Le coût d'un clic, mesuré
+
+`scene-picking.bench.ts`. Le rayon qui *touche* est le cas cher : three teste une sphère englobante
+avant de marcher les triangles, donc un rayon qui rate ne coûte rien quelle que soit la densité.
+
+| Scène | Avant | Avec le BVH |
+|---|---|---|
+| 3 modèles de 131k triangles | 7,3 ms | **0,016 ms** |
+| 3 modèles de 524k triangles | 32 ms | **0,018 ms** |
+| 2500 petites mailles | 0,13 ms | — |
+
+Le seuil que le plan s'était fixé était 2 ms. L'arbre est construit **en Web Worker** (invariant 6),
+seulement au-delà de 20 000 triangles, et seulement pour les modèles importés : une primitive du
+studio fait trente triangles et se marche plus vite qu'un arbre ne se construit.
 
 **Le chemin chaud de l'inspecteur n'est pas un sujet** — audité, chiffré, clos. Cf. § 5.
+
+### À revoir en priorité
+
+**Les étapes 8 à 11 n'ont été relues que par leur auteur.** La limite hebdomadaire de l'API a coupé
+les sous-agents en pleine revue de l'étape 8 ; `/simplify` et `/code-review` ont été menés à la
+main pour `sprite`, les modes d'affichage, l'export et le BVH. Les bugs trouvés à ces relectures
+sont écrits dans le plan, étape par étape — mais un seul regard n'en vaut pas deux, et c'est là
+qu'une lecture humaine rapporte le plus.
+
+Second point : **sur Windows et Linux, un raccourci qu'une surface écoute elle-même attend la
+touche Windows, pas `Ctrl`** — `signatureOf` lit `event.metaKey`. C'est la convention de tout
+`COMMAND_REGISTRY`, `⌘Z` compris, donc antérieure à cette branche ; la corriger touche la
+résolution des raccourcis de toute l'application. Documenté aux chapitres 15 et 18 du manuel.
 
 ---
 

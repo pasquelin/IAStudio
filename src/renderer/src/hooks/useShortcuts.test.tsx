@@ -52,6 +52,23 @@ describe('useShortcuts', () => {
     expect(onCommand).not.toHaveBeenCalled()
   })
 
+  // The platform copies a live selection from anywhere: taking ⌘C would leave the user no way
+  // to copy the text they just highlighted.
+  it('leaves ⌘C to the text the user has highlighted', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    const selection = window.getSelection()
+    selection?.selectAllChildren(screen.getByLabelText('prompt').parentElement as HTMLElement)
+    fireEvent.keyDown(window, { code: 'KeyC', metaKey: true })
+
+    expect(onCommand).not.toHaveBeenCalled()
+
+    selection?.removeAllRanges()
+    fireEvent.keyDown(window, { code: 'KeyC', metaKey: true })
+    expect(onCommand).toHaveBeenCalledWith('scene.copy')
+  })
+
   it('stays silent when disabled', async () => {
     const onCommand = vi.fn()
     mount(onCommand, false)

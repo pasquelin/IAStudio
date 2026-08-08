@@ -9,22 +9,28 @@
  * are what an inspector clamps a *live* edit to, and a document written by an earlier build is
  * allowed to hold a value today's bounds would refuse.
  */
-import { TEXTURE_SLOTS, type Transform } from '@shared/domain/scene'
+import {
+  readEnvironment,
+  TEXTURE_SLOTS,
+  type EnvironmentRef,
+  type Transform,
+} from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
 import {
   GEOMETRY_SPECS,
   LIGHT_SPECS,
   MATERIAL_SPECS,
+  SPRITE_SPECS,
   isVector3,
   type PropertySpec,
 } from './property-fields'
-import { EMPTY_SCENE, type SceneNode, type SceneState } from './scene-state'
+import { EMPTY_SCENE, shadowDefaults, type SceneNode, type SceneState } from './scene-state'
 
 /** What a saved scene holds. The selection is session state, and is deliberately left out. */
-export type ScenePayload = { nodes: readonly SceneNode[] }
+export type ScenePayload = { nodes: readonly SceneNode[]; environment: EnvironmentRef }
 
 export function scenePayload(state: SceneState): ScenePayload {
-  return { nodes: state.nodes }
+  return { nodes: state.nodes, environment: state.environment }
 }
 
 /**
@@ -39,7 +45,26 @@ export function sceneFromPayload(payload: unknown): SceneState {
   if (!isRecord(payload) || !Array.isArray(payload.nodes)) return EMPTY_SCENE
 
   const nodes: readonly unknown[] = payload.nodes
-  return { nodes: nodes.filter(isSceneNode), selectedId: null }
+  /**
+   * Defaults first, the node on top: a flag the file does not hold keeps its default, one it
+   * holds wins. That ordering *is* the migration — every document written so far predates
+   * shadows, and requiring the flags would have emptied each of them at load, silently, since a
+   * dropped node looks exactly like one that was never there.
+   */
+  return {
+    nodes: nodes.filter(isSceneNode).map(node => ({ ...node, ...withDefaults(node) })),
+    selectedIds: [],
+    environment: readEnvironment(payload.environment),
+  }
+}
+
+/** The flags, filled in where the file holds none — `null` included. */
+function withDefaults(node: SceneNode): Pick<SceneNode, 'castShadow' | 'receiveShadow'> {
+  const defaults = shadowDefaults(node)
+  return {
+    castShadow: node.castShadow ?? defaults.castShadow,
+    receiveShadow: node.receiveShadow ?? defaults.receiveShadow,
+  }
 }
 
 /** Keyed by kind rather than by shape, which is what makes an unknown kind a refusal. */
@@ -54,11 +79,29 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.parentId !== null && typeof value.parentId !== 'string') return false
   if (typeof value.name !== 'string' || typeof value.visible !== 'boolean') return false
   if (!isTransform(value.transform)) return false
+  // Absent is legal and means "the default", filled in below. `null` counts as absent: a tool
+  // that serializes missing fields that way must not cost the node.
+  if (!isOptionalFlag(value.castShadow) || !isOptionalFlag(value.receiveShadow)) return false
 
   if (value.type === 'mesh') {
     return describes(value.geometry, GEOMETRY_SPECS) && isMaterial(value.material)
   }
+  // A model is a reference and nothing else: an absent or non-string `assetId` costs the node,
+  // never the file. What it points at is resolved when the scene is built, not here — a project
+  // whose assets moved still opens, with a hole where the model was.
+  if (value.type === 'model')
+    return isRecord(value.model) && typeof value.model.assetId === 'string'
+  // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
+  // checked against the same table.
+  if (value.type === 'sprite') return isSprite(value.sprite)
+  // A group carries nothing of its own: everything it is has already been checked above.
+  if (value.type === 'group') return true
+
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
+}
+
+function isOptionalFlag(value: unknown): boolean {
+  return value == null || typeof value === 'boolean'
 }
 
 function isTransform(value: unknown): value is Transform {
@@ -94,6 +137,14 @@ function isMaterial(value: unknown): boolean {
   if (!MEASURED_MATERIAL.every(([name, spec]) => matches(value[name], spec))) return false
 
   return TEXTURE_SLOTS.every(slot => isTextureRef(value[slot]))
+}
+
+function isSprite(value: unknown): boolean {
+  if (!isRecord(value)) return false
+  if (value.color !== null && typeof value.color !== 'string') return false
+  if (!matches(value.opacity, SPRITE_SPECS.opacity)) return false
+
+  return isTextureRef(value.map)
 }
 
 function isTextureRef(value: unknown): boolean {

@@ -26,11 +26,9 @@ describe('MESH_PRIMITIVES', () => {
   })
 
   // Announced rather than hidden: the menu says what is coming instead of pretending.
-  it('leaves text and sprite without a builder', () => {
-    const announced = MESH_PRIMITIVES.filter(primitive => !primitive.create).map(
-      primitive => primitive.kind,
-    )
-    expect(announced).toEqual(['sprite', 'text'])
+  // A sprite and a 3D text are node types of their own, not geometries: they left this table.
+  it('gives every primitive it declares a builder', () => {
+    expect(MESH_PRIMITIVES.filter(primitive => !primitive.create)).toEqual([])
   })
 
   it('returns a fresh descriptor on every call', () => {

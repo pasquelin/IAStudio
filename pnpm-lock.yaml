@@ -32,6 +32,9 @@ importers:
       three:
         specifier: 0.185.1
         version: 0.185.1
+      three-mesh-bvh:
+        specifier: ^0.9.14
+        version: 0.9.14(three@0.185.1)
     devDependencies:
       '@electron/rebuild':
         specifier: ^4.0.1
@@ -2950,6 +2953,11 @@ packages:
   temp@0.9.4:
     resolution: {integrity: sha512-yYrrsWnrXMcdsnu/7YMYAofM1ktpL5By7vZhf15CrXijWWrEYZks5AXBudalfSWJLlnen/QUJUB5aoB0kqZUGA==}
     engines: {node: '>=6.0.0'}
+
+  three-mesh-bvh@0.9.14:
+    resolution: {integrity: sha512-xJzfUXnLYjgw5tRKGxjfJW3Pcx0IbwNskvpdwRryhK07SYrKrYB4W8zAaPxu784gK7G4lCBgG+vfG3YeYn95kg==}
+    peerDependencies:
+      three: '>= 0.159.0'
 
   three@0.185.1:
     resolution: {integrity: sha512-5aojFCXKwnjBRZvUnt3WFfEcvUJgkN5LlijRFN95hMy8WVkG4I0QNcJE+OuWvuJ0bOdStrbfXn0pkd6/QyiAlg==}
@@ -5947,6 +5955,10 @@ snapshots:
     dependencies:
       mkdirp: 0.5.6
       rimraf: 2.6.3
+
+  three-mesh-bvh@0.9.14(three@0.185.1):
+    dependencies:
+      three: 0.185.1
 
   three@0.185.1: {}
 

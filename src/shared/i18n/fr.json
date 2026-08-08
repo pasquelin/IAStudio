@@ -70,7 +70,8 @@
     "allMedia": "Tous les médias",
     "video": "Vidéo",
     "audio": "Audio",
-    "image": "Image"
+    "image": "Image",
+    "mesh": "Modèle 3D"
   },
   "ingest": {
     "queued": "En attente…",
@@ -289,16 +290,14 @@
     "plane": "Plan",
     "ring": "Anneau",
     "sphere": "Sphère",
-    "sprite": "Sprite",
     "tetrahedron": "Tétraèdre",
-    "text": "Texte",
     "torus": "Tore",
     "torusKnot": "Nœud de tore",
     "tube": "Tube",
     "add": "Ajouter une maille",
     "addHint": "Poser une primitive à l’origine de la scène",
     "remove": "Supprimer la maille",
-    "removeHint": "Retirer la maille sélectionnée de la scène",
+    "removeHint": "Retirer de la scène les mailles sélectionnées",
     "visible": "Afficher ou masquer",
     "empty": "Aucune maille. Ajoutez-en une pour commencer.",
     "noDocument": "Ouvrez une scène pour voir ses mailles."
@@ -312,7 +311,7 @@
     "add": "Ajouter une lumière",
     "addHint": "Poser une source lumineuse dans la scène",
     "remove": "Supprimer la lumière",
-    "removeHint": "Retirer la lumière sélectionnée de la scène",
+    "removeHint": "Retirer de la scène les lumières sélectionnées",
     "visible": "Afficher ou masquer",
     "empty": "Aucune lumière. La scène restera noire.",
     "noDocument": "Ouvrez une scène pour voir ses lumières."
@@ -325,12 +324,20 @@
     "otherWorkspace": "L’explorateur suit une scène 3D. Ouvrez l’espace 3D pour en voir le contenu.",
     "noDocument": "Ouvrez une scène pour voir son contenu."
   },
+  "objects": {
+    "sprite": "Sprite",
+    "text": "Texte"
+  },
   "inspector": {
     "noDocument": "Ouvrez une scène pour inspecter ce qu’elle contient.",
+    "castShadow": "Projette une ombre",
+    "receiveShadow": "Reçoit les ombres",
+    "shadows": "Ombres",
     "noSelection": "Sélectionnez un objet pour voir ses propriétés.",
     "transform": "Transformation",
     "geometry": "Géométrie",
     "material": "Matériau",
+    "sprite": "Sprite",
     "light": "Lumière",
     "name": "Nom",
     "position": "Position",
@@ -369,6 +376,7 @@
       "roughness": "Rugosité",
       "metalness": "Métallicité",
       "map": "Texture",
+      "opacity": "Opacité",
       "normalMap": "Normales",
       "roughnessMap": "Carte de rugosité",
       "metalnessMap": "Carte de métallicité",
@@ -433,7 +441,12 @@
     "opacity": "Opacité",
     "text": "Texte",
     "words": "Mots",
-    "textSize": "Corps"
+    "textSize": "Corps",
+    "environment": "Environnement",
+    "sky": "Ciel",
+    "studio": "Studio",
+    "chooseSky": "Choisir un ciel",
+    "clearSky": "Revenir au studio"
   },
   "transport": {
     "play": "Lire",
@@ -495,8 +508,46 @@
     "scaleHint": "Changer l’échelle de l’objet sélectionné",
     "frame": "Cadrer la sélection",
     "frameHint": "Recentrer la caméra sur l’objet sélectionné",
+    "snap": "Magnétisme",
+    "snapHint": "Faire avancer les poignées par pas réguliers, réglables dans les préférences",
+    "space": "Repère local",
+    "projection": "Projection",
+    "projectionHint": "Basculer entre perspective et projection orthographique",
+    "view": "Se placer",
+    "viewHint": "Regarder la scène par l’un de ses six côtés",
+    "display": "Affichage",
+    "displayHint": "Dessiner les surfaces, leurs arêtes, ou les deux",
+    "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
+    "group": "Grouper",
+    "groupHint": "Ranger les objets sélectionnés sous un même groupe",
+    "duplicate": "Dupliquer",
+    "duplicateHint": "Poser une copie de ce qui est sélectionné",
+    "copy": "Copier",
+    "copyHint": "Retenir ce qui est sélectionné pour le coller ensuite",
+    "cut": "Couper",
+    "cutHint": "Retenir ce qui est sélectionné et le retirer de la scène",
+    "paste": "Coller",
+    "pasteHint": "Poser dans cette scène ce qui a été copié",
     "delete": "Supprimer",
-    "deleteHint": "Retirer l’objet sélectionné de la scène"
+    "deleteHint": "Retirer de la scène ce qui est sélectionné"
+  },
+  "exportFormats": {
+    "glb": "glTF binaire (.glb)",
+    "gltf": "glTF (.gltf)",
+    "usdz": "USDZ (.usdz)"
+  },
+  "sceneViews": {
+    "front": "De face",
+    "back": "De dos",
+    "left": "De gauche",
+    "right": "De droite",
+    "top": "De dessus",
+    "bottom": "De dessous"
+  },
+  "sceneDisplay": {
+    "shaded": "Rendu",
+    "wireframe": "Filaire",
+    "both": "Rendu et filaire"
   },
   "project": {
     "none": "Aucun projet ouvert",
@@ -565,6 +616,9 @@
     "add": "Ajouter",
     "mesh": "Maille",
     "light": "Lumière",
+    "object": "Objet",
+    "exportScene": "Exporter la scène",
+    "exportSelection": "Exporter la sélection",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
     "zoomIn": "Zoom avant",
@@ -693,6 +747,28 @@
       "title": "Accélération",
       "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
     },
+    "shadowQuality": {
+      "title": "Douceur des ombres",
+      "help": "Le grain du bord d’une ombre. « Dure » découpe net et coûte le moins ; « Douce » adoucit le bord. Ce qui projette une ombre, en revanche, se décide objet par objet dans l’inspecteur.",
+      "hard": "Dure",
+      "soft": "Douce"
+    },
+    "shadowMapSize": {
+      "title": "Finesse des ombres",
+      "help": "La taille de la carte d’ombre que calcule chaque lumière qui en projette une, en pixels de côté. Doubler ce nombre quadruple la mémoire utilisée : 2048 suffit à une scène de quelques objets, 4096 sert quand une lumière éclaire un décor entier."
+    },
+    "snapTranslate": {
+      "title": "Pas de déplacement",
+      "help": "De combien un objet avance d’un cran quand le magnétisme est actif, en mètres. Le magnétisme s’allume dans la barre d’outils de la scène ; cette valeur dit seulement à quel point il est fin."
+    },
+    "snapRotate": {
+      "title": "Pas de rotation",
+      "help": "L’angle d’un cran de rotation quand le magnétisme est actif, en degrés. La rotation avance par crans depuis là où elle a commencé : 15° donne vingt-quatre crans par tour, 90° des quarts de tour."
+    },
+    "snapScale": {
+      "title": "Pas d’échelle",
+      "help": "De combien l’échelle avance d’un cran quand le magnétisme est actif. Les valeurs atteignables sont les multiples du pas : 0,1 tombe pile sur les dixièmes et les demis, 0,25 sur les quarts."
+    },
     "fieldOfView": {
       "title": "Angle de vue",
       "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
@@ -809,9 +885,45 @@
       "title": "Cadrer la sélection",
       "help": "Rapproche la caméra de l’objet choisi pour qu’il remplisse la vue. Pratique quand on s’est perdu ou qu’un objet est minuscule."
     },
+    "sceneSnap": {
+      "title": "Magnétisme",
+      "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les préférences de l’espace 3D."
+    },
+    "sceneSpace": {
+      "title": "Repère local",
+      "help": "Aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde. Sur un objet tourné, c’est ce qui permet de le déplacer « vers son avant » plutôt que vers le nord."
+    },
+    "sceneProjection": {
+      "title": "Projection",
+      "help": "Bascule entre la perspective, où les fuyantes convergent, et la projection orthographique, où les parallèles restent parallèles. C’est ce qui permet de juger un alignement à l’œil."
+    },
+    "sceneDisplay": {
+      "title": "Affichage",
+      "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
+    },
+    "sceneGroup": {
+      "title": "Grouper",
+      "help": "Range les objets sélectionnés sous un même groupe. Déplacer le groupe les déplace tous, et ⌘Z défait le rangement."
+    },
+    "sceneDuplicate": {
+      "title": "Dupliquer",
+      "help": "Pose une copie de ce qui est sélectionné, sous le même parent et exactement au même endroit, puis la sélectionne. Un groupe se duplique entier, avec tout ce qui pend dessous."
+    },
+    "sceneCopy": {
+      "title": "Copier",
+      "help": "Retient ce qui est sélectionné pour le coller ensuite, ici ou dans une autre scène. Ce presse-papiers est celui du studio : il ne touche pas à celui du système."
+    },
+    "sceneCut": {
+      "title": "Couper",
+      "help": "Retient ce qui est sélectionné puis le retire de la scène. ⌘Z le fait revenir."
+    },
+    "scenePaste": {
+      "title": "Coller",
+      "help": "Pose ce qui a été copié dans la scène en cours, et le sélectionne. Coller deux fois pose deux copies distinctes."
+    },
     "sceneDelete": {
       "title": "Supprimer",
-      "help": "Retire de la scène l’objet choisi. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
+      "help": "Retire de la scène tout ce qui est sélectionné. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
     },
     "undo": {
       "title": "Annuler",

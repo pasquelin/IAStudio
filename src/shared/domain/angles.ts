@@ -13,6 +13,16 @@ export type SphericalAngles = {
 }
 
 const TWO_PI = Math.PI * 2
+const PER_RADIAN = 180 / Math.PI
+
+/** Radians are what three.js turns in and what a document stores; nobody types in them. */
+export function toRadians(degrees: number): number {
+  return degrees / PER_RADIAN
+}
+
+export function toDegrees(radians: number): number {
+  return radians * PER_RADIAN
+}
 
 /**
  * Just short of the pole. Exactly at it the direction is vertical and the azimuth stops

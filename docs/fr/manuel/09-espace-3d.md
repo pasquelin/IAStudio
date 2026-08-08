@@ -123,8 +123,35 @@ Une *maille* (ou *mesh*) est un objet géométrique.
 | **Dodécaèdre** | 12 faces |
 | **Icosaèdre** | 20 faces |
 
-> **Sprite** et **Texte** apparaissent grisés dans le menu. Ils sont annoncés mais pas encore
-> constructibles. Voir [Ce qui n'existe pas encore](18-limites.md).
+> **Texte** apparaît grisé dans le menu : un texte 3D demande un fichier de police, et le studio
+> n'en fournit aucun. Voir [Ce qui n'existe pas encore](18-limites.md).
+
+### Le sprite — une image face à la caméra
+
+Un *sprite* n'est pas une maille : c'est une image plate qui se tourne toujours vers vous, quel
+que soit l'angle de la vue. C'est ce qu'on emploie pour une étincelle, une lueur, un repère, une
+étiquette au-dessus d'un objet — tout ce qui doit rester lisible d'où qu'on regarde.
+
+**Ajouter ▸ Sprite** en pose un à l'origine. Il arrive sans image : choisissez-la dans
+l'Inspecteur, section **Sprite**, parmi les images du projet — les mêmes que celles qu'un
+matériau accepte en texture.
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| **Couleur** | teinte l'image. Sur un sprite sans image, c'est la couleur du carré lui-même |
+| **Opacité** | de transparent à opaque |
+| **Texture** | l'image affichée, prise dans les assets du projet |
+
+Trois choses à savoir :
+
+- **Sa taille est son échelle.** Un sprite n'a pas de largeur propre : on le redimensionne avec la
+  poignée d'échelle, comme n'importe quel objet. Il rapetisse avec la distance, comme le reste de
+  la scène.
+- **Il ne joue pas avec les ombres.** Il n'en projette pas et n'en reçoit pas — three.js ne dessine
+  que des mailles dans une carte d'ombres. L'Inspecteur ne lui montre donc aucune section Ombres,
+  plutôt que deux interrupteurs sans effet.
+- **Il n'est pas éclairé.** Sa couleur est celle qu'on lui donne, pas celle que les lumières de la
+  scène en font.
 
 ### Les lumières disponibles
 
@@ -140,6 +167,74 @@ Sans lumière, la scène reste noire.
 
 **Pour commencer** : une **directionnelle** pour l'éclairage principal, plus une **ambiante**
 faible pour que les ombres ne soient pas complètement noires. C'est la recette classique.
+
+---
+
+## Regarder la scène autrement
+
+Trois boutons, entre les bascules et le cadrage. Ils ne changent rien à la scène : ils changent la
+façon de la regarder. Rien de tout cela n'est enregistré avec le document, et `⌘Z` n'y touche pas.
+
+### Projection — `O`
+
+En **perspective**, les fuyantes convergent : c'est ce que voit un œil, et c'est le réglage par
+défaut. En **orthographique**, les parallèles restent parallèles et un objet garde sa taille quelle
+que soit sa distance.
+
+C'est ce qui permet de juger un alignement. Deux cubes posés côte à côte semblent décalés en
+perspective ; en orthographique, ils le sont ou ils ne le sont pas.
+
+La bascule ne bouge pas la vue : la caméra reprend exactement sa place, et le tronc de la
+projection est calculé pour que ce qui est au centre garde sa taille.
+
+### Se placer — les six côtés
+
+**De face**, **de dos**, **de gauche**, **de droite**, **de dessus**, **de dessous**. La caméra va
+se poser sur l'axe correspondant, à la distance qu'elle avait déjà, et regarde le point autour
+duquel elle tournait.
+
+Combiné à la projection orthographique, c'est la vue de plan classique — celle sur laquelle on
+aligne.
+
+### Affichage — `Z`
+
+| Mode | Ce qui est dessiné |
+|---|---|
+| **Rendu** | les surfaces, éclairées et texturées |
+| **Filaire** | les arêtes seules, à travers l'objet |
+| **Rendu et filaire** | les deux : les surfaces, et leurs arêtes par-dessus |
+
+Le bouton porte le mode en cours et le fait défiler à chaque clic ; son menu permet d'en choisir un
+directement. `Z` fait la même chose au clavier, comme dans Blender.
+
+Le troisième mode est le plus coûteux : les arêtes sont un objet de plus par maille, construit
+quand on l'allume et jeté quand on l'éteint. Sur un modèle importé de plusieurs milliers de
+mailles, cela se sent.
+
+---
+
+## Dupliquer, copier, coller
+
+Quatre boutons en fin de barre d'outils, et les quatre raccourcis que vous connaissez déjà.
+
+| Geste | Raccourci | Ce qu'il fait |
+|---|---|---|
+| **Dupliquer** | `⌘D` | pose une copie de la sélection au même endroit, et la sélectionne |
+| **Copier** | `⌘C` | retient la sélection sans toucher à la scène |
+| **Couper** | `⌘X` | la retient et la retire de la scène |
+| **Coller** | `⌘V` | pose ce qui a été retenu dans la scène en cours |
+
+Trois choses valent d'être sues :
+
+- **Un groupe se duplique entier**, avec tout ce qui pend dessous. Copier un enfant seul le copie
+  seul, et il retrouve son parent — sauf si vous le collez dans une scène qui n'a pas ce parent,
+  où il se pose alors à la racine.
+- **La copie tombe exactement sur l'original.** Elle est sélectionnée : la déplacer est le geste
+  suivant, pas une manœuvre de rattrapage.
+- **Ce presse-papiers est celui du studio**, pas celui du système. Copier un objet ne jette pas le
+  texte que vous aviez en réserve, et vous pouvez coller dans une autre scène. Il se vide en
+  revanche quand vous changez de projet : un objet importé y nomme un asset qui n'existe nulle
+  part ailleurs.
 
 ---
 
@@ -246,6 +341,30 @@ Cachez-la pour juger une image sans rien autour.
 
 ---
 
+## Sortir une scène du studio
+
+**Fichier ▸ Exporter la scène** écrit tout ce que le document contient. **Fichier ▸ Exporter la
+sélection** n'écrit que les objets choisis — un groupe emmène ce qui pend dessous.
+
+| Format | Ce que c'est | Quand l'employer |
+|---|---|---|
+| **glTF binaire (`.glb`)** | un seul fichier, géométries comprises | le choix par défaut, et celui que lisent la plupart des moteurs |
+| **glTF (`.gltf`)** | la même chose en JSON, lisible | pour inspecter ou comparer le contenu |
+| **USDZ (`.usdz`)** | le format des visionneuses d'Apple | pour ouvrir la scène sur un iPhone ou un Mac |
+
+Une boîte d'enregistrement s'ouvre pour choisir où le fichier va. Son nom est celui du document ;
+l'extension suit le format choisi.
+
+**Ce qui ne sort pas.** La grille au sol, le trièdre du coin, les poignées de transformation et les
+repères de lumière ne font pas partie de la scène : ce sont des aides d'affichage. Le fichier ne
+contient que ce que l'Explorateur liste. Les arêtes du mode « rendu et filaire » n'en sont pas non
+plus.
+
+**Une sélection imbriquée garde sa place.** Exporter un objet rangé dans un groupe l'écrit là où il
+est dans la scène, pas là où il est dans son groupe.
+
+---
+
 ## Enregistrer
 
 `⌘S` / `Ctrl+S` écrit la scène dans le projet, sous `documents/`.
@@ -268,13 +387,8 @@ rien n'avait été écrit pour lui.
 
 L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
 
-- la **sélection multiple** — un seul objet à la fois ;
-- les **groupes** et le reparentage ;
-- le **copier-coller** et la duplication ;
-- l'**import de modèles** `.glb` / `.gltf` / `.obj` ;
-- les **ombres portées** ;
-- l'**éclairage par image** (HDRI) dans le viewport ;
-- le **magnétisme** et le pivot local.
+- le **Texte** 3D — l'entrée grisée du menu **Ajouter** ;
+- rien d'autre : l'espace 3D a désormais tout ce que ce manuel décrit.
 
 Le détail est dans [Ce qui n'existe pas encore](18-limites.md).
 

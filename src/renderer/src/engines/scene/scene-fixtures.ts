@@ -1,5 +1,14 @@
 import type { LightDescriptor } from '@shared/domain/scene'
-import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type LightNode, type MeshNode } from './scene-state'
+import {
+  DEFAULT_MATERIAL,
+  DEFAULT_SPRITE,
+  shadowDefaults,
+  IDENTITY_TRANSFORM,
+  type LightNode,
+  type MeshNode,
+  type ModelNode,
+  type SpriteNode,
+} from './scene-state'
 
 /**
  * Scene nodes for tests. Declared once so a new required field on `SceneNodeBase` breaks in one
@@ -13,6 +22,7 @@ export function meshNode(id: string, parentId: string | null = null): MeshNode {
     name: id,
     visible: true,
     transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'mesh' }),
     type: 'mesh',
     geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
     material: DEFAULT_MATERIAL,
@@ -29,7 +39,34 @@ export function lightNodeFixture(
     name: id,
     visible: true,
     transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'light', light }),
     type: 'light',
     light,
+  }
+}
+
+export function spriteNodeFixture(id: string, map: string | null = null): SpriteNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'sprite' }),
+    type: 'sprite',
+    sprite: { ...DEFAULT_SPRITE, map: map === null ? null : { assetId: map } },
+  }
+}
+
+export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'model' }),
+    type: 'model',
+    model: { assetId },
   }
 }

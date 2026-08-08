@@ -104,19 +104,28 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
       try {
         if (cancelled()) return
 
-        advance('probe')
-        const outcome = await deps.probe(sourcePath, controller.signal)
-        if (cancelled()) return
+        // ffprobe reads media, and a model is not media: asked about a `.glb` it answers
+        // "unreadable", which discards the row that was just minted — a valid file vanishing
+        // from the browser a second after it appeared. The hash below still runs: it is what
+        // catches a duplicate and what a relink is found by, and it reads any bytes at all.
+        const probed = kind !== 'mesh'
 
-        // Refused by the tool that can read every format the picker offers: the file is not
-        // media, and a row saying otherwise is worse than no row at all.
-        if (outcome.kind === 'unreadable') {
-          stage = 'unreadable'
-          return
+        if (probed) {
+          advance('probe')
+          const outcome = await deps.probe(sourcePath, controller.signal)
+          if (cancelled()) return
+
+          // Refused by the tool that can read every format the picker offers: the file is not
+          // media, and a row saying otherwise is worse than no row at all.
+          if (outcome.kind === 'unreadable') {
+            stage = 'unreadable'
+            return
+          }
+
+          if (outcome.kind === 'probed') fields.probe = outcome.probe
         }
 
-        const probe = outcome.kind === 'probed' ? outcome.probe : null
-        if (probe) fields.probe = probe
+        const probe = fields.probe ?? null
 
         advance('hash')
         const hash = await deps.hash(sourcePath)

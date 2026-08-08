@@ -1,13 +1,15 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
-import { LIGHT_ENTRIES, MESH_ENTRIES } from '@shared/domain/scene'
+import { LIGHT_ENTRIES, MESH_ENTRIES, OBJECT_ENTRIES } from '@shared/domain/scene'
 import { ADD_ENTRIES, NODE_KINDS } from './node-kinds'
 
 describe('ADD_ENTRIES', () => {
-  it('offers every mesh then every light, in the order the registries declare', () => {
-    expect(ADD_ENTRIES).toHaveLength(MESH_ENTRIES.length + LIGHT_ENTRIES.length)
+  it('offers every family in the order the registries declare', () => {
+    expect(ADD_ENTRIES).toHaveLength(
+      MESH_ENTRIES.length + LIGHT_ENTRIES.length + OBJECT_ENTRIES.length,
+    )
     expect(ADD_ENTRIES[0]?.entry.kind).toBe('box')
-    expect(ADD_ENTRIES.at(-1)?.entry.kind).toBe('spot')
+    expect(ADD_ENTRIES.at(-1)?.entry.kind).toBe('text')
   })
 
   // The key is derived, not declared: a missing string renders as `meshes.torusKnot` in the
@@ -16,10 +18,15 @@ describe('ADD_ENTRIES', () => {
     for (const { labelKey } of ADD_ENTRIES) expect(i18next.exists(labelKey)).toBe(true)
   })
 
-  it('greys the announced primitives and nothing else', () => {
+  it('greys the announced kinds and nothing else', () => {
     const greyed = ADD_ENTRIES.filter(({ entry }) => entry.disabled).map(({ entry }) => entry.kind)
 
-    expect(greyed).toEqual(['sprite', 'text'])
+    expect(greyed).toEqual(['text'])
+  })
+
+  // A kind with no glyph draws an empty button, which reads as a broken row rather than a tool.
+  it('gives every entry an icon', () => {
+    for (const { entry } of ADD_ENTRIES) expect(entry.icon).toBeTruthy()
   })
 })
 

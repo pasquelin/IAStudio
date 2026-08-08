@@ -122,8 +122,32 @@ A *mesh* is a geometric object.
 | **Dodecahedron** | 12 faces |
 | **Icosahedron** | 20 faces |
 
-> **Sprite** and **Text** appear greyed out in the menu. They are announced but not yet buildable.
+> **Text** appears greyed out in the menu: a 3D text needs a font file, and the studio ships none.
 > See [What does not exist yet](18-limits.md).
+
+### The sprite — a picture facing the camera
+
+A *sprite* is not a mesh: it is a flat picture that always turns towards you, whatever the view
+does. It is what you use for a spark, a glow, a marker, a label above an object — anything that
+has to stay readable from wherever you look.
+
+**Add ▸ Sprite** puts one at the origin. It arrives with no picture: choose one in the Inspector,
+under **Sprite**, from the project's own images — the same ones a material takes as a texture.
+
+| Setting | What it does |
+|---|---|
+| **Colour** | tints the picture. On a sprite with none, it is the colour of the quad itself |
+| **Opacity** | from transparent to opaque |
+| **Texture** | the picture shown, taken from the project's assets |
+
+Three things to know:
+
+- **Its size is its scale.** A sprite has no width of its own: you resize it with the scale handle,
+  like any other object. It shrinks with distance, like everything else in the scene.
+- **It has nothing to do with shadows.** It throws none and catches none — three.js draws meshes
+  into a shadow map and nothing else. The Inspector therefore shows it no Shadows section at all,
+  rather than two switches with no effect.
+- **It is not lit.** Its colour is the one you give it, not the one the scene's lights make of it.
 
 ### The available lights
 
@@ -139,6 +163,70 @@ Without a light, the scene stays black.
 
 **To start with**: a **directional** for the main light, plus a weak **ambient** so the shadows are
 not completely black. That is the classic recipe.
+
+---
+
+## Looking at the scene differently
+
+Three buttons, between the toggles and the framing. They change nothing of the scene: they change
+how it is looked at. None of it is saved with the document, and `⌘Z` never touches it.
+
+### Projection — `O`
+
+In **perspective**, receding lines converge: that is what an eye sees, and it is the default. In
+**orthographic**, parallels stay parallel and an object keeps its size whatever its distance.
+
+That is what lets an alignment be judged. Two cubes set side by side look offset in perspective; in
+orthographic they either are or they are not.
+
+The swap does not move the view: the camera takes its exact place back, and the frustum is sized so
+that whatever sits at the centre keeps the size it had.
+
+### Stand at — the six sides
+
+**Front**, **back**, **left**, **right**, **top**, **bottom**. The camera goes and stands on the
+matching axis, at the distance it already had, looking at the point it was turning around.
+
+Together with the orthographic projection, that is the classic plan view — the one you align on.
+
+### Display — `Z`
+
+| Mode | What is drawn |
+|---|---|
+| **Shaded** | the surfaces, lit and textured |
+| **Wireframe** | the edges alone, through the object |
+| **Shaded and wireframe** | both: the surfaces, and their edges over them |
+
+The button wears the current mode and cycles it on each click; its menu picks one directly. `Z`
+does the same from the keyboard, as in Blender.
+
+The third mode is the costly one: the edges are one more object per mesh, built when it is turned
+on and thrown away when it is turned off. On an imported model of several thousand meshes, it
+shows.
+
+---
+
+## Duplicate, copy, paste
+
+Four buttons at the end of the toolbar, and the four shortcuts you already know.
+
+| Gesture | Shortcut | What it does |
+|---|---|---|
+| **Duplicate** | `⌘D` | puts a copy of the selection at the same place, and selects it |
+| **Copy** | `⌘C` | holds the selection without touching the scene |
+| **Cut** | `⌘X` | holds it and takes it out of the scene |
+| **Paste** | `⌘V` | puts what was held into the current scene |
+
+Three things worth knowing:
+
+- **A group duplicates whole**, with everything hanging from it. Copying a lone child copies it
+  alone, and it finds its parent again — unless you paste it into a scene that has no such parent,
+  where it lands at the root instead.
+- **The copy falls exactly on the original.** It is selected: moving it is the next gesture, not a
+  recovery manoeuvre.
+- **This clipboard is the studio's**, not the system's. Copying an object does not throw away the
+  text you had in reserve, and you can paste into another scene. It does empty when you switch
+  projects, though: an imported object there names an asset that exists nowhere else.
 
 ---
 
@@ -242,6 +330,29 @@ Hide it to judge an image with nothing around it.
 
 ---
 
+## Getting a scene out of the studio
+
+**File ▸ Export the scene** writes everything the document holds. **File ▸ Export the selection**
+writes only the chosen objects — a group takes along whatever hangs from it.
+
+| Format | What it is | When to use it |
+|---|---|---|
+| **Binary glTF (`.glb`)** | one file, geometries included | the default, and what most engines read |
+| **glTF (`.gltf`)** | the same thing as readable JSON | to inspect or diff what is in it |
+| **USDZ (`.usdz`)** | the format Apple's viewers open | to look at the scene on an iPhone or a Mac |
+
+A save dialog opens to choose where the file goes. Its name is the document's; the extension
+follows the chosen format.
+
+**What does not come out.** The floor grid, the corner trihedron, the transform handles and the
+light markers are not part of the scene: they are display aids. The file holds only what the
+Explorer lists. The edges of the "shaded and wireframe" mode are not in it either.
+
+**A nested selection keeps its place.** Exporting an object filed inside a group writes it where it
+stands in the scene, not where it stands inside its group.
+
+---
+
 ## Saving
 
 `⌘S` / `Ctrl+S` writes the scene into the project, under `documents/`.
@@ -263,13 +374,8 @@ nothing had been written for it.
 
 The 3D workspace is functional but young. Do not look yet for:
 
-- **multiple selection** — one object at a time;
-- **groups** and reparenting;
-- **copy-paste** and duplication;
-- **model import** for `.glb` / `.gltf` / `.obj`;
-- **cast shadows**;
-- **image-based lighting** (HDRI) in the viewport;
-- **snapping** and local pivot.
+- the 3D **Text** — the greyed-out entry of the **Add** menu;
+- nothing else: the 3D workspace now has everything this manual describes.
 
 The detail is in [What does not exist yet](18-limits.md).
 

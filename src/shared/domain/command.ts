@@ -23,6 +23,15 @@ export type CommandId =
   | 'scene.rotate'
   | 'scene.scale'
   | 'scene.frame'
+  | 'scene.group'
+  | 'scene.duplicate'
+  | 'scene.copy'
+  | 'scene.cut'
+  | 'scene.paste'
+  | 'scene.snap'
+  | 'scene.space'
+  | 'scene.projection'
+  | 'scene.display'
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
@@ -160,6 +169,76 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneFrame.title',
     helpKey: 'commands.sceneFrame.help',
     defaultBinding: 'KeyF',
+  }),
+  // `KeyM` and `KeyL` as in magnet and local. Neither flies the camera, which rules out most of
+  // the left hand: `useShortcuts` reads both tables on the same keydown.
+  command({
+    id: 'scene.snap',
+    scope: 'scene',
+    titleKey: 'commands.sceneSnap.title',
+    helpKey: 'commands.sceneSnap.help',
+    defaultBinding: 'KeyM',
+  }),
+  command({
+    id: 'scene.space',
+    scope: 'scene',
+    titleKey: 'commands.sceneSpace.title',
+    helpKey: 'commands.sceneSpace.help',
+    defaultBinding: 'KeyL',
+  }),
+  command({
+    id: 'scene.projection',
+    scope: 'scene',
+    titleKey: 'commands.sceneProjection.title',
+    helpKey: 'commands.sceneProjection.help',
+    defaultBinding: 'KeyO',
+  }),
+  // `Z` as in Blender, where it is the key that changes what the viewport draws.
+  command({
+    id: 'scene.display',
+    scope: 'scene',
+    titleKey: 'commands.sceneDisplay.title',
+    helpKey: 'commands.sceneDisplay.help',
+    defaultBinding: 'KeyZ',
+  }),
+  // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
+  command({
+    id: 'scene.group',
+    scope: 'scene',
+    titleKey: 'commands.sceneGroup.title',
+    helpKey: 'commands.sceneGroup.help',
+    defaultBinding: 'Meta+KeyG',
+  }),
+  // The four gestures every editor shares, on the keys every editor uses. `role: 'editMenu'`
+  // carries the same three for text fields; a scene tab is not one, and `isTyping` keeps them
+  // apart when it is.
+  command({
+    id: 'scene.duplicate',
+    scope: 'scene',
+    titleKey: 'commands.sceneDuplicate.title',
+    helpKey: 'commands.sceneDuplicate.help',
+    defaultBinding: 'Meta+KeyD',
+  }),
+  command({
+    id: 'scene.copy',
+    scope: 'scene',
+    titleKey: 'commands.sceneCopy.title',
+    helpKey: 'commands.sceneCopy.help',
+    defaultBinding: 'Meta+KeyC',
+  }),
+  command({
+    id: 'scene.cut',
+    scope: 'scene',
+    titleKey: 'commands.sceneCut.title',
+    helpKey: 'commands.sceneCut.help',
+    defaultBinding: 'Meta+KeyX',
+  }),
+  command({
+    id: 'scene.paste',
+    scope: 'scene',
+    titleKey: 'commands.scenePaste.title',
+    helpKey: 'commands.scenePaste.help',
+    defaultBinding: 'Meta+KeyV',
   }),
   command({
     id: 'scene.delete',

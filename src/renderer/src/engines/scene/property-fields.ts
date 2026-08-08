@@ -2,6 +2,7 @@ import type {
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
+  SpriteDescriptor,
   TextureSlot,
   Vector3,
 } from '@shared/domain/scene'
@@ -129,6 +130,14 @@ export const MATERIAL_SPECS: MaterialSpecs = {
   metalness: UNIT,
 }
 
+/** Exhaustive like the material's, minus the map, which no control describes. */
+type SpriteSpecs = { [F in Exclude<keyof SpriteDescriptor, 'map'>]: PropertySpec }
+
+export const SPRITE_SPECS: SpriteSpecs = {
+  color: COLOR,
+  opacity: UNIT,
+}
+
 export function geometryFields(descriptor: GeometryDescriptor): PropertyField[] {
   return listFields(descriptor, GEOMETRY_SPECS[descriptor.kind])
 }
@@ -146,6 +155,11 @@ export function materialFields(
   fallbackColor: string,
 ): PropertyField[] {
   return listFields({ ...descriptor, color: descriptor.color ?? fallbackColor }, MATERIAL_SPECS)
+}
+
+/** Same rule as a material's, and for the same `null`. */
+export function spriteFields(descriptor: SpriteDescriptor, fallbackColor: string): PropertyField[] {
+  return listFields({ ...descriptor, color: descriptor.color ?? fallbackColor }, SPRITE_SPECS)
 }
 
 /**

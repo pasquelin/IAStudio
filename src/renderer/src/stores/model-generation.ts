@@ -1,0 +1,12 @@
+import { createGenerationLanding } from './generation-landing'
+import { addModelTo } from './scenes'
+
+/** A 3D generation comes back into the scene it was launched from. See `generation-landing`. */
+const landing = createGenerationLanding({
+  kind: 'scene',
+  accepts: asset => asset.type === 'mesh',
+  land: (documentId, asset) => void addModelTo(documentId, asset),
+})
+
+export const claimModelOnSubmit = landing.claimOnSubmit
+export const connectModelGeneration = landing.connect

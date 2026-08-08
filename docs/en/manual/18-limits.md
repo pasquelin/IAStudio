@@ -111,21 +111,13 @@ practice", above.
 
 ## 3D workspace
 
-### What is missing
+### The 3D text is announced but not buildable
 
-- **multiple selection** — one object at a time;
-- **groups** and reparenting — you cannot assemble objects into a subset;
-- **copy-paste** and duplication;
-- **model import** for `.glb`, `.gltf`, `.obj` — you can only place what the studio can build or
-  generate;
-- **cast shadows** — objects are lit, but throw no shadow;
-- **image-based lighting** (*IBL*) in the viewport — a *skybox* does not yet light a 3D scene, even
-  though it does light the Skyboxes workspace preview;
-- **snapping** and local pivot.
+**Text** appears greyed out in the **Add** menu.
 
-### Two objects announced but not buildable
-
-**Sprite** and **Text** appear greyed out in the **Add** menu.
+three.js builds a text in volume from a converted **font file**. The studio ships none, and a
+project's catalogue knows no asset of that kind: not an image, a video, a sound or a 3D model.
+Until one of the two exists, the entry stays greyed rather than promising what no path can keep.
 
 ### The `S` shortcut does two things at once
 
@@ -282,7 +274,7 @@ ahead of the workspace that will use it.
 
 ### What cannot
 
-- **3D files** — `.glb`, `.gltf`, `.obj`, `.fbx`;
+- **3D files other than `.glb`** — separate `.gltf`, `.obj`, `.fbx`;
 - **HDRIs** — `.hdr`.
 
 An `.exr` does import, but it is catalogued as an **image**, not as a sky. It still works as a source
@@ -316,12 +308,17 @@ not implemented**, and the choice is therefore offered nowhere in the interface.
 
 Offering a button that leads nowhere would be a promise the software cannot keep.
 
-### On Windows and Linux, the display shows `⌘`
+### On Windows and Linux, `⌘` is taken literally
 
-The shortcuts **work** with `Ctrl` — the system menu is correct. But the tooltips and the shortcuts
-screen draw the Mac `⌘` symbol instead of `Ctrl`.
+Two separate defects, one of display, one of function.
 
-It is a display defect, not a functional one.
+**Display**: the tooltips and the shortcuts screen draw the Mac `⌘` symbol instead of `Ctrl`,
+everywhere.
+
+**Function**: the shortcuts the system menu carries — `⌘Z`, `⌘S`, `⌘N` — do answer to `Ctrl`, since
+it is the menu that fires them. But the ones a surface listens for itself, such as `⌘D` in the 3D
+view, expect the **Windows** key rather than `Ctrl`: for now they are out of reach anywhere but on
+a Mac.
 
 ### One context heading is missing from the shortcuts screen
 
@@ -379,7 +376,7 @@ If you only remember six things from this chapter:
    the frame;
 3. **there is no video export** — the studio cannot yet deliver a final file;
 4. **there is no "enlarge", "cut out" or "vectorize" button**;
-5. **you cannot import a 3D model** or an HDRI;
+5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`;
 6. **a skybox does not yet light a 3D scene**.
 
 Everything else is comfort.

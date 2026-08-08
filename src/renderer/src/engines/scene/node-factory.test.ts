@@ -38,9 +38,22 @@ describe('createNodeOf', () => {
     expect(createNodeOf('box')?.id).not.toBe(createNodeOf('box')?.id)
   })
 
-  it('refuses a primitive that is announced but not buildable yet', () => {
+  it('refuses a kind that is announced but not buildable yet', () => {
     expect(createNodeOf('text')).toBeNull()
-    expect(createNodeOf('sprite')).toBeNull()
+  })
+
+  it('builds a sprite, mapless, since the picture is picked afterwards', () => {
+    const node = createNodeOf('sprite')
+
+    expect(node?.type).toBe('sprite')
+    expect(node?.type === 'sprite' && node.sprite.map).toBeNull()
+  })
+
+  // three.js draws meshes into a shadow map and nothing else, so both boxes would lie.
+  it('makes a sprite neither throw a shadow nor catch one', () => {
+    const node = createNodeOf('sprite')
+
+    expect(node).toMatchObject({ castShadow: false, receiveShadow: false })
   })
 
   it('refuses a kind no registry knows', () => {

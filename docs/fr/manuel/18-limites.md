@@ -114,21 +114,14 @@ haut, « Ce que cela veut dire concrètement ».
 
 ## Espace 3D
 
-### Ce qui manque
+### Le texte 3D est annoncé mais non constructible
 
-- **la sélection multiple** — un seul objet à la fois ;
-- **les groupes** et le reparentage — on ne peut pas assembler des objets en un sous-ensemble ;
-- **le copier-coller** et la duplication ;
-- **l'import de modèles** `.glb`, `.gltf`, `.obj` — on ne peut poser que ce que le studio sait
-  construire ou générer ;
-- **les ombres portées** — les objets sont éclairés, mais ne projettent pas d'ombre ;
-- **l'éclairage par image** (*IBL*) dans le viewport — une *skybox* n'éclaire pas encore une
-  scène 3D, alors qu'elle éclaire bien l'aperçu de l'espace Skyboxes ;
-- **le magnétisme** et le pivot local.
+**Texte** apparaît grisé dans le menu **Ajouter**.
 
-### Deux objets annoncés mais non constructibles
-
-**Sprite** et **Texte** apparaissent grisés dans le menu **Ajouter**.
+three.js construit un texte en volume à partir d'un **fichier de police** converti. Le studio n'en
+embarque aucun, et le catalogue d'un projet ne connaît pas ce genre d'asset : ni image, ni vidéo,
+ni son, ni modèle 3D. Tant que l'un des deux n'existe pas, l'entrée reste grisée plutôt que de
+promettre ce qu'aucun chemin ne peut tenir.
 
 ### Le raccourci `S` fait deux choses à la fois
 
@@ -290,7 +283,7 @@ réglage écrit en avance sur l'espace qui l'utilisera.
 
 ### Ce qui ne s'importe pas
 
-- **les fichiers 3D** — `.glb`, `.gltf`, `.obj`, `.fbx` ;
+- **les fichiers 3D autres que `.glb`** — `.gltf` séparé, `.obj`, `.fbx` ;
 - **les HDRI** — `.hdr`.
 
 Un `.exr` s'importe, mais il est catalogué comme **image**, pas comme ciel. Il fonctionne quand
@@ -324,12 +317,17 @@ second n'est pas implémenté**, et le choix n'est donc offert nulle part dans l
 
 Offrir un bouton qui ne mène nulle part serait une promesse que le logiciel ne peut pas tenir.
 
-### Sur Windows et Linux, l'affichage montre `⌘`
+### Sur Windows et Linux, `⌘` est pris au pied de la lettre
 
-Les raccourcis **fonctionnent** avec `Ctrl` — le menu du système est correct. Mais les infobulles
-et l'écran des raccourcis dessinent le symbole `⌘` du Mac au lieu de `Ctrl`.
+Deux défauts distincts, l'un d'affichage, l'autre de fonctionnement.
 
-C'est un défaut d'affichage, pas de fonctionnement.
+**L'affichage** : les infobulles et l'écran des raccourcis dessinent le symbole `⌘` du Mac au lieu
+de `Ctrl`, partout.
+
+**Le fonctionnement** : les raccourcis portés par le menu du système — `⌘Z`, `⌘S`, `⌘N` — répondent
+bien à `Ctrl`, c'est le menu qui les déclenche. Mais ceux qu'une surface écoute elle-même, comme
+`⌘D` dans la vue 3D, attendent la touche **Windows** et non `Ctrl` : ils sont pour l'instant hors
+d'atteinte ailleurs que sur un Mac.
 
 ### Un intitulé de contexte manque dans l'écran des raccourcis
 
@@ -388,7 +386,7 @@ Si vous ne deviez retenir que six choses de ce chapitre :
    le cadre ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
 4. **il n'y a pas de bouton « agrandir », « détourer » ni « vectoriser »** ;
-5. **on ne peut pas importer de modèle 3D** ni de HDRI ;
+5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu'un `.glb` ;
 6. **une skybox n'éclaire pas encore une scène 3D**.
 
 Tout le reste est du confort.

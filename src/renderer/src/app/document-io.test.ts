@@ -53,7 +53,7 @@ describe('saveDocument', () => {
 
     expect(write).toHaveBeenCalledWith(documentId, 'scene', {
       title: expect.any(String),
-      content: JSON.stringify({ nodes: [box] }),
+      content: JSON.stringify({ nodes: [box], environment: { kind: 'studio' } }),
     })
   })
 

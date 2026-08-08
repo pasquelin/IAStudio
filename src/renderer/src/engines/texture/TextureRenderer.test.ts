@@ -98,7 +98,8 @@ describe('the environment of a texture preview', () => {
 
     await applied(renderer, skyOf('sky-2'))
 
-    expect(freed[0]).toHaveBeenCalled()
+    // After the swap, never before: until then the old texture is what the background holds.
+    await vi.waitFor(() => expect(freed[0]).toHaveBeenCalled())
     expect(freed[1]).not.toHaveBeenCalled()
   })
 

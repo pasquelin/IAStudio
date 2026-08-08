@@ -114,11 +114,11 @@ describe('Collection', () => {
 
   it('selects on click and marks the selected item', async () => {
     const onSelect = vi.fn()
-    renderCollection(rows(4), {}, { onSelect, selectedId: 'row_1' })
+    renderCollection(rows(4), {}, { onSelect, selectedIds: ['row_1'] })
 
     await userEvent.click(screen.getByText('Row 2'))
 
-    expect(onSelect).toHaveBeenCalledWith({ id: 'row_2', name: 'Row 2' })
+    expect(onSelect).toHaveBeenCalledWith({ id: 'row_2', name: 'Row 2' }, ['row_2'], 'replace')
     expect(screen.getByText('Row 1').closest('[role="option"]')).toHaveAttribute(
       'aria-selected',
       'true',
@@ -132,7 +132,29 @@ describe('Collection', () => {
     await userEvent.tab()
     await userEvent.keyboard('{Enter}')
 
-    expect(onSelect).toHaveBeenCalledWith({ id: 'row_0', name: 'Row 0' })
+    expect(onSelect).toHaveBeenCalledWith({ id: 'row_0', name: 'Row 0' }, ['row_0'], 'replace')
+  })
+
+  // The same gesture the tree offers, so a row behaves alike whichever panel lists it.
+  it('extends over the items between the anchor and a shift-clicked one', async () => {
+    const onSelect = vi.fn()
+    const user = userEvent.setup()
+    renderCollection(rows(4), {}, { onSelect, selectedIds: ['row_0'] })
+
+    await user.keyboard('{Shift>}')
+    await user.click(screen.getByText('Row 2'))
+    await user.keyboard('{/Shift}')
+
+    expect(onSelect.mock.calls[0]?.slice(1)).toEqual([['row_0', 'row_1', 'row_2'], 'replace'])
+  })
+
+  it('paints every selected item, not only the anchor', () => {
+    renderCollection(rows(4), {}, { onSelect: vi.fn(), selectedIds: ['row_0', 'row_2'] })
+
+    const selected = screen
+      .getAllByRole('option')
+      .filter(cell => cell.getAttribute('aria-selected') === 'true')
+    expect(selected).toHaveLength(2)
   })
 
   // The eye of a layer or a node sits inside the row and answers Enter itself. Selecting on top
@@ -185,7 +207,7 @@ describe('Collection', () => {
   })
 
   it('puts that tab stop on the selected item, so tab lands where the eye is', () => {
-    renderCollection(rows(20), { view: 'list' }, { onSelect: vi.fn(), selectedId: 'row_3' })
+    renderCollection(rows(20), { view: 'list' }, { onSelect: vi.fn(), selectedIds: ['row_3'] })
 
     const reachable = screen.getAllByRole('option').find(cell => cell.tabIndex === 0)
     expect(reachable).toHaveTextContent('Row 3')

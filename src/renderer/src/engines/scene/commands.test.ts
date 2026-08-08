@@ -2,24 +2,38 @@ import { describe, expect, it } from 'vitest'
 import { emptyHistory, run, undo } from '../core/history'
 import {
   addNode,
+  addNodes,
+  batch,
+  copiesOf,
+  groupNodes,
+  moveNodes,
+  reparentNode,
   multi,
   removeNode,
+  removeNodes,
+  rootedIn,
   renameNode,
-  selectNode,
   setGeometry,
   setLight,
+  setLightOn,
   setMaterial,
   setNodeVisible,
+  setEnvironment,
+  setSelection,
+  setSpriteOn,
   setTransform,
 } from './commands'
-import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
+import { lightNodeFixture as light, meshNode as mesh, spriteNodeFixture } from './scene-fixtures'
+
+const sprite = (id: string) => spriteNodeFixture(id, 'pic-1')
 import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
+import type { EnvironmentRef } from '@shared/domain/scene'
 
 describe('addNode', () => {
   it('appends the node and selects it', () => {
     const state = addNode(mesh('a')).apply(EMPTY_SCENE)
     expect(state.nodes.map(node => node.id)).toEqual(['a'])
-    expect(state.selectedId).toBe('a')
+    expect(state.selectedIds).toEqual(['a'])
   })
 
   it('drops the node and its selection on revert', () => {
@@ -30,27 +44,44 @@ describe('addNode', () => {
 
 describe('removeNode', () => {
   it('restores the node at its original index', () => {
-    const start: SceneState = { nodes: [mesh('a'), mesh('b'), mesh('c')], selectedId: null }
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b'), mesh('c')],
+      selectedIds: [],
+    }
     const command = removeNode('b')
     const removed = command.apply(start)
     expect(removed.nodes.map(node => node.id)).toEqual(['a', 'c'])
     expect(command.revert(removed).nodes.map(node => node.id)).toEqual(['a', 'b', 'c'])
   })
 
-  it('clears the selection when it removes the selected node', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: 'a' }
-    expect(removeNode('a').apply(start).selectedId).toBeNull()
+  it('drops the removed node from the selection and leaves the rest of it standing', () => {
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b')],
+      selectedIds: ['a', 'b'],
+    }
+    expect(removeNode('a').apply(start).selectedIds).toEqual(['b'])
+  })
+
+  it('hands the anchor back to the previous node when it removes the anchor', () => {
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b')],
+      selectedIds: ['a', 'b'],
+    }
+    expect(removeNode('b').apply(start).selectedIds.at(-1)).toBe('a')
   })
 
   it('leaves an unknown id alone', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     expect(removeNode('ghost').apply(start)).toEqual(start)
   })
 })
 
 describe('setNodeVisible', () => {
   it('toggles visibility and comes back', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = setNodeVisible('a', false)
     const hidden = command.apply(start)
     expect(hidden.nodes[0]?.visible).toBe(false)
@@ -60,7 +91,7 @@ describe('setNodeVisible', () => {
 
 describe('renameNode', () => {
   it('renames and comes back', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = renameNode('a', 'Cube')
     const renamed = command.apply(start)
     expect(renamed.nodes[0]?.name).toBe('Cube')
@@ -70,7 +101,7 @@ describe('renameNode', () => {
 
 describe('setTransform', () => {
   it('survives being replayed through the history', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const moved = { ...IDENTITY_TRANSFORM, position: { x: 1, y: 2, z: 3 } }
     const [after, history] = run(start, emptyHistory<SceneState>(), setTransform('a', moved))
     expect(after.nodes[0]?.transform.position).toEqual({ x: 1, y: 2, z: 3 })
@@ -80,7 +111,7 @@ describe('setTransform', () => {
   })
 
   it('leaves the discriminated half of the node untouched', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const moved = { ...IDENTITY_TRANSFORM, position: { x: 5, y: 0, z: 0 } }
     const after = setTransform('a', moved).apply(start)
     const node = after.nodes[0]
@@ -91,7 +122,7 @@ describe('setTransform', () => {
 
 describe('setGeometry', () => {
   it('replaces the descriptor and comes back', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = setGeometry('a', {
       kind: 'sphere',
       radius: 2,
@@ -110,7 +141,7 @@ describe('setGeometry', () => {
   // A light holding a geometry is what the union exists to forbid, and it would be a document
   // that no longer loads.
   it('refuses to give a light a geometry', () => {
-    const start: SceneState = { nodes: [light('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [light('a')], selectedIds: [] }
     const command = setGeometry('a', {
       kind: 'sphere',
       radius: 1,
@@ -124,7 +155,7 @@ describe('setGeometry', () => {
 
 describe('setMaterial', () => {
   it('replaces the material and comes back', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = setMaterial('a', {
       ...DEFAULT_MATERIAL,
       color: '#ff0000',
@@ -141,7 +172,7 @@ describe('setMaterial', () => {
   })
 
   it('leaves the geometry it did not touch alone', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = setMaterial('a', { ...DEFAULT_MATERIAL, roughness: 0.5 })
 
     const node = command.apply(start).nodes[0]
@@ -151,7 +182,7 @@ describe('setMaterial', () => {
 
 describe('setLight', () => {
   it('replaces the descriptor and comes back', () => {
-    const start: SceneState = { nodes: [light('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [light('a')], selectedIds: [] }
     const command = setLight('a', { kind: 'ambient', color: '#ffffff', intensity: 0.5 })
 
     const applied = command.apply(start)
@@ -163,7 +194,7 @@ describe('setLight', () => {
   })
 
   it('refuses to give a mesh a light', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
 
     expect(setLight('a', { kind: 'ambient', color: '#ffffff', intensity: 1 }).apply(start)).toEqual(
       start,
@@ -180,10 +211,358 @@ describe('multi', () => {
   })
 })
 
-describe('selectNode', () => {
+describe('setSelection', () => {
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [mesh('a'), mesh('b'), mesh('c')],
+    selectedIds: [],
+  }
+
   it('stays out of the history', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedId: null }
-    expect(selectNode(start, 'a').selectedId).toBe('a')
-    expect(selectNode(start, null).selectedId).toBeNull()
+    expect(setSelection(start, ['a']).selectedIds).toEqual(['a'])
+    expect(setSelection(start, []).selectedIds).toEqual([])
+  })
+
+  it('replaces by default', () => {
+    const picked = setSelection(start, ['a', 'b'])
+    expect(setSelection(picked, ['c']).selectedIds).toEqual(['c'])
+  })
+
+  it('toggles an id in and out of what is already selected', () => {
+    const picked = setSelection(start, ['a', 'b'])
+    expect(setSelection(picked, ['c'], 'toggle').selectedIds).toEqual(['a', 'b', 'c'])
+    expect(setSelection(picked, ['b'], 'toggle').selectedIds).toEqual(['a'])
+  })
+
+  it('leaves the nodes alone', () => {
+    expect(setSelection(start, ['a']).nodes).toBe(start.nodes)
+  })
+})
+
+describe('removeNodes', () => {
+  it('deletes a whole selection as one entry, and puts it back in order', () => {
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b'), mesh('c')],
+      selectedIds: ['a', 'c'],
+    }
+    const command = removeNodes(start.nodes, ['a', 'c'])
+    const applied = command.apply(start)
+
+    expect(applied.nodes.map(node => node.id)).toEqual(['b'])
+    expect(applied.selectedIds).toEqual([])
+    expect(command.revert(applied).nodes.map(node => node.id)).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('moveNodes', () => {
+  it('carries one drag of several nodes as one entry', () => {
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b')],
+      selectedIds: ['a', 'b'],
+    }
+    const moved = { ...IDENTITY_TRANSFORM, position: { x: 1, y: 2, z: 3 } }
+    const command = moveNodes([
+      { id: 'a', transform: moved },
+      { id: 'b', transform: moved },
+    ])
+
+    const applied = command.apply(start)
+    expect(applied.nodes.map(node => node.transform.position.x)).toEqual([1, 1])
+    expect(command.revert(applied).nodes.map(node => node.transform.position.x)).toEqual([0, 0])
+  })
+
+  it('keeps the id a single move would have had, so a gesture still coalesces', () => {
+    expect(moveNodes([{ id: 'a', transform: IDENTITY_TRANSFORM }]).id).toBe(
+      setTransform('a', IDENTITY_TRANSFORM).id,
+    )
+  })
+})
+
+describe('setLightOn', () => {
+  const spot = (id: string, target: { x: number; y: number; z: number }): SceneState['nodes'][0] =>
+    light(id, {
+      kind: 'spot',
+      color: '#ffffff',
+      intensity: 1,
+      distance: 0,
+      angle: 0.3,
+      penumbra: 0,
+      decay: 2,
+      target,
+    })
+
+  // A vector field reports all three axes though the user moved one.
+  it('carries only the axis that moved onto the other lights', () => {
+    const anchor = spot('a', { x: 0, y: 0, z: 0 })
+    const other = spot('b', { x: 5, y: 6, z: 7 })
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [anchor, other], selectedIds: ['b', 'a'] }
+    if (anchor.type !== 'light') throw new Error('fixture is not a light')
+
+    const applied = setLightOn(start.nodes, anchor.light, 'target', { x: 0, y: 9, z: 0 }).apply(
+      start,
+    )
+
+    const moved = applied.nodes[1]
+    expect(moved?.type === 'light' && moved.light.kind === 'spot' && moved.light.target).toEqual({
+      x: 5,
+      y: 9,
+      z: 7,
+    })
+  })
+
+  it('leaves a light of another kind alone', () => {
+    const anchor = spot('a', { x: 0, y: 0, z: 0 })
+    const ambient = light('b')
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [anchor, ambient], selectedIds: ['b', 'a'] }
+    if (anchor.type !== 'light') throw new Error('fixture is not a light')
+
+    expect(setLightOn(start.nodes, anchor.light, 'intensity', 4).apply(start).nodes[1]).toBe(
+      ambient,
+    )
+  })
+})
+
+describe('reparentNode', () => {
+  const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), mesh('b'), mesh('c', 'b')] }
+
+  it('hangs a node from another, and puts it back where it was', () => {
+    const command = reparentNode('a', 'b')
+    const moved = command.apply(start)
+
+    expect(moved.nodes.find(node => node.id === 'a')?.parentId).toBe('b')
+    expect(command.revert(moved).nodes.find(node => node.id === 'a')?.parentId).toBeNull()
+  })
+
+  it('brings a node back out to the scene', () => {
+    const command = reparentNode('c', null)
+    expect(command.apply(start).nodes.find(node => node.id === 'c')?.parentId).toBeNull()
+  })
+
+  // Applied, it would close the tree on itself and every walk of it would run forever.
+  it('refuses a move under its own descendant, and leaves the scene untouched', () => {
+    expect(reparentNode('b', 'c').apply(start)).toBe(start)
+  })
+
+  it('leaves an unknown node and a move that changes nothing alone', () => {
+    expect(reparentNode('ghost', 'b').apply(start)).toBe(start)
+    expect(reparentNode('c', 'b').apply(start)).toBe(start)
+  })
+
+  // The old parent is only known once the move runs — a redo has to capture it again.
+  it('survives being replayed through the history', () => {
+    const command = reparentNode('c', null)
+    const [out, history] = run(start, emptyHistory<SceneState>(), command)
+    const [back] = undo(out, history)
+
+    expect(back.nodes.find(node => node.id === 'c')?.parentId).toBe('b')
+  })
+})
+
+describe('groupNodes', () => {
+  const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), mesh('b'), mesh('c', 'b')] }
+
+  it('puts one group over the selection, and hangs it from nothing', () => {
+    const grouped = groupNodes([mesh('a'), mesh('b')]).apply(start)
+    const group = grouped.nodes.find(node => node.type === 'group')
+
+    expect(group?.parentId).toBeNull()
+    expect(grouped.nodes.filter(node => node.parentId === group?.id).map(node => node.id)).toEqual([
+      'a',
+      'b',
+    ])
+  })
+
+  // A node whose own parent is selected too is already carried along by it.
+  it('moves only the roots of the selection, so a subtree stays a subtree', () => {
+    const chosen = [mesh('b'), mesh('c', 'b')]
+    const grouped = groupNodes(chosen).apply(start)
+
+    expect(grouped.nodes.find(node => node.id === 'c')?.parentId).toBe('b')
+  })
+
+  it('is one entry in the history, whatever it moved', () => {
+    const command = groupNodes([mesh('a'), mesh('b')])
+    expect(command.revert(command.apply(start)).nodes).toEqual(start.nodes)
+  })
+})
+
+describe('copiesOf', () => {
+  // a > b, and c beside them
+  const nodes = [mesh('a'), mesh('b', 'a'), mesh('c')]
+
+  it('gives every copy an id of its own', () => {
+    const copies = copiesOf(nodes, [mesh('c')])
+
+    expect(copies).toHaveLength(1)
+    expect(copies[0]?.id).not.toBe('c')
+  })
+
+  // A child still naming the original would be shared between the two: moving one would move
+  // the other's child.
+  it('carries a subtree whole, with its parents rewritten to the copies', () => {
+    const copies = copiesOf(nodes, [nodes[0]!])
+
+    expect(copies).toHaveLength(2)
+    expect(copies[1]?.parentId).toBe(copies[0]?.id)
+  })
+
+  // What falls outside the set keeps its parent, which is what puts a copy beside its original.
+  it('leaves a parent outside the copy pointing where it did', () => {
+    const copies = copiesOf(nodes, [nodes[1]!])
+    expect(copies[0]?.parentId).toBe('a')
+  })
+
+  it('copies a node once when both it and its parent are picked', () => {
+    expect(copiesOf(nodes, [nodes[0]!, nodes[1]!])).toHaveLength(2)
+  })
+
+  it('keeps everything else of the node, so a copy looks like what it came from', () => {
+    const dressed = { ...mesh('c'), name: 'Socle', visible: false }
+    const [copy] = copiesOf([dressed], [dressed])
+
+    expect(copy).toMatchObject({ name: 'Socle', visible: false, type: 'mesh' })
+  })
+})
+
+describe('addNodes', () => {
+  const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
+
+  it('puts the copies in and selects them, since that is what the next gesture acts on', () => {
+    const copies = copiesOf(start.nodes, start.nodes)
+    const pasted = addNodes(copies).apply(start)
+
+    expect(pasted.nodes).toHaveLength(2)
+    expect(pasted.selectedIds).toEqual(copies.map(node => node.id))
+  })
+
+  it('takes them back out, and the selection with them', () => {
+    const command = addNodes(copiesOf(start.nodes, start.nodes))
+    const back = command.revert(command.apply(start))
+
+    expect(back.nodes).toEqual(start.nodes)
+    expect(back.selectedIds).toEqual([])
+  })
+
+  // Nothing to put down clears no selection: an empty add is a no-op, not a deselect.
+  it('leaves the scene exactly as it was when given nothing', () => {
+    expect(addNodes([]).apply(start)).toBe(start)
+  })
+})
+
+describe('rootedIn', () => {
+  const nodes = [mesh('a'), mesh('b', 'a')]
+
+  it('cuts loose a parent the destination does not hold', () => {
+    const [stray] = rootedIn(copiesOf(nodes, [nodes[1]!]), [mesh('elsewhere')])
+
+    expect(stray?.parentId).toBeNull()
+  })
+
+  it('leaves a parent the destination does hold alone', () => {
+    const [carried] = rootedIn(copiesOf(nodes, [nodes[1]!]), nodes)
+
+    expect(carried?.parentId).toBe('a')
+  })
+
+  // The copies name each other: a parent inside the set is held by the paste itself.
+  it('keeps a parent that comes along in the same paste', () => {
+    const copies = rootedIn(copiesOf(nodes, [nodes[0]!]), [])
+
+    expect(copies[1]?.parentId).toBe(copies[0]?.id)
+  })
+})
+
+describe('setSpriteOn', () => {
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [sprite('s1'), sprite('s2'), mesh('m1')],
+    selectedIds: [],
+  }
+
+  it('writes the change onto every sprite of the selection, and comes back', () => {
+    const command = setSpriteOn(start.nodes, { opacity: 0.5 })
+    const faded = command.apply(start)
+
+    expect(faded.nodes.map(node => (node.type === 'sprite' ? node.sprite.opacity : null))).toEqual([
+      0.5,
+      0.5,
+      null,
+    ])
+    expect(command.revert(faded)).toEqual(start)
+  })
+
+  // A mesh has no sprite to write into: the union is what forbids it, and so does the command.
+  it('leaves everything that is not a sprite alone', () => {
+    const applied = setSpriteOn(start.nodes, { opacity: 0.5 }).apply(start)
+
+    expect(applied.nodes[2]).toEqual(start.nodes[2])
+  })
+
+  it('leaves the fields it was not given alone', () => {
+    const applied = setSpriteOn([start.nodes[0]!], { opacity: 0.2 }).apply(start)
+    const node = applied.nodes[0]
+
+    expect(node?.type === 'sprite' && node.sprite.map).toEqual({ assetId: 'pic-1' })
+  })
+})
+
+describe('setEnvironment', () => {
+  const sky: EnvironmentRef = { kind: 'skybox', assetId: 'sky-1' }
+
+  it('swaps what lights the scene, and comes back', () => {
+    const command = setEnvironment(sky)
+    const lit = command.apply(EMPTY_SCENE)
+
+    expect(lit.environment).toEqual(sky)
+    expect(command.revert(lit).environment).toEqual({ kind: 'studio' })
+  })
+
+  // Choosing a sky is a decision about the document, not a way of looking at it.
+  it('leaves the nodes and the selection alone', () => {
+    const start = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
+    const lit = setEnvironment(sky).apply(start)
+
+    expect(lit.nodes).toBe(start.nodes)
+    expect(lit.selectedIds).toBe(start.selectedIds)
+  })
+})
+
+describe('batch', () => {
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [mesh('a'), mesh('b'), light('c')],
+    selectedIds: [],
+  }
+
+  it('edits every node of a selection as one entry in the history', () => {
+    const command = batch('rename', start.nodes, node => renameNode(node.id, 'same'))
+    const applied = command.apply(start)
+
+    expect(applied.nodes.map(node => node.name)).toEqual(['same', 'same', 'same'])
+    expect(command.revert(applied).nodes.map(node => node.name)).toEqual(
+      start.nodes.map(node => node.name),
+    )
+  })
+
+  it('skips the nodes the edit does not apply to', () => {
+    const meshes = start.nodes.filter(node => node.type === 'mesh')
+    const command = batch('rename', start.nodes, node =>
+      node.type === 'mesh' ? renameNode(node.id, 'mesh') : null,
+    )
+
+    expect(command.apply(start).nodes.map(node => node.name)).toEqual([
+      'mesh',
+      'mesh',
+      start.nodes[2]?.name,
+    ])
+    expect(meshes).toHaveLength(2)
+  })
+
+  it('names the nodes it touched, so an edit of another selection is another entry', () => {
+    const one = batch('transform', [start.nodes[0] ?? mesh('a')], () => null)
+    const two = batch('transform', start.nodes, () => null)
+    expect(one.id).not.toBe(two.id)
   })
 })

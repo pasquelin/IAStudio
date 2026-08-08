@@ -1,6 +1,6 @@
 import { LIGHT_TYPES } from './light-types'
 import { lightNode } from './node-factory'
-import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
+import { STUDIO_ENVIRONMENT, type LightDescriptor, type Vector3 } from '@shared/domain/scene'
 import type { SceneState } from './scene-state'
 
 /** Which lights a new scene opens with, and where. A kind absent here is simply not one of them. */
@@ -17,6 +17,7 @@ export function createDefaultScene(): SceneState {
       const position = DEFAULT_LIGHT_POSITIONS.get(type.kind)
       return position ? [lightNode(type.create(), position)] : []
     }),
-    selectedId: null,
+    selectedIds: [],
+    environment: STUDIO_ENVIRONMENT,
   }
 }

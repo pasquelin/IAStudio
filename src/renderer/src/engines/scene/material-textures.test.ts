@@ -4,13 +4,14 @@ import {
   MeshStandardMaterial,
   NoColorSpace,
   SRGBColorSpace,
+  SpriteMaterial,
   Texture,
   type ColorSpace,
 } from 'three'
-import type { MaterialDescriptor } from '@shared/domain/scene'
+import type { MaterialDescriptor, SpriteDescriptor } from '@shared/domain/scene'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMaterialTextures } from './material-textures'
-import { DEFAULT_MATERIAL } from './scene-state'
+import { createMaterialTextures, createSpriteTexture } from './material-textures'
+import { DEFAULT_MATERIAL, DEFAULT_SPRITE } from './scene-state'
 import { geometryFor } from './three-factory'
 import type { TextureCache } from './texture-cache'
 
@@ -186,5 +187,62 @@ describe('createMaterialTextures', () => {
 
     expect(scripted.released.sort()).toEqual(['a', 'b'])
     expect(material.map).toBeNull()
+  })
+})
+
+describe('createSpriteTexture', () => {
+  const withPicture = (assetId: string | null): SpriteDescriptor => ({
+    ...DEFAULT_SPRITE,
+    map: assetId ? { assetId } : null,
+  })
+
+  it('installs the picture the descriptor asks for, read as colour', async () => {
+    const scripted = scriptedCache()
+    const spriteMaterial = new SpriteMaterial()
+    const texture = createSpriteTexture(scripted.cache, spriteMaterial, onChange)
+
+    texture.apply(withPicture('pic-1'))
+    const loaded = await scripted.settle('pic-1')
+
+    expect(spriteMaterial.map).toBe(loaded)
+    expect(scripted.spaces.get('pic-1')).toBe(SRGBColorSpace)
+  })
+
+  it('gives the previous picture back when the sprite changes its mind', async () => {
+    const scripted = scriptedCache()
+    const spriteMaterial = new SpriteMaterial()
+    const texture = createSpriteTexture(scripted.cache, spriteMaterial, onChange)
+
+    texture.apply(withPicture('pic-1'))
+    await scripted.settle('pic-1')
+    texture.apply(withPicture('pic-2'))
+
+    expect(scripted.released).toEqual(['pic-1'])
+  })
+
+  // What arrives for a sprite that has moved on must not land: the reference went back with it.
+  it('drops a picture that lands after the sprite let it go', async () => {
+    const scripted = scriptedCache()
+    const spriteMaterial = new SpriteMaterial()
+    const texture = createSpriteTexture(scripted.cache, spriteMaterial, onChange)
+
+    texture.apply(withPicture('slow'))
+    texture.apply(withPicture(null))
+    await scripted.settle('slow')
+
+    expect(spriteMaterial.map).toBeNull()
+  })
+
+  it('empties the slot and gives its reference back when the sprite goes', async () => {
+    const scripted = scriptedCache()
+    const spriteMaterial = new SpriteMaterial()
+    const texture = createSpriteTexture(scripted.cache, spriteMaterial, onChange)
+
+    texture.apply(withPicture('pic-1'))
+    await scripted.settle('pic-1')
+    texture.dispose()
+
+    expect(scripted.released).toEqual(['pic-1'])
+    expect(spriteMaterial.map).toBeNull()
   })
 })

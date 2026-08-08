@@ -7,11 +7,13 @@ import {
   type BufferGeometry,
   type Light,
   type Mesh,
+  type SpriteMaterial,
 } from 'three'
 import type {
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
+  SpriteDescriptor,
   Vector3,
 } from '@shared/domain/scene'
 import { bareLight, geometryFor } from './three-factory'
@@ -56,6 +58,20 @@ export function applyGeometry(mesh: Mesh, descriptor: GeometryDescriptor): void 
 
   mesh.geometry = next
   previous.dispose()
+}
+
+/**
+ * The sprite's own parameters. `transparent` is deliberately left alone: `SpriteMaterial` turns
+ * it on in its constructor — "sprite materials are transparent", says three.js — and switching it
+ * off at full opacity would make every picture with an alpha channel draw its whole quad.
+ */
+export function applySprite(
+  material: SpriteMaterial,
+  descriptor: SpriteDescriptor,
+  fallbackColor: string,
+): void {
+  material.color.set(descriptor.color ?? fallbackColor)
+  material.opacity = descriptor.opacity
 }
 
 /** A light of the right class, carrying what its descriptor says. */

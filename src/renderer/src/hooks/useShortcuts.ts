@@ -1,5 +1,5 @@
 import { type CommandId, type CommandScope } from '@shared/domain/command'
-import { type MotionId, signatureOf } from '@shared/domain/shortcut'
+import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
 import { commandFor } from '@shared/domain/command'
 import { currentOverrides, motionFor } from '@/stores/bindings'
@@ -22,6 +22,11 @@ function isTyping(target: EventTarget | null): boolean {
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLSelectElement
   )
+}
+
+function holdsText(): boolean {
+  const selection = window.getSelection()
+  return selection !== null && !selection.isCollapsed
 }
 
 /**
@@ -70,7 +75,7 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
       }
 
       const command = commandFor(signature, scope, currentOverrides())
-      if (!command) return
+      if (!command || (copiesText(signature) && holdsText())) return
       event.preventDefault()
       // A held key repeats keydown. Space is held far more readily than ⌘Z, and a transport
       // toggled thirty times a second is a strobe, not a shortcut.

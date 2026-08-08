@@ -86,6 +86,7 @@ export function buildMenu(next: Language = language, remapped: BindingOverrides 
       openTool: request => sendToFocused(EVENTS.openTool, request),
       runCommand: command => sendToFocused(EVENTS.menuCommand, command),
       addNode: request => sendToFocused(EVENTS.sceneAdd, request),
+      exportScene: command => sendToFocused(EVENTS.sceneExport, command),
     },
   })
 

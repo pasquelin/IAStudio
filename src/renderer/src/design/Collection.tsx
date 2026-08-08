@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
+import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowSkin } from './styles'
 
 const GAP = 8
@@ -21,8 +22,14 @@ export type CollectionProps<T extends { id: string }> = {
    */
   renderCard?: (item: T) => ReactNode
   renderRow: (item: T) => ReactNode
-  selectedId?: string | null
-  onSelect?: (item: T) => void
+  /** Ordered like `Tree`'s: the last one is the anchor, and it is where the tab stop sits. */
+  selectedIds?: readonly string[]
+  /**
+   * What the click asked for, resolved against the items in the order they are drawn — the same
+   * gesture `Tree` offers, so a row behaves alike whichever panel lists it. A caller that only
+   * ever selects one thing can ignore both extra arguments.
+   */
+  onSelect?: (item: T, ids: readonly string[], mode: SelectionMode) => void
   /** Called as the end nears. Must tolerate being called again before it has answered. */
   onReachEnd?: () => void
   /** The items currently on screen, for whatever a card needs fetched only when it is seen. */
@@ -90,7 +97,7 @@ export function Collection<T extends { id: string }>({
   state = LIST_ONLY,
   renderCard,
   renderRow,
-  selectedId,
+  selectedIds,
   onSelect,
   onReachEnd,
   onVisible,
@@ -148,8 +155,22 @@ export function Collection<T extends { id: string }>({
    * One tab stop for the whole collection, then the arrows — the roving pattern `Tree` uses.
    * A cell per tab makes a catalogue of five hundred models five hundred presses deep.
    */
-  const selectedIndex = selectedId ? items.findIndex(item => item.id === selectedId) : -1
-  const tabStop = Math.max(0, selectedIndex)
+  const anchor = selectedIds?.at(-1)
+  const selected = new Set(selectedIds)
+  const tabStop = Math.max(
+    0,
+    items.findIndex(item => item.id === anchor),
+  )
+
+  const pick = (item: T, modifiers: Modifiers): void => {
+    const { ids, mode } = pickFrom(
+      items.map(candidate => candidate.id),
+      anchor,
+      item.id,
+      modifiers,
+    )
+    onSelect?.(item, ids, mode)
+  }
 
   const focusCell = (index: number): void => {
     const bounded = Math.max(0, Math.min(index, items.length - 1))
@@ -206,11 +227,11 @@ export function Collection<T extends { id: string }>({
                     <CollectionCell
                       key={item.id}
                       index={index}
-                      selected={item.id === selectedId}
+                      selected={selected.has(item.id)}
                       tabbable={index === tabStop}
                       // A list row spans the collection; a card is sized by its grid column.
                       className={grid ? undefined : 'h-full w-full'}
-                      onSelect={onSelect ? () => onSelect(item) : undefined}
+                      onSelect={onSelect ? modifiers => pick(item, modifiers) : undefined}
                       onArrow={event => onCellKeyDown(index, event)}
                     >
                       {card ? card(item) : renderRow(item)}
@@ -233,7 +254,7 @@ type CollectionCellProps = {
   selected: boolean
   /** The collection's single tab stop. Every other cell is reached with the arrows. */
   tabbable: boolean
-  onSelect?: () => void
+  onSelect?: (modifiers: Modifiers) => void
   onArrow: (event: KeyboardEvent) => void
   className?: string
   children: ReactNode
@@ -268,7 +289,7 @@ function CollectionCell({
       data-cell={index}
       tabIndex={tabbable ? 0 : -1}
       aria-selected={selected}
-      onClick={onSelect}
+      onClick={event => onSelect(event)}
       onKeyDown={event => {
         if (event.key === 'Enter' || event.key === ' ') {
           // Only when the cell itself holds the focus: a control inside the row — the visibility
@@ -276,7 +297,7 @@ function CollectionCell({
           // a key press. Without this, reaching the eye by keyboard also moved the selection.
           if (event.target !== event.currentTarget) return
           event.preventDefault()
-          onSelect()
+          onSelect(event)
           return
         }
         onArrow(event.nativeEvent)

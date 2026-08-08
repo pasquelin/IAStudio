@@ -20,9 +20,10 @@ Keys are written with symbols, the same ones throughout the studio.
 So `⌘Z` reads "Command + Z" on a Mac, and "Ctrl + Z" elsewhere. The symbols are written together:
 `⇧⌘Z` means all three keys at once.
 
-> **On Windows and Linux, the display still shows `⌘`.** The shortcut **works** with `Ctrl` — the
-> system menu has it right — but the tooltip and the shortcuts screen draw the Mac symbol. It is a
-> known display defect, listed in [What does not exist yet](18-limits.md).
+> **On Windows and Linux, `⌘` is taken literally.** The tooltip and the shortcuts screen draw the
+> Mac symbol everywhere; and while the shortcuts the system menu carries do answer to `Ctrl`, the
+> ones a surface listens for itself expect the Windows key. Both defects are listed in
+> [What does not exist yet](18-limits.md).
 
 ---
 
@@ -83,8 +84,25 @@ and you can assign one to it (see below).
 | **Move** | `G` | drag the coloured arrows to slide it |
 | **Rotate** | `R` | drag the coloured circles to turn it |
 | **Scale** | `S` | drag the handles. `⇧` keeps its proportions |
+| **Magnet** | `M` | steps the handles by regular amounts, set in the preferences |
+| **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
+| **Projection** | `O` | switches between perspective and orthographic projection |
+| **Display** | `Z` | cycles shaded, wireframe, shaded and wireframe |
 | **Frame selection** | `F` | brings the camera in so the object fills the view |
 | **Delete** | `Del` | removes the chosen object. `⌘Z` brings it back |
+
+### Assemble and duplicate
+
+| Action | Key | What it does |
+|---|---|---|
+| **Group** | `⌘G` | files the selected objects under one group |
+| **Duplicate** | `⌘D` | puts a copy of the selection at the same place, and selects it |
+| **Copy** | `⌘C` | holds the selection, without touching the scene |
+| **Cut** | `⌘X` | holds it and takes it out of the scene |
+| **Paste** | `⌘V` | puts what was held into the current scene |
+
+> This clipboard is the studio's: it does not touch the system one, and `⌘C` stands aside as soon
+> as text is selected on screen.
 
 ### Undo and redo
 
@@ -283,6 +301,11 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 | `⌃⌘F` | Full screen | | | |
 | `⌘Z` | | Undo | Undo | Undo |
 | `⇧⌘Z` | | Redo | Redo | Redo |
+| `⌘G` | | Group | | |
+| `⌘D` | | Duplicate | | |
+| `⌘C` / `⌘X` / `⌘V` | | Copy / Cut / Paste | | |
+| `O` | | Projection | | |
+| `Z` | | Display | | |
 | `V` | | Select | | |
 | `G` | | Move | | |
 | `R` | | Rotate | | |

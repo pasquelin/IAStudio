@@ -51,6 +51,55 @@ export type GeometryDescriptor =
  */
 export type TextureRef = { assetId: string }
 
+/**
+ * An imported model, for the same reason and in the same shape as a texture: what a document
+ * stores is what a reload can resolve again.
+ *
+ * One node holding a reference, never a subtree of nodes. A single GLB brings meshes by the
+ * thousand, and a save was measured freezing every window past ~5500 nodes — the document grows
+ * by one row here whatever the file weighs. The cost is that the inside of a model cannot be edited;
+ * that is the right trade for a generation studio, and an explicit "explode" command is what
+ * would lift it the day it matters.
+ */
+export type ModelRef = { assetId: string }
+
+/**
+ * What lights a viewport. `studio` is procedural — three builds a small lit room and prefilters
+ * it — so a brand new document is already lit without the studio shipping an HDRI; anything else
+ * is a skybox of the project, named by asset id like every other reference a document stores.
+ */
+export type EnvironmentRef = { kind: 'studio' } | { kind: 'skybox'; assetId: string }
+
+export const STUDIO_ENVIRONMENT: EnvironmentRef = Object.freeze({ kind: 'studio' })
+
+/**
+ * What a stored value says about lighting, or the studio when it says nothing usable — a
+ * document written before environments existed, a sky named without an id, a hand-edited file.
+ */
+export function readEnvironment(value: unknown): EnvironmentRef {
+  if (typeof value !== 'object' || value === null) return STUDIO_ENVIRONMENT
+
+  const held: { kind?: unknown; assetId?: unknown } = value
+  return held.kind === 'skybox' && typeof held.assetId === 'string' && held.assetId !== ''
+    ? { kind: 'skybox', assetId: held.assetId }
+    : STUDIO_ENVIRONMENT
+}
+
+/**
+ * How soft a shadow edge is, named as a person would rather than as three.js spells it — the
+ * engine maps these onto its map types. Here because it is persisted, and `shared/` is where
+ * what a settings file holds is described.
+ *
+ * Two words and not three: three.js 0.185 deprecated its softest filter and silently falls back
+ * to the middle one, so a third option would have been a setting that changes nothing.
+ */
+export type ShadowQuality = 'hard' | 'soft'
+
+export const SHADOW_QUALITIES: readonly ShadowQuality[] = ['hard', 'soft']
+
+/** The sides a shadow map may take. A list, so a slider cannot suggest the values in between. */
+export const SHADOW_MAP_SIZES: readonly number[] = [512, 1024, 2048, 4096]
+
 /** The maps a `MeshStandardMaterial` reads, in the order the inspector lists them. */
 export type TextureSlot = 'map' | 'normalMap' | 'roughnessMap' | 'metalnessMap' | 'aoMap'
 
@@ -69,6 +118,21 @@ export type MaterialDescriptor = {
   roughness: number
   metalness: number
 } & { [S in TextureSlot]: TextureRef | null }
+
+/**
+ * A sprite: a picture that always faces the camera, whatever the view does.
+ *
+ * Not a geometry and not a material — nothing about it is three-dimensional, and it is lit by
+ * nothing — which is why it is a node of its own rather than a mesh wearing a plane. Its size
+ * is its transform's scale, like everything else in the scene.
+ */
+export type SpriteDescriptor = {
+  /** `null` means the studio's own colour, resolved from the palette when the sprite is built. */
+  color: string | null
+  opacity: number
+  /** What it draws. None leaves the plain coloured quad three.js gives a mapless sprite. */
+  map: TextureRef | null
+}
 
 /**
  * `target` is a point, not an object. three.js aims a light at an `Object3D`, and the official
@@ -91,8 +155,7 @@ export type LightDescriptor =
       target: Vector3
     }
 
-/** `sprite` and `text` are offered but not buildable yet: neither is a geometry. */
-export type MeshKind = GeometryDescriptor['kind'] | 'sprite' | 'text'
+export type MeshKind = GeometryDescriptor['kind']
 
 export type LightKind = LightDescriptor['kind']
 
@@ -123,12 +186,38 @@ export const MESH_ENTRIES: readonly SceneEntry<MeshKind>[] = [
   { kind: 'plane' },
   { kind: 'ring' },
   { kind: 'sphere' },
-  { kind: 'sprite', disabled: true },
   { kind: 'tetrahedron' },
-  { kind: 'text', disabled: true },
   { kind: 'torus' },
   { kind: 'torusKnot' },
   { kind: 'tube' },
+]
+
+/**
+ * The files a scene can leave the studio as. `glb` is one binary file and the safe default;
+ * `gltf` is its JSON form, readable and diffable; `usdz` is what Apple's viewers open.
+ */
+export type ExportFormat = 'glb' | 'gltf' | 'usdz'
+
+export const EXPORT_FORMATS: readonly ExportFormat[] = ['glb', 'gltf', 'usdz']
+
+/** The one place the studio's formats meet their file extensions. */
+export const EXPORT_EXTENSIONS: Record<ExportFormat, string> = {
+  glb: '.glb',
+  gltf: '.gltf',
+  usdz: '.usdz',
+}
+
+/**
+ * What is picked from the Add menu without being a mesh or a light.
+ *
+ * `text` is declared and greyed: three.js builds a 3D text from a font file, a project holds no
+ * asset of that kind, and the studio ships none — see the plan of the 3D workspace.
+ */
+export type ObjectKind = 'sprite' | 'text'
+
+export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
+  { kind: 'sprite' },
+  { kind: 'text', disabled: true },
 ]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [

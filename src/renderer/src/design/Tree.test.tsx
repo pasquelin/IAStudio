@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import type { SelectionMode } from '@/helpers/selection'
 import { flattenTree, Tree } from './Tree'
 
 const NODES = [
@@ -44,11 +45,32 @@ describe('flattenTree', () => {
   })
 })
 
-function renderTree(onSelect = (): void => {}, onToggle = (): void => {}) {
+/** jsdom implements no `DataTransfer`; the tree reads exactly these three members of one. */
+function dragData() {
+  const held = new Map<string, string>()
+  const data = {
+    // Read on the event after the one that set it, so it has to follow along.
+    types: [] as string[],
+    setData: (type: string, value: string) => {
+      held.set(type, value)
+      data.types = [...held.keys()]
+    },
+    getData: (type: string) => held.get(type) ?? '',
+  }
+  return data
+}
+
+type Selector = (ids: readonly string[], mode: SelectionMode) => void
+
+function renderTree(
+  onSelect: Selector = () => {},
+  onToggle = (): void => {},
+  selectedIds: readonly string[] = [],
+) {
   return render(
     <Tree
       nodes={NODES}
-      selectedId={null}
+      selectedIds={selectedIds}
       expandedIds={new Set(['scene'])}
       onSelect={onSelect}
       onToggle={onToggle}
@@ -64,13 +86,144 @@ describe('Tree', () => {
     expect(screen.getAllByRole('treeitem')).toHaveLength(3)
   })
 
-  it('reports the clicked node', async () => {
+  it('reports the clicked node, replacing whatever was selected', async () => {
     const onSelect = vi.fn()
     renderTree(onSelect)
 
     await userEvent.click(screen.getByText('a'))
 
-    expect(onSelect).toHaveBeenCalledWith('a')
+    expect(onSelect).toHaveBeenCalledWith(['a'], 'replace')
+  })
+
+  it('toggles the clicked node when the command key is held', async () => {
+    const onSelect = vi.fn()
+    // One session for the whole gesture: the direct API opens a new one per call, and the held
+    // modifier would be released before the click that is supposed to read it.
+    const user = userEvent.setup()
+    renderTree(onSelect, () => {}, ['scene'])
+
+    await user.keyboard('{Meta>}')
+    await user.click(screen.getByText('a'))
+    await user.keyboard('{/Meta}')
+
+    expect(onSelect).toHaveBeenCalledWith(['a'], 'toggle')
+  })
+
+  // The rows on screen are the tree's own order, and that is what "everything between" means.
+  it('extends over the rows between the anchor and the shift-clicked one', async () => {
+    const onSelect = vi.fn()
+    const user = userEvent.setup()
+    renderTree(onSelect, () => {}, ['scene'])
+
+    await user.keyboard('{Shift>}')
+    await user.click(screen.getByText('b'))
+    await user.keyboard('{/Shift}')
+
+    expect(onSelect).toHaveBeenCalledWith(['scene', 'a', 'b'], 'replace')
+  })
+
+  it('steps over the rows a selection may not hold when it extends', async () => {
+    const onSelect = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={['scene']}
+        expandedIds={new Set(['scene'])}
+        onSelect={onSelect}
+        onToggle={() => {}}
+        selectable={node => node.id !== 'a'}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    await user.keyboard('{Shift>}')
+    await user.click(screen.getByText('b'))
+    await user.keyboard('{/Shift}')
+
+    expect(onSelect).toHaveBeenCalledWith(['scene', 'b'], 'replace')
+  })
+
+  it('selects nothing at all when an unselectable row is clicked', async () => {
+    const onSelect = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={['b']}
+        expandedIds={new Set(['scene'])}
+        onSelect={onSelect}
+        onToggle={() => {}}
+        selectable={node => node.id !== 'scene'}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    await userEvent.click(screen.getByText('scene'))
+
+    expect(onSelect).toHaveBeenCalledWith([], 'replace')
+  })
+
+  it('paints every selected row, not only the anchor', () => {
+    renderTree(
+      () => {},
+      () => {},
+      ['scene', 'b'],
+    )
+
+    const selected = screen
+      .getAllByRole('treeitem')
+      .filter(row => row.getAttribute('aria-selected') === 'true')
+    expect(selected).toHaveLength(2)
+  })
+
+  it('leaves the rows undraggable when nothing listens for a drop', () => {
+    renderTree()
+    expect(screen.getAllByRole('treeitem')[0]).not.toHaveAttribute('draggable', 'true')
+  })
+
+  it('reports a row dropped onto another', () => {
+    const onDrop = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={onDrop}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const rows = screen.getAllByRole('treeitem')
+    const data = dragData()
+    fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    fireEvent.drop(rows[2]!, { dataTransfer: data })
+
+    expect(onDrop).toHaveBeenCalledWith('a', 'b')
+  })
+
+  // Dropping a row onto itself is the gesture of someone who changed their mind.
+  it('says nothing when a row is dropped onto itself', () => {
+    const onDrop = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={onDrop}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const row = screen.getAllByRole('treeitem')[1]!
+    const data = dragData()
+    fireEvent.dragStart(row, { dataTransfer: data })
+    fireEvent.drop(row, { dataTransfer: data })
+
+    expect(onDrop).not.toHaveBeenCalled()
   })
 
   it('expands with the right arrow and collapses with the left', async () => {
@@ -126,7 +279,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={many}
-        selectedId={null}
+        selectedIds={[]}
         expandedIds={new Set()}
         onSelect={() => {}}
         onToggle={() => {}}

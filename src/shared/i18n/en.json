@@ -70,7 +70,8 @@
     "allMedia": "All media",
     "video": "Video",
     "audio": "Audio",
-    "image": "Image"
+    "image": "Image",
+    "mesh": "3D model"
   },
   "ingest": {
     "queued": "Waiting…",
@@ -289,16 +290,14 @@
     "plane": "Plane",
     "ring": "Ring",
     "sphere": "Sphere",
-    "sprite": "Sprite",
     "tetrahedron": "Tetrahedron",
-    "text": "Text",
     "torus": "Torus",
     "torusKnot": "Torus knot",
     "tube": "Tube",
     "add": "Add a mesh",
     "addHint": "Drop a primitive at the origin of the scene",
     "remove": "Delete mesh",
-    "removeHint": "Remove the selected mesh from the scene",
+    "removeHint": "Remove the selected meshes from the scene",
     "visible": "Show or hide",
     "empty": "No mesh yet. Add one to get started.",
     "noDocument": "Open a scene to see its meshes."
@@ -312,7 +311,7 @@
     "add": "Add a light",
     "addHint": "Drop a light source into the scene",
     "remove": "Delete light",
-    "removeHint": "Remove the selected light from the scene",
+    "removeHint": "Remove the selected lights from the scene",
     "visible": "Show or hide",
     "empty": "No light. The scene will stay black.",
     "noDocument": "Open a scene to see its lights."
@@ -325,12 +324,20 @@
     "otherWorkspace": "The explorer follows a 3D scene. Open the 3D workspace to see its contents.",
     "noDocument": "Open a scene to see what is in it."
   },
+  "objects": {
+    "sprite": "Sprite",
+    "text": "Text"
+  },
   "inspector": {
     "noDocument": "Open a scene to inspect what is in it.",
+    "castShadow": "Casts a shadow",
+    "receiveShadow": "Catches shadows",
+    "shadows": "Shadows",
     "noSelection": "Select an object to see its properties.",
     "transform": "Transform",
     "geometry": "Geometry",
     "material": "Material",
+    "sprite": "Sprite",
     "light": "Light",
     "name": "Name",
     "position": "Position",
@@ -369,6 +376,7 @@
       "roughness": "Roughness",
       "metalness": "Metalness",
       "map": "Texture",
+      "opacity": "Opacity",
       "normalMap": "Normals",
       "roughnessMap": "Roughness map",
       "metalnessMap": "Metalness map",
@@ -433,7 +441,12 @@
     "opacity": "Opacity",
     "text": "Text",
     "words": "Words",
-    "textSize": "Size"
+    "textSize": "Size",
+    "environment": "Environment",
+    "sky": "Sky",
+    "studio": "Studio",
+    "chooseSky": "Choose a sky",
+    "clearSky": "Back to the studio"
   },
   "transport": {
     "play": "Play",
@@ -495,8 +508,46 @@
     "scaleHint": "Change the selected object’s scale",
     "frame": "Frame selection",
     "frameHint": "Recentre the camera on the selected object",
+    "snap": "Snap",
+    "snapHint": "Move the handles in regular steps, as coarse as the preferences say",
+    "space": "Local frame",
+    "projection": "Projection",
+    "projectionHint": "Switch between perspective and orthographic projection",
+    "view": "Stand at",
+    "viewHint": "Look at the scene from one of its six sides",
+    "display": "Display",
+    "displayHint": "Draw the surfaces, their edges, or both",
+    "spaceHint": "Line the handles up with the object's own orientation; when it is off, they follow the world axes",
+    "group": "Group",
+    "groupHint": "File the selected objects under one group",
+    "duplicate": "Duplicate",
+    "duplicateHint": "Put down a copy of whatever is selected",
+    "copy": "Copy",
+    "copyHint": "Hold whatever is selected, to paste later",
+    "cut": "Cut",
+    "cutHint": "Hold whatever is selected and take it out of the scene",
+    "paste": "Paste",
+    "pasteHint": "Put what was copied into this scene",
     "delete": "Delete",
-    "deleteHint": "Remove the selected object from the scene"
+    "deleteHint": "Remove whatever is selected from the scene"
+  },
+  "exportFormats": {
+    "glb": "Binary glTF (.glb)",
+    "gltf": "glTF (.gltf)",
+    "usdz": "USDZ (.usdz)"
+  },
+  "sceneViews": {
+    "front": "Front",
+    "back": "Back",
+    "left": "Left",
+    "right": "Right",
+    "top": "Top",
+    "bottom": "Bottom"
+  },
+  "sceneDisplay": {
+    "shaded": "Shaded",
+    "wireframe": "Wireframe",
+    "both": "Shaded and wireframe"
   },
   "project": {
     "none": "No project open",
@@ -565,6 +616,9 @@
     "add": "Add",
     "mesh": "Mesh",
     "light": "Light",
+    "object": "Object",
+    "exportScene": "Export the scene",
+    "exportSelection": "Export the selection",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
     "zoomIn": "Zoom in",
@@ -693,6 +747,28 @@
       "title": "Boost",
       "help": "What the speed is multiplied by while you hold the boost key. At 3 you go three times faster — enough to cross a large scene without changing the setting above."
     },
+    "shadowQuality": {
+      "title": "Shadow softness",
+      "help": "The grain of a shadow's edge. Hard cuts cleanly and costs the least; Soft smooths the edge. What throws a shadow, on the other hand, is decided object by object in the inspector.",
+      "hard": "Hard",
+      "soft": "Soft"
+    },
+    "shadowMapSize": {
+      "title": "Shadow detail",
+      "help": "The side, in pixels, of the shadow map each shadow-casting light computes. Doubling it costs four times the memory: 2048 is plenty for a scene of a few objects, 4096 earns its keep when one light covers a whole set."
+    },
+    "snapTranslate": {
+      "title": "Move step",
+      "help": "How far an object travels in one step while snapping is on, in metres. Snapping itself is switched on from the scene toolbar; this only says how fine it is."
+    },
+    "snapRotate": {
+      "title": "Turn step",
+      "help": "The angle of one step of rotation while snapping is on, in degrees. Rotation steps on from wherever it started: 15° gives twenty-four steps per turn, 90° quarter turns."
+    },
+    "snapScale": {
+      "title": "Scale step",
+      "help": "How much the scale moves in one step while snapping is on. What is reachable is the multiples of the step: 0.1 lands exactly on tenths and halves, 0.25 on quarters."
+    },
     "fieldOfView": {
       "title": "Field of view",
       "help": "How much the camera takes in, in degrees. A narrow angle pulls close and flattens, like a telephoto lens; a wide one shows far more but bends the edges. 60 is close to what an eye sees."
@@ -809,9 +885,45 @@
       "title": "Frame selection",
       "help": "Brings the camera close enough that the chosen object fills the view. Handy when you are lost, or when an object is tiny."
     },
+    "sceneSnap": {
+      "title": "Snapping",
+      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the 3D space preferences."
+    },
+    "sceneSpace": {
+      "title": "Local frame",
+      "help": "Lines the handles up with the object's own orientation rather than the world's. On a turned object, that is what lets you move it “towards its front” rather than north."
+    },
+    "sceneProjection": {
+      "title": "Projection",
+      "help": "Switches between perspective, where receding lines converge, and orthographic projection, where parallels stay parallel. That is what lets an alignment be judged by eye."
+    },
+    "sceneDisplay": {
+      "title": "Display",
+      "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button's menu picks one directly."
+    },
+    "sceneGroup": {
+      "title": "Group",
+      "help": "Files the selected objects under one group. Moving the group moves them all, and ⌘Z takes the grouping back."
+    },
+    "sceneDuplicate": {
+      "title": "Duplicate",
+      "help": "Puts a copy of the selection under the same parent and at the very same place, then selects it. A group duplicates whole, with everything hanging from it."
+    },
+    "sceneCopy": {
+      "title": "Copy",
+      "help": "Holds on to the selection so it can be pasted, here or in another scene. This is the studio's own clipboard: it leaves the system one alone."
+    },
+    "sceneCut": {
+      "title": "Cut",
+      "help": "Holds on to the selection and takes it out of the scene. ⌘Z brings it back."
+    },
+    "scenePaste": {
+      "title": "Paste",
+      "help": "Puts what was copied into the scene in front, and selects it. Pasting twice makes two separate copies."
+    },
     "sceneDelete": {
       "title": "Delete",
-      "help": "Removes the chosen object from the scene. Nothing is lost for good: ⌘Z brings it back."
+      "help": "Removes everything selected from the scene. Nothing is lost for good: ⌘Z brings it back."
     },
     "undo": {
       "title": "Undo",

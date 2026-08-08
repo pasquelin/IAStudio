@@ -3,9 +3,7 @@ import {
   mdiCircleOutline,
   mdiCube,
   mdiCylinder,
-  mdiFormatText,
   mdiHexagonOutline,
-  mdiImageOutline,
   mdiInfinity,
   mdiOctahedron,
   mdiPill,
@@ -24,14 +22,13 @@ export type MeshPrimitive = {
   icon: string
   /** Declared but not buildable yet: every menu greys it rather than hiding it. */
   disabled: boolean
-  create?: () => GeometryDescriptor
+  create: () => GeometryDescriptor
 }
 
 /**
  * What the shared table cannot carry: the glyph and the descriptor.
  *
- * `create` is narrowed per kind, so a builder handed the wrong descriptor fails to compile —
- * and `sprite` and `text`, which no geometry answers, can only be declared without one.
+ * `create` is narrowed per kind, so a builder handed the wrong descriptor fails to compile.
  *
  * Segment counts sit below the official editor's: a 32 x 16 sphere is already smooth on screen,
  * and every extra ring is paid on every frame.
@@ -39,7 +36,7 @@ export type MeshPrimitive = {
 type MeshBuilders = {
   [K in MeshKind]: {
     icon: string
-    create?: () => Extract<GeometryDescriptor, { kind: K }>
+    create: () => Extract<GeometryDescriptor, { kind: K }>
   }
 }
 
@@ -96,15 +93,11 @@ const MESH_BUILDERS: MeshBuilders = {
     icon: mdiSphere,
     create: () => ({ kind: 'sphere', radius: 0.5, widthSegments: 32, heightSegments: 16 }),
   },
-  // Not a geometry but a camera-facing image, hence no builder.
-  sprite: { icon: mdiImageOutline },
   // A tetrahedron is a triangular pyramid.
   tetrahedron: {
     icon: mdiPyramid,
     create: () => ({ kind: 'tetrahedron', radius: 0.5 }),
   },
-  // `TextGeometry` needs a JSON font loaded, so it needs an asset and a loader first.
-  text: { icon: mdiFormatText },
   torus: {
     icon: mdiCircleDouble,
     create: () => ({
@@ -136,9 +129,7 @@ const MESH_BUILDERS: MeshBuilders = {
 /** The shared table, in its order, with the glyph and the builder the menu has no use for. */
 export const MESH_PRIMITIVES: readonly MeshPrimitive[] = MESH_ENTRIES.map(entry => ({
   kind: entry.kind,
-  // One answer to "is this offered yet", derived rather than declared twice: the native menu
-  // reads the shared flag and the in-app menus read this, and they must never disagree.
-  disabled: entry.disabled ?? MESH_BUILDERS[entry.kind].create === undefined,
+  disabled: entry.disabled ?? false,
   ...MESH_BUILDERS[entry.kind],
 }))
 

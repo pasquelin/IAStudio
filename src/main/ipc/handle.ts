@@ -45,6 +45,8 @@ type ChannelMethod = {
   [CHANNELS.assetsReveal]: StudioBridge['assets']['reveal']
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
 
+  [CHANNELS.sceneExport]: StudioBridge['scene']['export']
+
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
   [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']
   [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']

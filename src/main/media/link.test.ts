@@ -11,9 +11,21 @@ describe('media kind from a file name', () => {
     expect(assetTypeOf('/plates/sky.jpg')).toBe('image')
   })
 
+  // Without this, only generated models could be imported — which makes no sense for a studio
+  // whose whole point is mixing what it makes with what you already have.
+  it('reads a model as mesh, whatever the case of its extension', () => {
+    expect(assetTypeOf('/props/chair.glb')).toBe('mesh')
+    expect(assetTypeOf('/props/chair.GLB')).toBe('mesh')
+  })
+
   it('reads nothing from a file the studio has no editor for', () => {
     expect(assetTypeOf('/notes.txt')).toBeNull()
     expect(assetTypeOf('/no-extension')).toBeNull()
+    // Announced nowhere rather than accepted and then failing in the viewport: a `.gltf` cannot
+    // resolve its sidecars once served flat, and nothing here reads `.obj` or `.fbx` at all.
+    expect(assetTypeOf('/props/chair.gltf')).toBeNull()
+    expect(assetTypeOf('/props/chair.obj')).toBeNull()
+    expect(assetTypeOf('/props/chair.fbx')).toBeNull()
   })
 })
 
@@ -40,7 +52,13 @@ describe('linked asset', () => {
 })
 
 describe('import dialog filters', () => {
-  const labels = { all: 'Tous les médias', video: 'Vidéo', audio: 'Audio', image: 'Image' }
+  const labels = {
+    all: 'Tous les médias',
+    video: 'Vidéo',
+    audio: 'Audio',
+    image: 'Image',
+    mesh: 'Modèle 3D',
+  }
 
   it('offers every media kind first, then one filter per kind, in the user language', () => {
     expect(mediaFilters(labels).map(filter => filter.name)).toEqual([
@@ -48,6 +66,7 @@ describe('import dialog filters', () => {
       'Vidéo',
       'Audio',
       'Image',
+      'Modèle 3D',
     ])
   })
 

@@ -24,6 +24,28 @@ describe('Toolbar', () => {
     )
   })
 
+  // A toggle and an armed tool are two questions, drawn the same way: snapping being on says
+  // nothing about which tool is armed.
+  it('draws a pressed toggle without anything being armed', () => {
+    const toggles: ToolbarItem[] = [{ ...TOOLS[0]!, pressed: true }, TOOLS[1]!]
+    render(<Toolbar tools={toggles} onTool={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'Fermer (V)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('leaves the armed tool pressed even when another one reports itself off', () => {
+    const toggles: ToolbarItem[] = [TOOLS[0]!, { ...TOOLS[1]!, pressed: false }]
+    render(<Toolbar tools={toggles} activeTool="brush" onTool={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'Générer (B)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
   it('reports the chosen tool', async () => {
     const onTool = vi.fn()
     render(<Toolbar tools={TOOLS} onTool={onTool} />)

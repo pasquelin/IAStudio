@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { ToolButton } from '@/design/ToolButton'
-import { removeNode } from '@/engines/scene/commands'
-import { labelKeyOf, NODE_KINDS } from '@/engines/scene/node-kinds'
-import { nodeById, type SceneNodeType } from '@/engines/scene/scene-state'
+import { removeNodes } from '@/engines/scene/commands'
+import { labelKeyOf, NODE_KINDS, type PanelNodeType } from '@/engines/scene/node-kinds'
+import { selectedNodes } from '@/engines/scene/scene-state'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useAddNode } from '@/hooks/useAddNode'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -15,18 +15,22 @@ import { sceneOf, useScenes } from '@/stores/scenes'
  * Add and delete, on the panel's own title bar. Shared by the mesh and light panels, which
  * differ only by the registry that fills the flyout and by the node type they may remove.
  */
-export function NodeActions({ documentId, type }: { documentId: string; type: SceneNodeType }) {
+export function NodeActions({ documentId, type }: { documentId: string; type: PanelNodeType }) {
   const { t } = useTranslation()
   const kind = NODE_KINDS[type]
   const { entries, namespace } = kind
   const addNodeOf = useAddNode(documentId)
 
-  const selectedId = useScenes(state => sceneOf(state, documentId).selectedId)
+  const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-  // The panel owns half the scene, and must not delete the other half's selection.
+  // The panel owns half the scene, and must not delete the other half's selection: a mixed
+  // selection deleted from the mesh panel takes its meshes and leaves its lights standing.
   const removable = useMemo(
-    () => selectedId !== null && nodeById({ nodes, selectedId }, selectedId)?.type === type,
-    [nodes, selectedId, type],
+    () =>
+      selectedNodes(nodes, selectedIds)
+        .filter(node => node.type === type)
+        .map(node => node.id),
+    [nodes, selectedIds, type],
   )
 
   return (
@@ -43,7 +47,7 @@ export function NodeActions({ documentId, type }: { documentId: string; type: Sc
           entries.map(entry => (
             <MenuRow
               key={entry.kind}
-              label={t(labelKeyOf(kind, entry))}
+              label={t(labelKeyOf(kind.namespace, entry))}
               icon={entry.icon}
               disabled={entry.disabled}
               onSelect={() => {
@@ -61,10 +65,8 @@ export function NodeActions({ documentId, type }: { documentId: string; type: Sc
         description={t(`${namespace}.removeHint`)}
         tooltip={TIP_BOTTOM}
         variant="header"
-        disabled={!removable}
-        onClick={() =>
-          selectedId && useScenes.getState().runCommand(documentId, removeNode(selectedId))
-        }
+        disabled={removable.length === 0}
+        onClick={() => useScenes.getState().runCommand(documentId, removeNodes(nodes, removable))}
       />
     </>
   )

@@ -70,6 +70,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       saveAudio: () => Promise.reject(new Error('no project')),
       ...overrides.assets,
     },
+    scene: {
+      export: () => Promise.resolve(null),
+      ...overrides.scene,
+    },
     media: {
       ingest: () => Promise.resolve([]),
       cancel: () => Promise.resolve(),
@@ -92,6 +96,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onOpenTool: noSubscription,
       onCommand: noSubscription,
       onSceneAdd: noSubscription,
+      onSceneExport: noSubscription,
       ...overrides.menu,
     },
   }

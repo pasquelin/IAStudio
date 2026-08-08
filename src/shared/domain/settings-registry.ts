@@ -6,6 +6,7 @@ import {
   THEMES,
   type SettingsSectionId,
 } from './settings'
+import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from './scene'
 import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 
 /**
@@ -327,6 +328,59 @@ export const SETTING_REGISTRY = [
     min: 30,
     max: 100,
     step: 5,
+  }),
+  // Sliders, not counters: a whole-number field refuses the decimals these are made of — their
+  // very defaults, half a metre and a tenth, would be unwritable from the screen.
+  setting({
+    path: 'three.snapTranslate',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.snapTranslate.title',
+    helpKey: 'settings.snapTranslate.help',
+    min: 0.1,
+    max: 10,
+    step: 0.1,
+  }),
+  setting({
+    path: 'three.snapRotate',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.snapRotate.title',
+    helpKey: 'settings.snapRotate.help',
+    min: 1,
+    max: 90,
+    step: 1,
+  }),
+  setting({
+    path: 'three.snapScale',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.snapScale.title',
+    helpKey: 'settings.snapScale.help',
+    min: 0.05,
+    max: 1,
+    step: 0.05,
+  }),
+  setting({
+    path: 'three.shadowQuality',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.shadowQuality.title',
+    helpKey: 'settings.shadowQuality.help',
+    options: SHADOW_QUALITIES.map(value => ({
+      value,
+      labelKey: `settings.shadowQuality.${value}`,
+    })),
+  }),
+  setting({
+    path: 'three.shadowMapSize',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.shadowMapSize.title',
+    helpKey: 'settings.shadowMapSize.help',
+    // A list rather than a slider: the values in between are not allowed, and a slider would
+    // suggest they are.
+    options: SHADOW_MAP_SIZES.map(value => ({ value, label: String(value) })),
   }),
   setting({
     path: 'storage.projectsFolder',

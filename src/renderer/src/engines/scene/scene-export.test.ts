@@ -1,0 +1,134 @@
+import {
+  BoxGeometry,
+  GridHelper,
+  LineBasicMaterial,
+  Mesh,
+  MeshStandardMaterial,
+  Scene,
+} from 'three'
+import { describe, expect, it } from 'vitest'
+import { applyWireOverlay } from './scene-view'
+import { exportObjects } from './scene-export'
+
+/** What a `.gltf` file holds, read back as the JSON it is — the point is to check the file. */
+type GltfFile = {
+  meshes?: { name?: string }[]
+  nodes?: { name?: string }[]
+}
+
+async function gltfOf(objects: Parameters<typeof exportObjects>[0]): Promise<GltfFile> {
+  const bytes = await exportObjects(objects, 'gltf')
+  // `as`: what a `.gltf` file holds is glTF, and the two fields read here are the ones a reader
+  // would look at. A guard would restate the schema to learn nothing more.
+  return JSON.parse(new TextDecoder().decode(bytes)) as GltfFile
+}
+
+function named(name: string): Mesh {
+  const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+  mesh.name = name
+  return mesh
+}
+
+describe('exportObjects', () => {
+  it('writes the objects it was handed', async () => {
+    const file = await gltfOf([named('box-1')])
+
+    expect(file.nodes?.map(node => node.name)).toContain('box-1')
+  })
+
+  it('writes several roots into one file', async () => {
+    const file = await gltfOf([named('box-1'), named('box-2')])
+
+    const names = file.nodes?.map(node => node.name) ?? []
+    expect(names).toContain('box-1')
+    expect(names).toContain('box-2')
+  })
+
+  it('carries what hangs from a root along with it', async () => {
+    const root = named('parent')
+    root.add(named('child'))
+
+    const file = await gltfOf([root])
+
+    expect(file.nodes?.map(node => node.name)).toContain('child')
+  })
+
+  /**
+   * The whole point of the step, checked on the file rather than assumed: the grid, the
+   * trihedron and the helpers are siblings of the nodes in the viewport, so handing over the
+   * nodes leaves them out. A grid handed over would land in the file — this proves the
+   * difference is the input, not luck.
+   */
+  it('leaves out what it was not handed, grid included', async () => {
+    const viewport = new Scene()
+    const grid = new GridHelper(10, 10)
+    grid.name = 'grid'
+    const mesh = named('box-1')
+    // Siblings in one scene, exactly as the viewport holds them: only the mesh is handed over.
+    viewport.add(grid, mesh)
+
+    const file = await gltfOf([mesh])
+
+    const names = file.nodes?.map(node => node.name) ?? []
+    expect(names).toContain('box-1')
+    expect(names).not.toContain('grid')
+  })
+
+  // The one thing that *is* a child of a mesh, and the one thing that would slip through.
+  it('leaves the wireframe overlay out of the file', async () => {
+    const mesh = named('box-1')
+    applyWireOverlay(mesh, true, new LineBasicMaterial())
+    expect(mesh.children).toHaveLength(1)
+
+    const file = await gltfOf([mesh])
+
+    expect(file.nodes?.map(node => node.name)).not.toContain('wireframe-overlay')
+  })
+
+  // Copies are handed over: the scene the user is looking at is not touched by an export.
+  it('leaves the live objects exactly as they were', async () => {
+    const mesh = named('box-1')
+    applyWireOverlay(mesh, true, new LineBasicMaterial())
+    mesh.position.set(1, 2, 3)
+
+    await gltfOf([mesh])
+
+    expect(mesh.children).toHaveLength(1)
+    expect(mesh.position.toArray()).toEqual([1, 2, 3])
+  })
+
+  /**
+   * The exporters write a *local* transform. Handed the object itself, a selected child would
+   * land in the file where it sits inside its parent — at the origin here — rather than where it
+   * sits in the scene.
+   */
+  it('writes a selected child where it stands in the world', async () => {
+    const parent = named('parent')
+    parent.position.set(10, 0, 0)
+    const child = named('child')
+    parent.add(child)
+
+    const bytes = await exportObjects([child], 'gltf')
+    // `as`: what a `.gltf` file holds is glTF, and these are the fields a reader looks at. The
+    // exporter writes a column-major matrix rather than a translation, so x sits at index 12.
+    const file = JSON.parse(new TextDecoder().decode(bytes)) as {
+      nodes?: { name?: string; matrix?: number[]; translation?: number[] }[]
+    }
+    const node = file.nodes?.[0]
+
+    expect(node?.translation?.[0] ?? node?.matrix?.[12]).toBe(10)
+  })
+
+  // `glb` is one binary file: it opens with the four bytes every reader looks for first.
+  it('writes a binary glTF that says it is one', async () => {
+    const bytes = await exportObjects([named('box-1')], 'glb')
+
+    expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe('glTF')
+  })
+
+  it('writes nothing at all for an empty selection', async () => {
+    const file = await gltfOf([])
+
+    expect(file.nodes ?? []).toEqual([])
+  })
+})

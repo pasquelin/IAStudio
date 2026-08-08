@@ -1,17 +1,20 @@
 import type { Job } from '@shared/domain/job'
-import { claimOnSubmit as claimImage } from './image-generation'
-import { claimOnSubmit as claimSkybox } from './skybox-generation'
+import { claimOnSubmit as claimImageOnSubmit } from './image-generation'
+import { claimModelOnSubmit } from './model-generation'
+import { claimSkyboxOnSubmit } from './skybox-generation'
 
 /**
- * The one thing the generator calls when it submits. Each workspace that can take a result
- * claims for itself, and only the one whose tab is in front finds a target — so the panel stays
- * ignorant of every space, which is what lets it serve all of them.
+ * Every workspace that has somewhere to put a result, claimed in one call.
  *
- * Asked at the click, settled when the job id arrives: both halves are fanned out together, or
- * a claim taken by one space and settled by another would drop the result in the wrong tab.
+ * The generator serves all of them and knows none: it asks here at the click, and hands the job
+ * back when the id arrives. Both halves are fanned out together, or a claim taken by one space
+ * and settled by another would drop the result in the wrong tab. Only one claim can be live at a
+ * time — a claim reads the document in front, and there is one — so the list costs nothing to
+ * hold and everything to forget: a workspace added without a line here is a generation that
+ * lands nowhere.
  */
 export function claimOnSubmit(): (job: Job | null) => void {
-  const claims = [claimSkybox(), claimImage()]
+  const claims = [claimSkyboxOnSubmit(), claimImageOnSubmit(), claimModelOnSubmit()]
 
   return job => {
     for (const claim of claims) claim(job)

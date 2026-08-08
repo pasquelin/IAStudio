@@ -41,7 +41,9 @@ export function LayerList({ documentId }: { documentId: string }) {
   return (
     <Collection
       items={stack}
-      selectedId={canvas.activeLayerId}
+      // One at a time: a stack arms the layer that is painted on, and there is only ever one of
+      // those. The plural is the collection's, which the scene outliner needs.
+      selectedIds={canvas.activeLayerId ? [canvas.activeLayerId] : []}
       onSelect={row => {
         selectLayerIn(documentId, row.layer.id)
         // The stack arms a layer to paint on; the inspector reads what was touched last. Both,

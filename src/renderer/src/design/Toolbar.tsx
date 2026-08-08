@@ -29,6 +29,8 @@ export type ToolbarItem = {
   icon: string
   shortcut?: string
   disabled?: boolean
+  /** A toggle that is on. Distinct from `activeTool`, the one armed tool, and drawn alike. */
+  pressed?: boolean
   /** Two or more open a flyout on hover; one or none makes the button act directly. */
   modes?: readonly ToolMode[]
   activeMode?: string
@@ -101,7 +103,9 @@ export function Toolbar({
           {tool.separatorBefore && divider}
           <ToolItem
             tool={tool}
-            active={tool.id === activeTool}
+            // Either, never one overriding the other: `pressed: false` on the armed tool must
+            // not draw it released.
+            active={tool.pressed === true || tool.id === activeTool}
             tip={tip}
             modeTip={modeTip}
             onTool={onTool}
