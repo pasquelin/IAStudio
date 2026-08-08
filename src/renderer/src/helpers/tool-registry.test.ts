@@ -54,8 +54,10 @@ describe('the generator', () => {
     expect(idsOf('left', 'image')).toEqual(['models', 'generator'])
   })
 
-  it('leaves the right column alone — it is the same one in every section', () => {
-    expect(idsOf('right', 'textures')).toEqual(['explorer', 'inspector'])
+  // Named for what it checks: `canOffer` answers for the generator and for nothing else, so a
+  // section with no model still shows every panel of its right column.
+  it('leaves the right column alone — no model removes anything there', () => {
+    expect(idsOf('right', 'textures')).toEqual(['channels', 'explorer', 'inspector'])
   })
 })
 
@@ -67,6 +69,7 @@ describe('a half open on no panel in particular', () => {
     expect(shownTool(null, 'right', 'primary', '3d', true)).toBe('explorer')
     expect(shownTool(null, 'right', 'primary', 'video', true)).toBe('assets')
     expect(shownTool(null, 'right', 'primary', 'skyboxes', true)).toBe('skybox')
+    expect(shownTool(null, 'right', 'primary', 'textures', true)).toBe('channels')
   })
 
   it('reads the band as the shelf or the montage, per section', () => {

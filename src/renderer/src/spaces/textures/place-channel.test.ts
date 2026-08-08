@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
+import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { forgetReportedFailures } from '@/services/diagnostics'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 
@@ -20,6 +22,7 @@ const channelsOf = () => textureOf(useTextures.getState(), 'doc-1').channels
 describe('putting a picture into a channel of a material', () => {
   beforeEach(() => {
     useTextures.setState({ states: {}, histories: {} })
+    forgetReportedFailures()
   })
 
   it('fills the base colour, which is what a bare drop means', () => {
@@ -51,10 +54,31 @@ describe('putting a picture into a channel of a material', () => {
 
   // A cloud asset has no file to decode yet, so the renderer would load a 404 into a slot it
   // cannot tell from an empty one.
+  /**
+   * And says so for real. `AssetDropTarget` cannot refuse this while it flies — a drag announces
+   * its type, not where its file is — so nine surfaces painted an accepting outline and then did
+   * nothing at all, which that component's own JSDoc calls the worse of the two.
+   */
   it('refuses a picture the cloud still holds, and says so', () => {
+    const bridge = bridgeWatchingLogs()
+
     expect(placeTextureChannel('doc-1', picture({ location: 'cloud' }))).toBe(false)
 
     expect(channelsOf().baseColor).toBeUndefined()
+    expect(bridge.report).toHaveBeenCalledWith(
+      expect.objectContaining({ level: 'error', scope: 'texture.channel' }),
+    )
+  })
+
+  /** A drop is a gesture: the second one has to speak too, or the user drops again and again. */
+  it('says it every time, not once', () => {
+    const bridge = bridgeWatchingLogs()
+    const cloud = picture({ location: 'cloud' })
+
+    placeTextureChannel('doc-1', cloud)
+    placeTextureChannel('doc-1', cloud)
+
+    expect(bridge.report).toHaveBeenCalledTimes(2)
   })
 
   it('refuses anything that is not a picture', () => {

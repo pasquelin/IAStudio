@@ -158,7 +158,11 @@ describe('the rail order of the upper right', () => {
 
   it('puts the sky controls first in Skyboxes — it is what that space is for', () => {
     expect(upperRightIn('skyboxes')).toEqual(['skybox', 'explorer'])
-    expect(upperRightIn('textures')).toEqual(['explorer'])
+  })
+
+  /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */
+  it('puts the channels first in Textures', () => {
+    expect(upperRightIn('textures')).toEqual(['channels', 'explorer'])
   })
 })
 

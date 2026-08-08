@@ -23,6 +23,7 @@ import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
 import { canvasHost } from '@/spaces/image/canvas-hosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
 import { newTexture, parseTexture } from '@/engines/texture/texture-state'
+import { useTextureViews } from '@/stores/texture-views'
 import { textureStore } from '@/stores/textures'
 import { createSkyboxContent } from '@shared/domain/skybox'
 
@@ -341,6 +342,10 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
 function forgetDocument(documentId: string): void {
   ioOf(documentId)?.forget(documentId)
   unreadable.delete(documentId)
+  // Session views are not the document's state, so no `DocumentIo` drops them. `useCanvasViews`
+  // and `useSceneViews` still keep their entry for the session — they hold a viewport, which is
+  // harmless to inherit; an inspected channel is not, it would reopen the tab on a flat map.
+  useTextureViews.getState().forget(documentId)
   closePanel(documentId)
   useDocuments.getState().close(documentId)
 }

@@ -127,14 +127,17 @@ Une *matière* (ou *texture*) n'est pas une image : c'est une surface qu'on juge
 2. bouton **+** du rail gauche ;
 3. **glissez une image du projet sur l'aperçu** — un cadre bleu confirme que le dépôt sera pris.
    Elle devient la **couleur de base** ;
-4. choisissez la forme d'aperçu — **sphère**, cube, cylindre, plan ou nœud de tore — et
-   regardez-la sous l'éclairage studio. La **sphère** montre le mieux la lumière, le **plan**
-   montre le mieux la répétition du motif ;
-5. `⌘S` **enregistre**. C'est l'un des deux seuls types de documents qui savent le faire.
+4. **Inspecteur** → section **Aperçu** : choisissez la forme — **sphère**, cube, cylindre, plan ou
+   nœud de tore. La **sphère** montre le mieux la lumière, le **plan** montre le mieux la
+   répétition du motif ;
+5. **Inspecteur** → section **Matériau** : réglez rugosité, métal, relief et émission. Si la
+   matière paraît uniformément moyenne, c'est le **remappage** qu'il faut ouvrir — voir plus bas ;
+6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir ;
+7. `⌘S` **enregistre**.
 
-**Le piège.** Seule la couleur de base se pose aujourd'hui. Les sept autres canaux — normales,
-rugosité, métallicité… — sont expliqués au [chapitre 12](12-espace-textures.md) mais pas encore
-branchés.
+**Le piège.** Une image déposée sur l'**aperçu** va toujours dans la couleur de base — c'est
+voulu. Pour viser les normales ou la rugosité, déposez sur **leur vignette** dans le panneau
+Canaux.
 
 ---
 

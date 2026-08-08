@@ -1,5 +1,4 @@
 import {
-  Color,
   Mesh,
   MeshStandardMaterial,
   NoColorSpace,
@@ -15,8 +14,22 @@ import { createTextureCache, type TextureCache, type TextureSource } from '../sc
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { ViewportEngine } from '../viewport/ViewportEngine'
+import {
+  bindUniforms,
+  createUniforms,
+  EDGE_DEFINE,
+  materialFrameOf,
+  patchFragment,
+  syncEdgeTransform,
+} from './material-shader'
 import { previewGeometry } from './preview-geometry'
-import { slotFor, type MaterialSlot, type PreviewShape, type TextureState } from './texture-state'
+import {
+  contentOf,
+  DEFAULT_TEXTURE_MATERIAL,
+  slotFor,
+  type PreviewShape,
+  type TextureState,
+} from './texture-state'
 
 export type TextureRendererOptions = {
   /** Injected: jsdom decodes no image, and the engine is built the same way in both. */
@@ -46,11 +59,17 @@ export class TextureRenderer {
   private environment: ViewportEnvironment | null = null
 
   /**
-   * Per slot, the asset this material holds a reference on, with the colour space it was taken
-   * in: the cache counts references per pair, and giving one back under the other space would
-   * leave the texture alive for the rest of the session.
+   * Per channel, the asset this material holds a reference on. Keyed by channel rather than by
+   * slot because the cavity mask has no slot at all, and the colour space is a function of the
+   * channel — held as a second field it was free to disagree with `spaceOf` and leave a texture
+   * alive for the rest of the session.
    */
-  private readonly holding = new Map<MaterialSlot, { assetId: string; space: ColorSpace }>()
+  private readonly holding = new Map<PbrChannel, string>()
+  private readonly uniforms = createUniforms()
+  /** What the maps are currently placed on, so a map arriving late is placed on the same thing. */
+  private transform: MapTransform | null = null
+  /** Anchors already reported, so a rebuilt program does not say the same thing again. */
+  private readonly reported = new Set<string>()
   private shape: PreviewShape = 'sphere'
   private displaced = false
   private spinning = false
@@ -63,6 +82,23 @@ export class TextureRenderer {
     this.sky = createSkyBinding(this.cache, () => this.paintBackground())
     this.viewport.camera.position.set(0, 0.6, 3.2)
     this.viewport.scene.add(this.mesh)
+
+    // Bound once on the material, not per compile: three hands the hook a fresh uniform object
+    // each time the program is rebuilt, and the engine's values have to survive that.
+    this.material.onBeforeCompile = shader => {
+      const { source, missing } = patchFragment(shader.fragmentShader)
+      shader.fragmentShader = source
+      bindUniforms(shader.uniforms, this.uniforms)
+
+      // Once per anchor per engine, and the `Set` is what makes that true: a program is rebuilt
+      // whenever a channel is filled, and a repeated report would bury the journal. A remap that
+      // quietly stopped applying is a slider that looks alive and does nothing.
+      for (const anchor of missing) {
+        if (this.reported.has(anchor)) continue
+        this.reported.add(anchor)
+        reportFailure('texture.shader', anchor, new Error(`three no longer ships ${anchor}`))
+      }
+    }
   }
 
   mount(host: HTMLElement): void {
@@ -87,7 +123,7 @@ export class TextureRenderer {
   }
 
   dispose(): void {
-    for (const slot of this.holding.keys()) this.release(slot)
+    for (const channel of this.holding.keys()) this.release(channel)
     this.holding.clear()
     this.sky.release()
     this.cache.dispose()
@@ -118,10 +154,16 @@ export class TextureRenderer {
     this.mesh.geometry = geometry
   }
 
-  private applyMaterial({ material }: TextureState): void {
+  private applyMaterial(texture: TextureState): void {
+    const { material } = texture
     this.material.color.set(material.color)
     this.material.roughness = material.roughness
     this.material.metalness = material.metalness
+
+    const frame = materialFrameOf(texture)
+    this.uniforms.roughnessRemap.value.set(frame.roughnessRemap.x, frame.roughnessRemap.y)
+    this.uniforms.metalnessRemap.value.set(frame.metalnessRemap.x, frame.metalnessRemap.y)
+    this.uniforms.edgeIntensity.value = frame.edgeIntensity
     this.material.normalScale.set(
       material.normalScale,
       // OpenGL and DirectX disagree on which way the green channel points, and a normal map
@@ -130,68 +172,127 @@ export class TextureRenderer {
     )
     this.material.displacementScale = material.heightScale
     this.material.aoMapIntensity = material.aoIntensity
-    this.material.emissive = new Color(material.emissive)
+    // `.set`, not a new Color: this runs on every frame of every drag, and three owns the instance.
+    this.material.emissive.set(material.emissive)
     this.material.emissiveIntensity = material.emissiveIntensity
 
+    // No `needsUpdate` here: nothing above affects the PROGRAM. A slot going empty→filled does,
+    // and `install`, `release` and `setEdgeMap` are the three that say so.
     this.applyTransform(material)
-    this.material.needsUpdate = true
   }
 
   /**
    * Repeat, offset and rotation are applied to **every** map, not just the base colour: applied
    * to one alone, the maps drift apart and the relief stops matching the picture it lifts.
+   *
+   * Guarded on the values having moved, as `applyGeometry` is: `apply` runs on every frame of
+   * every drag, and twelve of the fifteen settings have nothing to do with tiling.
+   *
+   * And no `needsUpdate` on a map, ever. It bumps `source.needsUpdate` too, which re-uploads the
+   * pixels AND rebuilds the mip chain — eight 2K channels is 128 MB of upload per frame. Nothing
+   * here needs it: `matrixAutoUpdate` is on, so three refreshes the uv matrix itself every frame,
+   * and `wrapS`/`wrapT`, which really are upload-time state, are set once in `install`.
    */
   private applyTransform({ tiling, offset, rotation }: TextureState['material']): void {
-    for (const slot of this.holding.keys()) {
-      const map = this.material[slot]
-      if (!map) continue
+    if (this.transform && sameTransform(this.transform, { tiling, offset, rotation })) return
+    this.transform = { tiling, offset, rotation }
 
-      map.wrapS = RepeatWrapping
-      map.wrapT = RepeatWrapping
-      map.repeat.set(tiling.x, tiling.y)
-      map.offset.set(offset.x, offset.y)
-      map.center.set(0.5, 0.5)
-      map.rotation = rotation
-      map.needsUpdate = true
+    for (const map of this.maps()) this.placeMap(map)
+    syncEdgeTransform(this.uniforms)
+  }
+
+  /** Every texture this material shows, the cavity mask included — it is not in a slot. */
+  private *maps(): Generator<Texture> {
+    for (const channel of this.holding.keys()) {
+      const slot = slotFor(channel)
+      const map = slot ? this.material[slot] : this.uniforms.edgeMap.value
+      if (map) yield map
     }
   }
 
   private applyChannels(texture: TextureState): void {
     for (const channel of PBR_CHANNELS) {
-      const slot = slotFor(channel)
-      if (!slot) continue
-
       const wanted = texture.channels[channel]?.assetId ?? null
-      if ((this.holding.get(slot)?.assetId ?? null) === wanted) continue
+      if ((this.holding.get(channel) ?? null) === wanted) continue
 
-      this.release(slot)
+      this.release(channel)
       if (!wanted) continue
 
-      const space = spaceOf(channel)
-      this.holding.set(slot, { assetId: wanted, space })
-      void this.cache.acquire(wanted, space).then(loaded => {
-        // Stale: the slot has moved on, and the reference it took went back with the move.
-        if (this.holding.get(slot)?.assetId !== wanted || !loaded) return
-        this.install(slot, loaded, texture)
+      this.holding.set(channel, wanted)
+      void this.cache.acquire(wanted, spaceOf(channel)).then(loaded => {
+        // Stale: the channel has moved on, and the reference it took went back with the move.
+        if (this.holding.get(channel) !== wanted || !loaded) return
+        this.install(channel, loaded)
       })
     }
   }
 
-  private install(slot: MaterialSlot, map: Texture, texture: TextureState): void {
-    this.material[slot] = map
-    // A slot going from empty to filled changes the shader program itself.
+  /**
+   * Takes no state: decoding a 4K picture runs for hundreds of milliseconds, and the state that
+   * started the load is stale by the time it resolves — reapplying it snapped every other map back
+   * to the tiling the user had already left.
+   */
+  private install(channel: PbrChannel, map: Texture): void {
+    // Upload-time state, set before the first render rather than on every frame: changing either
+    // of these later would cost a full re-upload of the pixels.
+    map.wrapS = RepeatWrapping
+    map.wrapT = RepeatWrapping
+    map.center.set(0.5, 0.5)
+    this.placeMap(map)
+
+    const slot = slotFor(channel)
+    if (slot) this.material[slot] = map
+    else this.setEdgeMap(map)
+
+    // A channel going from empty to filled changes the shader program itself.
     this.material.needsUpdate = true
-    this.applyTransform(texture.material)
+    syncEdgeTransform(this.uniforms)
     this.viewport.requestRender()
   }
 
-  private release(slot: MaterialSlot): void {
-    const held = this.holding.get(slot)
-    if (held) this.cache.release(held.assetId, held.space)
-    this.holding.delete(slot)
+  /** The transform this material is on, onto one map — the new one, or all of them. */
+  private placeMap(map: Texture): void {
+    const { tiling, offset, rotation } = this.transform ?? DEFAULT_TEXTURE_MATERIAL
+    map.repeat.set(tiling.x, tiling.y)
+    map.offset.set(offset.x, offset.y)
+    map.rotation = rotation
+  }
+
+  private release(channel: PbrChannel): void {
+    const held = this.holding.get(channel)
+    if (held) this.cache.release(held, spaceOf(channel))
+    this.holding.delete(channel)
+
+    const slot = slotFor(channel)
+    if (!slot) {
+      this.setEdgeMap(null)
+      return
+    }
 
     if (this.material[slot] === null) return
     this.material[slot] = null
+    this.material.needsUpdate = true
+  }
+
+  /**
+   * The define, not just the uniform: an unbound sampler is undefined behaviour on some drivers,
+   * so the cavity code has to be absent from the program rather than merely inert.
+   */
+  private setEdgeMap(map: Texture | null): void {
+    if (this.uniforms.edgeMap.value === map) return
+    this.uniforms.edgeMap.value = map
+
+    const defines = this.material.defines ?? {}
+    if (map) {
+      defines[EDGE_DEFINE] = ''
+      // `vUv` exists only where something asks for it, and no slot asks on this mask's behalf.
+      defines.USE_UV = ''
+    } else {
+      delete defines[EDGE_DEFINE]
+      delete defines.USE_UV
+    }
+
+    this.material.defines = defines
     this.material.needsUpdate = true
   }
 
@@ -216,9 +317,26 @@ export class TextureRenderer {
 }
 
 /**
- * The base colour is authored in sRGB; every other map carries data, not colour, and decoding
- * one would wash out the normals and lighten the roughness.
+ * A colour channel is authored in sRGB and has to be decoded; a data channel must not be, or the
+ * normals wash out and the roughness lightens.
+ *
+ * Which is which comes from the domain rather than from a test on the id here: it was
+ * `channel === 'baseColor'`, and `emissive` — a colour map, read as one by three — fell on the
+ * wrong side and came out dark and desaturated.
  */
 function spaceOf(channel: PbrChannel): ColorSpace {
-  return channel === 'baseColor' ? SRGBColorSpace : NoColorSpace
+  return contentOf(channel) === 'color' ? SRGBColorSpace : NoColorSpace
+}
+
+/** How every map is laid on the shape. The three values that move together, and only those. */
+type MapTransform = Pick<TextureState['material'], 'tiling' | 'offset' | 'rotation'>
+
+function sameTransform(a: MapTransform, b: MapTransform): boolean {
+  return (
+    a.rotation === b.rotation &&
+    a.tiling.x === b.tiling.x &&
+    a.tiling.y === b.tiling.y &&
+    a.offset.x === b.offset.x &&
+    a.offset.y === b.offset.y
+  )
 }

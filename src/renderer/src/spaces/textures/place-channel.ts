@@ -1,5 +1,6 @@
 import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import type { PbrChannel } from '@shared/domain/texture'
+import { reportFailure } from '@/services/diagnostics'
 import { setChannel } from '@/engines/texture/commands'
 import { useTextures } from '@/stores/textures'
 
@@ -19,7 +20,13 @@ export function placeTextureChannel(
   asset: Asset,
   channel: PbrChannel = 'baseColor',
 ): boolean {
-  if (!isLocalPicture(asset)) return false
+  if (!isLocalPicture(asset)) {
+    // Said rather than swallowed. `AssetDropTarget` cannot refuse this one while it flies — a drag
+    // announces its TYPE and not where its file is — so the refusal can only be spoken here, and
+    // the JSDoc of that component is explicit that a silent drop is the worse of the two.
+    reportFailure('texture.channel', asset.id, new Error(`${asset.name} has no local file yet`))
+    return false
+  }
 
   useTextures.getState().runCommand(
     documentId,

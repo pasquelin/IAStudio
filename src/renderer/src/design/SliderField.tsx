@@ -1,6 +1,6 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@/helpers/numeric'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
+import { FIELD_LABEL, FIELD_READOUT, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
 
 export type SliderFieldProps = GestureProps & {
   label: string
@@ -45,8 +45,7 @@ export function SliderField({
         className={cn('accent-accent h-(--sc-control) min-w-0 flex-1', FOCUS_RING)}
       />
 
-      {/* Tabular figures: without them the row twitches sideways as the digits change. */}
-      <output className="text-muted w-10 shrink-0 text-right tabular-nums">{value}</output>
+      <output className={cn(FIELD_READOUT, 'w-10')}>{value}</output>
     </label>
   )
 }

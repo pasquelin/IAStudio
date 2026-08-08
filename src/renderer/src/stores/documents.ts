@@ -82,6 +82,10 @@ export const activeSequenceId = (state: DocumentsSlice): string | null =>
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'skybox')
 
+/** The texture in front, as a selector. Same reason again, for the material inspector. */
+export const activeTextureId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'texture')
+
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,
   workspace: WorkspaceId,

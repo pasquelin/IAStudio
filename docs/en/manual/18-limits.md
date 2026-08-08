@@ -214,15 +214,24 @@ as new**. That is not a loss: it is a different working model, and it is complet
 
 ### What is missing
 
-- **the material panel** — roughness, metalness, relief, tiling, emission, adjustable live;
-- **the strip of eight channels**, with their thumbnails and individual import;
-- **the automatic derivations** — making *normals* from *height*, for example;
+- **the automatic derivations** — making *normals* from *height*, for example. The "derived" badge
+  exists, and the studio knows which channel derives from which; it is the computation that is
+  missing, not the vocabulary;
+- **importing a file from disk** straight into a channel. The detour exists: import the picture into
+  the project, then drop it onto the channel's thumbnail;
 - **the tiling preview** at 1×, 2×, 4×, and visible-seam detection;
 - **export** to glTF, Unity, Unreal, Roblox.
 
-What works today: generating a material, looking at it on five different shapes under a neutral light,
-and saving it. That is already the central gesture — judging a material on a lit object rather than on
-a flat square.
+What works today: generating a material, placing a picture in each of its eight channels, setting
+everything it is made of — roughness and metalness with their remap, relief, emission, tiling —
+looking at it on five shapes under the lighting of your choice, inspecting each channel flat, and
+saving it.
+
+### A channel's opacity cannot be set
+
+A channel is placed or it is not. There is no partial blend between two pictures in the same channel,
+and no fade between the overall value and the map: the remap sets the **range** the map is read into,
+which is a different question.
 
 ---
 

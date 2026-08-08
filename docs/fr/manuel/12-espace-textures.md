@@ -35,7 +35,9 @@ le dépôt sera accepté.
 
 ## Les réglages de l'aperçu
 
-En haut à gauche de l'aperçu, une petite barre.
+**Ils sont dans l'Inspecteur**, colonne de droite, section **Aperçu**. L'aperçu lui-même ne porte
+aucun bouton : dans un studio on juge des finitions, et un contrôle posé sur la matière est un
+contrôle devant elle.
 
 ### La forme
 
@@ -52,31 +54,33 @@ Cinq formes, et chacune montre quelque chose de différent :
 **En pratique** : commencez par la **sphère** pour juger la matière, puis passez au **plan** pour
 vérifier qu'elle se répète sans couture visible.
 
-### Les trois autres contrôles
+### Les quatre autres contrôles
 
 | Contrôle | Ce qu'il fait |
 |---|---|
+| **Éclairage** | l'intensité de la lumière d'ambiance, de 0 à 3 |
+| **Rotation du ciel** | fait tourner l'éclairage autour de l'objet, en degrés |
 | **Afficher le fond** | montre l'environnement derrière l'objet, ou l'utilise seulement pour éclairer |
 | **Rotation automatique** | fait tourner l'objet lentement, pour lire le relief |
-| **Éclairage** | l'intensité de la lumière d'ambiance, de 0 à 3 |
 
 **La rotation automatique est plus utile qu'elle n'en a l'air.** Un relief ne se voit pas sur une
-image fixe : c'est le déplacement de la lumière sur la surface qui le révèle.
-
-En bas à droite de l'aperçu, une petite vignette rappelle **quelle image** sert de couleur de
-base.
+image fixe : c'est le déplacement de la lumière sur la surface qui le révèle. La rotation du ciel
+fait la même chose autrement — l'objet reste immobile et c'est la lumière qui se déplace.
 
 ---
 
-## L'éclairage par défaut
+## L'éclairage
 
-Un **studio neutre** — un éclairage doux, sans couleur dominante, comme dans un studio photo.
+La section **Environnement** de l'Inspecteur, sous celle de l'aperçu. C'est **exactement celle de
+l'espace 3D** : la question est la même, et les ciels offerts sont ceux de votre projet.
 
-Aucun fichier à télécharger, et une matière lisible dès le premier document. C'est
+Par défaut, un **studio neutre** — un éclairage doux, sans couleur dominante, comme dans un studio
+photo. Aucun fichier à télécharger, et une matière lisible dès le premier document. C'est
 volontairement neutre : un éclairage coloré ferait paraître belle une matière qui ne l'est pas.
 
-> Le jour où votre projet contiendra des skyboxes, elles pourront servir de lumière à leur tour —
-> ce qui permettra de juger une matière sous l'éclairage réel de la scène où elle finira.
+Dès que votre projet contient une skybox, elle apparaît dans la liste et sert de lumière à son
+tour — ce qui permet de juger une matière sous l'éclairage réel de la scène où elle finira.
+« Studio » y est toujours proposé, pour y revenir.
 
 ---
 
@@ -104,9 +108,31 @@ Chaque canal a une **origine** :
 | **Dérivé** | calculé par le studio depuis un autre canal — il se recalcule si sa source change |
 | **Importé** | une image que vous avez posée vous-même |
 
-> **Aujourd'hui, seule la couleur de base se pose.** La bande des huit canaux, les dérivations
-> automatiques et le panneau des réglages de matière sont en cours. Voir
-> [Ce qui n'existe pas encore](18-limites.md).
+### Le panneau Canaux
+
+Colonne de droite, premier panneau de l'espace — c'est ce que Textures est. Une vignette par
+canal, les huit, **y compris ceux qui sont vides** : ce qui manque à une matière compte autant que
+ce qu'elle a.
+
+| Geste | Ce qu'il fait |
+|---|---|
+| **Glisser une image sur une vignette** | pose cette image dans **ce** canal |
+| **Le menu d'une vignette** | choisit parmi les images du projet, ou vide le canal |
+| **Cliquer une vignette** | montre ce canal **seul**, à plat |
+| **Cliquer la même à nouveau** | revient à la matière éclairée |
+
+Le badge en haut à gauche d'une vignette dit son **origine** — généré, dérivé ou importé.
+
+**La vue à plat n'est pas un aperçu, c'est une lecture.** Elle affiche les pixels sans lissage :
+une carte de normales ou de hauteur s'inspecte précisément pour le bruit et les paliers que le
+lissage d'un navigateur cacherait. Elle ne s'enregistre pas avec le document, et `⌘Z` ne la rend
+pas — c'est une façon de regarder, pas une décision.
+
+Une vignette vide ne se clique pas : il n'y a rien à regarder.
+
+> **Une image glissée sur l'aperçu, elle, va toujours dans la couleur de base.** C'est le canal
+> sans lequel une matière ne se juge pas, et l'aperçu ne peut pas devenir : pour viser un autre
+> canal, déposez sur sa vignette.
 
 ---
 
@@ -124,13 +150,82 @@ Ce sont les deux mots qu'il faut comprendre pour lire une matière.
 | 1 | craie, velours, béton brut |
 
 Certains logiciels appellent cela « brillance » (*glossiness* ou *smoothness*), qui est
-exactement l'inverse : brillance 0,9 = rugosité 0,1.
+exactement l'inverse : brillance 0,9 = rugosité 0,1. **Le studio dit toujours rugosité**, partout —
+un mot pour une grandeur, ici comme dans l'espace 3D.
+
+Ce n'est pas qu'une question de vocabulaire : certains modèles Scenario répondent en *brillance*.
+Le studio garde alors les pixels tels qu'ils sont arrivés et retourne la lecture au moment de
+l'affichage. Vous n'avez rien à faire, et vous ne verrez jamais une matière éclairée à l'envers.
 
 **Métallicité** — est-ce du métal, oui ou non.
 
 Ce réglage est presque toujours **0 ou 1**, rarement entre les deux. Un métal renvoie la lumière
 d'une façon complètement différente d'un non-métal ; il n'y a pas grand-chose entre les deux,
 sauf sur un métal peint ou rouillé, où la valeur varie **zone par zone** grâce à une carte.
+
+---
+
+## Régler la matière
+
+Inspecteur, section **Matériau**. Quatre sections en tout, et elles répondent à quatre questions
+différentes.
+
+### Matériau
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| **Teinte de base** | une couleur multipliée par la couleur de base — pour teinter sans repeindre |
+| **Rugosité** | mat ou brillant, pour toute la surface |
+| **Remappage** (sous la rugosité) | **deux poignées sur un rail** : la plage dans laquelle la carte est relue |
+| **Métal** | métal ou non, pour toute la surface |
+| **Remappage** (sous le métal) | la même chose, pour la carte de métallicité |
+| **Occlusion** | à quel point la carte d'occlusion assombrit les creux |
+| **Cavité** | à quel point la carte d'arêtes assombrit les bords |
+
+**Le remappage est le réglage le plus utile de cette section, et le moins évident.** Une carte
+générée est souvent **plate** — tout y est autour de 0,5, et la matière paraît uniformément
+moyenne. Le remappage rétrécit ou élargit la plage : mettre la rugosité « de 0,2 à 0,9 » étale ce
+que la carte contenait et fait apparaître le contraste entre les zones mates et les zones
+brillantes.
+
+Les deux poignées **peuvent se rejoindre, jamais se croiser**. Une plage inversée remapperait toute
+la carte sur rien, et la matière deviendrait plate sans que rien à l'écran ne dise pourquoi.
+
+**Quand aucune carte n'est posée, le remappage ne fait rien** : il décrit la façon de relire une
+carte, pas une valeur.
+
+### Relief
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| **Normale** | la force des micro-reliefs, de −2 à 2 |
+| **Inverser le vert** | pour une carte de normales cuite dans l'autre convention |
+| **Déplacement** | le relief réel, qui déforme la surface — à 0 par défaut |
+
+**Une normale négative retourne le relief** : les bosses deviennent des creux. Ce n'est pas un
+bug, c'est la réponse à une carte cuite à l'envers — l'autre réponse étant « Inverser le vert ».
+OpenGL et DirectX ne sont pas d'accord sur le sens du canal vert, et une carte venue d'un moteur
+éclaire depuis le mauvais côté jusqu'à ce que l'un des deux soit corrigé.
+
+**Le déplacement est à 0 volontairement.** Il déforme vraiment la géométrie, ce qui coûte plus
+cher que la scène qu'on prévisualise : c'est quelque chose qu'on demande, pas qu'on subit.
+
+### Émission
+
+Une couleur et une intensité, pour ce qui brille par soi-même.
+
+### Répétition
+
+Cette section est **repliée** à l'ouverture : une répétition se règle une fois et se laisse.
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| **Répéter** | combien de fois la matière se répète, en X et en Y |
+| **Décalage** | où elle commence |
+| **Rotation** | de 0 à 360°, autour du centre |
+
+**Les trois s'appliquent aux huit canaux à la fois.** Appliqués à un seul, les canaux se
+désaligneraient et le relief cesserait de correspondre à l'image qu'il soulève.
 
 ---
 
@@ -150,9 +245,11 @@ puce sur l'onglet dit ce qui attend encore d'être écrit.
 
 ## Ce qui manque encore
 
-- le **panneau de matière** — rugosité, métal, relief, répétition, émission, réglables en direct ;
-- la **bande des huit canaux**, avec leurs vignettes et leur import ;
-- les **dérivations automatiques** — fabriquer les normales depuis la hauteur, par exemple ;
+- les **dérivations automatiques** — fabriquer les normales depuis la hauteur, par exemple. Le
+  badge « dérivé » existe et le studio sait qu'un canal en dérive un autre ; ce qui manque est le
+  calcul lui-même ;
+- l'**import d'un fichier du disque** directement dans un canal. Passez par l'import du projet
+  (chapitre 7), puis posez l'image sur la vignette ;
 - l'**aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures ;
 - l'**export** vers glTF, Unity, Unreal, Roblox.
 

@@ -24,6 +24,9 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'document.close',
   'document.delete',
   'assets.reveal',
+  // A drop is a gesture: dropping the same cloud picture twice must say so twice, which is the
+  // very defect `feat/documents-erreurs` fixed for the others.
+  'texture.channel',
 ])
 
 /**

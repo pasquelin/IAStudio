@@ -3,7 +3,7 @@ import { toDegrees, toRadians } from '@shared/domain/angles'
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 import { TextField } from '@/design/TextField'
-import { Vector3Field } from '@/design/Vector3Field'
+import { VectorField } from '@/design/VectorField'
 import { batch, renameNode, setTransform } from '@/engines/scene/commands'
 import type { SceneNode } from '@/engines/scene/scene-state'
 import { changedFields } from '@/helpers/objects'
@@ -73,7 +73,7 @@ export function TransformSection({ node, selection, edit }: TransformSectionProp
         {...edit.gesture}
       />
 
-      <Vector3Field
+      <VectorField
         label={t('inspector.position')}
         value={transform.position}
         step={0.1}
@@ -81,7 +81,7 @@ export function TransformSection({ node, selection, edit }: TransformSectionProp
         {...edit.gesture}
       />
 
-      <Vector3Field
+      <VectorField
         label={t('inspector.rotation')}
         value={degrees}
         step={1}
@@ -92,7 +92,7 @@ export function TransformSection({ node, selection, edit }: TransformSectionProp
         {...edit.gesture}
       />
 
-      <Vector3Field
+      <VectorField
         label={t('inspector.scale')}
         value={transform.scale}
         step={0.1}

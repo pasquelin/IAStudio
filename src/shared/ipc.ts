@@ -224,6 +224,8 @@ export type LogScope =
   | 'scene.texture'
   | 'scene.export'
   | 'texture.map'
+  | 'texture.channel'
+  | 'texture.shader'
   | 'skybox.source'
   | 'canvas.layer'
   | 'image.export'
@@ -239,6 +241,8 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.texture',
   'scene.export',
   'texture.map',
+  'texture.channel',
+  'texture.shader',
   'skybox.source',
   'canvas.layer',
   'image.export',

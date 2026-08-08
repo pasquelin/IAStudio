@@ -1,6 +1,7 @@
 import type { ToolId } from '@shared/domain/tool'
 import type { ToolDefinition } from '@/panels/definition'
 import { definition as assets } from '@/panels/assets'
+import { definition as channels } from '@/panels/channels'
 import { definition as explorer } from '@/panels/explorer'
 import { definition as generator } from '@/panels/generator'
 import { definition as inspector } from '@/panels/inspector'
@@ -28,4 +29,5 @@ export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
   inspector,
   skybox,
   assets,
+  channels,
 }
