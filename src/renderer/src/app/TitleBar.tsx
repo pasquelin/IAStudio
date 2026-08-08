@@ -1,3 +1,4 @@
+import { mdiHomeOutline } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
@@ -10,6 +11,10 @@ import { workspaceLabelKey, WORKSPACES } from '@/helpers/workspaces'
 export type TitleBarProps = {
   activeWorkspace: WorkspaceId
   onWorkspace: (workspace: WorkspaceId) => void
+  /** Whether the home is the surface in front. Absent when the setting turned it off. */
+  home?: boolean
+  /** Absent hides the home button altogether — the setting is off, so it leads nowhere. */
+  onHome?: () => void
   /** Global actions aligned right: search, run, account. */
   actions?: ReactNode
 }
@@ -19,7 +24,13 @@ export type TitleBarProps = {
  * carries the workspaces. We reclaim a title bar's worth of height, and the application does
  * not look like a web page in a frame.
  */
-export function TitleBar({ activeWorkspace, onWorkspace, actions }: TitleBarProps) {
+export function TitleBar({
+  activeWorkspace,
+  onWorkspace,
+  home = false,
+  onHome,
+  actions,
+}: TitleBarProps) {
   const { t } = useTranslation()
   const { fullScreen } = useWindowState()
 
@@ -38,22 +49,25 @@ export function TitleBar({ activeWorkspace, onWorkspace, actions }: TitleBarProp
         style={CLICKABLE}
         className="flex items-center gap-1"
       >
+        {onHome && (
+          <BarButton
+            icon={mdiHomeOutline}
+            label={t('home.title')}
+            current={home}
+            onClick={onHome}
+          />
+        )}
+
         {WORKSPACES.map(workspace => (
-          <button
+          <BarButton
             key={workspace.id}
-            type="button"
-            aria-current={workspace.id === activeWorkspace ? 'page' : undefined}
+            icon={workspace.icon}
+            label={t(workspaceLabelKey(workspace.id))}
+            // The home covers the spaces rather than being one of them: while it is up, none
+            // of them is the page being read.
+            current={!home && workspace.id === activeWorkspace}
             onClick={() => onWorkspace(workspace.id)}
-            className={cn(
-              'flex cursor-pointer items-center gap-2 rounded-(--radius-sc-md) border-none px-3 py-1',
-              'text-muted bg-transparent transition-colors',
-              'hover:bg-elevated/60 hover:text-text',
-              workspace.id === activeWorkspace && 'bg-elevated text-text',
-            )}
-          >
-            <UiIcon path={workspace.icon} size={16} />
-            {t(workspaceLabelKey(workspace.id))}
-          </button>
+          />
         ))}
       </nav>
 
@@ -63,5 +77,33 @@ export function TitleBar({ activeWorkspace, onWorkspace, actions }: TitleBarProp
         </div>
       )}
     </header>
+  )
+}
+
+type BarButtonProps = {
+  icon: string
+  label: string
+  current: boolean
+  onClick: () => void
+}
+
+/** One destination of the bar. The home and the six spaces are read as one row, so they wear
+ * the same chrome — the home is not a control of a different kind. */
+function BarButton({ icon, label, current, onClick }: BarButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-current={current ? 'page' : undefined}
+      onClick={onClick}
+      className={cn(
+        'flex cursor-pointer items-center gap-2 rounded-(--radius-sc-md) border-none px-3 py-1',
+        'text-muted bg-transparent transition-colors',
+        'hover:bg-elevated/60 hover:text-text',
+        current && 'bg-elevated text-text',
+      )}
+    >
+      <UiIcon path={icon} size={16} />
+      {label}
+    </button>
   )
 }

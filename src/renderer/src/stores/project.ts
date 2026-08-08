@@ -17,6 +17,12 @@ type ProjectState = {
   connect: () => Promise<() => void>
   openPicked: () => Promise<void>
   createPicked: () => Promise<void>
+  /**
+   * Opens a known folder — what the home's shelf of recent projects clicks through to. Answers
+   * whether it worked: a folder moved or deleted since it was last opened is the ordinary case
+   * for that shelf, and the entry has to go rather than fail again on the next click.
+   */
+  open: (path: string) => Promise<boolean>
 }
 
 /**
@@ -74,6 +80,18 @@ export const useProject = create<ProjectState>()(set => ({
     set({ project: current })
     await followProject(current)
     return stop
+  },
+
+  open: async path => {
+    const bridge = getBridge()
+    if (!bridge) return false
+
+    try {
+      set({ project: await bridge.project.open(path) })
+      return true
+    } catch {
+      return false
+    }
   },
 
   openPicked: async () => {

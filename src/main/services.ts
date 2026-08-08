@@ -8,6 +8,7 @@ import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
+import { withRecentProject } from '@shared/domain/project'
 import type { PathKind } from '@shared/domain/settings-registry'
 import type { AuthState } from '@shared/domain/settings'
 import { log } from './log'
@@ -369,7 +370,20 @@ export function createServices(settings: SettingsStore): Services {
     openCatalog: openCatalogThread,
     now: timestamp,
     onChange: current => {
-      if (current) settings.write({ storage: { lastProject: current.path } })
+      if (current) {
+        settings.write({
+          storage: {
+            lastProject: current.path,
+            // Written on the same beat as `lastProject`, and replicated with it: the home reads
+            // the shelf from the settings every window already holds.
+            recentProjects: withRecentProject(
+              settings.read().storage.recentProjects,
+              current,
+              timestamp(),
+            ),
+          },
+        })
+      }
       broadcast(EVENTS.projectChanged, current)
 
       // Jobs left running by a previous session, picked up here rather than at boot: their

@@ -51,8 +51,11 @@ function runCommand(command: CommandId): void {
  * the generator into existence, and the menu has to learn it at that moment.
  */
 function publishMenuContext(): void {
-  const workspace = useLayouts.getState().activeWorkspace
-  void getBridge()?.window.setWorkspace(workspace, availableToolIds(workspace))
+  const { activeWorkspace, home } = useLayouts.getState()
+  // The home covers the docks entirely, so none of them is reachable: offering to open one
+  // would be a menu entry that does nothing visible.
+  const tools = home ? [] : availableToolIds(activeWorkspace)
+  void getBridge()?.window.setWorkspace(activeWorkspace, tools)
 }
 
 /**

@@ -6,14 +6,16 @@ export type SettingValue = string | number | boolean
 
 /**
  * Branches whose editor is a screen rather than a control per leaf — the default model of a
- * family is picked from a catalogue fetched at runtime, and a keyboard binding is captured by
- * pressing it, neither of which is a list anyone can write down.
+ * family is picked from a catalogue fetched at runtime, a keyboard binding is captured by
+ * pressing it, the home's sections are ordered on the home itself, and the recent projects are
+ * written by opening one — none of which is a list anyone can write down.
  *
  * Named by full path, not by key: excluding `'defaultModels'` wherever it appears would also
  * swallow a future `appearance.defaultModels`, and a leaf missing from `SettingPath` is a leaf
  * the coverage check can no longer notice.
  */
-type DedicatedPath = 'generation.defaultModels' | 'shortcuts.overrides'
+type DedicatedPath =
+  'generation.defaultModels' | 'shortcuts.overrides' | 'home.sections' | 'storage.recentProjects'
 
 /**
  * Dotted paths to the leaves of `Settings`, derived rather than listed: a setting added to the

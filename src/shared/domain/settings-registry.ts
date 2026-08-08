@@ -250,6 +250,16 @@ export const SETTING_REGISTRY = [
       labelKey: `settings.startup.${behaviour}`,
     })),
   }),
+  // Beside `startup` rather than in a screen of its own: what shows when the studio opens is
+  // one subject. Which sections the home draws, and in which order, is set on the home itself
+  // — see `home.sections` in `settings-path.ts`.
+  setting({
+    path: 'home.enabled',
+    kind: 'boolean',
+    section: 'general',
+    titleKey: 'settings.home.title',
+    helpKey: 'settings.home.help',
+  }),
   setting({
     path: 'appearance.theme',
     kind: 'choice',

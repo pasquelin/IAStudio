@@ -1,6 +1,8 @@
 import type { LanguagePreference } from '../i18n/languages'
 import type { BindingOverrides } from './command'
 import type { ApiFailure } from './failure'
+import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
+import type { RecentProject } from './project'
 import type { ModelFamily } from './model'
 import type { ShadowQuality } from './scene'
 
@@ -52,6 +54,14 @@ export type Settings = {
     language: LanguagePreference
     startup: StartupBehaviour
   }
+  /**
+   * The home screen. `sections` carries the user's own order and what they chose to hide;
+   * `domain/home.ts` owns what a section is, and which of them may never be hidden.
+   */
+  home: {
+    enabled: boolean
+    sections: HomeSectionSetting[]
+  }
   appearance: {
     theme: Theme
     density: Density
@@ -78,6 +88,8 @@ export type Settings = {
     backend: AssetBackend
     projectsFolder?: string
     lastProject?: string
+    /** Session state like `lastProject`, and replicated with it — see `domain/project.ts`. */
+    recentProjects: RecentProject[]
   }
   /**
    * The 3D workspace. A branch of its own rather than nested under a `spaces` one: every branch
@@ -136,6 +148,7 @@ export type Settings = {
  */
 export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject' },
+  home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {}, captionArrivals: true },
   three: {
@@ -150,7 +163,7 @@ export const DEFAULT_SETTINGS: Settings = {
     shadowQuality: 'soft',
     shadowMapSize: 2048,
   },
-  storage: { backend: 'local' },
+  storage: { backend: 'local', recentProjects: [] },
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},

@@ -228,6 +228,11 @@
     "texture": "Texture",
     "skybox": "Skybox"
   },
+  "carousel": {
+    "previous": "Scroll back",
+    "next": "Scroll on",
+    "page": "Page {{number}}"
+  },
   "collection": {
     "search": "Search…",
     "searchHint": "Filter the collection by name",
@@ -808,6 +813,10 @@
       "lastProject": "Reopen the last project",
       "nothing": "Open nothing"
     },
+    "home": {
+      "title": "Show the home screen",
+      "help": "The full-width screen the studio opens on: your projects, what you were working on, what is running, and what the models can do. Turn it off to go straight to the workspace you left. Which sections it shows, and in which order, is set on the home itself."
+    },
     "modified": "Changed, not applied yet",
     "apply": "Apply",
     "cancel": "Cancel",
@@ -1381,5 +1390,57 @@
     "End": "End",
     "PageUp": "Page Up",
     "PageDown": "Page Down"
+  },
+  "home": {
+    "sections": {
+      "spotlight": "Where you were",
+      "tools": "Tools",
+      "projects": "Your projects",
+      "documents": "Open documents",
+      "jobs": "Running now",
+      "activity": "Recent activity"
+    },
+    "title": "Home",
+    "tools": {
+      "createGroup": "Create",
+      "projectGroup": "This project",
+      "startGroup": "Get started",
+      "image": "Generate and retouch pictures on a layered canvas.",
+      "video": "Cut, sequence and export moving images.",
+      "3d": "Build a scene, light it, export the model.",
+      "audio": "Compose and edit sound across tracks.",
+      "textures": "Produce seamless material channels.",
+      "skyboxes": "Generate skies and light a scene with them.",
+      "newProject": "New project",
+      "newProjectHelp": "A folder that holds your documents and everything you bring in.",
+      "openProject": "Open a project",
+      "openProjectHelp": "Pick a project folder already on this machine.",
+      "settings": "Preferences",
+      "settingsHelp": "Keys, appearance, generation limits and shortcuts."
+    },
+    "projects": {
+      "none": "Create your first project"
+    },
+    "documents": {
+      "none": "Nothing open yet. Pick a tool above to make something."
+    },
+    "spotlight": {
+      "resume": "Pick up where you left off",
+      "resumeBody": "{{name}}, in {{project}}.",
+      "resumeAction": "Resume",
+      "running_one": "{{count}} generation running",
+      "running_other": "{{count}} generations running",
+      "runningBody": "They carry on while you work, and land in the document that asked for them.",
+      "connect": "Connect an API key",
+      "connectBody": "Models, generation and the shared library need a Scenario key. Everything on your disk works without one.",
+      "connectAction": "Open preferences",
+      "start": "Start a project",
+      "startBody": "A project is a folder: your documents, your assets, and an index the studio keeps beside them.",
+      "startAction": "Create a project"
+    },
+    "closing": {
+      "title": "Create or explore. One click to what comes next.",
+      "action": "Start creating"
+    }
   }
 }

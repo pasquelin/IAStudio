@@ -228,6 +228,11 @@
     "texture": "Texture",
     "skybox": "Skybox"
   },
+  "carousel": {
+    "previous": "Revenir en arrière",
+    "next": "Faire défiler",
+    "page": "Page {{number}}"
+  },
   "collection": {
     "search": "Rechercher…",
     "searchHint": "Filtrer la collection par nom",
@@ -808,6 +813,10 @@
       "lastProject": "Rouvrir le dernier projet",
       "nothing": "Ne rien ouvrir"
     },
+    "home": {
+      "title": "Afficher l’accueil",
+      "help": "L’écran pleine largeur sur lequel le studio s’ouvre : vos projets, ce sur quoi vous travailliez, ce qui tourne, et ce que les modèles savent faire. Désactivez-le pour aller droit à l’espace que vous aviez quitté. Les sections affichées et leur ordre se règlent sur l’accueil lui-même."
+    },
     "modified": "Modifié, pas encore appliqué",
     "apply": "Appliquer",
     "cancel": "Annuler",
@@ -1381,5 +1390,57 @@
     "End": "Fin",
     "PageUp": "Page préc.",
     "PageDown": "Page suiv."
+  },
+  "home": {
+    "sections": {
+      "spotlight": "Où vous en étiez",
+      "tools": "Outils",
+      "projects": "Vos projets",
+      "documents": "Documents ouverts",
+      "jobs": "En cours",
+      "activity": "Activité récente"
+    },
+    "title": "Accueil",
+    "tools": {
+      "createGroup": "Créer",
+      "projectGroup": "Ce projet",
+      "startGroup": "Pour commencer",
+      "image": "Générer et retoucher des images sur un canevas à calques.",
+      "video": "Monter, enchaîner et exporter des images animées.",
+      "3d": "Construire une scène, l’éclairer, exporter le modèle.",
+      "audio": "Composer et monter du son sur plusieurs pistes.",
+      "textures": "Produire les canaux d’un matériau sans raccord.",
+      "skyboxes": "Générer des ciels et éclairer une scène avec.",
+      "newProject": "Nouveau projet",
+      "newProjectHelp": "Un dossier qui réunit vos documents et tout ce que vous y importez.",
+      "openProject": "Ouvrir un projet",
+      "openProjectHelp": "Choisir un dossier de projet déjà présent sur cette machine.",
+      "settings": "Préférences",
+      "settingsHelp": "Clés, apparence, limites de génération et raccourcis."
+    },
+    "projects": {
+      "none": "Créer votre premier projet"
+    },
+    "documents": {
+      "none": "Rien d’ouvert pour l’instant. Choisissez un outil ci-dessus."
+    },
+    "spotlight": {
+      "resume": "Reprendre où vous en étiez",
+      "resumeBody": "{{name}}, dans {{project}}.",
+      "resumeAction": "Reprendre",
+      "running_one": "{{count}} génération en cours",
+      "running_other": "{{count}} générations en cours",
+      "runningBody": "Elles continuent pendant que vous travaillez, et atterrissent dans le document qui les a demandées.",
+      "connect": "Connecter une clé API",
+      "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé Scenario. Tout ce qui est sur votre disque fonctionne sans.",
+      "connectAction": "Ouvrir les préférences",
+      "start": "Démarrer un projet",
+      "startBody": "Un projet est un dossier : vos documents, vos assets, et l’index que le studio tient à côté.",
+      "startAction": "Créer un projet"
+    },
+    "closing": {
+      "title": "Créer ou explorer. Un clic vers la suite.",
+      "action": "Commencer à créer"
+    }
   }
 }

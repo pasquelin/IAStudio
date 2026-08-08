@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useLayouts } from '@/stores/layouts'
+import { useSettings } from '@/stores/settings'
 import { DEFAULT_OPEN, useTools, type OpenByZone } from '@/stores/tools'
 import { Shell } from './Shell'
 
@@ -28,8 +29,15 @@ function handles(): HTMLElement[] {
 
 beforeEach(() => {
   installFakeBridge()
-  useLayouts.setState({ activeWorkspace: 'image', layouts: {} })
+  // Every test below is about the docks, which the home covers entirely — see the last block,
+  // which is the one that exercises it.
+  useLayouts.setState({ activeWorkspace: 'image', layouts: {}, home: false })
   useTools.setState({ open: {}, sizes: {}, splits: {} })
+  // The store is shared across files: one test turns the home off, and every later one would
+  // inherit a studio whose entry point does not exist.
+  useSettings.setState(state => ({
+    settings: { ...state.settings, home: { ...state.settings.home, enabled: true } },
+  }))
 })
 
 describe('a horizontal band', () => {
@@ -141,5 +149,54 @@ describe('a side column', () => {
 
     expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
     expect(handles()).toHaveLength(1)
+  })
+})
+
+describe('the home', () => {
+  it('covers the docks entirely: no rail, no zone, no divider', () => {
+    useLayouts.setState({ home: true })
+    useTools.setState({ open: DEFAULT_OPEN })
+    renderShell()
+
+    expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
+    expect(handles()).toHaveLength(0)
+  })
+
+  // The status line is the studio's global view — jobs, activity, updates — and the home is
+  // where a global view is most wanted, not least.
+  it('keeps the status line under it', () => {
+    useLayouts.setState({ home: true })
+    renderShell()
+
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+  })
+
+  it('gives back the workspace and its panels when it is left', () => {
+    useLayouts.setState({ home: true })
+    useTools.setState({ open: { right: { primary: 'layers' } } })
+    const { rerender } = renderShell()
+
+    useLayouts.setState({ home: false })
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <Shell />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByLabelText('Calques')).toBeInTheDocument()
+  })
+
+  it('takes the home button out of the bar when the setting turns it off', () => {
+    useSettings.setState(state => ({
+      settings: { ...state.settings, home: { ...state.settings.home, enabled: false } },
+    }))
+    useLayouts.setState({ home: true })
+    useTools.setState({ open: { right: { primary: 'layers' } } })
+    renderShell()
+
+    expect(screen.queryByRole('button', { name: 'Accueil' })).not.toBeInTheDocument()
+    // And the studio is on its workspace rather than on a home nothing can reach.
+    expect(screen.getByLabelText('Calques')).toBeInTheDocument()
   })
 })
