@@ -28,11 +28,11 @@ import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
@@ -227,7 +227,10 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
           }
         }
 
-        renameSync(extracted, join(destination, name))
+        // Copied, not renamed: the scratch dir is under the OS temp root, which on a Windows
+        // runner is a different volume from the checkout — `rename` answers EXDEV across those.
+        copyFileSync(extracted, join(destination, name))
+        rmSync(extracted)
         chmodSync(join(destination, name), 0o755)
         console.log(`  \u2192 ${name} ${seen[name].slice(0, 12)}`)
       }

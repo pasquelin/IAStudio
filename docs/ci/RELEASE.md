@@ -38,6 +38,24 @@ Rappel du modèle de branches ([ADR-15](adr/ADR-15-modele-de-branches.md)) : **`
 
 ---
 
+## Choisir le numéro
+
+**Semver**, et le **tag fait foi**. `package.json` porte le même numéro sans le `v`.
+
+| Incrément | Quand | Exemple |
+|---|---|---|
+| **Patch** — `0.2.0` → `0.2.1` | correction seule, aucune capacité nouvelle | un export qui échouait passe |
+| **Mineure** — `0.2.1` → `0.3.0` | capacité nouvelle, les projets existants s'ouvrent toujours | l'espace Audio devient multipiste |
+| **Majeure** — `0.3.0` → `1.0.0` | un projet enregistré par la version d'avant ne s'ouvre plus tel quel, ou l'ergonomie change en profondeur | changement de format de document |
+
+Tant que le premier chiffre est `0`, la promesse de compatibilité est faible par convention —
+mais **le format des documents, lui, engage déjà** : quelqu'un a des projets sur son disque.
+Une version qui les casse est une majeure, quel que soit le chiffre de gauche.
+
+**Pré-versions** : `v0.3.0-rc.1` pour une candidate. `electron-updater` les traite comme des
+versions à part entière ; ne pas publier la draft d'une `-rc` si la base installée ne doit pas
+la recevoir.
+
 ## Publier
 
 1. **Partir d'un `develop` vert.** `pnpm validate` doit passer, et la CI être au vert sur
