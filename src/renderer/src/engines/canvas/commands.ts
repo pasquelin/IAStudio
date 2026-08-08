@@ -1,3 +1,4 @@
+import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { Command } from '../core/history'
 import {
   allLayers,
@@ -127,6 +128,34 @@ export function setLayerMask(
   mask: { enabled: boolean; linked: boolean } | undefined,
 ): Command<CanvasState> {
   return patch(`layer:mask:${id}`, id, { mask })
+}
+
+/**
+ * The grading values of an adjustment layer. Typed apart from `patch`, which is spelled on the
+ * fields every kind shares — this one belongs to a single kind of layer.
+ */
+export function setLayerAdjustment(id: string, values: AdjustmentStack): Command<CanvasState> {
+  let previous: AdjustmentStack | null = null
+
+  return {
+    id: `layer:adjust:${id}`,
+    apply: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => {
+        if (layer.id !== id || layer.kind !== 'adjustment') return layer
+        previous ??= layer.values
+        return { ...layer, values }
+      }),
+    }),
+    revert: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer =>
+        layer.id === id && layer.kind === 'adjustment' && previous
+          ? { ...layer, values: previous }
+          : layer,
+      ),
+    }),
+  }
 }
 
 /** The whole transform at once: the inspector's fields all write into the same object. */

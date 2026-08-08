@@ -5,12 +5,20 @@ import {
   mdiFolderRemoveOutline,
   mdiPlus,
   mdiTrashCanOutline,
+  mdiTune,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { ToolButton } from '@/design/ToolButton'
-import { allLayers, isGroup, layerById, pixelLayer } from '@/engines/canvas/canvas-state'
+import {
+  ADJUSTMENT_KINDS,
+  adjustmentLayer,
+  allLayers,
+  isGroup,
+  layerById,
+  pixelLayer,
+} from '@/engines/canvas/canvas-state'
 import {
   addLayer,
   duplicateLayer,
@@ -94,6 +102,28 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
         // The last paintable layer never goes: a canvas with an empty stack cannot be painted on.
         disabled={paintable.length <= 1 || active === null}
         onClick={() => active && perform(removeLayer(active))}
+      />
+      <MenuButton
+        icon={mdiTune}
+        label={t('adjustment.add')}
+        description={t('adjustment.addHint')}
+        tooltip={TIP_BOTTOM}
+        variant="header"
+        rowCount={ADJUSTMENT_KINDS.length}
+        opensOnClick
+        rows={close =>
+          ADJUSTMENT_KINDS.map(kind => (
+            <MenuRow
+              key={kind}
+              label={t(`adjustment.${kind}`)}
+              icon={mdiTune}
+              onSelect={() => {
+                perform(addLayer(adjustmentLayer(newId(), t(`adjustment.${kind}`), kind)))
+                close()
+              }}
+            />
+          ))
+        }
       />
       <MenuButton
         icon={mdiDotsHorizontal}

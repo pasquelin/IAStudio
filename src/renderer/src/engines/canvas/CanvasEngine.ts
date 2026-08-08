@@ -14,12 +14,14 @@ import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { mountApplication } from '../core/mount'
 import { onPaletteChange, token } from '../core/palette'
+import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
 import {
   allLayers,
   IDENTITY,
   isGroup,
   layerById,
   type BlendMode,
+  type AdjustmentLayer,
   type CanvasState,
   type GroupLayer,
   type Layer,
@@ -200,6 +202,9 @@ function payloadOf(url: string): string {
   return at >= 0 ? url.slice(at + 1) : url
 }
 
+/** A grading pass: the container the filter runs over, and the filter itself. */
+type AdjustPass = Container & { filter: AdjustFilter }
+
 /** The stencil that cuts a clipped layer out of the one below it, and what holds the pair. */
 type ClipProxy = { baseId: string; sprite: Sprite; host: Container }
 
@@ -270,6 +275,8 @@ export class CanvasEngine {
   private isolation: AlphaFilter | null = null
   /** The stencil of the last clipped pass, kept only so the next one can free it. */
   private clipping: Container | null = null
+  /** One grading pass per adjustment layer, holding the filter it applies. */
+  private readonly adjustments = new Map<string, AdjustPass>()
   /** Regions asked of masks that did not exist yet — see `fillMaskFromSelection`. */
   private readonly pendingMaskFills = new Map<string, readonly Point[]>()
   private readonly stamp = new Graphics()
@@ -402,6 +409,7 @@ export class CanvasEngine {
     const layers = allLayers(state.layers)
     for (const layer of layers) {
       if (isGroup(layer)) this.syncGroup(layer, state)
+      else if (layer.kind === 'adjustment') this.syncAdjustment(layer)
       else this.syncLayer(layer)
     }
 
@@ -452,6 +460,14 @@ export class CanvasEngine {
       this.groups.delete(id)
     }
 
+    for (const [id, pass] of this.adjustments) {
+      if (kept.has(id)) continue
+      // Emptied first: what it graded are layers that live on without it.
+      pass.removeChildren()
+      pass.destroy()
+      this.adjustments.delete(id)
+    }
+
     const clipping = new Set(layers.filter(layer => layer.clipped).map(layer => layer.id))
     for (const [id, clip] of this.clips) {
       if (clipping.has(id) && this.surfaces.has(clip.baseId)) continue
@@ -470,6 +486,15 @@ export class CanvasEngine {
         if (!container) continue
         this.attach(node.children, container)
         parent.addChild(container)
+        continue
+      }
+
+      if (node.kind === 'adjust') {
+        const pass = this.adjustments.get(node.id)
+        if (!pass) continue
+        // What it covers goes inside it: the filter grades the pass, not a sibling beside it.
+        this.attach(node.children, pass)
+        parent.addChild(pass)
         continue
       }
 
@@ -550,6 +575,24 @@ export class CanvasEngine {
       clip.sprite.visible = layer.visible
       clip.sprite.alpha = layer.opacity * layer.fillOpacity
     }
+  }
+
+  /**
+   * The grading pass of one adjustment layer. It holds no texture and no sprite: what it owns is
+   * a container carrying a filter, and what the filter grades is whatever `attach` puts in it.
+   */
+  private syncAdjustment(layer: AdjustmentLayer): void {
+    let pass = this.adjustments.get(layer.id)
+    if (!pass) {
+      const filter = createAdjustFilter()
+      pass = Object.assign(new Container({ label: layer.id }), { filter })
+      pass.filters = [filter]
+      this.adjustments.set(layer.id, pass)
+    }
+
+    pass.visible = layer.visible
+    pass.alpha = layer.opacity
+    pass.filter.grade(layer.values)
   }
 
   private syncGroup(layer: GroupLayer, box: Size): void {
@@ -828,6 +871,8 @@ export class CanvasEngine {
     this.stacking = ''
     for (const container of this.groups.values()) container.destroy()
     this.groups.clear()
+    for (const pass of this.adjustments.values()) pass.destroy()
+    this.adjustments.clear()
     for (const clip of this.clips.values()) this.destroyClip(clip)
     this.clips.clear()
     this.pendingMaskFills.clear()

@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { groupLayer, pixelLayer, type Layer } from '@/engines/canvas/canvas-state'
+import { adjustmentLayer, groupLayer, pixelLayer, type Layer } from '@/engines/canvas/canvas-state'
+import { addLayer } from '@/engines/canvas/commands'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { LayerInspector } from './LayerInspector'
@@ -81,5 +82,37 @@ describe('LayerInspector', () => {
     show(groupLayer('g', 'Group', [pixelLayer('a', 'A'), pixelLayer('b', 'B')]))
 
     expect(screen.getByText('2')).toBeInTheDocument()
+  })
+
+  describe('an adjustment layer', () => {
+    const graded = () => adjustmentLayer('grade', 'Exposure', 'exposure')
+
+    it('shows the one dial it exposes', () => {
+      show(graded())
+
+      expect(screen.getByLabelText('Exposition')).toBeInTheDocument()
+    })
+
+    it('writes the dial into the layer without disturbing the others', () => {
+      const layer = graded()
+      useCanvases.getState().runCommand(DOCUMENT, addLayer(layer))
+      render(<LayerInspector documentId={DOCUMENT} layer={layer} />)
+
+      fireEvent.change(screen.getByLabelText('Exposition'), { target: { value: '1.5' } })
+
+      const written = stack().layers.at(-1)
+      expect(written?.kind === 'adjustment' && written.values).toMatchObject({
+        exposure: 1.5,
+        contrast: 1,
+        saturation: 1,
+      })
+    })
+
+    // A pixel layer has no dial to show: the section belongs to the kind that carries one.
+    it('shows no dial on a layer that has none', () => {
+      show()
+
+      expect(screen.queryByLabelText('Exposition')).not.toBeInTheDocument()
+    })
   })
 })

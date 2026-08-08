@@ -4,15 +4,18 @@ import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { SliderField } from '@/design/SliderField'
 import { CONTROL } from '@/design/styles'
+import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { ToggleField } from '@/design/ToggleField'
 import {
   BLEND_MODES,
   isGroup,
+  type AdjustmentKind,
   type BlendMode,
   type Layer,
   type Transform,
 } from '@/engines/canvas/canvas-state'
 import {
+  setLayerAdjustment,
   setLayerBlend,
   setLayerClipped,
   setLayerFillOpacity,
@@ -29,6 +32,22 @@ export type LayerInspectorProps = { documentId: string; layer: Layer }
 
 /** Radians are what the engine turns and what a document stores; nobody types in them. */
 const PER_RADIAN = 180 / Math.PI
+
+/** Which dial of the stack each kind of adjustment layer exposes, and how far it swings. */
+const DIAL_BY_KIND: Readonly<Record<AdjustmentKind, keyof AdjustmentStack>> = {
+  exposure: 'exposure',
+  contrast: 'contrast',
+  saturation: 'saturation',
+  temperature: 'temperature',
+}
+
+const DIAL_RANGE: Readonly<Record<AdjustmentKind, { min: number; max: number }>> = {
+  // Stops, so ±3 is the range a photograph is recoverable within.
+  exposure: { min: -3, max: 3 },
+  contrast: { min: 0, max: 2 },
+  saturation: { min: 0, max: 2 },
+  temperature: { min: -1, max: 1 },
+}
 
 /**
  * One layer, read out and edited. Its own section rather than the scene's `TransformSection`:
@@ -112,6 +131,27 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           />
         ))}
       </PropertyGroup>
+
+      {layer.kind === 'adjustment' && (
+        <PropertyGroup title={t(`adjustment.${layer.adjustment}`)}>
+          <SliderField
+            label={t(`adjustment.${layer.adjustment}`)}
+            value={layer.values[DIAL_BY_KIND[layer.adjustment]]}
+            min={DIAL_RANGE[layer.adjustment].min}
+            max={DIAL_RANGE[layer.adjustment].max}
+            step={0.01}
+            onChange={value =>
+              edit.run(
+                setLayerAdjustment(layer.id, {
+                  ...layer.values,
+                  [DIAL_BY_KIND[layer.adjustment]]: value,
+                }),
+              )
+            }
+            {...edit.gesture}
+          />
+        </PropertyGroup>
+      )}
 
       {/* A group has no pixels of its own, but it does have a place: it carries its children. */}
       <PropertyGroup title={t('inspector.transform')}>

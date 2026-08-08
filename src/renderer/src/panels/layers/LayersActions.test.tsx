@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { addLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
+import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import { groupLayer } from '@/engines/canvas/canvas-state'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
@@ -96,6 +97,42 @@ describe('LayersActions', () => {
 
       const rows = await screen.findAllByRole('menuitem')
       expect(rows.map(row => row.textContent)).toEqual(['Grouper', 'Dégrouper', 'Dupliquer'])
+    })
+  })
+
+  describe('adjustment layers', () => {
+    const stack = () => canvasOf(useCanvases.getState(), 'doc-1')
+
+    it('lays an adjustment over what is below it', async () => {
+      render(<LayersActions />)
+      await userEvent.click(screen.getByRole('button', { name: /^Ajouter un réglage/ }))
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Exposition' }))
+
+      expect(stack().layers.at(-1)).toMatchObject({ kind: 'adjustment', adjustment: 'exposure' })
+    })
+
+    // Four dials, and only four: these are the ones the grading pass actually applies.
+    it('offers exactly the adjustments the pass can apply', async () => {
+      render(<LayersActions />)
+      await userEvent.click(screen.getByRole('button', { name: /^Ajouter un réglage/ }))
+
+      const rows = await screen.findAllByRole('menuitem')
+      expect(rows.map(row => row.textContent)).toEqual([
+        'Exposition',
+        'Contraste',
+        'Saturation',
+        'Température',
+      ])
+    })
+
+    // A new adjustment changes nothing until a dial is moved.
+    it('is born neutral', async () => {
+      render(<LayersActions />)
+      await userEvent.click(screen.getByRole('button', { name: /^Ajouter un réglage/ }))
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Contraste' }))
+
+      const layer = stack().layers.at(-1)
+      expect(layer?.kind === 'adjustment' && layer.values).toEqual(NEUTRAL_ADJUSTMENTS)
     })
   })
 })

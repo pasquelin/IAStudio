@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupLayer, pixelLayer, type Layer } from './canvas-state'
+import { adjustmentLayer, groupLayer, pixelLayer, type Layer } from './canvas-state'
 import { composite, placement, type CompositeNode } from './compositor'
 
 const clipped = (id: string): Layer => ({ ...pixelLayer(id, id), clipped: true })
@@ -151,5 +151,62 @@ describe('masks', () => {
     const child = group?.kind === 'group' ? group.children[1] : undefined
 
     expect(child).toMatchObject({ clippedBy: 'base', maskedBy: 'a' })
+  })
+})
+
+describe('adjustment layers', () => {
+  const adjust = (id: string, clipped = false): Layer => ({
+    ...adjustmentLayer(id, id, 'exposure'),
+    clipped,
+  })
+
+  // Photoshop's rule: everything below it in its parent.
+  it('wraps everything under it in its own level', () => {
+    const nodes = composite([pixelLayer('a', 'A'), pixelLayer('b', 'B'), adjust('grade')])
+
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0]).toMatchObject({ kind: 'adjust', id: 'grade' })
+    expect(nodes[0]?.kind === 'adjust' && nodes[0].children.map(child => child.id)).toEqual([
+      'a',
+      'b',
+    ])
+  })
+
+  // Clipped, it grades the single layer below it and leaves the rest of the stack alone.
+  it('grades only the layer below it when it is clipped', () => {
+    const nodes = composite([pixelLayer('a', 'A'), pixelLayer('b', 'B'), adjust('grade', true)])
+
+    expect(nodes.map(node => node.id)).toEqual(['a', 'grade'])
+    expect(nodes[1]?.kind === 'adjust' && nodes[1].children.map(child => child.id)).toEqual(['b'])
+  })
+
+  it('does not reach out of the group it sits in', () => {
+    const nodes = composite([
+      pixelLayer('outside', 'Outside'),
+      groupLayer('g', 'G', [pixelLayer('inside', 'Inside'), adjust('grade')]),
+    ])
+
+    expect(nodes.map(node => node.id)).toEqual(['outside', 'g'])
+  })
+
+  it('leaves nothing behind when there is nothing under it to grade', () => {
+    const nodes = composite([adjust('grade'), pixelLayer('above', 'Above')])
+
+    expect(nodes.map(node => node.id)).toEqual(['above'])
+  })
+
+  it('stacks one grading pass inside the next', () => {
+    const nodes = composite([pixelLayer('a', 'A'), adjust('warm'), adjust('bright')])
+
+    expect(nodes[0]).toMatchObject({ kind: 'adjust', id: 'bright' })
+    const inner = nodes[0]?.kind === 'adjust' ? nodes[0].children[0] : undefined
+    expect(inner).toMatchObject({ kind: 'adjust', id: 'warm' })
+  })
+
+  // The tree changes shape, so the engine has to rebuild it.
+  it('changes the placement when an adjustment appears', () => {
+    const plain = [pixelLayer('a', 'A')]
+
+    expect(placement(composite([...plain, adjust('grade')]))).not.toBe(placement(composite(plain)))
   })
 })

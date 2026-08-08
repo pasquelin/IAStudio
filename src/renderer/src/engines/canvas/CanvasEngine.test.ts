@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import { layerFixture } from './canvas-fixtures'
 import {
+  adjustmentLayer,
   BLEND_MODES,
   DEFAULT_CANVAS,
   groupLayer,
@@ -197,7 +199,12 @@ vi.mock('pixi.js', () => {
       }
       destroy(): void {}
     },
-    Filter: { defaultOptions: { resolution: 1 } },
+    defaultFilterVert: '',
+    Filter: {
+      defaultOptions: { resolution: 1 },
+      // What `Filter.from` builds, reduced to the one thing the engine writes into it.
+      from: () => ({ resources: { adjustUniforms: { uniforms: {} } } }),
+    },
     AlphaFilter: class {
       destroy(): void {}
     },
@@ -1158,6 +1165,57 @@ describe('flattening the document', () => {
     const { engine } = await mounted()
 
     await expect(engine.maskSnapshot('layer-1')).resolves.toBeNull()
+  })
+})
+
+describe('adjustment layers', () => {
+  const graded = (values: Partial<AdjustmentStack> = {}): CanvasState =>
+    stacked([
+      pixelLayer('layer-1', 'Background'),
+      {
+        ...adjustmentLayer('grade', 'Exposure', 'exposure'),
+        values: { ...NEUTRAL_ADJUSTMENTS, ...values },
+      },
+    ])
+
+  // It holds no pixels of its own: allocating it a document-sized texture would be pure waste.
+  it('costs no texture', async () => {
+    await mounted(graded())
+
+    expect(gpu.texturesCreated).toBe(1)
+  })
+
+  it('grades through a container of its own, carrying one filter', async () => {
+    await mounted(graded())
+    const pass = groupContainer('grade')
+
+    expect(pass?.filters).toHaveLength(1)
+  })
+
+  // What it covers goes inside it: the filter grades the pass, not a sibling beside it.
+  it('holds what it grades rather than sitting next to it', async () => {
+    await mounted(graded())
+
+    expect(groupContainer('grade')?.children).toHaveLength(1)
+  })
+
+  it('carries its own visibility and opacity', async () => {
+    const layer = {
+      ...adjustmentLayer('grade', 'Exposure', 'exposure'),
+      visible: false,
+      opacity: 0.5,
+    }
+    await mounted(stacked([pixelLayer('layer-1', 'Background'), layer]))
+
+    expect(groupContainer('grade')).toMatchObject({ visible: false, alpha: 0.5 })
+  })
+
+  it('lets the pass go when the layer leaves the stack', async () => {
+    const { engine } = await mounted(graded())
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background')]))
+
+    expect(groupContainer('grade')?.children).toHaveLength(0)
   })
 })
 

@@ -943,5 +943,13 @@
     "saturation": "Saturation",
     "color": "Couleur",
     "luminosity": "Luminosité"
+  },
+  "adjustment": {
+    "exposure": "Exposition",
+    "contrast": "Contraste",
+    "saturation": "Saturation",
+    "temperature": "Température",
+    "add": "Ajouter un réglage",
+    "addHint": "Poser un calque de réglage sur ce qui est en dessous"
   }
 }
