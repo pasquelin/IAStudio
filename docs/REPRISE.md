@@ -86,6 +86,44 @@ Ces quatre points traînaient dans les anciennes notes de reprise. Ils sont rég
 
 ---
 
+# 1 bis. La branche `feat/image` attend son merge
+
+**Elle est finie, verte et prête. Elle n'est pas fusionnée**, et c'est délibéré.
+
+    git -C .claude/worktrees/image log --oneline main..HEAD   # 32 commits
+    git -C .claude/worktrees/image status                     # propre
+
+`main` y est déjà intégré (commit « Intégration de main »), donc **la fusion est sans conflit** :
+`git merge-tree --write-tree HEAD main` passe. `pnpm validate` est vert dans le worktree :
+233 fichiers de test, 2555 tests.
+
+## Pourquoi elle n'a pas été fusionnée
+
+Au moment de le faire, **le dépôt principal avait 33 fichiers de documentation modifiés et non
+commités** — une autre session au travail. Quatre d'entre eux sont ceux que cette branche modifie
+aussi (`08-espace-image.md`, `18-limites.md` et leurs versions anglaises), et ils se contredisent :
+l'autre session documente que « on ne peut pas ouvrir une image existante », ce que le lot 2 de
+cette branche vient précisément d'implémenter.
+
+Merger dans cet état aurait écrasé ou mêlé le travail de quelqu'un d'autre. `main` étant par
+ailleurs *checked out* dans le dépôt principal, la fusion ne peut de toute façon pas partir du
+worktree.
+
+## Comment la fusionner
+
+Depuis le **dépôt principal**, une fois son répertoire de travail propre :
+
+    git status                          # doit être vide, sinon commiter ou remiser d'abord
+    git merge feat/image -m "Fusion de feat/image : l'espace Image édite des calques"
+    pnpm validate
+    git worktree remove .claude/worktrees/image
+
+Si les quatre fichiers de manuel entrent en conflit, **c'est la version de la branche qui est
+juste** sur l'espace Image : elle décrit le logiciel après ce travail. Reprendre de l'autre côté
+tout ce qui ne concerne pas l'espace Image.
+
+---
+
 # 2. Le plus urgent
 
 **La surface d'erreur.** `handle` ne journalise pas une promesse rejetée, et le renderer n'a aucune
@@ -262,8 +300,15 @@ historique. Le pinceau, la gomme et le pot sont bornés par un **pochoir GPU**, 
 touche. « Faire un masque de la sélection » relie les deux, ce qui est le prérequis de l'inpainting.
 
 **Transformation (jalon 7).** Les huit poignées plus la rotation (`engines/canvas/handles.ts`,
-arithmétique pure et testée sans GPU), les six formes, et le texte comme genre de calque qui reste
-éditable.
+arithmétique pure et testée sans GPU — `layerBoxOf` y vit aussi, sortie du moteur), les six formes,
+et le texte comme genre de calque qui reste éditable.
+
+> **Deux pièges de poignée, trouvés en revue et corrigés.** La compensation de position se calculait
+> contre `transform.x` comme si la boîte y commençait : faux dès que l'origine n'est pas 0, donc
+> toujours, `IDENTITY` la posant à 0,5 — l'arête qu'on tire *contre* dérivait pendant qu'on
+> redimensionnait. Et la borne anti-écrasement portait sur le *pas* d'un geste, non sur l'échelle
+> cumulée : trois glissements successifs atteignaient encore un millionième. Les deux ont un test de
+> mutation.
 
 **Réglages (jalon 9).** `engines/canvas/adjust-filter.ts` reprend le GLSL de
 `engines/gpu/passes/adjust.ts` dans un `Filter` Pixi. Un calque de réglage grade **tout ce qui est
@@ -274,6 +319,12 @@ dépôt d'asset, l'envoi d'une image à `assets.upload` par un canal IPC typé, 
 `maskSnapshot()`, et cinq actions d'édition qui **préparent le formulaire sans jamais le soumettre**.
 
 **Export (jalon 10).** ⇧⌘E aplatit le document et l'écrit sur le disque.
+
+**Ce que les revues ont encore rattrapé, après coup.** Le bouton du groupe *Cadre* s'armait alors que
+ses trois modes sont grisés — `Toolbar` n'hérite pas le `disabled` d'un mode, si bien que le bouton
+paraissait vivant et ne faisait rien ; il porte désormais son propre `disabled`, et tout le chemin de
+recadrage a été retiré du moteur plutôt que laissé injoignable. Un calque texte refusait aussi le
+pinceau *dans son masque*, alors que seule sa propre texture est réécrite à chaque lettre.
 
 ### Le blocage qui commande tout le reste
 
