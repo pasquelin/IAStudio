@@ -5,7 +5,7 @@ Version 1.0 — 8 août 2026
 
 Ces conditions régissent l'usage de **l'application compilée** distribuée sur la page des
 releases. Le code source publié sur GitHub relève d'un autre texte, la
-[PolyForm Noncommercial License 1.0.0](LICENSE), qui ne s'applique pas ici.
+PolyForm Noncommercial License 1.0.0 (fichier LICENSE du dépôt), qui ne s'applique pas ici.
 
 ## 1. Acceptation
 
@@ -41,7 +41,7 @@ respectifs.
 
 L'application intègre et distribue des logiciels tiers, chacun sous sa propre licence. La
 liste complète, avec le texte intégral de chaque licence, est consultable dans l'application
-sous **Aide ▸ Licences** et dans le fichier [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+sous **Aide ▸ Licences** et dans le fichier THIRD-PARTY-NOTICES.md, livré à côté de l'application.
 
 Ces licences priment sur les présentes conditions pour ce qui concerne les composants
 qu'elles couvrent. En particulier, **FFmpeg** est distribué à côté de l'application comme
@@ -76,9 +76,15 @@ votre usage.
 
 ## 8. Mises à jour
 
-L'application vérifie l'existence de nouvelles versions et peut les télécharger. Cette
-vérification est désactivable dans les préférences. Une version installée n'est jamais
-remplacée sans action de votre part.
+L'application **vérifie automatiquement** l'existence de nouvelles versions au démarrage et
+**télécharge** celles qu'elle trouve, sans vous le demander. Une mise à jour téléchargée
+**s'installe à la fermeture suivante de l'application**.
+
+Ce comportement n'est aujourd'hui pas désactivable depuis les préférences. La seule façon de
+l'empêcher est de bloquer l'accès réseau de l'application ou de ne pas la lancer.
+
+Les téléchargements proviennent de la page des releases du dépôt indiqué à l'article 14, et
+d'aucune autre source.
 
 ## 9. Données
 
@@ -122,4 +128,4 @@ consommateur résidant dans l'Union européenne, les règles de compétence prot
 
 ## 14. Contact
 
-Alban Pasquelin — <https://github.com/pasquelin/scenario>
+Alban Pasquelin — https://github.com/pasquelin/scenario

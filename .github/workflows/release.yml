@@ -183,7 +183,12 @@ jobs:
       contents: write
 
     steps:
+      # This is the one job holding `contents: write`. Checkout would otherwise leave that token
+      # in `.git/config` for every later step — including the one fetching tarballs from third
+      # parties. Nothing here uses git; the release step passes `GH_TOKEN` explicitly.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:

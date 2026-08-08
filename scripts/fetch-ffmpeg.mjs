@@ -368,11 +368,19 @@ async function fetchSources(into) {
 
 // Run directly rather than imported by `before-pack.mjs`.
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const wantsSources = process.argv.includes('--sources')
   const sourcesInto = flag('sources', null)
+
+  // Checked rather than trusted: a bare `--sources` would otherwise read as "no destination", fall
+  // through, and silently re-fetch this machine's binaries instead of the archives asked for.
+  if (wantsSources && (!sourcesInto || sourcesInto.startsWith('--'))) {
+    console.error('--sources needs a destination folder, as in: --sources dist')
+    process.exit(1)
+  }
 
   let run
   if (process.argv.includes('--digests')) run = printDigests()
-  else if (sourcesInto) run = fetchSources(sourcesInto)
+  else if (wantsSources) run = fetchSources(sourcesInto)
   else run = fetchFfmpeg(flag('platform', process.platform), flag('arch', process.arch))
 
   await run.catch(failure => {

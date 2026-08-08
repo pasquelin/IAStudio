@@ -167,7 +167,7 @@ Three texts, three scopes:
   [PolyForm Noncommercial License 1.0.0](LICENSE). Read it, build it, study it, use it for any
   noncommercial purpose. Commercial use is reserved.
 - **The application** distributed on the releases page has its own [terms of use](EULA.md).
-- **The third-party components** both carry keep their own licences — 36 of them, listed in
+- **The third-party components** both of them carry keep their own licences — 36 of them, in
   [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and shown in the app under Help ▸ Licences.
 
 FFmpeg is shipped beside the application as a separate program, under GPL-3.0 on macOS and

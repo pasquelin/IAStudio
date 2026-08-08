@@ -57,10 +57,7 @@ describe('the collected notice', () => {
     expect(entries.filter(entry => entry.spdx === 'UNKNOWN')).toEqual([])
   })
 
-  // Attribution is all the permissive terms ask. Copyleft asks for more: whoever receives the
-  // binary must be able to reach the source of the components carrying those terms — FFmpeg and
-  // mediabunny today. Checked by licence rather than by name, so a new one cannot slip through,
-  // and through the very predicate the collector applies, so neither can drift from the other.
+  // By licence and through the collector's own predicate, so a new copyleft entry cannot slip by.
   it('offers the sources of every copyleft component it ships', () => {
     const copyleft = entries.filter(entry => isCopyleft(entry.spdx))
     expect(copyleft.length).toBeGreaterThan(0)

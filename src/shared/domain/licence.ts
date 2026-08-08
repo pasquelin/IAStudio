@@ -20,9 +20,8 @@ export type Licence = {
 /**
  * Whether these terms oblige us to say where the source is, and not merely to carry the notice.
  *
- * Matched on the SPDX prefix so a version bump — MPL-2.0 to a hypothetical 3.0 — keeps answering
- * true. Lives here rather than in `collect-licences.mjs` because the collector applies the rule
- * and the tests verify it: one definition, or the guard drifts from what it guards.
+ * Shared with `collect-licences.mjs`, which applies it: one definition, or the test that guards
+ * the rule drifts from the rule itself. Matched on the prefix so a version bump still answers.
  */
 export function isCopyleft(spdx: string): boolean {
   return /^(MPL|LGPL|GPL|AGPL|EPL|CDDL|OSL|CeCILL)/.test(spdx)

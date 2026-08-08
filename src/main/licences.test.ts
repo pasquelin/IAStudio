@@ -5,13 +5,7 @@ import licences from '@shared/licences.json'
 import { isCopyleft, type Licence } from '@shared/domain/licence'
 import manifest from '../../package.json'
 
-/**
- * What the repository says about its terms, checked against what the Licences window shows.
- *
- * Under `src/main` rather than beside `licence.ts`: `src/shared` compiles for the renderer too,
- * where `node:fs` has no types, and the files under test sit on disk. This is the nearest project
- * whose tests may read one — the subject is the repository, not any one module of the main.
- */
+// Under `src/main` because `src/shared` compiles for the renderer, where `node:fs` has no types.
 const ROOT = join(import.meta.dirname, '..', '..')
 const entries: Licence[] = licences
 
@@ -20,8 +14,7 @@ const licence = readFileSync(join(ROOT, 'LICENSE'), 'utf8')
 const eula = readFileSync(join(ROOT, 'EULA.md'), 'utf8')
 
 describe('the notice the repository carries', () => {
-  // Generated beside `licences.json` by `pnpm licences:collect`. A stale copy would credit the
-  // wrong versions to whoever reads the release page rather than the running application.
+  // A stale copy would credit the wrong versions to whoever reads the repository, not the app.
   it('mirrors every entry of the window, version and licence included', () => {
     for (const entry of entries) {
       expect(notices, `${entry.name} is missing from THIRD-PARTY-NOTICES.md`).toContain(
@@ -42,11 +35,7 @@ describe('the notice the repository carries', () => {
   })
 })
 
-/**
- * Three texts, three scopes. Confusing them is the mistake worth guarding against: the repository
- * is source-available, the installed application is not, and neither says anything about the
- * third-party software both of them carry.
- */
+// Three texts, three scopes; confusing them is the mistake worth guarding against.
 describe('the terms the project ships under', () => {
   it('declares in the manifest the licence the repository actually carries', () => {
     expect(manifest.license).toBe('PolyForm-Noncommercial-1.0.0')
@@ -63,5 +52,17 @@ describe('the terms the project ships under', () => {
     expect(eula).toContain('THIRD-PARTY-NOTICES.md')
     // The one obligation the terms of use must not read as narrowing.
     expect(eula).toContain('FFmpeg')
+  })
+
+  /**
+   * electron-builder has no root `license` key: declaring one fails `validateConfiguration`
+   * before any platform is packaged, so the mistake costs a whole release rather than one target.
+   * Matched on the text — the schema lives in a dev dependency this project must not import.
+   */
+  it('offers the terms of use from where electron-builder accepts them', () => {
+    const packaging = readFileSync(join(ROOT, 'electron-builder.yml'), 'utf8')
+
+    expect(packaging).not.toMatch(/^license:/m)
+    expect(packaging).toMatch(/^ {2}license: EULA\.md$/m)
   })
 })

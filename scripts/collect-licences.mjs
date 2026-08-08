@@ -88,7 +88,12 @@ function repository(manifest) {
   const declared =
     typeof manifest.repository === 'string' ? manifest.repository : manifest.repository?.url
   if (!declared) return undefined
+
   const url = declared.replace(/^git\+/, '').replace(/\.git$/, '')
+  // npm also allows the `user/repo` shorthand, which is not something a recipient can open. Left
+  // undefined so the copyleft guard below catches it rather than shipping an unusable offer.
+  if (!/^https?:\/\//.test(url)) return undefined
+
   return `${url} — version ${manifest.version}, unmodified`
 }
 
@@ -205,12 +210,6 @@ const licences = [ffmpegLicence(), ...fontLicences(), ...SHIPPED.map(collect)].s
   one.name.localeCompare(other.name),
 )
 
-writeFileSync(OUTPUT, `${JSON.stringify(licences, null, 2)}\n`)
-console.log(`${licences.length} licences → src/shared/licences.json`)
-
-writeFileSync(NOTICES, renderNotices(licences))
-console.log(`${licences.length} licences → THIRD-PARTY-NOTICES.md`)
-
 /** Refuses to leave a notice that would be wrong, rather than writing it and hoping. */
 function refuse(offenders, why) {
   if (offenders.length === 0) return
@@ -223,11 +222,17 @@ function refuse(offenders, why) {
 //
 // Read from `patches/` rather than the config: pnpm 10 moved `patchedDependencies` into
 // `pnpm-workspace.yaml`, and this script has no YAML parser reachable. The folder is where the
-// patch text lands either way, and pnpm escapes a scope's slash to `__` in the file name.
+// patch text lands either way, and pnpm escapes a scope's slash to `__` in the file name. Anchored
+// on what follows the name, or `react-dom@18.patch` would convict a package named `react`.
 const patchFolder = join(ROOT, 'patches')
 const patches = existsSync(patchFolder) ? readdirSync(patchFolder) : []
-const isPatched = entry => patches.some(file => file.startsWith(entry.name.replace('/', '__')))
+const isPatched = entry => {
+  const stem = entry.name.replace('/', '__')
+  return patches.some(file => file === `${stem}.patch` || file.startsWith(`${stem}@`))
+}
 
+// Before writing, not after: a run that exits 1 having already overwritten both files leaves the
+// very claim it refuses on disk, one `git add` away from shipping.
 refuse(
   licences.filter(entry => !entry.text),
   'No licence text found for:',
@@ -240,3 +245,9 @@ refuse(
   licences.filter(entry => isCopyleft(entry.spdx) && isPatched(entry)),
   'Patched copyleft dependency — publish the modified files under their own terms, then say so:',
 )
+
+writeFileSync(OUTPUT, `${JSON.stringify(licences, null, 2)}\n`)
+console.log(`${licences.length} licences → src/shared/licences.json`)
+
+writeFileSync(NOTICES, renderNotices(licences))
+console.log(`${licences.length} licences → THIRD-PARTY-NOTICES.md`)

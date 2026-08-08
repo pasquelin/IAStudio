@@ -4,12 +4,6 @@ appId: com.scenario.app
 # here would leave the shipped name unguarded.
 copyright: © 2026 Alban Pasquelin
 
-# The terms of use of the binary, not the source-available licence of the repository — those are
-# two different texts and only this one governs what an installer hands over. Shown by the NSIS
-# installer and recorded in the Linux packages. Markdown renders as plain text there, which reads
-# fine and keeps one file authoritative instead of a copy that drifts.
-license: EULA.md
-
 directories:
   output: release
   buildResources: build
@@ -119,6 +113,11 @@ win:
       arch: [x64]
 
 nsis:
+  # The terms of use of the binary, not the source-available licence of the repository: two
+  # different texts, and only this one governs what an installer hands over. Per target — there is
+  # no root `license` key, and declaring one fails `validateConfiguration` before any platform is
+  # packaged. Not set under `dmg`: a licence there gates mounting the image every single time.
+  license: EULA.md
   oneClick: false
   allowToChangeInstallationDirectory: true
   # Per user, so installing needs no administrator: the studio writes to the user's own folders
@@ -138,3 +137,6 @@ linux:
     entry:
       StartupWMClass: Scenario Studio
   target: [AppImage, deb]
+
+appImage:
+  license: EULA.md
