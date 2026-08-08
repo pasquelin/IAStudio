@@ -102,7 +102,8 @@
       "canvas.layer": "A layer could not be loaded",
       "image.export": "Exporting the picture failed",
       "document.save": "Saving the document failed",
-      "assets.reveal": "The file could not be shown"
+      "assets.reveal": "The file could not be shown",
+      "font.face": "A font could not be loaded"
     }
   },
   "updates": {
