@@ -6,6 +6,8 @@
  * document, which is what `shared/domain` is for — and it is what lets `MeshKind` be *derived*
  * from them instead of restated, so a geometry added without a menu entry fails to compile.
  */
+import type { FontRef } from './font'
+
 export type Vector3 = { x: number; y: number; z: number }
 
 export type Transform = {
@@ -135,6 +137,26 @@ export type SpriteDescriptor = {
 }
 
 /**
+ * Words, as a solid. The typeface is a reference like a texture or a model is, and for the same
+ * reason: what a document stores has to be something a reload can resolve again — see
+ * `domain/font`, which both workspaces that set text read.
+ *
+ * The face itself is never stored. A shipped one is a name the studio can always answer, and an
+ * installed one is a name only that machine can — which is the missing-font hole, said out loud
+ * rather than papered over by embedding half a megabyte of glyph tables in every scene file.
+ */
+export type TextDescriptor = {
+  value: string
+  font: FontRef
+  /** Height of the em square, in scene units. A capital stands about seven tenths of it. */
+  size: number
+  /** How far the letters stand out of their own plane. Zero leaves them flat. */
+  depth: number
+  /** How finely the curves are cut. The cost of a letter is mostly here. */
+  curveSegments: number
+}
+
+/**
  * `target` is a point, not an object. three.js aims a light at an `Object3D`, and the official
  * editor shows that object in its outliner — but a node that cannot be renamed, hidden or
  * deleted is a property that leaked into the tree, and it doubles the length of a lit scene.
@@ -207,17 +229,12 @@ export const EXPORT_EXTENSIONS: Record<ExportFormat, string> = {
   usdz: '.usdz',
 }
 
-/**
- * What is picked from the Add menu without being a mesh or a light.
- *
- * `text` is declared and greyed: three.js builds a 3D text from a font file, a project holds no
- * asset of that kind, and the studio ships none — see the plan of the 3D workspace.
- */
+/** What is picked from the Add menu without being a mesh or a light. */
 export type ObjectKind = 'sprite' | 'text'
 
 export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
   { kind: 'sprite' },
-  { kind: 'text', disabled: true },
+  { kind: 'text' },
 ]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [

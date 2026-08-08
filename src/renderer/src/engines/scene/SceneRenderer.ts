@@ -32,6 +32,7 @@ import {
   type SceneNode,
   type SceneState,
   type SpriteNode,
+  type TextNode,
 } from './scene-state'
 import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
 import {
@@ -49,6 +50,10 @@ import {
   type SpriteTexture,
 } from './material-textures'
 import { reportFailure } from '@/services/diagnostics'
+import { studioFonts } from '@/services/fonts'
+import type { FontLibrary } from '../core/fonts'
+import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
+import { textGeometry } from './text-geometry'
 import { createGltfSource } from './gltf-source'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
@@ -56,6 +61,7 @@ import { applyShadowFlags, applyShadowQuality, fitShadowCamera, resizeShadowMap 
 import {
   applyDisplayMode,
   applyWireOverlay,
+  directionOf,
   viewPosition,
   type DisplayMode,
   type ViewDirection,
@@ -83,6 +89,8 @@ export type SceneRendererOptions = {
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
   loadTexture?: TextureSource
+  /** The typefaces a text is cut from. Shared with the image workspace — see `services/fonts`. */
+  fonts?: FontLibrary
 }
 
 /**
@@ -141,6 +149,12 @@ Mesh.prototype.raycast = acceleratedRaycast
 
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
+
+/**
+ * A second of the trihedron's own animation, in the seconds it takes. It turns a whole revolution
+ * per second and no side is half of one away, so one step lands on the target exactly.
+ */
+const HELPER_SETTLES = 1
 
 export class SceneRenderer {
   private readonly viewport = new ViewportEngine({
@@ -206,6 +220,7 @@ export class SceneRenderer {
   /** One line material for every overlay: they all draw the same edges in the same colour. */
   private readonly wireMaterial = new LineBasicMaterial()
   private readonly bvh: BvhBuilder = createBvhBuilder(() => new BvhWorker())
+  private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
 
   constructor(private readonly options: SceneRendererOptions) {
@@ -223,6 +238,9 @@ export class SceneRenderer {
       (assetId, error) => reportFailure('scene.model', assetId, error),
     )
     this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
+    // The studio's own by default: a face parsed for a caption in the image workspace is the
+    // same object a text node extrudes, and half a megabyte of glyph tables is worth sharing.
+    this.fonts = options.fonts ?? studioFonts
 
     // No lights here: they are nodes of the state now, so the viewport shows what the outliner
     // lists — and hiding one actually darkens the scene.
@@ -273,9 +291,7 @@ export class SceneRenderer {
       this.environment.setIntensity(STUDIO_INTENSITY)
     }
 
-    const viewHelper = new ViewHelper(camera, canvas)
-    tuneViewHelper(viewHelper)
-    this.viewHelper = viewHelper
+    this.buildViewHelper()
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
@@ -392,6 +408,23 @@ export class SceneRenderer {
 
   setProjection(kind: ProjectionKind): void {
     this.viewport.setProjection(kind)
+    // Rebuilt on the camera the viewport now draws with: a projection change swaps that camera
+    // for another object entirely, and the trihedron is built around whichever one it was given.
+    // Left alone it would show — and, since it became clickable, turn — a camera nothing renders.
+    this.buildViewHelper()
+  }
+
+  /** The trihedron, on the viewport's current camera. Thrown away and remade rather than rebound:
+   * the camera it holds is not part of its published surface. */
+  private buildViewHelper(): void {
+    const canvas = this.viewport.canvas
+    if (!canvas) return
+
+    this.viewHelper?.dispose()
+    const helper = new ViewHelper(this.viewport.camera, canvas)
+    tuneViewHelper(helper)
+    this.viewHelper = helper
+    this.viewport.requestRender()
   }
 
   /** Surfaces, edges, or both. Session state: nothing of the document moves. */
@@ -643,6 +676,19 @@ export class SceneRenderer {
 
       applySprite(object.material, node.sprite, this.meshColor)
       this.spriteMaps.get(node.id)?.apply(node.sprite)
+      return
+    }
+
+    if (node.type === 'text' && object instanceof Mesh) {
+      const before = previous?.type === 'text' ? previous : null
+      // Cut again only when the words or their shape moved: a colour change must not re-extrude
+      // a caption, which is the one edit here that costs a frame.
+      if (before?.text !== node.text) void this.reshapeText(node)
+
+      const material = standardMaterialOf(object)
+      if (material && before?.material !== node.material) {
+        applyMaterial(material, node.material, this.meshColor)
+      }
     }
   }
 
@@ -651,8 +697,50 @@ export class SceneRenderer {
     if (node.type === 'light') return this.buildLight(node)
     if (node.type === 'model') return this.buildModel(node)
     if (node.type === 'sprite') return this.buildSprite(node)
+    if (node.type === 'text') return this.buildText(node)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
+  }
+
+  /**
+   * Words as a solid. Born with no geometry at all: a face is fetched and parsed long after the
+   * frame that asked for it, exactly like a model's file or a mesh's maps.
+   */
+  private buildText(node: TextNode): Mesh {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, node.material, this.meshColor)
+
+    const mesh = new Mesh(new BufferGeometry(), material)
+    void this.reshapeText(node)
+
+    return mesh
+  }
+
+  /**
+   * The letters, cut again from whatever the node now says.
+   *
+   * A face nothing can produce falls back to one the studio ships rather than leaving the node
+   * invisible — the words are what someone typed, and showing them plainly beats showing nothing.
+   * That is not a silent swap: the document keeps the family it names, and `fonts` has already
+   * written the failure to the log.
+   */
+  private async reshapeText(node: TextNode): Promise<void> {
+    const font =
+      (await this.fonts.load(node.text.font)) ??
+      (isSameFont(node.text.font, DEFAULT_FONT) ? null : await this.fonts.load(DEFAULT_FONT))
+
+    const object = this.objects.get(node.id)
+    // The node may have been edited, retyped or deleted while the face was on its way: what is
+    // in the scene now is what decides, never what asked.
+    if (!font || !(object instanceof Mesh) || this.applied.get(node.id) !== node) return
+
+    object.geometry.dispose()
+    object.geometry = textGeometry(font, node.text)
+    // Same reason as a model landing into a wireframe scene: the edges were built from the shape
+    // that was there before the face arrived — an empty one at first, the previous words after an
+    // edit — and outline a mesh that no longer exists until they are built again.
+    if (this.display !== 'shaded') this.applyDisplay(object)
+    this.viewport.requestRender()
   }
 
   /**
@@ -921,6 +1009,9 @@ export class SceneRenderer {
       return
     }
     if (event.button !== 0 || this.gizmo?.dragging) return
+    // The trihedron is drawn over the viewport, so it takes the click before the scene does — and
+    // nothing is armed for a selection the click never meant.
+    if (this.turnToViewHelper(event)) return
     // Held, not acted on: `OrbitControls` pans on left-drag with any of the three modifiers, and
     // those are the very keys that add to a selection. Picking on release, and only if the
     // pointer never moved, is what stops a recentring gesture from unpicking what it passes over.
@@ -956,6 +1047,45 @@ export class SceneRenderer {
     // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
     const extending = event.shiftKey || event.metaKey || event.ctrlKey
     this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+  }
+
+  /**
+   * The side the trihedron was clicked on, gone to through `viewFrom`. Answers whether the click
+   * was its, so the viewport can leave it alone.
+   *
+   * The helper moves the camera itself, around a centre of its own that `OrbitControls` knows
+   * nothing about: left to it, the orbit's target would drift and the first drag afterwards would
+   * swing the view somewhere nobody asked for. So its centre is put on the target, its animation
+   * is run out in one step — only to learn which side it aimed at — and the move is left to
+   * `viewFrom`, which keeps the distance, nudges the poles off axis and tells the controls.
+   */
+  private turnToViewHelper(event: PointerEvent): boolean {
+    const helper = this.viewHelper
+    const orbit = this.viewport.orbit
+    if (!helper || !orbit) return false
+
+    const camera = this.viewport.camera
+    const from = camera.position.clone()
+    const facing = camera.quaternion.clone()
+
+    helper.center.copy(orbit.target)
+    // The helper reads where the camera stands to work out where it would send it, and one
+    // sitting exactly on its target stands nowhere: every side would come back as the same
+    // point. Pushed off first, and put back below whatever the click turns out to be.
+    if (from.equals(orbit.target)) camera.position.z += DEFAULT_VIEW_DISTANCE
+
+    const hit = helper.handleClick(event)
+    if (hit) helper.update(HELPER_SETTLES)
+    const direction = hit ? directionOf(camera.position.clone().sub(orbit.target)) : null
+
+    // Put back everything the helper moved. It was only ever asked which side it aimed at; the
+    // move itself belongs to `viewFrom`, which reads the distance off the camera it is about to
+    // move and tells the controls once it has.
+    camera.position.copy(from)
+    camera.quaternion.copy(facing)
+    if (direction) this.viewFrom(direction)
+
+    return hit
   }
 
   // Without this the OS menu opens on the very gesture that starts flying.

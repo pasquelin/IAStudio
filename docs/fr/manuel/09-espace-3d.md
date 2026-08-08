@@ -151,8 +151,31 @@ Une *maille* (ou *mesh*) est un objet géométrique.
 | **Dodécaèdre** | 12 faces |
 | **Icosaèdre** | 20 faces |
 
-> **Texte** apparaît grisé dans le menu : un texte 3D demande un fichier de police, et le studio
-> n'en fournit aucun. Voir [Ce qui n'existe pas encore](18-limites.md).
+### Le texte — des mots en volume
+
+**Ajouter ▸ Objet ▸ Texte** pose un texte dans la scène, déjà écrit et déjà lisible. L'inspecteur
+en montre trois choses : le **contenu**, la **police**, et les nombres qui donnent sa forme aux
+lettres — le **corps**, la **profondeur** (mettez-la à zéro pour des lettres plates) et les
+**segments de courbe**, qui décident de la finesse des arrondis.
+
+Un texte est éclairé comme une maille, et porte le même **matériau** : couleur, rugosité, métal,
+et les cinq textures. Il projette et reçoit les ombres.
+
+#### Les polices offertes
+
+La liste s'ouvre sur les **trois polices que le studio embarque** — Lato, IBM Plex Serif, IBM Plex
+Mono — puis sur **celles que votre machine a installées**. Les trois premières sont dans
+l'application : une scène qui les emploie s'ouvre à l'identique sur n'importe quelle machine.
+
+Une police du système, non. Elle reste écrite dans le document, mais si vous ouvrez la scène
+ailleurs et que la police n'y est pas, deux choses se produisent : la liste affiche son nom suivi
+de **« (absente) »**, et les lettres sont dessinées dans la police embarquée par défaut pour que
+le texte reste visible. Le document, lui, n'est pas réécrit — retrouvez la machine qui a la
+police, et la scène redevient ce qu'elle était.
+
+> Certaines polices anciennes du système ne s'ouvrent pas : la bibliothèque que le studio emploie
+> ne lit pas tous les formats de table qu'elles emploient. Le nom reste dans la liste, le texte
+> retombe sur la police par défaut, et le journal dit laquelle a échoué.
 
 ### Le sprite — une image face à la caméra
 
@@ -503,10 +526,9 @@ rien n'avait été écrit pour lui.
 
 ## Ce qui manque encore
 
-L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
-
-- le **Texte** 3D — l'entrée grisée du menu **Ajouter** ;
-- rien d'autre : l'espace 3D a désormais tout ce que ce manuel décrit.
+L'espace 3D a désormais tout ce que ce manuel décrit. Ce qui reste tient en une phrase : les
+polices s'offrent en une seule graisse par famille, et un texte ne se plie pas le long d'une
+courbe.
 
 Le détail est dans [Ce qui n'existe pas encore](18-limites.md).
 

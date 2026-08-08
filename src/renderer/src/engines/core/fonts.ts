@@ -1,5 +1,5 @@
 import { parse, type Font } from 'opentype.js'
-import { EMBEDDED_FONTS, type FontRef } from '@shared/domain/font'
+import { EMBEDDED_FONTS, fontKey, type FontRef } from '@shared/domain/font'
 import { reportFailure } from '@/services/diagnostics'
 
 /**
@@ -69,7 +69,7 @@ export function createFontLibrary(source: FontSource): FontLibrary {
     },
 
     load: ref => {
-      const key = `${ref.source}:${ref.family}`
+      const key = fontKey(ref)
       const held = faces.get(key)
       if (held) return held
 

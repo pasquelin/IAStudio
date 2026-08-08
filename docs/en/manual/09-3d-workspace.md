@@ -149,8 +149,30 @@ A *mesh* is a geometric object.
 | **Dodecahedron** | 12 faces |
 | **Icosahedron** | 20 faces |
 
-> **Text** appears greyed out in the menu: a 3D text needs a font file, and the studio ships none.
-> See [What does not exist yet](18-limits.md).
+### Text — words in volume
+
+**Add ▸ Object ▸ Text** drops a text into the scene, already written and already readable. The
+inspector shows three things about it: the **content**, the **font**, and the numbers that give
+the letters their shape — the **size**, the **depth** (set it to zero for flat letters) and the
+**curve segments**, which decide how finely the curves are cut.
+
+A text is lit like a mesh and wears the same **material**: colour, roughness, metalness, and the
+five textures. It casts and receives shadows.
+
+#### The fonts on offer
+
+The list opens on the **three fonts the studio ships** — Lato, IBM Plex Serif, IBM Plex Mono —
+then on **whatever your machine has installed**. The first three travel inside the application: a
+scene that uses them opens identically on any machine.
+
+A system font does not. It stays written in the document, but if you open the scene elsewhere and
+the font is not there, two things happen: the list shows its name followed by **"(missing)"**, and
+the letters are drawn in the default embedded font so the text stays visible. The document itself
+is not rewritten — go back to the machine that has the font, and the scene is what it was.
+
+> Some older system fonts will not open: the font-reading library the studio uses does not read
+> every table format they use. The name stays in the list, the text falls back to the default
+> font, and the log says which one failed.
 
 ### The sprite — a picture facing the camera
 
@@ -489,10 +511,8 @@ nothing had been written for it.
 
 ## What is still missing
 
-The 3D workspace is functional but young. Do not look yet for:
-
-- the 3D **Text** — the greyed-out entry of the **Add** menu;
-- nothing else: the 3D workspace now has everything this manual describes.
+The 3D workspace now has everything this manual describes. What is left fits in one sentence:
+fonts are offered in one weight per family, and a text does not bend along a curve.
 
 The detail is in [What does not exist yet](18-limits.md).
 

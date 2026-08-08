@@ -61,6 +61,28 @@ export function viewPosition(
   }
 }
 
+/** How square a direction has to be on an axis to count as that side. Cosine, so this is ~2.5°. */
+const ALIGNED = 0.999
+
+/**
+ * The side a direction names, or `null` when it points between two — the inverse of `AXES`.
+ *
+ * What the trihedron's click is read through: the helper works out where it would send the
+ * camera, and this turns that back into one of the six sides the studio already knows how to go
+ * to, so the move itself goes through `viewFrom` rather than around it.
+ */
+export function directionOf(offset: Vector3): ViewDirection | null {
+  const length = Math.hypot(offset.x, offset.y, offset.z)
+  if (length === 0) return null
+
+  return (
+    VIEW_DIRECTIONS.find(direction => {
+      const [x, y, z] = AXES[direction]
+      return (offset.x * x + offset.y * y + offset.z * z) / length > ALIGNED
+    }) ?? null
+  )
+}
+
 /** What the viewport draws: the surfaces, their edges, or both. */
 export type DisplayMode = 'shaded' | 'wireframe' | 'both'
 

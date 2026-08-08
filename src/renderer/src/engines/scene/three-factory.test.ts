@@ -181,27 +181,29 @@ describe('tuneViewHelper', () => {
   afterEach(() => vi.restoreAllMocks())
 
   // The helper offers no size option: the knobs are shrunk where they stand.
-  it('shrinks the knobs it keeps', () => {
+  it('shrinks every knob', () => {
     const helper = helperOf()
 
     tuneViewHelper(helper)
 
-    const shown = helper.children.filter(child => child instanceof Sprite && child.visible)
-    expect(shown.length).toBeGreaterThan(0)
-    expect(shown.every(sprite => sprite.scale.x < 1)).toBe(true)
+    const knobs = helper.children.filter(child => child instanceof Sprite)
+    expect(knobs.length).toBeGreaterThan(0)
+    expect(knobs.every(sprite => sprite.scale.x < 1)).toBe(true)
   })
 
-  // The coloured knobs already identify the axes; hidden rather than removed, so `dispose()`
-  // still frees the material they all share.
-  it('hides the unlit knobs of the negative axes, without removing them', () => {
+  /**
+   * The three unlit knobs were hidden while the trihedron was only a readout. They are buttons
+   * now, and the helper raycasts them whether or not they are drawn — one hidden would be a click
+   * landing on nothing anyone can see.
+   */
+  it('leaves all six knobs showing, since all six are clickable', () => {
     const helper = helperOf()
-    const before = helper.children.length
 
     tuneViewHelper(helper)
 
-    const hidden = helper.children.filter(child => child instanceof Sprite && !child.visible)
-    expect(hidden).toHaveLength(3)
-    expect(helper.children).toHaveLength(before)
+    const knobs = helper.children.filter(child => child instanceof Sprite)
+    expect(knobs).toHaveLength(6)
+    expect(knobs.every(sprite => sprite.visible)).toBe(true)
   })
 
   it('leaves the axis meshes alone', () => {

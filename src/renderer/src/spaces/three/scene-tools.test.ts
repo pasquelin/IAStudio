@@ -56,8 +56,9 @@ describe('SCENE_TOOLS', () => {
     )
   })
 
-  it('keeps the greyed kinds greyed', () => {
-    expect(add?.modes?.filter(mode => mode.disabled).map(mode => mode.id)).toEqual(['text'])
+  // The flyout can still grey a kind announced before it can be built; nothing needs it today.
+  it('greys nothing, every kind it offers being buildable', () => {
+    expect(add?.modes?.filter(mode => mode.disabled)).toEqual([])
   })
 
   it('keeps the three transform modes as three reachable buttons', () => {

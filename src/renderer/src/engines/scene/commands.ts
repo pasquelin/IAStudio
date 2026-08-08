@@ -5,6 +5,7 @@ import type {
   LightDescriptor,
   MaterialDescriptor,
   SpriteDescriptor,
+  TextDescriptor,
   Transform,
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
@@ -300,9 +301,13 @@ export function setMaterialOn(
   nodes: readonly SceneNode[],
   changes: Partial<MaterialDescriptor>,
 ): Command<SceneState> {
-  return batch('material', nodes, node =>
-    node.type === 'mesh' ? setMaterial(node.id, { ...node.material, ...changes }) : null,
-  )
+  return batch('material', nodes, node => {
+    // A text is lit exactly as a mesh is, and wears the same descriptor — so one section of the
+    // inspector serves both, and neither has to know the other exists.
+    if (node.type === 'mesh') return setMaterial(node.id, { ...node.material, ...changes })
+    if (node.type === 'text') return setTextMaterial(node.id, { ...node.material, ...changes })
+    return null
+  })
 }
 
 /**
@@ -322,6 +327,51 @@ export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneSt
     },
     revert: state => (previous ? patchPart(state, id, 'sprite', { sprite: previous }) : state),
   }
+}
+
+/**
+ * The words, the face and the three numbers that shape them. A node of another type is left
+ * alone rather than patched, exactly as `editMesh` refuses to give a light a geometry.
+ */
+export function setText(id: string, text: TextDescriptor): Command<SceneState> {
+  let previous: TextDescriptor | null = null
+
+  return {
+    id: `text:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'text') return state
+      previous = node.text
+      return patchPart(state, id, 'text', { text })
+    },
+    revert: state => (previous ? patchPart(state, id, 'text', { text: previous }) : state),
+  }
+}
+
+/** The material a text wears. Apart from `setMaterial`, which only ever knew about meshes. */
+export function setTextMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
+  let previous: MaterialDescriptor | null = null
+
+  return {
+    id: `material:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'text') return state
+      previous = node.material
+      return patchPart(state, id, 'text', { material })
+    },
+    revert: state => (previous ? patchPart(state, id, 'text', { material: previous }) : state),
+  }
+}
+
+/** The same, spread over a selection — the text counterpart of `setMaterialOn`. */
+export function setTextOn(
+  nodes: readonly SceneNode[],
+  changes: Partial<TextDescriptor>,
+): Command<SceneState> {
+  return batch('text', nodes, node =>
+    node.type === 'text' ? setText(node.id, { ...node.text, ...changes }) : null,
+  )
 }
 
 /** The same, spread over a selection — the sprite counterpart of `setMaterialOn`. */

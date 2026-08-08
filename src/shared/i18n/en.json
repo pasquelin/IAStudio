@@ -444,7 +444,10 @@
       "normalMap": "Normals",
       "roughnessMap": "Roughness map",
       "metalnessMap": "Metalness map",
-      "aoMap": "Ambient occlusion"
+      "aoMap": "Ambient occlusion",
+      "value": "Content",
+      "size": "Size",
+      "curveSegments": "Curve segments"
     },
     "empty": "Select something to see its properties.",
     "identity": "Identity",
@@ -510,7 +513,11 @@
     "sky": "Sky",
     "studio": "Studio",
     "chooseSky": "Choose a sky",
-    "clearSky": "Back to the studio"
+    "clearSky": "Back to the studio",
+    "font": "Font",
+    "noFont": "None",
+    "chooseFont": "Choose a font",
+    "fontMissing": "{{family}} (missing)"
   },
   "transport": {
     "play": "Play",

@@ -15,12 +15,14 @@ import {
   type EnvironmentRef,
   type Transform,
 } from '@shared/domain/scene'
+import { readFontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
 import {
   GEOMETRY_SPECS,
   LIGHT_SPECS,
   MATERIAL_SPECS,
   SPRITE_SPECS,
+  TEXT_SPECS,
   isVector3,
   type PropertySpec,
 } from './property-fields'
@@ -52,10 +54,24 @@ export function sceneFromPayload(payload: unknown): SceneState {
    * dropped node looks exactly like one that was never there.
    */
   return {
-    nodes: nodes.filter(isSceneNode).map(node => ({ ...node, ...withDefaults(node) })),
+    nodes: nodes.filter(isSceneNode).map(revived),
     selectedIds: [],
     environment: readEnvironment(payload.environment),
   }
+}
+
+/**
+ * A node as the studio holds it, from a node as the file spells it.
+ *
+ * The typeface is read rather than trusted: a family the studio no longer ships falls back to one
+ * it does. A family the machine simply has not got is kept — the document said what it meant, and
+ * the engine is what reports that this machine cannot honour it.
+ */
+function revived(node: SceneNode): SceneNode {
+  const filled = { ...node, ...withDefaults(node) }
+  if (filled.type !== 'text') return filled
+
+  return { ...filled, text: { ...filled.text, font: readFontRef(filled.text.font) } }
 }
 
 /** The flags, filled in where the file holds none — `null` included. */
@@ -94,6 +110,8 @@ function isSceneNode(value: unknown): value is SceneNode {
   // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
   // checked against the same table.
   if (value.type === 'sprite') return isSprite(value.sprite)
+  // A text is words, a face and three numbers, wearing a material like a mesh does.
+  if (value.type === 'text') return isText(value.text) && isMaterial(value.material)
   // A group carries nothing of its own: everything it is has already been checked above.
   if (value.type === 'group') return true
 
@@ -145,6 +163,17 @@ function isSprite(value: unknown): boolean {
   if (!matches(value.opacity, SPRITE_SPECS.opacity)) return false
 
   return isTextureRef(value.map)
+}
+
+/**
+ * The face is read rather than checked: `readFontRef` falls back on one the studio ships, so a
+ * document naming a family nothing can answer still opens — with plain letters, and a line in the
+ * log — instead of losing the node whole.
+ */
+function isText(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.value !== 'string') return false
+
+  return Object.entries(TEXT_SPECS).every(([name, spec]) => matches(value[name], spec))
 }
 
 function isTextureRef(value: unknown): boolean {

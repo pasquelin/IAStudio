@@ -65,6 +65,15 @@ export function isSameFont(one: FontRef, other: FontRef): boolean {
 }
 
 /**
+ * One string naming a face, for a cache key or a picker row. Source and family both: a machine
+ * with Lato installed offers a face under the same name as the one the studio ships, and they
+ * are not the same file.
+ */
+export function fontKey(font: FontRef): string {
+  return `${font.source}:${font.family}`
+}
+
+/**
  * What a stored value says about a typeface, or the studio's own when it says nothing usable —
  * a document written before texts had a font, a family named as a number, a hand-edited file.
  *

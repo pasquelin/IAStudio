@@ -119,13 +119,22 @@ practice", above.
 
 ## 3D workspace
 
-### The 3D text is announced but not buildable
+### The 3D text offers one weight per family
 
-**Text** appears greyed out in the **Add** menu.
+**Add ▸ Object ▸ Text** works — see [the 3D workspace](09-3d-workspace.md). Two reservations.
 
-three.js builds a text in volume from a converted **font file**. The studio ships none, and a
-project's catalogue knows no asset of that kind: not an image, a video, a sound or a 3D model.
-Until one of the two exists, the entry stays greyed rather than promising what no path can keep.
+**One cut per family.** The list offers the roman of each font and nothing else: no bold, no
+italic. A family that installs nine weights therefore takes one row, which is the right trade
+until the studio has a weight picker.
+
+**A system font does not travel.** It stays written in the document, but a machine that has not
+got it draws the letters in the default embedded font, marking the missing name in the list. The
+three fonts the studio ships, on the other hand, open identically everywhere.
+
+**And a few older fonts will not open at all**: the font-reading library the studio uses does not
+know every table format faces inherited from before the 2000s use. On an Apple machine this
+affects about one font in ten. The text then falls back to the default font, and the log says
+which one failed.
 
 ### The `S` shortcut does two things at once
 

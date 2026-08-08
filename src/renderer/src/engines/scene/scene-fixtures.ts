@@ -1,13 +1,15 @@
-import type { LightDescriptor } from '@shared/domain/scene'
+import type { LightDescriptor, TextDescriptor } from '@shared/domain/scene'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
+  DEFAULT_TEXT,
   shadowDefaults,
   IDENTITY_TRANSFORM,
   type LightNode,
   type MeshNode,
   type ModelNode,
   type SpriteNode,
+  type TextNode,
 } from './scene-state'
 
 /**
@@ -65,6 +67,20 @@ export function spriteNodeFixture(id: string, map: string | null = null): Sprite
     ...shadowDefaults({ type: 'sprite' }),
     type: 'sprite',
     sprite: { ...DEFAULT_SPRITE, map: map === null ? null : { assetId: map } },
+  }
+}
+
+export function textNodeFixture(id: string, text: Partial<TextDescriptor> = {}): TextNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'text' }),
+    type: 'text',
+    text: { ...DEFAULT_TEXT, ...text },
+    material: DEFAULT_MATERIAL,
   }
 }
 

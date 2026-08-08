@@ -7,10 +7,17 @@ import {
   meshNode as mesh,
   modelNodeFixture,
   spriteNodeFixture,
+  textNodeFixture,
 } from './scene-fixtures'
 import { groupNode } from './node-factory'
 import { scenePayload, sceneFromPayload } from './scene-document'
-import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
+import {
+  DEFAULT_MATERIAL,
+  DEFAULT_TEXT,
+  EMPTY_SCENE,
+  IDENTITY_TRANSFORM,
+  type SceneState,
+} from './scene-state'
 
 /** A payload as it comes back from disk: through JSON, so nothing keeps a live reference. */
 function reread(state: SceneState): SceneState {
@@ -136,6 +143,56 @@ describe('sceneFromPayload', () => {
       type: 'sprite',
       sprite: { map: { assetId: 'pic-1' }, opacity: 1, color: null },
     })
+  })
+
+  /**
+   * The trap this scene has fallen into twice: `isSceneNode` did not know `group`, and a grouped
+   * scene reopened without its groups; the same was waiting for `sprite`. Every new kind of node
+   * is tested by a round trip through what a file holds, never by reading the guard.
+   */
+  it('carries a text, its face and its shape through a round trip', () => {
+    const written = textNodeFixture('t1', { value: 'Bonjour', size: 2, depth: 0.5 })
+
+    const back = reread({ ...EMPTY_SCENE, nodes: [written] }).nodes
+
+    expect(back).toHaveLength(1)
+    expect(back[0]).toMatchObject({
+      type: 'text',
+      text: { value: 'Bonjour', size: 2, depth: 0.5, font: { source: 'embedded', family: 'Lato' } },
+    })
+  })
+
+  // A family this machine has not got is kept as written: the document said what it meant, and
+  // rewriting it here would lose the author's choice on every open.
+  it('keeps a system face nobody here has, rather than rewriting the document', () => {
+    const written = textNodeFixture('t1', { font: { source: 'system', family: 'Futura' } })
+
+    const back = reread({ ...EMPTY_SCENE, nodes: [written] }).nodes
+
+    expect(back[0]?.type === 'text' && back[0].text.font).toEqual({
+      source: 'system',
+      family: 'Futura',
+    })
+  })
+
+  // A face the studio no longer ships is one nothing can produce: fallen back rather than kept,
+  // so the words still draw.
+  it('falls back to a shipped face when the document names one it no longer has', () => {
+    const written = textNodeFixture('t1', { font: { source: 'embedded', family: 'Helvetiker' } })
+
+    const back = reread({ ...EMPTY_SCENE, nodes: [written] }).nodes
+
+    expect(back[0]?.type === 'text' && back[0].text.font.family).toBe('Lato')
+  })
+
+  it.each([
+    ['a size that is not a number', { ...DEFAULT_TEXT, size: 'big' }],
+    ['no words at all', { ...DEFAULT_TEXT, value: 42 }],
+    ['a text that is not an object', 'Bonjour'],
+  ])('drops a text with %s', (_case, text) => {
+    const nodes: unknown[] = [{ ...textNodeFixture('t1'), text }]
+
+    expect(sceneFromPayload({ nodes }).nodes).toHaveLength(0)
   })
 
   it('drops a sprite whose opacity is not a number', () => {

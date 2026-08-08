@@ -18,10 +18,10 @@ describe('ADD_ENTRIES', () => {
     for (const { labelKey } of ADD_ENTRIES) expect(i18next.exists(labelKey)).toBe(true)
   })
 
-  it('greys the announced kinds and nothing else', () => {
-    const greyed = ADD_ENTRIES.filter(({ entry }) => entry.disabled).map(({ entry }) => entry.kind)
-
-    expect(greyed).toEqual(['text'])
+  // The mechanism stays — a kind declared before it can be built is shown greyed rather than
+  // hidden — but nothing uses it any more: every entry the menus offer now builds a node.
+  it('greys nothing, every announced kind being buildable', () => {
+    expect(ADD_ENTRIES.filter(({ entry }) => entry.disabled)).toEqual([])
   })
 
   // A kind with no glyph draws an empty button, which reads as a broken row rather than a tool.

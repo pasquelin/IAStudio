@@ -55,9 +55,13 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
 
 const box = meshNode('box-1')
 
-/** A new document is born with three lights; only the meshes are what these tests count. */
+/** A new document is born with three lights; only the meshes are what most of these tests count. */
 function meshesOf(documentId: string): SceneNode[] {
-  return sceneOf(useScenes.getState(), documentId).nodes.filter(node => node.type === 'mesh')
+  return nodesOf(documentId).filter(node => node.type === 'mesh')
+}
+
+function nodesOf(documentId: string): SceneNode[] {
+  return [...sceneOf(useScenes.getState(), documentId).nodes]
 }
 
 // Every block, not one of them: a describe that leaned on its neighbour's setup only passed
@@ -191,12 +195,15 @@ describe('SceneDocument', () => {
     expect(lights).toHaveLength(4)
   })
 
-  it('adds nothing for a primitive that is not buildable yet', async () => {
+  it('drops a text into the scene, words and all', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
     await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
-    expect(await screen.findByRole('menuitem', { name: /Texte/ })).toBeDisabled()
-    expect(meshesOf('doc-1')).toHaveLength(0)
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Texte/ }))
+
+    const added = nodesOf('doc-1').filter(node => node.type === 'text')
+    expect(added).toHaveLength(1)
+    expect(added[0]?.type === 'text' && added[0].text.value).toBeTruthy()
   })
 })
 
