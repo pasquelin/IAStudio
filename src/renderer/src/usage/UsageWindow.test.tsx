@@ -24,7 +24,7 @@ function report(overrides: Partial<UsageReport> = {}): UsageReport {
   }
 }
 
-const EMPTY_EVENTS: UsageEventPage = { events: [], offset: 0, more: false }
+const EMPTY_EVENTS: UsageEventPage = { events: [], cursors: {}, more: false }
 
 function install(answered: UsageReport, events: UsageEventPage = EMPTY_EVENTS) {
   installFakeBridge({

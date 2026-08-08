@@ -12,7 +12,7 @@ import { useUsageEvents } from './useUsageReport'
 export function UsageJournal({ period }: { period: UsagePeriod }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
-  const { page, loading, failure, more } = useUsageEvents(period, true)
+  const { page, loading, failure, more } = useUsageEvents(period)
 
   if (failure) return <p className="text-xs">{t('usage.failure')}</p>
   if (!page && loading) return <p className="text-base-content/60 text-xs">{t('usage.loading')}</p>

@@ -286,7 +286,7 @@ describe('scenario handlers', () => {
   })
 
   describe('usage', () => {
-    const EMPTY_PAGE = { events: [], offset: 0, more: false }
+    const EMPTY_PAGE = { events: [], cursors: {}, more: false }
 
     it('passes a period the API accepts straight through', async () => {
       const report = vi.fn(() => Promise.reject(new Error('unused')))
@@ -317,7 +317,7 @@ describe('scenario handlers', () => {
       expect(report).not.toHaveBeenCalled()
     })
 
-    it('pages the log from a positive offset and refuses a negative one', async () => {
+    it('pages the log from the cursors it is given and refuses a nonsensical one', async () => {
       const events = vi.fn(() => Promise.resolve(EMPTY_PAGE))
       registerScenarioHandlers({
         models: registry(),
@@ -327,10 +327,12 @@ describe('scenario handlers', () => {
         usage: reader({ events }),
       })
 
-      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, 100)).resolves.toEqual(EMPTY_PAGE)
-      expect(events).toHaveBeenCalledWith(7, 100)
+      const cursors = { 'acc-1': 100 }
+      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, cursors)).resolves.toEqual(EMPTY_PAGE)
+      expect(events).toHaveBeenCalledWith(7, cursors)
 
-      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, -1)).rejects.toThrow()
+      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, { 'acc-1': -1 })).rejects.toThrow()
+      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, 100)).rejects.toThrow()
     })
 
     it('reduces a refused usage call to a code like every other channel', async () => {

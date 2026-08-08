@@ -1,5 +1,10 @@
-import type { UnitPrice, UsageEventPage, UsagePeriod, UsageReport } from '@shared/domain/usage'
-import { USAGE_EVENT_PAGE_SIZE } from '@shared/domain/usage'
+import type {
+  UnitPrice,
+  UsageCursors,
+  UsageEventPage,
+  UsagePeriod,
+  UsageReport,
+} from '@shared/domain/usage'
 import type { Credentials } from '@main/settings/accounts'
 import type { KeyedAccount } from '@main/settings/store'
 import type { AssistQueue } from './assist-queue'
@@ -33,7 +38,7 @@ export type UsageClient = {
 
 export type UsageReader = {
   report: (period: UsagePeriod) => Promise<UsageReport>
-  events: (period: UsagePeriod, offset: number) => Promise<UsageEventPage>
+  events: (period: UsagePeriod, cursors: UsageCursors) => Promise<UsageEventPage>
 }
 
 export type UsageReaderDeps = {
@@ -82,11 +87,11 @@ export function createUsageReader({
    * key is the ordinary case, and one of them must not cost the user the figures the other keys
    * did return.
    */
-  const collect = (query: UsageQuery): Promise<AccountUsage[]> =>
+  const collect = (queryFor: (account: KeyedAccount) => UsageQuery): Promise<AccountUsage[]> =>
     Promise.all(
       accounts().map(account =>
         queue
-          .run(() => clientFor(account.credentials).usages.list(query))
+          .run(() => clientFor(account.credentials).usages.list(queryFor(account)))
           .then(data => ({ accountId: account.id, name: account.name, data }))
           .catch((error: unknown) => ({
             accountId: account.id,
@@ -115,35 +120,40 @@ export function createUsageReader({
     report: async period => {
       const bounds = periodBounds(period, now())
       const [collected, price] = await Promise.all([
-        collect({
+        collect(() => ({
           startDate: bounds.from,
           endDate: bounds.to,
           dropZeroPoints: true,
           type: ['usages', 'model-usages', 'asset-usages'],
-        }),
+        })),
         priceList(),
       ])
 
       return aggregate(collected, period, bounds, price)
     },
 
-    events: async (period, offset) => {
+    events: async (period, cursors) => {
       const bounds = periodBounds(period, now())
-      const collected = await collect({
+      const collected = await collect(account => ({
         startDate: bounds.from,
         endDate: bounds.to,
         dropZeroPoints: true,
         type: ['activity'],
-        activityOffset: offset,
-      })
+        activityOffset: cursors[account.id] ?? 0,
+      }))
 
-      const events = eventsOf(collected)
-
-      return {
-        events: events.slice(0, USAGE_EVENT_PAGE_SIZE),
-        offset,
-        more: events.length > USAGE_EVENT_PAGE_SIZE,
+      // Advanced per account by what that account actually returned. A single offset over the
+      // merged list would re-read one key's events while skipping another's.
+      const advanced: UsageCursors = {}
+      for (const account of collected) {
+        const read = account.data?.activity?.length ?? 0
+        advanced[account.accountId] = (cursors[account.accountId] ?? 0) + read
       }
+
+      // No page size is published, so "more" cannot mean "the page was full": it means at least
+      // one key still had something. The last request of a run comes back empty and ends it.
+      const events = eventsOf(collected)
+      return { events, cursors: advanced, more: events.length > 0 }
     },
   }
 }

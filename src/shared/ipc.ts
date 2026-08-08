@@ -26,7 +26,7 @@ import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
-import type { UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
+import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
 import type { WindowState } from './domain/window'
 import type { WorkspaceId } from './domain/workspace'
 
@@ -387,8 +387,12 @@ export type StudioBridge = {
      * `silent` rather than failing the call, since a revoked key is the ordinary case.
      */
     usageReport: (period: UsagePeriod) => Promise<UsageReport>
-    /** The raw billable events, paged: the one section large enough to slow the window down. */
-    usageEvents: (period: UsagePeriod, offset: number) => Promise<UsageEventPage>
+    /**
+     * The raw billable events, paged: the one section large enough to slow the window down.
+     *
+     * Cursors are opaque — hand back the ones the previous page returned, `{}` for the first.
+     */
+    usageEvents: (period: UsagePeriod, cursors: UsageCursors) => Promise<UsageEventPage>
   }
   project: {
     create: (path: string, name: string) => Promise<Project>

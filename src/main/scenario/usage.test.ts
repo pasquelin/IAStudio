@@ -106,7 +106,7 @@ describe('createUsageReader', () => {
     const usage = reader([keyed('one')], () => client({ onQuery: query => seen.push(query) }))
 
     await usage.report(7)
-    await usage.events(7, 0)
+    await usage.events(7, {})
 
     expect(seen[0]?.type).not.toContain('activity')
     expect(seen[1]?.type).toEqual(['activity'])
@@ -211,22 +211,59 @@ describe('createUsageReader', () => {
     })
   })
 
-  it('says a full page has more behind it, and a short one has not', async () => {
+  it('ends the paging on the round that brings nothing back', async () => {
+    const empty = reader([keyed('one')], () => client())
+
+    await expect(empty.events(31, {})).resolves.toMatchObject({ more: false })
+  })
+
+  /**
+   * `activityOffset` counts within one account's own log. A single offset over the merged list
+   * would re-read what one key already returned and skip what another had not reached — so each
+   * account carries its own cursor, advanced by what that account itself returned.
+   */
+  it('advances each account by what that account returned, not by the merged total', async () => {
+    const asked: Record<string, number | undefined> = {}
     const entry = (index: number) => ({
       action: 'txt2img',
       time: `2026-08-01T10:00:${String(index).padStart(2, '0')}Z`,
       data: {},
     })
 
-    const short = reader([keyed('one')], () => client({ data: { activity: [entry(0)] } }))
-    await expect(short.events(31, 0)).resolves.toMatchObject({ more: false, offset: 0 })
-
-    const full = reader([keyed('one')], () =>
-      client({ data: { activity: Array.from({ length: 101 }, (_unused, i) => entry(i)) } }),
+    const usage = reader([keyed('busy'), keyed('quiet')], credentials =>
+      client({
+        data: {
+          activity: credentials.key === 'key-busy' ? [entry(0), entry(1), entry(2)] : [entry(3)],
+        },
+        onQuery: query => {
+          asked[credentials.key] = query.activityOffset
+        },
+      }),
     )
-    const page = await full.events(31, 0)
 
-    expect(page.more).toBe(true)
-    expect(page.events).toHaveLength(100)
+    const first = await usage.events(31, {})
+
+    expect(first.events).toHaveLength(4)
+    expect(first.cursors).toEqual({ 'acc-busy': 3, 'acc-quiet': 1 })
+
+    await usage.events(31, first.cursors)
+
+    expect(asked['key-busy']).toBe(3)
+    expect(asked['key-quiet']).toBe(1)
+  })
+
+  it('starts a key that has no cursor yet at the beginning of its log', async () => {
+    const asked: number[] = []
+    const usage = reader([keyed('fresh')], () =>
+      client({
+        onQuery: query => {
+          if (query.activityOffset !== undefined) asked.push(query.activityOffset)
+        },
+      }),
+    )
+
+    await usage.events(31, { 'acc-other': 40 })
+
+    expect(asked).toEqual([0])
   })
 })

@@ -17,7 +17,7 @@ import {
   parsePromptDraft,
   parseReferenceImages,
   parseSuggestPrompts,
-  parseUsageOffset,
+  parseUsageCursors,
   parseUsagePeriod,
 } from './validation'
 
@@ -42,8 +42,8 @@ export function registerScenarioHandlers({
     reduced(() => usage.report(parseUsagePeriod(period))),
   )
 
-  handle(CHANNELS.scenarioUsageEvents, (_event, period, offset) =>
-    reduced(() => usage.events(parseUsagePeriod(period), parseUsageOffset(offset))),
+  handle(CHANNELS.scenarioUsageEvents, (_event, period, cursors) =>
+    reduced(() => usage.events(parseUsagePeriod(period), parseUsageCursors(cursors))),
   )
 
   handle(CHANNELS.scenarioSearchModels, (_event, query) =>

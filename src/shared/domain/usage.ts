@@ -117,17 +117,26 @@ export type UsageEvent = {
 }
 
 /**
- * A slice of the activity log, which is paged rather than returned whole: over 120 days it is
- * the one section large enough to make opening the window slow, so it loads on demand.
+ * Where each account's log has been read up to, by account id.
+ *
+ * One cursor per account rather than a single offset: `activityOffset` counts within one
+ * account's own log, so a shared number applied to merged events would re-read what one key
+ * already returned while skipping what another had not reached yet.
+ *
+ * Opaque to the renderer, which hands back what it was given.
+ */
+export type UsageCursors = Record<string, number>
+
+/**
+ * A slice of the activity log, paged rather than returned whole: over 120 days it is the one
+ * section large enough to make opening the window slow, so it loads on demand.
  */
 export type UsageEventPage = {
   events: readonly UsageEvent[]
-  offset: number
-  /** False once the API stops returning a full page. */
+  cursors: UsageCursors
+  /** False once every account has run out — the API publishes no page size to compare against. */
   more: boolean
 }
-
-export const USAGE_EVENT_PAGE_SIZE = 100
 
 export const USAGE_ROUTE = 'usage'
 
