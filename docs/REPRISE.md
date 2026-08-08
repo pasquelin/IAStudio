@@ -13,7 +13,7 @@ pas. Pour *comprendre* le logiciel plutôt que reprendre son développement :
 > Je reprends le développement de **Scenario Studio**, dans
 > `/Users/pasquelin/Applications/scenario`.
 >
-> Lis `docs/REPRISE.md` en entier, puis `CLAUDE.md`. Ne refais pas les mesures du § 5 : leurs
+> Lis `docs/REPRISE.md` en entier, puis `CLAUDE.md`. Ne refais pas les mesures du § 6 : leurs
 > conclusions sont acquises. Puis `git log --oneline -15` et `pnpm validate` pour partir d'une
 > base verte.
 >
@@ -119,6 +119,47 @@ aucune, et aucun raccourci non plus — elles restent sans touche, elles dépens
 mais aucune porte. Trois l'ouvrent : le double-clic sur un asset, le dépôt depuis l'étagère, et la
 génération, qui retient le document d'où elle est partie et s'y pose seule. Les modèles de panorama
 ont leur famille, reconnue au tag `sc:skybox` — cf. § 3.5.
+
+**Le prompt s'écrit à quatre mains** — le champ que le modèle désigne (`promptSpark`, lu de son
+schéma) porte trois actions : proposer des variantes réécrites, traduire le brouillon vers la langue
+des modèles, lire le style des références déjà posées sur le formulaire. Une variante s'adopte en
+deux gestes séparés — le texte seul, ou le texte **et** les réglages — parce qu'écraser un ratio
+qu'on vient de choisir n'est pas une décision qu'une suggestion prend seule. Les réglages proposés
+sont filtrés contre les descripteurs du modèle avant de traverser la frontière : le SDK les type
+`unknown`, et une valeur hors bornes est écartée plutôt que ramenée de force. Côté bibliothèque, une
+image qui arrive sans nom utile est nommée toute seule, en lots et sous une file bornée. Détails et
+pièges : § 1, « Ce qui n'est pas commencé ».
+
+## Ce qui n'est pas commencé
+
+**La surface Scenario que le studio prend est plus étroite qu'elle n'en a l'air.** Dix canaux
+`scenario:*`, cinq `assets:*` et quatre `cloud:*` couvrent la génération, le catalogue de modèles,
+les jobs, l'upload, la bibliothèque et l'assistance au prompt — et rien d'autre. Ce qui n'est **pas**
+touché, endpoint par endpoint : les workflows, `dryRun` et le coût, `usages` et le solde, `detect`,
+`patch`, l'entraînement, la composition de LoRA, les écrans de collections, et la recherche par
+similarité visuelle. **Le § 4 est l'inventaire raisonné de ce trou**, avec ce qui vaut d'être pris et
+ce qui vaut d'être laissé.
+
+**L'assistance au prompt en est sortie** — `feat/prompt-assist`, fusionnée le 8 août 2026.
+`generate/prompt`, `caption`, `describe_style` et `translate` sont branchés. Ce qu'il faut en
+retenir avant de toucher au reste de la liste ci-dessus :
+
+- **Ces quatre-là ne sont asynchrones qu'en apparence.** Chacun répond avec un `Job`, mais son
+  résultat est dans la réponse du POST — `prompts` y est une propriété *requise*. Il n'y a rien à
+  interroger, et le `JobManager` n'est pas concerné. Vérifier ce point sur `detect` et `patch`
+  avant de supposer qu'ils ont besoin de lui.
+- **`generate/prompt` est gratuit** (0 unité créative, mesuré par `dryRun`) et rend bien plus qu'un
+  texte : des `calls` complets, paramètres conformes au schéma du modèle cible.
+- **Le champ à assister n'est pas deviné** : `GET /models/{id}` marque ses entrées d'un
+  `promptSpark`, que `FieldDescriptor` transporte désormais. C'est le prolongement de l'invariant 5.
+- **`caption` exige un identifiant d'asset** : un fichier resté local n'en a pas. La description
+  automatique porte donc sur le rapatriement depuis la bibliothèque, pas sur l'import d'un fichier
+  du disque, qui exigerait de l'envoyer d'abord.
+- **La file `assist-queue` est à part du `JobManager`**, et le restera : il n'y a ici ni asset à
+  collecter, ni statut à interroger. C'est le seul endroit du studio qui dépense sans qu'on le lui
+  ait demandé, d'où l'interrupteur `generation.captionArrivals` dans les préférences.
+- **`isRetryable` et `withRetry` ont quitté le `JobManager`** pour `scenario/retry.ts`. Tout ce qui
+  appelle l'API en tâche de fond doit passer par là plutôt que réécrire un backoff.
 
 ## Corrigé — ne pas le re-signaler
 
@@ -698,7 +739,7 @@ Le seuil que le plan s'était fixé était 2 ms. L'arbre est construit **en Web 
 seulement au-delà de 20 000 triangles, et seulement pour les modèles importés : une primitive du
 studio fait trente triangles et se marche plus vite qu'un arbre ne se construit.
 
-**Le chemin chaud de l'inspecteur n'est pas un sujet** — audité, chiffré, clos. Cf. § 5.
+**Le chemin chaud de l'inspecteur n'est pas un sujet** — audité, chiffré, clos. Cf. § 6.
 
 ### La dette de relecture des étapes 8 à 11 est payée
 
@@ -886,6 +927,35 @@ dans l'import » cherchera là.
 
 ## 3.6 Dettes transverses
 
+**Rien ne borne le DÉBIT des appels à l'API.** La limite est **100 requêtes par minute et par
+projet** — écrite noir sur blanc dans la copie locale,
+`docs/scenario-api/guides/get-started/documentation/workflows-and-apps.md`, § « Rate Limits », avec
+10 jobs de workflow concurrents et 50 nodes par workflow. `limits.ts` ne borne que la **taille des
+lots** (`GET_BULK_MAX` 200, `DELETE_MAX` 100, `PAGE_SIZE_MAX` 100), et le `JobManager` ne borne que
+la **concurrence**. Ce sont trois grandeurs différentes : dix jobs concurrents qui pollent toutes les
+deux secondes font déjà 300 requêtes par minute à eux seuls, et par-dessus s'ajoutent le catalogue,
+les vignettes de modèles par lots de 100 ids, les previews, et une synchro d'assets.
+
+Ce qui tient aujourd'hui, et pourquoi ce n'est pas une solution : `withRetry` réessaie les 429 en
+backoff exponentiel. **Le studio dégrade au lieu de casser** — mais un limiteur est ce qui évite d'y
+arriver, et un backoff sous rafale rallonge chaque génération de la file. Il faut un seau à jetons
+(100/60 s) **au-dessus du client SDK**, donc traversé par tout le monde : `reducedBy` est déjà le
+passage obligé de chaque appel, c'est le bon endroit. Le compter par compte actif, pas globalement :
+la limite est par projet, et une clé porte son projet (`owner-scope.ts`).
+
+**Un job ne survit pas à la fermeture de l'application.** `createJobManager` tient tout dans une
+`Map` en mémoire, `scenario:list-jobs` lit cette map, et **rien n'appelle `jobs.list` au démarrage**.
+Une génération vidéo de dix minutes, l'application fermée entre-temps : le job aboutit chez Scenario,
+l'asset existe dans la bibliothèque du compte, et le studio ne le collectera **jamais** dans le
+projet — `collect` n'est appelé que par la boucle qui a soumis.
+
+Ce n'est pas qu'une reprise d'affichage : c'est du travail payé et perdu. `jobs.list` est documenté
+(`reference/jobs.list.md`), filtrable par statut et par type, et `collector.ts` n'a besoin de rien de
+plus — il prend une liste d'ids d'assets distants et les importe. Ce qu'il faut est la persistance
+des entrées (`localId`, `jobId`, `modelId`, `label`, compte d'origine) et une reprise au boot qui
+réhydrate la file et relance le polling. **Prérequis dur de l'entraînement** (§ 4.8), qui dure des
+heures : sans lui, un train n'est pas seulement fragile, il est inutilisable.
+
 **Les index du catalogue n'ont pas été posés.** `catalog.ts` déclare des index simples
 (`assets(type)`, `assets(created_at DESC)`, `asset_tags(tag)`, `assets(hash)`…). **Il manque l'index
 composite `(type, created_at DESC)` et un FTS5** pour la recherche texte. Les deux requêtes coûteuses
@@ -936,7 +1006,246 @@ session le retrouve. Suivi sous `L7` dans `.claude/loop/BACKLOG.md`.
 
 ---
 
-# 4. Méthode — ce qui a marché
+# 4. Le node editor et les workflows Scenario
+
+> **Le chantier a son plan**, écrit pour être exécuté sans supervision, dix étapes :
+> [`docs/plans/2026-08-08-workflows-node-editor.md`](plans/2026-08-08-workflows-node-editor.md).
+> Branche `feat/workflows`, worktree `.claude/worktrees/workflows`, base `develop`. Les deux dettes
+> d'API du § 3.6 y sont les étapes 2 et 3, parce qu'elles le bloquent.
+
+**Rien n'existe.** `grep -rl "workflow" src/` ne rend aucun fichier, et aucune note de reprise
+antérieure ne mentionne le sujet — ni comme manque, ni comme report, ni comme arbitrage. C'est le
+plus gros trou fonctionnel du projet, et le seul chantier qui le ferait passer de « une interface
+devant une API » à « un outil ». D'où une section à lui, hors du § 3 : celui-là liste ce qui reste
+d'un chantier commencé, celui-ci ouvre un chantier qui ne l'est pas.
+
+## 4.1 Ce que l'API offre, vérifié dans la copie locale
+
+Huit endpoints, tous dans `docs/scenario-api/reference/` : `workflows.create`, `.update`, `.run`,
+`.list`, `.retrieve`, `.delete`, `.get_tags`, `.user_approval`. Le guide de référence est
+`guides/get-started/documentation/workflows-and-apps.md`, 1296 lignes — **à lire avant le web**.
+
+| Terme | Ce que c'est |
+|---|---|
+| **Workflow** | `inputs` + `flow` (le graphe exécutable) + `editorInfo` (l'état visuel) |
+| **Flow** | tableau de nodes : le format d'**exécution** |
+| **editorInfo** | `nodes` + `edges` + `inputKeys` : le format d'**édition** |
+| **App** | un workflow `privacy: public`, découvrable et exécutable par tout le monde |
+| **status** | `draft` (non exécutable) · `ready` · `deleted` (suppression douce) |
+
+**Trois limites à porter dans le domaine dès le premier jour** : 50 nodes par workflow, 10 jobs de
+workflow concurrents, 100 requêtes par minute. Les deux dernières sont la dette du § 3.6 ; la
+première appartient à l'export et doit **échouer proprement**, pas silencieusement.
+
+## 4.2 Ce que le SDK donne gratuitement — vérifié dans `node_modules`, pas supposé
+
+`@scenario-labs/sdk` **v2.7.0**, celui qui est installé. Ces exports existent :
+
+`convertWorkflowEditorToFlow` · `validateWorkflowFlow` · `validateEditorInfo` ·
+`WorkflowImportError` · `VALID_EDITOR_NODE_TYPES` · `WorkflowEntity` · `EnhancedWorkflows`
+
+**Scenario a publié le compilateur de son propre éditeur visuel.** Le format `editorInfo` est celui
+de React Flow au champ près — `source`, `target`, `sourceHandle`, `targetHandle` sur une arête,
+`{ id, type, data }` sur un nœud. Adopter ce format comme format natif du node editor rend gratuits :
+la compilation vers le flow, la validation, l'import/export, et l'aller-retour avec la webapp.
+**Ne pas écrire de compilateur.**
+
+L'évaluateur **CEL** vit dans `@scenario-labs/sdk/tools/cel` (`createCelEnvironment`, `evaluateCel`).
+Il repose sur `@marcbachmann/cel-js`, qui est une **dépendance du SDK, déjà présente dans le store
+pnpm** — donc l'évaluation locale d'un node `transform`, et son aperçu en direct pendant la frappe,
+**ne coûtent aucune dépendance nouvelle**. Le seul paquet à ajouter serait le canvas lui-même
+(`@xyflow/react`), et **ça demande la validation de l'utilisateur** (interdit du § 3.2).
+
+## 4.3 Les deux vocabulaires de nodes, et le compte exact
+
+Ce sont **deux graphes différents**, et c'est le piège structurant du sujet.
+
+**Nodes d'exécution — 10**, union littérale de `resources/workflows.d.ts` :
+`custom-model` · `model` · `workflow` · `remove-background` · `generate-prompt` · `logic` ·
+`transform` · `for-each` · `list` · `user-approval`
+
+**Nodes d'éditeur — 15**, `WorkflowEditorNodeType` :
+`text` · `asset` · `aspectRatio` · `model` · `modelInput` · `llm` · `transformText` · `splitText` ·
+`ifElse` · `groupItems` · `sliceAssets` · `forEach` · `forEachEnd` · `stickyNote` · `approval`
+
+> **Le tableau du guide n'en liste que 7 et il est incomplet** — il ignore `model`, `for-each` et
+> `list`. C'est le **type du SDK qui fait foi**, pas la page de doc. Et un rapport tiers qui annonce
+> 14 types d'éditeur a été écrit avant `modelInput`.
+
+`stickyNote` n'existe pas à l'exécution. La paire visuelle `forEach` / `forEachEnd` se compile en un
+seul node `for-each` portant `loopBodyNodeIds`. Un mapping 1:1 entre les deux vocabulaires n'existe
+pas et ne doit pas être cherché.
+
+## 4.4 La convention d'arête est INVERSÉE, et c'est le piège qui coûterait le plus cher
+
+Si l'éditeur est câblé dans le sens intuitif, `convertWorkflowEditorToFlow` produit un graphe
+retourné et **tout export vers Scenario est faux** — sans erreur, sans avertissement. À lire avant
+d'écrire la première arête.
+
+**Ce n'est pas une déduction.** Le code du SDK porte la règle en commentaire, dans
+`node_modules/@scenario-labs/sdk/lib/workflow_converter.js`, autour de la ligne 588 :
+
+    // edge convention: `{ source: consumer, target: provider }` — an input handle
+    // on `source` reads an output handle on `target`.
+    const providersOf = id => edges.filter(e => e.source === id).map(e => e.target)
+    const consumersOf = id => edges.filter(e => e.target === id).map(e => e.source)
+
+Et l'implémentation s'y tient partout : c'est **`targetNode.data.outputHandles`** qui est cherché
+par `edge.targetHandle` (l. 240, 258, 285, 294, 367).
+
+| | Côté écran | Champ React Flow | Ce que c'est |
+|---|---|---|---|
+| **Sortie** d'un node (le producteur) | droite | `target` / `targetHandle` | `outputHandles` |
+| **Entrée** d'un node (le consommateur) | gauche | `source` / `sourceHandle` | les inputs du modèle |
+
+La donnée va de gauche à droite à l'écran ; **l'objet arête pointe de droite à gauche.** L'attribut
+d'accessibilité que la webapp rend le dit tel quel : *edge from imageGenerator1 to text1*, pour une
+arête qui alimente `imageGenerator1` depuis `text1`.
+
+**Les conventions de nommage, à copier telles quelles** — le convertisseur les lit :
+
+| Quoi | Forme | Vérification |
+|---|---|---|
+| handle | `` `${nodeId}-${'source'\|'target'}-${fieldName}` `` | `workflow_converter.js:326` teste littéralement `` `${nodeId}-source-items` `` |
+| sorties d'un `forEach` | `` `${nodeId}-output-${n}` `` | `:254`, expression régulière `/-output-(\d+)$/` |
+| nom de sortie par défaut | `output` | `:320`, `?? 'output'` |
+| id de node | `` `${typeCamelCase}${index}` `` | `text1`, `imageGenerator1` — observé dans la webapp |
+| id d'arête | `` `${handleDeSortie}--TO--${handleDEntrée}` `` | observé dans la webapp ; le convertisseur ne lit pas les ids d'arête, c'est donc du confort de lecture — mais autant être compatible |
+
+**Le canvas de Scenario est bien `@xyflow/react` v12, et ce n'est plus une hypothèse.** Le DOM de
+`app.scenario.com/workflows/[id]` porte `react-flow__viewport xyflow__viewport`,
+`data-testid="rf__wrapper"`, `rf__node-*`, `rf__edge-*`, `react-flow__aria-live-*` et
+`react-flow__viewport-portal`. Les composants employés : `<ReactFlow>`,
+`<Background variant="dots" gap={20} size={0.5} />`, `<NodeResizeControl>` (poignée bas-droite),
+`<Handle>`, `<EdgeLabelRenderer>`, `<ViewportPortal>`, arête bézier par défaut stylée en CSS
+(`stroke-width: 3; stroke-dasharray: 8`). **Ni `<Controls>` ni `<MiniMap>`** : leur barre d'outils
+est flottante et maison — ce qui tombe bien, le studio a la sienne (`design/Toolbar.tsx`).
+
+**Deux types de l'éditeur à ne pas réinventer**, tous deux exportés :
+`WorkflowEditorHandleInput` porte `type?: string | string[]` — un tableau signifie un port
+**polymorphe**, et c'est la matière de `isValidConnection` et du code couleur des ports — plus
+`subHandles` pour les sous-ports. `WorkflowEditorConditionBlock` est
+`{ conditions: { field?, operator, value? }[], logic: 'and' | 'or' }` : l'UI d'un `ifElse` est un
+**query builder** de groupes ET/OU, et le format existe déjà.
+
+## 4.5 Quatre pièges trouvés en lisant, avant d'avoir écrit une ligne
+
+**1. Un job de workflow pollerait pour toujours.** La table `STATUS` du `JobManager` connaît
+`success`, `failure`, `canceled` — les valeurs de l'API de génération. Un job de workflow répond
+`succeeded`, `failed`, `canceled` (`workflows-and-apps.md`, « Job Status Values »). Or un statut
+inconnu est traité comme `running`, **délibérément et à raison** : c'est ce qui protège d'un statut
+que Scenario ajouterait. Conséquence ici : `succeeded` et `failed` ne seraient jamais reconnus,
+`isFinished` ne serait jamais vrai, la boucle ne s'arrêterait pas et le job resterait au compteur de
+concurrence jusqu'à la fermeture. **Deux lignes dans `STATUS` et un test, avant tout le reste.**
+
+**2. La progression serait affichée à 10000 %.** `advance` recopie `remote.progress` tel quel. La
+génération le rend en 0–1, le workflow en 0–100 (`"progress": 100` dans la réponse d'exemple).
+Normaliser à l'entrée — `p > 1 ? p / 100 : p` — et non à l'affichage : la valeur est stockée dans
+`Job.progress` et lue par plusieurs surfaces.
+
+**3. Les sorties d'un workflow ne sont pas là où le manager les cherche.** `RemoteJob` ne lit que
+`metadata.assetIds`. Un job de workflow rend `metadata.flow[]`, **une entrée par node avec son
+`status` et ses `assets[{ assetId, url }]`**. Bonne nouvelle : `collector.ts` n'a besoin d'aucun
+changement — il prend une liste d'ids distants. Ce qu'il faut est aplatir `flow[]` vers cette liste.
+Et `metadata.flow` est aussi ce qui rend le **retour visuel par node gratuit** : un seul poll met à
+jour l'état de tout le graphe, halo et vignette compris.
+
+**4. Une seule voie de publication est documentée.** `create` et `update` laissent le workflow en
+`draft`, donc non exécutable. Un endpoint de publication côté serveur qui compilerait `editorInfo`
+existe peut-être — **il n'est dans aucune des 209 pages locales**. La compilation **locale** est donc
+le seul chemin documenté : `convertWorkflowEditorToFlow`, puis `validateWorkflowFlow`, puis
+`update({ flow, status: 'ready' })`. C'est aussi le meilleur, parce que la validation devient un
+retour instantané dans l'éditeur au lieu d'un 400.
+
+Deux détails à ne pas redécouvrir : `"workflow"` est **réservé** dans `ref.node` — il désigne les
+inputs du workflow parent, donc **ne jamais nommer un node `workflow`** ; et
+`convertWorkflowEditorToFlow` rend `type: string` là où l'API attend une union littérale, ce qui
+impose l'un des rares `as` justifiés du dépôt, avec son commentaire d'une ligne.
+
+## 4.6 La décision d'architecture : où le graphe s'exécute
+
+C'est **la** question du chantier, et elle n'est pas tranchée.
+
+| | **A — déléguer à Scenario** | **B — exécuteur local** |
+|---|---|---|
+| Comment | `workflows.run` → un job → `metadata.flow` | tri topologique local, un `runModel` par node |
+| Progression par node | fournie | à écrire |
+| Nodes non-Scenario (ffmpeg, noyau GPU, fichier local, export moteur) | **impossible** | possible |
+| 50 nodes / 10 jobs concurrents | subis | contournés |
+| Re-run partiel par cache de hash | **impossible** | possible |
+| Publication en App, partage | natif | impossible |
+
+**La recommandation est B comme moteur, A comme export**, et la raison est le cache : changer le
+prompt du dernier node ne doit relancer que ce node. C'est ce qui rend un node editor supportable, et
+c'est exactement ce que déléguer interdit. Mais B est une semaine de plus, et A seul serait déjà un
+produit. **À arbitrer avec l'utilisateur avant d'ouvrir la branche.**
+
+Un point qui penche : les nodes que Scenario n'a pas sont ceux qui donneraient sa valeur au studio —
+`localFile`, `ffmpegConcat`, un aperçu PBR sur le noyau GPU existant, un export Unity ou Godot. Ils
+n'existent que sous B.
+
+## 4.7 Ce que le chantier apporterait par ricochet, et qui manque aujourd'hui
+
+Trois choses tombent dans l'escarcelle en même temps, et deux d'entre elles valent d'être faites
+**avant** le node editor parce qu'elles servent seules.
+
+**`dryRun`, à faire d'abord et séparément.** Documenté sur `generate.run_model` (`reference/…:21`),
+sur `workflows.run` et sur `models.train.trigger` : aucun job créé, aucun crédit débité, un coût
+estimé rendu. `grep -rn dryRun src/` → **zéro**. Aujourd'hui le bouton Générer ne dit pas ce qu'il
+va coûter, et rien ne dit le solde : `usages.list` (unités consommées, par modèle, par période) et
+`pricing.oscu.retrievePrices` ne sont appelés nulle part. Un badge « ~12 CU » sur chaque bouton et la
+consommation du mois dans Réglages > Compte : aucune dépendance, deux canaux, et c'est la première
+chose qu'on remarque. **Prérequis du node editor** — un graphe sans coût par node est un graphe qu'on
+n'ose pas lancer.
+
+**Les Apps sont une bibliothèque de modèles de workflows, gratuite.** `workflows.list` avec
+`privacy: public` rend des workflows exécutables tels quels, filtrables par tag. Ça donne le
+« ready-made » de la webapp sans écrire un seul graphe, et ça donne surtout des **exemples réels de
+`editorInfo`** pour vérifier le rendu du canvas contre des données que Scenario a produites.
+
+**`user-approval` ouvre une phase que le `JobManager` n'a pas.** Un job de workflow peut se
+suspendre en attendant l'utilisateur ; `workflows.userApproval` le débloque. `JobStatus` n'a rien
+entre `running` et fini. C'est une valeur de plus dans le domaine, et une ligne dans la barre de
+jobs — mais elle change `isFinished`, donc elle se traite avec les deux corrections du § 4.5.
+
+**Les modèles utilitaires de Scenario sont la matière première d'un graphe, et le studio n'en
+appelle aucun.** `grep -rn "model_sc\|model_scenario" src/` ne rend qu'un commentaire de test. Ce
+sont des **opérations déterministes exposées comme des modèles**, donc chaînables dans un flow et
+atteignables par le `runModel` déjà écrit — sans une ligne de code spécifique, puisque leur
+formulaire se construit tout seul (invariant 5).
+
+| Famille | Modèles | Ce qu'ils donnent au studio |
+|---|---|---|
+| Géométrie | `scenario-compose-image`, `-image-slicer`, `-grid-maker`, `-resize-image`, `-padding-remover`, `-convert-to-mask-image` | les nodes de composition et de découpe d'un graphe |
+| **Calques** | `scenario-image-layers-extractor` | `separationInstruction` en langage naturel, `maxLayers` 1–10 : **un clic « décomposer en calques » → une pile éditable** dans un espace Image qui a déjà l'arbre de calques |
+| ControlNet | `scenario-detection`, param `modality` | `canny` `depth` `grayscale` `lineart_anime` `mlsd` `normal` `pose` `scribble` `segmentation` `sketch` — un node « Detect » à un menu, et `depth`/`normal` alimentent le noyau GPU existant |
+| Étalonnage | 18 × `scenario-postprocessing-*` | `lut` (~180 presets film), `grain` (22 profils), `color-correction`, `sharpen`, `glow`, `vignette`… |
+
+Deux réserves à porter dans le plan. Ce sont des **appels réseau facturés** : pour un aperçu
+interactif, le noyau GPU du studio refait la passe en shader et Scenario n'est appelé qu'au rendu
+final — le mapping paramètre → uniform est direct, les noms et les bornes venant du schéma. Et
+`scenario-smart-reframe` en `textDensity: DENSE` + `thinkingLevel: HIGH` est **nettement plus
+coûteux** : ces deux champs veulent un avertissement et un `dryRun` affiché.
+
+## 4.8 Ce qui reste hors périmètre, et pourquoi c'est écrit ici
+
+Pour qu'une prochaine session ne reparte pas chercher.
+
+- **Train et Compose n'existent pas** (`models.train.trigger`, `models.training_images.*`,
+  `models.create` en `flux.1-composition` avec ses `concepts[]` à `scale`). Tout est documenté en
+  local, rien n'est écrit. Un entraînement dure des **heures** : c'est la persistance des jobs du
+  § 3.6 qui en est le vrai prérequis, pas l'inverse. Écarté pour l'instant, pas oublié.
+- **Le mode « Live » de la webapp n'a AUCUN endpoint dans les 209 pages locales** — ni streaming, ni
+  WebSocket, ni rien. Ce n'est pas un manque du studio, c'est une fonctionnalité que l'API n'expose
+  pas. À défaut, un `runModel` débouncé sur un modèle rapide avec annulation du job précédent en
+  serait l'imitation honnête. **Ne pas la chercher à nouveau dans la doc : elle n'y est pas.**
+- **Le serveur MCP de Scenario est en BETA** et n'a pas à devenir une dépendance produit.
+  `recommend` et `plan_generation` seraient un bonus ; le panneau Modèles à facettes mesurées du § 1
+  est la réponse déterministe au même besoin, et elle est déjà livrée.
+
+---
+
+# 5. Méthode — ce qui a marché
 
 **Les revues qui exécutent le code trouvent beaucoup plus que celles qui le lisent.** Trois points de
 comparaison, tous sur le mode Image :
@@ -985,7 +1294,7 @@ mentir la doc dans l'autre sens.
 
 ---
 
-# 5. Performance — les mesures acquises
+# 6. Performance — les mesures acquises
 
 **Trois audits, tous menés le 7 août 2026** sur Apple M2 Max / macOS 26.5.2, en **build de
 production**. **Ne pas refaire ces mesures.**
@@ -1145,7 +1454,7 @@ GC (`rme` jusqu'à 20 %) : la colonne à retenir est le **minimum**.
 
 ---
 
-# 6. Les captures d'écran attendues
+# 7. Les captures d'écran attendues
 
 Le `README.md` racine et les deux guides utilisateur référencent des images qui n'existent pas encore.
 Tant qu'un fichier manque, son emplacement reste visible dans le markdown sous forme de commentaire
