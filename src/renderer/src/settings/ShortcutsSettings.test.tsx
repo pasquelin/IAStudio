@@ -18,11 +18,16 @@ const staged = () => useSettingsDraft.getState().pending.shortcuts?.overrides
 const rowFor = (title: string): HTMLElement => screen.getByLabelText(title)
 
 /**
- * The button that arms the chord search. Its own text is its accessible name — and the only
- * element carrying it, unlike the command titles, which a `getByText` would find on their
- * label `span` rather than on their button.
+ * The button that arms the chord search, reached from its own text — the only element carrying
+ * it, unlike the command titles, which a `getByText` would find on their label `span` rather
+ * than on their button. `closest` answers with the control itself, so the assertions below hold
+ * whatever markup wraps that text, and a control that stops being a button fails right here.
  */
-const searchButton = (): HTMLElement => screen.getByText('Chercher par touche')
+const searchButton = (): HTMLButtonElement => {
+  const button = screen.getByText('Chercher par touche').closest('button')
+  if (!button) throw new Error('the chord search control is no longer a button')
+  return button
+}
 
 function press(code: string, modifiers: Partial<KeyboardEventInit> = {}): void {
   fireEvent.keyDown(window, { code, ...modifiers })
@@ -155,10 +160,10 @@ describe('searching by chord', () => {
   it('says a key is free rather than showing an empty screen', async () => {
     render(<ShortcutsSettings />)
 
-    // `SearchByChord` is not a `CommandRow`: the role asserted above says nothing about it, and
-    // a click would work just as well on a `div`. `toHaveRole` costs 3 ms where a named
-    // `getByRole` costs 370.
-    expect(searchButton()).toHaveRole('button')
+    // `SearchByChord` is not a `CommandRow`: the role asserted above says nothing about it. A
+    // named `getByRole` would derive 115 accessible names and eat half the margin under load;
+    // this one derives one.
+    expect(searchButton()).toHaveAccessibleName('Chercher par touche')
     await user.click(searchButton())
 
     press('KeyJ', { metaKey: true, altKey: true })
