@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job, JobStatus } from '@shared/domain/job'
-import { registerCanvas } from '@/spaces/image/canvas-hosts'
 import { useAssets } from './assets'
 import { canvasOf, useCanvases } from './canvases'
 import { installDocument } from './document-fixtures'
@@ -60,7 +59,6 @@ function submitFrom(jobId: string): void {
 const stack = (documentId: string) => canvasOf(useCanvases.getState(), documentId)
 
 let stop = (): void => undefined
-let release = (): void => undefined
 
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
@@ -68,13 +66,11 @@ beforeEach(() => {
   useJobs.setState({ jobs: [] })
   useAssets.setState({ items: [] })
   installDocument('doc-1', 'image')
-  release = registerCanvas('doc-1', { loadInto: () => Promise.resolve() })
   stop = connectImageGeneration()
 })
 
 afterEach(() => {
   stop()
-  release()
 })
 
 describe('landing a generation in the canvas that asked for it', () => {

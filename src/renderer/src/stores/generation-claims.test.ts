@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
-import { registerCanvas } from '@/spaces/image/canvas-hosts'
 import { useAssets } from './assets'
 import { canvasOf, useCanvases } from './canvases'
 import { installDocument } from './document-fixtures'
@@ -52,7 +51,6 @@ beforeEach(() => {
 describe('claiming a generation for whichever space is in front', () => {
   it('lands it on the canvas when an image tab is the one open', async () => {
     const stop = connectImageGeneration()
-    const release = registerCanvas('doc-1', { loadInto: () => Promise.resolve() })
     installDocument('doc-1', 'image')
 
     claimOnSubmit()(done)
@@ -61,7 +59,6 @@ describe('claiming a generation for whichever space is in front', () => {
 
     expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(2)
     stop()
-    release()
   })
 
   it('lands it in the sky when a skybox tab is the one open', async () => {

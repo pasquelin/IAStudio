@@ -9,6 +9,7 @@ import {
   Sprite,
   type BLEND_MODES,
 } from 'pixi.js'
+import { assetUrl } from '@shared/domain/asset'
 import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { mountApplication } from '../core/mount'
@@ -571,9 +572,10 @@ export class CanvasEngine {
 
     // The scheme carries no extension, so nothing in the URL tells Pixi what to make of it.
     const texture = await Assets.load({ src: url, parser: 'texture' })
-    // Read after the await: the document can be closed, or the layer removed, while it is in
-    // flight — and drawing into a destroyed texture is a GPU error, not a no-op.
-    if (mounting !== this.mounting || !this.surfaces.has(layerId)) return
+    // Read after the await: the document can be closed, or the layer removed and rebuilt, while
+    // it is in flight. Compared by identity rather than by key — an undo and a redo put a fresh
+    // surface under the same id, and the one captured above has had its texture destroyed.
+    if (mounting !== this.mounting || this.surfaces.get(layerId) !== surface) return
 
     const renderer = this.app?.renderer
     if (!renderer || !this.state) return
@@ -759,8 +761,17 @@ export class CanvasEngine {
   }
 
   private syncLayer(layer: Layer): void {
+    // Read before the build: a picture is drawn once, when its surface comes into existence —
+    // which is also the only moment the engine can know the layer at all.
+    const born = !this.surfaces.has(layer.id)
     const surface = this.buildSurface(layer.id, layer.kind === 'pixel' ? layer.fill : undefined)
     if (!surface) return
+
+    if (born && layer.kind === 'pixel' && layer.source !== undefined) {
+      // Unawaited, and its failure swallowed: one unreadable asset must not take the rest of
+      // the document's reconciliation down with it.
+      void this.loadInto(layer.id, assetUrl(layer.source)).catch(() => undefined)
+    }
 
     surface.sprite.visible = layer.visible
     // `fillOpacity` is meant to fade the pixels while leaving the effects drawn around them at

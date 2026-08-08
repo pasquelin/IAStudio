@@ -37,7 +37,7 @@ export function openAsset(asset: Asset): void {
 
   const imageTab = activeIdOfKind(documents, 'image')
   if (imageTab && isLocalPicture(asset)) {
-    void placeAsset(imageTab, asset)
+    placeAsset(imageTab, asset)
     return
   }
 

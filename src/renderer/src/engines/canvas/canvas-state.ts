@@ -113,6 +113,12 @@ export type PixelLayer = LayerBase & {
    * gives a new document its white page. Absent leaves the layer transparent.
    */
   fill?: number
+  /**
+   * The asset whose picture the layer was born holding, drawn into its texture as soon as the
+   * surface exists. In the state rather than pushed at the engine: pixels do not survive a
+   * closed tab, an undo or a detached panel, and this is what brings them back.
+   */
+  source?: string
 }
 
 /** `pass-through` lets an adjustment inside the group reach what is under the group. */
@@ -324,7 +330,12 @@ function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
   }
 
   // No `kind` at all is the pre-groups format, where every layer was a pixel layer.
-  return { ...base, kind: 'pixel', fill: typeof source.fill === 'number' ? source.fill : undefined }
+  return {
+    ...base,
+    kind: 'pixel',
+    fill: typeof source.fill === 'number' ? source.fill : undefined,
+    source: typeof source.source === 'string' ? source.source : undefined,
+  }
 }
 
 /**

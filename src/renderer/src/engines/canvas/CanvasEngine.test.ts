@@ -294,6 +294,9 @@ const VIEW_1_1 = { ...DEFAULT_VIEW, viewport: { x: 0, y: 0, scale: 1 } }
 const nextFrame = (): Promise<void> =>
   new Promise(resolve => requestAnimationFrame(() => resolve()))
 
+/** A picture is loaded without being awaited: nothing is drawn until the queue has drained. */
+const flushMicrotasks = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
+
 function press(host: HTMLElement, x: number, y: number, button = 0): void {
   host.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, button }))
 }
@@ -814,6 +817,35 @@ describe('loading a picture into a layer', () => {
     const laid = gpu.sprites.at(-1)
     expect(laid?.size).toEqual({ width: 200, height: 100 })
     expect(laid?.position).toMatchObject({ x: 412, y: 462 })
+  })
+
+  /**
+   * The seam a whole layer of tests used to straddle: the engine hears about a layer one React
+   * commit after the store took it, so a picture drawn at the moment of the drop landed nowhere
+   * at all. It is drawn when the surface is built, which is the first moment there is one.
+   */
+  it('draws what a layer carries as soon as it builds its surface', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    gpu.loaded = []
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background'), laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded).toEqual([{ src: 'scenario://asset/asset-7', parser: 'texture' }])
+  })
+
+  // Once, when it is born: redrawing on every state would repaint over what has been painted.
+  it('draws it once, not on every state that mentions the layer', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted(stacked([laid]))
+    await flushMicrotasks()
+    gpu.loaded = []
+
+    engine.apply(stacked([{ ...laid, opacity: 0.5 }]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded).toEqual([])
   })
 
   it('does nothing at all for a layer it does not hold', async () => {

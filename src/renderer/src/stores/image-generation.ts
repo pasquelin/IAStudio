@@ -1,4 +1,3 @@
-import { isLocalPicture } from '@shared/domain/asset'
 import { isFinished, type Job } from '@shared/domain/job'
 import { placeAsset } from '@/spaces/image/place-asset'
 import { useAssets } from './assets'
@@ -51,12 +50,10 @@ async function lay(settled: ReadonlyMap<string, string>): Promise<void> {
     // document nothing shows, with a history nobody can reach.
     if (!documents[documentId]) continue
 
-    // Every picture, not the first: a generation answers a batch, and each one is a layer. In
-    // the order the job rendered them, awaited one at a time so the stack matches that order
-    // and the last is the one left armed.
+    // Every picture, not the first: a generation answers a batch, and each one is a layer, in
+    // the order the job rendered them — so the last is the one left armed.
     for (const asset of items) {
-      if (asset.jobId !== jobId || !isLocalPicture(asset)) continue
-      await placeAsset(documentId, asset)
+      if (asset.jobId === jobId) placeAsset(documentId, asset)
     }
   }
 }

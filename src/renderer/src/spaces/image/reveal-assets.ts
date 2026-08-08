@@ -1,14 +1,13 @@
-import { TOOL_ZONES, type ToolId, type ToolSlot, type ToolZone } from '@shared/domain/tool'
-import { useTools } from '@/stores/tools'
+import { TOOL_ZONES, type ToolId, type ToolZone } from '@shared/domain/tool'
+import { toolZoneIn } from '@/helpers/tool-registry'
+import { useLayouts } from '@/stores/layouts'
+import { useTools, type OpenByZone } from '@/stores/tools'
 
 /**
- * The zone already showing the shelf, or `null` when none is. Where the user put it wins:
- * opening a second copy in the default corner would answer a click by moving their layout.
+ * The zone already showing a tool, or `null` when none is. Where the user put it wins: opening
+ * a second copy elsewhere would answer a click by rearranging their layout.
  */
-export function zoneShowing(
-  open: Partial<Record<ToolZone, Partial<Record<ToolSlot, ToolId>>>>,
-  tool: ToolId,
-): ToolZone | null {
+function zoneShowing(open: OpenByZone, tool: ToolId): ToolZone | null {
   return TOOL_ZONES.find(zone => Object.values(open[zone] ?? {}).includes(tool)) ?? null
 }
 
@@ -16,11 +15,17 @@ export function zoneShowing(
  * Brings the asset shelf forward. Placing a picture is choosing one, and the shelf is where
  * pictures are chosen — the canvas has no file dialog of its own, and the renderer has no
  * filesystem to open one against.
+ *
+ * The zone is resolved against the workspace rather than fixed: the shelf is the bottom band in
+ * Image and the left column in Video, and a half that does not match its placement renders a
+ * different panel altogether.
  */
 export function revealAssets(): void {
   const tools = useTools.getState()
-  const zone = zoneShowing(tools.open, 'assets')
+  const workspace = useLayouts.getState().activeWorkspace
+  const zone = toolZoneIn('assets', workspace)
+  if (!zone) return
 
-  if (zone) tools.focus(zone)
-  else tools.show('left', 'assets')
+  if (zoneShowing(tools.open, 'assets') === zone) tools.focus(zone)
+  else tools.show(zone, 'assets')
 }

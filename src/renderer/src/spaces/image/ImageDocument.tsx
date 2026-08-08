@@ -17,7 +17,6 @@ import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
-import { registerCanvas } from './canvas-hosts'
 import { canvasToolFor, cursorFor, DEFAULT_MODES, IMAGE_TOOLS } from './image-tools'
 import { layerPort } from './layer-port'
 import { placeAsset } from './place-asset'
@@ -79,12 +78,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
     engine.current = created
     void created.mount(element)
-    // A drop and a finished generation both land outside this component, and neither can reach
-    // the engine through the store: pixels are not state.
-    const unregister = registerCanvas(documentId, created)
 
     return () => {
-      unregister()
       created.dispose()
       engine.current = null
     }
@@ -159,7 +154,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
       const assetId = assetIdFromDrag(event)
       const asset = assetId ? byId.get(assetId) : null
-      if (asset) void placeAsset(documentId, asset)
+      if (asset) placeAsset(documentId, asset)
     },
     [byId, documentId],
   )
