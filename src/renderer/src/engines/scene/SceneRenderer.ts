@@ -217,7 +217,7 @@ export class SceneRenderer {
       (assetId, error) => reportFailure('scene.texture', assetId, error),
     )
     this.modelCache = createModelCache(
-      options.loadModel ?? createGltfSource(),
+      options.loadModel ?? createGltfSource(() => this.viewport.gl),
       // The node stays in the outliner and draws nothing: a corrupt or compressed GLB is
       // otherwise indistinguishable from one that was never asked for.
       (assetId, error) => reportFailure('scene.model', assetId, error),

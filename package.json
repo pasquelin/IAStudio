@@ -28,7 +28,8 @@
     "ffmpeg:fetch": "node scripts/fetch-ffmpeg.mjs",
     "licences:collect": "node scripts/collect-licences.mjs",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "node scripts/dev-app-identity.mjs"
+    "decoders:copy": "node scripts/copy-decoders.mjs",
+    "postinstall": "node scripts/dev-app-identity.mjs && node scripts/copy-decoders.mjs"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
