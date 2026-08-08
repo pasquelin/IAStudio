@@ -32,9 +32,13 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**684 fichiers dans `src/`. 3155 tests verts sur 259 fichiers. 6 espaces éditables. 3 types de
-documents sur 6 savent s'enregistrer — l'image a rejoint la scène 3D et la matière. L'espace Image
-est complet : ses cinq gestes sont offerts, recadrage compris.**
+**793 fichiers dans `src/`, dont 310 de test — plus de 3700 cas y sont déclarés. 6 espaces
+éditables. 3 types de documents sur 6 savent s'enregistrer — l'image a rejoint la scène 3D et la
+matière. L'espace Image est complet : ses cinq gestes sont offerts, recadrage compris.**
+
+> Le compte de fichiers est vérifié, celui des cas est **déclaré** : les `it.each` en exécutent
+> plusieurs chacun, donc `pnpm test` en annonce davantage. Ne pas recopier un total sans l'avoir
+> relancé.
 
 `pnpm validate` est vert, **budget de couverture compris** : il lance `test:coverage`, dont les
 seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
@@ -95,13 +99,31 @@ qui reste.
 des raccourcis ; un registre de réglages qui gouverne les préférences et la validation côté main.
 
 **La persistance des documents** — écriture atomique, marque « modifié », puce sur l'onglet,
-relecture à l'ouverture. Le mécanisme est générique ; **deux espaces y sont branchés**, la 3D et les
-Textures.
+relecture à l'ouverture. Le mécanisme est générique ; **trois genres y sont branchés** — `scene`,
+`texture` et `image` — et `IO_BY_KIND` est la seule liste qui fasse foi.
 
-**Le manuel utilisateur** — 19 chapitres, fr et en (`docs/fr/manuel/`, `docs/en/manual/`), vérifiés
-contre le code le 8 août 2026 après la fusion de l'espace Image. Il ne se relit pas, il **se
-vérifie** : les registres (`COMMAND_REGISTRY`, `IMAGE_TOOLS`, `UNBUILT_TOOLS`, `TOOL_PLACEMENTS`,
-`IO_BY_KIND`) et le bundle i18n disent ce que le logiciel fait — l'impression qu'on en a, non.
+**Le manuel utilisateur** — 19 chapitres, fr et en (`docs/fr/manuel/`, `docs/en/manual/`). Il ne se
+relit pas, il **se vérifie** : les registres (`COMMAND_REGISTRY`, `IMAGE_TOOLS`, `UNBUILT_TOOLS`,
+`TOOL_PLACEMENTS`, `IO_BY_KIND`) et le bundle i18n disent ce que le logiciel fait — l'impression
+qu'on en a, non.
+
+> **Cette méthode n'est pas décorative : elle a rattrapé une inversion complète.** `feat/panels-layout`
+> a échangé les deux colonnes, et le manuel a continué pendant plusieurs fusions à envoyer le
+> lecteur chercher chaque panneau du mauvais côté — 24 passages dans chaque langue. Une doc fausse
+> coûte plus cher qu'une doc absente. **Un merge qui déplace une surface visible n'est pas fini
+> tant que les deux manuels ne l'ont pas suivi.**
+
+**La bibliothèque du compte** — badges d'emplacement recalculés par `assetBadgeOf` (jamais stockés :
+ils dépendent du compte actif), envoi d'une sélection, facette « Emplacement », et le menu
+contextuel d'un asset qui **liste** ses destinations au lieu de les enfouir dans une cascade de
+`if`. `cloud.pull`, `cloud.browse` et `cloud.plan` traversent la frontière et sont testés, mais
+**aucune surface ne les appelle** : le transfert n'a qu'un sens aujourd'hui, et trois des sept
+badges sont hors d'atteinte tant que c'est le cas — cf. § 3.6.
+
+**Le journal d'activité** — `main/project/activity-log.ts`, sa liste filtrable par niveau et par
+sujet, son compteur dans la ligne d'état, et ses bulles. Deux décisions y sont verrouillées par le
+code : **seuls les échecs font une bulle**, et **une bulle n'expire pas** — c'est sa fermeture qui
+la marque lue, pas quatre secondes écoulées pendant qu'on regardait sa toile.
 
 **Les cinq éditions par le modèle aboutissent, et se trouvent.** `familyOf` produit désormais
 `upscale`, `background-removal` et `vectorization` : les capacités de l'API ne les distinguent pas
@@ -193,15 +215,22 @@ Ces quatre points traînaient dans les anciennes notes de reprise. Ils sont rég
 
 # 2. Le plus urgent
 
-**La surface d'erreur.** `handle` ne journalise pas une promesse rejetée, et le renderer n'a aucune
-surface pour le dire. Un ⌘S qui échoue laisse la puce, et c'est tout ce qu'il raconte. Une ouverture
-qui échoue ne dit rien du tout. Un document dont le fichier a refusé de s'ouvrir refuse ensuite de
-s'enregistrer, délibérément, **sans jamais expliquer pourquoi**.
+**La couche documents.** Trois genres sur six ne savent toujours pas s'enregistrer — `sequence`,
+`audio`, `skybox` — et fermer un onglet ne demande rien, laissant son fichier orphelin. Tout ce qui
+manque est écrit en détail au § 3.1 : le mécanisme est générique et éprouvé, brancher un espace
+c'est écrire son `DocumentIo`, pas toucher au socle.
 
-Elle existe désormais en partie : `services/diagnostics.ts` porte `reportFailure`, un canal
-renderer → main, et `useNativeMenu` s'en sert pour un ⌘S qui échoue. Ce qui manque encore est la
-surface **visible** : le journal part dans la console du main, jamais sous les yeux de qui travaille.
-Trois branchements de document restent à faire, et chacun ajoute un mode d'échec de plus.
+C'est ce qui bloque le plus de choses en aval : un montage qu'on ne peut pas rouvrir demain n'est
+pas un montage, et l'espace Audio ne peut pas devenir multipiste tant que son document ne survit
+pas à la fermeture de l'onglet.
+
+> **La surface d'erreur n'est plus ici, et il ne faut pas l'y remettre.** Elle occupait ce
+> paragraphe depuis longtemps : `handle` ne journalisait pas une promesse rejetée, et le renderer
+> n'avait aucun endroit pour le dire. C'est réglé. `services/diagnostics.ts` porte `reportFailure`,
+> `main/project/activity-log.ts` garde ce qui s'est passé, et l'utilisateur le lit dans la ligne
+> d'état — bulle pour un échec, compteur rouge tant qu'il n'est pas lu, liste filtrable par niveau
+> et par sujet. Les neuf portées déclarées (`activity.scope.*` dans le bundle i18n) disent ce qui
+> est branché ; **une nouvelle voie d'échec s'y ajoute, elle ne se rejournalise pas ailleurs.**
 
 ---
 
@@ -947,6 +976,21 @@ arriver, et un backoff sous rafale rallonge chaque génération de la file. Il f
 (100/60 s) **au-dessus du client SDK**, donc traversé par tout le monde : `reducedBy` est déjà le
 passage obligé de chaque appel, c'est le bon endroit. Le compter par compte actif, pas globalement :
 la limite est par projet, et une clé porte son projet (`owner-scope.ts`).
+
+**La moitié rapatriement de la bibliothèque n'a pas de porte.** `cloud.pull`, `cloud.browse` et
+`cloud.plan` traversent la frontière, sont testés, et **aucun composant ne les appelle** — la JSDoc
+de `stores/cloud.ts` le dit elle-même : le planificateur sait calculer un diff bidirectionnel, et
+personne ne le lui demande. Seul `push` a un bouton, dans la barre de l'étagère.
+
+Deux conséquences à ne pas confondre avec des bugs :
+
+- **trois des sept badges sont inatteignables** — `to-pull`, `conflict` et `other-account` ne
+  peuvent pas se produire tant que rien ne modifie le côté distant sans qu'on le demande. La
+  facette « Emplacement » n'en propose donc que quatre, et `location-facet.ts` explique pourquoi
+  à l'endroit exact où la tentation serait d'en ajouter ;
+- **le manuel l'écrit noir sur blanc** (`docs/fr/manuel/07-assets.md`, § « La bibliothèque de votre
+  compte ») : le transfert est à sens unique. Ouvrir cette moitié veut donc dire mettre à jour les
+  deux manuels dans le même mouvement, sinon la doc redevient fausse dans l'autre sens.
 
 **Un job ne survit pas à la fermeture de l'application.** `createJobManager` tient tout dans une
 `Map` en mémoire, `scenario:list-jobs` lit cette map, et **rien n'appelle `jobs.list` au démarrage**.
