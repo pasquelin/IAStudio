@@ -1,11 +1,12 @@
 import { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
-import type { JobProgress } from '@shared/domain/job'
+import type { Job, JobProgress } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import {
   createJobManager,
   jobProgressOf,
   jobStatusOf,
+  POLL_REQUESTS_PER_MINUTE,
   type AssetCollector,
   type JobManager,
   type JobManagerDeps,
@@ -26,11 +27,24 @@ function remote(status: string, overrides: Partial<RemoteJob> = {}): RemoteJob {
   return { jobId: 'job_remote', status, progress: 0, ...overrides }
 }
 
+/** A note a previous session left behind: the job exists at the API and has been paid for. */
+const RUNNING: PersistedJob = {
+  id: 'job_left_running',
+  remoteId: 'job_remote',
+  modelId: 'model_veo',
+  label: 'Veo',
+  accountId: 'fingerprint_studio',
+  projectPath: '/projects/kingdom',
+  createdAt: '2026-08-06T09:00:00.000Z',
+}
+
 type Harness = {
   manager: JobManager
   progress: JobProgress[]
   sleeps: number[]
   recorded: ActivityReport[]
+  /** Every list the manager announced, in order. One entry per gain or loss, never per poll. */
+  announced: (readonly Job[])[]
   /**
    * What would survive the process, as of now. A function and not a value: `persist` replaces
    * the list rather than mutating it, and a destructured getter would freeze the empty one the
@@ -41,7 +55,8 @@ type Harness = {
 
 /** The two halves of a `JobAccount`, spelled apart because most tests only replace one. */
 type HarnessOptions = Partial<JobManagerDeps> & {
-  runner?: JobRunner
+  /** Partial, because a test about the queue never reaches `submit` or `poll` at all. */
+  runner?: Partial<JobRunner>
   collect?: AssetCollector
 }
 
@@ -49,14 +64,16 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
   const progress: JobProgress[] = []
   const sleeps: number[] = []
   const recorded: ActivityReport[] = []
+  const announced: (readonly Job[])[] = []
   let remembered: PersistedJob[] = []
   let sequence = 0
 
   const account = {
-    runner: runner ?? {
+    runner: {
       submit: () => Promise.resolve(remote('success')),
       poll: () => Promise.resolve(remote('success')),
       cancel: () => Promise.resolve(),
+      ...runner,
     },
     collect: collect ?? (() => Promise.resolve([])),
   }
@@ -68,6 +85,7 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
     concurrency: () => 2,
     maxRetries: () => 3,
     onProgress: entry => void progress.push(structuredClone(entry)),
+    onListChanged: list => void announced.push(structuredClone(list)),
     record: report => void recorded.push(report),
     now: () => `2026-08-06T10:00:${String(sequence++).padStart(2, '0')}.000Z`,
     newId: () => `job_${sequence}`,
@@ -92,7 +110,7 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
     ...overrides,
   })
 
-  return { manager, progress, sleeps, recorded, remembered: () => remembered }
+  return { manager, progress, sleeps, recorded, announced, remembered: () => remembered }
 }
 
 describe('status mapping', () => {
@@ -491,16 +509,6 @@ describe('the account a job runs on', () => {
  * The job finishes at Scenario either way: what is lost is the studio ever collecting it.
  */
 describe('a job that outlives the session', () => {
-  const RUNNING: PersistedJob = {
-    id: 'job_left_running',
-    remoteId: 'job_remote',
-    modelId: 'model_veo',
-    label: 'Veo',
-    accountId: 'fingerprint_studio',
-    projectPath: '/projects/kingdom',
-    createdAt: '2026-08-06T09:00:00.000Z',
-  }
-
   /** Held open at the poll, so the job stays unfinished for as long as the test needs it. */
   const holding = (): Partial<HarnessOptions> => ({
     runner: {
@@ -695,6 +703,172 @@ describe('a job that outlives the session', () => {
     await settled()
 
     expect(manager.list()).toHaveLength(1)
+  })
+
+  /**
+   * Queued is not the same as never submitted, and that is new with resumption: a picked-up job
+   * waits its turn with a remote id already set. Dropped from the queue alone, it would keep
+   * running and being charged for, and `settle` releases the account that could have stopped it.
+   */
+  it('tells the API about a picked-up job cancelled before its turn came', async () => {
+    const cancel = vi.fn(() => Promise.resolve())
+    // Nothing may run, so the job stays in the queue: `submit` and `poll` are never reached.
+    const { manager, remembered } = harness({ concurrency: () => 0, runner: { cancel } })
+
+    manager.resume([RUNNING])
+    await settled()
+    // Still in the queue, since nothing may run: this is the branch under test.
+    expect(manager.list()[0]?.status).toBe('queued')
+
+    await manager.cancel(RUNNING.id)
+
+    expect(cancel).toHaveBeenCalledWith('job_remote')
+    expect(manager.list()[0]?.status).toBe('cancelled')
+    // Taken by the API, so nothing is owed and the note goes with it.
+    expect(remembered()).toEqual([])
+  })
+
+  /**
+   * Everything up to the API call is synchronous, so a second click lands while the first is
+   * still in flight — and finds the job already out of the queue. Unguarded, it fell through to
+   * the running branch and spent a second cancel, taking two of the five urgent slots.
+   */
+  it('tells the API once, however many times the user asks', async () => {
+    const cancel = vi.fn(() => Promise.resolve())
+    const { manager } = harness({ concurrency: () => 0, runner: { cancel } })
+
+    manager.resume([RUNNING])
+    await settled()
+    await Promise.all([manager.cancel(RUNNING.id), manager.cancel(RUNNING.id)])
+
+    expect(cancel).toHaveBeenCalledOnce()
+  })
+
+  // Refused, it is running and being charged: the note outlives the session that gave up on it.
+  it('keeps the note of a queued job the API would not cancel', async () => {
+    const { manager, remembered } = harness({
+      concurrency: () => 0,
+      runner: { cancel: () => Promise.reject(new APIConnectionError({})) },
+    })
+
+    manager.resume([RUNNING])
+    await settled()
+    await manager.cancel(RUNNING.id)
+
+    expect(remembered()).toHaveLength(1)
+  })
+
+  /**
+   * A note nothing can ever act on is not insurance, it is a job that fails again on every
+   * project open until the sweep a week later — with a bogus red row each time.
+   */
+  it('forgets a resumed job whose remote record the API no longer has', async () => {
+    const { manager, remembered } = harness({
+      runner: { poll: () => Promise.reject(new APIError(404, undefined, 'gone', undefined)) },
+    })
+
+    manager.resume([RUNNING])
+    await settled()
+
+    expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'not-found' })
+    expect(remembered()).toEqual([])
+  })
+})
+
+describe('how often it asks the API where a job is', () => {
+  /** Answers `in-progress` for a set number of polls, so the loop turns and then ends. */
+  const polling = (polls: number): HarnessOptions => {
+    let asked = 0
+    return {
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => Promise.resolve(remote(++asked <= polls ? 'in-progress' : 'success')),
+      },
+    }
+  }
+
+  // One generation on its own: a progress bar that moves is worth thirty requests a minute.
+  it('asks as fast as it may when a single job is running', async () => {
+    const { manager, sleeps } = harness({ ...polling(2), concurrency: () => 1 })
+
+    manager.submit('model_veo', 'Veo', {})
+    await settled()
+
+    expect(sleeps).toEqual([2000, 2000, 2000])
+  })
+
+  /**
+   * Six jobs at two seconds would ask for 180 a minute against a hundred granted. Stretched, the
+   * same six stay inside the share polling is allowed — which is what keeps them reported as
+   * running rather than failed.
+   */
+  it('stretches the interval rather than ask for more than it is granted', async () => {
+    const { manager, sleeps } = harness({ ...polling(18), concurrency: () => 6 })
+
+    for (let index = 0; index < 6; index++) manager.submit('model_veo', 'Veo', {})
+    await settled()
+
+    // The widest, which is the interval while all six were being followed at once. Six jobs, one
+    // request each per interval: this both stretches past the floor and stays inside the share.
+    const interval = Math.max(...sleeps)
+    expect((6 * 60_000) / interval).toBeLessThanOrEqual(POLL_REQUESTS_PER_MINUTE)
+  })
+})
+
+describe('what the list itself announces', () => {
+  it('announces the whole list when a job is picked up from a previous session', () => {
+    const { manager, announced } = harness({ concurrency: () => 0 })
+
+    manager.resume([RUNNING])
+
+    expect(announced).toHaveLength(1)
+    expect(announced[0]).toEqual([expect.objectContaining({ id: RUNNING.id, label: 'Veo' })])
+  })
+
+  // Handed nothing new, there is no composition to announce and no list to redraw.
+  it('says nothing when the same note is handed twice', () => {
+    const { manager, announced } = harness({ concurrency: () => 0 })
+
+    manager.resume([RUNNING])
+    manager.resume([RUNNING])
+
+    expect(announced).toHaveLength(1)
+  })
+
+  /**
+   * The one exit that leaves no outcome behind. Told nothing, a replica keeps drawing the job as
+   * running for the rest of the session, with a cancel button the manager has no entry for.
+   */
+  it('announces the list when a job steps aside because its project closed', async () => {
+    let open = '/projects/kingdom'
+    const { manager, announced } = harness({
+      projectPath: () => open,
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => {
+          open = '/projects/dungeon'
+          return Promise.resolve(remote('success', { metadata: { assetIds: ['r_1'] } }))
+        },
+      },
+    })
+
+    manager.submit('model_veo', 'Veo', {})
+    await settled()
+
+    // The submission announced it first; what matters is that its removal was announced too.
+    expect(announced.at(-1)).toEqual([])
+  })
+
+  /**
+   * The window that asked already holds it, but the others never will otherwise: they only hear
+   * progress, and progress cannot be merged into a job a replica has never seen.
+   */
+  it('announces a submission too, for the windows that did not make it', async () => {
+    const { manager, announced } = harness({ concurrency: () => 0 })
+
+    manager.submit('model_flux', 'Flux', {})
+
+    expect(announced).toEqual([[expect.objectContaining({ label: 'Flux' })]])
   })
 })
 

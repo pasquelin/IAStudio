@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import type { ClientOptions } from '@scenario-labs/sdk'
-import type { Credentials } from '@main/settings/accounts'
+import { accountFingerprint, type Credentials } from '@main/settings/accounts'
 
 /**
  * What the API accepts per minute and per project, from `workflows-and-apps.md` § Rate Limits.
@@ -25,12 +25,37 @@ export const RATE_MARGIN = 5
 /**
  * How long a request may be held inside the transport before the limiter answers instead.
  *
- * Short on purpose. The SDK arms its request timeout *before* calling the transport
- * (`client.js`, `fetchWithTimeout`), so every millisecond spent queueing is taken from the round
- * trip's own budget; and a cancel is an API call too, which nobody wants stuck behind a hundred
- * thumbnails. Past this, waiting is the SDK's business, not ours — see `heldResponse`.
+ * Short on purpose: the SDK arms its request timeout *before* calling the transport (`client.js`,
+ * `fetchWithTimeout`), so every millisecond spent queueing is taken from the round trip's own
+ * budget. Past this, waiting is the SDK's business, not ours — see `heldResponse`. What keeps a
+ * cancellation out of the queue is `URGENT_RESERVE`, not this.
  */
 export const MAX_WAIT_MS = 10_000
+
+/**
+ * Slots of the window that only an urgent request may take.
+ *
+ * Going first in the queue is not enough on its own: a saturated window makes everyone wait for
+ * the same expiry, whatever order they wait in. What a cancellation needs is a slot that the
+ * hundred thumbnails ahead of it could not have taken in the first place.
+ */
+export const URGENT_RESERVE = 5
+
+/**
+ * What ordinary traffic may spend in a window: the published limit, less the drift margin, less
+ * the slots a cancellation keeps for itself. Exported because a caller sizing its own continuous
+ * demand has to measure it against something — see `POLL_REQUESTS_PER_MINUTE`.
+ */
+export const ORDINARY_REQUESTS_PER_WINDOW = REQUESTS_PER_WINDOW - RATE_MARGIN - URGENT_RESERVE
+
+/**
+ * What a request is worth against the others waiting.
+ *
+ * `urgent` is for cancelling: it is the one call whose whole purpose is to stop spending, so
+ * queueing it behind two minutes of polls bills the user for the wait. Everything else is
+ * ordinary, and nothing else should become urgent without the same argument.
+ */
+export type Priority = 'ordinary' | 'urgent'
 
 /** Resolves after `ms`, or rejects if the signal aborts first. */
 export type Delay = (ms: number, signal?: AbortSignal) => Promise<void>
@@ -44,6 +69,7 @@ export type RateLimiterOptions = {
   limit?: number
   windowMs?: number
   maxWaitMs?: number
+  urgentReserve?: number
 }
 
 /** Admitted, or held with the wait that would have been needed. */
@@ -51,7 +77,7 @@ export type Admission = { admitted: true } | { admitted: false; retryAfterMs: nu
 
 export type RateLimiter = {
   /** Resolves once a request may go out, or says how long it would have taken. */
-  acquire: (signal?: AbortSignal) => Promise<Admission>
+  acquire: (signal?: AbortSignal, priority?: Priority) => Promise<Admission>
 }
 
 const ADMITTED: Admission = { admitted: true }
@@ -70,6 +96,7 @@ export function createRateLimiter({
   limit = REQUESTS_PER_WINDOW - RATE_MARGIN,
   windowMs = RATE_WINDOW_MS,
   maxWaitMs = MAX_WAIT_MS,
+  urgentReserve = URGENT_RESERVE,
 }: RateLimiterOptions): RateLimiter {
   const admitted: number[] = []
   let saturated = false
@@ -79,7 +106,16 @@ export function createRateLimiter({
     admitted.splice(0, live === -1 ? admitted.length : live)
   }
 
-  const wait = async (deadline: number, signal?: AbortSignal): Promise<Admission> => {
+  /** Ordinary traffic stops short of the ceiling; what it leaves behind belongs to a cancel. */
+  const ordinaryCeiling = limit - urgentReserve
+
+  const wait = async (
+    deadline: number,
+    priority: Priority,
+    signal?: AbortSignal,
+  ): Promise<Admission> => {
+    const ceiling = priority === 'urgent' ? limit : ordinaryCeiling
+
     for (;;) {
       // Before the slot is taken, not only before the wait: a caller that gave up while queued
       // behind others must not spend a request the API counts against everyone else.
@@ -89,7 +125,7 @@ export function createRateLimiter({
       forget(at)
 
       const oldest = admitted[0]
-      if (oldest === undefined || admitted.length < limit) {
+      if (oldest === undefined || admitted.length < ceiling) {
         admitted.push(at)
         return ADMITTED
       }
@@ -106,37 +142,47 @@ export function createRateLimiter({
     }
   }
 
-  // Acquisitions are chained so the wait is served first-come. It buys order, not priority: a
-  // project opening still puts its hundred catalogue reads ahead of the generation asked for
-  // next. What it rules out is the opposite — everyone woken by the same expiry racing for the
-  // one slot it freed, where the caller who has waited longest can lose indefinitely.
-  let turn: Promise<void> = Promise.resolve()
-  let queued = 0
+  // Acquisitions are served one at a time, first-come within a priority. Serializing rules out
+  // the race where everyone woken by the same expiry fights for the one slot it freed and the
+  // caller who has waited longest can lose indefinitely; the two lanes rule out the other half,
+  // where a project opening puts its hundred catalogue reads ahead of a cancellation.
+  const waiting: Record<Priority, (() => void)[]> = { urgent: [], ordinary: [] }
+  let serving = false
+
+  const takeTurn = (priority: Priority): Promise<void> => {
+    if (!serving) {
+      serving = true
+      return Promise.resolve()
+    }
+
+    return new Promise(resolve => waiting[priority].push(resolve))
+  }
+
+  const passTurn = (): void => {
+    const next = waiting.urgent.shift() ?? waiting.ordinary.shift()
+    serving = next !== undefined
+    next?.()
+  }
 
   return {
-    acquire: signal => {
+    acquire: (signal, priority = 'ordinary') => {
       // Stamped on arrival, not when the turn comes round: measured from the turn, each waiter
       // would get a fresh budget as the one before it was served, and the ceiling would bound
       // the last hop of the wait instead of the wait.
       const deadline = now() + maxWaitMs
 
-      queued++
-      const served = turn.then(() => wait(deadline, signal)).finally(releaseQueued)
-      // The chain has to survive a refusal, or one aborted wait deadlocks every later caller.
-      turn = served.then(
-        () => {},
-        () => {},
-      )
+      const served = takeTurn(priority)
+        .then(() => wait(deadline, priority, signal))
+        // Whatever the outcome, or one aborted wait deadlocks every later caller.
+        .finally(() => {
+          passTurn()
+          // Saturation lasts as long as anyone is queued, not until the next admission: measured
+          // per admission, a window that stays full would say so once per request.
+          if (!serving) saturated = false
+        })
 
       return abortable(served, signal)
     },
-  }
-
-  function releaseQueued(): void {
-    queued--
-    // Saturation lasts as long as anyone is queued, not until the next admission: measured per
-    // admission, a window that stays full would say so once per request.
-    if (queued === 0) saturated = false
   }
 }
 
@@ -186,6 +232,24 @@ export function createRateLimiters(options: RateLimiterOptions): RateLimiters {
 
 type Fetch = NonNullable<ClientOptions['fetch']>
 
+// Free only because Electron 43 runs Node 24, whose `AsyncContextFrame` replaced the process-wide
+// promise hook: measured at 10 ns a read, and no cost at all to the awaits it does not touch. On
+// Node 23 and below, merely constructing this tripled the cost of every await in the main process.
+const scope = new AsyncLocalStorage<Priority>()
+
+/**
+ * Runs an API call as urgent: it goes ahead of ordinary traffic and may take a slot ordinary
+ * traffic cannot.
+ *
+ * Carried in async context rather than passed as an argument, because the only thing that reads
+ * it is the transport, and everything between here and there is the SDK — which offers no way
+ * through. Reserved for cancelling, whose whole point is to stop spending: made to wait behind
+ * two minutes of polls, the request that stops the bill is itself billed for the wait.
+ */
+export async function asUrgent<T>(action: () => Promise<T>): Promise<T> {
+  return await scope.run('urgent', action)
+}
+
 /**
  * What a held request answers, in the only language the SDK listens to.
  *
@@ -213,23 +277,13 @@ function heldResponse(retryAfterMs: number): Response {
  */
 export function limitedTransport(limiters: RateLimiters, send: Fetch) {
   return (credentials: Credentials): Fetch => {
-    const limiter = limiters.of(windowNameOf(credentials))
+    const limiter = limiters.of(accountFingerprint(credentials))
 
     return async (input, init) => {
-      const admission = await limiter.acquire(init?.signal ?? undefined)
+      const admission = await limiter.acquire(init?.signal ?? undefined, scope.getStore())
       if (!admission.admitted) return heldResponse(admission.retryAfterMs)
 
       return await send(input, init)
     }
   }
-}
-
-/**
- * Names a window after the account without holding its key, so nothing that could end up in a
- * dump has to. Not the local account id, which a remove-and-re-add renews — the same project
- * would get a second window and twice the quota — and not `owner-scope`, which answers `null`
- * until a listing has come back, exactly when a cold start is bursting.
- */
-function windowNameOf(credentials: Credentials): string {
-  return createHash('sha256').update(credentials.key).digest('hex')
 }

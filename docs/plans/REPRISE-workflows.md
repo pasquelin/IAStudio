@@ -72,27 +72,25 @@
 ## L'état exact au moment d'écrire
 
 **Trois étapes livrées, chacune avec `pnpm validate` vert, `/simplify` et `/code-review`** —
-**21 défauts confirmés et corrigés** au total.
+**21 défauts confirmés et corrigés** au total, puis **10 de plus** à la revue de cohérence de la
+branche entière.
 
-> **⚠️ Rien n'est encore fusionné dans `develop`.** La session précédente s'est arrêtée juste
-> avant, faute de contexte. **Deux choses à faire avant de reprendre l'étape 4 :**
+> **La revue de cohérence a été lue et appliquée.** Elle a rendu dix défauts confirmés, dont
+> quatre sévères, tous corrigés — le détail est dans le journal du plan, entre l'étape 3 et
+> l'étape 4. Les deux dettes que cette section donnait pour assumées sont **payées** : l'intervalle
+> de poll se calcule sur la charge, et l'annulation passe par une file à priorité. Les deux
+> décisions ont été prises par l'utilisateur le 8 août 2026.
 >
-> 1. Une revue de **cohérence de la branche entière** a été lancée et son résultat n'a jamais été
->    lu. La relancer : `/code-review` sur `git diff develop...HEAD`, en cherchant uniquement ce
->    qu'une revue par étape ne voit pas — deux notions du même concept entre étapes, ce qu'une
->    étape a cassé dans une autre (la rafale de reprise de l'étape 3 passe-t-elle correctement
->    sous le limiteur de l'étape 2 ? un job repris peut-il prendre le 429 de synthèse pour un
->    échec définitif ?), la duplication d'écriture atomique entre `job-store.ts` et
->    `project/documents.ts`, et les contradictions entre les deux documents.
-> 2. Puis **fusionner dans `develop`** — `git merge --no-ff feat/workflows`, **depuis le dépôt
->    principal** `/Users/pasquelin/Applications/scenario`, où `develop` est sorti : git refuse de
->    la sortir deux fois. Ne rien pousser.
+> **`pnpm validate` était rouge sans que personne le sache.** Les 3931 tests passaient, mais trois
+> budgets de couverture débordaient : le pipe `| tail` masquait le code de sortie. `develop` était
+> vert, la branche non. Vérifier le code de sortie, pas la dernière ligne.
 
 | Étape | Commit | Ce qu'elle a livré |
 |---|---|---|
 | 1 | `eddbda0` | Les deux statuts de workflow dans le `JobManager`, et la progression normalisée |
 | 2 | `f45857c` | Le limiteur de débit, sur le `fetch` du client SDK |
 | 3 | `6421aa0` | Un job payé survit à la fermeture de l'application |
+| — | ci-après | La revue de cohérence de branche, ses dix correctifs et les deux arbitrages |
 
 **L'étape 4 est entamée, non commitée.** Ce qui est écrit et testé, mis de côté dans
 `<scratchpad>/step4/` si le worktree a été nettoyé :

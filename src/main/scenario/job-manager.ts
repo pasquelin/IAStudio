@@ -1,8 +1,9 @@
-import type { JobFailure } from '@shared/domain/failure'
+import type { ApiFailure, JobFailure } from '@shared/domain/failure'
 import { isFinished, type Job, type JobProgress, type JobStatus } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
 import type { PersistedJob } from './job-store'
+import { ORDINARY_REQUESTS_PER_WINDOW } from './rate-limiter'
 import { createRetry, DEFAULT_BACKOFF_BASE_MS } from './retry'
 
 /** A job as the API returns it, reduced to what the studio reads. */
@@ -62,6 +63,8 @@ export type JobManagerDeps = {
   concurrency: () => number
   maxRetries: () => number
   onProgress: (progress: JobProgress) => void
+  /** Told when the list gains or loses an entry. See `onJobsChanged` in `shared/ipc.ts`. */
+  onListChanged: (jobs: readonly Job[]) => void
   /** Where a finished generation says what became of it. See `ActivityLog`. */
   record: (report: ActivityReport) => void
   now: () => string
@@ -84,8 +87,44 @@ export type JobManager = {
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
 
+/**
+ * Requests a minute left to what the user is waiting on — a catalogue page, a sheet of
+ * thumbnails, an upload. Those come in bursts; the poll loop never stops, so it is the one that
+ * has to leave room rather than the other way round.
+ */
+const INTERACTIVE_RESERVE_PER_MINUTE = 15
+
+/**
+ * What the poll loop alone may spend.
+ *
+ * Left at two seconds whatever the load, four concurrent jobs ask for 120 a minute against the
+ * hundred the API grants: the limiter then holds every poll, the SDK retries, and a generation
+ * that is running and being paid for is reported as a rate-limit failure fifteen seconds in.
+ *
+ * Derived and not written down: the budget it stays under is three constants of `rate-limiter.ts`
+ * away, and stated as prose it would go quietly false the day one of them is tuned — with that
+ * same failure as the symptom.
+ */
+export const POLL_REQUESTS_PER_MINUTE =
+  ORDINARY_REQUESTS_PER_WINDOW - INTERACTIVE_RESERVE_PER_MINUTE
+
 /** Finished jobs kept for the bar's history. Beyond this a long session is just a leak. */
 const RETAINED_JOBS = 200
+
+/**
+ * The one answer that settles a job's fate for good: the API says it has no such job.
+ *
+ * A short list rather than `isRetryable`, which answers a different question — whether asking
+ * again might work — and agrees with this one only by coincidence. Keeping the note is the
+ * default because the two mistakes do not cost the same: an entry replayed for nothing is
+ * noise, an entry dropped is a paid generation abandoned. So `missing` and `invalid-credentials`
+ * stay, the user may yet re-add the key and the fingerprint naming the account is the same one;
+ * `forbidden` stays, a scope the key lost says nothing about a job that is still running and
+ * still billed; and `unexpected` stays, which this `catch` also reaches for anything thrown
+ * outside the SDK. `rejected` is not here because it cannot arrive here — the API pronouncing a
+ * job failed is `follow`'s business, and it settles `done` itself.
+ */
+const SETTLED_FOR_GOOD: ReadonlySet<ApiFailure> = new Set(['not-found'])
 
 /**
  * The API spells eight states, the studio has five. `warming-up` and `finalizing` are running
@@ -171,6 +210,7 @@ export function createJobManager({
   concurrency,
   maxRetries,
   onProgress,
+  onListChanged,
   record,
   now,
   newId,
@@ -182,6 +222,17 @@ export function createJobManager({
   const queue: string[] = []
   let running = 0
 
+  /**
+   * How long to wait before asking again, given how many jobs are being followed at once.
+   *
+   * Never faster than `pollIntervalMs`, which is what one or two generations get: a progress bar
+   * that moves is worth the requests. From the third on, the interval stretches by itself rather
+   * than have the studio ask for more than the API grants — the alternative is not a slower bar,
+   * it is live generations reported as failures.
+   */
+  const pollDelay = (): number =>
+    Math.max(pollIntervalMs, Math.ceil((running * 60_000) / POLL_REQUESTS_PER_MINUTE))
+
   const emit = (entry: Entry): void => {
     const progress: JobProgress = {
       id: entry.job.id,
@@ -192,6 +243,14 @@ export function createJobManager({
     if (entry.job.error !== undefined) progress.error = entry.job.error
     onProgress(progress)
   }
+
+  /** The list gained or lost an entry — neither of which a progress event can express. */
+  const announceList = (): void => onListChanged(listed())
+
+  const listed = (): Job[] =>
+    [...entries.values()]
+      .map(entry => entry.job)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
 
   /**
    * Writes down what would otherwise be lost with the process.
@@ -224,10 +283,12 @@ export function createJobManager({
   /** Insertion order is submission order, so the oldest finished entries go first. */
   const evictOldFinished = (): void => {
     const finished = [...entries.values()].filter(candidate => isFinished(candidate.job.status))
+    const stale = finished.slice(0, finished.length - RETAINED_JOBS)
 
-    for (const stale of finished.slice(0, finished.length - RETAINED_JOBS)) {
-      entries.delete(stale.job.id)
-    }
+    for (const entry of stale) entries.delete(entry.job.id)
+    // The other way the list loses an entry. Nothing in a replica prunes on its own, so left
+    // unsaid this one would drift past the retained count for the rest of the session.
+    if (stale.length > 0) announceList()
   }
 
   /**
@@ -274,6 +335,20 @@ export function createJobManager({
     remember()
   }
 
+  /**
+   * Tells the API about a job the studio has given up on, and settles it either way.
+   *
+   * The note goes with the API taking it, and not before: refused, the job is still running and
+   * still being paid for, so it has to outlive the session that gave up on it.
+   */
+  const abandon = async (entry: Entry, bound: JobAccount, remoteId: string): Promise<void> => {
+    await bound.runner
+      .cancel(remoteId)
+      .then(() => void (entry.done = true))
+      .catch(() => {})
+    settle(entry, 'cancelled')
+  }
+
   const withRetry = createRetry({ maxRetries, sleep, backoffBaseMs })
 
   const advance = (entry: Entry, remote: RemoteJob): JobStatus => {
@@ -306,24 +381,14 @@ export function createJobManager({
   ): Promise<void> => {
     // Cancelled while the submission was in flight: the remote job exists, so it must be told,
     // otherwise it keeps burning credits with nobody watching.
-    const abandon = async (): Promise<void> => {
-      // Only once the API has taken the cancellation: refused, the job is still running and
-      // still being paid for, so its note has to outlive the session that gave up on it.
-      await bound.runner
-        .cancel(remoteId)
-        .then(() => void (entry.done = true))
-        .catch(() => {})
-      settle(entry, 'cancelled')
-    }
-
-    if (entry.cancelled) return await abandon()
+    if (entry.cancelled) return await abandon(entry, bound, remoteId)
 
     let remote = submitted ?? (await withRetry(() => bound.runner.poll(remoteId)))
     let status = advance(entry, remote)
 
     while (!isFinished(status)) {
-      await sleep(pollIntervalMs)
-      if (entry.cancelled) return await abandon()
+      await sleep(pollDelay())
+      if (entry.cancelled) return await abandon(entry, bound, remoteId)
 
       remote = await withRetry(() => bound.runner.poll(remoteId))
       status = advance(entry, remote)
@@ -341,6 +406,10 @@ export function createJobManager({
     // stays instead, and the job is picked up again when its own project is next opened.
     if (entry.projectPath !== null && entry.projectPath !== projectPath()) {
       entries.delete(entry.job.id)
+      // Said out loud, because it is the one exit that leaves no outcome behind: a replica told
+      // nothing would keep drawing this job as running for the rest of the session, with a
+      // cancel button the manager no longer has an entry for.
+      announceList()
       return
     }
 
@@ -384,7 +453,9 @@ export function createJobManager({
 
       await follow(entry, bound, submitted.jobId, submitted)
     } catch (error) {
-      settle(entry, 'failed', failureOf(error))
+      const failure = failureOf(error)
+      entry.done = SETTLED_FOR_GOOD.has(failure)
+      settle(entry, 'failed', failure)
     }
   }
 
@@ -435,12 +506,18 @@ export function createJobManager({
       entries.set(job.id, entry)
       queue.push(job.id)
       emit(entry)
+      // The window that asked already holds this job — it pushed what the IPC call returned —
+      // but every other one only ever hears progress, which it cannot merge into a job it has
+      // never seen. A gain is a gain whichever window caused it.
+      announceList()
       pump()
 
       return job
     },
 
     resume: stored => {
+      let added = false
+
       for (const remembered of stored) {
         // A job the session already knows is the one that wrote this entry, not a second copy.
         if (entries.has(remembered.id)) continue
@@ -469,10 +546,13 @@ export function createJobManager({
 
         entries.set(job.id, entry)
         queue.push(job.id)
-        // Announced like a submission is: behind the concurrency bound it would otherwise be
-        // invisible in the jobs bar until its turn came.
-        emit(entry)
+        added = true
       }
+
+      // Not a progress event per job: these ids are ones the renderer has never seen, and a
+      // replica merges progress into what it already holds. Announced before `pump`, so the
+      // first thing said about a resumed job is that it exists.
+      if (added) announceList()
 
       pump()
     },
@@ -480,13 +560,27 @@ export function createJobManager({
     cancel: async jobId => {
       const entry = entries.get(jobId)
       if (!entry || isFinished(entry.job.status)) return
+      // Asked twice — a double click, two windows on one project — and the first is still in
+      // flight: everything up to the API call is synchronous, so the second would find the job
+      // gone from the queue, fall through to the running branch, and spend a second cancel on
+      // the same job. Whoever is following it will try again from `entry.cancelled` if the API
+      // refuses this one.
+      if (entry.cancelled) return
 
       entry.cancelled = true
 
-      // Still queued: it leaves the queue and never reaches the API at all.
+      // Out of the queue first, so nothing picks it up while the API is being told.
       const position = queue.indexOf(jobId)
       if (position >= 0) {
         queue.splice(position, 1)
+
+        const { account, remoteId } = entry
+        // Queued is not the same as never submitted: a job resumed from a previous session waits
+        // its turn with a remote id already set. Dropped from the queue alone, it would keep
+        // running and being charged for — and `settle` releases the account, so nothing left in
+        // the studio could ever cancel it.
+        if (account && remoteId) return await abandon(entry, account, remoteId)
+
         settle(entry, 'cancelled')
         return
       }
@@ -505,9 +599,6 @@ export function createJobManager({
       }
     },
 
-    list: () =>
-      [...entries.values()]
-        .map(entry => entry.job)
-        .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    list: listed,
   }
 }

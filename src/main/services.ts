@@ -482,8 +482,7 @@ export function createServices(settings: SettingsStore): Services {
       },
       backend: assets,
       newId: newAssetId,
-      localIdOf: async remoteAssetId =>
-        (await project.catalog().findByRemoteId(remoteAssetId))?.id ?? null,
+      heldFor: remoteAssetId => project.catalog().findByRemoteId(remoteAssetId),
     })
 
   // Rebuilt only when the client is, so every job of one account shares a single graph rather
@@ -589,12 +588,17 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.current()?.path ?? null,
     persist: (unfinished, handled) => {
       // Nothing waits on this: the write is settled at quit and on a project change, which are
-      // the two moments the process may not outlive it.
-      void jobStore.write(unfinished, handled).catch(() => {})
+      // the two moments the process may not outlive it. Said out loud all the same — a full disk
+      // or an unreadable file turns every note into a no-op, and the loss this whole mechanism
+      // exists to prevent would then happen with nothing anywhere saying why.
+      void jobStore.write(unfinished, handled).catch((error: unknown) => {
+        log.warn('jobs', `keeping notes of running jobs failed: ${String(error)}`)
+      })
     },
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
     onProgress: progress => broadcast(EVENTS.jobProgress, progress),
+    onListChanged: list => broadcast(EVENTS.jobsChanged, list),
     record: report => journal.record(report),
     now: timestamp,
     newId: () => `job_${randomUUID()}`,

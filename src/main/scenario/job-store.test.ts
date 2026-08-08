@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -134,6 +134,17 @@ describe('job store', () => {
     await expect(blocked.write([], [])).rejects.toThrow()
     // The one whose folder is simply absent is a first launch, and writes as one.
     await expect(unreadable.read(PROJECT)).resolves.toEqual([])
+  })
+
+  /**
+   * A write that fails is the guarantee this store exists for failing: it has to say so rather
+   * than resolve, and the caller is the one place that can put it in the log.
+   */
+  it('reports a write it could not make at all', async () => {
+    // A folder where the staging copy goes: the write is refused without the file being touched.
+    await mkdir(join(root, 'jobs.json.staging'))
+
+    await expect(store.write([RUNNING], [RUNNING.id])).rejects.toThrow()
   })
 
   // Quit does not wait for a write it never learned about, so the store has to say when it is done.

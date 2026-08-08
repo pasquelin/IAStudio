@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createRateLimiter,
   createRateLimiters,
+  asUrgent,
   limitedTransport,
   MAX_WAIT_MS,
   RATE_MARGIN,
@@ -28,6 +29,9 @@ function clock() {
       at += ms
       return Promise.resolve()
     },
+    // Nothing held back by default, so a test about the window is about the window alone. The
+    // reserve has its own describe, where it is asked for explicitly.
+    urgentReserve: 0,
   }
 
   return { deps, waited, advance: (ms: number) => void (at += ms) }
@@ -205,6 +209,65 @@ describe('what the limiter answers rather than hold', () => {
   })
 })
 
+/**
+ * Cancelling is the one call whose purpose is to stop spending. Held behind two minutes of polls
+ * and thumbnails, the request that stops the bill is itself billed for the wait.
+ */
+describe('what goes ahead of the queue', () => {
+  it('serves an urgent caller before the ordinary ones already waiting', async () => {
+    const { deps } = clock()
+    const limiter = createRateLimiter({ ...deps, limit: 1 })
+    const served: string[] = []
+
+    await limiter.acquire()
+    const first = limiter.acquire().then(() => void served.push('ordinary first'))
+    const second = limiter.acquire().then(() => void served.push('ordinary second'))
+    const cancel = limiter.acquire(undefined, 'urgent').then(() => void served.push('urgent'))
+
+    await Promise.all([first, second, cancel])
+
+    // Behind whoever was already being served, ahead of everyone merely waiting.
+    expect(served).toEqual(['ordinary first', 'urgent', 'ordinary second'])
+  })
+
+  /**
+   * Going first is not enough on its own: a full window makes everyone wait for the same expiry,
+   * whatever order they wait in. The reserve is the half that makes the priority worth having.
+   */
+  it('lets an urgent caller take a slot a full window would have refused', async () => {
+    const { deps } = clock()
+    const limiter = createRateLimiter({ ...deps, limit: 3, urgentReserve: 1 })
+
+    await limiter.acquire()
+    await limiter.acquire()
+
+    // Ordinary traffic stops two short of three; the slot left is not for it.
+    expect(await limiter.acquire()).toMatchObject({ admitted: false })
+    expect(await limiter.acquire(undefined, 'urgent')).toMatchObject({ admitted: true })
+  })
+
+  // Reserved is not unlimited: past the ceiling itself, an urgent caller waits like anyone else.
+  it('holds an urgent caller once even its reserve is spent', async () => {
+    const { deps } = clock()
+    const limiter = createRateLimiter({ ...deps, limit: 2, urgentReserve: 1 })
+
+    await limiter.acquire()
+    await limiter.acquire(undefined, 'urgent')
+
+    expect(await limiter.acquire(undefined, 'urgent')).toMatchObject({ admitted: false })
+  })
+
+  // A reserve wider than the window would otherwise leave ordinary traffic nothing at all.
+  it('never reserves away the last slot', async () => {
+    const { deps, advance } = clock()
+    const limiter = createRateLimiter({ ...deps, limit: 1, urgentReserve: 5 })
+
+    expect(await limiter.acquire()).toMatchObject({ admitted: true })
+    advance(RATE_WINDOW_MS)
+    expect(await limiter.acquire()).toMatchObject({ admitted: true })
+  })
+})
+
 describe('one window per account', () => {
   // Rebuilt on every switch, going back and forth would spend two windows on the same project.
   it('gives each account its own, and the same account the same one twice', async () => {
@@ -256,6 +319,27 @@ describe('the transport a client is built on', () => {
     expect(held.headers.get('retry-after-ms')).toBe(String(RATE_WINDOW_MS))
     // One admission, two calls: the held one never reached the network.
     expect(send).toHaveBeenCalledOnce()
+  })
+
+  /**
+   * The whole point of `asUrgent`: the transport is the only thing that reads the priority, and
+   * everything between it and the caller is the SDK, which offers no way to pass one through.
+   * Async context is what survives that crossing — an argument could not.
+   */
+  it('carries urgency across the SDK, which has no argument for it', async () => {
+    const { deps } = clock()
+    const send = vi.fn(answer)
+    // Two slots, one reserved: ordinary traffic may take exactly one.
+    const limiters = createRateLimiters({ ...deps, limit: 2, urgentReserve: 1 })
+    const transport = limitedTransport(limiters, send)(credentials)
+
+    await transport('https://api.scenario.com/models')
+    expect((await transport('https://api.scenario.com/models')).status).toBe(429)
+
+    // As the SDK calls it: a function that awaits deeper down, not the transport itself.
+    const cancel = await asUrgent(async () => await transport('https://api.scenario.com/jobs/j_1'))
+
+    expect(cancel.status).toBe(200)
   })
 
   // Nothing that could end up in a dump has to hold the key to say which account it belongs to.

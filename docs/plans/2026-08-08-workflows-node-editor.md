@@ -321,6 +321,59 @@ repart pas.
 
 ---
 
+## Revue de cohérence de la branche — entre l'étape 3 et l'étape 4
+
+Les trois étapes avaient chacune eu son `/simplify` et son `/code-review`. Cette passe-ci cherchait
+**ce qu'une revue par étape ne peut pas voir** : ce qu'une étape casse dans une autre, deux notions
+du même concept, un document qui contredit le code. Elle a rendu **dix défauts confirmés**, tous
+corrigés avant la fusion. Elle valait son prix : quatre des dix étaient sévères, et aucun n'était
+visible depuis l'étape qui l'avait introduit.
+
+**Les quatre qui perdaient du travail ou de l'argent.**
+
+1. **Annuler un job repris ne prévenait pas l'API.** L'étape 3 a donné un `remoteId` aux entrées
+   encore en file ; la branche « déjà en file » de `cancel` datait d'avant et disait « il n'a jamais
+   atteint l'API ». Elle sortait donc le job de la file, `settle` libérait son compte — et la
+   génération continuait d'être facturée sans que rien dans le studio ne puisse plus l'arrêter.
+   Pire : la note repartait sur disque, donc le job annulé **réapparaissait** à l'ouverture suivante.
+2. **Un job repris était invisible.** `resume` l'annonçait par un événement de progression, mais la
+   réplique du renderer ne sait que fusionner dans une ligne qu'elle a déjà : un identifiant inconnu
+   est ignoré en silence. Le commentaire du code affirmait exactement le contraire de ce qui se
+   passait.
+3. **Un job dont le projet a changé disparaissait sans le dire.** La seule sortie qui ne passait pas
+   par `settle`, donc le seul cas sans événement terminal : la ligne tournait pour le reste de la
+   session, avec un bouton Annuler que le main n'avait plus d'entrée pour servir.
+4. **`entry.done` n'était jamais posé dans le `catch` d'`execute`.** Un job dont l'API a perdu la
+   trace (404) rejouait son échec **à chaque ouverture de projet pendant sept jours**.
+
+Les deux premiers ont la même réponse : un canal `evt:jobs-changed` qui porte la liste entière
+quand elle **gagne ou perd** une entrée — ce qu'un événement de progression, qui nomme un job par
+son identifiant, ne peut pas exprimer par construction.
+
+**Les deux qui demandaient un arbitrage, tranchés par l'utilisateur** (voir § 3.6 de `REPRISE.md`
+pour le détail) : l'intervalle de poll est désormais **calculé** sur le nombre de jobs suivis, et
+l'annulation passe devant tout le monde grâce à une **file à priorité** doublée de places
+réservées. Les deux « dettes assumées » de l'étape 2 sont donc payées, pas reportées.
+
+**Les quatre derniers** : la garde de re-collecte de l'étape 3 était aveugle à la provenance et
+adoptait un asset venu de la bibliothèque du compte — elle est maintenant portée par le `jobId` ;
+`persist` avalait toute erreur d'écriture sous un `.catch(() => {})` muet, alors que c'est
+précisément la garantie que l'étape 3 existe pour tenir ; `windowNameOf` dupliquait
+`accountFingerprint` au caractère près, alors que les deux documents affirmaient qu'il n'y avait
+qu'une notion ; et `REPRISE.md` donnait pour livrée la formule de progression que `/code-review`
+avait rejetée à l'étape 1.
+
+**Trois candidats ont été réfutés** par la vérification, dont deux sur le même point : `accounts.of`
+ne casse pas le cache `bound`, et le § 3.6 ne se contredit pas sur le débit.
+
+**Ce que `pnpm validate` cachait.** Les 3931 tests passaient, mais trois budgets de couverture
+étaient dépassés — le pipe `| tail` masquait le code de sortie, et la session précédente a cru la
+branche verte. `develop` l'était, la branche non. Le code non couvert était exactement celui que la
+revue a relevé : la garde d'idempotence du collecteur et le rattrapage d'écriture du `job-store`,
+tous deux non testés. **Un budget de couverture qui déborde nomme souvent le défaut avant la revue.**
+
+---
+
 ## Étape 4 — `dryRun` et le coût visible
 
 - [ ] Livrée

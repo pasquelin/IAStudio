@@ -1055,21 +1055,35 @@ Six choses à savoir avant d'y toucher, dont deux qui ont coûté une revue chac
   `fetch` global (`lib/upload.js`). Les deux sont hors du quota, et c'est correct : ce ne sont pas
   des appels d'API.
 
-**Une dette assumée, écrite ici pour ne pas être redécouverte** : l'annulation d'un job est un
-appel d'API comme un autre, donc elle prend un ticket dans la même file. Sous saturation elle est
-au pire tenue 10 s, puis se voit répondre 429 — que le SDK réessaie deux fois. Si les trois
-tentatives échouent, `runner.cancel` est appelé sous un `.catch(() => {})` : le studio marque le
-job annulé pendant que le job distant continue de consommer. Une file à priorité serait le vrai
-remède.
+**L'annulation passe devant — la dette est payée, pas assumée.** Elle était écrite ici comme
+insoluble à bon compte : une annulation est un appel d'API comme un autre, donc elle prenait un
+ticket dans la même file, se voyait tenue 10 s, puis répondre 429 que le SDK réessaie — le bouton
+Annuler pouvait rester mort **deux minutes** sur un job facturé pendant ce temps. La revue de
+cohérence de la branche l'a reproduite et l'utilisateur a tranché pour le vrai remède, celui que
+cette section nommait déjà : **une file à priorité**.
 
-> **Ce que le limiteur rend visible, et qui est un vrai sujet produit : le polling seul frôle le
-> quota.** À la concurrence par défaut (`concurrentJobs: 3`) et avec un poll toutes les 2 s, trois
-> jobs en cours dépensent **90 requêtes par minute sur les 100** — avant le catalogue, les
-> vignettes et l'assistance. À la concurrence 10 que le § 4.1 cite pour les workflows, c'est 300.
-> Le limiteur ne crée pas ce dépassement, il le rend net au lieu de le laisser sortir en 429 ;
-> mais tant que la demande dépasse structurellement l'offre, il sera saturé en usage normal.
-> **Le remède est de réduire la demande** — allonger l'intervalle de poll, ou l'asservir au budget
-> restant de la fenêtre. C'est un changement de comportement, donc un arbitrage, pas un correctif.
+Deux moitiés, et il faut les deux. Passer devant dans la file ne suffit pas — une fenêtre pleine
+fait attendre la même expiration à tout le monde, quel que soit l'ordre. Il faut donc aussi des
+**places réservées** (`URGENT_RESERVE`, 5 sur les 95 admises) qu'un appel ordinaire ne peut pas
+prendre. La priorité voyage par `AsyncLocalStorage` (`asUrgent`) et non par un argument, parce que
+le seul lecteur est le transport et que tout ce qui se trouve entre les deux est le SDK, qui
+n'offre aucun passage. **Réservé à l'annulation** : c'est le seul appel dont le but est d'arrêter
+la dépense.
+
+**Le polling se règle sur ce qu'il a le droit de dépenser.** À la concurrence par défaut
+(`concurrentJobs: 3`) et un poll toutes les 2 s, trois jobs dépensaient **90 requêtes par minute
+sur les 100** — avant le catalogue, les vignettes et l'assistance ; à la concurrence 10 des
+workflows, 300. Ce n'était pas qu'un inconfort : au-delà de quatre jobs, le limiteur tenait chaque
+poll, le SDK réessayait, et une génération **vivante et payée** était rapportée en « échec — limite
+de débit » au bout d'une quinzaine de secondes.
+
+L'intervalle est donc calculé, plus fixe : `max(2 s, jobs × 60 s / POLL_REQUESTS_PER_MINUTE)`, avec
+**75** requêtes par minute pour le poll seul. Une génération isolée garde ses 2 s — une barre qui
+avance vaut ses requêtes ; six s'espacent à 4,8 s ; dix à 8 s. Le budget est sous les 90 places
+ordinaires (95 moins la réserve d'annulation), de sorte qu'une ouverture de projet derrière trois
+générations garde une part au lieu de faire la queue derrière une boucle qui ne s'arrête jamais.
+Le `JobManager` le calcule depuis son propre compteur `running`, sans rien demander au limiteur :
+aucun câblage entre les deux.
 
 **La moitié rapatriement de la bibliothèque n'a pas de porte.** `cloud.pull`, `cloud.browse` et
 `cloud.plan` traversent la frontière, sont testés, et **aucun composant ne les appelle** — la JSDoc
@@ -1156,6 +1170,22 @@ rustinage local.
 **Durabilité.** `documents.ts` renomme atomiquement, ce qui protège d'un crash **en cours
 d'écriture**, mais ne fait pas de `fsync` : une coupure de courant peut perdre l'écriture. C'est écrit
 dans son propre commentaire, et assumé.
+
+**L'écriture atomique existe en deux exemplaires, et la preuve qu'elle devrait n'en faire qu'un est
+déjà là.** `scenario/job-store.ts` et `project/documents.ts` écrivent tous deux une copie de transit
+puis renomment, avec le **même commentaire mot pour mot**. La revue de cohérence de `feat/workflows`
+a corrigé dans le premier un défaut que le second porte toujours : le `rm` de nettoyage n'était pas
+protégé, si bien qu'un échec du ménage remplaçait l'erreur d'origine et masquait la vraie cause.
+Corrigé dans `job-store.ts`, **pas** dans `documents.ts` (`store` et `storeFolder`) — hors périmètre
+de cette branche. `isMissing` est dupliqué à l'identique entre les deux fichiers, commentaire
+compris.
+
+Un `writeAtomic` partagé — dans un `src/main/files.ts` — les réunirait, à condition de **garder le
+nom de la copie en paramètre** : `documents.ts` en veut un unique par appel (`<fichier>.<uuid>.tmp`,
+parce que plusieurs fenêtres écrivent et que le dossier appartient à l'utilisateur), `job-store.ts`
+un nom fixe (`.staging`, parce que ses écritures sont sérialisées et qu'un nom unique laisserait un
+orphelin par crash). Les **files** d'attente, elles, ne se factorisent pas : `documents.ts` en tient
+une par fichier dans une `Map`, `job-store.ts` une seule pour un seul fichier.
 
 **Le double dispatch des accélérateurs Electron n'a jamais été vérifié en conditions réelles.** macOS
 consomme probablement la frappe avant le renderer, Windows/Linux non. Personne ne l'a mesuré sur les
@@ -1326,11 +1356,16 @@ l'étape 1. Aucune collision : aucune des deux graphies n'a d'autre sens dans le
 génération, la table unique est donc sans perte.
 
 **2. La progression serait affichée à 10000 %** — même condition. `advance` recopiait
-`remote.progress` tel quel. Normaliser **à l'entrée** — `p > 1 ? p / 100 : p`, puis borner à
+`remote.progress` tel quel. Normaliser **à l'entrée** — `p > 2 ? p / 100 : p`, puis borner à
 `[0, 1]` — et non à l'affichage : la valeur est stockée dans `Job.progress`, et `JobsStatus` la
 **somme** sur tous les jobs en cours, ce qu'un clamp d'affichage ne rattraperait pas. Livré à
-l'étape 1. L'heuristique est inerte si le SDK dit vrai, une progression n'ayant jamais de raison
-légitime de dépasser 1.
+l'étape 1.
+
+**Le seuil est 2, et pas 1** — la première version divisait dès 1 et `/code-review` l'a rattrapée.
+Une génération dépasse sa propre échelle : `design/ProgressBar.tsx` est borné parce qu'un job
+rapporte 1.02, si bien que diviser dès 1 faisait retomber la fin de chaque génération à **1 %** —
+une régression sur le chemin vivant, introduite pour un vocabulaire que personne n'a observé.
+Au-dessus de 2, aucune fraction ne peut vivre. L'heuristique reste inerte si le SDK dit vrai.
 
 **3. Les sorties d'un workflow ne sont pas là où le manager les cherche.** `RemoteJob` ne lit que
 `metadata.assetIds`. Un job de workflow rend `metadata.flow[]`, **une entrée par node avec son

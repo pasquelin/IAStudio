@@ -180,8 +180,9 @@ describe('client provider', () => {
     const { provider } = setup(() => credentials)
     const active = provider.get()
 
-    const other = clientFor({ key: 'api_other', secret: 'other' }, () => () =>
-      Promise.resolve(new Response('{}')),
+    const other = clientFor(
+      { key: 'api_other', secret: 'other' },
+      () => () => Promise.resolve(new Response('{}')),
     )
 
     expect(other).not.toBe(active)

@@ -117,7 +117,9 @@ export function createJobStore(userDataPath: () => string, now: () => number = D
           // list where the pending work was.
           await rename(copy, file)
         } catch (error) {
-          await rm(copy, { force: true })
+          // The tidy-up must not become the failure: what the caller has to hear is why the
+          // notes could not be written, not why the staging copy would not go away.
+          await rm(copy, { force: true }).catch(() => {})
           throw error
         }
       }
