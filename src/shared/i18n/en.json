@@ -262,7 +262,17 @@
     "lockPosition": "Lock position",
     "lockAlpha": "Lock transparency",
     "collapse": "Collapse group",
-    "expand": "Expand group"
+    "expand": "Expand group",
+    "operations": "Operations",
+    "operationsHint": "Group, duplicate, merge or flatten the stack",
+    "group": "Group",
+    "ungroup": "Ungroup",
+    "duplicate": "Duplicate",
+    "mergeDown": "Merge down",
+    "flatten": "Flatten image",
+    "groupName": "Group",
+    "copyName": "{{name}} copy",
+    "flatName": "Flattened"
   },
   "meshes": {
     "box": "Box",

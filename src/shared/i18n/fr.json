@@ -262,7 +262,17 @@
     "lockPosition": "Verrouiller la position",
     "lockAlpha": "Verrouiller la transparence",
     "collapse": "Replier le groupe",
-    "expand": "Déplier le groupe"
+    "expand": "Déplier le groupe",
+    "operations": "Opérations",
+    "operationsHint": "Grouper, dupliquer, fusionner ou aplatir la pile",
+    "group": "Grouper",
+    "ungroup": "Dégrouper",
+    "duplicate": "Dupliquer",
+    "mergeDown": "Fusionner avec le calque du dessous",
+    "flatten": "Aplatir l’image",
+    "groupName": "Groupe",
+    "copyName": "{{name}} copie",
+    "flatName": "Image aplatie"
   },
   "meshes": {
     "box": "Cube",
