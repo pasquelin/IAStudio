@@ -18,6 +18,7 @@ function layout(marker: string): SerializedLayout {
 
 describe('layouts store', () => {
   beforeEach(() => {
+    localStorage.clear()
     useLayouts.setState({ activeWorkspace: 'image', layouts: {} })
   })
 
@@ -51,6 +52,25 @@ describe('layouts store', () => {
     const { layouts } = useLayouts.getState()
     expect(layouts.image).toBeUndefined()
     expect(layouts.audio?.panels).toHaveProperty('tracks')
+  })
+
+  // Only Dockview can read a layout back, so a build whose Dockview — or whose set of document
+  // kinds — has moved on cannot tell whether a stored one still loads. It throws on restore if
+  // it does not, which is why the stamp exists rather than a migration.
+  describe('persisted format', () => {
+    it('drops what an older build stored instead of handing it to Dockview', async () => {
+      localStorage.setItem(
+        'scenario-studio:layouts',
+        JSON.stringify({
+          state: { activeWorkspace: 'image', layouts: { image: layout('generator') } },
+          version: 0,
+        }),
+      )
+
+      await useLayouts.persist.rehydrate()
+
+      expect(useLayouts.getState().layouts).toEqual({})
+    })
   })
 
   describe('adopt', () => {

@@ -25,7 +25,17 @@ export function DocumentArea() {
       setDockviewApi(event.api)
 
       const stored = useLayouts.getState().layouts[workspace]
-      if (stored) event.api.fromJSON(stored)
+      if (stored) {
+        try {
+          event.api.fromJSON(stored)
+        } catch (error) {
+          // Dockview rethrows a layout it refuses from inside its own mount effect, where an
+          // uncaught throw would take the window down on every launch. Forgotten, not kept:
+          // nothing reloads it afterwards, so a kept one would fail again at every switch.
+          console.error(`Discarding an unreadable layout for the "${workspace}" workspace:`, error)
+          useLayouts.getState().forget(workspace)
+        }
+      }
 
       event.api.onDidLayoutChange(() => {
         useLayouts.getState().remember(workspace, event.api.toJSON())

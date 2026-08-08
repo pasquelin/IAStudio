@@ -47,6 +47,13 @@ export const useLayouts = create<LayoutsState>()(
       adopt: projectPath =>
         set(state => (state.projectPath === projectPath ? {} : { projectPath, layouts: {} })),
     }),
-    { name: 'scenario-studio:layouts' },
+    {
+      name: 'scenario-studio:layouts',
+      // Bumped whenever a stored layout stops being one this build can restore: a major
+      // Dockview release, or a `DocumentKind` renamed or dropped — Dockview throws on a layout
+      // naming a component it cannot find. Dropped rather than migrated, per the type above.
+      version: 1,
+      migrate: () => undefined,
+    },
   ),
 )
