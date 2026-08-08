@@ -4,6 +4,8 @@ import { isLicencesRoute } from '@shared/domain/licence'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { resolveLanguage } from '@shared/i18n'
 import { Application } from '@/app/Application'
+import { ErrorBoundary } from '@/design/ErrorBoundary'
+import { WindowFailure } from '@/design/WindowFailure'
 import { initI18n } from '@/i18n'
 import { SettingsWindow } from '@/settings/SettingsWindow'
 import './index.css'
@@ -45,6 +47,11 @@ function Route({ hash }: { hash: string }) {
 
 createRoot(root).render(
   <StrictMode>
-    <Route hash={window.location.hash} />
+    {/* Above the routes, not inside: the per-panel boundaries cover the docks, and everything
+        holding them — shell, rails, title bar, settings — would otherwise unmount to a blank
+        window. Retry remounts the tree, which is the whole recovery a renderer can offer. */}
+    <ErrorBoundary fallback={retry => <WindowFailure onRetry={retry} />}>
+      <Route hash={window.location.hash} />
+    </ErrorBoundary>
   </StrictMode>,
 )

@@ -508,7 +508,8 @@
     "invalidValue": "Invalid value.",
     "rejected": "The generation failed.",
     "storage": "Could not save the result to disk.",
-    "panelCrashed": "This panel ran into an error."
+    "panelCrashed": "This panel ran into an error.",
+    "windowCrashed": "The application ran into an error."
   },
   "menu": {
     "file": "File",

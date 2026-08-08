@@ -38,6 +38,26 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
   })
 
+  it('hands retry to a fallback that asks for it, so a caller can offer its own way back', async () => {
+    let failing = true
+
+    function Flaky() {
+      if (failing) throw new Error('not yet')
+      return <p>recovered</p>
+    }
+
+    render(
+      <ErrorBoundary fallback={retry => <button onClick={retry}>start over</button>}>
+        <Flaky />
+      </ErrorBoundary>,
+    )
+
+    failing = false
+    await userEvent.click(screen.getByRole('button', { name: 'start over' }))
+
+    expect(screen.getByText('recovered')).toBeInTheDocument()
+  })
+
   it('renders a given fallback instead of the notice, for a surface too small to explain', () => {
     render(
       <ErrorBoundary fallback={null}>
@@ -58,7 +78,7 @@ describe('ErrorBoundary', () => {
     const reported = vi.mocked(console.error).mock.calls.flat().join(' ')
     // The prefix is ours: React reports caught errors on its own, so asserting only on the
     // message and the stack would pass with `componentDidCatch` deleted.
-    expect(reported).toContain('Panel failed to render:')
+    expect(reported).toContain('Render failed:')
     expect(reported).toContain('panel exploded')
     expect(reported).toContain('Boom')
   })
