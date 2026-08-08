@@ -1086,18 +1086,46 @@ Deux conséquences à ne pas confondre avec des bugs :
   compte ») : le transfert est à sens unique. Ouvrir cette moitié veut donc dire mettre à jour les
   deux manuels dans le même mouvement, sinon la doc redevient fausse dans l'autre sens.
 
-**Un job ne survit pas à la fermeture de l'application.** `createJobManager` tient tout dans une
-`Map` en mémoire, `scenario:list-jobs` lit cette map, et **rien n'appelle `jobs.list` au démarrage**.
-Une génération vidéo de dix minutes, l'application fermée entre-temps : le job aboutit chez Scenario,
-l'asset existe dans la bibliothèque du compte, et le studio ne le collectera **jamais** dans le
-projet — `collect` n'est appelé que par la boucle qui a soumis.
+> **Réglé par l'étape 3 de `feat/workflows`** (`scenario/job-store.ts`). Le diagnostic ci-dessous
+> reste exact ; ce qui a été livré, et ce que la revue a corrigé en chemin, suit.
 
-Ce n'est pas qu'une reprise d'affichage : c'est du travail payé et perdu. `jobs.list` est documenté
-(`reference/jobs.list.md`), filtrable par statut et par type, et `collector.ts` n'a besoin de rien de
-plus — il prend une liste d'ids d'assets distants et les importe. Ce qu'il faut est la persistance
-des entrées (`localId`, `jobId`, `modelId`, `label`, compte d'origine) et une reprise au boot qui
-réhydrate la file et relance le polling. **Prérequis dur de l'entraînement** (§ 4.8), qui dure des
-heures : sans lui, un train n'est pas seulement fragile, il est inutilisable.
+**Un job ne survivait pas à la fermeture de l'application.** `createJobManager` tenait tout dans une
+`Map` en mémoire, et **rien n'appelait `jobs.list` au démarrage**. Une génération vidéo de dix
+minutes, l'application fermée entre-temps : le job aboutit chez Scenario, l'asset existe dans la
+bibliothèque du compte, et le studio ne le collectait **jamais** dans le projet — `collect` n'est
+appelé que par la boucle qui a soumis. Ce n'était pas une reprise d'affichage : c'était du travail
+payé et perdu. **Prérequis dur de l'entraînement** (§ 4.8), qui dure des heures.
+
+**Ce qui est livré.** Les jobs inachevés sont écrits en JSON dans `app.getPath('userData')`,
+atomiquement (copie de transit puis `rename`), et repris **à l'ouverture du projet auquel ils
+appartiennent** — pas au démarrage : le collecteur écrit dans le catalogue du projet ouvert, et il
+n'y en a aucun avant. La note porte le compte, le projet, l'id distant et de quoi redessiner la
+ligne dans la barre de jobs ; ni le statut ni la progression, qui sont ce que l'API répondra au
+prochain poll et dont une copie périmée serait une seconde vérité.
+
+Six choses à savoir, dont quatre sont des défauts que la revue a trouvés dans la première version :
+
+- **une note ne part que si l'API a conclu.** C'est la règle centrale, et la première version
+  l'avait à l'envers : `settle` oubliait le job sur *tout* statut terminal, donc une coupure Wi-Fi
+  de quinze secondes au-delà du budget de réessai effaçait la note d'une génération vivante et
+  déjà payée — exactement la perte que le mécanisme existe pour empêcher. Un échec **local**
+  (réseau, clé indisponible, disque qui refuse) garde la note ; seuls un refus de l'API, une
+  annulation qu'elle a prise et une collecte réussie l'effacent ;
+- **la collecte est idempotente.** `collector.ts` frappait un id local neuf par sortie : une note
+  qui survivait à un job déjà collecté réimportait tout, et refacturait le transfert. Il consulte
+  désormais `localIdOf` sur la sortie elle-même, comme il le faisait déjà sur le parent ;
+- **un job ne collecte que dans son propre projet.** Le collecteur écrit là où le projet est
+  ouvert : plutôt que de classer une génération dans la mauvaise bibliothèque, le job s'efface de
+  la session et sa note attend que son projet revienne ;
+- **le compte est nommé par une empreinte de sa clé** (`accountFingerprint`), pas par l'id du
+  carnet, qu'un retrait suivi d'un ré-ajout renouvelle — le job repris ne retrouverait plus son
+  compte et serait perdu en silence. Même notion que celle qui nomme les fenêtres du limiteur ;
+- **un fichier illisible n'est pas un fichier vide.** Une écriture reconstruit le fichier depuis ce
+  qu'elle a lu : lire « rien » d'un fichier momentanément verrouillé aurait effacé les notes de
+  tous les autres projets d'un coup. Absent rend `[]`, illisible **refuse l'écriture** ;
+- **les notes se périment à sept jours**, et l'écriture est vidangée à la fermeture et au
+  changement de projet, à côté du journal — sans quoi la dernière note d'une session, celle qui
+  compte le plus, part avec le processus.
 
 **Les index du catalogue n'ont pas été posés.** `catalog.ts` déclare des index simples
 (`assets(type)`, `assets(created_at DESC)`, `asset_tags(tag)`, `assets(hash)`…). **Il manque l'index

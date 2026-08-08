@@ -2,6 +2,7 @@ import type { JobFailure } from '@shared/domain/failure'
 import { isFinished, type Job, type JobProgress, type JobStatus } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
+import type { PersistedJob } from './job-store'
 import { createRetry, DEFAULT_BACKOFF_BASE_MS } from './retry'
 
 /** A job as the API returns it, reduced to what the studio reads. */
@@ -38,9 +39,26 @@ export type JobAccount = {
   collect: AssetCollector
 }
 
+/** The account in force, named so a job outliving the session can find its way back to it. */
+export type ActiveAccount = { id: string; account: JobAccount }
+
+export type JobAccounts = {
+  /** `null` when no credentials are available. Read once per job, at submission. */
+  active: () => ActiveAccount | null
+  /** The account a resumed job was submitted on, or `null` if the studio no longer holds it. */
+  of: (accountId: string) => JobAccount | null
+}
+
 export type JobManagerDeps = {
-  /** The account in force, or `null` when no credentials are available. Read once per job. */
-  account: () => JobAccount | null
+  accounts: JobAccounts
+  /** The project a job's outputs belong in, captured at submission like the account is. */
+  projectPath: () => string | null
+  /**
+   * Where unfinished jobs are kept so that closing the studio does not abandon them. `handled`
+   * is every job this session is answering for, finished ones included: what the store may
+   * replace, as against the entries of a project nobody has reopened.
+   */
+  persist: (jobs: readonly PersistedJob[], handled: readonly string[]) => void
   concurrency: () => number
   maxRetries: () => number
   onProgress: (progress: JobProgress) => void
@@ -57,6 +75,11 @@ export type JobManager = {
   submit: (modelId: string, label: string, body: Record<string, unknown>) => Job
   cancel: (jobId: string) => Promise<void>
   list: () => Job[]
+  /**
+   * Picks up jobs left running by a previous session: polling starts again, and one that
+   * finished while the studio was closed is collected into the project it was meant for.
+   */
+  resume: (jobs: readonly PersistedJob[]) => void
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
@@ -118,9 +141,22 @@ type Entry = {
   job: Job
   /** Captured when the user asked for it: the credits and the output belong to that account. */
   account: JobAccount | null
+  /** Kept beside the account itself, because it is the half that survives the session. */
+  accountId: string | null
+  /** Likewise: where the outputs go, decided when the job was asked for, not when it lands. */
+  projectPath: string | null
   body: Record<string, unknown>
   remoteId: string | null
   cancelled: boolean
+  /**
+   * Whether the API has said what became of it, and its outputs are where they belong.
+   *
+   * The one thing that decides whether the note may be dropped. A job can fail here while it is
+   * alive and paid for over there — a poll past its retry budget, a key the keychain would not
+   * hand back, a disk that refused the download — and forgetting it then is the exact loss this
+   * whole mechanism exists to prevent.
+   */
+  done: boolean
 }
 
 /**
@@ -129,7 +165,9 @@ type Entry = {
  * generation exceeds on its own — see CLAUDE.md.
  */
 export function createJobManager({
-  account,
+  accounts,
+  projectPath,
+  persist,
   concurrency,
   maxRetries,
   onProgress,
@@ -153,6 +191,34 @@ export function createJobManager({
     if (entry.job.assetIds.length > 0) progress.assetIds = entry.job.assetIds
     if (entry.job.error !== undefined) progress.error = entry.job.error
     onProgress(progress)
+  }
+
+  /**
+   * Writes down what would otherwise be lost with the process.
+   *
+   * Only what is still running and has reached the API: a job the studio never submitted costs
+   * nothing to forget, and a finished one has nothing left to do.
+   */
+  const remember = (): void => {
+    const unfinished: PersistedJob[] = []
+
+    for (const entry of entries.values()) {
+      const { accountId, projectPath, remoteId } = entry
+      if (entry.done) continue
+      if (remoteId === null || accountId === null || projectPath === null) continue
+
+      unfinished.push({
+        id: entry.job.id,
+        remoteId,
+        modelId: entry.job.modelId,
+        label: entry.job.label,
+        accountId,
+        projectPath,
+        createdAt: entry.job.createdAt,
+      })
+    }
+
+    persist(unfinished, [...entries.keys()])
   }
 
   /** Insertion order is submission order, so the oldest finished entries go first. */
@@ -205,6 +271,7 @@ export function createJobManager({
     emit(entry)
     journal(entry.job, status)
     evictOldFinished()
+    remember()
   }
 
   const withRetry = createRetry({ maxRetries, sleep, backoffBaseMs })
@@ -226,58 +293,96 @@ export function createJobManager({
     return status
   }
 
+  /**
+   * A job that exists on the API, followed to its end. Shared by the one just submitted and the
+   * one picked up from a previous session — from here on the two are the same thing, which is
+   * what makes a job survive the studio being closed.
+   */
+  const follow = async (
+    entry: Entry,
+    bound: JobAccount,
+    remoteId: string,
+    submitted?: RemoteJob,
+  ): Promise<void> => {
+    // Cancelled while the submission was in flight: the remote job exists, so it must be told,
+    // otherwise it keeps burning credits with nobody watching.
+    const abandon = async (): Promise<void> => {
+      // Only once the API has taken the cancellation: refused, the job is still running and
+      // still being paid for, so its note has to outlive the session that gave up on it.
+      await bound.runner
+        .cancel(remoteId)
+        .then(() => void (entry.done = true))
+        .catch(() => {})
+      settle(entry, 'cancelled')
+    }
+
+    if (entry.cancelled) return await abandon()
+
+    let remote = submitted ?? (await withRetry(() => bound.runner.poll(remoteId)))
+    let status = advance(entry, remote)
+
+    while (!isFinished(status)) {
+      await sleep(pollIntervalMs)
+      if (entry.cancelled) return await abandon()
+
+      remote = await withRetry(() => bound.runner.poll(remoteId))
+      status = advance(entry, remote)
+    }
+
+    if (status !== 'succeeded') {
+      // The API has spoken, and nothing is owed: this one may be forgotten.
+      entry.done = true
+      settle(entry, status, status === 'failed' ? 'rejected' : undefined)
+      return
+    }
+
+    // Where the outputs are owed. The collector writes into whichever project is open, so
+    // collecting under another one would file this generation in the wrong library — the note
+    // stays instead, and the job is picked up again when its own project is next opened.
+    if (entry.projectPath !== null && entry.projectPath !== projectPath()) {
+      entries.delete(entry.job.id)
+      return
+    }
+
+    // Succeeded only once the files are on disk and indexed: announcing it earlier shows a
+    // finished job with nothing behind it in the asset browser.
+    try {
+      entry.job.assetIds = await bound.collect(entry.job, remote.metadata?.assetIds ?? [])
+    } catch {
+      // Writing or indexing failed — a local problem, distinct from anything the API said, and
+      // one the note must outlive: the generation is paid for and its outputs are still there.
+      settle(entry, 'failed', 'storage')
+      return
+    }
+
+    entry.done = true
+    settle(entry, 'succeeded')
+  }
+
   const execute = async (entry: Entry): Promise<void> => {
-    const { account: bound } = entry
-    // No key when the user asked, and none is borrowed from whoever holds one now.
+    const { account: bound, remoteId } = entry
+    // No key when the user asked, and none is borrowed from whoever holds one now. A resumed job
+    // whose account the studio no longer holds is the same answer: its id means nothing under
+    // another key, and no retry repairs a 404.
     if (!bound) {
       settle(entry, 'failed', 'missing')
       return
     }
 
     try {
+      if (remoteId !== null) return await follow(entry, bound, remoteId)
+
       const submitted = await withRetry(() => bound.runner.submit(entry.job.modelId, entry.body))
       entry.remoteId = submitted.jobId
 
       // The body is read once and can hold an encoded source image; a finished job has no
       // reason to keep it alive for the rest of the session.
       entry.body = {}
+      // The first moment there is anything worth surviving the process: before this, nothing
+      // was spent and forgetting the job costs nobody anything.
+      remember()
 
-      // Cancelled while the submission was in flight: the remote job exists, so it must be
-      // told, otherwise it keeps burning credits with nobody watching.
-      const abandon = async (): Promise<void> => {
-        await bound.runner.cancel(submitted.jobId).catch(() => {})
-        settle(entry, 'cancelled')
-      }
-
-      if (entry.cancelled) return await abandon()
-
-      let remote = submitted
-      let status = advance(entry, remote)
-
-      while (!isFinished(status)) {
-        await sleep(pollIntervalMs)
-        if (entry.cancelled) return await abandon()
-
-        remote = await withRetry(() => bound.runner.poll(submitted.jobId))
-        status = advance(entry, remote)
-      }
-
-      if (status !== 'succeeded') {
-        settle(entry, status, status === 'failed' ? 'rejected' : undefined)
-        return
-      }
-
-      // Succeeded only once the files are on disk and indexed: announcing it earlier shows a
-      // finished job with nothing behind it in the asset browser.
-      try {
-        entry.job.assetIds = await bound.collect(entry.job, remote.metadata?.assetIds ?? [])
-      } catch {
-        // Writing or indexing failed — a local problem, distinct from anything the API said.
-        settle(entry, 'failed', 'storage')
-        return
-      }
-
-      settle(entry, 'succeeded')
+      await follow(entry, bound, submitted.jobId, submitted)
     } catch (error) {
       settle(entry, 'failed', failureOf(error))
     }
@@ -316,13 +421,60 @@ export function createJobManager({
         assetIds: [],
       }
 
-      const entry: Entry = { job, account: account(), body, remoteId: null, cancelled: false }
+      const active = accounts.active()
+      const entry: Entry = {
+        job,
+        account: active?.account ?? null,
+        accountId: active?.id ?? null,
+        projectPath: projectPath(),
+        body,
+        remoteId: null,
+        cancelled: false,
+        done: false,
+      }
       entries.set(job.id, entry)
       queue.push(job.id)
       emit(entry)
       pump()
 
       return job
+    },
+
+    resume: stored => {
+      for (const remembered of stored) {
+        // A job the session already knows is the one that wrote this entry, not a second copy.
+        if (entries.has(remembered.id)) continue
+
+        const job: Job = {
+          id: remembered.id,
+          modelId: remembered.modelId,
+          label: remembered.label,
+          status: 'queued',
+          progress: 0,
+          createdAt: remembered.createdAt,
+          assetIds: [],
+        }
+
+        const entry: Entry = {
+          job,
+          account: accounts.of(remembered.accountId),
+          accountId: remembered.accountId,
+          projectPath: remembered.projectPath,
+          body: {},
+          // What makes `execute` follow it rather than submit it a second time.
+          remoteId: remembered.remoteId,
+          cancelled: false,
+          done: false,
+        }
+
+        entries.set(job.id, entry)
+        queue.push(job.id)
+        // Announced like a submission is: behind the concurrency bound it would otherwise be
+        // invisible in the jobs bar until its turn came.
+        emit(entry)
+      }
+
+      pump()
     },
 
     cancel: async jobId => {
@@ -339,8 +491,18 @@ export function createJobManager({
         return
       }
 
-      // On the account that submitted it, whichever one is active now.
-      if (entry.remoteId) await entry.account?.runner.cancel(entry.remoteId).catch(() => {})
+      // On the account that submitted it, whichever one is active now. The note goes with the
+      // API taking it, and not before: refused, the job is still running and still being paid
+      // for, so it has to outlive the session that gave up on it.
+      if (entry.remoteId) {
+        await entry.account?.runner
+          .cancel(entry.remoteId)
+          .then(() => {
+            entry.done = true
+            remember()
+          })
+          .catch(() => {})
+      }
     },
 
     list: () =>

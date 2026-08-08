@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import {
   checkAccountName,
   DEFAULT_ACCOUNT_NAME,
@@ -60,6 +61,28 @@ export function summariesOf(book: AccountBook): AccountSummary[] {
 
 export function activeCredentials(book: AccountBook): Credentials | null {
   return book.accounts.find(account => account.id === book.activeId)?.credentials ?? null
+}
+
+/**
+ * Which account a key belongs to, in a form that outlives the book entry naming it.
+ *
+ * The local id will not do: `addAccount` mints a fresh one, so removing a key and adding it
+ * back gives the same account a new name — and anything that wrote the old one down, a job left
+ * running or a rate-limit window, would no longer find its way back to it. A digest of the key
+ * survives that, and it is what may be written to disk: the key itself never is.
+ */
+export function accountFingerprint(credentials: Credentials): string {
+  return createHash('sha256').update(credentials.key).digest('hex')
+}
+
+export function credentialsByFingerprint(
+  book: AccountBook,
+  fingerprint: string,
+): Credentials | null {
+  const held = book.accounts.find(
+    account => accountFingerprint(account.credentials) === fingerprint,
+  )
+  return held?.credentials ?? null
 }
 
 function requireName(name: string, book: AccountBook, selfId?: string): string {

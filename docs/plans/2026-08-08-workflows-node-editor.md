@@ -267,7 +267,30 @@ passent, le 101ᵉ attend, la fenêtre glisse, un appel annulé libère sa place
 
 ## Étape 3 — Un job survit à la fermeture de l'application
 
-- [ ] Livrée
+- [x] Livrée
+
+> **L'étape la plus grosse des trois premières, et de loin** — le détail est au § 3.6 de
+> `REPRISE.md`. Elle a touché huit fichiers hors du `JobManager` : le carnet de comptes (une
+> identité de compte qui survit à un ré-ajout), le magasin de réglages, le collecteur d'assets,
+> le provider de client, la racine de composition et la fermeture de l'application.
+>
+> **Les trois pièges annoncés par le plan étaient les bons**, mais deux réponses du plan étaient
+> insuffisantes. « Garder l'identifiant du compte » : l'id local ne suffit pas, un retrait suivi
+> d'un ré-ajout de la même clé le renouvelle et le job repris est perdu en silence — c'est une
+> **empreinte de la clé** qu'il faut, la même notion que celle qui nomme les fenêtres du limiteur.
+> Et « ne pas ressusciter un job annulé » est le petit frère d'une règle bien plus large que le
+> plan ne voyait pas : **une note ne part que si l'API a conclu**. La première version oubliait le
+> job sur tout statut terminal, si bien qu'une coupure réseau de quinze secondes effaçait la note
+> d'une génération vivante et payée.
+>
+> **Un quatrième piège, absent du plan** : le collecteur frappait un id local neuf par sortie, donc
+> une note survivant à un job déjà collecté réimportait tout et refacturait le transfert. Un
+> `localIdOf` sur la sortie — la fonction était déjà là, employée pour le parent seulement.
+>
+> **Et une décision que le plan ne posait pas** : la reprise se fait à l'ouverture du projet, pas au
+> démarrage, parce que le collecteur écrit dans le catalogue du projet ouvert. La note porte donc
+> son projet, et un job qui aboutit alors qu'un autre projet est ouvert **ne collecte pas** : il
+> s'efface de la session et attend le retour du sien.
 
 Dette du § 3.6, et **prérequis dur** de tout job long. Aujourd'hui `createJobManager` tient tout
 dans une `Map`, et rien n'appelle `jobs.list` au démarrage : une génération vidéo de dix minutes,

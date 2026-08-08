@@ -41,6 +41,15 @@ export function createAssetCollector({
     // Sequential on purpose: a single generation can return a dozen outputs, and downloading
     // them all at once would fight the very concurrency the JobManager bounds.
     for (const [index, remoteAssetId] of remoteAssetIds.entries()) {
+      // Already here, so this is a second pass over the same job — a note that outlived a crash,
+      // or a resumed job the studio had in fact already collected. Downloading it again would
+      // give the library a duplicate of every output and pay for the transfer twice.
+      const held = await localIdOf(remoteAssetId)
+      if (held) {
+        collected.push(held)
+        continue
+      }
+
       const remote = await retrieve(remoteAssetId)
       const source = channelFromScenarioType(remote.metadataType)
       const type = assetTypeOfRemote(remote)

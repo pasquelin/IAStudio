@@ -1,4 +1,4 @@
-import { APIError } from '@scenario-labs/sdk'
+import { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import type { JobProgress } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
@@ -12,6 +12,7 @@ import {
   type JobRunner,
   type RemoteJob,
 } from './job-manager'
+import type { PersistedJob } from './job-store'
 
 const settled = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
 
@@ -30,6 +31,12 @@ type Harness = {
   progress: JobProgress[]
   sleeps: number[]
   recorded: ActivityReport[]
+  /**
+   * What would survive the process, as of now. A function and not a value: `persist` replaces
+   * the list rather than mutating it, and a destructured getter would freeze the empty one the
+   * harness starts with — which is what made two of these tests assert nothing at all.
+   */
+  remembered: () => PersistedJob[]
 }
 
 /** The two halves of a `JobAccount`, spelled apart because most tests only replace one. */
@@ -42,17 +49,22 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
   const progress: JobProgress[] = []
   const sleeps: number[] = []
   const recorded: ActivityReport[] = []
+  let remembered: PersistedJob[] = []
   let sequence = 0
 
+  const account = {
+    runner: runner ?? {
+      submit: () => Promise.resolve(remote('success')),
+      poll: () => Promise.resolve(remote('success')),
+      cancel: () => Promise.resolve(),
+    },
+    collect: collect ?? (() => Promise.resolve([])),
+  }
+
   const manager = createJobManager({
-    account: () => ({
-      runner: runner ?? {
-        submit: () => Promise.resolve(remote('success')),
-        poll: () => Promise.resolve(remote('success')),
-        cancel: () => Promise.resolve(),
-      },
-      collect: collect ?? (() => Promise.resolve([])),
-    }),
+    accounts: { active: () => ({ id: 'fingerprint_studio', account }), of: () => account },
+    projectPath: () => '/projects/kingdom',
+    persist: jobs => void (remembered = [...jobs]),
     concurrency: () => 2,
     maxRetries: () => 3,
     onProgress: entry => void progress.push(structuredClone(entry)),
@@ -80,7 +92,7 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
     ...overrides,
   })
 
-  return { manager, progress, sleeps, recorded }
+  return { manager, progress, sleeps, recorded, remembered: () => remembered }
 }
 
 describe('status mapping', () => {
@@ -412,7 +424,15 @@ describe('the account a job runs on', () => {
       collect: vi.fn(() => Promise.resolve(['asset_local'])),
     }
 
-    const { manager } = harness({ account: () => (switched ? other : studio) })
+    const accounts = {
+      active: () =>
+        switched
+          ? { id: 'account_other', account: other }
+          : { id: 'account_studio', account: studio },
+      of: (id: string) => (id === 'account_other' ? other : studio),
+    }
+
+    const { manager } = harness({ accounts })
     return { manager, studio, other, switch: () => void (switched = true) }
   }
 
@@ -457,12 +477,224 @@ describe('the account a job runs on', () => {
   })
 
   it('fails a job submitted without a key rather than borrowing one added since', async () => {
-    const { manager } = harness({ account: () => null })
+    const { manager } = harness({ accounts: { active: () => null, of: () => null } })
 
     manager.submit('model_flux', 'Flux', {})
     await settled()
 
     expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'missing' })
+  })
+})
+
+/**
+ * A generation is minutes spent elsewhere, and the studio may well be closed before it ends.
+ * The job finishes at Scenario either way: what is lost is the studio ever collecting it.
+ */
+describe('a job that outlives the session', () => {
+  const RUNNING: PersistedJob = {
+    id: 'job_left_running',
+    remoteId: 'job_remote',
+    modelId: 'model_veo',
+    label: 'Veo',
+    accountId: 'fingerprint_studio',
+    projectPath: '/projects/kingdom',
+    createdAt: '2026-08-06T09:00:00.000Z',
+  }
+
+  /** Held open at the poll, so the job stays unfinished for as long as the test needs it. */
+  const holding = (): Partial<HarnessOptions> => ({
+    runner: {
+      submit: () => Promise.resolve(remote('in-progress')),
+      poll: () => new Promise<RemoteJob>(() => {}),
+      cancel: () => Promise.resolve(),
+    },
+  })
+
+  it('writes a job down once it exists at the API, and not before', async () => {
+    const { manager, remembered } = harness(holding())
+
+    manager.submit('model_veo', 'Veo', {})
+    // Nothing was written at submission: no request had gone out, so nothing had been spent.
+    expect(remembered()).toEqual([])
+
+    await settled()
+
+    expect(remembered()).toEqual([
+      expect.objectContaining({
+        remoteId: 'job_remote',
+        modelId: 'model_veo',
+        label: 'Veo',
+        accountId: 'fingerprint_studio',
+        projectPath: '/projects/kingdom',
+      }),
+    ])
+  })
+
+  it('forgets it again once it is finished', async () => {
+    const { manager, remembered } = harness()
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(manager.list()[0]?.status).toBe('succeeded')
+    expect(remembered()).toEqual([])
+  })
+
+  it('polls a job it picked up, and collects what finished while the studio was closed', async () => {
+    const submit = vi.fn(() => Promise.resolve(remote('success')))
+    const { manager } = harness({
+      runner: {
+        submit,
+        poll: () => Promise.resolve(remote('success', { metadata: { assetIds: ['r_1'] } })),
+        cancel: () => Promise.resolve(),
+      },
+      collect: () => Promise.resolve(['asset_local']),
+    })
+
+    manager.resume([RUNNING])
+    await settled()
+
+    // Followed, never submitted a second time: the job already exists and has already been paid.
+    expect(submit).not.toHaveBeenCalled()
+    expect(manager.list()[0]).toMatchObject({
+      id: RUNNING.id,
+      label: 'Veo',
+      status: 'succeeded',
+      assetIds: ['asset_local'],
+    })
+  })
+
+  /**
+   * Its id means nothing under another key, so there is nothing to do this launch — but the key
+   * may simply be a keychain that would not open yet, and erasing the note would delete every
+   * paid job of the previous session in one pass.
+   */
+  it('gives up on one whose account the studio no longer holds, without forgetting it', async () => {
+    const { manager, remembered } = harness({
+      accounts: { active: () => null, of: () => null },
+    })
+
+    manager.resume([RUNNING])
+    await settled()
+
+    expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'missing' })
+    expect(remembered()).toHaveLength(1)
+  })
+
+  // Taken by the API, the job is dead: a note kept would resume one that will never answer.
+  it('forgets a cancelled job as soon as the API has taken the cancellation', async () => {
+    const { manager, remembered } = harness(holding())
+
+    const job = manager.submit('model_veo', 'Veo', {})
+    await settled()
+    expect(remembered()).toHaveLength(1)
+
+    await manager.cancel(job.id)
+
+    expect(remembered()).toEqual([])
+  })
+
+  // Refused, it is still running and still being charged: the note has to outlive the attempt.
+  it('keeps the note of a cancellation the API would not take', async () => {
+    const { manager, remembered } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => new Promise<RemoteJob>(() => {}),
+        cancel: () => Promise.reject(new APIConnectionError({})),
+      },
+    })
+
+    const job = manager.submit('model_veo', 'Veo', {})
+    await settled()
+    await manager.cancel(job.id)
+
+    expect(remembered()).toHaveLength(1)
+  })
+
+  /**
+   * The failure that matters most, and the one the first draft of this got wrong: a poll giving
+   * up is a local event. The generation is running and paid for at Scenario either way, so
+   * forgetting it here is the exact loss the whole mechanism exists to prevent.
+   */
+  it('keeps the note of a job the studio lost touch with', async () => {
+    const { manager, remembered } = harness({
+      maxRetries: () => 0,
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => Promise.reject(new APIConnectionError({})),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit('model_veo', 'Veo', {})
+    await settled()
+
+    expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'network' })
+    expect(remembered()).toHaveLength(1)
+  })
+
+  // The API said no. Nothing is owed, and a note kept would poll a job that will never run.
+  it('forgets one the API itself refused', async () => {
+    const { manager, remembered } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('failure')),
+        poll: () => Promise.resolve(remote('failure')),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(remembered()).toEqual([])
+  })
+
+  // The generation succeeded and is paid for; only the download failed, and it can be retried.
+  it('keeps the note of a job whose outputs would not come down', async () => {
+    const { manager, remembered } = harness({ collect: () => Promise.reject(new Error('disk')) })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'storage' })
+    expect(remembered()).toHaveLength(1)
+  })
+
+  /**
+   * The collector writes into whichever project is open. Rather than file this generation in
+   * the wrong library, the job steps aside and its note waits for its own project to reopen.
+   */
+  it('leaves its outputs uncollected rather than put them in another project', async () => {
+    let open = '/projects/kingdom'
+    const collect = vi.fn(() => Promise.resolve(['asset_local']))
+    const { manager, remembered } = harness({
+      projectPath: () => open,
+      collect,
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => {
+          open = '/projects/dungeon'
+          return Promise.resolve(remote('success', { metadata: { assetIds: ['r_1'] } }))
+        },
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit('model_veo', 'Veo', {})
+    await settled()
+
+    expect(collect).not.toHaveBeenCalled()
+    expect(remembered()).toEqual([expect.objectContaining({ projectPath: '/projects/kingdom' })])
+  })
+
+  it('picks up a job once, however often it is handed the same note', async () => {
+    const { manager } = harness()
+
+    manager.resume([RUNNING])
+    manager.resume([RUNNING])
+    await settled()
+
+    expect(manager.list()).toHaveLength(1)
   })
 })
 

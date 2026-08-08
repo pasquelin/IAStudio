@@ -55,6 +55,7 @@ import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './sce
 import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/asset-catalog'
 import { generationOfMetadata } from './scenario/asset-normalizer'
 import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
+import { accountFingerprint } from './settings/accounts'
 import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
 import { isRecord } from '@shared/guards'
 import {
@@ -64,15 +65,8 @@ import {
   type ClientProvider,
 } from './scenario/client'
 import { createUsageReader, type UsageReader } from './scenario/usage'
+import { createJobStore } from './scenario/job-store'
 import { createRateLimiters, limitedTransport } from './scenario/rate-limiter'
-
-/**
- * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
- * account does not spend one window's worth of requests on a screen nobody is waiting on — the
- * limiter would hold the rest of the studio behind it. It bounds concurrency, not rate: the
- * hundred a minute the API allows is `rate-limiter.ts`'s business.
- */
-const USAGE_CONCURRENCY = 4
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
@@ -84,6 +78,14 @@ import { createSettingsStore, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
 import { setWindowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
+
+/**
+ * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
+ * account does not spend one window's worth of requests on a screen nobody is waiting on — the
+ * limiter would hold the rest of the studio behind it. It bounds concurrency, not rate: the
+ * hundred a minute the API allows is `rate-limiter.ts`'s business.
+ */
+const USAGE_CONCURRENCY = 4
 
 export type Services = {
   settings: SettingsStore
@@ -107,6 +109,8 @@ export type Services = {
   project: ProjectStore
   /** What the studio did, and what it failed to do — the surface it had none of. */
   journal: ActivityLog
+  /** Settles the note of what is still running. Awaited at quit, beside the journal. */
+  flushJobs: () => Promise<void>
   documents: DocumentFiles
   assets: LocalBackend
   /** Minted here so the collector and the audio editor cannot name assets differently. */
@@ -305,8 +309,9 @@ export function createServices(settings: SettingsStore): Services {
     onSaturated: () => log.info('scenario', 'rate limit reached, requests are queueing'),
   })
 
-  // One transport for every client, the one in force and the one the usage reader builds per
-  // key: two spellings of it would be two behaviours the day a header is added to one of them.
+  // One transport for every client: the one in force, the one a resumed job needs, and the one
+  // the usage reader builds per key. Two spellings of it would be two behaviours the day a
+  // header is added to one of them.
   const transport = limitedTransport(limiters, (input, init) => fetch(input, init))
 
   const client = createClientProvider({
@@ -353,15 +358,29 @@ export function createServices(settings: SettingsStore): Services {
   // time rather than at construction, which is the only order that ties the knot.
   let opened: ActivityLog | null = null
 
+  // Same knot: the project store is built before the job manager and has to reach it. Read at
+  // call time, and a no-op until there is one to reach.
+  const resumeJobsOf = async (projectPath: string): Promise<void> => {
+    const remembered = await jobStore.read(projectPath)
+    if (remembered.length > 0) jobs.resume(remembered)
+  }
+
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
     onChange: current => {
       if (current) settings.write({ storage: { lastProject: current.path } })
       broadcast(EVENTS.projectChanged, current)
+
+      // Jobs left running by a previous session, picked up here rather than at boot: their
+      // outputs land in the project they were generated for, and the catalogue that receives
+      // them only exists once one is open.
+      if (current) void resumeJobsOf(current.path)
     },
     settle: async () => {
-      await opened?.flush()
+      // Both before the catalogue stops answering: the journal writes into it, and the pending
+      // jobs are about to be attributed to whichever project opens next.
+      await Promise.all([opened?.flush(), jobStore.flush()])
     },
   })
 
@@ -469,7 +488,7 @@ export function createServices(settings: SettingsStore): Services {
 
   // Rebuilt only when the client is, so every job of one account shares a single graph rather
   // than allocating its own — what matters is that a job holds ONE binding, not a fresh one.
-  let bound: { scenario: Scenario; account: JobAccount } | null = null
+  let bound: { scenario: Scenario; id: string; account: JobAccount } | null = null
 
   const uploads = createAssetUploader(() => client.require().assets)
 
@@ -537,21 +556,41 @@ export function createServices(settings: SettingsStore): Services {
     if (file) await rm(file, { force: true })
   }
 
+  const accountOn = (scenario: Scenario): JobAccount => ({
+    runner: runnerOf(scenario),
+    collect: collectorOf(scenario),
+  })
+
+  const jobStore = createJobStore(() => app.getPath('userData'))
+
   const jobs = createJobManager({
-    // Read once per job and kept, so a switch mid-flight does not have the new key asked about
-    // the previous account's job id — see `JobAccount`.
-    account: () => {
-      const scenario = client.get()
-      if (!scenario) return null
+    accounts: {
+      // Read once per job and kept, so a switch mid-flight does not have the new key asked about
+      // the previous account's job id — see `JobAccount`.
+      active: () => {
+        const scenario = client.get()
+        const held = settings.readCredentials()
+        if (!scenario || !held) return null
 
-      if (bound?.scenario !== scenario) {
-        bound = {
-          scenario,
-          account: { runner: runnerOf(scenario), collect: collectorOf(scenario) },
+        if (bound?.scenario !== scenario) {
+          bound = { scenario, id: accountFingerprint(held), account: accountOn(scenario) }
         }
-      }
 
-      return bound.account
+        return { id: bound.id, account: bound.account }
+      },
+
+      // A client of its own, not the one in force: a job resumed from a previous session belongs
+      // to the account that paid for it, whichever one the user has switched to since.
+      of: accountId => {
+        const credentials = settings.credentialsOf(accountId)
+        return credentials ? accountOn(clientFor(credentials, transport)) : null
+      },
+    },
+    projectPath: () => project.current()?.path ?? null,
+    persist: (unfinished, handled) => {
+      // Nothing waits on this: the write is settled at quit and on a project change, which are
+      // the two moments the process may not outlive it.
+      void jobStore.write(unfinished, handled).catch(() => {})
     },
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
@@ -606,6 +645,7 @@ export function createServices(settings: SettingsStore): Services {
     removeAssetFile,
     project,
     journal,
+    flushJobs: () => jobStore.flush(),
     documents,
     assets,
     newAssetId,

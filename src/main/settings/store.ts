@@ -6,6 +6,7 @@ import {
   activateAccount,
   activeCredentials,
   addAccount,
+  credentialsByFingerprint,
   bookFromCredentials,
   EMPTY_BOOK,
   removeAccount,
@@ -80,6 +81,12 @@ export type SettingsStore = {
   settleAccounts: () => void
   /** Main process only. Never expose over IPC — see spec § 4, invariant 1. */
   readCredentials: () => Credentials | null
+  /**
+   * The credentials behind an `accountFingerprint`, or `null` if that key is no longer held.
+   * Main process only. What lets a job outliving a session be polled on the account that paid
+   * for it — by the key rather than by the book entry, which a remove-and-re-add renews.
+   */
+  credentialsOf: (fingerprint: string) => Credentials | null
   /** Where the settings are written. */
   path: () => string
 }
@@ -318,6 +325,8 @@ export function createSettingsStore(
     },
 
     readCredentials: () => activeCredentials(readBook()),
+
+    credentialsOf: fingerprint => credentialsByFingerprint(readBook(), fingerprint),
 
     path: adapter.path,
   }

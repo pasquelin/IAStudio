@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
+import type { PersistedJob } from './job-store'
 import {
   MODEL_FAMILIES,
   MODEL_IDS_BATCH_LIMIT,
@@ -135,4 +136,28 @@ const referenceImages = z.array(z.string().trim().min(1)).min(1).max(PROMPT_IMAG
 
 export function parseReferenceImages(value: unknown): string[] {
   return referenceImages.parse(value)
+}
+
+/**
+ * Jobs read back from disk. Non-empty strings throughout: a hand-rolled guard once let a blank
+ * pair through in the settings, and a blank `remoteId` here would poll a job id that is not one.
+ *
+ * An entry that does not parse is dropped rather than failing the read — a file the studio
+ * cannot make sense of must not be a studio that will not start.
+ */
+const storedJob = z.object({
+  id: z.string().trim().min(1),
+  remoteId: z.string().trim().min(1),
+  modelId: z.string().trim().min(1),
+  label: z.string(),
+  accountId: z.string().trim().min(1),
+  projectPath: z.string().trim().min(1),
+  createdAt: z.string().trim().min(1),
+})
+
+const storedJobs = z.array(storedJob.nullable().catch(null))
+
+export function parseStoredJobs(content: string): PersistedJob[] {
+  const parsed: unknown = JSON.parse(content)
+  return storedJobs.parse(parsed).filter(job => job !== null)
 }
