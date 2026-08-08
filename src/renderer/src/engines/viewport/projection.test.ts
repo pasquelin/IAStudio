@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest'
 import { ViewportEngine } from './ViewportEngine'
 
 /**
- * The projection is the one half of the viewport a test can reach: it is decided in the
- * constructor and in plain maths, and nothing of it needs the GL context jsdom has none of.
- * Everything below therefore runs on an engine that was never mounted.
+ * The projection is decided in the constructor and in plain maths, so everything below runs on
+ * an engine that was never mounted. `ViewportEngine.test.ts` covers the other half — mounting,
+ * the frame loop and disposal — against a renderer standing in for the one jsdom cannot give.
  */
 describe('ViewportEngine projection', () => {
   it('draws with the perspective camera until asked otherwise', () => {

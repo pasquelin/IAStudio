@@ -1,7 +1,6 @@
-import { Texture } from 'three'
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
-import type { ViewportEnvironment } from '../viewport/environment'
 import { TextureRenderer } from './TextureRenderer'
 import { newTexture, type TextureState } from './texture-state'
 
@@ -10,20 +9,7 @@ import { newTexture, type TextureState } from './texture-state'
  * `WebGLRenderer`, which jsdom cannot give (`test-setup` hands back no canvas context). Stubbing
  * the viewport's mount and its `gl` accessor is enough — nothing here dereferences the renderer.
  */
-vi.mock('../viewport/environment', () => ({
-  // `satisfies`: a member added to the port and called by the engine must fail to compile here,
-  // rather than at run time on an opaque "is not a function".
-  createEnvironment: () =>
-    ({
-      setTexture: vi.fn(),
-      refresh: vi.fn(),
-      setStudio: vi.fn(),
-      setIntensity: vi.fn(),
-      setRotation: vi.fn(),
-      setBackgroundVisible: vi.fn(),
-      dispose: vi.fn(),
-    }) satisfies ViewportEnvironment,
-}))
+vi.mock('../viewport/environment', () => ({ createEnvironment: () => fakeEnvironment() }))
 
 const skyOf = (assetId: string): TextureState => {
   const state = newTexture()
@@ -32,18 +18,11 @@ const skyOf = (assetId: string): TextureState => {
 }
 
 describe('the environment of a texture preview', () => {
-  let freed: ReturnType<typeof vi.spyOn>[]
-  let loadTexture: Mock<(url: string) => Promise<Texture>>
+  let source: ReturnType<typeof fakeTextureSource>
   let host: HTMLElement
 
   beforeEach(() => {
-    freed = []
-    loadTexture = vi.fn(async () => {
-      const texture = new Texture()
-      // The cache disposes a texture the moment its last reference goes — what these watch.
-      freed.push(vi.spyOn(texture, 'dispose'))
-      return texture
-    })
+    source = fakeTextureSource()
     vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
     // `as`: `mount` only checks that a renderer exists before handing it to `createEnvironment`,
     // which is mocked above — so nothing ever reads a field of it.
@@ -52,15 +31,15 @@ describe('the environment of a texture preview', () => {
   })
 
   const mounted = (): TextureRenderer => {
-    const renderer = new TextureRenderer({ loadTexture })
+    const renderer = new TextureRenderer({ loadTexture: source.load })
     renderer.mount(host)
     return renderer
   }
 
   const applied = async (renderer: TextureRenderer, state: TextureState): Promise<void> => {
-    const calls = loadTexture.mock.calls.length
+    const calls = source.load.mock.calls.length
     renderer.apply(state)
-    await vi.waitFor(() => expect(loadTexture).toHaveBeenCalledTimes(calls + 1))
+    await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(calls + 1))
   }
 
   /**
@@ -70,7 +49,7 @@ describe('the environment of a texture preview', () => {
   it('asks for the sky by asset id, not by a URL it built itself', async () => {
     await applied(mounted(), skyOf('sky-1'))
 
-    expect(loadTexture).toHaveBeenCalledWith('scenario://asset/sky-1')
+    expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
   })
 
   /** The branch a refactor would silently regress by moving the release inside the sky path. */
@@ -80,7 +59,7 @@ describe('the environment of a texture preview', () => {
 
     renderer.apply(newTexture())
 
-    expect(freed[0]).toHaveBeenCalled()
+    expect(source.freed[0]).toHaveBeenCalled()
   })
 
   it('loads a sky once, however many times the same state comes back', async () => {
@@ -88,7 +67,7 @@ describe('the environment of a texture preview', () => {
     await applied(renderer, skyOf('sky-1'))
     renderer.apply(skyOf('sky-1'))
 
-    expect(loadTexture).toHaveBeenCalledTimes(1)
+    expect(source.load).toHaveBeenCalledTimes(1)
   })
 
   /** The cache counts references: a sky nobody displays any more is memory the viewport lacks. */
@@ -99,8 +78,8 @@ describe('the environment of a texture preview', () => {
     await applied(renderer, skyOf('sky-2'))
 
     // After the swap, never before: until then the old texture is what the background holds.
-    await vi.waitFor(() => expect(freed[0]).toHaveBeenCalled())
-    expect(freed[1]).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(source.freed[0]).toHaveBeenCalled())
+    expect(source.freed[1]).not.toHaveBeenCalled()
   })
 
   it('frees its sky when it goes away', async () => {
@@ -109,6 +88,6 @@ describe('the environment of a texture preview', () => {
 
     renderer.dispose()
 
-    expect(freed[0]).toHaveBeenCalled()
+    expect(source.freed[0]).toHaveBeenCalled()
   })
 })
