@@ -89,6 +89,19 @@ describe('TimelineCanvas', () => {
     expect(clipsOf()).toHaveLength(0)
   })
 
+  // The one half `AssetDropTarget` shares with it: a surface that prevents every dragover
+  // swallows the files dragged in from the desktop, and the drop then does nothing.
+  it('leaves a file dragged in from the desktop alone', () => {
+    const transfer = dragTransfer()
+    transfer.setData('text/plain', 'anything')
+
+    expect(fireEvent.dragOver(paint(), { dataTransfer: transfer })).toBe(true)
+  })
+
+  it('lets a drag of ours land', () => {
+    expect(fireEvent.dragOver(paint(), { dataTransfer: dataTransfer('asset-1') })).toBe(false)
+  })
+
   it('ignores a drag that carries something other than an asset', () => {
     fireEvent.drop(paint(), {
       clientX: 200,

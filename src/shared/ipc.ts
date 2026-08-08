@@ -193,6 +193,7 @@ export type LogScope =
   | 'canvas.layer'
   | 'image.export'
   | 'document.save'
+  | 'assets.reveal'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -203,6 +204,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'canvas.layer',
   'image.export',
   'document.save',
+  'assets.reveal',
 ]
 
 /**

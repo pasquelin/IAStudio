@@ -1,7 +1,19 @@
-import { describe, expect, it } from 'vitest'
-import { ASSET_TYPES } from '@shared/domain/asset'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
+import { installDocument } from '@/stores/document-fixtures'
+import { useDocuments } from '@/stores/documents'
 import { WORKSPACES } from './workspaces'
-import { ASSET_INTENTS, intentsFor } from './asset-intents'
+import { ASSET_INTENTS, defaultIntent, intentsFor } from './asset-intents'
+
+const picture = (overrides: Partial<Asset> = {}): Asset => ({
+  id: 'asset_1',
+  name: 'moss.png',
+  type: 'image',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-07T10:00:00.000Z',
+  ...overrides,
+})
 
 describe('where an asset can be sent', () => {
   it('offers the montage for every kind, since that is where they all end up', () => {
@@ -48,13 +60,53 @@ describe('where an asset can be sent', () => {
     }
   })
 
-  // The order IS the cascade a double-click follows; the montage has to close it, or it would
-  // swallow every asset before a more specific destination was ever considered.
-  it('leaves the catch-all last among the destinations that accept everything', () => {
+  // The order IS the cascade a double-click follows; the montage takes every kind, so anything
+  // more specific has to be considered before it is.
+  it('weighs the take and the sky before the montage', () => {
     const catchAll = ASSET_INTENTS.findIndex(intent => intent.id === 'video.clip')
-    const specific = ASSET_INTENTS.filter(intent => !intent.accepts.includes('audio'))
+    const before = ASSET_INTENTS.slice(0, catchAll).map(intent => intent.id)
 
-    expect(specific.every(intent => ASSET_INTENTS.indexOf(intent) !== catchAll)).toBe(true)
-    expect(ASSET_INTENTS.slice(0, catchAll).map(one => one.id)).toContain('audio.take')
+    expect(before).toContain('audio.take')
+    expect(before).toContain('skyboxes.source')
+    expect(before).toContain('image.layer')
+  })
+})
+
+describe('what a double-click settles on', () => {
+  beforeEach(() => {
+    useDocuments.setState({ documents: {}, activeId: null })
+  })
+
+  it('finds nowhere to send an asset when no document is in front', () => {
+    expect(defaultIntent(picture())).toBeNull()
+  })
+
+  it('lays a picture on the image tab that is in front', () => {
+    installDocument('img-1', 'image')
+
+    expect(defaultIntent(picture())?.id).toBe('image.layer')
+  })
+
+  // `placeAsset` refuses an asset with no file behind it. A `ready` that only counted open tabs
+  // would settle here anyway, and the double-click would do nothing at all.
+  it('refuses the layer for a picture the cloud still holds', () => {
+    installDocument('img-1', 'image')
+
+    expect(defaultIntent(picture({ location: 'cloud' }))).toBeNull()
+  })
+
+  // The montage used to answer yes whatever was open, which put it in front of the texture
+  // channel for every asset — a destination the table listed and no gesture could reach.
+  it('reaches the texture channel, which the montage used to hide', () => {
+    installDocument('tex-1', 'textures')
+
+    expect(defaultIntent(picture())?.id).toBe('textures.channel')
+  })
+
+  it('sends anything to the montage when a sequence is in front', () => {
+    installDocument('seq-1', 'video')
+
+    expect(defaultIntent(picture())?.id).toBe('video.clip')
+    expect(defaultIntent(picture({ type: 'mesh' }))?.id).toBe('video.clip')
   })
 })

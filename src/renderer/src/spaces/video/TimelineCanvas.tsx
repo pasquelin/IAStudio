@@ -27,7 +27,7 @@ import {
   ZOOM_STEP,
   type Size,
 } from '@/engines/timeline/viewport'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { assetIdFromDrag, carriesAsset } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 import { cachedImage } from '@/helpers/image-cache'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -362,7 +362,13 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onDragOver={event => event.preventDefault()}
+      // Not `AssetDropTarget`: what this surface accepts is decided per track, and one outline
+      // over the whole timeline would promise the ruler takes what it refuses. Only the half
+      // that has nothing to do with tracks is shared — preventing a drag we do not carry is
+      // what makes a surface swallow files dragged in from the desktop.
+      onDragOver={event => {
+        if (carriesAsset(event)) event.preventDefault()
+      }}
       onDrop={onDrop}
     />
   )

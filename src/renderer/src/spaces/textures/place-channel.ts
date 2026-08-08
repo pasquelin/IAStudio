@@ -10,8 +10,9 @@ import { useTextures } from '@/stores/textures'
  * same thing, and writing the command twice is how the two would come to disagree about which
  * channel a bare drop fills.
  *
- * Answers whether it landed. A cloud asset has no file to decode yet, and saying so lets the
- * caller offer to fetch it instead of silently doing nothing.
+ * Answers whether it landed: a cloud asset has no file to decode yet. What spares the user the
+ * silence is `ASSET_INTENTS`, whose `ready` asks the same question before offering the
+ * destination at all — this guard is the one that holds when it is called from anywhere else.
  */
 export function placeTextureChannel(
   documentId: string,

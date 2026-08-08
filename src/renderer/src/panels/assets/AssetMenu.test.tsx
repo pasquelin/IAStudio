@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { AssetMenu } from './AssetMenu'
 
@@ -57,11 +58,35 @@ describe('what the shelf offers to do with an asset', () => {
 
   it('closes once something has been chosen', async () => {
     const onClose = vi.fn()
+    installDocument('seq-1', 'video')
     render(<AssetMenu asset={asset()} at={AT} onClose={onClose} />)
 
     await userEvent.click(screen.getByRole('menuitem', { name: /montage/ }))
 
     expect(onClose).toHaveBeenCalled()
+  })
+
+  // The row used to be offered live whatever was open, because `ready` counted tabs and never
+  // looked at the asset — a click that closed the menu and did nothing at all.
+  it('greys out a destination its space is open for but that cannot take THIS asset', () => {
+    installDocument('img-1', 'image')
+
+    const { rerender } = render(<AssetMenu asset={asset()} at={AT} onClose={() => {}} />)
+    expect(screen.getByRole('menuitem', { name: /calque/ })).toBeEnabled()
+
+    rerender(<AssetMenu asset={asset({ location: 'cloud' })} at={AT} onClose={() => {}} />)
+    expect(screen.getByRole('menuitem', { name: /calque/ })).toBeDisabled()
+  })
+
+  // `addAssetToSequence` refuses when no sequence is in front, so an always-live row promised
+  // a landing the montage was never going to give.
+  it('greys out the montage when no sequence is in front', () => {
+    render(<AssetMenu asset={asset()} at={AT} onClose={() => {}} />)
+    expect(screen.getByRole('menuitem', { name: /montage/ })).toBeDisabled()
+
+    installDocument('seq-1', 'video')
+    render(<AssetMenu asset={asset()} at={AT} onClose={() => {}} />)
+    expect(screen.getAllByRole('menuitem', { name: /montage/ })[1]).toBeEnabled()
   })
 
   it('closes on Escape without doing anything', async () => {

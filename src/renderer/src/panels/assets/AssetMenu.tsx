@@ -6,6 +6,7 @@ import { MenuRow } from '@/design/MenuRow'
 import { intentsFor } from '@/helpers/asset-intents'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 
 export type AssetMenuProps = {
   asset: Asset
@@ -33,6 +34,18 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
       onClose()
     }
 
+  // The inspector turns a false into a "file missing" row; this menu is gone by the time the
+  // answer comes, so the failure travels to the log rather than nowhere. Either way, never a
+  // row that silently does nothing.
+  const reveal = (): void => {
+    void getBridge()
+      ?.assets.reveal(asset.id)
+      .then(shown => {
+        if (!shown) reportFailure('assets.reveal', asset.name, new Error('file not found'))
+      })
+      .catch(error => reportFailure('assets.reveal', asset.name, error))
+  }
+
   return (
     <ContextMenu at={at} onClose={onClose}>
       {intentsFor(asset.type).map(intent => (
@@ -41,7 +54,7 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
           label={t(intent.labelKey)}
           // Read off the workspace table: changing a space's glyph in the rail must change it here.
           icon={workspaceById(intent.workspace).icon}
-          disabled={!intent.ready()}
+          disabled={!intent.ready(asset)}
           onSelect={choose(() => intent.run(asset))}
         />
       ))}
@@ -49,7 +62,7 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
         label={t('inspector.reveal')}
         icon={mdiFolderOpenOutline}
         disabled={asset.location !== 'local'}
-        onSelect={choose(() => void getBridge()?.assets.reveal(asset.id))}
+        onSelect={choose(reveal)}
       />
     </ContextMenu>
   )
