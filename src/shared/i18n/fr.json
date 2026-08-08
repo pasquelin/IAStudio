@@ -140,7 +140,7 @@
     },
     "describe": "Décrire {{count}} asset",
     "describe_other": "Décrire {{count}} assets",
-    "describeHint": "Nommer les images choisies d'après ce que l'API y voit",
+    "describeHint": "Nommer les images choisies d’après ce que l’API y voit",
     "location": "Emplacement",
     "push": "Envoyer {{count}} asset",
     "push_other": "Envoyer {{count}} assets",
@@ -342,8 +342,8 @@
     "zoomIn": "Zoom avant",
     "zoomOut": "Zoom arrière",
     "fit": "Ajuster",
-    "fitHint": "Ajuster l'image à la fenêtre",
-    "actualHint": "Taille réelle — un pixel de l'image pour un pixel d'écran"
+    "fitHint": "Ajuster l’image à la fenêtre",
+    "actualHint": "Taille réelle — un pixel de l’image pour un pixel d’écran"
   },
   "layers": {
     "add": "Ajouter un calque",
@@ -843,7 +843,7 @@
       "global": "Partout dans l’application",
       "scene": "Dans la vue 3D",
       "sequence": "Dans le montage",
-      "canvas": "Dans l'image",
+      "canvas": "Dans l’image",
       "skybox": "Dans le ciel"
     },
     "spaces": "Espaces de travail",
@@ -969,7 +969,7 @@
     },
     "documentSave": {
       "title": "Enregistrer le document",
-      "help": "Écrit le document en avant dans le projet. Une scène 3D vit dans la fenêtre tant qu'elle n'est pas enregistrée : l'onglet porte un point tant que ce qui est à l'écran n'est pas ce qui est sur le disque."
+      "help": "Écrit le document en avant dans le projet. Une scène 3D vit dans la fenêtre tant qu’elle n’est pas enregistrée : l’onglet porte un point tant que ce qui est à l’écran n’est pas ce qui est sur le disque."
     },
     "layoutReset": {
       "title": "Réinitialiser la disposition",
@@ -1085,35 +1085,35 @@
     },
     "canvasZoomIn": {
       "title": "Zoom avant",
-      "help": "Agrandit la vue d'un cran, autour du centre de ce qui est visible. L'image n'est pas touchée, seulement la façon de la regarder."
+      "help": "Agrandit la vue d’un cran, autour du centre de ce qui est visible. L’image n’est pas touchée, seulement la façon de la regarder."
     },
     "canvasZoomOut": {
       "title": "Zoom arrière",
-      "help": "Réduit la vue d'un cran pour reprendre du recul sur l'ensemble de l'image."
+      "help": "Réduit la vue d’un cran pour reprendre du recul sur l’ensemble de l’image."
     },
     "canvasZoomFit": {
       "title": "Ajuster à la fenêtre",
-      "help": "Cadre l'image entière dans le panneau, avec une marge, et sans jamais l'agrandir au-delà de sa taille réelle."
+      "help": "Cadre l’image entière dans le panneau, avec une marge, et sans jamais l’agrandir au-delà de sa taille réelle."
     },
     "canvasZoomActual": {
       "title": "Taille réelle",
-      "help": "Un pixel de l'image pour un pixel d'écran : la seule échelle où l'on juge la netteté."
+      "help": "Un pixel de l’image pour un pixel d’écran : la seule échelle où l’on juge la netteté."
     },
     "canvasRulers": {
       "title": "Règles",
-      "help": "Affiche ou masque les deux règles graduées, en haut et à gauche. C'est d'elles qu'on tire les repères."
+      "help": "Affiche ou masque les deux règles graduées, en haut et à gauche. C’est d’elles qu’on tire les repères."
     },
     "canvasGuides": {
       "title": "Repères",
-      "help": "Affiche ou masque les repères posés sur l'image. Les masquer ne les efface pas."
+      "help": "Affiche ou masque les repères posés sur l’image. Les masquer ne les efface pas."
     },
     "canvasClearGuides": {
       "title": "Effacer les repères",
-      "help": "Retire tous les repères de l'image. Annulable, comme toute autre modification."
+      "help": "Retire tous les repères de l’image. Annulable, comme toute autre modification."
     },
     "canvasSnap": {
       "title": "Magnétisme",
-      "help": "Fait coller ce qu'on déplace aux repères, aux bords de l'image et à son centre, à quelques pixels près."
+      "help": "Fait coller ce qu’on déplace aux repères, aux bords de l’image et à son centre, à quelques pixels près."
     },
     "canvasDeselect": {
       "title": "Désélectionner",
@@ -1186,7 +1186,7 @@
     },
     "skyboxProbes": {
       "title": "Sondes de lumière",
-      "help": "Montre ou cache les sphères témoins. Un ciel se juge à ce qu'il éclaire, pas à sa propre image."
+      "help": "Montre ou cache les sphères témoins. Un ciel se juge à ce qu’il éclaire, pas à sa propre image."
     },
     "canvasToolMove": {
       "title": "Outil Déplacement",
@@ -1194,11 +1194,11 @@
     },
     "canvasToolHand": {
       "title": "Outil Main",
-      "help": "Arme la main : un glissement fait défiler la vue sans rien toucher au document. La barre d'espace fait la même chose sans changer d'outil."
+      "help": "Arme la main : un glissement fait défiler la vue sans rien toucher au document. La barre d’espace fait la même chose sans changer d’outil."
     },
     "canvasToolScale": {
       "title": "Outil Échelle",
-      "help": "Arme la mise à l'échelle : les poignées du calque actif le redimensionnent, et MAJ conserve ses proportions."
+      "help": "Arme la mise à l’échelle : les poignées du calque actif le redimensionnent, et MAJ conserve ses proportions."
     },
     "canvasToolCrop": {
       "title": "Outil Recadrage",
@@ -1210,7 +1210,7 @@
     },
     "canvasToolSelectEllipse": {
       "title": "Sélection elliptique",
-      "help": "Arme la sélection elliptique : un glissement inscrit l'ellipse dans le rectangle parcouru, et MAJ en fait un cercle."
+      "help": "Arme la sélection elliptique : un glissement inscrit l’ellipse dans le rectangle parcouru, et MAJ en fait un cercle."
     },
     "canvasToolSelectLasso": {
       "title": "Lasso",
@@ -1218,51 +1218,51 @@
     },
     "canvasToolShapeRectangle": {
       "title": "Forme Rectangle",
-      "help": "Arme le tracé d'un rectangle sur le calque actif ; MAJ en fait un carré."
+      "help": "Arme le tracé d’un rectangle sur le calque actif ; MAJ en fait un carré."
     },
     "canvasToolShapeLine": {
       "title": "Forme Ligne",
-      "help": "Arme le tracé d'une ligne. Dans le même groupe que le rectangle, d'où sa touche augmentée de MAJ."
+      "help": "Arme le tracé d’une ligne. Dans le même groupe que le rectangle, d’où sa touche augmentée de MAJ."
     },
     "canvasToolShapeArrow": {
       "title": "Forme Flèche",
-      "help": "Arme le tracé d'une flèche, de son point de départ vers l'endroit où la main relâche."
+      "help": "Arme le tracé d’une flèche, de son point de départ vers l’endroit où la main relâche."
     },
     "canvasToolShapeEllipse": {
       "title": "Forme Ellipse",
-      "help": "Arme le tracé d'une ellipse sur le calque actif ; MAJ en fait un cercle."
+      "help": "Arme le tracé d’une ellipse sur le calque actif ; MAJ en fait un cercle."
     },
     "canvasToolShapePolygon": {
       "title": "Forme Polygone",
-      "help": "Arme le tracé d'un polygone régulier, dont le nombre de côtés se règle dans l'inspecteur avant de tracer."
+      "help": "Arme le tracé d’un polygone régulier, dont le nombre de côtés se règle dans l’inspecteur avant de tracer."
     },
     "canvasToolShapeStar": {
       "title": "Forme Étoile",
-      "help": "Arme le tracé d'une étoile, dont le nombre de branches se règle dans l'inspecteur avant de tracer."
+      "help": "Arme le tracé d’une étoile, dont le nombre de branches se règle dans l’inspecteur avant de tracer."
     },
     "canvasToolBrush": {
       "title": "Outil Pinceau",
-      "help": "Arme le pinceau, aux bords adoucis. Il peint sur le calque actif, borné par la sélection s'il y en a une."
+      "help": "Arme le pinceau, aux bords adoucis. Il peint sur le calque actif, borné par la sélection s’il y en a une."
     },
     "canvasToolPencil": {
       "title": "Outil Crayon",
-      "help": "Arme le crayon, aux bords nets : le même geste que le pinceau, sans l'adoucissement des bords."
+      "help": "Arme le crayon, aux bords nets : le même geste que le pinceau, sans l’adoucissement des bords."
     },
     "canvasToolText": {
       "title": "Outil Texte",
-      "help": "Arme le texte : un clic pose une légende, dont les mots se saisissent dans l'inspecteur."
+      "help": "Arme le texte : un clic pose une légende, dont les mots se saisissent dans l’inspecteur."
     },
     "canvasToolEraser": {
       "title": "Outil Gomme",
-      "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s'il y en a une."
+      "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s’il y en a une."
     },
     "canvasToolEraserSelection": {
       "title": "Gomme de la sélection",
-      "help": "Arme la gomme de sélection : un clic efface d'un coup tout ce que la sélection enferme, au lieu de le frotter."
+      "help": "Arme la gomme de sélection : un clic efface d’un coup tout ce que la sélection enferme, au lieu de le frotter."
     },
     "canvasToolFill": {
       "title": "Outil Pot de peinture",
-      "help": "Arme le pot : un clic remplit le calque, ou la sélection s'il y en a une."
+      "help": "Arme le pot : un clic remplit le calque, ou la sélection s’il y en a une."
     },
     "canvasToolPicker": {
       "title": "Outil Pipette",
@@ -1331,7 +1331,7 @@
   "usage": {
     "title": "Consommation",
     "sections": {
-      "overview": "Vue d'ensemble",
+      "overview": "Vue d’ensemble",
       "models": "Modèles",
       "activities": "Activités",
       "journal": "Journal"
@@ -1348,11 +1348,11 @@
     },
     "refresh": "Actualiser",
     "loading": "Lecture de la consommation…",
-    "failure": "La consommation n'a pas pu être lue.",
+    "failure": "La consommation n’a pas pu être lue.",
     "retry": "Réessayer",
     "empty": "Aucune activité sur cette période.",
     "noAccount": "Aucune clé API enregistrée. Ajoutez-en une dans les préférences pour voir votre consommation.",
-    "noBalance": "L'API Scenario n'expose pas de solde : ces chiffres sont ce qui a été dépensé, jamais ce qu'il reste.",
+    "noBalance": "L’API Scenario n’expose pas de solde : ces chiffres sont ce qui a été dépensé, jamais ce qu’il reste.",
     "mixedAccounts": "Le total additionne des clés facturées séparément — il ne correspond à aucune facture.",
     "total": "Total consommé",
     "discount": "Remises",
@@ -1361,7 +1361,7 @@
     "indicative": "Montant indicatif, calculé sur la grille publique des packs prépayés.",
     "daily": "Par jour",
     "perAccount": "Par compte",
-    "silent": "Ces clés n'ont pas répondu : {{names}}. Les chiffres ci-dessus sont ceux des autres.",
+    "silent": "Ces clés n’ont pas répondu : {{names}}. Les chiffres ci-dessus sont ceux des autres.",
     "columns": {
       "model": "Modèle",
       "units": "Unités",
@@ -1369,7 +1369,7 @@
       "apiKey": "Dont clé API",
       "action": "Action",
       "count": "Nombre",
-      "kind": "Type d'asset",
+      "kind": "Type d’asset",
       "time": "Date",
       "account": "Compte"
     },
