@@ -23,9 +23,11 @@ left column holds Models and Generate, as it does everywhere else.
 **Two gestures, in this order, and the order matters:**
 
 1. **The `+` button on the left rail** — it opens an audio tab, empty for now.
-2. **Double-click an audio asset** in the shelf — the take goes into the tab.
+2. **Double-click an audio asset** in the shelf — the take goes into the tab. You can also **drag
+   it there** from the shelf, or use the right-click row **Open in the audio editor**.
 
-While no sound is loaded, the tab shows: "No sound open. Double-click an audio asset to edit it."
+While no sound is loaded, the tab shows: "No sound open. Drop a take here, or double-click an
+audio asset."
 
 > **Double-clicking without having opened a tab does nothing**, and nothing says so. Double-click
 > always sends the asset into the tab in front; with no tab, it has nowhere to send it. This is

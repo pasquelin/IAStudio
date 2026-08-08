@@ -6,6 +6,30 @@ Chaque message que le studio peut afficher, ce qu'il veut dire, et quoi faire.
 
 ---
 
+## Le premier endroit où regarder : le journal
+
+En bas à droite, à côté des générations, une icône ouvre le **journal d'activité**. Il retient ce
+que le studio a fait et ce qu'il a raté, même quand vous regardiez ailleurs.
+
+Quand quelque chose ne s'est pas passé comme prévu, c'est là qu'il faut aller **avant** de
+chercher plus loin : il nomme l'objet en cause et dit ce qui a échoué.
+
+| Ce que le journal peut raconter | Sujet |
+|---|---|
+| « La génération « … » a échoué », « Génération « … » annulée » | Génération |
+| « Impossible d'importer « … » », « « … » est illisible » | Import |
+| « Impossible d'envoyer « … » », « Les tags de « … » n'ont pas rejoint la bibliothèque », « L'API Scenario a refusé une requête » | Bibliothèque |
+| « L'enregistrement du document a échoué », « Un calque n'a pas pu être chargé », « L'export de la scène a échoué », « Le fichier n'a pas pu être montré » | Document |
+
+Filtrez par **niveau** — information, avertissement, échec — ou par **sujet**, et **Tout
+afficher** relâche les filtres.
+
+**Un échec fait aussi apparaître une bulle** dans le coin, qui ne s'efface pas toute seule. Si
+vous ne l'avez pas vue, le compteur rouge de la ligne d'état la garde en mémoire jusqu'à ce que
+vous ouvriez le journal.
+
+---
+
 ## D'abord : la plupart des messages ne sont pas des erreurs
 
 Le studio écrit beaucoup de phrases dans des panneaux vides. **Ce ne sont pas des pannes** : ce

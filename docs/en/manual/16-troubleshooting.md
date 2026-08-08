@@ -6,6 +6,29 @@ Every message the studio can show, what it means, and what to do.
 
 ---
 
+## The first place to look: the journal
+
+Bottom right, next to the generations, an icon opens the **activity journal**. It keeps what the
+studio has done and what it has failed to do, even while you were looking elsewhere.
+
+When something did not go as expected, that is where to go **before** looking any further: it
+names the object involved and says what failed.
+
+| What the journal can report | Topic |
+|---|---|
+| "Generation \"…\" failed", "Generation \"…\" cancelled" | Generation |
+| "Could not import \"…\"", "\"…\" is unreadable" | Import |
+| "Could not send \"…\"", "The tags of \"…\" did not reach the library", "The Scenario API refused a request" | Library |
+| "Saving the document failed", "A layer could not be loaded", "Exporting the scene failed", "The file could not be shown" | Document |
+
+Filter by **level** — information, warning, failure — or by **topic**, and **Show everything**
+releases the filters.
+
+**A failure also raises a toast** in the corner, which does not fade on its own. If you missed
+it, the red counter in the status line holds it until you open the journal.
+
+---
+
 ## First: most messages are not errors
 
 The studio writes a lot of sentences in empty panels. **These are not failures**: they are panels

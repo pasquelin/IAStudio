@@ -25,10 +25,12 @@ ailleurs.
 **Deux gestes, dans cet ordre, et l'ordre compte :**
 
 1. **Le bouton `+` du rail gauche** — il ouvre un onglet audio, vide pour l'instant.
-2. **Double-cliquez sur un asset audio** dans l'étagère — la prise entre dans l'onglet.
+2. **Double-cliquez sur un asset audio** dans l'étagère — la prise entre dans l'onglet. Vous
+   pouvez aussi **l'y glisser** depuis l'étagère, ou passer par le clic droit, ligne
+   **Ouvrir dans l'éditeur audio**.
 
-Tant qu'aucun son n'est chargé, l'onglet affiche : « Aucun son ouvert. Double-cliquez sur un
-asset audio pour l'éditer. »
+Tant qu'aucun son n'est chargé, l'onglet affiche : « Aucun son ouvert. Déposez une prise ici, ou
+double-cliquez sur un asset audio. »
 
 > **Double-cliquer sans avoir ouvert d'onglet ne fait rien**, et rien ne le dit. Le double-clic
 > envoie toujours l'asset dans l'onglet en avant ; s'il n'y en a pas, il n'a nulle part où

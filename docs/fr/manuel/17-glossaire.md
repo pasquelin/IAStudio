@@ -56,6 +56,18 @@ La direction d'une chose tout autour de vous, mesurée en tournant sur place. Po
 
 **Backoff** → voir *Temporisation exponentielle*.
 
+**Badge** *(d'un asset)*
+La petite marque sur une vignette de l'*étagère*, qui dit où en est ce fichier vis-à-vis de la
+*bibliothèque* : local seulement, synchronisé, à envoyer, à rapatrier, modifié des deux côtés,
+échec, ou appartenant à un autre projet. Il n'est pas stocké mais **recalculé** — il dépend du
+compte actif. Voir [Les assets](07-assets.md).
+
+**Bibliothèque** *(du compte)*
+Le stock d'assets qui vit en ligne, du côté de votre compte Scenario — par opposition au
+*projet*, qui est un dossier sur votre disque. Les deux sont séparés et rien ne circule entre eux
+sans une action de votre part. Aujourd'hui, seul le sens **projet → bibliothèque** a un bouton
+(**Envoyer**).
+
 ---
 
 ## C
@@ -314,6 +326,12 @@ d'une rue, on change un vêtement.
 ## J
 
 **Job** → voir *Tâche*.
+
+**Journal d'activité**
+La liste de ce que le studio a fait et raté, ouverte depuis la *ligne d'état*. Quatre sujets —
+génération, import, bibliothèque, document — et trois niveaux : information, avertissement,
+échec. Un échec y ajoute une **bulle** dans le coin de la fenêtre, qui ne disparaît que si on la
+ferme. Voir [Quand ça coince](16-depannage.md).
 
 ---
 

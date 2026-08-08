@@ -57,6 +57,17 @@ east, south, west, north. It pairs with *elevation*, which gives its height.
 
 **Backoff** → see *Exponential backoff*.
 
+**Badge** *(of an asset)*
+The small mark on a thumbnail in the *shelf*, saying where that file stands with respect to the
+*library*: local only, in sync, to send, to fetch, changed on both sides, failed, or belonging to
+another project. It is not stored but **recomputed** — it depends on the active account. See
+[Assets](07-assets.md).
+
+**Library** *(of the account)*
+The stock of assets living online, on your Scenario account's side — as opposed to the *project*,
+which is a folder on your disk. The two are separate and nothing travels between them without an
+action of yours. Today only the **project → library** direction has a button (**Send**).
+
 **Background removal** *(cut out)*
 Taking the background out of a picture to keep only the subject, on transparency. The **Cut out**
 command lives in the Image menu; its model is set in **Settings ▸ Generation ▸ Background removal**.
@@ -282,6 +293,12 @@ bar, and goes through five states: **Queued** → **Running** → **Done**, or e
 **Cancelled**.
 
 You can keep working while a job runs.
+
+**Journal** *(activity)*
+The list of what the studio has done and failed to do, opened from the *status line*. Four
+topics — generation, import, library, document — and three levels: information, warning, failure.
+A failure also raises a **toast** in the corner of the window, which only leaves if you dismiss
+it. See [When something goes wrong](16-troubleshooting.md).
 
 ---
 
