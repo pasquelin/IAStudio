@@ -500,7 +500,8 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d'éch
 **1398 tests répartis sur 148 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
 (`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
-`pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout
+`pnpm validate` — typecheck, lint, vérification de format, tests avec budgets de couverture —
+doit être vert avant tout
 commit.
 
 Ce qui est couvert, en pratique : chaque helper, chaque module d'état et de commandes de chaque

@@ -24,8 +24,12 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['**/*.bench.ts', '**/*-fixtures.ts', '**/test-harness.ts', '**/fake-bridge.ts'],
       reporter: ['text-summary', 'html'],
-      // Negative = how many uncovered statements/branches a module may carry. Today's counts
-      // sit ~15 % under each, which pays for a refactor but not for dropping a test file.
+      // Negative = how many uncovered statements/branches a module may carry. Sized per module
+      // rather than by one rule: a glob whose room to grow is mostly untestable GPU needs a
+      // wider budget than one made of state machines, or growth alone would break it.
+      //
+      // A glob matching nothing passes silently — renaming a folder turns its budget into a
+      // no-op with no warning. Rename these alongside `src/`.
       thresholds: {
         'src/shared/**': { statements: -6, branches: -20 },
         'src/main/settings/**': { statements: -30, branches: -12 },
@@ -33,9 +37,20 @@ export default defineConfig({
         'src/main/project/**': { statements: -115, branches: -60 },
         'src/main/media/**': { statements: -70, branches: -32 },
         'src/renderer/src/stores/**': { statements: -90, branches: -82 },
-        'src/renderer/src/engines/**': { statements: -900, branches: -520 },
+        // Split from the GPU below: together, five files jsdom cannot run held 55 % of one
+        // budget, so a new render pass ate the room that guarded the state machines.
+        'src/renderer/src/engines/{timeline,canvas,audio,core}/**': {
+          statements: -270,
+          branches: -250,
+        },
+        'src/renderer/src/engines/{scene,skybox,viewport,texture,gpu}/**': {
+          statements: -700,
+          branches: -310,
+        },
         'src/renderer/src/helpers/**': { statements: -30, branches: -28 },
         'src/renderer/src/hooks/**': { statements: -38, branches: -20 },
+        // The renderer half of project-file serialization; `src/main/project/**` guards the other.
+        'src/renderer/src/app/document-io.ts': { statements: -14, branches: -6 },
       },
     },
     projects: [

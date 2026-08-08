@@ -94,9 +94,10 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 | `pnpm dist` | build, then package and sign with electron-builder |
 | `pnpm typecheck` | `tsc --noEmit` across the three targets |
 | `pnpm test` · `pnpm test:watch` | vitest, single run or watching |
+| `pnpm test:coverage` | vitest with coverage, enforcing the per-module budgets |
 | `pnpm lint` · `pnpm lint:fix` | eslint over `src` |
 | `pnpm format` · `pnpm format:check` | prettier, write or check |
-| `pnpm validate` | typecheck + lint + format check + tests |
+| `pnpm validate` | typecheck + lint + format check + tests with coverage budgets |
 | `pnpm rebuild:native` | electron-rebuild — required after touching better-sqlite3 |
 | `pnpm docs:scenario` | regenerate the local copy of the Scenario API docs |
 

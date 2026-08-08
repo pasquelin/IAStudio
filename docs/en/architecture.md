@@ -483,7 +483,8 @@ opaquely.
 **1398 tests across 148 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
-`pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.
+`pnpm validate` — typecheck, lint, format check, tests with coverage budgets — must be green
+before any commit.
 
 What gets tested, in practice: every helper, every state and command module of every engine,
 the schema translation, the job manager's queue and backoff, the catalogue, the IPC contract,
