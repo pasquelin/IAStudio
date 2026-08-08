@@ -211,7 +211,7 @@ function strokePath(context: OverlayContext, viewport: Viewport, outline: readon
 
   const at = (point: Point): Point => {
     const screen = toScreen(viewport, point)
-    return { x: Math.round(screen.x) + 0.5, y: Math.round(screen.y) + 0.5 }
+    return { x: crisp(screen.x), y: crisp(screen.y) }
   }
 
   context.beginPath()
