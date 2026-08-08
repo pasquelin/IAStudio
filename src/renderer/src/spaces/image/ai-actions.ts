@@ -1,6 +1,9 @@
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
+import { sectionOfFamily } from '@shared/domain/settings-registry'
 import { layerById } from '@/engines/canvas/canvas-state'
+import { workspaceById } from '@/helpers/workspaces'
 import { canvasOf, useCanvases } from '@/stores/canvases'
+import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 import { fillEditFields } from './ai-fields'
@@ -33,6 +36,21 @@ export const AI_EDITS: Readonly<Record<AiEdit, { family: ModelFamily; masked: bo
 }
 
 /**
+ * Takes the user where a model of this family can be chosen — never choosing one for them.
+ *
+ * Which screen that is depends on the family: the Models panel only ever lists the workspace's
+ * own, so it would never show a cutout model however long one looked at it. The three families
+ * the edits reach for are set in the preferences, and nowhere else.
+ */
+function offerToChooseOne(family: ModelFamily): void {
+  const workspace = workspaceById(useLayouts.getState().activeWorkspace)
+  if (family === workspace.family) return revealTool('models')
+
+  const section = sectionOfFamily(family)
+  if (section) useSettings.getState().openSection(section)
+}
+
+/**
  * Prepares an edit and stops there. The form is never short-circuited: the action flattens the
  * document, sends it, finds the family's default model and opens its form on the right fields —
  * and the user submits. That is what keeps every parameter of the model visible (invariant 5),
@@ -53,8 +71,7 @@ export async function prepareEdit(
     useModels.getState().selected[family] ??
     useSettings.getState().settings.generation.defaultModels[family]
   if (!modelId) {
-    // Never a model chosen on the user's behalf: the panel opens on the family instead.
-    revealTool('models')
+    offerToChooseOne(family)
     return false
   }
 

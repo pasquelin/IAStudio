@@ -751,7 +751,6 @@
     },
     "defaultModel": "Default model",
     "noDefaultModel": "Ask every time",
-    "familyUpscale": "Upscaling",
     "ffmpegFound": "ffmpeg is available: proxies and waveforms will be prepared.",
     "ffmpegMissing": "ffmpeg is still not found. Importing works, without proxy or waveform.",
     "browse": "Browse…",

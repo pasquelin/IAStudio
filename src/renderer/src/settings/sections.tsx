@@ -34,6 +34,8 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   'generation.3d': () => <ModelFamilySettings family="3d" />,
   'generation.audio': () => <ModelFamilySettings family="audio" />,
   'generation.upscale': () => <ModelFamilySettings family="upscale" />,
+  'generation.background-removal': () => <ModelFamilySettings family="background-removal" />,
+  'generation.vectorization': () => <ModelFamilySettings family="vectorization" />,
 }
 
 function withContent(entry: SettingSectionEntry): SettingsSection {

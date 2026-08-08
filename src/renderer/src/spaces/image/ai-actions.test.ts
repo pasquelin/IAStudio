@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { setLayerMask } from '@/engines/canvas/commands'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useCanvases } from '@/stores/canvases'
 import { useLayouts } from '@/stores/layouts'
@@ -126,12 +127,36 @@ describe('preparing an edit', () => {
    * the one place where choosing one belongs.
    */
   it('opens the models panel rather than picking one when none is set', async () => {
+    useModels.setState({ selected: {} })
+    defaultModel('image', undefined)
+
+    await expect(prepareEdit(DOCUMENT, 'regenerate', host, bridge)).resolves.toBe(false)
+
+    expect(uploaded).toEqual([])
+    expect(useTools.getState().open.left?.primary).toBe('models')
+  })
+
+  /**
+   * The Models panel lists the workspace's own family and no other, so it can never show a
+   * vectorizer: sending the user there was a dead end, and the reason three edits read as
+   * "the panel opens and nothing happens".
+   */
+  it('opens the settings screen of a family the workspace has no panel for', async () => {
+    const opened: string[] = []
+    installFakeBridge({
+      settings: {
+        open: section => {
+          opened.push(section)
+          return Promise.resolve()
+        },
+      },
+    })
     defaultModel('vectorization', undefined)
 
     await expect(prepareEdit(DOCUMENT, 'vectorize', host, bridge)).resolves.toBe(false)
 
+    expect(opened).toEqual(['generation.vectorization'])
     expect(uploaded).toEqual([])
-    expect(useTools.getState().open.left?.primary).toBe('models')
   })
 
   // The action prepares; it never submits. Every parameter of the model stays visible, and the

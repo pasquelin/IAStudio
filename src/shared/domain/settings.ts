@@ -209,6 +209,8 @@ export type SettingsSectionId =
   | 'generation.3d'
   | 'generation.audio'
   | 'generation.upscale'
+  | 'generation.background-removal'
+  | 'generation.vectorization'
   | 'spaces'
   | 'spaces.three'
   | 'shortcuts'
@@ -226,6 +228,8 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'generation.3d',
   'generation.audio',
   'generation.upscale',
+  'generation.background-removal',
+  'generation.vectorization',
   'spaces',
   'spaces.three',
   'shortcuts',

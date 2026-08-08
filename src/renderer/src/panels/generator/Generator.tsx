@@ -34,7 +34,11 @@ export function Generator() {
   const { t } = useTranslation()
 
   const workspace = useLayouts(state => state.activeWorkspace)
-  const family = workspaceById(workspace).family
+
+  // What an edit asked this generator to open on — an upscaler for Enlarge — or the workspace's
+  // own family. See `prepared`: it is a parenthesis, and it closes on its own.
+  const prepared = useModels(state => state.prepared)
+  const family = prepared ?? workspaceById(workspace).family
 
   // The panel's choice wins over the preference: the preference is what to start from.
   const chosen = useModels(state => state.selected[family] ?? null)
