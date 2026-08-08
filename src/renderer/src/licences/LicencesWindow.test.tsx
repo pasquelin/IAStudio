@@ -13,13 +13,13 @@ describe('LicencesWindow', () => {
     render(<LicencesWindow />)
 
     expect(screen.getByRole('button', { name: /FFmpeg/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /three/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^three\b/ })).toBeInTheDocument()
   })
 
   // A notice that needs a working network to be read is not a notice: the whole text is here.
   it('unfolds the full text of a licence, not a link to it', async () => {
     render(<LicencesWindow />)
-    const entry = screen.getByRole('button', { name: /three/ })
+    const entry = screen.getByRole('button', { name: /^three\b/ })
 
     expect(entry).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(entry)
@@ -31,10 +31,13 @@ describe('LicencesWindow', () => {
   it('shows one at a time, so the list stays readable', async () => {
     render(<LicencesWindow />)
 
-    await userEvent.click(screen.getByRole('button', { name: /three/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^three\b/ }))
     await userEvent.click(screen.getByRole('button', { name: /FFmpeg/ }))
 
-    expect(screen.getByRole('button', { name: /three/ })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: /^three\b/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
   })
 
   // FFmpeg is the one whose licence asks for more than attribution: whoever receives the binary

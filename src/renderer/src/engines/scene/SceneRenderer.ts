@@ -1,4 +1,5 @@
 import {
+  BufferGeometry,
   DirectionalLight,
   GridHelper,
   Light,
@@ -14,6 +15,7 @@ import {
   Vector2,
   Vector3 as ThreeVector3,
 } from 'three'
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
@@ -57,6 +59,7 @@ import {
   type DisplayMode,
   type ViewDirection,
 } from './scene-view'
+import { createBvhBuilder, type BvhBuilder } from './bvh-builder'
 import { exportObjects } from './scene-export'
 import { snapSteps } from './snap-steps'
 import { createTextureCache, type TextureCache, type TextureSource } from './texture-cache'
@@ -125,6 +128,15 @@ const step = new ThreeVector3()
  * own: they are the shared `ViewportEngine`, so what this file holds is what makes a scene
  * *editor* — gizmos, selection, the trihedron, the grid and keyboard flight.
  */
+/**
+ * three-mesh-bvh reads a `boundsTree` if the mesh has one and falls back to walking triangles if
+ * it has none, so patching the prototypes once is safe for every mesh in the studio — the two
+ * other 3D spaces included, where no tree is ever built.
+ */
+BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
+BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
+Mesh.prototype.raycast = acceleratedRaycast
+
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
 
@@ -191,6 +203,9 @@ export class SceneRenderer {
 
   /** One line material for every overlay: they all draw the same edges in the same colour. */
   private readonly wireMaterial = new LineBasicMaterial()
+  private readonly bvh: BvhBuilder = createBvhBuilder(
+    () => new Worker(new URL('./bvh-worker.ts', import.meta.url), { type: 'module' }),
+  )
   private stopPaletteWatch: (() => void) | null = null
 
   constructor(private readonly options: SceneRendererOptions) {
@@ -421,6 +436,7 @@ export class SceneRenderer {
     this.textureCache.dispose()
     this.modelCache.dispose()
     this.wireMaterial.dispose()
+    this.bvh.dispose()
 
     this.grid?.dispose()
     this.grid = null
@@ -656,10 +672,24 @@ export class SceneRenderer {
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
       if (this.display !== 'shaded') this.applyDisplay(holder)
+      // A dense model is what makes a click cost a frame — measured in `scene-picking.bench.ts`.
+      // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.viewport.requestRender()
+      void this.accelerate(holder)
     })
 
     return holder
+  }
+
+  /** Every mesh a model brought, given the tree that makes picking it cheap. */
+  private async accelerate(object: Object3D): Promise<void> {
+    const meshes: Mesh[] = []
+    object.traverse(child => {
+      if (child instanceof Mesh) meshes.push(child)
+    })
+
+    for (const mesh of meshes) await this.bvh.accelerate(mesh)
+    this.viewport.requestRender()
   }
 
   private applyDisplay(object: Object3D): void {

@@ -806,7 +806,64 @@ Image a écrite pour son propre export.
 
 ## Étape 11 — BVH pour le picking, instanciation, LOD
 
-- [ ] Livrée
+- [x] Livrée pour le BVH. **Instanciation et LOD non faits, délibérément** — voir plus bas.
+
+**1. La mesure, d'abord, comme le plan l'exigeait.** `scene-picking.bench.ts` mesure
+`intersectObjects` sur des scènes qui tiennent lieu de « trois GLB denses ». Le rayon qui *touche*
+est le cas cher : three teste une sphère englobante avant de marcher les triangles, donc un rayon
+qui rate ne coûte rien quelle que soit la densité.
+
+| Scène | Rayon qui touche | Rayon qui rate |
+|---|---|---|
+| 3 modèles de 32k triangles | **1,87 ms** | 0,0002 ms |
+| 3 modèles de 131k triangles | **7,29 ms** | 0,0002 ms |
+| 3 modèles de 524k triangles | **32,2 ms** | 0,0002 ms |
+| 2500 petites mailles | 0,13 ms | 0,13 ms |
+
+Le seuil du plan était 2 ms. Trois modèles de 131k triangles — un asset généré tout à fait
+ordinaire — coûtent **7,3 ms par clic**, et des modèles denses en coûtent 32, soit deux frames
+perdues sur un simple clic. L'étape ne s'arrête donc pas à sa note.
+
+**2. Le BVH, en Web Worker comme l'invariant 6 le nomme.** `three-mesh-bvh` (autorisé) construit
+l'arbre dans `bvh-worker.ts` ; seuls les tampons traversent, jamais une géométrie — elle n'est pas
+clonable par structure, et le worker n'a pas de scène où la mettre. Ce qui revient est l'arbre
+sérialisé **plus l'index sur lequel la construction s'est arrêtée** : three-mesh-bvh réordonne les
+triangles, et la géométrie de l'autre côté doit prendre cet index avec l'arbre, sinon les deux
+décrivent des maillages différents.
+
+**La mesure d'après, sur la même machine :**
+
+| Scène | Avant | Avec l'arbre |
+|---|---|---|
+| 3 modèles de 131k triangles | 7,87 ms | **0,016 ms** |
+| 3 modèles de 524k triangles | 34,0 ms | **0,018 ms** |
+
+**3. Instanciation et LOD : non faits, et c'est le plan qui le demande.** « Ne rien faire sans un
+cas réel. Une optimisation sans mesure est une complication. » Aucun cas réel ne s'est présenté
+cette nuit : le seul coût mesuré était le picking, et il est réglé. Les deux restent à faire le jour
+où une scène les réclame, mesure en main.
+
+**Décisions prises seul.**
+
+- *Un seul worker, pas un pool.* L'invariant 6 borne un pool à `hardwareConcurrency − 2`, et un est
+  dans cette borne. Ce que l'invariant protège, c'est que la construction quitte le thread UI ; un
+  second worker n'aiderait qu'une scène important plusieurs modèles denses au même instant.
+- *Un seuil de 20 000 triangles.* En dessous, marcher les triangles est déjà plus rapide que
+  construire l'arbre — a fortiori que l'envoyer deux fois à travers une frontière. Une primitive du
+  studio fait trente triangles.
+- *Le worker ne démarre qu'au premier modèle dense.* Un thread ouvert au montage coûterait pour
+  rien dans une scène qui n'aura jamais que des cubes.
+- *Les prototypes sont patchés une fois pour toutes.* `acceleratedRaycast` retombe sur le raycast
+  d'origine quand la géométrie n'a pas d'arbre — vérifié dans la source — donc les espaces Textures
+  et Skyboxes, qui n'en construisent jamais, ne changent pas de comportement.
+
+**Un bug trouvé à la relecture.** `dispose()` vidait la table des requêtes en vol sans les résoudre :
+la promesse attendue ne se terminait jamais, et sa fermeture gardait la maille en vie. Un panneau
+détaché, un document fermé — c'est fréquent ici. Elles se résolvent maintenant sur rien.
+
+**Licence.** `three-mesh-bvh` est MIT ; sa notice est ajoutée à `licences.json`, que le test de
+licences vérifie dépendance par dépendance. Les requêtes de `LicencesWindow.test.tsx` ont dû être
+ancrées : `three` est un préfixe de `three-mesh-bvh`, et `/three/` trouvait désormais les deux.
 
 **À faire en dernier, et seulement mesure en main.** Le raycast parcourt aujourd'hui tous les objets
 (`SceneRenderer.ts:438-439`) et personne ne s'en est plaint — parce qu'aucune scène n'est encore
@@ -818,6 +875,59 @@ assez lourde. L'étape 3 change cela.
    nomme « construction de BVH » explicitement.
 3. Instanciation et LOD : ne rien faire sans un cas réel. Une optimisation sans mesure est une
    complication.
+
+---
+
+## Récapitulatif, au terme des onze étapes
+
+Onze étapes, onze commits, sur `feat/3d-completion`. `pnpm validate` vert à chaque commit ; 2561
+tests au dernier.
+
+### Ce qui est livré
+
+| # | Étape | Ce que le logiciel sait faire de plus |
+|---|---|---|
+| 1 | Sélection multiple | plusieurs objets se choisissent, se déplacent et s'éditent ensemble |
+| 2 | Reparentage et groupes | les objets se rangent en arbre, au glisser comme au `⌘G` |
+| 3 | Import de modèles | un GLB du projet entre dans la scène en un nœud |
+| 4 | Ombres | les objets projettent et reçoivent, réglable par nœud |
+| 5 | Environnement | une skybox du projet éclaire la scène et s'y reflète |
+| 6 | Glisser-déposer | un asset se dépose dans le viewport |
+| 7 | Dupliquer, copier-coller | `⌘D` `⌘C` `⌘X` `⌘V`, d'une scène à l'autre |
+| 8 | `sprite` | une image qui fait toujours face à la caméra |
+| 9 | Projection, vues, filaire | vue orthographique, six côtés, trois modes de dessin |
+| 10 | Export | glTF, GLB et USDZ, scène entière ou sélection |
+| 11 | BVH | un clic sur un modèle dense passe de 7,3 ms à 0,016 ms |
+
+### Ce qui est reporté, et pourquoi
+
+- **Le texte 3D** (étape 8). `TextGeometry` exige un fichier de police converti. Le catalogue ne
+  connaît pas ce genre d'asset et lui en ajouter un traverse toute la chaîne d'import ; convertir
+  une police hors ligne demande un outil absent ; et la seule que livre three.js dérive
+  d'Helvetica, ce qui est une décision de licence pour une application fermée, pas une décision
+  technique. L'entrée reste grisée et le manuel dit pourquoi.
+- **Instanciation et LOD** (étape 11), sur ordre du plan : aucun cas réel ne s'est présenté, et le
+  seul coût mesuré était le picking.
+- **Le clic du `ViewHelper`** (étape 9) : son animation déplace la caméra sans rien dire à
+  `OrbitControls`, la cible de l'orbite et la caméra divergeraient. Les six côtés passent par du
+  code qui repose la caméra puis met l'orbite à jour.
+
+### Ce qui reste à revoir
+
+1. **Les points 3 et 4 de la Definition of Done ont été menés à un seul regard à partir de
+   l'étape 8.** La limite hebdomadaire de l'API a coupé les sous-agents en pleine revue de
+   l'étape 8 ; les étapes 8 à 11 ont été relues par moi seul. C'est là qu'une revue humaine a le
+   plus de valeur. Les bugs trouvés à ces relectures sont écrits étape par étape ci-dessus.
+2. **Sur Windows et Linux, les raccourcis qu'une surface écoute elle-même attendent la touche
+   Windows, pas `Ctrl`** — `signatureOf` lit `event.metaKey`. Convention de tout
+   `COMMAND_REGISTRY`, `⌘Z` compris ; la corriger touche la résolution des raccourcis de toute
+   l'application. Documenté aux chapitres 15 et 18 du manuel.
+3. **Un sprite ne s'exporte pas** : ni glTF ni USDZ n'ont de notion d'objet toujours face à la
+   caméra, et three les ignore silencieusement. Non documenté dans le manuel.
+4. **Le chapitre 09 du manuel n'a pas de section** sur le magnétisme, le repère local, les ombres
+   ni l'environnement. Les étapes 1 à 6 ont corrigé ce qui y était faux, pas comblé ce qui manque.
+5. **`docs/REPRISE.md` § 3.3 est à réécrire** — voir « Au réveil » ci-dessous. Volontairement pas
+   fait au fil de l'eau.
 
 ---
 
