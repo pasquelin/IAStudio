@@ -68,8 +68,7 @@ Sur macOS, les trois pastilles rouge / orange / verte restent à leur place habi
 | Point **vert** | la clé du compte affiché fonctionne |
 | Point **gris** | elle ne fonctionne pas, ou il n'y a pas de compte |
 | **Le nom** | le compte en cours d'utilisation |
-| **« Développement »** | aucun compte enregistré, mais un fichier `secrets/.env` répond |
-| **« Non connecté »** | rien n'est branché |
+| **« Non connecté »** | aucun compte n'est enregistré |
 
 **Un clic ouvre la liste** de vos comptes, celui en cours étant coché, plus une entrée
 **Gérer les comptes…** qui mène aux réglages.
@@ -334,7 +333,21 @@ Le menu du système — en haut de l'écran sur macOS, en haut de la fenêtre ai
 | **Affichage** | Modules (rouvrir un panneau), Réinitialiser la disposition, Plein écran, et le zoom de l'image |
 | **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l'espace 3D |
 | **Fenêtre** | les commandes de fenêtre du système |
-| **Aide** | À propos de Scenario Studio |
+| **Aide** | À propos de Scenario Studio, Licences |
+
+### La fenêtre des licences
+
+**Aide ▸ Licences** ouvre la liste des logiciels que Scenario Studio embarque : leur nom, leur
+version, et le nom court de leur licence (`MIT`, `Apache-2.0`…).
+
+Cliquez sur une ligne : le **texte entier** de la licence se déplie, et le lien vers ses sources
+s'affiche quand la licence l'exige.
+
+> **Le texte est dans l'application, pas derrière un lien.** Une notice qu'il faut être connecté
+> pour lire n'est pas une notice — et plusieurs de ces licences exigent d'être reproduites en
+> entier, pas résumées.
+
+Rien à y faire, rien à y régler. C'est une obligation légale, tenue proprement.
 
 Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**. Si vous changez un
 raccourci dans les réglages, le menu suit.

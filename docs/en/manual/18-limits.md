@@ -1,6 +1,6 @@
 # 18. What does not exist yet
 
-[← Glossary](17-glossary.md) · [Contents](../user-guide.md)
+[← Glossary](17-glossary.md) · [Contents](../user-guide.md) · [Next chapter: How do I… →](19-recipes.md)
 
 The greyed-out buttons, the work in progress, and what not to expect. The complete list, current,
 and honest.
@@ -57,6 +57,30 @@ be redone — the *prompt*, the *seed*, the model.
 ---
 
 ## Image workspace
+
+### You cannot open an existing image
+
+**This is the studio's biggest limit, and its least visible one.**
+
+An image document is always a **fresh canvas**. No picture from your shelf — generated, imported,
+it makes no difference — can be brought into it:
+
+| What you naturally try | What happens |
+|---|---|
+| Double-clicking the picture in the shelf | nothing |
+| Dragging it onto the canvas | nothing |
+| Looking for an "Open" menu | there isn't one |
+
+And **nothing warns you**. No message, no barred cursor: the gesture is simply inert, which reads
+as a fault when in fact the feature is not written.
+
+The practical consequence: the Image workspace can **paint from nothing**. It cannot yet
+**retouch something**. And since it cannot export either (see below), an image document can today
+neither start nor end on a file.
+
+> **What does work** in the meantime: generating afresh. An *image to image* model takes a
+> picture as input and returns a new one — it is the only path that transforms an existing image
+> inside the studio. See [Generating](06-generating.md).
 
 ### Tools announced but inactive
 
@@ -225,6 +249,38 @@ That is the missing bridge between the two workspaces.
 
 ---
 
+## Generating
+
+### There is no "upscale", "remove background" or "vectorise" button
+
+The studio files models into **families**, and each workspace shows exactly one family: Image in
+the Image workspace, Video in the Video workspace, and so on for all six.
+
+Four further families are provided for in the code — **upscale**, **background removal**,
+**vectorisation** and **other** — and none has a workspace to hold it.
+
+There is something more surprising: **no model is ever filed under those families.** The studio
+works a model's family out from what the model takes in and gives back. An upscaler takes an image
+and returns an image: it is therefore filed — correctly — under **Image**.
+
+> **The good news: upscalers are usable.** They are simply in the Image workspace, mixed in with
+> the rest. Search for `upscale` in the **Models** panel, or filter on the `image-upscale` tag.
+
+So what is missing is not the model, it is **the shortcut**: an "upscale this image" button that
+would take the image under your cursor and send it to the right model without you having to find
+it again and drop it into a form yourself.
+
+### The "Upscaling" settings sub-section is always empty
+
+That follows directly from the above. **Settings ▸ Generation ▸ Upscaling** exists, opens, and
+holds **a single entry: "Ask every time"**. Its list fills with the models of the upscale family —
+and there are none.
+
+It is not a fault, and an empty list does not mean you are disconnected: it is a setting written
+ahead of the workspace that will use it.
+
+---
+
 ## Import
 
 ### What can be imported
@@ -326,16 +382,18 @@ cannot leak your account.
 
 ## Summary: in order of importance
 
-If you only remember five things from this chapter:
+If you only remember six things from this chapter:
 
 1. **images, sequences, sounds and skies do not save** — closing the tab loses the work;
-2. **there is no video export** — the studio cannot yet deliver a final file;
-3. **selection in the Image workspace constrains no tool**;
-4. **you cannot import a 3D model** or an HDRI;
-5. **a skybox does not yet light a 3D scene**.
+2. **you cannot open an existing image in the Image workspace** — it paints from a fresh canvas,
+   it does not retouch;
+3. **there is no video export** — the studio cannot yet deliver a final file;
+4. **selection in the Image workspace constrains no tool**;
+5. **you cannot import a 3D model** or an HDRI;
+6. **a skybox does not yet light a 3D scene**.
 
 Everything else is comfort.
 
 ---
 
-[← Glossary](17-glossary.md) · [Contents](../user-guide.md)
+[← Glossary](17-glossary.md) · [Contents](../user-guide.md) · [Next chapter: How do I… →](19-recipes.md)

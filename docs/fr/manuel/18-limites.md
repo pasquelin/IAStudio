@@ -1,6 +1,6 @@
 # 18. Ce qui n'existe pas encore
 
-[← Glossaire](17-glossaire.md) · [Sommaire](../guide-utilisateur.md)
+[← Glossaire](17-glossaire.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Comment faire pour… →](19-recettes.md)
 
 Les boutons gris, les promesses en cours, et ce qu'il ne faut pas attendre. La liste complète, à
 jour, et honnête.
@@ -58,6 +58,30 @@ mérite d'être refait — le *prompt*, la *graine*, le modèle.
 ---
 
 ## Espace Image
+
+### On ne peut pas ouvrir une image existante
+
+**C'est la plus grande limite du studio, et la moins visible.**
+
+Un document image est toujours une **toile neuve**. Aucune image de votre étagère — générée,
+importée, peu importe — ne peut y entrer :
+
+| Ce qu'on essaie naturellement | Ce qui se passe |
+|---|---|
+| Double-cliquer l'image dans l'étagère | rien |
+| La glisser sur la toile | rien |
+| Chercher un menu « Ouvrir » | il n'existe pas |
+
+Et **rien ne prévient**. Aucun message, aucun curseur barré : le geste est simplement sans effet,
+ce qui laisse croire à une panne alors que la fonction n'est pas écrite.
+
+Conséquence pratique : l'espace Image sait **peindre depuis rien**. Il ne sait pas encore
+**retoucher quelque chose**. Comme il ne sait pas non plus exporter (voir plus bas), un document
+image ne peut aujourd'hui ni commencer ni finir sur un fichier.
+
+> **Ce qui marche quand même**, en attendant : régénérer autrement. Un modèle *image vers image*
+> prend une image en entrée et en rend une nouvelle — c'est le seul chemin qui transforme une
+> image existante à l'intérieur du studio. Voir [Générer](06-generer.md).
 
 ### Outils annoncés mais inactifs
 
@@ -231,6 +255,39 @@ C'est le pont manquant entre les deux espaces.
 
 ---
 
+## Générer
+
+### Il n'y a pas de bouton « agrandir », « détourer » ni « vectoriser »
+
+Le studio range les modèles en **familles**, et chaque espace de travail montre exactement une
+famille : Image dans l'espace Image, Vidéo dans l'espace Vidéo, et ainsi de suite pour les six.
+
+Quatre familles supplémentaires sont prévues dans le code — **agrandissement**, **détourage**,
+**vectorisation** et **autre** — et aucune n'a d'espace pour l'accueillir.
+
+Il y a plus surprenant : **aucun modèle n'est jamais rangé dans ces familles.** Le studio devine
+la famille d'un modèle à partir de ce que le modèle sait recevoir et rendre. Un agrandisseur, lui,
+reçoit une image et rend une image : il est donc rangé — correctement — dans la famille **Image**.
+
+> **Bonne nouvelle : les agrandisseurs sont utilisables.** Ils sont simplement dans l'espace
+> Image, mélangés aux autres. Cherchez `upscale` dans le panneau **Modèles**, ou filtrez sur le
+> tag `image-upscale`.
+
+Ce qui manque n'est donc pas le modèle, c'est **le raccourci** : un bouton « agrandir cette
+image » qui prendrait l'image sous votre curseur et l'enverrait au bon modèle sans que vous ayez
+à la retrouver et à la redéposer dans un formulaire.
+
+### La sous-section « Agrandissement » des réglages est toujours vide
+
+C'est la conséquence directe de ce qui précède. **Réglages ▸ Génération ▸ Agrandissement** existe,
+s'ouvre, et n'a **qu'une seule entrée : « Demander à chaque fois »**. Sa liste se remplit avec les
+modèles de la famille agrandissement — et il n'y en a aucun.
+
+Ce n'est pas une panne, et une liste vide ne signifie pas que vous êtes déconnecté : c'est un
+réglage écrit en avance sur l'espace qui l'utilisera.
+
+---
+
 ## Import
 
 ### Ce qui s'importe
@@ -333,17 +390,19 @@ ne peut pas divulguer votre compte.
 
 ## Récapitulatif : par ordre d'importance
 
-Si vous ne deviez retenir que cinq choses de ce chapitre :
+Si vous ne deviez retenir que six choses de ce chapitre :
 
 1. **Les images, séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le
    travail ;
-2. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
-3. **la sélection dans l'espace Image ne limite aucun outil** ;
-4. **on ne peut pas importer de modèle 3D** ni de HDRI ;
-5. **une skybox n'éclaire pas encore une scène 3D**.
+2. **on ne peut pas ouvrir une image existante dans l'espace Image** — il peint depuis une toile
+   neuve, il ne retouche pas ;
+3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
+4. **la sélection dans l'espace Image ne limite aucun outil** ;
+5. **on ne peut pas importer de modèle 3D** ni de HDRI ;
+6. **une skybox n'éclaire pas encore une scène 3D**.
 
 Tout le reste est du confort.
 
 ---
 
-[← Glossaire](17-glossaire.md) · [Sommaire](../guide-utilisateur.md)
+[← Glossaire](17-glossaire.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Comment faire pour… →](19-recettes.md)

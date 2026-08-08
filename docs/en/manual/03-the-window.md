@@ -66,8 +66,7 @@ On the right of the title bar: a small coloured dot, a name, and a chevron.
 | **Green** dot | the displayed account's key works |
 | **Grey** dot | it does not, or there is no account |
 | **The name** | the account currently in use |
-| **"Development"** | no account stored, but a `secrets/.env` file is answering |
-| **"Not connected"** | nothing is connected |
+| **"Not connected"** | no account is stored |
 
 **One click opens the list** of your accounts, the current one ticked, plus a **Manage accounts…**
 entry leading to settings.
@@ -321,7 +320,20 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 | **View** | Tool windows (reopen a panel), Reset layout, Full screen, and image zoom |
 | **Objects** | Add ▸ Mesh, Add ▸ Light — in the 3D workspace |
 | **Window** | the system's window commands |
-| **Help** | About Scenario Studio |
+| **Help** | About Scenario Studio, Licences |
+
+### The licences window
+
+**Help ▸ Licences** opens the list of software Scenario Studio ships with: their name, their
+version, and the short name of their licence (`MIT`, `Apache-2.0`…).
+
+Click a row: the **full text** of the licence unfolds, and the link to its sources appears where the
+licence requires it.
+
+> **The text is inside the application, not behind a link.** A notice you have to be online to read
+> is not a notice — and several of these licences require reproducing in full, not summarising.
+
+Nothing to do there, nothing to set. It is a legal obligation, honoured properly.
 
 The shortcuts shown in the menus are **the ones you have set**. Change a shortcut in settings and
 the menu follows.

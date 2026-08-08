@@ -178,8 +178,20 @@ you can do something else meanwhile.
 When the line reads **Done**, your image has arrived. It is filed in the **Assets** panel —
 the project's shelf — and on your disk, in `assets/img/`.
 
-**Double-click the thumbnail**: the image opens in a tab, in the centre. You are in the Image
-workspace, with its tools and its layers. Over to you.
+**Click the thumbnail**: the **Inspector**, on the right, shows everything known about it — its
+size, its weight, the model that made it, the prompt you wrote, and the *seed* that will let you
+come back to it.
+
+The **Reveal in file manager** button, in the inspector, opens the folder it sits in. That is
+where you take it from to send it to anyone.
+
+> **No, you cannot retouch it here yet.** The Image workspace can paint on a fresh canvas, but it
+> cannot yet open an existing picture — neither yours nor the one it has just generated. It is
+> the studio's biggest limit today, explained in full in
+> [What does not exist yet](18-limits.md).
+>
+> To transform this picture without leaving the studio: go back to the **Generate** panel with an
+> *image to image* model, and give it your picture as the starting point.
 
 <!-- SCREENSHOT: the Generate panel with a model's form, and the status line below with a running
      generation. Save to ../../images/generate.png -->
@@ -193,7 +205,8 @@ workspace, with its tools and its layers. Over to you.
 | Understand every piece of the screen | [The window, explained](03-the-window.md) |
 | Choose your model better | [Finding a model](05-models.md) |
 | Write better prompts | [Generating](06-generating.md) |
-| Retouch the image you got | [Image workspace](08-image-workspace.md) |
+| Paint and draw | [Image workspace](08-image-workspace.md) |
+| Know what the studio cannot do yet | [What does not exist yet](18-limits.md) |
 | Tour every setting | [Every setting](14-settings.md) |
 
 ---

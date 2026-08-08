@@ -168,6 +168,15 @@ Vous pouvez aussi fixer un **modèle par défaut** pour chaque famille, une fois
 
 ## Deux détails à connaître
 
+**Un modèle n'apparaît que dans un seul espace.** Le studio devine à quelle famille un modèle
+appartient d'après ce qu'il sait recevoir et rendre : un modèle qui rend une vidéo est dans
+l'espace Vidéo, un modèle qui rend un son dans l'espace Audio. Si vous cherchez un modèle et ne
+le trouvez pas, la première question à se poser est **« suis-je dans le bon espace ? »**.
+
+Un cas surprend souvent : **les agrandisseurs sont dans l'espace Image**, parce qu'ils reçoivent
+une image et rendent une image. Cherchez `upscale`, ou filtrez sur le tag `image-upscale`. Il n'y
+a pas d'espace « Agrandissement » — voir [Ce qui n'existe pas encore](18-limites.md).
+
 **Les vignettes ne sont pas toutes les mêmes.** La plupart des modèles publics n'ont pas
 d'image de présentation. Le studio affiche alors l'un de leurs exemples de génération à la
 place. C'est représentatif de ce que le modèle sait faire, mais ce n'est pas une carte de visite

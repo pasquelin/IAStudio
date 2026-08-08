@@ -164,6 +164,15 @@ time" to choose at each generation.
 
 ## Two details worth knowing
 
+**A model appears in one workspace only.** The studio works out which family a model belongs to
+from what it takes in and gives back: a model that returns a video is in the Video workspace, a
+model that returns a sound is in the Audio workspace. If you are hunting for a model and cannot
+find it, the first question to ask is **"am I in the right workspace?"**.
+
+One case surprises people regularly: **upscalers are in the Image workspace**, because they take
+an image and return an image. Search for `upscale`, or filter on the `image-upscale` tag. There is
+no "Upscaling" workspace — see [What does not exist yet](18-limits.md).
+
 **The thumbnails are not all the same kind.** Most public models have no presentation image. The
 studio then shows one of their generation samples instead. It is representative of what the model
 can do, but it is not an official calling card.

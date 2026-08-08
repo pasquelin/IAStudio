@@ -28,14 +28,25 @@ raking orange light over everything in front of it.
 
 ## Three ways to get a sky
 
+**First, open a sky document** with the `+` button on the left rail. The three paths below fill an
+open tab; none of them creates one.
+
 | Path | How |
 |---|---|
-| **Double-click** | on a panoramic asset in the shelf |
-| **Drag and drop** | from the shelf onto the preview |
+| **Double-click** | on a picture in the shelf, with the sky tab in front |
+| **Drag and drop** | from the shelf onto the preview, anywhere on it |
 | **Generate** | pick a sky model and launch a generation: it lands **by itself** in the document it started from |
 
-While no image is placed, the preview shows: "No skybox. Generate one or drop an equirectangular
-panorama."
+While no image is placed, the preview shows: "No skybox yet. Generate one or drop an
+equirectangular panorama."
+
+> **Only things that can be looked at are accepted**: a picture, a material or another sky,
+> provided it is on your disk. A sound or a video dropped there is ignored in silence — nothing
+> breaks, nothing changes.
+>
+> On the other hand, **any picture goes through**, not only a true panorama. An ordinary photo
+> placed as a sky will look strangely stretched: that is normal, the workspace expects an
+> *equirectangular* image, twice as wide as it is tall.
 
 > **Sky models are recognised by a tag.** They answer like ordinary image models, and nothing in
 > their capabilities says they make panoramas: it is the `sc:skybox` tag that distinguishes them.

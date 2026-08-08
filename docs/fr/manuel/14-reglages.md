@@ -139,6 +139,17 @@ L'unicité est vérifiée **sans tenir compte de la casse** : « Studio » et «
 nom. C'est voulu — le sélecteur n'affiche que le nom, et deux entrées qui se lisent pareil vous
 feraient choisir à l'aveugle.
 
+**Deux autres messages peuvent apparaître ici**, plus rares, et ils ne se règlent pas de la même
+façon :
+
+| Message | Ce qui s'est passé | Quoi faire |
+|---|---|---|
+| « Ce compte n'existe plus. » | vous agissez sur un compte supprimé entre-temps — par une autre fenêtre du studio, le plus souvent | fermez les réglages et rouvrez-les : la liste se relit |
+| « Le compte n'a pas pu être enregistré. » | l'écriture a échoué sans que le studio sache dire pourquoi | réessayez une fois ; si cela recommence, voir [Quand ça coince](16-depannage.md) |
+
+Le premier n'est jamais votre faute et ne perd rien. Le second est le seul message de cette
+section qui mérite un deuxième essai.
+
 > **Les champs sont vidés même en cas de succès.** Ce n'est pas un bug. L'écran que vous regardez
 > n'a jamais le droit de connaître votre clé : il sait seulement si elle marche. Une fois envoyée,
 > elle est chiffrée par le trousseau du système d'exploitation — le même coffre-fort que celui qui
@@ -166,18 +177,25 @@ Trois boutons par ligne :
 | **Renommer** | remplace la ligne par un champ de saisie, avec **Enregistrer** et **Annuler** |
 | **Supprimer** | retire le compte et sa clé |
 
+### Le compte venu d'un fichier
+
+Si vous avez lancé le studio depuis son code source avec un fichier `secrets/.env`, ces
+identifiants apparaissent **comme un compte ordinaire** dans la liste, avec une étiquette grise
+`secrets/.env`.
+
+Il s'utilise comme les autres — le bouton **Utiliser ce compte** fonctionne — mais il n'a **ni
+Renommer ni Supprimer** : ces deux boutons sont absents, pas grisés.
+
+**C'est plus honnête qu'un bouton qui refuse.** Ce compte se modifie en éditant le fichier, et un
+bouton qui ne pourrait que dire non vaut moins que pas de bouton du tout. Si vous en croisez un par
+un autre chemin, le studio le dit : « Ce compte vient de `secrets/.env` : modifiez ce fichier pour
+le renommer ou le retirer. »
+
 ### Quand la liste est vide
 
-Deux messages possibles, et ils ne veulent pas dire la même chose :
+> « Aucun compte pour l'instant. Ajoutez une clé API pour accéder à la bibliothèque Scenario. »
 
-| Message | Ce que ça veut dire |
-|---|---|
-| « Aucun compte pour l'instant. Ajoutez une clé API pour accéder à la bibliothèque Scenario. » | rien n'est enregistré, et rien ne fonctionne |
-| « Aucun compte enregistré : les identifiants de développement (`secrets/.env`) sont utilisés. » | rien n'est enregistré, mais le studio fonctionne quand même |
-
-Le second ne concerne que qui a lancé le studio depuis son code source avec un fichier
-`secrets/.env`. Dire « aucun compte » sans plus de précision laisserait un studio parfaitement
-opérationnel avoir l'air mal configuré.
+Rien n'est enregistré, et rien ne fonctionne : ni catalogue, ni génération.
 
 ### Si le trousseau est verrouillé
 
@@ -302,6 +320,12 @@ arrivez dans cet espace.
 
 Réglez-le une fois que vous avez trouvé le modèle avec lequel vous travaillez le plus : cela
 enlève un clic à chaque session.
+
+> **La sous-section Agrandissement est vide, et ce n'est pas une panne.** Sa liste ne propose que
+> « Demander à chaque fois ». Aucun modèle n'est rangé dans la famille *agrandissement* — un
+> agrandisseur reçoit une image et rend une image, il est donc classé avec les modèles d'image, où
+> vous pouvez l'utiliser normalement. Le réglage est en avance sur l'espace qui l'utilisera — voir
+> [Ce qui n'existe pas encore](18-limites.md).
 
 ---
 

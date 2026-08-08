@@ -183,8 +183,20 @@ toute seule, et vous pouvez faire autre chose pendant ce temps.
 Quand la ligne affiche **Terminée**, votre image est arrivée. Elle est rangée dans le panneau
 **Assets** — l'étagère du projet — et sur votre disque, dans `assets/img/`.
 
-**Double-cliquez sur la vignette** : l'image s'ouvre dans un onglet, au centre. Vous êtes dans
-l'espace Image, avec ses outils et ses calques. À vous de jouer.
+**Cliquez sur la vignette** : l'**Inspecteur**, à droite, montre tout ce qu'on sait d'elle — sa
+taille, son poids, le modèle qui l'a faite, le prompt que vous avez écrit, et la *graine* qui
+permettra d'y revenir.
+
+Le bouton **Révéler dans le gestionnaire de fichiers**, dans l'inspecteur, ouvre le dossier où
+elle se trouve. C'est de là que vous l'enverrez à qui vous voudrez.
+
+> **Non, on ne la retouche pas encore ici.** L'espace Image sait peindre sur une toile neuve,
+> mais il ne sait pas encore ouvrir une image existante — ni la vôtre, ni celle qu'il vient de
+> générer. C'est la plus grande limite du studio aujourd'hui, elle est expliquée en entier dans
+> [Ce qui n'existe pas encore](18-limites.md).
+>
+> Pour transformer cette image sans quitter le studio : reprenez le panneau **Génération** avec
+> un modèle *image vers image*, et donnez-lui votre image comme point de départ.
 
 <!-- CAPTURE : le panneau Génération avec le formulaire d'un modèle, et la ligne d'état en
      dessous avec une tâche en cours. Vers ../../images/generate.png -->
@@ -198,7 +210,8 @@ l'espace Image, avec ses outils et ses calques. À vous de jouer.
 | Comprendre chaque morceau de l'écran | [La fenêtre, expliquée](03-la-fenetre.md) |
 | Mieux choisir son modèle | [Trouver un modèle](05-modeles.md) |
 | Mieux écrire ses prompts | [Générer](06-generer.md) |
-| Retoucher l'image obtenue | [Espace Image](08-espace-image.md) |
+| Peindre et dessiner | [Espace Image](08-espace-image.md) |
+| Savoir ce que le studio ne sait pas encore faire | [Ce qui n'existe pas encore](18-limites.md) |
 | Faire le tour des réglages | [Tous les réglages](14-reglages.md) |
 
 ---

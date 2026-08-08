@@ -7,18 +7,23 @@
 ## What this software is for
 
 You describe what you want, in words. A distant computer makes it. You get the result on your own
-machine, and you retouch it.
+machine, and you carry on working with it.
 
 That is the whole idea. What Scenario Studio adds, compared to a website where you type a sentence
 and download an image, is **everything that comes after**:
 
 - your creations are **filed** in a project, on your disk, not in an overflowing "Downloads"
   folder;
-- you can **retouch them** without switching applications — paint over them, crop, trim a sound,
-  edit a video;
-- you can **assemble them** — put an image on a 3D object, drop a video into an edit, build a sky
-  around a scene;
+- you can **assemble them** without switching applications — put a material on a 3D object, drop
+  a video into an edit, build a sky, trim a sound;
+- you can **find out how you made them** — the model, the prompt and the seed stay attached to
+  each file, and one button replays them;
 - **nothing leaves**: your files stay with you.
+
+> **One thing the studio cannot do yet**, and it is better known straight away: **it does not
+> reopen a picture for retouching.** You can paint on a fresh canvas, but you cannot pick up a
+> generated image with a brush. The complete and honest list of these gaps is the chapter
+> [What does not exist yet](18-limits.md) — it exists to be read, not hidden.
 
 ## Six ways of working
 
@@ -134,7 +139,7 @@ below. You can hide one, move it up, move it down, delete it. That is what makes
 | | |
 |---|---|
 | **A computer** | macOS, Windows or Linux |
-| **An internet connection** | to generate. To retouch what you already have, no |
+| **An internet connection** | to generate. To work on what you already have, no |
 | **A Scenario account** | with an API key and an API secret — see [First steps](02-first-steps.md) |
 
 **What you do not need**: to know how to draw, how to program, or what a neural network is. The
@@ -147,7 +152,7 @@ studio is made to be driven, not understood.
 Better said now — it saves you looking.
 
 - **It does not work offline to generate.** The making happens on Scenario's servers. Without a
-  connection you can open, retouch, edit and save, but not create new content.
+  connection you can open, edit, adjust and save, but not create new content.
 - **It is not free to use.** Every generation consumes credit on your Scenario account. The studio
   does not bill you — it only forwards — but your account does count.
 - **It does not replace Photoshop, Blender or Premiere.** It does a useful part of each, in one

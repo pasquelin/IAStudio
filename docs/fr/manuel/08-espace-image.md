@@ -6,15 +6,35 @@ L'espace où l'on peint, gomme, recadre et empile des calques.
 
 ---
 
-## Ouvrir une image
+## Ouvrir un document image
 
-Trois façons :
+**Une seule façon, et il faut la connaître : le bouton `+` du rail gauche.** Il crée un document
+**neuf et vide** : une toile de **1024 × 1024 pixels**, avec un unique calque blanc nommé
+**Background**, déjà sélectionné.
 
-| Geste | Résultat |
-|---|---|
-| **Double-clic** sur une image dans l'étagère Assets | elle s'ouvre dans un onglet |
-| Le bouton **+** du rail gauche | un document neuf, vide |
-| Une génération qui aboutit | l'image arrive dans l'étagère, à vous de l'ouvrir |
+> Ce blanc est un **vrai calque**, pas une couleur de fond. Vous pouvez le masquer, le rendre
+> transparent ou le supprimer comme n'importe quel autre — le damier de transparence apparaît
+> alors dessous.
+
+> ### ⚠️ On ne peut pas encore ouvrir une image existante ici
+>
+> C'est la limite la plus déroutante du studio, et elle mérite d'être dite tout de suite plutôt
+> que découverte après vingt minutes d'essais.
+>
+> **Une image de votre étagère — générée ou importée — ne peut pas entrer dans un document
+> image.** Le double-clic ne l'ouvre pas. Le glisser-déposer sur la toile ne fait rien. Il n'y a
+> pas de menu « Ouvrir ».
+>
+> L'espace Image sait donc **peindre depuis rien**, pas **retoucher quelque chose**. C'est écrit
+> noir sur blanc dans [Ce qui n'existe pas encore](18-limites.md), avec les autres.
+>
+> **En attendant :** pour voir une image en grand, sélectionnez-la dans l'étagère et regardez-la
+> dans l'**Inspecteur**. Pour la retoucher, il faut passer par un autre logiciel, ou la
+> re-générer autrement — par exemple avec un modèle *image vers image*, qui prend votre image en
+> entrée et en rend une nouvelle (voir [Générer](06-generer.md)).
+
+Ce que le bouton `+` demande, lui, est simple : un projet doit être ouvert. Sans projet, il est
+gris — il n'y aurait nulle part où écrire le document.
 
 ---
 

@@ -83,16 +83,42 @@ The message says which of the three cases you are in, because they call for diff
 | Gesture | Effect |
 |---|---|
 | **Click** | selects — the Inspector, on the right, shows its information |
-| **Double-click** | opens the asset in a tab, in the workspace that can handle it |
+| **Double-click** | sends the asset into **the tab in front of you** |
 | **Drag and drop** | drops the asset wherever you release it |
 
-What drag and drop can do today:
+### Double-click does not do what you think
+
+**It never opens a new tab.** This is the point that surprises everybody once, and only once:
+double-click **sends** the asset into the document already in front.
+
+What that gives you, depending on which tab is in front:
+
+| The tab in front is… | Double-clicking an asset… |
+|---|---|
+| a **sky** (Skyboxes workspace) | sets the picture as the sky — only pictures from the project are accepted |
+| a **sound** (Audio workspace) | loads that take into the editor, if it is indeed a sound |
+| a **sequence** (Video workspace) | drops a clip onto a track, at the playhead |
+| an **image**, a **3D scene**, a **texture** | **nothing at all** |
+| no tab open | **nothing at all** |
+
+**Nothing warns you when nothing happens.** No message, no visible refusal: the double-click is
+simply inert. If you double-click and nothing moves, the question to ask is **"which tab is in
+front?"**, never "is this asset broken?".
+
+> **To open a document, use the `+` button on the left rail**, in the workspace you want. It
+> creates a fresh document. Double-click is then how you feed material into it — where the
+> workspace can take any.
+
+### What drag and drop can do today
 
 | You drag… | Onto… | Result |
 |---|---|---|
 | a video or a sound | the **timeline** | a clip on a track |
 | an image | a **texture** preview | it becomes the base colour |
-| a panoramic image | the **Skyboxes** workspace | it becomes the sky |
+| a panoramic image | a **sky** preview | it becomes the sky |
+
+**Those three, and nothing else.** The Image workspace canvas and the 3D viewport accept no
+drops: releasing an asset over them does nothing.
 
 ---
 

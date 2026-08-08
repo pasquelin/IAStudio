@@ -200,6 +200,18 @@ Quatre par défaut.
 > **Une clé API invalide n'est jamais réessayée.** Réessayer ne la corrigerait pas. Le studio
 > distingue ce qui vaut la peine d'être retenté de ce qui ne le vaut pas.
 
+### Changer de compte n'interrompt pas une génération en cours
+
+**Une tâche finit sur le compte qui l'a lancée.** Elle retient sa clé au moment où vous appuyez sur
+Générer, et la garde jusqu'au bout — y compris pour déposer le résultat dans vos assets.
+
+Vous pouvez donc lancer une vidéo de dix minutes, basculer sur un autre compte pour aller chercher
+un modèle, et la première continue tranquillement.
+
+> Ce qui change, en revanche, c'est **le catalogue** : passer d'un compte à l'autre vide les
+> modèles et les assets distants du précédent. C'est voulu — ce sont deux bibliothèques
+> différentes, et les mélanger vous ferait choisir un modèle auquel votre clé n'a pas accès.
+
 ---
 
 ## Quand le résultat arrive
@@ -209,7 +221,22 @@ La ligne passe à **Terminée**, et l'asset apparaît :
 - dans le panneau **Assets** — l'étagère du projet ;
 - sur votre disque, dans `assets/img/`, `assets/vid/`, `assets/aud/`… selon son type.
 
-**Double-cliquez** sur la vignette pour l'ouvrir dans un onglet et la retoucher.
+**Ce que vous pouvez en faire ensuite dépend de son type**, et c'est là que le studio surprend le
+plus souvent :
+
+| Le résultat est… | Ce qui est possible aujourd'hui |
+|---|---|
+| une **image** | la voir dans l'Inspecteur, la reprendre comme départ d'une autre génération, ou s'en servir comme **ciel** ou comme **couleur de base** d'une matière |
+| une **vidéo** ou un **son** | le poser sur une **timeline** (espace Vidéo), ou l'éditer (espace Audio) |
+| un **panorama** | le poser dans un document **ciel** (espace Skyboxes) |
+| un **objet 3D** | rien d'utile — le studio ne sait pas encore ouvrir un maillage |
+
+**Rappel du geste**, parce qu'il déroute : le double-clic **n'ouvre pas d'onglet**, il envoie
+l'asset dans l'onglet déjà en avant. Ouvrez d'abord le document qui doit le recevoir, avec le
+bouton `+` du rail gauche. Voir [Les assets](07-assets.md).
+
+> **Une image générée ne peut pas être retouchée dans l'espace Image.** Cette fonction n'existe
+> pas encore — voir [Ce qui n'existe pas encore](18-limites.md).
 
 <!-- CAPTURE : le panneau Génération avec le formulaire d'un modèle, et la ligne d'état en
      dessous avec une tâche en cours. Vers ../../images/generate.png -->

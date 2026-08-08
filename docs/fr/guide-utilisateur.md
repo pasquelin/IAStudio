@@ -18,7 +18,7 @@ nécessaire, il est expliqué à l'endroit où il apparaît, puis rappelé dans 
 Scenario Studio est un logiciel qui s'installe sur votre ordinateur. Il sait **fabriquer** des
 images, des vidéos, des sons, des objets en 3D, des matières et des ciels — en demandant à des
 modèles d'intelligence artificielle, en ligne, chez [Scenario](https://www.scenario.com). Et il
-sait ensuite **les retoucher, les assembler et les ranger**, chez vous, sans les renvoyer nulle
+sait ensuite **les assembler, les régler et les ranger**, chez vous, sans les renvoyer nulle
 part.
 
 ---
@@ -62,6 +62,7 @@ part.
 | 16 | [Quand ça coince](manuel/16-depannage.md) | Les messages, ce qu'ils veulent dire, quoi faire |
 | 17 | [Glossaire](manuel/17-glossaire.md) | Tous les mots du logiciel, expliqués simplement |
 | 18 | [Ce qui n'existe pas encore](manuel/18-limites.md) | Les boutons gris, les promesses en cours, ce qu'il ne faut pas attendre |
+| 19 | [Comment faire pour…](manuel/19-recettes.md) | Seize recettes pas à pas, du premier clic au résultat |
 
 ---
 
@@ -100,7 +101,8 @@ Vous pouvez continuer à travailler pendant ce temps.
 
 **7. Récupérez le résultat.**
 Quand la tâche passe à « Terminée », l'image arrive dans le panneau **Assets** — l'étagère du
-projet. Double-cliquez dessus pour l'ouvrir et la retoucher.
+projet — et sur votre disque, dans le dossier `assets/img/`. Cliquez dessus : l'**Inspecteur**,
+à droite, montre son modèle, son prompt et sa graine, et sait ouvrir le dossier qui la contient.
 
 C'est tout. Le reste du manuel détaille chacune de ces sept étapes, et les cinq autres espaces.
 

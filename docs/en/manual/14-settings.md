@@ -135,6 +135,16 @@ Uniqueness is checked **ignoring case**: "Studio" and "studio" are the same name
 — the switcher shows nothing but the name, and two entries that read the same would leave you
 choosing blind.
 
+**Two other messages can appear here**, more rarely, and they are not fixed the same way:
+
+| Message | What happened | What to do |
+|---|---|---|
+| "This account no longer exists." | you are acting on an account deleted in the meantime — usually by another studio window | close settings and reopen them: the list is read again |
+| "The account could not be saved." | the write failed without the studio being able to say why | try once more; if it recurs, see [When something goes wrong](16-troubleshooting.md) |
+
+The first is never your fault and loses nothing. The second is the only message in this section
+that deserves a second attempt.
+
 > **The fields are cleared even on success.** That is not a bug. The screen you are looking at is
 > never allowed to know your key: it only knows whether it works. Once sent, it is encrypted by the
 > operating system's keychain — the same vault that holds your passwords — and filed out of the
@@ -162,18 +172,24 @@ Three buttons per row:
 | **Rename** | replaces the row with a text field, with **Save** and **Cancel** |
 | **Remove** | deletes the account and its key |
 
+### The account that comes from a file
+
+If you launched the studio from its source code with a `secrets/.env` file, those credentials appear
+as **an ordinary account** in the list, with a grey `secrets/.env` badge.
+
+It is used like the others — the **Use this account** button works — but it has **no Rename and no
+Remove**: those two buttons are absent, not greyed out.
+
+**That is more honest than a button that refuses.** This account is changed by editing the file, and
+a button that could only say no is worth less than no button at all. If you reach it by some other
+route, the studio says so: "This account comes from `secrets/.env`: edit that file to rename or
+remove it."
+
 ### When the list is empty
 
-Two possible messages, and they do not mean the same thing:
+> "No account yet. Add an API key to reach the Scenario library."
 
-| Message | What it means |
-|---|---|
-| "No account yet. Add an API key to reach the Scenario library." | nothing is stored, and nothing works |
-| "No account stored: the development credentials (`secrets/.env`) are in use." | nothing is stored, but the studio works anyway |
-
-The second only concerns whoever launched the studio from its source code with a `secrets/.env`
-file. Saying "no account" and nothing more would leave a perfectly working studio looking
-misconfigured.
+Nothing is stored, and nothing works: no catalogue, no generation.
 
 ### If the keychain is locked
 
@@ -296,6 +312,12 @@ workspace.
 | *a model* | that model is already in place when the workspace opens |
 
 Set it once you have found the model you work with most: it saves a click every session.
+
+> **The Upscaling sub-section is empty, and that is not a fault.** Its list offers nothing but
+> "Ask every time". No model is ever filed under the *upscale* family — an upscaler takes an image
+> and returns an image, so it is filed with the image models, where you can use it normally. The
+> setting is ahead of the workspace that will use it — see
+> [What does not exist yet](18-limits.md).
 
 ---
 

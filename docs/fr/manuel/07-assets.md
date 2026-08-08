@@ -85,16 +85,42 @@ Le message dit lequel des trois cas vous êtes, parce qu'ils appellent des répo
 | Geste | Effet |
 |---|---|
 | **Clic** | sélectionne — l'Inspecteur, à droite, montre ses informations |
-| **Double-clic** | ouvre l'asset dans un onglet, dans l'espace qui sait le traiter |
+| **Double-clic** | envoie l'asset dans **l'onglet ouvert devant vous** |
 | **Glisser-déposer** | dépose l'asset là où vous le lâchez |
 
-Ce que le glisser-déposer sait faire aujourd'hui :
+### Le double-clic ne fait pas ce qu'on croit
+
+**Il n'ouvre jamais de nouvel onglet.** C'est le point qui surprend tout le monde une fois, et une
+seule : le double-clic **envoie** l'asset dans le document déjà en avant.
+
+Ce que ça donne, selon l'onglet qui est devant :
+
+| L'onglet en avant est… | Un double-clic sur un asset… |
+|---|---|
+| un **ciel** (espace Skyboxes) | pose l'image comme ciel — seules les images du projet sont acceptées |
+| un **son** (espace Audio) | charge cette prise dans l'éditeur, si c'est bien un son |
+| une **séquence** (espace Vidéo) | pose un clip sur une piste, à la tête de lecture |
+| une **image**, une **scène 3D**, une **texture** | **rien du tout** |
+| aucun onglet ouvert | **rien du tout** |
+
+**Rien ne prévient quand il ne se passe rien.** Pas de message, pas de refus visible : le
+double-clic est simplement sans effet. Si vous double-cliquez et que rien ne bouge, la question à
+se poser est **« quel onglet est devant ? »**, jamais « l'asset est-il abîmé ? ».
+
+> **Pour ouvrir un document, c'est le bouton `+` du rail gauche**, dans l'espace voulu. Il crée un
+> document neuf. Le double-clic sert ensuite à y faire entrer de la matière — quand l'espace sait
+> en recevoir.
+
+### Ce que le glisser-déposer sait faire aujourd'hui
 
 | Vous glissez… | Vers… | Résultat |
 |---|---|---|
 | une vidéo ou un son | la **timeline** | un clip sur une piste |
 | une image | l'aperçu d'une **texture** | elle devient la couleur de base |
-| une image panoramique | l'espace **Skyboxes** | elle devient le ciel |
+| une image panoramique | l'aperçu d'un **ciel** | elle devient le ciel |
+
+**Ces trois-là, et rien d'autre.** La toile de l'espace Image et la vue de l'espace 3D
+n'acceptent aucun dépôt : lâcher un asset dessus ne fait rien.
 
 ---
 

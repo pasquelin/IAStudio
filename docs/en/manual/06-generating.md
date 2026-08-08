@@ -194,6 +194,18 @@ Four by default.
 > **An invalid API key is never retried.** Retrying would not fix it. The studio distinguishes what
 > is worth another attempt from what is not.
 
+### Switching accounts does not interrupt a running generation
+
+**A job finishes on the account that launched it.** It captures its key the moment you press
+Generate and keeps it to the end — including for dropping the result into your assets.
+
+So you can launch a ten-minute video, switch to another account to go and find a model, and the
+first one carries on quietly.
+
+> What does change is **the catalogue**: moving from one account to another clears the previous
+> one's remote models and assets. That is intended — they are two different libraries, and mixing
+> them would have you choose a model your key cannot reach.
+
 ---
 
 ## When the result arrives
@@ -203,7 +215,22 @@ The line turns to **Done**, and the asset appears:
 - in the **Assets** panel — the project's shelf;
 - on your disk, in `assets/img/`, `assets/vid/`, `assets/aud/`… depending on its type.
 
-**Double-click** the thumbnail to open it in a tab and retouch it.
+**What you can then do with it depends on its type**, and this is where the studio surprises
+people most often:
+
+| The result is… | What is possible today |
+|---|---|
+| a **picture** | see it in the Inspector, use it as the starting point of another generation, or set it as a **sky** or as a material's **base colour** |
+| a **video** or a **sound** | drop it on a **timeline** (Video workspace), or edit it (Audio workspace) |
+| a **panorama** | place it in a **sky** document (Skyboxes workspace) |
+| a **3D object** | nothing useful — the studio cannot open a mesh yet |
+
+**A reminder about the gesture**, because it misleads: double-click **does not open a tab**, it
+sends the asset into the tab already in front. Open the document meant to receive it first, with
+the `+` button on the left rail. See [Assets](07-assets.md).
+
+> **A generated picture cannot be retouched in the Image workspace.** That feature does not exist
+> yet — see [What does not exist yet](18-limits.md).
 
 <!-- SCREENSHOT: the Generate panel with a model's form, and the status line below with a running
      generation. Save to ../../images/generate.png -->

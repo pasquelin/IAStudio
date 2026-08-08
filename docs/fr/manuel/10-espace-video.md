@@ -40,16 +40,28 @@ voir ici. »
 
 ## Poser un premier clip
 
-**Glissez un asset depuis l'étagère et lâchez-le sur la timeline.**
+Deux gestes, et **ils ne posent pas le clip au même endroit** :
 
-Le studio choisit alors :
+| Geste | Sur quelle piste | À quel instant |
+|---|---|---|
+| **Glisser-déposer** depuis l'étagère | celle que vous survolez, **exactement** | là où vous lâchez |
+| **Double-clic** sur l'asset | le studio choisit | à la **tête de lecture** |
 
-- **la piste** — un son va sur une piste son, tout le reste sur une piste image. Les pistes
-  verrouillées et muettes sont évitées, parce qu'un dépôt qui y atterrit a l'air de n'avoir rien
-  fait ;
+**Le glisser-déposer vous obéit au pixel près.** C'est vous qui visez la piste, donc c'est vous
+qui décidez — y compris de viser une piste où le clip ne s'entendra pas. Lâcher sur la **règle des
+temps**, en haut, ou en dehors de toute piste, **ne fait rien** : il n'y a pas de piste sous le
+pointeur.
+
+**Le double-clic choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
+le reste sur une piste image, et les pistes **verrouillées** ou **rendues muettes** sont évitées —
+un clip qui y atterrirait aurait l'air de n'avoir rien fait.
+
+Dans les deux cas, le studio décide de deux choses :
+
 - **la durée** — celle du média. Une image fixe, ou un média dont la durée est inconnue, dure
   **5 secondes** par défaut ;
-- **la position** — calée sur une image entière, jamais entre deux.
+- **le calage** — sur une image entière, jamais entre deux. Vous pouvez viser au pixel, le clip
+  se range tout seul sur l'image la plus proche.
 
 ---
 
@@ -180,7 +192,7 @@ elle qui est lue pendant que vous montez, ce qui permet de naviguer dans un rush
 saccade.
 
 Si ffmpeg est absent, il n'y a pas de proxy, et la navigation dans les gros fichiers devient
-laborieuse. Voir [Les assets](07-assets.md#si-ffmpeg-est-absent).
+laborieuse. Voir [Les assets](07-assets.md#si-la-préparation-vidéo-est-indisponible).
 
 **À l'arrêt, le moniteur ne dessine rien.** Une image fixe repeinte soixante fois par seconde
 consomme autant qu'une lecture — pour rien. Le moniteur s'arrête dès que la lecture s'arrête, ce qui

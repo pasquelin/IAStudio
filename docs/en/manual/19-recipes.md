@@ -1,0 +1,337 @@
+# 19. How do I…
+
+[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md)
+
+The previous chapters explain **every piece** of the studio. This one does the opposite: it
+starts from what you want to end up with, and gives the whole path, from the first click to the
+result.
+
+Each recipe stands on its own. You need not read anything first.
+
+---
+
+## The three things to have before any recipe
+
+They recur everywhere, so they are said once here.
+
+| You need | How to check | If it is missing |
+|---|---|---|
+| **A connected account** | the dot is **green**, top right of the window | [First steps ▸ step 3](02-first-steps.md) |
+| **An open project** | its name is written bottom left, in the status line | `⌘N` to create one |
+| **The right workspace** | the six tabs, at the top of the window | click the one you need |
+
+**The third is the one people forget.** Half the studio's "it does not work" moments are the
+right gesture made in the wrong workspace.
+
+---
+
+## The gesture that misleads everybody
+
+Before the recipes, one rule that runs through all of them.
+
+**Double-clicking an asset does not open a tab.** It sends the asset into the tab **already open
+in front of you**. With no tab, nothing happens, and nothing says so.
+
+So in every recipe below, the order is **always** the same:
+
+```
+1. the right workspace   (the tabs, at the top)
+2. the + button          (the left rail — it creates the document)
+3. only then, the asset
+```
+
+Remember those three lines and nothing will block you.
+
+---
+
+# Making
+
+## Make a picture from a sentence
+
+**This is the basic path**, detailed in [First steps](02-first-steps.md). In short:
+
+1. **Image** workspace;
+2. **Models** panel, on the right: click a thumbnail;
+3. **Generate** panel, just below: write your sentence in the **prompt**;
+4. **Generate**. The status line, bottom right, follows the progress;
+5. the result arrives in the **Assets** panel, and in `assets/img/` on your disk.
+
+**The catch.** The Generate button is greyed out until a project is open. The message "Open a
+project to generate." appears above the form.
+
+---
+
+## Make a variant of a picture I already have
+
+This is called **image to image**: you give a starting picture, the model returns another one,
+inspired by it.
+
+1. **Image** workspace;
+2. in the **Models** panel, open **More filters** → **Capability** → tick **Image to image**;
+3. choose a model from what remains;
+4. in the form, an **image** field appears: give it your starting picture;
+5. write what you want to end up with, and set **strength** if the model offers it:
+   **0 = almost unchanged, 1 = unrecognisable**. Start around 0.5;
+6. **Generate**.
+
+**This is today the only way to transform a picture inside the studio**, since the Image
+workspace cannot reopen an existing image.
+
+---
+
+## Enlarge a picture
+
+The studio has no "upscale" button. But the models that do it are there, filed with the other
+image models — an upscaler takes an image and returns an image, so it belongs to the Image
+family.
+
+1. **Image** workspace;
+2. in the **Models** panel, type `upscale` into the search — or open **More filters** → **Tag**
+   → `image-upscale`;
+3. pick one, give it your picture, **Generate**.
+
+**The catch.** The **Settings ▸ Generation ▸ Upscaling** sub-section is always empty and serves
+no purpose today: it is waiting for a workspace that does not exist yet. Do not try to fill it.
+
+---
+
+## Make a 360° sky
+
+A *sky* — or *skybox* — is a picture that surrounds you completely. It serves as scenery **and**
+as light.
+
+1. **Skyboxes** workspace;
+2. the **+** button on the left rail: an empty sky document opens;
+3. **Models** panel: it shows only **three**, and that is correct — they are the only ones that
+   make panoramas;
+4. write your prompt, **Generate**;
+5. **the generation lands by itself** in the document it started from. You have nothing to do.
+
+Then **click and drag** in the preview to turn your head, and use the **Skybox** panel, on the
+right, to set exposure and rotation.
+
+**The catch.** Three of the four view buttons — equirectangular, cross, faces — draw nothing yet.
+Only the 360 view works.
+
+---
+
+## Make a material for a 3D object
+
+A *material* (or *texture*) is not a picture: it is a surface you judge **on a lit object**, not
+flat.
+
+1. **Textures** workspace;
+2. the **+** button on the left rail;
+3. **drag a picture from the project onto the preview** — a blue frame confirms the drop will be
+   taken. It becomes the **base colour**;
+4. choose the preview shape — **sphere**, box, cylinder, plane or torus knot — and look at it
+   under the studio lighting. The **sphere** shows the light best, the **plane** shows the
+   pattern's repetition best;
+5. `⌘S` **saves**. This is one of only two document kinds that can.
+
+**The catch.** Only the base colour can be placed today. The other seven channels — normal,
+roughness, metalness… — are explained in [chapter 12](12-textures-workspace.md) but not wired up
+yet.
+
+---
+
+## Make a still picture move
+
+1. **Video** workspace;
+2. **Models** panel → **More filters** → **Capability** → **Image to video**;
+3. pick a model, give it your picture, describe the motion you want;
+4. **Generate** — allow longer than for a picture: a few minutes is normal;
+5. the clip arrives in **Assets**.
+
+**To see it large**: the **+** button on the left rail to open a sequence, then drag the clip
+onto the timeline.
+
+---
+
+## Make music or a sound effect
+
+1. **Audio** workspace;
+2. **Models** panel: the publishers on offer are ElevenLabs, Google, Bytedance;
+3. describe the sound you want, **Generate**;
+4. the sound arrives in **Assets**.
+
+**To hear it and shape it:** the **+** button on the left rail — a sound tab opens — then
+**double-click** your sound in the shelf. The waveform appears.
+
+---
+
+## Compose a small 3D scene
+
+1. **3D** workspace;
+2. the **+** button on the left rail: a fresh scene, with its ground grid;
+3. **it is black, and that is normal** — there is no light. The Lights panel says so;
+4. **Lights** panel → **+** → **Directional**. The scene lights up;
+5. add a weak **Ambient** so the shadows are not completely black. That is the classic recipe;
+6. **Meshes** panel → **+** → a **Sphere**, for instance;
+7. `G` to move it, `R` to rotate it, `S` to scale it, `F` to frame it;
+8. `⌘S` **saves**.
+
+**To fly through the scene:** hold the **right mouse button** and use `W` `A` `S` `D` (`Z` `Q`
+`S` `D` on a French keyboard — the studio listens to the key's position, not the letter). `E`
+goes up, `Q` goes down, left `⇧` speeds up.
+
+---
+
+# Assembling
+
+## Edit two shots back to back
+
+1. **Video** workspace;
+2. the **+** button on the left rail: a fresh sequence;
+3. **drag** your first clip from the shelf, on the left, onto a picture track;
+4. drag the second **right after it** — it sticks to the first one's edge on its own;
+5. `Space` to play, `Home` to go back to the start.
+
+**To cut:** place the playhead, press `S`. To delete a clip: select it, `Del`.
+
+**The catch, and it is a serious one.** A sequence **does not save yet**. Closing the tab loses
+the edit — the clips stay in the project, but their arrangement is gone. And there is no export:
+the studio cannot yet write a final video file.
+
+---
+
+## Trim a sound and fade it in
+
+1. **Audio** workspace, the **+** button, then **double-click** your sound;
+2. drag the region's edges to **trim**;
+3. set a **fade in** and a **fade out**;
+4. the listen button compares against the original, before your edits.
+
+**The catch.** Nothing is written until you ask for it, and **swapping takes wipes your
+settings**: cuts are measured against the take that received them.
+
+---
+
+## Put an asset where it belongs
+
+The table to remember. There are **only three** possible drops, and double-click obeys a
+different rule again.
+
+| You want… | The gesture | You need, in front of you |
+|---|---|---|
+| a clip on an edit | drag onto the **timeline** | a sequence tab |
+| a picture as base colour | drag onto the **material preview** | a texture tab |
+| a picture as sky | drag onto the **sky preview** | a sky tab |
+
+The Image workspace canvas and the 3D viewport **accept no drops**.
+
+---
+
+# Filing, finding, carrying
+
+## Bring in my own files
+
+1. **Assets** panel → the **Import media** button, on its title row;
+2. choose your files. Accepted formats: video (`mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v`),
+   audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif` `tiff`
+   `exr`);
+3. a banner follows each file: Probing, Fingerprint, Proxy, Waveform, Ready.
+
+**What you need to know, and it has real consequences: the file is not copied.** The studio
+creates a **link** to where it sits. Moving, renaming or deleting the original **breaks the
+link**.
+
+**3D files (`.glb`, `.obj`, `.fbx`) and HDRIs (`.hdr`) cannot be imported.**
+
+---
+
+## Remake a picture that came out well
+
+1. click the picture in the **Assets** panel;
+2. look at the **Inspector**, on the right: if it knows the generation, it shows the **model**,
+   the **prompt** and the **seed**;
+3. the **Regenerate** button: the model and its parameters come back into the Generate panel,
+   ready to go again.
+
+**The principle to remember.** Same model + same prompt + **same seed** = same picture. Change
+the seed and you get a variant; keep it and change the prompt, and you explore around the same
+result.
+
+---
+
+## Carry my project to another machine
+
+A project is **an ordinary folder**. Copy it, that is all.
+
+1. find where it sits — the **Reveal in file manager** button in an asset's inspector;
+2. copy the whole folder: USB stick, disk, sync service, it makes no difference;
+3. on the other machine, `⌘O` and open it.
+
+**The catch.** **Imported** media are not inside the folder: they are links. Copy them
+separately — or better, copy them into the project folder **before** importing them.
+
+**Your settings do not follow**, and your API keys even less: they are encrypted by **your**
+session's keychain and unreadable anywhere else. On the new machine you will have to connect the
+account again.
+
+---
+
+## Work with two accounts
+
+Each API key carries **its own** Scenario project: its models, its assets, its credit.
+
+1. **Settings ▸ Account**: add a second one, with a name of its own;
+2. **Use this account** switches;
+3. quicker day to day: the account name, top right of the window, opens the list in one click.
+
+**What changes**: the model catalogue and the **remote** assets. **What does not change**: your
+local project's files, which are on your disk and belong to no account.
+
+**Good news**: a running generation **finishes on the account that launched it**. You can launch
+a ten-minute video, switch to go and find a model elsewhere, and the first one carries on
+quietly.
+
+---
+
+## Put the window back in order
+
+Menu **View ▸ Reset layout**. The panels return to their starting places, workspace by
+workspace.
+
+That command **deliberately has no shortcut**: you reach for it twice a year, and reserving a key
+for it would be a waste. You can assign one in **Settings ▸ Shortcuts**.
+
+---
+
+# What not to try
+
+Four known dead ends. They are not faults: they are features that do not exist yet, and nothing
+on screen says so at the moment you try.
+
+| You try to… | What happens | Why |
+|---|---|---|
+| **retouch a generated picture** in the Image workspace | nothing | the workspace cannot open an existing image |
+| **import a `.glb` or an `.hdr`** | it is refused | import only knows video, audio, image |
+| **export a video** or a picture | no button | export is not written |
+| **paint inside a selection** | it paints everywhere | selection draws but constrains nothing |
+
+All of it is spelled out, with nothing hidden, in
+[What does not exist yet](18-limits.md).
+
+---
+
+## The recap, on one page
+
+| I want… | Workspace | The path |
+|---|---|---|
+| a picture from a sentence | Image | Models → prompt → Generate |
+| a variant of a picture | Image | *Image to image* filter → give the picture |
+| a bigger picture | Image | search `upscale` in Models |
+| a 360° sky | Skyboxes | `+` → Generate, it lands by itself |
+| a material | Textures | `+` → drag a picture onto the preview → `⌘S` |
+| an animated shot | Video | *Image to video* filter → Generate |
+| a sound | Audio | Models → Generate, then `+` and double-click |
+| a 3D scene | 3D | `+` → a light **first**, then the objects → `⌘S` |
+| to edit two shots | Video | `+` → drag the clips onto the timeline |
+| to import my files | anywhere | Assets → Import media |
+| to remake the same picture | anywhere | Inspector → Regenerate |
+| to carry my project | — | copy the folder |
+
+---
+
+[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md)

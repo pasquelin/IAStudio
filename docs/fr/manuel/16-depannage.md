@@ -27,6 +27,18 @@ sont des panneaux qui vous disent ce qu'il leur manque pour se remplir.
 | « Aucun réglage ne correspond à cette recherche. » | idem, dans la fenêtre des réglages |
 | « Aucune action n'utilise cette touche : elle est libre. » | vous pouvez lui attribuer un raccourci |
 | « Ce document n'est plus ouvert. » | l'onglet a été fermé entre-temps |
+| « Aucun modèle dans cet espace. » | le catalogue est bien là, mais aucun modèle ne correspond à cet espace |
+| « Ouvrez une image pour voir ses calques. » | le panneau Calques attend un document image |
+| « Aucune maille. Ajoutez-en une pour commencer. » | la scène 3D est vide — le bouton **+** en pose une |
+| « Ouvrez une scène pour voir ses mailles. » | le panneau Mailles attend une scène 3D |
+| « Aucune lumière. La scène restera noire. » | il faut au moins une lumière pour voir quelque chose |
+| « Ouvrez une scène pour voir ses lumières. » | idem, pour le panneau Lumières |
+| « Ouvrez une scène pour inspecter ce qu'elle contient. » | l'Inspecteur attend une scène 3D |
+| « Sélectionnez un objet pour voir ses propriétés. » | la scène est là, rien n'est sélectionné |
+| « Sélectionnez un élément pour voir ses propriétés. » | la même chose, hors de la 3D |
+| « Sélectionnez un clip pour le voir ici. » | le moniteur Source attend une sélection |
+| « Aucune séquence ouverte. Créez-en une pour monter. » | la timeline attend un document séquence — bouton **+** |
+| « Ouvrez une skybox pour la régler. » | le panneau Skybox attend un document ciel |
 
 Aucune de ces phrases ne demande d'action de dépannage. Le reste du chapitre parle des vraies
 pannes.
@@ -303,6 +315,31 @@ vous-même. Dans les deux cas, le fichier peut être réimporté.
 
 Ceux-là sont les plus déroutants : rien ne s'écrit, mais quelque chose ne va pas.
 
+### « Je double-clique sur un asset et rien ne se passe »
+
+**C'est de loin le plus fréquent.** Et ce n'est ni un bug, ni un fichier abîmé.
+
+**La cause.** Le double-clic **n'ouvre jamais d'onglet** : il envoie l'asset dans l'onglet déjà
+en avant. S'il n'y a aucun onglet ouvert, ou si l'onglet en avant ne sait pas quoi faire de ce
+que vous lui envoyez, il ne se passe rien — et rien ne le dit.
+
+| Vous double-cliquez… | Il faut, devant vous… |
+|---|---|
+| une image, pour en faire un ciel | un onglet **ciel** ouvert (espace Skyboxes) |
+| un son, pour l'éditer | un onglet **son** ouvert (espace Audio) |
+| un média, pour le monter | un onglet **séquence** ouvert (espace Vidéo) |
+| une image, pour la retoucher | **rien à faire, ce n'est pas possible** — voir plus bas |
+
+**Quoi faire.**
+
+1. Vérifiez l'espace en haut de la fenêtre : êtes-vous dans le bon ?
+2. Vérifiez qu'un onglet est bien ouvert — sinon, le bouton `+` du rail gauche en crée un.
+3. Alors seulement, double-cliquez.
+
+> **Le cas de l'image est différent.** Aucune image ne peut être ouverte dans l'espace Image :
+> cette fonction n'existe pas encore, quel que soit l'onglet devant vous. Voir
+> [Ce qui n'existe pas encore](18-limites.md).
+
 ### « ⌘Z ne fait rien »
 
 **La cause, presque toujours.** L'action que vous voulez défaire appartient à **un autre onglet**.
@@ -418,6 +455,8 @@ installation neuve.
 | Pas de vagues sur la piste audio | idem |
 | « Préparation vidéo indisponible » alors que `which ffmpeg` en trouve un | `ffmpeg -version` : le binaire existe mais ne démarre plus |
 | « Le trousseau n'a pas rendu vos comptes » | déverrouiller le trousseau, puis recommencer — rien n'a été perdu |
+| Double-clic sur un asset sans effet | ouvrir d'abord un onglet, avec le `+` du rail gauche |
+| Double-clic sur un asset sans effet | ouvrir d'abord un onglet, avec le `+` du rail gauche |
 | `⌘Z` sans effet | activer le bon onglet |
 | Canvas 3D noir | fermer et rouvrir l'onglet |
 | Panneaux en désordre | Affichage → Réinitialiser la disposition |

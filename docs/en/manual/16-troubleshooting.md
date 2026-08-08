@@ -27,6 +27,18 @@ telling you what they are missing in order to fill up.
 | "No setting matches this search." | the same, in the settings window |
 | "No action uses this key: it is free." | you can assign a shortcut to it |
 | "This document is no longer open." | the tab was closed in the meantime |
+| "No model in this workspace." | the catalogue is there, but no model matches this workspace |
+| "Open an image to see its layers." | the Layers panel is waiting for an image document |
+| "No mesh yet. Add one to get started." | the 3D scene is empty — the **+** button places one |
+| "Open a scene to see its meshes." | the Meshes panel is waiting for a 3D scene |
+| "No light. The scene will stay black." | you need at least one light to see anything |
+| "Open a scene to see its lights." | the same, for the Lights panel |
+| "Open a scene to inspect what is in it." | the Inspector is waiting for a 3D scene |
+| "Select an object to see its properties." | the scene is there, nothing is selected |
+| "Select something to see its properties." | the same thing, outside 3D |
+| "Select a clip to see it here." | the Source monitor is waiting for a selection |
+| "No sequence open. Create one to start editing." | the timeline is waiting for a sequence document — the **+** button |
+| "Open a skybox to grade it." | the Skybox panel is waiting for a sky document |
 
 None of these sentences calls for troubleshooting. The rest of the chapter is about real failures.
 
@@ -293,6 +305,31 @@ the file can be imported again.
 
 These are the most disconcerting: nothing is written, but something is wrong.
 
+### "I double-click an asset and nothing happens"
+
+**By far the most common one.** And it is neither a bug nor a damaged file.
+
+**The cause.** Double-click **never opens a tab**: it sends the asset into the tab already in
+front. With no tab open, or with a tab that has no use for what you are sending it, nothing
+happens — and nothing says so.
+
+| You double-click… | You need, in front of you… |
+|---|---|
+| a picture, to make it a sky | a **sky** tab open (Skyboxes workspace) |
+| a sound, to edit it | a **sound** tab open (Audio workspace) |
+| a medium, to edit it into a cut | a **sequence** tab open (Video workspace) |
+| a picture, to retouch it | **nothing you can do — it is not possible** — see below |
+
+**What to do.**
+
+1. Check the workspace at the top of the window: are you in the right one?
+2. Check that a tab is actually open — if not, the `+` button on the left rail creates one.
+3. Only then, double-click.
+
+> **The picture case is different.** No image can be opened in the Image workspace: that feature
+> does not exist yet, whatever tab is in front of you. See
+> [What does not exist yet](18-limits.md).
+
 ### "⌘Z does nothing"
 
 **The cause, almost always.** The action you want to undo belongs to **another tab**.
@@ -401,10 +438,11 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 | "Too many requests" repeatedly | lower **Concurrent generations** to 2 |
 | "The generation failed" | restore the model's parameters to default, relaunch |
 | "Could not save" | check disk space and that the project folder exists |
-| Stuttering timeline | install ffmpeg, or shorten the video |
+| Stuttering timeline | check that video preparation is available, or shorten the video |
 | No waves on the audio track | the same |
 | "Video preparation unavailable" although `which ffmpeg` finds one | run `ffmpeg -version`: the binary exists but no longer starts |
 | "The keychain did not give your accounts back" | unlock the keychain, then start again — nothing was lost |
+| Double-clicking an asset has no effect | open a tab first, with `+` on the left rail |
 | `⌘Z` has no effect | activate the right tab |
 | Black 3D canvas | close and reopen the tab |
 | Panels in disorder | View → Reset layout |

@@ -26,6 +26,8 @@ Each key carries **its own Scenario project** — its models, its assets, its cr
 accounts therefore changes the remote library you browse, **never** the files in your local project,
 which are on your disk and belong to no account.
 
+A *job* already under way finishes on the account that launched it: switching interrupts nothing.
+
 **API key**
 Your identifier with Scenario, the equivalent of a username. It always goes with an *API secret*.
 Both are taken from [app.scenario.com](https://app.scenario.com) and pasted into Settings →

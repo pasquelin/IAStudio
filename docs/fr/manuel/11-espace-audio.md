@@ -9,10 +9,21 @@ volume.
 
 ## Ouvrir un son
 
-**Double-cliquez sur un asset audio** dans l'étagère.
+**Deux gestes, dans cet ordre, et l'ordre compte :**
 
-Tant qu'aucun son n'est ouvert, l'espace affiche : « Aucun son ouvert. Double-cliquez sur un
+1. **Le bouton `+` du rail gauche** — il ouvre un onglet audio, vide pour l'instant.
+2. **Double-cliquez sur un asset audio** dans l'étagère — la prise entre dans l'onglet.
+
+Tant qu'aucun son n'est chargé, l'onglet affiche : « Aucun son ouvert. Double-cliquez sur un
 asset audio pour l'éditer. »
+
+> **Double-cliquer sans avoir ouvert d'onglet ne fait rien**, et rien ne le dit. Le double-clic
+> envoie toujours l'asset dans l'onglet en avant ; s'il n'y en a pas, il n'a nulle part où
+> l'envoyer. C'est expliqué en détail dans [Les assets](07-assets.md).
+
+**Changer de prise se fait de la même façon** : double-cliquez sur un autre son, il remplace le
+précédent. Attention, **tout ce que vous aviez réglé est perdu** — les coupes et les fondus se
+mesurent sur la prise qui les a reçus, et n'auraient aucun sens reportés sur une autre.
 
 Si le fichier ne peut pas être décodé, il le dit aussi : « Ce fichier n'a pas pu être décodé. »
 C'est généralement un format inhabituel, ou un fichier abîmé.

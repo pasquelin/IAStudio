@@ -6,15 +6,34 @@ The workspace where you paint, erase, crop and stack layers.
 
 ---
 
-## Opening an image
+## Opening an image document
 
-Three ways:
+**One way only, and it is worth knowing: the `+` button on the left rail.** It creates a **fresh,
+empty** document: a **1024 × 1024 pixel** canvas holding a single white layer named
+**Background**, already selected.
 
-| Gesture | Result |
-|---|---|
-| **Double-click** an image in the Assets shelf | it opens in a tab |
-| The **+** button on the left rail | a fresh, empty document |
-| A generation that completes | the image arrives in the shelf, yours to open |
+> That white is a **real layer**, not a background colour. You can hide it, fade it or delete it
+> like any other — the transparency checker then shows through underneath.
+
+> ### ⚠️ You cannot open an existing image here yet
+>
+> This is the studio's most disconcerting limit, and it deserves saying up front rather than
+> being discovered after twenty minutes of trying.
+>
+> **An image from your shelf — generated or imported — cannot be brought into an image
+> document.** Double-clicking does not open it. Dropping it on the canvas does nothing. There is
+> no "Open" menu.
+>
+> The Image workspace can therefore **paint from nothing**, not **retouch something**. It is
+> written down in [What does not exist yet](18-limits.md), along with the rest.
+>
+> **In the meantime:** to see an image large, select it in the shelf and look at it in the
+> **Inspector**. To retouch it, you need another application — or a fresh generation, for
+> instance with an *image to image* model, which takes your picture as input and returns a new
+> one (see [Generating](06-generating.md)).
+
+What the `+` button does need is simple: a project must be open. Without one it is greyed out —
+there would be nowhere to write the document.
 
 ---
 

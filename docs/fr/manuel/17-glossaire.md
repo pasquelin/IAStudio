@@ -107,6 +107,8 @@ Chaque clé porte **son propre projet Scenario** — ses modèles, ses assets, s
 compte change donc la bibliothèque distante que vous parcourez, **jamais** les fichiers de votre
 projet local, qui sont sur votre disque et n'appartiennent à aucun compte.
 
+Une *tâche* déjà lancée finit sur le compte qui l'a lancée : basculer n'interrompt rien.
+
 **Contexte** *(d'un raccourci)*
 La surface où une touche a un sens. Le studio en connaît quatre : partout dans l'application, dans
 la vue 3D, dans le montage, dans l'image. C'est ce qui permet à `S` de couper un clip **et** de

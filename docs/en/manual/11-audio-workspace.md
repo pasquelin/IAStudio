@@ -8,10 +8,20 @@ The workspace where you shape a sound: shorten it, bring it up gently, even out 
 
 ## Opening a sound
 
-**Double-click an audio asset** in the shelf.
+**Two gestures, in this order, and the order matters:**
 
-While no sound is open, the workspace shows: "No sound open. Double-click an audio asset to edit
-it."
+1. **The `+` button on the left rail** — it opens an audio tab, empty for now.
+2. **Double-click an audio asset** in the shelf — the take goes into the tab.
+
+While no sound is loaded, the tab shows: "No sound open. Double-click an audio asset to edit it."
+
+> **Double-clicking without having opened a tab does nothing**, and nothing says so. Double-click
+> always sends the asset into the tab in front; with no tab, it has nowhere to send it. This is
+> explained in full in [Assets](07-assets.md).
+
+**Swapping takes works the same way**: double-click another sound and it replaces the previous
+one. Beware — **everything you had set is lost**. Cuts and fades are measured against the take
+that received them, and would mean nothing carried over to another.
 
 If the file cannot be decoded, it says that too: "This file could not be decoded." That is usually
 an unusual format, or a damaged file.

@@ -28,14 +28,25 @@ le fond : il pose une lumière orange rasante sur tout ce qui est devant.
 
 ## Trois façons d'obtenir un ciel
 
+**D'abord, ouvrez un document ciel** avec le bouton `+` du rail gauche. Les trois chemins qui
+suivent remplissent un onglet ouvert ; aucun n'en crée un.
+
 | Chemin | Comment |
 |---|---|
-| **Double-clic** | sur un asset panoramique dans l'étagère |
-| **Glisser-déposer** | depuis l'étagère vers l'aperçu |
+| **Double-clic** | sur une image de l'étagère, l'onglet ciel étant devant |
+| **Glisser-déposer** | depuis l'étagère vers l'aperçu, n'importe où dessus |
 | **Générer** | choisissez un modèle de ciel et lancez une génération : elle se pose **toute seule** dans le document d'où elle est partie |
 
 Tant qu'aucune image n'est posée, l'aperçu affiche : « Aucune skybox. Générez-en une ou déposez
 un panorama équirectangulaire. »
+
+> **Seul ce qui se regarde est accepté** : une image, une matière ou un autre ciel, à condition
+> qu'il soit sur votre disque. Un son ou une vidéo posés là-dessus sont ignorés en silence —
+> rien ne casse, rien ne change.
+>
+> En revanche, **n'importe quelle image passe**, pas seulement un vrai panorama. Une photo
+> ordinaire posée en ciel donnera une déformation étrange : c'est normal, l'espace attend une
+> image *équirectangulaire*, deux fois plus large que haute.
 
 > **Les modèles de ciel se reconnaissent à une étiquette.** Ils répondent comme des modèles
 > d'image ordinaires, et rien dans leurs capacités ne dit qu'ils font des panoramas : c'est

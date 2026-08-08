@@ -7,18 +7,23 @@
 ## À quoi sert ce logiciel
 
 Vous décrivez ce que vous voulez, avec des mots. Un ordinateur distant le fabrique. Vous
-récupérez le résultat chez vous, et vous le retouchez.
+récupérez le résultat chez vous, et vous continuez à travailler dessus.
 
 Voilà l'idée entière. Ce que Scenario Studio ajoute par rapport à un site web où l'on tape une
 phrase et où l'on télécharge une image, c'est **tout ce qui vient après** :
 
 - vos créations sont **rangées** dans un projet, sur votre disque, pas dans un dossier
   « Téléchargements » qui déborde ;
-- vous pouvez **les retoucher** sans changer de logiciel — peindre par-dessus, recadrer, couper
-  un son, monter une vidéo ;
-- vous pouvez **les assembler** — poser une image sur un objet 3D, glisser une vidéo dans un
-  montage, fabriquer un ciel autour d'une scène ;
+- vous pouvez **les assembler** sans changer de logiciel — poser une matière sur un objet 3D,
+  glisser une vidéo dans un montage, fabriquer un ciel, rogner un son ;
+- vous pouvez **retrouver comment vous les avez faites** — le modèle, le prompt et la graine
+  restent attachés à chaque fichier, et un bouton les rejoue ;
 - **rien ne repart** : vos fichiers restent chez vous.
+
+> **Une chose que le studio ne sait pas encore faire**, et qu'il vaut mieux savoir tout de suite :
+> **il ne rouvre pas une image pour la retoucher.** On peut peindre sur une toile neuve, mais pas
+> reprendre au pinceau une image générée. La liste complète et honnête de ces manques est le
+> chapitre [Ce qui n'existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
 
 ## Six façons de travailler
 
@@ -140,7 +145,7 @@ supprimer. C'est ce qui rend une image **modifiable** au lieu d'être un aplat d
 | | |
 |---|---|
 | **Un ordinateur** | macOS, Windows ou Linux |
-| **Une connexion internet** | pour générer. Pour retoucher ce que vous avez déjà, non |
+| **Une connexion internet** | pour générer. Pour travailler sur ce que vous avez déjà, non |
 | **Un compte Scenario** | avec une clé API et un secret API — voir [Premiers pas](02-premiers-pas.md) |
 
 **Ce dont vous n'avez pas besoin** : savoir dessiner, savoir programmer, savoir ce qu'est un
@@ -153,7 +158,7 @@ réseau de neurones. Le studio est fait pour être conduit, pas compris.
 Autant le dire tout de suite, cela évite de le chercher.
 
 - **Il ne travaille pas hors ligne pour générer.** La fabrication se passe sur les serveurs de
-  Scenario. Sans connexion, vous pouvez ouvrir, retoucher, monter et enregistrer, mais pas créer
+  Scenario. Sans connexion, vous pouvez ouvrir, monter, régler et enregistrer, mais pas créer
   de nouveau contenu.
 - **Il n'est pas gratuit à l'usage.** Chaque génération consomme le crédit de votre compte
   Scenario. Le studio ne vous le facture pas — il ne fait que transmettre — mais votre compte,

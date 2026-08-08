@@ -16,7 +16,7 @@ first appears, then repeated in the [glossary](manual/17-glossary.md).
 
 Scenario Studio is an application that installs on your computer. It can **make** images, videos,
 sounds, 3D objects, materials and skies — by asking artificial-intelligence models, online, at
-[Scenario](https://www.scenario.com). And it can then **retouch, assemble and file them**, on your
+[Scenario](https://www.scenario.com). And it can then **assemble, adjust and file them**, on your
 machine, without sending them anywhere.
 
 ---
@@ -60,6 +60,7 @@ machine, without sending them anywhere.
 | 16 | [When something goes wrong](manual/16-troubleshooting.md) | The messages, what they mean, what to do |
 | 17 | [Glossary](manual/17-glossary.md) | Every word in the software, explained plainly |
 | 18 | [What does not exist yet](manual/18-limits.md) | The greyed-out buttons, the work in progress, what not to expect |
+| 19 | [How do I…](manual/19-recipes.md) | Sixteen step-by-step recipes, from the first click to the result |
 
 ---
 
@@ -96,8 +97,9 @@ The request leaves. Bottom right of the window, the status line shows "1 generat
 fills. Click it for the detail. You can keep working while it runs.
 
 **7. Collect the result.**
-When the job reaches "Done", the image arrives in the **Assets** panel — the project's shelf.
-Double-click it to open and retouch it.
+When the job reaches "Done", the image arrives in the **Assets** panel — the project's shelf —
+and on your disk, in the `assets/img/` folder. Click it: the **Inspector**, on the right, shows
+its model, its prompt and its seed, and can open the folder holding it.
 
 That is all. The rest of the manual details each of these seven steps, and the five other
 workspaces.
