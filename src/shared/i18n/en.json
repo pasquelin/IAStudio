@@ -39,7 +39,6 @@
     "noParameter": "This model takes no parameters.",
     "randomSeed": "Random",
     "noProject": "Open a project to generate.",
-    "loadingForm": "Loading the form…",
     "noCredentials": "Enter your API credentials to see your models.",
     "dropPicture": "Drop a picture, or paste its id"
   },

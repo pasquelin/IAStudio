@@ -3,9 +3,9 @@ import type { FieldDescriptor } from '@shared/domain/model'
 import { blankToUndefined, isNumeric } from './dynamic-form'
 
 /**
- * Apart from `dynamic-form`, which the panels read to shape a body they never validate. Only the
- * form itself validates, and only it is deferred — leaving these three beside their neighbours
- * kept zod's 126,2 kB in the opening chunk, measured 8 August.
+ * Split from `dynamic-form`: the panels read that one to shape a body they never validate, and
+ * only the form validates — only the form is deferred. Left among its neighbours, zod came
+ * along with them into the opening chunk.
  */
 
 function numericSchema(field: FieldDescriptor): z.ZodType {

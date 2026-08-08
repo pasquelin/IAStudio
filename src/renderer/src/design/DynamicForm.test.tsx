@@ -2,11 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
+import { field } from '@/helpers/dynamic-form-fixtures'
 import { DynamicForm } from './DynamicForm'
-
-function field(overrides: Partial<FieldDescriptor> & { key: string }): FieldDescriptor {
-  return { kind: 'text', label: overrides.key, required: false, ...overrides }
-}
 
 function renderForm(fields: FieldDescriptor[]) {
   const onSubmit = vi.fn()

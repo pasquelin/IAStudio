@@ -19,9 +19,9 @@ import { EmptyState } from '@/design/EmptyState'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 
 /**
- * Deferred on purpose: the form drags zod, react-hook-form and its resolver behind it — 202,3 kB
- * of the 2 030,5 kB opening chunk, measured 8 August. It only ever renders once the model
- * descriptor has come back, so the wait it adds sits inside a wait the panel already had.
+ * Deferred on purpose: the form drags zod, react-hook-form and its resolver behind it, and
+ * taking them out of the opening chunk measured −219,62 kB on 8 August. It only renders once
+ * the model descriptor has come back, so the wait it adds sits inside one the panel already had.
  */
 const DynamicForm = lazy(async () => ({
   default: (await import('@/design/DynamicForm')).DynamicForm,
@@ -138,7 +138,7 @@ export function Generator() {
 
       {descriptor.data && (
         <Suspense
-          fallback={<EmptyState icon={mdiCreationOutline} message={t('generation.loadingForm')} />}
+          fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
         >
           <DynamicForm
             fields={descriptor.data.fields}

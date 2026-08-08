@@ -39,7 +39,6 @@
     "noParameter": "Ce modèle n’attend aucun paramètre.",
     "randomSeed": "Aléatoire",
     "noProject": "Ouvrez un projet pour générer.",
-    "loadingForm": "Chargement du formulaire…",
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
     "dropPicture": "Déposez une image, ou collez son identifiant"
   },
