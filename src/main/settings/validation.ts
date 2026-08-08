@@ -15,6 +15,8 @@ import {
   type SettingActionId,
 } from '@shared/domain/settings-registry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
+import { HOME_LIMIT_MAX, HOME_LIMIT_MIN, HOME_SECTION_IDS } from '@shared/domain/home'
+import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from '@shared/domain/scene'
 import type { AccountBook, Credentials } from './accounts'
 
@@ -51,10 +53,19 @@ const generation = z.object({
   captionArrivals: z.boolean().optional(),
 })
 
+const recentProject = z.object({
+  path: z.string().min(1),
+  name: z.string().min(1),
+  openedAt: z.string().min(1),
+})
+
 const storage = z.object({
   backend: z.enum(['local', 'cloud']).optional(),
   projectsFolder: z.string().min(1).optional(),
   lastProject: z.string().min(1).optional(),
+  // Bounded here as well as where it is written: the list is session state a hand-edited file
+  // could grow without limit, and the home draws every entry it is given.
+  recentProjects: z.array(recentProject).max(RECENT_PROJECTS_MAX).optional(),
 })
 
 // Not checked for existence here: a path typed while the binary is not plugged in yet must be
@@ -64,6 +75,24 @@ const media = z.object({ ffmpegPath: z.string().min(1).optional() })
 const general = z.object({
   language: z.enum(LANGUAGE_PREFERENCES).optional(),
   startup: z.enum(STARTUP_BEHAVIOURS).optional(),
+})
+
+const homeSection = z.object({
+  id: z.enum(HOME_SECTION_IDS),
+  visible: z.boolean(),
+  limit: z.number().int().min(HOME_LIMIT_MIN).max(HOME_LIMIT_MAX).optional(),
+})
+
+const home = z.object({
+  enabled: z.boolean().optional(),
+  // A section this build no longer knows is dropped rather than made a reason to refuse the
+  // whole write: a user who went back to an earlier version would otherwise lose every other
+  // setting along with it. `visibleHomeSections` drops it a second time, and is the one that
+  // has to — nothing guarantees the file went through here.
+  sections: z
+    .array(homeSection.nullable().catch(null))
+    .transform(entries => entries.filter(entry => entry !== null))
+    .optional(),
 })
 
 // Keys are command ids and values signatures, both free strings here: a build that no longer
@@ -102,6 +131,7 @@ const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 
 const partialSettings = z.object({
   general: general.optional(),
+  home: home.optional(),
   appearance: appearance.optional(),
   generation: generation.optional(),
   storage: storage.optional(),

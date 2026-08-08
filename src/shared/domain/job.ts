@@ -36,3 +36,8 @@ export const FINISHED_STATUSES: readonly JobStatus[] = ['succeeded', 'failed', '
 export function isFinished(status: JobStatus): boolean {
   return FINISHED_STATUSES.includes(status)
 }
+
+/** What the studio is doing right now. Asked by the status line, the home and its banner. */
+export function runningJobs(jobs: readonly Job[]): Job[] {
+  return jobs.filter(job => !isFinished(job.status))
+}

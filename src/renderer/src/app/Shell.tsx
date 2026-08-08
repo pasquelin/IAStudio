@@ -1,8 +1,10 @@
 import { useCallback } from 'react'
 import { cn } from '@/helpers/cn'
 import { TooltipHost } from '@/design/TooltipHost'
-import { useLayouts } from '@/stores/layouts'
+import { useHomeVisible, useLayouts } from '@/stores/layouts'
+import { useSettings } from '@/stores/settings'
 import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
+import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
@@ -37,35 +39,51 @@ import './dockview-theme.css'
 export function Shell() {
   const activeWorkspace = useLayouts(state => state.activeWorkspace)
   const setActiveWorkspace = useLayouts(state => state.setActiveWorkspace)
+  const setHome = useLayouts(state => state.setHome)
   const focus = useTools(state => state.focus)
+
+  const homeEnabled = useSettings(state => state.settings.home.enabled)
+  // The setting wins over the session: turning the home off must take it off the screen it is
+  // currently on, not at the next launch.
+  const home = useHomeVisible()
 
   return (
     <div className="bg-chassis flex h-full flex-col">
       <TitleBar
         activeWorkspace={activeWorkspace}
         onWorkspace={setActiveWorkspace}
+        home={home}
+        onHome={homeEnabled ? () => setHome(true) : undefined}
         actions={<AccountSelect />}
       />
 
-      <div className="flex min-h-0 flex-1">
-        <Rail side="left" />
+      {home ? (
+        // No rails, no zones, no Dockview: the home is read across the whole window, and a
+        // dock around it would frame an entry point as though it were a panel.
+        <Panel className="mx-(--sc-gutter) mb-(--sc-gutter) min-h-0 min-w-0 flex-1">
+          <HomeView />
+        </Panel>
+      ) : (
+        <div className="flex min-h-0 flex-1">
+          <Rail side="left" />
 
-        {/* Handles occupy exactly the gutter: the space between two surfaces IS the resize
-            area, rather than decorative emptiness doubled by a handle. */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
-          <Edge zone="top" />
-          <div className="flex min-h-0 flex-1">
-            <Edge zone="left" />
-            <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
-              <DocumentArea />
-            </Panel>
-            <Edge zone="right" />
+          {/* Handles occupy exactly the gutter: the space between two surfaces IS the resize
+              area, rather than decorative emptiness doubled by a handle. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
+            <Edge zone="top" />
+            <div className="flex min-h-0 flex-1">
+              <Edge zone="left" />
+              <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
+                <DocumentArea />
+              </Panel>
+              <Edge zone="right" />
+            </div>
+            <Edge zone="bottom" />
           </div>
-          <Edge zone="bottom" />
-        </div>
 
-        <Rail side="right" />
-      </div>
+          <Rail side="right" />
+        </div>
+      )}
 
       <Footer
         left={<Breadcrumb />}

@@ -1,46 +1,8 @@
 import { mdiProgressClock } from '@mdi/js'
-import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isFinished, type Job } from '@shared/domain/job'
-import { ProgressRow, type StatusTone } from '@/design/ProgressRow'
-import { failureMessageKey } from '@/services/failure-message'
 import { useJobs } from '@/stores/jobs'
 import { EmptyState } from '@/design/EmptyState'
-
-const STATUS_TONE: Record<Job['status'], StatusTone> = {
-  queued: 'muted',
-  running: 'accent',
-  succeeded: 'success',
-  failed: 'danger',
-  cancelled: 'muted',
-}
-
-// Memoised because `apply` preserves the identity of every job it does not touch: a progress
-// event then re-renders one row instead of the whole list, every two seconds, per job.
-const JobRow = memo(function JobRow({ job }: { job: Job }) {
-  const { t } = useTranslation()
-  const cancel = useJobs(state => state.cancel)
-  const finished = isFinished(job.status)
-
-  return (
-    <ProgressRow
-      label={job.label}
-      ratio={job.status === 'running' ? job.progress : undefined}
-      status={t(`jobs.status.${job.status}`)}
-      tone={STATUS_TONE[job.status]}
-      cancel={
-        finished ? undefined : { label: t('jobs.cancel'), onClick: () => void cancel(job.id) }
-      }
-      detail={
-        job.error && (
-          <span role="alert" className="text-danger text-[11px]">
-            {t(failureMessageKey(job.error))}
-          </span>
-        )
-      }
-    />
-  )
-})
+import { JobRow } from './JobRow'
 
 /** Global jobs list: a generation is launched and the user goes on working elsewhere. */
 export function Jobs() {

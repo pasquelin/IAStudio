@@ -8,7 +8,7 @@ import { publishCommand } from '@/services/command-bus'
 import { reportFailure } from '@/services/diagnostics'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -52,7 +52,11 @@ function runCommand(command: CommandId): void {
  */
 function publishMenuContext(): void {
   const workspace = useLayouts.getState().activeWorkspace
-  void getBridge()?.window.setWorkspace(workspace, availableToolIds(workspace))
+  // The home covers the docks entirely, so none of them is reachable: offering to open one
+  // would be a menu entry that does nothing visible. Through the shared answer, because the
+  // session flag alone says the home is up on every launch, turned off or not.
+  const tools = homeIsVisible() ? [] : availableToolIds(workspace)
+  void getBridge()?.window.setWorkspace(workspace, tools)
 }
 
 /**

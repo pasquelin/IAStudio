@@ -21,6 +21,57 @@ export type Project = {
 }
 
 /**
+ * A project the studio has opened before. Session state kept beside `storage.lastProject`, for
+ * the same reason it is: the settings are replicated in every window, so the home reads the
+ * list without a channel of its own.
+ *
+ * The name is stored rather than derived from the folder: a project renamed in its manifest
+ * would otherwise be listed under the name of the folder it happens to sit in.
+ */
+export type RecentProject = {
+  path: string
+  name: string
+  /** ISO 8601, stamped when it was last opened. */
+  openedAt: string
+}
+
+/**
+ * How many are kept. Long enough to hold a month of work, short enough that the shelf stays a
+ * shortcut rather than a file manager.
+ */
+export const RECENT_PROJECTS_MAX = 12
+
+/**
+ * The list after a project has been opened: newest first, one entry per path, bounded.
+ *
+ * Pure, and here rather than in the main process, because it is the whole of the policy — and
+ * because "opening a project I already have must not list it twice" is the sort of rule that
+ * only ever gets checked by a test.
+ */
+export function withRecentProject(
+  recent: readonly RecentProject[],
+  project: Project,
+  openedAt: string,
+): RecentProject[] {
+  const entry: RecentProject = { path: project.path, name: project.manifest.name, openedAt }
+
+  return [entry, ...withoutRecentProject(recent, project.path)].slice(0, RECENT_PROJECTS_MAX)
+}
+
+/**
+ * The list without one folder — what a project moved or deleted since it was last opened comes
+ * to. Beside the other half of the policy rather than written into whichever surface noticed:
+ * an opening can fail anywhere, and a list that only forgets when the home clicked it is a list
+ * that keeps offering a folder nothing can open.
+ */
+export function withoutRecentProject(
+  recent: readonly RecentProject[],
+  path: string,
+): RecentProject[] {
+  return recent.filter(candidate => candidate.path !== path)
+}
+
+/**
  * Subfolders created when a project is opened — see spec § 5. The asset folders are derived
  * from `ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the writer pointing
  * at a folder this never created.
