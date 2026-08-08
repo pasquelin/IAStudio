@@ -1,9 +1,28 @@
-import { DockviewReact, type DockviewReadyEvent } from 'dockview-react'
+import { DockviewReact, type DockviewApi, type DockviewReadyEvent } from 'dockview-react'
 import { useCallback } from 'react'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import { useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { useLayouts, type SerializedLayout } from '@/stores/layouts'
 import { DOCUMENT_COMPONENTS } from './documents'
 import { setDockviewApi } from './dockview-api'
+
+/**
+ * A layout is written by Dockview straight into localStorage and never read back by us, so
+ * nothing says it is still one. Dockview clears itself and rethrows on a layout it refuses —
+ * from inside its own mount effect, where an uncaught throw takes the window with it, on every
+ * launch, with no way for the user to reach the bad value.
+ *
+ * So the arrangement is dropped rather than the window: an empty workspace is a Tuesday, a
+ * window that will not open is not.
+ */
+function restoreLayout(api: DockviewApi, workspace: WorkspaceId, stored: SerializedLayout): void {
+  try {
+    api.fromJSON(stored)
+  } catch (error) {
+    console.error(`Discarding an unreadable layout for the "${workspace}" workspace:`, error)
+    useLayouts.getState().forget(workspace)
+  }
+}
 
 /**
  * Dockview, remounted per workspace by its `key`: coming back to "3D" must restore that
@@ -25,7 +44,7 @@ export function DocumentArea() {
       setDockviewApi(event.api)
 
       const stored = useLayouts.getState().layouts[workspace]
-      if (stored) event.api.fromJSON(stored)
+      if (stored) restoreLayout(event.api, workspace, stored)
 
       event.api.onDidLayoutChange(() => {
         useLayouts.getState().remember(workspace, event.api.toJSON())
