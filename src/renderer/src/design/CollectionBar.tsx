@@ -232,7 +232,7 @@ export function CollectionBar({
   const visible = expanded || !folded ? all : all.slice(0, FACETS_BEFORE_FOLD)
 
   return (
-    <div className={cn('border-border flex flex-col gap-2 border-b px-2 py-1.5', className)}>
+    <div className={cn('border-border flex flex-col gap-2 border-b p-2', className)}>
       {search}
 
       {/* Two to a row: a tool window is too narrow for a single line of dropdowns, and

@@ -14,7 +14,7 @@ export type PanelHeaderProps = {
 
 export function PanelHeader({ title, children, fillActions, trailing }: PanelHeaderProps) {
   return (
-    <header className="flex h-(--sc-header) shrink-0 items-center gap-1 pr-1.5 pl-3">
+    <header className="flex h-(--sc-header) shrink-0 items-center gap-2 pr-1.5 pl-3">
       {/* `flex-1` is `flex: 1 1 0%`, and a basis of zero weighs nothing when the row runs short:
           all of it would be taken from the title, which `truncate` lets crush to invisible. The
           name of the panel is not what a crowded row should spend first. */}
