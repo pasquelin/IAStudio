@@ -8,10 +8,9 @@ The workspace where you assemble shots one after another into a sequence.
 
 ## How this workspace is laid out
 
-This is the only workspace where the **bottom strip belongs to the edit**. A sequence reads across
-the full width of the screen: the **Timeline** therefore takes all of it, and the asset shelf moves
-into the upper half of the left column — free in this workspace — so it stays visible at the same
-time.
+Like the Audio workspace, this is one where the **bottom strip belongs to the edit**. A sequence
+reads across the full width of the screen: the **Timeline** therefore takes all of it, and the
+asset shelf moves into the upper half of the right column, so it stays visible at the same time.
 
 In the centre, two monitors side by side — the Premiere and DaVinci convention:
 

@@ -135,7 +135,7 @@ The chapter [Projects](04-projects.md) details each folder.
 
 At the top of the window, click **Image**.
 
-On the right, the **Models** panel fills up. These are the Scenario catalogue models capable of
+On the left, the **Models** panel fills up. These are the Scenario catalogue models capable of
 making images. There are many.
 
 For a first try, pick one at random among the featured ones: click a thumbnail. Its name appears
@@ -148,7 +148,9 @@ at the top of the panel — that is the one that will work.
 
 ## Step 7 — Write your first prompt
 
-Below the Models panel sits the **Generate** panel. It shows a form.
+Once a model is chosen, its **Generate** icon appears in the left rail. Click it: the **Generate**
+panel takes the place of Models — they share the same half of the column and take turns — and
+shows a form.
 
 **This form is not always the same.** It is built from what the chosen model can accept: two
 different models do not have the same settings, and the studio discovers them instead of guessing.

@@ -21,7 +21,8 @@ In between, you can keep working, switch workspace, open another document. Nothi
 
 ## The form
 
-Choose a model in the **Models** panel, then look at the **Generate** panel just below.
+Choose a model in the **Models** panel, on the left, then open the **Generate** panel: its icon has
+just appeared in the rail, and the panel takes the place of Models in the same half of the column.
 
 **The form is not written by hand.** It is built from what the chosen model declares it can accept.
 Two models therefore do not have the same form, and a model published tomorrow will have its own

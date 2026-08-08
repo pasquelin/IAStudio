@@ -15,13 +15,13 @@ It is the equivalent of a content browser — the library of raw material you dr
 
 | Workspace | Where the shelf is |
 |---|---|
-| Image, 3D, Audio, Textures, Skyboxes | in the **bottom strip** |
-| Video | in the **left column**, upper half |
+| Image, 3D, Textures, Skyboxes | in the **bottom strip** |
+| Video, Audio | in the **right column**, upper half |
 
-This is not a whim: in the Video workspace the bottom strip belongs to the edit, which needs the
-full width. Yet the shelf and the edit have to hold the screen **together** so you can drag a take
-from one to the other — so the shelf takes the upper half of the left column, which is free in that
-workspace.
+This is not a whim: in the Video and Audio workspaces the bottom strip belongs to the edit, which
+needs the full width. Yet the shelf and the edit have to hold the screen **together** so you can
+drag a take from one to the other — so the shelf takes the upper half of the right column, the one
+holding the panels that serve the open document.
 
 ---
 

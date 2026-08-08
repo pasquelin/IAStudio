@@ -6,6 +6,18 @@ The workspace where you shape a sound: shorten it, bring it up gently, even out 
 
 ---
 
+## How this workspace is laid out
+
+As in Video, the **bottom strip belongs to the edit** and the asset shelf takes the upper half of
+the **right column**, so a take can be dragged from one to the other without switching panels. The
+left column holds Models and Generate, as it does everywhere else.
+
+> **The bottom strip is reserved, not yet filled.** The Audio workspace has no multitrack edit
+> yet: the panel there shows the Timeline's empty state as long as no sequence is in front. The
+> place is being kept for it; this chapter describes the one-take-at-a-time editor.
+
+---
+
 ## Opening a sound
 
 **Two gestures, in this order, and the order matters:**
