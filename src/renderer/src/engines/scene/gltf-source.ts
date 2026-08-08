@@ -17,6 +17,19 @@ const DRACO_PATH = '/decoders/draco/'
 const KTX2_PATH = '/decoders/basis/'
 
 /**
+ * A source and the handle that shuts it down. Both decoders own Web Workers, and nothing else
+ * can reach them once they are behind the load function.
+ */
+export type GltfSource = {
+  load: ModelSource
+  /**
+   * Terminates the decoders' workers. Required, not tidy: an engine is rebuilt every time a
+   * panel is detached, and `dispose` is the only thing that ends the workers the last one spawned.
+   */
+  dispose: () => void
+}
+
+/**
  * The one place a `.glb` is turned into objects. Kept apart from the engine so the cache can be
  * driven by a stub under jsdom, which decodes nothing — same reason `TextureSource` exists.
  *
@@ -27,7 +40,7 @@ const KTX2_PATH = '/decoders/basis/'
  * it can actually transcode to, and the viewport has no renderer until it is mounted — while
  * this source is built in the engine's constructor.
  */
-export function createGltfSource(rendererOf: () => WebGLRenderer | null): ModelSource {
+export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSource {
   const loader = new GLTFLoader()
 
   const draco = new DRACOLoader().setDecoderPath(DRACO_PATH)
@@ -38,16 +51,24 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): ModelS
 
   let detected = false
 
-  return async url => {
-    // Once, and only once there is a GPU to ask: called twice, the loader would rebuild its
-    // support table on every model.
-    const renderer = detected ? null : rendererOf()
-    if (renderer) {
-      ktx2.detectSupport(renderer)
-      detected = true
-    }
+  return {
+    load: async url => {
+      // Once, and only once there is a GPU to ask: called twice, the loader would rebuild its
+      // support table on every model.
+      const renderer = detected ? null : rendererOf()
+      if (renderer) {
+        ktx2.detectSupport(renderer)
+        detected = true
+      }
 
-    const gltf = await loader.loadAsync(url)
-    return gltf.scene
+      const gltf = await loader.loadAsync(url)
+      return gltf.scene
+    },
+    // Both spawn their workers on the first parse and hold them for good. `KTX2Loader` also
+    // counts live instances, and an undisposed one makes the next engine warn about itself.
+    dispose: () => {
+      draco.dispose()
+      ktx2.dispose()
+    },
   }
 }
