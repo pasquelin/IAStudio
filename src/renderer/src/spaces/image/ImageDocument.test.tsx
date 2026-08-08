@@ -1,7 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useCanvases } from '@/stores/canvases'
+import type { Asset } from '@shared/domain/asset'
+import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
+import { dragTransfer } from '@/helpers/drag-fixtures'
+import { useAssets } from '@/stores/assets'
+import { canvasOf, useCanvases } from '@/stores/canvases'
+import { useTools } from '@/stores/tools'
 import { ImageDocument } from './ImageDocument'
 
 const setTool = vi.fn()
@@ -21,6 +26,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       setView = vi.fn()
       setTool = setTool
       setBrush = setBrush
+      loadInto = vi.fn(() => Promise.resolve())
     },
   }
 })
@@ -81,5 +87,57 @@ describe('ImageDocument', () => {
   it('disables undo when there is nothing to undo', () => {
     render(<ImageDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Annuler/ })).toBeDisabled()
+  })
+
+  describe('dropping a picture on it', () => {
+    const picture: Asset = {
+      id: 'asset-7',
+      name: 'concept art',
+      type: 'image',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-08-08T10:00:00.000Z',
+    }
+
+    /** A drop carrying our own MIME type, as the asset browser sends it. */
+    function drop(target: Element): void {
+      const transfer = dragTransfer()
+      transfer.setData(ASSET_DRAG_TYPE, picture.id)
+      fireEvent.drop(target, { dataTransfer: transfer })
+    }
+
+    it('lays the dropped asset down as a layer of its own', async () => {
+      useAssets.setState({ items: [picture] })
+      const { container } = render(<ImageDocument documentId="doc-1" />)
+
+      const surface = container.querySelector('.relative.min-w-0')
+      expect(surface).not.toBeNull()
+      if (surface) drop(surface)
+
+      await waitFor(() =>
+        expect(canvasOf(useCanvases.getState(), 'doc-1').layers.at(-1)?.name).toBe('concept art'),
+      )
+    })
+
+    it('answers a drag with the same edge every other droppable surface shows', () => {
+      const { container } = render(<ImageDocument documentId="doc-1" />)
+      const surface = container.querySelector('.relative.min-w-0')
+      expect(surface).not.toBeNull()
+      if (surface) fireEvent.dragOver(surface, { dataTransfer: dragTransfer() })
+
+      expect(container.querySelector('.border-accent')).not.toBeNull()
+    })
+  })
+
+  // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
+  it('brings the shelf forward instead of arming a tool that draws nothing', async () => {
+    useTools.setState({ open: { bottom: { primary: 'assets' } }, focusedZone: null })
+    render(<ImageDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /^Rectangle/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /^Image/ }))
+
+    expect(useTools.getState().focusedZone).toBe('bottom')
+    expect(setTool).not.toHaveBeenCalledWith('shape')
   })
 })

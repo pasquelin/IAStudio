@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
+import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
@@ -12,11 +13,15 @@ import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canva
 import { useBindingOverrides } from '@/stores/bindings'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { useCanvasViews, viewOf } from '@/stores/canvas-views'
+import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
+import { registerCanvas } from './canvas-hosts'
 import { canvasToolFor, cursorFor, DEFAULT_MODES, IMAGE_TOOLS } from './image-tools'
 import { layerPort } from './layer-port'
+import { placeAsset } from './place-asset'
+import { revealAssets } from './reveal-assets'
 import { pixelPort } from './pixel-port'
 import { ZoomBar } from './ZoomBar'
 
@@ -49,6 +54,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
   const bindings = useBindingOverrides()
   const active = useDocuments(state => state.activeId === documentId)
+  const byId = useAssets(assetsById)
+  const [over, setOver] = useState(false)
 
   useEffect(() => {
     const element = hostRef.current
@@ -72,8 +79,12 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
     engine.current = created
     void created.mount(element)
+    // A drop and a finished generation both land outside this component, and neither can reach
+    // the engine through the store: pixels are not state.
+    const unregister = registerCanvas(documentId, created)
 
     return () => {
+      unregister()
       created.dispose()
       engine.current = null
     }
@@ -140,9 +151,25 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     onCommand: run,
   })
 
+  /** A picture dropped on the canvas becomes a layer of its own, on top and armed. */
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault()
+      setOver(false)
+
+      const assetId = assetIdFromDrag(event)
+      const asset = assetId ? byId.get(assetId) : null
+      if (asset) void placeAsset(documentId, asset)
+    },
+    [byId, documentId],
+  )
+
   // Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
   // active has to hand over the ellipse, not merely remember it for later.
   const pick = useCallback((toolId: string, modeId: string) => {
+    // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
+    if (modeId === 'image') return revealAssets()
+
     setModes(current => ({ ...current, [toolId]: modeId }))
     setTool(toolId)
   }, [])
@@ -168,7 +195,15 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   return (
     <div className="flex h-full min-h-0">
-      <div className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}>
+      <div
+        className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}
+        onDragOver={event => {
+          event.preventDefault()
+          setOver(true)
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={onDrop}
+      >
         {/* Pixi appends its own canvas here, and the overlay its own above it — see
             `CanvasEngine.mount`. The cursor goes on the host rather than the canvas, which Pixi
             owns and replaces on every mount. */}
@@ -186,6 +221,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           canUndo={undoable}
           canRedo={redoable}
         />
+
+        {/* The same overlay every droppable surface uses, rather than a border of its own: a
+            difference in how two panels answer a drag reads as a bug. */}
+        {over && <div className="border-accent pointer-events-none absolute inset-0 border-2" />}
 
         <ZoomBar
           scale={view.viewport.scale}

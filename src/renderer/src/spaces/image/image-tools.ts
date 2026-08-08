@@ -186,9 +186,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         descriptionKey: 'imageTools.shapeImageHint',
         icon: mdiImagePlusOutline,
         shortcut: '⇧⌘K',
-        // Placing an asset needs the catalogue, which this space does not reach yet. Shown
-        // greyed rather than hidden: the bar says what is coming instead of pretending.
-        disabled: true,
       },
     ],
   },
