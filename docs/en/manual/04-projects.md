@@ -114,9 +114,22 @@ It is saved with `⌘S` / `Ctrl+S`, into `documents/`, under an extension that s
 The extension is there so the folder **reads at a glance**. `a3f1.scene` next to `b204.tex` says
 what each one is; `a3f1.json` next to `b204.json` says nothing.
 
-> **Today, only `.scene` and `.tex` documents actually save.** Images, sequences, sounds and skies
-> still live in the window: closing their tab loses what they hold. See
-> [What does not exist yet](18-limits.md).
+> **All six kinds save**, and the **Explorer** panel lists what the folder holds — that is how a
+> closed document is reopened. Closing a tab whose work is not written asks before losing it.
+
+### Reopening a document — the Explorer panel
+
+The layout remembers which tabs are open, but a document closed while no layout held it is no
+longer reachable through tabs. That is what the **Explorer** panel is for: it lists **everything
+the `documents/` folder holds**, open or not.
+
+- a **double-click** on a row opens the document, switching workspace if it belongs to another —
+  a sequence opened from the Image workspace switches to Video;
+- rows already on screen are marked **Open**;
+- the icon says which workspace the document belongs to, the same one the rail uses.
+
+There is no "Open file" dialog, and none is planned: the studio only opens what is in the
+project.
 
 ### How a document is written
 

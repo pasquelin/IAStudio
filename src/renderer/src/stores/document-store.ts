@@ -66,6 +66,7 @@ export type DocumentStore<S> = {
   historyOf: (state: Readable<S>, documentId: string) => History<S>
   markOf: (state: Readable<S>, documentId: string) => Command<S> | null
   isDirty: (state: Readable<S>, documentId: string) => boolean
+  hasUnsavedWork: (state: Readable<S>, documentId: string) => boolean
 }
 
 /**
@@ -102,9 +103,24 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
   /**
    * Whether anything has been done since the document was last written. A document with no mark
    * at all reads `undefined`, which no history position ever equals — never saved is modified.
+   *
+   * This is what the tab's bullet reads, and "never written" is exactly what it must show.
    */
   const isDirty = (state: Readable<S>, documentId: string): boolean =>
     state.saved[documentId] !== markOf(state, documentId)
+
+  /**
+   * Whether closing this document would throw work away — a different question from `isDirty`,
+   * and the one a confirmation dialog must ask.
+   *
+   * A tab opened and never touched is modified in the bullet's sense (nothing of it is on disk)
+   * while holding nothing anyone would miss. Asking about it turns every stray ⌘W into a modal
+   * question about a document that does not exist yet.
+   */
+  const hasUnsavedWork = (state: Readable<S>, documentId: string): boolean => {
+    const never = state.saved[documentId] === undefined && markOf(state, documentId) === null
+    return !never && isDirty(state, documentId)
+  }
 
   const use = create<DocumentStoreState<S>>()((set, get) => {
     /**
@@ -192,5 +208,5 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
     }
   })
 
-  return { use, stateOf, hasState, historyOf, markOf, isDirty }
+  return { use, stateOf, hasState, historyOf, markOf, isDirty, hasUnsavedWork }
 }

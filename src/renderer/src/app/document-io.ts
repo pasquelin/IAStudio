@@ -48,7 +48,7 @@ type DocumentIo = {
   createDefault: (documentId: string) => void
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
-  /** Whether the document has work its file does not hold. */
+  /** Whether closing the document would throw work away — never true for an untouched tab. */
   dirty: (documentId: string) => boolean
   /** Drops the state and the history a closed document was holding. */
   forget: (documentId: string) => void
@@ -91,7 +91,7 @@ function textDocumentIo<S>(
     },
     createDefault: documentId => store.use.getState().ensure(documentId, createDefault),
     holds: documentId => store.hasState(store.use.getState(), documentId),
-    dirty: documentId => store.isDirty(store.use.getState(), documentId),
+    dirty: documentId => store.hasUnsavedWork(store.use.getState(), documentId),
     forget: documentId => store.use.getState().drop(documentId),
   }
 }
@@ -168,7 +168,7 @@ const IMAGE_IO: DocumentIo = {
   },
   createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
   holds: documentId => canvasStore.hasState(useCanvases.getState(), documentId),
-  dirty: documentId => canvasStore.isDirty(useCanvases.getState(), documentId),
+  dirty: documentId => canvasStore.hasUnsavedWork(useCanvases.getState(), documentId),
   forget: documentId => useCanvases.getState().drop(documentId),
 }
 
@@ -202,13 +202,18 @@ const unreadable = new Set<string>()
 /**
  * Writes the document to the project. A document whose state was never filled is refused:
  * `holds` separates "empty scene" from "no scene yet".
+ *
+ * Answers whether anything was written. A refusal is not a failure — there was nothing to write,
+ * or the file must not be written over — but a caller about to throw the state away has to be
+ * able to tell that from a save that happened. It is what stops "Save" on a document whose file
+ * would not read from closing the tab on work that never reached the disk.
  */
-export async function saveDocument(documentId: string): Promise<void> {
+export async function saveDocument(documentId: string): Promise<boolean> {
   const bridge = getBridge()
   const document = useDocuments.getState().documents[documentId]
   const io = ioOf(documentId)
-  if (!bridge || !document || !io) return
-  if (unreadable.has(documentId) || !io.holds(documentId)) return
+  if (!bridge || !document || !io) return false
+  if (unreadable.has(documentId) || !io.holds(documentId)) return false
 
   const { draft, commit } = await io.capture(documentId)
   await bridge.documents.write(document.id, document.kind, { ...draft, title: document.title })
@@ -216,6 +221,7 @@ export async function saveDocument(documentId: string): Promise<void> {
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.
   void useDocuments.getState().relist()
+  return true
 }
 
 /**
@@ -274,7 +280,7 @@ export function restoreDocument(documentId: string): Promise<void> {
   return reading
 }
 
-/** Whether the document has work its file does not hold. A tab that never filled has none. */
+/** Whether closing would throw work away. A tab that never filled, or was never touched, has none. */
 function documentIsDirty(documentId: string): boolean {
   const io = ioOf(documentId)
   return io !== undefined && io.holds(documentId) && io.dirty(documentId)
@@ -294,9 +300,10 @@ export async function closeDocument(documentId: string): Promise<boolean> {
     const title = useDocuments.getState().documents[documentId]?.title ?? ''
     const choice = (await getBridge()?.documents.confirmClose(title)) ?? 'cancel'
     if (choice === 'cancel') return false
-    // Left open on a failed write: closing anyway would lose the work the dialog just promised
-    // to keep, and the failure is reported by the caller.
-    if (choice === 'save') await saveDocument(documentId)
+    // Left open unless the work actually reached the disk — a write that throws, and one that is
+    // refused because the file would not read, both leave the tab exactly where it was. Closing
+    // anyway would lose the work the dialog had just promised to keep.
+    if (choice === 'save' && !(await saveDocument(documentId))) return false
   }
 
   forgetDocument(documentId)

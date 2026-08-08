@@ -25,6 +25,7 @@ vi.mock('dockview-react', () => ({
     return (
       <span
         data-testid="default-tab"
+        // The mock takes its props untyped, so the handler comes back as `unknown`.
         onContextMenu={props.onContextMenu as React.MouseEventHandler}
       >
         tab
@@ -53,6 +54,20 @@ describe('a document tab', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Fermer l’onglet' }))
     expect(closeDocument).toHaveBeenCalledWith('doc-1')
+  })
+
+  // Dockview reads a click anywhere on a tab as "activate me"; the cross is not that.
+  it('does not let the close click reach the tab underneath', async () => {
+    const activate = vi.fn()
+    render(
+      <div onClick={activate}>
+        <DocumentTab {...props('doc-1')} />
+      </div>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fermer l’onglet' }))
+    expect(closeDocument).toHaveBeenCalledWith('doc-1')
+    expect(activate).not.toHaveBeenCalled()
   })
 
   it('opens its menu on a right-click', async () => {

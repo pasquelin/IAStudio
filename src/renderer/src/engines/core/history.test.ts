@@ -6,6 +6,8 @@ import {
   HISTORY_LIMIT,
   redo,
   run,
+  discardLast,
+  forget,
   markOf,
   runCoalescing,
   undo,
@@ -126,14 +128,68 @@ describe('markOf', () => {
     expect(markOf(undoAll(many(HISTORY_LIMIT + 1)))).not.toBeNull()
   })
 
-  it('keeps naming the same dropped command however many more are run', () => {
-    const first = markOf(undoAll(many(HISTORY_LIMIT + 1)))
-    const later = markOf(undoAll(many(HISTORY_LIMIT + 5)))
+  // It has to follow the stack, not freeze on the first command ever dropped: an empty stack
+  // stands on whatever fell off LAST, and two saves separated by a hundred edits must differ.
+  it('names the command that fell off last, not the first one that ever did', () => {
+    const commands = Array.from({ length: HISTORY_LIMIT + 3 }, () => add(1))
+    let value = 0
+    let history = emptyHistory<number>()
+    for (const command of commands) [value, history] = run(value, history, command)
 
-    expect(first).not.toBeNull()
-    expect(later).not.toBeNull()
-    // Different runs build different commands; what matters is that neither reads as untouched.
-    expect(later).not.toBe(first)
+    // Three fell off: the stack now stands on the third.
+    expect(history.dropped).toBe(commands[2])
+    expect(markOf(undoAll(history))).toBe(commands[2])
+  })
+
+  it('keeps the dropped command through a coalesced gesture', () => {
+    const history = many(HISTORY_LIMIT + 1)
+    const dropped = history.dropped
+
+    const [, merged] = runCoalescing(0, history, add(1))
+    expect(merged.dropped).toBe(dropped)
+  })
+
+  it('keeps it through an undo and a redo', () => {
+    const history = many(HISTORY_LIMIT + 1)
+    const dropped = history.dropped
+
+    const [value, undone] = undo(0, history)
+    expect(undone.dropped).toBe(dropped)
+    expect(redo(value, undone)[1].dropped).toBe(dropped)
+  })
+
+  // `forget` cuts the stack from below, so the commands it removes are still applied — exactly
+  // what the limit does, and it has to leave the same trace.
+  it('records what a forget cut away from under the stack', () => {
+    const commands = [add(1), add(2), add(3)]
+    let value = 0
+    let history = emptyHistory<number>()
+    for (const command of commands) [value, history] = run(value, history, command)
+
+    const cut = forget(history, commands[1]?.id ?? '')
+    expect(cut.dropped).toBe(commands[1])
+    expect(markOf(undoAll(cut))).toBe(commands[1])
+  })
+
+  it('leaves a history alone when it holds no command of that id', () => {
+    const history = many(3)
+    expect(forget(history, 'never-run')).toBe(history)
+  })
+
+  // A no-op gesture is thrown away rather than moved to the redo stack, or ⌘Y would resurrect
+  // what the user just discarded.
+  it('discards the last command without offering it back', () => {
+    const [value, history] = run(0, emptyHistory<number>(), add(5))
+
+    const [reverted, after] = discardLast(value, history)
+    expect(reverted).toBe(0)
+    expect(canUndo(after)).toBe(false)
+    expect(canRedo(after)).toBe(false)
+  })
+
+  it('keeps the dropped command through a discard', () => {
+    const history = many(HISTORY_LIMIT + 1)
+    expect(discardLast(0, history)[1].dropped).toBe(history.dropped)
   })
 
   it('survives a redo: replaying the stack lands on the same mark it left', () => {

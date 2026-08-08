@@ -3,16 +3,6 @@ import { MAX_LOG_MESSAGE, type LogScope } from '@shared/ipc'
 import { getBridge } from './bridge'
 
 /**
- * Records a failure the renderer would otherwise swallow. Without this, a model that fails to
- * load is a node that draws nothing and says nothing.
- *
- * It goes to the main process, which owns the log, and from there into the project's journal —
- * which is what puts it on screen, as a toast and then as a line in the activity panel.
- *
- * Silent when there is no bridge — tests and a plain browser have none, exactly as everywhere
- * else `getBridge` is read.
- */
-/**
  * The scopes whose failures follow a gesture the user made — a ⌘S, an export, a tab closed.
  *
  * They are reported every time. Everything else is reported once per subject, because an engine
@@ -36,6 +26,16 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'assets.reveal',
 ])
 
+/**
+ * Records a failure the renderer would otherwise swallow. Without this, a model that fails to
+ * load is a node that draws nothing and says nothing.
+ *
+ * It goes to the main process, which owns the log, and from there into the project's journal —
+ * which is what puts it on screen, as a toast and then as a line in the activity panel.
+ *
+ * Silent when there is no bridge — tests and a plain browser have none, exactly as everywhere
+ * else `getBridge` is read.
+ */
 export function reportFailure(scope: LogScope, subject: string, error: unknown): void {
   // Said once per thing that failed — but only for the failures nobody asked for.
   if (!GESTURE_SCOPES.has(scope)) {

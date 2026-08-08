@@ -425,15 +425,28 @@ which is far more pleasant than a jerky slide.
 
 ### "I lost my work when I closed a tab"
 
-**The cause.** Not every document can save yet.
+**This is not supposed to be possible any more.** All six document kinds save, and closing a tab
+whose work is not written asks first: *Save*, *Don't save*, *Cancel*.
 
-Today, only **3D scenes** (`.scene`) and **materials** (`.tex`) are written to disk. An image being
-retouched, a video edit, an edited sound, an adjusted sky: all of that lives in the window and
-**disappears with the tab**.
+**If no question came up**, the document was clean — no dot (`•`) beside its name. Two known
+cases:
 
-**What to do.** Until this is fixed: do not close the tab while the work matters, and note the
-important settings elsewhere — the seed, the prompt. The complete list is in
-[What does not exist yet](18-limits.md).
+- **the document was never saved and never received anything**: there was nothing to keep;
+- **its file could not be read when it opened.** The studio then deliberately refuses to save it,
+  so as not to write an empty document over the one it could not read — the file is the only
+  copy. The reason is in the activity journal.
+
+**What never comes back**, by design: the **undo history**. Reopening a document means starting
+again without `⌘Z`. The complete list is in [What does not exist yet](18-limits.md).
+
+### "I deleted a document by mistake"
+
+**Nothing gives it back.** *Delete document…* in a tab's context menu removes the file from the
+project folder, and the studio has no wastebasket. That is why the confirmation has *Cancel* as
+its default button.
+
+If the project folder is in a system backup (Time Machine, a synced folder), that is where to go
+and look for it.
 
 ### "The panels are all over the place and I am lost"
 

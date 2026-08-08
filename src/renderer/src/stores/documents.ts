@@ -126,19 +126,19 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   },
 
   relist: async () => {
-    const mine = ++generation
+    const mine = ++generations.relist
     const found = await listed()
     // A second project opened while the first was still listing: the last answer to arrive is
     // not necessarily the one that was asked for last.
-    if (mine !== generation) return
+    if (mine !== generations.relist) return
 
     set({ stored: sorted(found) })
   },
 
   refresh: async () => {
-    const mine = ++generation
+    const mine = ++generations.refresh
     const found = await listed()
-    if (mine !== generation) return
+    if (mine !== generations.refresh) return
 
     const shown = panelIds(useLayouts.getState().layouts)
     // One `set` for both halves: the folder says which documents exist, the layout says which
@@ -198,8 +198,15 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     }),
 }))
 
-/** Bumped per listing, so one that comes back late cannot install itself. */
-let generation = 0
+/**
+ * Bumped per listing, so one that comes back late cannot install itself — and one PER QUESTION.
+ *
+ * A shared counter looked harmless and was not: the Explorer relists from a mount effect while
+ * `followProject` is still awaiting its own read, and the relist would then make the refresh
+ * abandon — leaving every open tab without its descriptor, which is the very reconciliation
+ * `refresh` exists for.
+ */
+const generations = { relist: 0, refresh: 0 }
 
 /**
  * Sorted by title rather than by whatever order the folder was read in: a listing that

@@ -202,8 +202,8 @@ laptop: the fan goes quiet, the battery lasts.
 
 ## What is still missing
 
-> **A sequence does not save to disk yet.** Closing its tab loses the edit. The assets themselves
-> stay in the project.
+> **A sequence saves** as `.seq` with `⌘S`, and opens back as it was: tracks, clips, fades and
+> gains. What does not come back is the undo history.
 >
 > There is no **export** either: you cannot yet write a final video file. See
 > [What does not exist yet](18-limits.md).

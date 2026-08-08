@@ -28,6 +28,10 @@ import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { closeDocument, deleteDocument, restoreDocument, saveDocument } from './document-io'
 
+// The real one needs a live Dockview; what this file checks is that closing reaches it.
+const closePanel = vi.fn()
+vi.mock('./dockview-api', () => ({ closePanel: (id: string) => closePanel(id) }))
+
 const box = meshNode('box-1')
 
 const savedFile = (): DocumentFile => ({
@@ -667,6 +671,57 @@ describe('closing a document', () => {
     return created.id
   }
 
+  /**
+   * A tab opened and never touched carries the bullet — nothing of it is on disk — but holds
+   * nothing anyone would miss. Asking turns every stray ⌘W into a modal question about a
+   * document that does not exist yet.
+   */
+  it('never asks about a tab that was opened and never touched', async () => {
+    const confirmClose = vi.fn(() => Promise.resolve<CloseChoice>('cancel'))
+    installFakeBridge({ documents: { confirmClose } })
+
+    const created = await useDocuments.getState().create('3d')
+    if (!created) throw new Error('expected a document')
+    useScenes.getState().ensure(created.id, createDefaultScene)
+
+    await expect(closeDocument(created.id)).resolves.toBe(true)
+    expect(confirmClose).not.toHaveBeenCalled()
+  })
+
+  // The tab still says it is not on disk — that is the bullet's question, not this one.
+  it('still calls that untouched document modified on its tab', async () => {
+    installFakeBridge({})
+    const created = await useDocuments.getState().create('3d')
+    if (!created) throw new Error('expected a document')
+    useScenes.getState().ensure(created.id, createDefaultScene)
+
+    expect(isDirty(useScenes.getState(), created.id)).toBe(true)
+  })
+
+  /**
+   * `saveDocument` refuses to write a document whose file would not read — the empty editor it
+   * left is indistinguishable from a new one, and the file is the only copy. Answering "save"
+   * used to close the tab anyway: nothing written, and the state thrown away.
+   */
+  it('keeps the tab open when the save it was asked for is refused', async () => {
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({
+      documents: {
+        write,
+        read: () => Promise.reject(new Error('gone')),
+        confirmClose: () => Promise.resolve<CloseChoice>('save'),
+      },
+    })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+
+    await restoreDocument('doc-1')
+    useScenes.getState().runCommand('doc-1', addNode(box))
+
+    await expect(closeDocument('doc-1')).resolves.toBe(false)
+    expect(write).not.toHaveBeenCalled()
+    expect(useDocuments.getState().documents['doc-1']).toBeDefined()
+  })
+
   it('closes a clean document without asking anything', async () => {
     const confirmClose = vi.fn(() => Promise.resolve<CloseChoice>('cancel'))
     installFakeBridge({ documents: { confirmClose, write: () => Promise.resolve() } })
@@ -730,6 +785,41 @@ describe('closing a document', () => {
     expect(isDirty(useScenes.getState(), documentId)).toBe(true)
   })
 
+  it('takes the tab away with the document', async () => {
+    const documentId = await openDirtyScene()
+    installFakeBridge({
+      documents: { confirmClose: () => Promise.resolve<CloseChoice>('discard') },
+    })
+
+    await closeDocument(documentId)
+    expect(closePanel).toHaveBeenCalledWith(documentId)
+  })
+
+  // The id is the project folder's to hand out again: a document reopened later must not inherit
+  // the refusal to save passed on the one before it.
+  it('forgets that a closed document would not read', async () => {
+    installFakeBridge({
+      documents: {
+        read: () => Promise.reject(new Error('gone')),
+        confirmClose: () => Promise.resolve<CloseChoice>('discard'),
+        write: () => Promise.resolve(),
+      },
+    })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+    await restoreDocument('doc-1')
+    await closeDocument('doc-1')
+
+    // Reopened under the same id, now readable: the verdict must not have followed it.
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({ documents: { write, read: () => Promise.resolve(savedFile()) } })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+    await restoreDocument('doc-1')
+    useScenes.getState().runCommand('doc-1', addNode(meshNode('box-2')))
+
+    await saveDocument('doc-1')
+    expect(write).toHaveBeenCalled()
+  })
+
   it('drops the state and the history a closed document was holding', async () => {
     const documentId = await openDirtyScene()
     installFakeBridge({
@@ -749,6 +839,24 @@ describe('deleting a document', () => {
     useScenes.getState().ensure(created.id, createDefaultScene)
     return created.id
   }
+
+  // Left standing, a double-click on the row would open an empty document under the same id,
+  // and the next ⌘S would write back what was just deleted.
+  it('re-reads the folder so the deleted row goes with the file', async () => {
+    const list = vi.fn(() => Promise.resolve<DocumentDescriptor[]>([]))
+    installFakeBridge({
+      documents: {
+        list,
+        remove: () => Promise.resolve(),
+        confirmDelete: () => Promise.resolve(true),
+      },
+    })
+    const documentId = await openScene()
+    list.mockClear()
+
+    await deleteDocument(documentId)
+    expect(list).toHaveBeenCalled()
+  })
 
   it('removes the file and closes the tab once confirmed', async () => {
     const remove = vi.fn(() => Promise.resolve())

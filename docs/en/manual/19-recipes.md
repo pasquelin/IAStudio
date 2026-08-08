@@ -191,9 +191,10 @@ goes up, `Q` goes down, left `⇧` speeds up.
 
 **To cut:** place the playhead, press `S`. To delete a clip: select it, `Del`.
 
-**The catch, and it is a serious one.** A sequence **does not save yet**. Closing the tab loses
-the edit — the clips stay in the project, but their arrangement is gone. And there is no export:
-the studio cannot yet write a final video file.
+**To keep the edit:** `⌘S`. The sequence writes as `.seq` into the project and opens back as it
+was — tracks, clips, fades and gains. What does not come back is the undo history.
+
+**What is still missing:** the **export**. The studio cannot yet write a final video file.
 
 ---
 
