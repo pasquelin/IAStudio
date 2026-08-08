@@ -304,7 +304,12 @@ l'application réessaie toute seule. Ce nombre dit combien de fois avant d'aband
 
 ### Modèle par défaut, par famille
 
-Cinq sous-sections : **Image**, **Vidéo**, **3D**, **Audio**, **Agrandissement**.
+Sept sous-sections : **Image**, **Vidéo**, **3D**, **Audio**, **Agrandissement**, **Détourage**,
+**Vectorisation**.
+
+Les trois dernières n'ont pas d'espace de travail à elles : ce sont les familles que les éditions
+du canvas — Agrandir, Détourer, Vectoriser — vont chercher. Le panneau **Modèles** ne montre que
+la famille de l'espace ouvert, donc **c'est ici, et seulement ici, que leur modèle se choisit**.
 
 > **La famille Texture n'a pas encore la sienne.** Elle existe pourtant comme famille de modèles
 > depuis peu. Conséquence concrète : dans l'espace Textures, il faut choisir un modèle à la main à
@@ -321,11 +326,9 @@ arrivez dans cet espace.
 Réglez-le une fois que vous avez trouvé le modèle avec lequel vous travaillez le plus : cela
 enlève un clic à chaque session.
 
-> **La sous-section Agrandissement est vide, et ce n'est pas une panne.** Sa liste ne propose que
-> « Demander à chaque fois ». Aucun modèle n'est rangé dans la famille *agrandissement* — un
-> agrandisseur reçoit une image et rend une image, il est donc classé avec les modèles d'image, où
-> vous pouvez l'utiliser normalement. Le réglage est en avance sur l'espace qui l'utilisera — voir
-> [Ce qui n'existe pas encore](18-limites.md).
+> **Pour Agrandissement, Détourage et Vectorisation, ce réglage n'est pas un confort.** C'est ce
+> qui décide si l'édition correspondante peut partir : sans modèle réglé, **Agrandir** ouvre cet
+> écran au lieu d'envoyer l'image.
 
 ---
 

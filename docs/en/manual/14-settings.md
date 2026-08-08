@@ -297,7 +297,12 @@ At **0**, it never tries twice.
 
 ### Default model, per family
 
-Five sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**.
+Seven sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**,
+**Background removal**, **Vectorization**.
+
+The last three have no workspace of their own: they are the families the canvas edits — Enlarge,
+Cut out, Vectorize — reach for. The **Models** panel only shows the open workspace's family, so
+**this is where, and only where, their model is chosen**.
 
 > **The Texture family does not have one yet.** It has nevertheless been a model family in its own
 > right for a short while. The practical consequence: in the Textures workspace you have to pick a
@@ -313,11 +318,9 @@ workspace.
 
 Set it once you have found the model you work with most: it saves a click every session.
 
-> **The Upscaling sub-section is empty, and that is not a fault.** Its list offers nothing but
-> "Ask every time". No model is ever filed under the *upscale* family — an upscaler takes an image
-> and returns an image, so it is filed with the image models, where you can use it normally. The
-> setting is ahead of the workspace that will use it — see
-> [What does not exist yet](18-limits.md).
+> **For Upscaling, Background removal and Vectorization, this setting is not a convenience.** It is what
+> decides whether the matching edit can leave at all: with no model set, **Enlarge** opens this
+> screen instead of sending the picture.
 
 ---
 

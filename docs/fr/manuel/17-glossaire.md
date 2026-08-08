@@ -154,9 +154,9 @@ Un *canal* de texture que le studio a calculé à partir d'un autre, plutôt que
 Il se recalcule tout seul si sa source change.
 
 **Détourage** *(background removal)*
-Retirer le fond d'une image pour ne garder que le sujet, sur du transparent. Le studio en a la
-commande, dans l'espace Image, mais elle ne peut pas encore aboutir — voir
-[Ce qui n'existe pas encore](18-limites.md).
+Retirer le fond d'une image pour ne garder que le sujet, sur du transparent. La commande
+**Détourer** est dans le menu Image ; son modèle se règle dans
+**Réglages ▸ Génération ▸ Détourage**.
 
 **Dock**
 Une zone de la fenêtre où des *panneaux* peuvent se poser : les colonnes de gauche et de droite,
@@ -226,8 +226,10 @@ sombre.
 
 **Famille** *(de modèles)*
 Le grand type de ce qu'un *modèle* fabrique : image, vidéo, 3D, audio, texture, ciel,
-agrandissement, détourage, vectorisation. La plupart des familles peuvent avoir leur *modèle par
-défaut* dans les réglages — pas encore la famille Texture.
+agrandissement, détourage, vectorisation. Sept d'entre elles ont leur *modèle par défaut* dans les
+réglages ; Texture et Ciel ne l'ont pas encore. Les trois dernières — agrandissement, détourage,
+vectorisation — n'ont pas d'espace de travail : ce sont les éditions du menu Image qui les
+emploient.
 
 **ffmpeg**
 Un petit programme extérieur au studio, qui sait lire et convertir à peu près tous les formats
@@ -568,8 +570,8 @@ vous regardez n'y a pas accès : il sait seulement si la connexion fonctionne.
 
 **Vectorisation**
 Convertir une image en tracés — des lignes et des courbes, qui s'agrandissent sans jamais devenir
-floues. Le studio en a la commande, dans l'espace Image, mais elle ne peut pas encore aboutir —
-voir [Ce qui n'existe pas encore](18-limites.md).
+floues. La commande **Vectoriser** est dans le menu Image ; son modèle se règle dans
+**Réglages ▸ Génération ▸ Vectorisation**.
 
 **Vignette** *(thumbnail)*
 La petite image qui représente un *asset* dans l'étagère ou un *modèle* dans le catalogue.

@@ -58,9 +58,8 @@ east, south, west, north. It pairs with *elevation*, which gives its height.
 **Backoff** → see *Exponential backoff*.
 
 **Background removal** *(cut out)*
-Taking the background out of a picture to keep only the subject, on transparency. The studio has
-the command, in the Image workspace, but it cannot complete yet — see
-[What does not exist yet](18-limits.md).
+Taking the background out of a picture to keep only the subject, on transparency. The **Cut out**
+command lives in the Image menu; its model is set in **Settings ▸ Generation ▸ Background removal**.
 
 **Base colour** *(texture channel)*
 A material's colour, as it would be under perfectly neutral light: no shadow, no reflection, no
@@ -528,8 +527,8 @@ plausible matter where there was only a smeared pixel.
 
 **Vectorisation**
 Turning a picture into paths — lines and curves, which scale up without ever going blurry. The
-studio has the command, in the Image workspace, but it cannot complete yet — see
-[What does not exist yet](18-limits.md).
+**Vectorize** command lives in the Image menu; its model is set in
+**Settings ▸ Generation ▸ Vectorization**.
 
 **Waveform**
 The drawing of a sound: those waves showing where it is loud and where it is silent. It is what lets

@@ -248,10 +248,10 @@ du crédit, et une touche pressée par mégarde n'a pas à en dépenser.
 formulaire du panneau Génération** et vous le montre. C'est vous qui appuyez sur Générer, après
 avoir vu ce qui part et avec quels réglages.
 
-> **Trois d'entre elles ne peuvent pas aboutir aujourd'hui** — Détourer, Agrandir, Vectoriser.
-> Elles cherchent un modèle dans une famille qu'aucun écran ne permet de choisir. Le panneau
-> Modèles s'ouvre, et rien ne se passe. Voir
-> [Ce qui n'existe pas encore](18-limites.md).
+**Elles vivent dans le menu Image**, et nulle part ailleurs : sans raccourci par défaut, c'est la
+seule porte. Détourer, Agrandir et Vectoriser demandent chacune un modèle d'une famille qui n'a pas
+d'espace à elle ; il se règle dans **Réglages ▸ Génération**. Tant qu'aucun n'est réglé, l'édition
+ne part pas et ouvre l'écran où en choisir un.
 
 ### Exporter
 

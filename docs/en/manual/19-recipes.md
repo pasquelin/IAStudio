@@ -82,22 +82,18 @@ text — the other path is an image document with the picture dragged onto it as
 
 ## Enlarge a picture
 
-The Image workspace's menu offers an **Enlarge** command. **Do not use it: it cannot complete
-today** — it looks for its model in a family no screen lets you choose, and merely opens the
-Models panel.
+**Image ▸ Enlarge** flattens the document, sends it, and opens the upscaler's form with your
+picture already in it. You are the one who presses **Generate**.
 
-The path that works goes through the ordinary form:
+Once, before the first time: **Settings ▸ Generation ▸ Upscaling**, pick a model. Without it the
+command sends nothing and opens that screen — the **Models** panel cannot serve here, it only
+shows the open workspace's family.
 
-1. **Image** workspace;
-2. in the **Models** panel, type `upscale` into the search — or open **More filters** → **Tag**
-   → `image-upscale`;
-3. pick one, give it your picture, **Generate**.
+**Cut out** and **Vectorize** work exactly the same way, with their own settings sub-sections:
+**Background removal** and **Vectorization**.
 
-An upscaler is an image model like any other: it takes an image and returns one, larger. Which is
-precisely why it is filed under the Image family.
-
-**Cut out** and **Vectorize** are in the same position, with no fallback: no model of either
-family can be reached. See [What does not exist yet](18-limits.md).
+An upscaler is otherwise a model like any other: nothing stops you from finding it in the Models
+panel and handing it a picture by hand.
 
 ---
 
@@ -331,7 +327,7 @@ All of it is spelled out, with nothing hidden, in
 |---|---|---|
 | a picture from a sentence | Image | Models → prompt → Generate |
 | a variant of a picture | Image | *Image to image* filter → give the picture |
-| a bigger picture | Image | search `upscale` in Models — **not** the Enlarge command |
+| a bigger picture | Image | the **Image ▸ Enlarge** menu, once its model is set |
 | a 360° sky | Skyboxes | `+` → Generate, it lands by itself |
 | a material | Textures | `+` → drag a picture onto the preview → `⌘S` |
 | an animated shot | Video | *Image to video* filter → Generate |
