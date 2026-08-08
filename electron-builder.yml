@@ -73,9 +73,10 @@ mac:
   # The value Electron 43 already carries in its Info.plist, written down so it stops being
   # implicit: electron-updater reads it to decide whether a client may take an update.
   minimumSystemVersion: '12.0'
-  # No Apple Developer Program is subscribed — see docs/ci/adr/ADR-04. Notarising without an
-  # account fails the build; set this to true the day the secrets of ADR-07 exist.
-  notarize: false
+  # `notarize` is deliberately left at its default rather than pinned to false: electron-builder
+  # only notarises what it managed to sign, so an unsigned build skips it on its own — and the
+  # day the secrets of ADR-07 exist, signing and notarising both start without touching this
+  # file. No Apple Developer Program is subscribed today; see docs/ci/adr/ADR-04.
   # Signed with the app, or the hardened runtime refuses to spawn it — an unsigned executable
   # inside a signed bundle is exactly what Gatekeeper is there to stop.
   binaries:
