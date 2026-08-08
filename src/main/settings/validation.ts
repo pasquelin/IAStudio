@@ -15,6 +15,7 @@ import {
   type SettingActionId,
 } from '@shared/domain/settings-registry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
+import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from '@shared/domain/scene'
 import type { AccountBook, Credentials } from './accounts'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
@@ -83,6 +84,13 @@ const three = z.object({
   snapTranslate: z.number().min(moveStep.min).max(moveStep.max).optional(),
   snapRotate: z.number().min(turnStep.min).max(turnStep.max).optional(),
   snapScale: z.number().min(scaleStep.min).max(scaleStep.max).optional(),
+  shadowQuality: z.enum(SHADOW_QUALITIES).optional(),
+  // Read from the shared list, never retyped: what the panel offers and what this refuses have
+  // to be the same numbers.
+  shadowMapSize: z
+    .number()
+    .refine(value => SHADOW_MAP_SIZES.includes(value))
+    .optional(),
 })
 
 const shortcuts = z.object({

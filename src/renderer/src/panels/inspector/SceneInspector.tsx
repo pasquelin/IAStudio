@@ -10,6 +10,7 @@ import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
 import { MaterialSection } from './MaterialSection'
+import { ShadowSection } from './ShadowSection'
 import { TransformSection } from './TransformSection'
 import { useSceneEdit } from './useSceneEdit'
 
@@ -51,6 +52,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   return (
     <>
       <TransformSection node={node} selection={selection} edit={edit} />
+      <ShadowSection node={node} selection={selection} edit={edit} />
 
       {mesh && (
         <>

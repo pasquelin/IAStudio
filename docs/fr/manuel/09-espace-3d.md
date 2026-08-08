@@ -270,7 +270,6 @@ L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
 
 - les **groupes** et le reparentage ;
 - le **copier-coller** et la duplication ;
-- les **ombres portées** ;
 - l'**éclairage par image** (HDRI) dans le viewport.
 
 Le détail est dans [Ce qui n'existe pas encore](18-limites.md).

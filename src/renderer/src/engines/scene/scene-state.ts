@@ -22,6 +22,10 @@ type SceneNodeBase = {
   name: string
   visible: boolean
   transform: Transform
+  /** Throws a shadow. On a light, whether it casts any at all — six renders a frame for a point. */
+  castShadow: boolean
+  /** Catches the shadows of others. Meaningless on a light, and ignored there. */
+  receiveShadow: boolean
 }
 
 export type SceneNode = SceneNodeBase &
@@ -43,6 +47,34 @@ export type SceneState = {
 
 /** Where a node ended up, reported by whatever moved it — a gizmo drag moves a whole selection. */
 export type NodeMove = { id: string; transform: Transform }
+
+/**
+ * What a node without shadow flags means — a document written before they existed, which is
+ * every one saved so far.
+ *
+ * A mesh both throws and catches: that is what makes a scene read as lit rather than as a set of
+ * cut-outs. Of the lights, only the directional one throws by default: it is what carries the key
+ * of a scene. A point light is six renders of the whole scene per frame, and a spot — one render,
+ * like the directional — points down at a set nobody aimed it at yet, where it mostly produces
+ * acne. Both are one checkbox away in the inspector.
+ */
+export function shadowDefaults(
+  node: { type: 'light'; light: LightDescriptor } | { type: 'mesh' | 'model' },
+): { castShadow: boolean; receiveShadow: boolean } {
+  if (node.type !== 'light') return { castShadow: true, receiveShadow: true }
+  return { castShadow: node.light.kind === 'directional', receiveShadow: false }
+}
+
+/**
+ * Whether a node can throw a shadow at all. An ambient or hemisphere light has no shadow camera,
+ * and three.js warns once per frame about a light told to cast one — so the box is not offered
+ * rather than offered and ignored.
+ */
+export function canCastShadow(node: SceneNode): boolean {
+  return node.type !== 'light' || SHADOW_CASTING_LIGHTS.includes(node.light.kind)
+}
+
+const SHADOW_CASTING_LIGHTS: readonly LightDescriptor['kind'][] = ['directional', 'spot', 'point']
 
 export const IDENTITY_TRANSFORM: Transform = {
   position: { x: 0, y: 0, z: 0 },

@@ -328,6 +328,9 @@
   },
   "inspector": {
     "noDocument": "Open a scene to inspect what is in it.",
+    "castShadow": "Casts a shadow",
+    "receiveShadow": "Catches shadows",
+    "shadows": "Shadows",
     "noSelection": "Select an object to see its properties.",
     "transform": "Transform",
     "geometry": "Geometry",
@@ -697,6 +700,16 @@
     "boostFactor": {
       "title": "Boost",
       "help": "What the speed is multiplied by while you hold the boost key. At 3 you go three times faster — enough to cross a large scene without changing the setting above."
+    },
+    "shadowQuality": {
+      "title": "Shadow softness",
+      "help": "The grain of a shadow's edge. Hard cuts cleanly and costs the least; Soft smooths the edge. What throws a shadow, on the other hand, is decided object by object in the inspector.",
+      "hard": "Hard",
+      "soft": "Soft"
+    },
+    "shadowMapSize": {
+      "title": "Shadow detail",
+      "help": "The side, in pixels, of the shadow map each shadow-casting light computes. Doubling it costs four times the memory: 2048 is plenty for a scene of a few objects, 4096 earns its keep when one light covers a whole set."
     },
     "snapTranslate": {
       "title": "Move step",

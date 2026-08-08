@@ -87,8 +87,58 @@ describe('sceneFromPayload', () => {
     expect(reread({ nodes: [ghost], selectedIds: [] }).nodes).toEqual([ghost])
   })
 
+  /**
+   * The silent risk of the whole shadow change: every document written so far has no flags, and
+   * requiring them would have emptied each of them at load — a dropped node looks exactly like
+   * one that was never there.
+   */
+  describe('a document written before shadows existed', () => {
+    const before = (node: object): Record<string, unknown> => {
+      const stripped: Record<string, unknown> = { ...node }
+      delete stripped.castShadow
+      delete stripped.receiveShadow
+      return stripped
+    }
+
+    it('keeps its nodes rather than dropping them', () => {
+      const nodes = [before(mesh('a')), before(light('b')), before(modelNodeFixture('m'))]
+      expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a', 'b', 'm'])
+    })
+
+    it('gives a mesh both flags, so a scene reads as lit rather than as cut-outs', () => {
+      const [node] = sceneFromPayload({ nodes: [before(mesh('a'))] }).nodes
+      expect(node).toMatchObject({ castShadow: true, receiveShadow: true })
+    })
+
+    // A point light with shadows is six renders of the scene a frame, and a spot is one.
+    it('only lets a directional light throw shadows by default', () => {
+      const directional = light('d', {
+        kind: 'directional',
+        color: '#fff',
+        intensity: 1,
+        target: { x: 0, y: 0, z: 0 },
+      })
+      const point = light('p', {
+        kind: 'point',
+        color: '#fff',
+        intensity: 1,
+        distance: 0,
+        decay: 2,
+      })
+
+      const nodes = sceneFromPayload({ nodes: [before(directional), before(point)] }).nodes
+      expect(nodes.map(node => node.castShadow)).toEqual([true, false])
+    })
+
+    it('leaves a flag the file does hold alone', () => {
+      const kept = { ...mesh('a'), castShadow: false, receiveShadow: false }
+      expect(sceneFromPayload({ nodes: [kept] }).nodes[0]).toMatchObject({ castShadow: false })
+    })
+  })
+
   it.each([
     ['no id', nodeWith({ id: '' })],
+    ['a shadow flag that is not a flag', nodeWith({ castShadow: 'yes' })],
     ['a parent that is not a reference', nodeWith({ parentId: 7 })],
     ['no name', nodeWith({ name: null })],
     ['a visibility that is not a flag', nodeWith({ visible: 'yes' })],

@@ -115,7 +115,6 @@ practice", above.
 
 - **groups** and reparenting — you cannot assemble objects into a subset;
 - **copy-paste** and duplication;
-- **cast shadows** — objects are lit, but throw no shadow;
 - **image-based lighting** (*IBL*) in the viewport — a *skybox* does not yet light a 3D scene, even
   though it does light the Skyboxes workspace preview.
 

@@ -339,7 +339,51 @@ survit à un aller-retour d'enregistrement ; un `assetId` inconnu ne fait pas to
 
 ## Étape 4 — Ombres
 
-- [ ] Livrée
+- [x] Livrée
+
+**Ce qui est livré.** `castShadow` / `receiveShadow` par nœud, deux cases dans une section
+**Ombres** de l'inspecteur, `shadowMap` activé sur le viewport de la scène seule, et deux
+réglages : douceur et finesse. 2401 → 2420 tests.
+
+**Le risque silencieux, traité en premier.** Un `.scene` écrit avant cette étape n'a pas les
+deux champs. `sceneFromPayload` les remplit au chargement au lieu de les exiger — un nœud refusé
+est indiscernable d'un nœud qui n'a jamais existé, donc exiger les flags aurait vidé chaque
+document existant sans un mot. Quatre tests le verrouillent, dont un qui reconstruit un fichier
+d'avant l'étape en retirant les champs. `null` compte comme absent : un outil qui sérialise les
+champs manquants ainsi ne doit pas coûter le nœud.
+
+**Sur « mesurer avant de décider ».** Le plan demandait de mesurer le coût avant de choisir le
+défaut. Je n'ai pas mesuré de fps — l'app ne tourne pas dans cette boucle — mais le comptage est
+exact et suffisant : une scène neuve a une ambiante, une directionnelle et une hémisphérique, et
+seule la directionnelle projette, soit **une passe de profondeur plus la passe principale, deux
+rendus par frame**. Aucune ponctuelle par défaut, donc jamais les six. Le défaut retenu est celui
+que le plan désignait comme repli, et il est visible : une case par lumière dans l'inspecteur.
+Le spot est off lui aussi, bien qu'il ne coûte qu'une passe comme la directionnelle — sa raison
+est autre : pointé vers −Y sur un décor que personne n'a encore visé, il produit surtout de
+l'acné d'ombre.
+
+**Quatre bugs trouvés par `/simplify` et `/code-review`, tous corrigés :**
+
+- **le troisième niveau de douceur ne faisait rien.** `PCFSoftShadowMap` est déprécié dans
+  three 0.185 : le moteur le remplace par `PCFShadowMap` et journalise un avertissement — à
+  chaque `configure`, puisque le garde d'idempotence ne mordait plus. « Très douce » rendait donc
+  exactement comme « Douce ». Le réglage n'offre plus que les deux filtres réellement appliqués ;
+- **un modèle importé ne projetait aucune ombre.** Son fichier arrive après le sync qui a bâti
+  son porteur, et le sync suivant saute un nœud inchangé : les flags n'atteignaient jamais ce qui
+  était arrivé. Ils sont posés là où le fichier atterrit ;
+- **la directionnelle n'éclairait qu'un carré de dix unités.** Son frustum d'ombre naît en
+  ±5 ; sur la grille de vingt mètres contre laquelle une scène se construit, la moitié des objets
+  ne projetait rien, sans le moindre indice. Il est maintenant dimensionné sur la grille ;
+- **cocher « projette une ombre » sur une ambiante** faisait avertir three.js à chaque frame pour
+  un effet nul — et la scène par défaut en contient deux. La case n'est plus offerte aux lumières
+  qui n'ont pas de caméra d'ombre.
+
+**Une correction d'honnêteté.** Le commentaire justifiant `needsUpdate` décrivait un mécanisme
+inexistant : three.js recompile de lui-même sur changement de type, et `needsUpdate` n'est lu que
+si `autoUpdate` est coupé, ce qu'il n'est jamais ici. L'écriture et son commentaire sont partis.
+
+**Le manuel a été corrigé** : il listait les ombres portées parmi ce qui n'existe pas, et sa table
+des valeurs par défaut ignorait les deux nouveaux réglages.
 
 `shadowMap` activé sur le renderer du `ViewportEngine`, `castShadow` / `receiveShadow` par nœud —
 deux booléens dans `SceneNodeBase`, donc deux cases dans l'inspecteur et **deux champs de plus à

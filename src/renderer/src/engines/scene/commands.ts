@@ -10,6 +10,7 @@ import { changedFields } from '@/helpers/objects'
 import { applySelection, type SelectionMode } from '@/helpers/selection'
 import { isVector3, withField, type FieldValue } from './property-fields'
 import {
+  canCastShadow,
   nodeById,
   type MeshNode,
   type NodeMove,
@@ -64,7 +65,7 @@ export function removeNode(id: string): Command<SceneState> {
 
 /**
  * One shape for every edit of a shared field: they all revert by putting the old values back.
- * The whole shared trio is captured rather than the single field touched — the history is a
+ * The whole shared set is captured rather than the single field touched — the history is a
  * linear stack, so nothing can change the node between `apply` and `revert`.
  */
 function editNode(label: string, id: string, changes: NodePatch): Command<SceneState> {
@@ -75,7 +76,13 @@ function editNode(label: string, id: string, changes: NodePatch): Command<SceneS
     apply: state => {
       const node = nodeById(state, id)
       if (!node) return state
-      previous = { name: node.name, visible: node.visible, transform: node.transform }
+      previous = {
+        name: node.name,
+        visible: node.visible,
+        transform: node.transform,
+        castShadow: node.castShadow,
+        receiveShadow: node.receiveShadow,
+      }
       return patch(state, id, changes)
     },
     revert: state => (previous ? patch(state, id, previous) : state),
@@ -92,6 +99,30 @@ export function setNodeVisible(id: string, visible: boolean): Command<SceneState
 
 export function renameNode(id: string, name: string): Command<SceneState> {
   return editNode('rename', id, { name })
+}
+
+/**
+ * Whether the selected nodes throw a shadow, or catch the ones others throw.
+ *
+ * A light catches nothing, so it is skipped rather than given a flag the renderer would ignore:
+ * with a mesh and a light selected together, the inspector hides the row but the command would
+ * otherwise still write it into the document and into the history.
+ */
+export function setShadowOn(
+  nodes: readonly SceneNode[],
+  changes: ShadowPatch,
+): Command<SceneState> {
+  return batch('shadow', nodes, node =>
+    refuses(node, changes) ? null : editNode('shadow', node.id, changes),
+  )
+}
+
+type ShadowPatch = Partial<Pick<SceneNode, 'castShadow' | 'receiveShadow'>>
+
+/** A light catches nothing, and one without a shadow camera throws nothing either. */
+function refuses(node: SceneNode, changes: ShadowPatch): boolean {
+  if (changes.receiveShadow !== undefined && node.type === 'light') return true
+  return changes.castShadow !== undefined && !canCastShadow(node)
 }
 
 /**
@@ -141,7 +172,9 @@ export function setLight(id: string, light: LightDescriptor): Command<SceneState
  * Only the fields every node shares: patching a discriminated field would let a light take a
  * geometry, which is exactly what the union exists to forbid.
  */
-type NodePatch = Partial<Pick<SceneNode, 'name' | 'visible' | 'transform'>>
+type NodePatch = Partial<
+  Pick<SceneNode, 'name' | 'visible' | 'transform' | 'castShadow' | 'receiveShadow'>
+>
 
 function patch(state: SceneState, id: string, changes: NodePatch): SceneState {
   return {

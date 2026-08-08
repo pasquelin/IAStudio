@@ -266,7 +266,6 @@ The 3D workspace is functional but young. Do not look yet for:
 - **multiple selection** — one object at a time;
 - **groups** and reparenting;
 - **copy-paste** and duplication;
-- **cast shadows**;
 - **image-based lighting** (HDRI) in the viewport;
 - **snapping** and local pivot.
 

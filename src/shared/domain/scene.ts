@@ -63,6 +63,21 @@ export type TextureRef = { assetId: string }
  */
 export type ModelRef = { assetId: string }
 
+/**
+ * How soft a shadow edge is, named as a person would rather than as three.js spells it — the
+ * engine maps these onto its map types. Here because it is persisted, and `shared/` is where
+ * what a settings file holds is described.
+ *
+ * Two words and not three: three.js 0.185 deprecated its softest filter and silently falls back
+ * to the middle one, so a third option would have been a setting that changes nothing.
+ */
+export type ShadowQuality = 'hard' | 'soft'
+
+export const SHADOW_QUALITIES: readonly ShadowQuality[] = ['hard', 'soft']
+
+/** The sides a shadow map may take. A list, so a slider cannot suggest the values in between. */
+export const SHADOW_MAP_SIZES: readonly number[] = [512, 1024, 2048, 4096]
+
 /** The maps a `MeshStandardMaterial` reads, in the order the inspector lists them. */
 export type TextureSlot = 'map' | 'normalMap' | 'roughnessMap' | 'metalnessMap' | 'aoMap'
 

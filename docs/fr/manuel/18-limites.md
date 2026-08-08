@@ -118,7 +118,6 @@ haut, « Ce que cela veut dire concrètement ».
 
 - **les groupes** et le reparentage — on ne peut pas assembler des objets en un sous-ensemble ;
 - **le copier-coller** et la duplication ;
-- **les ombres portées** — les objets sont éclairés, mais ne projettent pas d'ombre ;
 - **l'éclairage par image** (*IBL*) dans le viewport — une *skybox* n'éclaire pas encore une
   scène 3D, alors qu'elle éclaire bien l'aperçu de l'espace Skyboxes.
 

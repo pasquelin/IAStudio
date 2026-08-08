@@ -36,6 +36,12 @@ export type ViewportEngineOptions = {
    */
   toneMapping?: boolean
   /**
+   * Whether the renderer draws shadow maps at all. Off by default, and left off by the two
+   * viewports that show one lit object on a studio environment: enabling it costs a depth pass
+   * per shadow-casting light, for surfaces that would catch nothing.
+   */
+  shadows?: boolean
+  /**
    * `orbit` circles a target — the scene editor and a texture on its sphere. `none` leaves the
    * camera where it is put, for a viewport whose camera sits at the centre and only turns its
    * head; orbiting with the target pinned at the centre would need the distance locked to
@@ -83,6 +89,7 @@ export class ViewportEngine {
     const renderer = new WebGLRenderer({ canvas, antialias: true })
     renderer.setPixelRatio(window.devicePixelRatio)
     renderer.toneMapping = this.options.toneMapping ? ACESFilmicToneMapping : NoToneMapping
+    renderer.shadowMap.enabled = this.options.shadows ?? false
     this.renderer = renderer
 
     if (this.options.controls !== 'none') {

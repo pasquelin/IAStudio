@@ -92,6 +92,26 @@ describe('a model node', () => {
     renderer.dispose()
   })
 
+  /**
+   * A model fills its holder long after the sync that built it, and the next sync skips a node
+   * that has not changed — so flagging only in `syncNode` left an imported model throwing no
+   * shadow at all until somebody edited it.
+   */
+  it('throws a shadow as soon as its file lands, without waiting to be edited', async () => {
+    // The scene gets a clone, which a test cannot reach — so the source hands back a known one.
+    const copy = source()
+    const parsed = source()
+    parsed.clone = () => copy
+
+    const renderer = rendererLoading(async () => parsed)
+    renderer.apply(withModels('a'))
+    await vi.waitFor(() => expect(copy.parent).not.toBeNull())
+
+    expect(copy.children[0]?.castShadow).toBe(true)
+    expect(copy.children[0]?.receiveShadow).toBe(true)
+    renderer.dispose()
+  })
+
   it('leaves the rest of the scene standing when a file cannot be read', async () => {
     const load = vi.fn(async () => {
       throw new Error('gone')

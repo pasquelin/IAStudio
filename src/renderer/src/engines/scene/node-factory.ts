@@ -4,7 +4,7 @@ import { newId } from '@/helpers/ids'
 import { lightByKind } from './light-types'
 import { primitiveByKind } from './mesh-primitives'
 import { MODEL_ICON } from './node-kinds'
-import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type SceneNode } from './scene-state'
+import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, shadowDefaults, type SceneNode } from './scene-state'
 
 /**
  * A node is named after its class, as in the three.js editor — `Box`, `SpotLight` — and never
@@ -22,6 +22,7 @@ export function lightNode(light: LightDescriptor, position: Vector3): SceneNode 
     name: `${classNameOf(light.kind)}Light`,
     visible: true,
     transform: { ...IDENTITY_TRANSFORM, position },
+    ...shadowDefaults({ type: 'light', light }),
     type: 'light',
     light,
   }
@@ -39,6 +40,7 @@ export function modelNode(assetId: string, name: string): SceneNode {
     name,
     visible: true,
     transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'model' }),
     type: 'model',
     model: { assetId },
   }
@@ -71,6 +73,7 @@ export function createNodeOf(kind: string): SceneNode | null {
       name: classNameOf(kind),
       visible: true,
       transform: IDENTITY_TRANSFORM,
+      ...shadowDefaults({ type: 'mesh' }),
       type: 'mesh',
       geometry,
       material: DEFAULT_MATERIAL,

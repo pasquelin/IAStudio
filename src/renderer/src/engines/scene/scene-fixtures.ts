@@ -1,6 +1,7 @@
 import type { LightDescriptor } from '@shared/domain/scene'
 import {
   DEFAULT_MATERIAL,
+  shadowDefaults,
   IDENTITY_TRANSFORM,
   type LightNode,
   type MeshNode,
@@ -19,6 +20,7 @@ export function meshNode(id: string, parentId: string | null = null): MeshNode {
     name: id,
     visible: true,
     transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'mesh' }),
     type: 'mesh',
     geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
     material: DEFAULT_MATERIAL,
@@ -35,6 +37,7 @@ export function lightNodeFixture(
     name: id,
     visible: true,
     transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'light', light }),
     type: 'light',
     light,
   }
@@ -47,6 +50,7 @@ export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
     name: id,
     visible: true,
     transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'model' }),
     type: 'model',
     model: { assetId },
   }

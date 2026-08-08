@@ -6,6 +6,7 @@ import {
   THEMES,
   type SettingsSectionId,
 } from './settings'
+import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from './scene'
 import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 
 /**
@@ -359,6 +360,27 @@ export const SETTING_REGISTRY = [
     min: 0.05,
     max: 1,
     step: 0.05,
+  }),
+  setting({
+    path: 'three.shadowQuality',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.shadowQuality.title',
+    helpKey: 'settings.shadowQuality.help',
+    options: SHADOW_QUALITIES.map(value => ({
+      value,
+      labelKey: `settings.shadowQuality.${value}`,
+    })),
+  }),
+  setting({
+    path: 'three.shadowMapSize',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.shadowMapSize.title',
+    helpKey: 'settings.shadowMapSize.help',
+    // A list rather than a slider: the values in between are not allowed, and a slider would
+    // suggest they are.
+    options: SHADOW_MAP_SIZES.map(value => ({ value, label: String(value) })),
   }),
   setting({
     path: 'storage.projectsFolder',

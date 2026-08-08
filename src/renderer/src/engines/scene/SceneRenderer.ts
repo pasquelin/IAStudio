@@ -15,6 +15,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
+import type { ShadowQuality } from '@shared/domain/scene'
 import type { SelectionMode } from '@/helpers/selection'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import type { ModelNode, NodeMove, SceneNode, SceneState } from './scene-state'
@@ -30,6 +31,7 @@ import { createMaterialTextures, type MaterialTextures } from './material-textur
 import { createGltfSource } from './gltf-source'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
+import { applyShadowFlags, applyShadowQuality, fitShadowCamera, resizeShadowMap } from './shadows'
 import { snapSteps } from './snap-steps'
 import { createTextureCache } from './texture-cache'
 
@@ -66,6 +68,10 @@ export type ViewportOptions = {
   /** In degrees; converted on the way to the gizmo, which turns in radians. */
   snapRotate: number
   snapScale: number
+  /** How soft a shadow edge is. Read by the renderer, once for the whole viewport. */
+  shadowQuality: ShadowQuality
+  /** Side of the square map each casting light allocates. Doubling it costs four times as much. */
+  shadowMapSize: number
 }
 
 /** How far the pointer may wander between press and release and still count as a click, in px. */
@@ -89,6 +95,9 @@ export class SceneRenderer {
   private readonly viewport = new ViewportEngine({
     onFrame: delta => this.advance(delta),
     onOverlay: renderer => this.viewHelper?.render(renderer),
+    // Only here: the texture and skybox viewports show what they show without any light told to
+    // cast, so a depth pass per frame would buy them nothing.
+    shadows: true,
   })
 
   /** Replaced by `configure` before the first frame; these keep the engine usable without it. */
@@ -101,6 +110,8 @@ export class SceneRenderer {
     snapTranslate: 0.5,
     snapRotate: 15,
     snapScale: 0.1,
+    shadowQuality: 'soft',
+    shadowMapSize: 2048,
   }
 
   private readonly raycaster = new Raycaster()
@@ -294,6 +305,8 @@ export class SceneRenderer {
   configure(next: ViewportOptions): void {
     const gridMoved = next.showGrid !== this.view.showGrid || next.gridSize !== this.view.gridSize
     const lensMoved = next.fieldOfView !== this.view.fieldOfView
+    const shadowsResized = next.shadowMapSize !== this.view.shadowMapSize
+    const shadowsMoved = shadowsResized || next.shadowQuality !== this.view.shadowQuality
 
     this.view = next
 
@@ -305,8 +318,17 @@ export class SceneRenderer {
     // Unconditional: a step changed while snapping is off has to be waiting when it comes on.
     this.applySnap()
 
+    const gl = this.viewport.gl
+    if (gl) applyShadowQuality(gl, next.shadowQuality)
+    // Every light, not only the ones built after the change: the map is allocated per light.
+    // Every light, not only the ones built after the change: a map is allocated per light, and
+    // the frustum of a directional one is sized from the grid the scene is laid out against.
+    if (shadowsResized || gridMoved) {
+      for (const object of this.objects.values()) this.tuneShadow(object)
+    }
+
     if (gridMoved && this.viewport.canvas) this.applyPalette()
-    if (gridMoved || lensMoved) this.viewport.requestRender()
+    if (gridMoved || lensMoved || shadowsMoved) this.viewport.requestRender()
   }
 
   private applySnap(): void {
@@ -392,6 +414,14 @@ export class SceneRenderer {
       this.syncDescriptors(object, previous, node)
     }
 
+    // Only when they moved: the flags are set per mesh, so a model of a few thousand of them
+    // would be walked on every value an inspector drag emits. What a model brings later is
+    // flagged where it arrives, in `buildModel`.
+    if (previous?.castShadow !== node.castShadow || previous.receiveShadow !== node.receiveShadow) {
+      applyShadowFlags(object, node.castShadow, receivesShadow(node))
+    }
+    if (node.type === 'light') this.tuneShadow(object)
+
     // A carried object holds a transform relative to the pivot, and the state holds one relative
     // to the scene: writing the second into the first mid-drag teleports it. The release puts
     // the truth back, so an undo during a gesture repaints everything but where things are.
@@ -461,10 +491,20 @@ export class SceneRenderer {
       if (this.objects.get(node.id) !== holder || !source) return
 
       holder.add(instanceOf(source))
+      // Here rather than in `syncNode`: what arrives lands after the sync that built the holder,
+      // and the next one skips an unchanged node — the model would throw nothing until edited.
+      const applied = this.applied.get(node.id) ?? node
+      applyShadowFlags(holder, applied.castShadow, receivesShadow(applied))
       this.viewport.requestRender()
     })
 
     return holder
+  }
+
+  /** What a light's shadow is sized against: the settings for the map, the grid for the reach. */
+  private tuneShadow(light: Object3D): void {
+    resizeShadowMap(light, this.view.shadowMapSize)
+    fitShadowCamera(light, this.view.gridSize)
   }
 
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
@@ -721,6 +761,11 @@ export function nodeIdOf(object: Object3D, isNode: (name: string) => boolean): s
     current = current.parent
   }
   return null
+}
+
+/** A light catches nothing: the flag exists on every node, but only two kinds answer to it. */
+function receivesShadow(node: SceneNode): boolean {
+  return node.type !== 'light' && node.receiveShadow
 }
 
 function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {

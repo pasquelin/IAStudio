@@ -18,7 +18,7 @@ import {
   isVector3,
   type PropertySpec,
 } from './property-fields'
-import { EMPTY_SCENE, type SceneNode, type SceneState } from './scene-state'
+import { EMPTY_SCENE, shadowDefaults, type SceneNode, type SceneState } from './scene-state'
 
 /** What a saved scene holds. The selection is session state, and is deliberately left out. */
 export type ScenePayload = { nodes: readonly SceneNode[] }
@@ -39,7 +39,25 @@ export function sceneFromPayload(payload: unknown): SceneState {
   if (!isRecord(payload) || !Array.isArray(payload.nodes)) return EMPTY_SCENE
 
   const nodes: readonly unknown[] = payload.nodes
-  return { nodes: nodes.filter(isSceneNode), selectedIds: [] }
+  /**
+   * Defaults first, the node on top: a flag the file does not hold keeps its default, one it
+   * holds wins. That ordering *is* the migration — every document written so far predates
+   * shadows, and requiring the flags would have emptied each of them at load, silently, since a
+   * dropped node looks exactly like one that was never there.
+   */
+  return {
+    nodes: nodes.filter(isSceneNode).map(node => ({ ...node, ...withDefaults(node) })),
+    selectedIds: [],
+  }
+}
+
+/** The flags, filled in where the file holds none — `null` included. */
+function withDefaults(node: SceneNode): Pick<SceneNode, 'castShadow' | 'receiveShadow'> {
+  const defaults = shadowDefaults(node)
+  return {
+    castShadow: node.castShadow ?? defaults.castShadow,
+    receiveShadow: node.receiveShadow ?? defaults.receiveShadow,
+  }
 }
 
 /** Keyed by kind rather than by shape, which is what makes an unknown kind a refusal. */
@@ -54,6 +72,9 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.parentId !== null && typeof value.parentId !== 'string') return false
   if (typeof value.name !== 'string' || typeof value.visible !== 'boolean') return false
   if (!isTransform(value.transform)) return false
+  // Absent is legal and means "the default", filled in below. `null` counts as absent: a tool
+  // that serializes missing fields that way must not cost the node.
+  if (!isOptionalFlag(value.castShadow) || !isOptionalFlag(value.receiveShadow)) return false
 
   if (value.type === 'mesh') {
     return describes(value.geometry, GEOMETRY_SPECS) && isMaterial(value.material)
@@ -65,6 +86,10 @@ function isSceneNode(value: unknown): value is SceneNode {
     return isRecord(value.model) && typeof value.model.assetId === 'string'
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
+}
+
+function isOptionalFlag(value: unknown): boolean {
+  return value == null || typeof value === 'boolean'
 }
 
 function isTransform(value: unknown): value is Transform {
