@@ -6,6 +6,7 @@ import {
   mdiCropFree,
   mdiCursorDefaultOutline,
   mdiDelete,
+  mdiFolderPlusOutline,
   mdiMagnet,
   mdiPlus,
   mdiResize,
@@ -93,6 +94,13 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     icon: mdiPlus,
     separatorBefore: true,
     modes: ADD_MODES,
+  },
+  {
+    id: 'group',
+    command: 'scene.group',
+    labelKey: 'sceneTools.group',
+    descriptionKey: 'sceneTools.groupHint',
+    icon: mdiFolderPlusOutline,
   },
   {
     id: 'delete',

@@ -3,7 +3,7 @@ import { shortcutLabel } from '@shared/domain/shortcut'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
-import { moveNodes, removeNodes } from '@/engines/scene/commands'
+import { groupNodes, moveNodes, removeNodes } from '@/engines/scene/commands'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { restoreDocument } from '@/app/document-io'
 import { setDocumentTitle } from '@/app/dockview-api'
@@ -14,6 +14,7 @@ import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { assetsById, useAssets } from '@/stores/assets'
+import { selectedNodes } from '@/engines/scene/scene-state'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
 
@@ -111,8 +112,14 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         case 'scene.space':
           return setLocalFrame(current => !current)
         case 'scene.delete': {
-          const { selectedIds } = sceneOf(store, documentId)
-          if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(selectedIds))
+          const { nodes, selectedIds } = sceneOf(store, documentId)
+          if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
+          return
+        }
+        case 'scene.group': {
+          const { nodes, selectedIds } = sceneOf(store, documentId)
+          const chosen = selectedNodes(nodes, selectedIds)
+          if (chosen.length > 0) store.runCommand(documentId, groupNodes(chosen))
           return
         }
         case 'scene.undo':

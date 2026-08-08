@@ -3,7 +3,9 @@ import { emptyHistory, run, undo } from '../core/history'
 import {
   addNode,
   batch,
+  groupNodes,
   moveNodes,
+  reparentNode,
   multi,
   removeNode,
   removeNodes,
@@ -238,7 +240,7 @@ describe('removeNodes', () => {
       nodes: [mesh('a'), mesh('b'), mesh('c')],
       selectedIds: ['a', 'c'],
     }
-    const command = removeNodes(['a', 'c'])
+    const command = removeNodes(start.nodes, ['a', 'c'])
     const applied = command.apply(start)
 
     expect(applied.nodes.map(node => node.id)).toEqual(['b'])
@@ -313,6 +315,70 @@ describe('setLightOn', () => {
     expect(setLightOn(start.nodes, anchor.light, 'intensity', 4).apply(start).nodes[1]).toBe(
       ambient,
     )
+  })
+})
+
+describe('reparentNode', () => {
+  const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), mesh('b'), mesh('c', 'b')] }
+
+  it('hangs a node from another, and puts it back where it was', () => {
+    const command = reparentNode('a', 'b')
+    const moved = command.apply(start)
+
+    expect(moved.nodes.find(node => node.id === 'a')?.parentId).toBe('b')
+    expect(command.revert(moved).nodes.find(node => node.id === 'a')?.parentId).toBeNull()
+  })
+
+  it('brings a node back out to the scene', () => {
+    const command = reparentNode('c', null)
+    expect(command.apply(start).nodes.find(node => node.id === 'c')?.parentId).toBeNull()
+  })
+
+  // Applied, it would close the tree on itself and every walk of it would run forever.
+  it('refuses a move under its own descendant, and leaves the scene untouched', () => {
+    expect(reparentNode('b', 'c').apply(start)).toBe(start)
+  })
+
+  it('leaves an unknown node and a move that changes nothing alone', () => {
+    expect(reparentNode('ghost', 'b').apply(start)).toBe(start)
+    expect(reparentNode('c', 'b').apply(start)).toBe(start)
+  })
+
+  // The old parent is only known once the move runs — a redo has to capture it again.
+  it('survives being replayed through the history', () => {
+    const command = reparentNode('c', null)
+    const [out, history] = run(start, emptyHistory<SceneState>(), command)
+    const [back] = undo(out, history)
+
+    expect(back.nodes.find(node => node.id === 'c')?.parentId).toBe('b')
+  })
+})
+
+describe('groupNodes', () => {
+  const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), mesh('b'), mesh('c', 'b')] }
+
+  it('puts one group over the selection, and hangs it from nothing', () => {
+    const grouped = groupNodes([mesh('a'), mesh('b')]).apply(start)
+    const group = grouped.nodes.find(node => node.type === 'group')
+
+    expect(group?.parentId).toBeNull()
+    expect(grouped.nodes.filter(node => node.parentId === group?.id).map(node => node.id)).toEqual([
+      'a',
+      'b',
+    ])
+  })
+
+  // A node whose own parent is selected too is already carried along by it.
+  it('moves only the roots of the selection, so a subtree stays a subtree', () => {
+    const chosen = [mesh('b'), mesh('c', 'b')]
+    const grouped = groupNodes(chosen).apply(start)
+
+    expect(grouped.nodes.find(node => node.id === 'c')?.parentId).toBe('b')
+  })
+
+  it('is one entry in the history, whatever it moved', () => {
+    const command = groupNodes([mesh('a'), mesh('b')])
+    expect(command.revert(command.apply(start)).nodes).toEqual(start.nodes)
   })
 })
 

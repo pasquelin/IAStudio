@@ -1,4 +1,4 @@
-import { mdiCubeScan, mdiLightbulbOutline, mdiShapeOutline } from '@mdi/js'
+import { mdiCubeScan, mdiFolderOutline, mdiLightbulbOutline, mdiShapeOutline } from '@mdi/js'
 import { LIGHT_TYPES } from './light-types'
 import { MESH_PRIMITIVES } from './mesh-primitives'
 import type { SceneNodeType } from './scene-state'
@@ -18,11 +18,11 @@ export type NodeKind = {
 }
 
 /**
- * The kinds a panel is built for. A model is not one: it has no Add menu — it arrives from the
- * project's assets — no panel of its own, and therefore no empty state to name. Everything here
- * is read by a panel, its title bar and its flyout, which is exactly what a model has none of.
+ * The kinds a panel is built for. A model is not one — it arrives from the project's assets —
+ * and neither is a group, which is made by grouping a selection rather than picked from a menu.
+ * Everything here is read by a panel, its title bar and its flyout: what those two have none of.
  */
-export type PanelNodeType = Exclude<SceneNodeType, 'model'>
+export type PanelNodeType = Exclude<SceneNodeType, 'model' | 'group'>
 
 /**
  * What tells a mesh from a light, everywhere: the rail icon, the panels, the toolbar's Add
@@ -33,8 +33,9 @@ export const NODE_KINDS: Record<PanelNodeType, NodeKind> = {
   light: { icon: mdiLightbulbOutline, entries: LIGHT_TYPES, namespace: 'lights' },
 }
 
-/** The glyph of an imported model. It has no registry, so it has no entry to carry one. */
+/** The glyphs of the kinds no registry describes, since neither is picked from a menu. */
 export const MODEL_ICON = mdiCubeScan
+export const GROUP_ICON = mdiFolderOutline
 
 /** i18n key of what a kind is called. */
 export function labelKeyOf(kind: NodeKind, entry: AddEntry): string {

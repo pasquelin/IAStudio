@@ -1,12 +1,15 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useMemo, useRef, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { dragChannel } from '@/helpers/drag'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { LIST_ROW_HEIGHT, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type TreeNode = { id: string; parentId: string | null }
+
+const ROWS = dragChannel('application/x-scenario-tree-row')
 
 export type TreeRow<T> = { node: T; depth: number; hasChildren: boolean; expanded: boolean }
 
@@ -51,6 +54,11 @@ export type TreeProps<T extends TreeNode> = {
    * range rather than filtered off afterwards by whoever stores the result.
    */
   selectable?: (node: T) => boolean
+  /**
+   * A row was dropped onto another. Absent leaves the tree undraggable — a file browser has
+   * nothing to reorder, and offering the gesture there would promise something it cannot do.
+   */
+  onDrop?: (id: string, parentId: string) => void
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
 }
@@ -68,8 +76,12 @@ export function Tree<T extends TreeNode>({
   onSelect,
   onToggle,
   selectable,
+  onDrop,
   renderRow,
 }: TreeProps<T>) {
+  // Which row the pointer is over during a drag. Session state of the gesture itself, so it
+  // never reaches the caller: what the caller hears about is the drop.
+  const [over, setOver] = useState<string | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const rows = useMemo(() => flattenTree(nodes, expandedIds), [nodes, expandedIds])
 
@@ -162,7 +174,32 @@ export function Tree<T extends TreeNode>({
                 className={cn(
                   'group flex h-(--sc-control) cursor-pointer items-center gap-1 px-1',
                   rowSkin(selected.has(row.node.id)),
+                  // The row a drop would land in, told apart from the row that is selected.
+                  over === row.node.id && 'outline-accent outline -outline-offset-1',
                 )}
+                // A row that a selection may not hold is not a node either: it has nothing to
+                // move. And the handle is the row itself — a `draggable` makes every control
+                // inside it draggable too, so the eye would reparent instead of toggling.
+                draggable={onDrop !== undefined && (selectable?.(row.node) ?? true)}
+                onDragStart={event => {
+                  if (event.target !== event.currentTarget) return event.preventDefault()
+                  ROWS.start(event, row.node.id)
+                }}
+                onDragOver={event => {
+                  if (!onDrop || !ROWS.carries(event)) return
+                  // Without this the browser refuses the drop, and `onDrop` never fires.
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = 'move'
+                  setOver(row.node.id)
+                }}
+                onDragLeave={() => setOver(current => (current === row.node.id ? null : current))}
+                onDragEnd={() => setOver(null)}
+                onDrop={event => {
+                  event.preventDefault()
+                  setOver(null)
+                  const dragged = ROWS.idFrom(event)
+                  if (dragged && dragged !== row.node.id) onDrop?.(dragged, row.node.id)
+                }}
                 onPointerDown={event => pick(row.node, event)}
                 onKeyDown={event => onRowKeyDown(row, index, event.nativeEvent)}
               >

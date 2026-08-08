@@ -10,9 +10,12 @@ import { isRecord } from '@shared/guards'
 import { changedFields } from '@/helpers/objects'
 import { applySelection, type SelectionMode } from '@/helpers/selection'
 import { isVector3, withField, type FieldValue } from './property-fields'
+import { groupNode } from './node-factory'
 import {
   canCastShadow,
+  canReparent,
   nodeById,
+  subtreeOf,
   type MeshNode,
   type NodeMove,
   type SceneNode,
@@ -304,9 +307,72 @@ export function setMaterialOn(
   )
 }
 
+/**
+ * Hangs a node from another, or from the scene when the parent is `null`.
+ *
+ * The old parent is captured **as the command runs**, like every other edit here: what a node
+ * hung from before is only known once the move actually happens, and a redo has to re-capture.
+ *
+ * A move that would close the tree on itself is refused rather than applied — see `canReparent`.
+ */
+export function reparentNode(id: string, parentId: string | null): Command<SceneState> {
+  let previous: string | null = null
+  let moved = false
+
+  return {
+    id: `reparent:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (!node || node.parentId === parentId || !canReparent(state.nodes, id, parentId)) {
+        moved = false
+        return state
+      }
+
+      previous = node.parentId
+      moved = true
+      return hang(state, id, parentId)
+    },
+    revert: state => (moved ? hang(state, id, previous) : state),
+  }
+}
+
+/**
+ * Puts a group over the selected nodes, and hangs them from it.
+ *
+ * Only the roots of the selection move: a node whose own parent is selected too is already
+ * carried along, and moving it as well would flatten the subtree it was part of.
+ *
+ * The group lands where the selection already lived when they share a parent, and at the scene
+ * when they do not: grouping two children of a group must not lift them out of it.
+ */
+export function groupNodes(nodes: readonly SceneNode[]): Command<SceneState> {
+  const selected = new Set(nodes.map(node => node.id))
+  const roots = nodes.filter(node => node.parentId === null || !selected.has(node.parentId))
+  const shared = roots.every(node => node.parentId === roots[0]?.parentId)
+  const group = { ...groupNode(), parentId: shared ? (roots[0]?.parentId ?? null) : null }
+
+  return multi(commandId('group', [group.id]), [
+    addNode(group),
+    ...roots.map(node => reparentNode(node.id, group.id)),
+  ])
+}
+
+function hang(state: SceneState, id: string, parentId: string | null): SceneState {
+  return {
+    ...state,
+    nodes: state.nodes.map(node => (node.id === id ? { ...node, parentId } : node)),
+  }
+}
+
 /** Deleting a selection is one gesture, so it is one entry in the history. */
-export function removeNodes(ids: readonly string[]): Command<SceneState> {
-  return multi(commandId('remove', ids), ids.map(removeNode))
+export function removeNodes(
+  nodes: readonly SceneNode[],
+  ids: readonly string[],
+): Command<SceneState> {
+  // The whole subtree, not the picked rows: a child left behind would hang from a parent the
+  // scene no longer holds, and `flattenTree` drops an orphan rather than promoting it.
+  const doomed = [...new Set(ids.flatMap(id => subtreeOf(nodes, id).map(node => node.id)))]
+  return multi(commandId('remove', ids), doomed.map(removeNode))
 }
 
 /** Where a drag left every node it carried. One drag, one entry, however many nodes moved. */

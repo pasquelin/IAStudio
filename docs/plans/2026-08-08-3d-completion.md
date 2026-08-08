@@ -460,7 +460,53 @@ C'est le lien **Skyboxes → 3D** que la conception promet depuis le début.
 
 ## Étape 6 — Groupes et reparentage
 
-- [ ] Livrée
+- [x] Livrée
+
+**Ce qui est livré.** `parentId` cesse d'attendre : un quatrième type de nœud `group`, la commande
+`reparentNode`, `groupNodes` derrière ⌘G et un bouton dans la barre, le glisser-déposer dans
+l'outliner avec sa cible surlignée, et le raccrochage côté moteur en seconde passe — un enfant
+peut être synchronisé avant que le parent dont il dépend existe. 2434 → 2457 tests.
+
+**La décision du plan, tranchée.** `group` devient un quatrième type de nœud, comme `model` : il
+n'a ni menu Ajouter ni panneau, donc il reste hors de `NODE_KINDS`, qui est un registre de
+panneaux. Un groupe ne porte rien — un transform, un nom, et ce qui pend dessous.
+
+**Le cycle, interdit à un seul endroit.** `canReparent` refuse qu'un nœud devienne l'enfant de
+son propre descendant, avec cinq tests dont un sur un arbre déjà bouclé. C'est le bug classique
+de cette fonctionnalité, et c'est une fonction plutôt qu'une vérification recopiée partout où un
+parent se choisit.
+
+**Deux bugs de données, tous deux prouvés par exécution en revue :**
+
+- **un groupe était jeté au rechargement.** `isSceneNode` ne connaissait pas le type : enregistrer
+  une scène groupée puis la rouvrir supprimait tous les groupes, et leurs enfants gardaient un
+  parent que plus rien ne désignait — invisibles dans l'outliner, invisibles dans le viewport, et
+  conservés dans le fichier. Le travail de groupage disparaissait en silence ;
+- **`subtreeOf` ratait une branche** dès qu'un enfant était déclaré avant son parent — ce que
+  `reparentNode` rend possible, puisqu'il change un `parentId` sur place sans toucher à l'ordre.
+  Supprimer un groupe laissait alors un nœud fantôme : introuvable, insupprimable, sauvegardé.
+  La descente se fait maintenant par index, jamais en pariant sur l'ordre.
+
+**Quatre autres corrections de la revue :**
+
+- **le nom du groupe était traduit**, ce qu'interdit noir sur blanc le commentaire de
+  `node-factory` : une scène dont les objets s'appellent « Groupe » en français et « Group » en
+  anglais ne se partage pas. Un groupe s'appelle `Group`, comme un cube s'appelle `Box` ;
+- **un glissement de gizmo sur une sélection groupée** écrivait une transformation monde dans un
+  champ local : le pivot rendait ses objets à la scène plutôt qu'à leur parent, et la
+  transformation du groupe s'appliquait une seconde fois au sync suivant ;
+- **cocher l'ombre d'un groupe** estampillait tout son sous-arbre sans rien écrire dans les nœuds
+  — l'affichage et le document divergeaient. Le parcours profond reste pour les modèles importés,
+  qui n'ont qu'un nœud pour tout un arbre ;
+- **un dépôt qui ne changeait rien** — reposer une ligne d'où elle vient, le geste le plus courant
+  du glisser — entrait quand même dans l'historique, laissant un ⌘Z qui ne fait rien.
+
+**Deux affordances ajoutées en chemin** : un groupe s'ouvre à sa première apparition, faute de
+quoi ⌘G faisait disparaître les objets qu'on venait d'y mettre ; et le nouveau groupe se pose là
+où vivait la sélection quand elle partageait un parent, au lieu de remonter à la racine.
+
+`helpers/drag.ts` porte désormais le canal de glisser une seule fois — `asset-drag` en était la
+première moitié, l'outliner en aurait été la seconde, et la timeline sera la troisième.
 
 `parentId` existe sur `SceneNodeBase` et **aucune commande ne le change** — le champ attend depuis
 le premier jour, sa JSDoc le dit (« Reparenting is not offered yet »).

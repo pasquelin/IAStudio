@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
-import { childrenOf, EMPTY_SCENE, nodeById, selectedNodes, type SceneState } from './scene-state'
+import {
+  canReparent,
+  childrenOf,
+  EMPTY_SCENE,
+  nodeById,
+  selectedNodes,
+  subtreeOf,
+  type SceneState,
+} from './scene-state'
 
 describe('EMPTY_SCENE', () => {
   it('starts empty with nothing selected', () => {
@@ -34,6 +42,64 @@ describe('selectedNodes', () => {
 
   it('drops the ids nothing answers to rather than reporting holes', () => {
     expect(selectedNodes(nodes, ['a', 'ghost']).map(node => node.id)).toEqual(['a'])
+  })
+})
+
+/** The classic bug of reparenting: a tree closed on itself, and every walk of it runs forever. */
+describe('canReparent', () => {
+  // a > b > c
+  const nodes = [mesh('a'), mesh('b', 'a'), mesh('c', 'b')]
+
+  it('lets a node hang from an unrelated one, and from the scene', () => {
+    expect(canReparent(nodes, 'c', null)).toBe(true)
+    expect(canReparent([mesh('a'), mesh('b')], 'a', 'b')).toBe(true)
+  })
+
+  it('refuses a node under itself', () => {
+    expect(canReparent(nodes, 'a', 'a')).toBe(false)
+  })
+
+  it('refuses a node under its own child', () => {
+    expect(canReparent(nodes, 'a', 'b')).toBe(false)
+  })
+
+  it('refuses a node under a deeper descendant, not only a direct child', () => {
+    expect(canReparent(nodes, 'a', 'c')).toBe(false)
+  })
+
+  it('answers rather than looping when the tree already holds a cycle', () => {
+    const looped = [mesh('a', 'b'), mesh('b', 'a')]
+    expect(canReparent(looped, 'a', 'b')).toBe(false)
+  })
+})
+
+describe('subtreeOf', () => {
+  const nodes = [mesh('a'), mesh('b', 'a'), mesh('c', 'b'), mesh('d')]
+
+  it('carries a node and everything under it, however deep', () => {
+    expect(subtreeOf(nodes, 'a').map(node => node.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('is the node alone when nothing hangs from it', () => {
+    expect(subtreeOf(nodes, 'd').map(node => node.id)).toEqual(['d'])
+  })
+
+  it('leaves the branches beside it alone', () => {
+    expect(subtreeOf(nodes, 'b').map(node => node.id)).toEqual(['b', 'c'])
+  })
+
+  /**
+   * Reparenting changes a `parentId` in place, so a child can perfectly well be listed before
+   * the parent it now hangs from. Reading the array in order left those behind — nodes nothing
+   * showed any more, that no delete could reach, and that the file kept.
+   */
+  it('finds a branch whose child is declared before its parent', () => {
+    const jumbled = [mesh('c', 'a'), mesh('a', 'b'), mesh('b')]
+    expect(
+      subtreeOf(jumbled, 'b')
+        .map(node => node.id)
+        .sort(),
+    ).toEqual(['a', 'b', 'c'])
   })
 })
 

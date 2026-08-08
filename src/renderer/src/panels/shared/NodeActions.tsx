@@ -66,7 +66,7 @@ export function NodeActions({ documentId, type }: { documentId: string; type: Pa
         tooltip={TIP_BOTTOM}
         variant="header"
         disabled={removable.length === 0}
-        onClick={() => useScenes.getState().runCommand(documentId, removeNodes(removable))}
+        onClick={() => useScenes.getState().runCommand(documentId, removeNodes(nodes, removable))}
       />
     </>
   )

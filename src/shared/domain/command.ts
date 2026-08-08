@@ -23,6 +23,7 @@ export type CommandId =
   | 'scene.rotate'
   | 'scene.scale'
   | 'scene.frame'
+  | 'scene.group'
   | 'scene.snap'
   | 'scene.space'
   | 'scene.delete'
@@ -178,6 +179,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneSpace.title',
     helpKey: 'commands.sceneSpace.help',
     defaultBinding: 'KeyL',
+  }),
+  // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
+  command({
+    id: 'scene.group',
+    scope: 'scene',
+    titleKey: 'commands.sceneGroup.title',
+    helpKey: 'commands.sceneGroup.help',
+    defaultBinding: 'Meta+KeyG',
   }),
   command({
     id: 'scene.delete',

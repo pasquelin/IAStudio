@@ -22,10 +22,23 @@ export function applyShadowQuality(renderer: ShadowMapHolder, quality: ShadowQua
 }
 
 /**
- * The flags a node carries, put on the object that stands for it — and on everything under it,
- * since three.js reads them per mesh and a model is one node over a whole imported tree.
+ * The flags a node carries, put on the object that stands for it — and, by default, on
+ * everything under it: three.js reads them per mesh, and a model is one node over a whole
+ * imported tree. A group is the opposite case, and asks for `deep: false`: its children are
+ * nodes of their own, carrying flags of their own.
  */
-export function applyShadowFlags(object: Object3D, cast: boolean, receive: boolean): void {
+export function applyShadowFlags(
+  object: Object3D,
+  cast: boolean,
+  receive: boolean,
+  deep = true,
+): void {
+  if (!deep) {
+    object.castShadow = cast
+    object.receiveShadow = receive
+    return
+  }
+
   object.traverse(child => {
     child.castShadow = cast
     child.receiveShadow = receive

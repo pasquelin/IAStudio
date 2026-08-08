@@ -3,6 +3,7 @@ import { MESH_ENTRIES, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { MESH_PRIMITIVES } from './mesh-primitives'
 import { LIGHT_TYPES } from './light-types'
 import { lightNodeFixture as light, meshNode as mesh, modelNodeFixture } from './scene-fixtures'
+import { groupNode } from './node-factory'
 import { scenePayload, sceneFromPayload } from './scene-document'
 import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
 
@@ -108,6 +109,17 @@ describe('sceneFromPayload', () => {
   it('carries a chosen sky through a round trip', () => {
     const lit: SceneState = { ...EMPTY_SCENE, environment: { kind: 'skybox', assetId: 'sky-1' } }
     expect(reread(lit).environment).toEqual({ kind: 'skybox', assetId: 'sky-1' })
+  })
+
+  // Saving a grouped scene and reopening it dropped every group, leaving their children hanging
+  // from a parent nothing answered to — invisible in the outliner, and kept in the file.
+  it('carries a group and what hangs from it through a round trip', () => {
+    const group = groupNode()
+    const child = { ...mesh('a'), parentId: group.id }
+
+    const back = reread({ ...EMPTY_SCENE, nodes: [group, child] }).nodes
+    expect(back.map(node => node.id)).toEqual([group.id, 'a'])
+    expect(back[1]?.parentId).toBe(group.id)
   })
 
   /**

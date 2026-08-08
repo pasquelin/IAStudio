@@ -47,19 +47,26 @@ export function carry(pivot: Object3D, objects: readonly Object3D[], scene: Obje
 }
 
 /**
- * Hands the selection back to the scene and reads where it ended up, or `null` if the pivot was
- * carrying nothing.
+ * Hands the selection back to where each node belongs and reads where it ended up, or `null` if
+ * the pivot was carrying nothing.
  *
  * What is carried is read off the pivot rather than off a list kept beside it: a node deleted
  * mid-drag would leave that list holding an object the scene must never be handed back.
  */
-export function release(pivot: Object3D, scene: Object3D): NodeMove[] | null {
+export function release(
+  pivot: Object3D,
+  scene: Object3D,
+  parentOf: (id: string) => Object3D = () => scene,
+): NodeMove[] | null {
   const carried = [...pivot.children]
   if (carried.length === 0) return null
 
   scene.updateMatrixWorld()
   return carried.map(object => {
-    scene.attach(object)
+    // Back under the node's own parent, not under the scene: what is read next is a *local*
+    // transform, and reading it in the scene's frame would write a group's own placement into
+    // its child — applied twice on the next sync.
+    parentOf(object.name).attach(object)
     return { id: object.name, transform: transformOf(object) }
   })
 }

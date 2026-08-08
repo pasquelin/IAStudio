@@ -508,6 +508,8 @@
     "snapHint": "Move the handles in regular steps, as coarse as the preferences say",
     "space": "Local frame",
     "spaceHint": "Line the handles up with the object's own orientation; when it is off, they follow the world axes",
+    "group": "Group",
+    "groupHint": "File the selected objects under one group",
     "delete": "Delete",
     "deleteHint": "Remove whatever is selected from the scene"
   },
@@ -851,6 +853,10 @@
     "sceneSpace": {
       "title": "Local frame",
       "help": "Lines the handles up with the object's own orientation rather than the world's. On a turned object, that is what lets you move it “towards its front” rather than north."
+    },
+    "sceneGroup": {
+      "title": "Group",
+      "help": "Files the selected objects under one group. Moving the group moves them all, and ⌘Z takes the grouping back."
     },
     "sceneDelete": {
       "title": "Delete",

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { SelectionMode } from '@/helpers/selection'
@@ -44,6 +44,21 @@ describe('flattenTree', () => {
     expect(flattenTree([{ id: 'orphan', parentId: 'gone' }], new Set(['gone']))).toEqual([])
   })
 })
+
+/** jsdom implements no `DataTransfer`; the tree reads exactly these three members of one. */
+function dragData() {
+  const held = new Map<string, string>()
+  const data = {
+    // Read on the event after the one that set it, so it has to follow along.
+    types: [] as string[],
+    setData: (type: string, value: string) => {
+      held.set(type, value)
+      data.types = [...held.keys()]
+    },
+    getData: (type: string) => held.get(type) ?? '',
+  }
+  return data
+}
 
 type Selector = (ids: readonly string[], mode: SelectionMode) => void
 
@@ -159,6 +174,56 @@ describe('Tree', () => {
       .getAllByRole('treeitem')
       .filter(row => row.getAttribute('aria-selected') === 'true')
     expect(selected).toHaveLength(2)
+  })
+
+  it('leaves the rows undraggable when nothing listens for a drop', () => {
+    renderTree()
+    expect(screen.getAllByRole('treeitem')[0]).not.toHaveAttribute('draggable', 'true')
+  })
+
+  it('reports a row dropped onto another', () => {
+    const onDrop = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={onDrop}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const rows = screen.getAllByRole('treeitem')
+    const data = dragData()
+    fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    fireEvent.drop(rows[2]!, { dataTransfer: data })
+
+    expect(onDrop).toHaveBeenCalledWith('a', 'b')
+  })
+
+  // Dropping a row onto itself is the gesture of someone who changed their mind.
+  it('says nothing when a row is dropped onto itself', () => {
+    const onDrop = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={onDrop}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const row = screen.getAllByRole('treeitem')[1]!
+    const data = dragData()
+    fireEvent.dragStart(row, { dataTransfer: data })
+    fireEvent.drop(row, { dataTransfer: data })
+
+    expect(onDrop).not.toHaveBeenCalled()
   })
 
   it('expands with the right arrow and collapses with the left', async () => {

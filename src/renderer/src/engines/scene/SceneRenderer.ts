@@ -245,6 +245,10 @@ export class SceneRenderer {
     for (const id of this.objects.keys()) if (!alive.has(id)) (stale ??= []).push(id)
     if (stale) for (const id of stale) this.release(id)
 
+    // A second pass, because the first cannot know the order: a child may be synced before the
+    // parent it hangs from exists as an object. By here every one of them does.
+    for (const node of state.nodes) this.hangFromParent(node)
+
     this.selectedIds = state.selectedIds
     if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
@@ -460,7 +464,9 @@ export class SceneRenderer {
     // would be walked on every value an inspector drag emits. What a model brings later is
     // flagged where it arrives, in `buildModel`.
     if (previous?.castShadow !== node.castShadow || previous.receiveShadow !== node.receiveShadow) {
-      applyShadowFlags(object, node.castShadow, receivesShadow(node))
+      // Not through a group: its children carry their own flags, and traversing would
+      // overwrite them without writing anything into their nodes.
+      applyShadowFlags(object, node.castShadow, receivesShadow(node), node.type !== 'group')
     }
     if (node.type === 'light') this.tuneShadow(object)
 
@@ -514,7 +520,9 @@ export class SceneRenderer {
   private build(node: SceneNode): Object3D {
     if (node.type === 'mesh') return this.buildMesh(node)
     if (node.type === 'light') return this.buildLight(node)
-    return this.buildModel(node)
+    if (node.type === 'model') return this.buildModel(node)
+    // A group is its transform and nothing else: an empty object others hang from.
+    return new Object3D()
   }
 
   /**
@@ -584,6 +592,34 @@ export class SceneRenderer {
       this.viewport.scene.add(helper)
     }
     return light
+  }
+
+  /** The object a node hangs from, or the scene for a node that hangs from nothing. */
+  private parentObjectOf(id: string): Object3D {
+    const parentId = this.applied.get(id)?.parentId
+    return (parentId ? this.objects.get(parentId) : null) ?? this.viewport.scene
+  }
+
+  /**
+   * Puts an object under the one that stands for its parent, or back under the scene.
+   *
+   * `add` rather than `attach`: the document holds a *local* transform, which `syncNode` has
+   * just written — so the object takes its new parent's frame, exactly as the document says.
+   * Preserving the world transform instead would need the local one recomputed in the command,
+   * which is the only place it could be written down.
+   *
+   * Skipped mid-drag, where the pivot is the parent that matters.
+   */
+  private hangFromParent(node: SceneNode): void {
+    const object = this.objects.get(node.id)
+    if (!object || object.parent === this.pivot) return
+
+    const parent = node.parentId ? this.objects.get(node.parentId) : this.viewport.scene
+    // A parent that is not built is not a reason to drop the child: the scene keeps it, and the
+    // next sync — where the parent exists — hangs it where it belongs.
+    if (!parent || object.parent === parent) return
+
+    parent.add(object)
   }
 
   private release(id: string): void {
@@ -672,7 +708,7 @@ export class SceneRenderer {
    * undo, and the meshes already show the truth while the gizmo holds them.
    */
   private readonly onGizmoRelease = (): void => {
-    const moves = release(this.pivot, this.viewport.scene)
+    const moves = release(this.pivot, this.viewport.scene, id => this.parentObjectOf(id))
     // What a key pressed mid-drag asked for, applied now that the gesture is over.
     this.gizmo?.setSpace(this.space)
 

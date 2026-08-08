@@ -1,9 +1,24 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { SceneTree } from './SceneTree'
+
+/** jsdom implements no `DataTransfer`; the tree reads exactly these three members of one. */
+function dragData() {
+  const held = new Map<string, string>()
+  const data = {
+    // Read on the event after the one that set it, so it has to follow along.
+    types: [] as string[],
+    setData: (type: string, value: string) => {
+      held.set(type, value)
+      data.types = [...held.keys()]
+    },
+    getData: (type: string) => held.get(type) ?? '',
+  }
+  return data
+}
 
 function scene() {
   return sceneOf(useScenes.getState(), 'doc-1')
@@ -104,6 +119,40 @@ describe('SceneTree', () => {
     await userEvent.click(eyes[1] as HTMLElement)
 
     expect(scene().selectedIds).toEqual([])
+  })
+
+  it('hangs a node from another when its row is dropped onto it, through the history', () => {
+    render(<SceneTree documentId="doc-1" />)
+    const rows = screen.getAllByRole('treeitem')
+
+    const data = dragData()
+    fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    fireEvent.drop(rows[2]!, { dataTransfer: data })
+
+    const [first, second] = scene().nodes
+    expect(first?.parentId).toBe(second?.id)
+
+    useScenes.getState().undo('doc-1')
+    expect(scene().nodes[0]?.parentId).toBeNull()
+  })
+
+  // The root stands for the scene: dropping onto it is how a node comes back out of a group.
+  it('brings a node back out to the scene when dropped on the root', () => {
+    render(<SceneTree documentId="doc-1" />)
+    const rowOf = (name: string): HTMLElement =>
+      screen.getByText(name).closest('[role="treeitem"]') as HTMLElement
+
+    const down = dragData()
+    fireEvent.dragStart(rowOf('AmbientLight'), { dataTransfer: down })
+    fireEvent.drop(rowOf('DirectionalLight'), { dataTransfer: down })
+    expect(scene().nodes[0]?.parentId).not.toBeNull()
+
+    // The drop opened the branch it landed in, so the moved row is still on screen.
+    const out = dragData()
+    fireEvent.dragStart(rowOf('AmbientLight'), { dataTransfer: out })
+    fireEvent.drop(rowOf('Scène'), { dataTransfer: out })
+
+    expect(scene().nodes[0]?.parentId).toBeNull()
   })
 
   it('folds the root away, which is session state and not an edit', async () => {

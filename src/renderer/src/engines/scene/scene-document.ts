@@ -90,6 +90,8 @@ function isSceneNode(value: unknown): value is SceneNode {
   // whose assets moved still opens, with a hole where the model was.
   if (value.type === 'model')
     return isRecord(value.model) && typeof value.model.assetId === 'string'
+  // A group carries nothing of its own: everything it is has already been checked above.
+  if (value.type === 'group') return true
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
 }
