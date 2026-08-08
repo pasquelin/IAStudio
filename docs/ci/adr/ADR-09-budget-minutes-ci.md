@@ -5,14 +5,24 @@
 
 ## Contexte
 
-Le cadrage supposait un budget contraint : sur dépôt privé, les minutes sont pondérées Linux ×1,
-Windows ×2, **macOS ×10**. L'audit établit que `pasquelin/scenario` est **public** — les runners
-hébergés y sont gratuits et illimités.
+Le cadrage supposait un budget contraint. `pasquelin/scenario` est **public** : les runners
+hébergés y sont gratuits et illimités, et la contrainte tombe.
 
-La contrainte budgétaire tombe, mais les raisons de ne pas lancer la matrice complète à chaque
-poussée demeurent : durée (le packaging des trois OS avec deux téléchargements ffmpeg de 96 Mo
-côté macOS se compte en dizaines de minutes) et bruit (un échec de packaging sur une branche de
-feature n'apprend rien d'utile).
+Elle ne tombe que tant que le dépôt reste public. Sur dépôt privé, les minutes sont pondérées
+Linux ×1, Windows ×2, **macOS ×10**, ce qui donne, aux durées attendues :
+
+| Job | Durée | Coefficient | Minutes facturées |
+|---|---|---|---|
+| macOS (deux architectures, deux ffmpeg) | ~30 min | ×10 | **300** |
+| Windows | ~15 min | ×2 | 30 |
+| Linux | ~15 min | ×1 | 15 |
+| | | | **~345 par release** |
+
+Le chiffre est écrit ici parce qu'il a failli s'appliquer, et parce qu'il désigne où regarder :
+le job macOS pèse à lui seul 87 % du total.
+
+Restent, indépendamment du prix, la durée d'attente et le bruit : un échec de packaging sur une
+branche de feature n'apprend rien d'utile.
 
 ## Décision
 
@@ -29,8 +39,11 @@ feature n'apprend rien d'utile).
 
 ## Conséquences
 
-- La décision de conception est **la même que sous contrainte budgétaire**, pour d'autres
-  raisons. Si le dépôt passait en privé, seule la justification changerait, pas le pipeline.
+- **Un `dry_run` exécute la même matrice qu'une vraie release.** Gratuit tant que le dépôt est
+  public, mais long — ce n'est pas un geste à répéter sans raison.
 - Une régression propre au packaging (une entrée manquante dans `files`, un ffmpeg introuvable)
   n'est détectée qu'au `dry_run` ou au tag. `RELEASE.md` fait du `dry_run` une étape de la
   procédure, précisément pour que ce ne soit pas le tag qui la découvre.
+- **Si le dépôt repassait en privé, le job macOS pèserait à lui seul 87 % de la facture.** C'est
+  là qu'il faudrait regarder en premier : renoncer à l'architecture x64 diviserait ce job par
+  deux, au prix des Mac Intel. À ne trancher que si le besoin se présente.
