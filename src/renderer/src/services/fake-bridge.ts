@@ -37,6 +37,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       searchModels: () => Promise.resolve({ items: [], cursor: null }),
       modelPreviews: () => Promise.resolve({}),
       describeModel: () => Promise.reject(new Error('no model')),
+      suggestPrompts: () => Promise.resolve([]),
+      translatePrompt: draft => Promise.resolve({ text: draft, detectedLanguage: 'english' }),
+      describeStyle: () => Promise.resolve({ description: '', synthesis: '' }),
       generate: () => Promise.reject(new Error('no generation')),
       uploadAsset: () => Promise.reject(new Error('no upload')),
       cancelJob: () => Promise.resolve(),
@@ -70,6 +73,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       saveAudio: () => Promise.reject(new Error('no project')),
       update: () => Promise.reject(new Error('no project')),
       remove: () => Promise.resolve(),
+      describe: () => Promise.resolve(0),
       ...overrides.assets,
     },
     cloud: {

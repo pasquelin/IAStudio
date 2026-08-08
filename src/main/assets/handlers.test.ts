@@ -51,6 +51,8 @@ type Harness = {
   catalog: AsyncCatalog
   cloud: CloudBackend
   journal: ActivityLog
+  /** The rows the describe channel handed over — what proves the ids were resolved first. */
+  described: Asset[]
   listed: unknown[]
   searched: unknown[]
   tagged: unknown[]
@@ -118,10 +120,18 @@ function setup(
     now: () => '2026-08-08T10:00:00.000Z',
   })
 
+  const described: Asset[] = []
+
   registerAssetHandlers({
     catalog: () => catalog,
     remote: () => remote,
     cloud: () => cloud,
+    // The real one is exercised in `auto-caption.test.ts`; here it must only stay out of the way.
+    captionArrivals: async () => {},
+    describeAssets: async assets => {
+      described.push(...assets)
+      return assets.length
+    },
     removeFile: async asset => {
       removedFiles.push(asset.id)
     },
@@ -133,6 +143,7 @@ function setup(
     catalog,
     cloud,
     journal,
+    described,
     listed,
     searched,
     tagged,
@@ -473,5 +484,30 @@ describe('removing assets that were never sent up', () => {
 
     expect(local.deleted).toHaveLength(0)
     expect(await local.catalog.find('asset_1')).toBeNull()
+  })
+})
+
+describe('describing a selection', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    resetHandlers()
+    harness = setup()
+  })
+
+  it('hands the catalogue rows over, and answers how many were named', async () => {
+    await harness.catalog.add(localAsset({ id: 'asset_1', remoteAssetId: 'remote_1' }))
+    await harness.catalog.add(localAsset({ id: 'asset_2', remoteAssetId: 'remote_2' }))
+
+    await expect(invoke(CHANNELS.assetsDescribe, ['asset_1', 'asset_2'])).resolves.toBe(2)
+    expect(harness.described.map(asset => asset.id)).toEqual(['asset_1', 'asset_2'])
+  })
+
+  // A selection can outlive the rows it points at — a delete in another window.
+  it('drops the ids the catalogue no longer knows', async () => {
+    await harness.catalog.add(localAsset({ id: 'asset_1' }))
+
+    await expect(invoke(CHANNELS.assetsDescribe, ['asset_1', 'asset_gone'])).resolves.toBe(1)
+    expect(harness.described.map(asset => asset.id)).toEqual(['asset_1'])
   })
 })

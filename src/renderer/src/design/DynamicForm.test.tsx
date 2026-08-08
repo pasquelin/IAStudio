@@ -135,4 +135,93 @@ describe('DynamicForm', () => {
 
     expect(screen.getByRole('group', { name: 'Advanced' })).toBeInTheDocument()
   })
+
+  describe('the accessory a caller hangs under a field', () => {
+    const fields = [
+      field({ key: 'prompt', label: 'Prompt', kind: 'longText' }),
+      field({ key: 'steps', label: 'Steps', kind: 'integer' }),
+    ]
+
+    it('is offered every field, so nothing about any feature is decided here', () => {
+      const seen = new Set<string>()
+      render(
+        <DynamicForm
+          fields={fields}
+          onSubmit={vi.fn()}
+          submitLabel="Générer"
+          accessory={shown => {
+            seen.add(shown.key)
+            return null
+          }}
+        />,
+      )
+
+      expect([...seen]).toEqual(['prompt', 'steps'])
+    })
+
+    it('fills its own field without disturbing the others', async () => {
+      const onSubmit = vi.fn()
+      render(
+        <DynamicForm
+          fields={fields}
+          onSubmit={onSubmit}
+          submitLabel="Générer"
+          accessory={(shown, handle) =>
+            shown.key === 'prompt' && (
+              <button type="button" onClick={() => handle.write('a rewritten prompt')}>
+                Adopter
+              </button>
+            )
+          }
+        />,
+      )
+
+      await userEvent.type(screen.getByLabelText(/Steps/), '30')
+      await userEvent.click(screen.getByRole('button', { name: 'Adopter' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Générer' }))
+
+      expect(onSubmit).toHaveBeenCalledWith({ prompt: 'a rewritten prompt', steps: 30 })
+    })
+
+    it('reads the field as it stands when asked, not as it was drawn', async () => {
+      const seen: unknown[] = []
+      render(
+        <DynamicForm
+          fields={fields}
+          onSubmit={vi.fn()}
+          submitLabel="Générer"
+          accessory={(shown, handle) =>
+            shown.key === 'prompt' && (
+              <button type="button" onClick={() => seen.push(handle.read())}>
+                Lire
+              </button>
+            )
+          }
+        />,
+      )
+
+      await userEvent.type(screen.getByLabelText(/Prompt/), 'a boulder')
+      await userEvent.click(screen.getByRole('button', { name: 'Lire' }))
+
+      expect(seen).toEqual(['a boulder'])
+    })
+
+    // A button nested in a label steals the click meant for the field it labels.
+    it('sits outside the label rather than inside it', () => {
+      render(
+        <DynamicForm
+          fields={[fields[0] ?? field({ key: 'prompt' })]}
+          onSubmit={vi.fn()}
+          submitLabel="Générer"
+          accessory={() => (
+            <button type="button" onClick={() => {}}>
+              Adopter
+            </button>
+          )}
+        />,
+      )
+
+      expect(screen.getByRole('button', { name: 'Adopter' }).closest('label')).toBeNull()
+    })
+  })
 })

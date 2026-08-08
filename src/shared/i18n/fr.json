@@ -88,6 +88,9 @@
     "pushFailed": "Impossible d’envoyer « {{name}} »",
     "pushed": "{{count}} asset envoyé",
     "pushed_other": "{{count}} assets envoyés",
+    "captioned": "{{count}} asset nommé",
+    "captioned_other": "{{count}} assets nommés",
+    "captionFailed": "La description automatique a échoué",
     "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
     "apiRefused": "L’API Scenario a refusé une requête",
     "scope": {
@@ -125,6 +128,9 @@
       "error": "Le dernier envoi a échoué",
       "other-account": "Appartient à un autre projet"
     },
+    "describe": "Décrire {{count}} asset",
+    "describe_other": "Décrire {{count}} assets",
+    "describeHint": "Nommer les images choisies d'après ce que l'API y voit",
     "location": "Emplacement",
     "push": "Envoyer {{count}} asset",
     "push_other": "Envoyer {{count}} assets",
@@ -740,6 +746,10 @@
       "title": "Générations simultanées",
       "help": "Nombre de créations qui travaillent en même temps. Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut mettre plus longtemps à revenir, et le service peut refuser celles qui arrivent en trop. Trois est un bon équilibre."
     },
+    "captionArrivals": {
+      "title": "Décrire les assets rapatriés",
+      "help": "Nommer automatiquement une image qui arrive sans nom utile. Consomme des unités créatives."
+    },
     "maxRetries": {
       "title": "Tentatives maximum",
       "help": "Quand une génération échoue à cause d’une coupure réseau ou d’un serveur occupé, l’application réessaie toute seule. Ce nombre dit combien de fois avant d’abandonner. À 0, elle n’essaie jamais deux fois. Une clé API invalide n’est jamais réessayée : réessayer ne la corrigerait pas."
@@ -1183,5 +1193,16 @@
     "imageLayer": "Placer comme calque",
     "videoClip": "Ajouter au montage",
     "textureChannel": "Utiliser comme couleur de base"
+  },
+  "prompt": {
+    "suggest": "Proposer des variantes",
+    "suggesting": "Rédaction des variantes…",
+    "noSuggestion": "Aucune variante proposée.",
+    "useText": "Utiliser le texte",
+    "useTextAndSettings": "Texte + réglages",
+    "translate": "Traduire en anglais",
+    "alreadyEnglish": "Ce texte est déjà en anglais.",
+    "describeStyle": "Décrire le style des références",
+    "noReference": "Déposez une image de référence pour en décrire le style."
   }
 }

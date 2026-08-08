@@ -68,6 +68,16 @@ export function isSyncStatus(value: unknown): value is SyncStatus {
  */
 export const PEAKS_PER_SECOND = 50
 
+/**
+ * How long an asset's name may be.
+ *
+ * Shared rather than repeated at each boundary: the rename channel has always refused more, and
+ * a name written straight into the catalogue — as automatic captioning does — must be held to
+ * the same rule. A caption is a sentence, and a row whose name is a paragraph is unreadable in
+ * every list that shows it.
+ */
+export const ASSET_NAME_MAX_LENGTH = 200
+
 /** What probing a media file tells us. Durations are microseconds, like the timeline. */
 export type MediaProbe = {
   duration: number

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
 import {
   MODEL_FAMILIES,
   MODEL_IDS_BATCH_LIMIT,
@@ -7,6 +8,12 @@ import {
   MODEL_SORTS,
   type ModelQuery,
 } from '@shared/domain/model'
+import {
+  PROMPT_IMAGES_MAX,
+  PROMPT_INPUT_MAX,
+  PROMPT_SUGGESTIONS_MAX,
+  type SuggestPromptsRequest,
+} from '@shared/domain/prompt-assist'
 
 const modelId = z.string().trim().min(1)
 
@@ -20,7 +27,7 @@ export function parseJobId(value: unknown): string {
   return jobId.parse(value)
 }
 
-const assetName = z.string().trim().min(1).max(200)
+const assetName = z.string().trim().min(1).max(ASSET_NAME_MAX_LENGTH)
 
 export function parseAssetName(value: unknown): string {
   return assetName.parse(value)
@@ -84,4 +91,34 @@ const generationBody = z.record(z.string(), z.unknown())
 
 export function parseGenerationBody(value: unknown): Record<string, unknown> {
   return generationBody.parse(value)
+}
+
+/**
+ * The draft is bounded rather than trusted: the API's own field caps at 250 000 characters on
+ * the model measured, and a renderer must not be able to push a megabyte through a channel
+ * whose answer is a handful of sentences.
+ */
+const suggestPrompts = z.object({
+  modelId,
+  prompt: z.string().max(PROMPT_INPUT_MAX).optional(),
+  images: z.array(z.string().trim().min(1)).max(PROMPT_IMAGES_MAX).optional(),
+  numResults: z.number().int().min(1).max(PROMPT_SUGGESTIONS_MAX).optional(),
+})
+
+export function parseSuggestPrompts(value: unknown): SuggestPromptsRequest {
+  return suggestPrompts.parse(value)
+}
+
+/** Bounded like the draft above, and non-empty: there is nothing to translate in blank text. */
+const promptDraft = z.string().trim().min(1).max(PROMPT_INPUT_MAX)
+
+export function parsePromptDraft(value: unknown): string {
+  return promptDraft.parse(value)
+}
+
+/** At least one, or there is no style to read; capped where the API caps its references. */
+const referenceImages = z.array(z.string().trim().min(1)).min(1).max(PROMPT_IMAGES_MAX)
+
+export function parseReferenceImages(value: unknown): string[] {
+  return referenceImages.parse(value)
 }

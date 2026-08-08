@@ -539,7 +539,7 @@ describe('model registry', () => {
 
       expect(descriptor.name).toBe('Flux')
       expect(descriptor.fields).toEqual([
-        { key: 'prompt', kind: 'longText', label: 'Prompt', required: true },
+        { key: 'prompt', kind: 'longText', label: 'Prompt', required: true, promptSpark: true },
         {
           key: 'numInferenceSteps',
           kind: 'integer',

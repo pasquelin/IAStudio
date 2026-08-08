@@ -314,6 +314,13 @@ export const SETTING_REGISTRY = [
     max: 10,
   }),
   setting({
+    path: 'generation.captionArrivals',
+    kind: 'boolean',
+    section: 'generation',
+    titleKey: 'settings.captionArrivals.title',
+    helpKey: 'settings.captionArrivals.help',
+  }),
+  setting({
     path: 'three.showGrid',
     kind: 'boolean',
     section: 'spaces.three',

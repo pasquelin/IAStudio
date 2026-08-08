@@ -13,6 +13,12 @@ import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
+import type {
+  PromptStyle,
+  PromptSuggestion,
+  PromptTranslation,
+  SuggestPromptsRequest,
+} from './domain/prompt-assist'
 import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
@@ -45,6 +51,9 @@ export type Channels = {
   scenarioSearchModels: 'scenario:search-models'
   scenarioModelPreviews: 'scenario:model-previews'
   scenarioDescribeModel: 'scenario:describe-model'
+  scenarioSuggestPrompts: 'scenario:suggest-prompts'
+  scenarioTranslatePrompt: 'scenario:translate-prompt'
+  scenarioDescribeStyle: 'scenario:describe-style'
   scenarioGenerate: 'scenario:generate'
   scenarioUploadAsset: 'scenario:upload-asset'
   scenarioCancelJob: 'scenario:cancel-job'
@@ -68,6 +77,7 @@ export type Channels = {
   assetsSaveAudio: 'assets:save-audio'
   assetsUpdate: 'assets:update'
   assetsRemove: 'assets:remove'
+  assetsDescribe: 'assets:describe'
 
   cloudBrowse: 'cloud:browse'
   cloudPull: 'cloud:pull'
@@ -116,6 +126,9 @@ export const CHANNELS: Channels = {
   scenarioSearchModels: 'scenario:search-models',
   scenarioModelPreviews: 'scenario:model-previews',
   scenarioDescribeModel: 'scenario:describe-model',
+  scenarioSuggestPrompts: 'scenario:suggest-prompts',
+  scenarioTranslatePrompt: 'scenario:translate-prompt',
+  scenarioDescribeStyle: 'scenario:describe-style',
   scenarioGenerate: 'scenario:generate',
   scenarioUploadAsset: 'scenario:upload-asset',
   scenarioCancelJob: 'scenario:cancel-job',
@@ -139,6 +152,7 @@ export const CHANNELS: Channels = {
   assetsSaveAudio: 'assets:save-audio',
   assetsUpdate: 'assets:update',
   assetsRemove: 'assets:remove',
+  assetsDescribe: 'assets:describe',
 
   cloudBrowse: 'cloud:browse',
   cloudPull: 'cloud:pull',
@@ -332,6 +346,19 @@ export type StudioBridge = {
     /** Signed picture URL per asset id, absent for the ones the API has nothing for. */
     modelPreviews: (assetIds: readonly string[]) => Promise<Record<string, string>>
     describeModel: (modelId: string) => Promise<ModelDescriptor>
+    /**
+     * Rewrites a draft into on-model prompts, each with the settings the API proposes for it.
+     * Free — measured at 0 creative units — and answered in one round trip: the endpoint hands
+     * back a job, but its result is in the response, so nothing here is polled.
+     */
+    suggestPrompts: (request: SuggestPromptsRequest) => Promise<PromptSuggestion[]>
+    /**
+     * Carries a draft into the language the models are trained in, and says what it recognized
+     * it as. Replaces the text rather than proposing beside it — nothing is invented here.
+     */
+    translatePrompt: (draft: string) => Promise<PromptTranslation>
+    /** Reads the style of the reference pictures, so a prompt can be written from it. */
+    describeStyle: (images: readonly string[]) => Promise<PromptStyle>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
     uploadAsset: (name: string, image: string) => Promise<string>
@@ -390,6 +417,13 @@ export type StudioBridge = {
      * so the confirmation belongs to whoever calls this.
      */
     remove: (assetIds: readonly string[], alsoRemote: boolean) => Promise<void>
+    /**
+     * Names the chosen pictures from what the API sees in them, and answers how many it named.
+     *
+     * Only pictures the library already knows can be described — captioning takes an asset id —
+     * so a selection of local-only files is answered with zero rather than an error.
+     */
+    describe: (assetIds: readonly string[]) => Promise<number>
   }
   /**
    * The account's library, which is not the project's catalogue.

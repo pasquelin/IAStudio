@@ -88,6 +88,9 @@
     "pushFailed": "Could not send \"{{name}}\"",
     "pushed": "{{count}} asset sent",
     "pushed_other": "{{count}} assets sent",
+    "captioned": "{{count}} asset named",
+    "captioned_other": "{{count}} assets named",
+    "captionFailed": "Automatic description failed",
     "tagsNotSynced": "The tags of \"{{name}}\" did not reach the library",
     "apiRefused": "The Scenario API refused a request",
     "scope": {
@@ -125,6 +128,9 @@
       "error": "The last upload failed",
       "other-account": "Belongs to another project"
     },
+    "describe": "Describe {{count}} asset",
+    "describe_other": "Describe {{count}} assets",
+    "describeHint": "Name the chosen pictures from what the API sees in them",
     "location": "Location",
     "push": "Send {{count}} asset",
     "push_other": "Send {{count}} assets",
@@ -740,6 +746,10 @@
       "title": "Concurrent generations",
       "help": "How many creations work at the same time. The higher it is, the more you can start at once — but each may take longer to come back, and the service can turn away the ones arriving on top. Three is a good balance."
     },
+    "captionArrivals": {
+      "title": "Describe fetched assets",
+      "help": "Automatically name a picture that arrives without a useful name. Spends creative units."
+    },
     "maxRetries": {
       "title": "Max retries",
       "help": "When a generation fails because the network dropped or a server was busy, the application tries again on its own. This number says how many times before giving up. At 0 it never tries twice. An invalid API key is never retried: trying again would not fix it."
@@ -1183,5 +1193,16 @@
     "imageLayer": "Place as a layer",
     "videoClip": "Add to the montage",
     "textureChannel": "Use as base colour"
+  },
+  "prompt": {
+    "suggest": "Suggest variants",
+    "suggesting": "Writing variants…",
+    "noSuggestion": "No variant proposed.",
+    "useText": "Use the text",
+    "useTextAndSettings": "Text + settings",
+    "translate": "Translate to English",
+    "alreadyEnglish": "This text is already in English.",
+    "describeStyle": "Describe the style of the references",
+    "noReference": "Drop a reference picture to describe its style."
   }
 }

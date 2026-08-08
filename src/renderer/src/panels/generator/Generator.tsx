@@ -2,9 +2,11 @@ import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { ModelDescriptor } from '@shared/domain/model'
+import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { workspaceById } from '@/helpers/workspaces'
-import type { FormValues } from '@/helpers/dynamic-form'
+import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
 import { DynamicForm } from '@/design/DynamicForm'
+import { PromptAssistant } from '@/design/PromptAssistant'
 import { failureKeyOf } from '@/services/failure-message'
 import { getBridge } from '@/services/bridge'
 import { useJobs } from '@/stores/jobs'
@@ -15,6 +17,35 @@ import { claimOnSubmit } from '@/stores/generation-claims'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
+
+/**
+ * Free — measured at 0 creative units — and answered in one round trip, so no job is involved
+ * and there is nothing for the jobs bar to show.
+ */
+function suggestPrompts(modelId: string, draft: string): Promise<PromptSuggestion[]> {
+  const bridge = getBridge()
+  if (!bridge) return Promise.resolve([])
+  return bridge.scenario.suggestPrompts({ modelId, prompt: draft })
+}
+
+/** A field's value as text. Anything else reads as an empty draft rather than as `[object …]`. */
+function textOf(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+/** Carries a draft into the language the models read. Nothing is proposed: the text changes. */
+function translateDraft(draft: string): Promise<PromptTranslation> {
+  const bridge = getBridge()
+  if (!bridge) return Promise.resolve({ text: draft, detectedLanguage: 'english' })
+  return bridge.scenario.translatePrompt(draft)
+}
+
+/** Reads the style of the pictures already on the form, to write a prompt from it. */
+function describeStyle(images: readonly string[]): Promise<PromptStyle> {
+  const bridge = getBridge()
+  if (!bridge) return Promise.resolve({ description: '', synthesis: '' })
+  return bridge.scenario.describeStyle(images)
+}
 
 function useDescriptor(modelId: string | null) {
   return useQuery<ModelDescriptor | null>({
@@ -49,6 +80,7 @@ export function Generator() {
   // preset changes, so dropping it would blank the form under the hand that is filling it. It
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
   const preset = useModels(state => state.preset[family])
+  const prepare = useModels(state => state.prepare)
   const preferred = useSettings(state => state.settings.generation.defaultModels[family] ?? null)
   const modelId = chosen ?? preferred
 
@@ -81,6 +113,13 @@ export function Generator() {
     void submit(modelId, body).then(claim)
   }
 
+  // Adopting the settings goes through the preset "regenerate with these parameters" already
+  // uses: `DynamicForm` rebuilds on it, so the whole form fills without a line of its own. The
+  // model is passed unchanged — `prepare` writes both, and the suggestion was made for it.
+  const adoptCall = (promptKey: string, suggestion: PromptSuggestion): void => {
+    prepare(family, modelId, { ...suggestion.parameters, [promptKey]: suggestion.text })
+  }
+
   return (
     <div className="flex h-full flex-col overflow-auto">
       <p className="text-muted truncate px-2 pt-2 text-[11px]">{descriptor.data?.name}</p>
@@ -95,6 +134,23 @@ export function Generator() {
           submitLabel={t('actions.generate')}
           busy={!project}
           preset={preset}
+          // The API marks the field its assistance rewrites; every other one gets nothing.
+          accessory={(field, handle) =>
+            field.promptSpark === true && (
+              <PromptAssistant
+                readDraft={() => textOf(handle.read())}
+                request={draft => suggestPrompts(modelId, draft)}
+                translate={translateDraft}
+                describeStyle={describeStyle}
+                readReferences={() =>
+                  referencePictures(descriptor.data?.fields ?? [], handle.readAll())
+                }
+                onAdoptText={handle.write}
+                onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
+                failureMessage={error => t(failureKeyOf(error))}
+              />
+            )
+          }
         />
       )}
     </div>

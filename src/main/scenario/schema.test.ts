@@ -44,6 +44,30 @@ describe('translateSchema', () => {
     expect(fields.map(field => field.kind)).toEqual(['longText', 'color', 'text'])
   })
 
+  describe('the field prompt assistance rewrites', () => {
+    // Measured on `model_google-gemini-3-1-flash`: the API marks it itself.
+    it('takes the API at its word when it marks one', () => {
+      const [field] = translateSchema([
+        { name: 'prompt', type: 'string', prompt: true, promptSpark: true },
+      ])
+      expect(field?.promptSpark).toBe(true)
+    })
+
+    // A model sparing with metadata must not lose the feature altogether.
+    it('falls back to the prompt field on a model that marks only that', () => {
+      const [field] = translateSchema([{ name: 'prompt', type: 'string', prompt: true }])
+      expect(field?.promptSpark).toBe(true)
+    })
+
+    it('leaves every other field unmarked', () => {
+      const fields = translateSchema([
+        { name: 'title', type: 'string' },
+        { name: 'steps', type: 'number' },
+      ])
+      expect(fields.every(field => field.promptSpark === undefined)).toBe(true)
+    })
+  })
+
   it('recognizes the seed by its name', () => {
     const [field] = translateSchema([{ name: 'seed', type: 'number' }])
     expect(field?.kind).toBe('seed')

@@ -12,6 +12,7 @@ import { remoteTypesFor } from '@main/scenario/remote-types'
 import { PAGE_SIZE_MAX } from '@main/scenario/limits'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import type { ActivityLog } from '@main/project/activity-log'
+import type { AutoCaption, DescribeAssets } from './auto-caption'
 import type { CloudBackend } from './cloud-backend'
 import { planSync, type SyncSide } from './sync-plan'
 import {
@@ -35,6 +36,10 @@ export type AssetHandlerDeps = {
   activeOwnerId: () => string | null
   /** Where a failure goes now that it has somewhere to go. */
   journal: () => ActivityLog
+  /** Names what arrives without a useful name. Never awaited, never allowed to throw. */
+  captionArrivals: AutoCaption
+  /** Names a chosen selection, whatever it is already called. */
+  describeAssets: DescribeAssets
 }
 
 const reduced = reducedBy('assets')
@@ -138,6 +143,8 @@ export function registerAssetHandlers({
   removeFile,
   activeOwnerId,
   journal,
+  captionArrivals,
+  describeAssets,
 }: AssetHandlerDeps): void {
   handle(CHANNELS.activityRead, (_event, query) => journal().read(parseActivityQuery(query)))
   handle(CHANNELS.assetsUpdate, async (_event, assetId, changes) => {
@@ -196,6 +203,13 @@ export function registerAssetHandlers({
     }
   })
 
+  handle(CHANNELS.assetsDescribe, async (_event, assetIds) => {
+    const ids = parseAssetIds(assetIds)
+    const found = await Promise.all(ids.map(assetId => catalog().find(assetId)))
+
+    return describeAssets(found.filter(asset => asset !== null))
+  })
+
   handle(CHANNELS.cloudBrowse, (_event, query) =>
     reduced(() => browse(remote(), parseCloudQuery(query))),
   )
@@ -208,9 +222,11 @@ export function registerAssetHandlers({
     // One at a time, and one outcome each — the same shape a push answers with. A download that
     // fails halfway has already written the ones before it to disk and added their rows; a
     // single rejection would throw that away as far as the caller can tell.
+    const arrived: Asset[] = []
+
     for (const cloudAsset of found) {
       try {
-        await cloud().pull(cloudAsset)
+        arrived.push(await cloud().pull(cloudAsset))
         outcomes.push({ assetId: cloudAsset.id, ok: true })
       } catch (error) {
         log.error('assets', describeFailure(error))
@@ -236,6 +252,11 @@ export function registerAssetHandlers({
         params: { count: pulled },
       })
     }
+
+    // Named after the outcomes are settled, and never awaited: describing what arrived was not
+    // what the user asked for, and a library that is slow to answer must not hold up the
+    // window that is waiting to show the assets already on disk.
+    void captionArrivals(arrived)
 
     return outcomes
   })

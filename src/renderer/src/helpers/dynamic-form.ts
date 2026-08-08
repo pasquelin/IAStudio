@@ -110,3 +110,24 @@ export function groupFields(fields: readonly FieldDescriptor[]): [string, FieldD
 
   return [...groups.entries()]
 }
+
+/**
+ * The reference pictures a filled form carries, in the order the model declared them.
+ *
+ * Values are handed over as they stand — an asset id or a data URL — because the API takes
+ * either, and the field cannot say which one the user gave it.
+ */
+export function referencePictures(
+  fields: readonly FieldDescriptor[],
+  values: FormValues,
+): string[] {
+  const pictures: string[] = []
+
+  for (const field of fields) {
+    if (field.kind !== 'image') continue
+    const value = values[field.key]
+    if (typeof value === 'string' && value.trim() !== '') pictures.push(value)
+  }
+
+  return pictures
+}

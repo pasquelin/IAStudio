@@ -3,6 +3,7 @@ import { handle } from '@main/ipc/handle'
 import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
+import type { PromptAssist } from './prompt-assist'
 import type { AssetUploader } from './uploader'
 import {
   parseAssetName,
@@ -12,17 +13,26 @@ import {
   parseModelId,
   parseModelIds,
   parseModelQuery,
+  parsePromptDraft,
+  parseReferenceImages,
+  parseSuggestPrompts,
 } from './validation'
 
 export type ScenarioHandlerDeps = {
   models: ModelRegistry
   jobs: JobManager
+  prompts: PromptAssist
   uploads: AssetUploader
 }
 
 const reduced = reducedBy('scenario')
 
-export function registerScenarioHandlers({ models, jobs, uploads }: ScenarioHandlerDeps): void {
+export function registerScenarioHandlers({
+  models,
+  jobs,
+  prompts,
+  uploads,
+}: ScenarioHandlerDeps): void {
   handle(CHANNELS.scenarioSearchModels, (_event, query) =>
     reduced(() => models.search(parseModelQuery(query))),
   )
@@ -33,6 +43,18 @@ export function registerScenarioHandlers({ models, jobs, uploads }: ScenarioHand
 
   handle(CHANNELS.scenarioDescribeModel, (_event, modelId) =>
     reduced(() => models.describe(parseModelId(modelId))),
+  )
+
+  handle(CHANNELS.scenarioSuggestPrompts, (_event, request) =>
+    reduced(() => prompts.suggest(parseSuggestPrompts(request))),
+  )
+
+  handle(CHANNELS.scenarioTranslatePrompt, (_event, draft) =>
+    reduced(() => prompts.translate(parsePromptDraft(draft))),
+  )
+
+  handle(CHANNELS.scenarioDescribeStyle, (_event, images) =>
+    reduced(() => prompts.describeStyle(parseReferenceImages(images))),
   )
 
   handle(CHANNELS.scenarioGenerate, async (_event, modelId, body) => {
