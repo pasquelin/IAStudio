@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import {
   DOCUMENT_MANIFEST,
@@ -85,10 +85,14 @@ export function splitDocument(body: string): DocumentFile {
   return { ...envelope, content: cut === -1 ? '' : body.slice(cut + 1) }
 }
 
-/** Whether a path is there at all. `stat` would say more than the caller needs. */
+/**
+ * Whether anything at all sits at a path — a folder, or the stray file a hand-repaired project
+ * may have left where a folder belongs. Told apart from `readdir`, which reports a regular file
+ * as absent and would then have the swap fail on every save, for good.
+ */
 async function exists(path: string): Promise<boolean> {
   try {
-    await readdir(path)
+    await stat(path)
     return true
   } catch {
     return false
@@ -280,6 +284,32 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     }
   }
 
+  /**
+   * Read behind whatever is writing the same path. A folder document is swapped in three moves,
+   * and a read landing between two of them would see nothing there — the tab would take the
+   * default, and the next ⌘S would write that over the document being saved.
+   */
+  async function readOne(id: string, kind: DocumentKind): Promise<DocumentFile | null> {
+    const file = fileOf(id, kind)
+
+    let document: DocumentFile
+    try {
+      document = FOLDER_KINDS.has(kind)
+        ? await readFolder(file)
+        : splitDocument(await readFile(file, 'utf8'))
+    } catch (error) {
+      if (isMissing(error)) return null
+      throw error
+    }
+
+    // The folder's word beats the file's. A document copied to another extension by hand would
+    // otherwise open in the wrong editor, with the wrong content.
+    if (document.kind !== kind) {
+      throw new Error(`Document ${id} holds a ${document.kind}, not a ${kind}`)
+    }
+    return document
+  }
+
   return {
     list: async () => {
       const folder = join(projectPath(), DOCUMENTS_FOLDER)
@@ -306,26 +336,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
       return found
     },
 
-    read: async (id, kind) => {
-      const file = fileOf(id, kind)
-
-      let document: DocumentFile
-      try {
-        document = FOLDER_KINDS.has(kind)
-          ? await readFolder(file)
-          : splitDocument(await readFile(file, 'utf8'))
-      } catch (error) {
-        if (isMissing(error)) return null
-        throw error
-      }
-
-      // The folder's word beats the file's. A document copied to another extension by hand
-      // would otherwise open in the wrong editor, with the wrong content.
-      if (document.kind !== kind) {
-        throw new Error(`Document ${id} holds a ${document.kind}, not a ${kind}`)
-      }
-      return document
-    },
+    read: (id, kind) => queued(fileOf(id, kind), () => readOne(id, kind)),
 
     write: (id, kind, draft) => {
       const file = fileOf(id, kind)

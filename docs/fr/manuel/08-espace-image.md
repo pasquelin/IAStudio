@@ -282,11 +282,16 @@ entrée d'historique. Vous n'annulez pas un trait pixel par pixel.
 **`⇧⌘E` écrit le document aplati en `.png`**, où vous voulez sur le disque. Les calques sont
 composités à l'export ; les règles, les repères et les pointillés de sélection n'y sont pas.
 
-> **Le document, lui, ne s'enregistre pas encore.** Fermer son onglet perd les calques et
-> l'historique — exportez avant, ou ne fermez pas. Les assets que vous y aviez posés restent dans
-> le projet, c'est le travail de composition qui est perdu.
+> **`⌘S` enregistre le document lui-même**, calques compris, dans le projet — et il se rouvre
+> tel quel. Ce n'est pas la même chose que `⇧⌘E` : l'export aplatit et sort du studio, tandis que
+> l'enregistrement garde la pile intacte pour continuer à travailler.
 >
-> Voir [Ce qui n'existe pas encore](18-limites.md).
+> L'image s'écrit en **dossier** `documents/<id>.img/` : un `document.json` pour la pile, et un
+> `.png` par calque — plus un second pour son masque, s'il en a un. C'est volontairement
+> inspectable : vous pouvez ouvrir le dossier et regarder les calques un par un.
+>
+> **Ce qui ne s'enregistre pas :** l'historique d'annulation. Rouvrir un document, c'est repartir
+> d'une pile propre — les pixels sont là, les cinquante derniers gestes ne le sont plus.
 
 ---
 

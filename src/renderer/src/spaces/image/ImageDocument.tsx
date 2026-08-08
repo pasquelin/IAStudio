@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { restoreDocument } from '@/app/document-io'
 import { reportFailure } from '@/services/diagnostics'
 import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
@@ -43,6 +44,7 @@ import { exportPicture } from './export-picture'
 import { maskFromSelection } from './mask-actions'
 import { placeAsset } from './place-asset'
 import { revealAssets } from './reveal-panel'
+import { holdCanvas } from './canvas-hosts'
 import { pixelPort } from './pixel-port'
 import { ZoomBar } from './ZoomBar'
 
@@ -127,12 +129,23 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     })
 
     engine.current = created
+    // Read through the ref rather than captured, for the reason `pixelPort` gives: a save can
+    // land after this engine has been replaced, and the current one holds the textures.
+    const release = holdCanvas(documentId, () => engine.current)
     void created.mount(element)
 
     return () => {
+      release()
       created.dispose()
       engine.current = null
     }
+  }, [documentId])
+
+  // Fills the tab from the project when a folder is there, from the default otherwise — and it is
+  // what saving reads back, so the two never disagree about what this document holds. After the
+  // engine is registered, never before: the pixels are handed to it, and it has to be reachable.
+  useEffect(() => {
+    void restoreDocument(documentId)
   }, [documentId])
 
   // The engine holds the pixels, never the stack: every state change is pushed into it.

@@ -275,11 +275,16 @@ undo a stroke pixel by pixel.
 **`⇧⌘E` writes the flattened document as a `.png`**, anywhere on disk. The layers are composited
 on the way out; rulers, guides and marching ants are not in it.
 
-> **The document itself does not save yet.** Closing its tab loses the layers and the history —
-> export first, or do not close. The assets you laid on it stay in the project; it is the
-> composition work that is lost.
+> **`⌘S` saves the document itself**, layers and all, into the project — and it opens back the
+> same. That is not what `⇧⌘E` does: the export flattens and leaves the studio, while saving keeps
+> the stack intact so you can carry on.
 >
-> See [What does not exist yet](18-limits.md).
+> An image is written as a **folder**, `documents/<id>.img/`: one `document.json` for the stack,
+> and one `.png` per layer — plus a second for its mask, where there is one. That is deliberately
+> inspectable: you can open the folder and look at the layers one by one.
+>
+> **What does not save:** the undo history. Reopening a document starts from a clean stack — the
+> pixels are there, the last fifty gestures are not.
 
 ---
 

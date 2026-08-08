@@ -321,7 +321,7 @@ encore, et rien à l'écran ne le dit sur le moment.
 
 | Vous essayez de… | Ce qui se passe | Pourquoi |
 |---|---|---|
-| **rouvrir un document image** fermé la veille | il n'existe plus | la pile de calques ne s'enregistre pas |
+| **retrouver l'historique** d'un document rouvert | la pile d'annulation est vide | seul l'état est enregistré, pas les gestes qui y ont mené |
 | **importer un `.hdr`**, un `.obj` ou un `.fbx` | il est refusé | seul le `.glb` entre, côté 3D |
 | **détourer ou vectoriser** une image | le panneau Modèles s'ouvre, et rien de plus | il manque le moyen de choisir le modèle |
 | **exporter une vidéo** | aucun bouton | l'export vidéo n'est pas écrit — l'image, elle, sort par `⇧⌘E` |

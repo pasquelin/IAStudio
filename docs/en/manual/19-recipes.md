@@ -314,7 +314,7 @@ on screen says so at the moment you try.
 
 | You try to… | What happens | Why |
 |---|---|---|
-| **reopen an image document** closed yesterday | it is gone | the layer stack does not save |
+| **find the history** of a reopened document | the undo stack is empty | only the state is saved, not the gestures that led to it |
 | **import an `.hdr`**, an `.obj` or an `.fbx` | it is refused | on the 3D side, only `.glb` comes in |
 | **cut out or vectorize** a picture | the Models panel opens, and no more | there is no way to choose the model |
 | **export a video** | no button | video export is not written — a picture does go out with `⇧⌘E` |

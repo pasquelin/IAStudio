@@ -11,6 +11,8 @@ const store = createDocumentStore<CanvasState>(DEFAULT_CANVAS)
 export const useCanvases = store.use
 export const canvasOf = store.stateOf
 export const historyOf = store.historyOf
+export const hasCanvas = store.hasState
+export const markOf = store.markOf
 
 /**
  * Selection stays out of the history, so it writes the whole canvas back — and the canvas has

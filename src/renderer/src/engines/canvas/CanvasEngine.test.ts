@@ -1556,6 +1556,71 @@ describe('flattening the document', () => {
   })
 })
 
+/**
+ * What a saved image weighs. The stack goes in the manifest and the pixels in a file per surface,
+ * so this is the seam between a document on disk and the textures only the GPU holds.
+ */
+describe('saving and restoring the pixels', () => {
+  const masked = (): CanvasState => ({
+    ...DEFAULT_CANVAS,
+    layers: [
+      { ...pixelLayer('layer-1', 'Background'), mask: { enabled: true, linked: true } },
+      pixelLayer('layer-2', 'Paint'),
+    ],
+    activeLayerId: 'layer-1',
+  })
+
+  it('hands back one picture per surface, masks included', async () => {
+    const { engine } = await mounted(masked())
+
+    await expect(engine.pixelSnapshots()).resolves.toEqual([
+      { layerId: 'layer-1', mask: false, data: 'QUJD' },
+      { layerId: 'layer-1', mask: true, data: 'QUJD' },
+      { layerId: 'layer-2', mask: false, data: 'QUJD' },
+    ])
+  })
+
+  /**
+   * The texture, not the placed sprite: a surface is document-sized and the transform lives in
+   * the state, so extracting the sprite would bake in a move `place` applies again on the way in.
+   */
+  it('extracts the texture rather than the sprite, at the document’s own scale', async () => {
+    const { engine } = await mounted()
+    gpu.extracted.length = 0
+
+    await engine.pixelSnapshots()
+
+    expect(gpu.extracted[0]?.resolution).toBe(1)
+    expect(gpu.extracted[0]?.frame).toBeUndefined()
+  })
+
+  it('hands back nothing for a group, which owns no texture', async () => {
+    const { engine } = await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [groupLayer('group-1', 'Set', [])],
+      activeLayerId: null,
+    })
+
+    await expect(engine.pixelSnapshots()).resolves.toEqual([])
+  })
+
+  it('hands back nothing before a document is applied', async () => {
+    const engine = new CanvasEngine(silentOptions())
+
+    await expect(engine.pixelSnapshots()).resolves.toEqual([])
+  })
+
+  it('draws a saved picture back into the surface it came from', async () => {
+    const { engine } = await mounted(masked())
+    gpu.loaded.length = 0
+
+    await engine.restoreSnapshot({ layerId: 'layer-1', mask: true, data: 'QUJD' })
+
+    expect(gpu.loaded[0]?.src).toBe('data:image/png;base64,QUJD')
+    expect(gpu.loaded[0]?.parser).toBe('texture')
+  })
+})
+
 describe('adjustment layers', () => {
   const graded = (values: Partial<AdjustmentStack> = {}): CanvasState =>
     stacked([
@@ -1887,6 +1952,23 @@ describe('the view', () => {
     expect(gpu.renders).toBeGreaterThan(0)
   })
 })
+
+/** An engine that reports to nobody, for the paths that answer before anything is mounted. */
+function silentOptions(): ConstructorParameters<typeof CanvasEngine>[0] {
+  const nothing = (): void => undefined
+  return {
+    onPick: nothing,
+    onPixels: nothing,
+    onPixelsDropped: nothing,
+    onViewport: nothing,
+    onSelection: nothing,
+    onHost: nothing,
+    onText: nothing,
+    onCrop: nothing,
+    guides: { add: () => '', move: nothing, remove: nothing, beginDrag: nothing, endDrag: nothing },
+    layers: { translate: nothing, transform: nothing, beginDrag: nothing, endDrag: nothing },
+  }
+}
 
 /** `pointermove` goes to the host, `pointerup` to the window — as the engine listens for them. */
 function drag(host: HTMLElement, x: number, y: number, shiftKey = false): void {

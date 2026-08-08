@@ -27,22 +27,20 @@ Three categories, not to be confused:
 
 ## The limit that matters most: saving
 
-**Four document types out of six do not save yet.**
+**Three document types out of six do not save yet.**
 
 | Document | Extension | Saves? |
 |---|---|---|
 | 3D scene | `.scene` | **yes** |
 | Material | `.tex` | **yes** |
-| Layered image | `.img` | no |
+| Layered image | `.img` | **yes** |
 | Video sequence | `.seq` | no |
 | Edited sound | `.aud` | no |
 | Sky | `.sky` | no |
 
-**What that means in practice.** You retouch an image: you paint, you add layers, you crop. You close
-the tab. **All that work is lost.** The original *asset* is still in the project — it is your
-retouching that disappears.
-
-The same goes for a video edit, and for a sky's settings.
+**What that means in practice.** You cut a sequence, you edit a sound, you set up a sky. You close
+the tab. **All that work is lost.** The original *assets* are still in the project — it is your work
+on them that disappears. Images and 3D scenes, on the other hand, open back exactly as they were.
 
 **What is never lost:**
 
@@ -384,8 +382,8 @@ cannot leak your account.
 
 If you only remember five things from this chapter:
 
-1. **images, sequences, sounds and skies do not save** — closing the tab loses the work; in the
-   Image workspace, `⇧⌘E` at least gets a PNG out before you close;
+1. **sequences, sounds and skies do not save** — closing the tab loses the work; images and 3D
+   scenes open back exactly as they were;
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;
 3. **there is no video export** — the studio cannot yet deliver a final file;
