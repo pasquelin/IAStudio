@@ -139,6 +139,24 @@ export class PixelPatches {
     return true
   }
 
+  /**
+   * Throws every patch away and reports each one, the way the budget does. Called when the
+   * surfaces are rebuilt at another size: a capture names its tile in the surface's own
+   * coordinates, and once that surface is a different shape those coordinates designate
+   * somewhere else — replaying one would paint the right pixels in the wrong place.
+   *
+   * A history that stops reads as a limit; a ⌘Z that moves pixels sideways reads as a bug.
+   */
+  dropAll(): void {
+    this.cancel()
+    for (const [id, patch] of this.patches) {
+      this.destroyPatch(patch)
+      this.patches.delete(id)
+      this.bytes -= patch.bytes
+      this.onDropped(id)
+    }
+  }
+
   dispose(): void {
     this.cancel()
     for (const patch of this.patches.values()) this.destroyPatch(patch)

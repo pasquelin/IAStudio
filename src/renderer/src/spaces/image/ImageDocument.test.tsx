@@ -49,6 +49,19 @@ describe('ImageDocument', () => {
     expect(screen.getByRole('button', { name: /^Texte/ })).toBeInTheDocument()
   })
 
+  it('opens on the pointer, so the first click cannot write on the picture', () => {
+    render(<ImageDocument documentId="doc-1" />)
+
+    expect(screen.getByRole('button', { name: /^Déplacement/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: /^Pinceau/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
   it('offers every shape Figma does, behind the shapes group', async () => {
     render(<ImageDocument documentId="doc-1" />)
     await userEvent.hover(screen.getByRole('button', { name: /^Rectangle/ }))

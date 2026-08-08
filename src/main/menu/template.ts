@@ -171,6 +171,36 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ]
       : []
 
+  /**
+   * A row that is exactly a command: its label, its accelerator and what it fires all come from
+   * the registry, so a title translated once is never translated again for the menu.
+   */
+  const commandItem = (command: CommandId, label: string): MenuItemConstructorOptions => ({
+    label,
+    accelerator: shortcut(command),
+    click: () => actions.runCommand(command),
+  })
+
+  /** Only where a picture is what is being edited: turning a scene is another gesture entirely. */
+  const imageMenu: MenuItemConstructorOptions[] =
+    workspace === 'image'
+      ? [
+          {
+            label: t.menu.image,
+            submenu: [
+              commandItem('canvas.mergeDown', t.commands.canvasMergeDown.title),
+              commandItem('canvas.flatten', t.commands.canvasFlatten.title),
+              { type: 'separator' },
+              commandItem('canvas.flipHorizontal', t.commands.canvasFlipHorizontal.title),
+              commandItem('canvas.flipVertical', t.commands.canvasFlipVertical.title),
+              { type: 'separator' },
+              commandItem('canvas.rotateCw', t.commands.canvasRotateCw.title),
+              commandItem('canvas.rotateCcw', t.commands.canvasRotateCcw.title),
+            ],
+          },
+        ]
+      : []
+
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
   const addMenu: MenuItemConstructorOptions[] =
     workspace === '3d'
@@ -217,6 +247,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ],
     },
     { role: 'editMenu', label: t.menu.edit },
+    ...imageMenu,
     ...addMenu,
     {
       label: t.menu.view,

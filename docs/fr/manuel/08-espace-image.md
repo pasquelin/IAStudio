@@ -22,7 +22,7 @@ part où écrire le document.
 
 **Un document image n'est pas condamné à partir du blanc.** Trois gestes y posent une image de
 votre étagère, et les trois font la même chose : un **calque de plus**, au-dessus de la pile,
-nommé d'après l'asset et **déjà armé** pour le pinceau.
+nommé d'après l'asset et **déjà actif** : c'est lui que le prochain trait recevra.
 
 | Geste | Ce qu'il faut |
 |---|---|
@@ -107,6 +107,38 @@ Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 | **Déplacement** | `V` | fait glisser le contenu du calque actif |
 | **Main** | `H` | déplace la vue |
 | **Mise à l'échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
+
+> **C'est le groupe armé à l'ouverture.** Un document s'ouvre sur **Déplacement**, jamais sur le
+> pinceau : le premier clic sur une image que vous venez d'ouvrir ne doit pas pouvoir y laisser
+> une trace. Le pinceau est à une touche — `P`.
+
+### Le menu **Image**
+
+Six entrées. Les quatre dernières agissent sur **tout le document**, calques compris — pas sur le
+calque actif :
+
+| Entrée | Ce qu'elle fait |
+|---|---|
+| **Fusionner vers le bas** (`⌘E`) | réunit le calque actif et celui **juste en dessous, au même niveau** — jamais à travers la paroi de son groupe. Le résultat garde le nom du calque du dessous, comme partout ailleurs |
+| **Aplatir l'image** | réduit toute la pile à un seul calque nommé « Arrière-plan » |
+| **Miroir horizontal** | retourne le document de gauche à droite |
+| **Miroir vertical** | retourne le document de haut en bas |
+| **Rotation horaire** | un quart de tour vers la droite ; **le cadre pivote avec** — un portrait devient un paysage |
+| **Rotation antihoraire** | un quart de tour vers la gauche, même chose |
+
+Aucune n'a de raccourci par défaut : le menu est leur seule porte. Vous pouvez leur en donner un
+dans les [réglages](14-reglages.md), comme à n'importe quelle commande.
+
+> **Un miroir suivi du même miroir rend exactement l'image de départ.** Ce n'est pas une évidence :
+> le studio retourne le calque plutôt que de réécrire ses pixels, et c'est ce qui évite qu'un
+> aller-retour laisse une trace d'arrondi.
+
+> **Aplatir perd les calques masqués**, il ne les fusionne pas — c'est aussi ce que fait Photoshop.
+> Ce que vous voyez est ce que vous gardez.
+
+**Fusionner et Aplatir écrivent vraiment des pixels**, à la différence du reste du menu : le calque
+qui reste reçoit l'image composée de ce qui disparaît. `⌘Z` rend la pile — et l'image avec, tant que
+le document n'a pas changé de taille entre-temps.
 
 ### Groupe Cadre
 

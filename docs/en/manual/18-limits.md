@@ -84,14 +84,14 @@ They are visible in the toolbar, greyed out.
 clicking in the image places no note. It is the studio's only button that looks alive without
 being so — the others say their state by their grey.
 
-### Cropping, mirroring and rotating are not offered
+### Cropping is not offered
 
-The gesture is written and cropping works, but **resizing the frame moves the layers without moving
-their pixels**: after a crop the brush would paint beside the cursor. The same goes for a mirror or a
-quarter turn, which would lay the layers outside the frame.
+**Merge down, Flatten, mirroring and the quarter turn now are** — the **Image** menu. What blocked
+them was a layer's surface not following its document; it follows it now.
 
-It is the same missing piece that keeps **Merge down** and **Flatten** off the menu. A button that
-damages the document is worse than a button that is not there.
+Only the **crop** is left, and for another reason: the gesture itself does not exist. Drawing the
+frame, seeing it, committing it — none of it is written. A button that damages the document is
+worse than a button that is not there.
 
 ### Fill is not a paint bucket
 
@@ -379,8 +379,8 @@ If you only remember five things from this chapter:
 
 1. **images, sequences, sounds and skies do not save** — closing the tab loses the work; in the
    Image workspace, `⇧⌘E` at least gets a PNG out before you close;
-2. **cropping, flipping and rotating a picture are not offered** — the pixels would not follow
-   the frame;
+2. **cropping a picture is not offered** — merging, flattening, mirroring and the quarter turn
+   are, from the Image menu;
 3. **there is no video export** — the studio cannot yet deliver a final file;
 4. **Cut out, Enlarge and Vectorize cannot complete** — there is no way to choose their model;
 5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.

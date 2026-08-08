@@ -21,7 +21,7 @@ would be nowhere to write the document.
 
 **An image document is not condemned to start from white.** Three gestures lay a picture from
 your shelf onto it, and all three do the same thing: **one more layer**, on top of the stack,
-named after the asset and **already armed** for the brush.
+named after the asset and **already active**: it is the one the next stroke will land on.
 
 | Gesture | What it needs |
 |---|---|
@@ -103,6 +103,37 @@ In other words: an armed tool never needs the menu to be taken up again.
 | **Move** | `V` | drags the active layer's content |
 | **Hand** | `H` | pans the view |
 | **Scale** | `K` | shows eight grips and a rotation handle around the armed layer |
+
+> **This is the group armed on opening.** A document opens on **Move**, never on the brush: the
+> first click on a picture you have just opened must not be able to leave a mark on it. The
+> brush is one key away — `P`.
+
+### The **Image** menu
+
+Six entries. The last four act on the **whole document**, layers included — not on the active layer:
+
+| Entry | What it does |
+|---|---|
+| **Merge down** (`⌘E`) | joins the active layer and the one **just below it, at the same level** — never through the wall of its group. The result keeps the lower layer's name, as everywhere else |
+| **Flatten image** | reduces the whole stack to a single layer named "Background" |
+| **Flip horizontal** | mirrors the document left to right |
+| **Flip vertical** | mirrors the document top to bottom |
+| **Rotate clockwise** | a quarter turn to the right; **the frame turns with it** — a portrait becomes a landscape |
+| **Rotate counter-clockwise** | a quarter turn to the left, same thing |
+
+None ships with a shortcut: the menu is their only way in. You can give them one in
+[settings](14-settings.md), as with any other command.
+
+> **A mirror followed by the same mirror gives back exactly the picture you started from.** That is
+> not a given: the studio turns the layer rather than rewriting its pixels, which is what keeps a
+> round trip from leaving a rounding trace.
+
+> **Flatten drops hidden layers**, it does not merge them — which is what Photoshop does too. What
+> you see is what you keep.
+
+**Merge down and Flatten really do write pixels**, unlike the rest of the menu: the layer that stays
+receives the picture composed from what disappears. `⌘Z` gives the stack back — and the picture with
+it, as long as the document has not changed size in between.
 
 ### Frame group
 

@@ -14,6 +14,7 @@ import {
   type Layer,
   type Transform,
 } from './canvas-state'
+import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from './shape-geometry'
 import { RULER_SIZE } from './CanvasOverlay'
@@ -47,6 +48,8 @@ type Placed = {
   mask: object | null
   maskChannel: string
   size: { width: number; height: number } | null
+  destroyed: boolean
+  matrix: { a: number; b: number; c: number; d: number; tx: number; ty: number } | null
 }
 
 const gpu: {
@@ -84,6 +87,25 @@ vi.mock('pixi.js/unsafe-eval', () => ({}))
 vi.mock('pixi.js/advanced-blend-modes', () => ({}))
 
 vi.mock('pixi.js', () => {
+  /** The six numbers of an affine map, which is all the engine ever builds one from. */
+  class Matrix {
+    a = 1
+    b = 0
+    c = 0
+    d = 1
+    tx = 0
+    ty = 0
+
+    set(a: number, b: number, c: number, d: number, tx: number, ty: number): void {
+      this.a = a
+      this.b = b
+      this.c = c
+      this.d = d
+      this.tx = tx
+      this.ty = ty
+    }
+  }
+
   /** Pixi's `ObservablePoint`, reduced to what a test needs: a value it can read back. */
   class Pair {
     x: number
@@ -116,6 +138,8 @@ vi.mock('pixi.js', () => {
     mask: object | null = null
     maskChannel = 'red'
     size: { width: number; height: number } | null = null
+    destroyed = false
+    matrix: { a: number; b: number; c: number; d: number; tx: number; ty: number } | null = null
 
     constructor(options: { label?: string } = {}) {
       this.label = options.label ?? ''
@@ -148,13 +172,28 @@ vi.mock('pixi.js', () => {
       this.maskChannel = options.channel ?? 'red'
     }
 
+    setFromMatrix(matrix: Matrix): void {
+      this.matrix = {
+        a: matrix.a,
+        b: matrix.b,
+        c: matrix.c,
+        d: matrix.d,
+        tx: matrix.tx,
+        ty: matrix.ty,
+      }
+    }
+
     removeChildren(): void {
       gpu.mutations += this.children.length
       for (const child of this.children) child.parent = null
       this.children.length = 0
     }
 
-    destroy(): void {}
+    /** Recorded, and passed down: `destroy({ children: true })` takes the subtree with it. */
+    destroy(options?: { children?: boolean }): void {
+      this.destroyed = true
+      if (options?.children) for (const child of this.children) child.destroy(options)
+    }
   }
 
   class Graphics extends Container {
@@ -212,6 +251,7 @@ vi.mock('pixi.js', () => {
     },
     Container,
     Graphics,
+    Matrix,
     Sprite: class extends Container {
       constructor() {
         super()
@@ -261,11 +301,21 @@ type Harness = {
   guides: { calls: string[] }
   /** The ids of the patches the engine reported as one finished gesture each. */
   patches: string[]
+  /** The ids whose tiles the engine threw away: their history entry can no longer be replayed. */
+  dropped: string[]
   /** `translate:<id>:<x>:<y>` and the two ends of the drag, in the order they arrived. */
   layers: string[]
 }
 
-function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
+/**
+ * A mounted engine with the brush armed. Explicit since the engine opens on the pointer, which
+ * writes nothing: a test that presses to paint has to say which tool it is pressing with, and
+ * the ones about another tool arm it themselves.
+ */
+function mounted(
+  state: CanvasState = DEFAULT_CANVAS,
+  tool: CanvasTool = 'brush',
+): Promise<Harness> {
   const host = document.createElement('div')
   document.body.appendChild(host)
 
@@ -274,12 +324,13 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
   const captions: Point[] = []
   const calls: string[] = []
   const patches: string[] = []
+  const dropped: string[] = []
   const layers: string[] = []
   const harness: Harness = {
     engine: new CanvasEngine({
       onPick: () => undefined,
       onPixels: patchId => patches.push(patchId),
-      onPixelsDropped: () => undefined,
+      onPixelsDropped: patchId => dropped.push(patchId),
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
       onText: at => captions.push(at),
@@ -310,10 +361,12 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
     captions,
     guides: { calls },
     patches,
+    dropped,
     layers,
   }
 
   harness.engine.setView(DEFAULT_VIEW)
+  harness.engine.setTool(tool)
   // The order React uses: the state is pushed while `mount` is still awaiting Pixi's `init`.
   harness.engine.apply(state)
   return harness.engine.mount(host).then(async () => {
@@ -759,6 +812,305 @@ describe('layer masks', () => {
 
     expect(gpu.sprites[0]?.position).toMatchObject({ x: 40 + 512, y: 60 + 512 })
     expect(gpu.sprites[1]?.position).toMatchObject({ x: 512, y: 512 })
+  })
+})
+
+/**
+ * A layer's pixels are its own; the sprite that shows them carries the layer's transform. A dab
+ * drawn where the cursor is therefore has to be mapped back, or it lands displaced by exactly
+ * that transform — which is what made the brush miss after a crop, `resizeCanvas` shifting every
+ * transform by the crop's offset.
+ */
+describe('painting a transformed layer', () => {
+  /** The one node the engine puts a matrix on is the space a pass is drawn through. */
+  const paintSpace = (): Placed | undefined => gpu.containers.find(container => container.matrix)
+
+  const shifted = (transform: Partial<Transform>): CanvasState =>
+    stacked([{ ...pixelLayer('layer-1', 'Background'), transform: { ...IDENTITY, ...transform } }])
+
+  /**
+   * A dab, closed. The release matters: `pointerup` is listened for on the window, so a gesture
+   * left open outlives its test and is ended by the next one's release — which photographs its
+   * tiles into the run that is measuring.
+   */
+  function dabAt(host: HTMLElement, x: number, y: number): void {
+    press(host, x, y)
+    release(x, y)
+  }
+
+  it('draws straight into the pixels of an untouched layer', async () => {
+    const { host } = await mounted(shifted({}))
+
+    dabAt(host, 200, 200)
+
+    const matrix = paintSpace()?.matrix
+    expect(matrix).toBeDefined()
+    // Signed zeroes come out of the inverse, and `toMatchObject` tells -0 from 0.
+    expect(matrix?.a).toBeCloseTo(1, 10)
+    expect(matrix?.d).toBeCloseTo(1, 10)
+    expect(matrix?.tx).toBeCloseTo(0, 10)
+    expect(matrix?.ty).toBeCloseTo(0, 10)
+  })
+
+  it('takes the move back out before it writes', async () => {
+    const { host } = await mounted(shifted({ x: 50, y: 30 }))
+
+    dabAt(host, 200, 200)
+
+    // The stroke is aimed at document (200, 200); the layer's pixel under it is (150, 170).
+    expect(paintSpace()?.matrix?.tx).toBeCloseTo(-50, 10)
+    expect(paintSpace()?.matrix?.ty).toBeCloseTo(-30, 10)
+  })
+
+  it('takes a scale back out too, so a stroke keeps the width the bar shows', async () => {
+    const { host } = await mounted(shifted({ scaleX: 2, scaleY: 2 }))
+
+    dabAt(host, 200, 200)
+
+    expect(paintSpace()?.matrix?.a).toBeCloseTo(0.5, 10)
+    expect(paintSpace()?.matrix?.d).toBeCloseTo(0.5, 10)
+  })
+
+  it('declines the stroke on a layer crushed onto a line', async () => {
+    // A singular map has no inverse, and painting through one writes NaN across the whole
+    // texture — which no undo brings back. Nothing at all is the only safe answer.
+    const { host, patches } = await mounted(shifted({ scaleX: 0 }))
+    gpu.painted = []
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(gpu.painted).toEqual([])
+    expect(patches).toEqual([])
+  })
+
+  it('keeps the stroke on the surface it started on', async () => {
+    // The map is taken once, when the hand comes down. Re-deriving it per move would re-resolve
+    // the armed layer, and a stroke would change surface mid-drag.
+    const { engine, host } = await mounted(shifted({ x: 50, y: 30 }))
+
+    press(host, 200, 200)
+    engine.apply(shifted({ x: 400, y: 400 }))
+    drag(host, 240, 240)
+    release(240, 240)
+
+    expect(paintSpace()?.matrix?.tx).toBeCloseTo(-50, 10)
+    expect(paintSpace()?.matrix?.ty).toBeCloseTo(-30, 10)
+  })
+
+  it('paints an unlinked mask in its own space, where it was left', async () => {
+    // Unlinked means the mask does not follow the layer, so the way back to its pixels is not
+    // the layer's transform but the identity.
+    const { engine, host } = await mounted(
+      stacked([
+        {
+          ...pixelLayer('layer-1', 'Background'),
+          transform: { ...IDENTITY, x: 50, y: 30 },
+          mask: { enabled: true, linked: false },
+        },
+      ]),
+    )
+    engine.setPaintTarget('mask')
+
+    dabAt(host, 200, 200)
+
+    expect(paintSpace()?.matrix?.tx).toBeCloseTo(0, 10)
+    expect(paintSpace()?.matrix?.ty).toBeCloseTo(0, 10)
+  })
+})
+
+/**
+ * Merging and flattening record that layers became one; the pixels are the engine's to compose,
+ * and there is exactly one moment it can — before the command drops what they are made of.
+ */
+describe('composing a merge and a flatten', () => {
+  const paintSpace = (): Placed | undefined => gpu.containers.find(container => container.matrix)
+
+  const twoLayers = (transform: Partial<Transform> = {}): CanvasState =>
+    stacked([
+      pixelLayer('below', 'Below'),
+      { ...pixelLayer('above', 'Above'), transform: { ...IDENTITY, ...transform } },
+    ])
+
+  /** The layers are built bottom first, so the lower one owns texture 0. */
+  const BELOW = 0
+
+  it('draws the upper layer into the lower one, which is the texture the merge keeps', async () => {
+    const { engine } = await mounted(twoLayers())
+    gpu.painted = []
+
+    engine.mergeInto('below', 'above')
+
+    expect(gpu.painted).toContain(BELOW)
+  })
+
+  it('carries the upper layer through the document and back into the lower one', async () => {
+    const { engine } = await mounted(twoLayers({ x: 40, y: 25 }))
+
+    engine.mergeInto('below', 'above')
+
+    // The upper layer sits 40 by 25 further along; the lower one has not moved, so its pixels
+    // must receive the picture at that same offset rather than at the origin.
+    expect(paintSpace()?.matrix?.tx).toBeCloseTo(40, 10)
+    expect(paintSpace()?.matrix?.ty).toBeCloseTo(25, 10)
+  })
+
+  it('composes nothing when either layer has no surface', async () => {
+    const { engine } = await mounted(twoLayers())
+    gpu.painted = []
+
+    engine.mergeInto('below', 'gone')
+
+    expect(gpu.painted).toEqual([])
+  })
+
+  it('hands the flattened picture to the layer that replaces the stack', async () => {
+    const { engine } = await mounted(twoLayers())
+
+    // Composed while the stack still exists, held for a layer that does not exist yet.
+    engine.flattenInto('flat')
+    const built = gpu.texturesCreated
+    gpu.painted = []
+    engine.apply(stacked([pixelLayer('flat', 'Background')]))
+
+    // The new surface is built, then the held picture is poured into it: born empty, the
+    // document would come out transparent, which is what kept Flatten off the menu.
+    expect(gpu.painted).toContain(built)
+  })
+
+  it('leaves a layer that was not flattened into alone', async () => {
+    const { engine } = await mounted(twoLayers())
+
+    engine.flattenInto('flat')
+    const built = gpu.texturesCreated
+    gpu.painted = []
+    engine.apply(stacked([pixelLayer('other', 'Other')]))
+
+    expect(gpu.painted).not.toContain(built)
+  })
+})
+
+/**
+ * A texture used to be allocated once, at whatever size the document had when its layer was
+ * born, and never grew. Five features were written against that and left unoffered for it: crop,
+ * mirror, quarter turn, merge down and flatten.
+ */
+describe('following the document to another size', () => {
+  const masked: CanvasState = {
+    ...DEFAULT_CANVAS,
+    layers: [{ ...pixelLayer('layer-1', 'Background'), mask: { enabled: true, linked: true } }],
+    activeLayerId: 'layer-1',
+  }
+
+  const resizedTo = (state: CanvasState, width: number, height: number): CanvasState => ({
+    ...state,
+    width,
+    height,
+    // A fresh array, since `apply` skips a state whose stack it already holds.
+    layers: [...state.layers],
+  })
+
+  it('rebuilds the layer and its mask, and frees what they replace', async () => {
+    const { engine } = await mounted(masked)
+    const builtBefore = gpu.texturesCreated
+    const freedBefore = gpu.texturesDestroyed
+
+    engine.apply(resizedTo(masked, 512, 512))
+
+    // Two surfaces, so two textures out and two in. A mask left behind is a layer hidden by a
+    // stencil one document old.
+    expect(gpu.texturesCreated - builtBefore).toBe(2)
+    expect(gpu.texturesDestroyed - freedBefore).toBe(2)
+  })
+
+  it('carries the old picture into each new surface', async () => {
+    const { engine } = await mounted(masked)
+    const first = gpu.texturesCreated
+    gpu.painted = []
+
+    engine.apply(resizedTo(masked, 512, 512))
+
+    // Rebuilt and left empty would lose the stack outright; the copy is what makes it a resize.
+    expect(gpu.painted).toContain(first)
+    expect(gpu.painted).toContain(first + 1)
+  })
+
+  it('leaves the surfaces alone when the frame keeps its size', async () => {
+    const { engine } = await mounted(masked)
+    const freedBefore = gpu.texturesDestroyed
+
+    engine.apply({ ...masked, layers: [...masked.layers] })
+
+    expect(gpu.texturesDestroyed).toBe(freedBefore)
+  })
+
+  it('throws the undo tiles away, and says which ones', async () => {
+    // A capture names its tile in the surface's own coordinates. Once the surface is another
+    // shape those coordinates point elsewhere, so replaying one would paint sideways.
+    const { engine, host, patches, dropped } = await mounted(masked)
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+    const recorded = patches[0]
+    expect(recorded).toBeDefined()
+
+    engine.apply(resizedTo(masked, 512, 512))
+
+    expect(dropped).toEqual([recorded])
+  })
+})
+
+/**
+ * The stencil holder is rebuilt per pass and the old one freed with its children. The brush's
+ * stamp is not one of its children to keep — it is built once, with the engine, and lives as long
+ * as it does.
+ */
+describe('the stencil holder and the stamp it borrows', () => {
+  const paintSpace = (): Placed | undefined => gpu.containers.find(container => container.matrix)
+
+  /** With nothing selected the stamp goes straight into the paint space: that is how it is found. */
+  function stampAfterAPlainDab(host: HTMLElement): Placed {
+    press(host, 200, 200)
+    release(200, 200)
+    const stamp = paintSpace()?.children[0]
+    if (!stamp) throw new Error('a dab always draws through the paint space')
+    return stamp
+  }
+
+  it('keeps the stamp alive when a selection is dropped between two strokes', async () => {
+    const { engine, host } = await mounted()
+    const stamp = stampAfterAPlainDab(host)
+
+    // Inside a marquee the stamp is reparented into a holder, which is what the stencil masks.
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 100, height: 100 } })
+    press(host, 50, 50)
+    release(50, 50)
+
+    // Deselecting frees that holder. The stamp must not go with it, or the brush is dead for
+    // the rest of the session: it is built once and never rebuilt.
+    engine.setSelection(null)
+    press(host, 200, 200)
+    release(200, 200)
+
+    expect(stamp.destroyed).toBe(false)
+  })
+
+  it('keeps the stamp alive when another tool borrows the stencil next', async () => {
+    const { engine, host } = await mounted()
+    const stamp = stampAfterAPlainDab(host)
+
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 100, height: 100 } })
+    press(host, 50, 50)
+    release(50, 50)
+
+    // The bucket cuts on the same stencil, and hands `clipped` a sheet of its own: the holder
+    // holding the stamp is freed by a pass the stamp is not part of.
+    engine.setTool('fill')
+    press(host, 60, 60)
+    release(60, 60)
+
+    expect(stamp.destroyed).toBe(false)
   })
 })
 

@@ -8,6 +8,7 @@ import {
   DEFAULT_TEXT_SIZE,
   deserializeCanvas,
   IDENTITY,
+  layerBelow,
   layerById,
   mapLayers,
   serializeCanvas,
@@ -181,6 +182,30 @@ describe('mapLayers', () => {
     const pruned = mapLayers(tree.layers, layer => (layer.id === 'a' ? null : layer))
 
     expect(allLayers(pruned).map(layer => layer.id)).toEqual(['g', 'b'])
+  })
+})
+
+describe('layerBelow', () => {
+  const tree = deserializeCanvas(
+    JSON.stringify({
+      layers: [{ id: 'a' }, { id: 'g', kind: 'group', children: [{ id: 'x' }, { id: 'y' }] }],
+    }),
+  )
+
+  it('finds the neighbour under a root layer', () => {
+    expect(layerBelow(tree.layers, 'g')?.id).toBe('a')
+  })
+
+  it('stays inside the group, never through its wall', () => {
+    // `mergeDown` merges within a level. Reaching out of the group would merge a child into
+    // whatever happens to sit under the group itself.
+    expect(layerBelow(tree.layers, 'y')?.id).toBe('x')
+    expect(layerBelow(tree.layers, 'x')).toBeNull()
+  })
+
+  it('finds nothing at the bottom of a level, or for an id nobody carries', () => {
+    expect(layerBelow(tree.layers, 'a')).toBeNull()
+    expect(layerBelow(tree.layers, 'nope')).toBeNull()
   })
 })
 

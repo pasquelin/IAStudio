@@ -318,6 +318,25 @@ export function updateSiblings(
   )
 }
 
+/**
+ * The layer directly under `id` at its own level — what `mergeDown` merges into. Within the level,
+ * never through the wall of the group it sits in, exactly as the command reads it.
+ *
+ * `null` when it is the bottom of its level, or when nothing carries that id: there is nothing to
+ * merge into, and the caller has to offer nothing rather than a menu entry that does nothing.
+ */
+export function layerBelow(layers: readonly Layer[], id: string): Layer | null {
+  const index = layers.findIndex(layer => layer.id === id)
+  if (index >= 0) return layers[index - 1] ?? null
+
+  for (const layer of layers) {
+    if (!isGroup(layer)) continue
+    const found = layerBelow(layer.children, id)
+    if (found) return found
+  }
+  return null
+}
+
 /** Rebuilds the tree with one layer replaced, wherever it sits. `null` removes it. */
 export function mapLayers(
   layers: readonly Layer[],

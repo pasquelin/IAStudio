@@ -242,6 +242,10 @@ what is going and with which settings.
 | Action | Key | What it does |
 |---|---|---|
 | **Export the image** | `⇧⌘E` | writes the flattened document to disk, as a PNG |
+| **Merge down** | `⌘E` | joins the active layer and the one just below it, at the same level |
+
+The five other **Image** menu entries — Flatten, both mirrors, both rotations — ship with no key.
+You can give them one in [settings](14-settings.md).
 
 ### Undo and redo
 

@@ -86,14 +86,14 @@ Ils sont visibles dans la barre d'outils, en gris.
 fait rien : cliquer dans l'image ne pose aucune note. C'est le seul bouton du studio qui ait l'air
 vivant sans l'être — les autres disent leur état par leur gris.
 
-### Recadrer, retourner et pivoter ne sont pas offerts
+### Le recadrage n'est pas offert
 
-Le geste est écrit et le recadrage fonctionne, mais **redimensionner le cadre déplace les calques
-sans déplacer leurs pixels** : après un recadrage, le pinceau peindrait à côté du curseur. Il en va
-de même pour un miroir ou un quart de tour, qui poseraient les calques hors du cadre.
+**Fusionner, Aplatir, le miroir et le quart de tour le sont désormais** — menu **Image**. Ce qui les
+bloquait était qu'une surface de calque ne suivait pas son document ; elle le suit maintenant.
 
-C'est la même pièce manquante qui empêche **Fusionner** et **Aplatir** d'être proposés. Un bouton
-qui abîme le document est pire qu'un bouton absent.
+Il ne reste que le **recadrage**, et pour une autre raison : le geste lui-même n'existe pas. Le
+dessiner, le voir, le valider — rien de tout cela n'est écrit. Un bouton qui abîme le document est
+pire qu'un bouton absent.
 
 ### Remplir n'est pas un pot de peinture
 
@@ -388,8 +388,8 @@ Si vous ne deviez retenir que cinq choses de ce chapitre :
 
 1. **Les images, séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le
    travail ; dans l'espace Image, `⇧⌘E` sort au moins un PNG avant de fermer ;
-2. **recadrer, retourner ou pivoter une image n'est pas offert** — les pixels ne suivraient pas
-   le cadre ;
+2. **recadrer une image n'est pas offert** — fusionner, aplatir, le miroir et le quart de tour le
+   sont, par le menu Image ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
 4. **Détourer, Agrandir et Vectoriser ne peuvent pas aboutir** — il manque le moyen de choisir
    leur modèle ;

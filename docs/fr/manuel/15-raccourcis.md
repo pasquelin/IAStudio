@@ -248,6 +248,10 @@ avoir vu ce qui part et avec quels réglages.
 | Action | Touche | Ce qu'elle fait |
 |---|---|---|
 | **Exporter l'image** | `⇧⌘E` | écrit le document aplati sur le disque, au format PNG |
+| **Fusionner vers le bas** | `⌘E` | réunit le calque actif et celui juste en dessous, au même niveau |
+
+Les cinq autres entrées du menu **Image** — Aplatir, les deux miroirs, les deux rotations — n'ont
+pas de touche par défaut. Vous pouvez leur en donner une dans les [réglages](14-reglages.md).
 
 ### Annuler et rétablir
 

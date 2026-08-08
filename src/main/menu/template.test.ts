@@ -46,6 +46,45 @@ function rolesUnder(template: MenuItemConstructorOptions[], label: string): (str
   return Array.isArray(menu?.submenu) ? menu.submenu.map(entry => entry.role) : []
 }
 
+describe('the Image menu', () => {
+  /**
+   * Turning a picture has no conventional shortcut, so the menu is the only way in. A command in
+   * the registry that nothing surfaces is a command that cannot be run — the defect the image
+   * toolbar has already shown twice.
+   */
+  it('offers the whole-document operations where a picture is being edited', () => {
+    const entries = labels(submenuOf(menuTemplate(options({ workspace: 'image' })), 'Image'))
+
+    expect(entries).toEqual([
+      'Fusionner vers le bas',
+      'Aplatir l’image',
+      '',
+      'Miroir horizontal',
+      'Miroir vertical',
+      '',
+      'Rotation horaire',
+      'Rotation antihoraire',
+    ])
+  })
+
+  it('leaves it out of every other workspace, where it would turn nothing', () => {
+    expect(labels(menuTemplate(options({ workspace: '3d' })))).not.toContain('Image')
+    expect(labels(menuTemplate(options({ workspace: null })))).not.toContain('Image')
+  })
+
+  it('fires the command the row names', () => {
+    const runCommand = vi.fn()
+    const entries = submenuOf(
+      menuTemplate(options({ workspace: 'image', actions: actions({ runCommand }) })),
+      'Image',
+    )
+
+    activate(entries.find(entry => entry.label === 'Rotation horaire'))
+
+    expect(runCommand).toHaveBeenCalledWith('canvas.rotateCw')
+  })
+})
+
 describe('menuTemplate', () => {
   it('names the application menu after the product, not the binary', () => {
     expect(labels(menuTemplate(options()))[0]).toBe('Scenario Studio')

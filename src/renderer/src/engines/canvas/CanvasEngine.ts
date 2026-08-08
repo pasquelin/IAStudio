@@ -4,6 +4,7 @@ import {
   Assets,
   Container,
   Graphics,
+  Matrix,
   Rectangle,
   RenderTexture,
   Sprite,
@@ -40,6 +41,7 @@ import {
   type SelectionShape,
 } from './canvas-selection'
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
+import { compose, invert, layerMatrix, mapRect, type Affine } from './layer-space'
 import {
   handleAt,
   HANDLE_GRAB,
@@ -172,8 +174,11 @@ export const DEFAULT_BRUSH: BrushSettings = {
 /**
  * Declared by the bar, not implemented here. Kept in the union so the registry stays typed, and
  * kept in one place so wiring one is a single deletion.
+ *
+ * Exported so the bar's registry can be crossed against it: a tool listed here whose button is
+ * not greyed arms a gesture `onPointerDown` drops on the floor.
  */
-const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['crop', 'comment'])
+export const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['crop', 'comment'])
 
 /**
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
@@ -213,7 +218,25 @@ type LayerSurface = {
 export type PaintSurface = 'pixels' | 'mask'
 
 /** A surface a gesture may write to, with the key its undo patches are filed under. */
-type BrushTarget = { key: string; surface: LayerSurface }
+/**
+ * Where a stroke lands, and how to get there. `toSurface` maps the document onto the surface's
+ * own pixels: the sprite that shows them carries the layer's transform, so artwork drawn where
+ * the cursor is would otherwise be displaced by exactly that transform.
+ *
+ * Taken once when the gesture opens rather than per move: the layer cannot be transformed while
+ * the pointer is captured, and re-deriving it per `pointermove` was also re-resolving the active
+ * layer, which a stroke must not do.
+ */
+type BrushTarget = { key: string; surface: LayerSurface; toSurface: Affine }
+
+/**
+ * Which transform a surface is placed by. Unlinked means the mask does not follow the layer: it
+ * stays where it was painted. Read by the placement and by the way back into the pixels, which
+ * have to agree — a brush that disagrees with the sprite paints beside the cursor.
+ */
+function surfaceTransform(layer: Layer, mask: boolean): Transform {
+  return mask && layer.mask?.linked !== true ? IDENTITY : layer.transform
+}
 
 /**
  * A line is a stroke, and the brush size is a diameter: a 24 px brush draws a 6 px line, which is
@@ -240,7 +263,7 @@ type Gesture =
   | { kind: 'none' }
   | { kind: 'pan'; from: Point }
   | { kind: 'guide'; id: string; axis: Axis }
-  | { kind: 'paint'; from: Point }
+  | { kind: 'paint'; from: Point; target: BrushTarget }
   /** `origin` is where the layer stood when the drag began: every step is absolute from it. */
   | { kind: 'move'; id: string; from: Point; origin: Point }
   | { kind: 'select'; from: Point }
@@ -305,21 +328,33 @@ export class CanvasEngine {
   /** Built on the first isolated group, and only then: most documents never hold one. */
   private isolation: AlphaFilter | null = null
   /** The stencil of the last clipped pass, kept only so the next one can free it. */
-  private clipping: Container | null = null
+  /**
+   * The stencil pass in flight, and the stencil it owns. Held as the pair because they are not
+   * the same thing to free: the holder's other children are borrowed — the brush's stamp lives
+   * as long as the engine, a tool's drawing is freed by the tool — and only the stencil is the
+   * pass's own.
+   */
+  private clipping: { holder: Container; stencil: Graphics } | null = null
   /** One grading pass per adjustment layer, holding the filter it applies. */
   private readonly adjustments = new Map<string, AdjustPass>()
   /** What each text layer was last drawn with, so unchanged words cost no rasterization. */
   private readonly wordings = new Map<string, string>()
   /** Regions asked of masks that did not exist yet — see `fillMaskFromSelection`. */
   private readonly pendingMaskFills = new Map<string, readonly Point[]>()
+  /** Pictures composed for layers that do not exist yet — see `flattenInto`. */
+  private readonly pendingPictures = new Map<string, RenderTexture>()
   private readonly stamp = new Graphics()
+  /** Carries the map back into a surface's own pixels — see `inSurfaceSpace`. */
+  private readonly paintSpace = new Container()
+  private readonly paintMatrix = new Matrix()
   private readonly overlay = new CanvasOverlay(() => this.scene())
   /** Built with the renderer, in `mount`: a tile is a texture, and there is none before then. */
   private patches: PixelPatches | null = null
   private resizer: ResizeObserver | null = null
   private stopPaletteWatch: (() => void) | null = null
 
-  private tool: CanvasTool = 'brush'
+  /** The pointer, so a click before React has armed anything cannot write on the picture. */
+  private tool: CanvasTool = 'move'
   private painting: PaintSurface = 'pixels'
   private brush: BrushSettings = DEFAULT_BRUSH
   private state: CanvasState | null = null
@@ -431,9 +466,50 @@ export class CanvasEngine {
     // tree and re-rendering the stage for it would be a full GPU frame per pointer move.
     if (previous && previous.layers === state.layers && !resized) return
 
+    // Before `reconcile`, which builds what is missing at the size the state now names: a
+    // surface that survives has to reach the same size, or half the stack is one document old.
+    if (previous && resized) this.resurface(state)
+
     this.reconcile()
     if (resized && this.framed) this.frameDocument()
     this.render()
+  }
+
+  /**
+   * Rebuilds every surface at the document's new size, masks included, and copies the old picture
+   * into it. Until this existed a texture was allocated once, at whatever size the document had
+   * when the layer was born, and never grew: a quarter turn left the layers outside the frame,
+   * and merging or flattening had nowhere document-sized to compose into.
+   *
+   * The copy lands at the origin, with no offset. `resizeCanvas` already moves every layer's
+   * transform by the frame's own displacement, and that transform is what places the sprite —
+   * shifting the pixels here as well would apply the same move twice.
+   *
+   * Shrinking loses what falls outside, and the undo tiles go with it: the frame comes back on
+   * ⌘Z, the pixels it cut away do not.
+   */
+  private resurface(size: Size): void {
+    const renderer = this.app?.renderer
+    if (!renderer || this.surfaces.size === 0) return
+
+    for (const surface of this.surfaces.values()) {
+      const texture = RenderTexture.create({
+        width: size.width,
+        height: size.height,
+        resolution: 1,
+      })
+
+      const carried = new Sprite(surface.texture)
+      renderer.render({ container: carried, target: texture, clear: true })
+      // The old texture is destroyed just below, so its source must not go with the sprite.
+      carried.destroy({ texture: false, textureSource: false })
+
+      surface.sprite.texture = texture
+      surface.texture.destroy(true)
+      surface.texture = texture
+    }
+
+    this.patches?.dropAll()
   }
 
   /** The stack, made real on the GPU: one texture per paintable layer, in the stack's order. */
@@ -773,13 +849,111 @@ export class CanvasEngine {
       return
     }
 
-    this.paintMask(mask, outline)
+    this.paintMask(layerId, mask, outline)
   }
 
-  private paintMask(mask: LayerSurface, outline: readonly Point[]): void {
+  /**
+   * Composes the whole stack into one picture and holds it for the layer that is about to replace
+   * it. Called BEFORE `flatten` runs: once the command has run the stack is gone, and with it
+   * every texture the picture is made of.
+   *
+   * The layer it is held for does not exist yet — the command that creates it runs on the React
+   * side, and its surface follows on the next `apply`. Same shape as `fillMaskFromSelection`.
+   */
+  flattenInto(layerId: string): void {
     const renderer = this.app?.renderer
+    if (!renderer || !this.state) return
+
+    const picture = RenderTexture.create({
+      width: this.state.width,
+      height: this.state.height,
+      resolution: 1,
+    })
+
+    // The world carries pan and zoom, which are session state and have no business in a picture:
+    // flattening at 40 % would otherwise bake a document four fifths empty.
+    const { x, y } = this.world.position
+    const scale = this.world.scale.x
+    this.world.position.set(0, 0)
+    this.world.scale.set(1)
+    renderer.render({ container: this.world, target: picture, clear: true })
+    this.world.position.set(x, y)
+    this.world.scale.set(scale)
+
+    this.dropPending(layerId)
+    this.pendingPictures.set(layerId, picture)
+  }
+
+  /**
+   * Draws one layer's pixels into the one below it, before `mergeDown` drops it from the stack.
+   * The lower layer keeps its own texture — that is what the command records — so this is the
+   * only moment the upper one's pixels can be saved.
+   *
+   * Both surfaces already exist, so nothing is held back: the picture is composed straight away.
+   * The upper layer is carried through the document and back into the lower layer's own pixels,
+   * which is what makes a merge right when either of them has been moved or turned.
+   */
+  mergeInto(belowId: string, aboveId: string): void {
+    const renderer = this.app?.renderer
+    const state = this.state
+    const below = this.surfaces.get(belowId)
+    const above = this.surfaces.get(aboveId)
+    if (!renderer || !state || !below || !above) return
+
+    const aboveLayer = layerById(state, aboveId)
+    const belowLayer = layerById(state, belowId)
+    if (!aboveLayer || !belowLayer) return
+
+    const toBelow = invert(this.surfaceMatrix(belowLayer, false, below))
+    if (!toBelow) return
+
+    const carried = new Sprite(above.texture)
+    // What the eye saw of the upper layer, which is what a merge promises to keep.
+    carried.alpha = aboveLayer.opacity * aboveLayer.fillOpacity
+    carried.blendMode = BLEND_BY_MODE[aboveLayer.blend]
+
+    const placement = compose(toBelow, this.surfaceMatrix(aboveLayer, false, above))
+    renderer.render({
+      container: this.inSurfaceSpace(placement, carried),
+      target: below.texture,
+      clear: false,
+    })
+    carried.destroy({ texture: false, textureSource: false })
+    this.render()
+  }
+
+  /** A picture held for a layer that never arrived, or that is being replaced by a newer one. */
+  private dropPending(layerId: string): void {
+    const held = this.pendingPictures.get(layerId)
+    if (!held) return
+    this.pendingPictures.delete(layerId)
+    held.destroy(true)
+  }
+
+  /** Pours the picture held for a layer into the surface it was waiting for. */
+  private drainPendingPicture(layerId: string, surface: LayerSurface): void {
+    const renderer = this.app?.renderer
+    const picture = this.pendingPictures.get(layerId)
+    if (!renderer || !picture) return
+
+    this.pendingPictures.delete(layerId)
+    const carried = new Sprite(picture)
+    renderer.render({ container: carried, target: surface.texture, clear: true })
+    carried.destroy({ texture: false, textureSource: false })
+    picture.destroy(true)
+    this.render()
+  }
+
+  private paintMask(layerId: string, mask: LayerSurface, outline: readonly Point[]): void {
+    const renderer = this.app?.renderer
+    const layer = this.state && layerById(this.state, layerId)
     const first = outline[0]
-    if (!renderer || !first || !this.state) return
+    if (!renderer || !first || !layer || !this.state) return
+
+    // The outline is where the marquee was drawn, in the document; the mask's pixels are its own.
+    // Without the way back, a mask made from a selection on a moved layer hides the wrong region.
+    const toSurface = invert(this.surfaceMatrix(layer, true, mask))
+    if (!toSurface) return
 
     const sheet = new Graphics()
     // Black over the whole document, then the region in white: the mask reads its red channel,
@@ -790,7 +964,11 @@ export class CanvasEngine {
     for (const point of outline.slice(1)) sheet.lineTo(point.x, point.y)
     sheet.fill({ color: WHITE })
 
-    renderer.render({ container: sheet, target: mask.texture, clear: true })
+    renderer.render({
+      container: this.inSurfaceSpace(toSurface, sheet),
+      target: mask.texture,
+      clear: true,
+    })
     sheet.destroy()
     this.render()
   }
@@ -805,7 +983,7 @@ export class CanvasEngine {
     if (!outline) return
 
     this.pendingMaskFills.delete(layerId)
-    this.paintMask(mask, outline)
+    this.paintMask(layerId, mask, outline)
   }
 
   /**
@@ -925,9 +1103,9 @@ export class CanvasEngine {
     for (const clip of this.clips.values()) this.destroyClip(clip)
     this.clips.clear()
     this.pendingMaskFills.clear()
+    for (const picture of this.pendingPictures.values()) picture.destroy(true)
+    this.pendingPictures.clear()
     this.wordings.clear()
-    // The stamp is the engine's own and is destroyed below, so it leaves the holder first.
-    this.clipping?.removeChild(this.stamp)
     this.dropClipping()
     this.isolation?.destroy()
     this.isolation = null
@@ -1074,6 +1252,9 @@ export class CanvasEngine {
       if (layer.kind === 'text') this.drawText(surface, layer)
     }
 
+    // A flatten composed its picture before the command ran; this is the surface it was for.
+    if (born) this.drainPendingPicture(layer.id, surface)
+
     if (born && layer.kind === 'pixel' && layer.source !== undefined) {
       // Unawaited, and its failure swallowed: one unreadable asset must not take the rest of
       // the document's reconciliation down with it.
@@ -1097,8 +1278,7 @@ export class CanvasEngine {
     const mask = this.buildSurface(maskKey(layer.id), WHITE)
     if (!mask) return
 
-    // Unlinked means the mask does not follow the layer: it stays where it was painted.
-    this.place(mask.sprite, layer.mask.linked ? layer.transform : IDENTITY, mask.texture)
+    this.place(mask.sprite, surfaceTransform(layer, true), mask.texture)
     if (bornMasked) this.drainPendingMask(layer.id, mask)
   }
 
@@ -1268,13 +1448,12 @@ export class CanvasEngine {
 
     if (this.tool === 'fill') {
       const target = this.paintTarget()
-      const frame = target && this.beginPixels(target)
-      if (!target || !frame) return
+      if (!target) return
 
-      this.patches?.touch(frame)
+      this.patches?.touch(this.beginPixels(target))
       // Edge to edge, or to the selection when there is one: that is what gives a layer a plain
       // white, black or red background in one gesture, and a region its flat colour.
-      this.fill(target.surface, this.brush.color, true)
+      this.fill(target.surface, this.brush.color, target.toSurface)
       this.endPixels()
       return
     }
@@ -1340,8 +1519,10 @@ export class CanvasEngine {
     if (!target) return
 
     this.beginPixels(target)
-    this.gesture = { kind: 'paint', from: point }
-    this.dab(target.surface, [point])
+    // The target rides with the gesture: re-resolving the active layer on every move would let a
+    // stroke change surface mid-drag, and its map back to the pixels along with it.
+    this.gesture = { kind: 'paint', from: point, target }
+    this.dab(target, [point])
   }
 
   /**
@@ -1391,7 +1572,41 @@ export class CanvasEngine {
     const surface = this.activeSurface()
     // No surface means the layer carries no mask while the brush aims at one: there is nothing
     // to paint, and nothing to say about it either.
-    return surface ? { key: this.paintKey(layer.id), surface } : null
+    if (!surface) return null
+
+    // A layer crushed onto a line has no way back from the document to its pixels. Declining the
+    // stroke is the only safe answer: painting through a singular map writes NaN over the whole
+    // texture, and no undo brings those back.
+    const toSurface = invert(this.surfaceMatrix(layer, this.painting === 'mask', surface))
+    return toSurface ? { key: this.paintKey(layer.id), surface, toSurface } : null
+  }
+
+  /**
+   * Where a surface's pixels land in the document, as `syncLayer` places them — the layer's own
+   * transform, or the identity for a mask that was unlinked from it, and always against the box
+   * `place` was given, which is the texture rather than the document.
+   */
+  private surfaceMatrix(layer: Layer, mask: boolean, surface: LayerSurface): Affine {
+    return layerMatrix(surfaceTransform(layer, mask), surface.texture)
+  }
+
+  /**
+   * Wraps document-space artwork so it lands on the surface's own pixels. One container, reused:
+   * a dab runs per `pointermove`, and a fresh node per dab is an allocation per frame of a drag.
+   */
+  private inSurfaceSpace(toSurface: Affine, content: Container): Container {
+    this.paintSpace.removeChildren()
+    this.paintSpace.addChild(content)
+    this.paintMatrix.set(
+      toSurface.a,
+      toSurface.b,
+      toSurface.c,
+      toSurface.d,
+      toSurface.tx,
+      toSurface.ty,
+    )
+    this.paintSpace.setFromMatrix(this.paintMatrix)
+    return this.paintSpace
   }
 
   private documentRect(): Rect | null {
@@ -1399,11 +1614,15 @@ export class CanvasEngine {
     return state ? { x: 0, y: 0, width: state.width, height: state.height } : null
   }
 
-  /** Returns the document's own rectangle, which the bucket then dirties whole. */
-  private beginPixels(target: BrushTarget): Rect | null {
-    const frame = this.documentRect()
-    if (frame) this.patches?.begin(newId(), target.key, target.surface.texture, frame)
-    return frame
+  /**
+   * Opens a recording and hands back the surface's own rectangle, which the bucket then dirties
+   * whole. Counted against the texture rather than the document: tiles index the surface being
+   * written to, and the two only happen to share a size.
+   */
+  private beginPixels(target: BrushTarget): Rect {
+    const { width, height } = target.surface.texture
+    this.patches?.begin(newId(), target.key, target.surface.texture, { width, height })
+    return { x: 0, y: 0, width, height }
   }
 
   private endPixels(): void {
@@ -1469,9 +1688,8 @@ export class CanvasEngine {
         return
       }
       case 'paint': {
-        const surface = this.activeSurface()
-        if (surface) this.stroke(surface, gesture.from, point)
-        this.gesture = { kind: 'paint', from: point }
+        this.stroke(gesture.target, gesture.from, point)
+        this.gesture = { kind: 'paint', from: point, target: gesture.target }
         return
       }
       case 'handle': {
@@ -1576,18 +1794,24 @@ export class CanvasEngine {
   }
 
   /**
-   * Paints a surface edge to edge. `bounded` is the bucket, which stops at the selection; a
-   * surface being born never does — a mask born white inside a marquee and transparent outside
-   * would hide its layer everywhere else the moment it appeared.
+   * Paints a surface edge to edge. `clip` is the bucket's way back into the pixels, and its
+   * presence is what makes the fill stop at the selection; a surface being born never does — a
+   * mask born white inside a marquee and transparent outside would hide its layer everywhere
+   * else the moment it appeared.
    */
-  private fill(surface: LayerSurface, color: number, bounded = false): void {
+  private fill(surface: LayerSurface, color: number, clip?: Affine): void {
     const renderer = this.app?.renderer
     if (!renderer || !this.state) return
 
     const sheet = new Graphics()
-    sheet.rect(0, 0, this.state.width, this.state.height)
+    // The document's own rectangle when the bucket draws it, since the stencil beside it is cut
+    // in document space; the texture's when a surface is being born, which has no stencil and
+    // must come out filled corner to corner whatever its layer's transform is.
+    const box = clip ? this.state : surface.texture
+    sheet.rect(0, 0, box.width, box.height)
     sheet.fill({ color })
-    const container = bounded ? this.clipped(sheet) : sheet
+
+    const container = clip ? this.inSurfaceSpace(clip, this.clipped(sheet)) : sheet
     renderer.render({ container, target: surface.texture, clear: false })
     sheet.destroy()
   }
@@ -1606,7 +1830,7 @@ export class CanvasEngine {
    * A fast drag delivers a handful of `pointermove` for a long distance; drawing only at those
    * points leaves a dotted line. One dab every quarter-radius closes it.
    */
-  private stroke(surface: LayerSurface, from: Point, to: Point): void {
+  private stroke(target: BrushTarget, from: Point, to: Point): void {
     const distance = Math.hypot(to.x - from.x, to.y - from.y)
     const step = Math.max(1, this.brush.size / 4)
     const count = Math.ceil(distance / step)
@@ -1619,7 +1843,7 @@ export class CanvasEngine {
         y: from.y + (to.y - from.y) * ratio,
       })
     }
-    this.dab(surface, points)
+    this.dab(target, points)
   }
 
   /**
@@ -1629,12 +1853,14 @@ export class CanvasEngine {
    * It is also the only way the opacity comes out right: separate passes composite the dabs onto
    * each other, so a half-opaque stroke darkened at every joint.
    */
-  private dab(surface: LayerSurface, points: readonly Point[]): void {
+  private dab(target: BrushTarget, points: readonly Point[]): void {
     const renderer = this.app?.renderer
     if (!renderer || points.length === 0) return
 
     // Before a single pixel is written: what the tiles hold now is what an undo will put back.
-    this.patches?.touch(brushRect(points, this.brush.size / 2))
+    // Mapped onto the surface, like the dabs themselves — tiles index the texture, and a stroke
+    // on a turned layer covers a different set of them than its document-space box suggests.
+    this.patches?.touch(mapRect(target.toSurface, brushRect(points, this.brush.size / 2)))
 
     const erasing = this.tool === 'eraser'
     this.stamp.clear()
@@ -1646,7 +1872,11 @@ export class CanvasEngine {
 
     // `clear: false`, or every dab would wipe the stroke that came before it. And `target`,
     // not the `renderTexture` option, which v8 deprecated.
-    renderer.render({ container: this.clipped(this.stamp), target: surface.texture, clear: false })
+    renderer.render({
+      container: this.inSurfaceSpace(target.toSurface, this.clipped(this.stamp)),
+      target: target.surface.texture,
+      clear: false,
+    })
     this.render()
   }
 
@@ -1659,35 +1889,39 @@ export class CanvasEngine {
     const outline = selectionOutline(this.selection)
     const first = outline[0]
     if (!first) {
-      // Freed here rather than never: the stamp has already been reparented by whoever renders
-      // it next, so the holder and its stencil are the only things left.
       this.dropClipping()
       return container
     }
 
-    const shape = new Graphics()
-    shape.moveTo(first.x, first.y)
-    for (const point of outline.slice(1)) shape.lineTo(point.x, point.y)
-    shape.fill({ color: 0xffffff })
+    const stencil = new Graphics()
+    stencil.moveTo(first.x, first.y)
+    for (const point of outline.slice(1)) stencil.lineTo(point.x, point.y)
+    stencil.fill({ color: 0xffffff })
 
     const holder = new Container()
-    holder.addChild(shape)
+    holder.addChild(stencil)
     holder.addChild(container)
-    holder.mask = shape
+    holder.mask = stencil
     // Rebuilt per pass rather than kept: a held stencil would have to be invalidated on every
-    // selection change, and the stamp is reparented into the new holder before the old is freed.
+    // selection change.
     this.dropClipping()
-    this.clipping = holder
+    this.clipping = { holder, stencil }
     return holder
   }
 
+  /**
+   * Frees the pass, and only the pass. Its borrowed children leave first: a holder freed with
+   * its subtree took the brush's stamp with it, and the stamp is built once with the engine —
+   * so the first stroke after a marquee was dropped killed the brush for the whole session.
+   */
   private dropClipping(): void {
-    const holder = this.clipping
+    const clipping = this.clipping
     this.clipping = null
-    if (!holder) return
+    if (!clipping) return
 
-    // With `children`: what stays inside is the stencil alone, which belongs to the pass.
-    holder.destroy({ children: true })
+    clipping.holder.removeChildren()
+    clipping.stencil.destroy()
+    clipping.holder.destroy()
   }
 
   /** Draws the previewed shape into the armed layer, once, when the hand comes up. */
@@ -1712,9 +1946,9 @@ export class CanvasEngine {
       drawing.fill({ color: this.brush.color, alpha: this.brush.opacity })
     }
 
-    this.patches?.touch(shapeBounds(shape, this.brush.size))
+    this.patches?.touch(mapRect(target.toSurface, shapeBounds(shape, this.brush.size)))
     renderer.render({
-      container: this.clipped(drawing),
+      container: this.inSurfaceSpace(target.toSurface, this.clipped(drawing)),
       target: target.surface.texture,
       clear: false,
     })

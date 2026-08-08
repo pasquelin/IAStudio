@@ -253,6 +253,9 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
   },
   {
     id: 'comment',
+    // Greyed for the same reason the frame group is: the engine drops every pointer event of an
+    // unbuilt tool, so the button armed a mode that changed the cursor and did nothing.
+    disabled: true,
     tool: 'comment',
     labelKey: 'imageTools.comment',
     descriptionKey: 'imageTools.commentHint',
