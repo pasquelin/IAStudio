@@ -159,3 +159,17 @@ describe('reading the stamps', () => {
     ])
   })
 })
+
+describe('an asset that is nowhere', () => {
+  it('is left alone under two-way: there is nothing to send and nothing to fetch', () => {
+    const nowhere = settled({
+      hasLocalFile: false,
+      remoteAssetId: undefined,
+      remoteOwnerId: undefined,
+    })
+
+    expect(planSync([nowhere], 'two-way', OWNER).actions).toEqual([
+      { kind: 'skip', assetId: 'asset_1', reason: 'no-local-file' },
+    ])
+  })
+})

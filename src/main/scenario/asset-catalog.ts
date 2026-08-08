@@ -1,4 +1,5 @@
 import type Scenario from '@scenario-labs/sdk'
+import { isRecord } from '@shared/guards'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { log } from '@main/log'
 import { cloudAssetOfHit, cloudAssetOfListing } from './asset-normalizer'
@@ -150,7 +151,10 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
 
     retrieve: async assetId => {
       log.info('scenario', `GET /assets/${assetId}`)
-      return cloudAssetOfListing(await backend.retrieve(assetId))
+      // `GET /assets/{id}` wraps its answer in `{ asset }`, unlike the listing which is already
+      // an array of them. Handing the envelope to the normaliser reads as an asset with no id.
+      const response = await backend.retrieve(assetId)
+      return cloudAssetOfListing(isRecord(response) ? response.asset : null)
     },
 
     getBulk: async assetIds => {

@@ -116,6 +116,25 @@ describe('searching the library', () => {
   })
 })
 
+describe('fetching one asset', () => {
+  it('unwraps the envelope the API answers a single asset with', () => {
+    // `GET /assets/{id}` answers `{ asset }` where the listing answers an array. Handing the
+    // envelope straight to the normaliser reads as a record with no id, and gives back nothing.
+    const { backend } = backendSpy({
+      retrieve: () => Promise.resolve({ asset: listing('asset_1') }),
+    })
+
+    return expect(assetCatalogOf(backend).retrieve('asset_1')).resolves.toMatchObject({
+      id: 'asset_1',
+    })
+  })
+
+  it('answers nothing for a response it cannot read', async () => {
+    const { backend } = backendSpy({ retrieve: () => Promise.resolve(null) })
+    expect(await assetCatalogOf(backend).retrieve('asset_1')).toBeNull()
+  })
+})
+
 describe('bulk calls the API caps', () => {
   it('splits a fetch of more than two hundred ids', async () => {
     const { backend, recorded } = backendSpy()
