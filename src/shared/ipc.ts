@@ -222,6 +222,7 @@ export type LogScope =
   | 'skybox.source'
   | 'canvas.layer'
   | 'image.export'
+  | 'document.load'
   | 'document.save'
   | 'document.close'
   | 'document.delete'
@@ -236,6 +237,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'skybox.source',
   'canvas.layer',
   'image.export',
+  'document.load',
   'document.save',
   'document.close',
   'document.delete',
@@ -246,6 +248,31 @@ export const LOG_SCOPES: readonly LogScope[] = [
 /** `LogEntry.scope` is a free string — the main process logs under its own names too. */
 export function isLogScope(value: unknown): value is LogScope {
   return LOG_SCOPES.some(candidate => candidate === value)
+}
+
+/**
+ * The scopes whose failures follow a gesture the user made — a ⌘S, an export, a tab closed.
+ *
+ * They are reported every time. Everything else here is reported once per subject, because an
+ * engine is rebuilt on every detach and every reopen (invariant 3) and asks again for the same
+ * missing asset: without that, a project whose folder moved refills the journal on each detach.
+ *
+ * A repeated gesture is the opposite case. Somebody pressed the key a second time precisely
+ * because the first did nothing, and answering that with silence is how a save that keeps
+ * failing looks like a save that worked.
+ */
+export const GESTURE_SCOPES: readonly LogScope[] = [
+  'scene.export',
+  'image.export',
+  'document.load',
+  'document.save',
+  'document.close',
+  'document.delete',
+  'assets.reveal',
+]
+
+export function isGestureScope(scope: LogScope): boolean {
+  return GESTURE_SCOPES.some(candidate => candidate === scope)
 }
 
 /**

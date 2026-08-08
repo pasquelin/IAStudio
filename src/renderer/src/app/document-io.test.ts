@@ -10,7 +10,7 @@ import type {
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
@@ -25,6 +25,7 @@ import { setSunAngles } from '@/engines/skybox/commands'
 import { useAudioEdits } from '@/stores/audio-edits'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
+import { forgetReportedFailures } from '@/services/diagnostics'
 import { closeDocument, deleteDocument, restoreDocument, saveDocument } from './document-io'
 
 const box = meshNode('box-1')
@@ -46,6 +47,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   clearScenes()
+  forgetReportedFailures()
   useDocuments.setState({ documents: {}, activeId: null })
 })
 
@@ -244,6 +246,31 @@ describe('restoreDocument', () => {
 
     await Promise.all([restoreDocument('doc-1'), restoreDocument('doc-1')])
     expect(read).toHaveBeenCalledTimes(1)
+  })
+
+  // The empty editor a failed read leaves is indistinguishable from a new document, and the
+  // refusal to save it then reads as a ⌘S that does nothing. This is the only place that knows.
+  it('reports a document whose file would not read', async () => {
+    const bridge = bridgeWatchingLogs({
+      documents: { read: () => Promise.reject(new Error('gone')) },
+    })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+
+    await restoreDocument('doc-1')
+
+    expect(bridge.entries()[0]).toMatchObject({
+      level: 'error',
+      scope: 'document.load',
+      message: expect.stringContaining('gone'),
+    })
+  })
+
+  it('says nothing for a document the project simply holds no file for', async () => {
+    const bridge = bridgeWatchingLogs({ documents: { read: () => Promise.resolve(null) } })
+    useDocuments.setState({ documents: { 'doc-2': scene('doc-2') } })
+
+    await restoreDocument('doc-2')
+    expect(bridge.entries()).toEqual([])
   })
 
   // A kind absent from the table has a Save that does nothing and a tab that never reads its

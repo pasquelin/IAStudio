@@ -103,7 +103,10 @@
       "image.export": "L’export de l’image a échoué",
       "document.save": "L’enregistrement du document a échoué",
       "assets.reveal": "Le fichier n’a pas pu être montré",
-      "font.face": "Une police n’a pas pu être chargée"
+      "font.face": "Une police n’a pas pu être chargée",
+      "document.close": "La fermeture du document a échoué",
+      "document.delete": "La suppression du document a échoué",
+      "document.load": "Le document n’a pas pu être ouvert"
     }
   },
   "updates": {

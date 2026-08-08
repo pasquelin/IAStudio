@@ -10,6 +10,7 @@ import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { parseSkybox, serializeSkybox } from '@/engines/skybox/skybox-state'
 import { EMPTY_SEQUENCE, parseSequence, serializeSequence } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { closePanel } from './dockview-api'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audio-edits'
@@ -263,8 +264,10 @@ export function restoreDocument(documentId: string): Promise<void> {
 
   unreadable.delete(documentId)
 
-  // Nothing is rethrown into a mount effect that has nowhere to show it. Nothing is logged
-  // either: `handle` reports a rejection to no one, and the studio has no error surface yet.
+  // Nothing is rethrown into a mount effect that has nowhere to show it — it is reported from
+  // here instead, which is the one place that knows a read failed. Without that, the empty
+  // editor a failed read leaves is indistinguishable from a new document, and the refusal to
+  // save it then looks like a ⌘S that does nothing.
   const reading = bridge.documents
     .read(document.id, document.kind)
     .then(file => {
@@ -275,8 +278,9 @@ export function restoreDocument(documentId: string): Promise<void> {
       if (file) io.install(documentId, file.content, file.parts)
       else io.createDefault(documentId)
     })
-    .catch(() => {
+    .catch(error => {
       unreadable.add(documentId)
+      reportFailure('document.load', document.title, error)
     })
     .finally(() => loading.delete(documentId))
 

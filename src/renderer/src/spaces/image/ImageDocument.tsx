@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { PICTURES, type Asset } from '@shared/domain/asset'
-import { restoreDocument } from '@/app/document-io'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { TIP_RIGHT } from '@/helpers/tooltip'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { canRedo, canUndo } from '@/engines/core/history'
@@ -147,12 +147,9 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     }
   }, [documentId])
 
-  // Fills the tab from the project when a folder is there, from the default otherwise — and it is
-  // what saving reads back, so the two never disagree about what this document holds. After the
-  // engine is registered, never before: the pixels are handed to it, and it has to be reachable.
-  useEffect(() => {
-    void restoreDocument(documentId)
-  }, [documentId])
+  // After the engine is registered, never before: the pixels are handed to it, and it has to be
+  // reachable.
+  useRestoredDocument(documentId)
 
   // The engine holds the pixels, never the stack: every state change is pushed into it.
   useEffect(() => {

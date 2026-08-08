@@ -11,7 +11,6 @@ import {
   type SkyboxView,
 } from '@shared/domain/skybox'
 import { PICTURES, type Asset } from '@shared/domain/asset'
-import { restoreDocument } from '@/app/document-io'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { setSunAngles } from '@/engines/skybox/commands'
@@ -20,6 +19,7 @@ import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { chipSkin } from '@/design/styles'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { useDocuments } from '@/stores/documents'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import type { CommandId } from '@shared/domain/command'
 
@@ -50,11 +50,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   // A skybox is judged by what it lights, not by its own picture — so the probes start on.
   const [probes, setProbes] = useState(true)
 
-  // Fills the tab from the project when a file is there, from the default otherwise — and it is
-  // what saving reads back, so the two never disagree about what this document holds.
-  useEffect(() => {
-    void restoreDocument(documentId)
-  }, [documentId])
+  useRestoredDocument(documentId)
 
   useEffect(() => {
     const element = host.current

@@ -1,7 +1,6 @@
 import { mdiVideoOutline } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { restoreDocument } from '@/app/document-io'
 import { EmptyState } from '@/design/EmptyState'
 import { Separator } from '@/design/Separator'
 import { programOwner } from '@/engines/timeline/playback'
@@ -15,6 +14,7 @@ import {
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
 export type SequenceDocumentProps = { documentId: string }
 
@@ -31,11 +31,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   // space bar at once, and the playback token would arbitrate a fight nobody started.
   const active = useDocuments(state => state.activeId === documentId)
 
-  // Fills the tab from the project when a file is there, from the default otherwise — and it is
-  // what saving reads back, so the two never disagree about what this document holds.
-  useEffect(() => {
-    void restoreDocument(documentId)
-  }, [documentId])
+  useRestoredDocument(documentId)
 
   const selected = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
 

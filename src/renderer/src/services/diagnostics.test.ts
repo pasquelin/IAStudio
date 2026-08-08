@@ -62,6 +62,31 @@ describe('reportFailure', () => {
     expect(bridge.report).toHaveBeenCalledTimes(2)
   })
 
+  /**
+   * The other half of the rule. Somebody pressed ⌘S a second time precisely because the first
+   * did nothing, and the deduplication used to answer that with silence — leaving a save that
+   * kept failing indistinguishable from one that worked, with only the dirty bullet to say so.
+   */
+  it('says a failed gesture every time it is made', () => {
+    const bridge = bridgeWatchingLogs()
+
+    reportFailure('document.save', 'doc-1', new Error('no project'))
+    reportFailure('document.save', 'doc-1', new Error('no project'))
+    reportFailure('document.save', 'doc-1', new Error('no project'))
+
+    expect(bridge.report).toHaveBeenCalledTimes(3)
+  })
+
+  it('keeps saying a spontaneous failure once, even after a gesture failed', () => {
+    const bridge = bridgeWatchingLogs()
+
+    reportFailure('document.save', 'doc-1', new Error('no project'))
+    reportFailure('scene.model', 'mesh-1', new Error('unreadable'))
+    reportFailure('scene.model', 'mesh-1', new Error('unreadable'))
+
+    expect(bridge.report).toHaveBeenCalledTimes(2)
+  })
+
   it('cuts a message no terminal would show whole before it crosses', () => {
     const bridge = bridgeWatchingLogs()
 
