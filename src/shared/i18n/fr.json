@@ -255,7 +255,14 @@
     "showHint": "Afficher ce calque",
     "hideHint": "Masquer ce calque sans le supprimer",
     "untitled": "Calque {{n}}",
-    "noDocument": "Ouvrez une image pour voir ses calques."
+    "noDocument": "Ouvrez une image pour voir ses calques.",
+    "locks": "Verrous",
+    "locksHint": "Verrouiller les pixels, la position ou la transparence",
+    "lockPixels": "Verrouiller les pixels",
+    "lockPosition": "Verrouiller la position",
+    "lockAlpha": "Verrouiller la transparence",
+    "collapse": "Replier le groupe",
+    "expand": "Déplier le groupe"
   },
   "meshes": {
     "box": "Cube",

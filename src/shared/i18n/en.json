@@ -255,7 +255,14 @@
     "showHint": "Show this layer",
     "hideHint": "Hide this layer without deleting it",
     "untitled": "Layer {{n}}",
-    "noDocument": "Open an image to see its layers."
+    "noDocument": "Open an image to see its layers.",
+    "locks": "Locks",
+    "locksHint": "Lock the pixels, the position or the transparency",
+    "lockPixels": "Lock pixels",
+    "lockPosition": "Lock position",
+    "lockAlpha": "Lock transparency",
+    "collapse": "Collapse group",
+    "expand": "Expand group"
   },
   "meshes": {
     "box": "Box",

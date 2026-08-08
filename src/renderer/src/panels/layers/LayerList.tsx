@@ -4,6 +4,7 @@ import { Collection } from '@/design/Collection'
 import { LIST_ROW_HEIGHT } from '@/design/styles'
 import { canvasOf, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { LayerRow } from './LayerRow'
+import { layerRows } from './layer-rows'
 
 /**
  * The stack of the document in front, listed through the same `Collection` as the mesh and light
@@ -17,12 +18,8 @@ export function LayerList({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const canvas = useCanvases(state => canvasOf(state, documentId))
 
-  /**
-   * Top of the list first — what the eye sees on top is what the hand reaches first, and every
-   * editor lays it out that way. The state stores it the other way round, bottom first, because
-   * that is the order it is drawn in.
-   */
-  const stack = useMemo(() => [...canvas.layers].reverse(), [canvas.layers])
+  // Top of the list first, groups nesting — see `layerRows`.
+  const stack = useMemo(() => layerRows(canvas.layers), [canvas.layers])
 
   // Resolved once for the list: a row is remounted while scrolling, and translating inside one
   // would run i18next per row and per frame.
@@ -31,6 +28,13 @@ export function LayerList({ documentId }: { documentId: string }) {
       visible: t('layers.visible'),
       show: t('layers.showHint'),
       hide: t('layers.hideHint'),
+      locks: t('layers.locks'),
+      locksHint: t('layers.locksHint'),
+      lockPixels: t('layers.lockPixels'),
+      lockPosition: t('layers.lockPosition'),
+      lockAlpha: t('layers.lockAlpha'),
+      collapse: t('layers.collapse'),
+      expand: t('layers.expand'),
     }),
     [t],
   )
@@ -39,9 +43,11 @@ export function LayerList({ documentId }: { documentId: string }) {
     <Collection
       items={stack}
       selectedId={canvas.activeLayerId}
-      onSelect={layer => selectLayerIn(documentId, layer.id)}
+      onSelect={row => selectLayerIn(documentId, row.layer.id)}
       rowHeight={LIST_ROW_HEIGHT}
-      renderRow={layer => <LayerRow documentId={documentId} layer={layer} labels={labels} />}
+      renderRow={row => (
+        <LayerRow documentId={documentId} layer={row.layer} depth={row.depth} labels={labels} />
+      )}
     />
   )
 }

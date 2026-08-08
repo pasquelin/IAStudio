@@ -289,6 +289,19 @@ export function clearGuides(): Command<CanvasState> {
 }
 
 /** Selection stays out of the history: nobody wants ⌘Z to give them back a selected layer. */
+/**
+ * Folds a group, or opens it. Out of the history like the selection, and for the same reason: a
+ * ⌘Z that reopened a group instead of undoing the last edit reads as a bug.
+ */
+export function collapseLayer(state: CanvasState, id: string, collapsed: boolean): CanvasState {
+  return {
+    ...state,
+    layers: mapLayers(state.layers, layer =>
+      layer.id === id && isGroup(layer) ? { ...layer, collapsed } : layer,
+    ),
+  }
+}
+
 export function selectLayer(state: CanvasState, id: string | null): CanvasState {
   return { ...state, activeLayerId: id }
 }
