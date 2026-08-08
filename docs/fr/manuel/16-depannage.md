@@ -328,7 +328,7 @@ que vous lui envoyez, il ne se passe rien — et rien ne le dit.
 | une image, pour en faire un ciel | un onglet **ciel** ouvert (espace Skyboxes) |
 | un son, pour l'éditer | un onglet **son** ouvert (espace Audio) |
 | un média, pour le monter | un onglet **séquence** ouvert (espace Vidéo) |
-| une image, pour la retoucher | **rien à faire, ce n'est pas possible** — voir plus bas |
+| une image, pour la peindre | un onglet **image** ouvert (espace Image) |
 
 **Quoi faire.**
 
@@ -336,9 +336,9 @@ que vous lui envoyez, il ne se passe rien — et rien ne le dit.
 2. Vérifiez qu'un onglet est bien ouvert — sinon, le bouton `+` du rail gauche en crée un.
 3. Alors seulement, double-cliquez.
 
-> **Le cas de l'image est différent.** Aucune image ne peut être ouverte dans l'espace Image :
-> cette fonction n'existe pas encore, quel que soit l'onglet devant vous. Voir
-> [Ce qui n'existe pas encore](18-limites.md).
+> **Le cas de la scène 3D et de la matière est différent.** Ces deux-là ne reçoivent rien par
+> double-clic, quel que soit l'asset : une texture se pose en glissant l'image sur son aperçu, et
+> la vue 3D n'accepte aucun dépôt. Voir [Ce qui n'existe pas encore](18-limites.md).
 
 ### « ⌘Z ne fait rien »
 
@@ -455,7 +455,6 @@ installation neuve.
 | Pas de vagues sur la piste audio | idem |
 | « Préparation vidéo indisponible » alors que `which ffmpeg` en trouve un | `ffmpeg -version` : le binaire existe mais ne démarre plus |
 | « Le trousseau n'a pas rendu vos comptes » | déverrouiller le trousseau, puis recommencer — rien n'a été perdu |
-| Double-clic sur un asset sans effet | ouvrir d'abord un onglet, avec le `+` du rail gauche |
 | Double-clic sur un asset sans effet | ouvrir d'abord un onglet, avec le `+` du rail gauche |
 | `⌘Z` sans effet | activer le bon onglet |
 | Canvas 3D noir | fermer et rouvrir l'onglet |

@@ -8,33 +8,34 @@ L'espace où l'on peint, gomme, recadre et empile des calques.
 
 ## Ouvrir un document image
 
-**Une seule façon, et il faut la connaître : le bouton `+` du rail gauche.** Il crée un document
-**neuf et vide** : une toile de **1024 × 1024 pixels**, avec un unique calque blanc nommé
-**Background**, déjà sélectionné.
+**Le bouton `+` du rail gauche** crée un document **neuf et vide** : une toile de
+**1024 × 1024 pixels**, avec un unique calque blanc nommé **Background**, déjà sélectionné.
 
 > Ce blanc est un **vrai calque**, pas une couleur de fond. Vous pouvez le masquer, le rendre
 > transparent ou le supprimer comme n'importe quel autre — le damier de transparence apparaît
 > alors dessous.
 
-> ### ⚠️ On ne peut pas encore ouvrir une image existante ici
->
-> C'est la limite la plus déroutante du studio, et elle mérite d'être dite tout de suite plutôt
-> que découverte après vingt minutes d'essais.
->
-> **Une image de votre étagère — générée ou importée — ne peut pas entrer dans un document
-> image.** Le double-clic ne l'ouvre pas. Le glisser-déposer sur la toile ne fait rien. Il n'y a
-> pas de menu « Ouvrir ».
->
-> L'espace Image sait donc **peindre depuis rien**, pas **retoucher quelque chose**. C'est écrit
-> noir sur blanc dans [Ce qui n'existe pas encore](18-limites.md), avec les autres.
->
-> **En attendant :** pour voir une image en grand, sélectionnez-la dans l'étagère et regardez-la
-> dans l'**Inspecteur**. Pour la retoucher, il faut passer par un autre logiciel, ou la
-> re-générer autrement — par exemple avec un modèle *image vers image*, qui prend votre image en
-> entrée et en rend une nouvelle (voir [Générer](06-generer.md)).
+Le `+` demande une seule chose : un projet ouvert. Sans projet, il est gris — il n'y aurait nulle
+part où écrire le document.
 
-Ce que le bouton `+` demande, lui, est simple : un projet doit être ouvert. Sans projet, il est
-gris — il n'y aurait nulle part où écrire le document.
+### Faire entrer une image existante
+
+**Un document image n'est pas condamné à partir du blanc.** Trois gestes y posent une image de
+votre étagère, et les trois font la même chose : un **calque de plus**, au-dessus de la pile,
+nommé d'après l'asset et **déjà armé** pour le pinceau.
+
+| Geste | Ce qu'il faut |
+|---|---|
+| **Glisser-déposer** l'image sur la toile | l'onglet image ouvert devant vous |
+| **Double-clic** sur l'image dans l'étagère | un onglet image en avant — c'est lui qui la reçoit |
+| L'outil **Image…** (`⇧⌘K`), groupe Formes | rien : il ouvre l'étagère, vous y choisissez |
+
+> Seules les **images du projet** entrent — celles que vous voyez dans l'étagère, générées ou
+> importées. Une image qui n'a pas encore été téléchargée dans le projet n'est pas déposable.
+
+Il n'y a **pas de menu « Ouvrir »** : un document image ne s'ouvre pas *sur* un fichier, il
+reçoit des images comme calques. La nuance compte au moment de fermer l'onglet — voir la fin de
+ce chapitre.
 
 ---
 
@@ -166,7 +167,7 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 
 | Outil | Raccourci | Ce qu'il fait |
 |---|---|---|
-| **Commentaire** | `C` | pose une note sur l'image |
+| **Commentaire** | `C` | *pas encore disponible* |
 | **Remplir le calque** | `G` | remplit **tout** le calque actif de la couleur courante |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, des formes et du remplissage |
@@ -224,11 +225,14 @@ entrée d'historique. Vous n'annulez pas un trait pixel par pixel.
 
 ---
 
-## Ce qu'il faut savoir avant de fermer un onglet
+## Sortir l'image du studio
 
-> **Une image ne s'enregistre pas encore sur le disque.** Fermer son onglet perd les calques et
-> l'historique. L'asset d'origine, lui, reste dans le projet — c'est le travail de retouche qui
-> est perdu.
+**`⇧⌘E` écrit le document aplati en `.png`**, où vous voulez sur le disque. Les calques sont
+composités à l'export ; les règles, les repères et les pointillés de sélection n'y sont pas.
+
+> **Le document, lui, ne s'enregistre pas encore.** Fermer son onglet perd les calques et
+> l'historique — exportez avant, ou ne fermez pas. Les assets que vous y aviez posés restent dans
+> le projet, c'est le travail de composition qui est perdu.
 >
 > Voir [Ce qui n'existe pas encore](18-limites.md).
 

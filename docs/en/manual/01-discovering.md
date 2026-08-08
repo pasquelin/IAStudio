@@ -20,10 +20,11 @@ and download an image, is **everything that comes after**:
   each file, and one button replays them;
 - **nothing leaves**: your files stay with you.
 
-> **One thing the studio cannot do yet**, and it is better known straight away: **it does not
-> reopen a picture for retouching.** You can paint on a fresh canvas, but you cannot pick up a
-> generated image with a brush. The complete and honest list of these gaps is the chapter
-> [What does not exist yet](18-limits.md) — it exists to be read, not hidden.
+> **One thing the studio cannot do yet**, and it is better known straight away: **work in
+> progress does not save.** A picture you are composing, an edit, a sound, an adjusted sky:
+> closing the tab loses them. Only 3D scenes and materials write to disk. The complete and honest
+> list of these gaps is the chapter [What does not exist yet](18-limits.md) — it exists to be
+> read, not hidden.
 
 ## Six ways of working
 

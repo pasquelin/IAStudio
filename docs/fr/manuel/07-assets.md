@@ -100,7 +100,8 @@ Ce que ça donne, selon l'onglet qui est devant :
 | un **ciel** (espace Skyboxes) | pose l'image comme ciel — seules les images du projet sont acceptées |
 | un **son** (espace Audio) | charge cette prise dans l'éditeur, si c'est bien un son |
 | une **séquence** (espace Vidéo) | pose un clip sur une piste, à la tête de lecture |
-| une **image**, une **scène 3D**, une **texture** | **rien du tout** |
+| une **image** (espace Image) | pose l'image comme un calque de plus, déjà armé |
+| une **scène 3D**, une **texture** | **rien du tout** |
 | aucun onglet ouvert | **rien du tout** |
 
 **Rien ne prévient quand il ne se passe rien.** Pas de message, pas de refus visible : le
@@ -116,11 +117,12 @@ se poser est **« quel onglet est devant ? »**, jamais « l'asset est-il abîm�
 | Vous glissez… | Vers… | Résultat |
 |---|---|---|
 | une vidéo ou un son | la **timeline** | un clip sur une piste |
+| une image | la **toile** de l'espace Image | elle devient un calque de plus, armé |
 | une image | l'aperçu d'une **texture** | elle devient la couleur de base |
 | une image panoramique | l'aperçu d'un **ciel** | elle devient le ciel |
 
-**Ces trois-là, et rien d'autre.** La toile de l'espace Image et la vue de l'espace 3D
-n'acceptent aucun dépôt : lâcher un asset dessus ne fait rien.
+**Ces quatre-là, et rien d'autre.** La vue de l'espace 3D n'accepte aucun dépôt : lâcher un asset
+dessus ne fait rien.
 
 ---
 

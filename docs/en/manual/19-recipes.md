@@ -74,8 +74,9 @@ inspired by it.
    **0 = almost unchanged, 1 = unrecognisable**. Start around 0.5;
 6. **Generate**.
 
-**This is today the only way to transform a picture inside the studio**, since the Image
-workspace cannot reopen an existing image.
+**This is how a model transforms a picture.** To take it up by hand — brush, eraser, shapes,
+text — the other path is an image document with the picture dragged onto it as a layer (see
+[Image workspace](08-image-workspace.md)).
 
 ---
 
@@ -209,16 +210,17 @@ settings**: cuts are measured against the take that received them.
 
 ## Put an asset where it belongs
 
-The table to remember. There are **only three** possible drops, and double-click obeys a
+The table to remember. There are **only four** possible drops, and double-click obeys a
 different rule again.
 
 | You want… | The gesture | You need, in front of you |
 |---|---|---|
 | a clip on an edit | drag onto the **timeline** | a sequence tab |
+| a picture as a layer | drag onto the **canvas** | an image tab |
 | a picture as base colour | drag onto the **material preview** | a texture tab |
 | a picture as sky | drag onto the **sky preview** | a sky tab |
 
-The Image workspace canvas and the 3D viewport **accept no drops**.
+The 3D viewport **accepts no drops**.
 
 ---
 
@@ -305,10 +307,10 @@ on screen says so at the moment you try.
 
 | You try to… | What happens | Why |
 |---|---|---|
-| **retouch a generated picture** in the Image workspace | nothing | the workspace cannot open an existing image |
+| **reopen an image document** closed yesterday | it is gone | the layer stack does not save |
 | **import a `.glb` or an `.hdr`** | it is refused | import only knows video, audio, image |
-| **export a video** or a picture | no button | export is not written |
-| **paint inside a selection** | it paints everywhere | selection draws but constrains nothing |
+| **export a video** | no button | video export is not written — a picture does go out with `⇧⌘E` |
+| **crop, flip or rotate** a picture | the tools are greyed out | the pixels would not follow the frame |
 
 All of it is spelled out, with nothing hidden, in
 [What does not exist yet](18-limits.md).

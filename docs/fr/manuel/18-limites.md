@@ -59,29 +59,16 @@ mérite d'être refait — le *prompt*, la *graine*, le modèle.
 
 ## Espace Image
 
-### On ne peut pas ouvrir une image existante
+### Un document image ne s'ouvre pas *sur* un fichier
 
-**C'est la plus grande limite du studio, et la moins visible.**
+Une image de l'étagère **entre** bien dans un document — glissée sur la toile, double-cliquée, ou
+choisie par l'outil **Image…** (`⇧⌘K`) : elle y devient un calque. Voir
+[Espace Image](08-espace-image.md).
 
-Un document image est toujours une **toile neuve**. Aucune image de votre étagère — générée,
-importée, peu importe — ne peut y entrer :
-
-| Ce qu'on essaie naturellement | Ce qui se passe |
-|---|---|
-| Double-cliquer l'image dans l'étagère | rien |
-| La glisser sur la toile | rien |
-| Chercher un menu « Ouvrir » | il n'existe pas |
-
-Et **rien ne prévient**. Aucun message, aucun curseur barré : le geste est simplement sans effet,
-ce qui laisse croire à une panne alors que la fonction n'est pas écrite.
-
-Conséquence pratique : l'espace Image sait **peindre depuis rien**. Il ne sait pas encore
-**retoucher quelque chose**. Comme il ne sait pas non plus exporter (voir plus bas), un document
-image ne peut aujourd'hui ni commencer ni finir sur un fichier.
-
-> **Ce qui marche quand même**, en attendant : régénérer autrement. Un modèle *image vers image*
-> prend une image en entrée et en rend une nouvelle — c'est le seul chemin qui transforme une
-> image existante à l'intérieur du studio. Voir [Générer](06-generer.md).
+Ce qui n'existe pas, c'est le geste inverse : **rouvrir plus tard le document qu'on a composé**.
+Il n'y a pas de menu « Ouvrir », parce qu'il n'y a rien à rouvrir — la pile de calques ne
+s'enregistre nulle part. `⇧⌘E` sort un `.png` aplati ; ce PNG, réimporté, revient comme une image
+et non comme ses calques.
 
 ### Outils annoncés mais inactifs
 
@@ -396,11 +383,11 @@ ne peut pas divulguer votre compte.
 Si vous ne deviez retenir que six choses de ce chapitre :
 
 1. **Les images, séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le
-   travail ;
-2. **on ne peut pas ouvrir une image existante dans l'espace Image** — il peint depuis une toile
-   neuve, il ne retouche pas ;
+   travail ; dans l'espace Image, `⇧⌘E` sort au moins un PNG avant de fermer ;
+2. **recadrer, retourner ou pivoter une image n'est pas offert** — les pixels ne suivraient pas
+   le cadre ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
-4. **la sélection dans l'espace Image ne limite aucun outil** ;
+4. **il n'y a pas de bouton « agrandir », « détourer » ni « vectoriser »** ;
 5. **on ne peut pas importer de modèle 3D** ni de HDRI ;
 6. **une skybox n'éclaire pas encore une scène 3D**.
 

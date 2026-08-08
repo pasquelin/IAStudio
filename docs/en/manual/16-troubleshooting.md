@@ -318,7 +318,7 @@ happens — and nothing says so.
 | a picture, to make it a sky | a **sky** tab open (Skyboxes workspace) |
 | a sound, to edit it | a **sound** tab open (Audio workspace) |
 | a medium, to edit it into a cut | a **sequence** tab open (Video workspace) |
-| a picture, to retouch it | **nothing you can do — it is not possible** — see below |
+| a picture, to paint on it | an **image** tab open (Image workspace) |
 
 **What to do.**
 
@@ -326,9 +326,9 @@ happens — and nothing says so.
 2. Check that a tab is actually open — if not, the `+` button on the left rail creates one.
 3. Only then, double-click.
 
-> **The picture case is different.** No image can be opened in the Image workspace: that feature
-> does not exist yet, whatever tab is in front of you. See
-> [What does not exist yet](18-limits.md).
+> **The 3D scene and the material are the different ones.** Neither receives anything by
+> double-click, whatever the asset: a texture takes a picture dragged onto its preview, and the
+> 3D viewport accepts no drops. See [What does not exist yet](18-limits.md).
 
 ### "⌘Z does nothing"
 

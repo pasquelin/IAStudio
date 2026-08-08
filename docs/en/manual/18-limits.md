@@ -58,29 +58,15 @@ be redone — the *prompt*, the *seed*, the model.
 
 ## Image workspace
 
-### You cannot open an existing image
+### An image document does not open *onto* a file
 
-**This is the studio's biggest limit, and its least visible one.**
+A picture from the shelf does come **in** — dragged onto the canvas, double-clicked, or chosen
+with the **Image…** tool (`⇧⌘K`): it becomes a layer. See
+[Image workspace](08-image-workspace.md).
 
-An image document is always a **fresh canvas**. No picture from your shelf — generated, imported,
-it makes no difference — can be brought into it:
-
-| What you naturally try | What happens |
-|---|---|
-| Double-clicking the picture in the shelf | nothing |
-| Dragging it onto the canvas | nothing |
-| Looking for an "Open" menu | there isn't one |
-
-And **nothing warns you**. No message, no barred cursor: the gesture is simply inert, which reads
-as a fault when in fact the feature is not written.
-
-The practical consequence: the Image workspace can **paint from nothing**. It cannot yet
-**retouch something**. And since it cannot export either (see below), an image document can today
-neither start nor end on a file.
-
-> **What does work** in the meantime: generating afresh. An *image to image* model takes a
-> picture as input and returns a new one — it is the only path that transforms an existing image
-> inside the studio. See [Generating](06-generating.md).
+What does not exist is the reverse gesture: **reopening later the document you composed**. There
+is no "Open" menu because there is nothing to reopen — the layer stack saves nowhere. `⇧⌘E`
+writes a flattened `.png`; reimported, that PNG comes back as a picture, not as its layers.
 
 ### Tools announced but inactive
 
@@ -387,11 +373,12 @@ cannot leak your account.
 
 If you only remember six things from this chapter:
 
-1. **images, sequences, sounds and skies do not save** — closing the tab loses the work;
-2. **you cannot open an existing image in the Image workspace** — it paints from a fresh canvas,
-   it does not retouch;
+1. **images, sequences, sounds and skies do not save** — closing the tab loses the work; in the
+   Image workspace, `⇧⌘E` at least gets a PNG out before you close;
+2. **cropping, flipping and rotating a picture are not offered** — the pixels would not follow
+   the frame;
 3. **there is no video export** — the studio cannot yet deliver a final file;
-4. **selection in the Image workspace constrains no tool**;
+4. **there is no "enlarge", "cut out" or "vectorize" button**;
 5. **you cannot import a 3D model** or an HDRI;
 6. **a skybox does not yet light a 3D scene**.
 

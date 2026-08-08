@@ -74,8 +74,9 @@ une autre, inspirée d'elle.
    **0 = presque inchangée, 1 = méconnaissable**. Commencez vers 0,5 ;
 6. **Générer**.
 
-**C'est aujourd'hui le seul moyen de transformer une image à l'intérieur du studio**, puisque
-l'espace Image ne sait pas rouvrir une image existante.
+**C'est le moyen de transformer une image par un modèle.** Pour la reprendre à la main —
+pinceau, gomme, formes, texte — c'est l'autre chemin : un document image, et l'image glissée
+dessus en calque (voir [Espace Image](08-espace-image.md)).
 
 ---
 
@@ -213,16 +214,17 @@ réglages** : les coupes se mesurent sur la prise qui les a reçues.
 
 ## Poser un asset là où il faut
 
-Le tableau à retenir. Il n'y a **que trois** dépôts possibles, et le double-clic obéit à une
+Le tableau à retenir. Il n'y a **que quatre** dépôts possibles, et le double-clic obéit à une
 autre règle encore.
 
 | Vous voulez… | Le geste | Il faut, devant vous |
 |---|---|---|
 | un clip sur un montage | glisser sur la **timeline** | un onglet séquence |
+| une image en calque | glisser sur la **toile** | un onglet image |
 | une image en couleur de base | glisser sur l'**aperçu de la matière** | un onglet texture |
 | une image en ciel | glisser sur l'**aperçu du ciel** | un onglet ciel |
 
-La toile de l'espace Image et la vue de l'espace 3D **n'acceptent aucun dépôt**.
+La vue de l'espace 3D **n'accepte aucun dépôt**.
 
 ---
 
@@ -312,10 +314,10 @@ encore, et rien à l'écran ne le dit sur le moment.
 
 | Vous essayez de… | Ce qui se passe | Pourquoi |
 |---|---|---|
-| **retoucher une image générée** dans l'espace Image | rien | l'espace ne sait pas ouvrir une image existante |
+| **rouvrir un document image** fermé la veille | il n'existe plus | la pile de calques ne s'enregistre pas |
 | **importer un `.glb` ou un `.hdr`** | il est refusé | l'import ne connaît que vidéo, audio, image |
-| **exporter une vidéo** ou une image | aucun bouton | l'export n'est pas écrit |
-| **peindre à l'intérieur d'une sélection** | ça peint partout | la sélection dessine mais ne limite rien |
+| **exporter une vidéo** | aucun bouton | l'export vidéo n'est pas écrit — l'image, elle, sort par `⇧⌘E` |
+| **recadrer, retourner ou pivoter** une image | les outils sont gris | les pixels ne suivraient pas le cadre |
 
 Tout est détaillé, sans rien cacher, dans
 [Ce qui n'existe pas encore](18-limites.md).

@@ -185,12 +185,15 @@ come back to it.
 The **Reveal in file manager** button, in the inspector, opens the folder it sits in. That is
 where you take it from to send it to anyone.
 
-> **No, you cannot retouch it here yet.** The Image workspace can paint on a fresh canvas, but it
-> cannot yet open an existing picture — neither yours nor the one it has just generated. It is
-> the studio's biggest limit today, explained in full in
-> [What does not exist yet](18-limits.md).
+> **To retouch it**, move to the **Image** workspace: the `+` button on the left rail opens a
+> document, then drag your picture onto the canvas — it becomes a layer there, and the brush, the
+> eraser and the shapes apply to it. The chapter [Image workspace](08-image-workspace.md) covers
+> the three ways of bringing it in.
 >
-> To transform this picture without leaving the studio: go back to the **Generate** panel with an
+> **What the studio cannot do yet:** save that document. Closing the tab loses the layers —
+> `⇧⌘E` gets a PNG out first. See [What does not exist yet](18-limits.md).
+>
+> To transform the picture rather than paint it: go back to the **Generate** panel with an
 > *image to image* model, and give it your picture as the starting point.
 
 <!-- SCREENSHOT: the Generate panel with a model's form, and the status line below with a running

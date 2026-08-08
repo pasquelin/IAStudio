@@ -226,7 +226,7 @@ plus souvent :
 
 | Le résultat est… | Ce qui est possible aujourd'hui |
 |---|---|
-| une **image** | la voir dans l'Inspecteur, la reprendre comme départ d'une autre génération, ou s'en servir comme **ciel** ou comme **couleur de base** d'une matière |
+| une **image** | la peindre dans un document **image**, la reprendre comme départ d'une autre génération, ou s'en servir comme **ciel** ou comme **couleur de base** d'une matière |
 | une **vidéo** ou un **son** | le poser sur une **timeline** (espace Vidéo), ou l'éditer (espace Audio) |
 | un **panorama** | le poser dans un document **ciel** (espace Skyboxes) |
 | un **objet 3D** | rien d'utile — le studio ne sait pas encore ouvrir un maillage |
@@ -235,8 +235,9 @@ plus souvent :
 l'asset dans l'onglet déjà en avant. Ouvrez d'abord le document qui doit le recevoir, avec le
 bouton `+` du rail gauche. Voir [Les assets](07-assets.md).
 
-> **Une image générée ne peut pas être retouchée dans l'espace Image.** Cette fonction n'existe
-> pas encore — voir [Ce qui n'existe pas encore](18-limites.md).
+> **Une image générée se retouche dans l'espace Image** : ouvrez un document avec le `+`, puis
+> glissez l'image sur la toile — elle y devient un calque. Ce document, en revanche, ne
+> s'enregistre pas ; `⇧⌘E` en sort un PNG. Voir [Espace Image](08-espace-image.md).
 
 <!-- CAPTURE : le panneau Génération avec le formulaire d'un modèle, et la ligne d'état en
      dessous avec une tâche en cours. Vers ../../images/generate.png -->

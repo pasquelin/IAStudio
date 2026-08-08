@@ -8,32 +8,32 @@ The workspace where you paint, erase, crop and stack layers.
 
 ## Opening an image document
 
-**One way only, and it is worth knowing: the `+` button on the left rail.** It creates a **fresh,
-empty** document: a **1024 × 1024 pixel** canvas holding a single white layer named
-**Background**, already selected.
+**The `+` button on the left rail** creates a **fresh, empty** document: a **1024 × 1024 pixel**
+canvas holding a single white layer named **Background**, already selected.
 
 > That white is a **real layer**, not a background colour. You can hide it, fade it or delete it
 > like any other — the transparency checker then shows through underneath.
 
-> ### ⚠️ You cannot open an existing image here yet
->
-> This is the studio's most disconcerting limit, and it deserves saying up front rather than
-> being discovered after twenty minutes of trying.
->
-> **An image from your shelf — generated or imported — cannot be brought into an image
-> document.** Double-clicking does not open it. Dropping it on the canvas does nothing. There is
-> no "Open" menu.
->
-> The Image workspace can therefore **paint from nothing**, not **retouch something**. It is
-> written down in [What does not exist yet](18-limits.md), along with the rest.
->
-> **In the meantime:** to see an image large, select it in the shelf and look at it in the
-> **Inspector**. To retouch it, you need another application — or a fresh generation, for
-> instance with an *image to image* model, which takes your picture as input and returns a new
-> one (see [Generating](06-generating.md)).
+The `+` button needs one thing only: a project must be open. Without one it is greyed out — there
+would be nowhere to write the document.
 
-What the `+` button does need is simple: a project must be open. Without one it is greyed out —
-there would be nowhere to write the document.
+### Bringing an existing picture in
+
+**An image document is not condemned to start from white.** Three gestures lay a picture from
+your shelf onto it, and all three do the same thing: **one more layer**, on top of the stack,
+named after the asset and **already armed** for the brush.
+
+| Gesture | What it needs |
+|---|---|
+| **Drag and drop** the picture onto the canvas | the image tab open in front of you |
+| **Double-click** the picture in the shelf | an image tab in front — it is the one that receives it |
+| The **Image…** tool (`⇧⌘K`), Shapes group | nothing: it opens the shelf, you pick there |
+
+> Only **pictures of the project** come in — the ones showing in the shelf, generated or
+> imported. A picture not yet downloaded into the project cannot be dropped.
+
+There is **no "Open" menu**: an image document does not open *onto* a file, it receives pictures
+as layers. The distinction matters when you close the tab — see the end of this chapter.
 
 ---
 
@@ -163,7 +163,7 @@ The eraser erases **to transparency**; it does not paint white.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Comment** | `C` | places a note on the image |
+| **Comment** | `C` | *not available yet* |
 | **Fill layer** | `G` | fills the **whole** active layer with the current colour |
 | **Eyedropper** | `I` | picks up the colour under the pointer |
 | **Colour** | — | the colour of the brush, the shapes and the fill |
@@ -220,10 +220,14 @@ undo a stroke pixel by pixel.
 
 ---
 
-## What to know before closing a tab
+## Getting the picture out of the studio
 
-> **An image does not save to disk yet.** Closing its tab loses the layers and the history. The
-> original asset stays in the project — it is the retouching work that is lost.
+**`⇧⌘E` writes the flattened document as a `.png`**, anywhere on disk. The layers are composited
+on the way out; rulers, guides and marching ants are not in it.
+
+> **The document itself does not save yet.** Closing its tab loses the layers and the history —
+> export first, or do not close. The assets you laid on it stay in the project; it is the
+> composition work that is lost.
 >
 > See [What does not exist yet](18-limits.md).
 

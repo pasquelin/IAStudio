@@ -190,13 +190,17 @@ permettra d'y revenir.
 Le bouton **Révéler dans le gestionnaire de fichiers**, dans l'inspecteur, ouvre le dossier où
 elle se trouve. C'est de là que vous l'enverrez à qui vous voudrez.
 
-> **Non, on ne la retouche pas encore ici.** L'espace Image sait peindre sur une toile neuve,
-> mais il ne sait pas encore ouvrir une image existante — ni la vôtre, ni celle qu'il vient de
-> générer. C'est la plus grande limite du studio aujourd'hui, elle est expliquée en entier dans
+> **Pour la retoucher**, passez dans l'espace **Image** : le `+` du rail gauche ouvre un
+> document, puis glissez votre image sur la toile — elle y devient un calque, et le pinceau, la
+> gomme et les formes s'appliquent dessus. Le chapitre [Espace Image](08-espace-image.md) détaille
+> les trois façons de l'y faire entrer.
+>
+> **Ce que le studio ne sait pas encore faire :** enregistrer ce document. Fermer l'onglet perd
+> les calques — `⇧⌘E` en sort un PNG avant. Voir
 > [Ce qui n'existe pas encore](18-limites.md).
 >
-> Pour transformer cette image sans quitter le studio : reprenez le panneau **Génération** avec
-> un modèle *image vers image*, et donnez-lui votre image comme point de départ.
+> Pour transformer l'image plutôt que la peindre : reprenez le panneau **Génération** avec un
+> modèle *image vers image*, et donnez-lui votre image comme point de départ.
 
 <!-- CAPTURE : le panneau Génération avec le formulaire d'un modèle, et la ligne d'état en
      dessous avec une tâche en cours. Vers ../../images/generate.png -->

@@ -220,7 +220,7 @@ people most often:
 
 | The result is… | What is possible today |
 |---|---|
-| a **picture** | see it in the Inspector, use it as the starting point of another generation, or set it as a **sky** or as a material's **base colour** |
+| a **picture** | paint on it in an **image** document, use it as the starting point of another generation, or set it as a **sky** or as a material's **base colour** |
 | a **video** or a **sound** | drop it on a **timeline** (Video workspace), or edit it (Audio workspace) |
 | a **panorama** | place it in a **sky** document (Skyboxes workspace) |
 | a **3D object** | nothing useful — the studio cannot open a mesh yet |
@@ -229,8 +229,9 @@ people most often:
 sends the asset into the tab already in front. Open the document meant to receive it first, with
 the `+` button on the left rail. See [Assets](07-assets.md).
 
-> **A generated picture cannot be retouched in the Image workspace.** That feature does not exist
-> yet — see [What does not exist yet](18-limits.md).
+> **A generated picture is retouched in the Image workspace**: open a document with `+`, then
+> drag the picture onto the canvas — it becomes a layer there. That document, however, does not
+> save; `⇧⌘E` gets a PNG out of it. See [Image workspace](08-image-workspace.md).
 
 <!-- SCREENSHOT: the Generate panel with a model's form, and the status line below with a running
      generation. Save to ../../images/generate.png -->

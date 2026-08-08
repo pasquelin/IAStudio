@@ -98,7 +98,8 @@ What that gives you, depending on which tab is in front:
 | a **sky** (Skyboxes workspace) | sets the picture as the sky — only pictures from the project are accepted |
 | a **sound** (Audio workspace) | loads that take into the editor, if it is indeed a sound |
 | a **sequence** (Video workspace) | drops a clip onto a track, at the playhead |
-| an **image**, a **3D scene**, a **texture** | **nothing at all** |
+| an **image** (Image workspace) | lays the picture down as one more layer, already armed |
+| a **3D scene**, a **texture** | **nothing at all** |
 | no tab open | **nothing at all** |
 
 **Nothing warns you when nothing happens.** No message, no visible refusal: the double-click is
@@ -114,11 +115,12 @@ front?"**, never "is this asset broken?".
 | You drag… | Onto… | Result |
 |---|---|---|
 | a video or a sound | the **timeline** | a clip on a track |
+| an image | the Image workspace **canvas** | it becomes one more layer, armed |
 | an image | a **texture** preview | it becomes the base colour |
 | a panoramic image | a **sky** preview | it becomes the sky |
 
-**Those three, and nothing else.** The Image workspace canvas and the 3D viewport accept no
-drops: releasing an asset over them does nothing.
+**Those four, and nothing else.** The 3D viewport accepts no drops: releasing an asset over it
+does nothing.
 
 ---
 

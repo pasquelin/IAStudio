@@ -21,9 +21,10 @@ phrase et où l'on télécharge une image, c'est **tout ce qui vient après** :
 - **rien ne repart** : vos fichiers restent chez vous.
 
 > **Une chose que le studio ne sait pas encore faire**, et qu'il vaut mieux savoir tout de suite :
-> **il ne rouvre pas une image pour la retoucher.** On peut peindre sur une toile neuve, mais pas
-> reprendre au pinceau une image générée. La liste complète et honnête de ces manques est le
-> chapitre [Ce qui n'existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
+> **un travail en cours ne s'enregistre pas.** Une image que vous composez, un montage, un son
+> édité, un ciel réglé : fermer l'onglet les perd. Seules les scènes 3D et les matières
+> s'écrivent sur le disque. La liste complète et honnête de ces manques est le chapitre
+> [Ce qui n'existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
 
 ## Six façons de travailler
 
