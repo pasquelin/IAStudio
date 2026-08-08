@@ -114,3 +114,10 @@ const promptDraft = z.string().trim().min(1).max(PROMPT_INPUT_MAX)
 export function parsePromptDraft(value: unknown): string {
   return promptDraft.parse(value)
 }
+
+/** At least one, or there is no style to read; capped where the API caps its references. */
+const referenceImages = z.array(z.string().trim().min(1)).min(1).max(PROMPT_IMAGES_MAX)
+
+export function parseReferenceImages(value: unknown): string[] {
+  return referenceImages.parse(value)
+}

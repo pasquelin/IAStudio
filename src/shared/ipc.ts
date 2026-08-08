@@ -14,6 +14,7 @@ import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
 import type {
+  PromptStyle,
   PromptSuggestion,
   PromptTranslation,
   SuggestPromptsRequest,
@@ -52,6 +53,7 @@ export type Channels = {
   scenarioDescribeModel: 'scenario:describe-model'
   scenarioSuggestPrompts: 'scenario:suggest-prompts'
   scenarioTranslatePrompt: 'scenario:translate-prompt'
+  scenarioDescribeStyle: 'scenario:describe-style'
   scenarioGenerate: 'scenario:generate'
   scenarioUploadAsset: 'scenario:upload-asset'
   scenarioCancelJob: 'scenario:cancel-job'
@@ -125,6 +127,7 @@ export const CHANNELS: Channels = {
   scenarioDescribeModel: 'scenario:describe-model',
   scenarioSuggestPrompts: 'scenario:suggest-prompts',
   scenarioTranslatePrompt: 'scenario:translate-prompt',
+  scenarioDescribeStyle: 'scenario:describe-style',
   scenarioGenerate: 'scenario:generate',
   scenarioUploadAsset: 'scenario:upload-asset',
   scenarioCancelJob: 'scenario:cancel-job',
@@ -352,6 +355,8 @@ export type StudioBridge = {
      * it as. Replaces the text rather than proposing beside it — nothing is invented here.
      */
     translatePrompt: (draft: string) => Promise<PromptTranslation>
+    /** Reads the style of the reference pictures, so a prompt can be written from it. */
+    describeStyle: (images: readonly string[]) => Promise<PromptStyle>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
     uploadAsset: (name: string, image: string) => Promise<string>

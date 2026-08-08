@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { buildBody, buildSchema, defaultValues, groupFields, visibleFields } from './dynamic-form'
+import {
+  buildBody,
+  buildSchema,
+  defaultValues,
+  groupFields,
+  referencePictures,
+  visibleFields,
+} from './dynamic-form'
 
 function field(overrides: Partial<FieldDescriptor> & { key: string }): FieldDescriptor {
   return { kind: 'text', label: overrides.key, required: false, ...overrides }
@@ -116,5 +123,40 @@ describe('grouping', () => {
       ['', ['prompt']],
       ['Advanced', ['steps', 'seed']],
     ])
+  })
+})
+
+describe('referencePictures', () => {
+  const picture = (key: string): FieldDescriptor => ({
+    key,
+    kind: 'image',
+    label: key,
+    required: false,
+  })
+
+  it('collects the picture fields the user filled, in declaration order', () => {
+    const fields = [
+      picture('reference'),
+      field({ key: 'prompt', kind: 'longText' }),
+      picture('mask'),
+    ]
+
+    expect(
+      referencePictures(fields, { reference: 'asset_one', prompt: 'a boulder', mask: 'asset_two' }),
+    ).toEqual(['asset_one', 'asset_two'])
+  })
+
+  it('skips the ones left empty', () => {
+    const fields = [picture('reference'), picture('mask')]
+
+    expect(referencePictures(fields, { reference: 'asset_one', mask: '   ' })).toEqual([
+      'asset_one',
+    ])
+  })
+
+  it('answers nothing when the model takes no picture', () => {
+    const fields = [field({ key: 'prompt', kind: 'longText' })]
+
+    expect(referencePictures(fields, { prompt: 'a boulder' })).toEqual([])
   })
 })

@@ -1,7 +1,11 @@
 import { APIError } from '@scenario-labs/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
-import { PROMPT_INPUT_MAX, PROMPT_SUGGESTIONS_MAX } from '@shared/domain/prompt-assist'
+import {
+  PROMPT_IMAGES_MAX,
+  PROMPT_INPUT_MAX,
+  PROMPT_SUGGESTIONS_MAX,
+} from '@shared/domain/prompt-assist'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerScenarioHandlers } from './handlers'
 import type { AssetUploader } from './uploader'
@@ -38,6 +42,7 @@ function assistant(overrides: Partial<PromptAssist> = {}): PromptAssist {
   return {
     suggest: () => Promise.reject(new Error('unused')),
     translate: () => Promise.reject(new Error('unused')),
+    describeStyle: () => Promise.reject(new Error('unused')),
     ...overrides,
   }
 }
@@ -173,6 +178,86 @@ describe('scenario handlers', () => {
       const refused = invoke(CHANNELS.scenarioSuggestPrompts, { modelId: 'model_flux' })
 
       await expect(refused).rejects.toThrow('rate-limited')
+    })
+  })
+
+  describe('translating a draft', () => {
+    it('passes a valid draft through', async () => {
+      const translate = vi.fn(() =>
+        Promise.resolve({ text: 'a mossy boulder', detectedLanguage: 'french' }),
+      )
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts: assistant({ translate }),
+        uploads,
+      })
+
+      await expect(invoke(CHANNELS.scenarioTranslatePrompt, 'un rocher moussu')).resolves.toEqual({
+        text: 'a mossy boulder',
+        detectedLanguage: 'french',
+      })
+      expect(translate).toHaveBeenCalledWith('un rocher moussu')
+    })
+
+    it('refuses blank text, which has nothing to translate', async () => {
+      const translate = vi.fn(() => Promise.reject(new Error('unused')))
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts: assistant({ translate }),
+        uploads,
+      })
+
+      await expect(invoke(CHANNELS.scenarioTranslatePrompt, '   ')).rejects.toThrow()
+      expect(translate).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('describing a style', () => {
+    it('passes the references through', async () => {
+      const describeStyle = vi.fn(() =>
+        Promise.resolve({ description: 'muted greens', synthesis: 'two pictures' }),
+      )
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts: assistant({ describeStyle }),
+        uploads,
+      })
+
+      await expect(
+        invoke(CHANNELS.scenarioDescribeStyle, ['asset_one', 'asset_two']),
+      ).resolves.toEqual({ description: 'muted greens', synthesis: 'two pictures' })
+      expect(describeStyle).toHaveBeenCalledWith(['asset_one', 'asset_two'])
+    })
+
+    it('refuses an empty list, which shows nothing to read', async () => {
+      const describeStyle = vi.fn(() => Promise.reject(new Error('unused')))
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts: assistant({ describeStyle }),
+        uploads,
+      })
+
+      await expect(invoke(CHANNELS.scenarioDescribeStyle, [])).rejects.toThrow()
+      expect(describeStyle).not.toHaveBeenCalled()
+    })
+
+    it('refuses more references than the API accepts', async () => {
+      const describeStyle = vi.fn(() => Promise.reject(new Error('unused')))
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts: assistant({ describeStyle }),
+        uploads,
+      })
+
+      const tooMany = Array.from({ length: PROMPT_IMAGES_MAX + 1 }, (_unused, at) => `asset_${at}`)
+
+      await expect(invoke(CHANNELS.scenarioDescribeStyle, tooMany)).rejects.toThrow()
+      expect(describeStyle).not.toHaveBeenCalled()
     })
   })
 })

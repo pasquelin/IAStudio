@@ -14,6 +14,9 @@ function draw(overrides: Partial<PromptAssistantProps> = {}) {
     readDraft: () => 'a boulder',
     request: () => Promise.resolve([SUGGESTION]),
     translate: draft => Promise.resolve({ text: draft, detectedLanguage: 'english' }),
+    describeStyle: () =>
+      Promise.resolve({ description: 'muted greens, soft light', synthesis: '' }),
+    readReferences: () => ['asset_one'],
     onAdoptText: vi.fn(),
     onAdoptCall: vi.fn(),
     failureMessage: () => 'Trop de requêtes.',
@@ -208,6 +211,48 @@ describe('the prompt assistant, drawn', () => {
       draw({ translate: () => Promise.reject(new Error('rate-limited')) })
 
       await userEvent.click(translateButton())
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Trop de requêtes.')
+    })
+  })
+
+  describe('reading the style of the references', () => {
+    const styleButton = (): HTMLElement =>
+      screen.getByRole('button', { name: 'Décrire le style des références' })
+
+    it('writes what it read into the prompt', async () => {
+      const onAdoptText = vi.fn()
+      draw({ onAdoptText })
+
+      await userEvent.click(styleButton())
+
+      await waitFor(() => expect(onAdoptText).toHaveBeenCalledWith('muted greens, soft light'))
+    })
+
+    it('passes the references the form carries', async () => {
+      const describeStyle = vi.fn(() => Promise.resolve({ description: 'a style', synthesis: '' }))
+      draw({ describeStyle, readReferences: () => ['asset_one', 'asset_two'] })
+
+      await userEvent.click(styleButton())
+
+      expect(describeStyle).toHaveBeenCalledWith(['asset_one', 'asset_two'])
+    })
+
+    // Asking with nothing to look at would spend a call to be told there was nothing.
+    it('says what is missing rather than asking about nothing', async () => {
+      const describeStyle = vi.fn(() => Promise.resolve({ description: 'a style', synthesis: '' }))
+      draw({ describeStyle, readReferences: () => [] })
+
+      await userEvent.click(styleButton())
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Déposez une image')
+      expect(describeStyle).not.toHaveBeenCalled()
+    })
+
+    it('says what went wrong rather than staying silent', async () => {
+      draw({ describeStyle: () => Promise.reject(new Error('rate-limited')) })
+
+      await userEvent.click(styleButton())
 
       expect(await screen.findByRole('status')).toHaveTextContent('Trop de requêtes.')
     })

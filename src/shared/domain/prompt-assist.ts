@@ -32,6 +32,17 @@ export type PromptTranslation = {
   detectedLanguage: string
 }
 
+/**
+ * How the API reads the style of the pictures it was shown.
+ *
+ * Two texts because the API answers two: `description` is the long one, worth using as a
+ * prompt; `synthesis` is the short line that says what was looked at.
+ */
+export type PromptStyle = {
+  description: string
+  synthesis: string
+}
+
 /** What the renderer asks for when it wants a draft rewritten. */
 export type SuggestPromptsRequest = {
   modelId: string

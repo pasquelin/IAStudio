@@ -20,10 +20,11 @@ const FIELDS: FieldDescriptor[] = [
 ]
 
 const unusedTranslate = (): Promise<never> => Promise.reject(new Error('unused'))
+const unusedStyle = (): Promise<never> => Promise.reject(new Error('unused'))
 
 function assist(answer: RemotePrompts, fields: readonly FieldDescriptor[] = FIELDS) {
   const prompt = vi.fn(async () => answer)
-  const api: PromptAssistApi = { prompt, translate: unusedTranslate }
+  const api: PromptAssistApi = { prompt, translate: unusedTranslate, describeStyle: unusedStyle }
   return { prompt, assist: createPromptAssist({ api: () => api, fields: async () => fields }) }
 }
 
@@ -98,6 +99,7 @@ describe('createPromptAssist', () => {
         calls: [{ modelId: MODEL, parameters: { resolution: '4K' } }],
       }),
       translate: unusedTranslate,
+      describeStyle: unusedStyle,
     }
     const subject = createPromptAssist({
       api: () => api,
@@ -185,7 +187,11 @@ describe('createPromptAssist', () => {
         detectedLanguage: 'french',
       }))
       const subject = createPromptAssist({
-        api: () => ({ prompt: async () => ({ prompts: [] }), translate }),
+        api: () => ({
+          prompt: async () => ({ prompts: [] }),
+          translate,
+          describeStyle: unusedStyle,
+        }),
         fields: async () => FIELDS,
       })
 
@@ -205,6 +211,7 @@ describe('createPromptAssist', () => {
             translation: 'a mossy boulder',
             detectedLanguage: 'english',
           }),
+          describeStyle: unusedStyle,
         }),
         fields: async () => FIELDS,
       })
@@ -213,6 +220,29 @@ describe('createPromptAssist', () => {
         text: 'a mossy boulder',
         detectedLanguage: 'english',
       })
+    })
+  })
+
+  describe('describeStyle', () => {
+    it('keeps the two texts the API answers with', async () => {
+      const describeStyle = vi.fn(async () => ({
+        description: 'muted greens under soft overcast light',
+        synthesis: 'three forest photographs',
+      }))
+      const subject = createPromptAssist({
+        api: () => ({
+          prompt: async () => ({ prompts: [] }),
+          translate: unusedTranslate,
+          describeStyle,
+        }),
+        fields: async () => FIELDS,
+      })
+
+      await expect(subject.describeStyle(['asset_one'])).resolves.toEqual({
+        description: 'muted greens under soft overcast light',
+        synthesis: 'three forest photographs',
+      })
+      expect(describeStyle).toHaveBeenCalledWith({ images: ['asset_one'] })
     })
   })
 })

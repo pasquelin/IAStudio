@@ -1191,6 +1191,8 @@
     "useText": "Utiliser le texte",
     "useTextAndSettings": "Texte + réglages",
     "translate": "Traduire en anglais",
-    "alreadyEnglish": "Ce texte est déjà en anglais."
+    "alreadyEnglish": "Ce texte est déjà en anglais.",
+    "describeStyle": "Décrire le style des références",
+    "noReference": "Déposez une image de référence pour en décrire le style."
   }
 }

@@ -1,7 +1,7 @@
-import { mdiCreationOutline, mdiTranslate } from '@mdi/js'
+import { mdiCreationOutline, mdiEyedropperVariant, mdiTranslate } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
+import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { cn } from '@/helpers/cn'
 import { Button } from './Button'
 import { ToolButton } from './ToolButton'
@@ -11,6 +11,10 @@ export type PromptAssistantProps = {
   readDraft: () => string
   request: (draft: string) => Promise<PromptSuggestion[]>
   translate: (draft: string) => Promise<PromptTranslation>
+  /** Reads the style of the reference pictures the form carries. */
+  describeStyle: (images: readonly string[]) => Promise<PromptStyle>
+  /** The references sitting on the form, read at the moment they are needed. */
+  readReferences: () => string[]
   /** Adopts the text alone, leaving every other field as the user set it. */
   onAdoptText: (text: string) => void
   /** Adopts the text and the settings that came with it. */
@@ -33,6 +37,8 @@ export function PromptAssistant({
   readDraft,
   request,
   translate,
+  describeStyle,
+  readReferences,
   onAdoptText,
   onAdoptCall,
   failureMessage,
@@ -83,9 +89,36 @@ export function PromptAssistant({
       .finally(() => setPending(false))
   }
 
+  const readStyle = (): void => {
+    const references = readReferences()
+    // Nothing shown means nothing to read, and the channel refuses an empty list anyway.
+    if (references.length === 0) {
+      setFailure(t('prompt.noReference'))
+      return
+    }
+
+    setPending(true)
+    setFailure(null)
+
+    void describeStyle(references)
+      .then(({ description }) => {
+        onAdoptText(description)
+        setFailure(null)
+      })
+      .catch((error: unknown) => setFailure(failureMessage(error)))
+      .finally(() => setPending(false))
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-end gap-1">
+        <ToolButton
+          icon={mdiEyedropperVariant}
+          label={t('prompt.describeStyle')}
+          variant="header"
+          disabled={pending}
+          onClick={readStyle}
+        />
         <ToolButton
           icon={mdiTranslate}
           label={t('prompt.translate')}

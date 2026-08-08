@@ -1,4 +1,9 @@
-import type { PromptAssistApi, RemotePrompts, RemoteTranslation } from './prompt-assist'
+import type {
+  PromptAssistApi,
+  RemotePrompts,
+  RemoteStyle,
+  RemoteTranslation,
+} from './prompt-assist'
 
 /**
  * The slice of the SDK prompt assistance touches.
@@ -18,6 +23,7 @@ export type PromptEndpoints = {
       numResults?: number
     }) => Promise<RemotePrompts>
     translate: (params: { prompt: string }) => Promise<RemoteTranslation>
+    describeStyle: (params: { images: string[] }) => Promise<RemoteStyle>
   }
 }
 
@@ -42,6 +48,14 @@ export function promptAssistApiOf(client: PromptEndpoints): PromptAssistApi {
     translate: async params => {
       const { translation, detectedLanguage } = await client.generate.translate(params)
       return { translation, detectedLanguage }
+    },
+
+    // Copied for the same reason as the references above.
+    describeStyle: async ({ images }) => {
+      const { description, synthesis } = await client.generate.describeStyle({
+        images: [...images],
+      })
+      return { description, synthesis }
     },
   }
 }

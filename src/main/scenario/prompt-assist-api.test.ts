@@ -6,6 +6,7 @@ function endpoints(overrides: Partial<PromptEndpoints['generate']> = {}): Prompt
     generate: {
       prompt: async () => ({ prompts: [] }),
       translate: async () => ({ translation: '', detectedLanguage: 'english' }),
+      describeStyle: async () => ({ description: '', synthesis: '' }),
       ...overrides,
     },
   }
@@ -68,5 +69,20 @@ describe('promptAssistApiOf', () => {
       translation: 'a mossy boulder',
       detectedLanguage: 'french',
     })
+  })
+
+  it('copies the references of a style request too', async () => {
+    const describeStyle = vi.fn<PromptEndpoints['generate']['describeStyle']>(async () => ({
+      description: 'a style',
+      synthesis: 'two pictures',
+    }))
+    const api = promptAssistApiOf(endpoints({ describeStyle }))
+    const images: readonly string[] = ['asset_one']
+
+    await expect(api.describeStyle({ images })).resolves.toEqual({
+      description: 'a style',
+      synthesis: 'two pictures',
+    })
+    expect(describeStyle.mock.calls[0]?.[0].images).not.toBe(images)
   })
 })

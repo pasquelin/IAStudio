@@ -14,6 +14,7 @@ import {
   parseModelIds,
   parseModelQuery,
   parsePromptDraft,
+  parseReferenceImages,
   parseSuggestPrompts,
 } from './validation'
 
@@ -50,6 +51,10 @@ export function registerScenarioHandlers({
 
   handle(CHANNELS.scenarioTranslatePrompt, (_event, draft) =>
     reduced(() => prompts.translate(parsePromptDraft(draft))),
+  )
+
+  handle(CHANNELS.scenarioDescribeStyle, (_event, images) =>
+    reduced(() => prompts.describeStyle(parseReferenceImages(images))),
   )
 
   handle(CHANNELS.scenarioGenerate, async (_event, modelId, body) => {

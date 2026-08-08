@@ -2,9 +2,9 @@ import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { ModelDescriptor } from '@shared/domain/model'
-import type { PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
+import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { workspaceById } from '@/helpers/workspaces'
-import type { FormValues } from '@/helpers/dynamic-form'
+import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
 import { DynamicForm } from '@/design/DynamicForm'
 import { PromptAssistant } from '@/design/PromptAssistant'
 import { failureKeyOf } from '@/services/failure-message'
@@ -33,6 +33,13 @@ function translateDraft(draft: string): Promise<PromptTranslation> {
   const bridge = getBridge()
   if (!bridge) return Promise.resolve({ text: draft, detectedLanguage: 'english' })
   return bridge.scenario.translatePrompt(draft)
+}
+
+/** Reads the style of the pictures already on the form, to write a prompt from it. */
+function describeStyle(images: readonly string[]): Promise<PromptStyle> {
+  const bridge = getBridge()
+  if (!bridge) return Promise.resolve({ description: '', synthesis: '' })
+  return bridge.scenario.describeStyle(images)
 }
 
 function useDescriptor(modelId: string | null) {
@@ -129,6 +136,10 @@ export function Generator() {
                 readDraft={() => (typeof handle.read() === 'string' ? String(handle.read()) : '')}
                 request={draft => suggestPrompts(modelId, draft)}
                 translate={translateDraft}
+                describeStyle={describeStyle}
+                readReferences={() =>
+                  referencePictures(descriptor.data?.fields ?? [], handle.readAll())
+                }
                 onAdoptText={handle.write}
                 onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
                 failureMessage={error => t(failureKeyOf(error))}

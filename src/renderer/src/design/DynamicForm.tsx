@@ -49,6 +49,12 @@ export type FieldHandle = {
   read: () => unknown
   /** Fills this field alone, leaving every other one as the user set it. */
   write: (value: string) => void
+  /**
+   * Every field's value, for an accessory whose action depends on more than the one it hangs
+   * under — prompt assistance conditions on the reference pictures sitting elsewhere on the
+   * form. Same rule as `read`: call it when acting, never while rendering.
+   */
+  readAll: () => FormValues
 }
 
 function Control({
@@ -208,6 +214,7 @@ export function DynamicForm({
               {accessory?.(field, {
                 read: () => getValues(field.key),
                 write: value => setValue(field.key, value),
+                readAll: () => getValues(),
               })}
             </Fragment>
           ))}

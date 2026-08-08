@@ -2,6 +2,7 @@ import type { FieldDescriptor } from '@shared/domain/model'
 import {
   PROMPT_SUGGESTIONS_MAX,
   type PromptSuggestion,
+  type PromptStyle,
   type PromptTranslation,
 } from '@shared/domain/prompt-assist'
 import { adoptableParameters } from './call-parameters'
@@ -36,6 +37,12 @@ export type PromptAssistApi = {
     numResults?: number
   }) => Promise<RemotePrompts>
   translate: (params: { prompt: string }) => Promise<RemoteTranslation>
+  describeStyle: (params: { images: readonly string[] }) => Promise<RemoteStyle>
+}
+
+export type RemoteStyle = {
+  description: string
+  synthesis: string
 }
 
 export type RemoteTranslation = {
@@ -61,6 +68,7 @@ export type PromptAssistDeps = {
 export type PromptAssist = {
   suggest: (request: SuggestRequest) => Promise<PromptSuggestion[]>
   translate: (draft: string) => Promise<PromptTranslation>
+  describeStyle: (images: readonly string[]) => Promise<PromptStyle>
 }
 
 /**
@@ -96,6 +104,11 @@ export function createPromptAssist({ api, fields }: PromptAssistDeps): PromptAss
     translate: async draft => {
       const { translation, detectedLanguage } = await api().translate({ prompt: draft })
       return { text: translation, detectedLanguage }
+    },
+
+    describeStyle: async images => {
+      const { description, synthesis } = await api().describeStyle({ images })
+      return { description, synthesis }
     },
   }
 }
