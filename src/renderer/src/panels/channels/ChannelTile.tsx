@@ -11,7 +11,7 @@ import { assetUrl } from '@shared/domain/asset'
 import type { PbrChannel } from '@shared/domain/texture'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { FOCUS_RING } from '@/design/styles'
+import { FOCUS_RING, rowSkin } from '@/design/styles'
 import { MediaTile } from '@/design/MediaTile'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
@@ -60,9 +60,33 @@ export function ChannelTile({
   const label = t(inspected ? 'texture.showMaterial' : 'texture.inspectChannel', { channel: name })
 
   return (
-    <div className="relative">
-      {/* A sibling of the menu button rather than its parent: a button inside a button is not
-          markup a browser will keep. */}
+    // Selection is painted by the container, not by the tile inside it, and through `rowSkin` —
+    // the studio's one answer to "this line is chosen", so a channel cannot light up differently
+    // from an asset. `p-0.5` is what lets the tint show as a frame around the picture.
+    <div className={cn('relative p-0.5', rowSkin(inspected))}>
+      <MediaTile
+        url={map ? assetUrl(map.assetId) : undefined}
+        caption={name}
+        fallbackIcon={mdiTextureBox}
+        badge={
+          origin && (
+            // Top LEFT: the menu button owns the other corner. `MediaTile` hands its slot straight
+            // through, so the corner belongs to the badge — same chrome as `AssetBadge` overlay.
+            <span
+              className="bg-chassis/75 text-text absolute top-1 left-1 rounded-(--radius-sc-sm) p-px"
+              title={t(origin.key)}
+              aria-label={t(origin.key)}
+              role="img"
+            >
+              <UiIcon path={origin.icon} size={12} />
+            </span>
+          )
+        }
+      />
+
+      {/* Laid over the tile rather than wrapped around it: `MediaTile` renders a `figure`, and a
+          `button` takes phrasing content only. Before the menu in the DOM, so the menu stays on
+          top of it without either needing a z-index. */}
       <button
         type="button"
         aria-pressed={inspected}
@@ -74,33 +98,11 @@ export function ChannelTile({
         title={label}
         onClick={onInspect}
         className={cn(
-          'block w-full cursor-pointer border-none bg-transparent p-0',
+          'absolute inset-0 cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
           'disabled:cursor-default',
           FOCUS_RING,
-          inspected && 'ring-accent rounded-(--radius-sc-sm) ring-2',
         )}
-      >
-        <MediaTile
-          url={map ? assetUrl(map.assetId) : undefined}
-          caption={name}
-          fallbackIcon={mdiTextureBox}
-          badge={
-            origin && (
-              // Top LEFT: the menu button owns the other corner, and a badge is a standing. Same
-              // chrome as the overlay badge of `AssetBadge` and of a featured model — the token,
-              // not a hand-picked black.
-              <span
-                className="bg-chassis/75 text-text absolute top-1 left-1 rounded-(--radius-sc-sm) p-px"
-                title={t(origin.key)}
-                aria-label={t(origin.key)}
-                role="img"
-              >
-                <UiIcon path={origin.icon} size={12} />
-              </span>
-            )
-          }
-        />
-      </button>
+      />
 
       <div className="absolute top-1 right-1">
         <MenuButton

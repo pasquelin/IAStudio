@@ -7,7 +7,12 @@ import { chipSkin } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
 import { setMaterial, setPreview } from '@/engines/texture/commands'
-import { MATERIAL_BOUNDS, PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
+import {
+  MATERIAL_BOUNDS,
+  PREVIEW_BOUNDS,
+  PREVIEW_SHAPES,
+  type PreviewShape,
+} from '@/engines/texture/texture-state'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { textureOf, useTextures } from '@/stores/textures'
 import { EnvironmentSection } from './EnvironmentSection'
@@ -168,8 +173,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         <VectorField
           label={t('texture.repeat')}
           value={material.tiling}
-          min={0.01}
-          step={0.1}
+          {...MATERIAL_BOUNDS.tiling}
           onChange={value => onMaterial('tiling', value)}
           {...edit.gesture}
         />
@@ -210,9 +214,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         <SliderField
           label={t('texture.envIntensity')}
           value={preview.envIntensity}
-          min={0}
-          max={3}
-          step={0.05}
+          {...PREVIEW_BOUNDS.envIntensity}
           onChange={value => onPreview('envIntensity', value)}
           {...edit.gesture}
         />

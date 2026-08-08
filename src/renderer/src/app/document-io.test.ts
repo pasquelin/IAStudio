@@ -26,6 +26,7 @@ import { useAudioEdits } from '@/stores/audio-edits'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
+import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { closeDocument, deleteDocument, restoreDocument, saveDocument } from './document-io'
 
 // The real one needs a live Dockview; what this file checks is that closing reaches it.
@@ -757,6 +758,33 @@ describe('closing a document', () => {
     await expect(closeDocument(documentId)).resolves.toBe(true)
     expect(write).not.toHaveBeenCalled()
     expect(useDocuments.getState().documents[documentId]).toBeUndefined()
+  })
+
+  /**
+   * A session view is not the document's state, so no `DocumentIo` drops it — `forgetDocument` has
+   * to. The project folder hands ids out again, and a tab reopened on a reissued id would have
+   * opened on the flat view of the document before it.
+   */
+  it('forgets which channel a closed texture was being looked at through', async () => {
+    installFakeBridge({})
+    const created = await useDocuments.getState().create('textures')
+    if (!created) throw new Error('expected a document')
+    useTextureViews.getState().inspect(created.id, 'normal')
+
+    await expect(closeDocument(created.id)).resolves.toBe(true)
+
+    expect(inspectedChannel(useTextureViews.getState(), created.id)).toBeNull()
+  })
+
+  it('leaves the flat view of a document it did not close alone', async () => {
+    installFakeBridge({})
+    const closing = await useDocuments.getState().create('textures')
+    if (!closing) throw new Error('expected a document')
+    useTextureViews.getState().inspect('elsewhere', 'roughness')
+
+    await expect(closeDocument(closing.id)).resolves.toBe(true)
+
+    expect(inspectedChannel(useTextureViews.getState(), 'elsewhere')).toBe('roughness')
   })
 
   // Cancel is the one answer that leaves everything as it was — including the state and the

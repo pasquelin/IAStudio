@@ -6,6 +6,7 @@
  * `fs`, and a file path written into a document would stop the project folder from being moved.
  */
 import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
+import { normalizeAzimuth } from '@shared/domain/angles'
 import { readEnvironment, type EnvironmentRef } from '@shared/domain/scene'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { clamp } from '@/helpers/numeric'
@@ -38,6 +39,32 @@ const SLOT_BY_CHANNEL: Record<PbrChannel, MaterialSlot | null> = {
 /** `null` for the cavity mask: three has no slot for it, and it is read in `onBeforeCompile`. */
 export function slotFor(channel: PbrChannel): MaterialSlot | null {
   return SLOT_BY_CHANNEL[channel]
+}
+
+/**
+ * What a channel's pixels ARE, which is what decides the colour space they must be decoded in.
+ * Named here rather than answered by the engine with `channel === 'baseColor'`: **two** channels
+ * carry colour, and the one that was forgotten came out dark and desaturated.
+ *
+ * A `data` channel decoded as colour would wash out the normals and lighten the roughness; a
+ * `color` channel decoded as data is the same mistake the other way round.
+ */
+export type ChannelContent = 'color' | 'data'
+
+const CONTENT_BY_CHANNEL: Record<PbrChannel, ChannelContent> = {
+  baseColor: 'color',
+  // Authored as a colour and read as one by three, exactly like the base map.
+  emissive: 'color',
+  normal: 'data',
+  roughness: 'data',
+  metalness: 'data',
+  ao: 'data',
+  height: 'data',
+  edge: 'data',
+}
+
+export function contentOf(channel: PbrChannel): ChannelContent {
+  return CONTENT_BY_CHANNEL[channel]
 }
 
 export type ChannelOrigin = 'generated' | 'derived' | 'imported'
@@ -95,12 +122,20 @@ export type Vector2 = { x: number; y: number }
  * and rendered fine, the slider pinned at its own maximum, and the first touch of it destroyed the
  * value — with the two truths far enough apart that nothing pointed at the cause.
  *
- * The three that already read through `readUnit` are not here: their bound IS the unit interval.
+ * The four that read through `readUnit` are not here: their bound IS the unit interval.
  */
 export const MATERIAL_BOUNDS = {
   normalScale: { min: -2, max: 2, step: 0.05 },
   heightScale: { min: 0, max: 0.5, step: 0.005 },
   emissiveIntensity: { min: 0, max: 4, step: 0.05 },
+  // A repeat of zero collapses every map to one texel, and a negative one mirrors it: neither is
+  // reachable from the field, so neither may arrive from a file.
+  tiling: { min: 0.01, max: 64, step: 0.1 },
+}
+
+/** The same rule for the preview, whose two sliders were read unbounded just as those three were. */
+export const PREVIEW_BOUNDS = {
+  envIntensity: { min: 0, max: 3, step: 0.05 },
 }
 
 /**
@@ -275,6 +310,13 @@ function readRange(source: Record<string, unknown>, key: string, fallback: Value
   return { min, max: clamp(readNumber(raw, 'max', fallback.max), min, 1) }
 }
 
+/** Held above zero on both axes, which is the one thing `readVector` cannot know to do. */
+function readTiling(source: Record<string, unknown>, fallback: Vector2): Vector2 {
+  const { min, max } = MATERIAL_BOUNDS.tiling
+  const raw = readVector(source, 'tiling', fallback)
+  return { x: clamp(raw.x, min, max), y: clamp(raw.y, min, max) }
+}
+
 function readVector(source: Record<string, unknown>, key: string, fallback: Vector2): Vector2 {
   const raw = source[key]
   if (!isRecord(raw)) return { ...fallback }
@@ -340,9 +382,12 @@ function readMaterial(value: unknown): MaterialSettings {
       fallback.emissiveIntensity,
       'emissiveIntensity',
     ),
-    tiling: readVector(value, 'tiling', fallback.tiling),
+    tiling: readTiling(value, fallback.tiling),
+    // Offset is left alone: it is cyclic and three wraps it, so 1.5 means the same as 0.5.
     offset: readVector(value, 'offset', fallback.offset),
-    rotation: readNumber(value, 'rotation', fallback.rotation),
+    // Wrapped, not clamped. An angle is cyclic, so `rotation: 100` means something — a clamp to
+    // 2PI would throw away what the author wrote, where wrapping keeps it.
+    rotation: normalizeAzimuth(readNumber(value, 'rotation', fallback.rotation)),
   }
 }
 
@@ -353,8 +398,12 @@ function readPreview(value: unknown): PreviewSettings {
   return {
     shape: isPreviewShape(value.shape) ? value.shape : fallback.shape,
     environment: readEnvironment(value.environment),
-    envIntensity: readPositive(value, 'envIntensity', fallback.envIntensity),
-    envRotation: readNumber(value, 'envRotation', fallback.envRotation),
+    envIntensity: clamp(
+      readPositive(value, 'envIntensity', fallback.envIntensity),
+      PREVIEW_BOUNDS.envIntensity.min,
+      PREVIEW_BOUNDS.envIntensity.max,
+    ),
+    envRotation: normalizeAzimuth(readNumber(value, 'envRotation', fallback.envRotation)),
     showBackground: readBoolean(value, 'showBackground', fallback.showBackground),
     autoSpin: readBoolean(value, 'autoSpin', fallback.autoSpin),
     tilingPreview: isTilingPreview(value.tilingPreview)

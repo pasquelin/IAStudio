@@ -46,7 +46,7 @@ export type AssetBadgeProps = {
   showQuiet?: boolean
   /**
    * Sits in the corner of a tile. Off in a row, which lays its marks out in the flow — the same
-   * component in both places, and `MediaTile` documents its slot as overlaid at the top right.
+   * component in both places, and this badge is the one that places itself at the top right.
    */
   overlay?: boolean
 }

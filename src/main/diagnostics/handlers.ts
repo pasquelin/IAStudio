@@ -14,6 +14,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.texture': 'document',
   'scene.export': 'document',
   'texture.map': 'document',
+  'texture.channel': 'document',
   // A chunk three renamed upstream, so a material setting silently stopped applying. Read with
   // the document because that is where it shows — as a slider that moves nothing.
   'texture.shader': 'document',

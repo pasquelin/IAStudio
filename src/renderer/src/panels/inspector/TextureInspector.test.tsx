@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import fr from '@shared/i18n/fr.json'
 import { installTexture } from '@/stores/texture-fixtures'
 import { historyOf, textureOf, useTextures } from '@/stores/textures'
 import { TextureInspector } from './TextureInspector'
@@ -19,12 +20,24 @@ const show = (): void => {
 }
 
 describe('TextureInspector', () => {
-  /** The word was decided rather than inherited: the file, three and the 3D face all say this. */
+  /**
+   * The word was decided rather than inherited: the file, three and the 3D face all say roughness.
+   * Asserted against the BUNDLE rather than against a string: `queryByLabelText('Brillance')`
+   * looked like a guard and could never fail, no bundle holding that word.
+   */
   it('says roughness, never glossiness, so one quantity has one name', () => {
     show()
 
     expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Brillance')).toBeNull()
+    expect(JSON.stringify(fr)).not.toMatch(/brillance/i)
+  })
+
+  /** Two remaps under one label is two rows a reader cannot tell apart. */
+  it('names each remap after the quantity it remaps', () => {
+    show()
+
+    expect(screen.getByText('Plage de rugosité')).toBeInTheDocument()
+    expect(screen.getByText('Plage de métal')).toBeInTheDocument()
   })
 
   it('writes a roughness onto the document', () => {

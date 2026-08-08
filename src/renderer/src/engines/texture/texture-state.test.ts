@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { isPbrChannel, PBR_CHANNELS } from '@shared/domain/texture'
 import {
   canDerive,
+  contentOf,
   DEFAULT_PREVIEW,
   MATERIAL_BOUNDS,
+  PREVIEW_BOUNDS,
   DEFAULT_TEXTURE_MATERIAL,
   missingChannels,
   newTexture,
@@ -315,6 +317,15 @@ describe('parseTexture', () => {
   })
 })
 
+/**
+ * The default of a bounded setting, or `null` for one whose value is not a scalar. A lookup rather
+ * than a cast: the guide asks for a justified `as`, and there is nothing here to justify.
+ */
+function scalarDefault(key: string): number | null {
+  const value = Object.entries(DEFAULT_TEXTURE_MATERIAL).find(([name]) => name === key)?.[1]
+  return typeof value === 'number' ? value : null
+}
+
 describe('the bounds a slider and a file share', () => {
   /**
    * The regression: read unclamped, a hand-edited `heightScale: 3` opened and rendered, the slider
@@ -342,11 +353,83 @@ describe('the bounds a slider and a file share', () => {
     expect(MATERIAL_BOUNDS.normalScale.min).toBeLessThan(0)
   })
 
+  /** An angle is cyclic: wrapping keeps what the author wrote where a clamp would discard it. */
+  it('wraps a rotation instead of clamping it', () => {
+    expect(parseTexture({ material: { rotation: 100 } }).material.rotation).toBeCloseTo(
+      100 % (Math.PI * 2),
+    )
+    expect(parseTexture({ material: { rotation: -Math.PI / 2 } }).material.rotation).toBeCloseTo(
+      (Math.PI * 3) / 2,
+    )
+  })
+
+  it('wraps the rotation of the sky the same way', () => {
+    expect(parseTexture({ preview: { envRotation: 100 } }).preview.envRotation).toBeCloseTo(
+      100 % (Math.PI * 2),
+    )
+  })
+
+  /** A repeat of zero collapses every map to one texel, and a negative one mirrors it. */
+  it('holds a tiling above zero on both axes', () => {
+    const texture = parseTexture({ material: { tiling: { x: 0, y: -4 } } })
+
+    expect(texture.material.tiling).toEqual({
+      x: MATERIAL_BOUNDS.tiling.min,
+      y: MATERIAL_BOUNDS.tiling.min,
+    })
+  })
+
+  it('holds the lighting inside what its slider can reach', () => {
+    expect(parseTexture({ preview: { envIntensity: 99 } }).preview.envIntensity).toBe(
+      PREVIEW_BOUNDS.envIntensity.max,
+    )
+  })
+
+  it('leaves the offset alone, which three wraps itself', () => {
+    expect(parseTexture({ material: { offset: { x: 1.5, y: -0.25 } } }).material.offset).toEqual({
+      x: 1.5,
+      y: -0.25,
+    })
+  })
+
   it('opens every default inside its own bounds', () => {
     for (const [key, { min, max }] of Object.entries(MATERIAL_BOUNDS)) {
-      const value = DEFAULT_TEXTURE_MATERIAL[key as keyof typeof MATERIAL_BOUNDS]
+      // `tiling` is bounded too, but per axis: swept below rather than here.
+      const value = scalarDefault(key)
+      if (value === null) continue
       expect(value, key).toBeGreaterThanOrEqual(min)
       expect(value, key).toBeLessThanOrEqual(max)
+    }
+
+    const { min, max } = MATERIAL_BOUNDS.tiling
+    for (const axis of [DEFAULT_TEXTURE_MATERIAL.tiling.x, DEFAULT_TEXTURE_MATERIAL.tiling.y]) {
+      expect(axis).toBeGreaterThanOrEqual(min)
+      expect(axis).toBeLessThanOrEqual(max)
+    }
+  })
+})
+
+describe('contentOf', () => {
+  /**
+   * The regression: the engine answered this with `channel === 'baseColor'`, so `emissive` — a
+   * colour map, read as one by three, exactly like the base map — was decoded as data and came out
+   * dark and desaturated. Two channels carry colour, not one.
+   */
+  it('calls both colour channels colour', () => {
+    expect(contentOf('baseColor')).toBe('color')
+    expect(contentOf('emissive')).toBe('color')
+  })
+
+  it('calls every other channel data, whose pixels are measurements and not colours', () => {
+    const data = PBR_CHANNELS.filter(channel => contentOf(channel) === 'data')
+
+    expect(data).toEqual(['normal', 'roughness', 'metalness', 'ao', 'height', 'edge'])
+  })
+
+  /** Exhaustive over the union, so a ninth channel cannot be added without deciding this. */
+  it('answers for every channel the domain declares', () => {
+    for (const channel of PBR_CHANNELS) {
+      expect(['color', 'data'], channel).toContain(contentOf(channel))
     }
   })
 })

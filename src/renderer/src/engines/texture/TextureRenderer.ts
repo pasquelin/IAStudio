@@ -24,6 +24,7 @@ import {
 } from './material-shader'
 import { previewGeometry } from './preview-geometry'
 import {
+  contentOf,
   DEFAULT_TEXTURE_MATERIAL,
   slotFor,
   type PreviewShape,
@@ -185,7 +186,7 @@ export class TextureRenderer {
    * to one alone, the maps drift apart and the relief stops matching the picture it lifts.
    *
    * Guarded on the values having moved, as `applyGeometry` is: `apply` runs on every frame of
-   * every drag, and thirteen of the fifteen sliders have nothing to do with tiling.
+   * every drag, and twelve of the fifteen settings have nothing to do with tiling.
    *
    * And no `needsUpdate` on a map, ever. It bumps `source.needsUpdate` too, which re-uploads the
    * pixels AND rebuilds the mip chain — eight 2K channels is 128 MB of upload per frame. Nothing
@@ -316,11 +317,15 @@ export class TextureRenderer {
 }
 
 /**
- * The base colour is authored in sRGB; every other map carries data, not colour, and decoding
- * one would wash out the normals and lighten the roughness.
+ * A colour channel is authored in sRGB and has to be decoded; a data channel must not be, or the
+ * normals wash out and the roughness lightens.
+ *
+ * Which is which comes from the domain rather than from a test on the id here: it was
+ * `channel === 'baseColor'`, and `emissive` — a colour map, read as one by three — fell on the
+ * wrong side and came out dark and desaturated.
  */
 function spaceOf(channel: PbrChannel): ColorSpace {
-  return channel === 'baseColor' ? SRGBColorSpace : NoColorSpace
+  return contentOf(channel) === 'color' ? SRGBColorSpace : NoColorSpace
 }
 
 /** How every map is laid on the shape. The three values that move together, and only those. */

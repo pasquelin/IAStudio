@@ -9,7 +9,11 @@ export type MediaTileProps = {
   url?: string
   /** Overlaid on the picture, at the bottom. */
   caption: string
-  /** Overlaid at the top right — a standing or a state, never an action. */
+  /**
+   * Overlaid on the picture — a standing or a state, never an action. WHICH corner is the badge's
+   * own business: this slot renders it as handed over, `AssetBadge` places itself top right, and a
+   * channel tile puts its origin top left because the menu button owns the other corner.
+   */
   badge?: ReactNode
   /**
    * Drawn in place of the picture. Defaults to a broken image, which is only honest where one
