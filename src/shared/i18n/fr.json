@@ -608,7 +608,7 @@
     "addHint": "Poser une maille ou une lumière dans la scène",
     "translate": "Déplacer",
     "translateHint": "Déplacer l’objet sélectionné le long des axes",
-    "rotate": "Tourner",
+    "rotate": "Pivoter",
     "rotateHint": "Faire pivoter l’objet sélectionné",
     "scale": "Redimensionner",
     "scaleHint": "Changer l’échelle de l’objet sélectionné",

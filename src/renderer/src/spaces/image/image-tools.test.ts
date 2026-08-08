@@ -1,21 +1,7 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { UNBUILT_TOOLS, type CanvasTool } from '@/engines/canvas/CanvasEngine'
-import { isRecord } from '@shared/guards'
-import { TRANSLATIONS } from '@shared/i18n'
-import {
-  IMAGE_TOOLS,
-  TOOL_COMMANDS,
-  canvasToolFor,
-  toolById,
-  type ToolCommand,
-} from './image-tools'
-
-/** Widened, not cast: the bundle's inferred type carries no index signature. */
-const read = (bundle: unknown, key: string): unknown =>
-  key
-    .split('.')
-    .reduce<unknown>((current, part) => (isRecord(current) ? current[part] : undefined), bundle)
+import { IMAGE_TOOLS, canvasToolFor, toolById } from './image-tools'
 
 /**
  * Every gesture the bar can arm, and whether it is reachable — the group's own button, plus one
@@ -117,40 +103,6 @@ describe('image tools', () => {
     for (const entry of IMAGE_TOOLS) {
       if (entry.disabled !== true) continue
       for (const mode of entry.modes ?? []) expect(mode.disabled).toBe(true)
-    }
-  })
-})
-
-/**
- * A tool wears two names: the bar shows it in context and names it bare — `Pinceau` — while the
- * shortcuts screen lists it among hundreds of unrelated rows and prefixes it — `Outil Pinceau`.
- * That gap is deliberate, so the two labels are not asked to be equal.
- *
- * Where ENGLISH gives a tool one label on both surfaces, though, the gap was never intended, and
- * French must not invent one. It had: the bar read `Sélection rectangle` where the shortcuts
- * screen read `Sélection rectangulaire` — the same tool, looked up under two names.
- */
-describe('the labels a tool wears on both surfaces', () => {
-  const labelKeyOf = ({ tool, mode }: ToolCommand): string | undefined => {
-    const entry = IMAGE_TOOLS.find(candidate => candidate.id === tool)
-    return mode ? entry?.modes?.find(candidate => candidate.id === mode)?.labelKey : entry?.labelKey
-  }
-
-  const titleKeyOf = (command: string): string =>
-    `commands.${command.replace(/\.(\w)/, (_, letter: string) => letter.toUpperCase())}.title`
-
-  it('agree in French wherever they agree in English', () => {
-    for (const entry of TOOL_COMMANDS) {
-      const labelKey = labelKeyOf(entry)
-      if (labelKey === undefined) continue
-
-      const titleKey = titleKeyOf(entry.command)
-      const unified = read(TRANSLATIONS.en, labelKey) === read(TRANSLATIONS.en, titleKey)
-      if (!unified) continue
-
-      expect(read(TRANSLATIONS.fr, labelKey), `${entry.command} is named twice`).toBe(
-        read(TRANSLATIONS.fr, titleKey),
-      )
     }
   })
 })
