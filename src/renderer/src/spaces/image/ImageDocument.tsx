@@ -245,8 +245,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         }
         case 'canvas.mergeDown': {
           const host = engine.current
-          const active = canvas.activeLayerId
-          const below = active ? layerBelow(canvas.layers, active) : null
+          // This handler is memoised: a captured stack goes stale the moment the selection moves.
+          const stack = canvasOf(useCanvases.getState(), documentId)
+          const active = stack.activeLayerId
+          const below = active ? layerBelow(stack.layers, active) : null
           // Nothing under it at its own level: no merge to offer, and nothing to say about it.
           if (!host || !active || !below) return
           // Composed before the command, which is the last moment the upper layer's pixels exist.
@@ -278,7 +280,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return useCanvases.getState().redo(documentId)
       }
     },
-    [documentId],
+    [documentId, t],
   )
 
   useShortcuts({

@@ -1,11 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_DRAG_TYPE, startAssetDrag } from '@/helpers/asset-drag'
+import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
+import { canUndo } from '@/engines/core/history'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
-import { canvasOf, useCanvases } from '@/stores/canvases'
+import { installCanvas } from '@/stores/canvas-fixtures'
+import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { useTools } from '@/stores/tools'
@@ -15,6 +18,7 @@ const setTool = vi.fn()
 const setBrush = vi.fn()
 const applyCrop = vi.fn()
 const dropCrop = vi.fn()
+const mergeInto = vi.fn()
 
 // jsdom has no WebGL context: the engine is exercised by hand, not here. What this covers is
 // that the document wires the bar to the right calls.
@@ -36,6 +40,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       snapshot = vi.fn(() => Promise.resolve('data:image/png;base64,AAAA'))
       applyCrop = applyCrop
       dropCrop = dropCrop
+      mergeInto = mergeInto
       pixelSnapshots = vi.fn(() => Promise.resolve([]))
       restoreSnapshot = vi.fn(() => Promise.resolve())
     },
@@ -176,6 +181,45 @@ describe('ImageDocument', () => {
 
     expect(useTools.getState().focusedZone).toBe('bottom')
     expect(setTool).not.toHaveBeenCalledWith('shape')
+  })
+})
+
+describe('merging the layer below', () => {
+  const DOCUMENT = 'doc-merge'
+
+  // Three flat layers, so `layerBelow` has an unambiguous answer for each of them.
+  const select = (activeLayerId: string) =>
+    installCanvas(DOCUMENT, {
+      ...DEFAULT_CANVAS,
+      layers: [pixelLayer('a', 'A'), pixelLayer('b', 'B'), pixelLayer('c', 'C')],
+      activeLayerId,
+    })
+
+  // The sibling `describe` above owns the one on line 49, so this suite needs its own.
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('composes the layer selected now, not the one selected when the space opened', () => {
+    select('b')
+    render(<ImageDocument documentId={DOCUMENT} />)
+
+    act(() => select('c'))
+    fireEvent.keyDown(window, { code: 'KeyE', metaKey: true })
+
+    expect(mergeInto).toHaveBeenCalledWith('b', 'c')
+  })
+
+  it('offers nothing at the bottom of the stack', () => {
+    select('a')
+    render(<ImageDocument documentId={DOCUMENT} />)
+
+    fireEvent.keyDown(window, { code: 'KeyE', metaKey: true })
+
+    expect(mergeInto).not.toHaveBeenCalled()
+    // The history too: `run` stacks a command whether or not it changed anything, so a merge that
+    // let the command through at the bottom would leave a ⌘Z that undoes nothing.
+    expect(canUndo(historyOf(useCanvases.getState(), DOCUMENT))).toBe(false)
   })
 })
 
