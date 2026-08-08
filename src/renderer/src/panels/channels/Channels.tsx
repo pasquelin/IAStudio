@@ -7,7 +7,7 @@ import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { setChannel } from '@/engines/texture/commands'
 import { placeTextureChannel } from '@/spaces/textures/place-channel'
-import { assetsById, useAssets } from '@/stores/assets'
+import { useAssets } from '@/stores/assets'
 import { activeTextureId, useDocuments } from '@/stores/documents'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
@@ -34,23 +34,30 @@ export function Channels() {
 function Grid({ documentId }: { documentId: string }) {
   const channels = useTextures(state => textureOf(state, documentId).channels)
   const assets = useAssets(state => state.items)
-  const byId = useAssets(assetsById)
 
   /**
-   * `isLocalPicture` and nothing else, the same filter the environment section applies: a cloud
-   * row would be offered, chosen, and show nothing at all.
+   * The same question the tile answers on a drop, so it gets the same answer: `PICTURES` for the
+   * type — a generated sky or texture is a picture a channel can hold — and `isLocalPicture` for
+   * the file, because a cloud row would be offered, chosen, and show nothing at all.
+   *
+   * Filtered on both, and not on `image` alone: dropping a local skybox onto Roughness worked
+   * while the menu never listed it, so the tile showed a picture with no row ticked.
    */
-  const options = useMemo(
-    () =>
-      assets
-        .filter(asset => asset.type === 'image' && isLocalPicture(asset))
-        .map(asset => ({ id: asset.id, name: asset.name })),
+  const pictures = useMemo(
+    () => assets.filter(asset => PICTURES.includes(asset.type) && isLocalPicture(asset)),
     [assets],
+  )
+  const options = useMemo(
+    () => pictures.map(asset => ({ id: asset.id, name: asset.name })),
+    [pictures],
   )
 
   const run = useTextures(state => state.runCommand)
   const inspected = useTextureViews(state => inspectedChannel(state, documentId))
   const inspect = useTextureViews(state => state.inspect)
+  // Derived where both stores are visible, as the document derives it: a channel emptied while it
+  // was the one being looked at left its tile pressed AND disabled, saying two things at once.
+  const shown = inspected && channels[inspected] ? inspected : null
 
   return (
     <div className="grid grid-cols-2 gap-1 p-1">
@@ -67,15 +74,15 @@ function Grid({ documentId }: { documentId: string }) {
             channel={channel}
             map={channels[channel] ?? null}
             options={options}
-            inspected={inspected === channel}
+            inspected={shown === channel}
             onPick={assetId => {
-              const asset = byId.get(assetId)
+              const asset = pictures.find(candidate => candidate.id === assetId)
               if (asset) placeTextureChannel(documentId, asset, channel)
             }}
             onClear={() => run(documentId, setChannel(channel, null))}
             // Clicking the one already shown flat goes back to the lit material: one gesture in
             // and out, rather than a second control to find.
-            onInspect={() => inspect(documentId, inspected === channel ? null : channel)}
+            onInspect={() => inspect(documentId, shown === channel ? null : channel)}
           />
         </AssetDropTarget>
       ))}

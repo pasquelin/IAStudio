@@ -7,7 +7,7 @@ import { chipSkin } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
 import { setMaterial, setPreview } from '@/engines/texture/commands'
-import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
+import { MATERIAL_BOUNDS, PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { textureOf, useTextures } from '@/stores/textures'
 import { EnvironmentSection } from './EnvironmentSection'
@@ -122,12 +122,11 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
       <PropertySection title={t('texture.relief')}>
         {/* Signed on purpose: a negative scale flips the relief, which is the answer to a normal
             map baked the other way round. */}
+        {/* The bounds come from the state, which clamps a hand-edited file to the same ones. */}
         <SliderField
           label={t('texture.normalScale')}
           value={material.normalScale}
-          min={-2}
-          max={2}
-          step={0.05}
+          {...MATERIAL_BOUNDS.normalScale}
           onChange={value => onMaterial('normalScale', value)}
           {...edit.gesture}
         />
@@ -141,9 +140,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         <SliderField
           label={t('texture.heightScale')}
           value={material.heightScale}
-          min={0}
-          max={0.5}
-          step={0.005}
+          {...MATERIAL_BOUNDS.heightScale}
           onChange={value => onMaterial('heightScale', value)}
           {...edit.gesture}
         />
@@ -159,9 +156,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         <SliderField
           label={t('texture.emissiveIntensity')}
           value={material.emissiveIntensity}
-          min={0}
-          max={4}
-          step={0.05}
+          {...MATERIAL_BOUNDS.emissiveIntensity}
           onChange={value => onMaterial('emissiveIntensity', value)}
           {...edit.gesture}
         />

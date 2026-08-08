@@ -6,7 +6,7 @@ import { ViewportEngine } from '../viewport/ViewportEngine'
 import { TextureRenderer } from './TextureRenderer'
 import { newTexture, slotFor, type ChannelMap, type TextureState } from './texture-state'
 
-const MAP: ChannelMap = { assetId: 'map-1', origin: 'generated', width: 512, height: 512 }
+const MAP: Omit<ChannelMap, 'assetId'> = { origin: 'generated', width: 512, height: 512 }
 
 const channelOf = (channel: PbrChannel, assetId: string): TextureState => {
   const state = newTexture()
@@ -14,10 +14,17 @@ const channelOf = (channel: PbrChannel, assetId: string): TextureState => {
   return state
 }
 
+/** All eight filled, which is what the loops in the engine actually have to handle. */
+const everyChannel = (): TextureState => {
+  const state = newTexture()
+  for (const channel of PBR_CHANNELS) state.channels[channel] = { ...MAP, assetId: `${channel}-1` }
+  return state
+}
+
 /**
- * The environment is the one part of this engine a unit test can reach: `mount` builds a real
- * `WebGLRenderer`, which jsdom cannot give (`test-setup` hands back no canvas context). Stubbing
- * the viewport's mount and its `gl` accessor is enough — nothing here dereferences the renderer.
+ * `mount` builds a real `WebGLRenderer`, which jsdom cannot give (`test-setup` hands back no canvas
+ * context). Stubbing the viewport's mount and its `gl` accessor is enough — nothing here
+ * dereferences the renderer, so what the engine decides is reachable and what it draws is not.
  */
 vi.mock('../viewport/environment', () => ({ createEnvironment: () => fakeEnvironment() }))
 
@@ -27,7 +34,7 @@ const skyOf = (assetId: string): TextureState => {
   return state
 }
 
-describe('the environment of a texture preview', () => {
+describe('the texture preview', () => {
   let source: ReturnType<typeof fakeTextureSource>
   let host: HTMLElement
 
@@ -107,19 +114,35 @@ describe('the environment of a texture preview', () => {
    * alone: the loop is what decides, and it is the loop a refactor narrows by accident.
    */
   describe('the channels of a texture', () => {
-    it.each(PBR_CHANNELS)('loads %s, slot or no slot', async channel => {
-      await applied(mounted(), channelOf(channel, `${channel}-1`))
+    /**
+     * All eight at once rather than one `it.each` per channel: it is the loop over `PBR_CHANNELS`
+     * that decides, and proving it handles them *together* is what a per-channel case cannot say.
+     */
+    it('loads every channel, slot or no slot', async () => {
+      const renderer = mounted()
+      renderer.apply(everyChannel())
 
-      expect(source.load).toHaveBeenCalledWith(`scenario://asset/${channel}-1`)
+      await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(PBR_CHANNELS.length))
+      for (const channel of PBR_CHANNELS) {
+        expect(source.load).toHaveBeenCalledWith(`scenario://asset/${channel}-1`)
+      }
     })
 
-    it.each(PBR_CHANNELS)('frees %s when it is taken out of the texture', async channel => {
+    /**
+     * Emptied while the eight loads are still in flight, which is the harder half: the cache frees
+     * what arrives for a holder that no longer exists, so the disposal lands on resolution rather
+     * than on the release — hence waiting for it instead of asserting straight away.
+     */
+    it('frees every channel when the texture is emptied', async () => {
       const renderer = mounted()
-      await applied(renderer, channelOf(channel, `${channel}-1`))
+      renderer.apply(everyChannel())
+      await vi.waitFor(() => expect(source.freed).toHaveLength(PBR_CHANNELS.length))
 
       renderer.apply(newTexture())
 
-      expect(source.freed[0]).toHaveBeenCalled()
+      await vi.waitFor(() => {
+        for (const freed of source.freed) expect(freed).toHaveBeenCalled()
+      })
     })
 
     it('frees the cavity mask on dispose, which no slot would have done for it', async () => {
@@ -147,16 +170,88 @@ describe('the environment of a texture preview', () => {
      * that reached the shader from one that was merely loaded and dropped: repeat, offset and
      * rotation are applied to every map at once, so a channel left out drifts away from the rest.
      */
-    it.each(PBR_CHANNELS)('applies the tiling of the material to %s', async channel => {
+    it('applies the tiling of the material to every map at once', async () => {
       const renderer = mounted()
-      const state = channelOf(channel, `${channel}-1`)
+      const state = everyChannel()
       state.material.tiling = { x: 3, y: 3 }
-      await applied(renderer, state)
+      renderer.apply(state)
+      await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(PBR_CHANNELS.length))
+
+      for (const result of source.load.mock.results) {
+        const map = await result.value
+        await vi.waitFor(() => expect(map.repeat.x).toBe(3))
+        expect(map.wrapS).toBe(RepeatWrapping)
+        expect(map.center.x).toBe(0.5)
+      }
+    })
+
+    /**
+     * The regression this exists for, measured rather than supposed: `Texture.needsUpdate` bumps
+     * `source.needsUpdate` too, so three re-uploads the pixels AND rebuilds the mip chain. Set on
+     * every `apply`, eight 2K channels came to 128 MB of upload per frame of any drag — four to ten
+     * times the whole frame budget, for a slider that has nothing to do with tiling.
+     *
+     * Nothing here needs it: `matrixAutoUpdate` is on, so three refreshes the uv matrix itself.
+     */
+    it('never asks for a re-upload of pixels it has not changed', async () => {
+      const renderer = mounted()
+      await applied(renderer, channelOf('baseColor', 'base-1'))
+      const map = await source.load.mock.results[0]?.value
+
+      // Whatever the first render needed is spent; from here on a version bump IS a re-upload.
+      const version = map.version
+
+      // The tiling moves, so the pass really does run and really does rewrite `repeat` — which is
+      // the case that matters: placing a map again must not cost its pixels. Asserted on a state
+      // that does NOT move would only have re-tested the guard above it.
+      const moved = channelOf('baseColor', 'base-1')
+      moved.material.tiling = { x: 2, y: 2 }
+      renderer.apply(moved)
+
+      expect(map.repeat.x).toBe(2)
+      expect(map.version).toBe(version)
+    })
+
+    it('leaves the maps alone entirely when the tiling has not moved', async () => {
+      const renderer = mounted()
+      await applied(renderer, channelOf('baseColor', 'base-1'))
+      const map = await source.load.mock.results[0]?.value
+      map.repeat.set(9, 9)
+
+      // Same tiling as before, so the pass must not run — not even to write the same values back.
+      renderer.apply(channelOf('baseColor', 'base-1'))
+
+      expect(map.repeat.x).toBe(9)
+    })
+
+    it('still follows the tiling when it does move', async () => {
+      const renderer = mounted()
+      await applied(renderer, channelOf('baseColor', 'base-1'))
+      const map = await source.load.mock.results[0]?.value
+
+      const moved = channelOf('baseColor', 'base-1')
+      moved.material.tiling = { x: 4, y: 2 }
+      renderer.apply(moved)
+
+      expect([map.repeat.x, map.repeat.y]).toEqual([4, 2])
+    })
+
+    /**
+     * A 4K picture decodes for hundreds of milliseconds. The state that started the load is stale
+     * by the time it resolves, and reapplying it snapped every other map back to a tiling the user
+     * had already left.
+     */
+    it('places a map that arrives late on the tiling in force, not the one it was asked under', async () => {
+      const renderer = mounted()
+      const asked = channelOf('baseColor', 'base-1')
+      renderer.apply(asked)
+
+      const moved = channelOf('baseColor', 'base-1')
+      moved.material.tiling = { x: 5, y: 5 }
+      renderer.apply(moved)
 
       const map = await source.load.mock.results[0]?.value
-      await vi.waitFor(() => expect(map.repeat.x).toBe(3))
-      expect(map.wrapS).toBe(RepeatWrapping)
-      expect(map.center.x).toBe(0.5)
+      await vi.waitFor(() => expect(map.repeat.x).toBe(5))
     })
 
     it('asks once for a channel, however many times the same state comes back', async () => {

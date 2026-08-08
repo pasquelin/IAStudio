@@ -94,11 +94,8 @@ function Face() {
     }
 
     // Nothing was clicked in a panel, so the document in front speaks for itself: a scene says
-    // which node is selected from its own state, and a texture has nothing to select at all —
-    // the material IS the document.
-    //
-    // At most one of the two is set, `activeIdOfKind` answering for a single kind: the order
-    // below is reading order, not precedence.
+    // which node is selected from its own state, and a texture has nothing to select — the
+    // material IS the document. At most one id is set, so the order below is reading order.
     default:
       if (sceneId) return <SceneInspector documentId={sceneId} />
       if (textureId) return <TextureInspector documentId={textureId} />

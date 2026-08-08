@@ -45,10 +45,6 @@ describe('TextureDocument', () => {
     expect(screen.queryByText(/Glissez une image du projet/)).toBeNull()
   })
 
-  /**
-   * Laid over the viewport rather than replacing it: a WebGL context does not survive being
-   * rebuilt for a glance at a normal map, and the engine would reload all eight channels.
-   */
   describe('a channel looked at on its own', () => {
     it('draws the picture of the inspected channel', () => {
       fill('normal', 'normal-1')

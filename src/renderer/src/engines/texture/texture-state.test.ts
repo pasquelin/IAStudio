@@ -3,6 +3,7 @@ import { isPbrChannel, PBR_CHANNELS } from '@shared/domain/texture'
 import {
   canDerive,
   DEFAULT_PREVIEW,
+  MATERIAL_BOUNDS,
   DEFAULT_TEXTURE_MATERIAL,
   missingChannels,
   newTexture,
@@ -311,5 +312,41 @@ describe('parseTexture', () => {
 
     expect(parsed.channels.metalness?.origin).toBe('imported')
     expect(parsed.channels.normal?.origin).toBe('derived')
+  })
+})
+
+describe('the bounds a slider and a file share', () => {
+  /**
+   * The regression: read unclamped, a hand-edited `heightScale: 3` opened and rendered, the slider
+   * pinned at 0.5, and the first touch of it destroyed the value without a word.
+   */
+  it('holds a hand-edited value inside what its own slider can reach', () => {
+    const texture = parseTexture({
+      material: { heightScale: 3, normalScale: 40, emissiveIntensity: 99 },
+    })
+
+    expect(texture.material.heightScale).toBe(MATERIAL_BOUNDS.heightScale.max)
+    expect(texture.material.normalScale).toBe(MATERIAL_BOUNDS.normalScale.max)
+    expect(texture.material.emissiveIntensity).toBe(MATERIAL_BOUNDS.emissiveIntensity.max)
+  })
+
+  it('holds the low end too, where a negative relief is legitimate and a negative height is not', () => {
+    const texture = parseTexture({ material: { normalScale: -40, heightScale: -1 } })
+
+    expect(texture.material.normalScale).toBe(MATERIAL_BOUNDS.normalScale.min)
+    expect(texture.material.heightScale).toBe(0)
+  })
+
+  it('keeps a signed normal scale, which is the answer to a map baked the other way round', () => {
+    expect(parseTexture({ material: { normalScale: -1 } }).material.normalScale).toBe(-1)
+    expect(MATERIAL_BOUNDS.normalScale.min).toBeLessThan(0)
+  })
+
+  it('opens every default inside its own bounds', () => {
+    for (const [key, { min, max }] of Object.entries(MATERIAL_BOUNDS)) {
+      const value = DEFAULT_TEXTURE_MATERIAL[key as keyof typeof MATERIAL_BOUNDS]
+      expect(value, key).toBeGreaterThanOrEqual(min)
+      expect(value, key).toBeLessThanOrEqual(max)
+    }
   })
 })

@@ -3,6 +3,7 @@ import {
   mdiDeleteOutline,
   mdiDotsHorizontal,
   mdiFileImageOutline,
+  mdiImageOffOutline,
   mdiTextureBox,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
@@ -85,16 +86,16 @@ export function ChannelTile({
           fallbackIcon={mdiTextureBox}
           badge={
             origin && (
+              // Top LEFT: the menu button owns the other corner, and a badge is a standing. Same
+              // chrome as the overlay badge of `AssetBadge` and of a featured model — the token,
+              // not a hand-picked black.
               <span
+                className="bg-chassis/75 text-text absolute top-1 left-1 rounded-(--radius-sc-sm) p-px"
                 title={t(origin.key)}
-                // Top LEFT: the menu button owns the other corner, and a badge is a standing.
-                className={cn(
-                  'absolute top-1 left-1 rounded-(--radius-sc-sm) bg-black/60 p-0.5',
-                  'text-white',
-                )}
+                aria-label={t(origin.key)}
+                role="img"
               >
                 <UiIcon path={origin.icon} size={12} />
-                <span className="sr-only">{t(origin.key)}</span>
               </span>
             )
           }
@@ -108,11 +109,14 @@ export function ChannelTile({
           tooltip={TIP_LEFT}
           variant="header"
           opensOnClick
-          disabled={options.length === 0 && !map}
-          // "Empty" is one of the choices rather than a second button, as `TextureField` has it:
-          // choosing no picture is choosing. It also keeps the menu two rows deep at its
-          // shallowest — one row makes `MenuButton` act outright instead of opening.
-          rowCount={options.length + 1}
+          /**
+           * "Empty" is always offered — choosing no picture is choosing, as `TextureField` has it
+           * — plus one row per picture, or a disabled row saying there is none. Never fewer than
+           * two, and that is the point: `MenuButton` acts outright instead of opening on a single
+           * row, so a project holding no picture left the one remaining action, emptying the
+           * channel, behind a button that looked alive and did nothing.
+           */
+          rowCount={Math.max(options.length + 1, 2)}
           rows={close => [
             <MenuRow
               key="clear"
@@ -124,18 +128,29 @@ export function ChannelTile({
                 close()
               }}
             />,
-            ...options.map(option => (
-              <MenuRow
-                key={option.id}
-                label={option.name}
-                icon={mdiFileImageOutline}
-                checked={map?.assetId === option.id}
-                onSelect={() => {
-                  onPick(option.id)
-                  close()
-                }}
-              />
-            )),
+            // Says WHY there is no choice, rather than a button that refuses without a word.
+            ...(options.length === 0
+              ? [
+                  <MenuRow
+                    key="none"
+                    label={t('texture.noPicture')}
+                    icon={mdiImageOffOutline}
+                    disabled
+                    onSelect={() => undefined}
+                  />,
+                ]
+              : options.map(option => (
+                  <MenuRow
+                    key={option.id}
+                    label={option.name}
+                    icon={mdiFileImageOutline}
+                    checked={map?.assetId === option.id}
+                    onSelect={() => {
+                      onPick(option.id)
+                      close()
+                    }}
+                  />
+                ))),
           ]}
         />
       </div>

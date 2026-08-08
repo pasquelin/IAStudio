@@ -2,38 +2,37 @@ import type { NumericBounds } from '@/helpers/numeric'
 import { NumberField } from './NumberField'
 import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
-/** Any axis-keyed value: a 3D position, or the two components of a repeat. */
-export type AxisValue = Record<string, number>
+/** A position or a rotation, or the two components of a repeat. `z` absent means two axes. */
+export type AxisValue = { x: number; y: number; z?: number }
 
 export type VectorFieldProps<V extends AxisValue> = NumericBounds &
   GestureProps & {
     label: string
     value: V
-    /** Which axes to show, in the order they read. Three by default, as a transform has. */
-    axes?: readonly (keyof V & string)[]
     onChange: (value: V) => void
   }
 
-const XYZ: readonly string[] = ['x', 'y', 'z']
+const XYZ: readonly (keyof AxisValue)[] = ['x', 'y', 'z']
 
 /**
  * The components of a position, a rotation, a scale or a repeat. Each axis is a `NumberField` of
  * its own, so each one drags on its own letter — and the axis names are not translated: X, Y and
  * Z are what every 3D application calls them, in every language.
  *
- * Generic over its axes rather than fixed at three: a tiling has two, and a second component
- * built for it would have been this one with a line removed.
+ * Two axes or three, read off the value: a tiling has two, and a second component built for it
+ * would have been this one with a line removed.
  */
 export function VectorField<V extends AxisValue>({
   label,
   value,
-  axes,
   onChange,
   onGestureStart,
   onGestureEnd,
   ...bounds
 }: VectorFieldProps<V>) {
-  const shown = axes ?? XYZ.filter((axis): axis is keyof V & string => axis in value)
+  // Read off the value rather than declared: a tiling has two components and a transform three,
+  // and the shape of the value is the only place that fact already lives.
+  const shown = XYZ.filter(axis => value[axis] !== undefined)
 
   return (
     <div className={FIELD_ROW}>

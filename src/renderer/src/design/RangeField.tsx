@@ -1,10 +1,23 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@/helpers/numeric'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
+import { FIELD_LABEL, FIELD_READOUT, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
 export type RangeValue = { min: number; max: number }
+
+/**
+ * Pointer events are off on the inputs and back on for their handles: stacked on one rail, the
+ * upper input would otherwise swallow every press meant for the lower one.
+ *
+ * At module scope because it depends on nothing, and this field sits on the drag path twice.
+ */
+const HANDLE = cn(
+  'absolute inset-0 m-0 h-full w-full appearance-none bg-transparent pointer-events-none',
+  '[&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto',
+  'accent-accent',
+  FOCUS_RING,
+)
 
 export type RangeFieldProps = GestureProps & {
   label: string
@@ -52,14 +65,6 @@ export function RangeField({
     )
   }
 
-  // Pointer events are off on the inputs and back on for their handles: stacked on one rail, the
-  // upper input would otherwise swallow every press meant for the lower one.
-  const handle = cn(
-    'absolute inset-0 m-0 h-full w-full appearance-none bg-transparent pointer-events-none',
-    '[&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto',
-    FOCUS_RING,
-  )
-
   return (
     <div className={FIELD_ROW}>
       <span className={FIELD_LABEL}>{label}</span>
@@ -91,7 +96,7 @@ export function RangeField({
           onChange={event => set('min', Number(event.target.value))}
           onFocus={() => onGestureStart?.()}
           onBlur={() => onGestureEnd?.()}
-          className={cn(handle, 'accent-accent')}
+          className={HANDLE}
         />
         <input
           type="range"
@@ -103,12 +108,11 @@ export function RangeField({
           onChange={event => set('max', Number(event.target.value))}
           onFocus={() => onGestureStart?.()}
           onBlur={() => onGestureEnd?.()}
-          className={cn(handle, 'accent-accent')}
+          className={HANDLE}
         />
       </div>
 
-      {/* Tabular figures, as `SliderField` does: without them the row twitches as digits change. */}
-      <output className="text-muted w-14 shrink-0 text-right tabular-nums">
+      <output className={cn(FIELD_READOUT, 'w-14')}>
         {value.min}–{value.max}
       </output>
     </div>

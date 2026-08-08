@@ -87,7 +87,7 @@ export function syncEdgeTransform(uniforms: MaterialUniforms): void {
   uniforms.edgeTransform.value.copy(map.matrix)
 }
 
-/** Where the field names meet the GLSL names — one place, so a rename cannot go half done. */
+/** One place where the field names meet the GLSL ones, so a rename cannot go half done. */
 export function bindUniforms(target: Record<string, IUniform>, uniforms: MaterialUniforms): void {
   target[ROUGHNESS_REMAP] = uniforms.roughnessRemap
   target[METALNESS_REMAP] = uniforms.metalnessRemap

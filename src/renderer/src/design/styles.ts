@@ -71,6 +71,14 @@ export const FIELD_ROW = 'flex min-w-0 items-center gap-1 text-[11px]'
 export const FIELD_LABEL = 'text-muted w-16 shrink-0 truncate'
 
 /**
+ * The number beside a slider — "somewhere past the middle" is not a value anyone can write down.
+ *
+ * Tabular figures are the point: without them the row twitches sideways as the digits change. The
+ * width is the caller's, one value being narrower than a span of two.
+ */
+export const FIELD_READOUT = 'text-muted shrink-0 text-right tabular-nums'
+
+/**
  * Both ends of one gesture. Everything a field emits between them is one thing the user did,
  * and whoever owns the value is expected to keep exactly one history entry for it.
  */

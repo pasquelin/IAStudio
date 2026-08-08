@@ -84,21 +84,5 @@ describe('VectorField', () => {
 
       expect(onChange).toHaveBeenCalledWith({ x: 5, y: 3 })
     })
-
-    it('shows the axes it is told to, in the order it is told', () => {
-      const onChange = vi.fn()
-      render(
-        <VectorField
-          label="Repeat"
-          value={{ u: 1, v: 4 }}
-          axes={['v', 'u']}
-          step={1}
-          onChange={onChange}
-        />,
-      )
-
-      const labels = screen.getAllByText(/^[UV]$/).map(node => node.textContent)
-      expect(labels).toEqual(['V', 'U'])
-    })
   })
 })

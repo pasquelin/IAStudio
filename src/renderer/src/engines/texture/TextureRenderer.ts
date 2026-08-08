@@ -1,5 +1,4 @@
 import {
-  Color,
   Mesh,
   MeshStandardMaterial,
   NoColorSpace,
@@ -24,7 +23,12 @@ import {
   syncEdgeTransform,
 } from './material-shader'
 import { previewGeometry } from './preview-geometry'
-import { slotFor, type PreviewShape, type TextureState } from './texture-state'
+import {
+  DEFAULT_TEXTURE_MATERIAL,
+  slotFor,
+  type PreviewShape,
+  type TextureState,
+} from './texture-state'
 
 export type TextureRendererOptions = {
   /** Injected: jsdom decodes no image, and the engine is built the same way in both. */
@@ -61,6 +65,10 @@ export class TextureRenderer {
    */
   private readonly holding = new Map<PbrChannel, string>()
   private readonly uniforms = createUniforms()
+  /** What the maps are currently placed on, so a map arriving late is placed on the same thing. */
+  private transform: MapTransform | null = null
+  /** Anchors already reported, so a rebuilt program does not say the same thing again. */
+  private readonly reported = new Set<string>()
   private shape: PreviewShape = 'sphere'
   private displaced = false
   private spinning = false
@@ -80,9 +88,15 @@ export class TextureRenderer {
       const { source, missing } = patchFragment(shader.fragmentShader)
       shader.fragmentShader = source
       bindUniforms(shader.uniforms, this.uniforms)
-      // Said once per anchor: a chunk renamed upstream costs a remap, and a remap that quietly
-      // stopped applying is a slider that looks alive and does nothing.
-      for (const anchor of missing) reportFailure('texture.shader', anchor, new Error(anchor))
+
+      // Once per anchor per engine, and the `Set` is what makes that true: a program is rebuilt
+      // whenever a channel is filled, and a repeated report would bury the journal. A remap that
+      // quietly stopped applying is a slider that looks alive and does nothing.
+      for (const anchor of missing) {
+        if (this.reported.has(anchor)) continue
+        this.reported.add(anchor)
+        reportFailure('texture.shader', anchor, new Error(`three no longer ships ${anchor}`))
+      }
     }
   }
 
@@ -157,28 +171,32 @@ export class TextureRenderer {
     )
     this.material.displacementScale = material.heightScale
     this.material.aoMapIntensity = material.aoIntensity
-    this.material.emissive = new Color(material.emissive)
+    // `.set`, not a new Color: this runs on every frame of every drag, and three owns the instance.
+    this.material.emissive.set(material.emissive)
     this.material.emissiveIntensity = material.emissiveIntensity
 
+    // No `needsUpdate` here: nothing above affects the PROGRAM. A slot going empty→filled does,
+    // and `install`, `release` and `setEdgeMap` are the three that say so.
     this.applyTransform(material)
-    this.material.needsUpdate = true
   }
 
   /**
    * Repeat, offset and rotation are applied to **every** map, not just the base colour: applied
    * to one alone, the maps drift apart and the relief stops matching the picture it lifts.
+   *
+   * Guarded on the values having moved, as `applyGeometry` is: `apply` runs on every frame of
+   * every drag, and thirteen of the fifteen sliders have nothing to do with tiling.
+   *
+   * And no `needsUpdate` on a map, ever. It bumps `source.needsUpdate` too, which re-uploads the
+   * pixels AND rebuilds the mip chain — eight 2K channels is 128 MB of upload per frame. Nothing
+   * here needs it: `matrixAutoUpdate` is on, so three refreshes the uv matrix itself every frame,
+   * and `wrapS`/`wrapT`, which really are upload-time state, are set once in `install`.
    */
   private applyTransform({ tiling, offset, rotation }: TextureState['material']): void {
-    for (const map of this.maps()) {
-      map.wrapS = RepeatWrapping
-      map.wrapT = RepeatWrapping
-      map.repeat.set(tiling.x, tiling.y)
-      map.offset.set(offset.x, offset.y)
-      map.center.set(0.5, 0.5)
-      map.rotation = rotation
-      map.needsUpdate = true
-    }
+    if (this.transform && sameTransform(this.transform, { tiling, offset, rotation })) return
+    this.transform = { tiling, offset, rotation }
 
+    for (const map of this.maps()) this.placeMap(map)
     syncEdgeTransform(this.uniforms)
   }
 
@@ -203,20 +221,40 @@ export class TextureRenderer {
       void this.cache.acquire(wanted, spaceOf(channel)).then(loaded => {
         // Stale: the channel has moved on, and the reference it took went back with the move.
         if (this.holding.get(channel) !== wanted || !loaded) return
-        this.install(channel, loaded, texture)
+        this.install(channel, loaded)
       })
     }
   }
 
-  private install(channel: PbrChannel, map: Texture, texture: TextureState): void {
+  /**
+   * Takes no state: decoding a 4K picture runs for hundreds of milliseconds, and the state that
+   * started the load is stale by the time it resolves — reapplying it snapped every other map back
+   * to the tiling the user had already left.
+   */
+  private install(channel: PbrChannel, map: Texture): void {
+    // Upload-time state, set before the first render rather than on every frame: changing either
+    // of these later would cost a full re-upload of the pixels.
+    map.wrapS = RepeatWrapping
+    map.wrapT = RepeatWrapping
+    map.center.set(0.5, 0.5)
+    this.placeMap(map)
+
     const slot = slotFor(channel)
     if (slot) this.material[slot] = map
     else this.setEdgeMap(map)
 
     // A channel going from empty to filled changes the shader program itself.
     this.material.needsUpdate = true
-    this.applyTransform(texture.material)
+    syncEdgeTransform(this.uniforms)
     this.viewport.requestRender()
+  }
+
+  /** The transform this material is on, onto one map — the new one, or all of them. */
+  private placeMap(map: Texture): void {
+    const { tiling, offset, rotation } = this.transform ?? DEFAULT_TEXTURE_MATERIAL
+    map.repeat.set(tiling.x, tiling.y)
+    map.offset.set(offset.x, offset.y)
+    map.rotation = rotation
   }
 
   private release(channel: PbrChannel): void {
@@ -283,4 +321,17 @@ export class TextureRenderer {
  */
 function spaceOf(channel: PbrChannel): ColorSpace {
   return channel === 'baseColor' ? SRGBColorSpace : NoColorSpace
+}
+
+/** How every map is laid on the shape. The three values that move together, and only those. */
+type MapTransform = Pick<TextureState['material'], 'tiling' | 'offset' | 'rotation'>
+
+function sameTransform(a: MapTransform, b: MapTransform): boolean {
+  return (
+    a.rotation === b.rotation &&
+    a.tiling.x === b.tiling.x &&
+    a.tiling.y === b.tiling.y &&
+    a.offset.x === b.offset.x &&
+    a.offset.y === b.offset.y
+  )
 }

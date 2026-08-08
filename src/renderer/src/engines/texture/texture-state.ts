@@ -90,6 +90,20 @@ export type ValueRange = { min: number; max: number }
 export type Vector2 = { x: number; y: number }
 
 /**
+ * How far each setting a slider drives is allowed to go. Here rather than at the field, because
+ * the parser has to hold the same bounds: read unclamped, a hand-edited `heightScale: 3` opened
+ * and rendered fine, the slider pinned at its own maximum, and the first touch of it destroyed the
+ * value — with the two truths far enough apart that nothing pointed at the cause.
+ *
+ * The three that already read through `readUnit` are not here: their bound IS the unit interval.
+ */
+export const MATERIAL_BOUNDS = {
+  normalScale: { min: -2, max: 2, step: 0.05 },
+  heightScale: { min: 0, max: 0.5, step: 0.005 },
+  emissiveIntensity: { min: 0, max: 4, step: 0.05 },
+}
+
+/**
  * The settings of the preview material. None of them ever touch the pixels of a channel: they
  * are read at render time, which is what lets a value be changed back six months later.
  *
@@ -241,6 +255,17 @@ function readUnit(source: Record<string, unknown>, key: string, fallback: number
   return clamp(readNumber(source, key, fallback), 0, 1)
 }
 
+/** Held inside what a slider can reach, so a file and its own field cannot disagree. */
+function readBounded(
+  source: Record<string, unknown>,
+  key: string,
+  fallback: number,
+  bound: keyof typeof MATERIAL_BOUNDS,
+): number {
+  const { min, max } = MATERIAL_BOUNDS[bound]
+  return clamp(readNumber(source, key, fallback), min, max)
+}
+
 /** Kept in order as well as in range: handles crossed over would remap everything to nothing. */
 function readRange(source: Record<string, unknown>, key: string, fallback: ValueRange): ValueRange {
   const raw = source[key]
@@ -302,14 +327,19 @@ function readMaterial(value: unknown): MaterialSettings {
     roughnessRange: readRange(value, 'roughnessRange', fallback.roughnessRange),
     metalnessRange: readRange(value, 'metalnessRange', fallback.metalnessRange),
     // Signed on purpose: a negative scale flips the relief, which is a legitimate answer to a
-    // normal map baked the other way round.
-    normalScale: readNumber(value, 'normalScale', fallback.normalScale),
+    // normal map baked the other way round — hence a bound that is not the unit interval.
+    normalScale: readBounded(value, 'normalScale', fallback.normalScale, 'normalScale'),
     invertNormalGreen: readBoolean(value, 'invertNormalGreen', fallback.invertNormalGreen),
-    heightScale: readNumber(value, 'heightScale', fallback.heightScale),
+    heightScale: readBounded(value, 'heightScale', fallback.heightScale, 'heightScale'),
     aoIntensity: readUnit(value, 'aoIntensity', fallback.aoIntensity),
     edgeIntensity: readUnit(value, 'edgeIntensity', fallback.edgeIntensity),
     emissive: readString(value, 'emissive', fallback.emissive),
-    emissiveIntensity: readPositive(value, 'emissiveIntensity', fallback.emissiveIntensity),
+    emissiveIntensity: readBounded(
+      value,
+      'emissiveIntensity',
+      fallback.emissiveIntensity,
+      'emissiveIntensity',
+    ),
     tiling: readVector(value, 'tiling', fallback.tiling),
     offset: readVector(value, 'offset', fallback.offset),
     rotation: readNumber(value, 'rotation', fallback.rotation),

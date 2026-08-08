@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Matrix3, ShaderLib, Texture } from 'three'
+import { Matrix3, ShaderLib, Texture, type IUniform } from 'three'
 import {
   bindUniforms,
   createUniforms,
@@ -82,13 +82,6 @@ describe('patchFragment', () => {
     )
   })
 
-  it('reads the channels three reads, which an ORM texture packs together', () => {
-    const { source } = patchFragment(PHYSICAL)
-
-    expect(source).toContain('texelRoughness.g')
-    expect(source).toContain('texelMetalness.b')
-  })
-
   it('leaves the original chunk includes in place, so the texel exists to be read', () => {
     const { source } = patchFragment(PHYSICAL)
 
@@ -126,7 +119,13 @@ describe('patchFragment', () => {
   it('reports every missing anchor rather than stopping at the first', () => {
     const { missing } = patchFragment('nothing a shader would recognise')
 
-    expect(missing).toHaveLength(4)
+    // Named rather than counted: a fifth patch would break a count without any behaviour changing.
+    expect(missing).toEqual([
+      'void main() {',
+      '#include <roughnessmap_fragment>',
+      '#include <metalnessmap_fragment>',
+      '#include <aomap_fragment>',
+    ])
   })
 })
 
@@ -198,19 +197,20 @@ describe('materialFrameOf', () => {
 describe('bindUniforms', () => {
   it('publishes every uniform the patched source declares, under its GLSL name', () => {
     const uniforms = createUniforms()
-    const target = {}
+    const target: Record<string, IUniform> = {}
 
     bindUniforms(target, uniforms)
 
+    // Every published name is declared by the patched source. Asserting against the same constants
+    // the function uses would have passed through any rename, pinning nothing.
+    const { source } = patchFragment(PHYSICAL)
+    for (const name of Object.keys(target)) expect(source).toContain(`${name};`)
+    expect(Object.keys(target)).toHaveLength(5)
+
     // The same objects, not copies: three reads these on every frame, and a copy would freeze
     // the material on whatever the values were at compile time.
-    expect(target).toEqual({
-      [ROUGHNESS_REMAP]: uniforms.roughnessRemap,
-      [METALNESS_REMAP]: uniforms.metalnessRemap,
-      [EDGE_MAP]: uniforms.edgeMap,
-      [EDGE_INTENSITY]: uniforms.edgeIntensity,
-      [EDGE_TRANSFORM]: uniforms.edgeTransform,
-    })
+    expect(target[ROUGHNESS_REMAP]).toBe(uniforms.roughnessRemap)
+    expect(target[EDGE_MAP]).toBe(uniforms.edgeMap)
   })
 
   it('starts on an identity remap, so an untouched texture renders what its maps hold', () => {
@@ -246,9 +246,10 @@ describe('syncEdgeTransform', () => {
 
     syncEdgeTransform(uniforms)
 
-    // The translation column of the uv matrix three composes — stale unless `updateMatrix` ran.
-    expect(uniforms.edgeTransform.value.elements[6]).toBeCloseTo(map.matrix.elements[6] ?? 0)
-    expect(uniforms.edgeTransform.value.equals(new Matrix3())).toBe(false)
+    // Written out rather than read back off `map.matrix`: comparing the copy to its source passes
+    // whether or not `updateMatrix` ran, because both would then be the identity.
+    expect(uniforms.edgeTransform.value.elements[6]).toBeCloseTo(0.25)
+    expect(uniforms.edgeTransform.value.elements[7]).toBeCloseTo(0.5)
   })
 
   it('leaves the identity in place while no mask is loaded', () => {

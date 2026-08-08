@@ -7,6 +7,7 @@ import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES, MODEL_PERIODS, MODEL_SORTS } fr
 import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
+import { PBR_CHANNELS } from '../domain/texture'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 
 function flatten(
@@ -89,6 +90,11 @@ const DYNAMIC_KEYS: readonly string[] = [
   // turns the progress row into a raw code at the exact moment something is happening.
   ...JOB_STATUSES.map(status => `jobs.status.${status}`),
   ...INGEST_STAGES.map(stage => `ingest.${stage}`),
+  // Composed from the shared PBR union to caption a tile of the Channels panel. `panels.channels`
+  // needs no line here because `t.panels[id]` is typed; this family has no such guard, so a ninth
+  // channel — and the domain warns the API adds types without notice — would caption a tile with
+  // its own key.
+  ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
 ]
 
 describe('the keys the interface composes', () => {

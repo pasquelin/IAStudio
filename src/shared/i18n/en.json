@@ -1316,7 +1316,8 @@
       "edge": "Cavity"
     },
     "inspectChannel": "Look at {{channel}} on its own",
-    "showMaterial": "Back to the lit material"
+    "showMaterial": "Back to the lit material",
+    "noPicture": "No picture in this project"
   },
   "usage": {
     "title": "Usage",

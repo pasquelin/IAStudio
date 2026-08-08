@@ -1316,7 +1316,8 @@
       "edge": "Cavité"
     },
     "inspectChannel": "Regarder {{channel}} seul",
-    "showMaterial": "Revenir au matériau éclairé"
+    "showMaterial": "Revenir au matériau éclairé",
+    "noPicture": "Aucune image dans ce projet"
   },
   "licences": {
     "title": "Licences",

@@ -140,10 +140,6 @@ describe('TextureInspector', () => {
     expect(preview().showBackground).toBe(false)
   })
 
-  /**
-   * The section the 3D space shows too. Its presence here is the point: a texture judged under a
-   * flat lamp is not judged, and a second copy of this control would have been the drift.
-   */
   it('lights the preview with the environment section the 3D space already had', () => {
     show()
 

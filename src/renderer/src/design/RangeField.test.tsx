@@ -61,10 +61,7 @@ describe('RangeField', () => {
     expect(onChange).toHaveBeenCalledWith({ min: 0.2, max: 0.9 })
   })
 
-  /**
-   * The regression worth a test: ends that swapped would remap a whole map to nothing, and a
-   * material rendered from it would go flat with nothing on screen to say why.
-   */
+  /** Meeting is legitimate — a span of nothing — so the clamp stops at the other handle. */
   it('stops the lower handle at the upper one rather than letting it past', () => {
     const { onChange, from } = renderField({ min: 0.2, max: 0.5 })
 
@@ -79,14 +76,6 @@ describe('RangeField', () => {
     fireEvent.change(to, { target: { value: '0.1' } })
 
     expect(onChange).toHaveBeenCalledWith({ min: 0.4, max: 0.4 })
-  })
-
-  it('lets the two meet, which is a legitimate span of nothing', () => {
-    const { onChange, from } = renderField({ min: 0.2, max: 0.5 })
-
-    fireEvent.change(from, { target: { value: '0.5' } })
-
-    expect(onChange).toHaveBeenCalledWith({ min: 0.5, max: 0.5 })
   })
 
   it('holds a value pushed past the field itself at the bound', () => {
