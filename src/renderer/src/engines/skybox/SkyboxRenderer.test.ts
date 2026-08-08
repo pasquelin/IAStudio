@@ -21,9 +21,9 @@ const pipeline = {
 } satisfies GpuPipeline
 
 /**
- * The grading pass is what the whole engine exists to feed, so its two inputs are watched. The
- * real pass is kept underneath — it is a `ShaderMaterial`, which jsdom builds fine — and only
- * the two setters are spied, so the material handed to the pipeline stays the real one.
+ * The grading pass is what the whole engine exists to feed, so its inputs and its disposal are
+ * watched. The real pass is kept underneath — it is a `ShaderMaterial`, which jsdom builds fine
+ * — so the material handed to the pipeline stays the real one.
  */
 let adjust: AdjustPass
 
@@ -34,7 +34,12 @@ vi.mock('../gpu/passes/adjust', async importOriginal => {
   return {
     ...actual,
     createAdjustPass: () => {
-      adjust = { ...actual.createAdjustPass(), setSource: vi.fn(), setAdjustments: vi.fn() }
+      adjust = {
+        ...actual.createAdjustPass(),
+        setSource: vi.fn(),
+        setAdjustments: vi.fn(),
+        dispose: vi.fn(),
+      }
       return adjust
     },
   }
@@ -178,6 +183,7 @@ describe('the renderer of a skybox', () => {
 
       expect(adjust.setAdjustments).toHaveBeenCalledWith(content.adjustments)
       expect(adjust.setSource).toHaveBeenCalledWith(expect.any(Texture))
+      expect(pipeline.renderTo).toHaveBeenCalledWith(adjust.material, gradedTarget())
     })
 
     it('clears the grading source when the picture goes', async () => {
@@ -346,6 +352,16 @@ describe('the renderer of a skybox', () => {
       expect(camera?.rotation.y).toBeCloseTo(afterFirst * 2, 5)
     })
 
+    it('raises the view when the hand goes down', () => {
+      const renderer = mounted()
+      renderer.apply(sunAt(SUN_BEHIND))
+      canvas.dispatchEvent(pointerAt('pointerdown', 10, 10))
+
+      window.dispatchEvent(pointerAt('pointermove', 10, 110))
+
+      expect(camera?.rotation.x).toBeGreaterThan(0)
+    })
+
     it('ignores a drag begun with another button', () => {
       grabbingTheSun(2)
 
@@ -409,7 +425,9 @@ describe('the renderer of a skybox', () => {
   })
 
   describe('going away', () => {
-    it('frees its sky, its target and everything it built', async () => {
+    // `probes` stays out: covering it would mean a fourth double for three meshes that own
+    // nothing else. `test-objects.ts` has no test at all — that is its own lot.
+    it('frees its sky, its target, its passes and its viewport', async () => {
       const renderer = mounted()
       const target = vi.spyOn(gradedTarget() ?? new WebGLRenderTarget(1, 1), 'dispose')
       await applied(renderer, skyOf('sky-1'))
@@ -420,6 +438,7 @@ describe('the renderer of a skybox', () => {
       expect(target).toHaveBeenCalled()
       expect(environment.dispose).toHaveBeenCalled()
       expect(pipeline.dispose).toHaveBeenCalled()
+      expect(adjust.dispose).toHaveBeenCalled()
       expect(disposeViewport).toHaveBeenCalled()
     })
 
