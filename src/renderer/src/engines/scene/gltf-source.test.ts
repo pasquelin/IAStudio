@@ -8,6 +8,8 @@ const setDecoderPath = vi.fn()
 const setTranscoderPath = vi.fn()
 const setDRACOLoader = vi.fn()
 const setKTX2Loader = vi.fn()
+const disposeDraco = vi.fn()
+const disposeKtx2 = vi.fn()
 
 /**
  * The three loaders, stood in for. jsdom fetches no decoder and has no GPU to ask, and what this
@@ -24,6 +26,7 @@ vi.mock('three/addons/loaders/GLTFLoader.js', () => ({
 
 vi.mock('three/addons/loaders/DRACOLoader.js', () => ({
   DRACOLoader: class {
+    dispose = disposeDraco
     setDecoderPath = (path: string) => {
       setDecoderPath(path)
       return this
@@ -34,6 +37,7 @@ vi.mock('three/addons/loaders/DRACOLoader.js', () => ({
 vi.mock('three/addons/loaders/KTX2Loader.js', () => ({
   KTX2Loader: class {
     detectSupport = detectSupport
+    dispose = disposeKtx2
     setTranscoderPath = (path: string) => {
       setTranscoderPath(path)
       return this
@@ -64,7 +68,7 @@ describe('createGltfSource', () => {
   })
 
   it('reads the scene out of what the loader brings back', async () => {
-    const source = await createGltfSource(() => null)('scenario://asset/mesh-1')
+    const source = await createGltfSource(() => null).load('scenario://asset/mesh-1')
 
     expect(source).toEqual({ name: 'root' })
     expect(loadAsync).toHaveBeenCalledWith('scenario://asset/mesh-1')
@@ -73,7 +77,7 @@ describe('createGltfSource', () => {
   // The viewport has no renderer until it is mounted, while the source is built in the engine's
   // constructor: asking too early would settle the support table on nothing.
   it('asks the GPU what it can transcode as soon as there is one', async () => {
-    await createGltfSource(fakeGpu)('scenario://asset/mesh-1')
+    await createGltfSource(fakeGpu).load('scenario://asset/mesh-1')
 
     expect(detectSupport).toHaveBeenCalled()
   })
@@ -81,8 +85,8 @@ describe('createGltfSource', () => {
   it('asks it once, however many models are loaded', async () => {
     const source = createGltfSource(fakeGpu)
 
-    await source('scenario://asset/mesh-1')
-    await source('scenario://asset/mesh-2')
+    await source.load('scenario://asset/mesh-1')
+    await source.load('scenario://asset/mesh-2')
 
     expect(detectSupport).toHaveBeenCalledTimes(1)
   })
@@ -93,11 +97,23 @@ describe('createGltfSource', () => {
     let gpu: WebGLRenderer | null = null
     const source = createGltfSource(() => gpu)
 
-    await source('scenario://asset/mesh-1')
+    await source.load('scenario://asset/mesh-1')
     expect(detectSupport).not.toHaveBeenCalled()
 
     gpu = fakeGpu()
-    await source('scenario://asset/mesh-2')
+    await source.load('scenario://asset/mesh-2')
     expect(detectSupport).toHaveBeenCalledTimes(1)
+  })
+
+  // Both decoders spawn Web Workers on the first parse and hold them for good. An engine is
+  // rebuilt every time a panel is detached, so nothing else ever ends them.
+  it('ends both decoders when it is let go', async () => {
+    const source = createGltfSource(fakeGpu)
+    await source.load('scenario://asset/mesh-1')
+
+    source.dispose()
+
+    expect(disposeDraco).toHaveBeenCalled()
+    expect(disposeKtx2).toHaveBeenCalled()
   })
 })

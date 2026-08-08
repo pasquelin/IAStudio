@@ -54,7 +54,7 @@ import { studioFonts } from '@/services/fonts'
 import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './text-geometry'
-import { createGltfSource } from './gltf-source'
+import { createGltfSource, type GltfSource } from './gltf-source'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
 import { applyShadowFlags, applyShadowQuality, fitShadowCamera, resizeShadowMap } from './shadows'
@@ -192,6 +192,7 @@ export class SceneRenderer {
   private readonly loader = new TextureLoader()
   private readonly textureCache: TextureCache
   private readonly modelCache: ModelCache
+  private readonly gltf: GltfSource
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -231,8 +232,11 @@ export class SceneRenderer {
       options.loadTexture ?? (url => this.loader.loadAsync(url)),
       (assetId, error) => reportFailure('scene.texture', assetId, error),
     )
+    this.gltf = options.loadModel
+      ? { load: options.loadModel, dispose: () => {} }
+      : createGltfSource(() => this.viewport.gl)
     this.modelCache = createModelCache(
-      options.loadModel ?? createGltfSource(() => this.viewport.gl),
+      this.gltf.load,
       // The node stays in the outliner and draws nothing: a corrupt or compressed GLB is
       // otherwise indistinguishable from one that was never asked for.
       (assetId, error) => reportFailure('scene.model', assetId, error),
@@ -479,6 +483,7 @@ export class SceneRenderer {
     this.environment = null
     this.textureCache.dispose()
     this.modelCache.dispose()
+    this.gltf.dispose()
     this.wireMaterial.dispose()
     this.bvh.dispose()
 
