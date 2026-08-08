@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assetBadgeOf,
   assetIdFromUrl,
   assetUrl,
   isAssetType,
+  isSyncStatus,
   mediaDuration,
   posterUrl,
   withoutSourcePath,
@@ -95,5 +97,58 @@ describe('asset types', () => {
     expect(isAssetType('skybox')).toBe(true)
     expect(isAssetType('hologram')).toBe(false)
     expect(isAssetType(undefined)).toBe(false)
+  })
+})
+
+describe('sync statuses', () => {
+  it('accepts the states the catalogue may hold and refuses the rest', () => {
+    expect(isSyncStatus('synced')).toBe(true)
+    expect(isSyncStatus('local-ahead')).toBe(true)
+    expect(isSyncStatus('conflict')).toBe(true)
+    expect(isSyncStatus('pushing')).toBe(false)
+    expect(isSyncStatus(undefined)).toBe(false)
+  })
+})
+
+describe('the badge an asset wears', () => {
+  const OWNER = 'proj_current'
+
+  it('says local-only when there is no twin', () => {
+    expect(assetBadgeOf(asset(), OWNER)).toBe('local-only')
+  })
+
+  it('reads the sync status once a twin exists', () => {
+    const twin = { remoteAssetId: 'asset_x', remoteOwnerId: OWNER }
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'synced' }), OWNER)).toBe('synced')
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'local-ahead' }), OWNER)).toBe('to-push')
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'remote-ahead' }), OWNER)).toBe('to-pull')
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'conflict' }), OWNER)).toBe('conflict')
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'error' }), OWNER)).toBe('error')
+  })
+
+  it('reads a twin the catalogue said nothing about as settled', () => {
+    // Rows written before the catalogue tracked sync — assets collected from a generation,
+    // which were downloaded from the very twin they point at.
+    expect(assetBadgeOf(asset({ remoteAssetId: 'asset_x' }), OWNER)).toBe('synced')
+  })
+
+  it('says so when the twin belongs to another project', () => {
+    // An API key carries its own project: the same identifier means nothing under another key,
+    // and calling it synchronised would promise a library that has never heard of it.
+    const foreign = asset({
+      remoteAssetId: 'asset_x',
+      remoteOwnerId: 'proj_other',
+      syncStatus: 'synced',
+    })
+    expect(assetBadgeOf(foreign, OWNER)).toBe('other-account')
+  })
+
+  it('judges nothing about ownership while no account is active', () => {
+    const twin = asset({
+      remoteAssetId: 'asset_x',
+      remoteOwnerId: 'proj_other',
+      syncStatus: 'synced',
+    })
+    expect(assetBadgeOf(twin, null)).toBe('synced')
   })
 })

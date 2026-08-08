@@ -31,5 +31,9 @@ function valueOf(catalog: Catalog, request: CatalogRequest): CatalogResults[Cata
       return catalog.search(request.query)
     case 'remove':
       return catalog.remove(request.assetId)
+    case 'appendActivity':
+      return catalog.appendActivity(request.entries)
+    case 'readActivity':
+      return catalog.readActivity(request.query)
   }
 }

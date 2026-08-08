@@ -7,7 +7,9 @@ import { ToolZoneProvider } from '@/app/tool-zone'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
+import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
+import { useSettings } from '@/stores/settings'
 import { AssetBrowser } from './AssetBrowser'
 
 const PROJECT: Project = {
@@ -157,5 +159,112 @@ describe('AssetBrowser', () => {
       const bar = screen.getByRole('searchbox').closest('label')?.parentElement
       expect(bar?.className).toContain('flex-col')
     })
+  })
+})
+
+describe('what the shelf shows of where an asset lives', () => {
+  beforeEach(() => {
+    useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
+    useProject.setState({ project: PROJECT })
+    useLayouts.setState({ activeWorkspace: 'image' })
+    useSettings.setState({ auth: { authenticated: true, ownerId: 'proj_a' } })
+  })
+
+  // Two hundred identical marks are noise; the grid keeps them for what needs doing something
+  // about, and the list, which has room, shows every state.
+  it('leaves a settled asset unmarked in the grid', () => {
+    useAssets.setState({ items: [asset('a', { name: 'Boulder' })] })
+    render(<AssetBrowser />)
+
+    expect(screen.queryByLabelText('Local seulement')).not.toBeInTheDocument()
+  })
+
+  it('marks it in the list, where there is room', () => {
+    useAssets.setState({
+      items: [asset('a', { name: 'Boulder' })],
+      collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' },
+    })
+    render(<AssetBrowser />)
+
+    expect(screen.getByLabelText('Local seulement')).toBeInTheDocument()
+  })
+
+  it('marks an asset waiting to be sent', () => {
+    useAssets.setState({
+      items: [
+        asset('a', {
+          name: 'Boulder',
+          remoteAssetId: 'remote_1',
+          remoteOwnerId: 'proj_a',
+          syncStatus: 'local-ahead',
+        }),
+      ],
+    })
+    render(<AssetBrowser />)
+
+    expect(screen.getByLabelText(/à envoyer/)).toBeInTheDocument()
+  })
+
+  it('says when a twin belongs to a project this key does not open onto', () => {
+    useAssets.setState({
+      items: [
+        asset('a', {
+          name: 'Boulder',
+          remoteAssetId: 'remote_1',
+          remoteOwnerId: 'proj_other',
+          syncStatus: 'synced',
+        }),
+      ],
+    })
+    render(<AssetBrowser />)
+
+    expect(screen.getByLabelText('Appartient à un autre projet')).toBeInTheDocument()
+  })
+})
+
+describe('the kinds a space has any use for', () => {
+  beforeEach(() => {
+    useProject.setState({ project: PROJECT })
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    useAssets.setState({
+      items: [asset('a', { name: 'Boulder' })],
+      collection: DEFAULT_COLLECTION_STATE,
+      scope: null,
+    })
+  })
+
+  // Asked OF the catalogue, so the header count and the empty message describe the same list.
+  it('asks the catalogue only for what the space can use', () => {
+    const setScope = vi.fn()
+    useAssets.setState({ setScope })
+    useLayouts.setState({ activeWorkspace: 'audio' })
+
+    render(<AssetBrowser />)
+
+    expect(setScope).toHaveBeenCalledWith(['audio'])
+  })
+
+  it('asks for pictures, materials and skies while painting', () => {
+    const setScope = vi.fn()
+    useAssets.setState({ setScope })
+    useLayouts.setState({ activeWorkspace: 'image' })
+
+    render(<AssetBrowser />)
+
+    expect(setScope).toHaveBeenCalledWith(['image', 'texture', 'skybox'])
+  })
+
+  // A default, not a wall: the intersection of two filters reads as a broken filter.
+  it('drops the scope once a kind is asked for by name', () => {
+    const setScope = vi.fn()
+    useAssets.setState({
+      setScope,
+      collection: { ...DEFAULT_COLLECTION_STATE, selections: { type: ['audio'] } },
+    })
+    useLayouts.setState({ activeWorkspace: 'image' })
+
+    render(<AssetBrowser />)
+
+    expect(setScope).toHaveBeenCalledWith(null)
   })
 })

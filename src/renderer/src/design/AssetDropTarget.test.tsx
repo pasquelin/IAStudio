@@ -1,0 +1,126 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { PICTURES, type Asset, type AssetType } from '@shared/domain/asset'
+import { startAssetDrag } from '@/helpers/asset-drag'
+import { dragTransfer } from '@/helpers/drag-fixtures'
+import { useAssets } from '@/stores/assets'
+import { AssetDropTarget } from './AssetDropTarget'
+
+const asset: Asset = {
+  id: 'asset_1',
+  name: 'moss.png',
+  type: 'image',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-07T10:00:00.000Z',
+}
+
+function dragging(type: AssetType): DataTransfer {
+  const dataTransfer = dragTransfer()
+  startAssetDrag({ dataTransfer }, { id: 'asset_1', type })
+  return dataTransfer
+}
+
+function target(accepts: readonly AssetType[], onDrop = vi.fn()) {
+  render(
+    <AssetDropTarget accepts={accepts} onDrop={onDrop}>
+      <span>slot</span>
+    </AssetDropTarget>,
+  )
+  return { surface: screen.getByText('slot').parentElement as Element, onDrop }
+}
+
+describe('a surface an asset can be dropped onto', () => {
+  beforeEach(() => {
+    useAssets.setState({ items: [asset] })
+  })
+
+  // The id is all the drag carries; every surface used to resolve it against the catalogue
+  // itself, and two of them did it by subscribing — a re-render on every catalogue refresh.
+  it('hands over the asset, not the id the drag carried', () => {
+    const { surface, onDrop } = target(PICTURES)
+
+    fireEvent.drop(surface, { dataTransfer: dragging('image') })
+
+    expect(onDrop).toHaveBeenCalledWith(asset)
+  })
+
+  it('says nothing when the id names an asset the catalogue does not hold', () => {
+    useAssets.setState({ items: [] })
+    const { surface, onDrop } = target(PICTURES)
+
+    fireEvent.drop(surface, { dataTransfer: dragging('image') })
+
+    expect(onDrop).not.toHaveBeenCalled()
+  })
+
+  // Only a prevented dragover makes a drop land. Preventing one we would refuse promises
+  // something the drop then quietly fails to do.
+  it('lets a drop land only when it would accept it', () => {
+    const { surface } = target(['image'])
+
+    const welcome = fireEvent.dragOver(surface, { dataTransfer: dragging('image') })
+    const refused = fireEvent.dragOver(surface, { dataTransfer: dragging('audio') })
+
+    // `fireEvent` answers false when the handler called `preventDefault`.
+    expect(welcome).toBe(false)
+    expect(refused).toBe(true)
+  })
+
+  it('never claims a drag that is not ours, so a file from the desktop passes through', () => {
+    const { surface } = target(PICTURES)
+
+    expect(fireEvent.dragOver(surface, { dataTransfer: dragTransfer() })).toBe(true)
+  })
+
+  it('accepts a drag that announces no kind rather than refusing it', () => {
+    // A drop that silently does nothing is worse than one that lands somewhere sensible.
+    const dataTransfer = dragTransfer()
+    dataTransfer.setData('application/x-scenario-asset', 'asset_1')
+
+    const { surface } = target(['audio'])
+
+    expect(fireEvent.dragOver(surface, { dataTransfer })).toBe(false)
+  })
+
+  it('draws its answer while the asset is flying, and drops it again on leaving', () => {
+    const { surface } = target(['image'])
+
+    fireEvent.dragOver(surface, { dataTransfer: dragging('image') })
+    expect(surface.className).toContain('outline-accent')
+
+    fireEvent.dragOver(surface, { dataTransfer: dragging('audio') })
+    expect(surface.className).toContain('outline-danger')
+
+    fireEvent.dragLeave(surface, { relatedTarget: document.body })
+    expect(surface.className).not.toContain('outline-')
+  })
+
+  // `dragleave` bubbles from every child: crossing from a canvas onto the toolbar above it fired
+  // one, and the outline flickered off and back on several times a second during a drag.
+  it('holds its outline when the pointer only crosses onto a child', () => {
+    const { surface } = target(['image'])
+    fireEvent.dragOver(surface, { dataTransfer: dragging('image') })
+
+    fireEvent.dragLeave(surface, { relatedTarget: screen.getByText('slot') })
+
+    expect(surface.className).toContain('outline-accent')
+  })
+
+  it('leaves the surface behind it alone when it is exclusive', () => {
+    const outer = vi.fn()
+    render(
+      <div onDrop={outer}>
+        <AssetDropTarget accepts={PICTURES} onDrop={vi.fn()} exclusive>
+          <span>field</span>
+        </AssetDropTarget>
+      </div>,
+    )
+
+    fireEvent.drop(screen.getByText('field').parentElement as Element, {
+      dataTransfer: dragging('image'),
+    })
+
+    expect(outer).not.toHaveBeenCalled()
+  })
+})

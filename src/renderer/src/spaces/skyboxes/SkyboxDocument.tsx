@@ -1,5 +1,5 @@
 import { mdiCubeOutline, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
 import type { SphericalAngles } from '@shared/domain/angles'
@@ -11,13 +11,13 @@ import {
   SKYBOX_VIEWS,
   type SkyboxView,
 } from '@shared/domain/skybox'
+import { PICTURES, type Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
-import { cn } from '@/helpers/cn'
-import { assetsById, useAssets } from '@/stores/assets'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
+import { chipSkin } from '@/design/styles'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 
 /** i18n key of a view mode — never the label itself, as `SceneEntry` does for primitives. */
@@ -80,22 +80,10 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     engine.current?.setProbesVisible(probes)
   }, [probes])
 
-  // Dropped from the shelf, which is shown in this workspace like every other. The asset is
-  // read from the catalogue rather than carried by the drag: only its id crosses.
-  const onDrop = (event: DragEvent<HTMLDivElement>): void => {
-    event.preventDefault()
-
-    const assetId = assetIdFromDrag(event)
-    const asset = assetId ? assetsById(useAssets.getState()).get(assetId) : undefined
-    if (asset) setSkyboxSource(documentId, asset)
-  }
+  const onDrop = (asset: Asset): void => setSkyboxSource(documentId, asset)
 
   return (
-    <div
-      className="relative size-full"
-      onDragOver={event => event.preventDefault()}
-      onDrop={onDrop}
-    >
+    <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 
@@ -112,10 +100,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
             type="button"
             onClick={() => setView(candidate)}
             aria-pressed={view === candidate}
-            className={cn(
-              'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
-              view === candidate ? 'bg-elevated text-text' : 'text-muted bg-transparent',
-            )}
+            className={chipSkin(view === candidate)}
           >
             {t(VIEW_LABELS[candidate])}
           </button>
@@ -141,6 +126,6 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
           />
         </label>
       </div>
-    </div>
+    </AssetDropTarget>
   )
 }

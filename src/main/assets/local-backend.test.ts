@@ -51,6 +51,7 @@ describe('local backend', () => {
     root = await mkdtemp(join(tmpdir(), 'scenario-assets-'))
     await mkdir(join(root, 'assets/img'), { recursive: true })
     await mkdir(join(root, 'assets/aud'), { recursive: true })
+    await mkdir(join(root, 'assets/tex'), { recursive: true })
 
     catalog = memoryCatalog()
     backend = createLocalBackend({
@@ -64,6 +65,117 @@ describe('local backend', () => {
   afterEach(async () => {
     await catalog.close()
     await rm(root, { recursive: true, force: true })
+  })
+
+  // Pulling a twin twice lands on the same id on purpose. Rebuilding the row from the request
+  // alone dropped what the user had put on it.
+  it('keeps the tags and the creation date when a row is written again', async () => {
+    await catalog.add({
+      id: 'asset_1',
+      name: 'Boulder',
+      type: 'image',
+      location: 'local',
+      tags: ['hero', 'final'],
+      createdAt: '2026-08-01T09:00:00.000Z',
+    })
+
+    const rewritten = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+      remoteAssetId: 'asset_remote',
+    })
+
+    expect(rewritten.tags).toEqual(['final', 'hero'])
+    expect(rewritten.createdAt).toBe('2026-08-01T09:00:00.000Z')
+    // The file did change, and that is what the local stamp is for.
+    expect(rewritten.localChangedAt).toBe('2026-08-06T10:00:00.000Z')
+  })
+
+  it('keeps what the request says nothing about', async () => {
+    await catalog.add({
+      id: 'asset_1',
+      name: 'Take',
+      type: 'audio',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-08-01T09:00:00.000Z',
+      hash: 'abc123',
+      peaksPath: '.index/peaks/abc123.bin',
+    })
+
+    const rewritten = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/take.wav',
+      name: 'Take',
+      type: 'audio',
+    })
+
+    expect(rewritten.hash).toBe('abc123')
+    expect(rewritten.peaksPath).toBe('.index/peaks/abc123.bin')
+  })
+
+  it('records everything a generation reported about an import', async () => {
+    const generation = { modelId: 'model_flux', modelLabel: 'Flux', prompt: 'moss', params: {} }
+    const asset = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Albedo',
+      type: 'texture',
+      jobId: 'job_1',
+      remoteAssetId: 'asset_remote',
+      remoteOwnerId: 'proj_a',
+      remoteUpdatedAt: '2026-08-06T09:00:00.000Z',
+      groupId: 'job_1',
+      outputIndex: 0,
+      generation,
+      derivedFrom: 'asset_source',
+      map: 'baseColor',
+      mapInverted: true,
+    })
+
+    expect(asset).toMatchObject({
+      groupId: 'job_1',
+      outputIndex: 0,
+      generation,
+      derivedFrom: 'asset_source',
+      map: 'baseColor',
+      mapInverted: true,
+      remoteOwnerId: 'proj_a',
+      remoteUpdatedAt: '2026-08-06T09:00:00.000Z',
+    })
+  })
+
+  // Downloaded from the very twin it points at: the two cannot differ yet.
+  it('counts an imported asset as settled with its twin', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+      remoteAssetId: 'asset_remote',
+    })
+
+    expect(asset).toMatchObject({
+      syncStatus: 'synced',
+      remoteSyncedAt: '2026-08-06T10:00:00.000Z',
+      localChangedAt: '2026-08-06T10:00:00.000Z',
+    })
+  })
+
+  it('leaves a file that came from nowhere in particular without a twin', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+    })
+
+    expect(asset.syncStatus).toBeUndefined()
+    expect(asset.remoteSyncedAt).toBeUndefined()
+    expect(asset.groupId).toBeUndefined()
+    expect(asset.outputIndex).toBeUndefined()
   })
 
   it('writes the file to disk and indexes it', async () => {

@@ -1,6 +1,7 @@
 import { APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import type { JobProgress } from '@shared/domain/job'
+import type { ActivityReport } from '@main/project/activity-log'
 import {
   createJobManager,
   jobStatusOf,
@@ -21,6 +22,7 @@ type Harness = {
   manager: JobManager
   progress: JobProgress[]
   sleeps: number[]
+  recorded: ActivityReport[]
 }
 
 /** The two halves of a `JobAccount`, spelled apart because most tests only replace one. */
@@ -32,6 +34,7 @@ type HarnessOptions = Partial<JobManagerDeps> & {
 function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harness {
   const progress: JobProgress[] = []
   const sleeps: number[] = []
+  const recorded: ActivityReport[] = []
   let sequence = 0
 
   const manager = createJobManager({
@@ -46,6 +49,7 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
     concurrency: () => 2,
     maxRetries: () => 3,
     onProgress: entry => void progress.push(structuredClone(entry)),
+    record: report => void recorded.push(report),
     now: () => `2026-08-06T10:00:${String(sequence++).padStart(2, '0')}.000Z`,
     newId: () => `job_${sequence}`,
     // Delays are recorded rather than waited: the backoff schedule is what matters, and a
@@ -57,7 +61,7 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
     ...overrides,
   })
 
-  return { manager, progress, sleeps }
+  return { manager, progress, sleeps, recorded }
 }
 
 describe('status mapping', () => {
@@ -383,5 +387,91 @@ describe('the account a job runs on', () => {
     await settled()
 
     expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'missing' })
+  })
+})
+
+/**
+ * A generation is minutes spent elsewhere: the progress bar is long gone by the time it ends,
+ * and a failure that only reached the terminal was a failure nobody was there for.
+ */
+describe('what a finished job leaves behind to read', () => {
+  it('records a failure, naming the model rather than a code', async () => {
+    const { manager, recorded } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('failure')),
+        poll: () => Promise.resolve(remote('failure')),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(recorded).toContainEqual({
+      level: 'error',
+      topic: 'generation',
+      messageKey: 'activity.jobFailed',
+      params: { name: 'Flux' },
+    })
+  })
+
+  it('records what a success produced, counted rather than listed', async () => {
+    const { manager, recorded } = harness({
+      collect: () => Promise.resolve(['asset_1', 'asset_2']),
+    })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(recorded).toContainEqual({
+      level: 'info',
+      topic: 'generation',
+      messageKey: 'activity.generated',
+      params: { count: 2 },
+    })
+  })
+
+  // Nothing came of it, so there is nothing to say: a line saying "0 assets generated" is one
+  // the reader has to work out the meaning of.
+  it('says nothing about a success that produced no asset', async () => {
+    const { manager, recorded } = harness({ collect: () => Promise.resolve([]) })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(recorded).toEqual([])
+  })
+
+  it('records a cancellation as a fact rather than as a failure', async () => {
+    const { manager, recorded } = harness({
+      concurrency: () => 1,
+      runner: {
+        submit: () => new Promise<RemoteJob>(() => {}),
+        poll: () => Promise.resolve(remote('success')),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit('model_veo', 'Veo', {})
+    const queued = manager.submit('model_veo', 'Veo', {})
+    await manager.cancel(queued.id)
+
+    expect(recorded).toContainEqual({
+      level: 'info',
+      topic: 'generation',
+      messageKey: 'activity.jobCancelled',
+      params: { name: 'Veo' },
+    })
+  })
+
+  // The message is a key and its parameters, never a sentence: a journal written in French is
+  // French for ever, and reads as gibberish once the interface is in English.
+  it('never stores a sentence, only a key and what fills it', async () => {
+    const { manager, recorded } = harness({ collect: () => Promise.resolve(['asset_1']) })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    for (const report of recorded) expect(report.messageKey).toMatch(/^activity\./)
   })
 })

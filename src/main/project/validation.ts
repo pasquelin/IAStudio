@@ -1,6 +1,13 @@
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
-import { isAssetType, type AssetQuery, type AssetType } from '@shared/domain/asset'
+import {
+  ASSET_TYPES,
+  isAssetType,
+  isSyncStatus,
+  type AssetQuery,
+  type AssetType,
+  type SyncStatus,
+} from '@shared/domain/asset'
 import {
   DOCUMENT_VERSION,
   isDocumentKind,
@@ -49,8 +56,14 @@ export function parseProjectName(value: unknown): string {
 // wants a literal tuple, which the project's ban on `as const` rules out.
 const assetQuery = z.object({
   type: z.custom<AssetType>(isAssetType).optional(),
+  // What a workspace asks for. Bounded by the number of kinds there are: a longer list is a
+  // caller that has lost track of what it wants.
+  types: z.array(z.custom<AssetType>(isAssetType)).max(ASSET_TYPES.length).optional(),
   tags: z.array(z.string().min(1)).max(32).optional(),
   text: z.string().max(200).optional(),
+  location: z.enum(['local', 'cloud']).optional(),
+  syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
+  groupId: z.string().trim().min(1).optional(),
   // Bounded here rather than in SQL: the renderer chooses the page size, and an unbounded
   // one would pull an entire well-stocked project across the IPC boundary in one message.
   limit: z.number().int().min(1).max(500).optional(),

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, net, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { delimiter, dirname } from 'node:path'
 import type { AccountSummary } from '@shared/domain/account'
@@ -16,7 +16,7 @@ import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
-import { serveAssets, servedFileOf } from './assets/protocol'
+import { assetFilePath, ownFileOf, serveAssets, servedFileOf } from './assets/protocol'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, resourcesRoot } from './resources'
 import { linkedAsset, mediaFilters } from './media/link'
@@ -45,10 +45,16 @@ import {
 import { runnerOf } from './scenario/runner'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
+import { createActivityLog, type ActivityLog } from './project/activity-log'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
-import { createAssetUploader, type AssetUploader } from './scenario/uploader'
-import { createClientProvider, type ClientProvider } from './scenario/client'
+import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
+import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/asset-catalog'
+import { generationOfMetadata } from './scenario/asset-normalizer'
+import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
+import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
+import { isRecord } from '@shared/guards'
+import { createClientProvider, recordFailuresTo, type ClientProvider } from './scenario/client'
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
@@ -64,7 +70,15 @@ export type Services = {
   models: ModelRegistry
   jobs: JobManager
   uploads: AssetUploader
+  /** The library, as the studio asks about it. Rebuilt per call: the key may have changed. */
+  remote: () => RemoteAssetCatalog
+  cloud: () => CloudBackend
+  ownerScope: OwnerScope
+  /** Drops the file an asset owns, leaving a linked one where it lies. */
+  removeAssetFile: (asset: Asset) => Promise<void>
   project: ProjectStore
+  /** What the studio did, and what it failed to do — the surface it had none of. */
+  journal: ActivityLog
   documents: DocumentFiles
   assets: LocalBackend
   /** Minted here so the collector and the audio editor cannot name assets differently. */
@@ -239,6 +253,11 @@ export function createServices(settings: SettingsStore): Services {
     watch: credentials.watch,
   })
 
+  // The two need each other: the journal writes into the open project's catalogue, and the
+  // project must see the journal emptied before that catalogue stops answering. Read at call
+  // time rather than at construction, which is the only order that ties the knot.
+  let opened: ActivityLog | null = null
+
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
@@ -246,6 +265,29 @@ export function createServices(settings: SettingsStore): Services {
       if (current) settings.write({ storage: { lastProject: current.path } })
       broadcast(EVENTS.projectChanged, current)
     },
+    settle: async () => {
+      await opened?.flush()
+    },
+  })
+
+  // Reads the catalogue per flush rather than holding one: a project can close and another open
+  // while lines are still queued, and a line belongs to whichever project is open when it lands.
+  const journal = createActivityLog({
+    catalog: () => (project.current() ? project.catalog() : null),
+    broadcast: entries => broadcast(EVENTS.activity, entries),
+    now: timestamp,
+  })
+  opened = journal
+
+  // Every reduced API failure, from one place rather than from each handler that remembers to.
+  // `describeFailure` is what `reducedBy` already holds — the only text allowed to travel.
+  recordFailuresTo((scope, detail) => {
+    journal.record({
+      level: 'error',
+      topic: scope === 'scenario' ? 'generation' : 'library',
+      messageKey: 'activity.apiRefused',
+      detail,
+    })
   })
 
   const assets = createLocalBackend({
@@ -301,6 +343,7 @@ export function createServices(settings: SettingsStore): Services {
       await writeFile(path, data)
     },
     onProgress: progress => broadcast(EVENTS.mediaProgress, progress),
+    record: report => journal.record(report),
     projectPath: () => project.current()?.path ?? null,
     // Two cores left to the interface and to whatever else the machine is doing.
     concurrency: () => Math.max(1, availableParallelism() - 2),
@@ -310,7 +353,18 @@ export function createServices(settings: SettingsStore): Services {
     createAssetCollector({
       retrieve: async remoteAssetId => {
         const { asset } = await scenario.assets.retrieve(remoteAssetId)
-        return { ...asset, metadataType: asset.metadata.type, parentId: asset.metadata.parentId }
+        const generation = generationOfMetadata(asset.metadata)
+        return {
+          ...asset,
+          metadataType: asset.metadata.type,
+          parentId: asset.metadata.parentId,
+          ownerId: asset.ownerId,
+          updatedAt: asset.updatedAt,
+          ...(asset.metadata.outputIndex === undefined
+            ? {}
+            : { outputIndex: asset.metadata.outputIndex }),
+          ...(generation ? { generation } : {}),
+        }
       },
       backend: assets,
       newId: newAssetId,
@@ -323,6 +377,70 @@ export function createServices(settings: SettingsStore): Services {
   let bound: { scenario: Scenario; account: JobAccount } | null = null
 
   const uploads = createAssetUploader(() => client.require().assets)
+
+  const ownerScope = createOwnerScope(credentials.watch)
+
+  /**
+   * The one door to the API for assets, wrapped so that listing it teaches the scope which
+   * project this key opens onto — there is no endpoint that would simply say.
+   *
+   * ONLY the listing. `getBulk` fetches ids the renderer chose, and a public asset belonging to
+   * someone else would plant the wrong project for the rest of the session: every local asset
+   * would then badge as foreign and every push would be refused. A listing is scoped to the key
+   * by construction, so it is the only answer that can speak for it.
+   */
+  const remoteAssets = (): RemoteAssetCatalog => {
+    const catalogue = assetCatalogOf(assetBackendOf(client.require()))
+
+    return {
+      ...catalogue,
+      list: async request => {
+        const page = await catalogue.list(request)
+        ownerScope.observe(page.assets)
+        return page
+      },
+    }
+  }
+
+  const cloudAssets = createCloudBackend({
+    remote: remoteAssets,
+    multipart: async params => {
+      // The helper's return type narrows on a literal `kind`; ours is a value, so what comes
+      // back is the union of an asset and a model. Read rather than asserted.
+      const result: unknown = await client.require().uploads.uploadFile(params)
+      const asset = isRecord(result) && isRecord(result.asset) ? result.asset : null
+      if (!asset || typeof asset.id !== 'string') throw new Error('upload-incomplete')
+
+      return {
+        assetId: asset.id,
+        ...(typeof asset.ownerId === 'string' ? { ownerId: asset.ownerId } : {}),
+        ...(typeof asset.updatedAt === 'string' ? { updatedAt: asset.updatedAt } : {}),
+      }
+    },
+    small: (name, image) => uploads.upload(name, image),
+    local: assets,
+    catalog: () => project.catalog(),
+    fileOf: asset => ownFileOf(project.path(), asset),
+    readFile: path => readFile(path),
+    sizeOf: async path => (await stat(path)).size,
+    newId: newAssetId,
+    now: timestamp,
+    smallUploadLimit: MAX_UPLOAD_BYTES,
+  })
+
+  /**
+   * Drops the file an asset owns. A linked rush is only ever unlinked: the file belongs to
+   * whoever pointed at it, and deleting it would take away a take the project never copied.
+   */
+  const removeAssetFile = async (asset: Asset): Promise<void> => {
+    const current = project.current()
+    if (!current || !asset.path) return
+
+    // Through the same containment the scheme uses: a stored path is user-editable territory,
+    // and `rm` on one that escaped the project would delete a file nobody asked about.
+    const file = assetFilePath(current.path, asset.path)
+    if (file) await rm(file, { force: true })
+  }
 
   const jobs = createJobManager({
     // Read once per job and kept, so a switch mid-flight does not have the new key asked about
@@ -343,6 +461,7 @@ export function createServices(settings: SettingsStore): Services {
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
     onProgress: progress => broadcast(EVENTS.jobProgress, progress),
+    record: report => journal.record(report),
     now: timestamp,
     newId: () => `job_${randomUUID()}`,
     sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
@@ -374,7 +493,12 @@ export function createServices(settings: SettingsStore): Services {
     models,
     jobs,
     uploads,
+    remote: remoteAssets,
+    cloud: () => cloudAssets,
+    ownerScope,
+    removeAssetFile,
     project,
+    journal,
     documents,
     assets,
     newAssetId,
@@ -400,7 +524,13 @@ export function createServices(settings: SettingsStore): Services {
     // Another key means another catalogue: keeping a cache would show the previous account's
     // contents under the new one.
     onCredentialsChanged: credentials.changed,
-    authState: () => client.authState(),
+    authState: async () => {
+      const state = await client.authState()
+      const owner = ownerScope.current()
+      // Attached here rather than probed for: the scope fills in as the library answers, and
+      // asking the API again would cost a call to learn something it already told us.
+      return state.authenticated && owner !== null ? { ...state, ownerId: owner } : state
+    },
     // Every window carries the switch, not just the one that made it: the studio and the
     // settings window both show which account is active.
     broadcastAccounts: accounts => broadcast(EVENTS.accountsChanged, accounts),

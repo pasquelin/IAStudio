@@ -4,6 +4,7 @@ import type { Project } from '@shared/domain/project'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
+import { useActivity } from './activity'
 import { useAssets } from './assets'
 import { useDocuments } from './documents'
 import { useLayouts } from './layouts'
@@ -30,7 +31,16 @@ async function followProject(project: Project | null): Promise<void> {
   // Another project's assets are another story: a file that failed to load in the last one has
   // nothing to say about this one, and a failure here is news again.
   forgetReportedFailures()
-  await Promise.all([useAssets.getState().refresh(), useDocuments.getState().refresh()])
+  // The journal lives in the project's own catalogue, so it is another project's account of
+  // itself: left alone, its lines and its failure count would carry over into this one. The
+  // toasts too — they never expire, so one raised by the project being left would hang over
+  // the one being opened, naming an asset that is no longer anywhere.
+  useActivity.getState().dismissAll()
+  await Promise.all([
+    useAssets.getState().refresh(),
+    useDocuments.getState().refresh(),
+    useActivity.getState().reload(),
+  ])
 }
 
 /**

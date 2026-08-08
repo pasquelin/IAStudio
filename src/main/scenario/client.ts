@@ -1,7 +1,9 @@
 import Scenario, { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import type { ApiFailure } from '@shared/domain/failure'
+import { MAX_LOG_MESSAGE } from '@shared/ipc'
 import type { AuthState } from '@shared/domain/settings'
 import type { Credentials } from '@main/settings/accounts'
+import { log } from '@main/log'
 import type { WatchCredentials } from './credentials-watch'
 
 /** Thrown when a channel needing the API is reached without usable credentials. */
@@ -58,6 +60,26 @@ export function describeFailure(error: unknown): string {
 }
 
 /**
+ * The same failure, for something that keeps it: the journal writes it to `catalog.db`, sends
+ * it across the boundary and draws it on screen.
+ *
+ * Two things `describeFailure` may do and this may not. It carries no stack: a stack holds
+ * absolute paths — `/Users/<someone>/…` — and this ends up in a file a user may well pass on.
+ * And it is bounded, by the same constant and for the same reason the log channel is: a studio
+ * looping on a failure must not be able to fill a database with one.
+ */
+export function persistableFailure(error: unknown): string {
+  if (error instanceof APIError) {
+    const body = error.error === undefined ? '' : ` ${JSON.stringify(error.error)}`
+    return `HTTP ${error.status ?? '?'}${body}`.slice(0, MAX_LOG_MESSAGE)
+  }
+
+  if (error instanceof Error) return `${error.name}: ${error.message}`.slice(0, MAX_LOG_MESSAGE)
+
+  return `non-error thrown: ${String(error)}`.slice(0, MAX_LOG_MESSAGE)
+}
+
+/**
  * The only thing an authentication probe needs. Narrower than `Scenario` on purpose: it says
  * what the check costs, and it is what makes the failure mapping testable without a network.
  */
@@ -87,6 +109,47 @@ export type ClientProvider = {
  * Holds the SDK client. Building one is cheap, but it caches nothing useful across
  * credentials, so it is rebuilt lazily and dropped whenever they change.
  */
+/**
+ * Runs an API call and lets nothing of it cross the IPC boundary but a code.
+ *
+ * An SDK message embeds the request that produced it — headers included, so the key. The cause
+ * stays attached for the main process alone: Electron serializes `message`, `name` and `stack`
+ * of a rejected handler, never `cause`.
+ *
+ * A factory rather than a function per handler family: three of them had copied the same six
+ * lines, and the rule that matters here is the one it would take one forgetful copy to break.
+ */
+/** What a refused call is told to, beyond the terminal. Installed once the journal exists. */
+type FailureSink = (scope: string, detail: string) => void
+
+let sink: FailureSink | null = null
+
+/**
+ * Sends every reduced failure to the journal as well as to the log.
+ *
+ * Installed rather than injected, exactly as `mirrorLogsTo` is: `reducedBy` is called at module
+ * load, long before a project — and therefore a journal — exists.
+ */
+export function recordFailuresTo(destination: FailureSink | null): void {
+  sink = destination
+}
+
+export function reducedBy(scope: string) {
+  return async <T>(action: () => Promise<T>): Promise<T> => {
+    try {
+      return await action()
+    } catch (error) {
+      // Logged where the credentials already live: reduced to a code, neither the renderer nor
+      // anyone reading a bug report could say which call the API refused.
+      log.error(scope, describeFailure(error))
+      // Every API failure the studio reduces passes here — which is why the journal is fed from
+      // this one place rather than from each handler that happens to remember.
+      sink?.(scope, persistableFailure(error))
+      throw new Error(failureOf(error), { cause: error })
+    }
+  }
+}
+
 export function createClientProvider(
   resolve: () => Credentials | null,
   watch: WatchCredentials,

@@ -44,6 +44,14 @@ type ChannelMethod = {
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']
   [CHANNELS.assetsReveal]: StudioBridge['assets']['reveal']
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
+  [CHANNELS.assetsUpdate]: StudioBridge['assets']['update']
+  [CHANNELS.assetsRemove]: StudioBridge['assets']['remove']
+  [CHANNELS.cloudBrowse]: StudioBridge['cloud']['browse']
+  [CHANNELS.cloudPull]: StudioBridge['cloud']['pull']
+  [CHANNELS.cloudPush]: StudioBridge['cloud']['push']
+  [CHANNELS.cloudPlan]: StudioBridge['cloud']['plan']
+
+  [CHANNELS.activityRead]: StudioBridge['activity']['read']
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
 

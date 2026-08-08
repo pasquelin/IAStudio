@@ -1,18 +1,18 @@
 import { mdiRotate3dVariant, mdiTextureBox, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
-import { assetUrl, isLocalPicture } from '@shared/domain/asset'
+import { assetUrl, PICTURES, type Asset } from '@shared/domain/asset'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
-import { setChannel, setPreview } from '@/engines/texture/commands'
+import { setPreview } from '@/engines/texture/commands'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
 import { restoreDocument } from '@/app/document-io'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
-import { cn } from '@/helpers/cn'
-import { assetsById, useAssets } from '@/stores/assets'
+import { chipSkin } from '@/design/styles'
 import { textureOf, useTextures } from '@/stores/textures'
+import { placeTextureChannel } from './place-channel'
 
 /** i18n key of a shape — never the label itself, as the scene registry does for its primitives. */
 const SHAPE_LABELS: Record<PreviewShape, string> = {
@@ -30,10 +30,8 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<TextureRenderer | null>(null)
-  const [over, setOver] = useState(false)
 
   const texture = useTextures(state => textureOf(state, documentId))
-  const byId = useAssets(assetsById)
 
   // Fills the tab from the project when a file is there, from the default otherwise — and it is
   // what saving reads back, so the two never disagree about what this document holds.
@@ -67,40 +65,14 @@ export function TextureDocument({ documentId }: { documentId: string }) {
    * A picture dropped on the viewport becomes the base colour. It is the one channel a texture
    * cannot be judged without, and the strip of the other seven is what the next step brings.
    */
-  const onDrop = useMemo(
-    () => (event: React.DragEvent) => {
-      event.preventDefault()
-      setOver(false)
-
-      const assetId = assetIdFromDrag(event)
-      const asset = assetId ? byId.get(assetId) : null
-      if (!asset || !isLocalPicture(asset)) return
-
-      run(
-        documentId,
-        setChannel('baseColor', {
-          assetId: asset.id,
-          origin: 'imported',
-          width: asset.width ?? 0,
-          height: asset.height ?? 0,
-        }),
-      )
-    },
-    [byId, documentId, run],
-  )
+  const onDrop = (asset: Asset): void => {
+    placeTextureChannel(documentId, asset)
+  }
 
   const base = texture.channels.baseColor
 
   return (
-    <div
-      className="relative size-full"
-      onDragOver={event => {
-        event.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={onDrop}
-    >
+    <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 
@@ -110,8 +82,6 @@ export function TextureDocument({ documentId }: { documentId: string }) {
         </div>
       )}
 
-      {over && <div className="border-accent pointer-events-none absolute inset-0 border-2" />}
-
       <div className="bg-panel/80 absolute top-2 left-2 flex items-center gap-1 rounded-(--radius-sc-md) p-1">
         {PREVIEW_SHAPES.map(shape => (
           <button
@@ -119,10 +89,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
             type="button"
             onClick={() => run(documentId, setPreview('shape', shape))}
             aria-pressed={preview.shape === shape}
-            className={cn(
-              'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
-              preview.shape === shape ? 'bg-elevated text-text' : 'text-muted bg-transparent',
-            )}
+            className={chipSkin(preview.shape === shape)}
           >
             {t(SHAPE_LABELS[shape])}
           </button>
@@ -166,6 +133,6 @@ export function TextureDocument({ documentId }: { documentId: string }) {
           />
         </div>
       )}
-    </div>
+    </AssetDropTarget>
   )
 }

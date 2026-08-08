@@ -1,9 +1,20 @@
-import { isRecord } from '@shared/guards'
+import { defined, isRecord } from '@shared/guards'
+import {
+  ACTIVITY_RETENTION,
+  isActivityLevel,
+  isActivityTopic,
+  type ActivityDraft,
+  type ActivityEntry,
+  type ActivityParams,
+  type ActivityQuery,
+} from '@shared/domain/activity'
 import {
   isAssetType,
+  isSyncStatus,
   mediaProbeOf,
   probeNumber,
   type Asset,
+  type AssetGeneration,
   type AssetQuery,
   type AssetType,
   type MediaProbe,
@@ -60,6 +71,59 @@ const MIGRATIONS: readonly string[] = [
   -- Resolving an API parent to the local asset it became, when a generation reports one.
   CREATE INDEX assets_remote_asset_id_idx ON assets(remote_asset_id);
   `,
+  `
+  -- Provenance, at last persisted. Columns rather than one JSON blob for the three that are
+  -- searched — "everything made with Flux", "the one whose prompt said moss" — and JSON for
+  -- the parameters, which are open by nature and never filtered on, as the probe already is.
+  ALTER TABLE assets ADD COLUMN model_id    TEXT;
+  ALTER TABLE assets ADD COLUMN model_label TEXT;
+  ALTER TABLE assets ADD COLUMN prompt      TEXT;
+  ALTER TABLE assets ADD COLUMN seed        INTEGER;
+  ALTER TABLE assets ADD COLUMN gen_params  TEXT;
+
+  -- The twin in the library, and the three stamps that place the two sides against each other.
+  -- Only two of the six sync states are ever written today, because pushing and pulling are
+  -- explicit; the stamps are recorded from the start so that computing the rest later is a
+  -- change of policy rather than a migration.
+  ALTER TABLE assets ADD COLUMN remote_owner_id   TEXT;
+  ALTER TABLE assets ADD COLUMN remote_updated_at TEXT;
+  ALTER TABLE assets ADD COLUMN remote_synced_at  TEXT;
+  ALTER TABLE assets ADD COLUMN local_changed_at  TEXT;
+  ALTER TABLE assets ADD COLUMN sync_state        TEXT;
+  ALTER TABLE assets ADD COLUMN sync_error        TEXT;
+
+  -- What ties the outputs of one generation together. The API has no notion of a set.
+  ALTER TABLE assets ADD COLUMN group_id     TEXT;
+  ALTER TABLE assets ADD COLUMN output_index INTEGER;
+
+  CREATE INDEX assets_model_id_idx   ON assets(model_id);
+  CREATE INDEX assets_group_id_idx   ON assets(group_id);
+  CREATE INDEX assets_sync_state_idx ON assets(sync_state);
+  -- Paired: a twin is only meaningful under the project whose key opens onto it.
+  CREATE INDEX assets_remote_owner_idx ON assets(remote_owner_id, remote_asset_id);
+  `,
+  `
+  -- What the studio did, and what it failed to do. Append-only: a line is a fact about a moment,
+  -- and rewriting one would make the journal argue with what the user saw.
+  --
+  -- The message is a KEY and its parameters rather than a sentence, so a journal written in one
+  -- language reads in whichever the interface is in later. \`detail\` carries \`describeFailure\`
+  -- and nothing else — an SDK message embeds the request that produced it, hence the API key.
+  CREATE TABLE activity (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    at          TEXT NOT NULL,
+    level       TEXT NOT NULL,
+    topic       TEXT NOT NULL,
+    message_key TEXT NOT NULL,
+    params      TEXT,
+    detail      TEXT,
+    asset_id    TEXT
+  );
+
+  -- No index: \`id INTEGER PRIMARY KEY\` IS the rowid, so the table is already stored in the one
+  -- order the journal is ever read in. A second B-tree would be maintained on every insert —
+  -- two hundred of them on a push of two hundred assets — and answer no query the first cannot.
+  `,
 ]
 
 const DEFAULT_LIMIT = 200
@@ -99,52 +163,76 @@ function assetType(row: SqlRow): AssetType {
 }
 
 function assetOf(row: SqlRow, tags: string[]): Asset {
-  const asset: Asset = {
+  const map = optionalText(row, 'map')
+  const syncState = optionalText(row, 'sync_state')
+
+  return {
     id: text(row, 'id'),
     name: text(row, 'name'),
     type: assetType(row),
     location: text(row, 'location') === 'cloud' ? 'cloud' : 'local',
     tags,
     createdAt: text(row, 'created_at'),
+    ...defined({
+      path: optionalText(row, 'path'),
+      remoteAssetId: optionalText(row, 'remote_asset_id'),
+      remoteOwnerId: optionalText(row, 'remote_owner_id'),
+      remoteUpdatedAt: optionalText(row, 'remote_updated_at'),
+      remoteSyncedAt: optionalText(row, 'remote_synced_at'),
+      localChangedAt: optionalText(row, 'local_changed_at'),
+      // Free strings in SQLite: a state this build no longer knows is dropped rather than
+      // carried into a union that does not contain it.
+      syncStatus: isSyncStatus(syncState) ? syncState : undefined,
+      syncError: optionalText(row, 'sync_error'),
+      jobId: optionalText(row, 'job_id'),
+      derivedFrom: optionalText(row, 'derived_from'),
+      groupId: optionalText(row, 'group_id'),
+      outputIndex: optionalNumber(row, 'output_index'),
+      generation: parseGeneration(row),
+      width: optionalNumber(row, 'width'),
+      height: optionalNumber(row, 'height'),
+      bytes: optionalNumber(row, 'bytes'),
+      sourcePath: optionalText(row, 'source_path'),
+      hash: optionalText(row, 'hash'),
+      probe: parseProbe(optionalText(row, 'probe')),
+      proxyPath: optionalText(row, 'proxy_path'),
+      peaksPath: optionalText(row, 'peaks_path'),
+    }),
+    // The column is a free string in SQLite; a channel this build no longer knows leaves the
+    // asset as an ordinary picture rather than making the whole row unreadable.
+    ...(isPbrChannel(map)
+      ? { map, ...(optionalNumber(row, 'map_inverted') === 1 ? { mapInverted: true } : {}) }
+      : {}),
   }
+}
 
-  const path = optionalText(row, 'path')
-  const remoteAssetId = optionalText(row, 'remote_asset_id')
-  const jobId = optionalText(row, 'job_id')
-  const derivedFrom = optionalText(row, 'derived_from')
-  const width = optionalNumber(row, 'width')
-  const height = optionalNumber(row, 'height')
-  const bytes = optionalNumber(row, 'bytes')
+/**
+ * The generation spread across its columns and back. Without a model there is no generation:
+ * an imported file has none, and a row that kept only a prompt could not be run again.
+ */
+function parseGeneration(row: SqlRow): AssetGeneration | undefined {
+  const modelId = optionalText(row, 'model_id')
+  if (modelId === undefined) return undefined
 
-  if (path !== undefined) asset.path = path
-  if (remoteAssetId !== undefined) asset.remoteAssetId = remoteAssetId
-  if (jobId !== undefined) asset.jobId = jobId
-  if (derivedFrom !== undefined) asset.derivedFrom = derivedFrom
-  if (width !== undefined) asset.width = width
-  if (height !== undefined) asset.height = height
-  if (bytes !== undefined) asset.bytes = bytes
-
-  const sourcePath = optionalText(row, 'source_path')
-  const hash = optionalText(row, 'hash')
-  const probe = parseProbe(optionalText(row, 'probe'))
-  const proxyPath = optionalText(row, 'proxy_path')
-  const peaksPath = optionalText(row, 'peaks_path')
-  const map = optionalText(row, 'map')
-
-  if (sourcePath !== undefined) asset.sourcePath = sourcePath
-  if (hash !== undefined) asset.hash = hash
-  if (probe !== undefined) asset.probe = probe
-  if (proxyPath !== undefined) asset.proxyPath = proxyPath
-  if (peaksPath !== undefined) asset.peaksPath = peaksPath
-
-  // The column is a free string in SQLite; a channel this build no longer knows leaves the
-  // asset as an ordinary picture rather than making the whole row unreadable.
-  if (isPbrChannel(map)) {
-    asset.map = map
-    if (optionalNumber(row, 'map_inverted') === 1) asset.mapInverted = true
+  const seed = optionalNumber(row, 'seed')
+  return {
+    modelId,
+    modelLabel: text(row, 'model_label'),
+    prompt: text(row, 'prompt'),
+    params: parseParams(optionalText(row, 'gen_params')),
+    ...defined({ seed }),
   }
+}
 
-  return asset
+function parseParams(raw: string | undefined): Record<string, unknown> {
+  if (raw === undefined) return {}
+
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return isRecord(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
 }
 
 /**
@@ -179,6 +267,62 @@ function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, character => `\\${character}`)
 }
 
+/**
+ * All or nothing, on a driver where forgetting the `ROLLBACK` leaves a transaction open for the
+ * rest of the session — and every window behind it.
+ */
+function transaction<T>(driver: SqliteDriver, body: () => T): T {
+  driver.exec('BEGIN')
+  try {
+    const result = body()
+    driver.exec('COMMIT')
+    return result
+  } catch (error) {
+    driver.exec('ROLLBACK')
+    throw error
+  }
+}
+
+/**
+ * The interpolations of a message key, back from the JSON they were stored as.
+ *
+ * Anything else is dropped rather than trusted: a value that is neither a string nor a number
+ * would reach `t()` as `[object Object]`, and a line nobody can read is worse than one missing
+ * a number.
+ */
+function activityParams(row: SqlRow): ActivityParams | undefined {
+  const raw = optionalText(row, 'params')
+  if (raw === undefined) return undefined
+
+  const params: ActivityParams = {}
+  for (const [key, value] of Object.entries(parseParams(raw))) {
+    if (typeof value === 'string' || typeof value === 'number') params[key] = value
+  }
+  return params
+}
+
+/**
+ * One row, read back. `level` and `topic` are closed unions in the domain and free strings in
+ * SQLite: a line written by a build that knew one more of either is read as an ordinary line
+ * rather than taking the panel down with it.
+ */
+function activityOf(row: SqlRow): ActivityEntry {
+  const level = text(row, 'level')
+  const topic = text(row, 'topic')
+  const params = activityParams(row)
+  const detail = optionalText(row, 'detail')
+  const assetId = optionalText(row, 'asset_id')
+
+  return {
+    id: optionalNumber(row, 'id') ?? 0,
+    at: text(row, 'at'),
+    level: isActivityLevel(level) ? level : 'info',
+    topic: isActivityTopic(topic) ? topic : 'library',
+    messageKey: text(row, 'message_key'),
+    ...defined({ params, detail, assetId }),
+  }
+}
+
 export type Catalog = {
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
@@ -193,6 +337,16 @@ export type Catalog = {
    * share, so only the caller knows whether they are still wanted.
    */
   remove: (assetId: string) => void
+  /**
+   * Writes lines to the journal, in one transaction, and trims it back to its bound.
+   *
+   * A batch rather than one line at a time: a push of two hundred assets writes two hundred
+   * lines, and two hundred transactions on a synchronous driver is the sort of thing that shows
+   * up as a frozen window.
+   */
+  appendActivity: (entries: readonly ActivityDraft[]) => ActivityEntry[]
+  /** Newest first, which is the order the panel opens on. */
+  readActivity: (query: ActivityQuery) => ActivityEntry[]
   close: () => void
 }
 
@@ -203,8 +357,12 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     INSERT OR REPLACE INTO assets
       (id, name, type, location, path, remote_asset_id, job_id, width, height, bytes,
        created_at, derived_from, source_path, hash, probe, proxy_path, peaks_path,
-       map, map_inverted)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       map, map_inverted,
+       model_id, model_label, prompt, seed, gen_params,
+       remote_owner_id, remote_updated_at, remote_synced_at, local_changed_at,
+       sync_state, sync_error, group_id, output_index)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const deleteTags = driver.prepare('DELETE FROM asset_tags WHERE asset_id = ?')
   const insertTag = driver.prepare('INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?, ?)')
@@ -218,6 +376,21 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   // and the proxy, and it is the one a second import of the same file must land on.
   const selectByHash = driver.prepare(
     'SELECT * FROM assets WHERE hash = ? ORDER BY created_at, id LIMIT 1',
+  )
+  const insertActivity = driver.prepare(`
+    INSERT INTO activity (at, level, topic, message_key, params, detail, asset_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `)
+  // By id rather than by age: the journal is append-only, so the id IS the order, and a clock
+  // that went backwards between two launches would otherwise decide what to keep.
+  const pruneActivity = driver.prepare(`
+    DELETE FROM activity
+    WHERE id <= (SELECT MAX(id) FROM activity) - ?
+  `)
+  const selectActivity = driver.prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?')
+  // Ascending, to pair with the drafts in the order they were handed over.
+  const selectActivityIds = driver.prepare(
+    'SELECT id FROM (SELECT id FROM activity ORDER BY id DESC LIMIT ?) ORDER BY id',
   )
   const deleteAsset = driver.prepare('DELETE FROM assets WHERE id = ?')
   // A child pointing at a parent that is gone reads back as a derivation from nothing, and
@@ -274,6 +447,19 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         asset.peaksPath ?? null,
         asset.map ?? null,
         asset.mapInverted ? 1 : null,
+        asset.generation?.modelId ?? null,
+        asset.generation?.modelLabel ?? null,
+        asset.generation?.prompt ?? null,
+        asset.generation?.seed ?? null,
+        asset.generation ? JSON.stringify(asset.generation.params) : null,
+        asset.remoteOwnerId ?? null,
+        asset.remoteUpdatedAt ?? null,
+        asset.remoteSyncedAt ?? null,
+        asset.localChangedAt ?? null,
+        asset.syncStatus ?? null,
+        asset.syncError ?? null,
+        asset.groupId ?? null,
+        asset.outputIndex ?? null,
       )
 
       deleteTags.run(asset.id)
@@ -302,15 +488,10 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       // One statement's worth of atomicity: a crash between the two would leave children
       // pointing at a row that is gone. The tags follow on their own — `asset_tags` is
       // `ON DELETE CASCADE`, and both drivers turn foreign keys on.
-      driver.exec('BEGIN')
-      try {
+      transaction(driver, () => {
         orphanChildren.run(assetId)
         deleteAsset.run(assetId)
-        driver.exec('COMMIT')
-      } catch (error) {
-        driver.exec('ROLLBACK')
-        throw error
-      }
+      })
     },
 
     search: query => {
@@ -322,9 +503,36 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         params.push(query.type)
       }
 
+      // What a workspace asks for: the Image space wants pictures, textures and skyboxes and
+      // nothing else. An empty list is not "no filter", it is "nothing" — and it must stay so,
+      // or opening a space that accepts no asset would show every asset.
+      if (query.types) {
+        const placeholders = query.types.map(() => '?').join(', ')
+        conditions.push(query.types.length > 0 ? `type IN (${placeholders})` : '0')
+        params.push(...query.types)
+      }
+
+      if (query.location) {
+        conditions.push('location = ?')
+        params.push(query.location)
+      }
+
+      if (query.syncStatus) {
+        conditions.push('sync_state = ?')
+        params.push(query.syncStatus)
+      }
+
+      if (query.groupId) {
+        conditions.push('group_id = ?')
+        params.push(query.groupId)
+      }
+
+      // The prompt is searched alongside the name: what one remembers of a generated asset is
+      // what one asked for, not the label the job happened to give it.
       if (query.text) {
-        conditions.push("name LIKE ? ESCAPE '\\'")
-        params.push(`%${escapeLike(query.text)}%`)
+        conditions.push("(name LIKE ? ESCAPE '\\' OR prompt LIKE ? ESCAPE '\\')")
+        const pattern = `%${escapeLike(query.text)}%`
+        params.push(pattern, pattern)
       }
 
       // Every tag must match, not any: filters narrow, they do not widen.
@@ -340,13 +548,50 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
       params.push(query.limit ?? DEFAULT_LIMIT, query.offset ?? 0)
 
+      // The members of one generation are read in the order the API produced them — the seven
+      // channels of a material, filling seven slots. Everywhere else, newest first.
+      const order = query.groupId ? 'output_index, id' : 'created_at DESC, id DESC'
       const rows = driver
-        .prepare(`SELECT * FROM assets ${where} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`)
+        .prepare(`SELECT * FROM assets ${where} ORDER BY ${order} LIMIT ? OFFSET ?`)
         .all(...params)
 
       const tags = tagsByAsset(rows.map(row => text(row, 'id')))
       return rows.map(row => assetOf(row, tags.get(text(row, 'id')) ?? []))
     },
+
+    appendActivity: entries => {
+      if (entries.length === 0) return []
+
+      // One transaction for the whole batch: a push of two hundred assets writes two hundred
+      // lines, and two hundred commits on a synchronous driver is a window that stops drawing.
+      transaction(driver, () => {
+        for (const entry of entries) {
+          insertActivity.run(
+            entry.at,
+            entry.level,
+            entry.topic,
+            entry.messageKey,
+            entry.params === undefined ? null : JSON.stringify(entry.params),
+            entry.detail ?? null,
+            entry.assetId ?? null,
+          )
+        }
+
+        // Trimmed here rather than on a timer: this is the only place the journal grows, and a
+        // bound nobody enforces is a bound written in a comment.
+        pruneActivity.run(ACTIVITY_RETENTION)
+      })
+
+      // The ids alone, paired back onto the drafts the caller still holds: `run` answers nothing
+      // through the port, and re-reading whole rows would re-parse params we just serialised.
+      // Ascending, so a batch longer than the retention keeps its surviving tail.
+      const ids = selectActivityIds.all(entries.length).map(row => optionalNumber(row, 'id') ?? 0)
+      return entries.slice(-ids.length).map((entry, index) => ({ ...entry, id: ids[index] ?? 0 }))
+    },
+
+    // Narrowing by level or topic is the window's job: it holds what it was given, so a filter
+    // costs it no round trip. This answers a count, newest first, and nothing else.
+    readActivity: query => selectActivity.all(query.limit ?? DEFAULT_LIMIT).map(activityOf),
 
     close: () => driver.close(),
   }

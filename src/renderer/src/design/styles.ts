@@ -44,6 +44,19 @@ export function rowSkin(selected: boolean): string {
 }
 
 /**
+ * A labelled toggle: the shape buttons of a texture, the view modes of a sky, the filters of
+ * the journal. Written once because three surfaces had it, and the third had already drifted —
+ * it lit up in `accent-soft` where the others use `elevated`, the studio's hover token.
+ */
+export function chipSkin(active: boolean): string {
+  return cn(
+    'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
+    active ? 'bg-elevated text-text' : 'text-muted hover:text-text bg-transparent',
+    FOCUS_RING,
+  )
+}
+
+/**
  * What one line measures in a list whose rows are the height of a control — `--sc-control` at
  * its tallest. The virtualizer needs a number and cannot read the gauge, so the lists estimating
  * such a row read it from here rather than each carrying its own copy of 28. A list whose rows
@@ -73,6 +86,15 @@ export type GestureProps = {
 export const FIELD = cn(
   'bg-surface border-border text-text h-(--sc-control) rounded-(--radius-sc-sm) border px-2',
   FOCUS_RING,
+)
+
+/**
+ * The surface a menu wears, whether it hangs from a control or opens at the pointer. Its width
+ * is left to the caller: a flyout is as wide as its anchor suggests, a context menu wider.
+ */
+export const MENU_SURFACE = cn(
+  'border-border bg-surface fixed z-50 flex flex-col gap-0.5',
+  'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
 )
 
 /** The frame every picture sits in, so a tile and a thumbnail cut their corners the same way. */

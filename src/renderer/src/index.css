@@ -25,6 +25,17 @@
   --color-accent-soft: #2e436e;
   --color-danger: #ff715b;
   /*
+   * Something did not go as asked, but nothing was lost — a rename that reached the disk and
+   * not the library. Its own token rather than `danger`: a journal where a warning is painted
+   * like a failure is a journal in which nothing stands out.
+   *
+   * daisyUI declares `warning` too, and the two namespaces are one set of variables. Declared
+   * here all the same, with daisyUI's own value: the journal lives in a dock, so it reads a
+   * studio token — and the two are made to agree rather than one being left to win on layer
+   * order, which is the lesson `--color-accent` cost below.
+   */
+  --color-warning: #e0a350;
+  /*
    * The one button that CREATES rather than shows. Its own token, warm against the blue accent
    * of everything that merely selects: the new-document button has to be findable in a rail of
    * grey glyphs without borrowing the colour that means "focused".

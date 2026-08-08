@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION } from '@shared/domain/document'
 import {
+  parseAssetQuery,
   parseDocumentDraft,
   parseDocumentEnvelope,
   parseDocumentId,
@@ -106,5 +107,43 @@ describe('parseDocumentDraft', () => {
   it('refuses a draft with no title', () => {
     expect(() => parseDocumentDraft({ content: null })).toThrow()
     expect(() => parseDocumentDraft(null)).toThrow()
+  })
+})
+
+describe('parseAssetQuery', () => {
+  it('lets a workspace ask for the kinds it uses', () => {
+    expect(parseAssetQuery({ types: ['image', 'texture', 'skybox'] })).toEqual({
+      types: ['image', 'texture', 'skybox'],
+    })
+  })
+
+  it('refuses a kind the studio does not have', () => {
+    expect(() => parseAssetQuery({ types: ['hologram'] })).toThrow()
+    expect(() => parseAssetQuery({ type: 'hologram' })).toThrow()
+  })
+
+  it('refuses a list longer than there are kinds', () => {
+    // A caller asking for eight of six kinds has lost track of what it wants.
+    const tooMany = Array.from({ length: 8 }, () => 'image')
+    expect(() => parseAssetQuery({ types: tooMany })).toThrow()
+  })
+
+  it('narrows by where the bytes are, and by nothing else that looks like it', () => {
+    expect(parseAssetQuery({ location: 'cloud' })).toEqual({ location: 'cloud' })
+    expect(() => parseAssetQuery({ location: 'remote' })).toThrow()
+  })
+
+  it('accepts a sync state the catalogue can hold, and refuses the rest', () => {
+    expect(parseAssetQuery({ syncStatus: 'local-ahead' })).toEqual({ syncStatus: 'local-ahead' })
+    expect(() => parseAssetQuery({ syncStatus: 'pushing' })).toThrow()
+  })
+
+  it('refuses a group that names nothing', () => {
+    expect(parseAssetQuery({ groupId: 'job_1' })).toEqual({ groupId: 'job_1' })
+    expect(() => parseAssetQuery({ groupId: '   ' })).toThrow()
+  })
+
+  it('asks for everything when asked for nothing', () => {
+    expect(parseAssetQuery({})).toEqual({})
   })
 })

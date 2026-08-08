@@ -1,6 +1,7 @@
 import { useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
+import { MENU_SURFACE } from './styles'
 
 /** Which side of its anchor the menu hangs on. */
 export type FlyoutPlacement = 'right' | 'above' | 'below'
@@ -64,8 +65,8 @@ export function Flyout({
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       className={cn(
-        'border-border bg-surface fixed z-50 flex min-w-40 flex-col gap-0.5',
-        'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
+        MENU_SURFACE,
+        'min-w-40',
         // The scene's Add menu is 22 rows: unbounded it runs off the bottom of the window,
         // and the rows past the edge are unreachable.
         'max-h-[min(60vh,32rem)] overflow-y-auto',

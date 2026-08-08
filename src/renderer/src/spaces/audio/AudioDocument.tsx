@@ -1,6 +1,8 @@
 import { mdiMusicNoteOutline, mdiPause, mdiPlay } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { Asset, AssetType } from '@shared/domain/asset'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { Toolbar } from '@/design/Toolbar'
 import { durationOf } from '@/engines/audio/audio-data'
@@ -14,6 +16,7 @@ import { assetsById, useAssets } from '@/stores/assets'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
+import { loadTake } from './load-take'
 import { useAudioRenderer } from './useAudioRenderer'
 import { useWaveSurfer } from './useWaveSurfer'
 
@@ -21,6 +24,8 @@ export type AudioDocumentProps = { documentId: string }
 
 /** What a fade tool lays down when no region says otherwise. */
 const DEFAULT_FADE: Us = SECOND
+
+const TAKES: readonly AssetType[] = ['audio']
 
 /**
  * One take, edited.
@@ -162,13 +167,25 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     }
   }
 
+  // The whole space takes a drop, empty or not: dropping a take onto the editor is how one
+  // replaces what is loaded, and the empty state is where the first one lands.
+  const takeDrop = (dropped: Asset): void => loadTake(documentId, dropped)
+
   if (!state.assetId) {
-    return <EmptyState icon={mdiMusicNoteOutline} message={t('audio.noAsset')} />
+    return (
+      <AssetDropTarget accepts={TAKES} onDrop={takeDrop} className="h-full">
+        <EmptyState icon={mdiMusicNoteOutline} message={t('audio.noAsset')} />
+      </AssetDropTarget>
+    )
   }
   if (failed) return <EmptyState icon={mdiMusicNoteOutline} message={t('audio.unreadable')} />
 
   return (
-    <section className="flex h-full min-h-0 flex-col gap-2 p-2">
+    <AssetDropTarget
+      accepts={TAKES}
+      onDrop={takeDrop}
+      className="flex h-full min-h-0 flex-col gap-2 p-2"
+    >
       <div className="bg-chassis relative min-h-0 w-full flex-1">
         <div ref={waveform} className="absolute inset-0" />
         {!rendered && <EmptyState icon={mdiMusicNoteOutline} message={t('collection.loading')} />}
@@ -198,6 +215,6 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
           </span>
         }
       />
-    </section>
+    </AssetDropTarget>
   )
 }

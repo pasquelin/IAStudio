@@ -49,6 +49,21 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   // a check that fails leaves the studio exactly as usable as it was.
   void services.updates.check()
 
+  // The journal batches, so up to a flush's worth of it is still in memory at any moment — and
+  // the most ordinary way to lose it is the one that matters: an export fails, the user quits.
+  //
+  // Electron only waits for this if it is told to. Without the `preventDefault`, the process is
+  // torn down while the round trip to the catalogue thread is still out, and the line this is
+  // here to save is the one that goes.
+  let leaving = false
+  app.on('before-quit', event => {
+    if (leaving) return
+
+    event.preventDefault()
+    leaving = true
+    void services.journal.flush().finally(() => app.quit())
+  })
+
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
   // the other. Only a second launch overrides that — see `revealWindow`.
   const main = createMainWindow({ deferShow: true })

@@ -1,7 +1,6 @@
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
-import { log } from '@main/log'
-import { describeFailure, failureOf } from './client'
+import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
 import type { AssetUploader } from './uploader'
@@ -21,24 +20,7 @@ export type ScenarioHandlerDeps = {
   uploads: AssetUploader
 }
 
-/**
- * A rejection crossing the boundary carries its message to the renderer. An SDK message
- * embeds the request that produced it, so every failure leaves as a code — the same reduction
- * the job manager and the authentication probe already apply.
- *
- * The cause stays attached for the main process alone: Electron serializes `message`, `name`
- * and `stack` of a rejected handler, never `cause`.
- */
-async function reduced<T>(action: () => Promise<T>): Promise<T> {
-  try {
-    return await action()
-  } catch (error) {
-    // Logged where the credentials already live: reduced to a code, the renderer cannot say
-    // which call the API refused, and neither could anyone reading a bug report.
-    log.error('scenario', describeFailure(error))
-    throw new Error(failureOf(error), { cause: error })
-  }
-}
+const reduced = reducedBy('scenario')
 
 export function registerScenarioHandlers({ models, jobs, uploads }: ScenarioHandlerDeps): void {
   handle(CHANNELS.scenarioSearchModels, (_event, query) =>

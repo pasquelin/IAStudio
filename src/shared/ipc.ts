@@ -1,5 +1,7 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
-import type { Asset, AssetQuery } from './domain/asset'
+import type { ActivityEntry, ActivityQuery } from './domain/activity'
+import type { Asset, AssetChanges, AssetQuery } from './domain/asset'
+import type { CloudPage, CloudQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type {
   DocumentDescriptor,
@@ -14,6 +16,7 @@ import type { Project } from './domain/project'
 import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
+import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { WindowState } from './domain/window'
@@ -63,6 +66,15 @@ export type Channels = {
   assetsPeaks: 'assets:peaks'
   assetsReveal: 'assets:reveal'
   assetsSaveAudio: 'assets:save-audio'
+  assetsUpdate: 'assets:update'
+  assetsRemove: 'assets:remove'
+
+  cloudBrowse: 'cloud:browse'
+  cloudPull: 'cloud:pull'
+  cloudPush: 'cloud:push'
+  cloudPlan: 'cloud:plan'
+
+  activityRead: 'activity:read'
 
   mediaIngest: 'media:ingest'
   mediaCancel: 'media:cancel'
@@ -122,6 +134,15 @@ export const CHANNELS: Channels = {
   assetsPeaks: 'assets:peaks',
   assetsReveal: 'assets:reveal',
   assetsSaveAudio: 'assets:save-audio',
+  assetsUpdate: 'assets:update',
+  assetsRemove: 'assets:remove',
+
+  cloudBrowse: 'cloud:browse',
+  cloudPull: 'cloud:pull',
+  cloudPush: 'cloud:push',
+  cloudPlan: 'cloud:plan',
+
+  activityRead: 'activity:read',
 
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
@@ -177,6 +198,7 @@ export type LogScope =
   | 'canvas.layer'
   | 'image.export'
   | 'document.save'
+  | 'assets.reveal'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -187,7 +209,13 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'canvas.layer',
   'image.export',
   'document.save',
+  'assets.reveal',
 ]
+
+/** `LogEntry.scope` is a free string — the main process logs under its own names too. */
+export function isLogScope(value: unknown): value is LogScope {
+  return LOG_SCOPES.some(candidate => candidate === value)
+}
 
 /**
  * Long enough for a stack trace, short enough that a renderer looping on a failure cannot fill
@@ -229,6 +257,7 @@ export const EVENTS = {
   sceneExport: 'evt:scene-export',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
+  activity: 'evt:activity',
 }
 
 export type Unsubscribe = () => void
@@ -344,6 +373,52 @@ export type StudioBridge = {
     reveal: (assetId: string) => Promise<boolean>
     /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
     saveAudio: (request: SaveAudioRequest) => Promise<Asset>
+    /** Renames an asset or rewrites its tags. Whichever field is absent is left as it was. */
+    update: (assetId: string, changes: AssetChanges) => Promise<Asset>
+    /**
+     * Drops assets from the project, and from the library too when asked.
+     *
+     * `alsoRemote` is not undone by anything: the API has no single-asset delete and no undo,
+     * so the confirmation belongs to whoever calls this.
+     */
+    remove: (assetIds: readonly string[], alsoRemote: boolean) => Promise<void>
+  }
+  /**
+   * The account's library, which is not the project's catalogue.
+   *
+   * Kept apart on purpose: `catalog.db` belongs to a project, while the library belongs to the
+   * key. Mirroring one into the other would copy the same library into every project and leave
+   * as many stale copies to invalidate — so cloud assets are read through, and only become rows
+   * once they are pulled.
+   */
+  cloud: {
+    /** One page of the library. The cursor is opaque, and null once there is no more. */
+    browse: (query: CloudQuery) => Promise<CloudPage>
+    /**
+     * Brings assets into the project, bytes and all. Answers what each one did — a download
+     * that fails halfway has already written the ones before it, and a rejection would lose
+     * that. The rows themselves arrive through the catalogue, which the store re-reads.
+     */
+    pull: (remoteAssetIds: readonly string[]) => Promise<SyncOutcome[]>
+    /** Sends local assets up. Answers what each one did, successes and failures alike. */
+    push: (assetIds: readonly string[]) => Promise<SyncOutcome[]>
+    /** What a push or a pull would do, before it costs a single request. */
+    plan: (assetIds: readonly string[], policy: SyncPolicy) => Promise<SyncPlan>
+  }
+  /**
+   * What the studio did, and what it failed to do — the surface it had none of.
+   *
+   * A line carries an i18n KEY and its parameters, never a sentence: the journal outlives the
+   * language the interface was in when it was written. `detail` is `describeFailure` output and
+   * nothing else, because an SDK message embeds the request, hence the API key.
+   */
+  activity: {
+    read: (query: ActivityQuery) => Promise<ActivityEntry[]>
+    /**
+     * Lines as they are written, in batches. A push of two hundred assets is one message, not
+     * two hundred — the same coalescing the ingest bar does with its progress.
+     */
+    onEntries: (callback: (entries: readonly ActivityEntry[]) => void) => Unsubscribe
   }
   scene: {
     /**

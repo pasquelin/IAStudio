@@ -1,3 +1,4 @@
+import { registerAssetHandlers } from '@main/assets/handlers'
 import { registerDiagnosticsHandlers } from '@main/diagnostics/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
@@ -16,7 +17,7 @@ import type { Services } from '@main/services'
 export function registerIpc(services: Services): void {
   registerWindowControls()
   registerMenuHandlers()
-  registerDiagnosticsHandlers()
+  registerDiagnosticsHandlers(() => services.journal)
   // Wired here rather than held by `Services`: opening a window is not a service, and this is
   // where the two sides of the boundary are already being joined.
   registerSettingsHandlers({
@@ -30,6 +31,14 @@ export function registerIpc(services: Services): void {
   })
   registerScenarioHandlers(services)
   registerProjectHandlers(services)
+  registerAssetHandlers({
+    catalog: () => services.project.catalog(),
+    remote: services.remote,
+    cloud: services.cloud,
+    removeFile: services.removeAssetFile,
+    activeOwnerId: services.ownerScope.current,
+    journal: () => services.journal,
+  })
   registerMediaHandlers(services)
   registerDialogHandlers(services)
   registerSceneHandlers(services)

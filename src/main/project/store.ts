@@ -25,6 +25,8 @@ export type ProjectStoreDeps = {
   openCatalog: (file: string) => Promise<AsyncCatalog>
   now: () => string
   onChange: (project: Project | null) => void
+  /** Writes out whatever still belongs to the project being closed, before its catalogue goes. */
+  settle?: () => Promise<void>
 }
 
 export type ProjectStore = {
@@ -42,7 +44,12 @@ async function ensureFolders(root: string): Promise<void> {
   await Promise.all(PROJECT_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
 }
 
-export function createProjectStore({ openCatalog, now, onChange }: ProjectStoreDeps): ProjectStore {
+export function createProjectStore({
+  openCatalog,
+  now,
+  onChange,
+  settle,
+}: ProjectStoreDeps): ProjectStore {
   let project: Project | null = null
   let catalog: AsyncCatalog | null = null
 
@@ -66,6 +73,10 @@ export function createProjectStore({ openCatalog, now, onChange }: ProjectStoreD
     await mkdir(dirname(file), { recursive: true })
 
     const opening = await openCatalog(file)
+
+    // Whatever is still queued belongs to the project that is closing, and its catalogue is
+    // about to stop answering.
+    await settle?.()
 
     close()
     catalog = opening

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { assetsById, useAssets } from './assets'
 
 function asset(id: string, name: string): Asset {
@@ -37,5 +38,80 @@ describe('assetsById', () => {
 
     expect(after).not.toBe(before)
     expect(after.get('a')?.name).toBe('Renamed')
+  })
+})
+
+describe('the kinds the catalogue is asked for', () => {
+  beforeEach(() => {
+    useAssets.setState({ items: [], scope: null })
+  })
+
+  it('asks for the kinds the space uses, and nothing else', async () => {
+    const asked: unknown[] = []
+    installFakeBridge({
+      assets: {
+        search: query => {
+          asked.push(query)
+          return Promise.resolve([])
+        },
+      },
+    })
+
+    await useAssets.getState().setScope(['image', 'texture'])
+
+    expect(asked).toEqual([{ types: ['image', 'texture'] }])
+  })
+
+  it('asks for everything once the scope is dropped', async () => {
+    const asked: unknown[] = []
+    installFakeBridge({
+      assets: {
+        search: query => {
+          asked.push(query)
+          return Promise.resolve([])
+        },
+      },
+    })
+    useAssets.setState({ scope: ['audio'] })
+
+    await useAssets.getState().setScope(null)
+
+    expect(asked).toEqual([{}])
+  })
+
+  // The panel calls this on every render; without the guard it would re-read the catalogue in
+  // a loop, and each read sets state that triggers the next render.
+  it('does not read the catalogue again for a scope it already holds', async () => {
+    let reads = 0
+    installFakeBridge({
+      assets: {
+        search: () => {
+          reads += 1
+          return Promise.resolve([])
+        },
+      },
+    })
+
+    await useAssets.getState().setScope(['image'])
+    await useAssets.getState().setScope(['image'])
+
+    expect(reads).toBe(1)
+  })
+
+  it('tells two scopes apart by what they hold, not by identity', async () => {
+    let reads = 0
+    installFakeBridge({
+      assets: {
+        search: () => {
+          reads += 1
+          return Promise.resolve([])
+        },
+      },
+    })
+
+    await useAssets.getState().setScope(['image', 'texture'])
+    await useAssets.getState().setScope(['image', 'skybox'])
+
+    expect(reads).toBe(2)
   })
 })

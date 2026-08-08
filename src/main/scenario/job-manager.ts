@@ -1,5 +1,6 @@
 import type { JobFailure } from '@shared/domain/failure'
 import { isFinished, type Job, type JobProgress, type JobStatus } from '@shared/domain/job'
+import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
 
 /** A job as the API returns it, reduced to what the studio reads. */
@@ -42,6 +43,8 @@ export type JobManagerDeps = {
   concurrency: () => number
   maxRetries: () => number
   onProgress: (progress: JobProgress) => void
+  /** Where a finished generation says what became of it. See `ActivityLog`. */
+  record: (report: ActivityReport) => void
   now: () => string
   newId: () => string
   sleep: (ms: number) => Promise<void>
@@ -106,6 +109,7 @@ export function createJobManager({
   concurrency,
   maxRetries,
   onProgress,
+  record,
   now,
   newId,
   sleep,
@@ -136,6 +140,33 @@ export function createJobManager({
     }
   }
 
+  /**
+   * What a finished job leaves behind for someone to read.
+   *
+   * A generation is minutes spent elsewhere: the progress bar is gone by the time it ends, and
+   * a failure that only reached the terminal was a failure nobody was there for.
+   */
+  const journal = (job: Job, status: JobStatus): void => {
+    if (status === 'succeeded') {
+      if (job.assetIds.length > 0) {
+        record({
+          level: 'info',
+          topic: 'generation',
+          messageKey: 'activity.generated',
+          params: { count: job.assetIds.length },
+        })
+      }
+      return
+    }
+
+    record({
+      level: status === 'failed' ? 'error' : 'info',
+      topic: 'generation',
+      messageKey: status === 'failed' ? 'activity.jobFailed' : 'activity.jobCancelled',
+      params: { name: job.label },
+    })
+  }
+
   const settle = (entry: Entry, status: JobStatus, error?: JobFailure): void => {
     entry.job.status = status
     entry.job.finishedAt = now()
@@ -148,6 +179,7 @@ export function createJobManager({
     if (status === 'succeeded') entry.job.progress = 1
     if (error !== undefined) entry.job.error = error
     emit(entry)
+    journal(entry.job, status)
     evictOldFinished()
   }
 

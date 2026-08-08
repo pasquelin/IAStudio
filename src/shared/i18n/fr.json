@@ -56,6 +56,52 @@
     },
     "cancel": "Annuler la tâche"
   },
+  "activity": {
+    "open": "Afficher le journal",
+    "none": "Rien à signaler.",
+    "noMatch": "Rien ne correspond à ce filtre.",
+    "failures_one": "{{count}} échec",
+    "failures_other": "{{count}} échecs",
+    "clearFilters": "Tout afficher",
+    "dismiss": "Masquer",
+    "levels": {
+      "info": "Information",
+      "warn": "Avertissement",
+      "error": "Échec"
+    },
+    "topics": {
+      "generation": "Génération",
+      "import": "Import",
+      "library": "Bibliothèque",
+      "document": "Document"
+    },
+    "jobFailed": "La génération « {{name}} » a échoué",
+    "jobCancelled": "Génération « {{name}} » annulée",
+    "generated": "{{count}} asset généré",
+    "generated_other": "{{count}} assets générés",
+    "importFailed": "Impossible d’importer « {{name}} »",
+    "imported": "{{name}} importé",
+    "importUnreadable": "« {{name}} » est illisible",
+    "pullFailed": "Impossible de rapatrier « {{name}} »",
+    "pulled": "{{count}} asset rapatrié",
+    "pulled_other": "{{count}} assets rapatriés",
+    "pushFailed": "Impossible d’envoyer « {{name}} »",
+    "pushed": "{{count}} asset envoyé",
+    "pushed_other": "{{count}} assets envoyés",
+    "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
+    "apiRefused": "L’API Scenario a refusé une requête",
+    "scope": {
+      "scene.model": "Un modèle 3D n’a pas pu être chargé",
+      "scene.texture": "Une texture n’a pas pu être chargée",
+      "scene.export": "L’export de la scène a échoué",
+      "texture.map": "Un canal de texture n’a pas pu être chargé",
+      "skybox.source": "L’image du ciel n’a pas pu être chargée",
+      "canvas.layer": "Un calque n’a pas pu être chargé",
+      "image.export": "L’export de l’image a échoué",
+      "document.save": "L’enregistrement du document a échoué",
+      "assets.reveal": "Le fichier n’a pas pu être montré"
+    }
+  },
   "updates": {
     "available": "Version {{version}} disponible",
     "downloading": "Téléchargement de la version {{version}}",
@@ -69,7 +115,20 @@
     "count_other": "{{count}} assets",
     "openProject": "Ouvrez un projet pour voir ses assets.",
     "import": "Importer un média",
-    "importHint": "Lier un fichier vidéo, audio ou image — il reste où il est"
+    "importHint": "Lier un fichier vidéo, audio ou image — il reste où il est",
+    "badge": {
+      "local-only": "Local seulement",
+      "synced": "Synchronisé avec la bibliothèque",
+      "to-push": "Modifié ici — à envoyer",
+      "to-pull": "Modifié dans la bibliothèque — à rapatrier",
+      "conflict": "Modifié des deux côtés",
+      "error": "Le dernier envoi a échoué",
+      "other-account": "Appartient à un autre projet"
+    },
+    "location": "Emplacement",
+    "push": "Envoyer {{count}} asset",
+    "push_other": "Envoyer {{count}} assets",
+    "pushHint": "Téléverse la sélection dans la bibliothèque Scenario"
   },
   "dialog": {
     "allMedia": "Tous les médias",
@@ -462,7 +521,7 @@
     "rewind": "Retour au début"
   },
   "audio": {
-    "noAsset": "Aucun son ouvert. Double-cliquez sur un asset audio pour l’éditer.",
+    "noAsset": "Aucun son ouvert. Déposez une prise ici, ou double-cliquez sur un asset audio.",
     "unreadable": "Ce fichier n’a pas pu être décodé.",
     "copyName": "{{name}} (édité)"
   },
@@ -1110,5 +1169,13 @@
     "temperature": "Température",
     "add": "Ajouter un réglage",
     "addHint": "Poser un calque de réglage sur ce qui est en dessous"
+  },
+  "intents": {
+    "skyboxSource": "Utiliser comme ciel",
+    "sceneMesh": "Ajouter à la scène",
+    "audioTake": "Ouvrir dans l’éditeur audio",
+    "imageLayer": "Placer comme calque",
+    "videoClip": "Ajouter au montage",
+    "textureChannel": "Utiliser comme couleur de base"
   }
 }

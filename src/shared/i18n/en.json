@@ -56,6 +56,52 @@
     },
     "cancel": "Cancel job"
   },
+  "activity": {
+    "open": "Show the journal",
+    "none": "Nothing to report.",
+    "noMatch": "Nothing matches this filter.",
+    "failures_one": "{{count}} failure",
+    "failures_other": "{{count}} failures",
+    "clearFilters": "Show everything",
+    "dismiss": "Dismiss",
+    "levels": {
+      "info": "Information",
+      "warn": "Warning",
+      "error": "Failure"
+    },
+    "topics": {
+      "generation": "Generation",
+      "import": "Import",
+      "library": "Library",
+      "document": "Document"
+    },
+    "jobFailed": "Generation \"{{name}}\" failed",
+    "jobCancelled": "Generation \"{{name}}\" cancelled",
+    "generated": "{{count}} asset generated",
+    "generated_other": "{{count}} assets generated",
+    "importFailed": "Could not import \"{{name}}\"",
+    "imported": "{{name}} imported",
+    "importUnreadable": "\"{{name}}\" is unreadable",
+    "pullFailed": "Could not fetch \"{{name}}\"",
+    "pulled": "{{count}} asset fetched",
+    "pulled_other": "{{count}} assets fetched",
+    "pushFailed": "Could not send \"{{name}}\"",
+    "pushed": "{{count}} asset sent",
+    "pushed_other": "{{count}} assets sent",
+    "tagsNotSynced": "The tags of \"{{name}}\" did not reach the library",
+    "apiRefused": "The Scenario API refused a request",
+    "scope": {
+      "scene.model": "A 3D model could not be loaded",
+      "scene.texture": "A texture could not be loaded",
+      "scene.export": "Exporting the scene failed",
+      "texture.map": "A texture channel could not be loaded",
+      "skybox.source": "The sky picture could not be loaded",
+      "canvas.layer": "A layer could not be loaded",
+      "image.export": "Exporting the picture failed",
+      "document.save": "Saving the document failed",
+      "assets.reveal": "The file could not be shown"
+    }
+  },
   "updates": {
     "available": "Version {{version}} available",
     "downloading": "Downloading version {{version}}",
@@ -69,7 +115,20 @@
     "count_other": "{{count}} assets",
     "openProject": "Open a project to see its assets.",
     "import": "Import media",
-    "importHint": "Link a video, audio or image file — it stays where it is"
+    "importHint": "Link a video, audio or image file — it stays where it is",
+    "badge": {
+      "local-only": "Local only",
+      "synced": "In sync with the library",
+      "to-push": "Changed here — to send",
+      "to-pull": "Changed in the library — to fetch",
+      "conflict": "Changed on both sides",
+      "error": "The last upload failed",
+      "other-account": "Belongs to another project"
+    },
+    "location": "Location",
+    "push": "Send {{count}} asset",
+    "push_other": "Send {{count}} assets",
+    "pushHint": "Uploads the selection to the Scenario library"
   },
   "dialog": {
     "allMedia": "All media",
@@ -462,7 +521,7 @@
     "rewind": "Back to start"
   },
   "audio": {
-    "noAsset": "No sound open. Double-click an audio asset to edit it.",
+    "noAsset": "No sound open. Drop a take here, or double-click an audio asset.",
     "unreadable": "This file could not be decoded.",
     "copyName": "{{name}} (edited)"
   },
@@ -1110,5 +1169,13 @@
     "temperature": "Temperature",
     "add": "Add an adjustment",
     "addHint": "Lay an adjustment layer over what is below it"
+  },
+  "intents": {
+    "skyboxSource": "Use as sky",
+    "sceneMesh": "Add to the scene",
+    "audioTake": "Open in the audio editor",
+    "imageLayer": "Place as a layer",
+    "videoClip": "Add to the montage",
+    "textureChannel": "Use as base colour"
   }
 }

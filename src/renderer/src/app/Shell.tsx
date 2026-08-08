@@ -6,6 +6,8 @@ import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { DocumentArea } from './DocumentArea'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
+import { ActivityStatus } from './ActivityStatus'
+import { ActivityToasts } from './ActivityToasts'
 import { JobsStatus } from './JobsStatus'
 import { UpdateStatus } from './UpdateStatus'
 import { Rail } from './Rail'
@@ -71,9 +73,11 @@ export function Shell() {
           <>
             <UpdateStatus />
             <JobsStatus />
+            <ActivityStatus />
           </>
         }
       />
+      <ActivityToasts />
       <TooltipHost />
     </div>
   )

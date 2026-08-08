@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { PICTURES, type Asset } from '@shared/domain/asset'
 import { restoreDocument } from '@/app/document-io'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
@@ -26,7 +27,6 @@ import {
 import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
-import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
@@ -90,8 +90,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
   const bindings = useBindingOverrides()
   const active = useDocuments(state => state.activeId === documentId)
-  const byId = useAssets(assetsById)
-  const [over, setOver] = useState(false)
 
   // What a fresh caption says. Held in a ref so the effect that builds the engine does not
   // depend on the language, which would remount it — and lose every layer's texture.
@@ -288,17 +286,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   })
 
   /** A picture dropped on the canvas becomes a layer of its own, on top and armed. */
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault()
-      setOver(false)
-
-      const assetId = assetIdFromDrag(event)
-      const asset = assetId ? byId.get(assetId) : null
-      if (asset) placeAsset(documentId, asset)
-    },
-    [byId, documentId],
-  )
+  const onDrop = (asset: Asset): void => placeAsset(documentId, asset)
 
   // Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
   // active has to hand over the ellipse, not merely remember it for later.
@@ -331,14 +319,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   return (
     <div className="flex h-full min-h-0">
-      <div
-        className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}
-        onDragOver={event => {
-          event.preventDefault()
-          setOver(true)
-        }}
-        onDragLeave={() => setOver(false)}
+      <AssetDropTarget
+        accepts={PICTURES}
         onDrop={onDrop}
+        className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}
       >
         {/* Pixi appends its own canvas here, and the overlay its own above it — see
             `CanvasEngine.mount`. The cursor goes on the host rather than the canvas, which Pixi
@@ -358,10 +342,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           canRedo={redoable}
         />
 
-        {/* The same overlay every droppable surface uses, rather than a border of its own: a
-            difference in how two panels answer a drag reads as a bug. */}
-        {over && <div className="border-accent pointer-events-none absolute inset-0 border-2" />}
-
         <ZoomBar
           scale={view.viewport.scale}
           shortcuts={shortcuts}
@@ -370,7 +350,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           onFit={() => run('canvas.zoomFit')}
           onActual={() => run('canvas.zoomActual')}
         />
-      </div>
+      </AssetDropTarget>
     </div>
   )
 }

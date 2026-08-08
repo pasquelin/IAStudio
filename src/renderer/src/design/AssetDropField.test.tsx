@@ -1,8 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
+import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
+import { useAssets } from '@/stores/assets'
 import { AssetDropField } from './AssetDropField'
+
+const picture: Asset = {
+  id: 'asset-7',
+  name: 'moss.png',
+  type: 'image',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-07T10:00:00.000Z',
+}
 
 /** What `register` hands a control, reduced to what this field touches. */
 function registration(onChange = vi.fn()) {
@@ -10,12 +21,16 @@ function registration(onChange = vi.fn()) {
 }
 
 function drop(target: Element, assetId: string): void {
-  const transfer = dragTransfer()
-  transfer.setData(ASSET_DRAG_TYPE, assetId)
-  fireEvent.drop(target, { dataTransfer: transfer })
+  const dataTransfer = dragTransfer()
+  startAssetDrag({ dataTransfer }, { id: assetId, type: 'image' })
+  fireEvent.drop(target, { dataTransfer })
 }
 
 describe('AssetDropField', () => {
+  beforeEach(() => {
+    useAssets.setState({ items: [picture] })
+  })
+
   it('takes the id of a picture dropped on it', () => {
     const onChange = vi.fn()
     const { container } = render(

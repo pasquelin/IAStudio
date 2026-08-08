@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
+import type { ActivityEntry } from '@shared/domain/activity'
 import type { CommandId } from '@shared/domain/command'
 import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
@@ -77,6 +78,19 @@ const bridge: StudioBridge = {
     peaks: assetId => ipcRenderer.invoke(CHANNELS.assetsPeaks, assetId),
     reveal: assetId => ipcRenderer.invoke(CHANNELS.assetsReveal, assetId),
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
+    update: (assetId, changes) => ipcRenderer.invoke(CHANNELS.assetsUpdate, assetId, changes),
+    remove: (assetIds, alsoRemote) =>
+      ipcRenderer.invoke(CHANNELS.assetsRemove, assetIds, alsoRemote),
+  },
+  cloud: {
+    browse: query => ipcRenderer.invoke(CHANNELS.cloudBrowse, query),
+    pull: remoteAssetIds => ipcRenderer.invoke(CHANNELS.cloudPull, remoteAssetIds),
+    push: assetIds => ipcRenderer.invoke(CHANNELS.cloudPush, assetIds),
+    plan: (assetIds, policy) => ipcRenderer.invoke(CHANNELS.cloudPlan, assetIds, policy),
+  },
+  activity: {
+    read: query => ipcRenderer.invoke(CHANNELS.activityRead, query),
+    onEntries: callback => subscribe<readonly ActivityEntry[]>(EVENTS.activity, callback),
   },
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),

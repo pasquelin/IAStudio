@@ -47,6 +47,34 @@ export function assetIcon(type: AssetType): string {
   return ICONS[WORKSPACE_OF_TYPE[type]]
 }
 
+/** Where a kind is made — the space its generator belongs to. */
+export function workspaceOfType(type: AssetType): WorkspaceId {
+  return WORKSPACE_OF_TYPE[type]
+}
+
+/**
+ * What each space has any use for — which is not the reverse of the table above.
+ *
+ * A space consumes more than it produces: the 3D one takes materials and skies as much as
+ * meshes, and the texture one is fed by ordinary pictures. Video takes everything, because a
+ * montage is where the others end up.
+ *
+ * This is what keeps takes out of the way while painting, without hiding anything that space
+ * could actually accept — the shelf offers a way back to everything.
+ */
+const USED_BY_WORKSPACE: Record<WorkspaceId, readonly AssetType[]> = {
+  image: ['image', 'texture', 'skybox'],
+  video: ['video', 'audio', 'image', 'mesh', 'texture', 'skybox'],
+  '3d': ['mesh', 'texture', 'skybox', 'image'],
+  audio: ['audio'],
+  textures: ['texture', 'image'],
+  skyboxes: ['skybox', 'image'],
+}
+
+export function assetTypesOf(workspace: WorkspaceId): readonly AssetType[] {
+  return USED_BY_WORKSPACE[workspace]
+}
+
 const FAMILIES: Record<WorkspaceId, ModelFamily> = {
   image: 'image',
   video: 'video',
