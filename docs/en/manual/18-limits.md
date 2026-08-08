@@ -64,20 +64,21 @@ They are visible in the toolbar, greyed out.
 
 | Tool | Group |
 |---|---|
-| **Scale** (`K`) | Cursor |
+| **Crop** (`F`) | Frame |
 | **Slice** (`⇧S`) | Frame |
 | **Cut** (`S`) | Frame |
-| **Image…** (`⇧⌘K`) | Shapes |
 | **Pen** | Drawing |
 | **Text on path** | Text |
+| **Comment** (`C`) | Comment |
 
-### Selection constrains nothing
+### Cropping, mirroring and rotating are not offered
 
-The three selection tools — **rectangle**, **ellipse**, **lasso** — do draw an area. But no other
-tool restricts its action to that area yet.
+The gesture is written and cropping works, but **resizing the frame moves the layers without moving
+their pixels**: after a crop the brush would paint beside the cursor. The same goes for a mirror or a
+quarter turn, which would lay the layers outside the frame.
 
-Painting with an active selection paints everywhere. It is the most disconcerting limit of this
-workspace, because the gesture appears to work.
+It is the same missing piece that keeps **Merge down** and **Flatten** off the menu. A button that
+damages the document is worse than a button that is not there.
 
 ### Fill is not a paint bucket
 
@@ -90,9 +91,11 @@ That is not a defect: it is a different tool, and its name says so.
 
 The *undo stack* keeps the **last 100** actions. Beyond that, the oldest disappear for good.
 
-### No export
+### Export exists, saving does not
 
-You cannot yet write a flattened `.png` or `.jpg` from an image document.
+`⇧⌘E` writes the flattened document as a `.png` wherever you point. But **an image document does not
+save**: closing the tab loses the layer stack and everything painted on it. See "What this means in
+practice", above.
 
 ---
 

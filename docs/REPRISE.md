@@ -32,8 +32,8 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**557 fichiers dans `src/`. 2088 tests verts sur 201 fichiers. 32 canaux IPC et 10 événements.
-6 espaces éditables. 2 types de documents sur 6 savent s'enregistrer.**
+**617 fichiers dans `src/`. 2529 tests verts sur 230 fichiers. 6 espaces éditables. 2 types de
+documents sur 6 savent s'enregistrer — l'espace Image, lui, exporte mais ne s'enregistre pas encore.**
 
 `pnpm validate` est vert. L'application démarre par `pnpm start`.
 
@@ -150,10 +150,11 @@ dit propre alors qu'il ne l'est pas. Le remède est un **jeton monotone par comm
 
 ---
 
-## 3.2 Mode Image — jalons 4 à 10
+## 3.2 Mode Image
 
-**Jalons 0 à 3 livrés et fusionnés dans `main`.** Plus de branche `feat/image-mode`, plus de
-worktree. Moteur : **PixiJS v8, pas three.js**.
+**Jalons 0 à 3, puis 4, 6, 7, 9 et 10 livrés et fusionnés dans `main`.** Moteur : **PixiJS v8, pas
+three.js**. Ce qui reste tient en dix points, § « Ce qui reste, par ordre de valeur » — et le premier
+en débloque cinq à lui seul.
 
 ### Le socle déjà posé — ne pas le réécrire
 
@@ -162,21 +163,21 @@ par commande avec `scope`, `titleKey`, `helpKey`, `defaultBinding` ; les overrid
 dans `stores/bindings.ts`. Ajouter une commande, c'est trois choses : un descripteur dans
 `COMMAND_REGISTRY`, deux clés i18n (`commands.<nom>.title` / `.help`) dans `fr.json` **et**
 `en.json`, et un `case` dans le `switch` du document concerné. Le mode Image a son scope `'canvas'`
-et dix commandes (`canvas.zoomIn`, `zoomOut`, `zoomFit`, `zoomActual`, `rulers`, `guides`,
-`clearGuides`, `snap`, `undo`, `redo`), exécutées par `ImageDocument` derrière
+et dix-huit commandes — les dix du zoom et des repères, plus `deselect`, `maskFromSelection`,
+`export`, et les cinq éditions IA — exécutées par `ImageDocument` derrière
 `useShortcuts({ scope: 'canvas', enabled: active, onCommand: run })` — **le document en avant est le
 seul à écouter**.
 
 **Le modèle de document est un arbre.** `engines/canvas/canvas-state.ts`, `state.layers` est la
 racine, jamais le document entier :
 
-    type Layer = PixelLayer | GroupLayer | AdjustmentLayer   // discriminé par `kind`
+    type Layer = PixelLayer | GroupLayer | AdjustmentLayer | TextLayer   // discriminé par `kind`
 
 **Ne jamais parcourir l'arbre à la main** : `allLayers`, `layerById`, `mapLayers`, `updateSiblings`,
 `pixelLayer` / `groupLayer`. **Les pixels ne sont pas dans le modèle** — ils vivent dans les
 `RenderTexture` de `CanvasEngine`, indexées par id de calque (invariant 3). `resizeCanvas` déplace le
 cadre sans toucher aux pixels ; `resizeImage` rééchantillonne, mais les textures ne le sont **pas
-encore** : c'est le jalon 10.
+encore** — c'est `resurface`, le blocage décrit plus bas.
 
 **L'historique, pixels compris (jalon 3).**
 
@@ -221,118 +222,178 @@ de transformation du jalon 7.
 `CanvasEngine.test.ts` double `pixi.js` avec `vi.mock` : **ajouter ses cas dedans** plutôt que de
 conclure qu'un moteur ne se teste pas.
 
-### Quatre écarts avec ce qu'on croit savoir
+### Cinq écarts avec ce qu'on croit savoir
 
-1. **Il n'existe ni `shared/gpu/GpuPipeline`, ni `passes/adjust`, ni `passes/blur`, ni `readback`,
-   ni `shared/model/adjustments`, ni `shared/export/encode`.** Il faudra les écrire.
-2. **Le socle GPU se construit sur `Filter` de Pixi.** `import 'pixi.js/unsafe-eval'` vient en
+1. **Le socle GPU se construit sur `Filter` de Pixi.** `import 'pixi.js/unsafe-eval'` vient en
    premier : la CSP d'Electron interdit `unsafe-eval` et Pixi compile ses shaders avec
-   `new Function()`.
-3. **Aucun objet GPU dans le modèle.**
-4. **`hue` n'existe pas dans les modes de fusion de Pixi.** Il est déclaré dans le modèle et retombe
-   sur `normal`, en attendant un filtre maison. Ne pas le mapper sur autre chose.
+   `new Function()`. `engines/canvas/adjust-filter.ts` est le premier écrit ; `blur`,
+   `morphology` et `threshold` restent à faire.
+2. **Aucun objet GPU dans le modèle.**
+3. **`hue` n'existe pas dans les modes de fusion de Pixi** — 8.19 l'a *commenté hors* de son propre
+   type `BLEND_MODES`, si bien que le littéral ne typecheckerait même pas. La table
+   `BLEND_BY_MODE` le fait retomber sur `normal`, explicitement et sous test. Ne pas le mapper sur
+   autre chose.
+4. **Pixi lit le canal ROUGE d'un masque de sprite, pas l'alpha.** `setMask({ channel: 'alpha' })`
+   est le chemin pour l'autre. Les deux sont utilisés, pour des raisons différentes — voir § 3.2.
+5. **Le `blendMode` d'un `Container` n'est qu'hérité**, et chaque enfant écrit le sien : un groupe
+   ne compose vraiment qu'à travers une passe hors écran.
 
-### Jalon 4 — Compositing et panneau Calques
+### Ce que la branche `feat/image` a livré
 
-Groupes, écrêtage (`clipped`), masques de fusion (`mask`), les 16 modes
-(`pixi.js/advanced-blend-modes`), `fillOpacity`, `isolation` des groupes.
+Vingt-huit commits, `pnpm validate` vert (230 fichiers de test, 2529 tests). Les jalons 4, 6, 7, 9 et
+10 sont **largement faits** ; ce qui reste est listé plus bas, avec sa raison.
 
-Le panneau (`panels/layers/` : `LayersPanel`, `LayerList`, `LayerRow`, `LayersActions`,
-`LayerStackActions`) rend une liste plate. Le rendre arborescent : glisser-déposer avec indicateur
-d'insertion, vignettes, renommage au double-clic, Alt+clic sur l'œil pour isoler, Alt+glisser pour
-dupliquer, sélection multiple, groupes repliables. `LayerList` utilise `Collection`, qui virtualise —
-**un arbre virtualisé se rend à plat après aplatissement, pas en récursion de composants**.
-`design/Tree.tsx` existe déjà, écrit pour l'espace 3D : le regarder avant d'en écrire un autre.
+**Compositing (jalon 4).** Les seize modes de fusion fusionnent vraiment — il manquait
+`import 'pixi.js/advanced-blend-modes'`, sans lequel onze des seize retombaient silencieusement sur
+`normal` ; il faut aussi `useBackBuffer: true` à l'`init` et
+`Filter.defaultOptions.resolution = 'inherit'`, les deux dans `engines/core/mount.ts`. Les groupes
+sont des `Container` qui composent leur sous-arbre, l'écrêtage découpe sur l'**alpha** de sa base
+(voir l'écart 5 ci-dessous), les masques de calque existent et se peignent au pinceau
+(`setPaintTarget`), `fillOpacity` est distingué de `opacity`. Le calcul pur est sorti dans
+`engines/canvas/compositor.ts`, testable sans GPU : qui écrête qui, quel conteneur porte quel groupe,
+et une signature de placement qui évite de reconstruire l'arbre à chaque frame d'un glissement.
 
-**À traiter ici en priorité** : supprimer un calque détruit sa texture dans `reconcile`, donc ⌘Z le
-fait revenir **vide**. C'est antérieur au jalon 3, mais l'historique des pixels le rend criant. Le
-cycle de vie des calques est le sujet de ce jalon.
+**Le panneau Calques (jalon 4).** Renommage sur double-clic, les trois verrous derrière un bouton,
+repli des groupes, indentation, grouper / dégrouper / dupliquer, et un inspecteur de calque complet
+(opacité, opacité de fond, les seize modes, écrêtage, verrous, transform).
 
-### Jalon 5 — Registre d'outils
+**Sélection (jalon 6).** Rectangle, ellipse et lasso, dans `stores/canvas-views.ts` — session, hors
+historique. Le pinceau, la gomme et le pot sont bornés par un **pochoir GPU**, jamais par un test par
+touche. « Faire un masque de la sélection » relie les deux, ce qui est le prérequis de l'inpainting.
 
-Extraire le `switch` hors de `CanvasEngine` vers `engines/canvas/tools/` : chaque outil expose
-`onPointerDown` / `onPointerMove` / `onPointerUp` / `drawOverlay` / `onDeactivate`.
+**Transformation (jalon 7).** Les huit poignées plus la rotation (`engines/canvas/handles.ts`,
+arithmétique pure et testée sans GPU), les six formes, et le texte comme genre de calque qui reste
+éditable.
 
-Trois choses le bloquent, dans cet ordre : le type `Gesture` mélange le chrome (`pan`, `guide`, qui
-restent au moteur pour toujours) et l'outil armé (`paint`, `move`, `select`) ; `onPointerDown` est une
-chaîne de `if` sur `this.tool` dont chaque branche plonge dans `activeSurface()`, `stamp`, `brush`,
-`render()` ; et `scene()` câble `OverlayScene.paint` — le bon point d'accroche générique — à un champ
-nommé d'un outil nommé. Définir le contexte que le moteur passe à un outil, **sortir `select` en
-premier pour prouver la couture**.
+**Réglages (jalon 9).** `engines/canvas/adjust-filter.ts` reprend le GLSL de
+`engines/gpu/passes/adjust.ts` dans un `Filter` Pixi. Un calque de réglage grade **tout ce qui est
+sous lui dans son parent**, ou le seul calque du dessous s'il est écrêté.
 
-Barre d'options horizontale en haut du panneau central, pilotée par l'outil actif. Flyouts sur clic
-long, dernier outil du groupe affiché, Maj+raccourci cycle dans le groupe.
+**L'IA dans le canvas.** `maskFrom` porté dans le descripteur de champ, un champ image qui accepte un
+dépôt d'asset, l'envoi d'une image à `assets.upload` par un canal IPC typé, `snapshot()` /
+`maskSnapshot()`, et cinq actions d'édition qui **préparent le formulaire sans jamais le soumettre**.
 
-Déjà câblés : pinceau, gomme, pot, pipette, déplacer, main, marquee rectangle (visuel seul).
-Déclarés mais morts : `crop`, `shape`, `text`, `comment` — voir `UNBUILT_TOOLS`
-(`CanvasEngine.ts:131`), qui existe pour qu'en brancher un soit une seule suppression.
+**Export (jalon 10).** ⇧⌘E aplatit le document et l'écrit sur le disque.
 
-### Jalon 6 — Sélection
+### Le blocage qui commande tout le reste
 
-**Un masque 8 bits, jamais un tracé vectoriel.** `RenderTexture` + bornes + adoucissement.
+**Une surface ne suit pas son document.** La texture d'un calque est allouée à la taille qu'avait le
+document et n'est **jamais recréée**. Cinq fonctionnalités sont écrites, testées, et volontairement
+non offertes pour cette seule raison :
 
-Les pointillés sont **dérivés du masque** : contour → marching squares → polylignes en coordonnées
-document → dessin sur l'overlay avec `setLineDash` animé, deux passes (noir, puis blanc décalé de 4).
-Transformer en coordonnées écran **au moment du dessin**, sinon l'épaisseur change avec le zoom.
+| Fonctionnalité | Ce qui casse sans `resurface` |
+|---|---|
+| Recadrage | Le cadre bouge, la texture non : le pinceau écrit au décalage du recadrage |
+| Miroir, quart de tour | Les calques sont posés hors du cadre |
+| Fusionner vers le bas | La texture du calque du dessus est détruite sans être composée |
+| Aplatir | Le document devient transparent, et ⌘Z ne rend pas les pixels |
+| Persistance | Une sauvegarde qui perd les traits de pinceau |
 
-Rectangle, ellipse, lasso. Maj ajoute, Alt soustrait, Maj+Alt intersecte. Le marquee actuel dessine
-un rectangle et ne sélectionne rien — aucun outil ne le lit.
+**Ce qu'il faut écrire :** un `resurface(size: Size)` sur `CanvasEngine`, qui recrée chaque
+`RenderTexture` à la nouvelle taille et y recopie l'ancienne au bon décalage, plus une extraction par
+calque — `snapshot()` sait déjà le faire pour le document entier. **Une seule pièce débloque les
+cinq.** C'est le premier chantier à ouvrir sur cet espace.
 
-Note : l'overlay repeint toute la scène à chaque frame demandée (~1800 appels 2D sur un hôte 4K avec
-les règles). Des pointillés animés le feront tourner en continu. Si ça pèse, mettre les bandes de
-règles en cache dans un canvas hors écran et ne repeindre par frame que les pointillés — **pas avant
-d'avoir mesuré**.
+Les commandes correspondantes existent et sont testées dans `engines/canvas/commands.ts`
+(`cropToRect`, `flipImage`, `rotateImage`, `mergeDown`, `flatten`) ; ce sont leurs entrées d'interface
+qui sont retirées. **Ne pas les rebrancher avant `resurface`** — un bouton qui vide le document est
+pire qu'un bouton absent.
 
-### Jalon 7 — Transformation
+### Ce qui reste, par ordre de valeur
 
-⌘T, boîte englobante, 8 poignées, zone de rotation à ~20 px à l'extérieur de chaque coin.
+1. **`resurface`**, ci-dessus. Débloque cinq fonctionnalités d'un coup.
+2. **La persistance** (jalon 10). Le format est tranché : un dossier `<nom>.img/` avec le JSON et un
+   PNG par calque, inspectable et réparable à la main. `serializeCanvas` / `deserializeCanvas`
+   existent et ne sont appelés que par leurs propres tests ; `PixelLayer.source` et `loadInto`
+   couvrent déjà la relecture d'un calque venu d'un asset. Il manque le canal IPC d'écriture
+   multi-fichiers et l'extraction par calque.
+3. **La classification des modèles.** `familyOf` (`main/scenario/schema.ts`) ne produit jamais les
+   familles `upscale`, `background-removal` ni `vectorization` : trois des cinq actions d'édition IA
+   — Détourer, Agrandir, Vectoriser — n'ont donc aucun modèle à trouver et s'arrêtent proprement sur
+   « aucun modèle réglé ». Travail de catalogue, pas d'espace Image. **Régénérer la zone** et
+   **Étendre**, en famille `image`, fonctionnent de bout en bout.
+4. **Le preset suit la famille de l'édition, pas celle de l'espace.** `prepare(family, …)` range le
+   preset sous la famille de l'édition alors que le Generator de l'espace Image lit `preset.image` :
+   même avec un modèle d'agrandissement réglé, « Agrandir » ouvrirait un formulaire qui ne montre pas
+   l'image envoyée. Même endroit à reprendre que le point 3.
+5. **Le réordonnancement des calques par glisser.** `reorderLayer` existe et est testée, sans bouton.
+   **Aucune liste réordonnable n'existe dans `design/`** — le seul `draggable` du dépôt est
+   `DraggableAsset`, qui sort un asset vers l'extérieur. L'écrire dans une liste virtualisée à groupes
+   imbriqués, avec indicateur de dépose et cible calculée par niveau, est un morceau à part entière.
+6. **La pile de calques est un arbre rendu par `Collection`, qui est une liste.** `design/Tree.tsx`
+   existe, virtualisé, avec l'indentation, le chevron, `role="treeitem"`, `aria-expanded` et le repli
+   aux flèches — la pile n'a rien de tout cela : un lecteur d'écran y entend une liste plate, et c'est
+   le seul arbre du studio où les flèches ne replient rien. `Tree` attend des nœuds plats
+   `{ id, parentId }` et un `Set` d'ouverts tenu par l'appelant, là où les calques s'imbriquent et
+   portent `collapsed` dans le document : `panels/layers/layer-rows.ts` est à une ligne de pouvoir
+   émettre les deux.
+7. **Deux réglages manquent sur les six de la spec.** `AdjustmentKind` expose `exposure | contrast |
+   saturation | temperature` — celles que la passe applique vraiment. Courbes et LUT demandent chacune
+   une texture de correspondance et un éditeur ; les offrir dans le panneau sans les appliquer serait
+   un curseur inerte.
+8. **Registre d'outils (jalon 5).** Le `switch` de `CanvasEngine.onPointerDown` a grandi avec les
+   gestes de forme, de recadrage, de texte et de poignée. L'extraction vers `engines/canvas/tools/`
+   reste un refactor interne, sans effet visible — à faire quand un neuvième geste sera à ajouter, pas
+   avant. Les trois obstacles décrits au jalon 5 tiennent toujours.
+9. **Peinture avancée (jalon 8).** Pression du stylet, `getCoalescedEvents`, texture de brouillon,
+   dégradés, vrai flood fill par tolérance, `brush.hardness` qui n'a toujours aucun lecteur.
+10. **La sélection ne se convertit pas depuis un masque.** « Faire un masque de la sélection » existe ;
+    l'inverse demanderait de relire la texture du masque pour en extraire le contour — un aller-retour
+    GPU puis un balayage d'un million de pixels sur le thread UI, ce que l'invariant 6 interdit.
 
-Modificateurs à respecter **exactement**, les utilisateurs les ont dans les doigts : Maj+coin conserve
-les proportions, Alt travaille depuis le centre, Maj+Alt les deux, hors de la boîte rotation libre,
-Maj+rotation par pas de 15°, Cmd+poignée distord, Cmd+Maj+arête incline, Entrée valide, Échap annule.
-Point d'origine déplaçable.
+### Dette connue, relevée en revue et assumée
 
-**Non destructive jusqu'à validation** : les pixels ne sont rééchantillonnés qu'à la fin,
-l'interpolation (bicubique par défaut) est un réglage, et chaîner plusieurs transformations sans
-revalider ne doit pas dégrader. Plus rotations 90°/180°, symétries, déformation 3×3.
+- **Un calque masqué ou écrêté dont le mode de fusion n'est pas `normal` compose faux.** Pixi
+  implémente un masque comme un filtre, et `FilterSystem` lie sa cible **en l'effaçant** : le sprite
+  est dessiné sur du vide, puis recollé en `normal`. Un `multiply` sur un calque écrêté sort noir. Le
+  corriger demande d'appliquer la fusion au *résultat* masqué — une refonte de la composition, que
+  jsdom ne peut pas vérifier.
+- **`clipped` sur un groupe est ignoré.** `setLayerClipped` l'accepte, le compositeur n'en fait rien.
+- **L'opacité d'un calque de réglage n'a pas d'effet.** Son conteneur porte les calques qu'il grade :
+  y poser `alpha` fondrait ce qu'il grade plutôt que le grading. L'œil retire la passe ; l'opacité
+  demanderait de mélanger la passe gradée avec l'originale.
+- **`GroupIsolation` reste sans effet.** `pass-through` est documenté comme « laisse un réglage
+  atteindre ce qui est sous le groupe » ; le compositeur récurse par niveau et ne l'honore pas. C'est
+  le calque de réglage qui donne enfin son sens à ce type.
+- **`useBackBuffer: true` est inconditionnel** : chaque rendu racine passe par une copie plein écran,
+  même pour un document qui n'emploie que `normal`. `renderer.backBuffer.useBackBuffer` est un champ
+  mutable — il pourrait suivre la présence d'un mode avancé dans l'état.
+- **`composite()` et `placement()` allouent un arbre par `apply`**, donc jusqu'à soixante fois par
+  seconde pendant un glissement, pour un résultat presque toujours identique. Un hachage roulant
+  calculé dans la boucle de synchronisation existante supprimerait l'allocation.
+- **Les textures d'images placées ne sont jamais déchargées** du cache de Pixi : une par image posée,
+  pour toute la session.
+- **`maskKey` partage l'espace de noms des ids de calque** (`${id}:mask`). Les ids de l'application
+  sont des UUID, mais `deserializeCanvas` accepte n'importe quelle chaîne.
+- **Le glisser-déposer d'asset est copié dans quatre espaces** (image, texture, skybox, timeline) :
+  même état de survol, mêmes trois gestionnaires, même chaîne de classes. Un `useAssetDrop` et un
+  composant de liseré dans `design/` les réduiraient à deux lignes chacun.
+- **`image-generation.ts` et `skybox-generation.ts` sont identiques à huit lignes près** (59 sur 94 le
+  sont au caractère). Une fabrique commune s'impose dès le troisième espace qui recevra des
+  générations.
 
-`syncLayer` n'applique aujourd'hui que `transform.x/y`. `scaleX`, `scaleY`, `rotation`, `skewX`,
-`skewY`, `originX`, `originY` existent dans le modèle et attendent ici.
+### Ce qui a été appris et qui n'était pas su
 
-### Jalon 8 — Peinture
-
-Pression du stylet (`PointerEvent.pressure`) sur la taille et l'opacité. `getCoalescedEvents()` pour
-ne pas perdre de points sur tablette haute fréquence, tout en composant **une fois par frame**.
-Texture de brouillon : le trait en cours se dessine à part et n'est fusionné dans le calque qu'au
-`pointerup` — c'est aussi ce qui rend l'opacité juste, une passe par point composite les touches les
-unes sur les autres.
-
-Dégradé (linéaire, radial, angulaire, réfléchi, losange). Pot de peinture en **vrai flood fill par
-tolérance** — il peint aujourd'hui d'un bord à l'autre, délibérément (c'est ce qui donne un fond uni
-en un geste), mais ce n'est pas un pot de peinture.
-
-`brush.hardness` existe dans `BrushSettings` sans lecteur : la touche est un cercle dur. C'est ici.
-
-### Jalon 9 — Sélection automatique et réglages
-
-Écrire `engines/canvas/passes/` en `Filter` Pixi : `adjust`, `blur`, `morphology`, `threshold`.
-
-Baguette magique (flood fill par tolérance en espace Lab, contigu ou global), sélection rapide,
-Modifier ▸ (dilater, contracter, contour, lisser), plage de couleurs avec aperçu.
-
-Calques de réglage : niveaux, courbes, TSL, balance des couleurs. `AdjustmentLayer` existe dans le
-modèle sans consommateur — c'est ici qu'il en trouve un, et le `pass-through` des groupes prend enfin
-son sens.
-
-### Jalon 10 — Export
-
-PNG / JPEG / WebP depuis `renderer.extract`, aplatissement. **Taille de l'image** et **Taille de la
-zone de travail** comme deux commandes distinctes (`resizeImage` / `resizeCanvas` existent déjà, mais
-les textures ne sont pas rééchantillonnées — c'est ici).
-
-Rien de l'overlay ne doit apparaître à l'export : il n'est pas dans la scène Pixi, **le vérifier**
-plutôt que le supposer. `dpi`, `colorMode`, `bitDepth` sont portés par le modèle depuis le début sans
-consommateur : c'est l'export qui les lit.
+- **Pixi lit le canal ROUGE d'un masque, pas l'alpha** (`effectsMixin.mjs`, `channel: 'red'`), et sa
+  propre documentation propose `setMask({ channel: 'alpha' })`. Le masque de calque garde donc le
+  rouge — c'est l'ergonomie Photoshop, on peint en noir pour cacher et en blanc pour révéler.
+  L'écrêtage, lui, est passé sur l'alpha : ce qui découpe un calque écrêté, c'est là où sa base a des
+  pixels, pas leur rougeur.
+- **Un masque neuf doit naître blanc.** Né effacé, il faisait disparaître le calque à l'instant où on
+  cochait la case.
+- **Le `blendMode` d'un `Container` v8 n'est qu'hérité**, et chaque enfant écrit le sien : le mode de
+  fusion d'un groupe ne faisait rien du tout. Son `alpha` multiplie **par enfant**, donc deux calques
+  qui se chevauchent dans un groupe à 50 % se transparaissaient. Les deux n'ont de sens qu'à travers
+  une passe hors écran — d'où la condition `isolate || blend !== 'normal' || opacity < 1`.
+- **Un shader copié d'un espace colorimétrique à l'autre ment.** Le pivot du contraste, 0,18, est le
+  gris moyen en **lumière linéaire** ; les textures du canvas sont en sRGB, où il vaut 0,5. Pivoter à
+  0,18 éclaircissait toute l'image au lieu de la durcir.
+- **L'état doit porter ce que le moteur dessine.** `placeAsset` écrivait le calque dans le store puis
+  appelait `loadInto` — or le moteur n'apprend l'existence du calque qu'un commit React plus tard, si
+  bien que **l'image n'arrivait jamais**, et trois suites de tests passaient autour du trou. La source
+  vit maintenant dans `PixelLayer.source`, et le moteur la dessine quand il construit la surface : le
+  redo, l'onglet rouvert et le changement d'espace pendant une génération sont réparés du même coup.
+  C'est l'invariant 3 — un moteur se reconstruit depuis son état — qui n'était pas tenu.
 
 ### Interdits
 
@@ -346,34 +407,6 @@ consommateur : c'est l'export qui les lit.
   de document.
 - Aucune dépendance nouvelle sans validation de l'utilisateur.
 
-### Dette du mode Image
-
-1. **Supprimer un calque perd ses pixels** — `reconcile` détruit la texture, l'annulation ramène un
-   calque vide. À traiter au **jalon 4**, dont c'est le sujet.
-2. **`HISTORY_LIMIT = 100` coupe sans prévenir le moteur.** `forgetThrough` couvre le sens « le moteur
-   a jeté un correctif, préviens l'historique » ; le sens inverse — l'historique éjecte une entrée par
-   capacité — laisse ses tuiles vivantes jusqu'à ce que le budget de 256 Mo les évince. Pas un crash,
-   mémoire bornée, mais asymétrique. La généralisation propre est un `dispose?: () => void` optionnel
-   sur `Command<S>`, appelé par `run()` quand il tronque — **à faire quand un deuxième moteur en aura
-   besoin** (cache de frames de la timeline, deltas de mesh de la 3D), pas avant.
-3. **`paintPixels` est la première commande dont l'utilité réelle est un effet de bord**, pas une
-   transition d'état : `apply`/`revert` retournent l'état inchangé et écrivent sur le GPU. Le drapeau
-   `recorded` est commenté et testé. Au **deuxième** cas de ce genre, extraire un type distinct plutôt
-   que de refaire `apply: state => state` avec un drapeau caché.
-4. **Deux ports dupliquent `beginDrag`/`endDrag`** (`guide-port.ts`, `layer-port.ts`). Deux lignes,
-   honnêtes. Au **troisième** port avec un vrai drag (crop, texte), extraire un
-   `dragGesture(documentId)`.
-5. **Allocations par pointermove non optimisées, mesurées et jugées acceptables** : `snapTargets`
-   alloue 3 tableaux par axe à chaque frame d'un glissement de calque (~480 petits tableaux/s), et
-   `tilesCovering` + `tileKey` allouent par `dab()` même quand la tuile est déjà capturée
-   (~180 allocs/s). Si ça se voit un jour au profiler : mémoïser `snapTargets` à `beginDrag`, et
-   garder sur la `Recording` une borne de ce qui est déjà capturé.
-6. **Le menu du mode Image n'a pas d'entrées** (zoom, règles, repères) : les raccourcis et la barre de
-   zoom couvrent tout. À ajouter à la main dans `src/main/menu/template.ts` si demandé, en vérifiant
-   qu'aucun `role:` Electron ne revendique déjà la touche (`role: 'reload'` porte ⌘R implicitement —
-   c'est pourquoi il est passé sur ⇧⌘R).
-
----
 
 ## 3.3 Espace 3D
 
