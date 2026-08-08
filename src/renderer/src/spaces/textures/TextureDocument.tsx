@@ -10,7 +10,7 @@ import { setPreview } from '@/engines/texture/commands'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
 import { restoreDocument } from '@/app/document-io'
-import { cn } from '@/helpers/cn'
+import { chipSkin } from '@/design/styles'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 
@@ -89,10 +89,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
             type="button"
             onClick={() => run(documentId, setPreview('shape', shape))}
             aria-pressed={preview.shape === shape}
-            className={cn(
-              'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
-              preview.shape === shape ? 'bg-elevated text-text' : 'text-muted bg-transparent',
-            )}
+            className={chipSkin(preview.shape === shape)}
           >
             {t(SHAPE_LABELS[shape])}
           </button>

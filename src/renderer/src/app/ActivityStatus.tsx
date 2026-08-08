@@ -1,11 +1,10 @@
 import { mdiAlertCircleOutline, mdiHistory } from '@mdi/js'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flyout } from '@/design/Flyout'
 import { UiIcon } from '@/design/UiIcon'
-import { ActivityList } from '@/panels/activity/ActivityList'
-import { cn } from '@/helpers/cn'
 import { failureCount, useActivity } from '@/stores/activity'
+import { ActivityList } from './ActivityList'
 
 /**
  * The journal, in the status line rather than in a panel of its own.
@@ -24,18 +23,6 @@ export function ActivityStatus() {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const [open, setOpen] = useState(false)
 
-  useEffect(() => {
-    let stop: (() => void) | undefined
-    void useActivity
-      .getState()
-      .connect()
-      .then(unsubscribe => {
-        stop = unsubscribe
-      })
-
-    return () => stop?.()
-  }, [])
-
   return (
     <>
       <button
@@ -52,7 +39,7 @@ export function ActivityStatus() {
       >
         <UiIcon path={failures > 0 ? mdiAlertCircleOutline : mdiHistory} size={12} />
         {failures > 0 && (
-          <span className={cn('text-danger')}>{t('activity.failures', { count: failures })}</span>
+          <span className="text-danger">{t('activity.failures', { count: failures })}</span>
         )}
       </button>
 

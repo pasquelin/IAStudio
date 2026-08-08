@@ -51,12 +51,17 @@ export type ActivityDraft = {
 /** A line as it is read back. */
 export type ActivityEntry = ActivityDraft & { id: number }
 
-/** What the panel asks for. Empty lists mean "no filter", not "nothing". */
-export type ActivityQuery = {
+/**
+ * What crosses the boundary. Only a count: the window holds the lines it was given and filters
+ * them itself, so a filter costs no round trip — and the toasts still see a failure the current
+ * filter would have hidden.
+ */
+export type ActivityQuery = { limit?: number }
+
+/** What the panel narrows by. Empty lists mean "no filter", not "nothing". */
+export type ActivityFilter = {
   levels?: readonly ActivityLevel[]
   topics?: readonly ActivityTopic[]
-  /** Newest first, so a bare read is what the panel opens on. */
-  limit?: number
 }
 
 export function isActivityLevel(value: unknown): value is ActivityLevel {
@@ -76,22 +81,10 @@ export function isActivityTopic(value: unknown): value is ActivityTopic {
  */
 export const ACTIVITY_RETENTION = 2000
 
-/**
- * How long lines are gathered before the windows hear about them.
- *
- * Pushing two hundred assets writes two hundred lines; one IPC message each would flood the
- * boundary the ingest bar already learned not to. The delay is short enough that a failure
- * still feels immediate.
- */
-export const ACTIVITY_FLUSH_MS = 200
-
-/**
- * Whether a line passes a filter. Shared so the panel and the catalogue cannot come to disagree
- * about what "no filter" means — an absent list and an empty one both let everything through.
- */
-export function matchesActivity(entry: ActivityDraft, query: ActivityQuery): boolean {
-  const levels = query.levels ?? []
-  const topics = query.topics ?? []
+/** Whether a line passes a filter. An absent list and an empty one both let everything through. */
+export function matchesActivity(entry: ActivityDraft, filter: ActivityFilter): boolean {
+  const levels = filter.levels ?? []
+  const topics = filter.topics ?? []
 
   return (
     (levels.length === 0 || levels.includes(entry.level)) &&

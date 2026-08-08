@@ -3,6 +3,7 @@ import {
   ACTIVITY_RETENTION,
   matchesActivity,
   type ActivityEntry,
+  type ActivityFilter,
   type ActivityLevel,
   type ActivityTopic,
 } from '@shared/domain/activity'
@@ -25,13 +26,15 @@ type ActivityState = {
 
   /** Reads the journal back and follows what is written to it. Returns the unsubscribe. */
   connect: () => Promise<() => void>
+  /** Re-reads it from scratch. The journal belongs to a project, so opening one replaces it. */
   reload: () => Promise<void>
   append: (entries: readonly ActivityEntry[]) => void
-  setLevels: (levels: readonly ActivityLevel[]) => void
-  setTopics: (topics: readonly ActivityTopic[]) => void
+  setFilters: (filters: Partial<ActivityFilters>) => void
   dismiss: (id: number) => void
   dismissAll: () => void
 }
+
+type ActivityFilters = { levels: ActivityLevel[]; topics: ActivityTopic[] }
 
 /**
  * The journal as the window sees it: owned by the main process, replicated here so the panel
@@ -55,13 +58,11 @@ export const useActivity = create<ActivityState>()((set, get) => ({
     return stop
   },
 
+  // A screenful and then some, not the whole retention: the journal keeps two thousand lines and
+  // the flyout shows fifteen, so asking for all of them was half a megabyte deserialised on the
+  // UI thread of every window that opened, for a panel that draws none of it.
   reload: async () => {
-    const bridge = getBridge()
-    if (!bridge) return
-
-    // Unfiltered: the panel filters what it holds, so changing a filter costs no round trip and
-    // the toasts still see a failure the current filter would have hidden.
-    set({ entries: await bridge.activity.read({ limit: ACTIVITY_RETENTION }) })
+    set({ entries: (await getBridge()?.activity.read({})) ?? [] })
   },
 
   // Prepended rather than refetched: the batch that just arrived IS the newest, and re-reading
@@ -75,21 +76,32 @@ export const useActivity = create<ActivityState>()((set, get) => ({
       ),
     })),
 
-  setLevels: levels => set({ levels: [...levels] }),
-  setTopics: topics => set({ topics: [...topics] }),
+  // One write for both axes: clearing the filters used to be two, and two renders for one click.
+  setFilters: filters => set(filters),
 
   dismiss: id => set(state => ({ unread: state.unread.filter(entry => entry.id !== id) })),
   dismissAll: () => set({ unread: [] }),
 }))
 
-/** What the panel draws, once its filters have had their say. */
-export function visibleActivity(state: ActivityState): ActivityEntry[] {
-  return state.entries.filter(entry =>
-    matchesActivity(entry, { levels: state.levels, topics: state.topics }),
-  )
+/**
+ * What the panel draws, once its filters have had their say.
+ *
+ * NOT a zustand selector: it derives a fresh array, and zustand compares snapshots by identity —
+ * passed to the hook it renders, derives again, and renders again, until React gives up. The
+ * panel reads the raw slices and memoises this itself.
+ */
+export function visibleActivity(
+  entries: readonly ActivityEntry[],
+  filters: ActivityFilter,
+): ActivityEntry[] {
+  return entries.filter(entry => matchesActivity(entry, filters))
 }
 
 /** What the status line counts: failures, which are the reason the journal exists. */
 export function failureCount(state: ActivityState): number {
-  return state.entries.filter(entry => entry.level === 'error').length
+  // Counted rather than filtered: this runs on every write to the store, including the ones
+  // that touch nothing but the toasts, and the intermediate array was pure allocation.
+  let count = 0
+  for (const entry of state.entries) if (entry.level === 'error') count++
+  return count
 }

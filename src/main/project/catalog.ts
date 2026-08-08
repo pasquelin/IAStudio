@@ -120,9 +120,9 @@ const MIGRATIONS: readonly string[] = [
     asset_id    TEXT
   );
 
-  -- The panel opens on "what just happened", and filters by level from there.
-  CREATE INDEX activity_id_idx    ON activity(id DESC);
-  CREATE INDEX activity_level_idx ON activity(level);
+  -- No index: \`id INTEGER PRIMARY KEY\` IS the rowid, so the table is already stored in the one
+  -- order the journal is ever read in. A second B-tree would be maintained on every insert —
+  -- two hundred of them on a push of two hundred assets — and answer no query the first cannot.
   `,
 ]
 
@@ -267,8 +267,21 @@ function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, character => `\\${character}`)
 }
 
-/** What the panel opens on. Wider than a screenful, so filtering does not need a round trip. */
-const DEFAULT_ACTIVITY_LIMIT = 200
+/**
+ * All or nothing, on a driver where forgetting the `ROLLBACK` leaves a transaction open for the
+ * rest of the session — and every window behind it.
+ */
+function transaction<T>(driver: SqliteDriver, body: () => T): T {
+  driver.exec('BEGIN')
+  try {
+    const result = body()
+    driver.exec('COMMIT')
+    return result
+  } catch (error) {
+    driver.exec('ROLLBACK')
+    throw error
+  }
+}
 
 /**
  * The interpolations of a message key, back from the JSON they were stored as.
@@ -281,11 +294,8 @@ function activityParams(row: SqlRow): ActivityParams | undefined {
   const raw = optionalText(row, 'params')
   if (raw === undefined) return undefined
 
-  const parsed: unknown = JSON.parse(raw)
-  if (!isRecord(parsed)) return undefined
-
   const params: ActivityParams = {}
-  for (const [key, value] of Object.entries(parsed)) {
+  for (const [key, value] of Object.entries(parseParams(raw))) {
     if (typeof value === 'string' || typeof value === 'number') params[key] = value
   }
   return params
@@ -307,11 +317,9 @@ function activityOf(row: SqlRow): ActivityEntry {
     id: optionalNumber(row, 'id') ?? 0,
     at: text(row, 'at'),
     level: isActivityLevel(level) ? level : 'info',
-    topic: isActivityTopic(topic) ? topic : 'document',
+    topic: isActivityTopic(topic) ? topic : 'library',
     messageKey: text(row, 'message_key'),
-    ...(params && { params }),
-    ...(detail !== undefined && { detail }),
-    ...(assetId !== undefined && { assetId }),
+    ...defined({ params, detail, assetId }),
   }
 }
 
@@ -379,6 +387,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     DELETE FROM activity
     WHERE id <= (SELECT MAX(id) FROM activity) - ?
   `)
+  const selectActivity = driver.prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?')
+  // Ascending, to pair with the drafts in the order they were handed over.
+  const selectActivityIds = driver.prepare(
+    'SELECT id FROM (SELECT id FROM activity ORDER BY id DESC LIMIT ?) ORDER BY id',
+  )
   const deleteAsset = driver.prepare('DELETE FROM assets WHERE id = ?')
   // A child pointing at a parent that is gone reads back as a derivation from nothing, and
   // every inspector that follows the link would have to guard against a row that cannot exist.
@@ -475,15 +488,10 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       // One statement's worth of atomicity: a crash between the two would leave children
       // pointing at a row that is gone. The tags follow on their own — `asset_tags` is
       // `ON DELETE CASCADE`, and both drivers turn foreign keys on.
-      driver.exec('BEGIN')
-      try {
+      transaction(driver, () => {
         orphanChildren.run(assetId)
         deleteAsset.run(assetId)
-        driver.exec('COMMIT')
-      } catch (error) {
-        driver.exec('ROLLBACK')
-        throw error
-      }
+      })
     },
 
     search: query => {
@@ -556,8 +564,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
       // One transaction for the whole batch: a push of two hundred assets writes two hundred
       // lines, and two hundred commits on a synchronous driver is a window that stops drawing.
-      driver.exec('BEGIN')
-      try {
+      transaction(driver, () => {
         for (const entry of entries) {
           insertActivity.run(
             entry.at,
@@ -573,45 +580,18 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         // Trimmed here rather than on a timer: this is the only place the journal grows, and a
         // bound nobody enforces is a bound written in a comment.
         pruneActivity.run(ACTIVITY_RETENTION)
-        driver.exec('COMMIT')
-      } catch (error) {
-        driver.exec('ROLLBACK')
-        throw error
-      }
+      })
 
-      // Read back rather than counted forward: the ids come from the database, and a batch
-      // longer than the retention has already lost its own oldest lines by now.
-      return driver
-        .prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?')
-        .all(entries.length)
-        .map(activityOf)
-        .reverse()
+      // The ids alone, paired back onto the drafts the caller still holds: `run` answers nothing
+      // through the port, and re-reading whole rows would re-parse params we just serialised.
+      // Ascending, so a batch longer than the retention keeps its surviving tail.
+      const ids = selectActivityIds.all(entries.length).map(row => optionalNumber(row, 'id') ?? 0)
+      return entries.slice(-ids.length).map((entry, index) => ({ ...entry, id: ids[index] ?? 0 }))
     },
 
-    readActivity: query => {
-      const conditions: string[] = []
-      const params: SqlValue[] = []
-
-      // An empty list is "no filter", not "nothing": a panel whose filters were just cleared
-      // must show everything, which is the rule `matchesActivity` states for the other side.
-      if (query.levels?.length) {
-        conditions.push(`level IN (${query.levels.map(() => '?').join(', ')})`)
-        params.push(...query.levels)
-      }
-
-      if (query.topics?.length) {
-        conditions.push(`topic IN (${query.topics.map(() => '?').join(', ')})`)
-        params.push(...query.topics)
-      }
-
-      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
-      params.push(query.limit ?? DEFAULT_ACTIVITY_LIMIT)
-
-      return driver
-        .prepare(`SELECT * FROM activity ${where} ORDER BY id DESC LIMIT ?`)
-        .all(...params)
-        .map(activityOf)
-    },
+    // Narrowing by level or topic is the window's job: it holds what it was given, so a filter
+    // costs it no round trip. This answers a count, newest first, and nothing else.
+    readActivity: query => selectActivity.all(query.limit ?? DEFAULT_LIMIT).map(activityOf),
 
     close: () => driver.close(),
   }

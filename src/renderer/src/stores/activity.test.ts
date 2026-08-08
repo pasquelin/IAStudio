@@ -67,7 +67,7 @@ describe('what the panel shows', () => {
   it('shows everything until a filter says otherwise', () => {
     useActivity.setState({ entries: [entry({ level: 'info' }), entry({ level: 'error' })] })
 
-    expect(visibleActivity(state())).toHaveLength(2)
+    expect(visibleActivity(state().entries, state())).toHaveLength(2)
   })
 
   it('filters what it already holds, so changing a filter costs no round trip', () => {
@@ -75,9 +75,9 @@ describe('what the panel shows', () => {
       entries: [entry({ id: 1, level: 'info' }), entry({ id: 2, level: 'error' })],
     })
 
-    state().setLevels(['error'])
+    state().setFilters({ levels: ['error'] })
 
-    expect(visibleActivity(state()).map(one => one.id)).toEqual([2])
+    expect(visibleActivity(state().entries, state()).map(one => one.id)).toEqual([2])
   })
 
   it('filters by topic as well, and by both at once', () => {
@@ -89,11 +89,11 @@ describe('what the panel shows', () => {
       ],
     })
 
-    state().setTopics(['import'])
-    expect(visibleActivity(state()).map(one => one.id)).toEqual([1, 3])
+    state().setFilters({ topics: ['import'] })
+    expect(visibleActivity(state().entries, state()).map(one => one.id)).toEqual([1, 3])
 
-    state().setLevels(['error'])
-    expect(visibleActivity(state()).map(one => one.id)).toEqual([1])
+    state().setFilters({ levels: ['error'] })
+    expect(visibleActivity(state().entries, state()).map(one => one.id)).toEqual([1])
   })
 
   it('counts the failures, which is what the status line says', () => {
@@ -125,12 +125,12 @@ describe('what gets shown as a toast', () => {
   })
 
   it('raises a failure the current filter would have hidden', () => {
-    state().setLevels(['info'])
+    state().setFilters({ levels: ['info'] })
 
     state().append([entry({ id: 7, level: 'error' })])
 
     expect(state().unread.map(one => one.id)).toEqual([7])
-    expect(visibleActivity(state())).toEqual([])
+    expect(visibleActivity(state().entries, state())).toEqual([])
   })
 
   it('lets one be dismissed, and all of them at once', () => {

@@ -1,11 +1,14 @@
-import {
-  ACTIVITY_FLUSH_MS,
-  type ActivityDraft,
-  type ActivityEntry,
-  type ActivityQuery,
-} from '@shared/domain/activity'
+import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import { log } from '../log'
 import type { AsyncCatalog } from './catalog-client'
+
+/**
+ * How long lines are gathered before they are written and the windows hear about them.
+ *
+ * Here rather than in the domain: it says how this writer batches, and no window can or should
+ * depend on it. Short enough that a failure still feels immediate.
+ */
+export const ACTIVITY_FLUSH_MS = 200
 
 /** What a caller says happened. The time is stamped here, so no caller has to remember to. */
 export type ActivityReport = Omit<ActivityDraft, 'at'>
@@ -18,8 +21,6 @@ export type ActivityLogDeps = {
   catalog: () => AsyncCatalog | null
   broadcast: (entries: readonly ActivityEntry[]) => void
   now: () => string
-  /** Overridden in tests, where waiting 200 ms per assertion is 200 ms too many. */
-  flushMs?: number
 }
 
 export type ActivityLog = {
@@ -47,7 +48,6 @@ export type ActivityLog = {
 export function createActivityLog(deps: ActivityLogDeps): ActivityLog {
   const queue: ActivityDraft[] = []
   let timer: ReturnType<typeof setTimeout> | null = null
-  let pending: Promise<void> = Promise.resolve()
   let disposed = false
 
   // Ids for lines no catalogue took. SQLite counts up from 1, so counting down from 0 can never
@@ -77,10 +77,12 @@ export function createActivityLog(deps: ActivityLogDeps): ActivityLog {
   const schedule = (): void => {
     if (timer !== null || disposed) return
 
+    // `write` empties the queue synchronously on entry, so two of them never take the same
+    // lines, and the catalogue thread answers in the order it was asked — nothing to serialise.
     timer = setTimeout(() => {
       timer = null
-      pending = pending.then(write)
-    }, deps.flushMs ?? ACTIVITY_FLUSH_MS)
+      void write()
+    }, ACTIVITY_FLUSH_MS)
 
     // Node keeps the process alive for a pending timer; a journal must never be the reason the
     // app refuses to quit.
@@ -103,8 +105,7 @@ export function createActivityLog(deps: ActivityLogDeps): ActivityLog {
         timer = null
       }
 
-      pending = pending.then(write)
-      await pending
+      await write()
     },
 
     dispose: () => {

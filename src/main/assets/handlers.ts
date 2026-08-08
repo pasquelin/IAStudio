@@ -5,7 +5,7 @@ import type { CloudPage, CloudQuery } from '@shared/domain/cloud-asset'
 import type { SyncOutcome } from '@shared/domain/sync'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
-import { describeFailure, failureOf, reducedBy } from '@main/scenario/client'
+import { describeFailure, failureOf, persistableFailure, reducedBy } from '@main/scenario/client'
 import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
 import { filterExpression } from '@main/scenario/filter-expression'
 import { remoteTypesFor } from '@main/scenario/remote-types'
@@ -168,7 +168,7 @@ export function registerAssetHandlers({
           topic: 'library',
           messageKey: 'activity.tagsNotSynced',
           params: { name: updated.name },
-          detail: describeFailure(error),
+          detail: persistableFailure(error),
           assetId: asset.id,
         })
       }
@@ -221,7 +221,7 @@ export function registerAssetHandlers({
           params: { name: cloudAsset.name },
           // `describeFailure` and never `error.message`: an SDK message embeds the request that
           // produced it, so it carries the API key, and a journal is a file one may well send on.
-          detail: describeFailure(error),
+          detail: persistableFailure(error),
         })
         outcomes.push({ assetId: cloudAsset.id, ok: false, error: failureOf(error) })
       }
@@ -263,7 +263,7 @@ export function registerAssetHandlers({
           topic: 'library',
           messageKey: 'activity.pushFailed',
           params: { name: asset?.name ?? assetId },
-          detail: describeFailure(error),
+          detail: persistableFailure(error),
           assetId,
         })
       }

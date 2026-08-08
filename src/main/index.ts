@@ -49,6 +49,12 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   // a check that fails leaves the studio exactly as usable as it was.
   void services.updates.check()
 
+  // The journal batches, so up to a flush's worth of it is still in memory at any moment — and
+  // the most ordinary way to lose it is the one that matters: an export fails, the user quits.
+  app.on('before-quit', () => {
+    void services.journal.flush()
+  })
+
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
   // the other. Only a second launch overrides that — see `revealWindow`.
   const main = createMainWindow({ deferShow: true })

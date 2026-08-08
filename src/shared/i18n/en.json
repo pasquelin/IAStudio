@@ -58,16 +58,12 @@
   },
   "activity": {
     "open": "Show the journal",
-    "title": "Journal",
     "none": "Nothing to report.",
     "noMatch": "Nothing matches this filter.",
     "failures_one": "{{count}} failure",
     "failures_other": "{{count}} failures",
-    "level": "Level",
-    "topic": "Subject",
     "clearFilters": "Show everything",
     "dismiss": "Dismiss",
-    "dismissAll": "Dismiss all",
     "levels": {
       "info": "Information",
       "warn": "Warning",
@@ -93,8 +89,18 @@
     "pushed": "{{count}} asset sent",
     "pushed_other": "{{count}} assets sent",
     "tagsNotSynced": "The tags of \"{{name}}\" did not reach the library",
-    "saveFailed": "Could not save \"{{name}}\"",
-    "saved": "{{name}} saved"
+    "apiRefused": "The Scenario API refused a request",
+    "scope": {
+      "scene.model": "A 3D model could not be loaded",
+      "scene.texture": "A texture could not be loaded",
+      "scene.export": "Exporting the scene failed",
+      "texture.map": "A texture channel could not be loaded",
+      "skybox.source": "The sky picture could not be loaded",
+      "canvas.layer": "A layer could not be loaded",
+      "image.export": "Exporting the picture failed",
+      "document.save": "Saving the document failed",
+      "assets.reveal": "The file could not be shown"
+    }
   },
   "updates": {
     "available": "Version {{version}} available",

@@ -58,16 +58,12 @@
   },
   "activity": {
     "open": "Afficher le journal",
-    "title": "Journal",
     "none": "Rien à signaler.",
     "noMatch": "Rien ne correspond à ce filtre.",
     "failures_one": "{{count}} échec",
     "failures_other": "{{count}} échecs",
-    "level": "Niveau",
-    "topic": "Sujet",
     "clearFilters": "Tout afficher",
     "dismiss": "Masquer",
-    "dismissAll": "Tout masquer",
     "levels": {
       "info": "Information",
       "warn": "Avertissement",
@@ -93,8 +89,18 @@
     "pushed": "{{count}} asset envoyé",
     "pushed_other": "{{count}} assets envoyés",
     "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
-    "saveFailed": "Impossible d’enregistrer « {{name}} »",
-    "saved": "{{name}} enregistré"
+    "apiRefused": "L’API Scenario a refusé une requête",
+    "scope": {
+      "scene.model": "Un modèle 3D n’a pas pu être chargé",
+      "scene.texture": "Une texture n’a pas pu être chargée",
+      "scene.export": "L’export de la scène a échoué",
+      "texture.map": "Un canal de texture n’a pas pu être chargé",
+      "skybox.source": "L’image du ciel n’a pas pu être chargée",
+      "canvas.layer": "Un calque n’a pas pu être chargé",
+      "image.export": "L’export de l’image a échoué",
+      "document.save": "L’enregistrement du document a échoué",
+      "assets.reveal": "Le fichier n’a pas pu être montré"
+    }
   },
   "updates": {
     "available": "Version {{version}} disponible",

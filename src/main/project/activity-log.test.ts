@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ActivityEntry } from '@shared/domain/activity'
-import { createActivityLog, type ActivityLog } from './activity-log'
+import { ACTIVITY_FLUSH_MS, createActivityLog, type ActivityLog } from './activity-log'
 import { memoryCatalog } from './catalog-fixtures'
 import type { AsyncCatalog } from './catalog-client'
 
@@ -20,7 +20,6 @@ describe('the studio recording what it did', () => {
       catalog: () => catalog,
       broadcast,
       now: () => '2026-08-08T10:00:00.000Z',
-      flushMs: 0,
     })
   })
 
@@ -74,12 +73,13 @@ describe('the studio recording what it did', () => {
     expect(await journal.read({})).toHaveLength(2)
   })
 
-  it('passes the filter through to the catalogue', async () => {
+  // Narrowing is the window's business — it holds what it was given. This one only bounds.
+  it('asks the catalogue for no more lines than it was told to', async () => {
     journal.record({ level: 'info', topic: 'import', messageKey: 'activity.imported' })
     journal.record({ level: 'error', topic: 'import', messageKey: 'activity.importFailed' })
     await journal.flush()
 
-    expect(await journal.read({ levels: ['error'] })).toHaveLength(1)
+    expect(await journal.read({ limit: 1 })).toHaveLength(1)
   })
 
   it('writes on its own, without anyone asking it to', async () => {
@@ -88,13 +88,13 @@ describe('the studio recording what it did', () => {
       catalog: () => catalog,
       broadcast,
       now: () => '2026-08-08T10:00:00.000Z',
-      flushMs: 200,
+      // The real cadence: nothing may depend on a test-only one.
     })
 
     timed.record({ level: 'warn', topic: 'document', messageKey: 'activity.saveFailed' })
     expect(broadcast).not.toHaveBeenCalled()
 
-    await vi.advanceTimersByTimeAsync(200)
+    await vi.advanceTimersByTimeAsync(ACTIVITY_FLUSH_MS)
     vi.useRealTimers()
 
     expect(broadcast).toHaveBeenCalledTimes(1)
@@ -108,7 +108,6 @@ describe('recording with no project open', () => {
       catalog: () => null,
       broadcast,
       now: () => '2026-08-08T10:00:00.000Z',
-      flushMs: 0,
     })
 
     journal.record({ level: 'error', topic: 'library', messageKey: 'activity.noProject' })
@@ -125,7 +124,6 @@ describe('recording with no project open', () => {
       catalog: () => null,
       broadcast,
       now: () => '2026-08-08T10:00:00.000Z',
-      flushMs: 0,
     })
 
     journal.record({ level: 'error', topic: 'library', messageKey: 'activity.a' })
@@ -142,7 +140,6 @@ describe('recording with no project open', () => {
       catalog: () => null,
       broadcast: spy(),
       now: () => '2026-08-08T10:00:00.000Z',
-      flushMs: 0,
     })
 
     expect(await journal.read({})).toEqual([])
@@ -159,7 +156,6 @@ describe('when the journal itself cannot be written', () => {
       }),
       broadcast: spy(),
       now: () => '2026-08-08T10:00:00.000Z',
-      flushMs: 0,
     })
 
     journal.record({ level: 'error', topic: 'import', messageKey: 'activity.importFailed' })
@@ -175,7 +171,6 @@ describe('a journal that has been disposed', () => {
       catalog: () => memoryCatalog(),
       broadcast,
       now: () => '2026-08-08T10:00:00.000Z',
-      flushMs: 0,
     })
 
     journal.dispose()

@@ -44,6 +44,19 @@ export function rowSkin(selected: boolean): string {
 }
 
 /**
+ * A labelled toggle: the shape buttons of a texture, the view modes of a sky, the filters of
+ * the journal. Written once because three surfaces had it, and the third had already drifted —
+ * it lit up in `accent-soft` where the others use `elevated`, the studio's hover token.
+ */
+export function chipSkin(active: boolean): string {
+  return cn(
+    'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
+    active ? 'bg-elevated text-text' : 'text-muted hover:text-text bg-transparent',
+    FOCUS_RING,
+  )
+}
+
+/**
  * What one line measures in a list whose rows are the height of a control — `--sc-control` at
  * its tallest. The virtualizer needs a number and cannot read the gauge, so the lists estimating
  * such a row read it from here rather than each carrying its own copy of 28. A list whose rows

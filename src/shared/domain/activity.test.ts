@@ -6,7 +6,7 @@ import {
   isActivityTopic,
   matchesActivity,
   type ActivityDraft,
-  type ActivityQuery,
+  type ActivityFilter,
 } from './activity'
 
 const line = (overrides: Partial<ActivityDraft> = {}): ActivityDraft => ({
@@ -53,7 +53,7 @@ describe('filtering the journal', () => {
   })
 
   it('asks both questions at once, not either', () => {
-    const query: ActivityQuery = { levels: ['error'], topics: ['import'] }
+    const query: ActivityFilter = { levels: ['error'], topics: ['import'] }
 
     expect(matchesActivity(line({ level: 'error', topic: 'import' }), query)).toBe(true)
     expect(matchesActivity(line({ level: 'error', topic: 'generation' }), query)).toBe(false)

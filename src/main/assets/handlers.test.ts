@@ -116,7 +116,6 @@ function setup(
     catalog: () => catalog,
     broadcast: () => {},
     now: () => '2026-08-08T10:00:00.000Z',
-    flushMs: 0,
   })
 
   registerAssetHandlers({

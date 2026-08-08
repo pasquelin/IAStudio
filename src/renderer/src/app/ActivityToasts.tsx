@@ -1,8 +1,11 @@
-import { mdiAlertCircleOutline, mdiClose } from '@mdi/js'
+import { mdiClose } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
+import { MENU_SURFACE } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { useActivity } from '@/stores/activity'
+import { ActivityMessage, GLYPHS } from './ActivityList'
 
 /**
  * Failures, said out loud once.
@@ -33,30 +36,18 @@ export function ActivityToasts() {
       {unread.map(entry => (
         <div
           key={entry.id}
-          className={cn(
-            'border-border bg-surface pointer-events-auto flex items-start gap-2 border p-2',
-            'rounded-(--radius-sc-lg) shadow-(--sc-shadow-floating)',
-          )}
+          // The same surface a menu wears, minus its layout: one floating look, wherever it hangs.
+          className={cn(MENU_SURFACE, 'pointer-events-auto static flex-row items-start gap-2 p-2')}
         >
-          <UiIcon path={mdiAlertCircleOutline} size={14} className="text-danger mt-px shrink-0" />
+          <UiIcon path={GLYPHS[entry.level]} size={14} className="text-danger mt-px shrink-0" />
+          <ActivityMessage entry={entry} />
 
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-text text-[11px] break-words">
-              {t(entry.messageKey, entry.params)}
-            </span>
-            {entry.detail && (
-              <span className="text-muted/70 font-mono text-[10px] break-all">{entry.detail}</span>
-            )}
-          </div>
-
-          <button
-            type="button"
-            aria-label={t('activity.dismiss')}
+          <ToolButton
+            icon={mdiClose}
+            label={t('activity.dismiss')}
+            variant="header"
             onClick={() => useActivity.getState().dismiss(entry.id)}
-            className="text-muted hover:text-text shrink-0 cursor-pointer border-none bg-transparent"
-          >
-            <UiIcon path={mdiClose} size={12} />
-          </button>
+          />
         </div>
       ))}
     </div>

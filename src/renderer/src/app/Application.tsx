@@ -10,6 +10,7 @@ import { useJobs } from '@/stores/jobs'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { useActivity } from '@/stores/activity'
 import { useUpdates } from '@/stores/updates'
 import { connectImageGeneration } from '@/stores/image-generation'
 import { connectModelGeneration } from '@/stores/model-generation'
@@ -27,6 +28,7 @@ export function Application() {
   const connectJobs = useJobs(state => state.connect)
   const connectMedia = useMedia(state => state.connect)
   const connectUpdates = useUpdates(state => state.connect)
+  const connectActivity = useActivity(state => state.connect)
 
   useEffect(() => {
     const subscriptions = [
@@ -36,11 +38,20 @@ export function Application() {
       connectJobs(),
       connectMedia(),
       connectUpdates(),
+      connectActivity(),
     ]
     return () => {
       for (const subscription of subscriptions) void subscription.then(stop => stop())
     }
-  }, [connectSettings, connectAccounts, connectProject, connectJobs, connectMedia, connectUpdates])
+  }, [
+    connectSettings,
+    connectAccounts,
+    connectProject,
+    connectJobs,
+    connectMedia,
+    connectUpdates,
+    connectActivity,
+  ])
 
   // Store to store rather than through the main process, so each subscribes on its own: what a
   // generation produced lands in the document that asked for it, whichever workspace that was.

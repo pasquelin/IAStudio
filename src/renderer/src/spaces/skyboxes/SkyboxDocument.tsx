@@ -17,7 +17,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
-import { cn } from '@/helpers/cn'
+import { chipSkin } from '@/design/styles'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 
 /** i18n key of a view mode — never the label itself, as `SceneEntry` does for primitives. */
@@ -100,10 +100,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
             type="button"
             onClick={() => setView(candidate)}
             aria-pressed={view === candidate}
-            className={cn(
-              'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
-              view === candidate ? 'bg-elevated text-text' : 'text-muted bg-transparent',
-            )}
+            className={chipSkin(view === candidate)}
           >
             {t(VIEW_LABELS[candidate])}
           </button>

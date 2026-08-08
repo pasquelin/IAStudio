@@ -17,7 +17,7 @@ import type { Services } from '@main/services'
 export function registerIpc(services: Services): void {
   registerWindowControls()
   registerMenuHandlers()
-  registerDiagnosticsHandlers()
+  registerDiagnosticsHandlers(() => services.journal)
   // Wired here rather than held by `Services`: opening a window is not a service, and this is
   // where the two sides of the boundary are already being joined.
   registerSettingsHandlers({

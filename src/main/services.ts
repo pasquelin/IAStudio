@@ -54,7 +54,7 @@ import { generationOfMetadata } from './scenario/asset-normalizer'
 import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
 import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
 import { isRecord } from '@shared/guards'
-import { createClientProvider, type ClientProvider } from './scenario/client'
+import { createClientProvider, recordFailuresTo, type ClientProvider } from './scenario/client'
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
@@ -253,12 +253,20 @@ export function createServices(settings: SettingsStore): Services {
     watch: credentials.watch,
   })
 
+  // The two need each other: the journal writes into the open project's catalogue, and the
+  // project must see the journal emptied before that catalogue stops answering. Read at call
+  // time rather than at construction, which is the only order that ties the knot.
+  let opened: ActivityLog | null = null
+
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
     onChange: current => {
       if (current) settings.write({ storage: { lastProject: current.path } })
       broadcast(EVENTS.projectChanged, current)
+    },
+    settle: async () => {
+      await opened?.flush()
     },
   })
 
@@ -268,6 +276,18 @@ export function createServices(settings: SettingsStore): Services {
     catalog: () => (project.current() ? project.catalog() : null),
     broadcast: entries => broadcast(EVENTS.activity, entries),
     now: timestamp,
+  })
+  opened = journal
+
+  // Every reduced API failure, from one place rather than from each handler that remembers to.
+  // `describeFailure` is what `reducedBy` already holds — the only text allowed to travel.
+  recordFailuresTo((scope, detail) => {
+    journal.record({
+      level: 'error',
+      topic: scope === 'scenario' ? 'generation' : 'library',
+      messageKey: 'activity.apiRefused',
+      detail,
+    })
   })
 
   const assets = createLocalBackend({

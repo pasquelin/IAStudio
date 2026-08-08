@@ -81,24 +81,16 @@ describe('the journal the catalogue keeps', () => {
     expect(catalog.readActivity({})).toEqual([])
   })
 
-  it('filters by level, and by topic, and by both at once', () => {
+  // Narrowing by level or topic is the window's business: it holds what it was given, so a
+  // filter costs it no round trip — and the catalogue answers a count, newest first, only.
+  it('hands back everything it holds, whatever the lines are about', () => {
     catalog.appendActivity([
       line({ level: 'info', topic: 'import' }),
       line({ level: 'error', topic: 'import' }),
       line({ level: 'error', topic: 'library' }),
     ])
 
-    expect(catalog.readActivity({ levels: ['error'] })).toHaveLength(2)
-    expect(catalog.readActivity({ topics: ['import'] })).toHaveLength(2)
-    expect(catalog.readActivity({ levels: ['error'], topics: ['import'] })).toHaveLength(1)
-  })
-
-  // An empty list is "no filter", not "nothing": a panel whose filters were just cleared would
-  // otherwise show an empty journal and read as broken.
-  it('reads an empty filter as no filter', () => {
-    catalog.appendActivity([line()])
-
-    expect(catalog.readActivity({ levels: [], topics: [] })).toHaveLength(1)
+    expect(catalog.readActivity({})).toHaveLength(3)
   })
 
   it('gives back no more than it was asked for', () => {
@@ -153,7 +145,7 @@ describe('a journal written by a build that knew more than this one', () => {
       .prepare('INSERT INTO activity (at, level, topic, message_key) VALUES (?, ?, ?, ?)')
       .run('2026-08-08T10:00:00.000Z', 'fatal', 'weather', 'activity.unknown')
 
-    expect(catalog.readActivity({})[0]).toMatchObject({ level: 'info', topic: 'document' })
+    expect(catalog.readActivity({})[0]).toMatchObject({ level: 'info', topic: 'library' })
   })
 
   it('drops a parameter that is neither a string nor a number', () => {
