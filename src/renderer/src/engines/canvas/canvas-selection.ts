@@ -71,6 +71,18 @@ export function selectionOutline(selection: CanvasSelection): Point[] {
   })
 }
 
+/**
+ * Whether a selection encloses nothing at all — a click that carved no region, or a lasso that
+ * never moved. Left standing, such a selection is a stencil nothing gets through, and every
+ * later stroke writes nothing while looking exactly like a bug in the brush.
+ */
+export function isEmptySelection(selection: CanvasSelection): boolean {
+  if (!selection) return false
+  if (selection.kind === 'lasso') return selection.points.length < 3
+
+  return selection.rect.width === 0 || selection.rect.height === 0
+}
+
 /** The box a selection fits in, which is what a brush stroke is clipped against first. */
 export function selectionBounds(selection: CanvasSelection): Rect | null {
   if (!selection) return null

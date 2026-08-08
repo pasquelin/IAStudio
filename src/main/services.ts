@@ -46,6 +46,7 @@ import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
+import { createAssetUploader, type AssetUploader } from './scenario/uploader'
 import { createClientProvider, type ClientProvider } from './scenario/client'
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
@@ -61,6 +62,7 @@ export type Services = {
   client: ClientProvider
   models: ModelRegistry
   jobs: JobManager
+  uploads: AssetUploader
   project: ProjectStore
   documents: DocumentFiles
   assets: LocalBackend
@@ -278,6 +280,8 @@ export function createServices(settings: SettingsStore): Services {
   // than allocating its own — what matters is that a job holds ONE binding, not a fresh one.
   let bound: { scenario: Scenario; account: JobAccount } | null = null
 
+  const uploads = createAssetUploader(() => client.require().assets)
+
   const jobs = createJobManager({
     // Read once per job and kept, so a switch mid-flight does not have the new key asked about
     // the previous account's job id — see `JobAccount`.
@@ -327,6 +331,7 @@ export function createServices(settings: SettingsStore): Services {
     client,
     models,
     jobs,
+    uploads,
     project,
     documents,
     assets,

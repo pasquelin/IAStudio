@@ -30,6 +30,7 @@ import {
 import {
   dragSelection,
   extendLasso,
+  isEmptySelection,
   selectionOutline,
   type CanvasSelection,
   type SelectionShape,
@@ -193,6 +194,12 @@ export type PaintSurface = 'pixels' | 'mask'
 /** A surface a gesture may write to, with the key its undo patches are filed under. */
 type BrushTarget = { key: string; surface: LayerSurface }
 
+/** A data URL down to what it carries: the API takes the payload, never the prefix. */
+function payloadOf(url: string): string {
+  const at = url.indexOf(',')
+  return at >= 0 ? url.slice(at + 1) : url
+}
+
 /** The stencil that cuts a clipped layer out of the one below it, and what holds the pair. */
 type ClipProxy = { baseId: string; sprite: Sprite; host: Container }
 
@@ -263,6 +270,8 @@ export class CanvasEngine {
   private isolation: AlphaFilter | null = null
   /** The stencil of the last clipped pass, kept only so the next one can free it. */
   private clipping: Container | null = null
+  /** Regions asked of masks that did not exist yet — see `fillMaskFromSelection`. */
+  private readonly pendingMaskFills = new Map<string, readonly Point[]>()
   private readonly stamp = new Graphics()
   private readonly overlay = new CanvasOverlay(() => this.scene())
   /** Built with the renderer, in `mount`: a tile is a texture, and there is none before then. */
@@ -288,6 +297,9 @@ export class CanvasEngine {
   private selection: CanvasSelection = null
   /** Which of the three the region tool draws. Pushed in by the bar, like the tool itself. */
   private selectionShape: SelectionShape = 'rect'
+  /** Wrapped, so a pending `null` is told apart from nothing pending — see `publishSelection`. */
+  private publishingSelection: { selection: CanvasSelection } | null = null
+  private selectionFrame = 0
   /** Moved locally, published to React once a frame — see `moveTo`. */
   private publishing: Viewport | null = null
   /** The last one React was told about, so its echo can be told apart from a command. */
@@ -666,7 +678,22 @@ export class CanvasEngine {
     const mask = this.surfaces.get(maskKey(layerId))
     const outline = selectionOutline(this.selection)
     const first = outline[0]
-    if (!renderer || !mask || !first || !this.state) return
+    if (!first || !renderer || !this.state) return
+
+    if (!mask) {
+      // The command that gives the layer its mask has only just been run: the surface follows
+      // on the next `apply`, one React commit later. Held until then rather than dropped.
+      this.pendingMaskFills.set(layerId, outline)
+      return
+    }
+
+    this.paintMask(mask, outline)
+  }
+
+  private paintMask(mask: LayerSurface, outline: readonly Point[]): void {
+    const renderer = this.app?.renderer
+    const first = outline[0]
+    if (!renderer || !first || !this.state) return
 
     const sheet = new Graphics()
     // Black over the whole document, then the region in white: the mask reads its red channel,
@@ -680,6 +707,54 @@ export class CanvasEngine {
     renderer.render({ container: sheet, target: mask.texture, clear: true })
     sheet.destroy()
     this.render()
+  }
+
+  /**
+   * A mask that has just come into existence takes the region it was asked for. Kept as the
+   * outline rather than as "the current selection": what a click meant must not change because
+   * the pointer moved between the command and the frame that built the surface.
+   */
+  private drainPendingMask(layerId: string, mask: LayerSurface): void {
+    const outline = this.pendingMaskFills.get(layerId)
+    if (!outline) return
+
+    this.pendingMaskFills.delete(layerId)
+    this.paintMask(mask, outline)
+  }
+
+  /**
+   * The whole document as one picture, or a region of it. What an edit sends to the API: the
+   * model is asked about what the eye sees, not about a stack it knows nothing of.
+   *
+   * Extracted rather than composited by hand — the world is already the composited tree, and
+   * the GPU has it. `base64` hands back a data URL, so the prefix is stripped: the API takes
+   * the payload alone, and a `data:image/png;base64,` reaching it is part of the picture.
+   */
+  async snapshot(region?: Rect): Promise<string | null> {
+    const renderer = this.app?.renderer
+    if (!renderer || !this.state) return null
+
+    const frame = region ?? this.documentRect()
+    if (!frame) return null
+
+    const url = await renderer.extract.base64({
+      target: this.world,
+      frame: new Rectangle(frame.x, frame.y, frame.width, frame.height),
+    })
+    return payloadOf(url)
+  }
+
+  /**
+   * A layer's mask, alone, as the API wants it: white where the model may paint. It is the same
+   * texture the brush writes into — the mask one paints is the mask one regenerates.
+   */
+  async maskSnapshot(layerId: string): Promise<string | null> {
+    const renderer = this.app?.renderer
+    const mask = this.surfaces.get(maskKey(layerId))
+    if (!renderer || !mask) return null
+
+    const url = await renderer.extract.base64({ target: mask.sprite })
+    return payloadOf(url)
   }
 
   /** Rectangle, ellipse or lasso: three gestures behind one tool, as the bar offers them. */
@@ -729,6 +804,7 @@ export class CanvasEngine {
     this.stopPaletteWatch = null
 
     cancelAnimationFrame(this.publishFrame)
+    cancelAnimationFrame(this.selectionFrame)
     this.resizer?.disconnect()
     this.resizer = null
     this.overlay.dispose()
@@ -744,10 +820,10 @@ export class CanvasEngine {
     this.groups.clear()
     for (const clip of this.clips.values()) this.destroyClip(clip)
     this.clips.clear()
-    // Without `children`: the stamp is the engine's own and outlives every pass.
-    this.clipping?.removeChildren()
-    this.clipping?.destroy()
-    this.clipping = null
+    this.pendingMaskFills.clear()
+    // The stamp is the engine's own and is destroyed below, so it leaves the holder first.
+    this.clipping?.removeChild(this.stamp)
+    this.dropClipping()
     this.isolation?.destroy()
     this.isolation = null
     this.stamp.destroy()
@@ -854,12 +930,16 @@ export class CanvasEngine {
     // Allocated only where the state asks for one: a mask per layer, built ahead, would double
     // the document's GPU memory for a feature most layers never use.
     if (!layer.mask) return
+    const bornMasked = !this.surfaces.has(maskKey(layer.id))
     // White, so a mask reveals everything until something is painted into it. Born cleared, it
     // would hide the layer whole the moment the box is ticked. The channel is Pixi's default red,
     // which is what makes the mask read like Photoshop's: paint black to hide, white to reveal.
     const mask = this.buildSurface(maskKey(layer.id), WHITE)
+    if (!mask) return
+
     // Unlinked means the mask does not follow the layer: it stays where it was painted.
-    if (mask) this.place(mask.sprite, layer.mask.linked ? layer.transform : IDENTITY, mask.texture)
+    this.place(mask.sprite, layer.mask.linked ? layer.transform : IDENTITY, mask.texture)
+    if (bornMasked) this.drainPendingMask(layer.id, mask)
   }
 
   /** A document-sized texture and the sprite that shows it, built once and kept. */
@@ -1015,9 +1095,9 @@ export class CanvasEngine {
       if (!target || !frame) return
 
       this.patches?.touch(frame)
-      // Edge to edge, not a flood fill from the click: that is what gives a layer a plain
-      // white, black or red background in one gesture.
-      this.fill(target.surface, this.brush.color)
+      // Edge to edge, or to the selection when there is one: that is what gives a layer a plain
+      // white, black or red background in one gesture, and a region its flat colour.
+      this.fill(target.surface, this.brush.color, true)
       this.endPixels()
       return
     }
@@ -1055,11 +1135,26 @@ export class CanvasEngine {
     this.dab(target.surface, [point])
   }
 
-  /** Moved locally and told to React, as the viewport is: the overlay must not wait a commit. */
+  /**
+   * Moved locally and told to React once a frame, exactly as the viewport is: routing every
+   * pointer move through the store and back would put a React commit between the gesture and
+   * the marquee it draws.
+   */
   private publishSelection(selection: CanvasSelection): void {
     this.selection = selection
     this.overlay.invalidate()
-    this.options.onSelection(selection)
+
+    this.publishingSelection = { selection }
+    if (this.selectionFrame === 0) {
+      this.selectionFrame = requestAnimationFrame(this.publishSelected)
+    }
+  }
+
+  private readonly publishSelected = (): void => {
+    this.selectionFrame = 0
+    const pending = this.publishingSelection
+    this.publishingSelection = null
+    if (pending) this.options.onSelection(pending.selection)
   }
 
   private activeLayer(): Layer | null {
@@ -1182,6 +1277,9 @@ export class CanvasEngine {
     // One history entry per gesture: a command per dab, or per pointer move, would make ⌘Z useless.
     if (gesture.kind === 'move') this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
+    // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
+    // selection is a stencil nothing gets through, and the document stops taking paint at all.
+    if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)
   }
 
   private readonly onPointerLeave = (): void => {
@@ -1236,15 +1334,20 @@ export class CanvasEngine {
     this.moveTo({ ...viewport, x: viewport.x - event.deltaX, y: viewport.y - event.deltaY })
   }
 
-  /** Paints a layer edge to edge, once, when it is born with a colour of its own. */
-  private fill(surface: LayerSurface, color: number): void {
+  /**
+   * Paints a surface edge to edge. `bounded` is the bucket, which stops at the selection; a
+   * surface being born never does — a mask born white inside a marquee and transparent outside
+   * would hide its layer everywhere else the moment it appeared.
+   */
+  private fill(surface: LayerSurface, color: number, bounded = false): void {
     const renderer = this.app?.renderer
     if (!renderer || !this.state) return
 
     const sheet = new Graphics()
     sheet.rect(0, 0, this.state.width, this.state.height)
     sheet.fill({ color })
-    renderer.render({ container: this.clipped(sheet), target: surface.texture, clear: false })
+    const container = bounded ? this.clipped(sheet) : sheet
+    renderer.render({ container, target: surface.texture, clear: false })
     sheet.destroy()
   }
 
@@ -1314,7 +1417,12 @@ export class CanvasEngine {
   private clipped(container: Container): Container {
     const outline = selectionOutline(this.selection)
     const first = outline[0]
-    if (!first) return container
+    if (!first) {
+      // Freed here rather than never: the stamp has already been reparented by whoever renders
+      // it next, so the holder and its stencil are the only things left.
+      this.dropClipping()
+      return container
+    }
 
     const shape = new Graphics()
     shape.moveTo(first.x, first.y)
@@ -1325,11 +1433,20 @@ export class CanvasEngine {
     holder.addChild(shape)
     holder.addChild(container)
     holder.mask = shape
-    // Rebuilt per pass rather than kept: a stroke that reaches the selection's edge is the
-    // uncommon case, and a held stencil would have to be invalidated on every selection change.
-    this.clipping?.destroy({ children: true })
+    // Rebuilt per pass rather than kept: a held stencil would have to be invalidated on every
+    // selection change, and the stamp is reparented into the new holder before the old is freed.
+    this.dropClipping()
     this.clipping = holder
     return holder
+  }
+
+  private dropClipping(): void {
+    const holder = this.clipping
+    this.clipping = null
+    if (!holder) return
+
+    // With `children`: what stays inside is the stencil alone, which belongs to the pass.
+    holder.destroy({ children: true })
   }
 
   private pick(point: Point): void {

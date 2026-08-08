@@ -42,6 +42,7 @@ export type Channels = {
   scenarioModelPreviews: 'scenario:model-previews'
   scenarioDescribeModel: 'scenario:describe-model'
   scenarioGenerate: 'scenario:generate'
+  scenarioUploadAsset: 'scenario:upload-asset'
   scenarioCancelJob: 'scenario:cancel-job'
   scenarioListJobs: 'scenario:list-jobs'
 
@@ -92,6 +93,7 @@ export const CHANNELS: Channels = {
   scenarioModelPreviews: 'scenario:model-previews',
   scenarioDescribeModel: 'scenario:describe-model',
   scenarioGenerate: 'scenario:generate',
+  scenarioUploadAsset: 'scenario:upload-asset',
   scenarioCancelJob: 'scenario:cancel-job',
   scenarioListJobs: 'scenario:list-jobs',
 
@@ -221,6 +223,8 @@ export type StudioBridge = {
     modelPreviews: (assetIds: readonly string[]) => Promise<Record<string, string>>
     describeModel: (modelId: string) => Promise<ModelDescriptor>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
+    /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
+    uploadAsset: (name: string, image: string) => Promise<string>
     cancelJob: (jobId: string) => Promise<void>
     listJobs: () => Promise<Job[]>
     onProgress: (callback: (progress: JobProgress) => void) => Unsubscribe

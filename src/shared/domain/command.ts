@@ -43,6 +43,8 @@ export type CommandId =
   | 'canvas.rulers'
   | 'canvas.guides'
   | 'canvas.clearGuides'
+  | 'canvas.deselect'
+  | 'canvas.maskFromSelection'
   | 'canvas.snap'
   | 'canvas.undo'
   | 'canvas.redo'
@@ -297,6 +299,20 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasClearGuides.title',
     helpKey: 'commands.canvasClearGuides.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.deselect',
+    scope: 'canvas',
+    titleKey: 'commands.canvasDeselect.title',
+    helpKey: 'commands.canvasDeselect.help',
+    defaultBinding: 'Meta+KeyD',
+  }),
+  command({
+    id: 'canvas.maskFromSelection',
+    scope: 'canvas',
+    titleKey: 'commands.canvasMaskFromSelection.title',
+    helpKey: 'commands.canvasMaskFromSelection.help',
     defaultBinding: null,
   }),
   command({

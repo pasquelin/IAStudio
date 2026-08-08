@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerScenarioHandlers } from './handlers'
+import type { AssetUploader } from './uploader'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
 
@@ -17,6 +18,10 @@ function registry(overrides: Partial<ModelRegistry> = {}): ModelRegistry {
     describe: () => Promise.reject(new Error('unused')),
     ...overrides,
   }
+}
+
+const uploads: AssetUploader = {
+  upload: () => Promise.resolve('asset-1'),
 }
 
 const jobs: JobManager = {
@@ -36,7 +41,11 @@ describe('scenario handlers', () => {
   // SDK message embeds the request that produced it.
   it('reduces an SDK failure to a code rather than carrying its message across', async () => {
     const failing = APIError.generate(429, undefined, LEAKY, new Headers())
-    registerScenarioHandlers({ models: registry({ search: () => Promise.reject(failing) }), jobs })
+    registerScenarioHandlers({
+      models: registry({ search: () => Promise.reject(failing) }),
+      jobs,
+      uploads,
+    })
 
     await expect(invoke(CHANNELS.scenarioSearchModels)).rejects.toThrow('rate-limited')
     await expect(invoke(CHANNELS.scenarioSearchModels)).rejects.not.toThrow(LEAKY)
@@ -44,7 +53,7 @@ describe('scenario handlers', () => {
 
   it('rejects a query asking for more than one page of models', async () => {
     const search = vi.fn(() => Promise.resolve({ items: [], cursor: null }))
-    registerScenarioHandlers({ models: registry({ search }), jobs })
+    registerScenarioHandlers({ models: registry({ search }), jobs, uploads })
 
     await expect(invoke(CHANNELS.scenarioSearchModels, { limit: 10_000 })).rejects.toThrow()
     expect(search).not.toHaveBeenCalled()
@@ -55,6 +64,7 @@ describe('scenario handlers', () => {
     registerScenarioHandlers({
       models: registry({ describe: () => Promise.reject(failing) }),
       jobs,
+      uploads,
     })
 
     await expect(invoke(CHANNELS.scenarioDescribeModel, 'model_flux')).rejects.toThrow('not-found')
@@ -62,7 +72,7 @@ describe('scenario handlers', () => {
 
   it('rejects a malformed model identifier before reaching the registry', async () => {
     const describe = vi.fn(() => Promise.reject(new Error('unused')))
-    registerScenarioHandlers({ models: registry({ describe }), jobs })
+    registerScenarioHandlers({ models: registry({ describe }), jobs, uploads })
 
     await expect(invoke(CHANNELS.scenarioDescribeModel, '   ')).rejects.toThrow()
     expect(describe).not.toHaveBeenCalled()

@@ -880,6 +880,14 @@
     "canvasSnap": {
       "title": "Snap",
       "help": "Makes what is dragged stick to guides, to the image edges and to its centre, within a few pixels."
+    },
+    "canvasDeselect": {
+      "title": "Deselect",
+      "help": "Drop the selected region, so the brush reaches the whole layer again"
+    },
+    "canvasMaskFromSelection": {
+      "title": "Make a mask of the selection",
+      "help": "Hide the armed layer outside the selected region"
     }
   },
   "texture": {

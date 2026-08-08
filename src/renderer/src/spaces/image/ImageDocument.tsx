@@ -25,6 +25,7 @@ import {
   selectionShapeFor,
 } from './image-tools'
 import { layerPort } from './layer-port'
+import { maskFromSelection } from './mask-actions'
 import { placeAsset } from './place-asset'
 import { revealAssets } from './reveal-assets'
 import { pixelPort } from './pixel-port'
@@ -144,6 +145,12 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return toggleView(documentId, 'snap')
         case 'canvas.clearGuides':
           return clearGuides(documentId)
+        case 'canvas.deselect':
+          return useCanvasViews.getState().setSelection(documentId, null)
+        case 'canvas.maskFromSelection': {
+          const host = engine.current
+          return host ? maskFromSelection(documentId, host) : undefined
+        }
         case 'canvas.undo':
           return useCanvases.getState().undo(documentId)
         case 'canvas.redo':

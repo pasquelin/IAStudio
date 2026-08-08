@@ -61,6 +61,8 @@ const gpu: {
   painted: number[]
   /** What the engine asked the asset loader for, so the parser it forces can be asserted. */
   loaded: { src: string; parser?: string }[]
+  /** Every extraction, so what a snapshot framed can be asserted. */
+  extracted: { frame?: unknown }[]
 } = {
   renders: 0,
   texturesCreated: 0,
@@ -71,6 +73,7 @@ const gpu: {
   containers: [],
   painted: [],
   loaded: [],
+  extracted: [],
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -180,7 +183,13 @@ vi.mock('pixi.js', () => {
           gpu.renders += 1
           if (options?.target) gpu.painted.push(options.target.id)
         },
-        extract: { pixels: () => ({ pixels: [0, 0, 0, 0] }) },
+        extract: {
+          pixels: () => ({ pixels: [0, 0, 0, 0] }),
+          base64: (options: { frame?: unknown }) => {
+            gpu.extracted.push(options)
+            return Promise.resolve('data:image/png;base64,QUJD')
+          },
+        },
       }
 
       async init(options: Record<string, unknown>): Promise<void> {
@@ -349,6 +358,7 @@ beforeEach(() => {
   gpu.containers = []
   gpu.painted = []
   gpu.loaded = []
+  gpu.extracted = []
 })
 
 describe('the blend table', () => {
@@ -889,6 +899,7 @@ describe('carving out a selection', () => {
     press(host, 100, 100)
     drag(host, 300, 200)
     release()
+    await nextFrame()
 
     expect(selections.at(-1)).toEqual({
       kind: 'rect',
@@ -903,6 +914,7 @@ describe('carving out a selection', () => {
 
     press(host, 100, 100)
     drag(host, 300, 200)
+    await nextFrame()
 
     expect(selections.at(-1)?.kind).toBe('ellipse')
   })
@@ -916,6 +928,7 @@ describe('carving out a selection', () => {
     press(host, 100, 100)
     drag(host, 120, 130)
     drag(host, 160, 180)
+    await nextFrame()
 
     const last = selections.at(-1)
     expect(last?.kind).toBe('lasso')
@@ -931,8 +944,51 @@ describe('carving out a selection', () => {
 
     press(host, 120, 120)
     drag(host, 160, 160)
+    await nextFrame()
 
     expect(selections.at(-1)?.kind).toBe('rect')
+  })
+
+  /**
+   * The one that bricked the document: a click carved a zero-area rectangle, which is a stencil
+   * nothing gets through — and every later stroke wrote nothing while looking like a broken
+   * brush, with nowhere in the app to deselect from.
+   */
+  it('drops a selection a click carved nothing out of', async () => {
+    const { engine, host, selections } = await mounted()
+    engine.setTool('select')
+
+    press(host, 200, 200)
+    release()
+    await nextFrame()
+
+    expect(selections.at(-1)).toBeNull()
+  })
+
+  // A drag that did carve something out survives the pointer coming up.
+  it('keeps one a drag actually made', async () => {
+    const { engine, host, selections } = await mounted()
+    engine.setTool('select')
+
+    press(host, 200, 200)
+    drag(host, 260, 260)
+    release()
+    await nextFrame()
+
+    expect(selections.at(-1)).not.toBeNull()
+  })
+
+  // Sixty pointer moves in a second must not be sixty React commits — the viewport's own rule.
+  it('tells React once a frame rather than once per pointer move', async () => {
+    const { engine, host, selections } = await mounted()
+    engine.setTool('select')
+
+    press(host, 200, 200)
+    for (const x of [210, 220, 230]) drag(host, x, 240)
+
+    expect(selections).toEqual([])
+    await nextFrame()
+    expect(selections).toHaveLength(1)
   })
 })
 
@@ -964,6 +1020,21 @@ describe('painting inside a selection', () => {
     expect(stencilled()).toBe(true)
   })
 
+  /**
+   * The bucket stops at the selection; a surface being born never does. A mask is born white,
+   * and one born white inside a marquee and transparent outside would hide its layer everywhere
+   * else the moment it appeared.
+   */
+  it('never cuts the fill a surface is born with', async () => {
+    const { engine } = await mounted()
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 10, height: 10 } })
+    gpu.containers = []
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background'), pixelLayer('b', 'B', 0xffffff)]))
+
+    expect(gpu.containers.some(container => container.mask !== null)).toBe(false)
+  })
+
   it('cuts the bucket the same way, which is what makes it fill a region', async () => {
     const { engine, host } = await mounted()
     engine.setTool('fill')
@@ -973,6 +1044,92 @@ describe('painting inside a selection', () => {
     press(host, 200, 200)
 
     expect(stencilled()).toBe(true)
+  })
+})
+
+describe('making a mask of a selection', () => {
+  const masked = (): CanvasState =>
+    stacked([{ ...pixelLayer('layer-1', 'Background'), mask: { enabled: true, linked: true } }])
+
+  it('paints the region into a mask that already exists', async () => {
+    const { engine } = await mounted(masked())
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 40, height: 40 } })
+    gpu.painted = []
+
+    engine.fillMaskFromSelection('layer-1')
+
+    // The second texture is the mask, and `clear: true` says the region replaces what was there.
+    expect(gpu.painted).toContain(1)
+  })
+
+  /**
+   * The seam again: the command that gives a layer its mask writes into the store, and the
+   * surface only follows one React commit later. Asked for it before then, the engine held the
+   * region rather than dropping it — otherwise the mask came out uniformly white.
+   */
+  it('holds the region until the mask it was asked for exists', async () => {
+    const { engine } = await mounted()
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 40, height: 40 } })
+
+    engine.fillMaskFromSelection('layer-1')
+    gpu.painted = []
+    engine.apply(masked())
+
+    // Twice into the mask: the white it is born with, then the region that was waiting. Once
+    // only would mean the region was dropped on the floor.
+    expect(gpu.painted.filter(id => id === 1)).toHaveLength(2)
+  })
+
+  // What a click meant must not change because the pointer moved in between.
+  it('paints the region it was asked for, not the one selected by then', async () => {
+    const { engine, host } = await mounted()
+    engine.setSelection({ kind: 'rect', rect: { x: 0, y: 0, width: 40, height: 40 } })
+    engine.fillMaskFromSelection('layer-1')
+
+    engine.setTool('select')
+    press(host, 200, 200)
+    drag(host, 400, 400)
+    release()
+    gpu.painted = []
+    engine.apply(masked())
+
+    expect(gpu.painted.filter(id => id === 1)).toHaveLength(2)
+  })
+})
+
+describe('flattening the document', () => {
+  // What an edit sends to the API: the model is asked about what the eye sees, not about a
+  // stack it knows nothing of.
+  it('hands back the payload alone, without the data URL around it', async () => {
+    const { engine } = await mounted()
+
+    await expect(engine.snapshot()).resolves.toBe('QUJD')
+  })
+
+  it('frames the whole document when no region is named', async () => {
+    const { engine } = await mounted()
+
+    await engine.snapshot()
+
+    expect(gpu.extracted).toHaveLength(1)
+    expect(gpu.extracted[0]?.frame).toBeDefined()
+  })
+
+  // The mask one paints is the mask one regenerates: the same texture, alone.
+  it('extracts the mask of a layer on its own', async () => {
+    const { engine } = await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [{ ...pixelLayer('layer-1', 'Background'), mask: { enabled: true, linked: true } }],
+      activeLayerId: 'layer-1',
+    })
+
+    await expect(engine.maskSnapshot('layer-1')).resolves.toBe('QUJD')
+  })
+
+  it('says nothing for a layer that carries no mask', async () => {
+    const { engine } = await mounted()
+
+    await expect(engine.maskSnapshot('layer-1')).resolves.toBeNull()
   })
 })
 

@@ -20,6 +20,25 @@ export function parseJobId(value: unknown): string {
   return jobId.parse(value)
 }
 
+const assetName = z.string().trim().min(1).max(200)
+
+export function parseAssetName(value: unknown): string {
+  return assetName.parse(value)
+}
+
+/**
+ * Only the payload, never a data URL: an `data:image/png;base64,` prefix reaches the API as
+ * part of the picture and comes back as an opaque decoding error.
+ */
+const base64 = z
+  .string()
+  .min(1)
+  .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'expected raw base64')
+
+export function parseBase64(value: unknown): string {
+  return base64.parse(value)
+}
+
 const facetValue = z.string().trim().min(1).max(80)
 
 /**

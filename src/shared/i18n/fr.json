@@ -880,6 +880,14 @@
     "canvasSnap": {
       "title": "Magnétisme",
       "help": "Fait coller ce qu'on déplace aux repères, aux bords de l'image et à son centre, à quelques pixels près."
+    },
+    "canvasDeselect": {
+      "title": "Désélectionner",
+      "help": "Abandonner la région sélectionnée : le pinceau retrouve tout le calque"
+    },
+    "canvasMaskFromSelection": {
+      "title": "Faire un masque de la sélection",
+      "help": "Masquer le calque actif hors de la région sélectionnée"
     }
   },
   "texture": {

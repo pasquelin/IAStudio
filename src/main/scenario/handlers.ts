@@ -4,7 +4,10 @@ import { log } from '@main/log'
 import { describeFailure, failureOf } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
+import type { AssetUploader } from './uploader'
 import {
+  parseAssetName,
+  parseBase64,
   parseGenerationBody,
   parseJobId,
   parseModelId,
@@ -15,6 +18,7 @@ import {
 export type ScenarioHandlerDeps = {
   models: ModelRegistry
   jobs: JobManager
+  uploads: AssetUploader
 }
 
 /**
@@ -36,7 +40,7 @@ async function reduced<T>(action: () => Promise<T>): Promise<T> {
   }
 }
 
-export function registerScenarioHandlers({ models, jobs }: ScenarioHandlerDeps): void {
+export function registerScenarioHandlers({ models, jobs, uploads }: ScenarioHandlerDeps): void {
   handle(CHANNELS.scenarioSearchModels, (_event, query) =>
     reduced(() => models.search(parseModelQuery(query))),
   )
@@ -63,6 +67,10 @@ export function registerScenarioHandlers({ models, jobs }: ScenarioHandlerDeps):
 
     return jobs.submit(id, label, parsedBody)
   })
+
+  handle(CHANNELS.scenarioUploadAsset, (_event, name, image) =>
+    reduced(() => uploads.upload(parseAssetName(name), parseBase64(image))),
+  )
 
   handle(CHANNELS.scenarioCancelJob, (_event, jobId) => jobs.cancel(parseJobId(jobId)))
 
