@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import {
+  DOCUMENT_MANIFEST,
   documentPath,
   DOCUMENTS_FOLDER,
   DOCUMENT_VERSION,
   ENVELOPE_LIMIT,
+  FOLDER_KINDS,
+  isPartName,
   kindForExtension,
   workspaceForKind,
   type DocumentDescriptor,
@@ -13,6 +16,7 @@ import {
   type DocumentEnvelope,
   type DocumentFile,
   type DocumentKind,
+  type DocumentPart,
 } from '@shared/domain/document'
 import { isRecord } from '@shared/guards'
 import { parseDocumentEnvelope } from './validation'
@@ -79,6 +83,20 @@ export function splitDocument(body: string): DocumentFile {
   }
 
   return { ...envelope, content: cut === -1 ? '' : body.slice(cut + 1) }
+}
+
+/**
+ * Whether anything at all sits at a path — a folder, or the stray file a hand-repaired project
+ * may have left where a folder belongs. Told apart from `readdir`, which reports a regular file
+ * as absent and would then have the swap fail on every save, for good.
+ */
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Node reports a missing path this way, and it is the one failure that is not an error here. */
@@ -169,13 +187,77 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     }
   }
 
+  /**
+   * A folder document, swapped in whole. The manifest carries what a file document's body
+   * carries; the parts sit beside it, under names `isPartName` has cleared — they become paths,
+   * so they are checked here rather than trusted from the renderer.
+   *
+   * Three moves rather than one: `rename` will not replace a folder that has anything in it, so
+   * the previous one steps aside before the new one lands, and is removed only once it has. The
+   * one it steps aside to is `.old`, which the sweep deliberately leaves alone: a process that
+   * dies between the two renames must leave the previous document recoverable by hand, not
+   * collected as rubbish.
+   */
+  const storeFolder = async (folder: string, document: DocumentFile): Promise<void> => {
+    const { parts = [], ...rest } = document
+    const refused = parts.find(part => !isPartName(part.name))
+    if (refused) throw new Error(`Part name ${refused.name} is not a file name`)
+
+    const staged = `${folder}.${randomUUID()}${STAGING_SUFFIX}`
+    const stepped = `${folder}.${randomUUID()}.old`
+    staging.add(basename(staged))
+
+    try {
+      await mkdir(staged, { recursive: true })
+      // The manifest holds no parts: they are the folder's own entries, and naming them twice
+      // would let the two disagree.
+      await writeFile(join(staged, DOCUMENT_MANIFEST), bodyOf(rest), 'utf8')
+      for (const part of parts) {
+        await writeFile(join(staged, part.name), Buffer.from(part.data, 'base64'))
+      }
+
+      const held = await exists(folder)
+      if (held) await rename(folder, stepped)
+      try {
+        await rename(staged, folder)
+      } catch (error) {
+        // Put back what stepped aside: the window between the two renames is the only moment
+        // the document does not exist, and leaving it that way would lose it.
+        if (held) await rename(stepped, folder)
+        throw error
+      }
+      if (held) await rm(stepped, { force: true, recursive: true })
+    } catch (error) {
+      await rm(staged, { force: true, recursive: true })
+      throw error
+    } finally {
+      staging.delete(basename(staged))
+    }
+  }
+
+  /** Reads a folder document back: its manifest, and every file the renderer left beside it. */
+  const readFolder = async (folder: string): Promise<DocumentFile> => {
+    const document = splitDocument(await readFile(join(folder, DOCUMENT_MANIFEST), 'utf8'))
+    const entries = await readdir(folder)
+
+    const parts: DocumentPart[] = []
+    for (const entry of entries) {
+      // The manifest is not a part, and anything else in there is not ours: a file the user
+      // dropped in the folder is left where it is rather than handed to the editor.
+      if (entry === DOCUMENT_MANIFEST || !isPartName(entry)) continue
+      parts.push({ name: entry, data: (await readFile(join(folder, entry))).toString('base64') })
+    }
+    return { ...document, parts }
+  }
+
   /** Swept while listing rather than on a timer: nothing else ever reads that folder. */
   const sweep = async (folder: string, entries: readonly string[]): Promise<void> => {
     // Failure is nothing to report: the listing is what was asked for, and the copy will be
     // offered again at the next open.
     await Promise.all(
       orphanStagingCopies(entries, staging).map(orphan =>
-        rm(join(folder, orphan), { force: true }),
+        // `recursive`: a folder document stages a folder, and `rm` refuses one without it.
+        rm(join(folder, orphan), { force: true, recursive: true }),
       ),
     )
   }
@@ -189,7 +271,8 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     if (!kind || !workspace) return null
 
     try {
-      const envelope = await headOf(join(folder, entry))
+      const path = join(folder, entry)
+      const envelope = await headOf(FOLDER_KINDS.has(kind) ? join(path, DOCUMENT_MANIFEST) : path)
       // The folder's word beats the file's, exactly as `read` has it: an extension changed by
       // hand must not send a document to an editor that cannot open it.
       if (envelope.kind !== kind) return null
@@ -199,6 +282,32 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
       // One unreadable document must not cost the user the listing of all the others.
       return null
     }
+  }
+
+  /**
+   * Read behind whatever is writing the same path. A folder document is swapped in three moves,
+   * and a read landing between two of them would see nothing there — the tab would take the
+   * default, and the next ⌘S would write that over the document being saved.
+   */
+  async function readOne(id: string, kind: DocumentKind): Promise<DocumentFile | null> {
+    const file = fileOf(id, kind)
+
+    let document: DocumentFile
+    try {
+      document = FOLDER_KINDS.has(kind)
+        ? await readFolder(file)
+        : splitDocument(await readFile(file, 'utf8'))
+    } catch (error) {
+      if (isMissing(error)) return null
+      throw error
+    }
+
+    // The folder's word beats the file's. A document copied to another extension by hand would
+    // otherwise open in the wrong editor, with the wrong content.
+    if (document.kind !== kind) {
+      throw new Error(`Document ${id} holds a ${document.kind}, not a ${kind}`)
+    }
+    return document
   }
 
   return {
@@ -227,36 +336,20 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
       return found
     },
 
-    read: async (id, kind) => {
-      const file = fileOf(id, kind)
-
-      let document: DocumentFile
-      try {
-        document = splitDocument(await readFile(file, 'utf8'))
-      } catch (error) {
-        if (isMissing(error)) return null
-        throw error
-      }
-
-      // The folder's word beats the file's. A document copied to another extension by hand
-      // would otherwise open in the wrong editor, with the wrong content.
-      if (document.kind !== kind) {
-        throw new Error(`Document ${id} holds a ${document.kind}, not a ${kind}`)
-      }
-      return document
-    },
+    read: (id, kind) => queued(fileOf(id, kind), () => readOne(id, kind)),
 
     write: (id, kind, draft) => {
       const file = fileOf(id, kind)
+      const document = { ...draft, version: DOCUMENT_VERSION, kind, updatedAt: now() }
       return queued(file, () =>
-        store(file, { ...draft, version: DOCUMENT_VERSION, kind, updatedAt: now() }),
+        FOLDER_KINDS.has(kind) ? storeFolder(file, document) : store(file, document),
       )
     },
 
     // `force`: closing a document that was never saved must not fail on a file that is absent.
     remove: async (id, kind) => {
       const file = fileOf(id, kind)
-      await queued(file, () => rm(file, { force: true }))
+      await queued(file, () => rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) }))
     },
   }
 }

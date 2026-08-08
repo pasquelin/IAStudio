@@ -120,11 +120,11 @@ describe('createDocumentFiles', () => {
 
   // A document copied to another extension by hand would otherwise open in the wrong editor.
   it('refuses a file whose kind disagrees with its extension', async () => {
-    await documents.write('doc-1', 'image', { title: 'Untitled', content: '{}' })
-    const source = await readFile(join(root, 'documents', 'doc-1.img'), 'utf8')
+    await documents.write('doc-1', 'texture', { title: 'Untitled', content: '{}' })
+    const source = await readFile(join(root, 'documents', 'doc-1.tex'), 'utf8')
     await writeFile(join(root, 'documents', 'doc-1.scene'), source, 'utf8')
 
-    await expect(documents.read('doc-1', 'scene')).rejects.toThrow(/image/)
+    await expect(documents.read('doc-1', 'scene')).rejects.toThrow(/texture/)
   })
 
   it('refuses a file written by a later build instead of flattening it', async () => {
@@ -243,6 +243,112 @@ describe('createDocumentFiles', () => {
 
       await documents.list()
       expect(await readdir(join(root, 'documents'))).toEqual(['doc-1.scene'])
+    })
+  })
+
+  /**
+   * An image keeps one PNG per layer, so it is written as a folder rather than a file. What is
+   * checked here is the contract the renderer depends on: the parts come back byte for byte, and
+   * nothing a part is named can reach outside the folder.
+   */
+  describe('a document written as a folder', () => {
+    const PIXELS = Buffer.from([137, 80, 78, 71]).toString('base64')
+
+    it('reads back the manifest and every part', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: '{"layers":[]}',
+        parts: [{ name: 'layer-1.png', data: PIXELS }],
+      })
+
+      const file = await documents.read('doc-1', 'image')
+
+      expect(file?.title).toBe('Poster')
+      expect(file?.content).toBe('{"layers":[]}')
+      expect(file?.parts).toEqual([{ name: 'layer-1.png', data: PIXELS }])
+    })
+
+    it('lays the folder out so it reads by hand', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: '{}',
+        parts: [{ name: 'layer-1.png', data: PIXELS }],
+      })
+
+      const entries = await readdir(join(root, 'documents', 'doc-1.img'))
+      expect([...entries].sort()).toEqual(['document.json', 'layer-1.png'])
+    })
+
+    it('lists a folder document like any other', async () => {
+      await documents.write('doc-1', 'image', { title: 'Poster', content: '{}' })
+
+      expect(await documents.list()).toEqual([
+        { id: 'doc-1', kind: 'image', title: 'Poster', workspace: 'image' },
+      ])
+    })
+
+    // The second write must leave the folder holding the second document, not both merged.
+    it('replaces the whole folder rather than merging into it', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: '{}',
+        parts: [
+          { name: 'layer-1.png', data: PIXELS },
+          { name: 'layer-2.png', data: PIXELS },
+        ],
+      })
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: '{}',
+        parts: [{ name: 'layer-1.png', data: PIXELS }],
+      })
+
+      const entries = await readdir(join(root, 'documents', 'doc-1.img'))
+      expect([...entries].sort()).toEqual(['document.json', 'layer-1.png'])
+    })
+
+    it('leaves no staging copy behind', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: '{}',
+        parts: [{ name: 'layer-1.png', data: PIXELS }],
+      })
+      await documents.write('doc-1', 'image', { title: 'Poster', content: '{}' })
+
+      const entries = await readdir(join(root, 'documents'))
+      expect(entries).toEqual(['doc-1.img'])
+    })
+
+    it('takes the whole folder away on remove', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: '{}',
+        parts: [{ name: 'layer-1.png', data: PIXELS }],
+      })
+      await documents.remove('doc-1', 'image')
+
+      expect(await documents.list()).toEqual([])
+      expect(await readdir(join(root, 'documents'))).toEqual([])
+    })
+
+    /**
+     * The renderer names the parts and the main process turns those names into paths: the one
+     * field of this contract that crosses a security boundary.
+     */
+    it('refuses a part that would write outside the folder', async () => {
+      await expect(
+        documents.write('doc-1', 'image', {
+          title: 'Poster',
+          content: '{}',
+          parts: [{ name: '../escaped.png', data: PIXELS }],
+        }),
+      ).rejects.toThrow(/not a file name/)
+
+      expect(await documents.list()).toEqual([])
+    })
+
+    it('reads back nothing for a folder that was never written', async () => {
+      expect(await documents.read('doc-9', 'image')).toBeNull()
     })
   })
 })

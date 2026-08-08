@@ -32,8 +32,9 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**679 fichiers dans `src/`. 3048 tests verts sur 257 fichiers. 6 espaces éditables. 2 types de
-documents sur 6 savent s'enregistrer — l'espace Image, lui, exporte mais ne s'enregistre pas encore.**
+**684 fichiers dans `src/`. 3155 tests verts sur 259 fichiers. 6 espaces éditables. 3 types de
+documents sur 6 savent s'enregistrer — l'image a rejoint la scène 3D et la matière. L'espace Image
+est complet : ses cinq gestes sont offerts, recadrage compris.**
 
 `pnpm validate` est vert, **budget de couverture compris** : il lance `test:coverage`, dont les
 seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
@@ -132,8 +133,10 @@ surface pour le dire. Un ⌘S qui échoue laisse la puce, et c'est tout ce qu'il
 qui échoue ne dit rien du tout. Un document dont le fichier a refusé de s'ouvrir refuse ensuite de
 s'enregistrer, délibérément, **sans jamais expliquer pourquoi**.
 
-Tant qu'elle manque, chaque nouveau branchement de document ajoute un mode d'échec silencieux — et
-il en reste quatre à brancher.
+Elle existe désormais en partie : `services/diagnostics.ts` porte `reportFailure`, un canal
+renderer → main, et `useNativeMenu` s'en sert pour un ⌘S qui échoue. Ce qui manque encore est la
+surface **visible** : le journal part dans la console du main, jamais sous les yeux de qui travaille.
+Trois branchements de document restent à faire, et chacun ajoute un mode d'échec de plus.
 
 ---
 
@@ -146,9 +149,26 @@ Le chantier le plus transverse : rien de ce qui suit n'est spécifique à un esp
 **Ce qui est posé.** `main/project/documents.ts` écrit dans `documents/<id>.<ext>`, **atomiquement**
 (fichier de transit puis `rename`) et en file d'attente par fichier. Le tour complet — ⌘S, marque
 « modifié », puce, relecture — est générique et fonctionne. `IO_BY_KIND` (`app/document-io.ts`)
-porte **deux entrées sur six : `scene` et `texture`**.
+porte **trois entrées sur six : `scene`, `texture` et `image`**.
 
-**1. Quatre types de documents ne savent pas s'enregistrer** — `image`, `sequence` (vidéo), `audio`,
+**Ce que l'image a coûté au contrat, et qui sert aux trois suivants.** `DocumentDraft` accepte des
+`parts` — des fichiers à côté du contenu — et le genre `image` s'écrit en dossier `<id>.img/` : un
+manifeste, et un PNG par surface. `DocumentIo.capture` est devenu **asynchrone** parce qu'une
+lecture GPU l'est ; la marque est lue synchronement, avant le premier `await`, et c'est la
+propriété à ne pas casser. Trois pièges y ont été payés, inutile de les repayer :
+
+- **une sauvegarde sans pixels efface ceux du disque.** Un dossier est remplacé en entier, donc
+  `capture` refuse plutôt que d'écrire un document amputé quand le moteur est injoignable — ce
+  qu'il est tant qu'il monte son contexte GPU, exactement quand tombe un ⌘S après un changement
+  d'espace ;
+- **l'état atteint le moteur un commit React après le disque.** Les pixels relus visent des
+  surfaces pas encore nées : ils patientent dans `pendingSnapshots`, comme le fait déjà une image
+  posée ;
+- **le nom d'une partie traverse une frontière de sécurité.** Le renderer les choisit, le main en
+  fait des chemins : `isPartName` n'accepte ni séparateur ni remontée, et le rôle passe DEVANT
+  l'identifiant (`p_`, `m_`) pour que le nommage reste injectif.
+
+**1. Trois types de documents ne savent pas s'enregistrer** — `sequence` (vidéo), `audio`,
 `skybox`. Chacun a besoin de sa paire **sérialiser / relire-et-valider** et d'une entrée dans
 `IO_BY_KIND`. Le reste est déjà générique : brancher un espace, c'est écrire son `DocumentIo`, pas
 toucher au mécanisme. Prendre `SCENE_IO` et `TEXTURE_IO` comme modèles ; la validation à la relecture
@@ -358,16 +378,23 @@ entrée d'interface :
   `flattenInto` vise un calque qui n'existe pas encore : composé pendant que la pile est là, gardé en
   attente, versé quand la surface naît. **L'ordre est le contrat** : composer, puis lancer la
   commande — après elle, ce dont l'image est faite n'existe plus.
-- **Recadrer** — le seul qui reste, et le plus lourd. `54730cc` a retiré **tout le chemin de
-  recadrage du moteur** ; il ne subsiste que le littéral `'crop'` dans l'union et dans
-  `UNBUILT_TOOLS`. Le rebrancher, c'est réécrire le geste : glisser un cadre, l'afficher dans
-  l'overlay, valider au relâchement.
+- **Recadrer : fait.** On pose un cadre, il reste à l'écran avec ses huit poignées, `⏎` rogne et
+  `⎋` abandonne — deux commandes du registre, scope `canvas`. Le cadre est de l'état de session,
+  hors historique, abandonné quand on change d'outil ou que le document change de taille sous lui.
 
+  **Et une prémisse s'est révélée fausse au passage, la voici corrigée.** Les anciennes notes
+  disaient que `resizeCanvas` déplaçant les transforms et `resurface` recopiant à l'origine étaient
+  « justes ensemble ». Ils ne l'étaient que pour un cadre ancré en (0,0) : les deux appliquaient le
+  même déplacement, une bande sortait vide à droite et en bas, et **tout le document l'était dès que
+  le cadre partait d'assez loin**. Un seul mécanisme doit porter le mouvement, et c'est celui des
+  pixels : une surface est de la taille du document, donc la neuve n'a de place que pour la région
+  gardée. `resurface` prend maintenant le coin d'où recopier, `cropToRect` ne déplace plus rien.
 
-**Une conséquence à écrire dans le manuel le jour où le recadrage est offert** : rétrécir perd ce qui
-tombe hors du cadre, et les tuiles d'annulation partent avec. Le cadre revient sur ⌘Z, les pixels
-retirés non. C'est le comportement de Photoshop « Supprimer les pixels rognés » **coché**, sauf que
-son historique à lui les rend.
+**La conséquence, écrite au manuel** (chapitres 08, 15, 18 et 19) : rétrécir perd ce qui tombe hors
+du cadre, et les tuiles d'annulation partent avec. Le cadre revient sur ⌘Z, les pixels retirés non.
+C'est le comportement de Photoshop « Supprimer les pixels rognés » **coché**, sauf que son
+historique à lui les rend. Le rendre entier reste faisable — `PixelPatches` sait capturer les tuiles
+perdues, bornées à 256 Mo — mais un recadrage sévère en retirerait presque tout le document.
 
 <!-- Conservé pour mémoire : ce que chacune cassait avant `resurface`. -->
 
@@ -384,12 +411,18 @@ Les commandes correspondantes vivent dans `engines/canvas/commands.ts` (`cropToR
 
 ### Ce qui reste, par ordre de valeur
 
-1. **Le geste de recadrage**, ci-dessus — le dernier des cinq.
-2. **La persistance** (jalon 10). Le format est tranché : un dossier `<nom>.img/` avec le JSON et un
-   PNG par calque, inspectable et réparable à la main. `serializeCanvas` / `deserializeCanvas`
-   existent et ne sont appelés que par leurs propres tests ; `PixelLayer.source` et `loadInto`
-   couvrent déjà la relecture d'un calque venu d'un asset. Il manque le canal IPC d'écriture
-   multi-fichiers et l'extraction par calque.
+1. **Rien de bloquant ne reste sur cet espace.** Les cinq gestes sont offerts et le document
+   s'enregistre. Ce qui suit est du confort et de la dette.
+2. **La persistance : faite** (jalon 10). Dossier `<id>.img/`, manifeste plus un PNG par surface,
+   masques compris. Ce qui ne s'enregistre pas et qui est écrit au manuel : l'historique
+   d'annulation. Deux dettes mesurées, aucune bloquante :
+   - **l'extraction GPU est synchrone et sur le thread UI.** `extract.base64` fait son readback
+     avant de rendre la main, et `pixelSnapshots` boucle par surface. Ni annulable, ni rapportant sa
+     progression — ce que l'invariant 6 demande d'une tâche longue. À reprendre le jour où un
+     document lourd le fera sentir ;
+   - **le décodage du clone IPC**, mesuré : 1,3 ms pour dix calques ordinaires (8 % d'une frame),
+     16 ms franchies vers 40 Mo de base64, soit vingt calques de 4096 px bien remplis. Un
+     `Uint8Array` à la place du base64 supprimerait l'inflation de 33 % et le décodage côté main.
 3. **La classification des modèles.** `familyOf` (`main/scenario/schema.ts`) ne produit jamais les
    familles `upscale`, `background-removal` ni `vectorization` : trois des cinq actions d'édition IA
    — Détourer, Agrandir, Vectoriser — n'ont donc aucun modèle à trouver et s'arrêtent proprement sur

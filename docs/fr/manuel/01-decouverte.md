@@ -21,9 +21,9 @@ phrase et où l'on télécharge une image, c'est **tout ce qui vient après** :
 - **rien ne repart** : vos fichiers restent chez vous.
 
 > **Une chose que le studio ne sait pas encore faire**, et qu'il vaut mieux savoir tout de suite :
-> **un travail en cours ne s'enregistre pas.** Une image que vous composez, un montage, un son
-> édité, un ciel réglé : fermer l'onglet les perd. Seules les scènes 3D et les matières
-> s'écrivent sur le disque. La liste complète et honnête de ces manques est le chapitre
+> **la moitié des documents ne s'enregistrent pas.** Un montage, un son édité, un ciel réglé :
+> fermer l'onglet les perd. Les images, les scènes 3D et les matières, elles, s'écrivent sur le
+> disque et se rouvrent telles quelles. La liste complète et honnête de ces manques est le chapitre
 > [Ce qui n'existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
 
 ## Six façons de travailler

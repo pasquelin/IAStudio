@@ -20,10 +20,10 @@ and download an image, is **everything that comes after**:
   each file, and one button replays them;
 - **nothing leaves**: your files stay with you.
 
-> **One thing the studio cannot do yet**, and it is better known straight away: **work in
-> progress does not save.** A picture you are composing, an edit, a sound, an adjusted sky:
-> closing the tab loses them. Only 3D scenes and materials write to disk. The complete and honest
-> list of these gaps is the chapter [What does not exist yet](18-limits.md) — it exists to be
+> **One thing the studio cannot do yet**, and it is better known straight away: **half the
+> document kinds do not save.** An edit, a sound, an adjusted sky: closing the tab loses them.
+> Pictures, 3D scenes and materials do write to disk, and open back exactly as they were. The
+> complete and honest list of these gaps is the chapter [What does not exist yet](18-limits.md) — it exists to be
 > read, not hidden.
 
 ## Six ways of working

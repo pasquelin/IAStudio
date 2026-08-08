@@ -28,22 +28,21 @@ Trois catégories, à ne pas confondre :
 
 ## La limite qui compte le plus : l'enregistrement
 
-**Quatre types de documents sur six ne s'enregistrent pas encore.**
+**Trois types de documents sur six ne s'enregistrent pas encore.**
 
 | Document | Extension | S'enregistre ? |
 |---|---|---|
 | Scène 3D | `.scene` | **oui** |
 | Matière | `.tex` | **oui** |
-| Image en calques | `.img` | non |
+| Image en calques | `.img` | **oui** |
 | Séquence vidéo | `.seq` | non |
 | Son édité | `.aud` | non |
 | Ciel | `.sky` | non |
 
-**Ce que cela veut dire concrètement.** Vous retouchez une image : vous peignez, vous ajoutez des
-calques, vous recadrez. Vous fermez l'onglet. **Tout ce travail est perdu.** L'*asset* d'origine
-est toujours dans le projet — c'est votre retouche qui disparaît.
-
-Idem pour un montage vidéo, pour les réglages d'un ciel.
+**Ce que cela veut dire concrètement.** Vous montez une séquence, vous éditez un son, vous réglez
+un ciel. Vous fermez l'onglet. **Tout ce travail est perdu.** Les *assets* d'origine sont toujours
+dans le projet — c'est votre travail dessus qui disparaît. L'image et la scène 3D, elles, se
+rouvrent telles quelles.
 
 **Ce qui n'est jamais perdu :**
 
@@ -396,8 +395,8 @@ ne peut pas divulguer votre compte.
 
 Si vous ne deviez retenir que cinq choses de ce chapitre :
 
-1. **Les images, séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le
-   travail ; dans l'espace Image, `⇧⌘E` sort au moins un PNG avant de fermer ;
+1. **Les séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le travail ;
+   l'image et la scène 3D, elles, se rouvrent telles quelles ;
 2. **un recadrage ne se défait qu'à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;

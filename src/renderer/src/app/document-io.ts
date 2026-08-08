@@ -1,11 +1,23 @@
-import type { DocumentKind } from '@shared/domain/document'
+import {
+  isPartName,
+  type DocumentDraft,
+  type DocumentKind,
+  type DocumentPart,
+} from '@shared/domain/document'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
 import { hasScene, markOf, sceneOf, useScenes } from '@/stores/scenes'
+import { DEFAULT_CANVAS, deserializeCanvas, serializeCanvas } from '@/engines/canvas/canvas-state'
+import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
+import { canvasHost } from '@/spaces/image/canvas-hosts'
+import { canvasOf, hasCanvas, markOf as canvasMarkOf, useCanvases } from '@/stores/canvases'
 import { newTexture, parseTexture } from '@/engines/texture/texture-state'
 import { hasTexture, markOf as textureMarkOf, textureOf, useTextures } from '@/stores/textures'
+
+/** What an editor produces to be saved. The title is the tab's, not the editor's. */
+type CapturedDraft = Omit<DocumentDraft, 'title'>
 
 /**
  * How a kind reaches the disk and comes back. One entry per space that has a serialized form; a
@@ -14,11 +26,14 @@ import { hasTexture, markOf as textureMarkOf, textureOf, useTextures } from '@/s
  */
 type DocumentIo = {
   /**
-   * What to write, and how to record that it was written. The two are read together and before
-   * the write, so an edit made while the file is on its way to disk is not counted as saved.
+   * What to write, and how to record that it was written.
+   *
+   * Asynchronous because an image's pixels live on the GPU and only come back through a promise.
+   * **The mark is read synchronously, before the first `await`** — that is the whole property:
+   * an edit made while the file is on its way to disk must not be counted as saved.
    */
-  capture: (documentId: string) => { content: string; commit: () => void }
-  install: (documentId: string, content: string) => void
+  capture: (documentId: string) => Promise<{ draft: CapturedDraft; commit: () => void }>
+  install: (documentId: string, content: string, parts?: readonly DocumentPart[]) => void
   /** What an unsaved document holds until something is done to it. */
   createDefault: (documentId: string) => void
   /** Whether the document is already filled — a remount must not read over what is open. */
@@ -30,12 +45,12 @@ const SCENE_IO: DocumentIo = {
     const scenes = useScenes.getState()
     const mark = markOf(scenes, documentId)
 
-    return {
+    return Promise.resolve({
       // Serialized here, in the window that owns the document: the file layer never parses a
       // content, so the cost of a twenty-thousand-node scene never reaches the main thread.
-      content: JSON.stringify(scenePayload(sceneOf(scenes, documentId))),
+      draft: { content: JSON.stringify(scenePayload(sceneOf(scenes, documentId))) },
       commit: () => useScenes.getState().markSaved(documentId, mark),
-    }
+    })
   },
   install: (documentId, content) => {
     const scenes = useScenes.getState()
@@ -53,10 +68,10 @@ const TEXTURE_IO: DocumentIo = {
     const textures = useTextures.getState()
     const mark = textureMarkOf(textures, documentId)
 
-    return {
-      content: JSON.stringify(textureOf(textures, documentId)),
+    return Promise.resolve({
+      draft: { content: JSON.stringify(textureOf(textures, documentId)) },
       commit: () => useTextures.getState().markSaved(documentId, mark),
-    }
+    })
   },
   install: (documentId, content) => {
     const textures = useTextures.getState()
@@ -68,7 +83,79 @@ const TEXTURE_IO: DocumentIo = {
   holds: documentId => hasTexture(useTextures.getState(), documentId),
 }
 
+/**
+ * What a surface's pixels are called inside `<id>.img/`. The role goes in FRONT of the id, never
+ * behind it: a suffix would not be injective — a layer literally called `x-mask` and the mask of
+ * a layer called `x` would claim the same file, and one would silently overwrite the other.
+ *
+ * `null` for an id that could not be a file name. Ids are UUIDs today, but `reviveLayer` takes
+ * whatever a file holds, and one odd id must cost that layer's pixels — never the whole save.
+ */
+function partName(pixels: LayerPixels): string | null {
+  const name = `${pixels.mask ? 'm' : 'p'}_${pixels.layerId}.png`
+  return isPartName(name) ? name : null
+}
+
+/** The other way round, for the read: anything else in the folder is not ours. */
+function pixelsFromPart(name: string, data: string): LayerPixels | null {
+  const match = /^([pm])_(.+)\.png$/.exec(name)
+  return match?.[2] ? { layerId: match[2], mask: match[1] === 'm', data } : null
+}
+
+/**
+ * The image, which is the one kind a string cannot hold: the stack goes in the manifest, and each
+ * layer's texture in a PNG beside it. The pixels live on the GPU, so they are asked of the engine
+ * holding the document — see `canvasHost`.
+ */
+const IMAGE_IO: DocumentIo = {
+  capture: async documentId => {
+    const canvases = useCanvases.getState()
+    // Read before the first await, which is the whole reason `capture` may be asynchronous: an
+    // edit made while the pixels are being extracted must not be counted as saved.
+    const mark = canvasMarkOf(canvases, documentId)
+    const content = serializeCanvas(canvasOf(canvases, documentId))
+
+    const host = canvasHost(documentId)
+    // Refused rather than written empty. A folder is replaced whole, so a save with no pictures
+    // would delete the ones on disk AND mark the document clean — the work would be gone with
+    // nothing said. The engine is unreachable while it boots its GPU context, which is exactly
+    // when a ⌘S after switching workspace lands.
+    if (!host) throw new Error(`No editor holds ${documentId}: its pixels cannot be read`)
+
+    const taken = await host.pixelSnapshots()
+    const parts: DocumentPart[] = []
+    for (const pixels of taken) {
+      const name = partName(pixels)
+      if (name) parts.push({ name, data: pixels.data })
+    }
+
+    return {
+      draft: { content, parts },
+      commit: () => useCanvases.getState().markSaved(documentId, mark),
+    }
+  },
+  install: (documentId, content, parts = []) => {
+    const canvases = useCanvases.getState()
+    // `replace`, not a command: loading a document is not something ⌘Z gives back.
+    canvases.replace(documentId, deserializeCanvas(content))
+    canvases.markSaved(documentId, canvasMarkOf(useCanvases.getState(), documentId))
+
+    // After the state, never before: the engine builds a surface per layer of the state it was
+    // given, and pixels aimed at a layer it has not heard of yet land nowhere.
+    const host = canvasHost(documentId)
+    if (!host) return
+    for (const part of parts) {
+      const pixels = pixelsFromPart(part.name, part.data)
+      // Nothing is rethrown into a mount effect that has nowhere to show it — see `restoreDocument`.
+      if (pixels) void host.restoreSnapshot(pixels).catch(() => undefined)
+    }
+  },
+  createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
+  holds: documentId => hasCanvas(useCanvases.getState(), documentId),
+}
+
 const IO_BY_KIND: Partial<Record<DocumentKind, DocumentIo>> = {
+  image: IMAGE_IO,
   scene: SCENE_IO,
   texture: TEXTURE_IO,
 }
@@ -97,8 +184,8 @@ export async function saveDocument(documentId: string): Promise<void> {
   if (!bridge || !document || !io) return
   if (unreadable.has(documentId) || !io.holds(documentId)) return
 
-  const { content, commit } = io.capture(documentId)
-  await bridge.documents.write(document.id, document.kind, { title: document.title, content })
+  const { draft, commit } = await io.capture(documentId)
+  await bridge.documents.write(document.id, document.kind, { ...draft, title: document.title })
   commit()
 }
 
@@ -143,7 +230,7 @@ export function restoreDocument(documentId: string): Promise<void> {
       // menu acts on it. Overwriting that edit would also mark the document clean, leaving an
       // undo stack whose commands describe a scene that never existed.
       if (io.holds(documentId)) return
-      if (file) io.install(documentId, file.content)
+      if (file) io.install(documentId, file.content, file.parts)
       else io.createDefault(documentId)
     })
     .catch(() => {

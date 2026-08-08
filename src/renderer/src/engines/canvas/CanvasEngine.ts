@@ -224,6 +224,17 @@ type LayerSurface = {
 /** Which of a layer's two surfaces the brush writes on. */
 export type PaintSurface = 'pixels' | 'mask'
 
+/**
+ * One surface's pixels, on their way to a file or back. `data` is base64 PNG — what the document
+ * layer writes beside the manifest, and what the renderer has to offer since it owns no disk.
+ */
+export type LayerPixels = {
+  layerId: string
+  /** A layer keeps two surfaces: the picture, and the mask painted over it. */
+  mask: boolean
+  data: string
+}
+
 /** A surface a gesture may write to, with the key its undo patches are filed under. */
 /**
  * Where a stroke lands, and how to get there. `toSurface` maps the document onto the surface's
@@ -360,6 +371,12 @@ export class CanvasEngine {
   private readonly pendingMaskFills = new Map<string, readonly Point[]>()
   /** Pictures composed for layers that do not exist yet — see `flattenInto`. */
   private readonly pendingPictures = new Map<string, RenderTexture>()
+  /**
+   * Saved pixels waiting for the surface they belong to. The document layer writes the stack into
+   * the store, and the engine only hears about it a React commit later — so a picture read off the
+   * disk almost always arrives before the layer it fills.
+   */
+  private readonly pendingSnapshots = new Map<string, string>()
   private readonly stamp = new Graphics()
   /** Carries the map back into a surface's own pixels — see `inSurfaceSpace`. */
   private readonly paintSpace = new Container()
@@ -790,7 +807,7 @@ export class CanvasEngine {
    * `url` is a `scenario://asset/<id>`: the renderer has no filesystem, and the main process
    * serves the scheme against the catalogue.
    */
-  async loadInto(layerId: string, url: string): Promise<void> {
+  async loadInto(layerId: string, url: string, clear = false): Promise<void> {
     const mounting = this.mounting
     const surface = this.surfaces.get(layerId)
     if (!surface || !this.app || !this.state) return
@@ -810,7 +827,7 @@ export class CanvasEngine {
     sprite.position.set(laid.x, laid.y)
     sprite.setSize(laid.width, laid.height)
 
-    renderer.render({ container: sprite, target: surface.texture, clear: false })
+    renderer.render({ container: sprite, target: surface.texture, clear })
     // Its texture belongs to the asset cache, and another layer may hold the same picture.
     sprite.destroy()
     this.render()
@@ -1072,6 +1089,60 @@ export class CanvasEngine {
     return payloadOf(url)
   }
 
+  /**
+   * Every surface's pixels, for saving the document. The textures rather than the sprites: a
+   * surface is document-sized and the transform lives in the state, so extracting a placed
+   * sprite would bake in a move `place` applies again on the way back.
+   *
+   * Keyed by layer rather than by file name — what these are called on disk is the document
+   * layer's business, not the engine's.
+   */
+  async pixelSnapshots(): Promise<LayerPixels[]> {
+    const renderer = this.app?.renderer
+    if (!renderer || !this.state) return []
+
+    const taken: LayerPixels[] = []
+    for (const layer of allLayers(this.state.layers)) {
+      for (const mask of [false, true]) {
+        const surface = this.surfaces.get(mask ? maskKey(layer.id) : layer.id)
+        if (!surface) continue
+        const url = await renderer.extract.base64({ target: surface.texture, resolution: 1 })
+        taken.push({ layerId: layer.id, mask, data: payloadOf(url) })
+      }
+    }
+    return taken
+  }
+
+  /**
+   * Draws saved pixels back into a layer's surface. Through `loadInto`, which contains what it
+   * is given inside the document — a `.png` edited by hand to another size is put back framed
+   * rather than spilling over the layers under it.
+   */
+  async restoreSnapshot(pixels: LayerPixels): Promise<void> {
+    const key = pixels.mask ? maskKey(pixels.layerId) : pixels.layerId
+    const url = `data:image/png;base64,${pixels.data}`
+
+    // Held rather than dropped when the surface is not there yet: `loadInto` returns in silence
+    // on a missing one, and a document would reopen with its stack and none of its pixels.
+    if (!this.surfaces.has(key)) {
+      this.pendingSnapshots.set(key, url)
+      return
+    }
+    // Cleared, unlike a placed picture: the surface was born filled — white, for the base layer —
+    // and compositing over that would bring a hole the user erased back as white rather than as
+    // the transparency the file holds.
+    await this.loadInto(key, url, true)
+  }
+
+  /** Pours the saved pixels held for a surface into it, once it exists. */
+  private drainPendingSnapshot(key: string): void {
+    const url = this.pendingSnapshots.get(key)
+    if (!url) return
+    this.pendingSnapshots.delete(key)
+    // Nothing is rethrown: this runs inside `reconcile`, which has nowhere to report to.
+    void this.loadInto(key, url, true).catch(() => undefined)
+  }
+
   /** Rectangle, ellipse or lasso: three gestures behind one tool, as the bar offers them. */
   setSelectionShape(shape: SelectionShape): void {
     this.selectionShape = shape
@@ -1147,6 +1218,7 @@ export class CanvasEngine {
     for (const clip of this.clips.values()) this.destroyClip(clip)
     this.clips.clear()
     this.pendingMaskFills.clear()
+    this.pendingSnapshots.clear()
     for (const picture of this.pendingPictures.values()) picture.destroy(true)
     this.pendingPictures.clear()
     this.wordings.clear()
@@ -1314,6 +1386,7 @@ export class CanvasEngine {
 
     // A flatten composed its picture before the command ran; this is the surface it was for.
     if (born) this.drainPendingPicture(layer.id, surface)
+    if (born) this.drainPendingSnapshot(layer.id)
 
     if (born && layer.kind === 'pixel' && layer.source !== undefined) {
       // Unawaited: one unreadable asset must not take the rest of the document's reconciliation
@@ -1342,6 +1415,7 @@ export class CanvasEngine {
 
     this.place(mask.sprite, surfaceTransform(layer, true), mask.texture)
     if (bornMasked) this.drainPendingMask(layer.id, mask)
+    if (bornMasked) this.drainPendingSnapshot(maskKey(layer.id))
   }
 
   /**

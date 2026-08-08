@@ -36,6 +36,8 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       snapshot = vi.fn(() => Promise.resolve('data:image/png;base64,AAAA'))
       applyCrop = applyCrop
       dropCrop = dropCrop
+      pixelSnapshots = vi.fn(() => Promise.resolve([]))
+      restoreSnapshot = vi.fn(() => Promise.resolve())
     },
   }
 })
