@@ -8,10 +8,9 @@ import {
 } from '@mdi/js'
 import { isLocalPicture, type Asset, type AssetType } from '@shared/domain/asset'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import { EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
+import { loadTake } from '@/spaces/audio/load-take'
 import { placeAsset } from '@/spaces/image/place-asset'
 import { placeTextureChannel } from '@/spaces/textures/place-channel'
-import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { addModelTo } from '@/stores/scenes'
 import { addAssetToSequence } from '@/stores/sequences'
@@ -86,16 +85,7 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     ready: () => activeId('audio') !== null,
     run: asset => {
       const tab = activeId('audio')
-      if (!tab) return
-
-      const store = useAudioEdits.getState()
-      if (audioEditsOf(store, tab).assetId === asset.id) return
-
-      // Everything goes, chain and history: an edit is a length and a region measured against
-      // the take it was made on. Carried over to another take they describe nothing, and
-      // "apply" would write that nothing over the file.
-      store.drop(tab)
-      store.replace(tab, { ...EMPTY_AUDIO_EDIT, assetId: asset.id })
+      if (tab) loadTake(tab, asset)
     },
   },
   {

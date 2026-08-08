@@ -476,7 +476,7 @@
     "rewind": "Back to start"
   },
   "audio": {
-    "noAsset": "No sound open. Double-click an audio asset to edit it.",
+    "noAsset": "No sound open. Drop a take here, or double-click an audio asset.",
     "unreadable": "This file could not be decoded.",
     "copyName": "{{name}} (edited)"
   },

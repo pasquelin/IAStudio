@@ -1,9 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { canUndo } from '@/engines/core/history'
 import { EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
+import { startAssetDrag } from '@/helpers/asset-drag'
+import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { AudioDocument } from './AudioDocument'
@@ -127,5 +129,37 @@ describe('AudioDocument', () => {
     const wav = saveAudio.mock.calls[0]?.[0].wav ?? new Uint8Array()
     // 200 mono frames at 16 bits, behind a 44-byte header.
     expect(wav.byteLength).toBe(44 + 200 * 2)
+  })
+})
+
+describe('dropping a take on the editor', () => {
+  const emptyEditor = (): Element => {
+    render(<AudioDocument documentId="doc-1" />)
+    return screen.getByText(/Déposez une prise/).closest('div[class]') ?? document.body
+  }
+
+  beforeEach(() => {
+    useAudioEdits.setState({ states: {}, histories: {} })
+  })
+
+  // The last space that accepted nothing: a take had to be double-clicked from the shelf, and
+  // nothing on screen said the editor would have taken it.
+  it('loads the take that was dropped on the empty editor', () => {
+    useAssets.setState({ items: [asset] })
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset-1', type: 'audio' })
+
+    fireEvent.drop(emptyEditor(), { dataTransfer })
+
+    expect(editsOf().assetId).toBe('asset-1')
+  })
+
+  it('refuses a picture, which the editor has nothing to do with', () => {
+    useAssets.setState({ items: [{ ...asset, id: 'asset-pic', type: 'image' }] })
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset-pic', type: 'image' })
+
+    // A refused drag is one the browser never lets land: `preventDefault` is not called.
+    expect(fireEvent.dragOver(emptyEditor(), { dataTransfer })).toBe(true)
   })
 })

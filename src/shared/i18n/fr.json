@@ -476,7 +476,7 @@
     "rewind": "Retour au début"
   },
   "audio": {
-    "noAsset": "Aucun son ouvert. Double-cliquez sur un asset audio pour l’éditer.",
+    "noAsset": "Aucun son ouvert. Déposez une prise ici, ou double-cliquez sur un asset audio.",
     "unreadable": "Ce fichier n’a pas pu être décodé.",
     "copyName": "{{name}} (édité)"
   },
