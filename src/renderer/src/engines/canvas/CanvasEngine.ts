@@ -351,7 +351,8 @@ export class CanvasEngine {
   private resizer: ResizeObserver | null = null
   private stopPaletteWatch: (() => void) | null = null
 
-  private tool: CanvasTool = 'brush'
+  /** The pointer, so a click before React has armed anything cannot write on the picture. */
+  private tool: CanvasTool = 'move'
   private painting: PaintSurface = 'pixels'
   private brush: BrushSettings = DEFAULT_BRUSH
   private state: CanvasState | null = null

@@ -22,7 +22,7 @@ part où écrire le document.
 
 **Un document image n'est pas condamné à partir du blanc.** Trois gestes y posent une image de
 votre étagère, et les trois font la même chose : un **calque de plus**, au-dessus de la pile,
-nommé d'après l'asset et **déjà armé** pour le pinceau.
+nommé d'après l'asset et **déjà actif** : c'est lui que le prochain trait recevra.
 
 | Geste | Ce qu'il faut |
 |---|---|
@@ -107,6 +107,10 @@ Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 | **Déplacement** | `V` | fait glisser le contenu du calque actif |
 | **Main** | `H` | déplace la vue |
 | **Mise à l'échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
+
+> **C'est le groupe armé à l'ouverture.** Un document s'ouvre sur **Déplacement**, jamais sur le
+> pinceau : le premier clic sur une image que vous venez d'ouvrir ne doit pas pouvoir y laisser
+> une trace. Le pinceau est à une touche — `P`.
 
 ### Groupe Cadre
 

@@ -14,6 +14,7 @@ import {
   type Layer,
   type Transform,
 } from './canvas-state'
+import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from './shape-geometry'
 import { RULER_SIZE } from './CanvasOverlay'
@@ -304,7 +305,15 @@ type Harness = {
   layers: string[]
 }
 
-function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
+/**
+ * A mounted engine with the brush armed. Explicit since the engine opens on the pointer, which
+ * writes nothing: a test that presses to paint has to say which tool it is pressing with, and
+ * the ones about another tool arm it themselves.
+ */
+function mounted(
+  state: CanvasState = DEFAULT_CANVAS,
+  tool: CanvasTool = 'brush',
+): Promise<Harness> {
   const host = document.createElement('div')
   document.body.appendChild(host)
 
@@ -353,6 +362,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
   }
 
   harness.engine.setView(DEFAULT_VIEW)
+  harness.engine.setTool(tool)
   // The order React uses: the state is pushed while `mount` is still awaiting Pixi's `init`.
   harness.engine.apply(state)
   return harness.engine.mount(host).then(async () => {

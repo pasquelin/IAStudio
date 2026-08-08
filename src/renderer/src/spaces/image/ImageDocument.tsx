@@ -63,7 +63,9 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<CanvasEngine | null>(null)
 
-  const [tool, setTool] = useState('paint')
+  // The pointer, not the brush: a document opens on the tool that inspects rather than the one
+  // that writes, so the first click on a freshly opened picture cannot leave a mark on it.
+  const [tool, setTool] = useState('pointer')
   // One armed mode per group, not one state per tool: a new group would otherwise mean a new
   // `useState` and a new branch in the mapping below.
   const [modes, setModes] = useState<Record<string, string>>(DEFAULT_MODES)

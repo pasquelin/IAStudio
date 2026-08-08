@@ -21,7 +21,7 @@ would be nowhere to write the document.
 
 **An image document is not condemned to start from white.** Three gestures lay a picture from
 your shelf onto it, and all three do the same thing: **one more layer**, on top of the stack,
-named after the asset and **already armed** for the brush.
+named after the asset and **already active**: it is the one the next stroke will land on.
 
 | Gesture | What it needs |
 |---|---|
@@ -103,6 +103,10 @@ In other words: an armed tool never needs the menu to be taken up again.
 | **Move** | `V` | drags the active layer's content |
 | **Hand** | `H` | pans the view |
 | **Scale** | `K` | shows eight grips and a rotation handle around the armed layer |
+
+> **This is the group armed on opening.** A document opens on **Move**, never on the brush: the
+> first click on a picture you have just opened must not be able to leave a mark on it. The
+> brush is one key away — `P`.
 
 ### Frame group
 
