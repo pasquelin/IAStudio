@@ -17,9 +17,9 @@ export default defineConfig({
   },
   test: {
     // Without `include`, a file no test imports is absent from the report — deleting its tests
-    // would RAISE the percentage. Budgets of uncovered items, not percentages: a percentage
-    // buys 7 statements of slack in `helpers` and 133 in `engines`, and widens on its own as
-    // well-covered files land. Only the modules the checklist names; no global threshold.
+    // would RAISE the percentage. Budgets of uncovered items, not percentages: the same
+    // percentage buys a handful of statements in a small module and hundreds in a large one,
+    // and widens on its own as well-covered files land. Only the modules the checklist names.
     coverage: {
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['**/*.bench.ts', '**/*-fixtures.ts', '**/test-harness.ts', '**/fake-bridge.ts'],
@@ -28,8 +28,9 @@ export default defineConfig({
       // rather than by one rule: a glob whose room to grow is mostly untestable GPU needs a
       // wider budget than one made of state machines, or growth alone would break it.
       //
-      // A glob matching nothing passes silently — renaming a folder turns its budget into a
-      // no-op with no warning. Rename these alongside `src/`.
+      // A glob matching nothing passes silently. Renaming a folder turns its budget into a
+      // no-op, and a new `engines/` subfolder lands under no budget at all — both without a
+      // warning. These names follow `src/`; keep them in step.
       thresholds: {
         'src/shared/**': { statements: -6, branches: -20 },
         'src/main/settings/**': { statements: -30, branches: -12 },
