@@ -328,6 +328,38 @@ export const SETTING_REGISTRY = [
     max: 100,
     step: 5,
   }),
+  // Sliders, not counters: a whole-number field refuses the decimals these are made of — their
+  // very defaults, half a metre and a tenth, would be unwritable from the screen.
+  setting({
+    path: 'three.snapTranslate',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.snapTranslate.title',
+    helpKey: 'settings.snapTranslate.help',
+    min: 0.1,
+    max: 10,
+    step: 0.1,
+  }),
+  setting({
+    path: 'three.snapRotate',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.snapRotate.title',
+    helpKey: 'settings.snapRotate.help',
+    min: 1,
+    max: 90,
+    step: 1,
+  }),
+  setting({
+    path: 'three.snapScale',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.snapScale.title',
+    helpKey: 'settings.snapScale.help',
+    min: 0.05,
+    max: 1,
+    step: 0.05,
+  }),
   setting({
     path: 'storage.projectsFolder',
     kind: 'path',

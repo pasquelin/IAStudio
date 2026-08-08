@@ -24,12 +24,17 @@ export function centreOf(objects: readonly Object3D[], out: Vector3): Vector3 {
 }
 
 /**
- * Puts the pivot at the centre of the selection, square with the world — so a rotation turns the
- * group around its own centre rather than around whatever the last drag left it pointing at.
+ * Puts the pivot at the centre of the selection, and turns it the way the frame asks.
+ *
+ * Square with the world by default, so a rotation turns the group around its own centre rather
+ * than around whatever the last drag left it pointing at. In the local frame it takes the
+ * anchor's orientation — the last node picked — which is what Blender does with the active
+ * object, and without which the toggle would light up while changing nothing.
  */
-export function placePivot(pivot: Object3D, objects: readonly Object3D[]): void {
+export function placePivot(pivot: Object3D, objects: readonly Object3D[], anchor?: Object3D): void {
   centreOf(objects, pivot.position)
-  pivot.rotation.set(0, 0, 0)
+  if (anchor) anchor.getWorldQuaternion(pivot.quaternion)
+  else pivot.rotation.set(0, 0, 0)
   pivot.scale.set(1, 1, 1)
   pivot.updateMatrixWorld()
 }

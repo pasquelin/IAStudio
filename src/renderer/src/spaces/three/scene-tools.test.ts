@@ -74,11 +74,20 @@ describe('SCENE_TOOLS', () => {
     expect(SCENE_TOOLS[0]?.id).toBe('select')
   })
 
-  it('reads as three groups rather than a run of seven icons', () => {
+  it('reads as groups rather than a run of icons', () => {
     expect(SCENE_TOOLS.filter(tool => tool.separatorBefore).map(tool => tool.id)).toEqual([
+      'snap',
       'frame',
       'add',
     ])
+  })
+
+  // They qualify the armed tool rather than replacing it, so they follow it in their own group.
+  it('puts the two toggles next to the transform modes they qualify', () => {
+    const ids = SCENE_TOOLS.map(tool => tool.id)
+
+    expect(ids.indexOf('snap')).toBe(ids.indexOf('scale') + 1)
+    expect(ids.indexOf('space')).toBe(ids.indexOf('snap') + 1)
   })
 
   // A group that only offers modes acts through its rows, never on its own click.

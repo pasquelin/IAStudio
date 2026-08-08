@@ -113,15 +113,13 @@ practice", above.
 
 ### What is missing
 
-- **multiple selection** — one object at a time;
 - **groups** and reparenting — you cannot assemble objects into a subset;
 - **copy-paste** and duplication;
 - **model import** for `.glb`, `.gltf`, `.obj` — you can only place what the studio can build or
   generate;
 - **cast shadows** — objects are lit, but throw no shadow;
 - **image-based lighting** (*IBL*) in the viewport — a *skybox* does not yet light a 3D scene, even
-  though it does light the Skyboxes workspace preview;
-- **snapping** and local pivot.
+  though it does light the Skyboxes workspace preview.
 
 ### Two objects announced but not buildable
 

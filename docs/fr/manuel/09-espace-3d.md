@@ -268,13 +268,11 @@ rien n'avait été écrit pour lui.
 
 L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
 
-- la **sélection multiple** — un seul objet à la fois ;
 - les **groupes** et le reparentage ;
 - le **copier-coller** et la duplication ;
 - l'**import de modèles** `.glb` / `.gltf` / `.obj` ;
 - les **ombres portées** ;
-- l'**éclairage par image** (HDRI) dans le viewport ;
-- le **magnétisme** et le pivot local.
+- l'**éclairage par image** (HDRI) dans le viewport.
 
 Le détail est dans [Ce qui n'existe pas encore](18-limites.md).
 

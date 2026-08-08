@@ -19,6 +19,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<SceneRenderer | null>(null)
   const [mode, setMode] = useState<TransformMode>('select')
+  // Session state, like the mode: a document that remembered its snapping would impose it on
+  // whoever opens it next.
+  const [snapping, setSnapping] = useState(false)
+  const [localFrame, setLocalFrame] = useState(false)
 
   const scene = useScenes(state => sceneOf(state, documentId))
   // Booleans rather than the history itself: a selector that builds an object on every call
@@ -75,6 +79,15 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setMode(mode)
   }, [mode])
 
+  useEffect(() => {
+    engine.current?.setSnapping(snapping)
+  }, [snapping])
+
+  // The only line that knows both spellings; everything above it is a toggle like any other.
+  useEffect(() => {
+    engine.current?.setSpace(localFrame ? 'local' : 'world')
+  }, [localFrame])
+
   // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
   // tool is declared once in `SCENE_TOOLS` and handled once here.
   const run = useCallback(
@@ -91,6 +104,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return setMode('scale')
         case 'scene.frame':
           return engine.current?.frameSelection()
+        case 'scene.snap':
+          return setSnapping(current => !current)
+        case 'scene.space':
+          return setLocalFrame(current => !current)
         case 'scene.delete': {
           const { selectedIds } = sceneOf(store, documentId)
           if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(selectedIds))
@@ -116,18 +133,25 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     onCommand: run,
   })
 
-  // Rebuilt only when a shortcut or the delete button's availability moves: the document
-  // re-renders on every transform release, and each item carries the 22-entry Add flyout.
+  // Rebuilt only when something the bar shows moves — a shortcut, the delete button's
+  // availability, a toggle: the document re-renders on every transform release, and each item
+  // carries the 22-entry Add flyout.
   const nothingSelected = scene.selectedIds.length === 0
-  const tools = useMemo(
-    () =>
-      SCENE_TOOLS.map(tool => ({
-        ...tool,
-        shortcut: tool.command ? shortcutLabel(bindingOf(tool.command, bindings)) : undefined,
-        disabled: tool.command === 'scene.delete' && nothingSelected,
-      })),
-    [bindings, nothingSelected],
-  )
+  const tools = useMemo(() => {
+    // Keyed by command rather than by tool id, so a renamed command fails to compile instead of
+    // quietly leaving a toggle unlit.
+    const pressed: Partial<Record<CommandId, boolean>> = {
+      'scene.snap': snapping,
+      'scene.space': localFrame,
+    }
+
+    return SCENE_TOOLS.map(tool => ({
+      ...tool,
+      shortcut: tool.command ? shortcutLabel(bindingOf(tool.command, bindings)) : undefined,
+      disabled: tool.command === 'scene.delete' && nothingSelected,
+      pressed: tool.command ? pressed[tool.command] : undefined,
+    }))
+  }, [bindings, nothingSelected, snapping, localFrame])
 
   return (
     <div className="relative size-full">

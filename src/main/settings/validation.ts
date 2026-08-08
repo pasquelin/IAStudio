@@ -70,6 +70,9 @@ const grid = boundsOf('three.gridSize')
 const fly = boundsOf('three.flySpeed')
 const boost = boundsOf('three.boostFactor')
 const lens = boundsOf('three.fieldOfView')
+const moveStep = boundsOf('three.snapTranslate')
+const turnStep = boundsOf('three.snapRotate')
+const scaleStep = boundsOf('three.snapScale')
 
 const three = z.object({
   showGrid: z.boolean().optional(),
@@ -77,6 +80,9 @@ const three = z.object({
   flySpeed: z.number().min(fly.min).max(fly.max).optional(),
   boostFactor: z.number().min(boost.min).max(boost.max).optional(),
   fieldOfView: z.number().min(lens.min).max(lens.max).optional(),
+  snapTranslate: z.number().min(moveStep.min).max(moveStep.max).optional(),
+  snapRotate: z.number().min(turnStep.min).max(turnStep.max).optional(),
+  snapScale: z.number().min(scaleStep.min).max(scaleStep.max).optional(),
 })
 
 const shortcuts = z.object({

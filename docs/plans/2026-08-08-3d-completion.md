@@ -163,7 +163,63 @@ suppression partielle, une édition d'inspecteur appliquée à trois nœuds en u
 
 ## Étape 2 — Magnétisme et pivot local / monde
 
-- [ ] Livrée
+- [x] Livrée
+
+**Ce qui a été fait.** Deux bascules dans la barre d'outils (`M` et `L`), trois pas dans les
+préférences (déplacement 0,5 m, rotation 15°, échelle 0,1), et les quatre appels d'API du plan.
+2345 → 2364 tests.
+
+**Décisions prises en chemin :**
+
+1. **Le repère est une bascule, pas un choix à deux valeurs affichées.** Pressée = local,
+   relâchée = monde, une seule icône. Le registre `SCENE_TOOLS` reste statique — une icône qui
+   change selon l'état aurait obligé le composant à la calculer, ce qui contredit « la barre est
+   un registre, rien n'y est dessiné ».
+2. **`pressed` est une notion neuve du design system**, à côté de `activeTool`. Une bascule et un
+   outil armé sont deux questions différentes qui se dessinent pareil ; les confondre aurait fait
+   du magnétisme un quatrième « mode » désarmant les trois autres. **Dette laissée** :
+   `Monitor.tsx` et `AudioDocument.tsx` expriment déjà des bascules en pliant `activeTool`
+   (`activeTool={playing ? 'play' : undefined}`) — ils devraient migrer vers `pressed`, mais ce
+   sont deux autres espaces et l'étape 2 n'a pas à les toucher.
+3. **Le on/off est de l'état de session, les pas sont des réglages.** Personne ne veut ⌘Z pour
+   récupérer un repère, et un document qui se souviendrait de son magnétisme l'imposerait au
+   suivant. La finesse, elle, appartient à la personne.
+4. **Le repère local oriente le pivot sur l'ancre** quand plusieurs nœuds sont sélectionnés —
+   comme Blender le fait avec l'objet actif. Sans cela le bouton s'allumait sans rien changer,
+   puisque `placePivot` remet le pivot d'équerre avec le monde.
+
+**Quatre bugs trouvés par `/code-review`, deux prouvés par exécution :**
+
+- **les deux réglages décimaux étaient inécrivables.** `SettingRow` refuse un non-entier de tout
+  ce qui n'est pas un `slider` : « Pas de déplacement » (0,5) et « Pas d'échelle » (0,1) avaient
+  leur propre valeur par défaut hors d'atteinte, et le champ paraissait figé. Les trois sont
+  devenus des sliders, et **un test de registre verrouille la règle pour tout le monde** — c'est
+  le genre de piège qui se reproduit ;
+- **`setSpace` pendant un glissement téléportait l'objet.** `TransformControls` réoriente son
+  plan d'interaction depuis `space` à chaque frame alors que le début du geste a été capturé sur
+  l'ancien : mesuré à ~1,3 unité hors de l'axe demandé, écrit dans l'historique au relâchement.
+  Même garde que celle posée à l'étape 1 sur `attachGizmo`, plus une réapplication au relâchement ;
+- **`mount` ne restaurait pas le mode**, alors que le commentaire promettait un moteur retrouvé
+  tel qu'on l'avait laissé. L'invariant 3 n'était tenu qu'à moitié ;
+- **deux textes d'aide décrivaient un magnétisme absolu** là où three.js magnétise le *geste*
+  pour la rotation : « 90° donne les quatre angles droits » est faux dès que l'objet ne part pas
+  de zéro. Et le pas d'échelle promettait des quarts qu'un pas de 0,1 ne peut pas atteindre.
+
+**Deux comportements assumés, notés plutôt que corrigés :**
+
+- le magnétisme de translation aligne le **barycentre** d'une sélection multiple, pas chaque
+  objet — c'est le « median point » de Blender, et l'alternative (aligner chacun) déferait les
+  écarts que l'utilisateur a construits ;
+- la rotation magnétisée avance par crans **depuis là où le geste a commencé**, alors que
+  déplacement et échelle magnétisent une valeur absolue. C'est three.js qui en décide ; les deux
+  textes d'aide le disent maintenant.
+
+**Le manuel a été corrigé dans le même mouvement.** Il listait « le magnétisme et le pivot local »
+et « la sélection multiple » parmi ce qui n'existe pas — faux depuis l'étape 1 pour l'une, depuis
+celle-ci pour l'autre. Les tables des raccourcis et des réglages ont reçu `M`, `L` et les trois
+pas. C'est différent de `REPRISE.md`, que ce plan demande de ne pas toucher au fil de l'eau : le
+manuel est versionné avec le code qu'il décrit, donc il doit être vrai dans cette branche ;
+`REPRISE.md` décrit l'état de `main`, et le restera jusqu'à la fusion.
 
 Deux appels d'API `TransformControls`, gain d'ergonomie immédiat, coût quasi nul :
 `setTranslationSnap`, `setRotationSnap`, `setScaleSnap`, `setSpace('local' | 'world')`.

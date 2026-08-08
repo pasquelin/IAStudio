@@ -5,10 +5,24 @@ import {
   directionFromAngles,
   normalizeAzimuth,
   POLE_LIMIT,
+  toDegrees,
+  toRadians,
   type SphericalAngles,
 } from './angles'
 
 const FALLBACK: SphericalAngles = { elevation: 0.5, azimuth: 1.5 }
+
+describe('toRadians and toDegrees', () => {
+  it('converts the angles people type into the ones three.js turns in', () => {
+    expect(toRadians(180)).toBeCloseTo(Math.PI)
+    expect(toRadians(90)).toBeCloseTo(Math.PI / 2)
+    expect(toDegrees(Math.PI)).toBeCloseTo(180)
+  })
+
+  it('comes back to where it started', () => {
+    expect(toDegrees(toRadians(45))).toBeCloseTo(45)
+  })
+})
 
 describe('azimuth wrapping', () => {
   it('leaves an angle already in range alone', () => {

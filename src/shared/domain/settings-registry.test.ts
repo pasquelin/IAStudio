@@ -126,6 +126,24 @@ describe('settings registry', () => {
     }
   })
 
+  /**
+   * `SettingRow` refuses a non-integer from anything but a slider, so a `number` holding a
+   * decimal is a field nobody can write: the value shown is one the write path rejects, and the
+   * control reads as frozen. Two snap steps shipped that way before this was checked here.
+   */
+  it('keeps a whole-number field on whole numbers, defaults and steps alike', () => {
+    for (const descriptor of SETTING_REGISTRY) {
+      if (descriptor.kind !== 'number') continue
+
+      const value = defaultAt(descriptor.path)
+      expect({ path: descriptor.path, value }).toEqual({
+        path: descriptor.path,
+        value: Math.round(typeof value === 'number' ? value : 0),
+      })
+      if (descriptor.step !== undefined) expect(Number.isInteger(descriptor.step)).toBe(true)
+    }
+  })
+
   it('groups settings by the screen that shows them, in registry order', () => {
     const shown = descriptorsIn('appearance')
 

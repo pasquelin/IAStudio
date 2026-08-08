@@ -2,9 +2,11 @@ import type { CommandId } from '@shared/domain/command'
 import {
   mdiArrowAll,
   mdiAxisArrow,
+  mdiAxisArrowLock,
   mdiCropFree,
   mdiCursorDefaultOutline,
   mdiDelete,
+  mdiMagnet,
   mdiPlus,
   mdiResize,
 } from '@mdi/js'
@@ -25,7 +27,8 @@ const ADD_MODES: readonly ToolMode[] = ADD_ENTRIES.map(({ entry, labelKey }) => 
 /**
  * The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here.
  *
- * Read in three groups: what manipulates, what frames, what creates and destroys. The three
+ * Read in four groups: what manipulates, what qualifies it, what frames, what creates and
+ * destroys. The three
  * transform modes stay three visible buttons rather than one flyout — unlike the image space,
  * and on purpose: a mode is switched several times a minute, and Blender, Maya, Unity and the
  * three.js editor all show them at once.
@@ -58,6 +61,22 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     labelKey: 'sceneTools.scale',
     descriptionKey: 'sceneTools.scaleHint',
     icon: mdiResize,
+  },
+  // Toggles, not armed tools: neither replaces the transform mode, both qualify it.
+  {
+    id: 'snap',
+    command: 'scene.snap',
+    labelKey: 'sceneTools.snap',
+    descriptionKey: 'sceneTools.snapHint',
+    icon: mdiMagnet,
+    separatorBefore: true,
+  },
+  {
+    id: 'space',
+    command: 'scene.space',
+    labelKey: 'sceneTools.space',
+    descriptionKey: 'sceneTools.spaceHint',
+    icon: mdiAxisArrowLock,
   },
   {
     id: 'frame',

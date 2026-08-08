@@ -44,6 +44,28 @@ describe('placePivot', () => {
     expect(pivot.rotation.toArray().slice(0, 3)).toEqual([0, 0, 0])
     expect(pivot.scale.toArray()).toEqual([1, 1, 1])
   })
+
+  // Without this the local-frame toggle would light up over a group and change nothing.
+  it('takes the anchor’s orientation when one is given', () => {
+    const anchor = node('b', 4)
+    anchor.rotation.y = Math.PI / 4
+    const pivot = new Object3D()
+
+    placePivot(pivot, [node('a', 0), anchor], anchor)
+
+    expect(pivot.rotation.y).toBeCloseTo(Math.PI / 4)
+    expect(pivot.position.x).toBeCloseTo(2)
+  })
+
+  it('still scales to one, so a turned anchor never stretches the group', () => {
+    const anchor = node('b', 0)
+    anchor.scale.set(4, 4, 4)
+    const pivot = new Object3D()
+
+    placePivot(pivot, [anchor], anchor)
+
+    expect(pivot.scale.toArray()).toEqual([1, 1, 1])
+  })
 })
 
 describe('carry and release', () => {

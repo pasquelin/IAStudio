@@ -23,6 +23,8 @@ export type CommandId =
   | 'scene.rotate'
   | 'scene.scale'
   | 'scene.frame'
+  | 'scene.snap'
+  | 'scene.space'
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
@@ -160,6 +162,22 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneFrame.title',
     helpKey: 'commands.sceneFrame.help',
     defaultBinding: 'KeyF',
+  }),
+  // `KeyM` and `KeyL` as in magnet and local. Neither flies the camera, which rules out most of
+  // the left hand: `useShortcuts` reads both tables on the same keydown.
+  command({
+    id: 'scene.snap',
+    scope: 'scene',
+    titleKey: 'commands.sceneSnap.title',
+    helpKey: 'commands.sceneSnap.help',
+    defaultBinding: 'KeyM',
+  }),
+  command({
+    id: 'scene.space',
+    scope: 'scene',
+    titleKey: 'commands.sceneSpace.title',
+    helpKey: 'commands.sceneSpace.help',
+    defaultBinding: 'KeyL',
   }),
   command({
     id: 'scene.delete',

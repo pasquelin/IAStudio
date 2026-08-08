@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { toDegrees, toRadians } from '@shared/domain/angles'
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 import { TextField } from '@/design/TextField'
@@ -8,23 +9,20 @@ import type { SceneNode } from '@/engines/scene/scene-state'
 import { changedFields } from '@/helpers/objects'
 import type { SceneEdit } from './useSceneEdit'
 
-/** Radians are what three.js turns and what a document stores; nobody types in them. */
-const PER_RADIAN = 180 / Math.PI
-
 /** A field reports a whole vector; this is the axes of it that actually moved. */
 type AxisPatch = { [K in keyof Transform]?: Partial<Vector3> }
 
-function scaled(vector: Vector3, factor: number): Vector3 {
-  return { x: vector.x * factor, y: vector.y * factor, z: vector.z * factor }
-}
-
 const AXES: readonly (keyof Vector3)[] = ['x', 'y', 'z']
 
-function scaledAxes(axes: Partial<Vector3>, factor: number): Partial<Vector3> {
+function degreesOf(vector: Vector3): Vector3 {
+  return { x: toDegrees(vector.x), y: toDegrees(vector.y), z: toDegrees(vector.z) }
+}
+
+function radiansOf(axes: Partial<Vector3>): Partial<Vector3> {
   const out: Partial<Vector3> = {}
   for (const axis of AXES) {
     const value = axes[axis]
-    if (value !== undefined) out[axis] = value * factor
+    if (value !== undefined) out[axis] = toRadians(value)
   }
   return out
 }
@@ -57,7 +55,7 @@ export type TransformSectionProps = {
 export function TransformSection({ node, selection, edit }: TransformSectionProps) {
   const { t } = useTranslation()
   const { transform } = node
-  const degrees = scaled(transform.rotation, PER_RADIAN)
+  const degrees = degreesOf(transform.rotation)
 
   const move = (patch: AxisPatch): void =>
     edit.run(
@@ -90,9 +88,7 @@ export function TransformSection({ node, selection, edit }: TransformSectionProp
         // Diffed in degrees, which is the unit the field reports: converting back to radians
         // first leaves the untouched axes a few ulps off, and those would then be written —
         // as the anchor's own angle — onto every other node of the selection.
-        onChange={next =>
-          move({ rotation: scaledAxes(changedFields(degrees, next), 1 / PER_RADIAN) })
-        }
+        onChange={next => move({ rotation: radiansOf(changedFields(degrees, next)) })}
         {...edit.gesture}
       />
 

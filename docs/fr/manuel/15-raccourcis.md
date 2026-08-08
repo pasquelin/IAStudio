@@ -86,8 +86,10 @@ plus bas).
 | **Déplacer** | `G` | tirer sur les flèches de couleur pour le glisser |
 | **Pivoter** | `R` | tirer sur les cercles de couleur pour le faire tourner |
 | **Redimensionner** | `S` | tirer sur les poignées. `⇧` garde les proportions |
+| **Magnétisme** | `M` | fait avancer les poignées par pas réguliers. Les pas se règlent dans les préférences |
+| **Repère local** | `L` | aligne les poignées sur l'orientation de l'objet plutôt que sur celle du monde |
 | **Cadrer la sélection** | `F` | rapproche la caméra pour que l'objet remplisse la vue |
-| **Supprimer** | `Suppr` | retire l'objet choisi. `⌘Z` le fait revenir |
+| **Supprimer** | `Suppr` | retire tout ce qui est sélectionné. `⌘Z` le fait revenir |
 
 ### Annuler et rétablir
 
@@ -295,6 +297,8 @@ figées pour l'instant. Voir [Ce qui n'existe pas encore](18-limites.md).
 | `G` | | Déplacer | | |
 | `R` | | Pivoter | | |
 | `S` | | Redimensionner *(et reculer)* | Couper le clip | |
+| `M` | | Magnétisme | | |
+| `L` | | Repère local | | |
 | `F` | | Cadrer la sélection | | |
 | `Suppr` | | Supprimer l'objet | Supprimer le clip | |
 | `W A S D` | | Voler | | |

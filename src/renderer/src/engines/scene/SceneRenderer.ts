@@ -28,10 +28,14 @@ import {
 } from './three-sync'
 import { createMaterialTextures, type MaterialTextures } from './material-textures'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
+import { snapSteps } from './snap-steps'
 import { createTextureCache } from './texture-cache'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
 export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
+
+/** Which frame the gizmo's handles line up with: the world's axes, or the object's own. */
+export type TransformSpace = 'world' | 'local'
 
 export type SceneRendererOptions = {
   /**
@@ -53,6 +57,11 @@ export type ViewportOptions = {
   flySpeed: number
   boostFactor: number
   fieldOfView: number
+  /** How coarse snapping is when it is on. Whether it is on is `setSnapping`, not a setting. */
+  snapTranslate: number
+  /** In degrees; converted on the way to the gizmo, which turns in radians. */
+  snapRotate: number
+  snapScale: number
 }
 
 /** How far the pointer may wander between press and release and still count as a click, in px. */
@@ -85,6 +94,9 @@ export class SceneRenderer {
     flySpeed: 4,
     boostFactor: 3,
     fieldOfView: 60,
+    snapTranslate: 0.5,
+    snapRotate: 15,
+    snapScale: 0.1,
   }
 
   private readonly raycaster = new Raycaster()
@@ -112,6 +124,8 @@ export class SceneRenderer {
   private grid: GridHelper | null = null
   private flying = false
   private mode: TransformMode = 'select'
+  private snapping = false
+  private space: TransformSpace = 'world'
   /** Held so leaving `select` can re-arm the gizmo without waiting for the next `apply`. */
   private selectedIds: readonly string[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
@@ -146,6 +160,12 @@ export class SceneRenderer {
     gizmo.addEventListener('mouseDown', this.onGizmoGrab)
     gizmo.addEventListener('mouseUp', this.onGizmoRelease)
     this.gizmo = gizmo
+    // A gizmo is born on defaults, and the engine may already have been told otherwise — every
+    // setter no-ops until this point, and `apply` has no reason to come round again.
+    if (this.mode !== 'select') gizmo.setMode(this.mode)
+    gizmo.setSpace(this.space)
+    this.applySnap()
+    this.attachGizmo()
 
     const viewHelper = new ViewHelper(camera, canvas)
     tuneViewHelper(viewHelper)
@@ -182,6 +202,25 @@ export class SceneRenderer {
     this.mode = mode
     // `TransformControls` knows only three modes; `select` is ours, and means no gizmo at all.
     if (mode !== 'select') this.gizmo?.setMode(mode)
+    this.attachGizmo()
+    this.viewport.requestRender()
+  }
+
+  /** Whether a drag lands on the steps `configure` was given, or wherever it was let go. */
+  setSnapping(snapping: boolean): void {
+    this.snapping = snapping
+    this.applySnap()
+  }
+
+  setSpace(space: TransformSpace): void {
+    this.space = space
+    // Held back mid-drag, like a mode change: `TransformControls` re-aims its interaction plane
+    // from `space` every frame, while the start of the gesture was captured on the old one — the
+    // object jumps off the axis it was given, and the release writes that jump down.
+    if (this.gizmo?.dragging) return
+
+    this.gizmo?.setSpace(space)
+    // The pivot carries the frame for a group: re-aimed, or it keeps the last one's orientation.
     this.attachGizmo()
     this.viewport.requestRender()
   }
@@ -253,8 +292,21 @@ export class SceneRenderer {
       this.viewport.camera.updateProjectionMatrix()
     }
 
+    // Unconditional: a step changed while snapping is off has to be waiting when it comes on.
+    this.applySnap()
+
     if (gridMoved && this.viewport.canvas) this.applyPalette()
     if (gridMoved || lensMoved) this.viewport.requestRender()
+  }
+
+  private applySnap(): void {
+    const gizmo = this.gizmo
+    if (!gizmo) return
+
+    const steps = snapSteps(this.view, this.snapping)
+    gizmo.setTranslationSnap(steps.translate)
+    gizmo.setRotationSnap(steps.rotate)
+    gizmo.setScaleSnap(steps.scale)
   }
 
   /**
@@ -465,7 +517,9 @@ export class SceneRenderer {
       return
     }
 
-    placePivot(this.pivot, objects)
+    // The anchor is the last node picked, and in the local frame it is what the handles line up
+    // with — a group has no orientation of its own to offer.
+    placePivot(this.pivot, objects, this.space === 'local' ? objects.at(-1) : undefined)
     gizmo.attach(this.pivot)
   }
 
@@ -486,6 +540,8 @@ export class SceneRenderer {
    */
   private readonly onGizmoRelease = (): void => {
     const moves = release(this.pivot, this.viewport.scene)
+    // What a key pressed mid-drag asked for, applied now that the gesture is over.
+    this.gizmo?.setSpace(this.space)
 
     // A click that armed an axis without moving it still round-tripped every carried node
     // through a matrix decomposition, which does not always give the same Euler back — and a

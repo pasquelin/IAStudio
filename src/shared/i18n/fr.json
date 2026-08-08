@@ -495,6 +495,10 @@
     "scaleHint": "Changer l’échelle de l’objet sélectionné",
     "frame": "Cadrer la sélection",
     "frameHint": "Recentrer la caméra sur l’objet sélectionné",
+    "snap": "Magnétisme",
+    "snapHint": "Faire avancer les poignées par pas réguliers, réglables dans les préférences",
+    "space": "Repère local",
+    "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
     "delete": "Supprimer",
     "deleteHint": "Retirer de la scène ce qui est sélectionné"
   },
@@ -693,6 +697,18 @@
       "title": "Accélération",
       "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
     },
+    "snapTranslate": {
+      "title": "Pas de déplacement",
+      "help": "De combien un objet avance d’un cran quand le magnétisme est actif, en mètres. Le magnétisme s’allume dans la barre d’outils de la scène ; cette valeur dit seulement à quel point il est fin."
+    },
+    "snapRotate": {
+      "title": "Pas de rotation",
+      "help": "L’angle d’un cran de rotation quand le magnétisme est actif, en degrés. La rotation avance par crans depuis là où elle a commencé : 15° donne vingt-quatre crans par tour, 90° des quarts de tour."
+    },
+    "snapScale": {
+      "title": "Pas d’échelle",
+      "help": "De combien l’échelle avance d’un cran quand le magnétisme est actif. Les valeurs atteignables sont les multiples du pas : 0,1 tombe pile sur les dixièmes et les demis, 0,25 sur les quarts."
+    },
     "fieldOfView": {
       "title": "Angle de vue",
       "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
@@ -808,6 +824,14 @@
     "sceneFrame": {
       "title": "Cadrer la sélection",
       "help": "Rapproche la caméra de l’objet choisi pour qu’il remplisse la vue. Pratique quand on s’est perdu ou qu’un objet est minuscule."
+    },
+    "sceneSnap": {
+      "title": "Magnétisme",
+      "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les préférences de l’espace 3D."
+    },
+    "sceneSpace": {
+      "title": "Repère local",
+      "help": "Aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde. Sur un objet tourné, c’est ce qui permet de le déplacer « vers son avant » plutôt que vers le nord."
     },
     "sceneDelete": {
       "title": "Supprimer",
