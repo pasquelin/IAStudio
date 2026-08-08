@@ -109,11 +109,13 @@ That is not a defect: it is a different tool, and its name says so.
 
 The *undo stack* keeps the **last 100** actions. Beyond that, the oldest disappear for good.
 
-### Export exists, saving does not
+### Export flattens, saving does not
 
-`⇧⌘E` writes the flattened document as a `.png` wherever you point. But **an image document does not
-save**: closing the tab loses the layer stack and everything painted on it. See "What this means in
-practice", above.
+`⇧⌘E` writes the **flattened** document as a `.png` wherever you point: one picture, the layers
+melted together. It is not a save — it is an output.
+
+To keep the layer stack, use `⌘S`: an image document **does save** now, as an `.img` folder. The
+two gestures do different jobs and neither replaces the other.
 
 ---
 
@@ -271,22 +273,35 @@ disk for nothing.
 
 ## Settings and shortcuts
 
-### The Texture family has no default model
+### Two families have no default model
 
-**Settings ▸ Generation** offers seven sub-sections: Image, Video, 3D, Audio, Upscaling, Background removal,
-Vectorization. **Texture** is missing, even though it is now a model family in its own
-right.
+**Settings ▸ Generation** offers seven sub-sections: Image, Video, 3D, Audio, Upscaling, Background
+removal, Vectorization. **Texture** and **Skybox** are missing, even though both are now model
+families in their own right.
 
-The consequence: in the Textures workspace the **Generate** panel only appears once a model has been
-chosen by hand, and it has to be chosen again every session — the other workspaces can remember
-theirs.
+The consequence: in the Textures and Skyboxes workspaces the **Generate** panel only appears once a
+model has been chosen by hand, and it has to be chosen again every session — the other workspaces
+can remember theirs.
 
-### Cloud storage does not exist
+### A project always stays on your disk
 
-The settings file provides for a choice between "on your disk" and "in the cloud". **The second is
-not implemented**, and the choice is therefore offered nowhere in the interface.
+The settings file provides for a choice between "on your disk" and "in the cloud" for where a
+project lives. **The second is not implemented**, and the choice is therefore offered nowhere in
+the interface. Offering a button that leads nowhere would be a promise the software cannot keep.
 
-Offering a button that leads nowhere would be a promise the software cannot keep.
+> **Not to be confused with your account's library**, which does exist: you can **send** assets to
+> it from the shelf. These are two different things — one is where the project itself is kept, the
+> other is a stock of assets online, beside the project. See [Assets](07-assets.md).
+
+### Fetching has no button
+
+Sending to the library exists; the way back does not. The studio knows how to fetch and how to
+compare both sides — it is written and tested — but no button triggers it, and no screen shows
+what the library holds.
+
+A direct consequence, and not a failure: of the seven badges an asset can wear, **three cannot
+appear** — "to fetch", "changed on both sides" and "belongs to another project". As long as
+nothing moves without you asking, the other side cannot get ahead of yours.
 
 ### On Windows and Linux, `⌘` is taken literally
 
@@ -299,13 +314,6 @@ everywhere.
 it is the menu that fires them. But the ones a surface listens for itself, such as `⌘D` in the 3D
 view, expect the **Windows** key rather than `Ctrl`: for now they are out of reach anywhere but on
 a Mac.
-
-### One context heading is missing from the shortcuts screen
-
-The four shortcut groups carry a title: "Anywhere in the application", "In the 3D view", "In the
-edit"… and the fourth, the image's, shows a technical code instead of its name.
-
-The group's shortcuts work normally.
 
 ---
 
@@ -355,8 +363,8 @@ If you only remember five things from this chapter:
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;
 3. **there is no video export** — the studio cannot yet deliver a final file;
-4. **the Texture family has no default model** — the Textures workspace makes you pick one again
-   every session;
+4. **the Texture and Skybox families have no default model** — both workspaces make you pick one
+   again every session;
 5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.
 
 Everything else is comfort.

@@ -116,11 +116,13 @@ Ce n'est pas un défaut : c'est un outil différent, qui porte bien son nom.
 La *pile d'annulation* garde les **100 dernières** actions. Au-delà, les plus anciennes
 disparaissent définitivement.
 
-### L'export existe, l'enregistrement non
+### L'export aplatit, l'enregistrement non
 
-`⇧⌘E` écrit le document aplati en `.png` où vous voulez. En revanche **un document image ne
-s'enregistre pas** : fermer l'onglet perd la pile de calques et tout ce qui a été peint. Voir plus
-haut, « Ce que cela veut dire concrètement ».
+`⇧⌘E` écrit le document **aplati** en `.png` où vous voulez : une seule image, les calques fondus
+ensemble. Ce n'est pas une sauvegarde — c'est une sortie.
+
+Pour garder la pile de calques, c'est `⌘S` : un document image **s'enregistre** depuis peu, en
+dossier `.img`. Les deux gestes ne servent pas à la même chose et aucun ne remplace l'autre.
 
 ---
 
@@ -282,22 +284,38 @@ projet remplirait votre disque pour rien.
 
 ## Réglages et raccourcis
 
-### La famille Texture n'a pas de modèle par défaut
+### Deux familles n'ont pas de modèle par défaut
 
 **Réglages ▸ Génération** propose sept sous-sections : Image, Vidéo, 3D, Audio, Agrandissement,
-Détourage, Vectorisation. **Texture** manque, alors que c'est désormais une famille de modèles à
-part entière.
+Détourage, Vectorisation. **Texture** et **Skybox** manquent, alors que ce sont désormais des
+familles de modèles à part entière.
 
-Conséquence : dans l'espace Textures, le panneau **Génération** n'apparaît qu'après avoir choisi un
-modèle à la main, et il faut recommencer à chaque session — les autres espaces peuvent, eux,
-mémoriser leur choix.
+Conséquence : dans les espaces Textures et Skyboxes, le panneau **Génération** n'apparaît qu'après
+avoir choisi un modèle à la main, et il faut recommencer à chaque session — les autres espaces
+peuvent, eux, mémoriser leur choix.
 
-### Le stockage dans le nuage n'existe pas
+### Un projet reste sur votre disque, toujours
 
-Le fichier de réglages prévoit un choix entre « sur votre disque » et « dans le nuage ». **Le
-second n'est pas implémenté**, et le choix n'est donc offert nulle part dans l'interface.
+Le fichier de réglages prévoit un choix entre « sur votre disque » et « dans le nuage » pour
+l'endroit où un projet vit. **Le second n'est pas implémenté**, et le choix n'est donc offert
+nulle part dans l'interface. Offrir un bouton qui ne mène nulle part serait une promesse que le
+logiciel ne peut pas tenir.
 
-Offrir un bouton qui ne mène nulle part serait une promesse que le logiciel ne peut pas tenir.
+> **À ne pas confondre avec la bibliothèque de votre compte**, qui, elle, existe : vous pouvez
+> **envoyer** des assets vers elle depuis l'étagère. Ce sont deux choses différentes — l'une est
+> l'endroit où le projet lui-même est rangé, l'autre est un stock d'assets en ligne à côté du
+> projet. Voir [Les assets](07-assets.md).
+
+### Le rapatriement n'a pas de bouton
+
+L'envoi vers la bibliothèque existe ; le chemin inverse non. Le studio sait rapatrier et sait
+comparer les deux côtés — c'est écrit et testé — mais aucun bouton ne le déclenche, et aucun écran
+ne montre le contenu de la bibliothèque.
+
+Conséquence directe, et ce n'est pas une panne : sur les sept badges qu'un asset peut porter,
+**trois ne peuvent pas apparaître** — « à rapatrier », « modifié des deux côtés » et « appartient
+à un autre projet ». Tant que rien ne bouge sans que vous le demandiez, l'autre côté ne peut pas
+prendre de l'avance sur le vôtre.
 
 ### Sur Windows et Linux, `⌘` est pris au pied de la lettre
 
@@ -310,14 +328,6 @@ de `Ctrl`, partout.
 bien à `Ctrl`, c'est le menu qui les déclenche. Mais ceux qu'une surface écoute elle-même, comme
 `⌘D` dans la vue 3D, attendent la touche **Windows** et non `Ctrl` : ils sont pour l'instant hors
 d'atteinte ailleurs que sur un Mac.
-
-### Un intitulé de contexte manque dans l'écran des raccourcis
-
-Les quatre groupes de raccourcis portent un titre : « Partout dans l'application », « Dans la vue
-3D », « Dans le montage »… et le quatrième, celui de l'image, affiche un code technique au lieu de
-son nom.
-
-Les raccourcis du groupe fonctionnent normalement.
 
 ---
 
@@ -367,8 +377,8 @@ Si vous ne deviez retenir que cinq choses de ce chapitre :
 2. **un recadrage ne se défait qu'à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
-4. **la famille Texture n'a pas de modèle par défaut** — l'espace Textures fait rechoisir son
-   modèle à chaque session ;
+4. **les familles Texture et Skybox n'ont pas de modèle par défaut** — ces deux espaces font
+   rechoisir leur modèle à chaque session ;
 5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu'un `.glb`.
 
 Tout le reste est du confort.

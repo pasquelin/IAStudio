@@ -595,7 +595,7 @@ Ce que vous avez sur une installation neuve, d'un coup d'œil.
 | Génération | Générations simultanées | 3 | 1 à 16 |
 | Génération | Décrire les assets rapatriés | — | — |
 | Génération | Tentatives maximum | 4 | 0 à 10 |
-| Génération | Modèle par défaut ×5 | Demander à chaque fois | — |
+| Génération | Modèle par défaut ×7 | Demander à chaque fois | — |
 | 3D | Afficher la grille | cochée | — |
 | 3D | Taille de la grille | 20 m | 2 à 500 |
 | 3D | Vitesse de déplacement | 4 m/s | 0,5 à 20 |
