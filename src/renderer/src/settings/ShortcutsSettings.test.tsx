@@ -8,14 +8,27 @@ import { ShortcutsSettings } from './ShortcutsSettings'
 
 const staged = () => useSettingsDraft.getState().pending.shortcuts?.overrides
 
-/** The command button of a row, which is what shows the binding and starts a capture. */
-const rowFor = (title: string): HTMLElement => screen.getByRole('button', { name: title })
+/**
+ * The command button of a row, which is what shows the binding and starts a capture. Found by
+ * its label rather than by role: the panel renders 115 buttons, and `getByRole` with a name
+ * re-derives the accessible name of every one of them after each re-render — 293 ms a call
+ * against 7 ms here, for the same element. One test below still asserts the role, so the
+ * accessible shape stays covered.
+ */
+const rowFor = (title: string): HTMLElement => screen.getByLabelText(title)
 
 function press(code: string, modifiers: Partial<KeyboardEventInit> = {}): void {
   fireEvent.keyDown(window, { code, ...modifiers })
 }
 
+let user: ReturnType<typeof userEvent.setup>
+
 beforeEach(() => {
+  // A session rather than the direct API, and without its two defaults: the delay between
+  // events, and a pointer-events check walking the ancestors of every target. Neither buys
+  // anything under jsdom, which has no layout, and both are paid on every interaction.
+  // `0` is `PointerEventsCheckLevel.Never`.
+  user = userEvent.setup({ delay: null, pointerEventsCheck: 0 })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
   useSettingsDraft.setState({ pending: {}, touched: new Set() })
 })
@@ -24,7 +37,9 @@ describe('showing the bindings', () => {
   it('shows the key each command answers to, as it is printed on the keyboard', () => {
     render(<ShortcutsSettings />)
 
-    expect(rowFor('Déplacer')).toHaveTextContent('G')
+    // The one place the role is asserted, so that `rowFor` may use the cheaper query everywhere
+    // else without the panel losing its accessible shape.
+    expect(screen.getByRole('button', { name: 'Déplacer' })).toHaveTextContent('G')
   })
 
   it('says so when a command is bound to nothing, rather than showing a blank', () => {
@@ -45,7 +60,7 @@ describe('showing the bindings', () => {
 describe('capturing a new binding', () => {
   it('records the combination that was pressed', async () => {
     render(<ShortcutsSettings />)
-    await userEvent.click(rowFor('Déplacer'))
+    await user.click(rowFor('Déplacer'))
 
     press('KeyT', { metaKey: true })
 
@@ -75,7 +90,7 @@ describe('capturing a new binding', () => {
 
   it('stages the remap rather than writing it, so Cancel can take it back', async () => {
     render(<ShortcutsSettings />)
-    await userEvent.click(rowFor('Déplacer'))
+    await user.click(rowFor('Déplacer'))
     press('KeyT')
 
     // Written nowhere yet: the buffer is what Apply flushes.
@@ -92,7 +107,7 @@ describe('capturing a new binding', () => {
     })
     render(<ShortcutsSettings />)
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole('button', { name: /Restaurer la valeur par défaut — Déplacer/ }),
     )
 
@@ -111,7 +126,7 @@ describe('conflicts', () => {
 
   it('flags two commands of one surface fighting over the same key', async () => {
     render(<ShortcutsSettings />)
-    await userEvent.click(rowFor('Pivoter'))
+    await user.click(rowFor('Pivoter'))
     press('KeyG')
 
     // Both sides are flagged: neither is more wrong than the other.
@@ -122,7 +137,7 @@ describe('conflicts', () => {
 describe('searching by chord', () => {
   it('answers what a combination is taken by, which is the question people ask', async () => {
     render(<ShortcutsSettings />)
-    await userEvent.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await user.click(screen.getByRole('button', { name: 'Chercher par touche' }))
 
     press('KeyG')
 
@@ -132,7 +147,7 @@ describe('searching by chord', () => {
 
   it('says a key is free rather than showing an empty screen', async () => {
     render(<ShortcutsSettings />)
-    await userEvent.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await user.click(screen.getByRole('button', { name: 'Chercher par touche' }))
 
     press('KeyJ', { metaKey: true, altKey: true })
 
@@ -148,8 +163,8 @@ describe('only one thing listens at a time', () => {
    */
   it('stops the search when a row starts capturing', async () => {
     render(<ShortcutsSettings />)
-    await userEvent.click(screen.getByRole('button', { name: 'Chercher par touche' }))
-    await userEvent.click(rowFor('Déplacer'))
+    await user.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await user.click(rowFor('Déplacer'))
 
     press('KeyT')
 
@@ -160,8 +175,8 @@ describe('only one thing listens at a time', () => {
 
   it('stops a capture when the search starts', async () => {
     render(<ShortcutsSettings />)
-    await userEvent.click(rowFor('Déplacer'))
-    await userEvent.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await user.click(rowFor('Déplacer'))
+    await user.click(screen.getByRole('button', { name: 'Chercher par touche' }))
 
     press('KeyG')
 
@@ -171,10 +186,10 @@ describe('only one thing listens at a time', () => {
 
   it('leaves the capture when the same row is clicked again', async () => {
     render(<ShortcutsSettings />)
-    await userEvent.click(rowFor('Déplacer'))
+    await user.click(rowFor('Déplacer'))
     expect(rowFor('Déplacer')).toHaveTextContent('Appuyez…')
 
-    await userEvent.click(rowFor('Déplacer'))
+    await user.click(rowFor('Déplacer'))
 
     expect(rowFor('Déplacer')).toHaveTextContent('G')
   })
