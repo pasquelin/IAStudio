@@ -51,8 +51,7 @@ export const useLayouts = create<LayoutsState>()(
       name: 'scenario-studio:layouts',
       // Bumped whenever a stored layout stops being one this build can restore: a major
       // Dockview release, or a `DocumentKind` renamed or dropped — Dockview throws on a layout
-      // naming a component it cannot find. Dropped rather than migrated: the shape is
-      // Dockview's, and rewriting it here would mean owning a format we deliberately do not.
+      // naming a component it cannot find. Dropped rather than migrated, per the type above.
       version: 1,
       migrate: () => undefined,
     },

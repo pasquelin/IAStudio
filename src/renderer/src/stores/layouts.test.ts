@@ -18,6 +18,7 @@ function layout(marker: string): SerializedLayout {
 
 describe('layouts store', () => {
   beforeEach(() => {
+    localStorage.clear()
     useLayouts.setState({ activeWorkspace: 'image', layouts: {} })
   })
 
