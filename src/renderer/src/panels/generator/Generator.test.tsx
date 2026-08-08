@@ -138,4 +138,18 @@ describe('Generator', () => {
     // with no form at all, and the line above would still pass.
     expect(panelSource).toMatch(/await import\('@\/design\/DynamicForm'\)/)
   })
+
+  /**
+   * Asserted on the source for the same reason as the import above: the note only appears after
+   * a debounced dry run, and what matters here is which formatter it goes through. That the
+   * formatter itself groups and rounds for a language is `usage/format.test.ts`'s business.
+   *
+   * The API prices a cheap call in fractions, and `String(1 / 3)` is sixteen digits with an
+   * English point — beside a usage window that writes the same number `0,33`.
+   */
+  it('reads the estimate through the formatter the usage window uses', () => {
+    expect(panelSource).toMatch(/formatUnits\(cost\.estimate\.creativeUnits, i18n\.language\)/)
+    // The other half: interpolating the raw number is exactly what this replaced.
+    expect(panelSource).not.toMatch(/units: cost\.estimate\.creativeUnits\b/)
+  })
 })

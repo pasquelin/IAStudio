@@ -2,6 +2,7 @@ import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
 import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
+import { formatUnits } from '@/usage/format'
 import type { ModelDescriptor } from '@shared/domain/model'
 import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { workspaceById } from '@/helpers/workspaces'
@@ -73,7 +74,7 @@ function useDescriptor(modelId: string | null) {
  * here is written for any particular model.
  */
 export function Generator() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const workspace = useLayouts(state => state.activeWorkspace)
 
@@ -155,7 +156,11 @@ export function Generator() {
               // honest, one that says « 0 CU » would be wrong about a generation that costs.
               submitNote={
                 cost.estimate
-                  ? t('generation.estimatedCost', { units: cost.estimate.creativeUnits })
+                  ? t('generation.estimatedCost', {
+                      // The same formatter the usage window reads its figures with: the API
+                      // prices a cheap call in fractions, and `String(1/3)` is sixteen digits.
+                      units: formatUnits(cost.estimate.creativeUnits, i18n.language),
+                    })
                   : undefined
               }
               onValuesChange={cost.onValuesChange}
