@@ -22,8 +22,9 @@ Rien ne bloque.
 
 ## Le formulaire
 
-Choisissez un modèle dans le panneau **Modèles**, puis regardez le panneau **Génération**,
-juste en dessous.
+Choisissez un modèle dans le panneau **Modèles**, à gauche, puis ouvrez le panneau
+**Génération** : son icône vient d'apparaître dans le rail, et le panneau prend la place des
+Modèles dans la même moitié de colonne.
 
 **Le formulaire n'est pas écrit à la main.** Il est construit à partir de ce que le modèle
 choisi déclare savoir recevoir. Deux modèles n'ont donc pas le même formulaire, et un modèle

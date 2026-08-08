@@ -279,8 +279,8 @@ principal a besoin de `{ id, zone, slot, workspaces }` pour ne proposer que ce q
 ouvrir, et le dupliquer dégraderait `ToolId` en `string`.
 
 Un outil peut déclarer **plusieurs placements**, pour des ensembles d'espaces disjoints —
-l'étagère est dans la bande basse presque partout, et dans la colonne de gauche en Vidéo, où le
-montage possède la bande. `tool.test.ts` verrouille les deux invariants qui rendent cela lisible :
+l'étagère est dans la bande basse presque partout, et dans la colonne de droite en Vidéo et en
+Audio, où le montage possède la bande. `tool.test.ts` verrouille les deux invariants qui rendent cela lisible :
 les espaces de deux placements ne se recouvrent jamais, et les placements d'un même outil partagent
 leur moitié — un outil qui changerait de moitié en même temps que de zone atterrirait dans une
 autre rangée du rail selon l'endroit d'où l'on vient.

@@ -137,7 +137,7 @@ Le chapitre [Les projets](04-projets.md) détaille chaque dossier.
 
 En haut de la fenêtre, cliquez sur **Image**.
 
-À droite, le panneau **Modèles** se remplit. Ce sont les modèles du catalogue Scenario capables
+À gauche, le panneau **Modèles** se remplit. Ce sont les modèles du catalogue Scenario capables
 de fabriquer des images. Il y en a beaucoup.
 
 Pour un premier essai, prenez-en un au hasard parmi ceux mis en avant : cliquez sur une
@@ -150,7 +150,9 @@ vignette. Son nom apparaît en haut du panneau — c'est lui qui travaillera.
 
 ## Étape 7 — Écrire son premier prompt
 
-Sous le panneau Modèles se trouve le panneau **Génération**. Il affiche un formulaire.
+Une fois le modèle choisi, son icône **Génération** apparaît dans le rail de gauche. Cliquez-la :
+le panneau **Génération** prend la place des Modèles — ils partagent la même moitié de colonne et
+se relaient — et affiche un formulaire.
 
 **Ce formulaire n'est pas toujours le même.** Il est construit à partir de ce que le modèle
 choisi sait recevoir : deux modèles différents n'ont pas les mêmes réglages, et le studio les

@@ -333,7 +333,7 @@ Trois choses valent d'être sues :
 
 ## L'Explorateur — l'arbre de la scène
 
-Le panneau **Explorateur**, dans la colonne de gauche, montre tout ce que la scène contient,
+Le panneau **Explorateur**, dans la colonne de droite, montre tout ce que la scène contient,
 sous forme d'arborescence.
 
 - **Cliquez** une ligne pour sélectionner l'objet — avec `⇧`, `⌘` ou `Ctrl` pour en choisir

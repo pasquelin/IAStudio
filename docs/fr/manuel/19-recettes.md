@@ -50,8 +50,8 @@ Retenez ces trois lignes et vous ne serez bloqué nulle part.
 **C'est le parcours de base**, détaillé dans [Premiers pas](02-premiers-pas.md). En résumé :
 
 1. espace **Image** ;
-2. panneau **Modèles**, à droite : cliquez une vignette ;
-3. panneau **Génération**, juste en dessous : écrivez votre phrase dans le **prompt** ;
+2. panneau **Modèles**, à gauche : cliquez une vignette ;
+3. panneau **Génération**, qui prend sa place : écrivez votre phrase dans le **prompt** ;
 4. **Générer**. La ligne d'état, en bas à droite, suit l'avancement ;
 5. le résultat arrive dans le panneau **Assets**, et dans `assets/img/` sur votre disque.
 

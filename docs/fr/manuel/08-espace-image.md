@@ -248,7 +248,7 @@ Le chapitre [Ce qui n'existe pas encore](18-limites.md) en donne la liste compl�
 
 ## Les calques
 
-Le panneau **Calques**, dans la colonne de gauche.
+Le panneau **Calques**, dans la colonne de droite.
 
 Un calque est une couche transparente empilée sur les autres. Le calque du haut recouvre ceux du
 dessous. Vous peignez sur celui qui est **actif** — cliquez sur son nom pour le choisir.
