@@ -1,6 +1,10 @@
+// Without it Pixi knows none of the separable modes past `screen`: eleven of the sixteen fell
+// back to `normal` silently, compositing wrongly with nothing to say so.
+import 'pixi.js/advanced-blend-modes'
 import {
   type Application,
   Container,
+  Filter,
   Graphics,
   Rectangle,
   RenderTexture,
@@ -136,10 +140,14 @@ const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>([
 ])
 
 /**
- * Pixi's own name for each mode. Partial: `hue` has no Pixi equivalent and waits for a filter of
- * its own, so it falls back to `normal` rather than compositing as something it is not.
+ * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
+ * must be a compile error, not a layer that quietly composites as `normal`.
+ *
+ * `hue` is the one exception, and it is deliberate: Pixi 8.19 commented it out of its own union
+ * and ships no filter for it, and the pieces to write one — `BlendModeFilter`, `hslgl` — are not
+ * public exports.
  */
-const BLEND_BY_MODE: Partial<Record<BlendMode, BLEND_MODES>> = {
+export const BLEND_BY_MODE: Record<BlendMode, BLEND_MODES> = {
   normal: 'normal',
   multiply: 'multiply',
   screen: 'screen',
@@ -152,10 +160,15 @@ const BLEND_BY_MODE: Partial<Record<BlendMode, BLEND_MODES>> = {
   'soft-light': 'soft-light',
   difference: 'difference',
   exclusion: 'exclusion',
+  hue: 'normal',
   saturation: 'saturation',
   color: 'color',
   luminosity: 'luminosity',
 }
+
+// The advanced modes are filters, and a filter renders at resolution 1 by default: on a retina
+// canvas the blended layer came out clipped and half-scaled.
+Filter.defaultOptions.resolution = 'inherit'
 
 type LayerSurface = {
   texture: RenderTexture
@@ -273,6 +286,9 @@ export class CanvasEngine {
         antialias: true,
         autoDensity: true,
         resolution: window.devicePixelRatio,
+        // The advanced blend modes read the back buffer. Without it WebGL warns once and
+        // composites every one of them as `normal`.
+        useBackBuffer: true,
       },
       // The mount counter rather than `disposed`: it also catches a remount onto the same
       // engine, where the first `init` resolves after the second has claimed the element.
@@ -541,7 +557,7 @@ export class CanvasEngine {
 
     surface.sprite.visible = layer.visible
     surface.sprite.alpha = layer.opacity
-    surface.sprite.blendMode = BLEND_BY_MODE[layer.blend] ?? 'normal'
+    surface.sprite.blendMode = BLEND_BY_MODE[layer.blend]
     // Read from the state, never written from here: a sprite nudged in place is a position the
     // next `apply` throws away and no undo ever hears about.
     surface.sprite.position.set(layer.transform.x, layer.transform.y)

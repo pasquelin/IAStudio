@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_CANVAS, pixelLayer, type CanvasState } from './canvas-state'
+import { BLEND_MODES, DEFAULT_CANVAS, pixelLayer, type CanvasState } from './canvas-state'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, type Viewport } from './viewport'
 
@@ -12,15 +12,24 @@ import { DEFAULT_VIEW, type Viewport } from './viewport'
  * at all. A guard added to `apply` then silently stopped a freshly opened document from ever
  * building a texture, and nothing caught it.
  */
-const gpu = {
+const gpu: {
+  renders: number
+  texturesCreated: number
+  texturesDestroyed: number
+  /** Every `setChildIndex`: the cost a restack pays, and the one a repaint must not. */
+  reorders: number
+  /** What the engine asked the renderer for, so the options it depends on can be asserted. */
+  init: Record<string, unknown>
+} = {
   renders: 0,
   texturesCreated: 0,
   texturesDestroyed: 0,
-  /** Every `setChildIndex`: the cost a restack pays, and the one a repaint must not. */
   reorders: 0,
+  init: {},
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
+vi.mock('pixi.js/advanced-blend-modes', () => ({}))
 
 vi.mock('pixi.js', () => {
   class Container {
@@ -77,9 +86,12 @@ vi.mock('pixi.js', () => {
         extract: { pixels: () => ({ pixels: [0, 0, 0, 0] }) },
       }
 
-      async init(): Promise<void> {}
+      async init(options: Record<string, unknown>): Promise<void> {
+        gpu.init = options
+      }
       destroy(): void {}
     },
+    Filter: { defaultOptions: { resolution: 1 } },
     Container,
     Graphics,
     Sprite: class extends Container {},
@@ -100,7 +112,7 @@ vi.mock('pixi.js', () => {
   }
 })
 
-const { CanvasEngine } = await import('./CanvasEngine')
+const { BLEND_BY_MODE, CanvasEngine } = await import('./CanvasEngine')
 
 type Harness = {
   engine: InstanceType<typeof CanvasEngine>
@@ -187,6 +199,35 @@ beforeEach(() => {
   gpu.texturesCreated = 0
   gpu.texturesDestroyed = 0
   gpu.reorders = 0
+  gpu.init = {}
+})
+
+describe('the blend table', () => {
+  // A mode missing from the table falls back to 'normal' silently: the layer composites wrongly
+  // and nothing says so. Eleven of the sixteen did exactly that until the extension was imported.
+  it('gives every declared blend mode a Pixi mode of its own', () => {
+    for (const mode of BLEND_MODES) expect(BLEND_BY_MODE[mode]).toBeDefined()
+  })
+
+  it('names each Pixi mode after the mode it stands for', () => {
+    for (const mode of BLEND_MODES) {
+      if (mode === 'hue') continue
+      expect(BLEND_BY_MODE[mode]).toBe(mode)
+    }
+  })
+
+  // Pixi 8.19 dropped 'hue' from its own union and ships no filter for it. The fallback is
+  // deliberate, and written down so it is not read as an oversight.
+  it('falls back to normal for the one mode Pixi no longer carries', () => {
+    expect(BLEND_BY_MODE.hue).toBe('normal')
+  })
+
+  // The advanced modes read the back buffer. Without it WebGL warns once and composites normally.
+  it('asks the renderer for the back buffer the advanced modes read from', async () => {
+    await mounted()
+
+    expect(gpu.init.useBackBuffer).toBe(true)
+  })
 })
 
 describe('mounting', () => {
