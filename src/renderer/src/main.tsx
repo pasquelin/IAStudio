@@ -2,6 +2,7 @@ import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isSettingsRoute } from '@shared/domain/settings'
+import { isUsageRoute } from '@shared/domain/usage'
 import { resolveLanguage } from '@shared/i18n'
 import { Application } from '@/app/Application'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
@@ -33,12 +34,24 @@ const LicencesWindow = lazy(async () => ({
   default: (await import('@/licences/LicencesWindow')).LicencesWindow,
 }))
 
+/** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
+const UsageWindow = lazy(async () => ({
+  default: (await import('@/usage/UsageWindow')).UsageWindow,
+}))
+
 function Route({ hash }: { hash: string }) {
   if (isSettingsRoute(hash)) return <SettingsWindow />
   if (isLicencesRoute(hash)) {
     return (
       <Suspense fallback={null}>
         <LicencesWindow />
+      </Suspense>
+    )
+  }
+  if (isUsageRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <UsageWindow />
       </Suspense>
     )
   }

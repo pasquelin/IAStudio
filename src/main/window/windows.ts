@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { chromeColor } from './theme'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
+import { USAGE_ROUTE } from '@shared/domain/usage'
 import { TRANSLATIONS } from '@shared/i18n'
 import { EVENTS } from '@shared/ipc'
 import { APP_ICON_PATH } from '@main/resources'
@@ -248,5 +249,42 @@ export function openLicencesWindow(): BrowserWindow {
 
   load(window, { hash: LICENCES_ROUTE })
   licencesWindow = window
+  return window
+}
+
+let usageWindow: BrowserWindow | null = null
+
+/**
+ * What every stored key has spent, as its own window rather than a panel: it is read on its
+ * own, not while working, and none of it belongs beside a document.
+ *
+ * Wider than the licences window — four sections, tables and charts side by side.
+ */
+export function openUsageWindow(): BrowserWindow {
+  if (usageWindow && !usageWindow.isDestroyed()) {
+    revealWindow(usageWindow)
+    return usageWindow
+  }
+
+  const window = new BrowserWindow({
+    width: 900,
+    height: 620,
+    minWidth: 680,
+    minHeight: 440,
+    show: false,
+    backgroundColor: chromeColor(),
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 12, y: 12 },
+    fullscreenable: false,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  window.on('closed', () => (usageWindow = null))
+
+  load(window, { hash: USAGE_ROUTE })
+  usageWindow = window
   return window
 }

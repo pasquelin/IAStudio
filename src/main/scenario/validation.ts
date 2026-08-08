@@ -14,6 +14,19 @@ import {
   PROMPT_SUGGESTIONS_MAX,
   type SuggestPromptsRequest,
 } from '@shared/domain/prompt-assist'
+import { USAGE_PERIODS, type UsagePeriod } from '@shared/domain/usage'
+
+const usagePeriod = z.literal(USAGE_PERIODS)
+
+export function parseUsagePeriod(value: unknown): UsagePeriod {
+  return usagePeriod.parse(value)
+}
+
+const usageOffset = z.number().int().min(0)
+
+export function parseUsageOffset(value: unknown): number {
+  return usageOffset.parse(value)
+}
 
 const modelId = z.string().trim().min(1)
 

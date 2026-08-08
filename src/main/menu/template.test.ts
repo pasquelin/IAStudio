@@ -9,6 +9,7 @@ import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   openSettings: () => {},
   openLicences: () => {},
+  openUsage: () => {},
   toggleFullScreen: () => {},
   openTool: () => {},
   runCommand: () => {},
@@ -259,6 +260,21 @@ describe('menuTemplate', () => {
     for (const isMac of [true, false]) {
       expect(labels(submenuOf(menuTemplate(options({ isMac })), 'Aide'))).toContain('Licences')
     }
+  })
+
+  // Consumption is read, never edited: it belongs beside About, not among the preferences.
+  it('offers the usage window under Help on every platform', () => {
+    for (const isMac of [true, false]) {
+      expect(labels(submenuOf(menuTemplate(options({ isMac })), 'Aide'))).toContain('Consommation…')
+    }
+  })
+
+  it('opens the usage window through the main process too', () => {
+    const openUsage = vi.fn()
+    const entries = submenuOf(menuTemplate(options({ actions: actions({ openUsage }) })), 'Aide')
+
+    activate(entries.find(entry => entry.label === 'Consommation…'))
+    expect(openUsage).toHaveBeenCalledOnce()
   })
 
   it('opens them through the main process, which owns the window', () => {

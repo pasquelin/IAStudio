@@ -44,6 +44,13 @@ export type AccountChange = {
   credentialsChanged: boolean
 }
 
+/** An account as the main process may use it to call the API on that account's behalf. */
+export type KeyedAccount = {
+  id: string
+  name: string
+  credentials: Credentials
+}
+
 export type SettingsStore = {
   read: () => Settings
   write: (partial: PartialSettings) => Settings
@@ -55,6 +62,11 @@ export type SettingsStore = {
   reset: () => Settings
   /** Every held account, without its credentials — this is what may cross to a window. */
   accounts: () => AccountSummary[]
+  /**
+   * The same accounts, credentials included. Main process only: nothing here may cross to a
+   * window. Exists so usage can be read for every stored key at once, not just the active one.
+   */
+  keyedAccounts: () => KeyedAccount[]
   /** All four throw an `AccountError`: a refused name, an unknown id, or a locked keychain. */
   addAccount: (name: string, credentials: Credentials) => AccountChange
   renameAccount: (id: string, name: string) => AccountChange
@@ -255,6 +267,13 @@ export function createSettingsStore(
     },
 
     accounts: () => summariesOf(readBook()),
+
+    keyedAccounts: () =>
+      readBook().accounts.map(account => ({
+        id: account.id,
+        name: account.name,
+        credentials: account.credentials,
+      })),
 
     addAccount: (name, credentials) =>
       apply(book => addAccount(book, { id: newAccountId(), name, credentials })),

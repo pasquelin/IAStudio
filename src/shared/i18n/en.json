@@ -727,7 +727,8 @@
     "snap": "Snap",
     "help": "Help",
     "about": "About {{name}}",
-    "licences": "Licences"
+    "licences": "Licences",
+    "usage": "Usage…"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
@@ -1182,6 +1183,50 @@
     "autoSpin": "Auto spin",
     "envIntensity": "Lighting",
     "dropSource": "Drop a picture from the project to use it as the base colour"
+  },
+  "usage": {
+    "title": "Usage",
+    "sections": {
+      "overview": "Overview",
+      "models": "Models",
+      "activities": "Activities",
+      "journal": "Log"
+    },
+    "period": {
+      "label": "Period",
+      "days": "{{count}} days"
+    },
+    "refresh": "Refresh",
+    "loading": "Reading usage…",
+    "failure": "Usage could not be read.",
+    "retry": "Try again",
+    "empty": "No activity over this period.",
+    "noAccount": "No API key stored. Add one in the preferences to see your usage.",
+    "noBalance": "The Scenario API exposes no balance: these figures are what was spent, never what is left.",
+    "mixedAccounts": "The total adds up keys billed separately — it matches no single invoice.",
+    "total": "Total spent",
+    "discount": "Discounts",
+    "jobs": "Generations",
+    "units": "CU",
+    "indicative": "Indicative amount, derived from the public prepaid pack grid.",
+    "daily": "Per day",
+    "perAccount": "Per account",
+    "silent": "These keys did not answer: {{names}}. The figures above are the other keys'.",
+    "columns": {
+      "model": "Model",
+      "units": "Units",
+      "jobs": "Generations",
+      "apiKey": "Via API key",
+      "action": "Action",
+      "count": "Count",
+      "kind": "Asset kind",
+      "time": "Date",
+      "account": "Account"
+    },
+    "assets": "Assets produced",
+    "actions": "Actions",
+    "loadMore": "Load more",
+    "free": "free"
   },
   "licences": {
     "title": "Licences",

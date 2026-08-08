@@ -2,6 +2,7 @@ import { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import type { Credentials } from '@main/settings/accounts'
 import {
+  clientForCredentials,
   createClientProvider,
   describeFailure,
   failureOf,
@@ -134,5 +135,16 @@ describe('client provider', () => {
 
     expect(provider.get()).not.toBe(first)
     expect(resolve).toHaveBeenCalledTimes(2)
+  })
+
+  // Reading usage asks every stored key at once; borrowing the cache would swap the active one.
+  it('builds a client for another account without disturbing the cached one', () => {
+    const provider = createClientProvider(() => credentials, createCredentialsWatch().watch)
+    const active = provider.get()
+
+    const other = clientForCredentials({ key: 'api_other', secret: 'other' })
+
+    expect(other).not.toBe(active)
+    expect(provider.get()).toBe(active)
   })
 })
