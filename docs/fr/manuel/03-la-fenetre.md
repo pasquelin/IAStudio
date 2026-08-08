@@ -244,6 +244,32 @@ Deux conséquences pratiques :
 - **une Génération sans modèle laisse la place aux Modèles** — le panneau qui permet justement d'en
   choisir un.
 
+### Une moitié que vous n'avez pas choisie s'ouvre sur le premier panneau de l'espace
+
+Tant que vous n'avez cliqué aucune icône d'une moitié, elle n'est attachée à **aucun** panneau :
+elle affiche le premier que l'espace y déclare — celui du haut dans le tableau ci-dessus, et donc
+le premier du rail.
+
+C'est ce que vous voyez à la première ouverture, et ce que **Affichage ▸ Réinitialiser la
+disposition** rétablit :
+
+| Espace | La moitié haute de droite s'ouvre sur | La bande basse sur |
+|---|---|---|
+| **Image** | Calques | Assets |
+| **Vidéo** | Assets | Timeline |
+| **3D** | Explorateur | Assets |
+| **Audio** | Assets | Timeline |
+| **Textures** | Explorateur | Assets |
+| **Skyboxes** | Skybox | Assets |
+
+**Pourquoi ce n'est pas un panneau fixé une fois pour toutes.** Votre disposition est retenue une
+seule fois pour les six espaces, alors que le panneau qui vient en premier diffère dans chacun.
+En inscrire un dans la disposition par défaut reviendrait à imposer la réponse d'un espace aux
+cinq autres.
+
+Dès que vous cliquez une icône, cette moitié retient **votre** choix, et ne bouge plus jusqu'à ce
+que vous en cliquiez une autre — ou que vous réinitialisiez la disposition.
+
 **Pourquoi l'Explorateur est visible partout alors qu'il ne sert qu'à la 3D.** Il est destiné à
 devenir l'arborescence du projet. En attendant, dans les autres espaces, il affiche un message
 qui explique ce qu'il attend plutôt que de disparaître.

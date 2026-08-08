@@ -285,9 +285,20 @@ les espaces de deux placements ne se recouvrent jamais, et les placements d'un m
 leur moitié — un outil qui changerait de moitié en même temps que de zone atterrirait dans une
 autre rangée du rail selon l'endroit d'où l'on vient.
 
-**Une règle échappe au registre**, et une seule : le générateur n'est offert que là où un modèle
-est choisi ou préféré. Elle dépend de l'état, et `shared/` n'a aucune dépendance runtime — d'où
-une couche au-dessus du registre, dans `helpers/tool-registry.ts`, plutôt qu'à l'intérieur.
+**L'ordre de `TOOL_PLACEMENTS` est celui du rail**, et c'est aussi lui qui désigne le panneau par
+défaut ci-dessous — un test l'épingle espace par espace.
+
+**Deux règles échappent au registre**, et deux seulement, parce qu'elles dépendent de l'état ou de
+l'espace, quand `shared/` n'a aucune dépendance runtime. D'où une couche au-dessus, dans
+`helpers/tool-registry.ts`, plutôt qu'à l'intérieur :
+
+- le générateur n'est offert que là où un modèle est choisi ou préféré ;
+- une moitié que personne n'a choisie affiche le **premier panneau que l'espace y déclare**. Elle
+  vaut `null` dans le store — clé absente, la moitié est fermée ; un identifiant, c'est un choix de
+  l'utilisateur. La disposition est retenue une fois pour les six espaces alors que ce premier
+  panneau diffère dans chacun : y inscrire un identifiant imposerait la réponse d'un espace aux
+  cinq autres. `shownTool` distingue les trois cas, et la migration vers la version 8 repose au
+  défaut toute disposition antérieure, moitié par moitié.
 
 ---
 
