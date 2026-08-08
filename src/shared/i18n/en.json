@@ -409,7 +409,25 @@
     "height": "Height",
     "onDisk": "Location",
     "reveal": "Show in the file manager",
-    "fileMissing": "File not found"
+    "fileMissing": "File not found",
+    "layer": "Layer",
+    "layerKind_pixel": "Pixels",
+    "layerKind_group": "Group",
+    "layerKind_adjustment": "Adjustment",
+    "compositing": "Compositing",
+    "blend": "Blend",
+    "fillOpacity": "Fill opacity",
+    "clipped": "Clip to layer below",
+    "locks": "Locks",
+    "lock_pixels": "Pixels",
+    "lock_position": "Position",
+    "lock_alpha": "Transparency",
+    "x": "X",
+    "y": "Y",
+    "scaleX": "Scale X",
+    "scaleY": "Scale Y",
+    "children": "Layers",
+    "opacity": "Opacity"
   },
   "transport": {
     "play": "Play",
@@ -877,5 +895,23 @@
     "title": "Licences",
     "intro": "Scenario Studio ships with the software below. Each keeps its own licence, reproduced here in full.",
     "sources": "Corresponding sources:"
+  },
+  "blend": {
+    "normal": "Normal",
+    "multiply": "Multiply",
+    "screen": "Screen",
+    "overlay": "Overlay",
+    "darken": "Darken",
+    "lighten": "Lighten",
+    "color-dodge": "Color dodge",
+    "color-burn": "Color burn",
+    "hard-light": "Hard light",
+    "soft-light": "Soft light",
+    "difference": "Difference",
+    "exclusion": "Exclusion",
+    "hue": "Hue",
+    "saturation": "Saturation",
+    "color": "Color",
+    "luminosity": "Luminosity"
   }
 }

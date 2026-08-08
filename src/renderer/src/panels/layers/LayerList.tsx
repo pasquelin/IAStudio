@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Collection } from '@/design/Collection'
 import { LIST_ROW_HEIGHT } from '@/design/styles'
 import { canvasOf, selectLayerIn, useCanvases } from '@/stores/canvases'
+import { useSelection } from '@/stores/selection'
 import { LayerRow } from './LayerRow'
 import { layerRows } from './layer-rows'
 
@@ -43,7 +44,12 @@ export function LayerList({ documentId }: { documentId: string }) {
     <Collection
       items={stack}
       selectedId={canvas.activeLayerId}
-      onSelect={row => selectLayerIn(documentId, row.layer.id)}
+      onSelect={row => {
+        selectLayerIn(documentId, row.layer.id)
+        // The stack arms a layer to paint on; the inspector reads what was touched last. Both,
+        // or picking a row would describe whatever was selected before it.
+        useSelection.getState().selectLayer(documentId, row.layer.id)
+      }}
       rowHeight={LIST_ROW_HEIGHT}
       renderRow={row => (
         <LayerRow documentId={documentId} layer={row.layer} depth={row.depth} labels={labels} />

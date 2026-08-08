@@ -6,11 +6,14 @@ import { PropertyRow } from '@/design/PropertyRow'
 import { clipById, trackById } from '@/engines/timeline/timeline-state'
 import { formatBytes } from '@/helpers/format'
 import { assetsById, useAssets } from '@/stores/assets'
-import { activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
+import { layerById, type Layer } from '@/engines/canvas/canvas-state'
+import { canvasOf, useCanvases } from '@/stores/canvases'
+import { activeImageId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { AssetInspector } from './AssetInspector'
 import { ClipInspector } from './ClipInspector'
+import { LayerInspector } from './LayerInspector'
 import { SceneInspector } from './SceneInspector'
 import { TrackInspector } from './TrackInspector'
 
@@ -36,6 +39,11 @@ function Face() {
   const sceneId = useDocuments(activeSceneId)
   const sequenceId = useDocuments(activeSequenceId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
+  const imageId = useDocuments(activeImageId)
+  const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
+
+  const layerOf = (documentId: string, picked: { ids: string[] }): Layer | null =>
+    canvas && documentId === imageId ? layerById(canvas, picked.ids[0] ?? null) : null
 
   switch (selection.kind) {
     // The catalogue is read by the face that needs it, not here: subscribing to it from `Face`
@@ -56,6 +64,13 @@ function Face() {
       ) : (
         <Empty />
       )
+    }
+
+    case 'layer': {
+      // Guarded on the owner, as the clip and track faces are: the image in front is not
+      // necessarily the one this layer was picked in.
+      const layer = selection.ownerId === imageId && imageId ? layerOf(imageId, selection) : null
+      return imageId && layer ? <LayerInspector documentId={imageId} layer={layer} /> : <Empty />
     }
 
     case 'track': {

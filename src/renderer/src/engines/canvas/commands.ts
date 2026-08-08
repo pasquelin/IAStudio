@@ -118,6 +118,11 @@ export function renameLayer(id: string, name: string): Command<CanvasState> {
   return patch(`layer:rename:${id}`, id, { name })
 }
 
+/** The whole transform at once: the inspector's fields all write into the same object. */
+export function setLayerTransform(id: string, transform: Transform): Command<CanvasState> {
+  return patch(`layer:transform:${id}`, id, { transform })
+}
+
 /**
  * One shape for every single-field edit: they all revert by putting the old value back. Typed on
  * the fields shared by every kind, so a patch cannot turn a group into something else.
