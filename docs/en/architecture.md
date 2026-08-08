@@ -22,6 +22,7 @@ up. Looking for how to *use* it? See [user-guide.md](user-guide.md).
 11. [Configuration](#configuration)
 12. [Testing](#testing)
 13. [Adding things](#adding-things)
+14. [Shipping a version](#shipping-a-version)
 
 ---
 
@@ -506,3 +507,63 @@ and the panels through Testing Library.
 Two rules that save the most time: check that a helper does not already exist before writing one,
 and read the neighbourhood before touching it. The registries mean most additions are one entry
 in one table, not a change in five files.
+
+---
+
+## Shipping a version
+
+The studio is distributed as **per-platform installers**, built by GitHub Actions and published
+to GitHub Releases, which the application itself reads to update.
+
+### Two branches, two roles
+
+`develop` integrates features as they land; `main` only ever receives release merges, and carries
+the tags. **A `v*` tag pushed on `main` is the only trigger of the pipeline.**
+
+```
+feat/<name> ──▶ develop ──▶ main ──tag v*──▶ build 3 OS ──▶ draft release ──▶ published
+```
+
+### What the pipeline produces
+
+| File | For |
+|---|---|
+| `.dmg` arm64 and x64 | macOS Apple Silicon and Intel |
+| `.zip` arm64 and x64 | what `electron-updater` consumes — not distributed |
+| `.exe` (NSIS) | Windows x64 |
+| `.AppImage` and `.deb` | Linux x64 |
+| `latest.yml`, `latest-mac.yml`, `latest-linux.yml` | the auto-update manifests |
+| `*.blockmap` | differential download |
+
+The three platforms are packaged in parallel but **publish nothing**: a final job gathers the
+artefacts, **checks that no manifest and no blockmap is missing**, and creates the release as a
+**draft**. An incomplete release would break auto-update for the whole installed base with no
+visible error — hence the blocking check, and hence publishing staying a human act.
+
+### Versioning
+
+Semver, and the tag is the source of truth: `package.json` must carry the same number as the tag.
+A mismatch produces manifests announcing a version that does not exist.
+
+### Auto-update inside the application
+
+`src/main/updater.ts` turns `electron-updater`'s events into a single `UpdateState` (`idle`,
+`checking`, `available`, `downloading`, `ready`, `failed`), pushed to the renderer over
+`EVENTS.updateState` and rendered by `UpdateStatus` in the status line. Three traits matter:
+
+- **`electron-updater` is loaded on the first check**, never at import — otherwise start-up would
+  pay some thirty milliseconds before the splash even appears, including in development where no
+  check happens.
+- **Nothing installs unattended**: the download is automatic, the install happens on the next
+  quit, or right away if the user asks.
+- **A failure is silent**: not knowing whether a newer version exists is not a problem the user
+  has to read about.
+
+### Where to read on
+
+| | |
+|---|---|
+| [`docs/ci/RELEASE.md`](../ci/RELEASE.md) | the publishing checklist, and the rollback |
+| [`docs/ci/SECRETS.md`](../ci/SECRETS.md) | signing secrets: obtaining them, rotating them |
+| [`docs/ci/TROUBLESHOOTING.md`](../ci/TROUBLESHOOTING.md) | symptom → cause → fix |
+| [`docs/ci/adr/`](../ci/adr/) | the fifteen decisions, with what was ruled out and why |

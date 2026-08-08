@@ -22,6 +22,7 @@ cherchez plutôt comment *s'en servir* ? Voir [guide-utilisateur.md](guide-utili
 11. [La configuration](#la-configuration)
 12. [Les tests](#les-tests)
 13. [Ajouter quelque chose](#ajouter-quelque-chose)
+14. [Livrer une version](#livrer-une-version)
 
 ---
 
@@ -524,3 +525,63 @@ IPC, et les panneaux via Testing Library.
 Deux règles qui font gagner le plus de temps : vérifier qu'un helper n'existe pas déjà avant d'en
 écrire un, et lire le voisinage avant d'y toucher. Les registres font que la plupart des ajouts
 tiennent en une entrée dans une table, et non en une modification dans cinq fichiers.
+
+---
+
+## Livrer une version
+
+Le studio se distribue en **installeurs signés par plateforme**, produits par GitHub Actions et
+publiés sur les GitHub Releases, que l'application consulte elle-même pour se mettre à jour.
+
+### Deux branches, deux rôles
+
+`develop` intègre les features au fil de l'eau ; `main` ne reçoit que des merges de release et
+porte les tags. **Un tag `v*` poussé sur `main` est le seul déclencheur du pipeline.**
+
+```
+feat/<nom> ──▶ develop ──▶ main ──tag v*──▶ build 3 OS ──▶ release en draft ──▶ publiée
+```
+
+### Ce que le pipeline produit
+
+| Fichier | Pour |
+|---|---|
+| `.dmg` arm64 et x64 | macOS Apple Silicon et Intel |
+| `.zip` arm64 et x64 | ce que consomme `electron-updater` — pas distribué |
+| `.exe` (NSIS) | Windows x64 |
+| `.AppImage` et `.deb` | Linux x64 |
+| `latest.yml`, `latest-mac.yml`, `latest-linux.yml` | les manifestes d'auto-update |
+| `*.blockmap` | le téléchargement différentiel |
+
+Les trois plateformes sont packagées en parallèle mais **ne publient rien** : un job final agrège
+les artefacts, **vérifie qu'aucun manifeste ni blockmap ne manque**, et crée la release en
+**draft**. Une release incomplète casserait l'auto-update de toute la base installée sans erreur
+visible — d'où ce contrôle bloquant, et d'où le fait que la publication reste un geste humain.
+
+### La version
+
+Semver, et le tag fait foi : `package.json` doit porter le même numéro que le tag. Un
+désalignement produit des manifestes qui annoncent une version inexistante.
+
+### L'auto-update dans l'application
+
+`src/main/updater.ts` traduit les événements d'`electron-updater` en un `UpdateState` unique
+(`idle`, `checking`, `available`, `downloading`, `ready`, `failed`), poussé au renderer par
+`EVENTS.updateState` et rendu par `UpdateStatus` dans la barre de statut. Trois traits comptent :
+
+- **`electron-updater` n'est chargé qu'au premier contrôle**, jamais à l'import — sans quoi le
+  démarrage paierait une trentaine de millisecondes avant même le splash, y compris en
+  développement où le contrôle n'a pas lieu.
+- **Rien ne s'installe sans un geste** : le téléchargement est automatique, l'installation se
+  fait au prochain quit, ou immédiatement si l'utilisateur clique.
+- **Un échec est silencieux** : ne pas savoir si une version plus récente existe n'est pas un
+  problème que l'utilisateur doit lire.
+
+### Où lire la suite
+
+| | |
+|---|---|
+| [`docs/ci/RELEASE.md`](../ci/RELEASE.md) | la check-list de publication et le rollback |
+| [`docs/ci/SECRETS.md`](../ci/SECRETS.md) | les secrets de signature, leur obtention, leur rotation |
+| [`docs/ci/TROUBLESHOOTING.md`](../ci/TROUBLESHOOTING.md) | symptôme → cause → correction |
+| [`docs/ci/adr/`](../ci/adr/) | les quinze décisions, avec ce qui a été écarté et pourquoi |
