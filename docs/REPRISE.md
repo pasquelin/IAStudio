@@ -305,6 +305,30 @@ dit propre alors qu'il ne l'est pas. Le remède est un **jeton monotone par comm
 
 ## 3.2 Mode Image
 
+> ### ⚠️ `feat/ergonomie` attend une réconciliation avant de pouvoir être fusionnée
+>
+> **Trois commits validés, non fusionnés**, dans `.claude/worktrees/ergonomie` — `pnpm validate`
+> vert à 3954 tests sur leur base. Ils entrent en collision de **conception** avec `15d4f97`
+> (« Les peintres d'outils quittent le moteur pour l'overlay »), fusionné dans `develop`
+> pendant leur écriture. Huit zones de conflit sur trois fichiers ; le volume est petit, la
+> divergence ne l'est pas.
+>
+> **La collision, en une phrase :** la branche ajoute des peintres *dans* le moteur
+> (`paintHandles` avec son survol, les ants passés par `scene.paint`), là où `develop` les a
+> sortis vers l'overlay derrière un `ToolChrome` que le moteur publie. Les deux vont dans le
+> même sens — `develop` est arrivée la première.
+>
+> **Ce que la réconciliation demande**, et rien de plus : porter le travail sur `ToolChrome`.
+> `scene.paint` n'existe plus ; `tools.handles: Rect | null` doit devenir des `Corners` et
+> porter la poignée survolée ; `drawSelection`, `drawCrop` et `drawPending`, désormais dans
+> l'overlay, appellent `ants()`. Le nouveau modèle **simplifie** ce travail plutôt qu'il ne le
+> gêne : les peintres sont maintenant du côté où les ants vivent, et la poignée illuminée
+> devient enfin testable — ce qu'une revue avait signalé comme intestable en jsdom.
+>
+> `handles.ts`, `cursors.ts`, le registre de commandes, les bundles i18n et le menu natif ne
+> sont **pas** en conflit : ils se fusionnent tels quels.
+
+
 **Jalons 0 à 3, puis 4, 6, 7, 9 et 10 livrés et fusionnés dans `main`.** Moteur : **PixiJS v8, pas
 three.js**. Ce qui reste tient en dix points, § « Ce qui reste, par ordre de valeur » — et le premier
 en débloque cinq à lui seul.
