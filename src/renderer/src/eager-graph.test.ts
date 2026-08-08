@@ -22,11 +22,18 @@ const ALIASES: readonly [string, string][] = [
 
 const EXTENSIONS = ['.ts', '.tsx']
 
+/** Leaves, not modules: a stylesheet, a worker URL and a JSON bundle import nothing further. */
+const NOT_MODULES = /\.(css|json)($|\?)|\?worker|\?raw|\?url/
+
 /** `import … from 'x'` and `export … from 'x'`, but never `import type` nor `await import(`. */
 const STATIC_IMPORT =
   /(?:^|\n)\s*(?:import|export)\s+(?!type\s)(?:[^'"]*?\sfrom\s+)?['"]([^'"]+)['"]/g
 
-/** Collapses `.` and `..` into a key the glob would produce, with no `node:path` in sight. */
+/**
+ * Collapses `.` and `..` into the exact spelling the glob uses — `./a/b` inside the renderer,
+ * `../../shared/…` outside it. Prefixing a leading `..` with `./` is what hid the whole of
+ * `src/shared` from an earlier version of this walker: 104 edges dropped, every test still green.
+ */
 function normalise(path: string): string {
   const parts: string[] = []
   for (const part of path.split('/')) {
@@ -34,7 +41,8 @@ function normalise(path: string): string {
     if (part === '..' && parts.length > 0 && parts.at(-1) !== '..') parts.pop()
     else parts.push(part)
   }
-  return `./${parts.join('/')}`
+  const joined = parts.join('/')
+  return joined.startsWith('..') ? joined : `./${joined}`
 }
 
 function folderOf(key: string): string {
@@ -44,7 +52,7 @@ function folderOf(key: string): string {
 /**
  * The key the glob knows this module by. A folder import lands on its `index`, and what it
  * imports next is relative to THAT file — resolving to the folder sends every specifier below
- * it into the void, silently.
+ * it into the void.
  */
 function keyOf(candidate: string): string | null {
   const base = normalise(candidate)
@@ -61,54 +69,77 @@ function specifierKey(specifier: string, from: string): string | null {
   return specifier.startsWith('.') ? keyOf(`${folderOf(from)}/${specifier}`) : null
 }
 
+function isLocal(specifier: string): boolean {
+  return specifier.startsWith('.') || ALIASES.some(([prefix]) => specifier.startsWith(prefix))
+}
+
+/** `@scope/name`, so a subpath cannot dodge the assertion — `zod/v4` is still zod. */
+function packageOf(specifier: string): string {
+  const parts = specifier.split('/')
+  const scoped = specifier.startsWith('@') ? parts.slice(0, 2) : parts.slice(0, 1)
+  return scoped.join('/')
+}
+
+type Graph = {
+  packages: Set<string>
+  files: Set<string>
+  /** Local specifiers no key could be found for. Any of them is a branch walked off silently. */
+  unresolved: Set<string>
+}
+
 /** Every package and every source file the entry point reaches without an `import()`. */
-async function eagerGraph(): Promise<{ packages: Set<string>; files: Set<string> }> {
+async function eagerGraph(): Promise<Graph> {
   const packages = new Set<string>()
   const files = new Set<string>()
-  const queue = [keyOf('./main.tsx')]
+  const unresolved = new Set<string>()
+  const queue: string[] = ['./main.tsx']
 
   while (queue.length > 0) {
     const key = queue.pop()
-    if (key === null || key === undefined || files.has(key)) continue
+    if (key === undefined || files.has(key)) continue
     const load = SOURCES[key]
     if (load === undefined) continue
     files.add(key)
 
     for (const match of (await load()).matchAll(STATIC_IMPORT)) {
       const specifier = match[1]
-      if (specifier === undefined) continue
-      if (
-        specifier.startsWith('.') ||
-        specifier.startsWith('@/') ||
-        specifier.startsWith('@shared/')
-      )
-        queue.push(specifierKey(specifier, key))
-      // A bare specifier is a package; `zod/v4` and `zod/mini` are still zod.
-      else
-        packages.add(specifier.startsWith('@') ? specifier : (specifier.split('/')[0] ?? specifier))
+      if (specifier === undefined || NOT_MODULES.test(specifier)) continue
+      if (!isLocal(specifier)) {
+        packages.add(packageOf(specifier))
+        continue
+      }
+
+      const next = specifierKey(specifier, key)
+      if (next === null) unresolved.add(`${key} → ${specifier}`)
+      else queue.push(next)
     }
   }
 
-  return { packages, files }
+  return { packages, files, unresolved }
 }
 
 describe('the opening chunk', () => {
-  it('walks a graph worth asserting on', async () => {
-    // Guards the walker, and it has earned its place: resolving a folder import to the folder
-    // rather than to its `index` cut every branch below it, and a hundred files still came back
-    // — enough to pass a count, not enough to catch anything.
-    const { packages, files } = await eagerGraph()
+  /**
+   * The assertion that makes the others mean something. Twice now a resolution failed in silence
+   * and took a whole subtree with it — a folder import that never found its `index`, then every
+   * `@shared/*` at once — while the negative assertions below sailed through. A dropped edge is
+   * a hole in the guard, so it is the guard's first failure.
+   */
+  it('resolves every static import it walks', async () => {
+    const { unresolved, files, packages } = await eagerGraph()
 
+    expect([...unresolved]).toEqual([])
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
     expect(files).toContain('./app/tool-components.ts')
     expect(files).toContain('./panels/generator/Generator.tsx')
+    expect(files).toContain('../../shared/domain/tool.ts')
     // The panels read this one eagerly for `referencePictures` — which is exactly why zod had to
     // leave it. If it stops being reached, the assertions below stop meaning anything.
     expect(files).toContain('./helpers/dynamic-form.ts')
   })
 
-  // Deferred by `Generator.tsx` on 8 August: −219,62 kB, three quarters of it zod.
+  // Deferred by `Generator.tsx` on 8 August: −219,38 kB, three quarters of it zod.
   it('never reaches the generation form, nor what validates it', async () => {
     const { files } = await eagerGraph()
 
@@ -121,7 +152,7 @@ describe('the opening chunk', () => {
 
     expect(packages).not.toContain('zod')
     expect(packages).not.toContain('react-hook-form')
-    expect(packages).not.toContain('@hookform/resolvers/zod')
+    expect(packages).not.toContain('@hookform/resolvers')
   })
 
   // Deferred by `engines/core/fonts.ts` on 8 August: −483,56 kB. Same property, same guard.
