@@ -25,6 +25,13 @@ export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
   onSubmit: (body: FormValues) => void
   submitLabel: string
+  /** Beside the label on the button, for what the form costs. Absent draws nothing. */
+  submitNote?: string
+  /**
+   * The body as it stands, on every edit. A subscription rather than a watched value: rendering
+   * on each keystroke is what the dependency watch below goes out of its way to avoid.
+   */
+  onValuesChange?: (body: FormValues) => void
   busy?: boolean
   /**
    * Values to open on, over each field's own default. What "regenerate with these parameters"
@@ -142,6 +149,8 @@ export function DynamicForm({
   fields,
   onSubmit,
   submitLabel,
+  submitNote,
+  onValuesChange,
   busy = false,
   preset,
   accessory,
@@ -161,6 +170,17 @@ export function DynamicForm({
   // Switching model swaps the whole descriptor set: keeping the previous values would carry a
   // `guidance` from one model into another that never declared it.
   useEffect(() => reset(initial), [initial, reset])
+
+  // Subscribed, not rendered: `watch(callback)` reports every edit without making this component
+  // a listener of its own form. The body is built the same way submitting builds it, so what is
+  // priced is what would be sent.
+  useEffect(() => {
+    if (!onValuesChange) return
+
+    onValuesChange(buildBody(fields, getValues()))
+    const subscription = watch(current => onValuesChange(buildBody(fields, current)))
+    return () => subscription.unsubscribe()
+  }, [fields, getValues, onValuesChange, watch])
 
   // Watching the whole form would re-render every control on every keystroke. Only the keys
   // another field declares a dependency on can change what is on screen.
@@ -223,6 +243,9 @@ export function DynamicForm({
 
       <Button type="submit" variant="primary" disabled={busy}>
         {submitLabel}
+        {/* Spaced here rather than by a gap on the button: every tool button in the studio is
+            built on the same base, and most of them are an icon beside a word. */}
+        {submitNote && <span className="ml-1.5 text-[11px] opacity-70">{submitNote}</span>}
       </Button>
     </form>
   )

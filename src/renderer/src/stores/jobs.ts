@@ -75,6 +75,7 @@ export const useJobs = create<JobsState>()((set, get) => ({
               progress: progress.progress,
               assetIds: progress.assetIds ?? job.assetIds,
               ...(progress.error === undefined ? {} : { error: progress.error }),
+              ...(progress.cost === undefined ? {} : { cost: progress.cost }),
             }
           : job,
       ),

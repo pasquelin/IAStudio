@@ -1,5 +1,11 @@
 import type { ApiFailure, JobFailure } from '@shared/domain/failure'
-import { isFinished, type Job, type JobProgress, type JobStatus } from '@shared/domain/job'
+import {
+  INTERACTIVE_REQUESTS_PER_MINUTE,
+  isFinished,
+  type Job,
+  type JobProgress,
+  type JobStatus,
+} from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
 import type { PersistedJob } from './job-store'
@@ -12,6 +18,8 @@ export type RemoteJob = {
   status: string
   progress?: number
   metadata?: { assetIds?: readonly string[] }
+  /** Only ever on a submission: the API prices the request, not the job it hands back. */
+  cost?: number
 }
 
 export type JobRunner = {
@@ -88,13 +96,6 @@ export type JobManager = {
 const DEFAULT_POLL_INTERVAL_MS = 2000
 
 /**
- * Requests a minute left to what the user is waiting on — a catalogue page, a sheet of
- * thumbnails, an upload. Those come in bursts; the poll loop never stops, so it is the one that
- * has to leave room rather than the other way round.
- */
-const INTERACTIVE_RESERVE_PER_MINUTE = 15
-
-/**
  * What the poll loop alone may spend.
  *
  * Left at two seconds whatever the load, four concurrent jobs ask for 120 a minute against the
@@ -106,7 +107,7 @@ const INTERACTIVE_RESERVE_PER_MINUTE = 15
  * same failure as the symptom.
  */
 export const POLL_REQUESTS_PER_MINUTE =
-  ORDINARY_REQUESTS_PER_WINDOW - INTERACTIVE_RESERVE_PER_MINUTE
+  ORDINARY_REQUESTS_PER_WINDOW - INTERACTIVE_REQUESTS_PER_MINUTE
 
 /** Finished jobs kept for the bar's history. Beyond this a long session is just a leak. */
 const RETAINED_JOBS = 200
@@ -241,6 +242,7 @@ export function createJobManager({
     }
     if (entry.job.assetIds.length > 0) progress.assetIds = entry.job.assetIds
     if (entry.job.error !== undefined) progress.error = entry.job.error
+    if (entry.job.cost !== undefined) progress.cost = entry.job.cost
     onProgress(progress)
   }
 
@@ -443,6 +445,7 @@ export function createJobManager({
 
       const submitted = await withRetry(() => bound.runner.submit(entry.job.modelId, entry.body))
       entry.remoteId = submitted.jobId
+      if (submitted.cost !== undefined) entry.job.cost = submitted.cost
 
       // The body is read once and can hold an encoded source image; a finished job has no
       // reason to keep it alive for the rest of the session.

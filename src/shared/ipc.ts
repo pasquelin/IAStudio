@@ -10,7 +10,7 @@ import type {
   DocumentFile,
   DocumentKind,
 } from './domain/document'
-import type { Job, JobProgress } from './domain/job'
+import type { CostEstimate, Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
@@ -57,6 +57,7 @@ export type Channels = {
   scenarioTranslatePrompt: 'scenario:translate-prompt'
   scenarioDescribeStyle: 'scenario:describe-style'
   scenarioGenerate: 'scenario:generate'
+  scenarioEstimateCost: 'scenario:estimate-cost'
   scenarioUploadAsset: 'scenario:upload-asset'
   scenarioCancelJob: 'scenario:cancel-job'
   scenarioListJobs: 'scenario:list-jobs'
@@ -136,6 +137,7 @@ export const CHANNELS: Channels = {
   scenarioTranslatePrompt: 'scenario:translate-prompt',
   scenarioDescribeStyle: 'scenario:describe-style',
   scenarioGenerate: 'scenario:generate',
+  scenarioEstimateCost: 'scenario:estimate-cost',
   scenarioUploadAsset: 'scenario:upload-asset',
   scenarioCancelJob: 'scenario:cancel-job',
   scenarioListJobs: 'scenario:list-jobs',
@@ -381,6 +383,11 @@ export type StudioBridge = {
     /** Reads the style of the reference pictures, so a prompt can be written from it. */
     describeStyle: (images: readonly string[]) => Promise<PromptStyle>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
+    /**
+     * What that same generation would cost, without running it. `null` when the API declines to
+     * price it; a rejection when the call itself failed, which a caller may treat as no figure.
+     */
+    estimateCost: (id: string, body: Record<string, unknown>) => Promise<CostEstimate>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
     uploadAsset: (name: string, image: string) => Promise<string>
     cancelJob: (jobId: string) => Promise<void>

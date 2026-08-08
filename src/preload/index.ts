@@ -55,6 +55,8 @@ const bridge: StudioBridge = {
     translatePrompt: draft => ipcRenderer.invoke(CHANNELS.scenarioTranslatePrompt, draft),
     describeStyle: images => ipcRenderer.invoke(CHANNELS.scenarioDescribeStyle, images),
     generate: (modelId, body) => ipcRenderer.invoke(CHANNELS.scenarioGenerate, modelId, body),
+    estimateCost: (modelId, body) =>
+      ipcRenderer.invoke(CHANNELS.scenarioEstimateCost, modelId, body),
     uploadAsset: (name, image) => ipcRenderer.invoke(CHANNELS.scenarioUploadAsset, name, image),
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
     listJobs: () => ipcRenderer.invoke(CHANNELS.scenarioListJobs),

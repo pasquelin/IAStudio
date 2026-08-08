@@ -42,6 +42,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       translatePrompt: draft => Promise.resolve({ text: draft, detectedLanguage: 'english' }),
       describeStyle: () => Promise.resolve({ description: '', synthesis: '' }),
       generate: () => Promise.reject(new Error('no generation')),
+      estimateCost: () => Promise.resolve(null),
       uploadAsset: () => Promise.reject(new Error('no upload')),
       cancelJob: () => Promise.resolve(),
       listJobs: () => Promise.resolve([]),

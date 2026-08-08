@@ -40,7 +40,8 @@
     "randomSeed": "Random",
     "noProject": "Open a project to generate.",
     "noCredentials": "Enter your API credentials to see your models.",
-    "dropPicture": "Drop a picture, or paste its id"
+    "dropPicture": "Drop a picture, or paste its id",
+    "estimatedCost": "~{{units}} CU"
   },
   "jobs": {
     "none": "No job running.",
@@ -49,6 +50,7 @@
     "failed_one": "{{count}} failure",
     "failed_other": "{{count}} failures",
     "open": "Show generations",
+    "cost": "{{units}} CU",
     "status": {
       "queued": "Queued",
       "running": "Running",

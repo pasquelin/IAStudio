@@ -13,6 +13,23 @@ const STATUS_TONE: Record<Job['status'], StatusTone> = {
   cancelled: 'muted',
 }
 
+/** What the row says under its bar: why it failed, or what it cost. Never both. */
+function JobDetail({ job }: { job: Job }) {
+  const { t } = useTranslation()
+
+  if (job.error) {
+    return (
+      <span role="alert" className="text-danger text-[11px]">
+        {t(failureMessageKey(job.error))}
+      </span>
+    )
+  }
+
+  if (job.cost === undefined) return null
+
+  return <span className="text-muted text-[11px]">{t('jobs.cost', { units: job.cost })}</span>
+}
+
 /**
  * One generation, as a line. In a file of its own because the panel is no longer the only place
  * that lists jobs — the home does too, and the copy it started with had already lost the tone
@@ -37,13 +54,7 @@ export const JobRow = memo(function JobRow({ job }: { job: Job }) {
       cancel={
         finished ? undefined : { label: t('jobs.cancel'), onClick: () => void cancel(job.id) }
       }
-      detail={
-        job.error && (
-          <span role="alert" className="text-danger text-[11px]">
-            {t(failureMessageKey(job.error))}
-          </span>
-        )
-      }
+      detail={<JobDetail job={job} />}
     />
   )
 })

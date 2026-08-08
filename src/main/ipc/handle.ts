@@ -28,6 +28,7 @@ type ChannelMethod = {
   [CHANNELS.scenarioTranslatePrompt]: StudioBridge['scenario']['translatePrompt']
   [CHANNELS.scenarioDescribeStyle]: StudioBridge['scenario']['describeStyle']
   [CHANNELS.scenarioGenerate]: StudioBridge['scenario']['generate']
+  [CHANNELS.scenarioEstimateCost]: StudioBridge['scenario']['estimateCost']
   [CHANNELS.scenarioUploadAsset]: StudioBridge['scenario']['uploadAsset']
   [CHANNELS.scenarioCancelJob]: StudioBridge['scenario']['cancelJob']
   [CHANNELS.scenarioListJobs]: StudioBridge['scenario']['listJobs']

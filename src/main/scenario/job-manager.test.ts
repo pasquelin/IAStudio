@@ -518,6 +518,31 @@ describe('a job that outlives the session', () => {
     },
   })
 
+  /**
+   * The API prices the request, not the job: the figure is on the submission response and never
+   * said again. Read anywhere later — a poll, a resumed note — there would be nothing to read.
+   */
+  it('keeps what the submission said the job cost', async () => {
+    const { manager, progress } = harness({
+      runner: { submit: () => Promise.resolve(remote('success', { cost: 12 })) },
+    })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(manager.list()[0]?.cost).toBe(12)
+    expect(progress.at(-1)?.cost).toBe(12)
+  })
+
+  it('leaves the cost unsaid when the API priced nothing', async () => {
+    const { manager } = harness()
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(manager.list()[0]?.cost).toBeUndefined()
+  })
+
   it('writes a job down once it exists at the API, and not before', async () => {
     const { manager, remembered } = harness(holding())
 

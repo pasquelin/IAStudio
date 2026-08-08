@@ -5,6 +5,7 @@ import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
 import type { PromptAssist } from './prompt-assist'
 import type { AssetUploader } from './uploader'
+import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
 import {
   parseAssetName,
@@ -27,6 +28,8 @@ export type ScenarioHandlerDeps = {
   prompts: PromptAssist
   uploads: AssetUploader
   usage: UsageReader
+  /** What a run would cost, asked before it is run. See `cost.ts`. */
+  estimateCost: CostEstimator
 }
 
 const reduced = reducedBy('scenario')
@@ -37,6 +40,7 @@ export function registerScenarioHandlers({
   prompts,
   uploads,
   usage,
+  estimateCost,
 }: ScenarioHandlerDeps): void {
   handle(CHANNELS.scenarioUsageReport, (_event, period) =>
     reduced(() => usage.report(parseUsagePeriod(period))),
@@ -84,6 +88,12 @@ export function registerScenarioHandlers({
 
     return jobs.submit(id, label, parsedBody)
   })
+
+  // Not through `reduced`: a dry run answers 402, which that would turn into a thrown failure —
+  // and this is the one call where a 4xx is the answer. The estimator swallows it into `null`.
+  handle(CHANNELS.scenarioEstimateCost, (_event, id, body) =>
+    reduced(() => estimateCost(parseModelId(id), parseGenerationBody(body))),
+  )
 
   handle(CHANNELS.scenarioUploadAsset, (_event, name, image) =>
     reduced(() => uploads.upload(parseAssetName(name), parseBase64(image))),

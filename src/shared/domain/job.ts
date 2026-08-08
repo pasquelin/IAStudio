@@ -15,11 +15,39 @@ export type Job = {
   assetIds: string[]
   /** A code, never a message: the renderer translates it — see `domain/failure.ts`. */
   error?: JobFailure
+  /**
+   * What it cost, in creative units.
+   *
+   * Read from `creativeUnitsCost` on the submission response, which is the only place the studio
+   * has seen it. The typings also declare a `billing.cuCost` on a polled job, unobserved so far —
+   * so a job resumed from a previous session simply has no figure rather than a wrong one.
+   */
+  cost?: number
 }
+
+/**
+ * What a generation would cost, asked before it is run.
+ *
+ * `null` where the API declines to say. An estimate is a courtesy: a button with no figure on it
+ * is a small disappointment, a button that refuses to work because the price would not come is a
+ * broken button.
+ */
+export type CostEstimate = { creativeUnits: number } | null
+
+/**
+ * Requests a minute the studio keeps for what the user is waiting on — a catalogue page, a sheet
+ * of thumbnails, a cost estimate.
+ *
+ * Shared because both sides spend from it and neither can see the other: the main process sizes
+ * the poll loop around what is left of it, and the renderer paces its estimates to stay inside
+ * it. Written down once, or the two halves drift and the poll loop is the one that pays.
+ */
+export const INTERACTIVE_REQUESTS_PER_MINUTE = 15
 
 export type JobProgress = Pick<Job, 'id' | 'status' | 'progress'> & {
   assetIds?: string[]
   error?: JobFailure
+  cost?: number
 }
 
 /** All of them, in the order a job goes through. The jobs panel names each one from a bundle. */
