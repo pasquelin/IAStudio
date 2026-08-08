@@ -9,6 +9,7 @@ import { APP_ICON_PATH } from '@main/resources'
 import { isDevelopment } from '@main/environment'
 import { trackWindowState } from './controls'
 import { windowLanguage } from './language'
+import { revealWindow } from './reveal'
 
 /**
  * The floor below which the layout stops being usable: the two rails take 96 px, the side
@@ -57,6 +58,8 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
   void window.loadFile(file, hash ? { hash } : {})
 }
 
+let mainWindow: BrowserWindow | null = null
+
 /**
  * `deferShow` hands the decision to the caller instead of showing on `ready-to-show`. Startup
  * uses it so the window waits for the splash to be gone: two windows on screen at once, one
@@ -95,7 +98,22 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
   if (!options.deferShow) window.once('ready-to-show', () => window.show())
   load(window)
 
+  mainWindow = window
+  // Identity-checked: an older window closing must not clear a slot a newer one now holds.
+  window.on('closed', () => {
+    if (mainWindow === window) mainWindow = null
+  })
+
   return window
+}
+
+/**
+ * Answers a second launch. On macOS every window can be closed while the process stays in the
+ * Dock, so there may be nothing left to reveal.
+ */
+export function showMainWindow(): void {
+  if (mainWindow && !mainWindow.isDestroyed()) revealWindow(mainWindow)
+  else createMainWindow()
 }
 
 let settingsWindow: BrowserWindow | null = null
@@ -139,10 +157,7 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
     // key, so the window is told to move rather than sent back through its route.
     if (section) showSection(settingsWindow, section)
 
-    // `focus()` alone is a no-op on a minimised window, on macOS and on Windows both: the
-    // button would look broken for anyone who parked the settings in the Dock.
-    if (settingsWindow.isMinimized()) settingsWindow.restore()
-    settingsWindow.focus()
+    revealWindow(settingsWindow)
     return settingsWindow
   }
 
@@ -209,8 +224,7 @@ let licencesWindow: BrowserWindow | null = null
  */
 export function openLicencesWindow(): BrowserWindow {
   if (licencesWindow && !licencesWindow.isDestroyed()) {
-    if (licencesWindow.isMinimized()) licencesWindow.restore()
-    licencesWindow.focus()
+    revealWindow(licencesWindow)
     return licencesWindow
   }
 

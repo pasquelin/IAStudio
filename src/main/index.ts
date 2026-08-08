@@ -14,19 +14,11 @@ import type { SettingsStore } from '@main/settings/store'
 import { lockNavigation } from '@main/window/navigation'
 import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splash-window'
-import { createMainWindow } from '@main/window/windows'
+import { createMainWindow, showMainWindow } from '@main/window/windows'
 
 // Before anything reads `app.getPath('userData')`: that path derives from the name, and a
 // late call would have electron-store read one folder while writing to another.
 app.setName(APP_NAME)
-
-// Must run before the app is ready: afterwards Electron ignores it, `img-src scenario:` in
-// the CSP is never honoured, and every local thumbnail comes back blank.
-registerAssetScheme()
-
-// At module scope, not inside `whenReady`: this hooks `web-contents-created`, so a window
-// opened before it would be created outside the lock and keep none of it.
-lockNavigation()
 
 /**
  * Everything below blocks the main loop from end to end — `createServices()` opens SQLite
@@ -53,8 +45,8 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   const services = createServices(settings)
   registerIpc(services)
 
-  // `deferShow`: the window stays hidden until the splash is gone, so the two are never on
-  // screen together — one appearing over the other is exactly what a splash should prevent.
+  // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
+  // the other. Only a second launch overrides that — see `revealWindow`.
   const main = createMainWindow({ deferShow: true })
 
   const reveal = (): void => {
@@ -77,21 +69,40 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   const language = services.language()
   registerAboutPanel(language)
   buildMenu(language, services.settings.read().shortcuts.overrides)
+
+  // Subscribed here, not beside the lock: reached any earlier, `showMainWindow` would find no
+  // window yet and open one before `registerIpc` above — a renderer whose every `invoke` fails.
+  app.on('second-instance', showMainWindow)
 }
 
-void app.whenReady().then(() => {
-  // Before the splash: it is painted from the theme, and reading the settings is a JSON file —
-  // the rest of the services open SQLite synchronously, far too late to decide what to paint.
-  const settings = createSettings()
-  const splash = openSplashWindow()
+function bootstrap(): void {
+  // Must run before the app is ready: afterwards Electron ignores it, `img-src scenario:` in
+  // the CSP is never honoured, and every local thumbnail comes back blank.
+  registerAssetScheme()
 
-  setImmediate(() => startUp(splash, settings))
+  // Before any window: this hooks `web-contents-created`, so a window opened earlier would be
+  // created outside the lock and keep none of it.
+  lockNavigation()
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+  void app.whenReady().then(() => {
+    // Before the splash: it is painted from the theme, and reading the settings is a JSON file —
+    // the rest of the services open SQLite synchronously, far too late to decide what to paint.
+    const settings = createSettings()
+    const splash = openSplashWindow()
+
+    setImmediate(() => startUp(splash, settings))
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+    })
   })
-})
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
+  })
+}
+
+// One studio per machine: two would share one settings file and one WAL catalogue opened
+// without a busy timeout. Must stay below `setName` — the lock file lives under `userData`.
+if (app.requestSingleInstanceLock()) bootstrap()
+else app.quit()
