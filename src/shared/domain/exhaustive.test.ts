@@ -105,6 +105,8 @@ describe('the lists that stand for a union', () => {
       'scene.texture': true,
       'scene.export': true,
       'texture.map': true,
+      'texture.channel': true,
+      'texture.shader': true,
       'skybox.source': true,
       'canvas.layer': true,
       'image.export': true,
