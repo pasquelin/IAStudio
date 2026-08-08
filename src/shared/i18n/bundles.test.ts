@@ -54,6 +54,20 @@ describe('the translation bundles', () => {
     }
   })
 
+  /**
+   * `CLAUDE.md` calls the French bundle out by name: user-facing text, with no ASCII stand-ins.
+   * A straight quote is one — the bundle already wrote `’` in a hundred and twenty-three lines
+   * and `'` in thirty-four, so the same word was drawn two ways depending on where it was read.
+   *
+   * French only: English interface text writes the straight one far more often here, and no
+   * rule in the repository picks a side for it.
+   */
+  it('types the French apostrophe rather than the ASCII one', () => {
+    for (const [key, text] of BUNDLES.fr) {
+      expect(text, `${key} uses a straight apostrophe`).not.toMatch(/\w'\w/)
+    }
+  })
+
   // A hole dropped in translation renders as a sentence with a number missing from it.
   it.each(CODES)('keeps the same interpolations in %s', code => {
     for (const [key, text] of BUNDLES[code]) {

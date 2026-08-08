@@ -53,7 +53,7 @@ describe('UsageWindow', () => {
   it('says the figures are a spend and never a remaining balance', async () => {
     render(<UsageWindow />)
 
-    expect(await screen.findByText(/n'expose pas de solde/)).toBeInTheDocument()
+    expect(await screen.findByText(/n’expose pas de solde/)).toBeInTheDocument()
   })
 
   it('opens on the overview and moves to the models on request', async () => {
