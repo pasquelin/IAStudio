@@ -14,6 +14,14 @@ When one word calls for another, it is written *in italics*: you will find it un
 A button that plays — or shows — the original version while you hold it, to compare it with the
 modified one. It undoes nothing: it shows.
 
+**Adjustment layer**
+A *layer* holding no pixels of its own: it **changes what sits below it**. Brightness, contrast,
+saturation, hue. Moving it in the stack changes what it touches; switching it off puts everything
+back.
+
+That is its strength: it never writes into the other layers' pixels. You can adjust it a hundred
+times, or delete it, having spoilt nothing.
+
 **Ambient occlusion** *(AO, texture channel)*
 A greyscale image marking the places ambient light struggles to reach: hollows, corners, joints. It
 adds depth to a material that looked flat.
@@ -49,6 +57,11 @@ east, south, west, north. It pairs with *elevation*, which gives its height.
 
 **Backoff** → see *Exponential backoff*.
 
+**Background removal** *(cut out)*
+Taking the background out of a picture to keep only the subject, on transparency. The studio has
+the command, in the Image workspace, but it cannot complete yet — see
+[What does not exist yet](18-limits.md).
+
 **Base colour** *(texture channel)*
 A material's colour, as it would be under perfectly neutral light: no shadow, no reflection, no
 relief. The "paint" aspect of the surface.
@@ -56,6 +69,12 @@ relief. The "paint" aspect of the surface.
 ---
 
 ## C
+
+**Blend mode**
+How a layer mixes with what is below it. **Normal** simply lays it on top; **Multiply** darkens;
+**Screen** lightens; there are sixteen in all.
+
+It is the setting that turns a stack of pictures into a composition.
 
 **Canvas**
 The drawing surface, in the centre of the Image workspace. This is where you paint, erase and crop.
@@ -143,6 +162,11 @@ The height of something above the horizon, in degrees. For a *skybox*'s sun: 0°
 What glows by itself in a material: a neon sign, embers, a lit screen. An emissive area stays visible
 even with no light around.
 
+**Environment** *(of a 3D scene)*
+What lights a scene besides its own lamps. Two values: **Studio**, a neutral computed lighting, or
+**a *skybox* from the project**, which lays its light and its reflections over everything. Chosen
+in the 3D workspace's Inspector, under Environment.
+
 **Equirectangular**
 The format of an image holding a whole sphere, flattened: twice as wide as it is tall, the way a
 world map holds the Earth. That is the form a *skybox* is stored in before being folded around you.
@@ -186,9 +210,20 @@ distances flatten. A wide angle: you see a lot, but the edges distort. A human e
 
 ## G
 
+**Flatten**
+Melting every visible *layer* into a single picture, as if photographing it. That is what export
+does, and what leaves when you ask the model to cut out or enlarge: the service receives a
+picture, not a stack.
+
+The document keeps its layers. Flattening is not destructive here.
+
 **Generate**
 To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
 result lands in your *assets*.
+
+**Group**
+Several objects filed under one parent. In the 3D workspace (`⌘G`) as in the layer stack: moving
+the group moves everything hanging below it, and folding it away makes a busy scene readable.
 
 **Guidance** *(ControlNet, cfg)*
 Two meanings, unfortunately:
@@ -259,6 +294,11 @@ move it down, delete it.
 
 That is what makes an image **editable** instead of a final flat.
 
+**Local frame / world frame**
+The orientation of the manipulation handles, in the 3D workspace. In the **world** frame the red
+arrow always points the same way. In the **local** frame it follows the object's orientation:
+which is what you need to drive a car forwards along the way it faces. The `L` key switches.
+
 **LUFS**
 The unit measuring a sound's **perceived** loudness, as opposed to its technical peak. Two sounds at
 the same peak level can sound very different; two sounds at the same LUFS sound equally loud. −14
@@ -267,6 +307,13 @@ LUFS is the streaming platforms' convention, and what the **Normalise** button a
 ---
 
 ## M
+
+**Mask**
+What decides **where** a layer shows. A layer mask hides part of a layer without erasing it: the
+pixels are still there, they are not displayed. You paint it, adjust it, remove it — the original
+picture never moved.
+
+A mask can also be made from a *selection*, in one command.
 
 **Mesh**
 A 3D object, described by its points and the triangles joining them. It is the shape, without the
@@ -320,6 +367,11 @@ no model is chosen.
 **Playhead**
 The vertical line marking the current instant in the edit. You move it to place yourself, and it is
 at its position that a *clip* is split.
+
+**Projection**
+How the 3D camera lays volume flat. In **perspective**, what is far is smaller — that is what an
+eye sees. In **orthographic**, sizes do not change with distance: it is an architect's drawing,
+and it is what you want to line objects up.
 
 **Prompt**
 Your instruction sentence: the text describing what you want. The most important field in the form.
@@ -389,8 +441,19 @@ fix it and you refine.
 
 It is the most useful setting in the form, and the most often ignored.
 
+**Selection** *(in an image)*
+A region drawn on the image — rectangle, ellipse or lasso — that **bounds the tools**. While it
+exists, the brush, the eraser and the fill only act inside it. `⌘D` drops it.
+
+It also serves to make a *mask*, and to tell the model which area to repaint.
+
 **Sequence**
 An edit: *clips* placed on *tracks*, through time. It is the *document* of the Video workspace.
+
+**Shadow** *(cast, caught)*
+Two separate settings, on every object of a 3D scene. **Casts a shadow**: the object blocks light.
+**Catches shadows**: other objects' shadows are drawn on it. A floor catches without casting; a
+distant piece of set can do neither without anyone noticing.
 
 **Shelf**
 The nickname of the **Assets** panel. You file what you have made and imported there; you pick from
@@ -410,6 +473,11 @@ that miss by a hair.
 ---
 
 ## T
+
+**Sprite**
+A picture placed in a 3D scene that **always faces the camera**, whichever direction you look from.
+Useful for foliage, a spark, a flat character. It is neither lit nor part of shadows: its colour is
+the one you give it.
 
 **Temperature**
 An image's shift towards cold (blue) or warm (orange). It is the setting that stops a photograph
@@ -457,6 +525,11 @@ plausible matter where there was only a smeared pixel.
 ---
 
 ## W
+
+**Vectorisation**
+Turning a picture into paths — lines and curves, which scale up without ever going blurry. The
+studio has the command, in the Image workspace, but it cannot complete yet — see
+[What does not exist yet](18-limits.md).
 
 **Waveform**
 The drawing of a sound: those waves showing where it is loud and where it is silent. It is what lets

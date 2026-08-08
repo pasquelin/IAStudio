@@ -373,6 +373,44 @@ How much the camera takes in.
 | **60°** | close to what an eye sees |
 | **wide** (85–100°) | shows far more, but bends the edges |
 
+### The three snapping steps
+
+Snapping is switched on in the **scene's toolbar** (the `M` key); these three settings only say
+**how far** it advances at each step.
+
+| Setting | Range | Starts at | What it does |
+|---|---|---|---|
+| **Move step** | 0.1 to 10 m, in 0.1 | **0.5 m** | how far an object advances in one step |
+| **Rotate step** | 1° to 90°, in 1 | **15°** | the angle of one rotation step |
+| **Scale step** | 0.05 to 1, in 0.05 | **0.1** | how far the scale advances in one step |
+
+**15° is the classic value**: twenty-four positions in a full turn, including every round angle —
+30, 45, 90. Rotation counts its steps **from where the turn began**, not from zero.
+
+### Shadow softness
+
+**Choice. Starts at: Soft.**
+
+The grain of a shadow's edge.
+
+| Value | Effect |
+|---|---|
+| **Hard** | a crisp edge, cut with a knife — the cheapest |
+| **Soft** | a softened edge, closer to reality |
+
+**This setting says what a shadow looks like, not who casts one.** That is decided object by
+object, in the Inspector — see [3D workspace](09-3d-workspace.md).
+
+### Shadow detail
+
+**Choice: 512, 1024, 2048 or 4096. Starts at: 2048.**
+
+The size, in pixels per side, of the map each light computes to work out what it lights.
+
+The larger the number, the finer the shadow's edge — and **the dearer it is**: doubling this
+number **quadruples** the memory used. 2048 is the right compromise; drop to 1024 if a busy scene
+starts to labour, raise to 4096 for a final image.
+
 ---
 
 ## Shortcuts

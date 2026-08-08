@@ -141,6 +141,38 @@ lire ce qui est écrit. C'est la seule situation où ce bouton sert à quelque c
 
 ---
 
+## Quand une partie de l'écran tombe en panne
+
+Deux messages qui ne viennent pas du service, mais du studio lui-même. Ils s'affichent **à la
+place** de ce qui aurait dû être dessiné, avec un bouton **Réessayer**.
+
+### « Ce panneau a rencontré une erreur. »
+
+**Ce que ça veut dire.** Un seul panneau a échoué à se dessiner. Le reste de la fenêtre — vos
+documents, vos autres panneaux, vos générations en cours — **continue de fonctionner
+normalement**.
+
+**Quoi faire.** Cliquez **Réessayer** : le panneau se reconstruit. Neuf fois sur dix il repart.
+
+**Ce que vous ne perdez pas** : rien. Un panneau est une vue sur des données qui vivent ailleurs.
+
+### « L'application a rencontré une erreur. »
+
+**Ce que ça veut dire.** La même chose, un cran au-dessus : c'est la fenêtre entière qui n'a pas
+pu se dessiner.
+
+**Quoi faire.** **Réessayer** d'abord. Si l'écran revient au même état, fermez la fenêtre et
+rouvrez-la.
+
+> **Ces deux écrans ne disent pas ce qui a échoué**, et c'est délibéré : le détail technique est
+> dans la console, et il ne sert qu'à qui peut le corriger. Si vous voulez le voir avant de
+> signaler le problème : Réglages → Avancé → **Outils de développement**.
+>
+> **Ce qui est enregistré sur le disque est en sécurité.** Un plantage d'affichage ne touche ni
+> vos assets, ni les documents déjà écrits.
+
+---
+
 ## Les messages de génération
 
 Ils apparaissent sur la ligne de la tâche, dans la liste qu'ouvre le résumé des générations, en bas
@@ -456,6 +488,7 @@ installation neuve.
 | « Préparation vidéo indisponible » alors que `which ffmpeg` en trouve un | `ffmpeg -version` : le binaire existe mais ne démarre plus |
 | « Le trousseau n'a pas rendu vos comptes » | déverrouiller le trousseau, puis recommencer — rien n'a été perdu |
 | Double-clic sur un asset sans effet | ouvrir d'abord un onglet, avec le `+` du rail gauche |
+| « Ce panneau a rencontré une erreur » | cliquer **Réessayer** — le reste de la fenêtre va bien |
 | `⌘Z` sans effet | activer le bon onglet |
 | Canvas 3D noir | fermer et rouvrir l'onglet |
 | Panneaux en désordre | Affichage → Réinitialiser la disposition |

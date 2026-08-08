@@ -209,6 +209,40 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 **Hiding guides does not erase them**: those are two different actions, and that is why the second
 has no shortcut — you do not want to reach it by accident.
 
+### Selection
+
+| Action | Key | What it does |
+|---|---|---|
+| **Deselect** | `⌘D` | drops the selected region: the brush reaches the whole layer again |
+| **Make a mask of the selection** | *none* | hides the armed layer outside the selected region |
+
+### Asking the model
+
+Five commands that send the image to the service. None has a default key: they cost credit, and a
+key pressed by mistake has no business spending any.
+
+| Action | What it does |
+|---|---|
+| **Regenerate the region** | has the masked region of the armed layer repainted |
+| **Extend** | has the model paint beyond the edges of the image |
+| **Cut out** | removes the background of the flattened image |
+| **Enlarge** | raises the definition of the flattened image |
+| **Vectorize** | turns the flattened image into paths |
+
+**None of them leaves on its own.** Each flattens the document, sends it, then **fills in the
+Generate panel's form** and shows it to you. You are the one who presses Generate, having seen
+what is going and with which settings.
+
+> **Three of them cannot complete today** — Cut out, Enlarge, Vectorize. They look for a model in
+> a family no screen lets you choose. The Models panel opens, and nothing happens. See
+> [What does not exist yet](18-limits.md).
+
+### Exporting
+
+| Action | Key | What it does |
+|---|---|---|
+| **Export the image** | `⇧⌘E` | writes the flattened document to disk, as a PNG |
+
 ### Undo and redo
 
 | Action | Key |
@@ -302,7 +336,7 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 | `⌘Z` | | Undo | Undo | Undo |
 | `⇧⌘Z` | | Redo | Redo | Redo |
 | `⌘G` | | Group | | |
-| `⌘D` | | Duplicate | | |
+| `⌘D` | | Duplicate | | Deselect |
 | `⌘C` / `⌘X` / `⌘V` | | Copy / Cut / Paste | | |
 | `O` | | Projection | | |
 | `Z` | | Display | | |
@@ -325,6 +359,7 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 | `⌘R` | | | | Rulers |
 | `⌘;` | | | | Guides |
 | `⇧⌘;` | | | | Snap |
+| `⇧⌘E` | | | | Export the image |
 
 ---
 

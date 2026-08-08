@@ -384,6 +384,45 @@ Ce que la caméra embrasse.
 | **60°** | proche de ce que voit un œil |
 | **grand** (85–100°) | montre beaucoup plus, mais déforme les bords |
 
+### Les trois pas du magnétisme
+
+Le magnétisme s'allume dans la **barre d'outils de la scène** (touche `M`) ; ces trois réglages
+disent seulement **de combien** il avance à chaque cran.
+
+| Réglage | Bornes | Départ | Ce qu'il fait |
+|---|---|---|---|
+| **Pas de déplacement** | 0,1 à 10 m, par 0,1 | **0,5 m** | de combien un objet avance d'un cran |
+| **Pas de rotation** | 1° à 90°, par 1 | **15°** | l'angle d'un cran de rotation |
+| **Pas d'échelle** | 0,05 à 1, par 0,05 | **0,1** | de combien l'échelle avance d'un cran |
+
+**15° est la valeur classique** : vingt-quatre positions sur un tour, dont tous les angles ronds —
+30, 45, 90. La rotation compte ses crans **depuis l'endroit où elle a commencé**, pas depuis zéro.
+
+### Douceur des ombres
+
+**Choix. Départ : Douce.**
+
+Le grain du bord d'une ombre.
+
+| Valeur | Effet |
+|---|---|
+| **Dure** | un bord net, découpé au couteau — c'est le moins coûteux |
+| **Douce** | un bord adouci, plus proche de la réalité |
+
+**Ce réglage dit à quoi ressemble une ombre, pas qui en projette une.** Cela se décide objet par
+objet, dans l'Inspecteur — voir [Espace 3D](09-espace-3d.md).
+
+### Finesse des ombres
+
+**Choix : 512, 1024, 2048 ou 4096. Départ : 2048.**
+
+La taille, en pixels de côté, de la carte que chaque lumière calcule pour savoir ce qu'elle
+éclaire.
+
+Plus le nombre est grand, plus le bord de l'ombre est précis — et **plus il coûte cher** :
+doubler ce nombre **quadruple** la mémoire utilisée. 2048 est le bon compromis ; descendez à 1024
+si une scène chargée commence à ramer, montez à 4096 pour une image finale.
+
 ---
 
 ## Raccourcis

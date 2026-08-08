@@ -79,7 +79,10 @@ They are visible in the toolbar, greyed out.
 | **Cut** (`S`) | Frame |
 | **Pen** | Drawing |
 | **Text on path** | Text |
-| **Comment** (`C`) | Comment |
+
+**Comment (`C`) is the only one not greyed out.** It arms like the others, and does nothing:
+clicking in the image places no note. It is the studio's only button that looks alive without
+being so — the others say their state by their grey.
 
 ### Cropping, mirroring and rotating are not offered
 
@@ -221,44 +224,47 @@ horizon rotation, the sun's position.
 
 And you cannot export the six faces of a cube, nor an *HDRI* usable in another application.
 
-### A sky does not yet light a 3D scene
-
-*IBL* works in the Skyboxes workspace preview — that is what lights the witness spheres. But you
-cannot yet put that sky around a scene in the 3D workspace so that it lights it.
-
-That is the missing bridge between the two workspaces.
-
 ---
 
 ## Generating
 
-### There is no "upscale", "remove background" or "vectorise" button
+### Cut out, Enlarge and Vectorize cannot complete
 
-The studio files models into **families**, and each workspace shows exactly one family: Image in
-the Image workspace, Video in the Video workspace, and so on for all six.
+The Image workspace offers **five model-driven edits** in its menu: Regenerate the region, Extend,
+Cut out, Enlarge, Vectorize.
 
-Four further families are provided for in the code — **upscale**, **background removal**,
-**vectorisation** and **other** — and none has a workspace to hold it.
+**The first two work. The other three stop before leaving.**
 
-There is something more surprising: **no model is ever filed under those families.** The studio
-works a model's family out from what the model takes in and gives back. An upscaler takes an image
-and returns an image: it is therefore filed — correctly — under **Image**.
+The reason takes two lines. Each edit asks for a model of a particular **family**:
 
-> **The good news: upscalers are usable.** They are simply in the Image workspace, mixed in with
-> the rest. Search for `upscale` in the **Models** panel, or filter on the `image-upscale` tag.
+| Edit | Family asked for | Can a model of that family be chosen? |
+|---|---|---|
+| Regenerate the region, Extend | image | **yes** — it is the Models panel's family in the Image workspace |
+| Enlarge | upscale | no |
+| Cut out | background removal | no |
+| Vectorize | vectorisation | no |
 
-So what is missing is not the model, it is **the shortcut**: an "upscale this image" button that
-would take the image under your cursor and send it to the right model without you having to find
-it again and drop it into a form yourself.
+And no screen lets you choose a model in those three families: the **Models** panel only shows the
+family of the workspace you are in, and settings only offer a list for Image, Video, 3D, Audio and
+Upscaling — the last of which is empty, see below.
+
+**What you will see**: the Models panel opens, and nothing else happens. It is not a fault, it is
+a command with a missing link.
+
+**In the meantime**, an upscaler stays usable like any other model: search for `upscale` in the
+Image workspace's Models panel, or filter on the `image-upscale` tag, then give it your picture in
+the form.
 
 ### The "Upscaling" settings sub-section is always empty
 
-That follows directly from the above. **Settings ▸ Generation ▸ Upscaling** exists, opens, and
-holds **a single entry: "Ask every time"**. Its list fills with the models of the upscale family —
-and there are none.
+**Settings ▸ Generation ▸ Upscaling** exists, opens, and holds **a single entry: "Ask every
+time"**.
 
-It is not a fault, and an empty list does not mean you are disconnected: it is a setting written
-ahead of the workspace that will use it.
+Its list fills with models of the *upscale* family — and the studio never files anybody there. It
+works a model's family out from what it takes in and gives back: an upscaler takes an image and
+returns an image, so it goes into the **Image** family.
+
+An empty list here therefore does not mean you are disconnected.
 
 ---
 
@@ -271,6 +277,7 @@ ahead of the workspace that will use it.
 | **Video** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
 | **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
+| **3D** | `glb` |
 
 ### What cannot
 
@@ -368,16 +375,15 @@ cannot leak your account.
 
 ## Summary: in order of importance
 
-If you only remember six things from this chapter:
+If you only remember five things from this chapter:
 
 1. **images, sequences, sounds and skies do not save** — closing the tab loses the work; in the
    Image workspace, `⇧⌘E` at least gets a PNG out before you close;
 2. **cropping, flipping and rotating a picture are not offered** — the pixels would not follow
    the frame;
 3. **there is no video export** — the studio cannot yet deliver a final file;
-4. **there is no "enlarge", "cut out" or "vectorize" button**;
-5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`;
-6. **a skybox does not yet light a 3D scene**.
+4. **Cut out, Enlarge and Vectorize cannot complete** — there is no way to choose their model;
+5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.
 
 Everything else is comfort.
 

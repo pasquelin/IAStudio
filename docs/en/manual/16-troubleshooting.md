@@ -139,6 +139,36 @@ That is the only situation where that button is of any use.
 
 ---
 
+## When part of the screen breaks down
+
+Two messages that do not come from the service, but from the studio itself. They appear **in
+place of** what should have been drawn, with a **Retry** button.
+
+### "This panel ran into an error."
+
+**What it means.** One panel failed to draw. The rest of the window — your documents, your other
+panels, your running generations — **carries on working normally**.
+
+**What to do.** Click **Retry**: the panel rebuilds itself. Nine times out of ten it comes back.
+
+**What you do not lose**: nothing. A panel is a view onto data that lives elsewhere.
+
+### "The application ran into an error."
+
+**What it means.** The same thing, one notch up: the whole window could not be drawn.
+
+**What to do.** **Retry** first. If the screen returns to the same state, close the window and
+open it again.
+
+> **Neither screen says what failed**, and that is deliberate: the technical detail is in the
+> console, and it only serves someone who can act on it. If you want to see it before reporting
+> the problem: Settings → Advanced → **Developer tools**.
+>
+> **What is saved on disk is safe.** A drawing crash touches neither your assets nor documents
+> already written.
+
+---
+
 ## Generation messages
 
 They appear on the job's line, in the list opened by the generations summary, bottom right of the
@@ -443,6 +473,7 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 | "Video preparation unavailable" although `which ffmpeg` finds one | run `ffmpeg -version`: the binary exists but no longer starts |
 | "The keychain did not give your accounts back" | unlock the keychain, then start again — nothing was lost |
 | Double-clicking an asset has no effect | open a tab first, with `+` on the left rail |
+| "This panel ran into an error" | click **Retry** — the rest of the window is fine |
 | `⌘Z` has no effect | activate the right tab |
 | Black 3D canvas | close and reopen the tab |
 | Panels in disorder | View → Reset layout |

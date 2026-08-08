@@ -81,7 +81,10 @@ Ils sont visibles dans la barre d'outils, en gris.
 | **Découpe** (`S`) | Cadre |
 | **Plume** | Dessin |
 | **Texte sur chemin** | Texte |
-| **Commentaire** (`C`) | Commentaire |
+
+**Le Commentaire (`C`) est le seul qui ne soit pas grisé.** Il s'arme comme les autres, et il ne
+fait rien : cliquer dans l'image ne pose aucune note. C'est le seul bouton du studio qui ait l'air
+vivant sans l'être — les autres disent leur état par leur gris.
 
 ### Recadrer, retourner et pivoter ne sont pas offerts
 
@@ -229,45 +232,47 @@ l'exposition, la rotation de l'horizon, la position du soleil.
 Et l'on ne peut pas exporter les six faces d'un cube, ni un *HDRI* utilisable dans un autre
 logiciel.
 
-### Un ciel n'éclaire pas encore une scène 3D
-
-L'*IBL* fonctionne dans l'aperçu de l'espace Skyboxes — c'est ce qui éclaire les sphères témoins.
-Mais on ne peut pas encore poser ce ciel autour d'une scène de l'espace 3D pour qu'il l'éclaire.
-
-C'est le pont manquant entre les deux espaces.
-
 ---
 
 ## Générer
 
-### Il n'y a pas de bouton « agrandir », « détourer » ni « vectoriser »
+### Détourer, Agrandir et Vectoriser ne peuvent pas aboutir
 
-Le studio range les modèles en **familles**, et chaque espace de travail montre exactement une
-famille : Image dans l'espace Image, Vidéo dans l'espace Vidéo, et ainsi de suite pour les six.
+L'espace Image offre **cinq éditions par le modèle**, dans son menu : Régénérer la zone, Étendre,
+Détourer, Agrandir, Vectoriser.
 
-Quatre familles supplémentaires sont prévues dans le code — **agrandissement**, **détourage**,
-**vectorisation** et **autre** — et aucune n'a d'espace pour l'accueillir.
+**Les deux premières fonctionnent. Les trois autres s'arrêtent avant de partir.**
 
-Il y a plus surprenant : **aucun modèle n'est jamais rangé dans ces familles.** Le studio devine
-la famille d'un modèle à partir de ce que le modèle sait recevoir et rendre. Un agrandisseur, lui,
-reçoit une image et rend une image : il est donc rangé — correctement — dans la famille **Image**.
+La raison tient en deux lignes. Chaque édition demande un modèle d'une **famille** précise :
 
-> **Bonne nouvelle : les agrandisseurs sont utilisables.** Ils sont simplement dans l'espace
-> Image, mélangés aux autres. Cherchez `upscale` dans le panneau **Modèles**, ou filtrez sur le
-> tag `image-upscale`.
+| Édition | Famille demandée | Peut-on choisir un modèle de cette famille ? |
+|---|---|---|
+| Régénérer la zone, Étendre | image | **oui** — c'est celle du panneau Modèles dans l'espace Image |
+| Agrandir | agrandissement | non |
+| Détourer | détourage | non |
+| Vectoriser | vectorisation | non |
 
-Ce qui manque n'est donc pas le modèle, c'est **le raccourci** : un bouton « agrandir cette
-image » qui prendrait l'image sous votre curseur et l'enverrait au bon modèle sans que vous ayez
-à la retrouver et à la redéposer dans un formulaire.
+Or aucun écran ne permet de choisir un modèle dans ces trois familles-là : le panneau **Modèles**
+ne montre que la famille de l'espace où vous êtes, et les réglages n'offrent une liste que pour
+Image, Vidéo, 3D, Audio et Agrandissement — cette dernière étant vide, voir plus bas.
+
+**Ce que vous verrez** : le panneau Modèles s'ouvre, et rien d'autre ne se passe. Ce n'est pas une
+panne, c'est une commande dont le chaînon manque.
+
+**En attendant**, un agrandisseur reste utilisable comme n'importe quel modèle : cherchez
+`upscale` dans le panneau Modèles de l'espace Image, ou filtrez sur le tag `image-upscale`, puis
+donnez-lui votre image dans le formulaire.
 
 ### La sous-section « Agrandissement » des réglages est toujours vide
 
-C'est la conséquence directe de ce qui précède. **Réglages ▸ Génération ▸ Agrandissement** existe,
-s'ouvre, et n'a **qu'une seule entrée : « Demander à chaque fois »**. Sa liste se remplit avec les
-modèles de la famille agrandissement — et il n'y en a aucun.
+**Réglages ▸ Génération ▸ Agrandissement** existe, s'ouvre, et n'a **qu'une seule entrée :
+« Demander à chaque fois »**.
 
-Ce n'est pas une panne, et une liste vide ne signifie pas que vous êtes déconnecté : c'est un
-réglage écrit en avance sur l'espace qui l'utilisera.
+Sa liste se remplit avec les modèles de la famille *agrandissement* — et le studio n'y range
+jamais personne. Il devine la famille d'un modèle à partir de ce qu'il sait recevoir et rendre :
+un agrandisseur reçoit une image et rend une image, il part donc dans la famille **Image**.
+
+Une liste vide ici ne veut donc pas dire que vous êtes déconnecté.
 
 ---
 
@@ -280,6 +285,7 @@ réglage écrit en avance sur l'espace qui l'utilisera.
 | **Vidéo** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
 | **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
+| **3D** | `glb` |
 
 ### Ce qui ne s'importe pas
 
@@ -378,16 +384,16 @@ ne peut pas divulguer votre compte.
 
 ## Récapitulatif : par ordre d'importance
 
-Si vous ne deviez retenir que six choses de ce chapitre :
+Si vous ne deviez retenir que cinq choses de ce chapitre :
 
 1. **Les images, séquences, sons et ciels ne s'enregistrent pas** — fermer l'onglet perd le
    travail ; dans l'espace Image, `⇧⌘E` sort au moins un PNG avant de fermer ;
 2. **recadrer, retourner ou pivoter une image n'est pas offert** — les pixels ne suivraient pas
    le cadre ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
-4. **il n'y a pas de bouton « agrandir », « détourer » ni « vectoriser »** ;
-5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu'un `.glb` ;
-6. **une skybox n'éclaire pas encore une scène 3D**.
+4. **Détourer, Agrandir et Vectoriser ne peuvent pas aboutir** — il manque le moyen de choisir
+   leur modèle ;
+5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu'un `.glb`.
 
 Tout le reste est du confort.
 

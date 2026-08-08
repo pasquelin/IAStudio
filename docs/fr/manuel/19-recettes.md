@@ -82,18 +82,23 @@ dessus en calque (voir [Espace Image](08-espace-image.md)).
 
 ## Agrandir une image
 
-Le studio n'a pas de bouton « agrandir ». Mais les modèles qui le font sont là, rangés avec les
-autres modèles d'image — un agrandisseur reçoit une image et en rend une, il est donc classé
-dans la famille Image.
+Le menu de l'espace Image offre une commande **Agrandir**. **Ne l'utilisez pas : elle ne peut pas
+aboutir aujourd'hui** — elle cherche son modèle dans une famille qu'aucun écran ne permet de
+choisir, et se contente d'ouvrir le panneau Modèles.
+
+Le chemin qui marche passe par le formulaire ordinaire :
 
 1. espace **Image** ;
 2. dans le panneau **Modèles**, tapez `upscale` dans la recherche — ou ouvrez
    **Plus de filtres** → **Tag** → `image-upscale` ;
 3. choisissez-en un, donnez-lui votre image, **Générer**.
 
-**Le piège.** La sous-section **Réglages ▸ Génération ▸ Agrandissement** est toujours vide et ne
-sert à rien aujourd'hui : elle attend un espace qui n'existe pas encore. Ne cherchez pas à la
-remplir.
+Un agrandisseur est un modèle d'image comme un autre : il reçoit une image et en rend une, en plus
+grand. C'est d'ailleurs pour cela qu'il est rangé dans la famille Image.
+
+**Détourer** et **Vectoriser** sont dans le même cas, et n'ont pas d'équivalent de secours : aucun
+modèle de ces deux familles n'est atteignable. Voir
+[Ce qui n'existe pas encore](18-limites.md).
 
 ---
 
@@ -214,7 +219,7 @@ réglages** : les coupes se mesurent sur la prise qui les a reçues.
 
 ## Poser un asset là où il faut
 
-Le tableau à retenir. Il n'y a **que quatre** dépôts possibles, et le double-clic obéit à une
+Le tableau à retenir. Il n'y a **que cinq** dépôts possibles, et le double-clic obéit à une
 autre règle encore.
 
 | Vous voulez… | Le geste | Il faut, devant vous |
@@ -223,8 +228,9 @@ autre règle encore.
 | une image en calque | glisser sur la **toile** | un onglet image |
 | une image en couleur de base | glisser sur l'**aperçu de la matière** | un onglet texture |
 | une image en ciel | glisser sur l'**aperçu du ciel** | un onglet ciel |
+| un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
-La vue de l'espace 3D **n'accepte aucun dépôt**.
+Une texture, elle, n'accepte **que** le glisser-déposer : la double-cliquer ne fait rien.
 
 ---
 
@@ -235,14 +241,15 @@ La vue de l'espace 3D **n'accepte aucun dépôt**.
 1. panneau **Assets** → bouton **Importer un média**, sur sa ligne de titre ;
 2. choisissez vos fichiers. Formats acceptés : vidéo (`mp4` `mov` `mkv` `webm` `avi` `mxf`
    `m4v`), audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif`
-   `tiff` `exr`) ;
+   `tiff` `exr`), 3D (`glb`) ;
 3. un bandeau suit chaque fichier : Analyse, Empreinte, Proxy, Waveform, Prêt.
 
 **Ce qu'il faut savoir, et qui a des conséquences réelles : le fichier n'est pas copié.** Le
 studio crée un **lien** vers l'endroit où il se trouve. Déplacer, renommer ou supprimer
 l'original **casse le lien**.
 
-**Les fichiers 3D (`.glb`, `.obj`, `.fbx`) et les HDRI (`.hdr`) ne s'importent pas.**
+**Côté 3D, seul le `.glb` entre.** Un `.gltf` séparé — celui qui traîne ses fichiers `.bin` et
+ses textures à côté — ainsi que `.obj`, `.fbx` et les HDRI (`.hdr`) sont refusés.
 
 ---
 
@@ -309,13 +316,14 @@ réserver une touche serait du gâchis. Vous pouvez lui en attribuer un dans
 
 # Ce qu'il ne faut pas essayer
 
-Quatre impasses connues. Elles ne sont pas des pannes : ce sont des fonctions qui n'existent pas
+Cinq impasses connues. Elles ne sont pas des pannes : ce sont des fonctions qui n'existent pas
 encore, et rien à l'écran ne le dit sur le moment.
 
 | Vous essayez de… | Ce qui se passe | Pourquoi |
 |---|---|---|
 | **rouvrir un document image** fermé la veille | il n'existe plus | la pile de calques ne s'enregistre pas |
-| **importer un `.glb` ou un `.hdr`** | il est refusé | l'import ne connaît que vidéo, audio, image |
+| **importer un `.hdr`**, un `.obj` ou un `.fbx` | il est refusé | seul le `.glb` entre, côté 3D |
+| **détourer ou vectoriser** une image | le panneau Modèles s'ouvre, et rien de plus | il manque le moyen de choisir le modèle |
 | **exporter une vidéo** | aucun bouton | l'export vidéo n'est pas écrit — l'image, elle, sort par `⇧⌘E` |
 | **recadrer, retourner ou pivoter** une image | les outils sont gris | les pixels ne suivraient pas le cadre |
 
@@ -330,12 +338,14 @@ Tout est détaillé, sans rien cacher, dans
 |---|---|---|
 | une image depuis une phrase | Image | Modèles → prompt → Générer |
 | une variante d'une image | Image | filtre *Image vers image* → donner l'image |
-| une image plus grande | Image | chercher `upscale` dans les Modèles |
+| une image plus grande | Image | chercher `upscale` dans les Modèles — **pas** la commande Agrandir |
 | un ciel à 360° | Skyboxes | `+` → Générer, ça se pose tout seul |
 | une matière | Textures | `+` → glisser une image sur l'aperçu → `⌘S` |
 | un plan animé | Vidéo | filtre *Image vers vidéo* → Générer |
 | un son | Audio | Modèles → Générer, puis `+` et double-clic |
 | une scène 3D | 3D | `+` → une lumière **d'abord**, puis les objets → `⌘S` |
+| éclairer une scène d'un ciel | 3D | Inspecteur → Environnement → choisir la skybox |
+| poser un modèle 3D | 3D | double-clic sur le maillage, ou le glisser sur la vue |
 | monter deux plans | Vidéo | `+` → glisser les clips sur la timeline |
 | importer mes fichiers | partout | Assets → Importer un média |
 | refaire la même image | partout | Inspecteur → Régénérer |

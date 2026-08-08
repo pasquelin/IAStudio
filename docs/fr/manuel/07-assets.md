@@ -101,7 +101,8 @@ Ce que ça donne, selon l'onglet qui est devant :
 | un **son** (espace Audio) | charge cette prise dans l'éditeur, si c'est bien un son |
 | une **séquence** (espace Vidéo) | pose un clip sur une piste, à la tête de lecture |
 | une **image** (espace Image) | pose l'image comme un calque de plus, déjà armé |
-| une **scène 3D**, une **texture** | **rien du tout** |
+| une **scène 3D** | fait entrer le maillage dans la scène, s'il s'agit bien d'un maillage |
+| une **texture** | **rien du tout** — une matière se remplit au glisser-déposer |
 | aucun onglet ouvert | **rien du tout** |
 
 **Rien ne prévient quand il ne se passe rien.** Pas de message, pas de refus visible : le
@@ -120,9 +121,10 @@ se poser est **« quel onglet est devant ? »**, jamais « l'asset est-il abîm�
 | une image | la **toile** de l'espace Image | elle devient un calque de plus, armé |
 | une image | l'aperçu d'une **texture** | elle devient la couleur de base |
 | une image panoramique | l'aperçu d'un **ciel** | elle devient le ciel |
+| un maillage | la **vue 3D** | il entre dans la scène, à l'origine |
 
-**Ces quatre-là, et rien d'autre.** La vue de l'espace 3D n'accepte aucun dépôt : lâcher un asset
-dessus ne fait rien.
+**Ces cinq-là, et rien d'autre.** Dans la vue 3D, le dépôt est accepté **partout sur la vue**, la
+barre d'outils comprise : un lâcher qui tombe à côté serait un raté qu'on ne voit pas venir.
 
 ---
 
@@ -156,6 +158,7 @@ Le bouton **Importer un média**, sur la ligne de titre de l'étagère.
 | **Vidéo** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
 | **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
+| **3D** | `glb` |
 
 > **Les modèles 3D s'importent au format `.glb`.** Le `.gltf` séparé (avec ses fichiers `.bin`
 > et ses textures à côté) ne s'importe pas : le studio sert chaque asset seul, sans son

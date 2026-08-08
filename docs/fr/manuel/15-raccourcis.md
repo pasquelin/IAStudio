@@ -214,6 +214,41 @@ La vitesse et l'accélération se règlent dans les [réglages](14-reglages.md#e
 **Masquer les repères ne les efface pas** : ce sont deux actions différentes, et c'est pour cela
 que la seconde n'a pas de raccourci — on ne veut pas l'atteindre par erreur.
 
+### Sélection
+
+| Action | Touche | Ce qu'elle fait |
+|---|---|---|
+| **Désélectionner** | `⌘D` | abandonne la région sélectionnée : le pinceau retrouve tout le calque |
+| **Faire un masque de la sélection** | *aucune* | masque le calque actif hors de la région sélectionnée |
+
+### Demander au modèle
+
+Cinq commandes qui envoient l'image au service. Aucune n'a de raccourci par défaut : elles coûtent
+du crédit, et une touche pressée par mégarde n'a pas à en dépenser.
+
+| Action | Ce qu'elle fait |
+|---|---|
+| **Régénérer la zone** | fait repeindre la région masquée du calque actif |
+| **Étendre** | fait peindre au-delà des bords de l'image |
+| **Détourer** | retire l'arrière-plan de l'image aplatie |
+| **Agrandir** | augmente la définition de l'image aplatie |
+| **Vectoriser** | convertit l'image aplatie en tracés |
+
+**Aucune ne part toute seule.** Chacune aplatit le document, l'envoie, puis **remplit le
+formulaire du panneau Génération** et vous le montre. C'est vous qui appuyez sur Générer, après
+avoir vu ce qui part et avec quels réglages.
+
+> **Trois d'entre elles ne peuvent pas aboutir aujourd'hui** — Détourer, Agrandir, Vectoriser.
+> Elles cherchent un modèle dans une famille qu'aucun écran ne permet de choisir. Le panneau
+> Modèles s'ouvre, et rien ne se passe. Voir
+> [Ce qui n'existe pas encore](18-limites.md).
+
+### Exporter
+
+| Action | Touche | Ce qu'elle fait |
+|---|---|---|
+| **Exporter l'image** | `⇧⌘E` | écrit le document aplati sur le disque, au format PNG |
+
 ### Annuler et rétablir
 
 | Action | Touche |
@@ -309,7 +344,7 @@ figées pour l'instant. Voir [Ce qui n'existe pas encore](18-limites.md).
 | `⌘Z` | | Annuler | Annuler | Annuler |
 | `⇧⌘Z` | | Rétablir | Rétablir | Rétablir |
 | `⌘G` | | Grouper | | |
-| `⌘D` | | Dupliquer | | |
+| `⌘D` | | Dupliquer | | Désélectionner |
 | `⌘C` / `⌘X` / `⌘V` | | Copier / Couper / Coller | | |
 | `O` | | Projection | | |
 | `Z` | | Affichage | | |
@@ -334,6 +369,7 @@ figées pour l'instant. Voir [Ce qui n'existe pas encore](18-limites.md).
 | `⌘R` | | | | Règles |
 | `⌘;` | | | | Repères |
 | `⇧⌘;` | | | | Magnétisme |
+| `⇧⌘E` | | | | Exporter l'image |
 
 ---
 

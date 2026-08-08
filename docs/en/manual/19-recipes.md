@@ -82,17 +82,22 @@ text — the other path is an image document with the picture dragged onto it as
 
 ## Enlarge a picture
 
-The studio has no "upscale" button. But the models that do it are there, filed with the other
-image models — an upscaler takes an image and returns an image, so it belongs to the Image
-family.
+The Image workspace's menu offers an **Enlarge** command. **Do not use it: it cannot complete
+today** — it looks for its model in a family no screen lets you choose, and merely opens the
+Models panel.
+
+The path that works goes through the ordinary form:
 
 1. **Image** workspace;
 2. in the **Models** panel, type `upscale` into the search — or open **More filters** → **Tag**
    → `image-upscale`;
 3. pick one, give it your picture, **Generate**.
 
-**The catch.** The **Settings ▸ Generation ▸ Upscaling** sub-section is always empty and serves
-no purpose today: it is waiting for a workspace that does not exist yet. Do not try to fill it.
+An upscaler is an image model like any other: it takes an image and returns one, larger. Which is
+precisely why it is filed under the Image family.
+
+**Cut out** and **Vectorize** are in the same position, with no fallback: no model of either
+family can be reached. See [What does not exist yet](18-limits.md).
 
 ---
 
@@ -210,7 +215,7 @@ settings**: cuts are measured against the take that received them.
 
 ## Put an asset where it belongs
 
-The table to remember. There are **only four** possible drops, and double-click obeys a
+The table to remember. There are **only five** possible drops, and double-click obeys a
 different rule again.
 
 | You want… | The gesture | You need, in front of you |
@@ -219,8 +224,9 @@ different rule again.
 | a picture as a layer | drag onto the **canvas** | an image tab |
 | a picture as base colour | drag onto the **material preview** | a texture tab |
 | a picture as sky | drag onto the **sky preview** | a sky tab |
+| a 3D object in a scene | drag onto the **3D view** | a scene tab |
 
-The 3D viewport **accepts no drops**.
+A texture, for its part, accepts **only** drag and drop: double-clicking one does nothing.
 
 ---
 
@@ -231,14 +237,15 @@ The 3D viewport **accepts no drops**.
 1. **Assets** panel → the **Import media** button, on its title row;
 2. choose your files. Accepted formats: video (`mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v`),
    audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif` `tiff`
-   `exr`);
+   `exr`), 3D (`glb`);
 3. a banner follows each file: Probing, Fingerprint, Proxy, Waveform, Ready.
 
 **What you need to know, and it has real consequences: the file is not copied.** The studio
 creates a **link** to where it sits. Moving, renaming or deleting the original **breaks the
 link**.
 
-**3D files (`.glb`, `.obj`, `.fbx`) and HDRIs (`.hdr`) cannot be imported.**
+**On the 3D side, only `.glb` comes in.** A separate `.gltf` — the kind that drags its `.bin`
+files and its textures along beside it — as well as `.obj`, `.fbx` and HDRIs (`.hdr`) are refused.
 
 ---
 
@@ -302,13 +309,14 @@ for it would be a waste. You can assign one in **Settings ▸ Shortcuts**.
 
 # What not to try
 
-Four known dead ends. They are not faults: they are features that do not exist yet, and nothing
+Five known dead ends. They are not faults: they are features that do not exist yet, and nothing
 on screen says so at the moment you try.
 
 | You try to… | What happens | Why |
 |---|---|---|
 | **reopen an image document** closed yesterday | it is gone | the layer stack does not save |
-| **import a `.glb` or an `.hdr`** | it is refused | import only knows video, audio, image |
+| **import an `.hdr`**, an `.obj` or an `.fbx` | it is refused | on the 3D side, only `.glb` comes in |
+| **cut out or vectorize** a picture | the Models panel opens, and no more | there is no way to choose the model |
 | **export a video** | no button | video export is not written — a picture does go out with `⇧⌘E` |
 | **crop, flip or rotate** a picture | the tools are greyed out | the pixels would not follow the frame |
 
@@ -323,12 +331,14 @@ All of it is spelled out, with nothing hidden, in
 |---|---|---|
 | a picture from a sentence | Image | Models → prompt → Generate |
 | a variant of a picture | Image | *Image to image* filter → give the picture |
-| a bigger picture | Image | search `upscale` in Models |
+| a bigger picture | Image | search `upscale` in Models — **not** the Enlarge command |
 | a 360° sky | Skyboxes | `+` → Generate, it lands by itself |
 | a material | Textures | `+` → drag a picture onto the preview → `⌘S` |
 | an animated shot | Video | *Image to video* filter → Generate |
 | a sound | Audio | Models → Generate, then `+` and double-click |
 | a 3D scene | 3D | `+` → a light **first**, then the objects → `⌘S` |
+| to light a scene with a sky | 3D | Inspector → Environment → choose the skybox |
+| to place a 3D model | 3D | double-click the mesh, or drag it onto the view |
 | to edit two shots | Video | `+` → drag the clips onto the timeline |
 | to import my files | anywhere | Assets → Import media |
 | to remake the same picture | anywhere | Inspector → Regenerate |

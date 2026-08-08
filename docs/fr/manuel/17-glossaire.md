@@ -28,6 +28,13 @@ humain tourne autour de 60°.
 Défaire la dernière action. Chaque *document* a sa propre *pile d'annulation* : `⌘Z` recule dans
 l'onglet actif, pas dans le dernier geste fait dans le studio.
 
+**Aplatir**
+Fondre tous les *calques* visibles en une seule image, comme si on la photographiait. C'est ce que
+fait l'export, et c'est ce qui part quand vous demandez au modèle de détourer ou d'agrandir : le
+service reçoit une image, pas une pile.
+
+Le document, lui, garde ses calques. Aplatir n'est pas destructif ici.
+
 **Arêtes** *(canal de texture)*
 Une image en noir et blanc qui dit où sont les bords d'une surface. Elle ne s'affiche pas
 directement : elle sert à d'autres calculs.
@@ -59,6 +66,14 @@ posées les unes sur les autres : on dessine sur celle du dessus sans abîmer ce
 peut en masquer une, la remonter, la descendre, la supprimer.
 
 C'est ce qui rend une image **modifiable** au lieu d'être un aplat définitif.
+
+**Calque de réglage**
+Un *calque* qui ne contient aucun pixel : il **modifie ce qui est en dessous de lui**. Luminosité,
+contraste, saturation, teinte. Le déplacer dans la pile change ce qu'il touche ; l'éteindre rend
+tout comme avant.
+
+Sa force est là : il n'écrit jamais dans les pixels des autres calques. Vous pouvez le régler
+cent fois, ou le supprimer, sans avoir rien abîmé.
 
 **Canal** *(d'une texture)*
 Une des images qui composent une matière. Une *texture* n'est pas une image mais un jeu d'images
@@ -138,6 +153,11 @@ resserre (24 px) pour faire tenir plus de choses à l'écran.
 Un *canal* de texture que le studio a calculé à partir d'un autre, plutôt que reçu d'un *modèle*.
 Il se recalcule tout seul si sa source change.
 
+**Détourage** *(background removal)*
+Retirer le fond d'une image pour ne garder que le sujet, sur du transparent. Le studio en a la
+commande, dans l'espace Image, mais elle ne peut pas encore aboutir — voir
+[Ce qui n'existe pas encore](18-limites.md).
+
 **Dock**
 Une zone de la fenêtre où des *panneaux* peuvent se poser : les colonnes de gauche et de droite,
 la bande du bas. Voir [La fenêtre](03-la-fenetre.md).
@@ -170,6 +190,11 @@ Une zone émissive reste visible même sans lumière autour.
 Une signature calculée à partir du contenu d'un fichier. Deux fichiers identiques ont la même
 empreinte, même s'ils portent des noms différents. C'est ainsi que le studio reconnaît un doublon
 à l'import.
+
+**Environnement** *(d'une scène 3D)*
+Ce qui éclaire une scène en dehors de ses lampes. Deux valeurs : **Studio**, un éclairage neutre
+calculé, ou **une *skybox* du projet**, qui pose sa lumière et ses reflets sur tout. Se choisit
+dans l'Inspecteur de l'espace 3D, section Environnement.
 
 **Équirectangulaire**
 Le format d'une image qui contient toute une sphère, aplatie : deux fois plus large que haute,
@@ -236,6 +261,11 @@ image. Changez la graine, vous obtenez une autre image de la même famille. Lais
 « Aléatoire », vous explorez ; fixez-la, vous affinez.
 
 C'est le réglage le plus utile du formulaire, et le plus souvent ignoré.
+
+**Groupe**
+Plusieurs objets rangés sous un même parent. Dans l'espace 3D (`⌘G`) comme dans la pile de
+calques : déplacer le groupe déplace tout ce qui pend dessous, et le replier rend une scène
+chargée lisible.
 
 **Guidage** *(ControlNet, cfg)*
 Deux sens, hélas :
@@ -304,11 +334,24 @@ les alignements ratés d'un cheveu.
 Un objet 3D, décrit par ses points et les triangles qui les relient. C'est la forme, sans la
 matière ni la lumière.
 
+**Masque**
+Ce qui décide **où** un calque se voit. Un masque de fusion cache une partie d'un calque sans
+l'effacer : les pixels sont toujours là, ils ne s'affichent pas. On le peint, on le règle, on le
+retire — l'image d'origine n'a jamais bougé.
+
+Un masque se fabrique aussi à partir d'une *sélection*, en une commande.
+
 **Métallicité** *(canal de texture)*
 Zone par zone : cette partie est-elle du métal, ou non ? Ce n'est pas un curseur d'aspect mais un
 interrupteur physique, parce que le métal et le non-métal réfléchissent la lumière de deux façons
 différentes. Les valeurs intermédiaires n'existent quasiment pas dans la nature — elles servent à
 adoucir la frontière entre deux zones.
+
+**Mode de fusion**
+La façon dont un calque se mélange à ce qui est en dessous. **Normal** le pose simplement par
+dessus ; **Produit** assombrit ; **Superposition** éclaircit ; il y en a seize en tout.
+
+C'est le réglage qui transforme un empilement d'images en une composition.
 
 **Modèle**
 Le programme distant qui fabrique. Il y en a plusieurs centaines, et ils ne savent pas tous faire
@@ -339,6 +382,11 @@ enchaînés ne se donnent pas un coup de volume l'un à l'autre.
 Une image en niveaux de gris qui marque les endroits où la lumière ambiante entre mal : les creux,
 les coins, les jointures. Elle ajoute de la profondeur à une matière qui semblait plate.
 
+**Ombre** *(projetée, reçue)*
+Deux réglages distincts, sur chaque objet d'une scène 3D. **Projette une ombre** : l'objet bloque
+la lumière. **Reçoit les ombres** : celles des autres se dessinent sur lui. Un sol reçoit sans
+projeter ; un décor lointain peut ne faire ni l'un ni l'autre sans que cela se voie.
+
 **Onglet**
 Un *document* ouvert, au centre de la fenêtre. Un onglet dont le travail n'est pas encore écrit sur
 le disque porte un point (`•`) à côté de son nom.
@@ -366,6 +414,11 @@ document a la sienne** — c'est pour cela qu'annuler dans un onglet ne touche p
 **Piste**
 Une ligne du montage, sur laquelle des *clips* sont posés bout à bout. Une piste vidéo, une piste
 audio, plusieurs de chaque si besoin.
+
+**Projection**
+La façon dont la caméra 3D met le volume à plat. En **perspective**, ce qui est loin est plus
+petit — c'est ce que voit un œil. En **orthographique**, les tailles ne changent pas avec la
+distance : c'est la vue d'un plan d'architecte, et c'est ce qu'on veut pour aligner des objets.
 
 **Prompt**
 Votre phrase de commande : le texte qui décrit ce que vous voulez. Le champ le plus important du
@@ -411,6 +464,12 @@ Une des deux bandes graduées, en haut et à gauche du *canvas*. C'est d'elles q
 Une ligne fine, horizontale ou verticale, posée sur l'image pour aligner ce qu'on y met. Elle ne
 fait pas partie de l'image et ne s'exporte pas. Masquer les repères ne les efface pas.
 
+**Repère local / repère monde**
+L'orientation des poignées de manipulation, dans l'espace 3D. En repère **monde**, la flèche rouge
+pointe toujours dans la même direction. En repère **local**, elle suit l'orientation de l'objet :
+c'est ce qu'il faut pour faire avancer une voiture dans le sens où elle roule. La touche `L`
+bascule de l'un à l'autre.
+
 **Reprise automatique**
 Ce que le studio fait quand une *tâche* échoue pour une raison qu'un nouvel essai peut réparer :
 réseau coupé, service occupé, trop de requêtes. Voir *Temporisation exponentielle*.
@@ -439,6 +498,12 @@ crient.
 La seconde moitié de vos identifiants Scenario, l'équivalent d'un mot de passe. Il va toujours
 avec une *clé API*, et ne s'affiche jamais en clair une fois enregistré.
 
+**Sélection** *(dans une image)*
+Une région tracée sur l'image — rectangle, ellipse ou lasso — qui **borne les outils**. Tant
+qu'elle existe, le pinceau, la gomme et le pot n'agissent qu'à l'intérieur. `⌘D` l'abandonne.
+
+Elle sert aussi à fabriquer un *masque*, et à dire au modèle quelle zone repeindre.
+
 **Séquence**
 Un montage : des *clips* posés sur des *pistes*, dans le temps. C'est le *document* de l'espace
 Vidéo.
@@ -453,6 +518,11 @@ second point compte davantage.
 ---
 
 ## T
+
+**Sprite**
+Une image posée dans une scène 3D et qui **fait toujours face à la caméra**, quelle que soit la
+direction d'où on la regarde. Utile pour un feuillage, une étincelle, un personnage plat. Il n'est
+ni éclairé ni concerné par les ombres : sa couleur est celle qu'on lui donne.
 
 **Tâche** *(job)*
 Une demande de fabrication en cours. Elle vit dans la **ligne d'état**, en bas à droite de la
@@ -495,6 +565,11 @@ vous regardez n'y a pas accès : il sait seulement si la connexion fonctionne.
 ---
 
 ## V
+
+**Vectorisation**
+Convertir une image en tracés — des lignes et des courbes, qui s'agrandissent sans jamais devenir
+floues. Le studio en a la commande, dans l'espace Image, mais elle ne peut pas encore aboutir —
+voir [Ce qui n'existe pas encore](18-limites.md).
 
 **Vignette** *(thumbnail)*
 La petite image qui représente un *asset* dans l'étagère ou un *modèle* dans le catalogue.

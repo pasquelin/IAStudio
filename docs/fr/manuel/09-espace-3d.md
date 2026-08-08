@@ -65,9 +65,19 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
 | **Déplacer** | `G` | tire l'objet le long des flèches de couleur |
 | **Tourner** | `R` | fait pivoter l'objet avec les cercles de couleur |
 | **Redimensionner** | `S` | agrandit ou rétrécit avec les poignées |
+| **Magnétisme** | `M` | fait avancer les poignées **par crans** au lieu de les laisser libres |
+| **Repère local** | `L` | aligne les poignées sur l'orientation de **l'objet** plutôt que sur celle du monde |
 | **Cadrer la sélection** | `F` | recentre la caméra sur l'objet choisi |
 | **Ajouter** | — | pose une maille ou une lumière dans la scène |
-| **Supprimer** | `Suppr` | retire l'objet choisi |
+| **Supprimer** | `Suppr` | retire tout ce qui est sélectionné |
+
+**Le magnétisme sert à aligner.** Sans lui, un objet se pose à 1,0374 m du précédent ; avec lui,
+à 1 m tout rond. La finesse des crans — un pour le déplacement, un pour la rotation, un pour
+l'échelle — se règle dans **Réglages ▸ Espaces de travail ▸ 3D**.
+
+**Le repère local se voit sur un objet tourné.** Poignées en repère monde, la flèche rouge pointe
+toujours vers l'est. En repère local, elle pointe vers la droite **de l'objet** : c'est ce qu'on
+veut pour avancer une voiture dans le sens où elle roule.
 
 Contrairement à l'espace Image, les trois outils de manipulation restent **trois boutons
 visibles** au lieu d'être groupés. C'est délibéré : on en change plusieurs fois par minute, et
@@ -100,6 +110,24 @@ Trois chemins mènent au même endroit :
 - le menu **Objets ▸ Ajouter**.
 
 L'objet se pose à **l'origine de la scène** — le centre du monde, là où les axes se croisent.
+
+### Faire entrer un modèle existant
+
+Les formes ci-dessous sont celles que le studio sait **construire**. Un modèle qui vient
+d'ailleurs — généré par un modèle *texte vers 3D*, ou importé depuis un `.glb` — entre par
+l'étagère :
+
+| Geste | Résultat |
+|---|---|
+| **Double-clic** sur un maillage dans l'étagère | il entre dans la scène ouverte |
+| **Glisser-déposer** sur la vue 3D | idem — n'importe où sur la vue, la barre d'outils comprise |
+
+**Seuls les maillages entrent.** Une image, un son ou une vidéo lâchés sur la vue 3D ne font
+rien : la scène ne saurait qu'en faire.
+
+Comme le reste, le modèle se pose **à l'origine**. Il arrive parfois minuscule ou gigantesque —
+un `.glb` porte son échelle d'origine, qui n'a aucune raison d'être la vôtre. La poignée
+d'échelle (`S`) règle cela en un geste, et `F` recadre la caméra dessus.
 
 ### Les mailles disponibles
 
@@ -213,6 +241,48 @@ mailles, cela se sent.
 
 ---
 
+## Choisir plusieurs objets
+
+**Un clic remplace la sélection. Un clic avec `⇧`, `⌘` ou `Ctrl` l'ajoute ou la retire.**
+
+C'est la convention de tous les logiciels : le modificateur bascule l'objet cliqué sans toucher au
+reste. Recliquer un objet déjà choisi le sort de la sélection.
+
+| Geste | Effet |
+|---|---|
+| **Clic** sur un objet | il devient la sélection, seul |
+| **`⇧`/`⌘`/`Ctrl` + clic** | il entre dans la sélection, ou en sort s'il y était |
+| **Clic dans le vide** | tout est désélectionné |
+| **`⇧`/`⌘`/`Ctrl` + clic dans le vide** | **rien ne change** — un raté ne doit pas défaire un tri patient |
+
+Tout ce qui suit — déplacer, tourner, supprimer, grouper, dupliquer, régler dans l'Inspecteur —
+agit sur **toute** la sélection, pas seulement sur le dernier objet cliqué.
+
+---
+
+## Grouper
+
+**`⌘G`**, ou le bouton **Grouper** de la barre d'outils.
+
+Un groupe range plusieurs objets sous un même parent. **Déplacer le groupe les déplace tous**, et
+il se replie d'un clic dans l'Explorateur — une scène de trente objets redevient lisible.
+
+Deux façons de défaire ou de refaire un rangement :
+
+- **`⌘Z`** annule le groupement, comme n'importe quelle action ;
+- **glisser une ligne sur une autre**, dans l'Explorateur, la range sous elle. Pour **sortir** un
+  objet de son groupe, lâchez-le sur la **première ligne**, celle qui porte le nom de la scène :
+  elle représente la racine.
+
+La branche d'accueil **se déplie toute seule** après le dépôt — sinon l'objet qu'on vient de
+ranger disparaîtrait de l'écran, et on le croirait perdu.
+
+> **Un groupe ne peut pas descendre dans son propre contenu.** Le studio refuse le dépôt plutôt
+> que de fabriquer une boucle. De même, relâcher une ligne là où elle était déjà ne fait rien —
+> ni action, ni entrée dans l'historique.
+
+---
+
 ## Dupliquer, copier, coller
 
 Quatre boutons en fin de barre d'outils, et les quatre raccourcis que vous connaissez déjà.
@@ -243,9 +313,15 @@ Trois choses valent d'être sues :
 Le panneau **Explorateur**, dans la colonne de gauche, montre tout ce que la scène contient,
 sous forme d'arborescence.
 
-- **Cliquez** une ligne pour sélectionner l'objet.
+- **Cliquez** une ligne pour sélectionner l'objet — avec `⇧`, `⌘` ou `Ctrl` pour en choisir
+  plusieurs, exactement comme dans la vue.
 - **Les flèches du clavier** parcourent l'arbre.
 - **L'œil** à droite de chaque ligne affiche ou masque l'objet.
+- **Glissez une ligne sur une autre** pour la ranger dessous ; sur la ligne du haut, celle qui
+  porte le nom de la scène, pour la sortir de son groupe.
+
+La sélection est la **même** des deux côtés : ce que vous choisissez dans l'arbre s'entoure de
+poignées dans la vue, et réciproquement.
 
 Seules les lignes visibles sont réellement dessinées : une scène lourde défile sans peine.
 
@@ -318,6 +394,43 @@ texture** ouvre la liste ; **Retirer la texture** la vide.
 | **Pénombre** | la douceur du bord du cône — projecteur seulement |
 | **Cible** | vers quoi elle pointe |
 | **Couleur du ciel** / **du sol** | hémisphérique seulement |
+
+### Ombres
+
+Deux interrupteurs, sur chaque objet qui peut en avoir :
+
+| Interrupteur | Ce qu'il fait |
+|---|---|
+| **Projette une ombre** | l'objet bloque la lumière et pose son ombre sur le reste |
+| **Reçoit les ombres** | les ombres des autres se dessinent sur lui |
+
+**Les deux se décident objet par objet**, et c'est voulu : une ombre coûte du calcul à chaque
+lumière qui la projette. Un sol reçoit sans projeter ; une petite pièce de décor loin de la
+caméra peut ne faire ni l'un ni l'autre sans que cela se voie.
+
+> **La section n'apparaît pas toujours.** Un *sprite* ne joue pas du tout avec les ombres, une
+> lumière ambiante ou hémisphérique n'en projette aucune : plutôt que d'afficher un interrupteur
+> sans effet, le studio n'affiche rien.
+
+À quoi ressemble une ombre — bord net ou adouci, finesse du calcul — se règle une fois pour toute
+la scène dans **Réglages ▸ Espaces de travail ▸ 3D**.
+
+### Environnement — le ciel qui éclaire
+
+**Cette section s'affiche même quand rien n'est sélectionné**, parce qu'elle appartient à la
+scène entière et non à un objet.
+
+| Valeur | Ce que ça donne |
+|---|---|
+| **Studio** *(départ)* | un éclairage neutre, calculé, qui existe avant que vous n'ayez rien généré |
+| *une skybox du projet* | le ciel choisi éclaire la scène **et** se reflète dans les matériaux |
+
+C'est le pont entre les deux espaces : un ciel fabriqué dans l'espace **Skyboxes** devient ici la
+lumière de votre scène. Un coucher de soleil pose une lumière orange rasante sur tout, sans que
+vous ayez à placer une seule lampe.
+
+La liste ne propose que les **skyboxes du projet, présentes sur votre disque**. Un ciel resté
+dans le nuage n'y figure pas : il serait choisi, et rien ne s'afficherait.
 
 > L'Inspecteur **n'est pas un panneau de la 3D**. Le même inspecteur lit un clip, une piste ou un
 > asset quand c'est cela qui est sélectionné. C'est pourquoi il reste ouvert dans tous les

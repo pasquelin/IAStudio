@@ -99,7 +99,8 @@ What that gives you, depending on which tab is in front:
 | a **sound** (Audio workspace) | loads that take into the editor, if it is indeed a sound |
 | a **sequence** (Video workspace) | drops a clip onto a track, at the playhead |
 | an **image** (Image workspace) | lays the picture down as one more layer, already armed |
-| a **3D scene**, a **texture** | **nothing at all** |
+| a **3D scene** | brings the mesh into the scene, if it is indeed a mesh |
+| a **texture** | **nothing at all** — a material is filled by dragging |
 | no tab open | **nothing at all** |
 
 **Nothing warns you when nothing happens.** No message, no visible refusal: the double-click is
@@ -118,9 +119,10 @@ front?"**, never "is this asset broken?".
 | an image | the Image workspace **canvas** | it becomes one more layer, armed |
 | an image | a **texture** preview | it becomes the base colour |
 | a panoramic image | a **sky** preview | it becomes the sky |
+| a mesh | the **3D view** | it enters the scene, at the origin |
 
-**Those four, and nothing else.** The 3D viewport accepts no drops: releasing an asset over it
-does nothing.
+**Those five, and nothing else.** In the 3D view the drop is accepted **anywhere on the view**,
+toolbar included: a release landing beside it would be a miss you cannot see coming.
 
 ---
 
@@ -154,6 +156,7 @@ The **Import media** button, on the shelf's title line.
 | **Video** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
 | **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
+| **3D** | `glb` |
 
 > **3D models import as `.glb`.** A separate `.gltf` — the one with its `.bin` and textures
 > beside it — does not: the studio serves each asset on its own, so the linked files would be
