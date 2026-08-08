@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
 import {
   buildBody,
-  buildSchema,
   defaultValues,
   groupFields,
   referencePictures,
   visibleFields,
 } from './dynamic-form'
+import { buildSchema } from './dynamic-form-schema'
 
 function field(overrides: Partial<FieldDescriptor> & { key: string }): FieldDescriptor {
   return { kind: 'text', label: overrides.key, required: false, ...overrides }

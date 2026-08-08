@@ -1,11 +1,11 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
+import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelDescriptor } from '@shared/domain/model'
 import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
-import { DynamicForm } from '@/design/DynamicForm'
 import { PromptAssistant } from '@/design/PromptAssistant'
 import { failureKeyOf } from '@/services/failure-message'
 import { getBridge } from '@/services/bridge'
@@ -17,6 +17,15 @@ import { claimOnSubmit } from '@/stores/generation-claims'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
+
+/**
+ * Deferred on purpose: the form drags zod, react-hook-form and its resolver behind it — 202,3 kB
+ * of the 2 030,5 kB opening chunk, measured 8 August. It only ever renders once the model
+ * descriptor has come back, so the wait it adds sits inside a wait the panel already had.
+ */
+const DynamicForm = lazy(async () => ({
+  default: (await import('@/design/DynamicForm')).DynamicForm,
+}))
 
 /**
  * Free — measured at 0 creative units — and answered in one round trip, so no job is involved
@@ -128,30 +137,34 @@ export function Generator() {
       {!project && <p className="text-muted px-2 text-xs">{t('generation.noProject')}</p>}
 
       {descriptor.data && (
-        <DynamicForm
-          fields={descriptor.data.fields}
-          onSubmit={generate}
-          submitLabel={t('actions.generate')}
-          busy={!project}
-          preset={preset}
-          // The API marks the field its assistance rewrites; every other one gets nothing.
-          accessory={(field, handle) =>
-            field.promptSpark === true && (
-              <PromptAssistant
-                readDraft={() => textOf(handle.read())}
-                request={draft => suggestPrompts(modelId, draft)}
-                translate={translateDraft}
-                describeStyle={describeStyle}
-                readReferences={() =>
-                  referencePictures(descriptor.data?.fields ?? [], handle.readAll())
-                }
-                onAdoptText={handle.write}
-                onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
-                failureMessage={error => t(failureKeyOf(error))}
-              />
-            )
-          }
-        />
+        <Suspense
+          fallback={<EmptyState icon={mdiCreationOutline} message={t('generation.loadingForm')} />}
+        >
+          <DynamicForm
+            fields={descriptor.data.fields}
+            onSubmit={generate}
+            submitLabel={t('actions.generate')}
+            busy={!project}
+            preset={preset}
+            // The API marks the field its assistance rewrites; every other one gets nothing.
+            accessory={(field, handle) =>
+              field.promptSpark === true && (
+                <PromptAssistant
+                  readDraft={() => textOf(handle.read())}
+                  request={draft => suggestPrompts(modelId, draft)}
+                  translate={translateDraft}
+                  describeStyle={describeStyle}
+                  readReferences={() =>
+                    referencePictures(descriptor.data?.fields ?? [], handle.readAll())
+                  }
+                  onAdoptText={handle.write}
+                  onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
+                  failureMessage={error => t(failureKeyOf(error))}
+                />
+              )
+            }
+          />
+        </Suspense>
       )}
     </div>
   )

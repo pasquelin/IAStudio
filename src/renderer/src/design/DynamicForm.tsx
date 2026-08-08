@@ -7,7 +7,6 @@ import type { FieldDescriptor } from '@shared/domain/model'
 import { cn } from '@/helpers/cn'
 import {
   buildBody,
-  buildSchema,
   defaultValues,
   dependencyKeys,
   groupFields,
@@ -16,6 +15,7 @@ import {
   visibleFields,
   type FormValues,
 } from '@/helpers/dynamic-form'
+import { buildSchema } from '@/helpers/dynamic-form-schema'
 import { Button } from './Button'
 import { AssetDropField } from './AssetDropField'
 import { FIELD } from './styles'

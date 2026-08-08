@@ -11,6 +11,7 @@ import { connectPreparation } from '@/stores/preparation'
 import { useSettings } from '@/stores/settings'
 import { useTools } from '@/stores/tools'
 import { prepareEdit } from '@/spaces/image/ai-actions'
+import panelSource from './Generator.tsx?raw'
 import { Generator } from './Generator'
 
 const DOCUMENT = 'doc-1'
@@ -125,5 +126,16 @@ describe('Generator', () => {
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()
+  })
+
+  /**
+   * The form pulls zod, react-hook-form and its resolver — 219,6 kB of the opening chunk on
+   * 8 August. Nothing but a deferred import keeps them out, and nothing but this says so.
+   */
+  it('never imports the form at module scope', () => {
+    expect(panelSource).not.toMatch(/^import \{ DynamicForm \}/m)
+    // Both halves: a static import removed without a deferred one put back would leave the panel
+    // with no form at all, and the line above would still pass.
+    expect(panelSource).toMatch(/await import\('@\/design\/DynamicForm'\)/)
   })
 })
