@@ -44,13 +44,22 @@ describe('exporting the document', () => {
     expect(written).toHaveBeenCalledWith('Sky.png', 'PAYLOAD')
   })
 
-  // Separators and dots would name another folder, or another extension.
+  // A separator would name another folder; a leading dot would hide the file.
   it('takes a title a file system cannot hold down to one it can', async () => {
-    titled('a/b:c*.png')
+    titled('a/b:c*')
 
     await exportPicture(DOCUMENT, host)
 
-    expect(written.mock.calls[0]?.[0]).toBe('abc png.png')
+    expect(written.mock.calls[0]?.[0]).toBe('abc.png')
+  })
+
+  // The dots inside a name stay: `Study v1.2` is a name people rely on.
+  it('keeps the version in a name that carries one', async () => {
+    titled('Study v1.2')
+
+    await exportPicture(DOCUMENT, host)
+
+    expect(written.mock.calls[0]?.[0]).toBe('Study v1.2.png')
   })
 
   it('falls back to a name rather than writing one made of nothing', async () => {

@@ -217,6 +217,14 @@ export type PaintSurface = 'pixels' | 'mask'
 /** A surface a gesture may write to, with the key its undo patches are filed under. */
 type BrushTarget = { key: string; surface: LayerSurface }
 
+/**
+ * A line is a stroke, and the brush size is a diameter: a 24 px brush draws a 6 px line, which is
+ * what the same setting gives a dab of ink under a pen.
+ */
+function strokeWidth(brushSize: number): number {
+  return Math.max(1, brushSize / 4)
+}
+
 /** A data URL down to what it carries: the API takes the payload, never the prefix. */
 function payloadOf(url: string): string {
   const at = url.indexOf(',')
@@ -966,7 +974,7 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
-      paint: this.paintOverlay,
+      paint: this.selection || this.pending || this.tool === 'move' ? this.paintOverlay : undefined,
     }
   }
 
@@ -1722,7 +1730,7 @@ export class CanvasEngine {
     if (shape.kind === 'line' || shape.kind === 'arrow') {
       drawing.stroke({
         color: this.brush.color,
-        width: this.brush.size / 4,
+        width: strokeWidth(this.brush.size),
         alpha: this.brush.opacity,
       })
     } else {

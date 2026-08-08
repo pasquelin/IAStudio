@@ -164,7 +164,14 @@ export function adjustmentLayer(
   name: string,
   adjustment: AdjustmentKind,
 ): AdjustmentLayer {
-  return { ...layerBase(id, name), kind: 'adjustment', adjustment, values: NEUTRAL_ADJUSTMENTS }
+  // Copied, never the shared constant itself: one mutation of it anywhere would neutralise every
+  // adjustment layer in the application at once.
+  return {
+    ...layerBase(id, name),
+    kind: 'adjustment',
+    adjustment,
+    values: { ...NEUTRAL_ADJUSTMENTS },
+  }
 }
 
 /**

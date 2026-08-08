@@ -22,11 +22,14 @@ export async function exportPicture(documentId: string, host: ExportHost): Promi
   return bridge.dialog.exportPicture(`${fileNameOf(title)}.png`, image)
 }
 
-/** A title down to what a file system takes: separators and dots would name another folder. */
+/**
+ * A title down to what a file system takes. Separators go, and a leading dot with them — it would
+ * hide the file; the dots inside a name stay, because `Study v1.2` is a name people rely on.
+ */
 function fileNameOf(title: string): string {
   const cleaned = title
     .replace(/[/\\:*?"<>|]/g, '')
-    .replace(/\.+/g, ' ')
+    .replace(/^\.+/, '')
     .trim()
   return cleaned || 'image'
 }

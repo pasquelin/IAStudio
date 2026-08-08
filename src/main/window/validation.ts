@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { PATH_KINDS, type PathKind } from '@shared/domain/settings-registry'
+import { parseBase64 } from '@main/scenario/validation'
 
 // Throws rather than falling back: the value decides which native picker opens, and a renderer
 // is what sends it. Built from the shared list, never retyped.
@@ -30,15 +31,7 @@ export function parseFileName(value: unknown): string {
   return fileName.parse(value)
 }
 
-/** Only the payload: a `data:` prefix would be written into the file as if it were pixels. */
-const base64Payload = z
-  .string()
-  .min(1)
-  // The head alone: the payload is megabytes long, and the one mistake worth catching — a
-  // `data:image/png;base64,` prefix — is at the front. An unanchored class would match `data`
-  // and let the rest through.
-  .refine(value => /^[A-Za-z0-9+/=]+$/.test(value.slice(0, 64)), 'expected raw base64')
-
+/** The same rule the upload path applies: only the payload, never a data URL. */
 export function parseBase64Payload(value: unknown): string {
-  return base64Payload.parse(value)
+  return parseBase64(value)
 }

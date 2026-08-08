@@ -1,5 +1,6 @@
 import { defaultFilterVert, Filter } from 'pixi.js'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
+import { adjustUniformsOf } from '../gpu/passes/adjust'
 
 /**
  * Colour grading as one filter pass. The GLSL is the one `engines/gpu/passes/adjust.ts` grades
@@ -51,10 +52,6 @@ void main(void) {
 }
 `
 
-/** How far a full swing of the temperature or tint slider pushes a channel. */
-const TEMPERATURE_GAIN = 0.25
-const TINT_GAIN = 0.15
-
 export type AdjustFilter = Filter & {
   /** Pushes a stack into the pass. Uniforms only: nothing is rebuilt, nothing is reallocated. */
   grade: (values: AdjustmentStack) => void
@@ -80,12 +77,14 @@ export function createAdjustFilter(): AdjustFilter {
     const uniforms = filter.resources.adjustUniforms?.uniforms
     if (!uniforms) return
 
-    // Stops, so 0 is untouched and every step doubles — the unit a photographer already thinks in.
-    uniforms.uExposure = 2 ** values.exposure
-    uniforms.uContrast = values.contrast
-    uniforms.uSaturation = values.saturation
-    uniforms.uTemperature = values.temperature * TEMPERATURE_GAIN
-    uniforms.uTint = values.tint * TINT_GAIN
+    // The same conversion the three.js pass applies — stops into a multiplier, a slider swing
+    // into a channel push. Shared rather than repeated: two copies of a grading contract drift.
+    const graded = adjustUniformsOf(values)
+    uniforms.uExposure = graded.exposure
+    uniforms.uContrast = graded.contrast
+    uniforms.uSaturation = graded.saturation
+    uniforms.uTemperature = graded.temperature
+    uniforms.uTint = graded.tint
   }
 
   return Object.assign(filter, { grade })
