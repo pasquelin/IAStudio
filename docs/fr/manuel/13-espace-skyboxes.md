@@ -81,6 +81,10 @@ En haut à gauche.
 | **Objets de test** | affiche ou masque des sphères témoins |
 | **Champ de vision** | de 50° à 110°, 75° par défaut |
 
+**Deux touches évitent la barre** : `V` fait défiler les quatre vues, `P` montre ou cache les
+objets de test. `⌘Z` et `⇧⌘Z` annulent et rétablissent ici comme ailleurs — voir
+[Tous les raccourcis](15-raccourcis.md).
+
 **Les objets de test** sont des sphères posées au milieu du ciel : une mate, une brillante, une
 métallique. Elles ne font pas partie du ciel — elles servent à **voir ce que le ciel éclaire**.
 Un ciel se juge par ce qu'il fait aux objets, pas seulement par sa propre image. Elles sont

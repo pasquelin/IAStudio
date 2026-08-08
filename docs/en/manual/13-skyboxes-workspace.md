@@ -80,6 +80,9 @@ Top left.
 | **Test objects** | shows or hides witness spheres |
 | **Field of view** | from 50° to 110°, 75° by default |
 
+**Two keys skip the bar**: `V` cycles through the four views, `P` shows or hides the test objects.
+`⌘Z` and `⇧⌘Z` undo and redo here as anywhere else — see [Every shortcut](15-shortcuts.md).
+
 **The test objects** are spheres set in the middle of the sky: one matte, one glossy, one metallic.
 They are not part of the sky — they are there to **see what the sky lights**. A sky is judged by
 what it does to objects, not only by its own image. That is why they are visible by default.
