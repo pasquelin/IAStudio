@@ -45,7 +45,7 @@ Five contexts:
 | **Anywhere in the application** | any window, any workspace |
 | **In the 3D view** | the viewport of the 3D workspace |
 | **In the edit** | the timeline of the Video and Audio workspaces |
-| **In the image** | the canvas of the Image workspace |
+| **In the picture** | the canvas of the Image workspace |
 | **In the sky** | the view of the Skyboxes workspace |
 
 One context is special: **Anywhere in the application**. Its keys go through the operating system's

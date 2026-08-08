@@ -577,7 +577,7 @@ What you have on a fresh install, at a glance.
 | Generation | Concurrent generations | 3 | 1 to 16 |
 | Generation | Describe fetched assets | — | — |
 | Generation | Max retries | 4 | 0 to 10 |
-| Generation | Default model ×5 | Ask every time | — |
+| Generation | Default model ×7 | Ask every time | — |
 | 3D | Show the grid | checked | — |
 | 3D | Grid size | 20 m | 2 to 500 |
 | 3D | Fly speed | 4 m/s | 0.5 to 20 |
