@@ -47,6 +47,16 @@ describe('revealWindow', () => {
     expect(focus).toHaveBeenCalledTimes(1)
   })
 
+  it('shows and restores a minimised window, which macOS and Windows both report as hidden', () => {
+    const { window, restore, show, focus } = fakeWindow({ minimized: true, visible: false })
+
+    revealWindow(window)
+
+    expect(show).toHaveBeenCalledBefore(restore)
+    expect(restore).toHaveBeenCalledBefore(focus)
+    expect(focus).toHaveBeenCalledTimes(1)
+  })
+
   it('leaves a destroyed window alone', () => {
     const { window, restore, show, focus } = fakeWindow({ destroyed: true })
 

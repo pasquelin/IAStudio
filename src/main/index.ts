@@ -45,8 +45,8 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   const services = createServices(settings)
   registerIpc(services)
 
-  // `deferShow`: the window stays hidden until the splash is gone, so the two are never on
-  // screen together — one appearing over the other is exactly what a splash should prevent.
+  // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
+  // the other. Only a second launch overrides that — see `revealWindow`.
   const main = createMainWindow({ deferShow: true })
 
   const reveal = (): void => {

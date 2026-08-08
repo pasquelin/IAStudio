@@ -9,9 +9,10 @@ export type RevealableWindow = Pick<
 export function revealWindow(window: RevealableWindow): void {
   if (window.isDestroyed()) return
 
-  // Both are no-ops of their own: Electron's `Focus()` returns early on a window that is not
-  // visible, and on one that is minimised. The main window spends the whole splash in the
-  // first state — created, alive, never shown — so a second launch there would do nothing.
+  // `Focus()` returns early on a window it considers invisible — which on macOS and Windows
+  // covers both a window never shown and a minimised one. The main window spends the whole
+  // splash in the first state, so a second launch landing there would otherwise do nothing.
+  // X11 reports a minimised window as visible, hence the second call rather than either alone.
   if (!window.isVisible()) window.show()
   if (window.isMinimized()) window.restore()
 
