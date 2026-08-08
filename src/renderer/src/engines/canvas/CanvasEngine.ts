@@ -35,7 +35,6 @@ import {
   dragSelection,
   extendLasso,
   isEmptySelection,
-  selectionBounds,
   selectionOutline,
   type CanvasSelection,
   type SelectionShape,
@@ -45,6 +44,7 @@ import {
   handleAt,
   HANDLE_GRAB,
   HANDLE_IDS,
+  layerBoxOf,
   handlePoints,
   resizeBy,
   rotateBy,
@@ -156,8 +156,6 @@ export type CanvasEngineOptions = {
   onSelection: (selection: CanvasSelection) => void
   /** The host's size, which the zoom commands need: they centre on a panel they cannot see. */
   onHost: (size: Size) => void
-  /** A crop is a command on the stack, and the stack lives on the React side. */
-  onCrop: (rect: Rect) => void
   /** Where a caption was asked for. The layer it becomes is the stack's to make. */
   onText: (at: Point) => void
   guides: GuidePort
@@ -248,7 +246,6 @@ type Gesture =
   | { kind: 'select'; from: Point }
   /** `from` is where the drag began; the shape is redrawn from it on every move. */
   | { kind: 'shape'; from: Point; target: BrushTarget }
-  | { kind: 'crop'; from: Point }
   /** `origin` is the transform the layer had when the drag began: every step is absolute. */
   | { kind: 'handle'; id: string; handle: HandleId; box: Rect; from: Point; origin: Transform }
 
@@ -997,7 +994,7 @@ export class CanvasEngine {
    */
   private readonly paintHandles = (context: OverlayContext): void => {
     const layer = this.tool === 'move' ? this.activeLayer() : null
-    const box = layer && !layer.locked.position ? this.layerBox(layer) : null
+    const box = layer && !layer.locked.position ? this.boxOf(layer) : null
     if (!box) return
 
     const points = handlePoints(box)
@@ -1292,7 +1289,7 @@ export class CanvasEngine {
       if (!layer || layer.locked.position) return
 
       // The grips first: they sit on the layer, and a drag on one is not a drag of the layer.
-      const box = this.layerBox(layer)
+      const box = this.boxOf(layer)
       const handle = box && handleAt(box, point, HANDLE_GRAB / this.view.viewport.scale)
       if (box && handle) {
         this.options.layers.beginDrag()
@@ -1321,12 +1318,6 @@ export class CanvasEngine {
       // A click places a caption; the words themselves are typed in the inspector, where a
       //a letter typed on the canvas would be competing with every tool shortcut the space binds.
       this.options.onText(point)
-      return
-    }
-
-    if (this.tool === 'crop') {
-      this.gesture = { kind: 'crop', from: point }
-      this.publishSelection(dragSelection('rect', point, point, false))
       return
     }
 
@@ -1379,33 +1370,23 @@ export class CanvasEngine {
     return this.state ? layerById(this.state, this.state.activeLayerId) : null
   }
 
-  /**
-   * Where the armed layer stands, in document units. Its texture is document-sized, so the box
-   * is the document under the layer's own scale — which is what the grips are drawn around.
-   */
-  private layerBox(layer: Layer): Rect | null {
-    const state = this.state
-    if (!state || isGroup(layer)) return null
+  private documentSize(): Size {
+    return { width: this.state?.width ?? 0, height: this.state?.height ?? 0 }
+  }
 
-    const { transform } = layer
-    const width = state.width * transform.scaleX
-    const height = state.height * transform.scaleY
-    // The origin is where the layer is pinned, and `place` scales about it: the box grows from
-    // that point, not from the top-left corner.
-    return {
-      x: transform.x + state.width * transform.originX * (1 - transform.scaleX),
-      y: transform.y + state.height * transform.originY * (1 - transform.scaleY),
-      width,
-      height,
-    }
+  /** `null` for a group, which has no texture of its own and so no box to grab. */
+  private boxOf(layer: Layer): Rect | null {
+    if (!this.state || isGroup(layer)) return null
+    return layerBoxOf(layer.transform, this.documentSize())
   }
 
   /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
   private paintTarget(): BrushTarget | null {
     const layer = this.activeLayer()
-    // A caption is redrawn whole whenever a letter changes, so a stroke laid on it would be
-    // wiped without a history entry to bring it back.
-    if (!layer || isGroup(layer) || layer.kind === 'text' || layer.locked.pixels) return null
+    if (!layer || isGroup(layer) || layer.locked.pixels) return null
+    // Its own pixels only: a caption is redrawn whole whenever a letter changes, so a stroke laid
+    // on it would be wiped with no history entry to bring it back. Its mask is never redrawn.
+    if (layer.kind === 'text' && this.painting !== 'mask') return null
 
     const surface = this.activeSurface()
     // No surface means the layer carries no mask while the brush aims at one: there is nothing
@@ -1497,12 +1478,8 @@ export class CanvasEngine {
         const next =
           gesture.handle === 'rotate'
             ? rotateBy(gesture.origin, gesture.box, gesture.from, point)
-            : resizeBy(gesture.origin, gesture.handle, gesture.box, point, event.shiftKey)
+            : resizeBy(gesture.origin, gesture.handle, this.documentSize(), point, event.shiftKey)
         this.options.layers.transform(gesture.id, next)
-        return
-      }
-      case 'crop': {
-        this.publishSelection(dragSelection('rect', gesture.from, point, event.shiftKey))
         return
       }
       case 'shape': {
@@ -1541,8 +1518,6 @@ export class CanvasEngine {
     if (gesture.kind === 'move' || gesture.kind === 'handle') this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
     if (gesture.kind === 'shape') this.commitShape(gesture.target)
-    // A crop that carved nothing out is a click, and a click crops nothing.
-    if (gesture.kind === 'crop') this.commitCrop()
     // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
     // selection is a stencil nothing gets through, and the document stops taking paint at all.
     if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)
@@ -1746,13 +1721,6 @@ export class CanvasEngine {
     drawing.destroy()
     this.endPixels()
     this.render()
-  }
-
-  /** Crops the document to what the gesture carved out, through the command that owns the stack. */
-  private commitCrop(): void {
-    const rect = selectionBounds(this.selection)
-    this.publishSelection(null)
-    if (rect && rect.width > 0 && rect.height > 0) this.options.onCrop(rect)
   }
 
   private pick(point: Point): void {

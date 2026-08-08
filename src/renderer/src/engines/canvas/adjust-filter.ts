@@ -1,6 +1,5 @@
 import { defaultFilterVert, Filter } from 'pixi.js'
-import type { AdjustmentStack } from '@shared/domain/adjustments'
-import { adjustUniformsOf } from '../gpu/passes/adjust'
+import { adjustUniformsOf, type AdjustmentStack } from '@shared/domain/adjustments'
 
 /**
  * Colour grading as one filter pass. The GLSL is the one `engines/gpu/passes/adjust.ts` grades

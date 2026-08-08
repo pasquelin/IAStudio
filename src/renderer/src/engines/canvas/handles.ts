@@ -1,5 +1,6 @@
 import type { Rect, Transform } from './canvas-state'
 import type { Point } from './shape-geometry'
+import type { Size } from './viewport'
 
 /**
  * The nine grips of a transform box: eight on the edge, one above it for rotation. Pixi ships no
@@ -37,6 +38,23 @@ export const ROTATE_OFFSET = 24
 
 /** Half the side of a grip's hit square, in screen pixels — grips do not scale with the zoom. */
 export const HANDLE_GRAB = 6
+
+/**
+ * Where a layer stands, in document units. Its texture is document-sized, so the box is the
+ * document under the layer's own scale — grown about the origin it is pinned by, which is what
+ * `place` does when it sets a pivot and compensates the position.
+ */
+export function layerBoxOf(transform: Transform, document: Size): Rect {
+  const width = document.width * transform.scaleX
+  const height = document.height * transform.scaleY
+
+  return {
+    x: transform.x + document.width * transform.originX * (1 - transform.scaleX),
+    y: transform.y + document.height * transform.originY * (1 - transform.scaleY),
+    width,
+    height,
+  }
+}
 
 /** Where each grip sits, in document coordinates, for a layer occupying `box`. */
 export function handlePoints(box: Rect): Readonly<Record<HandleId, Point>> {
@@ -79,13 +97,12 @@ export function handleAt(box: Rect, point: Point, tolerance: number): HandleId |
  */
 export function resizeBy(
   transform: Transform,
-  handle: HandleId,
-  box: Rect,
+  handle: Exclude<HandleId, 'rotate'>,
+  document: Size,
   to: Point,
   uniform: boolean,
 ): Transform {
-  if (handle === 'rotate') return transform
-
+  const box = layerBoxOf(transform, document)
   const anchor = ANCHOR[handle]
   const fixed = { x: box.x + box.width * anchor.x, y: box.y + box.height * anchor.y }
 
@@ -102,13 +119,19 @@ export function resizeBy(
     scaleY = side * Math.sign(scaleY || 1)
   }
 
-  return {
+  const scaled = {
     ...transform,
-    scaleX: transform.scaleX * scaleX,
-    scaleY: transform.scaleY * scaleY,
-    // The fixed corner is fixed in document space, so the origin moves with the box.
-    x: fixed.x - (fixed.x - transform.x) * scaleX,
-    y: fixed.y - (fixed.y - transform.y) * scaleY,
+    scaleX: floored(transform.scaleX * scaleX),
+    scaleY: floored(transform.scaleY * scaleY),
+  }
+
+  // Solved through `layerBoxOf` rather than against `transform.x`: the two differ by the origin
+  // term, and reading the transform directly let the anchored edge drift as the layer resized.
+  const grown = layerBoxOf(scaled, document)
+  return {
+    ...scaled,
+    x: scaled.x + (fixed.x - (grown.x + grown.width * anchor.x)),
+    y: scaled.y + (fixed.y - (grown.y + grown.height * anchor.y)),
   }
 }
 
@@ -122,14 +145,19 @@ export function rotateBy(transform: Transform, box: Rect, from: Point, to: Point
 }
 
 /**
- * How far the grip travelled, as a share of the side it pulls. Never zero: a layer scaled to
- * nothing has no box left to grab, so the grips would be gone along with it and only ⌘Z could
- * bring it back.
+ * The smallest a layer may be scaled to. On the *result*, not on one gesture's step: the steps
+ * multiply, so three collapsing drags of a bounded ratio still reached a millionth. A layer that
+ * small has no box left to grab, and only ⌘Z would bring it back.
  */
-const MIN_RATIO = 0.01
+const MIN_SCALE = 0.01
 
 function ratio(moved: number, extent: number): number {
-  if (extent === 0) return 1
-  const pulled = moved / extent
-  return Math.abs(pulled) < MIN_RATIO ? MIN_RATIO * Math.sign(pulled || 1) : pulled
+  // Near-zero, not exactly zero: a box that has already collapsed would divide by ~1e-17.
+  if (Math.abs(extent) < Number.EPSILON) return 1
+  return moved / extent
+}
+
+/** Keeps a scale off zero without flipping the mirror the user may have asked for. */
+function floored(scale: number): number {
+  return Math.abs(scale) < MIN_SCALE ? MIN_SCALE * Math.sign(scale || 1) : scale
 }

@@ -13,7 +13,7 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
-import { addLayer, cropToRect } from '@/engines/canvas/commands'
+import { addLayer } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
@@ -105,7 +105,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       onViewport: viewport => views().setViewport(documentId, viewport),
       onSelection: selection => views().setSelection(documentId, selection),
       onHost: size => views().setHost(documentId, size),
-      onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
       // Read through the ref rather than captured: rebuilding the engine on a language change
       // would take the GPU context — and the pixels in it — down with it.
       onText: at =>

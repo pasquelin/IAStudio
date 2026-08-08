@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { IDENTITY, type Rect } from './canvas-state'
-import { handleAt, handlePoints, resizeBy, rotateBy, ROTATE_OFFSET } from './handles'
+import { IDENTITY, type Rect, type Transform } from './canvas-state'
+import type { Point } from './shape-geometry'
+import { handleAt, handlePoints, layerBoxOf, resizeBy, rotateBy, ROTATE_OFFSET } from './handles'
 
 const BOX: Rect = { x: 100, y: 100, width: 200, height: 100 }
+
+/** A square document, so a box and its scale read off each other without arithmetic. */
+const DOC = { width: 1000, height: 1000 }
 
 describe('where the grips sit', () => {
   it('puts eight on the edge of the box', () => {
@@ -34,52 +38,90 @@ describe('taking a grip', () => {
   })
 })
 
-describe('pulling a grip', () => {
-  // The opposite corner stays put, which is the only behaviour that lets a layer be sized
-  // against something else on the canvas.
-  it('doubles the width when the east grip is pulled twice as far', () => {
-    const after = resizeBy(IDENTITY, 'e', BOX, { x: 500, y: 150 }, false)
+describe('where a layer stands', () => {
+  // The origin is where the layer is pinned, and `place` scales about it: the box grows from
+  // that point, not from the top-left corner.
+  it('grows about the origin the layer is pinned by', () => {
+    const doubled = { ...IDENTITY, scaleX: 2, scaleY: 2 }
 
-    expect(after.scaleX).toBe(2)
+    expect(layerBoxOf(doubled, DOC)).toEqual({ x: -500, y: -500, width: 2000, height: 2000 })
+  })
+
+  it('is the document itself at identity', () => {
+    expect(layerBoxOf(IDENTITY, DOC)).toEqual({ x: 0, y: 0, width: 1000, height: 1000 })
+  })
+
+  it('follows the layer where it was moved', () => {
+    expect(layerBoxOf({ ...IDENTITY, x: 40 }, DOC)).toMatchObject({ x: 40 })
+  })
+})
+
+describe('pulling a grip', () => {
+  /** Where the layer stands after a grip has been dragged to `to`. */
+  const pulled = (
+    transform: Transform,
+    handle: 'e' | 'se' | 'w' | 'n',
+    to: Point,
+    uniform = false,
+  ) => layerBoxOf(resizeBy(transform, handle, DOC, to, uniform), DOC)
+
+  it('doubles the width when the east grip is pulled twice as far', () => {
+    expect(pulled(IDENTITY, 'e', { x: 2000, y: 500 })).toMatchObject({ width: 2000 })
+  })
+
+  /**
+   * The whole point of a grip: the edge you are pulling against does not move. It used to drift
+   * by the origin term, so a layer slid out from under the pointer as it was resized.
+   */
+  it('leaves the anchored edge exactly where it was', () => {
+    const box = pulled(IDENTITY, 'e', { x: 2000, y: 500 })
+
+    expect(box.x).toBe(0)
+  })
+
+  it('anchors the east edge when the west grip is pulled', () => {
+    const box = pulled(IDENTITY, 'w', { x: -1000, y: 500 })
+
+    expect(box.x + box.width).toBe(1000)
+    expect(box.width).toBe(2000)
+  })
+
+  it('holds the anchor on a layer that was already moved and scaled', () => {
+    const placed = { ...IDENTITY, x: 120, scaleX: 1.5, scaleY: 1.5 }
+    const before = layerBoxOf(placed, DOC)
+    const after = pulled(placed, 'e', { x: 900, y: 400 })
+
+    expect(after.x).toBeCloseTo(before.x)
   })
 
   it('leaves the other axis alone for a grip on an edge', () => {
-    const after = resizeBy(IDENTITY, 'e', BOX, { x: 500, y: 500 }, false)
-
-    expect(after.scaleY).toBe(1)
+    expect(resizeBy(IDENTITY, 'e', DOC, { x: 2000, y: 9000 }, false).scaleY).toBe(1)
   })
 
   it('pulls both axes from a corner', () => {
-    const after = resizeBy(IDENTITY, 'se', BOX, { x: 500, y: 300 }, false)
+    const box = pulled(IDENTITY, 'se', { x: 2000, y: 2000 })
 
-    expect(after.scaleX).toBe(2)
-    expect(after.scaleY).toBe(2)
+    expect(box).toMatchObject({ width: 2000, height: 2000 })
   })
 
   // Shift keeps a picture's shape, as it does everywhere else in the studio.
   it('follows the longer side on both axes when the modifier is held', () => {
-    const after = resizeBy(IDENTITY, 'se', BOX, { x: 500, y: 220 }, true)
+    const after = resizeBy(IDENTITY, 'se', DOC, { x: 2000, y: 1100 }, true)
 
     expect(after.scaleX).toBe(after.scaleY)
   })
 
-  it('pulls against the far corner, so a west grip moves the layer with it', () => {
-    // The box spans 100 to 300; pulling its west edge out to -100 makes it twice as wide.
-    const after = resizeBy({ ...IDENTITY, x: 100 }, 'w', BOX, { x: -100, y: 150 }, false)
+  /**
+   * On the result, not on one gesture's step: the steps multiply, so three collapsing drags of a
+   * bounded ratio still reached a millionth — a layer with no box left to grab.
+   */
+  it('never scales a layer down to nothing, however many times it is collapsed', () => {
+    let transform = IDENTITY
+    for (let drag = 0; drag < 3; drag += 1) {
+      transform = resizeBy(transform, 'e', DOC, { x: 0, y: 500 }, false)
+    }
 
-    expect(after.scaleX).toBe(2)
-    expect(after.x).toBeLessThan(100)
-  })
-
-  // A zero-width box would scale a layer to nothing it could ever be pulled back from.
-  it('refuses to collapse a box that has no width', () => {
-    const flat: Rect = { x: 0, y: 0, width: 0, height: 10 }
-
-    expect(resizeBy(IDENTITY, 'e', flat, { x: 50, y: 5 }, false).scaleX).toBe(1)
-  })
-
-  it('does nothing at all for the rotation grip', () => {
-    expect(resizeBy(IDENTITY, 'rotate', BOX, { x: 500, y: 500 }, false)).toEqual(IDENTITY)
+    expect(Math.abs(transform.scaleX)).toBeGreaterThanOrEqual(0.01)
   })
 })
 

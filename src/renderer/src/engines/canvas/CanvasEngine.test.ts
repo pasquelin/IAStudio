@@ -12,7 +12,6 @@ import {
   textLayer,
   type CanvasState,
   type Layer,
-  type Rect,
   type Transform,
 } from './canvas-state'
 import type { CanvasSelection } from './canvas-selection'
@@ -257,8 +256,6 @@ type Harness = {
   viewports: Viewport[]
   /** Every selection the engine carved out, in the order it published them. */
   selections: CanvasSelection[]
-  /** Every crop the engine asked the stack for. */
-  crops: Rect[]
   /** Where a caption was asked for, in document coordinates. */
   captions: Point[]
   guides: { calls: string[] }
@@ -274,7 +271,6 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
 
   const viewports: Viewport[] = []
   const selections: CanvasSelection[] = []
-  const crops: Rect[] = []
   const captions: Point[] = []
   const calls: string[] = []
   const patches: string[] = []
@@ -286,7 +282,6 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
       onPixelsDropped: () => undefined,
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
-      onCrop: rect => crops.push(rect),
       onText: at => captions.push(at),
       onHost: () => undefined,
       guides: {
@@ -312,7 +307,6 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
     host,
     viewports,
     selections,
-    crops,
     captions,
     guides: { calls },
     patches,
@@ -1301,25 +1295,6 @@ describe('drawing a shape', () => {
   })
 })
 
-/**
- * The gesture is written and tested; the tool that arms it is greyed. Cropping resizes the frame
- * and moves every layer, but a layer's texture keeps the document's old size — so after a crop
- * the brush writes at the offset the crop introduced. A tool that breaks the document is worse
- * than a tool that is not there yet.
- */
-describe('cropping', () => {
-  it('carves nothing while the tool is unbuilt', async () => {
-    const { engine, host, crops } = await mounted()
-    engine.setTool('crop')
-
-    press(host, 100, 100)
-    drag(host, 300, 250)
-    release()
-
-    expect(crops).toEqual([])
-  })
-})
-
 describe('captions', () => {
   const caption = (text: string, size = 48): CanvasState =>
     stacked([
@@ -1342,7 +1317,6 @@ describe('captions', () => {
 
     engine.apply(caption('Hello'))
 
-    // The second texture is the caption's own, and `clear: true` replaces what was there.
     expect(gpu.painted).toContain(1)
   })
 
@@ -1367,6 +1341,24 @@ describe('captions', () => {
     release()
 
     expect(patches).toEqual([])
+  })
+
+  /**
+   * Its mask, though, is never redrawn — so it takes a stroke like any other. Refusing it was a
+   * refusal too wide: the only surface `drawText` overwrites is the layer's own.
+   */
+  it('takes one into its mask, which nothing ever redraws', async () => {
+    const masked = stacked([
+      { ...textLayer('t', 'Hello', { x: 10, y: 20 }), mask: { enabled: true, linked: true } },
+    ])
+    const { engine, host, patches } = await mounted(masked)
+    engine.setPaintTarget('mask')
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(patches).toHaveLength(1)
   })
 
   // Its texture went with it, so the words have to be drawn again on the way back.

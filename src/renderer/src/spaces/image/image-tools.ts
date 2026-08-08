@@ -73,6 +73,9 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
   },
   {
     id: 'frame',
+    // Greyed on the group, not only on its rows: `Toolbar` does not inherit a mode's `disabled`,
+    // so the button armed a tool the engine refuses — a live-looking button that does nothing.
+    disabled: true,
     tool: 'crop',
     labelKey: 'imageTools.frame',
     descriptionKey: 'imageTools.frameHint',
