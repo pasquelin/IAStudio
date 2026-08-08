@@ -680,6 +680,16 @@ trois plateformes.
 `src/main/ipc/test-harness.ts` mocke déjà `ipcMain`, mais il faut l'étendre à
 `app` / `BrowserWindow` / `Menu`.
 
+**Aucun test ne s'exécute sur l'application lancée.** Les 250 fichiers de test sont unitaires :
+`find src -name '*.e2e.*'` ne rend rien. Tout ce qui ne se prouve qu'en conditions réelles —
+ouverture, parcours des six espaces, détachement d'un panneau, fermeture propre, consoles main et
+renderer sans erreur — est vérifié à la main, à chaque fois, par qui livre. C'est le poste de
+vérification le plus cher du projet et le seul qu'aucune porte ne tient.
+
+En ajouter demande **Playwright ou équivalent**, donc une dépendance : la décision revient au
+propriétaire du dépôt. **Reporté le 8 août 2026, pas abandonné** — noté ici pour que la prochaine
+session le retrouve. Suivi sous `L7` dans `.claude/loop/BACKLOG.md`.
+
 ---
 
 # 4. Méthode — ce qui a marché
