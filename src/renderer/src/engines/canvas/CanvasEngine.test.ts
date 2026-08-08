@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { BLEND_MODES, DEFAULT_CANVAS, pixelLayer, type CanvasState } from './canvas-state'
+import {
+  BLEND_MODES,
+  DEFAULT_CANVAS,
+  IDENTITY,
+  pixelLayer,
+  type CanvasState,
+  type Transform,
+} from './canvas-state'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, type Viewport } from './viewport'
 
@@ -12,6 +19,20 @@ import { DEFAULT_VIEW, type Viewport } from './viewport'
  * at all. A guard added to `apply` then silently stopped a freshly opened document from ever
  * building a texture, and nothing caught it.
  */
+type Pair = { x: number; y: number }
+
+/** A layer's sprite, seen through what the engine is allowed to write on it. */
+type PlacedSprite = {
+  position: Pair
+  scale: Pair
+  pivot: Pair
+  skew: Pair
+  rotation: number
+  visible: boolean
+  alpha: number
+  blendMode: string
+}
+
 const gpu: {
   renders: number
   texturesCreated: number
@@ -20,24 +41,46 @@ const gpu: {
   reorders: number
   /** What the engine asked the renderer for, so the options it depends on can be asserted. */
   init: Record<string, unknown>
+  /** Every sprite built, in the order they were built: one per paintable layer. */
+  sprites: PlacedSprite[]
 } = {
   renders: 0,
   texturesCreated: 0,
   texturesDestroyed: 0,
   reorders: 0,
   init: {},
+  sprites: [],
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
 vi.mock('pixi.js/advanced-blend-modes', () => ({}))
 
 vi.mock('pixi.js', () => {
+  /** Pixi's `ObservablePoint`, reduced to what a test needs: a value it can read back. */
+  class Pair {
+    x: number
+    y: number
+
+    constructor(value = 0) {
+      this.x = value
+      this.y = value
+    }
+
+    set(x: number, y = x): void {
+      this.x = x
+      this.y = y
+    }
+  }
+
   class Container {
     readonly children: object[] = []
-    readonly position = { set: vi.fn() }
-    readonly scale = { set: vi.fn() }
+    readonly position = new Pair()
+    readonly scale = new Pair(1)
+    readonly pivot = new Pair()
+    readonly skew = new Pair()
     visible = true
     alpha = 1
+    rotation = 0
     blendMode = 'normal'
     x = 0
     y = 0
@@ -94,13 +137,22 @@ vi.mock('pixi.js', () => {
     Filter: { defaultOptions: { resolution: 1 } },
     Container,
     Graphics,
-    Sprite: class extends Container {},
+    Sprite: class extends Container {
+      constructor() {
+        super()
+        // The world is private, so this registry is the only way a test can read what the
+        // engine wrote onto a layer's sprite.
+        gpu.sprites.push(this)
+      }
+    },
     Rectangle: class {},
     Texture: class {},
     RenderTexture: {
-      create: () => {
+      create: (options: { width: number; height: number }) => {
         gpu.texturesCreated += 1
         return {
+          width: options.width,
+          height: options.height,
           // The patch store lifts sub-frames off it; what matters is that it is a stable object.
           source: {},
           destroy: () => {
@@ -200,6 +252,7 @@ beforeEach(() => {
   gpu.texturesDestroyed = 0
   gpu.reorders = 0
   gpu.init = {}
+  gpu.sprites = []
 })
 
 describe('the blend table', () => {
@@ -299,6 +352,51 @@ describe('mounting', () => {
 
     expect(gpu.texturesCreated).toBe(1)
     expect(gpu.renders).toBe(renders)
+  })
+})
+
+describe('the layer transform', () => {
+  /** One layer, with the transform under test, and the sprite the engine built for it. */
+  async function placed(transform: Partial<Transform>): Promise<PlacedSprite> {
+    const layer = {
+      ...pixelLayer('layer-1', 'Background'),
+      transform: { ...IDENTITY, ...transform },
+    }
+    // A test may place twice, and each mount builds its own sprites.
+    gpu.sprites = []
+    await mounted({ ...DEFAULT_CANVAS, layers: [layer], activeLayerId: layer.id })
+
+    const sprite = gpu.sprites[0]
+    if (!sprite) throw new Error('the engine built no sprite for the layer')
+    return sprite
+  }
+
+  it('turns, scales and skews the sprite the way the state says', async () => {
+    const sprite = await placed({ rotation: Math.PI / 2, scaleX: 2, scaleY: 3, skewX: 0.1 })
+
+    expect(sprite.rotation).toBe(Math.PI / 2)
+    expect(sprite.scale).toMatchObject({ x: 2, y: 3 })
+    expect(sprite.skew).toMatchObject({ x: 0.1, y: 0 })
+  })
+
+  // The origin is a fraction of the box, so a resize does not move the pivot.
+  it('pivots on the fraction of the box the origin names', async () => {
+    const sprite = await placed({ originX: 0.5, originY: 0.25 })
+
+    expect(sprite.pivot).toMatchObject({ x: 512, y: 256 })
+  })
+
+  /**
+   * A pivot displaces the sprite by itself. Without the compensation, moving the origin of an
+   * otherwise untouched layer would slide it across the document — which the type forbids.
+   */
+  it('leaves an untransformed layer where the state put it, whatever its origin', async () => {
+    const centred = await placed({ x: 10, y: 20, originX: 0.5, originY: 0.5 })
+    expect(centred.position.x - centred.pivot.x).toBe(10)
+    expect(centred.position.y - centred.pivot.y).toBe(20)
+
+    const cornered = await placed({ x: 10, y: 20, originX: 0, originY: 0 })
+    expect(cornered.position).toMatchObject({ x: 10, y: 20 })
   })
 })
 

@@ -23,6 +23,7 @@ import {
   type CanvasState,
   type Layer,
   type Rect,
+  type Transform,
 } from './canvas-state'
 import {
   CanvasOverlay,
@@ -558,9 +559,26 @@ export class CanvasEngine {
     surface.sprite.visible = layer.visible
     surface.sprite.alpha = layer.opacity
     surface.sprite.blendMode = BLEND_BY_MODE[layer.blend]
-    // Read from the state, never written from here: a sprite nudged in place is a position the
-    // next `apply` throws away and no undo ever hears about.
-    surface.sprite.position.set(layer.transform.x, layer.transform.y)
+    this.place(surface, layer.transform)
+  }
+
+  /**
+   * Read from the state, never written from here: a sprite nudged in place is a position the next
+   * `apply` throws away and no undo ever hears about.
+   */
+  private place(surface: LayerSurface, transform: Transform): void {
+    const { sprite, texture } = surface
+    // The origin is a fraction of the box, so a resize leaves the pivot where it was.
+    const pivotX = transform.originX * texture.width
+    const pivotY = transform.originY * texture.height
+
+    sprite.pivot.set(pivotX, pivotY)
+    // A pivot displaces the sprite by itself: without this, moving the origin of an otherwise
+    // untouched layer would slide it across the document.
+    sprite.position.set(transform.x + pivotX, transform.y + pivotY)
+    sprite.rotation = transform.rotation
+    sprite.scale.set(transform.scaleX, transform.scaleY)
+    sprite.skew.set(transform.skewX, transform.skewY)
   }
 
   /**
