@@ -45,15 +45,12 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
   }
 
   const build = async (mesh: Mesh, geometry: BufferGeometry): Promise<void> => {
-    const position = geometry.getAttribute('position')
-    if (!(position.array instanceof Float32Array)) return
-
     const id = (nextId += 1)
     const request: BvhRequest = {
       id,
       // Copies: the buffers are transferred, and the live geometry has to keep drawing while the
       // build runs. What comes back replaces the index anyway.
-      position: position.array.slice(),
+      position: positionsOf(geometry),
       index: indexOf(geometry),
     }
 
@@ -100,13 +97,44 @@ function triangleCount(geometry: BufferGeometry): number {
   return (index ? index.count : (geometry.getAttribute('position')?.count ?? 0)) / 3
 }
 
+/**
+ * The positions as three tight floats each, read attribute-wise rather than off the underlying
+ * array. `GLTFLoader` interleaves whenever a file's byte stride says to, and an interleaved
+ * attribute's `array` is the *whole* buffer — normals and uvs among the coordinates. Handed over
+ * as positions it builds a tree of a mesh that does not exist, and clicks then miss what they hit.
+ */
+function positionsOf(geometry: BufferGeometry): Float32Array {
+  const position = geometry.getAttribute('position')
+  const { array } = position
+  // Already three floats each and nothing between them: the copy is a memcpy.
+  if (array instanceof Float32Array && array.length === position.count * 3) return array.slice()
+
+  const tight = new Float32Array(position.count * 3)
+  for (let at = 0; at < position.count; at += 1) {
+    tight[at * 3] = position.getX(at)
+    tight[at * 3 + 1] = position.getY(at)
+    tight[at * 3 + 2] = position.getZ(at)
+  }
+  return tight
+}
+
+/**
+ * The index as 32-bit values, whatever width it was written in. Widened rather than refused: an
+ * index of any other type made the worker take the geometry for a non-indexed one, build a tree
+ * of a different mesh, and hand back an index of another length — which `deserialize` then writes
+ * over the live one for as far as it reaches, silently, leaving the rest of the triangles as they
+ * were. A `SHORT` accessor is all it takes, and glTF allows one.
+ */
 function indexOf(geometry: BufferGeometry): BvhIndex | null {
   const index = geometry.getIndex()
   if (!index) return null
 
   const { array } = index
   if (array instanceof Uint32Array || array instanceof Uint16Array) return array.slice()
-  return null
+
+  const widened = new Uint32Array(index.count)
+  for (let at = 0; at < index.count; at += 1) widened[at] = index.getX(at)
+  return widened
 }
 
 function transferablesOf(request: BvhRequest): Transferable[] {
