@@ -162,25 +162,46 @@ never handles a file path.
 ```
 src/main/
 ├── scenario/
-│   ├── client.ts          the @scenario-labs/sdk client, built from stored credentials
-│   ├── credentials.ts     reading, validating, and reporting auth state
-│   ├── model-registry.ts  GET /models/{id} → FieldDescriptor[]
-│   ├── model-catalog.ts   paginated model listing, cached
-│   ├── job-manager.ts     the queue, the concurrency, the polling
-│   ├── runner.ts          what actually calls generate
-│   ├── schema.ts          schema translation and model family inference
-│   └── handlers.ts        the scenario:* channels
+│   ├── client.ts            the @scenario-labs/sdk client, built from stored credentials
+│   ├── credentials.ts       reading, validating, and reporting auth state
+│   ├── model-registry.ts    GET /models/{id} → FieldDescriptor[]
+│   ├── model-catalog.ts     paginated model listing, cached
+│   ├── job-manager.ts       the queue, the concurrency, the polling
+│   ├── runner.ts            what actually calls generate
+│   ├── schema.ts            schema translation and model family inference
+│   ├── retry.ts             exponential backoff, taken out of the JobManager and shared
+│   ├── asset-catalog.ts     the remote library, read and paginated
+│   ├── asset-normalizer.ts  an API asset brought back to the studio's shape
+│   ├── owner-scope.ts       which project the active key opens onto
+│   ├── filter-expression.ts the search translated for the API
+│   ├── limits.ts            the batch sizes the API imposes
+│   ├── prompt-assist.ts     variants, translation, style reading
+│   ├── assist-queue.ts      the bounded queue of background assistance
+│   ├── uploader.ts          sending a file up to the library
+│   └── handlers.ts          the scenario:* channels
 ├── project/
-│   ├── store.ts           create and open a project folder, read/write the manifest
-│   ├── catalog.ts         the SQLite asset index
-│   ├── sqlite.ts          the SqliteDriver port
-│   ├── sqlite-native.ts   better-sqlite3 — production
-│   └── sqlite-memory.ts   node:sqlite — tests
-├── settings/              the encrypted store, its adapter, its handlers
-├── assets/                asset records and the scenario:// protocol
-├── media/                 ingesting a file: probe, hash, proxy, waveform
-├── menu/                  the native menu, built from the shared registries
-└── window/                lifecycle and navigation lockdown
+│   ├── store.ts             create and open a project folder, read/write the manifest
+│   ├── catalog.ts           the SQLite asset index
+│   ├── catalog-thread.ts    the worker carrying it, and its protocol
+│   ├── activity-log.ts      what the studio did and failed to do
+│   ├── documents.ts         the atomic write of a document
+│   ├── sqlite.ts            the SqliteDriver port
+│   ├── sqlite-native.ts     better-sqlite3 — production
+│   └── sqlite-memory.ts     node:sqlite — tests
+├── assets/
+│   ├── local-backend.ts     the project's assets, on disk
+│   ├── cloud-backend.ts     the same ones, on the library's side
+│   ├── sync-plan.ts         what two sides would have to do about each other
+│   ├── collector.ts         what a generation drops into the project
+│   ├── auto-caption.ts      naming a picture from what the API sees in it
+│   └── protocol.ts          the scenario:// protocol
+├── settings/                the encrypted store, its adapter, its handlers
+├── diagnostics/             the channel the renderer reports a failure through
+├── media/                   ingesting a file: probe, hash, proxy, waveform
+├── fonts/                   the shipped typefaces and the system's
+├── menu/                    the native menu, built from the shared registries
+├── update/                  the update check
+└── window/                  lifecycle and navigation lockdown
 ```
 
 ### The JobManager is the only thing that polls
@@ -192,6 +213,41 @@ seconds, and pushes progress to the renderer over `evt:job-progress`.
 **Polling anywhere else is a bug.** The manager also owns the concurrency (three by default,
 settable) and the exponential backoff on 429 and 5xx — no published rate limit exists, so none
 is assumed. Bypassing the queue with a direct SDK call is how you get a burst of 429s.
+
+### Two asset backends, one planner
+
+The project and the account's library are two stores, served by two backends of the same shape:
+`local-backend.ts` for the folder on disk, `cloud-backend.ts` for the API. What decides what
+should move between them lives elsewhere, and is **pure**: `sync-plan.ts`.
+
+That separation carries two promises:
+
+- **a plan can be shown before it costs a single request** — "12 to push, 3 to fetch" is computed
+  without transferring anything;
+- **two-way syncing stays a policy, not a rewrite.** `planSync` already handles `two-way`, tested,
+  even though the studio only ever asks for `push` or `pull` from an explicit selection. It is the
+  comparison the three stamps were recorded for; writing it later means bolting it on.
+
+Three stamps, read against one another: `remoteSyncedAt` is the baseline, `localChangedAt` and
+`remoteUpdatedAt` say which side moved since. They are **parsed, not compared as text** — an
+offset instead of a `Z` would quietly give the wrong answer. An unreadable date counts as "did not
+move": refusing to act on a date nobody can read beats overwriting a file on the strength of it.
+
+On the renderer's side, a thumbnail's badge is **derived** by `assetBadgeOf` and never stored: it
+depends on the active account, and an API key opens onto exactly one project. Storing it would
+mean rewriting every row on every key change — and showing a stale answer in between.
+
+### The activity journal
+
+`project/activity-log.ts` keeps account of what the studio did and failed to do. Three decisions
+are frozen into it, each answering a precise defect:
+
+- **`record` returns immediately.** It is called from failure paths: a journal that made its
+  callers await would put the disk on the critical path of every error.
+- **Lines are written in batches** (`ACTIVITY_FLUSH_MS`, 200 ms), short enough that a failure
+  still feels immediate.
+- **The catalogue is read per flush, never held.** A project can be closed and another opened
+  while lines are still queued.
 
 ### Ingesting media
 

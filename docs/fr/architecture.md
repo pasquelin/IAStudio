@@ -165,25 +165,46 @@ manipule toujours aucun chemin de fichier.
 ```
 src/main/
 ├── scenario/
-│   ├── client.ts          le client @scenario-labs/sdk, bâti sur les identifiants stockés
-│   ├── credentials.ts     lecture, validation, état d'authentification
-│   ├── model-registry.ts  GET /models/{id} → FieldDescriptor[]
-│   ├── model-catalog.ts   listing paginé des modèles, mis en cache
-│   ├── job-manager.ts     la file, la concurrence, le polling
-│   ├── runner.ts          ce qui appelle réellement generate
-│   ├── schema.ts          traduction de schéma et déduction de famille
-│   └── handlers.ts        les canaux scenario:*
+│   ├── client.ts            le client @scenario-labs/sdk, bâti sur les identifiants stockés
+│   ├── credentials.ts       lecture, validation, état d'authentification
+│   ├── model-registry.ts    GET /models/{id} → FieldDescriptor[]
+│   ├── model-catalog.ts     listing paginé des modèles, mis en cache
+│   ├── job-manager.ts       la file, la concurrence, le polling
+│   ├── runner.ts            ce qui appelle réellement generate
+│   ├── schema.ts            traduction de schéma et déduction de famille
+│   ├── retry.ts             le backoff exponentiel, sorti du JobManager et partagé
+│   ├── asset-catalog.ts     la bibliothèque distante, lue et paginée
+│   ├── asset-normalizer.ts  un asset de l'API ramené à la forme du studio
+│   ├── owner-scope.ts       à quel projet la clé active donne accès
+│   ├── filter-expression.ts la recherche traduite pour l'API
+│   ├── limits.ts            les tailles de lot que l'API impose
+│   ├── prompt-assist.ts     variantes, traduction, lecture de style
+│   ├── assist-queue.ts      la file bornée de l'assistance de fond
+│   ├── uploader.ts          l'envoi d'un fichier vers la bibliothèque
+│   └── handlers.ts          les canaux scenario:*
 ├── project/
-│   ├── store.ts           créer et ouvrir un dossier de projet, lire/écrire le manifeste
-│   ├── catalog.ts         l'index SQLite des assets
-│   ├── sqlite.ts          le port SqliteDriver
-│   ├── sqlite-native.ts   better-sqlite3 — production
-│   └── sqlite-memory.ts   node:sqlite — tests
-├── settings/              le store chiffré, son adaptateur, ses handlers
-├── assets/                les enregistrements d'assets et le protocole scenario://
-├── media/                 importer un fichier : sonde, hachage, proxy, forme d'onde
-├── menu/                  le menu natif, bâti depuis les registres partagés
-└── window/                cycle de vie et verrouillage de la navigation
+│   ├── store.ts             créer et ouvrir un dossier de projet, lire/écrire le manifeste
+│   ├── catalog.ts           l'index SQLite des assets
+│   ├── catalog-thread.ts    le worker qui le porte, et son protocole
+│   ├── activity-log.ts      ce que le studio a fait et raté
+│   ├── documents.ts         l'écriture atomique d'un document
+│   ├── sqlite.ts            le port SqliteDriver
+│   ├── sqlite-native.ts     better-sqlite3 — production
+│   └── sqlite-memory.ts     node:sqlite — tests
+├── assets/
+│   ├── local-backend.ts     les assets du projet, sur le disque
+│   ├── cloud-backend.ts     les mêmes, du côté de la bibliothèque
+│   ├── sync-plan.ts         ce que deux côtés devraient faire l'un de l'autre
+│   ├── collector.ts         ce qu'une génération dépose dans le projet
+│   ├── auto-caption.ts      nommer une image d'après ce que l'API y voit
+│   └── protocol.ts          le protocole scenario://
+├── settings/                le store chiffré, son adaptateur, ses handlers
+├── diagnostics/             le canal par lequel le renderer signale un échec
+├── media/                   importer un fichier : sonde, hachage, proxy, forme d'onde
+├── fonts/                   les polices embarquées et celles du système
+├── menu/                    le menu natif, bâti depuis les registres partagés
+├── update/                  la vérification de mise à jour
+└── window/                  cycle de vie et verrouillage de la navigation
 ```
 
 ### Le JobManager est le seul à poller
@@ -197,6 +218,44 @@ pour une barre de progression, inutilisable pour une génération vidéo. Le `Jo
 réglable) et le backoff exponentiel sur 429 et 5xx — aucun seuil de débit n'est publié, donc
 aucun n'est supposé. Contourner la file par un appel direct au SDK, c'est ainsi qu'on récolte une
 rafale de 429.
+
+### Deux backends d'assets, un seul planificateur
+
+Le projet et la bibliothèque du compte sont deux stocks, servis par deux backends de même forme :
+`local-backend.ts` pour le dossier sur le disque, `cloud-backend.ts` pour l'API. Ce qui décide de
+ce qui devrait bouger entre les deux est ailleurs, et **pur** : `sync-plan.ts`.
+
+Cette séparation porte deux promesses :
+
+- **un plan peut être montré avant de coûter une requête** — « 12 à envoyer, 3 à rapatrier » se
+  calcule sans rien transférer ;
+- **la synchronisation bidirectionnelle reste une politique, pas une réécriture.** `planSync` gère
+  déjà `two-way`, testée, bien que le studio ne demande jamais que `push` ou `pull` depuis une
+  sélection explicite. C'est la comparaison pour laquelle les trois horodatages ont été
+  enregistrés ; l'écrire plus tard, c'est la greffer.
+
+Trois horodatages, lus l'un contre l'autre : `remoteSyncedAt` sert de référence, `localChangedAt`
+et `remoteUpdatedAt` disent qui a bougé depuis. Ils sont **analysés, pas comparés comme du
+texte** — un décalage horaire au lieu d'un `Z` donnerait silencieusement la mauvaise réponse. Une
+date illisible compte comme « n'a pas bougé » : refuser d'agir sur une date que personne ne
+comprend vaut mieux qu'écraser un fichier sur sa foi.
+
+Côté renderer, le badge d'une vignette est **dérivé** par `assetBadgeOf` et jamais stocké : il
+dépend du compte actif, et une clé API ouvre sur un projet et un seul. Le stocker obligerait à
+réécrire chaque ligne à chaque changement de clé — et à montrer une réponse périmée entre les
+deux.
+
+### Le journal d'activité
+
+`project/activity-log.ts` tient le compte de ce que le studio a fait et raté. Trois décisions y
+sont figées, et chacune répond à un défaut précis :
+
+- **`record` rend la main immédiatement.** Il est appelé depuis des chemins d'échec : un journal
+  qui ferait attendre ses appelants mettrait le disque sur le chemin critique de chaque erreur.
+- **Les lignes sont écrites par lots** (`ACTIVITY_FLUSH_MS`, 200 ms), assez court pour qu'un échec
+  reste immédiat à l'œil.
+- **Le catalogue est relu à chaque vidage, jamais retenu.** Un projet peut être fermé et un autre
+  ouvert pendant que des lignes attendent encore dans la file.
 
 ### L'import de médias
 
