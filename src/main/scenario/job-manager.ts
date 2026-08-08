@@ -65,9 +65,14 @@ const DEFAULT_POLL_INTERVAL_MS = 2000
 const RETAINED_JOBS = 200
 
 /**
- * The API knows eight statuses, the studio five. `warming-up` and `finalizing` are running
+ * The API spells eight states, the studio has five. `warming-up` and `finalizing` are running
  * states, not states of their own; an unknown one is treated as running, so a status Scenario
  * adds keeps the job polling instead of declaring an outcome nobody understood.
+ *
+ * `succeeded` and `failed` are insurance, not observation: the SDK types give a workflow job
+ * the same eight spellings as a generation, while the prose guide gives it these two. They cost
+ * two rows and no collision — and without them, the guide being right means a workflow job
+ * polls for ever while holding its place in the concurrency count.
  */
 const STATUS: Record<string, JobStatus> = {
   pending: 'queued',
@@ -76,12 +81,37 @@ const STATUS: Record<string, JobStatus> = {
   'in-progress': 'running',
   finalizing: 'running',
   success: 'succeeded',
+  succeeded: 'succeeded',
   failure: 'failed',
+  failed: 'failed',
   canceled: 'cancelled',
 }
 
 export function jobStatusOf(remoteStatus: string): JobStatus {
-  return STATUS[remoteStatus] ?? 'running'
+  // Own keys only: a status spelled like an inherited member would otherwise resolve to one.
+  return Object.hasOwn(STATUS, remoteStatus) ? (STATUS[remoteStatus] ?? 'running') : 'running'
+}
+
+/**
+ * A progress reading above this is a percentage, below it a fraction. Not 1: generation
+ * overshoots its own scale — `ProgressBar` is clamped because a job reports 1.02 — so dividing
+ * from 1 would show the end of a generation as 1 %.
+ */
+const PERCENTAGE_ABOVE = 2
+
+/**
+ * Progress as the fraction `Job.progress` promises, which several surfaces sum.
+ *
+ * The SDK types say 0–1 for every job type; the prose guide says 0–100 for a workflow one, and
+ * reading the larger scale costs nothing if the types are right. Anything outside either scale
+ * is out of contract and clamped rather than passed on — NaN included, which would otherwise
+ * emit on every poll, `NaN !== NaN` defeating the guard that only emits on change.
+ */
+export function jobProgressOf(reported: number): number {
+  if (!Number.isFinite(reported)) return 0
+
+  const fraction = reported > PERCENTAGE_ABOVE ? reported / 100 : reported
+  return Math.min(Math.max(fraction, 0), 1)
 }
 
 type Entry = {
@@ -181,7 +211,7 @@ export function createJobManager({
 
   const advance = (entry: Entry, remote: RemoteJob): JobStatus => {
     const status = jobStatusOf(remote.status)
-    const progress = remote.progress ?? entry.job.progress
+    const progress = jobProgressOf(remote.progress ?? entry.job.progress)
 
     // An outcome is announced by `settle` alone, and only once it is actually complete: a
     // success emitted here would reach the jobs bar before the asset exists on disk.

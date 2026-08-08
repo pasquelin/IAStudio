@@ -120,7 +120,41 @@ comme modèles.
 
 ## Étape 1 — Les deux statuts qui feraient poller pour toujours
 
-- [ ] Livrée
+- [x] Livrée
+
+> **Suivie, mais sa prémisse est fausse — et c'est le SDK qui le dit.** Les deux corrections
+> ci-dessous étaient présentées comme des correctifs ; ce sont des **assurances**.
+> `resources/workflows.d.ts` l. 4079-4091 donne à la réponse de `workflows.run` les **huit**
+> statuts de la génération et une progression *« between 0 and 1 »* ; `jobs.retrieve`, le seul
+> endpoint que le `JobManager` interroge, dit la même chose, et le filtre du serveur MCP officiel
+> aussi. Seul le guide en prose annonce `succeeded`/`failed` et 0–100. Rien dans l'historique du
+> compte ne permet d'observer un vrai job de workflow (`jobs_list type: workflow` est vide).
+>
+> Les deux lignes de `STATUS` et l'heuristique de progression sont donc **livrées quand même** :
+> inertes si le SDK dit vrai, salvatrices si c'est le guide, et sans collision dans les deux cas.
+> Le § 4.5 de `REPRISE.md` porte le détail. **Conséquence pour l'étape 5** : ne pas coder en dur
+> l'un des deux vocabulaires — observer ce qu'un vrai job de workflow répond, et le consigner.
+>
+> **Le seuil de pourcentage est 2, pas 1** — et c'est `/code-review` qui l'a rattrapé. Le dépôt
+> documente qu'une génération dépasse sa propre échelle : « *Clamped, because a job that reports
+> 1.02 must not overflow its track* » (`design/ProgressBar.tsx`). Diviser dès 1 faisait donc
+> retomber la fin de chaque génération à **1 %**, une régression sur le chemin vivant introduite
+> pour un vocabulaire que personne n'a observé. Au-dessus de 2, aucune fraction ne peut vivre.
+>
+> Trois autres corrections de la même revue : `jobProgressOf` rend **0 sur une valeur non finie**
+> (un NaN stocké était réémis à chaque poll, `NaN !== NaN` battant la garde qui n'émet que sur
+> changement, et `JobsStatus` somme ces valeurs) ; `jobStatusOf` ne lit que les **clés propres** de
+> sa table (un statut nommé comme un membre du prototype ne retombait pas sur `running`) ; et le
+> test de bout en bout portait ses pourcentages sur un poll **final**, où `advance` sort avant de
+> rien stocker — il ne prouvait rien, il les porte désormais sur un poll encore en cours.
+>
+> Deux ajouts hors plan, issus de `/simplify` : la progression est **bornée à `[0, 1]`** en plus
+> d'être normalisée ; et le `sleep` du harness de test est **borné** — ces délais se résolvent sur
+> la file de microtâches, donc une boucle de poll dont la condition de sortie régresse tournait à
+> l'infini sans qu'aucun timer, celui de vitest compris, ne puisse tomber. La garde **relance hors
+> de la chaîne de promesses** (`queueMicrotask`), parce que `execute` rattrape tout : avalée, elle
+> réglait le job en échec et laissait passer au vert une boucle emballée. Vérifié en retirant
+> `success` de la table : le run devient rouge en 233 ms au lieu de pendre.
 
 **C'est la première étape, et rien du reste ne peut marcher avant.**
 

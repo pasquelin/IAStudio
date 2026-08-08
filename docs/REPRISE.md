@@ -1217,18 +1217,36 @@ est flottante et maison — ce qui tombe bien, le studio a la sienne (`design/To
 
 ## 4.5 Quatre pièges trouvés en lisant, avant d'avoir écrit une ligne
 
-**1. Un job de workflow pollerait pour toujours.** La table `STATUS` du `JobManager` connaît
-`success`, `failure`, `canceled` — les valeurs de l'API de génération. Un job de workflow répond
-`succeeded`, `failed`, `canceled` (`workflows-and-apps.md`, « Job Status Values »). Or un statut
-inconnu est traité comme `running`, **délibérément et à raison** : c'est ce qui protège d'un statut
-que Scenario ajouterait. Conséquence ici : `succeeded` et `failed` ne seraient jamais reconnus,
-`isFinished` ne serait jamais vrai, la boucle ne s'arrêterait pas et le job resterait au compteur de
-concurrence jusqu'à la fermeture. **Deux lignes dans `STATUS` et un test, avant tout le reste.**
+> **Les deux premiers reposaient sur la prose du guide, et le SDK la contredit — vérifié le
+> 8 août 2026, avant d'écrire l'étape 1.** `node_modules/@scenario-labs/sdk/resources/workflows.d.ts`,
+> l. 4079-4091, décrit la réponse de `workflows.run` : `status` y prend **les huit valeurs de la
+> génération** (`canceled | failure | finalizing | in-progress | pending | queued | success |
+> warming-up`), sans `succeeded` ni `failed`, et `progress` y porte le commentaire *« Progress of
+> the job (between 0 and 1) »*. `jobs.retrieve` — le seul endpoint que le `JobManager` interroge —
+> dit exactement la même chose (`resources/jobs.d.ts`, l. 39-51), et le filtre de statut du serveur
+> MCP officiel n'admet lui aussi que ces huit valeurs. Le guide en prose est donc **la seule des
+> trois sources** à annoncer `succeeded`/`failed` et une progression en 0–100.
+>
+> Aucun job de workflow n'existe dans l'historique du compte pour trancher à l'observation
+> (`jobs_list` filtré sur `type: workflow` rend une liste vide). L'étape 1 a donc livré les deux
+> corrections **comme des assurances, pas comme des correctifs** : elles ne coûtent rien si le SDK
+> dit vrai, et elles évitent la panne si c'est le guide.
 
-**2. La progression serait affichée à 10000 %.** `advance` recopie `remote.progress` tel quel. La
-génération le rend en 0–1, le workflow en 0–100 (`"progress": 100` dans la réponse d'exemple).
-Normaliser à l'entrée — `p > 1 ? p / 100 : p` — et non à l'affichage : la valeur est stockée dans
-`Job.progress` et lue par plusieurs surfaces.
+**1. Un job de workflow pollerait pour toujours** — si le guide dit vrai. La table `STATUS` du
+`JobManager` connaissait `success`, `failure`, `canceled`, les valeurs de l'API de génération. Un
+statut inconnu est traité comme `running`, **délibérément et à raison** : c'est ce qui protège d'un
+statut que Scenario ajouterait. Conséquence : `succeeded` et `failed` n'auraient jamais été
+reconnus, `isFinished` jamais vrai, la boucle ne se serait pas arrêtée et le job serait resté au
+compteur de concurrence jusqu'à la fermeture. **Deux lignes dans `STATUS` et un test** — livrées à
+l'étape 1. Aucune collision : aucune des deux graphies n'a d'autre sens dans le vocabulaire de la
+génération, la table unique est donc sans perte.
+
+**2. La progression serait affichée à 10000 %** — même condition. `advance` recopiait
+`remote.progress` tel quel. Normaliser **à l'entrée** — `p > 1 ? p / 100 : p`, puis borner à
+`[0, 1]` — et non à l'affichage : la valeur est stockée dans `Job.progress`, et `JobsStatus` la
+**somme** sur tous les jobs en cours, ce qu'un clamp d'affichage ne rattraperait pas. Livré à
+l'étape 1. L'heuristique est inerte si le SDK dit vrai, une progression n'ayant jamais de raison
+légitime de dépasser 1.
 
 **3. Les sorties d'un workflow ne sont pas là où le manager les cherche.** `RemoteJob` ne lit que
 `metadata.assetIds`. Un job de workflow rend `metadata.flow[]`, **une entrée par node avec son

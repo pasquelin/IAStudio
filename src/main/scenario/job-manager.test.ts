@@ -4,6 +4,7 @@ import type { JobProgress } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import {
   createJobManager,
+  jobProgressOf,
   jobStatusOf,
   type AssetCollector,
   type JobManager,
@@ -13,6 +14,12 @@ import {
 } from './job-manager'
 
 const settled = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
+
+/**
+ * Counted across the whole harness rather than per job, so it has to clear the busiest test by
+ * a wide margin — a runaway loop reaches it in milliseconds either way.
+ */
+const RUNAWAY_SLEEPS = 1000
 
 function remote(status: string, overrides: Partial<RemoteJob> = {}): RemoteJob {
   return { jobId: 'job_remote', status, progress: 0, ...overrides }
@@ -54,8 +61,20 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
     newId: () => `job_${sequence}`,
     // Delays are recorded rather than waited: the backoff schedule is what matters, and a
     // test that actually sleeps for it takes seconds to prove one assertion.
+    // Bounded, because these delays resolve on the microtask queue: a poll loop whose exit
+    // condition regresses would spin without ever letting a timer — vitest's own included —
+    // fire, turning a red assertion into a run that has to be killed by hand. Thrown outside
+    // the promise chain as well, because `execute` catches everything: swallowed, the guard
+    // would settle the job as failed and let a spinning loop merge green.
     sleep: ms => {
       sleeps.push(ms)
+      if (sleeps.length > RUNAWAY_SLEEPS) {
+        const runaway = new Error('poll loop did not terminate')
+        queueMicrotask(() => {
+          throw runaway
+        })
+        throw runaway
+      }
       return Promise.resolve()
     },
     ...overrides,
@@ -65,7 +84,7 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
 }
 
 describe('status mapping', () => {
-  it('folds the eight statuses of the API onto the five of the studio', () => {
+  it('folds the eight statuses of generation onto the five of the studio', () => {
     expect(jobStatusOf('pending')).toBe('queued')
     expect(jobStatusOf('queued')).toBe('queued')
     expect(jobStatusOf('warming-up')).toBe('running')
@@ -76,9 +95,41 @@ describe('status mapping', () => {
     expect(jobStatusOf('canceled')).toBe('cancelled')
   })
 
+  // Unrecognised, either would fold onto `running` and poll for ever holding a concurrency slot.
+  it('folds the two outcomes the guide spells differently for a workflow job', () => {
+    expect(jobStatusOf('succeeded')).toBe('succeeded')
+    expect(jobStatusOf('failed')).toBe('failed')
+  })
+
   // Declaring an outcome nobody understood is worse than polling one cycle too many.
   it('keeps polling on a status it has never seen', () => {
     expect(jobStatusOf('reticulating-splines')).toBe('running')
+  })
+})
+
+describe('progress normalisation', () => {
+  it('leaves the fraction the SDK types promise alone', () => {
+    expect(jobProgressOf(0)).toBe(0)
+    expect(jobProgressOf(0.42)).toBe(0.42)
+    expect(jobProgressOf(1)).toBe(1)
+  })
+
+  // Passed on as-is, the 0 to 100 the guide describes would show as 10000 % in the jobs bar.
+  it('reads a reading past the fraction scale as a percentage', () => {
+    expect(jobProgressOf(100)).toBe(1)
+    expect(jobProgressOf(40)).toBe(0.4)
+  })
+
+  // The scale a generation ends on: `ProgressBar` clamps 1.02 rather than divide it by a hundred.
+  it('reads a generation overshooting its own scale as finished, not as one percent', () => {
+    expect(jobProgressOf(1.02)).toBe(1)
+    expect(jobProgressOf(2)).toBe(1)
+  })
+
+  it('never reports outside the fraction it promises', () => {
+    expect(jobProgressOf(150)).toBe(1)
+    expect(jobProgressOf(-1)).toBe(0)
+    expect(jobProgressOf(Number.NaN)).toBe(0)
   })
 })
 
@@ -148,6 +199,31 @@ describe('job manager', () => {
     expect(progress.map(entry => [entry.status, entry.progress])).toEqual([
       ['queued', 0],
       ['running', 0.4],
+      ['succeeded', 1],
+    ])
+  })
+
+  /**
+   * The percentages have to land on a poll that is still running: `advance` returns before
+   * storing anything once the status is final, and `settle` writes 1 of its own accord.
+   */
+  it('finishes a job that spells its outcome and its progress the way the guide does', async () => {
+    const polls = [remote('in-progress', { progress: 40 }), remote('finalizing', { progress: 100 })]
+    const { manager, progress } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('queued', { progress: 0 })),
+        poll: () => Promise.resolve(polls.shift() ?? remote('succeeded', { progress: 100 })),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit('model_flux', 'Flux', {})
+    await settled()
+
+    expect(progress.map(entry => [entry.status, entry.progress])).toEqual([
+      ['queued', 0],
+      ['running', 0.4],
+      ['running', 1],
       ['succeeded', 1],
     ])
   })
