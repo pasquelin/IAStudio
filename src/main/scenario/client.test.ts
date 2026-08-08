@@ -9,6 +9,7 @@ import {
   testAuthentication,
   type AuthProbe,
 } from './client'
+import { createCredentialsWatch } from './credentials-watch'
 
 // Headers are not decoration here: `generate` degrades to a connection error without them,
 // which is exactly what a real response never does when it carries a status.
@@ -100,7 +101,7 @@ describe('client provider', () => {
   const credentials: Credentials = { key: 'api_k', secret: 's3cr3t' }
 
   it('has no client when no credentials can be resolved', async () => {
-    const provider = createClientProvider(() => null)
+    const provider = createClientProvider(() => null, createCredentialsWatch().watch)
 
     expect(provider.get()).toBeNull()
     expect(() => provider.require()).toThrow(NotAuthenticatedError)
@@ -112,18 +113,24 @@ describe('client provider', () => {
 
   it('builds the client once and keeps it', () => {
     const resolve = vi.fn(() => credentials)
-    const provider = createClientProvider(resolve)
+    const provider = createClientProvider(resolve, createCredentialsWatch().watch)
 
     expect(provider.get()).toBe(provider.get())
     expect(resolve).toHaveBeenCalledOnce()
   })
 
-  it('rebuilds after the credentials change', () => {
+  /**
+   * Subscribed where it is built, and reachable no other way: a public `invalidate` would let a
+   * later caller drop this cache by hand and leave every other one holding the old account's
+   * contents — which is the failure the watch exists to make impossible.
+   */
+  it('rebuilds on an account switch, without being told', () => {
+    const watch = createCredentialsWatch()
     const resolve = vi.fn(() => credentials)
-    const provider = createClientProvider(resolve)
+    const provider = createClientProvider(resolve, watch.watch)
 
     const first = provider.get()
-    provider.invalidate()
+    watch.changed()
 
     expect(provider.get()).not.toBe(first)
     expect(resolve).toHaveBeenCalledTimes(2)

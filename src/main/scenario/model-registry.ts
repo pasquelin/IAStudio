@@ -10,6 +10,7 @@ import {
   type ModelSort,
   type ModelSummary,
 } from '@shared/domain/model'
+import type { WatchCredentials } from './credentials-watch'
 import { familyOf, translateSchema, type ScenarioInput } from './schema'
 
 /**
@@ -83,11 +84,12 @@ export type ModelRegistry = {
   describe: (modelId: string) => Promise<ModelDescriptor>
   /** Signed picture URL per asset id, absent for the ones the API has nothing for. */
   previews: (assetIds: readonly string[]) => Promise<Record<string, string>>
-  invalidate: () => void
 }
 
 export type RegistryOptions = {
   catalog: () => ModelCatalog
+  /** Required: everything cached here belongs to one account, and none of the keys say which. */
+  watch: WatchCredentials
   ttlMs?: number
   now?: () => number
 }
@@ -253,6 +255,7 @@ type Cached<T> = { at: number; value: T }
  */
 export function createModelRegistry({
   catalog,
+  watch,
   ttlMs = DEFAULT_TTL_MS,
   now = Date.now,
 }: RegistryOptions): ModelRegistry {
@@ -335,6 +338,16 @@ export function createModelRegistry({
     if (token) return { mode: 'list', privacy: cursor.privacy, token }
     return cursor.privacy === 'private' ? { mode: 'list', privacy: 'public' } : null
   }
+
+  const invalidate = (): void => {
+    pages.clear()
+    fetched.clear()
+    descriptors.clear()
+    previews.clear()
+    ownsModels = null
+  }
+
+  watch(invalidate)
 
   return {
     search: async query => {
@@ -433,14 +446,6 @@ export function createModelRegistry({
         if (url) resolved[id] = url
       }
       return resolved
-    },
-
-    invalidate: () => {
-      pages.clear()
-      fetched.clear()
-      descriptors.clear()
-      previews.clear()
-      ownsModels = null
     },
   }
 }

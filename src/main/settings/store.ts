@@ -10,9 +10,13 @@ import {
   EMPTY_BOOK,
   removeAccount,
   renameAccount,
+  settleBook,
   summariesOf,
+  withEnvironment,
+  withoutEnvironment,
   type AccountBook,
   type Credentials,
+  type StoredAccount,
 } from './accounts'
 import { parseStoredAccounts, parseStoredCredentials, salvagePartialSettings } from './validation'
 
@@ -79,6 +83,18 @@ const ACCOUNTS_KEY = 'accounts'
  */
 const MIGRATED_ACCOUNT_ID = 'account_migrated'
 
+/**
+ * Whether the calls now go out under a different key. Read off the credentials rather than off
+ * the active id, because the two stopped being the same question: the development account keeps
+ * one id while the file behind it may hold another key, and a cache kept across that change
+ * would serve one project's contents under another's name.
+ */
+function movedKey(before: AccountBook, after: AccountBook): boolean {
+  const from = activeCredentials(before)
+  const to = activeCredentials(after)
+  return from?.key !== to?.key || from?.secret !== to?.secret
+}
+
 function merge(base: Settings, partial: PartialSettings): Settings {
   return {
     general: { ...base.general, ...partial.general },
@@ -101,11 +117,20 @@ export type SettingsStoreOptions = {
   onChange?: (settings: Settings) => void
   /** Injected so a test can name the accounts it creates. */
   newAccountId?: () => string
+  /**
+   * The account `secrets/.env` stands for in development, read afresh each time: the file is
+   * the truth about it, and nothing here ever writes it back.
+   */
+  environmentAccount?: () => StoredAccount | null
 }
 
 export function createSettingsStore(
   adapter: PersistenceAdapter,
-  { onChange, newAccountId = () => `account_${randomUUID()}` }: SettingsStoreOptions = {},
+  {
+    onChange,
+    newAccountId = () => `account_${randomUUID()}`,
+    environmentAccount = () => null,
+  }: SettingsStoreOptions = {},
 ): SettingsStore {
   const read = (): Settings =>
     merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
@@ -168,7 +193,7 @@ export function createSettingsStore(
    * With no book at all, a lone pair from a single-credential install stands in for one, so
    * an upgrade keeps working before `settleAccounts` has had a chance to carry it over.
    */
-  const readBook = (): AccountBook => {
+  const persistedBook = (): AccountBook => {
     const stored = storedBook()
     if (stored.held === 'book') return stored.book
     if (stored.held !== 'none') return EMPTY_BOOK
@@ -178,8 +203,19 @@ export function createSettingsStore(
     return credentials ? bookFromCredentials(credentials, MIGRATED_ACCOUNT_ID) : EMPTY_BOOK
   }
 
+  /**
+   * What the studio runs on: the keychain's accounts, plus the development one behind them,
+   * repaired once the list is whole. The repair comes last on purpose — a stored `activeId` may
+   * name the account that lives in a file, and judged against the blob alone it names nothing.
+   *
+   * Takes the persisted book so a caller holding one already need not read it twice.
+   */
+  const readBook = (persisted = persistedBook()): AccountBook =>
+    settleBook(withEnvironment(persisted, environmentAccount()))
+
+  /** Only what the keychain owns: the development account is read back from its file. */
   const writeBook = (book: AccountBook): void => {
-    adapter.write(ACCOUNTS_KEY, adapter.encrypt(JSON.stringify(book)))
+    adapter.write(ACCOUNTS_KEY, adapter.encrypt(JSON.stringify(withoutEnvironment(book))))
   }
 
   /** Runs one change and reports whether it moved the active key — never guessed by a caller. */
@@ -195,11 +231,11 @@ export function createSettingsStore(
      */
     if (stored.held === 'locked') throw new AccountError('store-unreadable')
 
-    const before = stored.held === 'book' ? stored.book : readBook()
+    const before = readBook(stored.held === 'book' ? stored.book : undefined)
     const after = change(before)
     writeBook(after)
 
-    return { accounts: summariesOf(after), credentialsChanged: before.activeId !== after.activeId }
+    return { accounts: summariesOf(after), credentialsChanged: movedKey(before, after) }
   }
 
   return {

@@ -6,12 +6,31 @@ export type AccountSummary = {
   id: string
   name: string
   active: boolean
+  /**
+   * Whether the studio may rename or remove it. A window is told the permission and not where
+   * the account is kept: which store holds a key is the main process's business alone.
+   */
+  readOnly?: boolean
 }
 
 export const ACCOUNT_NAME_MAX_LENGTH = 60
 
 /** What a single-credential install becomes when it grows a list. */
 export const DEFAULT_ACCOUNT_NAME = 'Scenario'
+
+/**
+ * The id the development account always takes. Fixed rather than generated so that activating
+ * it survives a relaunch: what is persisted is the id alone, and a fresh one per read would
+ * point the stored choice at nothing.
+ */
+export const ENVIRONMENT_ACCOUNT_ID = 'account_environment'
+
+/**
+ * What the development account is called when `secrets/.env` does not name it. Untranslated,
+ * like every other account name: these sit side by side in one switch, and a name that moved
+ * with the interface language would stop matching what was shown yesterday.
+ */
+export const DEFAULT_ENVIRONMENT_ACCOUNT_NAME = 'Development'
 
 /** Why a name was refused. */
 export type AccountNameFailure = 'empty' | 'too-long' | 'duplicate'
@@ -21,8 +40,11 @@ export type AccountNameFailure = 'empty' | 'too-long' | 'duplicate'
  *
  * `store-unreadable` means the keychain would not give the stored accounts back. Writing then
  * would replace them all with the one being saved, so the change is refused instead.
+ *
+ * `read-only-account` means the development account: it is edited in `secrets/.env`, not here.
  */
-export type AccountFailure = AccountNameFailure | 'unknown-account' | 'store-unreadable'
+export type AccountFailure =
+  AccountNameFailure | 'unknown-account' | 'store-unreadable' | 'read-only-account'
 
 /** Named accounts, whatever else the caller holds about them. */
 type Named = { id: string; name: string }

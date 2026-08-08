@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
+import { useAccountChange } from '@/hooks/useAccountChange'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useWindowFit } from '@/hooks/useWindowFit'
-import { activeAccount, useAccounts } from '@/stores/accounts'
+import { useAccounts } from '@/stores/accounts'
 import { useJobs } from '@/stores/jobs'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
@@ -54,28 +55,8 @@ export function Application() {
    * and none of the query keys say which. Without this, switching accounts leaves the previous
    * one's models and their signed previews on screen — nothing refetches them, since the keys
    * did not change and `refetchOnWindowFocus` is off.
-   *
-   * The main process clears its own caches on the same event (`onCredentialsChanged`).
    */
-  useEffect(() => {
-    /*
-     * Watched on the store, not on the event: the first list arrives through `list()` and
-     * never through `onChange`. A watcher on the event alone would therefore still hold `null`
-     * once the window is up, and would sit out the switch it exists to catch — leaving this
-     * window serving the previous account's models.
-     */
-    let active = activeAccount(useAccounts.getState().accounts)?.id ?? null
-
-    return useAccounts.subscribe(state => {
-      const next = activeAccount(state.accounts)?.id ?? null
-      if (next === active) return
-
-      // Nothing was fetched under "no account", so arriving at one has nothing to drop.
-      const switched = active !== null
-      active = next
-      if (switched) client.clear()
-    })
-  }, [client])
+  useAccountChange(() => client.clear())
 
   return (
     <QueryClientProvider client={client}>

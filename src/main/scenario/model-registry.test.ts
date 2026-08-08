@@ -1,12 +1,19 @@
 import { describe, expect, it, vi } from 'vitest'
 import { OFFICIAL_TAG, SKYBOX_TAG } from '@shared/domain/model'
+import { createCredentialsWatch } from './credentials-watch'
 import {
   createModelRegistry,
   type ListRequest,
   type ModelCatalog,
+  type ModelRegistry,
+  type RegistryOptions,
   type RemoteModel,
   type SearchRequest,
 } from './model-registry'
+
+/** The account switch is its own subject, below: everything else is built deaf to it. */
+const registryOf = (options: Omit<RegistryOptions, 'watch'>): ModelRegistry =>
+  createModelRegistry({ ...options, watch: () => () => {} })
 
 const FLUX: RemoteModel = {
   id: 'model_flux',
@@ -130,7 +137,7 @@ function manyModels(count: number, prefix = 'model'): RemoteModel[] {
 
 describe('model registry', () => {
   it('summarizes what the panel needs and infers the family', async () => {
-    const registry = createModelRegistry({ catalog: publicCatalog([FLUX]) })
+    const registry = registryOf({ catalog: publicCatalog([FLUX]) })
 
     expect((await registry.search({})).items).toEqual([
       {
@@ -150,7 +157,7 @@ describe('model registry', () => {
   })
 
   it('falls back to the id and to an unknown origin rather than dropping a model', async () => {
-    const registry = createModelRegistry({ catalog: publicCatalog([{ id: 'model_bare' }]) })
+    const registry = registryOf({ catalog: publicCatalog([{ id: 'model_bare' }]) })
 
     expect((await registry.search({})).items).toEqual([
       {
@@ -167,7 +174,7 @@ describe('model registry', () => {
   })
 
   it('reads authorship from the official tag, the only signal the API carries', async () => {
-    const registry = createModelRegistry({ catalog: publicCatalog([FLUX, VEO]) })
+    const registry = registryOf({ catalog: publicCatalog([FLUX, VEO]) })
 
     expect((await registry.search({ origin: 'community' })).items).toEqual([
       expect.objectContaining({ id: 'model_veo', origin: 'community' }),
@@ -175,7 +182,7 @@ describe('model registry', () => {
   })
 
   it('filters by family across pages', async () => {
-    const registry = createModelRegistry({ catalog: publicCatalog([FLUX, VEO]) })
+    const registry = registryOf({ catalog: publicCatalog([FLUX, VEO]) })
 
     expect((await registry.search({ family: 'video' })).items).toEqual([
       expect.objectContaining({ id: 'model_veo' }),
@@ -184,7 +191,7 @@ describe('model registry', () => {
 
   it('answers one page at a time rather than walking the whole catalogue', async () => {
     const spied = spiedCatalog({ public: manyModels(400) })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     const first = await registry.search({ limit: 24 })
 
@@ -200,7 +207,7 @@ describe('model registry', () => {
    */
   it('downloads a server page once, however many screenfuls it serves', async () => {
     const spied = spiedCatalog({ public: manyModels(400) })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     const first = await registry.search({ limit: 24 })
     const second = await registry.search({ limit: 24, cursor: first.cursor ?? undefined })
@@ -211,7 +218,7 @@ describe('model registry', () => {
   })
 
   it('resumes where the cursor left off, without repeating a model', async () => {
-    const registry = createModelRegistry({ catalog: publicCatalog(manyModels(400)) })
+    const registry = registryOf({ catalog: publicCatalog(manyModels(400)) })
 
     const first = await registry.search({ limit: 24 })
     const second = await registry.search({ limit: 24, cursor: first.cursor ?? undefined })
@@ -226,7 +233,7 @@ describe('model registry', () => {
    */
   it('lists a model once even when both passes carry it', async () => {
     const mine = { ...FLUX, id: 'model_shared' }
-    const registry = createModelRegistry({
+    const registry = registryOf({
       catalog: spiedCatalog({ private: [mine], public: [mine, VEO] }).catalog,
     })
 
@@ -236,14 +243,14 @@ describe('model registry', () => {
   })
 
   it('reports the end of the catalogue with a null cursor', async () => {
-    const registry = createModelRegistry({ catalog: publicCatalog([FLUX, VEO]) })
+    const registry = registryOf({ catalog: publicCatalog([FLUX, VEO]) })
 
     expect((await registry.search({})).cursor).toBeNull()
   })
 
   it('walks the private models first, then the public ones', async () => {
     const spied = spiedCatalog({ private: [VEO], public: [FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     const page = await registry.search({})
 
@@ -254,7 +261,7 @@ describe('model registry', () => {
   // A model the user trained is theirs, never Scenario's: that page could only be discarded.
   it('skips the private pass entirely when only official models are wanted', async () => {
     const spied = spiedCatalog({ private: [VEO], public: [FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     const page = await registry.search({ origin: 'official' })
 
@@ -268,7 +275,7 @@ describe('model registry', () => {
    */
   it('sends one tag to the API as a coarse pre-filter', async () => {
     const spied = spiedCatalog({ public: [FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     await registry.search({ tags: ['I2V', 'Video'] })
 
@@ -282,7 +289,7 @@ describe('model registry', () => {
    */
   it('asks the API for the skybox tag when the workspace wants that family', async () => {
     const spied = spiedCatalog({ public: [SKY] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     await registry.search({ family: 'skybox' })
     expect(spied.lists.at(-1)?.tag).toBe(SKYBOX_TAG)
@@ -298,7 +305,7 @@ describe('model registry', () => {
   // family in its key, these three models answered the Image listing that came next.
   it('does not serve a skybox page back to another family', async () => {
     const spied = spiedCatalog({ public: [SKY, FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     await registry.search({ family: 'skybox' })
     const images = await registry.search({ family: 'image' })
@@ -311,7 +318,7 @@ describe('model registry', () => {
   it('turns the requested span into a date, against its own clock', async () => {
     const spied = spiedCatalog({ public: [FLUX] })
     const noon = Date.parse('2026-08-06T12:00:00.000Z')
-    const registry = createModelRegistry({ catalog: spied.catalog, now: () => noon })
+    const registry = registryOf({ catalog: spied.catalog, now: () => noon })
 
     await registry.search({ since: 'week' })
 
@@ -320,7 +327,7 @@ describe('model registry', () => {
 
   it('asks for no date bound when no span is wanted', async () => {
     const spied = spiedCatalog({ public: [FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     await registry.search({})
 
@@ -329,7 +336,7 @@ describe('model registry', () => {
 
   it('pushes the official filter to the API instead of discarding pages client-side', async () => {
     const spied = spiedCatalog({ public: [FLUX, VEO] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     await registry.search({ origin: 'official' })
 
@@ -343,7 +350,7 @@ describe('model registry', () => {
    */
   it('bounds how many pages one request walks, and keeps its cursor', async () => {
     const spied = spiedCatalog({ public: manyModels(5000) })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     const page = await registry.search({ family: 'video', limit: 24 })
 
@@ -354,7 +361,7 @@ describe('model registry', () => {
 
   it('sends a text query to the search index rather than sifting the catalogue', async () => {
     const spied = spiedCatalog({ public: [FLUX, VEO] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     const page = await registry.search({ search: 'flu' })
 
@@ -365,7 +372,7 @@ describe('model registry', () => {
 
   it('paginates the search index by offset', async () => {
     const spied = spiedCatalog({ public: manyModels(60, 'flux') })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     const first = await registry.search({ search: 'flux', limit: 24 })
     await registry.search({ search: 'flux', limit: 24, cursor: first.cursor ?? undefined })
@@ -375,7 +382,7 @@ describe('model registry', () => {
 
   it('serves an identical query from cache', async () => {
     const spied = spiedCatalog({ public: [FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = registryOf({ catalog: spied.catalog })
 
     await registry.search({ family: 'image' })
     await registry.search({ family: 'image' })
@@ -387,7 +394,7 @@ describe('model registry', () => {
   it('refetches once the cache has expired', async () => {
     let clock = 0
     const spied = spiedCatalog({ public: [FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog, ttlMs: 1000, now: () => clock })
+    const registry = registryOf({ catalog: spied.catalog, ttlMs: 1000, now: () => clock })
 
     await registry.search({})
     clock = 999
@@ -399,13 +406,19 @@ describe('model registry', () => {
     expect(spied.lists).toHaveLength(4)
   })
 
-  it('drops every cache when the credentials change', async () => {
+  /**
+   * Subscribed where it is built, and reachable no other way: a public `invalidate` would let a
+   * later caller drop this cache by hand and leave every other one holding the old account's
+   * contents — which is the failure the watch exists to make impossible.
+   */
+  it('drops every cache on an account switch, without being told', async () => {
+    const watch = createCredentialsWatch()
     const spied = spiedCatalog({ public: [FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog })
+    const registry = createModelRegistry({ catalog: spied.catalog, watch: watch.watch })
 
     await registry.search({})
     await registry.previews(['asset_a'])
-    registry.invalidate()
+    watch.changed()
 
     await registry.search({})
     await registry.previews(['asset_a'])
@@ -417,7 +430,7 @@ describe('model registry', () => {
   describe('previews', () => {
     it('resolves a whole screenful of cards in one request', async () => {
       const spied = spiedCatalog({ public: [FLUX] })
-      const registry = createModelRegistry({ catalog: spied.catalog })
+      const registry = registryOf({ catalog: spied.catalog })
 
       const resolved = await registry.previews(['asset_a', 'asset_b'])
 
@@ -431,7 +444,7 @@ describe('model registry', () => {
      */
     it('uses the rendered still when the example is not an image', async () => {
       const spied = spiedCatalog({ public: [FLUX] })
-      const registry = createModelRegistry({ catalog: spied.catalog })
+      const registry = registryOf({ catalog: spied.catalog })
 
       expect(await registry.previews(['asset_video'])).toEqual({
         asset_video: 'https://cdn/asset_video-still',
@@ -440,7 +453,7 @@ describe('model registry', () => {
 
     it('drops an example that is neither a picture nor has a still', async () => {
       const spied = spiedCatalog({ public: [FLUX] })
-      const registry = createModelRegistry({ catalog: spied.catalog })
+      const registry = registryOf({ catalog: spied.catalog })
 
       expect(await registry.previews(['asset_text', 'asset_a'])).toEqual({
         asset_a: 'https://cdn/asset_a',
@@ -454,7 +467,7 @@ describe('model registry', () => {
     it('asks again once a resolved picture has gone stale', async () => {
       let clock = 0
       const spied = spiedCatalog({ public: [FLUX] })
-      const registry = createModelRegistry({
+      const registry = registryOf({
         catalog: spied.catalog,
         ttlMs: 1000,
         now: () => clock,
@@ -473,7 +486,7 @@ describe('model registry', () => {
     // Asking again on every scroll would cost a request per screen, forever.
     it('remembers which assets have no picture and stops asking', async () => {
       const spied = spiedCatalog({ public: [FLUX] })
-      const registry = createModelRegistry({ catalog: spied.catalog })
+      const registry = registryOf({ catalog: spied.catalog })
 
       await registry.previews(['asset_missing'])
       await registry.previews(['asset_missing'])
@@ -483,7 +496,7 @@ describe('model registry', () => {
 
     it('asks only for the assets it has not resolved yet', async () => {
       const spied = spiedCatalog({ public: [FLUX] })
-      const registry = createModelRegistry({ catalog: spied.catalog })
+      const registry = registryOf({ catalog: spied.catalog })
 
       await registry.previews(['asset_a'])
       await registry.previews(['asset_a', 'asset_b'])
@@ -494,7 +507,7 @@ describe('model registry', () => {
 
   describe('describe', () => {
     it('translates a model’s inputs into descriptors', async () => {
-      const registry = createModelRegistry({ catalog: publicCatalog([FLUX]) })
+      const registry = registryOf({ catalog: publicCatalog([FLUX]) })
       const descriptor = await registry.describe('model_flux')
 
       expect(descriptor.name).toBe('Flux')
@@ -513,13 +526,13 @@ describe('model registry', () => {
     })
 
     it('describes a model with no inputs as a form with no field, not as a failure', async () => {
-      const registry = createModelRegistry({ catalog: publicCatalog([VEO]) })
+      const registry = registryOf({ catalog: publicCatalog([VEO]) })
       await expect(registry.describe('model_veo')).resolves.toMatchObject({ fields: [] })
     })
 
     it('describes each model once', async () => {
       const catalog = vi.fn(publicCatalog([FLUX]))
-      const registry = createModelRegistry({ catalog })
+      const registry = registryOf({ catalog })
 
       await registry.describe('model_flux')
       await registry.describe('model_flux')

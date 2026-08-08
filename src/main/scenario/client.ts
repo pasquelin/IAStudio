@@ -2,6 +2,7 @@ import Scenario, { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { AuthState } from '@shared/domain/settings'
 import type { Credentials } from '@main/settings/accounts'
+import type { WatchCredentials } from './credentials-watch'
 
 /** Thrown when a channel needing the API is reached without usable credentials. */
 export class NotAuthenticatedError extends Error {
@@ -79,7 +80,6 @@ export type ClientProvider = {
   get: () => Scenario | null
   /** Same, but throws — every `scenario:*` handler needs a client to do anything at all. */
   require: () => Scenario
-  invalidate: () => void
   authState: () => Promise<AuthState>
 }
 
@@ -87,7 +87,10 @@ export type ClientProvider = {
  * Holds the SDK client. Building one is cheap, but it caches nothing useful across
  * credentials, so it is rebuilt lazily and dropped whenever they change.
  */
-export function createClientProvider(resolve: () => Credentials | null): ClientProvider {
+export function createClientProvider(
+  resolve: () => Credentials | null,
+  watch: WatchCredentials,
+): ClientProvider {
   let client: Scenario | null = null
 
   const get = (): Scenario | null => {
@@ -98,6 +101,12 @@ export function createClientProvider(resolve: () => Credentials | null): ClientP
     return client
   }
 
+  const invalidate = (): void => {
+    client = null
+  }
+
+  watch(invalidate)
+
   return {
     get,
 
@@ -105,10 +114,6 @@ export function createClientProvider(resolve: () => Credentials | null): ClientP
       const resolved = get()
       if (!resolved) throw new NotAuthenticatedError()
       return resolved
-    },
-
-    invalidate: () => {
-      client = null
     },
 
     authState: async () => {

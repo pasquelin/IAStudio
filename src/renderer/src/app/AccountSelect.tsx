@@ -35,11 +35,6 @@ export function AccountSelect() {
   const active = activeAccount(accounts)
   const manage = (): void => openSection('account')
 
-  // Authenticated with nothing stored means `secrets/.env` answered — the development fallback
-  // in `resolveCredentials`. Calling that "not connected" while every call succeeds would send
-  // the reader hunting for a key that is not the problem.
-  const label = active?.name ?? t(authenticated ? 'accounts.development' : 'accounts.notConnected')
-
   return (
     <div {...flyout.wrapProps} className="contents">
       <button
@@ -61,12 +56,10 @@ export function AccountSelect() {
           aria-hidden
           className={cn(
             'size-1.5 shrink-0 rounded-full',
-            // Follows the probe alone: it answers for whatever credentials the main process
-            // resolved, which is the active account or the development fallback behind it.
             authenticated ? 'bg-success' : 'bg-muted',
           )}
         />
-        <span className="truncate">{label}</span>
+        <span className="truncate">{active?.name ?? t('accounts.notConnected')}</span>
         <UiIcon path={mdiChevronDown} size={12} />
       </button>
 

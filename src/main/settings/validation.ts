@@ -15,7 +15,7 @@ import {
   type SettingActionId,
 } from '@shared/domain/settings-registry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
-import { settleBook, type AccountBook, type Credentials } from './accounts'
+import type { AccountBook, Credentials } from './accounts'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
@@ -173,13 +173,16 @@ const storedBook = z.object({
   // every key the user holds.
   accounts: z.array(storedAccount.nullable().catch(null)),
   // Caught for the same reason as an entry: a corrupt `activeId` must cost the pointer, not
-  // the whole book. `settleBook` repoints it at the first account left.
+  // the whole book.
   activeId: z.string().min(1).nullable().catch(null),
 })
 
 /**
- * Reads a book back from disk, keeping whatever still parses. `settleBook` then repairs what
- * survived — a dangling `activeId`, a duplicate id.
+ * Reads a book back from disk, keeping whatever still parses — and repairing nothing.
+ *
+ * The repair is `settleBook`, and it runs one step later, inside `withEnvironment`. It has to:
+ * the `activeId` on disk may well name the development account, which lives in a file and not
+ * in this blob, and repointing it here would send every launch to the wrong key.
  *
  * Null means the blob is not a book at all, which is what tells the caller to look for a lone
  * pair to migrate instead.
@@ -188,8 +191,8 @@ export function parseStoredAccounts(plain: string): AccountBook | null {
   const parsed = storedBook.safeParse(JSON.parse(plain))
   if (!parsed.success) return null
 
-  return settleBook({
+  return {
     accounts: parsed.data.accounts.filter(entry => entry !== null),
     activeId: parsed.data.activeId,
-  })
+  }
 }

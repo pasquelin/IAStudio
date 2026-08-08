@@ -22,9 +22,23 @@ export type JobRunner = {
  */
 export type AssetCollector = (job: Job, remoteAssetIds: readonly string[]) => Promise<string[]>
 
-export type JobManagerDeps = {
+/**
+ * What a job addresses its account through, captured at submission so that it finishes on the
+ * one that launched it. Resolved per call instead, an account switch mid-flight has the next
+ * poll ask the new key about the previous account's job id: the API answers 404, no retry can
+ * fix a 404, and a ten-minute video generation dies on a switch unrelated to it.
+ *
+ * `collect` is here for the one dependency of its own that is account-scoped — retrieving the
+ * outputs is an API call, and a signed URL fetched under the wrong key answers 404 too.
+ */
+export type JobAccount = {
   runner: JobRunner
   collect: AssetCollector
+}
+
+export type JobManagerDeps = {
+  /** The account in force, or `null` when no credentials are available. Read once per job. */
+  account: () => JobAccount | null
   concurrency: () => number
   maxRetries: () => number
   onProgress: (progress: JobProgress) => void
@@ -75,6 +89,8 @@ function isRetryable(error: unknown): boolean {
 
 type Entry = {
   job: Job
+  /** Captured when the user asked for it: the credits and the output belong to that account. */
+  account: JobAccount | null
   body: Record<string, unknown>
   remoteId: string | null
   cancelled: boolean
@@ -86,8 +102,7 @@ type Entry = {
  * generation exceeds on its own — see CLAUDE.md.
  */
 export function createJobManager({
-  runner,
-  collect,
+  account,
   concurrency,
   maxRetries,
   onProgress,
@@ -125,6 +140,11 @@ export function createJobManager({
     entry.job.status = status
     entry.job.finishedAt = now()
     entry.body = {}
+    // Released with the body, and for the same reason: the SDK client behind it holds an HTTP
+    // agent and its sockets, and a finished job would keep a switched-away account's alive for
+    // the rest of the session. `execute` holds its own reference, and `cancel` returns before
+    // this on a finished job.
+    entry.account = null
     if (status === 'succeeded') entry.job.progress = 1
     if (error !== undefined) entry.job.error = error
     emit(entry)
@@ -160,8 +180,15 @@ export function createJobManager({
   }
 
   const execute = async (entry: Entry): Promise<void> => {
+    const { account: bound } = entry
+    // No key when the user asked, and none is borrowed from whoever holds one now.
+    if (!bound) {
+      settle(entry, 'failed', 'missing')
+      return
+    }
+
     try {
-      const submitted = await withRetry(() => runner.submit(entry.job.modelId, entry.body))
+      const submitted = await withRetry(() => bound.runner.submit(entry.job.modelId, entry.body))
       entry.remoteId = submitted.jobId
 
       // The body is read once and can hold an encoded source image; a finished job has no
@@ -171,7 +198,7 @@ export function createJobManager({
       // Cancelled while the submission was in flight: the remote job exists, so it must be
       // told, otherwise it keeps burning credits with nobody watching.
       const abandon = async (): Promise<void> => {
-        await runner.cancel(submitted.jobId).catch(() => {})
+        await bound.runner.cancel(submitted.jobId).catch(() => {})
         settle(entry, 'cancelled')
       }
 
@@ -184,7 +211,7 @@ export function createJobManager({
         await sleep(pollIntervalMs)
         if (entry.cancelled) return await abandon()
 
-        remote = await withRetry(() => runner.poll(submitted.jobId))
+        remote = await withRetry(() => bound.runner.poll(submitted.jobId))
         status = advance(entry, remote)
       }
 
@@ -196,7 +223,7 @@ export function createJobManager({
       // Succeeded only once the files are on disk and indexed: announcing it earlier shows a
       // finished job with nothing behind it in the asset browser.
       try {
-        entry.job.assetIds = await collect(entry.job, remote.metadata?.assetIds ?? [])
+        entry.job.assetIds = await bound.collect(entry.job, remote.metadata?.assetIds ?? [])
       } catch {
         // Writing or indexing failed — a local problem, distinct from anything the API said.
         settle(entry, 'failed', 'storage')
@@ -242,7 +269,7 @@ export function createJobManager({
         assetIds: [],
       }
 
-      const entry: Entry = { job, body, remoteId: null, cancelled: false }
+      const entry: Entry = { job, account: account(), body, remoteId: null, cancelled: false }
       entries.set(job.id, entry)
       queue.push(job.id)
       emit(entry)
@@ -265,7 +292,8 @@ export function createJobManager({
         return
       }
 
-      if (entry.remoteId !== null) await runner.cancel(entry.remoteId).catch(() => {})
+      // On the account that submitted it, whichever one is active now.
+      if (entry.remoteId) await entry.account?.runner.cancel(entry.remoteId).catch(() => {})
     },
 
     list: () =>

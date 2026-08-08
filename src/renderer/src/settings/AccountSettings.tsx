@@ -14,6 +14,7 @@ const FAILURE_KEYS: Record<AccountSaveFailure, string> = {
   duplicate: 'accounts.errors.duplicate',
   'unknown-account': 'accounts.errors.unknown-account',
   'store-unreadable': 'accounts.errors.store-unreadable',
+  'read-only-account': 'accounts.errors.read-only-account',
   unexpected: 'accounts.errors.unexpected',
 }
 
@@ -38,11 +39,7 @@ export function AccountSettings() {
   return (
     <div className="flex max-w-lg flex-col gap-4">
       {accounts.length === 0 ? (
-        // Authenticated with nothing stored means `secrets/.env` answered, and saying "no
-        // account" alone would leave a working studio looking unconfigured.
-        <p className="text-base-content/60 text-xs">
-          {t(auth.authenticated ? 'accounts.developmentFallback' : 'accounts.none')}
-        </p>
+        <p className="text-base-content/60 text-xs">{t('accounts.none')}</p>
       ) : (
         <ul className="flex flex-col gap-1">
           {accounts.map(account => (
@@ -136,6 +133,7 @@ function AccountRow({ account, authenticated }: AccountRowProps) {
             {authenticated ? t('accounts.active') : t('accounts.notConnected')}
           </span>
         )}
+        {account.readOnly && <span className="badge badge-sm">{t('accounts.fromEnvFile')}</span>}
       </span>
 
       {!account.active && (
@@ -143,16 +141,26 @@ function AccountRow({ account, authenticated }: AccountRowProps) {
           {t('accounts.use')}
         </button>
       )}
-      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDraft(account.name)}>
-        {t('accounts.rename')}
-      </button>
-      <button
-        type="button"
-        className="btn btn-sm btn-ghost text-error"
-        onClick={() => void remove(account.id)}
-      >
-        {t('accounts.remove')}
-      </button>
+
+      {/* Edited in `secrets/.env`: buttons that could only be refused are worse than no buttons. */}
+      {!account.readOnly && (
+        <>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={() => setDraft(account.name)}
+          >
+            {t('accounts.rename')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost text-error"
+            onClick={() => void remove(account.id)}
+          >
+            {t('accounts.remove')}
+          </button>
+        </>
+      )}
     </li>
   )
 }
