@@ -76,10 +76,23 @@ They are visible in the toolbar, greyed out.
 | **Cut** (`S`) | Frame |
 | **Pen** | Drawing |
 | **Text on path** | Text |
+| **Comment** (`C`) | alone in its group |
 
-**Comment (`C`) is the only one not greyed out.** It arms like the others, and does nothing:
-clicking in the image places no note. It is the studio's only button that looks alive without
-being so — the others say their state by their grey.
+**They all say their state by their grey**, which is the only thing asked of them until they
+exist. Comment was the last to fall into line: it armed like the others, changed the cursor, and
+left the engine dropping every click — a button that looked alive without being so.
+
+### Tool keys are not listened for
+
+The toolbar shows a key beside each tool — `V` for move, `P` for the brush, `E` for the eraser.
+**None of them is active.** They appear in the menus and tooltips, and nothing in the studio
+resolves them: a tool is picked with the mouse.
+
+The same gap exists in the **Video** workspace, for `V`, `C` and `H`.
+
+So they are not shortcuts but **stated intentions**. The keys actually in service all go through
+the command registry, and those — and only those — are what [Every shortcut](15-shortcuts.md)
+lists: they can be remapped, they appear in the settings screen, and they answer.
 
 ### Cropping does not give its pixels back on undo
 

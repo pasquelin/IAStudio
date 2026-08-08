@@ -96,6 +96,11 @@ It sits at the top of the document. The tools are **grouped**, as in Figma:
 
 In other words: an armed tool never needs the menu to be taken up again.
 
+> **The keys listed below are not active yet.** `V`, `P`, `E`… are shown in the menus and
+> tooltips, but **nothing listens for them**: a tool is picked with the mouse. They are the keys
+> planned, not shortcuts in service. The ones that really work in the Image workspace are in
+> [Every shortcut](15-shortcuts.md) — zoom, rulers, guides, selection, model edits, export, undo.
+
 ### Cursor group
 
 | Tool | Shortcut | What it does |

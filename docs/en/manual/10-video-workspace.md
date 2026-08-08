@@ -70,6 +70,10 @@ Either way, the studio settles two things:
 | **Blade** | `C` | cuts a clip where you click |
 | **Hand** | `H` | scrolls the timeline — wheel to zoom |
 
+> **These three keys are not active yet**: they appear in the tooltips, but nothing listens for
+> them. A tool is picked with the mouse. The keys in service in the edit — `Space`, `S`,
+> `Delete`, the zooms — are in [Every shortcut](15-shortcuts.md).
+
 ### With the Select tool
 
 | Gesture | Effect |
