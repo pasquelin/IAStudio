@@ -235,6 +235,29 @@ Two practical consequences:
 - **nothing is overwritten**: go back to the original workspace and you find what you had there;
 - **a Generate panel with no model gives way to Models** — the panel that lets you choose one.
 
+### A half you have not chosen for opens on the workspace's first panel
+
+Until you have clicked an icon of a half, it is attached to **no** panel: it shows the first one
+the workspace declares there — the topmost in the table above, and so the first on the rail.
+
+That is what you see on first launch, and what **View ▸ Reset layout** restores:
+
+| Workspace | The upper right half opens on | The bottom strip on |
+|---|---|---|
+| **Image** | Layers | Assets |
+| **Video** | Assets | Timeline |
+| **3D** | Explorer | Assets |
+| **Audio** | Assets | Timeline |
+| **Textures** | Explorer | Assets |
+| **Skyboxes** | Skybox | Assets |
+
+**Why this is not a panel pinned once and for all.** Your layout is remembered once for all six
+workspaces, while the panel that comes first differs in each. Writing one into the default layout
+would impose one workspace's answer on the other five.
+
+As soon as you click an icon, that half remembers **your** choice, and does not move again until
+you click another — or reset the layout.
+
 **Why the Explorer is visible everywhere when it only serves 3D.** It is meant to become the
 project tree. Until then, in other workspaces, it shows a message explaining what it is waiting for
 rather than disappearing.

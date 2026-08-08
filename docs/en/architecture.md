@@ -277,9 +277,20 @@ owns the strip. `tool.test.ts` locks the two invariants that keep this legible: 
 placements never overlap, and the placements of one tool share a slot — a tool that changed half as
 well as zone would land in a different row of the rail depending on where you came from.
 
-**One rule escapes the registry**, and only one: the generator is offered only where a model is
-chosen or preferred. It depends on state, and `shared/` holds no runtime dependency — hence a layer
-above the registry, in `helpers/tool-registry.ts`, rather than inside it.
+**The order of `TOOL_PLACEMENTS` is the rail's order**, and it also names the default panel below
+— a test pins it workspace by workspace.
+
+**Two rules escape the registry**, and only two, because they depend on state or on the workspace,
+where `shared/` holds no runtime dependency. Hence a layer above it, in
+`helpers/tool-registry.ts`, rather than inside:
+
+- the generator is offered only where a model is chosen or preferred;
+- a half nobody has chosen for shows the **first panel the workspace declares there**. It holds
+  `null` in the store — an absent key means the half is closed, an id means the user chose. The
+  layout is remembered once for all six workspaces while that first panel differs in each: writing
+  an id there would impose one workspace's answer on the other five. `shownTool` tells the three
+  cases apart, and migrating to version 8 puts every earlier layout back to its default, half by
+  half.
 
 ---
 

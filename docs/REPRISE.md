@@ -134,7 +134,14 @@ Ces quatre points traînaient dans les anciennes notes de reprise. Ils sont rég
   textures des enfants de groupe. Corrigé — **ne pas le recasser**.
 - **L'étagère à assets était à droite dans tous les espaces**, où elle mangeait la largeur du
   canvas. `TOOL_PLACEMENTS` (`shared/domain/tool.ts`) la pose désormais en **bande du bas** partout
-  sauf en Vidéo, où la colonne de gauche la porte — la timeline occupe le bas.
+  sauf en Vidéo et en Audio, où la colonne de droite la porte — la timeline occupe le bas. Depuis,
+  la **colonne de gauche est réservée à la génération** dans les six espaces, et la droite porte ce
+  qui parle du document, inspecteur en moitié basse.
+- **La disposition par défaut nommait un panneau dans chaque moitié**, ce qui imposait la réponse
+  d'un espace aux cinq autres — l'Explorateur gagnait partout, y compris en Image où les Calques
+  viennent en premier. Une moitié vaut désormais `null` quand personne ne l'a choisie, et chaque
+  espace y lit le premier panneau qu'il déclare. **Ne pas remettre d'identifiant dans
+  `DEFAULT_OPEN`.**
 
 ---
 
