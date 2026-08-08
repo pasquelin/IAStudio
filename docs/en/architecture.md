@@ -490,6 +490,24 @@ renderer, and the two must say the same thing.
 Labels used inside a virtualised list are resolved **once by the panel**, never per row: a scroll
 re-renders every mounted row on each frame, and `useTranslation()` is not free.
 
+### What gets translated goes beyond sentences
+
+Four things go through the bundles without looking like it, and each answers an observed defect:
+
+- **key names** — `Space`, `Delete`, `Home` are not English labels left in place: the shortcuts
+  screen resolves them like everything else;
+- **units and dates** — `formatBytes` computes a size but **does not name it**: the unit's name
+  comes from the caller, because `Mio` and `MiB` are the same size in two languages and the
+  abbreviations had ended up living in French inside a computation file;
+- **the journal's scopes** — an activity line shows a sentence, never the key naming it;
+- **the document's own language** — `document.documentElement.lang` follows the chosen language.
+  `index.html` carried it hardcoded: a screen reader picks its voice from it, and an English
+  interface under `lang="fr"` was read with French phonetics.
+
+Parity between the two bundles is **checked by a test**, key by key, and the same test refuses a
+user-visible string hardcoded in a component. That is what stops one language drifting from the
+other as things are added.
+
 ---
 
 ## Configuration
