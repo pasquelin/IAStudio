@@ -54,9 +54,21 @@ export function withRecentProject(
   openedAt: string,
 ): RecentProject[] {
   const entry: RecentProject = { path: project.path, name: project.manifest.name, openedAt }
-  const others = recent.filter(candidate => candidate.path !== project.path)
 
-  return [entry, ...others].slice(0, RECENT_PROJECTS_MAX)
+  return [entry, ...withoutRecentProject(recent, project.path)].slice(0, RECENT_PROJECTS_MAX)
+}
+
+/**
+ * The list without one folder — what a project moved or deleted since it was last opened comes
+ * to. Beside the other half of the policy rather than written into whichever surface noticed:
+ * an opening can fail anywhere, and a list that only forgets when the home clicked it is a list
+ * that keeps offering a folder nothing can open.
+ */
+export function withoutRecentProject(
+  recent: readonly RecentProject[],
+  path: string,
+): RecentProject[] {
+  return recent.filter(candidate => candidate.path !== path)
 }
 
 /**

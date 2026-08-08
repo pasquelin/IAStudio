@@ -9,7 +9,6 @@ import {
   homeSectionOf,
   limitedHomeSection,
   movedHomeSection,
-  needsCredentials,
   shownHomeSection,
   visibleHomeSections,
   type HomeContext,
@@ -162,12 +161,5 @@ describe('rearranging the home', () => {
 
     expect(homeSectionLimit(tiny, 'projects')).toBe(HOME_LIMIT_MIN)
     expect(homeSectionLimit(huge, 'projects')).toBe(HOME_LIMIT_MAX)
-  })
-})
-
-describe('the invitation to connect a key', () => {
-  it('shows exactly when the studio has none', () => {
-    expect(needsCredentials({ authenticated: false, hasProject: true })).toBe(true)
-    expect(needsCredentials({ authenticated: true, hasProject: false })).toBe(false)
   })
 })

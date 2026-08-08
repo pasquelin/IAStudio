@@ -2,6 +2,7 @@ import type { SerializedDockview } from 'dockview-react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
+import { useSettings } from './settings'
 
 /** Serialized Dockview layout. Its shape belongs to Dockview; we never read it back. */
 export type SerializedLayout = SerializedDockview
@@ -77,3 +78,22 @@ export const useLayouts = create<LayoutsState>()(
     },
   ),
 )
+
+/**
+ * Whether the home is the surface in front: the session flag AND the setting that allows it.
+ *
+ * One answer, in one place, because three readers ask — the shell, the title bar and the native
+ * menu — and they were each combining the two halves themselves. The menu had stopped: `home`
+ * starts `true` on every launch, so a studio whose home is turned off published its menu as if
+ * the home were up, while the docks were on screen.
+ */
+export function homeIsVisible(): boolean {
+  return useLayouts.getState().home && useSettings.getState().settings.home.enabled
+}
+
+/** The same answer, subscribed. */
+export function useHomeVisible(): boolean {
+  const home = useLayouts(state => state.home)
+  const enabled = useSettings(state => state.settings.home.enabled)
+  return home && enabled
+}

@@ -6,17 +6,18 @@ import {
   mdiProgressClock,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import type { DocumentDescriptor } from '@shared/domain/document'
 import { isFinished } from '@shared/domain/job'
-import { Carousel } from '@/design/Carousel'
+import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { Button } from '@/design/Button'
+import { Carousel } from '@/design/Carousel'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { getBridge } from '@/services/bridge'
-import { useDocuments } from '@/stores/documents'
+import { useDocuments, type DocumentsSlice } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { enterWorkspace, openExistingDocument } from '../open'
 
 /** Banner-sized, like the reference: two of them fill the band, three make it a shelf. */
@@ -30,8 +31,18 @@ type Slide = {
   body: string
   /** Absent on a card that only reports — the section under it is already the way there. */
   action?: { label: string; onClick: () => void }
-  /** The one card the eye should land on first. At most one is ever set. */
+  /** The one card the eye should land on first. Set once, on the first card that acts. */
   leading?: boolean
+}
+
+/**
+ * The document "Resume" means. The tab in front when the studio was last on a workspace, and
+ * the first one otherwise — the store keys its record in insertion order, which is the closest
+ * thing to recency a `DocumentDescriptor` carries.
+ */
+function resumable(state: DocumentsSlice): DocumentDescriptor | undefined {
+  const active = state.activeId ? state.documents[state.activeId] : undefined
+  return active ?? Object.values(state.documents)[0]
 }
 
 /**
@@ -42,18 +53,17 @@ type Slide = {
  * the second launch. What a person wants at the top is where they left off, what is running,
  * and what is in their way.
  *
- * It never renders empty, which is why it is pinned: with no project and no key, the two cards
- * that remain are exactly the two things left to do.
+ * It never renders empty, which is why it is pinned — the last branch below is what holds that.
  */
 export function Spotlight() {
   const { t } = useTranslation()
   const project = useProject(state => state.project)
-  const documents = useDocuments(state => state.documents)
-  const jobs = useJobs(state => state.jobs)
+  const last = useDocuments(resumable)
+  // The count, not the list: `apply` replaces the whole array on every progress event, and this
+  // band only changes when a job starts or stops.
+  const running = useJobs(state => state.jobs.filter(job => !isFinished(job.status)).length)
   const authenticated = useSettings(state => state.auth.authenticated)
 
-  const running = jobs.filter(job => !isFinished(job.status))
-  const last = Object.values(documents)[0]
   const slides: Slide[] = []
 
   if (project && last) {
@@ -66,15 +76,14 @@ export function Spotlight() {
         label: t('home.spotlight.resumeAction'),
         onClick: () => openExistingDocument(last),
       },
-      leading: true,
     })
   }
 
-  if (running.length > 0) {
+  if (running > 0) {
     slides.push({
       id: 'running',
       icon: mdiProgressClock,
-      title: t('home.spotlight.running', { count: running.length }),
+      title: t('home.spotlight.running', { count: running }),
       body: t('home.spotlight.runningBody'),
     })
   }
@@ -89,7 +98,6 @@ export function Spotlight() {
         label: t('home.spotlight.connectAction'),
         onClick: () => void getBridge()?.settings.open('account'),
       },
-      leading: slides.length === 0,
     })
   }
 
@@ -103,11 +111,10 @@ export function Spotlight() {
         label: t('home.spotlight.startAction'),
         onClick: () => void useProject.getState().createPicked(),
       },
-      leading: slides.length === 0,
     })
   }
 
-  // Everything above is conditional, and a project open with nothing in it yet satisfies none
+  // Every branch above is conditional, and a project open with nothing in it yet satisfies none
   // of them. Being pinned is a promise to draw something: without this, the home would open on
   // its second band, and the one state a fresh project is in would be the one with no heading.
   if (slides.length === 0) {
@@ -120,14 +127,18 @@ export function Spotlight() {
         label: t('home.spotlight.readyAction'),
         onClick: () => enterWorkspace(DEFAULT_WORKSPACE),
       },
-      leading: true,
     })
   }
 
-  // A lone banner has no rail to be scrolled along, and a 560 px card marooned in a 1400 px
-  // band reads as a leftover rather than as the top of the page. It takes the width instead,
-  // and lies down: a full-width card as tall as a stacked one is mostly empty.
-  if (slides.length === 1 && slides[0]) return <Banner slide={slides[0]} />
+  // Read off the list rather than set at four push sites: the first card that offers something
+  // to do is the one worth the accent, and "running" is the only card that offers nothing.
+  const leading = slides.find(slide => slide.action !== undefined)
+  if (leading) leading.leading = true
+
+  // A lone banner has no rail to be scrolled along, and a 560 px card marooned in a 1400 px band
+  // reads as a leftover rather than as the top of the page. It takes the width instead, and lies
+  // down: a full-width card as tall as a stacked one is mostly empty.
+  if (slides.length === 1 && slides[0]) return <Card slide={slides[0]} layout="banner" />
 
   return (
     <Carousel
@@ -135,24 +146,49 @@ export function Spotlight() {
       itemWidth={CARD_WIDTH}
       itemHeight={CARD_HEIGHT}
       label={t('home.sections.spotlight')}
-      renderCard={slide => <Card slide={slide} />}
+      renderCard={slide => <Card slide={slide} layout="stacked" />}
     />
   )
 }
 
-/** The same card laid on its side: text takes the width, the action sits at the far end. */
-function Banner({ slide }: { slide: Slide }) {
+/**
+ * One card of the band. Laid on its side when it is alone and takes the width, stacked when it
+ * shares a rail — the same four things either way, which is why it is one component.
+ *
+ * The leading card carries the studio's create colour, and nothing else on the home does: one
+ * accent, on the one thing worth doing first.
+ */
+function Card({ slide, layout }: { slide: Slide; layout: 'banner' | 'stacked' }) {
+  const banner = layout === 'banner'
+
   return (
-    <article className={cn('flex items-center gap-4 rounded-(--radius-sc-lg) p-4', skinOf(slide))}>
+    <article
+      className={cn(
+        'flex overflow-hidden rounded-(--radius-sc-lg) p-4',
+        banner ? 'items-center gap-4' : 'size-full flex-col items-start gap-2',
+        slide.leading ? 'bg-create/15 border-create/40 border' : 'bg-surface',
+      )}
+    >
       <UiIcon
         path={slide.icon}
-        size={20}
+        size={banner ? 20 : 16}
         className={cn('shrink-0', slide.leading ? 'text-create' : 'text-muted')}
       />
 
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
+      {/* `contents` rather than a second flex column when stacked: the heading and the body are
+          then the card's own children, spaced by its gap like the button under them. */}
+      <span className={banner ? 'flex min-w-0 flex-1 flex-col gap-1' : 'contents'}>
         <h3 className="text-text m-0 text-[13px] font-semibold">{slide.title}</h3>
-        <p className="text-muted m-0 max-w-[80ch] text-[11px] leading-relaxed">{slide.body}</p>
+        {/* Bounded, and the button is not: a body long enough to push the action out of the
+            card would leave the one thing to click off screen. */}
+        <p
+          className={cn(
+            'text-muted m-0 overflow-hidden text-[11px] leading-relaxed',
+            banner ? 'max-w-[80ch]' : 'max-w-[64ch] flex-1',
+          )}
+        >
+          {slide.body}
+        </p>
       </span>
 
       {slide.action && (
@@ -161,46 +197,6 @@ function Banner({ slide }: { slide: Slide }) {
             {slide.action.label}
           </Button>
         </span>
-      )}
-    </article>
-  )
-}
-
-/**
- * The leading card carries the studio's create colour, and nothing else on the home does: one
- * accent, on the one thing worth doing first.
- */
-function skinOf(slide: Slide): string {
-  return slide.leading ? 'bg-create/15 border-create/40 border' : 'bg-surface'
-}
-
-function Card({ slide }: { slide: Slide }) {
-  return (
-    <article
-      className={cn(
-        'flex size-full flex-col items-start gap-2 overflow-hidden rounded-(--radius-sc-lg) p-4',
-        skinOf(slide),
-      )}
-    >
-      <span className="flex items-center gap-2">
-        <UiIcon
-          path={slide.icon}
-          size={16}
-          className={slide.leading ? 'text-create' : 'text-muted'}
-        />
-        <h3 className="text-text m-0 text-[13px] font-semibold">{slide.title}</h3>
-      </span>
-
-      {/* Bounded, and the button below is not: a body long enough to push the action out of the
-          card would leave the one thing to click off screen. */}
-      <p className="text-muted m-0 max-w-[64ch] flex-1 overflow-hidden text-[11px] leading-relaxed">
-        {slide.body}
-      </p>
-
-      {slide.action && (
-        <Button variant={slide.leading ? 'primary' : 'neutral'} onClick={slide.action.onClick}>
-          {slide.action.label}
-        </Button>
       )}
     </article>
   )

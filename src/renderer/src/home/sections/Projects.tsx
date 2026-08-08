@@ -6,13 +6,12 @@ import { UiIcon } from '@/design/UiIcon'
 import { FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { timeAgo } from '@/helpers/relative-time'
-import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { Section } from '../Section'
+import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
 
 const CARD_WIDTH = 220
-const CARD_HEIGHT = 84
 
 /** A recent project needs an `id` to be carried by the carousel; its folder is already one. */
 type Card = RecentProject & { id: string }
@@ -30,47 +29,25 @@ export function Projects() {
 
   const cards: Card[] = recent.map(entry => ({ ...entry, id: entry.path }))
 
-  const open = (project: Card): void => {
-    void useProject
-      .getState()
-      .open(project.path)
-      .then(opened => {
-        if (opened) return
-        // Gone from the disk. Dropped from the shelf rather than left to fail again — and
-        // written through the settings, which is where the list lives.
-        void getBridge()?.settings.write({
-          storage: { recentProjects: recent.filter(entry => entry.path !== project.path) },
-        })
-      })
-  }
-
   return (
     <Section id="projects" title={t('home.sections.projects')}>
       <Carousel
         items={cards}
         itemWidth={CARD_WIDTH}
-        itemHeight={CARD_HEIGHT}
+        itemHeight={SHELF_CARD_HEIGHT}
         label={t('home.sections.projects')}
         empty={<Empty />}
         renderCard={project => (
-          <button
-            type="button"
-            onClick={() => open(project)}
-            title={project.path}
-            className={cn(
-              'bg-surface hover:bg-elevated flex size-full cursor-pointer flex-col justify-center',
-              'gap-1 rounded-(--radius-sc-md) border-none px-3 text-left transition-colors',
-              FOCUS_RING,
-            )}
-          >
-            <span className="flex items-center gap-2">
-              <UiIcon path={mdiFolderOutline} size={16} className="text-muted shrink-0" />
-              <span className="text-text truncate text-[12px]">{project.name}</span>
-            </span>
-            <span className="text-muted truncate text-[11px]">
-              {timeAgo(project.openedAt, i18n.language) ?? project.path}
-            </span>
-          </button>
+          <ShelfCard
+            icon={mdiFolderOutline}
+            title={project.name}
+            // The path when the date is unreadable — a hand-edited settings file reaches here.
+            subtitle={timeAgo(project.openedAt, i18n.language) ?? project.path}
+            hint={project.path}
+            // A folder gone from the disk drops out of the shelf on its own: the store forgets
+            // it wherever an opening fails, not only where it was clicked.
+            onClick={() => void useProject.getState().open(project.path)}
+          />
         )}
       />
     </Section>
@@ -94,7 +71,7 @@ function Empty() {
         'bg-transparent p-6 text-[12px] transition-colors',
         FOCUS_RING,
       )}
-      style={{ height: CARD_HEIGHT }}
+      style={{ height: SHELF_CARD_HEIGHT }}
     >
       <UiIcon path={mdiFolderOutline} size={18} />
       {t('home.projects.none')}

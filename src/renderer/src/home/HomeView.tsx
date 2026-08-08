@@ -1,11 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import {
-  hiddenHomeSections,
-  homeSections,
-  shownHomeSection,
-  type HomeSectionId,
-  type HomeSectionSetting,
-} from '@shared/domain/home'
+import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/domain/home'
 import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { FOCUS_RING } from '@/design/styles'
@@ -72,7 +66,10 @@ function Hidden() {
   if (hidden.length === 0) return null
 
   const restore = (): void => {
-    const sections = hidden.reduce(shownAgain, homeSections(stored))
+    const sections = hidden.reduce(
+      (all, id) => shownHomeSection(all, id, true),
+      homeSections(stored),
+    )
     void useSettings.getState().write({ home: { sections } })
   }
 
@@ -92,8 +89,4 @@ function Hidden() {
       </button>
     </p>
   )
-}
-
-function shownAgain(sections: HomeSectionSetting[], id: HomeSectionId): HomeSectionSetting[] {
-  return shownHomeSection(sections, id, true)
 }

@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { cn } from '@/helpers/cn'
 import { TooltipHost } from '@/design/TooltipHost'
-import { useLayouts } from '@/stores/layouts'
+import { useHomeVisible, useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView'
@@ -45,7 +45,7 @@ export function Shell() {
   const homeEnabled = useSettings(state => state.settings.home.enabled)
   // The setting wins over the session: turning the home off must take it off the screen it is
   // currently on, not at the next launch.
-  const home = useLayouts(state => state.home) && homeEnabled
+  const home = useHomeVisible()
 
   return (
     <div className="bg-chassis flex h-full flex-col">

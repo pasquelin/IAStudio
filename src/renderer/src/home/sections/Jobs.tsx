@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { isFinished } from '@shared/domain/job'
-import { ProgressRow } from '@/design/ProgressRow'
+import { runningJobs } from '@shared/domain/job'
+import { JobRow } from '@/panels/jobs/JobRow'
 import { useJobs } from '@/stores/jobs'
+import { SHELF_BLOCK } from '../styles'
 import { Section } from '../Section'
 
 /**
@@ -13,28 +14,20 @@ import { Section } from '../Section'
  */
 export function Jobs() {
   const { t } = useTranslation()
-  const jobs = useJobs(state => state.jobs)
+  // The whole list, filtered here — the same subscription the jobs panel takes. This band draws
+  // the progress, so it has to follow it; `JobRow` is memoised, so only the rows that moved
+  // re-render.
+  const running = runningJobs(useJobs(state => state.jobs))
 
-  const running = jobs.filter(job => !isFinished(job.status))
   if (running.length === 0) return null
 
   return (
     <Section id="jobs" title={t('home.sections.jobs')}>
-      <div className="bg-surface flex flex-col gap-1 rounded-(--radius-sc-lg) p-2">
+      <ul className={SHELF_BLOCK}>
         {running.map(job => (
-          <ProgressRow
-            key={job.id}
-            label={job.label}
-            ratio={job.progress}
-            status={t(`jobs.status.${job.status}`)}
-            tone={job.status === 'running' ? 'accent' : 'muted'}
-            cancel={{
-              label: t('jobs.cancel'),
-              onClick: () => void useJobs.getState().cancel(job.id),
-            }}
-          />
+          <JobRow key={job.id} job={job} />
         ))}
-      </div>
+      </ul>
     </Section>
   )
 }

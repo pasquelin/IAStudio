@@ -5,20 +5,16 @@ import { cn } from '@/helpers/cn'
 import { timeAgo } from '@/helpers/relative-time'
 import { useActivity } from '@/stores/activity'
 import { useSettings } from '@/stores/settings'
-import { GLYPHS } from '@/app/ActivityList'
+import { ActivityMessage, GLYPHS, TINTS } from '@/app/ActivityList'
+import { SHELF_BLOCK } from '../styles'
 import { Section } from '../Section'
-
-const TINTS = {
-  info: 'text-muted',
-  warn: 'text-warning',
-  error: 'text-danger',
-}
 
 /**
  * The last things this project did, and the last things it failed to do.
  *
- * Read from the store the journal panel already fills, and drawn with the same glyphs: a
- * failure must not look like one thing on the home and another in the panel it leads to.
+ * Drawn with the journal panel's own glyphs, tints and message — a failure must not look like
+ * one thing on the home and another in the panel it leads to, and the detail under a failed
+ * line is what someone asked "what went wrong" actually reads.
  */
 export function Activity() {
   const { t, i18n } = useTranslation()
@@ -30,17 +26,15 @@ export function Activity() {
 
   return (
     <Section id="activity" title={t('home.sections.activity')}>
-      <ul className="bg-surface m-0 flex list-none flex-col rounded-(--radius-sc-lg) p-2">
+      <ul className={SHELF_BLOCK}>
         {shown.map(entry => (
-          <li key={entry.id} className="flex items-center gap-2 px-1 py-1">
+          <li key={entry.id} className="flex items-start gap-2 px-1 py-1">
             <UiIcon
               path={GLYPHS[entry.level]}
               size={14}
-              className={cn('shrink-0', TINTS[entry.level])}
+              className={cn('mt-px shrink-0', TINTS[entry.level])}
             />
-            <span className="text-text min-w-0 flex-1 truncate text-[11px]">
-              {t(entry.messageKey, entry.params)}
-            </span>
+            <ActivityMessage entry={entry} />
             <span className="text-muted shrink-0 text-[11px]">
               {timeAgo(entry.at, i18n.language)}
             </span>

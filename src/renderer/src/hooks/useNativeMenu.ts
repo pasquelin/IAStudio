@@ -8,7 +8,7 @@ import { publishCommand } from '@/services/command-bus'
 import { reportFailure } from '@/services/diagnostics'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -51,11 +51,12 @@ function runCommand(command: CommandId): void {
  * the generator into existence, and the menu has to learn it at that moment.
  */
 function publishMenuContext(): void {
-  const { activeWorkspace, home } = useLayouts.getState()
+  const workspace = useLayouts.getState().activeWorkspace
   // The home covers the docks entirely, so none of them is reachable: offering to open one
-  // would be a menu entry that does nothing visible.
-  const tools = home ? [] : availableToolIds(activeWorkspace)
-  void getBridge()?.window.setWorkspace(activeWorkspace, tools)
+  // would be a menu entry that does nothing visible. Through the shared answer, because the
+  // session flag alone says the home is up on every launch, turned off or not.
+  const tools = homeIsVisible() ? [] : availableToolIds(workspace)
+  void getBridge()?.window.setWorkspace(workspace, tools)
 }
 
 /**

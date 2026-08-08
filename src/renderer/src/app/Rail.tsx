@@ -5,11 +5,10 @@ import { useTranslation } from 'react-i18next'
 import { Separator } from '@/design/Separator'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
-import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
-import { openDocument } from './dockview-api'
+import { createDocumentIn } from './new-document'
 import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
 import {
   shownTool,
@@ -82,15 +81,7 @@ function NewDocumentButton() {
       label={t('documents.new')}
       tooltip={TIP_RIGHT}
       disabled={kindForWorkspace(workspace) === null || !project}
-      onClick={() => {
-        void useDocuments
-          .getState()
-          .create(workspace)
-          .then(created => created && openDocument(created))
-          // A folder gone read-only, or removed under us: no tab opens, which is the honest
-          // outcome, and the studio has nowhere to say more until it grows a notification.
-          .catch(() => {})
-      }}
+      onClick={() => createDocumentIn(workspace)}
       // Filled, unlike every tool icon around it: this one acts, the others only switch what is
       // shown. A grey plus among grey glyphs is a plus nobody finds.
       className="bg-create hover:bg-create-hover size-(--sc-rail-button) rounded-(--radius-sc-md) text-white hover:text-white disabled:bg-transparent disabled:text-current"

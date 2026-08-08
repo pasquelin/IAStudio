@@ -63,44 +63,26 @@ describe('Carousel', () => {
     expect(screen.getByText('Nothing here yet')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Shelf' })).not.toBeInTheDocument()
   })
-
-  it('asks for the next page before the end is reached', () => {
-    const onReachEnd = vi.fn()
-    renderCarousel(cards(6), { onReachEnd })
-
-    expect(onReachEnd).toHaveBeenCalled()
-  })
-
-  it('does not ask for more when there is nothing at all', () => {
-    const onReachEnd = vi.fn()
-    renderCarousel([], { onReachEnd })
-
-    expect(onReachEnd).not.toHaveBeenCalled()
-  })
-
-  it('reports only the items on screen', () => {
-    const onVisible = vi.fn()
-    renderCarousel(cards(500), { onVisible })
-
-    const shown: Card[] = onVisible.mock.calls.at(-1)?.[0] ?? []
-    expect(shown.length).toBeGreaterThan(0)
-    expect(shown.length).toBeLessThan(100)
-  })
 })
 
+/**
+ * The rail measures itself one frame after it is laid out — reading three layout properties on
+ * every scroll event would force a reflow a hundred times a second. So the arrows and the dots
+ * are awaited, never read synchronously.
+ */
 describe('the arrows', () => {
-  it('hides the one pointing at an end the rail has reached', () => {
+  it('hides the one pointing at an end the rail has reached', async () => {
     renderCarousel(cards(500))
 
     // The rail starts at its left end, so only the forward arrow has anything to point at.
+    expect(await screen.findByRole('button', { name: 'Faire défiler' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Revenir en arrière' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Faire défiler' })).toBeInTheDocument()
   })
 
   it('scrolls by a page, keeping a sliver of the previous one', async () => {
     renderCarousel(cards(500))
 
-    await userEvent.click(screen.getByRole('button', { name: 'Faire défiler' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Faire défiler' }))
 
     const asked: number = scrollBy.mock.calls.at(-1)?.[0].left
     // A page of the 640 px viewport, less the overlap — never a single card.
@@ -110,11 +92,11 @@ describe('the arrows', () => {
 })
 
 describe('the page dots', () => {
-  it('offers one per page and marks the one being read', () => {
+  it('offers one per page and marks the one being read', async () => {
     renderCarousel(cards(500))
 
     // 3200 px of rail over a 640 px viewport.
-    const dots = screen.getAllByRole('button', { name: /^Page \d+$/ })
+    const dots = await screen.findAllByRole('button', { name: /^Page \d+$/ })
     expect(dots).toHaveLength(5)
     expect(dots[0]).toHaveAttribute('aria-current', 'true')
   })
@@ -122,7 +104,7 @@ describe('the page dots', () => {
   it('scrolls to the page it names', async () => {
     renderCarousel(cards(500))
 
-    await userEvent.click(screen.getByRole('button', { name: 'Page 3' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Page 3' }))
 
     expect(scrollTo).toHaveBeenCalledWith({ left: 640 * 2 })
   })
@@ -155,7 +137,7 @@ describe('reduced motion', () => {
 
     rail.focus()
     await userEvent.keyboard('{ArrowRight}{End}')
-    await userEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Page 2' }))
 
     // The virtualizer scrolls too, and passes `behavior: undefined` — which is the same as
     // saying nothing. What must never appear is a named behaviour.

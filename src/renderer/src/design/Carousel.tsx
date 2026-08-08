@@ -9,9 +9,6 @@ import { UiIcon } from './UiIcon'
 /** The same gutter the collection puts between its cards, for the same reason. */
 const GAP = 8
 
-/** How many items from the end the next page is asked for — before the user sees it. */
-const PREFETCH_ITEMS = 4
-
 /**
  * Beyond this, dots count rather than orient: a reader cannot tell the eleventh from the
  * twelfth, and the row of them starts competing with the content it sits under.
@@ -28,10 +25,6 @@ export type CarouselProps<T extends { id: string }> = {
   itemHeight: number
   /** Names the region for a screen reader. Every carousel on the home says what it holds. */
   label: string
-  /** Called as the end nears. Must tolerate being called again before it has answered. */
-  onReachEnd?: () => void
-  /** The items currently on screen, for whatever a card needs fetched only when it is seen. */
-  onVisible?: (items: readonly T[]) => void
   /** Shown in place of the rail — the caller decides whether it means empty or unmatched. */
   empty?: ReactNode
 }
@@ -78,8 +71,6 @@ export function Carousel<T extends { id: string }>({
   itemWidth,
   itemHeight,
   label,
-  onReachEnd,
-  onVisible,
   empty,
 }: CarouselProps<T>) {
   const { t } = useTranslation()
@@ -94,54 +85,46 @@ export function Carousel<T extends { id: string }>({
     overscan: 3,
   })
 
-  const measure = useCallback(() => {
-    const element = rail.current
-    if (!element) return
+  // Coalesced to one reading per frame: a trackpad fires scroll a hundred times a second, and
+  // `positionOf` reads three layout properties — enough to force a reflow on each of them.
+  const pending = useRef(0)
 
-    const next = positionOf(element)
-    // Same values, same object: a scroll inside one page must not re-render the dots.
-    setPosition(current =>
-      current.page === next.page &&
-      current.pages === next.pages &&
-      current.atStart === next.atStart &&
-      current.atEnd === next.atEnd
-        ? current
-        : next,
-    )
+  const measure = useCallback(() => {
+    if (pending.current !== 0) return
+
+    pending.current = requestAnimationFrame(() => {
+      pending.current = 0
+      const element = rail.current
+      if (!element) return
+
+      const next = positionOf(element)
+      // Same values, same object: a scroll inside one page must not re-render the dots.
+      setPosition(current =>
+        current.page === next.page &&
+        current.pages === next.pages &&
+        current.atStart === next.atStart &&
+        current.atEnd === next.atEnd
+          ? current
+          : next,
+      )
+    })
   }, [])
+
+  useEffect(() => () => cancelAnimationFrame(pending.current), [])
 
   useEffect(() => {
     const element = rail.current
     if (!element) return
 
+    // The rail and the sizer inside it: one reports a window resized, the other a page of items
+    // arriving. Without the second, the forward arrow stays hidden on a shelf that just grew.
     const observer = new ResizeObserver(measure)
     observer.observe(element)
+    if (element.firstElementChild) observer.observe(element.firstElementChild)
     return () => observer.disconnect()
   }, [measure])
 
-  // The rail grows as pages arrive, and a scroll is not what reports that: without this, the
-  // right arrow stays disabled on a shelf that has just been extended.
-  useEffect(measure, [measure, items.length, itemWidth])
-
   const virtualItems = virtualizer.getVirtualItems()
-  const first = virtualItems[0]?.index ?? 0
-  const last = virtualItems.at(-1)?.index ?? 0
-
-  /**
-   * An empty rail is NOT the end of one. Asking for more with nothing on screen loops until the
-   * source runs dry — the caller knows whether an empty answer is worth another request.
-   */
-  const nearEnd = items.length > 0 && last >= items.length - PREFETCH_ITEMS
-
-  useEffect(() => {
-    if (nearEnd) onReachEnd?.()
-  }, [nearEnd, items.length, onReachEnd])
-
-  useEffect(() => {
-    if (!onVisible) return
-    const shown = items.slice(first, last + 1)
-    if (shown.length) onVisible(shown)
-  }, [onVisible, items, first, last])
 
   /**
    * `behavior` is deliberately not passed: left to the stylesheet, the scroll follows

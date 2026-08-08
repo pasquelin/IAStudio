@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { useLayouts } from '@/stores/layouts'
+import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_OPEN, useTools, type OpenByZone } from '@/stores/tools'
 import { Shell } from './Shell'
@@ -198,5 +198,28 @@ describe('the home', () => {
     expect(screen.queryByRole('button', { name: 'Accueil' })).not.toBeInTheDocument()
     // And the studio is on its workspace rather than on a home nothing can reach.
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
+  })
+})
+
+/**
+ * `home` starts true on every launch — it is session state, deliberately not persisted. The
+ * setting is what decides whether that means anything, and every reader has to ask the same
+ * question: the native menu asked a different one and published its context as if the home
+ * were up while the docks were on screen.
+ */
+describe('who is in front', () => {
+  it('answers the same to the shell and to the native menu', () => {
+    useSettings.setState(state => ({
+      settings: { ...state.settings, home: { ...state.settings.home, enabled: false } },
+    }))
+    useLayouts.setState({ home: true })
+
+    expect(homeIsVisible()).toBe(false)
+
+    useSettings.setState(state => ({
+      settings: { ...state.settings, home: { ...state.settings.home, enabled: true } },
+    }))
+
+    expect(homeIsVisible()).toBe(true)
   })
 })

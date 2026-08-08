@@ -1,6 +1,6 @@
 import i18next from 'i18next'
 import { create } from 'zustand'
-import type { Project } from '@shared/domain/project'
+import { withoutRecentProject, type Project } from '@shared/domain/project'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
@@ -90,6 +90,12 @@ export const useProject = create<ProjectState>()(set => ({
       set({ project: await bridge.project.open(path) })
       return true
     } catch {
+      // Forgotten here rather than by whoever clicked: an opening can fail from anywhere, and a
+      // list that only forgets when the home asked it keeps offering a folder nothing can open.
+      const recent = useSettings.getState().settings.storage.recentProjects
+      await bridge.settings.write({
+        storage: { recentProjects: withoutRecentProject(recent, path) },
+      })
       return false
     }
   },

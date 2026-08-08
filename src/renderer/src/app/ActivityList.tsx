@@ -20,7 +20,9 @@ export const GLYPHS: Record<ActivityLevel, string> = {
   error: mdiAlertCircleOutline,
 }
 
-const TINTS: Record<ActivityLevel, string> = {
+/** Exported beside `GLYPHS`: the home draws the same levels, and one of the two tables
+ * drifting would make a failure look like one thing there and another here. */
+export const TINTS: Record<ActivityLevel, string> = {
   info: 'text-muted',
   warn: 'text-warning',
   error: 'text-danger',

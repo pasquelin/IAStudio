@@ -77,24 +77,26 @@ function satisfies(entry: HomeSectionEntry, context: HomeContext): boolean {
 
 /**
  * The stored order, cleaned of ids this version no longer knows and completed by the ones it
- * has added since.
+ * has added since. Every read and every write starts here: a user reordering a home whose
+ * settings predate a section would otherwise write that section out of existence.
  *
  * An added section is placed where it was designed to sit rather than appended: nobody goes
  * looking in the preferences for a feature they have never seen, and a new section landing
  * under the fold is a feature that ships invisible.
  */
-function reconciled(stored: readonly HomeSectionSetting[]): HomeSectionSetting[] {
+export function homeSections(stored: readonly HomeSectionSetting[]): HomeSectionSetting[] {
   const settings = stored.filter(setting => homeSectionOf(setting.id) !== null)
 
   for (const [index, entry] of HOME_SECTIONS.entries()) {
     if (settings.some(setting => setting.id === entry.id)) continue
 
-    const preceding = HOME_SECTIONS.slice(0, index)
-      .reverse()
-      .map(earlier => settings.findIndex(setting => setting.id === earlier.id))
-      .find(position => position >= 0)
+    let at = 0
+    for (const earlier of HOME_SECTIONS.slice(0, index)) {
+      const found = settings.findIndex(setting => setting.id === earlier.id)
+      if (found >= 0) at = found + 1
+    }
 
-    settings.splice(preceding === undefined ? 0 : preceding + 1, 0, settingOf(entry))
+    settings.splice(at, 0, settingOf(entry))
   }
 
   return settings
@@ -112,23 +114,13 @@ export function visibleHomeSections(
   stored: readonly HomeSectionSetting[],
   context: HomeContext,
 ): readonly HomeSectionId[] {
-  return reconciled(stored)
+  return homeSections(stored)
     .filter(setting => {
       const entry = homeSectionOf(setting.id)
       if (!entry) return false
       return (entry.pinned === true || setting.visible) && satisfies(entry, context)
     })
     .map(setting => setting.id)
-}
-
-/**
- * The stored order, complete and cleaned — what a write starts from.
- *
- * Every mutation below goes through it rather than through the raw array: a user reordering a
- * home whose settings predate a section would otherwise write that section out of existence.
- */
-export function homeSections(stored: readonly HomeSectionSetting[]): HomeSectionSetting[] {
-  return reconciled(stored)
 }
 
 /** Which way a section is being moved. Positions are settings, not ids, so this is enough. */
@@ -143,7 +135,7 @@ export function movedHomeSection(
   id: HomeSectionId,
   move: HomeMove,
 ): HomeSectionSetting[] {
-  const sections = reconciled(stored)
+  const sections = homeSections(stored)
   const from = sections.findIndex(setting => setting.id === id)
   const to = move === 'up' ? from - 1 : from + 1
 
@@ -158,12 +150,23 @@ export function movedHomeSection(
   return sections
 }
 
+/** One field of one section, rewritten. Both writes the menu offers are shaped like this. */
+function patchedHomeSection(
+  stored: readonly HomeSectionSetting[],
+  id: HomeSectionId,
+  patch: Partial<HomeSectionSetting>,
+): HomeSectionSetting[] {
+  return homeSections(stored).map(setting =>
+    setting.id === id ? { ...setting, ...patch } : setting,
+  )
+}
+
 export function shownHomeSection(
   stored: readonly HomeSectionSetting[],
   id: HomeSectionId,
   visible: boolean,
 ): HomeSectionSetting[] {
-  return reconciled(stored).map(setting => (setting.id === id ? { ...setting, visible } : setting))
+  return patchedHomeSection(stored, id, { visible })
 }
 
 /** Clamped rather than refused: the menu offers a few values, and nothing else may reach here. */
@@ -173,15 +176,12 @@ export function limitedHomeSection(
   limit: number,
 ): HomeSectionSetting[] {
   const bounded = Math.min(HOME_LIMIT_MAX, Math.max(HOME_LIMIT_MIN, Math.round(limit)))
-
-  return reconciled(stored).map(setting =>
-    setting.id === id ? { ...setting, limit: bounded } : setting,
-  )
+  return patchedHomeSection(stored, id, { limit: bounded })
 }
 
 /** Sections the user hid, so the home can offer them back without a trip to the preferences. */
 export function hiddenHomeSections(stored: readonly HomeSectionSetting[]): HomeSectionId[] {
-  return reconciled(stored)
+  return homeSections(stored)
     .filter(setting => !setting.visible && homeSectionOf(setting.id)?.pinned !== true)
     .map(setting => setting.id)
 }
@@ -193,9 +193,4 @@ export function homeSectionLimit(
 ): number | undefined {
   const setting = stored.find(candidate => candidate.id === id)
   return setting?.limit ?? homeSectionOf(id)?.defaultLimit
-}
-
-/** Whether the home should offer the way to connect a key, rather than hide what needs one. */
-export function needsCredentials(context: HomeContext): boolean {
-  return !context.authenticated
 }
