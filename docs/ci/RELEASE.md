@@ -167,3 +167,30 @@ pnpm validate
 ```
 
 Changer l'URL sans l'empreinte fait échouer le build au packaging — c'est voulu.
+
+**Changer de version impose de changer `SOURCES` avec.** Le commit BtbN suit tout seul, dérivé de
+`BTBN_BUILD` ; la ligne macOS est écrite à la main. Une version sans archive de sources déclarée
+fait échouer `fetch-ffmpeg.mjs --sources`, donc la release — voir ci-dessous.
+
+---
+
+## Les sources de ffmpeg voyagent avec la release
+
+Distribuer les binaires déclenche l'obligation : GPL-3.0 sur macOS, LGPL-2.1 ailleurs, et les
+deux demandent la source **correspondant à ce build précis**
+([ADR-16](adr/ADR-16-licence-du-projet.md)).
+
+Le job `release` s'en charge tout seul, avant de créer la draft :
+
+```bash
+node scripts/fetch-ffmpeg.mjs --sources dist
+```
+
+Deux archives, environ 26 Mo, attachées aux installeurs. Rien à faire à la main — mais **deux
+choses à vérifier sur la draft** avant de la publier :
+
+- `ffmpeg-7.1.1-source.tar.xz` et `ffmpeg-n7.1.5-…-source.tar.gz` sont bien dans les assets ;
+- leur numéro correspond à celui de `TARGETS`.
+
+Si le téléchargement échoue, la release échoue. C'est délibéré : publier les binaires sans leurs
+sources est la violation, pas l'inverse.

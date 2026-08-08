@@ -17,6 +17,17 @@ export type Licence = {
   sources?: string
 }
 
+/**
+ * Whether these terms oblige us to say where the source is, and not merely to carry the notice.
+ *
+ * Matched on the SPDX prefix so a version bump — MPL-2.0 to a hypothetical 3.0 — keeps answering
+ * true. Lives here rather than in `collect-licences.mjs` because the collector applies the rule
+ * and the tests verify it: one definition, or the guard drifts from what it guards.
+ */
+export function isCopyleft(spdx: string): boolean {
+  return /^(MPL|LGPL|GPL|AGPL|EPL|CDDL|OSL|CeCILL)/.test(spdx)
+}
+
 export const LICENCES_ROUTE = 'licences'
 
 export function isLicencesRoute(hash: string): boolean {

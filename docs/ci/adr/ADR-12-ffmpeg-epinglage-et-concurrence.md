@@ -59,6 +59,8 @@ problèmes que le passage en CI transforme de gêne en défaut :
   la plus fragile des trois, et la seule à servir `darwin-arm64`.
 - Chaque job de packaging retélécharge ses 96 Mo, une fois par architecture. C'est le prix
   assumé de l'absence de cache ; il se compte en une à deux minutes par job.
-- **L'obligation GPL est assumée en connaissance de cause** et ne relève pas de ce pipeline :
-  elle est signalée ici pour qu'une revue juridique puisse la trancher avant la première
-  distribution publique.
+- **L'obligation GPL est assumée en connaissance de cause.** Elle a été tranchée depuis, par
+  l'[ADR-16](ADR-16-licence-du-projet.md) : les sources correspondantes — le tarball exact pour
+  macOS, le commit compilé par BtbN pour les autres — sont jointes à chaque release par
+  `fetch-ffmpeg.mjs --sources`. Le lien générique vers `ffmpeg.org/download.html` que cet ADR
+  laissait dans `NOTICE.txt` ne satisfaisait pas la GPLv3 §6.

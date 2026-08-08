@@ -4,6 +4,12 @@ appId: com.scenario.app
 # here would leave the shipped name unguarded.
 copyright: © 2026 Alban Pasquelin
 
+# The terms of use of the binary, not the source-available licence of the repository — those are
+# two different texts and only this one governs what an installer hands over. Shown by the NSIS
+# installer and recorded in the Linux packages. Markdown renders as plain text there, which reads
+# fine and keeps one file authoritative instead of a copy that drifts.
+license: EULA.md
+
 directories:
   output: release
   buildResources: build
@@ -62,6 +68,13 @@ extraResources:
   - from: resources/ffmpeg
     to: ffmpeg
     filter: ['**/*']
+  # Beside the application rather than only inside its Help window: a notice reachable only from
+  # a running app is out of reach for whoever cannot start it, and the FFmpeg source offer has to
+  # survive that. Both are generated or hand-written at the repository root, never duplicated.
+  - from: EULA.md
+    to: EULA.md
+  - from: THIRD-PARTY-NOTICES.md
+    to: THIRD-PARTY-NOTICES.md
 
 mac:
   category: public.app-category.graphics-design

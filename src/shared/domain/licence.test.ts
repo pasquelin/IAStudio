@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLicencesRoute, LICENCES_ROUTE, type Licence } from './licence'
+import { isCopyleft, isLicencesRoute, LICENCES_ROUTE, type Licence } from './licence'
 import licences from '../licences.json'
 import manifest from '../../../package.json'
 
@@ -57,11 +57,25 @@ describe('the collected notice', () => {
     expect(entries.filter(entry => entry.spdx === 'UNKNOWN')).toEqual([])
   })
 
-  // The only component whose licence asks for more than attribution: whoever receives the
-  // binary must be able to reach the sources of the FFmpeg it was built from.
-  it('offers the sources of the copyleft component it ships', () => {
-    const ffmpeg = entries.find(entry => entry.name === 'FFmpeg')
-    expect(ffmpeg?.sources).toBeTruthy()
+  // Attribution is all the permissive terms ask. Copyleft asks for more: whoever receives the
+  // binary must be able to reach the source of the components carrying those terms — FFmpeg and
+  // mediabunny today. Checked by licence rather than by name, so a new one cannot slip through,
+  // and through the very predicate the collector applies, so neither can drift from the other.
+  it('offers the sources of every copyleft component it ships', () => {
+    const copyleft = entries.filter(entry => isCopyleft(entry.spdx))
+    expect(copyleft.length).toBeGreaterThan(0)
+
+    for (const entry of copyleft) {
+      expect(entry.sources, `${entry.name} is ${entry.spdx} without a source offer`).toBeTruthy()
+    }
+  })
+
+  it('leaves the permissive licences out of the source-offer rule', () => {
+    expect(isCopyleft('MIT')).toBe(false)
+    expect(isCopyleft('BSD-3-Clause')).toBe(false)
+    expect(isCopyleft('Apache-2.0')).toBe(false)
+    expect(isCopyleft('MPL-2.0')).toBe(true)
+    expect(isCopyleft('GPL-3.0-or-later')).toBe(true)
   })
 
   /**

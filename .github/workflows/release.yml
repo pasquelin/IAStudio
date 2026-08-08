@@ -183,11 +183,24 @@ jobs:
       contents: write
 
     steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
       - uses: actions/download-artifact@v8
         with:
           pattern: installers-*
           merge-multiple: true
           path: dist
+
+      # Shipping the FFmpeg binaries is what triggers the obligation, and the GPL asks for the
+      # source that corresponds to *this* build — a link to ffmpeg.org's download page does not
+      # answer it. Attached to the same release so the offer cannot outlive the page it names.
+      # No `pnpm install`: the script only uses `fetch` and `node:fs`.
+      - name: Attach FFmpeg's corresponding sources
+        run: node scripts/fetch-ffmpeg.mjs --sources dist
 
       - name: Check the update manifests are complete
         run: |
