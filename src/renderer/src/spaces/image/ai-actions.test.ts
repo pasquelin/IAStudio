@@ -131,7 +131,7 @@ describe('preparing an edit', () => {
     await expect(prepareEdit(DOCUMENT, 'vectorize', host, bridge)).resolves.toBe(false)
 
     expect(uploaded).toEqual([])
-    expect(useTools.getState().open.right?.primary).toBe('models')
+    expect(useTools.getState().open.left?.primary).toBe('models')
   })
 
   // The action prepares; it never submits. Every parameter of the model stays visible, and the
@@ -139,6 +139,6 @@ describe('preparing an edit', () => {
   it('brings the form forward rather than submitting it', async () => {
     await prepareEdit(DOCUMENT, 'regenerate', host, bridge)
 
-    expect(useTools.getState().focusedZone).toBe('right')
+    expect(useTools.getState().focusedZone).toBe('left')
   })
 })

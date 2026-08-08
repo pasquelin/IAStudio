@@ -108,8 +108,8 @@ function halvesOf(tools: Tool[]): [ToolSlot, Tool[]][] {
 
 /**
  * The zone's tools, cut the way the zone itself is cut: the icons above the separator open in
- * its first half, the ones below in its second. On the right that cut is the AI's — choosing a
- * model and filling its form above, everything else below. The rail is the legend of the column.
+ * its first half, the ones below in its second. On the right that cut separates what shows the
+ * document from what edits the selection. The rail is the legend of the column.
  *
  * One zone per group rather than a list: `useAvailableTools` is a hook, and the generator's
  * presence depends on state — a loop over zones could not ask it.

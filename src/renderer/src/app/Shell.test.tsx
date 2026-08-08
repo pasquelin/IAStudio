@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useLayouts } from '@/stores/layouts'
-import { DEFAULT_OPEN, useTools } from '@/stores/tools'
+import { DEFAULT_OPEN, useTools, type OpenByZone } from '@/stores/tools'
 import { Shell } from './Shell'
 
 vi.mock('./DocumentArea', () => ({ DocumentArea: () => null }))
@@ -61,22 +61,27 @@ describe('a horizontal band', () => {
   })
 })
 
-// Spec § 3: the band belongs to the montage in Video, and the shelf moves to the left column
+// Spec § 3: the band belongs to the montage in Video, and the shelf moves to the right column
 // so a take can be dragged onto a track.
 describe('the Video layout', () => {
-  it('puts the montage in the band and the shelf in the left column', () => {
+  // One stored layout, read by two sections: the halves keep their place, their contents follow.
+  const SHELF_IN_COLUMN: OpenByZone = {
+    ...DEFAULT_OPEN,
+    right: { primary: 'assets', secondary: 'inspector' },
+  }
+
+  it('puts the montage in the band and the shelf in the right column', () => {
     useLayouts.setState({ activeWorkspace: 'video' })
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ open: SHELF_IN_COLUMN })
     renderShell()
 
     expect(screen.getByLabelText('Timeline')).toBeInTheDocument()
     expect(screen.getByLabelText('Assets')).toBeInTheDocument()
   })
 
-  // Same stored layout, other section: the halves keep their place, their contents follow.
   it('gives the same halves the panels Image puts there', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ open: SHELF_IN_COLUMN })
     renderShell()
 
     expect(screen.getByLabelText('Assets')).toBeInTheDocument()
@@ -89,11 +94,21 @@ describe('a side column', () => {
   // The cut a band refuses is exactly what a column is for: two panels stacked, and a divider
   // to share the height between them.
   it('keeps both halves and the divider between them', () => {
-    useTools.setState({ open: { right: { primary: 'models', secondary: 'inspector' } } })
+    useTools.setState({ open: { right: { primary: 'layers', secondary: 'inspector' } } })
+    renderShell()
+
+    expect(screen.getByLabelText('Calques')).toBeInTheDocument()
+    expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
+    expect(handles()).toHaveLength(2)
+  })
+
+  // The left column holds one panel, whichever of the two generation panels it is: no divider
+  // to drag, and no half to leave empty.
+  it('draws no divider in the left column, which is never cut', () => {
+    useTools.setState({ open: { left: { primary: 'models' } } })
     renderShell()
 
     expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
-    expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
-    expect(handles()).toHaveLength(2)
+    expect(handles()).toHaveLength(1)
   })
 })

@@ -2,6 +2,8 @@ import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { ModelFamily } from '@shared/domain/model'
+import type { ToolZone } from '@shared/domain/tool'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 import { hasModelFor, shownTool, useAvailableTools } from './tool-registry'
@@ -15,7 +17,7 @@ function preferModel(family: ModelFamily, modelId: string): void {
   })
 }
 
-function idsOf(zone: 'right', workspace: 'image' | 'textures'): string[] {
+function idsOf(zone: ToolZone, workspace: WorkspaceId): string[] {
   const { result } = renderHook(() => useAvailableTools(zone, workspace))
   return result.current.map(tool => tool.id)
 }
@@ -28,11 +30,11 @@ beforeEach(() => {
 describe('the generator', () => {
   it('is offered where a model was chosen', () => {
     useModels.setState({ selected: { image: 'flux-dev' } })
-    expect(idsOf('right', 'image')).toContain('generator')
+    expect(idsOf('left', 'image')).toContain('generator')
   })
 
   it('is absent where none was — generating is impossible without one', () => {
-    expect(idsOf('right', 'image')).not.toContain('generator')
+    expect(idsOf('left', 'image')).not.toContain('generator')
   })
 
   it('counts the preferred model, which is what that preference is for', () => {
@@ -47,7 +49,13 @@ describe('the generator', () => {
   })
 
   it('is the only panel its absence removes', () => {
-    expect(idsOf('right', 'image')).toEqual(['models', 'inspector'])
+    expect(idsOf('left', 'image')).toEqual(['models'])
+    useModels.setState({ selected: { image: 'flux-dev' } })
+    expect(idsOf('left', 'image')).toEqual(['models', 'generator'])
+  })
+
+  it('leaves the right column alone — it is the same one in every section', () => {
+    expect(idsOf('right', 'textures')).toEqual(['explorer', 'inspector'])
   })
 })
 
@@ -64,42 +72,38 @@ describe('what a half of a zone shows', () => {
   })
 
   it('leaves a tool alone in the zone this section gives it', () => {
-    expect(shownTool('assets', 'left', 'primary', 'video', true)).toBe('assets')
+    expect(shownTool('assets', 'right', 'primary', 'video', true)).toBe('assets')
     expect(shownTool('assets', 'bottom', 'primary', 'image', true)).toBe('assets')
   })
 
   it('substitutes within the half, never across the separator', () => {
-    // Layers is an upper-left panel; Audio has nothing there, and the explorer below is not a
-    // candidate — it would jump the separator the rail draws.
-    expect(shownTool('layers', 'left', 'primary', 'audio', true)).toBeNull()
-    expect(shownTool('layers', 'left', 'primary', 'video', true)).toBe('assets')
+    expect(shownTool('inspector', 'right', 'primary', 'image', true)).toBe('layers')
+    expect(shownTool('layers', 'right', 'secondary', 'image', true)).toBe('inspector')
+  })
+
+  it('answers null for a half this section does not fill', () => {
+    // The left column is one half: generating is a single panel, whichever of the two shows it.
+    expect(shownTool('models', 'left', 'secondary', 'image', true)).toBeNull()
+    expect(shownTool('assets', 'bottom', 'secondary', 'image', true)).toBeNull()
   })
 
   it('never substitutes a generator a section cannot offer', () => {
-    expect(shownTool('skybox', 'right', 'primary', 'image', false)).toBe('models')
-  })
-
-  // The half is asked for by name, so a tool of the right zone but the other half is no more
-  // this one's business than a tool of another zone — a band holds only a first half, and
-  // that is the whole of what keeps one uncut.
-  it('answers for the half it is asked about, not merely the zone', () => {
-    expect(shownTool('inspector', 'right', 'primary', 'image', true)).toBe('models')
-    expect(shownTool('assets', 'bottom', 'secondary', 'image', true)).toBeNull()
+    expect(shownTool('inspector', 'left', 'primary', 'image', false)).toBe('models')
   })
 
   // Where several tools share a half, the substitute is the first the registry declares. The
   // order of `TOOL_PLACEMENTS` is the choice, so it is spelled out here rather than left to
   // whoever reorders that table next.
   it('substitutes the first tool the half declares when several share it', () => {
-    expect(shownTool('layers', 'left', 'primary', '3d', true)).toBe('meshes')
-    expect(shownTool('skybox', 'right', 'primary', 'image', true)).toBe('models')
+    expect(shownTool('layers', 'right', 'primary', '3d', true)).toBe('explorer')
+    expect(shownTool('layers', 'right', 'primary', 'skyboxes', true)).toBe('skybox')
   })
 
   it('falls back to the models panel where the generator has no model', () => {
-    expect(shownTool('generator', 'right', 'primary', 'image', false)).toBe('models')
+    expect(shownTool('generator', 'left', 'primary', 'image', false)).toBe('models')
   })
 
   it('shows the generator again as soon as one is there', () => {
-    expect(shownTool('generator', 'right', 'primary', 'image', true)).toBe('generator')
+    expect(shownTool('generator', 'left', 'primary', 'image', true)).toBe('generator')
   })
 })

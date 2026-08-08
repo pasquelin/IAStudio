@@ -57,29 +57,49 @@ describe('Rail', () => {
   // says what the section can do.
   it('offers no generator icon while no model is chosen', () => {
     useModels.setState({ selected: {} })
-    render(<Rail side="right" />)
+    render(<Rail side="left" />)
     expect(screen.queryByRole('button', { name: 'Génération' })).not.toBeInTheDocument()
   })
 
   it('offers it as soon as one is', () => {
     useModels.setState({ selected: { '3d': 'tripo-v3' } })
-    render(<Rail side="right" />)
+    render(<Rail side="left" />)
     expect(screen.getByRole('button', { name: 'Génération' })).toBeInTheDocument()
   })
 
-  // Spec § 2, rule 2: the upper right is the AI's, and the separator is where that stops. The
-  // rail is the legend of the column, so it has to draw the same cut.
-  it('cuts the right rail where the column is cut: the AI above, the rest below', () => {
-    useModels.setState({ selected: { '3d': 'tripo-v3' } })
-    const { container } = render(<Rail side="right" />)
-
-    // The separator is decorative, hence hidden from assistive tech — it is read here as a
-    // position in the rail, not as a control.
-    const marks = [...container.querySelectorAll('button, span[aria-hidden="true"]')].map(
+  // The separator is decorative, hence hidden from assistive tech — it is read here as a
+  // position in the rail, not as a control.
+  function marksOf(container: HTMLElement): string[] {
+    return [...container.querySelectorAll('button, span[aria-hidden="true"]')].map(
       node => node.getAttribute('aria-label') ?? 'separator',
     )
+  }
 
-    expect(marks).toEqual(['Modèles', 'Génération', 'separator', 'Inspecteur'])
+  // The left rail is generation, under the button that makes a document, with the band's own
+  // tools at its foot. The rail is the legend of the column, so it has to draw the same cut.
+  it('puts generation on the left rail, under the new-document button', () => {
+    useModels.setState({ selected: { '3d': 'tripo-v3' } })
+    const { container } = render(<Rail side="left" />)
+
+    expect(marksOf(container)).toEqual([
+      'Nouveau document',
+      'separator',
+      'Modèles',
+      'Génération',
+      'Assets',
+    ])
+  })
+
+  it('cuts the right rail where the column is cut: the document above, the selection below', () => {
+    const { container } = render(<Rail side="right" />)
+
+    expect(marksOf(container)).toEqual([
+      'Explorateur',
+      'Lumières',
+      'Mailles',
+      'separator',
+      'Inspecteur',
+    ])
   })
 
   // The panel a section stands in for another is the one that is up, so its icon is the one
