@@ -20,7 +20,7 @@ import { useUsageReport } from './useUsageReport'
 
 export type UsageSectionId = 'overview' | 'models' | 'activities' | 'journal'
 
-const SECTIONS: readonly UsageSectionId[] = ['overview', 'models', 'activities', 'journal']
+export const SECTIONS: readonly UsageSectionId[] = ['overview', 'models', 'activities', 'journal']
 
 /** Periods, sections and the refresh answer to one look: active is primary, idle is a hover. */
 function control(active: boolean): string {
