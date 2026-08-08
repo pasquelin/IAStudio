@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_OPEN, useTools } from '@/stores/tools'
 import { useLayouts } from '@/stores/layouts'
-import { revealAssets } from './reveal-assets'
+import { revealAssets } from './reveal-panel'
 
 beforeEach(() => {
   useTools.setState({ open: {}, focusedZone: null })

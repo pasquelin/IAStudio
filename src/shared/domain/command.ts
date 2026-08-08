@@ -45,6 +45,11 @@ export type CommandId =
   | 'canvas.clearGuides'
   | 'canvas.deselect'
   | 'canvas.maskFromSelection'
+  | 'canvas.regenerate'
+  | 'canvas.cutout'
+  | 'canvas.enlarge'
+  | 'canvas.vectorize'
+  | 'canvas.extend'
   | 'canvas.snap'
   | 'canvas.undo'
   | 'canvas.redo'
@@ -313,6 +318,41 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasMaskFromSelection.title',
     helpKey: 'commands.canvasMaskFromSelection.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.regenerate',
+    scope: 'canvas',
+    titleKey: 'commands.canvasRegenerate.title',
+    helpKey: 'commands.canvasRegenerate.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.cutout',
+    scope: 'canvas',
+    titleKey: 'commands.canvasCutout.title',
+    helpKey: 'commands.canvasCutout.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.enlarge',
+    scope: 'canvas',
+    titleKey: 'commands.canvasEnlarge.title',
+    helpKey: 'commands.canvasEnlarge.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.vectorize',
+    scope: 'canvas',
+    titleKey: 'commands.canvasVectorize.title',
+    helpKey: 'commands.canvasVectorize.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.extend',
+    scope: 'canvas',
+    titleKey: 'commands.canvasExtend.title',
+    helpKey: 'commands.canvasExtend.help',
     defaultBinding: null,
   }),
   command({

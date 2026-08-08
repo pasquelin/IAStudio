@@ -888,6 +888,26 @@
     "canvasMaskFromSelection": {
       "title": "Make a mask of the selection",
       "help": "Hide the armed layer outside the selected region"
+    },
+    "canvasRegenerate": {
+      "title": "Regenerate the region",
+      "help": "Ask the model to repaint the masked region of the armed layer"
+    },
+    "canvasCutout": {
+      "title": "Cut out",
+      "help": "Remove the background of the flattened image with the default model"
+    },
+    "canvasEnlarge": {
+      "title": "Enlarge",
+      "help": "Raise the definition of the flattened image with the default model"
+    },
+    "canvasVectorize": {
+      "title": "Vectorize",
+      "help": "Turn the flattened image into paths with the default model"
+    },
+    "canvasExtend": {
+      "title": "Extend",
+      "help": "Ask the model to paint beyond the edges of the flattened image"
     }
   },
   "texture": {

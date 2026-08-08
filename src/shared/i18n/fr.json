@@ -888,6 +888,26 @@
     "canvasMaskFromSelection": {
       "title": "Faire un masque de la sélection",
       "help": "Masquer le calque actif hors de la région sélectionnée"
+    },
+    "canvasRegenerate": {
+      "title": "Régénérer la zone",
+      "help": "Demander au modèle de repeindre la région masquée du calque actif"
+    },
+    "canvasCutout": {
+      "title": "Détourer",
+      "help": "Retirer l’arrière-plan de l’image aplatie avec le modèle par défaut"
+    },
+    "canvasEnlarge": {
+      "title": "Agrandir",
+      "help": "Augmenter la définition de l’image aplatie avec le modèle par défaut"
+    },
+    "canvasVectorize": {
+      "title": "Vectoriser",
+      "help": "Convertir l’image aplatie en tracés avec le modèle par défaut"
+    },
+    "canvasExtend": {
+      "title": "Étendre",
+      "help": "Demander au modèle de peindre au-delà des bords de l’image aplatie"
     }
   },
   "texture": {

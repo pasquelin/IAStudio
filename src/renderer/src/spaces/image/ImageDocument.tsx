@@ -25,13 +25,23 @@ import {
   selectionShapeFor,
 } from './image-tools'
 import { layerPort } from './layer-port'
+import { prepareEdit, type AiEdit } from './ai-actions'
 import { maskFromSelection } from './mask-actions'
 import { placeAsset } from './place-asset'
-import { revealAssets } from './reveal-assets'
+import { revealAssets } from './reveal-panel'
 import { pixelPort } from './pixel-port'
 import { ZoomBar } from './ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }
+
+/** Which edit each command asks for. A table, so a sixth is one entry and no new branch. */
+const EDIT_BY_COMMAND: Readonly<Record<string, AiEdit>> = {
+  'canvas.regenerate': 'regenerate',
+  'canvas.cutout': 'cutout',
+  'canvas.enlarge': 'enlarge',
+  'canvas.vectorize': 'vectorize',
+  'canvas.extend': 'extend',
+}
 
 /**
  * The transparency checker, as one repeating gradient — no image, and no hex: a painted white
@@ -150,6 +160,17 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         case 'canvas.maskFromSelection': {
           const host = engine.current
           return host ? maskFromSelection(documentId, host) : undefined
+        }
+        case 'canvas.regenerate':
+        case 'canvas.cutout':
+        case 'canvas.enlarge':
+        case 'canvas.vectorize':
+        case 'canvas.extend': {
+          const host = engine.current
+          const edit = EDIT_BY_COMMAND[command]
+          // Prepared, never submitted: the form opens filled and the user is the one who runs it.
+          if (host && edit) void prepareEdit(documentId, edit, host, window.studio.scenario)
+          return
         }
         case 'canvas.undo':
           return useCanvases.getState().undo(documentId)
