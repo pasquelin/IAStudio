@@ -1,5 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { hasFailed, isTerminal, needsDismissing, type IngestStage } from './media'
+import { hasFailed, INGEST_STAGES, isTerminal, needsDismissing, type IngestStage } from './media'
+
+/**
+ * The bundles are checked against `INGEST_STAGES`, so a stage missing from it is a stage
+ * nobody notices is untranslated. The `Record` is what makes the union say so: adding a stage
+ * without listing it here stops compiling.
+ */
+describe('the list of stages', () => {
+  it('holds every stage the pipeline can report', () => {
+    const all: Record<IngestStage, true> = {
+      queued: true,
+      probe: true,
+      hash: true,
+      proxy: true,
+      peaks: true,
+      done: true,
+      cancelled: true,
+      failed: true,
+      duplicate: true,
+      unreadable: true,
+    }
+
+    expect([...INGEST_STAGES].sort()).toEqual(Object.keys(all).sort())
+  })
+})
 
 describe('what an ingest stage means for the list', () => {
   it('calls every outcome terminal, since each one left the catalogue changed', () => {

@@ -17,6 +17,20 @@ export type IngestStage =
   /** ffprobe read the file and refused it — it is not media, whatever its extension says. */
   | 'unreadable'
 
+/** All of them, in pipeline order. The import list names each one from a bundle. */
+export const INGEST_STAGES: readonly IngestStage[] = [
+  'queued',
+  'probe',
+  'hash',
+  'proxy',
+  'peaks',
+  'done',
+  'cancelled',
+  'failed',
+  'duplicate',
+  'unreadable',
+]
+
 /**
  * Nothing more will happen to this file. Every one of these left the catalogue different from
  * how it found it — a length and a waveform filled in, or the row dropped outright.

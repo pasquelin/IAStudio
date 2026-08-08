@@ -22,6 +22,15 @@ export type JobProgress = Pick<Job, 'id' | 'status' | 'progress'> & {
   error?: JobFailure
 }
 
+/** All of them, in the order a job goes through. The jobs panel names each one from a bundle. */
+export const JOB_STATUSES: readonly JobStatus[] = [
+  'queued',
+  'running',
+  'succeeded',
+  'failed',
+  'cancelled',
+]
+
 export const FINISHED_STATUSES: readonly JobStatus[] = ['succeeded', 'failed', 'cancelled']
 
 export function isFinished(status: JobStatus): boolean {
