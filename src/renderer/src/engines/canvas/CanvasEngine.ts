@@ -63,6 +63,7 @@ import {
 } from './handles'
 import { resizeCursor, rotateCursor, UPRIGHT, type Facing } from './cursors'
 import {
+  ants,
   CanvasOverlay,
   RULER_SIZE,
   type OverlayColors,
@@ -344,6 +345,8 @@ const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
   rulerText: '--color-muted',
   rulerTick: '--color-muted',
   accent: '--color-accent',
+  marqueeLight: '--color-marquee-light',
+  marqueeDark: '--color-marquee-dark',
   scrim: '--color-scrim',
 }
 
@@ -355,6 +358,8 @@ const FALLBACK_COLORS: OverlayColors = {
   rulerText: '#868a91',
   rulerTick: '#868a91',
   accent: '#3574f0',
+  marqueeLight: '#ffffff',
+  marqueeDark: '#000000',
   scrim: '#00000099',
 }
 
@@ -369,6 +374,8 @@ function readColors(element: HTMLElement): OverlayColors {
     rulerText: read('rulerText'),
     rulerTick: read('rulerTick'),
     accent: read('accent'),
+    marqueeLight: read('marqueeLight'),
+    marqueeDark: read('marqueeDark'),
     scrim: read('scrim'),
   }
 }
@@ -1340,6 +1347,7 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
+      marching: this.marching(),
       // Unconditional: every painter below already returns on nothing to draw, and a gate
       // repeating those guards is one a new decoration gets forgotten from — silently, since
       // nothing would fail, it would simply never appear.
@@ -1353,18 +1361,28 @@ export class CanvasEngine {
    * to know nothing beyond `moveTo` and `lineTo`.
    */
   /** The marquee and the shape being dragged, both chrome and both in screen space. */
-  private readonly paintOverlay = (context: OverlayContext): void => {
-    this.paintSelection(context)
-    this.paintPending(context)
-    this.paintCrop(context)
+  private readonly paintOverlay = (context: OverlayContext, phase: number): void => {
+    this.paintSelection(context, phase)
+    this.paintPending(context, phase)
+    this.paintCrop(context, phase)
     this.paintHandles(context)
+  }
+
+  /**
+   * Whether anything on screen is dashed, which is what keeps the frame loop alive. Kept beside
+   * the three that draw ants: a fourth that forgot to say so would simply stand still.
+   */
+  private marching(): boolean {
+    return (
+      selectionOutline(this.selection).length > 0 || this.pending !== null || this.cropping !== null
+    )
   }
 
   /**
    * Nothing here outlives the gesture: the frame applies on release, so one still on screen
    * afterwards would promise an adjustment step that does not exist.
    */
-  private readonly paintCrop = (context: OverlayContext): void => {
+  private readonly paintCrop = (context: OverlayContext, phase: number): void => {
     const rect = this.cropping
     if (!rect) return
 
@@ -1373,8 +1391,21 @@ export class CanvasEngine {
     context.fillStyle = this.colors.scrim
     for (const band of scrim) context.fillRect(band.x, band.y, band.width, band.height)
 
-    context.strokeStyle = this.colors.accent
-    context.strokeRect(frame.x, frame.y, frame.width, frame.height)
+    // The same ants as a selection: what a frame promises to keep and what a marquee encloses are
+    // the same kind of statement, and the eye should not have to learn two ways of reading it.
+    ants(
+      context,
+      () => {
+        context.beginPath()
+        context.moveTo(frame.x, frame.y)
+        context.lineTo(frame.x + frame.width, frame.y)
+        context.lineTo(frame.x + frame.width, frame.y + frame.height)
+        context.lineTo(frame.x, frame.y + frame.height)
+        context.lineTo(frame.x, frame.y)
+      },
+      phase,
+      this.colors,
+    )
 
     context.fillStyle = this.colors.accent
     for (const grip of grips) context.fillRect(grip.x, grip.y, grip.width, grip.height)
@@ -1408,26 +1439,28 @@ export class CanvasEngine {
   }
 
   /** The shape under the hand, outlined until it is committed to the layer. */
-  private readonly paintPending = (context: OverlayContext): void => {
+  private readonly paintPending = (context: OverlayContext, phase: number): void => {
     const shape = this.pending
     if (!shape) return
 
-    context.strokeStyle = this.colors.accent
-    this.strokePath(context, shapeOutline(shape))
+    const outline = shapeOutline(shape)
+    ants(context, () => this.tracePath(context, outline), phase, this.colors)
   }
 
-  private readonly paintSelection = (context: OverlayContext): void => {
+  private readonly paintSelection = (context: OverlayContext, phase: number): void => {
     const outline = selectionOutline(this.selection)
     if (outline.length === 0) return
 
-    context.strokeStyle = this.colors.accent
-    context.setLineDash([4, 4])
-    this.strokePath(context, outline)
-    context.setLineDash([])
+    ants(context, () => this.tracePath(context, outline), phase, this.colors)
   }
 
-  /** A closed polyline, in screen space: a selection is chrome, and chrome never scales. */
-  private strokePath(context: OverlayContext, outline: readonly Point[]): void {
+  /**
+   * A closed polyline, in screen space: a selection is chrome, and chrome never scales.
+   *
+   * Laid down without being stroked, because the marching ants stroke the same path twice — the
+   * light pass and the dark dashed one over it.
+   */
+  private tracePath(context: OverlayContext, outline: readonly Point[]): void {
     const first = outline[0]
     if (!first) return
 
@@ -1446,6 +1479,10 @@ export class CanvasEngine {
     // Closed by hand rather than with `closePath`: a lasso is left open by the hand that drew it,
     // and the region it stands for is the closed one.
     context.lineTo(start.x, start.y)
+  }
+
+  private strokePath(context: OverlayContext, outline: readonly Point[]): void {
+    this.tracePath(context, outline)
     context.stroke()
   }
 

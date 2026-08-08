@@ -27,6 +27,7 @@ export type OverlayContext = Pick<
   | 'strokeRect'
   | 'fillText'
   | 'setLineDash'
+  | 'lineDashOffset'
   | 'lineWidth'
   | 'strokeStyle'
   | 'fillStyle'
@@ -43,8 +44,59 @@ export type OverlayColors = {
   rulerText: string
   rulerTick: string
   accent: string
+  /** The two strokes of the marching ants — see the tokens for why they are white and black. */
+  marqueeLight: string
+  marqueeDark: string
   /** Translucent: it dims what a crop is about to cut away without hiding it. */
   scrim: string
+}
+
+/** The dash pattern of the marching ants, in screen pixels, and how long one period lasts. */
+const ANT_DASH = 5
+const ANT_GAP = 4
+const ANT_PERIOD_MS = 500
+
+/**
+ * How far along its pattern the dash has marched, from a clock rather than from a frame counter:
+ * the ants have to crawl at the same speed on a screen that drops frames as on one that does not.
+ */
+export function antPhase(time: number): number {
+  return ((time % ANT_PERIOD_MS) / ANT_PERIOD_MS) * (ANT_DASH + ANT_GAP)
+}
+
+/**
+ * The marching ants, in the one place every dashed outline goes through.
+ *
+ * Two strokes over the same path: a plain light one, then a dark dashed one that marches over it.
+ * The alternation is what keeps the outline readable over anything the document holds — a single
+ * dashed stroke disappears against a background of its own colour, whichever colour that is.
+ *
+ * One helper for all three surfaces that dash — the selection, the crop frame, the shape being
+ * drawn — so drift between them is not merely unlikely but impossible.
+ */
+export function ants(
+  context: OverlayContext,
+  trace: () => void,
+  phase: number,
+  colors: OverlayColors,
+): void {
+  context.lineWidth = 1.5
+
+  context.setLineDash([])
+  context.strokeStyle = colors.marqueeLight
+  trace()
+  context.stroke()
+
+  context.setLineDash([ANT_DASH, ANT_GAP])
+  // Negative, so the dashes travel the way the path was traced rather than against it.
+  context.lineDashOffset = -phase
+  context.strokeStyle = colors.marqueeDark
+  trace()
+  context.stroke()
+
+  context.setLineDash([])
+  context.lineDashOffset = 0
+  context.lineWidth = 1
 }
 
 export const RULER_SIZE = 20
@@ -64,8 +116,14 @@ export type OverlayScene = {
   /** Where the pointer is, in screen pixels — the rulers echo it. `null` once it leaves. */
   pointer: Point | null
   colors: OverlayColors
+  /**
+   * Whether anything on screen is dashed. The frame loop keeps booking frames while it is true
+   * and stops the moment it is not: ants that marched on an empty canvas would be a rAF running
+   * for the life of the document, which the UI thread has better uses for.
+   */
+  marching: boolean
   /** The active tool's own chrome, drawn last and in screen space. */
-  paint?: (context: OverlayContext) => void
+  paint?: (context: OverlayContext, phase: number) => void
 }
 
 function line(context: OverlayContext, x1: number, y1: number, x2: number, y2: number): void {
@@ -79,7 +137,7 @@ function line(context: OverlayContext, x1: number, y1: number, x2: number, y2: n
  * One frame of the overlay. Pure in everything but the context: the scene decides, this only
  * puts it on screen — which is what lets it be tested without a GPU.
  */
-export function drawOverlay(context: OverlayContext, scene: OverlayScene): void {
+export function drawOverlay(context: OverlayContext, scene: OverlayScene, phase = 0): void {
   context.clearRect(0, 0, scene.host.width, scene.host.height)
   context.save()
   // Every stroke here is chrome, so nothing scales with the zoom.
@@ -88,7 +146,7 @@ export function drawOverlay(context: OverlayContext, scene: OverlayScene): void 
 
   drawFrame(context, scene)
   if (scene.showGuides) drawGuides(context, scene)
-  scene.paint?.(context)
+  scene.paint?.(context, phase)
   if (scene.showRulers) drawRulers(context, scene)
 
   context.restore()
@@ -247,9 +305,15 @@ export class CanvasOverlay {
     this.canvas.remove()
   }
 
-  private readonly draw = (): void => {
+  private readonly draw = (time: number): void => {
     this.frame = 0
     const scene = this.scene()
-    if (scene && this.context) drawOverlay(this.context, scene)
+    if (!scene) return
+
+    if (this.context) drawOverlay(this.context, scene, antPhase(time))
+    // Ants keep marching, and nothing else keeps the loop alive: a frame is booked for the next
+    // step only while something on screen is actually dashed. Decided from the scene rather than
+    // from the context, so what governs the loop is what is on screen and nothing else.
+    if (scene.marching) this.invalidate()
   }
 }

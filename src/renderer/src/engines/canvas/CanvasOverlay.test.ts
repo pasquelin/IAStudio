@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import { drawOverlay, RULER_SIZE, type OverlayContext, type OverlayScene } from './CanvasOverlay'
+import {
+  ants,
+  antPhase,
+  CanvasOverlay,
+  drawOverlay,
+  RULER_SIZE,
+  type OverlayContext,
+  type OverlayScene,
+} from './CanvasOverlay'
 
 type Call = { op: string; args: unknown[] }
 
@@ -15,7 +23,7 @@ function recorder(): { context: OverlayContext; calls: Call[] } {
       calls.push({ op, args })
     }
 
-  const style = { lineWidth: 0, strokeStyle: '', fillStyle: '', font: '' }
+  const style = { lineWidth: 0, lineDashOffset: 0, strokeStyle: '', fillStyle: '', font: '' }
 
   const context: OverlayContext = {
     save: record('save'),
@@ -38,6 +46,14 @@ function recorder(): { context: OverlayContext; calls: Call[] } {
     set lineWidth(value: number) {
       style.lineWidth = value
       calls.push({ op: 'lineWidth', args: [value] })
+    },
+    // Recorded, since how far the ants have marched is the one thing that says they move at all.
+    get lineDashOffset() {
+      return style.lineDashOffset
+    },
+    set lineDashOffset(value: number) {
+      style.lineDashOffset = value
+      calls.push({ op: 'lineDashOffset', args: [value] })
     },
     get strokeStyle() {
       return style.strokeStyle
@@ -69,6 +85,8 @@ const COLORS = {
   rulerText: '#text',
   rulerTick: '#tick',
   accent: '#accent',
+  marqueeLight: '#light',
+  marqueeDark: '#dark',
   scrim: '#scrim',
 }
 
@@ -83,6 +101,7 @@ function scene(overrides: Partial<OverlayScene> = {}): OverlayScene {
     activeGuideId: null,
     pointer: null,
     colors: COLORS,
+    marching: false,
     ...overrides,
   }
 }
@@ -178,5 +197,92 @@ describe('drawOverlay', () => {
 
     expect(opsOf(calls, 'moveTo')).toContainEqual([120.5, 0])
     expect(opsOf(calls, 'moveTo')).toContainEqual([0, 90.5])
+  })
+})
+
+describe('the marching ants', () => {
+  it('strokes the same path twice, light under dark', () => {
+    const { context, calls } = recorder()
+    let traced = 0
+
+    ants(context, () => (traced += 1), 0, COLORS)
+
+    expect(traced).toBe(2)
+    expect(opsOf(calls, 'stroke')).toHaveLength(2)
+  })
+
+  /**
+   * A single dashed stroke vanishes against a background of its own colour, and the document
+   * underneath can be any colour at all. The alternation is the whole mechanism.
+   */
+  it('dashes only the second stroke, leaving the first solid', () => {
+    const { context, calls } = recorder()
+
+    ants(context, () => undefined, 3, COLORS)
+
+    const dashes = opsOf(calls, 'setLineDash')
+    expect(dashes[0]).toEqual([[]])
+    expect(dashes[1]).toEqual([[5, 4]])
+  })
+
+  it('offsets the dash by the phase, against the way the path was traced', () => {
+    const { context, calls } = recorder()
+
+    ants(context, () => undefined, 3, COLORS)
+
+    expect(opsOf(calls, 'lineDashOffset')).toContainEqual([-3])
+  })
+
+  // Left as it was found: the ruler ticks and the frame are drawn by the same context after it.
+  it('puts the dash and its offset back when it is done', () => {
+    const { context, calls } = recorder()
+
+    ants(context, () => undefined, 3, COLORS)
+
+    expect(opsOf(calls, 'setLineDash').at(-1)).toEqual([[]])
+    expect(opsOf(calls, 'lineDashOffset').at(-1)).toEqual([0])
+  })
+
+  /** From a clock, not a frame counter: the ants crawl at one speed whatever the frame rate. */
+  it('walks one full pattern per period and starts over', () => {
+    expect(antPhase(0)).toBe(0)
+    expect(antPhase(250)).toBeCloseTo(4.5)
+    expect(antPhase(500)).toBe(0)
+  })
+
+  it('reaches the same place a period later', () => {
+    expect(antPhase(1700)).toBeCloseTo(antPhase(200))
+  })
+})
+
+describe('the frame loop of the ants', () => {
+  /**
+   * The one thing that would keep a `requestAnimationFrame` alive for the life of a document if
+   * it were wrong. Booking is decided from the scene, not from the canvas, so it can be read back
+   * where jsdom hands out no 2D context at all.
+   */
+  function booksAfterOneFrame(marching: boolean): number {
+    const frames: FrameRequestCallback[] = []
+    const booked = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+      frames.push(callback)
+      return frames.length
+    })
+
+    const overlay = new CanvasOverlay(() => scene({ marching }))
+    overlay.mount(document.createElement('div'))
+    frames.shift()?.(0)
+    const again = frames.length
+
+    overlay.dispose()
+    booked.mockRestore()
+    return again
+  }
+
+  it('books the next step while something is dashed', () => {
+    expect(booksAfterOneFrame(true)).toBe(1)
+  })
+
+  it('lets the loop die once nothing is', () => {
+    expect(booksAfterOneFrame(false)).toBe(0)
   })
 })

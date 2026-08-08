@@ -46,6 +46,18 @@
   --color-muted: #868a91;
 
   /*
+   * Marching ants — the outline of a selection, of a crop frame, of a shape being drawn. Two
+   * strokes, a light one under a dark dashed one, as Photoshop has drawn them for thirty years
+   * and as map3D draws them here. Deliberately white and black rather than palette greys: the
+   * outline crosses whatever the document happens to hold, and only a full-contrast alternation
+   * stays legible over a photograph, a flat white and a flat black alike.
+   *
+   * They do NOT swap with the theme, for that same reason: the picture underneath does not.
+   */
+  --color-marquee-light: #ffffff;
+  --color-marquee-dark: #000000;
+
+  /*
    * The 3D viewport is neither a panel surface nor the chassis: it is a working space, and it
    * sits LIGHTER than both. A scene judged against near-black reads darker than it is, and the
    * grid it stands on disappears into the background.
@@ -204,6 +216,13 @@
    * on, whatever the studio's own chrome is doing — the same trade the opaque window makes.
    */
   --color-monitor: #000000;
+  /*
+   * Restated identically, and for the same reason as the monitor: the marching ants are drawn
+   * over the document, not over the studio's chrome, and the document does not change with the
+   * theme. Swapping them would make the outline vanish over a light picture.
+   */
+  --color-marquee-light: #ffffff;
+  --color-marquee-dark: #000000;
   /*
    * Lighter than its dark counterpart: on a light document the same black would read as a hole
    * rather than as a dimmed part of the picture.
