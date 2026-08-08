@@ -32,24 +32,25 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**673 fichiers dans `src/`. 2937 tests verts sur 253 fichiers. 6 espaces éditables. 2 types de
+**679 fichiers dans `src/`. 3048 tests verts sur 257 fichiers. 6 espaces éditables. 2 types de
 documents sur 6 savent s'enregistrer — l'espace Image, lui, exporte mais ne s'enregistre pas encore.**
 
 `pnpm validate` est vert, **budget de couverture compris** : il lance `test:coverage`, dont les
 seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
 pourcentages.
 
-**Le plus tendu n'a aucune marge** : `engines/{scene,skybox,viewport,texture,gpu}/**` est à
-**310 branches non couvertes pour 310 permises**. Il était à 367 le 8 août — rouge, sur `main`,
-depuis la fusion des espaces Image et 3D — et les 57 branches qui n'étaient pas du GPU ont été
-couvertes plutôt qu'absoutes. Ce qui reste au-dessous est du moteur WebGL que jsdom n'exécute
-pas : `SceneRenderer` en porte 189 à lui seul. **Toute étape qui ajoute du code là doit le
-couvrir, ou élargir en le justifiant** — le commentaire du fichier dit le seul cas où élargir est
-légitime (un glob dont la marge de croissance est du GPU intestable).
+**Il sortait en 1 sur `main` le 8 août** : `engines/{scene,skybox,viewport,texture,gpu}/**` était
+à 367 branches non couvertes pour 310 permises, depuis la fusion des espaces Image et 3D. Deux
+chantiers l'ont refermé sans se concerter — `test/gpu-coverage` sur le GPU, `feat/3d-finition` sur
+les 57 branches de logique pure qui n'en étaient pas. Le glob est à **232 pour 310**, 78 de marge.
+Ce qui reste dessous est du moteur WebGL que jsdom n'exécute pas.
 
-`engines/{timeline,canvas,audio,core}/**` suit à 241 pour 250. Deux globs sont à **zéro** :
-`main/diagnostics/**` et `renderer/src/services/**`, le canal qui dit les échecs — une branche
-que personne n'exerce y serait un échec que personne ne lirait.
+`engines/{timeline,canvas,audio,core}/**` suit à **242 pour 250**, huit de marge : c'est lui, le
+tendu. Deux globs sont à **zéro** : `main/diagnostics/**` et `renderer/src/services/**`, le canal
+qui dit les échecs — une branche que personne n'exerce y serait un échec que personne ne lirait.
+
+**Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas où élargir est légitime
+(un glob dont la marge de croissance est du GPU intestable).
 
 > **Un grain de sable environnemental subsiste : `src/renderer/src/settings/ShortcutsSettings.test.tsx`
 > dépasse son budget de 5 s par test quand la machine porte plusieurs sessions** — des
@@ -496,9 +497,11 @@ Les commandes correspondantes vivent dans `engines/canvas/commands.ts` (`cropToR
 
 ## 3.3 Espace 3D
 
-> **Fusionné dans `main`.** Onze étapes, treize commits, rebasés sur `main` après la fusion de
-> l'espace Image puis fusionnés à leur tour. Le plan et son journal étape par étape :
-> [`docs/plans/2026-08-08-3d-completion.md`](plans/2026-08-08-3d-completion.md).
+> **Fusionné dans `main`, en deux temps.** Onze étapes d'abord
+> (`feat/3d-completion`, plan et journal dans
+> [`docs/plans/2026-08-08-3d-completion.md`](plans/2026-08-08-3d-completion.md)), puis cinq commits
+> de finition (`feat/3d-finition`) : le canal qui dit les échecs, Draco et KTX2, la ligne du manuel
+> sur le sprite, et la dette de couverture refermée.
 
 **Ce qui existait avant** — 17 primitives, 5 types de lumières, gizmo translate/rotate/scale,
 sélection par raycast, inspecteur dérivé des descripteurs, undo avec coalescing par geste, 5 slots
