@@ -47,6 +47,7 @@ type Placed = {
   mask: object | null
   maskChannel: string
   size: { width: number; height: number } | null
+  matrix: { a: number; b: number; c: number; d: number; tx: number; ty: number } | null
 }
 
 const gpu: {
@@ -84,6 +85,25 @@ vi.mock('pixi.js/unsafe-eval', () => ({}))
 vi.mock('pixi.js/advanced-blend-modes', () => ({}))
 
 vi.mock('pixi.js', () => {
+  /** The six numbers of an affine map, which is all the engine ever builds one from. */
+  class Matrix {
+    a = 1
+    b = 0
+    c = 0
+    d = 1
+    tx = 0
+    ty = 0
+
+    set(a: number, b: number, c: number, d: number, tx: number, ty: number): void {
+      this.a = a
+      this.b = b
+      this.c = c
+      this.d = d
+      this.tx = tx
+      this.ty = ty
+    }
+  }
+
   /** Pixi's `ObservablePoint`, reduced to what a test needs: a value it can read back. */
   class Pair {
     x: number
@@ -116,6 +136,7 @@ vi.mock('pixi.js', () => {
     mask: object | null = null
     maskChannel = 'red'
     size: { width: number; height: number } | null = null
+    matrix: { a: number; b: number; c: number; d: number; tx: number; ty: number } | null = null
 
     constructor(options: { label?: string } = {}) {
       this.label = options.label ?? ''
@@ -146,6 +167,17 @@ vi.mock('pixi.js', () => {
     setMask(options: { mask: Container | null; channel?: string }): void {
       this.mask = options.mask
       this.maskChannel = options.channel ?? 'red'
+    }
+
+    setFromMatrix(matrix: Matrix): void {
+      this.matrix = {
+        a: matrix.a,
+        b: matrix.b,
+        c: matrix.c,
+        d: matrix.d,
+        tx: matrix.tx,
+        ty: matrix.ty,
+      }
     }
 
     removeChildren(): void {
@@ -212,6 +244,7 @@ vi.mock('pixi.js', () => {
     },
     Container,
     Graphics,
+    Matrix,
     Sprite: class extends Container {
       constructor() {
         super()
@@ -759,6 +792,111 @@ describe('layer masks', () => {
 
     expect(gpu.sprites[0]?.position).toMatchObject({ x: 40 + 512, y: 60 + 512 })
     expect(gpu.sprites[1]?.position).toMatchObject({ x: 512, y: 512 })
+  })
+})
+
+/**
+ * A layer's pixels are its own; the sprite that shows them carries the layer's transform. A dab
+ * drawn where the cursor is therefore has to be mapped back, or it lands displaced by exactly
+ * that transform — which is what made the brush miss after a crop, `resizeCanvas` shifting every
+ * transform by the crop's offset.
+ */
+describe('painting a transformed layer', () => {
+  /** The one node the engine puts a matrix on is the space a pass is drawn through. */
+  const paintSpace = (): Placed | undefined => gpu.containers.find(container => container.matrix)
+
+  const shifted = (transform: Partial<Transform>): CanvasState =>
+    stacked([{ ...pixelLayer('layer-1', 'Background'), transform: { ...IDENTITY, ...transform } }])
+
+  /**
+   * A dab, closed. The release matters: `pointerup` is listened for on the window, so a gesture
+   * left open outlives its test and is ended by the next one's release — which photographs its
+   * tiles into the run that is measuring.
+   */
+  function dabAt(host: HTMLElement, x: number, y: number): void {
+    press(host, x, y)
+    release(x, y)
+  }
+
+  it('draws straight into the pixels of an untouched layer', async () => {
+    const { host } = await mounted(shifted({}))
+
+    dabAt(host, 200, 200)
+
+    const matrix = paintSpace()?.matrix
+    expect(matrix).toBeDefined()
+    // Signed zeroes come out of the inverse, and `toMatchObject` tells -0 from 0.
+    expect(matrix?.a).toBeCloseTo(1, 10)
+    expect(matrix?.d).toBeCloseTo(1, 10)
+    expect(matrix?.tx).toBeCloseTo(0, 10)
+    expect(matrix?.ty).toBeCloseTo(0, 10)
+  })
+
+  it('takes the move back out before it writes', async () => {
+    const { host } = await mounted(shifted({ x: 50, y: 30 }))
+
+    dabAt(host, 200, 200)
+
+    // The stroke is aimed at document (200, 200); the layer's pixel under it is (150, 170).
+    expect(paintSpace()?.matrix?.tx).toBeCloseTo(-50, 10)
+    expect(paintSpace()?.matrix?.ty).toBeCloseTo(-30, 10)
+  })
+
+  it('takes a scale back out too, so a stroke keeps the width the bar shows', async () => {
+    const { host } = await mounted(shifted({ scaleX: 2, scaleY: 2 }))
+
+    dabAt(host, 200, 200)
+
+    expect(paintSpace()?.matrix?.a).toBeCloseTo(0.5, 10)
+    expect(paintSpace()?.matrix?.d).toBeCloseTo(0.5, 10)
+  })
+
+  it('declines the stroke on a layer crushed onto a line', async () => {
+    // A singular map has no inverse, and painting through one writes NaN across the whole
+    // texture — which no undo brings back. Nothing at all is the only safe answer.
+    const { host, patches } = await mounted(shifted({ scaleX: 0 }))
+    gpu.painted = []
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(gpu.painted).toEqual([])
+    expect(patches).toEqual([])
+  })
+
+  it('keeps the stroke on the surface it started on', async () => {
+    // The map is taken once, when the hand comes down. Re-deriving it per move would re-resolve
+    // the armed layer, and a stroke would change surface mid-drag.
+    const { engine, host } = await mounted(shifted({ x: 50, y: 30 }))
+
+    press(host, 200, 200)
+    engine.apply(shifted({ x: 400, y: 400 }))
+    drag(host, 240, 240)
+    release(240, 240)
+
+    expect(paintSpace()?.matrix?.tx).toBeCloseTo(-50, 10)
+    expect(paintSpace()?.matrix?.ty).toBeCloseTo(-30, 10)
+  })
+
+  it('paints an unlinked mask in its own space, where it was left', async () => {
+    // Unlinked means the mask does not follow the layer, so the way back to its pixels is not
+    // the layer's transform but the identity.
+    const { engine, host } = await mounted(
+      stacked([
+        {
+          ...pixelLayer('layer-1', 'Background'),
+          transform: { ...IDENTITY, x: 50, y: 30 },
+          mask: { enabled: true, linked: false },
+        },
+      ]),
+    )
+    engine.setPaintTarget('mask')
+
+    dabAt(host, 200, 200)
+
+    expect(paintSpace()?.matrix?.tx).toBeCloseTo(0, 10)
+    expect(paintSpace()?.matrix?.ty).toBeCloseTo(0, 10)
   })
 })
 
