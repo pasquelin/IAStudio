@@ -10,6 +10,17 @@ signale dans le résumé de chaque run — c'est délibéré, voir
 Les noms sont figés par [ADR-07](adr/ADR-07-nommage-des-secrets.md). En ajouter un hors de cette
 liste demande un amendement.
 
+## Avant d'activer quoi que ce soit
+
+**Épingler les actions au SHA dans `release.yml`.** Elles y sont référencées par tag majeur
+(`actions/checkout@v7`), et un tag se redéplace. Sans secret, l'enjeu est nul ; avec du matériel
+de signature dans l'environnement d'un job, une action compromise en amont s'exécute dans le même
+job que le packaging. Remplacer chaque `@vN` par le SHA du commit, avec la version en commentaire :
+
+```yaml
+- uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v7.0.1
+```
+
 ## Règles
 
 - Un secret se colle **dans l'interface GitHub, et nulle part ailleurs** :

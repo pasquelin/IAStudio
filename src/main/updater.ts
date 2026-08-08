@@ -59,6 +59,9 @@ export function createUpdates({ loadUpdater, isPackaged, onChange }: UpdaterPort
   }
 
   let state: UpdateState = { phase: 'idle' }
+  // The promise, not the resolved updater: two checks racing the first import would otherwise
+  // both load it and register every listener twice, doubling each event on one singleton.
+  let connecting: Promise<AutoUpdaterLike> | null = null
   let updater: AutoUpdaterLike | null = null
 
   const move = (next: UpdateState): void => {
@@ -66,9 +69,12 @@ export function createUpdates({ loadUpdater, isPackaged, onChange }: UpdaterPort
     onChange(next)
   }
 
-  const connect = async (): Promise<AutoUpdaterLike> => {
-    if (updater) return updater
+  const connect = (): Promise<AutoUpdaterLike> => {
+    connecting ??= wire()
+    return connecting
+  }
 
+  const wire = async (): Promise<AutoUpdaterLike> => {
     const autoUpdater = await loadUpdater()
     autoUpdater.logger = {
       info: message => log.info('updater', message),
@@ -89,7 +95,10 @@ export function createUpdates({ loadUpdater, isPackaged, onChange }: UpdaterPort
       }),
     )
     autoUpdater.on('update-downloaded', info => move({ phase: 'ready', version: info.version }))
-    autoUpdater.on('error', failure => move({ phase: 'failed', reason: failure.message }))
+    autoUpdater.on('error', failure => {
+      log.error('updater', failure.message)
+      move({ phase: 'failed' })
+    })
 
     updater = autoUpdater
     return autoUpdater
@@ -98,7 +107,10 @@ export function createUpdates({ loadUpdater, isPackaged, onChange }: UpdaterPort
   const give = (failure: unknown): void => {
     const reason = failure instanceof Error ? failure.message : 'unknown'
     log.warn('updater', `Could not check for updates: ${reason}`)
-    move({ phase: 'failed', reason })
+    // A load that failed must not poison every later check: a rejected promise cached here
+    // would answer instantly and identically for the rest of the session.
+    if (!updater) connecting = null
+    move({ phase: 'failed' })
   }
 
   return {

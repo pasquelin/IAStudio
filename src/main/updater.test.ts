@@ -63,6 +63,18 @@ describe('the updater', () => {
     expect(loadUpdater).toHaveBeenCalledTimes(1)
   })
 
+  // Two checks racing the first import would otherwise register every listener twice, on one
+  // singleton — each event then published twice.
+  it('loads it once even when two checks race the first import', async () => {
+    const updates = createUpdates({ loadUpdater, isPackaged: true, onChange: () => {} })
+
+    await Promise.all([updates.check(), updates.check()])
+    autoUpdater.fire('update-not-available')
+
+    expect(loadUpdater).toHaveBeenCalledTimes(1)
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2)
+  })
+
   it('downloads on its own but leaves the restart to the user', async () => {
     await checked()
 
@@ -118,7 +130,7 @@ describe('the updater', () => {
 
     await checked()
 
-    expect(published.at(-1)).toEqual({ phase: 'failed', reason: 'getaddrinfo ENOTFOUND' })
+    expect(published.at(-1)).toEqual({ phase: 'failed' })
   })
 
   // The module cannot be there at all — a packaged build missing its dependency, or a broken
@@ -128,7 +140,7 @@ describe('the updater', () => {
 
     await checked()
 
-    expect(published.at(-1)).toEqual({ phase: 'failed', reason: 'Cannot find module' })
+    expect(published.at(-1)).toEqual({ phase: 'failed' })
   })
 
   it('reports an error raised by the updater itself', async () => {
@@ -136,7 +148,7 @@ describe('the updater', () => {
 
     autoUpdater.fire('error', new Error('signature mismatch'))
 
-    expect(published.at(-1)).toEqual({ phase: 'failed', reason: 'signature mismatch' })
+    expect(published.at(-1)).toEqual({ phase: 'failed' })
   })
 
   // Quitting before the bytes are on disk would restart the app onto the version it already is.

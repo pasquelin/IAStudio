@@ -30,7 +30,7 @@ describe('the update indicator', () => {
 
   // Not knowing whether a newer version exists is not a problem the user has to be told about.
   it('says nothing when the check failed', () => {
-    const { container } = show({ phase: 'failed', reason: 'getaddrinfo ENOTFOUND' })
+    const { container } = show({ phase: 'failed' })
     expect(container).toBeEmptyDOMElement()
   })
 

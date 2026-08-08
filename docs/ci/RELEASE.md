@@ -5,6 +5,14 @@ Check-list exécutable sans réfléchir. Chaque étape est vérifiable ; aucune 
 Rappel du modèle de branches ([ADR-15](adr/ADR-15-modele-de-branches.md)) : **`develop` intègre,
 `main` publie**. Un tag `v*` posé sur `main` déclenche le pipeline.
 
+> **Les builds ne sont pas signés, et l'auto-update ne vérifie donc rien.**
+> Le condensat du manifeste garantit qu'un téléchargement n'a pas été corrompu, pas qu'il vient
+> de vous : sans certificat, ni Gatekeeper ni SmartScreen n'ont de signataire à comparer. La
+> seule barrière est l'accès en écriture au dépôt.
+> **Publier une release, c'est donc autoriser l'exécution de ce binaire sur chaque machine qui
+> l'installe.** Réserver ce canal à un cercle de test tant que les certificats de
+> [SECRETS.md](SECRETS.md) ne sont pas provisionnés — [ADR-04](adr/ADR-04-strategie-de-signature.md).
+
 ---
 
 ## Avant la première release — à faire une seule fois

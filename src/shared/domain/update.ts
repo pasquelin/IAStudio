@@ -11,7 +11,9 @@ export type UpdateState =
   | { phase: 'downloading'; version: string; progress: number }
   | { phase: 'ready'; version: string }
   /**
-   * A check that failed. `idle`, `checking` and `failed` all render as nothing: the studio works
-   * perfectly well without knowing whether it is current, and an offline user is not in trouble.
+   * A check that failed. It carries no reason: the studio works perfectly well without knowing
+   * whether it is current, so `idle`, `checking` and `failed` all render as nothing — and the
+   * message would name a local cache path or a feed URL for no one to read. It is logged on the
+   * side that produced it instead.
    */
-  | { phase: 'failed'; reason: string }
+  | { phase: 'failed' }

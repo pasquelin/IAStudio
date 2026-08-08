@@ -41,6 +41,21 @@ passe du compte, et plus stable en CI.
 - Un utilisateur macOS devra contourner Gatekeeper (clic droit → Ouvrir) ; un utilisateur
   Windows devra passer l'avertissement SmartScreen. **Acceptable en phase de test, pas en
   distribution publique** — c'est la dette explicite de cette décision.
+- **Conséquence la plus lourde, et la moins visible : sans signature, l'auto-update n'a aucune
+  vérification cryptographique.** `electron-updater` compare le `sha512` du manifeste, mais ce
+  condensat est produit par le même run non signé : il garantit l'intégrité du transfert, pas
+  l'authenticité de l'éditeur. Sur macOS, Squirrel exige normalement une application signée ;
+  sur Windows, `verifyUpdateCodeSignature` compare les signataires de l'ancien et du nouveau
+  binaire — sans signature des deux côtés, il n'y a rien à comparer.
+
+  La seule barrière restante est le contrôle d'accès en écriture au dépôt GitHub, plus le geste
+  humain de publier la draft. **Tant que la signature n'est pas active, ce canal ne doit servir
+  qu'à un cercle de test.** `RELEASE.md` porte l'avertissement au-dessus de la procédure, pour
+  qu'il ne vive pas seulement dans cet ADR.
+- Les actions GitHub sont épinglées à un **tag majeur, qui est mutable**. C'est sans enjeu
+  aujourd'hui, puisque aucun secret n'existe. **Le jour où les certificats sont provisionnés,
+  `release.yml` manipule du matériel de signature dans l'environnement d'un job : les actions
+  devront alors être épinglées au SHA.** C'est un prérequis d'activation, noté dans `SECRETS.md`.
 - `docs/ci/SECRETS.md` documente la procédure complète d'obtention, pour que l'activation soit
   une formalité et non une redécouverte.
 - Le job macOS reçoit un `timeout-minutes` large dès maintenant : la notarisation est asynchrone

@@ -154,7 +154,8 @@ async function download(url, into) {
   writeFileSync(into, new Uint8Array(await response.arrayBuffer()))
 }
 
-function extract(archive, member, name, work, destination) {
+/** Pulls one member out of the archive into `work`, and answers where it landed. */
+function extract(archive, member, work) {
   // `--strip-components` would need the depth of each member; pulling the exact path and
   // renaming afterwards works the same for a flat zip and for a nested tarball.
   const attempts = [
@@ -166,9 +167,9 @@ function extract(archive, member, name, work, destination) {
   for (const [tool, args] of attempts) {
     try {
       execFileSync(tool, args, { stdio: 'pipe' })
-      renameSync(join(work, member), join(destination, name))
-      chmodSync(join(destination, name), 0o755)
-      return
+      // Left where it landed, still not executable. The caller checks its digest and only then
+      // moves it into place: nothing unverified is ever runnable at the path the app spawns.
+      return join(work, member)
     } catch (cause) {
       failures.push(`${tool}: ${cause.message}`)
     }
@@ -211,8 +212,9 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
       await download(archive.url, file)
 
       for (const [name, member] of Object.entries(archive.members)) {
-        extract(file, member, name, work, destination)
-        seen[name] = digestOf(join(destination, name))
+        const extracted = extract(file, member, work)
+        seen[name] = digestOf(extracted)
+
         if (verify) {
           const expected = target.digests[name]
           if (!expected) throw new Error(`No digest recorded for ${key}/${name}`)
@@ -224,6 +226,9 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
             )
           }
         }
+
+        renameSync(extracted, join(destination, name))
+        chmodSync(join(destination, name), 0o755)
         console.log(`  \u2192 ${name} ${seen[name].slice(0, 12)}`)
       }
       rmSync(file)
