@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isRecord, readBoolean, readNumber, readString } from './guards'
+import { defined, isRecord, readBoolean, readNumber, readString } from './guards'
 
 describe('isRecord', () => {
   it('rejects null, which typeof alone reports as an object', () => {
@@ -68,5 +68,20 @@ describe('readBoolean', () => {
     expect(readBoolean({ muted: 'true' }, 'muted', false)).toBe(false)
     expect(readBoolean({ shown: null }, 'shown', true)).toBe(true)
     expect(readBoolean({}, 'shown', true)).toBe(true)
+  })
+})
+
+describe('defined', () => {
+  it('drops the keys whose value is undefined', () => {
+    expect(defined({ a: 1, b: undefined, c: 'x' })).toEqual({ a: 1, c: 'x' })
+  })
+
+  it('keeps a value that is falsy but present', () => {
+    // `0`, `''` and `false` are answers; only `undefined` is the absence of one.
+    expect(defined({ a: 0, b: '', c: false, d: null })).toEqual({ a: 0, b: '', c: false, d: null })
+  })
+
+  it('answers an empty object when nothing is defined', () => {
+    expect(defined({ a: undefined })).toEqual({})
   })
 })

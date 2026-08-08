@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
-import { assetTypeOf, createAssetCollector, type RemoteAsset } from './collector'
+import { createAssetCollector, type RemoteAsset } from './collector'
 import type { ImportRequest, LocalBackend } from './local-backend'
 
 const JOB: Job = {
@@ -35,23 +35,6 @@ function backendSpy(): { backend: LocalBackend; imported: ImportRequest[] } {
   }
   return { backend, imported }
 }
-
-describe('asset kinds', () => {
-  it('maps each media kind onto a studio type', () => {
-    expect(assetTypeOf('image')).toBe('image')
-    expect(assetTypeOf('image-hdr')).toBe('skybox')
-    expect(assetTypeOf('video')).toBe('video')
-    expect(assetTypeOf('audio')).toBe('audio')
-    expect(assetTypeOf('3d')).toBe('mesh')
-  })
-
-  it('rejects what is data about an asset rather than an asset', () => {
-    expect(assetTypeOf('json')).toBeNull()
-    expect(assetTypeOf('text')).toBeNull()
-    expect(assetTypeOf('document')).toBeNull()
-    expect(assetTypeOf('something-new')).toBeNull()
-  })
-})
 
 describe('asset collector', () => {
   const remote = (kind: string): RemoteAsset => ({ url: `https://cdn.example/x.${kind}`, kind })
@@ -211,5 +194,84 @@ describe('asset collector', () => {
 
     await collect(JOB, ['a', 'b', 'c'])
     expect(peak).toBe(1)
+  })
+})
+
+describe('what the collector records about a generation', () => {
+  const collectorOn = (assets: Record<string, RemoteAsset>) => {
+    const { backend, imported: seen } = backendSpy()
+    let next = 0
+    return {
+      collect: createAssetCollector({
+        retrieve: id => Promise.resolve(assets[id] ?? { url: 'https://cdn/x.png', kind: 'image' }),
+        backend,
+        newId: () => `asset_${(next += 1)}`,
+        localIdOf: () => Promise.resolve(null),
+      }),
+      seen,
+    }
+  }
+
+  it('carries the model, prompt and seed the API reported', async () => {
+    const generation = {
+      modelId: 'model_flux',
+      modelLabel: 'Flux',
+      prompt: 'mossy boulder',
+      params: { guidance: 3.5 },
+      seed: 7,
+    }
+    const { collect, seen } = collectorOn({
+      remote_1: { url: 'https://cdn/a.png', kind: 'image', generation },
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(seen[0]?.generation).toEqual(generation)
+  })
+
+  it('carries the twin its project and its timestamp', async () => {
+    const { collect, seen } = collectorOn({
+      remote_1: {
+        url: 'https://cdn/a.png',
+        kind: 'image',
+        ownerId: 'proj_a',
+        updatedAt: '2026-08-06T09:00:00.000Z',
+      },
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(seen[0]).toMatchObject({
+      remoteOwnerId: 'proj_a',
+      remoteUpdatedAt: '2026-08-06T09:00:00.000Z',
+    })
+  })
+
+  it('ties the outputs of one job together and keeps their order', async () => {
+    const { collect, seen } = collectorOn({
+      remote_1: { url: 'https://cdn/a.png', kind: 'image', metadataType: 'texture-albedo' },
+      remote_2: { url: 'https://cdn/b.png', kind: 'image', metadataType: 'texture-normal' },
+    })
+
+    await collect(JOB, ['remote_1', 'remote_2'])
+    expect(seen.map(one => [one.groupId, one.outputIndex, one.map])).toEqual([
+      ['job_1', 0, 'baseColor'],
+      ['job_1', 1, 'normal'],
+    ])
+  })
+
+  it('leaves a lone output ungrouped, because one asset is not a set', async () => {
+    const { collect, seen } = collectorOn({})
+
+    await collect(JOB, ['remote_1'])
+    expect(seen[0]?.groupId).toBeUndefined()
+    expect(seen[0]?.outputIndex).toBeUndefined()
+  })
+
+  it('files an LDR skybox as a skybox rather than as a picture', async () => {
+    const { collect, seen } = collectorOn({
+      remote_1: { url: 'https://cdn/a.png', kind: 'image', metadataType: 'skybox-base-360' },
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(seen[0]?.type).toBe('skybox')
   })
 })

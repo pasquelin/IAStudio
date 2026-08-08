@@ -20,6 +20,23 @@ export function messageOf(error: unknown): string {
 }
 
 /**
+ * The same object without the keys whose value is `undefined`.
+ *
+ * For building a record out of columns that may be null, where `{ width: undefined }` and `{}`
+ * must not be told apart: an asset read back from the catalogue is compared against the one
+ * that was written, and a key present with no value fails that comparison while meaning the
+ * same thing. Spreading this beats a run of `if (x !== undefined)` once a shape has twenty
+ * optional fields.
+ */
+export function defined<T extends object>(fields: T): Partial<T> {
+  const kept: Partial<T> = {}
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) Object.assign(kept, { [key]: value })
+  }
+  return kept
+}
+
+/**
  * Reading one field off something that came back from disk or from a store. Three readers
  * rather than a generic merge: a document written by an older build must open on the current
  * default, and the field is the only place that knows which default that is.

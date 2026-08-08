@@ -1,29 +1,8 @@
-import type { AssetType } from '@shared/domain/asset'
+import type { AssetGeneration } from '@shared/domain/asset'
+import { assetTypeOfRemote } from '@shared/domain/asset-kind'
 import { channelFromScenarioType } from '@shared/domain/texture'
 import type { AssetCollector } from '@main/scenario/job-manager'
 import type { LocalBackend } from './local-backend'
-
-/**
- * The API describes an asset by its `kind`. Only media belongs in a project: a `json` or
- * `text` output of a captioning job is data about an asset, not an asset.
- */
-export function assetTypeOf(kind: string): AssetType | null {
-  switch (kind) {
-    case 'image':
-      return 'image'
-    // HDR images are what the skybox space consumes, and nothing else produces them.
-    case 'image-hdr':
-      return 'skybox'
-    case 'video':
-      return 'video'
-    case 'audio':
-      return 'audio'
-    case '3d':
-      return 'mesh'
-    default:
-      return null
-  }
-}
 
 /**
  * `metadataType` is `metadata.type` on the API side — where a PBR channel announces itself —
@@ -33,7 +12,13 @@ export type RemoteAsset = {
   url: string
   kind: string
   metadataType?: string
+  mimeType?: string
   parentId?: string
+  ownerId?: string
+  updatedAt?: string
+  outputIndex?: number
+  /** Read off the API asset: the job carries neither the model nor the prompt at its top level. */
+  generation?: AssetGeneration
 }
 
 export type CollectorDeps = {
@@ -58,9 +43,7 @@ export function createAssetCollector({
     for (const [index, remoteAssetId] of remoteAssetIds.entries()) {
       const remote = await retrieve(remoteAssetId)
       const source = channelFromScenarioType(remote.metadataType)
-      // A PBR channel lands as a texture whatever its `kind` says: one converter job answers
-      // with several pictures, and filing them as plain images would lose the whole material.
-      const type = source ? 'texture' : assetTypeOf(remote.kind)
+      const type = assetTypeOfRemote(remote)
       if (!type) continue
 
       // What the channels of one texture hang from. Absent when the parent never entered the
@@ -74,6 +57,12 @@ export function createAssetCollector({
         type,
         jobId: job.id,
         remoteAssetId,
+        // One job, one group. The API has no notion of a set, but the seven channels of a PBR
+        // pack are exactly the outputs of one conversion — and a lone output is not a group.
+        ...(remoteAssetIds.length > 1 ? { groupId: job.id, outputIndex: index } : {}),
+        ...(remote.ownerId ? { remoteOwnerId: remote.ownerId } : {}),
+        ...(remote.updatedAt ? { remoteUpdatedAt: remote.updatedAt } : {}),
+        ...(remote.generation ? { generation: remote.generation } : {}),
         ...(derivedFrom ? { derivedFrom } : {}),
         // Absent rather than false: an ordinary map is not "a map that is not inverted".
         ...(source ? { map: source.channel } : {}),

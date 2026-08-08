@@ -1,9 +1,11 @@
-import { isRecord } from '@shared/guards'
+import { defined, isRecord } from '@shared/guards'
 import {
   isAssetType,
+  isSyncStatus,
   mediaProbeOf,
   probeNumber,
   type Asset,
+  type AssetGeneration,
   type AssetQuery,
   type AssetType,
   type MediaProbe,
@@ -60,6 +62,37 @@ const MIGRATIONS: readonly string[] = [
   -- Resolving an API parent to the local asset it became, when a generation reports one.
   CREATE INDEX assets_remote_asset_id_idx ON assets(remote_asset_id);
   `,
+  `
+  -- Provenance, at last persisted. Columns rather than one JSON blob for the three that are
+  -- searched — "everything made with Flux", "the one whose prompt said moss" — and JSON for
+  -- the parameters, which are open by nature and never filtered on, as the probe already is.
+  ALTER TABLE assets ADD COLUMN model_id    TEXT;
+  ALTER TABLE assets ADD COLUMN model_label TEXT;
+  ALTER TABLE assets ADD COLUMN prompt      TEXT;
+  ALTER TABLE assets ADD COLUMN seed        INTEGER;
+  ALTER TABLE assets ADD COLUMN gen_params  TEXT;
+
+  -- The twin in the library, and the three stamps that place the two sides against each other.
+  -- Only two of the six sync states are ever written today, because pushing and pulling are
+  -- explicit; the stamps are recorded from the start so that computing the rest later is a
+  -- change of policy rather than a migration.
+  ALTER TABLE assets ADD COLUMN remote_owner_id   TEXT;
+  ALTER TABLE assets ADD COLUMN remote_updated_at TEXT;
+  ALTER TABLE assets ADD COLUMN remote_synced_at  TEXT;
+  ALTER TABLE assets ADD COLUMN local_changed_at  TEXT;
+  ALTER TABLE assets ADD COLUMN sync_state        TEXT;
+  ALTER TABLE assets ADD COLUMN sync_error        TEXT;
+
+  -- What ties the outputs of one generation together. The API has no notion of a set.
+  ALTER TABLE assets ADD COLUMN group_id     TEXT;
+  ALTER TABLE assets ADD COLUMN output_index INTEGER;
+
+  CREATE INDEX assets_model_id_idx   ON assets(model_id);
+  CREATE INDEX assets_group_id_idx   ON assets(group_id);
+  CREATE INDEX assets_sync_state_idx ON assets(sync_state);
+  -- Paired: a twin is only meaningful under the project whose key opens onto it.
+  CREATE INDEX assets_remote_owner_idx ON assets(remote_owner_id, remote_asset_id);
+  `,
 ]
 
 const DEFAULT_LIMIT = 200
@@ -99,52 +132,76 @@ function assetType(row: SqlRow): AssetType {
 }
 
 function assetOf(row: SqlRow, tags: string[]): Asset {
-  const asset: Asset = {
+  const map = optionalText(row, 'map')
+  const syncState = optionalText(row, 'sync_state')
+
+  return {
     id: text(row, 'id'),
     name: text(row, 'name'),
     type: assetType(row),
     location: text(row, 'location') === 'cloud' ? 'cloud' : 'local',
     tags,
     createdAt: text(row, 'created_at'),
+    ...defined({
+      path: optionalText(row, 'path'),
+      remoteAssetId: optionalText(row, 'remote_asset_id'),
+      remoteOwnerId: optionalText(row, 'remote_owner_id'),
+      remoteUpdatedAt: optionalText(row, 'remote_updated_at'),
+      remoteSyncedAt: optionalText(row, 'remote_synced_at'),
+      localChangedAt: optionalText(row, 'local_changed_at'),
+      // Free strings in SQLite: a state this build no longer knows is dropped rather than
+      // carried into a union that does not contain it.
+      syncStatus: isSyncStatus(syncState) ? syncState : undefined,
+      syncError: optionalText(row, 'sync_error'),
+      jobId: optionalText(row, 'job_id'),
+      derivedFrom: optionalText(row, 'derived_from'),
+      groupId: optionalText(row, 'group_id'),
+      outputIndex: optionalNumber(row, 'output_index'),
+      generation: parseGeneration(row),
+      width: optionalNumber(row, 'width'),
+      height: optionalNumber(row, 'height'),
+      bytes: optionalNumber(row, 'bytes'),
+      sourcePath: optionalText(row, 'source_path'),
+      hash: optionalText(row, 'hash'),
+      probe: parseProbe(optionalText(row, 'probe')),
+      proxyPath: optionalText(row, 'proxy_path'),
+      peaksPath: optionalText(row, 'peaks_path'),
+    }),
+    // The column is a free string in SQLite; a channel this build no longer knows leaves the
+    // asset as an ordinary picture rather than making the whole row unreadable.
+    ...(isPbrChannel(map)
+      ? { map, ...(optionalNumber(row, 'map_inverted') === 1 ? { mapInverted: true } : {}) }
+      : {}),
   }
+}
 
-  const path = optionalText(row, 'path')
-  const remoteAssetId = optionalText(row, 'remote_asset_id')
-  const jobId = optionalText(row, 'job_id')
-  const derivedFrom = optionalText(row, 'derived_from')
-  const width = optionalNumber(row, 'width')
-  const height = optionalNumber(row, 'height')
-  const bytes = optionalNumber(row, 'bytes')
+/**
+ * The generation spread across its columns and back. Without a model there is no generation:
+ * an imported file has none, and a row that kept only a prompt could not be run again.
+ */
+function parseGeneration(row: SqlRow): AssetGeneration | undefined {
+  const modelId = optionalText(row, 'model_id')
+  if (modelId === undefined) return undefined
 
-  if (path !== undefined) asset.path = path
-  if (remoteAssetId !== undefined) asset.remoteAssetId = remoteAssetId
-  if (jobId !== undefined) asset.jobId = jobId
-  if (derivedFrom !== undefined) asset.derivedFrom = derivedFrom
-  if (width !== undefined) asset.width = width
-  if (height !== undefined) asset.height = height
-  if (bytes !== undefined) asset.bytes = bytes
-
-  const sourcePath = optionalText(row, 'source_path')
-  const hash = optionalText(row, 'hash')
-  const probe = parseProbe(optionalText(row, 'probe'))
-  const proxyPath = optionalText(row, 'proxy_path')
-  const peaksPath = optionalText(row, 'peaks_path')
-  const map = optionalText(row, 'map')
-
-  if (sourcePath !== undefined) asset.sourcePath = sourcePath
-  if (hash !== undefined) asset.hash = hash
-  if (probe !== undefined) asset.probe = probe
-  if (proxyPath !== undefined) asset.proxyPath = proxyPath
-  if (peaksPath !== undefined) asset.peaksPath = peaksPath
-
-  // The column is a free string in SQLite; a channel this build no longer knows leaves the
-  // asset as an ordinary picture rather than making the whole row unreadable.
-  if (isPbrChannel(map)) {
-    asset.map = map
-    if (optionalNumber(row, 'map_inverted') === 1) asset.mapInverted = true
+  const seed = optionalNumber(row, 'seed')
+  return {
+    modelId,
+    modelLabel: text(row, 'model_label'),
+    prompt: text(row, 'prompt'),
+    params: parseParams(optionalText(row, 'gen_params')),
+    ...defined({ seed }),
   }
+}
 
-  return asset
+function parseParams(raw: string | undefined): Record<string, unknown> {
+  if (raw === undefined) return {}
+
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return isRecord(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
 }
 
 /**
@@ -203,8 +260,12 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     INSERT OR REPLACE INTO assets
       (id, name, type, location, path, remote_asset_id, job_id, width, height, bytes,
        created_at, derived_from, source_path, hash, probe, proxy_path, peaks_path,
-       map, map_inverted)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       map, map_inverted,
+       model_id, model_label, prompt, seed, gen_params,
+       remote_owner_id, remote_updated_at, remote_synced_at, local_changed_at,
+       sync_state, sync_error, group_id, output_index)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const deleteTags = driver.prepare('DELETE FROM asset_tags WHERE asset_id = ?')
   const insertTag = driver.prepare('INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?, ?)')
@@ -274,6 +335,19 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         asset.peaksPath ?? null,
         asset.map ?? null,
         asset.mapInverted ? 1 : null,
+        asset.generation?.modelId ?? null,
+        asset.generation?.modelLabel ?? null,
+        asset.generation?.prompt ?? null,
+        asset.generation?.seed ?? null,
+        asset.generation ? JSON.stringify(asset.generation.params) : null,
+        asset.remoteOwnerId ?? null,
+        asset.remoteUpdatedAt ?? null,
+        asset.remoteSyncedAt ?? null,
+        asset.localChangedAt ?? null,
+        asset.syncStatus ?? null,
+        asset.syncError ?? null,
+        asset.groupId ?? null,
+        asset.outputIndex ?? null,
       )
 
       deleteTags.run(asset.id)
@@ -322,9 +396,36 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         params.push(query.type)
       }
 
+      // What a workspace asks for: the Image space wants pictures, textures and skyboxes and
+      // nothing else. An empty list is not "no filter", it is "nothing" — and it must stay so,
+      // or opening a space that accepts no asset would show every asset.
+      if (query.types) {
+        const placeholders = query.types.map(() => '?').join(', ')
+        conditions.push(query.types.length > 0 ? `type IN (${placeholders})` : '0')
+        params.push(...query.types)
+      }
+
+      if (query.location) {
+        conditions.push('location = ?')
+        params.push(query.location)
+      }
+
+      if (query.syncStatus) {
+        conditions.push('sync_state = ?')
+        params.push(query.syncStatus)
+      }
+
+      if (query.groupId) {
+        conditions.push('group_id = ?')
+        params.push(query.groupId)
+      }
+
+      // The prompt is searched alongside the name: what one remembers of a generated asset is
+      // what one asked for, not the label the job happened to give it.
       if (query.text) {
-        conditions.push("name LIKE ? ESCAPE '\\'")
-        params.push(`%${escapeLike(query.text)}%`)
+        conditions.push("(name LIKE ? ESCAPE '\\' OR prompt LIKE ? ESCAPE '\\')")
+        const pattern = `%${escapeLike(query.text)}%`
+        params.push(pattern, pattern)
       }
 
       // Every tag must match, not any: filters narrow, they do not widen.
@@ -340,8 +441,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
       params.push(query.limit ?? DEFAULT_LIMIT, query.offset ?? 0)
 
+      // The members of one generation are read in the order the API produced them — the seven
+      // channels of a material, filling seven slots. Everywhere else, newest first.
+      const order = query.groupId ? 'output_index, id' : 'created_at DESC, id DESC'
       const rows = driver
-        .prepare(`SELECT * FROM assets ${where} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`)
+        .prepare(`SELECT * FROM assets ${where} ORDER BY ${order} LIMIT ? OFFSET ?`)
         .all(...params)
 
       const tags = tagsByAsset(rows.map(row => text(row, 'id')))

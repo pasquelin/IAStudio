@@ -1,6 +1,12 @@
 import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
-import { ASSET_FOLDERS, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
+import {
+  ASSET_FOLDERS,
+  type Asset,
+  type AssetGeneration,
+  type AssetType,
+  type MediaProbe,
+} from '@shared/domain/asset'
 import type { PbrChannel } from '@shared/domain/texture'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 
@@ -29,7 +35,15 @@ export type ImportRequest = {
   type: AssetType
   jobId?: string
   remoteAssetId?: string
+  /** The project the twin belongs to — an API key opens onto one, and keys can be swapped. */
+  remoteOwnerId?: string
+  remoteUpdatedAt?: string
   derivedFrom?: string
+  /** What ties the outputs of one generation together — the seven channels of a PBR pack. */
+  groupId?: string
+  outputIndex?: number
+  /** The model, prompt and parameters behind it, read off the API asset rather than the job. */
+  generation?: AssetGeneration
   map?: PbrChannel
   mapInverted?: boolean
 }
@@ -85,6 +99,28 @@ export function relativePathFor(id: string, extension: string, type: AssetType):
 }
 
 /**
+ * What an asset that came down from the library records about its twin.
+ *
+ * It is `synced` the moment it lands, and that is not an assumption: the bytes on disk were
+ * just downloaded from the very asset being pointed at, so the two sides cannot differ yet.
+ * `remoteSyncedAt` is the baseline both later stamps are measured against.
+ */
+function twinOf(
+  request: Pick<ImportRequest, 'remoteAssetId' | 'remoteOwnerId' | 'remoteUpdatedAt'>,
+  at: string,
+): Partial<Asset> {
+  if (!request.remoteAssetId) return {}
+
+  return {
+    remoteAssetId: request.remoteAssetId,
+    syncStatus: 'synced',
+    remoteSyncedAt: at,
+    ...(request.remoteOwnerId ? { remoteOwnerId: request.remoteOwnerId } : {}),
+    ...(request.remoteUpdatedAt ? { remoteUpdatedAt: request.remoteUpdatedAt } : {}),
+  }
+}
+
+/**
  * Brings a generated asset down to disk and indexes it. The disk is the truth: scrubbing a
  * video and loading a mesh must never depend on the network — see spec § 5.
  */
@@ -98,6 +134,7 @@ export function createLocalBackend({
     const relativePath = relativePathFor(request.id, request.extension, request.type)
     await writeFile(join(projectPath(), relativePath), bytes)
 
+    const at = now()
     const asset: Asset = {
       id: request.id,
       name: request.name,
@@ -106,18 +143,20 @@ export function createLocalBackend({
       path: relativePath,
       bytes: bytes.byteLength,
       tags: [],
-      createdAt: now(),
-    }
-
-    if (request.probe) asset.probe = request.probe
-    if (request.jobId) asset.jobId = request.jobId
-    if (request.remoteAssetId) asset.remoteAssetId = request.remoteAssetId
-    if (request.derivedFrom) asset.derivedFrom = request.derivedFrom
-    // Nested: the flag says how to read a channel, so it means nothing without one — and the
-    // catalogue only reads it back inside a valid channel anyway.
-    if (request.map) {
-      asset.map = request.map
-      if (request.mapInverted) asset.mapInverted = true
+      createdAt: at,
+      localChangedAt: at,
+      ...(request.probe ? { probe: request.probe } : {}),
+      ...(request.jobId ? { jobId: request.jobId } : {}),
+      ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+      ...(request.groupId ? { groupId: request.groupId } : {}),
+      ...(request.outputIndex !== undefined ? { outputIndex: request.outputIndex } : {}),
+      ...(request.generation ? { generation: request.generation } : {}),
+      // Nested: the flag says how to read a channel, so it means nothing without one — and the
+      // catalogue only reads it back inside a valid channel anyway.
+      ...(request.map
+        ? { map: request.map, ...(request.mapInverted ? { mapInverted: true } : {}) }
+        : {}),
+      ...twinOf(request, at),
     }
 
     return await catalog().add(asset)
@@ -155,6 +194,10 @@ export function createLocalBackend({
         ...existing,
         path: relativePath,
         bytes: bytes.byteLength,
+        localChangedAt: now(),
+        // The file just changed under a twin that has not: saying so is what later lets a push
+        // be offered, and what stops an edited take from passing for identical to the library.
+        ...(existing.remoteAssetId ? { syncStatus: 'local-ahead' } : {}),
         ...(probe ? { probe } : {}),
       }
       delete rewritten.peaksPath

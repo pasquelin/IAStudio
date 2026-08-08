@@ -267,3 +267,166 @@ describe('catalog', () => {
     expect(catalog.search({})).toHaveLength(1)
   })
 })
+
+describe('catalogue provenance and sync', () => {
+  let driver: SqliteDriver
+  let catalog: Catalog
+
+  beforeEach(() => {
+    driver = openMemoryDatabase()
+    catalog = createCatalog(driver)
+  })
+
+  it('keeps a generation through a round trip', () => {
+    const generation = {
+      modelId: 'model_flux',
+      modelLabel: 'Flux 1.1 Pro',
+      prompt: 'mossy boulder, overcast',
+      params: { guidance: 3.5, scheduler: 'euler' },
+      seed: 42,
+    }
+    catalog.add(asset({ generation }))
+
+    expect(catalog.find('asset_1')?.generation).toEqual(generation)
+  })
+
+  it('leaves an imported file without a generation rather than an empty one', () => {
+    catalog.add(asset())
+    expect(catalog.find('asset_1')?.generation).toBeUndefined()
+  })
+
+  it('keeps a generation whose seed the model never reported', () => {
+    catalog.add(asset({ generation: { modelId: 'm', modelLabel: 'M', prompt: 'p', params: {} } }))
+
+    const found = catalog.find('asset_1')?.generation
+    expect(found).toEqual({ modelId: 'm', modelLabel: 'M', prompt: 'p', params: {} })
+    expect(found && 'seed' in found).toBe(false)
+  })
+
+  it('keeps the twin and its three stamps through a round trip', () => {
+    const twin: Partial<Asset> = {
+      remoteAssetId: 'asset_remote',
+      remoteOwnerId: 'proj_a',
+      remoteUpdatedAt: '2026-08-06T09:00:00.000Z',
+      remoteSyncedAt: '2026-08-06T09:30:00.000Z',
+      localChangedAt: '2026-08-06T10:00:00.000Z',
+      syncStatus: 'local-ahead',
+      syncError: 'upload-too-large',
+    }
+    catalog.add(asset(twin))
+
+    expect(catalog.find('asset_1')).toMatchObject(twin)
+  })
+
+  it('drops a sync state this build no longer knows rather than carrying it out of the union', () => {
+    catalog.add(asset({ syncStatus: 'synced' }))
+    // Written straight to the column, as a build that knew a seventh state would have left it.
+    driver.prepare("UPDATE assets SET sync_state = 'quarantined' WHERE id = ?").run('asset_1')
+
+    expect(catalog.find('asset_1')?.syncStatus).toBeUndefined()
+  })
+
+  it('reads the members of one generation in the order the API produced them', () => {
+    for (const [index, name] of ['albedo', 'normal', 'height'].entries()) {
+      catalog.add(
+        asset({
+          id: `asset_${index}`,
+          name,
+          type: 'texture',
+          groupId: 'job_1',
+          outputIndex: 2 - index,
+          createdAt: `2026-08-06T10:0${index}:00.000Z`,
+        }),
+      )
+    }
+
+    expect(catalog.search({ groupId: 'job_1' }).map(found => found.name)).toEqual([
+      'height',
+      'normal',
+      'albedo',
+    ])
+  })
+
+  it('narrows to the kinds a workspace accepts', () => {
+    catalog.add(asset({ id: 'a', type: 'image' }))
+    catalog.add(asset({ id: 'b', type: 'audio' }))
+    catalog.add(asset({ id: 'c', type: 'texture' }))
+
+    const found = catalog.search({ types: ['image', 'texture'] })
+    expect(found.map(one => one.id).sort()).toEqual(['a', 'c'])
+  })
+
+  it('shows nothing for a workspace that accepts nothing', () => {
+    // An empty list is "nothing", not "no filter" — otherwise it would show everything.
+    catalog.add(asset())
+    expect(catalog.search({ types: [] })).toEqual([])
+  })
+
+  it('narrows by where the bytes are and by what is still to move', () => {
+    catalog.add(asset({ id: 'a', location: 'local', syncStatus: 'local-ahead' }))
+    catalog.add(asset({ id: 'b', location: 'cloud', syncStatus: 'synced' }))
+
+    expect(catalog.search({ location: 'cloud' }).map(one => one.id)).toEqual(['b'])
+    expect(catalog.search({ syncStatus: 'local-ahead' }).map(one => one.id)).toEqual(['a'])
+  })
+
+  it('searches the prompt as well as the name', () => {
+    catalog.add(
+      asset({
+        id: 'a',
+        name: 'Flux 1',
+        generation: { modelId: 'm', modelLabel: 'M', prompt: 'mossy boulder', params: {} },
+      }),
+    )
+    catalog.add(asset({ id: 'b', name: 'mossy rock' }))
+
+    expect(
+      catalog
+        .search({ text: 'mossy' })
+        .map(one => one.id)
+        .sort(),
+    ).toEqual(['a', 'b'])
+  })
+})
+
+describe('migrating a catalogue that already holds assets', () => {
+  it('carries the existing rows across without losing a field', () => {
+    const older = openMemoryDatabase()
+    older.exec(`
+      CREATE TABLE assets (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,
+        path TEXT, remote_asset_id TEXT, job_id TEXT, width INTEGER, height INTEGER,
+        bytes INTEGER, created_at TEXT NOT NULL, derived_from TEXT,
+        source_path TEXT, hash TEXT, probe TEXT, proxy_path TEXT, peaks_path TEXT,
+        map TEXT, map_inverted INTEGER
+      );
+      CREATE TABLE asset_tags (
+        asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+        tag TEXT NOT NULL, PRIMARY KEY (asset_id, tag)
+      );
+      INSERT INTO assets (id, name, type, location, path, remote_asset_id, created_at, hash)
+        VALUES ('asset_old', 'Boulder', 'image', 'local', 'assets/img/asset_old.png',
+                'asset_remote', '2026-08-01T10:00:00.000Z', 'abc123');
+      INSERT INTO asset_tags (asset_id, tag) VALUES ('asset_old', 'hero');
+      PRAGMA user_version = 3;
+    `)
+
+    migrate(older)
+    const upgraded = createCatalog(older)
+    const found = upgraded.find('asset_old')
+
+    expect(found).toMatchObject({
+      id: 'asset_old',
+      name: 'Boulder',
+      path: 'assets/img/asset_old.png',
+      remoteAssetId: 'asset_remote',
+      hash: 'abc123',
+      tags: ['hero'],
+    })
+    // Nothing invented for a row that predates the columns: an asset the catalogue never
+    // tracked has no provenance, and claiming one would put a prompt on an imported file.
+    expect(found?.generation).toBeUndefined()
+    expect(found?.syncStatus).toBeUndefined()
+    expect(found?.groupId).toBeUndefined()
+  })
+})
