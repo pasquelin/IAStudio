@@ -11,7 +11,7 @@ import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
-import type { LightKind, MeshKind, ObjectKind } from './domain/scene'
+import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { ToolId, ToolZone } from './domain/tool'
@@ -67,6 +67,8 @@ export type Channels = {
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
 
+  sceneExport: 'scene:export'
+
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
   windowWorkspace: 'window:workspace'
@@ -119,6 +121,8 @@ export const CHANNELS: Channels = {
   mediaCancel: 'media:cancel',
   mediaAvailable: 'media:available',
 
+  sceneExport: 'scene:export',
+
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
   windowWorkspace: 'window:workspace',
@@ -133,6 +137,15 @@ export type SaveAudioRequest = {
   derivedFrom?: string
   /** 16-bit PCM WAV, encoded by the renderer that decoded it. */
   wav: Uint8Array
+}
+
+/** A scene on its way to a file the studio will never look at again. */
+export type SceneExportRequest = {
+  /** Suggested file name, without its extension — the format decides that. */
+  name: string
+  format: ExportFormat
+  /** Already encoded by the renderer: three.js's exporters run where the scene lives. */
+  data: Uint8Array
 }
 
 export type LogLevel = 'info' | 'warn' | 'error'
@@ -160,6 +173,7 @@ export const EVENTS = {
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
   sceneAdd: 'evt:scene-add',
+  sceneExport: 'evt:scene-export',
   settingsSection: 'evt:settings-section',
 }
 
@@ -173,6 +187,9 @@ export type ToolRequest = {
 
 /** Request to drop a node in the active scene, coming from the native menu. */
 export type SceneAddRequest = { kind: MeshKind | LightKind | ObjectKind }
+
+/** What the native menu asks of the scene in front: a format, and how much of the scene. */
+export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selection' }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
@@ -274,6 +291,14 @@ export type StudioBridge = {
     /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
     saveAudio: (request: SaveAudioRequest) => Promise<Asset>
   }
+  scene: {
+    /**
+     * Writes an exported scene wherever the save dialog lands. Answers the file name it was
+     * written under, or `null` when the dialog was dismissed — the name, never the path: where
+     * a file sits is the main process's business, exactly as for an asset.
+     */
+    export: (request: SceneExportRequest) => Promise<string | null>
+  }
   media: {
     /**
      * Opens the native picker and links what was chosen — the file is never copied, so a
@@ -300,6 +325,7 @@ export type StudioBridge = {
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
     onCommand: (callback: (command: CommandId) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
+    onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
   }
   diagnostics: {
     onLog: (callback: (entry: LogEntry) => void) => Unsubscribe

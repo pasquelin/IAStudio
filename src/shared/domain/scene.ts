@@ -193,6 +193,21 @@ export const MESH_ENTRIES: readonly SceneEntry<MeshKind>[] = [
 ]
 
 /**
+ * The files a scene can leave the studio as. `glb` is one binary file and the safe default;
+ * `gltf` is its JSON form, readable and diffable; `usdz` is what Apple's viewers open.
+ */
+export type ExportFormat = 'glb' | 'gltf' | 'usdz'
+
+export const EXPORT_FORMATS: readonly ExportFormat[] = ['glb', 'gltf', 'usdz']
+
+/** The one place the studio's formats meet their file extensions. */
+export const EXPORT_EXTENSIONS: Record<ExportFormat, string> = {
+  glb: '.glb',
+  gltf: '.gltf',
+  usdz: '.usdz',
+}
+
+/**
  * What is picked from the Add menu without being a mesh or a light.
  *
  * `text` is declared and greyed: three.js builds a 3D text from a font file, a project holds no

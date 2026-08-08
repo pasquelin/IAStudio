@@ -76,6 +76,7 @@ export type Services = {
   language: () => Language
   pickPath: (kind: PathKind) => Promise<string | null>
   savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
+  pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   pickMedia: () => Promise<string[]>
@@ -110,20 +111,40 @@ async function pickPath(kind: PathKind, startIn?: string): Promise<string | null
 }
 
 /**
- * Asks where a picture goes and writes it there. The renderer has no filesystem, so the bytes
- * come across and the path never goes back the other way beyond the one it chose.
+ * Where a file the studio is about to write goes. One dialog for every such question, like
+ * `openDialog` above it: a second one with slightly different options is how two save flows
+ * start behaving differently.
  */
-async function savePicture(name: string, bytes: Uint8Array): Promise<string | null> {
+async function saveDialog(options: Electron.SaveDialogOptions): Promise<string | null> {
   const parent = BrowserWindow.getFocusedWindow()
-  const options: Electron.SaveDialogOptions = { defaultPath: name }
   const result = parent
     ? await dialog.showSaveDialog(parent, options)
     : await dialog.showSaveDialog(options)
 
-  if (result.canceled || !result.filePath) return null
+  return result.canceled ? null : (result.filePath ?? null)
+}
 
-  await writeFile(result.filePath, bytes)
-  return result.filePath
+/**
+ * Asks where a picture goes and writes it there. The renderer has no filesystem, so the bytes
+ * come across and the path never goes back the other way beyond the one it chose.
+ */
+async function savePicture(name: string, bytes: Uint8Array): Promise<string | null> {
+  const path = await saveDialog({ defaultPath: name })
+  if (!path) return null
+
+  await writeFile(path, bytes)
+  return path
+}
+
+/**
+ * Where an exported scene goes, the writing left to its caller: an export is encoded before the
+ * dialog opens, and the scene handler is what turns a path back into a name.
+ */
+function pickSavePath(name: string, extension: string): Promise<string | null> {
+  return saveDialog({
+    defaultPath: `${name}${extension}`,
+    filters: [{ name: extension.slice(1).toUpperCase(), extensions: [extension.slice(1)] }],
+  })
 }
 
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
@@ -371,6 +392,7 @@ export function createServices(settings: SettingsStore): Services {
     language,
     pickPath,
     savePicture,
+    pickSavePath,
     reveal: file => shell.showItemInFolder(file),
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's

@@ -531,6 +531,11 @@
     "delete": "Supprimer",
     "deleteHint": "Retirer de la scène ce qui est sélectionné"
   },
+  "exportFormats": {
+    "glb": "glTF binaire (.glb)",
+    "gltf": "glTF (.gltf)",
+    "usdz": "USDZ (.usdz)"
+  },
   "sceneViews": {
     "front": "De face",
     "back": "De dos",
@@ -612,6 +617,8 @@
     "mesh": "Maille",
     "light": "Lumière",
     "object": "Objet",
+    "exportScene": "Exporter la scène",
+    "exportSelection": "Exporter la sélection",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
     "zoomIn": "Zoom avant",

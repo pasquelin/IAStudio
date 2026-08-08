@@ -744,7 +744,52 @@ Rien de tout cela n'existe dans le viewport.
 
 ## Étape 10 — Export glTF / GLB / USDZ
 
-- [ ] Livrée
+- [x] Livrée
+
+**Fichier ▸ Exporter la scène** et **Fichier ▸ Exporter la sélection**, trois formats chacun. Aucune
+dépendance nouvelle : `GLTFExporter` et `USDZExporter` viennent de `three/addons`.
+
+**L'invariant 1 est tenu.** Le renderer encode et n'obtient jamais de chemin : il envoie des octets
+sur `scene:export`, le main ouvre la boîte d'enregistrement, écrit, et répond **le nom du fichier**,
+jamais son chemin — la même règle que `withoutSourcePath` applique aux assets. Le canal est typé des
+deux côtés dans `shared/ipc.ts`, et validé par zod à l'arrivée : format connu, nom sans séparateur,
+octets bornés.
+
+**« Le vérifier sur le fichier produit », comme le plan l'exigeait.** Les exporteurs de three
+tournent sous jsdom sans contexte GL : les tests écrivent un vrai `.gltf`, le relisent en JSON et
+regardent ce qu'il contient. `scene-renderer-export.test.ts` construit un `SceneRenderer` sans le
+monter, lui donne une maille et une lumière directionnelle — laquelle fabrique **un helper et une
+cible**, tous deux posés dans le viewport à côté des nœuds, le helper portant même l'identifiant de
+la lumière — puis vérifie que le fichier contient exactement deux nœuds. Ni grille, ni helper, ni
+cible, ni trièdre.
+
+**Décisions prises seul.**
+
+- *Six entrées de menu plutôt qu'un dialogue d'export.* La portée (scène ou sélection) et le format
+  sont deux choix ; sans dialogue maison, les poser dans le menu natif évite d'inventer une surface
+  et laisse la boîte d'enregistrement faire ce qu'elle sait faire. Aucun `CommandId` n'est créé : le
+  menu passe par le même chemin d'événement que l'ajout de nœud.
+- *L'export est écouté dans `SceneDocument`, pas dans `useNativeMenu`.* Il lit les objets three.js,
+  et ce composant est le seul qui les détienne. Seulement pendant que l'onglet est devant, sans quoi
+  deux scènes ouvertes répondraient toutes deux au même clic.
+- *Pas de message de confirmation.* Le studio n'a pas de système de notification, et en inventer un
+  pour cette étape serait un chantier transverse. La boîte d'enregistrement est la confirmation.
+
+**Deux bugs trouvés à la relecture, avant qu'ils n'atteignent un fichier.**
+
+- *Une sélection imbriquée sortait à la mauvaise place.* Les exporteurs écrivent une transformation
+  **locale** : un objet rangé dans un groupe déplacé serait apparu à l'origine. Ce sont désormais
+  des copies qui sont remises aux exporteurs, chacune portant la transformation monde de son
+  original.
+- *L'export réécrivait l'arbre vivant.* `USDZExporter` ne prend qu'une racine ; ma première version
+  sortait les objets du viewport pour les regrouper le temps de l'export, et les rendait ensuite.
+  Une frame dessinée pendant ce temps aurait fait disparaître la scène, et un échec au milieu
+  l'aurait laissée démembrée. Les copies règlent les deux, et permettent au passage de retirer les
+  arêtes du mode filaire de la copie plutôt que de les masquer dans l'original.
+
+**Ce qui ne s'exporte pas, et c'est normal** : un sprite. Ni glTF ni USDZ n'ont de notion
+d'objet-toujours-face-à-la-caméra ; three les ignore silencieusement. À écrire dans le manuel le
+jour où quelqu'un s'en étonne.
 
 `GLTFExporter` et `USDZExporter` viennent de `three/addons`, aucune dépendance nouvelle. La spec les
 nomme au § 8.2.

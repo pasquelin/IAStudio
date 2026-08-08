@@ -114,11 +114,6 @@ haut, « Ce que cela veut dire concrètement ».
 
 ## Espace 3D
 
-### Ce qui manque
-
-- **l'export** d'une scène vers un fichier `.glb` ou `.usdz` — on peut importer un modèle et le
-  mettre en scène, pas ressortir la scène montée.
-
 ### Le texte 3D est annoncé mais non constructible
 
 **Texte** apparaît grisé dans le menu **Ajouter**.

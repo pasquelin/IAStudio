@@ -18,7 +18,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
-import type { ShadowQuality } from '@shared/domain/scene'
+import type { ExportFormat, ShadowQuality } from '@shared/domain/scene'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
@@ -57,6 +57,7 @@ import {
   type DisplayMode,
   type ViewDirection,
 } from './scene-view'
+import { exportObjects } from './scene-export'
 import { snapSteps } from './snap-steps'
 import { createTextureCache, type TextureCache, type TextureSource } from './texture-cache'
 
@@ -339,6 +340,33 @@ export class SceneRenderer {
     camera.position.set(x, y, z)
     orbit.update()
     this.viewport.requestRender()
+  }
+
+  /**
+   * The scene as a file, or only what is selected.
+   *
+   * Roots only: what hangs from them comes along, and handing the exporter a child as well would
+   * write it twice. The grid, the trihedron, the gizmo and the light helpers are siblings of the
+   * nodes rather than children, so none of them is reachable from here.
+   */
+  exportTo(format: ExportFormat, scope: 'scene' | 'selection'): Promise<Uint8Array> {
+    const wanted = scope === 'selection' ? this.selectedIds : [...this.objects.keys()]
+    const roots = wanted.filter(id => !this.hasExportedAncestor(id, wanted))
+
+    return exportObjects(
+      roots.flatMap(id => this.objects.get(id) ?? []),
+      format,
+    )
+  }
+
+  /** A node whose parent is going out too travels with it, and must not be handed over twice. */
+  private hasExportedAncestor(id: string, wanted: readonly string[]): boolean {
+    let parentId = this.applied.get(id)?.parentId
+    while (parentId) {
+      if (wanted.includes(parentId)) return true
+      parentId = this.applied.get(parentId)?.parentId
+    }
+    return false
   }
 
   setProjection(kind: ProjectionKind): void {

@@ -330,6 +330,29 @@ Hide it to judge an image with nothing around it.
 
 ---
 
+## Getting a scene out of the studio
+
+**File ▸ Export the scene** writes everything the document holds. **File ▸ Export the selection**
+writes only the chosen objects — a group takes along whatever hangs from it.
+
+| Format | What it is | When to use it |
+|---|---|---|
+| **Binary glTF (`.glb`)** | one file, geometries included | the default, and what most engines read |
+| **glTF (`.gltf`)** | the same thing as readable JSON | to inspect or diff what is in it |
+| **USDZ (`.usdz`)** | the format Apple's viewers open | to look at the scene on an iPhone or a Mac |
+
+A save dialog opens to choose where the file goes. Its name is the document's; the extension
+follows the chosen format.
+
+**What does not come out.** The floor grid, the corner trihedron, the transform handles and the
+light markers are not part of the scene: they are display aids. The file holds only what the
+Explorer lists. The edges of the "shaded and wireframe" mode are not in it either.
+
+**A nested selection keeps its place.** Exporting an object filed inside a group writes it where it
+stands in the scene, not where it stands inside its group.
+
+---
+
 ## Saving
 
 `⌘S` / `Ctrl+S` writes the scene into the project, under `documents/`.
@@ -352,7 +375,7 @@ nothing had been written for it.
 The 3D workspace is functional but young. Do not look yet for:
 
 - the 3D **Text** — the greyed-out entry of the **Add** menu;
-- **exporting** a scene to a `.glb` or `.usdz` file.
+- nothing else: the 3D workspace now has everything this manual describes.
 
 The detail is in [What does not exist yet](18-limits.md).
 

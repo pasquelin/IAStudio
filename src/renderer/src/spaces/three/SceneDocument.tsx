@@ -1,5 +1,6 @@
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
+import type { ExportFormat } from '@shared/domain/scene'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
@@ -17,6 +18,7 @@ import { setDocumentTitle } from '@/app/dockview-api'
 import { useAddNode } from '@/hooks/useAddNode'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
+import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
@@ -27,6 +29,24 @@ import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/
 import { useSceneViews, viewOf } from '@/stores/scene-views'
 import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
 import { SCENE_TOOLS } from './scene-tools'
+
+/**
+ * Encoded here, written by the main process: the renderer has no `fs`, and where the file lands
+ * is decided by the save dialog it never sees the answer of — only the name it was given.
+ */
+async function exportScene(
+  documentId: string,
+  engine: SceneRenderer | null,
+  format: ExportFormat,
+  scope: 'scene' | 'selection',
+): Promise<void> {
+  const bridge = getBridge()
+  if (!engine || !bridge) return
+
+  const data = await engine.exportTo(format, scope)
+  const name = useDocuments.getState().documents[documentId]?.title ?? 'scene'
+  await bridge.scene.export({ name, format, data })
+}
 
 export function SceneDocument({ documentId }: { documentId: string }) {
   const host = useRef<HTMLDivElement>(null)
@@ -111,6 +131,18 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setDisplayMode(view.display)
   }, [view.display])
+
+  // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
+  // this component is the only thing that holds them. Only while this tab is in front, or two
+  // open scenes would both answer one menu click.
+  useEffect(() => {
+    const bridge = getBridge()
+    if (!bridge || !active) return
+
+    return bridge.menu.onSceneExport(({ format, scope }) => {
+      void exportScene(documentId, engine.current, format, scope)
+    })
+  }, [documentId, active])
 
   // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
   // tool is declared once in `SCENE_TOOLS` and handled once here.

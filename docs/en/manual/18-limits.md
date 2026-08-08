@@ -111,11 +111,6 @@ practice", above.
 
 ## 3D workspace
 
-### What is missing
-
-- **exporting** a scene to a `.glb` or `.usdz` file — you can import a model and stage it, not get
-  the staged scene back out.
-
 ### The 3D text is announced but not buildable
 
 **Text** appears greyed out in the **Add** menu.

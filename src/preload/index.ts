@@ -12,6 +12,7 @@ import {
   EVENTS,
   type LogEntry,
   type SceneAddRequest,
+  type SceneExportCommand,
   type StudioBridge,
   type ToolRequest,
   type Unsubscribe,
@@ -76,6 +77,9 @@ const bridge: StudioBridge = {
     reveal: assetId => ipcRenderer.invoke(CHANNELS.assetsReveal, assetId),
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
   },
+  scene: {
+    export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),
+  },
   media: {
     ingest: () => ipcRenderer.invoke(CHANNELS.mediaIngest),
     cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),
@@ -93,6 +97,7 @@ const bridge: StudioBridge = {
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
     onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
+    onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),

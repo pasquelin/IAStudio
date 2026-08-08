@@ -10,6 +10,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   openTool: () => {},
   runCommand: () => {},
   addNode: () => {},
+  exportScene: () => {},
   ...overrides,
 })
 
@@ -237,5 +238,35 @@ describe('accelerators within the View menu', () => {
   it('keeps the developer reload reachable, one modifier further', () => {
     const items = submenuOf(menuTemplate(options()), 'Affichage')
     expect(items.find(item => item.role === 'reload')?.accelerator).toBe('Shift+CmdOrCtrl+R')
+  })
+})
+
+describe('the export menu', () => {
+  it('offers the three formats, for the scene and for the selection', () => {
+    const file = submenuOf(menuTemplate(options()), 'Fichier')
+
+    expect(submenuOf(file, 'Exporter la scène').map(item => item.label)).toEqual([
+      'glTF binaire (.glb)',
+      'glTF (.gltf)',
+      'USDZ (.usdz)',
+    ])
+    expect(submenuOf(file, 'Exporter la sélection')).toHaveLength(3)
+  })
+
+  it('asks for the format and the scope the row names', () => {
+    const exportScene = vi.fn()
+    const file = submenuOf(menuTemplate(options({ actions: actions({ exportScene }) })), 'Fichier')
+    const usdz = submenuOf(file, 'Exporter la sélection')[2]
+
+    usdz?.click?.(...([] as never[] as [never, never, never]))
+
+    expect(exportScene).toHaveBeenCalledWith({ format: 'usdz', scope: 'selection' })
+  })
+
+  // Exporting an image document is another errand, with another writer behind it.
+  it('offers no export outside the 3D workspace', () => {
+    const file = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Fichier')
+
+    expect(file.map(item => item.label)).not.toContain('Exporter la scène')
   })
 })

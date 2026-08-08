@@ -341,6 +341,30 @@ Cachez-la pour juger une image sans rien autour.
 
 ---
 
+## Sortir une scène du studio
+
+**Fichier ▸ Exporter la scène** écrit tout ce que le document contient. **Fichier ▸ Exporter la
+sélection** n'écrit que les objets choisis — un groupe emmène ce qui pend dessous.
+
+| Format | Ce que c'est | Quand l'employer |
+|---|---|---|
+| **glTF binaire (`.glb`)** | un seul fichier, géométries comprises | le choix par défaut, et celui que lisent la plupart des moteurs |
+| **glTF (`.gltf`)** | la même chose en JSON, lisible | pour inspecter ou comparer le contenu |
+| **USDZ (`.usdz`)** | le format des visionneuses d'Apple | pour ouvrir la scène sur un iPhone ou un Mac |
+
+Une boîte d'enregistrement s'ouvre pour choisir où le fichier va. Son nom est celui du document ;
+l'extension suit le format choisi.
+
+**Ce qui ne sort pas.** La grille au sol, le trièdre du coin, les poignées de transformation et les
+repères de lumière ne font pas partie de la scène : ce sont des aides d'affichage. Le fichier ne
+contient que ce que l'Explorateur liste. Les arêtes du mode « rendu et filaire » n'en sont pas non
+plus.
+
+**Une sélection imbriquée garde sa place.** Exporter un objet rangé dans un groupe l'écrit là où il
+est dans la scène, pas là où il est dans son groupe.
+
+---
+
 ## Enregistrer
 
 `⌘S` / `Ctrl+S` écrit la scène dans le projet, sous `documents/`.
@@ -364,7 +388,7 @@ rien n'avait été écrit pour lui.
 L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
 
 - le **Texte** 3D — l'entrée grisée du menu **Ajouter** ;
-- l'**export** d'une scène vers un fichier `.glb` ou `.usdz`.
+- rien d'autre : l'espace 3D a désormais tout ce que ce manuel décrit.
 
 Le détail est dans [Ce qui n'existe pas encore](18-limites.md).
 
