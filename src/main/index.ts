@@ -14,19 +14,11 @@ import type { SettingsStore } from '@main/settings/store'
 import { lockNavigation } from '@main/window/navigation'
 import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splash-window'
-import { createMainWindow } from '@main/window/windows'
+import { createMainWindow, showMainWindow } from '@main/window/windows'
 
 // Before anything reads `app.getPath('userData')`: that path derives from the name, and a
 // late call would have electron-store read one folder while writing to another.
 app.setName(APP_NAME)
-
-// Must run before the app is ready: afterwards Electron ignores it, `img-src scenario:` in
-// the CSP is never honoured, and every local thumbnail comes back blank.
-registerAssetScheme()
-
-// At module scope, not inside `whenReady`: this hooks `web-contents-created`, so a window
-// opened before it would be created outside the lock and keep none of it.
-lockNavigation()
 
 /**
  * Everything below blocks the main loop from end to end — `createServices()` opens SQLite
@@ -79,19 +71,45 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   buildMenu(language, services.settings.read().shortcuts.overrides)
 }
 
-void app.whenReady().then(() => {
-  // Before the splash: it is painted from the theme, and reading the settings is a JSON file —
-  // the rest of the services open SQLite synchronously, far too late to decide what to paint.
-  const settings = createSettings()
-  const splash = openSplashWindow()
+/**
+ * One studio per machine. Two instances share one settings file and one catalogue:
+ * `electron-store` hands the file to whoever writes last, and the catalogue is opened in WAL
+ * with no busy timeout, so the loser of a concurrent write takes SQLITE_BUSY on the spot.
+ * They would each run a job queue too, doubling a concurrency the preferences bound once.
+ *
+ * The whole start-up sits inside the lock rather than after an early exit: `app.quit()` is
+ * asynchronous, and a second process left to run on would register its protocol, open SQLite
+ * and put a window on screen well before the quit landed.
+ */
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  // Someone launched the application again — from the Dock, the Finder or a terminal. Their
+  // intent is to reach the studio, so it comes forward instead of a second copy opening.
+  app.on('second-instance', showMainWindow)
 
-  setImmediate(() => startUp(splash, settings))
+  // Must run before the app is ready: afterwards Electron ignores it, `img-src scenario:` in
+  // the CSP is never honoured, and every local thumbnail comes back blank.
+  registerAssetScheme()
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+  // At module scope, not inside `whenReady`: this hooks `web-contents-created`, so a window
+  // opened before it would be created outside the lock and keep none of it.
+  lockNavigation()
+
+  void app.whenReady().then(() => {
+    // Before the splash: it is painted from the theme, and reading the settings is a JSON file —
+    // the rest of the services open SQLite synchronously, far too late to decide what to paint.
+    const settings = createSettings()
+    const splash = openSplashWindow()
+
+    setImmediate(() => startUp(splash, settings))
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+    })
   })
-})
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
+  })
+}
