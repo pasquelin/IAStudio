@@ -1,0 +1,529 @@
+# 14. Every setting
+
+[← Skyboxes workspace](13-skyboxes-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Every shortcut →](15-shortcuts.md)
+
+Every setting in the studio, its starting value, its limits, and what it is really for.
+
+---
+
+## Opening settings
+
+`⌘,` (macOS) or `Ctrl+,` (Windows, Linux). Or the menu **Settings…**.
+
+Settings open in **a separate window**. It lives alongside your work: you can leave it open, change
+a value, watch the effect in the main window, and start again.
+
+On the left, the list of **sections**. Above it, a **Search settings** field: type "grid",
+"language", "ffmpeg", and the window shows the settings that match, whatever their section. If
+nothing matches, it says so: "No setting matches this search."
+
+### How a change is saved
+
+Three buttons at the bottom of the window.
+
+| Button | What it does |
+|---|---|
+| **Apply** | saves the changes and leaves the window open |
+| **OK** | saves and closes the window |
+| **Cancel** | throws away the unsaved changes |
+
+While a setting is changed but not applied, a **dot** appears beside it, with the tooltip "Changed,
+not applied yet".
+
+> **Closing the window with pending changes does not lose them silently.** The studio asks: "You
+> changed settings without applying them. What would you like to do?" — you choose **Apply** or
+> **Don't apply**.
+
+### Going back to the original value
+
+Each setting carries, on hover, a small **Restore the default value** button. It touches only that
+one setting. To reset everything at once, see **Reset everything** in the Advanced section, below.
+
+### A greyed-out setting
+
+Some settings depend on another. **Grid size** is useless if the grid is not shown: it stays
+visible, but greyed out, with the reason written underneath — *"Has no effect while 'Show the grid'
+is off."*
+
+Nothing is ever hidden: a setting you cannot change right now stays where it is, with its
+explanation. Hunting for a vanished setting is more painful than reading why it is switched off.
+
+---
+
+## General
+
+*The application's language, and what it does when it opens.*
+
+### Language
+
+**Choice. Starts at: System.**
+
+The language of every text in the application: menus, buttons, messages.
+
+| Value | Effect |
+|---|---|
+| **System** | follows your computer's own language |
+| **Français** | French |
+| **English** | English |
+
+Each language names itself in its own language — "Français" stays "Français" even on an English
+screen. That is deliberate: you recognise your own language before you can read the screen's.
+
+The change is **immediate**, nothing needs relaunching. It touches neither your projects nor what
+you write in them: a prompt written in English stays in English.
+
+### On opening
+
+**Choice. Starts at: Reopen the last project.**
+
+What the application does when you launch it.
+
+| Value | Effect |
+|---|---|
+| **Reopen the last project** | puts you back where you left off |
+| **Open nothing** | starts on an empty window |
+
+"Open nothing" is quicker to start, and calmer if you juggle a lot of projects.
+
+---
+
+## Account
+
+*API credentials, encrypted by the system keychain.*
+
+This is where you connect the studio to [Scenario](https://www.scenario.com). Without this step,
+anything to do with generation stays inert: the model catalogue is empty, the **Generate** button
+does not answer.
+
+### The studio holds several accounts
+
+Not one. You can store as many API keys as you like, each under a name you choose — "Studio",
+"Client X", "Personal".
+
+**Why that is useful.** An API key **carries its own Scenario project**: its models, its assets, its
+credit. Switching accounts changes **the remote library** you browse.
+
+> **It never touches your local project.** Your folders, your images, your edits are on your disk
+> and belong to no account. Switching accounts changes what you can **go and fetch**, never what you
+> **already have**.
+
+### Adding an account
+
+The form, below the list. Three fields:
+
+| Field | What it is |
+|---|---|
+| **Name** | whatever you like, so you can tell them apart — "Studio, Client X…" |
+| **API key** | your identifier, visible as you type it |
+| **API secret** | your password, masked with dots |
+
+Take the key and the secret from [app.scenario.com](https://app.scenario.com), in your account
+settings. Then **Add an account** — the button reads "Adding…" while it writes.
+
+**The button stays off** until all three fields are valid. No need to guess why: it lights up when
+everything is there.
+
+The name obeys three rules, and the studio says which one was broken:
+
+| Rule | Message when it is broken |
+|---|---|
+| A name is required | "A name is required." |
+| 60 characters at most | "This name is too long." |
+| Two accounts cannot share a name | "Another account already uses this name." |
+
+Uniqueness is checked **ignoring case**: "Studio" and "studio" are the same name. That is deliberate
+— the switcher shows nothing but the name, and two entries that read the same would leave you
+choosing blind.
+
+> **The fields are cleared even on success.** That is not a bug. The screen you are looking at is
+> never allowed to know your key: it only knows whether it works. Once sent, it is encrypted by the
+> operating system's keychain — the same vault that holds your passwords — and filed out of the
+> display's reach.
+>
+> That is why there is **no "show my key" button**: that button cannot exist.
+
+### The account list
+
+One row per account. On the row of the account **currently in use**, a badge:
+
+| Badge | What it says |
+|---|---|
+| **In use**, green | this account is the one working, and its key works |
+| **Not connected**, red | this account is the one working, but its key is refused |
+
+The other rows carry none: only the active account can report whether its key works, since it is the
+only one being asked.
+
+Three buttons per row:
+
+| Button | Effect |
+|---|---|
+| **Use this account** | switches to it. Absent on the row that is already active |
+| **Rename** | replaces the row with a text field, with **Save** and **Cancel** |
+| **Remove** | deletes the account and its key |
+
+### When the list is empty
+
+Two possible messages, and they do not mean the same thing:
+
+| Message | What it means |
+|---|---|
+| "No account yet. Add an API key to reach the Scenario library." | nothing is stored, and nothing works |
+| "No account stored: the development credentials (`secrets/.env`) are in use." | nothing is stored, but the studio works anyway |
+
+The second only concerns whoever launched the studio from its source code with a `secrets/.env`
+file. Saying "no account" and nothing more would leave a perfectly working studio looking
+misconfigured.
+
+### If the keychain is locked
+
+> "The keychain did not give your accounts back. Try again once it is unlocked — nothing was
+> changed."
+
+**The second half of that sentence is the important one.** The studio refused to write rather than
+write halfway: unable to read the existing list back, saving an account would have replaced it with
+that one alone. Unlock your keychain, try again, everything is still there.
+
+---
+
+## Appearance
+
+*Theme and control density.*
+
+### Theme
+
+**Choice. Starts at: Dark.**
+
+| Value | Effect |
+|---|---|
+| **Dark** | very dark grey background — rests the eyes in a dimly lit room |
+| **Light** | light background — reads better in broad daylight |
+| **System** | follows your computer's setting, and switches on its own when evening comes |
+
+> **The background stays opaque, whatever the theme.** No transparency, no blur behind the window.
+> In a studio you judge colours, and a translucent background falsifies the perception of everything
+> shown on top of it. That is a professional decision, not an oversight.
+
+### Density
+
+**Choice. Starts at: Comfortable.**
+
+Sets how big the buttons are and how tall the rows sit.
+
+| Value | Control height | For whom |
+|---|---|---|
+| **Comfortable** | 28 px | more air, easier to aim at with a mouse |
+| **Compact** | 24 px | more on screen, on a small display or with many panels |
+
+### Accent colour
+
+**Colour. Starts at: the theme's own (blue).**
+
+The colour that marks **what is selected or under way**: the outline of the active panel, the
+timeline playhead, the frame around a selection.
+
+It changes nothing about what you make — only how the application shows you where you are. Leave it
+be to keep the theme's own.
+
+### Text size
+
+**Slider. From 0.85 to 1.40, in steps of 0.05. Starts at: 1.**
+
+Makes **every text** in the application bigger or smaller at once.
+
+- **1** is the original size, the one the interface was drawn at;
+- **above**, words get larger and less fits on screen;
+- **below**, the opposite.
+
+**Buttons keep their size**: density is what handles those. The two settings are separate on
+purpose — you may want large text on tight controls, or the reverse.
+
+### Limit animations
+
+**Checkbox. Starts at: unchecked.**
+
+Turns off the small movements of the interface: panels appear at once instead of sliding in.
+
+Useful in two cases: if animation tires you or makes you queasy, and on a slower machine where it
+stutters instead of smoothing.
+
+---
+
+## Generation
+
+*Generation queue and default models, per family.*
+
+### Concurrent generations
+
+**Whole number. From 1 to 16. Starts at: 3.**
+
+How many creations work **at the same time**.
+
+The higher it is, the more you can start at once — but each may take longer to come back, and the
+service can turn away the ones arriving on top (see
+[Too many requests](16-troubleshooting.md)). **Three is a good balance.**
+
+> **This setting is the only valve.** Every generation goes through the same queue, whatever
+> workspace it starts from. There is no way around it, and that is intended: it is what stops a
+> burst of requests from being refused wholesale.
+
+### Max retries
+
+**Whole number. From 0 to 10. Starts at: 4.**
+
+When a generation fails because of a **dropped connection** or a **busy server**, the application
+tries again on its own. This number says how many times before giving up.
+
+At **0**, it never tries twice.
+
+> **An invalid API key is never retried**, whatever this setting says. Trying again would not fix it
+> — it would only delay the message that tells you what to do.
+
+### Default model, per family
+
+Five sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**.
+
+> **The Texture family does not have one yet.** It has nevertheless been a model family in its own
+> right for a short while. The practical consequence: in the Textures workspace you have to pick a
+> model by hand every session — see [What does not exist yet](18-limits.md).
+
+Each holds a single setting: the model the **Generate** panel preselects when you arrive in that
+workspace.
+
+| Value | Effect |
+|---|---|
+| **Ask every time** *(start)* | no model preselected, you choose |
+| *a model* | that model is already in place when the workspace opens |
+
+Set it once you have found the model you work with most: it saves a click every session.
+
+---
+
+## Workspaces
+
+*What only makes sense inside one space: the 3D view, the edit, the image.*
+
+Only one sub-section for now: **3D**.
+
+### Show the grid
+
+**Checkbox. Starts at: checked.**
+
+The squared floor of the 3D view.
+
+It is **not part of what you are making**: it is a landmark, for where things are and how high. Hide
+it to judge an image with nothing around it.
+
+### Grid size
+
+**Whole number. From 2 to 500 metres. Starts at: 20.** *(greyed out if the grid is hidden)*
+
+How far the grid reaches, and therefore how many squares it has — **a square is always one metre**.
+
+Make it bigger for a wide scene; smaller for a little object sitting near the camera.
+
+### Fly speed
+
+**Slider. From 0.5 to 20 m/s, in steps of 0.5. Starts at: 4.**
+
+How fast the camera moves when you **fly** through the 3D view.
+
+Too slow and crossing the scene takes ten seconds. Too fast and you shoot past it without seeing it.
+4 m/s is roughly the pace of a running person.
+
+### Boost
+
+**Slider. From 1 to 10, in steps of 0.5. Starts at: 3.**
+
+What the speed is multiplied by **while you hold the boost key** (left `⇧`, by default).
+
+At 3 you go three times faster: enough to cross a large scene without touching the setting above.
+
+### Field of view
+
+**Slider. From 30° to 100°, in steps of 5. Starts at: 60.**
+
+How much the camera takes in.
+
+| Angle | Effect |
+|---|---|
+| **narrow** (30–45°) | pulls close and flattens, like a telephoto lens |
+| **60°** | close to what an eye sees |
+| **wide** (85–100°) | shows far more, but bends the edges |
+
+---
+
+## Shortcuts
+
+*The keys that trigger each action. Click a key to replace it.*
+
+This section has its own chapter: [Every shortcut](15-shortcuts.md).
+
+---
+
+## Media
+
+*Preparation of imported files: proxies and waveforms.*
+
+### Path to ffmpeg
+
+**File path. Starts at: empty.**
+
+**ffmpeg** is the program that can read and convert just about every video and audio format in the
+world. The studio uses it for two things on import:
+
+1. **the proxy** — a lighter copy of the video, which lets you scrub through the timeline smoothly;
+2. **the waveform** — the drawing of the soundtrack, those waves that let you see where someone
+   speaks.
+
+> **The studio ships its own**, on macOS, Windows and Linux. There is nothing to install, and this
+> setting is only for insisting on a different one.
+
+**So leave this field empty**, unless you have a specific reason. The studio tries three in this
+order:
+
+1. the ffmpeg **shipped with the application**;
+2. the one you point at here;
+3. whatever is on your system's `PATH`.
+
+Below the field, the studio says which it kept:
+
+| Message | What it means |
+|---|---|
+| "ffmpeg is available: proxies and waveforms will be prepared." | all is well — the normal case |
+| "ffmpeg is still not found. Importing works, without proxy or waveform." | even the application's own is missing: see below |
+
+**The second message has become rare.** It now happens mostly to whoever runs the studio from its
+source code without having run `pnpm ffmpeg:fetch`, which downloads the binaries.
+
+> **Even then, importing still works.** Your files enter the project, play, and edit. It is simply
+> less comfortable. The studio never blocks you over a missing optional tool.
+
+The **Browse…** button opens your system's file picker.
+
+---
+
+## Storage
+
+*Where your projects are kept on disk.*
+
+### Projects folder
+
+**Folder path. Starts at: empty.**
+
+The folder the application **offers** when you create or open a project.
+
+It moves **nothing**: projects already created stay exactly where they are. It is a starting
+suggestion for the file picker, not a relocation.
+
+Leave it empty to start from wherever you last were.
+
+---
+
+## Advanced
+
+*What is only needed to understand a problem, or to start over.*
+
+### Log detail
+
+**Choice. Starts at: Everything.**
+
+How much the application says about what it is doing, in its log.
+
+| Value | What is written |
+|---|---|
+| **Nothing** | nothing at all |
+| **Errors only** | what failed |
+| **Errors and warnings** | and what nearly failed |
+| **Everything** *(start)* | each step |
+
+"Everything" helps to understand a problem, and is chatty the rest of the time. This setting changes
+nothing about what the software does — only about what it says.
+
+### Settings file
+
+**Button: Reveal.**
+
+Opens your file manager where your settings are saved, in a file called `settings.json`.
+
+| System | Where |
+|---|---|
+| macOS | `~/Library/Application Support/Scenario Studio/settings.json` |
+| Windows | `%APPDATA%\Scenario Studio\settings.json` |
+| Linux | `~/.config/Scenario Studio/settings.json` |
+
+Useful to copy them before moving to another machine, or to send to someone helping you understand
+a problem.
+
+> **Your API credentials are in this file, but encrypted.** They appear as an unreadable block that
+> only **your** session's keychain can decrypt. Copying this file to another machine copies your
+> settings there, but **not** your connection: you will have to retype the key and the secret.
+
+### Developer tools
+
+**Button: Open.**
+
+Opens the technical console of the embedded browser: the log messages, the errors, the internal
+state of the display.
+
+For troubleshooting only. **Nothing in there is needed to use the software** — and nothing you type
+in it is meant to be.
+
+### Reset everything
+
+**Button: Reset.** *(with confirmation)*
+
+Puts **EVERY** setting back to a fresh install: theme, language, shortcuts, default models, all of
+it.
+
+The studio asks for confirmation first:
+
+> *Reset every setting? Your projects are untouched, but this cannot be undone.*
+
+**Your projects, images and edits are untouched.** Only the settings are.
+
+> **There is no going back.** This button does not pass through the editing buffer: there is no
+> **Cancel** to catch it. That is why it asks for confirmation, unlike the other settings.
+
+---
+
+## Dashboard: every starting value
+
+What you have on a fresh install, at a glance.
+
+| Section | Setting | Start | Limits |
+|---|---|---|---|
+| General | Language | System | System, Français, English |
+| General | On opening | Reopen the last project | — |
+| Appearance | Theme | Dark | Dark, Light, System |
+| Appearance | Density | Comfortable | Comfortable, Compact |
+| Appearance | Accent colour | the theme's own | — |
+| Appearance | Text size | 1 | 0.85 to 1.40 |
+| Appearance | Limit animations | unchecked | — |
+| Generation | Concurrent generations | 3 | 1 to 16 |
+| Generation | Max retries | 4 | 0 to 10 |
+| Generation | Default model ×5 | Ask every time | — |
+| 3D | Show the grid | checked | — |
+| 3D | Grid size | 20 m | 2 to 500 |
+| 3D | Fly speed | 4 m/s | 0.5 to 20 |
+| 3D | Boost | 3× | 1 to 10 |
+| 3D | Field of view | 60° | 30 to 100 |
+| Media | Path to ffmpeg | empty | — |
+| Storage | Projects folder | empty | — |
+| Advanced | Log detail | Everything | Nothing → Everything |
+
+---
+
+## Two settings that do not exist yet
+
+Two values live in the settings file with no control editing them:
+
+- **the last project opened** — written on its own every time a project opens. That is session
+  memory, not a preference: nothing to set;
+- **where assets are kept** — a choice between "on your disk" and "in the cloud". The second does
+  not exist yet, and offering a choice that leads nowhere would be a promise the software cannot
+  keep. See [What does not exist yet](18-limits.md).
+
+---
+
+[← Skyboxes workspace](13-skyboxes-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Every shortcut →](15-shortcuts.md)

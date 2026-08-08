@@ -1,0 +1,361 @@
+# 3. La fenêtre, expliquée
+
+[← Premiers pas](02-premiers-pas.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Les projets →](04-projets.md)
+
+La fenêtre du studio ressemble à celle d'un logiciel de développement ou de montage, pas à une
+page web. Ce chapitre en démonte chaque morceau.
+
+---
+
+## Le plan d'ensemble
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  BARRE DE TITRE — les six espaces de travail                 │
+├──┬────────────────────────────────────────────────────────┬──┤
+│  │                    zone haute                          │  │
+│ R├────────────────────────────────────────────────────────┤ R│
+│ A│         │                                    │         │ A│
+│ I│  zone   │       ZONE DES DOCUMENTS           │  zone   │ I│
+│ L│ gauche  │      (les onglets vivent ici)      │ droite  │ L│
+│  │         │                                    │         │  │
+│ g├────────────────────────────────────────────────────────┤ d│
+│  │                    zone basse                          │  │
+├──┴────────────────────────────────────────────────────────┴──┤
+│  LIGNE D'ÉTAT — projet — document                            │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Cinq éléments, dans l'ordre où on les rencontre :
+
+1. la **barre de titre**, tout en haut, qui porte les espaces de travail ;
+2. les **rails**, collés aux bords gauche et droit : des bandes d'icônes ;
+3. les **zones**, où vivent les panneaux ;
+4. la **zone des documents**, au centre : c'est là que se trouve ce que vous fabriquez ;
+5. la **ligne d'état**, tout en bas.
+
+**Les couleurs ont un sens.** Le fond général — le *châssis* — est gris moyen. Les panneaux
+posés dessus sont **plus sombres**, avec des coins arrondis. C'est l'inverse de l'habitude du
+web, et c'est voulu : cela donne la lecture « des panneaux posés sur une table », comme dans un
+logiciel de montage.
+
+---
+
+## La barre de titre
+
+Elle ne porte pas le nom du fichier. Elle porte les **six espaces de travail** :
+
+**Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes**
+
+Un clic change d'espace. L'espace actif est celui dont le bouton est plus clair que les autres.
+
+Changer d'espace fait trois choses d'un coup :
+
+- **les panneaux se réarrangent** — chaque espace montre les outils dont il a besoin et cache
+  les autres ;
+- **les onglets changent** — chaque espace a ses propres documents ouverts ;
+- **le catalogue se filtre** — le panneau Modèles ne montre plus que les modèles capables de
+  fabriquer ce type de contenu.
+
+Sur macOS, les trois pastilles rouge / orange / verte restent à leur place habituelle, à gauche.
+
+### Le sélecteur de compte
+
+À droite de la barre de titre : un petit point de couleur, un nom, et un chevron.
+
+| Ce que vous voyez | Ce que ça dit |
+|---|---|
+| Point **vert** | la clé du compte affiché fonctionne |
+| Point **gris** | elle ne fonctionne pas, ou il n'y a pas de compte |
+| **Le nom** | le compte en cours d'utilisation |
+| **« Développement »** | aucun compte enregistré, mais un fichier `secrets/.env` répond |
+| **« Non connecté »** | rien n'est branché |
+
+**Un clic ouvre la liste** de vos comptes, celui en cours étant coché, plus une entrée
+**Gérer les comptes…** qui mène aux réglages.
+
+S'il n'y a **aucun compte enregistré**, le bouton n'ouvre pas de menu : il va directement aux
+réglages. Un menu d'une seule ligne n'est pas un menu.
+
+> **Changer de compte change la bibliothèque, pas votre travail.** Chaque clé API porte son propre
+> projet Scenario — ses modèles, ses assets, son crédit. Votre projet local, lui, est sur votre
+> disque et n'appartient à aucun compte : il ne bouge pas d'un pixel.
+
+C'est un **sélecteur**, jamais un formulaire : les clés se tapent dans les réglages, et nulle part
+ailleurs.
+
+---
+
+## Les rails
+
+Les deux bandes verticales d'icônes, collées aux bords gauche et droit.
+
+**Un rail ne disparaît jamais.** C'est leur intérêt : même quand vous avez tout fermé, chaque
+panneau reste à un clic.
+
+### Comment ils se lisent
+
+Un clic sur une icône **ouvre** le panneau. Un second clic sur la même icône le **referme**.
+
+Un **trait de séparation** en travers du rail indique la coupure d'une zone : les icônes
+au-dessus du trait ouvrent dans la première moitié de la zone, celles en dessous dans la
+seconde. Le rail est donc la légende de la colonne qu'il commande.
+
+### Le rail de gauche
+
+De haut en bas :
+
+| Élément | Ce qu'il fait |
+|---|---|
+| **+** (bouton bleu) | crée un **nouveau document** dans l'espace actif |
+| *séparateur* | |
+| Les icônes de la **colonne de gauche** | Calques, Mailles, Lumières, Assets (selon l'espace), puis Explorateur |
+| Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l'espace |
+
+Le bouton **+** est plein et bleu, quand tous les autres sont des glyphes gris. C'est parce
+qu'il **agit** — il crée quelque chose — alors que les autres ne font que montrer ou cacher.
+
+> Le bouton **+** est grisé quand aucun projet n'est ouvert : un document est un fichier dans un
+> dossier de projet, et sans projet il n'y a nulle part où l'écrire.
+
+### Le rail de droite
+
+Les icônes de la **colonne de droite** : Modèles, Génération, Skybox (dans l'espace Skyboxes), puis
+Inspecteur.
+
+### Le rail ne montre que ce que l'espace sait faire
+
+Une icône n'apparaît que si l'espace où vous êtes a réellement ce panneau. Les Calques n'ont aucun
+sens dans l'espace Audio : leur icône n'y est pas.
+
+**Un cas particulier : la Génération.** Son icône disparaît tant qu'aucun modèle n'est choisi.
+Ce n'est pas un bouton grisé, c'est une absence — générer sans modèle est impossible, et le rail
+préfère montrer ce que l'espace **peut** faire plutôt que ce qu'il ne peut pas.
+
+Dès que vous choisissez un modèle dans le panneau **Modèles**, l'icône apparaît. Elle reste si vous
+avez fixé un modèle par défaut pour cette famille dans les réglages.
+
+---
+
+## Les zones et les panneaux
+
+Il y a quatre zones : **gauche**, **droite**, **haute**, **basse**.
+
+Chaque zone est **coupée en deux moitiés**, et chaque moitié montre **un panneau à la fois**.
+
+Cela veut dire deux choses :
+
+- deux panneaux de la **même moitié** se relaient : ouvrir le second referme le premier ;
+- deux panneaux de moitiés **différentes** de la même zone s'affichent **ensemble** — l'un
+  au-dessus de l'autre dans une colonne, l'un à côté de l'autre dans une bande.
+
+> **La zone haute n'accueille aucun panneau pour l'instant.** Elle existe dans la structure et
+> reste réservée. Rien n'y apparaîtra tant qu'un panneau n'y sera pas déclaré.
+
+### Redimensionner
+
+**Tirez sur l'espace entre deux panneaux.** Cet espace — la *gouttière* — est lui-même la
+poignée : il n'y a pas de petite prise à viser au pixel près.
+
+Le studio garde toujours **au moins 240 pixels** pour la zone des documents au centre, et au
+moins 140 pixels pour chaque zone latérale. Vous ne pouvez donc pas écraser le centre par
+accident en tirant trop loin.
+
+Tailles de départ : colonne de gauche 260 px, colonne de droite 320 px, bande basse 240 px.
+
+### Fermer, rouvrir, tout remettre en place
+
+Un panneau **se ferme**, il ne se replie pas. Un panneau replié serait un troisième état qui ne
+ressemble ni à ouvert ni à fermé — et le rail le rouvre déjà en un clic.
+
+Trois façons de retrouver ce que vous avez fermé :
+
+| Moyen | Effet |
+|---|---|
+| Cliquer son icône dans le rail | rouvre ce panneau-là |
+| **Affichage ▸ Modules** | même chose, depuis le menu |
+| **Affichage ▸ Réinitialiser la disposition** | remet **tous** les panneaux à leur place d'origine |
+
+> **Réinitialiser la disposition ne touche pas votre travail.** Cela ne déplace que des
+> panneaux.
+
+### Quand un panneau devient étroit
+
+Rétrécissez un panneau et sa ligne de titre cède du terrain progressivement : ses propres
+contrôles — un filtre, un bouton de vue — partent les premiers. **Le bouton de fermeture, lui,
+ne part jamais.** Un panneau dont on ne pourrait plus sortir serait pire qu'un panneau privé de
+son filtre.
+
+**Une exception : le nom du panneau ne se sacrifie pas en premier.** Dans une bande, l'étagère
+loge toute sa barre sur la ligne de titre ; si la place manquait, c'est le nom qui serait rogné
+jusqu'à disparaître. Le nom d'un panneau n'est pas ce qu'une ligne encombrée doit dépenser en
+premier, donc il garde sa taille et c'est la barre qui se resserre.
+
+---
+
+## La liste complète des panneaux
+
+| Panneau | Zone | Moitié | Visible dans | Ce que c'est |
+|---|---|---|---|---|
+| **Calques** | gauche | 1re | Image | la pile de calques de l'image ouverte |
+| **Mailles** | gauche | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
+| **Lumières** | gauche | 1re | 3D | les sources lumineuses de la scène |
+| **Assets** | gauche | 1re | Vidéo | l'étagère du projet |
+| **Explorateur** | gauche | 2de | partout | l'arbre de la scène 3D |
+| **Modèles** | droite | 1re | partout | le catalogue Scenario, filtré sur l'espace actif |
+| **Génération** | droite | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
+| **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
+| **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
+| **Assets** | bas | 1re | Image, 3D, Audio, Textures, Skyboxes | la même étagère, en bande |
+| **Timeline** | bas | 1re | Vidéo | la séquence en cours de montage |
+
+**La moitié haute de la colonne de droite est réservée.** Trois panneaux seulement y ont le
+droit — **Modèles**, **Génération**, **Skybox** — et aucun d'eux ne s'affiche ailleurs. C'est la
+moitié « fabriquer » : choisir un modèle, remplir son formulaire, régler le ciel qu'il produit.
+Ce sont trois moments du même travail, donc ils se relaient.
+
+**L'Inspecteur occupe l'autre moitié, et toujours en bas.** On lit ce qui est sélectionné
+**pendant** qu'on choisit un modèle et qu'on écrit un prompt : dans un éditeur, l'inspecteur n'est
+jamais le panneau qu'il faut quitter pour voir autre chose.
+
+**Pourquoi l'étagère à assets change de place.** Dans la plupart des espaces, elle est en bas :
+c'est une étagère, elle se lit en largeur, et la colonne latérale est réservée à ce qui agit sur le
+document. Mais dans l'espace **Vidéo**, la bande basse appartient au montage, qui a besoin de toute
+la largeur. L'étagère passe alors dans la **colonne de gauche**, dont la moitié haute est libre là,
+pour que le montage et elle tiennent l'écran **ensemble** : glisser une prise sur une piste est le
+geste autour duquel cet espace est bâti.
+
+### Une moitié montre ce que l'espace y met
+
+Vous ouvrez la bande basse dans l'espace Image : c'est l'étagère. Vous passez en Vidéo : la même
+bande devient le montage, sans que vous ayez rien à rouvrir.
+
+**Ce que vous avez ouvert, c'est une zone** — et elle le reste. Une moitié qui contient un panneau
+que cet espace range ailleurs, ou n'a pas du tout, affiche ce que l'espace y met à la place.
+Fermer la moitié la vide partout : c'est la seule chose que le clic disait vraiment.
+
+Deux conséquences pratiques :
+
+- **rien n'est réécrit** : revenez dans l'espace d'origine, vous retrouvez ce que vous y aviez ;
+- **une Génération sans modèle laisse la place aux Modèles** — le panneau qui permet justement d'en
+  choisir un.
+
+**Pourquoi l'Explorateur est visible partout alors qu'il ne sert qu'à la 3D.** Il est destiné à
+devenir l'arborescence du projet. En attendant, dans les autres espaces, il affiche un message
+qui explique ce qu'il attend plutôt que de disparaître.
+
+---
+
+## La zone des documents
+
+Le centre. C'est là que se trouve ce que vous fabriquez.
+
+**Elle ne prend que des documents.** Un fichier ouvert et sa barre d'outils, rien d'autre. Aucun
+panneau ne peut y entrer.
+
+### Les onglets
+
+Chaque document ouvert a son onglet, en haut du centre. Un clic passe de l'un à l'autre.
+
+Ils peuvent être **déplacés**, **réorganisés**, et **posés côte à côte** : faites glisser un
+onglet vers un bord du centre, une zone de dépôt s'affiche, lâchez — vous obtenez deux documents
+visibles en même temps.
+
+### Le point à côté du nom
+
+Un onglet dont le travail n'est pas encore écrit sur le disque porte **un point** (`•`) à côté
+de son nom.
+
+Le point disparaît à l'enregistrement (`⌘S` / `Ctrl+S`), et revient à la modification suivante.
+Si vous annulez jusqu'au point exact où vous aviez enregistré, il disparaît aussi : ce que vous
+voyez est alors bien ce que contient le fichier.
+
+> **Tous les documents ne savent pas encore s'enregistrer.** Aujourd'hui, seules les **scènes
+> 3D** et les **textures** s'écrivent sur le disque. Voir
+> [Ce qui n'existe pas encore](18-limites.md).
+
+### Chaque espace a ses propres onglets
+
+Passer de « Image » à « 3D » ne ferme rien : cela range les onglets d'Image et sort ceux de 3D.
+Revenez à Image, vous retrouvez exactement ce que vous y aviez laissé.
+
+---
+
+## La ligne d'état
+
+La bande fine, tout en bas.
+
+À gauche, elle indique **où vous êtes** :
+
+| Ce qui s'affiche | Situation |
+|---|---|
+| *Aucun projet ouvert* | rien n'est ouvert |
+| `Mon projet` | un projet est ouvert, aucun document en avant |
+| `Mon projet — Falaise` | un projet est ouvert, et le document « Falaise » est en avant |
+
+### Les générations, à droite de la ligne d'état
+
+C'est ici que vivent vos demandes en cours. **Il n'y a pas de panneau Tâches** : une génération est
+plusieurs minutes d'attente que vous passez ailleurs, elle doit donc se lire depuis n'importe quel
+espace — et un panneau ne peut être qu'à un endroit.
+
+Ce que vous voyez, quand quelque chose travaille :
+
+```
+3 générations  ▓▓▓▓▓░░░░░  45 %  ⌃
+```
+
+| Élément | Ce qu'il dit |
+|---|---|
+| **« 3 générations »** | combien travaillent en ce moment |
+| **La barre** | leur avancement moyen |
+| **Le pourcentage** | le même chiffre, en clair |
+| **Le chevron** | un clic ouvre la liste complète |
+
+**Quand plus rien ne travaille, la zone disparaît.** Elle ne coûte aucune place au repos.
+
+**Sauf s'il y a eu un échec** : « 2 échecs » reste affiché après la fin des tâches. Un échec qui
+s'effacerait avec la dernière génération en cours est un échec que personne n'aurait lu.
+
+**Le clic ouvre la liste**, dans une petite fenêtre au-dessus de la ligne d'état : une ligne par
+tâche, son modèle, son état, sa barre, et le bouton qui l'annule. C'est le contenu de l'ancien
+panneau, à un clic au lieu d'une place permanente.
+
+---
+
+## Le menu natif
+
+Le menu du système — en haut de l'écran sur macOS, en haut de la fenêtre ailleurs.
+
+| Menu | Ce qu'on y trouve |
+|---|---|
+| **Fichier** | Nouveau projet…, Ouvrir un projet…, Enregistrer, Réglages… |
+| **Édition** | Annuler, Rétablir, et les commandes de texte du système |
+| **Affichage** | Modules (rouvrir un panneau), Réinitialiser la disposition, Plein écran, et le zoom de l'image |
+| **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l'espace 3D |
+| **Fenêtre** | les commandes de fenêtre du système |
+| **Aide** | À propos de Scenario Studio |
+
+Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**. Si vous changez un
+raccourci dans les réglages, le menu suit.
+
+**Affichage ▸ Modules ne liste que ce que l'espace peut ouvrir.** Comme le rail : pas de Calques
+dans l'espace Audio, et pas de Génération tant qu'aucun modèle n'est choisi. Un menu qui proposerait
+d'ouvrir un panneau qui n'apparaîtrait pas serait pire qu'un menu court.
+
+---
+
+## Ce que le studio retient tout seul
+
+Vous n'avez rien à enregistrer pour cela :
+
+- **la disposition de vos panneaux**, par espace de travail et par projet ;
+- **la taille de chaque zone** ;
+- **les onglets ouverts**, par espace ;
+- **le dernier projet ouvert**, rouvert au lancement suivant — réglable, voir
+  [Tous les réglages](14-reglages.md) ;
+- **le modèle choisi**, par famille.
+
+---
+
+[← Premiers pas](02-premiers-pas.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Les projets →](04-projets.md)

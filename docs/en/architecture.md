@@ -267,7 +267,18 @@ components; the **native menu reads the same tables**. Adding a seventh workspac
 and the compiler then demands its icon and its family.
 
 That is why the tool registry lives in `shared/` and not in the renderer: the main process needs
-`{ id, zone }` to restore a closed tool, and duplicating it would degrade `ToolId` to `string`.
+`{ id, zone, slot, workspaces }` in order to offer only what the section can open, and duplicating
+it would degrade `ToolId` to `string`.
+
+A tool may declare **more than one placement**, for disjoint sets of workspaces — the shelf sits in
+the bottom strip nearly everywhere, and in the left column in Video, where the montage owns the
+strip. `tool.test.ts` locks the two invariants that keep this legible: the workspaces of two
+placements never overlap, and the placements of one tool share a slot — a tool that changed half as
+well as zone would land in a different row of the rail depending on where you came from.
+
+**One rule escapes the registry**, and only one: the generator is offered only where a model is
+chosen or preferred. It depends on state, and `shared/` holds no runtime dependency — hence a layer
+above the registry, in `helpers/tool-registry.ts`, rather than inside it.
 
 ---
 
@@ -316,7 +327,7 @@ scrubbing starts stuttering for no visible reason.
 6. user submits                  scenario:generate
 7. JobManager queues it          bounded concurrency
 8. it polls                      jobs.retrieve, every 2 s
-9. progress flows back           evt:job-progress → Jobs panel
+9. progress flows back           evt:job-progress → status line
 10. success                      metadata.assetIds → downloaded into the project
 11. the catalogue records it     SQLite → the asset appears in the shelf
 ```
@@ -332,7 +343,7 @@ form that silently loses a field is worse than an ugly one.
 ## Projects and the catalogue
 
 A project is a folder. `project.json` is its manifest (version, name, timestamps); the rest is
-structure the studio creates on open — see the [user guide](user-guide.md#projects) for the tree.
+structure the studio creates on open — see the [manual](manual/04-projects.md) for the tree.
 
 The **catalogue** is `.index/catalog.db`, a SQLite index of every asset: id, name, type,
 location, tags, timestamps, and the path when the asset is local. It exists so the asset shelf
@@ -371,7 +382,7 @@ Key primitives, all in `design/`:
 | `Collection`, `CollectionBar` | the virtualised two-view list, and its search/facet/sort bar |
 | `MediaTile`, `Thumbnail` | the captioned square tile, and the same picture at a fixed size |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | the shared bar, its icon buttons, its labelled ones, the only door icons come through |
-| `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the jobs bar and media import |
+| `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the generations summary, its expanded list and media import |
 | `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |

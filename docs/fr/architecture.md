@@ -274,8 +274,19 @@ composants ; le **menu natif lit les mêmes tables**. Déclarer un septième esp
 entrée, et le compilateur réclame ensuite son icône et sa famille.
 
 C'est pourquoi le registre d'outils vit dans `shared/` et non dans le renderer : le processus
-principal a besoin de `{ id, zone }` pour restaurer un outil fermé, et le dupliquer dégraderait
-`ToolId` en `string`.
+principal a besoin de `{ id, zone, slot, workspaces }` pour ne proposer que ce que la section peut
+ouvrir, et le dupliquer dégraderait `ToolId` en `string`.
+
+Un outil peut déclarer **plusieurs placements**, pour des ensembles d'espaces disjoints —
+l'étagère est dans la bande basse presque partout, et dans la colonne de gauche en Vidéo, où le
+montage possède la bande. `tool.test.ts` verrouille les deux invariants qui rendent cela lisible :
+les espaces de deux placements ne se recouvrent jamais, et les placements d'un même outil partagent
+leur moitié — un outil qui changerait de moitié en même temps que de zone atterrirait dans une
+autre rangée du rail selon l'endroit d'où l'on vient.
+
+**Une règle échappe au registre**, et une seule : le générateur n'est offert que là où un modèle
+est choisi ou préféré. Elle dépend de l'état, et `shared/` n'a aucune dépendance runtime — d'où
+une couche au-dessus du registre, dans `helpers/tool-registry.ts`, plutôt qu'à l'intérieur.
 
 ---
 
@@ -325,7 +336,7 @@ le scrubbing se met à saccader sans raison visible.
 6. soumission                        scenario:generate
 7. le JobManager met en file         concurrence bornée
 8. il poll                           jobs.retrieve, toutes les 2 s
-9. la progression remonte            evt:job-progress → panneau Jobs
+9. la progression remonte            evt:job-progress → ligne d'état
 10. succès                           metadata.assetIds → téléchargés dans le projet
 11. le catalogue l'enregistre        SQLite → l'asset paraît dans l'étagère
 ```
@@ -343,7 +354,7 @@ un formulaire de génération qui perd un champ en silence est pire qu'un formul
 
 Un projet est un dossier. `project.json` en est le manifeste (version, nom, dates) ; le reste est
 la structure que le studio crée à l'ouverture — l'arborescence est dans le
-[guide utilisateur](guide-utilisateur.md#les-projets).
+[manuel](manuel/04-projets.md).
 
 Le **catalogue** est `.index/catalog.db`, un index SQLite de chaque asset : identifiant, nom,
 type, emplacement, étiquettes, dates, et le chemin quand l'asset est local. Il existe pour que
@@ -383,7 +394,7 @@ Les primitives, toutes dans `design/` :
 | `Collection`, `CollectionBar` | la liste virtualisée à deux vues, et sa barre de recherche/facettes/tri |
 | `MediaTile`, `Thumbnail` | la tuile carrée légendée, et la même image à taille fixe |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | la barre partagée, ses boutons d'icône, ses boutons libellés, l'unique porte des icônes |
-| `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par la barre de jobs et l'import de médias |
+| `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par le résumé des générations, sa liste dépliée et l'import de médias |
 | `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField`, `PropertyRow` — ce dont l'inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |

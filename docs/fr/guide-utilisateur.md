@@ -1,515 +1,142 @@
-# Scenario Studio — guide de l'utilisateur
+# Scenario Studio — le manuel
 
-Tout ce qu'il faut pour se servir du studio, du premier lancement à une séquence terminée.
-Vous cherchez plutôt comment il est bâti ? Voir [architecture.md](architecture.md).
+Bienvenue. Ce manuel explique **tout** ce que fait Scenario Studio, du premier lancement au
+travail de tous les jours.
 
-> 🇬🇧 This guide is also available [in English](../en/user-guide.md).
+Il est écrit pour être lu par quelqu'un qui n'a jamais ouvert de logiciel de création, sans
+pour autant mentir à quelqu'un qui en ouvre tous les jours. Quand un mot compliqué est
+nécessaire, il est expliqué à l'endroit où il apparaît, puis rappelé dans le
+[glossaire](manuel/17-glossaire.md).
 
----
-
-## Sommaire
-
-1. [Premier lancement](#premier-lancement)
-2. [La fenêtre, expliquée](#la-fenêtre-expliquée)
-3. [Les espaces de travail](#les-espaces-de-travail)
-4. [Les projets](#les-projets)
-5. [Trouver un modèle](#trouver-un-modèle)
-6. [Générer](#générer)
-7. [L'étagère à assets](#létagère-à-assets)
-8. [Éditer une image](#éditer-une-image)
-9. [Travailler en 3D](#travailler-en-3d)
-10. [Monter une vidéo](#monter-une-vidéo)
-11. [Travailler le son](#travailler-le-son)
-12. [Travailler une texture](#travailler-une-texture)
-13. [Les réglages](#les-réglages)
-14. [Aide-mémoire clavier](#aide-mémoire-clavier)
-15. [Quand quelque chose cloche](#quand-quelque-chose-cloche)
+> 🇬🇧 This manual is also available [in English](../en/user-guide.md).
+> Vous cherchez plutôt comment le logiciel est **bâti** ? Voir [architecture.md](architecture.md).
 
 ---
 
-## Premier lancement
+## En trois phrases
 
-Il vous faut une **clé** et un **secret** d'API Scenario, créés depuis votre compte sur
-[app.scenario.com](https://app.scenario.com).
-
-1. Ouvrez les **Réglages** — `⌘,` sur macOS, `Ctrl+,` ailleurs.
-2. Allez dans la section **Compte** et collez votre clé et votre secret.
-3. Le studio les vérifie immédiatement et vous dit s'il est authentifié.
-
-Vos identifiants sont chiffrés par le trousseau de votre système et détenus par le seul
-processus principal de l'application. L'interface ne les reçoit jamais : elle demande
-« suis-je authentifié ? », jamais « quelle est ma clé ? ».
-
-Tant que vous n'êtes pas authentifié, les panneaux de modèles et de génération restent vides et
-disent pourquoi.
-
-<!-- CAPTURE : la fenêtre de Réglages, section Compte, état authentifié visible.
-     Enregistrer dans ../images/settings-account.png -->
+Scenario Studio est un logiciel qui s'installe sur votre ordinateur. Il sait **fabriquer** des
+images, des vidéos, des sons, des objets en 3D, des matières et des ciels — en demandant à des
+modèles d'intelligence artificielle, en ligne, chez [Scenario](https://www.scenario.com). Et il
+sait ensuite **les retoucher, les assembler et les ranger**, chez vous, sans les renvoyer nulle
+part.
 
 ---
 
-## La fenêtre, expliquée
+## Le manuel, chapitre par chapitre
 
-Le studio est disposé comme un IDE, pas comme une page web : un **châssis** gris moyen sur lequel
-reposent des **panneaux** plus sombres, aux angles arrondis.
+### Pour commencer
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  barre de titre — espaces de travail, nom du projet          │
-├──┬────────────────────────────────────────────────────────┬──┤
-│  │                    zone haute                          │  │
-│  ├────────────────────────────────────────────────────────┤  │
-│ r│         │                                    │         │r │
-│ a│  zone   │        espace des documents        │  zone   │a │
-│ i│ gauche  │      (les onglets vivent ici)      │ droite  │i │
-│ l│         │                                    │         │l │
-│  ├────────────────────────────────────────────────────────┤  │
-│  │                    zone basse                          │  │
-├──┴────────────────────────────────────────────────────────┴──┤
-│  ligne d'état                                                │
-└──────────────────────────────────────────────────────────────┘
-```
-
-**Les rails** — les bandes d'icônes collées aux bords gauche et droit. Un clic ouvre l'outil, un
-second le referme. Un séparateur en travers du rail marque la coupe d'une zone : les icônes
-au-dessus ouvrent dans sa première moitié, celles en dessous dans la seconde.
-
-**Les zones** — quatre (gauche, droite, haut, bas). Chacune est coupée en deux moitiés, et chaque
-moitié montre un outil à la fois. Deux outils dans des moitiés *différentes* d'une même zone
-s'affichent ensemble — empilés dans une colonne, côte à côte dans une bande.
-
-**L'espace des documents** — le centre. Il ne prend **que des documents** : un fichier ouvert et
-sa barre d'outils. Les onglets vivent ici et nulle part ailleurs, parce qu'un document a un nom.
-Aucune fenêtre d'outil n'y entre.
-
-**Redimensionner** — tirez la gouttière entre deux surfaces. L'espace entre elles *est* la
-poignée ; il n'y a pas de prise séparée à viser.
-
-Un panneau se ferme, il ne se replie pas. Un panneau replié est un troisième état qui ne
-ressemble ni à ouvert ni à fermé, et le rail rouvre un outil en un clic.
-
-Rétrécissez assez un panneau et sa ligne de titre cède du terrain : ses propres contrôles partent
-les premiers, le bouton de fermeture jamais — un panneau dont on ne peut pas sortir serait pire
-qu'un panneau privé d'un filtre.
-
-### Les outils
-
-| Outil | Où | Visible dans | Ce que c'est |
-|---|---|---|---|
-| **Calques** | gauche, 1re moitié | Image | la pile de calques de l'image ouverte |
-| **Maillages** | gauche, 1re moitié | 3D | les maillages de la scène, et le bouton qui en ajoute |
-| **Lumières** | gauche, 1re moitié | 3D | les lumières de la scène |
-| **Explorateur** | gauche, 2de moitié | partout | l'arbre de scène en 3D. L'arborescence de projet n'est pas encore écrite, et le panneau le dit dans les autres espaces |
-| **Modèles** | droite, 1re moitié | partout | le catalogue Scenario, filtré sur l'espace actif |
-| **Génération** | droite, 1re moitié | partout | le formulaire du modèle choisi |
-| **Assets** | droite, 1re moitié | partout | tout ce que le projet contient |
-| **Inspecteur** | droite, 2de moitié | partout | ce qui est sélectionné — nœud 3D, clip, piste, asset — réglable en direct |
-| **Timeline** | bas | Vidéo | la séquence en cours de montage |
-| **Jobs** | bas | partout | ce qui est en train de générer |
-
-L'étagère à assets siège dans la colonne latérale plutôt que dans la bande basse, pour qu'elle et
-le montage tiennent l'écran ensemble : déposer une prise sur une piste est le geste autour duquel
-l'espace Vidéo est bâti, et deux panneaux qui prennent leur tour ne se glissent pas l'un dans
-l'autre.
-
-**Affichage → Outils** rouvre ce que vous avez fermé, **Affichage → Réinitialiser la disposition**
-remet chaque panneau à sa place d'origine.
-
----
-
-## Les espaces de travail
-
-Six espaces, changés depuis la barre de titre. Chacun réarrange les panneaux et la barre d'outils
-autour d'un type de travail, et filtre le catalogue sur la famille correspondante.
-
-| Espace | Famille de modèles | Panneaux qu'il amène |
+| | Chapitre | Ce que vous y trouverez |
 |---|---|---|
-| **Image** | image | Calques |
-| **Vidéo** | video | Timeline |
-| **3D** | 3d | Maillages, Lumières, Inspecteur, et l'arbre de scène dans l'Explorateur |
-| **Audio** | audio | — (son éditeur est la forme d'onde elle-même) |
-| **Textures** | image | — (son éditeur est l'aperçu lui-même) |
-| **Skyboxes** | image | — |
+| 1 | [Découvrir le studio](manuel/01-decouverte.md) | À quoi il sert, pour qui, et les huit mots à connaître avant de commencer |
+| 2 | [Premiers pas](manuel/02-premiers-pas.md) | Installer, brancher son compte, créer son premier projet, faire sa première image |
+| 3 | [La fenêtre, expliquée](manuel/03-la-fenetre.md) | Chaque morceau de l'écran, à quoi il sert, comment le déplacer ou le faire revenir |
 
-Une disposition arrangée dans un espace y reste. Ce qui est ouvert est retenu par zone, et un
-espace laisse simplement de côté les outils dont il n'a pas l'usage.
+### Le travail de tous les jours
 
----
-
-## Les projets
-
-Un projet est **un dossier sur votre disque** — pas une base de données, pas un espace en ligne.
-`⌘N` / `Ctrl+N` en crée un, `⌘O` / `Ctrl+O` en ouvre un.
-
-Le studio y crée cette structure :
-
-```
-mon-projet/
-├── project.json          le manifeste : nom, version, dates
-├── assets/
-│   ├── img/  vid/  aud/  3d/  tex/  sky/
-├── documents/            vos images, scènes et séquences
-├── layouts/              les dispositions enregistrées
-└── .index/               cache reconstructible — suppression sans risque
-    ├── catalog.db          l'index des assets
-    ├── proxies/            médias allégés pour le scrubbing
-    ├── peaks/              formes d'onde audio
-    └── filmstrips/         vignettes vidéo
-```
-
-Tout ce qui est sous `.index/` est dérivé et se régénère. Tout le reste vous appartient.
-
-Sans projet ouvert, un asset généré n'a nulle part où atterrir : la génération attend et le dit.
-
----
-
-## Trouver un modèle
-
-Le panneau **Modèles** liste le catalogue Scenario pour la famille de l'espace actif — l'espace
-Image montre les modèles d'image, l'espace 3D les modèles 3D. Pas d'onglets de type : la barre de
-titre dit déjà quel espace est actif.
-
-- **La recherche** filtre à la frappe, avec une courte pause pour ne pas partir à chaque touche.
-- **Les facettes** trient par capacité (texte-vers-image, inpaint, controlnet, image-vers-3D…) et
-  par période.
-- **Le tri** se fait par pertinence, du plus récent ou du plus ancien.
-- **Deux vues** — une grille de vignettes ou une liste dense. On en change depuis la barre ; le
-  curseur redimensionne les vignettes.
-
-Un clic choisit le modèle. Le choix est retenu par famille, et rappelé en haut du panneau : c'est
-lui que la génération, en dessous, fera tourner.
-
-La plupart des modèles publics n'ont pas de vignette propre et sont illustrés par l'un de leurs
-assets d'exemple. Ces images ne sont demandées que pour les cartes qui atteignent réellement
-l'écran, rassemblées en une requête par pause de défilement.
-
-<!-- CAPTURE : le panneau Modèles en grille, facettes ouvertes. Vers ../images/models-grid.png -->
-
----
-
-## Générer
-
-Choisissez un modèle, puis ouvrez **Génération**. Le formulaire affiché est **construit depuis le
-schéma du modèle lui-même**, récupéré auprès de l'API — ce n'est pas un formulaire écrit à la
-main, et c'est pourquoi il est juste pour tous les modèles, y compris ceux publiés après cette
-version.
-
-Remplissez-le et appuyez sur **Générer**. La requête revient immédiatement avec un job.
-
-### Le panneau Jobs
-
-Chaque génération y apparaît avec son état — en file, en cours, réussi, échoué, annulé — et une
-barre de progression tant qu'elle tourne. **Annuler** arrête ce qui n'est pas terminé.
-
-Les jobs passent par une file bornée : trois à la fois par défaut, réglable dans les Réglages.
-Quand l'API répond 429 ou 5xx, la file recule exponentiellement et réessaie, au lieu d'insister.
-
-Un job réussi écrit son résultat dans le projet, et le nouvel asset paraît dans l'étagère.
-
-<!-- CAPTURE : le panneau Génération avec le formulaire d'un modèle, et la bande Jobs en dessous
-     avec un job en cours. Vers ../images/generate.png -->
-
----
-
-## L'étagère à assets
-
-Le panneau **Assets** est le navigateur de contenu du projet. Ses contrôles siègent sur la ligne
-de titre plutôt qu'en dessous : l'étagère est là pour montrer des assets, pas des boutons.
-
-- **Recherche** et **filtre de type** (image, vidéo, audio, maillage, texture, skybox).
-- **Grille ou liste**, toutes deux virtualisées : un projet de plusieurs milliers d'assets défile
-  sans à-coups, parce que seul ce qui est à l'écran est rendu.
-- **Glissez un asset** hors de l'étagère et déposez-le — sur la timeline, par exemple, pour en
-  faire un clip.
-
-Le filtrage est local : le catalogue du projet est déjà indexé en mémoire.
-
-### Importer vos propres médias
-
-Le bouton **importer**, sur la ligne de titre de l'étagère, fait entrer des fichiers depuis votre
-disque. Chacun passe par un court pipeline, et un bandeau au-dessus du navigateur dit où il en
-est : **analyse** (lire ce que le fichier est réellement), **empreinte**, **proxy** (une copie
-allégée, pour que le scrubbing reste fluide), **waveform** (pour que l'audio se dessine).
-Chacune est interruptible — le proxy d'un rush de vingt minutes n'a pas à être attendu.
-
-Si ffmpeg est introuvable, le bandeau le dit : l'import fonctionne quand même, vous n'avez
-simplement ni proxy ni waveform. Indiquez le chemin de votre ffmpeg dans les réglages pour les
-retrouver.
-
----
-
-## Éditer une image
-
-Ouvrez un document image et la barre d'outils devient celle de l'image. Les outils sont groupés
-comme Figma groupe les siens : **survolez un groupe pour en ouvrir le reste** ; cliquer le bouton
-lui-même arme le mode qu'il montre.
-
-| Groupe | Outils |
-|---|---|
-| **Pointeur** | pointeur, déplacer, main, échelle |
-| **Cadre** | cadre, recadrer, section, tranche |
-| **Sélection** | rectangle, ellipse, lasso |
-| **Forme** | rectangle, ligne, flèche, ellipse, polygone, étoile, image |
-| **Peinture** | brosse, crayon |
-| **Gomme** | gomme, gomme ponctuelle, gomme de sélection |
-| **Autres** | plume, texte, texte sur chemin, remplissage, pipette, commentaire, région |
-
-Le panneau **Calques**, à gauche, tient la pile : réordonner, masquer d'un œil, et voir d'un coup
-d'œil ce qui est caché — un calque masqué est estompé et barré.
-
-Annuler et rétablir sont dans la barre d'outils et sur `⌘Z` / `⇧⌘Z`. L'historique appartient au
-document : l'onglet visé doit être l'onglet actif pour que son annulation s'applique.
-
-<!-- CAPTURE : un document image, le volet du groupe Forme ouvert, la pile de calques visible.
-     Vers ../images/image-tools.png -->
-
----
-
-## Travailler en 3D
-
-L'espace 3D ouvre une vraie vue three.js.
-
-**Naviguer** — maintenez et volez :
-
-| Touche | Mouvement |
-|---|---|
-| `W` `A` `S` `D` | avant, gauche, arrière, droite |
-| `E` / `Q` | monter / descendre |
-| `Shift` | accélérer |
-
-Les touches sont lues à leur **position physique** : WASD en QWERTY et ZQSD en AZERTY sont les
-mêmes quatre touches. Rien à reconfigurer.
-
-**Manipuler** — une touche par outil :
-
-| Touche | Outil |
-|---|---|
-| `V` | sélection |
-| `G` | déplacer |
-| `R` | tourner |
-| `S` | mettre à l'échelle |
-| `F` | cadrer la sélection |
-| `Suppr` | supprimer |
-
-**Ajouter** — depuis la barre d'outils, depuis les panneaux Maillages et Lumières, ou depuis le
-menu natif sous **Objets → Ajouter**. Maillages : boîte, sphère, capsule, cercle, cylindre,
-dodécaèdre, icosaèdre, octaèdre, tétraèdre, plan, anneau, tore, nœud de tore, tube,
-révolution. Le sprite et le texte 3D sont annoncés mais pas encore constructibles — le menu les
-grise plutôt que de cacher ce qui vient. Lumières : ambiante, directionnelle, hémisphérique,
-ponctuelle, spot.
-
-L'**Explorateur** montre la scène en arbre. Seules les lignes visibles sont rendues, de sorte
-qu'une scène lourde défile quand même sans peine, et les flèches la parcourent.
-
-L'**Inspecteur**, à droite, tient tout ce qui définit le nœud sélectionné et permet d'y toucher :
-sa transformation, les paramètres de sa géométrie, son matériau et ses emplacements de texture,
-ou — pour une lumière — sa couleur et son intensité. Ce qu'il montre suit ce qui est sélectionné ;
-les champs viennent du type du nœud, pas d'un formulaire écrit pour chacun.
-
-Ce n'est pas un panneau de la 3D : le même inspecteur lit un clip, une piste ou un asset quand
-c'est cela qui est sélectionné, et c'est pourquoi il reste ouvert dans tous les espaces.
-
-### Enregistrer une scène
-
-`⌘S` / `Ctrl+S` écrit la scène en avant dans le projet, sous `documents/`. Un onglet dont le
-travail n'est pas encore sur le disque porte **un point à côté de son nom** ; le point disparaît
-à l'enregistrement, et revient à la modification suivante. Annuler jusqu'au point où vous aviez
-enregistré le fait disparaître aussi — ce que vous voyez est alors bien ce que contient le
-fichier.
-
-Rouvrir le studio ramène l'onglet et relit sa scène. Un onglet jamais enregistré revient vide :
-rien n'avait été écrit pour lui.
-
-> Pour l'instant, seules les scènes 3D s'enregistrent. Les images, les séquences, les sons et les
-> ciels vivent encore dans la fenêtre — fermer leur onglet perd ce qu'ils contiennent.
-
-<!-- CAPTURE : la vue 3D avec un maillage sélectionné, l'arbre de scène et le panneau Maillages.
-     Vers ../images/scene-3d.png -->
-
----
-
-## Monter une vidéo
-
-L'espace Vidéo place la **Timeline** en travers de la bande basse — une séquence se lit sur toute
-la largeur, donc la timeline et l'étagère à assets y prennent leur tour plutôt que de la
-partager.
-
-| Outil | Ce qu'il fait |
-|---|---|
-| **Sélection** | déplacer et rogner les clips |
-| **Lame** | couper un clip là où vous cliquez |
-| **Main** | faire défiler la timeline |
-
-Les contrôles de transport lisent, mettent en pause et rembobinent — `Espace` bascule entre les
-deux premiers sans quitter le clavier. Un seul lecteur est actif à la fois, ce qui garde le
-scrubbing fluide au lieu de le faire lutter contre un second décodeur.
-
-Déposez un asset de l'étagère sur la timeline pour en faire un clip.
-
-Chaque piste se renomme et porte trois états : **muet**, **solo** et **verrouillé**.
-Sélectionnez un clip ou une piste et l'inspecteur, à droite, tient ce qui les définit — points
-d'entrée et de sortie, fondus, vitesse, gain.
-
-<!-- CAPTURE : l'espace vidéo, timeline avec plusieurs clips et le moniteur au-dessus.
-     Vers ../images/timeline.png -->
-
----
-
-## Travailler le son
-
-Double-cliquez sur un asset audio dans l'étagère pour l'ouvrir. L'espace Audio en montre la forme
-d'onde et travaille sur la sélection que vous y tirez.
-
-| Outil | Ce qu'il fait |
-|---|---|
-| **Rogner** | ne garder que la sélection |
-| **Fondu d'entrée** / **de sortie** | monter depuis le silence, ou y descendre, sur la sélection |
-| **Normaliser** | ramener le niveau à −14 LUFS |
-| **Couper les silences** | retirer le silence au début et à la fin |
-| **A/B** | écouter la source, sans rien annuler |
-
-Rien n'est écrit tant que vous ne le dites pas : **Appliquer** réécrit l'asset, **Enregistrer
-comme nouveau** en crée un à côté. L'A/B existe pour entendre ce que vous avez changé avant de
-choisir entre les deux.
-
----
-
-## Travailler une texture
-
-Une texture n'est pas une image : c'est une matière, et elle ne se juge pas à plat. L'espace
-Textures la pose sur une forme, sous une vraie lumière.
-
-Cliquez **+** dans l'espace Textures pour ouvrir un document, puis **glissez une image du projet
-sur l'aperçu** : elle devient la couleur de base.
-
-| Réglage | Ce qu'il fait |
-|---|---|
-| **Sphère · Cube · Cylindre · Plan · Nœud** | la forme sur laquelle juger. Le plan montre la répétition, la sphère montre l'éclairage, le nœud montre ce qui se passe là où la surface se replie |
-| **Fond** | montrer l'environnement derrière le sujet, ou l'utiliser seulement pour éclairer |
-| **Rotation automatique** | faire tourner la forme lentement, pour lire le relief |
-| **Éclairage** | l'intensité de l'environnement |
-
-L'éclairage par défaut est un studio neutre : aucun fichier à télécharger, et une matière
-lisible dès le premier document. Le jour où votre projet contient des skyboxes, elles pourront
-servir de lumière à leur tour.
-
-Tout est enregistré dans un fichier `.tex` du dossier `documents/` de votre projet, quelques
-instants après votre dernier geste. Rien n'est cuit dans les pixels : rouvrez le document dans
-six mois, chaque réglage est encore là et se règle encore.
-
----
-
-## Les réglages
-
-`⌘,` / `Ctrl+,` ouvre la fenêtre de réglages.
-
-### Compte
-
-Votre **clé** et votre **secret** d'API Scenario. Ils sont vérifiés dès l'enregistrement, et la
-fenêtre vous dit s'ils fonctionnent.
-
-Ils sont chiffrés par le trousseau de votre système et détenus par le seul processus principal.
-Si votre système n'offre aucun chiffrement, le studio **refuse de les stocker** plutôt que de les
-écrire en clair.
-
-### Apparence
-
-| Réglage | Valeurs | Défaut |
+| | Chapitre | Ce que vous y trouverez |
 |---|---|---|
-| **Thème** | sombre, clair | sombre |
-| **Densité** | confort (contrôles à 28 px), compact (24 px) | confort |
+| 4 | [Les projets](manuel/04-projets.md) | Ce qu'est un projet, ce qu'il y a dedans, comment le sauvegarder et le déplacer |
+| 5 | [Trouver un modèle](manuel/05-modeles.md) | Le catalogue, la recherche, les filtres, et comment choisir |
+| 6 | [Générer](manuel/06-generer.md) | Le formulaire, le prompt, la file de tâches, les erreurs et les reprises |
+| 7 | [Les assets](manuel/07-assets.md) | L'étagère du projet, la recherche, l'import de vos propres fichiers |
 
-La densité atteint tous les contrôles d'un coup — rails, en-têtes, lignes, gouttières — parce
-qu'ils sont tous dimensionnés sur les mêmes gauges plutôt que sur leurs propres pixels.
+### Les six espaces de travail
 
-Le fond reste opaque, délibérément, et aucun réglage ne permet d'en changer : dans un studio on
-juge des couleurs, et un fond translucide fausse tout ce qui est affiché au-dessus.
-
-### Génération
-
-| Réglage | Ce qu'il fait | Défaut |
+| | Chapitre | Ce que vous y trouverez |
 |---|---|---|
-| **Jobs simultanés** | combien de générations tournent à la fois | 3 |
-| **Tentatives maximales** | combien de fois une requête limitée ou échouée est réessayée, avec recul exponentiel | 4 |
+| 8 | [Espace Image](manuel/08-espace-image.md) | Peindre, gommer, recadrer, empiler des calques |
+| 9 | [Espace 3D](manuel/09-espace-3d.md) | Voler dans une scène, poser des objets et des lumières, les régler |
+| 10 | [Espace Vidéo](manuel/10-espace-video.md) | Monter une séquence, couper, régler des pistes |
+| 11 | [Espace Audio](manuel/11-espace-audio.md) | Rogner un son, faire des fondus, normaliser |
+| 12 | [Espace Textures](manuel/12-espace-textures.md) | Juger une matière sur un objet éclairé |
+| 13 | [Espace Skyboxes](manuel/13-espace-skyboxes.md) | Fabriquer un ciel à 360° et le régler |
 
-Augmenter la concurrence n'accélère pas l'API ; cela rend seulement la limitation de débit plus
-probable. La file existe pour étaler une rafale plutôt que de la faire rejeter.
+### Les annexes
 
-### Familles de modèles
-
-Le modèle que la génération présélectionne pour chaque famille — image, vidéo, 3D, audio,
-upscale. Laissez une famille vide pour qu'elle demande à chaque fois.
-
-Le studio retient le dernier projet ouvert et le rouvre au lancement. Ce n'est pas un réglage à
-cocher — cela se fait tout seul.
-
-### Médias
-
-**Chemin de ffmpeg** — un binaire ffmpeg à utiliser à la place de celui trouvé automatiquement.
-Le laisser vide est le cas normal.
-
-Le studio cherche dans cet ordre : **le binaire embarqué**, puis **votre chemin configuré**, puis
-**ce qui se trouve sur votre `PATH`**. Si aucun ne répond, l'import fonctionne quand même — vous
-perdez le proxy et la forme d'onde, et l'étagère le dit précisément au lieu d'échouer en silence.
-
-### Où tout cela est rangé
-
-Un fichier `settings.json` dans votre dossier de configuration utilisateur, écrit par
-`electron-store` :
-
-| Système | Chemin |
-|---|---|
-| macOS | `~/Library/Application Support/scenario-studio/settings.json` |
-| Windows | `%APPDATA%\scenario-studio\settings.json` |
-| Linux | `~/.config/scenario-studio/settings.json` |
-
-Tout y est lisible sauf les identifiants, qui sont chiffrés. Supprimer le fichier remet le studio
-à ses valeurs par défaut ; vos projets n'y sont pour rien, ils vivent dans leurs propres dossiers.
+| | Chapitre | Ce que vous y trouverez |
+|---|---|---|
+| 14 | [Tous les réglages](manuel/14-reglages.md) | Chaque réglage, sa valeur de départ, ses limites, à quoi il sert |
+| 15 | [Tous les raccourcis](manuel/15-raccourcis.md) | La liste complète, par contexte, et comment les changer |
+| 16 | [Quand ça coince](manuel/16-depannage.md) | Les messages, ce qu'ils veulent dire, quoi faire |
+| 17 | [Glossaire](manuel/17-glossaire.md) | Tous les mots du logiciel, expliqués simplement |
+| 18 | [Ce qui n'existe pas encore](manuel/18-limites.md) | Les boutons gris, les promesses en cours, ce qu'il ne faut pas attendre |
 
 ---
 
-## Aide-mémoire clavier
+## Le tour en cinq minutes
 
-### Partout
+Si vous ne lisez qu'une chose, lisez ceci. C'est le chemin complet, du logiciel fermé à une
+première image dans votre projet.
 
-| Raccourci | Action |
-|---|---|
-| `⌘N` / `Ctrl+N` | nouveau projet |
-| `⌘O` / `Ctrl+O` | ouvrir un projet |
-| `⌘S` / `Ctrl+S` | enregistrer le document en avant |
-| `⌘,` / `Ctrl+,` | réglages |
-| `⌃⌘F` / `F11` | plein écran |
-| `⌘Z` / `⇧⌘Z` | annuler / rétablir, dans le document actif |
+**1. Branchez votre compte.**
+Ouvrez les réglages avec `⌘,` (macOS) ou `Ctrl+,` (Windows, Linux). Allez dans **Compte**.
+Donnez un **nom** au compte, puis collez votre **clé API** et votre **secret API**, pris sur
+[app.scenario.com](https://app.scenario.com). Cliquez **Ajouter un compte** : le studio vérifie
+tout de suite et pose une pastille verte **Utilisé** sur la ligne.
 
-### Vue 3D
+**2. Créez un projet.**
+`⌘N` / `Ctrl+N`. Choisissez un dossier et un nom. Un projet est un **dossier sur votre disque** :
+tout ce que vous fabriquerez atterrira dedans.
 
-| Raccourci | Action |
-|---|---|
-| `V` `G` `R` `S` | sélection, déplacer, tourner, échelle |
-| `F` | cadrer la sélection |
-| `Suppr` | supprimer la sélection |
-| `W` `A` `S` `D` `Q` `E` | voler |
-| `Shift` | accélérer en vol |
+**3. Choisissez un espace.**
+En haut de la fenêtre, six onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
+**Skyboxes**. Cliquez **Image**.
 
-### Vidéo
+**4. Choisissez un modèle.**
+À droite, le panneau **Modèles** montre le catalogue. Cliquez sur une vignette qui vous plaît.
+Le nom du modèle choisi s'affiche en haut du panneau.
 
-| Raccourci | Action |
-|---|---|
-| `Espace` | lire / mettre en pause la séquence |
+**5. Décrivez ce que vous voulez.**
+Juste en dessous, le panneau **Génération** affiche un formulaire. Le champ le plus important
+s'appelle le **prompt** : c'est votre phrase de commande, en anglais de préférence.
+Par exemple : `a small red lighthouse on a cliff, morning light`.
 
-Les raccourcis sont retenus comme des positions physiques de touche, et sont réassignables.
+**6. Appuyez sur Générer.**
+La demande part. En bas à droite de la fenêtre, la ligne d'état affiche « 1 génération » avec une
+barre qui avance. Un clic dessus ouvre le détail.
+Vous pouvez continuer à travailler pendant ce temps.
+
+**7. Récupérez le résultat.**
+Quand la tâche passe à « Terminée », l'image arrive dans le panneau **Assets** — l'étagère du
+projet. Double-cliquez dessus pour l'ouvrir et la retoucher.
+
+C'est tout. Le reste du manuel détaille chacune de ces sept étapes, et les cinq autres espaces.
 
 ---
 
-## Quand quelque chose cloche
+## Comment lire ce manuel
+
+**Vous n'avez pas à le lire dans l'ordre.** Chaque chapitre se suffit à lui-même et renvoie aux
+autres quand il faut.
+
+Trois conventions reviennent partout :
 
 | Ce que vous voyez | Ce que ça veut dire |
 |---|---|
-| Le panneau des modèles dit qu'il n'y a pas d'identifiants | Réglages → Compte. La clé ou le secret manque, ou est refusé |
-| La génération demande d'ouvrir un projet | Un asset généré doit atterrir quelque part — créez ou ouvrez-en un |
-| Un job échoue et reste en échec | Le message en nomme la cause. Une limite de débit recule et réessaie seule ; une entrée invalide, non |
-| L'étagère est vide dans un projet ouvert | Rien n'a encore été généré ni importé — le panneau distingue ces deux cas |
-| `⌘Z` semble ne rien faire | L'annulation appartient à l'onglet actif. Activez le document visé |
-| Un panneau a disparu | Affichage → Outils le rouvre ; Affichage → Réinitialiser la disposition remet tout en place |
+| `⌘S` / `Ctrl+S` | Un raccourci clavier. La première forme est celle de macOS, la seconde celle de Windows et Linux |
+| **Génération** en gras | Le nom exact d'un bouton, d'un panneau ou d'un menu, tel qu'il est écrit à l'écran |
+| > Une citation encadrée | Un avertissement, ou une limite à connaître avant de s'y heurter |
 
-Rien de votre travail ne quitte votre machine, hormis les requêtes de génération elles-mêmes.
+Les symboles du clavier, une fois pour toutes :
+
+| Symbole | Touche | Où |
+|---|---|---|
+| `⌘` | Commande | macOS. Remplacée par `Ctrl` ailleurs |
+| `⇧` | Majuscule (Shift) | partout |
+| `⌥` | Option / Alt | partout |
+| `⌃` | Contrôle | macOS |
+
+---
+
+## Une chose importante, avant tout le reste
+
+**Vos identifiants ne quittent jamais votre machine.** Ils sont chiffrés par le trousseau de
+votre système d'exploitation — le même coffre-fort que celui qui garde vos mots de passe — et
+seule la partie du logiciel qui parle à Scenario y a accès. L'écran que vous regardez, lui, ne
+sait jamais quelle est votre clé : il sait seulement s'il est connecté ou non.
+
+**Vos fichiers non plus.** Vos projets sont des dossiers ordinaires sur votre disque. Rien n'est
+envoyé ailleurs, sauf ce que vous demandez explicitement de générer — c'est-à-dire le texte de
+votre prompt et, le cas échéant, l'image que vous fournissez en entrée.
