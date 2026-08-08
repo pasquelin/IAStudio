@@ -100,6 +100,12 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onSceneExport: noSubscription,
       ...overrides.menu,
     },
+    updates: {
+      state: () => Promise.resolve({ phase: 'idle' }),
+      install: () => Promise.resolve(),
+      onState: noSubscription,
+      ...overrides.updates,
+    },
   }
 
   vi.stubGlobal('studio', bridge)

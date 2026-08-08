@@ -56,6 +56,9 @@ type ChannelMethod = {
   [CHANNELS.windowToggleFullScreen]: StudioBridge['window']['toggleFullScreen']
   [CHANNELS.windowState]: StudioBridge['window']['state']
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']
+
+  [CHANNELS.updateState]: StudioBridge['updates']['state']
+  [CHANNELS.updateInstall]: StudioBridge['updates']['install']
 }
 
 type Resolved<T> = T extends Promise<infer U> ? U : T

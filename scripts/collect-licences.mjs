@@ -30,9 +30,11 @@ const SHIPPED = [
   '@scenario-labs/sdk',
   'better-sqlite3',
   'electron-store',
+  'electron-updater',
   'mediabunny',
   'pixi.js',
   'three',
+  'three-mesh-bvh',
   // The runtime itself.
   'electron',
   // Bundled into the renderer by Vite, hence in `devDependencies` while shipping all the same.

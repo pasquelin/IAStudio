@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/about-panel'
@@ -10,6 +11,7 @@ import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
 import { log, mirrorLogsTo } from '@main/log'
 import { createServices, createSettings } from '@main/services'
+import { registerUpdateHandlers } from '@main/updater'
 import type { SettingsStore } from '@main/settings/store'
 import { lockNavigation } from '@main/window/navigation'
 import { type Splash } from '@main/window/splash'
@@ -44,6 +46,10 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   // Before the window: the renderer's first `invoke` must find its handlers registered.
   const services = createServices(settings)
   registerIpc(services)
+
+  // Fire and forget: whether a newer version exists has no bearing on the window opening, and
+  // a check that fails leaves the studio exactly as usable as it was.
+  void registerUpdateHandlers({ autoUpdater, isPackaged: app.isPackaged }).check()
 
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
   // the other. Only a second launch overrides that — see `revealWindow`.

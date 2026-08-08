@@ -5,6 +5,7 @@ import type { Project } from '@shared/domain/project'
 import type { JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
 import type { Settings } from '@shared/domain/settings'
+import type { UpdateState } from '@shared/domain/update'
 import type { WindowState } from '@shared/domain/window'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import {
@@ -102,6 +103,11 @@ const bridge: StudioBridge = {
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),
     report: entry => ipcRenderer.invoke(CHANNELS.diagnosticsReport, entry),
+  },
+  updates: {
+    state: () => ipcRenderer.invoke(CHANNELS.updateState),
+    install: () => ipcRenderer.invoke(CHANNELS.updateInstall),
+    onState: callback => subscribe<UpdateState>(EVENTS.updateState, callback),
   },
 }
 

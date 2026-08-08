@@ -56,6 +56,11 @@
     },
     "cancel": "Annuler la tâche"
   },
+  "updates": {
+    "available": "Version {{version}} disponible",
+    "downloading": "Téléchargement de la version {{version}}",
+    "restart": "Redémarrer pour installer la version {{version}}"
+  },
   "assets": {
     "none": "Aucun asset. Générez quelque chose pour commencer.",
     "search": "Rechercher…",

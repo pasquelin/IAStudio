@@ -56,6 +56,11 @@
     },
     "cancel": "Cancel job"
   },
+  "updates": {
+    "available": "Version {{version}} available",
+    "downloading": "Downloading version {{version}}",
+    "restart": "Restart to install version {{version}}"
+  },
   "assets": {
     "none": "No asset yet. Generate something to get started.",
     "search": "Search…",
