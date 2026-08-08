@@ -18,7 +18,8 @@ import { useDocuments, type DocumentsSlice } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { enterWorkspace, openExistingDocument } from '../open'
+import { openDocument } from '@/app/dockview-api'
+import { enterWorkspace } from '../open'
 
 /** Banner-sized, like the reference: two of them fill the band, three make it a shelf. */
 const CARD_WIDTH = 560
@@ -74,7 +75,7 @@ export function Spotlight() {
       body: t('home.spotlight.resumeBody', { project: project.manifest.name, name: last.title }),
       action: {
         label: t('home.spotlight.resumeAction'),
-        onClick: () => openExistingDocument(last),
+        onClick: () => openDocument(last),
       },
     })
   }

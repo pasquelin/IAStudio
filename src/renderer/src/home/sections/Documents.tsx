@@ -5,7 +5,7 @@ import { Carousel } from '@/design/Carousel'
 import { WORKSPACES, workspaceLabelKey } from '@/helpers/workspaces'
 import { useDocuments } from '@/stores/documents'
 import { useSettings } from '@/stores/settings'
-import { openExistingDocument } from '../open'
+import { openDocument } from '@/app/dockview-api'
 import { Section } from '../Section'
 import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
 
@@ -36,7 +36,7 @@ export function Documents() {
             icon={iconOf(document)}
             title={document.title}
             subtitle={t(workspaceLabelKey(document.workspace))}
-            onClick={() => openExistingDocument(document)}
+            onClick={() => openDocument(document)}
           />
         )}
       />
