@@ -17,6 +17,16 @@ export type Licence = {
   sources?: string
 }
 
+/**
+ * Whether these terms oblige us to say where the source is, and not merely to carry the notice.
+ *
+ * Shared with `collect-licences.mjs`, which applies it: one definition, or the test that guards
+ * the rule drifts from the rule itself. Matched on the prefix so a version bump still answers.
+ */
+export function isCopyleft(spdx: string): boolean {
+  return /^(MPL|LGPL|GPL|AGPL|EPL|CDDL|OSL|CeCILL)/.test(spdx)
+}
+
 export const LICENCES_ROUTE = 'licences'
 
 export function isLicencesRoute(hash: string): boolean {

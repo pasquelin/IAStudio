@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Studio de création d'images, vidéos, modèles 3D, audio, textures et skyboxes sur l'API Scenario.",
   "author": "Alban Pasquelin",
-  "license": "UNLICENSED",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",

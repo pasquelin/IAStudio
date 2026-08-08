@@ -16,13 +16,19 @@
  *
  * Licences differ per target and that is deliberate: LGPL builds exist for Windows and Linux,
  * none does for macOS. Both are fine here because ffmpeg is spawned as a separate program, but
- * the GPL ones oblige us to offer FFmpeg's sources — hence `SOURCES` in the written notice.
+ * both also oblige us to offer FFmpeg's corresponding sources — hence the `sources` of each
+ * target, pinned to the exact tarball or commit that build came from, written into the notice and
+ * attached to the release by `--sources`.
  *
  * Every URL is pinned to a version and every extracted binary is checked against a recorded
  * digest: two builds of the same tag must ship the same encoder. Rotating a build means changing
  * the URL *and* the digest, which `--digests` prints:
  *
  *     node scripts/fetch-ffmpeg.mjs --digests
+ *
+ * And the source archives the release must carry alongside the installers:
+ *
+ *     node scripts/fetch-ffmpeg.mjs --sources dist
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -48,6 +54,38 @@ const BTBN = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-
 const BTBN_VERSION = '7.1.5'
 const BTBN_BUILD = 'ffmpeg-n7.1.5-12-g1fdbca85aa'
 
+// `git describe` shape: ffmpeg-n<tag>-<commits ahead>-g<commit>. BtbN builds that commit, not the
+// tag, so the tag's tarball would not be the *corresponding* source. Derived rather than written
+// out, so rotating `BTBN_BUILD` cannot leave the source offer pointing at the previous build.
+const BTBN_COMMIT = BTBN_BUILD.split('-g').at(-1)
+
+const MACOS_VERSION = '7.1.1'
+
+/**
+ * Where the source of a build lives, and under which name it is attached to the release. Both
+ * copyleft families oblige the offer: GPL-3.0 for the macOS builds, LGPL-2.1 for the others. A
+ * link to ffmpeg.org's download page satisfies neither — the source has to correspond to the
+ * binary that was distributed, hence the exact release tarball and the exact commit.
+ *
+ * Declared per target rather than per version, because a version number does not identify a
+ * build: `darwin-arm64` and `darwin-x64` are both 7.1.1 today, yet come from two unrelated
+ * maintainers. Both are believed to be vanilla builds of the tarball below — if one ever carries
+ * a patch, its own entry is where that gets recorded, and `sourceArchives()` will then attach two
+ * archives instead of collapsing them into one.
+ *
+ * The build configuration is not reproduced here: every ffmpeg binary carries its own, and
+ * `ffmpeg -buildconf` prints it. Pointing at the binary beats a copy that can drift from it.
+ */
+const VANILLA_MACOS = {
+  url: `https://ffmpeg.org/releases/ffmpeg-${MACOS_VERSION}.tar.xz`,
+  file: `ffmpeg-${MACOS_VERSION}-source.tar.xz`,
+}
+
+const BTBN_SOURCE = {
+  url: `https://github.com/FFmpeg/FFmpeg/archive/${BTBN_COMMIT}.tar.gz`,
+  file: `${BTBN_BUILD}-source.tar.gz`,
+}
+
 /**
  * One entry per packaging target. `members` are paths inside the archive; a single archive
  * carrying both binaries is the common case, and macOS the exception with one each. `digests`
@@ -58,9 +96,10 @@ const BTBN_BUILD = 'ffmpeg-n7.1.5-12-g1fdbca85aa'
  */
 export const TARGETS = {
   'darwin-arm64': {
-    version: '7.1.1',
+    version: MACOS_VERSION,
     licence: 'GPL-3.0-or-later',
     source: 'https://www.osxexperts.net',
+    sources: VANILLA_MACOS,
     archives: [
       { url: 'https://www.osxexperts.net/ffmpeg711arm.zip', members: { ffmpeg: 'ffmpeg' } },
       { url: 'https://www.osxexperts.net/ffprobe711arm.zip', members: { ffprobe: 'ffprobe' } },
@@ -71,9 +110,10 @@ export const TARGETS = {
     },
   },
   'darwin-x64': {
-    version: '7.1.1',
+    version: MACOS_VERSION,
     licence: 'GPL-3.0-or-later',
     source: 'https://evermeet.cx/ffmpeg/',
+    sources: VANILLA_MACOS,
     archives: [
       { url: 'https://evermeet.cx/ffmpeg/ffmpeg-7.1.1.zip', members: { ffmpeg: 'ffmpeg' } },
       { url: 'https://evermeet.cx/ffmpeg/ffprobe-7.1.1.zip', members: { ffprobe: 'ffprobe' } },
@@ -87,6 +127,7 @@ export const TARGETS = {
     version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
+    sources: BTBN_SOURCE,
     archives: [
       {
         url: `${BTBN}/${BTBN_BUILD}-win64-lgpl-7.1.zip`,
@@ -105,6 +146,7 @@ export const TARGETS = {
     version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
+    sources: BTBN_SOURCE,
     archives: [
       {
         url: `${BTBN}/${BTBN_BUILD}-linux64-lgpl-7.1.tar.xz`,
@@ -123,6 +165,7 @@ export const TARGETS = {
     version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
+    sources: BTBN_SOURCE,
     archives: [
       {
         url: `${BTBN}/${BTBN_BUILD}-linuxarm64-lgpl-7.1.tar.xz`,
@@ -139,7 +182,18 @@ export const TARGETS = {
   },
 }
 
-export const SOURCES = 'https://ffmpeg.org/download.html'
+/**
+ * The source archives the release has to carry, deduplicated by URL — not by version, since two
+ * targets on the same version may well be two different builds owing two different sources.
+ */
+export function sourceArchives() {
+  const byUrl = new Map()
+  for (const target of Object.values(TARGETS)) {
+    if (!target.sources) throw new Error(`No source archive declared for ffmpeg ${target.version}`)
+    byUrl.set(target.sources.url, { version: target.version, ...target.sources })
+  }
+  return [...byUrl.values()]
+}
 
 function flag(name, fallback) {
   const at = process.argv.indexOf(`--${name}`)
@@ -237,15 +291,22 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
       rmSync(file)
     }
 
+    const sources = target.sources
     writeFileSync(
       join(destination, 'NOTICE.txt'),
       [
         `FFmpeg ${target.version} for ${key}`,
         `Licence: ${target.licence}`,
         `Build: ${target.source}`,
-        `Corresponding sources: ${SOURCES}`,
         '',
         'FFmpeg is a separate program, spawned by Scenario Studio. It is not linked into it.',
+        '',
+        'Corresponding sources, as the licence requires:',
+        `  ${sources.url}`,
+        `  also attached to every release of Scenario Studio as ${sources.file}`,
+        '',
+        'The build configuration of this very binary is printed by:',
+        `  ${platform === 'win32' ? 'ffmpeg.exe' : './ffmpeg'} -buildconf`,
         '',
       ].join('\n'),
     )
@@ -287,11 +348,40 @@ async function printDigests() {
   }
 }
 
+/**
+ * Downloads the source archive of every shipped build into `into`, for the release job to attach.
+ *
+ * Distributing the binaries is what triggers the obligation, so the sources travel with the same
+ * release rather than living behind a link that can rot. No digest is checked here: unlike the
+ * binaries these are never executed, and pinning a hash to an upstream tarball would fail the
+ * release the day GitHub recompresses an archive.
+ */
+async function fetchSources(into) {
+  mkdirSync(into, { recursive: true })
+  for (const archive of sourceArchives()) {
+    const file = join(into, archive.file)
+    console.log(`Fetching ${archive.url}`)
+    await download(archive.url, file)
+    console.log(`  → ${archive.file}`)
+  }
+}
+
 // Run directly rather than imported by `before-pack.mjs`.
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  const run = process.argv.includes('--digests')
-    ? printDigests()
-    : fetchFfmpeg(flag('platform', process.platform), flag('arch', process.arch))
+  const wantsSources = process.argv.includes('--sources')
+  const sourcesInto = flag('sources', null)
+
+  // Checked rather than trusted: a bare `--sources` would otherwise read as "no destination", fall
+  // through, and silently re-fetch this machine's binaries instead of the archives asked for.
+  if (wantsSources && (!sourcesInto || sourcesInto.startsWith('--'))) {
+    console.error('--sources needs a destination folder, as in: --sources dist')
+    process.exit(1)
+  }
+
+  let run
+  if (process.argv.includes('--digests')) run = printDigests()
+  else if (wantsSources) run = fetchSources(sourcesInto)
+  else run = fetchFfmpeg(flag('platform', process.platform), flag('arch', process.arch))
 
   await run.catch(failure => {
     console.error(failure.message)

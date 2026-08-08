@@ -62,6 +62,13 @@ extraResources:
   - from: resources/ffmpeg
     to: ffmpeg
     filter: ['**/*']
+  # Beside the application rather than only inside its Help window: a notice reachable only from
+  # a running app is out of reach for whoever cannot start it, and the FFmpeg source offer has to
+  # survive that. Both are generated or hand-written at the repository root, never duplicated.
+  - from: EULA.md
+    to: EULA.md
+  - from: THIRD-PARTY-NOTICES.md
+    to: THIRD-PARTY-NOTICES.md
 
 mac:
   category: public.app-category.graphics-design
@@ -106,6 +113,11 @@ win:
       arch: [x64]
 
 nsis:
+  # The terms of use of the binary, not the source-available licence of the repository: two
+  # different texts, and only this one governs what an installer hands over. Per target — there is
+  # no root `license` key, and declaring one fails `validateConfiguration` before any platform is
+  # packaged. Not set under `dmg`: a licence there gates mounting the image every single time.
+  license: EULA.md
   oneClick: false
   allowToChangeInstallationDirectory: true
   # Per user, so installing needs no administrator: the studio writes to the user's own folders
@@ -125,3 +137,6 @@ linux:
     entry:
       StartupWMClass: Scenario Studio
   target: [AppImage, deb]
+
+appImage:
+  license: EULA.md

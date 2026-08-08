@@ -46,12 +46,12 @@ describe('LicencesWindow', () => {
     )
   })
 
-  // FFmpeg is the one whose licence asks for more than attribution: whoever receives the binary
-  // must be able to reach the sources it was built from.
+  // FFmpeg's licence asks for more than attribution: whoever receives the binary must be able to
+  // reach the source it was built from — the archive of that build, not the project's front page.
   it('offers the sources of the copyleft component', async () => {
     render(<LicencesWindow />)
     await userEvent.click(screen.getByRole('button', { name: /FFmpeg/ }))
 
-    expect(screen.getByText(/ffmpeg\.org\/download/)).toBeInTheDocument()
+    expect(screen.getByText(/ffmpeg-7\.1\.1\.tar\.xz/)).toBeInTheDocument()
   })
 })

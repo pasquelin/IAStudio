@@ -12,7 +12,7 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.19-2b2d30?logo=javascript&logoColor=e8639b)](https://pixijs.com)
 [![Vite](https://img.shields.io/badge/Vite-7-2b2d30?logo=vite&logoColor=ffd028)](https://vite.dev)
 [![Tests](https://img.shields.io/badge/tests-1398%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
-[![License](https://img.shields.io/badge/license-proprietary-2b2d30)](#license)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-2b2d30)](#license)
 
 </div>
 
@@ -161,4 +161,17 @@ currently **unsigned**: macOS and Windows both warn on first launch until the ce
 
 ## License
 
-Proprietary. All rights reserved.
+Three texts, three scopes:
+
+- **The source code in this repository** is available under the
+  [PolyForm Noncommercial License 1.0.0](LICENSE). Read it, build it, study it, use it for any
+  noncommercial purpose. Commercial use is reserved.
+- **The application** distributed on the releases page has its own [terms of use](EULA.md).
+- **The third-party components** both of them carry keep their own licences — 36 of them, in
+  [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and shown in the app under Help ▸ Licences.
+
+FFmpeg is shipped beside the application as a separate program, under GPL-3.0 on macOS and
+LGPL-2.1 elsewhere. Its corresponding sources are attached to every release. The reasoning is in
+[ADR-16](docs/ci/adr/ADR-16-licence-du-projet.md).
+
+© 2026 Alban Pasquelin. Not affiliated with Scenario Labs.
