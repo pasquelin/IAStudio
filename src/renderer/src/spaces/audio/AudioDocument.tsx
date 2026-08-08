@@ -2,6 +2,7 @@ import { mdiMusicNoteOutline, mdiPause, mdiPlay } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetType } from '@shared/domain/asset'
+import { restoreDocument } from '@/app/document-io'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { Toolbar } from '@/design/Toolbar'
@@ -51,6 +52,12 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio } | null>(null)
 
   const asset = state.assetId ? (byId.get(state.assetId) ?? null) : null
+
+  // Fills the tab from the project when a file is there, from the default otherwise — and it is
+  // what saving reads back, so the two never disagree about what this document holds.
+  useEffect(() => {
+    void restoreDocument(documentId)
+  }, [documentId])
 
   useEffect(() => {
     const assetId = state.assetId

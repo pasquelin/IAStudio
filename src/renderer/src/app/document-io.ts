@@ -4,17 +4,25 @@ import {
   type DocumentKind,
   type DocumentPart,
 } from '@shared/domain/document'
+import { parseAudioEdits, serializeAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
+import { parseSkybox, serializeSkybox } from '@/engines/skybox/skybox-state'
+import { EMPTY_SEQUENCE, parseSequence, serializeSequence } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
-import { hasScene, markOf, sceneOf, useScenes } from '@/stores/scenes'
+import { audioEditStore } from '@/stores/audio-edits'
+import { sceneStore } from '@/stores/scenes'
+import { sequenceStore } from '@/stores/sequences'
+import { skyboxStore } from '@/stores/skyboxes'
+import type { DocumentStore } from '@/stores/document-store'
 import { DEFAULT_CANVAS, deserializeCanvas, serializeCanvas } from '@/engines/canvas/canvas-state'
 import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
 import { canvasHost } from '@/spaces/image/canvas-hosts'
-import { canvasOf, hasCanvas, markOf as canvasMarkOf, useCanvases } from '@/stores/canvases'
+import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
 import { newTexture, parseTexture } from '@/engines/texture/texture-state'
-import { hasTexture, markOf as textureMarkOf, textureOf, useTextures } from '@/stores/textures'
+import { textureStore } from '@/stores/textures'
+import { createSkyboxContent } from '@shared/domain/skybox'
 
 /** What an editor produces to be saved. The title is the tab's, not the editor's. */
 type CapturedDraft = Omit<DocumentDraft, 'title'>
@@ -40,47 +48,40 @@ type DocumentIo = {
   holds: (documentId: string) => boolean
 }
 
-const SCENE_IO: DocumentIo = {
-  capture: documentId => {
-    const scenes = useScenes.getState()
-    const mark = markOf(scenes, documentId)
+/**
+ * The five kinds a string can hold, which differ only in how their state turns into text and
+ * back. Written once: the bookkeeping around the crossing — read the mark before the write,
+ * hand it back after, load outside the history, open clean — is the same for all of them, and
+ * five copies of it meant a fix landing in one space and not the others.
+ */
+function textDocumentIo<S>(
+  store: DocumentStore<S>,
+  serialize: (state: S) => string,
+  parse: (content: string) => S,
+  createDefault: () => S,
+): DocumentIo {
+  return {
+    capture: documentId => {
+      const current = store.use.getState()
+      const mark = store.markOf(current, documentId)
 
-    return Promise.resolve({
-      // Serialized here, in the window that owns the document: the file layer never parses a
-      // content, so the cost of a twenty-thousand-node scene never reaches the main thread.
-      draft: { content: JSON.stringify(scenePayload(sceneOf(scenes, documentId))) },
-      commit: () => useScenes.getState().markSaved(documentId, mark),
-    })
-  },
-  install: (documentId, content) => {
-    const scenes = useScenes.getState()
-    // `replace`, not a command: loading a document is not something ⌘Z gives back.
-    scenes.replace(documentId, sceneFromPayload(JSON.parse(content)))
-    // What is on screen is now exactly what the disk holds, so the document opens clean.
-    scenes.markSaved(documentId, markOf(useScenes.getState(), documentId))
-  },
-  createDefault: documentId => useScenes.getState().ensure(documentId, createDefaultScene),
-  holds: documentId => hasScene(useScenes.getState(), documentId),
-}
-
-const TEXTURE_IO: DocumentIo = {
-  capture: documentId => {
-    const textures = useTextures.getState()
-    const mark = textureMarkOf(textures, documentId)
-
-    return Promise.resolve({
-      draft: { content: JSON.stringify(textureOf(textures, documentId)) },
-      commit: () => useTextures.getState().markSaved(documentId, mark),
-    })
-  },
-  install: (documentId, content) => {
-    const textures = useTextures.getState()
-    // `replace`, not a command: loading a document is not something ⌘Z gives back.
-    textures.replace(documentId, parseTexture(JSON.parse(content)))
-    textures.markSaved(documentId, textureMarkOf(useTextures.getState(), documentId))
-  },
-  createDefault: documentId => useTextures.getState().ensure(documentId, newTexture),
-  holds: documentId => hasTexture(useTextures.getState(), documentId),
+      return Promise.resolve({
+        // Serialized here, in the window that owns the document: the file layer never parses a
+        // content, so the cost of a twenty-thousand-node scene never reaches the main thread.
+        draft: { content: serialize(store.stateOf(current, documentId)) },
+        commit: () => store.use.getState().markSaved(documentId, mark),
+      })
+    },
+    install: (documentId, content) => {
+      // `replace`, not a command: loading a document is not something ⌘Z gives back.
+      store.use.getState().replace(documentId, parse(content))
+      // What is on screen is now exactly what the disk holds, so the document opens clean.
+      const loaded = store.use.getState()
+      loaded.markSaved(documentId, store.markOf(loaded, documentId))
+    },
+    createDefault: documentId => store.use.getState().ensure(documentId, createDefault),
+    holds: documentId => store.hasState(store.use.getState(), documentId),
+  }
 }
 
 /**
@@ -112,7 +113,7 @@ const IMAGE_IO: DocumentIo = {
     const canvases = useCanvases.getState()
     // Read before the first await, which is the whole reason `capture` may be asynchronous: an
     // edit made while the pixels are being extracted must not be counted as saved.
-    const mark = canvasMarkOf(canvases, documentId)
+    const mark = canvasStore.markOf(canvases, documentId)
     const content = serializeCanvas(canvasOf(canvases, documentId))
 
     const host = canvasHost(documentId)
@@ -138,7 +139,7 @@ const IMAGE_IO: DocumentIo = {
     const canvases = useCanvases.getState()
     // `replace`, not a command: loading a document is not something ⌘Z gives back.
     canvases.replace(documentId, deserializeCanvas(content))
-    canvases.markSaved(documentId, canvasMarkOf(useCanvases.getState(), documentId))
+    canvases.markSaved(documentId, canvasStore.markOf(useCanvases.getState(), documentId))
 
     // After the state, never before: the engine builds a surface per layer of the state it was
     // given, and pixels aimed at a layer it has not heard of yet land nowhere.
@@ -151,13 +152,45 @@ const IMAGE_IO: DocumentIo = {
     }
   },
   createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
-  holds: documentId => hasCanvas(useCanvases.getState(), documentId),
+  holds: documentId => canvasStore.hasState(useCanvases.getState(), documentId),
 }
 
+/**
+ * Every kind the studio can write, and the only place a kind is declared savable. A kind absent
+ * here has a Save that does nothing rather than one that writes an empty body.
+ */
 const IO_BY_KIND: Partial<Record<DocumentKind, DocumentIo>> = {
   image: IMAGE_IO,
-  scene: SCENE_IO,
-  texture: TEXTURE_IO,
+  scene: textDocumentIo(
+    sceneStore,
+    state => JSON.stringify(scenePayload(state)),
+    content => sceneFromPayload(JSON.parse(content)),
+    createDefaultScene,
+  ),
+  sequence: textDocumentIo(
+    sequenceStore,
+    serializeSequence,
+    content => parseSequence(JSON.parse(content)),
+    () => EMPTY_SEQUENCE,
+  ),
+  audio: textDocumentIo(
+    audioEditStore,
+    serializeAudioEdits,
+    content => parseAudioEdits(JSON.parse(content)),
+    () => EMPTY_AUDIO_EDIT,
+  ),
+  skybox: textDocumentIo(
+    skyboxStore,
+    serializeSkybox,
+    content => parseSkybox(JSON.parse(content)),
+    createSkyboxContent,
+  ),
+  texture: textDocumentIo(
+    textureStore,
+    state => JSON.stringify(state),
+    content => parseTexture(JSON.parse(content)),
+    newTexture,
+  ),
 }
 
 const ioOf = (documentId: string): DocumentIo | undefined => {

@@ -392,31 +392,31 @@ function readSettings(raw: unknown): SequenceSettings {
   }
 }
 
-/** Unreadable input yields a fresh sequence: a blank timeline beats an uncaught throw. */
-export function deserializeSequence(raw: string): SequenceState {
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (!isRecord(parsed) || !Array.isArray(parsed.tracks)) return EMPTY_SEQUENCE
+/**
+ * A sequence read back from a file. Takes the parsed value rather than the text, like every
+ * other document reader: text that is not JSON at all is a file that failed to read, and the
+ * caller must be able to tell that from a file whose shape is merely wrong — the first refuses
+ * to be written over, the second opens on an empty timeline.
+ */
+export function parseSequence(content: unknown): SequenceState {
+  if (!isRecord(content) || !Array.isArray(content.tracks)) return EMPTY_SEQUENCE
 
-    const tracks: Track[] = []
-    parsed.tracks.forEach((entry, row) => {
-      const track = readTrack(entry, row)
-      if (track) tracks.push(track)
-    })
-    if (tracks.length === 0) return EMPTY_SEQUENCE
+  const tracks: Track[] = []
+  content.tracks.forEach((entry, row) => {
+    const track = readTrack(entry, row)
+    if (track) tracks.push(track)
+  })
+  if (tracks.length === 0) return EMPTY_SEQUENCE
 
-    const selectedId = parsed.selectedId
-    return {
-      settings: readSettings(parsed.settings),
-      tracks,
-      // Dropped when it points at a clip the read discarded: nothing may select nothing.
-      selectedId:
-        typeof selectedId === 'string' && tracks.some(t => t.clips.some(c => c.id === selectedId))
-          ? selectedId
-          : null,
-      playhead: Math.max(0, readNumber(parsed, 'playhead', 0)),
-    }
-  } catch {
-    return EMPTY_SEQUENCE
+  const selectedId = content.selectedId
+  return {
+    settings: readSettings(content.settings),
+    tracks,
+    // Dropped when it points at a clip the read discarded: nothing may select nothing.
+    selectedId:
+      typeof selectedId === 'string' && tracks.some(t => t.clips.some(c => c.id === selectedId))
+        ? selectedId
+        : null,
+    playhead: Math.max(0, readNumber(content, 'playhead', 0)),
   }
 }

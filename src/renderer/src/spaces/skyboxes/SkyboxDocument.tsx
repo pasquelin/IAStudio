@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
 import type { SphericalAngles } from '@shared/domain/angles'
 import {
-  createSkyboxContent,
   DEFAULT_FIELD_OF_VIEW,
   MAX_FIELD_OF_VIEW,
   MIN_FIELD_OF_VIEW,
@@ -12,6 +11,7 @@ import {
   type SkyboxView,
 } from '@shared/domain/skybox'
 import { PICTURES, type Asset } from '@shared/domain/asset'
+import { restoreDocument } from '@/app/document-io'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { setSunAngles } from '@/engines/skybox/commands'
@@ -50,8 +50,10 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   // A skybox is judged by what it lights, not by its own picture — so the probes start on.
   const [probes, setProbes] = useState(true)
 
+  // Fills the tab from the project when a file is there, from the default otherwise — and it is
+  // what saving reads back, so the two never disagree about what this document holds.
   useEffect(() => {
-    useSkyboxes.getState().ensure(documentId, createSkyboxContent)
+    void restoreDocument(documentId)
   }, [documentId])
 
   useEffect(() => {

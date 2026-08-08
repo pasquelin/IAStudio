@@ -13,6 +13,7 @@ import { createDocumentStore } from './document-store'
 /** One sequence per document, in memory like the documents themselves. */
 const store = createDocumentStore<SequenceState>(EMPTY_SEQUENCE)
 
+export const sequenceStore = store
 export const useSequences = store.use
 export const sequenceOf = store.stateOf
 export const historyOf = store.historyOf

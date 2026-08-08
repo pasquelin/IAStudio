@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import {
   emptyHistory,
   redo,
@@ -58,14 +58,28 @@ export type DocumentStoreState<S> = {
   drop: (documentId: string) => void
 }
 
-type Readable<S> = Pick<DocumentStoreState<S>, 'states' | 'histories' | 'saved'>
+export type Readable<S> = Pick<DocumentStoreState<S>, 'states' | 'histories' | 'saved'>
+
+/**
+ * A space's store, as anything generic over spaces sees it. Spelled out rather than inferred so
+ * that `document-io` can take one as an argument: five kinds reach the disk the same way, and
+ * the alternative was that mechanism written out once per kind.
+ */
+export type DocumentStore<S> = {
+  use: UseBoundStore<StoreApi<DocumentStoreState<S>>>
+  stateOf: (state: Readable<S>, documentId: string) => S
+  hasState: (state: Readable<S>, documentId: string) => boolean
+  historyOf: (state: Readable<S>, documentId: string) => History<S>
+  markOf: (state: Readable<S>, documentId: string) => Command<S> | null
+  isDirty: (state: Readable<S>, documentId: string) => boolean
+}
 
 /**
  * The per-document state, history and undo/redo shared by every editable space. Canvases and
  * scenes differ only in what they hold: the bookkeeping around it is the same, and writing it
  * twice meant a fix landing in one space and not the other.
  */
-export function createDocumentStore<S>(defaultState: S) {
+export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
   // Shared: `historyOf` runs on every selector pass, and a fresh pair per call is garbage.
   const NO_HISTORY: History<S> = emptyHistory<S>()
 

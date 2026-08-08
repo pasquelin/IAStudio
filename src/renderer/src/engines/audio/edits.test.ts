@@ -6,8 +6,10 @@ import {
   audibleData,
   clampRegion,
   EMPTY_AUDIO_EDIT,
+  parseAudioEdits,
   pushEdit,
   renderEdits,
+  serializeAudioEdits,
   type AudioEditState,
 } from './edits'
 import { encodeWav } from './wav'
@@ -151,5 +153,56 @@ describe('writing a wav back', () => {
   it('rounds the duration back to what it started as', () => {
     expect(durationOf(tone(150))).toBe(1_500_000)
     expect(toDb(rms(tone(150, 1)))).toBeCloseTo(0)
+  })
+})
+
+describe('reading an edit chain back', () => {
+  const filled: AudioEditState = {
+    assetId: 'asset-a',
+    edits: [
+      { kind: 'crop', from: 10, to: 400 },
+      { kind: 'fade', edge: 'out', length: 50 },
+      { kind: 'gain', db: -3 },
+      { kind: 'normalize', targetLufs: -20 },
+      { kind: 'trimSilence' },
+    ],
+    region: { from: 0, to: 200 },
+    bypassed: false,
+  }
+
+  it('survives a serialize/parse round trip unchanged', () => {
+    expect(parseAudioEdits(JSON.parse(serializeAudioEdits(filled)))).toEqual(filled)
+  })
+
+  it('falls back to an empty chain rather than throwing on a shape it cannot read', () => {
+    expect(parseAudioEdits('not a record')).toEqual(EMPTY_AUDIO_EDIT)
+    expect(parseAudioEdits({ edits: 'nope' })).toEqual(EMPTY_AUDIO_EDIT)
+  })
+
+  // A step this build cannot replay is dropped rather than kept as a no-op, which would
+  // silently change what the take sounds like.
+  it('drops a step of an unknown kind, and a fade naming no edge', () => {
+    const state = parseAudioEdits({
+      edits: [{ kind: 'reverb' }, { kind: 'fade', length: 10 }, { kind: 'gain', db: 2 }],
+    })
+    expect(state.edits).toEqual([{ kind: 'gain', db: 2 }])
+  })
+
+  it('drops a crop that spans nothing', () => {
+    expect(parseAudioEdits({ edits: [{ kind: 'crop', from: 5, to: 5 }] }).edits).toEqual([])
+  })
+
+  it('drops a region that has collapsed, which every tool would then act on', () => {
+    expect(parseAudioEdits({ region: { from: 5, to: 5 } }).region).toBeNull()
+  })
+
+  it('reads a missing asset id as no take rather than as an empty one', () => {
+    expect(parseAudioEdits({ assetId: '' }).assetId).toBeNull()
+  })
+
+  // A/B is what one is listening to right now; a document reopening on the source would look
+  // like a chain that stopped working.
+  it('never reopens bypassed', () => {
+    expect(parseAudioEdits({ ...filled, bypassed: true }).bypassed).toBe(false)
   })
 })

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DOCUMENT_VERSION } from '@shared/domain/document'
+import { DOCUMENT_KINDS, DOCUMENT_VERSION, workspaceForKind } from '@shared/domain/document'
 import type {
   DocumentDescriptor,
   DocumentDraft,
@@ -16,6 +16,13 @@ import { isPartName } from '@shared/domain/document'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
 import { holdCanvas } from '@/spaces/image/canvas-hosts'
 import { useCanvases } from '@/stores/canvases'
+import { pushEdit } from '@/engines/audio/edits'
+import { addClip } from '@/engines/timeline/commands'
+import { makeClip } from '@/engines/timeline/timeline-state'
+import { setSunAngles } from '@/engines/skybox/commands'
+import { useAudioEdits } from '@/stores/audio-edits'
+import { sequenceStore, useSequences } from '@/stores/sequences'
+import { useSkyboxes } from '@/stores/skyboxes'
 import { restoreDocument, saveDocument } from './document-io'
 
 const box = meshNode('box-1')
@@ -237,16 +244,21 @@ describe('restoreDocument', () => {
     expect(read).toHaveBeenCalledTimes(1)
   })
 
-  it('fills nothing for a kind whose space cannot be restored yet', async () => {
-    const read = vi.fn(() => Promise.resolve(savedFile()))
+  // A kind absent from the table has a Save that does nothing and a tab that never reads its
+  // file — silently. This is what says the table still covers everything the studio can create.
+  it('reads the file of every kind the studio can create', async () => {
+    const read = vi.fn(() => Promise.resolve(null))
     installFakeBridge({ documents: { read } })
-    useDocuments.setState({
-      // A sequence: the image joined the table, and three kinds are still waiting for theirs.
-      documents: { 'doc-1': { id: 'doc-1', kind: 'sequence', title: 'Cut', workspace: 'video' } },
-    })
 
-    await restoreDocument('doc-1')
-    expect(read).not.toHaveBeenCalled()
+    for (const kind of DOCUMENT_KINDS) {
+      const workspace = workspaceForKind(kind)
+      if (!workspace) throw new Error(`no workspace opens ${kind}`)
+      const id = `doc-${kind}`
+      useDocuments.setState({ documents: { [id]: { id, kind, title: kind, workspace } } })
+      await restoreDocument(id)
+    }
+
+    expect(read).toHaveBeenCalledTimes(DOCUMENT_KINDS.length)
   })
 })
 
@@ -481,5 +493,133 @@ describe('an image document', () => {
     release()
 
     expect(restoreSnapshot).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The three kinds that could not reach the disk before. What is checked is the whole round
+ * trip rather than either half: a serializer and a reader that agree only with themselves
+ * would pass two separate tests and still lose the document.
+ */
+describe('the kinds a string holds', () => {
+  /** Writes to memory and reads back, which is what a project folder does. */
+  const diskBackedBridge = (kind: DocumentKind) => {
+    const written = new Map<string, string>()
+    installFakeBridge({
+      documents: {
+        write: (id: string, _kind: DocumentKind, draft: DocumentDraft) => {
+          written.set(id, draft.content)
+          return Promise.resolve()
+        },
+        read: (id: string) => {
+          const content = written.get(id)
+          return Promise.resolve<DocumentFile | null>(
+            content === undefined
+              ? null
+              : {
+                  version: DOCUMENT_VERSION,
+                  kind,
+                  title: 'Untitled',
+                  content,
+                  updatedAt: '2026-08-08T10:00:00.000Z',
+                },
+          )
+        },
+      },
+    })
+    return written
+  }
+
+  const open = async (workspace: 'video' | 'audio' | 'skyboxes'): Promise<string> => {
+    const created = await useDocuments.getState().create(workspace)
+    if (!created) throw new Error('expected a document')
+    await restoreDocument(created.id)
+    return created.id
+  }
+
+  it('carries a sequence to disk and back', async () => {
+    diskBackedBridge('sequence')
+    const documentId = await open('video')
+
+    const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: 2_000_000 })
+    useSequences.getState().runCommand(documentId, addClip('V1', clip))
+    const before = useSequences.getState().states[documentId]
+    await saveDocument(documentId)
+
+    useSequences.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(useSequences.getState().states[documentId]).toEqual(before)
+  })
+
+  it('carries an edit chain to disk and back', async () => {
+    diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    useAudioEdits.getState().replace(documentId, {
+      assetId: 'asset-a',
+      edits: [],
+      region: null,
+      bypassed: false,
+    })
+    useAudioEdits.getState().runCommand(documentId, pushEdit({ kind: 'gain', db: -6 }))
+    const before = useAudioEdits.getState().states[documentId]
+    await saveDocument(documentId)
+
+    useAudioEdits.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(useAudioEdits.getState().states[documentId]).toEqual(before)
+  })
+
+  it('carries a sky to disk and back', async () => {
+    diskBackedBridge('skybox')
+    const documentId = await open('skyboxes')
+
+    useSkyboxes.getState().runCommand(documentId, setSunAngles({ elevation: 0.3, azimuth: 1 }))
+    const before = useSkyboxes.getState().states[documentId]
+    await saveDocument(documentId)
+
+    useSkyboxes.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(useSkyboxes.getState().states[documentId]).toEqual(before)
+  })
+
+  // The document opens clean: what is on screen is exactly what the disk holds.
+  it('opens a document read back from disk unmodified', async () => {
+    diskBackedBridge('sequence')
+    const documentId = await open('video')
+
+    const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: 2_000_000 })
+    useSequences.getState().runCommand(documentId, addClip('V1', clip))
+    await saveDocument(documentId)
+
+    useSequences.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(sequenceStore.isDirty(useSequences.getState(), documentId)).toBe(false)
+  })
+
+  // A file that is not JSON at all is a read that failed, and the tab must not then write an
+  // empty document over the only copy.
+  it('refuses to save a sequence whose file would not read', async () => {
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({
+      documents: {
+        write,
+        read: () =>
+          Promise.resolve<DocumentFile | null>({
+            version: DOCUMENT_VERSION,
+            kind: 'sequence',
+            title: 'Untitled',
+            content: '{ not json',
+            updatedAt: '2026-08-08T10:00:00.000Z',
+          }),
+      },
+    })
+
+    const created = await useDocuments.getState().create('video')
+    if (!created) throw new Error('expected a document')
+    await restoreDocument(created.id)
+
+    await saveDocument(created.id)
+    expect(write).not.toHaveBeenCalled()
   })
 })
