@@ -94,7 +94,7 @@ describe('SceneDocument', () => {
   it('renders the shared toolbar with the scene tools', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Déplacer/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Tourner/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Pivoter/ })).toBeInTheDocument()
   })
 
   /**
@@ -109,7 +109,7 @@ describe('SceneDocument', () => {
 
   it('switches the gizmo mode when a tool is clicked', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Tourner/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Pivoter/ }))
     expect(setMode).toHaveBeenCalledWith('rotate')
   })
 
@@ -259,14 +259,14 @@ describe('snapping and the coordinate frame', () => {
   // Held down, not armed: turning snapping on must not disarm the transform mode.
   it('draws a toggle as pressed without unarming the tool', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Tourner/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Pivoter/ }))
     await userEvent.click(screen.getByRole('button', { name: /Magnétisme/ }))
 
     expect(screen.getByRole('button', { name: /Magnétisme/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
-    expect(screen.getByRole('button', { name: /Tourner/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Pivoter/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('carries the snap steps into the engine with the rest of the viewport settings', () => {
