@@ -47,7 +47,7 @@ export function NodeActions({ documentId, type }: { documentId: string; type: Pa
           entries.map(entry => (
             <MenuRow
               key={entry.kind}
-              label={t(labelKeyOf(kind, entry))}
+              label={t(labelKeyOf(kind.namespace, entry))}
               icon={entry.icon}
               disabled={entry.disabled}
               onSelect={() => {

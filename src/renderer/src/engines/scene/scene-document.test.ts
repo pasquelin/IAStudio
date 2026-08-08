@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { MESH_ENTRIES, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { MESH_PRIMITIVES } from './mesh-primitives'
 import { LIGHT_TYPES } from './light-types'
-import { lightNodeFixture as light, meshNode as mesh, modelNodeFixture } from './scene-fixtures'
+import {
+  lightNodeFixture as light,
+  meshNode as mesh,
+  modelNodeFixture,
+  spriteNodeFixture,
+} from './scene-fixtures'
 import { groupNode } from './node-factory'
 import { scenePayload, sceneFromPayload } from './scene-document'
 import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
@@ -120,6 +125,26 @@ describe('sceneFromPayload', () => {
     const back = reread({ ...EMPTY_SCENE, nodes: [group, child] }).nodes
     expect(back.map(node => node.id)).toEqual([group.id, 'a'])
     expect(back[1]?.parentId).toBe(group.id)
+  })
+
+  // Same trap as the group's: a node type the loader has never heard of is dropped, and a scene
+  // saved with sprites would reopen without them.
+  it('carries a sprite and the picture it wears through a round trip', () => {
+    const back = reread({ ...EMPTY_SCENE, nodes: [spriteNodeFixture('s1', 'pic-1')] }).nodes
+
+    expect(back[0]).toMatchObject({
+      type: 'sprite',
+      sprite: { map: { assetId: 'pic-1' }, opacity: 1, color: null },
+    })
+  })
+
+  it('drops a sprite whose opacity is not a number', () => {
+    const broken = {
+      ...spriteNodeFixture('s1'),
+      sprite: { color: null, opacity: 'half', map: null },
+    }
+
+    expect(sceneFromPayload({ nodes: [broken] }).nodes).toEqual([])
   })
 
   /**

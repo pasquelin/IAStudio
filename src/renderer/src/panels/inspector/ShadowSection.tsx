@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { PropertySection } from '@/design/PropertySection'
 import { ToggleField } from '@/design/ToggleField'
 import { setShadowOn } from '@/engines/scene/commands'
-import { canCastShadow, type SceneNode } from '@/engines/scene/scene-state'
+import { canCastShadow, canReceiveShadow, type SceneNode } from '@/engines/scene/scene-state'
 import type { SceneEdit } from './useSceneEdit'
 
 export type ShadowSectionProps = {
@@ -19,10 +19,15 @@ export type ShadowSectionProps = {
 export function ShadowSection({ node, selection, edit }: ShadowSectionProps) {
   const { t } = useTranslation()
 
+  const casts = canCastShadow(node)
+  const receives = canReceiveShadow(node)
+  // A sprite does neither: the section would be an empty box under the transform.
+  if (!casts && !receives) return null
+
   return (
     <PropertySection title={t('inspector.shadows')}>
       {/* An ambient or hemisphere light has no shadow camera: three.js would warn every frame. */}
-      {canCastShadow(node) && (
+      {casts && (
         <ToggleField
           label={t('inspector.castShadow')}
           value={node.castShadow}
@@ -31,7 +36,7 @@ export function ShadowSection({ node, selection, edit }: ShadowSectionProps) {
       )}
 
       {/* Meaningless on a light, which catches nothing: the row would be a switch with no effect. */}
-      {node.type !== 'light' && (
+      {receives && (
         <ToggleField
           label={t('inspector.receiveShadow')}
           value={node.receiveShadow}

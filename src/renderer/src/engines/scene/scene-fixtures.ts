@@ -1,11 +1,13 @@
 import type { LightDescriptor } from '@shared/domain/scene'
 import {
   DEFAULT_MATERIAL,
+  DEFAULT_SPRITE,
   shadowDefaults,
   IDENTITY_TRANSFORM,
   type LightNode,
   type MeshNode,
   type ModelNode,
+  type SpriteNode,
 } from './scene-state'
 
 /**
@@ -40,6 +42,19 @@ export function lightNodeFixture(
     ...shadowDefaults({ type: 'light', light }),
     type: 'light',
     light,
+  }
+}
+
+export function spriteNodeFixture(id: string, map: string | null = null): SpriteNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'sprite' }),
+    type: 'sprite',
+    sprite: { ...DEFAULT_SPRITE, map: map === null ? null : { assetId: map } },
   }
 }
 

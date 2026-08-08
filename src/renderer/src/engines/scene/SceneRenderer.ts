@@ -7,6 +7,8 @@ import {
   Object3D,
   Raycaster,
   SpotLight,
+  Sprite,
+  SpriteMaterial,
   TextureLoader,
   Vector2,
   Vector3 as ThreeVector3,
@@ -20,16 +22,29 @@ import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
 import { ViewportEngine } from '../viewport/ViewportEngine'
-import type { ModelNode, NodeMove, SceneNode, SceneState } from './scene-state'
+import {
+  canReceiveShadow,
+  type ModelNode,
+  type NodeMove,
+  type SceneNode,
+  type SceneState,
+  type SpriteNode,
+} from './scene-state'
 import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
 import {
   applyGeometry,
   applyLight,
   applyMaterial,
+  applySprite,
   lightFor,
   standardMaterialOf,
 } from './three-sync'
-import { createMaterialTextures, type MaterialTextures } from './material-textures'
+import {
+  createMaterialTextures,
+  createSpriteTexture,
+  type MaterialTextures,
+  type SpriteTexture,
+} from './material-textures'
 import { createGltfSource } from './gltf-source'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
@@ -130,6 +145,8 @@ export class SceneRenderer {
   private readonly helpers = new Map<string, LightHelper>()
   /** The texture slots of each mesh, and the references they hold on the cache. */
   private readonly textures = new Map<string, MaterialTextures>()
+  /** The same, for the one map a sprite wears. Apart, so each map stays exactly typed. */
+  private readonly spriteMaps = new Map<string, SpriteTexture>()
   /** Last node applied per id, compared by reference to skip what has not changed. */
   private readonly applied = new Map<string, SceneNode>()
   private readonly loader = new TextureLoader()
@@ -514,6 +531,15 @@ export class SceneRenderer {
     if (node.type === 'light' && object instanceof Light) {
       const before = previous?.type === 'light' ? previous : null
       if (before?.light !== node.light) applyLight(object, node.light)
+      return
+    }
+
+    if (node.type === 'sprite' && object instanceof Sprite) {
+      const before = previous?.type === 'sprite' ? previous : null
+      if (before?.sprite === node.sprite) return
+
+      applySprite(object.material, node.sprite, this.meshColor)
+      this.spriteMaps.get(node.id)?.apply(node.sprite)
     }
   }
 
@@ -521,6 +547,7 @@ export class SceneRenderer {
     if (node.type === 'mesh') return this.buildMesh(node)
     if (node.type === 'light') return this.buildLight(node)
     if (node.type === 'model') return this.buildModel(node)
+    if (node.type === 'sprite') return this.buildSprite(node)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
   }
@@ -574,6 +601,20 @@ export class SceneRenderer {
     this.textures.set(node.id, textures)
 
     return mesh
+  }
+
+  private buildSprite(node: SpriteNode): Sprite {
+    const material = new SpriteMaterial()
+    applySprite(material, node.sprite, this.meshColor)
+
+    const sprite = new Sprite(material)
+    // Like a mesh's maps: the picture arrives long after the frame that asked for it, and the
+    // render has to be asked for again when it lands.
+    const texture = createSpriteTexture(this.textureCache, material, this.viewport.requestRender)
+    texture.apply(node.sprite)
+    this.spriteMaps.set(node.id, texture)
+
+    return sprite
   }
 
   private buildLight(node: SceneNode & { type: 'light' }): Light {
@@ -630,12 +671,11 @@ export class SceneRenderer {
 
     this.applied.delete(id)
 
-    const textures = this.textures.get(id)
-    if (textures) {
-      // Before the material goes: the slots have to give their references back, or the cache
-      // keeps a 4K map alive for a mesh that no longer exists.
-      textures.dispose()
-      this.textures.delete(id)
+    // Before the material goes: the slots have to give their references back, or the cache
+    // keeps a 4K map alive for a node that no longer exists.
+    for (const maps of [this.textures, this.spriteMaps]) {
+      maps.get(id)?.dispose()
+      maps.delete(id)
     }
 
     const object = this.objects.get(id)
@@ -647,6 +687,9 @@ export class SceneRenderer {
         object.geometry.dispose()
         disposeMaterial(object)
       }
+      // A sprite is not a mesh, so the branch above never freed its material. Its geometry is
+      // left alone on purpose: three.js shares one quad between every sprite ever built.
+      if (object instanceof Sprite) object.material.dispose()
       if (object instanceof DirectionalLight || object instanceof SpotLight)
         this.viewport.scene.remove(object.target)
       this.objects.delete(id)
@@ -843,7 +886,7 @@ export function nodeIdOf(object: Object3D, isNode: (name: string) => boolean): s
 
 /** A light catches nothing: the flag exists on every node, but only two kinds answer to it. */
 function receivesShadow(node: SceneNode): boolean {
-  return node.type !== 'light' && node.receiveShadow
+  return canReceiveShadow(node) && node.receiveShadow
 }
 
 function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {

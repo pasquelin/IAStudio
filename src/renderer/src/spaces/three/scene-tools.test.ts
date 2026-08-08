@@ -1,6 +1,7 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
+import { OBJECT_ENTRIES } from '@shared/domain/scene'
 import { LIGHT_TYPES } from '@/engines/scene/light-types'
 import { MESH_PRIMITIVES } from '@/engines/scene/mesh-primitives'
 import { SCENE_TOOLS } from './scene-tools'
@@ -42,15 +43,14 @@ describe('scene tools', () => {
 })
 
 describe('SCENE_TOOLS', () => {
-  it('offers every primitive and every light under one Add button', () => {
-    expect(add?.modes).toHaveLength(MESH_PRIMITIVES.length + LIGHT_TYPES.length)
+  it('offers every primitive, every light and every object under one Add button', () => {
+    expect(add?.modes).toHaveLength(
+      MESH_PRIMITIVES.length + LIGHT_TYPES.length + OBJECT_ENTRIES.length,
+    )
   })
 
-  it('keeps the greyed primitives greyed', () => {
-    expect(add?.modes?.filter(mode => mode.disabled).map(mode => mode.id)).toEqual([
-      'sprite',
-      'text',
-    ])
+  it('keeps the greyed kinds greyed', () => {
+    expect(add?.modes?.filter(mode => mode.disabled).map(mode => mode.id)).toEqual(['text'])
   })
 
   it('keeps the three transform modes as three reachable buttons', () => {

@@ -122,8 +122,32 @@ A *mesh* is a geometric object.
 | **Dodecahedron** | 12 faces |
 | **Icosahedron** | 20 faces |
 
-> **Sprite** and **Text** appear greyed out in the menu. They are announced but not yet buildable.
+> **Text** appears greyed out in the menu: a 3D text needs a font file, and the studio ships none.
 > See [What does not exist yet](18-limits.md).
+
+### The sprite — a picture facing the camera
+
+A *sprite* is not a mesh: it is a flat picture that always turns towards you, whatever the view
+does. It is what you use for a spark, a glow, a marker, a label above an object — anything that
+has to stay readable from wherever you look.
+
+**Add ▸ Sprite** puts one at the origin. It arrives with no picture: choose one in the Inspector,
+under **Sprite**, from the project's own images — the same ones a material takes as a texture.
+
+| Setting | What it does |
+|---|---|
+| **Colour** | tints the picture. On a sprite with none, it is the colour of the quad itself |
+| **Opacity** | from transparent to opaque |
+| **Texture** | the picture shown, taken from the project's assets |
+
+Three things to know:
+
+- **Its size is its scale.** A sprite has no width of its own: you resize it with the scale handle,
+  like any other object. It shrinks with distance, like everything else in the scene.
+- **It has nothing to do with shadows.** It throws none and catches none — three.js draws meshes
+  into a shadow map and nothing else. The Inspector therefore shows it no Shadows section at all,
+  rather than two switches with no effect.
+- **It is not lit.** Its colour is the one you give it, not the one the scene's lights make of it.
 
 ### The available lights
 
@@ -287,7 +311,7 @@ nothing had been written for it.
 
 The 3D workspace is functional but young. Do not look yet for:
 
-- **Sprite** and **Text** — the two greyed-out entries of the **Add** menu;
+- the 3D **Text** — the greyed-out entry of the **Add** menu;
 - the **normalised views** (top, front, side) and the **orthographic camera**;
 - **exporting** a scene to a `.glb` or `.usdz` file.
 

@@ -12,12 +12,11 @@ import {
   type LightDescriptor,
   type MaterialDescriptor,
   type ModelRef,
+  type SpriteDescriptor,
   type Transform,
 } from '@shared/domain/scene'
 
-export type SceneNodeType = 'mesh' | 'light' | 'model' | 'group'
-
-type SceneNodeBase = {
+export type SceneNodeBase = {
   id: string
   /** `null` is a direct child of the scene. Reparenting is not offered yet. */
   parentId: string | null
@@ -35,9 +34,17 @@ export type SceneNode = SceneNodeBase &
     | { type: 'mesh'; geometry: GeometryDescriptor; material: MaterialDescriptor }
     | { type: 'light'; light: LightDescriptor }
     | { type: 'model'; model: ModelRef }
+    | { type: 'sprite'; sprite: SpriteDescriptor }
     // Nothing of its own: a group is a transform others hang from, and a name to find it by.
     | { type: 'group' }
   )
+
+/** Derived, never restated: a member added to the union above is a member here on the spot. */
+export type SceneNodeType = SceneNode['type']
+
+/** What the shadow rules read of a node — its type, and a light's kind. */
+type ShadowSubject =
+  { type: 'light'; light: LightDescriptor } | { type: Exclude<SceneNodeType, 'light'> }
 
 /**
  * A flat ordered list, not a nested tree: reparenting becomes one field instead of moving a
@@ -64,20 +71,32 @@ export type NodeMove = { id: string; transform: Transform }
  * like the directional — points down at a set nobody aimed it at yet, where it mostly produces
  * acne. Both are one checkbox away in the inspector.
  */
-export function shadowDefaults(
-  node: { type: 'light'; light: LightDescriptor } | { type: 'mesh' | 'model' | 'group' },
-): { castShadow: boolean; receiveShadow: boolean } {
-  if (node.type !== 'light') return { castShadow: true, receiveShadow: true }
-  return { castShadow: node.light.kind === 'directional', receiveShadow: false }
+export function shadowDefaults(node: ShadowSubject): {
+  castShadow: boolean
+  receiveShadow: boolean
+} {
+  if (node.type === 'light') {
+    return { castShadow: node.light.kind === 'directional', receiveShadow: false }
+  }
+  // Everything else defaults to what it is capable of: a mesh both throws and catches, a sprite
+  // does neither, and nothing has to say so twice.
+  return { castShadow: canCastShadow(node), receiveShadow: canReceiveShadow(node) }
 }
 
 /**
  * Whether a node can throw a shadow at all. An ambient or hemisphere light has no shadow camera,
  * and three.js warns once per frame about a light told to cast one — so the box is not offered
- * rather than offered and ignored.
+ * rather than offered and ignored. A sprite is never drawn into a shadow map: three.js walks
+ * meshes there, and nothing else.
  */
-export function canCastShadow(node: SceneNode): boolean {
-  return node.type !== 'light' || SHADOW_CASTING_LIGHTS.includes(node.light.kind)
+export function canCastShadow(node: ShadowSubject): boolean {
+  if (node.type === 'light') return SHADOW_CASTING_LIGHTS.includes(node.light.kind)
+  return node.type !== 'sprite'
+}
+
+/** Whether a node catches the shadows of others. A light catches none, and a sprite is unlit. */
+export function canReceiveShadow(node: ShadowSubject): boolean {
+  return node.type !== 'light' && node.type !== 'sprite'
 }
 
 const SHADOW_CASTING_LIGHTS: readonly LightDescriptor['kind'][] = ['directional', 'spot', 'point']
@@ -100,6 +119,12 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
   aoMap: null,
 }
 
+export const DEFAULT_SPRITE: SpriteDescriptor = {
+  color: null,
+  opacity: 1,
+  map: null,
+}
+
 export const EMPTY_SCENE: SceneState = {
   nodes: [],
   selectedIds: [],
@@ -109,6 +134,7 @@ export const EMPTY_SCENE: SceneState = {
 export type MeshNode = Extract<SceneNode, { type: 'mesh' }>
 export type LightNode = Extract<SceneNode, { type: 'light' }>
 export type ModelNode = Extract<SceneNode, { type: 'model' }>
+export type SpriteNode = Extract<SceneNode, { type: 'sprite' }>
 export type GroupNode = Extract<SceneNode, { type: 'group' }>
 
 export function nodeById(state: SceneState, id: string): SceneNode | null {

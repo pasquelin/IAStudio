@@ -135,13 +135,20 @@ describe('menuTemplate', () => {
     expect(submenuOf(add, 'Lumière')).toHaveLength(LIGHT_ENTRIES.length)
   })
 
-  it('greys out the announced primitives instead of hiding them', () => {
-    const meshes = submenuOf(submenuOf(menuTemplate(options()), 'Ajouter'), 'Maille')
+  it('greys out the announced objects instead of hiding them', () => {
+    const objects = submenuOf(submenuOf(menuTemplate(options()), 'Ajouter'), 'Objet')
 
-    expect(meshes.filter(item => item.enabled === false).map(item => item.label)).toEqual([
-      'Sprite',
+    expect(objects.map(item => item.label)).toEqual(['Sprite', 'Texte'])
+    expect(objects.filter(item => item.enabled === false).map(item => item.label)).toEqual([
       'Texte',
     ])
+  })
+
+  // Every mesh the table declares is buildable: what is not lives under Object.
+  it('greys out no mesh at all', () => {
+    const meshes = submenuOf(submenuOf(menuTemplate(options()), 'Ajouter'), 'Maille')
+
+    expect(meshes.filter(item => item.enabled === false)).toEqual([])
   })
 
   it('asks for the node by kind, so the payload cannot drift from the entry', () => {

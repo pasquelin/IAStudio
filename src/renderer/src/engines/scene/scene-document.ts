@@ -20,6 +20,7 @@ import {
   GEOMETRY_SPECS,
   LIGHT_SPECS,
   MATERIAL_SPECS,
+  SPRITE_SPECS,
   isVector3,
   type PropertySpec,
 } from './property-fields'
@@ -90,6 +91,9 @@ function isSceneNode(value: unknown): value is SceneNode {
   // whose assets moved still opens, with a hole where the model was.
   if (value.type === 'model')
     return isRecord(value.model) && typeof value.model.assetId === 'string'
+  // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
+  // checked against the same table.
+  if (value.type === 'sprite') return isSprite(value.sprite)
   // A group carries nothing of its own: everything it is has already been checked above.
   if (value.type === 'group') return true
 
@@ -133,6 +137,14 @@ function isMaterial(value: unknown): boolean {
   if (!MEASURED_MATERIAL.every(([name, spec]) => matches(value[name], spec))) return false
 
   return TEXTURE_SLOTS.every(slot => isTextureRef(value[slot]))
+}
+
+function isSprite(value: unknown): boolean {
+  if (!isRecord(value)) return false
+  if (value.color !== null && typeof value.color !== 'string') return false
+  if (!matches(value.opacity, SPRITE_SPECS.opacity)) return false
+
+  return isTextureRef(value.map)
 }
 
 function isTextureRef(value: unknown): boolean {

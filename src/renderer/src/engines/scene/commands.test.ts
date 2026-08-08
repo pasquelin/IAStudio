@@ -20,9 +20,12 @@ import {
   setNodeVisible,
   setEnvironment,
   setSelection,
+  setSpriteOn,
   setTransform,
 } from './commands'
-import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
+import { lightNodeFixture as light, meshNode as mesh, spriteNodeFixture } from './scene-fixtures'
+
+const sprite = (id: string) => spriteNodeFixture(id, 'pic-1')
 import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
 import type { EnvironmentRef } from '@shared/domain/scene'
 
@@ -468,6 +471,40 @@ describe('rootedIn', () => {
     const copies = rootedIn(copiesOf(nodes, [nodes[0]!]), [])
 
     expect(copies[1]?.parentId).toBe(copies[0]?.id)
+  })
+})
+
+describe('setSpriteOn', () => {
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [sprite('s1'), sprite('s2'), mesh('m1')],
+    selectedIds: [],
+  }
+
+  it('writes the change onto every sprite of the selection, and comes back', () => {
+    const command = setSpriteOn(start.nodes, { opacity: 0.5 })
+    const faded = command.apply(start)
+
+    expect(faded.nodes.map(node => (node.type === 'sprite' ? node.sprite.opacity : null))).toEqual([
+      0.5,
+      0.5,
+      null,
+    ])
+    expect(command.revert(faded)).toEqual(start)
+  })
+
+  // A mesh has no sprite to write into: the union is what forbids it, and so does the command.
+  it('leaves everything that is not a sprite alone', () => {
+    const applied = setSpriteOn(start.nodes, { opacity: 0.5 }).apply(start)
+
+    expect(applied.nodes[2]).toEqual(start.nodes[2])
+  })
+
+  it('leaves the fields it was not given alone', () => {
+    const applied = setSpriteOn([start.nodes[0]!], { opacity: 0.2 }).apply(start)
+    const node = applied.nodes[0]
+
+    expect(node?.type === 'sprite' && node.sprite.map).toEqual({ assetId: 'pic-1' })
   })
 })
 

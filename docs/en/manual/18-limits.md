@@ -118,9 +118,13 @@ practice", above.
 - **exporting** a scene to a `.glb` or `.usdz` file — you can import a model and stage it, not get
   the staged scene back out.
 
-### Two objects announced but not buildable
+### The 3D text is announced but not buildable
 
-**Sprite** and **Text** appear greyed out in the **Add** menu.
+**Text** appears greyed out in the **Add** menu.
+
+three.js builds a text in volume from a converted **font file**. The studio ships none, and a
+project's catalogue knows no asset of that kind: not an image, a video, a sound or a 3D model.
+Until one of the two exists, the entry stays greyed rather than promising what no path can keep.
 
 ### The `S` shortcut does two things at once
 

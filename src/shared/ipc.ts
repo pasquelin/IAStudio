@@ -11,7 +11,7 @@ import type { Job, JobProgress } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
-import type { LightKind, MeshKind } from './domain/scene'
+import type { LightKind, MeshKind, ObjectKind } from './domain/scene'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { ToolId, ToolZone } from './domain/tool'
@@ -172,7 +172,7 @@ export type ToolRequest = {
 }
 
 /** Request to drop a node in the active scene, coming from the native menu. */
-export type SceneAddRequest = { kind: MeshKind | LightKind }
+export type SceneAddRequest = { kind: MeshKind | LightKind | ObjectKind }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in

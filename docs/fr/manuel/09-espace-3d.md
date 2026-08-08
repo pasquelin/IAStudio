@@ -123,8 +123,35 @@ Une *maille* (ou *mesh*) est un objet géométrique.
 | **Dodécaèdre** | 12 faces |
 | **Icosaèdre** | 20 faces |
 
-> **Sprite** et **Texte** apparaissent grisés dans le menu. Ils sont annoncés mais pas encore
-> constructibles. Voir [Ce qui n'existe pas encore](18-limites.md).
+> **Texte** apparaît grisé dans le menu : un texte 3D demande un fichier de police, et le studio
+> n'en fournit aucun. Voir [Ce qui n'existe pas encore](18-limites.md).
+
+### Le sprite — une image face à la caméra
+
+Un *sprite* n'est pas une maille : c'est une image plate qui se tourne toujours vers vous, quel
+que soit l'angle de la vue. C'est ce qu'on emploie pour une étincelle, une lueur, un repère, une
+étiquette au-dessus d'un objet — tout ce qui doit rester lisible d'où qu'on regarde.
+
+**Ajouter ▸ Sprite** en pose un à l'origine. Il arrive sans image : choisissez-la dans
+l'Inspecteur, section **Sprite**, parmi les images du projet — les mêmes que celles qu'un
+matériau accepte en texture.
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| **Couleur** | teinte l'image. Sur un sprite sans image, c'est la couleur du carré lui-même |
+| **Opacité** | de transparent à opaque |
+| **Texture** | l'image affichée, prise dans les assets du projet |
+
+Trois choses à savoir :
+
+- **Sa taille est son échelle.** Un sprite n'a pas de largeur propre : on le redimensionne avec la
+  poignée d'échelle, comme n'importe quel objet. Il rapetisse avec la distance, comme le reste de
+  la scène.
+- **Il ne joue pas avec les ombres.** Il n'en projette pas et n'en reçoit pas — three.js ne dessine
+  que des mailles dans une carte d'ombres. L'Inspecteur ne lui montre donc aucune section Ombres,
+  plutôt que deux interrupteurs sans effet.
+- **Il n'est pas éclairé.** Sa couleur est celle qu'on lui donne, pas celle que les lumières de la
+  scène en font.
 
 ### Les lumières disponibles
 
@@ -293,7 +320,7 @@ rien n'avait été écrit pour lui.
 
 L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
 
-- **Sprite** et **Texte** — les deux entrées grisées du menu **Ajouter** ;
+- le **Texte** 3D — l'entrée grisée du menu **Ajouter** ;
 - les **vues normalisées** (dessus, face, côté) et la **caméra orthographique** ;
 - l'**export** d'une scène vers un fichier `.glb` ou `.usdz`.
 

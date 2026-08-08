@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { setGeometryOn, setLightOn, setMaterialOn } from '@/engines/scene/commands'
+import { setGeometryOn, setLightOn, setMaterialOn, setSpriteOn } from '@/engines/scene/commands'
 import { geometryFields, lightFields } from '@/engines/scene/property-fields'
 import { selectedNodes } from '@/engines/scene/scene-state'
 import { changedFields } from '@/helpers/objects'
@@ -10,6 +10,7 @@ import { DescriptorSection } from './DescriptorSection'
 import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
 import { ShadowSection } from './ShadowSection'
+import { SpriteSection } from './SpriteSection'
 import { TransformSection } from './TransformSection'
 import { useSceneEdit } from './useSceneEdit'
 
@@ -42,6 +43,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
 
   const mesh = node?.type === 'mesh' ? node : null
   const light = node?.type === 'light' ? node : null
+  const sprite = node?.type === 'sprite' ? node : null
   // The descriptors keep their identity across every edit that does not touch them, so the
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
@@ -79,6 +81,15 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             gesture={edit.gesture}
           />
         </>
+      )}
+
+      {sprite && (
+        <SpriteSection
+          sprite={sprite.sprite}
+          fallbackColor={meshColor}
+          onChange={next => edit.run(setSpriteOn(selection, changedFields(sprite.sprite, next)))}
+          gesture={edit.gesture}
+        />
       )}
 
       {light && (

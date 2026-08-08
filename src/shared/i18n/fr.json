@@ -290,9 +290,7 @@
     "plane": "Plan",
     "ring": "Anneau",
     "sphere": "Sphère",
-    "sprite": "Sprite",
     "tetrahedron": "Tétraèdre",
-    "text": "Texte",
     "torus": "Tore",
     "torusKnot": "Nœud de tore",
     "tube": "Tube",
@@ -326,6 +324,10 @@
     "otherWorkspace": "L’explorateur suit une scène 3D. Ouvrez l’espace 3D pour en voir le contenu.",
     "noDocument": "Ouvrez une scène pour voir son contenu."
   },
+  "objects": {
+    "sprite": "Sprite",
+    "text": "Texte"
+  },
   "inspector": {
     "noDocument": "Ouvrez une scène pour inspecter ce qu’elle contient.",
     "castShadow": "Projette une ombre",
@@ -335,6 +337,7 @@
     "transform": "Transformation",
     "geometry": "Géométrie",
     "material": "Matériau",
+    "sprite": "Sprite",
     "light": "Lumière",
     "name": "Nom",
     "position": "Position",
@@ -373,6 +376,7 @@
       "roughness": "Rugosité",
       "metalness": "Métallicité",
       "map": "Texture",
+      "opacity": "Opacité",
       "normalMap": "Normales",
       "roughnessMap": "Carte de rugosité",
       "metalnessMap": "Carte de métallicité",
@@ -588,6 +592,7 @@
     "add": "Ajouter",
     "mesh": "Maille",
     "light": "Lumière",
+    "object": "Objet",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
     "zoomIn": "Zoom avant",

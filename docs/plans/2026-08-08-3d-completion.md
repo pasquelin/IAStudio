@@ -595,7 +595,68 @@ Aucune commande dans `commands.ts` aujourd'hui.
 
 ## Étape 8 — `sprite` et `text`
 
-- [ ] Livrée
+- [x] Livrée pour `sprite`. **`text` reporté**, raison écrite plus bas.
+
+**Le chemin choisi est le premier des deux que proposait cette étape** : `sprite` est un type de
+nœud à part entière, comme `model` et `group`. `SpriteDescriptor { color, opacity, map }` vit dans
+`shared/domain/scene.ts`, le moteur construit un `Sprite` + `SpriteMaterial`, l'inspecteur lui
+donne sa section, et le document le relit. `sprite` et `text` ont quitté `MESH_ENTRIES` pour
+`OBJECT_ENTRIES` : `MeshKind = GeometryDescriptor['kind']` redevient vrai, et le menu natif gagne
+un sous-menu **Objet** à côté de Maille et Lumière.
+
+**Pourquoi `text` est reporté, noir sur blanc.** three.js construit un texte en volume avec
+`TextGeometry`, qui exige un **fichier de police converti** au format typeface JSON. Trois voies,
+toutes fermées ce soir :
+
+1. *Depuis le projet*, comme le demandait le plan — le catalogue ne connaît que `image`, `video`,
+   `audio`, `mesh`, `texture` et `skybox`. Ajouter un genre `font` traverse toute la chaîne
+   d'import (collector, dossiers, filtres du navigateur d'assets, vignettes, i18n) : c'est une
+   étape à soi seule, plus grosse que celle-ci.
+2. *Embarquée dans l'application* — convertir une police au format attendu demande un outil que je
+   n'ai pas hors ligne.
+3. *Celle que livre three.js* (`helvetiker`) — dérivée d'Helvetica. Embarquer ça dans une
+   application fermée est une décision de licence, pas une décision technique, et elle n'est pas la
+   mienne à prendre.
+
+L'entrée reste donc grisée, et le manuel dit maintenant **pourquoi** au lieu de « annoncé mais pas
+encore constructible ». Le plan prévoyait ce cas : « elle est la plus reportable des onze ».
+
+**Décisions prises seul.**
+
+- *Pas de panneau Sprites.* `PanelNodeType` exclut désormais `sprite` : un panneau listant les
+  sprites d'une scène serait un panneau d'une ligne et d'un bouton Ajouter. Le sprite s'ajoute
+  depuis la barre d'outils et le menu natif, et se retrouve dans l'Explorateur comme tout le reste.
+- *Le panneau Mailles n'offre plus Sprite.* Il ajoute ce qu'il liste ; proposer un nœud qu'il ne
+  montrerait jamais était le vrai défaut de l'ancien registre.
+- *`Exclude` gardé plutôt qu'`Extract` pour `PanelNodeType`*, contre l'avis de la passe de
+  simplification. La liste d'exclusion grandit, c'est vrai — mais c'est exactement elle qui a forcé
+  la question « ce type a-t-il un panneau ? » à la compilation quand `sprite` est apparu. Un
+  `Extract` aurait laissé passer l'oubli en silence.
+- *Pas de `sizeAttenuation` ni de rotation dans le descripteur.* Aucun contrôle booléen n'existe
+  dans `PropertySpec`, et la taille d'un sprite est déjà son échelle de transformation.
+
+**Deux bugs trouvés en revue et corrigés.**
+
+- *La transparence éteinte à pleine opacité.* J'avais écrit `material.transparent = opacity < 1`,
+  ce qui paraissait économe. Or `SpriteMaterial` allume `transparent` dans son constructeur — three
+  le commente « sprite materials are transparent ». Ma ligne l'éteignait dans le cas normal, et
+  toute image à canal alpha — une lueur, une étincelle, l'usage même d'un sprite — aurait dessiné
+  son carré entier. La ligne est partie ; un test verrouille la règle.
+- *Le `SpriteMaterial` jamais disposé.* `release` libère le matériau sous `if (object instanceof
+  Mesh)` — un `Sprite` n'en est pas un. Sa géométrie, elle, est délibérément laissée : three.js
+  partage un seul quad entre tous les sprites, et la disposer casserait les autres.
+
+**Passe de simplification, ce qui a été appliqué.** Le JSDoc de `setMaterialOn` s'était retrouvé
+au-dessus d'une autre fonction ; `patchMesh`/`patchLight`/`patchSprite` sont devenus un seul
+`patchPart<T>` générique, sans `as` ; `SceneNodeType` se dérive maintenant de l'union `SceneNode`
+au lieu d'être réécrit à côté ; `shadowDefaults` lit ses deux prédicats au lieu de rejouer leurs
+cas ; la règle « pas d'ombres pour un sprite » appartient à `ShadowSection` plutôt que d'être
+écrite aussi chez son appelant ; `PictureField` porte une fois les trois libellés que les deux
+sections répétaient ; et le `create?:` optionnel des primitives, devenu inatteignable, a disparu
+avec la branche morte qu'il imposait à `createNodeOf`.
+
+**Manuel.** Le chapitre 09 gagne « Le sprite — une image face à la caméra », et sa liste de manques
+ne mentionne plus que le texte. Le chapitre 18 explique le report plutôt que de le constater.
 
 Déclarés dans `MESH_ENTRIES` avec `disabled: true`, grisés dans tous les menus parce que
 `MESH_BUILDERS` ne leur donne pas de `create` (`mesh-primitives.ts:141`). Leur JSDoc dit le pourquoi :

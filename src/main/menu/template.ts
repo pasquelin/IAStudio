@@ -5,8 +5,10 @@ import { APP_NAME } from '@shared/constants'
 import {
   LIGHT_ENTRIES,
   MESH_ENTRIES,
+  OBJECT_ENTRIES,
   type LightKind,
   type MeshKind,
+  type ObjectKind,
   type SceneEntry,
 } from '@shared/domain/scene'
 import { placementIn, type ToolId, type ToolPlacement } from '@shared/domain/tool'
@@ -143,7 +145,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   ]
 
   const entryItem =
-    <K extends MeshKind | LightKind>(labels: Record<K, string>) =>
+    <K extends MeshKind | LightKind | ObjectKind>(labels: Record<K, string>) =>
     (entry: SceneEntry<K>): MenuItemConstructorOptions => ({
       label: labels[entry.kind],
       enabled: !entry.disabled,
@@ -159,6 +161,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
             submenu: [
               { label: t.menu.mesh, submenu: MESH_ENTRIES.map(entryItem<MeshKind>(t.meshes)) },
               { label: t.menu.light, submenu: LIGHT_ENTRIES.map(entryItem<LightKind>(t.lights)) },
+              {
+                label: t.menu.object,
+                submenu: OBJECT_ENTRIES.map(entryItem<ObjectKind>(t.objects)),
+              },
             ],
           },
         ]

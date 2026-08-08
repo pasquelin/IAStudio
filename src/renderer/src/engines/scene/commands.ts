@@ -4,6 +4,7 @@ import type {
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
+  SpriteDescriptor,
   Transform,
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
@@ -14,9 +15,12 @@ import { newId } from '@/helpers/ids'
 import { groupNode } from './node-factory'
 import {
   canCastShadow,
+  canReceiveShadow,
   canReparent,
   nodeById,
   subtreeOf,
+  type SceneNodeBase,
+  type SceneNodeType,
   type MeshNode,
   type NodeMove,
   type SceneNode,
@@ -118,9 +122,9 @@ export function setShadowOn(
 
 type ShadowPatch = Partial<Pick<SceneNode, 'castShadow' | 'receiveShadow'>>
 
-/** A light catches nothing, and one without a shadow camera throws nothing either. */
+/** A light catches nothing, one without a shadow camera throws nothing, a sprite does neither. */
 function refuses(node: SceneNode, changes: ShadowPatch): boolean {
-  if (changes.receiveShadow !== undefined && node.type === 'light') return true
+  if (changes.receiveShadow !== undefined && !canReceiveShadow(node)) return true
   return changes.castShadow !== undefined && !canCastShadow(node)
 }
 
@@ -138,9 +142,9 @@ function editMesh(label: string, id: string, changes: MeshPatch): Command<SceneS
       const node = nodeById(state, id)
       if (node?.type !== 'mesh') return state
       previous = { geometry: node.geometry, material: node.material }
-      return patchMesh(state, id, changes)
+      return patchPart(state, id, 'mesh', changes)
     },
-    revert: state => (previous ? patchMesh(state, id, previous) : state),
+    revert: state => (previous ? patchPart(state, id, 'mesh', previous) : state),
   }
 }
 
@@ -161,9 +165,9 @@ export function setLight(id: string, light: LightDescriptor): Command<SceneState
       const node = nodeById(state, id)
       if (node?.type !== 'light') return state
       previous = node.light
-      return patchLight(state, id, light)
+      return patchPart(state, id, 'light', { light })
     },
-    revert: state => (previous ? patchLight(state, id, previous) : state),
+    revert: state => (previous ? patchPart(state, id, 'light', { light: previous }) : state),
   }
 }
 
@@ -184,20 +188,21 @@ function patch(state: SceneState, id: string, changes: NodePatch): SceneState {
 
 type MeshPatch = Partial<Pick<MeshNode, 'geometry' | 'material'>>
 
-function patchMesh(state: SceneState, id: string, changes: MeshPatch): SceneState {
+/**
+ * The discriminated half of one node, replaced. Keyed by `type` as well as by id: `type` is what
+ * forbids a light from holding a geometry, and a node of another kind is left alone rather than
+ * given a field its shape has no room for.
+ */
+function patchPart<T extends SceneNodeType>(
+  state: SceneState,
+  id: string,
+  type: T,
+  changes: Partial<Omit<Extract<SceneNode, { type: T }>, keyof SceneNodeBase | 'type'>>,
+): SceneState {
   return {
     ...state,
     nodes: state.nodes.map(node =>
-      node.id === id && node.type === 'mesh' ? { ...node, ...changes } : node,
-    ),
-  }
-}
-
-function patchLight(state: SceneState, id: string, light: LightDescriptor): SceneState {
-  return {
-    ...state,
-    nodes: state.nodes.map(node =>
-      node.id === id && node.type === 'light' ? { ...node, light } : node,
+      node.id === id && node.type === type ? { ...node, ...changes } : node,
     ),
   }
 }
@@ -297,6 +302,35 @@ export function setMaterialOn(
 ): Command<SceneState> {
   return batch('material', nodes, node =>
     node.type === 'mesh' ? setMaterial(node.id, { ...node.material, ...changes }) : null,
+  )
+}
+
+/**
+ * The sprite's own parameters. A node of another type is left alone rather than patched, exactly
+ * as `editMesh` refuses to give a light a geometry.
+ */
+export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneState> {
+  let previous: SpriteDescriptor | null = null
+
+  return {
+    id: `sprite:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'sprite') return state
+      previous = node.sprite
+      return patchPart(state, id, 'sprite', { sprite })
+    },
+    revert: state => (previous ? patchPart(state, id, 'sprite', { sprite: previous }) : state),
+  }
+}
+
+/** The same, spread over a selection — the sprite counterpart of `setMaterialOn`. */
+export function setSpriteOn(
+  nodes: readonly SceneNode[],
+  changes: Partial<SpriteDescriptor>,
+): Command<SceneState> {
+  return batch('sprite', nodes, node =>
+    node.type === 'sprite' ? setSprite(node.id, { ...node.sprite, ...changes }) : null,
   )
 }
 

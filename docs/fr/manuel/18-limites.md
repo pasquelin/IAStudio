@@ -121,9 +121,14 @@ haut, « Ce que cela veut dire concrètement ».
 - **l'export** d'une scène vers un fichier `.glb` ou `.usdz` — on peut importer un modèle et le
   mettre en scène, pas ressortir la scène montée.
 
-### Deux objets annoncés mais non constructibles
+### Le texte 3D est annoncé mais non constructible
 
-**Sprite** et **Texte** apparaissent grisés dans le menu **Ajouter**.
+**Texte** apparaît grisé dans le menu **Ajouter**.
+
+three.js construit un texte en volume à partir d'un **fichier de police** converti. Le studio n'en
+embarque aucun, et le catalogue d'un projet ne connaît pas ce genre d'asset : ni image, ni vidéo,
+ni son, ni modèle 3D. Tant que l'un des deux n'existe pas, l'entrée reste grisée plutôt que de
+promettre ce qu'aucun chemin ne peut tenir.
 
 ### Le raccourci `S` fait deux choses à la fois
 

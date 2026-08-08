@@ -290,9 +290,7 @@
     "plane": "Plane",
     "ring": "Ring",
     "sphere": "Sphere",
-    "sprite": "Sprite",
     "tetrahedron": "Tetrahedron",
-    "text": "Text",
     "torus": "Torus",
     "torusKnot": "Torus knot",
     "tube": "Tube",
@@ -326,6 +324,10 @@
     "otherWorkspace": "The explorer follows a 3D scene. Open the 3D workspace to see its contents.",
     "noDocument": "Open a scene to see what is in it."
   },
+  "objects": {
+    "sprite": "Sprite",
+    "text": "Text"
+  },
   "inspector": {
     "noDocument": "Open a scene to inspect what is in it.",
     "castShadow": "Casts a shadow",
@@ -335,6 +337,7 @@
     "transform": "Transform",
     "geometry": "Geometry",
     "material": "Material",
+    "sprite": "Sprite",
     "light": "Light",
     "name": "Name",
     "position": "Position",
@@ -373,6 +376,7 @@
       "roughness": "Roughness",
       "metalness": "Metalness",
       "map": "Texture",
+      "opacity": "Opacity",
       "normalMap": "Normals",
       "roughnessMap": "Roughness map",
       "metalnessMap": "Metalness map",
@@ -588,6 +592,7 @@
     "add": "Add",
     "mesh": "Mesh",
     "light": "Light",
+    "object": "Object",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
     "zoomIn": "Zoom in",

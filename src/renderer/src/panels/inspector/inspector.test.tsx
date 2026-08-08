@@ -5,7 +5,7 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/node-factory'
-import { lightNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
+import { lightNodeFixture, meshNode, spriteNodeFixture } from '@/engines/scene/scene-fixtures'
 import {
   DEFAULT_MATERIAL,
   IDENTITY_TRANSFORM,
@@ -152,6 +152,37 @@ describe('inspector panel', () => {
     expect(screen.queryByRole('button', { name: /Géométrie/ })).not.toBeInTheDocument()
     // A light is placed like anything else: the transform is not a mesh privilege.
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
+  })
+
+  it('shows a sprite its own section, and no material', () => {
+    install(spriteNodeFixture('sprite-1'))
+    render(<Content />)
+
+    expect(screen.getByRole('button', { name: /Sprite/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Matériau/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
+  })
+
+  // three.js draws meshes into a shadow map and nothing else: both switches would be inert.
+  it('offers a sprite no shadow section at all', () => {
+    install(spriteNodeFixture('sprite-1'))
+    render(<Content />)
+
+    expect(screen.queryByRole('button', { name: /Ombres/ })).not.toBeInTheDocument()
+  })
+
+  it('fades a sprite through the history', () => {
+    install(spriteNodeFixture('sprite-1'))
+    render(<Content />)
+
+    fireEvent.change(screen.getByLabelText('Opacité'), { target: { value: '0.4' } })
+
+    const node = nodeInStore('sprite-1')
+    expect(node?.type === 'sprite' && node.sprite.opacity).toBe(0.4)
+
+    useScenes.getState().undo('doc-1')
+    const back = nodeInStore('sprite-1')
+    expect(back?.type === 'sprite' && back.sprite.opacity).toBe(1)
   })
 
   it('follows the selection', () => {

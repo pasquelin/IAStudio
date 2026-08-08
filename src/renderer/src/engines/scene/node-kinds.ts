@@ -1,4 +1,12 @@
-import { mdiCubeScan, mdiFolderOutline, mdiLightbulbOutline, mdiShapeOutline } from '@mdi/js'
+import {
+  mdiCubeScan,
+  mdiFolderOutline,
+  mdiFormatText,
+  mdiImageOutline,
+  mdiLightbulbOutline,
+  mdiShapeOutline,
+} from '@mdi/js'
+import { OBJECT_ENTRIES, type ObjectKind } from '@shared/domain/scene'
 import { LIGHT_TYPES } from './light-types'
 import { MESH_PRIMITIVES } from './mesh-primitives'
 import type { SceneNodeType } from './scene-state'
@@ -21,8 +29,11 @@ export type NodeKind = {
  * The kinds a panel is built for. A model is not one — it arrives from the project's assets —
  * and neither is a group, which is made by grouping a selection rather than picked from a menu.
  * Everything here is read by a panel, its title bar and its flyout: what those two have none of.
+ *
+ * A sprite is picked from a menu like a mesh, but one sprite is not a family: a panel listing
+ * the sprites of a scene would be a panel of one row and one Add button.
  */
-export type PanelNodeType = Exclude<SceneNodeType, 'model' | 'group'>
+export type PanelNodeType = Exclude<SceneNodeType, 'model' | 'sprite' | 'group'>
 
 /**
  * What tells a mesh from a light, everywhere: the rail icon, the panels, the toolbar's Add
@@ -33,16 +44,31 @@ export const NODE_KINDS: Record<PanelNodeType, NodeKind> = {
   light: { icon: mdiLightbulbOutline, entries: LIGHT_TYPES, namespace: 'lights' },
 }
 
+const OBJECT_ICONS: Record<ObjectKind, string> = {
+  sprite: mdiImageOutline,
+  text: mdiFormatText,
+}
+
 /** The glyphs of the kinds no registry describes, since neither is picked from a menu. */
 export const MODEL_ICON = mdiCubeScan
 export const GROUP_ICON = mdiFolderOutline
+export const SPRITE_ICON = OBJECT_ICONS.sprite
 
 /** i18n key of what a kind is called. */
-export function labelKeyOf(kind: NodeKind, entry: AddEntry): string {
-  return `${kind.namespace}.${entry.kind}`
+export function labelKeyOf(namespace: string, entry: AddEntry): string {
+  return `${namespace}.${entry.kind}`
 }
 
-/** Everything a scene can hold, meshes then lights, in the order the registries declare. */
-export const ADD_ENTRIES: readonly { entry: AddEntry; labelKey: string }[] = Object.values(
-  NODE_KINDS,
-).flatMap(kind => kind.entries.map(entry => ({ entry, labelKey: labelKeyOf(kind, entry) })))
+/**
+ * Everything a scene can hold, family by family, in the order the registries declare. The
+ * families with a panel come from `NODE_KINDS`; sprite and text have none — see `PanelNodeType`.
+ */
+export const ADD_ENTRIES: readonly { entry: AddEntry; labelKey: string }[] = [
+  ...Object.values(NODE_KINDS),
+  {
+    entries: OBJECT_ENTRIES.map(entry => ({ ...entry, icon: OBJECT_ICONS[entry.kind] })),
+    namespace: 'objects',
+  },
+].flatMap(({ entries, namespace }) =>
+  entries.map(entry => ({ entry, labelKey: labelKeyOf(namespace, entry) })),
+)

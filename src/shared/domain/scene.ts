@@ -120,6 +120,21 @@ export type MaterialDescriptor = {
 } & { [S in TextureSlot]: TextureRef | null }
 
 /**
+ * A sprite: a picture that always faces the camera, whatever the view does.
+ *
+ * Not a geometry and not a material — nothing about it is three-dimensional, and it is lit by
+ * nothing — which is why it is a node of its own rather than a mesh wearing a plane. Its size
+ * is its transform's scale, like everything else in the scene.
+ */
+export type SpriteDescriptor = {
+  /** `null` means the studio's own colour, resolved from the palette when the sprite is built. */
+  color: string | null
+  opacity: number
+  /** What it draws. None leaves the plain coloured quad three.js gives a mapless sprite. */
+  map: TextureRef | null
+}
+
+/**
  * `target` is a point, not an object. three.js aims a light at an `Object3D`, and the official
  * editor shows that object in its outliner — but a node that cannot be renamed, hidden or
  * deleted is a property that leaked into the tree, and it doubles the length of a lit scene.
@@ -140,8 +155,7 @@ export type LightDescriptor =
       target: Vector3
     }
 
-/** `sprite` and `text` are offered but not buildable yet: neither is a geometry. */
-export type MeshKind = GeometryDescriptor['kind'] | 'sprite' | 'text'
+export type MeshKind = GeometryDescriptor['kind']
 
 export type LightKind = LightDescriptor['kind']
 
@@ -172,12 +186,23 @@ export const MESH_ENTRIES: readonly SceneEntry<MeshKind>[] = [
   { kind: 'plane' },
   { kind: 'ring' },
   { kind: 'sphere' },
-  { kind: 'sprite', disabled: true },
   { kind: 'tetrahedron' },
-  { kind: 'text', disabled: true },
   { kind: 'torus' },
   { kind: 'torusKnot' },
   { kind: 'tube' },
+]
+
+/**
+ * What is picked from the Add menu without being a mesh or a light.
+ *
+ * `text` is declared and greyed: three.js builds a 3D text from a font file, a project holds no
+ * asset of that kind, and the studio ships none — see the plan of the 3D workspace.
+ */
+export type ObjectKind = 'sprite' | 'text'
+
+export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
+  { kind: 'sprite' },
+  { kind: 'text', disabled: true },
 ]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [

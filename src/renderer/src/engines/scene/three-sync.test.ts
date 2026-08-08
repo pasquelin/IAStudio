@@ -6,11 +6,18 @@ import {
   MeshStandardMaterial,
   PointLight,
   SpotLight,
+  SpriteMaterial,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { geometryFor } from './three-factory'
 import { DEFAULT_MATERIAL } from './scene-state'
-import { applyGeometry, applyLight, applyMaterial, standardMaterialOf } from './three-sync'
+import {
+  applyGeometry,
+  applyLight,
+  applyMaterial,
+  applySprite,
+  standardMaterialOf,
+} from './three-sync'
 
 describe('applyMaterial', () => {
   it('writes the descriptor into the material it was given', () => {
@@ -54,6 +61,44 @@ describe('applyMaterial', () => {
     applyMaterial(material, DEFAULT_MATERIAL, '')
 
     expect(material.color.getHexString()).toBe('123456')
+  })
+})
+
+describe('applySprite', () => {
+  const sprite = { color: '#ff0000', opacity: 1, map: null }
+
+  it('writes the descriptor into the material it was given', () => {
+    const material = new SpriteMaterial()
+
+    applySprite(material, sprite, '#123456')
+
+    expect(material.color.getHexString()).toBe('ff0000')
+    expect(material.opacity).toBe(1)
+  })
+
+  it('falls back to the studio colour when the descriptor carries none', () => {
+    const material = new SpriteMaterial()
+
+    applySprite(material, { ...sprite, color: null }, '#00ff00')
+
+    expect(material.color.getHexString()).toBe('00ff00')
+  })
+
+  it('fades the sprite', () => {
+    const material = new SpriteMaterial()
+
+    applySprite(material, { ...sprite, opacity: 0.5 }, '#123456')
+
+    expect(material.opacity).toBe(0.5)
+  })
+
+  // Switched off at full opacity, every picture with an alpha channel would draw its whole quad.
+  it('leaves the material transparent, whatever the opacity says', () => {
+    const material = new SpriteMaterial()
+
+    applySprite(material, sprite, '#123456')
+
+    expect(material.transparent).toBe(true)
   })
 })
 
