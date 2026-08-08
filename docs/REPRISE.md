@@ -639,65 +639,44 @@ résolution des raccourcis de toute l'application. Documenté aux chapitres 15 e
 canaux comme domaine, le viewport partagé, le panneau matériau, la bande de canaux — et la
 vérification à l'écran reste due, cf. la fin de ce §.
 
-### Les étapes 4 et 5 sont livrées
+### Ce que les étapes 4 et 5 ont appris, et qu'il ne faut pas repayer
 
-**4 — Panneau matériau.** Les treize réglages que `MaterialSettings` portait depuis l'étape 3 ont
-leur surface : `panels/inspector/TextureInspector.tsx`, quatre sections (Matériau, Relief, Émission,
-Répétition) plus l'Aperçu. **Une face de l'inspecteur, pas un panneau** — et elle répond sur la
-branche `default`, celle de la scène : `activeIdOfKind` ne rend qu'un genre à la fois, donc les deux
-sont exclusives et l'ordre n'est pas une priorité (une mutation l'a prouvé, l'inverser ne cassait
-rien).
+Le récit de ce qui a été corrigé est dans les messages de `feat/textures-materiau`. Ne restent ici
+que les faits qui coûteraient une seconde fois.
 
-Trois choses que ce lot a apprises et qu'il ne faut pas redécouvrir :
-
-- **`ChannelMap.inverted` n'était lu par personne.** Le convertisseur de Scenario répond en
-  *smoothness* là où le studio stocke la rugosité ; le drapeau existait depuis l'étape 3 et le
-  moteur l'ignorait, donc tout canal `texture-smoothness` s'affichait à l'envers. L'inversion se
-  replie dans le remap — `mix(1, 0, v)` EST `1 - v` — donc **aucune branche de shader et aucun
-  define à recompiler**. C'est `remapOf` dans `engines/texture/material-shader.ts`.
-- **`edgeIntensity` avait sa JSDoc et aucun lecteur.** Le masque de cavité n'a **aucun slot** dans
-  `MeshStandardMaterial` : il passe par un uniform à lui, avec sa **propre matrice d'uv** et le
-  define `USE_UV`, parce que three ne construit la matrice que d'une carte qu'elle connaît. Sans
-  elle, le masque glisse hors de l'image dès qu'on change le tiling — et rien ne le disait, la
-  mutation correspondante était verte au premier passage.
-- **Une ancre de chunk que three renommerait est rapportée, pas avalée** (`texture.shader` dans
-  `LOG_SCOPES`) : le rendu continue sans son remap plutôt que de sortir une sphère noire. Les noms
-  vérifiés sur three 0.185 sont `roughnessmap_fragment`, `metalnessmap_fragment`, `aomap_fragment`
-  et `void main() {` — et `material-shader.test.ts` les teste contre `ShaderLib.physical`, donc un
-  renommage amont fait rougir un test au lieu d'un écran.
-
-**Rugosité, jamais brillance** — tranché : le fichier, three et la face 3D disent tous rugosité. Le
-manuel porte l'équivalence pour qui vient de Substance.
-
-**Deux réutilisations plutôt que deux copies.** `EnvironmentSection` est **partagée avec l'espace
-3D** (elle reçoit un `onChange` au lieu d'un `SceneEdit`), et `Vector3Field` est devenu
-**`VectorField`**, générique sur ses axes — un tiling en a deux, et un composant écrit pour lui
-aurait été celui-là moins une ligne.
-
-**5 — Bande de canaux.** `ToolId` `channels`, **colonne de droite** et non bande du bas : le bas
-appartient à l'étagère dans cet espace, et déposer une image sur un canal exige que les deux soient
-visibles ensemble. Les huit tuiles s'enroulent sur deux colonnes. Badge d'origine par tuile, dépôt
-par tuile, et **un canal se regarde à plat en le cliquant** — vue posée PAR-DESSUS le viewport,
-jamais à sa place : un contexte WebGL ne survit pas à sa reconstruction pour un coup d'œil.
-`stores/texture-views.ts` tient cet état, non persisté, hors historique.
-
-Deux pièges payés ici :
-
-- **`MenuButton` agit directement quand il n'a qu'une ligne** (`useHoverFlyout(rowCount)`). Un
-  projet ne contenant qu'une image ne pouvait donc pas ouvrir le menu d'un canal. « Vider » est
-  devenu l'une des lignes, comme `TextureField` le fait déjà ;
-- **le nom accessible d'une tuile venait de sa légende**, qui dit quel canal c'est et rien de ce que
-  le clic fait. Un `aria-label` explicite le remplace.
+- **Les noms de chunks de three sont vérifiés, et un test les tient.** `roughnessmap_fragment`,
+  `metalnessmap_fragment`, `aomap_fragment` et `void main() {` sur 0.185.1, testés contre le vrai
+  `ShaderLib.physical` — un renommage amont fait rougir `material-shader.test.ts` au lieu d'un
+  écran. Une ancre manquante est **rapportée** (`texture.shader`), pas avalée : le rendu continue
+  sans son remap plutôt que de sortir une sphère noire.
+- **Le masque de cavité n'a aucun slot** dans `MeshStandardMaterial` : il passe par un uniform à
+  lui, avec sa **propre matrice d'uv** et le define `USE_UV`, parce que three ne construit la
+  matrice que d'une carte qu'elle connaît.
+- **Ne jamais poser `needsUpdate` sur une texture pour la déplacer.** Il incrémente aussi
+  `source.needsUpdate` : three réuploade les pixels ET reconstruit les mips. Huit canaux 2K, c'est
+  128 Mo par frame. `matrixAutoUpdate` suffit ; seuls `wrapS`/`wrapT` sont de l'état d'upload.
+- **Deux canaux portent de la couleur**, `baseColor` et `emissive` — `contentOf` le dit, et un
+  test exhaustif sur l'union le verrouille. La version précédente testait `channel === 'baseColor'`
+  et sortait l'émission assombrie.
+- **Une borne se déclare une fois** (`MATERIAL_BOUNDS`, `PREVIEW_BOUNDS`), lue par le champ et par
+  le parseur. Et un angle s'**enveloppe** (`normalizeAzimuth`) là où une échelle se clampe : clamper
+  un angle jette ce que l'auteur du fichier avait écrit.
+- **`MenuButton` agit au lieu d'ouvrir quand il n'a qu'une ligne** (`useHoverFlyout(rowCount)`).
+  Un menu qui peut se retrouver à une seule ligne doit en offrir une seconde, fût-elle désactivée.
+- **Un dépôt refusé doit parler**, et sa portée va dans `GESTURE_SCOPES` : `AssetDropTarget` ne
+  peut pas refuser pendant le vol — un glissement annonce son type, pas où est son fichier.
 
 **Ce qui reste de l'étape 5** : l'import d'un fichier du disque **directement** dans un canal. Le
 détour existe (importer dans le projet, puis déposer sur la vignette) et il est écrit au manuel.
 `IMPORTABLE_TYPES` ne connaît pas les canaux, donc c'est un chemin à ouvrir, pas un bug.
 
-**Une lacune d'accessibilité trouvée en passant et NON corrigée** : `design/MenuRow.tsx` dessine sa
-coche mais n'expose aucun `aria-checked`. Un lecteur d'écran ne dit donc pas quelle ligne est active,
-dans **tous** les menus du studio. Le rôle juste serait `menuitemradio`, ce qui casse toutes les
-suites interrogeant `getByRole('menuitem')` — d'où le report plutôt qu'un passage en force depuis un
-chantier Textures.
+**Trois angles de revue sur cinq n'ont pas rendu** sur ce lot — bugs par reproduction, historique
+git, adverse three.js/React. Les relancer sur ce diff est le premier geste utile si un défaut
+apparaît dans cet espace.
+
+**Noté ailleurs, hors périmètre** : `design/MenuRow.tsx` n'expose aucun `aria-checked`, dans tous
+les menus du studio ; `useDocuments.refresh()` ne passe pas par `forgetDocument`, donc les vues de
+session d'un projet quitté y survivent.
 
 **6 — Dérivations en shader.** `engines/texture/derive/` : quad plein écran, `WebGLRenderTarget`,
 **port injectable** (jsdom n'a pas de WebGL). Sobel height→normal d'abord. **Aucune boucle JS sur des
@@ -721,80 +700,13 @@ ses propres yeux, avec un projet ouvert et le MCP `electron` après `pnpm start:
 - **la sphère éclairée** et une image posée en couleur de base (le viewport noir d'avant venait de
   l'environnement studio manquant, corrigé depuis) ;
 - **le remap** : un canal de rugosité plat, les deux poignées écartées, et le contraste qui apparaît.
-  jsdom ne compile aucun shader, donc les 13 tests de `material-shader.test.ts` prouvent le texte du
+  jsdom ne compile aucun shader, donc les tests de `material-shader.test.ts` prouvent le texte du
   GLSL et **pas** ce qu'il dessine ;
 - **le masque de cavité**, pour la même raison, et parce que c'est le seul uniform à porter sa propre
   matrice d'uv ;
 - **la vue à plat** d'un canal, en `image-rendering: pixelated`.
 
 Un jalon visuel validé uniquement par des tests unitaires n'est validé qu'à moitié — § 5.
-
-### Ce que la revue de code a rendu, et qui est corrigé
-
-`/simplify` puis `/code-review` sont passés. La revue a été menée sur cinq angles ; **deux ont rendu
-avant qu'elle soit interrompue**, et leurs trouvailles sont traitées. Ce qui suit est ce qu'elles ont
-appris, pour ne pas le redécouvrir.
-
-**Un vrai bug de rendu, et le plus instructif du lot.** `spaceOf` répondait
-`channel === 'baseColor' ? sRGB : NoColorSpace` — or **deux** canaux portent de la couleur :
-`emissive` en est un, et three le lit en sRGB comme la carte de base. Un canal émissif sortait
-assombri et désaturé. Le commentaire qui justifiait la fonction était recopié de
-`engines/scene/material-textures.ts`, où il était **vrai** : là-bas `TEXTURE_SLOTS` ne contient
-aucune carte de couleur hors `map`. La leçon est celle du § 5 — un commentaire déplacé garde sa
-formulation et perd sa vérité. La réponse vit maintenant dans le domaine,
-`CONTENT_BY_CHANNEL` / `contentOf`, troisième table de la famille de `SLOT_BY_CHANNEL` et
-`SOURCE_BY_CHANNEL`, exhaustive sur l'union.
-
-**`spaceOf` est antérieur à ce lot ; c'est ce lot qui a rendu le défaut atteignable** en ouvrant les
-huit canaux au dépôt. Le critère retenu : un lot qui rend un défaut théorique atteignable en hérite.
-
-**Les bornes sont unifiées pour de bon.** `MATERIAL_BOUNDS` et `PREVIEW_BOUNDS` sont lues par le
-champ **et** par le parseur. Deux natures y sont distinguées : ce qui se **clampe** (`normalScale`,
-`heightScale`, `emissiveIntensity`, `tiling`, `envIntensity`) et ce qui s'**enveloppe** —
-`rotation` et `envRotation` passent par `normalizeAzimuth`, parce qu'un angle est cyclique et qu'un
-clamp jetterait ce que l'auteur du fichier avait écrit. `offset` est laissé libre : trois l'enveloppe
-lui-même.
-
-**Un dépôt refusé ne se tait plus.** `AssetDropTarget` ne peut pas refuser une image du cloud
-pendant qu'elle vole — un glissement annonce son **type**, pas où est son fichier — donc neuf
-surfaces peignaient un liseré d'acceptation puis ne faisaient rien, ce que la JSDoc de ce composant
-appelle elle-même le pire des deux. Le refus est dit depuis `placeTextureChannel`, donc une fois pour
-les neuf, sous la portée `texture.channel`. Elle est dans `GESTURE_SCOPES` : un dépôt est un geste
-demandé, et le second doit parler comme le premier — c'est le défaut que `feat/documents-erreurs`
-avait corrigé pour les autres.
-
-**Cohérence visuelle.** La tuile inspectée était marquée `ring-accent ring-2`, seule occurrence du
-dépôt hors de `FOCUS_RING`. Elle passe par `rowSkin`, comme toute ligne choisie du studio — et
-`Collection` documente déjà que **c'est le conteneur qui peint la sélection, pas l'élément**.
-
-**Deux contrats remis d'aplomb.** `MediaTile` promettait un badge « overlaid at the top right »
-alors que son code passe le slot tel quel : la JSDoc dit désormais que le coin appartient au badge,
-et `AssetBadge` est celui qui se place à droite. Et la tuile ne met plus la `<figure>` de `MediaTile`
-**dans un `<button>`** — un bouton n'accepte que du contenu phrasé ; le bouton est posé par-dessus.
-
-**Trois défauts dans ce que ce lot avait écrit lui-même** : un `as` sans justification (supprimé, pas
-commenté — la clé se lit sans lui) ; `forgetDocument` appelait `useTextureViews.forget` sans qu'aucun
-test ne l'exerce ; et un test cherchait l'absence du mot « Brillance », **qu'aucun bundle ne
-contient** — il ne pouvait pas échouer. Il interroge maintenant le bundle. Les deux remaps, enfin,
-portaient le **même** libellé.
-
-**Ce que la revue a vérifié et déclaré exact**, pour ne pas le re-soupçonner : les quatre ancres du
-patch GLSL contre le vrai `ShaderLib.physical` de three 0.185.1 ; `texelRoughness.g` et
-`texelMetalness.b` en portée sous le bon `#ifdef` ; le masque de cavité épargne réellement les
-spéculaires ; `mix(1,0,v) === 1-v` et aucun define à recompiler pour une inversion ; « Never fewer
-than two » sur le compte de lignes du menu ; « nothing above affects the PROGRAM » pour les quinze
-réglages ; la garde `sameTransform` (aucune écriture ne mute `tiling` en place, donc elle ne peut pas
-être aveuglée) ; et `DEFAULT_TEXTURE_MATERIAL` reste gelé, aucune écriture nulle part.
-
-**Trois angles de revue n'ont pas rendu** — bugs par reproduction, historique git, adverse
-three.js/React. Ce qu'ils auraient trouvé n'est pas connu ; les relancer sur ce diff est le premier
-geste utile si un défaut apparaît dans cet espace.
-
-**Reste ouvert, hors périmètre et noté** : extraire les lignes de menu de `TextureField` (le geste
-est juste, il touche un composant que la 3D utilise) ; une table genre → face pour `Inspector` ;
-`useDocuments.refresh()` ne passe pas par `forgetDocument`, donc les vues de session d'un projet
-quitté y survivent ; `design/MenuRow.tsx` n'expose aucun `aria-checked`, dans **tous** les menus du
-studio.
 
 ---
 
