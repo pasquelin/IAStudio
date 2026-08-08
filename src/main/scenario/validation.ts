@@ -33,7 +33,9 @@ export function parseAssetName(value: unknown): string {
 const base64 = z
   .string()
   .min(1)
-  .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'expected raw base64')
+  // Only the head: the payload is megabytes long, and a data URL prefix — the one mistake this
+  // catches — is at the front. The size is checked before it, in the uploader.
+  .refine(value => /^[A-Za-z0-9+/]{1,64}/.test(value), 'expected raw base64')
 
 export function parseBase64(value: unknown): string {
   return base64.parse(value)

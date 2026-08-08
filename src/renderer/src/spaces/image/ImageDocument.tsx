@@ -8,6 +8,7 @@ import { CONTROL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { getBridge } from '@/services/bridge'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
@@ -168,8 +169,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         case 'canvas.extend': {
           const host = engine.current
           const edit = EDIT_BY_COMMAND[command]
+          const bridge = getBridge()
+          if (!host || !edit || !bridge) return
+
           // Prepared, never submitted: the form opens filled and the user is the one who runs it.
-          if (host && edit) void prepareEdit(documentId, edit, host, window.studio.scenario)
+          // The failure is swallowed here rather than left unhandled — the shortcut has nowhere
+          // to report to, and the panel it opens is what says whether anything was prepared.
+          void prepareEdit(documentId, edit, host, bridge.scenario).catch(() => undefined)
           return
         }
         case 'canvas.undo':

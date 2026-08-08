@@ -740,6 +740,9 @@ export class CanvasEngine {
     const url = await renderer.extract.base64({
       target: this.world,
       frame: new Rectangle(frame.x, frame.y, frame.width, frame.height),
+      // Not the renderer's, which is the display scale: the same document would otherwise be
+      // sent at 1024² from one screen and 2048² from another, at twice the price.
+      resolution: 1,
     })
     return payloadOf(url)
   }
@@ -751,9 +754,16 @@ export class CanvasEngine {
   async maskSnapshot(layerId: string): Promise<string | null> {
     const renderer = this.app?.renderer
     const mask = this.surfaces.get(maskKey(layerId))
-    if (!renderer || !mask) return null
+    const frame = this.documentRect()
+    if (!renderer || !mask || !frame) return null
 
-    const url = await renderer.extract.base64({ target: mask.sprite })
+    // Framed on the document like the picture it masks: extracting the sprite bare would drop
+    // the transform `place` put on it, and the mask would arrive offset from what it masks.
+    const url = await renderer.extract.base64({
+      target: mask.sprite,
+      frame: new Rectangle(frame.x, frame.y, frame.width, frame.height),
+      resolution: 1,
+    })
     return payloadOf(url)
   }
 

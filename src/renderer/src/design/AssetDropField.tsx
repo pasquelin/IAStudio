@@ -30,8 +30,18 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
   const [assetId, setAssetId] = useState(initial ?? '')
   const [over, setOver] = useState(false)
 
+  // A model switch resets the form; without this the old thumbnail outlives the value it stood
+  // for. Keyed on what the form was reset to, so typing in between is not undone.
+  const [seen, setSeen] = useState(initial)
+  if (seen !== initial) {
+    setSeen(initial)
+    setAssetId(initial ?? '')
+  }
+
   const take = (event: React.DragEvent): void => {
     event.preventDefault()
+    // Ours alone: an editor behind this field must not also receive the drop.
+    event.stopPropagation()
     setOver(false)
 
     const dropped = assetIdFromDrag(event)
@@ -59,11 +69,14 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
         </span>
       )}
 
+      {/* Controlled, so a drop shows in the field as well as in the thumbnail — and so the
+          reset a model switch performs empties both together. */}
       <input
         type="text"
         placeholder={placeholder}
         className={cn(FIELD, 'min-w-0 flex-1')}
         {...registration}
+        value={assetId}
         onChange={event => {
           setAssetId(event.target.value)
           void registration.onChange(event)

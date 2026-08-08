@@ -48,10 +48,21 @@ export async function prepareEdit(
   bridge: EditBridge,
 ): Promise<boolean> {
   const { family, masked } = AI_EDITS[edit]
-  const modelId = useSettings.getState().settings.generation.defaultModels[family]
+  // The session choice first, then the preference — the order the generator itself follows.
+  const modelId =
+    useModels.getState().selected[family] ??
+    useSettings.getState().settings.generation.defaultModels[family]
   if (!modelId) {
     // Never a model chosen on the user's behalf: the panel opens on the family instead.
     revealTool('models')
+    return false
+  }
+
+  // Described before anything is sent: an upload is a permanent asset in the user's library, and
+  // a model with nowhere to put a picture must not cost one.
+  const descriptor = await bridge.describeModel(modelId)
+  if (!descriptor.fields.some(field => field.kind === 'image')) {
+    revealTool('generator')
     return false
   }
 
@@ -60,14 +71,15 @@ export async function prepareEdit(
 
   const canvas = canvasOf(useCanvases.getState(), documentId)
   const layer = layerById(canvas, canvas.activeLayerId)
-  const mask = masked && layer?.mask ? await host.maskSnapshot(layer.id) : null
+  // `enabled`, not merely present: the canvas does not honour a mask whose box is unticked, and
+  // sending it would ask the model to repaint a region nothing on screen shows.
+  const mask = masked && layer?.mask?.enabled === true ? await host.maskSnapshot(layer.id) : null
 
   const [imageId, maskId] = await Promise.all([
     bridge.uploadAsset(`${documentId}.png`, image),
     mask ? bridge.uploadAsset(`${documentId}-mask.png`, mask) : Promise.resolve(null),
   ])
 
-  const descriptor = await bridge.describeModel(modelId)
   const values = fillEditFields(descriptor.fields, {
     image: imageId,
     ...(maskId ? { mask: maskId } : {}),

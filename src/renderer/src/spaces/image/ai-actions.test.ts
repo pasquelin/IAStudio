@@ -57,6 +57,42 @@ describe('preparing an edit', () => {
     expect(useModels.getState().preset.image).toMatchObject({ image: 'asset-flat' })
   })
 
+  // The session choice wins over the preference, the order the generator itself follows.
+  it('uses the model chosen in the panel over the one set in the preferences', async () => {
+    useModels.getState().select('image', 'model_chosen')
+
+    await prepareEdit(DOCUMENT, 'regenerate', host, bridge)
+
+    expect(useModels.getState().selected.image).toBe('model_chosen')
+  })
+
+  /**
+   * The canvas does not honour a mask whose box is unticked, so sending it would ask the model
+   * to repaint a region nothing on screen shows.
+   */
+  it('leaves a disabled mask out of the edit', async () => {
+    useCanvases
+      .getState()
+      .runCommand(DOCUMENT, setLayerMask('layer-1', { enabled: false, linked: true }))
+
+    await prepareEdit(DOCUMENT, 'regenerate', host, bridge)
+
+    expect(uploaded).toEqual(['FLAT'])
+  })
+
+  // An upload is a permanent asset in the user's library: a model with nowhere to put a picture
+  // must not cost one.
+  it('sends nothing to a model that takes no picture', async () => {
+    const textOnly = {
+      ...bridge,
+      describeModel: () =>
+        Promise.resolve({ fields: [FIELDS[0]].filter(field => field !== undefined) }),
+    }
+
+    await expect(prepareEdit(DOCUMENT, 'regenerate', host, textOnly)).resolves.toBe(false)
+    expect(uploaded).toEqual([])
+  })
+
   // The mask one paints is the mask one regenerates — but only where the layer carries one.
   it('sends the mask along when the armed layer has one', async () => {
     useCanvases

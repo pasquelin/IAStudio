@@ -61,8 +61,8 @@ const gpu: {
   painted: number[]
   /** What the engine asked the asset loader for, so the parser it forces can be asserted. */
   loaded: { src: string; parser?: string }[]
-  /** Every extraction, so what a snapshot framed can be asserted. */
-  extracted: { frame?: unknown }[]
+  /** Every extraction, so what a snapshot framed and at what scale can be asserted. */
+  extracted: { frame?: unknown; resolution?: number }[]
 } = {
   renders: 0,
   texturesCreated: 0,
@@ -185,7 +185,7 @@ vi.mock('pixi.js', () => {
         },
         extract: {
           pixels: () => ({ pixels: [0, 0, 0, 0] }),
-          base64: (options: { frame?: unknown }) => {
+          base64: (options: { frame?: unknown; resolution?: number }) => {
             gpu.extracted.push(options)
             return Promise.resolve('data:image/png;base64,QUJD')
           },
@@ -1113,6 +1113,34 @@ describe('flattening the document', () => {
 
     expect(gpu.extracted).toHaveLength(1)
     expect(gpu.extracted[0]?.frame).toBeDefined()
+  })
+
+  /**
+   * Not the renderer's resolution, which is the display scale: the same document would be sent
+   * at 1024² from one screen and 2048² from another, at twice the price and past the 6 MB the
+   * upload route accepts.
+   */
+  it('sends the document at its own size, whatever the screen is worth', async () => {
+    const { engine } = await mounted()
+
+    await engine.snapshot()
+
+    expect(gpu.extracted[0]?.resolution).toBe(1)
+  })
+
+  // Extracted bare, the sprite loses the transform `place` put on it and the mask arrives
+  // offset from the picture it masks.
+  it('frames a mask on the document, like the picture it masks', async () => {
+    const { engine } = await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [{ ...pixelLayer('layer-1', 'Background'), mask: { enabled: true, linked: true } }],
+      activeLayerId: 'layer-1',
+    })
+
+    await engine.maskSnapshot('layer-1')
+
+    expect(gpu.extracted[0]?.frame).toBeDefined()
+    expect(gpu.extracted[0]?.resolution).toBe(1)
   })
 
   // The mask one paints is the mask one regenerates: the same texture, alone.
