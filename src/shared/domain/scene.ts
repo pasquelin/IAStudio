@@ -64,6 +64,28 @@ export type TextureRef = { assetId: string }
 export type ModelRef = { assetId: string }
 
 /**
+ * What lights a viewport. `studio` is procedural — three builds a small lit room and prefilters
+ * it — so a brand new document is already lit without the studio shipping an HDRI; anything else
+ * is a skybox of the project, named by asset id like every other reference a document stores.
+ */
+export type EnvironmentRef = { kind: 'studio' } | { kind: 'skybox'; assetId: string }
+
+export const STUDIO_ENVIRONMENT: EnvironmentRef = Object.freeze({ kind: 'studio' })
+
+/**
+ * What a stored value says about lighting, or the studio when it says nothing usable — a
+ * document written before environments existed, a sky named without an id, a hand-edited file.
+ */
+export function readEnvironment(value: unknown): EnvironmentRef {
+  if (typeof value !== 'object' || value === null) return STUDIO_ENVIRONMENT
+
+  const held: { kind?: unknown; assetId?: unknown } = value
+  return held.kind === 'skybox' && typeof held.assetId === 'string' && held.assetId !== ''
+    ? { kind: 'skybox', assetId: held.assetId }
+    : STUDIO_ENVIRONMENT
+}
+
+/**
  * How soft a shadow edge is, named as a person would rather than as three.js spells it — the
  * engine maps these onto its map types. Here because it is persisted, and `shared/` is where
  * what a settings file holds is described.

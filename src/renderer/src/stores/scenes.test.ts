@@ -147,7 +147,10 @@ describe('gestures', () => {
   }
 
   beforeEach(() => {
-    useScenes.setState({ states: { 'doc-1': { nodes: [box], selectedIds: [] } }, histories: {} })
+    useScenes.setState({
+      states: { 'doc-1': { ...EMPTY_SCENE, nodes: [box], selectedIds: [] } },
+      histories: {},
+    })
   })
 
   it('leaves one history entry for a drag that emitted a value per frame', () => {
@@ -201,8 +204,8 @@ describe('gestures', () => {
     const store = useScenes.getState()
     useScenes.setState({
       states: {
-        'doc-1': { nodes: [box], selectedIds: [] },
-        'doc-2': { nodes: [box], selectedIds: [] },
+        'doc-1': { ...EMPTY_SCENE, nodes: [box], selectedIds: [] },
+        'doc-2': { ...EMPTY_SCENE, nodes: [box], selectedIds: [] },
       },
       histories: {},
     })

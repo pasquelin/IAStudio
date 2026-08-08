@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
-import { TEXTURE_SLOTS } from '@shared/domain/scene'
+import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/node-factory'
 import { lightNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
@@ -21,11 +21,16 @@ import { useSelection } from '@/stores/selection'
 import { installScene } from '@/stores/scene-fixtures'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { definition } from '.'
+import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 
 const { Content } = definition
 
 function install(node: SceneNode, selected = true): SceneState {
-  const state: SceneState = { nodes: [node], selectedIds: selected ? [node.id] : [] }
+  const state: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [node],
+    selectedIds: selected ? [node.id] : [],
+  }
   installScene('doc-1', state)
   return state
 }
@@ -64,11 +69,63 @@ describe('inspector panel', () => {
     expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
   })
 
-  it('says so when nothing is selected', () => {
+  // The environment belongs to the document rather than to a node, so it is what the panel shows
+  // when nothing is selected — in place of a message saying there is nothing to show.
+  it('shows what lights the scene when nothing is selected', () => {
     install(meshNode('box-1'), false)
     render(<Content />)
 
-    expect(screen.getByText('Sélectionnez un objet pour voir ses propriétés.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Environnement/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Transformation/ })).not.toBeInTheDocument()
+  })
+
+  it('offers the skies of the project, and the studio to come back to', async () => {
+    useAssets.setState({
+      items: [
+        {
+          id: 'sky-1',
+          name: 'Coucher',
+          type: 'skybox',
+          location: 'local',
+          path: 'assets/sky-1.png',
+          tags: [],
+          createdAt: '2026-08-08T00:00:00.000Z',
+        },
+      ],
+    })
+    render(<Content />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
+
+    expect(await screen.findByRole('menuitem', { name: /Coucher/ })).toBeInTheDocument()
+  })
+
+  it('writes the chosen sky into the document, through the history', async () => {
+    useAssets.setState({
+      items: [
+        {
+          id: 'sky-1',
+          name: 'Coucher',
+          type: 'skybox',
+          location: 'local',
+          path: 'assets/sky-1.png',
+          tags: [],
+          createdAt: '2026-08-08T00:00:00.000Z',
+        },
+      ],
+    })
+    render(<Content />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Coucher/ }))
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').environment).toEqual({
+      kind: 'skybox',
+      assetId: 'sky-1',
+    })
+
+    useScenes.getState().undo('doc-1')
+    expect(sceneOf(useScenes.getState(), 'doc-1').environment).toEqual({ kind: 'studio' })
   })
 
   it('shows the three sections of a mesh', () => {
@@ -99,6 +156,7 @@ describe('inspector panel', () => {
 
   it('follows the selection', () => {
     installScene('doc-1', {
+      ...EMPTY_SCENE,
       nodes: [meshNode('box-1'), lightNodeFixture('light-1')],
       selectedIds: ['light-1'],
     })
@@ -353,6 +411,7 @@ describe('inspector panel', () => {
   describe('several nodes at once', () => {
     function installPair(): void {
       installScene('doc-1', {
+        ...EMPTY_SCENE,
         nodes: [meshNode('box-1'), meshNode('box-2'), lightNodeFixture('light-1')],
         selectedIds: ['box-2', 'box-1'],
       })
@@ -392,6 +451,7 @@ describe('inspector panel', () => {
           { ...meshNode('box-2'), transform: moved(5, 0, 0) },
         ],
         selectedIds: ['box-2', 'box-1'],
+        environment: STUDIO_ENVIRONMENT,
       })
       render(<Content />)
       const handle = axisHandle('Y')
@@ -426,6 +486,7 @@ describe('inspector panel', () => {
           { ...meshNode('box-2'), transform: turned(1.5, 0, 0) },
         ],
         selectedIds: ['box-2', 'box-1'],
+        environment: STUDIO_ENVIRONMENT,
       })
       render(<Content />)
       const handle = axisHandle('Y', 1)

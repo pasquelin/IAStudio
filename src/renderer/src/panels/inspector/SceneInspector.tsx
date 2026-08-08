@@ -1,7 +1,5 @@
-import { mdiTuneVariant } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
 import { setGeometryOn, setLightOn, setMaterialOn } from '@/engines/scene/commands'
 import { geometryFields, lightFields } from '@/engines/scene/property-fields'
 import { selectedNodes } from '@/engines/scene/scene-state'
@@ -9,6 +7,7 @@ import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
+import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
 import { ShadowSection } from './ShadowSection'
 import { TransformSection } from './TransformSection'
@@ -33,6 +32,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // snapshot on every call, and the render loop never settles.
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
+  const environment = useScenes(state => sceneOf(state, documentId).environment)
   const selection = useMemo(() => selectedNodes(nodes, selectedIds), [nodes, selectedIds])
   const node = selection.at(-1) ?? null
 
@@ -47,12 +47,18 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
   const lit = useMemo(() => (light ? lightFields(light.light) : []), [light])
 
-  if (!node) return <EmptyState icon={mdiTuneVariant} message={t('inspector.noSelection')} />
-
+  // The environment belongs to the document rather than to a node, so it shows either way — and
+  // it is what keeps the panel from being empty when nothing is selected, in place of a message.
   return (
     <>
-      <TransformSection node={node} selection={selection} edit={edit} />
-      <ShadowSection node={node} selection={selection} edit={edit} />
+      <EnvironmentSection environment={environment} edit={edit} />
+
+      {node && (
+        <>
+          <TransformSection node={node} selection={selection} edit={edit} />
+          <ShadowSection node={node} selection={selection} edit={edit} />
+        </>
+      )}
 
       {mesh && (
         <>

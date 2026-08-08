@@ -6,6 +6,7 @@
  * `fs`, and a file path written into a document would stop the project folder from being moved.
  */
 import { isRecord, readBoolean, readNumber, readString } from '@shared/guards'
+import { readEnvironment, type EnvironmentRef } from '@shared/domain/scene'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { clamp } from '@/helpers/numeric'
 
@@ -159,13 +160,6 @@ function isPreviewShape(value: unknown): value is PreviewShape {
   return PREVIEW_SHAPES.some(candidate => candidate === value)
 }
 
-/**
- * What lights the preview. `studio` is procedural, so a brand new project already shows a
- * material under usable light; anything else is a skybox of the project — an asset, resolved to
- * a URL by the renderer, because a document stores identifiers and never paths.
- */
-export type PreviewEnvironment = { kind: 'studio' } | { kind: 'skybox'; assetId: string }
-
 /** How many times the map repeats on the preview. Local to the view, never baked into tiling. */
 export type TilingPreview = 1 | 2 | 4
 
@@ -177,7 +171,8 @@ function isTilingPreview(value: unknown): value is TilingPreview {
 
 export type PreviewSettings = {
   shape: PreviewShape
-  environment: PreviewEnvironment
+  /** What lights the preview — the same thing a 3D scene is lit by. */
+  environment: EnvironmentRef
   envIntensity: number
   /** Radians, around the vertical axis. */
   envRotation: number
@@ -323,13 +318,6 @@ function readMaterial(value: unknown): MaterialSettings {
     offset: readVector(value, 'offset', fallback.offset),
     rotation: readNumber(value, 'rotation', fallback.rotation),
   }
-}
-
-function readEnvironment(value: unknown): PreviewEnvironment {
-  if (!isRecord(value) || value.kind !== 'skybox') return { ...DEFAULT_PREVIEW.environment }
-
-  const assetId = readString(value, 'assetId', '')
-  return assetId.length > 0 ? { kind: 'skybox', assetId } : { ...DEFAULT_PREVIEW.environment }
 }
 
 function readPreview(value: unknown): PreviewSettings {

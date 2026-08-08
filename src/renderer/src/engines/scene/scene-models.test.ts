@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
 import { modelNodeFixture } from './scene-fixtures'
 import type { SceneState } from './scene-state'
+import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 
 /**
  * The model path, driven through the loader port — the whole point of that port existing. jsdom
@@ -16,7 +17,11 @@ function source(): Object3D {
 }
 
 function withModels(...ids: string[]): SceneState {
-  return { nodes: ids.map(id => modelNodeFixture(id, `asset-${id}`)), selectedIds: [] }
+  return {
+    ...EMPTY_SCENE,
+    nodes: ids.map(id => modelNodeFixture(id, `asset-${id}`)),
+    selectedIds: [],
+  }
 }
 
 function rendererLoading(load: (url: string) => Promise<Object3D>) {
@@ -39,8 +44,8 @@ describe('a model node', () => {
     const renderer = rendererLoading(load)
 
     renderer.apply({
+      ...EMPTY_SCENE,
       nodes: [modelNodeFixture('a', 'shared'), modelNodeFixture('b', 'shared')],
-      selectedIds: [],
     })
     await vi.waitFor(() => expect(load).toHaveBeenCalled())
 
@@ -61,15 +66,15 @@ describe('a model node', () => {
     const renderer = rendererLoading(load)
 
     renderer.apply({
+      ...EMPTY_SCENE,
       nodes: [modelNodeFixture('a', 'shared'), modelNodeFixture('b', 'shared')],
-      selectedIds: [],
     })
     await vi.waitFor(() => expect(load).toHaveBeenCalled())
 
-    renderer.apply({ nodes: [modelNodeFixture('b', 'shared')], selectedIds: [] })
+    renderer.apply({ ...EMPTY_SCENE, nodes: [modelNodeFixture('b', 'shared')], selectedIds: [] })
     expect(dispose).not.toHaveBeenCalled()
 
-    renderer.apply({ nodes: [], selectedIds: [] })
+    renderer.apply({ ...EMPTY_SCENE, nodes: [], selectedIds: [] })
     expect(dispose).toHaveBeenCalled()
 
     renderer.dispose()
@@ -82,7 +87,7 @@ describe('a model node', () => {
     const renderer = rendererLoading(load)
 
     renderer.apply(withModels('a'))
-    renderer.apply({ nodes: [], selectedIds: [] })
+    renderer.apply({ ...EMPTY_SCENE, nodes: [], selectedIds: [] })
     settle(source())
 
     // Asking again reads the file rather than handing back what nobody holds.

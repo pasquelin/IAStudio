@@ -11,12 +11,12 @@ describe('EMPTY_SCENE', () => {
 
 describe('nodeById', () => {
   it('finds a node by its id', () => {
-    const state: SceneState = { nodes: [mesh('a'), light('b')], selectedIds: [] }
+    const state: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), light('b')], selectedIds: [] }
     expect(nodeById(state, 'b')?.type).toBe('light')
   })
 
   it('returns null for an unknown id', () => {
-    expect(nodeById({ nodes: [mesh('a')], selectedIds: [] }, 'ghost')).toBeNull()
+    expect(nodeById({ ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }, 'ghost')).toBeNull()
   })
 })
 
@@ -39,18 +39,26 @@ describe('selectedNodes', () => {
 
 describe('childrenOf', () => {
   it('keeps the declared order', () => {
-    const state: SceneState = { nodes: [mesh('a'), mesh('b'), mesh('c')], selectedIds: [] }
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b'), mesh('c')],
+      selectedIds: [],
+    }
     expect(childrenOf(state, null).map(node => node.id)).toEqual(['a', 'b', 'c'])
   })
 
   it('separates roots from children', () => {
-    const state: SceneState = { nodes: [mesh('a'), mesh('b', 'a')], selectedIds: [] }
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b', 'a')],
+      selectedIds: [],
+    }
     expect(childrenOf(state, null).map(node => node.id)).toEqual(['a'])
     expect(childrenOf(state, 'a').map(node => node.id)).toEqual(['b'])
   })
 
   it('answers with nothing for a childless parent', () => {
-    const state: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const state: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     expect(childrenOf(state, 'a')).toEqual([])
   })
 })

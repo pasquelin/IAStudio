@@ -402,7 +402,44 @@ directionnelle, et le réglage est visible. Mesurer avant de décider.
 
 ## Étape 5 — Environnement / IBL dans le viewport
 
-- [ ] Livrée
+- [x] Livrée
+
+**Ce qui est livré.** `createEnvironment` branché dans `SceneRenderer`, l'environnement choisi
+porté par le document (studio ou skybox du projet), une section **Environnement** dans
+l'inspecteur — visible même sans sélection, puisque c'est une propriété du document et non d'un
+nœud. C'est le lien Skyboxes → 3D que la conception promettait. 2420 → 2434 tests.
+
+**Une décision de conception.** L'inspecteur n'affiche plus « sélectionnez un objet » quand rien
+n'est sélectionné : il affiche l'environnement. Le message disait au panneau d'être vide alors
+qu'il avait quelque chose à montrer, et l'`EmptyState` empilé sous une section faisait défiler le
+panneau au lieu de se centrer.
+
+**Une correction que le plan n'avait pas prévue : l'IBL annulait l'étape précédente.** Un
+environnement éclaire de partout et n'est occulté par rien ; à pleine intensité il remplit les
+ombres que les lumières viennent de projeter. Le studio de l'éditeur de scène est donc posé à
+0,4 — la préversion de texture, qui n'a ni lumières ni ombres, garde sa pleine intensité.
+
+**Trois bugs, tous dans la portion que j'avais recopiée depuis `TextureRenderer` :**
+
+- **revenir au studio laissait le viewport noir.** `setStudio` éclaire la scène mais n'accroche
+  rien derrière : après avoir effacé le ciel, le fond restait vide. Reproductible en trois clics ;
+- **le ciel disparaissait du fond au changement de thème ou de taille de grille.** `applyPalette`
+  repeint le fond, écrasant la texture — et rien ne la reposait, si bien que les matériaux
+  réfléchissaient un ciel que le fond n'affichait plus ;
+- **le ciel était libéré du GPU avant que son remplaçant soit en place**, donc détruit alors
+  qu'il était encore accroché au fond : three.js le ré-uploadait à la frame suivante, sans plus
+  rien pour le libérer.
+
+Les trois vivaient aussi dans l'espace Textures, d'où ils venaient. `viewport/sky-binding.ts`
+porte désormais la mécanique une seule fois, avec ses huit tests — l'ordre des opérations est
+toute la subtilité, et deux copies en étaient une de trop. `readEnvironment` a suivi le même
+chemin vers `shared/domain`, et `PreviewEnvironment` n'est plus qu'un nom pour `EnvironmentRef`.
+
+**Un arbitrage identifié et non pris : le tone mapping.** `ViewportEngine` documente que « un
+viewport qui juge un environnement HDR l'active », et l'espace Textures l'active. L'espace 3D ne
+l'active pas, si bien qu'un même ciel sur un même matériau ne rend pas pareil dans les deux. Je ne
+l'ai pas activé : cela change l'aspect de toutes les scènes existantes, et je ne peux pas le
+regarder cette nuit. À trancher en voyant les deux images.
 
 **Rien à écrire : à brancher.** `engines/viewport/environment.ts` porte déjà `createEnvironment`
 avec `setStudio`, `setTexture`, `refresh`, `setIntensity`, `setRotation`,

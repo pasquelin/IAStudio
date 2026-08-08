@@ -5,12 +5,14 @@
  * The descriptors themselves live in `shared/domain/scene.ts`: they are what a saved document
  * contains, and the native menu builds its Add entries from the same kinds.
  */
-import type {
-  GeometryDescriptor,
-  LightDescriptor,
-  MaterialDescriptor,
-  ModelRef,
-  Transform,
+import {
+  STUDIO_ENVIRONMENT,
+  type EnvironmentRef,
+  type GeometryDescriptor,
+  type LightDescriptor,
+  type MaterialDescriptor,
+  type ModelRef,
+  type Transform,
 } from '@shared/domain/scene'
 
 export type SceneNodeType = 'mesh' | 'light' | 'model'
@@ -43,6 +45,8 @@ export type SceneState = {
   nodes: SceneNode[]
   /** Ordered, and the last one is the anchor: what the inspector reads out. See `helpers/selection`. */
   selectedIds: readonly string[]
+  /** What lights the scene, and what its materials reflect. Part of the document. */
+  environment: EnvironmentRef
 }
 
 /** Where a node ended up, reported by whatever moved it — a gizmo drag moves a whole selection. */
@@ -94,7 +98,11 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
   aoMap: null,
 }
 
-export const EMPTY_SCENE: SceneState = { nodes: [], selectedIds: [] }
+export const EMPTY_SCENE: SceneState = {
+  nodes: [],
+  selectedIds: [],
+  environment: STUDIO_ENVIRONMENT,
+}
 
 export type MeshNode = Extract<SceneNode, { type: 'mesh' }>
 export type LightNode = Extract<SceneNode, { type: 'light' }>

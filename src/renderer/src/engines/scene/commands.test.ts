@@ -13,11 +13,13 @@ import {
   setLightOn,
   setMaterial,
   setNodeVisible,
+  setEnvironment,
   setSelection,
   setTransform,
 } from './commands'
 import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
 import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
+import type { EnvironmentRef } from '@shared/domain/scene'
 
 describe('addNode', () => {
   it('appends the node and selects it', () => {
@@ -34,7 +36,11 @@ describe('addNode', () => {
 
 describe('removeNode', () => {
   it('restores the node at its original index', () => {
-    const start: SceneState = { nodes: [mesh('a'), mesh('b'), mesh('c')], selectedIds: [] }
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b'), mesh('c')],
+      selectedIds: [],
+    }
     const command = removeNode('b')
     const removed = command.apply(start)
     expect(removed.nodes.map(node => node.id)).toEqual(['a', 'c'])
@@ -42,24 +48,32 @@ describe('removeNode', () => {
   })
 
   it('drops the removed node from the selection and leaves the rest of it standing', () => {
-    const start: SceneState = { nodes: [mesh('a'), mesh('b')], selectedIds: ['a', 'b'] }
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b')],
+      selectedIds: ['a', 'b'],
+    }
     expect(removeNode('a').apply(start).selectedIds).toEqual(['b'])
   })
 
   it('hands the anchor back to the previous node when it removes the anchor', () => {
-    const start: SceneState = { nodes: [mesh('a'), mesh('b')], selectedIds: ['a', 'b'] }
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b')],
+      selectedIds: ['a', 'b'],
+    }
     expect(removeNode('b').apply(start).selectedIds.at(-1)).toBe('a')
   })
 
   it('leaves an unknown id alone', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     expect(removeNode('ghost').apply(start)).toEqual(start)
   })
 })
 
 describe('setNodeVisible', () => {
   it('toggles visibility and comes back', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = setNodeVisible('a', false)
     const hidden = command.apply(start)
     expect(hidden.nodes[0]?.visible).toBe(false)
@@ -69,7 +83,7 @@ describe('setNodeVisible', () => {
 
 describe('renameNode', () => {
   it('renames and comes back', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = renameNode('a', 'Cube')
     const renamed = command.apply(start)
     expect(renamed.nodes[0]?.name).toBe('Cube')
@@ -79,7 +93,7 @@ describe('renameNode', () => {
 
 describe('setTransform', () => {
   it('survives being replayed through the history', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const moved = { ...IDENTITY_TRANSFORM, position: { x: 1, y: 2, z: 3 } }
     const [after, history] = run(start, emptyHistory<SceneState>(), setTransform('a', moved))
     expect(after.nodes[0]?.transform.position).toEqual({ x: 1, y: 2, z: 3 })
@@ -89,7 +103,7 @@ describe('setTransform', () => {
   })
 
   it('leaves the discriminated half of the node untouched', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const moved = { ...IDENTITY_TRANSFORM, position: { x: 5, y: 0, z: 0 } }
     const after = setTransform('a', moved).apply(start)
     const node = after.nodes[0]
@@ -100,7 +114,7 @@ describe('setTransform', () => {
 
 describe('setGeometry', () => {
   it('replaces the descriptor and comes back', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = setGeometry('a', {
       kind: 'sphere',
       radius: 2,
@@ -119,7 +133,7 @@ describe('setGeometry', () => {
   // A light holding a geometry is what the union exists to forbid, and it would be a document
   // that no longer loads.
   it('refuses to give a light a geometry', () => {
-    const start: SceneState = { nodes: [light('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [light('a')], selectedIds: [] }
     const command = setGeometry('a', {
       kind: 'sphere',
       radius: 1,
@@ -133,7 +147,7 @@ describe('setGeometry', () => {
 
 describe('setMaterial', () => {
   it('replaces the material and comes back', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = setMaterial('a', {
       ...DEFAULT_MATERIAL,
       color: '#ff0000',
@@ -150,7 +164,7 @@ describe('setMaterial', () => {
   })
 
   it('leaves the geometry it did not touch alone', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     const command = setMaterial('a', { ...DEFAULT_MATERIAL, roughness: 0.5 })
 
     const node = command.apply(start).nodes[0]
@@ -160,7 +174,7 @@ describe('setMaterial', () => {
 
 describe('setLight', () => {
   it('replaces the descriptor and comes back', () => {
-    const start: SceneState = { nodes: [light('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [light('a')], selectedIds: [] }
     const command = setLight('a', { kind: 'ambient', color: '#ffffff', intensity: 0.5 })
 
     const applied = command.apply(start)
@@ -172,7 +186,7 @@ describe('setLight', () => {
   })
 
   it('refuses to give a mesh a light', () => {
-    const start: SceneState = { nodes: [mesh('a')], selectedIds: [] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
 
     expect(setLight('a', { kind: 'ambient', color: '#ffffff', intensity: 1 }).apply(start)).toEqual(
       start,
@@ -190,7 +204,11 @@ describe('multi', () => {
 })
 
 describe('setSelection', () => {
-  const start: SceneState = { nodes: [mesh('a'), mesh('b'), mesh('c')], selectedIds: [] }
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [mesh('a'), mesh('b'), mesh('c')],
+    selectedIds: [],
+  }
 
   it('stays out of the history', () => {
     expect(setSelection(start, ['a']).selectedIds).toEqual(['a'])
@@ -216,6 +234,7 @@ describe('setSelection', () => {
 describe('removeNodes', () => {
   it('deletes a whole selection as one entry, and puts it back in order', () => {
     const start: SceneState = {
+      ...EMPTY_SCENE,
       nodes: [mesh('a'), mesh('b'), mesh('c')],
       selectedIds: ['a', 'c'],
     }
@@ -230,7 +249,11 @@ describe('removeNodes', () => {
 
 describe('moveNodes', () => {
   it('carries one drag of several nodes as one entry', () => {
-    const start: SceneState = { nodes: [mesh('a'), mesh('b')], selectedIds: ['a', 'b'] }
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b')],
+      selectedIds: ['a', 'b'],
+    }
     const moved = { ...IDENTITY_TRANSFORM, position: { x: 1, y: 2, z: 3 } }
     const command = moveNodes([
       { id: 'a', transform: moved },
@@ -266,7 +289,7 @@ describe('setLightOn', () => {
   it('carries only the axis that moved onto the other lights', () => {
     const anchor = spot('a', { x: 0, y: 0, z: 0 })
     const other = spot('b', { x: 5, y: 6, z: 7 })
-    const start: SceneState = { nodes: [anchor, other], selectedIds: ['b', 'a'] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [anchor, other], selectedIds: ['b', 'a'] }
     if (anchor.type !== 'light') throw new Error('fixture is not a light')
 
     const applied = setLightOn(start.nodes, anchor.light, 'target', { x: 0, y: 9, z: 0 }).apply(
@@ -284,7 +307,7 @@ describe('setLightOn', () => {
   it('leaves a light of another kind alone', () => {
     const anchor = spot('a', { x: 0, y: 0, z: 0 })
     const ambient = light('b')
-    const start: SceneState = { nodes: [anchor, ambient], selectedIds: ['b', 'a'] }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [anchor, ambient], selectedIds: ['b', 'a'] }
     if (anchor.type !== 'light') throw new Error('fixture is not a light')
 
     expect(setLightOn(start.nodes, anchor.light, 'intensity', 4).apply(start).nodes[1]).toBe(
@@ -293,8 +316,33 @@ describe('setLightOn', () => {
   })
 })
 
+describe('setEnvironment', () => {
+  const sky: EnvironmentRef = { kind: 'skybox', assetId: 'sky-1' }
+
+  it('swaps what lights the scene, and comes back', () => {
+    const command = setEnvironment(sky)
+    const lit = command.apply(EMPTY_SCENE)
+
+    expect(lit.environment).toEqual(sky)
+    expect(command.revert(lit).environment).toEqual({ kind: 'studio' })
+  })
+
+  // Choosing a sky is a decision about the document, not a way of looking at it.
+  it('leaves the nodes and the selection alone', () => {
+    const start = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
+    const lit = setEnvironment(sky).apply(start)
+
+    expect(lit.nodes).toBe(start.nodes)
+    expect(lit.selectedIds).toBe(start.selectedIds)
+  })
+})
+
 describe('batch', () => {
-  const start: SceneState = { nodes: [mesh('a'), mesh('b'), light('c')], selectedIds: [] }
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [mesh('a'), mesh('b'), light('c')],
+    selectedIds: [],
+  }
 
   it('edits every node of a selection as one entry in the history', () => {
     const command = batch('rename', start.nodes, node => renameNode(node.id, 'same'))

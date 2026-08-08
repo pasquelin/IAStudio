@@ -9,7 +9,12 @@
  * are what an inspector clamps a *live* edit to, and a document written by an earlier build is
  * allowed to hold a value today's bounds would refuse.
  */
-import { TEXTURE_SLOTS, type Transform } from '@shared/domain/scene'
+import {
+  readEnvironment,
+  TEXTURE_SLOTS,
+  type EnvironmentRef,
+  type Transform,
+} from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
 import {
   GEOMETRY_SPECS,
@@ -21,10 +26,10 @@ import {
 import { EMPTY_SCENE, shadowDefaults, type SceneNode, type SceneState } from './scene-state'
 
 /** What a saved scene holds. The selection is session state, and is deliberately left out. */
-export type ScenePayload = { nodes: readonly SceneNode[] }
+export type ScenePayload = { nodes: readonly SceneNode[]; environment: EnvironmentRef }
 
 export function scenePayload(state: SceneState): ScenePayload {
-  return { nodes: state.nodes }
+  return { nodes: state.nodes, environment: state.environment }
 }
 
 /**
@@ -48,6 +53,7 @@ export function sceneFromPayload(payload: unknown): SceneState {
   return {
     nodes: nodes.filter(isSceneNode).map(node => ({ ...node, ...withDefaults(node) })),
     selectedIds: [],
+    environment: readEnvironment(payload.environment),
   }
 }
 

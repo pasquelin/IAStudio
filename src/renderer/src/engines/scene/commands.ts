@@ -1,5 +1,6 @@
 import type { Command } from '../core/history'
 import type {
+  EnvironmentRef,
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
@@ -30,8 +31,9 @@ import {
 export function addNode(node: SceneNode): Command<SceneState> {
   return {
     id: `add:${node.id}`,
-    apply: state => ({ nodes: [...state.nodes, node], selectedIds: [node.id] }),
+    apply: state => ({ ...state, nodes: [...state.nodes, node], selectedIds: [node.id] }),
     revert: state => ({
+      ...state,
       nodes: state.nodes.filter(candidate => candidate.id !== node.id),
       selectedIds: deselect(state.selectedIds, node.id),
     }),
@@ -49,6 +51,7 @@ export function removeNode(id: string): Command<SceneState> {
       if (index < 0) return state
       removed = state.nodes[index] ?? null
       return {
+        ...state,
         nodes: state.nodes.filter(node => node.id !== id),
         selectedIds: deselect(state.selectedIds, id),
       }
@@ -318,6 +321,23 @@ export function moveNodes(moves: readonly NodeMove[]): Command<SceneState> {
  */
 function commandId(label: string, ids: readonly string[]): string {
   return `${label}:${ids.join(',')}`
+}
+
+/**
+ * What lights the scene. In the history like any other edit of the document: choosing a sky is a
+ * decision about the scene, and ⌘Z has to take it back like the rest.
+ */
+export function setEnvironment(environment: EnvironmentRef): Command<SceneState> {
+  let previous: EnvironmentRef | null = null
+
+  return {
+    id: 'environment',
+    apply: state => {
+      previous = state.environment
+      return { ...state, environment }
+    },
+    revert: state => (previous ? { ...state, environment: previous } : state),
+  }
 }
 
 /** Selection stays out of the history: nobody wants ⌘Z to give them back a selection. */

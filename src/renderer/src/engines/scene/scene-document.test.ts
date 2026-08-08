@@ -14,16 +14,20 @@ function reread(state: SceneState): SceneState {
 const nodeWith = (fields: object): unknown => ({ ...mesh('a'), ...fields })
 
 describe('scenePayload', () => {
-  it('carries the nodes and leaves the selection behind', () => {
-    const state: SceneState = { nodes: [mesh('a')], selectedIds: ['a'] }
-    expect(scenePayload(state)).toEqual({ nodes: [mesh('a')] })
+  it('carries the nodes and what lights them, and leaves the selection behind', () => {
+    const state: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
+    expect(scenePayload(state)).toEqual({ nodes: [mesh('a')], environment: { kind: 'studio' } })
   })
 })
 
 describe('sceneFromPayload', () => {
   it('round-trips a scene through what is written to disk', () => {
-    const state: SceneState = { nodes: [mesh('a'), light('b')], selectedIds: ['a'] }
-    expect(reread(state)).toEqual({ nodes: [mesh('a'), light('b')], selectedIds: [] })
+    const state: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), light('b')], selectedIds: ['a'] }
+    expect(reread(state)).toEqual({
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), light('b')],
+      selectedIds: [],
+    })
   })
 
   it('round-trips every primitive the studio can build', () => {
@@ -31,14 +35,14 @@ describe('sceneFromPayload', () => {
       primitive.create ? [{ ...mesh(`mesh-${index}`), geometry: primitive.create() }] : [],
     )
 
-    expect(reread({ nodes, selectedIds: [] }).nodes).toHaveLength(
+    expect(reread({ ...EMPTY_SCENE, nodes }).nodes).toHaveLength(
       MESH_ENTRIES.filter(entry => !entry.disabled).length,
     )
   })
 
   it('round-trips every kind of light', () => {
     const nodes = LIGHT_TYPES.map((type, index) => light(`light-${index}`, type.create()))
-    expect(reread({ nodes, selectedIds: [] }).nodes).toHaveLength(nodes.length)
+    expect(reread({ ...EMPTY_SCENE, nodes }).nodes).toHaveLength(nodes.length)
   })
 
   it('keeps a material dressed with textures', () => {
@@ -51,7 +55,7 @@ describe('sceneFromPayload', () => {
       },
     }
 
-    expect(reread({ nodes: [dressed], selectedIds: [] }).nodes).toEqual([dressed])
+    expect(reread({ ...EMPTY_SCENE, nodes: [dressed], selectedIds: [] }).nodes).toEqual([dressed])
   })
 
   it('yields an empty scene for a payload that is not one', () => {
@@ -61,14 +65,16 @@ describe('sceneFromPayload', () => {
   })
 
   it('opens with nothing selected, whatever the file says', () => {
-    expect(sceneFromPayload({ nodes: [], selectedIds: ['a'] }).selectedIds).toEqual([])
+    expect(sceneFromPayload({ ...EMPTY_SCENE, nodes: [], selectedIds: ['a'] }).selectedIds).toEqual(
+      [],
+    )
   })
 
   // A model is a reference and nothing else — what it points at is resolved when the scene is
   // built, so a project whose assets moved still opens.
   it('carries an imported model through a round trip', () => {
     const model = modelNodeFixture('m')
-    expect(reread({ nodes: [model], selectedIds: [] }).nodes).toEqual([model])
+    expect(reread({ ...EMPTY_SCENE, nodes: [model], selectedIds: [] }).nodes).toEqual([model])
   })
 
   it('drops a model whose reference says nothing, and keeps the rest of the scene', () => {
@@ -84,7 +90,24 @@ describe('sceneFromPayload', () => {
 
   it('keeps a model pointing at an asset nothing answers to, which is a project that moved', () => {
     const ghost = modelNodeFixture('m', 'gone')
-    expect(reread({ nodes: [ghost], selectedIds: [] }).nodes).toEqual([ghost])
+    expect(reread({ ...EMPTY_SCENE, nodes: [ghost], selectedIds: [] }).nodes).toEqual([ghost])
+  })
+
+  // A document names no environment until this step: every one written so far, and any file a
+  // hand left half-edited, has to open lit rather than black.
+  it('lights a scene the file says nothing about with the studio', () => {
+    expect(sceneFromPayload({ nodes: [] }).environment).toEqual({ kind: 'studio' })
+    expect(sceneFromPayload({ nodes: [], environment: null }).environment).toEqual({
+      kind: 'studio',
+    })
+    expect(sceneFromPayload({ nodes: [], environment: { kind: 'skybox' } }).environment).toEqual({
+      kind: 'studio',
+    })
+  })
+
+  it('carries a chosen sky through a round trip', () => {
+    const lit: SceneState = { ...EMPTY_SCENE, environment: { kind: 'skybox', assetId: 'sky-1' } }
+    expect(reread(lit).environment).toEqual({ kind: 'skybox', assetId: 'sky-1' })
   })
 
   /**

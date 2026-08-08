@@ -437,7 +437,12 @@
     "opacity": "Opacité",
     "text": "Texte",
     "words": "Mots",
-    "textSize": "Corps"
+    "textSize": "Corps",
+    "environment": "Environnement",
+    "sky": "Ciel",
+    "studio": "Studio",
+    "chooseSky": "Choisir un ciel",
+    "clearSky": "Revenir au studio"
   },
   "transport": {
     "play": "Lire",

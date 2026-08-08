@@ -437,7 +437,12 @@
     "opacity": "Opacity",
     "text": "Text",
     "words": "Words",
-    "textSize": "Size"
+    "textSize": "Size",
+    "environment": "Environment",
+    "sky": "Sky",
+    "studio": "Studio",
+    "chooseSky": "Choose a sky",
+    "clearSky": "Back to the studio"
   },
   "transport": {
     "play": "Play",

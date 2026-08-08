@@ -17,6 +17,8 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
 import type { ShadowQuality } from '@shared/domain/scene'
 import type { SelectionMode } from '@/helpers/selection'
+import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
+import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import type { ModelNode, NodeMove, SceneNode, SceneState } from './scene-state'
 import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
@@ -33,7 +35,7 @@ import { createModelCache, instanceOf, type ModelCache, type ModelSource } from 
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
 import { applyShadowFlags, applyShadowQuality, fitShadowCamera, resizeShadowMap } from './shadows'
 import { snapSteps } from './snap-steps'
-import { createTextureCache } from './texture-cache'
+import { createTextureCache, type TextureCache, type TextureSource } from './texture-cache'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
 export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
@@ -50,6 +52,8 @@ export type SceneRendererOptions = {
   onTransform: (moves: readonly NodeMove[]) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
+  /** Same, for the sky an environment hangs: jsdom decodes no image either. */
+  loadTexture?: TextureSource
 }
 
 /**
@@ -73,6 +77,12 @@ export type ViewportOptions = {
   /** Side of the square map each casting light allocates. Doubling it costs four times as much. */
   shadowMapSize: number
 }
+
+/**
+ * How strongly the environment lights the scene. Below one because a scene has lights of its own
+ * and shadows to keep readable — the texture preview, which has neither, judges at full strength.
+ */
+const STUDIO_INTENSITY = 0.4
 
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
@@ -123,10 +133,12 @@ export class SceneRenderer {
   /** Last node applied per id, compared by reference to skip what has not changed. */
   private readonly applied = new Map<string, SceneNode>()
   private readonly loader = new TextureLoader()
-  // One cache for the whole scene: ten meshes sharing a map upload it once.
-  private readonly textureCache = createTextureCache(url => this.loader.loadAsync(url))
+  private readonly textureCache: TextureCache
   private readonly modelCache: ModelCache
   private readonly held = new Set<MotionId>()
+
+  private environment: ViewportEnvironment | null = null
+  private readonly sky: SkyBinding
 
   /** What the gizmo holds when more than one node is selected. See `pivot.ts`. */
   private readonly pivot = new Object3D()
@@ -151,7 +163,12 @@ export class SceneRenderer {
   constructor(private readonly options: SceneRendererOptions) {
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
+    // One cache for the whole scene: ten meshes sharing a map upload it once.
+    this.textureCache = createTextureCache(
+      options.loadTexture ?? (url => this.loader.loadAsync(url)),
+    )
     this.modelCache = createModelCache(options.loadModel ?? createGltfSource())
+    this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
 
     // No lights here: they are nodes of the state now, so the viewport shows what the outliner
     // lists — and hiding one actually darkens the scene.
@@ -187,6 +204,21 @@ export class SceneRenderer {
     this.applySnap()
     this.attachGizmo()
 
+    // Lit before anything is added: a scene with no light of its own still shows its materials,
+    // exactly as the texture viewport does. `apply` replaces this the moment a document says so.
+    const renderer = this.viewport.gl
+    if (renderer) {
+      this.environment = createEnvironment(
+        renderer,
+        this.viewport.scene,
+        this.viewport.requestRender,
+      )
+      this.environment.setStudio()
+      // Half strength, unlike the texture preview: image-based light comes from everywhere and
+      // is occluded by nothing, so at full intensity it fills the very shadows the lights cast.
+      this.environment.setIntensity(STUDIO_INTENSITY)
+    }
+
     const viewHelper = new ViewHelper(camera, canvas)
     tuneViewHelper(viewHelper)
     this.viewHelper = viewHelper
@@ -214,6 +246,7 @@ export class SceneRenderer {
     if (stale) for (const id of stale) this.release(id)
 
     this.selectedIds = state.selectedIds
+    if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
     this.viewport.requestRender()
   }
@@ -288,6 +321,9 @@ export class SceneRenderer {
     this.viewHelper = null
 
     for (const id of [...this.objects.keys()]) this.release(id)
+    this.sky.release()
+    this.environment?.dispose()
+    this.environment = null
     this.textureCache.dispose()
     this.modelCache.dispose()
 
@@ -359,6 +395,12 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  /** The backdrop, unless a sky is hanging behind the scene — in which case the sky is it. */
+  private paintBackground(): void {
+    if (this.sky.showsSky()) return
+    this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
+  }
+
   /** Pulls the studio palette off the canvas, so the viewport follows a theme change with it. */
   private applyPalette(): void {
     // The centre axes take the muted token so they stand out from the grid rather than blend in.
@@ -366,7 +408,7 @@ export class SceneRenderer {
     const line = this.viewport.paletteToken('--color-viewport-line')
 
     this.meshColor = this.viewport.paletteToken('--color-mesh')
-    this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
+    this.paintBackground()
 
     if (this.grid) {
       this.viewport.scene.remove(this.grid)
