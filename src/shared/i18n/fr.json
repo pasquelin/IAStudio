@@ -272,7 +272,8 @@
     "flatten": "Aplatir l’image",
     "groupName": "Groupe",
     "copyName": "{{name}} copie",
-    "flatName": "Image aplatie"
+    "flatName": "Image aplatie",
+    "rename": "Renommer le calque"
   },
   "meshes": {
     "box": "Cube",

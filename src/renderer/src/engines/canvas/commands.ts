@@ -293,10 +293,9 @@ export function clearGuides(): Command<CanvasState> {
   }
 }
 
-/** Selection stays out of the history: nobody wants ⌘Z to give them back a selected layer. */
 /**
- * Folds a group, or opens it. Out of the history like the selection, and for the same reason: a
- * ⌘Z that reopened a group instead of undoing the last edit reads as a bug.
+ * Folds a group, or opens it. Adds no history entry, like the selection — though an undo of the
+ * edit before it does put the fold back, since a command reverts the whole layer it patched.
  */
 export function collapseLayer(state: CanvasState, id: string, collapsed: boolean): CanvasState {
   return {
@@ -307,6 +306,7 @@ export function collapseLayer(state: CanvasState, id: string, collapsed: boolean
   }
 }
 
+/** Selection stays out of the history: nobody wants ⌘Z to give them back a selected layer. */
 export function selectLayer(state: CanvasState, id: string | null): CanvasState {
   return { ...state, activeLayerId: id }
 }
@@ -362,7 +362,9 @@ export function groupLayers(
     return {
       ...state,
       layers: [...rest.slice(0, at), group, ...rest.slice(at)],
-      activeLayerId: groupId,
+      // The topmost member, not the group: a group holds no pixels, so arming one leaves the
+      // brush silently drawing nothing.
+      activeLayerId: allLayers(members).findLast(layer => !isGroup(layer))?.id ?? null,
     }
   })
 }
@@ -378,7 +380,8 @@ export function ungroupLayer(id: string): Command<CanvasState> {
       ...group.children,
       ...siblings.slice(index + 1),
     ])
-    return { ...state, layers, activeLayerId: group.children.at(-1)?.id ?? state.activeLayerId }
+    const armed = allLayers(group.children).findLast(layer => !isGroup(layer))?.id
+    return { ...state, layers, activeLayerId: armed ?? state.activeLayerId }
   })
 }
 

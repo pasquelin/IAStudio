@@ -22,7 +22,7 @@ export function selectLayerIn(documentId: string, id: string | null): void {
   state.replace(documentId, selectLayer(canvasOf(state, documentId), id))
 }
 
-/** Folding a group is a way of looking at the stack, not an edit of it — so it is not undoable. */
+/** Folding a group is a way of looking at the stack, not an edit of it — so it adds no entry. */
 export function collapseLayerIn(documentId: string, id: string, collapsed: boolean): void {
   const state = useCanvases.getState()
   state.replace(documentId, collapseLayer(canvasOf(state, documentId), id, collapsed))

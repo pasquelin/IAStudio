@@ -4,7 +4,14 @@ import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { SliderField } from '@/design/SliderField'
 import { CONTROL } from '@/design/styles'
-import { BLEND_MODES, isGroup, type BlendMode, type Layer } from '@/engines/canvas/canvas-state'
+import { ToggleField } from '@/design/ToggleField'
+import {
+  BLEND_MODES,
+  isGroup,
+  type BlendMode,
+  type Layer,
+  type Transform,
+} from '@/engines/canvas/canvas-state'
 import {
   setLayerBlend,
   setLayerClipped,
@@ -14,15 +21,14 @@ import {
   setLayerTransform,
 } from '@/engines/canvas/commands'
 import { cn } from '@/helpers/cn'
+import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { useCanvases } from '@/stores/canvases'
+import { useDocumentEdit } from './useDocumentEdit'
 
 export type LayerInspectorProps = { documentId: string; layer: Layer }
 
 /** Radians are what the engine turns and what a document stores; nobody types in them. */
 const PER_RADIAN = 180 / Math.PI
-
-/** Which padlock each row opens, in the order the row of them reads. */
-const PADLOCKS: readonly ('pixels' | 'position' | 'alpha')[] = ['pixels', 'position', 'alpha']
 
 /**
  * One layer, read out and edited. Its own section rather than the scene's `TransformSection`:
@@ -31,12 +37,11 @@ const PADLOCKS: readonly ('pixels' | 'position' | 'alpha')[] = ['pixels', 'posit
  */
 export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
   const { t } = useTranslation()
-  const run = (command: Parameters<ReturnType<typeof useCanvases.getState>['runCommand']>[1]) =>
-    useCanvases.getState().runCommand(documentId, command)
-
-  const { transform } = layer
-  const move = (changes: Partial<typeof transform>): void =>
-    run(setLayerTransform(layer.id, { ...transform, ...changes }))
+  // The same seam every other face uses: without its gesture props a slider drag writes one
+  // history entry per emitted value, and a hundred of them evict everything before them.
+  const edit = useDocumentEdit(useCanvases, documentId)
+  const move = (changes: Partial<Transform>): void =>
+    edit.run(setLayerTransform(layer.id, { ...layer.transform, ...changes }))
 
   return (
     <>
@@ -56,8 +61,8 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           <select
             aria-label={t('inspector.blend')}
             value={layer.blend}
-            onChange={event => run(setLayerBlend(layer.id, asBlendMode(event.target.value)))}
-            className={cn(CONTROL, 'text-text bg-surface w-full rounded px-1 text-[11px]')}
+            onChange={event => edit.run(setLayerBlend(layer.id, asBlendMode(event.target.value)))}
+            className={cn(CONTROL, 'w-full px-1')}
           >
             {BLEND_MODES.map(mode => (
               <option key={mode} value={mode}>
@@ -73,7 +78,8 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           min={0}
           max={1}
           step={0.01}
-          onChange={value => run(setLayerOpacity(layer.id, value))}
+          onChange={value => edit.run(setLayerOpacity(layer.id, value))}
+          {...edit.gesture}
         />
         {/* Distinct from the one above: it fades the pixels and leaves the effects drawn around
             them alone. No layer effect exists yet, so today the two simply multiply. */}
@@ -83,31 +89,27 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           min={0}
           max={1}
           step={0.01}
-          onChange={value => run(setLayerFillOpacity(layer.id, value))}
+          onChange={value => edit.run(setLayerFillOpacity(layer.id, value))}
+          {...edit.gesture}
         />
 
-        <PropertyRow label={t('inspector.clipped')}>
-          <input
-            type="checkbox"
-            aria-label={t('inspector.clipped')}
-            checked={layer.clipped}
-            onChange={event => run(setLayerClipped(layer.id, event.target.checked))}
-          />
-        </PropertyRow>
+        <ToggleField
+          label={t('inspector.clipped')}
+          value={layer.clipped}
+          onChange={value => edit.run(setLayerClipped(layer.id, value))}
+        />
       </PropertyGroup>
 
       <PropertyGroup title={t('inspector.locks')}>
-        {PADLOCKS.map(padlock => (
-          <PropertyRow key={padlock} label={t(`inspector.lock_${padlock}`)}>
-            <input
-              type="checkbox"
-              aria-label={t(`inspector.lock_${padlock}`)}
-              checked={layer.locked[padlock]}
-              onChange={event =>
-                run(setLayerLocks(layer.id, { ...layer.locked, [padlock]: event.target.checked }))
-              }
-            />
-          </PropertyRow>
+        {LAYER_LOCKS.map(padlock => (
+          <ToggleField
+            key={padlock.key}
+            label={t(padlock.labelKey)}
+            value={layer.locked[padlock.key]}
+            onChange={value =>
+              edit.run(setLayerLocks(layer.id, { ...layer.locked, [padlock.key]: value }))
+            }
+          />
         ))}
       </PropertyGroup>
 
@@ -115,33 +117,38 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
       <PropertyGroup title={t('inspector.transform')}>
         <NumberField
           label={t('inspector.x')}
-          value={transform.x}
+          value={layer.transform.x}
           step={1}
           onChange={value => move({ x: value })}
+          {...edit.gesture}
         />
         <NumberField
           label={t('inspector.y')}
-          value={transform.y}
+          value={layer.transform.y}
           step={1}
           onChange={value => move({ y: value })}
+          {...edit.gesture}
         />
         <NumberField
           label={t('inspector.rotation')}
-          value={transform.rotation * PER_RADIAN}
+          value={layer.transform.rotation * PER_RADIAN}
           step={1}
           onChange={value => move({ rotation: value / PER_RADIAN })}
+          {...edit.gesture}
         />
         <NumberField
           label={t('inspector.scaleX')}
-          value={transform.scaleX}
+          value={layer.transform.scaleX}
           step={0.1}
           onChange={value => move({ scaleX: value })}
+          {...edit.gesture}
         />
         <NumberField
           label={t('inspector.scaleY')}
-          value={transform.scaleY}
+          value={layer.transform.scaleY}
           step={0.1}
           onChange={value => move({ scaleY: value })}
+          {...edit.gesture}
         />
         {isGroup(layer) && (
           <PropertyRow label={t('inspector.children')}>{layer.children.length}</PropertyRow>

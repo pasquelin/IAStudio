@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { addLayer } from '@/engines/canvas/commands'
@@ -109,9 +109,7 @@ describe('LayersPanel', () => {
       render(<LayersPanel />)
       await userEvent.click(screen.getByRole('button', { name: /^Verrous/ }))
 
-      await userEvent.click(
-        await screen.findByRole('menuitem', { name: 'Verrouiller la position' }),
-      )
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Position' }))
 
       expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.locked).toEqual({
         pixels: false,
@@ -145,5 +143,24 @@ describe('LayersPanel', () => {
 
       expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(1)
     })
+  })
+
+  /**
+   * Both lists are virtualized and re-key their rows on every change, so a layer added while a
+   * name is being typed tears the field out of the tree — and React fires no blur for an input
+   * it unmounts. The name was lost with it.
+   */
+  it('keeps a name typed in a row that is torn out from under it', async () => {
+    render(<LayersPanel />)
+    await userEvent.dblClick(screen.getByText('Background'))
+    await userEvent.clear(screen.getByRole('textbox'))
+    await userEvent.type(screen.getByRole('textbox'), 'Sky')
+
+    // What a finished generation does while the field is open.
+    useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
+
+    await waitFor(() =>
+      expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Sky'),
+    )
   })
 })

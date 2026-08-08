@@ -1,14 +1,17 @@
 import { mdiChevronDown, mdiChevronRight, mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js'
 import { memo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { Row } from '@/design/Row'
 import { ToolButton } from '@/design/ToolButton'
-import { isGroup, type Layer, type LayerLocks } from '@/engines/canvas/canvas-state'
+import { isGroup, type CanvasState, type Layer } from '@/engines/canvas/canvas-state'
 import { renameLayer, setLayerLocks, setLayerVisible } from '@/engines/canvas/commands'
-import { cn } from '@/helpers/cn'
+import type { Command } from '@/engines/core/history'
 import { TIP_RIGHT } from '@/helpers/tooltip'
+import { InlineRename } from '@/panels/shared/InlineRename'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
+import { LAYER_LOCKS } from './layer-locks'
 import { collapseLayerIn, useCanvases } from '@/stores/canvases'
 
 /** Resolved by the list rather than per row — see `LayerList`. */
@@ -18,9 +21,7 @@ export type LayerRowLabels = {
   hide: string
   locks: string
   locksHint: string
-  lockPixels: string
-  lockPosition: string
-  lockAlpha: string
+  rename: string
   collapse: string
   expand: string
 }
@@ -32,13 +33,6 @@ export type LayerRowProps = {
   depth: number
   labels: LayerRowLabels
 }
-
-/** Which padlock each menu row opens, in the order they are offered. */
-const PADLOCKS: readonly { key: keyof LayerLocks; label: keyof LayerRowLabels }[] = [
-  { key: 'pixels', label: 'lockPixels' },
-  { key: 'position', label: 'lockPosition' },
-  { key: 'alpha', label: 'lockAlpha' },
-]
 
 /** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
 const INDENT = 'var(--sc-gutter)'
@@ -53,8 +47,9 @@ export const LayerRow = memo(function LayerRow({
   depth,
   labels,
 }: LayerRowProps) {
+  const { t } = useTranslation()
   const [renaming, setRenaming] = useState(false)
-  const run = (command: Parameters<ReturnType<typeof useCanvases.getState>['runCommand']>[1]) =>
+  const run = (command: Command<CanvasState>): void =>
     useCanvases.getState().runCommand(documentId, command)
 
   const locked = layer.locked.pixels || layer.locked.position || layer.locked.alpha
@@ -63,7 +58,6 @@ export const LayerRow = memo(function LayerRow({
     <div
       className="flex h-full min-w-0 items-center"
       style={{ paddingLeft: `calc(${INDENT} * ${depth})` }}
-      onDoubleClick={() => setRenaming(true)}
     >
       {isGroup(layer) ? (
         <ToolButton
@@ -84,13 +78,15 @@ export const LayerRow = memo(function LayerRow({
         <span aria-hidden className="w-(--sc-control) shrink-0" />
       )}
 
-      <div className="min-w-0 flex-1">
+      {/* On the name alone: a double click meant for the chevron or the eye is not a rename. */}
+      <div className="min-w-0 flex-1" onDoubleClick={() => setRenaming(true)}>
         {renaming ? (
-          <RenameField
-            name={layer.name}
-            onDone={name => {
+          <InlineRename
+            value={layer.name}
+            label={labels.rename}
+            onCommit={name => {
               setRenaming(false)
-              if (name && name !== layer.name) run(renameLayer(layer.id, name))
+              if (name !== layer.name) run(renameLayer(layer.id, name))
             }}
           />
         ) : (
@@ -114,14 +110,14 @@ export const LayerRow = memo(function LayerRow({
                 variant="header"
                 active={locked}
                 // One button rather than three on the line: the row is 24 px tall in compact.
-                rowCount={PADLOCKS.length}
+                rowCount={LAYER_LOCKS.length}
                 opensOnClick
                 rows={() =>
-                  PADLOCKS.map(padlock => (
+                  LAYER_LOCKS.map(padlock => (
                     <MenuRow
                       key={padlock.key}
-                      label={labels[padlock.label]}
-                      icon={layer.locked[padlock.key] ? mdiLockOutline : mdiLockOpenVariantOutline}
+                      label={t(padlock.labelKey)}
+                      icon={padlock.iconFor(layer.locked[padlock.key])}
                       checked={layer.locked[padlock.key]}
                       onSelect={() =>
                         run(
@@ -142,30 +138,3 @@ export const LayerRow = memo(function LayerRow({
     </div>
   )
 })
-
-/**
- * The name, editable in place. Committed on blur as well as on Enter: clicking away from a
- * half-typed name is how most renames end, and losing it there would be the worst of both.
- */
-function RenameField({ name, onDone }: { name: string; onDone: (name: string) => void }) {
-  return (
-    <input
-      autoFocus
-      defaultValue={name}
-      className={cn(
-        'text-text w-full bg-transparent px-1 text-[12px] outline-none',
-        'focus:ring-accent focus:ring-1',
-      )}
-      onPointerDown={event => event.stopPropagation()}
-      onBlur={event => onDone(event.target.value.trim())}
-      onKeyDown={event => {
-        if (event.key === 'Enter') event.currentTarget.blur()
-        // Restored before blurring, so the commit on blur has nothing new to write.
-        if (event.key === 'Escape') {
-          event.currentTarget.value = name
-          event.currentTarget.blur()
-        }
-      }}
-    />
-  )
-}

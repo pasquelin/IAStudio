@@ -67,6 +67,15 @@ describe('LayersActions', () => {
       expect(stack().layers.map(layer => layer.id)).toEqual(['layer-1', 'inside'])
     })
 
+    // A group holds no pixels, so `paintTarget` refuses it: arming one leaves the brush drawing
+    // nothing at all, silently — the state `deserializeCanvas` refuses to even load.
+    it('arms the layer it wrapped rather than the group it made', async () => {
+      render(<LayersActions />)
+      await choose('Grouper')
+
+      expect(stack().activeLayerId).toBe('layer-1')
+    })
+
     it('copies the armed layer, with an id of its own', async () => {
       render(<LayersActions />)
       await choose('Dupliquer')
@@ -75,28 +84,18 @@ describe('LayersActions', () => {
       expect(new Set(stack().layers.map(layer => layer.id)).size).toBe(2)
     })
 
-    // A layer merges into the one below it, so the bottom one has nothing to merge into.
-    it('offers no merge to a layer with nothing under it', async () => {
+    /**
+     * Merging and flattening are not offered: both restructure the stack, and nothing in
+     * `CanvasEngine` composites the pixels of the layers they remove — the textures are simply
+     * destroyed, and the reborn layer is transparent. A row that empties the document is worse
+     * than a row that is not there.
+     */
+    it('offers neither merge nor flatten, which would throw the pixels away', async () => {
       render(<LayersActions />)
       await userEvent.click(screen.getByRole('button', { name: /^Opérations/ }))
 
-      expect(await screen.findByRole('menuitem', { name: /^Fusionner/ })).toBeDisabled()
-    })
-
-    it('merges a layer into the one below it', async () => {
-      useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
-      render(<LayersActions />)
-      await choose(/^Fusionner/)
-
-      expect(stack().layers.map(layer => layer.id)).toEqual(['layer-1'])
-    })
-
-    it('flattens the whole stack into one layer', async () => {
-      useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
-      render(<LayersActions />)
-      await choose(/^Aplatir/)
-
-      expect(stack().layers).toHaveLength(1)
+      const rows = await screen.findAllByRole('menuitem')
+      expect(rows.map(row => row.textContent)).toEqual(['Grouper', 'Dégrouper', 'Dupliquer'])
     })
   })
 })

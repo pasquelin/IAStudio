@@ -272,7 +272,8 @@
     "flatten": "Flatten image",
     "groupName": "Group",
     "copyName": "{{name}} copy",
-    "flatName": "Flattened"
+    "flatName": "Flattened",
+    "rename": "Rename layer"
   },
   "meshes": {
     "box": "Box",

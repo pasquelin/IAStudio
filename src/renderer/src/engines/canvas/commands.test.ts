@@ -28,6 +28,7 @@ import { layerFixture } from './canvas-fixtures'
 import {
   allLayers,
   DEFAULT_CANVAS,
+  groupLayer,
   isGroup,
   layerById,
   pixelLayer,
@@ -162,10 +163,22 @@ describe('groupLayers', () => {
     expect(namesOf(after)).toEqual(['a', 'g'])
   })
 
-  it('arms the group, so the next action lands on what was just made', () => {
+  /**
+   * A group holds no pixels, so `paintTarget` refuses it: arming one left the brush drawing
+   * nothing at all, silently, which is the state `deserializeCanvas` refuses to even load.
+   */
+  it('arms the topmost layer it wrapped rather than the group itself', () => {
     const [after] = roundTrip(stack('a', 'b'), groupLayers(['a'], 'g', 'Group'))
 
-    expect(after.activeLayerId).toBe('g')
+    expect(after.activeLayerId).toBe('a')
+  })
+
+  it('reaches into a nested group for something to arm', () => {
+    const nested = groupLayer('inner', 'Inner', [pixelLayer('deep', 'Deep')])
+    const before: CanvasState = { ...DEFAULT_CANVAS, layers: [nested], activeLayerId: 'deep' }
+    const [after] = roundTrip(before, groupLayers(['inner'], 'g', 'Group'))
+
+    expect(after.activeLayerId).toBe('deep')
   })
 
   it('does nothing when no named layer is there', () => {
