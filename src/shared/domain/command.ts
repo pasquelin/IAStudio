@@ -43,6 +43,14 @@ export type CommandId =
   | 'canvas.rulers'
   | 'canvas.guides'
   | 'canvas.clearGuides'
+  | 'canvas.deselect'
+  | 'canvas.maskFromSelection'
+  | 'canvas.regenerate'
+  | 'canvas.cutout'
+  | 'canvas.enlarge'
+  | 'canvas.vectorize'
+  | 'canvas.extend'
+  | 'canvas.export'
   | 'canvas.snap'
   | 'canvas.undo'
   | 'canvas.redo'
@@ -298,6 +306,62 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasClearGuides.title',
     helpKey: 'commands.canvasClearGuides.help',
     defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.deselect',
+    scope: 'canvas',
+    titleKey: 'commands.canvasDeselect.title',
+    helpKey: 'commands.canvasDeselect.help',
+    defaultBinding: 'Meta+KeyD',
+  }),
+  command({
+    id: 'canvas.maskFromSelection',
+    scope: 'canvas',
+    titleKey: 'commands.canvasMaskFromSelection.title',
+    helpKey: 'commands.canvasMaskFromSelection.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.regenerate',
+    scope: 'canvas',
+    titleKey: 'commands.canvasRegenerate.title',
+    helpKey: 'commands.canvasRegenerate.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.cutout',
+    scope: 'canvas',
+    titleKey: 'commands.canvasCutout.title',
+    helpKey: 'commands.canvasCutout.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.enlarge',
+    scope: 'canvas',
+    titleKey: 'commands.canvasEnlarge.title',
+    helpKey: 'commands.canvasEnlarge.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.vectorize',
+    scope: 'canvas',
+    titleKey: 'commands.canvasVectorize.title',
+    helpKey: 'commands.canvasVectorize.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.extend',
+    scope: 'canvas',
+    titleKey: 'commands.canvasExtend.title',
+    helpKey: 'commands.canvasExtend.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.export',
+    scope: 'canvas',
+    titleKey: 'commands.canvasExport.title',
+    helpKey: 'commands.canvasExport.help',
+    defaultBinding: 'Shift+Meta+KeyE',
   }),
   command({
     id: 'canvas.snap',

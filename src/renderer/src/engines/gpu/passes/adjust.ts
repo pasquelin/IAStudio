@@ -1,17 +1,11 @@
 import { ShaderMaterial, type Texture } from 'three'
-import type { AdjustmentStack } from '@shared/domain/adjustments'
+import { adjustUniformsOf, type AdjustmentStack } from '@shared/domain/adjustments'
 
 /**
  * Colour grading, in one shader, for every workspace that grades. Uniforms only: nothing here
  * ever writes a pixel to disk, which is what makes an adjustment free to change and free to
  * undo — and what a competitor charges another generation for.
  */
-
-const TWO_PI = Math.PI * 2
-
-/** How far a full swing of the temperature or tint slider pushes a channel. */
-const TEMPERATURE_GAIN = 0.25
-const TINT_GAIN = 0.15
 
 const VERTEX_SHADER = /* glsl */ `
 varying vec2 vUv;
@@ -88,32 +82,6 @@ export type AdjustPass = {
   setSource: (texture: Texture | null) => void
   setAdjustments: (stack: AdjustmentStack) => void
   dispose: () => void
-}
-
-/**
- * The uniforms a stack becomes. Separate from the material so the two conversions that are not
- * identities — stops into a multiplier, radians into a texture offset — can be tested without
- * a GL context.
- */
-export function adjustUniformsOf(stack: AdjustmentStack): {
-  exposure: number
-  contrast: number
-  saturation: number
-  temperature: number
-  tint: number
-  offsetU: number
-} {
-  return {
-    // Stops are doublings, which is what makes +1 EV mean "twice the light" rather than "one
-    // more unit of it".
-    exposure: 2 ** stack.exposure,
-    contrast: stack.contrast,
-    saturation: stack.saturation,
-    temperature: stack.temperature * TEMPERATURE_GAIN,
-    tint: stack.tint * TINT_GAIN,
-    // A full turn is the whole width of an equirectangular picture.
-    offsetU: stack.rotationY / TWO_PI,
-  }
 }
 
 export function createAdjustPass(): AdjustPass {

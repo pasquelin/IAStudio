@@ -105,13 +105,13 @@ Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 |---|---|---|
 | **Déplacement** | `V` | fait glisser le contenu du calque actif |
 | **Main** | `H` | déplace la vue |
-| **Mise à l'échelle** | `K` | *pas encore disponible* |
+| **Mise à l'échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
 
 ### Groupe Cadre
 
 | Outil | Raccourci | Ce qu'il fait |
 |---|---|---|
-| **Recadrage** | `F` | redéfinit les bords de l'image |
+| **Recadrage** | `F` | *pas encore disponible* |
 | **Section** | `⇧S` | *pas encore disponible* |
 | **Découpe** | `S` | *pas encore disponible* |
 
@@ -123,9 +123,8 @@ Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 | **Sélection ellipse** | — | trace une zone ovale |
 | **Lasso** | `L` | trace une zone à main levée |
 
-> Ces trois outils **dessinent** la zone mais ne la limitent pas encore : aucun outil ne
-> restreint son action à la sélection pour l'instant. Voir
-> [Ce qui n'existe pas encore](18-limites.md).
+> Tant qu'une zone est tracée, **le pinceau, la gomme et le pot n'agissent qu'à l'intérieur**.
+> Un clic sans glisser abandonne la zone, comme `⌘D`.
 
 ### Groupe Formes
 
@@ -137,7 +136,7 @@ Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 | **Ellipse** | `O` | Maj pour un cercle |
 | **Polygone** | — | tracé depuis son centre |
 | **Étoile** | — | tracée depuis son centre |
-| **Image…** | `⇧⌘K` | *pas encore disponible* |
+| **Image…** | `⇧⌘K` | ouvre la bibliothèque, pour poser une image comme calque |
 
 ### Groupe Dessin
 

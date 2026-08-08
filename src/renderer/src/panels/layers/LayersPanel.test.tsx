@@ -1,8 +1,9 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { addLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
+import { groupLayer } from '@/engines/canvas/canvas-state'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { installDocument } from '@/stores/document-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
@@ -72,5 +73,94 @@ describe('LayersPanel', () => {
     expect(canvas.layers[0]?.visible).toBe(false)
     // Clicking the eye of another row must not steal the selection.
     expect(canvas.activeLayerId).toBe('layer-2')
+  })
+
+  describe('a row of the stack', () => {
+    it('renames a layer on a double click', async () => {
+      render(<LayersPanel />)
+      await userEvent.dblClick(screen.getByText('Background'))
+      await userEvent.clear(screen.getByRole('textbox'))
+      await userEvent.type(screen.getByRole('textbox'), 'Sky{Enter}')
+
+      expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Sky')
+    })
+
+    // Clicking away from a half-typed name is how most renames end.
+    it('keeps what was typed when the field loses focus', async () => {
+      render(<LayersPanel />)
+      await userEvent.dblClick(screen.getByText('Background'))
+      await userEvent.clear(screen.getByRole('textbox'))
+      await userEvent.type(screen.getByRole('textbox'), 'Sky')
+      await userEvent.tab()
+
+      expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Sky')
+    })
+
+    it('leaves the name alone when the rename is abandoned', async () => {
+      render(<LayersPanel />)
+      await userEvent.dblClick(screen.getByText('Background'))
+      await userEvent.type(screen.getByRole('textbox'), 'Sky{Escape}')
+
+      expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Background')
+    })
+
+    // One button rather than three on the line: a row is 24 px tall in compact.
+    it('opens the three padlocks behind a single button', async () => {
+      render(<LayersPanel />)
+      await userEvent.click(screen.getByRole('button', { name: /^Verrous/ }))
+
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Position' }))
+
+      expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.locked).toEqual({
+        pixels: false,
+        position: true,
+        alpha: false,
+      })
+    })
+
+    it('nests the children of a group and folds them away on the chevron', async () => {
+      useCanvases
+        .getState()
+        .runCommand(
+          'doc-1',
+          addLayer(groupLayer('g', 'Group', [layerFixture({ id: 'inside', name: 'Inside' })])),
+        )
+      render(<LayersPanel />)
+      expect(screen.getByText('Inside')).toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: /^Replier/ }))
+
+      expect(screen.queryByText('Inside')).not.toBeInTheDocument()
+    })
+
+    // Folding a group is a way of looking at the stack, not an edit of it.
+    it('does not put a fold in the history', async () => {
+      useCanvases.getState().runCommand('doc-1', addLayer(groupLayer('g', 'Group', [])))
+      render(<LayersPanel />)
+      await userEvent.click(screen.getByRole('button', { name: /^Replier/ }))
+
+      useCanvases.getState().undo('doc-1')
+
+      expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(1)
+    })
+  })
+
+  /**
+   * Both lists are virtualized and re-key their rows on every change, so a layer added while a
+   * name is being typed tears the field out of the tree — and React fires no blur for an input
+   * it unmounts. The name was lost with it.
+   */
+  it('keeps a name typed in a row that is torn out from under it', async () => {
+    render(<LayersPanel />)
+    await userEvent.dblClick(screen.getByText('Background'))
+    await userEvent.clear(screen.getByRole('textbox'))
+    await userEvent.type(screen.getByRole('textbox'), 'Sky')
+
+    // What a finished generation does while the field is open.
+    useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
+
+    await waitFor(() =>
+      expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Sky'),
+    )
   })
 })

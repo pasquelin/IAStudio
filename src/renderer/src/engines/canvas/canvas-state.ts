@@ -1,4 +1,6 @@
+import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import { isRecord } from '@shared/guards'
+import type { Point } from './shape-geometry'
 
 /**
  * An image document, as plain data. It holds no Pixi object on purpose: an engine is rebuilt
@@ -113,6 +115,12 @@ export type PixelLayer = LayerBase & {
    * gives a new document its white page. Absent leaves the layer transparent.
    */
   fill?: number
+  /**
+   * The asset whose picture the layer was born holding, drawn into its texture as soon as the
+   * surface exists. In the state rather than pushed at the engine: pixels do not survive a
+   * closed tab, an undo or a detached panel, and this is what brings them back.
+   */
+  source?: string
 }
 
 /** `pass-through` lets an adjustment inside the group reach what is under the group. */
@@ -127,14 +135,72 @@ export type GroupLayer = LayerBase & {
   isolation: GroupIsolation
 }
 
-export type AdjustmentKind = 'levels' | 'curves' | 'hsl' | 'colorBalance'
+/**
+ * Which dial an adjustment layer exposes. Four, and only four, because these are the ones the
+ * grading pass actually applies — a `curves` or a `LUT` entry would be a row in the panel that
+ * changes nothing on screen, which is the one thing a layer must never be.
+ */
+export type AdjustmentKind = 'exposure' | 'contrast' | 'saturation' | 'temperature'
+
+export const ADJUSTMENT_KINDS: readonly AdjustmentKind[] = [
+  'exposure',
+  'contrast',
+  'saturation',
+  'temperature',
+]
 
 export type AdjustmentLayer = LayerBase & {
   kind: 'adjustment'
   adjustment: AdjustmentKind
+  /**
+   * The whole stack, not just the dial this layer names: the pass is one shader, and carrying
+   * the others at their neutral costs nothing while keeping two layers from needing two passes.
+   */
+  values: AdjustmentStack
 }
 
-export type Layer = PixelLayer | GroupLayer | AdjustmentLayer
+export function adjustmentLayer(
+  id: string,
+  name: string,
+  adjustment: AdjustmentKind,
+): AdjustmentLayer {
+  // Copied, never the shared constant itself: one mutation of it anywhere would neutralise every
+  // adjustment layer in the application at once.
+  return {
+    ...layerBase(id, name),
+    kind: 'adjustment',
+    adjustment,
+    values: { ...NEUTRAL_ADJUSTMENTS },
+  }
+}
+
+/**
+ * Words rather than pixels. Kept as text so it stays editable and stays sharp at any zoom — a
+ * caption rasterized at the moment it was typed is a caption nobody can fix a typo in.
+ */
+export type TextLayer = LayerBase & {
+  kind: 'text'
+  text: string
+  /** Points at 1:1, before the layer's own scale. */
+  size: number
+  /** Packed RGB, the form Pixi takes. */
+  color: number
+}
+
+export const DEFAULT_TEXT_SIZE = 48
+
+export function textLayer(id: string, text: string, at: Point): TextLayer {
+  return {
+    ...layerBase(id, text),
+    kind: 'text',
+    text,
+    size: DEFAULT_TEXT_SIZE,
+    color: 0x000000,
+    transform: { ...IDENTITY, x: at.x, y: at.y },
+  }
+}
+
+export type Layer = PixelLayer | GroupLayer | AdjustmentLayer | TextLayer
 
 const GUIDE_AXES: readonly ('x' | 'y')[] = ['x', 'y']
 
@@ -315,16 +381,32 @@ function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
     }
   }
 
+  if (source.kind === 'text') {
+    return {
+      ...base,
+      kind: 'text',
+      text: typeof source.text === 'string' ? source.text : '',
+      size: typeof source.size === 'number' ? source.size : DEFAULT_TEXT_SIZE,
+      color: typeof source.color === 'number' ? source.color : 0x000000,
+    }
+  }
+
   if (source.kind === 'adjustment') {
     return {
       ...base,
       kind: 'adjustment',
-      adjustment: oneOf(ADJUSTMENT_KINDS, source.adjustment, 'levels'),
+      adjustment: reviveAdjustment(source.adjustment),
+      values: reviveAdjustmentValues(source.values),
     }
   }
 
   // No `kind` at all is the pre-groups format, where every layer was a pixel layer.
-  return { ...base, kind: 'pixel', fill: typeof source.fill === 'number' ? source.fill : undefined }
+  return {
+    ...base,
+    kind: 'pixel',
+    fill: typeof source.fill === 'number' ? source.fill : undefined,
+    source: typeof source.source === 'string' ? source.source : undefined,
+  }
 }
 
 /**
@@ -352,7 +434,43 @@ function reviveLocks(raw: unknown): LayerLocks {
   }
 }
 
-const ADJUSTMENT_KINDS: readonly AdjustmentKind[] = ['levels', 'curves', 'hsl', 'colorBalance']
+/**
+ * What the four kinds a document may have been saved with became. `levels` and `curves` both
+ * graded tone and `colorBalance` graded colour, so each lands on the dial that does its job —
+ * a document written by an older build opens showing something, never an empty row.
+ */
+const RETIRED_ADJUSTMENTS: Readonly<Record<string, AdjustmentKind>> = {
+  levels: 'exposure',
+  curves: 'contrast',
+  hsl: 'saturation',
+  colorBalance: 'temperature',
+}
+
+function reviveAdjustment(raw: unknown): AdjustmentKind {
+  if (typeof raw === 'string' && raw in RETIRED_ADJUSTMENTS) {
+    return RETIRED_ADJUSTMENTS[raw] ?? 'exposure'
+  }
+  return oneOf(ADJUSTMENT_KINDS, raw, 'exposure')
+}
+
+/** A stack read back from a file: every dial narrowed to a number, missing ones left neutral. */
+function reviveAdjustmentValues(raw: unknown): AdjustmentStack {
+  if (!isRecord(raw)) return NEUTRAL_ADJUSTMENTS
+  const source = raw
+
+  const number = (key: keyof AdjustmentStack): number =>
+    typeof source[key] === 'number' ? source[key] : NEUTRAL_ADJUSTMENTS[key]
+
+  return {
+    exposure: number('exposure'),
+    contrast: number('contrast'),
+    saturation: number('saturation'),
+    temperature: number('temperature'),
+    tint: number('tint'),
+    rotationY: number('rotationY'),
+    blur: number('blur'),
+  }
+}
 
 function reviveTransform(raw: unknown): Transform {
   if (!isRecord(raw)) return IDENTITY

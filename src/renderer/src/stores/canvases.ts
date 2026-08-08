@@ -1,4 +1,4 @@
-import { selectLayer } from '@/engines/canvas/commands'
+import { collapseLayer, selectLayer } from '@/engines/canvas/commands'
 import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvas-state'
 import { createDocumentStore } from './document-store'
 
@@ -20,4 +20,10 @@ export const historyOf = store.historyOf
 export function selectLayerIn(documentId: string, id: string | null): void {
   const state = useCanvases.getState()
   state.replace(documentId, selectLayer(canvasOf(state, documentId), id))
+}
+
+/** Folding a group is a way of looking at the stack, not an edit of it — so it adds no entry. */
+export function collapseLayerIn(documentId: string, id: string, collapsed: boolean): void {
+  const state = useCanvases.getState()
+  state.replace(documentId, collapseLayer(canvasOf(state, documentId), id, collapsed))
 }

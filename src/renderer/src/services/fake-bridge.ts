@@ -38,6 +38,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       modelPreviews: () => Promise.resolve({}),
       describeModel: () => Promise.reject(new Error('no model')),
       generate: () => Promise.reject(new Error('no generation')),
+      uploadAsset: () => Promise.reject(new Error('no upload')),
       cancelJob: () => Promise.resolve(),
       listJobs: () => Promise.resolve([]),
       onProgress: noSubscription,
@@ -51,6 +52,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       ...overrides.project,
     },
     dialog: {
+      exportPicture: () => Promise.resolve(null),
       pickPath: () => Promise.resolve(null),
       ...overrides.dialog,
     },

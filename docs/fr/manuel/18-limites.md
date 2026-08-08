@@ -89,20 +89,21 @@ Ils sont visibles dans la barre d'outils, en gris.
 
 | Outil | Groupe |
 |---|---|
-| **Mise à l'échelle** (`K`) | Transformation |
-| **Section** (`⇧S`) | Transformation |
-| **Découpe** (`S`) | Transformation |
-| **Image…** (`⇧⌘K`) | Formes |
+| **Recadrage** (`F`) | Cadre |
+| **Section** (`⇧S`) | Cadre |
+| **Découpe** (`S`) | Cadre |
 | **Plume** | Dessin |
 | **Texte sur chemin** | Texte |
+| **Commentaire** (`C`) | Commentaire |
 
-### La sélection ne limite rien
+### Recadrer, retourner et pivoter ne sont pas offerts
 
-Les trois outils de sélection — **rectangle**, **ellipse**, **lasso** — **dessinent** bien une
-zone. Mais aucun autre outil ne restreint encore son action à cette zone.
+Le geste est écrit et le recadrage fonctionne, mais **redimensionner le cadre déplace les calques
+sans déplacer leurs pixels** : après un recadrage, le pinceau peindrait à côté du curseur. Il en va
+de même pour un miroir ou un quart de tour, qui poseraient les calques hors du cadre.
 
-Peindre avec une sélection active peint partout. C'est la limite la plus déroutante de cet espace,
-parce que le geste semble fonctionner.
+C'est la même pièce manquante qui empêche **Fusionner** et **Aplatir** d'être proposés. Un bouton
+qui abîme le document est pire qu'un bouton absent.
 
 ### Remplir n'est pas un pot de peinture
 
@@ -116,9 +117,11 @@ Ce n'est pas un défaut : c'est un outil différent, qui porte bien son nom.
 La *pile d'annulation* garde les **100 dernières** actions. Au-delà, les plus anciennes
 disparaissent définitivement.
 
-### Pas d'export
+### L'export existe, l'enregistrement non
 
-On ne peut pas encore écrire une image aplatie en `.png` ou `.jpg` depuis un document image.
+`⇧⌘E` écrit le document aplati en `.png` où vous voulez. En revanche **un document image ne
+s'enregistre pas** : fermer l'onglet perd la pile de calques et tout ce qui a été peint. Voir plus
+haut, « Ce que cela veut dire concrètement ».
 
 ---
 

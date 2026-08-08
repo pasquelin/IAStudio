@@ -8,6 +8,7 @@ import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { canvasOf, useCanvases } from '@/stores/canvases'
 import { openAsset } from './open-asset'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
@@ -32,6 +33,7 @@ describe('opening an asset', () => {
     useAudioEdits.setState({ states: {}, histories: {} })
     useSequences.setState({ states: {}, histories: {} })
     useSkyboxes.setState({ states: {}, histories: {} })
+    useCanvases.setState({ states: {}, histories: {} })
   })
 
   it('points the audio editor at a take when an audio tab is in front', () => {
@@ -53,6 +55,22 @@ describe('opening an asset', () => {
     openAsset(asset({ type: 'image' }))
 
     expect(audioEditsOf(useAudioEdits.getState(), 'doc-1').assetId).toBeNull()
+  })
+
+  it('lays a picture down as a layer when an image tab is in front', () => {
+    open('image')
+    openAsset(picture())
+
+    expect(canvasOf(useCanvases.getState(), 'doc-1').layers.at(-1)?.name).toBe('dusk.png')
+  })
+
+  // The canvas takes pictures, and nothing else: a sound double-clicked over an image tab must
+  // fall through rather than become a layer of silence.
+  it('leaves the canvas alone for an asset it cannot hold', () => {
+    open('image')
+    openAsset(asset())
+
+    expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(1)
   })
 
   it('does nothing at all when no document can take it', () => {

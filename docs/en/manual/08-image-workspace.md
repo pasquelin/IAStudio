@@ -102,13 +102,13 @@ In other words: an armed tool never needs the menu to be taken up again.
 |---|---|---|
 | **Move** | `V` | drags the active layer's content |
 | **Hand** | `H` | pans the view |
-| **Scale** | `K` | *not available yet* |
+| **Scale** | `K` | shows eight grips and a rotation handle around the armed layer |
 
 ### Frame group
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Crop** | `F` | redefines the image's edges |
+| **Crop** | `F` | *not available yet* |
 | **Slice** | `⇧S` | *not available yet* |
 | **Cut** | `S` | *not available yet* |
 
@@ -133,7 +133,7 @@ In other words: an armed tool never needs the menu to be taken up again.
 | **Ellipse** | `O` | Shift for a circle |
 | **Polygon** | — | drawn from its centre |
 | **Star** | — | drawn from its centre |
-| **Image…** | `⇧⌘K` | *not available yet* |
+| **Image…** | `⇧⌘K` | opens the shelf, to lay a picture down as a layer |
 
 ### Drawing group
 

@@ -20,6 +20,30 @@ export function parseJobId(value: unknown): string {
   return jobId.parse(value)
 }
 
+const assetName = z.string().trim().min(1).max(200)
+
+export function parseAssetName(value: unknown): string {
+  return assetName.parse(value)
+}
+
+/**
+ * Only the payload, never a data URL: an `data:image/png;base64,` prefix reaches the API as
+ * part of the picture and comes back as an opaque decoding error.
+ */
+const base64 = z
+  .string()
+  .min(1)
+  // Only the head: the payload is megabytes long, and a data URL prefix — the one mistake this
+  // catches — is at the front. The size is checked before it, in the uploader.
+  // The head alone: the payload is megabytes long, and the one mistake worth catching — a
+  // `data:image/png;base64,` prefix — is at the front. An unanchored class would match `data`
+  // and let the rest through.
+  .refine(value => /^[A-Za-z0-9+/=]+$/.test(value.slice(0, 64)), 'expected raw base64')
+
+export function parseBase64(value: unknown): string {
+  return base64.parse(value)
+}
+
 const facetValue = z.string().trim().min(1).max(80)
 
 /**

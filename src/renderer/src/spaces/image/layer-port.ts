@@ -1,5 +1,5 @@
 import type { LayerPort } from '@/engines/canvas/CanvasEngine'
-import { translateLayer } from '@/engines/canvas/commands'
+import { setLayerTransform, translateLayer } from '@/engines/canvas/commands'
 import { useCanvases } from '@/stores/canvases'
 
 /**
@@ -14,6 +14,7 @@ export function layerPort(documentId: string): LayerPort {
   const store = () => useCanvases.getState()
 
   return {
+    transform: (id, transform) => store().runCommand(documentId, setLayerTransform(id, transform)),
     translate: (id, x, y) => store().runCommand(documentId, translateLayer(id, x, y)),
     beginDrag: () => store().beginGesture(documentId),
     endDrag: () => store().endGesture(documentId),

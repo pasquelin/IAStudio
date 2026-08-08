@@ -144,4 +144,18 @@ describe('familyOf', () => {
   it('does not claim a skybox upscaler', () => {
     expect(familyOf(['img2img'], ['sc:scenario', 'skybox-upscale'])).toBe('image')
   })
+
+  /**
+   * `generate.run_model` calls it "the name of the file input field to use as the mask source".
+   * Carried through so an edit action can fill the picture and its mask without naming either
+   * model's field — which is what keeps invariant 5 whole for inpainting.
+   */
+  it('carries the field a mask input masks', () => {
+    const inputs: ScenarioInput[] = [
+      { name: 'image', type: 'file', kind: 'image' },
+      { name: 'mask', type: 'file', kind: 'image', maskFrom: 'image' },
+    ]
+
+    expect(translateSchema(inputs).map(field => field.maskFrom)).toEqual([undefined, 'image'])
+  })
 })

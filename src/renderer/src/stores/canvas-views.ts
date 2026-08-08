@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { CanvasSelection } from '@/engines/canvas/canvas-selection'
 import {
   DEFAULT_VIEW,
   sameViewport,
@@ -23,14 +24,22 @@ const NO_HOST: Size = { width: 0, height: 0 }
 export type CanvasViewsState = {
   views: Record<string, CanvasView>
   hosts: Record<string, Size>
+  /**
+   * The region carved out of each document. Here rather than in `CanvasState` for the same
+   * reason as the viewport: a marquee is how one is looking at a document, not something one
+   * made of it, and ⌘Z must not give one back.
+   */
+  selections: Record<string, CanvasSelection>
   setViewport: (documentId: string, viewport: Viewport) => void
   setHost: (documentId: string, size: Size) => void
+  setSelection: (documentId: string, selection: CanvasSelection) => void
   toggle: (documentId: string, key: ViewToggle) => void
 }
 
 export const useCanvasViews = create<CanvasViewsState>()(set => ({
   views: {},
   hosts: {},
+  selections: {},
 
   // Both guard on the value first: a wheel notch with no delta, a pan frame with no motion and a
   // resize observer firing for an unchanged layout would otherwise wake every subscriber.
@@ -50,6 +59,9 @@ export const useCanvasViews = create<CanvasViewsState>()(set => ({
         : { hosts: { ...state.hosts, [documentId]: size } }
     }),
 
+  setSelection: (documentId, selection) =>
+    set(state => ({ selections: { ...state.selections, [documentId]: selection } })),
+
   toggle: (documentId, key) =>
     set(state => {
       const view = viewOf(state, documentId)
@@ -57,7 +69,7 @@ export const useCanvasViews = create<CanvasViewsState>()(set => ({
     }),
 }))
 
-type Readable = Pick<CanvasViewsState, 'views' | 'hosts'>
+type Readable = Pick<CanvasViewsState, 'views' | 'hosts' | 'selections'>
 
 /** Shared defaults, never a fresh object: a selector building one hands React a new snapshot. */
 export function viewOf(state: Readable, documentId: string): CanvasView {
@@ -66,4 +78,8 @@ export function viewOf(state: Readable, documentId: string): CanvasView {
 
 export function hostOf(state: Readable, documentId: string): Size {
   return state.hosts[documentId] ?? NO_HOST
+}
+
+export function selectionOf(state: Readable, documentId: string): CanvasSelection {
+  return state.selections[documentId] ?? null
 }

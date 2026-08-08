@@ -23,7 +23,9 @@ export const MIN_SPLIT = 100
 /** One tool per half, so an icon click swaps rather than stacks. An absent key is a closed
  * half — there is no second way to say it. */
 type ZoneSlots = Partial<Record<ToolSlot, ToolId>>
-type OpenByZone = Partial<Record<ToolZone, ZoneSlots>>
+
+/** Which tool each half of each zone currently shows. */
+export type OpenByZone = Partial<Record<ToolZone, ZoneSlots>>
 type SizesByZone = Partial<Record<ToolZone, number>>
 
 type ToolsState = {

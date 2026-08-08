@@ -37,7 +37,8 @@
     "noParameter": "Ce modèle n’attend aucun paramètre.",
     "randomSeed": "Aléatoire",
     "noProject": "Ouvrez un projet pour générer.",
-    "noCredentials": "Renseignez vos identifiants API pour voir vos modèles."
+    "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
+    "dropPicture": "Déposez une image, ou collez son identifiant"
   },
   "jobs": {
     "none": "Aucune tâche en cours.",
@@ -236,7 +237,8 @@
     "picker": "Pipette",
     "pickerHint": "Prélever la couleur sous le pointeur",
     "color": "Couleur",
-    "colorHint": "Couleur du pinceau, des formes et du remplissage"
+    "colorHint": "Couleur du pinceau, des formes et du remplissage",
+    "textDefault": "Votre texte"
   },
   "imageView": {
     "zoom": "Zoom",
@@ -255,7 +257,25 @@
     "showHint": "Afficher ce calque",
     "hideHint": "Masquer ce calque sans le supprimer",
     "untitled": "Calque {{n}}",
-    "noDocument": "Ouvrez une image pour voir ses calques."
+    "noDocument": "Ouvrez une image pour voir ses calques.",
+    "locks": "Verrous",
+    "locksHint": "Verrouiller les pixels, la position ou la transparence",
+    "lockPixels": "Verrouiller les pixels",
+    "lockPosition": "Verrouiller la position",
+    "lockAlpha": "Verrouiller la transparence",
+    "collapse": "Replier le groupe",
+    "expand": "Déplier le groupe",
+    "operations": "Opérations",
+    "operationsHint": "Grouper, dupliquer, fusionner ou aplatir la pile",
+    "group": "Grouper",
+    "ungroup": "Dégrouper",
+    "duplicate": "Dupliquer",
+    "mergeDown": "Fusionner avec le calque du dessous",
+    "flatten": "Aplatir l’image",
+    "groupName": "Groupe",
+    "copyName": "{{name}} copie",
+    "flatName": "Image aplatie",
+    "rename": "Renommer le calque"
   },
   "meshes": {
     "box": "Cube",
@@ -392,7 +412,28 @@
     "height": "Hauteur",
     "onDisk": "Emplacement",
     "reveal": "Révéler dans le gestionnaire de fichiers",
-    "fileMissing": "Fichier introuvable"
+    "fileMissing": "Fichier introuvable",
+    "layer": "Calque",
+    "layerKind_pixel": "Pixels",
+    "layerKind_group": "Groupe",
+    "layerKind_adjustment": "Réglage",
+    "compositing": "Composition",
+    "blend": "Fusion",
+    "fillOpacity": "Opacité du fond",
+    "clipped": "Écrêté sur le calque du dessous",
+    "locks": "Verrous",
+    "lock_pixels": "Pixels",
+    "lock_position": "Position",
+    "lock_alpha": "Transparence",
+    "x": "X",
+    "y": "Y",
+    "scaleX": "Échelle X",
+    "scaleY": "Échelle Y",
+    "children": "Calques",
+    "opacity": "Opacité",
+    "text": "Texte",
+    "words": "Mots",
+    "textSize": "Corps"
   },
   "transport": {
     "play": "Lire",
@@ -843,6 +884,38 @@
     "canvasSnap": {
       "title": "Magnétisme",
       "help": "Fait coller ce qu'on déplace aux repères, aux bords de l'image et à son centre, à quelques pixels près."
+    },
+    "canvasDeselect": {
+      "title": "Désélectionner",
+      "help": "Abandonner la région sélectionnée : le pinceau retrouve tout le calque"
+    },
+    "canvasMaskFromSelection": {
+      "title": "Faire un masque de la sélection",
+      "help": "Masquer le calque actif hors de la région sélectionnée"
+    },
+    "canvasRegenerate": {
+      "title": "Régénérer la zone",
+      "help": "Demander au modèle de repeindre la région masquée du calque actif"
+    },
+    "canvasCutout": {
+      "title": "Détourer",
+      "help": "Retirer l’arrière-plan de l’image aplatie avec le modèle par défaut"
+    },
+    "canvasEnlarge": {
+      "title": "Agrandir",
+      "help": "Augmenter la définition de l’image aplatie avec le modèle par défaut"
+    },
+    "canvasVectorize": {
+      "title": "Vectoriser",
+      "help": "Convertir l’image aplatie en tracés avec le modèle par défaut"
+    },
+    "canvasExtend": {
+      "title": "Étendre",
+      "help": "Demander au modèle de peindre au-delà des bords de l’image aplatie"
+    },
+    "canvasExport": {
+      "title": "Exporter l’image",
+      "help": "Écrire le document aplati sur le disque, au format PNG"
     }
   },
   "texture": {
@@ -860,5 +933,31 @@
     "title": "Licences",
     "intro": "Scenario Studio est livré avec les logiciels ci-dessous. Chacun garde sa propre licence, reproduite ici en entier.",
     "sources": "Sources correspondantes :"
+  },
+  "blend": {
+    "normal": "Normal",
+    "multiply": "Produit",
+    "screen": "Superposition",
+    "overlay": "Incrustation",
+    "darken": "Obscurcir",
+    "lighten": "Éclaircir",
+    "color-dodge": "Densité couleur -",
+    "color-burn": "Densité couleur +",
+    "hard-light": "Lumière crue",
+    "soft-light": "Lumière tamisée",
+    "difference": "Différence",
+    "exclusion": "Exclusion",
+    "hue": "Teinte",
+    "saturation": "Saturation",
+    "color": "Couleur",
+    "luminosity": "Luminosité"
+  },
+  "adjustment": {
+    "exposure": "Exposition",
+    "contrast": "Contraste",
+    "saturation": "Saturation",
+    "temperature": "Température",
+    "add": "Ajouter un réglage",
+    "addHint": "Poser un calque de réglage sur ce qui est en dessous"
   }
 }

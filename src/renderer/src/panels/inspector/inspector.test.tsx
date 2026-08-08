@@ -13,7 +13,9 @@ import {
   type SceneState,
 } from '@/engines/scene/scene-state'
 import { useAssets } from '@/stores/assets'
+import { installCanvas } from '@/stores/canvas-fixtures'
 import { useDocuments } from '@/stores/documents'
+import { useSelection } from '@/stores/selection'
 import { installScene } from '@/stores/scene-fixtures'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { definition } from '.'
@@ -343,5 +345,23 @@ describe('inspector panel', () => {
     render(<Content />)
 
     expect(entries()).toBe(1)
+  })
+
+  // One panel for the whole studio: picking a layer describes it where a clip would be described.
+  it('describes the layer picked in the stack', () => {
+    installCanvas('doc-1')
+    useSelection.getState().selectLayer('doc-1', 'layer-1')
+    render(<Content />)
+
+    expect(screen.getByText('Composition')).toBeInTheDocument()
+  })
+
+  // The image in front is not necessarily the one the layer was picked in.
+  it('says nothing for a layer picked in another document', () => {
+    installCanvas('doc-1')
+    useSelection.getState().selectLayer('elsewhere', 'layer-1')
+    render(<Content />)
+
+    expect(screen.queryByText('Composition')).not.toBeInTheDocument()
   })
 })

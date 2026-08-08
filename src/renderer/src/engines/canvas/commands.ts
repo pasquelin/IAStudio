@@ -1,3 +1,4 @@
+import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { Command } from '../core/history'
 import {
   allLayers,
@@ -15,6 +16,7 @@ import {
   type Layer,
   type LayerLocks,
   type Rect,
+  type TextLayer,
   type Transform,
 } from './canvas-state'
 
@@ -116,6 +118,74 @@ export function setLayerVisible(id: string, visible: boolean): Command<CanvasSta
 
 export function renameLayer(id: string, name: string): Command<CanvasState> {
   return patch(`layer:rename:${id}`, id, { name })
+}
+
+/**
+ * Gives a layer a mask, or takes it away. Its pixels belong to the engine like the layer's own;
+ * what the stack records is only that there is one, and whether it is hiding anything.
+ */
+export function setLayerMask(
+  id: string,
+  mask: { enabled: boolean; linked: boolean } | undefined,
+): Command<CanvasState> {
+  return patch(`layer:mask:${id}`, id, { mask })
+}
+
+/**
+ * The grading values of an adjustment layer. Typed apart from `patch`, which is spelled on the
+ * fields every kind shares — this one belongs to a single kind of layer.
+ */
+export function setLayerAdjustment(id: string, values: AdjustmentStack): Command<CanvasState> {
+  let previous: AdjustmentStack | null = null
+
+  return {
+    id: `layer:adjust:${id}`,
+    apply: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => {
+        if (layer.id !== id || layer.kind !== 'adjustment') return layer
+        previous ??= layer.values
+        return { ...layer, values }
+      }),
+    }),
+    revert: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer =>
+        layer.id === id && layer.kind === 'adjustment' && previous
+          ? { ...layer, values: previous }
+          : layer,
+      ),
+    }),
+  }
+}
+
+/** The words of a caption, and how they are set. Its own command, like the grading values. */
+export function setLayerText(
+  id: string,
+  changes: Partial<Pick<TextLayer, 'text' | 'size' | 'color'>>,
+): Command<CanvasState> {
+  let previous: TextLayer | null = null
+
+  return {
+    id: `layer:text:${id}`,
+    apply: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => {
+        if (layer.id !== id || layer.kind !== 'text') return layer
+        previous ??= layer
+        return { ...layer, ...changes }
+      }),
+    }),
+    revert: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => (layer.id === id && previous ? previous : layer)),
+    }),
+  }
+}
+
+/** The whole transform at once: the inspector's fields all write into the same object. */
+export function setLayerTransform(id: string, transform: Transform): Command<CanvasState> {
+  return patch(`layer:transform:${id}`, id, { transform })
 }
 
 /**
@@ -288,6 +358,19 @@ export function clearGuides(): Command<CanvasState> {
   }
 }
 
+/**
+ * Folds a group, or opens it. Adds no history entry, like the selection — though an undo of the
+ * edit before it does put the fold back, since a command reverts the whole layer it patched.
+ */
+export function collapseLayer(state: CanvasState, id: string, collapsed: boolean): CanvasState {
+  return {
+    ...state,
+    layers: mapLayers(state.layers, layer =>
+      layer.id === id && isGroup(layer) ? { ...layer, collapsed } : layer,
+    ),
+  }
+}
+
 /** Selection stays out of the history: nobody wants ⌘Z to give them back a selected layer. */
 export function selectLayer(state: CanvasState, id: string | null): CanvasState {
   return { ...state, activeLayerId: id }
@@ -344,7 +427,9 @@ export function groupLayers(
     return {
       ...state,
       layers: [...rest.slice(0, at), group, ...rest.slice(at)],
-      activeLayerId: groupId,
+      // The topmost member, not the group: a group holds no pixels, so arming one leaves the
+      // brush silently drawing nothing.
+      activeLayerId: allLayers(members).findLast(layer => !isGroup(layer))?.id ?? null,
     }
   })
 }
@@ -360,7 +445,8 @@ export function ungroupLayer(id: string): Command<CanvasState> {
       ...group.children,
       ...siblings.slice(index + 1),
     ])
-    return { ...state, layers, activeLayerId: group.children.at(-1)?.id ?? state.activeLayerId }
+    const armed = allLayers(group.children).findLast(layer => !isGroup(layer))?.id
+    return { ...state, layers, activeLayerId: armed ?? state.activeLayerId }
   })
 }
 
@@ -483,6 +569,47 @@ export function resizeImage(width: number, height: number): Command<CanvasState>
         y: transform.y * scaleY,
         scaleX: transform.scaleX * scaleX,
         scaleY: transform.scaleY * scaleY,
+      })),
+    }
+  })
+}
+
+export type FlipAxis = 'horizontal' | 'vertical'
+
+/**
+ * Mirrors the whole document. A negative scale rather than rewritten pixels: the layers keep
+ * their textures, so flipping and flipping back is exactly the identity — which rewriting them
+ * would not be, once resampling has rounded a pixel twice.
+ */
+export function flipImage(axis: FlipAxis): Command<CanvasState> {
+  return restructure(`canvas:flip:${axis}`, state => ({
+    ...state,
+    layers: moveLayers(state, transform =>
+      axis === 'horizontal'
+        ? { ...transform, scaleX: -transform.scaleX, x: state.width - transform.x }
+        : { ...transform, scaleY: -transform.scaleY, y: state.height - transform.y },
+    ),
+  }))
+}
+
+/**
+ * Turns the document a quarter turn. The frame turns with it — a portrait becomes a landscape,
+ * which is the whole point — and each layer turns about the document's centre rather than its
+ * own, or a stack would fan out instead of turning as one picture.
+ */
+export function rotateImage(clockwise: boolean): Command<CanvasState> {
+  return restructure(`canvas:rotate:${clockwise ? 'cw' : 'ccw'}`, state => {
+    const quarter = clockwise ? Math.PI / 2 : -Math.PI / 2
+
+    return {
+      ...state,
+      width: state.height,
+      height: state.width,
+      layers: moveLayers(state, transform => ({
+        ...transform,
+        rotation: transform.rotation + quarter,
+        x: clockwise ? state.height - transform.y : transform.y,
+        y: clockwise ? transform.x : state.width - transform.x,
       })),
     }
   })

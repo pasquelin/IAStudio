@@ -2,25 +2,52 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
+import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { getBridge } from '@/services/bridge'
 import { canRedo, canUndo } from '@/engines/core/history'
+import { textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
+import { addLayer } from '@/engines/canvas/commands'
+import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
-import { useCanvasViews, viewOf } from '@/stores/canvas-views'
+import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
+import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
-import { canvasToolFor, cursorFor, DEFAULT_MODES, IMAGE_TOOLS } from './image-tools'
+import {
+  canvasToolFor,
+  cursorFor,
+  DEFAULT_MODES,
+  IMAGE_TOOLS,
+  selectionShapeFor,
+  shapeKindFor,
+} from './image-tools'
 import { layerPort } from './layer-port'
+import { prepareEdit, type AiEdit } from './ai-actions'
+import { exportPicture } from './export-picture'
+import { maskFromSelection } from './mask-actions'
+import { placeAsset } from './place-asset'
+import { revealAssets } from './reveal-panel'
 import { pixelPort } from './pixel-port'
 import { ZoomBar } from './ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }
+
+/** Which edit each command asks for. A table, so a sixth is one entry and no new branch. */
+const EDIT_BY_COMMAND: Readonly<Record<string, AiEdit>> = {
+  'canvas.regenerate': 'regenerate',
+  'canvas.cutout': 'cutout',
+  'canvas.enlarge': 'enlarge',
+  'canvas.vectorize': 'vectorize',
+  'canvas.extend': 'extend',
+}
 
 /**
  * The transparency checker, as one repeating gradient — no image, and no hex: a painted white
@@ -32,6 +59,7 @@ const CHECKER = cn(
 )
 
 export function ImageDocument({ documentId }: ImageDocumentProps) {
+  const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<CanvasEngine | null>(null)
 
@@ -43,12 +71,22 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
   const view = useCanvasViews(state => viewOf(state, documentId))
+  const selection = useCanvasViews(state => selectionOf(state, documentId))
   // Booleans rather than the history itself: a selector building an object on every call hands
   // React a new snapshot each render, and the loop never settles.
   const undoable = useCanvases(state => canUndo(historyOf(state, documentId)))
   const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
   const bindings = useBindingOverrides()
   const active = useDocuments(state => state.activeId === documentId)
+  const byId = useAssets(assetsById)
+  const [over, setOver] = useState(false)
+
+  // What a fresh caption says. Held in a ref so the effect that builds the engine does not
+  // depend on the language, which would remount it — and lose every layer's texture.
+  const caption = useRef(t('imageTools.textDefault'))
+  useEffect(() => {
+    caption.current = t('imageTools.textDefault')
+  }, [t])
 
   useEffect(() => {
     const element = hostRef.current
@@ -65,7 +103,14 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       onPixels: pixels.record,
       onPixelsDropped: pixels.drop,
       onViewport: viewport => views().setViewport(documentId, viewport),
+      onSelection: selection => views().setSelection(documentId, selection),
       onHost: size => views().setHost(documentId, size),
+      // Read through the ref rather than captured: rebuilding the engine on a language change
+      // would take the GPU context — and the pixels in it — down with it.
+      onText: at =>
+        useCanvases
+          .getState()
+          .runCommand(documentId, addLayer(textLayer(newId(), caption.current, at))),
       guides: guidePort(documentId),
       layers: layerPort(documentId),
     })
@@ -89,6 +134,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   }, [view])
 
   useEffect(() => {
+    engine.current?.setSelection(selection)
+  }, [selection])
+
+  useEffect(() => {
     engine.current?.setBrush(brush)
   }, [brush])
 
@@ -97,6 +146,12 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   useEffect(() => {
     const canvasTool = canvasToolFor(tool, mode)
     if (canvasTool) engine.current?.setTool(canvasTool)
+    // The region group holds three gestures behind one tool; the bar says which is armed.
+    const region = selectionShapeFor(tool, mode)
+    if (region) engine.current?.setSelectionShape(region)
+    // Same for the shapes group, whose six modes are one tool drawing six things.
+    const shape = shapeKindFor(tool, mode)
+    if (shape) engine.current?.setShape(shape)
   }, [tool, mode])
 
   /**
@@ -123,6 +178,35 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return toggleView(documentId, 'snap')
         case 'canvas.clearGuides':
           return clearGuides(documentId)
+        case 'canvas.export': {
+          const host = engine.current
+          // Swallowed here rather than left unhandled: a shortcut has nowhere to report to, and
+          // the dialog it opens is what says whether anything was written.
+          if (host) void exportPicture(documentId, host).catch(() => undefined)
+          return
+        }
+        case 'canvas.deselect':
+          return useCanvasViews.getState().setSelection(documentId, null)
+        case 'canvas.maskFromSelection': {
+          const host = engine.current
+          return host ? maskFromSelection(documentId, host) : undefined
+        }
+        case 'canvas.regenerate':
+        case 'canvas.cutout':
+        case 'canvas.enlarge':
+        case 'canvas.vectorize':
+        case 'canvas.extend': {
+          const host = engine.current
+          const edit = EDIT_BY_COMMAND[command]
+          const bridge = getBridge()
+          if (!host || !edit || !bridge) return
+
+          // Prepared, never submitted: the form opens filled and the user is the one who runs it.
+          // The failure is swallowed here rather than left unhandled — the shortcut has nowhere
+          // to report to, and the panel it opens is what says whether anything was prepared.
+          void prepareEdit(documentId, edit, host, bridge.scenario).catch(() => undefined)
+          return
+        }
         case 'canvas.undo':
           return useCanvases.getState().undo(documentId)
         case 'canvas.redo':
@@ -140,9 +224,25 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     onCommand: run,
   })
 
+  /** A picture dropped on the canvas becomes a layer of its own, on top and armed. */
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault()
+      setOver(false)
+
+      const assetId = assetIdFromDrag(event)
+      const asset = assetId ? byId.get(assetId) : null
+      if (asset) placeAsset(documentId, asset)
+    },
+    [byId, documentId],
+  )
+
   // Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
   // active has to hand over the ellipse, not merely remember it for later.
   const pick = useCallback((toolId: string, modeId: string) => {
+    // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
+    if (modeId === 'image') return revealAssets()
+
     setModes(current => ({ ...current, [toolId]: modeId }))
     setTool(toolId)
   }, [])
@@ -168,7 +268,15 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   return (
     <div className="flex h-full min-h-0">
-      <div className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}>
+      <div
+        className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}
+        onDragOver={event => {
+          event.preventDefault()
+          setOver(true)
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={onDrop}
+      >
         {/* Pixi appends its own canvas here, and the overlay its own above it — see
             `CanvasEngine.mount`. The cursor goes on the host rather than the canvas, which Pixi
             owns and replaces on every mount. */}
@@ -186,6 +294,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           canUndo={undoable}
           canRedo={redoable}
         />
+
+        {/* The same overlay every droppable surface uses, rather than a border of its own: a
+            difference in how two panels answer a drag reads as a bug. */}
+        {over && <div className="border-accent pointer-events-none absolute inset-0 border-2" />}
 
         <ZoomBar
           scale={view.viewport.scale}

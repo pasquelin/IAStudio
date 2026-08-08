@@ -49,6 +49,7 @@ const bridge: StudioBridge = {
     modelPreviews: assetIds => ipcRenderer.invoke(CHANNELS.scenarioModelPreviews, assetIds),
     describeModel: modelId => ipcRenderer.invoke(CHANNELS.scenarioDescribeModel, modelId),
     generate: (modelId, body) => ipcRenderer.invoke(CHANNELS.scenarioGenerate, modelId, body),
+    uploadAsset: (name, image) => ipcRenderer.invoke(CHANNELS.scenarioUploadAsset, name, image),
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
     listJobs: () => ipcRenderer.invoke(CHANNELS.scenarioListJobs),
     onProgress: callback => subscribe<JobProgress>(EVENTS.jobProgress, callback),
@@ -61,6 +62,7 @@ const bridge: StudioBridge = {
   },
   dialog: {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
+    exportPicture: (name, image) => ipcRenderer.invoke(CHANNELS.dialogExportPicture, name, image),
   },
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),

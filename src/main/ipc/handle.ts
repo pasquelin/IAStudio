@@ -25,6 +25,7 @@ type ChannelMethod = {
   [CHANNELS.scenarioModelPreviews]: StudioBridge['scenario']['modelPreviews']
   [CHANNELS.scenarioDescribeModel]: StudioBridge['scenario']['describeModel']
   [CHANNELS.scenarioGenerate]: StudioBridge['scenario']['generate']
+  [CHANNELS.scenarioUploadAsset]: StudioBridge['scenario']['uploadAsset']
   [CHANNELS.scenarioCancelJob]: StudioBridge['scenario']['cancelJob']
   [CHANNELS.scenarioListJobs]: StudioBridge['scenario']['listJobs']
 
@@ -32,6 +33,7 @@ type ChannelMethod = {
   [CHANNELS.projectOpen]: StudioBridge['project']['open']
   [CHANNELS.projectCurrent]: StudioBridge['project']['current']
   [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
+  [CHANNELS.dialogExportPicture]: StudioBridge['dialog']['exportPicture']
 
   [CHANNELS.documentList]: StudioBridge['documents']['list']
   [CHANNELS.documentRead]: StudioBridge['documents']['read']

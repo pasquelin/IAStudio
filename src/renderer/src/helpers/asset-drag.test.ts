@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ASSET_DRAG_TYPE, assetIdFromDrag, startAssetDrag } from './asset-drag'
-
-function transfer(): DataTransfer {
-  const values = new Map<string, string>()
-  // jsdom builds no DataTransfer; the two methods used here are the whole contract.
-  return {
-    setData: (format: string, value: string) => values.set(format, value),
-    getData: (format: string) => values.get(format) ?? '',
-    effectAllowed: 'none',
-  } as unknown as DataTransfer
-}
+import { dragTransfer as transfer } from './drag-fixtures'
 
 describe('asset drag', () => {
   it('carries the asset id under a private type', () => {

@@ -46,6 +46,7 @@ import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
+import { createAssetUploader, type AssetUploader } from './scenario/uploader'
 import { createClientProvider, type ClientProvider } from './scenario/client'
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
@@ -61,6 +62,7 @@ export type Services = {
   client: ClientProvider
   models: ModelRegistry
   jobs: JobManager
+  uploads: AssetUploader
   project: ProjectStore
   documents: DocumentFiles
   assets: LocalBackend
@@ -73,6 +75,7 @@ export type Services = {
   /** The language in force, machine locale included. Both the menu and the dialogs read it. */
   language: () => Language
   pickPath: (kind: PathKind) => Promise<string | null>
+  savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   pickMedia: () => Promise<string[]>
@@ -104,6 +107,23 @@ async function pickPath(kind: PathKind, startIn?: string): Promise<string | null
     ...(startIn ? { defaultPath: startIn } : {}),
   })
   return picked[0] ?? null
+}
+
+/**
+ * Asks where a picture goes and writes it there. The renderer has no filesystem, so the bytes
+ * come across and the path never goes back the other way beyond the one it chose.
+ */
+async function savePicture(name: string, bytes: Uint8Array): Promise<string | null> {
+  const parent = BrowserWindow.getFocusedWindow()
+  const options: Electron.SaveDialogOptions = { defaultPath: name }
+  const result = parent
+    ? await dialog.showSaveDialog(parent, options)
+    : await dialog.showSaveDialog(options)
+
+  if (result.canceled || !result.filePath) return null
+
+  await writeFile(result.filePath, bytes)
+  return result.filePath
 }
 
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
@@ -278,6 +298,8 @@ export function createServices(settings: SettingsStore): Services {
   // than allocating its own — what matters is that a job holds ONE binding, not a fresh one.
   let bound: { scenario: Scenario; account: JobAccount } | null = null
 
+  const uploads = createAssetUploader(() => client.require().assets)
+
   const jobs = createJobManager({
     // Read once per job and kept, so a switch mid-flight does not have the new key asked about
     // the previous account's job id — see `JobAccount`.
@@ -327,6 +349,7 @@ export function createServices(settings: SettingsStore): Services {
     client,
     models,
     jobs,
+    uploads,
     project,
     documents,
     assets,
@@ -346,6 +369,7 @@ export function createServices(settings: SettingsStore): Services {
     },
     language,
     pickPath,
+    savePicture,
     reveal: file => shell.showItemInFolder(file),
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's

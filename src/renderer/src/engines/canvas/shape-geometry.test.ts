@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_SIDES, MIN_SIDES, SHAPE_KINDS, shapeGeometry } from './shape-geometry'
+import {
+  MAX_SIDES,
+  MIN_SIDES,
+  paintShape,
+  SHAPE_KINDS,
+  shapeBounds,
+  shapeGeometry,
+  shapeOutline,
+  type ShapePath,
+} from './shape-geometry'
 
 const FREE = { sides: 5, constrain: false }
 const HELD = { sides: 5, constrain: true }
@@ -117,5 +126,72 @@ describe('shape geometry', () => {
     for (const kind of SHAPE_KINDS) {
       expect(() => shapeGeometry(kind, { x: 8, y: 8 }, { x: 8, y: 8 }, FREE)).not.toThrow()
     }
+  })
+})
+
+describe('outlining a shape', () => {
+  it('closes a rectangle on its four corners', () => {
+    const outline = shapeOutline({ kind: 'rectangle', x: 10, y: 20, width: 30, height: 40 })
+
+    expect(outline).toEqual([
+      { x: 10, y: 20 },
+      { x: 40, y: 20 },
+      { x: 40, y: 60 },
+      { x: 10, y: 60 },
+    ])
+  })
+
+  it('reads an ellipse as a curve rather than as its box', () => {
+    const outline = shapeOutline({ kind: 'ellipse', x: 0, y: 0, radiusX: 10, radiusY: 5 })
+
+    expect(outline.length).toBeGreaterThan(16)
+    expect(outline[0]).toEqual({ x: 10, y: 0 })
+  })
+
+  // An arrow is a shaft and two barbs, traced without lifting the hand.
+  it('traces an arrow through its tip twice', () => {
+    const arrow = shapeGeometry('arrow', { x: 0, y: 0 }, { x: 100, y: 0 }, FREE)
+    const outline = shapeOutline(arrow)
+
+    expect(outline).toHaveLength(5)
+    expect(outline[1]).toEqual(outline[3])
+  })
+})
+
+describe('what a shape dirties', () => {
+  // The undo tiles are photographed from it: too small, and the edge of a stroke is not restored.
+  it('widens the box by the stroke it is drawn with', () => {
+    const bounds = shapeBounds({ kind: 'rectangle', x: 10, y: 10, width: 20, height: 20 }, 8)
+
+    expect(bounds).toEqual({ x: 2, y: 2, width: 36, height: 36 })
+  })
+})
+
+describe('tracing a shape', () => {
+  /** The two calls the geometry makes, recorded rather than drawn. */
+  function recorder(): { path: ShapePath; calls: string[] } {
+    const calls: string[] = []
+    return {
+      calls,
+      path: {
+        moveTo: (x, y) => calls.push(`move ${x} ${y}`),
+        lineTo: (x, y) => calls.push(`line ${x} ${y}`),
+      },
+    }
+  }
+
+  it('closes what has an inside', () => {
+    const { path, calls } = recorder()
+    paintShape(path, { kind: 'rectangle', x: 0, y: 0, width: 10, height: 10 })
+
+    expect(calls.at(-1)).toBe('line 0 0')
+  })
+
+  // A line and an arrow have no inside; closing them would draw a shape nobody asked for.
+  it('leaves a line open', () => {
+    const { path, calls } = recorder()
+    paintShape(path, { kind: 'line', from: { x: 0, y: 0 }, to: { x: 10, y: 10 } })
+
+    expect(calls).toEqual(['move 0 0', 'line 10 10'])
   })
 })

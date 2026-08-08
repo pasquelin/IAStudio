@@ -26,6 +26,8 @@ import {
   mdiTriangleOutline,
   mdiVectorLine,
 } from '@mdi/js'
+import type { SelectionShape } from '@/engines/canvas/canvas-selection'
+import { SHAPE_KINDS, type ShapeKind } from '@/engines/canvas/shape-geometry'
 import type { CanvasTool } from '@/engines/canvas/CanvasEngine'
 import type { ToolbarItem } from '@/design/Toolbar'
 
@@ -66,13 +68,14 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         descriptionKey: 'imageTools.scaleHint',
         icon: mdiResize,
         shortcut: 'K',
-        // The engine has no scale gesture: armed, it would silently drag the layer instead.
-        disabled: true,
       },
     ],
   },
   {
     id: 'frame',
+    // Greyed on the group, not only on its rows: `Toolbar` does not inherit a mode's `disabled`,
+    // so the button armed a tool the engine refuses — a live-looking button that does nothing.
+    disabled: true,
     tool: 'crop',
     labelKey: 'imageTools.frame',
     descriptionKey: 'imageTools.frameHint',
@@ -84,6 +87,10 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         descriptionKey: 'imageTools.cropHint',
         icon: mdiCropFree,
         shortcut: 'F',
+        // Resizing the frame moves every layer, but a layer's texture keeps the document's old
+        // size — so after a crop the brush writes at the offset the crop introduced. Greyed
+        // rather than hidden, as the bar does for everything else that is coming.
+        disabled: true,
       },
       {
         id: 'section',
@@ -186,9 +193,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         descriptionKey: 'imageTools.shapeImageHint',
         icon: mdiImagePlusOutline,
         shortcut: '⇧⌘K',
-        // Placing an asset needs the catalogue, which this space does not reach yet. Shown
-        // greyed rather than hidden: the bar says what is coming instead of pretending.
-        disabled: true,
       },
     ],
   },
@@ -308,6 +312,23 @@ export function toolById(id: string): ImageTool | null {
 export function canvasToolFor(toolId: string, modeId?: string): CanvasTool | null {
   if (toolId === 'pointer') return modeId === 'hand' ? 'hand' : 'move'
   return toolById(toolId)?.tool ?? null
+}
+
+/**
+ * Which shape the region tool draws. Its three modes are one tool with three gestures, the same
+ * way the pointer group holds both dragging the content and dragging the view.
+ */
+export function selectionShapeFor(toolId: string, modeId?: string): SelectionShape | null {
+  if (toolId !== 'region') return null
+  if (modeId === 'ellipse') return 'ellipse'
+  if (modeId === 'lasso') return 'lasso'
+  return 'rect'
+}
+
+/** Which of the six the shapes tool draws. `image` is not one: it opens the shelf instead. */
+export function shapeKindFor(toolId: string, modeId?: string): ShapeKind | null {
+  if (toolId !== 'shape') return null
+  return SHAPE_KINDS.find(kind => kind === modeId) ?? null
 }
 
 /** The mode each group opens armed with — its first row, as Figma's groups do. */

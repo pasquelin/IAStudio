@@ -17,11 +17,11 @@ export type PatchRenderer = {
 /** One tile of one patch, photographed either side of the gesture that dirtied it. */
 type Capture = { tile: Tile; before: RenderTexture; after: RenderTexture | null }
 
-type Patch = { id: string; layerId: string; captures: Capture[]; bytes: number }
+type Patch = { id: string; surfaceId: string; captures: Capture[]; bytes: number }
 
 type Recording = {
   id: string
-  layerId: string
+  surfaceId: string
   source: RenderTexture
   document: Size
   captured: Map<string, Capture>
@@ -62,9 +62,9 @@ export class PixelPatches {
   ) {}
 
   /** Opens a recording. Whatever was open is thrown away: only one gesture writes at a time. */
-  begin(id: string, layerId: string, source: RenderTexture, document: Size): void {
+  begin(id: string, surfaceId: string, source: RenderTexture, document: Size): void {
     this.cancel()
-    this.recording = { id, layerId, source, document, captured: new Map() }
+    this.recording = { id, surfaceId, source, document, captured: new Map() }
   }
 
   get recordingId(): string | null {
@@ -110,7 +110,7 @@ export class PixelPatches {
     const bytes = weightOf(captures) * 2
     this.patches.set(recording.id, {
       id: recording.id,
-      layerId: recording.layerId,
+      surfaceId: recording.surfaceId,
       captures,
       bytes,
     })
@@ -119,9 +119,12 @@ export class PixelPatches {
     return recording.id
   }
 
-  /** Which layer a patch belongs to, so the engine can find the texture to paint it back into. */
-  layerOf(patchId: string): string | null {
-    return this.patches.get(patchId)?.layerId ?? null
+  /**
+   * Which surface a patch belongs to, so the engine can find the texture to paint it back into.
+   * A surface is a layer's pixels or its mask: the store never needs to know which.
+   */
+  surfaceOf(patchId: string): string | null {
+    return this.patches.get(patchId)?.surfaceId ?? null
   }
 
   /** `false` when the patch has been thrown away — the caller must not pretend it succeeded. */
@@ -150,7 +153,7 @@ export class PixelPatches {
     for (const capture of recording.captured.values()) capture.before.destroy(true)
   }
 
-  /** A tile of the layer, lifted into a texture of its own. */
+  /** A tile of the surface, lifted into a texture of its own. */
   private copyOut(tile: Tile, source: RenderTexture): RenderTexture {
     const texture = RenderTexture.create({
       width: tile.width,
@@ -169,7 +172,7 @@ export class PixelPatches {
   }
 
   /**
-   * A tile painted back over the layer. `erase` first, then the tile: compositing it on top would
+   * A tile painted back over the surface. `erase` first, then the tile: compositing it on top would
    * blend the old stroke with the new one instead of replacing what is there.
    */
   private copyIn(source: RenderTexture, tile: Tile, target: RenderTexture): void {

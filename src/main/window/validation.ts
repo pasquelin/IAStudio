@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { PATH_KINDS, type PathKind } from '@shared/domain/settings-registry'
+import { parseBase64 } from '@main/scenario/validation'
 
 // Throws rather than falling back: the value decides which native picker opens, and a renderer
 // is what sends it. Built from the shared list, never retyped.
@@ -14,4 +15,23 @@ const startIn = z.string().min(1).optional()
 
 export function parseStartIn(value: unknown): string | undefined {
   return startIn.parse(value)
+}
+
+/** A file name and nothing else: a separator here would write outside the folder that was picked. */
+const fileName = z
+  .string()
+  .trim()
+  .min(1)
+  .max(200)
+  .refine(value => !value.includes('/') && !value.includes('\\') && !value.includes('..'), {
+    message: 'expected a plain file name',
+  })
+
+export function parseFileName(value: unknown): string {
+  return fileName.parse(value)
+}
+
+/** The same rule the upload path applies: only the payload, never a data URL. */
+export function parseBase64Payload(value: unknown): string {
+  return parseBase64(value)
 }

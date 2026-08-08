@@ -1,0 +1,212 @@
+import { describe, expect, it } from 'vitest'
+import { adjustmentLayer, groupLayer, pixelLayer, type Layer } from './canvas-state'
+import { composite, placement, type CompositeNode } from './compositor'
+
+const clipped = (id: string): Layer => ({ ...pixelLayer(id, id), clipped: true })
+const masked = (id: string): Layer => ({
+  ...pixelLayer(id, id),
+  mask: { enabled: true, linked: true },
+})
+
+/** The nodes of one level, by id, so an assertion can name the layer it means. */
+function byId(nodes: readonly CompositeNode[]): Map<string, CompositeNode> {
+  return new Map(nodes.map(node => [node.id, node]))
+}
+
+describe('a flat stack', () => {
+  it('gives every layer a surface of its own, bottom first', () => {
+    const nodes = composite([pixelLayer('a', 'A'), pixelLayer('b', 'B')])
+
+    expect(nodes.map(node => node.id)).toEqual(['a', 'b'])
+    expect(nodes.every(node => node.kind === 'surface')).toBe(true)
+  })
+
+  it('clips nothing when nothing asks to be clipped', () => {
+    const nodes = composite([pixelLayer('a', 'A'), pixelLayer('b', 'B')])
+
+    expect(nodes.map(node => node.kind === 'surface' && node.clippedBy)).toEqual([null, null])
+  })
+})
+
+describe('groups', () => {
+  it('nests their children rather than flattening them', () => {
+    const nodes = composite([groupLayer('g', 'G', [pixelLayer('a', 'A'), pixelLayer('b', 'B')])])
+    const group = nodes[0]
+
+    expect(group?.kind).toBe('group')
+    expect(group?.kind === 'group' && group.children.map(child => child.id)).toEqual(['a', 'b'])
+  })
+
+  // A group is a stack of its own: its first child has nothing of the outer stack under it.
+  it('does not let a clipped child reach past its group for a base', () => {
+    const nodes = composite([pixelLayer('base', 'Base'), groupLayer('g', 'G', [clipped('a')])])
+    const group = nodes[1]
+    const child = group?.kind === 'group' ? group.children[0] : undefined
+
+    expect(child).toMatchObject({ clippedBy: null })
+  })
+})
+
+describe('clipping', () => {
+  it('cuts a clipped layer out of the one below it', () => {
+    const nodes = byId(composite([pixelLayer('base', 'Base'), clipped('a')]))
+
+    expect(nodes.get('a')).toMatchObject({ clippedBy: 'base' })
+    expect(nodes.get('base')).toMatchObject({ clippedBy: null })
+  })
+
+  // A run of clipped layers shares one base, as it does in Photoshop.
+  it('gives a run of three clipped layers the same base', () => {
+    const nodes = byId(
+      composite([pixelLayer('base', 'Base'), clipped('a'), clipped('b'), clipped('c')]),
+    )
+
+    for (const id of ['a', 'b', 'c']) expect(nodes.get(id)).toMatchObject({ clippedBy: 'base' })
+  })
+
+  // Hiding it would lose its pixels for a reason nobody could see on screen.
+  it('leaves a clipped layer with nothing under it unclipped', () => {
+    const nodes = byId(composite([clipped('a'), pixelLayer('b', 'B')]))
+
+    expect(nodes.get('a')).toMatchObject({ clippedBy: null })
+  })
+
+  // A group holds no texture, so the engine finds no stencil and declines — but it is the layer
+  // under it all the same, and skipping it would let the clip reach further down than it should.
+  it('lets a group be the base a clipped layer names', () => {
+    const nodes = byId(
+      composite([pixelLayer('deep', 'Deep'), groupLayer('g', 'G', []), clipped('a')]),
+    )
+
+    expect(nodes.get('a')).toMatchObject({ clippedBy: 'g' })
+  })
+
+  it('starts a new run at the next unclipped layer', () => {
+    const stack = [pixelLayer('one', 'One'), clipped('a'), pixelLayer('two', 'Two'), clipped('b')]
+    const nodes = byId(composite(stack))
+
+    expect(nodes.get('a')).toMatchObject({ clippedBy: 'one' })
+    expect(nodes.get('b')).toMatchObject({ clippedBy: 'two' })
+  })
+})
+
+describe('the placement signature', () => {
+  const stack = [pixelLayer('a', 'A'), pixelLayer('b', 'B')]
+
+  // What a dragged layer costs: the same tree, and the engine must be able to say so cheaply.
+  it('reads the same for a stack that only moved', () => {
+    const moved = stack.map(layer => ({ ...layer, transform: { ...layer.transform, x: 20 } }))
+
+    expect(placement(composite(moved))).toBe(placement(composite(stack)))
+  })
+
+  it('changes when the order does', () => {
+    expect(placement(composite([...stack].reverse()))).not.toBe(placement(composite(stack)))
+  })
+
+  // The tree itself changes when a clip or a mask appears: the sprite is nested differently.
+  it('changes when a clip or a mask appears', () => {
+    const withClip = [pixelLayer('a', 'A'), clipped('b')]
+    const withMask = [pixelLayer('a', 'A'), masked('b')]
+
+    expect(placement(composite(withClip))).not.toBe(placement(composite(stack)))
+    expect(placement(composite(withMask))).not.toBe(placement(composite(stack)))
+  })
+
+  it('tells a layer inside a group from the same layer beside it', () => {
+    const nested = [groupLayer('g', 'G', [pixelLayer('a', 'A')])]
+    const beside = [groupLayer('g', 'G', []), pixelLayer('a', 'A')]
+
+    expect(placement(composite(nested))).not.toBe(placement(composite(beside)))
+  })
+})
+
+describe('masks', () => {
+  it('names the mask a layer carries, and none for a layer without one', () => {
+    const nodes = byId(composite([masked('a'), pixelLayer('b', 'B')]))
+
+    expect(nodes.get('a')).toMatchObject({ maskedBy: 'a', maskEnabled: true })
+    expect(nodes.get('b')).toMatchObject({ maskedBy: null, maskEnabled: false })
+  })
+
+  // The two are told apart on purpose: presence is what owns a texture, and unticking the box
+  // must not read as "this layer has no mask" — that is how the pixels used to be freed.
+  it('names a disabled mask all the same, and says it hides nothing', () => {
+    const off: Layer = { ...pixelLayer('a', 'A'), mask: { enabled: false, linked: true } }
+    const nodes = byId(composite([off]))
+
+    expect(nodes.get('a')).toMatchObject({ maskedBy: 'a', maskEnabled: false })
+  })
+
+  it('changes the placement when a mask is removed, disabled or not', () => {
+    const off: Layer = { ...pixelLayer('a', 'A'), mask: { enabled: false, linked: true } }
+
+    expect(placement(composite([off]))).not.toBe(placement(composite([pixelLayer('a', 'A')])))
+  })
+
+  it('survives a mask and a clip meeting inside a group', () => {
+    const inner = [pixelLayer('base', 'Base'), { ...masked('a'), clipped: true }]
+    const nodes = composite([groupLayer('g', 'G', inner)])
+    const group = nodes[0]
+    const child = group?.kind === 'group' ? group.children[1] : undefined
+
+    expect(child).toMatchObject({ clippedBy: 'base', maskedBy: 'a' })
+  })
+})
+
+describe('adjustment layers', () => {
+  const adjust = (id: string, clipped = false): Layer => ({
+    ...adjustmentLayer(id, id, 'exposure'),
+    clipped,
+  })
+
+  // Photoshop's rule: everything below it in its parent.
+  it('wraps everything under it in its own level', () => {
+    const nodes = composite([pixelLayer('a', 'A'), pixelLayer('b', 'B'), adjust('grade')])
+
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0]).toMatchObject({ kind: 'adjust', id: 'grade' })
+    expect(nodes[0]?.kind === 'adjust' && nodes[0].children.map(child => child.id)).toEqual([
+      'a',
+      'b',
+    ])
+  })
+
+  // Clipped, it grades the single layer below it and leaves the rest of the stack alone.
+  it('grades only the layer below it when it is clipped', () => {
+    const nodes = composite([pixelLayer('a', 'A'), pixelLayer('b', 'B'), adjust('grade', true)])
+
+    expect(nodes.map(node => node.id)).toEqual(['a', 'grade'])
+    expect(nodes[1]?.kind === 'adjust' && nodes[1].children.map(child => child.id)).toEqual(['b'])
+  })
+
+  it('does not reach out of the group it sits in', () => {
+    const nodes = composite([
+      pixelLayer('outside', 'Outside'),
+      groupLayer('g', 'G', [pixelLayer('inside', 'Inside'), adjust('grade')]),
+    ])
+
+    expect(nodes.map(node => node.id)).toEqual(['outside', 'g'])
+  })
+
+  it('leaves nothing behind when there is nothing under it to grade', () => {
+    const nodes = composite([adjust('grade'), pixelLayer('above', 'Above')])
+
+    expect(nodes.map(node => node.id)).toEqual(['above'])
+  })
+
+  it('stacks one grading pass inside the next', () => {
+    const nodes = composite([pixelLayer('a', 'A'), adjust('warm'), adjust('bright')])
+
+    expect(nodes[0]).toMatchObject({ kind: 'adjust', id: 'bright' })
+    const inner = nodes[0]?.kind === 'adjust' ? nodes[0].children[0] : undefined
+    expect(inner).toMatchObject({ kind: 'adjust', id: 'warm' })
+  })
+
+  // The tree changes shape, so the engine has to rebuild it.
+  it('changes the placement when an adjustment appears', () => {
+    const plain = [pixelLayer('a', 'A')]
+
+    expect(placement(composite([...plain, adjust('grade')]))).not.toBe(placement(composite(plain)))
+  })
+})
