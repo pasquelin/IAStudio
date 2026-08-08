@@ -2,10 +2,10 @@ import { mdiRotate3dVariant, mdiTextureBox, mdiWeatherSunny } from '@mdi/js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
-import { assetUrl, isLocalPicture } from '@shared/domain/asset'
+import { assetUrl } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
-import { setChannel, setPreview } from '@/engines/texture/commands'
+import { setPreview } from '@/engines/texture/commands'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
 import { restoreDocument } from '@/app/document-io'
@@ -13,6 +13,7 @@ import { assetIdFromDrag } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 import { assetsById, useAssets } from '@/stores/assets'
 import { textureOf, useTextures } from '@/stores/textures'
+import { placeTextureChannel } from './place-channel'
 
 /** i18n key of a shape — never the label itself, as the scene registry does for its primitives. */
 const SHAPE_LABELS: Record<PreviewShape, string> = {
@@ -74,19 +75,9 @@ export function TextureDocument({ documentId }: { documentId: string }) {
 
       const assetId = assetIdFromDrag(event)
       const asset = assetId ? byId.get(assetId) : null
-      if (!asset || !isLocalPicture(asset)) return
-
-      run(
-        documentId,
-        setChannel('baseColor', {
-          assetId: asset.id,
-          origin: 'imported',
-          width: asset.width ?? 0,
-          height: asset.height ?? 0,
-        }),
-      )
+      if (asset) placeTextureChannel(documentId, asset)
     },
-    [byId, documentId, run],
+    [byId, documentId],
   )
 
   const base = texture.channels.baseColor

@@ -82,7 +82,8 @@
     "location": "Location",
     "push": "Send {{count}} asset",
     "push_other": "Send {{count}} assets",
-    "pushHint": "Uploads the selection to the Scenario library"
+    "pushHint": "Uploads the selection to the Scenario library",
+    "reveal": "Show in the file manager"
   },
   "dialog": {
     "allMedia": "All media",
@@ -1123,5 +1124,13 @@
     "temperature": "Temperature",
     "add": "Add an adjustment",
     "addHint": "Lay an adjustment layer over what is below it"
+  },
+  "intents": {
+    "skyboxSource": "Use as sky",
+    "sceneMesh": "Add to the scene",
+    "audioTake": "Open in the audio editor",
+    "imageLayer": "Place as a layer",
+    "videoClip": "Add to the montage",
+    "textureChannel": "Use as base colour"
   }
 }
