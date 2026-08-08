@@ -524,6 +524,7 @@
     "layerKind_pixel": "Pixels",
     "layerKind_group": "Groupe",
     "layerKind_adjustment": "Réglage",
+    "layerKind_text": "Texte",
     "compositing": "Composition",
     "blend": "Fusion",
     "fillOpacity": "Opacité du fond",

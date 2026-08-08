@@ -214,6 +214,11 @@ export function textLayer(id: string, text: string, at: Point): TextLayer {
 
 export type Layer = PixelLayer | GroupLayer | AdjustmentLayer | TextLayer
 
+export type LayerKind = Layer['kind']
+
+/** All of them: the inspector names each one from a bundle, and a nameless one shows its key. */
+export const LAYER_KINDS: readonly LayerKind[] = ['pixel', 'group', 'adjustment', 'text']
+
 const GUIDE_AXES: readonly ('x' | 'y')[] = ['x', 'y']
 
 export type Guide = {

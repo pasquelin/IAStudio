@@ -16,6 +16,9 @@ export type SequenceSettings = {
 
 export type TrackKind = 'video' | 'audio'
 
+/** Both of them, for the same reason as `LAYER_KINDS`: the inspector names a track by its kind. */
+export const TRACK_KINDS: readonly TrackKind[] = ['video', 'audio']
+
 /** Which end of a clip an edit works on — a trim, a fade, a snap candidate. */
 export type ClipEdge = 'in' | 'out'
 
