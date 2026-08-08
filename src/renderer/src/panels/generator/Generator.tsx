@@ -16,6 +16,7 @@ import { useProject } from '@/stores/project'
 import { claimOnSubmit } from '@/stores/generation-claims'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
+import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 
 /**
@@ -137,34 +138,38 @@ export function Generator() {
       {!project && <p className="text-muted px-2 text-xs">{t('generation.noProject')}</p>}
 
       {descriptor.data && (
-        <Suspense
-          fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
-        >
-          <DynamicForm
-            fields={descriptor.data.fields}
-            onSubmit={generate}
-            submitLabel={t('actions.generate')}
-            busy={!project}
-            preset={preset}
-            // The API marks the field its assistance rewrites; every other one gets nothing.
-            accessory={(field, handle) =>
-              field.promptSpark === true && (
-                <PromptAssistant
-                  readDraft={() => textOf(handle.read())}
-                  request={draft => suggestPrompts(modelId, draft)}
-                  translate={translateDraft}
-                  describeStyle={describeStyle}
-                  readReferences={() =>
-                    referencePictures(descriptor.data?.fields ?? [], handle.readAll())
-                  }
-                  onAdoptText={handle.write}
-                  onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
-                  failureMessage={error => t(failureKeyOf(error))}
-                />
-              )
-            }
-          />
-        </Suspense>
+        // Above the `Suspense`: a rejected `lazy()` import is an error, not a fallback. Without
+        // it the throw leaves the panel, leaves the dock, and takes the whole window down.
+        <ErrorBoundary>
+          <Suspense
+            fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
+          >
+            <DynamicForm
+              fields={descriptor.data.fields}
+              onSubmit={generate}
+              submitLabel={t('actions.generate')}
+              busy={!project}
+              preset={preset}
+              // The API marks the field its assistance rewrites; every other one gets nothing.
+              accessory={(field, handle) =>
+                field.promptSpark === true && (
+                  <PromptAssistant
+                    readDraft={() => textOf(handle.read())}
+                    request={draft => suggestPrompts(modelId, draft)}
+                    translate={translateDraft}
+                    describeStyle={describeStyle}
+                    readReferences={() =>
+                      referencePictures(descriptor.data?.fields ?? [], handle.readAll())
+                    }
+                    onAdoptText={handle.write}
+                    onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
+                    failureMessage={error => t(failureKeyOf(error))}
+                  />
+                )
+              }
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   )
