@@ -1217,15 +1217,17 @@ describe('adjustment layers', () => {
     expect(groupContainer('grade')?.children).toHaveLength(1)
   })
 
-  it('carries its own visibility and opacity', async () => {
-    const layer = {
-      ...adjustmentLayer('grade', 'Exposure', 'exposure'),
-      visible: false,
-      opacity: 0.5,
-    }
+  /**
+   * The container holds the layers it grades, so hiding it would hide the whole stack under it.
+   * The eye of an adjustment drops its pass instead.
+   */
+  it('drops its pass when it is hidden, rather than hiding what it grades', async () => {
+    const layer = { ...adjustmentLayer('grade', 'Exposure', 'exposure'), visible: false }
     await mounted(stacked([pixelLayer('layer-1', 'Background'), layer]))
 
-    expect(groupContainer('grade')).toMatchObject({ visible: false, alpha: 0.5 })
+    const pass = groupContainer('grade')
+    expect(pass?.filters).toEqual([])
+    expect(pass?.visible).toBe(true)
   })
 
   it('lets the pass go when the layer leaves the stack', async () => {
@@ -1299,40 +1301,22 @@ describe('drawing a shape', () => {
   })
 })
 
+/**
+ * The gesture is written and tested; the tool that arms it is greyed. Cropping resizes the frame
+ * and moves every layer, but a layer's texture keeps the document's old size — so after a crop
+ * the brush writes at the offset the crop introduced. A tool that breaks the document is worse
+ * than a tool that is not there yet.
+ */
 describe('cropping', () => {
-  it('asks the stack for the region the drag carved out', async () => {
+  it('carves nothing while the tool is unbuilt', async () => {
     const { engine, host, crops } = await mounted()
     engine.setTool('crop')
 
     press(host, 100, 100)
     drag(host, 300, 250)
-    release()
-
-    expect(crops).toEqual([{ x: 100, y: 100, width: 200, height: 150 }])
-  })
-
-  // A click carves nothing, and a crop to nothing would leave a document with no pixels at all.
-  it('crops nothing for a click', async () => {
-    const { engine, host, crops } = await mounted()
-    engine.setTool('crop')
-
-    press(host, 200, 200)
     release()
 
     expect(crops).toEqual([])
-  })
-
-  // The marquee was the gesture, not the result: leaving it up would clip every later stroke.
-  it('drops the marquee once the crop is asked for', async () => {
-    const { engine, host, selections } = await mounted()
-    engine.setTool('crop')
-
-    press(host, 100, 100)
-    drag(host, 300, 250)
-    release()
-    await nextFrame()
-
-    expect(selections.at(-1)).toBeNull()
   })
 })
 
@@ -1374,13 +1358,26 @@ describe('captions', () => {
     expect(gpu.painted).toContain(1)
   })
 
-  it('redraws when only the size changes', async () => {
+  /** A caption is redrawn whole whenever a letter changes: a stroke on it would be wiped. */
+  it('takes no brush stroke, which the next letter typed would erase', async () => {
+    const { host, patches } = await mounted(stacked([textLayer('t', 'Hello', { x: 10, y: 20 })]))
+
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+
+    expect(patches).toEqual([])
+  })
+
+  // Its texture went with it, so the words have to be drawn again on the way back.
+  it('draws the words again when the layer comes back', async () => {
     const { engine } = await mounted(caption('Hello'))
+    engine.apply(stacked([pixelLayer('layer-1', 'Background')]))
     gpu.painted = []
 
-    engine.apply(caption('Hello', 72))
+    engine.apply(caption('Hello'))
 
-    expect(gpu.painted).toContain(1)
+    expect(gpu.painted.length).toBeGreaterThan(0)
   })
 })
 

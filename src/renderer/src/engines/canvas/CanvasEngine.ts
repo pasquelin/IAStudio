@@ -175,7 +175,7 @@ export const DEFAULT_BRUSH: BrushSettings = {
  * Declared by the bar, not implemented here. Kept in the union so the registry stays typed, and
  * kept in one place so wiring one is a single deletion.
  */
-const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['comment'])
+const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['crop', 'comment'])
 
 /**
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
@@ -500,6 +500,11 @@ export class CanvasEngine {
       this.adjustments.delete(id)
     }
 
+    for (const id of this.wordings.keys()) {
+      // Its texture went with it, so the words have to be drawn again on the way back.
+      if (!kept.has(id)) this.wordings.delete(id)
+    }
+
     const clipping = new Set(layers.filter(layer => layer.clipped).map(layer => layer.id))
     for (const [id, clip] of this.clips) {
       if (clipping.has(id) && this.surfaces.has(clip.baseId)) continue
@@ -622,8 +627,9 @@ export class CanvasEngine {
       this.adjustments.set(layer.id, pass)
     }
 
-    pass.visible = layer.visible
-    pass.alpha = layer.opacity
+    // Never `visible` or `alpha` on the container: it holds the layers it grades, so hiding it
+    // would hide the whole stack under it. Hiding a grading is dropping its pass.
+    pass.filters = layer.visible ? [pass.filter] : []
     pass.filter.grade(layer.values)
   }
 
@@ -1374,18 +1380,24 @@ export class CanvasEngine {
     if (!state || isGroup(layer)) return null
 
     const { transform } = layer
+    const width = state.width * transform.scaleX
+    const height = state.height * transform.scaleY
+    // The origin is where the layer is pinned, and `place` scales about it: the box grows from
+    // that point, not from the top-left corner.
     return {
-      x: transform.x,
-      y: transform.y,
-      width: state.width * transform.scaleX,
-      height: state.height * transform.scaleY,
+      x: transform.x + state.width * transform.originX * (1 - transform.scaleX),
+      y: transform.y + state.height * transform.originY * (1 - transform.scaleY),
+      width,
+      height,
     }
   }
 
   /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
   private paintTarget(): BrushTarget | null {
     const layer = this.activeLayer()
-    if (!layer || isGroup(layer) || layer.locked.pixels) return null
+    // A caption is redrawn whole whenever a letter changes, so a stroke laid on it would be
+    // wiped without a history entry to bring it back.
+    if (!layer || isGroup(layer) || layer.kind === 'text' || layer.locked.pixels) return null
 
     const surface = this.activeSurface()
     // No surface means the layer carries no mask while the brush aims at one: there is nothing

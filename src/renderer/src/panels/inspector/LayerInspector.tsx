@@ -5,7 +5,6 @@ import { PropertyRow } from '@/design/PropertyRow'
 import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
 import { CONTROL } from '@/design/styles'
-import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { ToggleField } from '@/design/ToggleField'
 import {
   BLEND_MODES,
@@ -35,14 +34,7 @@ export type LayerInspectorProps = { documentId: string; layer: Layer }
 /** Radians are what the engine turns and what a document stores; nobody types in them. */
 const PER_RADIAN = 180 / Math.PI
 
-/** Which dial of the stack each kind of adjustment layer exposes, and how far it swings. */
-const DIAL_BY_KIND: Readonly<Record<AdjustmentKind, keyof AdjustmentStack>> = {
-  exposure: 'exposure',
-  contrast: 'contrast',
-  saturation: 'saturation',
-  temperature: 'temperature',
-}
-
+/** How far each dial swings. Its name is its key: `AdjustmentKind` is a subset of the stack. */
 const DIAL_RANGE: Readonly<Record<AdjustmentKind, { min: number; max: number }>> = {
   // Stops, so ±3 is the range a photograph is recoverable within.
   exposure: { min: -3, max: 3 },
@@ -140,6 +132,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             label={t('inspector.words')}
             value={layer.text}
             onChange={text => edit.run(setLayerText(layer.id, { text }))}
+            {...edit.gesture}
           />
           <NumberField
             label={t('inspector.textSize')}
@@ -156,7 +149,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
         <PropertyGroup title={t(`adjustment.${layer.adjustment}`)}>
           <SliderField
             label={t(`adjustment.${layer.adjustment}`)}
-            value={layer.values[DIAL_BY_KIND[layer.adjustment]]}
+            value={layer.values[layer.adjustment]}
             min={DIAL_RANGE[layer.adjustment].min}
             max={DIAL_RANGE[layer.adjustment].max}
             step={0.01}
@@ -164,7 +157,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
               edit.run(
                 setLayerAdjustment(layer.id, {
                   ...layer.values,
-                  [DIAL_BY_KIND[layer.adjustment]]: value,
+                  [layer.adjustment]: value,
                 }),
               )
             }

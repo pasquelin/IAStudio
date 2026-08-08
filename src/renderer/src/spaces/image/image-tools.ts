@@ -84,6 +84,10 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         descriptionKey: 'imageTools.cropHint',
         icon: mdiCropFree,
         shortcut: 'F',
+        // Resizing the frame moves every layer, but a layer's texture keeps the document's old
+        // size — so after a crop the brush writes at the offset the crop introduced. Greyed
+        // rather than hidden, as the bar does for everything else that is coming.
+        disabled: true,
       },
       {
         id: 'section',

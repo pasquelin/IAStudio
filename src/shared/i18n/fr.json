@@ -913,22 +913,6 @@
       "title": "Étendre",
       "help": "Demander au modèle de peindre au-delà des bords de l’image aplatie"
     },
-    "canvasFlipHorizontal": {
-      "title": "Miroir horizontal",
-      "help": "Retourner toute l’image de gauche à droite, sans réécrire un pixel"
-    },
-    "canvasFlipVertical": {
-      "title": "Miroir vertical",
-      "help": "Retourner toute l’image de haut en bas, sans réécrire un pixel"
-    },
-    "canvasRotateClockwise": {
-      "title": "Pivoter à droite",
-      "help": "Faire tourner l’image d’un quart de tour dans le sens des aiguilles"
-    },
-    "canvasRotateCounterClockwise": {
-      "title": "Pivoter à gauche",
-      "help": "Faire tourner l’image d’un quart de tour dans l’autre sens"
-    },
     "canvasExport": {
       "title": "Exporter l’image",
       "help": "Écrire le document aplati sur le disque, au format PNG"

@@ -9,11 +9,11 @@ import { Toolbar } from '@/design/Toolbar'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
-import { canRedo, canUndo, type Command } from '@/engines/core/history'
-import { textLayer, type CanvasState } from '@/engines/canvas/canvas-state'
+import { canRedo, canUndo } from '@/engines/core/history'
+import { textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
-import { addLayer, cropToRect, flipImage, rotateImage } from '@/engines/canvas/commands'
+import { addLayer, cropToRect } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
@@ -162,9 +162,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
    */
   const run = useCallback(
     (command: CommandId) => {
-      const edit = (change: Command<CanvasState>): void =>
-        useCanvases.getState().runCommand(documentId, change)
-
       switch (command) {
         case 'canvas.zoomIn':
           return zoomIn(documentId)
@@ -189,14 +186,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           if (host) void exportPicture(documentId, host).catch(() => undefined)
           return
         }
-        case 'canvas.flipHorizontal':
-          return edit(flipImage('horizontal'))
-        case 'canvas.flipVertical':
-          return edit(flipImage('vertical'))
-        case 'canvas.rotateClockwise':
-          return edit(rotateImage(true))
-        case 'canvas.rotateCounterClockwise':
-          return edit(rotateImage(false))
         case 'canvas.deselect':
           return useCanvasViews.getState().setSelection(documentId, null)
         case 'canvas.maskFromSelection': {

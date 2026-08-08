@@ -23,9 +23,10 @@ uniform float uTint;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
-// Middle grey in linear light. Pivoting contrast around 0.5 would be pivoting around a value
-// that is nearly white once the source has been decoded out of sRGB.
-const float PIVOT = 0.18;
+// Middle grey in sRGB, which is what a layer's texture holds. The three.js pass grades linear
+// light and pivots at 0.18; pivoting there on sRGB pixels brightens the whole picture instead
+// of hardening it.
+const float PIVOT = 0.5;
 
 void main(void) {
   vec4 source = texture(uTexture, vTextureCoord);

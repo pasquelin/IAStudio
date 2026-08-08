@@ -21,7 +21,7 @@ export const HANDLE_IDS: readonly HandleId[] = [
 ]
 
 /** Which corner each grip pulls against: the opposite one stays put, as it does everywhere. */
-const ANCHOR: Readonly<Record<string, { x: number; y: number }>> = {
+const ANCHOR: Readonly<Record<Exclude<HandleId, 'rotate'>, { x: number; y: number }>> = {
   nw: { x: 1, y: 1 },
   n: { x: 0.5, y: 1 },
   ne: { x: 0, y: 1 },
@@ -86,7 +86,7 @@ export function resizeBy(
 ): Transform {
   if (handle === 'rotate') return transform
 
-  const anchor = ANCHOR[handle] ?? { x: 0.5, y: 0.5 }
+  const anchor = ANCHOR[handle]
   const fixed = { x: box.x + box.width * anchor.x, y: box.y + box.height * anchor.y }
 
   // A grip on an edge moves one axis only: the other keeps the scale it had.
@@ -121,8 +121,15 @@ export function rotateBy(transform: Transform, box: Rect, from: Point, to: Point
   return { ...transform, rotation: transform.rotation + after - before }
 }
 
-/** A zero-width box would scale a layer to nothing it could ever be pulled back from. */
+/**
+ * How far the grip travelled, as a share of the side it pulls. Never zero: a layer scaled to
+ * nothing has no box left to grab, so the grips would be gone along with it and only ⌘Z could
+ * bring it back.
+ */
+const MIN_RATIO = 0.01
+
 function ratio(moved: number, extent: number): number {
   if (extent === 0) return 1
-  return moved / extent
+  const pulled = moved / extent
+  return Math.abs(pulled) < MIN_RATIO ? MIN_RATIO * Math.sign(pulled || 1) : pulled
 }
