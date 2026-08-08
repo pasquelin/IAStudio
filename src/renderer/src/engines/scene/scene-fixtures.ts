@@ -29,6 +29,16 @@ export function meshNode(id: string, parentId: string | null = null): MeshNode {
   }
 }
 
+/** The one light kind that builds a helper and a target beside itself. */
+export function directionalLight(id: string): LightNode {
+  return lightNodeFixture(id, {
+    kind: 'directional',
+    color: '#ffffff',
+    intensity: 1,
+    target: { x: 0, y: 0, z: 0 },
+  })
+}
+
 export function lightNodeFixture(
   id: string,
   light: LightDescriptor = { kind: 'ambient', color: '#222222', intensity: 1 },

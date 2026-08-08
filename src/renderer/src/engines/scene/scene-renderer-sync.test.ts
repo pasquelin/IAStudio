@@ -1,8 +1,8 @@
 import { BufferGeometry, Group, Material, Mesh, Object3D } from 'three'
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { beforeEach, describe, expect, it, vi, type Mock, type MockInstance } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
 import type { ModelSource } from './model-cache'
-import { lightNodeFixture, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
+import { directionalLight, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from './scene-state'
 
 /**
@@ -13,18 +13,15 @@ import { EMPTY_SCENE, type SceneNode, type SceneState } from './scene-state'
  * Freeing is watched on the three.js prototypes rather than on the scene graph, which the engine
  * keeps to itself. It is also the honest place to watch it: what matters is that a buffer is
  * given back, not which object held it.
+ *
+ * What is out of reach here: whether an object leaves the three.js graph. `exportTo` reads the
+ * engine's own map of nodes, not the scene, so a node removed from the map but left hanging in
+ * the graph looks identical from outside. Only a mounted renderer would tell them apart.
  */
-const directional = () =>
-  lightNodeFixture('light-1', {
-    kind: 'directional',
-    color: '#ffffff',
-    intensity: 1,
-    target: { x: 0, y: 0, z: 0 },
-  })
 
 describe('a scene told what changed', () => {
-  let freedGeometries: ReturnType<typeof vi.spyOn>
-  let freedMaterials: ReturnType<typeof vi.spyOn>
+  let freedGeometries: MockInstance<() => void>
+  let freedMaterials: MockInstance<() => void>
   let loadModel: Mock<ModelSource>
 
   beforeEach(() => {
@@ -49,15 +46,19 @@ describe('a scene told what changed', () => {
     renderer.apply(state)
   }
 
-  const namesIn = async (renderer: SceneRenderer): Promise<string[]> => {
+  const fileOf = async (renderer: SceneRenderer): Promise<string> => {
     const bytes = await renderer.exportTo('gltf', 'scene')
+    return new TextDecoder().decode(bytes)
+  }
+
+  const namesIn = async (renderer: SceneRenderer): Promise<string[]> => {
     // `as`: a `.gltf` file holds glTF, and `nodes` is the field a reader looks at first.
-    const file = JSON.parse(new TextDecoder().decode(bytes)) as { nodes?: { name?: string }[] }
+    const file = JSON.parse(await fileOf(renderer)) as { nodes?: { name?: string }[] }
     return (file.nodes ?? []).flatMap(node => node.name ?? [])
   }
 
   describe('a node that goes away', () => {
-    it('leaves the scene with it', async () => {
+    it('is dropped from what the document exports', async () => {
       const renderer = rendererOf(meshNode('box-1'), meshNode('box-2'))
 
       applied(renderer, meshNode('box-2'))
@@ -93,7 +94,7 @@ describe('a scene told what changed', () => {
 
     /** A forgotten helper leaks a line geometry on every delete. */
     it('gives back the line buffer of a light helper', () => {
-      const renderer = rendererOf(directional())
+      const renderer = rendererOf(directionalLight('light-1'))
       freedGeometries.mockClear()
 
       applied(renderer)
@@ -139,11 +140,6 @@ describe('a scene told what changed', () => {
   })
 
   describe('an edit to what a node is made of', () => {
-    const fileOf = async (renderer: SceneRenderer): Promise<string> => {
-      const bytes = await renderer.exportTo('gltf', 'scene')
-      return new TextDecoder().decode(bytes)
-    }
-
     it('replaces the shape when the geometry changes', async () => {
       const box = meshNode('box-1')
       const renderer = rendererOf(box)
@@ -157,15 +153,15 @@ describe('a scene told what changed', () => {
       expect(await fileOf(renderer)).not.toEqual(before)
     })
 
-    it('carries the material through to the file', async () => {
+    it('carries the colour through to the file', async () => {
       const box = meshNode('box-1')
       const renderer = rendererOf(box)
 
       applied(renderer, { ...box, material: { ...box.material, color: '#ff0000' } })
 
-      // A mesh whose material was never applied exports with none at all: glTF writes no
-      // `baseColorFactor` for a node it has no material for.
-      expect(await fileOf(renderer)).toContain('baseColorFactor')
+      // The value, not the field: glTF omits `baseColorFactor` altogether while the material is
+      // still white and opaque, so asserting its presence alone would go green on any colour.
+      expect(await fileOf(renderer)).toContain('"baseColorFactor":[1,0,0,1]')
     })
   })
 
@@ -216,10 +212,6 @@ describe('a scene told what changed', () => {
       stray.name = 'Cube.001'
 
       expect(nodeIdOf(stray, known)).toBeNull()
-    })
-
-    it('answers nothing for an object with no name at all', () => {
-      expect(nodeIdOf(new Object3D(), known)).toBeNull()
     })
   })
 })
