@@ -115,8 +115,6 @@ practice", above.
 
 - **groups** and reparenting — you cannot assemble objects into a subset;
 - **copy-paste** and duplication;
-- **model import** for `.glb`, `.gltf`, `.obj` — you can only place what the studio can build or
-  generate;
 - **cast shadows** — objects are lit, but throw no shadow;
 - **image-based lighting** (*IBL*) in the viewport — a *skybox* does not yet light a 3D scene, even
   though it does light the Skyboxes workspace preview.
@@ -280,7 +278,7 @@ ahead of the workspace that will use it.
 
 ### What cannot
 
-- **3D files** — `.glb`, `.gltf`, `.obj`, `.fbx`;
+- **3D files other than `.glb`** — separate `.gltf`, `.obj`, `.fbx`;
 - **HDRIs** — `.hdr`.
 
 An `.exr` does import, but it is catalogued as an **image**, not as a sky. It still works as a source
@@ -377,7 +375,7 @@ If you only remember six things from this chapter:
    the frame;
 3. **there is no video export** — the studio cannot yet deliver a final file;
 4. **there is no "enlarge", "cut out" or "vectorize" button**;
-5. **you cannot import a 3D model** or an HDRI;
+5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`;
 6. **a skybox does not yet light a 3D scene**.
 
 Everything else is comfort.

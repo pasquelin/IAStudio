@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { LIST_ROW_HEIGHT } from '@/design/styles'
-import { NODE_KINDS } from '@/engines/scene/node-kinds'
-import { nodesOfType, type SceneNodeType } from '@/engines/scene/scene-state'
+import { NODE_KINDS, type PanelNodeType } from '@/engines/scene/node-kinds'
+import { nodesOfType } from '@/engines/scene/scene-state'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SceneNodeRow } from './SceneNodeRow'
 
 /** The meshes or the lights of the scene in front, listed. */
-export function NodeList({ documentId, type }: { documentId: string; type: SceneNodeType }) {
+export function NodeList({ documentId, type }: { documentId: string; type: PanelNodeType }) {
   const { t } = useTranslation()
   const { icon, namespace } = NODE_KINDS[type]
 

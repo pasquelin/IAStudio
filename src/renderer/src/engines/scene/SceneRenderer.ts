@@ -17,7 +17,7 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
 import type { SelectionMode } from '@/helpers/selection'
 import { ViewportEngine } from '../viewport/ViewportEngine'
-import type { NodeMove, SceneNode, SceneState } from './scene-state'
+import type { ModelNode, NodeMove, SceneNode, SceneState } from './scene-state'
 import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
 import {
   applyGeometry,
@@ -27,6 +27,8 @@ import {
   standardMaterialOf,
 } from './three-sync'
 import { createMaterialTextures, type MaterialTextures } from './material-textures'
+import { createGltfSource } from './gltf-source'
+import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
 import { snapSteps } from './snap-steps'
 import { createTextureCache } from './texture-cache'
@@ -44,6 +46,8 @@ export type SceneRendererOptions = {
    */
   onSelect: (ids: readonly string[], mode: SelectionMode) => void
   onTransform: (moves: readonly NodeMove[]) => void
+  /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
+  loadModel?: ModelSource
 }
 
 /**
@@ -110,6 +114,7 @@ export class SceneRenderer {
   private readonly loader = new TextureLoader()
   // One cache for the whole scene: ten meshes sharing a map upload it once.
   private readonly textureCache = createTextureCache(url => this.loader.loadAsync(url))
+  private readonly modelCache: ModelCache
   private readonly held = new Set<MotionId>()
 
   /** What the gizmo holds when more than one node is selected. See `pivot.ts`. */
@@ -133,6 +138,10 @@ export class SceneRenderer {
   private stopPaletteWatch: (() => void) | null = null
 
   constructor(private readonly options: SceneRendererOptions) {
+    // Injected rather than built here, so a test can drive the whole model path without a
+    // decoder: jsdom parses no GLB, exactly as it decodes no image.
+    this.modelCache = createModelCache(options.loadModel ?? createGltfSource())
+
     // No lights here: they are nodes of the state now, so the viewport shows what the outliner
     // lists — and hiding one actually darkens the scene.
     this.viewport.camera.position.set(5, 5, 5)
@@ -269,6 +278,7 @@ export class SceneRenderer {
 
     for (const id of [...this.objects.keys()]) this.release(id)
     this.textureCache.dispose()
+    this.modelCache.dispose()
 
     this.grid?.dispose()
     this.grid = null
@@ -360,11 +370,19 @@ export class SceneRenderer {
   private syncNode(node: SceneNode): void {
     const previous = this.applied.get(node.id)
     if (previous === node) return
+
+    // A model is its file: pointing a node at another asset is a different object, not an edit
+    // of this one. Released and rebuilt — patching it would leave the old file on screen and
+    // its reference held for good, since `release` only ever knows the asset applied last.
+    if (previous?.type === 'model' && (node.type !== 'model' || pointsElsewhere(previous, node))) {
+      this.release(node.id)
+    }
+
     this.applied.set(node.id, node)
 
     let object = this.objects.get(node.id)
     if (!object) {
-      object = node.type === 'mesh' ? this.buildMesh(node) : this.buildLight(node)
+      object = this.build(node)
       object.name = node.id
       this.objects.set(node.id, object)
       this.viewport.scene.add(object)
@@ -421,6 +439,34 @@ export class SceneRenderer {
     }
   }
 
+  private build(node: SceneNode): Object3D {
+    if (node.type === 'mesh') return this.buildMesh(node)
+    if (node.type === 'light') return this.buildLight(node)
+    return this.buildModel(node)
+  }
+
+  /**
+   * A model arrives long after the frame that asked for it, so what goes into the scene now is
+   * an empty holder the file fills in. The alternative — adding nothing until it lands — leaves
+   * a node the outliner lists, the gizmo cannot find, and a click cannot select.
+   */
+  private buildModel(node: ModelNode): Object3D {
+    const holder = new Object3D()
+    const { assetId } = node.model
+
+    void this.modelCache.acquire(assetId).then(source => {
+      // A freshness test and nothing more: `release` owns the reference, as `clear` does in
+      // `material-textures`. Letting go here too would drop the count twice, and free a source
+      // another node is still cloning.
+      if (this.objects.get(node.id) !== holder || !source) return
+
+      holder.add(instanceOf(source))
+      this.viewport.requestRender()
+    })
+
+    return holder
+  }
+
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
@@ -459,6 +505,11 @@ export class SceneRenderer {
   }
 
   private release(id: string): void {
+    // Read before `applied` is emptied: the reference the cache holds is keyed by what the node
+    // pointed at, and nothing else remembers it.
+    const applied = this.applied.get(id)
+    if (applied?.type === 'model') this.modelCache.release(applied.model.assetId)
+
     this.applied.delete(id)
 
     const textures = this.textures.get(id)
@@ -613,7 +664,7 @@ export class SceneRenderer {
     // that the ray actually meets. Both they and the light carry the node's id.
     const targets = [...this.objects.values(), ...this.helpers.values()]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
-    const id = hit ? nodeIdOf(hit.object) : null
+    const id = hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
     // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
     const extending = event.shiftKey || event.metaKey || event.ctrlKey
     this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
@@ -657,14 +708,23 @@ export class SceneRenderer {
   }
 }
 
-/** Walks up to whoever carries a node id: the ray meets a helper's child, not the helper. */
-function nodeIdOf(object: Object3D): string | null {
+/**
+ * Walks up to the object that stands for a node: the ray meets a helper's child, or one of the
+ * hundred meshes a GLB brought — and `GLTFLoader` names every one of them, so a name alone
+ * proves nothing. Only an id the engine put there counts, or a click on an imported model would
+ * select something the scene has never heard of.
+ */
+export function nodeIdOf(object: Object3D, isNode: (name: string) => boolean): string | null {
   let current: Object3D | null = object
   while (current) {
-    if (current.name) return current.name
+    if (current.name && isNode(current.name)) return current.name
     current = current.parent
   }
   return null
+}
+
+function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {
+  return node.type === 'model' && previous.model.assetId !== node.model.assetId
 }
 
 function disposeMaterial(mesh: Mesh): void {

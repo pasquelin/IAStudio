@@ -5,8 +5,8 @@ import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { ToolButton } from '@/design/ToolButton'
 import { removeNodes } from '@/engines/scene/commands'
-import { labelKeyOf, NODE_KINDS } from '@/engines/scene/node-kinds'
-import { selectedNodes, type SceneNodeType } from '@/engines/scene/scene-state'
+import { labelKeyOf, NODE_KINDS, type PanelNodeType } from '@/engines/scene/node-kinds'
+import { selectedNodes } from '@/engines/scene/scene-state'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useAddNode } from '@/hooks/useAddNode'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -15,7 +15,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
  * Add and delete, on the panel's own title bar. Shared by the mesh and light panels, which
  * differ only by the registry that fills the flyout and by the node type they may remove.
  */
-export function NodeActions({ documentId, type }: { documentId: string; type: SceneNodeType }) {
+export function NodeActions({ documentId, type }: { documentId: string; type: PanelNodeType }) {
   const { t } = useTranslation()
   const kind = NODE_KINDS[type]
   const { entries, namespace } = kind

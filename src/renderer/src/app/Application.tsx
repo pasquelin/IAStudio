@@ -11,6 +11,7 @@ import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { connectImageGeneration } from '@/stores/image-generation'
+import { connectModelGeneration } from '@/stores/model-generation'
 import { connectSkyboxGeneration } from '@/stores/skybox-generation'
 import { Shell } from './Shell'
 
@@ -38,10 +39,11 @@ export function Application() {
     }
   }, [connectSettings, connectAccounts, connectProject, connectJobs, connectMedia])
 
-  // Store to store rather than through the main process, so it subscribes on its own: what a
-  // generation launched from the Skyboxes workspace produced lands in the sky that asked.
+  // Store to store rather than through the main process, so each subscribes on its own: what a
+  // generation produced lands in the document that asked for it, whichever workspace that was.
   useEffect(() => connectSkyboxGeneration(), [])
   useEffect(() => connectImageGeneration(), [])
+  useEffect(() => connectModelGeneration(), [])
 
   useAppliedSettings()
 

@@ -74,10 +74,11 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    void cache.acquire('tex-1', NoColorSpace)
+    const acquired = cache.acquire('tex-1', NoColorSpace)
     void cache.acquire('tex-1', NoColorSpace)
     const texture = source.settle('tex-1')
-    await Promise.resolve()
+    // The promise, not a tick: what is being waited for is the load, not a count of microtasks.
+    await acquired
     const dispose = vi.spyOn(texture, 'dispose')
 
     cache.release('tex-1', NoColorSpace)
@@ -107,9 +108,9 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    void cache.acquire('tex-1', NoColorSpace)
+    const acquired = cache.acquire('tex-1', NoColorSpace)
     source.settle('tex-1')
-    await Promise.resolve()
+    await acquired
     cache.release('tex-1', NoColorSpace)
 
     void cache.acquire('tex-1', NoColorSpace)
@@ -164,11 +165,13 @@ describe('createTextureCache', () => {
     const source = deferredSource()
     const cache = createTextureCache(source.load)
 
-    void cache.acquire('tex-1', NoColorSpace)
-    void cache.acquire('tex-2', NoColorSpace)
+    const acquired = Promise.all([
+      cache.acquire('tex-1', NoColorSpace),
+      cache.acquire('tex-2', NoColorSpace),
+    ])
     const first = source.settle('tex-1')
     const second = source.settle('tex-2')
-    await Promise.resolve()
+    await acquired
 
     const disposals = [vi.spyOn(first, 'dispose'), vi.spyOn(second, 'dispose')]
     cache.dispose()

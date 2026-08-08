@@ -9,10 +9,11 @@ import type {
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
+  ModelRef,
   Transform,
 } from '@shared/domain/scene'
 
-export type SceneNodeType = 'mesh' | 'light'
+export type SceneNodeType = 'mesh' | 'light' | 'model'
 
 type SceneNodeBase = {
   id: string
@@ -27,6 +28,7 @@ export type SceneNode = SceneNodeBase &
   (
     | { type: 'mesh'; geometry: GeometryDescriptor; material: MaterialDescriptor }
     | { type: 'light'; light: LightDescriptor }
+    | { type: 'model'; model: ModelRef }
   )
 
 /**
@@ -64,6 +66,7 @@ export const EMPTY_SCENE: SceneState = { nodes: [], selectedIds: [] }
 
 export type MeshNode = Extract<SceneNode, { type: 'mesh' }>
 export type LightNode = Extract<SceneNode, { type: 'light' }>
+export type ModelNode = Extract<SceneNode, { type: 'model' }>
 
 export function nodeById(state: SceneState, id: string): SceneNode | null {
   return state.nodes.find(node => node.id === id) ?? null

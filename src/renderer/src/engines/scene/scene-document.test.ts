@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MESH_ENTRIES, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { MESH_PRIMITIVES } from './mesh-primitives'
 import { LIGHT_TYPES } from './light-types'
-import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
+import { lightNodeFixture as light, meshNode as mesh, modelNodeFixture } from './scene-fixtures'
 import { scenePayload, sceneFromPayload } from './scene-document'
 import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
 
@@ -62,6 +62,29 @@ describe('sceneFromPayload', () => {
 
   it('opens with nothing selected, whatever the file says', () => {
     expect(sceneFromPayload({ nodes: [], selectedIds: ['a'] }).selectedIds).toEqual([])
+  })
+
+  // A model is a reference and nothing else — what it points at is resolved when the scene is
+  // built, so a project whose assets moved still opens.
+  it('carries an imported model through a round trip', () => {
+    const model = modelNodeFixture('m')
+    expect(reread({ nodes: [model], selectedIds: [] }).nodes).toEqual([model])
+  })
+
+  it('drops a model whose reference says nothing, and keeps the rest of the scene', () => {
+    const nodes: unknown[] = [
+      mesh('a'),
+      { ...modelNodeFixture('m'), model: {} },
+      { ...modelNodeFixture('n'), model: { assetId: 42 } },
+      { ...modelNodeFixture('o'), model: null },
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
+  })
+
+  it('keeps a model pointing at an asset nothing answers to, which is a project that moved', () => {
+    const ghost = modelNodeFixture('m', 'gone')
+    expect(reread({ nodes: [ghost], selectedIds: [] }).nodes).toEqual([ghost])
   })
 
   it.each([

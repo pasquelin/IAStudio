@@ -270,7 +270,6 @@ L'espace 3D est fonctionnel mais jeune. Ne cherchez pas encore :
 
 - les **groupes** et le reparentage ;
 - le **copier-coller** et la duplication ;
-- l'**import de modèles** `.glb` / `.gltf` / `.obj` ;
 - les **ombres portées** ;
 - l'**éclairage par image** (HDRI) dans le viewport.
 

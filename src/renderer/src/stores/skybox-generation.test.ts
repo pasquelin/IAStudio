@@ -5,7 +5,7 @@ import { useAssets } from './assets'
 import { installDocument } from './document-fixtures'
 import { useDocuments } from './documents'
 import { useJobs } from './jobs'
-import { claimOnSubmit, connectSkyboxGeneration } from './skybox-generation'
+import { claimSkyboxOnSubmit, connectSkyboxGeneration } from './skybox-generation'
 import { skyboxOf, useSkyboxes } from './skyboxes'
 
 const panorama: Asset = {
@@ -59,7 +59,7 @@ const sourceOf = (documentId: string): { assetId: string } | null =>
 
 /** Submits from whatever tab is in front, the way the generator does — capture, then settle. */
 function submitFrom(jobId: string): void {
-  claimOnSubmit()(job({ id: jobId }))
+  claimSkyboxOnSubmit()(job({ id: jobId }))
 }
 
 /** Two skies open at once, `doc-1` in front — `installDocument` only ever installs one. */
@@ -142,7 +142,7 @@ describe('landing a generation in the sky that asked for it', () => {
    * the job id arrives would land the picture wherever they went.
    */
   it('writes into the sky it was launched from, not the one in front when the id arrives', async () => {
-    const claim = claimOnSubmit()
+    const claim = claimSkyboxOnSubmit()
 
     openBoth()
     useDocuments.setState({ activeId: 'doc-2' })

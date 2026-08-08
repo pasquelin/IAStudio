@@ -1,4 +1,6 @@
-import { setSelection } from '@/engines/scene/commands'
+import type { Asset } from '@shared/domain/asset'
+import { addNode, setSelection } from '@/engines/scene/commands'
+import { modelNode } from '@/engines/scene/node-factory'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/scene-state'
 import type { SelectionMode } from '@/helpers/selection'
 import { createDocumentStore } from './document-store'
@@ -25,4 +27,20 @@ export function selectIn(
 ): void {
   const state = useScenes.getState()
   state.replace(documentId, setSelection(sceneOf(state, documentId), ids, mode))
+}
+
+/**
+ * The one way an imported model enters a scene, whichever door it came through: a double-click
+ * in the asset browser, a drop on the viewport, or a 3D generation landing in the tab it was
+ * launched from. Three call sites building the node their own way is three ways for a model to
+ * arrive without a name.
+ *
+ * Answers whether it went in, so a caller that owns a gesture — a drop — knows whether to
+ * swallow it. An asset of another type is refused rather than turned into an empty node.
+ */
+export function addModelTo(documentId: string, asset: Asset): boolean {
+  if (asset.type !== 'mesh') return false
+
+  useScenes.getState().runCommand(documentId, addNode(modelNode(asset.id, asset.name)))
+  return true
 }

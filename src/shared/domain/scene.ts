@@ -51,6 +51,18 @@ export type GeometryDescriptor =
  */
 export type TextureRef = { assetId: string }
 
+/**
+ * An imported model, for the same reason and in the same shape as a texture: what a document
+ * stores is what a reload can resolve again.
+ *
+ * One node holding a reference, never a subtree of nodes. A single GLB brings meshes by the
+ * thousand, and a save was measured freezing every window past ~5500 nodes — the document grows
+ * by one row here whatever the file weighs. The cost is that the inside of a model cannot be edited;
+ * that is the right trade for a generation studio, and an explicit "explode" command is what
+ * would lift it the day it matters.
+ */
+export type ModelRef = { assetId: string }
+
 /** The maps a `MeshStandardMaterial` reads, in the order the inspector lists them. */
 export type TextureSlot = 'map' | 'normalMap' | 'roughnessMap' | 'metalnessMap' | 'aoMap'
 

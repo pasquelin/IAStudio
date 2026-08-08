@@ -70,7 +70,8 @@
     "allMedia": "Tous les médias",
     "video": "Vidéo",
     "audio": "Audio",
-    "image": "Image"
+    "image": "Image",
+    "mesh": "Modèle 3D"
   },
   "ingest": {
     "queued": "En attente…",

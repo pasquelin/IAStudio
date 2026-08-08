@@ -1,5 +1,11 @@
 import type { LightDescriptor } from '@shared/domain/scene'
-import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type LightNode, type MeshNode } from './scene-state'
+import {
+  DEFAULT_MATERIAL,
+  IDENTITY_TRANSFORM,
+  type LightNode,
+  type MeshNode,
+  type ModelNode,
+} from './scene-state'
 
 /**
  * Scene nodes for tests. Declared once so a new required field on `SceneNodeBase` breaks in one
@@ -31,5 +37,17 @@ export function lightNodeFixture(
     transform: IDENTITY_TRANSFORM,
     type: 'light',
     light,
+  }
+}
+
+export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    type: 'model',
+    model: { assetId },
   }
 }

@@ -58,6 +58,12 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'mesh') {
     return describes(value.geometry, GEOMETRY_SPECS) && isMaterial(value.material)
   }
+  // A model is a reference and nothing else: an absent or non-string `assetId` costs the node,
+  // never the file. What it points at is resolved when the scene is built, not here — a project
+  // whose assets moved still opens, with a hole where the model was.
+  if (value.type === 'model')
+    return isRecord(value.model) && typeof value.model.assetId === 'string'
+
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
 }
 

@@ -3,6 +3,7 @@ import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
 import { lightByKind } from './light-types'
 import { primitiveByKind } from './mesh-primitives'
+import { MODEL_ICON } from './node-kinds'
 import { DEFAULT_MATERIAL, IDENTITY_TRANSFORM, type SceneNode } from './scene-state'
 
 /**
@@ -26,8 +27,27 @@ export function lightNode(light: LightDescriptor, position: Vector3): SceneNode 
   }
 }
 
+/**
+ * An imported model, as one node holding a reference. Named after the asset rather than after
+ * its class: two cubes are both `Box`, but two imported models are two different files, and the
+ * outliner is where you tell them apart.
+ */
+export function modelNode(assetId: string, name: string): SceneNode {
+  return {
+    id: newId(),
+    parentId: null,
+    name,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    type: 'model',
+    model: { assetId },
+  }
+}
+
 /** The glyph belongs to the registry entry, not to whichever panel happens to draw the node. */
 export function iconOf(node: SceneNode): string {
+  if (node.type === 'model') return MODEL_ICON
+
   const kind = node.type === 'light' ? node.light.kind : node.geometry.kind
   return (primitiveByKind(kind) ?? lightByKind(kind))?.icon ?? mdiCubeOutline
 }

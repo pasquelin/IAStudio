@@ -155,7 +155,9 @@ The **Import media** button, on the shelf's title line.
 | **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
 
-> **3D files (`.glb`, `.obj`, `.fbx`) and HDRIs (`.hdr`) cannot be imported yet.** An imported
+> **3D models import as `.glb`.** A separate `.gltf` — the one with its `.bin` and textures
+> beside it — does not: the studio serves each asset on its own, so the linked files would be
+> nowhere to be found. `.obj`, `.fbx` and HDRIs (`.hdr`) cannot be imported yet, and an imported
 > `.exr` is catalogued as an image, not as a sky. See [What does not exist yet](18-limits.md).
 
 ### The file is not copied

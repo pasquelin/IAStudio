@@ -241,7 +241,61 @@ seul. C'est écrit dans `REPRISE.md` comme une erreur déjà commise et supprim�
 
 ## Étape 3 — Import glTF
 
-- [ ] Livrée
+- [x] Livrée — **sans Draco/KTX2 ni Web Worker**, voir plus bas
+
+**Ce qui est livré.** Le type de nœud `model` portant `{ assetId }`, sa validation, son cache à
+comptage de références, et les trois portes d'entrée : double-clic sur un asset `mesh`, dépôt sur
+le viewport, génération 3D qui revient dans le document d'où elle est partie. Plus l'import
+depuis le disque. 2364 → 2401 tests.
+
+**Deux reports, écrits noir sur blanc :**
+
+1. **Draco et KTX2 ne sont pas branchés.** Ce ne sont pas les dépendances qui bloquent — elles
+   sont autorisées — mais l'endroit d'où servir leurs décodeurs : ~700 Ko de wasm plus leur glue
+   JS, dont le chemin diffère entre le serveur de dev et une application empaquetée, et je ne
+   peux pas valider un build empaqueté cette nuit. Le loader est construit dans
+   `gltf-source.ts` **et nulle part ailleurs** : les brancher plus tard, c'est cette fonction et
+   aucune autre. En attendant, un `.glb` compressé échoue comme un fichier illisible.
+2. **Le parsing n'est pas en Web Worker.** Le plan autorise explicitement ce report. Un GLB de
+   300 Mo gèlera la fenêtre le temps du parsing. Le port `loadModel` est le point d'accroche : y
+   passer un worker ne change rien au reste.
+
+**Trois divergences par rapport au plan, assumées :**
+
+1. **`NODE_KINDS` n'a pas gagné de troisième ligne.** Son test exige de chaque entrée les clés
+   `add`, `remove`, `empty` et `noDocument` — c'est un registre de *panneaux*, et un modèle n'a
+   ni menu Ajouter, ni panneau, ni état vide. Lui en inventer aurait été quatre clés mortes.
+   D'où `PanelNodeType = Exclude<SceneNodeType, 'model'>` : un type de nœud qui mérite un panneau
+   casse toujours la compilation, un modèle non. L'outliner, lui, liste bien les modèles.
+2. **`.gltf` n'est pas importable, `.glb` seul l'est.** Un `.gltf` séparé pointe ses buffers et
+   ses textures par chemin relatif, et un asset est servi à plat en `scenario://asset/<id>` : les
+   fichiers voisins n'ont pas d'id, le loader ferait 404 sur chacun et afficherait un modèle vide
+   sans rien dire. Mieux vaut refuser dans le sélecteur que trahir dans le viewport.
+3. **`skybox-generation` a été factorisé avec le nouveau.** Les deux fichiers étaient identiques
+   à trois valeurs près, et seul l'ancien avait des tests. `generation-landing.ts` porte la
+   machinerie, les deux espaces la déclarent en dix lignes. Idem pour les caches :
+   `engines/core/ref-cache.ts` porte le comptage de références et sa course subtile, que
+   `texture-cache` et `model-cache` partagent désormais.
+
+**Cinq bugs trouvés par `/simplify` et `/code-review`, tous corrigés :**
+
+- **un modèle importé était insélectionnable à la souris.** `GLTFLoader` nomme chaque maille
+  qu'il construit, et le picking remontait au premier nom trouvé : un clic répondait `mesh_0`, et
+  cet id fantôme partait dans la sélection, dans l'historique et dans le document. Le picking
+  n'accepte plus qu'un nom que le moteur a lui-même posé ;
+- **importer un `.glb` depuis le disque créait la ligne de catalogue puis la supprimait.**
+  Le pipeline média ffprobe tout type importable ; un GLB n'est pas un média, donc « illisible »,
+  donc `discard`. Le fichier disparaissait de la bibliothèque une seconde après y être apparu.
+  Perfide : sur cette machine le ffprobe de Homebrew est cassé, donc le bug ne s'y voyait pas —
+  il aurait frappé toute machine saine ;
+- **la référence du cache était relâchée deux fois** : supprimer un de deux nœuds pointant le
+  même asset libérait la source que l'autre était en train de cloner ;
+- **le dépôt sur le viewport ne fonctionnait pas** : `getData` rend une chaîne vide pendant un
+  `dragover`, donc le `preventDefault` conditionnel n'avait jamais lieu ;
+- **un `assetId` changeant sur un nœud existant** n'était traité nulle part : ancien modèle
+  toujours à l'écran, ancienne référence jamais rendue, et décrément du mauvais compteur.
+
+**Le manuel a été corrigé** : il affirmait à six endroits que les modèles 3D ne s'importent pas.
 
 L'étape la plus grosse. Elle applique la décision d'architecture ci-dessus.
 

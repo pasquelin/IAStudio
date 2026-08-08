@@ -12,7 +12,9 @@ import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
-import { historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { assetsById, useAssets } from '@/stores/assets'
+import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SCENE_TOOLS } from './scene-tools'
 
 export function SceneDocument({ documentId }: { documentId: string }) {
@@ -154,7 +156,20 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [bindings, nothingSelected, snapping, localFrame])
 
   return (
-    <div className="relative size-full">
+    <div
+      className="relative size-full"
+      // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the
+      // toolbar instead of beside it would be a miss the user cannot see coming.
+      onDragOver={event => event.preventDefault()}
+      onDrop={event => {
+        event.preventDefault()
+        const assetId = assetIdFromDrag(event)
+        // Read at the drop rather than subscribed to: the catalogue refreshes on its own, and
+        // this document has no reason to re-render every time it does.
+        const asset = assetId ? assetsById(useAssets.getState()).get(assetId) : null
+        if (asset) addModelTo(documentId, asset)
+      }}
+    >
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
       <Toolbar

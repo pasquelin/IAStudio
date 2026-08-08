@@ -134,6 +134,7 @@ function pickMedia(language: Language): Promise<string[]> {
     video: t.video,
     audio: t.audio,
     image: t.image,
+    mesh: t.mesh,
   })
 
   return openDialog({ properties: ['openFile', 'multiSelections'], filters })

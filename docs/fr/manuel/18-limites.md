@@ -118,8 +118,6 @@ haut, « Ce que cela veut dire concrètement ».
 
 - **les groupes** et le reparentage — on ne peut pas assembler des objets en un sous-ensemble ;
 - **le copier-coller** et la duplication ;
-- **l'import de modèles** `.glb`, `.gltf`, `.obj` — on ne peut poser que ce que le studio sait
-  construire ou générer ;
 - **les ombres portées** — les objets sont éclairés, mais ne projettent pas d'ombre ;
 - **l'éclairage par image** (*IBL*) dans le viewport — une *skybox* n'éclaire pas encore une
   scène 3D, alors qu'elle éclaire bien l'aperçu de l'espace Skyboxes.
@@ -288,7 +286,7 @@ réglage écrit en avance sur l'espace qui l'utilisera.
 
 ### Ce qui ne s'importe pas
 
-- **les fichiers 3D** — `.glb`, `.gltf`, `.obj`, `.fbx` ;
+- **les fichiers 3D autres que `.glb`** — `.gltf` séparé, `.obj`, `.fbx` ;
 - **les HDRI** — `.hdr`.
 
 Un `.exr` s'importe, mais il est catalogué comme **image**, pas comme ciel. Il fonctionne quand
@@ -386,7 +384,7 @@ Si vous ne deviez retenir que six choses de ce chapitre :
    le cadre ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
 4. **il n'y a pas de bouton « agrandir », « détourer » ni « vectoriser »** ;
-5. **on ne peut pas importer de modèle 3D** ni de HDRI ;
+5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu'un `.glb` ;
 6. **une skybox n'éclaire pas encore une scène 3D**.
 
 Tout le reste est du confort.
