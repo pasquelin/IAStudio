@@ -86,43 +86,49 @@ Ces quatre points traînaient dans les anciennes notes de reprise. Ils sont rég
 
 ---
 
-# 1 bis. La branche `feat/image` attend son merge
+# 1 bis. `feat/image` — rebasée, il reste trois gestes
 
-**Elle est finie, verte et prête. Elle n'est pas fusionnée**, et c'est délibéré.
+**Worktree** `.claude/worktrees/image`, branche `feat/image`, **rebasée sur `main` (`fcb67ab`)**,
+32 commits. Point de retour si besoin : la branche `feat/image-avant-rebase` pointe sur l'état
+d'avant.
 
-    git -C .claude/worktrees/image log --oneline main..HEAD   # 32 commits
-    git -C .claude/worktrees/image status                     # propre
+## Ce qui reste, dans l'ordre
 
-`main` y est déjà intégré (commit « Intégration de main »), donc **la fusion est sans conflit** :
-`git merge-tree --write-tree HEAD main` passe. `pnpm validate` est vert dans le worktree :
-233 fichiers de test, 2555 tests.
+**1. Formater, valider, commiter.** Un seul fichier est modifié et non commité :
+`src/renderer/src/engines/canvas/canvas-state.test.ts` — onze tests de désérialisation ajoutés
+(genres retirés d'un réglage, valeurs manquantes, légendes, masques, `source`, guides illisibles).
+Ils passent ; il leur manque `pnpm format`.
 
-## Pourquoi elle n'a pas été fusionnée
+    pnpm format && pnpm validate
+    git add src/renderer/src/engines/canvas/canvas-state.test.ts
+    git commit -m "Un document d'une version antérieure s'ouvre sur ce que ce build sait lire"
 
-Au moment de le faire, **le dépôt principal avait 33 fichiers de documentation modifiés et non
-commités** — une autre session au travail. Quatre d'entre eux sont ceux que cette branche modifie
-aussi (`08-espace-image.md`, `18-limites.md` et leurs versions anglaises), et ils se contredisent :
-l'autre session documente que « on ne peut pas ouvrir une image existante », ce que le lot 2 de
-cette branche vient précisément d'implémenter.
+**2. Le budget de couverture.** `pnpm validate` lance désormais `test:coverage`, et le rebase a fait
+apparaître son seuil : `engines/{timeline,canvas,audio,core}/**` était à **284 branches non
+couvertes pour 250 permises**. Les tests du point 1 ont été écrits pour ça — `canvas-state.ts` était
+à 63 % de branches, le plus bas du dossier. **Vérifier que le compte est repassé sous 250.** S'il
+reste au-dessus, les candidats suivants sont `canvas-views.ts` (58 %) et les gardes de
+`CanvasEngine` ; élargir le budget est le dernier recours, et son propre commentaire dans
+`vitest.config.ts` explique quand c'est légitime — « a glob whose room to grow is mostly untestable
+GPU needs a wider budget ».
 
-Merger dans cet état aurait écrasé ou mêlé le travail de quelqu'un d'autre. `main` étant par
-ailleurs *checked out* dans le dépôt principal, la fusion ne peut de toute façon pas partir du
-worktree.
+**3. Fusionner.** Depuis le **dépôt principal**, pas depuis le worktree — `main` y est *checked
+out*, ce qui interdit la fusion d'ailleurs :
 
-## Comment la fusionner
-
-Depuis le **dépôt principal**, une fois son répertoire de travail propre :
-
-    git status                          # doit être vide, sinon commiter ou remiser d'abord
+    cd /Users/pasquelin/Applications/scenario
+    git status                     # doit être propre ; sinon commiter d'abord
     git merge feat/image -m "Fusion de feat/image : l'espace Image édite des calques"
     pnpm validate
     git worktree remove .claude/worktrees/image
+    git branch -d feat/image-avant-rebase
 
-Si les quatre fichiers de manuel entrent en conflit, **c'est la version de la branche qui est
-juste** sur l'espace Image : elle décrit le logiciel après ce travail. Reprendre de l'autre côté
-tout ce qui ne concerne pas l'espace Image.
-
----
+> **Avertissement, vérifié le 8 août 2026 :** le dépôt principal portait alors **33 fichiers de
+> documentation modifiés et non commités**, dont quatre que cette branche modifie aussi
+> (`08-espace-image.md`, `18-limites.md`, et leurs versions anglaises). Ils se contredisaient :
+> l'autre travail documentait que « on ne peut pas ouvrir une image existante », ce que le lot 2 de
+> cette branche a précisément implémenté. **En cas de conflit sur ces quatre fichiers, la version de
+> la branche est la juste** sur l'espace Image — elle décrit le logiciel après ce travail. Reprendre
+> de l'autre côté tout ce qui ne le concerne pas.
 
 # 2. Le plus urgent
 
