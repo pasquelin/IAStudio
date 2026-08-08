@@ -162,5 +162,8 @@ describe('the opentype.js import', () => {
   // What it costs to get this wrong is beside the dynamic import itself, in `fonts.ts`.
   it('is never a value import at module scope', () => {
     expect(moduleSource).not.toMatch(/^import (?!type\b).*'opentype\.js'/m)
+    // Both halves, or hoisting the `import()` to module scope would pass the line above while
+    // fetching the parser as soon as this module is evaluated — which is on the first screen.
+    expect(moduleSource).toMatch(/await import\('opentype\.js'\)/)
   })
 })
