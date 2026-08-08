@@ -6,11 +6,8 @@ export type PanelFailureProps = {
   onRetry: () => void
 }
 
-/**
- * What a panel shows once its content has thrown. Deliberately says nothing about the error:
- * the message is on the console with its component stack, and a stack in a dock is noise for
- * the one person who cannot act on it.
- */
+// Says nothing about the error itself: the stack is on the console, and it is noise for the
+// one person who cannot act on it.
 export function PanelFailure({ onRetry }: PanelFailureProps) {
   const { t } = useTranslation()
 

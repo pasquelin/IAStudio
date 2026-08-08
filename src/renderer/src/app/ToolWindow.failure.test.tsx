@@ -11,6 +11,13 @@ vi.mock('./tool-components', () => ({
         throw new Error('tool exploded')
       },
     },
+    // Renders its content fine, but its header actions do not.
+    layers: {
+      Content: () => <p>layer list</p>,
+      Actions: () => {
+        throw new Error('actions exploded')
+      },
+    },
   },
 }))
 
@@ -39,5 +46,16 @@ describe('a panel whose tool throws', () => {
     )
 
     expect(screen.getByText('the rest of the studio')).toBeInTheDocument()
+  })
+})
+
+describe('a panel whose header actions throw', () => {
+  it('drops the actions and keeps both the content and the close button', () => {
+    render(<ToolWindow tool="layers" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+
+    expect(screen.getByText('layer list')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
+    // The content is fine, so the panel must not claim otherwise.
+    expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
   })
 })

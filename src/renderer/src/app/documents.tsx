@@ -38,8 +38,8 @@ const TextureDocument = lazy(async () => ({
 /** Every space is opened the same way: the tab checks its document still exists, then renders. */
 function panelFor(Space: FC<{ documentId: string }>): FC<IDockviewPanelProps<DocumentPanelParams>> {
   return props => (
-    // Above the `Suspense` below, so it catches a chunk that fails to load as well as a space
-    // that throws while rendering — a rejected `lazy()` import is an error, not a fallback.
+    // Above the `Suspense` below: a rejected `lazy()` import is an error, not a fallback. Retry
+    // cannot fix that one — React caches the rejection — but the tab stays closable.
     <ErrorBoundary>
       <WithDocument id={props.params.documentId}>
         {() => <Space documentId={props.params.documentId} />}

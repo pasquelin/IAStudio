@@ -29,28 +29,23 @@ describe('ErrorBoundary', () => {
   })
 
   it('shows the failure notice instead of letting the error reach the window', () => {
-    expect(() =>
-      render(
-        <ErrorBoundary>
-          <Boom />
-        </ErrorBoundary>,
-      ),
-    ).not.toThrow()
+    render(
+      <ErrorBoundary>
+        <Boom />
+      </ErrorBoundary>,
+    )
 
     expect(screen.getByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
   })
 
-  it('keeps the siblings of a failing panel mounted', () => {
+  it('renders a given fallback instead of the notice, for a surface too small to explain', () => {
     render(
-      <div>
-        <ErrorBoundary>
-          <Boom />
-        </ErrorBoundary>
-        <p>the other panel</p>
-      </div>,
+      <ErrorBoundary fallback={null}>
+        <Boom />
+      </ErrorBoundary>,
     )
 
-    expect(screen.getByText('the other panel')).toBeInTheDocument()
+    expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
   })
 
   it('reports the error and the component stack, so a crash is not silent', () => {

@@ -45,9 +45,8 @@ export const ToolWindow = memo(function ToolWindow({
   const definition = TOOL_COMPONENTS[tool]
   const title = t(toolTitleKey(tool))
 
-  // The id comes from persisted state: an entry left over from an older version names no
-  // component. Dropped rather than left to the boundary below, which would show a failure
-  // where there is only a tool this version no longer has.
+  // The id comes from persisted state: an entry from an older version names no component —
+  // a tool this version dropped, not a failure to present as one.
   if (!definition) return null
   const { Content, Actions, fillActions } = definition
 
@@ -81,11 +80,17 @@ export const ToolWindow = memo(function ToolWindow({
             </>
           }
         >
-          {Actions !== undefined && <Actions />}
+          {/* Its own boundary, and an empty one: actions that throw must not take the close
+              button with them, and a failure notice does not fit on a header row. */}
+          {Actions !== undefined && (
+            <ErrorBoundary fallback={null}>
+              <Actions />
+            </ErrorBoundary>
+          )}
         </PanelHeader>
         <div className="min-h-0 flex-1 overflow-auto">
-          {/* Inside the panel, not around it: a tool that throws keeps its header, so the
-              user can still close it — which is the only way out of a tool that never renders. */}
+          {/* Inside the panel, not around it: a tool that throws keeps its header, so it can
+              still be closed. */}
           <ErrorBoundary>
             <Content />
           </ErrorBoundary>

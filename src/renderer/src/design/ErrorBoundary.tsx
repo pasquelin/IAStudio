@@ -3,19 +3,15 @@ import { PanelFailure } from './PanelFailure'
 
 export type ErrorBoundaryProps = {
   children: ReactNode
+  /** Shown instead of the panel notice, for a surface too small to explain itself — a header. */
+  fallback?: ReactNode
 }
 
 type ErrorBoundaryState = {
   failed: boolean
 }
 
-/**
- * Keeps a throwing panel from taking the window with it. A class because React offers no hook
- * for this — `getDerivedStateFromError` has no functional equivalent in 19.
- *
- * One per panel rather than one at the root: a dock whose panels can be closed and reopened
- * individually should lose exactly the one that broke.
- */
+// A class: `getDerivedStateFromError` still has no hook equivalent in React 19.
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { failed: false }
 
@@ -24,8 +20,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   override componentDidCatch(error: unknown, info: ErrorInfo): void {
-    // The one place the renderer may reach the console (CLAUDE.md): a panel that fails in
-    // silence looks like a panel that renders nothing, and the stack is the only way back.
+    // A render stack is renderer-local, and devtools is where it is read — unlike the API calls
+    // CLAUDE.md sends to the main log, which never appear here at all.
     console.error('Panel failed to render:', error, info.componentStack)
   }
 
@@ -34,7 +30,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   override render(): ReactNode {
-    if (this.state.failed) return <PanelFailure onRetry={this.retry} />
-    return this.props.children
+    if (!this.state.failed) return this.props.children
+    // Compared to `undefined`, not `??`: `fallback={null}` means "show nothing", and `??`
+    // would read that as "not given" and put the notice back.
+    if (this.props.fallback !== undefined) return this.props.fallback
+    return <PanelFailure onRetry={this.retry} />
   }
 }
