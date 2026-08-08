@@ -213,6 +213,20 @@ describe('sceneFromPayload', () => {
     ],
     ['a material missing a slot', nodeWith({ material: { ...DEFAULT_MATERIAL, map: undefined } })],
     ['a texture without an asset', nodeWith({ material: { ...DEFAULT_MATERIAL, map: {} } })],
+    ['an id that is not text', nodeWith({ id: 7 })],
+    ['a transform that is not an object', nodeWith({ transform: 'origin' })],
+    ['a geometry whose kind is not text', nodeWith({ geometry: { kind: 7 } })],
+    ['a material that is not an object', nodeWith({ material: 'standard' })],
+    [
+      'a material colour that is not text',
+      nodeWith({ material: { ...DEFAULT_MATERIAL, color: 7 } }),
+    ],
+    ['a model whose reference is not an object', { ...modelNodeFixture('m'), model: 'asset-1' }],
+    ['a sprite that is not an object', { ...spriteNodeFixture('s'), sprite: 'red' }],
+    [
+      'a sprite colour that is not text',
+      { ...spriteNodeFixture('s'), sprite: { color: 7, opacity: 1, map: null } },
+    ],
   ])('drops a node with %s', (_case, node) => {
     expect(sceneFromPayload({ nodes: [node] }).nodes).toEqual([])
   })

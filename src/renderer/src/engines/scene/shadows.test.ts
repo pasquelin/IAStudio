@@ -41,6 +41,19 @@ describe('applyShadowQuality', () => {
 })
 
 describe('applyShadowFlags', () => {
+  // A helper wears its light's flags and nothing under it does: it has no tree to reach into,
+  // and walking one would be walking the scene the helper is drawn beside.
+  it('stops at the object itself when it is told not to descend', () => {
+    const root = new Object3D()
+    const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    root.add(mesh)
+
+    applyShadowFlags(root, true, true, false)
+
+    expect(root.castShadow).toBe(true)
+    expect(mesh.castShadow).toBe(false)
+  })
+
   // A model is one node over a whole imported tree, and three.js reads the flags per mesh.
   it('reaches every mesh under the object, not only the object', () => {
     const root = new Object3D()

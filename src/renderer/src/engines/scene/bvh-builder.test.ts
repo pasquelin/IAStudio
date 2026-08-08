@@ -1,7 +1,7 @@
 import { BufferAttribute, BufferGeometry, Mesh, SphereGeometry } from 'three'
 import { MeshBVH } from 'three-mesh-bvh'
 import { describe, expect, it, vi } from 'vitest'
-import { createBvhBuilder } from './bvh-builder'
+import { createBvhBuilder, WORTH_A_TREE } from './bvh-builder'
 import type { BvhRequest, BvhResponse } from './bvh-message'
 
 /**
@@ -21,9 +21,11 @@ function scriptedWorker() {
     terminate: vi.fn(),
   }
 
+  // `as`: the builder calls exactly these three members of a `Worker`, and jsdom has no other.
+  const spawn = vi.fn(() => worker as unknown as Worker)
+
   return {
-    // `as`: the builder calls exactly these three members of a `Worker`, and jsdom has no other.
-    spawn: () => worker as unknown as Worker,
+    spawn,
     sent,
     terminated: worker.terminate,
     /** Answers the last request the way the real worker would, tree included. */
@@ -177,5 +179,58 @@ describe('createBvhBuilder', () => {
     await createBvhBuilder(spawn).accelerate(light())
 
     expect(spawn).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * A mesh worth a tree, built the way a GLB arrives: raw positions, and an index only when the
+ * file carried one. Sized from the threshold itself, so raising it cannot leave these tests
+ * quietly asserting the too-light path.
+ */
+function worthATree(positions: Float32ArrayConstructor | Float64ArrayConstructor, indexed = false) {
+  const triangles = WORTH_A_TREE + 1
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new positions(triangles * 9), 3))
+  if (indexed) geometry.setIndex(new BufferAttribute(new Uint8Array(triangles * 3), 1))
+  return new Mesh(geometry)
+}
+
+describe('what the builder sends across', () => {
+  // The build itself is irrelevant here, and a real one costs 150 ms a piece.
+  it('spawns one worker however many trees it builds', () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+
+    void builder.accelerate(dense())
+    void builder.accelerate(dense())
+
+    expect(scripted.spawn).toHaveBeenCalledTimes(1)
+  })
+
+  // The worker reads a `Float32Array` and nothing else; a wider buffer would be read as garbage.
+  it('refuses a position buffer of another width', async () => {
+    const scripted = scriptedWorker()
+
+    await createBvhBuilder(scripted.spawn).accelerate(worthATree(Float64Array))
+
+    expect(scripted.sent).toEqual([])
+  })
+
+  it('sends no index for a geometry that has none', async () => {
+    const scripted = scriptedWorker()
+
+    void createBvhBuilder(scripted.spawn).accelerate(worthATree(Float32Array))
+
+    expect(scripted.sent[0]?.index).toBeNull()
+  })
+
+  // Only the two widths the tree is written back in travel; anything else is rebuilt from the
+  // positions rather than sent as an index the worker would misread.
+  it('drops an index of a width the tree cannot carry', async () => {
+    const scripted = scriptedWorker()
+
+    void createBvhBuilder(scripted.spawn).accelerate(worthATree(Float32Array, true))
+
+    expect(scripted.sent[0]?.index).toBeNull()
   })
 })

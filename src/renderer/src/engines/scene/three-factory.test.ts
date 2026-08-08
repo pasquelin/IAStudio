@@ -9,13 +9,17 @@ import {
   PointLightHelper,
   SpotLight,
   SpotLightHelper,
+  Mesh,
+  PerspectiveCamera,
+  Sprite,
   TorusGeometry,
   TorusKnotGeometry,
 } from 'three'
-import { describe, expect, it } from 'vitest'
+import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LIGHT_TYPES } from './light-types'
 import { MESH_PRIMITIVES } from './mesh-primitives'
-import { geometryFor, helperFor } from './three-factory'
+import { geometryFor, helperFor, tuneViewHelper } from './three-factory'
 import { lightFor } from './three-sync'
 
 describe('geometryFor', () => {
@@ -146,5 +150,66 @@ describe('helperFor', () => {
       const helper = helperFor(light)
       expect(type.kind === 'ambient' ? helper === null : helper !== null).toBe(true)
     }
+  })
+})
+
+/**
+ * `ViewHelper` paints its knobs on a 2D canvas, which the renderer test setup stubs to `null`
+ * for every other suite. Given back here rather than globally: what the setup's comment says
+ * still holds — the timeline checks for `null` before painting, and must keep doing so.
+ */
+function withCanvasContext(): void {
+  const context = {
+    beginPath: () => {},
+    arc: () => {},
+    closePath: () => {},
+    fill: () => {},
+    fillText: () => {},
+  }
+
+  // `as`: the helper reaches for five of a 2D context's hundred members, and `getContext` is
+  // overloaded per context id — none of its returns is "the five methods this one uses".
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+    context as unknown as ReturnType<HTMLCanvasElement['getContext']>,
+  )
+}
+
+describe('tuneViewHelper', () => {
+  const helperOf = () => new ViewHelper(new PerspectiveCamera(), document.createElement('div'))
+
+  beforeEach(withCanvasContext)
+  afterEach(() => vi.restoreAllMocks())
+
+  // The helper offers no size option: the knobs are shrunk where they stand.
+  it('shrinks the knobs it keeps', () => {
+    const helper = helperOf()
+
+    tuneViewHelper(helper)
+
+    const shown = helper.children.filter(child => child instanceof Sprite && child.visible)
+    expect(shown.length).toBeGreaterThan(0)
+    expect(shown.every(sprite => sprite.scale.x < 1)).toBe(true)
+  })
+
+  // The coloured knobs already identify the axes; hidden rather than removed, so `dispose()`
+  // still frees the material they all share.
+  it('hides the unlit knobs of the negative axes, without removing them', () => {
+    const helper = helperOf()
+    const before = helper.children.length
+
+    tuneViewHelper(helper)
+
+    const hidden = helper.children.filter(child => child instanceof Sprite && !child.visible)
+    expect(hidden).toHaveLength(3)
+    expect(helper.children).toHaveLength(before)
+  })
+
+  it('leaves the axis meshes alone', () => {
+    const helper = helperOf()
+    const meshes = helper.children.filter(child => child instanceof Mesh)
+
+    tuneViewHelper(helper)
+
+    expect(meshes.every(mesh => mesh.scale.x === 1)).toBe(true)
   })
 })

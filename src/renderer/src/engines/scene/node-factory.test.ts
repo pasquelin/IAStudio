@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createNodeOf } from './node-factory'
+import { createNodeOf, groupNode, iconOf } from './node-factory'
+import { lightNodeFixture, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
 
 describe('createNodeOf', () => {
   it('builds a mesh from a primitive kind', () => {
@@ -58,5 +59,20 @@ describe('createNodeOf', () => {
 
   it('refuses a kind no registry knows', () => {
     expect(createNodeOf('teapot')).toBeNull()
+  })
+})
+
+// The glyph belongs to the registry entry: a panel that picked its own would drift from the menu.
+describe('iconOf', () => {
+  it('gives each kind of node its own glyph', () => {
+    const icons = [
+      iconOf(meshNode('a')),
+      iconOf(lightNodeFixture('l')),
+      iconOf(spriteNodeFixture('s')),
+      iconOf(modelNodeFixture('m')),
+      iconOf(groupNode()),
+    ]
+
+    expect(new Set(icons).size).toBe(icons.length)
   })
 })
