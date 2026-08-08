@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { LicencesWindow } from './LicencesWindow'
+
+// Unfolding a licence puts its WHOLE text in the DOM — that is the point of the panel — and
+// `userEvent` re-checks pointability against all of it on every click. Under a loaded run the
+// two-click case went past the default budget, which reads as a broken panel rather than a slow
+// test. Raised rather than trimmed: what makes it slow is what it exists to prove.
+vi.setConfig({ testTimeout: 20_000 })
 
 describe('LicencesWindow', () => {
   beforeEach(() => {
