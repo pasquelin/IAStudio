@@ -12,6 +12,7 @@ import type { AssetUploader } from './uploader'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
 import type { PromptAssist } from './prompt-assist'
+import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
@@ -62,6 +63,8 @@ function reader(overrides: Partial<UsageReader> = {}): UsageReader {
 
 const usage = reader()
 
+const estimateCost: CostEstimator = () => Promise.resolve(null)
+
 describe('scenario handlers', () => {
   beforeEach(() => {
     resetHandlers()
@@ -76,6 +79,7 @@ describe('scenario handlers', () => {
       jobs,
       prompts,
       uploads,
+      estimateCost,
       usage,
     })
 
@@ -85,7 +89,14 @@ describe('scenario handlers', () => {
 
   it('rejects a query asking for more than one page of models', async () => {
     const search = vi.fn(() => Promise.resolve({ items: [], cursor: null }))
-    registerScenarioHandlers({ models: registry({ search }), jobs, prompts, uploads, usage })
+    registerScenarioHandlers({
+      models: registry({ search }),
+      jobs,
+      prompts,
+      uploads,
+      usage,
+      estimateCost,
+    })
 
     await expect(invoke(CHANNELS.scenarioSearchModels, { limit: 10_000 })).rejects.toThrow()
     expect(search).not.toHaveBeenCalled()
@@ -98,6 +109,7 @@ describe('scenario handlers', () => {
       jobs,
       prompts,
       uploads,
+      estimateCost,
       usage,
     })
 
@@ -106,7 +118,14 @@ describe('scenario handlers', () => {
 
   it('rejects a malformed model identifier before reaching the registry', async () => {
     const describe = vi.fn(() => Promise.reject(new Error('unused')))
-    registerScenarioHandlers({ models: registry({ describe }), jobs, prompts, uploads, usage })
+    registerScenarioHandlers({
+      models: registry({ describe }),
+      jobs,
+      prompts,
+      uploads,
+      usage,
+      estimateCost,
+    })
 
     await expect(invoke(CHANNELS.scenarioDescribeModel, '   ')).rejects.toThrow()
     expect(describe).not.toHaveBeenCalled()
@@ -120,6 +139,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -136,6 +156,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -154,6 +175,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -173,6 +195,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -192,6 +215,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest: () => Promise.reject(failing) }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -211,6 +235,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ translate }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -228,6 +253,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ translate }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -246,6 +272,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ describeStyle }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -262,6 +289,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ describeStyle }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -276,6 +304,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ describeStyle }),
         uploads,
+        estimateCost,
         usage,
       })
 
@@ -296,6 +325,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts,
         uploads,
+        estimateCost,
         usage: reader({ report }),
       })
 
@@ -311,6 +341,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts,
         uploads,
+        estimateCost,
         usage: reader({ report }),
       })
 
@@ -325,6 +356,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts,
         uploads,
+        estimateCost,
         usage: reader({ events }),
       })
 
@@ -343,6 +375,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts,
         uploads,
+        estimateCost,
         usage: reader({ report: () => Promise.reject(failing) }),
       })
 
@@ -350,6 +383,43 @@ describe('scenario handlers', () => {
 
       await expect(refused).rejects.toThrow('rate-limited')
       await expect(refused).rejects.not.toThrow(LEAKY)
+    })
+  })
+
+  describe('what a generation would cost', () => {
+    it('hands the estimate back, validating what the renderer asked with', async () => {
+      const estimate = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts,
+        uploads,
+        usage,
+        estimateCost: estimate,
+      })
+
+      await expect(
+        invoke(CHANNELS.scenarioEstimateCost, 'model_flux', { prompt: 'a rock' }),
+      ).resolves.toEqual({ creativeUnits: 12 })
+      expect(estimate).toHaveBeenCalledWith('model_flux', { prompt: 'a rock' })
+    })
+
+    it('refuses a malformed request before it reaches the API', async () => {
+      const estimate = vi.fn(() => Promise.resolve(null))
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts,
+        uploads,
+        usage,
+        estimateCost: estimate,
+      })
+
+      await expect(invoke(CHANNELS.scenarioEstimateCost, '  ', {})).rejects.toThrow()
+      await expect(
+        invoke(CHANNELS.scenarioEstimateCost, 'model_flux', 'not a body'),
+      ).rejects.toThrow()
+      expect(estimate).not.toHaveBeenCalled()
     })
   })
 })

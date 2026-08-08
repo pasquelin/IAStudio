@@ -18,6 +18,7 @@ import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
+import { useCostEstimate } from './useCostEstimate'
 
 /**
  * Deferred on purpose: the form drags zod, react-hook-form and its resolver behind it, and
@@ -99,6 +100,8 @@ export function Generator() {
   const submit = useJobs(state => state.submit)
 
   const descriptor = useDescriptor(modelId)
+  // Before the guards below return early: a hook cannot be called conditionally.
+  const cost = useCostEstimate(modelId, descriptor.data?.fields)
 
   if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
 
@@ -148,6 +151,14 @@ export function Generator() {
               fields={descriptor.data.fields}
               onSubmit={generate}
               submitLabel={t('actions.generate')}
+              // Absent rather than zero when nothing is priced: a button that says nothing is
+              // honest, one that says « 0 CU » would be wrong about a generation that costs.
+              submitNote={
+                cost.estimate
+                  ? t('generation.estimatedCost', { units: cost.estimate.creativeUnits })
+                  : undefined
+              }
+              onValuesChange={cost.onValuesChange}
               busy={!project}
               preset={preset}
               // The API marks the field its assistance rewrites; every other one gets nothing.

@@ -8,7 +8,12 @@ import { asUrgent } from './rate-limiter'
  */
 export function runnerOf(client: Scenario): JobRunner {
   return {
-    submit: async (modelId, body) => (await client.generate.runModel(modelId, { body })).job,
+    // The cost is on the submission response, beside the job and not inside it — and it is never
+    // said again, the polled job does not carry it. Read here or lost.
+    submit: async (modelId, body) => {
+      const { job, creativeUnitsCost } = await client.generate.runModel(modelId, { body })
+      return creativeUnitsCost === undefined ? job : { ...job, cost: creativeUnitsCost }
+    },
 
     poll: async jobId => (await client.jobs.retrieve(jobId)).job,
 

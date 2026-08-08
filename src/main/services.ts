@@ -65,6 +65,7 @@ import {
   recordFailuresTo,
   type ClientProvider,
 } from './scenario/client'
+import { costEstimatorOf, type CostEstimator } from './scenario/cost'
 import { createUsageReader, type UsageReader } from './scenario/usage'
 import { createJobStore } from './scenario/job-store'
 import { createRateLimiters, limitedTransport } from './scenario/rate-limiter'
@@ -96,6 +97,8 @@ export type Services = {
   prompts: PromptAssist
   /** What every stored key spent. Consumption only — the API exposes no balance to read. */
   usage: UsageReader
+  /** What a run would cost, asked before it is run. See `cost.ts`. */
+  estimateCost: CostEstimator
   /** Names what arrives without a useful name. Never throws, never blocks its caller. */
   captionArrivals: AutoCaption
   /** Names a chosen selection, whatever it is already called. */
@@ -505,6 +508,15 @@ export function createServices(settings: SettingsStore): Services {
 
   const uploads = createAssetUploader(() => client.require().assets)
 
+  // The client in force, resolved per call like every other service here: an estimate is asked
+  // before any job exists, so it is the key the user is about to spend from that must price it.
+  // `maxRetries: 0`, because a held request is answered with a synthetic 429 the SDK honours:
+  // retried twice, one courtesy estimate would take three slots of the window precisely when
+  // there are none left, and hold the transport for half a minute for a figure nobody waits on.
+  const estimateCost = costEstimatorOf((modelId, body) =>
+    client.require().generate.runModel(modelId, { body, dryRun: true }, { maxRetries: 0 }),
+  )
+
   const ownerScope = createOwnerScope(credentials.watch)
 
   /**
@@ -654,6 +666,7 @@ export function createServices(settings: SettingsStore): Services {
     jobs,
     prompts,
     usage,
+    estimateCost,
     captionArrivals: captioner.onArrival,
     describeAssets: captioner.describe,
     uploads,

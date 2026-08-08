@@ -40,7 +40,8 @@
     "randomSeed": "Aléatoire",
     "noProject": "Ouvrez un projet pour générer.",
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
-    "dropPicture": "Déposez une image, ou collez son identifiant"
+    "dropPicture": "Déposez une image, ou collez son identifiant",
+    "estimatedCost": "~{{units}} UC"
   },
   "jobs": {
     "none": "Aucune tâche en cours.",
@@ -49,6 +50,7 @@
     "failed_one": "{{count}} échec",
     "failed_other": "{{count}} échecs",
     "open": "Afficher les générations",
+    "cost": "{{units}} UC",
     "status": {
       "queued": "En file",
       "running": "En cours",
