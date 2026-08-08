@@ -10,6 +10,7 @@ import { useJobs } from '@/stores/jobs'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { connectImageGeneration } from '@/stores/image-generation'
 import { connectSkyboxGeneration } from '@/stores/skybox-generation'
 import { Shell } from './Shell'
 
@@ -40,6 +41,7 @@ export function Application() {
   // Store to store rather than through the main process, so it subscribes on its own: what a
   // generation launched from the Skyboxes workspace produced lands in the sky that asked.
   useEffect(() => connectSkyboxGeneration(), [])
+  useEffect(() => connectImageGeneration(), [])
 
   useAppliedSettings()
 
