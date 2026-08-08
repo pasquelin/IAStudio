@@ -79,10 +79,25 @@ Ils sont visibles dans la barre d'outils, en gris.
 | **Découpe** (`S`) | Cadre |
 | **Plume** | Dessin |
 | **Texte sur chemin** | Texte |
+| **Commentaire** (`C`) | seul de son groupe |
 
-**Le Commentaire (`C`) est le seul qui ne soit pas grisé.** Il s'arme comme les autres, et il ne
-fait rien : cliquer dans l'image ne pose aucune note. C'est le seul bouton du studio qui ait l'air
-vivant sans l'être — les autres disent leur état par leur gris.
+**Ils disent tous leur état par leur gris**, et c'est la seule chose qu'on leur demande tant qu'ils
+n'existent pas. Le Commentaire a été le dernier à rentrer dans le rang : il s'armait comme les
+autres, changeait le curseur, et laissait le moteur jeter chaque clic — un bouton qui avait l'air
+vivant sans l'être.
+
+### Les touches des outils ne sont pas écoutées
+
+La barre d'outils affiche une touche à côté de chaque outil — `V` pour le déplacement, `P` pour le
+pinceau, `E` pour la gomme. **Aucune n'est active.** Elles apparaissent dans les menus et les
+infobulles, et rien dans le studio ne les résout : un outil se choisit à la souris.
+
+Le même écart existe dans l'espace **Vidéo**, pour `V`, `C` et `H`.
+
+Ce ne sont donc pas des raccourcis mais des **intentions affichées**. Les touches réellement en
+service passent toutes par le registre de commandes, et ce sont celles — et seulement celles — que
+liste [Tous les raccourcis](15-raccourcis.md) : elles se remappent, elles apparaissent dans
+l'écran des réglages, et elles répondent.
 
 ### Le recadrage ne rend pas ses pixels à l'annulation
 

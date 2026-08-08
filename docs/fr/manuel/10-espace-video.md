@@ -72,6 +72,10 @@ Dans les deux cas, le studio décide de deux choses :
 | **Lame** | `C` | coupe un clip là où vous cliquez |
 | **Main** | `H` | fait défiler la timeline — molette pour zoomer |
 
+> **Ces trois touches ne sont pas encore actives** : elles s'affichent dans les infobulles, mais
+> rien ne les écoute. Un outil se choisit à la souris. Les touches en service dans le montage —
+> `Espace`, `S`, `Suppr`, les zooms — sont dans [Tous les raccourcis](15-raccourcis.md).
+
 ### Avec l'outil Sélection
 
 | Geste | Effet |
