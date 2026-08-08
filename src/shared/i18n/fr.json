@@ -30,7 +30,8 @@
     "redoHint": "Rétablir l’action annulée",
     "generate": "Générer",
     "close": "Fermer",
-    "removeTool": "Retirer le module"
+    "removeTool": "Retirer le module",
+    "retry": "Réessayer"
   },
   "generation": {
     "noParameter": "Ce modèle n’attend aucun paramètre.",
@@ -506,7 +507,8 @@
     "unexpected": "Une erreur inattendue est survenue.",
     "invalidValue": "Valeur invalide.",
     "rejected": "La génération a échoué.",
-    "storage": "Impossible d’enregistrer le résultat sur le disque."
+    "storage": "Impossible d’enregistrer le résultat sur le disque.",
+    "panelCrashed": "Ce panneau a rencontré une erreur."
   },
   "menu": {
     "file": "Fichier",

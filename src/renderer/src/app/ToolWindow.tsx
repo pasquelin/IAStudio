@@ -2,6 +2,7 @@ import { mdiClose } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Panel } from '@/design/Panel'
 import { PanelHeader } from '@/design/PanelHeader'
 import { Separator } from '@/design/Separator'
@@ -44,8 +45,8 @@ export const ToolWindow = memo(function ToolWindow({
   const definition = TOOL_COMPONENTS[tool]
   const title = t(toolTitleKey(tool))
 
-  // The id comes from persisted state: an entry left over from an older version would
-  // otherwise throw while rendering, with no error boundary above to catch it.
+  // The id comes from persisted state: an entry from an older version names no component —
+  // a tool this version dropped, not a failure to present as one.
   if (!definition) return null
   const { Content, Actions, fillActions } = definition
 
@@ -79,10 +80,21 @@ export const ToolWindow = memo(function ToolWindow({
             </>
           }
         >
-          {Actions !== undefined && <Actions />}
+          {/* Its own boundary, and an empty one: actions that throw must not take the close
+              button with them, and a failure notice does not fit on a header row. */}
+          {Actions !== undefined && (
+            <ErrorBoundary key={tool} fallback={null}>
+              <Actions />
+            </ErrorBoundary>
+          )}
         </PanelHeader>
         <div className="min-h-0 flex-1 overflow-auto">
-          <Content />
+          {/* Inside the panel, not around it: a tool that throws keeps its header, so it can
+              still be closed. Keyed by the tool — the rail swaps `tool` on this same element,
+              and a boundary left standing would hand its failure to the tool that replaced it. */}
+          <ErrorBoundary key={tool}>
+            <Content />
+          </ErrorBoundary>
         </div>
       </Panel>
     </ToolZoneProvider>
