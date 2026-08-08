@@ -143,6 +143,23 @@ describe('openFrom', () => {
     expect(open.left?.primary).toBe('generator')
   })
 
+  // The layout a version 6 install actually holds. Every half it named still draws a panel
+  // afterwards: a migration that left one empty would look like a broken window on the first
+  // launch after an update.
+  it('rebuilds a whole version 6 layout without emptying a half', () => {
+    const open = openFrom({
+      left: { primary: 'assets', secondary: 'explorer' },
+      right: { primary: 'models', secondary: 'inspector' },
+      bottom: { primary: 'assets' },
+    })
+
+    expect(open.left).toEqual({ primary: 'models' })
+    // Two tools of the old left column now declare the same half; the last one read wins it, and
+    // the shelf is not lost with it — it keeps the band, which is its other placement.
+    expect(open.right).toEqual({ primary: 'explorer', secondary: 'inspector' })
+    expect(open.bottom).toEqual({ primary: 'assets' })
+  })
+
   it('drops the jobs panel, which is no longer a tool window', () => {
     expect(openFrom({ bottom: { primary: 'assets', secondary: 'jobs' } }).bottom).toEqual({
       primary: 'assets',
