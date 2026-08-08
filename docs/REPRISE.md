@@ -443,10 +443,9 @@ pire qu'un bouton absent.
 
 ## 3.3 Espace 3D
 
-> **Livré sur `feat/3d-completion`, pas encore fusionné.** Onze étapes, douze commits, rebasés sur
-> `main` après la fusion de l'espace Image. Ce qui suit décrit la branche ; tant qu'elle n'est pas
-> fusionnée, `main` n'a que la colonne « Ce qui existait avant ». Le plan et son journal étape par
-> étape : [`docs/plans/2026-08-08-3d-completion.md`](plans/2026-08-08-3d-completion.md).
+> **Fusionné dans `main`.** Onze étapes, treize commits, rebasés sur `main` après la fusion de
+> l'espace Image puis fusionnés à leur tour. Le plan et son journal étape par étape :
+> [`docs/plans/2026-08-08-3d-completion.md`](plans/2026-08-08-3d-completion.md).
 
 **Ce qui existait avant** — 17 primitives, 5 types de lumières, gizmo translate/rotate/scale,
 sélection par raycast, inspecteur dérivé des descripteurs, undo avec coalescing par geste, 5 slots
