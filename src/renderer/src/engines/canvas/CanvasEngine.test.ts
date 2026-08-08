@@ -301,6 +301,8 @@ type Harness = {
   guides: { calls: string[] }
   /** The ids of the patches the engine reported as one finished gesture each. */
   patches: string[]
+  /** The ids whose tiles the engine threw away: their history entry can no longer be replayed. */
+  dropped: string[]
   /** `translate:<id>:<x>:<y>` and the two ends of the drag, in the order they arrived. */
   layers: string[]
 }
@@ -322,12 +324,13 @@ function mounted(
   const captions: Point[] = []
   const calls: string[] = []
   const patches: string[] = []
+  const dropped: string[] = []
   const layers: string[] = []
   const harness: Harness = {
     engine: new CanvasEngine({
       onPick: () => undefined,
       onPixels: patchId => patches.push(patchId),
-      onPixelsDropped: () => undefined,
+      onPixelsDropped: patchId => dropped.push(patchId),
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
       onText: at => captions.push(at),
@@ -358,6 +361,7 @@ function mounted(
     captions,
     guides: { calls },
     patches,
+    dropped,
     layers,
   }
 
@@ -913,6 +917,76 @@ describe('painting a transformed layer', () => {
 
     expect(paintSpace()?.matrix?.tx).toBeCloseTo(0, 10)
     expect(paintSpace()?.matrix?.ty).toBeCloseTo(0, 10)
+  })
+})
+
+/**
+ * A texture used to be allocated once, at whatever size the document had when its layer was
+ * born, and never grew. Five features were written against that and left unoffered for it: crop,
+ * mirror, quarter turn, merge down and flatten.
+ */
+describe('following the document to another size', () => {
+  const masked: CanvasState = {
+    ...DEFAULT_CANVAS,
+    layers: [{ ...pixelLayer('layer-1', 'Background'), mask: { enabled: true, linked: true } }],
+    activeLayerId: 'layer-1',
+  }
+
+  const resizedTo = (state: CanvasState, width: number, height: number): CanvasState => ({
+    ...state,
+    width,
+    height,
+    // A fresh array, since `apply` skips a state whose stack it already holds.
+    layers: [...state.layers],
+  })
+
+  it('rebuilds the layer and its mask, and frees what they replace', async () => {
+    const { engine } = await mounted(masked)
+    const builtBefore = gpu.texturesCreated
+    const freedBefore = gpu.texturesDestroyed
+
+    engine.apply(resizedTo(masked, 512, 512))
+
+    // Two surfaces, so two textures out and two in. A mask left behind is a layer hidden by a
+    // stencil one document old.
+    expect(gpu.texturesCreated - builtBefore).toBe(2)
+    expect(gpu.texturesDestroyed - freedBefore).toBe(2)
+  })
+
+  it('carries the old picture into each new surface', async () => {
+    const { engine } = await mounted(masked)
+    const first = gpu.texturesCreated
+    gpu.painted = []
+
+    engine.apply(resizedTo(masked, 512, 512))
+
+    // Rebuilt and left empty would lose the stack outright; the copy is what makes it a resize.
+    expect(gpu.painted).toContain(first)
+    expect(gpu.painted).toContain(first + 1)
+  })
+
+  it('leaves the surfaces alone when the frame keeps its size', async () => {
+    const { engine } = await mounted(masked)
+    const freedBefore = gpu.texturesDestroyed
+
+    engine.apply({ ...masked, layers: [...masked.layers] })
+
+    expect(gpu.texturesDestroyed).toBe(freedBefore)
+  })
+
+  it('throws the undo tiles away, and says which ones', async () => {
+    // A capture names its tile in the surface's own coordinates. Once the surface is another
+    // shape those coordinates point elsewhere, so replaying one would paint sideways.
+    const { engine, host, patches, dropped } = await mounted(masked)
+    press(host, 200, 200)
+    drag(host, 240, 240)
+    release()
+    const recorded = patches[0]
+    expect(recorded).toBeDefined()
+
+    engine.apply(resizedTo(masked, 512, 512))
+
+    expect(dropped).toEqual([recorded])
   })
 })
 

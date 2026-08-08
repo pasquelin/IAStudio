@@ -464,9 +464,50 @@ export class CanvasEngine {
     // tree and re-rendering the stage for it would be a full GPU frame per pointer move.
     if (previous && previous.layers === state.layers && !resized) return
 
+    // Before `reconcile`, which builds what is missing at the size the state now names: a
+    // surface that survives has to reach the same size, or half the stack is one document old.
+    if (previous && resized) this.resurface(state)
+
     this.reconcile()
     if (resized && this.framed) this.frameDocument()
     this.render()
+  }
+
+  /**
+   * Rebuilds every surface at the document's new size, masks included, and copies the old picture
+   * into it. Until this existed a texture was allocated once, at whatever size the document had
+   * when the layer was born, and never grew: a quarter turn left the layers outside the frame,
+   * and merging or flattening had nowhere document-sized to compose into.
+   *
+   * The copy lands at the origin, with no offset. `resizeCanvas` already moves every layer's
+   * transform by the frame's own displacement, and that transform is what places the sprite —
+   * shifting the pixels here as well would apply the same move twice.
+   *
+   * Shrinking loses what falls outside, and the undo tiles go with it: the frame comes back on
+   * ⌘Z, the pixels it cut away do not.
+   */
+  private resurface(size: Size): void {
+    const renderer = this.app?.renderer
+    if (!renderer || this.surfaces.size === 0) return
+
+    for (const surface of this.surfaces.values()) {
+      const texture = RenderTexture.create({
+        width: size.width,
+        height: size.height,
+        resolution: 1,
+      })
+
+      const carried = new Sprite(surface.texture)
+      renderer.render({ container: carried, target: texture, clear: true })
+      // The old texture is destroyed just below, so its source must not go with the sprite.
+      carried.destroy({ texture: false, textureSource: false })
+
+      surface.sprite.texture = texture
+      surface.texture.destroy(true)
+      surface.texture = texture
+    }
+
+    this.patches?.dropAll()
   }
 
   /** The stack, made real on the GPU: one texture per paintable layer, in the stack's order. */
