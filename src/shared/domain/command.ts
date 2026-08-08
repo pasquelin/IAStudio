@@ -1,4 +1,5 @@
 import type { Signature } from './shortcut'
+import type { WorkspaceId } from './workspace'
 
 /**
  * Which surface a command belongs to. Two spaces legitimately want the same key — `Delete`
@@ -543,14 +544,14 @@ export const COMMAND_SCOPES: readonly CommandScope[] = ['global', 'scene', 'sequ
  * Declared rather than derived: the menu is built in the main process from a workspace id, and
  * it has to name the exact command the surface in front is listening for.
  */
-const SCOPE_BY_WORKSPACE: Record<string, CommandScope> = {
+const SCOPE_BY_WORKSPACE: Partial<Record<WorkspaceId, CommandScope>> = {
   image: 'canvas',
   '3d': 'scene',
   video: 'sequence',
 }
 
 /** The surface a workspace edits through, or `null` where nothing is undoable. */
-export function scopeOfWorkspace(workspace: string | null): CommandScope | null {
+export function scopeOfWorkspace(workspace: WorkspaceId | null): CommandScope | null {
   return workspace ? (SCOPE_BY_WORKSPACE[workspace] ?? null) : null
 }
 

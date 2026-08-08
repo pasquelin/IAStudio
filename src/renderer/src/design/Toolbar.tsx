@@ -1,5 +1,5 @@
 import { mdiRedo, mdiUndo } from '@mdi/js'
-import { Fragment, type ReactNode } from 'react'
+import { Fragment, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { MenuButton } from './MenuButton'
@@ -56,6 +56,8 @@ export type ToolbarProps = {
   canUndo?: boolean
   canRedo?: boolean
   className?: string
+  /** What no class can express — an offset read off a runtime measure, such as the rulers'. */
+  style?: CSSProperties
 }
 
 /**
@@ -78,6 +80,7 @@ export function Toolbar({
   canUndo = false,
   canRedo = false,
   className,
+  style,
 }: ToolbarProps) {
   const { t } = useTranslation()
   const vertical = orientation === 'vertical'
@@ -90,6 +93,7 @@ export function Toolbar({
   return (
     <div
       role="toolbar"
+      style={style}
       aria-orientation={vertical ? 'vertical' : 'horizontal'}
       className={cn(
         'border-border bg-surface flex items-center gap-0.5 rounded-(--radius-sc-lg) border p-1',

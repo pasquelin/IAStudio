@@ -339,25 +339,22 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
 
         {/* Inside the rulers rather than over them: the toolbar covered the first twenty pixels
-            of both graduations — the corner one reads a position from. The inset follows the
-            engine's own constant, so the two can never disagree about how thick a ruler is. */}
-        <div
-          className="pointer-events-none absolute right-0 bottom-0"
-          style={{ top: rulerInset, left: rulerInset }}
-        >
-          <Toolbar
-            className="pointer-events-auto absolute top-2 left-2"
-            tools={tools}
-            activeTool={tool}
-            onTool={setTool}
-            onMode={pick}
-            extras={<BrushControls brush={brush} onBrush={setBrush} />}
-            onUndo={() => run('canvas.undo')}
-            onRedo={() => run('canvas.redo')}
-            canUndo={undoable}
-            canRedo={redoable}
-          />
-        </div>
+            of both graduations — the corner one reads a position from. A margin, so the gap the
+            class already sets is kept, and the engine's own constant stays the only truth about
+            how thick a ruler is. */}
+        <Toolbar
+          className="absolute top-2 left-2"
+          style={{ marginTop: rulerInset, marginLeft: rulerInset }}
+          tools={tools}
+          activeTool={tool}
+          onTool={setTool}
+          onMode={pick}
+          extras={<BrushControls brush={brush} onBrush={setBrush} />}
+          onUndo={() => run('canvas.undo')}
+          onRedo={() => run('canvas.redo')}
+          canUndo={undoable}
+          canRedo={redoable}
+        />
 
         <ZoomBar
           scale={view.viewport.scale}

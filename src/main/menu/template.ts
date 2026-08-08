@@ -181,9 +181,14 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * A row that is exactly a command: its label, its accelerator and what it fires all come from
    * the registry, so a title translated once is never translated again for the menu.
    */
-  const commandItem = (command: CommandId, label: string): MenuItemConstructorOptions => ({
+  const commandItem = (
+    command: CommandId,
+    label: string,
+    registerAccelerator = true,
+  ): MenuItemConstructorOptions => ({
     label,
     accelerator: shortcut(command),
+    registerAccelerator,
     click: () => actions.runCommand(command),
   })
 
@@ -210,7 +215,14 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     label: t.menu.edit,
     submenu: [
       ...(undo && redo
-        ? [commandItem(undo, t.commands.undo.title), commandItem(redo, t.commands.redo.title)]
+        ? [
+            // The key is shown but not reserved, exactly as for the clipboard below: reserving it
+            // would take ⌘Z away from a field being typed into, and undo a brush stroke instead of
+            // the word just mistyped. Unreserved, the window sees it and `useShortcuts` steps
+            // aside whenever the caret is in a text field.
+            commandItem(undo, t.commands.undo.title, false),
+            commandItem(redo, t.commands.redo.title, false),
+          ]
         : nativeHistory),
       { type: 'separator' },
       { role: 'cut', registerAccelerator: false },

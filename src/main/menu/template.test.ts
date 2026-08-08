@@ -191,6 +191,20 @@ describe('the Edit menu', () => {
    * not reserve the key: `scene.copy` is bound to ⌘C too, and `useShortcuts` is what decides
    * between the two by looking at whether text is highlighted.
    */
+  /**
+   * Reserving ⌘Z would take it from a field being typed into: the menu would hear it first and
+   * undo a brush stroke instead of the word just mistyped. Unreserved, the window sees the key
+   * and `useShortcuts` steps aside whenever the caret sits in a text field.
+   */
+  it('shows the undo key without reserving it either', () => {
+    const entries = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Édition')
+    const history = entries.filter(entry => ['Annuler', 'Rétablir'].includes(String(entry.label)))
+
+    expect(history).toHaveLength(2)
+    expect(history.map(entry => entry.registerAccelerator)).toEqual([false, false])
+    expect(history[0]?.accelerator).toBeTruthy()
+  })
+
   it('shows the clipboard keys without reserving them', () => {
     const entries = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Édition')
     const clipboard = entries.filter(entry => ['cut', 'copy', 'paste'].includes(String(entry.role)))
