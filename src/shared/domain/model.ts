@@ -94,6 +94,40 @@ export const FEATURED_TAG = 'sc:featured'
  */
 export const SKYBOX_TAG = 'sc:skybox'
 
+/**
+ * The families no capability can name, and the tag that names each one. Skyboxes were the first;
+ * upscaling, cutout and vectorization are the same case — the capability enum holds no value for
+ * any of them, and all 24 of those models answer `img2img` like every other image model.
+ *
+ * Read in both directions, which is why it is a list of pairs: `familyOf` classifies a model by
+ * it, and the registry narrows a listing server-side by it. Ten models out of 642 are not worth
+ * walking six pages of catalogue to find.
+ *
+ * A tag alone never decides — see `familyOf`: two of the nine models carrying `remove-background`
+ * remove it from video, and they belong to the montage, not to the canvas.
+ *
+ * A tag listed here belongs to its own family and to no other: offering it in `TAGS_BY_FAMILY`
+ * elsewhere would filter a listing down to models that listing has already excluded. Under its
+ * own family it is just as useless — every row already carries it.
+ *
+ * ORDER IS A PRIORITY. A model carrying two of these tags has no right answer — they name
+ * different outputs — and the first entry here wins. That is a choice for a stable answer over
+ * the order the API happens to serve its tags in.
+ */
+export type FamilyTag = { family: ModelFamily; tag: string }
+
+export const FAMILY_TAGS: readonly FamilyTag[] = [
+  { family: 'skybox', tag: SKYBOX_TAG },
+  { family: 'upscale', tag: 'image-upscale' },
+  { family: 'background-removal', tag: 'remove-background' },
+  { family: 'vectorization', tag: 'vectorize' },
+]
+
+/** The tag that stands for a family, when one does. */
+export function tagOfFamily(family: ModelFamily): string | undefined {
+  return FAMILY_TAGS.find(entry => entry.family === family)?.tag
+}
+
 export type ModelSummary = {
   id: string
   name: string
@@ -165,7 +199,6 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
     'Image to Image',
     'editing',
     'Post Processing',
-    'image-upscale',
     'characters',
     'fantasy',
     'cartoon',

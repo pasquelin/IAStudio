@@ -251,48 +251,6 @@ logiciel.
 
 ---
 
-## Générer
-
-### Détourer, Agrandir et Vectoriser ne peuvent pas aboutir
-
-L'espace Image offre **cinq éditions par le modèle**, dans son menu : Régénérer la zone, Étendre,
-Détourer, Agrandir, Vectoriser.
-
-**Les deux premières fonctionnent. Les trois autres s'arrêtent avant de partir.**
-
-La raison tient en deux lignes. Chaque édition demande un modèle d'une **famille** précise :
-
-| Édition | Famille demandée | Peut-on choisir un modèle de cette famille ? |
-|---|---|---|
-| Régénérer la zone, Étendre | image | **oui** — c'est celle du panneau Modèles dans l'espace Image |
-| Agrandir | agrandissement | non |
-| Détourer | détourage | non |
-| Vectoriser | vectorisation | non |
-
-Or aucun écran ne permet de choisir un modèle dans ces trois familles-là : le panneau **Modèles**
-ne montre que la famille de l'espace où vous êtes, et les réglages n'offrent une liste que pour
-Image, Vidéo, 3D, Audio et Agrandissement — cette dernière étant vide, voir plus bas.
-
-**Ce que vous verrez** : le panneau Modèles s'ouvre, et rien d'autre ne se passe. Ce n'est pas une
-panne, c'est une commande dont le chaînon manque.
-
-**En attendant**, un agrandisseur reste utilisable comme n'importe quel modèle : cherchez
-`upscale` dans le panneau Modèles de l'espace Image, ou filtrez sur le tag `image-upscale`, puis
-donnez-lui votre image dans le formulaire.
-
-### La sous-section « Agrandissement » des réglages est toujours vide
-
-**Réglages ▸ Génération ▸ Agrandissement** existe, s'ouvre, et n'a **qu'une seule entrée :
-« Demander à chaque fois »**.
-
-Sa liste se remplit avec les modèles de la famille *agrandissement* — et le studio n'y range
-jamais personne. Il devine la famille d'un modèle à partir de ce qu'il sait recevoir et rendre :
-un agrandisseur reçoit une image et rend une image, il part donc dans la famille **Image**.
-
-Une liste vide ici ne veut donc pas dire que vous êtes déconnecté.
-
----
-
 ## Import
 
 ### Ce qui s'importe
@@ -326,8 +284,9 @@ projet remplirait votre disque pour rien.
 
 ### La famille Texture n'a pas de modèle par défaut
 
-**Réglages ▸ Génération** propose cinq sous-sections : Image, Vidéo, 3D, Audio, Agrandissement.
-**Texture** manque, alors que c'est désormais une famille de modèles à part entière.
+**Réglages ▸ Génération** propose sept sous-sections : Image, Vidéo, 3D, Audio, Agrandissement,
+Détourage, Vectorisation. **Texture** manque, alors que c'est désormais une famille de modèles à
+part entière.
 
 Conséquence : dans l'espace Textures, le panneau **Génération** n'apparaît qu'après avoir choisi un
 modèle à la main, et il faut recommencer à chaque session — les autres espaces peuvent, eux,
@@ -408,8 +367,8 @@ Si vous ne deviez retenir que cinq choses de ce chapitre :
 2. **un recadrage ne se défait qu'à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
 3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
-4. **Détourer, Agrandir et Vectoriser ne peuvent pas aboutir** — il manque le moyen de choisir
-   leur modèle ;
+4. **la famille Texture n'a pas de modèle par défaut** — l'espace Textures fait rechoisir son
+   modèle à chaque session ;
 5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu'un `.glb`.
 
 Tout le reste est du confort.

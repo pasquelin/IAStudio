@@ -14,6 +14,7 @@ import { useActivity } from '@/stores/activity'
 import { useUpdates } from '@/stores/updates'
 import { connectImageGeneration } from '@/stores/image-generation'
 import { connectModelGeneration } from '@/stores/model-generation'
+import { connectPreparation } from '@/stores/preparation'
 import { connectSkyboxGeneration } from '@/stores/skybox-generation'
 import { Shell } from './Shell'
 
@@ -58,6 +59,10 @@ export function Application() {
   useEffect(() => connectSkyboxGeneration(), [])
   useEffect(() => connectImageGeneration(), [])
   useEffect(() => connectModelGeneration(), [])
+
+  // Same reason, the other way round: what an edit asked the generator to open on belongs to the
+  // space that asked, and has to close when the user leaves it.
+  useEffect(() => connectPreparation(), [])
 
   useAppliedSettings()
 

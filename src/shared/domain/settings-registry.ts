@@ -6,6 +6,7 @@ import {
   THEMES,
   type SettingsSectionId,
 } from './settings'
+import type { ModelFamily } from './model'
 import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from './scene'
 import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 
@@ -40,20 +41,50 @@ export type SettingSectionEntry = {
   descriptionKey?: string
   /** Set on a sub-section. The navigation builds its tree from this, and nothing else. */
   parent?: SettingsSectionId
+  /**
+   * The model family this screen sets a default for. Declared rather than read back out of the
+   * id: an action that cannot find a model of a family has to open the screen that sets one,
+   * and slicing `'background-removal'` off the id would hand it a string nothing checks.
+   */
+  family?: ModelFamily
+}
+
+/** Where a family's model is chosen, when a screen offers one. */
+export function sectionOfFamily(family: ModelFamily): SettingsSectionId | undefined {
+  return SETTING_SECTIONS.find(section => section.family === family)?.id
 }
 
 /**
  * One screen per model family, each holding the default model of that family. Their labels are
  * the workspaces' own: a family and the space that works with it are the same idea to the user.
  *
- * `upscale` has no workspace, so it carries a label of its own.
+ * The last three have no workspace of their own — they are the families the canvas edits reach
+ * for — so they are named after the family. Without these screens, Cutout and Vectorize have
+ * nowhere at all to be given a model, and both stop on "no model set".
  */
 const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
-  { id: 'generation.image', labelKey: 'workspaces.image', parent: 'generation' },
-  { id: 'generation.video', labelKey: 'workspaces.video', parent: 'generation' },
-  { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation' },
-  { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation' },
-  { id: 'generation.upscale', labelKey: 'settings.familyUpscale', parent: 'generation' },
+  { id: 'generation.image', labelKey: 'workspaces.image', parent: 'generation', family: 'image' },
+  { id: 'generation.video', labelKey: 'workspaces.video', parent: 'generation', family: 'video' },
+  { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation', family: '3d' },
+  { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation', family: 'audio' },
+  {
+    id: 'generation.upscale',
+    labelKey: 'families.upscale',
+    parent: 'generation',
+    family: 'upscale',
+  },
+  {
+    id: 'generation.background-removal',
+    labelKey: 'families.background-removal',
+    parent: 'generation',
+    family: 'background-removal',
+  },
+  {
+    id: 'generation.vectorization',
+    labelKey: 'families.vectorization',
+    parent: 'generation',
+    family: 'vectorization',
+  },
 ]
 
 export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [

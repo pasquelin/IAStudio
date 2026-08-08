@@ -82,23 +82,18 @@ dessus en calque (voir [Espace Image](08-espace-image.md)).
 
 ## Agrandir une image
 
-Le menu de l'espace Image offre une commande **Agrandir**. **Ne l'utilisez pas : elle ne peut pas
-aboutir aujourd'hui** — elle cherche son modèle dans une famille qu'aucun écran ne permet de
-choisir, et se contente d'ouvrir le panneau Modèles.
+Le menu **Image ▸ Agrandir** aplatit le document, l'envoie, et ouvre le formulaire de
+l'agrandisseur avec votre image déjà dedans. C'est vous qui appuyez sur **Générer**.
 
-Le chemin qui marche passe par le formulaire ordinaire :
+Une fois, avant la première : **Réglages ▸ Génération ▸ Agrandissement**, choisissez un modèle.
+Sans lui, la commande n'envoie rien et ouvre cet écran — le panneau **Modèles** ne peut pas servir
+ici, il ne montre que la famille de l'espace ouvert.
 
-1. espace **Image** ;
-2. dans le panneau **Modèles**, tapez `upscale` dans la recherche — ou ouvrez
-   **Plus de filtres** → **Tag** → `image-upscale` ;
-3. choisissez-en un, donnez-lui votre image, **Générer**.
+**Détourer** et **Vectoriser** marchent exactement pareil, avec leur propre sous-section de
+réglages : **Détourage** et **Vectorisation**.
 
-Un agrandisseur est un modèle d'image comme un autre : il reçoit une image et en rend une, en plus
-grand. C'est d'ailleurs pour cela qu'il est rangé dans la famille Image.
-
-**Détourer** et **Vectoriser** sont dans le même cas, et n'ont pas d'équivalent de secours : aucun
-modèle de ces deux familles n'est atteignable. Voir
-[Ce qui n'existe pas encore](18-limites.md).
+Un agrandisseur reste par ailleurs un modèle comme un autre : rien n'empêche de le chercher dans
+le panneau Modèles et de lui donner une image à la main.
 
 ---
 
@@ -338,7 +333,7 @@ Tout est détaillé, sans rien cacher, dans
 |---|---|---|
 | une image depuis une phrase | Image | Modèles → prompt → Générer |
 | une variante d'une image | Image | filtre *Image vers image* → donner l'image |
-| une image plus grande | Image | chercher `upscale` dans les Modèles — **pas** la commande Agrandir |
+| une image plus grande | Image | menu **Image ▸ Agrandir**, après avoir réglé son modèle |
 | un ciel à 360° | Skyboxes | `+` → Générer, ça se pose tout seul |
 | une matière | Textures | `+` → glisser une image sur l'aperçu → `⌘S` |
 | un plan animé | Vidéo | filtre *Image vers vidéo* → Générer |

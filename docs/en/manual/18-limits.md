@@ -240,48 +240,6 @@ And you cannot export the six faces of a cube, nor an *HDRI* usable in another a
 
 ---
 
-## Generating
-
-### Cut out, Enlarge and Vectorize cannot complete
-
-The Image workspace offers **five model-driven edits** in its menu: Regenerate the region, Extend,
-Cut out, Enlarge, Vectorize.
-
-**The first two work. The other three stop before leaving.**
-
-The reason takes two lines. Each edit asks for a model of a particular **family**:
-
-| Edit | Family asked for | Can a model of that family be chosen? |
-|---|---|---|
-| Regenerate the region, Extend | image | **yes** — it is the Models panel's family in the Image workspace |
-| Enlarge | upscale | no |
-| Cut out | background removal | no |
-| Vectorize | vectorisation | no |
-
-And no screen lets you choose a model in those three families: the **Models** panel only shows the
-family of the workspace you are in, and settings only offer a list for Image, Video, 3D, Audio and
-Upscaling — the last of which is empty, see below.
-
-**What you will see**: the Models panel opens, and nothing else happens. It is not a fault, it is
-a command with a missing link.
-
-**In the meantime**, an upscaler stays usable like any other model: search for `upscale` in the
-Image workspace's Models panel, or filter on the `image-upscale` tag, then give it your picture in
-the form.
-
-### The "Upscaling" settings sub-section is always empty
-
-**Settings ▸ Generation ▸ Upscaling** exists, opens, and holds **a single entry: "Ask every
-time"**.
-
-Its list fills with models of the *upscale* family — and the studio never files anybody there. It
-works a model's family out from what it takes in and gives back: an upscaler takes an image and
-returns an image, so it goes into the **Image** family.
-
-An empty list here therefore does not mean you are disconnected.
-
----
-
 ## Import
 
 ### What can be imported
@@ -315,8 +273,9 @@ disk for nothing.
 
 ### The Texture family has no default model
 
-**Settings ▸ Generation** offers five sub-sections: Image, Video, 3D, Audio, Upscaling. **Texture**
-is missing, even though it is now a model family in its own right.
+**Settings ▸ Generation** offers seven sub-sections: Image, Video, 3D, Audio, Upscaling, Background removal,
+Vectorization. **Texture** is missing, even though it is now a model family in its own
+right.
 
 The consequence: in the Textures workspace the **Generate** panel only appears once a model has been
 chosen by hand, and it has to be chosen again every session — the other workspaces can remember
@@ -396,7 +355,8 @@ If you only remember five things from this chapter:
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;
 3. **there is no video export** — the studio cannot yet deliver a final file;
-4. **Cut out, Enlarge and Vectorize cannot complete** — there is no way to choose their model;
+4. **the Texture family has no default model** — the Textures workspace makes you pick one again
+   every session;
 5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.
 
 Everything else is comfort.

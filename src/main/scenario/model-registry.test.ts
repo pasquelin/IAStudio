@@ -40,6 +40,14 @@ const SKY: RemoteModel = {
   tags: [SKYBOX_TAG, 'panorama'],
 }
 
+/** Shaped after `model_ideogram-remove-background`: a cutout model answers `img2img` too. */
+const CUTOUT: RemoteModel = {
+  id: 'model_cutout',
+  name: 'Ideogram Remove Background',
+  capabilities: ['img2img'],
+  tags: [OFFICIAL_TAG, 'remove-background'],
+}
+
 type Catalogue = {
   private?: readonly RemoteModel[]
   public?: readonly RemoteModel[]
@@ -299,6 +307,25 @@ describe('model registry', () => {
 
     await registry.search({ family: 'image' })
     expect(spied.lists.at(-1)?.tag).toBeUndefined()
+  })
+
+  /**
+   * The three edit families are as sparse as the skyboxes and are found the same way. Measured:
+   * nine models carry `remove-background`, ten `image-upscale`, four `vectorize`.
+   */
+  it('asks the API for the tag of every family one defines', async () => {
+    const spied = spiedCatalog({ public: [CUTOUT] })
+    const registry = registryOf({ catalog: spied.catalog })
+
+    const cutouts = await registry.search({ family: 'background-removal' })
+    expect(spied.lists.at(-1)?.tag).toBe('remove-background')
+    expect(cutouts.items.map(item => item.id)).toEqual(['model_cutout'])
+
+    await registry.search({ family: 'upscale' })
+    expect(spied.lists.at(-1)?.tag).toBe('image-upscale')
+
+    await registry.search({ family: 'vectorization' })
+    expect(spied.lists.at(-1)?.tag).toBe('vectorize')
   })
 
   // The pre-filter makes a page family-specific, so the pages cache has to be too. Without the

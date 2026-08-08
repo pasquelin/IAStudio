@@ -98,6 +98,18 @@ contre le code le 8 août 2026 après la fusion de l'espace Image. Il ne se reli
 vérifie** : les registres (`COMMAND_REGISTRY`, `IMAGE_TOOLS`, `UNBUILT_TOOLS`, `TOOL_PLACEMENTS`,
 `IO_BY_KIND`) et le bundle i18n disent ce que le logiciel fait — l'impression qu'on en a, non.
 
+**Les cinq éditions par le modèle aboutissent, et se trouvent.** `familyOf` produit désormais
+`upscale`, `background-removal` et `vectorization` : les capacités de l'API ne les distinguent pas
+— les 24 modèles concernés déclarent tous `img2img` — et c'est le tag qui tranche, après les
+capacités et seulement si elles ont répondu `image` (deux des neuf `remove-background` sont des
+modèles vidéo). `FAMILY_TAGS` (`shared/domain/model.ts`) se lit dans les deux sens : le registre y
+prend le tag dont il pré-filtre une liste côté serveur. Les trois familles ont leur écran de
+réglages — c'est le seul endroit où leur modèle se choisit, le panneau Modèles ne montrant que la
+famille de l'espace — et une édition sans modèle y mène au lieu d'ouvrir une impasse. Le générateur
+suit la famille de l'édition le temps d'une parenthèse, refermée par `connectPreparation` quand on
+quitte l'espace. Enfin les cinq commandes ont une ligne dans le menu Image : elles n'en avaient
+aucune, et aucun raccourci non plus — elles restent sans touche, elles dépensent du crédit.
+
 **L'entrée d'une image dans un ciel** — l'espace Skyboxes avait son moteur, son undo et son panneau,
 mais aucune porte. Trois l'ouvrent : le double-clic sur un asset, le dépôt depuis l'étagère, et la
 génération, qui retient le document d'où elle est partie et s'y pose seule. Les modèles de panorama
@@ -423,37 +435,28 @@ Les commandes correspondantes vivent dans `engines/canvas/commands.ts` (`cropToR
    - **le décodage du clone IPC**, mesuré : 1,3 ms pour dix calques ordinaires (8 % d'une frame),
      16 ms franchies vers 40 Mo de base64, soit vingt calques de 4096 px bien remplis. Un
      `Uint8Array` à la place du base64 supprimerait l'inflation de 33 % et le décodage côté main.
-3. **La classification des modèles.** `familyOf` (`main/scenario/schema.ts`) ne produit jamais les
-   familles `upscale`, `background-removal` ni `vectorization` : trois des cinq actions d'édition IA
-   — Détourer, Agrandir, Vectoriser — n'ont donc aucun modèle à trouver et s'arrêtent proprement sur
-   « aucun modèle réglé ». Travail de catalogue, pas d'espace Image. **Régénérer la zone** et
-   **Étendre**, en famille `image`, fonctionnent de bout en bout.
-4. **Le preset suit la famille de l'édition, pas celle de l'espace.** `prepare(family, …)` range le
-   preset sous la famille de l'édition alors que le Generator de l'espace Image lit `preset.image` :
-   même avec un modèle d'agrandissement réglé, « Agrandir » ouvrirait un formulaire qui ne montre pas
-   l'image envoyée. Même endroit à reprendre que le point 3.
-5. **Le réordonnancement des calques par glisser.** `reorderLayer` existe et est testée, sans bouton.
+3. **Le réordonnancement des calques par glisser.** `reorderLayer` existe et est testée, sans bouton.
    **Aucune liste réordonnable n'existe dans `design/`** — le seul `draggable` du dépôt est
    `DraggableAsset`, qui sort un asset vers l'extérieur. L'écrire dans une liste virtualisée à groupes
    imbriqués, avec indicateur de dépose et cible calculée par niveau, est un morceau à part entière.
-6. **La pile de calques est un arbre rendu par `Collection`, qui est une liste.** `design/Tree.tsx`
+4. **La pile de calques est un arbre rendu par `Collection`, qui est une liste.** `design/Tree.tsx`
    existe, virtualisé, avec l'indentation, le chevron, `role="treeitem"`, `aria-expanded` et le repli
    aux flèches — la pile n'a rien de tout cela : un lecteur d'écran y entend une liste plate, et c'est
    le seul arbre du studio où les flèches ne replient rien. `Tree` attend des nœuds plats
    `{ id, parentId }` et un `Set` d'ouverts tenu par l'appelant, là où les calques s'imbriquent et
    portent `collapsed` dans le document : `panels/layers/layer-rows.ts` est à une ligne de pouvoir
    émettre les deux.
-7. **Deux réglages manquent sur les six de la spec.** `AdjustmentKind` expose `exposure | contrast |
+5. **Deux réglages manquent sur les six de la spec.** `AdjustmentKind` expose `exposure | contrast |
    saturation | temperature` — celles que la passe applique vraiment. Courbes et LUT demandent chacune
    une texture de correspondance et un éditeur ; les offrir dans le panneau sans les appliquer serait
    un curseur inerte.
-8. **Registre d'outils (jalon 5).** Le `switch` de `CanvasEngine.onPointerDown` a grandi avec les
+6. **Registre d'outils (jalon 5).** Le `switch` de `CanvasEngine.onPointerDown` a grandi avec les
    gestes de forme, de recadrage, de texte et de poignée. L'extraction vers `engines/canvas/tools/`
    reste un refactor interne, sans effet visible — à faire quand un neuvième geste sera à ajouter, pas
    avant. Les trois obstacles décrits au jalon 5 tiennent toujours.
-9. **Peinture avancée (jalon 8).** Pression du stylet, `getCoalescedEvents`, texture de brouillon,
+7. **Peinture avancée (jalon 8).** Pression du stylet, `getCoalescedEvents`, texture de brouillon,
    dégradés, vrai flood fill par tolérance, `brush.hardness` qui n'a toujours aucun lecteur.
-10. **La sélection ne se convertit pas depuis un masque.** « Faire un masque de la sélection » existe ;
+8. **La sélection ne se convertit pas depuis un masque.** « Faire un masque de la sélection » existe ;
     l'inverse demanderait de relire la texture du masque pour en extraire le contour — un aller-retour
     GPU puis un balayage d'un million de pixels sur le thread UI, ce que l'invariant 6 interdit.
 

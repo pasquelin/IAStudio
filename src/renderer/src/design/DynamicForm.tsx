@@ -37,10 +37,13 @@ export type DynamicFormProps = {
 function Control({
   field,
   registration,
+  initial,
   onRoll,
 }: {
   field: FieldDescriptor
   registration: UseFormRegisterReturn
+  /** What the form opens on for this field — the preset when there is one, the default if not. */
+  initial: unknown
   onRoll: () => void
 }) {
   const { t } = useTranslation()
@@ -96,7 +99,7 @@ function Control({
       return (
         <AssetDropField
           registration={registration}
-          initial={typeof field.default === 'string' ? field.default : undefined}
+          initial={typeof initial === 'string' && initial ? initial : undefined}
           placeholder={t('generation.dropPicture')}
         />
       )
@@ -168,6 +171,7 @@ export function DynamicForm({
               <Control
                 field={field}
                 registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
+                initial={initial[field.key]}
                 onRoll={() => setValue(field.key, randomSeed())}
               />
 

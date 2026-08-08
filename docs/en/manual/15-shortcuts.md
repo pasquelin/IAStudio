@@ -243,9 +243,10 @@ key pressed by mistake has no business spending any.
 Generate panel's form** and shows it to you. You are the one who presses Generate, having seen
 what is going and with which settings.
 
-> **Three of them cannot complete today** — Cut out, Enlarge, Vectorize. They look for a model in
-> a family no screen lets you choose. The Models panel opens, and nothing happens. See
-> [What does not exist yet](18-limits.md).
+**They live in the Image menu**, and nowhere else: with no default shortcut, that is the only
+door. Cut out, Enlarge and Vectorize each ask for a model of a family that has no workspace of its
+own; it is set in **Settings ▸ Generation**. Until one is set, the edit does not leave and opens
+the screen where you choose it.
 
 ### Exporting
 

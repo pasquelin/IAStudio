@@ -139,10 +139,51 @@ describe('familyOf', () => {
     expect(familyOf(['txt2img'], [])).toBe('image')
   })
 
-  // `skybox-upscale`, which carries no `sc:skybox`: an upscaler belongs with the pictures it
-  // enlarges, not in a workspace whose documents it cannot produce.
+  // `skybox-upscale` is not `image-upscale`: the four upscaling tags are disjoint, and this one
+  // enlarges panoramas. Classifying it is another errand — it stays where it was.
   it('does not claim a skybox upscaler', () => {
     expect(familyOf(['img2img'], ['sc:scenario', 'skybox-upscale'])).toBe('image')
+  })
+
+  // The capability enum holds no upscale, no cutout and no vectorize value — measured against
+  // `models.list`'s own — and all 24 of these models answer `img2img`. The tag is the only
+  // signal, exactly as for skyboxes.
+  it('tells the three edit families apart from plain image models', () => {
+    expect(familyOf(['img2img'], ['image-upscale'])).toBe('upscale')
+    expect(familyOf(['img2img'], ['remove-background'])).toBe('background-removal')
+    expect(familyOf(['img2img'], ['vectorize'])).toBe('vectorization')
+  })
+
+  // Two of the nine models carrying `remove-background` are video models. Refining from the
+  // capabilities rather than from the tag alone is what keeps them out of the canvas's cutout.
+  it('leaves a video background remover under video', () => {
+    expect(familyOf(['video2video'], ['remove-background'])).toBe('video')
+  })
+
+  // VecGlypher answers `txt2img` and produces an SVG: it is a vectorizer that takes no picture,
+  // and the family is what it makes, not what it is fed.
+  it('claims a text-to-image vectorizer', () => {
+    expect(familyOf(['txt2img'], ['vectorize'])).toBe('vectorization')
+  })
+
+  /**
+   * Two of these tags on one model have no right answer — they name different outputs. The
+   * table's order decides, so the answer is at least stable: the tag order the API happens to
+   * serve would not be.
+   */
+  it('settles a model carrying two family tags by the table, not by the API', () => {
+    expect(familyOf(['img2img'], ['vectorize', 'image-upscale'])).toBe('upscale')
+    expect(familyOf(['img2img'], ['image-upscale', 'vectorize'])).toBe('upscale')
+  })
+
+  /**
+   * An author's tag is trusted only once the capabilities have vouched for it, so a model that
+   * declares none stays unclassified. `sc:skybox` is the exception, and deliberately: it comes
+   * from Scenario's own namespace, where nobody else can post it.
+   */
+  it('does not classify by an author tag alone when a model declares no capability', () => {
+    expect(familyOf([], ['remove-background'])).toBe('other')
+    expect(familyOf(undefined, [SKYBOX_TAG])).toBe('skybox')
   })
 
   /**

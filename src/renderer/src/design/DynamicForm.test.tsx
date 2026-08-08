@@ -14,6 +14,26 @@ function renderForm(fields: FieldDescriptor[]) {
   return onSubmit
 }
 
+describe('a picture the form opens on', () => {
+  /**
+   * The picture field showed the descriptor's own default and never the preset, so an edit that
+   * had just flattened the document, uploaded it and filled the form left the field looking
+   * empty — the one thing the user is being asked to review before paying for the generation.
+   */
+  it('shows the one a preset carries, not only the descriptor default', () => {
+    const { container } = render(
+      <DynamicForm
+        fields={[{ key: 'image', kind: 'image', label: 'Image', required: true }]}
+        onSubmit={vi.fn()}
+        submitLabel="Générer"
+        preset={{ image: 'asset-flat' }}
+      />,
+    )
+
+    expect(container.querySelector('img')).not.toBeNull()
+  })
+})
+
 describe('DynamicForm', () => {
   it('renders one control per kind', () => {
     renderForm([

@@ -162,8 +162,9 @@ le panneau **Génération**, juste en dessous, fera travailler.
 revenez : votre modèle d'image est toujours là.
 
 Vous pouvez aussi fixer un **modèle par défaut** pour chaque famille, une fois pour toutes :
-**Réglages ▸ Génération ▸ Image** (ou Vidéo, 3D, Audio, Agrandissement). Laissez le réglage sur
-« Demander à chaque fois » pour choisir à chaque génération.
+**Réglages ▸ Génération ▸ Image** (ou Vidéo, 3D, Audio, Agrandissement, Détourage,
+Vectorisation). Laissez le réglage sur « Demander à chaque fois » pour choisir à chaque
+génération.
 
 ---
 
@@ -174,9 +175,21 @@ appartient d'après ce qu'il sait recevoir et rendre : un modèle qui rend une v
 l'espace Vidéo, un modèle qui rend un son dans l'espace Audio. Si vous cherchez un modèle et ne
 le trouvez pas, la première question à se poser est **« suis-je dans le bon espace ? »**.
 
-Un cas surprend souvent : **les agrandisseurs sont dans l'espace Image**, parce qu'ils reçoivent
-une image et rendent une image. Cherchez `upscale`, ou filtrez sur le tag `image-upscale`. Il n'y
-a pas d'espace « Agrandissement » — voir [Ce qui n'existe pas encore](18-limites.md).
+Trois familles n'ont pas d'espace du tout : **agrandissement**, **détourage** et
+**vectorisation**. Leurs modèles reçoivent une image et en rendent une, comme les modèles d'image,
+mais ils font un travail à part et le studio les range à part. Le panneau **Modèles** ne les
+montre donc nulle part : leur modèle se choisit dans **Réglages ▸ Génération**, et ce sont les
+éditions du menu **Image** — Agrandir, Détourer, Vectoriser — qui les emploient.
+
+| Édition | Famille demandée | Où se règle son modèle |
+|---|---|---|
+| Régénérer la zone, Étendre | image | panneau **Modèles** de l'espace Image |
+| Agrandir | agrandissement | **Réglages ▸ Génération ▸ Agrandissement** |
+| Détourer | détourage | **Réglages ▸ Génération ▸ Détourage** |
+| Vectoriser | vectorisation | **Réglages ▸ Génération ▸ Vectorisation** |
+
+Sans modèle réglé, l'édition ne part pas et ouvre l'écran où en choisir un. Rien n'est envoyé,
+rien n'est facturé.
 
 **Les vignettes ne sont pas toutes les mêmes.** La plupart des modèles publics n'ont pas
 d'image de présentation. Le studio affiche alors l'un de leurs exemples de génération à la
