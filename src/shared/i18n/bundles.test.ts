@@ -4,6 +4,8 @@ import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
 import { isRecord } from '../guards'
 import { NAMED_KEYS } from '../domain/shortcut'
 import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES, MODEL_PERIODS, MODEL_SORTS } from '../domain/model'
+import { INGEST_STAGES } from '../domain/media'
+import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 
@@ -83,6 +85,10 @@ const DYNAMIC_KEYS: readonly string[] = [
   // Shown inside a tooltip and in the shortcuts screen, where a missing one reads as the
   // English key name rather than as an obviously broken key.
   ...NAMED_KEYS.map(key => `keys.${key}`),
+  // The two pipelines the user watches run: a stage or a status added without its line
+  // turns the progress row into a raw code at the exact moment something is happening.
+  ...JOB_STATUSES.map(status => `jobs.status.${status}`),
+  ...INGEST_STAGES.map(stage => `ingest.${stage}`),
 ]
 
 describe('the keys the interface composes', () => {
