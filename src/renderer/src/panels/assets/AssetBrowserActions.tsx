@@ -1,11 +1,15 @@
-import { mdiFileImportOutline } from '@mdi/js'
+import { mdiCloudUploadOutline, mdiFileImportOutline } from '@mdi/js'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useToolLying } from '@/app/tool-zone'
 import { CollectionBar } from '@/design/CollectionBar'
 import { ToolButton } from '@/design/ToolButton'
 import { useAssets } from '@/stores/assets'
+import { useCloud } from '@/stores/cloud'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
+import { useSelection } from '@/stores/selection'
+import { useLocationFacet } from './location-facet'
 import { useTypeFacet, useTypeLabels } from './type-facet'
 
 // The bar rides here in a band, where the row is wide and a second one would cost height the
@@ -20,8 +24,17 @@ export function AssetBrowserActions() {
   const project = useProject(state => state.project)
   const importMedia = useMedia(state => state.importMedia)
   const typeLabels = useTypeLabels()
-  const facets = useTypeFacet(typeLabels)
+  const typeFacet = useTypeFacet(typeLabels)
+  const locationFacet = useLocationFacet()
+  const facets = useMemo(() => [...typeFacet, ...locationFacet], [typeFacet, locationFacet])
   const lying = useToolLying()
+
+  const selection = useSelection(state => state.selection)
+  const push = useCloud(state => state.push)
+  const busy = useCloud(state => state.busy)
+  // Only assets can be sent, and only the ones that are selected: pushing a whole project by
+  // accident is not something a single click should be able to do.
+  const selected = selection.kind === 'asset' ? selection.ids : []
 
   return (
     <>
@@ -41,6 +54,14 @@ export function AssetBrowserActions() {
         variant="header"
         disabled={!project}
         onClick={() => void importMedia()}
+      />
+      <ToolButton
+        icon={mdiCloudUploadOutline}
+        label={t('assets.push', { count: selected.length })}
+        description={t('assets.pushHint')}
+        variant="header"
+        disabled={!project || busy || selected.length === 0}
+        onClick={() => void push(selected)}
       />
     </>
   )

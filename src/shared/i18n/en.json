@@ -79,7 +79,10 @@
       "error": "The last upload failed",
       "other-account": "Belongs to another project"
     },
-    "location": "Location"
+    "location": "Location",
+    "push": "Send {{count}} asset",
+    "push_other": "Send {{count}} assets",
+    "pushHint": "Uploads the selection to the Scenario library"
   },
   "dialog": {
     "allMedia": "All media",

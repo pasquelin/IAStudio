@@ -79,7 +79,10 @@
       "error": "Le dernier envoi a échoué",
       "other-account": "Appartient à un autre projet"
     },
-    "location": "Emplacement"
+    "location": "Emplacement",
+    "push": "Envoyer {{count}} asset",
+    "push_other": "Envoyer {{count}} assets",
+    "pushHint": "Téléverse la sélection dans la bibliothèque Scenario"
   },
   "dialog": {
     "allMedia": "Tous les médias",
