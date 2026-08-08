@@ -2,6 +2,7 @@
 // back to `normal` silently, compositing wrongly with nothing to say so.
 import 'pixi.js/advanced-blend-modes'
 import {
+  AlphaFilter,
   type Application,
   Container,
   Filter,
@@ -21,10 +22,12 @@ import {
   layerById,
   type BlendMode,
   type CanvasState,
+  type GroupLayer,
   type Layer,
   type Rect,
   type Transform,
 } from './canvas-state'
+import { composite, placement, type CompositeNode } from './compositor'
 import {
   CanvasOverlay,
   RULER_SIZE,
@@ -235,6 +238,9 @@ export class CanvasEngine {
   private host: HTMLElement | null = null
   private readonly world = new Container()
   private readonly surfaces = new Map<string, LayerSurface>()
+  private readonly groups = new Map<string, Container>()
+  /** Built on the first isolated group, and only then: most documents never hold one. */
+  private isolation: AlphaFilter | null = null
   private readonly stamp = new Graphics()
   private readonly overlay = new CanvasOverlay(() => this.scene())
   /** Built with the renderer, in `mount`: a tile is a texture, and there is none before then. */
@@ -356,30 +362,89 @@ export class CanvasEngine {
 
     // The whole tree, not the root: a group holds layers, and a surface judged missing here is
     // a texture destroyed on the GPU. Grouping two layers used to lose their pixels outright.
-    const layers = allLayers(state.layers).filter(layer => !isGroup(layer))
-    for (const layer of layers) this.syncLayer(layer)
+    const layers = allLayers(state.layers)
+    for (const layer of layers) {
+      if (isGroup(layer)) this.syncGroup(layer)
+      else this.syncLayer(layer)
+    }
 
-    // Dragging a layer rewrites the stack sixty times a second without restacking it. Both passes
-    // below are per-layer — one of them quadratic in the surfaces — and neither has anything to
-    // do when the same ids come back in the same order.
-    const stacking = layers.map(layer => layer.id).join(' ')
+    // Nothing has been built yet, so no placement has been made either: remembering one here
+    // would make the replay in `mount` skip the very tree it exists to build.
+    if (!this.app) return
+
+    // Dragging a layer rewrites the stack sixty times a second without restacking it, and the
+    // pass below detaches and reattaches every node of the document.
+    const nodes = composite(state.layers)
+    const stacking = placement(nodes)
     if (stacking === this.stacking) return
     this.stacking = stacking
 
+    // The tree first: it leaves whatever departed orphaned, so nothing is destroyed while it is
+    // still someone's child.
+    this.attach(nodes, this.world)
+    this.dropDeparted(layers)
+  }
+
+  /** Frees what the stack no longer holds. A layer that left took its pixels with it. */
+  private dropDeparted(layers: readonly Layer[]): void {
     for (const [id, surface] of this.surfaces) {
       if (layers.some(layer => layer.id === id)) continue
-      this.world.removeChild(surface.sprite)
       surface.sprite.destroy()
       // The texture lives on the GPU: dropping the reference is not enough.
       surface.texture.destroy(true)
       this.surfaces.delete(id)
     }
 
-    // Bottom first, so the last layer of the stack is the one the eye sees on top.
-    layers.forEach((layer, index) => {
-      const surface = this.surfaces.get(layer.id)
-      if (surface) this.world.setChildIndex(surface.sprite, index)
-    })
+    for (const [id, container] of this.groups) {
+      if (layers.some(layer => layer.id === id)) continue
+      // Emptied first, and destroyed without `children`: ungrouping keeps the layers, and
+      // taking their sprites down with the container is the same lost-pixels bug in reverse.
+      container.removeChildren()
+      container.destroy()
+      this.groups.delete(id)
+    }
+  }
+
+  /** Bottom first, so the last node of a level is the one the eye sees on top. */
+  private attach(nodes: readonly CompositeNode[], parent: Container): void {
+    parent.removeChildren()
+
+    for (const node of nodes) {
+      if (node.kind === 'group') {
+        const container = this.groups.get(node.id)
+        if (!container) continue
+        this.attach(node.children, container)
+        parent.addChild(container)
+        continue
+      }
+
+      const surface = this.surfaces.get(node.id)
+      if (surface) parent.addChild(surface.sprite)
+    }
+  }
+
+  private syncGroup(layer: GroupLayer): void {
+    let container = this.groups.get(layer.id)
+    if (!container) {
+      container = new Container({ label: layer.id })
+      this.groups.set(layer.id, container)
+    }
+
+    container.visible = layer.visible
+    container.alpha = layer.opacity
+    container.blendMode = BLEND_BY_MODE[layer.blend]
+    // An isolated group composites on itself before the stack sees it, which is what an offscreen
+    // pass does — and a neutral filter is the only way v8 offers to ask for one. Empty otherwise:
+    // a filter on every group would cost a render target per group for nothing.
+    container.filters = layer.isolation === 'isolate' ? [this.isolationPass()] : []
+    // A group holds no texture, so the document is the box its origin is a fraction of.
+    this.place(container, layer.transform, this.documentSize())
+  }
+
+  private isolationPass(): AlphaFilter {
+    // One per engine, shared by every isolated group: a filter carries no per-object state.
+    this.isolation ??= new AlphaFilter()
+    return this.isolation
   }
 
   /** Pan, zoom, and what the overlay shows. Pushed in, never read out: React owns it. */
@@ -467,6 +532,10 @@ export class CanvasEngine {
 
     for (const surface of this.surfaces.values()) surface.texture.destroy(true)
     this.surfaces.clear()
+    for (const container of this.groups.values()) container.destroy()
+    this.groups.clear()
+    this.isolation?.destroy()
+    this.isolation = null
     this.stamp.destroy()
 
     // `removeView`, because the canvas belongs to this engine now: leaving it behind would
@@ -550,7 +619,7 @@ export class CanvasEngine {
       const sprite = new Sprite(texture)
       surface = { texture, sprite }
       this.surfaces.set(layer.id, surface)
-      this.world.addChild(sprite)
+      // Attached by `attach`, which is the only place that knows which container holds it.
 
       if (layer.kind === 'pixel' && layer.fill !== undefined) this.fill(surface, layer.fill)
     }
@@ -558,26 +627,29 @@ export class CanvasEngine {
     surface.sprite.visible = layer.visible
     surface.sprite.alpha = layer.opacity
     surface.sprite.blendMode = BLEND_BY_MODE[layer.blend]
-    this.place(surface, layer.transform)
+    this.place(surface.sprite, layer.transform, surface.texture)
   }
 
   /**
-   * Read from the state, never written from here: a sprite nudged in place is a position the next
+   * Read from the state, never written from here: a node nudged in place is a position the next
    * `apply` throws away and no undo ever hears about.
    */
-  private place(surface: LayerSurface, transform: Transform): void {
-    const { sprite, texture } = surface
+  private place(target: Container, transform: Transform, box: Size): void {
     // The origin is a fraction of the box, so a resize leaves the pivot where it was.
-    const pivotX = transform.originX * texture.width
-    const pivotY = transform.originY * texture.height
+    const pivotX = transform.originX * box.width
+    const pivotY = transform.originY * box.height
 
-    sprite.pivot.set(pivotX, pivotY)
-    // A pivot displaces the sprite by itself: without this, moving the origin of an otherwise
+    target.pivot.set(pivotX, pivotY)
+    // A pivot displaces the node by itself: without this, moving the origin of an otherwise
     // untouched layer would slide it across the document.
-    sprite.position.set(transform.x + pivotX, transform.y + pivotY)
-    sprite.rotation = transform.rotation
-    sprite.scale.set(transform.scaleX, transform.scaleY)
-    sprite.skew.set(transform.skewX, transform.skewY)
+    target.position.set(transform.x + pivotX, transform.y + pivotY)
+    target.rotation = transform.rotation
+    target.scale.set(transform.scaleX, transform.scaleY)
+    target.skew.set(transform.skewX, transform.skewY)
+  }
+
+  private documentSize(): Size {
+    return { width: this.state?.width ?? 0, height: this.state?.height ?? 0 }
   }
 
   /**

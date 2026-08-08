@@ -39,6 +39,20 @@ export function composite(layers: readonly Layer[]): CompositeNode[] {
 }
 
 /**
+ * Everything the built tree depends on, as one string. A state that leaves it unchanged — a layer
+ * being dragged, a guide being laid — must not cost a rebuild of the whole document.
+ */
+export function placement(nodes: readonly CompositeNode[]): string {
+  return nodes
+    .map(node =>
+      node.kind === 'group'
+        ? `${node.id}(${placement(node.children)})`
+        : `${node.id}:${node.clippedBy ?? ''}:${node.maskedBy ?? ''}`,
+    )
+    .join(' ')
+}
+
+/**
  * The first unclipped layer below this one, among its siblings only: a run of clipped layers
  * shares one base, as it does in Photoshop, and a group is a stack of its own.
  *

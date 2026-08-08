@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   BLEND_MODES,
   DEFAULT_CANVAS,
+  groupLayer,
   IDENTITY,
   pixelLayer,
   type CanvasState,
+  type Layer,
   type Transform,
 } from './canvas-state'
 import { RULER_SIZE } from './CanvasOverlay'
@@ -21,8 +23,9 @@ import { DEFAULT_VIEW, type Viewport } from './viewport'
  */
 type Pair = { x: number; y: number }
 
-/** A layer's sprite, seen through what the engine is allowed to write on it. */
-type PlacedSprite = {
+/** A node of the built tree, seen through what the engine is allowed to write on it. */
+type Placed = {
+  readonly children: object[]
   position: Pair
   scale: Pair
   pivot: Pair
@@ -31,25 +34,31 @@ type PlacedSprite = {
   visible: boolean
   alpha: number
   blendMode: string
+  label: string
+  filters: object[]
+  mask: object | null
 }
 
 const gpu: {
   renders: number
   texturesCreated: number
   texturesDestroyed: number
-  /** Every `setChildIndex`: the cost a restack pays, and the one a repaint must not. */
-  reorders: number
+  /** Every attach and detach: the cost a restack pays, and the one a repaint must not. */
+  mutations: number
   /** What the engine asked the renderer for, so the options it depends on can be asserted. */
   init: Record<string, unknown>
   /** Every sprite built, in the order they were built: one per paintable layer. */
-  sprites: PlacedSprite[]
+  sprites: Placed[]
+  /** Every container built, groups included — they are found back by their label. */
+  containers: Placed[]
 } = {
   renders: 0,
   texturesCreated: 0,
   texturesDestroyed: 0,
-  reorders: 0,
+  mutations: 0,
   init: {},
   sprites: [],
+  containers: [],
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -82,22 +91,32 @@ vi.mock('pixi.js', () => {
     alpha = 1
     rotation = 0
     blendMode = 'normal'
+    label = ''
+    filters: object[] = []
+    mask: object | null = null
     x = 0
     y = 0
 
+    constructor(options: { label?: string } = {}) {
+      this.label = options.label ?? ''
+      gpu.containers.push(this)
+    }
+
     addChild(child: object): void {
+      gpu.mutations += 1
       this.children.push(child)
     }
 
     removeChild(child: object): void {
       const at = this.children.indexOf(child)
-      if (at >= 0) this.children.splice(at, 1)
+      if (at < 0) return
+      gpu.mutations += 1
+      this.children.splice(at, 1)
     }
 
-    setChildIndex(child: object, index: number): void {
-      gpu.reorders += 1
-      this.removeChild(child)
-      this.children.splice(index, 0, child)
+    removeChildren(): void {
+      gpu.mutations += this.children.length
+      this.children.length = 0
     }
 
     destroy(): void {}
@@ -135,6 +154,9 @@ vi.mock('pixi.js', () => {
       destroy(): void {}
     },
     Filter: { defaultOptions: { resolution: 1 } },
+    AlphaFilter: class {
+      destroy(): void {}
+    },
     Container,
     Graphics,
     Sprite: class extends Container {
@@ -240,19 +262,25 @@ function press(host: HTMLElement, x: number, y: number, button = 0): void {
   host.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, button }))
 }
 
-/** How many reorders happen from here on, read when the assertion needs it. */
-function reordersCounted(): () => number {
-  const before = gpu.reorders
-  return () => gpu.reorders - before
+/** How many tree mutations happen from here on, read when the assertion needs it. */
+function mutationsCounted(): () => number {
+  const before = gpu.mutations
+  return () => gpu.mutations - before
+}
+
+/** The container the engine built for a group, found by the label it puts on it. */
+function groupContainer(id: string): Placed | undefined {
+  return gpu.containers.find(container => container.label === id)
 }
 
 beforeEach(() => {
   gpu.renders = 0
   gpu.texturesCreated = 0
   gpu.texturesDestroyed = 0
-  gpu.reorders = 0
+  gpu.mutations = 0
   gpu.init = {}
   gpu.sprites = []
+  gpu.containers = []
 })
 
 describe('the blend table', () => {
@@ -315,14 +343,13 @@ describe('mounting', () => {
   })
 
   /**
-   * Dragging a layer rewrites `state.layers` sixty times a second without restacking it. Both
-   * passes are per-layer and one is quadratic in the surfaces: a fifty-layer document paid fifty
-   * reorders a frame for one layer that moved.
+   * Dragging a layer rewrites `state.layers` sixty times a second without restacking it, and
+   * rebuilding the tree for it would detach and reattach every sprite of the document per frame.
    */
   it('does not restack for a state whose layers are the same ones in the same order', async () => {
     const stack = [pixelLayer('a', 'A'), pixelLayer('b', 'B')]
     const { engine } = await mounted({ ...DEFAULT_CANVAS, layers: stack, activeLayerId: 'a' })
-    const world = reordersCounted()
+    const world = mutationsCounted()
 
     engine.apply({
       ...DEFAULT_CANVAS,
@@ -336,11 +363,11 @@ describe('mounting', () => {
   it('restacks when the order actually changes', async () => {
     const stack = [pixelLayer('a', 'A'), pixelLayer('b', 'B')]
     const { engine } = await mounted({ ...DEFAULT_CANVAS, layers: stack, activeLayerId: 'a' })
-    const world = reordersCounted()
+    const world = mutationsCounted()
 
     engine.apply({ ...DEFAULT_CANVAS, layers: [...stack].reverse(), activeLayerId: 'a' })
 
-    expect(world()).toBe(2)
+    expect(world()).toBeGreaterThan(0)
   })
 
   // A guide drag rewrites the state on every pointer move and touches no pixel.
@@ -355,9 +382,80 @@ describe('mounting', () => {
   })
 })
 
+describe('groups', () => {
+  const grouped = (children: Layer[]): CanvasState => ({
+    ...DEFAULT_CANVAS,
+    layers: [groupLayer('g', 'G', children)],
+    activeLayerId: children[0]?.id ?? null,
+  })
+
+  it('builds a container of its own and nests the surfaces inside it', async () => {
+    await mounted(grouped([pixelLayer('a', 'A'), pixelLayer('b', 'B')]))
+
+    expect(groupContainer('g')?.children).toHaveLength(2)
+  })
+
+  // A group has no pixels of its own: allocating it a texture would be a document-sized waste.
+  it('costs no texture', async () => {
+    await mounted(grouped([pixelLayer('a', 'A')]))
+
+    expect(gpu.texturesCreated).toBe(1)
+  })
+
+  /**
+   * The known regression: a surface judged missing here is a texture destroyed on the GPU, and
+   * grouping two painted layers used to lose their pixels outright.
+   */
+  it('keeps both textures when two layers are gathered into one', async () => {
+    const stack = [pixelLayer('a', 'A'), pixelLayer('b', 'B')]
+    const { engine } = await mounted({ ...DEFAULT_CANVAS, layers: stack, activeLayerId: 'a' })
+
+    engine.apply(grouped(stack))
+
+    expect(gpu.texturesDestroyed).toBe(0)
+    expect(gpu.texturesCreated).toBe(2)
+  })
+
+  // A group at 50% used to leave its children at 100%: the whole point of a group is that it
+  // composites its subtree, not that it passes the stack through.
+  it('carries its own visibility, opacity and blend mode', async () => {
+    const group: Layer = {
+      ...groupLayer('g', 'G', [pixelLayer('a', 'A')]),
+      opacity: 0.5,
+      visible: false,
+      blend: 'multiply',
+    }
+    await mounted({ ...DEFAULT_CANVAS, layers: [group], activeLayerId: 'a' })
+
+    expect(groupContainer('g')).toMatchObject({ alpha: 0.5, visible: false, blendMode: 'multiply' })
+  })
+
+  // Isolation is an offscreen pass, and a neutral filter is how v8 asks for one.
+  it('isolates only the group that asks for it', async () => {
+    const passing = groupLayer('g', 'G', [pixelLayer('a', 'A')])
+    const { engine } = await mounted({ ...DEFAULT_CANVAS, layers: [passing], activeLayerId: 'a' })
+    expect(groupContainer('g')?.filters).toEqual([])
+
+    engine.apply({
+      ...DEFAULT_CANVAS,
+      layers: [{ ...passing, isolation: 'isolate' }],
+      activeLayerId: 'a',
+    })
+    expect(groupContainer('g')?.filters).toHaveLength(1)
+  })
+
+  it('drops the container of a group that left the stack', async () => {
+    const { engine } = await mounted(grouped([pixelLayer('a', 'A')]))
+
+    engine.apply({ ...DEFAULT_CANVAS, layers: [pixelLayer('a', 'A')], activeLayerId: 'a' })
+
+    expect(groupContainer('g')?.children).toHaveLength(0)
+  })
+})
+
 describe('the layer transform', () => {
   /** One layer, with the transform under test, and the sprite the engine built for it. */
-  async function placed(transform: Partial<Transform>): Promise<PlacedSprite> {
+  async function placed(transform: Partial<Transform>): Promise<Placed> {
     const layer = {
       ...pixelLayer('layer-1', 'Background'),
       transform: { ...IDENTITY, ...transform },

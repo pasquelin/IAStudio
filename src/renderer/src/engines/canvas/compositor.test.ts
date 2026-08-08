@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { groupLayer, pixelLayer, type Layer } from './canvas-state'
-import { composite, type CompositeNode } from './compositor'
+import { composite, placement, type CompositeNode } from './compositor'
 
 const clipped = (id: string): Layer => ({ ...pixelLayer(id, id), clipped: true })
 const masked = (id: string): Layer => ({
@@ -86,6 +86,37 @@ describe('clipping', () => {
 
     expect(nodes.get('a')).toMatchObject({ clippedBy: 'one' })
     expect(nodes.get('b')).toMatchObject({ clippedBy: 'two' })
+  })
+})
+
+describe('the placement signature', () => {
+  const stack = [pixelLayer('a', 'A'), pixelLayer('b', 'B')]
+
+  // What a dragged layer costs: the same tree, and the engine must be able to say so cheaply.
+  it('reads the same for a stack that only moved', () => {
+    const moved = stack.map(layer => ({ ...layer, transform: { ...layer.transform, x: 20 } }))
+
+    expect(placement(composite(moved))).toBe(placement(composite(stack)))
+  })
+
+  it('changes when the order does', () => {
+    expect(placement(composite([...stack].reverse()))).not.toBe(placement(composite(stack)))
+  })
+
+  // The tree itself changes when a clip or a mask appears: the sprite is nested differently.
+  it('changes when a clip or a mask appears', () => {
+    const withClip = [pixelLayer('a', 'A'), clipped('b')]
+    const withMask = [pixelLayer('a', 'A'), masked('b')]
+
+    expect(placement(composite(withClip))).not.toBe(placement(composite(stack)))
+    expect(placement(composite(withMask))).not.toBe(placement(composite(stack)))
+  })
+
+  it('tells a layer inside a group from the same layer beside it', () => {
+    const nested = [groupLayer('g', 'G', [pixelLayer('a', 'A')])]
+    const beside = [groupLayer('g', 'G', []), pixelLayer('a', 'A')]
+
+    expect(placement(composite(nested))).not.toBe(placement(composite(beside)))
   })
 })
 
