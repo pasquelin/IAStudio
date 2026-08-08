@@ -126,10 +126,15 @@ export function useHasModel(workspace: WorkspaceId): boolean {
 }
 
 /**
- * What a half of a zone actually draws, given what it holds.
+ * What a half of a zone actually draws, given what it holds — `undefined` for a closed half,
+ * `null` for one open on no panel in particular, an id for a panel the user chose.
  *
- * Two substitutions are settled here rather than in the store, which knows what is open per
+ * Three substitutions are settled here rather than in the store, which knows what is open per
  * zone and nothing about sections.
+ *
+ * A half nobody has chosen for shows the first panel this section declares there. That first
+ * panel differs in each — the layers in Image, the shelf in Video, the sky in Skyboxes — which
+ * is exactly why the store holds no id for it.
  *
  * A half holding a tool this section puts elsewhere — or does not have at all — shows what the
  * section does put there. What the user opened is a zone, and it stays that zone: the bottom
@@ -137,17 +142,18 @@ export function useHasModel(workspace: WorkspaceId): boolean {
  * by hand on every switch. Closing the half still empties it everywhere, which is the one
  * thing the click actually said.
  *
- * And a generator without a model gives way to the Models panel. Both substitutions leave the
- * persisted state alone, so a section that has what was asked for restores it.
+ * And a generator without a model gives way to the Models panel. All three leave the persisted
+ * state alone, so a section that has what was asked for restores it.
  */
 export function shownTool(
-  tool: ToolId | null,
+  tool: ToolId | null | undefined,
   zone: ToolZone,
   slot: ToolSlot,
   workspace: WorkspaceId,
   hasModel: boolean,
 ): ToolId | null {
-  if (!tool) return null
+  if (tool === undefined) return null
+  if (tool === null) return firstToolIn(zone, slot, workspace, hasModel)
 
   // Zone AND half: a stored id that names neither is not this half's business, whether it
   // belongs to the other column, the other half, or to a band no placement ever cuts.
@@ -156,10 +162,20 @@ export function shownTool(
     return canOffer(tool, hasModel) ? tool : 'models'
   }
 
-  const substitute = toolsInZone(zone, workspace).find(
+  return firstToolIn(zone, slot, workspace, hasModel)
+}
+
+/** The panel a section puts first in a half — what an unchosen half shows, and the fallback. */
+function firstToolIn(
+  zone: ToolZone,
+  slot: ToolSlot,
+  workspace: WorkspaceId,
+  hasModel: boolean,
+): ToolId | null {
+  const first = toolsInZone(zone, workspace).find(
     candidate => candidate.slot === slot && canOffer(candidate.id, hasModel),
   )
-  return substitute ? substitute.id : null
+  return first ? first.id : null
 }
 
 /**

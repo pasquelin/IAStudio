@@ -59,6 +59,37 @@ describe('the generator', () => {
   })
 })
 
+// A half nobody has chosen for holds `null`, and each section answers it on its own: what is
+// open is stored once for all six, while the panel that comes first differs in each.
+describe('a half open on no panel in particular', () => {
+  it('shows the one this section declares first', () => {
+    expect(shownTool(null, 'right', 'primary', 'image', true)).toBe('layers')
+    expect(shownTool(null, 'right', 'primary', '3d', true)).toBe('explorer')
+    expect(shownTool(null, 'right', 'primary', 'video', true)).toBe('assets')
+    expect(shownTool(null, 'right', 'primary', 'skyboxes', true)).toBe('skybox')
+  })
+
+  it('reads the band as the shelf or the montage, per section', () => {
+    expect(shownTool(null, 'bottom', 'primary', 'image', true)).toBe('assets')
+    expect(shownTool(null, 'bottom', 'primary', 'audio', true)).toBe('timeline')
+  })
+
+  it('never opens on a generator the section cannot offer', () => {
+    expect(shownTool(null, 'left', 'primary', 'image', false)).toBe('models')
+    expect(shownTool(null, 'left', 'primary', 'image', true)).toBe('models')
+  })
+
+  // The distinction the store draws: an absent key is a closed half, `null` an open one. Reading
+  // both as "nothing" would close every half nobody has clicked.
+  it('is not a closed half, which shows nothing at all', () => {
+    expect(shownTool(undefined, 'right', 'primary', 'image', true)).toBeNull()
+  })
+
+  it('shows nothing where the section fills no such half', () => {
+    expect(shownTool(null, 'left', 'secondary', 'image', true)).toBeNull()
+  })
+})
+
 describe('what a half of a zone shows', () => {
   it('shows the tool it holds', () => {
     expect(shownTool('inspector', 'right', 'secondary', 'image', false)).toBe('inspector')

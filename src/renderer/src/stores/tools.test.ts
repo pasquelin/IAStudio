@@ -7,6 +7,7 @@ import {
   MIN_SIZE,
   MIN_SPLIT,
   openFrom,
+  unchosen,
   useTools,
 } from './tools'
 
@@ -121,6 +122,38 @@ describe('fitSplit', () => {
   })
 })
 
+describe('the default layout', () => {
+  // What "Reset layout" in the native menu restores. It names no panel at all: naming one would
+  // pick a section's answer — the layers, the shelf, the sky — and impose it on the other five.
+  it('names which halves are open, and no panel in any of them', () => {
+    for (const slots of Object.values(DEFAULT_OPEN)) {
+      for (const tool of Object.values(slots)) expect(tool).toBeNull()
+    }
+  })
+
+  it('survives a round trip through the persisted shape', () => {
+    expect(openFrom(DEFAULT_OPEN)).toEqual(DEFAULT_OPEN)
+  })
+
+  // Every half named a panel up to version 7, the default included. Kept as a choice, an Image
+  // nobody had ever arranged would still open on the explorer instead of its layers.
+  it('is what a layout from before version 8 comes back as, half for half', () => {
+    const stored = openFrom({
+      right: { primary: 'explorer', secondary: 'inspector' },
+      bottom: { primary: 'assets' },
+    })
+
+    expect(unchosen(stored)).toEqual({
+      right: { primary: null, secondary: null },
+      bottom: { primary: null },
+    })
+  })
+
+  it('leaves a closed half closed — it says which halves are open, and only that', () => {
+    expect(unchosen({ right: { secondary: 'inspector' } })).toEqual({ right: { secondary: null } })
+  })
+})
+
 describe('openFrom', () => {
   it('migrates the single id version 2 stored into the slot its tool declares', () => {
     expect(openFrom({ right: 'inspector' })).toEqual({ right: { secondary: 'inspector' } })
@@ -158,6 +191,21 @@ describe('openFrom', () => {
     // the shelf is not lost with it — it keeps the band, which is its other placement.
     expect(open.right).toEqual({ primary: 'explorer', secondary: 'inspector' })
     expect(open.bottom).toEqual({ primary: 'assets' })
+  })
+
+  // The shelf claims the upper right and the band both; the column was only left on its default.
+  // An explicit choice outranks a default, whichever of the two the rebuild reads first.
+  it('lets a named panel win a half left on its default', () => {
+    expect(openFrom({ right: { primary: null }, bottom: { primary: 'assets' } })).toEqual({
+      right: { primary: 'assets' },
+      bottom: { primary: 'assets' },
+    })
+  })
+
+  it('keeps a default half that no panel claims', () => {
+    expect(openFrom({ right: { primary: null, secondary: 'inspector' } })).toEqual({
+      right: { primary: null, secondary: 'inspector' },
+    })
   })
 
   it('drops the jobs panel, which is no longer a tool window', () => {

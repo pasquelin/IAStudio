@@ -132,7 +132,7 @@ function RailGroup({ zone }: { zone: ToolZone }) {
       {halvesOf(tools).map(([slot, inSlot], index) => {
         // What the half draws, not what it stores: a panel standing in for one this section
         // puts elsewhere is up, and its icon has to read — and close — as up.
-        const up = shownTool(open[zone]?.[slot] ?? null, zone, slot, workspace, hasModel)
+        const up = shownTool(open[zone]?.[slot], zone, slot, workspace, hasModel)
 
         return (
           <Fragment key={`${zone}:${slot}`}>

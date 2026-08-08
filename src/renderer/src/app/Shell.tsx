@@ -99,8 +99,10 @@ function Edge({ zone }: { zone: ToolZone }) {
   const workspace = useLayouts(state => state.activeWorkspace)
   const hasModel = useHasModel(workspace)
 
+  // The stored value straight through: `undefined` is a closed half and `null` an unchosen one,
+  // and collapsing the two would close every half nobody has clicked.
   const shown = (slot: ToolSlot): ToolId | null =>
-    shownTool(slots?.[slot] ?? null, zone, slot, workspace, hasModel)
+    shownTool(slots?.[slot], zone, slot, workspace, hasModel)
 
   const primary = shown('primary')
   const secondary = shown('secondary')
