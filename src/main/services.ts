@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { delimiter, dirname } from 'node:path'
+import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
@@ -57,14 +58,20 @@ import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
 import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
 import { isRecord } from '@shared/guards'
 import {
-  clientForCredentials,
+  clientFor,
   createClientProvider,
   recordFailuresTo,
   type ClientProvider,
 } from './scenario/client'
 import { createUsageReader, type UsageReader } from './scenario/usage'
+import { createRateLimiters, limitedTransport } from './scenario/rate-limiter'
 
-/** Keys queried at once when reading usage. Fixed and low: the API publishes no rate limit. */
+/**
+ * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
+ * account does not spend one window's worth of requests on a screen nobody is waiting on — the
+ * limiter would hold the rest of the studio behind it. It bounds concurrency, not rate: the
+ * hundred a minute the API allows is `rate-limiter.ts`'s business.
+ */
 const USAGE_CONCURRENCY = 4
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
@@ -215,6 +222,10 @@ function pickMedia(language: Language): Promise<string[]> {
   return openDialog({ properties: ['openFile', 'multiSelections'], filters })
 }
 
+/** The one wait of the main process. Cancellable, which `setTimeout` in a promise is not. */
+const delay = (ms: number, signal?: AbortSignal): Promise<void> =>
+  sleepFor(ms, undefined, { signal })
+
 /** `net.fetch` rather than the global one: it goes through Electron's own network stack. */
 async function download(url: string): Promise<Uint8Array> {
   const response = await net.fetch(url)
@@ -285,7 +296,24 @@ export function createServices(settings: SettingsStore): Services {
   // that a cache added later cannot be left out of a purge list nobody thinks to reread.
   const credentials = createCredentialsWatch()
 
-  const client = createClientProvider(() => settings.readCredentials(), credentials.watch)
+  // Above the three concurrency bounds the studio already has, none of which decides a rate.
+  // `performance.now` and not `Date.now`: a laptop waking up steps the wall clock backwards, and
+  // a window holding instants from the future would refuse every call until it caught up.
+  const limiters = createRateLimiters({
+    now: () => performance.now(),
+    delay,
+    onSaturated: () => log.info('scenario', 'rate limit reached, requests are queueing'),
+  })
+
+  // One transport for every client, the one in force and the one the usage reader builds per
+  // key: two spellings of it would be two behaviours the day a header is added to one of them.
+  const transport = limitedTransport(limiters, (input, init) => fetch(input, init))
+
+  const client = createClientProvider({
+    resolve: () => settings.readCredentials(),
+    watch: credentials.watch,
+    transport,
+  })
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
@@ -296,15 +324,15 @@ export function createServices(settings: SettingsStore): Services {
   const assistQueue = createAssistQueue({
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
-    sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+    sleep: delay,
   })
 
   // Its own client per account rather than the shared one: reading usage asks every stored key
-  // at once and must leave the active account exactly as it found it. Its own queue too, small
-  // and fixed: no rate limit is published, and a burst of keys on one endpoint earns a 429.
+  // at once and must leave the active account exactly as it found it. Through the same transport
+  // all the same, so each key spends from its own window rather than around it.
   const usage = createUsageReader({
     accounts: () => settings.keyedAccounts(),
-    clientFor: clientForCredentials,
+    clientFor: credentials => clientFor(credentials, transport),
     queue: createAssistQueue({
       concurrency: () => USAGE_CONCURRENCY,
       maxRetries: () => settings.read().generation.maxRetries,
@@ -531,7 +559,7 @@ export function createServices(settings: SettingsStore): Services {
     record: report => journal.record(report),
     now: timestamp,
     newId: () => `job_${randomUUID()}`,
-    sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+    sleep: delay,
   })
 
   const captioner = createCaptioner({

@@ -1,4 +1,4 @@
-import Scenario, { APIConnectionError, APIError } from '@scenario-labs/sdk'
+import Scenario, { APIConnectionError, APIError, type ClientOptions } from '@scenario-labs/sdk'
 import type { ApiFailure } from '@shared/domain/failure'
 import { MAX_LOG_MESSAGE } from '@shared/ipc'
 import type { AuthState } from '@shared/domain/settings'
@@ -150,28 +150,44 @@ export function reducedBy(scope: string) {
   }
 }
 
+/** What a client is built through, so that no client can be built without its rate limit. */
+export type Transport = (credentials: Credentials) => NonNullable<ClientOptions['fetch']>
+
 /**
- * A client for one named account, outside the active-credentials cache above.
+ * The one place a client is constructed.
  *
- * The cache holds exactly one client and drops it whenever the active key changes, which is
- * right for every call the studio makes on the user's behalf. Reading usage is the exception:
- * it asks every stored key at once, and must not disturb which account is active.
+ * Exported because two callers need one outside the active-credentials cache: a job outliving
+ * its session, which has to be polled on the account that paid for it, and the usage reader,
+ * which asks every stored key at once and must leave the active account as it found it. Both
+ * still go through `transport`, so neither escapes the account's own rate-limit window.
  */
-export function clientForCredentials(credentials: Credentials): Scenario {
-  return new Scenario({ apiKey: credentials.key, apiSecret: credentials.secret })
+export function clientFor(credentials: Credentials, transport: Transport): Scenario {
+  return new Scenario({
+    apiKey: credentials.key,
+    apiSecret: credentials.secret,
+    fetch: transport(credentials),
+  })
 }
 
-export function createClientProvider(
-  resolve: () => Credentials | null,
-  watch: WatchCredentials,
-): ClientProvider {
+export type ClientProviderDeps = {
+  /** `null` when neither the settings nor `secrets/.env` hold a usable key. */
+  resolve: () => Credentials | null
+  watch: WatchCredentials
+  transport: Transport
+}
+
+export function createClientProvider({
+  resolve,
+  watch,
+  transport,
+}: ClientProviderDeps): ClientProvider {
   let client: Scenario | null = null
 
   const get = (): Scenario | null => {
     if (client) return client
     const credentials = resolve()
     if (!credentials) return null
-    client = new Scenario({ apiKey: credentials.key, apiSecret: credentials.secret })
+    client = clientFor(credentials, transport)
     return client
   }
 

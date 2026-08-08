@@ -181,7 +181,63 @@ vert.
 
 ## Étape 2 — Le limiteur de débit, 100 requêtes par minute
 
-- [ ] Livrée
+- [x] Livrée
+
+> **Pas dans `reducedBy` : dans le `fetch` du client SDK.** Le plan le donnait pour « le passage
+> obligé de chaque appel » — il ne l'est pas. `reducedBy` enrobe deux familles de handlers IPC
+> (`scenario` et `assets`, deux appels dans tout `src/`), et le `JobManager` poll droit à travers
+> son runner sans le traverser : le plus gros consommateur de requêtes du studio serait passé à
+> côté du limiteur. `ClientOptions.fetch` est injectable, et **tout** y passe — la pagination
+> automatique et les réessais internes du SDK compris.
+>
+> Une **fenêtre glissante**, pas un seau à jetons : l'API compte par minute, et l'ouverture d'un
+> projet dépense légitimement cent requêtes d'un coup qu'un seau étalerait pour rien. Les
+> acquisitions sont **sérialisées** — sans quoi tous ceux que la même expiration réveille se
+> disputent l'unique place libérée, et le plus ancien peut perdre indéfiniment. La fenêtre est
+> nommée par un **digest de la clé** : elle appartient au compte de toute façon, et rien qui
+> pourrait finir dans un dump n'a besoin de porter le secret pour dire lequel.
+>
+> L'attente est annulable, et le refus arrive **avant que la place soit prise**, pas seulement
+> avant l'attente : un appelant qui a renoncé pendant qu'il faisait la queue ne doit pas dépenser
+> une requête que l'API compte à tout le monde.
+>
+> **Le piège qu'ont trouvé `/simplify` puis `/code-review`, et qui aurait rendu le limiteur
+> nuisible.** Le SDK arme le timeout d'une requête **avant** d'appeler le transport (`client.js`,
+> `fetchWithTimeout`) : toute attente est prise sur le budget de l'aller-retour. La première
+> réponse — allonger le timeout du client et lever une erreur au-delà d'un plafond — était fausse
+> deux fois, et la revue l'a démontrée par simulation :
+>
+> 1. **une erreur levée depuis le transport n'arrive jamais telle quelle.** Le SDK rattrape ce qui
+>    en sort, le réessaie deux fois, puis le remballe en `APIConnectionError` : la limite serait
+>    arrivée à l'utilisateur en « échec réseau » sur une connexion saine, et la branche ajoutée à
+>    `failureOf` était du code mort ;
+> 2. **allonger le timeout du client le fait pour toutes les requêtes**, y compris l'immense
+>    majorité qui n'attend pas : un réseau réellement mort mettait six minutes à se déclarer au
+>    lieu de trois.
+>
+> La bonne réponse tient dans la langue que le SDK parle déjà : au-delà de **10 s** d'attente, le
+> transport rend une **réponse 429 de synthèse portant `retry-after-ms`**. Le SDK l'attend au
+> millimètre (`client.js` honore cet en-tête), la réessaie, et ce qui remonte s'il persiste est une
+> `APIError` que `failureOf` lit déjà en `rate-limited`. Le timeout du client redevient son défaut.
+>
+> Trois autres corrections de la même revue : le **plafond d'attente est compté à l'arrivée** de
+> l'appelant et non quand son tour vient (compté au tour, chaque attendant recevait un budget neuf
+> et la file entière était tenue sans borne — 320 acquisitions simulées, zéro refus) ; l'horloge
+> est **monotone**, une horloge murale qui recule laissant dans la fenêtre des instants futurs qui
+> refusaient *tous* les appels ; et un appelant qui renonce **pendant qu'il fait la queue** est
+> relâché tout de suite au lieu d'attendre son tour, sans quoi l'appel SDK derrière lui ne se
+> règle jamais. La limite effective est **95** et non 100 : le studio compte au départ, l'API à
+> l'arrivée, et la marge absorbe la dérive.
+>
+> **À arbitrer, hors périmètre de cette étape** : le polling seul dépense **90 requêtes/minute sur
+> 100** à la concurrence par défaut (3 jobs, poll à 2 s), et 300 à la concurrence 10 des workflows.
+> Le limiteur ne crée pas ce dépassement, il le rend net — mais il sera saturé en usage normal
+> tant que la demande n'est pas réduite. Recommandation : allonger l'intervalle de poll, ou
+> l'asservir au budget restant. C'est un changement de comportement, donc une décision.
+>
+> **Hors périmètre, assumé et écrit dans `REPRISE.md`** : `download()` va chercher une URL signée
+> par `net.fetch`, et les envois multipart du SDK vont sur S3 avec le `fetch` global. Ni l'un ni
+> l'autre n'est un appel d'API, ni compté.
 
 Dette du § 3.6. La limite est **100 requêtes/minute/projet**, écrite dans
 `workflows-and-apps.md` § « Rate Limits ». `limits.ts` ne borne que la **taille des lots**, le

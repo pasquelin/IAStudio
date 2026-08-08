@@ -994,7 +994,10 @@ dans l'import » cherchera là.
 
 ## 3.6 Dettes transverses
 
-**Rien ne borne le DÉBIT des appels à l'API.** La limite est **100 requêtes par minute et par
+> **Le débit est borné depuis l'étape 2 de `feat/workflows`** (`scenario/rate-limiter.ts`). Ce qui
+> suit décrit la dette et reste vrai de son diagnostic ; ce qui a changé est dit à la fin.
+
+**Rien ne bornait le DÉBIT des appels à l'API.** La limite est **100 requêtes par minute et par
 projet** — écrite noir sur blanc dans la copie locale,
 `docs/scenario-api/guides/get-started/documentation/workflows-and-apps.md`, § « Rate Limits », avec
 10 jobs de workflow concurrents et 50 nodes par workflow. `limits.ts` ne borne que la **taille des
@@ -1005,15 +1008,68 @@ les vignettes de modèles par lots de 100 ids, les previews, et une synchro d'as
 
 Depuis `feat/prompt-assist`, il y a une **troisième** source d'appels : `assist-queue.ts` borne la
 concurrence de l'assistance de fond, et sa JSDoc dit elle-même qu'elle « décide seulement quand le
-travail tourne » — donc pas le débit. Trois bornes de concurrence, toujours zéro borne de débit.
+travail tourne » — donc pas le débit. Trois bornes de concurrence, zéro borne de débit.
 
-Ce qui tient aujourd'hui, et pourquoi ce n'est pas une solution : le `retry` de `scenario/retry.ts`
-— sorti du `JobManager` par cette même branche, et désormais partagé — réessaie les 429 en
-backoff exponentiel. **Le studio dégrade au lieu de casser** — mais un limiteur est ce qui évite d'y
-arriver, et un backoff sous rafale rallonge chaque génération de la file. Il faut un seau à jetons
-(100/60 s) **au-dessus du client SDK**, donc traversé par tout le monde : `reducedBy` est déjà le
-passage obligé de chaque appel, c'est le bon endroit. Le compter par compte actif, pas globalement :
-la limite est par projet, et une clé porte son projet (`owner-scope.ts`).
+Ce qui tenait, et pourquoi ce n'était pas une solution : le `retry` de `scenario/retry.ts` réessaie
+les 429 en backoff exponentiel. **Le studio dégradait au lieu de casser** — mais un limiteur est ce
+qui évite d'y arriver, et un backoff sous rafale rallonge chaque génération de la file.
+
+**Ce qui a été livré, et l'endroit où le plan se trompait.** Une fenêtre glissante de 100 requêtes
+sur 60 secondes, **par compte** — la limite est par projet, et une clé porte son projet. Elle n'est
+pas dans `reducedBy` comme le plan l'annonçait : `reducedBy` **n'est pas le passage obligé**, c'est
+un enrobage de deux familles de handlers IPC (`scenario` et `assets`), et le `JobManager` poll
+droit à travers son runner sans le traverser. Le vrai passage obligé est le **`fetch` du client
+SDK**, injectable par `ClientOptions.fetch` : aucun appel n'existe sans client, la pagination
+automatique et les réessais internes du SDK y passent aussi, et un appelant ne peut pas l'oublier.
+
+Six choses à savoir avant d'y toucher, dont deux qui ont coûté une revue chacune :
+
+- **une fenêtre, pas un seau à jetons.** L'API compte des requêtes par minute : un studio resté
+  inactif peut légitimement en dépenser cent d'un coup — c'est ce que fait l'ouverture d'un projet —
+  là où un seau qui se remplit d'un jeton toutes les 600 ms étalerait cette rafale pour rien ;
+- **95, pas 100.** Le studio compte une requête quand il la lâche, l'API quand elle arrive. Cent
+  admises juste avant la bascule peuvent atteindre le serveur groupées derrière un uplink lent et
+  tomber dans la même minute côté serveur que la première de la fenêtre suivante — un 429 pour un
+  client irréprochable. `RATE_MARGIN` absorbe cette dérive ;
+- **un appelant tenu longtemps se voit répondre `429`, il n'attend pas.** Le SDK arme le timeout
+  d'une requête **avant** d'appeler le transport (`client.js`, `fetchWithTimeout`) : chaque
+  milliseconde d'attente est prise sur le budget de l'aller-retour lui-même. Le transport ne tient
+  donc un appel que `MAX_WAIT_MS` (10 s) ; au-delà il rend une réponse **429 de synthèse portant
+  `retry-after-ms`**, que le SDK sait attendre au millimètre et réessayer. **Lever une erreur ne
+  marche pas** : le SDK rattrape tout ce qui sort du transport, le réessaie et le remballe en
+  `APIConnectionError` — la limite de débit arriverait à l'utilisateur en « échec réseau » sur une
+  connexion saine ;
+- **le plafond d'attente est compté à l'arrivée de l'appelant, pas quand son tour vient.** Compté
+  au tour, chaque attendant recevrait un budget neuf à mesure que le précédent est servi, et une
+  file de n'importe quelle profondeur serait tenue aussi longtemps qu'il le faut — exactement ce
+  que le plafond existe pour borner ;
+- **l'horloge est monotone** (`performance.now`). Une horloge murale qui recule — un portable qui
+  se réveille, un pas NTP — laisserait dans la fenêtre des instants situés dans le futur, que rien
+  n'expire, et **tout appel d'API serait refusé** jusqu'à ce que le temps rattrape ;
+- **les acquisitions sont sérialisées**, sinon tous les appelants réveillés par la même expiration
+  se disputent l'unique place libérée et le plus ancien peut perdre indéfiniment. C'est de l'ordre,
+  pas de la priorité : une ouverture de projet passe toujours ses lectures de catalogue devant la
+  génération demandée juste après ;
+- **les téléchargements d'assets n'y passent pas.** `download()` (`services.ts`) va chercher une
+  URL signée par `net.fetch`, et les envois multipart du SDK vont directement sur S3 avec le
+  `fetch` global (`lib/upload.js`). Les deux sont hors du quota, et c'est correct : ce ne sont pas
+  des appels d'API.
+
+**Une dette assumée, écrite ici pour ne pas être redécouverte** : l'annulation d'un job est un
+appel d'API comme un autre, donc elle prend un ticket dans la même file. Sous saturation elle est
+au pire tenue 10 s, puis se voit répondre 429 — que le SDK réessaie deux fois. Si les trois
+tentatives échouent, `runner.cancel` est appelé sous un `.catch(() => {})` : le studio marque le
+job annulé pendant que le job distant continue de consommer. Une file à priorité serait le vrai
+remède.
+
+> **Ce que le limiteur rend visible, et qui est un vrai sujet produit : le polling seul frôle le
+> quota.** À la concurrence par défaut (`concurrentJobs: 3`) et avec un poll toutes les 2 s, trois
+> jobs en cours dépensent **90 requêtes par minute sur les 100** — avant le catalogue, les
+> vignettes et l'assistance. À la concurrence 10 que le § 4.1 cite pour les workflows, c'est 300.
+> Le limiteur ne crée pas ce dépassement, il le rend net au lieu de le laisser sortir en 429 ;
+> mais tant que la demande dépasse structurellement l'offre, il sera saturé en usage normal.
+> **Le remède est de réduire la demande** — allonger l'intervalle de poll, ou l'asservir au budget
+> restant de la fenêtre. C'est un changement de comportement, donc un arbitrage, pas un correctif.
 
 **La moitié rapatriement de la bibliothèque n'a pas de porte.** `cloud.pull`, `cloud.browse` et
 `cloud.plan` traversent la frontière, sont testés, et **aucun composant ne les appelle** — la JSDoc
