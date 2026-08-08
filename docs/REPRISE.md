@@ -347,14 +347,16 @@ entrée d'interface :
   d'ajouter une commande d'espace : **le menu natif n'exposait aucune commande de scope `canvas`**,
   toutes passaient par le clavier. Une commande sans raccourci par défaut et sans entrée de menu
   est injoignable.
-- **Fusionner et Aplatir** — pas du câblage. `flatten` remplace la pile par un calque neuf dont la
-  texture naît vide, et `mergeDown` garde la texture du dessous sans y composer celle du dessus. Il
-  leur faut une étape de composition dans le moteur, sur le modèle de `pendingMaskFills` /
-  `drainPendingMask` : la React demande la composition **avant** de lancer la commande, le moteur la
-  garde en attente, et la verse quand la surface naît.
-- **Recadrer** — plus lourd : `54730cc` a retiré **tout le chemin de recadrage du moteur**, il ne
-  reste que le littéral `'crop'` dans l'union et dans `UNBUILT_TOOLS`. Le rebrancher, c'est réécrire
-  le geste : glisser un cadre, l'afficher dans l'overlay, valider au relâchement.
+- **Fusionner et Aplatir : faits.** `mergeInto` vise une surface qui existe déjà — composition
+  immédiate, le calque du dessus porté à travers le document puis ramené dans les pixels du dessous.
+  `flattenInto` vise un calque qui n'existe pas encore : composé pendant que la pile est là, gardé en
+  attente, versé quand la surface naît. **L'ordre est le contrat** : composer, puis lancer la
+  commande — après elle, ce dont l'image est faite n'existe plus.
+- **Recadrer** — le seul qui reste, et le plus lourd. `54730cc` a retiré **tout le chemin de
+  recadrage du moteur** ; il ne subsiste que le littéral `'crop'` dans l'union et dans
+  `UNBUILT_TOOLS`. Le rebrancher, c'est réécrire le geste : glisser un cadre, l'afficher dans
+  l'overlay, valider au relâchement.
+
 
 **Une conséquence à écrire dans le manuel le jour où le recadrage est offert** : rétrécir perd ce qui
 tombe hors du cadre, et les tuiles d'annulation partent avec. Le cadre revient sur ⌘Z, les pixels
@@ -376,8 +378,7 @@ Les commandes correspondantes vivent dans `engines/canvas/commands.ts` (`cropToR
 
 ### Ce qui reste, par ordre de valeur
 
-1. **Rebrancher les cinq**, ci-dessus : les quatre commandes de menu d'abord, le geste de recadrage
-   ensuite.
+1. **Le geste de recadrage**, ci-dessus — le dernier des cinq.
 2. **La persistance** (jalon 10). Le format est tranché : un dossier `<nom>.img/` avec le JSON et un
    PNG par calque, inspectable et réparable à la main. `serializeCanvas` / `deserializeCanvas`
    existent et ne sont appelés que par leurs propres tests ; `PixelLayer.source` et `loadInto`
