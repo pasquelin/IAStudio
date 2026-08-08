@@ -112,6 +112,7 @@ describe('SequenceDocument', () => {
       .getAllByRole('button', { name: /Lire/ })
       .map(button => button.getAttribute('aria-label'))
 
-    expect(names).toEqual(['Lire', 'Lire (Space)'])
+    // The key is named from the bundle: the French interface used to announce `Space`.
+    expect(names).toEqual(['Lire', 'Lire (Espace)'])
   })
 })

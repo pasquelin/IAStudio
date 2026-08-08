@@ -72,22 +72,27 @@ describe('defaults', () => {
   })
 })
 
+/** Marks what the caller was asked to name, so a key left unnamed stands out in the output. */
+const named = (code: string): string => `<${code}>`
+
 describe('shortcutLabel', () => {
   it('shows the printed letter of a physical key', () => {
-    expect(shortcutLabel('KeyG')).toBe('G')
+    expect(shortcutLabel('KeyG', named)).toBe('G')
   })
 
   it('keeps the modifiers in front', () => {
-    expect(shortcutLabel('Shift+KeyG')).toBe('⇧G')
+    expect(shortcutLabel('Shift+KeyG', named)).toBe('⇧G')
   })
 
-  it('leaves a non-letter code readable', () => {
-    expect(shortcutLabel('Delete')).toBe('Delete')
+  // The bug this replaced: `Delete` and `Space` are words, and read as English ones in French.
+  it('has the caller name the keys that are words', () => {
+    expect(shortcutLabel('Delete', named)).toBe('<Delete>')
+    expect(shortcutLabel('Meta+Space', named)).toBe('⌘<Space>')
   })
 
   it('renders every default binding without leaking a raw code', () => {
-    expect(shortcutLabel(shipped('scene.undo'))).toBe('⌘Z')
-    expect(shortcutLabel(shipped('scene.redo'))).toBe('⇧⌘Z')
+    expect(shortcutLabel(shipped('scene.undo'), named)).toBe('⌘Z')
+    expect(shortcutLabel(shipped('scene.redo'), named)).toBe('⇧⌘Z')
   })
 })
 
@@ -116,21 +121,31 @@ describe('acceleratorOf', () => {
 
 describe('shortcutLabel, on the keys that are neither letters nor named', () => {
   it('prints what the key cap prints', () => {
-    expect(shortcutLabel('Meta+Equal')).toBe('⌘=')
-    expect(shortcutLabel('Meta+Minus')).toBe('⌘−')
-    expect(shortcutLabel('Shift+Meta+Semicolon')).toBe('⇧⌘;')
-    expect(shortcutLabel('Meta+Comma')).toBe('⌘,')
+    expect(shortcutLabel('Meta+Equal', named)).toBe('⌘=')
+    expect(shortcutLabel('Meta+Minus', named)).toBe('⌘−')
+    expect(shortcutLabel('Shift+Meta+Semicolon', named)).toBe('⇧⌘;')
+    expect(shortcutLabel('Meta+Comma', named)).toBe('⌘,')
+  })
+
+  it('draws an arrow rather than spelling one', () => {
+    expect(shortcutLabel('ArrowUp', named)).toBe('↑')
   })
 
   it('drops the `Digit` prefix a number key carries', () => {
-    expect(shortcutLabel('Meta+Digit0')).toBe('⌘0')
+    expect(shortcutLabel('Meta+Digit0', named)).toBe('⌘0')
   })
 
-  // Every binding the registry ships has to be readable, or the shortcuts screen lists codes.
+  /**
+   * Every binding the registry ships is either a glyph or a name the caller supplied. The list
+   * used to stop at `Key|Digit|Equal|Minus|Semi`, which is how six word-keys shipped in English.
+   */
   it('never leaves a raw code in a shipped binding', () => {
     for (const descriptor of COMMAND_REGISTRY) {
       if (!descriptor.defaultBinding) continue
-      expect(shortcutLabel(descriptor.defaultBinding)).not.toMatch(/Key|Digit|Equal|Minus|Semi/)
+
+      // What is left once the caller's names are removed: a glyph or a single printed letter.
+      const raw = shortcutLabel(descriptor.defaultBinding, named).replace(/<[^>]+>/g, '')
+      expect(raw, descriptor.id).not.toMatch(/[A-Za-z]{2}/)
     }
   })
 })

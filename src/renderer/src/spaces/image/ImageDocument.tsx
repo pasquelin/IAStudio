@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
-import { shortcutLabel } from '@shared/domain/shortcut'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { PICTURES, type Asset } from '@shared/domain/asset'
 import { restoreDocument } from '@/app/document-io'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
@@ -93,6 +93,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const undoable = useCanvases(state => canUndo(historyOf(state, documentId)))
   const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
   const bindings = useBindingOverrides()
+  const label = useShortcutLabel()
   const active = useDocuments(state => state.activeId === documentId)
 
   // What a fresh caption says. Held in a ref so the effect that builds the engine does not
@@ -318,12 +319,12 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   // has to move on the bar with it.
   const shortcuts = useMemo(
     () => ({
-      zoomIn: shortcutLabel(bindingOf('canvas.zoomIn', bindings)),
-      zoomOut: shortcutLabel(bindingOf('canvas.zoomOut', bindings)),
-      fit: shortcutLabel(bindingOf('canvas.zoomFit', bindings)),
-      actual: shortcutLabel(bindingOf('canvas.zoomActual', bindings)),
+      zoomIn: label(bindingOf('canvas.zoomIn', bindings)),
+      zoomOut: label(bindingOf('canvas.zoomOut', bindings)),
+      fit: label(bindingOf('canvas.zoomFit', bindings)),
+      actual: label(bindingOf('canvas.zoomActual', bindings)),
     }),
-    [bindings],
+    [bindings, label],
   )
 
   return (

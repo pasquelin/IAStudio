@@ -5,7 +5,7 @@ import type { SettingPath } from '@shared/domain/settings-path'
 import { descriptorsIn, sectionEntry, SETTING_REGISTRY } from '@shared/domain/settings-registry'
 import { hitId, matchSettings, sectionsOf, type SearchHit } from '@shared/domain/settings-search'
 import { bindingOf } from '@shared/domain/command'
-import { shortcutLabel } from '@shared/domain/shortcut'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
@@ -135,12 +135,13 @@ function SearchResults({
 /** A hit that is not a setting: a button, or a command with the key it answers to. */
 function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
   const { t } = useTranslation()
+  const label = useShortcutLabel()
   const overrides = useSettings(state => state.settings.shortcuts.overrides)
 
   if (hit.kind === 'setting') return null
 
   const entry = hit.kind === 'action' ? hit.action : hit.command
-  const key = hit.kind === 'command' ? shortcutLabel(bindingOf(hit.command.id, overrides)) : ''
+  const key = hit.kind === 'command' ? label(bindingOf(hit.command.id, overrides)) : ''
 
   return (
     <button

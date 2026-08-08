@@ -1,5 +1,5 @@
 import { type CommandId } from '@shared/domain/command'
-import { shortcutLabel } from '@shared/domain/shortcut'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
 import { ALL_FORMATS, BlobSource, Input, VideoSampleSink } from 'mediabunny'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -105,6 +105,7 @@ export function Monitor({
   }, [onTime])
 
   const playPause = useBinding('sequence.playPause')
+  const label = useShortcutLabel()
 
   const run = useCallback(
     (command: CommandId) => {
@@ -122,7 +123,7 @@ export function Monitor({
       labelKey: playing ? 'transport.pause' : 'transport.play',
       icon: playing ? mdiPause : mdiPlay,
       // Advertised only where it is armed: a tooltip promising a key nothing listens to lies.
-      shortcut: keyboard ? shortcutLabel(playPause) : undefined,
+      shortcut: keyboard ? label(playPause) : undefined,
     },
   ]
 

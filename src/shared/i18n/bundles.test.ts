@@ -3,6 +3,7 @@ import { ACTIVITY_LEVELS, ACTIVITY_TOPICS } from '../domain/activity'
 import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
 import { isRecord } from '../guards'
 import { LOG_SCOPES } from '../ipc'
+import { NAMED_KEYS } from '../domain/shortcut'
 import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES, MODEL_PERIODS, MODEL_SORTS } from '../domain/model'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 
@@ -79,6 +80,9 @@ const DYNAMIC_KEYS: readonly string[] = [
   // Written by the main process into the journal, so the miss surfaces long after the failure
   // that caused it — `font.face` shipped untranslated and read as its own key on screen.
   ...LOG_SCOPES.map(scope => `activity.scope.${scope}`),
+  // Shown inside a tooltip and in the shortcuts screen, where a missing one reads as the
+  // English key name rather than as an obviously broken key.
+  ...NAMED_KEYS.map(key => `keys.${key}`),
 ]
 
 describe('the keys the interface composes', () => {

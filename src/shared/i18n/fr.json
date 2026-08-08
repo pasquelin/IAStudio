@@ -1221,5 +1221,17 @@
     "kibibyte": "Kio",
     "mebibyte": "Mio",
     "gibibyte": "Gio"
+  },
+  "keys": {
+    "Space": "Espace",
+    "Enter": "Entrée",
+    "Escape": "Échap",
+    "Delete": "Suppr",
+    "Backspace": "Retour arrière",
+    "Tab": "Tab",
+    "Home": "Début",
+    "End": "Fin",
+    "PageUp": "Page préc.",
+    "PageDown": "Page suiv."
   }
 }

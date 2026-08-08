@@ -72,8 +72,15 @@ const MODIFIER_GLYPHS: Record<string, string> = {
  * Turns a signature into what a tooltip shows — the display counterpart of `signatureOf`.
  * `KeyG` is a position, not a letter, but the letter is what is printed on the key in front of
  * the user, so that is what is displayed.
+ *
+ * `keyName` names the keys that are words rather than glyphs. It is asked for rather than
+ * looked up here because `shared/` has no runtime dependency and so cannot translate: `Space`
+ * and `Delete` read as themselves in English, and had been reading as themselves in French too.
  */
-export function shortcutLabel(signature: Signature | null): string {
+export function shortcutLabel(
+  signature: Signature | null,
+  keyName: (code: NamedKey) => string,
+): string {
   // A command may be bound to nothing: listed and searchable, waiting for a key. Its tooltip
   // simply shows no shortcut rather than an empty pair of brackets.
   if (!signature) return ''
@@ -81,13 +88,15 @@ export function shortcutLabel(signature: Signature | null): string {
   const parts = signature.split('+')
   const code = parts.at(-1) ?? ''
   const modifiers = parts.slice(0, -1).map(part => MODIFIER_GLYPHS[part] ?? part)
-  return [...modifiers, keyGlyph(code)].join('')
+  return [...modifiers, keyGlyph(code, keyName)].join('')
 }
 
 /**
  * A code is a position, and what is printed on that key is what the user is looking for. The
  * bindings that are neither letters nor named keys — the zoom's `=` and `-`, the guides' `;` —
  * would otherwise read `⌘Equal` in a tooltip and in the shortcuts screen.
+ *
+ * Arrows are glyphs and not words: they are what the key wears, in every language.
  */
 const KEY_GLYPHS: Record<string, string> = {
   Equal: '=',
@@ -96,11 +105,49 @@ const KEY_GLYPHS: Record<string, string> = {
   Comma: ',',
   Period: '.',
   Slash: '/',
+  ArrowUp: '↑',
+  ArrowDown: '↓',
+  ArrowLeft: '←',
+  ArrowRight: '→',
 }
 
-function keyGlyph(code: string): string {
+/** The keys whose name is a word, and so differs between languages. */
+export type NamedKey =
+  | 'Space'
+  | 'Enter'
+  | 'Escape'
+  | 'Delete'
+  | 'Backspace'
+  | 'Tab'
+  | 'Home'
+  | 'End'
+  | 'PageUp'
+  | 'PageDown'
+
+export const NAMED_KEYS: readonly NamedKey[] = [
+  'Space',
+  'Enter',
+  'Escape',
+  'Delete',
+  'Backspace',
+  'Tab',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+]
+
+function isNamedKey(code: string): code is NamedKey {
+  return NAMED_KEYS.some(candidate => candidate === code)
+}
+
+function keyGlyph(code: string, keyName: (code: NamedKey) => string): string {
   if (code.startsWith('Key')) return code.slice(3)
   if (code.startsWith('Digit')) return code.slice(5)
+  if (isNamedKey(code)) return keyName(code)
+
+  // A key nothing above claims — remapping accepts any code — reads as the code itself, which
+  // is still closer to what the user pressed than nothing at all.
   return KEY_GLYPHS[code] ?? code
 }
 
