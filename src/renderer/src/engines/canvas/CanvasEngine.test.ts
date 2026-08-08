@@ -2121,6 +2121,34 @@ describe('the crop tool', () => {
     expect(crops).toEqual([])
   })
 
+  /**
+   * The frame draws its grips through the same geometry the move tool's box does, so it answers
+   * the same hover. Without this the crop kept the blind aiming the branch set out to remove.
+   */
+  it('says a grip of the placed frame pulls across its edge', async () => {
+    const { host } = await mounted(DEFAULT_CANVAS, 'crop')
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    drag(host, 400, 200)
+
+    expect(host.querySelector('canvas')?.style.cursor).toBe('ew-resize')
+  })
+
+  // A crop does not turn the document, so there is no ring outside its corners to find. Twelve
+  // pixels out is past the grip and well inside the reach a layer's corner would have answered.
+  it('offers no rotation outside a corner of the frame', async () => {
+    const { host } = await mounted(DEFAULT_CANVAS, 'crop')
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    drag(host, 412, 312)
+
+    expect(host.querySelector('canvas')?.style.cursor).toBe('')
+  })
+
   it('crops to the placed frame on ⏎', async () => {
     const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
 
@@ -2433,19 +2461,187 @@ describe('the transform grips', () => {
     expect(layers.at(-1)).toBe('transform:layer-1:1.50:1.50:0.00')
   })
 
-  // The layer is pushed down the document on purpose: the rotation grip floats above its top
-  // edge, and above a layer at the origin that lands under the ruler band.
-  it('turns the layer by the grip that floats above it', async () => {
-    const { engine, host, layers } = await mounted(
-      stacked([{ ...pixelLayer('layer-1', 'Background'), transform: { ...IDENTITY, y: 200 } }]),
+  /**
+   * There is no rotation grip: the zone just outside a corner turns the layer, as it does in
+   * Figma. The layer is pushed clear of the origin on purpose — outside its top-left corner has
+   * to be canvas, and at the origin that would be the ruler band.
+   */
+  const offset = (): Promise<Awaited<ReturnType<typeof mounted>>> =>
+    mounted(
+      stacked([
+        { ...pixelLayer('layer-1', 'Background'), transform: { ...IDENTITY, x: 200, y: 200 } },
+      ]),
+    )
+
+  it('turns the layer by the zone just outside a corner', async () => {
+    const { engine, host, layers } = await offset()
+    engine.setTool('move')
+
+    // Beyond the north-west corner (200, 200) — too far out for the grip, inside the rotation
+    // ring — then a quarter turn about the middle at (712, 712).
+    press(host, 190, 190)
+    drag(host, 1234, 190)
+
+    expect(layers.at(-1)).toMatch(/^transform:layer-1:1\.00:1\.00:1\.5/)
+  })
+
+  // Inside the corner is a drag of the layer, not a turn: only the outside of it rotates.
+  it('moves the layer for a drag that started just inside the same corner', async () => {
+    const { engine, host, layers } = await offset()
+    engine.setTool('move')
+
+    press(host, 210, 210)
+    drag(host, 240, 240)
+
+    expect(layers.at(-1)).toBe('translate:layer-1:230:230')
+  })
+
+  /**
+   * What the pointer says before the button goes down. The grips were reachable only by guessing:
+   * nothing changed under an idle hand, so the twelve pixels of a grip had to be found blind.
+   *
+   * Pixi owns this canvas and the cursor goes on it, which is what lets it win for as long as the
+   * gesture lasts and hand it back to the host on release.
+   */
+  const cursorOn = (host: HTMLElement): string => {
+    // Found by what it is, not by where it sits: the overlay marks itself unclickable, so the
+    // other canvas is Pixi's. Taking the first would ride on the order `mount` happens to append
+    // them in, and every assertion of an *absent* cursor would pass on the wrong element.
+    const canvases = [...host.querySelectorAll('canvas')]
+    const pixi = canvases.filter(canvas => canvas.style.pointerEvents !== 'none')
+    const only = pixi.length === 1 ? pixi[0] : undefined
+    return only ? only.style.cursor : `expected one paintable canvas, found ${pixi.length}`
+  }
+
+  it('says a grip pulls across the edge when the pointer rests on one', async () => {
+    const { host } = await armed()
+
+    drag(host, 1024, 512)
+
+    expect(cursorOn(host)).toBe('ew-resize')
+  })
+
+  it('says a corner pulls along its diagonal', async () => {
+    const { host } = await armed()
+
+    drag(host, 1024, 1024)
+
+    expect(cursorOn(host)).toBe('nwse-resize')
+  })
+
+  // Drawn rather than named: no platform ships a rotation cursor.
+  it('draws a turning cursor over the zone outside a corner', async () => {
+    const { host } = await armed()
+
+    drag(host, 1034, 1034)
+
+    expect(cursorOn(host)).toContain('data:image/svg+xml')
+  })
+
+  /**
+   * Leaving a grip has to take its cursor with it. Established before it is denied — an assertion
+   * that the cursor is empty, on a canvas where nothing ever wrote one, cannot fail.
+   */
+  it('gives the cursor back when the pointer leaves a grip for the middle', async () => {
+    const { host } = await armed()
+    drag(host, 1024, 512)
+    expect(cursorOn(host)).toBe('ew-resize')
+
+    drag(host, 512, 512)
+
+    expect(cursorOn(host)).toBe('')
+  })
+
+  /**
+   * The layer's rotation is what turns the arrow, and the engine has to hand it over: a quarter
+   * turn puts the east grip due south, where it pulls up and down.
+   *
+   * Without this nothing would notice `hoverBox` passing a fixed zero — every other cursor test
+   * arms a layer that was never turned.
+   */
+  it('turns the arrow with the layer, not just with the grip', async () => {
+    const { engine, host } = await mounted(
+      stacked([
+        {
+          ...pixelLayer('layer-1', 'Background'),
+          transform: { ...IDENTITY, rotation: Math.PI / 2 },
+        },
+      ]),
     )
     engine.setTool('move')
 
-    // From due north of the box's middle to due east of it: a quarter turn.
-    press(host, 512, 176)
-    drag(host, 1048, 712)
+    drag(host, 512, 1024)
 
-    expect(layers.at(-1)).toMatch(/^transform:layer-1:1\.00:1\.00:1\.5/)
+    expect(cursorOn(host)).toBe('ns-resize')
+  })
+
+  /**
+   * Space is a pan in waiting and owns the cursor while it is held. What the pointer was over is
+   * dropped on release: the hover only recomputes when it *changes*, so a grip the hand never
+   * left would compare equal for ever and its arrow would never come back.
+   */
+  it('brings the grip’s arrow back after space was held and released', async () => {
+    const { host } = await armed()
+    drag(host, 1024, 512)
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }))
+    document.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }))
+
+    drag(host, 1024, 512)
+
+    expect(cursorOn(host)).toBe('ew-resize')
+  })
+
+  // Arming another layer keeps `layers` identical, so it is the one way a box moves under a
+  // still pointer without the tree changing — and the cursor used to keep the old promise.
+  it('drops the cursor when another layer is armed under a still pointer', async () => {
+    const state = stacked([pixelLayer('layer-1', 'Background'), pixelLayer('layer-2', 'Top')])
+    const { engine, host } = await mounted(state)
+    engine.setTool('move')
+    drag(host, 1024, 512)
+    expect(cursorOn(host)).toBe('ew-resize')
+
+    // The very shape `selectLayer` produces: a fresh state around the same `layers` array.
+    engine.apply({ ...state, activeLayerId: 'layer-2' })
+
+    expect(cursorOn(host)).toBe('')
+  })
+
+  // A turn is one gesture, so it is one history entry — the drag has to be closed like any other.
+  it('closes the history entry a turn opened', async () => {
+    const { engine, host, layers } = await offset()
+    engine.setTool('move')
+
+    press(host, 190, 190)
+    drag(host, 1234, 190)
+    release()
+
+    expect(layers.at(-1)).toBe('end')
+  })
+
+  /**
+   * The chrome belongs to the tool that draws it. Arming the brush used to leave the move tool's
+   * cursor and grips on screen until something else happened to repaint.
+   */
+  it('hands the cursor back when another tool is armed', async () => {
+    const { engine, host } = await armed()
+    drag(host, 1024, 512)
+
+    engine.setTool('brush')
+
+    expect(cursorOn(host)).toBe('')
+  })
+
+  // Presence established first, then denied: the same hover that answers under the move tool has
+  // to answer nothing under the brush, and an empty canvas would say that on its own.
+  it('offers no grip at all once another tool is armed', async () => {
+    const { engine, host } = await armed()
+    drag(host, 1024, 512)
+    expect(cursorOn(host)).toBe('ew-resize')
+
+    engine.setTool('brush')
+    drag(host, 1024, 513)
+
+    expect(cursorOn(host)).toBe('')
   })
 
   it('moves the layer for a drag that took no grip at all', async () => {

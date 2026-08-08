@@ -1,6 +1,6 @@
 import { clamp } from '@/helpers/numeric'
 import type { Rect } from './canvas-state'
-import { ANCHOR, gripRects, HANDLE_IDS, type HandleId } from './handles'
+import { ANCHOR, cornersOfRect, gripRects, HANDLE_IDS, type HandleId } from './handles'
 import { box, type Point } from './shape-geometry'
 import { crisp, toScreen, type Size, type Viewport } from './viewport'
 
@@ -33,7 +33,7 @@ export function cropRect(
  */
 export function resizeCrop(
   rect: Rect,
-  handle: Exclude<HandleId, 'rotate'>,
+  handle: HandleId,
   to: Point,
   documentSize: Size,
   constrain: boolean,
@@ -58,9 +58,6 @@ export type CropChrome = {
   grips: readonly Rect[]
 }
 
-/** A crop does not turn the document, so the grip that would turn it is not offered. */
-const CROP_GRIPS: readonly HandleId[] = HANDLE_IDS.filter(id => id !== 'rotate')
-
 /**
  * Where the crop frame, its grips and the dimming go, in screen space. Pure, so what the overlay
  * decides can be read back without a 2D context — jsdom has none, and the chrome would otherwise
@@ -73,7 +70,7 @@ export function cropChrome(rect: Rect, viewport: Viewport, documentSize: Size): 
   const far = toScreen(viewport, { x: rect.x + rect.width, y: rect.y + rect.height })
   const origin = toScreen(viewport, { x: 0, y: 0 })
   const corner = toScreen(viewport, { x: documentSize.width, y: documentSize.height })
-  const grips = gripRects(rect, viewport)
+  const grips = gripRects(cornersOfRect(rect), viewport)
 
   const bands = [
     { x: origin.x, y: origin.y, width: corner.x - origin.x, height: inside.y - origin.y },
@@ -91,6 +88,6 @@ export function cropChrome(rect: Rect, viewport: Viewport, documentSize: Size): 
       width: Math.round(far.x - inside.x),
       height: Math.round(far.y - inside.y),
     },
-    grips: CROP_GRIPS.map(id => grips[id]),
+    grips: HANDLE_IDS.map(id => grips[id]),
   }
 }
