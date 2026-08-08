@@ -1,6 +1,22 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
-import { IMAGE_TOOLS, toolById } from './image-tools'
+import { UNBUILT_TOOLS, type CanvasTool } from '@/engines/canvas/CanvasEngine'
+import { IMAGE_TOOLS, canvasToolFor, toolById } from './image-tools'
+
+/**
+ * Every gesture the bar can arm, and whether it is reachable — the group's own button, plus one
+ * row per mode. Read through `canvasToolFor`, which is what the component calls: a group whose
+ * modes mean different tools is only crossed correctly through it.
+ */
+const armableRows = (): { id: string; tool: CanvasTool | null; reachable: boolean }[] =>
+  IMAGE_TOOLS.flatMap(entry => [
+    { id: entry.id, tool: canvasToolFor(entry.id), reachable: entry.disabled !== true },
+    ...(entry.modes ?? []).map(mode => ({
+      id: `${entry.id}/${mode.id}`,
+      tool: canvasToolFor(entry.id, mode.id),
+      reachable: entry.disabled !== true && mode.disabled !== true,
+    })),
+  ])
 
 describe('image tools', () => {
   it('names every tool through i18n rather than a literal', () => {
@@ -55,5 +71,38 @@ describe('image tools', () => {
 
   it('finds nothing for an unknown id', () => {
     expect(toolById('nope')).toBeNull()
+  })
+
+  /**
+   * The bar and the engine hold two halves of the same truth, and nothing made them agree: the
+   * frame group armed a tool `onPointerDown` ignores, then the comment button did the same. The
+   * cursor changed, the button lit, and the pointer did nothing.
+   */
+  it('greys every row that would arm a tool the engine ignores', () => {
+    const live = armableRows().filter(
+      row => row.reachable && row.tool && UNBUILT_TOOLS.has(row.tool),
+    )
+    expect(live.map(row => row.id)).toEqual([])
+  })
+
+  it('greys nothing whose tool the engine implements', () => {
+    // Groups only: a mode can be greyed for its own sake — `text/path` writes on a curve, which
+    // is unbuilt without `text` being, and the two share one `CanvasTool`.
+    const hidden = IMAGE_TOOLS.filter(entry => entry.disabled === true).filter(entry => {
+      const tool = canvasToolFor(entry.id)
+      return !tool || !UNBUILT_TOOLS.has(tool)
+    })
+    expect(hidden.map(entry => entry.id)).toEqual([])
+  })
+
+  /**
+   * `MenuButton` hangs the hover wrapper on a div around the button, so a greyed group still
+   * opens its menu: a live row inside one is a reachable way to arm what the group refuses.
+   */
+  it('leaves no live row inside a greyed group, which the flyout would still offer', () => {
+    for (const entry of IMAGE_TOOLS) {
+      if (entry.disabled !== true) continue
+      for (const mode of entry.modes ?? []) expect(mode.disabled).toBe(true)
+    }
   })
 })

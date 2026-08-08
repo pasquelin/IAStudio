@@ -172,8 +172,11 @@ export const DEFAULT_BRUSH: BrushSettings = {
 /**
  * Declared by the bar, not implemented here. Kept in the union so the registry stays typed, and
  * kept in one place so wiring one is a single deletion.
+ *
+ * Exported so the bar's registry can be crossed against it: a tool listed here whose button is
+ * not greyed arms a gesture `onPointerDown` drops on the floor.
  */
-const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['crop', 'comment'])
+export const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['crop', 'comment'])
 
 /**
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
