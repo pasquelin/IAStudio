@@ -16,6 +16,44 @@ export default defineConfig({
     __COMMIT_HASH__: JSON.stringify('test'),
   },
   test: {
+    // Without `include`, a file no test imports is absent from the report — deleting its tests
+    // would RAISE the percentage. Budgets of uncovered items, not percentages: the same
+    // percentage buys a handful of statements in a small module and hundreds in a large one,
+    // and widens on its own as well-covered files land. Only the modules the checklist names.
+    coverage: {
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['**/*.bench.ts', '**/*-fixtures.ts', '**/test-harness.ts', '**/fake-bridge.ts'],
+      reporter: ['text-summary', 'html'],
+      // Negative = how many uncovered statements/branches a module may carry. Sized per module
+      // rather than by one rule: a glob whose room to grow is mostly untestable GPU needs a
+      // wider budget than one made of state machines, or growth alone would break it.
+      //
+      // A glob matching nothing passes silently. Renaming a folder turns its budget into a
+      // no-op, and a new `engines/` subfolder lands under no budget at all — both without a
+      // warning. These names follow `src/`; keep them in step.
+      thresholds: {
+        'src/shared/**': { statements: -6, branches: -20 },
+        'src/main/settings/**': { statements: -30, branches: -12 },
+        'src/main/scenario/**': { statements: -85, branches: -65 },
+        'src/main/project/**': { statements: -115, branches: -60 },
+        'src/main/media/**': { statements: -70, branches: -32 },
+        'src/renderer/src/stores/**': { statements: -90, branches: -82 },
+        // Split from the GPU below: together, five files jsdom cannot run held 55 % of one
+        // budget, so a new render pass ate the room that guarded the state machines.
+        'src/renderer/src/engines/{timeline,canvas,audio,core}/**': {
+          statements: -270,
+          branches: -250,
+        },
+        'src/renderer/src/engines/{scene,skybox,viewport,texture,gpu}/**': {
+          statements: -700,
+          branches: -310,
+        },
+        'src/renderer/src/helpers/**': { statements: -30, branches: -28 },
+        'src/renderer/src/hooks/**': { statements: -38, branches: -20 },
+        // The renderer half of project-file serialization; `src/main/project/**` guards the other.
+        'src/renderer/src/app/document-io.ts': { statements: -14, branches: -6 },
+      },
+    },
     projects: [
       {
         resolve: { alias },
