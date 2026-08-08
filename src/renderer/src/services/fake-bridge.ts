@@ -37,6 +37,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       searchModels: () => Promise.resolve({ items: [], cursor: null }),
       modelPreviews: () => Promise.resolve({}),
       describeModel: () => Promise.reject(new Error('no model')),
+      suggestPrompts: () => Promise.resolve([]),
       generate: () => Promise.reject(new Error('no generation')),
       uploadAsset: () => Promise.reject(new Error('no upload')),
       cancelJob: () => Promise.resolve(),

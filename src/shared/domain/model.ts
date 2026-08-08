@@ -39,6 +39,12 @@ export type FieldDescriptor = {
    * field itself, which is what lets an edit action fill the pair without naming either.
    */
   maskFrom?: string
+  /**
+   * Whether this is the field prompt assistance rewrites. The API marks it itself — measured on
+   * `model_google-gemini-3-1-flash`, whose `prompt` input carries `promptSpark: true` — so no
+   * field name is ever guessed at here.
+   */
+  promptSpark?: boolean
 }
 
 export type ModelFamily =

@@ -58,6 +58,8 @@ import { createClientProvider, recordFailuresTo, type ClientProvider } from './s
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
+import { createPromptAssist, type PromptAssist } from './scenario/prompt-assist'
+import { promptAssistApiOf } from './scenario/prompt-assist-api'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
@@ -69,6 +71,7 @@ export type Services = {
   client: ClientProvider
   models: ModelRegistry
   jobs: JobManager
+  prompts: PromptAssist
   uploads: AssetUploader
   /** The library, as the studio asks about it. Rebuilt per call: the key may have changed. */
   remote: () => RemoteAssetCatalog
@@ -251,6 +254,13 @@ export function createServices(settings: SettingsStore): Services {
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
+  })
+
+  const prompts = createPromptAssist({
+    api: () => promptAssistApiOf(client.require()),
+    // Through the registry rather than the API: the generator just described the model to draw
+    // the form, so the descriptors are warm and no round trip is spent narrowing the answer.
+    fields: async modelId => (await models.describe(modelId)).fields,
   })
 
   // The two need each other: the journal writes into the open project's catalogue, and the
@@ -492,6 +502,7 @@ export function createServices(settings: SettingsStore): Services {
     client,
     models,
     jobs,
+    prompts,
     uploads,
     remote: remoteAssets,
     cloud: () => cloudAssets,

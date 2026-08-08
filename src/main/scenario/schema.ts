@@ -19,6 +19,8 @@ export type ScenarioInput = {
   maskFrom?: string
   color?: boolean
   prompt?: boolean
+  /** Whether the input is the one prompt assistance rewrites. */
+  promptSpark?: boolean
   default?: unknown
   min?: number
   max?: number
@@ -98,6 +100,10 @@ export function translateSchema(inputs: readonly ScenarioInput[] | undefined): F
     // The pairing Scenario declares between a mask and the picture it masks: carried through so
     // an edit action can fill both without knowing either model's field names.
     if (input.maskFrom !== undefined) descriptor.maskFrom = input.maskFrom
+
+    // The API says which field prompt assistance rewrites, so the studio never has to guess.
+    // `prompt` is the fallback: it marks the same field on models that declare only that one.
+    if (input.promptSpark === true || input.prompt === true) descriptor.promptSpark = true
 
     const options = optionsOf(input)
     if (options) descriptor.options = options

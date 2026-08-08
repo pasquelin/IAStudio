@@ -2,6 +2,7 @@ import type { JobFailure } from '@shared/domain/failure'
 import { isFinished, type Job, type JobProgress, type JobStatus } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
+import { createRetry, DEFAULT_BACKOFF_BASE_MS } from './retry'
 
 /** A job as the API returns it, reduced to what the studio reads. */
 export type RemoteJob = {
@@ -59,7 +60,6 @@ export type JobManager = {
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
-const DEFAULT_BACKOFF_BASE_MS = 1000
 
 /** Finished jobs kept for the bar's history. Beyond this a long session is just a leak. */
 const RETAINED_JOBS = 200
@@ -82,12 +82,6 @@ const STATUS: Record<string, JobStatus> = {
 
 export function jobStatusOf(remoteStatus: string): JobStatus {
   return STATUS[remoteStatus] ?? 'running'
-}
-
-/** Only what a retry can fix. A 401 or a malformed body will fail identically forever. */
-function isRetryable(error: unknown): boolean {
-  const failure = failureOf(error)
-  return failure === 'rate-limited' || failure === 'server' || failure === 'network'
 }
 
 type Entry = {
@@ -183,16 +177,7 @@ export function createJobManager({
     evictOldFinished()
   }
 
-  const withRetry = async <T>(action: () => Promise<T>): Promise<T> => {
-    for (let attempt = 0; ; attempt++) {
-      try {
-        return await action()
-      } catch (error) {
-        if (attempt >= maxRetries() || !isRetryable(error)) throw error
-        await sleep(backoffBaseMs * 2 ** attempt)
-      }
-    }
-  }
+  const withRetry = createRetry({ maxRetries, sleep, backoffBaseMs })
 
   const advance = (entry: Entry, remote: RemoteJob): JobStatus => {
     const status = jobStatusOf(remote.status)

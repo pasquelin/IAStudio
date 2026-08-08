@@ -51,6 +51,7 @@ const bridge: StudioBridge = {
     searchModels: query => ipcRenderer.invoke(CHANNELS.scenarioSearchModels, query),
     modelPreviews: assetIds => ipcRenderer.invoke(CHANNELS.scenarioModelPreviews, assetIds),
     describeModel: modelId => ipcRenderer.invoke(CHANNELS.scenarioDescribeModel, modelId),
+    suggestPrompts: request => ipcRenderer.invoke(CHANNELS.scenarioSuggestPrompts, request),
     generate: (modelId, body) => ipcRenderer.invoke(CHANNELS.scenarioGenerate, modelId, body),
     uploadAsset: (name, image) => ipcRenderer.invoke(CHANNELS.scenarioUploadAsset, name, image),
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),

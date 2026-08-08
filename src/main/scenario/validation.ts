@@ -7,6 +7,12 @@ import {
   MODEL_SORTS,
   type ModelQuery,
 } from '@shared/domain/model'
+import {
+  PROMPT_IMAGES_MAX,
+  PROMPT_INPUT_MAX,
+  PROMPT_SUGGESTIONS_MAX,
+  type SuggestPromptsRequest,
+} from '@shared/domain/prompt-assist'
 
 const modelId = z.string().trim().min(1)
 
@@ -84,4 +90,20 @@ const generationBody = z.record(z.string(), z.unknown())
 
 export function parseGenerationBody(value: unknown): Record<string, unknown> {
   return generationBody.parse(value)
+}
+
+/**
+ * The draft is bounded rather than trusted: the API's own field caps at 250 000 characters on
+ * the model measured, and a renderer must not be able to push a megabyte through a channel
+ * whose answer is a handful of sentences.
+ */
+const suggestPrompts = z.object({
+  modelId,
+  prompt: z.string().max(PROMPT_INPUT_MAX).optional(),
+  images: z.array(z.string().trim().min(1)).max(PROMPT_IMAGES_MAX).optional(),
+  numResults: z.number().int().min(1).max(PROMPT_SUGGESTIONS_MAX).optional(),
+})
+
+export function parseSuggestPrompts(value: unknown): SuggestPromptsRequest {
+  return suggestPrompts.parse(value)
 }

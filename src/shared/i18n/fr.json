@@ -1183,5 +1183,12 @@
     "imageLayer": "Placer comme calque",
     "videoClip": "Ajouter au montage",
     "textureChannel": "Utiliser comme couleur de base"
+  },
+  "prompt": {
+    "suggest": "Proposer des variantes",
+    "suggesting": "Rédaction des variantes…",
+    "noSuggestion": "Aucune variante proposée.",
+    "useText": "Utiliser le texte",
+    "useTextAndSettings": "Texte + réglages"
   }
 }

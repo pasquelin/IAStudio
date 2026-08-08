@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { mdiDiceMultipleOutline } from '@mdi/js'
-import { useEffect, useMemo } from 'react'
+import { Fragment, useEffect, useMemo, type ReactNode } from 'react'
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { FieldDescriptor } from '@shared/domain/model'
@@ -32,6 +32,23 @@ export type DynamicFormProps = {
    * would reach fields that do not exist.
    */
   preset?: FormValues
+  /**
+   * Rendered under each field, for whatever the caller wants to hang there — prompt assistance
+   * hangs on the one the model marks. Called for every field so that nothing about any
+   * particular feature is decided here; answering `null` leaves the field alone.
+   *
+   * The handle is what makes it worth a hook rather than a sibling: both halves live inside
+   * this component. `read` is a getter rather than a value on purpose — watching the field
+   * would re-render it on every keystroke, for something only a click ever asks for.
+   */
+  accessory?: (field: FieldDescriptor, handle: FieldHandle) => ReactNode
+}
+
+export type FieldHandle = {
+  /** The field's value as it stands. Call it when acting, never while rendering. */
+  read: () => unknown
+  /** Fills this field alone, leaving every other one as the user set it. */
+  write: (value: string) => void
 }
 
 function Control({
@@ -121,6 +138,7 @@ export function DynamicForm({
   submitLabel,
   busy = false,
   preset,
+  accessory,
 }: DynamicFormProps) {
   const { t } = useTranslation()
   const schema = useMemo(() => buildSchema(fields), [fields])
@@ -128,10 +146,11 @@ export function DynamicForm({
   const groups = useMemo(() => groupFields(fields), [fields])
   const dependencies = useMemo(() => dependencyKeys(fields), [fields])
 
-  const { register, handleSubmit, watch, setValue, reset, formState } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: initial,
-  })
+  const { register, handleSubmit, watch, setValue, getValues, reset, formState } =
+    useForm<FormValues>({
+      resolver: zodResolver(schema),
+      defaultValues: initial,
+    })
 
   // Switching model swaps the whole descriptor set: keeping the previous values would carry a
   // `guidance` from one model into another that never declared it.
@@ -162,26 +181,35 @@ export function DynamicForm({
           )}
 
           {visibleFields(groupedFields, values).map(field => (
-            <label key={field.key} className="flex flex-col gap-1 text-xs">
-              <span className="text-muted">
-                {field.label}
-                {field.required && <span aria-hidden> *</span>}
-              </span>
-
-              <Control
-                field={field}
-                registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
-                initial={initial[field.key]}
-                onRoll={() => setValue(field.key, randomSeed())}
-              />
-
-              {field.help && <span className="text-muted text-[11px]">{field.help}</span>}
-              {formState.errors[field.key] && (
-                <span role="alert" className="text-danger text-[11px]">
-                  {t('errors.invalidValue')}
+            // The accessory sits outside the label rather than in it: it holds buttons, and a
+            // control nested in a label steals the click meant for the field.
+            <Fragment key={field.key}>
+              <label className="flex flex-col gap-1 text-xs">
+                <span className="text-muted">
+                  {field.label}
+                  {field.required && <span aria-hidden> *</span>}
                 </span>
-              )}
-            </label>
+
+                <Control
+                  field={field}
+                  registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
+                  initial={initial[field.key]}
+                  onRoll={() => setValue(field.key, randomSeed())}
+                />
+
+                {field.help && <span className="text-muted text-[11px]">{field.help}</span>}
+                {formState.errors[field.key] && (
+                  <span role="alert" className="text-danger text-[11px]">
+                    {t('errors.invalidValue')}
+                  </span>
+                )}
+              </label>
+
+              {accessory?.(field, {
+                read: () => getValues(field.key),
+                write: value => setValue(field.key, value),
+              })}
+            </Fragment>
           ))}
         </fieldset>
       ))}

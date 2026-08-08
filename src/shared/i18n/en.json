@@ -1183,5 +1183,12 @@
     "imageLayer": "Place as a layer",
     "videoClip": "Add to the montage",
     "textureChannel": "Use as base colour"
+  },
+  "prompt": {
+    "suggest": "Suggest variants",
+    "suggesting": "Writing variants…",
+    "noSuggestion": "No variant proposed.",
+    "useText": "Use the text",
+    "useTextAndSettings": "Text + settings"
   }
 }
