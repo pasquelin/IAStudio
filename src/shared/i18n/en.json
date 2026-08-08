@@ -237,7 +237,8 @@
     "picker": "Eyedropper",
     "pickerHint": "Pick up the colour under the pointer",
     "color": "Colour",
-    "colorHint": "Colour of the brush, the shapes and the fill"
+    "colorHint": "Colour of the brush, the shapes and the fill",
+    "textDefault": "Your text"
   },
   "imageView": {
     "zoom": "Zoom",
@@ -429,7 +430,10 @@
     "scaleX": "Scale X",
     "scaleY": "Scale Y",
     "children": "Layers",
-    "opacity": "Opacity"
+    "opacity": "Opacity",
+    "text": "Text",
+    "words": "Words",
+    "textSize": "Size"
   },
   "transport": {
     "play": "Play",

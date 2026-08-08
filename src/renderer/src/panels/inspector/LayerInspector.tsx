@@ -3,6 +3,7 @@ import { NumberField } from '@/design/NumberField'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { SliderField } from '@/design/SliderField'
+import { TextField } from '@/design/TextField'
 import { CONTROL } from '@/design/styles'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { ToggleField } from '@/design/ToggleField'
@@ -21,6 +22,7 @@ import {
   setLayerFillOpacity,
   setLayerLocks,
   setLayerOpacity,
+  setLayerText,
   setLayerTransform,
 } from '@/engines/canvas/commands'
 import { cn } from '@/helpers/cn'
@@ -131,6 +133,24 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           />
         ))}
       </PropertyGroup>
+
+      {layer.kind === 'text' && (
+        <PropertyGroup title={t('inspector.text')}>
+          <TextField
+            label={t('inspector.words')}
+            value={layer.text}
+            onChange={text => edit.run(setLayerText(layer.id, { text }))}
+          />
+          <NumberField
+            label={t('inspector.textSize')}
+            value={layer.size}
+            min={1}
+            step={1}
+            onChange={size => edit.run(setLayerText(layer.id, { size }))}
+            {...edit.gesture}
+          />
+        </PropertyGroup>
+      )}
 
       {layer.kind === 'adjustment' && (
         <PropertyGroup title={t(`adjustment.${layer.adjustment}`)}>

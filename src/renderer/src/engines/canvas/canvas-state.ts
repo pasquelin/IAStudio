@@ -1,5 +1,6 @@
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import { isRecord } from '@shared/guards'
+import type { Point } from './shape-geometry'
 
 /**
  * An image document, as plain data. It holds no Pixi object on purpose: an engine is rebuilt
@@ -166,7 +167,33 @@ export function adjustmentLayer(
   return { ...layerBase(id, name), kind: 'adjustment', adjustment, values: NEUTRAL_ADJUSTMENTS }
 }
 
-export type Layer = PixelLayer | GroupLayer | AdjustmentLayer
+/**
+ * Words rather than pixels. Kept as text so it stays editable and stays sharp at any zoom — a
+ * caption rasterized at the moment it was typed is a caption nobody can fix a typo in.
+ */
+export type TextLayer = LayerBase & {
+  kind: 'text'
+  text: string
+  /** Points at 1:1, before the layer's own scale. */
+  size: number
+  /** Packed RGB, the form Pixi takes. */
+  color: number
+}
+
+export const DEFAULT_TEXT_SIZE = 48
+
+export function textLayer(id: string, text: string, at: Point): TextLayer {
+  return {
+    ...layerBase(id, text),
+    kind: 'text',
+    text,
+    size: DEFAULT_TEXT_SIZE,
+    color: 0x000000,
+    transform: { ...IDENTITY, x: at.x, y: at.y },
+  }
+}
+
+export type Layer = PixelLayer | GroupLayer | AdjustmentLayer | TextLayer
 
 const GUIDE_AXES: readonly ('x' | 'y')[] = ['x', 'y']
 
@@ -344,6 +371,16 @@ function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
       children: Array.isArray(source.children) ? reviveLayers(source.children, seen) : [],
       collapsed: source.collapsed === true,
       isolation: oneOf(GROUP_ISOLATIONS, source.isolation, 'pass-through'),
+    }
+  }
+
+  if (source.kind === 'text') {
+    return {
+      ...base,
+      kind: 'text',
+      text: typeof source.text === 'string' ? source.text : '',
+      size: typeof source.size === 'number' ? source.size : DEFAULT_TEXT_SIZE,
+      color: typeof source.color === 'number' ? source.color : 0x000000,
     }
   }
 

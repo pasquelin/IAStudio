@@ -10,10 +10,11 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { canRedo, canUndo, type Command } from '@/engines/core/history'
-import type { CanvasState } from '@/engines/canvas/canvas-state'
+import { textLayer, type CanvasState } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
-import { cropToRect, flipImage, rotateImage } from '@/engines/canvas/commands'
+import { addLayer, cropToRect, flipImage, rotateImage } from '@/engines/canvas/commands'
+import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
 import { assetsById, useAssets } from '@/stores/assets'
@@ -57,6 +58,7 @@ const CHECKER = cn(
 )
 
 export function ImageDocument({ documentId }: ImageDocumentProps) {
+  const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<CanvasEngine | null>(null)
 
@@ -78,6 +80,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const byId = useAssets(assetsById)
   const [over, setOver] = useState(false)
 
+  // What a fresh caption says. Held in a ref so the effect that builds the engine does not
+  // depend on the language, which would remount it — and lose every layer's texture.
+  const caption = useRef(t('imageTools.textDefault'))
+  useEffect(() => {
+    caption.current = t('imageTools.textDefault')
+  }, [t])
+
   useEffect(() => {
     const element = hostRef.current
     if (!element) return
@@ -96,6 +105,12 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       onSelection: selection => views().setSelection(documentId, selection),
       onHost: size => views().setHost(documentId, size),
       onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
+      // Read through the ref rather than captured: rebuilding the engine on a language change
+      // would take the GPU context — and the pixels in it — down with it.
+      onText: at =>
+        useCanvases
+          .getState()
+          .runCommand(documentId, addLayer(textLayer(newId(), caption.current, at))),
       guides: guidePort(documentId),
       layers: layerPort(documentId),
     })

@@ -9,12 +9,14 @@ import {
   IDENTITY,
   isGroup,
   pixelLayer,
+  textLayer,
   type CanvasState,
   type Layer,
   type Rect,
   type Transform,
 } from './canvas-state'
 import type { CanvasSelection } from './canvas-selection'
+import type { Point } from './shape-geometry'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, type Viewport } from './viewport'
 
@@ -225,6 +227,7 @@ vi.mock('pixi.js', () => {
         return Promise.resolve({ width: 200, height: 100 })
       },
     },
+    Text: class extends Container {},
     Rectangle: class {},
     Texture: class {},
     RenderTexture: {
@@ -256,6 +259,8 @@ type Harness = {
   selections: CanvasSelection[]
   /** Every crop the engine asked the stack for. */
   crops: Rect[]
+  /** Where a caption was asked for, in document coordinates. */
+  captions: Point[]
   guides: { calls: string[] }
   /** The ids of the patches the engine reported as one finished gesture each. */
   patches: string[]
@@ -270,6 +275,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
   const viewports: Viewport[] = []
   const selections: CanvasSelection[] = []
   const crops: Rect[] = []
+  const captions: Point[] = []
   const calls: string[] = []
   const patches: string[] = []
   const layers: string[] = []
@@ -281,6 +287,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
       onCrop: rect => crops.push(rect),
+      onText: at => captions.push(at),
       onHost: () => undefined,
       guides: {
         add: (axis, position) => {
@@ -306,6 +313,7 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
     viewports,
     selections,
     crops,
+    captions,
     guides: { calls },
     patches,
     layers,
@@ -1325,6 +1333,54 @@ describe('cropping', () => {
     await nextFrame()
 
     expect(selections.at(-1)).toBeNull()
+  })
+})
+
+describe('captions', () => {
+  const caption = (text: string, size = 48): CanvasState =>
+    stacked([
+      pixelLayer('layer-1', 'Background'),
+      { ...textLayer('t', text, { x: 10, y: 20 }), size },
+    ])
+
+  it('asks the stack for a caption where the pointer landed', async () => {
+    const { engine, host, captions } = await mounted()
+    engine.setTool('text')
+
+    press(host, 300, 250)
+
+    expect(captions).toEqual([{ x: 300, y: 250 }])
+  })
+
+  it('rasterizes the words into the layer that holds them', async () => {
+    const { engine } = await mounted()
+    gpu.painted = []
+
+    engine.apply(caption('Hello'))
+
+    // The second texture is the caption's own, and `clear: true` replaces what was there.
+    expect(gpu.painted).toContain(1)
+  })
+
+  // Rasterizing is a canvas redraw and a GPU upload: unchanged words must not pay for it.
+  it('redraws only when the words or their setting change', async () => {
+    const { engine } = await mounted(caption('Hello'))
+    gpu.painted = []
+
+    engine.apply(caption('Hello'))
+    expect(gpu.painted).toEqual([])
+
+    engine.apply(caption('Goodbye'))
+    expect(gpu.painted).toContain(1)
+  })
+
+  it('redraws when only the size changes', async () => {
+    const { engine } = await mounted(caption('Hello'))
+    gpu.painted = []
+
+    engine.apply(caption('Hello', 72))
+
+    expect(gpu.painted).toContain(1)
   })
 })
 

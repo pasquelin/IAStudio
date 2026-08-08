@@ -237,7 +237,8 @@
     "picker": "Pipette",
     "pickerHint": "Prélever la couleur sous le pointeur",
     "color": "Couleur",
-    "colorHint": "Couleur du pinceau, des formes et du remplissage"
+    "colorHint": "Couleur du pinceau, des formes et du remplissage",
+    "textDefault": "Votre texte"
   },
   "imageView": {
     "zoom": "Zoom",
@@ -429,7 +430,10 @@
     "scaleX": "Échelle X",
     "scaleY": "Échelle Y",
     "children": "Calques",
-    "opacity": "Opacité"
+    "opacity": "Opacité",
+    "text": "Texte",
+    "words": "Mots",
+    "textSize": "Corps"
   },
   "transport": {
     "play": "Lire",

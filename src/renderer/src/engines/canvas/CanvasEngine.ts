@@ -7,6 +7,7 @@ import {
   Rectangle,
   RenderTexture,
   Sprite,
+  Text,
   type BLEND_MODES,
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
@@ -26,6 +27,7 @@ import {
   type GroupLayer,
   type Layer,
   type Rect,
+  type TextLayer,
   type Transform,
   WHITE,
 } from './canvas-state'
@@ -156,6 +158,8 @@ export type CanvasEngineOptions = {
   onHost: (size: Size) => void
   /** A crop is a command on the stack, and the stack lives on the React side. */
   onCrop: (rect: Rect) => void
+  /** Where a caption was asked for. The layer it becomes is the stack's to make. */
+  onText: (at: Point) => void
   guides: GuidePort
   layers: LayerPort
 }
@@ -171,7 +175,7 @@ export const DEFAULT_BRUSH: BrushSettings = {
  * Declared by the bar, not implemented here. Kept in the union so the registry stays typed, and
  * kept in one place so wiring one is a single deletion.
  */
-const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['text', 'comment'])
+const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['comment'])
 
 /**
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
@@ -299,6 +303,8 @@ export class CanvasEngine {
   private clipping: Container | null = null
   /** One grading pass per adjustment layer, holding the filter it applies. */
   private readonly adjustments = new Map<string, AdjustPass>()
+  /** What each text layer was last drawn with, so unchanged words cost no rasterization. */
+  private readonly wordings = new Map<string, string>()
   /** Regions asked of masks that did not exist yet — see `fillMaskFromSelection`. */
   private readonly pendingMaskFills = new Map<string, readonly Point[]>()
   private readonly stamp = new Graphics()
@@ -908,6 +914,7 @@ export class CanvasEngine {
     for (const clip of this.clips.values()) this.destroyClip(clip)
     this.clips.clear()
     this.pendingMaskFills.clear()
+    this.wordings.clear()
     // The stamp is the engine's own and is destroyed below, so it leaves the holder first.
     this.clipping?.removeChild(this.stamp)
     this.dropClipping()
@@ -1046,8 +1053,15 @@ export class CanvasEngine {
     // Read before the build: a picture is drawn once, when its surface comes into existence —
     // which is also the only moment the engine can know the layer at all.
     const born = !this.surfaces.has(layer.id)
+    // Words are redrawn whenever they change, unlike pixels, which are what the layer holds.
+    const wording = layer.kind === 'text' ? `${layer.text}|${layer.size}|${layer.color}` : null
     const surface = this.buildSurface(layer.id, layer.kind === 'pixel' ? layer.fill : undefined)
     if (!surface) return
+
+    if (wording !== null && this.wordings.get(layer.id) !== wording) {
+      this.wordings.set(layer.id, wording)
+      if (layer.kind === 'text') this.drawText(surface, layer)
+    }
 
     if (born && layer.kind === 'pixel' && layer.source !== undefined) {
       // Unawaited, and its failure swallowed: one unreadable asset must not take the rest of
@@ -1075,6 +1089,23 @@ export class CanvasEngine {
     // Unlinked means the mask does not follow the layer: it stays where it was painted.
     this.place(mask.sprite, layer.mask.linked ? layer.transform : IDENTITY, mask.texture)
     if (bornMasked) this.drainPendingMask(layer.id, mask)
+  }
+
+  /**
+   * The words, rasterized into the layer's own texture. `clear: true`, so editing a caption
+   * replaces it rather than laying the new one over the old.
+   */
+  private drawText(surface: LayerSurface, layer: TextLayer): void {
+    const renderer = this.app?.renderer
+    if (!renderer) return
+
+    const text = new Text({
+      text: layer.text,
+      style: { fontFamily: 'sans-serif', fontSize: layer.size, fill: layer.color },
+    })
+    renderer.render({ container: text, target: surface.texture, clear: true })
+    text.destroy()
+    this.render()
   }
 
   /** A document-sized texture and the sprite that shows it, built once and kept. */
@@ -1269,6 +1300,13 @@ export class CanvasEngine {
         from: point,
         origin: { x: layer.transform.x, y: layer.transform.y },
       }
+      return
+    }
+
+    if (this.tool === 'text') {
+      // A click places a caption; the words themselves are typed in the inspector, where a
+      //a letter typed on the canvas would be competing with every tool shortcut the space binds.
+      this.options.onText(point)
       return
     }
 

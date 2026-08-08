@@ -16,6 +16,7 @@ import {
   type Layer,
   type LayerLocks,
   type Rect,
+  type TextLayer,
   type Transform,
 } from './canvas-state'
 
@@ -154,6 +155,30 @@ export function setLayerAdjustment(id: string, values: AdjustmentStack): Command
           ? { ...layer, values: previous }
           : layer,
       ),
+    }),
+  }
+}
+
+/** The words of a caption, and how they are set. Its own command, like the grading values. */
+export function setLayerText(
+  id: string,
+  changes: Partial<Pick<TextLayer, 'text' | 'size' | 'color'>>,
+): Command<CanvasState> {
+  let previous: TextLayer | null = null
+
+  return {
+    id: `layer:text:${id}`,
+    apply: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => {
+        if (layer.id !== id || layer.kind !== 'text') return layer
+        previous ??= layer
+        return { ...layer, ...changes }
+      }),
+    }),
+    revert: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => (layer.id === id && previous ? previous : layer)),
     }),
   }
 }

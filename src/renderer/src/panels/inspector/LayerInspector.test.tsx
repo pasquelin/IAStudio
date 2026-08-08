@@ -1,7 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { adjustmentLayer, groupLayer, pixelLayer, type Layer } from '@/engines/canvas/canvas-state'
+import {
+  adjustmentLayer,
+  groupLayer,
+  pixelLayer,
+  textLayer,
+  type Layer,
+} from '@/engines/canvas/canvas-state'
 import { addLayer } from '@/engines/canvas/commands'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
@@ -113,6 +119,39 @@ describe('LayerInspector', () => {
       show()
 
       expect(screen.queryByLabelText('Exposition')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('a caption', () => {
+    const words = () => textLayer('t', 'Hello', { x: 0, y: 0 })
+
+    it('edits the words in place', () => {
+      const layer = words()
+      useCanvases.getState().runCommand(DOCUMENT, addLayer(layer))
+      render(<LayerInspector documentId={DOCUMENT} layer={layer} />)
+
+      fireEvent.change(screen.getByLabelText('Mots'), { target: { value: 'Bonjour' } })
+
+      const written = stack().layers.at(-1)
+      expect(written?.kind === 'text' && written.text).toBe('Bonjour')
+    })
+
+    it('sets the size in points', () => {
+      const layer = words()
+      useCanvases.getState().runCommand(DOCUMENT, addLayer(layer))
+      render(<LayerInspector documentId={DOCUMENT} layer={layer} />)
+
+      fireEvent.change(screen.getByLabelText('Corps'), { target: { value: '72' } })
+
+      const written = stack().layers.at(-1)
+      expect(written?.kind === 'text' && written.size).toBe(72)
+    })
+
+    // Words belong to the kind that has them; a pixel layer must not grow a text field.
+    it('offers no words on a layer that has none', () => {
+      show()
+
+      expect(screen.queryByLabelText('Mots')).not.toBeInTheDocument()
     })
   })
 })
