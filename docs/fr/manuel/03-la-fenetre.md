@@ -300,8 +300,8 @@ Le point disparaît à l'enregistrement (`⌘S` / `Ctrl+S`), et revient à la mo
 Si vous annulez jusqu'au point exact où vous aviez enregistré, il disparaît aussi : ce que vous
 voyez est alors bien ce que contient le fichier.
 
-> **Tous les documents ne savent pas encore s'enregistrer.** Aujourd'hui, seules les **scènes
-> 3D** et les **textures** s'écrivent sur le disque. Voir
+> **Tous les documents ne savent pas encore s'enregistrer.** Aujourd'hui, les **images**, les
+> **scènes 3D** et les **textures** s'écrivent sur le disque. Voir
 > [Ce qui n'existe pas encore](18-limites.md).
 
 ### Chaque espace a ses propres onglets
@@ -350,6 +350,38 @@ s'effacerait avec la dernière génération en cours est un échec que personne 
 **Le clic ouvre la liste**, dans une petite fenêtre au-dessus de la ligne d'état : une ligne par
 tâche, son modèle, son état, sa barre, et le bouton qui l'annule. C'est le contenu de l'ancien
 panneau, à un clic au lieu d'une place permanente.
+
+### Le journal, à côté
+
+Une seconde icône, sur la même ligne : c'est le **journal d'activité**. Il retient ce que le
+studio a fait et ce qu'il a raté — une génération, un import, un envoi vers la bibliothèque, un
+enregistrement de document.
+
+**Il est toujours là**, contrairement aux générations qui s'effacent au repos. Un studio qui ne
+montre rien tant que rien n'a cassé laisse l'utilisateur sans endroit où regarder **avant** que
+ça casse.
+
+| Ce que vous voyez | Situation |
+|---|---|
+| une petite horloge grise | tout va bien, le journal est consultable |
+| une alerte et « 2 échecs » en rouge | deux choses ont échoué et n'ont pas encore été lues |
+
+**Un clic ouvre la liste et marque tout comme lu** — l'ouvrir, c'est le lire. Deux filtres y
+attendent : le **niveau** (information, avertissement, échec) et le **sujet** (génération,
+import, bibliothèque, document). Un bouton **Tout afficher** les relâche.
+
+### Les bulles qui ne s'effacent pas
+
+Un échec fait apparaître une **bulle** dans le coin bas-droit, au-dessus de la ligne d'état.
+
+Deux décisions y sont visibles, et toutes deux à contre-courant de l'habitude :
+
+- **Seuls les échecs en font une.** Un asset importé avec succès a sa ligne dans le journal, pas
+  de bulle : une bulle par événement heureux apprendrait à détourner le regard du coin où
+  s'affichent les problèmes.
+- **Elles ne disparaissent pas toutes seules.** Pas de fondu au bout de quatre secondes — une
+  bulle évanouie est une bulle que quelqu'un qui regardait sa toile n'a jamais vue. Elle part
+  quand vous la fermez, et c'est cette fermeture qui la marque lue.
 
 ---
 

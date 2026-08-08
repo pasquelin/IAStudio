@@ -48,17 +48,18 @@ Six types d'assets :
 | Zone | Où ils sont |
 |---|---|
 | **Bande basse** | sur la **ligne de titre**, à côté du nom du panneau |
-| **Colonne de gauche** (espace Vidéo) | sur leur **propre ligne**, sous le titre |
+| **Colonne de droite** (espaces Vidéo et Audio) | sur leur **propre ligne**, sous le titre |
 
 Dans une bande, la ligne est large et presque vide : y loger la barre épargne une rangée
-entière, et l'étagère est là pour montrer des assets, pas des boutons. Dans une colonne de
-320 pixels, la même barre pousserait le bouton de fermeture hors du cadre — elle redescend donc
-sous le titre.
+entière, et l'étagère est là pour montrer des assets, pas des boutons. Dans une colonne étroite,
+la même barre pousserait le bouton de fermeture hors du cadre — elle redescend donc sous le
+titre.
 
 | Contrôle | Ce qu'il fait |
 |---|---|
 | **Rechercher…** | filtre sur le **nom** de l'asset, à la frappe |
 | **Type** | ne garde qu'une ou plusieurs sortes d'assets |
+| **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque |
 | **Icônes** / **Liste** | grille de vignettes, ou liste dense |
 | **Réduire** / **Agrandir** | la taille des vignettes |
 
@@ -86,7 +87,37 @@ Le message dit lequel des trois cas vous êtes, parce qu'ils appellent des répo
 |---|---|
 | **Clic** | sélectionne — l'Inspecteur, à droite, montre ses informations |
 | **Double-clic** | envoie l'asset dans **l'onglet ouvert devant vous** |
+| **Clic droit** | ouvre la liste de **toutes** ses destinations |
 | **Glisser-déposer** | dépose l'asset là où vous le lâchez |
+
+### Le clic droit dit ce que le double-clic ne montre pas
+
+Le double-clic prend **la première destination applicable**, et se tait sur les autres. Le clic
+droit les liste toutes :
+
+Les lignes apparaissent toujours dans le même ordre, celui que suit le double-clic :
+
+| Ligne | Où elle envoie l'asset | Pour quels types |
+|---|---|---|
+| **Utiliser comme ciel** | le ciel ouvert, espace Skyboxes | images |
+| **Ajouter à la scène** | la scène 3D ouverte | maillages |
+| **Ouvrir dans l'éditeur audio** | la prise ouverte, espace Audio | sons |
+| **Placer comme calque** | l'image ouverte, espace Image | images |
+| **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
+| **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
+| **Montrer dans le Finder** | ouvre le dossier qui contient le fichier | tous |
+
+Chaque ligne porte l'icône de son espace, la même que dans la barre de titre. Le menu ne montre
+que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n'offre pas
+de le poser comme ciel.
+
+**En revanche, une destination dont l'espace n'a pas de document ouvert reste affichée, mais
+grisée.** C'est délibéré : un menu qui change de longueur selon ce qui est ouvert est un menu
+qu'on ne peut pas apprendre. Une ligne grisée vous dit quoi faire — ouvrir un document dans cet
+espace — là où une ligne absente ne dit rien du tout.
+
+C'est aussi la réponse au piège du double-clic : quand rien ne bouge, le clic droit montre en une
+fois ce que cet asset peut faire, et ce qui manque pour qu'il le fasse.
 
 ### Le double-clic ne fait pas ce qu'on croit
 
@@ -144,6 +175,66 @@ dans le Finder, l'Explorateur ou votre gestionnaire de fichiers.
 
 > « **Fichier introuvable** » signifie qu'un média lié a été déplacé ou supprimé de son
 > emplacement d'origine. Voir la section suivante.
+
+---
+
+## La bibliothèque de votre compte
+
+Votre projet est un dossier sur votre disque. Votre compte Scenario, lui, a sa propre
+bibliothèque, en ligne. Les deux existent séparément, et **rien ne circule entre eux sans que
+vous le demandiez**.
+
+### Ce que le badge d'une vignette raconte
+
+Chaque vignette porte une petite marque qui dit où en est cet asset vis-à-vis de la
+bibliothèque :
+
+| Badge | Ce qu'il veut dire |
+|---|---|
+| **Local seulement** | le fichier est chez vous, la bibliothèque ne le connaît pas |
+| **Synchronisé** | les deux côtés ont la même version |
+| **Modifié ici — à envoyer** | votre copie a bougé depuis le dernier envoi |
+| **Modifié dans la bibliothèque — à rapatrier** | c'est l'autre côté qui a bougé |
+| **Modifié des deux côtés** | les deux versions ont divergé |
+| **Le dernier envoi a échoué** | la tentative précédente n'est pas passée |
+| **Appartient à un autre projet** | le jumeau en ligne relève d'une autre clé API que celle qui est active |
+
+Ce badge n'est pas stocké, il est **recalculé** : il dépend du compte actif, et une clé API
+ouvre sur un projet et un seul. Changez de compte dans la barre de titre, et les badges se
+relisent — c'est le même fichier, c'est la bibliothèque d'en face qui a changé.
+
+> **Quatre de ces sept badges sont hors d'atteinte aujourd'hui**, et c'est cohérent : tant que
+> les transferts se déclenchent à la main, rien ne peut modifier la version en ligne dans votre
+> dos. « À rapatrier », « modifié des deux côtés » et « autre projet » n'apparaîtront qu'avec la
+> synchronisation automatique, quand elle existera. Le filtre **Emplacement** ne propose donc que
+> les quatre états réellement atteignables : *local seulement*, *synchronisé*, *à envoyer* et
+> *échec*.
+
+### Envoyer une sélection
+
+Le bouton **Envoyer**, sur la ligne de titre de l'étagère, téléverse les assets **sélectionnés**
+dans la bibliothèque de votre compte.
+
+Trois choses le décrivent mieux qu'une phrase de présentation :
+
+- **il ne part jamais tout seul** — il faut une sélection, et un clic ;
+- **il refuse de se lancer deux fois** : pendant un transfert, le bouton est inactif, pour
+  qu'un second clic ne pousse pas par-dessus le premier ;
+- **il rend compte asset par asset.** Ce qui est passé passe, ce qui a échoué prend le badge
+  *échec* et une ligne dans le journal — un envoi n'est pas un tout ou rien.
+
+Un asset non sélectionné, ou un projet fermé, laisse le bouton grisé.
+
+> **Il n'y a pas encore de bouton pour rapatrier**, ni d'écran pour parcourir la bibliothèque
+> depuis le studio. Le studio sait le faire — le mécanisme est écrit et testé — mais aucune porte
+> ne le déclenche pour l'instant. Le sens du transfert est donc unique : de chez vous vers la
+> bibliothèque.
+
+### Nommer par ce que l'API voit
+
+Le bouton **Décrire**, à côté, demande à l'API de regarder les images sélectionnées et de leur
+donner un nom tiré de leur contenu. Rien ne part sans le clic, et les noms obtenus atterrissent
+dans le catalogue du projet.
 
 ---
 
