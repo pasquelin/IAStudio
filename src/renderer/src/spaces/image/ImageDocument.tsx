@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { reportFailure } from '@/services/diagnostics'
 import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
@@ -182,9 +183,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return clearGuides(documentId)
         case 'canvas.export': {
           const host = engine.current
-          // Swallowed here rather than left unhandled: a shortcut has nowhere to report to, and
-          // the dialog it opens is what says whether anything was written.
-          if (host) void exportPicture(documentId, host).catch(() => undefined)
+          // Reported rather than swallowed: a dismissed dialog and a refused write look exactly
+          // alike from here, and only one of the two is worth knowing about.
+          if (host) {
+            void exportPicture(documentId, host).catch(error =>
+              reportFailure('image.export', documentId, error),
+            )
+          }
           return
         }
         case 'canvas.deselect':

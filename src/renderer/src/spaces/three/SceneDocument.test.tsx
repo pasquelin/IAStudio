@@ -2,6 +2,9 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import type { SceneExportCommand } from '@shared/ipc'
+import { forgetReportedFailures } from '@/services/diagnostics'
+import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
@@ -46,6 +49,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setDisplayMode = setDisplayMode
     viewFrom = viewFrom
     frameSelection = frameSelection
+    exportTo = vi.fn(() => Promise.resolve(new Uint8Array([103, 108, 84, 70])))
   },
 }))
 
@@ -61,6 +65,11 @@ function meshesOf(documentId: string): SceneNode[] {
 // things it leaked.
 beforeEach(() => {
   vi.clearAllMocks()
+  // The export tests install a bridge; without this it would answer for the ones that follow.
+  vi.unstubAllGlobals()
+  // A report is said once per subject and the set lives at module scope: a second test on the
+  // same pair would otherwise watch a channel that has already had its say.
+  forgetReportedFailures()
   clearScenes()
   useSceneViews.setState({ views: {} })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
@@ -349,5 +358,50 @@ describe('how the scene is looked at', () => {
     await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
 
     expect(viewOf(useSceneViews.getState(), 'doc-2').projection).toBe('perspective')
+  })
+})
+
+describe('exporting the scene', () => {
+  /** The menu is what asks for an export; this is the hand that pulls its lever. */
+  function bridgeThatExports(exported: () => Promise<string | null>) {
+    let ask: ((command: SceneExportCommand) => void) | null = null
+
+    const watched = bridgeWatchingLogs({
+      menu: {
+        onSceneExport: callback => {
+          ask = callback
+          return () => {}
+        },
+      },
+      scene: { export: exported },
+    })
+
+    return { ...watched, ask: () => ask?.({ format: 'glb', scope: 'scene' }) }
+  }
+
+  it('hands the encoded scene over under the document title', async () => {
+    const exported = vi.fn(() => Promise.resolve('set.glb'))
+    const bridge = bridgeThatExports(exported)
+    render(<SceneDocument documentId="doc-1" />)
+
+    await act(async () => bridge.ask())
+
+    expect(exported).toHaveBeenCalledWith(expect.objectContaining({ name: 'Set dressing' }))
+  })
+
+  // Nothing awaits the export: a refused write would otherwise look exactly like a dismissed
+  // dialog, which is how a failed save goes unnoticed.
+  it('records a write the disk refused', async () => {
+    const bridge = bridgeThatExports(() => Promise.reject(new Error('read-only volume')))
+    render(<SceneDocument documentId="doc-1" />)
+
+    await act(async () => bridge.ask())
+
+    expect(bridge.report).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'scene.export',
+        message: expect.stringContaining('read-only volume'),
+      }),
+    )
   })
 })

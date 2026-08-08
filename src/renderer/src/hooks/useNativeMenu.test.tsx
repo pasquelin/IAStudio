@@ -4,7 +4,7 @@ import type { SceneAddRequest, Unsubscribe } from '@shared/ipc'
 import { installScene } from '@/stores/scene-fixtures'
 import type { CommandId } from '@shared/domain/command'
 import type { ToolId } from '@shared/domain/tool'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -20,9 +20,9 @@ vi.mock('@/app/document-io', () => ({
 const { useNativeMenu } = await import('./useNativeMenu')
 
 /** Holds the listener the hook registers on a menu channel, so the test can play the menu. */
-function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand'): { emit: (payload: T) => void } {
+function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand') {
   let listener: ((payload: T) => void) | null = null
-  installFakeBridge({
+  const watched = bridgeWatchingLogs({
     menu: {
       [channel]: (callback: (payload: T) => void): Unsubscribe => {
         listener = callback
@@ -32,7 +32,7 @@ function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand'): { emit: (payload: 
       },
     },
   })
-  return { emit: payload => listener?.(payload) }
+  return { ...watched, emit: (payload: T) => listener?.(payload) }
 }
 
 const captureSceneAdd = () => captureMenu<SceneAddRequest>('onSceneAdd')
@@ -117,14 +117,21 @@ describe('useNativeMenu', () => {
     expect(saveDocument).not.toHaveBeenCalled()
   })
 
-  // A menu command runs outside React: an unhandled rejection is the only thing a failed one
-  // could produce, and the studio has no surface to report it on yet.
-  it('does not let a failed command raise an unhandled rejection', () => {
+  /**
+   * A menu command runs outside React, so a failed one has nowhere to surface: the tab simply
+   * keeps its modified marker. The log is what says why it kept it.
+   */
+  it('records a save the project refused, rather than swallowing it', async () => {
     saveDocument.mockReturnValueOnce(Promise.reject(new Error('no project')))
     const menu = captureCommand()
     renderHook(() => useNativeMenu())
 
     expect(() => menu.emit('document.save')).not.toThrow()
+    await vi.waitFor(() =>
+      expect(menu.report).toHaveBeenCalledWith(
+        expect.objectContaining({ scope: 'document.save', message: expect.any(String) }),
+      ),
+    )
   })
 })
 

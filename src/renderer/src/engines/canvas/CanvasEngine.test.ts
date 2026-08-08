@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
+import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { layerFixture } from './canvas-fixtures'
 import {
   adjustmentLayer,
@@ -68,6 +69,8 @@ const gpu: {
   painted: number[]
   /** What the engine asked the asset loader for, so the parser it forces can be asserted. */
   loaded: { src: string; parser?: string }[]
+  /** Set by the one test that needs a load to fail: an asset whose file is gone. */
+  refuseLoad: boolean
   /** Every extraction, so what a snapshot framed and at what scale can be asserted. */
   extracted: { frame?: unknown; resolution?: number }[]
 } = {
@@ -80,6 +83,7 @@ const gpu: {
   containers: [],
   painted: [],
   loaded: [],
+  refuseLoad: false,
   extracted: [],
 }
 
@@ -263,6 +267,7 @@ vi.mock('pixi.js', () => {
     Assets: {
       load: (options: { src: string; parser?: string }) => {
         gpu.loaded.push(options)
+        if (gpu.refuseLoad) return Promise.reject(new Error('gone'))
         return Promise.resolve({ width: 200, height: 100 })
       },
     },
@@ -2091,5 +2096,32 @@ describe('the pixel history', () => {
 
     expect(patches).toEqual([])
     expect(gpu.renders).toBe(renders)
+  })
+})
+
+/**
+ * A layer whose asset is gone lists in the panel and draws nothing. The reconciliation must not
+ * fall over for it — one unreadable file must not take the rest of the document down — so the
+ * log is the only trace of it there will ever be.
+ */
+describe('a layer whose picture never arrives', () => {
+  it('records the asset that failed, and reconciles the rest of the document', async () => {
+    const watched = bridgeWatchingLogs()
+    gpu.refuseLoad = true
+
+    const { engine } = await mounted(
+      stacked([{ ...pixelLayer('a', 'A'), source: 'asset-gone' }, pixelLayer('b', 'B')]),
+    )
+
+    await vi.waitFor(() =>
+      expect(watched.report).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scope: 'canvas.layer',
+          message: expect.stringContaining('asset-gone'),
+        }),
+      ),
+    )
+    expect(engine).toBeDefined()
+    gpu.refuseLoad = false
   })
 })

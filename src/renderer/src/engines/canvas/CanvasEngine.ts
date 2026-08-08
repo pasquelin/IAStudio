@@ -14,6 +14,7 @@ import {
 import { assetUrl } from '@shared/domain/asset'
 import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
+import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
 import { onPaletteChange, token } from '../core/palette'
 import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
@@ -1256,9 +1257,11 @@ export class CanvasEngine {
     if (born) this.drainPendingPicture(layer.id, surface)
 
     if (born && layer.kind === 'pixel' && layer.source !== undefined) {
-      // Unawaited, and its failure swallowed: one unreadable asset must not take the rest of
-      // the document's reconciliation down with it.
-      void this.loadInto(layer.id, assetUrl(layer.source)).catch(() => undefined)
+      // Unawaited: one unreadable asset must not take the rest of the document's reconciliation
+      // down with it. The layer then lists in the panel and draws nothing, hence the report.
+      void this.loadInto(layer.id, assetUrl(layer.source)).catch(error =>
+        reportFailure('canvas.layer', layer.source ?? layer.id, error),
+      )
     }
 
     surface.sprite.visible = layer.visible

@@ -20,6 +20,8 @@ export type RefCache<T> = {
 export type RefCacheOptions<T> = {
   load: (key: string) => Promise<T>
   free: (value: T) => void
+  /** Told when a load fails. Injected like `load`, so the cache knows no more than it must. */
+  onFailure: (key: string, error: unknown) => void
 }
 
 type Entry<T> = {
@@ -28,7 +30,7 @@ type Entry<T> = {
   value: T | null
 }
 
-export function createRefCache<T>({ load, free }: RefCacheOptions<T>): RefCache<T> {
+export function createRefCache<T>({ load, free, onFailure }: RefCacheOptions<T>): RefCache<T> {
   const entries = new Map<string, Entry<T>>()
 
   const drop = (key: string, entry: Entry<T>): void => {
@@ -55,12 +57,17 @@ export function createRefCache<T>({ load, free }: RefCacheOptions<T>): RefCache<
           entry.value = value
           return value
         },
-        () => {
+        error => {
           // A failure leaves the caller without, rather than the panel broken — a missing file
           // is an ordinary thing in a project that moved. The next acquire tries again.
+          //
           // Only if the entry is still this one: released and re-acquired while it was in
-          // flight, deleting blindly would evict the load that is about to succeed.
-          if (entries.get(key) === entry) entries.delete(key)
+          // flight, deleting blindly would evict the load that is about to succeed — and
+          // reporting a stale failure would blame a file the scene is about to draw.
+          if (entries.get(key) !== entry) return null
+
+          entries.delete(key)
+          onFailure(key, error)
           return null
         },
       )

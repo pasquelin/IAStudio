@@ -101,6 +101,7 @@ const bridge: StudioBridge = {
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),
+    report: entry => ipcRenderer.invoke(CHANNELS.diagnosticsReport, entry),
   },
 }
 

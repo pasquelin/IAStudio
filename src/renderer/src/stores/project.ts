@@ -2,6 +2,7 @@ import i18next from 'i18next'
 import { create } from 'zustand'
 import type { Project } from '@shared/domain/project'
 import { getBridge } from '@/services/bridge'
+import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
 import { useAssets } from './assets'
 import { useDocuments } from './documents'
@@ -26,6 +27,9 @@ async function followProject(project: Project | null): Promise<void> {
   // A copied model names an asset of the project it came from: pasted into another one, it
   // would list in the outliner and draw nothing, with no way to tell why.
   useSceneClipboard.setState({ nodes: [] })
+  // Another project's assets are another story: a file that failed to load in the last one has
+  // nothing to say about this one, and a failure here is news again.
+  forgetReportedFailures()
   await Promise.all([useAssets.getState().refresh(), useDocuments.getState().refresh()])
 }
 

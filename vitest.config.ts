@@ -48,6 +48,10 @@ export default defineConfig({
           statements: -700,
           branches: -310,
         },
+        // Both at zero: the diagnostics channel is the studio's only trace of a failure that has
+        // no surface, and a branch of it nobody exercises is a failure nobody would ever read.
+        'src/main/diagnostics/**': { statements: 0, branches: 0 },
+        'src/renderer/src/services/**': { statements: 0, branches: 0 },
         'src/renderer/src/helpers/**': { statements: -30, branches: -28 },
         'src/renderer/src/hooks/**': { statements: -38, branches: -20 },
         // The renderer half of project-file serialization; `src/main/project/**` guards the other.

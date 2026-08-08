@@ -48,6 +48,7 @@ import {
   type MaterialTextures,
   type SpriteTexture,
 } from './material-textures'
+import { reportFailure } from '@/services/diagnostics'
 import { createGltfSource } from './gltf-source'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
@@ -213,8 +214,14 @@ export class SceneRenderer {
     // One cache for the whole scene: ten meshes sharing a map upload it once.
     this.textureCache = createTextureCache(
       options.loadTexture ?? (url => this.loader.loadAsync(url)),
+      (assetId, error) => reportFailure('scene.texture', assetId, error),
     )
-    this.modelCache = createModelCache(options.loadModel ?? createGltfSource())
+    this.modelCache = createModelCache(
+      options.loadModel ?? createGltfSource(),
+      // The node stays in the outliner and draws nothing: a corrupt or compressed GLB is
+      // otherwise indistinguishable from one that was never asked for.
+      (assetId, error) => reportFailure('scene.model', assetId, error),
+    )
     this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
 
     // No lights here: they are nodes of the state now, so the viewport shows what the outliner

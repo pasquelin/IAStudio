@@ -17,7 +17,10 @@ describe('createSkyBinding', () => {
     paint = vi.fn()
   })
 
-  const binding = () => createSkyBinding(createTextureCache(source.load), paint)
+  /** The failure port: what a cache tells its engine is that engine's business, not this one's. */
+  const silent = () => {}
+
+  const binding = () => createSkyBinding(createTextureCache(source.load, silent), paint)
 
   it('asks for the sky by asset id, and prefilters it once it has decoded', async () => {
     const environment = fakeEnvironment()
@@ -106,7 +109,7 @@ describe('createSkyBinding', () => {
     const sky = createSkyBinding(
       createTextureCache(async () => {
         throw new Error('gone')
-      }),
+      }, silent),
       paint,
     )
     const environment = fakeEnvironment()

@@ -2,6 +2,9 @@ import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, Texture } from 'thre
 import { describe, expect, it, vi } from 'vitest'
 import { createModelCache, disposeTree, instanceOf } from './model-cache'
 
+/** The failure port, silent unless a test watches it — the renderer's log is not this module's. */
+const silent = () => {}
+
 /** A stand-in for what `GLTFLoader` hands back: a tree, never one mesh. */
 function loaded(): Object3D {
   const root = new Object3D()
@@ -17,17 +20,28 @@ describe('createModelCache', () => {
     await createModelCache(async url => {
       urls.push(url)
       return loaded()
-    }).acquire('mesh-1')
+    }, silent).acquire('mesh-1')
 
     expect(urls[0]).toContain('mesh-1')
     expect(urls[0]).toMatch(/^scenario:/)
+  })
+
+  // A compressed or corrupt GLB leaves a node in the outliner drawing nothing: what the engine
+  // is told is the only trace there is.
+  it('tells which model failed to load, by asset rather than by url', async () => {
+    const onFailure = vi.fn()
+    const gone = new Error('unreadable')
+
+    await createModelCache(() => Promise.reject(gone), onFailure).acquire('mesh-1')
+
+    expect(onFailure).toHaveBeenCalledWith('mesh-1', gone)
   })
 
   it('frees the whole tree at the last release, not just its root', async () => {
     const object = loaded()
     const mesh = object.children[0]
     const dispose = mesh instanceof Mesh ? vi.spyOn(mesh.geometry, 'dispose') : null
-    const cache = createModelCache(async () => object)
+    const cache = createModelCache(async () => object, silent)
 
     await cache.acquire('mesh-1')
     cache.release('mesh-1')

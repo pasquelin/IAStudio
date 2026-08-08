@@ -69,6 +69,8 @@ export type Channels = {
 
   sceneExport: 'scene:export'
 
+  diagnosticsReport: 'diagnostics:report'
+
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
   windowWorkspace: 'window:workspace'
@@ -123,6 +125,8 @@ export const CHANNELS: Channels = {
 
   sceneExport: 'scene:export',
 
+  diagnosticsReport: 'diagnostics:report',
+
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
   windowWorkspace: 'window:workspace',
@@ -150,10 +154,52 @@ export type SceneExportRequest = {
 
 export type LogLevel = 'info' | 'warn' | 'error'
 
+export const LOG_LEVELS: readonly LogLevel[] = ['info', 'warn', 'error']
+
 /**
- * A line the main process wants visible in the renderer's console. The API calls leave from
- * the main process, so they never show up in the renderer's Network tab; without this mirror
- * the only place to watch them is the terminal the app was launched from.
+ * Where in the renderer a failure was born. An inventory rather than free text: it is what a
+ * reader greps for, and a typo in a string nobody reads back is a line that never surfaces.
+ * The main process checks a report against this very list — see `registerDiagnosticsHandlers`.
+ */
+export type LogScope =
+  | 'scene.model'
+  | 'scene.texture'
+  | 'scene.export'
+  | 'texture.map'
+  | 'skybox.source'
+  | 'canvas.layer'
+  | 'image.export'
+  | 'document.save'
+
+export const LOG_SCOPES: readonly LogScope[] = [
+  'scene.model',
+  'scene.texture',
+  'scene.export',
+  'texture.map',
+  'skybox.source',
+  'canvas.layer',
+  'image.export',
+  'document.save',
+]
+
+/**
+ * Long enough for a stack trace, short enough that a renderer looping on a failure cannot fill
+ * the terminal. Applied on both sides: by the sender so the boundary carries no more than it
+ * has to, by the main process because the sandboxed side is trusted for nothing.
+ */
+export const MAX_LOG_MESSAGE = 4000
+
+/**
+ * A logged line, travelling either way.
+ *
+ * Towards the renderer, it is what the main process wants visible in devtools: the API calls
+ * leave from the main process, so they never show up in the renderer's Network tab, and without
+ * this mirror the terminal the app was launched from is the only place to watch them.
+ *
+ * Towards the main process, it is a failure the renderer has no other way to record — the log
+ * belongs to the main process, and a `console.error` in a component would leave nothing behind
+ * in a packaged build. The scope is prefixed on arrival, so a line always says which side it
+ * came from.
  */
 export type LogEntry = {
   level: LogLevel
@@ -329,5 +375,11 @@ export type StudioBridge = {
   }
   diagnostics: {
     onLog: (callback: (entry: LogEntry) => void) => Unsubscribe
+    /**
+     * The other direction: a failure born in the renderer, recorded by the process that owns the
+     * log. Fire and forget — nothing decides anything on the answer, and a caller that awaited it
+     * would make reporting a failure cost a round trip.
+     */
+    report: (entry: LogEntry) => Promise<void>
   }
 }

@@ -14,8 +14,11 @@ export type ModelCache = RefCache<Object3D>
  * shares geometries and materials, which is the whole point: the GPU uploads them once, and
  * freeing the source at the last release frees them for every clone at the same time.
  */
-export function createModelCache(load: ModelSource): ModelCache {
-  return createRefCache({ load: assetId => load(assetUrl(assetId)), free: disposeTree })
+export function createModelCache(
+  load: ModelSource,
+  onFailure: (assetId: string, error: unknown) => void,
+): ModelCache {
+  return createRefCache({ load: assetId => load(assetUrl(assetId)), free: disposeTree, onFailure })
 }
 
 /**

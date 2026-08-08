@@ -10,6 +10,7 @@ import {
   type Texture,
 } from 'three'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
+import { reportFailure } from '@/services/diagnostics'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
@@ -56,7 +57,9 @@ export class TextureRenderer {
   private readonly sky: SkyBinding
 
   constructor(options: TextureRendererOptions) {
-    this.cache = createTextureCache(options.loadTexture)
+    this.cache = createTextureCache(options.loadTexture, (assetId, error) =>
+      reportFailure('texture.map', assetId, error),
+    )
     this.sky = createSkyBinding(this.cache, () => this.paintBackground())
     this.viewport.camera.position.set(0, 0.6, 3.2)
     this.viewport.scene.add(this.mesh)

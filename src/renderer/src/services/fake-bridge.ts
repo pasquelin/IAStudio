@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import type { StudioBridge } from '@shared/ipc'
+import type { LogEntry, StudioBridge } from '@shared/ipc'
 
 const noSubscription = (): (() => void) => () => {}
 
@@ -90,6 +90,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     diagnostics: {
       onLog: noSubscription,
+      report: () => Promise.resolve(),
       ...overrides.diagnostics,
     },
     menu: {
@@ -103,4 +104,15 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
 
   vi.stubGlobal('studio', bridge)
   return bridge
+}
+
+/**
+ * A bridge whose log channel is watched. Four suites had grown their own copy of the same spy,
+ * and the entries it collects are what `reportFailure` is asserted on.
+ */
+export function bridgeWatchingLogs(overrides: BridgeOverrides = {}) {
+  const report = vi.fn((_entry: LogEntry) => Promise.resolve())
+  installFakeBridge({ ...overrides, diagnostics: { report, ...overrides.diagnostics } })
+
+  return { report, entries: () => report.mock.calls.map(([entry]) => entry) }
 }
