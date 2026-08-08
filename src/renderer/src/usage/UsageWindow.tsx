@@ -8,7 +8,7 @@ import {
   type UsageReport,
 } from '@shared/domain/usage'
 import { UiIcon } from '@/design/UiIcon'
-import { DRAGGABLE } from '@/helpers/app-region'
+import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { UsageActivities } from './UsageActivities'
@@ -46,6 +46,32 @@ export function UsageWindow() {
         className="flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 text-[13px] font-medium"
       >
         {t('usage.title')}
+
+        {/* A dragged surface swallows clicks; every control inside has to switch back. */}
+        <div
+          style={CLICKABLE}
+          role="group"
+          aria-label={t('usage.period.label')}
+          className="ml-auto flex gap-0.5"
+        >
+          {USAGE_PERIODS.map(days => (
+            <button
+              key={days}
+              type="button"
+              aria-pressed={days === period}
+              onClick={() => setPeriod(days)}
+              className={cn(
+                'flex h-(--sc-control) cursor-pointer items-center justify-center',
+                'rounded-(--radius-sc-sm) border-none px-2.5 text-xs font-normal',
+                days === period
+                  ? 'bg-primary text-primary-content'
+                  : 'hover:bg-base-300 bg-transparent',
+              )}
+            >
+              {t('usage.period.short', { count: days })}
+            </button>
+          ))}
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -53,26 +79,6 @@ export function UsageWindow() {
           aria-label={t('usage.title')}
           className="border-base-300 flex w-56 shrink-0 flex-col gap-2 overflow-auto border-r p-2"
         >
-          <div role="group" aria-label={t('usage.period.label')} className="flex gap-0.5">
-            {USAGE_PERIODS.map(days => (
-              <button
-                key={days}
-                type="button"
-                aria-pressed={days === period}
-                onClick={() => setPeriod(days)}
-                className={cn(
-                  'flex h-(--sc-control) flex-1 cursor-pointer items-center justify-center',
-                  'rounded-(--radius-sc-sm) border-none text-xs',
-                  days === period
-                    ? 'bg-primary text-primary-content'
-                    : 'hover:bg-base-300 bg-transparent',
-                )}
-              >
-                {t('usage.period.short', { count: days })}
-              </button>
-            ))}
-          </div>
-
           <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
             {SECTIONS.map(id => (
               <li key={id}>
