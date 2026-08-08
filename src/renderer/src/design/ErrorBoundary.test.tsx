@@ -56,6 +56,9 @@ describe('ErrorBoundary', () => {
     )
 
     const reported = vi.mocked(console.error).mock.calls.flat().join(' ')
+    // The prefix is ours: React reports caught errors on its own, so asserting only on the
+    // message and the stack would pass with `componentDidCatch` deleted.
+    expect(reported).toContain('Panel failed to render:')
     expect(reported).toContain('panel exploded')
     expect(reported).toContain('Boom')
   })

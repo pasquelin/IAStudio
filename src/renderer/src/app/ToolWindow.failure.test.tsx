@@ -49,6 +49,21 @@ describe('a panel whose tool throws', () => {
   })
 })
 
+describe('a half switched to another tool', () => {
+  it('does not hand the failure of the last tool to the next one', () => {
+    const { rerender } = render(
+      <ToolWindow tool="assets" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />,
+    )
+    expect(screen.getByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
+
+    // What the rail does: same element, another tool. The boundary must not survive it.
+    rerender(<ToolWindow tool="layers" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+
+    expect(screen.getByText('layer list')).toBeInTheDocument()
+    expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
+  })
+})
+
 describe('a panel whose header actions throw', () => {
   it('drops the actions and keeps both the content and the close button', () => {
     render(<ToolWindow tool="layers" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)

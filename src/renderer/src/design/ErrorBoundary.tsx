@@ -31,9 +31,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   override render(): ReactNode {
     if (!this.state.failed) return this.props.children
-    // Compared to `undefined`, not `??`: `fallback={null}` means "show nothing", and `??`
-    // would read that as "not given" and put the notice back.
-    if (this.props.fallback !== undefined) return this.props.fallback
+    // `in`, not `??` nor a comparison: both `null` and `undefined` are ways of asking for
+    // nothing, and either would otherwise read as "not given" and put the notice back.
+    if ('fallback' in this.props) return this.props.fallback
     return <PanelFailure onRetry={this.retry} />
   }
 }

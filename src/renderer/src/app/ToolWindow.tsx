@@ -83,15 +83,16 @@ export const ToolWindow = memo(function ToolWindow({
           {/* Its own boundary, and an empty one: actions that throw must not take the close
               button with them, and a failure notice does not fit on a header row. */}
           {Actions !== undefined && (
-            <ErrorBoundary fallback={null}>
+            <ErrorBoundary key={tool} fallback={null}>
               <Actions />
             </ErrorBoundary>
           )}
         </PanelHeader>
         <div className="min-h-0 flex-1 overflow-auto">
           {/* Inside the panel, not around it: a tool that throws keeps its header, so it can
-              still be closed. */}
-          <ErrorBoundary>
+              still be closed. Keyed by the tool — the rail swaps `tool` on this same element,
+              and a boundary left standing would hand its failure to the tool that replaced it. */}
+          <ErrorBoundary key={tool}>
             <Content />
           </ErrorBoundary>
         </div>
