@@ -289,10 +289,10 @@ vi.mock('pixi.js', () => {
     // Carries its four numbers: the eyedropper's whole point is which frame it asks for.
     Rectangle: class {
       constructor(
-        readonly x = 0,
-        readonly y = 0,
-        readonly width = 0,
-        readonly height = 0,
+        readonly x: number,
+        readonly y: number,
+        readonly width: number,
+        readonly height: number,
       ) {}
     },
     Texture: class {},
@@ -2725,7 +2725,7 @@ describe('the wheel', () => {
   it.each([
     { how: 'ctrl', ctrlKey: true, metaKey: false },
     { how: 'meta', ctrlKey: false, metaKey: true },
-  ])('zooms on $how held with it', async ({ ctrlKey, metaKey }) => {
+  ])('zooms with $how held', async ({ ctrlKey, metaKey }) => {
     const { host, viewports } = await mounted()
 
     wheel(host, { deltaY: -100, ctrlKey, metaKey })
