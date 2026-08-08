@@ -1192,9 +1192,16 @@
       "activities": "Activities",
       "journal": "Log"
     },
+    "descriptions": {
+      "overview": "What all your keys spent over the period.",
+      "models": "Which models cost what, and how many generations each one served.",
+      "activities": "What was done, and what came out of it.",
+      "journal": "Every billable event, newest first."
+    },
     "period": {
       "label": "Period",
-      "days": "{{count}} days"
+      "days": "{{count}} days",
+      "short": "{{count}}d"
     },
     "refresh": "Refresh",
     "loading": "Reading usage…",

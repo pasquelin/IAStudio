@@ -1197,9 +1197,16 @@
       "activities": "Activités",
       "journal": "Journal"
     },
+    "descriptions": {
+      "overview": "Ce que toutes vos clés ont dépensé sur la période.",
+      "models": "Quels modèles ont coûté, et combien de générations chacun a servi.",
+      "activities": "Ce qui a été fait, et ce qui en est sorti.",
+      "journal": "Chaque événement facturé, du plus récent au plus ancien."
+    },
     "period": {
       "label": "Période",
-      "days": "{{count}} jours"
+      "days": "{{count}} jours",
+      "short": "{{count}} j"
     },
     "refresh": "Actualiser",
     "loading": "Lecture de la consommation…",

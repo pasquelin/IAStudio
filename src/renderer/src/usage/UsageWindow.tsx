@@ -1,3 +1,4 @@
+import { mdiRefresh } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -6,6 +7,7 @@ import {
   type UsagePeriod,
   type UsageReport,
 } from '@shared/domain/usage'
+import { UiIcon } from '@/design/UiIcon'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
@@ -22,9 +24,9 @@ const SECTIONS: readonly UsageSectionId[] = ['overview', 'models', 'activities',
 /**
  * What every stored key has spent, in its own window off the Help menu.
  *
- * Outside the docks, so DaisyUI rather than the design system — this is the application being an
- * application, and it borrows the preferences' shape for the same reason: four screens, read one
- * at a time, where the log must not load until it is asked for.
+ * Built on the settings window's shape rather than its own: sections on the left, the selected
+ * one on the right, the control that scopes everything at the top of the nav — where the
+ * settings search sits, and for the same reason.
  *
  * Consumption only. The API publishes no balance, no quota and no subscription state, so nothing
  * here can answer "how much is left" — which is why the window says so rather than implying it.
@@ -38,76 +40,93 @@ export function UsageWindow() {
   const { report, loading, failure, reload } = useUsageReport(period)
 
   return (
-    <div className="bg-base-200 text-base-content flex h-screen flex-col">
+    <div className="bg-base-200 text-base-content flex h-full flex-col">
       <header
         style={DRAGGABLE}
-        className="flex shrink-0 items-center gap-3 pt-2 pr-4 pb-2 pl-24 text-[13px] font-medium"
+        className="flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 text-[13px] font-medium"
       >
         {t('usage.title')}
-
-        <div className="ml-auto flex items-center gap-2">
-          <select
-            aria-label={t('usage.period.label')}
-            className="select select-xs w-28"
-            value={period}
-            onChange={event => setPeriod(periodOf(event.target.value))}
-          >
-            {USAGE_PERIODS.map(days => (
-              <option key={days} value={days}>
-                {t('usage.period.days', { count: days })}
-              </option>
-            ))}
-          </select>
-
-          <button type="button" className="btn btn-xs" onClick={reload} disabled={loading}>
-            {t('usage.refresh')}
-          </button>
-        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
         <nav
           aria-label={t('usage.title')}
-          className="border-base-300 flex w-44 shrink-0 flex-col gap-0.5 overflow-auto border-r p-2"
+          className="border-base-300 flex w-56 shrink-0 flex-col gap-2 overflow-auto border-r p-2"
         >
-          {SECTIONS.map(id => (
-            <button
-              key={id}
-              type="button"
-              aria-current={id === section ? 'page' : undefined}
-              onClick={() => setSection(id)}
-              className={cn(
-                'cursor-pointer rounded px-2 py-1 text-left text-xs',
-                id === section ? 'bg-base-300 font-medium' : 'hover:bg-base-300/60',
-              )}
-            >
-              {t(`usage.sections.${id}`)}
-            </button>
-          ))}
+          <div role="group" aria-label={t('usage.period.label')} className="flex gap-0.5">
+            {USAGE_PERIODS.map(days => (
+              <button
+                key={days}
+                type="button"
+                aria-pressed={days === period}
+                onClick={() => setPeriod(days)}
+                className={cn(
+                  'flex h-(--sc-control) flex-1 cursor-pointer items-center justify-center',
+                  'rounded-(--radius-sc-sm) border-none text-xs',
+                  days === period
+                    ? 'bg-primary text-primary-content'
+                    : 'hover:bg-base-300 bg-transparent',
+                )}
+              >
+                {t('usage.period.short', { count: days })}
+              </button>
+            ))}
+          </div>
+
+          <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+            {SECTIONS.map(id => (
+              <li key={id}>
+                <button
+                  type="button"
+                  aria-current={id === section ? 'page' : undefined}
+                  onClick={() => setSection(id)}
+                  className={cn(
+                    'flex h-(--sc-control) w-full cursor-pointer items-center rounded-(--radius-sc-sm)',
+                    'border-none bg-transparent pr-3 pl-3 text-left text-xs',
+                    id === section ? 'bg-primary text-primary-content' : 'hover:bg-base-300',
+                  )}
+                >
+                  {t(`usage.sections.${id}`)}
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            type="button"
+            onClick={reload}
+            disabled={loading}
+            className={cn(
+              'mt-auto flex h-(--sc-control) w-full cursor-pointer items-center gap-1.5',
+              'rounded-(--radius-sc-sm) border-none bg-transparent px-3 text-left text-xs',
+              'hover:bg-base-300 disabled:cursor-default disabled:opacity-50',
+            )}
+          >
+            <UiIcon path={mdiRefresh} size={14} />
+            {t('usage.refresh')}
+          </button>
         </nav>
 
         <main className="min-w-0 flex-1 overflow-auto px-6 py-4">
+          <h2 className="mb-1 text-base font-semibold">{t(`usage.sections.${section}`)}</h2>
+          <p className="text-base-content/60 mb-4 text-xs">{t(`usage.descriptions.${section}`)}</p>
+
           {failure ? (
             <div className="flex flex-col items-start gap-2">
-              <p className="text-sm">{t('usage.failure')}</p>
+              <p className="text-xs">{t('usage.failure')}</p>
               <button type="button" className="btn btn-xs" onClick={reload}>
                 {t('usage.retry')}
               </button>
             </div>
-          ) : loading && !report ? (
-            <p className="text-base-content/60 text-xs">{t('usage.loading')}</p>
           ) : report ? (
             <Section id={section} period={period} report={report} />
-          ) : null}
+          ) : (
+            <p className="text-base-content/60 text-xs">{t('usage.loading')}</p>
+          )}
         </main>
       </div>
     </div>
   )
-}
-
-/** The select hands back a string; anything unexpected falls back to the default period. */
-function periodOf(value: string): UsagePeriod {
-  return USAGE_PERIODS.find(days => String(days) === value) ?? DEFAULT_USAGE_PERIOD
 }
 
 type SectionProps = {
