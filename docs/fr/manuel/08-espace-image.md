@@ -112,6 +112,24 @@ Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 > pinceau : le premier clic sur une image que vous venez d'ouvrir ne doit pas pouvoir y laisser
 > une trace. Le pinceau est à une touche — `P`.
 
+### Retourner et pivoter le document — menu **Image**
+
+Quatre entrées, qui agissent sur **tout le document**, calques compris — pas sur le calque actif :
+
+| Entrée | Ce qu'elle fait |
+|---|---|
+| **Miroir horizontal** | retourne le document de gauche à droite |
+| **Miroir vertical** | retourne le document de haut en bas |
+| **Rotation horaire** | un quart de tour vers la droite ; **le cadre pivote avec** — un portrait devient un paysage |
+| **Rotation antihoraire** | un quart de tour vers la gauche, même chose |
+
+Aucune n'a de raccourci par défaut : le menu est leur seule porte. Vous pouvez leur en donner un
+dans les [réglages](14-reglages.md), comme à n'importe quelle commande.
+
+> **Un miroir suivi du même miroir rend exactement l'image de départ.** Ce n'est pas une évidence :
+> le studio retourne le calque plutôt que de réécrire ses pixels, et c'est ce qui évite qu'un
+> aller-retour laisse une trace d'arrondi.
+
 ### Groupe Cadre
 
 | Outil | Raccourci | Ce qu'il fait |

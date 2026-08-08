@@ -60,6 +60,10 @@ export type CommandId =
   | 'canvas.vectorize'
   | 'canvas.extend'
   | 'canvas.export'
+  | 'canvas.flipHorizontal'
+  | 'canvas.flipVertical'
+  | 'canvas.rotateCw'
+  | 'canvas.rotateCcw'
   | 'canvas.snap'
   | 'canvas.undo'
   | 'canvas.redo'
@@ -364,6 +368,34 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasZoomActual.title',
     helpKey: 'commands.canvasZoomActual.help',
     defaultBinding: 'Meta+Digit1',
+  }),
+  command({
+    id: 'canvas.flipHorizontal',
+    scope: 'canvas',
+    titleKey: 'commands.canvasFlipHorizontal.title',
+    helpKey: 'commands.canvasFlipHorizontal.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.flipVertical',
+    scope: 'canvas',
+    titleKey: 'commands.canvasFlipVertical.title',
+    helpKey: 'commands.canvasFlipVertical.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.rotateCw',
+    scope: 'canvas',
+    titleKey: 'commands.canvasRotateCw.title',
+    helpKey: 'commands.canvasRotateCw.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.rotateCcw',
+    scope: 'canvas',
+    titleKey: 'commands.canvasRotateCcw.title',
+    helpKey: 'commands.canvasRotateCcw.help',
+    defaultBinding: null,
   }),
   command({
     id: 'canvas.rulers',

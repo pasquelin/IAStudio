@@ -608,6 +608,7 @@
     "edit": "Edit",
     "view": "View",
     "window": "Window",
+    "image": "Image",
     "newProject": "New project…",
     "openProject": "Open project…",
     "saveDocument": "Save",
@@ -1024,6 +1025,22 @@
     "canvasExtend": {
       "title": "Extend",
       "help": "Ask the model to paint beyond the edges of the flattened image"
+    },
+    "canvasFlipHorizontal": {
+      "title": "Flip horizontal",
+      "help": "Mirror the whole document left to right, layers included"
+    },
+    "canvasFlipVertical": {
+      "title": "Flip vertical",
+      "help": "Mirror the whole document top to bottom, layers included"
+    },
+    "canvasRotateCw": {
+      "title": "Rotate clockwise",
+      "help": "Turn the document a quarter turn to the right: the frame turns with it"
+    },
+    "canvasRotateCcw": {
+      "title": "Rotate counter-clockwise",
+      "help": "Turn the document a quarter turn to the left: the frame turns with it"
     },
     "canvasExport": {
       "title": "Export the image",

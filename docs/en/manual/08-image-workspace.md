@@ -108,6 +108,24 @@ In other words: an armed tool never needs the menu to be taken up again.
 > first click on a picture you have just opened must not be able to leave a mark on it. The
 > brush is one key away — `P`.
 
+### Flipping and turning the document — the **Image** menu
+
+Four entries, acting on the **whole document**, layers included — not on the active layer:
+
+| Entry | What it does |
+|---|---|
+| **Flip horizontal** | mirrors the document left to right |
+| **Flip vertical** | mirrors the document top to bottom |
+| **Rotate clockwise** | a quarter turn to the right; **the frame turns with it** — a portrait becomes a landscape |
+| **Rotate counter-clockwise** | a quarter turn to the left, same thing |
+
+None ships with a shortcut: the menu is their only way in. You can give them one in
+[settings](14-settings.md), as with any other command.
+
+> **A mirror followed by the same mirror gives back exactly the picture you started from.** That is
+> not a given: the studio turns the layer rather than rewriting its pixels, which is what keeps a
+> round trip from leaving a rounding trace.
+
 ### Frame group
 
 | Tool | Shortcut | What it does |

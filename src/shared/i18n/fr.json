@@ -608,6 +608,7 @@
     "edit": "Édition",
     "view": "Affichage",
     "window": "Fenêtre",
+    "image": "Image",
     "newProject": "Nouveau projet…",
     "openProject": "Ouvrir un projet…",
     "saveDocument": "Enregistrer",
@@ -1024,6 +1025,22 @@
     "canvasExtend": {
       "title": "Étendre",
       "help": "Demander au modèle de peindre au-delà des bords de l’image aplatie"
+    },
+    "canvasFlipHorizontal": {
+      "title": "Miroir horizontal",
+      "help": "Retourner tout le document de gauche à droite, calques compris"
+    },
+    "canvasFlipVertical": {
+      "title": "Miroir vertical",
+      "help": "Retourner tout le document de haut en bas, calques compris"
+    },
+    "canvasRotateCw": {
+      "title": "Rotation horaire",
+      "help": "Pivoter le document d\u2019un quart de tour vers la droite : le cadre pivote avec lui"
+    },
+    "canvasRotateCcw": {
+      "title": "Rotation antihoraire",
+      "help": "Pivoter le document d\u2019un quart de tour vers la gauche : le cadre pivote avec lui"
     },
     "canvasExport": {
       "title": "Exporter l’image",

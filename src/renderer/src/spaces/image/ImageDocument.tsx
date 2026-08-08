@@ -13,7 +13,7 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
 import { useBindingOverrides } from '@/stores/bindings'
-import { addLayer } from '@/engines/canvas/commands'
+import { addLayer, flipImage, rotateImage } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
@@ -209,6 +209,14 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           void prepareEdit(documentId, edit, host, bridge.scenario).catch(() => undefined)
           return
         }
+        case 'canvas.flipHorizontal':
+          return useCanvases.getState().runCommand(documentId, flipImage('horizontal'))
+        case 'canvas.flipVertical':
+          return useCanvases.getState().runCommand(documentId, flipImage('vertical'))
+        case 'canvas.rotateCw':
+          return useCanvases.getState().runCommand(documentId, rotateImage(true))
+        case 'canvas.rotateCcw':
+          return useCanvases.getState().runCommand(documentId, rotateImage(false))
         case 'canvas.undo':
           return useCanvases.getState().undo(documentId)
         case 'canvas.redo':
