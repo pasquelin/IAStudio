@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { layerFixture } from './canvas-fixtures'
+import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import {
   allLayers,
   clampOpacity,
   DEFAULT_CANVAS,
+  DEFAULT_TEXT_SIZE,
   deserializeCanvas,
   IDENTITY,
   layerById,
@@ -179,5 +181,105 @@ describe('mapLayers', () => {
     const pruned = mapLayers(tree.layers, layer => (layer.id === 'a' ? null : layer))
 
     expect(allLayers(pruned).map(layer => layer.id)).toEqual(['g', 'b'])
+  })
+})
+
+describe('reading back the kinds this build added', () => {
+  const read = (layers: unknown[]) =>
+    deserializeCanvas(JSON.stringify({ ...DEFAULT_CANVAS, layers, activeLayerId: 'a' }))
+
+  /**
+   * The four kinds a document may have been saved with before the grading pass existed. Each
+   * lands on the dial that does its job, so an older file opens showing something rather than an
+   * empty row.
+   */
+  it('lands a retired adjustment kind on the dial that does its job', () => {
+    const retired = ['levels', 'curves', 'hsl', 'colorBalance']
+    const layers = retired.map((adjustment, at) => ({
+      id: `a${at}`,
+      kind: 'adjustment',
+      adjustment,
+    }))
+
+    const kinds = read(layers).layers.map(layer => layer.kind === 'adjustment' && layer.adjustment)
+    expect(kinds).toEqual(['exposure', 'contrast', 'saturation', 'temperature'])
+  })
+
+  it('falls back to exposure for a kind no build ever wrote', () => {
+    const [layer] = read([{ id: 'a', kind: 'adjustment', adjustment: 'nonsense' }]).layers
+
+    expect(layer?.kind === 'adjustment' && layer.adjustment).toBe('exposure')
+  })
+
+  it('opens an adjustment saved before it carried values at neutral', () => {
+    const [layer] = read([{ id: 'a', kind: 'adjustment', adjustment: 'exposure' }]).layers
+
+    expect(layer?.kind === 'adjustment' && layer.values).toEqual(NEUTRAL_ADJUSTMENTS)
+  })
+
+  it('keeps the values a graded layer was saved with, and neutralises what is missing', () => {
+    const [layer] = read([
+      {
+        id: 'a',
+        kind: 'adjustment',
+        adjustment: 'exposure',
+        values: { exposure: 1.5, contrast: 'x' },
+      },
+    ]).layers
+
+    expect(layer?.kind === 'adjustment' && layer.values).toMatchObject({
+      exposure: 1.5,
+      contrast: 1,
+    })
+  })
+
+  it('reads a caption back with its words, its size and its colour', () => {
+    const [layer] = read([{ id: 'a', kind: 'text', text: 'Hello', size: 72, color: 255 }]).layers
+
+    expect(layer).toMatchObject({ kind: 'text', text: 'Hello', size: 72, color: 255 })
+  })
+
+  it('opens a caption whose fields were lost rather than dropping the layer', () => {
+    const [layer] = read([{ id: 'a', kind: 'text' }]).layers
+
+    expect(layer).toMatchObject({ kind: 'text', text: '', size: DEFAULT_TEXT_SIZE, color: 0 })
+  })
+
+  // Its presence is what owns a texture; `enabled` only says whether it hides anything.
+  it('reads a mask back, defaulting both of its flags to on', () => {
+    const [layer] = read([{ id: 'a', mask: {} }]).layers
+
+    expect(layer?.mask).toEqual({ enabled: true, linked: true })
+  })
+
+  it('keeps a mask that was saved switched off', () => {
+    const [layer] = read([{ id: 'a', mask: { enabled: false, linked: false } }]).layers
+
+    expect(layer?.mask).toEqual({ enabled: false, linked: false })
+  })
+
+  it('carries the asset a layer was born holding', () => {
+    const [layer] = read([{ id: 'a', kind: 'pixel', source: 'asset-7' }]).layers
+
+    expect(layer).toMatchObject({ kind: 'pixel', source: 'asset-7' })
+  })
+
+  it('drops a source that is not an id', () => {
+    const [layer] = read([{ id: 'a', kind: 'pixel', source: 42 }]).layers
+
+    expect(layer?.kind === 'pixel' && layer.source).toBeUndefined()
+  })
+
+  it('keeps the guides it can read and skips the ones it cannot', () => {
+    const state = deserializeCanvas(
+      JSON.stringify({
+        ...DEFAULT_CANVAS,
+        layers: [{ id: 'a' }],
+        activeLayerId: 'a',
+        guides: [{ id: 'g', axis: 'y', position: 40 }, { id: 'broken' }, 'nonsense'],
+      }),
+    )
+
+    expect(state.guides).toEqual([{ id: 'g', axis: 'y', position: 40 }])
   })
 })
