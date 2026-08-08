@@ -1,10 +1,10 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { PanelFailure } from './PanelFailure'
+import { Failure } from './Failure'
 
 export type ErrorBoundaryProps = {
   children: ReactNode
-  /** Shown instead of the panel notice, for a surface too small to explain itself — a header. */
-  fallback?: ReactNode
+  /** For a surface the notice does not suit — a header, a whole window. `() => null` shows nothing. */
+  fallback?: (retry: () => void) => ReactNode
 }
 
 type ErrorBoundaryState = {
@@ -22,7 +22,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   override componentDidCatch(error: unknown, info: ErrorInfo): void {
     // A render stack is renderer-local, and devtools is where it is read — unlike the API calls
     // CLAUDE.md sends to the main log, which never appear here at all.
-    console.error('Panel failed to render:', error, info.componentStack)
+    console.error('Render failed:', error, info.componentStack)
   }
 
   private readonly retry = (): void => {
@@ -31,9 +31,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   override render(): ReactNode {
     if (!this.state.failed) return this.props.children
-    // `in`, not `??` nor a comparison: both `null` and `undefined` are ways of asking for
-    // nothing, and either would otherwise read as "not given" and put the notice back.
-    if ('fallback' in this.props) return this.props.fallback
-    return <PanelFailure onRetry={this.retry} />
+
+    const { fallback } = this.props
+    return fallback ? fallback(this.retry) : <Failure scope="panel" onRetry={this.retry} />
   }
 }

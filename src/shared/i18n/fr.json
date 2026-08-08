@@ -508,7 +508,8 @@
     "invalidValue": "Valeur invalide.",
     "rejected": "La génération a échoué.",
     "storage": "Impossible d’enregistrer le résultat sur le disque.",
-    "panelCrashed": "Ce panneau a rencontré une erreur."
+    "panelCrashed": "Ce panneau a rencontré une erreur.",
+    "windowCrashed": "L’application a rencontré une erreur."
   },
   "menu": {
     "file": "Fichier",
