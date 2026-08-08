@@ -96,10 +96,8 @@ It sits at the top of the document. The tools are **grouped**, as in Figma:
 
 In other words: an armed tool never needs the menu to be taken up again.
 
-> **The keys listed below are not active yet.** `V`, `P`, `E`… are shown in the menus and
-> tooltips, but **nothing listens for them**: a tool is picked with the mouse. They are the keys
-> planned, not shortcuts in service. The ones that really work in the Image workspace are in
-> [Every shortcut](15-shortcuts.md) — zoom, rulers, guides, selection, model edits, export, undo.
+> **The keys below arm the tool**, and they remap like every other one: each tool is a command in
+> its own right, listed under **Settings ▸ Shortcuts**. See [Every shortcut](15-shortcuts.md).
 
 ### Cursor group
 
@@ -183,8 +181,8 @@ The frame never leaves the picture — a crop trims, it does not grow.
 | Tool | Shortcut | What it does |
 |---|---|---|
 | **Rectangle** | `R` | Shift for a square |
-| **Line** | `L` | Shift constrains it to 45° |
-| **Arrow** | `⇧L` | Shift constrains it to 45° |
+| **Line** | `⇧R` | Shift constrains it to 45° |
+| **Arrow** | `A` | Shift constrains it to 45° |
 | **Ellipse** | `O` | Shift for a circle |
 | **Polygon** | — | drawn from its centre |
 | **Star** | — | drawn from its centre |

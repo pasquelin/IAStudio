@@ -83,17 +83,17 @@ They are visible in the toolbar, greyed out.
 exist. Comment was the last to fall into line: it armed like the others, changed the cursor, and
 left the engine dropping every click — a button that looked alive without being so.
 
-### Tool keys are not listened for
+### In Video, tool keys are not listened for
 
-The toolbar shows a key beside each tool — `V` for move, `P` for the brush, `E` for the eraser.
-**None of them is active.** They appear in the menus and tooltips, and nothing in the studio
-resolves them: a tool is picked with the mouse.
+The edit's toolbar shows `V`, `C` and `H` beside its three tools. **None of them is active**:
+they appear in the tooltips, and nothing resolves them — a tool there is picked with the mouse.
 
-The same gap exists in the **Video** workspace, for `V`, `C` and `H`.
+**The Image workspace has settled the question**: its twenty tools became commands in their own
+right, so their keys really arm, remap, and show up in the shortcuts screen. That is the model the
+edit has yet to follow.
 
-So they are not shortcuts but **stated intentions**. The keys actually in service all go through
-the command registry, and those — and only those — are what [Every shortcut](15-shortcuts.md)
-lists: they can be remapped, they appear in the settings screen, and they answer.
+The general rule is unchanged: what goes through the command registry answers; what does not is a
+stated intention.
 
 ### Cropping does not give its pixels back on undo
 

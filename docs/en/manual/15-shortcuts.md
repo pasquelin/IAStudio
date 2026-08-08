@@ -186,6 +186,27 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 
 ## In the image
 
+### Arming a tool
+
+Every tool in the bar is a command: its key arms it, and remaps like the rest.
+
+| Key | Tool | | Key | Tool |
+|---|---|---|---|---|
+| `V` | Move | | `R` | Rectangle |
+| `H` | Hand | | `⇧R` | Line |
+| `K` | Scale | | `A` | Arrow |
+| `F` | Crop | | `O` | Ellipse |
+| `M` | Rectangle select | | `P` | Brush |
+| `L` | Lasso | | `⇧P` | Pencil |
+| `T` | Text | | `E` | Eraser |
+| `G` | Fill the layer | | `I` | Eyedropper |
+
+**Four tools have no default key** — ellipse select, polygon, star, selection eraser — and you can
+give them one in the settings.
+
+> **Line changed key.** It answered to `L`, which the Lasso already used in the same context; it
+> moved to `⇧R`, next to Rectangle, and the Arrow to `A`.
+
 ### Cropping
 
 These two keys act **only** while a crop frame is placed on the picture, and only in the tab in

@@ -191,6 +191,27 @@ La vitesse et l'accélération se règlent dans les [réglages](14-reglages.md#e
 
 ## Dans l'image
 
+### Armer un outil
+
+Chaque outil de la barre est une commande : sa touche l'arme, et se remappe comme les autres.
+
+| Touche | Outil | | Touche | Outil |
+|---|---|---|---|---|
+| `V` | Déplacement | | `R` | Rectangle |
+| `H` | Main | | `⇧R` | Trait |
+| `K` | Mise à l'échelle | | `A` | Flèche |
+| `F` | Recadrage | | `O` | Ellipse |
+| `M` | Sélection rectangle | | `P` | Pinceau |
+| `L` | Lasso | | `⇧P` | Crayon |
+| `T` | Texte | | `E` | Gomme |
+| `G` | Remplir le calque | | `I` | Pipette |
+
+**Quatre outils n'ont pas de touche par défaut** — sélection ellipse, polygone, étoile, gomme
+sélective — et vous pouvez leur en donner une dans les réglages.
+
+> **Le Trait a changé de touche.** Il répondait à `L`, qui servait déjà au Lasso dans le même
+> contexte ; il est passé à `⇧R`, près du Rectangle, et la Flèche à `A`.
+
 ### Recadrage
 
 Ces deux touches n'agissent **que** tant qu'un cadre de recadrage est posé sur l'image, et
