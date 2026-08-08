@@ -192,8 +192,9 @@ where you take it from to send it to anyone.
 > eraser and the shapes apply to it. The chapter [Image workspace](08-image-workspace.md) covers
 > the three ways of bringing it in.
 >
-> **What the studio cannot do yet:** save that document. Closing the tab loses the layers —
-> `⇧⌘E` gets a PNG out first. See [What does not exist yet](18-limits.md).
+> **To keep it:** `⌘S` writes the document into the project, layers and masks included, and it
+> reopens just as it was — the **Explorer** panel lists what the project holds. `⇧⌘E` gets a
+> flattened PNG out, which is an export and not a save.
 >
 > To transform the picture rather than paint it: go back to the **Generate** panel with an
 > *image to image* model, and give it your picture as the starting point.

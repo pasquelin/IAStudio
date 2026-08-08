@@ -145,7 +145,9 @@ project's `documents/` folder.
 **Nothing is baked into the pixels.** Reopen the document in six months: every setting is still
 there, and still adjustable. What is written are your decisions, not their result.
 
-Textures are, along with 3D scenes, one of only two document types that can save today.
+**All six document types now save**, but materials keep one peculiarity: they are the only ones
+that write themselves. Everywhere else `⌘S` decides the moment, and the dot on the tab says what
+is still waiting to be written.
 
 ---
 
