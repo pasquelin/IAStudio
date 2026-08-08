@@ -196,6 +196,14 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
               { type: 'separator' },
               commandItem('canvas.rotateCw', t.commands.canvasRotateCw.title),
               commandItem('canvas.rotateCcw', t.commands.canvasRotateCcw.title),
+              { type: 'separator' },
+              // The only way in: none of the five carries a default shortcut, deliberately —
+              // they spend credit, and a key pressed by accident has no business spending any.
+              commandItem('canvas.regenerate', t.commands.canvasRegenerate.title),
+              commandItem('canvas.extend', t.commands.canvasExtend.title),
+              commandItem('canvas.cutout', t.commands.canvasCutout.title),
+              commandItem('canvas.enlarge', t.commands.canvasEnlarge.title),
+              commandItem('canvas.vectorize', t.commands.canvasVectorize.title),
             ],
           },
         ]

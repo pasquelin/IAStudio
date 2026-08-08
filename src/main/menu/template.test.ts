@@ -64,7 +64,39 @@ describe('the Image menu', () => {
       '',
       'Rotation horaire',
       'Rotation antihoraire',
+      '',
+      'Régénérer la zone',
+      'Étendre',
+      'Détourer',
+      'Agrandir',
+      'Vectoriser',
     ])
+  })
+
+  /**
+   * The five edits had no default shortcut and no menu row: `COMMAND_REGISTRY` declared them,
+   * `ImageDocument` ran them, and nothing anywhere could reach them. The menu is the only door,
+   * and it stays keyless on purpose — each one spends credit.
+   */
+  it('offers the edits without binding a key to any of them', () => {
+    const entries = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Image')
+    const edits = ['Régénérer la zone', 'Étendre', 'Détourer', 'Agrandir', 'Vectoriser']
+
+    const rows = entries.filter(entry => edits.includes(String(entry.label)))
+    expect(rows).toHaveLength(edits.length)
+    expect(rows.map(row => row.accelerator)).toEqual(edits.map(() => undefined))
+  })
+
+  it('fires the edit the row names', () => {
+    const runCommand = vi.fn()
+    const entries = submenuOf(
+      menuTemplate(options({ workspace: 'image', actions: actions({ runCommand }) })),
+      'Image',
+    )
+
+    activate(entries.find(entry => entry.label === 'Détourer'))
+
+    expect(runCommand).toHaveBeenCalledWith('canvas.cutout')
   })
 
   it('leaves it out of every other workspace, where it would turn nothing', () => {
