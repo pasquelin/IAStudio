@@ -1,7 +1,7 @@
 import { mdiMusicNoteOutline, mdiPause, mdiPlay } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AssetType } from '@shared/domain/asset'
+import type { Asset, AssetType } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { Toolbar } from '@/design/Toolbar'
@@ -24,6 +24,8 @@ export type AudioDocumentProps = { documentId: string }
 
 /** What a fade tool lays down when no region says otherwise. */
 const DEFAULT_FADE: Us = SECOND
+
+const TAKES: readonly AssetType[] = ['audio']
 
 /**
  * One take, edited.
@@ -167,16 +169,11 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   // The whole space takes a drop, empty or not: dropping a take onto the editor is how one
   // replaces what is loaded, and the empty state is where the first one lands.
-  const takeDrop = (assetId: string): void => {
-    const dropped = byId.get(assetId)
-    if (dropped) loadTake(documentId, dropped)
-  }
-
-  const accepts = (type: AssetType | null): boolean => type === 'audio' || type === null
+  const takeDrop = (dropped: Asset): void => loadTake(documentId, dropped)
 
   if (!state.assetId) {
     return (
-      <AssetDropTarget accepts={accepts} onDrop={takeDrop} className="h-full">
+      <AssetDropTarget accepts={TAKES} onDrop={takeDrop} className="h-full">
         <EmptyState icon={mdiMusicNoteOutline} message={t('audio.noAsset')} />
       </AssetDropTarget>
     )
@@ -185,7 +182,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   return (
     <AssetDropTarget
-      accepts={accepts}
+      accepts={TAKES}
       onDrop={takeDrop}
       className="flex h-full min-h-0 flex-col gap-2 p-2"
     >

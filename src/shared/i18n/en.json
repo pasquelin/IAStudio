@@ -82,8 +82,7 @@
     "location": "Location",
     "push": "Send {{count}} asset",
     "push_other": "Send {{count}} assets",
-    "pushHint": "Uploads the selection to the Scenario library",
-    "reveal": "Show in the file manager"
+    "pushHint": "Uploads the selection to the Scenario library"
   },
   "dialog": {
     "allMedia": "All media",

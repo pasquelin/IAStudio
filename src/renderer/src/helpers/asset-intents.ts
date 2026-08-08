@@ -1,12 +1,5 @@
-import {
-  mdiCubeOutline,
-  mdiImageOutline,
-  mdiPanoramaVariantOutline,
-  mdiTextureBox,
-  mdiVideoOutline,
-  mdiVolumeHigh,
-} from '@mdi/js'
-import { isLocalPicture, PICTURES, type Asset, type AssetType } from '@shared/domain/asset'
+import { ASSET_TYPES, PICTURES, type Asset, type AssetType } from '@shared/domain/asset'
+import type { DocumentKind } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { loadTake } from '@/spaces/audio/load-take'
 import { placeAsset } from '@/spaces/image/place-asset'
@@ -20,33 +13,45 @@ import { setSkyboxSource } from '@/stores/skyboxes'
  * Where an asset can be sent, as something one can list rather than something one falls through.
  *
  * This used to be a cascade of `if`s inside `openAsset`, which worked for double-clicking and
- * for nothing else: a menu can only offer what it can enumerate, and a drop target can only
- * refuse what it can name. Same table, three consumers — the double-click takes the first
- * applicable entry, the context menu lists them all, and a drop target picks one by id.
+ * for nothing else: a menu can only offer what it can enumerate. Same table, two consumers — the
+ * double-click takes the first applicable entry, and the context menu lists them all.
  *
  * ORDER IS THE CASCADE. The first entry whose space is open and whose `accepts` says yes is what
  * a double-click does, exactly as the chain of `if`s did before it.
  */
 export type AssetIntent = {
   id: string
+  /** Where this destination lives — the menu reads its glyph off the workspace table. */
   workspace: WorkspaceId
   labelKey: string
-  icon: string
   /**
-   * Whether this destination takes that KIND — judged on the type alone, never on the asset.
+   * The kinds this destination takes, judged on the type alone and never on the asset.
    *
    * The platform forces it: during a drag, `dataTransfer.getData()` answers an empty string, so
-   * a target knows the kind flying over it and nothing else. An `accepts` that needed the whole
-   * asset could not be asked in time to paint the target.
+   * a target knows the kind flying over it and nothing else.
    */
-  accepts: (type: AssetType) => boolean
+  accepts: readonly AssetType[]
   /** Whether there is somewhere to put it right now — the space must have a document open. */
   ready: () => boolean
   run: (asset: Asset) => void
 }
 
-function activeId(kind: Parameters<typeof activeIdOfKind>[1]): string | null {
+function activeId(kind: DocumentKind): string | null {
   return activeIdOfKind(useDocuments.getState(), kind)
+}
+
+/** A destination that needs an open tab of its kind — which is every one of them but the montage. */
+function inDocument(
+  kind: DocumentKind,
+  put: (documentId: string, asset: Asset) => void,
+): Pick<AssetIntent, 'ready' | 'run'> {
+  return {
+    ready: () => activeId(kind) !== null,
+    run: asset => {
+      const tab = activeId(kind)
+      if (tab) put(tab, asset)
+    },
+  }
 }
 
 export const ASSET_INTENTS: readonly AssetIntent[] = [
@@ -54,58 +59,36 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     id: 'skyboxes.source',
     workspace: 'skyboxes',
     labelKey: 'intents.skyboxSource',
-    icon: mdiPanoramaVariantOutline,
-    accepts: type => PICTURES.includes(type),
-    ready: () => activeId('skybox') !== null,
-    run: asset => {
-      const tab = activeId('skybox')
-      if (tab) setSkyboxSource(tab, asset)
-    },
+    accepts: PICTURES,
+    ...inDocument('skybox', setSkyboxSource),
   },
   {
     id: '3d.mesh',
     workspace: '3d',
     labelKey: 'intents.sceneMesh',
-    icon: mdiCubeOutline,
-    accepts: type => type === 'mesh',
-    ready: () => activeId('scene') !== null,
-    run: asset => {
-      const tab = activeId('scene')
-      if (tab) addModelTo(tab, asset)
-    },
+    accepts: ['mesh'],
+    ...inDocument('scene', addModelTo),
   },
   {
     id: 'audio.take',
     workspace: 'audio',
     labelKey: 'intents.audioTake',
-    icon: mdiVolumeHigh,
-    accepts: type => type === 'audio',
-    ready: () => activeId('audio') !== null,
-    run: asset => {
-      const tab = activeId('audio')
-      if (tab) loadTake(tab, asset)
-    },
+    accepts: ['audio'],
+    ...inDocument('audio', loadTake),
   },
   {
     id: 'image.layer',
     workspace: 'image',
     labelKey: 'intents.imageLayer',
-    icon: mdiImageOutline,
-    accepts: type => PICTURES.includes(type),
-    ready: () => activeId('image') !== null,
-    run: asset => {
-      const tab = activeId('image')
-      // A cloud asset has no file to decode yet; the shelf offers to fetch it instead.
-      if (tab && isLocalPicture(asset)) placeAsset(tab, asset)
-    },
+    accepts: PICTURES,
+    ...inDocument('image', placeAsset),
   },
   {
     id: 'video.clip',
     workspace: 'video',
     labelKey: 'intents.videoClip',
-    icon: mdiVideoOutline,
     // The montage is where everything ends up, which is why it closes the cascade.
-    accepts: () => true,
+    accepts: ASSET_TYPES,
     ready: () => true,
     run: asset => addAssetToSequence(asset),
   },
@@ -113,24 +96,15 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     id: 'textures.channel',
     workspace: 'textures',
     labelKey: 'intents.textureChannel',
-    icon: mdiTextureBox,
-    accepts: type => PICTURES.includes(type),
-    ready: () => activeId('texture') !== null,
-    run: asset => {
-      const tab = activeId('texture')
-      // The base colour is what a bare drop fills; a named channel comes from the slot itself.
-      if (tab) placeTextureChannel(tab, asset)
-    },
+    accepts: PICTURES,
+    // The base colour is what a bare drop fills; a named channel comes from the slot itself.
+    ...inDocument('texture', placeTextureChannel),
   },
 ]
 
 /** Every destination that would take this kind, whether or not its space is open right now. */
 export function intentsFor(type: AssetType): readonly AssetIntent[] {
-  return ASSET_INTENTS.filter(intent => intent.accepts(type))
-}
-
-export function intentAt(id: string): AssetIntent | null {
-  return ASSET_INTENTS.find(intent => intent.id === id) ?? null
+  return ASSET_INTENTS.filter(intent => intent.accepts.includes(type))
 }
 
 /**
@@ -139,5 +113,5 @@ export function intentAt(id: string): AssetIntent | null {
  * chain — the difference is that it can now be listed and pointed at.
  */
 export function defaultIntent(asset: Asset): AssetIntent | null {
-  return ASSET_INTENTS.find(intent => intent.accepts(asset.type) && intent.ready()) ?? null
+  return ASSET_INTENTS.find(intent => intent.accepts.includes(asset.type) && intent.ready()) ?? null
 }

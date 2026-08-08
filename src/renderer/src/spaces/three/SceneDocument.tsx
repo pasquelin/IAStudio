@@ -1,3 +1,4 @@
+import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
 import type { ExportFormat } from '@shared/domain/scene'
@@ -22,8 +23,7 @@ import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
-import { assetsById, useAssets } from '@/stores/assets'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { selectedNodes } from '@/engines/scene/scene-state'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
@@ -52,6 +52,8 @@ async function exportScene(
     reportFailure('scene.export', format, error)
   })
 }
+
+const MESHES: readonly AssetType[] = ['mesh']
 
 export function SceneDocument({ documentId }: { documentId: string }) {
   const host = useRef<HTMLDivElement>(null)
@@ -268,19 +270,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [bindings, nothingSelected, nothingHeld, snapping, localFrame, view])
 
   return (
-    <div
+    // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the
+    // toolbar instead of beside it would be a miss the user cannot see coming.
+    <AssetDropTarget
+      accepts={MESHES}
+      onDrop={asset => addModelTo(documentId, asset)}
       className="relative size-full"
-      // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the
-      // toolbar instead of beside it would be a miss the user cannot see coming.
-      onDragOver={event => event.preventDefault()}
-      onDrop={event => {
-        event.preventDefault()
-        const assetId = assetIdFromDrag(event)
-        // Read at the drop rather than subscribed to: the catalogue refreshes on its own, and
-        // this document has no reason to re-render every time it does.
-        const asset = assetId ? assetsById(useAssets.getState()).get(assetId) : null
-        if (asset) addModelTo(documentId, asset)
-      }}
     >
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
@@ -300,6 +295,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         canUndo={undoable}
         canRedo={redoable}
       />
-    </div>
+    </AssetDropTarget>
   )
 }

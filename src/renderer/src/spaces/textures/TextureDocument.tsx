@@ -1,9 +1,8 @@
 import { mdiRotate3dVariant, mdiTextureBox, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
-import { assetUrl } from '@shared/domain/asset'
-import { PICTURES } from '@shared/domain/asset'
+import { assetUrl, PICTURES, type Asset } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
@@ -12,7 +11,6 @@ import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
 import { restoreDocument } from '@/app/document-io'
 import { cn } from '@/helpers/cn'
-import { assetsById, useAssets } from '@/stores/assets'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 
@@ -34,7 +32,6 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const engine = useRef<TextureRenderer | null>(null)
 
   const texture = useTextures(state => textureOf(state, documentId))
-  const byId = useAssets(assetsById)
 
   // Fills the tab from the project when a file is there, from the default otherwise — and it is
   // what saving reads back, so the two never disagree about what this document holds.
@@ -68,22 +65,14 @@ export function TextureDocument({ documentId }: { documentId: string }) {
    * A picture dropped on the viewport becomes the base colour. It is the one channel a texture
    * cannot be judged without, and the strip of the other seven is what the next step brings.
    */
-  const onDrop = useMemo(
-    () => (assetId: string) => {
-      const asset = byId.get(assetId)
-      if (asset) placeTextureChannel(documentId, asset)
-    },
-    [byId, documentId],
-  )
+  const onDrop = (asset: Asset): void => {
+    placeTextureChannel(documentId, asset)
+  }
 
   const base = texture.channels.baseColor
 
   return (
-    <AssetDropTarget
-      accepts={type => type === null || PICTURES.includes(type)}
-      onDrop={onDrop}
-      className="relative size-full"
-    >
+    <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ASSET_TYPES } from '@shared/domain/asset'
-import { ASSET_INTENTS, intentAt, intentsFor } from './asset-intents'
+import { WORKSPACES } from './workspaces'
+import { ASSET_INTENTS, intentsFor } from './asset-intents'
 
 describe('where an asset can be sent', () => {
   it('offers the montage for every kind, since that is where they all end up', () => {
@@ -31,20 +32,19 @@ describe('where an asset can be sent', () => {
     expect(picture).toContain('textures.channel')
   })
 
-  it('finds a destination by name, and answers nothing for one that does not exist', () => {
-    expect(intentAt('3d.mesh')?.workspace).toBe('3d')
-    expect(intentAt('3d.hologram')).toBeNull()
-  })
-
   it('gives every destination a distinct name', () => {
     const ids = ASSET_INTENTS.map(intent => intent.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('names a label and a glyph for each, since the menu draws both', () => {
+  // The menu draws the label and reads the glyph off the workspace table, so a destination
+  // naming a space that does not exist would render without one.
+  it('names a label and a real workspace for each', () => {
+    const spaces = WORKSPACES.map(workspace => workspace.id)
+
     for (const intent of ASSET_INTENTS) {
       expect(intent.labelKey).toMatch(/^intents\./)
-      expect(intent.icon.length).toBeGreaterThan(0)
+      expect(spaces).toContain(intent.workspace)
     }
   })
 
@@ -52,7 +52,7 @@ describe('where an asset can be sent', () => {
   // swallow every asset before a more specific destination was ever considered.
   it('leaves the catch-all last among the destinations that accept everything', () => {
     const catchAll = ASSET_INTENTS.findIndex(intent => intent.id === 'video.clip')
-    const specific = ASSET_INTENTS.filter(intent => !intent.accepts('audio'))
+    const specific = ASSET_INTENTS.filter(intent => !intent.accepts.includes('audio'))
 
     expect(specific.every(intent => ASSET_INTENTS.indexOf(intent) !== catchAll)).toBe(true)
     expect(ASSET_INTENTS.slice(0, catchAll).map(one => one.id)).toContain('audio.take')

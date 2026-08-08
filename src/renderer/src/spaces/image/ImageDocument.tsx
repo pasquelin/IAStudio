@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { shortcutLabel } from '@shared/domain/shortcut'
-import { PICTURES } from '@shared/domain/asset'
+import { PICTURES, type Asset } from '@shared/domain/asset'
 import { restoreDocument } from '@/app/document-io'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
@@ -27,7 +27,6 @@ import {
 import { newId } from '@/helpers/ids'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
-import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
@@ -91,7 +90,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
   const bindings = useBindingOverrides()
   const active = useDocuments(state => state.activeId === documentId)
-  const byId = useAssets(assetsById)
 
   // What a fresh caption says. Held in a ref so the effect that builds the engine does not
   // depend on the language, which would remount it — and lose every layer's texture.
@@ -288,13 +286,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   })
 
   /** A picture dropped on the canvas becomes a layer of its own, on top and armed. */
-  const onDrop = useCallback(
-    (assetId: string) => {
-      const asset = byId.get(assetId)
-      if (asset) placeAsset(documentId, asset)
-    },
-    [byId, documentId],
-  )
+  const onDrop = (asset: Asset): void => placeAsset(documentId, asset)
 
   // Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
   // active has to hand over the ellipse, not merely remember it for later.
@@ -328,7 +320,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   return (
     <div className="flex h-full min-h-0">
       <AssetDropTarget
-        accepts={type => type === null || PICTURES.includes(type)}
+        accepts={PICTURES}
         onDrop={onDrop}
         className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}
       >

@@ -75,6 +75,15 @@ export const FIELD = cn(
   FOCUS_RING,
 )
 
+/**
+ * The surface a menu wears, whether it hangs from a control or opens at the pointer. Its width
+ * is left to the caller: a flyout is as wide as its anchor suggests, a context menu wider.
+ */
+export const MENU_SURFACE = cn(
+  'border-border bg-surface fixed z-50 flex flex-col gap-0.5',
+  'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
+)
+
 /** The frame every picture sits in, so a tile and a thumbnail cut their corners the same way. */
 export const MEDIA_FRAME =
   'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'

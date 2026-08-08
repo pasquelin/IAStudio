@@ -1,7 +1,8 @@
 import { fireEvent, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
+import { startAssetDrag } from '@/helpers/asset-drag'
+import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { installDocument } from '@/stores/document-fixtures'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
@@ -28,9 +29,10 @@ const panorama: Asset = {
   createdAt: '2026-08-07T10:00:00.000Z',
 }
 
-/** A drag carrying one format, the way `startAssetDrag` writes it — jsdom builds none. */
-function dataTransfer(format: string, value: string): DataTransfer {
-  return { getData: (asked: string) => (asked === format ? value : '') } as DataTransfer
+function dragging(assetId: string): DataTransfer {
+  const dataTransfer = dragTransfer()
+  startAssetDrag({ dataTransfer }, { id: assetId, type: 'image' })
+  return dataTransfer
 }
 
 const sourceOf = (documentId: string): { assetId: string } | null =>
@@ -53,19 +55,23 @@ describe('SkyboxDocument', () => {
   })
 
   it('hangs a picture dropped from the shelf', () => {
-    fireEvent.drop(viewport(), { dataTransfer: dataTransfer(ASSET_DRAG_TYPE, 'asset-dusk') })
+    fireEvent.drop(viewport(), { dataTransfer: dragging('asset-dusk') })
     expect(sourceOf('doc-1')).toEqual({ assetId: 'asset-dusk' })
   })
 
   // The drag carries an id, never the asset: one the catalogue no longer holds has no file
   // behind it, and the engine would load a 404 into a sky it cannot tell from a black one.
   it('ignores an id the catalogue does not hold', () => {
-    fireEvent.drop(viewport(), { dataTransfer: dataTransfer(ASSET_DRAG_TYPE, 'asset-gone') })
+    fireEvent.drop(viewport(), { dataTransfer: dragging('asset-gone') })
     expect(sourceOf('doc-1')).toBeNull()
   })
 
   it('leaves a file dragged in from the desktop alone', () => {
-    fireEvent.drop(viewport(), { dataTransfer: dataTransfer('text/plain', 'asset-dusk') })
+    const dataTransfer = dragTransfer()
+    dataTransfer.setData('text/plain', 'asset-dusk')
+
+    fireEvent.drop(viewport(), { dataTransfer })
+
     expect(sourceOf('doc-1')).toBeNull()
   })
 

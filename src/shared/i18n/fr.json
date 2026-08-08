@@ -82,8 +82,7 @@
     "location": "Emplacement",
     "push": "Envoyer {{count}} asset",
     "push_other": "Envoyer {{count}} assets",
-    "pushHint": "Téléverse la sélection dans la bibliothèque Scenario",
-    "reveal": "Afficher dans le Finder"
+    "pushHint": "Téléverse la sélection dans la bibliothèque Scenario"
   },
   "dialog": {
     "allMedia": "Tous les médias",

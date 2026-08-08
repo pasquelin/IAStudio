@@ -6,7 +6,8 @@ import { RULER_HEIGHT, type Viewport } from '@/engines/timeline/timeline-geometr
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import type { Clip } from '@/engines/timeline/timeline-state'
 import { EMPTY_SEQUENCE } from '@/engines/timeline/timeline-state'
-import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
+import { startAssetDrag } from '@/helpers/asset-drag'
+import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
@@ -27,10 +28,9 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
 const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
 
 function dataTransfer(assetId: string): DataTransfer {
-  // jsdom builds no DataTransfer, and the drop handler reads exactly one format.
-  return {
-    getData: (format: string) => (format === ASSET_DRAG_TYPE ? assetId : ''),
-  } as DataTransfer
+  const transfer = dragTransfer()
+  if (assetId) startAssetDrag({ dataTransfer: transfer }, { id: assetId, type: 'video' })
+  return transfer
 }
 
 function paint(tool: VideoToolId = 'select') {

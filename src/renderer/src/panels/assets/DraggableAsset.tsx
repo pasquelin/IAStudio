@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import type { Asset } from '@shared/domain/asset'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { openAsset } from '@/helpers/open-asset'
@@ -22,6 +22,9 @@ export type DraggableAssetProps = {
 export function DraggableAsset({ asset, className, children }: DraggableAssetProps) {
   const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
 
+  // Stable, or the open menu re-subscribes its three global listeners on every catalogue refresh.
+  const closeMenu = useCallback(() => setMenuAt(null), [])
+
   return (
     <div
       className={className}
@@ -38,7 +41,7 @@ export function DraggableAsset({ asset, className, children }: DraggableAssetPro
       }}
     >
       {children}
-      {menuAt && <AssetMenu asset={asset} at={menuAt} onClose={() => setMenuAt(null)} />}
+      {menuAt && <AssetMenu asset={asset} at={menuAt} onClose={closeMenu} />}
     </div>
   )
 }

@@ -11,14 +11,13 @@ import {
   SKYBOX_VIEWS,
   type SkyboxView,
 } from '@shared/domain/skybox'
-import { PICTURES } from '@shared/domain/asset'
+import { PICTURES, type Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { cn } from '@/helpers/cn'
-import { assetsById, useAssets } from '@/stores/assets'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 
 /** i18n key of a view mode — never the label itself, as `SceneEntry` does for primitives. */
@@ -81,19 +80,10 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     engine.current?.setProbesVisible(probes)
   }, [probes])
 
-  // Dropped from the shelf, which is shown in this workspace like every other. The asset is
-  // read from the catalogue rather than carried by the drag: only its id crosses.
-  const onDrop = (assetId: string): void => {
-    const asset = assetsById(useAssets.getState()).get(assetId)
-    if (asset) setSkyboxSource(documentId, asset)
-  }
+  const onDrop = (asset: Asset): void => setSkyboxSource(documentId, asset)
 
   return (
-    <AssetDropTarget
-      accepts={type => type === null || PICTURES.includes(type)}
-      onDrop={onDrop}
-      className="relative size-full"
-    >
+    <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 

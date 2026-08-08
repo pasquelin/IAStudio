@@ -1,6 +1,7 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
+import { MENU_SURFACE } from './styles'
 
 export type ContextMenuProps = {
   /** Where the pointer was. Viewport coordinates, as a right-click reports them. */
@@ -47,28 +48,28 @@ export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
   }, [onClose])
 
   // Placed through a callback ref rather than state, as `Flyout` does: measuring in an effect
-  // would draw the menu once off-screen and then move it.
-  const place = (node: HTMLDivElement | null): void => {
-    menu.current = node
-    if (!node) return
+  // would draw the menu once off-screen and then move it. Memoised because React re-runs a
+  // callback ref whose identity changed, and each run forces a layout read then two writes.
+  const place = useCallback(
+    (node: HTMLDivElement | null): void => {
+      menu.current = node
+      if (!node) return
 
-    const box = node.getBoundingClientRect()
-    const x = Math.min(at.x, window.innerWidth - box.width - MARGIN)
-    const y = Math.min(at.y, window.innerHeight - box.height - MARGIN)
+      const box = node.getBoundingClientRect()
+      const x = Math.min(at.x, window.innerWidth - box.width - MARGIN)
+      const y = Math.min(at.y, window.innerHeight - box.height - MARGIN)
 
-    node.style.left = `${Math.max(MARGIN, x)}px`
-    node.style.top = `${Math.max(MARGIN, y)}px`
-  }
+      node.style.left = `${Math.max(MARGIN, x)}px`
+      node.style.top = `${Math.max(MARGIN, y)}px`
+    },
+    [at],
+  )
 
   return createPortal(
     <div
       ref={place}
       role="menu"
-      // The same surface a flyout wears: one menu look, wherever it hangs from.
-      className={cn(
-        'border-border bg-surface fixed z-50 flex min-w-44 flex-col gap-0.5',
-        'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
-      )}
+      className={cn(MENU_SURFACE, 'min-w-44')}
       onContextMenu={event => event.preventDefault()}
     >
       {children}

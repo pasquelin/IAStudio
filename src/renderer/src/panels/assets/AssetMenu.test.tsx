@@ -52,7 +52,7 @@ describe('what the shelf offers to do with an asset', () => {
   it('cannot show a cloud asset in the file manager, since there is no file yet', () => {
     render(<AssetMenu asset={asset({ location: 'cloud' })} at={AT} onClose={() => {}} />)
 
-    expect(screen.getByRole('menuitem', { name: /Finder/ })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: /gestionnaire de fichiers/ })).toBeDisabled()
   })
 
   it('closes once something has been chosen', async () => {

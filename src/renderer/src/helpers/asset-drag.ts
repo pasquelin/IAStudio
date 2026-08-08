@@ -1,4 +1,5 @@
-import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
+import { isAssetType, type Asset, type AssetType } from '@shared/domain/asset'
+import { assetsById, useAssets } from '@/stores/assets'
 import { dragChannel } from './drag'
 
 /** Dragging an asset out of the browser and onto an editor. See `dragChannel` for the why. */
@@ -9,20 +10,10 @@ const ASSETS = dragChannel(ASSET_DRAG_TYPE)
 /**
  * The same drag, announced again under a type that names the kind being carried.
  *
- * The platform makes this necessary: during `dragover`, `dataTransfer.getData()` answers an
- * empty string — only `types` is readable before the drop itself. A target therefore cannot ask
- * WHICH asset is passing over it, only whether one is. Putting the kind in the MIME type is the
- * one place a target can read it in time to say whether it would accept the drop, which is what
- * lets a texture slot refuse a video while it is still flying.
+ * Putting the kind in the MIME type is the one place a target can read it in time to say whether
+ * it would accept the drop — `getData` answers nothing until the drop itself.
  */
-const BY_TYPE: Record<AssetType, ReturnType<typeof dragChannel>> = {
-  image: dragChannel(`${ASSET_DRAG_TYPE}+image`),
-  video: dragChannel(`${ASSET_DRAG_TYPE}+video`),
-  audio: dragChannel(`${ASSET_DRAG_TYPE}+audio`),
-  mesh: dragChannel(`${ASSET_DRAG_TYPE}+mesh`),
-  texture: dragChannel(`${ASSET_DRAG_TYPE}+texture`),
-  skybox: dragChannel(`${ASSET_DRAG_TYPE}+skybox`),
-}
+const TYPED_PREFIX = `${ASSET_DRAG_TYPE}+`
 
 /** Announces the drag under both types: the plain one for existing targets, the typed one too. */
 export function startAssetDrag(
@@ -33,7 +24,7 @@ export function startAssetDrag(
   },
 ): void {
   ASSETS.start(event, asset.id)
-  BY_TYPE[asset.type].start(event, asset.id)
+  dragChannel(`${TYPED_PREFIX}${asset.type}`).start(event, asset.id)
 }
 
 export const assetIdFromDrag = ASSETS.idFrom
@@ -49,5 +40,23 @@ export const carriesAsset = ASSETS.carries
  * silently does nothing is worse than one that lands somewhere sensible.
  */
 export function draggedAssetType(event: { dataTransfer: DataTransfer | null }): AssetType | null {
-  return ASSET_TYPES.find(type => BY_TYPE[type].carries(event)) ?? null
+  // One read of `types`: it is a fresh array on every access, and this runs on every `dragover`.
+  const announced = event.dataTransfer?.types.find(type => type.startsWith(TYPED_PREFIX))
+  if (!announced) return null
+
+  const kind = announced.slice(TYPED_PREFIX.length)
+  return isAssetType(kind) ? kind : null
+}
+
+/**
+ * The asset being dropped, resolved once here rather than by each surface that takes one.
+ *
+ * Read from the catalogue at the drop rather than subscribed to: only the id crosses the drag,
+ * and a surface that subscribed would re-render every time the catalogue refreshes.
+ */
+export function draggedAsset(event: { dataTransfer: DataTransfer | null }): Asset | null {
+  const id = assetIdFromDrag(event)
+  if (!id) return null
+
+  return assetsById(useAssets.getState()).get(id) ?? null
 }
