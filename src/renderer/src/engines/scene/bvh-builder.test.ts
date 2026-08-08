@@ -1,4 +1,11 @@
-import { BufferAttribute, BufferGeometry, Mesh, SphereGeometry } from 'three'
+import {
+  BufferAttribute,
+  BufferGeometry,
+  InterleavedBuffer,
+  InterleavedBufferAttribute,
+  Mesh,
+  SphereGeometry,
+} from 'three'
 import { MeshBVH } from 'three-mesh-bvh'
 import { describe, expect, it, vi } from 'vitest'
 import { createBvhBuilder, WORTH_A_TREE } from './bvh-builder'
@@ -207,13 +214,36 @@ describe('what the builder sends across', () => {
     expect(scripted.spawn).toHaveBeenCalledTimes(1)
   })
 
-  // The worker reads a `Float32Array` and nothing else; a wider buffer would be read as garbage.
-  it('refuses a position buffer of another width', async () => {
+  // The worker reads a `Float32Array` and nothing else, so another width is converted on the way
+  // out rather than refused — refusing left a dense mesh costing a frame a click, for nothing.
+  it('narrows a position buffer of another width on the way out', async () => {
     const scripted = scriptedWorker()
 
-    await createBvhBuilder(scripted.spawn).accelerate(worthATree(Float64Array))
+    void createBvhBuilder(scripted.spawn).accelerate(worthATree(Float64Array))
 
-    expect(scripted.sent).toEqual([])
+    expect(scripted.sent[0]?.position).toBeInstanceOf(Float32Array)
+  })
+
+  /**
+   * `GLTFLoader` interleaves as soon as a file's byte stride says to, and an interleaved
+   * attribute's `array` is the *whole* buffer. Handed over whole it is read as coordinates, so the
+   * tree describes a mesh made of normals and uvs — and every click then misses what it hit.
+   */
+  it('sends only the coordinates of an interleaved position', async () => {
+    const scripted = scriptedWorker()
+    const vertices = (WORTH_A_TREE + 1) * 3
+    // Six floats a vertex: the three coordinates, then three of something else.
+    const buffer = new InterleavedBuffer(new Float32Array(vertices * 6), 6)
+    for (let at = 0; at < vertices; at += 1) buffer.array[at * 6] = at
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new InterleavedBufferAttribute(buffer, 3, 0))
+
+    void createBvhBuilder(scripted.spawn).accelerate(new Mesh(geometry))
+
+    const sent = scripted.sent[0]?.position
+    expect(sent).toHaveLength(vertices * 3)
+    // The second vertex's x, which is the fourth float once the padding is gone.
+    expect(sent?.[3]).toBe(1)
   })
 
   it('sends no index for a geometry that has none', async () => {
@@ -224,13 +254,16 @@ describe('what the builder sends across', () => {
     expect(scripted.sent[0]?.index).toBeNull()
   })
 
-  // Only the two widths the tree is written back in travel; anything else is rebuilt from the
-  // positions rather than sent as an index the worker would misread.
-  it('drops an index of a width the tree cannot carry', async () => {
+  /**
+   * Widened, never dropped. Dropped, the worker took the geometry for a non-indexed one and handed
+   * back an index of another length — which `deserialize` writes over the live one for as far as
+   * it reaches, leaving the rest of the triangles where they were and raising nothing.
+   */
+  it('widens an index of a width the tree cannot carry', async () => {
     const scripted = scriptedWorker()
 
     void createBvhBuilder(scripted.spawn).accelerate(worthATree(Float32Array, true))
 
-    expect(scripted.sent[0]?.index).toBeNull()
+    expect(scripted.sent[0]?.index).toBeInstanceOf(Uint32Array)
   })
 })

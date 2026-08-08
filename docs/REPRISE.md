@@ -53,11 +53,16 @@ qui dit les échecs — une branche que personne n'exerce y serait un échec que
 **Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas où élargir est légitime
 (un glob dont la marge de croissance est du GPU intestable).
 
-> **Un grain de sable environnemental subsiste : `src/renderer/src/settings/ShortcutsSettings.test.tsx`
-> dépasse son budget de 5 s par test quand la machine porte plusieurs sessions** — des
-> sous-ensembles différents à chaque passage, verts en isolation. C'est `userEvent` qui est lent,
-> pas une régression. Il rend `validate` capricieux pour tout le monde tant que plusieurs worktrees
-> tournent en parallèle.
+> **Un grain de sable environnemental subsiste : les tests qui pilotent `userEvent` dépassent leur
+> budget de 5 s quand la machine porte plusieurs sessions** — des sous-ensembles différents à
+> chaque passage, verts en isolation. C'est `userEvent` qui est lent, pas une régression. Il rend
+> `validate` capricieux pour tout le monde tant que plusieurs worktrees tournent en parallèle.
+>
+> **Ce n'est pas un seul fichier.** `settings/ShortcutsSettings.test.tsx` a été le premier nommé ;
+> `licences/LicencesWindow.test.tsx` est tombé le 8 août pour la même raison, à 5,25 s en charge et
+> 5,11 s seul — la marge est le vrai sujet, pas le fichier. Devant un échec de ce genre, le
+> réflexe est `vitest run <le fichier>` en isolation, ou `vitest run --coverage --maxWorkers=2`
+> pour toute la passe, avant de chercher une cause dans le code.
 
 L'application démarre par `pnpm start`.
 
@@ -695,14 +700,93 @@ studio fait trente triangles et se marche plus vite qu'un arbre ne se construit.
 
 **Le chemin chaud de l'inspecteur n'est pas un sujet** — audité, chiffré, clos. Cf. § 5.
 
-### À revoir en priorité
+### La dette de relecture des étapes 8 à 11 est payée
 
-**Les étapes 8 à 11 n'ont été relues que par leur auteur.** La limite hebdomadaire de l'API a coupé
-les sous-agents en pleine revue de l'étape 8 ; `/simplify` et `/code-review` ont été menés à la
-main pour `sprite`, les modes d'affichage, l'export et le BVH, puis une dernière fois avant la
-fusion sur les résolutions de rebase. Les bugs trouvés à ces relectures sont écrits dans le plan,
-étape par étape — mais un seul regard n'en vaut pas deux, et c'est là qu'une lecture humaine
-rapporte le plus.
+**Les quatre sujets ont eu leur seconde lecture** (`feat/3d-dette`) : `sprite`, les modes
+d'affichage, l'export et le BVH. Elle a rendu **sept défauts confirmés et corrigés**, chacun avec le
+test qui le verrouille, et une liste de constats vérifiés mais non traités, écrits plus bas.
+
+**Ce qui a été trouvé.**
+
+- **Un rejet d'export n'atteignait personne.** Le `.catch` de `SceneDocument` était posé autour du
+  seul appel au bridge, pas autour de l'encodage, et l'appel part en `void` : un `parseAsync` qui
+  refuse laissait le clic de menu indistinguable d'un dialogue annulé — ni journal, ni écran.
+  L'encodage est passé sous le même garde.
+- **Aucun modèle à textures KTX2 ne s'exportait**, dans aucun des trois formats. `GLTFExporter` et
+  `USDZExporter` **lèvent** sur une texture compressée au lieu de la sauter, et ni l'un ni l'autre
+  ne recevait `setTextureUtils` — or le `KTX2Loader` est branché sur le chargeur de modèles depuis
+  `feat/3d-finition`, donc un GLB qui en porte est ordinaire. Les deux reçoivent désormais un
+  décodeur. **Il décode sur un renderer à lui, jamais celui du viewport** : `decompress` appelle
+  `setSize` sur celui qu'on lui donne, et lui passer le viewport redimensionnerait le canvas qu'on
+  regarde.
+- **La surcouche filaire était sous le pointeur.** Une ligne est touchée à un **monde entier**
+  d'elle-même (`Raycaster.params.Line.threshold` vaut 1), et la surcouche pend sous chaque maille :
+  en mode « rendu + filaire », chaque arête de la scène portait un halo cliquable de cette taille,
+  et un clic dans le vide à côté d'un cube le sélectionnait au lieu de vider la sélection. Elle est
+  désormais aveugle au rayon, comme elle était déjà absente de la carte d'ombres.
+
+**Ce qui a été cherché et écarté — ne pas le refaire.**
+
+- **Le BVH et les groupes de matériaux.** `three-mesh-bvh` construit exprès une racine par plage de
+  groupe pour qu'un triangle ne change jamais de groupe au réordonnancement. Le worker, lui,
+  reconstruit une géométrie nue — position et index — donc sans `groups` ni `drawRange` : l'index
+  qu'il renvoie est réordonné sur une seule plage, et `MeshBVH.deserialize` le repose sur la
+  géométrie vivante (`setIndex` vaut `true` par défaut). Une géométrie à plusieurs groupes verrait
+  donc ses matériaux appliqués aux mauvais triangles. **Non atteignable aujourd'hui** :
+  `accelerate` n'est appelé que depuis `buildModel`, et `GLTFLoader` ne produit jamais de `groups`
+  — il fait une maille par primitive. À traiter le jour où un arbre sera construit ailleurs que
+  sur un modèle importé.
+- **Un changement de type sur un id stable.** `syncNode` ne libère et ne rebâtit que sur un
+  `model` devenu autre chose ; tout autre changement de type garderait l'objet three.js du type
+  précédent, muet. **Non atteignable** : chaque commande qui crée un nœud bat un id neuf, et un
+  document se relit dans un moteur vide. Laissé tel quel plutôt que gardé contre un état que rien
+  ne produit.
+
+Le reste de ce qui avait été trouvé au premier regard est écrit dans le plan, étape par étape.
+
+**Quatre défauts de plus, trouvés par les passes adverses et corrigés ensuite.**
+
+- **Le picking d'un modèle importé était faux dès que le fichier entrelaçait ses attributs.**
+  `GLTFLoader` entrelace dès que le pas d'octets le dit, et l'`array` d'un attribut entrelacé est
+  le tampon **entier** — normales et uv compris. Envoyé tel quel au worker, l'arbre décrivait un
+  maillage inexistant et les clics rataient ce qu'ils touchaient, seulement une fois l'arbre
+  arrivé. Les coordonnées sont lues attribut par attribut.
+- **Un index en `SHORT` corrompait l'affichage.** Abandonné parce que ni `Uint16` ni `Uint32`, il
+  faisait prendre la géométrie pour non indexée ; le worker rendait un index d'une autre longueur
+  que `deserialize` écrivait par-dessus le vivant aussi loin qu'il portait, sans rien lever. Il est
+  élargi.
+- **L'export USDZ posait une sélection imbriquée au mauvais endroit.** `clone` recopie `matrix`, et
+  décomposer la matrice monde écrit à côté d'elle ; `GLTFExporter` rafraîchit avant de lire,
+  `USDZExporter` non. La correction de l'étape 10 ne valait donc que pour glTF.
+- **Le gizmo gardait la caméra perspective après un passage en orthographique.** Il en reçoit une
+  au montage et lance son rayon de prise depuis elle : poignées à la mauvaise taille, un tirer en
+  bord de vue partait dans l'orbite, un tirer plus au centre écrivait une translation sur le
+  **mauvais axe** dans le document. Il se rebranche comme le trièdre.
+
+### Ce que la relecture a trouvé et que personne n'a encore traité
+
+Vérifié, non corrigé, par ordre de gravité. Chaque ligne est actionnable telle quelle.
+
+| Où | Quoi |
+|---|---|
+| `shadows.ts:42` via `SceneRenderer.ts:617` | `applyShadowFlags(deep)` traverse **au-delà des nœuds enfants** : régler une ombre sur un parent écrase les drapeaux de ses enfants, que `syncNode` ne répare jamais (`previous === node`). Un changement de thème rejoue l'écrasement sur toute la scène. Corriger en arrêtant la traversée sur tout enfant portant l'id d'un nœud connu |
+| `bvh-builder.ts:34-45` | `dispose()` n'est pas définitif : `workerOf()` respawne sans condition, donc la boucle série de `accelerate` fait naître un worker **après** le démontage du moteur, que rien ne terminera. Un drapeau `disposed` suffit |
+| `bvh.worker.ts` | Aucun canal d'échec — pas de `try/catch`, pas de variante d'erreur, et le builder n'écoute ni `'error'` ni `'messageerror'`. Une exception laisse la promesse suspendue, garde la géométrie dans `building` pour toujours et bloque les mailles suivantes |
+| `SceneRenderer.ts:772` | `void this.accelerate(holder)` avale ses rejets alors que `scene.model` est branché vingt lignes plus haut |
+| `main/scene/export.ts:24` | Le message d'erreur de `writeFile` **livre le chemin absolu au renderer** (invariant 1) : un `EPERM` traverse la frontière et part au journal. À trancher avec l'asymétrie connue de `savePicture`, qui rend déjà le chemin |
+| `SceneRenderer.ts:599` | Le fichier exporté porte des **UUID** en guise de noms : `object.name = node.id`, et le `name` du document n'atteint jamais le fichier. Le test qui semblait le prouver utilisait une fixture dont l'id vaut le nom |
+| `scene-export.ts` | Une lumière directionnelle ou spot **perd son orientation** : la cible est sœur des nœuds, non exportée, et three prévient elle-même |
+| `SceneRenderer.ts:389` | Un nœud **caché** produit un fichier vide, écrit sans un mot (`onlyVisible` vaut `true` chez les deux exporteurs) |
+| `scene-export.ts` | Un GLB **riggé** sort en glTF invalide, `"joints":[null,null]` : `SkinnedMesh.copy` partage le squelette de l'original, hors du sous-arbre exporté. `model-cache.ts:28` a le même défaut — une instance riggée est pilotée par les os du cache |
+| `scene-export.ts:37` | Le décodeur de textures compressées crée un `WebGLRenderer` **par slot de map**, pas par texture (le cache de `GLTFExporter` n'indexe pas la compressée), et laisse derrière lui des écouteurs `dispose` morts plus un singleton de module qui retient la dernière texture. Coût sur le thread UI, et rétention |
+| `services/diagnostics.ts` | `reportFailure` dédoublonne par `scope:subject`, et le sujet de l'export est le **format** : le second export raté du même format est muet. Insuffisant pour une action relancée à la main |
+| `three-sync.ts:68` | Le mode `rotate` s'arme sur un sprite et n'a aucun effet — le shader ne lit que les longueurs de colonnes — mais salit le document et empile un undo vide |
+| `scene-document.ts:160` | `isSprite` est le seul garde non dérivé de sa table : un champ ajouté au descripteur ne sera pas vérifié à la relecture |
+| `ViewportEngine.ts:105-120` | Le passage ortho → perspective jette le zoom accumulé ; `frameSelection` ne redimensionne pas le tronc orthographique, donc `F` en ortho ne change rien à l'écran |
+
+**Sur le sprite, l'export et le BVH, « rien trouvé » n'est plus le verdict** : les passes ont rendu
+sur les trois. Ce qui reste ci-dessus n'a pas été traité faute de périmètre, pas faute d'avoir
+regardé.
 
 **Les deux résolutions de rebase sont relues.** `image-generation.ts` réimplémentait
 `generation-landing.ts` — 91 lignes contre 15, mêmes claims, même settle, à une différence de

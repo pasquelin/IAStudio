@@ -31,6 +31,9 @@ const setSpace = vi.fn()
 const setProjection = vi.fn()
 const setDisplayMode = vi.fn()
 const viewFrom = vi.fn()
+// At module scope like the others, so a test can make the encoding itself refuse: the exporters
+// throw on a texture they cannot write, and that is the half no bridge failure stands in for.
+const exportTo = vi.fn(() => Promise.resolve(new Uint8Array([103, 108, 84, 70])))
 
 // jsdom has no WebGL context: the renderer is exercised by hand, not here. What this test
 // covers is that the document wires the toolbar and the keyboard to the right calls.
@@ -49,7 +52,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setDisplayMode = setDisplayMode
     viewFrom = viewFrom
     frameSelection = frameSelection
-    exportTo = vi.fn(() => Promise.resolve(new Uint8Array([103, 108, 84, 70])))
+    exportTo = exportTo
   },
 }))
 
@@ -408,6 +411,26 @@ describe('exporting the scene', () => {
       expect.objectContaining({
         scope: 'scene.export',
         message: expect.stringContaining('read-only volume'),
+      }),
+    )
+  })
+
+  /**
+   * The other half, and the one no bridge failure covers: `GLTFExporter` and `USDZExporter` throw
+   * on a compressed texture, which the KTX2 loader makes an ordinary thing for an imported model
+   * to wear. Left outside the guard, that rejection reached nobody and the menu click did nothing.
+   */
+  it('records an encoding the exporter refused', async () => {
+    exportTo.mockRejectedValueOnce(new Error('setTextureUtils() must be called'))
+    const bridge = bridgeThatExports(() => Promise.resolve('set.glb'))
+    render(<SceneDocument documentId="doc-1" />)
+
+    await act(async () => bridge.ask())
+
+    expect(bridge.report).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'scene.export',
+        message: expect.stringContaining('setTextureUtils'),
       }),
     )
   })

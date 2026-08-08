@@ -1,14 +1,16 @@
 import {
   BoxGeometry,
+  CompressedTexture,
   GridHelper,
   LineBasicMaterial,
   Mesh,
   MeshStandardMaterial,
   Scene,
+  Texture,
 } from 'three'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { applyWireOverlay } from './scene-view'
-import { exportObjects } from './scene-export'
+import { exportObjects, placedCopy } from './scene-export'
 
 /** What a `.gltf` file holds, read back as the JSON it is — the point is to check the file. */
 type GltfFile = {
@@ -133,6 +135,44 @@ describe('exportObjects', () => {
   })
 })
 
+/**
+ * KTX2 is wired into the model loader, so an imported model routinely wears textures glTF cannot
+ * hold. Both exporters throw on one rather than skip it — the whole file is lost over a picture —
+ * so the decoder the renderer supplies has to reach them.
+ */
+describe('exportObjects with a compressed texture', () => {
+  function boxWearing(map: Texture): Mesh {
+    const material = new MeshStandardMaterial()
+    material.map = map
+    return new Mesh(new BoxGeometry(), material)
+  }
+
+  /**
+   * What is pinned is that the texture reaches the decoder instead of throwing at it. The export
+   * cannot then finish: a decoded texture is canvas-backed, and jsdom encodes no canvas.
+   */
+  it('hands it to the decoder', async () => {
+    const decompress = vi.fn(() => new Texture())
+    const mesh = boxWearing(new CompressedTexture([], 4, 4))
+
+    await exportObjects([mesh], 'gltf', { decompress }).catch(() => {})
+
+    expect(decompress).toHaveBeenCalled()
+  })
+
+  // The default is the wired one, not none: an export must never be the exporter refusing to try.
+  it('carries a decoder without being handed one', async () => {
+    const mesh = boxWearing(new CompressedTexture([], 4, 4))
+
+    const refusal = await exportObjects([mesh], 'gltf').then(
+      () => '',
+      (error: unknown) => String(error),
+    )
+
+    expect(refusal).not.toMatch(/setTextureUtils/)
+  })
+})
+
 // `USDZExporter` takes one root; several are handed to it under a group of no consequence, and
 // the file must hold them all the same.
 describe('exportObjects to USDZ', () => {
@@ -147,5 +187,27 @@ describe('exportObjects to USDZ', () => {
 
     expect(one.byteLength).toBeGreaterThan(0)
     expect(two.byteLength).toBeGreaterThan(one.byteLength * 1.5)
+  })
+})
+
+/**
+ * `USDZExporter` reads `object.matrix` and never refreshes it (`USDZExporter.js:639`), where
+ * `GLTFExporter` calls `updateMatrix` first (`GLTFExporter.js:2488`). Decomposing the world matrix
+ * into position, quaternion and scale therefore reached one format and not the other: a selected
+ * child came out of USDZ where it sits inside its parent, and the glTF test never saw it.
+ */
+describe('placedCopy', () => {
+  it('leaves the copy a matrix that agrees with where it stands', () => {
+    const parent = named('parent')
+    parent.position.set(10, 0, 0)
+    const child = named('child')
+    parent.add(child)
+    parent.updateMatrixWorld(true)
+
+    const copy = placedCopy(child)
+
+    // Column-major, so the translation sits at index 12.
+    expect(copy.matrix.elements[12]).toBe(10)
+    expect(copy.position.x).toBe(10)
   })
 })

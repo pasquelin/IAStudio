@@ -6,6 +6,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  Raycaster,
 } from 'three'
 import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
@@ -226,5 +227,23 @@ describe('applyWireOverlay', () => {
     applyWireOverlay(mesh, false, line)
 
     expect(mesh.children).toHaveLength(0)
+  })
+})
+
+/**
+ * A line is met within a whole world unit of itself — `Raycaster.params.Line.threshold`. The
+ * overlay is decoration hanging under every mesh, so left pickable it grows a halo of that size
+ * around every edge in the scene, and a click into the void beside a cube selects the cube.
+ */
+describe('the wireframe overlay under the pointer', () => {
+  it('is never what a ray meets', () => {
+    const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial())
+    mesh.updateMatrixWorld(true)
+    applyWireOverlay(mesh, true, new LineBasicMaterial())
+
+    // Beside the box, not through it: x sits outside the half-width, well inside the threshold.
+    const raycaster = new Raycaster(new Vector3(0.9, 0, 5), new Vector3(0, 0, -1))
+
+    expect(raycaster.intersectObject(mesh, true)).toEqual([])
   })
 })
