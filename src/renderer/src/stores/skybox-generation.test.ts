@@ -161,6 +161,16 @@ describe('landing a generation in the sky that asked for it', () => {
     expect(useSkyboxes.getState().states['doc-1']).toBeUndefined()
   })
 
+  // A generation answers a batch and a sky is one sky. The other half of `takes` is the canvas,
+  // which gives each of the same batch a layer — see `image-generation`.
+  it('hangs the first of a batch and leaves the rest on the shelf', async () => {
+    catalogueHolds([panorama, { ...panorama, id: 'asset-dawn', name: 'dawn' }])
+    submitFrom('job-1')
+    await finish('succeeded')
+
+    expect(sourceOf('doc-1')).toEqual({ assetId: 'asset-dusk' })
+  })
+
   it('ignores an outcome that decodes as no picture', async () => {
     catalogueHolds([{ ...panorama, type: 'mesh' }])
     submitFrom('job-1')

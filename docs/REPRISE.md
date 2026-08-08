@@ -647,9 +647,15 @@ les sous-agents en pleine revue de l'étape 8 ; `/simplify` et `/code-review` on
 main pour `sprite`, les modes d'affichage, l'export et le BVH, puis une dernière fois avant la
 fusion sur les résolutions de rebase. Les bugs trouvés à ces relectures sont écrits dans le plan,
 étape par étape — mais un seul regard n'en vaut pas deux, et c'est là qu'une lecture humaine
-rapporte le plus. **Les deux résolutions de rebase à regarder en premier** : la réunion de
-`generation-claims.ts`, créé des deux côtés, et l'extraction de `saveDialog` dans `services.ts`,
-où un export d'image et un export de scène partagent désormais un dialogue.
+rapporte le plus.
+
+**Les deux résolutions de rebase sont relues.** `image-generation.ts` réimplémentait
+`generation-landing.ts` — 91 lignes contre 15, mêmes claims, même settle, à une différence de
+comportement près : l'espace Image pose *tous* les assets d'un lot, les autres le premier. Cette
+différence est devenue un champ, `takes: 'first' | 'every'`, et les quatre espaces passent par le
+même mécanisme. L'extraction de `saveDialog` dans `services.ts` est propre ; **une asymétrie
+confirmée et laissée telle quelle** : `pickSavePath` pose un filtre d'extension, `savePicture`
+n'en pose aucun — on peut donc enregistrer des octets PNG sous un nom que rien ne contraint.
 
 Second point : **sur Windows et Linux, un raccourci qu'une surface écoute elle-même attend la
 touche Windows, pas `Ctrl`** — `signatureOf` lit `event.metaKey`. C'est la convention de tout

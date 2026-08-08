@@ -5,6 +5,7 @@ import { addModelTo } from './scenes'
 const landing = createGenerationLanding({
   kind: 'scene',
   accepts: asset => asset.type === 'mesh',
+  takes: 'first',
   land: (documentId, asset) => void addModelTo(documentId, asset),
 })
 

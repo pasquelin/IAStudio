@@ -8,8 +8,14 @@ import { useJobs } from './jobs'
 /** What one workspace needs said about where its generations land. Everything else is shared. */
 export type GenerationLanding = {
   kind: DocumentKind
-  /** Which of a generation's outputs this workspace can take. The first match is the one. */
+  /** Which of a generation's outputs this workspace can take. The rest stays on the shelf. */
   accepts: (asset: Asset) => boolean
+  /**
+   * How much of a batch it keeps, and the only thing the three workspaces ever differed on: a
+   * sky is one sky and a scene one model, while a canvas gives every picture a layer of its own
+   * — so `every` leaves the last one rendered armed.
+   */
+  takes: 'first' | 'every'
   land: (documentId: string, asset: Asset) => void
 }
 
@@ -31,14 +37,16 @@ export type LandingChannel = {
  * The machinery every workspace shares for putting a finished generation where it was asked
  * for: a claim per running job, settled when it stops running.
  *
- * Written once because the 3D workspace needs exactly what the skybox one does, and differs
- * from it by three values: a second copy would have carried the subtleties (capture at the
- * click, drop the claim whatever the outcome, read the catalogue rather than wait on it)
- * without carrying the tests that guard them.
+ * Written once because the sky, the scene and the canvas need the same thing and differ by four
+ * values. The canvas proved the point the hard way: it kept its own copy of this for a while,
+ * ninety lines against fifteen, carrying the subtleties (capture at the click, drop the claim
+ * whatever the outcome, read the catalogue rather than wait on it) without the tests that guard
+ * them here.
  */
 export function createGenerationLanding({
   kind,
   accepts,
+  takes,
   land,
 }: GenerationLanding): LandingChannel {
   /**
@@ -65,14 +73,18 @@ export function createGenerationLanding({
     const { documents } = useDocuments.getState()
 
     for (const [jobId, documentId] of settled) {
-      // A generation can answer several files; the first this workspace can take is the one.
-      // Anything else it produced stays on the shelf rather than being guessed at.
-      const asset = items.find(candidate => candidate.jobId === jobId && accepts(candidate))
       // The tab may have been closed while the job ran: writing into it would resurrect a
       // document nothing shows, with a history nobody can reach.
-      if (!asset || !documents[documentId]) continue
+      if (!documents[documentId]) continue
 
-      land(documentId, asset)
+      // In catalogue order, which is the order they were rendered. Stopped at the first match
+      // when that is all this workspace takes: `items` is the project's whole catalogue.
+      for (const asset of items) {
+        if (asset.jobId !== jobId || !accepts(asset)) continue
+
+        land(documentId, asset)
+        if (takes === 'first') break
+      }
     }
   }
 
