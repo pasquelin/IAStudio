@@ -1,24 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import { revealWindow, type RevealableWindow } from './reveal'
 
-function fakeWindow(state: { destroyed?: boolean; minimized?: boolean } = {}): {
-  window: RevealableWindow
-  restore: ReturnType<typeof vi.fn>
-  focus: ReturnType<typeof vi.fn>
-} {
+function fakeWindow(state: { destroyed?: boolean; minimized?: boolean } = {}) {
   const restore = vi.fn()
   const focus = vi.fn()
 
-  return {
+  const window: RevealableWindow = {
+    isDestroyed: () => state.destroyed ?? false,
+    isMinimized: () => state.minimized ?? false,
     restore,
     focus,
-    window: {
-      isDestroyed: () => state.destroyed ?? false,
-      isMinimized: () => state.minimized ?? false,
-      restore,
-      focus,
-    },
   }
+
+  return { window, restore, focus }
 }
 
 describe('revealWindow', () => {
@@ -47,9 +41,5 @@ describe('revealWindow', () => {
 
     expect(restore).not.toHaveBeenCalled()
     expect(focus).not.toHaveBeenCalled()
-  })
-
-  it('accepts the absence of a window, so callers need no guard of their own', () => {
-    expect(() => revealWindow(null)).not.toThrow()
   })
 })

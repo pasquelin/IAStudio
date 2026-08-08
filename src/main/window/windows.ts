@@ -58,10 +58,6 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
   void window.loadFile(file, hash ? { hash } : {})
 }
 
-/**
- * The studio window, remembered so a second launch has something to bring forward — the same
- * bookkeeping the settings and licences windows do below.
- */
 let mainWindow: BrowserWindow | null = null
 
 /**
@@ -109,17 +105,12 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
 }
 
 /**
- * Answers a second launch of the application. On macOS every window can be closed while the
- * process stays in the Dock, so there may be nothing left to reveal — hence the fallback,
- * which is what `activate` does for a click on the Dock icon.
+ * Answers a second launch. On macOS every window can be closed while the process stays in the
+ * Dock, so there may be nothing left to reveal.
  */
 export function showMainWindow(): void {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    createMainWindow()
-    return
-  }
-
-  revealWindow(mainWindow)
+  if (mainWindow) revealWindow(mainWindow)
+  else createMainWindow()
 }
 
 let settingsWindow: BrowserWindow | null = null

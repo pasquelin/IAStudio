@@ -69,31 +69,19 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   const language = services.language()
   registerAboutPanel(language)
   buildMenu(language, services.settings.read().shortcuts.overrides)
+
+  // Subscribed here, not beside the lock: reached any earlier, `showMainWindow` would find no
+  // window yet and open one before `registerIpc` above — a renderer whose every `invoke` fails.
+  app.on('second-instance', showMainWindow)
 }
 
-/**
- * One studio per machine. Two instances share one settings file and one catalogue:
- * `electron-store` hands the file to whoever writes last, and the catalogue is opened in WAL
- * with no busy timeout, so the loser of a concurrent write takes SQLITE_BUSY on the spot.
- * They would each run a job queue too, doubling a concurrency the preferences bound once.
- *
- * The whole start-up sits inside the lock rather than after an early exit: `app.quit()` is
- * asynchronous, and a second process left to run on would register its protocol, open SQLite
- * and put a window on screen well before the quit landed.
- */
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
-} else {
-  // Someone launched the application again — from the Dock, the Finder or a terminal. Their
-  // intent is to reach the studio, so it comes forward instead of a second copy opening.
-  app.on('second-instance', showMainWindow)
-
+function bootstrap(): void {
   // Must run before the app is ready: afterwards Electron ignores it, `img-src scenario:` in
   // the CSP is never honoured, and every local thumbnail comes back blank.
   registerAssetScheme()
 
-  // At module scope, not inside `whenReady`: this hooks `web-contents-created`, so a window
-  // opened before it would be created outside the lock and keep none of it.
+  // Before any window: this hooks `web-contents-created`, so a window opened earlier would be
+  // created outside the lock and keep none of it.
   lockNavigation()
 
   void app.whenReady().then(() => {
@@ -113,3 +101,10 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform !== 'darwin') app.quit()
   })
 }
+
+/**
+ * One studio per machine: two would share one settings file, one WAL catalogue opened without
+ * a busy timeout, and would each run the job queue the preferences bound once.
+ */
+if (app.requestSingleInstanceLock()) bootstrap()
+else app.quit()
