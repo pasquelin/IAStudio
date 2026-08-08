@@ -1,6 +1,6 @@
 import { clamp } from '@/helpers/numeric'
 import type { Rect } from './canvas-state'
-import { gripRects, HANDLE_IDS, type HandleId } from './handles'
+import { ANCHOR, gripRects, HANDLE_IDS, type HandleId } from './handles'
 import { box, type Point } from './shape-geometry'
 import { crisp, toScreen, type Size, type Viewport } from './viewport'
 
@@ -21,6 +21,33 @@ export function cropRect(
   const height = Math.round(clamp(dragged.y + dragged.height, 0, documentSize.height)) - y
 
   return width >= 1 && height >= 1 ? { x, y, width, height } : null
+}
+
+/**
+ * The frame after one of its grips was dragged to `to`. The edges the grip does not pull stay
+ * where they are, so the opposite corner is fixed — the same rule the layer grips follow.
+ *
+ * Routed back through `cropRect`, which is what keeps a dragged frame and an adjusted one under
+ * one set of rules: clamped to the document, whole-pixel, and `null` rather than collapsed. A
+ * grip pulled past the far edge flips the frame instead of inverting it, since `box` normalises.
+ */
+export function resizeCrop(
+  rect: Rect,
+  handle: Exclude<HandleId, 'rotate'>,
+  to: Point,
+  documentSize: Size,
+  constrain: boolean,
+): Rect | null {
+  // Read off `ANCHOR`, which already says which corner each grip pulls against: an anchor at 1
+  // means the far edge is the right or the bottom, so the grip moves the left or the top. Keyed
+  // on the union rather than tested on the letters, so renaming a grip is a compile error.
+  const anchor = ANCHOR[handle]
+  const left = anchor.x === 1 ? to.x : rect.x
+  const right = anchor.x === 0 ? to.x : rect.x + rect.width
+  const top = anchor.y === 1 ? to.y : rect.y
+  const bottom = anchor.y === 0 ? to.y : rect.y + rect.height
+
+  return cropRect({ x: left, y: top }, { x: right, y: bottom }, documentSize, constrain)
 }
 
 /** Everything the crop chrome puts on screen, in screen pixels and ready to fill or stroke. */

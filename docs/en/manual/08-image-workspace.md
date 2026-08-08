@@ -139,16 +139,23 @@ it, as long as the document has not changed size in between.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Crop** | `F` | drag a frame over the picture; on release, the document is brought down to it |
+| **Crop** | `F` | drag a frame over the picture, adjust it, then `⏎` to trim |
 | **Slice** | `⇧S` | *not available yet* |
 | **Cut** | `S` | *not available yet* |
 
-While you drag, whatever falls outside the frame is **dimmed**: that is exactly what the crop is
-about to remove. Hold `⇧` to constrain the frame to a square. The frame never leaves the picture —
-a crop trims, it does not grow.
+The gesture comes in three steps:
 
-**The crop applies on release**, with no confirmation step. To correct it, press `⌘Z` and start
-again; to abandon it mid-gesture, press the **middle mouse button** before letting go.
+1. **Drag** a frame over the picture. Whatever falls outside it is **dimmed** — that is exactly
+   what the crop is about to remove. Hold `⇧` to constrain the frame to a square.
+2. **Adjust it.** The frame stays on screen when you let go, with its eight grips: pull a corner
+   or an edge to correct it. Dragging anywhere else starts a fresh frame.
+3. **`⏎` applies**, `⎋` abandons.
+
+Nothing changes before `⏎`: you can zoom, pan with the middle mouse button, and come back to the
+frame. Arming another tool abandons it, and so does resizing or rotating the picture — the frame
+would no longer point at the same thing.
+
+The frame never leaves the picture — a crop trims, it does not grow.
 
 > ⚠️ **`⌘Z` gives the frame back, not the cropped pixels.** Shrinking the document throws away
 > what fell outside for good: undo restores the original size, but the removed area comes back

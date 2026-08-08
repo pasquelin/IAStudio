@@ -22,7 +22,7 @@ export const HANDLE_IDS: readonly HandleId[] = [
 ]
 
 /** Which corner each grip pulls against: the opposite one stays put, as it does everywhere. */
-const ANCHOR: Readonly<Record<Exclude<HandleId, 'rotate'>, { x: number; y: number }>> = {
+export const ANCHOR: Readonly<Record<Exclude<HandleId, 'rotate'>, { x: number; y: number }>> = {
   nw: { x: 1, y: 1 },
   n: { x: 0.5, y: 1 },
   ne: { x: 0, y: 1 },

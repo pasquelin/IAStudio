@@ -202,6 +202,12 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         }
         case 'canvas.deselect':
           return useCanvasViews.getState().setSelection(documentId, null)
+        // Both no-ops without a frame on screen, which is what makes ⏎ and ⎋ safe to bind here:
+        // the engine answers, and only the document in front is listening.
+        case 'canvas.cropApply':
+          return engine.current?.applyCrop()
+        case 'canvas.cropCancel':
+          return engine.current?.dropCrop()
         case 'canvas.maskFromSelection': {
           const host = engine.current
           return host ? maskFromSelection(documentId, host) : undefined

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cropChrome, cropRect } from './crop'
+import { cropChrome, cropRect, resizeCrop } from './crop'
 
 const DOCUMENT = { width: 800, height: 600 }
 const VIEW_1_1 = { x: 0, y: 0, scale: 1 }
@@ -72,6 +72,60 @@ describe('cropRect', () => {
 
   it('refuses a drag that happens entirely outside the document', () => {
     expect(cropRect({ x: 900, y: 700 }, { x: 1200, y: 900 }, DOCUMENT, false)).toBeNull()
+  })
+})
+
+describe('resizeCrop', () => {
+  const FRAME = { x: 100, y: 100, width: 200, height: 200 }
+
+  it('moves the edge its grip pulls and leaves the others alone', () => {
+    expect(resizeCrop(FRAME, 'e', { x: 400, y: 999 }, DOCUMENT, false)).toEqual({
+      x: 100,
+      y: 100,
+      width: 300,
+      height: 200,
+    })
+  })
+
+  it('moves both edges of a corner grip', () => {
+    expect(resizeCrop(FRAME, 'nw', { x: 50, y: 60 }, DOCUMENT, false)).toEqual({
+      x: 50,
+      y: 60,
+      width: 250,
+      height: 240,
+    })
+  })
+
+  it('keeps the opposite edge fixed when a grip is dragged inwards', () => {
+    expect(resizeCrop(FRAME, 'w', { x: 250, y: 0 }, DOCUMENT, false)).toEqual({
+      x: 250,
+      y: 100,
+      width: 50,
+      height: 200,
+    })
+  })
+
+  /** Pulled past the far edge the frame flips rather than inverting: `box` normalises it. */
+  it('flips the frame when a grip is dragged past the opposite edge', () => {
+    expect(resizeCrop(FRAME, 'w', { x: 500, y: 0 }, DOCUMENT, false)).toEqual({
+      x: 300,
+      y: 100,
+      width: 200,
+      height: 200,
+    })
+  })
+
+  it('clamps an adjusted frame to the document, as a dragged one is', () => {
+    expect(resizeCrop(FRAME, 'se', { x: 2000, y: 2000 }, DOCUMENT, false)).toEqual({
+      x: 100,
+      y: 100,
+      width: 700,
+      height: 500,
+    })
+  })
+
+  it('refuses an adjustment that collapses the frame', () => {
+    expect(resizeCrop(FRAME, 'w', { x: 300, y: 0 }, DOCUMENT, false)).toBeNull()
   })
 })
 

@@ -1007,6 +1007,14 @@
       "title": "Deselect",
       "help": "Drop the selected region, so the brush reaches the whole layer again"
     },
+    "canvasCropApply": {
+      "title": "Apply the crop",
+      "help": "Trim the document to the placed frame. ⌘Z gives the frame back, not the pixels"
+    },
+    "canvasCropCancel": {
+      "title": "Abandon the crop",
+      "help": "Take the crop frame away without trimming anything at all"
+    },
     "canvasMaskFromSelection": {
       "title": "Make a mask of the selection",
       "help": "Hide the armed layer outside the selected region"

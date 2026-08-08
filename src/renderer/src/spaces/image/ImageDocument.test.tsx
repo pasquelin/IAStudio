@@ -13,6 +13,8 @@ import { ImageDocument } from './ImageDocument'
 
 const setTool = vi.fn()
 const setBrush = vi.fn()
+const applyCrop = vi.fn()
+const dropCrop = vi.fn()
 
 // jsdom has no WebGL context: the engine is exercised by hand, not here. What this covers is
 // that the document wires the bar to the right calls.
@@ -32,6 +34,8 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       setSelection = vi.fn()
       setSelectionShape = vi.fn()
       snapshot = vi.fn(() => Promise.resolve('data:image/png;base64,AAAA'))
+      applyCrop = applyCrop
+      dropCrop = dropCrop
     },
   }
 })
