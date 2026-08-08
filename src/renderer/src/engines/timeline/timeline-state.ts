@@ -2,7 +2,7 @@
  * A sequence, as plain data. It holds no decoder and no Pixi object: an engine is rebuilt from
  * its serialized state, never from its DOM, and jsdom has neither WebCodecs nor WebGL.
  */
-import { isRecord, readBoolean, readNumber, readString } from '@shared/guards'
+import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 
 /** Timeline time, in microseconds. Never float seconds: drift accumulates over a long edit. */
 export type Us = number
@@ -320,10 +320,6 @@ export function insertClip(track: Track, clip: Clip, tailId: string): Track {
   return { ...track, clips: clips.sort((left, right) => left.start - right.start) }
 }
 
-export function serializeSequence(state: SequenceState): string {
-  return JSON.stringify(state)
-}
-
 function readClip(raw: unknown): Clip | null {
   if (!isRecord(raw)) return null
 
@@ -338,11 +334,11 @@ function readClip(raw: unknown): Clip | null {
       id,
       assetId,
       duration,
-      start: Math.max(0, readNumber(raw, 'start', 0)),
-      inPoint: Math.max(0, readNumber(raw, 'inPoint', 0)),
+      start: readPositive(raw, 'start', 0),
+      inPoint: readPositive(raw, 'inPoint', 0),
       speed: readNumber(raw, 'speed', 1) || 1,
-      fadeIn: Math.max(0, readNumber(raw, 'fadeIn', 0)),
-      fadeOut: Math.max(0, readNumber(raw, 'fadeOut', 0)),
+      fadeIn: readPositive(raw, 'fadeIn', 0),
+      fadeOut: readPositive(raw, 'fadeOut', 0),
       gain: readNumber(raw, 'gain', 0),
     }),
   )
@@ -417,6 +413,6 @@ export function parseSequence(content: unknown): SequenceState {
       typeof selectedId === 'string' && tracks.some(t => t.clips.some(c => c.id === selectedId))
         ? selectedId
         : null,
-    playhead: Math.max(0, readNumber(content, 'playhead', 0)),
+    playhead: readPositive(content, 'playhead', 0),
   }
 }

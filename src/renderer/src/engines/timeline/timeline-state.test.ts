@@ -18,7 +18,6 @@ import {
   newClipId,
   playsThrough,
   sequenceDuration,
-  serializeSequence,
   snapToFrame,
   sourceTimeAt,
   trackOfClip,
@@ -241,7 +240,7 @@ describe('track height', () => {
 describe('reading a sequence back', () => {
   it('survives a serialize/deserialize round trip unchanged', () => {
     const state: SequenceState = { ...EMPTY_SEQUENCE, tracks: [track([clip('a', 0, 1_000)])] }
-    expect(parseSequence(JSON.parse(serializeSequence(state)))).toEqual(state)
+    expect(parseSequence(JSON.parse(JSON.stringify(state)))).toEqual(state)
   })
 
   it('falls back to an empty sequence rather than throwing on a shape it cannot read', () => {

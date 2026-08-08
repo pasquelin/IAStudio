@@ -27,8 +27,13 @@ export function setDockviewApi(workspace: WorkspaceId, api: DockviewApi): void {
   current = api
   mounted = workspace
 
-  const queued = pending.filter(document => document.workspace === workspace)
-  pending = pending.filter(document => document.workspace !== workspace)
+  const queued: DocumentDescriptor[] = []
+  const waiting: DocumentDescriptor[] = []
+  for (const document of pending) {
+    ;(document.workspace === workspace ? queued : waiting).push(document)
+  }
+
+  pending = waiting
   for (const document of queued) addPanel(api, document)
 }
 

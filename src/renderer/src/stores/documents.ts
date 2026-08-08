@@ -25,7 +25,20 @@ type DocumentsState = {
    * which is exactly the document one needs the Explorer to find.
    */
   stored: DocumentDescriptor[]
-  /** Reads the open project's folder: the whole listing, and the documents a layout still shows. */
+  /**
+   * Re-reads the folder into `stored`, and nothing else.
+   *
+   * Separate from `refresh` on purpose: a panel that wants a listing must not also settle which
+   * tabs are open. `create` posts a descriptor without writing a file — deliberately, so a tab
+   * opened and never typed in leaves nothing behind — and a reconciliation triggered by opening
+   * the Explorer would evict exactly that document while its tab is still on screen.
+   */
+  relist: () => Promise<void>
+  /**
+   * Reads the open project's folder and settles both halves: what exists, and which of those a
+   * layout still shows. For a change of project — where dropping the documents of the previous
+   * one is the whole point.
+   */
   refresh: () => Promise<void>
   /** `null` when the workspace has no editable document kind yet. */
   create: (workspace: WorkspaceId) => Promise<DocumentDescriptor | null>
@@ -112,12 +125,19 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     if (get().activeId !== id) set({ activeId: id })
   },
 
+  relist: async () => {
+    const mine = ++generation
+    const found = await listed()
+    // A second project opened while the first was still listing: the last answer to arrive is
+    // not necessarily the one that was asked for last.
+    if (mine !== generation) return
+
+    set({ stored: sorted(found) })
+  },
+
   refresh: async () => {
     const mine = ++generation
     const found = await listed()
-
-    // A second project opened while the first was still listing: the last answer to arrive is
-    // not necessarily the one that was asked for last.
     if (mine !== generation) return
 
     const shown = panelIds(useLayouts.getState().layouts)
@@ -129,9 +149,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
     set(state => ({
       documents,
-      // Sorted by title rather than by whatever order the folder was read in: a listing that
-      // reshuffles between two refreshes is a list nobody can point at.
-      stored: [...found].sort((left, right) => left.title.localeCompare(right.title)),
+      stored: sorted(found),
       // Kept when the tab survived the load: Dockview announces the active panel on mount, and
       // that happens before this listing comes back — clearing it here would leave every tool
       // window looking at nothing while a document is plainly open.
@@ -180,8 +198,16 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     }),
 }))
 
-/** Bumped per refresh, so a listing that comes back late cannot install itself. */
+/** Bumped per listing, so one that comes back late cannot install itself. */
 let generation = 0
+
+/**
+ * Sorted by title rather than by whatever order the folder was read in: a listing that
+ * reshuffles between two reads is a list nobody can point at.
+ */
+function sorted(found: readonly DocumentDescriptor[]): DocumentDescriptor[] {
+  return [...found].sort((left, right) => left.title.localeCompare(right.title))
+}
 
 /**
  * What the project folder holds, or nothing at all: no project open, or a folder that went away

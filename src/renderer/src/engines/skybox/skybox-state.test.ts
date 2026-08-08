@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import { POLE_LIMIT } from '@shared/domain/angles'
 import { createSkyboxContent, DEFAULT_SUN, type SkyboxContent } from '@shared/domain/skybox'
-import { parseSkybox, serializeSkybox } from './skybox-state'
+import { parseSkybox } from './skybox-state'
 
 const filled: SkyboxContent = {
   source: { assetId: 'asset-a' },
@@ -14,7 +14,7 @@ const filled: SkyboxContent = {
 
 describe('reading a sky back', () => {
   it('survives a serialize/parse round trip unchanged', () => {
-    expect(parseSkybox(JSON.parse(serializeSkybox(filled)))).toEqual(filled)
+    expect(parseSkybox(JSON.parse(JSON.stringify(filled)))).toEqual(filled)
   })
 
   it('falls back to a fresh sky rather than throwing on a shape it cannot read', () => {

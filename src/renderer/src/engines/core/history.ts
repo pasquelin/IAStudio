@@ -104,6 +104,39 @@ export function undo<S>(state: S, history: History<S>): [S, History<S>] {
   ]
 }
 
+/**
+ * Drops an entry the caller can no longer replay, and everything the stack would have to step
+ * over to reach it. Undo is sequential, so an entry left behind a missing one is unreachable
+ * anyway — leaving it in place would show a ⌘Z that does nothing rather than one that has run
+ * out, which is the difference between a limit and a bug.
+ *
+ * Here rather than in the store, so that the one rule about `dropped` — a command that leaves
+ * `past` while staying applied has to be remembered — is written where the type lives.
+ */
+export function forget<S>(history: History<S>, commandId: string): History<S> {
+  const behind = history.past.findIndex(command => command.id === commandId)
+  const ahead = history.future.findIndex(command => command.id === commandId)
+  if (behind < 0 && ahead < 0) return history
+
+  return {
+    past: behind < 0 ? history.past : history.past.slice(behind + 1),
+    // Redo runs forwards, so a hole in the future cuts everything past it instead.
+    future: ahead < 0 ? history.future : history.future.slice(0, ahead),
+    dropped: behind < 0 ? history.dropped : (history.past[behind] ?? history.dropped),
+  }
+}
+
+/**
+ * Reverts the last command and forgets it, rather than moving it to the redo stack. For a
+ * gesture that turned out to be a no-op — a guide pulled off a ruler and dropped back on it —
+ * where `undo` would leave ⌘Y able to resurrect what the user just threw away.
+ */
+export function discardLast<S>(state: S, history: History<S>): [S, History<S>] {
+  const command = history.past.at(-1)
+  if (!command) return [state, history]
+  return [command.revert(state), { ...history, past: history.past.slice(0, -1) }]
+}
+
 export function redo<S>(state: S, history: History<S>): [S, History<S>] {
   const [command, ...rest] = history.future
   if (!command) return [state, history]

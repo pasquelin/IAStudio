@@ -1,11 +1,9 @@
 import { mdiClose } from '@mdi/js'
 import { DockviewDefaultTab, type IDockviewPanelHeaderProps } from 'dockview-react'
-import { useState, type MouseEvent } from 'react'
+import { useCallback, useState, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { UiIcon } from '@/design/UiIcon'
-import { cn } from '@/helpers/cn'
-import { reportFailure } from '@/services/diagnostics'
-import { closeDocument } from './document-io'
+import { ToolButton } from '@/design/ToolButton'
+import { closeTab } from './close-tab'
 import { DocumentTabMenu } from './DocumentTabMenu'
 
 /**
@@ -14,7 +12,7 @@ import { DocumentTabMenu } from './DocumentTabMenu'
  * Dockview's own close button removes the panel and nothing else — it cannot ask about unsaved
  * work, and it left the document's state, its history and its descriptor behind. So the default
  * tab is kept for its title, its drag behaviour and its look, its cross is hidden, and the one
- * drawn here goes through `closeDocument` instead.
+ * drawn here goes through `closeTab` instead.
  */
 export function DocumentTab(props: IDockviewPanelHeaderProps) {
   const { t } = useTranslation()
@@ -23,9 +21,7 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
   const close = (event: MouseEvent): void => {
     // Dockview reads a click on the tab as "activate me"; this one is not that.
     event.stopPropagation()
-    void closeDocument(props.api.id).catch(error =>
-      reportFailure('document.close', props.api.id, error),
-    )
+    closeTab(props.api.id)
   }
 
   const openMenu = (event: MouseEvent): void => {
@@ -33,27 +29,25 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
     setMenuAt({ x: event.clientX, y: event.clientY })
   }
 
+  // Stable, or the open menu re-subscribes its three global listeners every time the tab
+  // re-renders — which it does on every title change and every modified bullet.
+  const closeMenu = useCallback(() => setMenuAt(null), [])
+
   return (
     <>
       <DockviewDefaultTab {...props} hideClose onContextMenu={openMenu} />
-      <button
-        type="button"
-        aria-label={t('documents.close')}
+      {/* Same footprint as the cross it replaces, so a tab does not change width for having
+          its own close button. */}
+      <ToolButton
+        icon={mdiClose}
+        label={t('documents.close')}
+        variant="header"
+        iconSize={12}
+        className="mr-1 size-4 self-center"
         onClick={close}
-        // Same footprint as the cross it replaces, so a tab does not change width for having
-        // its own close button.
-        className={cn(
-          'text-muted hover:bg-elevated hover:text-text flex shrink-0 cursor-pointer',
-          'mr-1 items-center justify-center rounded-(--radius-sc-sm) border-none bg-transparent',
-          'size-4 self-center transition-colors',
-        )}
-      >
-        <UiIcon path={mdiClose} size={12} />
-      </button>
+      />
 
-      {menuAt && (
-        <DocumentTabMenu documentId={props.api.id} at={menuAt} onClose={() => setMenuAt(null)} />
-      )}
+      {menuAt && <DocumentTabMenu documentId={props.api.id} at={menuAt} onClose={closeMenu} />}
     </>
   )
 }

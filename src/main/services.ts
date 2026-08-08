@@ -143,27 +143,6 @@ async function pickPath(kind: PathKind, startIn?: string): Promise<string | null
  * `openDialog` above it: a second one with slightly different options is how two save flows
  * start behaving differently.
  */
-/**
- * A question with buttons, parented to the window that asked when there is one. Modal to it
- * rather than to the application: a sheet hanging off no window is one the user can lose
- * behind it.
- */
-async function askUser(options: {
-  message: string
-  detail: string
-  buttons: string[]
-  defaultId: number
-  cancelId: number
-}): Promise<number> {
-  const parent = BrowserWindow.getFocusedWindow()
-  const shown: Electron.MessageBoxOptions = { type: 'warning', ...options }
-  const result = parent
-    ? await dialog.showMessageBox(parent, shown)
-    : await dialog.showMessageBox(shown)
-
-  return result.response
-}
-
 async function saveDialog(options: Electron.SaveDialogOptions): Promise<string | null> {
   const parent = BrowserWindow.getFocusedWindow()
   const result = parent
@@ -171,6 +150,21 @@ async function saveDialog(options: Electron.SaveDialogOptions): Promise<string |
     : await dialog.showSaveDialog(options)
 
   return result.canceled ? null : (result.filePath ?? null)
+}
+
+/**
+ * A question with buttons, parented to the window that asked when there is one. Modal to it
+ * rather than to the application: a sheet hanging off no window is one the user can lose
+ * behind it.
+ */
+const askUser: AskUser = async options => {
+  const parent = BrowserWindow.getFocusedWindow()
+  const shown: Electron.MessageBoxOptions = { type: 'warning', ...options }
+  const result = parent
+    ? await dialog.showMessageBox(parent, shown)
+    : await dialog.showMessageBox(shown)
+
+  return result.response
 }
 
 /**
@@ -579,7 +573,7 @@ export function createServices(settings: SettingsStore): Services {
     savePicture,
     pickSavePath,
     reveal: file => shell.showItemInFolder(file),
-    askUser: askUser,
+    askUser,
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's
     // contents under the new one.

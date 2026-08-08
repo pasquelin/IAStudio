@@ -99,12 +99,8 @@ describe('isDirty', () => {
     expect(dirty('doc-2')).toBe(true)
   })
 
-  /**
-   * Past `HISTORY_LIMIT` the oldest commands fall off the stack. Undoing everything left then
-   * empties it — and an empty stack used to read exactly like the one a document saved with no
-   * history has, so the document called itself clean while the dropped commands were still
-   * applied. The bullet vanished from the tab and the work went with the next close.
-   */
+  // What `history.ts` calls `dropped`, seen from the store: the bullet used to vanish from the
+  // tab while the commands the stack dropped were still applied.
   it('stays modified after an undo that only reached the end of a truncated stack', () => {
     useScenes.getState().markSaved('doc-1', sceneStore.markOf(useScenes.getState(), 'doc-1'))
     expect(dirty('doc-1')).toBe(false)

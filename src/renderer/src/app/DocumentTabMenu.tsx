@@ -2,8 +2,8 @@ import { mdiClose, mdiCloseBoxMultipleOutline, mdiTrashCanOutline } from '@mdi/j
 import { useTranslation } from 'react-i18next'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
-import type { LogScope } from '@shared/ipc'
 import { reportFailure } from '@/services/diagnostics'
+import { closeTab } from './close-tab'
 import { closeDocument, deleteDocument } from './document-io'
 import { openPanelIds } from './dockview-api'
 
@@ -23,30 +23,39 @@ export type DocumentTabMenuProps = {
 export function DocumentTabMenu({ documentId, at, onClose }: DocumentTabMenuProps) {
   const { t } = useTranslation()
 
-  const run = (work: Promise<unknown>, scope: LogScope): void => {
-    onClose()
-    // Every one of these can fail on the disk, and none of them has a surface of its own by the
-    // time it does — the menu is gone. The journal is where it lands.
-    void work.catch(error => reportFailure(scope, documentId, error))
-  }
+  /** The menu is gone by the time any of these fails, so the journal is where it lands. */
+  const choose =
+    (run: () => void): (() => void) =>
+    () => {
+      onClose()
+      run()
+    }
 
   return (
     <ContextMenu at={at} onClose={onClose}>
       <MenuRow
         label={t('documents.close')}
         icon={mdiClose}
-        onSelect={() => run(closeDocument(documentId), 'document.close')}
+        onSelect={choose(() => closeTab(documentId))}
       />
       <MenuRow
         label={t('documents.closeOthers')}
         icon={mdiCloseBoxMultipleOutline}
         disabled={openPanelIds().length < 2}
-        onSelect={() => run(closeOthers(documentId), 'document.close')}
+        onSelect={choose(() => {
+          void closeOthers(documentId).catch(error =>
+            reportFailure('document.close', documentId, error),
+          )
+        })}
       />
       <MenuRow
         label={t('documents.delete')}
         icon={mdiTrashCanOutline}
-        onSelect={() => run(deleteDocument(documentId), 'document.delete')}
+        onSelect={choose(() => {
+          void deleteDocument(documentId).catch(error =>
+            reportFailure('document.delete', documentId, error),
+          )
+        })}
       />
     </ContextMenu>
   )

@@ -187,8 +187,6 @@ export type DocumentEnvelope = Omit<DocumentFile, 'content'>
  */
 export type CloseChoice = 'save' | 'discard' | 'cancel'
 
-export const CLOSE_CHOICES: readonly CloseChoice[] = ['save', 'discard', 'cancel']
-
 /**
  * How much of a file the envelope may take. It holds a capped title and three short fields; a
  * head longer than this is not one, and reading further would be reading the document itself.

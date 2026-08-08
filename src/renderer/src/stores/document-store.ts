@@ -1,6 +1,8 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import {
+  discardLast,
   emptyHistory,
+  forget,
   markOf as historyMark,
   redo,
   run,
@@ -29,18 +31,9 @@ export type DocumentStoreState<S> = {
   endGesture: (documentId: string) => void
   /** Writes without touching the history — selection is not a command. */
   replace: (documentId: string, state: S) => void
-  /**
-   * Reverts the last command and forgets it, rather than moving it to the redo stack. For a
-   * gesture that turned out to be a no-op — a guide pulled off a ruler and dropped back on it —
-   * where `undo` would leave ⌘Y able to resurrect what the user just threw away.
-   */
+  /** `discardLast` of `history.ts`, on this document. */
   discardLast: (documentId: string) => void
-  /**
-   * Drops an entry the engine can no longer replay, and everything the stack would have to step
-   * over to reach it. Undo is sequential, so an entry left behind a missing one is unreachable
-   * anyway — leaving it in place would show a ⌘Z that does nothing rather than one that has run
-   * out, which is the difference between a limit and a bug.
-   */
+  /** `forget` of `history.ts`, on this document — for a patch the engine can no longer replay. */
   forgetThrough: (documentId: string, commandId: string) => void
   /**
    * Installs a starting state on first open, built rather than shared: a scene needs its own
@@ -59,7 +52,7 @@ export type DocumentStoreState<S> = {
   drop: (documentId: string) => void
 }
 
-export type Readable<S> = Pick<DocumentStoreState<S>, 'states' | 'histories' | 'saved'>
+type Readable<S> = Pick<DocumentStoreState<S>, 'states' | 'histories' | 'saved'>
 
 /**
  * A space's store, as anything generic over spaces sees it. Spelled out rather than inferred so
@@ -162,37 +155,15 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
 
       // Deliberately leaves the open gesture alone: this is called from inside one, and closing
       // it would stop the rest of that gesture from coalescing — one history entry per frame.
-      discardLast: documentId =>
-        step(documentId, (state, history) => {
-          const command = history.past.at(-1)
-          if (!command) return [state, history]
-          return [
-            command.revert(state),
-            { ...history, past: history.past.slice(0, -1), future: history.future },
-          ]
-        }),
+      discardLast: documentId => step(documentId, discardLast),
 
       forgetThrough: (documentId, commandId) =>
-        set(state => {
-          const history = historyOf(state, documentId)
-          const behind = history.past.findIndex(command => command.id === commandId)
-          const ahead = history.future.findIndex(command => command.id === commandId)
-          if (behind < 0 && ahead < 0) return state
-
-          return {
-            histories: {
-              ...state.histories,
-              [documentId]: {
-                past: behind < 0 ? history.past : history.past.slice(behind + 1),
-                // Redo runs forwards, so a hole in the future cuts everything past it instead.
-                future: ahead < 0 ? history.future : history.future.slice(0, ahead),
-                // The cut drops commands that are still applied, exactly as the limit does: the
-                // stack it leaves must not compare equal to the one an untouched document has.
-                dropped: behind < 0 ? history.dropped : (history.past[behind] ?? history.dropped),
-              },
-            },
-          }
-        }),
+        set(state => ({
+          histories: {
+            ...state.histories,
+            [documentId]: forget(historyOf(state, documentId), commandId),
+          },
+        })),
 
       // Both close whatever gesture was open: the entry the next command would have merged into
       // is no longer the one the gesture started from.

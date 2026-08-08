@@ -4,11 +4,11 @@ import {
   type DocumentKind,
   type DocumentPart,
 } from '@shared/domain/document'
-import { parseAudioEdits, serializeAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
+import { parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
-import { parseSkybox, serializeSkybox } from '@/engines/skybox/skybox-state'
-import { EMPTY_SEQUENCE, parseSequence, serializeSequence } from '@/engines/timeline/timeline-state'
+import { parseSkybox } from '@/engines/skybox/skybox-state'
+import { EMPTY_SEQUENCE, parseSequence } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { closePanel } from './dockview-api'
@@ -55,15 +55,19 @@ type DocumentIo = {
 }
 
 /**
- * The five kinds a string can hold, which differ only in how their state turns into text and
- * back. Written once: the bookkeeping around the crossing — read the mark before the write,
- * hand it back after, load outside the history, open clean — is the same for all of them, and
- * five copies of it meant a fix landing in one space and not the others.
+ * The kinds a string can hold, which differ only in what their state becomes on the way out and
+ * how it is read back in. Written once: the bookkeeping around the crossing — read the mark
+ * before the write, hand it back after, load outside the history, open clean — is the same for
+ * all of them, and a copy per kind meant a fix landing in one space and not the others.
+ *
+ * JSON is crossed HERE, never by a caller. A `SyntaxError` from a file that is not JSON at all
+ * is what marks the document unreadable and stops the next ⌘S from writing over it — a kind
+ * whose own reader swallowed that would lose the protection with nothing to catch it.
  */
 function textDocumentIo<S>(
   store: DocumentStore<S>,
-  serialize: (state: S) => string,
-  parse: (content: string) => S,
+  toPayload: (state: S) => unknown,
+  fromPayload: (payload: unknown) => S,
   createDefault: () => S,
 ): DocumentIo {
   return {
@@ -72,15 +76,15 @@ function textDocumentIo<S>(
       const mark = store.markOf(current, documentId)
 
       return Promise.resolve({
-        // Serialized here, in the window that owns the document: the file layer never parses a
-        // content, so the cost of a twenty-thousand-node scene never reaches the main thread.
-        draft: { content: serialize(store.stateOf(current, documentId)) },
+        // Serialized in the window that owns the document: the file layer never parses a
+        // content, so the biggest of them is never decoded in the main process.
+        draft: { content: JSON.stringify(toPayload(store.stateOf(current, documentId))) },
         commit: () => store.use.getState().markSaved(documentId, mark),
       })
     },
     install: (documentId, content) => {
       // `replace`, not a command: loading a document is not something ⌘Z gives back.
-      store.use.getState().replace(documentId, parse(content))
+      store.use.getState().replace(documentId, fromPayload(JSON.parse(content)))
       // What is on screen is now exactly what the disk holds, so the document opens clean.
       const loaded = store.use.getState()
       loaded.markSaved(documentId, store.markOf(loaded, documentId))
@@ -91,6 +95,9 @@ function textDocumentIo<S>(
     forget: documentId => store.use.getState().drop(documentId),
   }
 }
+
+/** A state that is already the payload — most kinds store what they serialize. */
+const asIs = <S>(state: S): unknown => state
 
 /**
  * What a surface's pixels are called inside `<id>.img/`. The role goes in FRONT of the id, never
@@ -169,40 +176,16 @@ const IMAGE_IO: DocumentIo = {
  * Every kind the studio can write, and the only place a kind is declared savable. A kind absent
  * here has a Save that does nothing rather than one that writes an empty body.
  */
-const IO_BY_KIND: Partial<Record<DocumentKind, DocumentIo>> = {
+const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   image: IMAGE_IO,
-  scene: textDocumentIo(
-    sceneStore,
-    state => JSON.stringify(scenePayload(state)),
-    content => sceneFromPayload(JSON.parse(content)),
-    createDefaultScene,
-  ),
-  sequence: textDocumentIo(
-    sequenceStore,
-    serializeSequence,
-    content => parseSequence(JSON.parse(content)),
-    () => EMPTY_SEQUENCE,
-  ),
-  audio: textDocumentIo(
-    audioEditStore,
-    serializeAudioEdits,
-    content => parseAudioEdits(JSON.parse(content)),
-    () => EMPTY_AUDIO_EDIT,
-  ),
-  skybox: textDocumentIo(
-    skyboxStore,
-    serializeSkybox,
-    content => parseSkybox(JSON.parse(content)),
-    createSkyboxContent,
-  ),
-  texture: textDocumentIo(
-    textureStore,
-    state => JSON.stringify(state),
-    content => parseTexture(JSON.parse(content)),
-    newTexture,
-  ),
+  scene: textDocumentIo(sceneStore, scenePayload, sceneFromPayload, createDefaultScene),
+  sequence: textDocumentIo(sequenceStore, asIs, parseSequence, () => EMPTY_SEQUENCE),
+  audio: textDocumentIo(audioEditStore, asIs, parseAudioEdits, () => EMPTY_AUDIO_EDIT),
+  skybox: textDocumentIo(skyboxStore, asIs, parseSkybox, createSkyboxContent),
+  texture: textDocumentIo(textureStore, asIs, parseTexture, newTexture),
 }
 
+/** `undefined` for an id no tab is showing — never for a kind that cannot be saved. */
 const ioOf = (documentId: string): DocumentIo | undefined => {
   const kind = useDocuments.getState().documents[documentId]?.kind
   return kind && IO_BY_KIND[kind]
@@ -230,6 +213,9 @@ export async function saveDocument(documentId: string): Promise<void> {
   const { draft, commit } = await io.capture(documentId)
   await bridge.documents.write(document.id, document.kind, { ...draft, title: document.title })
   commit()
+  // The folder now holds a file it did not: a document saved for the first time has to appear
+  // in the Explorer without waiting for the panel to be reopened.
+  void useDocuments.getState().relist()
 }
 
 /**
@@ -288,13 +274,10 @@ export function restoreDocument(documentId: string): Promise<void> {
   return reading
 }
 
-/**
- * Whether the document has work its file does not hold. `false` for a kind that cannot be
- * saved and for a tab that never filled: neither has anything to lose.
- */
-export function documentIsDirty(documentId: string): boolean {
+/** Whether the document has work its file does not hold. A tab that never filled has none. */
+function documentIsDirty(documentId: string): boolean {
   const io = ioOf(documentId)
-  return io ? io.holds(documentId) && io.dirty(documentId) : false
+  return io !== undefined && io.holds(documentId) && io.dirty(documentId)
 }
 
 /**
@@ -307,9 +290,7 @@ export function documentIsDirty(documentId: string): boolean {
  * cancelled dialog costs nothing.
  */
 export async function closeDocument(documentId: string): Promise<boolean> {
-  const io = ioOf(documentId)
-
-  if (io && documentIsDirty(documentId)) {
+  if (documentIsDirty(documentId)) {
     const title = useDocuments.getState().documents[documentId]?.title ?? ''
     const choice = (await getBridge()?.documents.confirmClose(title)) ?? 'cancel'
     if (choice === 'cancel') return false
@@ -338,6 +319,9 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
 
   await bridge.documents.remove(document.id, document.kind)
   forgetDocument(documentId)
+  // The row has to go with the file. Left standing, a double-click on it would open an empty
+  // document under the same id — and the next ⌘S would write back what was just deleted.
+  void useDocuments.getState().relist()
   return true
 }
 

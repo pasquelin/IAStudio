@@ -27,10 +27,10 @@ export function Explorer() {
   const open = useDocuments(state => state.documents)
   const projectPath = useProject(state => state.project?.path ?? null)
 
-  // The folder is read when a project opens; a document written since then is not in that
-  // listing. Re-read on mount rather than on a timer: opening the panel is when one asks.
+  // Opening a project already lists it; this is for what has been written since. `relist` and
+  // not `refresh`: settling which tabs are open is the project's business, not this panel's.
   useEffect(() => {
-    void useDocuments.getState().refresh()
+    void useDocuments.getState().relist()
   }, [projectPath])
 
   if (!projectPath)
@@ -39,7 +39,8 @@ export function Explorer() {
   return (
     <Collection
       items={stored}
-      selectedIds={selectedIn(open)}
+      // Not a selection one makes — it is what "open" looks like in this list.
+      selectedIds={Object.keys(open)}
       renderRow={(document: DocumentDescriptor) => (
         <div className="h-full" onDoubleClick={() => openDocument(document)}>
           <DocumentRow document={document} open={open[document.id] !== undefined} />
@@ -48,9 +49,4 @@ export function Explorer() {
       empty={<EmptyState icon={mdiFolderOpenOutline} message={t('explorer.noDocuments')} />}
     />
   )
-}
-
-/** The rows a tab is showing. Not a selection one makes — it is what "open" looks like here. */
-function selectedIn(open: Record<string, DocumentDescriptor>): string[] {
-  return Object.keys(open)
 }

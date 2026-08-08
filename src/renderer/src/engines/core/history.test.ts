@@ -82,13 +82,7 @@ describe('history', () => {
   })
 })
 
-/**
- * What says whether a document is on disk. The trap it now avoids: past the limit the oldest
- * commands fall off, so undoing everything left empties the stack while those commands are
- * still applied — and an empty stack used to read exactly like an untouched document. A save
- * made when the history was empty then called that state clean, and the work was lost with the
- * bullet gone from the tab.
- */
+/** What says whether a document is on disk — see `dropped` in `history.ts` for the trap. */
 describe('markOf', () => {
   const many = (count: number): History<number> => {
     let value = 0

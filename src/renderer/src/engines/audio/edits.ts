@@ -1,4 +1,4 @@
-import { isRecord, readNumber, readString } from '@shared/guards'
+import { isRecord, readNumber, readPositive, readString } from '@shared/guards'
 import type { Command } from '@/engines/core/history'
 import { CLIP_EDGES, type ClipEdge, type Us } from '@/engines/timeline/timeline-state'
 import {
@@ -101,10 +101,6 @@ export function pushEdit(edit: AudioEdit): Command<AudioEditState> {
   }
 }
 
-export function serializeAudioEdits(state: AudioEditState): string {
-  return JSON.stringify(state)
-}
-
 /**
  * One step read back. `null` for anything this build cannot replay, and the caller drops it:
  * a chain is replayed in order, so a step that does nothing would silently change what the
@@ -115,13 +111,13 @@ function readEdit(raw: unknown): AudioEdit | null {
 
   switch (raw.kind) {
     case 'crop': {
-      const from = Math.max(0, readNumber(raw, 'from', 0))
-      const to = Math.max(0, readNumber(raw, 'to', 0))
+      const from = readPositive(raw, 'from', 0)
+      const to = readPositive(raw, 'to', 0)
       return to > from ? { kind: 'crop', from, to } : null
     }
     case 'fade': {
       const edge = CLIP_EDGES.find(candidate => candidate === raw.edge)
-      const length = Math.max(0, readNumber(raw, 'length', 0))
+      const length = readPositive(raw, 'length', 0)
       return edge ? { kind: 'fade', edge, length } : null
     }
     case 'gain':
@@ -138,8 +134,8 @@ function readEdit(raw: unknown): AudioEdit | null {
 function readRegion(raw: unknown): Region | null {
   if (!isRecord(raw)) return null
 
-  const from = Math.max(0, readNumber(raw, 'from', 0))
-  const to = Math.max(0, readNumber(raw, 'to', 0))
+  const from = readPositive(raw, 'from', 0)
+  const to = readPositive(raw, 'to', 0)
   // A collapsed region loops over nothing and every tool reading it acts on nothing.
   return to > from ? { from, to } : null
 }

@@ -11,11 +11,7 @@ import {
   DEFAULT_SUN,
   type SkyboxContent,
 } from '@shared/domain/skybox'
-import { isRecord, readBoolean, readNumber, readString } from '@shared/guards'
-
-export function serializeSkybox(content: SkyboxContent): string {
-  return JSON.stringify(content)
-}
+import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 
 function readSource(raw: unknown): SkyboxContent['source'] {
   if (!isRecord(raw)) return null
@@ -32,7 +28,7 @@ function readSun(raw: unknown): SkyboxContent['sun'] {
     // pole loses its azimuth, and `asin` of an out-of-range value poisons every later frame.
     elevation: clampElevation(readNumber(raw, 'elevation', DEFAULT_SUN.elevation)),
     azimuth: normalizeAzimuth(readNumber(raw, 'azimuth', DEFAULT_SUN.azimuth)),
-    intensity: Math.max(0, readNumber(raw, 'intensity', DEFAULT_SUN.intensity)),
+    intensity: readPositive(raw, 'intensity', DEFAULT_SUN.intensity),
     color: readString(raw, 'color', DEFAULT_SUN.color),
   }
 }
@@ -41,7 +37,7 @@ function readEnvironment(raw: unknown): SkyboxContent['environment'] {
   if (!isRecord(raw)) return { ...DEFAULT_ENVIRONMENT }
 
   return {
-    intensity: Math.max(0, readNumber(raw, 'intensity', DEFAULT_ENVIRONMENT.intensity)),
+    intensity: readPositive(raw, 'intensity', DEFAULT_ENVIRONMENT.intensity),
     showBackground: readBoolean(raw, 'showBackground', DEFAULT_ENVIRONMENT.showBackground),
   }
 }
@@ -56,12 +52,14 @@ function readGeneration(raw: unknown): SkyboxContent['generation'] {
   const modelId = readString(raw, 'modelId', '')
   if (!modelId) return undefined
 
-  const seed = readNumber(raw, 'seed', Number.NaN)
+  const seed = raw.seed
   return {
     modelId,
     modelLabel: readString(raw, 'modelLabel', modelId),
     prompt: readString(raw, 'prompt', ''),
-    ...(Number.isFinite(seed) ? { seed } : {}),
+    // Absent rather than zero: a seed of nothing is a generation that was never seeded, and a
+    // panel offering to repeat it must not claim a number the model never saw.
+    ...(typeof seed === 'number' && Number.isFinite(seed) ? { seed } : {}),
   }
 }
 

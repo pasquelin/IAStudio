@@ -9,7 +9,6 @@ import {
   parseAudioEdits,
   pushEdit,
   renderEdits,
-  serializeAudioEdits,
   type AudioEditState,
 } from './edits'
 import { encodeWav } from './wav'
@@ -171,7 +170,7 @@ describe('reading an edit chain back', () => {
   }
 
   it('survives a serialize/parse round trip unchanged', () => {
-    expect(parseAudioEdits(JSON.parse(serializeAudioEdits(filled)))).toEqual(filled)
+    expect(parseAudioEdits(JSON.parse(JSON.stringify(filled)))).toEqual(filled)
   })
 
   it('falls back to an empty chain rather than throwing on a shape it cannot read', () => {

@@ -5,7 +5,7 @@
  * The channels themselves are assets of the project, referenced by id. The renderer has no
  * `fs`, and a file path written into a document would stop the project folder from being moved.
  */
-import { isRecord, readBoolean, readNumber, readString } from '@shared/guards'
+import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 import { readEnvironment, type EnvironmentRef } from '@shared/domain/scene'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { clamp } from '@/helpers/numeric'
@@ -239,10 +239,6 @@ export function missingChannels(texture: TextureState): PbrChannel[] {
  */
 function readUnit(source: Record<string, unknown>, key: string, fallback: number): number {
   return clamp(readNumber(source, key, fallback), 0, 1)
-}
-
-function readPositive(source: Record<string, unknown>, key: string, fallback: number): number {
-  return Math.max(0, readNumber(source, key, fallback))
 }
 
 /** Kept in order as well as in range: handles crossed over would remap everything to nothing. */

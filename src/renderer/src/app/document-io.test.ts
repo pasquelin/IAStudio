@@ -532,7 +532,7 @@ describe('an image document', () => {
  */
 describe('the kinds a string holds', () => {
   /** Writes to memory and reads back, which is what a project folder does. */
-  const diskBackedBridge = (kind: DocumentKind) => {
+  const diskBackedBridge = (kind: DocumentKind): void => {
     const written = new Map<string, string>()
     installFakeBridge({
       documents: {
@@ -556,7 +556,6 @@ describe('the kinds a string holds', () => {
         },
       },
     })
-    return written
   }
 
   const open = async (workspace: 'video' | 'audio' | 'skyboxes'): Promise<string> => {

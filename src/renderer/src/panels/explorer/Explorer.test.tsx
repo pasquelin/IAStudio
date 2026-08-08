@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
-import { showPanels } from '@/stores/layout-fixtures'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { Explorer } from './Explorer'
@@ -69,13 +68,36 @@ describe('the project explorer', () => {
 
   it('marks the documents a tab is already showing', async () => {
     withProject()
-    showPanels('3d', 'doc-1')
+    useDocuments.setState({ documents: { 'doc-1': scene } })
     installFakeBridge({ documents: { list: () => Promise.resolve([scene, sequence]) } })
 
     render(<Explorer />)
 
     await screen.findByText('Niveau')
     expect(screen.getAllByText('Ouvert')).toHaveLength(1)
+  })
+
+  /**
+   * `create` posts a descriptor without writing a file — deliberately, so a tab opened and never
+   * typed in leaves nothing in the project. Reading the folder must therefore never settle which
+   * tabs are open, or opening this panel would evict that document while its tab is on screen,
+   * and the tab would fall back to "no longer open" with its state orphaned.
+   */
+  it('leaves a document that has no file yet alone', async () => {
+    withProject()
+    const unwritten: DocumentDescriptor = {
+      id: 'doc-new',
+      kind: 'image',
+      title: 'Sans titre 1',
+      workspace: 'image',
+    }
+    useDocuments.setState({ documents: { 'doc-new': unwritten } })
+    installFakeBridge({ documents: { list: () => Promise.resolve([scene]) } })
+
+    render(<Explorer />)
+
+    await screen.findByText('Niveau')
+    expect(useDocuments.getState().documents['doc-new']).toBe(unwritten)
   })
 
   it('opens a document on a double-click', async () => {

@@ -1,5 +1,5 @@
 import { messageOf } from '@shared/guards'
-import { isGestureScope, MAX_LOG_MESSAGE, type LogScope } from '@shared/ipc'
+import { MAX_LOG_MESSAGE, type LogScope } from '@shared/ipc'
 import { getBridge } from './bridge'
 
 /**
@@ -12,10 +12,33 @@ import { getBridge } from './bridge'
  * Silent when there is no bridge — tests and a plain browser have none, exactly as everywhere
  * else `getBridge` is read.
  */
+/**
+ * The scopes whose failures follow a gesture the user made — a ⌘S, an export, a tab closed.
+ *
+ * They are reported every time. Everything else is reported once per subject, because an engine
+ * is rebuilt on every detach and every reopen (invariant 3) and asks again for the same missing
+ * asset: without that, a project whose folder moved refills the journal on each detach. That is
+ * also why `document.load` is NOT here — it is reported from a mount effect, not from a gesture.
+ *
+ * A repeated gesture is the opposite case. Somebody pressed the key a second time precisely
+ * because the first did nothing, and answering that with silence is how a save that keeps
+ * failing looks like a save that worked.
+ *
+ * Here rather than in `shared/ipc.ts`: nothing about this crosses the boundary. It is what this
+ * module does with a scope, not what a scope is.
+ */
+const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
+  'scene.export',
+  'image.export',
+  'document.save',
+  'document.close',
+  'document.delete',
+  'assets.reveal',
+])
+
 export function reportFailure(scope: LogScope, subject: string, error: unknown): void {
-  // Said once per thing that failed — but only for the failures nobody asked for. A gesture
-  // repeated is a question asked again, and it gets an answer every time: see `GESTURE_SCOPES`.
-  if (!isGestureScope(scope)) {
+  // Said once per thing that failed — but only for the failures nobody asked for.
+  if (!GESTURE_SCOPES.has(scope)) {
     const said = `${scope}:${subject}`
     if (reported.has(said)) return
     reported.add(said)
