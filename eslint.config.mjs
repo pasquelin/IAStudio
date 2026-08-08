@@ -39,6 +39,9 @@ export default defineConfig([
       // library (react-virtual, react-i18next). That is an observation, not a defect: the
       // only way to clear it would be to drop those libraries.
       'react-hooks/incompatible-library': 'off',
+      // Red in the editor, not only in CI: a dependency array that lies costs a stale value at
+      // the moment the user acts, which is the hardest kind of bug to reproduce afterwards.
+      'react-hooks/exhaustive-deps': 'error',
     },
   },
   {

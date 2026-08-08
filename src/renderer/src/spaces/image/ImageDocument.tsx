@@ -245,8 +245,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         }
         case 'canvas.mergeDown': {
           const host = engine.current
-          // Read at the press, like every other case here: the stack this handler was built
-          // with is the one the space opened on, and the selection moves after that.
+          // This handler is memoised: a captured stack goes stale the moment the selection moves.
           const stack = canvasOf(useCanvases.getState(), documentId)
           const active = stack.activeLayerId
           const below = active ? layerBelow(stack.layers, active) : null

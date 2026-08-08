@@ -21,7 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "bench": "vitest bench --run",
     "lint": "eslint src --max-warnings 0",
-    "lint:fix": "eslint src --fix",
+    "lint:fix": "pnpm lint --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "validate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:coverage",

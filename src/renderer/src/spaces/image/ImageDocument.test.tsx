@@ -6,6 +6,7 @@ import { ASSET_DRAG_TYPE, startAssetDrag } from '@/helpers/asset-drag'
 import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
+import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
@@ -186,45 +187,32 @@ describe('merging the layer below', () => {
   const DOCUMENT = 'doc-merge'
 
   // Three flat layers, so `layerBelow` has an unambiguous answer for each of them.
-  const open = (activeLayerId: string) => {
-    useDocuments.setState({
-      activeId: DOCUMENT,
-      documents: {
-        [DOCUMENT]: { id: DOCUMENT, kind: 'image', workspace: 'image', title: 'Poster' },
-      },
+  const select = (activeLayerId: string) =>
+    installCanvas(DOCUMENT, {
+      ...DEFAULT_CANVAS,
+      layers: [pixelLayer('a', 'A'), pixelLayer('b', 'B'), pixelLayer('c', 'C')],
+      activeLayerId,
     })
-    useCanvases.setState({
-      states: {
-        [DOCUMENT]: {
-          ...DEFAULT_CANVAS,
-          layers: [pixelLayer('a', 'A'), pixelLayer('b', 'B'), pixelLayer('c', 'C')],
-          activeLayerId,
-        },
-      },
-      histories: {},
-    })
-  }
 
+  // The sibling `describe` above owns the one on line 49, so this suite needs its own.
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('composes the layer selected now, not the one selected when the space opened', () => {
-    open('b')
+    select('b')
     render(<ImageDocument documentId={DOCUMENT} />)
 
-    // The whole point of the shortcut: the selection moves long after the space was mounted.
-    act(() => open('c'))
+    act(() => select('c'))
     fireEvent.keyDown(window, { code: 'KeyE', metaKey: true })
 
     expect(mergeInto).toHaveBeenCalledWith('b', 'c')
   })
 
   it('offers nothing at the bottom of the stack', () => {
-    open('b')
+    select('a')
     render(<ImageDocument documentId={DOCUMENT} />)
 
-    act(() => open('a'))
     fireEvent.keyDown(window, { code: 'KeyE', metaKey: true })
 
     expect(mergeInto).not.toHaveBeenCalled()
