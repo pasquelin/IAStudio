@@ -1403,8 +1403,7 @@
     "title": "Home",
     "tools": {
       "createGroup": "Create",
-      "projectGroup": "This project",
-      "startGroup": "Get started",
+      "projectGroup": "Projects",
       "image": "Generate and retouch pictures on a layered canvas.",
       "video": "Cut, sequence and export moving images.",
       "3d": "Build a scene, light it, export the model.",
@@ -1432,11 +1431,14 @@
       "running_other": "{{count}} generations running",
       "runningBody": "They carry on while you work, and land in the document that asked for them.",
       "connect": "Connect an API key",
-      "connectBody": "Models, generation and the shared library need a Scenario key. Everything on your disk works without one.",
-      "connectAction": "Open preferences",
+      "connectBody": "Models, generation and the shared library need a Scenario key and secret. Paste them into Preferences ▸ Account — they are encrypted by the system keychain and never leave this machine. Everything on your disk works without one.",
+      "connectAction": "Enter my API key",
       "start": "Start a project",
       "startBody": "A project is a folder: your documents, your assets, and an index the studio keeps beside them.",
-      "startAction": "Create a project"
+      "startAction": "Create a project",
+      "ready": "Ready when you are",
+      "readyBody": "{{project}} is open and holds nothing yet. Pick a workspace and make the first thing in it.",
+      "readyAction": "Make an image"
     },
     "closing": {
       "title": "Create or explore. One click to what comes next.",

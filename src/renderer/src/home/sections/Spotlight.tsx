@@ -1,4 +1,10 @@
-import { mdiFolderPlusOutline, mdiKeyOutline, mdiPlayOutline, mdiProgressClock } from '@mdi/js'
+import {
+  mdiCreationOutline,
+  mdiFolderPlusOutline,
+  mdiKeyOutline,
+  mdiPlayOutline,
+  mdiProgressClock,
+} from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { isFinished } from '@shared/domain/job'
 import { Carousel } from '@/design/Carousel'
@@ -10,10 +16,12 @@ import { useDocuments } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { openExistingDocument } from '../open'
+import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
+import { enterWorkspace, openExistingDocument } from '../open'
 
-const CARD_WIDTH = 360
-const CARD_HEIGHT = 132
+/** Banner-sized, like the reference: two of them fill the band, three make it a shelf. */
+const CARD_WIDTH = 560
+const CARD_HEIGHT = 168
 
 type Slide = {
   id: string
@@ -99,39 +107,101 @@ export function Spotlight() {
     })
   }
 
+  // Everything above is conditional, and a project open with nothing in it yet satisfies none
+  // of them. Being pinned is a promise to draw something: without this, the home would open on
+  // its second band, and the one state a fresh project is in would be the one with no heading.
+  if (slides.length === 0) {
+    slides.push({
+      id: 'ready',
+      icon: mdiCreationOutline,
+      title: t('home.spotlight.ready'),
+      body: t('home.spotlight.readyBody', { project: project?.manifest.name ?? '' }),
+      action: {
+        label: t('home.spotlight.readyAction'),
+        onClick: () => enterWorkspace(DEFAULT_WORKSPACE),
+      },
+      leading: true,
+    })
+  }
+
+  // A lone banner has no rail to be scrolled along, and a 560 px card marooned in a 1400 px
+  // band reads as a leftover rather than as the top of the page. It takes the width instead,
+  // and lies down: a full-width card as tall as a stacked one is mostly empty.
+  if (slides.length === 1 && slides[0]) return <Banner slide={slides[0]} />
+
   return (
     <Carousel
       items={slides}
       itemWidth={CARD_WIDTH}
       itemHeight={CARD_HEIGHT}
       label={t('home.sections.spotlight')}
-      renderCard={slide => (
-        <article
-          className={cn(
-            'flex size-full flex-col gap-2 rounded-(--radius-sc-lg) p-4',
-            // The leading card carries the studio's create colour, and nothing else on the home
-            // does: one accent, on the one thing worth doing first.
-            slide.leading ? 'bg-create/15 border-create/40 border' : 'bg-surface',
-          )}
-        >
-          <span className="flex items-center gap-2">
-            <UiIcon
-              path={slide.icon}
-              size={16}
-              className={slide.leading ? 'text-create' : 'text-muted'}
-            />
-            <h3 className="text-text m-0 text-[13px] font-semibold">{slide.title}</h3>
-          </span>
-
-          <p className="text-muted m-0 flex-1 text-[11px] leading-relaxed">{slide.body}</p>
-
-          {slide.action && (
-            <span>
-              <Button onClick={slide.action.onClick}>{slide.action.label}</Button>
-            </span>
-          )}
-        </article>
-      )}
+      renderCard={slide => <Card slide={slide} />}
     />
+  )
+}
+
+/** The same card laid on its side: text takes the width, the action sits at the far end. */
+function Banner({ slide }: { slide: Slide }) {
+  return (
+    <article className={cn('flex items-center gap-4 rounded-(--radius-sc-lg) p-4', skinOf(slide))}>
+      <UiIcon
+        path={slide.icon}
+        size={20}
+        className={cn('shrink-0', slide.leading ? 'text-create' : 'text-muted')}
+      />
+
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <h3 className="text-text m-0 text-[13px] font-semibold">{slide.title}</h3>
+        <p className="text-muted m-0 max-w-[80ch] text-[11px] leading-relaxed">{slide.body}</p>
+      </span>
+
+      {slide.action && (
+        <span className="shrink-0">
+          <Button variant={slide.leading ? 'primary' : 'neutral'} onClick={slide.action.onClick}>
+            {slide.action.label}
+          </Button>
+        </span>
+      )}
+    </article>
+  )
+}
+
+/**
+ * The leading card carries the studio's create colour, and nothing else on the home does: one
+ * accent, on the one thing worth doing first.
+ */
+function skinOf(slide: Slide): string {
+  return slide.leading ? 'bg-create/15 border-create/40 border' : 'bg-surface'
+}
+
+function Card({ slide }: { slide: Slide }) {
+  return (
+    <article
+      className={cn(
+        'flex size-full flex-col items-start gap-2 overflow-hidden rounded-(--radius-sc-lg) p-4',
+        skinOf(slide),
+      )}
+    >
+      <span className="flex items-center gap-2">
+        <UiIcon
+          path={slide.icon}
+          size={16}
+          className={slide.leading ? 'text-create' : 'text-muted'}
+        />
+        <h3 className="text-text m-0 text-[13px] font-semibold">{slide.title}</h3>
+      </span>
+
+      {/* Bounded, and the button below is not: a body long enough to push the action out of the
+          card would leave the one thing to click off screen. */}
+      <p className="text-muted m-0 max-w-[64ch] flex-1 overflow-hidden text-[11px] leading-relaxed">
+        {slide.body}
+      </p>
+
+      {slide.action && (
+        <Button variant={slide.leading ? 'primary' : 'neutral'} onClick={slide.action.onClick}>
+          {slide.action.label}
+        </Button>
+      )}
+    </article>
   )
 }

@@ -1403,8 +1403,7 @@
     "title": "Accueil",
     "tools": {
       "createGroup": "Créer",
-      "projectGroup": "Ce projet",
-      "startGroup": "Pour commencer",
+      "projectGroup": "Projets",
       "image": "Générer et retoucher des images sur un canevas à calques.",
       "video": "Monter, enchaîner et exporter des images animées.",
       "3d": "Construire une scène, l’éclairer, exporter le modèle.",
@@ -1432,11 +1431,14 @@
       "running_other": "{{count}} générations en cours",
       "runningBody": "Elles continuent pendant que vous travaillez, et atterrissent dans le document qui les a demandées.",
       "connect": "Connecter une clé API",
-      "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé Scenario. Tout ce qui est sur votre disque fonctionne sans.",
-      "connectAction": "Ouvrir les préférences",
+      "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé et un secret Scenario. Collez-les dans Préférences ▸ Compte — ils sont chiffrés par le trousseau du système et ne quittent jamais cette machine. Tout ce qui est sur votre disque fonctionne sans.",
+      "connectAction": "Saisir ma clé API",
       "start": "Démarrer un projet",
       "startBody": "Un projet est un dossier : vos documents, vos assets, et l’index que le studio tient à côté.",
-      "startAction": "Créer un projet"
+      "startAction": "Créer un projet",
+      "ready": "Tout est prêt",
+      "readyBody": "{{project}} est ouvert et ne contient encore rien. Choisissez un espace et créez-y la première pièce.",
+      "readyAction": "Créer une image"
     },
     "closing": {
       "title": "Créer ou explorer. Un clic vers la suite.",

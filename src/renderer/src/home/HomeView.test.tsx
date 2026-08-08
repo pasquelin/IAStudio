@@ -72,6 +72,20 @@ describe('the home', () => {
     expect(screen.getByText('Reprendre où vous en étiez')).toBeInTheDocument()
   })
 
+  /**
+   * The state a fresh project is in satisfies none of the spotlight's conditions — no document
+   * to resume, no job running, a key already connected. Being pinned is a promise to draw
+   * something, and this is the case that broke it.
+   */
+  it('still opens on a band when a key is connected and the project is empty', () => {
+    setSettings(DEFAULT_HOME_SECTIONS, true)
+    useProject.setState({ project: PROJECT })
+    render(<HomeView />)
+
+    expect(screen.getByText('Tout est prêt')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Créer une image' })).toBeInTheDocument()
+  })
+
   it('ends on a way forward rather than on the last shelf', () => {
     render(<HomeView />)
 

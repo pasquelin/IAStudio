@@ -25,7 +25,6 @@ type Entry = {
  */
 export function Tools() {
   const { t } = useTranslation()
-  const project = useProject(state => state.project)
 
   const create: Entry[] = WORKSPACES.map(workspace => ({
     key: workspace.id,
@@ -69,11 +68,9 @@ export function Tools() {
           // would leave the create group twice as tall as the one beside it.
           columns={2}
         />
-        <Group
-          title={project ? t('home.tools.projectGroup') : t('home.tools.startGroup')}
-          entries={manage}
-          columns={1}
-        />
+        {/* Named for what it holds, not for the state the studio is in: these three entries are
+            about projects whether one is open or not. */}
+        <Group title={t('home.tools.projectGroup')} entries={manage} columns={1} />
       </div>
     </Section>
   )
