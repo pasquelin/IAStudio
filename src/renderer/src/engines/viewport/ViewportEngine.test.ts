@@ -5,8 +5,8 @@ import { ViewportEngine } from './ViewportEngine'
 
 /**
  * A renderer jsdom can hold: the real one asks the canvas for a WebGL context and gets null.
- * Only what the engine reads back is kept — the element it draws into, and the two flags the
- * overlay pass turns on and off.
+ * Only what the engine reads back is kept — the element it draws into, the two flags it sets at
+ * mount, and `autoClear`, which the overlay pass turns off and back on.
  */
 const rendered = vi.fn()
 const disposed = vi.fn()

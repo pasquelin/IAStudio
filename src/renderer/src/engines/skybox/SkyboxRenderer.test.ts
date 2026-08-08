@@ -2,6 +2,8 @@ import { Texture, WebGLRenderTarget } from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
+import type * as AdjustModule from '../gpu/passes/adjust'
+import type { AdjustPass } from '../gpu/passes/adjust'
 import type { GpuPipeline } from '../gpu/GpuPipeline'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
@@ -18,8 +20,25 @@ const pipeline = {
   dispose: vi.fn(),
 } satisfies GpuPipeline
 
+/**
+ * The grading pass is what the whole engine exists to feed, so its two inputs are watched. The
+ * real pass is kept underneath — it is a `ShaderMaterial`, which jsdom builds fine — and only
+ * the two setters are spied, so the material handed to the pipeline stays the real one.
+ */
+let adjust: AdjustPass
+
 vi.mock('../viewport/environment', () => ({ createEnvironment: () => environment }))
 vi.mock('../gpu/GpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
+vi.mock('../gpu/passes/adjust', async importOriginal => {
+  const actual = await importOriginal<typeof AdjustModule>()
+  return {
+    ...actual,
+    createAdjustPass: () => {
+      adjust = { ...actual.createAdjustPass(), setSource: vi.fn(), setAdjustments: vi.fn() }
+      return adjust
+    },
+  }
+})
 
 const host = document.createElement('div')
 
@@ -43,6 +62,8 @@ describe('the renderer of a skybox', () => {
   let onSunChange: Mock<(angles: SphericalAngles) => void>
   let source: ReturnType<typeof fakeTextureSource>
   let canvas: HTMLCanvasElement
+  let camera: ViewportEngine['camera'] | null
+  let disposeViewport: ReturnType<typeof vi.spyOn>
   let ndc: { x: number; y: number } | null
   let mountedRenderers: SkyboxRenderer[]
 
@@ -55,15 +76,18 @@ describe('the renderer of a skybox', () => {
     mountedRenderers = []
     source = fakeTextureSource()
     canvas = document.createElement('canvas')
+    camera = null
     ndc = { x: 0, y: 0 }
 
     vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+    disposeViewport = vi.spyOn(ViewportEngine.prototype, 'dispose')
     // `as`: neither the pipeline nor the environment is real here, and nothing else reads it.
     vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
     vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(canvas)
     vi.spyOn(ViewportEngine.prototype, 'pointerNdcOf').mockImplementation(function (
       this: ViewportEngine,
     ) {
+      camera = this.camera
       // What a drawn frame would have done. Without it the camera's world matrix is still the
       // identity, every ray points down -Z whatever the camera was aimed at, and the gesture
       // the engine picks would be decided by an artefact of the test rather than by the sun.
@@ -120,7 +144,6 @@ describe('the renderer of a skybox', () => {
       expect(pipeline.createTarget).not.toHaveBeenCalled()
     })
 
-    // Eight bits per channel band on a sky gradient long before they do on a texture.
     it('grades into a half-float target', () => {
       mounted()
 
@@ -145,6 +168,25 @@ describe('the renderer of a skybox', () => {
       await applied(mounted(), skyOf('sky-1'))
 
       expect(environment.setTexture).toHaveBeenCalledWith(gradedTarget()?.texture)
+    })
+
+    it('hands the picture and the adjustments to the grading pass', async () => {
+      const content = skyOf('sky-1')
+      content.adjustments = { ...content.adjustments, exposure: 1.7 }
+
+      await applied(mounted(), content)
+
+      expect(adjust.setAdjustments).toHaveBeenCalledWith(content.adjustments)
+      expect(adjust.setSource).toHaveBeenCalledWith(expect.any(Texture))
+    })
+
+    it('clears the grading source when the picture goes', async () => {
+      const renderer = mounted()
+      await applied(renderer, skyOf('sky-1'))
+
+      renderer.apply(createSkyboxContent())
+
+      expect(adjust.setSource).toHaveBeenLastCalledWith(null)
     })
 
     it('loads a sky once, however many times the same state comes back', async () => {
@@ -216,8 +258,6 @@ describe('the renderer of a skybox', () => {
   })
 
   describe('the prefiltered map', () => {
-    // Prefiltering is a full mip chain: run per frame of a drag it drops the viewport to single
-    // digits, which is why the refresh is rescheduled rather than queued.
     it('prefilters once for a burst of changes, not once per change', async () => {
       const renderer = mounted()
       await applied(renderer, skyOf('sky-1'))
@@ -280,12 +320,30 @@ describe('the renderer of a skybox', () => {
     it('turns the head when the drag starts away from the sun', () => {
       const renderer = mounted()
       renderer.apply(sunAt(SUN_BEHIND))
-
       canvas.dispatchEvent(pointerAt('pointerdown', 10, 10))
-      ndc = { x: 0, y: 0.5 }
+      const before = camera?.quaternion.clone()
+
       window.dispatchEvent(pointerAt('pointermove', 40, 10))
 
       expect(onSunChange).not.toHaveBeenCalled()
+      expect(camera?.quaternion.equals(before ?? camera.quaternion)).toBe(false)
+    })
+
+    // Dragging right turns the view left: the image follows the hand, as grabbing the world
+    // implies. Inverted, the viewport fights every gesture.
+    it('turns the view the way the hand went, and keeps going from where it left off', () => {
+      const renderer = mounted()
+      renderer.apply(sunAt(SUN_BEHIND))
+      canvas.dispatchEvent(pointerAt('pointerdown', 10, 10))
+
+      window.dispatchEvent(pointerAt('pointermove', 110, 10))
+      const afterFirst = camera?.rotation.y ?? 0
+      window.dispatchEvent(pointerAt('pointermove', 210, 10))
+
+      expect(afterFirst).toBeLessThan(0)
+      // Read from the last point, not from where the drag began: measured from the start, the
+      // second half of a drag would replay the first and the view would move twice as fast.
+      expect(camera?.rotation.y).toBeCloseTo(afterFirst * 2, 5)
     })
 
     it('ignores a drag begun with another button', () => {
@@ -362,6 +420,7 @@ describe('the renderer of a skybox', () => {
       expect(target).toHaveBeenCalled()
       expect(environment.dispose).toHaveBeenCalled()
       expect(pipeline.dispose).toHaveBeenCalled()
+      expect(disposeViewport).toHaveBeenCalled()
     })
 
     it('disposes cleanly when the mount never got a renderer', () => {

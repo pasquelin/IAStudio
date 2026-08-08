@@ -4,9 +4,9 @@ import type { TextureSource } from '../scene/texture-cache'
 import type { ViewportEnvironment } from './environment'
 
 /**
- * What the three 3D workspaces need to stand in for the GPU, in one place. Every viewport test
- * repeats the same two doubles, and a member added to `ViewportEnvironment` has to reach all of
- * them — `satisfies` makes that a compile error here instead of a run-time "is not a function".
+ * What the three 3D workspaces need to stand in for the GPU, in one place. A member added to
+ * `ViewportEnvironment` then fails to compile here once, rather than at run time in each of the
+ * three suites, on an opaque "is not a function".
  */
 export function fakeEnvironment(): ViewportEnvironment {
   return {
@@ -17,7 +17,7 @@ export function fakeEnvironment(): ViewportEnvironment {
     setRotation: vi.fn(),
     setBackgroundVisible: vi.fn(),
     dispose: vi.fn(),
-  } satisfies ViewportEnvironment
+  }
 }
 
 export type FakeTextureSource = {
