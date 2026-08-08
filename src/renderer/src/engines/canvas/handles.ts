@@ -167,13 +167,36 @@ export function resizeBy(
   }
 }
 
-/** The angle from the box's middle to the pointer, which is what the rotation grip reads. */
-export function rotateBy(transform: Transform, box: Rect, from: Point, to: Point): Transform {
+/**
+ * Every fifteen degrees, which is what Shift buys on a rotation grip everywhere else.
+ *
+ * Applied to the resulting angle rather than to the turn: snapping the delta would carry
+ * whatever fraction the layer already held, and the box would never sit straight.
+ */
+const ROTATION_STEP = Math.PI / 12
+
+/**
+ * The angle from the box's middle to the pointer, which is what the rotation grip reads.
+ *
+ * Free to the degree unless `constrain` says otherwise — a rotation that always clicked into
+ * steps could not be used to straighten a horizon, which is most of what one rotates for.
+ */
+export function rotateBy(
+  transform: Transform,
+  box: Rect,
+  from: Point,
+  to: Point,
+  constrain = false,
+): Transform {
   const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
   const before = Math.atan2(from.y - middle.y, from.x - middle.x)
   const after = Math.atan2(to.y - middle.y, to.x - middle.x)
+  const rotation = transform.rotation + after - before
 
-  return { ...transform, rotation: transform.rotation + after - before }
+  return {
+    ...transform,
+    rotation: constrain ? Math.round(rotation / ROTATION_STEP) * ROTATION_STEP : rotation,
+  }
 }
 
 /**

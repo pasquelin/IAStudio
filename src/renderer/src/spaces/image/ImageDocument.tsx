@@ -16,6 +16,7 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import { registerFace } from '@/engines/canvas/canvas-fonts'
 import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
 import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
+import { RULER_SIZE } from '@/engines/canvas/CanvasOverlay'
 import { useBindingOverrides } from '@/stores/bindings'
 import {
   addLayer,
@@ -84,6 +85,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
   const view = useCanvasViews(state => viewOf(state, documentId))
+  // What the rulers take from the top and the left when they are on, and nothing when they are off.
+  const rulerInset = view.rulers ? RULER_SIZE : 0
   const selection = useCanvasViews(state => selectionOf(state, documentId))
   // Booleans rather than the history itself: a selector building an object on every call hands
   // React a new snapshot each render, and the loop never settles.
@@ -335,18 +338,26 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
             owns and replaces on every mount. */}
         <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
 
-        <Toolbar
-          className="absolute top-2 left-2"
-          tools={tools}
-          activeTool={tool}
-          onTool={setTool}
-          onMode={pick}
-          extras={<BrushControls brush={brush} onBrush={setBrush} />}
-          onUndo={() => run('canvas.undo')}
-          onRedo={() => run('canvas.redo')}
-          canUndo={undoable}
-          canRedo={redoable}
-        />
+        {/* Inside the rulers rather than over them: the toolbar covered the first twenty pixels
+            of both graduations — the corner one reads a position from. The inset follows the
+            engine's own constant, so the two can never disagree about how thick a ruler is. */}
+        <div
+          className="pointer-events-none absolute right-0 bottom-0"
+          style={{ top: rulerInset, left: rulerInset }}
+        >
+          <Toolbar
+            className="pointer-events-auto absolute top-2 left-2"
+            tools={tools}
+            activeTool={tool}
+            onTool={setTool}
+            onMode={pick}
+            extras={<BrushControls brush={brush} onBrush={setBrush} />}
+            onUndo={() => run('canvas.undo')}
+            onRedo={() => run('canvas.redo')}
+            canUndo={undoable}
+            canRedo={redoable}
+          />
+        </div>
 
         <ZoomBar
           scale={view.viewport.scale}
