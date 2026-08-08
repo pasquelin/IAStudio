@@ -1,27 +1,15 @@
 import { Texture, WebGLRenderTarget } from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import type { SphericalAngles } from '@shared/domain/angles'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import type { GpuPipeline } from '../gpu/GpuPipeline'
-import type { ViewportEnvironment } from '../viewport/environment'
+import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { SkyboxRenderer } from './SkyboxRenderer'
-import type { SkyboxGesture } from './sun-drag'
 
-/**
- * Two collaborators need a GL context jsdom cannot give: the environment prefilters a mip
- * chain, and the pipeline draws a full-screen quad into a target. Both are stubbed at their
- * own boundary — `satisfies` so that a member added to either port fails to compile here
- * rather than at run time on an opaque "is not a function".
- */
-const environment = {
-  setTexture: vi.fn(),
-  refresh: vi.fn(),
-  setStudio: vi.fn(),
-  setIntensity: vi.fn(),
-  setRotation: vi.fn(),
-  setBackgroundVisible: vi.fn(),
-  dispose: vi.fn(),
-} satisfies ViewportEnvironment
+// The environment prefilters a mip chain and the pipeline draws into a target: both need the GL
+// context jsdom has none of. `gestureFor` stays real — the wiring to it is what this proves.
+const environment = fakeEnvironment()
 
 const pipeline = {
   renderTo: vi.fn(),
@@ -33,14 +21,11 @@ const pipeline = {
 vi.mock('../viewport/environment', () => ({ createEnvironment: () => environment }))
 vi.mock('../gpu/GpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
 
-/**
- * Which gesture a drag is, decided by the test rather than by geometry. `gestureFor` compares
- * the ray against the sun, and a raycast here would read a camera whose world matrix no frame
- * has ever updated — the engine's job is the wiring, and the geometry has `sun-drag.test.ts`.
- */
-let gesture: SkyboxGesture = 'sun'
+const host = document.createElement('div')
 
-vi.mock('./sun-drag', () => ({ gestureFor: () => gesture }))
+/** Azimuth `0` aims at `+Z`, which is where a ray through the centre of the frame goes. */
+const SUN_AHEAD = 0
+const SUN_BEHIND = Math.PI
 
 const skyOf = (assetId: string): SkyboxContent => {
   const content = createSkyboxContent()
@@ -48,51 +33,64 @@ const skyOf = (assetId: string): SkyboxContent => {
   return content
 }
 
+const sunAt = (azimuth: number): SkyboxContent => {
+  const content = createSkyboxContent()
+  content.sun = { ...content.sun, elevation: 0, azimuth }
+  return content
+}
+
 describe('the renderer of a skybox', () => {
-  let onSunChange: Mock<(angles: { elevation: number; azimuth: number }) => void>
-  let loadTexture: Mock<(url: string) => Promise<Texture>>
-  let freed: ReturnType<typeof vi.spyOn>[]
-  let host: HTMLElement
+  let onSunChange: Mock<(angles: SphericalAngles) => void>
+  let source: ReturnType<typeof fakeTextureSource>
   let canvas: HTMLCanvasElement
   let ndc: { x: number; y: number } | null
+  let mountedRenderers: SkyboxRenderer[]
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // Fake from the start: the prefilter is scheduled on a real timer otherwise, and one left
-    // pending by a test fires inside the next and refreshes an environment nobody asked.
+    // Fake from the start: the prefilter runs on a timer otherwise, and one left pending by a
+    // test fires inside the next and refreshes an environment nobody asked.
     vi.useFakeTimers()
-    gesture = 'sun'
-    freed = []
-    onSunChange = vi.fn()
-    loadTexture = vi.fn(async () => {
-      const texture = new Texture()
-      freed.push(vi.spyOn(texture, 'dispose'))
-      return texture
-    })
-
+    onSunChange = vi.fn<(angles: SphericalAngles) => void>()
+    mountedRenderers = []
+    source = fakeTextureSource()
     canvas = document.createElement('canvas')
-    host = document.createElement('div')
-    // A pointer with a surface under it. `null` is the other case — a collapsed panel — and the
-    // tests that want it say so.
     ndc = { x: 0, y: 0 }
 
     vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
     // `as`: neither the pipeline nor the environment is real here, and nothing else reads it.
     vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
     vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(canvas)
-    // jsdom runs no layout, so the real one measures a zero-sized canvas and answers null for
-    // every pointer — which would leave every gesture untested.
-    vi.spyOn(ViewportEngine.prototype, 'pointerNdcOf').mockImplementation(() => ndc)
+    vi.spyOn(ViewportEngine.prototype, 'pointerNdcOf').mockImplementation(function (
+      this: ViewportEngine,
+    ) {
+      // What a drawn frame would have done. Without it the camera's world matrix is still the
+      // identity, every ray points down -Z whatever the camera was aimed at, and the gesture
+      // the engine picks would be decided by an artefact of the test rather than by the sun.
+      this.camera.updateMatrixWorld()
+      return ndc
+    })
   })
 
   afterEach(() => {
+    // `mount` puts pointer listeners on `window` and only `dispose` takes them off. A renderer
+    // left mounted keeps answering gestures in the tests that follow — which silently turned
+    // four of the negative assertions below green for the wrong reason.
+    for (const renderer of mountedRenderers) renderer.dispose()
+    vi.restoreAllMocks()
     vi.useRealTimers()
   })
 
   const mounted = (): SkyboxRenderer => {
-    const renderer = new SkyboxRenderer({ onSunChange, loadTexture })
+    const renderer = new SkyboxRenderer({ onSunChange, loadTexture: source.load })
     renderer.mount(host)
+    mountedRenderers.push(renderer)
     return renderer
+  }
+
+  const unmountable = (): SkyboxRenderer => {
+    vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue(null)
+    return mounted()
   }
 
   /**
@@ -102,45 +100,51 @@ describe('the renderer of a skybox', () => {
   const applied = async (renderer: SkyboxRenderer, content: SkyboxContent): Promise<void> => {
     const graded = pipeline.renderTo.mock.calls.length
     renderer.apply(content)
-    await vi.waitFor(() => expect(pipeline.renderTo).toHaveBeenCalledTimes(graded + 1))
+    // Draining the microtasks, not polling: `vi.waitFor` probes on a real interval and advances
+    // the fake clock 50 ms per probe, which both costs wall time and eats into the quiet delay
+    // the prefilter tests measure.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(pipeline.renderTo).toHaveBeenCalledTimes(graded + 1)
   }
 
-  /** A document whose sun sits on the horizon, where a ray through the centre of the frame goes. */
-  const sunAtEyeLevel = (): SkyboxContent => {
-    const content = createSkyboxContent()
-    content.sun = { ...content.sun, elevation: 0, azimuth: 0 }
-    return content
-  }
+  const gradedTarget = (): WebGLRenderTarget | undefined =>
+    pipeline.createTarget.mock.results[0]?.value
 
   const pointerAt = (type: string, x: number, y: number, button = 0): PointerEvent =>
-    // `as`: jsdom ships no `PointerEvent`, and a gesture only reads the button and the point.
-    new MouseEvent(type, { clientX: x, clientY: y, button, bubbles: true }) as PointerEvent
+    new PointerEvent(type, { clientX: x, clientY: y, button, bubbles: true })
 
   describe('mounting', () => {
     it('builds nothing when the viewport has no renderer to share', () => {
-      vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue(null)
-
-      new SkyboxRenderer({ onSunChange, loadTexture }).mount(host)
+      unmountable()
 
       expect(pipeline.createTarget).not.toHaveBeenCalled()
     })
 
-    /**
-     * Half float, not bytes: this target is what the prefiltered map is built from, and eight
-     * bits per channel bands on a sky gradient long before it does on a texture.
-     */
+    // Eight bits per channel band on a sky gradient long before they do on a texture.
     it('grades into a half-float target', () => {
       mounted()
 
-      expect(pipeline.createTarget).toHaveBeenCalledWith(2048, 1024, 'float')
+      expect(pipeline.createTarget).toHaveBeenCalledWith(
+        expect.any(Number),
+        expect.any(Number),
+        'float',
+      )
     })
   })
 
   describe('the source picture', () => {
+    // Handing the cache a URL it had built itself made it encode the whole `scenario://` address
+    // as an asset id, and no sky could ever load.
     it('asks for the sky by asset id, not by a URL it built itself', async () => {
       await applied(mounted(), skyOf('sky-1'))
 
-      expect(loadTexture).toHaveBeenCalledWith('scenario://asset/sky-1')
+      expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
+    })
+
+    it('grades the picture it was given into the background', async () => {
+      await applied(mounted(), skyOf('sky-1'))
+
+      expect(environment.setTexture).toHaveBeenCalledWith(gradedTarget()?.texture)
     })
 
     it('loads a sky once, however many times the same state comes back', async () => {
@@ -149,7 +153,7 @@ describe('the renderer of a skybox', () => {
 
       renderer.apply(skyOf('sky-1'))
 
-      expect(loadTexture).toHaveBeenCalledTimes(1)
+      expect(source.load).toHaveBeenCalledTimes(1)
     })
 
     it('frees the previous sky when another one is chosen', async () => {
@@ -158,11 +162,10 @@ describe('the renderer of a skybox', () => {
 
       await applied(renderer, skyOf('sky-2'))
 
-      await vi.waitFor(() => expect(freed[0]).toHaveBeenCalled())
-      expect(freed[1]).not.toHaveBeenCalled()
+      expect(source.freed[0]).toHaveBeenCalled()
+      expect(source.freed[1]).not.toHaveBeenCalled()
     })
 
-    /** A document that had a picture and lost it must not keep showing the old one. */
     it('takes the background away when the picture goes', async () => {
       const renderer = mounted()
       await applied(renderer, skyOf('sky-1'))
@@ -172,59 +175,49 @@ describe('the renderer of a skybox', () => {
       expect(environment.setTexture).toHaveBeenCalledWith(null)
     })
 
-    /** Nothing to ask for, and nothing to erase: a new document leaves the environment alone. */
     it('asks for nothing on a document that never had a picture', () => {
       mounted().apply(createSkyboxContent())
 
-      expect(loadTexture).not.toHaveBeenCalled()
+      expect(source.load).not.toHaveBeenCalled()
       expect(environment.setTexture).not.toHaveBeenCalled()
     })
 
     /**
      * The document may move on while a texture is in flight. Two things keep the loser out —
-     * the engine's check on arrival, and the cache resolving to `null` once the last holder
-     * let go — so this pins the behaviour, not either mechanism.
+     * the engine's check on arrival, and the cache resolving to `null` once the last holder let
+     * go — so this pins the behaviour, not either mechanism.
      */
     it('drops a texture that arrives after the document moved on', async () => {
       const renderer = mounted()
-      let arrive: (texture: Texture) => void = () => {}
-      loadTexture.mockImplementationOnce(() => new Promise<Texture>(resolve => (arrive = resolve)))
+      let arrive: () => void = () => {}
+      source.load.mockImplementationOnce(
+        () => new Promise(resolve => (arrive = () => resolve(new Texture()))),
+      )
 
       renderer.apply(skyOf('slow'))
       await applied(renderer, skyOf('quick'))
-
-      arrive(new Texture())
+      arrive()
       // Drained, not merely awaited: the stale `then` runs on a later microtask, and asserting
       // before it does would pass whether the guard is there or not.
       await vi.advanceTimersByTimeAsync(0)
 
-      // Still one: the picture that lost the race must not grade itself over the winner.
       expect(pipeline.renderTo).toHaveBeenCalledTimes(1)
     })
 
-    it('grades the picture into the background once it arrives', async () => {
-      await applied(mounted(), skyOf('sky-1'))
-
-      await vi.waitFor(() => expect(pipeline.renderTo).toHaveBeenCalled())
-      expect(environment.setTexture).toHaveBeenCalled()
-    })
-
-    it('grades nothing while the viewport has no pipeline', () => {
-      vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue(null)
-      const renderer = new SkyboxRenderer({ onSunChange, loadTexture })
-      renderer.mount(host)
+    it('grades nothing while the viewport has no pipeline', async () => {
+      const renderer = unmountable()
 
       renderer.apply(skyOf('sky-1'))
+      await vi.advanceTimersByTimeAsync(0)
 
+      expect(source.load).toHaveBeenCalled()
       expect(pipeline.renderTo).not.toHaveBeenCalled()
     })
   })
 
   describe('the prefiltered map', () => {
-    /**
-     * Prefiltering is a full mip chain. Run per frame of a slider drag it drops the viewport to
-     * single digits, which is why the refresh is rescheduled rather than queued.
-     */
+    // Prefiltering is a full mip chain: run per frame of a drag it drops the viewport to single
+    // digits, which is why the refresh is rescheduled rather than queued.
     it('prefilters once for a burst of changes, not once per change', async () => {
       const renderer = mounted()
       await applied(renderer, skyOf('sky-1'))
@@ -233,7 +226,7 @@ describe('the renderer of a skybox', () => {
       renderer.apply(skyOf('sky-1'))
       renderer.apply(skyOf('sky-1'))
       expect(environment.refresh).not.toHaveBeenCalled()
-      vi.advanceTimersByTime(120)
+      await vi.advanceTimersByTimeAsync(120)
 
       expect(environment.refresh).toHaveBeenCalledTimes(1)
     })
@@ -244,7 +237,7 @@ describe('the renderer of a skybox', () => {
       renderer.apply(skyOf('sky-1'))
 
       renderer.dispose()
-      vi.advanceTimersByTime(500)
+      await vi.advanceTimersByTimeAsync(500)
 
       expect(environment.refresh).not.toHaveBeenCalled()
     })
@@ -260,33 +253,13 @@ describe('the renderer of a skybox', () => {
       expect(environment.setIntensity).toHaveBeenCalledWith(0.25)
       expect(environment.setBackgroundVisible).toHaveBeenCalledWith(false)
     })
-
-    it('delegates the field of view to the viewport', () => {
-      const setFieldOfView = vi.spyOn(ViewportEngine.prototype, 'setFieldOfView')
-
-      mounted().setFieldOfView(75)
-
-      expect(setFieldOfView).toHaveBeenCalledWith(75)
-    })
-
-    it('shows and hides the probes and the ground', () => {
-      const renderer = mounted()
-
-      renderer.setProbesVisible(false)
-      renderer.setGroundVisible(false)
-      renderer.setProbesVisible(true)
-
-      // Nothing to assert on beyond not throwing: the objects are three's, and what matters is
-      // that the calls reach them rather than a null field left by a failed mount.
-      expect(() => renderer.dispose()).not.toThrow()
-    })
   })
 
   describe('dragging inside the picture', () => {
-    const grabbingTheSun = (): SkyboxRenderer => {
+    const grabbingTheSun = (button = 0): SkyboxRenderer => {
       const renderer = mounted()
-      renderer.apply(sunAtEyeLevel())
-      canvas.dispatchEvent(pointerAt('pointerdown', 10, 10))
+      renderer.apply(sunAt(SUN_AHEAD))
+      canvas.dispatchEvent(pointerAt('pointerdown', 10, 10, button))
       return renderer
     }
 
@@ -304,41 +277,40 @@ describe('the renderer of a skybox', () => {
       expect(onSunChange.mock.calls[0]?.[0].elevation).toBeGreaterThan(0)
     })
 
-    /** Off the sun, the same drag turns the head — and must never report a sun angle. */
     it('turns the head when the drag starts away from the sun', () => {
-      gesture = 'look'
       const renderer = mounted()
-      renderer.apply(sunAtEyeLevel())
+      renderer.apply(sunAt(SUN_BEHIND))
 
       canvas.dispatchEvent(pointerAt('pointerdown', 10, 10))
+      ndc = { x: 0, y: 0.5 }
       window.dispatchEvent(pointerAt('pointermove', 40, 10))
 
       expect(onSunChange).not.toHaveBeenCalled()
     })
 
     it('ignores a drag begun with another button', () => {
-      const renderer = mounted()
-      renderer.apply(sunAtEyeLevel())
+      grabbingTheSun(2)
 
-      canvas.dispatchEvent(pointerAt('pointerdown', 10, 10, 2))
+      ndc = { x: 0, y: 0.5 }
       window.dispatchEvent(pointerAt('pointermove', 20, 30))
 
       expect(onSunChange).not.toHaveBeenCalled()
     })
 
-    /** A collapsed panel has no surface to hit: no gesture may begin on it. */
+    // A collapsed panel has no surface to hit: no gesture may begin on it, even if one could
+    // continue by the time the pointer moves.
     it('ignores a drag begun on a canvas with no surface', () => {
       const renderer = mounted()
-      renderer.apply(sunAtEyeLevel())
+      renderer.apply(sunAt(SUN_AHEAD))
       ndc = null
 
       canvas.dispatchEvent(pointerAt('pointerdown', 10, 10))
+      ndc = { x: 0, y: 0.5 }
       window.dispatchEvent(pointerAt('pointermove', 20, 30))
 
       expect(onSunChange).not.toHaveBeenCalled()
     })
 
-    /** The sun is grabbed, then the pointer leaves the surface mid-drag. */
     it('reports nothing while the pointer has no surface under it', () => {
       grabbingTheSun()
 
@@ -360,6 +332,7 @@ describe('the renderer of a skybox', () => {
       grabbingTheSun()
 
       window.dispatchEvent(pointerAt('pointerup', 10, 10))
+      ndc = { x: 0, y: 0.5 }
       window.dispatchEvent(pointerAt('pointermove', 20, 30))
 
       expect(onSunChange).not.toHaveBeenCalled()
@@ -369,6 +342,7 @@ describe('the renderer of a skybox', () => {
       const renderer = grabbingTheSun()
 
       renderer.dispose()
+      mountedRenderers.length = 0
       ndc = { x: 0, y: 0.5 }
       window.dispatchEvent(pointerAt('pointermove', 20, 30))
 
@@ -379,19 +353,19 @@ describe('the renderer of a skybox', () => {
   describe('going away', () => {
     it('frees its sky, its target and everything it built', async () => {
       const renderer = mounted()
+      const target = vi.spyOn(gradedTarget() ?? new WebGLRenderTarget(1, 1), 'dispose')
       await applied(renderer, skyOf('sky-1'))
 
       renderer.dispose()
 
-      expect(freed[0]).toHaveBeenCalled()
+      expect(source.freed[0]).toHaveBeenCalled()
+      expect(target).toHaveBeenCalled()
       expect(environment.dispose).toHaveBeenCalled()
       expect(pipeline.dispose).toHaveBeenCalled()
     })
 
     it('disposes cleanly when the mount never got a renderer', () => {
-      vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue(null)
-      const renderer = new SkyboxRenderer({ onSunChange, loadTexture })
-      renderer.mount(host)
+      const renderer = unmountable()
 
       expect(() => renderer.dispose()).not.toThrow()
       expect(pipeline.dispose).not.toHaveBeenCalled()

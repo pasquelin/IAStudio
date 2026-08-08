@@ -1,49 +1,29 @@
-import { Texture } from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { EnvironmentRef } from '@shared/domain/scene'
 import { createTextureCache } from '../scene/texture-cache'
-import type { ViewportEnvironment } from './environment'
 import { createSkyBinding } from './sky-binding'
+import { fakeEnvironment, fakeTextureSource } from './viewport-fixtures'
 
 const SKY: EnvironmentRef = { kind: 'skybox', assetId: 'sky-1' }
 const OTHER: EnvironmentRef = { kind: 'skybox', assetId: 'sky-2' }
 const STUDIO: EnvironmentRef = { kind: 'studio' }
 
-function fakeEnvironment(): ViewportEnvironment {
-  return {
-    setTexture: vi.fn(),
-    refresh: vi.fn(),
-    setStudio: vi.fn(),
-    setIntensity: vi.fn(),
-    setRotation: vi.fn(),
-    setBackgroundVisible: vi.fn(),
-    dispose: vi.fn(),
-  }
-}
-
 describe('createSkyBinding', () => {
-  let freed: ReturnType<typeof vi.spyOn>[]
-  let load: Mock<(url: string) => Promise<Texture>>
+  let source: ReturnType<typeof fakeTextureSource>
   let paint: Mock<() => void>
 
   beforeEach(() => {
-    freed = []
-    load = vi.fn(async () => {
-      const texture = new Texture()
-      // The cache disposes a texture the moment its last reference goes — what these watch.
-      freed.push(vi.spyOn(texture, 'dispose'))
-      return texture
-    })
+    source = fakeTextureSource()
     paint = vi.fn()
   })
 
-  const binding = () => createSkyBinding(createTextureCache(load), paint)
+  const binding = () => createSkyBinding(createTextureCache(source.load), paint)
 
   it('asks for the sky by asset id, and prefilters it once it has decoded', async () => {
     const environment = fakeEnvironment()
     await binding().apply(environment, SKY)
 
-    expect(load).toHaveBeenCalledWith('scenario://asset/sky-1')
+    expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
     expect(environment.setTexture).toHaveBeenCalled()
     expect(environment.refresh).toHaveBeenCalled()
   })
@@ -55,7 +35,7 @@ describe('createSkyBinding', () => {
     await sky.apply(environment, SKY)
     await sky.apply(environment, SKY)
 
-    expect(load).toHaveBeenCalledTimes(1)
+    expect(source.load).toHaveBeenCalledTimes(1)
   })
 
   /**
@@ -92,11 +72,11 @@ describe('createSkyBinding', () => {
     const environment = fakeEnvironment()
 
     await sky.apply(environment, SKY)
-    expect(freed[0]).not.toHaveBeenCalled()
+    expect(source.freed[0]).not.toHaveBeenCalled()
 
     await sky.apply(environment, OTHER)
-    expect(freed[0]).toHaveBeenCalled()
-    expect(freed[1]).not.toHaveBeenCalled()
+    expect(source.freed[0]).toHaveBeenCalled()
+    expect(source.freed[1]).not.toHaveBeenCalled()
   })
 
   it('frees the sky it holds when the viewport goes away', async () => {
@@ -105,7 +85,7 @@ describe('createSkyBinding', () => {
 
     sky.release()
 
-    expect(freed[0]).toHaveBeenCalled()
+    expect(source.freed[0]).toHaveBeenCalled()
     expect(sky.showsSky()).toBe(false)
   })
 

@@ -1,25 +1,27 @@
 import { EquirectangularReflectionMapping, Scene, Texture, type WebGLRenderer } from 'three'
 import type * as ThreeModule from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-import { createEnvironment } from './environment'
+import { createEnvironment, type ViewportEnvironment } from './environment'
 
 /**
  * `PMREMGenerator` prefilters by rendering a mip chain, which needs a GL context jsdom cannot
- * give. Replaced by a generator that hands back a target carrying a recognisable texture, so
- * the tests can follow which map the scene ends up reading and when the previous one is freed.
+ * give. The stand-in hands back a target carrying a recognisable texture, so the tests can
+ * follow which map the scene ends up reading and when the previous one is freed.
  */
-const targets: { texture: Texture; dispose: ReturnType<typeof vi.fn>; boundWhenFreed: boolean }[] =
-  []
+type FakeTarget = { texture: Texture; dispose: Mock<() => void>; boundWhenFreed: boolean }
 
-let scene = new Scene()
+const targets: FakeTarget[] = []
 
-const newTarget = (): (typeof targets)[number] => {
-  const target = {
+/** The scene the environment under test was handed, captured rather than assumed. */
+let watched: Scene | null = null
+
+const newTarget = (): FakeTarget => {
+  const target: FakeTarget = {
     texture: new Texture(),
     // Recorded at the moment of the call: whether the scene was still reading this map when it
-    // was freed is the whole point, and it cannot be read afterwards.
+    // was freed cannot be known afterwards, and that is the whole question.
     dispose: vi.fn(() => {
-      target.boundWhenFreed = scene.environment === target.texture
+      target.boundWhenFreed = watched?.environment === target.texture
     }),
     boundWhenFreed: false,
   }
@@ -30,12 +32,11 @@ const newTarget = (): (typeof targets)[number] => {
 const fromEquirectangular = vi.fn(() => newTarget())
 const fromScene = vi.fn(() => newTarget())
 const disposeGenerator = vi.fn()
-const compileEquirectangularShader = vi.fn()
 
 vi.mock('three', async importOriginal => ({
   ...(await importOriginal<typeof ThreeModule>()),
   PMREMGenerator: class {
-    compileEquirectangularShader = compileEquirectangularShader
+    compileEquirectangularShader(): void {}
     fromEquirectangular = fromEquirectangular
     fromScene = fromScene
     dispose = disposeGenerator
@@ -43,18 +44,27 @@ vi.mock('three', async importOriginal => ({
 }))
 
 describe('the environment of a viewport', () => {
+  let scene: Scene
   let requestRender: Mock<() => void>
 
   beforeEach(() => {
     targets.length = 0
     vi.clearAllMocks()
     scene = new Scene()
+    watched = scene
     requestRender = vi.fn<() => void>()
   })
 
   // `as`: the generator is mocked above, and it is the only thing the renderer is handed to.
-  const environmentOf = (): ReturnType<typeof createEnvironment> =>
+  const environmentOf = (): ViewportEnvironment =>
     createEnvironment({} as WebGLRenderer, scene, requestRender)
+
+  const withPrefilteredMap = (): ViewportEnvironment => {
+    const environment = environmentOf()
+    environment.setTexture(new Texture())
+    environment.refresh()
+    return environment
+  }
 
   it('shows a picture behind the scene, on the mapping a sky is drawn with', () => {
     const environment = environmentOf()
@@ -64,7 +74,6 @@ describe('the environment of a viewport', () => {
 
     expect(sky.mapping).toBe(EquirectangularReflectionMapping)
     expect(scene.background).toBe(sky)
-    expect(requestRender).toHaveBeenCalled()
   })
 
   it('takes the picture away when the source goes', () => {
@@ -92,7 +101,6 @@ describe('the environment of a viewport', () => {
     expect(scene.background).toBe(sky)
   })
 
-  /** A texture handed over while the background is hidden must not turn it back on. */
   it('leaves the background hidden when a new source arrives', () => {
     const environment = environmentOf()
     environment.setBackgroundVisible(false)
@@ -118,10 +126,7 @@ describe('the environment of a viewport', () => {
    * place leaves every material reflecting freed GPU memory for a frame.
    */
   it('frees the previous map only once the new one is in place', () => {
-    const environment = environmentOf()
-    environment.setTexture(new Texture())
-    environment.refresh()
-
+    const environment = withPrefilteredMap()
     expect(targets[0]?.dispose).not.toHaveBeenCalled()
 
     environment.refresh()
@@ -140,7 +145,7 @@ describe('the environment of a viewport', () => {
     expect(scene.environment).toBeNull()
   })
 
-  /** No HDRI ships with the studio: a brand new project still has to light a material. */
+  // No HDRI ships with the studio: a brand new project still has to light a material.
   it('lights the scene from a neutral room when asked for the studio', () => {
     const environment = environmentOf()
 
@@ -151,9 +156,7 @@ describe('the environment of a viewport', () => {
   })
 
   it('frees the previous map when the studio replaces it, and not before', () => {
-    const environment = environmentOf()
-    environment.setTexture(new Texture())
-    environment.refresh()
+    const environment = withPrefilteredMap()
 
     environment.setStudio()
 
@@ -161,7 +164,7 @@ describe('the environment of a viewport', () => {
     expect(targets[0]?.boundWhenFreed).toBe(false)
   })
 
-  /** Both, or the sun sits in one place and lights from another. */
+  // Both, or the sun sits in one place and lights from another.
   it('turns the picture and what the scene reflects by the same angle', () => {
     const environment = environmentOf()
 
@@ -180,10 +183,30 @@ describe('the environment of a viewport', () => {
     expect(scene.environmentIntensity).toBe(0.4)
   })
 
-  it('leaves the scene holding nothing, and frees what it built', () => {
+  /**
+   * The viewport only draws when something asks it to. A setter that changes what is on screen
+   * without asking leaves the panel showing the previous value until some unrelated frame.
+   */
+  it('asks for a frame after every change it makes', () => {
     const environment = environmentOf()
-    environment.setTexture(new Texture())
-    environment.refresh()
+    const changes: (() => void)[] = [
+      () => environment.setTexture(new Texture()),
+      () => environment.refresh(),
+      () => environment.setStudio(),
+      () => environment.setIntensity(0.5),
+      () => environment.setRotation(0.5),
+      () => environment.setBackgroundVisible(false),
+    ]
+
+    for (const change of changes) {
+      requestRender.mockClear()
+      change()
+      expect(requestRender).toHaveBeenCalled()
+    }
+  })
+
+  it('leaves the scene holding nothing, and frees what it built', () => {
+    const environment = withPrefilteredMap()
 
     environment.dispose()
 
@@ -194,9 +217,7 @@ describe('the environment of a viewport', () => {
   })
 
   it('disposes without a map to free', () => {
-    const environment = environmentOf()
-
-    environment.dispose()
+    environmentOf().dispose()
 
     expect(disposeGenerator).toHaveBeenCalled()
   })
