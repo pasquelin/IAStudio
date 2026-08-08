@@ -452,6 +452,20 @@ licence requires it.
 
 Nothing to do there, nothing to set. It is a legal obligation, honoured properly.
 
+**This window is about the others, not about the studio.** Three texts, three scopes, and they are
+worth telling apart:
+
+| What it covers | Under which terms | Where to read it |
+|---|---|---|
+| **The studio's source code** | PolyForm Noncommercial 1.0.0 — readable, modifiable, reusable for any **noncommercial** purpose | `LICENSE`, in the repository |
+| **The application** you installed | its own terms of use | `EULA.md`, in the repository |
+| **The third-party components** both of them carry | each keeps its own | this window, and `THIRD-PARTY-NOTICES.md` |
+
+**ffmpeg is a case apart**, and its entry says so: it is not linked into the application, it is
+launched **beside** it, as a separate program. Its licence therefore differs per platform — GPL on
+macOS, LGPL elsewhere — and **its corresponding sources are attached to every published release**,
+next to the installers.
+
 The shortcuts shown in the menus are **the ones you have set**. Change a shortcut in settings and
 the menu follows.
 
