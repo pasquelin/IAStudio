@@ -87,6 +87,28 @@ export function fitTo(document: Size, host: Size, inset: number = 0): Viewport {
   return centerOn(document, host, scale, inset)
 }
 
+/**
+ * A picture laid inside a box, centred, shrunk to fit but never magnified — the same rule as
+ * `fitTo`, in document units rather than screen ones. Magnifying an imported picture to fill the
+ * canvas would blur it on arrival, with no way back to its own pixels.
+ */
+export function containIn(source: Size, box: Size): Rect {
+  const scale = Math.min(
+    1,
+    box.width / Math.max(1, source.width),
+    box.height / Math.max(1, source.height),
+  )
+  const width = source.width * scale
+  const height = source.height * scale
+
+  return {
+    x: Math.round((box.width - width) / 2),
+    y: Math.round((box.height - height) / 2),
+    width,
+    height,
+  }
+}
+
 /** Same framing as `fitTo`, at a scale the caller chose — ⌘1 lands here. */
 export function centerOn(document: Size, host: Size, scale: number, inset: number = 0): Viewport {
   const next = clampScale(scale)

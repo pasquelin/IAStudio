@@ -1,6 +1,7 @@
 import {
   AlphaFilter,
   type Application,
+  Assets,
   Container,
   Graphics,
   Rectangle,
@@ -47,6 +48,7 @@ import { PixelPatches, type PatchSide } from './PixelPatches'
 import { box, type Point } from './shape-geometry'
 import { brushRect } from './tiles'
 import {
+  containIn,
   DEFAULT_VIEW,
   fitTo,
   sameViewport,
@@ -554,6 +556,37 @@ export class CanvasEngine {
     // One per engine, shared by every isolated group: a filter carries no per-object state.
     this.isolation ??= new AlphaFilter()
     return this.isolation
+  }
+
+  /**
+   * Draws a picture into a layer's texture, laid inside the document without deforming it.
+   *
+   * `url` is a `scenario://asset/<id>`: the renderer has no filesystem, and the main process
+   * serves the scheme against the catalogue.
+   */
+  async loadInto(layerId: string, url: string): Promise<void> {
+    const mounting = this.mounting
+    const surface = this.surfaces.get(layerId)
+    if (!surface || !this.app || !this.state) return
+
+    // The scheme carries no extension, so nothing in the URL tells Pixi what to make of it.
+    const texture = await Assets.load({ src: url, parser: 'texture' })
+    // Read after the await: the document can be closed, or the layer removed, while it is in
+    // flight — and drawing into a destroyed texture is a GPU error, not a no-op.
+    if (mounting !== this.mounting || !this.surfaces.has(layerId)) return
+
+    const renderer = this.app?.renderer
+    if (!renderer || !this.state) return
+
+    const laid = containIn(texture, { width: this.state.width, height: this.state.height })
+    const sprite = new Sprite(texture)
+    sprite.position.set(laid.x, laid.y)
+    sprite.setSize(laid.width, laid.height)
+
+    renderer.render({ container: sprite, target: surface.texture, clear: false })
+    // Its texture belongs to the asset cache, and another layer may hold the same picture.
+    sprite.destroy()
+    this.render()
   }
 
   /** Pan, zoom, and what the overlay shows. Pushed in, never read out: React owns it. */

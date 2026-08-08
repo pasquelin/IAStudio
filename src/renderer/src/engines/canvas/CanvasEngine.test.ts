@@ -41,6 +41,7 @@ type Placed = {
   filters: object[]
   mask: object | null
   maskChannel: string
+  size: { width: number; height: number } | null
 }
 
 const gpu: {
@@ -57,6 +58,8 @@ const gpu: {
   containers: Placed[]
   /** The id of every texture a render was aimed at: which surface a stroke actually wrote to. */
   painted: number[]
+  /** What the engine asked the asset loader for, so the parser it forces can be asserted. */
+  loaded: { src: string; parser?: string }[]
 } = {
   renders: 0,
   texturesCreated: 0,
@@ -66,6 +69,7 @@ const gpu: {
   sprites: [],
   containers: [],
   painted: [],
+  loaded: [],
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -103,6 +107,7 @@ vi.mock('pixi.js', () => {
     filters: object[] = []
     mask: object | null = null
     maskChannel = 'red'
+    size: { width: number; height: number } | null = null
 
     constructor(options: { label?: string } = {}) {
       this.label = options.label ?? ''
@@ -124,6 +129,10 @@ vi.mock('pixi.js', () => {
       gpu.mutations += 1
       child.parent = null
       this.children.splice(at, 1)
+    }
+
+    setSize(width: number, height: number): void {
+      this.size = { width, height }
     }
 
     setMask(options: { mask: Container | null; channel?: string }): void {
@@ -185,6 +194,12 @@ vi.mock('pixi.js', () => {
         // engine wrote onto a layer's sprite.
         gpu.sprites.push(this)
       }
+    },
+    Assets: {
+      load: (options: { src: string; parser?: string }) => {
+        gpu.loaded.push(options)
+        return Promise.resolve({ width: 200, height: 100 })
+      },
     },
     Rectangle: class {},
     Texture: class {},
@@ -318,6 +333,7 @@ beforeEach(() => {
   gpu.sprites = []
   gpu.containers = []
   gpu.painted = []
+  gpu.loaded = []
 })
 
 describe('the blend table', () => {
@@ -765,6 +781,59 @@ describe('painting into a mask', () => {
 
     expect(gpu.painted).toEqual([])
     expect(patches).toEqual([])
+  })
+})
+
+describe('loading a picture into a layer', () => {
+  const URL = 'scenario://asset/take-1'
+
+  it('draws it into the texture of the layer it names', async () => {
+    const { engine } = await mounted(stacked([pixelLayer('a', 'A'), pixelLayer('b', 'B')]))
+    gpu.painted = []
+
+    await engine.loadInto('b', URL)
+
+    expect(gpu.painted).toEqual([1])
+  })
+
+  // The scheme carries no extension, so nothing in the URL tells Pixi what to make of it.
+  it('names the parser, which the scheme cannot tell Pixi by itself', async () => {
+    const { engine } = await mounted()
+
+    await engine.loadInto('layer-1', URL)
+
+    expect(gpu.loaded).toEqual([{ src: URL, parser: 'texture' }])
+  })
+
+  it('lays it inside the document without deforming it', async () => {
+    const { engine } = await mounted()
+
+    await engine.loadInto('layer-1', URL)
+
+    // 200×100 in a 1024² document: it already fits, so it keeps its size and is centred.
+    const laid = gpu.sprites.at(-1)
+    expect(laid?.size).toEqual({ width: 200, height: 100 })
+    expect(laid?.position).toMatchObject({ x: 412, y: 462 })
+  })
+
+  it('does nothing at all for a layer it does not hold', async () => {
+    const { engine } = await mounted()
+    gpu.painted = []
+
+    await expect(engine.loadInto('never-built', URL)).resolves.toBeUndefined()
+    expect(gpu.painted).toEqual([])
+  })
+
+  // Drawing into a texture the GPU has already freed is an error, not a no-op.
+  it('drops the picture when the document closed while it was in flight', async () => {
+    const { engine } = await mounted()
+    const loading = engine.loadInto('layer-1', URL)
+    engine.dispose()
+    gpu.painted = []
+
+    await loading
+
+    expect(gpu.painted).toEqual([])
   })
 })
 

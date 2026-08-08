@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   centerOn,
   clampScale,
+  containIn,
   fitTo,
   MAX_SCALE,
   MIN_SCALE,
@@ -87,6 +88,30 @@ describe('viewport', () => {
       y: 25,
       width: 400,
       height: 300,
+    })
+  })
+
+  describe('laying a picture inside the document', () => {
+    it('centres one that already fits, at its own size', () => {
+      expect(containIn({ width: 400, height: 200 }, { width: 1024, height: 1024 })).toEqual({
+        x: 312,
+        y: 412,
+        width: 400,
+        height: 200,
+      })
+    })
+
+    // Magnifying an import would blur it on arrival, with no way back to its own pixels.
+    it('never magnifies a small one to fill the canvas', () => {
+      const laid = containIn({ width: 10, height: 10 }, { width: 1024, height: 1024 })
+
+      expect(laid.width).toBe(10)
+    })
+
+    it('shrinks one that overflows without deforming it', () => {
+      const laid = containIn({ width: 4000, height: 2000 }, { width: 1000, height: 1000 })
+
+      expect(laid).toEqual({ x: 0, y: 250, width: 1000, height: 500 })
     })
   })
 })
