@@ -1,6 +1,6 @@
 import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
-import { shortcutLabel } from '@shared/domain/shortcut'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat } from '@shared/domain/scene'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
@@ -76,6 +76,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const modified = useScenes(state => isDirty(state, documentId))
   const title = useDocuments(state => state.documents[documentId]?.title)
   const bindings = useBindingOverrides()
+  const label = useShortcutLabel()
   const addNodeOf = useAddNode(documentId)
   const active = useDocuments(state => state.activeId === documentId)
   const viewport = useSettings(state => state.settings.three)
@@ -266,12 +267,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
     return SCENE_TOOLS.map(tool => ({
       ...tool,
-      shortcut: tool.command ? shortcutLabel(bindingOf(tool.command, bindings)) : undefined,
+      shortcut: tool.command ? label(bindingOf(tool.command, bindings)) : undefined,
       activeMode: tool.id === 'display' ? view.display : undefined,
       disabled: tool.command ? unavailable[tool.command] : undefined,
       pressed: tool.command ? pressed[tool.command] : undefined,
     }))
-  }, [bindings, nothingSelected, nothingHeld, snapping, localFrame, view])
+  }, [bindings, label, nothingSelected, nothingHeld, snapping, localFrame, view])
 
   return (
     // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the
@@ -294,8 +295,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         onMode={(toolId, modeId) => runMode(toolId, modeId)}
         onUndo={() => run('scene.undo')}
         onRedo={() => run('scene.redo')}
-        undoShortcut={shortcutLabel(bindingOf('scene.undo', bindings))}
-        redoShortcut={shortcutLabel(bindingOf('scene.redo', bindings))}
+        undoShortcut={label(bindingOf('scene.undo', bindings))}
+        redoShortcut={label(bindingOf('scene.redo', bindings))}
         canUndo={undoable}
         canRedo={redoable}
       />

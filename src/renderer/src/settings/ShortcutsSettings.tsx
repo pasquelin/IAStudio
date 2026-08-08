@@ -11,7 +11,8 @@ import {
   type CommandId,
   type CommandScope,
 } from '@shared/domain/command'
-import { shortcutLabel, signatureOf, type Signature } from '@shared/domain/shortcut'
+import { signatureOf, type Signature } from '@shared/domain/shortcut'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { useSettings } from '@/stores/settings'
@@ -83,6 +84,7 @@ function CommandRow({
   onBind: (signature: Signature | null) => void
 }) {
   const { t } = useTranslation()
+  const label = useShortcutLabel()
 
   useCapture(signature => (signature === '' ? onCapture() : onBind(signature)), capturing)
 
@@ -115,7 +117,7 @@ function CommandRow({
               clashing && !capturing && 'btn-error btn-outline',
             )}
           >
-            {capturing ? t('settings.pressAKey') : shortcutLabel(binding) || t('settings.unbound')}
+            {capturing ? t('settings.pressAKey') : label(binding) || t('settings.unbound')}
           </button>
 
           <button
@@ -264,6 +266,7 @@ function SearchByChord({
   onQuery: (signature: Signature | null) => void
 }) {
   const { t } = useTranslation()
+  const label = useShortcutLabel()
 
   useCapture(signature => onQuery(signature === '' ? null : signature), listening)
 
@@ -274,7 +277,7 @@ function SearchByChord({
         className={cn('btn btn-sm font-mono', listening && 'btn-primary')}
         onClick={onListen}
       >
-        {listening ? t('settings.pressAKey') : shortcutLabel(query) || t('settings.findByChord')}
+        {listening ? t('settings.pressAKey') : label(query) || t('settings.findByChord')}
       </button>
 
       {query !== null && (

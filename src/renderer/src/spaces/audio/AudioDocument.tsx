@@ -198,7 +198,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
             id: 'transport',
             labelKey: player.playing ? 'transport.pause' : 'transport.play',
             icon: player.playing ? mdiPause : mdiPlay,
-            shortcut: 'Space',
+            shortcut: t('keys.Space'),
           },
           ...AUDIO_TOOLS,
         ]}

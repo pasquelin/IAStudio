@@ -1221,5 +1221,17 @@
     "kibibyte": "KiB",
     "mebibyte": "MiB",
     "gibibyte": "GiB"
+  },
+  "keys": {
+    "Space": "Space",
+    "Enter": "Enter",
+    "Escape": "Esc",
+    "Delete": "Delete",
+    "Backspace": "Backspace",
+    "Tab": "Tab",
+    "Home": "Home",
+    "End": "End",
+    "PageUp": "Page Up",
+    "PageDown": "Page Down"
   }
 }
