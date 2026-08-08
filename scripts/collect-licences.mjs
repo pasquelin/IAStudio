@@ -10,10 +10,10 @@
  * The texts themselves are read from `node_modules`, never copied by hand — a version bump
  * brings its own wording.
  */
-import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { SOURCES as FFMPEG_SOURCES, TARGETS as FFMPEG_TARGETS } from './fetch-ffmpeg.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'src', 'shared', 'licences.json')
@@ -89,29 +89,33 @@ function collect(name) {
 
 /**
  * FFmpeg is not an npm package: it is fetched by `pnpm ffmpeg:fetch` and spawned as a separate
- * program. Its terms travel with the binary in `resources/ffmpeg/NOTICE.txt`, and the version
- * is read from the binary itself when it is there.
+ * program.
+ *
+ * Read from `TARGETS`, never from `resources/ffmpeg/NOTICE.txt`: this file is one shared
+ * constant compiled into every platform's bundle, while the folder holds whichever target this
+ * machine last fetched. Sourcing it from disk would ship "GPL-3.0, darwin-arm64" to the Windows
+ * and Linux users whose build is LGPL — a licence notice stating the wrong licence.
  */
 function ffmpegLicence() {
-  const noticeFile = join(ROOT, 'resources', 'ffmpeg', 'NOTICE.txt')
-  const name = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
-  const binary = join(ROOT, 'resources', 'ffmpeg', name)
-  const notice = existsSync(noticeFile) ? readFileSync(noticeFile, 'utf8') : null
+  const terms = Object.entries(FFMPEG_TARGETS).map(
+    ([target, { version, licence, source }]) => `  ${target}: ${version}, ${licence} — ${source}`,
+  )
 
-  let version = 'shipped with the application'
-  if (existsSync(binary)) {
-    const first = execFileSync(binary, ['-version'], { encoding: 'utf8' }).split('\n')[0]
-    version = first.replace(/^ffmpeg version /, '').split(' ')[0]
-  }
+  const licences = new Set(Object.values(FFMPEG_TARGETS).map(target => target.licence))
 
   return {
     name: 'FFmpeg',
-    version,
-    spdx: notice?.match(/Licence: (.+)/)?.[1] ?? 'LGPL-2.1-or-later',
-    text:
-      notice?.trim() ??
-      'Fetch it with `pnpm ffmpeg:fetch` to record the exact terms of the shipped build.',
-    sources: 'https://ffmpeg.org/download.html',
+    version: [...new Set(Object.values(FFMPEG_TARGETS).map(target => target.version))].join(' / '),
+    spdx: [...licences].join(' / '),
+    text: [
+      'FFmpeg is a separate program, spawned by Scenario Studio. It is not linked into it.',
+      '',
+      'The build differs per platform, and so do its terms:',
+      ...terms,
+      '',
+      'The GPL builds oblige us to offer FFmpeg’s corresponding sources, below.',
+    ].join('\n'),
+    sources: FFMPEG_SOURCES,
   }
 }
 

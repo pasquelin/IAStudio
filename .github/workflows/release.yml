@@ -63,6 +63,9 @@ jobs:
         with:
           path: ${{ matrix.electron-cache }}
           key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          # The only real input is the Electron version. Without a partial hit, any unrelated
+          # dependency bump throws away ~150 MB and re-downloads it.
+          restore-keys: electron-${{ runner.os }}-
 
       - run: pnpm install --frozen-lockfile
 
@@ -77,16 +80,14 @@ jobs:
           WIN_CERT: ${{ secrets.WIN_CERT_P12_BASE64 }}
         run: |
           case "${{ matrix.platform }}" in
-            mac) present="$MAC_CERT" ;;
-            win) present="$WIN_CERT" ;;
-            *)   present="not-applicable" ;;
+            mac) cert="$MAC_CERT" ;;
+            win) cert="$WIN_CERT" ;;
+            *)
+              echo "Linux: AppImage and deb need no code signature." >> "$GITHUB_STEP_SUMMARY"
+              exit 0 ;;
           esac
 
-          if [ "${{ matrix.platform }}" = linux ]; then
-            echo "signed=n/a" >> "$GITHUB_OUTPUT"
-            echo "Linux: AppImage and deb need no code signature." >> "$GITHUB_STEP_SUMMARY"
-          elif [ -n "$present" ]; then
-            echo "signed=true" >> "$GITHUB_OUTPUT"
+          if [ -n "$cert" ]; then
             echo "${{ matrix.platform }}: signing certificate present." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "signed=false" >> "$GITHUB_OUTPUT"
@@ -136,6 +137,9 @@ jobs:
             release/latest*.yml
           retention-days: 7
           if-no-files-found: error
+          # dmg, zip, nsis and AppImage are already compressed containers. Deflating them again
+          # costs ~20 s per platform and saves nothing.
+          compression-level: 0
 
   release:
     needs: build

@@ -13,14 +13,8 @@ const registered = new Map<string, Invoke>()
 
 export function mockElectron(): {
   ipcMain: { handle: (channel: string, handler: Invoke) => void }
-  BrowserWindow: { getAllWindows: () => [] }
 } {
-  return {
-    ipcMain: { handle: (channel, handler) => void registered.set(channel, handler) },
-    // `broadcast` walks the windows, and a handler that pushes an event reaches it as soon as
-    // it is registered. No windows means nothing is sent, which is the truth under test.
-    BrowserWindow: { getAllWindows: () => [] },
-  }
+  return { ipcMain: { handle: (channel, handler) => void registered.set(channel, handler) } }
 }
 
 /** Calls the registered handler, with the event argument every handler ignores. */

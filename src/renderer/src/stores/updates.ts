@@ -9,12 +9,6 @@ type UpdatesState = {
   install: () => Promise<void>
 }
 
-/**
- * The updater's state, replicated so the status line can render without asking.
- *
- * Seeded rather than left waiting for the first event: a download that finished before this
- * window existed pushes nothing more, and the indicator would stay silent with an update ready.
- */
 export const useUpdates = create<UpdatesState>()(set => ({
   update: { phase: 'idle' },
 

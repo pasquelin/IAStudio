@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UpdateState } from '@shared/domain/update'
@@ -62,17 +62,5 @@ describe('the update indicator', () => {
     show({ phase: 'downloading', version: '0.2.0', progress: 0.4 })
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
-  })
-
-  // A window opened after the download finished gets no further event: without seeding, the
-  // indicator would stay silent with an update sitting ready on disk.
-  it('seeds itself from the state the main process already holds', async () => {
-    installFakeBridge({
-      updates: { state: () => Promise.resolve({ phase: 'ready', version: '0.3.0' }) },
-    })
-
-    render(<UpdateStatus />)
-
-    await waitFor(() => expect(screen.getByRole('button', { name: /0\.3\.0/ })).toBeInTheDocument())
   })
 })

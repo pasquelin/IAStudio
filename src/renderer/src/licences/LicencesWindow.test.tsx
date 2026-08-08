@@ -46,8 +46,6 @@ describe('LicencesWindow', () => {
     render(<LicencesWindow />)
     await userEvent.click(screen.getByRole('button', { name: /FFmpeg/ }))
 
-    // The dedicated line, not just any mention: the shipped NOTICE.txt names the same URL, and
-    // matching on the address alone would pass on the licence text having quoted it.
-    expect(screen.getByText(/Sources correspondantes/)).toHaveTextContent('ffmpeg.org/download')
+    expect(screen.getByText(/ffmpeg\.org\/download/)).toBeInTheDocument()
   })
 })

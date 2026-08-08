@@ -45,6 +45,7 @@ const DESTINATION = join(ROOT, 'resources', 'ffmpeg')
 
 // A dated autobuild, not the rolling `latest` tag: `latest` moves under a pinned URL.
 const BTBN = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-07-13-13'
+const BTBN_VERSION = '7.1.5'
 const BTBN_BUILD = 'ffmpeg-n7.1.5-12-g1fdbca85aa'
 
 /**
@@ -55,7 +56,7 @@ const BTBN_BUILD = 'ffmpeg-n7.1.5-12-g1fdbca85aa'
  * All five targets sit on the 7.1 series on purpose: ffmpeg drops and renames CLI options
  * between majors, and `src/main/media/runner.ts` builds one command line for every platform.
  */
-const TARGETS = {
+export const TARGETS = {
   'darwin-arm64': {
     version: '7.1.1',
     licence: 'GPL-3.0-or-later',
@@ -83,7 +84,7 @@ const TARGETS = {
     },
   },
   'win32-x64': {
-    version: '7.1.5',
+    version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
     archives: [
@@ -101,7 +102,7 @@ const TARGETS = {
     },
   },
   'linux-x64': {
-    version: '7.1.5',
+    version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
     archives: [
@@ -119,7 +120,7 @@ const TARGETS = {
     },
   },
   'linux-arm64': {
-    version: '7.1.5',
+    version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
     archives: [
@@ -138,7 +139,7 @@ const TARGETS = {
   },
 }
 
-const SOURCES = 'https://ffmpeg.org/download.html'
+export const SOURCES = 'https://ffmpeg.org/download.html'
 
 function flag(name, fallback) {
   const at = process.argv.indexOf(`--${name}`)
@@ -256,7 +257,7 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
   if (platform === process.platform && arch === process.arch) {
     console.log(execFileSync(binary, ['-version'], { encoding: 'utf8' }).split('\n')[0])
   }
-  return { binary, digests: seen }
+  return seen
 }
 
 /** Fetches every target into a scratch folder and prints what to paste back into `TARGETS`. */
@@ -265,7 +266,7 @@ async function printDigests() {
   try {
     for (const key of Object.keys(TARGETS)) {
       const [platform, arch] = key.split('-')
-      const { digests } = await fetchFfmpeg(platform, arch, {
+      const digests = await fetchFfmpeg(platform, arch, {
         destination: join(scratch, key),
         verify: false,
       })

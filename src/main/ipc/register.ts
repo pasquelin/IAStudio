@@ -8,6 +8,7 @@ import { registerSettingsHandlers } from '@main/settings/handlers'
 import { registerWindowControls } from '@main/window/controls'
 import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
+import { registerUpdateHandlers } from '@main/update/handlers'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
 import type { Services } from '@main/services'
 
@@ -32,4 +33,5 @@ export function registerIpc(services: Services): void {
   registerMediaHandlers(services)
   registerDialogHandlers(services)
   registerSceneHandlers(services)
+  registerUpdateHandlers(services)
 }
