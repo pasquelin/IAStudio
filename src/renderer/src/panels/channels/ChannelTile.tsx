@@ -1,0 +1,144 @@
+import {
+  mdiCogOutline,
+  mdiDeleteOutline,
+  mdiDotsHorizontal,
+  mdiFileImageOutline,
+  mdiTextureBox,
+} from '@mdi/js'
+import { useTranslation } from 'react-i18next'
+import { assetUrl } from '@shared/domain/asset'
+import type { PbrChannel } from '@shared/domain/texture'
+import { cn } from '@/helpers/cn'
+import { TIP_LEFT } from '@/helpers/tooltip'
+import { FOCUS_RING } from '@/design/styles'
+import { MediaTile } from '@/design/MediaTile'
+import { MenuButton } from '@/design/MenuButton'
+import { MenuRow } from '@/design/MenuRow'
+import { UiIcon } from '@/design/UiIcon'
+import type { ChannelMap, ChannelOrigin } from '@/engines/texture/texture-state'
+
+export type ChannelTileProps = {
+  channel: PbrChannel
+  map: ChannelMap | null
+  /** Pictures of the project this channel could hold, already filtered to what can be decoded. */
+  options: readonly { id: string; name: string }[]
+  /** Whether the document is currently showing this channel flat instead of the lit material. */
+  inspected: boolean
+  onPick: (assetId: string) => void
+  onClear: () => void
+  onInspect: () => void
+}
+
+/**
+ * What each origin looks like. A glyph rather than a colour alone, for the reason `AssetBadge`
+ * gives: three states have to be told apart on a small tile, and none of them is alarming.
+ *
+ * The distinction is the point of the badge: a *derived* channel is recomputed whenever its
+ * source changes, a *generated* one is frozen at what the model answered, and an *imported* one
+ * is the user's own file. Someone about to repaint a height map needs to know which.
+ */
+const ORIGINS: Record<ChannelOrigin, { icon: string; key: string }> = {
+  generated: { icon: mdiTextureBox, key: 'texture.originGenerated' },
+  derived: { icon: mdiCogOutline, key: 'texture.originDerived' },
+  imported: { icon: mdiFileImageOutline, key: 'texture.originImported' },
+}
+
+/** One channel of a material: what it holds, where those pixels came from, and how to change it. */
+export function ChannelTile({
+  channel,
+  map,
+  options,
+  inspected,
+  onPick,
+  onClear,
+  onInspect,
+}: ChannelTileProps) {
+  const { t } = useTranslation()
+  const name = t(`texture.channel.${channel}`)
+  const origin = map ? ORIGINS[map.origin] : null
+  const label = t(inspected ? 'texture.showMaterial' : 'texture.inspectChannel', { channel: name })
+
+  return (
+    <div className="relative">
+      {/* A sibling of the menu button rather than its parent: a button inside a button is not
+          markup a browser will keep. */}
+      <button
+        type="button"
+        aria-pressed={inspected}
+        // Nothing to look at flat: an empty channel would show a blank frame and say nothing.
+        disabled={!map}
+        // Named outright: the accessible name would otherwise be the tile's caption, which says
+        // which channel this is and nothing about what pressing it does.
+        aria-label={label}
+        title={label}
+        onClick={onInspect}
+        className={cn(
+          'block w-full cursor-pointer border-none bg-transparent p-0',
+          'disabled:cursor-default',
+          FOCUS_RING,
+          inspected && 'ring-accent rounded-(--radius-sc-sm) ring-2',
+        )}
+      >
+        <MediaTile
+          url={map ? assetUrl(map.assetId) : undefined}
+          caption={name}
+          fallbackIcon={mdiTextureBox}
+          badge={
+            origin && (
+              <span
+                title={t(origin.key)}
+                // Top LEFT: the menu button owns the other corner, and a badge is a standing.
+                className={cn(
+                  'absolute top-1 left-1 rounded-(--radius-sc-sm) bg-black/60 p-0.5',
+                  'text-white',
+                )}
+              >
+                <UiIcon path={origin.icon} size={12} />
+                <span className="sr-only">{t(origin.key)}</span>
+              </span>
+            )
+          }
+        />
+      </button>
+
+      <div className="absolute top-1 right-1">
+        <MenuButton
+          icon={mdiDotsHorizontal}
+          label={t('texture.chooseChannel', { channel: name })}
+          tooltip={TIP_LEFT}
+          variant="header"
+          opensOnClick
+          disabled={options.length === 0 && !map}
+          // "Empty" is one of the choices rather than a second button, as `TextureField` has it:
+          // choosing no picture is choosing. It also keeps the menu two rows deep at its
+          // shallowest — one row makes `MenuButton` act outright instead of opening.
+          rowCount={options.length + 1}
+          rows={close => [
+            <MenuRow
+              key="clear"
+              label={t('texture.clearChannel')}
+              icon={mdiDeleteOutline}
+              checked={map === null}
+              onSelect={() => {
+                onClear()
+                close()
+              }}
+            />,
+            ...options.map(option => (
+              <MenuRow
+                key={option.id}
+                label={option.name}
+                icon={mdiFileImageOutline}
+                checked={map?.assetId === option.id}
+                onSelect={() => {
+                  onPick(option.id)
+                  close()
+                }}
+              />
+            )),
+          ]}
+        />
+      </div>
+    </div>
+  )
+}

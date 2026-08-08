@@ -3,6 +3,7 @@ import {
   mdiCubeScan,
   mdiFileTreeOutline,
   mdiFolderOutline,
+  mdiGridLarge,
   mdiImageMultipleOutline,
   mdiLayersOutline,
   mdiTuneVariant,
@@ -45,6 +46,7 @@ const ICONS: Record<ToolId, string> = {
   inspector: mdiTuneVariant,
   skybox: mdiWeatherPartlyCloudy,
   assets: mdiImageMultipleOutline,
+  channels: mdiGridLarge,
 }
 
 /**

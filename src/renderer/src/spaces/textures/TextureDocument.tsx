@@ -2,10 +2,11 @@ import { mdiTextureBox } from '@mdi/js'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TextureLoader, type Texture } from 'three'
-import { PICTURES, type Asset } from '@shared/domain/asset'
+import { assetUrl, PICTURES, type Asset } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
+import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
@@ -24,6 +25,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const engine = useRef<TextureRenderer | null>(null)
 
   const texture = useTextures(state => textureOf(state, documentId))
+  const inspected = useTextureViews(state => inspectedChannel(state, documentId))
 
   useRestoredDocument(documentId)
 
@@ -54,12 +56,28 @@ export function TextureDocument({ documentId }: { documentId: string }) {
     placeTextureChannel(documentId, asset)
   }
 
+  const flat = inspected ? texture.channels[inspected] : undefined
+
   return (
     <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 
-      {!texture.channels.baseColor && (
+      {/* Laid over the viewport rather than unmounting it: a WebGL context does not survive being
+          rebuilt for a glance at a normal map, and the engine would reload all eight channels. */}
+      {flat && (
+        <div className="bg-viewport absolute inset-0 flex items-center justify-center p-4">
+          <img
+            src={assetUrl(flat.assetId)}
+            alt=""
+            // `pixelated`: a normal or a height map is inspected to be read, and a browser's
+            // smoothing hides exactly the noise one is looking for.
+            className="max-h-full max-w-full object-contain [image-rendering:pixelated]"
+          />
+        </div>
+      )}
+
+      {!texture.channels.baseColor && !flat && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <EmptyState icon={mdiTextureBox} message={t('texture.dropSource')} />
         </div>

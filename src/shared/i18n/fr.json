@@ -22,7 +22,8 @@
     "inspector": "Inspecteur",
     "assets": "Assets",
     "skybox": "Skybox",
-    "scene": "Scène"
+    "scene": "Scène",
+    "channels": "Canaux"
   },
   "actions": {
     "undo": "Annuler",
@@ -1297,7 +1298,25 @@
     "offset": "Décalage",
     "rotation": "Rotation",
     "preview": "Aperçu",
-    "envRotation": "Rotation du ciel"
+    "envRotation": "Rotation du ciel",
+    "noDocument": "Ouvrez une texture pour voir ses canaux.",
+    "originGenerated": "Généré par un modèle — figé tel qu’il est arrivé",
+    "originDerived": "Dérivé d’un autre canal — recalculé quand il change",
+    "originImported": "Votre propre fichier",
+    "chooseChannel": "Ce que contient {{channel}}",
+    "clearChannel": "Vider ce canal",
+    "channel": {
+      "baseColor": "Couleur de base",
+      "normal": "Normale",
+      "roughness": "Rugosité",
+      "metalness": "Métal",
+      "ao": "Occlusion",
+      "height": "Hauteur",
+      "emissive": "Émission",
+      "edge": "Cavité"
+    },
+    "inspectChannel": "Regarder {{channel}} seul",
+    "showMaterial": "Revenir au matériau éclairé"
   },
   "licences": {
     "title": "Licences",
