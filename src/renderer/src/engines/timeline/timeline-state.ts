@@ -2,7 +2,7 @@
  * A sequence, as plain data. It holds no decoder and no Pixi object: an engine is rebuilt from
  * its serialized state, never from its DOM, and jsdom has neither WebCodecs nor WebGL.
  */
-import { isRecord, readBoolean, readNumber, readString } from '@shared/guards'
+import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 
 /** Timeline time, in microseconds. Never float seconds: drift accumulates over a long edit. */
 export type Us = number
@@ -320,10 +320,6 @@ export function insertClip(track: Track, clip: Clip, tailId: string): Track {
   return { ...track, clips: clips.sort((left, right) => left.start - right.start) }
 }
 
-export function serializeSequence(state: SequenceState): string {
-  return JSON.stringify(state)
-}
-
 function readClip(raw: unknown): Clip | null {
   if (!isRecord(raw)) return null
 
@@ -338,11 +334,11 @@ function readClip(raw: unknown): Clip | null {
       id,
       assetId,
       duration,
-      start: Math.max(0, readNumber(raw, 'start', 0)),
-      inPoint: Math.max(0, readNumber(raw, 'inPoint', 0)),
+      start: readPositive(raw, 'start', 0),
+      inPoint: readPositive(raw, 'inPoint', 0),
       speed: readNumber(raw, 'speed', 1) || 1,
-      fadeIn: Math.max(0, readNumber(raw, 'fadeIn', 0)),
-      fadeOut: Math.max(0, readNumber(raw, 'fadeOut', 0)),
+      fadeIn: readPositive(raw, 'fadeIn', 0),
+      fadeOut: readPositive(raw, 'fadeOut', 0),
       gain: readNumber(raw, 'gain', 0),
     }),
   )
@@ -392,31 +388,31 @@ function readSettings(raw: unknown): SequenceSettings {
   }
 }
 
-/** Unreadable input yields a fresh sequence: a blank timeline beats an uncaught throw. */
-export function deserializeSequence(raw: string): SequenceState {
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (!isRecord(parsed) || !Array.isArray(parsed.tracks)) return EMPTY_SEQUENCE
+/**
+ * A sequence read back from a file. Takes the parsed value rather than the text, like every
+ * other document reader: text that is not JSON at all is a file that failed to read, and the
+ * caller must be able to tell that from a file whose shape is merely wrong — the first refuses
+ * to be written over, the second opens on an empty timeline.
+ */
+export function parseSequence(content: unknown): SequenceState {
+  if (!isRecord(content) || !Array.isArray(content.tracks)) return EMPTY_SEQUENCE
 
-    const tracks: Track[] = []
-    parsed.tracks.forEach((entry, row) => {
-      const track = readTrack(entry, row)
-      if (track) tracks.push(track)
-    })
-    if (tracks.length === 0) return EMPTY_SEQUENCE
+  const tracks: Track[] = []
+  content.tracks.forEach((entry, row) => {
+    const track = readTrack(entry, row)
+    if (track) tracks.push(track)
+  })
+  if (tracks.length === 0) return EMPTY_SEQUENCE
 
-    const selectedId = parsed.selectedId
-    return {
-      settings: readSettings(parsed.settings),
-      tracks,
-      // Dropped when it points at a clip the read discarded: nothing may select nothing.
-      selectedId:
-        typeof selectedId === 'string' && tracks.some(t => t.clips.some(c => c.id === selectedId))
-          ? selectedId
-          : null,
-      playhead: Math.max(0, readNumber(parsed, 'playhead', 0)),
-    }
-  } catch {
-    return EMPTY_SEQUENCE
+  const selectedId = content.selectedId
+  return {
+    settings: readSettings(content.settings),
+    tracks,
+    // Dropped when it points at a clip the read discarded: nothing may select nothing.
+    selectedId:
+      typeof selectedId === 'string' && tracks.some(t => t.clips.some(c => c.id === selectedId))
+        ? selectedId
+        : null,
+    playhead: readPositive(content, 'playhead', 0),
   }
 }

@@ -1,8 +1,8 @@
 import { render } from '@testing-library/react'
-import { Orientation } from 'dockview-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDocuments } from '@/stores/documents'
-import { useLayouts, type SerializedLayout } from '@/stores/layouts'
+import { layoutShowing } from '@/stores/layout-fixtures'
+import { useLayouts } from '@/stores/layouts'
 import { DocumentArea } from './DocumentArea'
 import { openDocument, setDocumentTitle } from './dockview-api'
 
@@ -33,18 +33,6 @@ vi.mock('dockview-react', () => ({
   },
 }))
 
-function layout(): SerializedLayout {
-  return {
-    grid: {
-      root: { type: 'branch', data: [] },
-      height: 100,
-      width: 100,
-      orientation: Orientation.HORIZONTAL,
-    },
-    panels: {},
-  }
-}
-
 describe('DocumentArea', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -54,7 +42,7 @@ describe('DocumentArea', () => {
   })
 
   it('restores the layout stored for the active workspace', async () => {
-    const stored = layout()
+    const stored = layoutShowing()
     useLayouts.setState({ layouts: { '3d': stored } })
 
     render(<DocumentArea />)
@@ -63,7 +51,7 @@ describe('DocumentArea', () => {
   })
 
   it('does not restore another workspace layout', async () => {
-    useLayouts.setState({ layouts: { image: layout() } })
+    useLayouts.setState({ layouts: { image: layoutShowing() } })
 
     render(<DocumentArea />)
 
@@ -72,7 +60,7 @@ describe('DocumentArea', () => {
 
   describe('given a stored layout Dockview refuses', () => {
     beforeEach(() => {
-      useLayouts.setState({ layouts: { '3d': layout() } })
+      useLayouts.setState({ layouts: { '3d': layoutShowing() } })
       fromJSON.mockImplementation(() => {
         throw new Error('dockview: root must be of type branch')
       })

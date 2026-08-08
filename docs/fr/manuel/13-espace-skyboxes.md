@@ -178,8 +178,6 @@ endroit. Deux façons de continuer :
   panneau ;
 - **l'export** — on ne peut pas encore écrire les six faces d'un cube, ni un HDRI utilisable
   ailleurs ;
-- **l'enregistrement** — un ciel ne s'écrit pas encore dans un fichier `.sky`. Fermer l'onglet
-  perd les réglages ;
 - **l'import d'un `.hdr`** — le studio n'importe que les images ordinaires. Un `.exr` importé est
   catalogué comme image, pas comme ciel. Il fonctionne quand même comme source, mais il faut
   aller le chercher dans les images.

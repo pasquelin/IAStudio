@@ -17,11 +17,38 @@ type DocumentsState = {
    * to know which document they are inspecting — a layer stack has to follow the active tab.
    */
   activeId: string | null
-  /** Reads the open project's folder and keeps the documents a layout still shows. */
+  /**
+   * Everything the project folder holds, open or not — what the Explorer lists.
+   *
+   * Beside `documents` rather than derived from it: `documents` is what the window is showing,
+   * and a document closed and gone from every layout would vanish from the folder listing too,
+   * which is exactly the document one needs the Explorer to find.
+   */
+  stored: DocumentDescriptor[]
+  /**
+   * Re-reads the folder into `stored`, and nothing else.
+   *
+   * Separate from `refresh` on purpose: a panel that wants a listing must not also settle which
+   * tabs are open. `create` posts a descriptor without writing a file — deliberately, so a tab
+   * opened and never typed in leaves nothing behind — and a reconciliation triggered by opening
+   * the Explorer would evict exactly that document while its tab is still on screen.
+   */
+  relist: () => Promise<void>
+  /**
+   * Reads the open project's folder and settles both halves: what exists, and which of those a
+   * layout still shows. For a change of project — where dropping the documents of the previous
+   * one is the whole point.
+   */
   refresh: () => Promise<void>
   /** `null` when the workspace has no editable document kind yet. */
   create: (workspace: WorkspaceId) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
+  /**
+   * Takes in a document the folder holds but no tab shows yet — what the Explorer hands over
+   * when one of its rows is opened. Idempotent, and it never overwrites: the open descriptor is
+   * the one the tab has been renaming, and the listing it came from is a snapshot.
+   */
+  adopt: (document: DocumentDescriptor) => void
   close: (id: string) => void
 }
 
@@ -85,10 +112,11 @@ export function panelIds(layouts: Record<string, { panels?: object } | undefined
  * pointing at files that are not there, or worse, at a file of the same id in another project.
  *
  * So the folder says which documents exist and what they are called; the persisted layout says
- * which of them are open. Loading is `load` plus `pruneDocuments`, in that order.
+ * which of them are open — `refresh` reads both and keeps the intersection.
  */
 export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   documents: {},
+  stored: [],
   activeId: null,
 
   // Guarded: Dockview announces the active panel again on each workspace switch — usually the
@@ -97,13 +125,20 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     if (get().activeId !== id) set({ activeId: id })
   },
 
-  refresh: async () => {
-    const mine = ++generation
+  relist: async () => {
+    const mine = ++generations.relist
     const found = await listed()
-
     // A second project opened while the first was still listing: the last answer to arrive is
     // not necessarily the one that was asked for last.
-    if (mine !== generation) return
+    if (mine !== generations.relist) return
+
+    set({ stored: sorted(found) })
+  },
+
+  refresh: async () => {
+    const mine = ++generations.refresh
+    const found = await listed()
+    if (mine !== generations.refresh) return
 
     const shown = panelIds(useLayouts.getState().layouts)
     // One `set` for both halves: the folder says which documents exist, the layout says which
@@ -114,6 +149,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
     set(state => ({
       documents,
+      stored: sorted(found),
       // Kept when the tab survived the load: Dockview announces the active panel on mount, and
       // that happens before this listing comes back — clearing it here would leave every tool
       // window looking at nothing while a document is plainly open.
@@ -147,6 +183,13 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     return document
   },
 
+  adopt: document =>
+    set(state =>
+      state.documents[document.id]
+        ? state
+        : { documents: { ...state.documents, [document.id]: document } },
+    ),
+
   close: id =>
     set(state => {
       const remaining = { ...state.documents }
@@ -155,8 +198,23 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     }),
 }))
 
-/** Bumped per refresh, so a listing that comes back late cannot install itself. */
-let generation = 0
+/**
+ * Bumped per listing, so one that comes back late cannot install itself — and one PER QUESTION.
+ *
+ * A shared counter looked harmless and was not: the Explorer relists from a mount effect while
+ * `followProject` is still awaiting its own read, and the relist would then make the refresh
+ * abandon — leaving every open tab without its descriptor, which is the very reconciliation
+ * `refresh` exists for.
+ */
+const generations = { relist: 0, refresh: 0 }
+
+/**
+ * Sorted by title rather than by whatever order the folder was read in: a listing that
+ * reshuffles between two reads is a list nobody can point at.
+ */
+function sorted(found: readonly DocumentDescriptor[]): DocumentDescriptor[] {
+  return [...found].sort((left, right) => left.title.localeCompare(right.title))
+}
 
 /**
  * What the project folder holds, or nothing at all: no project open, or a folder that went away

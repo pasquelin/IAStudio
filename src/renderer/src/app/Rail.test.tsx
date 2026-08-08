@@ -95,6 +95,7 @@ describe('Rail', () => {
 
     expect(marksOf(container)).toEqual([
       'Explorateur',
+      'Scène',
       'Lumières',
       'Mailles',
       'separator',

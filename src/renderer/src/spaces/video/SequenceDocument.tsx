@@ -14,6 +14,7 @@ import {
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
 export type SequenceDocumentProps = { documentId: string }
 
@@ -29,6 +30,8 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   // Dockview keeps hidden tabs mounted: without this every open sequence would answer the
   // space bar at once, and the playback token would arbitrate a fight nobody started.
   const active = useDocuments(state => state.activeId === documentId)
+
+  useRestoredDocument(documentId)
 
   const selected = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
 

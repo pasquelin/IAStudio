@@ -21,7 +21,8 @@
     "generator": "Generate",
     "inspector": "Inspector",
     "assets": "Assets",
-    "skybox": "Skybox"
+    "skybox": "Skybox",
+    "scene": "Scene"
   },
   "actions": {
     "undo": "Undo",
@@ -103,7 +104,10 @@
       "image.export": "Exporting the picture failed",
       "document.save": "Saving the document failed",
       "assets.reveal": "The file could not be shown",
-      "font.face": "A font could not be loaded"
+      "font.face": "A font could not be loaded",
+      "document.close": "Closing the document failed",
+      "document.delete": "Deleting the document failed",
+      "document.load": "The document could not be opened"
     }
   },
   "updates": {
@@ -241,7 +245,18 @@
     "none": "No document open. Generate or open an asset to get started.",
     "untitled": "Untitled {{n}}",
     "new": "New document",
-    "missing": "This document is no longer open."
+    "missing": "This document is no longer open.",
+    "close": "Close tab",
+    "closeOthers": "Close other tabs",
+    "delete": "Delete document…",
+    "saveTitle": "Save changes to “{{title}}”?",
+    "saveBody": "If you do not save them, they will be lost.",
+    "save": "Save",
+    "dontSave": "Don’t save",
+    "cancel": "Cancel",
+    "deleteTitle": "Delete “{{title}}” from the project?",
+    "deleteBody": "The file is removed from the project folder. This cannot be undone.",
+    "deleteConfirm": "Delete"
   },
   "imageTools": {
     "pointer": "Pointer",
@@ -389,11 +404,13 @@
   },
   "scene": {
     "root": "Scene",
-    "visible": "Show or hide"
+    "visible": "Show or hide",
+    "noDocument": "Open a scene to see its contents."
   },
   "explorer": {
-    "otherWorkspace": "The explorer follows a 3D scene. Open the 3D workspace to see its contents.",
-    "noDocument": "Open a scene to see what is in it."
+    "noProject": "No project open. Create or open one to see its documents.",
+    "noDocuments": "This project holds no saved document yet.",
+    "open": "Open"
   },
   "objects": {
     "sprite": "Sprite",

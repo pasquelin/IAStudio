@@ -21,7 +21,8 @@
     "generator": "Génération",
     "inspector": "Inspecteur",
     "assets": "Assets",
-    "skybox": "Skybox"
+    "skybox": "Skybox",
+    "scene": "Scène"
   },
   "actions": {
     "undo": "Annuler",
@@ -103,7 +104,10 @@
       "image.export": "L’export de l’image a échoué",
       "document.save": "L’enregistrement du document a échoué",
       "assets.reveal": "Le fichier n’a pas pu être montré",
-      "font.face": "Une police n’a pas pu être chargée"
+      "font.face": "Une police n’a pas pu être chargée",
+      "document.close": "La fermeture du document a échoué",
+      "document.delete": "La suppression du document a échoué",
+      "document.load": "Le document n’a pas pu être ouvert"
     }
   },
   "updates": {
@@ -241,7 +245,18 @@
     "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer.",
     "untitled": "Sans titre {{n}}",
     "new": "Nouveau document",
-    "missing": "Ce document n’est plus ouvert."
+    "missing": "Ce document n’est plus ouvert.",
+    "close": "Fermer l’onglet",
+    "closeOthers": "Fermer les autres onglets",
+    "delete": "Supprimer le document…",
+    "saveTitle": "Enregistrer les modifications de « {{title}} » ?",
+    "saveBody": "Si vous ne les enregistrez pas, elles seront perdues.",
+    "save": "Enregistrer",
+    "dontSave": "Ne pas enregistrer",
+    "cancel": "Annuler",
+    "deleteTitle": "Supprimer « {{title}} » du projet ?",
+    "deleteBody": "Le fichier est retiré du dossier du projet. Cette action est irréversible.",
+    "deleteConfirm": "Supprimer"
   },
   "imageTools": {
     "pointer": "Curseur",
@@ -389,11 +404,13 @@
   },
   "scene": {
     "root": "Scène",
-    "visible": "Afficher ou masquer"
+    "visible": "Afficher ou masquer",
+    "noDocument": "Ouvrez une scène pour voir son contenu."
   },
   "explorer": {
-    "otherWorkspace": "L’explorateur suit une scène 3D. Ouvrez l’espace 3D pour en voir le contenu.",
-    "noDocument": "Ouvrez une scène pour voir son contenu."
+    "noProject": "Aucun projet ouvert. Créez-en un ou ouvrez-en un pour voir ses documents.",
+    "noDocuments": "Ce projet ne contient encore aucun document enregistré.",
+    "open": "Ouvert"
   },
   "objects": {
     "sprite": "Sprite",

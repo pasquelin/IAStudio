@@ -1,24 +1,52 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { DocumentDescriptor } from '@shared/domain/document'
+import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
-import { activeSceneId, useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
-import { SceneTree } from './SceneTree'
+import { openDocument } from '@/app/dockview-api'
+import { useDocuments } from '@/stores/documents'
+import { useProject } from '@/stores/project'
+import { DocumentRow } from './DocumentRow'
 
 /**
- * One panel whose content follows the active workspace. The project file tree is not written
- * yet, so every other workspace says so rather than showing an outliner from another space.
+ * The documents of the project, open or not.
+ *
+ * This is what makes a closed document reachable again. The layout says which documents are on
+ * screen and the folder says which exist, and until this panel listed the second the difference
+ * between the two was unreachable from inside the studio — a document closed while no layout
+ * held it could only be found on disk.
+ *
+ * The same list in all six workspaces, and a row opens wherever it belongs: a sequence opened
+ * from the Image workspace switches to Video, which is what double-clicking an asset already
+ * does. Filing them per workspace would hide from the user the one document they are hunting.
  */
 export function Explorer() {
   const { t } = useTranslation()
-  const workspace = useLayouts(state => state.activeWorkspace)
-  const documentId = useDocuments(activeSceneId)
+  const stored = useDocuments(state => state.stored)
+  const open = useDocuments(state => state.documents)
+  const projectPath = useProject(state => state.project?.path ?? null)
 
-  // Its own wording, both times: an explorer that says "no project open" in the Image
-  // workspace has the user hunting for a project that is right there.
-  if (workspace !== '3d')
-    return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.otherWorkspace')} />
-  if (!documentId)
-    return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.noDocument')} />
-  return <SceneTree documentId={documentId} />
+  // Opening a project already lists it; this is for what has been written since. `relist` and
+  // not `refresh`: settling which tabs are open is the project's business, not this panel's.
+  useEffect(() => {
+    void useDocuments.getState().relist()
+  }, [projectPath])
+
+  if (!projectPath)
+    return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.noProject')} />
+
+  return (
+    <Collection
+      items={stored}
+      // Not a selection one makes — it is what "open" looks like in this list.
+      selectedIds={Object.keys(open)}
+      renderRow={(document: DocumentDescriptor) => (
+        <div className="h-full" onDoubleClick={() => openDocument(document)}>
+          <DocumentRow document={document} open={open[document.id] !== undefined} />
+        </div>
+      )}
+      empty={<EmptyState icon={mdiFolderOpenOutline} message={t('explorer.noDocuments')} />}
+    />
+  )
 }

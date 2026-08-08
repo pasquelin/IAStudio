@@ -40,6 +40,9 @@ function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}
       remove: vi.fn(async () => undefined),
     },
     reveal: vi.fn(),
+    // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy
+    // anything by not caring.
+    askUser: vi.fn(async () => 2),
     ...overrides,
   }
 }

@@ -8,11 +8,10 @@ import { createDocumentStore } from './document-store'
 /** One scene per document, in memory like the documents themselves. */
 const store = createDocumentStore<SceneState>(EMPTY_SCENE)
 
+export const sceneStore = store
 export const useScenes = store.use
 export const sceneOf = store.stateOf
-export const hasScene = store.hasState
 export const historyOf = store.historyOf
-export const markOf = store.markOf
 export const isDirty = store.isDirty
 
 /**

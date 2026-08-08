@@ -19,6 +19,7 @@ import { decodeAsset } from './decode'
 import { loadTake } from './load-take'
 import { useAudioRenderer } from './useAudioRenderer'
 import { useWaveSurfer } from './useWaveSurfer'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
 export type AudioDocumentProps = { documentId: string }
 
@@ -51,6 +52,8 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio } | null>(null)
 
   const asset = state.assetId ? (byId.get(state.assetId) ?? null) : null
+
+  useRestoredDocument(documentId)
 
   useEffect(() => {
     const assetId = state.assetId

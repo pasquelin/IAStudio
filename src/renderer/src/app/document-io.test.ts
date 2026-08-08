@@ -1,22 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DOCUMENT_VERSION } from '@shared/domain/document'
+import { DOCUMENT_KINDS, DOCUMENT_VERSION, workspaceForKind } from '@shared/domain/document'
 import type {
+  CloseChoice,
   DocumentDescriptor,
   DocumentDraft,
   DocumentFile,
   DocumentKind,
 } from '@shared/domain/document'
+import { createDefaultScene } from '@/engines/scene/default-scene'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { clearScenes } from '@/stores/scene-fixtures'
-import { isDirty, sceneOf, useScenes } from '@/stores/scenes'
+import { isDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
 import { holdCanvas } from '@/spaces/image/canvas-hosts'
 import { useCanvases } from '@/stores/canvases'
-import { restoreDocument, saveDocument } from './document-io'
+import { pushEdit } from '@/engines/audio/edits'
+import { addClip } from '@/engines/timeline/commands'
+import { makeClip } from '@/engines/timeline/timeline-state'
+import { setSunAngles } from '@/engines/skybox/commands'
+import { useAudioEdits } from '@/stores/audio-edits'
+import { sequenceStore, useSequences } from '@/stores/sequences'
+import { useSkyboxes } from '@/stores/skyboxes'
+import { forgetReportedFailures } from '@/services/diagnostics'
+import { closeDocument, deleteDocument, restoreDocument, saveDocument } from './document-io'
+
+// The real one needs a live Dockview; what this file checks is that closing reaches it.
+const closePanel = vi.fn()
+vi.mock('./dockview-api', () => ({ closePanel: (id: string) => closePanel(id) }))
 
 const box = meshNode('box-1')
 
@@ -37,6 +51,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   clearScenes()
+  forgetReportedFailures()
   useDocuments.setState({ documents: {}, activeId: null })
 })
 
@@ -237,16 +252,46 @@ describe('restoreDocument', () => {
     expect(read).toHaveBeenCalledTimes(1)
   })
 
-  it('fills nothing for a kind whose space cannot be restored yet', async () => {
-    const read = vi.fn(() => Promise.resolve(savedFile()))
-    installFakeBridge({ documents: { read } })
-    useDocuments.setState({
-      // A sequence: the image joined the table, and three kinds are still waiting for theirs.
-      documents: { 'doc-1': { id: 'doc-1', kind: 'sequence', title: 'Cut', workspace: 'video' } },
+  // The empty editor a failed read leaves is indistinguishable from a new document, and the
+  // refusal to save it then reads as a ⌘S that does nothing. This is the only place that knows.
+  it('reports a document whose file would not read', async () => {
+    const bridge = bridgeWatchingLogs({
+      documents: { read: () => Promise.reject(new Error('gone')) },
     })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
 
     await restoreDocument('doc-1')
-    expect(read).not.toHaveBeenCalled()
+
+    expect(bridge.entries()[0]).toMatchObject({
+      level: 'error',
+      scope: 'document.load',
+      message: expect.stringContaining('gone'),
+    })
+  })
+
+  it('says nothing for a document the project simply holds no file for', async () => {
+    const bridge = bridgeWatchingLogs({ documents: { read: () => Promise.resolve(null) } })
+    useDocuments.setState({ documents: { 'doc-2': scene('doc-2') } })
+
+    await restoreDocument('doc-2')
+    expect(bridge.entries()).toEqual([])
+  })
+
+  // A kind absent from the table has a Save that does nothing and a tab that never reads its
+  // file — silently. This is what says the table still covers everything the studio can create.
+  it('reads the file of every kind the studio can create', async () => {
+    const read = vi.fn(() => Promise.resolve(null))
+    installFakeBridge({ documents: { read } })
+
+    for (const kind of DOCUMENT_KINDS) {
+      const workspace = workspaceForKind(kind)
+      if (!workspace) throw new Error(`no workspace opens ${kind}`)
+      const id = `doc-${kind}`
+      useDocuments.setState({ documents: { [id]: { id, kind, title: kind, workspace } } })
+      await restoreDocument(id)
+    }
+
+    expect(read).toHaveBeenCalledTimes(DOCUMENT_KINDS.length)
   })
 })
 
@@ -481,5 +526,370 @@ describe('an image document', () => {
     release()
 
     expect(restoreSnapshot).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The three kinds that could not reach the disk before. What is checked is the whole round
+ * trip rather than either half: a serializer and a reader that agree only with themselves
+ * would pass two separate tests and still lose the document.
+ */
+describe('the kinds a string holds', () => {
+  /** Writes to memory and reads back, which is what a project folder does. */
+  const diskBackedBridge = (kind: DocumentKind): void => {
+    const written = new Map<string, string>()
+    installFakeBridge({
+      documents: {
+        write: (id: string, _kind: DocumentKind, draft: DocumentDraft) => {
+          written.set(id, draft.content)
+          return Promise.resolve()
+        },
+        read: (id: string) => {
+          const content = written.get(id)
+          return Promise.resolve<DocumentFile | null>(
+            content === undefined
+              ? null
+              : {
+                  version: DOCUMENT_VERSION,
+                  kind,
+                  title: 'Untitled',
+                  content,
+                  updatedAt: '2026-08-08T10:00:00.000Z',
+                },
+          )
+        },
+      },
+    })
+  }
+
+  const open = async (workspace: 'video' | 'audio' | 'skyboxes'): Promise<string> => {
+    const created = await useDocuments.getState().create(workspace)
+    if (!created) throw new Error('expected a document')
+    await restoreDocument(created.id)
+    return created.id
+  }
+
+  it('carries a sequence to disk and back', async () => {
+    diskBackedBridge('sequence')
+    const documentId = await open('video')
+
+    const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: 2_000_000 })
+    useSequences.getState().runCommand(documentId, addClip('V1', clip))
+    const before = useSequences.getState().states[documentId]
+    await saveDocument(documentId)
+
+    useSequences.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(useSequences.getState().states[documentId]).toEqual(before)
+  })
+
+  it('carries an edit chain to disk and back', async () => {
+    diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    useAudioEdits.getState().replace(documentId, {
+      assetId: 'asset-a',
+      edits: [],
+      region: null,
+      bypassed: false,
+    })
+    useAudioEdits.getState().runCommand(documentId, pushEdit({ kind: 'gain', db: -6 }))
+    const before = useAudioEdits.getState().states[documentId]
+    await saveDocument(documentId)
+
+    useAudioEdits.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(useAudioEdits.getState().states[documentId]).toEqual(before)
+  })
+
+  it('carries a sky to disk and back', async () => {
+    diskBackedBridge('skybox')
+    const documentId = await open('skyboxes')
+
+    useSkyboxes.getState().runCommand(documentId, setSunAngles({ elevation: 0.3, azimuth: 1 }))
+    const before = useSkyboxes.getState().states[documentId]
+    await saveDocument(documentId)
+
+    useSkyboxes.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(useSkyboxes.getState().states[documentId]).toEqual(before)
+  })
+
+  // The document opens clean: what is on screen is exactly what the disk holds.
+  it('opens a document read back from disk unmodified', async () => {
+    diskBackedBridge('sequence')
+    const documentId = await open('video')
+
+    const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: 2_000_000 })
+    useSequences.getState().runCommand(documentId, addClip('V1', clip))
+    await saveDocument(documentId)
+
+    useSequences.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(sequenceStore.isDirty(useSequences.getState(), documentId)).toBe(false)
+  })
+
+  // A file that is not JSON at all is a read that failed, and the tab must not then write an
+  // empty document over the only copy.
+  it('refuses to save a sequence whose file would not read', async () => {
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({
+      documents: {
+        write,
+        read: () =>
+          Promise.resolve<DocumentFile | null>({
+            version: DOCUMENT_VERSION,
+            kind: 'sequence',
+            title: 'Untitled',
+            content: '{ not json',
+            updatedAt: '2026-08-08T10:00:00.000Z',
+          }),
+      },
+    })
+
+    const created = await useDocuments.getState().create('video')
+    if (!created) throw new Error('expected a document')
+    await restoreDocument(created.id)
+
+    await saveDocument(created.id)
+    expect(write).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * Closing, which until now no caller ever did: `useDocuments.close` had none, `documents.remove`
+ * had none, and the modified bullet was consulted by nobody on the way out. What is checked is
+ * the order — the question, then the write, then the forgetting — because getting it wrong loses
+ * exactly the work the dialog promised to keep.
+ */
+describe('closing a document', () => {
+  const openDirtyScene = async (): Promise<string> => {
+    installFakeBridge({ documents: { write: () => Promise.resolve() } })
+    const created = await useDocuments.getState().create('3d')
+    if (!created) throw new Error('expected a document')
+    useScenes.getState().runCommand(created.id, addNode(box))
+    return created.id
+  }
+
+  /**
+   * A tab opened and never touched carries the bullet — nothing of it is on disk — but holds
+   * nothing anyone would miss. Asking turns every stray ⌘W into a modal question about a
+   * document that does not exist yet.
+   */
+  it('never asks about a tab that was opened and never touched', async () => {
+    const confirmClose = vi.fn(() => Promise.resolve<CloseChoice>('cancel'))
+    installFakeBridge({ documents: { confirmClose } })
+
+    const created = await useDocuments.getState().create('3d')
+    if (!created) throw new Error('expected a document')
+    useScenes.getState().ensure(created.id, createDefaultScene)
+
+    await expect(closeDocument(created.id)).resolves.toBe(true)
+    expect(confirmClose).not.toHaveBeenCalled()
+  })
+
+  // The tab still says it is not on disk — that is the bullet's question, not this one.
+  it('still calls that untouched document modified on its tab', async () => {
+    installFakeBridge({})
+    const created = await useDocuments.getState().create('3d')
+    if (!created) throw new Error('expected a document')
+    useScenes.getState().ensure(created.id, createDefaultScene)
+
+    expect(isDirty(useScenes.getState(), created.id)).toBe(true)
+  })
+
+  /**
+   * `saveDocument` refuses to write a document whose file would not read — the empty editor it
+   * left is indistinguishable from a new one, and the file is the only copy. Answering "save"
+   * used to close the tab anyway: nothing written, and the state thrown away.
+   */
+  it('keeps the tab open when the save it was asked for is refused', async () => {
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({
+      documents: {
+        write,
+        read: () => Promise.reject(new Error('gone')),
+        confirmClose: () => Promise.resolve<CloseChoice>('save'),
+      },
+    })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+
+    await restoreDocument('doc-1')
+    useScenes.getState().runCommand('doc-1', addNode(box))
+
+    await expect(closeDocument('doc-1')).resolves.toBe(false)
+    expect(write).not.toHaveBeenCalled()
+    expect(useDocuments.getState().documents['doc-1']).toBeDefined()
+  })
+
+  it('closes a clean document without asking anything', async () => {
+    const confirmClose = vi.fn(() => Promise.resolve<CloseChoice>('cancel'))
+    installFakeBridge({ documents: { confirmClose, write: () => Promise.resolve() } })
+
+    const created = await useDocuments.getState().create('3d')
+    if (!created) throw new Error('expected a document')
+    useScenes.getState().ensure(created.id, createDefaultScene)
+    useScenes.getState().markSaved(created.id, sceneStore.markOf(useScenes.getState(), created.id))
+
+    await expect(closeDocument(created.id)).resolves.toBe(true)
+    expect(confirmClose).not.toHaveBeenCalled()
+  })
+
+  it('writes the document when the answer is save', async () => {
+    const documentId = await openDirtyScene()
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({
+      documents: { write, confirmClose: () => Promise.resolve<CloseChoice>('save') },
+    })
+
+    await expect(closeDocument(documentId)).resolves.toBe(true)
+    expect(write).toHaveBeenCalledTimes(1)
+    expect(useDocuments.getState().documents[documentId]).toBeUndefined()
+  })
+
+  it('throws the work away when the answer is discard', async () => {
+    const documentId = await openDirtyScene()
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({
+      documents: { write, confirmClose: () => Promise.resolve<CloseChoice>('discard') },
+    })
+
+    await expect(closeDocument(documentId)).resolves.toBe(true)
+    expect(write).not.toHaveBeenCalled()
+    expect(useDocuments.getState().documents[documentId]).toBeUndefined()
+  })
+
+  // Cancel is the one answer that leaves everything as it was — including the state and the
+  // history, which a tab reopened a second later would otherwise come back to empty.
+  it('leaves the document open and intact when the answer is cancel', async () => {
+    const documentId = await openDirtyScene()
+    installFakeBridge({ documents: { confirmClose: () => Promise.resolve<CloseChoice>('cancel') } })
+
+    await expect(closeDocument(documentId)).resolves.toBe(false)
+    expect(useDocuments.getState().documents[documentId]).toBeDefined()
+    expect(sceneOf(useScenes.getState(), documentId).nodes).toEqual([box])
+  })
+
+  // A save that fails must not have already thrown the work away.
+  it('keeps the document open when the write it was asked for fails', async () => {
+    const documentId = await openDirtyScene()
+    installFakeBridge({
+      documents: {
+        write: () => Promise.reject(new Error('no project')),
+        confirmClose: () => Promise.resolve<CloseChoice>('save'),
+      },
+    })
+
+    await expect(closeDocument(documentId)).rejects.toThrow()
+    expect(useDocuments.getState().documents[documentId]).toBeDefined()
+    expect(isDirty(useScenes.getState(), documentId)).toBe(true)
+  })
+
+  it('takes the tab away with the document', async () => {
+    const documentId = await openDirtyScene()
+    installFakeBridge({
+      documents: { confirmClose: () => Promise.resolve<CloseChoice>('discard') },
+    })
+
+    await closeDocument(documentId)
+    expect(closePanel).toHaveBeenCalledWith(documentId)
+  })
+
+  // The id is the project folder's to hand out again: a document reopened later must not inherit
+  // the refusal to save passed on the one before it.
+  it('forgets that a closed document would not read', async () => {
+    installFakeBridge({
+      documents: {
+        read: () => Promise.reject(new Error('gone')),
+        confirmClose: () => Promise.resolve<CloseChoice>('discard'),
+        write: () => Promise.resolve(),
+      },
+    })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+    await restoreDocument('doc-1')
+    await closeDocument('doc-1')
+
+    // Reopened under the same id, now readable: the verdict must not have followed it.
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({ documents: { write, read: () => Promise.resolve(savedFile()) } })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+    await restoreDocument('doc-1')
+    useScenes.getState().runCommand('doc-1', addNode(meshNode('box-2')))
+
+    await saveDocument('doc-1')
+    expect(write).toHaveBeenCalled()
+  })
+
+  it('drops the state and the history a closed document was holding', async () => {
+    const documentId = await openDirtyScene()
+    installFakeBridge({
+      documents: { confirmClose: () => Promise.resolve<CloseChoice>('discard') },
+    })
+
+    await closeDocument(documentId)
+    expect(useScenes.getState().states[documentId]).toBeUndefined()
+    expect(useScenes.getState().histories[documentId]).toBeUndefined()
+  })
+})
+
+describe('deleting a document', () => {
+  const openScene = async (): Promise<string> => {
+    const created = await useDocuments.getState().create('3d')
+    if (!created) throw new Error('expected a document')
+    useScenes.getState().ensure(created.id, createDefaultScene)
+    return created.id
+  }
+
+  // Left standing, a double-click on the row would open an empty document under the same id,
+  // and the next ⌘S would write back what was just deleted.
+  it('re-reads the folder so the deleted row goes with the file', async () => {
+    const list = vi.fn(() => Promise.resolve<DocumentDescriptor[]>([]))
+    installFakeBridge({
+      documents: {
+        list,
+        remove: () => Promise.resolve(),
+        confirmDelete: () => Promise.resolve(true),
+      },
+    })
+    const documentId = await openScene()
+    list.mockClear()
+
+    await deleteDocument(documentId)
+    expect(list).toHaveBeenCalled()
+  })
+
+  it('removes the file and closes the tab once confirmed', async () => {
+    const remove = vi.fn(() => Promise.resolve())
+    installFakeBridge({ documents: { remove, confirmDelete: () => Promise.resolve(true) } })
+    const documentId = await openScene()
+
+    await expect(deleteDocument(documentId)).resolves.toBe(true)
+    expect(remove).toHaveBeenCalledWith(documentId, 'scene')
+    expect(useDocuments.getState().documents[documentId]).toBeUndefined()
+  })
+
+  it('touches nothing when the confirmation is declined', async () => {
+    const remove = vi.fn(() => Promise.resolve())
+    installFakeBridge({ documents: { remove, confirmDelete: () => Promise.resolve(false) } })
+    const documentId = await openScene()
+
+    await expect(deleteDocument(documentId)).resolves.toBe(false)
+    expect(remove).not.toHaveBeenCalled()
+    expect(useDocuments.getState().documents[documentId]).toBeDefined()
+  })
+
+  // The file is going: writing it on the way out would save and delete in the same breath.
+  it('never offers to save the work of a document being deleted', async () => {
+    const write = vi.fn(() => Promise.resolve())
+    const confirmClose = vi.fn(() => Promise.resolve<CloseChoice>('save'))
+    installFakeBridge({
+      documents: { write, confirmClose, confirmDelete: () => Promise.resolve(true) },
+    })
+    const documentId = await openScene()
+    useScenes.getState().runCommand(documentId, addNode(box))
+
+    await deleteDocument(documentId)
+    expect(confirmClose).not.toHaveBeenCalled()
+    expect(write).not.toHaveBeenCalled()
   })
 })

@@ -54,6 +54,18 @@ export function readString(source: Record<string, unknown>, key: string, fallbac
   return typeof value === 'string' ? value : fallback
 }
 
+/**
+ * A number that cannot be negative — a length, an intensity, a point in time. Twelve call sites
+ * across four engines wrote `Math.max(0, readNumber(…))` before this existed.
+ */
+export function readPositive(
+  source: Record<string, unknown>,
+  key: string,
+  fallback: number,
+): number {
+  return Math.max(0, readNumber(source, key, fallback))
+}
+
 export function readBoolean(
   source: Record<string, unknown>,
   key: string,

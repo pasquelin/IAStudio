@@ -197,9 +197,9 @@ elle se trouve. C'est de là que vous l'enverrez à qui vous voudrez.
 > gomme et les formes s'appliquent dessus. Le chapitre [Espace Image](08-espace-image.md) détaille
 > les trois façons de l'y faire entrer.
 >
-> **Ce que le studio ne sait pas encore faire :** enregistrer ce document. Fermer l'onglet perd
-> les calques — `⇧⌘E` en sort un PNG avant. Voir
-> [Ce qui n'existe pas encore](18-limites.md).
+> **Pour le garder :** `⌘S` écrit le document dans le projet, calques et masques compris, et il
+> se rouvre tel quel — le panneau **Explorateur** liste ce que le projet contient. `⇧⌘E` en sort
+> un PNG aplati, ce qui est un export et non un enregistrement.
 >
 > Pour transformer l'image plutôt que la peindre : reprenez le panneau **Génération** avec un
 > modèle *image vers image*, et donnez-lui votre image comme point de départ.

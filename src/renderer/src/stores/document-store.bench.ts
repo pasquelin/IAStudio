@@ -23,6 +23,7 @@ const commandAt = (value: number): Command<Fake> => ({
 const history: History<Fake> = {
   past: Array.from({ length: 100 }, (_unused, index) => commandAt(index)),
   future: [],
+  dropped: null,
 }
 
 const state = {

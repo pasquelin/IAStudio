@@ -1,7 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MAX_LOG_MESSAGE } from '@shared/ipc'
+import { MAX_LOG_MESSAGE, type LogScope } from '@shared/ipc'
 import { bridgeWatchingLogs } from './fake-bridge'
 import { forgetReportedFailures, reportFailure } from './diagnostics'
+
+/** The two halves of the rule, spelled out so a scope that changes side has to be moved here. */
+const GESTURES: readonly LogScope[] = [
+  'scene.export',
+  'image.export',
+  'document.save',
+  'document.close',
+  'document.delete',
+  'assets.reveal',
+]
+
+const SPONTANEOUS: readonly LogScope[] = [
+  'document.load',
+  'scene.model',
+  'scene.texture',
+  'canvas.layer',
+  'font.face',
+]
 
 beforeEach(forgetReportedFailures)
 
@@ -57,6 +75,53 @@ describe('reportFailure', () => {
 
     reportFailure('scene.model', 'mesh-1', new Error('unreadable'))
     forgetReportedFailures()
+    reportFailure('scene.model', 'mesh-1', new Error('unreadable'))
+
+    expect(bridge.report).toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * The other half of the rule. Somebody pressed ⌘S a second time precisely because the first
+   * did nothing, and the deduplication used to answer that with silence — leaving a save that
+   * kept failing indistinguishable from one that worked, with only the dirty bullet to say so.
+   */
+  it('says a failed gesture every time it is made', () => {
+    const bridge = bridgeWatchingLogs()
+
+    reportFailure('document.save', 'doc-1', new Error('no project'))
+    reportFailure('document.save', 'doc-1', new Error('no project'))
+    reportFailure('document.save', 'doc-1', new Error('no project'))
+
+    expect(bridge.report).toHaveBeenCalledTimes(3)
+  })
+
+  // Every scope in the set, not just the one that prompted it: a scope added there without a
+  // test is a failure that will start repeating with nobody noticing.
+  it.each(GESTURES)('says a failed %s every time', scope => {
+    const bridge = bridgeWatchingLogs()
+
+    reportFailure(scope, 'subject', new Error('nope'))
+    reportFailure(scope, 'subject', new Error('nope'))
+
+    expect(bridge.report).toHaveBeenCalledTimes(2)
+  })
+
+  // Reported from a mount effect, and a tab remounts on every workspace switch: repeating it
+  // would refill the journal for one document whose file will not read.
+  it.each(SPONTANEOUS)('says a spontaneous %s once', scope => {
+    const bridge = bridgeWatchingLogs()
+
+    reportFailure(scope, 'subject', new Error('nope'))
+    reportFailure(scope, 'subject', new Error('nope'))
+
+    expect(bridge.report).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps saying a spontaneous failure once, even after a gesture failed', () => {
+    const bridge = bridgeWatchingLogs()
+
+    reportFailure('document.save', 'doc-1', new Error('no project'))
+    reportFailure('scene.model', 'mesh-1', new Error('unreadable'))
     reportFailure('scene.model', 'mesh-1', new Error('unreadable'))
 
     expect(bridge.report).toHaveBeenCalledTimes(2)

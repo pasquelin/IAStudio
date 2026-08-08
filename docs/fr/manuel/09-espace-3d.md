@@ -288,12 +288,12 @@ agit sur **toute** la sélection, pas seulement sur le dernier objet cliqué.
 **`⌘G`**, ou le bouton **Grouper** de la barre d'outils.
 
 Un groupe range plusieurs objets sous un même parent. **Déplacer le groupe les déplace tous**, et
-il se replie d'un clic dans l'Explorateur — une scène de trente objets redevient lisible.
+il se replie d'un clic dans le panneau Scène — une scène de trente objets redevient lisible.
 
 Deux façons de défaire ou de refaire un rangement :
 
 - **`⌘Z`** annule le groupement, comme n'importe quelle action ;
-- **glisser une ligne sur une autre**, dans l'Explorateur, la range sous elle. Pour **sortir** un
+- **glisser une ligne sur une autre**, dans le panneau Scène, la range sous elle. Pour **sortir** un
   objet de son groupe, lâchez-le sur la **première ligne**, celle qui porte le nom de la scène :
   elle représente la racine.
 
@@ -331,10 +331,11 @@ Trois choses valent d'être sues :
 
 ---
 
-## L'Explorateur — l'arbre de la scène
+## Le panneau Scène — l'arbre de la scène
 
-Le panneau **Explorateur**, dans la colonne de droite, montre tout ce que la scène contient,
-sous forme d'arborescence.
+Le panneau **Scène**, dans la colonne de droite, montre tout ce que la scène contient, sous
+forme d'arborescence. Il s'appelait l'Explorateur ; celui-ci liste maintenant les documents du
+projet, ce qui est une autre question et vaut dans les six espaces.
 
 - **Cliquez** une ligne pour sélectionner l'objet — avec `⇧`, `⌘` ou `Ctrl` pour en choisir
   plusieurs, exactement comme dans la vue.
@@ -493,7 +494,7 @@ l'extension suit le format choisi.
 
 **Ce qui ne sort pas.** La grille au sol, le trièdre du coin, les poignées de transformation et les
 repères de lumière ne font pas partie de la scène : ce sont des aides d'affichage. Le fichier ne
-contient que ce que l'Explorateur liste. Les arêtes du mode « rendu et filaire » n'en sont pas non
+contient que ce que le panneau Scène liste. Les arêtes du mode « rendu et filaire » n'en sont pas non
 plus.
 
 **Un sprite ne sort pas non plus.** Ni en glTF, ni en USDZ : aucun des deux formats n'a d'objet qui

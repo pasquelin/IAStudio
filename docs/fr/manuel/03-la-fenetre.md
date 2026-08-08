@@ -119,8 +119,8 @@ qu'il **agit** — il crée quelque chose — alors que les autres ne font que m
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Skybox, Calques, Assets, Explorateur, Lumières, Mailles —
-celles que l'espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+Les icônes de la **colonne de droite** : Skybox, Calques, Assets, Explorateur, Scène, Lumières,
+Mailles — celles que l'espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
 
 ### Le rail ne montre que ce que l'espace sait faire
 
@@ -203,7 +203,8 @@ premier, donc il garde sa taille et c'est la barre qui se resserre.
 | **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
 | **Calques** | droite | 1re | Image | la pile de calques de l'image ouverte |
 | **Assets** | droite | 1re | Vidéo, Audio | l'étagère du projet, en colonne |
-| **Explorateur** | droite | 1re | partout | l'arbre de la scène 3D |
+| **Explorateur** | droite | 1re | partout | les documents du projet, ouverts ou non |
+| **Scène** | droite | 1re | 3D | l'arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
@@ -270,9 +271,10 @@ cinq autres.
 Dès que vous cliquez une icône, cette moitié retient **votre** choix, et ne bouge plus jusqu'à ce
 que vous en cliquiez une autre — ou que vous réinitialisiez la disposition.
 
-**Pourquoi l'Explorateur est visible partout alors qu'il ne sert qu'à la 3D.** Il est destiné à
-devenir l'arborescence du projet. En attendant, dans les autres espaces, il affiche un message
-qui explique ce qu'il attend plutôt que de disparaître.
+**Pourquoi l'Explorateur est visible partout.** Il liste les documents du dossier de projet,
+ouverts ou non, et c'est la même question dans les six espaces : un double-clic sur une ligne
+ouvre le document, en changeant d'espace s'il appartient à un autre. Il a longtemps montré
+l'arbre de la scène 3D — celui-ci a désormais son propre panneau, **Scène**.
 
 ---
 
@@ -300,9 +302,37 @@ Le point disparaît à l'enregistrement (`⌘S` / `Ctrl+S`), et revient à la mo
 Si vous annulez jusqu'au point exact où vous aviez enregistré, il disparaît aussi : ce que vous
 voyez est alors bien ce que contient le fichier.
 
-> **Tous les documents ne savent pas encore s'enregistrer.** Aujourd'hui, les **images**, les
-> **scènes 3D** et les **textures** s'écrivent sur le disque. Voir
-> [Ce qui n'existe pas encore](18-limites.md).
+> **Les six types de documents savent s'enregistrer** — images, scènes 3D, textures, séquences,
+> sons édités et ciels. Ce qui ne revient pas d'un enregistrement à l'autre, c'est l'historique
+> d'annulation. Voir [Ce qui n'existe pas encore](18-limites.md).
+
+### Fermer un onglet
+
+La croix de l'onglet ferme le document. **S'il porte le point**, le studio demande d'abord quoi
+faire de ce qui n'est pas écrit :
+
+- **Enregistrer** écrit le document puis ferme — c'est ce que `⏎` choisit ;
+- **Ne pas enregistrer** ferme et perd le travail fait depuis le dernier `⌘S` ;
+- **Annuler** ne ferme rien — et c'est aussi ce que répond `⎋`, pour qu'une touche frappée sans
+  lire ne puisse jamais jeter du travail.
+
+Si l'écriture échoue, l'onglet reste ouvert et la raison part dans le journal d'activité : fermer
+quand même perdrait exactement ce que la question venait de promettre de garder.
+
+### Le menu d'un onglet
+
+Un **clic droit** sur un onglet ouvre trois gestes :
+
+| Ligne | Ce qu'elle fait |
+|---|---|
+| **Fermer l'onglet** | comme la croix, question comprise |
+| **Fermer les autres onglets** | ferme un par un ; un *Annuler* arrête la série |
+| **Supprimer le document…** | **retire le fichier du dossier du projet** |
+
+**Supprimer est irréversible**, et c'est le seul geste du studio qui efface un fichier que vous
+avez fait. Le studio demande confirmation, et cette fois-ci c'est *Annuler* qui est le bouton par
+défaut. Un document supprimé ne propose pas d'être enregistré au passage : l'écrire et l'effacer
+dans le même geste n'aurait aucun sens.
 
 ### Chaque espace a ses propres onglets
 

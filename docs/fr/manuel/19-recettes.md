@@ -194,9 +194,12 @@ lettre). `E` monte, `Q` descend, `⇧` gauche accélère.
 **Pour couper :** placez la tête de lecture, appuyez sur `S`. Pour supprimer un clip :
 sélectionnez-le, `Suppr`.
 
-**Le piège, et il est sérieux.** Une séquence **ne s'enregistre pas encore**. Fermer l'onglet perd
-le montage — les clips restent dans le projet, mais leur agencement disparaît. Et il n'y a pas
-d'export : le studio ne peut pas encore écrire un fichier vidéo final.
+**Pour garder le montage :** `⌘S`. La séquence s'écrit en `.seq` dans le projet et se rouvre
+telle quelle — pistes, clips, fondus et gains. Ce qui ne revient pas, c'est l'historique
+d'annulation.
+
+**Ce qui manque toujours :** l'**export**. Le studio ne peut pas encore écrire un fichier vidéo
+final.
 
 ---
 

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_TOPICS } from '../domain/activity'
 import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
 import { isRecord } from '../guards'
-import { LOG_SCOPES } from '../ipc'
 import { NAMED_KEYS } from '../domain/shortcut'
 import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES, MODEL_PERIODS, MODEL_SORTS } from '../domain/model'
+import { LOG_SCOPES } from '../ipc'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 
 function flatten(

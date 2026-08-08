@@ -439,15 +439,30 @@ au lieu de glisser, ce qui est bien plus agréable qu'un glissement haché.
 
 ### « J'ai perdu mon travail en fermant un onglet »
 
-**La cause.** Tous les documents ne savent pas encore s'enregistrer.
+**Ce n'est plus censé pouvoir arriver.** Les six types de documents s'enregistrent, et fermer un
+onglet dont le travail n'est pas écrit pose la question avant de fermer : *Enregistrer*, *Ne pas
+enregistrer*, *Annuler*.
 
-Aujourd'hui, seules les **scènes 3D** (`.scene`) et les **matières** (`.tex`) s'écrivent sur le
-disque. Une image en cours de retouche, un montage vidéo, un son édité, un ciel réglé : tout cela
-vit dans la fenêtre et **disparaît avec l'onglet**.
+**Si la question ne s'est pas posée**, c'est que le document était propre — pas de point (`•`) à
+côté de son nom. Deux cas connus :
 
-**Quoi faire.** En attendant que ce soit corrigé : ne fermez pas l'onglet tant que le travail
-compte, et notez vos réglages importants (la graine, le prompt) ailleurs. La liste complète est
-dans [Ce qui n'existe pas encore](18-limites.md).
+- **le document n'a jamais été enregistré et n'a rien reçu** : il n'y avait rien à garder ;
+- **son fichier n'avait pas pu être lu à l'ouverture.** Le studio refuse alors délibérément de
+  l'enregistrer, pour ne pas écrire un document vide par-dessus celui qu'il n'a pas su lire — le
+  fichier est la seule copie. La raison est dans le journal d'activité.
+
+**Ce qui ne revient jamais**, et c'est voulu : l'**historique d'annulation**. Rouvrir un
+document, c'est repartir sans `⌘Z`. La liste complète est dans
+[Ce qui n'existe pas encore](18-limites.md).
+
+### « J'ai supprimé un document par erreur »
+
+**Rien ne le rend.** *Supprimer le document…* du menu contextuel d'onglet retire le fichier du
+dossier du projet, et le studio n'a pas de corbeille. C'est pour cela que la confirmation a
+*Annuler* pour bouton par défaut.
+
+Si le dossier de projet est dans une sauvegarde système (Time Machine, un dossier synchronisé),
+c'est là qu'il faut aller le chercher.
 
 ### « Les panneaux sont dans tous les sens et je ne m'y retrouve plus »
 
