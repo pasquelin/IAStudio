@@ -3,6 +3,7 @@ import type { CommandId } from '@shared/domain/command'
 import { saveDocument } from '@/app/document-io'
 import { availableToolIds, toolZoneIn } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
@@ -26,9 +27,12 @@ function runCommand(command: CommandId): void {
     case 'document.save': {
       // The menu is application-wide and has no idea which tab is in front; the store does.
       const documentId = useDocuments.getState().activeId
-      // Caught, not left to `void`: nothing logs an IPC rejection and the studio has no error
-      // surface, so the tab keeping its marker is the whole of what a failed save reports.
-      if (documentId) void saveDocument(documentId).catch(() => {})
+      // The tab keeps its marker either way; the log is what says why it kept it.
+      if (documentId) {
+        void saveDocument(documentId).catch(error =>
+          reportFailure('document.save', documentId, error),
+        )
+      }
       return
     }
   }

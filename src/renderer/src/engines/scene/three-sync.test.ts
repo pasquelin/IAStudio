@@ -9,6 +9,7 @@ import {
   SpriteMaterial,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
+import { LIGHT_TYPES } from './light-types'
 import { geometryFor } from './three-factory'
 import { DEFAULT_MATERIAL } from './scene-state'
 import {
@@ -16,6 +17,7 @@ import {
   applyLight,
   applyMaterial,
   applySprite,
+  giveSecondUvSet,
   standardMaterialOf,
 } from './three-sync'
 
@@ -227,5 +229,46 @@ describe('standardMaterialOf', () => {
     const mesh = new Mesh(undefined, [new MeshStandardMaterial()])
 
     expect(standardMaterialOf(mesh)).toBeNull()
+  })
+})
+
+/**
+ * Each branch checks the class it writes to rather than casting. A descriptor that does not
+ * match the light it is handed leaves it alone: three.js throws on a field its class has no
+ * room for, and a mismatched pair is reachable while a kind is being swapped.
+ */
+describe('a light descriptor handed to a light of another class', () => {
+  // Read off the registry rather than typed out: a sixth kind of light is then covered the day
+  // it lands, instead of quietly not being.
+  const positioned = LIGHT_TYPES.filter(type => type.kind !== 'ambient')
+
+  for (const type of positioned) {
+    it(`leaves an ambient light alone when given a ${type.kind} descriptor`, () => {
+      const light = new AmbientLight()
+      const descriptor = type.create()
+
+      expect(() => applyLight(light, descriptor)).not.toThrow()
+      expect(light.intensity).toBe(descriptor.intensity)
+    })
+  }
+})
+
+// An occlusion map reads the second UV set; without this, nudging a radius would stop it dead.
+describe('applyGeometry and the second UV set', () => {
+  it('carries it over to the shape that replaces the one that had it', () => {
+    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
+    giveSecondUvSet(mesh.geometry)
+
+    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 })
+
+    expect(mesh.geometry.attributes.uv1).toBeDefined()
+  })
+
+  it('does not invent one for a shape that never had it', () => {
+    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
+
+    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 })
+
+    expect(mesh.geometry.attributes.uv1).toBeUndefined()
   })
 })

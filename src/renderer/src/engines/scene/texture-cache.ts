@@ -26,7 +26,10 @@ const SEPARATOR = ':'
  * map, read as sRGB, and another as roughness, read as data — and they are two different
  * textures on the GPU. Setting it on a shared instance would silently wash out the second.
  */
-export function createTextureCache(load: TextureSource): TextureCache {
+export function createTextureCache(
+  load: TextureSource,
+  onFailure: (assetId: string, error: unknown) => void,
+): TextureCache {
   const cache = createRefCache<Texture>({
     load: async key => {
       const [colorSpace, assetId] = splitKey(key)
@@ -35,6 +38,8 @@ export function createTextureCache(load: TextureSource): TextureCache {
       return texture
     },
     free: texture => texture.dispose(),
+    // The asset, not the key: which colour space it was read in says nothing to a reader.
+    onFailure: (key, error) => onFailure(splitKey(key)[1], error),
   })
 
   const keyOf = (assetId: string, colorSpace: ColorSpace): string =>

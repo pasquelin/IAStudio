@@ -1,5 +1,6 @@
 import type { Catalog } from './catalog'
 import type { CatalogOp, CatalogRequest, CatalogResponse, CatalogResults } from './catalog-protocol'
+import { messageOf } from '@shared/guards'
 
 /**
  * One request, run against the catalogue. Separate from the worker entry point so it can be
@@ -31,8 +32,4 @@ function valueOf(catalog: Catalog, request: CatalogRequest): CatalogResults[Cata
     case 'remove':
       return catalog.remove(request.assetId)
   }
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }

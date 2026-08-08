@@ -16,6 +16,14 @@ function applied(
 }
 
 describe('setMaterial', () => {
+  // Redo replays a command: a revert that never ran has no earlier value to write back, and
+  // writing `undefined` would empty the section.
+  it('gives the texture back untouched when it is reverted before it ran', () => {
+    const texture = newTexture()
+
+    expect(setMaterial('roughness', 0.25).revert(texture)).toBe(texture)
+  })
+
   it('writes one setting and leaves the others alone', () => {
     const next = applied(newTexture(), setMaterial('roughness', 0.25))
 

@@ -473,6 +473,11 @@ repères de lumière ne font pas partie de la scène : ce sont des aides d'affic
 contient que ce que l'Explorateur liste. Les arêtes du mode « rendu et filaire » n'en sont pas non
 plus.
 
+**Un sprite ne sort pas non plus.** Ni en glTF, ni en USDZ : aucun des deux formats n'a d'objet qui
+se tourne toujours vers la caméra, et three.js le laisse simplement de côté — sans un mot. En glTF
+le fichier garde son nom et sa place, mais rien n'y est dessiné ; en USDZ il n'en reste rien du
+tout. Une image plate qui doit survivre à l'export se fait avec un plan et une texture.
+
 **Une sélection imbriquée garde sa place.** Exporter un objet rangé dans un groupe l'écrit là où il
 est dans la scène, pas là où il est dans son groupe.
 

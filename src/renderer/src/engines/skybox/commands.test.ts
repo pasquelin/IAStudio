@@ -105,6 +105,13 @@ describe('the source', () => {
 describe('a generated sky', () => {
   const provenance = { modelId: 'model_sky', modelLabel: 'Scenario Skybox Flux.1', prompt: 'dusk' }
 
+  // Redo replays a command: a revert that never ran has no earlier sky to give back.
+  it('gives the content back untouched when it is reverted before it ran', () => {
+    const content = createSkyboxContent()
+
+    expect(applyGeneration({ assetId: 'asset_1' }, provenance).revert(content)).toBe(content)
+  })
+
   it('lands with what produced it, in one entry', () => {
     const command = applyGeneration({ assetId: 'asset_1' }, provenance)
     const after = command.apply(createSkyboxContent())

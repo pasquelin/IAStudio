@@ -17,7 +17,7 @@ export type BvhBuilder = {
  * in `scene-picking.bench.ts`: three models of 32k triangles cost 1.9 ms a click, which is a
  * frame; a studio primitive is thirty triangles and costs nothing.
  */
-const WORTH_A_TREE = 20_000
+export const WORTH_A_TREE = 20_000
 
 /**
  * One worker, not a pool. CLAUDE.md invariant 6 bounds a pool at `hardwareConcurrency − 2`, and

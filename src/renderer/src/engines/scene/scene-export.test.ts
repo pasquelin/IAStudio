@@ -132,3 +132,20 @@ describe('exportObjects', () => {
     expect(file.nodes ?? []).toEqual([])
   })
 })
+
+// `USDZExporter` takes one root; several are handed to it under a group of no consequence, and
+// the file must hold them all the same.
+describe('exportObjects to USDZ', () => {
+  /**
+   * Weighed rather than read: a USDZ is a zip of a binary USD crate, and the studio ships no
+   * reader for one. What this pins is that both shapes reach the file — the geometry of a second
+   * box is thousands of bytes, far more than the envelope a wrapping root adds.
+   */
+  it('writes one object, and writes several under a root of its own', async () => {
+    const one = await exportObjects([named('box-1')], 'usdz')
+    const two = await exportObjects([named('box-1'), named('box-2')], 'usdz')
+
+    expect(one.byteLength).toBeGreaterThan(0)
+    expect(two.byteLength).toBeGreaterThan(one.byteLength * 1.5)
+  })
+})

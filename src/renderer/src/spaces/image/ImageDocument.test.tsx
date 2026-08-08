@@ -6,6 +6,8 @@ import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { canvasOf, useCanvases } from '@/stores/canvases'
+import { useDocuments } from '@/stores/documents'
+import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { useTools } from '@/stores/tools'
 import { ImageDocument } from './ImageDocument'
 
@@ -29,6 +31,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       loadInto = vi.fn(() => Promise.resolve())
       setSelection = vi.fn()
       setSelectionShape = vi.fn()
+      snapshot = vi.fn(() => Promise.resolve('data:image/png;base64,AAAA'))
     },
   }
 })
@@ -154,5 +157,39 @@ describe('ImageDocument', () => {
 
     expect(useTools.getState().focusedZone).toBe('bottom')
     expect(setTool).not.toHaveBeenCalledWith('shape')
+  })
+})
+
+/**
+ * A shortcut runs outside React and has nowhere to report to: a dismissed dialog and a volume
+ * that refused the write look exactly alike from the canvas, and only one of the two is worth
+ * knowing about.
+ */
+describe('exporting the canvas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useCanvases.setState({ states: {}, histories: {} })
+    useDocuments.setState({
+      documents: { 'doc-1': { id: 'doc-1', kind: 'image', workspace: 'image', title: 'Poster' } },
+      activeId: 'doc-1',
+    })
+  })
+
+  it('records a write the disk refused', async () => {
+    const watched = bridgeWatchingLogs({
+      dialog: { exportPicture: () => Promise.reject(new Error('read-only volume')) },
+    })
+    render(<ImageDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{Meta>}{Shift>}E{/Shift}{/Meta}')
+
+    await waitFor(() =>
+      expect(watched.report).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scope: 'image.export',
+          message: expect.stringContaining('read-only volume'),
+        }),
+      ),
+    )
   })
 })

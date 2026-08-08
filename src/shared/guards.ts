@@ -8,6 +8,18 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * What a rejection says, whatever was thrown. A thrown string is as ordinary as a thrown
+ * `Error` — a worker that dies, a loader that gives up — and both sides of the boundary need
+ * the same answer for the same throw.
+ *
+ * The message, never the stack: the trace of a rejected loader points into three.js's own
+ * microtasks and names nothing the caller does not already know, while carrying kilobytes.
+ */
+export function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+/**
  * Reading one field off something that came back from disk or from a store. Three readers
  * rather than a generic merge: a document written by an older build must open on the current
  * default, and the field is the only place that knows which default that is.

@@ -46,9 +46,22 @@ describe('the window policy', () => {
     expect(directive('media-src')).toContain('scenario:')
   })
 
-  // Nothing runs that the application did not ship. Pixi builds its shaders with `new Function`
-  // and is given static polyfills instead — see `engines/core/mount.ts`.
-  it('keeps scripts to the application itself', () => {
-    expect(directive('script-src')).toBe("script-src 'self'")
+  /**
+   * Nothing runs that the application did not ship. Pixi builds its shaders with `new Function`
+   * and is given static polyfills instead — see `engines/core/mount.ts`.
+   *
+   * `wasm-unsafe-eval` is the one addition, and it is not `unsafe-eval`: it allows compiling
+   * WebAssembly and nothing else — no `eval`, no `new Function`. The Draco and KTX2 decoders a
+   * compressed `.glb` needs are wasm, and Chromium refuses to instantiate any module without it.
+   * The modules themselves still have to come from `'self'`, and they are shipped, not fetched.
+   */
+  it('keeps scripts to the application itself, wasm aside', () => {
+    expect(directive('script-src')).toBe("script-src 'self' 'wasm-unsafe-eval'")
+  })
+
+  // The decoders are served from the application's own origin, never from a CDN: loading a
+  // model must not depend on the network.
+  it('lets nothing be fetched from a script CDN', () => {
+    expect(directive('script-src')).not.toContain('http')
   })
 })

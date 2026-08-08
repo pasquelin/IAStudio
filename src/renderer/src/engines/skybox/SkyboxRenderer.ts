@@ -8,6 +8,7 @@ import {
 import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent } from '@shared/domain/skybox'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/GpuPipeline'
 import { createAdjustPass } from '../gpu/passes/adjust'
+import { reportFailure } from '@/services/diagnostics'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createTestObjects, type TestObjects } from '../viewport/test-objects'
@@ -74,7 +75,9 @@ export class SkyboxRenderer {
   private quiet: ReturnType<typeof setTimeout> | null = null
 
   constructor(private readonly options: SkyboxRendererOptions) {
-    this.cache = createTextureCache(options.loadTexture)
+    this.cache = createTextureCache(options.loadTexture, (assetId, error) =>
+      reportFailure('skybox.source', assetId, error),
+    )
     this.viewport.camera.position.set(0, EYE_HEIGHT, 0)
     this.viewport.scene.add(this.probes.group, this.sunLight, this.sunLight.target)
   }

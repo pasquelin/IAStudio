@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyHistory, run, undo } from '../core/history'
+import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
   addNode,
   addNodes,
@@ -14,19 +14,29 @@ import {
   rootedIn,
   renameNode,
   setGeometry,
+  setGeometryOn,
   setLight,
   setLightOn,
   setMaterial,
+  setMaterialOn,
   setNodeVisible,
   setEnvironment,
   setSelection,
+  setShadowOn,
+  setSprite,
   setSpriteOn,
   setTransform,
 } from './commands'
 import { lightNodeFixture as light, meshNode as mesh, spriteNodeFixture } from './scene-fixtures'
 
 const sprite = (id: string) => spriteNodeFixture(id, 'pic-1')
-import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
+import {
+  DEFAULT_MATERIAL,
+  DEFAULT_SPRITE,
+  EMPTY_SCENE,
+  IDENTITY_TRANSFORM,
+  type SceneState,
+} from './scene-state'
 import type { EnvironmentRef } from '@shared/domain/scene'
 
 describe('addNode', () => {
@@ -386,6 +396,14 @@ describe('groupNodes', () => {
     const command = groupNodes([mesh('a'), mesh('b')])
     expect(command.revert(command.apply(start)).nodes).toEqual(start.nodes)
   })
+
+  // Grouping nothing is reachable from the keyboard: the group must land at the scene rather
+  // than hang from `undefined`.
+  it('puts the group at the scene when nothing is selected', () => {
+    const applied = groupNodes([]).apply(EMPTY_SCENE)
+
+    expect(applied.nodes.find(node => node.type === 'group')?.parentId).toBeNull()
+  })
 })
 
 describe('copiesOf', () => {
@@ -564,5 +582,96 @@ describe('batch', () => {
     const one = batch('transform', [start.nodes[0] ?? mesh('a')], () => null)
     const two = batch('transform', start.nodes, () => null)
     expect(one.id).not.toBe(two.id)
+  })
+})
+
+/**
+ * The defensive halves. A command is built before it knows what it will meet: the node may be
+ * gone, or be of another type. Each of those must leave the state exactly as it was — an edit
+ * written onto a node of the wrong type produces a document that no longer loads.
+ */
+describe('an edit that meets nothing it can act on', () => {
+  const scene = { ...EMPTY_SCENE, nodes: [mesh('a'), light('l'), sprite('s')] }
+
+  const refused: [string, Command<SceneState>][] = [
+    ['renameNode on a node that is gone', renameNode('missing', 'x')],
+    ['setSprite on a mesh', setSprite('a', DEFAULT_SPRITE)],
+  ]
+
+  for (const [name, command] of refused) {
+    it(`leaves the scene alone: ${name}`, () => {
+      expect(command.apply(scene)).toBe(scene)
+    })
+  }
+})
+
+// Redo replays a command; a revert that never ran must not invent a previous state to go back to.
+describe('a revert asked for before its apply', () => {
+  const scene = { ...EMPTY_SCENE, nodes: [mesh('a'), light('l'), sprite('s')] }
+
+  const untouched: [string, Command<SceneState>][] = [
+    ['removeNode', removeNode('a')],
+    ['renameNode', renameNode('a', 'x')],
+    [
+      'setGeometry',
+      setGeometry('a', { kind: 'sphere', radius: 1, widthSegments: 8, heightSegments: 6 }),
+    ],
+    ['setLight', setLight('l', { kind: 'ambient', color: '#fff', intensity: 2 })],
+    ['setSprite', setSprite('s', DEFAULT_SPRITE)],
+    ['reparentNode', reparentNode('a', 'l')],
+    ['setEnvironment', setEnvironment({ kind: 'skybox', assetId: 'sky-1' })],
+  ]
+
+  for (const [name, command] of untouched) {
+    it(`gives ${name} back the very state it was handed`, () => {
+      expect(command.revert(scene)).toBe(scene)
+    })
+  }
+})
+
+describe('setShadowOn', () => {
+  const scene = { ...EMPTY_SCENE, nodes: [mesh('a'), light('l'), sprite('s')] }
+
+  // The inspector hides the row; the command must refuse it too, or the flag lands in the
+  // document and in the history for a node the renderer will never read it from.
+  it('skips what catches no shadow', () => {
+    const applied = setShadowOn(scene.nodes, { receiveShadow: true }).apply(scene)
+
+    expect(applied.nodes.map(node => node.receiveShadow)).toEqual([true, false, false])
+  })
+
+  it('skips what throws no shadow', () => {
+    const applied = setShadowOn(scene.nodes, { castShadow: true }).apply(scene)
+
+    expect(applied.nodes.map(node => node.castShadow)).toEqual([true, false, false])
+  })
+})
+
+describe('an edit spread over a selection', () => {
+  const scene = { ...EMPTY_SCENE, nodes: [mesh('a'), light('l')] }
+
+  it('writes a geometry field only onto the meshes built from the same primitive', () => {
+    const sphere = mesh('b')
+    sphere.geometry = { kind: 'sphere', radius: 1, widthSegments: 8, heightSegments: 6 }
+    const nodes = [...scene.nodes, sphere]
+
+    const applied = setGeometryOn(
+      nodes,
+      { kind: 'box', width: 1, height: 1, depth: 1 },
+      'width',
+      4,
+    ).apply({ ...EMPTY_SCENE, nodes })
+
+    expect(
+      applied.nodes.map(node => (node.type === 'mesh' ? node.geometry.kind : node.type)),
+    ).toEqual(['box', 'light', 'sphere'])
+    expect(applied.nodes[2]).toEqual(sphere)
+  })
+
+  it('writes a material field onto the meshes and nothing else', () => {
+    const applied = setMaterialOn(scene.nodes, { color: '#ff0000' }).apply(scene)
+
+    expect(applied.nodes[0]?.type === 'mesh' && applied.nodes[0].material.color).toBe('#ff0000')
+    expect(applied.nodes[1]).toBe(scene.nodes[1])
   })
 })

@@ -2,6 +2,9 @@ import { NoColorSpace, SRGBColorSpace, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { createTextureCache, type TextureSource } from './texture-cache'
 
+/** The failure port, silent unless a test watches it — the renderer's log is not this module's. */
+const silent = () => {}
+
 /**
  * A loader whose answers are handed out by the test. It keeps every pending load of a URL, not
  * just the last: one asset can be loaded twice at once, once per colour space, and each load
@@ -47,7 +50,7 @@ function deferredSource() {
 describe('createTextureCache', () => {
   it('loads a texture from the asset it names', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const loading = cache.acquire('tex-1', NoColorSpace)
     const texture = source.settle('tex-1')
@@ -59,7 +62,7 @@ describe('createTextureCache', () => {
   // Ten meshes sharing one 4K map should upload it once.
   it('loads once for however many holders', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const first = cache.acquire('tex-1', NoColorSpace)
     const second = cache.acquire('tex-1', NoColorSpace)
@@ -72,7 +75,7 @@ describe('createTextureCache', () => {
 
   it('frees the texture once the last holder lets go', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const acquired = cache.acquire('tex-1', NoColorSpace)
     void cache.acquire('tex-1', NoColorSpace)
@@ -91,7 +94,7 @@ describe('createTextureCache', () => {
   // A texture nobody wants any more must not come back to life when it finally arrives.
   it('frees a texture released while it was still loading', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const loading = cache.acquire('tex-1', NoColorSpace)
     cache.release('tex-1', NoColorSpace)
@@ -106,7 +109,7 @@ describe('createTextureCache', () => {
 
   it('loads again for a texture asked for after it was freed', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const acquired = cache.acquire('tex-1', NoColorSpace)
     source.settle('tex-1')
@@ -120,7 +123,7 @@ describe('createTextureCache', () => {
   // A file that moved is an ordinary thing in a project, not a reason for the panel to break.
   it('answers with nothing when the texture cannot be loaded', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const loading = cache.acquire('tex-1', NoColorSpace)
     source.fail('tex-1')
@@ -128,9 +131,22 @@ describe('createTextureCache', () => {
     await expect(loading).resolves.toBeNull()
   })
 
+  // An empty slot says nothing on its own: the material simply looks untextured. The asset, not
+  // the key: which colour space it was read in says nothing to a reader.
+  it('tells which texture failed to load, without its colour space', async () => {
+    const onFailure = vi.fn()
+    const source = deferredSource()
+
+    const loading = createTextureCache(source.load, onFailure).acquire('tex-1', SRGBColorSpace)
+    source.fail('tex-1')
+    await loading
+
+    expect(onFailure).toHaveBeenCalledWith('tex-1', expect.any(Error))
+  })
+
   it('retries a texture that failed rather than caching the failure', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const loading = cache.acquire('tex-1', NoColorSpace)
     source.fail('tex-1')
@@ -141,7 +157,7 @@ describe('createTextureCache', () => {
   })
 
   it('ignores a release nobody was holding', () => {
-    const cache = createTextureCache(deferredSource().load)
+    const cache = createTextureCache(deferredSource().load, silent)
 
     expect(() => cache.release('never-loaded', NoColorSpace)).not.toThrow()
   })
@@ -150,7 +166,7 @@ describe('createTextureCache', () => {
   // space on one shared instance would silently wash out the other.
   it('keeps one texture per colour space', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const asColour = cache.acquire('tex-1', SRGBColorSpace)
     const asData = cache.acquire('tex-1', NoColorSpace)
@@ -163,7 +179,7 @@ describe('createTextureCache', () => {
 
   it('frees everything it still holds when the engine goes', async () => {
     const source = deferredSource()
-    const cache = createTextureCache(source.load)
+    const cache = createTextureCache(source.load, silent)
 
     const acquired = Promise.all([
       cache.acquire('tex-1', NoColorSpace),

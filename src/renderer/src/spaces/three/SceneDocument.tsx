@@ -19,6 +19,7 @@ import { useAddNode } from '@/hooks/useAddNode'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { assetIdFromDrag } from '@/helpers/asset-drag'
@@ -45,7 +46,11 @@ async function exportScene(
 
   const data = await engine.exportTo(format, scope)
   const name = useDocuments.getState().documents[documentId]?.title ?? 'scene'
-  await bridge.scene.export({ name, format, data })
+  // Reported rather than thrown on: nothing awaits this, and a disk that refused the write would
+  // otherwise leave a dismissed dialog and an unwritten file looking exactly alike.
+  await bridge.scene.export({ name, format, data }).catch(error => {
+    reportFailure('scene.export', format, error)
+  })
 }
 
 export function SceneDocument({ documentId }: { documentId: string }) {

@@ -4,7 +4,9 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig([
-  globalIgnores(['out', 'dist', 'node_modules', 'docs']),
+  // `public/decoders/` is three.js's own Draco and KTX2 glue, copied in by
+  // `scripts/copy-decoders.mjs`. Vendored code, and minified: linting it says nothing.
+  globalIgnores(['out', 'dist', 'node_modules', 'docs', 'src/renderer/public']),
   js.configs.recommended,
   tseslint.configs.recommended,
   {

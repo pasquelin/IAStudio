@@ -25,3 +25,4 @@ logs/
 
 # Shipped with the app, fetched by `pnpm ffmpeg:fetch` — binaries, never committed.
 resources/ffmpeg/
+src/renderer/public/decoders/

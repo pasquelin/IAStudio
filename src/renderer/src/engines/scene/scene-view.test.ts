@@ -1,4 +1,12 @@
-import { BoxGeometry, LineBasicMaterial, LineSegments, Mesh, MeshStandardMaterial } from 'three'
+import {
+  BoxGeometry,
+  LineBasicMaterial,
+  LineSegments,
+  Material,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+} from 'three'
 import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import {
@@ -88,6 +96,32 @@ describe('applyDisplayMode', () => {
 
     expect(child.material.wireframe).toBe(true)
   })
+
+  it('walks past what is not a mesh', () => {
+    const empty = new Object3D()
+    empty.add(new Object3D())
+
+    expect(() => applyDisplayMode(empty, 'wireframe')).not.toThrow()
+  })
+
+  // `Material` itself declares no `wireframe`; only the mesh materials do, and writing one onto
+  // a material that has none would be a property three.js never reads.
+  it('leaves a material with no wireframe of its own without one', () => {
+    const mesh = new Mesh(new BoxGeometry(), new Material())
+
+    applyDisplayMode(mesh, 'wireframe')
+
+    expect('wireframe' in mesh.material).toBe(false)
+  })
+
+  it('reaches every material of a mesh that carries several', () => {
+    const materials = [new MeshStandardMaterial(), new MeshStandardMaterial()]
+    const mesh = new Mesh(new BoxGeometry(), materials)
+
+    applyDisplayMode(mesh, 'wireframe')
+
+    expect(materials.every(material => material.wireframe)).toBe(true)
+  })
 })
 
 describe('applyWireOverlay', () => {
@@ -144,5 +178,18 @@ describe('applyWireOverlay', () => {
     applyWireOverlay(mesh, true, line)
 
     expect(mesh.children[0]).toMatchObject({ castShadow: false, receiveShadow: false })
+  })
+
+  // The overlay is found by name: something else wearing it is taken away all the same, rather
+  // than left to accumulate under the mesh.
+  it('takes away an overlay that carries no geometry of its own', () => {
+    const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    const impostor = new Object3D()
+    impostor.name = 'wireframe-overlay'
+    mesh.add(impostor)
+
+    applyWireOverlay(mesh, false, line)
+
+    expect(mesh.children).toHaveLength(0)
   })
 })

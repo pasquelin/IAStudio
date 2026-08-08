@@ -47,6 +47,8 @@ type ChannelMethod = {
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
 
+  [CHANNELS.diagnosticsReport]: StudioBridge['diagnostics']['report']
+
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
   [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']
   [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']
