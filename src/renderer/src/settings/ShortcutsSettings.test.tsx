@@ -17,6 +17,9 @@ const staged = () => useSettingsDraft.getState().pending.shortcuts?.overrides
  */
 const rowFor = (title: string): HTMLElement => screen.getByLabelText(title)
 
+/** The button that arms the chord search. Its own text is its accessible name. */
+const searchButton = (): HTMLElement => screen.getByText('Chercher par touche')
+
 function press(code: string, modifiers: Partial<KeyboardEventInit> = {}): void {
   fireEvent.keyDown(window, { code, ...modifiers })
 }
@@ -137,7 +140,7 @@ describe('conflicts', () => {
 describe('searching by chord', () => {
   it('answers what a combination is taken by, which is the question people ask', async () => {
     render(<ShortcutsSettings />)
-    await user.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await user.click(searchButton())
 
     press('KeyG')
 
@@ -147,7 +150,7 @@ describe('searching by chord', () => {
 
   it('says a key is free rather than showing an empty screen', async () => {
     render(<ShortcutsSettings />)
-    await user.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await user.click(searchButton())
 
     press('KeyJ', { metaKey: true, altKey: true })
 
@@ -163,7 +166,7 @@ describe('only one thing listens at a time', () => {
    */
   it('stops the search when a row starts capturing', async () => {
     render(<ShortcutsSettings />)
-    await user.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await user.click(searchButton())
     await user.click(rowFor('Déplacer'))
 
     press('KeyT')
@@ -176,7 +179,7 @@ describe('only one thing listens at a time', () => {
   it('stops a capture when the search starts', async () => {
     render(<ShortcutsSettings />)
     await user.click(rowFor('Déplacer'))
-    await user.click(screen.getByRole('button', { name: 'Chercher par touche' }))
+    await user.click(searchButton())
 
     press('KeyG')
 
