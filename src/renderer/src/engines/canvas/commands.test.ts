@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import { emptyHistory, run, undo } from '../core/history'
 import type { Command } from '../core/history'
 import {
@@ -20,7 +21,10 @@ import {
   resizeCanvas,
   resizeImage,
   selectLayer,
+  setLayerAdjustment,
+  setLayerBlend,
   setLayerOpacity,
+  setLayerText,
   setLayerVisible,
   translateLayer,
   paintPixels,
@@ -28,6 +32,7 @@ import {
 } from './commands'
 import { layerFixture } from './canvas-fixtures'
 import {
+  adjustmentLayer,
   allLayers,
   DEFAULT_CANVAS,
   groupLayer,
@@ -35,6 +40,7 @@ import {
   isGroup,
   layerById,
   pixelLayer,
+  textLayer,
   type CanvasState,
 } from './canvas-state'
 
@@ -604,5 +610,160 @@ describe('flipping and turning the whole document', () => {
     for (let turn = 0; turn < 4; turn += 1) [state] = roundTrip(state, rotateImage(true))
 
     expect(state).toMatchObject({ width: 100, height: 200 })
+  })
+})
+
+const withAdjustment: CanvasState = addLayer(adjustmentLayer('adj', 'Exposure', 'exposure')).apply(
+  DEFAULT_CANVAS,
+)
+
+const warmer = { ...NEUTRAL_ADJUSTMENTS, exposure: 1.5, temperature: 0.4 }
+
+describe('setLayerAdjustment', () => {
+  it('writes the whole stack onto the adjustment layer', () => {
+    const [after] = roundTrip(withAdjustment, setLayerAdjustment('adj', warmer))
+    const layer = layerById(after, 'adj')
+
+    expect(layer?.kind === 'adjustment' ? layer.values : null).toEqual(warmer)
+  })
+
+  it('gives the grading it found back on undo', () => {
+    const [, reverted] = roundTrip(withAdjustment, setLayerAdjustment('adj', warmer))
+    const layer = layerById(reverted, 'adj')
+
+    expect(layer?.kind === 'adjustment' ? layer.values : null).toEqual(NEUTRAL_ADJUSTMENTS)
+  })
+
+  // Typed apart from `patch` because it is spelled on one kind of layer; a pixel one named by
+  // the same id is not an adjustment that lost its values.
+  it('leaves a layer of another kind untouched', () => {
+    const [after] = roundTrip(withTwo, setLayerAdjustment('layer-2', warmer))
+
+    expect(after.layers).toEqual(withTwo.layers)
+  })
+})
+
+describe('setLayerText', () => {
+  const withText: CanvasState = addLayer(textLayer('cap', 'Hello', { x: 10, y: 20 })).apply(
+    DEFAULT_CANVAS,
+  )
+  const wordsOf = (state: CanvasState) => {
+    const layer = layerById(state, 'cap')
+    return layer?.kind === 'text' ? layer.text : null
+  }
+
+  it('rewrites only the fields it was given', () => {
+    const [after] = roundTrip(withText, setLayerText('cap', { text: 'Goodbye' }))
+    const layer = layerById(after, 'cap')
+
+    expect(wordsOf(after)).toBe('Goodbye')
+    expect(layer?.kind === 'text' ? layer.size : null).toBe(48)
+  })
+
+  it('puts the caption it found back on undo', () => {
+    const [, reverted] = roundTrip(withText, setLayerText('cap', { text: 'Goodbye', size: 12 }))
+
+    expect(wordsOf(reverted)).toBe('Hello')
+    expect(layerById(reverted, 'cap')).toEqual(layerById(withText, 'cap'))
+  })
+
+  it('leaves a layer of another kind untouched', () => {
+    const [after] = roundTrip(withTwo, setLayerText('layer-2', { text: 'Goodbye' }))
+
+    expect(after.layers).toEqual(withTwo.layers)
+  })
+})
+
+/**
+ * A command reverted before it ever applied. The panel builds one per edit and the history may
+ * step over an entry whose `apply` ran on another document — every command captures what it
+ * needs on the way in, so with nothing captured the only honest inverse is the state itself.
+ */
+describe('reverting a command that never applied', () => {
+  it('leaves the stack alone for a single-field edit', () => {
+    expect(setLayerBlend('layer-2', 'multiply').revert(withTwo)).toBe(withTwo)
+  })
+
+  it('leaves the stack alone for a move', () => {
+    expect(translateLayer('layer-2', 40, 40).revert(withTwo)).toBe(withTwo)
+  })
+
+  it('leaves the grading alone', () => {
+    expect(setLayerAdjustment('adj', warmer).revert(withAdjustment).layers).toEqual(
+      withAdjustment.layers,
+    )
+  })
+
+  it('leaves the guides alone', () => {
+    expect(moveGuide('g1', 40).revert(withGuides)).toBe(withGuides)
+    expect(removeGuide('g1').revert(withGuides)).toBe(withGuides)
+  })
+})
+
+/**
+ * An id that names nothing — a panel row acting on a layer another window has just removed.
+ * Every one of these is a no-op rather than a stack quietly rebuilt around a hole.
+ */
+describe('commands aimed at a layer that is gone', () => {
+  it('removes nothing', () => {
+    expect(removeLayer('gone').apply(withTwo)).toBe(withTwo)
+  })
+
+  it('reorders nothing', () => {
+    expect(reorderLayer('gone', 0).apply(withTwo)).toBe(withTwo)
+  })
+
+  it('duplicates nothing', () => {
+    expect(duplicateLayer('gone', 'copy', 'Copy', ids()).apply(withTwo)).toBe(withTwo)
+  })
+
+  it('patches nothing, and has nothing to undo', () => {
+    const command = setLayerBlend('gone', 'multiply')
+    const applied = command.apply(withTwo)
+
+    expect(applied.layers).toEqual(withTwo.layers)
+    expect(command.revert(applied)).toBe(applied)
+  })
+
+  it('moves no guide, and has none to put back', () => {
+    const command = moveGuide('gone', 40)
+    const applied = command.apply(withGuides)
+
+    expect(applied.guides).toEqual(withGuides.guides)
+    expect(command.revert(applied)).toBe(applied)
+  })
+
+  it('removes no guide, and lays none back down', () => {
+    const command = removeGuide('gone')
+    const applied = command.apply(withGuides)
+
+    expect(applied.guides).toEqual(withGuides.guides)
+    expect(command.revert(applied)).toBe(applied)
+  })
+})
+
+/**
+ * A group holds no pixels, so arming one leaves the brush drawing nothing. When a restructure
+ * turns up nothing paintable, it must not point the brush at a group to fill the field.
+ */
+describe('restructuring around layers that hold no pixels', () => {
+  const emptyGroup = (id: string): CanvasState => ({
+    ...DEFAULT_CANVAS,
+    layers: [groupLayer(id, 'Empty', [])],
+    activeLayerId: null,
+  })
+
+  it('arms nothing when the group it wrapped holds nothing paintable', () => {
+    const [after] = roundTrip(emptyGroup('g0'), groupLayers(['g0'], 'g', 'Group'))
+
+    expect(after.activeLayerId).toBeNull()
+  })
+
+  it('leaves the selection where it was when a dissolved group held nothing paintable', () => {
+    const before = { ...emptyGroup('g0'), activeLayerId: 'elsewhere' }
+    const [after] = roundTrip(before, ungroupLayer('g0'))
+
+    expect(after.layers).toEqual([])
+    expect(after.activeLayerId).toBe('elsewhere')
   })
 })
