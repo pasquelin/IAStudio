@@ -908,6 +908,22 @@
     "canvasExtend": {
       "title": "Extend",
       "help": "Ask the model to paint beyond the edges of the flattened image"
+    },
+    "canvasFlipHorizontal": {
+      "title": "Flip horizontally",
+      "help": "Mirror the whole image left to right, without rewriting a pixel"
+    },
+    "canvasFlipVertical": {
+      "title": "Flip vertically",
+      "help": "Mirror the whole image top to bottom, without rewriting a pixel"
+    },
+    "canvasRotateClockwise": {
+      "title": "Rotate right",
+      "help": "Turn the image a quarter turn clockwise, frame and all"
+    },
+    "canvasRotateCounterClockwise": {
+      "title": "Rotate left",
+      "help": "Turn the image a quarter turn the other way, frame and all"
     }
   },
   "texture": {

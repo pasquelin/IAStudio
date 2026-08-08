@@ -549,6 +549,47 @@ export function resizeImage(width: number, height: number): Command<CanvasState>
   })
 }
 
+export type FlipAxis = 'horizontal' | 'vertical'
+
+/**
+ * Mirrors the whole document. A negative scale rather than rewritten pixels: the layers keep
+ * their textures, so flipping and flipping back is exactly the identity — which rewriting them
+ * would not be, once resampling has rounded a pixel twice.
+ */
+export function flipImage(axis: FlipAxis): Command<CanvasState> {
+  return restructure(`canvas:flip:${axis}`, state => ({
+    ...state,
+    layers: moveLayers(state, transform =>
+      axis === 'horizontal'
+        ? { ...transform, scaleX: -transform.scaleX, x: state.width - transform.x }
+        : { ...transform, scaleY: -transform.scaleY, y: state.height - transform.y },
+    ),
+  }))
+}
+
+/**
+ * Turns the document a quarter turn. The frame turns with it — a portrait becomes a landscape,
+ * which is the whole point — and each layer turns about the document's centre rather than its
+ * own, or a stack would fan out instead of turning as one picture.
+ */
+export function rotateImage(clockwise: boolean): Command<CanvasState> {
+  return restructure(`canvas:rotate:${clockwise ? 'cw' : 'ccw'}`, state => {
+    const quarter = clockwise ? Math.PI / 2 : -Math.PI / 2
+
+    return {
+      ...state,
+      width: state.height,
+      height: state.width,
+      layers: moveLayers(state, transform => ({
+        ...transform,
+        rotation: transform.rotation + quarter,
+        x: clockwise ? state.height - transform.y : transform.y,
+        y: clockwise ? transform.x : state.width - transform.x,
+      })),
+    }
+  })
+}
+
 /** Cropping is resizing the frame onto a rectangle: same gesture, offset the other way. */
 export function cropToRect(rect: Rect): Command<CanvasState> {
   return resizeCanvas(rect.width, rect.height, { x: -rect.x, y: -rect.y })

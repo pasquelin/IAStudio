@@ -8,11 +8,13 @@ import {
   cropToRect,
   duplicateLayer,
   flatten,
+  flipImage,
   groupLayers,
   mergeDown,
   moveGuide,
   removeGuide,
   removeLayer,
+  rotateImage,
   renameLayer,
   reorderLayer,
   resizeCanvas,
@@ -29,6 +31,7 @@ import {
   allLayers,
   DEFAULT_CANVAS,
   groupLayer,
+  IDENTITY,
   isGroup,
   layerById,
   pixelLayer,
@@ -541,5 +544,65 @@ describe('paintPixels', () => {
     const command = paintPixels('p1', port())
 
     expect(command.revert(DEFAULT_CANVAS)).toBe(DEFAULT_CANVAS)
+  })
+})
+
+describe('flipping and turning the whole document', () => {
+  const placed = (x: number, y: number): CanvasState => ({
+    ...DEFAULT_CANVAS,
+    width: 100,
+    height: 200,
+    layers: [{ ...pixelLayer('a', 'A'), transform: { ...IDENTITY, x, y } }],
+    activeLayerId: 'a',
+  })
+
+  const transformOf = (state: CanvasState) => state.layers[0]?.transform
+
+  // A negative scale rather than rewritten pixels: flipping twice is exactly the identity, which
+  // resampling twice would not be.
+  it('mirrors without touching a single pixel', () => {
+    const [after] = roundTrip(placed(10, 20), flipImage('horizontal'))
+
+    expect(transformOf(after)).toMatchObject({ scaleX: -1, x: 90 })
+  })
+
+  it('mirrors the other way on the other axis', () => {
+    const [after] = roundTrip(placed(10, 20), flipImage('vertical'))
+
+    expect(transformOf(after)).toMatchObject({ scaleY: -1, y: 180 })
+  })
+
+  it('puts everything back on an undo', () => {
+    const before = placed(10, 20)
+    const [, reverted] = roundTrip(before, flipImage('horizontal'))
+
+    expect(reverted).toEqual(before)
+  })
+
+  // The frame turns with the picture: a portrait becomes a landscape.
+  it('swaps the sides of the frame a quarter turn', () => {
+    const [after] = roundTrip(placed(10, 20), rotateImage(true))
+
+    expect(after).toMatchObject({ width: 200, height: 100 })
+  })
+
+  it('turns every layer a quarter turn with it', () => {
+    const [after] = roundTrip(placed(10, 20), rotateImage(true))
+
+    expect(transformOf(after)?.rotation).toBeCloseTo(Math.PI / 2)
+  })
+
+  it('turns the other way when asked', () => {
+    const [after] = roundTrip(placed(10, 20), rotateImage(false))
+
+    expect(transformOf(after)?.rotation).toBeCloseTo(-Math.PI / 2)
+  })
+
+  // Four quarter turns are one full turn, and one full turn is where the document started.
+  it('comes back to its own frame after four turns', () => {
+    let state = placed(10, 20)
+    for (let turn = 0; turn < 4; turn += 1) [state] = roundTrip(state, rotateImage(true))
+
+    expect(state).toMatchObject({ width: 100, height: 200 })
   })
 })

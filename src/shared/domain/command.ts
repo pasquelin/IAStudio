@@ -50,6 +50,10 @@ export type CommandId =
   | 'canvas.enlarge'
   | 'canvas.vectorize'
   | 'canvas.extend'
+  | 'canvas.flipHorizontal'
+  | 'canvas.flipVertical'
+  | 'canvas.rotateClockwise'
+  | 'canvas.rotateCounterClockwise'
   | 'canvas.snap'
   | 'canvas.undo'
   | 'canvas.redo'
@@ -353,6 +357,34 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasExtend.title',
     helpKey: 'commands.canvasExtend.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.flipHorizontal',
+    scope: 'canvas',
+    titleKey: 'commands.canvasFlipHorizontal.title',
+    helpKey: 'commands.canvasFlipHorizontal.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.flipVertical',
+    scope: 'canvas',
+    titleKey: 'commands.canvasFlipVertical.title',
+    helpKey: 'commands.canvasFlipVertical.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.rotateClockwise',
+    scope: 'canvas',
+    titleKey: 'commands.canvasRotateClockwise.title',
+    helpKey: 'commands.canvasRotateClockwise.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.rotateCounterClockwise',
+    scope: 'canvas',
+    titleKey: 'commands.canvasRotateCounterClockwise.title',
+    helpKey: 'commands.canvasRotateCounterClockwise.help',
     defaultBinding: null,
   }),
   command({
