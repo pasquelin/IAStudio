@@ -18,6 +18,10 @@ vi.mock('./tool-components', () => ({
         throw new Error('actions exploded')
       },
     },
+    explorer: {
+      Content: () => <p>explorer tree</p>,
+      Actions: () => <p>explorer actions</p>,
+    },
   },
 }))
 
@@ -61,6 +65,17 @@ describe('a half switched to another tool', () => {
 
     expect(screen.getByText('layer list')).toBeInTheDocument()
     expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
+  })
+
+  it('gives the next tool its actions back, even if the last one lost them', () => {
+    const { rerender } = render(
+      <ToolWindow tool="layers" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />,
+    )
+    expect(screen.queryByText('explorer actions')).not.toBeInTheDocument()
+
+    rerender(<ToolWindow tool="explorer" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+
+    expect(screen.getByText('explorer actions')).toBeInTheDocument()
   })
 })
 
