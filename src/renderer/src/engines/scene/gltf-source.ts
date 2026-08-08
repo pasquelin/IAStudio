@@ -17,15 +17,12 @@ const DRACO_PATH = '/decoders/draco/'
 const KTX2_PATH = '/decoders/basis/'
 
 /**
- * A source and the handle that shuts it down. Both decoders own Web Workers, and nothing else
- * can reach them once they are behind the load function.
+ * A source and the handle that shuts it down. Both decoders own Web Workers and nothing else can
+ * reach them from behind the load function, while an engine is rebuilt on every panel detach —
+ * so `dispose` is required, not tidy.
  */
 export type GltfSource = {
   load: ModelSource
-  /**
-   * Terminates the decoders' workers. Required, not tidy: an engine is rebuilt every time a
-   * panel is detached, and `dispose` is the only thing that ends the workers the last one spawned.
-   */
   dispose: () => void
 }
 
@@ -64,8 +61,7 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
       const gltf = await loader.loadAsync(url)
       return gltf.scene
     },
-    // Both spawn their workers on the first parse and hold them for good. `KTX2Loader` also
-    // counts live instances, and an undisposed one makes the next engine warn about itself.
+    // `KTX2Loader` counts live instances: an undisposed one makes the next engine warn about itself.
     dispose: () => {
       draco.dispose()
       ktx2.dispose()

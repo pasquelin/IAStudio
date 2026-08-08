@@ -192,8 +192,7 @@ export class SceneRenderer {
   private readonly loader = new TextureLoader()
   private readonly textureCache: TextureCache
   private readonly modelCache: ModelCache
-  /** Null when a source is injected: nothing was built here, so there is nothing to terminate. */
-  private readonly gltf: GltfSource | null = null
+  private readonly gltf: GltfSource
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -233,16 +232,11 @@ export class SceneRenderer {
       options.loadTexture ?? (url => this.loader.loadAsync(url)),
       (assetId, error) => reportFailure('scene.texture', assetId, error),
     )
-    // Built only when nothing is injected, and kept: the decoders own Web Workers, and this
-    // handle is the only way back to them once the cache holds the load function alone.
-    let load = options.loadModel
-    if (load === undefined) {
-      const gltf = createGltfSource(() => this.viewport.gl)
-      this.gltf = gltf
-      load = gltf.load
-    }
+    this.gltf = options.loadModel
+      ? { load: options.loadModel, dispose: () => {} }
+      : createGltfSource(() => this.viewport.gl)
     this.modelCache = createModelCache(
-      load,
+      this.gltf.load,
       // The node stays in the outliner and draws nothing: a corrupt or compressed GLB is
       // otherwise indistinguishable from one that was never asked for.
       (assetId, error) => reportFailure('scene.model', assetId, error),
@@ -489,7 +483,7 @@ export class SceneRenderer {
     this.environment = null
     this.textureCache.dispose()
     this.modelCache.dispose()
-    this.gltf?.dispose()
+    this.gltf.dispose()
     this.wireMaterial.dispose()
     this.bvh.dispose()
 

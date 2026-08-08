@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SceneRenderer } from './SceneRenderer'
 
+const builtDraco = vi.fn()
 const disposeDraco = vi.fn()
 const disposeKtx2 = vi.fn()
 
@@ -10,6 +11,9 @@ const disposeKtx2 = vi.fn()
  */
 vi.mock('three/addons/loaders/DRACOLoader.js', () => ({
   DRACOLoader: class {
+    constructor() {
+      builtDraco()
+    }
     dispose = disposeDraco
     setDecoderPath = () => this
   },
@@ -24,11 +28,16 @@ vi.mock('three/addons/loaders/KTX2Loader.js', () => ({
 }))
 
 describe('SceneRenderer and the model decoders', () => {
-  // Never mounted: the decoders are built in the constructor, and freeing them needs no GL.
-  const engine = () => new SceneRenderer({ onSelect: () => {}, onTransform: () => {} })
+  beforeEach(vi.clearAllMocks)
 
-  // Both hold Web Workers once a compressed model has been parsed, and an engine is rebuilt every
-  // time a panel is detached — so a cycle that skipped this would leave a pool behind each time.
+  // Never mounted: the decoders are built in the constructor, and freeing them needs no GL.
+  const engine = (loadModel?: () => Promise<never>) =>
+    new SceneRenderer({
+      onSelect: () => {},
+      onTransform: () => {},
+      ...(loadModel && { loadModel }),
+    })
+
   it('ends the decoders it built when the engine is disposed', () => {
     engine().dispose()
 
@@ -36,16 +45,11 @@ describe('SceneRenderer and the model decoders', () => {
     expect(disposeKtx2).toHaveBeenCalled()
   })
 
+  // Asserted on the constructor, not on `dispose`: a decoder built and left alone would look the
+  // same from the release side, and that is the leak this whole file is about.
   it('builds no decoder at all when a source is injected', () => {
-    vi.clearAllMocks()
+    engine(() => Promise.reject(new Error('never asked'))).dispose()
 
-    new SceneRenderer({
-      onSelect: () => {},
-      onTransform: () => {},
-      loadModel: () => Promise.reject(new Error('never asked')),
-    }).dispose()
-
-    expect(disposeDraco).not.toHaveBeenCalled()
-    expect(disposeKtx2).not.toHaveBeenCalled()
+    expect(builtDraco).not.toHaveBeenCalled()
   })
 })
