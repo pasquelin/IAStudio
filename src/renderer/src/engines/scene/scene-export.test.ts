@@ -10,7 +10,7 @@ import {
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { applyWireOverlay } from './scene-view'
-import { exportObjects } from './scene-export'
+import { exportObjects, placedCopy } from './scene-export'
 
 /** What a `.gltf` file holds, read back as the JSON it is — the point is to check the file. */
 type GltfFile = {
@@ -187,5 +187,27 @@ describe('exportObjects to USDZ', () => {
 
     expect(one.byteLength).toBeGreaterThan(0)
     expect(two.byteLength).toBeGreaterThan(one.byteLength * 1.5)
+  })
+})
+
+/**
+ * `USDZExporter` reads `object.matrix` and never refreshes it (`USDZExporter.js:639`), where
+ * `GLTFExporter` calls `updateMatrix` first (`GLTFExporter.js:2488`). Decomposing the world matrix
+ * into position, quaternion and scale therefore reached one format and not the other: a selected
+ * child came out of USDZ where it sits inside its parent, and the glTF test never saw it.
+ */
+describe('placedCopy', () => {
+  it('leaves the copy a matrix that agrees with where it stands', () => {
+    const parent = named('parent')
+    parent.position.set(10, 0, 0)
+    const child = named('child')
+    parent.add(child)
+    parent.updateMatrixWorld(true)
+
+    const copy = placedCopy(child)
+
+    // Column-major, so the translation sits at index 12.
+    expect(copy.matrix.elements[12]).toBe(10)
+    expect(copy.position.x).toBe(10)
   })
 })

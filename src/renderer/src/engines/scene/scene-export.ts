@@ -63,11 +63,15 @@ export async function exportObjects(
  * A copy standing where the original stands in the world. Geometries and materials are shared
  * rather than duplicated — `clone` keeps the references — so the copy costs objects, not buffers.
  */
-function placedCopy(object: Object3D): Object3D {
+export function placedCopy(object: Object3D): Object3D {
   const copy = object.clone()
 
   object.updateWorldMatrix(true, false)
   object.matrixWorld.decompose(copy.position, copy.quaternion, copy.scale)
+  // `clone` carried the original's `matrix` over, and decomposing writes the three components
+  // beside it rather than through it. `USDZExporter` reads that matrix and never refreshes it,
+  // so without this the placement above reaches glTF — which does refresh — and nothing else.
+  copy.updateMatrix()
 
   dropOverlays(copy)
   return copy

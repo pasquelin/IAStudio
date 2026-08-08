@@ -412,6 +412,11 @@ export class SceneRenderer {
     // for another object entirely, and the trihedron is built around whichever one it was given.
     // Left alone it would show — and, since it became clickable, turn — a camera nothing renders.
     this.buildViewHelper()
+    // The gizmo was handed a camera at mount and casts its grab ray from it. Left on the one
+    // nothing draws, the ray starts where that camera was frozen: handles keep the screen size
+    // they had, a drag off-centre grabs the neighbouring axis, and a miss falls through to the
+    // orbit. Rebound rather than rebuilt — unlike the trihedron, its camera is assignable.
+    if (this.gizmo) this.gizmo.camera = this.viewport.camera
   }
 
   /** The trihedron, on the viewport's current camera. Thrown away and remade rather than rebound:
