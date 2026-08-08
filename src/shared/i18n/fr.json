@@ -99,6 +99,7 @@
       "scene.texture": "Une texture n’a pas pu être chargée",
       "scene.export": "L’export de la scène a échoué",
       "texture.map": "Un canal de texture n’a pas pu être chargé",
+      "texture.shader": "L’aperçu du matériau a perdu l’un de ses réglages",
       "skybox.source": "L’image du ciel n’a pas pu être chargée",
       "canvas.layer": "Un calque n’a pas pu être chargé",
       "image.export": "L’export de l’image a échoué",

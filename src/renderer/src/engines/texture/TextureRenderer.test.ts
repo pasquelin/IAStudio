@@ -1,8 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { RepeatWrapping } from 'three'
+import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { TextureRenderer } from './TextureRenderer'
-import { newTexture, type TextureState } from './texture-state'
+import { newTexture, slotFor, type ChannelMap, type TextureState } from './texture-state'
+
+const MAP: ChannelMap = { assetId: 'map-1', origin: 'generated', width: 512, height: 512 }
+
+const channelOf = (channel: PbrChannel, assetId: string): TextureState => {
+  const state = newTexture()
+  state.channels[channel] = { ...MAP, assetId }
+  return state
+}
 
 /**
  * The environment is the one part of this engine a unit test can reach: `mount` builds a real
@@ -89,5 +99,73 @@ describe('the environment of a texture preview', () => {
     renderer.dispose()
 
     expect(source.freed[0]).toHaveBeenCalled()
+  })
+
+  /**
+   * The cavity mask reaches the shader through a uniform of its own, so it takes the one path in
+   * this engine that no material slot walks. Covered channel by channel rather than for `edge`
+   * alone: the loop is what decides, and it is the loop a refactor narrows by accident.
+   */
+  describe('the channels of a texture', () => {
+    it.each(PBR_CHANNELS)('loads %s, slot or no slot', async channel => {
+      await applied(mounted(), channelOf(channel, `${channel}-1`))
+
+      expect(source.load).toHaveBeenCalledWith(`scenario://asset/${channel}-1`)
+    })
+
+    it.each(PBR_CHANNELS)('frees %s when it is taken out of the texture', async channel => {
+      const renderer = mounted()
+      await applied(renderer, channelOf(channel, `${channel}-1`))
+
+      renderer.apply(newTexture())
+
+      expect(source.freed[0]).toHaveBeenCalled()
+    })
+
+    it('frees the cavity mask on dispose, which no slot would have done for it', async () => {
+      const renderer = mounted()
+      expect(slotFor('edge')).toBeNull()
+      await applied(renderer, channelOf('edge', 'edge-1'))
+
+      renderer.dispose()
+
+      expect(source.freed[0]).toHaveBeenCalled()
+    })
+
+    it('swaps a channel for another asset without holding on to the first', async () => {
+      const renderer = mounted()
+      await applied(renderer, channelOf('edge', 'edge-1'))
+
+      await applied(renderer, channelOf('edge', 'edge-2'))
+
+      await vi.waitFor(() => expect(source.freed[0]).toHaveBeenCalled())
+      expect(source.freed[1]).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Reads the texture the source handed out, which is the only way from here to tell a channel
+     * that reached the shader from one that was merely loaded and dropped: repeat, offset and
+     * rotation are applied to every map at once, so a channel left out drifts away from the rest.
+     */
+    it.each(PBR_CHANNELS)('applies the tiling of the material to %s', async channel => {
+      const renderer = mounted()
+      const state = channelOf(channel, `${channel}-1`)
+      state.material.tiling = { x: 3, y: 3 }
+      await applied(renderer, state)
+
+      const map = await source.load.mock.results[0]?.value
+      await vi.waitFor(() => expect(map.repeat.x).toBe(3))
+      expect(map.wrapS).toBe(RepeatWrapping)
+      expect(map.center.x).toBe(0.5)
+    })
+
+    it('asks once for a channel, however many times the same state comes back', async () => {
+      const renderer = mounted()
+      await applied(renderer, channelOf('roughness', 'rough-1'))
+
+      renderer.apply(channelOf('roughness', 'rough-1'))
+
+      expect(source.load).toHaveBeenCalledTimes(1)
+    })
   })
 })

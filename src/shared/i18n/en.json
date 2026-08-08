@@ -99,6 +99,7 @@
       "scene.texture": "A texture could not be loaded",
       "scene.export": "Exporting the scene failed",
       "texture.map": "A texture channel could not be loaded",
+      "texture.shader": "The material preview lost one of its settings",
       "skybox.source": "The sky picture could not be loaded",
       "canvas.layer": "A layer could not be loaded",
       "image.export": "Exporting the picture failed",
