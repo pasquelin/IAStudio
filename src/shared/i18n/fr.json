@@ -727,7 +727,8 @@
     "snap": "Magnétisme",
     "help": "Aide",
     "about": "À propos de {{name}}",
-    "licences": "Licences"
+    "licences": "Licences",
+    "usage": "Consommation…"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
@@ -1187,6 +1188,56 @@
     "title": "Licences",
     "intro": "Scenario Studio est livré avec les logiciels ci-dessous. Chacun garde sa propre licence, reproduite ici en entier.",
     "sources": "Sources correspondantes :"
+  },
+  "usage": {
+    "title": "Consommation",
+    "sections": {
+      "overview": "Vue d'ensemble",
+      "models": "Modèles",
+      "activities": "Activités",
+      "journal": "Journal"
+    },
+    "descriptions": {
+      "overview": "Ce que toutes vos clés ont dépensé sur la période.",
+      "models": "Quels modèles ont coûté, et combien de générations chacun a servi.",
+      "activities": "Ce qui a été fait, et ce qui en est sorti.",
+      "journal": "Chaque événement facturé, du plus récent au plus ancien."
+    },
+    "period": {
+      "label": "Période",
+      "short": "{{count}} j"
+    },
+    "refresh": "Actualiser",
+    "loading": "Lecture de la consommation…",
+    "failure": "La consommation n'a pas pu être lue.",
+    "retry": "Réessayer",
+    "empty": "Aucune activité sur cette période.",
+    "noAccount": "Aucune clé API enregistrée. Ajoutez-en une dans les préférences pour voir votre consommation.",
+    "noBalance": "L'API Scenario n'expose pas de solde : ces chiffres sont ce qui a été dépensé, jamais ce qu'il reste.",
+    "mixedAccounts": "Le total additionne des clés facturées séparément — il ne correspond à aucune facture.",
+    "total": "Total consommé",
+    "discount": "Remises",
+    "jobs": "Générations",
+    "units": "UC",
+    "indicative": "Montant indicatif, calculé sur la grille publique des packs prépayés.",
+    "daily": "Par jour",
+    "perAccount": "Par compte",
+    "silent": "Ces clés n'ont pas répondu : {{names}}. Les chiffres ci-dessus sont ceux des autres.",
+    "columns": {
+      "model": "Modèle",
+      "units": "Unités",
+      "jobs": "Générations",
+      "apiKey": "Dont clé API",
+      "action": "Action",
+      "count": "Nombre",
+      "kind": "Type d'asset",
+      "time": "Date",
+      "account": "Compte"
+    },
+    "assets": "Assets produits",
+    "actions": "Actions",
+    "loadMore": "Charger la suite",
+    "free": "gratuit"
   },
   "blend": {
     "normal": "Normal",

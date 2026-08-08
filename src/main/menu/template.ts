@@ -33,6 +33,7 @@ import type { SceneAddRequest, SceneExportCommand, ToolRequest } from '@shared/i
 export type MenuActions = {
   openSettings: () => void
   openLicences: () => void
+  openUsage: () => void
   toggleFullScreen: () => void
   openTool: (request: ToolRequest) => void
   runCommand: (command: CommandId) => void
@@ -143,12 +144,19 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     click: () => actions.openLicences(),
   }
 
+  const usageItem: MenuItemConstructorOptions = {
+    label: t.menu.usage,
+    click: () => actions.openUsage(),
+  }
+
   // On macOS About lives in the application menu; Help exists here for the licences alone,
   // which is where every macOS application keeps its notice.
   const helpMenu: MenuItemConstructorOptions[] = [
     {
       label: t.menu.help,
-      submenu: isMac ? [licencesItem] : [{ role: 'about', label: aboutLabel }, licencesItem],
+      submenu: isMac
+        ? [usageItem, { type: 'separator' }, licencesItem]
+        : [{ role: 'about', label: aboutLabel }, usageItem, { type: 'separator' }, licencesItem],
     },
   ]
 

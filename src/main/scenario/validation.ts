@@ -14,6 +14,20 @@ import {
   PROMPT_SUGGESTIONS_MAX,
   type SuggestPromptsRequest,
 } from '@shared/domain/prompt-assist'
+import { USAGE_PERIODS, type UsageCursors, type UsagePeriod } from '@shared/domain/usage'
+
+const usagePeriod = z.literal(USAGE_PERIODS)
+
+export function parseUsagePeriod(value: unknown): UsagePeriod {
+  return usagePeriod.parse(value)
+}
+
+/** One cursor per account id. Bounded: a window asks for a handful of keys, never thousands. */
+const usageCursors = z.record(z.string().min(1), z.number().int().min(0))
+
+export function parseUsageCursors(value: unknown): UsageCursors {
+  return usageCursors.parse(value)
+}
 
 const modelId = z.string().trim().min(1)
 

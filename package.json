@@ -42,6 +42,8 @@
     "mediabunny": "^1.52.3",
     "opentype.js": "^2.0.0",
     "pixi.js": "8.19.0",
+    "react-is": "^19.2.8",
+    "recharts": "^3.10.1",
     "three": "0.185.1",
     "three-mesh-bvh": "^0.9.14"
   },
@@ -59,6 +61,7 @@
     "@types/node": "^24.9.1",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
+    "@types/react-is": "^19.2.0",
     "@types/three": "0.185.4",
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.10",

@@ -12,6 +12,7 @@ import type { AssetUploader } from './uploader'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
 import type { PromptAssist } from './prompt-assist'
+import type { UsageReader } from './usage'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
 
@@ -50,6 +51,16 @@ function assistant(overrides: Partial<PromptAssist> = {}): PromptAssist {
 
 const prompts = assistant()
 
+function reader(overrides: Partial<UsageReader> = {}): UsageReader {
+  return {
+    report: () => Promise.reject(new Error('unused')),
+    events: () => Promise.reject(new Error('unused')),
+    ...overrides,
+  }
+}
+
+const usage = reader()
+
 describe('scenario handlers', () => {
   beforeEach(() => {
     resetHandlers()
@@ -64,6 +75,7 @@ describe('scenario handlers', () => {
       jobs,
       prompts,
       uploads,
+      usage,
     })
 
     await expect(invoke(CHANNELS.scenarioSearchModels)).rejects.toThrow('rate-limited')
@@ -72,7 +84,7 @@ describe('scenario handlers', () => {
 
   it('rejects a query asking for more than one page of models', async () => {
     const search = vi.fn(() => Promise.resolve({ items: [], cursor: null }))
-    registerScenarioHandlers({ models: registry({ search }), jobs, prompts, uploads })
+    registerScenarioHandlers({ models: registry({ search }), jobs, prompts, uploads, usage })
 
     await expect(invoke(CHANNELS.scenarioSearchModels, { limit: 10_000 })).rejects.toThrow()
     expect(search).not.toHaveBeenCalled()
@@ -85,6 +97,7 @@ describe('scenario handlers', () => {
       jobs,
       prompts,
       uploads,
+      usage,
     })
 
     await expect(invoke(CHANNELS.scenarioDescribeModel, 'model_flux')).rejects.toThrow('not-found')
@@ -92,7 +105,7 @@ describe('scenario handlers', () => {
 
   it('rejects a malformed model identifier before reaching the registry', async () => {
     const describe = vi.fn(() => Promise.reject(new Error('unused')))
-    registerScenarioHandlers({ models: registry({ describe }), jobs, prompts, uploads })
+    registerScenarioHandlers({ models: registry({ describe }), jobs, prompts, uploads, usage })
 
     await expect(invoke(CHANNELS.scenarioDescribeModel, '   ')).rejects.toThrow()
     expect(describe).not.toHaveBeenCalled()
@@ -106,6 +119,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest }),
         uploads,
+        usage,
       })
 
       await expect(
@@ -121,6 +135,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest }),
         uploads,
+        usage,
       })
 
       await expect(
@@ -138,6 +153,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest }),
         uploads,
+        usage,
       })
 
       await expect(
@@ -156,6 +172,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest }),
         uploads,
+        usage,
       })
 
       await expect(
@@ -174,6 +191,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ suggest: () => Promise.reject(failing) }),
         uploads,
+        usage,
       })
 
       const refused = invoke(CHANNELS.scenarioSuggestPrompts, { modelId: 'model_flux' })
@@ -192,6 +210,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ translate }),
         uploads,
+        usage,
       })
 
       await expect(invoke(CHANNELS.scenarioTranslatePrompt, 'un rocher moussu')).resolves.toEqual({
@@ -208,6 +227,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ translate }),
         uploads,
+        usage,
       })
 
       await expect(invoke(CHANNELS.scenarioTranslatePrompt, '   ')).rejects.toThrow()
@@ -225,6 +245,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ describeStyle }),
         uploads,
+        usage,
       })
 
       await expect(
@@ -240,6 +261,7 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ describeStyle }),
         uploads,
+        usage,
       })
 
       await expect(invoke(CHANNELS.scenarioDescribeStyle, [])).rejects.toThrow()
@@ -253,12 +275,80 @@ describe('scenario handlers', () => {
         jobs,
         prompts: assistant({ describeStyle }),
         uploads,
+        usage,
       })
 
       const tooMany = Array.from({ length: PROMPT_IMAGES_MAX + 1 }, (_unused, at) => `asset_${at}`)
 
       await expect(invoke(CHANNELS.scenarioDescribeStyle, tooMany)).rejects.toThrow()
       expect(describeStyle).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('usage', () => {
+    const EMPTY_PAGE = { events: [], cursors: {}, more: false }
+
+    it('passes a period the API accepts straight through', async () => {
+      const report = vi.fn(() => Promise.reject(new Error('unused')))
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts,
+        uploads,
+        usage: reader({ report }),
+      })
+
+      await expect(invoke(CHANNELS.scenarioUsageReport, 31)).rejects.toThrow()
+      expect(report).toHaveBeenCalledWith(31)
+    })
+
+    // 120 days is the API's ceiling; anything else is a caller inventing a window.
+    it('refuses a period the API does not offer', async () => {
+      const report = vi.fn(() => Promise.reject(new Error('unused')))
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts,
+        uploads,
+        usage: reader({ report }),
+      })
+
+      await expect(invoke(CHANNELS.scenarioUsageReport, 45)).rejects.toThrow()
+      expect(report).not.toHaveBeenCalled()
+    })
+
+    it('pages the log from the cursors it is given and refuses a nonsensical one', async () => {
+      const events = vi.fn(() => Promise.resolve(EMPTY_PAGE))
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts,
+        uploads,
+        usage: reader({ events }),
+      })
+
+      const cursors = { 'acc-1': 100 }
+      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, cursors)).resolves.toEqual(EMPTY_PAGE)
+      expect(events).toHaveBeenCalledWith(7, cursors)
+
+      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, { 'acc-1': -1 })).rejects.toThrow()
+      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, 100)).rejects.toThrow()
+    })
+
+    it('reduces a refused usage call to a code like every other channel', async () => {
+      const failing = APIError.generate(429, undefined, LEAKY, new Headers())
+      registerScenarioHandlers({
+        models: registry(),
+        jobs,
+        prompts,
+        uploads,
+        usage: reader({ report: () => Promise.reject(failing) }),
+      })
+
+      const refused = invoke(CHANNELS.scenarioUsageReport, 31)
+
+      await expect(refused).rejects.toThrow('rate-limited')
+      await expect(refused).rejects.not.toThrow(LEAKY)
     })
   })
 })

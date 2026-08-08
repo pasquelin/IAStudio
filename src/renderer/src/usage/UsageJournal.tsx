@@ -1,0 +1,63 @@
+import { useTranslation } from 'react-i18next'
+import type { UsagePeriod } from '@shared/domain/usage'
+import { HeadCell, Row, UsageTable } from './UsageTable'
+import { formatMoment, formatUnits } from './format'
+import { useUsageEvents } from './useUsageReport'
+
+/**
+ * The raw billable log, event by event.
+ *
+ * Loads when this section is opened, not with the window: over 120 days it is the one call heavy
+ * enough to make opening feel slow, and it is nobody's first screen.
+ */
+export function UsageJournal({ period }: { period: UsagePeriod }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language
+  const { page, loading, failure, more } = useUsageEvents(period)
+
+  if (failure) return <p className="text-xs">{t('usage.failure')}</p>
+  if (!page && loading) return <p className="text-base-content/60 text-xs">{t('usage.loading')}</p>
+  if (!page || page.events.length === 0) {
+    return <p className="text-base-content/60 text-xs">{t('usage.empty')}</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <UsageTable
+        head={
+          <>
+            <HeadCell label={t('usage.columns.time')} />
+            <HeadCell label={t('usage.columns.action')} />
+            <HeadCell label={t('usage.columns.model')} />
+            <HeadCell label={t('usage.columns.account')} />
+            <HeadCell label={t('usage.columns.units')} numeric />
+          </>
+        }
+      >
+        {page.events.map((event, index) => (
+          <Row key={`${event.time}-${event.jobId ?? index}`}>
+            <td className="py-1.5 whitespace-nowrap">{formatMoment(event.time, locale)}</td>
+            <td className="py-1.5">{event.action}</td>
+            <td className="max-w-48 truncate py-1.5" title={event.modelName}>
+              {event.modelName ?? '—'}
+            </td>
+            <td className="py-1.5">{event.accountName}</td>
+            <td className="py-1.5 text-right font-mono">
+              {event.units === 0 ? (
+                <span className="text-base-content/60">{t('usage.free')}</span>
+              ) : (
+                formatUnits(event.units, locale)
+              )}
+            </td>
+          </Row>
+        ))}
+      </UsageTable>
+
+      {page.more && (
+        <button type="button" className="btn btn-xs self-start" onClick={more} disabled={loading}>
+          {t('usage.loadMore')}
+        </button>
+      )}
+    </div>
+  )
+}

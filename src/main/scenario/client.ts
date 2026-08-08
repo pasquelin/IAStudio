@@ -150,6 +150,17 @@ export function reducedBy(scope: string) {
   }
 }
 
+/**
+ * A client for one named account, outside the active-credentials cache above.
+ *
+ * The cache holds exactly one client and drops it whenever the active key changes, which is
+ * right for every call the studio makes on the user's behalf. Reading usage is the exception:
+ * it asks every stored key at once, and must not disturb which account is active.
+ */
+export function clientForCredentials(credentials: Credentials): Scenario {
+  return new Scenario({ apiKey: credentials.key, apiSecret: credentials.secret })
+}
+
 export function createClientProvider(
   resolve: () => Credentials | null,
   watch: WatchCredentials,

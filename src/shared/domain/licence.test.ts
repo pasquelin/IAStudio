@@ -17,6 +17,7 @@ const BUILD_ONLY = new Set([
   '@types/node',
   '@types/react',
   '@types/react-dom',
+  '@types/react-is',
   '@types/three',
   '@vitejs/plugin-react',
   '@vitest/coverage-v8',

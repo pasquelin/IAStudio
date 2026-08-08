@@ -59,6 +59,9 @@ const bridge: StudioBridge = {
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
     listJobs: () => ipcRenderer.invoke(CHANNELS.scenarioListJobs),
     onProgress: callback => subscribe<JobProgress>(EVENTS.jobProgress, callback),
+    usageReport: period => ipcRenderer.invoke(CHANNELS.scenarioUsageReport, period),
+    usageEvents: (period, cursors) =>
+      ipcRenderer.invoke(CHANNELS.scenarioUsageEvents, period, cursors),
   },
   project: {
     create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),

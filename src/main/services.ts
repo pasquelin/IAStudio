@@ -56,7 +56,16 @@ import { generationOfMetadata } from './scenario/asset-normalizer'
 import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
 import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
 import { isRecord } from '@shared/guards'
-import { createClientProvider, recordFailuresTo, type ClientProvider } from './scenario/client'
+import {
+  clientForCredentials,
+  createClientProvider,
+  recordFailuresTo,
+  type ClientProvider,
+} from './scenario/client'
+import { createUsageReader, type UsageReader } from './scenario/usage'
+
+/** Keys queried at once when reading usage. Fixed and low: the API publishes no rate limit. */
+const USAGE_CONCURRENCY = 4
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
@@ -75,6 +84,8 @@ export type Services = {
   models: ModelRegistry
   jobs: JobManager
   prompts: PromptAssist
+  /** What every stored key spent. Consumption only — the API exposes no balance to read. */
+  usage: UsageReader
   /** Names what arrives without a useful name. Never throws, never blocks its caller. */
   captionArrivals: AutoCaption
   /** Names a chosen selection, whatever it is already called. */
@@ -286,6 +297,20 @@ export function createServices(settings: SettingsStore): Services {
     concurrency: () => settings.read().generation.concurrentJobs,
     maxRetries: () => settings.read().generation.maxRetries,
     sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+  })
+
+  // Its own client per account rather than the shared one: reading usage asks every stored key
+  // at once and must leave the active account exactly as it found it. Its own queue too, small
+  // and fixed: no rate limit is published, and a burst of keys on one endpoint earns a 429.
+  const usage = createUsageReader({
+    accounts: () => settings.keyedAccounts(),
+    clientFor: clientForCredentials,
+    queue: createAssistQueue({
+      concurrency: () => USAGE_CONCURRENCY,
+      maxRetries: () => settings.read().generation.maxRetries,
+      sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+    }),
+    now: () => new Date(),
   })
 
   const prompts = createPromptAssist({
@@ -543,6 +568,7 @@ export function createServices(settings: SettingsStore): Services {
     models,
     jobs,
     prompts,
+    usage,
     captionArrivals: captioner.onArrival,
     describeAssets: captioner.describe,
     uploads,
