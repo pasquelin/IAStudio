@@ -3,7 +3,7 @@ import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { CommandId } from '@shared/domain/command'
 import type { Project } from '@shared/domain/project'
-import type { JobProgress } from '@shared/domain/job'
+import type { Job, JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
 import type { Settings } from '@shared/domain/settings'
 import type { UpdateState } from '@shared/domain/update'
@@ -59,6 +59,7 @@ const bridge: StudioBridge = {
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
     listJobs: () => ipcRenderer.invoke(CHANNELS.scenarioListJobs),
     onProgress: callback => subscribe<JobProgress>(EVENTS.jobProgress, callback),
+    onJobsChanged: callback => subscribe<Job[]>(EVENTS.jobsChanged, callback),
     usageReport: period => ipcRenderer.invoke(CHANNELS.scenarioUsageReport, period),
     usageEvents: (period, cursors) =>
       ipcRenderer.invoke(CHANNELS.scenarioUsageEvents, period, cursors),

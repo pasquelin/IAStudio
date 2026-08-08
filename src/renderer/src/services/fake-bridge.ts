@@ -46,6 +46,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       cancelJob: () => Promise.resolve(),
       listJobs: () => Promise.resolve([]),
       onProgress: noSubscription,
+      onJobsChanged: noSubscription,
       usageReport: () => Promise.reject(new Error('no usage')),
       usageEvents: () => Promise.reject(new Error('no usage')),
       ...overrides.scenario,

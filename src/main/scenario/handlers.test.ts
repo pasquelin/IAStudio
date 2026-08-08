@@ -37,6 +37,7 @@ const jobs: JobManager = {
   },
   cancel: () => Promise.resolve(),
   list: () => [],
+  resume: () => {},
 }
 
 function assistant(overrides: Partial<PromptAssist> = {}): PromptAssist {

@@ -7,6 +7,8 @@
  *
  * Sources, in `docs/scenario-api/reference/`: `assets.get_bulk.md`, `assets.delete_multiple.md`,
  * `assets.list.md`. The collection and batch-download caps join them when those endpoints do.
+ *
+ * How many calls a minute may hold is another quantity entirely, and lives in `rate-limiter.ts`.
  */
 
 /** `POST /assets/get-bulk` */

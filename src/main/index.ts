@@ -61,7 +61,9 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
     event.preventDefault()
     leaving = true
-    void services.journal.flush().finally(() => app.quit())
+    // The note of what is still running goes out with the journal: a job whose submission
+    // landed in the last moments would otherwise be lost, and it has already been paid for.
+    void Promise.all([services.journal.flush(), services.flushJobs()]).finally(() => app.quit())
   })
 
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over

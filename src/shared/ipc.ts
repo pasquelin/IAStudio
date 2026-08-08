@@ -283,6 +283,7 @@ export type LogEntry = {
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
   jobProgress: 'evt:job-progress',
+  jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
@@ -381,6 +382,14 @@ export type StudioBridge = {
     cancelJob: (jobId: string) => Promise<void>
     listJobs: () => Promise<Job[]>
     onProgress: (callback: (progress: JobProgress) => void) => Unsubscribe
+    /**
+     * The whole list, sent when it gains or loses an entry rather than when one of them moves.
+     *
+     * A progress event names a job by id, so a replica can only merge it into one it already
+     * holds: a job picked up from a previous session, and one that left the session because its
+     * project is no longer open, are both invisible to `onProgress` by construction.
+     */
+    onJobsChanged: (callback: (jobs: Job[]) => void) => Unsubscribe
     /**
      * What every stored account spent over the period — consumption only, never a balance: the
      * API exposes no such thing. Accounts are queried together and a refused key is reported in

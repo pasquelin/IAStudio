@@ -46,7 +46,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => `asset_${++sequence}`,
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     expect(await collect(JOB, ['remote_1'])).toEqual(['asset_1'])
@@ -60,7 +60,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => `asset_${++sequence}`,
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     await collect(JOB, ['remote_1', 'remote_2'])
@@ -74,7 +74,7 @@ describe('asset collector', () => {
         Promise.resolve(remote(remoteAssetId === 'remote_caption' ? 'json' : 'image')),
       backend,
       newId: () => 'asset_1',
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     expect(await collect(JOB, ['remote_caption', 'remote_image'])).toEqual(['asset_1'])
@@ -87,7 +87,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('3d')),
       backend,
       newId: () => 'asset_1',
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -102,7 +102,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'texture-normal' }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -116,7 +116,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'texture-smoothness' }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -136,7 +136,8 @@ describe('asset collector', () => {
         }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: async remoteAssetId => (remoteAssetId === 'remote_source' ? 'asset_source' : null),
+      heldFor: async remoteAssetId =>
+        remoteAssetId === 'remote_source' ? { id: 'asset_source' } : null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -154,7 +155,7 @@ describe('asset collector', () => {
         }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -167,7 +168,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'inference-txt2img' }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -189,11 +190,40 @@ describe('asset collector', () => {
       }),
       backend,
       newId: () => 'asset_1',
-      localIdOf: async () => null,
+      heldFor: async () => null,
     })
 
     await collect(JOB, ['a', 'b', 'c'])
     expect(peak).toBe(1)
+  })
+
+  it('reuses what this job already put in the project instead of downloading it again', async () => {
+    const { backend, imported } = backendSpy()
+    const retrieve = vi.fn(() => Promise.resolve(remote('image')))
+
+    const collect = createAssetCollector({
+      retrieve,
+      backend,
+      newId: () => 'asset_new',
+      heldFor: async () => ({ id: 'asset_already_here', jobId: JOB.id }),
+    })
+
+    expect(await collect(JOB, ['remote_1'])).toEqual(['asset_already_here'])
+    expect(retrieve).not.toHaveBeenCalled()
+    expect(imported).toEqual([])
+  })
+
+  it('collects its own output even when the library already holds a copy from elsewhere', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () => Promise.resolve(remote('image')),
+      backend,
+      newId: () => 'asset_generated',
+      heldFor: async () => ({ id: 'asset_pulled_from_cloud' }),
+    })
+
+    expect(await collect(JOB, ['remote_1'])).toEqual(['asset_generated'])
+    expect(imported[0]).toMatchObject({ jobId: JOB.id, name: 'Flux' })
   })
 })
 
@@ -206,7 +236,7 @@ describe('what the collector records about a generation', () => {
         retrieve: id => Promise.resolve(assets[id] ?? { url: 'https://cdn/x.png', kind: 'image' }),
         backend,
         newId: () => `asset_${(next += 1)}`,
-        localIdOf: () => Promise.resolve(null),
+        heldFor: () => Promise.resolve(null),
       }),
       seen,
     }

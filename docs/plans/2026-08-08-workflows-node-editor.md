@@ -120,7 +120,41 @@ comme modèles.
 
 ## Étape 1 — Les deux statuts qui feraient poller pour toujours
 
-- [ ] Livrée
+- [x] Livrée
+
+> **Suivie, mais sa prémisse est fausse — et c'est le SDK qui le dit.** Les deux corrections
+> ci-dessous étaient présentées comme des correctifs ; ce sont des **assurances**.
+> `resources/workflows.d.ts` l. 4079-4091 donne à la réponse de `workflows.run` les **huit**
+> statuts de la génération et une progression *« between 0 and 1 »* ; `jobs.retrieve`, le seul
+> endpoint que le `JobManager` interroge, dit la même chose, et le filtre du serveur MCP officiel
+> aussi. Seul le guide en prose annonce `succeeded`/`failed` et 0–100. Rien dans l'historique du
+> compte ne permet d'observer un vrai job de workflow (`jobs_list type: workflow` est vide).
+>
+> Les deux lignes de `STATUS` et l'heuristique de progression sont donc **livrées quand même** :
+> inertes si le SDK dit vrai, salvatrices si c'est le guide, et sans collision dans les deux cas.
+> Le § 4.5 de `REPRISE.md` porte le détail. **Conséquence pour l'étape 5** : ne pas coder en dur
+> l'un des deux vocabulaires — observer ce qu'un vrai job de workflow répond, et le consigner.
+>
+> **Le seuil de pourcentage est 2, pas 1** — et c'est `/code-review` qui l'a rattrapé. Le dépôt
+> documente qu'une génération dépasse sa propre échelle : « *Clamped, because a job that reports
+> 1.02 must not overflow its track* » (`design/ProgressBar.tsx`). Diviser dès 1 faisait donc
+> retomber la fin de chaque génération à **1 %**, une régression sur le chemin vivant introduite
+> pour un vocabulaire que personne n'a observé. Au-dessus de 2, aucune fraction ne peut vivre.
+>
+> Trois autres corrections de la même revue : `jobProgressOf` rend **0 sur une valeur non finie**
+> (un NaN stocké était réémis à chaque poll, `NaN !== NaN` battant la garde qui n'émet que sur
+> changement, et `JobsStatus` somme ces valeurs) ; `jobStatusOf` ne lit que les **clés propres** de
+> sa table (un statut nommé comme un membre du prototype ne retombait pas sur `running`) ; et le
+> test de bout en bout portait ses pourcentages sur un poll **final**, où `advance` sort avant de
+> rien stocker — il ne prouvait rien, il les porte désormais sur un poll encore en cours.
+>
+> Deux ajouts hors plan, issus de `/simplify` : la progression est **bornée à `[0, 1]`** en plus
+> d'être normalisée ; et le `sleep` du harness de test est **borné** — ces délais se résolvent sur
+> la file de microtâches, donc une boucle de poll dont la condition de sortie régresse tournait à
+> l'infini sans qu'aucun timer, celui de vitest compris, ne puisse tomber. La garde **relance hors
+> de la chaîne de promesses** (`queueMicrotask`), parce que `execute` rattrape tout : avalée, elle
+> réglait le job en échec et laissait passer au vert une boucle emballée. Vérifié en retirant
+> `success` de la table : le run devient rouge en 233 ms au lieu de pendre.
 
 **C'est la première étape, et rien du reste ne peut marcher avant.**
 
@@ -147,7 +181,63 @@ vert.
 
 ## Étape 2 — Le limiteur de débit, 100 requêtes par minute
 
-- [ ] Livrée
+- [x] Livrée
+
+> **Pas dans `reducedBy` : dans le `fetch` du client SDK.** Le plan le donnait pour « le passage
+> obligé de chaque appel » — il ne l'est pas. `reducedBy` enrobe deux familles de handlers IPC
+> (`scenario` et `assets`, deux appels dans tout `src/`), et le `JobManager` poll droit à travers
+> son runner sans le traverser : le plus gros consommateur de requêtes du studio serait passé à
+> côté du limiteur. `ClientOptions.fetch` est injectable, et **tout** y passe — la pagination
+> automatique et les réessais internes du SDK compris.
+>
+> Une **fenêtre glissante**, pas un seau à jetons : l'API compte par minute, et l'ouverture d'un
+> projet dépense légitimement cent requêtes d'un coup qu'un seau étalerait pour rien. Les
+> acquisitions sont **sérialisées** — sans quoi tous ceux que la même expiration réveille se
+> disputent l'unique place libérée, et le plus ancien peut perdre indéfiniment. La fenêtre est
+> nommée par un **digest de la clé** : elle appartient au compte de toute façon, et rien qui
+> pourrait finir dans un dump n'a besoin de porter le secret pour dire lequel.
+>
+> L'attente est annulable, et le refus arrive **avant que la place soit prise**, pas seulement
+> avant l'attente : un appelant qui a renoncé pendant qu'il faisait la queue ne doit pas dépenser
+> une requête que l'API compte à tout le monde.
+>
+> **Le piège qu'ont trouvé `/simplify` puis `/code-review`, et qui aurait rendu le limiteur
+> nuisible.** Le SDK arme le timeout d'une requête **avant** d'appeler le transport (`client.js`,
+> `fetchWithTimeout`) : toute attente est prise sur le budget de l'aller-retour. La première
+> réponse — allonger le timeout du client et lever une erreur au-delà d'un plafond — était fausse
+> deux fois, et la revue l'a démontrée par simulation :
+>
+> 1. **une erreur levée depuis le transport n'arrive jamais telle quelle.** Le SDK rattrape ce qui
+>    en sort, le réessaie deux fois, puis le remballe en `APIConnectionError` : la limite serait
+>    arrivée à l'utilisateur en « échec réseau » sur une connexion saine, et la branche ajoutée à
+>    `failureOf` était du code mort ;
+> 2. **allonger le timeout du client le fait pour toutes les requêtes**, y compris l'immense
+>    majorité qui n'attend pas : un réseau réellement mort mettait six minutes à se déclarer au
+>    lieu de trois.
+>
+> La bonne réponse tient dans la langue que le SDK parle déjà : au-delà de **10 s** d'attente, le
+> transport rend une **réponse 429 de synthèse portant `retry-after-ms`**. Le SDK l'attend au
+> millimètre (`client.js` honore cet en-tête), la réessaie, et ce qui remonte s'il persiste est une
+> `APIError` que `failureOf` lit déjà en `rate-limited`. Le timeout du client redevient son défaut.
+>
+> Trois autres corrections de la même revue : le **plafond d'attente est compté à l'arrivée** de
+> l'appelant et non quand son tour vient (compté au tour, chaque attendant recevait un budget neuf
+> et la file entière était tenue sans borne — 320 acquisitions simulées, zéro refus) ; l'horloge
+> est **monotone**, une horloge murale qui recule laissant dans la fenêtre des instants futurs qui
+> refusaient *tous* les appels ; et un appelant qui renonce **pendant qu'il fait la queue** est
+> relâché tout de suite au lieu d'attendre son tour, sans quoi l'appel SDK derrière lui ne se
+> règle jamais. La limite effective est **95** et non 100 : le studio compte au départ, l'API à
+> l'arrivée, et la marge absorbe la dérive.
+>
+> **À arbitrer, hors périmètre de cette étape** : le polling seul dépense **90 requêtes/minute sur
+> 100** à la concurrence par défaut (3 jobs, poll à 2 s), et 300 à la concurrence 10 des workflows.
+> Le limiteur ne crée pas ce dépassement, il le rend net — mais il sera saturé en usage normal
+> tant que la demande n'est pas réduite. Recommandation : allonger l'intervalle de poll, ou
+> l'asservir au budget restant. C'est un changement de comportement, donc une décision.
+>
+> **Hors périmètre, assumé et écrit dans `REPRISE.md`** : `download()` va chercher une URL signée
+> par `net.fetch`, et les envois multipart du SDK vont sur S3 avec le `fetch` global. Ni l'un ni
+> l'autre n'est un appel d'API, ni compté.
 
 Dette du § 3.6. La limite est **100 requêtes/minute/projet**, écrite dans
 `workflows-and-apps.md` § « Rate Limits ». `limits.ts` ne borne que la **taille des lots**, le
@@ -177,7 +267,30 @@ passent, le 101ᵉ attend, la fenêtre glisse, un appel annulé libère sa place
 
 ## Étape 3 — Un job survit à la fermeture de l'application
 
-- [ ] Livrée
+- [x] Livrée
+
+> **L'étape la plus grosse des trois premières, et de loin** — le détail est au § 3.6 de
+> `REPRISE.md`. Elle a touché huit fichiers hors du `JobManager` : le carnet de comptes (une
+> identité de compte qui survit à un ré-ajout), le magasin de réglages, le collecteur d'assets,
+> le provider de client, la racine de composition et la fermeture de l'application.
+>
+> **Les trois pièges annoncés par le plan étaient les bons**, mais deux réponses du plan étaient
+> insuffisantes. « Garder l'identifiant du compte » : l'id local ne suffit pas, un retrait suivi
+> d'un ré-ajout de la même clé le renouvelle et le job repris est perdu en silence — c'est une
+> **empreinte de la clé** qu'il faut, la même notion que celle qui nomme les fenêtres du limiteur.
+> Et « ne pas ressusciter un job annulé » est le petit frère d'une règle bien plus large que le
+> plan ne voyait pas : **une note ne part que si l'API a conclu**. La première version oubliait le
+> job sur tout statut terminal, si bien qu'une coupure réseau de quinze secondes effaçait la note
+> d'une génération vivante et payée.
+>
+> **Un quatrième piège, absent du plan** : le collecteur frappait un id local neuf par sortie, donc
+> une note survivant à un job déjà collecté réimportait tout et refacturait le transfert. Un
+> `localIdOf` sur la sortie — la fonction était déjà là, employée pour le parent seulement.
+>
+> **Et une décision que le plan ne posait pas** : la reprise se fait à l'ouverture du projet, pas au
+> démarrage, parce que le collecteur écrit dans le catalogue du projet ouvert. La note porte donc
+> son projet, et un job qui aboutit alors qu'un autre projet est ouvert **ne collecte pas** : il
+> s'efface de la session et attend le retour du sien.
 
 Dette du § 3.6, et **prérequis dur** de tout job long. Aujourd'hui `createJobManager` tient tout
 dans une `Map`, et rien n'appelle `jobs.list` au démarrage : une génération vidéo de dix minutes,
@@ -205,6 +318,59 @@ terminés, et **collecter les sorties de ceux qui ont abouti pendant l'absence**
 **Fin d'étape** : un test qui écrit l'état, reconstruit un manager, et vérifie qu'un job `running`
 reprend son polling, qu'un job abouti pendant l'absence est collecté, et qu'un job annulé ne
 repart pas.
+
+---
+
+## Revue de cohérence de la branche — entre l'étape 3 et l'étape 4
+
+Les trois étapes avaient chacune eu son `/simplify` et son `/code-review`. Cette passe-ci cherchait
+**ce qu'une revue par étape ne peut pas voir** : ce qu'une étape casse dans une autre, deux notions
+du même concept, un document qui contredit le code. Elle a rendu **dix défauts confirmés**, tous
+corrigés avant la fusion. Elle valait son prix : quatre des dix étaient sévères, et aucun n'était
+visible depuis l'étape qui l'avait introduit.
+
+**Les quatre qui perdaient du travail ou de l'argent.**
+
+1. **Annuler un job repris ne prévenait pas l'API.** L'étape 3 a donné un `remoteId` aux entrées
+   encore en file ; la branche « déjà en file » de `cancel` datait d'avant et disait « il n'a jamais
+   atteint l'API ». Elle sortait donc le job de la file, `settle` libérait son compte — et la
+   génération continuait d'être facturée sans que rien dans le studio ne puisse plus l'arrêter.
+   Pire : la note repartait sur disque, donc le job annulé **réapparaissait** à l'ouverture suivante.
+2. **Un job repris était invisible.** `resume` l'annonçait par un événement de progression, mais la
+   réplique du renderer ne sait que fusionner dans une ligne qu'elle a déjà : un identifiant inconnu
+   est ignoré en silence. Le commentaire du code affirmait exactement le contraire de ce qui se
+   passait.
+3. **Un job dont le projet a changé disparaissait sans le dire.** La seule sortie qui ne passait pas
+   par `settle`, donc le seul cas sans événement terminal : la ligne tournait pour le reste de la
+   session, avec un bouton Annuler que le main n'avait plus d'entrée pour servir.
+4. **`entry.done` n'était jamais posé dans le `catch` d'`execute`.** Un job dont l'API a perdu la
+   trace (404) rejouait son échec **à chaque ouverture de projet pendant sept jours**.
+
+Les deux premiers ont la même réponse : un canal `evt:jobs-changed` qui porte la liste entière
+quand elle **gagne ou perd** une entrée — ce qu'un événement de progression, qui nomme un job par
+son identifiant, ne peut pas exprimer par construction.
+
+**Les deux qui demandaient un arbitrage, tranchés par l'utilisateur** (voir § 3.6 de `REPRISE.md`
+pour le détail) : l'intervalle de poll est désormais **calculé** sur le nombre de jobs suivis, et
+l'annulation passe devant tout le monde grâce à une **file à priorité** doublée de places
+réservées. Les deux « dettes assumées » de l'étape 2 sont donc payées, pas reportées.
+
+**Les quatre derniers** : la garde de re-collecte de l'étape 3 était aveugle à la provenance et
+adoptait un asset venu de la bibliothèque du compte — elle est maintenant portée par le `jobId` ;
+`persist` avalait toute erreur d'écriture sous un `.catch(() => {})` muet, alors que c'est
+précisément la garantie que l'étape 3 existe pour tenir ; `windowNameOf` dupliquait
+`accountFingerprint` au caractère près, alors que les deux documents affirmaient qu'il n'y avait
+qu'une notion ; et `REPRISE.md` donnait pour livrée la formule de progression que `/code-review`
+avait rejetée à l'étape 1.
+
+**Trois candidats ont été réfutés** par la vérification, dont deux sur le même point : `accounts.of`
+ne casse pas le cache `bound`, et le § 3.6 ne se contredit pas sur le débit.
+
+**Ce que `pnpm validate` cachait.** Les 3931 tests passaient, mais trois budgets de couverture
+étaient dépassés — le pipe `| tail` masquait le code de sortie, et la session précédente a cru la
+branche verte. `develop` l'était, la branche non. Le code non couvert était exactement celui que la
+revue a relevé : la garde d'idempotence du collecteur et le rattrapage d'écriture du `job-store`,
+tous deux non testés. **Un budget de couverture qui déborde nomme souvent le défaut avant la revue.**
 
 ---
 

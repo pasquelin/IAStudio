@@ -1,4 +1,4 @@
-import type { AssetGeneration } from '@shared/domain/asset'
+import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { assetTypeOfRemote } from '@shared/domain/asset-kind'
 import { channelFromScenarioType } from '@shared/domain/texture'
 import type { AssetCollector } from '@main/scenario/job-manager'
@@ -25,15 +25,18 @@ export type CollectorDeps = {
   retrieve: (remoteAssetId: string) => Promise<RemoteAsset>
   backend: LocalBackend
   newId: () => string
-  /** The local asset an API one became, or `null` when the parent never entered the project. */
-  localIdOf: (remoteAssetId: string) => Promise<string | null>
+  /**
+   * The local asset an API one became, or `null` when it never entered the project. `jobId` is
+   * what put it there, and the collector reads it: a row alone does not say whose output it is.
+   */
+  heldFor: (remoteAssetId: string) => Promise<Pick<Asset, 'id' | 'jobId'> | null>
 }
 
 export function createAssetCollector({
   retrieve,
   backend,
   newId,
-  localIdOf,
+  heldFor,
 }: CollectorDeps): AssetCollector {
   return async (job, remoteAssetIds) => {
     const collected: string[] = []
@@ -41,6 +44,17 @@ export function createAssetCollector({
     // Sequential on purpose: a single generation can return a dozen outputs, and downloading
     // them all at once would fight the very concurrency the JobManager bounds.
     for (const [index, remoteAssetId] of remoteAssetIds.entries()) {
+      // This job's own output, already here: a second pass over a note that outlived a crash, or
+      // a resumed job the studio had in fact collected. Downloading it again would duplicate
+      // every output and pay for the transfer twice. Scoped to the job rather than to the remote
+      // id alone, or a copy the user had pulled from the account library would be adopted as the
+      // output — and it carries neither the prompt behind it, nor its group, nor its label.
+      const held = await heldFor(remoteAssetId)
+      if (held?.jobId === job.id) {
+        collected.push(held.id)
+        continue
+      }
+
       const remote = await retrieve(remoteAssetId)
       const source = channelFromScenarioType(remote.metadataType)
       const type = assetTypeOfRemote(remote)
@@ -48,7 +62,7 @@ export function createAssetCollector({
 
       // What the channels of one texture hang from. Absent when the parent never entered the
       // project — an image uploaded straight to the API, or converted before it was imported.
-      const derivedFrom = remote.parentId ? await localIdOf(remote.parentId) : null
+      const parent = remote.parentId ? await heldFor(remote.parentId) : null
 
       const asset = await backend.importFromUrl({
         id: newId(),
@@ -63,7 +77,7 @@ export function createAssetCollector({
         ...(remote.ownerId ? { remoteOwnerId: remote.ownerId } : {}),
         ...(remote.updatedAt ? { remoteUpdatedAt: remote.updatedAt } : {}),
         ...(remote.generation ? { generation: remote.generation } : {}),
-        ...(derivedFrom ? { derivedFrom } : {}),
+        ...(parent ? { derivedFrom: parent.id } : {}),
         // Absent rather than false: an ordinary map is not "a map that is not inverted".
         ...(source ? { map: source.channel } : {}),
         ...(source?.inverted ? { mapInverted: true } : {}),

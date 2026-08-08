@@ -712,7 +712,10 @@ dans l'import » cherchera là.
 
 ## 3.6 Dettes transverses
 
-**Rien ne borne le DÉBIT des appels à l'API.** La limite est **100 requêtes par minute et par
+> **Le débit est borné depuis l'étape 2 de `feat/workflows`** (`scenario/rate-limiter.ts`). Ce qui
+> suit décrit la dette et reste vrai de son diagnostic ; ce qui a changé est dit à la fin.
+
+**Rien ne bornait le DÉBIT des appels à l'API.** La limite est **100 requêtes par minute et par
 projet** — écrite noir sur blanc dans la copie locale,
 `docs/scenario-api/guides/get-started/documentation/workflows-and-apps.md`, § « Rate Limits », avec
 10 jobs de workflow concurrents et 50 nodes par workflow. `limits.ts` ne borne que la **taille des
@@ -723,15 +726,82 @@ les vignettes de modèles par lots de 100 ids, les previews, et une synchro d'as
 
 Depuis `feat/prompt-assist`, il y a une **troisième** source d'appels : `assist-queue.ts` borne la
 concurrence de l'assistance de fond, et sa JSDoc dit elle-même qu'elle « décide seulement quand le
-travail tourne » — donc pas le débit. Trois bornes de concurrence, toujours zéro borne de débit.
+travail tourne » — donc pas le débit. Trois bornes de concurrence, zéro borne de débit.
 
-Ce qui tient aujourd'hui, et pourquoi ce n'est pas une solution : le `retry` de `scenario/retry.ts`
-— sorti du `JobManager` par cette même branche, et désormais partagé — réessaie les 429 en
-backoff exponentiel. **Le studio dégrade au lieu de casser** — mais un limiteur est ce qui évite d'y
-arriver, et un backoff sous rafale rallonge chaque génération de la file. Il faut un seau à jetons
-(100/60 s) **au-dessus du client SDK**, donc traversé par tout le monde : `reducedBy` est déjà le
-passage obligé de chaque appel, c'est le bon endroit. Le compter par compte actif, pas globalement :
-la limite est par projet, et une clé porte son projet (`owner-scope.ts`).
+Ce qui tenait, et pourquoi ce n'était pas une solution : le `retry` de `scenario/retry.ts` réessaie
+les 429 en backoff exponentiel. **Le studio dégradait au lieu de casser** — mais un limiteur est ce
+qui évite d'y arriver, et un backoff sous rafale rallonge chaque génération de la file.
+
+**Ce qui a été livré, et l'endroit où le plan se trompait.** Une fenêtre glissante de 100 requêtes
+sur 60 secondes, **par compte** — la limite est par projet, et une clé porte son projet. Elle n'est
+pas dans `reducedBy` comme le plan l'annonçait : `reducedBy` **n'est pas le passage obligé**, c'est
+un enrobage de deux familles de handlers IPC (`scenario` et `assets`), et le `JobManager` poll
+droit à travers son runner sans le traverser. Le vrai passage obligé est le **`fetch` du client
+SDK**, injectable par `ClientOptions.fetch` : aucun appel n'existe sans client, la pagination
+automatique et les réessais internes du SDK y passent aussi, et un appelant ne peut pas l'oublier.
+
+Six choses à savoir avant d'y toucher, dont deux qui ont coûté une revue chacune :
+
+- **une fenêtre, pas un seau à jetons.** L'API compte des requêtes par minute : un studio resté
+  inactif peut légitimement en dépenser cent d'un coup — c'est ce que fait l'ouverture d'un projet —
+  là où un seau qui se remplit d'un jeton toutes les 600 ms étalerait cette rafale pour rien ;
+- **95, pas 100.** Le studio compte une requête quand il la lâche, l'API quand elle arrive. Cent
+  admises juste avant la bascule peuvent atteindre le serveur groupées derrière un uplink lent et
+  tomber dans la même minute côté serveur que la première de la fenêtre suivante — un 429 pour un
+  client irréprochable. `RATE_MARGIN` absorbe cette dérive ;
+- **un appelant tenu longtemps se voit répondre `429`, il n'attend pas.** Le SDK arme le timeout
+  d'une requête **avant** d'appeler le transport (`client.js`, `fetchWithTimeout`) : chaque
+  milliseconde d'attente est prise sur le budget de l'aller-retour lui-même. Le transport ne tient
+  donc un appel que `MAX_WAIT_MS` (10 s) ; au-delà il rend une réponse **429 de synthèse portant
+  `retry-after-ms`**, que le SDK sait attendre au millimètre et réessayer. **Lever une erreur ne
+  marche pas** : le SDK rattrape tout ce qui sort du transport, le réessaie et le remballe en
+  `APIConnectionError` — la limite de débit arriverait à l'utilisateur en « échec réseau » sur une
+  connexion saine ;
+- **le plafond d'attente est compté à l'arrivée de l'appelant, pas quand son tour vient.** Compté
+  au tour, chaque attendant recevrait un budget neuf à mesure que le précédent est servi, et une
+  file de n'importe quelle profondeur serait tenue aussi longtemps qu'il le faut — exactement ce
+  que le plafond existe pour borner ;
+- **l'horloge est monotone** (`performance.now`). Une horloge murale qui recule — un portable qui
+  se réveille, un pas NTP — laisserait dans la fenêtre des instants situés dans le futur, que rien
+  n'expire, et **tout appel d'API serait refusé** jusqu'à ce que le temps rattrape ;
+- **les acquisitions sont sérialisées**, sinon tous les appelants réveillés par la même expiration
+  se disputent l'unique place libérée et le plus ancien peut perdre indéfiniment. C'est de l'ordre,
+  pas de la priorité : une ouverture de projet passe toujours ses lectures de catalogue devant la
+  génération demandée juste après ;
+- **les téléchargements d'assets n'y passent pas.** `download()` (`services.ts`) va chercher une
+  URL signée par `net.fetch`, et les envois multipart du SDK vont directement sur S3 avec le
+  `fetch` global (`lib/upload.js`). Les deux sont hors du quota, et c'est correct : ce ne sont pas
+  des appels d'API.
+
+**L'annulation passe devant — la dette est payée, pas assumée.** Elle était écrite ici comme
+insoluble à bon compte : une annulation est un appel d'API comme un autre, donc elle prenait un
+ticket dans la même file, se voyait tenue 10 s, puis répondre 429 que le SDK réessaie — le bouton
+Annuler pouvait rester mort **deux minutes** sur un job facturé pendant ce temps. La revue de
+cohérence de la branche l'a reproduite et l'utilisateur a tranché pour le vrai remède, celui que
+cette section nommait déjà : **une file à priorité**.
+
+Deux moitiés, et il faut les deux. Passer devant dans la file ne suffit pas — une fenêtre pleine
+fait attendre la même expiration à tout le monde, quel que soit l'ordre. Il faut donc aussi des
+**places réservées** (`URGENT_RESERVE`, 5 sur les 95 admises) qu'un appel ordinaire ne peut pas
+prendre. La priorité voyage par `AsyncLocalStorage` (`asUrgent`) et non par un argument, parce que
+le seul lecteur est le transport et que tout ce qui se trouve entre les deux est le SDK, qui
+n'offre aucun passage. **Réservé à l'annulation** : c'est le seul appel dont le but est d'arrêter
+la dépense.
+
+**Le polling se règle sur ce qu'il a le droit de dépenser.** À la concurrence par défaut
+(`concurrentJobs: 3`) et un poll toutes les 2 s, trois jobs dépensaient **90 requêtes par minute
+sur les 100** — avant le catalogue, les vignettes et l'assistance ; à la concurrence 10 des
+workflows, 300. Ce n'était pas qu'un inconfort : au-delà de quatre jobs, le limiteur tenait chaque
+poll, le SDK réessayait, et une génération **vivante et payée** était rapportée en « échec — limite
+de débit » au bout d'une quinzaine de secondes.
+
+L'intervalle est donc calculé, plus fixe : `max(2 s, jobs × 60 s / POLL_REQUESTS_PER_MINUTE)`, avec
+**75** requêtes par minute pour le poll seul. Une génération isolée garde ses 2 s — une barre qui
+avance vaut ses requêtes ; six s'espacent à 4,8 s ; dix à 8 s. Le budget est sous les 90 places
+ordinaires (95 moins la réserve d'annulation), de sorte qu'une ouverture de projet derrière trois
+générations garde une part au lieu de faire la queue derrière une boucle qui ne s'arrête jamais.
+Le `JobManager` le calcule depuis son propre compteur `running`, sans rien demander au limiteur :
+aucun câblage entre les deux.
 
 **La moitié rapatriement de la bibliothèque n'a pas de porte.** `cloud.pull`, `cloud.browse` et
 `cloud.plan` traversent la frontière, sont testés, et **aucun composant ne les appelle** — la JSDoc
@@ -748,18 +818,46 @@ Deux conséquences à ne pas confondre avec des bugs :
   compte ») : le transfert est à sens unique. Ouvrir cette moitié veut donc dire mettre à jour les
   deux manuels dans le même mouvement, sinon la doc redevient fausse dans l'autre sens.
 
-**Un job ne survit pas à la fermeture de l'application.** `createJobManager` tient tout dans une
-`Map` en mémoire, `scenario:list-jobs` lit cette map, et **rien n'appelle `jobs.list` au démarrage**.
-Une génération vidéo de dix minutes, l'application fermée entre-temps : le job aboutit chez Scenario,
-l'asset existe dans la bibliothèque du compte, et le studio ne le collectera **jamais** dans le
-projet — `collect` n'est appelé que par la boucle qui a soumis.
+> **Réglé par l'étape 3 de `feat/workflows`** (`scenario/job-store.ts`). Le diagnostic ci-dessous
+> reste exact ; ce qui a été livré, et ce que la revue a corrigé en chemin, suit.
 
-Ce n'est pas qu'une reprise d'affichage : c'est du travail payé et perdu. `jobs.list` est documenté
-(`reference/jobs.list.md`), filtrable par statut et par type, et `collector.ts` n'a besoin de rien de
-plus — il prend une liste d'ids d'assets distants et les importe. Ce qu'il faut est la persistance
-des entrées (`localId`, `jobId`, `modelId`, `label`, compte d'origine) et une reprise au boot qui
-réhydrate la file et relance le polling. **Prérequis dur de l'entraînement** (§ 4.8), qui dure des
-heures : sans lui, un train n'est pas seulement fragile, il est inutilisable.
+**Un job ne survivait pas à la fermeture de l'application.** `createJobManager` tenait tout dans une
+`Map` en mémoire, et **rien n'appelait `jobs.list` au démarrage**. Une génération vidéo de dix
+minutes, l'application fermée entre-temps : le job aboutit chez Scenario, l'asset existe dans la
+bibliothèque du compte, et le studio ne le collectait **jamais** dans le projet — `collect` n'est
+appelé que par la boucle qui a soumis. Ce n'était pas une reprise d'affichage : c'était du travail
+payé et perdu. **Prérequis dur de l'entraînement** (§ 4.8), qui dure des heures.
+
+**Ce qui est livré.** Les jobs inachevés sont écrits en JSON dans `app.getPath('userData')`,
+atomiquement (copie de transit puis `rename`), et repris **à l'ouverture du projet auquel ils
+appartiennent** — pas au démarrage : le collecteur écrit dans le catalogue du projet ouvert, et il
+n'y en a aucun avant. La note porte le compte, le projet, l'id distant et de quoi redessiner la
+ligne dans la barre de jobs ; ni le statut ni la progression, qui sont ce que l'API répondra au
+prochain poll et dont une copie périmée serait une seconde vérité.
+
+Six choses à savoir, dont quatre sont des défauts que la revue a trouvés dans la première version :
+
+- **une note ne part que si l'API a conclu.** C'est la règle centrale, et la première version
+  l'avait à l'envers : `settle` oubliait le job sur *tout* statut terminal, donc une coupure Wi-Fi
+  de quinze secondes au-delà du budget de réessai effaçait la note d'une génération vivante et
+  déjà payée — exactement la perte que le mécanisme existe pour empêcher. Un échec **local**
+  (réseau, clé indisponible, disque qui refuse) garde la note ; seuls un refus de l'API, une
+  annulation qu'elle a prise et une collecte réussie l'effacent ;
+- **la collecte est idempotente.** `collector.ts` frappait un id local neuf par sortie : une note
+  qui survivait à un job déjà collecté réimportait tout, et refacturait le transfert. Il consulte
+  désormais `localIdOf` sur la sortie elle-même, comme il le faisait déjà sur le parent ;
+- **un job ne collecte que dans son propre projet.** Le collecteur écrit là où le projet est
+  ouvert : plutôt que de classer une génération dans la mauvaise bibliothèque, le job s'efface de
+  la session et sa note attend que son projet revienne ;
+- **le compte est nommé par une empreinte de sa clé** (`accountFingerprint`), pas par l'id du
+  carnet, qu'un retrait suivi d'un ré-ajout renouvelle — le job repris ne retrouverait plus son
+  compte et serait perdu en silence. Même notion que celle qui nomme les fenêtres du limiteur ;
+- **un fichier illisible n'est pas un fichier vide.** Une écriture reconstruit le fichier depuis ce
+  qu'elle a lu : lire « rien » d'un fichier momentanément verrouillé aurait effacé les notes de
+  tous les autres projets d'un coup. Absent rend `[]`, illisible **refuse l'écriture** ;
+- **les notes se périment à sept jours**, et l'écriture est vidangée à la fermeture et au
+  changement de projet, à côté du journal — sans quoi la dernière note d'une session, celle qui
+  compte le plus, part avec le processus.
 
 **Les index du catalogue n'ont pas été posés.** `catalog.ts` déclare des index simples
 (`assets(type)`, `assets(created_at DESC)`, `asset_tags(tag)`, `assets(hash)`…). **Il manque l'index
@@ -790,6 +888,22 @@ rustinage local.
 **Durabilité.** `documents.ts` renomme atomiquement, ce qui protège d'un crash **en cours
 d'écriture**, mais ne fait pas de `fsync` : une coupure de courant peut perdre l'écriture. C'est écrit
 dans son propre commentaire, et assumé.
+
+**L'écriture atomique existe en deux exemplaires, et la preuve qu'elle devrait n'en faire qu'un est
+déjà là.** `scenario/job-store.ts` et `project/documents.ts` écrivent tous deux une copie de transit
+puis renomment, avec le **même commentaire mot pour mot**. La revue de cohérence de `feat/workflows`
+a corrigé dans le premier un défaut que le second porte toujours : le `rm` de nettoyage n'était pas
+protégé, si bien qu'un échec du ménage remplaçait l'erreur d'origine et masquait la vraie cause.
+Corrigé dans `job-store.ts`, **pas** dans `documents.ts` (`store` et `storeFolder`) — hors périmètre
+de cette branche. `isMissing` est dupliqué à l'identique entre les deux fichiers, commentaire
+compris.
+
+Un `writeAtomic` partagé — dans un `src/main/files.ts` — les réunirait, à condition de **garder le
+nom de la copie en paramètre** : `documents.ts` en veut un unique par appel (`<fichier>.<uuid>.tmp`,
+parce que plusieurs fenêtres écrivent et que le dossier appartient à l'utilisateur), `job-store.ts`
+un nom fixe (`.staging`, parce que ses écritures sont sérialisées et qu'un nom unique laisserait un
+orphelin par crash). Les **files** d'attente, elles, ne se factorisent pas : `documents.ts` en tient
+une par fichier dans une `Map`, `job-store.ts` une seule pour un seul fichier.
 
 **Le double dispatch des accélérateurs Electron n'a jamais été vérifié en conditions réelles.** macOS
 consomme probablement la frappe avant le renderer, Windows/Linux non. Personne ne l'a mesuré sur les
@@ -935,18 +1049,41 @@ est flottante et maison — ce qui tombe bien, le studio a la sienne (`design/To
 
 ## 4.5 Quatre pièges trouvés en lisant, avant d'avoir écrit une ligne
 
-**1. Un job de workflow pollerait pour toujours.** La table `STATUS` du `JobManager` connaît
-`success`, `failure`, `canceled` — les valeurs de l'API de génération. Un job de workflow répond
-`succeeded`, `failed`, `canceled` (`workflows-and-apps.md`, « Job Status Values »). Or un statut
-inconnu est traité comme `running`, **délibérément et à raison** : c'est ce qui protège d'un statut
-que Scenario ajouterait. Conséquence ici : `succeeded` et `failed` ne seraient jamais reconnus,
-`isFinished` ne serait jamais vrai, la boucle ne s'arrêterait pas et le job resterait au compteur de
-concurrence jusqu'à la fermeture. **Deux lignes dans `STATUS` et un test, avant tout le reste.**
+> **Les deux premiers reposaient sur la prose du guide, et le SDK la contredit — vérifié le
+> 8 août 2026, avant d'écrire l'étape 1.** `node_modules/@scenario-labs/sdk/resources/workflows.d.ts`,
+> l. 4079-4091, décrit la réponse de `workflows.run` : `status` y prend **les huit valeurs de la
+> génération** (`canceled | failure | finalizing | in-progress | pending | queued | success |
+> warming-up`), sans `succeeded` ni `failed`, et `progress` y porte le commentaire *« Progress of
+> the job (between 0 and 1) »*. `jobs.retrieve` — le seul endpoint que le `JobManager` interroge —
+> dit exactement la même chose (`resources/jobs.d.ts`, l. 39-51), et le filtre de statut du serveur
+> MCP officiel n'admet lui aussi que ces huit valeurs. Le guide en prose est donc **la seule des
+> trois sources** à annoncer `succeeded`/`failed` et une progression en 0–100.
+>
+> Aucun job de workflow n'existe dans l'historique du compte pour trancher à l'observation
+> (`jobs_list` filtré sur `type: workflow` rend une liste vide). L'étape 1 a donc livré les deux
+> corrections **comme des assurances, pas comme des correctifs** : elles ne coûtent rien si le SDK
+> dit vrai, et elles évitent la panne si c'est le guide.
 
-**2. La progression serait affichée à 10000 %.** `advance` recopie `remote.progress` tel quel. La
-génération le rend en 0–1, le workflow en 0–100 (`"progress": 100` dans la réponse d'exemple).
-Normaliser à l'entrée — `p > 1 ? p / 100 : p` — et non à l'affichage : la valeur est stockée dans
-`Job.progress` et lue par plusieurs surfaces.
+**1. Un job de workflow pollerait pour toujours** — si le guide dit vrai. La table `STATUS` du
+`JobManager` connaissait `success`, `failure`, `canceled`, les valeurs de l'API de génération. Un
+statut inconnu est traité comme `running`, **délibérément et à raison** : c'est ce qui protège d'un
+statut que Scenario ajouterait. Conséquence : `succeeded` et `failed` n'auraient jamais été
+reconnus, `isFinished` jamais vrai, la boucle ne se serait pas arrêtée et le job serait resté au
+compteur de concurrence jusqu'à la fermeture. **Deux lignes dans `STATUS` et un test** — livrées à
+l'étape 1. Aucune collision : aucune des deux graphies n'a d'autre sens dans le vocabulaire de la
+génération, la table unique est donc sans perte.
+
+**2. La progression serait affichée à 10000 %** — même condition. `advance` recopiait
+`remote.progress` tel quel. Normaliser **à l'entrée** — `p > 2 ? p / 100 : p`, puis borner à
+`[0, 1]` — et non à l'affichage : la valeur est stockée dans `Job.progress`, et `JobsStatus` la
+**somme** sur tous les jobs en cours, ce qu'un clamp d'affichage ne rattraperait pas. Livré à
+l'étape 1.
+
+**Le seuil est 2, et pas 1** — la première version divisait dès 1 et `/code-review` l'a rattrapée.
+Une génération dépasse sa propre échelle : `design/ProgressBar.tsx` est borné parce qu'un job
+rapporte 1.02, si bien que diviser dès 1 faisait retomber la fin de chaque génération à **1 %** —
+une régression sur le chemin vivant, introduite pour un vocabulaire que personne n'a observé.
+Au-dessus de 2, aucune fraction ne peut vivre. L'heuristique reste inerte si le SDK dit vrai.
 
 **3. Les sorties d'un workflow ne sont pas là où le manager les cherche.** `RemoteJob` ne lit que
 `metadata.assetIds`. Un job de workflow rend `metadata.flow[]`, **une entrée par node avec son
