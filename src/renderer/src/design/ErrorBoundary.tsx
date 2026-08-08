@@ -3,10 +3,7 @@ import { Failure } from './Failure'
 
 export type ErrorBoundaryProps = {
   children: ReactNode
-  /**
-   * Shown instead of the panel notice. Always a function, so `() => null` says "nothing" —
-   * a bare `null` would be indistinguishable from the prop being left out.
-   */
+  /** For a surface the notice does not suit — a header, a whole window. `() => null` shows nothing. */
   fallback?: (retry: () => void) => ReactNode
 }
 

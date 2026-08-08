@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from './EmptyState'
 
 export type FailureProps = {
-  /** What was lost: one panel, or the window holding them. */
   scope: 'panel' | 'window'
   onRetry: () => void
 }

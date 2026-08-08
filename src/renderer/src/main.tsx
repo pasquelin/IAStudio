@@ -48,8 +48,10 @@ function Route({ hash }: { hash: string }) {
 createRoot(root).render(
   <StrictMode>
     {/* Above the routes: the per-panel boundaries cover the docks, not the shell holding them.
-        Renders only — a throw while this module is evaluated happens before the boundary
-        exists, and leaves the empty window no React can catch. */}
+        Renders only, and not this module's own evaluation — a throw there predates the
+        boundary and leaves the empty window no React can catch. Event handlers and rejected
+        promises are outside too. Retry cannot mend a rejected `lazy()` either: React caches
+        the rejection, so the licences route in particular offers a button that cannot win. */}
     <ErrorBoundary fallback={retry => <Failure scope="window" onRetry={retry} />}>
       <Route hash={window.location.hash} />
     </ErrorBoundary>
