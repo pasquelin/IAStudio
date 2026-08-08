@@ -53,6 +53,21 @@ describe('layouts store', () => {
     expect(layouts.audio?.panels).toHaveProperty('tracks')
   })
 
+  // Only Dockview can read a layout back, so a build whose Dockview — or whose set of document
+  // kinds — has moved on cannot know whether a stored one still loads. It throws on restore if
+  // it does not, which is why the stamp exists rather than a migration.
+  describe('persisted format', () => {
+    it('is stamped with the Dockview major version that wrote it', () => {
+      expect(useLayouts.persist.getOptions().version).toBe(7)
+    })
+
+    it('drops anything stored under an older stamp instead of rewriting it', () => {
+      const migrate = useLayouts.persist.getOptions().migrate
+
+      expect(migrate?.({ layouts: { image: layout('generator') } }, 6)).toBeUndefined()
+    })
+  })
+
   describe('adopt', () => {
     // A panel is a document open, and the documents live in the project folder: kept across a
     // change of project, the tabs of the previous one come back over a folder that has none.

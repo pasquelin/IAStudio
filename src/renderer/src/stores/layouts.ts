@@ -47,6 +47,14 @@ export const useLayouts = create<LayoutsState>()(
       adopt: projectPath =>
         set(state => (state.projectPath === projectPath ? {} : { projectPath, layouts: {} })),
     }),
-    { name: 'scenario-studio:layouts' },
+    {
+      name: 'scenario-studio:layouts',
+      // The major version of Dockview that wrote these, since only Dockview can read them
+      // back. Bumped with it, and whenever a `DocumentKind` is renamed or dropped — a layout
+      // naming a component this build no longer has makes Dockview throw on restore.
+      // Dropped rather than migrated: their shape is not ours to rewrite.
+      version: 7,
+      migrate: () => undefined,
+    },
   ),
 )

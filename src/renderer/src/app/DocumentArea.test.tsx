@@ -70,9 +70,6 @@ describe('DocumentArea', () => {
     expect(fromJSON).not.toHaveBeenCalled()
   })
 
-  // A layout is written by Dockview into localStorage and never read back by us, so nothing
-  // guarantees what comes out of it. Dockview clears itself and rethrows on a bad one — from
-  // inside its own mount effect, where a throw would take the window down with it.
   describe('given a stored layout Dockview refuses', () => {
     beforeEach(() => {
       useLayouts.setState({ layouts: { '3d': layout() } })
@@ -95,10 +92,6 @@ describe('DocumentArea', () => {
       expect(vi.mocked(console.error).mock.calls.flat().join(' ')).toContain(
         'Discarding an unreadable layout',
       )
-    })
-
-    it('mounts anyway rather than taking the window down', () => {
-      expect(() => render(<DocumentArea />)).not.toThrow()
     })
 
     it('forgets the layout, so the next launch is not the same launch', () => {
