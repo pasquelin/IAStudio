@@ -13,6 +13,7 @@ import {
   isGroup,
   pixelLayer,
   textLayer,
+  UNLOCKED,
   type CanvasState,
   type Layer,
   type Rect,
@@ -436,6 +437,49 @@ const flushMicrotasks = (): Promise<void> => new Promise(resolve => setTimeout(r
 
 function press(host: HTMLElement, x: number, y: number, button = 0): void {
   host.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, button }))
+}
+
+/**
+ * Every rectangle the overlay filled, in order. The overlay paints only when its canvas hands
+ * out a 2D context, and `test-setup` denies one to the whole renderer — lending it a recorder
+ * for the length of one test is the only outlet the grips have.
+ */
+function chromeRecorder(): number[][] {
+  const fills: number[][] = []
+  const ignore = (): void => {}
+  const context = {
+    save: ignore,
+    restore: ignore,
+    setTransform: ignore,
+    clearRect: ignore,
+    beginPath: ignore,
+    moveTo: ignore,
+    lineTo: ignore,
+    stroke: ignore,
+    strokeRect: ignore,
+    fillText: ignore,
+    setLineDash: ignore,
+    fillRect: (x: number, y: number, width: number, height: number): void => {
+      fills.push([x, y, width, height])
+    },
+    lineWidth: 1,
+    strokeStyle: '',
+    fillStyle: '',
+    font: '',
+    textAlign: 'left',
+    textBaseline: 'top',
+  }
+
+  const previous = HTMLCanvasElement.prototype.getContext
+  // Same cast as `test-setup` makes to deny it: the overloads of `getContext` cannot be
+  // satisfied by one function, and the overlay asks for its context in its constructor.
+  HTMLCanvasElement.prototype.getContext = (() =>
+    context) as unknown as HTMLCanvasElement['getContext']
+  onTestFinished(() => {
+    HTMLCanvasElement.prototype.getContext = previous
+  })
+
+  return fills
 }
 
 /** How many tree mutations happen from here on, read when the assertion needs it. */
@@ -2781,5 +2825,42 @@ describe('the wheel', () => {
     await nextFrame()
 
     expect(viewports.at(-1)).toMatchObject({ x: -30, y: -40, scale: 1 })
+  })
+})
+
+/**
+ * What the engine hands the overlay for the move tool. Nothing else exposes it: the grips are
+ * chrome, they touch neither the document nor anything the engine publishes.
+ */
+describe('the grips offered on the armed layer', () => {
+  /** Rulers and guides off, or their own bands and lines would answer instead of the grips. */
+  const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
+
+  async function chromeOf(tool: CanvasTool, layer: Layer): Promise<number[][]> {
+    const fills = chromeRecorder()
+    const harness = await mounted(stacked([layer]), tool)
+
+    // Twice: the first drains the frames mounting already booked, with the rulers still on.
+    harness.engine.setView(BARE)
+    await nextFrame()
+    fills.length = 0
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    return fills
+  }
+
+  it('draws the nine of them while the move tool holds a free layer', async () => {
+    expect(await chromeOf('move', layerFixture())).toHaveLength(9)
+  })
+
+  it('draws none of them once another tool is armed', async () => {
+    expect(await chromeOf('brush', layerFixture())).toHaveLength(0)
+  })
+
+  it('draws none of them on a layer pinned in place', async () => {
+    const pinned = layerFixture({ locked: { ...UNLOCKED, position: true } })
+
+    expect(await chromeOf('move', pinned)).toHaveLength(0)
   })
 })

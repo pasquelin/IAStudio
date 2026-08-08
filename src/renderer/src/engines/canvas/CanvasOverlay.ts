@@ -166,10 +166,6 @@ function drawPending(context: OverlayContext, scene: OverlayScene): void {
   strokePath(context, scene.viewport, shapeOutline(shape))
 }
 
-/**
- * Nothing here outlives the gesture: the frame applies on release, so one still on screen
- * afterwards would promise an adjustment step that does not exist.
- */
 function drawCrop(context: OverlayContext, scene: OverlayScene): void {
   const rect = scene.tools.crop
   if (!rect) return
@@ -195,7 +191,6 @@ function drawGrips(context: OverlayContext, scene: OverlayScene): void {
   if (!box) return
 
   const grips = gripRects(box, scene.viewport)
-  context.strokeStyle = scene.colors.accent
   context.fillStyle = scene.colors.accent
 
   for (const id of HANDLE_IDS) {

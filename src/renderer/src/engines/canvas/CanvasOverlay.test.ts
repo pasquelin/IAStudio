@@ -229,6 +229,8 @@ describe('the tool chrome', () => {
       [27.5, 131.5],
       [27.5, 51.5],
     ])
+    // The frame's own colour, then the marquee's: the right box in the wrong ink reads as a bug.
+    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#accent']])
   })
 
   it('dashes the marquee and puts the dash back for whoever draws next', () => {
@@ -259,6 +261,28 @@ describe('the tool chrome', () => {
       [27.5, 51.5],
     ])
     expect(opsOf(calls, 'setLineDash')).toEqual([[[]]])
+    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#accent']])
+  })
+
+  it('lays the marquee down first, then the shape, then the crop over both', () => {
+    const { context, calls } = recorder()
+    drawOverlay(
+      context,
+      toolScene({
+        selection: { kind: 'rect', rect: RECT },
+        pending: { kind: 'line', from: { x: 50, y: 50 }, to: { x: 60, y: 70 } },
+        crop: RECT,
+      }),
+    )
+
+    const marquee = calls.findIndex(call => call.op === 'moveTo' && call.args[0] === 27.5)
+    const shape = calls.findIndex(call => call.op === 'moveTo' && call.args[0] === 107.5)
+    const scrim = calls.findIndex(call => call.op === 'fillRect')
+
+    expect(marquee).toBeGreaterThanOrEqual(0)
+    expect(shape).toBeGreaterThan(marquee)
+    // The dimming comes last of the three, or it would fail to dim what it is about to cut.
+    expect(scrim).toBeGreaterThan(shape)
   })
 
   it('asks for no path at all for a shape with no vertex', () => {
