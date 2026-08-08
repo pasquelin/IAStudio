@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import { ASSET_NAME_MAX_LENGTH, type Asset } from '@shared/domain/asset'
 import type { ActivityReport } from '@main/project/activity-log'
 import { CAPTION_BATCH, createCaptioner, worthCaptioning } from './auto-caption'
 
@@ -114,6 +114,19 @@ describe('the captioner, on arrival', () => {
       2,
       expect.objectContaining({ id: 'local-2', name: 'a clearing' }),
     )
+  })
+
+  // The rename channel refuses more, and this path writes straight into the catalogue.
+  it('holds a long caption to the length a name is allowed', async () => {
+    const { run, save } = captionerOf({
+      caption: async () => ['a mossy boulder '.repeat(40)],
+    })
+
+    await run([asset()])
+
+    const written = save.mock.calls[0]?.[0].name ?? ''
+    expect(written.length).toBeLessThanOrEqual(ASSET_NAME_MAX_LENGTH)
+    expect(written).not.toMatch(/\s$/)
   })
 
   it('leaves an asset alone when its caption came back empty', async () => {

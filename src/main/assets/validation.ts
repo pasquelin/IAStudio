@@ -5,7 +5,7 @@ import {
   ACTIVITY_TOPICS,
   type ActivityQuery,
 } from '@shared/domain/activity'
-import { ASSET_TYPES, type AssetChanges } from '@shared/domain/asset'
+import { ASSET_NAME_MAX_LENGTH, ASSET_TYPES, type AssetChanges } from '@shared/domain/asset'
 import type { CloudQuery } from '@shared/domain/cloud-asset'
 
 import { SYNC_POLICIES, type SyncPolicy } from '@shared/domain/sync'
@@ -30,7 +30,7 @@ export function parseAssetIds(value: unknown): string[] {
 }
 
 const assetChanges = z.object({
-  name: z.string().trim().min(1).max(200).optional(),
+  name: z.string().trim().min(1).max(ASSET_NAME_MAX_LENGTH).optional(),
   // Replaced wholesale, so an empty list is a real answer — "this asset has no tags".
   tags: z.array(z.string().trim().min(1).max(80)).max(64).optional(),
 })

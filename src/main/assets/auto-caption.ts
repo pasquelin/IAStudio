@@ -1,4 +1,4 @@
-import type { Asset } from '@shared/domain/asset'
+import { ASSET_NAME_MAX_LENGTH, type Asset } from '@shared/domain/asset'
 import type { ActivityReport } from '@main/project/activity-log'
 import { chunk } from '@main/scenario/limits'
 
@@ -82,7 +82,9 @@ export function createCaptioner({
           const written = captions[index]?.trim()
           if (!written) continue
 
-          await save({ ...asset, name: written })
+          // Held to the same length the rename channel enforces: a caption is a sentence, and
+          // this path writes straight into the catalogue without passing that boundary.
+          await save({ ...asset, name: written.slice(0, ASSET_NAME_MAX_LENGTH).trimEnd() })
           named++
         }
       } catch {

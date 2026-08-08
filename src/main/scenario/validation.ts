@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
 import {
   MODEL_FAMILIES,
   MODEL_IDS_BATCH_LIMIT,
@@ -26,7 +27,7 @@ export function parseJobId(value: unknown): string {
   return jobId.parse(value)
 }
 
-const assetName = z.string().trim().min(1).max(200)
+const assetName = z.string().trim().min(1).max(ASSET_NAME_MAX_LENGTH)
 
 export function parseAssetName(value: unknown): string {
   return assetName.parse(value)
