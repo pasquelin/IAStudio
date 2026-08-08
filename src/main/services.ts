@@ -14,6 +14,7 @@ import { TRANSLATIONS, type Language } from '@shared/i18n'
 import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
+import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
 import { serveAssets, servedFileOf } from './assets/protocol'
 import { createFfmpegResolver } from './media/ffmpeg'
@@ -83,6 +84,7 @@ export type Services = {
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
   broadcastAccounts: (accounts: AccountSummary[]) => void
+  updates: Updates
 }
 
 const timestamp = (): string => new Date().toISOString()
@@ -402,5 +404,10 @@ export function createServices(settings: SettingsStore): Services {
     // Every window carries the switch, not just the one that made it: the studio and the
     // settings window both show which account is active.
     broadcastAccounts: accounts => broadcast(EVENTS.accountsChanged, accounts),
+    updates: createUpdates({
+      loadUpdater: async () => (await import('electron-updater')).autoUpdater,
+      isPackaged: app.isPackaged,
+      onChange: state => broadcast(EVENTS.updateState, state),
+    }),
   }
 }

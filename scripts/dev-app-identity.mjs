@@ -42,6 +42,13 @@ const ICON_SIZES = [
   [1024, 'icon_512x512@2x'],
 ]
 
+// Nothing to dress up on a runner: no one looks at the Dock, and electron-builder writes the
+// shipped bundle from scratch. `CI` rather than `GITHUB_ACTIONS` — every platform sets it.
+if (process.env.CI) {
+  console.log('CI: leaving the Electron bundle untouched.')
+  process.exit(0)
+}
+
 if (process.platform !== 'darwin') process.exit(0)
 
 const projectRoot = process.argv[2]

@@ -45,6 +45,10 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   const services = createServices(settings)
   registerIpc(services)
 
+  // Fire and forget: whether a newer version exists has no bearing on the window opening, and
+  // a check that fails leaves the studio exactly as usable as it was.
+  void services.updates.check()
+
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
   // the other. Only a second launch overrides that — see `revealWindow`.
   const main = createMainWindow({ deferShow: true })

@@ -8,6 +8,24 @@ directories:
   output: release
   buildResources: build
 
+# `beforePack` fetches into `resources/ffmpeg/`, emptying it first — the binaries differ in name
+# per platform. Two targets packed at once would take each other's encoder. This is the default,
+# declared so a change of default cannot silently break it.
+concurrency:
+  jobs: 1
+
+# Name, version, platform and architecture, in that order: the two macOS installers differ only
+# by the last field, and a release page listing them has to make that legible.
+artifactName: ${name}-${version}-${platform}-${arch}.${ext}
+
+# The release is created as a draft by the `release` job, never by the build matrix — see
+# docs/ci/adr/ADR-06. Nothing reaches an installed client until the draft is published by hand.
+publish:
+  provider: github
+  owner: pasquelin
+  repo: scenario
+  releaseType: draft
+
 files:
   - out/**
   - package.json
@@ -52,6 +70,13 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  # The value Electron 43 already carries in its Info.plist, written down so it stops being
+  # implicit: electron-updater reads it to decide whether a client may take an update.
+  minimumSystemVersion: '12.0'
+  # `notarize` is deliberately left at its default rather than pinned to false: electron-builder
+  # only notarises what it managed to sign, so an unsigned build skips it on its own — and the
+  # day the secrets of ADR-07 exist, signing and notarising both start without touching this
+  # file. No Apple Developer Program is subscribed today; see docs/ci/adr/ADR-04.
   # Signed with the app, or the hardened runtime refuses to spawn it — an unsigned executable
   # inside a signed bundle is exactly what Gatekeeper is there to stop.
   binaries:
@@ -83,8 +108,20 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  # Per user, so installing needs no administrator: the studio writes to the user's own folders
+  # and has nothing to register machine-wide.
+  perMachine: false
+  createDesktopShortcut: true
+  # Projects, settings and the encrypted API key live in appData. Uninstalling a version — to
+  # reinstall another — must not take the work with it.
+  deleteAppDataOnUninstall: false
 
 linux:
   icon: build/icon.svg
   category: Graphics
+  synopsis: Image, video, 3D, audio, texture and skybox creation on the Scenario API
+  maintainer: Alban Pasquelin <alban.pasquelin@gmail.com>
+  desktop:
+    entry:
+      StartupWMClass: Scenario Studio
   target: [AppImage, deb]

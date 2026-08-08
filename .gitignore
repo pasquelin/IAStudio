@@ -26,3 +26,11 @@ logs/
 # Shipped with the app, fetched by `pnpm ffmpeg:fetch` — binaries, never committed.
 resources/ffmpeg/
 src/renderer/public/decoders/
+
+# Signing material. A safety net, never a permission: certificates belong in the GitHub
+# secrets of the repository, and nowhere on disk — see docs/ci/SECRETS.md.
+*.p12
+*.pfx
+*.cer
+*.provisionprofile
+*.mobileprovision

@@ -52,10 +52,14 @@ export default defineConfig({
         // no surface, and a branch of it nobody exercises is a failure nobody would ever read.
         'src/main/diagnostics/**': { statements: 0, branches: 0 },
         'src/renderer/src/services/**': { statements: 0, branches: 0 },
+        // Kept tight for the same reason: an update downloads itself and `quitAndInstall` is
+        // irreversible, so a branch nobody exercises is one nobody would see go wrong either.
+        'src/main/{updater.ts,update/**}': { statements: -3, branches: -1 },
         'src/renderer/src/helpers/**': { statements: -30, branches: -28 },
         'src/renderer/src/hooks/**': { statements: -38, branches: -20 },
         // The renderer half of project-file serialization; `src/main/project/**` guards the other.
         'src/renderer/src/app/document-io.ts': { statements: -14, branches: -6 },
+        'src/renderer/src/app/UpdateStatus.tsx': { statements: 0, branches: 0 },
       },
     },
     projects: [

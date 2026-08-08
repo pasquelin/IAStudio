@@ -8,6 +8,7 @@
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",
+  "packageManager": "pnpm@11.16.0",
   "scripts": {
     "start": "electron-vite dev --watch",
     "start:debug": "electron-vite dev --watch --remoteDebuggingPort 9222",
@@ -37,6 +38,7 @@
     "@scenario-labs/sdk": "^2.7.0",
     "better-sqlite3": "^13.0.3",
     "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.9",
     "mediabunny": "^1.52.3",
     "pixi.js": "8.19.0",
     "three": "0.185.1",

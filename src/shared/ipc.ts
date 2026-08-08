@@ -15,6 +15,7 @@ import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/sce
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { ToolId, ToolZone } from './domain/tool'
+import type { UpdateState } from './domain/update'
 import type { WindowState } from './domain/window'
 import type { WorkspaceId } from './domain/workspace'
 
@@ -74,6 +75,9 @@ export type Channels = {
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
   windowWorkspace: 'window:workspace'
+
+  updateState: 'update:state'
+  updateInstall: 'update:install'
 }
 
 /**
@@ -130,6 +134,9 @@ export const CHANNELS: Channels = {
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
   windowWorkspace: 'window:workspace',
+
+  updateState: 'update:state',
+  updateInstall: 'update:install',
 }
 
 /** An edited take on its way back to disk — see `StudioBridge['assets']['saveAudio']`. */
@@ -221,6 +228,7 @@ export const EVENTS = {
   sceneAdd: 'evt:scene-add',
   sceneExport: 'evt:scene-export',
   settingsSection: 'evt:settings-section',
+  updateState: 'evt:update-state',
 }
 
 export type Unsubscribe = () => void
@@ -381,5 +389,18 @@ export type StudioBridge = {
      * would make reporting a failure cost a round trip.
      */
     report: (entry: LogEntry) => Promise<void>
+  }
+  updates: {
+    /**
+     * The state as it stands. A window opened after the download finished would otherwise show
+     * nothing until the next event, and there is no next event once an update is ready.
+     */
+    state: () => Promise<UpdateState>
+    /**
+     * Quits and installs. Only does anything once the state is `ready`; the update is applied
+     * on the next quit regardless, so this is the shortcut, never the only way.
+     */
+    install: () => Promise<void>
+    onState: (callback: (state: UpdateState) => void) => Unsubscribe
   }
 }

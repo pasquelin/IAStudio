@@ -1,0 +1,214 @@
+name: Release
+
+# A tag is the only thing that publishes. `workflow_dispatch` exercises the whole chain without
+# publishing, which is how this pipeline is validated before a single certificate exists —
+# docs/ci/adr/ADR-02-declencheur-de-release.md.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build every platform and upload the artefacts, without creating a release
+        type: boolean
+        default: true
+
+# Never cancel in flight: a half-packaged run would leave a release missing a platform.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    strategy:
+      # One platform failing must not deprive the others of their artefacts: with three of them
+      # and no way to test Windows or Linux locally, partial output is what tells us what broke.
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            electron-cache: ~/Library/Caches/electron
+          - os: windows-latest
+            platform: win
+            electron-cache: ~\AppData\Local\electron\Cache
+          # Pinned, NOT `ubuntu-latest`. An AppImage inherits the glibc of the machine that
+          # built it and refuses to start on anything older. Raising this drops every user on a
+          # distribution older than the runner — do not "fix" it. See TROUBLESHOOTING.md §9.2.
+          - os: ubuntu-22.04
+            platform: linux
+            electron-cache: ~/.cache/electron
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # ~150 MB per platform, immutable for a given Electron version.
+      - uses: actions/cache@v6
+        with:
+          path: ${{ matrix.electron-cache }}
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          # The only real input is the Electron version. Without a partial hit, any unrelated
+          # dependency bump throws away ~150 MB and re-downloads it.
+          restore-keys: electron-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Report signing status
+        id: signing
+        shell: bash
+        # A secret cannot be read in a job-level `if`; it has to come through the environment
+        # first. Absent secrets mean an unsigned build — never a failure — and the run summary
+        # has to say so, or an unsigned installer looks like a signed one. See ADR-04.
+        env:
+          MAC_CERT: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          WIN_CERT: ${{ secrets.WIN_CERT_P12_BASE64 }}
+        run: |
+          case "${{ matrix.platform }}" in
+            mac) cert="$MAC_CERT" ;;
+            win) cert="$WIN_CERT" ;;
+            *)
+              echo "Linux: AppImage and deb need no code signature." >> "$GITHUB_STEP_SUMMARY"
+              exit 0 ;;
+          esac
+
+          if [ -n "$cert" ]; then
+            echo "${{ matrix.platform }}: signing certificate present." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "> [!WARNING]" >> "$GITHUB_STEP_SUMMARY"
+            echo "> **${{ matrix.platform }}: UNSIGNED build.** No certificate is configured," \
+                 "so this installer will be blocked by Gatekeeper or flagged by SmartScreen." \
+                 "See docs/ci/SECRETS.md." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - run: pnpm build
+
+      - name: Package
+        shell: bash
+        env:
+          # Not for publishing — `--publish never` below. electron-builder fetches its own
+          # toolchain (nsis, winCodeSign, appimage) from GitHub releases, and an anonymous
+          # runner hits the rate limit.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # electron-builder reads these itself. Empty when the secret does not exist, which is
+          # exactly the unsigned path — the names are frozen by ADR-07.
+          CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CERT_P12_BASE64 }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Without a certificate, let electron-builder look for one in the runner's keychain and
+          # it finds an unrelated identity or hangs. Say no once, clearly.
+          if [ "${{ steps.signing.outputs.signed }}" = false ]; then
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+
+          # notarytool wants a path, not the key itself. Written under RUNNER_TEMP, which the
+          # runner wipes, and never inside the checkout where `files` could sweep it into the app.
+          if [ -n "$APPLE_API_KEY_P8_BASE64" ]; then
+            printf %s "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/apple-api-key.p8"
+            export APPLE_API_KEY="$RUNNER_TEMP/apple-api-key.p8"
+          fi
+
+          # Architectures come from electron-builder.yml — macOS builds arm64 *and* x64 from this
+          # arm64 runner, which a bare `--mac` would otherwise not do. `--publish never` because
+          # only the release job publishes (ADR-06); the latest*.yml manifests are written either
+          # way, since a `publish` provider is configured.
+          pnpm exec electron-builder --${{ matrix.platform }} --publish never
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installers-${{ matrix.platform }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/latest*.yml
+            # The manifests name these by file. Without them electron-updater hangs on
+            # "Download block maps" instead of falling back to a full download.
+            release/*.blockmap
+          retention-days: 7
+          if-no-files-found: error
+          # dmg, zip, nsis and AppImage are already compressed containers. Deflating them again
+          # costs ~20 s per platform and saves nothing.
+          compression-level: 0
+
+  release:
+    needs: build
+    # A tag, and not just "not a dry run": a manual dispatch from a branch would otherwise cut a
+    # release named after that branch, from its HEAD, with real installers attached.
+    if: ${{ !inputs.dry_run && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Scoped here and nowhere else: the three build jobs have no business writing to the repo.
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: installers-*
+          merge-multiple: true
+          path: dist
+
+      - name: Check the update manifests are complete
+        run: |
+          missing=()
+          for manifest in latest.yml latest-mac.yml latest-linux.yml; do
+            [ -f "dist/$manifest" ] || missing+=("$manifest")
+          done
+
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing update manifests: ${missing[*]}"
+            echo "A release without them breaks auto-update for every installed client, and does" \
+                 "so silently — the server answers 404 and the app says nothing. Publishing is" \
+                 "refused. See docs/ci/adr/ADR-06-publication-des-artefacts.md."
+            exit 1
+          fi
+
+          # A manifest never names its blockmaps: electron-updater derives each one by appending
+          # .blockmap to the file URL. A missing one hangs the client on "Download block maps"
+          # instead of degrading to a full download, so check every file the manifests list.
+          for file in $(grep -ho 'url: .*' dist/latest*.yml | cut -d' ' -f2 | sort -u); do
+            [ -f "dist/$file.blockmap" ] || {
+              echo "::error::No blockmap for $file, which the manifests list."
+              exit 1
+            }
+          done
+
+          echo "Manifests present. Versions found:"
+          grep -h '^version:' dist/latest*.yml | sort -u
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        # Draft on purpose: nothing reaches an installed client until a human publishes it.
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --draft \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            dist/*

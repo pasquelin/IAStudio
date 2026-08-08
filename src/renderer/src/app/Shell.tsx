@@ -7,6 +7,7 @@ import { DocumentArea } from './DocumentArea'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
 import { JobsStatus } from './JobsStatus'
+import { UpdateStatus } from './UpdateStatus'
 import { Rail } from './Rail'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { AccountSelect } from './AccountSelect'
@@ -64,7 +65,15 @@ export function Shell() {
         <Rail side="right" />
       </div>
 
-      <Footer left={<Breadcrumb />} right={<JobsStatus />} />
+      <Footer
+        left={<Breadcrumb />}
+        right={
+          <>
+            <UpdateStatus />
+            <JobsStatus />
+          </>
+        }
+      />
       <TooltipHost />
     </div>
   )
