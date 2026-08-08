@@ -35,9 +35,38 @@ const SPOKEN_ATTRIBUTES = new Set([
   'tooltip',
 ])
 
+/**
+ * Attributes whose literal is never a word: class names, urls, SVG paths, React keys. They are
+ * the only ones allowed to hold spaces and capitals, and `className` above all does both.
+ */
+const TECHNICAL_ATTRIBUTES = new Set([
+  'className',
+  'style',
+  'src',
+  'href',
+  'd',
+  'viewBox',
+  'key',
+  'id',
+])
+
 /** A word, rather than a symbol, a number or a separator that reads the same in any language. */
 function isWords(text: string): boolean {
   return /\p{Letter}{2}/u.test(text)
+}
+
+/**
+ * A phrase rather than an enum member. Every literal the components pass today is a lowercase
+ * keyword — `horizontal`, `background-removal`, `preserveStartEnd` — so a capital at the front
+ * or a space between two words is what tells a sentence from a setting.
+ *
+ * This is what catches a prop the list below has never heard of: a design-system component
+ * gaining a `nameHeader` or an `emptyMessage` needs no edit here to be covered.
+ */
+function looksLikeSentence(text: string): boolean {
+  return (
+    /\p{Letter}\s+\p{Letter}/u.test(text) || /^\p{Uppercase_Letter}\p{Lowercase_Letter}/u.test(text)
+  )
 }
 
 function findingsIn(path: string, code: string): string[] {
@@ -53,15 +82,19 @@ function findingsIn(path: string, code: string): string[] {
     // Text sitting between tags: `<span>Ready</span>`.
     if (ts.isJsxText(node) && isWords(node.text)) note(node, node.text)
 
-    // A spoken attribute given a literal: `aria-label="Close"`.
+    // An attribute given a literal. A spoken one may not hold a word at all; any other one may
+    // hold a keyword, but not a sentence.
     if (
       ts.isJsxAttribute(node) &&
       node.initializer !== undefined &&
-      ts.isStringLiteral(node.initializer) &&
-      SPOKEN_ATTRIBUTES.has(node.name.getText(source)) &&
-      isWords(node.initializer.text)
+      ts.isStringLiteral(node.initializer)
     ) {
-      note(node, `${node.name.getText(source)}="${node.initializer.text}"`)
+      const name = node.name.getText(source)
+      const value = node.initializer.text
+      const spoken = SPOKEN_ATTRIBUTES.has(name) && isWords(value)
+      const sentence = !TECHNICAL_ATTRIBUTES.has(name) && looksLikeSentence(value)
+
+      if (spoken || sentence) note(node, `${name}="${value}"`)
     }
 
     ts.forEachChild(node, visit)
@@ -98,12 +131,22 @@ describe('the renderer', () => {
     ])
   })
 
+  // The blind spot this closed: a prop the list of spoken attributes has never heard of.
+  it('would see a word put into a prop it has never heard of', () => {
+    const found = findingsIn('probe.tsx', 'const A = () => <Table nameHeader="Action" />')
+
+    expect(found).toHaveLength(1)
+  })
+
   it('leaves class names, ARIA keywords and symbols alone', () => {
     const quiet = [
       'const A = () => <p className="flex gap-2 truncate" role="group" aria-live="polite" />',
       "const B = () => <span>{t('jobs.none')}</span>",
       'const C = () => <span> · </span>',
       'const D = () => <img alt="" src={url} />',
+      'const E = () => <Bar orientation="horizontal" variant="header" zone="top" />',
+      'const F = () => <Line dataKey="units" interval="preserveStartEnd" height="100%" />',
+      'const G = () => <svg viewBox="0 0 24 24" />',
     ]
 
     expect(quiet.flatMap((code, index) => findingsIn(`probe${index}.tsx`, code))).toEqual([])
