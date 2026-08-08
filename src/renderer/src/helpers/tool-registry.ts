@@ -75,15 +75,6 @@ export function toolsInZone(zone: ToolZone, workspace: WorkspaceId): Tool[] {
   return BY_ZONE[zone].filter(tool => servesWorkspace(tool, workspace))
 }
 
-export function toolServes(id: ToolId, workspace: WorkspaceId): boolean {
-  return placementIn(id, workspace) !== null
-}
-
-/** The zone a tool occupies here — the shelf does not live in the same one everywhere. */
-export function toolZoneIn(id: ToolId, workspace: WorkspaceId): ToolZone | null {
-  return placementIn(id, workspace)?.zone ?? null
-}
-
 /** i18n key of a tool's title — never the displayed text. */
 export function toolTitleKey(id: ToolId): string {
   return `panels.${id}`

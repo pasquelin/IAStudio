@@ -21,17 +21,12 @@ export const MIN_CENTER = 240
 export const MIN_SPLIT = 100
 
 /**
- * One tool per half, so an icon click swaps rather than stacks. Three states, and no fourth way
- * to say any of them:
+ * One tool per half, so an icon click swaps rather than stacks. Key absent, the half is closed;
+ * `null`, it is open on no panel in particular; an id, on the panel the user chose.
  *
- * - key absent — the half is closed;
- * - `null` — open on whatever this section puts first in that half, which is what a half nobody
- *   has clicked yet shows;
- * - an id — the panel the user chose.
- *
- * The `null` matters because what is open is stored once for all six sections, while the first
- * panel of a half differs in each: the layers in Image, the shelf in Video, the sky in Skyboxes.
- * Storing an id there would name one section's answer and impose it on the other five.
+ * That third state earns its keep: what is open is stored once for all six sections, while the
+ * panel that comes first in a half differs in each — the layers in Image, the shelf in Video,
+ * the sky in Skyboxes. An id there would impose one section's answer on the other five.
  */
 type ZoneSlots = Partial<Record<ToolSlot, ToolId | null>>
 
