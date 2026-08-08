@@ -60,8 +60,10 @@ C'est le champ qui compte. Quelques principes, dans l'ordre d'importance.
 ### Écrivez en anglais si vous le pouvez
 
 La grande majorité des modèles ont été entraînés sur des descriptions en anglais. Un prompt
-français fonctionne parfois, mais moins bien. Un traducteur en ligne suffit largement — la
-grammaire compte peu, les mots comptent beaucoup.
+français fonctionne parfois, mais moins bien. La grammaire compte peu, les mots comptent beaucoup.
+
+**Vous n'avez pas besoin d'un traducteur ailleurs** : le bouton **Traduire en anglais**, au-dessus
+du champ, s'en charge. Voir la section suivante.
 
 ### Décrivez ce qui est là
 
@@ -96,6 +98,60 @@ soft morning light, photographic
 
 Empiler quarante adjectifs ne rend pas l'image quarante fois meilleure. Au-delà d'une trentaine
 de mots, la plupart des modèles diluent. Mieux vaut une phrase juste que trois phrases vagues.
+
+---
+
+## Se faire aider pour écrire le prompt
+
+Trois boutons se tiennent au-dessus du champ. Ils ne sont pas là sur tous les formulaires :
+**c'est le modèle qui désigne le champ à assister**, et le studio suit. Un modèle qui ne le
+signale pas n'affiche pas ces boutons — le studio n'essaie pas de deviner lequel de ses champs
+est un prompt.
+
+| Bouton | Ce qu'il fait |
+|---|---|
+| **Proposer des variantes** | fait réécrire votre brouillon par le modèle qui va le lire |
+| **Traduire en anglais** | réécrit votre texte dans la langue sur laquelle les modèles ont appris |
+| **Décrire le style des références** | lit les images déjà posées sur le formulaire et écrit ce qu'elles ont en commun |
+
+Pendant le travail, « Rédaction des variantes… » s'affiche et les trois boutons sont inactifs.
+
+### Ce qu'une variante propose, et comment on la prend
+
+Chaque variante apparaît dans son propre encadré, avec jusqu'à trois choses :
+
+- **le texte réécrit**, celui que vous adopterez ;
+- **la raison** de la réécriture, en italique, quand le modèle en donne une ;
+- **les réglages** qu'elle suggère en plus du texte — un ratio, un nombre d'étapes — listés en
+  clair sous la proposition.
+
+Deux boutons, et la différence entre eux compte :
+
+| Bouton | Effet |
+|---|---|
+| **Utiliser le texte** | remplace le prompt, **et rien d'autre** |
+| **Texte + réglages** | remplace le prompt **et** applique les réglages proposés |
+
+**Le second n'apparaît que s'il y a des réglages à appliquer.** Séparer les deux gestes est
+délibéré : écraser un ratio que vous venez de choisir n'est pas une décision qu'une suggestion
+prend toute seule.
+
+> Les réglages proposés sont **filtrés contre ce que le modèle déclare accepter** avant d'être
+> appliqués. Une valeur hors bornes est écartée, jamais ramenée de force dans l'intervalle.
+
+### Les deux refus que vous verrez
+
+| Message | Ce qu'il veut dire |
+|---|---|
+| « Ce texte est déjà en anglais. » | la traduction n'a rien à faire — le studio vérifie la langue avant d'appeler |
+| « Déposez une image de référence pour en décrire le style. » | le formulaire ne porte aucune image à lire |
+
+Ces deux-là ne sont pas des pannes, et rien n'est dépensé quand ils s'affichent.
+
+> **Ces demandes-là sont immédiates**, contrairement à une génération : elles n'entrent pas dans
+> la file, ne s'affichent pas dans la ligne d'état, et il n'y a rien à annuler. **Proposer des
+> variantes ne coûte aucune unité créative** — c'est mesuré, pas supposé. Pour la traduction et la
+> lecture de style, le studio ne mesure rien : traitez-les comme des appels ordinaires.
 
 ---
 

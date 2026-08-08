@@ -283,6 +283,17 @@ service can turn away the ones arriving on top (see
 > workspace it starts from. There is no way around it, and that is intended: it is what stops a
 > burst of requests from being refused wholesale.
 
+### Describe fetched assets
+
+**Checkbox.**
+
+Automatically names a picture that arrives **without a useful name**, by asking the API what it
+sees in it.
+
+> **This is the only place where the studio spends without being asked**, and that is exactly why
+> the setting exists: clear it, and nothing leaves on its own any more. The naming works in
+> batches, under a bounded queue, and every result takes its line in the activity journal.
+
 ### Max retries
 
 **Whole number. From 0 to 10. Starts at: 4.**
@@ -564,6 +575,7 @@ What you have on a fresh install, at a glance.
 | Appearance | Text size | 1 | 0.85 to 1.40 |
 | Appearance | Limit animations | unchecked | — |
 | Generation | Concurrent generations | 3 | 1 to 16 |
+| Generation | Describe fetched assets | — | — |
 | Generation | Max retries | 4 | 0 to 10 |
 | Generation | Default model ×5 | Ask every time | — |
 | 3D | Show the grid | checked | — |
