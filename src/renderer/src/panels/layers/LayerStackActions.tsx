@@ -30,6 +30,11 @@ import { newId } from '@/helpers/ids'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 
+/** What the stack menu offers. Each one names itself from `layers.<operation>`. */
+export type LayerOperation = 'group' | 'ungroup' | 'duplicate'
+
+export const LAYER_OPERATIONS: readonly LayerOperation[] = ['group', 'ungroup', 'duplicate']
+
 /** Add, delete and the stack operations, on the panel's own title bar. */
 export function LayerStackActions({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
@@ -48,10 +53,16 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
   }
 
   /**
-   * Every stack operation, behind one button. They are five, the title bar holds two, and none
-   * of them is reached often enough to earn a place on the line.
+   * Every stack operation, behind one button. None of them is reached often enough to earn a
+   * place on the line, and merging and flattening left the menu altogether — they emptied the
+   * document from a button nobody expected to. Both stayed as commands.
    */
-  const operations: readonly { key: string; icon: string; enabled: boolean; run: () => void }[] =
+  const operations: readonly {
+    key: LayerOperation
+    icon: string
+    enabled: boolean
+    run: () => void
+  }[] =
     activeLayer === null
       ? []
       : [

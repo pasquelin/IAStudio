@@ -10,6 +10,7 @@ import {
   type LayerKind,
 } from '@/engines/canvas/canvas-state'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
+import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
 
 function resolve(code: Language, key: string): unknown {
@@ -35,6 +36,7 @@ const COMPOSED_KEYS: readonly string[] = [
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
+  ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
   ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
   ...WORKSPACE_IDS.map(workspace => `home.tools.${workspace}`),
 ]
@@ -62,6 +64,12 @@ describe('the lists behind those keys', () => {
     }
 
     expect([...LAYER_KINDS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  it('holds every operation the stack menu offers', () => {
+    const all: Record<LayerOperation, true> = { group: true, ungroup: true, duplicate: true }
+
+    expect([...LAYER_OPERATIONS].sort()).toEqual(Object.keys(all).sort())
   })
 
   it('holds every kind a track can be', () => {
