@@ -68,8 +68,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         descriptionKey: 'imageTools.scaleHint',
         icon: mdiResize,
         shortcut: 'K',
-        // The engine has no scale gesture: armed, it would silently drag the layer instead.
-        disabled: true,
       },
     ],
   },

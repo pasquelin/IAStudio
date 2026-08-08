@@ -40,6 +40,15 @@ import {
 } from './canvas-selection'
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
 import {
+  handleAt,
+  HANDLE_GRAB,
+  HANDLE_IDS,
+  handlePoints,
+  resizeBy,
+  rotateBy,
+  type HandleId,
+} from './handles'
+import {
   CanvasOverlay,
   RULER_SIZE,
   type OverlayColors,
@@ -123,6 +132,8 @@ export type GuidePort = {
 export type LayerPort = {
   /** Absolute, not a step: the commands of one drag merge, and only the last one survives. */
   translate: (id: string, x: number, y: number) => void
+  /** Same, for what a grip does: scale, rotation and place all move together. */
+  transform: (id: string, transform: Transform) => void
   beginDrag: () => void
   endDrag: () => void
 }
@@ -226,6 +237,8 @@ type Gesture =
   /** `from` is where the drag began; the shape is redrawn from it on every move. */
   | { kind: 'shape'; from: Point; target: BrushTarget }
   | { kind: 'crop'; from: Point }
+  /** `origin` is the transform the layer had when the drag began: every step is absolute. */
+  | { kind: 'handle'; id: string; handle: HandleId; box: Rect; from: Point; origin: Transform }
 
 const NO_GESTURE: Gesture = { kind: 'none' }
 
@@ -940,7 +953,7 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
-      paint: this.selection || this.pending ? this.paintOverlay : undefined,
+      paint: this.paintOverlay,
     }
   }
 
@@ -953,6 +966,34 @@ export class CanvasEngine {
   private readonly paintOverlay = (context: OverlayContext): void => {
     this.paintSelection(context)
     this.paintPending(context)
+    this.paintHandles(context)
+  }
+
+  /**
+   * The nine grips of the armed layer, drawn only while the move tool holds them — Pixi ships no
+   * transformer, so these are ours. Fixed-size squares: a grip that shrank with the zoom would be
+   * unclickable on a document seen at 5%.
+   */
+  private readonly paintHandles = (context: OverlayContext): void => {
+    const layer = this.tool === 'move' ? this.activeLayer() : null
+    const box = layer && !layer.locked.position ? this.layerBox(layer) : null
+    if (!box) return
+
+    const points = handlePoints(box)
+    context.strokeStyle = this.colors.accent
+    context.fillStyle = this.colors.accent
+
+    for (const id of HANDLE_IDS) {
+      const grip = points[id]
+      const screen = toScreen(this.view.viewport, grip)
+      const side = HANDLE_GRAB * 2
+      context.fillRect(
+        Math.round(screen.x - HANDLE_GRAB) + 0.5,
+        Math.round(screen.y - HANDLE_GRAB) + 0.5,
+        side,
+        side,
+      )
+    }
   }
 
   /** The shape under the hand, outlined until it is committed to the layer. */
@@ -1205,6 +1246,22 @@ export class CanvasEngine {
       const layer = this.activeLayer()
       if (!layer || layer.locked.position) return
 
+      // The grips first: they sit on the layer, and a drag on one is not a drag of the layer.
+      const box = this.layerBox(layer)
+      const handle = box && handleAt(box, point, HANDLE_GRAB / this.view.viewport.scale)
+      if (box && handle) {
+        this.options.layers.beginDrag()
+        this.gesture = {
+          kind: 'handle',
+          id: layer.id,
+          handle,
+          box,
+          from: point,
+          origin: layer.transform,
+        }
+        return
+      }
+
       this.options.layers.beginDrag()
       this.gesture = {
         kind: 'move',
@@ -1268,6 +1325,23 @@ export class CanvasEngine {
 
   private activeLayer(): Layer | null {
     return this.state ? layerById(this.state, this.state.activeLayerId) : null
+  }
+
+  /**
+   * Where the armed layer stands, in document units. Its texture is document-sized, so the box
+   * is the document under the layer's own scale — which is what the grips are drawn around.
+   */
+  private layerBox(layer: Layer): Rect | null {
+    const state = this.state
+    if (!state || isGroup(layer)) return null
+
+    const { transform } = layer
+    return {
+      x: transform.x,
+      y: transform.y,
+      width: state.width * transform.scaleX,
+      height: state.height * transform.scaleY,
+    }
   }
 
   /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
@@ -1361,6 +1435,14 @@ export class CanvasEngine {
         this.gesture = { kind: 'paint', from: point }
         return
       }
+      case 'handle': {
+        const next =
+          gesture.handle === 'rotate'
+            ? rotateBy(gesture.origin, gesture.box, gesture.from, point)
+            : resizeBy(gesture.origin, gesture.handle, gesture.box, point, event.shiftKey)
+        this.options.layers.transform(gesture.id, next)
+        return
+      }
       case 'crop': {
         this.publishSelection(dragSelection('rect', gesture.from, point, event.shiftKey))
         return
@@ -1398,7 +1480,7 @@ export class CanvasEngine {
     }
 
     // One history entry per gesture: a command per dab, or per pointer move, would make ⌘Z useless.
-    if (gesture.kind === 'move') this.options.layers.endDrag()
+    if (gesture.kind === 'move' || gesture.kind === 'handle') this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
     if (gesture.kind === 'shape') this.commitShape(gesture.target)
     // A crop that carved nothing out is a click, and a click crops nothing.

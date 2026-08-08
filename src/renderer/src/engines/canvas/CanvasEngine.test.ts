@@ -293,6 +293,10 @@ function mounted(state: CanvasState = DEFAULT_CANVAS): Promise<Harness> {
         endDrag: () => calls.push('end'),
       },
       layers: {
+        transform: (id, next) =>
+          layers.push(
+            `transform:${id}:${next.scaleX.toFixed(2)}:${next.scaleY.toFixed(2)}:${next.rotation.toFixed(2)}`,
+          ),
         translate: (id, x, y) => layers.push(`translate:${id}:${Math.round(x)}:${Math.round(y)}`),
         beginDrag: () => layers.push('begin'),
         endDrag: () => layers.push('end'),
@@ -1537,6 +1541,88 @@ describe('the move tool', () => {
     press(host, 220, 220, 1)
 
     expect(layers.at(-1)).toBe('end')
+  })
+})
+
+describe('the transform grips', () => {
+  /** A layer occupying the whole 1024² document, so the grips sit on the document's corners. */
+  const armed = async () => {
+    const harness = await mounted()
+    harness.engine.setTool('move')
+    return harness
+  }
+
+  // Pixi ships no transformer, so the grips are ours — and a drag on one is not a drag of the
+  // layer, which is why they are tested before the move gesture.
+  it('takes a corner grip rather than moving the layer', async () => {
+    const { host, layers } = await armed()
+
+    press(host, 1024, 1024)
+    drag(host, 1224, 1224)
+
+    expect(layers.at(-1)).toMatch(/^transform:layer-1:/)
+  })
+
+  it('scales from the far corner, so the opposite one stays put', async () => {
+    const { host, layers } = await armed()
+
+    press(host, 1024, 1024)
+    drag(host, 2048, 2048)
+
+    expect(layers.at(-1)).toBe('transform:layer-1:2.00:2.00:0.00')
+  })
+
+  // Every step is absolute from where the layer stood, or merging the drag into one entry would
+  // rewind a single pointer move.
+  it('reports where the layer is, not how far the pointer went', async () => {
+    const { host, layers } = await armed()
+
+    press(host, 1024, 1024)
+    drag(host, 2048, 2048)
+    drag(host, 1536, 1536)
+
+    expect(layers.at(-1)).toBe('transform:layer-1:1.50:1.50:0.00')
+  })
+
+  // The layer is pushed down the document on purpose: the rotation grip floats above its top
+  // edge, and above a layer at the origin that lands under the ruler band.
+  it('turns the layer by the grip that floats above it', async () => {
+    const { engine, host, layers } = await mounted(
+      stacked([{ ...pixelLayer('layer-1', 'Background'), transform: { ...IDENTITY, y: 200 } }]),
+    )
+    engine.setTool('move')
+
+    // From due north of the box's middle to due east of it: a quarter turn.
+    press(host, 512, 176)
+    drag(host, 1048, 712)
+
+    expect(layers.at(-1)).toMatch(/^transform:layer-1:1\.00:1\.00:1\.5/)
+  })
+
+  it('moves the layer for a drag that took no grip at all', async () => {
+    const { host, layers } = await armed()
+
+    press(host, 400, 400)
+    drag(host, 460, 430)
+
+    expect(layers.at(-1)).toBe('translate:layer-1:60:30')
+  })
+
+  it('takes no grip on a layer whose position is padlocked', async () => {
+    const { engine, host, layers } = await mounted(
+      stacked([
+        {
+          ...pixelLayer('layer-1', 'Background'),
+          locked: { pixels: false, position: true, alpha: false },
+        },
+      ]),
+    )
+    engine.setTool('move')
+
+    press(host, 1024, 1024)
+    drag(host, 1224, 1224)
+
+    expect(layers).toEqual([])
   })
 })
 
