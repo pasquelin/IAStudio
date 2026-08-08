@@ -189,8 +189,9 @@ starts or stops dead.
 
 **Family** *(of models)*
 The broad type of what a *model* makes: image, video, 3D, audio, texture, sky, upscaling, background
-removal, vectorisation. Most families can have their *default model* in settings — the Texture
-family cannot yet.
+removal, vectorisation. Seven of them have their *default model* in settings; Texture and Sky do
+not yet. The last three — upscaling, background removal, vectorisation — have no workspace at all:
+it is the Image menu's edits that use them.
 
 **ffmpeg**
 A small program outside the studio, which can read and convert just about every existing video and

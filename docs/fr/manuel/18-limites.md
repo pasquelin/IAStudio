@@ -251,30 +251,6 @@ logiciel.
 
 ---
 
-## Générer
-
-### Les éditions par le modèle demandent chacune leur famille
-
-L'espace Image offre **cinq éditions par le modèle**, dans son menu : Régénérer la zone, Étendre,
-Détourer, Agrandir, Vectoriser. **Les cinq aboutissent**, à une condition : chacune cherche un
-modèle d'une **famille** précise, et il faut qu'un modèle de cette famille soit réglé.
-
-| Édition | Famille demandée | Où se règle son modèle |
-|---|---|---|
-| Régénérer la zone, Étendre | image | panneau **Modèles** de l'espace Image |
-| Agrandir | agrandissement | **Réglages ▸ Génération ▸ Agrandissement** |
-| Détourer | détourage | **Réglages ▸ Génération ▸ Détourage** |
-| Vectoriser | vectorisation | **Réglages ▸ Génération ▸ Vectorisation** |
-
-Les trois dernières familles n'ont pas d'espace de travail à elles : le panneau **Modèles** ne
-montre que la famille de l'espace où vous êtes, il n'affichera donc jamais un détoureur. C'est
-pourquoi leur modèle se choisit dans les réglages, et nulle part ailleurs.
-
-**Si aucun modèle n'est réglé**, l'édition ne part pas et ouvre l'écran de réglages de sa
-famille — celui où en choisir un. Rien n'est envoyé, rien n'est facturé.
-
----
-
 ## Import
 
 ### Ce qui s'importe

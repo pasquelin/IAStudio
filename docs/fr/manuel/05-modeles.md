@@ -181,6 +181,16 @@ mais ils font un travail à part et le studio les range à part. Le panneau **Mo
 montre donc nulle part : leur modèle se choisit dans **Réglages ▸ Génération**, et ce sont les
 éditions du menu **Image** — Agrandir, Détourer, Vectoriser — qui les emploient.
 
+| Édition | Famille demandée | Où se règle son modèle |
+|---|---|---|
+| Régénérer la zone, Étendre | image | panneau **Modèles** de l'espace Image |
+| Agrandir | agrandissement | **Réglages ▸ Génération ▸ Agrandissement** |
+| Détourer | détourage | **Réglages ▸ Génération ▸ Détourage** |
+| Vectoriser | vectorisation | **Réglages ▸ Génération ▸ Vectorisation** |
+
+Sans modèle réglé, l'édition ne part pas et ouvre l'écran où en choisir un. Rien n'est envoyé,
+rien n'est facturé.
+
 **Les vignettes ne sont pas toutes les mêmes.** La plupart des modèles publics n'ont pas
 d'image de présentation. Le studio affiche alors l'un de leurs exemples de génération à la
 place. C'est représentatif de ce que le modèle sait faire, mais ce n'est pas une carte de visite

@@ -176,6 +176,16 @@ of their own and the studio files them apart. The **Models** panel therefore sho
 their model is chosen in **Settings ▸ Generation**, and it is the **Image** menu's edits — Enlarge,
 Cut out, Vectorize — that use them.
 
+| Edit | Family asked for | Where its model is set |
+|---|---|---|
+| Regenerate the region, Extend | image | the Image workspace's **Models** panel |
+| Enlarge | upscale | **Settings ▸ Generation ▸ Upscaling** |
+| Cut out | background removal | **Settings ▸ Generation ▸ Background removal** |
+| Vectorize | vectorisation | **Settings ▸ Generation ▸ Vectorization** |
+
+With no model set, the edit does not leave and opens the screen where you choose one. Nothing is
+sent, nothing is billed.
+
 **The thumbnails are not all the same kind.** Most public models have no presentation image. The
 studio then shows one of their generation samples instead. It is representative of what the model
 can do, but it is not an official calling card.

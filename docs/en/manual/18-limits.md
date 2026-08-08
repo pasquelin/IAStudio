@@ -240,30 +240,6 @@ And you cannot export the six faces of a cube, nor an *HDRI* usable in another a
 
 ---
 
-## Generating
-
-### The model-driven edits each ask for their own family
-
-The Image workspace offers **five model-driven edits** in its menu: Regenerate the region, Extend,
-Cut out, Enlarge, Vectorize. **All five complete**, on one condition: each looks for a model of a
-particular **family**, and a model of that family has to be set.
-
-| Edit | Family asked for | Where its model is set |
-|---|---|---|
-| Regenerate the region, Extend | image | the Image workspace's **Models** panel |
-| Enlarge | upscale | **Settings ▸ Generation ▸ Upscaling** |
-| Cut out | background removal | **Settings ▸ Generation ▸ Background removal** |
-| Vectorize | vectorisation | **Settings ▸ Generation ▸ Vectorization** |
-
-Those last three families have no workspace of their own: the **Models** panel only shows the
-family of the workspace you are in, so it will never show a background remover. That is why their
-model is chosen in the settings, and nowhere else.
-
-**With no model set**, the edit does not leave and opens its family's settings screen — the one
-where you choose one. Nothing is sent, nothing is billed.
-
----
-
 ## Import
 
 ### What can be imported
