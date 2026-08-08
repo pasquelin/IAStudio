@@ -471,6 +471,20 @@ s'affiche quand la licence l'exige.
 
 Rien à y faire, rien à y régler. C'est une obligation légale, tenue proprement.
 
+**Cette fenêtre parle des autres, pas du studio.** Trois textes, trois portées, et il vaut mieux
+ne pas les confondre :
+
+| Ce dont on parle | Sous quelles conditions | Où le lire |
+|---|---|---|
+| **Le code source** du studio | PolyForm Noncommercial 1.0.0 — lisible, modifiable, réutilisable pour tout usage **non commercial** | `LICENSE`, dans le dépôt |
+| **L'application** que vous avez installée | ses propres conditions d'utilisation | `EULA.md`, dans le dépôt |
+| **Les composants tiers** que l'un et l'autre embarquent | chacun garde la sienne | cette fenêtre, et `THIRD-PARTY-NOTICES.md` |
+
+**Le cas de ffmpeg est à part**, et sa ligne le dit : il n'est pas lié dans l'application, il est
+lancé **à côté**, comme un programme séparé. Sa licence n'est donc pas la même selon la
+plateforme — GPL sur macOS, LGPL ailleurs — et **ses sources correspondantes sont attachées à
+chaque version publiée**, à côté des installeurs.
+
 Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**. Si vous changez un
 raccourci dans les réglages, le menu suit.
 
