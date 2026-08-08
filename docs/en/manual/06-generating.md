@@ -250,6 +250,26 @@ Four by default.
 > **An invalid API key is never retried.** Retrying would not fix it. The studio distinguishes what
 > is worth another attempt from what is not.
 
+### Closing the studio does not cancel a generation
+
+**A generation you started keeps running on Scenario's side, whether the studio is open or not.**
+What was missing was its ability to find it again on the way back: that is done. On the way out it
+notes the requests still running; on the next launch it picks them up where they are, and their
+result joins your assets as if nothing had happened.
+
+Three things decide what you will actually see:
+
+- **resuming is per project.** Reopen the project the request came from and it reappears in the
+  status line. Another project does not show the first one's jobs, and does not lose them either;
+- **resuming is per account.** A request is asked about again with the key that started it —
+  another key would be turned away, and no retry repairs that;
+- **past a week, a forgotten request is swept.** Long enough for training a model, which runs for
+  hours, and short enough that a project abandoned mid-generation does not keep its notes for
+  ever.
+
+**Cancelling, for its part, really stops the request** — on Scenario's side, not just in the
+display.
+
 ### Switching accounts does not interrupt a running generation
 
 **A job finishes on the account that launched it.** It captures its key the moment you press

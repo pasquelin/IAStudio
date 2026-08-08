@@ -208,6 +208,10 @@ retrying immediately, in a loop, worsens the congestion instead of resolving it.
 **What you can do.** If this comes back often, lower **Concurrent generations** in settings. Three is
 the starting value; two is plenty to work comfortably.
 
+> **This message has become rare.** The studio now bounds its call **rate**, not just how many
+> generations run in parallel: those were two different things, and counting one did not cover
+> the other. Seeing it often anyway means another tool is using the same key at the same time.
+
 ### "The generation failed."
 
 **What it means.** The service did receive the request, processed it, and returned a failure. This is

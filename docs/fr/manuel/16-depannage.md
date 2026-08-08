@@ -216,6 +216,11 @@ aggrave l'encombrement au lieu de le résoudre.
 les réglages. Trois est la valeur de départ ; deux suffit largement pour travailler
 confortablement.
 
+> **Ce message est devenu rare.** Le studio borne désormais son **débit** d'appels, et pas
+> seulement le nombre de générations en parallèle : c'étaient deux choses différentes, et compter
+> les secondes ne suffisait pas. Le voir souvent malgré cela veut dire qu'un autre outil se sert
+> de la même clé en même temps.
+
 ### « La génération a échoué. »
 
 **Ce que ça veut dire.** Le service a bien reçu la demande, l'a traitée, et a rendu un échec. Ce
