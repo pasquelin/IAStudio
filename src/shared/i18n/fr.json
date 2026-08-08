@@ -241,7 +241,18 @@
     "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer.",
     "untitled": "Sans titre {{n}}",
     "new": "Nouveau document",
-    "missing": "Ce document n’est plus ouvert."
+    "missing": "Ce document n’est plus ouvert.",
+    "close": "Fermer l’onglet",
+    "closeOthers": "Fermer les autres onglets",
+    "delete": "Supprimer le document…",
+    "saveTitle": "Enregistrer les modifications de « {{title}} » ?",
+    "saveBody": "Si vous ne les enregistrez pas, elles seront perdues.",
+    "save": "Enregistrer",
+    "dontSave": "Ne pas enregistrer",
+    "cancel": "Annuler",
+    "deleteTitle": "Supprimer « {{title}} » du projet ?",
+    "deleteBody": "Le fichier est retiré du dossier du projet. Cette action est irréversible.",
+    "deleteConfirm": "Supprimer"
   },
   "imageTools": {
     "pointer": "Curseur",

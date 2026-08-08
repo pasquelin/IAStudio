@@ -4,6 +4,7 @@ import type { Asset, AssetChanges, AssetQuery } from './domain/asset'
 import type { CloudPage, CloudQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type {
+  CloseChoice,
   DocumentDescriptor,
   DocumentDraft,
   DocumentFile,
@@ -70,6 +71,8 @@ export type Channels = {
   documentRead: 'document:read'
   documentWrite: 'document:write'
   documentRemove: 'document:remove'
+  documentConfirmClose: 'document:confirm-close'
+  documentConfirmDelete: 'document:confirm-delete'
 
   assetsSearch: 'assets:search'
   assetsPeaks: 'assets:peaks'
@@ -145,6 +148,8 @@ export const CHANNELS: Channels = {
   documentRead: 'document:read',
   documentWrite: 'document:write',
   documentRemove: 'document:remove',
+  documentConfirmClose: 'document:confirm-close',
+  documentConfirmDelete: 'document:confirm-delete',
 
   assetsSearch: 'assets:search',
   assetsPeaks: 'assets:peaks',
@@ -218,6 +223,8 @@ export type LogScope =
   | 'canvas.layer'
   | 'image.export'
   | 'document.save'
+  | 'document.close'
+  | 'document.delete'
   | 'assets.reveal'
   | 'font.face'
 
@@ -230,6 +237,8 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'canvas.layer',
   'image.export',
   'document.save',
+  'document.close',
+  'document.delete',
   'assets.reveal',
   'font.face',
 ]
@@ -393,6 +402,14 @@ export type StudioBridge = {
     /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */
     write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
     remove: (id: string, kind: DocumentKind) => Promise<void>
+    /**
+     * What to do with a modified document being closed. Native rather than drawn in the window:
+     * this is the OS convention every desktop application answers with, and the wording lives
+     * beside the menu's — the renderer asks the question, it does not phrase it.
+     */
+    confirmClose: (title: string) => Promise<CloseChoice>
+    /** Whether the document's file really goes. Destructive, so the safe answer is the default. */
+    confirmDelete: (title: string) => Promise<boolean>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>

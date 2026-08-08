@@ -120,6 +120,11 @@ const content = z.string().max(MAX_CONTENT_BYTES)
 
 const documentDraft = z.object({ title, content })
 
+/** A title on its way into a dialog. Capped like the one a draft carries, and for the same reason. */
+export function parseDocumentTitle(value: unknown): string {
+  return title.parse(value)
+}
+
 export function parseDocumentDraft(value: unknown): DocumentDraft {
   return documentDraft.parse(value)
 }

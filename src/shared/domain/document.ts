@@ -182,6 +182,14 @@ export type DocumentFile = DocumentDraft & {
 export type DocumentEnvelope = Omit<DocumentFile, 'content'>
 
 /**
+ * The three answers to closing a document that has unsaved work. `cancel` is the safe one, so
+ * it is what a dismissed dialog gives back — a tab must never close because a key was struck.
+ */
+export type CloseChoice = 'save' | 'discard' | 'cancel'
+
+export const CLOSE_CHOICES: readonly CloseChoice[] = ['save', 'discard', 'cancel']
+
+/**
  * How much of a file the envelope may take. It holds a capped title and three short fields; a
  * head longer than this is not one, and reading further would be reading the document itself.
  */

@@ -75,6 +75,8 @@ const bridge: StudioBridge = {
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
     write: (id, kind, file) => ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file),
     remove: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRemove, id, kind),
+    confirmClose: title => ipcRenderer.invoke(CHANNELS.documentConfirmClose, title),
+    confirmDelete: title => ipcRenderer.invoke(CHANNELS.documentConfirmDelete, title),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),

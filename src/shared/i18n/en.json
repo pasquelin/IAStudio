@@ -241,7 +241,18 @@
     "none": "No document open. Generate or open an asset to get started.",
     "untitled": "Untitled {{n}}",
     "new": "New document",
-    "missing": "This document is no longer open."
+    "missing": "This document is no longer open.",
+    "close": "Close tab",
+    "closeOthers": "Close other tabs",
+    "delete": "Delete document…",
+    "saveTitle": "Save changes to “{{title}}”?",
+    "saveBody": "If you do not save them, they will be lost.",
+    "save": "Save",
+    "dontSave": "Don’t save",
+    "cancel": "Cancel",
+    "deleteTitle": "Delete “{{title}}” from the project?",
+    "deleteBody": "The file is removed from the project folder. This cannot be undone.",
+    "deleteConfirm": "Delete"
   },
   "imageTools": {
     "pointer": "Pointer",

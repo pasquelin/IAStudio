@@ -10,6 +10,7 @@ import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { parseSkybox, serializeSkybox } from '@/engines/skybox/skybox-state'
 import { EMPTY_SEQUENCE, parseSequence, serializeSequence } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
+import { closePanel } from './dockview-api'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audio-edits'
 import { sceneStore } from '@/stores/scenes'
@@ -46,6 +47,10 @@ type DocumentIo = {
   createDefault: (documentId: string) => void
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
+  /** Whether the document has work its file does not hold. */
+  dirty: (documentId: string) => boolean
+  /** Drops the state and the history a closed document was holding. */
+  forget: (documentId: string) => void
 }
 
 /**
@@ -81,6 +86,8 @@ function textDocumentIo<S>(
     },
     createDefault: documentId => store.use.getState().ensure(documentId, createDefault),
     holds: documentId => store.hasState(store.use.getState(), documentId),
+    dirty: documentId => store.isDirty(store.use.getState(), documentId),
+    forget: documentId => store.use.getState().drop(documentId),
   }
 }
 
@@ -153,6 +160,8 @@ const IMAGE_IO: DocumentIo = {
   },
   createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
   holds: documentId => canvasStore.hasState(useCanvases.getState(), documentId),
+  dirty: documentId => canvasStore.isDirty(useCanvases.getState(), documentId),
+  forget: documentId => useCanvases.getState().drop(documentId),
 }
 
 /**
@@ -273,4 +282,70 @@ export function restoreDocument(documentId: string): Promise<void> {
 
   loading.set(documentId, reading)
   return reading
+}
+
+/**
+ * Whether the document has work its file does not hold. `false` for a kind that cannot be
+ * saved and for a tab that never filled: neither has anything to lose.
+ */
+export function documentIsDirty(documentId: string): boolean {
+  const io = ioOf(documentId)
+  return io ? io.holds(documentId) && io.dirty(documentId) : false
+}
+
+/**
+ * Closes a document: asks about unsaved work, writes it if that is the answer, then drops its
+ * state, its history and its tab. `false` when the user cancelled, which is the one answer that
+ * leaves everything as it was.
+ *
+ * The order matters. The file is written before anything is forgotten — a save that fails must
+ * not have already thrown the work away — and the question is asked before the write so that a
+ * cancelled dialog costs nothing.
+ */
+export async function closeDocument(documentId: string): Promise<boolean> {
+  const io = ioOf(documentId)
+
+  if (io && documentIsDirty(documentId)) {
+    const title = useDocuments.getState().documents[documentId]?.title ?? ''
+    const choice = (await getBridge()?.documents.confirmClose(title)) ?? 'cancel'
+    if (choice === 'cancel') return false
+    // Left open on a failed write: closing anyway would lose the work the dialog just promised
+    // to keep, and the failure is reported by the caller.
+    if (choice === 'save') await saveDocument(documentId)
+  }
+
+  forgetDocument(documentId)
+  return true
+}
+
+/**
+ * Removes the document's file from the project, then closes its tab. Confirmed first, and by
+ * the OS: this is the one gesture in the studio that destroys a file the user made.
+ *
+ * Unsaved work is not offered for saving on the way out — the file is going. Answering "save"
+ * to a document about to be deleted would write it and delete it in the same breath.
+ */
+export async function deleteDocument(documentId: string): Promise<boolean> {
+  const bridge = getBridge()
+  const document = useDocuments.getState().documents[documentId]
+  if (!bridge || !document) return false
+
+  if (!(await bridge.documents.confirmDelete(document.title))) return false
+
+  await bridge.documents.remove(document.id, document.kind)
+  forgetDocument(documentId)
+  return true
+}
+
+/**
+ * Drops everything a document was holding, in the window and in the layout.
+ *
+ * Its refusal to save is dropped too: the id is the project folder's to hand out again, and a
+ * document reopened later must not inherit the verdict passed on the one before it.
+ */
+function forgetDocument(documentId: string): void {
+  ioOf(documentId)?.forget(documentId)
+  unreadable.delete(documentId)
+  closePanel(documentId)
+  useDocuments.getState().close(documentId)
 }

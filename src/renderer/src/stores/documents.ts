@@ -85,7 +85,7 @@ export function panelIds(layouts: Record<string, { panels?: object } | undefined
  * pointing at files that are not there, or worse, at a file of the same id in another project.
  *
  * So the folder says which documents exist and what they are called; the persisted layout says
- * which of them are open. Loading is `load` plus `pruneDocuments`, in that order.
+ * which of them are open — `refresh` reads both and keeps the intersection.
  */
 export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   documents: {},

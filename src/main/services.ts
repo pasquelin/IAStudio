@@ -44,6 +44,7 @@ import {
   type JobManager,
 } from './scenario/job-manager'
 import { runnerOf } from './scenario/runner'
+import type { AskUser } from './project/document-dialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createProjectStore, type ProjectStore } from './project/store'
 import { createActivityLog, type ActivityLog } from './project/activity-log'
@@ -103,6 +104,8 @@ export type Services = {
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
+  /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
+  askUser: AskUser
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
@@ -140,6 +143,27 @@ async function pickPath(kind: PathKind, startIn?: string): Promise<string | null
  * `openDialog` above it: a second one with slightly different options is how two save flows
  * start behaving differently.
  */
+/**
+ * A question with buttons, parented to the window that asked when there is one. Modal to it
+ * rather than to the application: a sheet hanging off no window is one the user can lose
+ * behind it.
+ */
+async function askUser(options: {
+  message: string
+  detail: string
+  buttons: string[]
+  defaultId: number
+  cancelId: number
+}): Promise<number> {
+  const parent = BrowserWindow.getFocusedWindow()
+  const shown: Electron.MessageBoxOptions = { type: 'warning', ...options }
+  const result = parent
+    ? await dialog.showMessageBox(parent, shown)
+    : await dialog.showMessageBox(shown)
+
+  return result.response
+}
+
 async function saveDialog(options: Electron.SaveDialogOptions): Promise<string | null> {
   const parent = BrowserWindow.getFocusedWindow()
   const result = parent
@@ -555,6 +579,7 @@ export function createServices(settings: SettingsStore): Services {
     savePicture,
     pickSavePath,
     reveal: file => shell.showItemInFolder(file),
+    askUser: askUser,
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's
     // contents under the new one.

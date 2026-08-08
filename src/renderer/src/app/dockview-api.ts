@@ -30,3 +30,16 @@ export function openDocument(document: DocumentDescriptor): void {
 export function setDocumentTitle(documentId: string, title: string, modified: boolean): void {
   current?.getPanel(documentId)?.setTitle(modified ? `${title} •` : title)
 }
+
+/**
+ * Takes the tab away. Called by `closeDocument` once the document's own bookkeeping is done —
+ * never by a tab directly, which is what keeps a closed tab from leaving its state behind.
+ */
+export function closePanel(documentId: string): void {
+  current?.getPanel(documentId)?.api.close()
+}
+
+/** The tabs of the workspace on screen, in the order they are shown. */
+export function openPanelIds(): string[] {
+  return (current?.panels ?? []).map(panel => panel.id)
+}

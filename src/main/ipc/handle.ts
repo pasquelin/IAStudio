@@ -42,6 +42,8 @@ type ChannelMethod = {
   [CHANNELS.documentRead]: StudioBridge['documents']['read']
   [CHANNELS.documentWrite]: StudioBridge['documents']['write']
   [CHANNELS.documentRemove]: StudioBridge['documents']['remove']
+  [CHANNELS.documentConfirmClose]: StudioBridge['documents']['confirmClose']
+  [CHANNELS.documentConfirmDelete]: StudioBridge['documents']['confirmDelete']
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']

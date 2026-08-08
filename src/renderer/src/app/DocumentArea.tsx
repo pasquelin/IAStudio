@@ -2,6 +2,7 @@ import { DockviewReact, type DockviewReadyEvent } from 'dockview-react'
 import { useCallback } from 'react'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { DocumentTab } from './DocumentTab'
 import { DOCUMENT_COMPONENTS } from './documents'
 import { setDockviewApi } from './dockview-api'
 
@@ -55,6 +56,9 @@ export function DocumentArea() {
     <DockviewReact
       key={`${projectPath ?? ''}:${workspace}`}
       components={DOCUMENT_COMPONENTS}
+      // Every tab, not a per-panel choice: closing a document has to ask about unsaved work
+      // whichever space opened it.
+      defaultTabComponent={DocumentTab}
       onReady={onReady}
     />
   )
