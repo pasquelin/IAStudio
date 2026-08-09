@@ -180,15 +180,16 @@ function neighbourOf(
   move: HomeMove,
   shown?: readonly HomeSectionId[],
 ): number {
-  const step = move === 'up' ? -1 : 1
+  // Walked as a slice rather than by index: the bounds are then the array's own, and there is
+  // no out-of-range case left to guard against.
+  const ahead =
+    move === 'up' ? [...sections.slice(0, from)].reverse() : [...sections.slice(from + 1)]
 
-  for (let at = from + step; at >= 0 && at < sections.length; at += step) {
-    const candidate = sections[at]
-    if (!candidate) return -1
+  for (const candidate of ahead) {
     // Nothing may be swapped past an anchored band either — that is how a section would end up
     // under a feed that never ends.
     if (anchored(candidate)) return -1
-    if (!shown || shown.includes(candidate.id)) return at
+    if (!shown || shown.includes(candidate.id)) return sections.indexOf(candidate)
   }
 
   return -1
