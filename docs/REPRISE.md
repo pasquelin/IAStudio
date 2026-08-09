@@ -117,6 +117,21 @@ prouve ; **déplacer la ligne jusqu’à un endroit testable, non.**
 > pas été remesurées.** Seule celle de `src/main/project/**` l’a été. Un chiffre de marge se relève
 > par `pnpm test:coverage`, pas par lecture — et il ne se recopie pas d’un tour sur l’autre.
 
+> ⚠️ **`renderer/src/stores/**` est annoncé DÉPASSÉ depuis `bc9356a`** (9 août, ~19 h), sur ses
+> deux seuils (`statements: -90`, `branches: -82`). **Rapporté par le message de `d73635c`, pas
+> mesuré ici** — et la distinction compte : la vérification a échoué pour une raison qui n’est pas
+> le code (ci-dessous). Aucun commit de `develop` n’a touché `vitest.config.ts` ni
+> `renderer/src/stores/` depuis. **Premier geste de la prochaine session : le mesurer**, avant de
+> supposer la porte verte.
+
+> **Deux sessions ne peuvent pas lancer `pnpm test:coverage` dans le même clone en même temps.**
+> Mesuré le 9 août au soir, en essayant précisément de vérifier la ligne ci-dessus : *« Something
+> removed the coverage directory `coverage/.tmp` Vitest created earlier »*, puis un `ENOENT` sur un
+> `coverage-<n>.json`. `coverage.reportsDirectory` est un chemin unique du dépôt, et les worktrees
+> ne le partagent pas — mais deux sessions **du dépôt principal**, si. L’échec ne ressemble en rien
+> à un budget dépassé : ne pas le lire comme un rouge du code. Attendre, ou mesurer depuis un
+> worktree.
+
 > **Un grain de sable environnemental : les tests lents dépassent leur budget de 5 s quand la machine
 > porte plusieurs sessions** — des sous-ensembles différents à chaque passage, verts en isolation.
 > Ce n’est ni un seul fichier ni une seule cause : `LicencesWindow.test.tsx` pilote `userEvent`, qui
