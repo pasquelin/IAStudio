@@ -14,6 +14,20 @@ When one word calls for another, it is written *in italics*: you will find it un
 A button that plays — or shows — the original version while you hold it, to compare it with the
 modified one. It undoes nothing: it shows.
 
+**Accent colour**
+The colour that marks what is selected or under way in the interface: the outline of the active
+panel, the *playhead*, the frame around a selection. Adjustable in Settings → **Appearance**.
+
+**Account**
+A stored API key, under a name you choose. The studio holds **several**, and the switcher in the
+title bar moves between them.
+
+Each key carries **its own Scenario project** — its models, its assets, its credit. Switching
+accounts therefore changes the remote library you browse, **never** the files in your local project,
+which are on your disk and belong to no account.
+
+A *job* already under way finishes on the account that launched it: switching interrupts nothing.
+
 **Adjustment layer**
 A *layer* holding no pixels of its own: it **changes what sits below it**. Brightness, contrast,
 saturation, hue. Moving it in the stack changes what it touches; switching it off puts everything
@@ -26,20 +40,14 @@ times, or delete it, having spoilt nothing.
 A greyscale image marking the places ambient light struggles to reach: hollows, corners, joints. It
 adds depth to a material that looked flat.
 
-**Account**
-A stored API key, under a name you choose. The studio holds **several**, and the switcher in the
-title bar moves between them.
-
-Each key carries **its own Scenario project** — its models, its assets, its credit. Switching
-accounts therefore changes the remote library you browse, **never** the files in your local project,
-which are on your disk and belong to no account.
-
-A *job* already under way finishes on the account that launched it: switching interrupts nothing.
-
 **API key**
 Your identifier with Scenario, the equivalent of a username. It always goes with an *API secret*.
 Both are taken from [app.scenario.com](https://app.scenario.com) and pasted into Settings →
 **Account**.
+
+**API secret**
+The second half of your Scenario credentials, the equivalent of a password. It always goes with an
+*API key*, and is never displayed in the clear once stored.
 
 **Asset**
 A raw-material file in your *project*: an image, a video, a sound, a 3D object, a *texture*, a sky.
@@ -55,6 +63,10 @@ east, south, west, north. It pairs with *elevation*, which gives its height.
 
 ## B
 
+**Background removal** *(cut out)*
+Taking the background out of a picture to keep only the subject, on transparency. The **Cut out**
+command lives in the Image menu; its model is set in **Settings ▸ Generation ▸ Background removal**.
+
 **Backoff** → see *Exponential backoff*.
 
 **Badge** *(of an asset)*
@@ -63,28 +75,19 @@ The small mark on a thumbnail in the *shelf*, saying where that file stands with
 another project. It is not stored but **recomputed** — it depends on the active account. See
 [Assets](07-assets.md).
 
-**Library** *(of the account)*
-The stock of assets living online, on your Scenario account's side — as opposed to the *project*,
-which is a folder on your disk. The two are separate and nothing travels between them without an
-action of yours. Today only the **project → library** direction has a button (**Send**).
-
-**Background removal** *(cut out)*
-Taking the background out of a picture to keep only the subject, on transparency. The **Cut out**
-command lives in the Image menu; its model is set in **Settings ▸ Generation ▸ Background removal**.
-
 **Base colour** *(texture channel)*
 A material's colour, as it would be under perfectly neutral light: no shadow, no reflection, no
 relief. The "paint" aspect of the surface.
-
----
-
-## C
 
 **Blend mode**
 How a layer mixes with what is below it. **Normal** simply lays it on top; **Multiply** darkens;
 **Screen** lightens; there are sixteen in all.
 
 It is the setting that turns a stack of pictures into a composition.
+
+---
+
+## C
 
 **Canvas**
 The drawing surface, in the centre of the Image workspace. This is where you paint, erase and crop.
@@ -135,13 +138,13 @@ You meet it in three places: the **Generate** button carries an estimate — `~1
 press it; the generation's own line shows the real figure once it has gone; **Help ▸ Usage…**
 totals a period. Asking for the estimate spends nothing and generates nothing.
 
-**Accent colour**
-The colour that marks what is selected or under way in the interface: the outline of the active
-panel, the *playhead*, the frame around a selection. Adjustable in Settings → **Appearance**.
-
 ---
 
 ## D
+
+**Default model**
+The one the **Generate** panel preselects when a *workspace* opens. Adjustable per *family*, in
+Settings → **Generation**.
 
 **Density**
 The size of the interface's controls. **Comfortable** leaves air (28 px tall); **Compact** tightens
@@ -217,17 +220,13 @@ A small program outside the studio, which can read and convert just about every 
 audio format. The studio uses it on import to make *proxies* and *waveforms*. Optional: without it,
 importing still works, just less comfortably.
 
-**Fingerprint** *(of a file)*
-A signature computed from a file's content. Two identical files have the same fingerprint, even under
-different names. That is how the studio recognises a duplicate on import.
-
 **Field of view** *(FOV)*
 What a camera takes in, measured in degrees. A narrow angle: you see little, but closely, and
 distances flatten. A wide angle: you see a lot, but the edges distort. A human eye sits around 60°.
 
----
-
-## G
+**Fingerprint** *(of a file)*
+A signature computed from a file's content. Two identical files have the same fingerprint, even under
+different names. That is how the studio recognises a duplicate on import.
 
 **Flatten**
 Melting every visible *layer* into a single picture, as if photographing it. That is what export
@@ -235,6 +234,10 @@ does, and what leaves when you ask the model to cut out or enlarge: the service 
 picture, not a stack.
 
 The document keeps its layers. Flattening is not destructive here.
+
+---
+
+## G
 
 **Generate**
 To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
@@ -310,6 +313,15 @@ it. See [When something goes wrong](16-troubleshooting.md).
 
 ---
 
+## K
+
+**Keychain**
+Your operating system's vault, the one that holds your passwords. It is what encrypts your *API key*
+and your *API secret*. They never come out in the clear, and the screen you are looking at has no
+access: it only knows whether the connection works.
+
+---
+
 ## L
 
 **Layer**
@@ -318,6 +330,11 @@ on another: you draw on the top one without spoiling the ones below. You can hid
 move it down, delete it.
 
 That is what makes an image **editable** instead of a final flat.
+
+**Library** *(of the account)*
+The stock of assets living online, on your Scenario account's side — as opposed to the *project*,
+which is a folder on your disk. The two are separate and nothing travels between them without an
+action of yours. Today only the **project → library** direction has a button (**Send**).
 
 **Local frame / world frame**
 The orientation of the manipulation handles, in the 3D workspace. In the **world** frame the red
@@ -353,13 +370,13 @@ they serve to soften the boundary between two areas.
 The distant program that makes things. There are several hundred, and they cannot all do the same
 thing. **Choosing the right model matters as much as writing a good prompt.**
 
-**Default model**
-The one the **Generate** panel preselects when a *workspace* opens. Adjustable per *family*, in
-Settings → **Generation**.
-
 ---
 
 ## N
+
+**Negative prompt**
+What you want to avoid. Short, in keywords: `blurry, text, watermark`. It is not the place to
+describe a scene in reverse.
 
 **Normalise** *(audio)*
 Bringing a sound's perceived loudness to a reference level, here −14 *LUFS*. It stops two sounds
@@ -404,10 +421,6 @@ Your instruction sentence: the text describing what you want. The most important
 Three principles: **write in English** if you can, **describe what is there** rather than what is
 not, and **be concrete**.
 
-**Negative prompt**
-What you want to avoid. Short, in keywords: `blurry, text, watermark`. It is not the place to
-describe a scene in reverse.
-
 **Proxy**
 A lightweight copy of a video, made at import, which lets you scrub through the edit smoothly. You
 work on the proxy and export from the original. Making it requires *ffmpeg*.
@@ -416,14 +429,14 @@ work on the proxy and export from the original. Making it requires *ffmpeg*.
 
 ## Q
 
+**Queue**
+The line of pending *jobs*. How many work at once is adjustable (3 by default). Everything goes
+through this queue — that is what stops a burst of requests from being refused wholesale.
+
 **QWERTY / AZERTY**
 The two common keyboard layouts. The studio listens to the **position** of the keys, not the letter
 printed on them: the flying keys always form the same square at the top left — `WASD` on an American
 keyboard, `ZQSD` on a French one. Nothing to set.
-
-**Queue**
-The line of pending *jobs*. How many work at once is adjustable (3 by default). Everything goes
-through this queue — that is what stops a burst of requests from being refused wholesale.
 
 ---
 
@@ -452,10 +465,6 @@ are dragged.
 
 **Saturation**
 The intensity of colours. At 0 the image is black and white; above 1 the colours shout.
-
-**API secret**
-The second half of your Scenario credentials, the equivalent of a password. It always goes with an
-*API key*, and is never displayed in the clear once stored.
 
 **Seed**
 The starting point of a generation's randomness. It is a number.
@@ -529,11 +538,6 @@ each if needed.
 
 **Trim**
 To shorten a *clip* from one of its ends, or to keep only the selected portion of a sound.
-
-**Keychain**
-Your operating system's vault, the one that holds your passwords. It is what encrypts your *API key*
-and your *API secret*. They never come out in the clear, and the screen you are looking at has no
-access: it only knows whether the connection works.
 
 ---
 
