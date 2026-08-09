@@ -110,6 +110,43 @@ existe déjà : `EnvironmentSection` leur est commun, et sa JSDoc dit pourquoi.
 style lisible par les deux espaces demande que la forme sérialisée descende dans `shared/domain/` —
 sans quoi le main, qui écrira le fichier de `userData`, ne peut pas la typer.
 
+### 24. L’Explorateur et Apps passent au rail gauche, dans toute l’application
+
+**Décidé le 9 août 2026**, dans la foulée de l’entrée 23 : les deux quittent le rail droit pour
+le gauche, **partout**.
+
+**L’Explorateur y est déjà à moitié, et le code l’avait déjà tranché dans ce sens.** Il porte
+**deux** placements : `left/primary` pour l’accueil, `right/primary` pour les six espaces. Et le
+commentaire de celui de l’accueil dit exactement ceci — « Same panel and same half as in the six
+spaces, **one column over** ». Le déplacement ne fait donc pas qu’obéir : il **réunit les deux
+entrées en une**, et supprime la seule raison qu’avait ce panneau d’exister en double.
+
+**Ce que la droite garde**, une fois les deux partis — c’est le vrai enjeu, et il ne se voit pas
+avant de l’écrire :
+
+| Espace | Colonne droite, après |
+|---|---|
+| Image | `layers` **seul** |
+| Vidéo | `assets` **seul** |
+| Audio | `assets` **seul** |
+| Textures | `channels` seul — deux avec le panneau Styles de l’entrée 7 |
+| 3D | `scene`, `lights`, `meshes` |
+| Skyboxes | `skybox`, `view` |
+
+L’inspecteur ne bouge pas : il occupe l’autre moitié (`right/secondary`) et reste en bas à
+droite dans les six espaces.
+
+**Et la gauche passe à quatre panneaux qui prennent leur tour** — `models`, `generator`,
+`explorer`, `apps` — **cinq en Textures** quand Styles arrivera. C’est la contrepartie, et elle
+est à regarder à l’écran : quatre icônes empilées dans un rail, c’est le moment où une colonne
+cesse d’être un endroit qu’on connaît pour devenir une pile qu’on fouille. L’ordre de
+déclaration décide de ce qui s’ouvre par défaut.
+
+> **Deux commentaires deviennent faux le jour où c’est fait** et doivent partir avec le code :
+> « The left column is generation, **and only generation**, in every space » sur `models`, et
+> celui d’`apps` qui explique pourquoi il n’est *pas* à gauche. Une raison écrite pour une
+> décision qui n’est plus prise se lit comme la règle en vigueur.
+
 ### 19. « Apps » ne dit pas ce que le panneau contient
 
 **Vu le 9 août 2026** — « c’est quoi App, le titre je ne le comprends pas ». Le panneau liste
