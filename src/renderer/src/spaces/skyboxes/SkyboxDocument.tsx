@@ -30,10 +30,14 @@ async function exportSkybox(documentId: string, size: number): Promise<void> {
   if (!bridge) return
 
   try {
-    const source = skyboxOf(useSkyboxes.getState(), documentId).source
+    // Read once, before any `await`. Read twice — the picture here and the grading after the
+    // `import()` — and a slider moved while the chunk downloads would export one sky's pixels
+    // under another sky's settings, with nothing in the six files to say so.
+    const sky = skyboxOf(useSkyboxes.getState(), documentId)
+
     // Guarded before the dialog: a sky with no picture would open a folder chooser to write six
     // files of nothing, and the message belongs where the gesture was made.
-    if (!source) throw new Error('this sky has no source to export')
+    if (!sky.source) throw new Error('this sky has no source to export')
 
     // Cleaned before it is either a folder or a file name: a document is titled by hand.
     const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'skybox')
@@ -41,8 +45,8 @@ async function exportSkybox(documentId: string, size: number): Promise<void> {
     const { createSkyboxExportPort } = await import('@/engines/skybox/export-port')
 
     const files = await createSkyboxExportPort({ loadTexture })({
-      assetId: source.assetId,
-      adjustments: skyboxOf(useSkyboxes.getState(), documentId).adjustments,
+      assetId: sky.source.assetId,
+      adjustments: sky.adjustments,
       name,
       size,
     })
