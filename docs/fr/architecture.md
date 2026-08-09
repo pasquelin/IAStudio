@@ -309,12 +309,44 @@ src/renderer/src/
 └── services/     l'accès au pont et la traduction des échecs
 ```
 
-### Le shell
+### Le premier écran
 
-Les quatre éditeurs sont chargés à l’ouverture d’un document de leur type, jamais avant. Importés
-statiquement, ils atterriraient tous les quatre dans le morceau que l’écran de démarrage attend —
-cinq mégaoctets pour ouvrir une fenêtre au centre vide. Une session en ouvre un ou deux, et celui
-qu’elle ouvre coûte quelques centaines de millisecondes qu’elle allait dépenser de toute façon.
+**Tout ce qu’un import statique atteint depuis `main.tsx` est dans le morceau que l’écran de
+démarrage attend.** C’est la seule règle, et elle décide de ce que coûte l’ouverture d’une fenêtre
+vide. Le splash lui-même a son entrée à part, précisément pour ne jamais tirer ce bundle.
+
+Six choses en sont tenues dehors, chacune parce qu’une session ordinaire ne les ouvre pas toutes :
+
+| Ce qui est chargé à la demande | Pourquoi |
+|---|---|
+| Les **quatre éditeurs** | une session en ouvre un ou deux ; les quatre pèsent cinq mégaoctets |
+| Le **formulaire de génération**, et zod, `react-hook-form`, `@hookform/resolvers` avec lui | on ouvre un générateur, on n’arrive pas dessus |
+| La fenêtre des **Réglages** — son registre, ses sections, son brouillon | une cinquantaine de kilooctets d’une autre fenêtre |
+| La fenêtre des **Licences** | le texte intégral de chaque licence embarquée, que personne ne lit dans une session ordinaire |
+| La fenêtre de **Consommation** | pour une raison plus dure que sa taille : la bibliothèque de graphiques |
+| Le **parseur de polices** (`opentype.js`) | seul le texte en volume et les légendes en ont besoin |
+
+**Un `lazy()` qui échoue ne se rattrape pas par un réessai** : React met le rejet en cache, si
+bien que le bouton « Réessayer » de la frontière d’erreur ne peut pas gagner sur ces routes. La
+frontière est au-dessus des routes — celles des panneaux couvrent les docks, pas le shell qui les
+tient — et elle n’attrape que les rendus : ni les gestionnaires d’événements, ni les promesses
+rejetées, ni l’évaluation de `main.tsx` lui-même, dont un jet précède la frontière et laisse une
+fenêtre vide qu’aucun React ne voit.
+
+**Un test tient la liste**, `eager-graph.test.ts` : il marche le graphe des imports statiques
+depuis `main.tsx` et échoue si l’un d’eux réapparaît. Sans lui, un `import` ajouté sans y penser
+défait le gain sans rien casser de visible — le pire des régressions, celle qui ne se voit qu’au
+chronomètre.
+
+**Il vise des dossiers, pas des fichiers.** Une garde posée sur quatre fichiers du dossier des
+réglages laisse entrer le cinquième ; c’est ce qui a été corrigé en même temps que les réglages
+eux-mêmes.
+
+Les quatre éditeurs sont chargés à l’ouverture d’un document de leur type, jamais avant : celui
+qu’une session ouvre coûte quelques centaines de millisecondes qu’elle allait dépenser de toute
+façon.
+
+### Le shell
 
 Dockview tient le centre et **uniquement** le centre : les documents et leurs onglets. Les
 fenêtres d’outil sont posées sur la gouttière du châssis par le shell lui-même, parce que leur
@@ -436,7 +468,7 @@ n’est pas achetée deux fois, et elle ne se réessaie pas.
 ensemble : sans la seconde, `referencePictures` retenait zod dans le graphe eager. zod,
 `react-hook-form` et `@hookform/resolvers` sont à **zéro** dans le chunk initial, qui passe de
 2 030,50 à 1 810,88 kB — mesuré par décodage VLQ des sourcemaps, et verrouillé par des tests qui
-lisent la source.
+lisent la source. C’est un cas particulier de la règle du [premier écran](#le-premier-écran).
 
 ---
 

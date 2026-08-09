@@ -301,12 +301,40 @@ src/renderer/src/
 └── services/     the bridge accessor and failure-message mapping
 ```
 
-### The shell
+### The first screen
 
-The four editors are loaded when a document of their kind is opened, never before. Statically
-imported, all four would land in the chunk the splash screen waits for — five megabytes to open
-a window showing an empty centre. A session uses one or two of them, and the one it opens costs a
-few hundred milliseconds it was going to spend anyway.
+**Everything a static import reaches from `main.tsx` is in the chunk the splash screen waits
+for.** That is the only rule, and it decides what opening an empty window costs. The splash has an
+entry of its own, precisely so it never pulls this bundle in.
+
+Six things are kept out, each because an ordinary session does not open them all:
+
+| Loaded on demand | Why |
+|---|---|
+| The **four editors** | a session opens one or two; all four weigh five megabytes |
+| The **generation form**, and zod, `react-hook-form`, `@hookform/resolvers` with it | you open a generator, you do not land on one |
+| The **Settings** window — its registry, its sections, its draft | fifty kilobytes of another window |
+| The **Licences** window | every shipped licence in full, which nobody reads in a usual session |
+| The **Usage** window | for a harder reason than its size: the charting library |
+| The **font parser** (`opentype.js`) | only text in volume and captions need it |
+
+**A failed `lazy()` cannot be mended by retrying**: React caches the rejection, so the error
+boundary's "Retry" button cannot win on those routes. The boundary sits above the routes — the
+per-panel ones cover the docks, not the shell holding them — and it catches renders only: not
+event handlers, not rejected promises, and not `main.tsx`'s own evaluation, where a throw predates
+the boundary and leaves an empty window no React can see.
+
+**A test holds the list**, `eager-graph.test.ts`: it walks the static import graph from `main.tsx`
+and fails if any of them reappears. Without it, an `import` added without a thought undoes the
+gain while breaking nothing visible — the worst kind of regression, the one only a stopwatch sees.
+
+**It aims at folders, not files.** A guard set on four files of the settings folder lets the fifth
+back in; that was fixed at the same time as the settings themselves.
+
+The four editors are loaded when a document of their kind is opened, never before: the one a
+session opens costs a few hundred milliseconds it was going to spend anyway.
+
+### The shell
 
 Dockview holds the centre and **only** the centre: documents and their tabs. Tool windows are
 laid over the chassis gutter by the shell itself, because their behaviour — a rail that switches
@@ -423,6 +451,7 @@ same estimate is never bought twice, and it does not retry.
 without the second, `referencePictures` kept zod in the eager graph. zod, `react-hook-form` and
 `@hookform/resolvers` are at **zero** in the initial chunk, which drops from 2,030.50 to
 1,810.88 kB — measured by VLQ-decoding the sourcemaps, and locked by tests that read the source.
+It is one case of the [first screen](#the-first-screen) rule.
 
 ---
 
