@@ -1,7 +1,7 @@
 import { type CommandId, type CommandScope } from '@shared/domain/command'
 import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
-import { commandDescriptor, commandFor } from '@shared/domain/command'
+import { commandDescriptor, commandFor, heldCommandFor } from '@shared/domain/command'
 import { subscribeToCommands } from '@/services/command-bus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
 
@@ -28,6 +28,11 @@ function isTyping(target: EventTarget | null): boolean {
 function holdsText(): boolean {
   const selection = window.getSelection()
   return selection !== null && !selection.isCollapsed
+}
+
+/** Whether a command is heard where the focus currently sits — see `whileTyping`. */
+function reaches(command: CommandId, target: EventTarget | null): boolean {
+  return !isTyping(target) || commandDescriptor(command)?.whileTyping === true
 }
 
 /**
@@ -112,4 +117,63 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
   }, [enabled, scope])
 
   return { heldMotion }
+}
+
+/**
+ * A command that is held rather than tapped — dictation, and anything later that works the same
+ * way. Mounted once by the shell rather than by each surface: five documents listening would
+ * report one press five times, and the surfaces above already share this module's guards.
+ *
+ * Held commands are matched across scopes and are never claimed by the native menu, which has
+ * no release to report — see `heldCommandFor`.
+ */
+export function useHeldCommand(
+  command: CommandId,
+  enabled: boolean,
+  onChange: (held: boolean) => void,
+): void {
+  const handler = useRef(onChange)
+
+  useEffect(() => {
+    handler.current = onChange
+  }, [onChange])
+
+  useEffect(() => {
+    if (!enabled) return
+
+    let down = false
+    const set = (held: boolean) => {
+      if (down === held) return
+      down = held
+      handler.current(held)
+    }
+
+    const matches = (event: KeyboardEvent) =>
+      heldCommandFor(signatureOf(event), currentOverrides()) === command
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!matches(event) || !reaches(command, event.target)) return
+      event.preventDefault()
+      set(true)
+    }
+
+    // Matched on the key alone, without `reaches`: a key pressed outside a field and released
+    // inside one still has to be let go, or dictation would stay on with nothing holding it.
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (matches(event)) set(false)
+    }
+
+    // The window losing focus never delivers the keyup — the same hole the motions have.
+    const onBlur = () => set(false)
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onBlur)
+      set(false)
+    }
+  }, [command, enabled])
 }

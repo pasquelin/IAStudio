@@ -1,5 +1,6 @@
 import type { LanguagePreference } from '../i18n/languages'
 import type { BindingOverrides } from './command'
+import type { DictationMode, ExpectedLanguage } from './dictation'
 import type { ApiFailure } from './failure'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
@@ -139,6 +140,32 @@ export type Settings = {
      */
     ffmpegPath?: string
   }
+  /** Speaking a prompt instead of typing it. Everything runs on this machine — see `domain/dictation.ts`. */
+  dictation: {
+    enabled: boolean
+    mode: DictationMode
+    /** Silence that closes a segment, in milliseconds. Longer suits someone who pauses to think. */
+    silenceMs: number
+    /**
+     * How often the segment in flight is decoded again to show a preview. The model is not a
+     * streaming one, so a preview costs a full decode of what has been said so far; `0` turns
+     * previews off and leaves only the text of each closed segment.
+     */
+    previewMs: number
+    /** Inference threads. More is faster up to a point, and every one of them is a core taken. */
+    threads: number
+    /** Minutes of silence after which the engine is dropped, returning around 700 MB. `0` keeps it. */
+    idleUnloadMinutes: number
+    /** Compared against the language the model reports, never sent to it — see `ExpectedLanguage`. */
+    expectedLanguage: ExpectedLanguage
+    /** A model folder to read instead of the downloaded one. Absent is the normal case. */
+    modelFolder?: string
+    /**
+     * The microphone to record from. Absent means the system default, which is what most people
+     * want and what survives plugging a headset in and out.
+     */
+    inputDeviceId?: string
+  }
 }
 
 /**
@@ -167,6 +194,15 @@ export const DEFAULT_SETTINGS: Settings = {
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},
+  dictation: {
+    enabled: true,
+    mode: 'pushToTalk',
+    silenceMs: 600,
+    previewMs: 700,
+    threads: 2,
+    idleUnloadMinutes: 10,
+    expectedLanguage: 'auto',
+  },
 }
 
 /** Derived, so a section added to `Settings` is writable without being restated here. */
@@ -234,6 +270,7 @@ export type SettingsSectionId =
   | 'spaces'
   | 'spaces.three'
   | 'shortcuts'
+  | 'dictation'
   | 'media'
   | 'storage'
   | 'advanced'
@@ -253,6 +290,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'spaces',
   'spaces.three',
   'shortcuts',
+  'dictation',
   'media',
   'storage',
   'advanced',

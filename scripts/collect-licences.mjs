@@ -40,6 +40,7 @@ const SHIPPED = [
   'mediabunny',
   'opentype.js',
   'pixi.js',
+  'sherpa-onnx-node',
   'three',
   'three-mesh-bvh',
   // The runtime itself.

@@ -5,6 +5,7 @@ import type { FavoriteRecipe } from './domain/favorite'
 import type { MaterialStyle } from './domain/style'
 import type { CloudPage, CloudQuery, ExploreQuery, SimilarPage } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
+import type { SttEvent, SttSnapshot } from './domain/dictation'
 import type {
   CloseChoice,
   DocumentDescriptor,
@@ -119,6 +120,15 @@ export type Channels = {
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
 
+  dictationState: 'dictation:state'
+  dictationStart: 'dictation:start'
+  dictationStop: 'dictation:stop'
+  dictationCancel: 'dictation:cancel'
+  dictationPush: 'dictation:push'
+  dictationDownloadModel: 'dictation:download-model'
+  dictationCancelDownload: 'dictation:cancel-download'
+  dictationOpenPrivacy: 'dictation:open-privacy'
+
   sceneExport: 'scene:export'
 
   textureExport: 'texture:export'
@@ -217,6 +227,15 @@ export const CHANNELS: Channels = {
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
   mediaAvailable: 'media:available',
+
+  dictationState: 'dictation:state',
+  dictationStart: 'dictation:start',
+  dictationStop: 'dictation:stop',
+  dictationCancel: 'dictation:cancel',
+  dictationPush: 'dictation:push',
+  dictationDownloadModel: 'dictation:download-model',
+  dictationCancelDownload: 'dictation:cancel-download',
+  dictationOpenPrivacy: 'dictation:open-privacy',
 
   sceneExport: 'scene:export',
 
@@ -381,6 +400,7 @@ export const EVENTS = {
   jobProgress: 'evt:job-progress',
   jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
+  dictation: 'evt:dictation',
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
   settingsChanged: 'evt:settings-changed',
@@ -711,6 +731,33 @@ export type StudioBridge = {
     cancel: (assetId: string) => Promise<void>
     capabilities: () => Promise<MediaCapabilities>
     onProgress: (callback: (progress: IngestProgress) => void) => Unsubscribe
+  }
+  dictation: {
+    /** The state as it stands, for a window that arrives after the events it missed. */
+    state: () => Promise<SttSnapshot>
+    /**
+     * Opens a session: asks the operating system for the microphone, loads the engine if it is
+     * not resident, and starts accepting audio. Resolves once the answer is known — which may
+     * be `permissionRequired` or `modelMissing` rather than success.
+     */
+    start: () => Promise<void>
+    /** Closes the segment in flight, so the last words are transcribed rather than dropped. */
+    stop: () => Promise<void>
+    /** Drops the segment in flight. What was said is not transcribed and not inserted. */
+    cancel: () => Promise<void>
+    /**
+     * One chunk of 16-bit PCM at 16 kHz. Fire and forget, like `diagnostics.report`: nothing
+     * decides on the answer, and awaiting one would put a round trip on every 100 ms of speech.
+     */
+    push: (chunk: ArrayBuffer) => Promise<void>
+    downloadModel: () => Promise<void>
+    cancelDownload: () => Promise<void>
+    /**
+     * Opens the operating system's microphone privacy screen. Takes no address: a renderer that
+     * could name what gets opened would be a renderer that can open anything.
+     */
+    openPrivacySettings: () => Promise<void>
+    onEvent: (callback: (event: SttEvent) => void) => Unsubscribe
   }
   window: {
     toggleFullScreen: () => Promise<void>

@@ -37,6 +37,7 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | react-is | 19.2.8 | MIT |
 | react-tooltip | 6.0.8 | MIT |
 | recharts | 3.10.1 | MIT |
+| sherpa-onnx-node | 1.13.4 | Apache-2.0 |
 | tailwind-merge | 3.6.0 | MIT |
 | tailwindcss | 4.3.3 | MIT |
 | three | 0.185.1 | MIT |
@@ -1399,6 +1400,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+## sherpa-onnx-node
+
+Version: 1.13.4  
+Licence: Apache-2.0
+
+```
+See README.md of the package.
 ```
 ## tailwind-merge
 

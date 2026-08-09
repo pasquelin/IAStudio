@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { CommandId } from '@shared/domain/command'
+import type { SttEvent } from '@shared/domain/dictation'
 import type { Project } from '@shared/domain/project'
 import type { Job, JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
@@ -139,6 +140,17 @@ const bridge: StudioBridge = {
     cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),
     capabilities: () => ipcRenderer.invoke(CHANNELS.mediaAvailable),
     onProgress: callback => subscribe<IngestProgress>(EVENTS.mediaProgress, callback),
+  },
+  dictation: {
+    state: () => ipcRenderer.invoke(CHANNELS.dictationState),
+    start: () => ipcRenderer.invoke(CHANNELS.dictationStart),
+    stop: () => ipcRenderer.invoke(CHANNELS.dictationStop),
+    cancel: () => ipcRenderer.invoke(CHANNELS.dictationCancel),
+    push: chunk => ipcRenderer.invoke(CHANNELS.dictationPush, chunk),
+    downloadModel: () => ipcRenderer.invoke(CHANNELS.dictationDownloadModel),
+    cancelDownload: () => ipcRenderer.invoke(CHANNELS.dictationCancelDownload),
+    openPrivacySettings: () => ipcRenderer.invoke(CHANNELS.dictationOpenPrivacy),
+    onEvent: callback => subscribe<SttEvent>(EVENTS.dictation, callback),
   },
   window: {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
