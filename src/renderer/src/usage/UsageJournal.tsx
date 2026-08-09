@@ -37,7 +37,10 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
         {page.events.map((event, index) => (
           <Row key={`${event.time}-${event.jobId ?? index}`}>
             <td className="py-1.5 whitespace-nowrap">{formatMoment(event.time, locale)}</td>
-            <td className="py-1.5">{event.action}</td>
+            {/* Scenario adds actions without notice: one nobody named shows as the API sent it. */}
+            <td className="py-1.5">
+              {t(`usage.actionNames.${event.action}`, { defaultValue: event.action })}
+            </td>
             <td className="max-w-48 truncate py-1.5" title={event.modelName}>
               {event.modelName ?? '—'}
             </td>
