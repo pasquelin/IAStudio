@@ -50,7 +50,7 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > Textures (`feat/textures-materiau`). Le détail est au § 1.
 >
 > **Propose-moi un ordre et attends ma réponse** avant d’ouvrir un worktree. Les candidats, sans
-> priorité imposée : les **étapes 7 et 8 des Textures** (§ 3.4) · le **backlog qualité P1**
+> priorité imposée : l’**étape 8 des Textures** (§ 3.4) · le **backlog qualité P1**
 > (`.claude/loop/BACKLOG.md`, dont les statuts ont déjà menti trois fois : vérifie avant de prendre)
 > · les **13 constats du § 3.3** et l’export en six faces du skybox (§ 3.5) · les **dettes
 > transverses** du § 3.6.
@@ -350,8 +350,8 @@ budget de couverture (§ 3.1), ce qui est précisément pourquoi ce chemin n’a
 ---
 
 L’espace **Textures** est le prochain manque fonctionnel par ordre de valeur hors workflows : les
-**étapes 7 et 8** (§ 3.4) sont écrites et non commencées, et **les dérivations livrées le 9 août
-n’ont pas été vues à l’écran** — c’est la seule chose de cet espace qui reste à regarder.
+**étape 8** (§ 3.4) est écrite et non commencée, et **ni les dérivations ni le tiling, livrés le
+9 août, n’ont été vus à l’écran** — c’est la seule chose de cet espace qui reste à regarder.
 
 Les deux dettes d’API qui bloquaient le node editor — borne de débit et survie des jobs — **sont
 livrées** par les étapes 2 et 3 de `feat/workflows` (§ 3.6). Ce qui reste des dettes transverses :
@@ -675,12 +675,36 @@ inversée. Le résultat traverse `assets:save-texture` et devient un asset `text
 `JobManager`**, jamais un appel direct au SDK. Un job rend six canaux ; `collector.ts` sait déjà les
 répartir par `metadata.type`.
 
-### Les deux étapes écrites et non commencées
+### L’étape 7 est livrée — ce qu’elle a appris
 
-**7 — Tiling.** Aperçu 1×/2×/4× (multiplicateur **local**, jamais écrit dans `material.tiling`),
-détection de coutures par gradient aux bords, seamless par décalage d’une demi-largeur. `overlap` et
-`featherRadius` sont les paramètres de `model_scenario-texture`. Appliqué à tous les canaux **avec
-les mêmes valeurs**, sinon ils se désalignent.
+Aperçu 1×/2×/4×, décalage d’une demie pour amener les coutures au centre, mesure des coutures par
+shader. Les trois vivent dans `preview`, aucun ne touche la matière.
+
+- **L’invariant « une seule passe hors écran à la fois » appartient au port**, pas aux panneaux :
+  `runOffscreenPass` (`derive/offscreen.ts`) sérialise. Il a vécu six heures réparti entre deux
+  composants qui s’ignorent — la grille de canaux éteignait ses lignes, l’inspecteur avait son
+  booléen — de sorte que dériver puis cliquer « Mesurer » ouvrait deux contextes et décodait deux
+  4K. La file **ne reporte pas un rejet** : sans le `catch`, un contexte refusé rejetterait toutes
+  les passes derrière lui pour la vie de la fenêtre.
+- **Le prix de cette file, non traité** : une passe dont le `load` ne se règle jamais la bloque
+  définitivement. Avant, elle ne bloquait que sa propre ligne de menu. Un délai de garde serait une
+  complexité non mesurée ; c’est un choix, pas un oubli.
+- **Une demie est une demi-période, pas une demi-image.** `Matrix3.setUvTransform` pose l’offset
+  **après** l’échelle (`sx*(u − cx) + cx + tx`), donc la couture arrive au milieu d’une tuile quel
+  que soit le multiplicateur. Une revue a affirmé le contraire ; trente secondes dans
+  `node_modules/three` l’ont réfutée. **Ne pas rouvrir.**
+- **Une mesure retient l’asset qu’elle a lu**, pas seulement le nombre (`{ assetId, ratio }`) :
+  remplacer la couleur de base laissait « Couture visible » à l’écran pour des pixels partis. La
+  donnée porte sa propre péremption, ce qui évite une garde après l’`await`.
+- **Mesurer est un geste** : `texture.seam` est dans `GESTURE_SCOPES`, comme le dépôt. Un second
+  clic qui échoue doit le redire, sinon le bouton a l’air muet.
+- **jsdom ne voit pas la taille du frame** passée au renderer : un test qui prétendait la
+  surveiller ne mordait sur aucune mutation. Ce qui se vérifie de ce côté, c’est que le pass est
+  construit sur la taille de la **source**, jamais sur celle du frame réduit.
+- **Un carré passe un test d’axes.** `tiling` à 3×3 laissait `repeat.set(y, x)` vert ; c’est le
+  test voisin qui mordait à sa place. Toute assertion sur deux axes prend deux valeurs différentes.
+
+### L’étape écrite et non commencée
 
 **8 — Export.** glTF/GLB, Unity, Unreal, Roblox, canaux bruts. Empaquetage ORM (AO=R, Roughness=G,
 Metallic=B) **en une passe shader**. L’écriture disque passe par le main. `GLTFExporter` vient de
