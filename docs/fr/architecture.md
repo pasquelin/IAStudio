@@ -682,9 +682,19 @@ La règle qui départage les deux :
 |---|---|
 | appartient à une **liste fermée** que l’API documente | une clé de bundle par valeur, plus une garde exhaustive |
 | est **écrit librement** et change avec chaque modèle publié | le dictionnaire indexé sur le texte source |
+| est **lu par le code autant que par l’œil** | rien — il sort brut, et c’est délibéré |
 
-Dans les deux cas le repli est **le texte brut de l’API, jamais une clé** : un écran en anglais
-reste lisible, un écran qui affiche `usage.action.images-generation` ne l’est pas.
+Dans les deux premiers cas le repli est **le texte brut de l’API, jamais une clé** : un écran en
+anglais reste lisible, un écran qui affiche `usage.action.images-generation` ne l’est pas.
+
+**La troisième ligne est celle qu’on oublie, et elle casse en silence.** Un port de nœud de
+workflow montre le nom que le workflow lui a donné — celui-là passe par le dictionnaire. Mais un
+port **sans** nom affiche ce qu’il accepte, `image` ou `video`, et **cette chaîne est ce que la
+vérification de connexion compare** : traduite d’un côté de l’arête et pas de l’autre, elle ne dit
+plus si deux ports vont ensemble. `NodePorts.tsx` porte la règle en JSDoc, là où elle se paierait.
+
+C’est le même partage que `name` et `message` dans les gardes de texte en dur : **une chaîne qui
+est aussi une donnée n’est pas un libellé**, et la traduire la casse comme donnée.
 
 ### Quatre gardes, et ce que chacun tient
 

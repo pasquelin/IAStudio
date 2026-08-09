@@ -656,9 +656,19 @@ The rule that tells them apart:
 |---|---|
 | belongs to a **closed list** the API documents | one bundle key per value, plus an exhaustive guard |
 | is **written freely** and changes with every published model | the dictionary indexed on the source text |
+| is **read by the code as much as by the eye** | nothing — it comes out raw, deliberately |
 
-In both cases the fallback is **the API's raw text, never a key**: an English screen stays
+In the first two cases the fallback is **the API's raw text, never a key**: an English screen stays
 readable, a screen showing `usage.action.images-generation` does not.
+
+**The third row is the one that gets forgotten, and it breaks silently.** A workflow node's port
+shows the name the workflow gave it — that one goes through the dictionary. But a port **without**
+a name shows what it accepts, `image` or `video`, and **that string is what the connection check
+compares**: translated on one side of an edge and not the other, it no longer says whether two
+ports go together. `NodePorts.tsx` carries the rule in JSDoc, where it would be paid for.
+
+It is the same split as `name` and `message` in the hardcoded-text guards: **a string that is also
+data is not a label**, and translating it breaks it as data.
 
 ### Four guards, and what each one holds
 

@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`99cb1ef`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline 99cb1ef..develop`) au lieu de relire mille lignes.
+à **`d4d5cdc`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline d4d5cdc..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -111,14 +111,20 @@ glob dont la marge de croissance est du GPU intestable).
 > `vitest run --coverage --maxWorkers=2` pour toute la passe, avant de chercher une cause dans le
 > code.
 >
-> **Le pire cas a été mesuré et réglé** (`0d59c57`). `ShortcutsSettings.test.tsx` rend l’arbre le
-> plus lourd de la suite — 115 boutons dont le nom accessible est redérivé à chaque appel — et il
-> tenait **1,0 s au repos contre 4,8 s sous charge**, pour un plafond à 5 s. D’où un `pnpm validate`
-> vert seul et rouge en suite complète, sans qu’une ligne de production ait bougé : la pire façon
-> pour une suite d’avoir tort, puisqu’elle **accuse le dernier commit venu**. Son plafond est passé
-> à 20 s ; l’assertion par rôle est la partie lente et c’est celle qui vaut d’être gardée. **Un
-> plafond de temps qu’une machine chargée fait franchir n’est pas une garde, c’est un générateur de
-> fausses accusations** — le mesurer avant de le déplacer, et ne déplacer que celui-là.
+> **Deux fichiers ont été mesurés et réglés, et c’est un motif, pas deux accidents.**
+> `ShortcutsSettings.test.tsx` (`0d59c57`) rend l’arbre le plus lourd de la suite — 115 boutons
+> dont le nom accessible est redérivé à chaque appel — et tenait **1,0 s au repos contre 4,8 s sous
+> charge**, pour un plafond à 5 s. `known-keys.i18n.test.ts` (`0dc2c8f`) relit à la source chaque
+> fichier du renderer pour en extraire les clés nommées, et flanchait **deux fois sur trois passes**
+> sous `--coverage`. Les deux passent à 20 s.
+>
+> D’où un `pnpm validate` vert seul et rouge en suite complète, sans qu’une ligne de production ait
+> bougé : la pire façon pour une suite d’avoir tort, puisqu’elle **accuse le dernier commit venu**.
+> **Un plafond de temps qu’une machine chargée fait franchir n’est pas une garde, c’est un
+> générateur de fausses accusations** — et une garde qui clignote finit par être désactivée, alors
+> que celle-ci est précisément ce qui empêche une clé d’atteindre l’écran sans traduction. Le
+> réflexe est donc : **mesurer au repos et sous charge, relever le plafond de ce fichier-là, et ne
+> jamais toucher à l’assertion** — c’est elle qui vaut d’être gardée, et c’est elle qui est lente.
 >
 > **Et ce grain-là ne se présente pas toujours comme un dépassement de temps.** Le 9 août au soir,
 > une passe a rendu **26 échecs sur 5 fichiers** — des **échecs d’assertion**, pas des timeouts,
@@ -153,7 +159,15 @@ changer de langue redit le formulaire ouvert, et les Apps en profitent sans une 
 manquer : ses actions et ses genres d’assets sont deux **unions fermées** que l’API documente, donc
 une clé de bundle par valeur et une garde exhaustive dans `bundles.test.ts`. Le dictionnaire par
 texte source est pour ce qui change à chaque modèle publié ; une liste fermée mérite une garde qui
-rougit. Le tableau qui départage les deux est dans `fr/architecture.md`, § Internationalisation.
+rougit.
+
+**Et un troisième cas ne se traduit pas du tout.** Les ports d’un nœud de workflow passent leur
+**nom** par le même dictionnaire (`useModelText`, pas une seconde table) — mais un port sans nom
+affiche son **type**, `image` ou `video`, et cette chaîne-là est ce que la vérification de
+connexion compare. Traduite d’un côté de l’arête et pas de l’autre, elle ne dit plus si deux ports
+vont ensemble. **Une chaîne qui est aussi une donnée n’est pas un libellé** — même partage que
+`name` et `message` dans les gardes de texte en dur. Le tableau qui départage les trois est dans
+`fr/architecture.md`, § Internationalisation.
 
 **Le prix, avant et après** — `main/scenario/cost.ts` tire l’estimation d’un `?dryRun=true`, qui
 **répond 200** avec `creativeUnitsCost` dans le corps ; le 402 que documente la référence est gardé
