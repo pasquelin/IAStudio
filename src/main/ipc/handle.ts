@@ -92,6 +92,15 @@ type ChannelMethod = {
   [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']
   [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']
 
+  [CHANNELS.dictationState]: StudioBridge['dictation']['state']
+  [CHANNELS.dictationStart]: StudioBridge['dictation']['start']
+  [CHANNELS.dictationStop]: StudioBridge['dictation']['stop']
+  [CHANNELS.dictationCancel]: StudioBridge['dictation']['cancel']
+  [CHANNELS.dictationPush]: StudioBridge['dictation']['push']
+  [CHANNELS.dictationDownloadModel]: StudioBridge['dictation']['downloadModel']
+  [CHANNELS.dictationCancelDownload]: StudioBridge['dictation']['cancelDownload']
+  [CHANNELS.dictationOpenPrivacy]: StudioBridge['dictation']['openPrivacySettings']
+
   [CHANNELS.windowToggleFullScreen]: StudioBridge['window']['toggleFullScreen']
   [CHANNELS.windowState]: StudioBridge['window']['state']
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']

@@ -6,6 +6,7 @@ import { registerFontHandlers } from '@main/fonts/handlers'
 import { registerFavoriteHandlers } from '@main/favorites/handlers'
 import { registerStyleHandlers } from '@main/styles/handlers'
 import { readFavoriteThumbnail } from '@main/favorites/thumbnail'
+import { registerDictationHandlers } from '@main/dictation/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
 import { registerProjectHandlers } from '@main/project/handlers'
@@ -57,6 +58,10 @@ export function registerIpc(services: Services): void {
   })
   registerStyleHandlers(services.styles)
   registerMediaHandlers(services)
+  registerDictationHandlers({
+    session: services.dictation,
+    openPrivacySettings: services.openMicrophoneSettings,
+  })
   registerDialogHandlers(services)
   registerSceneHandlers(services)
   registerTextureHandlers(services)

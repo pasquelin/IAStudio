@@ -62,6 +62,9 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
     event.preventDefault()
     leaving = true
+    // Not awaited with the rest: the recognition process holds no state worth settling, and a
+    // model still loading would otherwise keep the studio on screen for seconds.
+    services.dictation.dispose()
     // The note of what is still running goes out with the journal: a job whose submission
     // landed in the last moments would otherwise be lost, and it has already been paid for.
     void Promise.all([services.journal.flush(), services.flushJobs()]).finally(() => app.quit())

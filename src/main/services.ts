@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, net, shell } from 'electron'
+import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
@@ -24,7 +24,12 @@ import { assetFilePath, ownFileOf, serveAssets, servedFileOf } from './assets/pr
 import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
-import { bundledFfmpeg, resourcesRoot } from './resources'
+import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
+import { createSession, type DictationSession } from './dictation/session'
+import { fetchModel, modelIsComplete, sweepPartials } from './dictation/model-download'
+import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/model-store'
+import { MACOS_MICROPHONE_SETTINGS, requestMicrophone } from './dictation/permissions'
+import { openSttProcess } from './dictation/stt-process'
 import { linkedAsset, mediaFilters } from './media/link'
 import {
   binaryRuns,
@@ -131,6 +136,10 @@ export type Services = {
   /** Minted here so the collector and the audio editor cannot name assets differently. */
   newAssetId: () => string
   media: MediaService
+  /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
+  dictation: DictationSession
+  /** Opens the system screen where microphone access is granted back after a refusal. */
+  openMicrophoneSettings: () => void
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Promise<Asset>
   capabilities: () => Promise<MediaCapabilities>
@@ -498,6 +507,44 @@ export function createServices(settings: SettingsStore): Services {
     concurrency: () => Math.max(1, availableParallelism() - 2),
   })
 
+  // The model is read from where the user pointed, or from beside the settings file. Read on
+  // every call rather than kept: the folder is a setting, and it can change while the studio
+  // is open.
+  const modelFolder = (): string =>
+    settings.read().dictation.modelFolder ?? defaultModelFolder(app.getPath('userData'))
+
+  const downloads = createDownloadHost()
+
+  const dictation = createSession({
+    modelFolder,
+    vadPath: () => bundledVad(resourcesRoot()),
+    settings: () => settings.read().dictation,
+    modelIsReady: () => modelIsComplete(downloads, modelFolder()),
+    download: async (onProgress, signal) => {
+      const folder = modelFolder()
+      await ensureFolder(folder)
+      // Swept before fetching rather than at startup: a `.part` is only ever resumed by a
+      // download someone asked for, and this is that moment.
+      await sweepPartials(downloads, folder)
+      await fetchModel(downloads, { folder, onProgress, signal })
+    },
+    requestMicrophone: () =>
+      requestMicrophone({
+        platform: process.platform,
+        status: () => systemPreferences.getMediaAccessStatus('microphone'),
+        ask: () => systemPreferences.askForMediaAccess('microphone'),
+        openPrivacySettings: () => void shell.openExternal(MACOS_MICROPHONE_SETTINGS),
+      }),
+    openEngine: openSttProcess,
+    emit: event => broadcast(EVENTS.dictation, event),
+    join,
+    now: Date.now,
+    schedule: (run, delayMs) => {
+      const timer = setTimeout(run, delayMs)
+      return () => clearTimeout(timer)
+    },
+  })
+
   const collectorOf = (scenario: Scenario): AssetCollector =>
     createAssetCollector({
       retrieve: async remoteAssetId => {
@@ -712,6 +759,8 @@ export function createServices(settings: SettingsStore): Services {
     assets,
     newAssetId,
     media,
+    dictation,
+    openMicrophoneSettings: () => void shell.openExternal(MACOS_MICROPHONE_SETTINGS),
     link: async (source, type) =>
       await project
         .catalog()
