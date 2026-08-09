@@ -13,6 +13,7 @@ import { definition as meshes } from '@/panels/meshes'
 import { definition as models } from '@/panels/models'
 import { definition as scene } from '@/panels/scene'
 import { definition as skybox } from '@/panels/skybox'
+import { definition as styles } from '@/panels/styles'
 import { definition as timeline } from '@/panels/timeline'
 import { definition as view } from '@/panels/view'
 import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './tool-components'
@@ -38,6 +39,7 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   skybox,
   assets,
   channels,
+  styles,
   view,
   apps,
 }

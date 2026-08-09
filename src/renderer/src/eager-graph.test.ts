@@ -266,12 +266,12 @@ describe('the opening chunk', () => {
   })
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
-  // `format.ts` was the one exception until the panels went lazy: the Generate button prices a
-  // run in the units the window totals, and that button lives in a panel.
+  // `format.ts` is the exception, and it earns it: a job row prices a run in the units the
+  // window totals (`panels/jobs/JobRow.tsx:7`), and the status bar carries those rows.
   it('never reaches the usage window, nor what draws its charts', () => {
     const { files, packages } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual([])
+    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual(['./usage/format.ts'])
     expect(packages).not.toContain('recharts')
   })
 })
