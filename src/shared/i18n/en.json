@@ -91,6 +91,11 @@
     "failures_other": "{{count, number}} failures",
     "clearFilters": "Show everything",
     "dismiss": "Dismiss",
+    "all": "All",
+    "filters": {
+      "levels": "Level",
+      "topics": "Topic"
+    },
     "levels": {
       "info": "Information",
       "warn": "Warning",
