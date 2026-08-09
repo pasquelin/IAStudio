@@ -22,6 +22,7 @@ export type ToolId =
   | 'skybox'
   | 'channels'
   | 'view'
+  | 'apps'
 
 /**
  * The panels the LEFT column is reserved for: choosing a model, then filling its form. Nothing
@@ -97,6 +98,11 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'scene', zone: 'right', slot: 'primary', workspaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', workspaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', workspaces: ['3d'] },
+  // Scenario's Apps — public workflows, run as they are. In the right column and not in the
+  // left one, which is reserved for the two generation panels: an App is a pipeline of its own,
+  // not a model the generator would fill a form for. Last of the half in every space, so it
+  // takes the place of nothing: what a space opens on is what it declares first here.
+  { id: 'apps', zone: 'right', slot: 'primary', workspaces: WORKSPACE_IDS },
 
   // The other half of the right column, and always up: what is selected is read WHILE a
   // model is chosen and a prompt written, and in an editor the inspector is never the panel

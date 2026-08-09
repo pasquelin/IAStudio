@@ -1,8 +1,14 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { JobTarget } from '@shared/domain/job'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { ESTIMATE_DEBOUNCE_MS, ESTIMATE_MIN_INTERVAL_MS, useCostEstimate } from './useCostEstimate'
+import {
+  ESTIMATE_DEBOUNCE_MS,
+  ESTIMATE_MIN_INTERVAL_MS,
+  resetCostBudget,
+  useCostEstimate,
+} from './useCostEstimate'
 
 const PROMPT: FieldDescriptor = { key: 'prompt', label: 'Prompt', kind: 'text', required: true }
 
@@ -23,6 +29,8 @@ async function typeAt(
 describe('what the form in front of the user would cost', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    // The floor is shared by every form of the window, so it outlives a case unless it is reset.
+    resetCostBudget()
   })
 
   afterEach(() => {
@@ -38,7 +46,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
 
     act(() => {
       result.current.onValuesChange({ prompt: 'a' })
@@ -52,8 +60,11 @@ describe('what the form in front of the user would cost', () => {
     })
 
     expect(estimateCost).toHaveBeenCalledOnce()
-    expect(estimateCost).toHaveBeenCalledWith('model_flux', { prompt: 'a rock' })
-    expect(result.current.estimate).toEqual({ creativeUnits: 12 })
+    expect(estimateCost).toHaveBeenCalledWith(
+      { kind: 'model', id: 'model_flux' },
+      { prompt: 'a rock' },
+    )
+    expect(result.current.note).toContain('12')
   })
 
   /**
@@ -65,7 +76,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 1 }))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
 
     const text = 'a mossy boulder in a clearing at dawn'
     await typeAt(result.current.onValuesChange, text, ESTIMATE_DEBOUNCE_MS + 50)
@@ -76,12 +87,43 @@ describe('what the form in front of the user would cost', () => {
     expect(estimateCost.mock.calls.length).toBeLessThan(text.length)
   })
 
+  /**
+   * The generator and an App are in different columns, so both forms are on screen at once — an
+   * ordinary layout. A floor kept per hook would let each spend the whole interactive share, and
+   * the poll loop is sized against that share once: it is the one that would pay.
+   */
+  it('spends one share between two forms, not one each', async () => {
+    const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 1 }))
+    installFakeBridge({ scenario: { estimateCost } })
+
+    const generator = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
+    const app = renderHook(() => useCostEstimate('workflow', 'workflow_1', [PROMPT]))
+
+    act(() => generator.result.current.onValuesChange({ prompt: 'a rock' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ESTIMATE_DEBOUNCE_MS)
+    })
+    expect(estimateCost).toHaveBeenCalledOnce()
+
+    // The second form asks straight away; the floor is what must hold it back all the same.
+    act(() => app.result.current.onValuesChange({ prompt: 'a boulder' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ESTIMATE_DEBOUNCE_MS)
+    })
+    expect(estimateCost).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ESTIMATE_MIN_INTERVAL_MS)
+    })
+    expect(estimateCost).toHaveBeenCalledTimes(2)
+  })
+
   // A body without what the model requires answers 400, never a price: it buys nothing.
   it('asks nothing while a required field is empty', async () => {
     const estimateCost = vi.fn(() => Promise.resolve(null))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({}))
     await act(async () => {
@@ -96,7 +138,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({ prompt: 'a rock' }))
     await act(async () => {
@@ -116,7 +158,7 @@ describe('what the form in front of the user would cost', () => {
    * land second and sit on the button, pricing a form the user has already moved past.
    */
   it('keeps the answer to the last question, whatever order they come back in', async () => {
-    const estimateCost = vi.fn((_modelId: string, body: Record<string, unknown>) =>
+    const estimateCost = vi.fn((_target: JobTarget, body: Record<string, unknown>) =>
       body.prompt === 'slow'
         ? new Promise<{ creativeUnits: number }>(resolve =>
             setTimeout(() => resolve({ creativeUnits: 99 }), 8_000),
@@ -125,7 +167,7 @@ describe('what the form in front of the user would cost', () => {
     )
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({ prompt: 'slow' }))
     await act(async () => {
@@ -136,7 +178,7 @@ describe('what the form in front of the user would cost', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(ESTIMATE_MIN_INTERVAL_MS)
     })
-    expect(result.current.estimate).toEqual({ creativeUnits: 3 })
+    expect(result.current.note).toContain('3')
 
     // The dearer, older answer now lands. It must not take the button back.
     await act(async () => {
@@ -144,7 +186,7 @@ describe('what the form in front of the user would cost', () => {
     })
 
     expect(estimateCost).toHaveBeenCalledTimes(2)
-    expect(result.current.estimate).toEqual({ creativeUnits: 3 })
+    expect(result.current.note).toContain('3')
   })
 
   /**
@@ -155,13 +197,13 @@ describe('what the form in front of the user would cost', () => {
     let answer = (): Promise<{ creativeUnits: number }> => Promise.resolve({ creativeUnits: 12 })
     installFakeBridge({ scenario: { estimateCost: () => answer() } })
 
-    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({ prompt: 'a rock' }))
     await act(async () => {
       await vi.advanceTimersByTimeAsync(ESTIMATE_MIN_INTERVAL_MS)
     })
-    expect(result.current.estimate).toEqual({ creativeUnits: 12 })
+    expect(result.current.note).toContain('12')
 
     answer = () => Promise.reject(new Error('offline'))
     act(() => result.current.onValuesChange({ prompt: 'a boulder' }))
@@ -169,7 +211,7 @@ describe('what the form in front of the user would cost', () => {
       await vi.advanceTimersByTimeAsync(ESTIMATE_MIN_INTERVAL_MS)
     })
 
-    expect(result.current.estimate).toBeNull()
+    expect(result.current.note).toBeUndefined()
   })
 
   /**
@@ -177,12 +219,12 @@ describe('what the form in front of the user would cost', () => {
    * before stays on the button — and if their bodies serialise alike, the dedupe keeps it there.
    */
   it('drops the figure, and the memory of it, when the model changes', async () => {
-    const estimateCost = vi.fn((modelId: string) =>
-      Promise.resolve({ creativeUnits: modelId === 'model_flux' ? 12 : 99 }),
+    const estimateCost = vi.fn((target: JobTarget) =>
+      Promise.resolve({ creativeUnits: target.id === 'model_flux' ? 12 : 99 }),
     )
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result, rerender } = renderHook(({ id }) => useCostEstimate(id, [PROMPT]), {
+    const { result, rerender } = renderHook(({ id }) => useCostEstimate('model', id, [PROMPT]), {
       initialProps: { id: 'model_flux' },
     })
 
@@ -190,10 +232,10 @@ describe('what the form in front of the user would cost', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(ESTIMATE_MIN_INTERVAL_MS)
     })
-    expect(result.current.estimate).toEqual({ creativeUnits: 12 })
+    expect(result.current.note).toContain('12')
 
     rerender({ id: 'model_veo' })
-    expect(result.current.estimate).toBeNull()
+    expect(result.current.note).toBeUndefined()
 
     // The very same body, which the dedupe would otherwise recognise and skip.
     act(() => result.current.onValuesChange({ prompt: 'a rock' }))
@@ -201,7 +243,56 @@ describe('what the form in front of the user would cost', () => {
       await vi.advanceTimersByTimeAsync(ESTIMATE_MIN_INTERVAL_MS)
     })
 
-    expect(result.current.estimate).toEqual({ creativeUnits: 99 })
+    expect(result.current.note).toContain('99')
+  })
+
+  /**
+   * Answers come back seconds later. Left in flight, the price of the model before lands on the
+   * button of the one now chosen — which was never estimated — and stays there.
+   */
+  it('drops an answer still in flight when the target changes', async () => {
+    let land = (_estimate: { creativeUnits: number }): void => {}
+    const estimateCost = vi.fn(
+      () => new Promise<{ creativeUnits: number }>(resolve => (land = resolve)),
+    )
+    installFakeBridge({ scenario: { estimateCost } })
+
+    const { result, rerender } = renderHook(({ id }) => useCostEstimate('model', id, [PROMPT]), {
+      initialProps: { id: 'model_flux' },
+    })
+
+    act(() => result.current.onValuesChange({ prompt: 'a rock' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ESTIMATE_MIN_INTERVAL_MS)
+    })
+    // The half that makes the assertion below mean anything: an answer really is in flight.
+    expect(estimateCost).toHaveBeenCalledOnce()
+
+    rerender({ id: 'model_veo' })
+    await act(async () => {
+      land({ creativeUnits: 12 })
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(result.current.note).toBeUndefined()
+  })
+
+  // The pause is worth an interactive request, and the form it was pricing is gone.
+  it('drops a pause interrupted by a change of target', async () => {
+    const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
+    installFakeBridge({ scenario: { estimateCost } })
+
+    const { result, rerender } = renderHook(({ id }) => useCostEstimate('model', id, [PROMPT]), {
+      initialProps: { id: 'model_flux' },
+    })
+
+    act(() => result.current.onValuesChange({ prompt: 'a rock' }))
+    rerender({ id: 'model_veo' })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ESTIMATE_MIN_INTERVAL_MS)
+    })
+
+    expect(estimateCost).not.toHaveBeenCalled()
   })
 
   // A panel closed mid-pause must not spend a request on a form that is no longer on screen.
@@ -209,7 +300,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve(null))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result, unmount } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
+    const { result, unmount } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({ prompt: 'a rock' }))
     unmount()

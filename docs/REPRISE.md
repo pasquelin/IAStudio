@@ -114,11 +114,13 @@ le main, `ModelRegistry` avec auto-pagination et cache, `JobManager` qui poll se
 concurrence, `DynamicForm` construit depuis les descripteurs et chargé paresseusement, zod avec lui.
 Aucun formulaire de génération écrit à la main (invariant 5).
 
-**Le prix, avant et après** — `main/scenario/cost.ts` tire l’estimation d’un `?dryRun=true` qui
-répond **402** : le seul appel du studio où un 4xx est le chemin nominal. `useCostEstimate` la tient
-à jour sous le bouton Générer, débounce plus plancher partagé avec le polling du `JobManager`. Le
-coût réel se capte à la soumission, à côté du job et non dedans. Un job repris au démarrage n’affiche
-aucun chiffre, délibérément.
+**Le prix, avant et après** — `main/scenario/cost.ts` tire l’estimation d’un `?dryRun=true`, qui
+**répond 200** avec `creativeUnitsCost` dans le corps ; le 402 que documente la référence est gardé
+en repli et n’a jamais été observé. `useCostEstimate` la tient à jour sous le bouton Générer,
+débounce plus plancher partagé avec le polling du `JobManager`. Le coût réel se capte à la
+soumission **et à chaque poll** — c’est là qu’un job repris trouve le sien. Un job de workflow fait
+exception : il facture 0 sur lui-même, ses nœuds portent la charge, et ce zéro-là ne s’affiche pas
+(§ 4.5).
 
 **Les projets** — un dossier, un manifeste, un catalogue SQLite. Le catalogue tourne sur son propre
 `worker_threads` : de 16 blocages du thread principal à 0 (§ 6).
@@ -792,6 +794,35 @@ qui le ferait passer de « une interface devant une API » à « un outil ». D�
 du § 3 : celui-là liste ce qui reste d’un chantier commencé, celui-ci ouvre un chantier qui ne l’est
 pas.
 
+> **L'étape 5 est livrée : les Apps s'exécutent.** `workflows.list` en `privacy: 'public'` alimente
+> un panneau **Apps** (colonne de droite, les six espaces), une App s'ouvre sur le formulaire que
+> `translateSchema` bâtit de ses `inputs` — le même traducteur que pour un modèle, invariant 5 — et
+> se lance par le `JobManager`, avec son coût estimé sur le bouton. **Trois** canaux — `workflows:search`,
+> `:describe`, `:run` — et **pas un quatrième pour le prix** : `scenario:estimate-cost` price
+> désormais une **cible** (`{ kind, id }`), la même que celle qu'on soumet.
+>
+> Trois choses à ne pas redécouvrir :
+>
+> - **un job dit maintenant ce qu'il lance** — `Job.kind` (`model` | `workflow`) et `Job.targetId`.
+>   Sans quoi « Régénérer avec ces paramètres » rouvrait le générateur sur un id de workflow, que
+>   le catalogue de modèles ne connaît pas. Les **notes de jobs déjà sur disque** nomment un
+>   `modelId` : la relecture accepte les deux noms, sinon une génération payée serait abandonnée ;
+> - **les sorties d'un job de workflow** se lisent d'abord dans `metadata.assetIds`, et seulement
+>   s'il est vide en aplatissant `metadata.flow[].assets[]` — `outputsOf`, dans `runner.ts`, parce
+>   que c'est le fichier qui parle SDK. Les deux à la fois importeraient chaque image
+>   intermédiaire de la chaîne comme un résultat ;
+> - **`billing.cuCost` est enfin lu**, sur le job lui-même, après `creativeUnitsCost` — pour qu'un
+>   chiffre donné à la soumission l'emporte toujours. **Mais un job de workflow y répond `0`** : la
+>   charge est sur ses sous-jobs, ce que le lancement réel du 9 août a montré. Voir le § 4.5 :
+>   ce zéro-là ne s'affiche pas ;
+> - **un statut inconnu vaut `ready`, pas `draft`.** La graphie n'a pas pu être observée : refuser
+>   ce qu'on ne reconnaît pas rendrait **toutes** les Apps inertes le jour où Scenario écrirait
+>   `published`. Seul un `draft` explicite éteint le bouton ;
+> - **ce que le MCP ne pouvait pas dire, un vrai lancement l'a dit.** Le serveur ne liste que les
+>   workflows **privés** du compte (aucun) et n'a pas de filtre `public`. Les trois inconnues — la
+>   graphie des statuts, l'échelle de la progression, le peuplement d'`assetIds` — ont donc été
+>   tranchées le 9 août 2026 en lançant une App par le SDK. **Le relevé est au § 4.5.**
+
 ## 4.1 Ce que l’API offre, vérifié dans la copie locale
 
 Huit endpoints, tous dans `docs/scenario-api/reference/` : `workflows.create`, `.update`, `.run`,
@@ -909,9 +940,47 @@ porte `type?: string | string[]` — un tableau signifie un port **polymorphe**,
 > pending | queued | success | warming-up`), sans `succeeded` ni `failed`, et `progress` va de 0 à 1.
 > `jobs.retrieve` dit la même chose (`resources/jobs.d.ts`, l. 39-51), et le filtre du serveur MCP
 > officiel aussi. **Le guide en prose est la seule des trois sources** à annoncer `succeeded`/`failed`
-> et une progression en 0-100. Aucun job de workflow n’existe dans l’historique du compte pour
-> trancher à l’observation. Les deux corrections sont donc livrées **comme des assurances, pas comme
-> des correctifs**.
+> et une progression en 0-100. Aucun job de workflow n’existait alors dans l’historique du compte
+> pour trancher à l’observation : les deux corrections sont donc livrées **comme des assurances, pas
+> comme des correctifs**. **Tranché depuis** — voir juste dessous.
+>
+> ### Tranché à l’observation le 9 août 2026 — une App lancée pour de vrai
+>
+> `wflow_coloring-page-maker` (deux nœuds, 12 CU), lancée par le SDK avec la clé de développement,
+> le job suivi par `jobs.retrieve` jusqu’à son terme. **C’est le SDK qui disait vrai, sur les deux
+> points, et le guide en prose qui a tort.** Ne pas rouvrir la question.
+>
+> | Ce qui était en doute | Ce que l’API répond |
+> |---|---|
+> | La graphie des statuts | `queued` → `in-progress` → `success` — le vocabulaire de la génération |
+> | L’échelle de la progression | `0` … `0` … `1`. En 0–1, **et elle ne bouge pas d’ici là** |
+> | `metadata.assetIds` | **peuplé**, à côté d’un `flow[]` qui porte les mêmes assets par nœud |
+>
+> Les deux assurances de l’étape 1 restent donc **inertes** — et c’est le résultat voulu : elles ne
+> coûtent rien et elles tiennent si Scenario change de vocabulaire.
+>
+> **Deux défauts que seule l’observation pouvait trouver, corrigés dans la foulée :**
+>
+> 1. **Le dry run répond `200`, pas `402`** — sur `generate.runModel` comme sur `workflows.run`.
+>    Le corps porte `creativeUnitsCost` (et `creativeUnitsDiscount`) à côté d’un `job` vide. Le
+>    402 à `estimatedCost` que documente `workflows-and-apps.md` n’a **jamais** été observé.
+>    `cost.ts` ne lisait que lui : **aucun badge de prix n’a rien affiché depuis l’étape 4**, et
+>    rien ne pouvait le dire — un bouton sans badge se lit comme un modèle que l’API refuse de
+>    tarifer. Les deux formes sont désormais lues, le 402 en repli.
+> 2. **Un job de workflow facture `cuCost: 0`.** La charge est sur ses **sous-jobs**, un par nœud :
+>    le parent `job_fZ1b…` disait 0, le nœud `job_14DZ…` qu’il a lancé disait 12. Le studio aurait
+>    affiché « 0 CU » sur une chaîne payée. Un `cuCost` nul sur un job de **workflow** vaut donc
+>    absence de prix ; sur une génération il vaut gratuit, et il s’affiche.
+>
+> **Deux faits acquis pour la suite.** L’`editorInfo` d’une App porte un **quatrième** champ que
+> le § 4.4 ne nommait pas : `nodeGroups`, `{ [uuid]: { title, color } }`, avec un `data.group` sur
+> chaque nœud — ce sont les boîtes de regroupement de la webapp. Et une App publique compte
+> **62 nœuds** (`wflow_H1bKz78jgpinWPKJfVCM5uAp`) : le plafond de 50 n’est pas opposé aux
+> workflows publiés, ce qui est à vérifier avant d’écrire le refus d’export de l’étape 9.
+>
+> **La convention d’arête inversée du § 4.4 est confirmée par des données réelles** :
+> `{ source: 'imageGenerator1', target: 'image1' }` pour une arête qui alimente le générateur
+> depuis l’asset, avec `sourcePosition: 'left’` et `targetPosition: 'right’` sur les nœuds.
 
 **1. Un job de workflow pollerait pour toujours** — si le guide dit vrai. Un statut inconnu est traité
 comme `running`, **délibérément et à raison** : c’est ce qui protège d’un statut que Scenario

@@ -1,3 +1,4 @@
+import type { Job, JobTarget } from '@shared/domain/job'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { reducedBy } from './client'
@@ -7,6 +8,7 @@ import type { PromptAssist } from './prompt-assist'
 import type { AssetUploader } from './uploader'
 import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
+import type { WorkflowRegistry } from './workflow-registry'
 import {
   parseAssetName,
   parseBase64,
@@ -19,16 +21,20 @@ import {
   parseReferenceImages,
   parseSuggestPrompts,
   parseUsageCursors,
+  parseJobTarget,
   parseUsagePeriod,
+  parseWorkflowId,
+  parseWorkflowQuery,
 } from './validation'
 
 export type ScenarioHandlerDeps = {
   models: ModelRegistry
+  workflows: WorkflowRegistry
   jobs: JobManager
   prompts: PromptAssist
   uploads: AssetUploader
   usage: UsageReader
-  /** What a run would cost, asked before it is run. See `cost.ts`. */
+  /** What a run would cost, asked before it is run — of a model or of a workflow. */
   estimateCost: CostEstimator
 }
 
@@ -36,6 +42,7 @@ const reduced = reducedBy('scenario')
 
 export function registerScenarioHandlers({
   models,
+  workflows,
   jobs,
   prompts,
   uploads,
@@ -74,25 +81,53 @@ export function registerScenarioHandlers({
     reduced(() => prompts.describeStyle(parseReferenceImages(images))),
   )
 
-  handle(CHANNELS.scenarioGenerate, async (_event, modelId, body) => {
-    const id = parseModelId(modelId)
-    const parsedBody = parseGenerationBody(body)
-
-    // `describe` rather than `list`: the generator just used it to render the form, so it is
-    // warm, whereas a cold `list` paginates the whole catalogue before the job is even queued.
-    // A missing label is a cosmetic problem; refusing to generate over one is not.
-    const label = await models
-      .describe(id)
+  /**
+   * Queues a job under the name of what it runs.
+   *
+   * `describe` rather than `list`: the panel just used it to render the form, so it is warm,
+   * whereas a cold listing paginates a whole catalogue before the job is even queued. A missing
+   * name is a cosmetic problem; refusing to run over one is not.
+   */
+  const submitNamed = async (
+    target: JobTarget,
+    describe: (id: string) => Promise<{ name: string }>,
+    body: Record<string, unknown>,
+  ): Promise<Job> => {
+    const label = await describe(target.id)
       .then(descriptor => descriptor.name)
-      .catch(() => id)
+      .catch(() => target.id)
 
-    return jobs.submit(id, label, parsedBody)
-  })
+    return jobs.submit(target, label, body)
+  }
 
-  // Not through `reduced`: a dry run answers 402, which that would turn into a thrown failure —
-  // and this is the one call where a 4xx is the answer. The estimator swallows it into `null`.
-  handle(CHANNELS.scenarioEstimateCost, (_event, id, body) =>
-    reduced(() => estimateCost(parseModelId(id), parseGenerationBody(body))),
+  handle(CHANNELS.scenarioGenerate, (_event, modelId, body) =>
+    submitNamed(
+      { kind: 'model', id: parseModelId(modelId) },
+      id => models.describe(id),
+      parseGenerationBody(body),
+    ),
+  )
+
+  handle(CHANNELS.workflowsSearch, (_event, query) =>
+    reduced(() => workflows.search(parseWorkflowQuery(query))),
+  )
+
+  handle(CHANNELS.workflowsDescribe, (_event, workflowId) =>
+    reduced(() => workflows.describe(parseWorkflowId(workflowId))),
+  )
+
+  handle(CHANNELS.workflowsRun, (_event, workflowId, body) =>
+    submitNamed(
+      { kind: 'workflow', id: parseWorkflowId(workflowId) },
+      id => workflows.describe(id),
+      parseGenerationBody(body),
+    ),
+  )
+
+  // One channel for the two things the studio runs: what is priced is a target, exactly as what
+  // is submitted is. Where the figure sits in the answer is `cost.ts`'s business, not this one's.
+  handle(CHANNELS.scenarioEstimateCost, (_event, target, body) =>
+    reduced(() => estimateCost(parseJobTarget(target), parseGenerationBody(body))),
   )
 
   handle(CHANNELS.scenarioUploadAsset, (_event, name, image) =>

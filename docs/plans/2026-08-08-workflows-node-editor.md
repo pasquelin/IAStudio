@@ -400,10 +400,12 @@ tous deux non testés. **Un budget de couverture qui déborde nomme souvent le d
 > `costEstimatorOf((id, body) => client.workflows.run(id, { body, dryRun: true }))`, sans rien
 > défaire.
 >
-> **Une affirmation à vérifier un jour** : le code lit `creativeUnitsCost` sur la réponse de
-> soumission. Les typages déclarent aussi un `billing.cuCost` sur un job **interrogé** — jamais
-> observé. Si l’API le peuple vraiment, un job repris pourrait afficher son coût, ce qu’il ne fait
-> pas aujourd’hui.
+> **Affirmation vérifiée depuis, et elle était fausse deux fois.** Le code lisait
+> `creativeUnitsCost` sur la réponse de soumission, et le dry run n’était lu que sur un 402 : il
+> répond **200**, donc aucun prix ne s’affichait. Et `billing.cuCost`, que les typages déclarent
+> sur un job **interrogé**, existe bel et bien — un job repris affiche désormais son coût, parce
+> qu’un poll le lui apporte. Les deux corrections sont datées du 9 août 2026, § 4.5 de
+> `REPRISE.md`.
 
 > **Le point 4 est déjà livré, par quelqu’un d’autre.** `feat/usage-window` a été fusionnée dans
 > `develop` le 8 août 2026 et donne à la consommation de chaque clé **sa propre fenêtre**
@@ -448,7 +450,74 @@ est un `402` porteur d’un `estimatedCost` — donc **un 402 n’est pas une er
 
 ## Étape 5 — Exécuter les Apps de Scenario, sans éditeur
 
-- [ ] Livrée
+- [x] Livrée
+
+> **Ce que le plan ne disait pas, et qu’il a fallu trancher : un job ne portait pas ce qu’il
+> lance.** `Job.modelId` était lu par l’inspecteur pour offrir « Régénérer avec ces paramètres »,
+> qui rouvre le générateur sur ce modèle. Un id de workflow y serait passé pour un id de modèle,
+> et le panneau serait resté sur une erreur. `Job` porte donc `kind` (`model` | `workflow`) et
+> `targetId` — les deux endpoints n’ont pas le même vocabulaire d’identifiant, et seul le premier
+> veut dire quelque chose au générateur. `JobRunner.submit` prend la cible entière ; `follow`,
+> `poll` et `cancel` ne changent pas, un job est suivi par l’API des jobs quel qu’il soit.
+>
+> **Les notes de jobs déjà sur disque nomment un `modelId`.** Une note qui ne parse pas est
+> **jetée** (`storedJob` dans `validation.ts`), donc migrer le champ sans plus aurait abandonné,
+> chez un utilisateur, une génération en cours et déjà payée. La lecture accepte les deux noms et
+> retombe sur `kind: 'model'` ; un test le verrouille.
+>
+> **Les sorties d’un job de workflow ne sont pas là où le manager les cherchait**, comme annoncé —
+> mais `metadata.assetIds` **existe aussi** sur un job de workflow, et la doc dit que seuls les
+> derniers nœuds y contribuent. `remoteAssetIdsOf` lit donc `assetIds` **d’abord** et n’aplatit
+> `flow[]` que s’il est vide : aplatir les deux importerait chaque image intermédiaire d’une
+> chaîne comme si c’était un résultat. Dédupliqué, parce qu’un nœud de boucle se répète.
+>
+> **Pas de quatrième canal.** Le dry run est le même 402 sur l’autre endpoint, et `costEstimatorOf`
+> prend une fonction : `scenario:estimate-cost` price désormais une **cible**, celle-là même qu’on
+> soumet, et le renderer n’a plus à savoir quel endpoint tarife quoi. `useCostEstimate` prend le
+> genre en premier argument, et **le plancher de débit est partagé par toutes les formes ouvertes**
+> — le générateur et une App sont dans deux colonnes, donc tous deux à l’écran : un plancher par
+> hook aurait laissé chacun dépenser la part interactive entière, et c’est la boucle de poll,
+> dimensionnée une seule fois sur cette part, qui l’aurait payé.
+>
+> **Le champ `billing.cuCost` existe** : déclaré sur le job par `workflows.run` **et** par
+> `jobs.retrieve` — le doute que le § 4.5 de `REPRISE.md` laissait ouvert. Lu après
+> `creativeUnitsCost`, jamais devant. **Mais sur un job de workflow il vaut `0`**, et ce zéro-là
+> n’est pas un prix : voir plus bas, l’observation du 9 août.
+>
+> **Le panneau est à DROITE**, en dernier de la moitié haute dans les six espaces. La colonne de
+> gauche est réservée à `models` et `generator`, un test le verrouille dans les deux sens — et une
+> App n’est pas un modèle que le générateur remplirait. Dernier de la liste pour ne rien déplacer :
+> ce qu’un espace ouvre par défaut est ce qu’il déclare en premier.
+>
+> **Ce qui n’a PAS pu être observé depuis le MCP.** Le § 4.5 demandait de consigner ce
+> qu’un vrai job de workflow répond. Impossible par le serveur MCP : il ne liste que les workflows
+> **privés** du compte — `workflows_list` rend une liste vide — et n’expose aucun filtre
+> `privacy: public`. Le studio, lui, demande bien `privacy: 'public'`.
+>
+> **Tranché le 9 août 2026, par un vrai lancement** (`wflow_coloring-page-maker`, deux nœuds,
+> 12 CU) — le § 4.5 de `REPRISE.md` porte le relevé complet. Les trois inconnues, et deux
+> défauts que l’observation seule pouvait trouver :
+>
+> - **les statuts sont ceux de la génération** : `queued` → `in-progress` → `success`. Le SDK
+>   disait vrai, le guide en prose a tort. Les deux lignes de l’étape 1 restent inertes ;
+> - **la progression est en 0–1**, et elle ne bouge pas : `0` du début à la fin, `1` à l’arrivée.
+>   L’heuristique `p > 2 ? p / 100 : p` reste inerte elle aussi ;
+> - **`metadata.assetIds` EST peuplé** sur un job de workflow, à côté de `flow[]` qui porte les
+>   mêmes assets par nœud. `outputsOf` lit bien `assetIds` d’abord : aplatir les deux aurait
+>   importé chaque image intermédiaire ;
+> - **le dry run répond 200, pas 402** — sur les deux endpoints. `creativeUnitsCost` est dans le
+>   corps, à côté d’un `job` vide. `cost.ts` ne lisait que le 402 documenté : **aucun badge de
+>   prix n’a jamais rien affiché**, ni pour un modèle ni pour une App, depuis l’étape 4. Corrigé,
+>   le 402 gardé en repli ;
+> - **un job de workflow facture `cuCost: 0`** — la charge est sur ses sous-jobs, un par nœud
+>   (le parent disait 0 là où le nœud qu’il a lancé disait 12). Afficher ce zéro aurait dit
+>   « gratuit » d’une chaîne payée.
+>
+> **Deux faits de plus, pour l’étape 6 et pour l’export.** Une App publique porte
+> `nodeGroups` dans son `editorInfo` — `{ [uuid]: { title, color } }`, et chaque nœud porte
+> `data.group` : un **quatrième** champ, que ni le plan ni le § 4.4 ne nommaient. Et
+> `wflow_H1bKz78jgpinWPKJfVCM5uAp` compte **62 nœuds** : le plafond de 50 n’est pas opposé aux
+> workflows publiés, donc le refus d’export au-delà de 50 se vérifiera avant d’être écrit.
 
 **Une étape qui vaut un produit à elle seule**, et qui vient avant le canvas : `workflows.list` en
 `privacy: public` rend les **Apps** — des workflows publics, exécutables tels quels, filtrables par

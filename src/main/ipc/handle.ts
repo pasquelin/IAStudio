@@ -35,6 +35,10 @@ type ChannelMethod = {
   [CHANNELS.scenarioUsageReport]: StudioBridge['scenario']['usageReport']
   [CHANNELS.scenarioUsageEvents]: StudioBridge['scenario']['usageEvents']
 
+  [CHANNELS.workflowsSearch]: StudioBridge['workflows']['search']
+  [CHANNELS.workflowsDescribe]: StudioBridge['workflows']['describe']
+  [CHANNELS.workflowsRun]: StudioBridge['workflows']['run']
+
   [CHANNELS.projectCreate]: StudioBridge['project']['create']
   [CHANNELS.projectOpen]: StudioBridge['project']['open']
   [CHANNELS.projectCurrent]: StudioBridge['project']['current']

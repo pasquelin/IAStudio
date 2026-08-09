@@ -24,7 +24,8 @@
     "skybox": "Skybox",
     "scene": "Scene",
     "channels": "Channels",
-    "view": "View"
+    "view": "View",
+    "apps": "Apps"
   },
   "view": {
     "empty": "Open a skybox to change how it is being displayed.",
@@ -49,6 +50,12 @@
     "noCredentials": "Enter your API credentials to see your models.",
     "dropPicture": "Drop a picture, or paste its id",
     "estimatedCost": "~{{units}} CU"
+  },
+  "apps": {
+    "none": "No App published yet.",
+    "back": "All Apps",
+    "run": "Run",
+    "draft": "This App is a draft: it cannot be run."
   },
   "jobs": {
     "none": "No job running.",

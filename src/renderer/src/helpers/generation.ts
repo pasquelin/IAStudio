@@ -62,8 +62,12 @@ export function generationOf(
   const body = bodies[asset.jobId]
   if (!job || !body) return null
 
+  // A workflow's id is not a model's: "regenerate with these parameters" would open the
+  // generator on a model the catalogue has never heard of, and the panel would sit on an error.
+  if (job.kind !== 'model') return null
+
   return {
-    modelId: job.modelId,
+    modelId: job.targetId,
     modelLabel: job.label,
     prompt: promptIn(body),
     params: body,

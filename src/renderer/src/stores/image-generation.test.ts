@@ -21,7 +21,8 @@ const picture = (id: string, overrides: Partial<Asset> = {}): Asset => ({
 
 const job = (overrides: Partial<Job> = {}): Job => ({
   id: 'job-1',
-  modelId: 'model_flux',
+  kind: 'model',
+  targetId: 'model_flux',
   label: 'Scenario Flux.1',
   status: 'running',
   progress: 0.5,

@@ -27,7 +27,8 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
 
 const job: Job = {
   id: 'job-1',
-  modelId: 'eleven-music-v2',
+  kind: 'model',
+  targetId: 'eleven-music-v2',
   label: 'ElevenLabs Music v2',
   status: 'succeeded',
   progress: 1,

@@ -15,7 +15,8 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
 
 const job = (overrides: Partial<Job> = {}): Job => ({
   id: 'job-1',
-  modelId: 'eleven-music-v2',
+  kind: 'model',
+  targetId: 'eleven-music-v2',
   label: 'ElevenLabs Music v2',
   status: 'succeeded',
   progress: 1,
@@ -75,6 +76,17 @@ describe('where an asset came from', () => {
 
   it('answers nothing for a job this session never submitted, such as after a reload', () => {
     expect(generationOf(asset({ jobId: 'job-1' }), [job()], {})).toBeNull()
+  })
+
+  /**
+   * A workflow's id is not a model's. Answered as a generation, "regenerate with these
+   * parameters" would open the generator on a model the catalogue has never heard of.
+   */
+  it('answers nothing for what an App produced', () => {
+    const workflowJob = job({ kind: 'workflow', targetId: 'workflow_1' })
+    const bodies = { 'job-1': { prompt: 'a soft pad' } }
+
+    expect(generationOf(asset({ jobId: 'job-1' }), [workflowJob], bodies)).toBeNull()
   })
 
   it('keeps the whole body, so regenerating carries every parameter and not just the prompt', () => {

@@ -1,4 +1,5 @@
 import {
+  mdiApplicationBracesOutline,
   mdiCreationOutline,
   mdiCubeScan,
   mdiFileTreeOutline,
@@ -49,6 +50,7 @@ const ICONS: Record<ToolId, string> = {
   view: mdiEyeOutline,
   assets: mdiImageMultipleOutline,
   channels: mdiGridLarge,
+  apps: mdiApplicationBracesOutline,
 }
 
 /**

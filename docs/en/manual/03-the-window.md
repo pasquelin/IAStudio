@@ -202,8 +202,8 @@ The **+** button is solid and blue, where all the others are grey glyphs. That i
 
 ### The right rail
 
-The **right column** icons: Skybox, View, Layers, Channels, Assets, Explorer, Scene, Lights, Meshes — whichever ones the
-workspace declares, in that order — then, below the separator, Inspector.
+The **right column** icons: Skybox, View, Layers, Channels, Assets, Explorer, Scene, Lights, Meshes, Apps — whichever
+ones the workspace declares, in that order — then, below the separator, Inspector.
 
 ### The rail only shows what the workspace can do
 
@@ -287,6 +287,7 @@ instead.
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
+| **Apps** | right | 1st | everywhere | Scenario's ready-made pipelines, run as they are |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
 | **Assets** | bottom | 1st | Image, 3D, Textures, Skyboxes | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio | the sequence being edited |

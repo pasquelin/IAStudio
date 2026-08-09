@@ -1,5 +1,6 @@
 import { APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
+import type { JobTarget } from '@shared/domain/job'
 import { costEstimatorOf, type CostEstimator } from './cost'
 
 const refusedWith = (status: number, body: object): unknown =>
@@ -9,30 +10,56 @@ const estimator = (answer: () => Promise<unknown>): CostEstimator => costEstimat
 
 describe('cost estimate', () => {
   /**
-   * The one call in the studio where a 4xx is the success path: a dry run answers 402 and puts
-   * the figure in the body. Read as an ordinary failure, the button would say nothing.
+   * What the API was observed doing on 9 August 2026, on both endpoints: 200, the figure beside
+   * an empty `job`. The studio read the documented 402 alone, so no badge ever showed a price.
    */
-  it('reads the estimate off the 402 the API answers with', async () => {
+  it('reads the estimate off the 200 a dry run answers with', async () => {
+    const estimate = estimator(() =>
+      Promise.resolve({ creativeUnitsCost: 12, creativeUnitsDiscount: 0, job: {} }),
+    )
+
+    await expect(
+      estimate({ kind: 'model', id: 'model_flux' }, { prompt: 'a rock' }),
+    ).resolves.toEqual({ creativeUnits: 12 })
+  })
+
+  /** A free model is priced at nothing, which is a figure — not the absence of one. */
+  it('keeps a zero, which is a price and not a silence', async () => {
+    const estimate = estimator(() => Promise.resolve({ creativeUnitsCost: 0, job: {} }))
+
+    await expect(estimate({ kind: 'model', id: 'model_free' }, {})).resolves.toEqual({
+      creativeUnits: 0,
+    })
+  })
+
+  /**
+   * The documented answer, kept as a fallback: `workflows-and-apps.md` describes a 402 carrying
+   * `estimatedCost`. Read as an ordinary failure, the button would say nothing.
+   */
+  it('reads the estimate off the 402 the reference documents', async () => {
     const estimate = estimator(() =>
       Promise.reject(refusedWith(402, { message: 'Dry run completed', estimatedCost: 12 })),
     )
 
-    await expect(estimate('model_flux', { prompt: 'a rock' })).resolves.toEqual({
+    await expect(
+      estimate({ kind: 'model', id: 'model_flux' }, { prompt: 'a rock' }),
+    ).resolves.toEqual({
       creativeUnits: 12,
     })
   })
 
   it('asks whatever it was handed, with the body as it stands', async () => {
     const run = vi.fn(() => Promise.reject(refusedWith(402, { estimatedCost: 3 })))
-    await costEstimatorOf(run)('model_flux', { prompt: 'a rock' })
+    const target: JobTarget = { kind: 'model', id: 'model_flux' }
+    await costEstimatorOf(run)(target, { prompt: 'a rock' })
 
-    expect(run).toHaveBeenCalledWith('model_flux', { prompt: 'a rock' })
+    expect(run).toHaveBeenCalledWith(target, { prompt: 'a rock' })
   })
 
   // A price is a courtesy: no figure means a button with no badge, never a button that refuses.
   it('answers with no figure rather than a failure when the API prices nothing', async () => {
     await expect(
-      estimator(() => Promise.resolve({ job: {} }))('model_flux', {}),
+      estimator(() => Promise.resolve({ job: {} }))({ kind: 'model', id: 'model_flux' }, {}),
     ).resolves.toBeNull()
   })
 
@@ -43,19 +70,19 @@ describe('cost estimate', () => {
   it('lets a refusal that is not a dry run travel', async () => {
     const estimate = estimator(() => Promise.reject(refusedWith(400, { message: 'bad body' })))
 
-    await expect(estimate('model_flux', {})).rejects.toThrow()
+    await expect(estimate({ kind: 'model', id: 'model_flux' }, {})).rejects.toThrow()
   })
 
   it('lets a dead network travel too', async () => {
     const estimate = estimator(() => Promise.reject(new Error('offline')))
 
-    await expect(estimate('model_flux', {})).rejects.toThrow('offline')
+    await expect(estimate({ kind: 'model', id: 'model_flux' }, {})).rejects.toThrow('offline')
   })
 
   it('answers with no figure on a 402 that carries no number', async () => {
     const estimate = estimator(() => Promise.reject(refusedWith(402, { estimatedCost: 'twelve' })))
 
-    await expect(estimate('model_flux', {})).resolves.toBeNull()
+    await expect(estimate({ kind: 'model', id: 'model_flux' }, {})).resolves.toBeNull()
   })
 
   // A 402 with nothing parsed behind it — a gateway's own page, an empty body.
@@ -64,7 +91,7 @@ describe('cost estimate', () => {
       Promise.reject(APIError.generate(402, undefined, 'Payment Required', new Headers())),
     )
 
-    await expect(estimate('model_flux', {})).resolves.toBeNull()
+    await expect(estimate({ kind: 'model', id: 'model_flux' }, {})).resolves.toBeNull()
   })
 
   // A number that is not one: it would reach the button as « ~Infinity CU » or « ~NaN CU ».
@@ -73,6 +100,6 @@ describe('cost estimate', () => {
       Promise.reject(refusedWith(402, { estimatedCost: Number.POSITIVE_INFINITY })),
     )
 
-    await expect(estimate('model_flux', {})).resolves.toBeNull()
+    await expect(estimate({ kind: 'model', id: 'model_flux' }, {})).resolves.toBeNull()
   })
 })

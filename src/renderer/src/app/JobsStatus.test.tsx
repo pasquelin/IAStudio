@@ -8,7 +8,8 @@ import { JobsStatus } from './JobsStatus'
 function job(id: string, status: JobStatus, progress: number): Job {
   return {
     id,
-    modelId: 'flux-dev',
+    kind: 'model',
+    targetId: 'flux-dev',
     label: `Take ${id}`,
     status,
     progress,

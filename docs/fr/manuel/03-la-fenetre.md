@@ -206,7 +206,8 @@ qu’il **agit** — il crée quelque chose — alors que les autres ne font que
 ### Le rail de droite
 
 Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Assets, Explorateur, Scène,
-Lumières, Mailles — celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+Lumières, Mailles, Apps — celles que l’espace déclare, dans cet ordre — puis, sous le trait,
+Inspecteur.
 
 ### Le rail ne montre que ce que l’espace sait faire
 
@@ -294,6 +295,7 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
+| **Apps** | droite | 1re | partout | les chaînes toutes faites de Scenario, à lancer telles quelles |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
 | **Assets** | bas | 1re | Image, 3D, Textures, Skyboxes | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio | la séquence en cours de montage |
@@ -347,7 +349,7 @@ disposition** rétablit :
 | **Vidéo** | Assets | Timeline |
 | **3D** | Explorateur | Assets |
 | **Audio** | Assets | Timeline |
-| **Textures** | Explorateur | Assets |
+| **Textures** | Canaux | Assets |
 | **Skyboxes** | Skybox | Assets |
 
 **Pourquoi ce n’est pas un panneau fixé une fois pour toutes.** Votre disposition est retenue une

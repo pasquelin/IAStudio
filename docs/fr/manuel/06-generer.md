@@ -257,9 +257,13 @@ Le bouton **Annuler la tâche** arrête ce qui n’est pas encore terminé.
 **Sous la barre, la ligne dit ce que la génération a coûté** — `3 UC` — ou, si elle a échoué,
 pourquoi. Jamais les deux : une génération ratée n’a pas de prix à annoncer.
 
-> **Une génération reprise au démarrage n’affiche aucun chiffre.** Le coût réel se capte au
-> moment où le studio lance la tâche ; s’il a été fermé entre-temps, il préfère ne rien dire
-> plutôt que d’annoncer un chiffre faux.
+> **Une génération reprise affiche son prix dès que le studio redemande où elle en est** — le
+> chiffre voyage avec la tâche, pas seulement avec la demande. Tant qu’il n’est pas revenu, la
+> ligne ne dit rien : mieux vaut se taire qu’annoncer un chiffre faux.
+
+> **Une App n’affiche pas de prix une fois lancée.** Une chaîne ne facture rien pour elle-même :
+> ce sont ses étapes qui sont facturées, chacune de son côté. Le prix que vous avez lu sur le
+> bouton avant de lancer reste donc le seul chiffre — et il vaut pour la chaîne entière.
 
 ### La file d’attente
 
@@ -359,6 +363,34 @@ de relancer, ce qui est la façon la plus rapide d’explorer une piste.
 
 > Les valeurs restent dans le formulaire jusqu’à ce qu’un autre « Régénérer » les remplace. Cela
 > se lit comme « les derniers réglages utilisés ».
+
+---
+
+## Les Apps : des chaînes toutes faites
+
+Le panneau **Apps**, dans la colonne de droite, liste les *workflows publics* de Scenario. Une App
+est une chaîne de traitements — plusieurs modèles enchaînés, parfois une découpe, un détourage et
+un agrandissement à la suite — publiée par Scenario ou par la communauté, et exécutable telle
+quelle. Vous n’avez rien à construire : elle a déjà ses étapes et ses réglages.
+
+**Le geste est le même que pour un modèle**, en trois temps :
+
+1. cliquez une App dans la liste — sa description dit ce qu’elle fait ;
+2. remplissez le formulaire qui s’ouvre. Il est bâti sur ce que l’App déclare attendre, exactement
+   comme le formulaire d’un modèle : ni le studio ni vous n’avez à deviner ses champs ;
+3. **Lancer**. La tâche part dans la barre des générations, avec les autres, et ses sorties
+   arrivent dans le projet ouvert.
+
+**Le prix s’affiche sur le bouton** dès que le formulaire est complet, comme pour une génération.
+
+**Retour à la liste** par la flèche, en haut du panneau.
+
+> Une App marquée **brouillon** n’est pas exécutable — c’est l’API qui le décide, pas le studio.
+> Le panneau le dit et le bouton reste inactif plutôt que de vous laisser essayer.
+
+> Une génération lancée par une App n’a **pas** de bouton « Régénérer » dans l’inspecteur : la
+> chaîne qui l’a produite n’est pas un modèle, et le formulaire de génération ne saurait pas quoi
+> en faire. Relancez-la depuis le panneau Apps.
 
 ---
 

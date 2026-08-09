@@ -1,0 +1,159 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Job } from '@shared/domain/job'
+import type { WorkflowDescriptor, WorkflowSummary } from '@shared/domain/workflow'
+import { installFakeBridge } from '@/services/fake-bridge'
+import { useJobs } from '@/stores/jobs'
+import { useProject } from '@/stores/project'
+import { useSettings } from '@/stores/settings'
+import { Apps } from './Apps'
+
+function app(overrides: Partial<WorkflowSummary> = {}): WorkflowSummary {
+  return {
+    id: 'workflow_1',
+    name: 'Background remover',
+    description: 'Cuts the subject out',
+    status: 'ready',
+    privacy: 'public',
+    tags: ['tool'],
+    ...overrides,
+  }
+}
+
+function descriptor(overrides: Partial<WorkflowDescriptor> = {}): WorkflowDescriptor {
+  return {
+    ...app(),
+    fields: [{ key: 'image', kind: 'text', label: 'Image', required: false }],
+    ...overrides,
+  }
+}
+
+function renderPanel() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={client}>
+      <Apps />
+    </QueryClientProvider>,
+  )
+}
+
+describe('Apps panel', () => {
+  beforeEach(() => {
+    useSettings.setState({ auth: { authenticated: true } })
+    useProject.setState({
+      project: {
+        path: '/projects/kingdom',
+        manifest: {
+          version: 1,
+          name: 'Kingdom',
+          createdAt: '2026-08-09T10:00:00.000Z',
+          updatedAt: '2026-08-09T10:00:00.000Z',
+        },
+      },
+    })
+  })
+
+  it('says what to do rather than showing an empty panel without credentials', () => {
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    installFakeBridge()
+    renderPanel()
+
+    expect(screen.getByText(/identifiants API/i)).toBeInTheDocument()
+  })
+
+  /** Public workflows and nothing else: a private one belongs to whoever wrote it. */
+  it('lists the public workflows of the platform', async () => {
+    const search = vi.fn(() => Promise.resolve({ items: [app()], cursor: null }))
+    installFakeBridge({ workflows: { search } })
+    renderPanel()
+
+    expect(await screen.findByText('Background remover')).toBeInTheDocument()
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ privacy: 'public' }))
+  })
+
+  it('opens one on its form, built from the inputs the API declares', async () => {
+    installFakeBridge({
+      workflows: {
+        search: () => Promise.resolve({ items: [app()], cursor: null }),
+        describe: () => Promise.resolve(descriptor()),
+      },
+    })
+    renderPanel()
+
+    await userEvent.click(await screen.findByText('Background remover'))
+
+    expect(await screen.findByLabelText('Image')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lancer' })).toBeInTheDocument()
+  })
+
+  it('runs it through the workflow channel, and puts the job in the bar', async () => {
+    const started: Job = {
+      id: 'job_1',
+      kind: 'workflow',
+      targetId: 'workflow_1',
+      label: 'Background remover',
+      status: 'queued',
+      progress: 0,
+      createdAt: '2026-08-09T10:00:00.000Z',
+      assetIds: [],
+    }
+    const run = vi.fn(() => Promise.resolve(started))
+    installFakeBridge({
+      workflows: {
+        search: () => Promise.resolve({ items: [app()], cursor: null }),
+        describe: () => Promise.resolve(descriptor()),
+        run,
+      },
+    })
+    useJobs.setState({ jobs: [], bodies: {} })
+    renderPanel()
+
+    await userEvent.click(await screen.findByText('Background remover'))
+    await userEvent.type(await screen.findByLabelText('Image'), 'asset_1')
+    await userEvent.click(screen.getByRole('button', { name: 'Lancer' }))
+
+    await waitFor(() => expect(run).toHaveBeenCalledWith('workflow_1', { image: 'asset_1' }))
+    await waitFor(() => expect(useJobs.getState().jobs).toHaveLength(1))
+  })
+
+  /** A draft answers 400 at the API. Saying so beats a failure nobody can read. */
+  it('says a draft cannot be run, and does not offer to', async () => {
+    installFakeBridge({
+      workflows: {
+        search: () => Promise.resolve({ items: [app({ status: 'draft' })], cursor: null }),
+        describe: () => Promise.resolve(descriptor({ status: 'draft' })),
+      },
+    })
+    renderPanel()
+
+    await userEvent.click(await screen.findByText('Background remover'))
+
+    expect(await screen.findByText(/brouillon/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lancer' })).toBeDisabled()
+  })
+
+  it('comes back to the listing from an App', async () => {
+    installFakeBridge({
+      workflows: {
+        search: () => Promise.resolve({ items: [app()], cursor: null }),
+        describe: () => Promise.resolve(descriptor()),
+      },
+    })
+    renderPanel()
+
+    await userEvent.click(await screen.findByText('Background remover'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Toutes les Apps' }))
+
+    expect(await screen.findByText('Cuts the subject out')).toBeInTheDocument()
+  })
+
+  // Without this the panel sits on "loading" for ever when the API refuses the request.
+  it('says why the listing is empty when the API refuses it', async () => {
+    installFakeBridge({ workflows: { search: () => Promise.reject(new Error('rate-limited')) } })
+    renderPanel()
+
+    expect(await screen.findByText(/Trop de requêtes/i)).toBeInTheDocument()
+  })
+})

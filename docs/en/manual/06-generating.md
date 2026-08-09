@@ -250,9 +250,13 @@ The **Cancel job** button stops anything not yet finished.
 **Under the bar, the line says what the generation cost** — `3 CU` — or, if it failed, why.
 Never both: a failed generation has no price to announce.
 
-> **A generation resumed at startup shows no figure.** The real cost is captured the moment the
-> studio launches the job; if it was closed in between, it would rather say nothing than announce
-> a wrong number.
+> **A resumed generation shows its price as soon as the studio asks where it stands again** — the
+> figure travels with the job, not only with the request that started it. Until it comes back the
+> line says nothing: better silent than wrong.
+
+> **An App shows no price once it is running.** A pipeline bills nothing for itself: its steps are
+> billed, each on its own. The price you read on the button before launching is therefore the only
+> figure — and it covers the whole chain.
 
 ### The queue
 
@@ -351,6 +355,34 @@ the fastest way to explore a direction.
 
 > The values stay in the form until another "Regenerate" replaces them. Read it as "the last
 > settings used".
+
+---
+
+## Apps: ready-made pipelines
+
+The **Apps** panel, in the right column, lists Scenario's *public workflows*. An App is a pipeline
+— several models chained together, sometimes a slice, a cutout and an upscale one after the other
+— published by Scenario or by the community, and runnable as it is. There is nothing to build:
+it already has its steps and its settings.
+
+**The gesture is the one you know**, in three beats:
+
+1. click an App in the list — its description says what it does;
+2. fill the form that opens. It is built from what the App declares it expects, exactly like a
+   model's form: neither you nor the studio has to guess its fields;
+3. **Run**. The job joins the generations bar with the others, and its outputs land in the open
+   project.
+
+**The price shows on the button** as soon as the form is complete, just as for a generation.
+
+**Back to the list** with the arrow at the top of the panel.
+
+> An App marked **draft** cannot be run — that is the API's decision, not the studio's. The panel
+> says so and the button stays inactive rather than letting you try.
+
+> Something an App produced has **no** "Regenerate" button in the inspector: the pipeline behind
+> it is not a model, and the generation form would not know what to do with it. Launch it again
+> from the Apps panel.
 
 ---
 
