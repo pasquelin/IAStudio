@@ -40,6 +40,7 @@ too — with no update to the studio.
 | A **number** | a quantity | often with a minimum and a maximum |
 | A **checkbox** | yes or no | — |
 | A **dropdown** | a list of imposed choices | a format, a style, a size |
+| An **empty frame** reading "Drop a picture…" | an input picture — a reference, a mask, the image to edit | drag a project asset onto it, or paste its id |
 | A **colour square** | a colour | a click opens the system picker |
 | A **number with a die** 🎲 | the *seed* — see below | a number, or a click on the die |
 

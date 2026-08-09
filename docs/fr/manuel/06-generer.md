@@ -42,6 +42,7 @@ publié demain aura, lui aussi, le sien — sans mise à jour du studio.
 | Un **nombre** | une quantité | souvent avec un minimum et un maximum |
 | Une **case à cocher** | oui ou non | — |
 | Un **menu déroulant** | une liste de choix imposés | un format, un style, une taille |
+| Un **cadre vide** « Déposez une image… » | une image d’entrée — référence, masque, image à éditer | glissez-y un asset du projet, ou collez son identifiant |
 | Un **carré de couleur** | une couleur | un clic ouvre le sélecteur du système |
 | Un **nombre avec un dé** 🎲 | la *graine* — voir plus bas | un nombre, ou un clic sur le dé |
 

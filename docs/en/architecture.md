@@ -603,13 +603,19 @@ re-renders every mounted row on each frame, and `useTranslation()` is not free.
 
 ### What gets translated goes beyond sentences
 
-Five things go through the bundles without looking like it, and each answers an observed defect:
+Six things go through the bundles without looking like it, and each answers an observed defect:
 
 - **key names** — `Space`, `Delete`, `Home` are not English labels left in place: the shortcuts
   screen resolves them like everything else;
 - **units and dates** — `formatBytes` computes a size but **does not name it**: the unit's name
   comes from the caller, because `Mio` and `MiB` are the same size in two languages and the
   abbreviations had ended up living in French inside a computation file;
+- **numbers written INSIDE a sentence** — `{{count, number}}` rather than `{{count}}`: a thousand
+  reads "4,000" on one side of the Channel and "4 000" on the other, and French's separator is a
+  narrow no-break space. i18next's formatter is `Intl.NumberFormat`, nothing to configure.
+  Twenty-seven keys carry it. **The exception is a factor, not a count**:
+  `texture.tilingPreviewTimes` writes "4×", and grouping a repetition would be wrong exactly where
+  the grouping would show — `bundles.test.ts` holds the rule **and its exception**;
 - **the journal's scopes** — an activity line shows a sentence, never the key naming it;
 - **the document's own language** — `document.documentElement.lang` follows the chosen language.
   `index.html` carried it hardcoded: a screen reader picks its voice from it, and an English

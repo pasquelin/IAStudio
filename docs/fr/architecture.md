@@ -627,13 +627,19 @@ pas gratuit.
 
 ### Ce qui est traduit va plus loin que les phrases
 
-Cinq choses passent par les bundles sans en avoir l’air, et chacune répond à un défaut constaté :
+Six choses passent par les bundles sans en avoir l’air, et chacune répond à un défaut constaté :
 
 - **les noms de touches** — `Espace`, `Suppr`, `Début` ne sont pas des libellés anglais laissés en
   place : l’écran des raccourcis les résout comme le reste ;
 - **les unités et les dates** — `formatBytes` calcule une taille mais **ne la nomme pas** : le
   nom de l’unité est fourni par l’appelant, parce que `Mio` et `MiB` sont la même taille dans deux
   langues et que les abréviations avaient fini par vivre en français dans un fichier de calcul ;
+- **les nombres écrits DANS une phrase** — `{{count, number}}` plutôt que `{{count}}` : un millier
+  s’écrit « 4 000 » d’un côté de la Manche et « 4,000 » de l’autre, et l’espace du français est une
+  insécable étroite. Le formateur d’i18next est `Intl.NumberFormat`, rien à configurer. Vingt-sept
+  clés le portent. **L’exception est un facteur, pas un dénombrement** :
+  `texture.tilingPreviewTimes` écrit « 4× », et grouper une répétition serait faux précisément là
+  où le groupement se verrait — `bundles.test.ts` tient la règle **et son exception** ;
 - **les portées du journal** — une ligne d’activité affiche une phrase, jamais la clé qui la
   désigne ;
 - **la langue du document lui-même** — `document.documentElement.lang` suit la langue choisie.
