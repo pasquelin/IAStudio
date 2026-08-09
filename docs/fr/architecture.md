@@ -51,7 +51,7 @@ Electron, trois cibles, un dépôt.
         │  renderer     bac à sable, ni Node ni fs    │
         │                                             │
         │  · shell React 19 — rails, zones, docks     │
-        │  · moteurs : canvas, scène, timeline, audio │
+        │  · six moteurs, aucun React dedans          │
         │  · stores zustand, TanStack Query           │
         └─────────────────────────────────────────────┘
 ```
@@ -82,8 +82,9 @@ respecte pas son contrat déclaré ne compile pas.
 
 ### 3. Un moteur est recréable depuis son état, jamais depuis son DOM
 
-`CanvasEngine`, `SceneRenderer`, `TimelineEngine` se reconstruisent intégralement depuis leur
-état sérialisé.
+Chaque moteur se reconstruit intégralement depuis son état sérialisé — `CanvasEngine` et
+`SceneRenderer` autant que le son, qui est une paire de modules plutôt qu’une classe et tient la
+même règle : l’édition est l’état, jamais le buffer en mémoire.
 
 La raison est concrète : un contexte WebGL ne survit pas au déplacement entre documents, et
 détacher un panneau dans une autre fenêtre l’exige. Le save/load et l’undo deviennent fiables
@@ -118,14 +119,20 @@ Toute tâche longue est **annulable**, **rapporte sa progression**, et tourne da
 `better-sqlite3` est synchrone : une requête lourde dans le processus principal bloque toutes les
 fenêtres, donc les requêtes de catalogue non triviales passent par `worker_threads`.
 
-Deux fils existent précisément pour cela. `main/project/catalog-worker.ts` détient la base et
+Trois fils existent précisément pour cela. `main/project/catalog-worker.ts` détient la base et
 répond à une boucle de messages : une recherche parmi des milliers d’assets ne gèle plus aucune
 fenêtre. `renderer/src/engines/audio/audio.worker.ts` sort la chaîne sonore du thread de la
-fenêtre, les buffers d’échantillons étant **transférés** plutôt que copiés. Les deux ne sont que
-de la tuyauterie : le catalogue, le dispatch et l’arithmétique audio se testent seuls, sans
-worker.
+fenêtre, les buffers d’échantillons étant **transférés** plutôt que copiés. Et
+`renderer/src/engines/scene/bvh.worker.ts` construit les arbres de collision d’un maillage — **un
+seul worker, pas un pool** : un BVH par maillage arrive en rafale au chargement d’une scène, et
+une rafale bornée à un fil garde le reste de la fenêtre réactif. Les trois ne sont que de la
+tuyauterie : le catalogue, le dispatch, l’arithmétique audio et la construction du BVH se testent
+seuls, sans worker.
 
-**Et un processus, pour la reconnaissance vocale.** `main/dictation/stt-worker.ts` tient Parakeet
+**Et deux processus, pour ce qui ne doit pas partager un heap.**
+`main/media/peaks-worker.ts` réduit une forme d’onde dans un `utilityProcess` : une heure de PCM
+mesurée à 129 ms sur le thread principal, et toutes les fenêtres du studio attendaient.
+`main/dictation/stt-worker.ts` tient Parakeet
 — six cents millions de paramètres, 640 Mo de poids — dans un `utilityProcess` à lui. Un thread
 n'aurait pas suffi : il partage le heap et le cycle de vie de son processus, donc les 700 Mo
 resteraient dans l'empreinte du principal et un plantage de l'addon natif emporterait le studio.
@@ -979,7 +986,7 @@ tiennent en une entrée dans une table, et non en une modification dans cinq fic
 
 ## Livrer une version
 
-Le studio se distribue en **installeurs signés par plateforme**, produits par GitHub Actions et
+Le studio se distribue en **installeurs par plateforme**, produits par GitHub Actions et
 publiés sur les GitHub Releases, que l’application consulte elle-même pour se mettre à jour.
 
 ### Deux branches, deux rôles
@@ -1033,4 +1040,4 @@ désalignement produit des manifestes qui annoncent une version inexistante.
 | [`docs/ci/RELEASE.md`](../ci/RELEASE.md) | la check-list de publication et le rollback |
 | [`docs/ci/SECRETS.md`](../ci/SECRETS.md) | les secrets de signature, leur obtention, leur rotation |
 | [`docs/ci/TROUBLESHOOTING.md`](../ci/TROUBLESHOOTING.md) | symptôme → cause → correction |
-| [`docs/ci/adr/`](../ci/adr/) | les quinze décisions, avec ce qui a été écarté et pourquoi |
+| [`docs/ci/adr/`](../ci/adr/) | les décisions du pipeline, avec ce qui a été écarté et pourquoi |
