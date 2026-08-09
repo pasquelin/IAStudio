@@ -315,11 +315,12 @@ src/renderer/src/
 démarrage attend.** C’est la seule règle, et elle décide de ce que coûte l’ouverture d’une fenêtre
 vide. Le splash lui-même a son entrée à part, précisément pour ne jamais tirer ce bundle.
 
-Six choses en sont tenues dehors, chacune parce qu’une session ordinaire ne les ouvre pas toutes :
+Sept choses en sont tenues dehors, chacune parce qu’une session ordinaire ne les ouvre pas toutes :
 
 | Ce qui est chargé à la demande | Pourquoi |
 |---|---|
-| Les **six éditeurs** | une session en ouvre un ou deux ; les six pèsent cinq mégaoctets |
+| Les **sept éditeurs** | une session en ouvre un ou deux ; les sept pèsent cinq mégaoctets |
+| Les **quinze panneaux** | un espace en montre trois ou quatre, jamais les quinze |
 | Le **formulaire de génération**, et zod, `react-hook-form`, `@hookform/resolvers` avec lui | on ouvre un générateur, on n’arrive pas dessus |
 | La fenêtre des **Réglages** — son registre, ses sections, son brouillon | une cinquantaine de kilooctets d’une autre fenêtre |
 | La fenêtre des **Licences** | le texte intégral de chaque licence embarquée, que personne ne lit dans une session ordinaire |
@@ -333,17 +334,36 @@ tient — et elle n’attrape que les rendus : ni les gestionnaires d’événem
 rejetées, ni l’évaluation de `main.tsx` lui-même, dont un jet précède la frontière et laisse une
 fenêtre vide qu’aucun React ne voit.
 
-**Un test tient les six lignes**, `eager-graph.test.ts` : il marche le graphe des imports
+**Un test tient les sept lignes**, `eager-graph.test.ts` : il marche le graphe des imports
 statiques depuis `main.tsx` et échoue si l’un d’eux réapparaît. Sans lui, un `import` ajouté sans
 y penser défait le gain sans rien casser de visible — le pire des régressions, celle qui ne se
 voit qu’au chronomètre.
 
-**Les éditeurs sont dehors, leurs voisins pas tout à fait.** Six modules des dossiers `spaces/`
-entrent quand même dans le premier écran, et aucun n’est un éditeur : ce sont des helpers qu’un
-**panneau** va chercher à côté d’un éditeur — `TimelinePanel` tire `TimelineCanvas`, `Channels`
-tire `place-channel` — parce qu’**aucun panneau n’est paresseux**, `app/tool-components.ts` les
-important tous les onze d’un coup. Le test en fait un **budget** : la liste peut rétrécir, jamais
-grandir. Une septième entrée veut dire qu’un panneau est allé chercher plus loin que nécessaire.
+**Les panneaux sont sortis à leur tour**, et c’est ce qui a rétréci la liste des voisins.
+`app/tool-components.ts` les importait tous d’un coup ; il déclare désormais, par panneau, **le
+module à charger et ce que son en-tête fait** — cette seconde moitié est nécessaire, parce que la
+ligne de titre se dispose au premier rendu et qu’un séparateur qui arriverait une frame plus tard
+décalerait une rangée déjà à l’écran. Mesuré sur le même commit des deux côtés, préchargés
+comptés, sans sourcemaps : **2 331 395 → 2 081 385 octets, −250 010, soit −10,7 %.**
+
+> **Un glob sur le dossier supprimerait la copie du nom de chaque panneau, et il a été écrit puis
+> retiré.** `eager-graph.test.ts` marche les imports **statiques** : un glob lui est invisible, et
+> la garde qui surveille précisément cette propriété serait restée verte quoi que le glob fasse au
+> chunk d’entrée. La copie reste, et `tool-components.test.ts` la tient — un `layers` qui
+> nommerait le module des mailles échangerait les deux en silence.
+
+**Il reste deux voisins**, et aucun n’est un éditeur : ce sont des helpers que quelque chose du
+premier écran va chercher à côté d’un éditeur. Ils étaient six ; **quatre sont partis avec les
+panneaux**, puisqu’ils entraient par un panneau et non par le shell. Le test en fait un
+**budget** : la liste peut rétrécir, jamais grandir. Une troisième entrée veut dire que le premier
+écran est allé chercher plus loin que nécessaire.
+
+**Le graphe est le seul espace dont le lecteur n’est pas derrière son éditeur** : `document-io.ts`
+parse un graphe comme il parse les autres genres, donc `engines/graph/serialize.ts` entre. Le
+moteur de mutation et le canvas, eux, restent dehors — `@xyflow/react` n’est jamais dans le chunk
+d’entrée. C’était deux modules de plus jusqu’à ce que l’id de nœud réservé descende dans
+`shared/domain/graph.ts` : un prédicat atteint depuis le lecteur tirait `mutations.ts`, qui tirait
+`connect.ts` et `handles.ts` — la moitié du moteur, pour une comparaison de chaînes.
 
 **Il vise des dossiers, pas des fichiers.** Une garde posée sur quatre fichiers du dossier des
 réglages laisse entrer le cinquième ; c’est ce qui a été corrigé en même temps que les réglages
