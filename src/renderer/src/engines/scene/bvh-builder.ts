@@ -39,11 +39,10 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
   const abandon = (reason: string): void => {
     worker?.terminate()
     worker = null
-    const waiting = [...pending.values()]
-    pending.clear()
     // Not a rebuild: whoever asked will hear, and the next mesh spawns a worker of its own. A
     // model that runs the thread out of memory must not take every later click's tree with it.
-    for (const slot of waiting) slot.reject(new Error(reason))
+    for (const slot of pending.values()) slot.reject(new Error(reason))
+    pending.clear()
   }
 
   const workerOf = (): Worker => {

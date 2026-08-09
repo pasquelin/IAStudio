@@ -36,13 +36,15 @@ function scriptedWorker() {
     await Promise.resolve()
   }
 
+  const lastRequest = (): BvhRequest | undefined => sent.at(-1)
+
   return {
     spawn,
     sent,
     terminated: worker.terminate,
     /** Answers the last request the way the real worker would, tree included. */
     settle: async () => {
-      const request = sent.at(-1)
+      const request = lastRequest()
       if (!request) return
 
       const geometry = new BufferGeometry()
@@ -66,7 +68,7 @@ function scriptedWorker() {
     },
     /** Answers the last request the way a build that threw does. */
     refuse: async (error: string) => {
-      const request = sent.at(-1)
+      const request = lastRequest()
       if (!request) return
       await reply({ id: request.id, ok: false, error })
     },

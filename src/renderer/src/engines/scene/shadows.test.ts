@@ -90,7 +90,7 @@ describe('applyShadowFlags', () => {
     branch.add(mesh)
     root.add(branch)
 
-    applyShadowFlags(root, true, false)
+    applyShadowFlags(root, true, false, () => false)
 
     expect(mesh.castShadow).toBe(true)
     expect(mesh.receiveShadow).toBe(false)
@@ -101,8 +101,8 @@ describe('applyShadowFlags', () => {
     const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
     root.add(mesh)
 
-    applyShadowFlags(root, true, true)
-    applyShadowFlags(root, false, false)
+    applyShadowFlags(root, true, true, () => false)
+    applyShadowFlags(root, false, false, () => false)
 
     expect(mesh.castShadow).toBe(false)
     expect(mesh.receiveShadow).toBe(false)

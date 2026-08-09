@@ -796,7 +796,9 @@ export class SceneRenderer {
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.viewport.requestRender()
       // Reported rather than swallowed: `scene.model` is what the same asset's load failure uses
-      // twenty lines up, and a click that costs a frame is worth a line in the journal.
+      // twenty lines up, and a click that costs a frame is worth a line in the journal. Sharing
+      // that scope shares its dedup key, which the two causes cannot collide on within a load —
+      // accelerating only runs once one has already worked.
       void this.accelerate(holder).catch(error => reportFailure('scene.model', assetId, error))
     })
 

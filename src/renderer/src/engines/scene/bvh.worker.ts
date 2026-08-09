@@ -45,6 +45,7 @@ self.addEventListener('message', (event: MessageEvent<BvhRequest>) => {
   } catch (error) {
     // A build that raises — a buffer the file lied about, memory the tree could not have — must
     // answer all the same: the other side holds a promise on this id and nothing else settles it.
-    self.postMessage({ id, ok: false, error: messageOf(error) })
+    const failed: BvhResponse = { id, ok: false, error: messageOf(error) }
+    self.postMessage(failed)
   }
 })

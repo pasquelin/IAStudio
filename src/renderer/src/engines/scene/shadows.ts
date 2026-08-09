@@ -26,7 +26,8 @@ export function applyShadowQuality(renderer: ShadowMapHolder, quality: ShadowQua
  * is only scenery: three.js reads them per mesh, and a model is one node over a whole imported
  * tree.
  *
- * It stops at a child that stands for a node of its own — `belongsElsewhere`. A traversal that
+ * It stops at a child that stands for a node of its own — `belongsElsewhere`, which has no default
+ * on purpose: a caller who forgot it would silently reopen the defect below. A traversal that
  * went through wrote the parent's flags over a child's, and nothing ever put them back: `syncNode`
  * only rewrites them when they changed, and the child's had not. A theme reload replayed the
  * overwrite over the whole scene. A group is the extreme case, all of whose children are nodes.
@@ -35,7 +36,7 @@ export function applyShadowFlags(
   object: Object3D,
   cast: boolean,
   receive: boolean,
-  belongsElsewhere: (child: Object3D) => boolean = () => false,
+  belongsElsewhere: (child: Object3D) => boolean,
 ): void {
   object.castShadow = cast
   object.receiveShadow = receive
