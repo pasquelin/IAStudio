@@ -43,9 +43,9 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
   }
 
   return {
-    // What is asked for, not what is on screen: a viewport whose sky is still decoding must not
-    // repaint its backdrop underneath it. Unchanged by the two-field split, deliberately.
-    showsSky: () => wanted !== null,
+    // Either: a sky still decoding must not have its backdrop repainted underneath it, and one
+    // already painted still owns the background even when the sky asked for after it failed.
+    showsSky: () => wanted !== null || shown !== null,
     release,
 
     apply: async (environment, asked) => {
@@ -69,17 +69,19 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
       // twice would take the count to zero under whoever else holds the same sky.
       if (!inFlight.delete(token)) return
 
-      // Overtaken while decoding: gives back what it acquired, which it never put on screen.
-      if (wanted !== assetId) {
-        cache.release(assetId, SRGBColorSpace)
+      // Failure first, because it holds nothing to give back — `ref-cache` drops the entry. Asked
+      // after the overtaken case, a sky that both failed and lost would hand back a reference it
+      // never took. `wanted` stops claiming it so `release` does not either, and so the same sky
+      // can be asked for again; only if it is still the one wanted, or a loser would clear the
+      // winner's claim.
+      if (!loaded) {
+        if (wanted === assetId) wanted = null
         return
       }
 
-      // A failed load holds nothing — `ref-cache` drops the entry — so `wanted` must not keep
-      // claiming it: `release` would give back a reference this binding never took, and the next
-      // try of the same sky would be turned away as already wanted.
-      if (!loaded) {
-        wanted = null
+      // Overtaken while decoding: gives back what it acquired, which it never put on screen.
+      if (wanted !== assetId) {
+        cache.release(assetId, SRGBColorSpace)
         return
       }
 

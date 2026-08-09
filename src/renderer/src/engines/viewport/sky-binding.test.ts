@@ -1,4 +1,4 @@
-import { SRGBColorSpace } from 'three'
+import { SRGBColorSpace, type ColorSpace } from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { EnvironmentRef } from '@shared/domain/scene'
 import { createTextureCache } from '../scene/texture-cache'
@@ -233,6 +233,59 @@ describe('createSkyBinding', () => {
     await sky.apply(environment, SKY)
 
     expect(environment.refresh).toHaveBeenCalled()
+  })
+
+  /**
+   * A sky that failed does not unpaint the one before it. `SceneRenderer.applyPalette` repaints
+   * the backdrop on every apply and asks this first — answering no here would flatten a sky that
+   * is still hanging behind the scene.
+   */
+  it('still owns the background when the next sky fails to load', async () => {
+    let fail = false
+    const cache = createTextureCache(async url => {
+      if (fail) throw new Error('gone')
+      return source.load(url)
+    }, silent)
+    const sky = createSkyBinding(cache, paint)
+    const environment = fakeEnvironment()
+    await sky.apply(environment, SKY)
+
+    fail = true
+    await sky.apply(environment, OTHER)
+
+    expect(sky.showsSky()).toBe(true)
+  })
+
+  /**
+   * Failed and overtaken at once: `ref-cache` dropped the entry, so this call holds nothing to
+   * give. Handing one back anyway takes the count to zero under whoever re-acquired the sky in
+   * the meantime — a window of one microtask, and the cache is shared with the material slots.
+   */
+  it('gives nothing back for a sky that both failed and lost the race', async () => {
+    let fail = true
+    const cache = createTextureCache(async url => {
+      if (fail) throw new Error('gone')
+      return source.load(url)
+    }, silent)
+
+    const released: string[] = []
+    const watched = {
+      acquire: cache.acquire,
+      release: (assetId: string, colorSpace: ColorSpace) => {
+        released.push(assetId)
+        cache.release(assetId, colorSpace)
+      },
+      dispose: cache.dispose,
+    }
+    const sky = createSkyBinding(watched, paint)
+    const environment = fakeEnvironment()
+
+    const failing = sky.apply(environment, SKY)
+    fail = false
+    const winner = sky.apply(environment, OTHER)
+    await Promise.all([failing, winner])
+
+    expect(released).not.toContain('sky-1')
   })
 
   it('shows nothing rather than throwing when the file cannot be read', async () => {
