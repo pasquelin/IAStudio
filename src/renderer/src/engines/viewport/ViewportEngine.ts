@@ -113,16 +113,17 @@ export class ViewportEngine {
     // An orthographic camera zooms by scaling its frustum, never by moving — so what the wheel
     // left on it has no counterpart in one that zooms by moving. Spent as distance rather than
     // dropped: dropped, coming back to perspective threw the view out to where it stood before.
-    const spent = this.projection === 'orthographic' ? this.orthographic.zoom : 1
+    const leavingOrthographic = this.projection === 'orthographic'
+    const zoomToSpend = this.orthographic.zoom
 
     this.projection = kind
     const next = this.camera
     next.position.copy(previous.position)
     next.quaternion.copy(previous.quaternion)
-    if (spent !== 1) {
+    if (leavingOrthographic && zoomToSpend !== 1) {
       // The same fallback as `fitProjection`: with no controls, there is no target but the origin.
       const target = this.controls?.target ?? ORIGIN
-      next.position.sub(target).divideScalar(spent).add(target)
+      next.position.sub(target).divideScalar(zoomToSpend).add(target)
     }
     // Carried over, a zoom from an earlier swap would apply again on top of the frustum just
     // sized for it.

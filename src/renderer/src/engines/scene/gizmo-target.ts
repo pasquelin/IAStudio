@@ -34,12 +34,9 @@ export function gizmoTargetFor(
   const [first] = selected
   if (!first) return { kind: 'none' }
 
-  const turns = (object: Object3D): boolean => {
-    const node = nodeOf(object)
-    // An object the engine cannot name is not a reason to withhold the handle.
-    return !node || canRotate(node)
+  if (mode === 'rotate' && !selected.some(object => turns(nodeOf(object)))) {
+    return { kind: 'none' }
   }
-  if (mode === 'rotate' && !selected.some(turns)) return { kind: 'none' }
 
   // One node attaches straight to its object: routing a single move through the pivot would
   // round-trip its transform through two matrices for nothing.
@@ -52,4 +49,9 @@ export function gizmoTargetFor(
     objects: selected,
     anchor: space === 'local' ? selected.at(-1) : undefined,
   }
+}
+
+/** An object the engine cannot name is not a reason to withhold the handle. */
+function turns(node: { type: SceneNodeType } | undefined): boolean {
+  return !node || canRotate(node)
 }
