@@ -209,28 +209,6 @@ filtre n’exempte pas d’expliquer — deux manques, dans l’ordre :
 2. **Dire où le résultat est parti**, après. La barre de jobs et le journal savent qu’il est
    arrivé ; ni l’un ni l’autre ne dit dans quelle étagère.
 
-### 26. Après un renommage en place, le focus tombe hors de la liste
-
-**Vu le 9 août 2026**, en traitant l’entrée 7 : le défaut n’est pas dans le panneau Styles, il
-est dans le composant que trois surfaces partagent.
-
-`InlineRename` (`panels/shared/InlineRename.tsx`) remplace le nom par un champ, et le champ
-disparaît au commit — Entrée, perte de focus, ou démontage. **Rien ne rend le focus à la ligne.**
-Il retombe sur `document.body` : la tabulation suivante repart du haut du document, et
-l’utilisateur au clavier qui vient de renommer se retrouve hors de la liste qu’il éditait.
-
-**Reproduit à la mesure**, pas déduit : `activeElement` vaut `BODY` après le commit.
-
-**Trois surfaces l’utilisent** — la pile de calques, les en-têtes de piste, et maintenant les
-styles — donc la réparation vaut pour les trois. Elle demande de rendre le focus à la cellule
-que `Collection` a montée, ce que l’appelant ne sait pas faire seul aujourd’hui : `focusCell`
-est privé au composant. C’est ce qui range cette entrée ici plutôt que dans le lot qui l’a
-trouvée — ce n’est pas un `if` à poser, c’est un geste que `Collection` doit offrir.
-
-> À ne pas confondre avec l’entrée 20 : celle-ci parle du **focus**, qui se voit déjà très bien
-> (l’anneau `ring-accent` est net) ; l’autre parle de la **sélection**, qui ne se voit pas. Les
-> deux états sont distincts, et l’entrée 9 vient justement de les séparer.
-
 ### 27. `develop` est rouge par intermittence, et jamais deux fois au même endroit
 
 **Vu le 9 août 2026**, sur quatre exécutions de `pnpm validate` d’affilée. Ce n’est pas un retour
@@ -703,8 +681,39 @@ correction.
 | **(10)** Les filtres du journal revenaient à la ligne, orphelinant une famille | `71f3140` (feat/journal-filtres) |
 | **(22)** L’avis « pas de ffmpeg » volait une ligne à l’étagère, trois en colonne | `8bb53b2` (feat/ffmpeg-notice) |
 | **(28)** Les trois boutons de la ligne d’état offraient une cible de 12 × 12 | `53e1b34` (feat/cible-journal) |
+| **(26)** Le focus tombait hors de la liste après un renommage en place | `42c1e50` (feat/focus-renommage) |
 | **(11)** La ligne d’état était collée au bord et alignée sur rien | `d66b811` (feat/ligne-etat) |
 
+
+
+> **L’entrée 26 avait le bon défaut et le mauvais remède**, et les trois repères qu’elle donnait
+> sont faux — vérifiés un par un.
+>
+> Elle annonçait **trois surfaces** : `InlineRename` n’a que **deux** appelants, `LayerRow` et
+> `StyleRow`. Les en-têtes de piste, qu’elle citait, ont leur **propre** `<input autoFocus>`
+> (`TrackHeaders.tsx`) — et la JSDoc du composant se trompe de la même façon, elle se dit écrite
+> « pour la pile de calques et les en-têtes de piste ».
+>
+> Elle demandait d’**ouvrir `focusCell`** : inutile. `CollectionCell` pose `tabIndex` sur **toute**
+> cellule montée, `0` ou `-1` selon qu’elle est le point d’entrée clavier — un `-1` se focalise
+> très bien par script. Le champ retrouve donc sa ligne par un `closest('[tabindex]')`, sans que
+> `Collection` expose quoi que ce soit.
+>
+> **Le remède est allé là où le focus est emprunté**, pas là où il devrait atterrir : c’est
+> `autoFocus` qui le prend, c’est au champ de le rendre. Trois lignes, aucune interface élargie.
+>
+> **Un second chemin, que seule la revue a vu.** Quand une ligne est ajoutée pendant la frappe —
+> ce qu’une génération qui aboutit fait tout le temps — les lignes se remontent à d’autres index
+> et celle qu’on éditait n’existe plus : `isConnected` est faux et le défaut revenait entier. La
+> liste, elle, tient toujours son point d’entrée clavier (`[tabindex="0"]`), et c’est lui qui sert
+> de repli. On ne revient pas sur sa ligne, mais on ne quitte pas la liste. Le test qui existait
+> pour ce cas ne jugeait que le **nom** conservé, jamais le focus.
+>
+> **Ce qui reste ouvert, et qui n’est pas une négligence** : les en-têtes de piste ont le même
+> défaut et ne sont atteints ni par ce correctif ni par celui que l’entrée proposait. Les
+> réparer demande soit de rendre leur `<span>` focalisable — ce qui change le parcours clavier de
+> la timeline —, soit de les faire passer par `InlineRename`, ce qui change leur habillage. C’est
+> une décision de conception, pas une correction : elle revient à l’humain.
 
 > **L’entrée 28 en cachait un troisième.** Elle nommait le journal et les générations ; la mise à
 > jour (`UpdateStatus`) a la même forme, le même défaut, et n’était nommée nulle part. Le gabarit
