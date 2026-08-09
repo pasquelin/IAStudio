@@ -1,4 +1,4 @@
-import { isForeignTwin } from '@shared/domain/asset'
+import { isForeignTwin, movedSince } from '@shared/domain/asset'
 import type { SyncAction, SyncPlan, SyncPolicy } from '@shared/domain/sync'
 
 /**
@@ -29,23 +29,6 @@ export type SyncSide = {
   /** When the two sides were last reconciled. The baseline both other stamps are read against. */
   remoteSyncedAt?: string
   localChangedAt?: string
-}
-
-/**
- * Whether a stamp is later than the baseline.
- *
- * Parsed rather than compared as text: both stamps are ISO today, but one comes from the API and
- * one from us, and a string comparison would quietly give the wrong answer the day one of them
- * carries an offset instead of a Z. An unreadable stamp counts as "not moved" — refusing to act
- * on a date nobody can read beats pushing over a file on the strength of it.
- */
-function movedSince(stamp: string | undefined, baseline: string | undefined): boolean {
-  if (stamp === undefined) return false
-  if (baseline === undefined) return true
-
-  const at = Date.parse(stamp)
-  const since = Date.parse(baseline)
-  return Number.isNaN(at) || Number.isNaN(since) ? false : at > since
 }
 
 function actionFor(side: SyncSide, policy: SyncPolicy, activeOwnerId: string | null): SyncAction {

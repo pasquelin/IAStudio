@@ -6,7 +6,7 @@ import { availableParallelism } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
-import { ASSET_HOST, type Asset, type AssetType } from '@shared/domain/asset'
+import { ASSET_HOST, ASSET_ID_PREFIX, type Asset, type AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import { withRecentProject } from '@shared/domain/project'
@@ -61,6 +61,7 @@ import { createActivityLog, type ActivityLog } from './project/activity-log'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
+import { createAssetInputResolver } from './scenario/asset-inputs'
 import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/asset-catalog'
 import { generationOfMetadata } from './scenario/asset-normalizer'
 import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
@@ -162,7 +163,7 @@ export type Services = {
 }
 
 const timestamp = (): string => new Date().toISOString()
-const newAssetId = (): string => `asset_${randomUUID()}`
+const newAssetId = (): string => `${ASSET_ID_PREFIX}${randomUUID()}`
 
 async function openDialog(options: Electron.OpenDialogOptions): Promise<string[]> {
   const parent = BrowserWindow.getFocusedWindow()
@@ -636,6 +637,17 @@ export function createServices(settings: SettingsStore): Services {
   })
 
   /**
+   * The catalogue and the push path an id has to travel through before a job can name it. Both
+   * resolved per call, like every other service here: the project and the key both change under
+   * a resolver held for the life of the process.
+   */
+  const resolveAssetInputs = createAssetInputResolver({
+    find: assetId => project.catalog().find(assetId),
+    push: assetId => cloudAssets.push(assetId),
+    activeOwnerId: ownerScope.current,
+  })
+
+  /**
    * Drops the file an asset owns. A linked rush is only ever unlinked: the file belongs to
    * whoever pointed at it, and deleting it would take away a take the project never copied.
    */
@@ -680,6 +692,7 @@ export function createServices(settings: SettingsStore): Services {
       },
     },
     projectPath: () => project.current()?.path ?? null,
+    resolveAssetInputs,
     persist: (unfinished, handled) => {
       // Nothing waits on this: the write is settled at quit and on a project change, which are
       // the two moments the process may not outlive it. Said out loud all the same — a full disk

@@ -1098,6 +1098,26 @@ au lieu de la rustiner deux fois — un viewport qui l'oublierait ouvre son mouv
 > 2026) : ce que l'appelant entend est de nouveau la raison pour laquelle le document n'a pas pu
 > être écrit. **Ne pas le re-signaler.**
 
+### Deux chemins envoient encore à l'API des identifiants qu'elle ne connaît pas
+
+**Le fond est réglé pour ce qui compte** : depuis `feat/workflows` (10 août 2026), le `JobManager`
+traduit les ids d'assets d'un corps de génération avant de le soumettre — un id local
+(`asset_<uuid>`, frappé par le collecteur) n'est pas un id Scenario, et l'API répond **404** dessus,
+vérifié par appel. Restent deux chemins qui ne passent pas par là, pour deux raisons différentes.
+
+1. **L'estimation de coût** (`scenario:estimate-cost` → `costEstimatorOf`) price le corps brut. C'est
+   **délibéré** : l'estimation est demandée à chaque frappe, et téléverser un fichier pour un chiffre
+   que personne n'attend serait absurde. Mais `referenceImages` porte `cost_impact: true` — relevé
+   sur `model_openai-gpt-image-2` — donc **l'estimation d'un formulaire qui porte une image peut
+   annoncer moins que le prix réel**. Ce qui se ferait sans rien envoyer : lire le `remoteAssetId`
+   quand il existe déjà, et laisser tel quel sinon. C'est une variante « traduis, n'envoie pas » du
+   résolveur, pas un second mécanisme.
+2. **L'assistance de prompt** (`prompts.suggest`, `prompts.describeStyle`) reçoit ses images de
+   référence de `referencePictures` (`helpers/dynamic-form.ts`), qui lit la valeur brute des champs
+   `kind: 'image'` — donc des ids locaux. Ce n'est pas un job, donc rien ne les traduit : **l'API ne
+   voit jamais les images sur lesquelles on lui demande d'écrire un prompt.** Le geste est explicite
+   (un bouton, pas une frappe), donc téléverser y serait défendable — à trancher.
+
 **Durabilité, assumée.** `documents.ts` renomme atomiquement, ce qui protège d'un crash **en cours
 d'écriture**, mais ne fait pas de `fsync` : une coupure de courant peut perdre l'écriture.
 

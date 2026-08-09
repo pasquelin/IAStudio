@@ -31,6 +31,13 @@ export const ASSET_FOLDERS: Record<AssetType, string> = {
   skybox: 'assets/sky',
 }
 
+/**
+ * What every asset id starts with, ours and Scenario's alike — the two vocabularies share the
+ * spelling and nothing else. Written down because the main process reads it to tell a value that
+ * may name an asset from one that cannot, before asking the catalogue about it.
+ */
+export const ASSET_ID_PREFIX = 'asset_'
+
 export type AssetLocation = 'local' | 'cloud'
 
 /**
@@ -236,6 +243,27 @@ export function isForeignTwin(
     twin.remoteOwnerId !== undefined &&
     twin.remoteOwnerId !== activeOwnerId
   )
+}
+
+/**
+ * Whether a stamp is later than the baseline.
+ *
+ * Parsed rather than compared as text: both stamps are ISO today, but one comes from the API and
+ * one from us, and a string comparison would quietly give the wrong answer the day one of them
+ * carries an offset instead of a Z. An unreadable stamp counts as "not moved" — refusing to act
+ * on a date nobody can read beats pushing over a file on the strength of it.
+ *
+ * Beside `isForeignTwin` because the two answer the halves of one question — is the twin this
+ * asset records still the one the API would serve — and are read by the badge, by the sync
+ * planner and by what translates a body before a job runs.
+ */
+export function movedSince(stamp: string | undefined, baseline: string | undefined): boolean {
+  if (stamp === undefined) return false
+  if (baseline === undefined) return true
+
+  const at = Date.parse(stamp)
+  const since = Date.parse(baseline)
+  return Number.isNaN(at) || Number.isNaN(since) ? false : at > since
 }
 
 export const ASSET_BADGES: readonly AssetBadge[] = [
