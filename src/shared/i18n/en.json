@@ -880,13 +880,6 @@
       "title": "Free the memory after",
       "help": "Minutes without dictating before the model is unloaded, returning around 700 MB of memory. It loads itself again on the next dictation, which takes a few seconds. Set it to 0 to keep it resident."
     },
-    "dictationLanguage": {
-      "title": "Expected language",
-      "help": "The model works out the spoken language on its own and takes no instruction about it. This setting only warns you: announce French and have a sentence heard as English, and the application says so instead of inserting the text without a word.",
-      "auto": "Say nothing",
-      "fr": "French",
-      "en": "English"
-    },
     "dictationModelFolder": {
       "title": "Model folder",
       "help": "Where to find a recognition model already on this disk, to use instead of the one the application downloads. Leave empty in the normal case.",
@@ -1687,7 +1680,6 @@
     "cancelDownload": "Stop the download",
     "permissionRequired": "Microphone access was refused. Allow it for this application, then try again.",
     "openPrivacySettings": "Open the system settings",
-    "heardAs": "That sentence was heard as {{language}}.",
     "active": "Microphone on",
     "device": "Microphone",
     "defaultDevice": "Default device",

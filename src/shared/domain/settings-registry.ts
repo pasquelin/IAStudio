@@ -1,5 +1,5 @@
 import { LANGUAGES } from '../i18n/languages'
-import { DICTATION_MODES, EXPECTED_LANGUAGES } from './dictation'
+import { DICTATION_MODES } from './dictation'
 import {
   DENSITIES,
   LOG_VERBOSITIES,
@@ -514,18 +514,6 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.dictationIdleUnload.help',
     min: 0,
     max: 120,
-    dependsOn: { path: 'dictation.enabled', equals: true },
-  }),
-  setting({
-    path: 'dictation.expectedLanguage',
-    kind: 'choice',
-    section: 'dictation',
-    titleKey: 'settings.dictationLanguage.title',
-    helpKey: 'settings.dictationLanguage.help',
-    options: EXPECTED_LANGUAGES.map(language => ({
-      value: language,
-      labelKey: `settings.dictationLanguage.${language}`,
-    })),
     dependsOn: { path: 'dictation.enabled', equals: true },
   }),
   setting({

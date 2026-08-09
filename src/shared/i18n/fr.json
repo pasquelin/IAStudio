@@ -880,13 +880,6 @@
       "title": "Libérer la mémoire après",
       "help": "Minutes sans dicter au bout desquelles le modèle est déchargé, rendant environ 700 Mo de mémoire. Il se recharge tout seul à la dictée suivante, ce qui prend quelques secondes. Mettez 0 pour le garder chargé en permanence."
     },
-    "dictationLanguage": {
-      "title": "Langue attendue",
-      "help": "Le modèle reconnaît seul la langue parlée et n’accepte aucune consigne là-dessus. Ce réglage sert uniquement à vous prévenir : si vous annoncez le français et qu’une phrase est entendue en anglais, l’application le signale au lieu d’insérer le texte sans rien dire.",
-      "auto": "Ne rien signaler",
-      "fr": "Français",
-      "en": "Anglais"
-    },
     "dictationModelFolder": {
       "title": "Dossier du modèle",
       "help": "Emplacement d’un modèle de reconnaissance déjà présent sur ce disque, à utiliser au lieu de celui que l’application télécharge. Laissez vide dans le cas normal.",
@@ -1687,7 +1680,6 @@
     "cancelDownload": "Interrompre le téléchargement",
     "permissionRequired": "L’accès au micro a été refusé. Autorisez-le pour cette application, puis réessayez.",
     "openPrivacySettings": "Ouvrir les réglages du système",
-    "heardAs": "Cette phrase a été entendue en {{language}}.",
     "active": "Micro actif",
     "device": "Micro",
     "defaultDevice": "Périphérique par défaut",

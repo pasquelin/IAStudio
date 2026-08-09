@@ -52,10 +52,12 @@ export default defineConfig({
         'src/main/scenario/**': { statements: -85, branches: -70 },
         'src/main/project/**': { statements: -115, branches: -60 },
         'src/main/media/**': { statements: -70, branches: -32 },
-        // The recognition engine and what feeds it. The worker itself is thin wiring around a
-        // native addon no test can load; everything that decides anything sits beside it and is
-        // covered, which is what the allowance leaves room for and no more.
-        'src/main/dictation/**': { statements: -60, branches: -30 },
+        // The recognition engine and what feeds it. Three files here cannot be reached by a
+        // test and account for nearly all of the allowance: `stt-worker` loads a native addon
+        // at import, `stt-process` forks a `utilityProcess`, and `model-store` is the real
+        // network and the real disk. Everything that decides anything — the protocol, the
+        // download, the session's states, the segmenting — sits beside them and is covered.
+        'src/main/dictation/**': { statements: -140, branches: -60 },
         // Where the library meets the disk. Tight on purpose: nothing here needs a GPU or a
         // network, so what is not covered is what nobody got round to, not what cannot be run.
         'src/main/assets/**': { statements: -10, branches: -10 },

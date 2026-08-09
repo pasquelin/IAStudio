@@ -15,7 +15,7 @@ import {
   type SettingActionId,
 } from '@shared/domain/settings-registry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
-import { DICTATION_MODES, EXPECTED_LANGUAGES } from '@shared/domain/dictation'
+import { DICTATION_MODES } from '@shared/domain/dictation'
 import { HOME_LIMIT_MAX, HOME_LIMIT_MIN, HOME_SECTION_IDS } from '@shared/domain/home'
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from '@shared/domain/scene'
@@ -142,7 +142,6 @@ const dictation = z.object({
   previewMs: z.number().int().min(preview.min).max(preview.max).optional(),
   threads: z.number().int().min(threads.min).max(threads.max).optional(),
   idleUnloadMinutes: z.number().int().min(idleUnload.min).max(idleUnload.max).optional(),
-  expectedLanguage: z.enum(EXPECTED_LANGUAGES).optional(),
   modelFolder: z.string().min(1).optional(),
   // A device id from a machine whose microphones have since changed is stored all the same:
   // the capture falls back to the default rather than refusing to record.

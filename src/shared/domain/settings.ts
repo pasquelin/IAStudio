@@ -1,6 +1,6 @@
 import type { LanguagePreference } from '../i18n/languages'
 import type { BindingOverrides } from './command'
-import type { DictationMode, ExpectedLanguage } from './dictation'
+import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
@@ -156,8 +156,6 @@ export type Settings = {
     threads: number
     /** Minutes of silence after which the engine is dropped, returning around 700 MB. `0` keeps it. */
     idleUnloadMinutes: number
-    /** Compared against the language the model reports, never sent to it — see `ExpectedLanguage`. */
-    expectedLanguage: ExpectedLanguage
     /** A model folder to read instead of the downloaded one. Absent is the normal case. */
     modelFolder?: string
     /**
@@ -201,7 +199,6 @@ export const DEFAULT_SETTINGS: Settings = {
     previewMs: 700,
     threads: 2,
     idleUnloadMinutes: 10,
-    expectedLanguage: 'auto',
   },
 }
 

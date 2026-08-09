@@ -66,10 +66,11 @@ export type SttEvent =
    * A closed segment. Concatenated by the consumer, and the only thing that ever reaches a
    * text field.
    *
-   * `language` is what the model detected, which is not a setting: a multilingual transducer
-   * decides on its own and takes no instruction — see `expectedLanguage`.
+   * No language travels with it. Parakeet recognises twenty-five of them and reports none: the
+   * `lang` field of a NeMo transducer result comes back empty, measured rather than assumed.
+   * There is therefore nothing to lock and nothing to warn about — see docs/stt/00-architecture.md.
    */
-  | { type: 'final'; text: string; language: string; latencyMs: number }
+  | { type: 'final'; text: string; latencyMs: number }
   | { type: 'download'; progress: DownloadProgress }
   | { type: 'error'; failure: SttFailure }
 
@@ -89,15 +90,6 @@ export type SttSnapshot = {
 export type DictationMode = 'pushToTalk' | 'continuous'
 
 export const DICTATION_MODES: readonly DictationMode[] = ['pushToTalk', 'continuous']
-
-/**
- * The language the user expects to speak. Not passed to the engine — a NeMo transducer has no
- * language input and detects on its own. It is compared against what came back, so the interface
- * can say a segment was heard as something else rather than silently inserting it.
- */
-export type ExpectedLanguage = 'auto' | 'fr' | 'en'
-
-export const EXPECTED_LANGUAGES: readonly ExpectedLanguage[] = ['auto', 'fr', 'en']
 
 /** A microphone the user may pick. Mirrors what `enumerateDevices` gives, minus everything else. */
 export type InputDevice = { id: string; label: string }
