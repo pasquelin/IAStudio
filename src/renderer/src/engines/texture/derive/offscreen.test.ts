@@ -60,8 +60,12 @@ describe('an off-screen pass', () => {
     expect(pass).toHaveBeenCalled()
   })
 
-  /** A pass that reduces draws into its own frame, not into the source's 16 million pixels. */
-  it('draws into the frame the pass asked for', async () => {
+  /**
+   * The frame a reduction draws into is one texel; what the pass reads is still the whole
+   * picture, and one texel OF IT is what its uv step measures. Only the second half is visible
+   * from jsdom — the frame the renderer was sized to needs a GPU to be read back.
+   */
+  it('builds the pass on the source, whatever frame it draws into', async () => {
     const sizes: { width: number; height: number }[] = []
 
     await expect(
@@ -77,7 +81,6 @@ describe('an off-screen pass', () => {
       }),
     ).rejects.toThrow()
 
-    // The pass still reads the source's own size: it is what one texel of it measures.
     expect(sizes).toEqual([{ width: 8, height: 8 }])
   })
 

@@ -1,10 +1,4 @@
-import {
-  LinearFilter,
-  NoColorSpace,
-  WebGLRenderer,
-  type ShaderMaterial,
-  type Texture,
-} from 'three'
+import { LinearFilter, NoColorSpace, WebGLRenderer, type ShaderMaterial, type Texture } from 'three'
 import { isRecord, readNumber } from '@shared/guards'
 import { createGpuPipeline, type GpuPipeline } from '../../gpu/GpuPipeline'
 import type { TextureSource } from '../../scene/texture-cache'
