@@ -384,6 +384,13 @@ retient qu'elle est inversée. Un fichier `_Roughness` contient donc bien de la 
 
 ### Trois choses à savoir
 
+**Vos réglages de plage partent avec.** La double poignée du panneau Matériau — celle qui
+resserre la rugosité ou la métallicité — n’existe dans aucun des quatre formats. Elle est donc
+**écrite dans les pixels** : une rugosité resserrée entre 0,3 et 0,7 à l’écran sort resserrée.
+Une seule exception, et c’est sa raison d’être : **les canaux bruts sortent tels qu’ils sont
+stockés**, sans remappage — c’est la ligne qu’on choisit précisément pour récupérer ses pixels
+intacts.
+
 **La pleine résolution, pas celle de l'aperçu.** L'export lit chaque canal à la taille où il est
 stocké. Une seule exception, et elle n'est pas la nôtre : **Roblox refuse une carte au-delà de
 1024 px**, donc ses quatre fichiers sont ramenés sous ce plafond, en gardant les proportions.

@@ -377,6 +377,12 @@ does hold smoothness: the file name says what is inside it.
 
 ### Three things worth knowing
 
+**Your range settings leave with it.** The double handle of the Material panel — the one that
+narrows roughness or metalness — exists in none of the four formats. So it is **written into the
+pixels**: a roughness narrowed to between 0.3 and 0.7 on screen leaves narrowed. One exception,
+and it is the whole reason that row exists: **the raw channels leave as they are stored**, with no
+remap — that is the row you pick precisely to get your pixels back untouched.
+
 **Full resolution, not the preview's.** The export reads each channel at the size it is stored at.
 One exception, and it is not ours: **Roblox refuses a map above 1024 px**, so its four files are
 brought under that ceiling, keeping their proportions.
