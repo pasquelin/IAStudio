@@ -577,9 +577,25 @@ Four things go through the bundles without looking like it, and each answers an 
   `index.html` carried it hardcoded: a screen reader picks its voice from it, and an English
   interface under `lang="fr"` was read with French phonetics.
 
-Parity between the two bundles is **checked by a test**, key by key, and the same test refuses a
-user-visible string hardcoded in a component. That is what stops one language drifting from the
-other as things are added.
+### Four guards, and what each one holds
+
+They are not the same test, and treating them as one suggests a single thing is being watched.
+They share the tree without overlapping, and all of them run in `pnpm validate`.
+
+| Guard | What it refuses |
+|---|---|
+| `shared/i18n/bundles.test.ts` | a key on one side and not the other, a diverging order, a blank value, an ASCII apostrophe in French, a lost interpolation hole — **and an English sentence copied into `fr.json`** |
+| `renderer/src/no-hardcoded-text.test.ts` | in a `.tsx`: text between tags, a literal in braces, one behind a ternary or an `&&`, and any attribute a human reads |
+| `main/no-hardcoded-text.test.ts`, § *the main process* | a word written into a native dialog or a menu `label` |
+| `main/no-hardcoded-text.test.ts`, § *the registries* | in a `.ts` of `renderer`, `shared` or `preload`: a label written where a key belongs |
+
+**The first sees what none of the other three can.** An English sentence pasted into `fr.json`
+goes *through* the bundle: it is spotless to the guards hunting hardcoded text, and it still
+shows in English to a French reader. The test knows it by one sign — it is **identical in both
+files**. It compares sentences only, never single words: `Position`, `Rotation`, `Saturation`
+are spelled the same in both languages — ninety-four keys — and listing those would cost far
+more than it would catch. Seven sentences are identical on purpose, and they are named: the
+brand, two format names, two paths, a copyright line, an example to type over.
 
 ---
 

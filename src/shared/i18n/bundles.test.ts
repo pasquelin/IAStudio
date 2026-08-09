@@ -78,6 +78,39 @@ describe('the translation bundles', () => {
   })
 
   /**
+   * The sentences that read the same in both bundles because nobody translates them: the brand,
+   * two format names, two paths, a copyright line, and an example someone types over.
+   *
+   * Anything else arriving here is an English sentence pasted into the French file — the one
+   * untranslated string no other guard can see, precisely because it *is* in the bundle.
+   */
+  it('says something of its own in French wherever it says a sentence', () => {
+    // Sentences only. A single word identical in both is usually a cognate — `Position`,
+    // `Rotation`, `Saturation`, ninety-four of them — and listing those would cost far more
+    // than it would ever catch.
+    const wordsOf = (text: string): readonly string[] =>
+      text.replace(/\{\{[^}]+\}\}/g, ' ').match(/\p{Letter}{2,}/gu) ?? []
+
+    const untranslatedOnPurpose = new Set([
+      'about.copyright',
+      'accounts.fromEnvFile',
+      'accounts.namePlaceholder',
+      'app.name',
+      'exportFormats.gltf',
+      'exportFormats.usdz',
+      'settings.ffmpegPath.placeholder',
+    ])
+
+    const copied = [...BUNDLES.fr]
+      .filter(([key, text]) => BUNDLES.en.get(key) === text)
+      .filter(([, text]) => wordsOf(text).length >= 2)
+      .map(([key]) => key)
+      .filter(key => !untranslatedOnPurpose.has(key))
+
+    expect(copied).toEqual([])
+  })
+
+  /**
    * `CLAUDE.md` calls the French bundle out by name: user-facing text, with no ASCII stand-ins.
    * A straight quote is one — the bundle already wrote `’` in a hundred and twenty-three lines
    * and `'` in thirty-four, so the same word was drawn two ways depending on where it was read.
