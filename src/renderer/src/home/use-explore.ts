@@ -116,14 +116,20 @@ export function useExplore(type: AssetType): Explore {
     busy.current = false
   }, [source])
 
-  /** Which source the first page was asked for, so it is asked for exactly once. */
-  const started = useRef('')
-
+  /**
+   * Keeps pulling while nothing is on screen and the feed has not run out.
+   *
+   * This is both the first read and the repair for an empty page. The main process narrows the
+   * hits again after the index answered, so a whole page can be dropped — and the grid never
+   * asks for more on an empty grid, quite rightly. Left there, a dropped page reads as the end
+   * of the feed and the tab dies on "nothing published" with pages still to come.
+   *
+   * It terminates: the offset strictly advances, so the feed reaches its end and `exhausted`
+   * stops the loop. Once anything is on screen, the grid drives the paging again.
+   */
   useEffect(() => {
-    if (started.current === source) return
-    started.current = source
-    more()
-  }, [source, more])
+    if (feed.assets.length === 0 && !feed.exhausted && !loading) more()
+  }, [feed.assets.length, feed.exhausted, loading, more])
 
   return { assets: feed.assets, loading, exhausted: feed.exhausted, more }
 }

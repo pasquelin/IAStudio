@@ -109,6 +109,21 @@ describe('one tab of the public feed', () => {
     )
   })
 
+  it('walks past a page the studio narrowed away, rather than calling it the end', async () => {
+    // The main process retypes the hits after the index answered, so a whole page can come back
+    // empty with a cursor still live. The grid never asks again on an empty grid — so if the
+    // hook stopped here, the tab would die on "nothing published" with pages still to come.
+    install([
+      { assets: [], cursor: 'o:40' },
+      { assets: [], cursor: 'o:80' },
+      { assets: [cloudAsset('a')], cursor: null },
+    ])
+
+    const { result } = renderHook(() => useExplore('image'))
+
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+  })
+
   it('stops asking once the feed says there is no more', async () => {
     const { explore } = install([{ assets: [cloudAsset('a')], cursor: null }])
 

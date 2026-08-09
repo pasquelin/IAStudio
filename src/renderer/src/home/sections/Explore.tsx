@@ -26,7 +26,7 @@ const PREVIEW_WIDTH = 440
 export function Explore() {
   const { t } = useTranslation()
   const [type, setType] = useState<AssetType>('image')
-  const { assets, loading, more } = useExplore(type)
+  const { assets, exhausted, more } = useExplore(type)
 
   return (
     <Section
@@ -54,11 +54,12 @@ export function Explore() {
         label={t(`assetTypes.${type}`)}
         ratioOf={ratioOf}
         onReachEnd={more}
-        // Nothing published and "not read yet" are not the same thing, and the second one lasts
-        // a round trip: saying the feed is empty and then filling it is the worse of the two.
+        // Only `exhausted` may say the feed is empty. Anything else — the first round trip, or
+        // a page the studio narrowed away after the index answered — still has pages behind it,
+        // and announcing emptiness there is a claim that is about to be contradicted.
         empty={
           <p className="text-muted m-0 py-6 text-center text-[12px]">
-            {t(loading ? 'home.explore.loading' : 'home.explore.none')}
+            {t(exhausted ? 'home.explore.none' : 'home.explore.loading')}
           </p>
         }
         renderCard={asset => <Tile asset={asset} />}

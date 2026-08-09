@@ -327,9 +327,15 @@ describe('the public feed', () => {
       },
     })
 
-    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
+    const page = await invoke<{ assets: CloudAsset[]; cursor: string | null }>(
+      CHANNELS.cloudExplore,
+      { type: 'image' },
+    )
     expect(page.assets).toEqual([])
     expect(searched.length).toBeLessThanOrEqual(3)
+    // The cursor stays live on purpose: the feed is not over, this handler simply stopped
+    // spending quota on it. `useExplore` is what carries on from here.
+    expect(page.cursor).not.toBeNull()
   })
 
   it('walks by offset, and marks the cursor as the index produced it', async () => {
