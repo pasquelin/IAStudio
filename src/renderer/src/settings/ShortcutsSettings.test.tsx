@@ -10,10 +10,10 @@ const staged = () => useSettingsDraft.getState().pending.shortcuts?.overrides
 
 /**
  * The command button of a row, which is what shows the binding and starts a capture. Found by
- * its label rather than by role: the panel renders 115 buttons, and `getByRole` with a name
- * re-derives the accessible name of every one of them after each re-render — 293 ms a call
- * against 7 ms here, for the same element. One test below still asserts the role, so the
- * accessible shape stays covered.
+ * its label rather than by role: the panel renders 171 buttons, and `getByRole` with a name
+ * re-derives the accessible name of every one of them after each re-render — seconds a call
+ * against milliseconds here, for the same element. The rows that a test clicks assert their
+ * role with `toHaveRole`, which reads that one element, so the accessible shape stays covered.
  */
 const rowFor = (title: string): HTMLElement => screen.getByLabelText(title)
 
@@ -49,9 +49,14 @@ describe('showing the bindings', () => {
   it('shows the key each command answers to, as it is printed on the keyboard', () => {
     render(<ShortcutsSettings />)
 
-    // The one place the role is asserted, so that `rowFor` may use the cheaper query everywhere
-    // else without the panel losing its accessible shape.
-    expect(screen.getByRole('button', { name: 'Déplacer' })).toHaveTextContent('G')
+    // Asserted ON the row rather than queried by role: `getByRole` with a name re-derives the
+    // accessible name of all 171 buttons — 3.6 s here — where `toHaveRole` reads the one element
+    // the label already found. Every control a test reaches by label asserts its role this way,
+    // or a control that stopped being a button would go on passing.
+    const row = rowFor('Déplacer')
+
+    expect(row).toHaveRole('button')
+    expect(row).toHaveTextContent('G')
   })
 
   it('says so when a command is bound to nothing, rather than showing a blank', () => {
@@ -119,9 +124,10 @@ describe('capturing a new binding', () => {
     })
     render(<ShortcutsSettings />)
 
-    await user.click(
-      screen.getByRole('button', { name: /Restaurer la valeur par défaut — Déplacer/ }),
-    )
+    const restore = screen.getByLabelText(/Restaurer la valeur par défaut — Déplacer/)
+
+    expect(restore).toHaveRole('button')
+    await user.click(restore)
 
     // Removed, not set back to `KeyG`: a future version changing that default reaches this
     // user too, which pinning the value would prevent.
@@ -161,7 +167,7 @@ describe('searching by chord', () => {
     render(<ShortcutsSettings />)
 
     // `SearchByChord` is not a `CommandRow`: the role asserted above says nothing about it. A
-    // named `getByRole` would derive 115 accessible names and eat half the margin under load;
+    // named `getByRole` would derive 171 accessible names and eat half the margin under load;
     // this one derives one.
     expect(searchButton()).toHaveAccessibleName('Chercher par touche')
     await user.click(searchButton())
