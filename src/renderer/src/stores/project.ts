@@ -65,7 +65,12 @@ export const useProject = create<ProjectState>()(set => ({
 
   connect: async () => {
     const bridge = getBridge()
-    if (!bridge) return () => {}
+    // Nothing will ever answer, so the answer is "none": surfaces that wait to be told — the
+    // home draws nothing until then — would otherwise wait for the rest of the session.
+    if (!bridge) {
+      set({ known: true })
+      return () => {}
+    }
 
     // The main process reopens the last project on launch without waiting for it, so the answer
     // to `current()` can be the `null` of a moment already gone by the time it arrives. An
@@ -81,7 +86,10 @@ export const useProject = create<ProjectState>()(set => ({
       void followProject(project)
     })
 
-    const current = await bridge.project.current()
+    // A refusal is an answer too. Left to throw, `connect` never hands back the unsubscribe —
+    // stranding the listener — and never says which project is open, which the home reads as
+    // "still asking" and holds a blank page on.
+    const current = await bridge.project.current().catch(() => null)
     if (announced) return stop
 
     set({ project: current, known: true })

@@ -21,7 +21,7 @@ const NONE = emptyAssetCounts()
 export function ByMode() {
   const { t } = useTranslation()
   const path = useProject(state => state.project?.path ?? null)
-  const counts = useShelf(NONE, () => getBridge()?.assets.counts(), [path])
+  const counts = useShelf(NONE, () => getBridge()?.assets.counts(), path ?? '')
 
   const total = ASSET_TYPES.reduce((sum, type) => sum + counts[type], 0)
   if (total === 0) return null

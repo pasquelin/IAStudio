@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import type { AssetGeneration, AssetType } from '@shared/domain/asset'
 import { FAVORITES_MAX, sameRecipe, type FavoriteRecipe } from '@shared/domain/favorite'
 import { isMissing } from '@main/scenario/job-store'
@@ -20,8 +20,8 @@ export type FavoritesStore = {
   /** Answers the whole list, as the account channels do: one write, one truth back. */
   pin: (draft: FavoriteDraft) => Promise<FavoriteRecipe[]>
   unpin: (id: string) => Promise<FavoriteRecipe[]>
-  /** The file behind `scenario://favorite/<id>`. */
-  thumbnailPath: (id: string) => string
+  /** The file behind `scenario://favorite/<id>`, or null for an id that is not one of ours. */
+  thumbnailPath: (id: string) => string | null
 }
 
 const INDEX = 'favorites.json'
@@ -126,17 +126,24 @@ export function createFavorites(folder: string): FavoritesStore {
           await writeFile(fileOf(draft.id), draft.thumbnail)
         }
 
-        return write([
-          {
-            id: draft.id,
-            label: draft.label,
-            type: draft.type,
-            generation: draft.generation,
-            pinnedAt: draft.pinnedAt,
-            hasThumbnail: draft.thumbnail !== null,
-          },
-          ...recipes,
-        ])
+        try {
+          return await write([
+            {
+              id: draft.id,
+              label: draft.label,
+              type: draft.type,
+              generation: draft.generation,
+              pinnedAt: draft.pinnedAt,
+              hasThumbnail: draft.thumbnail !== null,
+            },
+            ...recipes,
+          ])
+        } catch (error) {
+          // The index is what `unpin` reads to know which stills to remove, so a picture whose
+          // line never landed is one nothing can ever collect.
+          await rm(fileOf(draft.id), { force: true }).catch(() => {})
+          throw error
+        }
       }),
 
     unpin: id =>
@@ -144,14 +151,26 @@ export function createFavorites(folder: string): FavoritesStore {
         const kept = recipes.filter(recipe => recipe.id !== id)
         if (kept.length === recipes.length) return recipes
 
-        // The still goes with the line that named it; a folder of orphans nothing reads would
-        // grow for as long as the studio is used.
-        await rm(fileOf(id), { force: true })
-        return write(kept)
+        // The line first, the still after: an orphaned picture is invisible, while a recipe left
+        // pointing at a file that is gone is a broken tile for good — the shelf reads
+        // `hasThumbnail` and never checks again.
+        const written = await write(kept)
+        await rm(fileOf(id), { force: true }).catch(() => {})
+        return written
       }),
 
-    // Answered without reading anything: the window only builds this URL for a recipe whose
-    // `hasThumbnail` it already holds, and a file that is not there is a 404 either way.
-    thumbnailPath: fileOf,
+    /**
+     * Answered without reading the index: the window only builds this URL for a recipe whose
+     * `hasThumbnail` it already holds, and a file that is not there is a 404 either way.
+     *
+     * Contained all the same, exactly as `assetFilePath` contains a catalogue path. The id here
+     * comes off a URL and `new URL` does not decode `%2F`, so `scenario://favorite/..%2F..%2Fx`
+     * reaches this as a real `../../x` — and the scheme is one the CSP lets the window fetch.
+     */
+    thumbnailPath: id => {
+      const root = resolve(folder)
+      const file = resolve(root, `${id}${THUMBNAIL_EXTENSION}`)
+      return file.startsWith(root + sep) ? file : null
+    },
   }
 }

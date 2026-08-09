@@ -4,6 +4,7 @@ import { handle } from '@main/ipc/handle'
 import { servedFileOf } from '@main/assets/protocol'
 import type { ProjectStore } from '@main/project/store'
 import type { FavoritesStore } from './store'
+import { parseAssetId } from '@main/project/validation'
 import { parseFavoriteId } from './validation'
 
 /** Reads a still down to what a tile draws. Injected: it needs a live app to reach `nativeImage`. */
@@ -33,7 +34,7 @@ export function registerFavoriteHandlers({
   handle(CHANNELS.favoritesList, () => favorites.list())
 
   handle(CHANNELS.favoritesPin, async (_event, assetId) => {
-    const asset = await assetOf(project, parseFavoriteId(assetId))
+    const asset = await assetOf(project, parseAssetId(assetId))
     // An import has no recipe to keep, and neither has an asset from a build that recorded none.
     if (!asset?.generation) return favorites.list()
 

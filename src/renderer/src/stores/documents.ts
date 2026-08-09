@@ -32,8 +32,11 @@ type DocumentsState = {
    * tabs are open. `create` posts a descriptor without writing a file — deliberately, so a tab
    * opened and never typed in leaves nothing behind — and a reconciliation triggered by opening
    * the Explorer would evict exactly that document while its tab is still on screen.
+   *
+   * `after: 'own-write'` for a caller that has just written or deleted a file: the listing this
+   * shares otherwise may have started BEFORE that write, and would answer without it.
    */
-  relist: () => Promise<void>
+  relist: (after?: 'own-write') => Promise<void>
   /**
    * Reads the open project's folder and settles both halves: what exists, and which of those a
    * layout still shows. For a change of project — where dropping the documents of the previous
@@ -129,11 +132,11 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     if (get().activeId !== id) set({ activeId: id })
   },
 
-  relist: async () => {
-    // Callers that want the folder NOW share the listing already in flight rather than opening a
-    // second one. Three surfaces ask on the same paint — the home's shelf, its tree, and the
+  relist: async after => {
+    // Callers that only want the folder share the listing already in flight rather than opening
+    // a second one: three surfaces ask on the same paint — the home's shelf, its tree, and the
     // project that just opened — and each answer costs a round trip and a folder walk.
-    if (listing) {
+    if (listing && after !== 'own-write') {
       await listing
       return
     }

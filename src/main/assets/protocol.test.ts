@@ -93,6 +93,16 @@ describe('routing a URL of the scheme', () => {
     expect(resolveFavorite).toHaveBeenCalledWith('favorite_1')
   })
 
+  /**
+   * A plain object carries `Object.prototype`, so every one of its keys would be a live host —
+   * `scenario://toString/x` reached `net.fetch` with a path nobody registered.
+   */
+  it('serves nothing for a host that is only inherited', async () => {
+    await expect(servedPath('scenario://toString/x', resolvers)).resolves.toBeNull()
+    await expect(servedPath('scenario://constructor/x', resolvers)).resolves.toBeNull()
+    await expect(servedPath('scenario://__proto__/x', resolvers)).resolves.toBeNull()
+  })
+
   it('serves nothing for a host neither resolver knows', async () => {
     await expect(servedPath('scenario://something-else/1', resolvers)).resolves.toBeNull()
     await expect(servedPath('https://example.com/1', resolvers)).resolves.toBeNull()

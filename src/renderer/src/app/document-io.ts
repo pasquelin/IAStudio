@@ -222,7 +222,7 @@ export async function saveDocument(documentId: string): Promise<boolean> {
   commit()
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.
-  void useDocuments.getState().relist()
+  void useDocuments.getState().relist('own-write')
   return true
 }
 
@@ -330,7 +330,7 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   forgetDocument(documentId)
   // The row has to go with the file. Left standing, a double-click on it would open an empty
   // document under the same id — and the next ⌘S would write back what was just deleted.
-  void useDocuments.getState().relist()
+  void useDocuments.getState().relist('own-write')
   return true
 }
 

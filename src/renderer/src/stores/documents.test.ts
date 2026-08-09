@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { documentsIn, panelIds, useDocuments } from './documents'
@@ -281,5 +281,39 @@ describe('adopt', () => {
 
     useDocuments.getState().adopt(POSTER)
     expect(useDocuments.getState().documents[POSTER.id]).toBe(renamed)
+  })
+})
+
+/**
+ * `relist` shares a listing already in flight, which is right for three surfaces asking on the
+ * same paint — and wrong for a caller that has just written a file: the shared answer may have
+ * been asked for before the write, and would come back without it.
+ */
+describe('sharing a listing', () => {
+  beforeEach(() => {
+    useDocuments.setState({ stored: [] })
+  })
+
+  it('answers a plain caller from the listing already travelling', async () => {
+    const list = vi.fn(() => Promise.resolve([POSTER]))
+    installFakeBridge({ documents: { list } })
+
+    await Promise.all([useDocuments.getState().relist(), useDocuments.getState().relist()])
+
+    expect(list).toHaveBeenCalledOnce()
+    expect(useDocuments.getState().stored).toHaveLength(1)
+  })
+
+  it('reads again for a caller that has just written, so its own file is there', async () => {
+    const written: DocumentDescriptor[] = []
+    const list = vi.fn(() => Promise.resolve([...written]))
+    installFakeBridge({ documents: { list } })
+
+    const shared = useDocuments.getState().relist()
+    written.push(POSTER)
+    await Promise.all([shared, useDocuments.getState().relist('own-write')])
+
+    expect(list).toHaveBeenCalledTimes(2)
+    expect(useDocuments.getState().stored).toHaveLength(1)
   })
 })

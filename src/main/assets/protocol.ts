@@ -95,6 +95,10 @@ export async function servedPath(url: string, resolvers: AssetResolvers): Promis
   const parsed = hostedParts(url)
   if (!parsed) return null
 
-  const resolve = resolvers[parsed.host]
-  return resolve ? resolve(parsed.id) : null
+  // `hasOwn`, not a plain lookup: every key of `Object.prototype` would otherwise be a live host,
+  // and `scenario://toString/x` would reach `net.fetch` with a path nobody registered.
+  if (!Object.hasOwn(resolvers, parsed.host)) return null
+
+  const resolveHost = resolvers[parsed.host]
+  return resolveHost ? resolveHost(parsed.id) : null
 }

@@ -8,6 +8,7 @@ import { FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { assetIcon } from '@/helpers/workspaces'
 import { useFavorites } from '@/stores/favorites'
+import { useProject } from '@/stores/project'
 import { Section } from '../Section'
 import { ShelfTile, SHELF_TILE_SIZE } from '../ShelfCard'
 import { recreate } from '../recreate'
@@ -41,6 +42,10 @@ export function Favorites() {
 
 function Tile({ recipe }: { recipe: FavoriteRecipe }) {
   const { t } = useTranslation()
+  // The shelf stands with no project — that is what "outside every project" means — but running
+  // a recipe writes an asset, and there would be no folder to write it into. Inert, as a library
+  // tile is: leaving the home for an empty space with an armed generator helps nobody.
+  const hasProject = useProject(state => state.project !== null)
 
   return (
     <ShelfTile
@@ -49,7 +54,7 @@ function Tile({ recipe }: { recipe: FavoriteRecipe }) {
       fallbackIcon={assetIcon(recipe.type)}
       hint={recipe.generation.prompt || recipe.label}
       label={t('home.creations.recreate', { model: recipe.label })}
-      onClick={() => recreate(recipe.type, recipe.generation)}
+      {...(hasProject ? { onClick: () => recreate(recipe.type, recipe.generation) } : {})}
       corner={<Unpin recipe={recipe} />}
     />
   )

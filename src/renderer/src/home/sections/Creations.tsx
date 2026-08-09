@@ -26,10 +26,11 @@ export function Creations() {
   const sections = useSettings(state => state.settings.home.sections)
   const limit = homeSectionLimit(sections, 'creations')
 
-  const assets = useShelf(NOTHING, () => getBridge()?.assets.search({ generated: true, limit }), [
-    path,
-    limit,
-  ])
+  const assets = useShelf(
+    NOTHING,
+    () => getBridge()?.assets.search({ generated: true, limit }),
+    `${path}/${limit}`,
+  )
 
   if (assets.length === 0) return null
 

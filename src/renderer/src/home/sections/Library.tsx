@@ -32,7 +32,7 @@ export function Library() {
 
   // Read again when the active key changes: another key is another library, and the tiles of the
   // previous one would be pictures nobody in this account can fetch.
-  const page = useShelf(NOTHING, () => browse(limit), [owner, limit])
+  const page = useShelf(NOTHING, () => browse(limit), `${owner}/${limit}`)
 
   if (page.length === 0) return null
 

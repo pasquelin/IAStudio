@@ -102,6 +102,18 @@ describe('the favourites folder', () => {
     await expect(readdir(folder)).resolves.toEqual(['favorites.json'])
   })
 
+  /**
+   * The id reaches this off a URL, and `new URL` does not decode `%2F`: a crafted
+   * `scenario://favorite/..%2F..%2Fsecret` arrives here as a real `../../secret`. The scheme is
+   * one the window is allowed to fetch, so an unchecked join would hand it any file on disk.
+   */
+  it('refuses a still whose id would climb out of the folder', () => {
+    expect(favorites.thumbnailPath('../../../secret')).toBeNull()
+    expect(favorites.thumbnailPath('../sibling')).toBeNull()
+    expect(favorites.thumbnailPath('/etc/passwd')).toBeNull()
+    expect(favorites.thumbnailPath('favorite_1')).toBe(join(folder, 'favorite_1.png'))
+  })
+
   it('says nothing changed when asked to drop something it does not hold', async () => {
     await favorites.pin(draft())
 
@@ -143,7 +155,9 @@ describe('the favourites folder', () => {
       'utf8',
     )
 
-    await expect(favorites.list()).resolves.toHaveLength(1)
+    // Through a fresh store: the one that wrote the file answers from what it holds, so asking
+    // it would test the cache rather than the parsing.
+    await expect(createFavorites(folder).list()).resolves.toHaveLength(1)
   })
 
   it('reads an unreadable file as an empty shelf, never as a failure', async () => {

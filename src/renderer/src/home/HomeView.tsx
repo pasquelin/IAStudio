@@ -27,12 +27,15 @@ import { useHomeSections } from './use-home-sections'
 export function HomeView() {
   const sections = useHomeSections()
   const projectKnown = useProject(state => state.known)
+  const settingsLoaded = useSettings(state => state.loaded)
 
-  // Nothing at all until the main process has said which project is open, if any. Half the
-  // sections require one, so drawing before the answer lays out a page of three bands and then
-  // reflows it into nine — the aside appearing alone moves the whole column 264 px sideways.
-  // The wait is a file read; the key, which is a request, is left to settle under the page.
-  if (!projectKnown) return <div className="h-full" />
+  // Nothing at all until the main process has said which project is open and which sections this
+  // person kept. Half the sections require a project, and the order is a setting: drawing first
+  // lays out three default bands and then reflows into nine in someone else's order — the aside
+  // appearing alone moves the whole column 264 px sideways.
+  //
+  // Both waits are file reads. The key is a request, and is left to settle under the page.
+  if (!projectKnown || !settingsLoaded) return <div className="h-full" />
 
   const aside = sections.filter(id => homePlaceOf(id) === 'aside')
   const main = sections.filter(id => homePlaceOf(id) !== 'aside')

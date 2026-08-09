@@ -32,6 +32,7 @@ function setSettings(home = DEFAULT_HOME_SECTIONS, authenticated = false): void 
     // A studio that has already answered. The home says nothing before it has — see the
     // spotlight's own suite.
     authKnown: true,
+    loaded: true,
     settings: {
       ...state.settings,
       home: { enabled: true, sections: [...home] },
@@ -116,6 +117,26 @@ describe('the home', () => {
     expect(aside).not.toBeNull()
     expect(aside?.textContent).toContain('Explorateur')
     expect(aside?.textContent).toContain('Poster')
+  })
+
+  /**
+   * Both waits are file reads, and both decide what the page holds: which project is open, and
+   * which sections this person kept in which order. Drawing before either lays out one page and
+   * then reflows it into another — the flicker this guard exists to stop.
+   */
+  it('draws nothing at all until it knows what it is drawing', () => {
+    useProject.setState({ project: null, known: false })
+    const { container, rerender } = render(<HomeView />)
+    expect(container.textContent).toBe('')
+
+    useProject.setState({ known: true })
+    useSettings.setState({ loaded: false })
+    rerender(<HomeView />)
+    expect(container.textContent).toBe('')
+
+    useSettings.setState({ loaded: true })
+    rerender(<HomeView />)
+    expect(screen.getByText('Outils')).toBeInTheDocument()
   })
 
   it('leaves the aside out entirely when nothing stands in it', () => {
