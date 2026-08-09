@@ -363,6 +363,21 @@ lire soixante-cinq caractères, et il ne le peut pas.
 livré avec l’entrée 22). Reste `clickable`, qui bascule `pointer-events` sur **toutes** les
 infobulles : à regarder d’un bloc, avec ce que ça fait aux barres flottantes qui en portent.
 
+### 31. L’infobulle de la Lame promet une coupe à la tête de lecture ; elle coupe où on clique
+
+**Trouvé le 9 août 2026** en confrontant le manuel au registre `VIDEO_TOOLS`, et tranché par le
+code, pas par l’écran : `TimelineCanvas.tsx:263` prend le clic, `xToTime(point.x, viewport)`, et
+`splitClip(clipId, at)`. La tête de lecture n’entre nulle part dedans — elle sert à `S`, qui est
+l’autre geste, celui du raccourci.
+
+`videoTools.bladeHint` dit pourtant « Couper un clip à la tête de lecture » / « Cut a clip at the
+playhead », dans les deux bundles. **Les deux manuels disent juste** (« coupe un clip là où vous
+cliquez ») : c’est l’application qui ment, et elle ment sur le seul geste où l’utilisateur choisit
+lui-même l’endroit.
+
+Une ligne dans chaque bundle : « Couper un clip là où l’on clique » / « Cut a clip where you
+click ». Rien d’autre à toucher — la clé n’est lue que par la barre.
+
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
 **Vu le 9 août 2026**, en soldant la vérification à l’écran des entrées 6 et 8 : l’étagère
