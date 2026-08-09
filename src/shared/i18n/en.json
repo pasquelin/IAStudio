@@ -1323,6 +1323,11 @@
     "showMaterial": "Back to the lit material",
     "noPicture": "No picture in this project"
   },
+  "licences": {
+    "title": "Licences",
+    "intro": "Scenario Studio ships with the software below. Each keeps its own licence, reproduced here in full.",
+    "sources": "Corresponding sources:"
+  },
   "usage": {
     "title": "Usage",
     "sections": {
@@ -1372,11 +1377,6 @@
     "actions": "Actions",
     "loadMore": "Load more",
     "free": "free"
-  },
-  "licences": {
-    "title": "Licences",
-    "intro": "Scenario Studio ships with the software below. Each keeps its own licence, reproduced here in full.",
-    "sources": "Corresponding sources:"
   },
   "blend": {
     "normal": "Normal",
