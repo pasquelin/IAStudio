@@ -8,6 +8,7 @@ import { useDocuments } from '@/stores/documents'
 import { useSettings } from '@/stores/settings'
 import { openDocument } from '@/app/dockview-api'
 import { Section } from '../Section'
+import { SectionNote } from '../SectionNote'
 import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
 
 const CARD_WIDTH = 190
@@ -40,7 +41,7 @@ export function Documents() {
         itemWidth={CARD_WIDTH}
         itemHeight={SHELF_CARD_HEIGHT}
         label={t('home.sections.documents')}
-        empty={<p className="text-muted m-0 text-[12px]">{t('home.documents.none')}</p>}
+        empty={<SectionNote>{t('home.documents.none')}</SectionNote>}
         renderCard={document => (
           <ShelfCard
             icon={iconOf(document)}

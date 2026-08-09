@@ -134,20 +134,42 @@ export function recordFailuresTo(destination: FailureSink | null): void {
   sink = destination
 }
 
-export function reducedBy(scope: string) {
+/** The reduction itself, which is the part that must never be written twice. */
+function reducing(note: (error: unknown) => void) {
   return async <T>(action: () => Promise<T>): Promise<T> => {
     try {
       return await action()
     } catch (error) {
-      // Logged where the credentials already live: reduced to a code, neither the renderer nor
-      // anyone reading a bug report could say which call the API refused.
-      log.error(scope, describeFailure(error))
-      // Every API failure the studio reduces passes here — which is why the journal is fed from
-      // this one place rather than from each handler that happens to remember.
-      sink?.(scope, persistableFailure(error))
+      note(error)
       throw new Error(failureOf(error), { cause: error })
     }
   }
+}
+
+export function reducedBy(scope: string) {
+  return reducing(error => {
+    // Logged where the credentials already live: reduced to a code, neither the renderer nor
+    // anyone reading a bug report could say which call the API refused.
+    log.error(scope, describeFailure(error))
+    // Every API failure the studio reduces passes here — which is why the journal is fed from
+    // this one place rather than from each handler that happens to remember.
+    sink?.(scope, persistableFailure(error))
+  })
+}
+
+/**
+ * The same reduction, kept out of the JOURNAL — and only out of the journal.
+ *
+ * The journal is what somebody opens after a job went wrong, and a decorative band that polls on
+ * its own must not fill it: one rate-limited home leaves five entries about requests nobody asked
+ * for, and the push that actually failed scrolls off the top.
+ *
+ * Still `log.error`, deliberately. A packaged app has no terminal attached and only mirrors its
+ * log to the window in development, and `settings.advanced.logLevel` can drop warnings outright —
+ * so demoting the level here would not move the failure somewhere quieter, it would erase it.
+ */
+export function quietlyReducedBy(scope: string) {
+  return reducing(error => log.error(scope, describeFailure(error)))
 }
 
 /** What a client is built through, so that no client can be built without its rate limit. */

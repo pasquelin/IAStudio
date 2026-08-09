@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
+import { recordFailuresTo } from '@main/scenario/client'
 import { createActivityLog, type ActivityLog } from '@main/project/activity-log'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import type { AsyncCatalog } from '@main/project/catalog-client'
@@ -261,43 +262,9 @@ describe('the public feed', () => {
     expect(page.assets.map(asset => asset.id)).toEqual(['a'])
   })
 
-  it('draws each tile from the public thumbnail, not the whole file', async () => {
-    // A search hit carries only the signed URL of the original — 28 MB for one upscaled texture,
-    // against 1.6 KB for its thumbnail, and a width appended to it answers 302.
-    setup({
-      remote: {
-        search: () =>
-          Promise.resolve({
-            assets: [{ ...cloudAsset('a'), url: 'https://cdn.example/assets-transform/a?p=100' }],
-            token: null,
-          }),
-      },
-    })
-
-    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
-    expect(page.assets[0]?.thumbnailUrl).toBe('https://cdn.example/thumbnails/a')
-  })
-
-  it('leaves a thumbnail the API did name alone', async () => {
-    setup({
-      remote: {
-        search: () =>
-          Promise.resolve({
-            assets: [
-              {
-                ...cloudAsset('a'),
-                url: 'https://cdn.example/assets-transform/a',
-                thumbnailUrl: 'https://cdn.example/its/own.png',
-              },
-            ],
-            token: null,
-          }),
-      },
-    })
-
-    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
-    expect(page.assets[0]?.thumbnailUrl).toBe('https://cdn.example/its/own.png')
-  })
+  // The thumbnail a hit does not carry is filled in by `cloudAssetOfHit`, one layer down — see
+  // `asset-normalizer.test.ts` and `asset-catalog.test.ts`. The fake catalogue here answers with
+  // `CloudAsset`s directly, so it never crosses that reader.
 
   it('walks past a page the retyping emptied rather than reporting the end', async () => {
     // The filter casts wider than the studio decides, so a whole page can fall to it. Handed up
@@ -352,25 +319,79 @@ describe('the public feed', () => {
     expect(harness.searched[0]).toMatchObject({ offset: 40 })
   })
 
+  it('caps how far into the index a cursor may point', async () => {
+    // `o:1e99` passes validation — it is a short string — and asks the index for an offset no
+    // index can answer for.
+    await invoke(CHANNELS.cloudExplore, { type: 'image', cursor: 'o:1e99' })
+
+    const asked = harness.searched[0]
+    expect(asked).toMatchObject({ offset: 10_000 })
+  })
+
+  it('bounds the offset it walks to itself, not only the one handed in', async () => {
+    // The empty-round loop reads the API's own token back as an offset, and that token is just
+    // as much an outside value as the cursor. Recorded HERE and not through the harness: this
+    // override replaces the `search` the harness records through, so its log would stay empty
+    // and an assertion over it would hold vacuously.
+    const offsets: unknown[] = []
+    setup({
+      remote: {
+        search: request => {
+          offsets.push(request.offset)
+          return Promise.resolve({
+            assets: [{ ...cloudAsset('a'), type: 'audio' }],
+            token: 'later',
+          })
+        },
+      },
+    })
+
+    await invoke(CHANNELS.cloudExplore, { type: 'image' })
+
+    expect(offsets.length).toBeGreaterThan(0)
+    expect(offsets.every(offset => Number.isFinite(offset))).toBe(true)
+  })
+
+  it('stops walking once the offset can no longer move', async () => {
+    // A token the bound clamps, or one that is not a number, asks the index the very same
+    // question again — and the search is billed either way.
+    const offsets: number[] = []
+    setup({
+      remote: {
+        search: request => {
+          offsets.push(request.offset)
+          return Promise.resolve({
+            assets: [{ ...cloudAsset('a'), type: 'audio' }],
+            token: 'not-a-number',
+          })
+        },
+      },
+    })
+
+    await invoke(CHANNELS.cloudExplore, { type: 'image' })
+    expect(offsets).toEqual([0])
+  })
+
   it('refuses a feed of everything: the masonry shows one kind at a time', async () => {
     await expect(invoke(CHANNELS.cloudExplore, {})).rejects.toThrow()
   })
 })
 
-describe('what resembles the account own work', () => {
-  it('measures the likeness against the library latest asset', async () => {
+describe('what resembles an asset the caller names', () => {
+  it('measures the likeness against the asset it was given', async () => {
+    // Never against a reference chosen here: "the library's most recent" is what the HOME wants,
+    // and baking it in left the channel unusable for a right-click on some other asset.
     const harness = setup()
-    await invoke(CHANNELS.cloudSimilar)
+    await invoke(CHANNELS.cloudSimilar, 'asset_named')
 
-    expect(harness.listed[0]).toMatchObject({ pageSize: 1 })
-    // `remote_1` is what the listing answers with in the harness above.
-    expect(harness.searched[0]).toMatchObject({ like: ['remote_1'], publicFeed: true })
+    expect(harness.listed).toHaveLength(0)
+    expect(harness.searched[0]).toMatchObject({ like: ['asset_named'], publicFeed: true })
   })
 
   it('asks for no order at all, since the API ranks by likeness', async () => {
     // Naming a sort on a semantic search silently drops the ranking that is the whole point.
     const harness = setup()
-    await invoke(CHANNELS.cloudSimilar)
+    await invoke(CHANNELS.cloudSimilar, 'asset_named')
 
     expect(harness.searched[0]).not.toHaveProperty('sortBy')
   })
@@ -379,20 +400,67 @@ describe('what resembles the account own work', () => {
     // The API answers with the reference itself, at the top.
     setup({
       remote: {
-        list: () => Promise.resolve({ assets: [cloudAsset('ref')], token: null }),
         search: () =>
           Promise.resolve({ assets: [cloudAsset('ref'), cloudAsset('other')], token: null }),
       },
     })
 
-    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudSimilar)
-    expect(page.assets.map(asset => asset.id)).toEqual(['other'])
+    const assets = await invoke<CloudAsset[]>(CHANNELS.cloudSimilar, 'ref')
+    expect(assets.map(asset => asset.id)).toEqual(['other'])
   })
 
-  it('answers nothing when the account holds nothing to compare', async () => {
-    setup({ remote: { list: () => Promise.resolve({ assets: [], token: null }) } })
+  it('refuses an empty reference rather than asking the index for nothing', async () => {
+    setup()
+    await expect(invoke(CHANNELS.cloudSimilar, '')).rejects.toThrow()
+  })
+})
 
-    expect(await invoke(CHANNELS.cloudSimilar)).toBeNull()
+describe('what a decorative band is allowed to write in the journal', () => {
+  afterEach(() => recordFailuresTo(null))
+
+  it('leaves the journal alone when a shelf is refused', async () => {
+    // The journal is what one opens after a job went wrong. A band that polls on its own would
+    // fill it with requests nobody made, and the push that really failed scrolls off the top.
+    //
+    // `cloudBrowse` is in here too: it reads like a browser's channel, but both of its callers
+    // are shelves of the home, and the lookalikes band opens on one of them.
+    const noted: string[] = []
+    recordFailuresTo((_scope, detail) => noted.push(detail))
+
+    setup({
+      remote: {
+        search: () => Promise.reject(new Error('429 too many requests')),
+        list: () => Promise.reject(new Error('429 too many requests')),
+      },
+    })
+
+    await expect(invoke(CHANNELS.cloudExplore, { type: 'image' })).rejects.toThrow()
+    await expect(invoke(CHANNELS.cloudSimilar, 'asset_1')).rejects.toThrow()
+    await expect(invoke(CHANNELS.cloudBrowse, {})).rejects.toThrow()
+    expect(noted).toEqual([])
+  })
+
+  it('still writes it for a call the user did make', async () => {
+    // The contrast is the point: silence belongs to the reads nobody asked for, not to every
+    // failure. Deleting a selection is a gesture, and its refusal belongs in the journal.
+    const noted: string[] = []
+    recordFailuresTo((_scope, detail) => noted.push(detail))
+
+    const harness = setup({
+      remote: { deleteMany: () => Promise.reject(new Error('429 too many requests')) },
+    })
+    await harness.catalog.add(localAsset({ remoteAssetId: 'remote_1' }))
+
+    await expect(invoke(CHANNELS.assetsRemove, ['asset_1'], true)).rejects.toThrow()
+    expect(noted).toHaveLength(1)
+  })
+
+  it('still tells the caller it was refused rather than answering an empty band', async () => {
+    // An empty answer would be indistinguishable from an account that holds nothing alike, and
+    // the shelf would take itself off the page until the key changes.
+    setup({ remote: { search: () => Promise.reject(new Error('503')) } })
+
+    await expect(invoke(CHANNELS.cloudSimilar, 'asset_1')).rejects.toThrow()
   })
 })
 

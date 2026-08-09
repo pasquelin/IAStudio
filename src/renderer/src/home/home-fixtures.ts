@@ -1,3 +1,5 @@
+import { act, screen, waitFor } from '@testing-library/react'
+import { expect } from 'vitest'
 import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
 import type { Project } from '@shared/domain/project'
 import { useProject } from '@/stores/project'
@@ -27,4 +29,29 @@ export function settleHome(project: Project | null = HOME_PROJECT): void {
     settings: { ...state.settings, home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] } },
   }))
   useProject.setState({ project, known: true })
+}
+
+/**
+ * Waits for a band's read to have been made AND settled.
+ *
+ * Several cases assert an absence, and a band is absent before it has read too — so the wait has
+ * to be on something positive first, or the assertion passes before the bridge has answered and
+ * stays green against a band that never draws at all.
+ */
+export async function settled(read: { mock: { calls: readonly unknown[] } }): Promise<void> {
+  // Read off `mock.calls` rather than through `toHaveBeenCalled`, so the parameter is the one
+  // shape every spy shares — `vi.fn` infers a type per call site, and none of them is `Mock`.
+  await waitFor(() => expect(read.mock.calls.length).toBeGreaterThan(0))
+  await act(async () => {
+    await new Promise(done => setTimeout(done, 0))
+  })
+}
+
+/**
+ * That a band drew nothing a reader can perceive — which is not the same as an empty container:
+ * a deferred band leaves a hidden marker behind, and that marker is what its read waits on.
+ */
+export function expectSilent(container: HTMLElement): void {
+  expect(container.textContent).toBe('')
+  expect(screen.queryByRole('region')).not.toBeInTheDocument()
 }

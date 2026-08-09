@@ -4,12 +4,13 @@ import { useTranslation } from 'react-i18next'
 import type { PromptSuggestion } from '@shared/domain/prompt-assist'
 import { Button } from '@/design/Button'
 import { UiIcon } from '@/design/UiIcon'
-import { FOCUS_RING } from '@/design/styles'
+import { BUTTON_BASE } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { openGeneratorOn } from '@/helpers/generation'
 import { getBridge } from '@/services/bridge'
 import { useModels } from '@/stores/models'
 import { Section } from '../Section'
+import { SectionNote } from '../SectionNote'
 
 /** Three fit the width without wrapping, and reading more than three is choosing, not sparking. */
 const HOW_MANY = 3
@@ -59,7 +60,7 @@ export function Spark() {
       }
     >
       {suggestions.length === 0 ? (
-        <p className="text-muted m-0 text-[12px]">{t('home.spark.help')}</p>
+        <SectionNote>{t('home.spark.help')}</SectionNote>
       ) : (
         <div className="flex flex-col gap-2">
           {suggestions.map(suggestion => (
@@ -85,10 +86,11 @@ function Idea({ suggestion, modelId }: IdeaProps) {
       title={suggestion.rationale}
       aria-label={t('home.spark.use', { prompt: suggestion.text })}
       onClick={() => openGeneratorOn('image', modelId, suggestion.parameters)}
+      // The docks' own button chrome, rather than a fourth hand-written copy of it — laid out
+      // from the top, since an idea is two lines of prose beside a glyph.
       className={cn(
-        'bg-surface hover:bg-elevated flex cursor-pointer items-start gap-2 border-none',
-        'rounded-(--radius-sc-md) p-3 text-left transition-colors',
-        FOCUS_RING,
+        BUTTON_BASE,
+        'bg-surface hover:bg-elevated flex items-start justify-start gap-2 p-3 text-left',
       )}
     >
       <UiIcon path={mdiCreationOutline} size={16} className="text-create mt-px shrink-0" />

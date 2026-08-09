@@ -1795,6 +1795,7 @@
     "hidden_one": "{{count, number}} section hidden",
     "hidden_other": "{{count, number}} sections hidden",
     "restore": "Show them again",
+    "retry": "Try again",
     "spark": {
       "ask": "Suggest an idea",
       "asking": "One moment…",
@@ -1802,7 +1803,8 @@
       "use": "Open the generator on “{{prompt}}”"
     },
     "similar": {
-      "title": "In the vein of “{{name}}”"
+      "title": "In the vein of “{{name}}”",
+      "refused": "The library did not answer. The band comes back as soon as you try again."
     },
     "usage": {
       "summary_one": "{{units}} units over {{days, number}} days, for {{count, number}} generation.",

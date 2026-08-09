@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { useOnScreen } from '@/hooks/useOnScreen'
 
 /**
  * What a shelf holds, read once when it appears and again when what it depends on changes.
@@ -44,4 +45,35 @@ export function useShelf<T>(initial: T, read: () => Promise<T> | undefined, sour
   }, [source])
 
   return held
+}
+
+export type DeferredShelf<T> = {
+  value: T
+  /**
+   * What the band draws INSTEAD of its content while it holds nothing. Never `null` before the
+   * band has been seen — a band that renders nothing is a band nothing can scroll to, and its
+   * read would never happen — and always `null` afterwards, so a band with nothing to say costs
+   * no room: the home lays its sections out with a gap, and an empty marker still takes one.
+   */
+  marker: ReactNode
+}
+
+/**
+ * A shelf that reads nothing until it has been scrolled to.
+ *
+ * Three things have to line up for that, and they were subtle enough that both bands using it
+ * had copied them: the read must answer `undefined` while unseen, `seen` must be part of what
+ * the shelf reads under (or the first read is the only one), and something must stay on screen
+ * in place of the content. The marker is owned here rather than described to callers, because
+ * two of those three are silent when forgotten — the band simply never loads.
+ */
+export function useDeferredShelf<T>(
+  initial: T,
+  read: () => Promise<T> | undefined,
+  source: string,
+): DeferredShelf<T> {
+  const { ref, seen } = useOnScreen()
+  const value = useShelf(initial, () => (seen ? read() : undefined), `${source}/${seen}`)
+
+  return { value, marker: seen ? null : <div ref={ref} aria-hidden /> }
 }

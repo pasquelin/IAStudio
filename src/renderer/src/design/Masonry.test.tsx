@@ -124,3 +124,26 @@ describe('Masonry', () => {
     expect(screen.getByText('nothing published')).toBeInTheDocument()
   })
 })
+
+describe('a grid with nothing to scroll it', () => {
+  it('lays every card out in columns rather than drawing nothing at all', async () => {
+    // Unreachable from the home, which publishes its scroller. The fallback it replaces was
+    // `document.documentElement`, which produced a grid that could not be scrolled at all: the
+    // page's scroll is dispatched on `document`, and `firstElementChild` of `<html>` is `<head>`.
+    render(
+      <div>
+        <Masonry
+          items={pictures(6, 1)}
+          renderCard={item => <span>{item.name}</span>}
+          ratioOf={item => item.ratio}
+          columnWidth={COLUMN_WIDTH}
+          label="Explore"
+        />
+      </div>,
+    )
+
+    // Every card, since nothing can be left out of a surface nobody scrolls.
+    await waitFor(() => expect(screen.getByText('Picture 5')).toBeInTheDocument())
+    expect(screen.getByRole('region', { name: 'Explore' }).style.columnCount).not.toBe('')
+  })
+})

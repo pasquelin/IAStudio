@@ -7,8 +7,9 @@ import { activeOwnerId, useSettings } from '@/stores/settings'
 // pulls the chart library in with it, which `eager-graph.test.ts` holds the line on.
 import { formatUnits } from '@/usage/format'
 import { Section } from '../Section'
-import { SHELF_CARD_HEIGHT } from '../ShelfCard'
-import { useShelf } from '../use-shelf'
+import { SectionNote } from '../SectionNote'
+import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
+import { useDeferredShelf } from '../use-shelf'
 
 /** Wide enough for a model name and two figures under it, without wrapping either. */
 const CARD_WIDTH = 220
@@ -26,21 +27,21 @@ const CARD_WIDTH = 220
 export function Usage() {
   const { t, i18n } = useTranslation()
   const owner = useSettings(activeOwnerId)
-
-  // Read again when the active key changes: another key spends its own units.
-  const report = useShelf<UsageReport | null>(null, () => spending(), `${owner}`)
+  // Below the fold on any window, so it is read when reached rather than at mount. Read again
+  // when the active key changes too: another key spends its own units.
+  const { value: report, marker } = useDeferredShelf<UsageReport | null>(null, spending, `${owner}`)
 
   // Nothing spent is not nothing to say — but nothing READ is, and the two look alike from here
   // until the report lands.
-  if (!report) return null
+  if (!report) return marker
 
   const spent = formatUnits(report.units, i18n.language)
 
   return (
     <Section id="usage" title={t('home.sections.usage')}>
-      <p className="text-muted m-0 text-[12px]">
+      <SectionNote>
         {t('home.usage.summary', { units: spent, count: report.jobs, days: report.period })}
-      </p>
+      </SectionNote>
 
       {report.models.length > 0 && (
         <Carousel
@@ -48,7 +49,16 @@ export function Usage() {
           itemWidth={CARD_WIDTH}
           itemHeight={SHELF_CARD_HEIGHT}
           label={t('home.sections.usage')}
-          renderCard={model => <ModelCard model={model} />}
+          renderCard={model => (
+            <ShelfCard
+              title={model.name}
+              hint={model.name}
+              subtitle={t('home.usage.model', {
+                units: formatUnits(model.units, i18n.language),
+                count: model.jobs,
+              })}
+            />
+          )}
         />
       )}
     </Section>
@@ -62,22 +72,4 @@ function spending(): Promise<UsageReport> | undefined {
 /** The carousel keys on `id`; a spend is keyed by the model it was spent on. */
 function withId(model: ModelSpend): ModelSpend & { id: string } {
   return { ...model, id: model.modelId }
-}
-
-function ModelCard({ model }: { model: ModelSpend }) {
-  const { t, i18n } = useTranslation()
-
-  return (
-    <div className="bg-surface flex size-full flex-col justify-center gap-2 rounded-(--radius-sc-md) px-3">
-      <span className="text-text truncate text-[12px]" title={model.name}>
-        {model.name}
-      </span>
-      <span className="text-muted truncate text-[11px]">
-        {t('home.usage.model', {
-          units: formatUnits(model.units, i18n.language),
-          count: model.jobs,
-        })}
-      </span>
-    </div>
-  )
 }

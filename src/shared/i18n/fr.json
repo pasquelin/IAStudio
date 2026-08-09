@@ -1795,6 +1795,7 @@
     "hidden_one": "{{count, number}} section masquée",
     "hidden_other": "{{count, number}} sections masquées",
     "restore": "Les réafficher",
+    "retry": "Réessayer",
     "spark": {
       "ask": "Proposez-moi une idée",
       "asking": "Un instant…",
@@ -1802,7 +1803,8 @@
       "use": "Ouvrir le générateur sur « {{prompt}} »"
     },
     "similar": {
-      "title": "Dans la veine de « {{name}} »"
+      "title": "Dans la veine de « {{name}} »",
+      "refused": "La bibliothèque n’a pas répondu. La bande revient dès que vous réessayez."
     },
     "usage": {
       "summary_one": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} génération.",

@@ -34,6 +34,9 @@ function install(pages: CloudPage[]) {
   return { explore }
 }
 
+/** The page that first brought something, plus the barren ones the hook is allowed to walk. */
+const BARREN_LIMIT = 5
+
 beforeEach(() => {
   useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } })
 })
@@ -211,6 +214,153 @@ describe('one tab of the public feed', () => {
 
     // A refusal is not a reason to blank a band that is already showing what was published.
     expect(result.current.assets).toHaveLength(1)
+  })
+
+  it('stops when the cursor comes back unchanged, instead of stopping for good in silence', async () => {
+    // The symmetric failure to the runaway below: same cursor, every asset already held. Nothing
+    // in `more`'s dependencies moves, so the effect never fires again — the tab freezes with
+    // whatever it had and no way to ask for the rest. Better to say so than to hang.
+    const { explore } = install([
+      { assets: [cloudAsset('a')], cursor: 'o:40' },
+      { assets: [cloudAsset('a')], cursor: 'o:40' },
+    ])
+
+    const { result } = renderHook(() => useExplore('image'))
+    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+
+    act(() => result.current.more())
+    await waitFor(() => expect(result.current.exhausted).toBe(true))
+
+    expect(result.current.assets.map(asset => asset.id)).toEqual(['a'])
+    expect(explore).toHaveBeenCalledTimes(2)
+  })
+
+  it('gives up on a feed that keeps handing back what it already showed', async () => {
+    // At the foot of the feed the grid stays near its end and `more` takes a new identity with
+    // every cursor: pages of pure duplicates fired thirty requests without a gesture. Offset
+    // paging over a feed with deletions produces exactly that.
+    let offset = 40
+    const explore = vi.fn(() => {
+      offset += 40
+      return Promise.resolve({ assets: [cloudAsset('a')], cursor: `o:${offset}` })
+    })
+    installFakeBridge({ cloud: { explore } })
+
+    const { result } = renderHook(() => useExplore('image'))
+    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+
+    // What the grid does at the foot of the feed: `nearEnd` stays true, and every cursor gives
+    // `more` a new identity, so the effect fires again on each page that lands.
+    for (let asked = 0; asked < 30 && !result.current.exhausted; asked += 1) {
+      await act(async () => {
+        result.current.more()
+        await new Promise(settled => setTimeout(settled, 0))
+      })
+    }
+
+    expect(result.current.exhausted).toBe(true)
+    // The number that matters is that it is bounded at all: thirty was the measured runaway.
+    expect(explore.mock.calls.length).toBeLessThanOrEqual(BARREN_LIMIT)
+  })
+
+  it('counts only the pages in a row, so a lull does not end a live feed', async () => {
+    // The feed shifts under the offset, so a page of pure duplicates now and then is ordinary.
+    install([
+      { assets: [cloudAsset('a')], cursor: 'o:40' },
+      { assets: [cloudAsset('a')], cursor: 'o:80' },
+      { assets: [cloudAsset('b')], cursor: 'o:120' },
+      { assets: [cloudAsset('c')], cursor: null },
+    ])
+
+    const { result } = renderHook(() => useExplore('image'))
+    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+
+    act(() => result.current.more())
+    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+    act(() => result.current.more())
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a', 'b']))
+
+    expect(result.current.exhausted).toBe(false)
+  })
+
+  it('shows a tab already read without asking for it again', async () => {
+    // Six tabs, each spending up to three searches on the main side: sweeping the row cost
+    // eighteen calls to the endpoint the catalogue bills apart.
+    const { explore } = install([
+      { assets: [cloudAsset('a')], cursor: 'o:40' },
+      { assets: [cloudAsset('b', 'video')], cursor: 'o:40' },
+    ])
+
+    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
+      initialProps: { type: 'image' },
+    })
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+
+    rerender({ type: 'video' })
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['b']))
+
+    rerender({ type: 'image' })
+    expect(result.current.assets.map(asset => asset.id)).toEqual(['a'])
+    expect(explore).toHaveBeenCalledTimes(2)
+  })
+
+  it('asks again on a tab the API had refused, rather than remembering the refusal', async () => {
+    // The cache must not turn one 429 into a tab that reads "nothing published" for the rest of
+    // the session — that is the failure this band was fixed for, one level up.
+    const explore = vi
+      .fn<() => Promise<CloudPage>>()
+      .mockRejectedValueOnce(new Error('429'))
+      .mockResolvedValue({ assets: [cloudAsset('a')], cursor: null })
+    installFakeBridge({ cloud: { explore } })
+
+    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
+      initialProps: { type: 'image' },
+    })
+    await waitFor(() => expect(result.current.exhausted).toBe(true))
+    expect(result.current.assets).toHaveLength(0)
+
+    rerender({ type: 'video' })
+    rerender({ type: 'image' })
+
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+  })
+
+  it('keeps a tab that genuinely ran out, and does not read it again', async () => {
+    // The contrast: an exhausted feed is worth remembering, a refused one is not.
+    const { explore } = install([
+      { assets: [cloudAsset('a')], cursor: null },
+      { assets: [cloudAsset('b', 'video')], cursor: null },
+    ])
+
+    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
+      initialProps: { type: 'image' },
+    })
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+
+    rerender({ type: 'video' })
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['b']))
+    rerender({ type: 'image' })
+
+    expect(result.current.assets.map(asset => asset.id)).toEqual(['a'])
+    expect(explore).toHaveBeenCalledTimes(2)
+  })
+
+  it('forgets what it read under another key', async () => {
+    const { explore } = install([
+      { assets: [cloudAsset('a')], cursor: 'o:40' },
+      { assets: [cloudAsset('b')], cursor: 'o:40' },
+    ])
+
+    const { result } = renderHook(() => useExplore('image'))
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+
+    act(() => useSettings.setState({ auth: { authenticated: true, ownerId: 'team_2' } }))
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['b']))
+
+    act(() => useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } }))
+    // Read again rather than served from what the other key had on screen.
+    expect(result.current.assets).toHaveLength(0)
+    await waitFor(() => expect(explore).toHaveBeenCalledTimes(3))
   })
 
   it('does not call the feed empty before it has run out', async () => {

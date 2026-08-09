@@ -107,6 +107,67 @@ const VIEWPORT_WIDTH = 640
 const VIEWPORT_HEIGHT = 800
 
 /**
+ * A fake `IntersectionObserver`, and the handle to make it report.
+ *
+ * One definition rather than one per suite: the inert members below (`takeRecords`, `root`,
+ * `rootMargin`, `scrollMargin`, `thresholds`) are conformance to `lib.dom`, not test intent, and
+ * `scrollMargin` arriving in a TypeScript release is exactly how a second copy starts to rot.
+ *
+ * `eager` is the default because jsdom runs no layout: with nothing off screen, everything
+ * observed is on it. A suite about DEFERRING installs the other one and calls `reveal`.
+ */
+export function installIntersectionObserver({ eager = true }: { eager?: boolean } = {}): {
+  reveal: () => void
+} {
+  const watching: { observer: IntersectionObserver; watched: Element[] }[] = []
+
+  function reported(observer: IntersectionObserver, watched: readonly Element[]): void {
+    // `as`: an entry has eight fields, and a caller only ever reads `isIntersecting`.
+    const entries = watched.map(
+      target => ({ target, isIntersecting: true }) as IntersectionObserverEntry,
+    )
+    if (entries.length > 0) seen.get(observer)?.(entries, observer)
+  }
+
+  const seen = new Map<IntersectionObserver, IntersectionObserverCallback>()
+
+  class Fake implements IntersectionObserver {
+    private readonly watched: Element[] = []
+
+    constructor(callback: IntersectionObserverCallback) {
+      seen.set(this, callback)
+      watching.push({ observer: this, watched: this.watched })
+    }
+
+    observe(target: Element): void {
+      this.watched.push(target)
+      if (eager) reported(this, [target])
+    }
+
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return []
+    }
+
+    readonly root = null
+    readonly rootMargin = ''
+    readonly scrollMargin = ''
+    readonly thresholds: readonly number[] = []
+  }
+
+  globalThis.IntersectionObserver = Fake
+
+  return {
+    // Over a snapshot: a callback that mounts something registers another observer, and walking
+    // the live list would never end.
+    reveal: () => {
+      for (const { observer, watched } of [...watching]) reported(observer, watched)
+    },
+  }
+}
+
+/**
  * jsdom runs no layout: every element measures zero, and a virtualized collection asked to
  * fill zero pixels renders no row at all. Stubbed here rather than worked around in the
  * components, which must keep measuring the real surface in Chromium.
@@ -145,6 +206,9 @@ function polyfillLayout(): void {
       value: IdentityMatrix,
     })
   }
+
+  // Same reading as the size stubs above: with no layout there is nothing off screen.
+  if (!('IntersectionObserver' in globalThis)) installIntersectionObserver()
 
   const sizes: [string, number][] = [
     ['clientWidth', VIEWPORT_WIDTH],

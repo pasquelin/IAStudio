@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/domain/home'
 import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
+import { ScrollHostProvider } from '@/design/ScrollHost'
 import { FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { HOME_COMPONENTS } from './home-registry'
+import { SectionNote } from './SectionNote'
 import { enterWorkspace } from './open'
 import { useHomeSections } from './use-home-sections'
 
@@ -22,6 +25,8 @@ export function HomeView() {
   const sections = useHomeSections()
   const projectKnown = useProject(state => state.known)
   const settingsLoaded = useSettings(state => state.loaded)
+  // State and not a ref: what hangs off this scroller has to render again once it exists.
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null)
 
   // Nothing at all until the main process has said which project is open and which sections this
   // person kept. Half the sections require a project, and the order is a setting: drawing first
@@ -31,20 +36,24 @@ export function HomeView() {
   if (!projectKnown || !settingsLoaded) return <div className="h-full" />
 
   return (
-    <div className="h-full overflow-x-hidden overflow-y-auto">
-      <div className="flex flex-col gap-8 px-6 py-6">
-        {sections.map(id => {
-          const Section = HOME_COMPONENTS[id]
-          return (
-            // Per section: a shelf that throws takes itself off the home, not the home with it.
-            <ErrorBoundary key={id}>
-              <Section />
-            </ErrorBoundary>
-          )
-        })}
-        <Closing />
+    // Published rather than left to be found: the grid virtualizes against this scroll and the
+    // sticky headings measure themselves from its top, and neither could say so.
+    <ScrollHostProvider host={scroller}>
+      <div ref={setScroller} className="h-full overflow-x-hidden overflow-y-auto">
+        <div className="flex flex-col gap-8 px-6 py-6">
+          {sections.map(id => {
+            const Section = HOME_COMPONENTS[id]
+            return (
+              // Per section: a shelf that throws takes itself off the home, not the home with it.
+              <ErrorBoundary key={id}>
+                <Section />
+              </ErrorBoundary>
+            )
+          })}
+          <Closing />
+        </div>
       </div>
-    </div>
+    </ScrollHostProvider>
   )
 }
 
@@ -54,7 +63,7 @@ function Closing() {
 
   return (
     <div className="flex flex-col items-center gap-3 py-8">
-      <p className="text-muted m-0 text-center text-[12px]">{t('home.closing.title')}</p>
+      <SectionNote standalone>{t('home.closing.title')}</SectionNote>
       <Button onClick={() => enterWorkspace(DEFAULT_WORKSPACE)}>{t('home.closing.action')}</Button>
       <Hidden />
     </div>

@@ -132,6 +132,11 @@ export function cloudAssetOf(value: unknown): CloudAsset | null {
  *
  * The origin is read off the signed URL rather than written down here: it is the same CDN by
  * construction, and a hard-coded host is one deployment away from being wrong.
+ *
+ * Applied whatever the asset's privacy: `/thumbnails/{id}` answers 200 with a JPEG for a PRIVATE
+ * asset of this account — measured 9 August 2026, against a 502 for an id that does not exist,
+ * so the answer discriminates. The path carries no signature, and gating it on `privacy` would
+ * have cost every private hit its thumbnail for a restriction the CDN does not apply.
  */
 export function withPublicThumbnail(asset: CloudAsset): CloudAsset {
   if (asset.thumbnailUrl !== undefined || asset.url === undefined) return asset
@@ -156,5 +161,12 @@ export const cloudAssetOfListing = cloudAssetOf
  * From `POST /search/assets`, whose hits carry neither `kind` nor `properties`. The dimensions
  * are not lost with them: they are duplicated in `metadata` for anything generated, which is
  * what the reader falls back to.
+ *
+ * The missing thumbnail is filled in HERE rather than by each caller, for the same reason: it is
+ * a property of the response shape, not of the errand. Two handlers remembered; `browse` did not,
+ * and every text or tag search was still drawing its tiles from the originals.
  */
-export const cloudAssetOfHit = cloudAssetOf
+export function cloudAssetOfHit(value: unknown): CloudAsset | null {
+  const asset = cloudAssetOf(value)
+  return asset === null ? null : withPublicThumbnail(asset)
+}

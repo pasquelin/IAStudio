@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { MediaTile } from '@/design/MediaTile'
 import { UiIcon } from '@/design/UiIcon'
-import { FOCUS_RING } from '@/design/styles'
+import { BUTTON_BASE, FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 
 /** What one card of a home shelf measures. Written once so two shelves cannot drift apart. */
@@ -11,38 +11,57 @@ export const SHELF_CARD_HEIGHT = 84
 export const SHELF_TILE_SIZE = 132
 
 export type ShelfCardProps = {
-  icon: string
+  /** Absent for a card that stands for something with no glyph of its own — a model's spend. */
+  icon?: string
   title: string
-  /** The line under the name — a date, a workspace. Truncated, never wrapped. */
+  /** The line under the name — a date, a workspace, two figures. Truncated, never wrapped. */
   subtitle: string
   /** Native tooltip, for a card whose title is cut short. */
   hint?: string
-  onClick: () => void
+  /** Absent leaves the card inert, as `ShelfTile` already allowed: a spend opens nothing. */
+  onClick?: () => void
 }
 
+/** The shape both forms draw. Only the hover and the focus ring belong to the pressable one. */
+const CARD = 'bg-surface flex size-full flex-col justify-center gap-2 rounded-(--radius-sc-md) px-3'
+
 /**
- * One card of a horizontal shelf: a glyph, a name, a line underneath.
+ * One card of a horizontal shelf: a name, a line underneath, and a glyph when there is one.
  *
- * Shared by the projects and the documents shelves, which had it twice, byte for byte. A third
- * shelf arrives with the next lot; the point of this file is that it will not be a fourth copy.
+ * Shared by the projects and the documents shelves, which had it twice, byte for byte — and by
+ * the usage band, which had redrawn it a third time to be rid of the glyph and the click.
  */
 export function ShelfCard({ icon, title, subtitle, hint, onClick }: ShelfCardProps) {
+  const body = (
+    <>
+      <span className="flex items-center gap-2">
+        {icon !== undefined && <UiIcon path={icon} size={16} className="text-muted shrink-0" />}
+        <span className="text-text truncate text-[12px]">{title}</span>
+      </span>
+      <span className="text-muted truncate text-[11px]">{subtitle}</span>
+    </>
+  )
+
+  // A card nothing happens on is not a button: announced as one, it promises an action to a
+  // reader who then finds none.
+  if (!onClick) {
+    return (
+      <div title={hint} className={CARD}>
+        {body}
+      </div>
+    )
+  }
+
   return (
+    // The docks' own button chrome rather than a fourth copy of it — `cn` is `twMerge`, so
+    // `CARD`'s column layout wins over the centred row `BUTTON_BASE` assumes.
     <button
       type="button"
       onClick={onClick}
       title={hint}
-      className={cn(
-        'bg-surface hover:bg-elevated flex size-full cursor-pointer flex-col justify-center',
-        'gap-2 rounded-(--radius-sc-md) border-none px-3 text-left transition-colors',
-        FOCUS_RING,
-      )}
+      className={cn(BUTTON_BASE, CARD, 'hover:bg-elevated text-left')}
     >
-      <span className="flex items-center gap-2">
-        <UiIcon path={icon} size={16} className="text-muted shrink-0" />
-        <span className="text-text truncate text-[12px]">{title}</span>
-      </span>
-      <span className="text-muted truncate text-[11px]">{subtitle}</span>
+      {body}
     </button>
   )
 }

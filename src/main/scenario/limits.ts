@@ -21,6 +21,16 @@ export const DELETE_MAX = 100
 export const PAGE_SIZE_MAX = 100
 
 /**
+ * How deep into the search index an offset may point.
+ *
+ * Ours rather than the API's: a cursor is an opaque string, rightly bounded by length alone, so
+ * `o:1e99` passes validation and reaches the SDK as a number no index can answer for. Walking to
+ * the ceiling is not a dead end — the feed then answers the same page twice, which the caller
+ * reads as its end.
+ */
+export const OFFSET_MAX = 10_000
+
+/**
  * The list cut into runs of at most `size`, in order.
  *
  * An empty input gives no batches rather than one empty batch: callers loop over the result and
