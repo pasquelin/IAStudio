@@ -60,14 +60,23 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > pour partir d'une base verte.
 >
 > **Une chose passe avant le reste** : le **§ 0** (la porte — mesurer le budget de couverture avant
-> de croire une livraison verte). Le déplacement de l'Explorateur et des Apps en moitié basse de la
-> colonne gauche est **livré** (`feat/left-column`, 9 août 2026).
+> de croire une livraison verte).
 >
-> **Pour la suite, propose-moi un ordre et attends ma réponse** avant d'ouvrir un worktree. Les
-> candidats, sans priorité imposée : les **étapes 7 à 9 du node editor** — compiler, valider,
-> exécuter (§ 5) · les retours d'accessibilité (§ 2) et d'affordance (§ 3) · les **manques par
-> espace** (§ 4), dont deux qui ne se jugent qu'à l'écran : le fondu du pinceau et l'export des
-> Textures.
+> **Quatre entrées attendent une décision de ma part et personne ne doit les trancher à ma place** :
+> la **39** (l'Explorateur en arbre : quelle racine ? que fait un double-clic sur un fichier que le
+> studio ne sait pas ouvrir ? le panneau suit-il le disque ?), la **12** (« ouvrir » devient-il
+> l'action par défaut des vignettes de l'accueil ?), la **40** (`accent-soft` veut-il dire
+> « sélectionné » ou « actif » ?) et la **29** (embarquer `Inter`, donc une dépendance, ou cesser de
+> la nommer). Demande-les-moi, ne les déduis pas.
+>
+> **Le prochain chantier libre est l'entrée 36** (§ 4.3), et il est déjà repéré : `canRotate` existe
+> et `gizmoTargetFor` le consulte, mais `TransformSection` rend la ligne Rotation sans le lire, et
+> la garde `refuses` de `commands.ts` ne filtre que les drapeaux d'ombre. La condition qui compte
+> est celle des enfants — un sprite dont des nœuds descendent tourne pour de vrai.
+>
+> Les autres candidats, sans priorité imposée : les **étapes 7 à 9 du node editor** (§ 5) · le reste
+> des retours d'accessibilité (§ 2) et d'affordance (§ 3) · les **manques par espace** (§ 4), dont
+> deux qui ne se jugent qu'à l'écran : le fondu du pinceau et l'export des Textures.
 >
 > **Ce fichier est la seule liste qui reste.** `.claude/loop/BACKLOG.md`, qui portait le backlog
 > qualité, **n'existe plus** — ne pas l'y chercher, et ne pas conclure d'un renvoi trouvé ailleurs
@@ -76,16 +85,27 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > Cinq règles qui ne sont pas dans `CLAUDE.md` :
 >
 > - **Pose les questions avant d'attaquer. N'invente jamais** : si un choix de conception se
->   présente, demande.
+>   présente, demande. Une entrée qui dit « à trancher » ne se tranche pas seule — sauf quand son
+>   propre « geste attendu » a déjà répondu, et il faut alors le montrer.
 > - **Aucune dépendance nouvelle sans mon accord.** Les tests e2e (Playwright) sont reportés à la
 >   fin du projet, c'est décidé.
 > - **`git worktree list` avant d'ouvrir quoi que ce soit** : plusieurs sessions travaillent en
 >   parallèle, ne prends pas un sujet déjà tenu.
 > - **Mets la doc à jour** quand le code change ce qu'elle affirme — manuel fr *et* en, et ce
 >   fichier. Un grep sur les tournures de manque (« ne sait pas », « pas encore », « aucun bouton »)
->   trouve en trente secondes ce qu'aucune fusion ne signalera.
+>   trouve en trente secondes ce qu'aucune fusion ne signalera. Et **relis les chapitres que ton
+>   propre lot vient de rendre faux** : le déplacement du § 3.6 a laissé « colonne de droite » dans
+>   le chapitre 6 pendant une heure.
 > - **Ce fichier est une liste de ce qui reste, pas un journal.** N'y écris que ce qui coûterait une
->   seconde fois.
+>   seconde fois — y compris une mesure qui n'a rien donné, pour qu'elle ne soit pas retentée.
+>
+> Deux choses apprises la nuit du 9 au 10 août, qui coûteraient une seconde fois :
+>
+> - **`pnpm validate` doit être relancé après le dernier `edit`**, pas après l'avant-dernier. Deux
+>   fois cette nuit il est sorti rouge sur un test que j'avais écrit avant un refactor et pas
+>   rejoué.
+> - **La garde de typographie française mord** : espace insécable avant `; : ! ?` et `»`, sans quoi
+>   la ligne casse et laisse le signe seul en tête de la suivante.
 
 Si la demande touche l'API Scenario : `docs/scenario-api/README.md`, 209 pages aspirées en local,
 **à consulter avant le web**. La conception validée est dans
