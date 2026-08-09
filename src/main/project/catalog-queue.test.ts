@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { createCatalogQueue } from './catalog-queue'
-import { ABANDONED, type CatalogRequest, type CatalogResponse } from './catalog-protocol'
+import { createCatalogQueue, serveCatalog, type CatalogServerPort } from './catalog-queue'
+import { createCatalog } from './catalog'
+import { openMemoryDatabase } from './sqlite-memory'
+import {
+  ABANDONED,
+  type CatalogMessage,
+  type CatalogRequest,
+  type CatalogResponse,
+} from './catalog-protocol'
 
 const search = (id: number, text: string): CatalogRequest => ({
   id,
@@ -118,5 +125,59 @@ describe('the catalogue queue', () => {
     while (turn());
 
     expect(ran).toEqual([1, 2])
+  })
+})
+
+/**
+ * The thread's own shape, without a thread: a port made of two functions is all `serveCatalog`
+ * ever touches, which is why the entry point can be left as plumbing nobody tests.
+ */
+describe('a catalogue served on a port', () => {
+  function fakePort(): CatalogServerPort & {
+    send: (message: CatalogMessage) => void
+    answers: CatalogResponse[]
+  } {
+    const answers: CatalogResponse[] = []
+    let listener: ((message: CatalogMessage) => void) | null = null
+
+    return {
+      answers,
+      postMessage: response => answers.push(response),
+      on: (_event, next) => {
+        listener = next
+      },
+      send: message => listener?.(message),
+    }
+  }
+
+  /** One turn of the loop, which is what `serveCatalog` yields to between two requests. */
+  const settle = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
+
+  it('answers what it is asked, off the catalogue it was given', async () => {
+    const port = fakePort()
+    serveCatalog(createCatalog(openMemoryDatabase()), port)
+
+    port.send({ id: 1, op: 'search', query: {} })
+    await settle()
+    await settle()
+
+    expect(port.answers).toEqual([{ id: 1, ok: true, value: [] }])
+  })
+
+  /** The reason the queue exists at all, end to end: a search given up on never runs. */
+  it('skips a request abandoned before its turn', async () => {
+    const port = fakePort()
+    const catalog = createCatalog(openMemoryDatabase())
+    serveCatalog(catalog, port)
+
+    port.send({ id: 1, op: 'search', query: { text: 'mo' } })
+    port.send({ id: 2, op: 'search', query: { text: 'mos' } })
+    port.send({ op: 'abandon', target: 2 })
+    for (let turn = 0; turn < 4; turn++) await settle()
+
+    expect(port.answers).toEqual([
+      { id: 1, ok: true, value: [] },
+      { id: 2, ok: false, error: ABANDONED },
+    ])
   })
 })

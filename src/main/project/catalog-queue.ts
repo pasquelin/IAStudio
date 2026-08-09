@@ -1,3 +1,5 @@
+import type { Catalog } from './catalog'
+import { dispatchCatalogRequest } from './catalog-dispatch'
 import {
   ABANDONED,
   isAbandon,
@@ -64,4 +66,27 @@ export function createCatalogQueue({ run, answer, yieldTo }: CatalogQueueOptions
       yieldTo(step)
     },
   }
+}
+
+/** The thread's end of the port, reduced to what serving a catalogue needs. */
+export type CatalogServerPort = {
+  postMessage: (response: CatalogResponse) => void
+  on: (event: 'message', listener: (message: CatalogMessage) => void) => void
+}
+
+/**
+ * A catalogue answering on a port. Here rather than in the worker entry point for the reason
+ * `catalog-dispatch` gives: what a thread does is worth testing, and starting a thread to test
+ * it is not. The entry point is then nothing but opening the database.
+ */
+export function serveCatalog(catalog: Catalog, port: CatalogServerPort): void {
+  const queue = createCatalogQueue({
+    run: request => dispatchCatalogRequest(catalog, request),
+    answer: response => port.postMessage(response),
+    // `setImmediate` rather than a microtask: a promise would resolve before the loop ever polls
+    // the port, so an abandon posted while a query ran would arrive too late to save the next.
+    yieldTo: setImmediate,
+  })
+
+  port.on('message', message => queue.accept(message))
 }
