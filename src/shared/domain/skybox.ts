@@ -100,7 +100,6 @@ export type SkyboxView = 'immersive' | 'equirect' | 'cross' | 'faces'
 
 export const SKYBOX_VIEWS: readonly SkyboxView[] = ['immersive', 'equirect', 'cross', 'faces']
 
-
 export const MIN_FIELD_OF_VIEW = 50
 export const MAX_FIELD_OF_VIEW = 110
 export const DEFAULT_FIELD_OF_VIEW = 75

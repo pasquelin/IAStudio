@@ -39,9 +39,7 @@ export type SkyboxExportPortOptions = {
 
 const PNG_EXTENSION = '.png'
 
-export function createSkyboxExportPort({
-  loadTexture,
-}: SkyboxExportPortOptions): SkyboxExportPort {
+export function createSkyboxExportPort({ loadTexture }: SkyboxExportPortOptions): SkyboxExportPort {
   return ({ assetId, adjustments, name, size }) => {
     // Filled while the sources are in hand: `draw` is handed the frame's size — one face — and
     // the graded picture in between is the source's, which nothing else carries across.

@@ -192,7 +192,11 @@ describe('the export menu row', () => {
     // guard would fail too — and a test that only checked for no dialog would pass either way.
     await vi.waitFor(() =>
       expect(entries()).toEqual([
-        { level: 'error', scope: 'skybox.export', message: '1024: this sky has no source to export' },
+        {
+          level: 'error',
+          scope: 'skybox.export',
+          message: '1024: this sky has no source to export',
+        },
       ]),
     )
 
