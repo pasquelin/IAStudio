@@ -146,18 +146,28 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           returns typed data
 ```
 
-Sixty channels are declared, in four families:
+**82 channels in `CHANNELS`, plus 17 events in `EVENTS`** — counted on 9 August 2026, and the
+figure moves with every batch: counting it (`CHANNELS`, two spaces of indentation) costs less than
+believing it. Twenty prefixes, the busiest being:
 
-| Family | What it carries |
-|---|---|
-| `window:*` | window state, full screen |
-| `settings:*` | read, write, credentials, authentication state |
-| `scenario:*` | model search, model description, generation, job control |
-| `project:*` / `assets:*` | project lifecycle, catalogue queries, ingestion |
+| Family | Count | What it carries |
+|---|---|---|
+| `scenario:*` | 13 | model search, model description, generation, job control |
+| `assets:*` / `cloud:*` | 9 + 6 | project catalogue, ingestion, and the account's library |
+| `dictation:*` | 8 | microphone permissions, model, recognition session |
+| `settings:*` / `accounts:*` | 6 + 5 | read, write, credentials, authentication state |
+| `document:*` | 6 | opening, writing and listing the project's documents |
+| `styles:*`, `favorites:*`, `workflows:*`, `project:*`, `media:*`, `window:*` | 3 each | — |
+| `dialog:*`, `fonts:*`, `update:*` | 2 each | — |
+| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*` | 1 each | — |
 
-Ten of them travel the other way — main pushing to the renderer: job and media progress, log
-lines, project and settings changes, window state, and the native menu asking the UI to open a
-tool or a settings section, run a command, or drop a node into the scene.
+**`EVENTS` is the other direction** — main pushing to the renderer, seventeen entries: job and
+media progress, log lines, project and settings changes, window state, dictation previews, and the
+native menu asking the UI to open a tool or a settings section, run a command, or drop a node into
+the scene.
+
+The split is not cosmetic: **every `on…` on the bridge subscribes to exactly one entry of
+`EVENTS`**, and every call method maps to exactly one of `CHANNELS`.
 
 Local files are served to the renderer over a custom `scenario://` protocol. The URL is derived
 from the asset identifier, so a grid of thumbnails costs no IPC at all — and the renderer still
@@ -203,14 +213,28 @@ src/main/
 │   ├── collector.ts         what a generation drops into the project
 │   ├── auto-caption.ts      naming a picture from what the API sees in it
 │   └── protocol.ts          the scenario:// protocol
+├── dictation/               speech recognition: permissions, model, segmenting, handlers
 ├── settings/                the encrypted store, its adapter, its handlers
+├── favorites/               the pinned recipes, kept outside every project
+├── styles/                  the material settings replayed from one texture to the next
+├── scene/, texture/         exporting a scene and a material, and validating both
 ├── diagnostics/             the channel the renderer reports a failure through
 ├── media/                   ingesting a file: probe, hash, proxy, waveform
 ├── fonts/                   the shipped typefaces and the system's
 ├── menu/                    the native menu, built from the shared registries
+├── ipc/                     `handle`, `register`, `broadcast` — the machinery of invariant 2
+├── persistence.ts           the atomic write of the small files kept for the user
 ├── update/                  the update check
 └── window/                  lifecycle and navigation lockdown
 ```
+
+> **`persistence.ts` was written at the third copy**, and that is the rule it carries: the job
+> notes, the pinned recipes and the saved styles each had the same twenty lines, each annotated
+> "written the way the job notes are, and for the same reason". The document keeps its own in
+> `project/documents.ts` — not by oversight: it holds a register of in-flight names and creates the
+> user's folder, neither of which belongs to anyone else. **The temporary file's name is a
+> parameter, not a constant**: the three stores serialise their writes, but several windows write
+> into the same project folder.
 
 ### The JobManager is the only thing that polls
 

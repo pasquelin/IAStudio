@@ -148,19 +148,28 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           renvoie des données typées
 ```
 
-Soixante canaux sont déclarés, en quatre familles :
+**82 canaux dans `CHANNELS`, plus 17 événements dans `EVENTS`** — relevé le 9 août 2026, et le
+chiffre bouge à chaque chantier : le compter (`CHANNELS`, deux espaces d’indentation) coûte moins
+que de le croire. Vingt préfixes, dont les plus chargés :
 
-| Famille | Ce qu’elle porte |
-|---|---|
-| `window:*` | état de fenêtre, plein écran |
-| `settings:*` | lecture, écriture, identifiants, état d’authentification |
-| `scenario:*` | recherche de modèles, description, génération, contrôle des jobs |
-| `project:*` / `assets:*` | cycle de vie du projet, requêtes de catalogue, ingestion |
+| Famille | Nb | Ce qu’elle porte |
+|---|---|---|
+| `scenario:*` | 13 | recherche de modèles, description, génération, contrôle des jobs |
+| `assets:*` / `cloud:*` | 9 + 6 | catalogue du projet, ingestion, et la bibliothèque du compte |
+| `dictation:*` | 8 | permissions du micro, modèle, session de reconnaissance |
+| `settings:*` / `accounts:*` | 6 + 5 | lecture, écriture, identifiants, état d’authentification |
+| `document:*` | 6 | ouvrir, écrire, lister les documents du projet |
+| `styles:*`, `favorites:*`, `workflows:*`, `project:*`, `media:*`, `window:*` | 3 chacun | — |
+| `dialog:*`, `fonts:*`, `update:*` | 2 chacun | — |
+| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*` | 1 chacun | — |
 
-Dix d’entre eux vont dans l’autre sens — le main poussant vers le renderer : progression des jobs
-et des imports, lignes de journal, changements de projet et de réglages, état de fenêtre, et le
-menu natif qui demande à l’UI d’ouvrir un outil ou une section de réglages, d’exécuter une
-commande, ou de déposer un nœud dans la scène.
+**`EVENTS` est l’autre sens** — le main poussant vers le renderer, dix-sept entrées : progression
+des jobs et des imports, lignes de journal, changements de projet et de réglages, état de fenêtre,
+aperçus de dictée, et le menu natif qui demande à l’UI d’ouvrir un outil ou une section de réglages,
+d’exécuter une commande, ou de déposer un nœud dans la scène.
+
+La séparation n’est pas cosmétique : **chaque `on…` du pont s’abonne à exactement une entrée de
+`EVENTS`**, et chaque méthode d’appel à exactement une de `CHANNELS`.
 
 Les fichiers locaux sont servis au renderer par un protocole `scenario://`. L’URL est dérivée de
 l’identifiant de l’asset : une grille de vignettes ne coûte donc aucun IPC — et le renderer ne
@@ -206,14 +215,28 @@ src/main/
 │   ├── collector.ts         ce qu'une génération dépose dans le projet
 │   ├── auto-caption.ts      nommer une image d'après ce que l'API y voit
 │   └── protocol.ts          le protocole scenario://
+├── dictation/               la reconnaissance vocale : permissions, modèle, découpage, handlers
 ├── settings/                le store chiffré, son adaptateur, ses handlers
+├── favorites/               les recettes épinglées, gardées hors des projets
+├── styles/                  les réglages de matière qu'on rejoue d'une texture à l'autre
+├── scene/, texture/         l'export d'une scène et d'un matériau, et leur validation
 ├── diagnostics/             le canal par lequel le renderer signale un échec
 ├── media/                   importer un fichier : sonde, hachage, proxy, forme d'onde
 ├── fonts/                   les polices embarquées et celles du système
 ├── menu/                    le menu natif, bâti depuis les registres partagés
+├── ipc/                     `handle`, `register`, `broadcast` — la mécanique de l'invariant 2
+├── persistence.ts           l'écriture atomique des petits fichiers de l'utilisateur
 ├── update/                  la vérification de mise à jour
 └── window/                  cycle de vie et verrouillage de la navigation
 ```
+
+> **`persistence.ts` a été écrit à la troisième copie**, et c'est la règle qu'il porte : les notes
+> de jobs, les recettes épinglées et les styles avaient les mêmes vingt lignes, chacune annotée
+> « écrit comme les notes de jobs, et pour la même raison ». Le document, lui, garde la sienne dans
+> `project/documents.ts` — non par oubli : il tient un registre des noms en transit et crée le
+> dossier de l'utilisateur, ce qui n'appartient qu'à lui. **Le nom du fichier de transit est un
+> paramètre et non une constante** : les trois stores sérialisent leurs écritures, mais plusieurs
+> fenêtres écrivent dans le même dossier de projet.
 
 ### Le JobManager est le seul à poller
 
