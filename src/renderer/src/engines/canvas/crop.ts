@@ -1,4 +1,4 @@
-import { clamp } from '@/helpers/numeric'
+import { clamp } from '@shared/numeric'
 import type { Rect } from './canvas-state'
 import { ANCHOR, cornersOfRect, gripRects, HANDLE_IDS, type HandleId } from './handles'
 import { box, type Point } from './shape-geometry'

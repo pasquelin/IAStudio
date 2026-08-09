@@ -1,5 +1,5 @@
 import { cn } from '@/helpers/cn'
-import { clamp } from '@/helpers/numeric'
+import { clamp } from '@shared/numeric'
 
 export type ProgressBarProps = {
   /** 0 to 1. Clamped, because a job that reports 1.02 must not overflow its track. */

@@ -5,7 +5,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { cn } from '@/helpers/cn'
-import { bound, type NumericBounds } from '@/helpers/numeric'
+import { bound, type NumericBounds } from '@shared/numeric'
 import { FIELD, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 export type NumberFieldProps = NumericBounds &

@@ -70,6 +70,11 @@ type ChannelMethod = {
   [CHANNELS.favoritesPin]: StudioBridge['favorites']['pin']
   [CHANNELS.favoritesUnpin]: StudioBridge['favorites']['unpin']
 
+  [CHANNELS.stylesList]: StudioBridge['styles']['list']
+  [CHANNELS.stylesSave]: StudioBridge['styles']['save']
+  [CHANNELS.stylesRename]: StudioBridge['styles']['rename']
+  [CHANNELS.stylesRemove]: StudioBridge['styles']['remove']
+
   [CHANNELS.activityRead]: StudioBridge['activity']['read']
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']

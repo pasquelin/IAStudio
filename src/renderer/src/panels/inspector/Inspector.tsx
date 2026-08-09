@@ -24,6 +24,7 @@ import { LayerInspector } from './LayerInspector'
 import { SceneInspector } from './SceneInspector'
 import { TextureInspector } from './TextureInspector'
 import { TrackInspector } from './TrackInspector'
+import { inspectedTextureId } from './inspected'
 
 /**
  * What the selection is, read out.
@@ -97,10 +98,13 @@ function Face() {
     // Nothing was clicked in a panel, so the document in front speaks for itself: a scene says
     // which node is selected from its own state, and a texture has nothing to select — the
     // material IS the document. At most one id is set, so the order below is reading order.
-    default:
+    default: {
       if (sceneId) return <SceneInspector documentId={sceneId} />
-      if (textureId) return <TextureInspector documentId={textureId} />
-      return <Empty />
+      // Through the same answer the title row reads, so the button it carries and the face
+      // below it can never describe two different things.
+      const material = inspectedTextureId(selection, sceneId, textureId)
+      return material ? <TextureInspector documentId={material} /> : <Empty />
+    }
   }
 }
 

@@ -202,7 +202,7 @@ The **+** button is solid and blue, where all the others are grey glyphs. That i
 
 ### The right rail
 
-The **right column** icons: Skybox, View, Layers, Channels, Assets, Explorer, Scene, Lights, Meshes, Apps — whichever
+The **right column** icons: Skybox, View, Layers, Channels, Styles, Assets, Explorer, Scene, Lights, Meshes, Apps — whichever
 ones the workspace declares, in that order — then, below the separator, Inspector.
 
 ### The rail only shows what the workspace can do
@@ -283,6 +283,7 @@ instead.
 | **View** | right | 1st | Skyboxes | the projection, the field of view and the test objects |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
 | **Channels** | right | 1st | Textures | the eight channels of the open material, and what each one holds |
+| **Styles** | right | 1st | Textures | saved material settings, to replay on any material |
 | **Assets** | right | 1st | Video, Audio | the project's shelf, as a column |
 | **Explorer** | right | 1st | everywhere | the documents of the project, open or not |
 | **Scene** | right | 1st | 3D | the tree of the open scene |

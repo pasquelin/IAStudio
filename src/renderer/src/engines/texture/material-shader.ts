@@ -8,7 +8,8 @@
  * between versions, which is why a missing one is reported rather than silently skipped.
  */
 import { Matrix3, Vector2, type IUniform, type Texture } from 'three'
-import type { TextureState, ValueRange, Vector2 as Vector2Like } from './texture-state'
+import type { ValueRange, Vector2 as Vector2Like } from '@shared/domain/texture'
+import type { TextureState } from './texture-state'
 
 /** Uniform and define names, prefixed so nothing can collide with a chunk three adds later. */
 export const ROUGHNESS_REMAP = 'scRoughnessRemap'

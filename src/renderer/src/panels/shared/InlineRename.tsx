@@ -22,6 +22,12 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
   const [draft, setDraft] = useState(value)
   // Read by the unmount cleanup, which must not re-run on every keystroke to see the last one.
   const latest = useRef({ draft, onCommit, value })
+  /**
+   * Whether a commit already happened. Without it, Enter commits and then the unmount fires a
+   * SECOND commit with the same name: the caller writes asynchronously, so `value` is still the
+   * old name when the field is torn down, and the "was it abandoned mid-type" guard reads true.
+   */
+  const committed = useRef(false)
 
   useEffect(() => {
     latest.current = { draft, onCommit, value }
@@ -29,6 +35,8 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
 
   useEffect(() => {
     return () => {
+      if (committed.current) return
+
       const { draft: typed, onCommit: commit, value: original } = latest.current
       const name = typed.trim()
       if (name && name !== original) commit(name)
@@ -36,6 +44,9 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
   }, [])
 
   const done = (): void => {
+    if (committed.current) return
+    committed.current = true
+
     const name = draft.trim()
     onCommit(name || value)
   }
@@ -49,6 +60,7 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
       // Restored first, so neither the blur nor the unmount writes what was abandoned.
       setDraft(value)
       latest.current = { ...latest.current, draft: value }
+      committed.current = true
       onCommit(value)
     }
   }

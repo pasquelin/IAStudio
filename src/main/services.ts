@@ -22,6 +22,7 @@ import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
 import { assetFilePath, ownFileOf, serveAssets, servedFileOf } from './assets/protocol'
 import { createFavorites, type FavoritesStore } from './favorites/store'
+import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, resourcesRoot } from './resources'
 import { linkedAsset, mediaFilters } from './media/link'
@@ -119,6 +120,8 @@ export type Services = {
   project: ProjectStore
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
+  /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */
+  styles: StylesStore
   /** What the studio did, and what it failed to do — the surface it had none of. */
   journal: ActivityLog
   /** Settles the note of what is still running. Awaited at quit, beside the journal. */
@@ -657,6 +660,7 @@ export function createServices(settings: SettingsStore): Services {
   })
 
   const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))
+  const styles = createStyles(() => app.getPath('userData'))
 
   serveAssets({
     [ASSET_HOST]: async assetId => {
@@ -684,6 +688,7 @@ export function createServices(settings: SettingsStore): Services {
   return {
     settings,
     favorites,
+    styles,
     client,
     models,
     workflows,

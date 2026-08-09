@@ -24,6 +24,7 @@
     "skybox": "Skybox",
     "scene": "Scene",
     "channels": "Channels",
+    "styles": "Styles",
     "view": "View",
     "apps": "Apps"
   },
@@ -1308,6 +1309,16 @@
       "title": "Larger brush",
       "help": "Widens the brush, the eraser and the shape stroke by one step of the scale."
     }
+  },
+  "styles": {
+    "none": "No style saved yet. Set a material up, then save it from the inspector.",
+    "rename": "Rename",
+    "actions": "Style actions",
+    "actionsHint": "Rename or delete this style.",
+    "remove": "Delete",
+    "newName": "Style",
+    "save": "Save as style",
+    "saveHint": "Keeps the current material settings, without its maps, to replay on another texture."
   },
   "texture": {
     "shapeSphere": "Sphere",

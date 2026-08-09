@@ -4,7 +4,7 @@
  * be tested without rendering a virtualized grid.
  */
 import { foldForSearch } from '@shared/text'
-import { clamp } from './numeric'
+import { clamp } from '@shared/numeric'
 
 export type CollectionView = 'grid' | 'list'
 

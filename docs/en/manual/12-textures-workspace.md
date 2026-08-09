@@ -279,6 +279,38 @@ apart and the relief would stop matching the picture it lifts.
 
 ---
 
+## Styles — keeping a setup for the next material
+
+A well-tuned material is fifteen or so values. Dialling them in again by hand on the next one is
+the kind of work nobody does twice gladly.
+
+**The button at the top right of the inspector** saves the material's current state under a
+generated name — "Style 1", "Style 2". The **Styles** panel, in the right column beside Channels,
+lists them all.
+
+**Double-click a style** — or press Enter on it — to apply it to the open material. It is a
+single undo: `⌘Z` puts back exactly what was set before.
+
+**Right-click → Rename**, IDE-style. The name is edited where it is read. Right-click → Delete
+removes the style.
+
+### What a style carries, and what it does not
+
+**A style holds no map.** It says *how to read* the channels of the material in front of it, never
+*which ones*. That is exactly what lets it apply to any material: a style that brought its own
+channels would no longer apply — it would replace.
+
+A consequence worth knowing, and not a fault: **a good half of the settings do nothing without the
+matching map**. A "metal look" dropped on a material with no maps acts through its colour,
+roughness and metalness; the remap ranges and the normal strength will wait for the channels to
+arrive. They are kept as they are, and will take effect the day the material is completed.
+
+**Styles follow the machine, not the project.** They are kept in your user folder, beside the
+favourites, so they are there whichever project is open. This is deliberate: a map belongs to one
+project's catalogue, a knack belongs to none.
+
+---
+
 ## Saving
 
 Everything is saved **automatically**, moments after your last gesture, into a `.tex` file in your

@@ -2,6 +2,7 @@ import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
+import type { MaterialStyle } from './domain/style'
 import type { CloudPage, CloudQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type {
@@ -104,6 +105,11 @@ export type Channels = {
   favoritesPin: 'favorites:pin'
   favoritesUnpin: 'favorites:unpin'
 
+  stylesList: 'styles:list'
+  stylesSave: 'styles:save'
+  stylesRename: 'styles:rename'
+  stylesRemove: 'styles:remove'
+
   activityRead: 'activity:read'
 
   mediaIngest: 'media:ingest'
@@ -193,6 +199,11 @@ export const CHANNELS: Channels = {
   favoritesList: 'favorites:list',
   favoritesPin: 'favorites:pin',
   favoritesUnpin: 'favorites:unpin',
+
+  stylesList: 'styles:list',
+  stylesSave: 'styles:save',
+  stylesRename: 'styles:rename',
+  stylesRemove: 'styles:remove',
 
   activityRead: 'activity:read',
 
@@ -582,6 +593,17 @@ export type StudioBridge = {
      */
     pin: (assetId: string) => Promise<FavoriteRecipe[]>
     unpin: (id: string) => Promise<FavoriteRecipe[]>
+  }
+  /** Saved ways of reading a material, held outside every project — see `domain/style.ts`. */
+  styles: {
+    list: () => Promise<MaterialStyle[]>
+    /**
+     * Keeps the values handed over. Each of the four answers the whole list, as the favourites
+     * do: one write, one truth back, and a window that never has to guess where a row landed.
+     */
+    save: (style: MaterialStyle) => Promise<MaterialStyle[]>
+    rename: (id: string, name: string) => Promise<MaterialStyle[]>
+    remove: (id: string) => Promise<MaterialStyle[]>
   }
   /**
    * What the studio did, and what it failed to do — the surface it had none of.

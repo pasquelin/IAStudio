@@ -111,6 +111,12 @@ const bridge: StudioBridge = {
     pin: assetId => ipcRenderer.invoke(CHANNELS.favoritesPin, assetId),
     unpin: id => ipcRenderer.invoke(CHANNELS.favoritesUnpin, id),
   },
+  styles: {
+    list: () => ipcRenderer.invoke(CHANNELS.stylesList),
+    save: style => ipcRenderer.invoke(CHANNELS.stylesSave, style),
+    rename: (id, name) => ipcRenderer.invoke(CHANNELS.stylesRename, id, name),
+    remove: id => ipcRenderer.invoke(CHANNELS.stylesRemove, id),
+  },
   activity: {
     read: query => ipcRenderer.invoke(CHANNELS.activityRead, query),
     onEntries: callback => subscribe<readonly ActivityEntry[]>(EVENTS.activity, callback),

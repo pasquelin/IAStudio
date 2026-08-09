@@ -5,11 +5,17 @@
  * The channels themselves are assets of the project, referenced by id. The renderer has no
  * `fs`, and a file path written into a document would stop the project folder from being moved.
  */
-import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
+import { isRecord, readBoolean, readNumber, readPositive } from '@shared/guards'
 import { normalizeAzimuth } from '@shared/domain/angles'
 import { readEnvironment, type EnvironmentRef } from '@shared/domain/scene'
-import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
-import { clamp } from '@/helpers/numeric'
+import {
+  DEFAULT_TEXTURE_MATERIAL,
+  PBR_CHANNELS,
+  readMaterial,
+  type MaterialSettings,
+  type PbrChannel,
+} from '@shared/domain/texture'
+import { clamp } from '@shared/numeric'
 
 /**
  * The `MeshStandardMaterial` property a channel feeds. Named here rather than borrowed from the
@@ -113,87 +119,10 @@ export function sourceFor(channel: PbrChannel): PbrChannel | null {
   return SOURCE_BY_CHANNEL[channel]
 }
 
-export type ValueRange = { min: number; max: number }
-
-export type Vector2 = { x: number; y: number }
-
-/**
- * How far each setting a slider drives is allowed to go. Here rather than at the field, because
- * the parser has to hold the same bounds: read unclamped, a hand-edited `heightScale: 3` opened
- * and rendered fine, the slider pinned at its own maximum, and the first touch of it destroyed the
- * value — with the two truths far enough apart that nothing pointed at the cause.
- *
- * The four that read through `readUnit` are not here: their bound IS the unit interval.
- */
-export const MATERIAL_BOUNDS = {
-  normalScale: { min: -2, max: 2, step: 0.05 },
-  heightScale: { min: 0, max: 0.5, step: 0.005 },
-  emissiveIntensity: { min: 0, max: 4, step: 0.05 },
-  // A repeat of zero collapses every map to one texel, and a negative one mirrors it: neither is
-  // reachable from the field, so neither may arrive from a file.
-  tiling: { min: 0.01, max: 64, step: 0.1 },
-}
-
 /** The same rule for the preview, whose two sliders were read unbounded just as those three were. */
 export const PREVIEW_BOUNDS = {
   envIntensity: { min: 0, max: 3, step: 0.05 },
 }
-
-/**
- * The settings of the preview material. None of them ever touch the pixels of a channel: they
- * are read at render time, which is what lets a value be changed back six months later.
- *
- * `roughnessRange` and `metalnessRange` remap what their map holds — the double handle of the
- * material panel — and are the identity by default.
- */
-export type MaterialSettings = {
-  /** Tint multiplied over the base colour map. */
-  color: string
-  roughness: number
-  metalness: number
-  roughnessRange: ValueRange
-  metalnessRange: ValueRange
-  normalScale: number
-  /** OpenGL and DirectX disagree on which way the green channel points. */
-  invertNormalGreen: boolean
-  /** Displacement, off by default: a subdivided sphere costs more than the scene it previews. */
-  heightScale: number
-  aoIntensity: number
-  /** How much the cavity mask darkens edges, read in `onBeforeCompile`. */
-  edgeIntensity: number
-  emissive: string
-  emissiveIntensity: number
-  /** Repeat, applied to every channel at once: applied to one alone, the maps drift apart. */
-  tiling: Vector2
-  offset: Vector2
-  /** Radians. */
-  rotation: number
-}
-
-/**
- * Frozen down to its nested objects, and not only for its own sake: a panel that resets one row
- * writes `{ ...DEFAULT_TEXTURE_MATERIAL, roughness }`, and a spread copies the reference to
- * `tiling` — one drag on the copy would then move the default every other texture opens on.
- */
-export const DEFAULT_TEXTURE_MATERIAL: MaterialSettings = {
-  color: '#ffffff',
-  roughness: 1,
-  metalness: 0,
-  roughnessRange: Object.freeze({ min: 0, max: 1 }),
-  metalnessRange: Object.freeze({ min: 0, max: 1 }),
-  normalScale: 1,
-  invertNormalGreen: false,
-  heightScale: 0,
-  aoIntensity: 1,
-  edgeIntensity: 0,
-  emissive: '#000000',
-  emissiveIntensity: 1,
-  tiling: Object.freeze({ x: 1, y: 1 }),
-  offset: Object.freeze({ x: 0, y: 0 }),
-  rotation: 0,
-}
-
-Object.freeze(DEFAULT_TEXTURE_MATERIAL)
 
 /** The shapes a texture is judged on. A plane reads tiling, a sphere reads lighting. */
 export type PreviewShape = 'sphere' | 'box' | 'cylinder' | 'plane' | 'torusKnot'
@@ -297,48 +226,6 @@ export function missingChannels(texture: TextureState): PbrChannel[] {
   return PBR_CHANNELS.filter(channel => texture.channels[channel] === undefined)
 }
 
-/**
- * Read like every other value, then held inside what the value means. A hand-edited `.tex` is
- * user territory, and a roughness of -1 reaches the GGX term as a negative alpha: black or white
- * pixels depending on the driver, with nothing on the way to say where it came from.
- */
-function readUnit(source: Record<string, unknown>, key: string, fallback: number): number {
-  return clamp(readNumber(source, key, fallback), 0, 1)
-}
-
-/** Held inside what a slider can reach, so a file and its own field cannot disagree. */
-function readBounded(
-  source: Record<string, unknown>,
-  key: string,
-  fallback: number,
-  bound: keyof typeof MATERIAL_BOUNDS,
-): number {
-  const { min, max } = MATERIAL_BOUNDS[bound]
-  return clamp(readNumber(source, key, fallback), min, max)
-}
-
-/** Kept in order as well as in range: handles crossed over would remap everything to nothing. */
-function readRange(source: Record<string, unknown>, key: string, fallback: ValueRange): ValueRange {
-  const raw = source[key]
-  if (!isRecord(raw)) return { ...fallback }
-
-  const min = readUnit(raw, 'min', fallback.min)
-  return { min, max: clamp(readNumber(raw, 'max', fallback.max), min, 1) }
-}
-
-/** Held above zero on both axes, which is the one thing `readVector` cannot know to do. */
-function readTiling(source: Record<string, unknown>, fallback: Vector2): Vector2 {
-  const { min, max } = MATERIAL_BOUNDS.tiling
-  const raw = readVector(source, 'tiling', fallback)
-  return { x: clamp(raw.x, min, max), y: clamp(raw.y, min, max) }
-}
-
-function readVector(source: Record<string, unknown>, key: string, fallback: Vector2): Vector2 {
-  const raw = source[key]
-  if (!isRecord(raw)) return { ...fallback }
-  return { x: readNumber(raw, 'x', fallback.x), y: readNumber(raw, 'y', fallback.y) }
-}
-
 function readChannels(value: unknown): ChannelSet {
   const channels: ChannelSet = {}
   if (!isRecord(value)) return channels
@@ -372,39 +259,6 @@ function readChannels(value: unknown): ChannelSet {
   }
 
   return channels
-}
-
-function readMaterial(value: unknown): MaterialSettings {
-  const fallback = DEFAULT_TEXTURE_MATERIAL
-  if (!isRecord(value)) return structuredClone(fallback)
-
-  return {
-    color: readString(value, 'color', fallback.color),
-    roughness: readUnit(value, 'roughness', fallback.roughness),
-    metalness: readUnit(value, 'metalness', fallback.metalness),
-    roughnessRange: readRange(value, 'roughnessRange', fallback.roughnessRange),
-    metalnessRange: readRange(value, 'metalnessRange', fallback.metalnessRange),
-    // Signed on purpose: a negative scale flips the relief, which is a legitimate answer to a
-    // normal map baked the other way round — hence a bound that is not the unit interval.
-    normalScale: readBounded(value, 'normalScale', fallback.normalScale, 'normalScale'),
-    invertNormalGreen: readBoolean(value, 'invertNormalGreen', fallback.invertNormalGreen),
-    heightScale: readBounded(value, 'heightScale', fallback.heightScale, 'heightScale'),
-    aoIntensity: readUnit(value, 'aoIntensity', fallback.aoIntensity),
-    edgeIntensity: readUnit(value, 'edgeIntensity', fallback.edgeIntensity),
-    emissive: readString(value, 'emissive', fallback.emissive),
-    emissiveIntensity: readBounded(
-      value,
-      'emissiveIntensity',
-      fallback.emissiveIntensity,
-      'emissiveIntensity',
-    ),
-    tiling: readTiling(value, fallback.tiling),
-    // Offset is left alone: it is cyclic and three wraps it, so 1.5 means the same as 0.5.
-    offset: readVector(value, 'offset', fallback.offset),
-    // Wrapped, not clamped. An angle is cyclic, so `rotation: 100` means something — a clamp to
-    // 2PI would throw away what the author wrote, where wrapping keeps it.
-    rotation: normalizeAzimuth(readNumber(value, 'rotation', fallback.rotation)),
-  }
 }
 
 function readPreview(value: unknown): PreviewSettings {

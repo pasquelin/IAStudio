@@ -8,7 +8,7 @@ import type {
   Vector3,
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
-import type { NumericBounds } from '@/helpers/numeric'
+import type { NumericBounds } from '@shared/numeric'
 
 /*
  * What each field of a descriptor is, so the inspector can be derived from a descriptor rather
