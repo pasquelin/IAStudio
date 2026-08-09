@@ -67,16 +67,28 @@ export function ActivityMessage({ entry }: { entry: ActivityEntry }) {
   )
 }
 
-function ActivityRow({ entry }: { entry: ActivityEntry }) {
-  const { i18n } = useTranslation()
-
+/**
+ * One journal line, wherever it is read. Written twice, the two had each kept half of it: the
+ * panel had `tabular-nums` but no `shrink-0`, so a long message squeezed its level glyph; the
+ * home had `shrink-0` but no `tabular-nums`, so its timestamps did not line up down the column.
+ *
+ * It carries its own padding, like `ProgressRow` — the row on the band beside it in the home,
+ * which indents by `px-2` where this one indented by `px-1`. Two bands stacked on the same shelf
+ * and starting at different columns is drift, not a density anyone chose.
+ *
+ * `time` is handed over already written: the panel states the hour and the home says how long
+ * ago, and that difference is the one worth keeping. `null` for a stamp neither can read.
+ */
+export function ActivityRow({ entry, time }: { entry: ActivityEntry; time: string | null }) {
   return (
     <li className="flex items-start gap-2 px-2 py-1.5">
-      <UiIcon path={GLYPHS[entry.level]} size={14} className={cn('mt-px', TINTS[entry.level])} />
+      <UiIcon
+        path={GLYPHS[entry.level]}
+        size={14}
+        className={cn('mt-px shrink-0', TINTS[entry.level])}
+      />
       <ActivityMessage entry={entry} />
-      <span className="text-muted shrink-0 text-[11px] tabular-nums">
-        {timeOf(entry.at, i18n.language)}
-      </span>
+      <span className="text-muted shrink-0 text-[11px] tabular-nums">{time}</span>
     </li>
   )
 }
@@ -140,7 +152,7 @@ function FilterRow<T extends string>({
  * whenever its flyout closes.
  */
 export function ActivityList() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const entries = useActivity(state => state.entries)
   const levels = useActivity(state => state.levels)
   const topics = useActivity(state => state.topics)
@@ -189,7 +201,7 @@ export function ActivityList() {
       ) : (
         <ul className="divide-border min-h-0 flex-1 divide-y overflow-y-auto">
           {visible.map(entry => (
-            <ActivityRow key={entry.id} entry={entry} />
+            <ActivityRow key={entry.id} entry={entry} time={timeOf(entry.at, i18n.language)} />
           ))}
         </ul>
       )}

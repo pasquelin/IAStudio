@@ -1,11 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { homeSectionLimit } from '@shared/domain/home'
-import { UiIcon } from '@/design/UiIcon'
-import { cn } from '@/helpers/cn'
 import { timeAgo } from '@/helpers/relative-time'
 import { useActivity } from '@/stores/activity'
 import { useSettings } from '@/stores/settings'
-import { ActivityMessage, GLYPHS, TINTS } from '@/app/ActivityList'
+import { ActivityRow } from '@/app/ActivityList'
 import { SHELF_BLOCK } from '../styles'
 import { Section } from '../Section'
 
@@ -28,17 +26,7 @@ export function Activity() {
     <Section id="activity" title={t('home.sections.activity')}>
       <ul className={SHELF_BLOCK}>
         {shown.map(entry => (
-          <li key={entry.id} className="flex items-start gap-2 px-1 py-1">
-            <UiIcon
-              path={GLYPHS[entry.level]}
-              size={14}
-              className={cn('mt-px shrink-0', TINTS[entry.level])}
-            />
-            <ActivityMessage entry={entry} />
-            <span className="text-muted shrink-0 text-[11px]">
-              {timeAgo(entry.at, i18n.language)}
-            </span>
-          </li>
+          <ActivityRow key={entry.id} entry={entry} time={timeAgo(entry.at, i18n.language)} />
         ))}
       </ul>
     </Section>
