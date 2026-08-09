@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ActivityEntry } from '@shared/domain/activity'
 import { useActivity } from '@/stores/activity'
@@ -25,17 +25,18 @@ describe('the home journal band', () => {
    * had lost `tabular-nums`, so its timestamps did not line up down the column.
    */
   it('lines its timestamps up in a column, as the journal panel does', () => {
-    render(<Activity />)
-
-    const stamp = screen.getByText(/\d/, { selector: 'span.tabular-nums' })
-    expect(stamp).toBeInTheDocument()
-  })
-
-  /** A long message must not squeeze the level glyph — the panel had no `shrink-0` either. */
-  it('keeps the level glyph at its size whatever the message is', () => {
+    // Never on the text: `timeAgo` says "hier" past a day, and a case that asserts a digit
+    // starts failing on its own the morning after its fixture was written.
     const { container } = render(<Activity />)
 
-    expect(container.querySelector('svg.shrink-0')).not.toBeNull()
+    expect(container.querySelector('span.tabular-nums')).not.toBeNull()
+  })
+
+  /** The band indents like the jobs band above it, which the panel's row already did. */
+  it('starts its lines at the same column as the band beside it', () => {
+    const { container } = render(<Activity />)
+
+    expect(container.querySelector('li.px-2')).not.toBeNull()
   })
 
   it('says nothing rather than announcing its own emptiness', () => {

@@ -92,4 +92,16 @@ describe('the filters of the journal', () => {
     expect(useActivity.getState().levels).toEqual([])
     expect(useActivity.getState().topics).toEqual(['import'])
   })
+
+  /**
+   * The panel is the side that gained this: it drew its glyph without `shrink-0`, so a long
+   * message squeezed it while the home's copy held its size.
+   */
+  it('keeps the level glyph at its size whatever the message is', () => {
+    useActivity.setState({ entries: [entry()] })
+
+    const { container } = render(<ActivityList />)
+
+    expect(container.querySelector('svg.shrink-0')).not.toBeNull()
+  })
 })

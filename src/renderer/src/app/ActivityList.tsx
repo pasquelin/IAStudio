@@ -68,28 +68,20 @@ export function ActivityMessage({ entry }: { entry: ActivityEntry }) {
 }
 
 /**
- * One journal line, wherever it is read. Shared for the same reason `ActivityMessage` is: the
- * home drew its own and had already drifted — no `tabular-nums`, so its timestamps would not line
- * up, and no `shrink-0`, so a long message squeezed the level glyph.
+ * One journal line, wherever it is read. Written twice, the two had each kept half of it: the
+ * panel had `tabular-nums` but no `shrink-0`, so a long message squeezed its level glyph; the
+ * home had `shrink-0` but no `tabular-nums`, so its timestamps did not line up down the column.
  *
- * `time` is handed over already written, not derived here: the panel states the hour and the home
- * says how long ago, and that difference is the one worth keeping. `null` for a stamp neither can
- * read, which leaves the slot empty rather than printing a placeholder date.
+ * It carries its own padding, like `ProgressRow` — the row on the band beside it in the home,
+ * which indents by `px-2` where this one indented by `px-1`. Two bands stacked on the same shelf
+ * and starting at different columns is drift, not a density anyone chose.
  *
- * The padding stays with the caller — a dock is dense, a home band sits on a surface with its own
- * `p-2`, and folding one into the row would give the other twice the inset.
+ * `time` is handed over already written: the panel states the hour and the home says how long
+ * ago, and that difference is the one worth keeping. `null` for a stamp neither can read.
  */
-export function ActivityRow({
-  entry,
-  time,
-  className,
-}: {
-  entry: ActivityEntry
-  time: string | null
-  className?: string
-}) {
+export function ActivityRow({ entry, time }: { entry: ActivityEntry; time: string | null }) {
   return (
-    <li className={cn('flex items-start gap-2', className)}>
+    <li className="flex items-start gap-2 px-2 py-1.5">
       <UiIcon
         path={GLYPHS[entry.level]}
         size={14}
@@ -209,12 +201,7 @@ export function ActivityList() {
       ) : (
         <ul className="divide-border min-h-0 flex-1 divide-y overflow-y-auto">
           {visible.map(entry => (
-            <ActivityRow
-              key={entry.id}
-              entry={entry}
-              time={timeOf(entry.at, i18n.language)}
-              className="px-2 py-1.5"
-            />
+            <ActivityRow key={entry.id} entry={entry} time={timeOf(entry.at, i18n.language)} />
           ))}
         </ul>
       )}

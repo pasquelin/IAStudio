@@ -26,12 +26,7 @@ export function Activity() {
     <Section id="activity" title={t('home.sections.activity')}>
       <ul className={SHELF_BLOCK}>
         {shown.map(entry => (
-          <ActivityRow
-            key={entry.id}
-            entry={entry}
-            time={timeAgo(entry.at, i18n.language)}
-            className="px-1 py-1"
-          />
+          <ActivityRow key={entry.id} entry={entry} time={timeAgo(entry.at, i18n.language)} />
         ))}
       </ul>
     </Section>
