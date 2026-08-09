@@ -283,6 +283,39 @@ désaligneraient et le relief cesserait de correspondre à l’image qu’il sou
 
 ---
 
+## Les styles — garder un réglage pour la matière suivante
+
+Une matière bien réglée, c’est une quinzaine de valeurs. Les retrouver à la main sur la matière
+d’après, c’est le genre de travail qu’on ne refait pas deux fois de bon cœur.
+
+**Le bouton en haut à droite de l’inspecteur** enregistre l’état courant du matériau sous un nom
+généré — « Style 1 », « Style 2 ». Le panneau **Styles**, dans la colonne de droite à côté des
+Canaux, les liste tous.
+
+**Double-cliquez un style** — ou pressez Entrée dessus — pour l’appliquer à la matière ouverte.
+C’est une seule annulation : `⌘Z` remet exactement ce qui était réglé avant.
+
+**Clic droit → Renommer**, comme dans un IDE. Le nom s’édite là où il se lit. Clic droit →
+Supprimer retire le style.
+
+### Ce qu’un style emporte, et ce qu’il n’emporte pas
+
+**Un style ne contient aucune carte.** Il dit *comment lire* les canaux de la matière en face,
+jamais *lesquels*. C’est précisément ce qui lui permet de s’appliquer à n’importe quelle
+matière : un style qui apporterait ses propres canaux ne s’appliquerait plus, il remplacerait.
+
+Conséquence à connaître, qui n’est pas un défaut : **une bonne moitié des réglages ne fait rien
+sans la carte correspondante**. Un « effet métal » posé sur une matière sans carte agit par sa
+couleur, sa rugosité et sa métallicité ; les plages de remappage et la force de normale
+attendront que les canaux arrivent. Elles sont gardées telles quelles, et prendront effet le
+jour où la matière se complète.
+
+**Les styles suivent la machine, pas le projet.** Ils sont rangés dans votre dossier
+d’utilisateur, à côté des favoris, et sont donc là quel que soit le projet ouvert. C’est voulu :
+une carte appartient au catalogue d’un projet, un tour de main n’appartient à aucun.
+
+---
+
 ## Enregistrer
 
 Tout est enregistré **automatiquement**, quelques instants après votre dernier geste, dans un

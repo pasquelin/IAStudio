@@ -205,7 +205,7 @@ qu’il **agit** — il crée quelque chose — alors que les autres ne font que
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Assets, Explorateur, Scène,
+Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Styles, Assets, Explorateur, Scène,
 Lumières, Mailles, Apps — celles que l’espace déclare, dans cet ordre — puis, sous le trait,
 Inspecteur.
 
@@ -291,6 +291,7 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Vue** | droite | 1re | Skyboxes | la projection, le champ de vision et les objets de test |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
 | **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte, et ce que chacun porte |
+| **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
 | **Assets** | droite | 1re | Vidéo, Audio | l’étagère du projet, en colonne |
 | **Explorateur** | droite | 1re | partout | les documents du projet, ouverts ou non |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
