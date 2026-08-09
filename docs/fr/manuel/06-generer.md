@@ -163,19 +163,20 @@ Ils ne sont pas les mêmes partout, mais ces noms reviennent :
 | Nom courant | Ce que ça fait | Conseil |
 |---|---|---|
 | **prompt** | votre description | voir ci-dessus |
-| **negative prompt** | ce que vous voulez éviter | court : « blurry, text, watermark » |
+| **Prompt négatif** | ce que vous voulez éviter | court : « blurry, text, watermark » |
 | **Graine** (*seed*) | le point de départ du hasard | voir ci-dessous |
 | **steps** | le nombre d’étapes de calcul | plus haut = plus long, pas forcément mieux |
-| **guidance scale** / **CFG scale** | à quel point le modèle obéit au prompt | trop haut, l’image devient dure et saturée |
+| **Guidage**, **Échelle de guidage** (*guidance*, *cfg*) | à quel point le modèle obéit au prompt | trop haut, l’image devient dure et saturée |
 | **Largeur** / **Hauteur** | les dimensions | souvent contraintes à des multiples de 8 ou 64 |
 | **Nombre d’images** | combien d’images d’un coup | chacune consomme du crédit |
 | **Intensité** (*strength*) | à quel point une image de départ est transformée | 0 = inchangée, 1 = méconnaissable |
 
 > **Pourquoi certains noms sont en français et d’autres non.** Ces noms sont écrits par le modèle,
 > donc en anglais, et le studio les traduit avec son propre dictionnaire. Ce qu’il ne traduit pas,
-> il ne le traduit **nulle part** : `prompt`, `guidance scale`, `CFG scale`, `sampler`,
-> `scheduler`, `LoRA`, `checkpoint`, `clip skip`, `denoising strength`. Un nom qu’il ne connaît pas
-> encore — `steps` en est un — reste en anglais plutôt que de disparaître.
+> il ne le traduit **nulle part** : `prompt`, `sampler`, `scheduler`, `LoRA`, `checkpoint`,
+> `clip skip`, `denoising strength` — sept mots que ni une surface du studio ni le
+> [glossaire](17-glossaire.md) n’a jamais nommés en français. Un nom qu’il ne connaît pas encore —
+> `steps` en est un — reste en anglais plutôt que de disparaître.
 
 ### La graine (*seed*)
 

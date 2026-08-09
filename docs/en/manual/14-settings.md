@@ -82,11 +82,15 @@ you write in them: a prompt written in English stays in English.
 > does not know yet therefore stays **in English** rather than disappearing, and a model published
 > tomorrow arrives in its original wording.
 >
-> **Some words stay in English on purpose**: `guidance scale`, `CFG scale`, `sampler`,
-> `scheduler`. The rule is not "it is the trade's term" — it is easier to check than that: **only
-> what the studio says in English everywhere else stays in English.** Which is why `seed` is no
-> longer among them: the inspector and the Skybox panel had said "Graine" in French for a long
-> time, and the form was the only surface refusing the word the rest of the window uses.
+> **Seven words stay in English on purpose**: `sampler`, `scheduler`, `LoRA`, `checkpoint`,
+> `prompt`, `clip skip`, `denoising strength`. The rule is not "it is the trade's term" — it is
+> easier to check than that: **a word is left in English only where the studio never gives it a
+> French name** — not in one of its own surfaces, and not in the [glossary](17-glossary.md).
+>
+> The list has emptied twice under that rule. `seed` left it because the inspector and the Skybox
+> panel had said "Graine" for a long time; `guidance scale` and `negative prompt` left it because
+> the glossary named them — "Guidage" and "Prompt négatif". Each time, the form was the only
+> surface refusing the word the rest of the studio uses.
 
 ### On opening
 

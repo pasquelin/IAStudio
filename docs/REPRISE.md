@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`d8fff21`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline d8fff21..develop`) au lieu de relire mille lignes.
+à **`6ad591f`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 6ad591f..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -57,9 +57,10 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > **Propose-moi un ordre et attends ma réponse** avant d’ouvrir un worktree. Les candidats, sans
 > priorité imposée : les **étapes 7 à 9 du node editor** — compiler, valider, exécuter (§ 4) ·
 > le **backlog qualité P1** (`.claude/loop/BACKLOG.md`, dont
-> les statuts ont déjà menti trois fois : vérifie avant de prendre) · les **3 constats restants du
-> § 3.3** et l’export en six faces du skybox (§ 3.5) · les **deux dernières dettes transverses**
-> du § 3.6.
+> les statuts ont déjà menti trois fois : vérifie avant de prendre) · l’**export en six faces du
+> skybox** (§ 3.5), dont la moitié difficile est écrite depuis `feat/skybox-vues` · les **deux
+> dernières dettes transverses** du § 3.6. La table des constats du § 3.3 est **vide** : ne pas
+> l’y chercher.
 >
 > Cinq règles qui ne sont pas dans `CLAUDE.md` :
 >

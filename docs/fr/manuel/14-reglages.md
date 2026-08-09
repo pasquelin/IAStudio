@@ -86,11 +86,15 @@ vous écrivez dedans : un prompt écrit en anglais reste en anglais.
 > qu’il ne connaît pas encore reste donc **en anglais** plutôt que de disparaître, et un modèle
 > publié demain arrive dans sa langue d’origine.
 >
-> **Certains mots restent en anglais exprès** : `guidance scale`, `CFG scale`, `sampler`,
-> `scheduler`. La règle n’est pas « c’est le terme du métier » — elle est plus simple à
-> vérifier : **ne reste en anglais que ce que le studio dit en anglais partout ailleurs.** C’est
-> pourquoi `seed` n’y est plus : l’inspecteur et le panneau Skybox disaient « Graine » depuis
-> longtemps, et le formulaire était la seule surface à refuser le mot que le reste de la fenêtre
+> **Sept mots restent en anglais exprès** : `sampler`, `scheduler`, `LoRA`, `checkpoint`,
+> `prompt`, `clip skip`, `denoising strength`. La règle n’est pas « c’est le terme du métier » —
+> elle est plus simple à vérifier : **ne reste en anglais que ce que le studio ne nomme en
+> français nulle part**, ni dans une de ses surfaces, ni dans le [glossaire](17-glossaire.md).
+>
+> La liste s’est vidée deux fois en appliquant cette règle. `seed` en est parti parce que
+> l’inspecteur et le panneau Skybox disaient « Graine » depuis longtemps ; `guidance scale` et
+> `negative prompt` parce que le glossaire, lui, les nommait — « Guidage » et « Prompt négatif ».
+> Le formulaire était à chaque fois la seule surface à refuser le mot que le reste du studio
 > emploie.
 
 ### À l’ouverture
