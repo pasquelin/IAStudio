@@ -55,6 +55,32 @@ describe('the projection shader', () => {
   })
 })
 
+describe('what the flat views owe the screen', () => {
+  /**
+   * The source is a half-float target holding linear light. three converts on the way out of
+   * every material it compiles, but only where the shader asks — so a pass that forgets lands
+   * washed out beside the immersive view it is supposed to be the same sky as.
+   *
+   * Named against `ShaderChunk` rather than spelled: an include three does not publish is a
+   * compile error at the first frame, which no test in jsdom would ever reach.
+   */
+  it('asks three for the two conversions, by names three actually publishes', () => {
+    const shader = shaderOf()
+
+    for (const chunk of ['tonemapping_fragment', 'colorspace_fragment']) {
+      expect(shader).toContain(`#include <${chunk}>`)
+      expect(ShaderChunk[chunk]).toBeTypeOf('string')
+    }
+  })
+
+  it('leaves no path out of main that skips them', () => {
+    // A bare `return;` only ever appears in `main` — the helpers all return a value — and one
+    // there would jump over the conversions written at the end of it. That is exactly how the
+    // equirect layout came out brighter than the two that unfold: it returned early.
+    expect(shaderOf()).not.toMatch(/return\s*;/)
+  })
+})
+
 describe('a projection pass', () => {
   it('carries the layout and its shape together', () => {
     const pass = createProjectionPass()

@@ -119,27 +119,35 @@ void main() {
 
   if (uLayout < 0.5) {
     gl_FragColor = texture2D(uSource, uv);
-    return;
+  } else {
+    float face = uFace;
+    vec2 local = uv;
+
+    if (uLayout < 1.5) {
+      int column;
+      int row;
+      local = cellUv(uv, ${CROSS_COLUMNS}.0, ${CROSS_ROWS}.0, column, row);
+      face = crossFaceAt(column, row);
+      // The four holes of the cross: nothing to draw, and nothing to pretend either.
+      if (face < 0.0) discard;
+    } else if (uLayout < 2.5) {
+      int column;
+      int row;
+      local = cellUv(uv, ${FACES_COLUMNS}.0, ${FACES_ROWS}.0, column, row);
+      face = float(row * ${FACES_COLUMNS} + column);
+    }
+
+    gl_FragColor = texture2D(uSource, equirectUv(faceDirection(face, local)));
   }
 
-  float face = uFace;
-  vec2 local = uv;
-
-  if (uLayout < 1.5) {
-    int column;
-    int row;
-    local = cellUv(uv, ${CROSS_COLUMNS}.0, ${CROSS_ROWS}.0, column, row);
-    face = crossFaceAt(column, row);
-    // The four holes of the cross: nothing to draw, and nothing to pretend either.
-    if (face < 0.0) discard;
-  } else if (uLayout < 2.5) {
-    int column;
-    int row;
-    local = cellUv(uv, ${FACES_COLUMNS}.0, ${FACES_ROWS}.0, column, row);
-    face = float(row * ${FACES_COLUMNS} + column);
-  }
-
-  gl_FragColor = texture2D(uSource, equirectUv(faceDirection(face, local)));
+  // The source is a half-float target holding linear light, and this pass ends on a screen or
+  // in a PNG — neither of which reads linear. three writes these two conversions into every
+  // material it compiles, but a ShaderMaterial only gets them where it asks: without them a
+  // flat view is washed out beside the immersive one it is meant to be the same sky as.
+  //
+  // Reached on BOTH branches, which is why the equirect one no longer returns early.
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
 }
 `
 
