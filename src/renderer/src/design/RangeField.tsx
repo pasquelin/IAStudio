@@ -55,6 +55,11 @@ export function RangeField({
   const span = max - min
   const percent = (edge: number): number => ((edge - min) / span) * 100
 
+  // Stacked inputs: «to» is last in the DOM, so it takes the press wherever the two meet. Only
+  // at the ceiling is that a trap — «to» has nowhere to drag to, so it cannot part them. Lifting
+  // «from» any earlier would take the presses «to» still needs to widen the span upwards.
+  const fromOnTop = value.max >= max
+
   const set = (edge: 'min' | 'max', raw: number): void => {
     const next = bound(raw, { min, max, step })
     // Clamped against the other handle rather than refused: a drag that ran past it stops there,
@@ -97,7 +102,7 @@ export function RangeField({
           onChange={event => set('min', Number(event.target.value))}
           onFocus={() => onGestureStart?.()}
           onBlur={() => onGestureEnd?.()}
-          className={HANDLE}
+          className={cn(HANDLE, fromOnTop && 'z-1')}
         />
         <input
           type="range"

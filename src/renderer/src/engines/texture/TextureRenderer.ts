@@ -303,8 +303,10 @@ export class TextureRenderer {
     environment.setIntensity(preview.envIntensity)
     environment.setRotation(preview.envRotation)
     environment.setBackgroundVisible(preview.showBackground)
+    // On the edge only: `apply` runs on every value a drag emits, and restarting the clock there
+    // leaves the spin the time since the last slider value instead of since the last frame.
+    if (preview.autoSpin && !this.spinning) this.viewport.resetClock()
     this.spinning = preview.autoSpin
-    if (preview.autoSpin) this.viewport.resetClock()
 
     await this.sky.apply(environment, preview.environment)
   }

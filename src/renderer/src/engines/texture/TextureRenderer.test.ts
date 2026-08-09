@@ -108,6 +108,65 @@ describe('the texture preview', () => {
     expect(source.freed[0]).toHaveBeenCalled()
   })
 
+  /** Why the edge matters is in `applyEnvironment`; these three hold it to the three cases. */
+  describe('the auto spin', () => {
+    const spinning = (): TextureState => {
+      const state = newTexture()
+      state.preview.autoSpin = true
+      return state
+    }
+
+    /** Already spinning, which is the state the clock must not be restarted from. */
+    const spun = (): TextureRenderer => {
+      const renderer = mounted()
+      renderer.apply(spinning())
+      return renderer
+    }
+
+    /**
+     * Cleared rather than created per test: `vi.spyOn` hands back the mock already installed on a
+     * method, so a fresh `const` inside a test would read the count of the one before it — which
+     * is what made the first version of these three pass on numbers that meant nothing.
+     */
+    const watchClock = () => {
+      const reset = vi.spyOn(ViewportEngine.prototype, 'resetClock')
+      reset.mockClear()
+      return reset
+    }
+
+    it('starts the frame clock when the spin begins', () => {
+      const reset = watchClock()
+
+      mounted().apply(spinning())
+
+      expect(reset).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves the clock alone while a setting is dragged under a spinning shape', () => {
+      const renderer = spun()
+      const reset = watchClock()
+
+      // What a drag is: one `apply` per value, the spin untouched throughout.
+      for (const roughness of [0.2, 0.4, 0.6]) {
+        const dragged = spinning()
+        dragged.material.roughness = roughness
+        renderer.apply(dragged)
+      }
+
+      expect(reset).not.toHaveBeenCalled()
+    })
+
+    it('starts the clock again when the spin is turned off and back on', () => {
+      const renderer = spun()
+      renderer.apply(newTexture())
+      const reset = watchClock()
+
+      renderer.apply(spinning())
+
+      expect(reset).toHaveBeenCalledTimes(1)
+    })
+  })
+
   /**
    * The cavity mask reaches the shader through a uniform of its own, so it takes the one path in
    * this engine that no material slot walks. Covered channel by channel rather than for `edge`
