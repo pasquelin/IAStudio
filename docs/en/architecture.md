@@ -428,7 +428,7 @@ scrubbing starts stuttering for no visible reason.
 3. main fetches it               GET /models/{id}
 4. ModelRegistry translates      JSON schema → FieldDescriptor[]
 5. DynamicForm renders it        react-hook-form + a zod schema built from the descriptors
-5b. the price shows up           scenario:estimate-cost → POST ?dryRun=true → 402
+5b. the price shows up           scenario:estimate-cost → POST ?dryRun=true → 200 (402 as fallback)
 6. user submits                  scenario:generate
 7. JobManager queues it          bounded concurrency
 8. it polls                      jobs.retrieve, every 2 s
@@ -443,11 +443,20 @@ hand is right for exactly one model on exactly one day.
 An unknown field kind renders as raw input rather than failing the descriptor — a generation
 form that silently loses a field is worse than an ugly one.
 
-**Step 5b is the one call in the studio where a 4xx is the success path.** A `?dryRun=true`
-creates no job and spends nothing; the API answers **402**, carrying `estimatedCost` in its body.
-`main/scenario/cost.ts` swallows that status and nothing else — a 500 or a dead network is thrown
-on, so it reaches the log like every other failure. The port is a function rather than a method,
-because the dry run is documented on `workflows.run` as much as on generation.
+**Step 5b reads a price out of two shapes of answer, because the reference and the server do not
+agree.** A `?dryRun=true` creates no job and spends nothing. The reference documents a **402**
+carrying `estimatedCost`; the server, observed on both endpoints, answers **200** with
+`creativeUnitsCost` beside an empty `job`. `main/scenario/cost.ts` reads both, the 200 first and
+the 402 as a fallback — a 500 or a dead network is thrown on, so it reaches the log like every
+other failure.
+
+> **Reading only the documented 402 is how no badge ever showed a price.** The defect was
+> invisible by construction: a button with no figure reads as a model the API declines to price,
+> exactly like the three other cases that yield `null`. It took running a real App to see it.
+> **In front of an API, the reference says what was intended, not what answers.**
+
+The port is a function rather than a method because `generate.runModel` and `workflows.run` price
+a dry run the same way: which of the two is targeted is the target's business, not the port's.
 
 On the renderer side, `useCostEstimate` debounces at 600 ms **and** keeps a floor between two
 requests, derived from `INTERACTIVE_REQUESTS_PER_MINUTE`: a trailing debounce alone has no
