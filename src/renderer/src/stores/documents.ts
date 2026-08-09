@@ -41,8 +41,12 @@ type DocumentsState = {
    * Reads the open project's folder and settles both halves: what exists, and which of those a
    * layout still shows. For a change of project — where dropping the documents of the previous
    * one is the whole point.
+   *
+   * Answers whether the folder was read at all. An empty centre is the honest answer to a
+   * folder that went away, but it is NOT an answer about which tabs deserve to survive: only a
+   * listing that came back says a document is nowhere.
    */
-  refresh: () => Promise<void>
+  refresh: () => Promise<boolean>
   /** `null` when the workspace has no editable document kind yet. */
   create: (workspace: WorkspaceId) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
@@ -170,7 +174,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       const found = await listing
       // A second project opened while the first was still listing: the last answer to arrive is
       // not necessarily the one that was asked for last.
-      if (mine === generations.relist) set({ stored: sorted(found) })
+      if (mine === generations.relist) set({ stored: sorted(found ?? []) })
     } finally {
       listing = null
     }
@@ -179,23 +183,26 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   refresh: async () => {
     const mine = ++generations.refresh
     const found = await listed()
-    if (mine !== generations.refresh) return
+    if (mine !== generations.refresh) return false
 
+    const listing = found ?? []
     const shown = panelIds(useLayouts.getState().layouts)
     // One `set` for both halves: the folder says which documents exist, the layout says which
     // are open, and between two writes every tab would paint and unpaint.
     const documents = Object.fromEntries(
-      found.filter(document => shown.has(document.id)).map(document => [document.id, document]),
+      listing.filter(document => shown.has(document.id)).map(document => [document.id, document]),
     )
 
     set(state => ({
       documents,
-      stored: sorted(found),
+      stored: sorted(listing),
       // Kept when the tab survived the load: Dockview announces the active panel on mount, and
       // that happens before this listing comes back — clearing it here would leave every tool
       // window looking at nothing while a document is plainly open.
       activeId: state.activeId && documents[state.activeId] ? state.activeId : null,
     }))
+
+    return found !== null
   },
 
   create: async workspace => {
@@ -204,7 +211,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
     // Numbered against the folder as much as against the open tabs: a document saved and then
     // closed still holds its name, and counting only what is open hands that name out twice.
-    const stored = await listed()
+    const stored = (await listed()) ?? []
     const taken = new Set([
       ...stored.filter(document => document.workspace === workspace).map(document => document.id),
       ...documentsIn(get(), workspace).map(document => document.id),
@@ -250,7 +257,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 const generations = { relist: 0, refresh: 0 }
 
 /** The listing `relist` has in flight, shared by whoever asks while it is still travelling. */
-let listing: Promise<DocumentDescriptor[]> | null = null
+let listing: Promise<DocumentDescriptor[] | null> | null = null
 
 /**
  * Sorted by title rather than by whatever order the folder was read in: a listing that
@@ -261,14 +268,17 @@ function sorted(found: readonly DocumentDescriptor[]): DocumentDescriptor[] {
 }
 
 /**
- * What the project folder holds, or nothing at all: no project open, or a folder that went away
- * while one was. An empty centre is the honest answer to both, and neither is worth a throw
- * nobody is placed to catch.
+ * What the project folder holds, an empty list when no project is open, and `null` when the
+ * read itself failed — a folder that went away while it was open.
+ *
+ * The failure is told apart from the empty answer rather than levelled to it: both leave an
+ * empty centre, which is honest, but only the empty answer means a document is not there.
+ * Neither is worth a throw nobody is placed to catch.
  */
-async function listed(): Promise<DocumentDescriptor[]> {
+async function listed(): Promise<DocumentDescriptor[] | null> {
   try {
     return (await getBridge()?.documents.list()) ?? []
   } catch {
-    return []
+    return null
   }
 }

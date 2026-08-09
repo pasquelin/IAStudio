@@ -1,6 +1,7 @@
 import i18next from 'i18next'
 import { create } from 'zustand'
 import { withoutRecentProject, type Project } from '@shared/domain/project'
+import { closeOrphanTabs } from '@/app/orphan-tabs'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
@@ -48,11 +49,15 @@ async function followProject(project: Project | null): Promise<void> {
   // toasts too — they never expire, so one raised by the project being left would hang over
   // the one being opened, naming an asset that is no longer anywhere.
   useActivity.getState().dismissAll()
-  await Promise.all([
+  const [, folderAnswered] = await Promise.all([
     useAssets.getState().refresh(),
     useDocuments.getState().refresh(),
     useActivity.getState().reload(),
   ])
+
+  // Last, and only on a folder that answered: the reconciliation above is what says which tabs
+  // have a document, and a listing that failed says nothing about any of them.
+  if (folderAnswered) closeOrphanTabs()
 }
 
 /**

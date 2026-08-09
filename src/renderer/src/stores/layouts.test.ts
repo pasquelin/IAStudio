@@ -44,6 +44,45 @@ describe('layouts store', () => {
     expect(layouts.audio?.panels).toHaveProperty('tracks')
   })
 
+  describe('prune', () => {
+    it('takes the panel out of the workspace holding it', () => {
+      useLayouts.getState().remember('image', layoutShowing('kept', 'ghost'))
+
+      useLayouts.getState().prune(new Set(['ghost']))
+
+      expect(Object.keys(useLayouts.getState().layouts.image?.panels ?? {})).toEqual(['kept'])
+    })
+
+    it('reaches every workspace, not the one in front', () => {
+      useLayouts.getState().remember('image', layoutShowing('kept'))
+      useLayouts.getState().remember('3d', layoutShowing('ghost'))
+
+      useLayouts.getState().prune(new Set(['ghost']))
+
+      expect(useLayouts.getState().layouts['3d']).toBeUndefined()
+      expect(useLayouts.getState().layouts.image?.panels).toHaveProperty('kept')
+    })
+
+    it('forgets a layout left with no panel rather than storing an empty one', () => {
+      useLayouts.getState().remember('image', layoutShowing('ghost'))
+
+      useLayouts.getState().prune(new Set(['ghost']))
+
+      expect(useLayouts.getState().layouts.image).toBeUndefined()
+    })
+
+    // Every launch calls this, and a layout replaced by an equal one is a write to
+    // `localStorage` for nothing — and a new identity for whoever subscribes to it.
+    it('leaves the layouts alone when none of them shows one', () => {
+      useLayouts.getState().remember('image', layoutShowing('kept'))
+      const before = useLayouts.getState().layouts
+
+      useLayouts.getState().prune(new Set(['elsewhere']))
+
+      expect(useLayouts.getState().layouts).toBe(before)
+    })
+  })
+
   // Only Dockview can read a layout back, so a build whose Dockview — or whose set of document
   // kinds — has moved on cannot tell whether a stored one still loads. It throws on restore if
   // it does not, which is why the stamp exists rather than a migration.

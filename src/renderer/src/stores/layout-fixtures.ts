@@ -6,14 +6,18 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 /**
  * A persisted layout holding one panel per id, in the shape Dockview writes.
  *
- * Only `panels` is ever read back — `panelIds` is the one consumer — but the whole shape is
- * built rather than cast: a fixture that lies about its type is a test passing on something
- * production never sees.
+ * The whole shape is built rather than cast: a fixture that lies about its type is a test
+ * passing on something production never sees. The grid names the same ids as `panels` for that
+ * reason — `panelIds` reads only the registry, but `prune` walks the groups, and a layout whose
+ * halves disagree is one Dockview would refuse to restore.
  */
 export function layoutShowing(...ids: readonly string[]): SerializedLayout {
   return {
     grid: {
-      root: { type: 'branch', data: [] },
+      root: {
+        type: 'branch',
+        data: ids.length === 0 ? [] : [{ type: 'leaf', data: { id: 'group-1', views: [...ids] } }],
+      },
       width: 0,
       height: 0,
       orientation: Orientation.HORIZONTAL,
