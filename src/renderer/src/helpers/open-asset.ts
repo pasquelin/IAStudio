@@ -3,7 +3,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { defaultIntent } from './asset-intents'
 
 /**
- * What double-clicking an asset does — the cascade itself is `ASSET_INTENTS`.
+ * What opening an asset does — double-click or Enter; the cascade itself is `ASSET_INTENTS`.
  *
  * A refusal is said out loud. The same double-click worked over one tab and did nothing at all
  * over another, without a word either way, which is what made the gesture untrustworthy: the

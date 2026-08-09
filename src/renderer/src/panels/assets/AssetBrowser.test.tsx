@@ -9,8 +9,12 @@ import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
+import { useSelection } from '@/stores/selection'
 import { useSettings } from '@/stores/settings'
 import { AssetBrowser } from './AssetBrowser'
+
+const openAsset = vi.fn()
+vi.mock('@/helpers/open-asset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
 
 const PROJECT: Project = {
   path: '/tmp/project',
@@ -34,6 +38,8 @@ describe('AssetBrowser', () => {
     useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
     useProject.setState({ project: null })
     useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
+    useSelection.getState().clear()
+    vi.clearAllMocks()
   })
 
   // Two situations, and the user can only act on one of them.
@@ -266,5 +272,82 @@ describe('the kinds a space has any use for', () => {
     render(<AssetBrowser />)
 
     expect(setScope).toHaveBeenCalledWith(null)
+  })
+})
+
+/**
+ * What belongs to the shelf is the wiring, not the gestures: `Collection` has its own tests for
+ * the tab stop, the range and the two ways of activating a row.
+ */
+describe('the shelf hands its rows to the collection', () => {
+  beforeEach(() => {
+    useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
+    useProject.setState({ project: PROJECT })
+    useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
+    useSelection.getState().clear()
+    vi.clearAllMocks()
+  })
+
+  it('selects the row a click lands on, and paints it', async () => {
+    useAssets.setState({ items: [asset('one'), asset('two')] })
+    render(<AssetBrowser />)
+
+    await userEvent.click(screen.getByText('Asset two'))
+
+    expect(useSelection.getState().selection).toMatchObject({ kind: 'asset', ids: ['two'] })
+    expect(screen.getByText('Asset two').closest('[role="option"]')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+  })
+
+  // The shelf is the one panel whose actions are plural — sending and describing both take a
+  // selection — and a modifier click used to replace it instead of adding to it.
+  it('adds to the selection rather than replacing it, under the modifier', async () => {
+    const user = userEvent.setup()
+    useAssets.setState({ items: [asset('one'), asset('two'), asset('three')] })
+    render(<AssetBrowser />)
+
+    await user.click(screen.getByText('Asset one'))
+    await user.keyboard('{Meta>}')
+    await user.click(screen.getByText('Asset three'))
+    await user.keyboard('{/Meta}')
+
+    expect(useSelection.getState().selection).toMatchObject({ ids: ['one', 'three'] })
+  })
+
+  it('opens an asset from the keyboard, which the shelf could not do at all', async () => {
+    useAssets.setState({ items: [asset('one')] })
+    render(<AssetBrowser />)
+
+    await userEvent.click(screen.getByText('Asset one'))
+    await userEvent.keyboard('{Enter}')
+
+    expect(openAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'one' }))
+  })
+
+  it('still opens on a double-click, which is the gesture people know', async () => {
+    useAssets.setState({ items: [asset('one')] })
+    render(<AssetBrowser />)
+
+    await userEvent.dblClick(screen.getByText('Asset one'))
+
+    expect(openAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'one' }))
+  })
+
+  // The default state is the grid, so every test above draws cards. The shelf has two views and
+  // the wiring belongs to neither: a row must answer the same as a card.
+  it('hands its rows over in the list view too', async () => {
+    useAssets.setState({
+      items: [asset('one'), asset('two')],
+      collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' },
+    })
+    render(<AssetBrowser />)
+
+    await userEvent.click(screen.getByText('Asset two'))
+    expect(useSelection.getState().selection).toMatchObject({ kind: 'asset', ids: ['two'] })
+
+    await userEvent.keyboard('{Enter}')
+    expect(openAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'two' }))
   })
 })
