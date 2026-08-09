@@ -557,20 +557,15 @@ savoirs en restent :
 étant dans `GESTURE_SCOPES` depuis `feat/documents-erreurs`, et un `it.each(GESTURES)` le
 verrouille. Cinquième fois qu’une ligne de ce fichier décrit un défaut déjà corrigé.
 
-### Les constats vérifiés que personne n’a traités
+### Les constats vérifiés — la table est vide
 
-Par ordre de gravité. Chaque ligne est actionnable telle quelle.
-
-| Où | Quoi |
-|---|---|
-| `three-sync.ts:68` | Le mode `rotate` s’arme sur un sprite et n’a aucun effet — le shader ne lit que les longueurs de colonnes — mais salit le document et empile un undo vide |
-| `scene-document.ts:160` | `isSprite` est le seul garde non dérivé de sa table : un champ ajouté au descripteur ne sera pas vérifié à la relecture |
-| `ViewportEngine.ts:105-120` | Le passage ortho → perspective jette le zoom accumulé ; `frameSelection` ne redimensionne pas le tronc orthographique, donc `F` en ortho ne change rien à l’écran |
+Les sept qu’un audit avait relevés sont traités. Les deux lots qui les ont absorbés sont ci-dessous ;
+ce qu’ils ont appris est tout ce qui reste à en savoir.
 
 ### Le lot BVH et ombres — livré, et ce qu’il a appris
 
-Les quatre premiers constats de la table ci-dessus, traités ensemble parce qu’ils vivaient dans le
-même sous-système.
+Les quatre premiers de ces constats, traités ensemble parce qu’ils vivaient dans le même
+sous-système.
 
 - **La traversée des ombres s’arrête sur tout enfant qui tient lieu de nœud**, et le paramètre
   `deep` a disparu avec : un groupe, dont *tous* les enfants sont des nœuds, est le cas extrême de
@@ -603,6 +598,36 @@ même sous-système.
 - **Ce qu’aucun test ne tient**, dit franchement : l’entrée que laisse dans `pending` une requête
   dont le `spawn` a été refusé. Rien hors du module ne lit cette carte ; le `finally` qui la vide
   est une assurance, pas une mesure.
+
+### Le lot des trois derniers constats — livré, et ce qu’il a appris
+
+Sprite, garde de relecture, caméra orthographique. Rien en commun sinon d’avoir été relevés le même
+jour, et c’est pour ça qu’ils sont partis ensemble.
+
+- **Un contrôle sans effet ne s’affiche pas** — la règle que le studio applique déjà à la case
+  d’ombre d’un sprite vaut pour la poignée de rotation. Vérifié dans le shader de three 0.185
+  (`sprite.glsl.js`) plutôt que sur la foi du constat : il lit `length(modelMatrix[0].xyz)` et
+  `length(modelMatrix[1].xyz)` — des **longueurs**, qu’une rotation laisse intactes — et prend son
+  angle d’un `uniform` de matériau. **Une sélection mixte garde sa poignée** : tourner le groupe
+  déplace le sprite dans l’espace, et ça se voit.
+- **Un zoom orthographique se dépense en distance, il ne se jette pas.** Les deux caméras zooment
+  autrement — l’une met à l’échelle son tronc, l’autre avance — et la conversion tient en une
+  division : `distance / zoom`, parce que `fitProjection` a dimensionné le tronc depuis cette
+  distance-là. Pas de trigonométrie à réécrire.
+- **Déplacer une caméra orthographique ne change rien à ce qu’elle montre.** D’où `refit()`, et
+  d’où la vérification qui va avec : sur les **six** endroits de `src/` qui écrivent
+  `camera.position`, `frameSelection` est le **seul** qui change la distance à la cible.
+  `viewFrom` et le vol WASD la préservent délibérément, et les viewports de texture et de skybox
+  n’appellent jamais `setProjection`. Poser `refit()` dans le viewport à chaque déplacement serait
+  donc le mauvais geste — c’est mesuré, pas supposé.
+- **Deux affirmations des manuels étaient fausses**, dont une que le correctif venait de créer :
+  « la caméra reprend exactement sa place » ne tient plus, puisqu’elle se déplace justement pour
+  que la vue ne change pas. Et « `F` rapproche la caméra pour que l’objet remplisse la vue » n’a
+  jamais décrit le code, qui se pose à distance fixe — ce lot redimensionne le tronc pour cette
+  distance, il ne cadre toujours pas sur la taille de l’objet.
+- **Ce qu’aucun test ne tient**, dit franchement : le branchement `frameSelection → refit()`.
+  `frameSelection` sort tôt sans `orbit`, qui n’existe qu’après un `mount` exigeant WebGL.
+  `refit()` lui-même est testé ; l’appel ne l’est pas.
 
 ### Les pièges three.js déjà payés — ne pas les repayer
 
