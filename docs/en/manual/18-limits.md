@@ -170,14 +170,12 @@ by key** button does not find them.
 
 ## Video workspace
 
-### No saving, no export
+### No export
 
-**A sequence is not written to disk**: closing the tab loses the edit.
+A sequence is now written into a `.seq` file and reopens exactly as it was.
 
-**There is no export**: you cannot yet produce a final video file. This is the studio's heaviest limit
-to date, because it stops you delivering.
-
-The *assets* that made up the edit do stay in the project.
+**There is still no export**: you cannot yet produce a final video file. This is the studio's
+heaviest limit to date, because it stops you delivering.
 
 ### A sequence's settings are fixed
 
@@ -204,10 +202,15 @@ construction.
 What stays useful on a generated sound is to shorten it, bring it to the right level, and make it
 come in and go out cleanly. That is exactly what this workspace does, and no more.
 
-### No audio document
+### The audio document does not keep the A/B listen
 
-There is no `.aud` file on disk. The Audio workspace writes *assets* directly, via **Apply** or **Save
-as new**. That is not a loss: it is a different working model, and it is complete.
+The `.aud` file exists and reopens — the table at the top of this chapter is what counts. What it
+holds is **the edit**, not the sound: the cuts, the fades, the gain, replayed over the source
+asset. What it does not keep is the **A/B listen** — a reopened document listens to the chain,
+never to the source.
+
+The workspace can also write an *asset* directly, through **Apply** or **Save as new**: that is
+what you do when the result has to serve elsewhere rather than carry on being edited.
 
 ---
 
@@ -249,7 +252,7 @@ buttons the translations announce — **Regenerate** and **Reset** — are place
 Until then, you copy the prompt and the seed by hand into the **Generate** panel, which comes to the
 same thing in three more gestures.
 
-### No export
+### The export comes out as PNG, so without the highlights
 
 A sky is now written into a `.sky` file — the exposure, the horizon rotation and the sun's position
 reopen exactly as they were. What the document does not keep: the view and the field of view, which
