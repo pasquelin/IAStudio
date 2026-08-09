@@ -135,6 +135,37 @@ describe('salvaging the bar order', () => {
   })
 })
 
+/** The home's band order is written by the same kind of gesture, and costs the same if refused. */
+describe('salvaging the home section order', () => {
+  const withTheme = (home: unknown): unknown => ({ home, appearance: { theme: 'light' } })
+
+  it('drops a section this build no longer knows, keeping the rest of the order', () => {
+    const sections = [
+      { id: 'tools', visible: true },
+      { id: 'nether' },
+      { id: 'jobs', visible: false },
+    ]
+
+    const salvaged = salvagePartialSettings(withTheme({ sections }))
+
+    expect(salvaged.home?.sections).toEqual([
+      { id: 'tools', visible: true },
+      { id: 'jobs', visible: false },
+    ])
+  })
+
+  it('keeps the other settings when the sections are not a list at all', () => {
+    const salvaged = salvagePartialSettings(withTheme({ enabled: false, sections: 'tools' }))
+
+    expect(salvaged.home?.sections ?? []).toEqual([])
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+
+  it('keeps the other settings when the branch itself is not an object', () => {
+    expect(salvagePartialSettings(withTheme(['tools'])).appearance?.theme).toBe('light')
+  })
+})
+
 /**
  * A remap crosses as a plain string, so the shape is all there is to check. The cost of getting
  * it wrong is not symmetrical: a refused binding is a key nobody can bind, while an accepted one

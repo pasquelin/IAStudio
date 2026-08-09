@@ -1322,40 +1322,12 @@ de l'image, pas une nouvelle famille.**
 
 ---
 
-# 8. Duplication et cohérence
+# 8. Cohérence
 
-Deux entrées qui ne cassent rien aujourd'hui et qui coûteront le jour où quelqu'un modifiera
-l'une des deux copies sans savoir que l'autre existe.
+Une entrée qui ne casse rien aujourd'hui et qui coûtera le jour où la police nommée par
+l'interface se mettra à compter.
 
-## 8.1 Un algorithme écrit deux fois
-
-### 33. Le même algorithme de réconciliation d'ordre, écrit deux fois
-
-**Le geste attendu.** Aucun geste — c'est une duplication, et elle coûtera au premier qui modifiera une des deux
-copies sans savoir que l'autre existe.
-
-**Vu par deux agents de revue indépendamment.** `workspaceOrder` (`shared/domain/workspace.ts`) et
-`homeSections` (`shared/domain/home.ts`) portent la même boucle à deux passes : garder les ids stockés
-que le build connaît encore, puis réinsérer chaque entrée manquante du registre **juste après son
-dernier voisin antérieur encore présent**.
-
-C'est la partie subtile — le calcul de l'indice d'insertion — dupliquée presque mot pour mot, et **deux
-suites de tests prouvent séparément le même algorithme**.
-
-Un générique `reconcileOrder<T, K>(stored, registry, keyOf)` dans `shared/domain/` absorbe les deux :
-une vingtaine de lignes contre deux sites d'appel de trois. La différence de forme — ids nus d'un côté,
-`{ id, visible, limit }` de l'autre — se règle par `keyOf`.
-
-**Ne pas généraliser les `moved*` avec** : `movedWorkspace` déplace vers une cible (sémantique du
-lâcher), `movedHomeSection` échange deux voisins (sémantique du menu). Un paramètre de mode coûterait
-plus en indirection que deux fonctions de dix lignes ne rendent.
-
-> **Un trou jumeau, connu** : `home.sections` a le même défaut de `.catch` sur l'élément plutôt que
-> sur la branche que `order` avait — un ordre mal formé y jette encore tout le fichier de réglages.
-
----
-
-## 8.2 Une police déclarée et jamais chargée
+## 8.1 Une police déclarée et jamais chargée
 
 ### 29. `Inter` est déclarée comme police de l'interface, et n'est chargée nulle part
 
