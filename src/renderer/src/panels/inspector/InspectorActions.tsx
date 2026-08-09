@@ -16,23 +16,13 @@ import { inspectedTextureId } from './inspected'
  * drawn is `inspectedTextureId`, the same answer `Face` renders from.
  */
 export function InspectorActions() {
+  const { t } = useTranslation()
   const selection = useSelection(state => state.selection)
   const sceneId = useDocuments(activeSceneId)
   const textureId = useDocuments(activeTextureId)
   const documentId = inspectedTextureId(selection, sceneId, textureId)
 
   if (!documentId) return null
-  return <SaveStyle documentId={documentId} />
-}
-
-/**
- * Split out so the material is only subscribed to when there is one. Read here rather than
- * passed down from the face: the two are siblings in the title row and the panel body, and
- * threading it would mean the panel owning what its header saves.
- */
-function SaveStyle({ documentId }: { documentId: string }) {
-  const { t } = useTranslation()
-  const material = useTextures(state => textureOf(state, documentId).material)
 
   return (
     <ToolButton
@@ -40,7 +30,13 @@ function SaveStyle({ documentId }: { documentId: string }) {
       label={t('styles.save')}
       description={t('styles.saveHint')}
       variant="header"
-      onClick={() => void useStyles.getState().save(material, t('styles.newName'))}
+      // The settings are read at click time rather than subscribed to. They are never drawn
+      // here, and a drag emits one value per frame: a subscription would redraw this button on
+      // every one of them — the cost `useDocumentEdit` exists to keep off the inspector.
+      onClick={() => {
+        const { material } = textureOf(useTextures.getState(), documentId)
+        void useStyles.getState().save(material, t('styles.newName'))
+      }}
     />
   )
 }

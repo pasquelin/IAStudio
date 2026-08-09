@@ -1,7 +1,8 @@
-import { readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { MaterialStyle } from '@shared/domain/style'
 import { isMissing } from '@main/scenario/job-store'
+import { writeAtomic, writeQueue } from '@main/persistence'
 import { parseStyles } from './validation'
 
 export type StylesStore = {
@@ -26,8 +27,7 @@ const FILE_NAME = 'styles.json'
 export function createStyles(userDataPath: () => string): StylesStore {
   const fileOf = (): string => join(userDataPath(), FILE_NAME)
 
-  // Serialized, so two saves racing cannot have the older one land last.
-  let pending: Promise<unknown> = Promise.resolve()
+  const queue = writeQueue()
 
   /** The list, or `null` when the file is there and could not be read — not the same answer. */
   const read = async (): Promise<MaterialStyle[] | null> => {
@@ -43,41 +43,21 @@ export function createStyles(userDataPath: () => string): StylesStore {
   }
 
   const write = async (styles: readonly MaterialStyle[]): Promise<MaterialStyle[]> => {
-    const file = fileOf()
-    // A fixed name rather than a unique one: the writes are serialized, so a crash mid-write
-    // leaves one staging copy the next write overwrites, not an orphan per crash.
-    const staging = `${file}.staging`
-
-    try {
-      await writeFile(staging, JSON.stringify(styles, null, 2), 'utf8')
-      // Renaming within a folder is atomic: a crash can never leave a truncated list.
-      await rename(staging, file)
-    } catch (error) {
-      await rm(staging, { force: true }).catch(() => {})
-      throw error
-    }
-
+    await writeAtomic(fileOf(), JSON.stringify(styles, null, 2))
     return [...styles]
   }
 
   /** Runs one change against the file, after whichever change is already in flight. */
   const change = (
     body: (styles: MaterialStyle[]) => readonly MaterialStyle[],
-  ): Promise<MaterialStyle[]> => {
-    const run = async (): Promise<MaterialStyle[]> => {
+  ): Promise<MaterialStyle[]> =>
+    queue.next(async () => {
       const styles = await read()
       // Refusing beats rewriting from a list we could not read: the panel would come back short
       // of everything the failed read did not see, and nothing would say so.
       if (styles === null) throw new Error('styles could not be read')
       return write(body(styles))
-    }
-
-    const next = pending.then(run, run)
-    // Swallowed on the chain only: the caller still sees the rejection through `next`, and one
-    // failed save must not stop the ones queued behind it.
-    pending = next.catch(() => {})
-    return next
-  }
+    })
 
   return {
     list: async () => (await read()) ?? [],

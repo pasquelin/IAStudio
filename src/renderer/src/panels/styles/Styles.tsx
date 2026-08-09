@@ -1,11 +1,9 @@
-import { mdiDeleteOutline, mdiPaletteSwatchOutline, mdiRenameOutline } from '@mdi/js'
-import { useEffect, useState } from 'react'
+import { mdiPaletteSwatchOutline } from '@mdi/js'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MaterialStyle } from '@shared/domain/style'
 import { Collection } from '@/design/Collection'
-import { ContextMenu } from '@/design/ContextMenu'
 import { EmptyState } from '@/design/EmptyState'
-import { MenuRow } from '@/design/MenuRow'
 import { applyStyle } from '@/engines/texture/commands'
 import { activeTextureId, useDocuments } from '@/stores/documents'
 import { useStyles } from '@/stores/styles'
@@ -23,10 +21,6 @@ export function Styles() {
   const { t } = useTranslation()
   const styles = useStyles(state => state.styles)
   const documentId = useDocuments(activeTextureId)
-  const [renaming, setRenaming] = useState<string | null>(null)
-  const [menu, setMenu] = useState<{ style: MaterialStyle; at: { x: number; y: number } } | null>(
-    null,
-  )
 
   useEffect(() => {
     void useStyles.getState().load()
@@ -40,52 +34,12 @@ export function Styles() {
   }
 
   return (
-    <>
-      <Collection
-        label={t('panels.styles')}
-        items={styles}
-        onActivate={apply}
-        renderRow={(style: MaterialStyle) => (
-          <div
-            className="h-full min-w-0"
-            onContextMenu={event => {
-              event.preventDefault()
-              setMenu({ style, at: { x: event.clientX, y: event.clientY } })
-            }}
-          >
-            <StyleRow
-              style={style}
-              renaming={renaming === style.id}
-              onRenamed={name => {
-                setRenaming(null)
-                if (name !== style.name) void useStyles.getState().rename(style.id, name)
-              }}
-            />
-          </div>
-        )}
-        empty={<EmptyState icon={mdiPaletteSwatchOutline} message={t('styles.none')} />}
-      />
-
-      {menu && (
-        <ContextMenu at={menu.at} onClose={() => setMenu(null)}>
-          <MenuRow
-            label={t('styles.rename')}
-            icon={mdiRenameOutline}
-            onSelect={() => {
-              setRenaming(menu.style.id)
-              setMenu(null)
-            }}
-          />
-          <MenuRow
-            label={t('styles.remove')}
-            icon={mdiDeleteOutline}
-            onSelect={() => {
-              void useStyles.getState().remove(menu.style.id)
-              setMenu(null)
-            }}
-          />
-        </ContextMenu>
-      )}
-    </>
+    <Collection
+      label={t('panels.styles')}
+      items={styles}
+      onActivate={apply}
+      renderRow={(style: MaterialStyle) => <StyleRow style={style} />}
+      empty={<EmptyState icon={mdiPaletteSwatchOutline} message={t('styles.none')} />}
+    />
   )
 }

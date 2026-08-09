@@ -18,6 +18,7 @@ import {
 import type { Manifest } from '@shared/domain/project'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
 import type { SaveAudioRequest, SaveTextureRequest } from '@shared/ipc'
+import { pathSegment } from '@main/validation'
 
 const manifest = z.object({
   version: z.number().int().min(1),
@@ -35,15 +36,6 @@ export function parseManifest(value: unknown): Manifest {
 // against the main process's working directory, which is wherever Electron happened to be
 // launched from — so `project:open('..')` would reach a folder nobody chose.
 const projectPath = z.string().trim().min(1).refine(isAbsolute)
-
-// One name inside one folder. Anything that would create a nested folder, or escape into one,
-// is not one — and both users of this come from the renderer and end up in a `join`.
-const pathSegment = z
-  .string()
-  .trim()
-  .min(1)
-  .max(120)
-  .refine(value => !/[/\\]/.test(value) && value !== '.' && value !== '..')
 
 export function parseProjectPath(value: unknown): string {
   return projectPath.parse(value)

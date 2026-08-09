@@ -1,6 +1,7 @@
-import { readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { JobKind } from '@shared/domain/job'
+import { writeAtomic, writeQueue } from '@main/persistence'
 import { parseStoredJobs } from './validation'
 
 /**
@@ -62,8 +63,7 @@ export const JOB_NOTE_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000
 export function createJobStore(userDataPath: () => string, now: () => number = Date.now): JobStore {
   const fileOf = (): string => join(userDataPath(), FILE_NAME)
 
-  // Serialized, so two writes racing cannot have the older one land last.
-  let pending: Promise<unknown> = Promise.resolve()
+  const queue = writeQueue()
 
   /**
    * What is on disk, or `null` when the file is there and could not be read.
@@ -107,33 +107,12 @@ export function createJobStore(userDataPath: () => string, now: () => number = D
         if (stored === null) throw new Error('job notes could not be read')
 
         const others = stored.filter(job => !handled.includes(job.id) && fresh(job))
-        const file = fileOf()
-        // A fixed name rather than a unique one: the writes are serialized, so only one staging
-        // copy can exist, and a crash mid-write leaves one the next write overwrites instead of
-        // an orphan per crash that nothing ever collects.
-        const copy = `${file}.staging`
-
-        try {
-          await writeFile(copy, JSON.stringify([...others, ...jobs]), 'utf8')
-          // Renaming within a folder is atomic, so a crash mid-write can never leave a truncated
-          // list where the pending work was.
-          await rename(copy, file)
-        } catch (error) {
-          // The tidy-up must not become the failure: what the caller has to hear is why the
-          // notes could not be written, not why the staging copy would not go away.
-          await rm(copy, { force: true }).catch(() => {})
-          throw error
-        }
+        await writeAtomic(fileOf(), JSON.stringify([...others, ...jobs]))
       }
 
-      const next = pending.then(run)
-      // Settled either way: a failed write must not block the file for the rest of the session.
-      pending = next.catch(() => {})
-      return next
+      return queue.next(run)
     },
 
-    flush: async () => {
-      await pending
-    },
+    flush: queue.settled,
   }
 }

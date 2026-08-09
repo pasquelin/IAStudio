@@ -1,8 +1,9 @@
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
 import type { AssetGeneration, AssetType } from '@shared/domain/asset'
 import { FAVORITES_MAX, sameRecipe, type FavoriteRecipe } from '@shared/domain/favorite'
 import { isMissing } from '@main/scenario/job-store'
+import { writeAtomic, writeQueue } from '@main/persistence'
 import { parseFavoriteIndex } from './validation'
 
 /** What a pin carries beyond the recipe itself: the still to keep, when there was one to copy. */
@@ -39,8 +40,7 @@ export function createFavorites(folder: string): FavoritesStore {
   const indexPath = join(folder, INDEX)
   const fileOf = (id: string): string => join(folder, `${id}${THUMBNAIL_EXTENSION}`)
 
-  // Serialized, so two pins racing cannot have the older one land last.
-  let pending: Promise<unknown> = Promise.resolve()
+  const queue = writeQueue()
 
   // What the last read or write settled on. The folder has one writer, so the copy cannot go
   // stale — and the protocol asks for a thumbnail path once per tile drawn, which used to parse
@@ -69,18 +69,7 @@ export function createFavorites(folder: string): FavoritesStore {
 
   const write = async (recipes: readonly FavoriteRecipe[]): Promise<FavoriteRecipe[]> => {
     await mkdir(folder, { recursive: true })
-    // A fixed name rather than a unique one: the writes are serialized, so a crash mid-write
-    // leaves one staging copy the next write overwrites, not an orphan per crash.
-    const staging = `${indexPath}.staging`
-
-    try {
-      await writeFile(staging, JSON.stringify(recipes, null, 2), 'utf8')
-      // Renaming within a folder is atomic: a crash can never leave a truncated shelf.
-      await rename(staging, indexPath)
-    } catch (error) {
-      await rm(staging, { force: true }).catch(() => {})
-      throw error
-    }
+    await writeAtomic(indexPath, JSON.stringify(recipes, null, 2))
 
     held = [...recipes]
     return [...recipes]
@@ -98,10 +87,7 @@ export function createFavorites(folder: string): FavoritesStore {
       return body(recipes)
     }
 
-    const next = pending.then(run)
-    // Settled either way: a failed write must not wedge the folder for the rest of the session.
-    pending = next.catch(() => {})
-    return next
+    return queue.next(run)
   }
 
   return {

@@ -1,17 +1,10 @@
 import { z } from 'zod'
 import { readMaterial } from '@shared/domain/texture'
 import type { MaterialStyle } from '@shared/domain/style'
+import { pathSegment } from '@main/validation'
 
-/**
- * A style's identifier. Bounded and refusing a separator like the favourites' is: it is what a
- * window hands back to rename or remove, and a window is trusted for nothing.
- */
-const styleId = z
-  .string()
-  .trim()
-  .min(1)
-  .max(120)
-  .refine(value => !/[/\\]/.test(value) && value !== '.' && value !== '..')
+/** What a window hands back to rename or remove, and a window is trusted for nothing. */
+const styleId = pathSegment
 
 export function parseStyleId(value: unknown): string {
   return styleId.parse(value)
