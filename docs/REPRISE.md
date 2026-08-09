@@ -125,13 +125,20 @@ prouve ; **déplacer la ligne jusqu’à un endroit testable, non.**
 > `renderer/src/stores/` depuis. **Premier geste de la prochaine session : le mesurer**, avant de
 > supposer la porte verte.
 
-> **Deux sessions ne peuvent pas lancer `pnpm test:coverage` dans le même clone en même temps.**
-> Mesuré le 9 août au soir, en essayant précisément de vérifier la ligne ci-dessus : *« Something
-> removed the coverage directory `coverage/.tmp` Vitest created earlier »*, puis un `ENOENT` sur un
-> `coverage-<n>.json`. `coverage.reportsDirectory` est un chemin unique du dépôt, et les worktrees
-> ne le partagent pas — mais deux sessions **du dépôt principal**, si. L’échec ne ressemble en rien
-> à un budget dépassé : ne pas le lire comme un rouge du code. Attendre, ou mesurer depuis un
-> worktree.
+> **Deux sessions ne peuvent pas lancer `pnpm test:coverage` dans le même clone en même temps, et
+> la collision RESSEMBLE À DES TESTS ROUGES.** Mesuré le 9 août au soir, en trois passages :
+>
+> | Commande | Ce qu’elle a rendu |
+> |---|---|
+> | `pnpm test:coverage` | **3 failed | 421 passed** — trois *fichiers* en échec, sans nom |
+> | `pnpm test:coverage`, relancé | *« Something removed the coverage directory `coverage/.tmp` »*, puis `ENOENT` sur un `coverage-<n>.json` |
+> | `pnpm test` | **424 passed, 5 343 tests, zéro échec** |
+>
+> Les trois échecs n’existaient pas : c’est l’écriture concurrente dans `coverage/.tmp` qui les
+> fabrique. `coverage.reportsDirectory` est un chemin unique du dépôt ; les worktrees ne le
+> partagent pas, deux sessions **du dépôt principal**, si. **Devant un rouge sous couverture,
+> relancer `pnpm test` sans elle avant de chercher une cause dans le code** — sans quoi on
+> instruit trois fichiers qui n’ont rien.
 
 > **Un grain de sable environnemental : les tests lents dépassent leur budget de 5 s quand la machine
 > porte plusieurs sessions** — des sous-ensembles différents à chaque passage, verts en isolation.
