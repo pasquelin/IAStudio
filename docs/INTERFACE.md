@@ -341,21 +341,6 @@ lire soixante-cinq caractères, et il ne le peut pas.
 livré avec l’entrée 22). Reste `clickable`, qui bascule `pointer-events` sur **toutes** les
 infobulles : à regarder d’un bloc, avec ce que ça fait aux barres flottantes qui en portent.
 
-### 31. L’infobulle de la Lame promet une coupe à la tête de lecture ; elle coupe où on clique
-
-**Trouvé le 9 août 2026** en confrontant le manuel au registre `VIDEO_TOOLS`, et tranché par le
-code, pas par l’écran : `TimelineCanvas.tsx:263` prend le clic, `xToTime(point.x, viewport)`, et
-`splitClip(clipId, at)`. La tête de lecture n’entre nulle part dedans — elle sert à `S`, qui est
-l’autre geste, celui du raccourci.
-
-`videoTools.bladeHint` dit pourtant « Couper un clip à la tête de lecture » / « Cut a clip at the
-playhead », dans les deux bundles. **Les deux manuels disent juste** (« coupe un clip là où vous
-cliquez ») : c’est l’application qui ment, et elle ment sur le seul geste où l’utilisateur choisit
-lui-même l’endroit.
-
-Une ligne dans chaque bundle : « Couper un clip là où l’on clique » / « Cut a clip where you
-click ». Rien d’autre à toucher — la clé n’est lue que par la barre.
-
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
 **Vu le 9 août 2026**, en soldant la vérification à l’écran des entrées 6 et 8 : l’étagère
@@ -682,9 +667,35 @@ correction.
 | **(22)** L’avis « pas de ffmpeg » volait une ligne à l’étagère, trois en colonne | `8bb53b2` (feat/ffmpeg-notice) |
 | **(28)** Les trois boutons de la ligne d’état offraient une cible de 12 × 12 | `53e1b34` (feat/cible-journal) |
 | **(26)** Le focus tombait hors de la liste après un renommage en place | `42c1e50` (feat/focus-renommage) |
+| **(31)** La Lame annonçait une coupe à la tête de lecture ; elle coupe au pointeur | `e5a75b4` (feat/lame-infobulle) |
 | **(11)** La ligne d’état était collée au bord et alignée sur rien | `d66b811` (feat/ligne-etat) |
 
 
+
+
+> **L’entrée 31 est la seule du lot dont les trois repères étaient justes** — cause, lieu, et
+> remède. Elle est notée ici pour ce qu’elle a révélé à côté.
+>
+> **Le texte suit désormais la gomme plutôt que le manuel.** « Cut a clip where you click » aurait
+> été la traduction fidèle du manuel, mais c’aurait été le **seul** des cinquante libellés `*Hint`
+> à tutoyer l’utilisateur : la famille est impersonnelle, et `eraserPointHint` — « Effacer au
+> passage du pointeur » — répond déjà à la même question pour un geste jumeau. D’où « Couper un
+> clip sous le pointeur », miroir exact dans les deux langues.
+>
+> **Le test qui existait ne verrouillait rien.** `splits a clip under the blade` comptait les clips
+> — deux après la coupe — ce qui est vrai d’une coupe au pointeur comme d’une coupe à la tête de
+> lecture. La phrase que la barre affiche n’était donc protégée par personne. Le test ajouté gare
+> la tête de lecture ailleurs et clique **à côté d’une frontière d’image** : la revue a montré que
+> la première version passait par coïncidence, l’instant choisi tombant pile sur une frontière et
+> le clip commençant à zéro — deux hasards qui rendaient l’égalité vraie sans que le calcul le
+> soit.
+>
+> **Une incohérence trouvée en chemin, qui n’est pas de cette entrée** : la Lame n’a **aucun
+> magnétisme**, là où `trim` et `move` aimantent aux bords des clips *et à la tête de lecture*,
+> à huit pixels près (`snapCandidates`, `SNAP_THRESHOLD`). Mesuré : tête de lecture à un tiers de
+> pixel du clic, la coupe l’ignore. La Lame arrondit seulement à l’image (`snapToFrame`, dans
+> `splitClip`). Ce n’est pas un défaut de l’infobulle — qui dit maintenant vrai — mais c’est un
+> geste de la timeline qui se comporte autrement que ses voisins.
 
 > **L’entrée 26 avait le bon défaut et le mauvais remède**, et les trois repères qu’elle donnait
 > sont faux — vérifiés un par un.
