@@ -40,11 +40,9 @@ export default defineConfig({
       // rather than by one rule: a glob whose room to grow is mostly untestable GPU needs a
       // wider budget than one made of state machines, or growth alone would break it.
       //
-      // The sign is the whole meaning, and there is no way to write a budget of zero: vitest
-      // reads any threshold `>= 0` as a minimum PERCENTAGE, so `0` asks for "at least 0%
-      // covered" — a gate nothing can fail. Three globs here carried that `0` meaning to be the
-      // strictest in the project and were guarding nothing; a glob that must be covered whole
-      // says `100`.
+      // The sign is the whole meaning: a threshold `>= 0` is read as a minimum PERCENTAGE, so a
+      // budget of zero cannot be written and a glob covered whole says `100`. Guarded by
+      // `src/main/coverage-thresholds.test.ts`, which tells what it cost.
       //
       // A glob matching nothing passes silently. Renaming a folder turns its budget into a
       // no-op, and a new `engines/` subfolder lands under no budget at all — both without a

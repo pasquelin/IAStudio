@@ -18,9 +18,9 @@ const logEntry = z.object({
 })
 
 /**
- * What survives the parser. `LogEntry.scope` is a free string because the main process logs
- * under its own names too, and returning that wider type here threw away what the schema had
- * just established — leaving the caller a runtime guard no input could ever reach.
+ * `LogEntry.scope` is a free string — the main process logs under its own names too. Returning
+ * that wider type threw away what the schema had just established, leaving the caller a runtime
+ * guard no input could reach.
  */
 export type ParsedLogEntry = Omit<LogEntry, 'scope'> & { scope: LogScope }
 

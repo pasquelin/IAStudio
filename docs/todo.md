@@ -59,8 +59,10 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > conclusions sont acquises. Puis `git log --oneline -15`, `git worktree list` et `pnpm validate`
 > pour partir d'une base verte.
 >
-> **Une chose passe avant le reste** : le **§ 0** (la porte — mesurer le budget de couverture avant
-> de croire une livraison verte).
+> **Le § 0 reste la porte, mais sa première marche est franchie** : les budgets de couverture sont
+> mesurés et les trous comblés (10 août 2026) — **ne pas les remesurer pour le plaisir**, le § 0.1
+> dit ce que chacun porte. Ce qui reste ouvert y est le rouge intermittent (§ 0.2) et les deux
+> branchements que seule la mutation trouve (§ 0.3).
 >
 > **Les quatre décisions qui attendaient sont prises le 10 août 2026** — 39, 12, 40, 29. Elles sont
 > écrites dans leur entrée, et **ne se redemandent pas**. Une seule question en est née et reste
@@ -156,6 +158,10 @@ couvert » : ils demandaient **« au moins 0 % de couverture »**, ce que rien n
 `-0` retomberait dans le même piège. Un glob qui doit être couvert entièrement s'écrit **`100`**.
 C'est ce qui est en place, et **la morsure a été vérifiée** : une branche non couverte ajoutée à
 `main/diagnostics/**` fait bien rougir la porte (`statements (90%)`, `branches (50%)`).
+
+**Un test verrouille la règle** (`src/main/coverage-thresholds.test.ts`) : tout seuil qui n'est ni
+négatif ni `100` fait rougir, avec le message qui dit quoi écrire. C'était la moitié qui manquait —
+écrire `100` répare la porte du jour, le test empêche de la redéfaire.
 
 ### Ce que chaque glob porte, et ce qui lui reste
 
