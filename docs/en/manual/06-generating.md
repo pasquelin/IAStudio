@@ -44,6 +44,14 @@ too — with no update to the studio.
 | A **colour square** | a colour | a click opens the system picker |
 | A **number with a die** 🎲 | the *seed* — see below | a number, or a click on the die |
 
+> **A picture placed on a form goes up to Scenario when you generate.** The model runs on
+> Scenario's servers: it can only read what the account's library holds. So the studio sends the
+> project asset up, remembers the link between the two, and sends nothing the next time. You will
+> find it under **Your library**, on the home screen.
+>
+> A picture edited since it went up is sent again: otherwise the generation would run on a version
+> you no longer see.
+
 Fields are **grouped** when the model groups them, and some **only appear when another has the
 right value** — no point offering an effect's strength when the effect is switched off.
 
@@ -259,6 +267,11 @@ there would be nothing to price.
 **No figure on the button?** Three cases look alike on screen, and none of them is a problem:
 nothing has been asked yet, the API declined to price that model, or the request did not go
 through. A price is a courtesy; its absence never stops you from generating.
+
+> **A reference picture is not counted in the estimate.** The price is asked on every keystroke,
+> and pricing a picture would mean sending it up each time. The form is therefore priced without
+> it, while the API does bill for it: on a model that reads a reference, **the figure shown is
+> lower than what you will pay**.
 
 > **It is an estimate, not an invoice.** What you actually spent reads afterwards, on the
 > generation's own line, and in **Help ▸ Usage…**.

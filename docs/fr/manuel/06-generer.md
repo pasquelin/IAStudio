@@ -46,6 +46,14 @@ publié demain aura, lui aussi, le sien — sans mise à jour du studio.
 | Un **carré de couleur** | une couleur | un clic ouvre le sélecteur du système |
 | Un **nombre avec un dé** 🎲 | la *graine* — voir plus bas | un nombre, ou un clic sur le dé |
 
+> **Une image posée sur un formulaire part chez Scenario au moment de générer.** Le modèle
+> tourne sur les serveurs de Scenario : il ne peut lire que ce que la bibliothèque du compte
+> contient. Le studio envoie donc l’asset du projet, garde le lien entre les deux, et n’envoie
+> rien la fois suivante. Vous la retrouvez dans **Votre bibliothèque**, sur l’accueil.
+>
+> Une image modifiée depuis son envoi repart : sans quoi la génération tournerait sur une
+> version que vous ne voyez plus.
+
 Les champs sont **groupés** quand le modèle les groupe, et certains **n’apparaissent que si un
 autre a la bonne valeur** — inutile de proposer la force d’un effet quand l’effet est désactivé.
 
@@ -276,6 +284,11 @@ obligatoire est vide — sans quoi il n’y aurait aucun prix à donner.
 **Pas de chiffre sur le bouton ?** Trois cas se ressemblent à l’écran, et aucun n’est un
 problème : rien n’a encore été demandé, l’API n’a pas voulu chiffrer ce modèle, ou la demande
 n’est pas passée. Un prix est une courtoisie ; son absence n’empêche jamais de générer.
+
+> **Une image de référence n’est pas comptée dans l’estimation.** Le prix se demande à chaque
+> frappe, et chiffrer une image voudrait dire l’envoyer à chaque fois. Le formulaire est donc
+> chiffré sans elle, alors que l’API, elle, la facture : sur un modèle qui lit une référence,
+> **le chiffre annoncé est plus bas que ce que vous paierez**.
 
 > **C’est une estimation, pas une facture.** Ce que vous avez réellement dépensé se lit après
 > coup, sur la ligne de la génération, et dans **Aide ▸ Consommation…**.
