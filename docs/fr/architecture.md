@@ -198,6 +198,9 @@ src/main/
 │   ├── prompt-assist.ts     variantes, traduction, lecture de style
 │   ├── assist-queue.ts      la file bornée de l'assistance de fond
 │   ├── uploader.ts          l'envoi d'un fichier vers la bibliothèque
+│   ├── cost.ts              ce qu'une génération coûterait, sans la lancer
+│   ├── usage.ts             les unités consommées et la grille de prix
+│   ├── workflow-registry.ts un workflow de l'API traduit en graphe
 │   └── handlers.ts          les canaux scenario:*
 ├── project/
 │   ├── store.ts             créer et ouvrir un dossier de projet, lire/écrire le manifeste
@@ -219,7 +222,8 @@ src/main/
 ├── settings/                le store chiffré, son adaptateur, ses handlers
 ├── favorites/               les recettes épinglées, gardées hors des projets
 ├── styles/                  les réglages de matière qu'on rejoue d'une texture à l'autre
-├── scene/, texture/         l'export d'une scène et d'un matériau, et leur validation
+├── scene/                   l'export d'une scène, et sa validation
+├── export/                  écrire plusieurs fichiers dans un dossier : un matériau, six faces de ciel
 ├── diagnostics/             le canal par lequel le renderer signale un échec
 ├── media/                   importer un fichier : sonde, hachage, proxy, forme d'onde
 ├── fonts/                   les polices embarquées et celles du système
@@ -600,7 +604,9 @@ coupure en cours d’écriture ne laisse jamais un document tronqué là où ét
 
 Le corps du fichier appartient à l’espace qui l’a écrit : le processus principal ne le lit pas, il
 l’estampille et le rend tel quel. Un espace qui apprend à s’enregistrer n’a donc pas de canal à
-lui. **Aujourd’hui la 3D et les Textures sont branchées** — cf. `docs/todo.md`.
+lui. **Les sept genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel, matière
+et graphe, déclarés en un seul endroit, `IO_BY_KIND` dans `app/document-io.ts`. Un genre absent de
+cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
 
 ---
 

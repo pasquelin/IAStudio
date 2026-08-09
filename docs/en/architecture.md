@@ -196,6 +196,9 @@ src/main/
 │   ├── prompt-assist.ts     variants, translation, style reading
 │   ├── assist-queue.ts      the bounded queue of background assistance
 │   ├── uploader.ts          sending a file up to the library
+│   ├── cost.ts              what a generation would cost, without running it
+│   ├── usage.ts             the units spent, and the price list
+│   ├── workflow-registry.ts an API workflow translated into a graph
 │   └── handlers.ts          the scenario:* channels
 ├── project/
 │   ├── store.ts             create and open a project folder, read/write the manifest
@@ -217,7 +220,8 @@ src/main/
 ├── settings/                the encrypted store, its adapter, its handlers
 ├── favorites/               the pinned recipes, kept outside every project
 ├── styles/                  the material settings replayed from one texture to the next
-├── scene/, texture/         exporting a scene and a material, and validating both
+├── scene/                   exporting a scene, and validating it
+├── export/                  writing several files into a folder: a material, six sky faces
 ├── diagnostics/             the channel the renderer reports a failure through
 ├── media/                   ingesting a file: probe, hash, proxy, waveform
 ├── fonts/                   the shipped typefaces and the system's
@@ -580,7 +584,9 @@ leave a truncated document where the work was.
 
 The body belongs to the space that wrote it: the main process never reads into it, it stamps an
 envelope and hands it back untouched. A space that learns to save therefore needs no channel of
-its own. **3D and Textures are wired today** — see `docs/todo.md`.
+its own. **All seven kinds can write themselves today** — image, scene, sequence, audio, skybox,
+texture and graph, declared in one place, `IO_BY_KIND` in `app/document-io.ts`. A kind absent from
+that table has a Save that does nothing, rather than one that writes an empty body.
 
 ---
 
