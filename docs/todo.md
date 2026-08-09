@@ -1159,17 +1159,16 @@ canal** — ce qui dépasse le blanc est écrêté, et un éclairage à forte dy
 
 # 6. Le node editor et les workflows Scenario
 
-> **Le chantier a son plan**, dix étapes — `docs/plans/2026-08-08-workflows-node-editor.md`.
-> **Ce fichier n'est pas dans le dépôt** : `docs/plans/` n'a jamais été commité, et le dossier a
-> disparu du dépôt principal le 9 août 2026 au soir. La seule copie vivante est dans le worktree
-> `.claude/worktrees/workflows/`. **À commiter avant que ce worktree ne soit retiré**, sans quoi les
-> dix étapes s'en vont avec lui — c'est exactement le cas que le § « le prompt de reprise » annonce
-> deux cents lignes plus haut, et il s'est produit.
+> **Le chantier a son plan**, dix étapes :
+> [`docs/plans/2026-08-08-workflows-node-editor.md`](plans/2026-08-08-workflows-node-editor.md).
+> Il est dans le dépôt depuis `61b1955` — il ne l'était pas trois heures plus tôt, et sa seule
+> copie vivait alors dans un worktree.
 
 **Sept étapes sur dix sont fusionnées dans `develop`** — les six premières, puis **la dixième**. Le
 graphe est un espace pour de bon : document `.graph`, entrée dans `IO_BY_KIND`, composant en `lazy()`,
-palette et barre. Le manuel le décrit dans les deux langues, avec l'avertissement qui convient — **il
-s'ouvre, on y pose des nœuds et on les enregistre, il ne sait pas encore exécuter ce qu'il décrit.**
+palette et barre, et **un nœud sélectionné s'ouvre dans l'Inspecteur** depuis `61b1955` — identifiant,
+genre, titre, et ce que le nœud porte selon son type. Le manuel le décrit dans les deux langues, avec
+l'avertissement qui convient — **il ne sait toujours pas exécuter ce qu'il décrit.**
 
 ## 6.1 Ce qui reste — étapes 7 à 9
 

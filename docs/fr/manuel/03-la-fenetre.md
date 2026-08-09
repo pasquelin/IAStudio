@@ -171,8 +171,13 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 
 **Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes** · **Graphe**
 
-> **Le Graphe est en construction.** Il s’ouvre, on y pose des nœuds et on les enregistre, mais
-> il ne sait pas encore exécuter ce qu’il décrit. Son chapitre viendra quand il le saura.
+> **Le Graphe est en construction.** Il s’ouvre, on y pose des nœuds, on les relie, on les
+> enregistre, et **sélectionner un nœud l’ouvre dans l’Inspecteur** — son identifiant, son genre,
+> et un titre qui se tape. Un nœud de texte y montre son prompt, une note son texte, un nœud de
+> modèle le modèle qu’il lancera. Ce qu’on y tape passe par le même ⌘Z que le nœud qu’on déplace.
+>
+> Ce qu’il ne sait **pas encore** : exécuter ce qu’il décrit. Son chapitre viendra quand il le
+> saura.
 
 Un clic change d’espace. L’espace actif est celui dont le bouton est plus clair que les autres.
 

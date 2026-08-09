@@ -167,8 +167,12 @@ It does not carry the file name. It carries the **seven workspaces**:
 
 **Image** · **Video** · **3D** · **Audio** · **Textures** · **Skyboxes** · **Graph**
 
-> **The Graph is under construction.** It opens, nodes can be placed and saved, but it cannot
-> yet run what it describes. Its chapter comes when it can.
+> **The Graph is under construction.** It opens, nodes can be placed, wired and saved, and
+> **selecting a node opens it in the Inspector** — its id, its kind, and a title you can type. A
+> text node shows its prompt there, a sticky note its text, a model node the model it will run.
+> What you type there goes through the same ⌘Z as the node you drag.
+>
+> What it cannot do **yet**: run what it describes. Its chapter comes when it can.
 
 One click switches workspace. The active one is the button lighter than the others.
 

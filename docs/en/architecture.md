@@ -861,8 +861,8 @@ needs.
 
 ### What the user sets
 
-`shared/domain/settings.ts` declares the whole shape — appearance, generation, storage, media,
-dictation.
+`shared/domain/settings.ts` declares the whole shape, group by group — from appearance to
+dictation, by way of 3D, shortcuts and the home screen.
 It is the contract, and it is deliberately the **only** settings type the renderer can see:
 **API credentials never appear in it**. The renderer reads `AuthState`, not a key.
 
@@ -912,8 +912,8 @@ opaquely.
 ## Testing
 
 **Over 5,600 tests across more than 440 files**, run by Vitest — the exact figure moves with every
-merge, and `pnpm test` states it. Unit tests are colocated (`*.test.ts` next to the
-code) and written in the same movement as the code, never after.
+merge, and `pnpm test` states it. Unit tests are colocated (`*.test.ts` next to the code) and
+written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests with coverage budgets — must be green
 before any commit.
