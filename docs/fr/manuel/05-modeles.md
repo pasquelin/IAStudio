@@ -64,6 +64,18 @@ Il cherche dans le **nom** du modèle.
 Le bouton **Plus de filtres** ouvre les menus de tri par critère. Ils ne sont pas les mêmes
 selon l’espace, parce qu’ils n’ont pas de sens partout.
 
+### Famille — seulement là où l’espace n’en impose pas
+
+**Dans le Graphe uniquement**, pour l’instant. Un espace comme Image ou Vidéo ne montre que les
+modèles de sa famille : un menu qui redirait laquelle ne pourrait que la contredire. Le Graphe,
+lui, n’appartient à aucune famille — il les enchaîne — donc c’est à vous de dire laquelle vous
+cherchez.
+
+> **Ce filtre se pose parfois tout seul.** Si vous posez un nœud générateur vidéo sans avoir
+> jamais choisi de modèle vidéo, le studio ouvre le panneau **Modèles** déjà réduit à cette
+> famille. Un message d’échec dit ce qui ne va pas ; il ne dit pas quoi faire — ouvrir l’endroit
+> où l’on choisit, si.
+
 ### Origine — disponible partout
 
 | Valeur | Ce que ça veut dire |

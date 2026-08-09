@@ -1365,6 +1365,21 @@ qu’un espace absent garde l’undo **natif**, lequel enregistre l’accéléra
 l’avale avant la fenêtre. L’historique du graphe existait, était testé, et aucun geste ne
 l’atteignait. **Skyboxes avait déjà payé exactement ce défaut** ; son commentaire le raconte.
 
+> **Un sixième défaut est sorti du même trou, et il valait cinq exemplaires de code** : trois des
+> quatre générateurs de la palette ne posaient **aucun** nœud. Le graphe n’appartenant à aucune
+> famille, il range son choix de modèle sous `'all'` — mais un nœud générateur demande le modèle
+> d’**une** famille, et `selected[family]` seul répond « rien » pour toute famille jamais visitée
+> ailleurs. La chaîne « choix de session, puis préférence » vivait en **six exemplaires**, dont un
+> qui n’en gardait que la première moitié et un autre qui oubliait la préférence — d’où un panneau
+> Modèles annonçant « Aucun modèle choisi » pendant que le rail dessinait le générateur et que le
+> formulaire s’affichait correctement. `modelForScope` et `useModelForScope` réunissent les six.
+>
+> **Ce qui a été arbitré et qui vaut au-delà de ce cas** : quand il n’y a toujours aucun modèle, le
+> panneau Modèles s’ouvre **narrowé sur la famille** plutôt que de rapporter un échec. *Un message
+> d’échec dit ce qui ne va pas, jamais quoi faire.* Deux ajouts sans lesquels l’ouverture ne
+> débloquerait rien : une **facette famille**, offerte uniquement là où la surface n’a pas de
+> famille propre, et `select()` qui classe le modèle sous **sa** famille en plus du scope parcouru.
+
 Ce qui reste est le cœur exécutable — étapes 7 à 9 : compiler vers le `flow`, valider, exécuter
 en local, puis la logique, les boucles, les transforms, l’approbation, et enfin l’import/export et
 la publication. D’où une section à lui, hors du § 3 : celui-là liste ce qui reste d’un chantier
