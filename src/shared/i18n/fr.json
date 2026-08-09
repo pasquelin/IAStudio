@@ -23,7 +23,14 @@
     "assets": "Assets",
     "skybox": "Skybox",
     "scene": "Scène",
-    "channels": "Canaux"
+    "channels": "Canaux",
+    "view": "Vue"
+  },
+  "view": {
+    "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
+    "projection": "Projection",
+    "mode": "Mode",
+    "helpers": "Repères"
   },
   "actions": {
     "undo": "Annuler",

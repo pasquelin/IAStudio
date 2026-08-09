@@ -65,6 +65,13 @@ export function chipSkin(active: boolean): string {
 export const LIST_ROW_HEIGHT = 28
 
 /**
+ * A panel's scrolling body. The right padding is the point: on macOS the scrollbar is drawn
+ * OVER the content rather than beside it, and with no room reserved it lands on the last column
+ * of every row — which in an inspector is the value one is trying to read.
+ */
+export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
+
+/**
  * One property row of an inspector: a label of fixed width, then the control it names.
  *
  * `gap-2`, not `gap-1`: at one the label, the track and the number read as one run-on string

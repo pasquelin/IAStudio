@@ -21,6 +21,7 @@ export type ToolId =
   | 'assets'
   | 'skybox'
   | 'channels'
+  | 'view'
 
 /**
  * The panels the LEFT column is reserved for: choosing a model, then filling its form. Nothing
@@ -78,6 +79,10 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The sky controls stay on the right rather than following the generator: they steer a
   // document that is already there, which is what the panels around them do.
   { id: 'skybox', zone: 'right', slot: 'primary', workspaces: ['skyboxes'] },
+  // How the viewport is being looked at, never what it holds. Beside the sky's own controls
+  // rather than under them: the centre carries the toolbar and the rulers, and a menu laid
+  // over the picture covers the one thing the space exists to show.
+  { id: 'view', zone: 'right', slot: 'primary', workspaces: ['skyboxes'] },
   { id: 'layers', zone: 'right', slot: 'primary', workspaces: ['image'] },
   // The eight channels of a material, first in Textures for the same reason the sky controls come
   // first in Skyboxes: it is what the space is for. In the column rather than the band, so a

@@ -12,6 +12,7 @@ import { definition as models } from '@/panels/models'
 import { definition as scene } from '@/panels/scene'
 import { definition as skybox } from '@/panels/skybox'
 import { definition as timeline } from '@/panels/timeline'
+import { definition as view } from '@/panels/view'
 
 /**
  * Tool content table. Each panel publishes its own definition, so adding one is a folder and a
@@ -30,4 +31,5 @@ export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
   skybox,
   assets,
   channels,
+  view,
 }
