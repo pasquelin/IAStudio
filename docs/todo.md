@@ -553,10 +553,47 @@ vérifie le format des signatures du registre (§ 5.2).
 
 # 4. Ce que l'interface ne dit pas
 
-Cinq entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
+Sept entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
 bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
-## 4.1 L'état d'une tuile
+## 4.1 L'état d'une ligne, et d'une tuile — un seul composant, trois aspects
+
+**Regroupées** : les entrées 20 et 40 sont le même défaut vu de deux côtés. `rowSkin` est l'unique
+fonction qui peint hover, sélection et focus d'une ligne, et sa JSDoc énonce la règle — « the same
+line must not light up differently depending on whether a `Tree` or a `Collection` is holding it ».
+Elle est enfreinte des deux manières possibles : **la sélection ne se voit pas là où elle existe**
+(20), et **elle se peint là où elle n'existe pas** (40).
+
+### 40. La même liste s'allume en bleu, en gris, ou pas du tout
+
+**Vu le 9 août 2026, captures à l'appui** — trois panneaux côte à côte, trois aspects : l'Explorateur
+peint une ligne en **bleu plein**, Styles en **gris**, Apps en **gris avec un liseré**.
+
+**Ce n'est pas du code custom, et c'est ce qui rend le défaut trouvable.** Les trois passent par le
+**même** `Collection`, dont les cellules peignent par le **même** `rowSkin`, et leurs trois lignes
+sont le **même** `Row` du design system — vérifié fichier par fichier. Ce qui diverge est **ce que
+chaque panneau met derrière la même prop** :
+
+| Panneau | Ce qu'il passe à `Collection` | Ce qui s'affiche |
+|---|---|---|
+| **Explorateur** | `selectedIds={Object.keys(open)}` — les documents **ouverts** | `bg-accent-soft`, le **bleu de sélection** |
+| **Styles** | ni `selectedIds` ni `onSelect` | aucune ligne n'est jamais sélectionnée : le gris est le **survol** (`hover:bg-elevated`) |
+| **Apps** | `onSelect` **sans** `selectedIds` — l'id ouvert reste dans le state du panneau | même chose, plus l'anneau de `FOCUS_RING` |
+
+**Le seul panneau qui peint une sélection est donc le seul qui n'en a pas.** L'Explorateur détourne
+la prop pour dire « ouvert », et son commentaire l'assume : « Not a selection one makes — it is what
+"open" looks like in this list ». `Collection` a même dû s'en défendre côté accessibilité —
+`aria-selected` n'est posé que si `role === 'option'`, avec la raison en commentaire. **L'entrée 9
+avait corrigé ce que la ligne annonce ; personne n'a corrigé ce qu'elle montre.**
+
+**Et l'inverse est vrai là où ça compterait** : quel style est appliqué et quelle App est ouverte
+sont exactement ce qu'une sélection dirait, et ni l'un ni l'autre ne le dit.
+
+**Ce que ça demande, et l'ordre importe** : trancher d'abord **ce que `accent-soft` signifie** — une
+sélection, ou un état actif ? — puis brancher les deux listes qui ne le passent pas, et donner à
+« ouvert » sa propre marque dans l'Explorateur, qui n'est pas celle de la sélection. Un troisième
+jeton n'est pas nécessaire : `chipSkin` a déjà tranché la même question dans l'autre sens
+(« il lit en `accent-soft` où les autres utilisent `elevated`, le jeton de survol du studio »).
 
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
@@ -584,7 +621,45 @@ sélection **par dessous**.
 
 ---
 
-## 4.2 L'accueil — deux entrées, une surface
+## 4.2 L'Explorateur n'explore rien
+
+### 39. Le panneau s'appelle « Explorateur » et liste six documents à plat
+
+**Vu le 9 août 2026** — « pourquoi l'Explorateur ne ressemble pas à un explorateur ? ». La référence
+donnée est l'arbre de projet d'un IDE : le dossier racine, ses sous-dossiers, dépliables, avec les
+fichiers dedans.
+
+**Ce que le panneau fait aujourd'hui** : `Explorer.tsx` rend un `Collection` sur `stored`, c'est-à-dire
+**les documents du projet**, sans hiérarchie, sans dossier, sans dépliage. Une ligne, un titre, une
+icône d'espace, et « Ouvert » en sous-titre. C'est une **liste de documents récents**, et elle porte
+le nom d'un explorateur de fichiers.
+
+**Et le studio a déjà l'arbre.** `design/Tree.tsx` existe : `flattenTree`, dépliage par nœud,
+virtualisation, glisser de ligne, sélection multiple par `pickFrom`, et il peint par le **même**
+`rowSkin` que `Collection` — précisément pour qu'une ligne d'arbre et une ligne de liste soient
+identiques. **Il n'a qu'un seul appelant : `SceneTree`**, l'outliner 3D.
+
+**Ce n'est donc pas qu'un changement de composant**, et c'est ce qu'il faut trancher avant d'écrire
+une ligne : un arbre de fichiers montrerait **le dossier du projet** — `assets/`, `documents/`, et ce
+que l'utilisateur y a déposé lui-même — là où le panneau ne montre aujourd'hui que les documents que
+le studio sait ouvrir. Trois questions, dans cet ordre :
+
+1. **Qu'est-ce que la racine ?** Le dossier du projet, ou `documents/` seul ? Le premier expose la
+   mécanique que l'entrée 17 vient justement de masquer (`.index/` caché sur les trois plateformes) —
+   il faudra dire ce qui se montre et ce qui reste caché.
+2. **Que fait un double-clic sur un fichier que le studio ne sait pas ouvrir ?** Aujourd'hui la
+   question ne se pose pas : tout ce qui est listé s'ouvre.
+3. **Le panneau suit-il le disque ?** Un arbre qui ne se rafraîchit qu'au montage ment dès qu'on
+   copie un fichier dans le dossier depuis le Finder — et `relist` n'est appelé qu'au changement de
+   projet.
+
+> **Ce que le panneau a de juste et qu'un arbre ne doit pas perdre** : il rend un document fermé
+> atteignable de nouveau, et c'est sa raison d'être — sa JSDoc le dit. Un document fermé alors
+> qu'aucun layout ne le tenait n'était trouvable que sur le disque.
+
+---
+
+## 4.3 L'accueil — deux entrées, une surface
 
 **Regroupées** : l'entrée 13 finit sur le constat de l'entrée 12 — le menu « … » qui masque une
 bande n'a pas été trouvé, « l'accueil ne montre pas ce qu'il permet ». Même page, même défaut
@@ -634,7 +709,7 @@ Que ce menu « … » n'ait pas été trouvé est un retour en soi, et il rejoin
 
 ---
 
-## 4.3 Les Apps — deux entrées, un panneau
+## 4.4 Les Apps — deux entrées, un panneau
 
 **Regroupées** : les deux demandent d'écrire une phrase que le panneau ne porte pas, elles
 coûtent leurs clés dans les deux mêmes bundles, et la réponse de l'une conditionne l'autre —
