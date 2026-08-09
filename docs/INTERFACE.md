@@ -167,6 +167,38 @@ remplacer par la nouvelle raison, en une ligne.
 > le studio n’a pas encore d’éditeur pour ça — c’est le node editor, § 4 de `REPRISE`. La
 > formulation ne doit donc pas promettre « vos workflows ».
 
+### 21. Le volet du journal ne se ferme pas au clic à côté
+
+**Vu le 9 août 2026, capture à l’appui.** Un clic en dehors du volet devrait le refermer. Il
+reste ouvert, et la seule sortie est de recliquer sur « 1 échec » — ce que personne n’a le
+réflexe de faire : c’est un indicateur d’état, pas un bouton de fermeture.
+
+**`Flyout` ne ferme rien, par construction** : il place et il rend, la fermeture appartient à
+l’appelant. Sur les cinq appelants, deux gèrent, deux ne gèrent pas :
+
+| Appelant | Comment il ferme |
+|---|---|
+| `MenuButton`, `AccountSelect` | `useHoverFlyout` — le pointeur sort, ça ferme, avec période de grâce |
+| **`ActivityStatus`, `JobsStatus`** | **un `useState` et le clic du bouton, rien d’autre** |
+
+C’est donc **deux volets** de la ligne d’état, pas un : la barre de jobs a exactement le même
+défaut, et il n’a pas encore été signalé parce qu’on l’ouvre moins.
+
+**Le remède est déjà écrit, ailleurs.** `ContextMenu` fait le travail complet, avec ses raisons
+en commentaire : `pointerdown` **en capture** — « a menu that survives until mouseup stays under
+the pointer while the surface behind it has already reacted to the press » —, `Escape`,
+`window.blur`, et la garde qui distingue un clic **dans** le menu (une ligne qu’on choisit) d’un
+clic dehors. Il n’y a rien à concevoir : il y a à partager.
+
+> **Le piège du remède rapide** : ne pas poser ce comportement dans `Flyout` d’office. Deux de
+> ses appelants ouvrent au survol et ferment au survol, avec une période de grâce que le guide
+> décrit — un `pointerdown` global ajouté sous eux se battrait avec. Une prop de rejet
+> optionnelle, ou un hook que les deux volets appellent.
+
+**Trois sorties valent mieux qu’une**, et elles vont ensemble : le clic à côté, `Échap`, et la
+fenêtre qui perd le focus. La troisième compte plus qu’il n’y paraît dans un studio : on passe à
+une autre application, on revient, et le volet est toujours là par-dessus le travail.
+
 ### 20. Une App n’appartient à aucun espace, et rien ne dit ce qu’elle produit
 
 **Constaté le 9 août 2026** — « je le vois sur toutes les sections ». C’est exact, et c’est
