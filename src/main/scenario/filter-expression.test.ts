@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { AssetType } from '@shared/domain/asset'
+import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { assetTypeOfRemote } from '@shared/domain/asset-kind'
-import { filterExpression } from './filter-expression'
+import { filterExpression, publicFeedFilter } from './filter-expression'
 import { remoteTypesFor } from './remote-types'
 
 describe('the filter a search is narrowed by', () => {
@@ -78,6 +78,52 @@ describe('the provenance values that stand for our kinds', () => {
     const both = remoteTypesFor(['mesh', 'audio'])
     expect(both).toContain('img23d')
     expect(both).toContain('txt2audio')
+  })
+})
+
+describe('the filter the public feed is narrowed by', () => {
+  it('drops what the API flagged, whatever the kind', () => {
+    for (const type of ASSET_TYPES) {
+      expect(publicFeedFilter(type)).toContain('nsfw IS EMPTY')
+    }
+  })
+
+  it('asks the index for one media class', () => {
+    expect(publicFeedFilter('video')).toBe('nsfw IS EMPTY AND kind = "video"')
+    expect(publicFeedFilter('mesh')).toBe('nsfw IS EMPTY AND kind = "3d"')
+  })
+
+  it('keeps materials and skies out of the pictures they share a kind with', () => {
+    expect(publicFeedFilter('image')).toBe(
+      'nsfw IS EMPTY AND kind = "image"' +
+        ' AND NOT metadata.type CONTAINS "texture"' +
+        ' AND NOT metadata.type CONTAINS "skybox"',
+    )
+  })
+
+  it('asks for materials and skies by provenance, which is the only thing that names them', () => {
+    expect(publicFeedFilter('texture')).toBe('nsfw IS EMPTY AND metadata.type CONTAINS "texture"')
+    expect(publicFeedFilter('skybox')).toBe('nsfw IS EMPTY AND metadata.type CONTAINS "skybox"')
+  })
+
+  /**
+   * The one that matters. `CONTAINS` is not decoration: a material arrives as `texture`,
+   * `upscale-texture` or `3d-texture-roughness`, and the tempting `STARTS WITH` — the only other
+   * operator the API honours, since `ENDS WITH` answers 500 — would silently lose two of those
+   * three. The feed may over-catch, because the hits are typed again on arrival; it may never
+   * under-catch, because nothing downstream can recover an asset the index was not asked for.
+   */
+  it('catches every provenance the studio files as a material or a sky', () => {
+    const byProvenance: AssetType[] = ['texture', 'skybox']
+
+    for (const type of byProvenance) {
+      const filter = publicFeedFilter(type)
+
+      for (const remoteType of remoteTypesFor([type]) ?? []) {
+        expect(filter).toContain(`CONTAINS "${type}"`)
+        expect(remoteType).toContain(type)
+      }
+    }
   })
 })
 

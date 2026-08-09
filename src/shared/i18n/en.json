@@ -1661,7 +1661,11 @@
       "library": "Your library",
       "documents": "Your documents",
       "jobs": "Running now",
-      "activity": "Recent activity"
+      "activity": "Recent activity",
+      "spark": "An idea to start from",
+      "similar": "In the same vein",
+      "usage": "What you have spent",
+      "explore": "Explore"
     },
     "title": "Home",
     "tools": {
@@ -1725,6 +1729,25 @@
     "showCount_other": "Show {{count, number}} items",
     "hidden_one": "{{count, number}} section hidden",
     "hidden_other": "{{count, number}} sections hidden",
-    "restore": "Show them again"
+    "restore": "Show them again",
+    "spark": {
+      "ask": "Suggest an idea",
+      "asking": "One moment…",
+      "help": "Starting points written for the model the generator will open on. Free: no creative unit is spent.",
+      "use": "Open the generator on \u201c{{prompt}}\u201d"
+    },
+    "similar": {
+      "title": "In the vein of \u201c{{name}}\u201d"
+    },
+    "usage": {
+      "summary_one": "{{units}} units over {{days, number}} days, for {{count, number}} generation.",
+      "summary_other": "{{units}} units over {{days, number}} days, for {{count, number}} generations.",
+      "model_one": "{{units}} units \u00b7 {{count, number}} generation",
+      "model_other": "{{units}} units \u00b7 {{count, number}} generations"
+    },
+    "explore": {
+      "loading": "Loading the feed\u2026",
+      "none": "Nothing published in this category yet."
+    }
   }
 }

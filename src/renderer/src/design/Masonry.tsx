@@ -1,0 +1,176 @@
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { scrollOffsetWithin, scrollParentOf } from '@/helpers/scroll-parent'
+import { columnsIn, GAP, PREFETCH_ROWS } from './virtual'
+
+/** A picture whose shape nobody stated. Square is the least wrong guess, and never distorts. */
+const FALLBACK_RATIO = 1
+
+/**
+ * How far from square a tile may go, as width ÷ height.
+ *
+ * Seamless textures are published at 3584×512 — seven to one. Reserved faithfully, they draw a
+ * letterbox strip a few pixels tall beside square tiles, and a column of them reads as a list of
+ * captions rather than as pictures. Past these bounds the picture is cropped by `object-cover`
+ * instead: showing the middle of a tiling texture loses nothing, and the grid stays legible.
+ */
+const RATIO_MIN = 0.5
+const RATIO_MAX = 2
+
+export type MasonryProps<T extends { id: string }> = {
+  items: readonly T[]
+  renderCard: (item: T) => ReactNode
+  /**
+   * The shape of an item, as width ÷ height — what reserves its place BEFORE the picture is
+   * fetched. `undefined` for an asset the API stated no dimensions for, which is common enough
+   * to be ordinary rather than an error.
+   */
+  ratioOf: (item: T) => number | undefined
+  /** What one column aims for. The real width divides the space evenly, never below the aim. */
+  columnWidth: number
+  /** Names the region for a screen reader. */
+  label: string
+  /** Called as the end nears. Must tolerate being called again before it has answered. */
+  onReachEnd?: () => void
+  /** Shown in place of the grid — the caller decides whether it means empty or unmatched. */
+  empty?: ReactNode
+}
+
+/**
+ * A grid of free-height columns, virtualized against a scroll container it does not own.
+ *
+ * That last part is the whole difference with `Collection`, which scrolls inside itself. The
+ * home holds the only scroll on the screen, so this hangs off whatever scrolls it — found by
+ * walking up rather than passed down, since every component in between would otherwise have to
+ * carry a ref it makes no use of.
+ *
+ * Each item's height is computed from its own aspect ratio, so the place is reserved before the
+ * picture arrives and nothing below it ever jumps. Heights are therefore never measured from the
+ * DOM: the estimate IS the truth, which is also what lets the virtualizer assign lanes up front.
+ */
+export function Masonry<T extends { id: string }>({
+  items,
+  renderCard,
+  ratioOf,
+  columnWidth,
+  label,
+  onReachEnd,
+  empty,
+}: MasonryProps<T>) {
+  const host = useRef<HTMLDivElement>(null)
+  const [scroller, setScroller] = useState<HTMLElement | null>(null)
+  const [width, setWidth] = useState(0)
+  const [scrollMargin, setScrollMargin] = useState(0)
+
+  // The page itself when nothing above scrolls: a virtualizer with no scroll element renders
+  // nothing at all, and a grid that is silently blank is worse than one that is not virtualized.
+  useEffect(() => setScroller(scrollParentOf(host.current) ?? document.documentElement), [])
+
+  useEffect(() => {
+    const element = host.current
+    if (!element) return
+
+    const observer = new ResizeObserver(entries => {
+      const measured = entries[0]?.contentRect.width
+      if (measured !== undefined) setWidth(measured)
+    })
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  /**
+   * Where this grid starts inside the scroll container.
+   *
+   * Watched rather than polled: the value is invariant under scrolling — moving down by one
+   * pixel lowers the grid's box by one and raises `scrollTop` by one — so reading it per frame
+   * would recompute the same number all the way down. It moves only when a section ABOVE
+   * changes height, which is what the observer below fires on.
+   */
+  useEffect(() => {
+    const content = scroller?.firstElementChild
+    const element = host.current
+    if (!scroller || !content || !element) return
+
+    const measure = (): void => {
+      const offset = scrollOffsetWithin(element, scroller) + scroller.scrollTop
+      setScrollMargin(current => (current === offset ? current : offset))
+    }
+
+    measure()
+    // The page's content, not the scroller: the window keeping its size while a band above
+    // fills in is precisely the case, and only the content grows then.
+    const observer = new ResizeObserver(measure)
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [scroller])
+
+  const { columns, columnWidth: laneWidth } = columnsIn(width, columnWidth)
+  const lanes = columns
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scroller,
+    estimateSize: index => {
+      const item = items[index]
+      const stated = item ? (ratioOf(item) ?? FALLBACK_RATIO) : FALLBACK_RATIO
+      // A ratio of zero or worse would collapse the cell and stack every item at one offset.
+      const ratio = stated > 0 ? stated : FALLBACK_RATIO
+      return laneWidth / Math.min(RATIO_MAX, Math.max(RATIO_MIN, ratio))
+    },
+    lanes,
+    gap: GAP,
+    scrollMargin,
+    overscan: 2,
+    // Nothing here is measured from the DOM, so lanes are settled from the estimates alone.
+    laneAssignmentMode: 'estimate',
+  })
+
+  // The virtualizer memoizes its measurements on `count` and friends, never on the estimator:
+  // without this, a resize leaves every cell at the height the previous width gave it.
+  useEffect(() => virtualizer.measure(), [virtualizer, laneWidth, lanes])
+
+  const virtualItems = virtualizer.getVirtualItems()
+  const last = virtualItems.at(-1)?.index ?? 0
+  /**
+   * An empty grid is NOT the end of one. Asking for more with nothing on screen loops until the
+   * source runs dry — the caller knows whether an empty answer is worth another request.
+   */
+  const nearEnd = items.length > 0 && last >= items.length - lanes * PREFETCH_ROWS
+
+  useEffect(() => {
+    if (nearEnd) onReachEnd?.()
+  }, [nearEnd, items.length, onReachEnd])
+
+  return (
+    <div ref={host} role="region" aria-label={label}>
+      {items.length === 0 ? (
+        empty
+      ) : (
+        <div style={{ height: virtualizer.getTotalSize() }} className="relative">
+          {virtualItems.map(virtual => {
+            const item = items[virtual.index]
+            if (!item) return null
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  // `start` counts from the top of the scroll container; the grid draws from its
+                  // own top, which is exactly `scrollMargin` further down.
+                  transform: `translateY(${virtual.start - scrollMargin}px)`,
+                  left: virtual.lane * (laneWidth + GAP),
+                  width: laneWidth,
+                  height: virtual.size,
+                }}
+                className="absolute top-0"
+              >
+                {renderCard(item)}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}

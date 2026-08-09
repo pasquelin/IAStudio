@@ -4,13 +4,11 @@ import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowSkin } from './styles'
+import { columnsIn, GAP, PREFETCH_ROWS } from './virtual'
 
-const GAP = 8
 const ROW_HEIGHT = 26
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
-/** How many rows from the bottom the next page is asked for — before the user sees the end. */
-const PREFETCH_ROWS = 3
 
 export type CollectionProps<T extends { id: string }> = {
   items: readonly T[]
@@ -99,8 +97,7 @@ function useGrid(host: { current: HTMLElement | null }, cardWidth: number, enabl
       const width = entries[0]?.contentRect.width
       if (width === undefined) return
 
-      const columns = Math.max(1, Math.floor((width + GAP) / (cardWidth + GAP)))
-      const columnWidth = (width - (columns - 1) * GAP) / columns
+      const { columns, columnWidth } = columnsIn(width, cardWidth)
 
       // Same values, same object: a resize that changes neither must not re-render the grid.
       setGrid(current =>

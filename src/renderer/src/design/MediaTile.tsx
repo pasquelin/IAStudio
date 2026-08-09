@@ -20,6 +20,12 @@ export type MediaTileProps = {
    * was expected: a sound has no thumbnail to fail at, and saying otherwise reads as a bug.
    */
   fallbackIcon?: string
+  /**
+   * Fills the box it is given instead of squaring itself off. For a caller that has already
+   * reserved the exact place — the masonry does, from the asset's own dimensions, and a square
+   * forced on top of that would crop every picture that is not one.
+   */
+  fill?: boolean
 }
 
 /**
@@ -34,11 +40,12 @@ export function MediaTile({
   caption,
   badge,
   fallbackIcon = mdiImageOffOutline,
+  fill = false,
 }: MediaTileProps) {
   const { src, onError } = useLoadable(url)
 
   return (
-    <figure className={cn(MEDIA_FRAME, 'relative m-0 aspect-square w-full')}>
+    <figure className={cn(MEDIA_FRAME, 'relative m-0 w-full', fill ? 'h-full' : 'aspect-square')}>
       {src ? (
         <img
           src={src}

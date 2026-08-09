@@ -1661,7 +1661,11 @@
       "library": "Votre bibliothèque",
       "documents": "Vos documents",
       "jobs": "En cours",
-      "activity": "Activité récente"
+      "activity": "Activité récente",
+      "spark": "Une idée pour commencer",
+      "similar": "Dans la même veine",
+      "usage": "Ce que vous avez consommé",
+      "explore": "Explorer"
     },
     "title": "Accueil",
     "tools": {
@@ -1725,6 +1729,25 @@
     "showCount_other": "Afficher {{count, number}} éléments",
     "hidden_one": "{{count, number}} section masquée",
     "hidden_other": "{{count, number}} sections masquées",
-    "restore": "Les réafficher"
+    "restore": "Les réafficher",
+    "spark": {
+      "ask": "Proposez-moi une idée",
+      "asking": "Un instant…",
+      "help": "Des départs écrits pour le modèle que le générateur ouvrira. Gratuit : aucune unité créative n’est consommée.",
+      "use": "Ouvrir le générateur sur « {{prompt}} »"
+    },
+    "similar": {
+      "title": "Dans la veine de « {{name}} »"
+    },
+    "usage": {
+      "summary_one": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} génération.",
+      "summary_other": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} générations.",
+      "model_one": "{{units}} unités · {{count, number}} génération",
+      "model_other": "{{units}} unités · {{count, number}} générations"
+    },
+    "explore": {
+      "loading": "Chargement du fil…",
+      "none": "Rien de publié dans cette catégorie pour le moment."
+    }
   }
 }

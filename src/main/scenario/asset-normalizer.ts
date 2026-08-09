@@ -122,6 +122,33 @@ export function cloudAssetOf(value: unknown): CloudAsset | null {
   }
 }
 
+/**
+ * The same asset, carrying the public thumbnail the CDN serves for it.
+ *
+ * A hit from `POST /search/assets` has no `thumbnail` — only the asset's own signed URL, which
+ * is the full file and cannot be resized: appending a width invalidates the signature and the
+ * CDN answers 302. Drawing a 220 px tile from it meant downloading the original, measured at
+ * 28 MB for one upscaled texture, against 1.6 KB for the thumbnail of the same asset.
+ *
+ * The origin is read off the signed URL rather than written down here: it is the same CDN by
+ * construction, and a hard-coded host is one deployment away from being wrong.
+ */
+export function withPublicThumbnail(asset: CloudAsset): CloudAsset {
+  if (asset.thumbnailUrl !== undefined || asset.url === undefined) return asset
+
+  const origin = originOf(asset.url)
+  return origin === null ? asset : { ...asset, thumbnailUrl: `${origin}/thumbnails/${asset.id}` }
+}
+
+function originOf(url: string): string | null {
+  try {
+    return new URL(url).origin
+  } catch {
+    // An unparseable URL is not worth a failed page: the tile falls back to its glyph.
+    return null
+  }
+}
+
 /** From `GET /assets`, `GET /assets/{id}` and `POST /assets/get-bulk`. */
 export const cloudAssetOfListing = cloudAssetOf
 

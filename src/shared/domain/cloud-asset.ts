@@ -72,6 +72,28 @@ export type CloudPage = {
   cursor: string | null
 }
 
+export type SimilarPage = {
+  /** What the likeness was measured against — one of the account's own assets. */
+  reference: CloudAsset
+  /** Published assets that resemble it, the reference itself taken out. */
+  assets: CloudAsset[]
+}
+
+/**
+ * What the home's explore feed asks for.
+ *
+ * A query of its own rather than a flag on `CloudQuery`: it reads assets nobody here owns and
+ * pages by offset alone, so sharing the type would mean fields that mean one thing in one mode
+ * and another in the other.
+ */
+export type ExploreQuery = {
+  /** One tab of the feed. The kinds a masonry can show are the six the studio already has. */
+  type: AssetType
+  /** Opaque, straight from the previous page. */
+  cursor?: string
+  pageSize?: number
+}
+
 /** How large a preview should come down. The CDN resizes; downloading a 4K to draw 112 px does not. */
 export type PreviewSize = { width?: number; quality?: number }
 

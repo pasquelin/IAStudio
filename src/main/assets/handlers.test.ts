@@ -222,6 +222,180 @@ describe('browsing the library', () => {
   })
 })
 
+describe('the public feed', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setup()
+  })
+
+  it('searches what everyone published, newest first', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'image' })
+
+    // Never the plain listing: `GET /assets` answers for this key alone.
+    expect(harness.listed).toHaveLength(0)
+    expect(harness.searched[0]).toMatchObject({
+      publicFeed: true,
+      sortBy: ['createdAt:desc'],
+      offset: 0,
+    })
+  })
+
+  it('leaves out anything the API flagged', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'video' })
+    expect(harness.searched[0]).toMatchObject({ filter: expect.stringContaining('nsfw IS EMPTY') })
+  })
+
+  it('types the hits again, because the filter casts wider than the studio decides', async () => {
+    setup({
+      remote: {
+        search: () =>
+          Promise.resolve({
+            assets: [{ ...cloudAsset('a'), type: 'texture' }, cloudAsset('b')],
+            token: null,
+          }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'texture' })
+    expect(page.assets.map(asset => asset.id)).toEqual(['a'])
+  })
+
+  it('draws each tile from the public thumbnail, not the whole file', async () => {
+    // A search hit carries only the signed URL of the original — 28 MB for one upscaled texture,
+    // against 1.6 KB for its thumbnail, and a width appended to it answers 302.
+    setup({
+      remote: {
+        search: () =>
+          Promise.resolve({
+            assets: [{ ...cloudAsset('a'), url: 'https://cdn.example/assets-transform/a?p=100' }],
+            token: null,
+          }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.assets[0]?.thumbnailUrl).toBe('https://cdn.example/thumbnails/a')
+  })
+
+  it('leaves a thumbnail the API did name alone', async () => {
+    setup({
+      remote: {
+        search: () =>
+          Promise.resolve({
+            assets: [
+              {
+                ...cloudAsset('a'),
+                url: 'https://cdn.example/assets-transform/a',
+                thumbnailUrl: 'https://cdn.example/its/own.png',
+              },
+            ],
+            token: null,
+          }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.assets[0]?.thumbnailUrl).toBe('https://cdn.example/its/own.png')
+  })
+
+  it('walks past a page the retyping emptied rather than reporting the end', async () => {
+    // The filter casts wider than the studio decides, so a whole page can fall to it. Handed up
+    // empty, it reads as the end of the feed: the grid does not ask again on an empty grid.
+    let round = 0
+    setup({
+      remote: {
+        search: () => {
+          round += 1
+          const dropped: CloudAsset = { ...cloudAsset('a'), type: 'video' }
+          const assets = round === 1 ? [dropped] : [cloudAsset('b')]
+          return Promise.resolve({ assets, token: String(round * 40) })
+        },
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.assets.map(asset => asset.id)).toEqual(['b'])
+  })
+
+  it('gives up after a few empty rounds rather than walking the whole index', async () => {
+    const audioAsset: CloudAsset = { ...cloudAsset('a'), type: 'audio' }
+    // A kind nobody has published would otherwise cost a search quota per page, to the end.
+    const { searched } = setup({
+      remote: {
+        search: () => Promise.resolve({ assets: [audioAsset], token: '40' }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[]; cursor: string | null }>(
+      CHANNELS.cloudExplore,
+      { type: 'image' },
+    )
+    expect(page.assets).toEqual([])
+    expect(searched.length).toBeLessThanOrEqual(3)
+    // The cursor stays live on purpose: the feed is not over, this handler simply stopped
+    // spending quota on it. `useExplore` is what carries on from here.
+    expect(page.cursor).not.toBeNull()
+  })
+
+  it('walks by offset, and marks the cursor as the index produced it', async () => {
+    setup({
+      remote: { search: () => Promise.resolve({ assets: [cloudAsset('a')], token: '40' }) },
+    })
+
+    const page = await invoke<{ cursor: string | null }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.cursor).toBe('o:40')
+  })
+
+  it('reads back the offset it handed out', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'image', cursor: 'o:40' })
+    expect(harness.searched[0]).toMatchObject({ offset: 40 })
+  })
+
+  it('refuses a feed of everything: the masonry shows one kind at a time', async () => {
+    await expect(invoke(CHANNELS.cloudExplore, {})).rejects.toThrow()
+  })
+})
+
+describe('what resembles the account own work', () => {
+  it('measures the likeness against the library latest asset', async () => {
+    const harness = setup()
+    await invoke(CHANNELS.cloudSimilar)
+
+    expect(harness.listed[0]).toMatchObject({ pageSize: 1 })
+    // `remote_1` is what the listing answers with in the harness above.
+    expect(harness.searched[0]).toMatchObject({ like: ['remote_1'], publicFeed: true })
+  })
+
+  it('asks for no order at all, since the API ranks by likeness', async () => {
+    // Naming a sort on a semantic search silently drops the ranking that is the whole point.
+    const harness = setup()
+    await invoke(CHANNELS.cloudSimilar)
+
+    expect(harness.searched[0]).not.toHaveProperty('sortBy')
+  })
+
+  it('takes the reference back out of its own results', async () => {
+    // The API answers with the reference itself, at the top.
+    setup({
+      remote: {
+        list: () => Promise.resolve({ assets: [cloudAsset('ref')], token: null }),
+        search: () =>
+          Promise.resolve({ assets: [cloudAsset('ref'), cloudAsset('other')], token: null }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudSimilar)
+    expect(page.assets.map(asset => asset.id)).toEqual(['other'])
+  })
+
+  it('answers nothing when the account holds nothing to compare', async () => {
+    setup({ remote: { list: () => Promise.resolve({ assets: [], token: null }) } })
+
+    expect(await invoke(CHANNELS.cloudSimilar)).toBeNull()
+  })
+})
+
 describe('renaming and tagging', () => {
   let harness: Harness
 

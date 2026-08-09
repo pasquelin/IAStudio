@@ -52,8 +52,8 @@ describe('the home', () => {
   it('says something on a studio with no key, no project and no history', () => {
     render(<HomeView />)
 
-    // The two things left to do, and the six ways in — never a blank page.
-    expect(screen.getByText('Démarrer un projet')).toBeInTheDocument()
+    // The one thing left to do, and the six ways in — never a blank page. Creating a project is
+    // not among them: the rail's + and the tools band already offer it, three times over.
     expect(screen.getByText('Connecter une clé API')).toBeInTheDocument()
     expect(screen.getByText('Outils')).toBeInTheDocument()
     expect(screen.getByText('Vos projets')).toBeInTheDocument()

@@ -41,7 +41,7 @@ describe('the spotlight while the studio is still opening', () => {
     render(<Spotlight />)
 
     expect(screen.queryByText('Connecter une clé API')).not.toBeInTheDocument()
-    expect(screen.queryByText('Démarrer un projet')).not.toBeInTheDocument()
+    expect(screen.queryByRole('article')).not.toBeInTheDocument()
   })
 
   it('holds the room the banner will take, so nothing shifts under the reader', () => {
@@ -56,7 +56,6 @@ describe('the spotlight while the studio is still opening', () => {
     render(<Spotlight />)
 
     expect(screen.getByText('Connecter une clé API')).toBeInTheDocument()
-    expect(screen.getByText('Démarrer un projet')).toBeInTheDocument()
   })
 
   /**

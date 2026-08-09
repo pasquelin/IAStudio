@@ -5,6 +5,7 @@ import {
   HOME_LIMIT_MIN,
   HOME_SECTIONS,
   canMoveHomeSection,
+  homeSections,
   hiddenHomeSections,
   homeSectionLimit,
   homeSectionOf,
@@ -13,6 +14,7 @@ import {
   shownHomeSection,
   visibleHomeSections,
   type HomeContext,
+  type HomeSectionId,
   type HomeSectionSetting,
 } from './home'
 
@@ -70,7 +72,9 @@ describe('the sections a home draws', () => {
     const reversed = [...DEFAULT_HOME_SECTIONS].reverse()
     const sections = visibleHomeSections(reversed, { authenticated: true, hasProject: true })
 
-    expect(sections).toEqual(reversed.map(setting => setting.id))
+    // Every band but the anchored one, which is held at the foot however it was stored.
+    const expected = reversed.map(setting => setting.id).filter(id => id !== 'explore')
+    expect(sections).toEqual([...expected, 'explore'])
   })
 
   it('hides a section the user hid, and keeps the pinned one they tried to', () => {
@@ -128,7 +132,7 @@ describe('rearranging the home', () => {
 
   it('refuses a move at either end of the column it belongs to', () => {
     expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'spotlight', 'up')).toBe(false)
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'activity', 'down')).toBe(false)
+    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'down')).toBe(false)
     expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'projects', 'up')).toBe(true)
   })
 
@@ -169,5 +173,46 @@ describe('rearranging the home', () => {
 
     expect(homeSectionLimit(tiny, 'projects')).toBe(HOME_LIMIT_MIN)
     expect(homeSectionLimit(huge, 'projects')).toBe(HOME_LIMIT_MAX)
+  })
+})
+
+describe('a band that never ends', () => {
+  it('is held at the foot of the page whatever the stored order says', () => {
+    // Settings written by an earlier version, or by hand, must not land it mid-page.
+    const scrambled: HomeSectionSetting[] = [
+      { id: 'explore', visible: true },
+      { id: 'tools', visible: true },
+    ]
+
+    expect(homeSections(scrambled).at(-1)?.id).toBe('explore')
+  })
+
+  it('cannot be moved, in either direction', () => {
+    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'up')).toBe(false)
+    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'down')).toBe(false)
+    expect(movedHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'up').at(-1)?.id).toBe('explore')
+  })
+
+  it('cannot be passed under either, since that is the same burial', () => {
+    const before = homeSections(DEFAULT_HOME_SECTIONS).at(-2)
+    expect(before).toBeDefined()
+    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, before?.id ?? 'tools', 'down')).toBe(false)
+  })
+})
+
+describe('moving a band past the ones nobody is shown', () => {
+  it('skips a neighbour the studio is not drawing', () => {
+    // Swapping with a hidden band changes the stored order and nothing on screen — an enabled
+    // row that does nothing, which is what `canMoveHomeSection` exists to prevent.
+    const shown: HomeSectionId[] = ['spotlight', 'projects']
+    const moved = movedHomeSection(DEFAULT_HOME_SECTIONS, 'projects', 'up', shown)
+    const order = moved.map(setting => setting.id)
+
+    expect(order.indexOf('projects')).toBeLessThan(order.indexOf('spotlight'))
+  })
+
+  it('refuses when every neighbour on that side is hidden', () => {
+    const shown: HomeSectionId[] = ['projects']
+    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'projects', 'up', shown)).toBe(false)
   })
 })

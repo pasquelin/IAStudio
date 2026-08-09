@@ -61,6 +61,18 @@ export type AssetSearchRequest = {
   filter?: string
   limit: number
   offset: number
+  /**
+   * Searches what everyone published rather than what this key owns. Named for the errand and
+   * not after the SDK's `public`, which cannot be destructured — it is a reserved word.
+   */
+  publicFeed?: boolean
+  /** `attribute:asc|desc` pairs. `score` is NOT among them — see `PUBLIC_FEED_SORT`. */
+  sortBy?: readonly string[]
+  /**
+   * Asset ids to look like. The API answers by visual and semantic likeness, and includes the
+   * references themselves — the caller takes them back out.
+   */
+  like?: readonly string[]
 }
 
 /**
@@ -129,10 +141,13 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
      * public-only. It also costs a separate quota, which is why this is the debounced path and
      * never the one taken at rest.
      */
-    search: async ({ query, filter, limit, offset }) => {
+    search: async ({ query, filter, limit, offset, publicFeed, sortBy, like }) => {
       const params = {
         ...(query ? { query } : {}),
         ...(filter ? { filter } : {}),
+        ...(publicFeed ? { public: true } : {}),
+        ...(sortBy?.length ? { sortBy: [...sortBy] } : {}),
+        ...(like?.length ? { images: { like: [...like] } } : {}),
         limit: Math.min(limit, PAGE_SIZE_MAX),
         offset,
       }

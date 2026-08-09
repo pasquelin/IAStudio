@@ -32,8 +32,7 @@ export function HomeView() {
 
   return (
     <div className="h-full overflow-x-hidden overflow-y-auto">
-      {/* Bounded, and centred: shelves stretched across a 34" display stop being shelves. */}
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-8 px-6 py-6">
+      <div className="flex flex-col gap-8 px-6 py-6">
         {sections.map(id => {
           const Section = HOME_COMPONENTS[id]
           return (

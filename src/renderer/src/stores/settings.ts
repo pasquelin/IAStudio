@@ -70,7 +70,10 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     const readAuth = bridge.settings
       .authState()
       .then(auth => set({ auth, authKnown: true }))
-      .catch(() => {})
+      // Answered, badly — and still an answer. Same reason as the read above: the home's top
+      // band waits on this flag, and a refusal that never sets it leaves a grey placeholder
+      // there for the whole session, with no way left to reach the key dialog.
+      .catch(() => set({ authKnown: true }))
 
     await Promise.all([readSettings, readAuth])
 

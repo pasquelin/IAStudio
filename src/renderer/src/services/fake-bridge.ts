@@ -95,6 +95,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     cloud: {
       browse: () => Promise.resolve({ assets: [], cursor: null }),
+      explore: () => Promise.resolve({ assets: [], cursor: null }),
+      similar: () => Promise.resolve(null),
       pull: () => Promise.resolve([]),
       push: () => Promise.resolve([]),
       plan: () =>

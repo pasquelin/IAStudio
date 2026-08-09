@@ -15,6 +15,7 @@ import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
+import { useHomeSections } from './use-home-sections'
 
 /** What a shelf may be cut down to. Enough to matter, few enough to stay one glance. */
 const LIMITS: readonly number[] = [6, 12, 24, 48]
@@ -22,6 +23,9 @@ const LIMITS: readonly number[] = [6, 12, 24, 48]
 export function SectionMenu({ id }: { id: HomeSectionId }) {
   const { t } = useTranslation()
   const stored = useSettings(state => state.settings.home.sections)
+  // The bands actually on screen: swapping with one that a missing project hides is a write
+  // nobody can see.
+  const shown = useHomeSections()
 
   const entry = homeSectionOf(id)
   const limit = homeSectionLimit(stored, id)
@@ -48,18 +52,18 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
           <MenuRow
             icon={mdiArrowUp}
             label={t('home.moveUp')}
-            disabled={!canMoveHomeSection(stored, id, 'up')}
+            disabled={!canMoveHomeSection(stored, id, 'up', shown)}
             onSelect={() => {
-              write(movedHomeSection(stored, id, 'up'))
+              write(movedHomeSection(stored, id, 'up', shown))
               close()
             }}
           />
           <MenuRow
             icon={mdiArrowDown}
             label={t('home.moveDown')}
-            disabled={!canMoveHomeSection(stored, id, 'down')}
+            disabled={!canMoveHomeSection(stored, id, 'down', shown)}
             onSelect={() => {
-              write(movedHomeSection(stored, id, 'down'))
+              write(movedHomeSection(stored, id, 'down', shown))
               close()
             }}
           />
