@@ -146,9 +146,10 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           returns typed data
 ```
 
-**82 channels in `CHANNELS`, plus 17 events in `EVENTS`** — counted on 9 August 2026, and the
-figure moves with every batch: counting it (`CHANNELS`, two spaces of indentation) costs less than
-believing it. Twenty prefixes, the busiest being:
+**83 channels in `CHANNELS`, plus 18 events in `EVENTS`** — counted on the evening of 9 August
+2026, and the figure moves with every batch: **it moved twice on the day this sentence was
+written.** Counting it (`CHANNELS`, two spaces of indentation) costs less than believing it.
+Twenty-one prefixes, the busiest being:
 
 | Family | Count | What it carries |
 |---|---|---|
@@ -157,11 +158,12 @@ believing it. Twenty prefixes, the busiest being:
 | `dictation:*` | 8 | microphone permissions, model, recognition session |
 | `settings:*` / `accounts:*` | 6 + 5 | read, write, credentials, authentication state |
 | `document:*` | 6 | opening, writing and listing the project's documents |
-| `styles:*`, `favorites:*`, `workflows:*`, `project:*`, `media:*`, `window:*` | 3 each | — |
+| `styles:*` | 4 | material settings, saved and replayed |
+| `favorites:*`, `workflows:*`, `project:*`, `media:*`, `window:*` | 3 each | — |
 | `dialog:*`, `fonts:*`, `update:*` | 2 each | — |
-| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*` | 1 each | — |
+| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*`, `skybox:*` | 1 each | — |
 
-**`EVENTS` is the other direction** — main pushing to the renderer, seventeen entries: job and
+**`EVENTS` is the other direction** — main pushing to the renderer, eighteen entries: job and
 media progress, log lines, project and settings changes, window state, dictation previews, and the
 native menu asking the UI to open a tool or a settings section, run a command, or drop a node into
 the scene.
@@ -609,7 +611,7 @@ Key primitives, all in `design/`:
 | `MediaTile`, `Thumbnail` | the captioned square tile, and the same picture at a fixed size |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | the shared bar, its icon buttons, its labelled ones, the only door icons come through |
 | `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the generations summary, its expanded list and media import |
-| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField`, `PropertyRow` — what the inspector is built from |
+| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
@@ -625,15 +627,15 @@ role at all when they answer to nothing. The two cannot diverge, and that is the
 
 Three consequences for the caller, none of them optional:
 
-- **`label` is required.** A `listbox` with no name is a WCAG 2.0 A violation (4.1.2), and six
-  panels that pass none all announce themselves as "listbox". Each passes the title it already
-  carries.
+- **`label` is required.** A `listbox` with no name is a WCAG 2.0 A violation (4.1.2), and panels
+  that pass none all announce themselves as "listbox", indistinguishable from one another. Each
+  passes the title it already carries.
 - **The announced count is the data's, not the virtualised window's.** `aria-posinset` and
   `aria-setsize` come from the real index: without them a 2000-model catalogue says "1 of 35",
   and the number changes as you scroll.
 - **`aria-multiselectable` is declared, never inferred.** `pickFrom` offers shift and ⌘ to every
-  caller, but three panels out of six keep only one selection: inferring it would promise a range
-  they do not build.
+  caller, but most keep a single selection — only two pass `multiple`, the asset shelf and the
+  node list. Inferring it would promise a range the others do not build.
 
 `aria-selected` is only ever set on an `option`. The Explorer paints "open" with that same prop,
 and announcing it as "selected" would describe a state its rows can neither take nor give back.

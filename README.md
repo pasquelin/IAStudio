@@ -53,7 +53,7 @@ holds nodes and saves them, but does not yet run what it describes.
 | | |
 |---|---|
 | **Seven workspaces** | Image, Video, 3D, Audio, Textures, Skyboxes and Graph, each with its own toolbar and its own panels |
-| **Three editors** | a Pixi-backed image canvas, a three.js 3D viewport, and a video timeline with real decoding |
+| **Real editors, not previews** | a Pixi-backed image canvas, a three.js 3D viewport, a video timeline that decodes for real, and a sound editor working on samples |
 | **No hand-written generation forms** | every model's inputs are discovered from the API and rendered from its schema |
 | **Your keys stay in the main process** | encrypted by the OS keychain, never handed to the renderer |
 | **Bounded concurrency** | one queue polls the API, with exponential backoff on 429 and 5xx |
@@ -120,8 +120,8 @@ src/
 ├── renderer/src/
 │   ├── app/         the shell: rails, zones, tool windows, document area
 │   ├── design/      the in-house design system — every docked component
-│   ├── engines/     canvas, scene, timeline and audio engines. No React in here
-│   ├── spaces/      one document editor per kind: image, three, video, audio
+│   ├── engines/     one engine per kind of surface. No React in here
+│   ├── spaces/      one document editor per kind
 │   ├── panels/      the dockable tools
 │   ├── stores/      zustand stores
 │   ├── hooks/       shared hooks
@@ -130,6 +130,9 @@ src/
     ├── domain/      the vocabulary both processes speak
     └── i18n/        one JSON per language, read by the menu and the UI
 ```
+
+A selection, not an inventory — enough to find your way, and no more.
+[Architecture](docs/en/architecture.md#the-main-process) goes through each side in turn.
 
 ---
 
