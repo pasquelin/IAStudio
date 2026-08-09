@@ -320,35 +320,6 @@ réponse se trouve.
 > sélectionnée, et l’inverse. L’entrée 9 vient justement de séparer ce que ces cellules
 > annoncent ; il s’agit ici de leur faire dire à l’œil ce qu’elles disent déjà au lecteur d’écran.
 
-### 10. Les filtres du journal reviennent à la ligne, et il leur manque « Tout »
-
-**Vu le 9 août 2026, capture à l’appui.** Dans le volet du journal d’activité — celui qu’ouvre
-« 1 échec » en bas à droite — les filtres passent sur deux lignes : `Information / Avertissement /
-Échec | Génération` puis `Import / Bibliothèque / Document`. Et il manque un **premier bouton
-« Tout »**, alias du « rien de sélectionné », pratique à l’usage.
-
-**Le retour à la ligne ne fait pas qu’être laid : il détruit le groupement.** `ActivityList.tsx`
-pose sept boutons dans un `flex-wrap`, avec un `Separator` vertical entre les trois niveaux et les
-quatre sujets. Le `Flyout` fait `w-96` (384 px), les sept libellés français n’y tiennent pas, et la
-coupure tombe **après** le séparateur — les trois sujets de la seconde ligne se retrouvent orphelins
-du trait qui était censé les annoncer. Les deux familles deviennent illisibles comme familles.
-
-Deux rangées **explicites**, une par famille, règlent la mise en forme et la place du « Tout » d’un
-seul geste : le séparateur disparaît au profit de ce qu’il essayait de dire, et chaque rangée reçoit
-son propre « Tout » en tête, sans l’ambiguïté qu’aurait un « Tout » unique posé devant deux familles
-qui se filtrent séparément. Élargir le flyout ne réglerait que la première moitié.
-
-**« Tout » est bien un alias, et l’alias existe déjà** — `ActivityList.tsx:85` : « Nothing selected
-is "everything" ». Le bouton n’ajoute donc aucun état : il vide la sélection de sa famille et
-s’affiche actif quand elle est vide. Le geste existe aussi déjà, mais **seulement quand la liste est
-vide** — `EmptyState` propose `activity.clearFilters`, qui appelle exactement
-`setFilters({ levels: [], topics: [] })`. Aujourd’hui, un filtre trop étroit se défait en le
-défaisant chip par chip, ou en attendant que la liste soit vide pour qu’on vous offre le bouton.
-
-Trois choses qui suivent : `chipSkin` (`design/styles.ts`) porte déjà les deux états et **trois
-surfaces le partagent** — ne pas en dériver une variante locale ; une clé i18n neuve est à poser
-dans les deux bundles ; et `ActivityList.test.tsx` existe.
-
 ### 11. La ligne d’état est collée au bord et désalignée du reste
 
 **Même capture.** En bas de fenêtre, `Verif4` à gauche et `1 échec` à droite touchent presque le
@@ -655,6 +626,36 @@ correction.
 | **(25)** La croix des onglets passait sous le titre — la règle visait le mauvais nœud | *à commiter* |
 | **(18)** Le formulaire de génération parlait anglais dans une application en français | `e0a07b2` (feat/i18n-schema-api) |
 | **(7)** Aucun moyen de garder un réglage de matière pour la texture suivante | `c3ec714` (feat/styles-textures) |
+| **(10)** Les filtres du journal revenaient à la ligne, orphelinant une famille | `71f3140` (feat/journal-filtres) |
+
+> **L’entrée 10 avait raison sur la cause, et c’est assez rare ici pour le dire.** Le calcul la
+> confirme : 376 px utiles dans le volet, ≈600 px de puces, et le cumul atteint 351 px juste
+> **après** `Génération` — exactement la coupure décrite. Rien à rechercher.
+>
+> **Ce qu’elle ne disait pas, et qui change la portée du correctif** : le `Separator` est
+> `aria-hidden` — « Decorative, hence hidden from assistive tech ». Le groupement que le retour à
+> la ligne venait de détruire à l’œil **n’avait jamais existé** pour un lecteur d’écran. Les deux
+> rangées sont donc des `role="group"` **nommés**, ce qui n’était pas demandé et qui coûte deux
+> clés de plus : sans nom, les deux boutons « Tout » seraient rigoureusement indistinguables dans
+> l’arbre d’accessibilité, même libellé et même rôle.
+>
+> **`flex-wrap` est conservé À L’INTÉRIEUR de chaque rangée, délibérément.** La largeur des puces
+> suit la langue — « Échec » n’est pas « Failure » — donc aucune largeur de volet ne garantit une
+> ligne. Ce qui est garanti, c’est qu’un débordement reste désormais **dans** sa famille au lieu
+> de la couper en deux. C’est pour ça qu’élargir `w-96` n’aurait pas été le correctif, et pas
+> seulement parce que ça n’aurait réglé « que la première moitié ».
+>
+> **Un cas de bord tranché, à ne pas rouvrir comme un défaut** : cocher les trois niveaux un par
+> un laisse « Tout » éteint, alors que `matchesActivity` ne filtre alors plus rien. C’est voulu.
+> « Tout » ne dit pas « rien n’est caché », il dit « aucun filtre n’est posé » — et trois filtres
+> dont l’union couvre tout restent trois filtres. Les allumer ensemble donnerait quatre boutons
+> actifs pour un seul état.
+>
+> **Et une trouvaille hors périmètre, qui sert l’entrée 21** : `Flyout` pose `role="menu"` sur son
+> conteneur alors qu’il héberge des `role="group"` et des `<ul>`, et il n’implémente ni `Échap`,
+> ni piège de focus, ni navigation aux flèches. L’entrée 21 ne parle que de la fermeture au clic à
+> côté ; le rôle est à corriger dans le même geste, sous peine de laisser un menu qui n’en est pas
+> un.
 
 > **L’entrée 7 s’est faite dans le sens qu’elle demandait, mais pas avec la carte qu’elle
 > donnait.** Trois de ses repères étaient faux, et chacun a coûté un détour.
