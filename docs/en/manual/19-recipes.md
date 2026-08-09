@@ -18,7 +18,7 @@ They recur everywhere, so they are said once here.
 |---|---|---|
 | **A connected account** | the dot is **green**, top right of the window | [First steps ▸ step 3](02-first-steps.md) |
 | **An open project** | its name is written bottom left, in the status line | `⌘N` to create one |
-| **The right workspace** | the six tabs, at the top of the window | click the one you need |
+| **The right workspace** | the seven tabs, at the top of the window | click the one you need |
 
 **The third is the one people forget.** Half the studio's "it does not work" moments are the
 right gesture made in the wrong workspace.

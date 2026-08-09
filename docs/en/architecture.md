@@ -442,10 +442,10 @@ where `shared/` holds no runtime dependency. Hence a layer above it, in
 - the generator is offered only where a model is chosen or preferred;
 - a half nobody has chosen for shows the **first panel the workspace declares there**. It holds
   `null` in the store — an absent key means the half is closed, an id means the user chose. The
-  layout is remembered once for all six workspaces while that first panel differs in each: writing
-  an id there would impose one workspace's answer on the other five. `shownTool` tells the three
-  cases apart, and migrating to version 8 puts every earlier layout back to its default, half by
-  half.
+  layout is remembered once for all seven workspaces while that first panel differs in each:
+  writing an id there would impose one workspace's answer on the other six. `shownTool` tells the
+  three cases apart, and migrating to version 8 puts every earlier layout back to its default,
+  half by half.
 
 ---
 
@@ -902,7 +902,7 @@ opaquely.
 
 ## Testing
 
-**1398 tests across 148 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
+**5655 tests across 447 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests with coverage budgets — must be green

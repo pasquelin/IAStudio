@@ -11,7 +11,7 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 [![three.js](https://img.shields.io/badge/three.js-0.185-2b2d30?logo=three.js&logoColor=ffffff)](https://threejs.org)
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.19-2b2d30?logo=javascript&logoColor=e8639b)](https://pixijs.com)
 [![Vite](https://img.shields.io/badge/Vite-7-2b2d30?logo=vite&logoColor=ffd028)](https://vite.dev)
-[![Tests](https://img.shields.io/badge/tests-1398%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
+[![Tests](https://img.shields.io/badge/tests-5655%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-2b2d30)](#license)
 
 </div>
@@ -46,12 +46,13 @@ them, and assemble them into 3D scenes or video sequences — without leaving th
 without your API credentials ever reaching the browser context.
 
 The unit of work is a **project**: a folder on your disk. The unit of display is a **workspace**:
-six of them — Image, Video, 3D, Audio, Textures, Skyboxes — each rearranging the panels around
-what that kind of work needs.
+seven of them — Image, Video, 3D, Audio, Textures, Skyboxes and Graph — each rearranging the
+panels around what that kind of work needs. The Graph is still under construction: it opens,
+holds nodes and saves them, but does not yet run what it describes.
 
 | | |
 |---|---|
-| **Six workspaces** | Image, Video, 3D, Audio, Textures and Skyboxes, each with its own toolbar and its own panels |
+| **Seven workspaces** | Image, Video, 3D, Audio, Textures, Skyboxes and Graph, each with its own toolbar and its own panels |
 | **Three editors** | a Pixi-backed image canvas, a three.js 3D viewport, and a video timeline with real decoding |
 | **No hand-written generation forms** | every model's inputs are discovered from the API and rendered from its schema |
 | **Your keys stay in the main process** | encrypted by the OS keychain, never handed to the renderer |
@@ -79,7 +80,7 @@ In development you can drop them in `secrets/.env` instead (`SCENARIO_API_KEY`,
 Settings. See [`secrets/README.md`](secrets/README.md).
 
 Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained:
-[Settings](docs/en/user-guide.md#settings) · how configuration is layered:
+[Settings](docs/en/manual/14-settings.md) · how configuration is layered:
 [Architecture](docs/en/architecture.md#configuration).
 
 ---
@@ -135,7 +136,7 @@ src/
 ## Quality bar
 
 `pnpm validate` must be green before any commit: typecheck, lint, format check, and the full
-test suite — **1398 tests across 148 files** at the time of writing. Unit tests are colocated
+test suite — **5655 tests across 447 files** at the time of writing. Unit tests are colocated
 with the code they cover and written in the same movement, never after.
 
 Every change also goes through a reuse-and-simplification pass and an automated review before

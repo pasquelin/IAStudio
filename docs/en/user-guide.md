@@ -40,7 +40,7 @@ machine, without sending them anywhere.
 | 6 | [Generating](manual/06-generating.md) | The form, the prompt, the job queue, errors and retries |
 | 7 | [Assets](manual/07-assets.md) | The project's shelf, search, importing your own files |
 
-### The six workspaces
+### The workspaces
 
 | | Chapter | What you will find |
 |---|---|---|
@@ -50,6 +50,11 @@ machine, without sending them anywhere.
 | 11 | [Audio workspace](manual/11-audio-workspace.md) | Trim a sound, fade it, normalise it |
 | 12 | [Textures workspace](manual/12-textures-workspace.md) | Judge a material on a lit object |
 | 13 | [Skyboxes workspace](manual/13-skyboxes-workspace.md) | Make a 360° sky and adjust it |
+
+> **The seventh workspace, the Graph, has no chapter yet.** It opens, holds nodes and saves them,
+> but it does not yet run what it describes: describing it like the other six would promise work
+> it cannot do. What it does today is in [chapter 3](manual/03-the-window.md), and its limits in
+> [chapter 18](manual/18-limits.md).
 
 ### Appendices
 
@@ -80,8 +85,8 @@ straight away and puts a green **In use** badge on the row.
 you make will land inside it.
 
 **3. Choose a workspace.**
-At the top of the window, six tabs: **Image**, **Video**, **3D**, **Audio**, **Textures**,
-**Skyboxes**. Click **Image**.
+At the top of the window, seven tabs: **Image**, **Video**, **3D**, **Audio**, **Textures**,
+**Skyboxes**, **Graph**. Click **Image**.
 
 **4. Choose a model.**
 On the left, the **Models** panel shows the catalogue. Click a thumbnail you like. The chosen
@@ -102,7 +107,7 @@ When the job reaches "Done", the image arrives in the **Assets** panel — the p
 and on your disk, in the `assets/img/` folder. Click it: the **Inspector**, on the right, shows
 its model, its prompt and its seed, and can open the folder holding it.
 
-That is all. The rest of the manual details each of these seven steps, and the five other
+That is all. The rest of the manual details each of these seven steps, and the six other
 workspaces.
 
 ---

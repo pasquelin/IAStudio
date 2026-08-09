@@ -42,7 +42,7 @@ part.
 | 6 | [Générer](manuel/06-generer.md) | Le formulaire, le prompt, la file de tâches, les erreurs et les reprises |
 | 7 | [Les assets](manuel/07-assets.md) | L’étagère du projet, la recherche, l’import de vos propres fichiers |
 
-### Les six espaces de travail
+### Les espaces de travail
 
 | | Chapitre | Ce que vous y trouverez |
 |---|---|---|
@@ -52,6 +52,11 @@ part.
 | 11 | [Espace Audio](manuel/11-espace-audio.md) | Rogner un son, faire des fondus, normaliser |
 | 12 | [Espace Textures](manuel/12-espace-textures.md) | Juger une matière sur un objet éclairé |
 | 13 | [Espace Skyboxes](manuel/13-espace-skyboxes.md) | Fabriquer un ciel à 360° et le régler |
+
+> **Le septième espace, le Graphe, n’a pas encore son chapitre.** Il s’ouvre, on y pose des nœuds
+> et on les enregistre, mais il ne sait pas encore exécuter ce qu’il décrit : le décrire comme les
+> six autres promettrait un travail qu’on ne peut pas faire. Ce qu’il fait aujourd’hui est au
+> [chapitre 3](manuel/03-la-fenetre.md) et ses limites au [chapitre 18](manuel/18-limites.md).
 
 ### Les annexes
 
@@ -82,8 +87,8 @@ tout de suite et pose une pastille verte **Utilisé** sur la ligne.
 tout ce que vous fabriquerez atterrira dedans.
 
 **3. Choisissez un espace.**
-En haut de la fenêtre, six onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
-**Skyboxes**. Cliquez **Image**.
+En haut de la fenêtre, sept onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
+**Skyboxes**, **Graphe**. Cliquez **Image**.
 
 **4. Choisissez un modèle.**
 À gauche, le panneau **Modèles** montre le catalogue. Cliquez sur une vignette qui vous plaît.
@@ -105,7 +110,7 @@ Quand la tâche passe à « Terminée », l’image arrive dans le panneau **Ass
 projet — et sur votre disque, dans le dossier `assets/img/`. Cliquez dessus : l’**Inspecteur**,
 à droite, montre son modèle, son prompt et sa graine, et sait ouvrir le dossier qui la contient.
 
-C’est tout. Le reste du manuel détaille chacune de ces sept étapes, et les cinq autres espaces.
+C’est tout. Le reste du manuel détaille chacune de ces sept étapes, et les six autres espaces.
 
 ---
 

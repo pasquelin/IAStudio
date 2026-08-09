@@ -17,7 +17,7 @@ Elles reviennent partout, alors elles sont dites une fois ici.
 |---|---|---|
 | **Un compte branché** | la pastille est **verte** en haut à droite de la fenêtre | [Premiers pas ▸ étape 3](02-premiers-pas.md) |
 | **Un projet ouvert** | son nom est écrit en bas à gauche, dans la ligne d’état | `⌘N` pour en créer un |
-| **Le bon espace** | les six onglets, en haut de la fenêtre | cliquez sur celui qu’il faut |
+| **Le bon espace** | les sept onglets, en haut de la fenêtre | cliquez sur celui qu’il faut |
 
 **Le troisième est celui qu’on oublie.** La moitié des « ça ne marche pas » du studio sont un
 geste juste, fait dans le mauvais espace.
