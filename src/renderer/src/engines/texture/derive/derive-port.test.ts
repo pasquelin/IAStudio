@@ -1,5 +1,5 @@
-import { NoColorSpace, SRGBColorSpace, Texture } from 'three'
-import { describe, expect, it } from 'vitest'
+import { LinearFilter, NoColorSpace, SRGBColorSpace, Texture } from 'three'
+import { describe, expect, it, vi } from 'vitest'
 import { fakeTextureSource } from '../../viewport/viewport-fixtures'
 import { createDerivePort } from './derive-port'
 
@@ -17,13 +17,43 @@ describe('the derivation port', () => {
   })
 
   /** The frame is the source's own size, so nothing reads a mip and building one is 22 MB wasted. */
-  it('leaves the mip pyramid unbuilt', async () => {
+  it('leaves the mip pyramid unbuilt, and stops the filter from asking for one', async () => {
     const source = new Texture()
     const port = createDerivePort({ loadTexture: () => Promise.resolve(source) })
 
     await expect(port({ channel: 'normal', sourceUrl: 'asset://a' })).rejects.toThrow()
 
     expect(source.generateMipmaps).toBe(false)
+    // Both, or neither works: three's default minFilter samples a chain that is no longer built.
+    expect(source.minFilter).toBe(LinearFilter)
+  })
+
+  /**
+   * A decoded 4K channel is 64 MB. Everything between taking the pixels and giving them back can
+   * throw — sizing, building the pass, and asking for a context on a machine whose GPU process
+   * has died — and each of those used to pin that picture for the life of the window.
+   */
+  it('gives the decoded picture back even when it never reaches the GPU', async () => {
+    const { load, freed } = fakeTextureSource()
+    const port = createDerivePort({ loadTexture: load })
+
+    await expect(port({ channel: 'normal', sourceUrl: 'asset://a' })).rejects.toThrow()
+
+    expect(freed).toHaveLength(1)
+    expect(freed[0]).toHaveBeenCalled()
+  })
+
+  it('gives it back for a channel no shader derives, too', async () => {
+    const source = new Texture()
+    source.image = { width: 8, height: 8 }
+    const freed = vi.spyOn(source, 'dispose')
+    const port = createDerivePort({ loadTexture: () => Promise.resolve(source) })
+
+    await expect(port({ channel: 'baseColor', sourceUrl: 'asset://a' })).rejects.toThrow(
+      /no shader derives/,
+    )
+
+    expect(freed).toHaveBeenCalled()
   })
 
   /**

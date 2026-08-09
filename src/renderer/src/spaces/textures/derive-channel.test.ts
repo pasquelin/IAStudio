@@ -89,15 +89,25 @@ describe('deriving one channel from another', () => {
     })
   })
 
-  /** The shelf is what the tile reads for the picture it shows. */
+  /**
+   * The shelf is what the tile reads for the picture it shows: pointed at first, the channel
+   * holds an id the store has never heard of and the tile draws an empty frame. Asserted on the
+   * ORDER, because "it was called" and "the store holds it" are both true either way round.
+   */
   it('lists the new asset before pointing the channel at it', async () => {
-    const search = vi.fn(() => Promise.resolve([asset('img-1', 'Brique'), asset('derived-1', 'N')]))
+    const order: string[] = []
+    const search = vi.fn(() => {
+      order.push('search')
+      return Promise.resolve([asset('img-1', 'Brique'), asset('derived-1', 'N')])
+    })
     bridgeWatchingLogs({ assets: { saveTexture: saved(), search } })
     fill('height', 'img-1')
+    const unsubscribe = useTextures.subscribe(() => order.push('channel'))
 
     await deriveTextureChannel('doc-1', 'normal', port())
+    unsubscribe()
 
-    expect(search).toHaveBeenCalled()
+    expect(order).toEqual(['search', 'channel'])
     expect(useAssets.getState().items.map(item => item.id)).toContain('derived-1')
   })
 
@@ -130,6 +140,45 @@ describe('deriving one channel from another', () => {
     }
 
     await expect(deriveTextureChannel('doc-1', 'normal', derive)).resolves.toBe(false)
+
+    expect(channels().normal).toBeUndefined()
+    expect(entries().at(-1)?.message).toContain('height changed while deriving')
+  })
+
+  /**
+   * Only the menu row goes dead while a derivation runs — the tile still takes a drop. A picture
+   * the user put there by hand meanwhile is the more recent gesture, and it is the one that has
+   * to survive: overwriting it would replace a chosen file with a result badged `derived`.
+   */
+  it('leaves alone a channel the user filled while it was computing', async () => {
+    const { entries } = bridgeWatchingLogs({ assets: { saveTexture: saved() } })
+    fill('height', 'img-1')
+
+    const derive: DerivePort = () => {
+      fill('normal', 'my-own-normal')
+      return Promise.resolve({ png, width: 512, height: 512 })
+    }
+
+    await expect(deriveTextureChannel('doc-1', 'normal', derive)).resolves.toBe(false)
+
+    expect(channels().normal?.assetId).toBe('my-own-normal')
+    expect(entries().at(-1)?.message).toContain('normal changed while deriving')
+  })
+
+  /**
+   * The two longest waits come AFTER the first check: writing the file, then relisting the
+   * catalogue. A guard that closed before them would leave exactly the state it exists to stop —
+   * a channel badged `derived` from a source the texture no longer holds.
+   */
+  it('abandons when the source changes while the file is being written', async () => {
+    const saveTexture = vi.fn((_request: SaveTextureRequest) => {
+      fill('height', 'img-2')
+      return Promise.resolve(asset('derived-1', 'x'))
+    })
+    const { entries } = bridgeWatchingLogs({ assets: { saveTexture } })
+    fill('height', 'img-1')
+
+    await expect(deriveTextureChannel('doc-1', 'normal', port())).resolves.toBe(false)
 
     expect(channels().normal).toBeUndefined()
     expect(entries().at(-1)?.message).toContain('height changed while deriving')

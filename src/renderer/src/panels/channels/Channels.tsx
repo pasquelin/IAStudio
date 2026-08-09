@@ -26,7 +26,10 @@ export function Channels() {
   const documentId = useDocuments(activeTextureId)
 
   return documentId ? (
-    <Grid documentId={documentId} />
+    // Keyed: the derivation in flight is the grid's own state, and one instance shared across
+    // documents left every derivable row of the texture in front dead for a job running in
+    // another tab — with a reason that was true of a document nobody was looking at.
+    <Grid key={documentId} documentId={documentId} />
   ) : (
     <EmptyState icon={mdiTextureBox} message={t('texture.noDocument')} />
   )

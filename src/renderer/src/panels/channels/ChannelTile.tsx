@@ -145,7 +145,7 @@ export function ChannelTile({
            * row, so a project holding no picture left the one remaining action, emptying the
            * channel, behind a button that looked alive and did nothing.
            */
-          rowCount={Math.max(options.length + 1 + (derivation ? 1 : 0), 2)}
+          rowCount={Math.max(options.length + 1, 2)}
           rows={close => [
             ...(derivation
               ? [

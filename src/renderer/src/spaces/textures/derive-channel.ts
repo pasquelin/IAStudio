@@ -4,7 +4,7 @@ import type { PbrChannel } from '@shared/domain/texture'
 import { loadTexture } from '@/engines/scene/texture-cache'
 import { createDerivePort, type DerivePort } from '@/engines/texture/derive/derive-port'
 import { setChannel } from '@/engines/texture/commands'
-import { sourceFor } from '@/engines/texture/texture-state'
+import { sourceFor, type ChannelSet } from '@/engines/texture/texture-state'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
@@ -32,23 +32,45 @@ export async function deriveTextureChannel(
   const bridge = getBridge()
   if (!from || !bridge) return false
 
-  const source = textureOf(useTextures.getState(), documentId).channels[from]
+  const source = channels(documentId)[from]
   if (!source) {
     reportFailure('texture.channel', channel, new Error(`${from} is empty`))
+    return false
+  }
+
+  /**
+   * What must not have moved while this ran, checked after EVERY await rather than once.
+   *
+   * Both ends matter, and each was a way of losing work. The **source**: pixels computed from a
+   * height map that has since been replaced describe nothing that is still open. The
+   * **destination**: only the menu row goes dead during a derivation — the tile still takes a
+   * drop, and a picture the user put there by hand would be silently overwritten by a result
+   * badged `derived`. The most recent gesture is the one that has to survive.
+   *
+   * And the two longest waits come AFTER the first check: writing the file, then relisting the
+   * catalogue. A check that closed before them would leave exactly the state it exists to stop.
+   */
+  const before = { source: source.assetId, target: channels(documentId)[channel]?.assetId }
+
+  /** Which end moved, so the journal names it rather than saying something changed. */
+  const moved = (): PbrChannel | null => {
+    const now = channels(documentId)
+    if (now[from]?.assetId !== before.source) return from
+    return now[channel]?.assetId !== before.target ? channel : null
+  }
+
+  const abandon = (which: PbrChannel): false => {
+    reportFailure('texture.channel', channel, new Error(`${which} changed while deriving`))
     return false
   }
 
   try {
     const picture = await derive({ channel, sourceUrl: assetUrl(source.assetId) })
 
-    // Read again, after the await: a derivation runs for as long as the picture takes to decode,
-    // and pixels computed from a source that has since been replaced describe nothing that is
-    // still open. Said rather than swallowed — the menu row would otherwise look inert.
-    const current = textureOf(useTextures.getState(), documentId).channels[from]
-    if (current?.assetId !== source.assetId) {
-      reportFailure('texture.channel', channel, new Error(`${from} changed while deriving`))
-      return false
-    }
+    // Said rather than swallowed — the menu row would otherwise look inert. Checked here so a
+    // file is not written for a result already known to be stale.
+    const stale = moved()
+    if (stale) return abandon(stale)
 
     const asset = await bridge.assets.saveTexture({
       name: derivedName(from, channel, source.assetId),
@@ -60,6 +82,9 @@ export async function deriveTextureChannel(
     // Before the channel points at it: the tile reads the shelf for the picture it shows, and a
     // channel filled with an id the store has never heard of shows an empty frame.
     await useAssets.getState().refresh()
+
+    const late = moved()
+    if (late) return abandon(late)
 
     useTextures.getState().runCommand(
       documentId,
@@ -75,6 +100,11 @@ export async function deriveTextureChannel(
     reportFailure('texture.channel', channel, error)
     return false
   }
+}
+
+/** Read at call time, never captured: every check has to see the store as it is right now. */
+function channels(documentId: string): ChannelSet {
+  return textureOf(useTextures.getState(), documentId).channels
 }
 
 /**

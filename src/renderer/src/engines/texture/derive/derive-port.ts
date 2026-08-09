@@ -1,4 +1,4 @@
-import { LinearFilter, NoColorSpace, WebGLRenderer, type Texture } from 'three'
+import { LinearFilter, NoColorSpace, WebGLRenderer, type Material, type Texture } from 'three'
 import { isRecord, readNumber } from '@shared/guards'
 import type { PbrChannel } from '@shared/domain/texture'
 import { createGpuPipeline } from '../../gpu/GpuPipeline'
@@ -35,9 +35,10 @@ export type DerivePortOptions = {
  * from the project's own file, and the result leaves as a PNG on its way to disk. Borrowing the
  * viewport's would mean drawing over the frame the user is looking at.
  *
- * One context per run, released before the promise settles: a derivation is a gesture, not a
- * loop, and a browser stops handing out contexts around sixteen. What keeps two runs from
- * overlapping is the caller — the menu row of every derivable channel goes dead while one runs.
+ * One context per run, released before the promise settles. The ceiling it respects is not its
+ * own: a browser keeps about sixteen contexts and evicts the oldest to hand out the next, so a
+ * derivation that leaked one would black out a viewport somebody was looking at. What keeps two
+ * runs from overlapping is the caller — every derivable menu row goes dead while one runs.
  */
 export function createDerivePort({ loadTexture }: DerivePortOptions): DerivePort {
   return async ({ channel, sourceUrl }) => {
@@ -51,39 +52,55 @@ export function createDerivePort({ loadTexture }: DerivePortOptions): DerivePort
     source.generateMipmaps = false
     source.minFilter = LinearFilter
 
-    const size = sizeOf(source)
-    const pass = createDerivePass(channel, source, size)
-    const renderer = new WebGLRenderer({
-      // Without it the drawing buffer is cleared before the canvas can be read back, and every
-      // derivation comes out blank.
-      preserveDrawingBuffer: true,
-      // A full-screen quad depth-tests against nothing and blends with nothing. Left on, the
-      // depth attachment alone is another 67 MB at 4K, allocated and thrown away.
-      antialias: false,
-      depth: false,
-      stencil: false,
-      alpha: false,
-    })
-
+    // The whole of it in one `try`, opened the instant the pixels are ours. Sizing, building the
+    // pass and asking for a context all throw — a machine whose GPU process has died throws on
+    // the last one — and outside this block each of them pinned a fully decoded picture, 64 MB
+    // for a 4K channel, for the life of the window.
     try {
-      // `false` for the third: the canvas is read back, never laid out, so a style in CSS
-      // pixels would only make a device pixel ratio disagree with the frame that was drawn.
-      renderer.setSize(size.width, size.height, false)
-      const pipeline = createGpuPipeline(renderer)
+      const size = sizeOf(source)
+      const pass = createDerivePass(channel, source, size)
       try {
-        pipeline.renderToScreen(pass.material)
-        return { ...size, png: await encodePng(renderer.domElement) }
+        return await draw(pass.material, size)
       } finally {
-        pipeline.dispose()
+        pass.material.dispose()
       }
     } finally {
-      pass.material.dispose()
       source.dispose()
-      renderer.dispose()
-      // `dispose` frees three's own objects; the context itself only goes with this, and a
-      // leaked one counts against the browser's ceiling for the rest of the session.
-      renderer.forceContextLoss()
     }
+  }
+}
+
+/** One context, one frame, one PNG — opened and given back inside this call, whatever happens. */
+async function draw(material: Material, size: PictureSize): Promise<DerivedPicture> {
+  const renderer = new WebGLRenderer({
+    // Without it the drawing buffer is cleared before the canvas can be read back, and every
+    // derivation comes out blank.
+    preserveDrawingBuffer: true,
+    // A full-screen quad depth-tests against nothing and blends with nothing. Left on, the
+    // depth attachment alone is another 67 MB at 4K, allocated and thrown away.
+    antialias: false,
+    depth: false,
+    stencil: false,
+    alpha: false,
+  })
+
+  try {
+    // `false` for the third: the canvas is read back, never laid out, so a style in CSS pixels
+    // would only make a device pixel ratio disagree with the frame that was drawn.
+    renderer.setSize(size.width, size.height, false)
+    const pipeline = createGpuPipeline(renderer)
+    try {
+      pipeline.renderToScreen(material)
+      return { ...size, png: await encodePng(renderer.domElement) }
+    } finally {
+      pipeline.dispose()
+    }
+  } finally {
+    renderer.dispose()
+    // `dispose` frees three's own objects; the context itself only goes with this. And the one
+    // that pays for a leak is not this call: a browser evicts the OLDEST context when it hands
+    // out the seventeenth, so what goes black is a viewport somebody was looking at.
+    renderer.forceContextLoss()
   }
 }
 

@@ -157,7 +157,7 @@ describe('project handlers', () => {
         name: 'Brique — Normale',
         map: 'normal',
         derivedFrom: 'asset-1',
-        png: new Uint8Array([137, 80, 78, 71]),
+        png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
       })
 
       expect(assets.importFromBytes).toHaveBeenCalledWith(
@@ -169,7 +169,7 @@ describe('project handlers', () => {
           map: 'normal',
           derivedFrom: 'asset-1',
         },
-        new Uint8Array([137, 80, 78, 71]),
+        new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
       )
     })
 
@@ -183,7 +183,7 @@ describe('project handlers', () => {
       const saved = await invoke(CHANNELS.assetsSaveTexture, {
         name: 'Brique',
         map: 'normal',
-        png: new Uint8Array([1]),
+        png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
       })
 
       expect(saved).toEqual(expect.not.objectContaining({ sourcePath: expect.anything() }))
@@ -194,7 +194,10 @@ describe('project handlers', () => {
       registerProjectHandlers(deps(catalog, { assets: backend() }))
 
       await expect(
-        invoke(CHANNELS.assetsSaveTexture, { name: 'Brique', png: new Uint8Array([1]) }),
+        invoke(CHANNELS.assetsSaveTexture, {
+          name: 'Brique',
+          png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        }),
       ).rejects.toThrow()
     })
 
@@ -206,7 +209,48 @@ describe('project handlers', () => {
         invoke(CHANNELS.assetsSaveTexture, {
           name: 'Brique',
           map: 'displacement',
-          png: new Uint8Array([1]),
+          png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        }),
+      ).rejects.toThrow()
+    })
+
+    /** The renderer is sandboxed, and this door writes a file: an unbounded buffer is a partition. */
+    it('refuses a payload past the ceiling', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveTexture, {
+          name: 'Brique',
+          map: 'normal',
+          png: new Uint8Array(257 * 1024 * 1024),
+        }),
+      ).rejects.toThrow()
+    })
+
+    /**
+     * The bytes are checked, not merely bounded. An encoder that answered with nothing would
+     * otherwise be catalogued as a channel, and the tile would show an empty frame for a file
+     * that is not a picture — with no way, from there, to read why.
+     */
+    it('refuses bytes that are not a PNG', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      for (const png of [new Uint8Array(), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])]) {
+        await expect(
+          invoke(CHANNELS.assetsSaveTexture, { name: 'Brique', map: 'normal', png }),
+        ).rejects.toThrow()
+      }
+    })
+
+    it('refuses a source identifier that is not one', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveTexture, {
+          name: 'Brique',
+          map: 'normal',
+          derivedFrom: '   ',
+          png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
         }),
       ).rejects.toThrow()
     })
@@ -218,7 +262,7 @@ describe('project handlers', () => {
         invoke(CHANNELS.assetsSaveTexture, {
           name: '   ',
           map: 'normal',
-          png: new Uint8Array([1]),
+          png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
         }),
       ).rejects.toThrow()
     })

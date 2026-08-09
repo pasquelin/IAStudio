@@ -33,8 +33,10 @@ describe('the derivation shaders', () => {
   it('steps by one texel of the source it was given, on each axis separately', () => {
     const pass = createDerivePass('normal', source, { width: 2048, height: 512 })
 
-    expect(pass.uniforms.uTexel.value.x).toBeCloseTo(1 / 2048)
-    expect(pass.uniforms.uTexel.value.y).toBeCloseTo(1 / 512)
+    // Exact, not `toBeCloseTo`: its default tolerance is 0.005, wider than any real texel step,
+    // and it stayed green with the two axes swapped — on the test that names them.
+    expect(pass.uniforms.uTexel.value.x).toBe(1 / 2048)
+    expect(pass.uniforms.uTexel.value.y).toBe(1 / 512)
     expect(pass.uniforms.uSource.value).toBe(source)
   })
 
@@ -50,15 +52,49 @@ describe('the derivation shaders', () => {
     expect(shaderFor('normal')).toContain('normal * 0.5 + 0.5')
   })
 
-  /** The whole point of a Sobel: the four diagonals weigh in, so one noisy texel is not a spike. */
-  it('reads the eight neighbours of a pixel to slope it', () => {
-    expect(shaderFor('normal').match(/heightAt\(vec2\(/g) ?? []).toHaveLength(8)
+  /**
+   * The kernel, verbatim. jsdom runs no GLSL, so these are assertions on the TEXT of the shader
+   * — the same bargain `material-shader.test.ts` makes with three's chunk names. Counting the
+   * eight taps was not one: a Sobel that read a corner twice and ignored another counted eight
+   * all the same, and the mutation stayed green on the test that claimed to watch it.
+   */
+  it('weights the eight neighbours the way a Sobel does, each one once', () => {
+    const shader = shaderFor('normal')
+
+    expect(shader).toContain('float dx = (tr + 2.0 * r + br) - (tl + 2.0 * l + bl);')
+    expect(shader).toContain('float dy = (tl + 2.0 * t + tr) - (bl + 2.0 * b + br);')
+  })
+
+  /** Rec. 709. Permuted, every derivation that reads a colour reads the wrong brightness. */
+  it('weighs luminance the way the grading pass does', () => {
+    expect(shaderFor('height')).toContain('vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);')
+  })
+
+  /**
+   * The direction of the relief, in one line. Both signs matter: the first is what tilts a slope
+   * away from the direction it climbs, the second is the OpenGL convention for green.
+   */
+  it('tilts the normal away from the slope it climbs', () => {
+    expect(shaderFor('normal')).toContain('normalize(vec3(-dx, -dy, 1.0))')
+  })
+
+  /**
+   * Which way round the occlusion reads. Inverted either at the subtraction or at the write, an
+   * AO map lights the hollows and darkens what stands out — and both mutations were green.
+   */
+  it('darkens what sits below its neighbourhood, and only that', () => {
+    const shader = shaderFor('ao')
+
+    expect(shader).toContain('clamp((around - here) * 2.0, 0.0, 1.0)')
+    expect(shader).toContain('vec4(vec3(1.0 - occlusion), 1.0)')
+    // Three rings: one radius answers only for detail of that exact size.
+    expect(shader).toContain('const float RINGS = 3.0;')
   })
 
   /** Same picture read the other way round: what one calls deep, the other calls matte. */
   it('inverts the luminance for roughness and not for height', () => {
-    expect(shaderFor('roughness')).toContain('1.0 - luma')
-    expect(shaderFor('height')).not.toContain('1.0 - luma')
+    expect(shaderFor('roughness')).toContain('vec4(vec3(1.0 - luma), 1.0)')
+    expect(shaderFor('height')).toContain('vec4(vec3(luma), 1.0)')
   })
 
   /** Every pass is opaque: an alpha below one would be read back as premultiplied noise. */

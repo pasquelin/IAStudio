@@ -1349,7 +1349,7 @@
     "chooseChannel": "What {{channel}} holds",
     "clearChannel": "Empty this channel",
     "derive": "Compute from {{source}}",
-    "deriveMissing": "Compute from {{source}} — that channel is empty",
+    "deriveMissing": "Compute from {{source}} — {{source}} is empty",
     "deriveBusy": "Compute from {{source}} — another channel is being computed",
     "deriving": "Computing…",
     "derivedName": "{{name}} — {{channel}}",

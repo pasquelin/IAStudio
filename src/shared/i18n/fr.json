@@ -1349,7 +1349,7 @@
     "chooseChannel": "Ce que contient {{channel}}",
     "clearChannel": "Vider ce canal",
     "derive": "Calculer depuis {{source}}",
-    "deriveMissing": "Calculer depuis {{source}} — ce canal est vide",
+    "deriveMissing": "Calculer depuis {{source}} — {{source}} est vide",
     "deriveBusy": "Calculer depuis {{source}} — un autre canal est en calcul",
     "deriving": "Calcul en cours…",
     "derivedName": "{{name}} — {{channel}}",
