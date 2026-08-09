@@ -4,7 +4,10 @@ import type { Asset } from '@shared/domain/asset'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
+import { useDocuments } from '@/stores/documents'
 import { installDocument } from '@/stores/document-fixtures'
+import type { FolderExportRequest, SkyboxExportCommand } from '@shared/ipc'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { useSkyboxViews, viewOf } from '@/stores/skybox-views'
 import { SKYBOX_VIEWS, type SkyboxView } from '@shared/domain/skybox'
@@ -96,6 +99,105 @@ describe('SkyboxDocument', () => {
   it('hands the renderer a host to fill, never a canvas of its own', () => {
     const { container } = render(<SkyboxDocument documentId="doc-1" />)
     expect(container.querySelector('canvas')).toBeNull()
+  })
+})
+
+/**
+ * The menu row that hands a sky to an engine. What the six faces look like needs a GPU and is
+ * not here; what is, is who answers the row — the event reaches the window, not a document.
+ */
+describe('the export menu row', () => {
+  const listen = (): {
+    listeners: () => number
+    unsubscribed: () => number
+    fire: (size: number) => void
+    exported: () => FolderExportRequest[]
+  } => {
+    const callbacks: ((command: SkyboxExportCommand) => void)[] = []
+    const exported: FolderExportRequest[] = []
+    let released = 0
+
+    installFakeBridge({
+      menu: {
+        onSkyboxExport: callback => {
+          callbacks.push(callback)
+          return () => {
+            released += 1
+          }
+        },
+      },
+      skybox: {
+        export: request => {
+          exported.push(request)
+          return Promise.resolve(request.folder)
+        },
+      },
+    })
+
+    return {
+      listeners: () => callbacks.length,
+      unsubscribed: () => released,
+      fire: size => {
+        for (const callback of callbacks) callback({ size })
+      },
+      exported: () => exported,
+    }
+  }
+
+  it('is listened to while the tab is in front, and not while it is behind', () => {
+    const menu = listen()
+
+    useDocuments.setState({ activeId: 'doc-1' })
+    render(<SkyboxDocument documentId="doc-1" />)
+    expect(menu.listeners()).toBe(1)
+
+    useDocuments.setState({ activeId: 'doc-2' })
+    render(<SkyboxDocument documentId="doc-1" />)
+    // Still one: a second sky answering the same row would open a second folder dialog.
+    expect(menu.listeners()).toBe(1)
+  })
+
+  it('lets go of the row when the tab closes', () => {
+    const menu = listen()
+    useDocuments.setState({ activeId: 'doc-1' })
+
+    render(<SkyboxDocument documentId="doc-1" />).unmount()
+
+    expect(menu.unsubscribed()).toBe(1)
+  })
+
+  it('refuses a sky with no picture, and says which refusal it was', async () => {
+    const callbacks: ((command: SkyboxExportCommand) => void)[] = []
+    const exported: FolderExportRequest[] = []
+    const { entries } = bridgeWatchingLogs({
+      menu: {
+        onSkyboxExport: callback => {
+          callbacks.push(callback)
+          return () => {}
+        },
+      },
+      skybox: {
+        export: request => {
+          exported.push(request)
+          return Promise.resolve(request.folder)
+        },
+      },
+    })
+
+    useDocuments.setState({ activeId: 'doc-1' })
+    render(<SkyboxDocument documentId="doc-1" />)
+    for (const callback of callbacks) callback({ size: 1024 })
+
+    // The message, not merely the silence: jsdom has no WebGL, so an export that got past the
+    // guard would fail too — and a test that only checked for no dialog would pass either way.
+    await vi.waitFor(() =>
+      expect(entries()).toEqual([
+        { level: 'error', scope: 'skybox.export', message: '1024: this sky has no source to export' },
+      ]),
+    )
+
+    // A folder chooser asking where to write six files of nothing is a dialog nobody can answer.
+    expect(exported).toEqual([])
   })
 })
 
