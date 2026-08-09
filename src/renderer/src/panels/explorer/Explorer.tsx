@@ -41,10 +41,9 @@ export function Explorer() {
       items={stored}
       // Not a selection one makes — it is what "open" looks like in this list.
       selectedIds={Object.keys(open)}
+      onActivate={openDocument}
       renderRow={(document: DocumentDescriptor) => (
-        <div className="h-full" onDoubleClick={() => openDocument(document)}>
-          <DocumentRow document={document} open={open[document.id] !== undefined} />
-        </div>
+        <DocumentRow document={document} open={open[document.id] !== undefined} />
       )}
       empty={<EmptyState icon={mdiFolderOpenOutline} message={t('explorer.noDocuments')} />}
     />
