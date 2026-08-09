@@ -167,6 +167,42 @@ remplacer par la nouvelle raison, en une ligne.
 > le studio n’a pas encore d’éditeur pour ça — c’est le node editor, § 4 de `REPRISE`. La
 > formulation ne doit donc pas promettre « vos workflows ».
 
+### 22. L’avis « pas de ffmpeg » vole une deuxième ligne à l’étagère
+
+**Vu le 9 août 2026, capture à l’appui.** « Préparation vidéo indisponible : ni copie allégée ni
+forme d’onde. » s’écrit sous la barre de l’étagère et lui prend une ligne entière. **Il doit
+tenir sur la ligne de la barre, pas en dessous.**
+
+**Et la règle qu’il enfreint est déjà écrite, pour cette barre-là.** `AssetBrowserActions` porte
+ceci : « The bar rides here in a band, where the row is wide and **a second one would cost
+height the zone cannot spare**. » C’est exactement pour éviter une deuxième ligne que la barre a
+été remontée dans la ligne de titre. L’avis, lui, la recrée.
+
+**D’où il vient** : `ImportProgress` est une bande posée entre la barre et la grille, qui porte
+deux choses — les lignes de progression des imports en cours, et cet avis. Le `<p>` de l’avis
+est en `px-2 py-1`, sur toute la largeur.
+
+**Ce qui interdit de le déplacer tel quel** : le message fait 65 caractères en français, et la
+ligne porte déjà le titre, le compteur, l’import, la recherche et deux facettes. En texte, il ne
+rentrera pas — ou il chassera les facettes, ce qui déplace le défaut sans le corriger. La forme
+qui tient à toute largeur est **une icône d’alerte dans la ligne de titre, le message en
+infobulle** ; `ToolButton variant="header"` et `TooltipHost` existent tous les deux.
+
+**Deux choses à ne pas casser en le faisant :**
+
+1. **L’avis doit rester tant que ffmpeg manque**, et le commentaire dit pourquoi : « The notice
+   outlives the ingests: without ffmpeg one lasts a few hundred milliseconds, and the
+   explanation would vanish just as the user wonders where the waveform went. » Ce n’est donc
+   pas un toast, et ça ne se dissout pas avec l’import.
+2. **La bande reste pour les imports en cours** — ce sont des lignes, au pluriel, qui ne
+   remontent nulle part. La demande porte sur l’avis, pas sur la bande.
+
+> **En colonne, c’est pire, et ça ne se voit pas sur la capture.** En Vidéo et en Audio,
+> l’étagère est dans la colonne de droite : la barre y est rendue **hors** de la ligne de titre
+> (`!lying && <CollectionBar/>`), sur sa propre ligne. L’avis y fait donc une **troisième**
+> ligne avant la première vignette. Corriger la bande sans regarder ce cas ne corrige que la
+> moitié visible.
+
 ### 21. Le volet du journal ne se ferme pas au clic à côté
 
 **Vu le 9 août 2026, capture à l’appui.** Un clic en dehors du volet devrait le refermer. Il
