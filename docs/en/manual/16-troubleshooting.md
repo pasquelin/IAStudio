@@ -356,6 +356,30 @@ format (`.mp4`, `.wav`, `.png`).
 **Failed**: preparation stopped on a problem. **Stopped**: you halted it yourself. In both cases,
 the file can be imported again.
 
+### "This asset has nowhere to go"
+
+**What it means.** You double-clicked an asset, and **no open document knows how to receive it**.
+It is neither a bug nor a damaged file.
+
+**The cause.** Double-click **never opens a tab**: it sends the asset into a document that is
+already open. It looks across every workspace, not only the one you are in — but it needs at
+least one destination.
+
+| You double-click… | You need, open somewhere… |
+|---|---|
+| a picture, to make it a sky | a **sky** document (Skyboxes workspace) |
+| a mesh, to set it in a scene | a **3D scene** |
+| a sound, to edit it | a **take** (Audio workspace) |
+| a picture, to paint on it | an **image** document |
+| anything, to cut it into an edit | a **sequence** (Video workspace) |
+| a picture, to make it a material | a **material** (Textures workspace) |
+
+**What to do.** Open a document able to receive it — the `+` button on the left rail, in the
+workspace you want — then double-click. You do not have to go there first: the studio takes you.
+
+> **Right-click answers the question without trying.** It lists every destination this asset has,
+> greying out those whose document is not open. Quicker than guessing.
+
 ---
 
 ## The troubles that show no message
@@ -378,30 +402,6 @@ If the cursor is normal and nothing appears anyway, it is elsewhere: a **selecti
 outside the area you are painting — the brush, the eraser and the bucket only act inside it. `⌘D`
 drops it.
 
-### "I double-click an asset and nothing happens"
-
-**By far the most common one.** And it is neither a bug nor a damaged file.
-
-**The cause.** Double-click **never opens a tab**: it sends the asset into the tab already in
-front. With no tab open, or with a tab that has no use for what you are sending it, nothing
-happens — and nothing says so.
-
-| You double-click… | You need, in front of you… |
-|---|---|
-| a picture, to make it a sky | a **sky** tab open (Skyboxes workspace) |
-| a sound, to edit it | a **sound** tab open (Audio workspace) |
-| a medium, to edit it into a cut | a **sequence** tab open (Video workspace) |
-| a picture, to paint on it | an **image** tab open (Image workspace) |
-
-**What to do.**
-
-1. Check the workspace at the top of the window: are you in the right one?
-2. Check that a tab is actually open — if not, the `+` button on the left rail creates one.
-3. Only then, double-click.
-
-> **The 3D scene and the material are the different ones.** Neither receives anything by
-> double-click, whatever the asset: a texture takes a picture dragged onto its preview, and the
-> 3D viewport accepts no drops. See [What does not exist yet](18-limits.md).
 
 ### "⌘Z does nothing"
 
@@ -528,7 +528,7 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 | No waves on the audio track | the same |
 | "Video preparation unavailable" although `which ffmpeg` finds one | run `ffmpeg -version`: the binary exists but no longer starts |
 | "The keychain did not give your accounts back" | unlock the keychain, then start again — nothing was lost |
-| Double-clicking an asset has no effect | open a tab first, with `+` on the left rail |
+| "This asset has nowhere to go" | open a document able to receive it, with `+` on the left rail |
 | "This panel ran into an error" | click **Retry** — the rest of the window is fine |
 | `⌘Z` has no effect | activate the right tab |
 | Black 3D canvas | close and reopen the tab |

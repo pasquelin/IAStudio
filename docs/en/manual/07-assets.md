@@ -84,7 +84,7 @@ The message says which of the three cases you are in, because they call for diff
 | Gesture | Effect |
 |---|---|
 | **Click** | selects — the Inspector, on the right, shows its information |
-| **Double-click** | sends the asset into **the tab in front of you** |
+| **Double-click** | sends the asset into whichever document can take it, switching workspace if need be |
 | **Right-click** | lists **every** destination it has |
 | **Drag and drop** | drops the asset wherever you release it |
 
@@ -111,33 +111,40 @@ sky.
 deliberate: a menu whose length changes with what is open is a menu you cannot learn. A greyed row
 tells you what to do — open a document in that workspace — where a missing row tells you nothing.
 
-It is also the answer to the double-click trap: when nothing moves, right-click shows in one go
-what this asset can do, and what is missing for it to do it.
+It is also what to look at when double-click answers "This asset has nowhere to go": right-click
+shows in one go what this asset can do, and what is missing for it to do it.
 
 ### Double-click does not do what you think
 
 **It never opens a new tab.** This is the point that surprises everybody once, and only once:
-double-click **sends** the asset into the document already in front.
+double-click **sends** the asset into a document that is already open. It creates none.
 
-What that gives you, depending on which tab is in front:
+It is not a prisoner of the tab you are looking at, though: **it crosses workspaces**. A document
+open elsewhere — in another workspace, behind another tab — is a valid destination, and sending
+the asset there takes you along.
 
-| The tab in front is… | Double-clicking an asset… |
+Two rules, in this order:
+
+1. **The tab in front of you wins**, as long as it can take that asset. Double-clicking a picture
+   while an image is open lays it down as a layer, full stop.
+2. **Otherwise the cascade decides** between the documents open elsewhere, always in the same
+   order: sky, 3D scene, audio take, image, sequence, material.
+
+| What you double-click | Where it goes |
 |---|---|
-| a **sky** (Skyboxes workspace) | sets the picture as the sky — only pictures from the project are accepted |
-| a **sound** (Audio workspace) | loads that take into the editor, if it is indeed a sound |
-| a **sequence** (Video workspace) | drops a clip onto a track, at the playhead |
-| an **image** (Image workspace) | lays the picture down as one more layer, already armed |
-| a **3D scene** | brings the mesh into the scene, if it is indeed a mesh |
-| a **texture** | **nothing at all** — a material is filled by dragging |
-| no tab open | **nothing at all** |
+| a **picture**, a **texture**, a **sky** | sky, layer, sequence or base colour — whichever is open |
+| a **mesh** | the open 3D scene |
+| a **sound** | the open audio take, or a track of the sequence |
+| a **video** | the open sequence |
 
-**Nothing warns you when nothing happens.** No message, no visible refusal: the double-click is
-simply inert. If you double-click and nothing moves, the question to ask is **"which tab is in
-front?"**, never "is this asset broken?".
+The sequence takes **everything** — which is what earns it its place at the end of the cascade:
+it only picks an asset up when no more specific destination claims it.
+
+**A double-click that leads nowhere now says so**: "This asset has nowhere to go". That happens
+when no document able to receive it is open — not when the asset is broken.
 
 > **To open a document, use the `+` button on the left rail**, in the workspace you want. It
-> creates a fresh document. Double-click is then how you feed material into it — where the
-> workspace can take any.
+> creates a fresh document. Double-click is then how you feed material into it.
 
 ### What drag and drop can do today
 
