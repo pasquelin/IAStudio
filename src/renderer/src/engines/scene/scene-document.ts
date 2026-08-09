@@ -26,7 +26,15 @@ import {
   isVector3,
   type PropertySpec,
 } from './property-fields'
-import { EMPTY_SCENE, shadowDefaults, type SceneNode, type SceneState } from './scene-state'
+import {
+  DEFAULT_MATERIAL,
+  DEFAULT_SPRITE,
+  DEFAULT_TEXT,
+  EMPTY_SCENE,
+  shadowDefaults,
+  type SceneNode,
+  type SceneState,
+} from './scene-state'
 
 /** What a saved scene holds. The selection is session state, and is deliberately left out. */
 export type ScenePayload = { nodes: readonly SceneNode[]; environment: EnvironmentRef }
@@ -69,9 +77,24 @@ export function sceneFromPayload(payload: unknown): SceneState {
  */
 function revived(node: SceneNode): SceneNode {
   const filled = { ...node, ...withDefaults(node) }
+
+  // Every descriptor a spec table describes is laid over its default, so a field the table has
+  // gained since the file was written arrives with a value instead of `undefined`. `measures`
+  // is what lets such a file through in the first place; this is the other half of the same
+  // rule, and one without the other would revive a sprite whose opacity is nothing at all.
+  if (filled.type === 'mesh') {
+    return { ...filled, material: { ...DEFAULT_MATERIAL, ...filled.material } }
+  }
+  if (filled.type === 'sprite') {
+    return { ...filled, sprite: { ...DEFAULT_SPRITE, ...filled.sprite } }
+  }
   if (filled.type !== 'text') return filled
 
-  return { ...filled, text: { ...filled.text, font: readFontRef(filled.text.font) } }
+  return {
+    ...filled,
+    material: { ...DEFAULT_MATERIAL, ...filled.material },
+    text: { ...DEFAULT_TEXT, ...filled.text, font: readFontRef(filled.text.font) },
+  }
 }
 
 /** The flags, filled in where the file holds none — `null` included. */
@@ -143,6 +166,22 @@ function describes(value: unknown, table: SpecTable): boolean {
   return Object.entries(fields).every(([name, spec]) => matches(value[name], spec))
 }
 
+/**
+ * A field the table describes, or absent — and absent means the default, which `revived` fills.
+ *
+ * This is what keeps a field ADDED to a spec table from deleting the node out of every document
+ * written before it existed. The tables are exhaustive by typecheck, so a new field is required
+ * of files that could not have carried it the moment it lands, and a node that fails its guard
+ * is dropped in silence — indistinguishable from a node that never existed.
+ *
+ * Only `undefined`, never `null`: the colour and the texture slots read `null` as a value of
+ * their own, and a number stored as `null` is a file saying something wrong rather than saying
+ * nothing.
+ */
+function measures(value: unknown, spec: PropertySpec): boolean {
+  return value === undefined || matches(value, spec)
+}
+
 function matches(value: unknown, spec: PropertySpec): boolean {
   if (spec.control === 'color') return typeof value === 'string'
   if (spec.control === 'vector3') return isVector3(value)
@@ -155,17 +194,19 @@ function isMaterial(value: unknown): boolean {
   if (!isRecord(value) || value.kind !== 'standard') return false
   // `null` means the studio's own colour, resolved when the mesh is built.
   if (value.color !== null && typeof value.color !== 'string') return false
-  if (!MEASURED_MATERIAL.every(([name, spec]) => matches(value[name], spec))) return false
+  if (!MEASURED_MATERIAL.every(([name, spec]) => measures(value[name], spec))) return false
 
-  return TEXTURE_SLOTS.every(slot => isTextureRef(value[slot]))
+  // A slot added to `TEXTURE_SLOTS` is the same trap as a field added to a table, and the
+  // default it revives with — no texture — is the one absence already means.
+  return TEXTURE_SLOTS.every(slot => value[slot] === undefined || isTextureRef(value[slot]))
 }
 
 function isSprite(value: unknown): boolean {
   if (!isRecord(value)) return false
   if (value.color !== null && typeof value.color !== 'string') return false
-  if (!MEASURED_SPRITE.every(([name, spec]) => matches(value[name], spec))) return false
+  if (!MEASURED_SPRITE.every(([name, spec]) => measures(value[name], spec))) return false
 
-  return isTextureRef(value.map)
+  return value.map === undefined || isTextureRef(value.map)
 }
 
 /**
@@ -176,7 +217,7 @@ function isSprite(value: unknown): boolean {
 function isText(value: unknown): boolean {
   if (!isRecord(value) || typeof value.value !== 'string') return false
 
-  return Object.entries(TEXT_SPECS).every(([name, spec]) => matches(value[name], spec))
+  return Object.entries(TEXT_SPECS).every(([name, spec]) => measures(value[name], spec))
 }
 
 function isTextureRef(value: unknown): boolean {
