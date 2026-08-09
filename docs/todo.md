@@ -26,6 +26,12 @@ une livraison (§ 0), puis ce qui perd du travail sans le dire (§ 1), puis une 
 qui déplace des surfaces que tout le reste décrit (§ 2), puis ce qui bloque un geste (§ 3), ce qui
 fait douter (§ 4), ce qui manque (§ 5 à § 7), et enfin ce qui coûtera plus tard (§ 8, § 9).
 
+**Chaque entrée commence par le geste attendu, avant tout diagnostic.** Une phrase qui dit ce que
+l'utilisateur doit pouvoir faire à l'écran — pas ce que le code fait, pas la cause, pas le remède. La
+raison est un défaut réel : la dictée a quatre documents de conception et un ADR, et le geste qu'elle
+devait servir — cliquer, parler, couper — **n'était écrit nulle part**. Une entrée sans son geste
+décrit un mécanisme au lieu d'un besoin, et se livre « conforme » sans être utilisable.
+
 **Ce qui se traite d'un bloc est écrit d'un bloc.** Plusieurs entrées partagent leur code, leurs clés
 i18n ou leur test : les séparer ferait écrire deux fois la même chose. Chaque regroupement dit en une
 phrase **pourquoi** il en est un — et un regroupement qui ne se justifie pas est un regroupement à
@@ -165,6 +171,9 @@ sous la porte.
 
 ### 35. Trois branchements que la couverture certifie et qu'aucun test ne tient
 
+**Le geste attendu.** Casser une ligne de `frameSelection`, du builder BVH ou du quantificateur d'`isSprite` doit
+faire rougir un test. Aujourd'hui les trois passent, et la porte est verte.
+
 **Vu le 9 août 2026**, par relecture par mutation — la couverture était verte sur les trois.
 
 - **`SceneRenderer.frameSelection` → `viewport.refit()`.** Vider entièrement le corps de
@@ -201,6 +210,9 @@ n'a cette propriété.
 
 ### 37. Un garde dérivé de sa table rend tout futur champ obligatoire, en silence
 
+**Le geste attendu.** Ajouter un champ à une table de specs ne doit **jamais** faire disparaître un nœud des
+documents déjà enregistrés.
+
 **Vu le 9 août 2026**, sur `isSprite`, mais la dette est plus large.
 
 `SpriteSpecs` est exhaustif sur `SpriteDescriptor` moins `map` : un champ ajouté est **forcé par le
@@ -224,6 +236,8 @@ que la question des layouts touche. Les prendre séparément ferait écrire deux
 d'échec.
 
 ### 15. Un panneau ne déclare pas ce dont il a besoin — l'Explorateur sans projet
+
+**Le geste attendu.** Depuis l'Explorateur sans projet, ouvrir ou créer un projet **sans repasser par l'accueil**.
 
 **Demandé le 9 août 2026.** Sans projet ouvert, pas d'Explorateur : un projet est le dossier qui tient
 les documents et les assets.
@@ -272,6 +286,10 @@ exige un projet, soit il faut dire ce que devient ce qu'il produit.
 ---
 
 ### 16. Ouvrir un projet ne dit rien quand ça rate, et le manifeste n'est pas défendu
+
+**Le geste attendu.** Désigner un dossier qui n'est pas un projet doit afficher « Ce dossier n'est pas un projet
+Scenario » — pas un `ENOENT` brut. Et un projet écrit par une version future doit être **refusé**,
+pas aplati.
 
 **Demandé le 9 août 2026**, à la suite de l'entrée 15 : c'est le même bouton qui va ouvrir ce
 sélecteur. Le but énoncé — **un projet reste fiable même modifié de l'extérieur, et ce qui rate le dit
@@ -323,6 +341,10 @@ un chantier, il se traite d'un bloc.
 
 ### Où vivent les layouts — à trancher, et ce n'est pas un oubli
 
+**Le geste attendu, et c'est la question même.** Ouvrir le même projet sur une autre machine et
+y retrouver son arrangement de panneaux — ou l'assumer attaché à la machine. **Les deux se défendent ;
+ce qui ne se défend pas est que la spec dise l'un et le code l'autre.**
+
 **C'est une divergence.** La conception le prévoit — « `layouts/` : dispositions Dockview
 sérialisées, par espace », § 5 de `docs/specs/2026-08-06-scenario-studio-design.md`. L'implémentation a
 pris l'autre chemin : les arrangements vivent dans le `localStorage` du renderer
@@ -344,6 +366,9 @@ dossier.
 ## 1.3 L'écriture sur le disque
 
 ### 38. Les écritures de dossier de `documents.ts` gardent leur propre nettoyage
+
+**Le geste attendu.** Quand l'enregistrement d'un document dossier échoue, lire l'erreur qui dit **pourquoi** — pas
+celle du ménage qui a suivi.
 
 **Vu le 9 août 2026**, en mutualisant l'écriture atomique de fichier.
 
@@ -370,6 +395,9 @@ décrivent** : la traiter après elles les ferait toutes mentir. C'est la seule 
 fichier dont la position dans l'ordre vient de sa portée et non de sa gravité.
 
 ### 24. L'Explorateur et Apps passent au rail gauche, dans toute l'application
+
+**Le geste attendu.** Trouver l'Explorateur et les Apps **à gauche, sous la génération**, dans les sept espaces comme
+sur l'accueil.
 
 **Décidé le 9 août 2026, et précisé le même jour : ils vont en MOITIÉ BASSE de la colonne gauche,
 sous les deux panneaux de génération.** Pas un troisième et un quatrième onglet qui prennent leur
@@ -449,12 +477,54 @@ même moitié et la même rangée de rail partout, ce que l'invariant existe pr�
 
 ---
 
-# 3. Ce qui ne s'atteint ni au clavier ni au lecteur d'écran
+# 3. Les gestes qui n'aboutissent pas
 
-Quatre entrées, trois sous-systèmes. Aucune ne se voit sur une capture : elles se constatent en
+Cinq entrées. La première échoue **complètement et en silence** ; les autres ne se constatent qu'en
 lâchant la souris.
 
-## 3.1 Les surcouches flottantes — un seul lot, trois composants
+## 3.1 La dictée — le geste demandé n'a jamais existé
+
+### 41. Trois micros pour une session, et le texte n'atterrit nulle part
+
+**Le geste attendu.** Je clique le micro d'un champ, je parle, je reclique : **ce que j'ai dit est
+écrit dans ce champ-là**. Rien d'autre ne bouge à l'écran.
+
+**Vu le 9 août 2026, capture à l'appui** — un formulaire d'App à trois champs texte : les **trois**
+micros passent en bleu ensemble, les **trois** affichent « Je vous écoute… », et rien ne s'écrit.
+
+**Les trois symptômes ont une seule cause : rien ne relie une session de dictée à un champ.**
+Vérifié dans le code, fichier par fichier :
+
+| Ce qui est vu | Ce que le code fait |
+|---|---|
+| Les trois micros s'allument | `dictationAccessory` accroche un `DictationField` sous **chaque** champ `longText`, et ce composant **ne sait pas sous quel champ il est** — sa JSDoc l'assume : « It holds nothing about the field it sits under ». Il lit un store **global** : une session, un booléen, N boutons branchés dessus |
+| Rien ne s'écrit | `insertAtCaret` écrit dans `document.activeElement`. **Le clic sur le micro y met le bouton** — c'est un `<button>`, et rien ne préserve le focus du champ. `editableOf` rend `null`, la fonction répond `false`, et **personne ne lit ce `false`** |
+
+**Le geste naturel est donc structurellement impossible** : cliquer arme le micro *et* fait perdre
+la cible. Ça ne peut marcher qu'en recliquant dans le textarea après avoir armé — ce que personne ne
+devine.
+
+**Ce que ça demande, dans cet ordre :**
+
+1. **Un seul micro à l'écran par session.** Soit le bouton descend dans la ligne d'état comme le
+   reste de l'état de dictée — ce que `DictationButton` fait déjà pour le téléchargement et les
+   échecs, avec sa raison écrite : « a form with two long text fields would otherwise offer two
+   buttons to download the same 640 MB » —, soit `DictationField` reçoit l'identité de son champ et
+   n'allume que le sien.
+2. **Le clic ne doit pas voler le focus.** `onPointerDown` + `preventDefault` sur le bouton, le
+   patron que `ContextMenu` emploie déjà pour une autre raison.
+3. **Retenir le champ visé plutôt que le deviner.** Mémoriser le dernier `editableOf` focalisé au
+   moment où la session s'ouvre, et écrire là — `activeElement` ne peut pas répondre pendant qu'un
+   bouton est enfoncé.
+4. **Un échec d'insertion doit se dire.** `insertAtCaret` rend `false` et son appelant l'ignore
+   (`stores/dictation.ts:108`) : une phrase dictée disparaît sans un mot.
+
+> **Le modèle local reste — tranché le 9 août 2026.** Parakeet TDT 0.6b, 640 Mo, dans son propre
+> `utilityProcess` : **rien de ce qui est dicté ne quitte la machine**, et rien ne se facture à la
+> minute. C'est `ADR-17`, et la question a été reposée à l'utilisateur qui l'a confirmée. **Les 640 Mo
+> ne sont pas le défaut ; le défaut est qu'on les télécharge pour un geste qui n'aboutit pas.**
+
+## 3.2 Les surcouches flottantes — un seul lot, trois composants
 
 **Regroupées** : `Flyout`, `ContextMenu` et `MenuRow` sont le même sous-système du design
 system, l'entrée 21 demande déjà de corriger le rôle de `Flyout` dans le même geste, et le
@@ -466,6 +536,9 @@ reviendrait à écrire trois fois la gestion d'`Échap`.
 > du studio.
 
 ### 21. Le volet du journal ne se ferme pas au clic à côté
+
+**Le geste attendu.** Cliquer à côté du volet du journal le referme. `Échap` aussi. Passer à une autre application
+aussi.
 
 **Vu le 9 août 2026, capture à l'appui.** Un clic en dehors du volet devrait le refermer. La seule
 sortie est de recliquer sur « 1 échec » — ce que personne n'a le réflexe de faire : c'est un
@@ -501,6 +574,9 @@ troisième compte plus qu'il n'y paraît dans un studio.
 
 ### 32. Un menu contextuel ne se prend jamais au clavier
 
+**Le geste attendu.** Ouvrir un menu contextuel au clavier, le parcourir aux flèches, en sortir par `Échap`, et
+retrouver le focus là où on l'avait laissé.
+
 **Vu le 9 août 2026.** `design/ContextMenu.tsx` est un `createPortal` vers `document.body` portant
 `role="menu"`, avec des `MenuRow` en `role="menuitem"`. Il n'a **aucune gestion du focus** : ni entrée
 au focus, ni `tabIndex`, ni piège de focus, ni traitement des flèches, ni restauration à la fermeture.
@@ -516,9 +592,12 @@ flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le me
 
 ---
 
-## 3.2 Les infobulles
+## 3.3 Les infobulles
 
 ### 30. Une infobulle ne se laisse pas survoler
+
+**Le geste attendu.** Amener le pointeur sur une infobulle pour la lire jusqu'au bout, sans qu'elle se referme en
+chemin.
 
 **Vu le 9 août 2026.** `TooltipHost` ne pose pas `clickable`, donc la bulle garde le
 `pointer-events: none` de la feuille de style du cœur, à `offset: 8` de son ancre : aller vers elle
@@ -533,7 +612,7 @@ avec ce que ça fait aux barres flottantes qui en portent.
 
 ---
 
-## 3.3 Les raccourcis hors registre
+## 3.4 Les raccourcis hors registre
 
 **Elle était regroupée avec la garde de format des signatures ; ce regroupement est tombé** — la
 garde est livrée (`isSignature`, `feat/pinceau-durete`, 9 août 2026). L'entrée reste entière et sa
@@ -541,6 +620,9 @@ phrase reste vraie : `Alt+Flèches` ne passant toujours pas par le registre, il 
 cette garde. Elle se traite désormais seule.
 
 ### 34. Le raccourci de réordonnancement n'est pas remappable
+
+**Le geste attendu.** Changer le raccourci de réordonnancement des espaces depuis l'écran des raccourcis, comme
+n'importe quel autre.
 
 `Alt+Flèches` est codé dans `TitleBar` et annoncé par `aria-keyshortcuts`, mais il ne passe pas par le
 registre de commandes — donc il n'apparaît pas dans les réglages de raccourcis, et
@@ -565,6 +647,9 @@ Elle est enfreinte des deux manières possibles : **la sélection ne se voit pas
 (20), et **elle se peint là où elle n'existe pas** (40).
 
 ### 40. La même liste s'allume en bleu, en gris, ou pas du tout
+
+**Le geste attendu.** Voir d'un coup d'œil quelle ligne est sélectionnée — et que ce soit **la même couleur** dans les
+trois panneaux.
 
 **Vu le 9 août 2026, captures à l'appui** — trois panneaux côte à côte, trois aspects : l'Explorateur
 peint une ligne en **bleu plein**, Styles en **gris**, Apps en **gris avec un liseré**.
@@ -597,6 +682,8 @@ jeton n'est pas nécessaire : `chipSkin` a déjà tranché la même question dan
 
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
+**Le geste attendu.** En vue Icônes, voir lesquelles des vignettes sont sélectionnées.
+
 **Vu le 9 août 2026** : l'étagère annonçait trois assets sélectionnés — l'inspecteur affichait
 « Éléments 3 » — et les trois carrés étaient rigoureusement identiques aux autres.
 
@@ -624,6 +711,9 @@ sélection **par dessous**.
 ## 4.2 L'Explorateur n'explore rien
 
 ### 39. Le panneau s'appelle « Explorateur » et liste six documents à plat
+
+**Le geste attendu.** Parcourir le dossier du projet comme un **arbre** — dossiers dépliables, fichiers dedans — au
+lieu d'une liste plate de documents.
 
 **Vu le 9 août 2026** — « pourquoi l'Explorateur ne ressemble pas à un explorateur ? ». La référence
 donnée est l'arbre de projet d'un IDE : le dossier racine, ses sous-dossiers, dépliables, avec les
@@ -667,6 +757,9 @@ de fond, et le correctif de l'une se juge en regardant l'autre.
 
 ### 12. L'accueil ne dit pas ce que cliquer va faire — et ça n'ouvre jamais le fichier
 
+**Le geste attendu.** Sur l'accueil, savoir **avant** de cliquer ce que la vignette va faire — et pouvoir simplement
+ouvrir le fichier.
+
 **Vu le 9 août 2026, capture à l'appui.** « Je clique sur une vignette, il y a une activité, mais ça
 n'ouvre pas le fichier, et je ne comprends pas ce qui se passe. »
 
@@ -696,6 +789,8 @@ Ce n'est donc pas un défaut de compréhension mais **d'affordance**.
 
 ### 13. L'activité est affichée deux fois
 
+**Le geste attendu.** Ne pas voir deux fois la même activité.
+
 La bande « Activité récente » de l'accueil montre ce que le volet du bas montre déjà.
 
 C'est bien la **même source** : `home/sections/Activity.tsx` lit `useActivity(state => state.entries)`
@@ -718,6 +813,8 @@ dire *ce qu'est* une App et dire *ce qu'elle produit* sont deux moitiés du mêm
 dans une colonne qu'elle quitte.
 
 ### 19. « Apps » ne dit pas ce que le panneau contient
+
+**Le geste attendu.** Comprendre ce qu'est une App sans quitter le panneau.
 
 **Vu le 9 août 2026** — « c'est quoi App, le titre je ne le comprends pas ». Le panneau liste seize
 entrées et ne dit nulle part ce qu'elles sont.
@@ -745,6 +842,8 @@ coûtent une clé i18n dans chaque bundle.
 ---
 
 ### 23. Une App n'appartient à aucun espace, et rien ne dit ce qu'elle produit
+
+**Le geste attendu.** Savoir ce qu'une App produit **avant** de la lancer, et où le résultat est parti **après**.
 
 **Constaté le 9 août 2026** — « je le vois sur toutes les sections ». C'est exact : `TOOL_PLACEMENTS`
 déclare `apps` pour `WORKSPACE_IDS`, et `searchApps` ne filtre que `privacy: 'public'`. **La même
@@ -849,6 +948,9 @@ la clé API** — il faudrait la réduire avant, et `log.ts` l'écrit en gros.
 ---
 
 ### 36. Un sprite refuse la poignée de rotation, mais l'inspecteur laisse encore taper l'angle
+
+**Le geste attendu.** Sur un sprite seul, la ligne Rotation de l'inspecteur ne doit pas accepter une valeur qui ne se
+voit nulle part.
 
 **Vu le 9 août 2026.** `gizmoTargetFor` refuse désormais la poignée sur un sprite seul et sans
 enfant — three ne lit jamais la rotation d'objet d'un sprite, vérifié dans `sprite.glsl.js` de three
@@ -1101,6 +1203,9 @@ l'une des deux copies sans savoir que l'autre existe.
 
 ### 33. Le même algorithme de réconciliation d'ordre, écrit deux fois
 
+**Le geste attendu.** Aucun geste — c'est une duplication, et elle coûtera au premier qui modifiera une des deux
+copies sans savoir que l'autre existe.
+
 **Vu par deux agents de revue indépendamment.** `workspaceOrder` (`shared/domain/workspace.ts`) et
 `homeSections` (`shared/domain/home.ts`) portent la même boucle à deux passes : garder les ids stockés
 que le build connaît encore, puis réinsérer chaque entrée manquante du registre **juste après son
@@ -1126,6 +1231,9 @@ plus en indirection que deux fonctions de dix lignes ne rendent.
 
 ### 29. `Inter` est déclarée comme police de l'interface, et n'est chargée nulle part
 
+**Le geste attendu.** Que l'interface s'affiche avec la **même** police sur les trois plateformes, et qu'un libellé
+coupe au même endroit partout.
+
 `--font-sans` nomme `'Inter', system-ui, …` dans `index.css`, mais **aucun `@font-face`, aucune
 dépendance dans `package.json`, aucun lien dans `index.html`** : la pile retombe sur `system-ui`,
 c'est-à-dire une police différente sur chacune des trois plateformes que le pipeline empaquette.
@@ -1145,6 +1253,8 @@ nommer. **La nommer sans la charger est la seule qui mente.**
 Une entrée, et elle ne bouge pas sans une mesure sur l'application lancée.
 
 ### 4. Aucun sélecteur de couleur ne s'ouvre
+
+**Le geste attendu.** Cliquer un carré de couleur ouvre un sélecteur.
 
 Les **quatre** `input type="color"` de l'application sont muets — pinceau, inspecteur, formulaire de
 génération, réglages. Ce n'est donc pas un défaut de la barre d'outils : la cause est sous le renderer.
