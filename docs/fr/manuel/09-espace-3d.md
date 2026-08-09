@@ -335,7 +335,7 @@ Trois choses valent d’être sues :
 
 Le panneau **Scène**, dans la colonne de droite, montre tout ce que la scène contient, sous
 forme d’arborescence. Il s’appelait l’Explorateur ; celui-ci liste maintenant les documents du
-projet, ce qui est une autre question et vaut dans les six espaces.
+projet, ce qui est une autre question et vaut dans tous les espaces.
 
 - **Cliquez** une ligne pour sélectionner l’objet — avec `⇧`, `⌘` ou `Ctrl` pour en choisir
   plusieurs, exactement comme dans la vue.

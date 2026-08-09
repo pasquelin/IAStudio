@@ -19,7 +19,7 @@ require a starting image. Some return in ten seconds, others in three minutes.
 
 ## The Models panel
 
-It sits in the left column, in the same place in all six workspaces. It lists the catalogue
+It sits in the left column, in the same place in every workspace. It lists the catalogue
 **for the workspace you are in**: in the Image
 workspace, image models; in the 3D workspace, 3D models.
 

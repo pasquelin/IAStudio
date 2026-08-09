@@ -460,7 +460,7 @@ au lieu de glisser, ce qui est bien plus agréable qu’un glissement haché.
 
 ### « J’ai perdu mon travail en fermant un onglet »
 
-**Ce n’est plus censé pouvoir arriver.** Les six types de documents s’enregistrent, et fermer un
+**Ce n’est plus censé pouvoir arriver.** Tous les types de documents s’enregistrent, et fermer un
 onglet dont le travail n’est pas écrit pose la question avant de fermer : *Enregistrer*, *Ne pas
 enregistrer*, *Annuler*.
 

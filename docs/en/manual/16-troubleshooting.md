@@ -445,7 +445,7 @@ which is far more pleasant than a jerky slide.
 
 ### "I lost my work when I closed a tab"
 
-**This is not supposed to be possible any more.** All six document kinds save, and closing a tab
+**This is not supposed to be possible any more.** All document kinds save, and closing a tab
 whose work is not written asks first: *Save*, *Don't save*, *Cancel*.
 
 **If no question came up**, the document was clean — no dot (`•`) beside its name. Two known

@@ -25,10 +25,10 @@ Three categories, not to be confused:
 
 ---
 
-## Saving: all six types are there
+## Saving: every type is there
 
 **This chapter long opened with "three documents out of six do not save". That is no longer
-true.** All six write into the project folder and open back exactly as they were.
+true.** All seven write into the project folder and open back exactly as they were.
 
 | Document | Extension | Saves? |
 |---|---|---|
@@ -38,6 +38,7 @@ true.** All six write into the project folder and open back exactly as they were
 | Video sequence | `.seq` | **yes** |
 | Edited sound | `.aud` | **yes** |
 | Sky | `.sky` | **yes** |
+| Graph | `.graph` | **yes** — though it cannot run yet |
 
 **What does not save, and that is deliberate:**
 
