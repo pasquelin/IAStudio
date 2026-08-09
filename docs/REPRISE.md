@@ -55,7 +55,7 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 >
 > **Propose-moi un ordre et attends ma réponse** avant d’ouvrir un worktree. Les candidats, sans
 > priorité imposée : les **étapes 7 à 9 du node editor** — compiler, valider, exécuter (§ 4) ·
-> l’**étape 8 des Textures** (§ 3.4) · le **backlog qualité P1** (`.claude/loop/BACKLOG.md`, dont
+> le **backlog qualité P1** (`.claude/loop/BACKLOG.md`, dont
 > les statuts ont déjà menti trois fois : vérifie avant de prendre) · les **3 constats restants du
 > § 3.3** et l’export en six faces du skybox (§ 3.5) · les **deux dernières dettes transverses**
 > du § 3.6.
@@ -412,9 +412,9 @@ budget de couverture (§ 3.1), ce qui est précisément pourquoi ce chemin n’a
 
 ---
 
-L’espace **Textures** est le prochain manque fonctionnel par ordre de valeur hors workflows :
-l’**étape 8** (§ 3.4) est écrite et non commencée, et **ni les dérivations ni le tiling, livrés le
-9 août, n’ont été vus à l’écran** — c’est la seule chose de cet espace qui reste à regarder.
+L’espace **Textures** n’a plus de manque fonctionnel écrit : les étapes 6 à 8 sont livrées. Ce qui
+reste est un regard — **ni les dérivations, ni le tiling, ni l’export n’ont été vus à l’écran**, et
+c’est la seule chose de cet espace qui demande que l’application soit fermée d’abord.
 
 **Des dettes transverses du § 3.6, il ne reste que deux lignes** : le **décodage du clone IPC** —
 73 % du coût d’un ⌘S, intouché — et la **coalescence d’undo volée par une commande asynchrone**.
@@ -813,17 +813,51 @@ shader. Les trois vivent dans `preview`, aucun ne touche la matière.
 - **Un carré passe un test d’axes.** `tiling` à 3×3 laissait `repeat.set(y, x)` vert ; c’est le
   test voisin qui mordait à sa place. Toute assertion sur deux axes prend deux valeurs différentes.
 
-### L’étape écrite et non commencée
+### L’étape 8 est livrée — ce qu’elle a appris
 
-**8 — Export.** glTF/GLB, Unity, Unreal, Roblox, canaux bruts. Empaquetage ORM (AO=R, Roughness=G,
-Metallic=B) **en une passe shader**. L’écriture disque passe par le main. `GLTFExporter` vient de
-`three/addons`. C’est ici que « aperçu en 1024, export en pleine résolution » s’applique.
+Cinq cibles, décrites comme **données** dans `shared/domain/texture-export.ts` : une recette dit
+quel canal alimente quelle composante, et une passe shader unique les sert toutes.
+
+- **Le contexte hors écran est prémultiplié, et `alpha: false` ne l’atteint pas.** three met
+  `premultipliedAlpha: true` par défaut ; l’attribut `alpha` du constructeur ne choisit que la
+  couleur d’effacement. Une passe qui écrit des valeurs droites se fait diviser par son alpha à
+  `toBlob`. Toutes les passes du dépôt écrivaient alpha 1, ce qui l’a caché huit mois — le
+  `_MaskMap` d’Unity, seul alpha variable, sortait en (0,0,0,0) sur une surface rugueuse.
+  **Toute passe future qui écrit un alpha qui varie dépend de cette ligne.**
+- **Trois négations peuvent se croiser sur une composante** : celle de la recette, celle du canal
+  stocké à l’envers, celle d’une normale arrivée en DirectX. Elles se comptent au lieu de
+  s’enchaîner. Et une composante ne porte pas un booléen mais **deux bornes** — `0 → 1` ne fait
+  rien, `1 → 0` inverse, `0,3 → 0,7` est le remap du panneau. C’est `remapOf` de l’aperçu, que
+  `shared/` ne peut pas importer.
+- **Un réglage de rendu qui n’en est pas un.** `invertNormalGreen` ne dit pas comment afficher :
+  il dit dans quelle convention la normale est **arrivée**. Il descend donc jusqu’à l’export, seul
+  endroit où la convention d’un canal et celle d’une cible se rencontrent. Il reste stocké sous le
+  matériau parce que les `.tex` déjà écrits l’y portent — **dette nommée, pas réglée**.
+- **glTF ne porte ni déplacement ni pivot.** Pas de `displacementMap`, donc la hauteur ne part pas
+  et la géométrie ne se subdivise pas (196 000 triangles pour un cube, six Mo de sommets pour
+  rien) ; et `KHR_texture_transform` n’a **pas** de champ de pivot — `GLTFExporter` ne lit jamais
+  `texture.center`. Une rotation sort donc autour du coin quand l’aperçu tourne autour du milieu.
+  Écrit aux deux manuels. Le compenser dans l’offset n’est pas exact quand les deux axes de
+  répétition diffèrent.
+- **Un dossier, pas un fichier.** Les fichiers d’un export ne veulent rien dire séparés, et
+  `mkdir` n’en vide aucun : ré-exporter écrase fichier par fichier et laisse les périmés. Dit au
+  manuel plutôt que corrigé — vider le dossier de quelqu’un est un geste qu’on ne prend pas seul.
+- **Roblox refuse une carte au-delà de 1024 px.** Le seul plafond, et il ne vient pas de nous.
+
+**Ce qui reste, mesuré et non traité** : la cible glTF encode quatre PNG puis les redécode aussitôt
+pour les remonter en textures — un aller-retour d’encodeur pour des octets qu’elle n’écrit jamais,
+de l’ordre de trois à sept secondes sur un export 4K. Sortir un `ImageBitmap` de la passe
+l’éviterait, au prix d’une passe qui répond deux choses selon la cible.
 
 ### Vérifié à l’écran le 9 août — ne pas le redemander
 
-> **Les dérivations n’en font pas partie** : elles sont livrées et testées, jamais vues tourner.
-> C’est la seule chose de cet espace qui reste à regarder, et elle demande que l’application soit
-> fermée d’abord — le verrou d’instance unique.
+> **Trois choses n’en font pas partie** : les dérivations, le tiling et l’export. Livrés et
+> testés, jamais vus tourner. C’est tout ce qui reste à regarder dans cet espace, et cela demande
+> que l’application soit fermée d’abord — le verrou d’instance unique.
+>
+> Pour l’export, deux choses ne se jugent qu’à l’œil et qu’aucun test ne peut rendre : ce que
+> donne un `.glb` **ouvert ailleurs** (Blender, un moteur), et ce que vaut un `_MaskMap`
+> **relu par Unity**, puisque c’est un canal alpha et que rien ici n’en affiche un.
 
 Sphère éclairée, remap, masque de cavité, vue à plat : les quatre sont vus sur l’application
 lancée, et les cinq angles de revue ont rendu. Deux choses seulement en restent, parce qu’elles

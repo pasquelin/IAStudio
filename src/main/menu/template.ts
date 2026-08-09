@@ -23,7 +23,13 @@ import {
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
-import type { SceneAddRequest, SceneExportCommand, ToolRequest } from '@shared/ipc'
+import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
+import type {
+  SceneAddRequest,
+  SceneExportCommand,
+  TextureExportCommand,
+  ToolRequest,
+} from '@shared/ipc'
 
 /**
  * What the menu asks of the window it belongs to. One method per message rather than a
@@ -39,6 +45,7 @@ export type MenuActions = {
   runCommand: (command: CommandId) => void
   addNode: (request: SceneAddRequest) => void
   exportScene: (command: SceneExportCommand) => void
+  exportTexture: (command: TextureExportCommand) => void
 }
 
 /**
@@ -175,15 +182,35 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       click: () => actions.exportScene({ format, scope }),
     }))
 
-  /** Only where a scene is what is being edited: exporting an image document is another errand. */
-  const exportMenu: MenuItemConstructorOptions[] =
-    workspace === '3d'
-      ? [
-          { type: 'separator' },
-          { label: t.menu.exportScene, submenu: exportItems('scene') },
-          { label: t.menu.exportSelection, submenu: exportItems('selection') },
-        ]
-      : []
+  /** One engine per row, for the same reason a format is one: a dialog has no such control. */
+  const textureItems = (): MenuItemConstructorOptions[] =>
+    TEXTURE_EXPORT_TARGETS.map(target => ({
+      label: t.textureExportTargets[target],
+      click: () => actions.exportTexture({ target }),
+    }))
+
+  /**
+   * Only where the thing being edited is what the rows export. An image document has neither a
+   * scene nor a set of channels, and a row that exported nothing would still look like one.
+   *
+   * Returns rather than a nested ternary: this file's idiom is one flat arm per feature, and a
+   * third exporting space — skyboxes is the obvious next — would make that a triple.
+   */
+  const exportMenu = (): MenuItemConstructorOptions[] => {
+    if (workspace === '3d') {
+      return [
+        { type: 'separator' },
+        { label: t.menu.exportScene, submenu: exportItems('scene') },
+        { label: t.menu.exportSelection, submenu: exportItems('selection') },
+      ]
+    }
+
+    if (workspace === 'textures') {
+      return [{ type: 'separator' }, { label: t.menu.exportTexture, submenu: textureItems() }]
+    }
+
+    return []
+  }
 
   /**
    * A row that is exactly a command: its label, its accelerator and what it fires all come from
@@ -380,7 +407,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('document.save'),
           click: () => actions.runCommand('document.save'),
         },
-        ...exportMenu,
+        ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,
         { role: isMac ? 'close' : 'quit' },

@@ -15,6 +15,7 @@ import {
   type LogEntry,
   type SceneAddRequest,
   type SceneExportCommand,
+  type TextureExportCommand,
   type StudioBridge,
   type ToolRequest,
   type Unsubscribe,
@@ -124,6 +125,9 @@ const bridge: StudioBridge = {
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),
   },
+  texture: {
+    export: request => ipcRenderer.invoke(CHANNELS.textureExport, request),
+  },
   fonts: {
     list: () => ipcRenderer.invoke(CHANNELS.fontsList),
     read: family => ipcRenderer.invoke(CHANNELS.fontsRead, family),
@@ -146,6 +150,7 @@ const bridge: StudioBridge = {
     onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
+    onTextureExport: callback => subscribe<TextureExportCommand>(EVENTS.textureExport, callback),
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),

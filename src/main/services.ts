@@ -139,6 +139,8 @@ export type Services = {
   pickPath: (kind: PathKind) => Promise<string | null>
   savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
   pickSavePath: (name: string, extension: string) => Promise<string | null>
+  /** Where a folder the studio is about to fill goes — an exported texture is several files. */
+  pickFolder: () => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
@@ -726,6 +728,9 @@ export function createServices(settings: SettingsStore): Services {
     pickPath,
     savePicture,
     pickSavePath,
+    // The same picker the settings use for a folder: a second dialog with slightly different
+    // options is how two flows start behaving differently.
+    pickFolder: () => pickPath('folder'),
     reveal: file => shell.showItemInFolder(file),
     askUser,
     pickMedia: () => pickMedia(language()),

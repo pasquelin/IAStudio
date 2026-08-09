@@ -226,14 +226,18 @@ travail, et il est complet.
 - **l’enchaînement des dérivations** — calculer la hauteur depuis la couleur de base ne recalcule
   pas la normale qui en venait : chaque canal se recalcule à la demande, un par un ;
 - **l’import d’un fichier du disque** directement dans un canal. Le détour existe : importez
-  l’image dans le projet, puis posez-la sur la vignette du canal ;
-- **l’export** vers glTF, Unity, Unreal, Roblox.
+  l’image dans le projet, puis posez-la sur la vignette du canal.
+
+**L’export existe désormais** — glTF/GLB, Unity, Unreal, Roblox et les canaux bruts, par
+Fichier → Exporter la matière. Deux bornes à connaître : **Roblox refuse une carte au-delà de
+1024 px**, donc ses quatre fichiers sont ramenés sous ce plafond ; et le `.glb` part avec la
+forme de l’aperçu, faute pour un format d’objet de savoir porter une matière toute seule.
 
 Ce qui fonctionne aujourd’hui : générer une matière, poser une image dans chacun de ses huit
 canaux, en calculer quatre depuis un autre, juger sa répétition et mesurer ses coutures, régler tout ce
 dont elle est faite — rugosité et métal avec leur remappage, relief,
 émission, répétition —, la regarder sur cinq formes sous l’éclairage de votre choix, inspecter
-chaque canal à plat, et l’enregistrer.
+chaque canal à plat, l’enregistrer, et la sortir vers cinq destinations.
 
 ### L’opacité d’un canal ne se règle pas
 

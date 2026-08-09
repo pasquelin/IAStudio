@@ -325,11 +325,103 @@ is still waiting to be written.
 
 ---
 
+## Exporting the material
+
+Menu **File → Export the texture**, then the row of the engine that will receive it. The menu only
+appears in the Textures workspace, and it speaks to the **tab in front**: two open materials do
+not both answer one click.
+
+The studio asks for **a folder**, and creates a sub-folder inside it named after your document.
+The files of an export mean nothing apart — a base colour without its ORM beside it is half a
+material — so they travel together.
+
+### The five destinations
+
+| Row | What is written |
+|---|---|
+| **glTF / GLB** | **one file**, `.glb`, textures embedded, on the shape of the preview |
+| **Unity (URP)** | `_BaseMap`, `_BumpMap`, `_MaskMap`, `_EmissionMap`, `_ParallaxMap` |
+| **Unreal Engine** | `_BaseColor`, `_Normal`, `_ORM`, `_Emissive`, `_Height` |
+| **Roblox** | `_ColorMap`, `_NormalMap`, `_RoughnessMap`, `_MetalnessMap` |
+| **Raw channels** | the eight channels, one file each, cavity mask included |
+
+The channels leave as **PNG**, lossless: a channel is data before it is a picture, and JPEG would
+invent gradients exactly where relief is read. The first row writes a single `.glb` instead, which
+carries its pictures inside it.
+
+### What "packing" means
+
+An engine does not read eight files when three components are enough for it. Three grey channels
+fit into one picture, one per component — that is a *pack*, and each engine has its own:
+
+- **Unreal's `_ORM`**: occlusion on **red**, roughness on **green**, metallic on **blue**. It is
+  also what glTF reads, which takes the same picture for its occlusion and for its
+  metallic-roughness pair;
+- **Unity's `_MaskMap`**: metallic on **red**, occlusion on **green**, and **smoothness on
+  alpha**. One picture, to be assigned to **both** slots — the metallic one and the occlusion one;
+- **Roblox** packs nothing: its `SurfaceAppearance` takes exactly four separate maps.
+
+The computing happens **on the GPU, in one pass** per picture. A 4K picture is sixteen million
+pixels with three channels read per pixel: a JavaScript loop over them would freeze the window.
+
+### Two conventions the export reconciles for you
+
+**The green of a normal.** OpenGL and DirectX disagree on which way it points. The studio writes
+OpenGL; Unreal expects DirectX. So the export flips the green for Unreal, and for nobody else. And
+if you had ticked **Invert green** because your normal had arrived as DirectX, the export knows:
+it does not flip twice.
+
+**Roughness stored the other way round.** Scenario's converter sometimes answers with a
+*smoothness* map — the same picture read the other way. The studio keeps it as it arrived and
+remembers that it is inverted. So a `_Roughness` file does hold roughness, and Unity's `_MaskMap`
+does hold smoothness: the file name says what is inside it.
+
+### Four things worth knowing
+
+**Your range settings leave with it.** The double handle of the Material panel — the one that
+narrows roughness or metalness — exists in none of the four formats. So it is **written into the
+pixels**: a roughness narrowed to between 0.3 and 0.7 on screen leaves narrowed. One exception,
+and it is the whole reason that row exists: **the raw channels leave with no remap** — that is the
+row you pick precisely to get your pixels back as you dropped them. One thing is still applied to
+them: a roughness stored the other way round (a smoothness map) is put back the right way, because
+the file is called `_Roughness` and has to hold what it says.
+
+**Full resolution, not the preview's.** The export reads each channel at the size it is stored at.
+One exception, and it is not ours: **Roblox refuses a map above 1024 px**, so its four files are
+brought under that ceiling, keeping their proportions.
+
+**A picture no channel feeds is not written.** A material with neither occlusion nor metalness
+does not ship a flat grey `_ORM`: the whole point of that slot is that what is in it was measured.
+The missing components of a picture that *is* written take a neutral value — no occlusion, no
+metal.
+
+**Re-exporting overwrites file by file, and tidies nothing.** The same document exported twice to
+the same place rewrites the files of the same name, but **does not empty the folder**: exporting to
+Unreal and then to Roblox leaves both sets side by side, and a channel deleted in between leaves
+its stale file there. Empty the folder yourself if you want it to hold only the latest export.
+
+### What the `.glb` carries in addition
+
+It alone is an object rather than a set of files: it leaves with **the shape of the preview**, and
+with the settings of the Material panel that the format can hold: the tint, the roughness, the
+metalness, the strength of the normal, the occlusion intensity, the emission and its strength, and
+the tiling with its offset and rotation. Opened elsewhere, it looks like what you were judging on
+screen.
+
+Two things do not go in, for want of existing in the format: the **relief** — glTF has no
+displacement slot, so height leaves neither as a map nor as a strength — and the **centre of the
+rotation**. `KHR_texture_transform` has no pivot: a material exported with a rotation turns around
+the corner of the picture where the preview turns around the middle.
+
+The tiling **preview** (×1, ×2, ×4) is not part of it, and that is deliberate: judging a repeat and
+choosing one are two gestures, and only the one you chose belongs in a file.
+
+---
+
 ## What is still missing
 
 - **importing a file from disk** straight into a channel. Go through the project's import
-  (chapter 7), then drop the picture onto the thumbnail;
-- **export** to glTF, Unity, Unreal, Roblox.
+  (chapter 7), then drop the picture onto the thumbnail.
 
 The detail is in [What does not exist yet](18-limits.md).
 

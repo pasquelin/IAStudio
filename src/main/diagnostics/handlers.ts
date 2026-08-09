@@ -17,6 +17,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'texture.map': 'document',
   'texture.channel': 'document',
   'texture.seam': 'document',
+  // With the document, not the library: an export writes outside the project, and what its
+  // failure says something about is the texture that was open.
+  'texture.export': 'document',
   // A chunk three renamed upstream, so a material setting silently stopped applying. Read with
   // the document because that is where it shows — as a slider that moves nothing.
   'texture.shader': 'document',

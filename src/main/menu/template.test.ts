@@ -15,6 +15,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   runCommand: () => {},
   addNode: () => {},
   exportScene: () => {},
+  exportTexture: () => {},
   ...overrides,
 })
 
@@ -446,10 +447,41 @@ describe('the export menu', () => {
     expect(exportScene).toHaveBeenCalledWith({ format: 'usdz', scope: 'selection' })
   })
 
-  // Exporting an image document is another errand, with another writer behind it.
-  it('offers no export outside the 3D workspace', () => {
-    const file = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Fichier')
+  it('offers the five targets where a texture is what is being edited', () => {
+    const file = submenuOf(menuTemplate(options({ workspace: 'textures' })), 'Fichier')
 
-    expect(file.map(item => item.label)).not.toContain('Exporter la scène')
+    expect(submenuOf(file, 'Exporter la matière').map(item => item.label)).toEqual([
+      'glTF / GLB (.glb)',
+      'Unity (URP)',
+      'Unreal Engine',
+      'Roblox',
+      'Canaux bruts',
+    ])
+  })
+
+  it('asks for the engine the row names', () => {
+    const exportTexture = vi.fn()
+    const file = submenuOf(
+      menuTemplate(options({ workspace: 'textures', actions: actions({ exportTexture }) })),
+      'Fichier',
+    )
+    const roblox = submenuOf(file, 'Exporter la matière')[3]
+
+    roblox?.click?.(...([] as never[] as [never, never, never]))
+
+    expect(exportTexture).toHaveBeenCalledWith({ target: 'roblox' })
+  })
+
+  // Exporting an image document is another errand, with another writer behind it.
+  it('shows each workspace only the export that belongs to it', () => {
+    const labels = (workspace: WorkspaceId): (string | undefined)[] =>
+      submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(item => item.label)
+
+    expect(labels('3d')).toContain('Exporter la scène')
+    expect(labels('3d')).not.toContain('Exporter la matière')
+    expect(labels('textures')).toContain('Exporter la matière')
+    expect(labels('textures')).not.toContain('Exporter la scène')
+    expect(labels('image')).not.toContain('Exporter la scène')
+    expect(labels('image')).not.toContain('Exporter la matière')
   })
 })

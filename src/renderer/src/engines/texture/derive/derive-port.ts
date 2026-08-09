@@ -33,8 +33,8 @@ export function createDerivePort({ loadTexture }: DerivePortOptions): DerivePort
   return ({ channel, sourceUrl }) =>
     runOffscreenPass({
       load: loadTexture,
-      url: sourceUrl,
-      pass: (source, size) => createDerivePass(channel, source, size),
+      urls: [sourceUrl],
+      pass: ([source]) => createDerivePass(channel, source.texture, source.size),
       draw: async ({ renderer, pipeline, material, size }) => {
         pipeline.renderToScreen(material)
         return { ...size, png: await encodePng(renderer.domElement) }

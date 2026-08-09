@@ -123,6 +123,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       export: () => Promise.resolve(null),
       ...overrides.scene,
     },
+    texture: {
+      export: () => Promise.resolve(null),
+      ...overrides.texture,
+    },
     // A test machine's installed faces are not the studio's business: the list is empty unless
     // a case says otherwise, so nothing under test depends on what happens to be on the disk.
     fonts: {
@@ -154,6 +158,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onCommand: noSubscription,
       onSceneAdd: noSubscription,
       onSceneExport: noSubscription,
+      onTextureExport: noSubscription,
       ...overrides.menu,
     },
     updates: {

@@ -218,14 +218,18 @@ as new**. That is not a loss: it is a different working model, and it is complet
 - **chained derivations** — computing height from the base colour does not recompute the normal
   that came from it: each channel is recomputed on demand, one at a time;
 - **importing a file from disk** straight into a channel. The detour exists: import the picture into
-  the project, then drop it onto the channel's thumbnail;
-- **export** to glTF, Unity, Unreal, Roblox.
+  the project, then drop it onto the channel's thumbnail.
+
+**Export now exists** — glTF/GLB, Unity, Unreal, Roblox and the raw channels, through File →
+Export the texture. Two bounds worth knowing: **Roblox refuses a map above 1024 px**, so its four
+files are brought under that ceiling; and the `.glb` leaves with the shape of the preview, an
+object format having no way to carry a material on its own.
 
 What works today: generating a material, placing a picture in each of its eight channels, computing
 four of them from another, judging how it repeats and measuring its seams, setting
 everything it is made of — roughness and metalness with their remap, relief, emission, tiling —
-looking at it on five shapes under the lighting of your choice, inspecting each channel flat, and
-saving it.
+looking at it on five shapes under the lighting of your choice, inspecting each channel flat,
+saving it, and handing it to five destinations.
 
 ### A channel's opacity cannot be set
 

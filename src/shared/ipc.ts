@@ -23,6 +23,7 @@ import type {
   SuggestPromptsRequest,
 } from './domain/prompt-assist'
 import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/scene'
+import type { TextureExportTarget } from './domain/texture-export'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
@@ -117,6 +118,8 @@ export type Channels = {
   mediaAvailable: 'media:available'
 
   sceneExport: 'scene:export'
+
+  textureExport: 'texture:export'
 
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
@@ -213,6 +216,8 @@ export const CHANNELS: Channels = {
 
   sceneExport: 'scene:export',
 
+  textureExport: 'texture:export',
+
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
 
@@ -263,6 +268,26 @@ export type SceneExportRequest = {
   data: Uint8Array
 }
 
+/** One file of an exported texture, already encoded by the renderer that drew it. */
+export type TextureExportFile = {
+  /** No separator and no extension: it is joined to a folder this process chose. */
+  name: string
+  /** Carried rather than derived: a target writes `.png`s, and one of them writes a `.glb`. */
+  extension: string
+  bytes: Uint8Array
+}
+
+/**
+ * A texture on its way to a folder. Unlike a scene, an export is several files that mean
+ * nothing apart — a base colour without the ORM beside it is half a material — so the dialog
+ * asks for a folder and they land in one named after the texture.
+ */
+export type TextureExportRequest = {
+  /** The folder to create inside the chosen one, named after the texture. */
+  folder: string
+  files: readonly TextureExportFile[]
+}
+
 export type LogLevel = 'info' | 'warn' | 'error'
 
 export const LOG_LEVELS: readonly LogLevel[] = ['info', 'warn', 'error']
@@ -281,6 +306,7 @@ export type LogScope =
   | 'texture.channel'
   | 'texture.seam'
   | 'texture.shader'
+  | 'texture.export'
   | 'skybox.source'
   | 'canvas.layer'
   | 'image.export'
@@ -302,6 +328,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'texture.channel',
   'texture.seam',
   'texture.shader',
+  'texture.export',
   'skybox.source',
   'canvas.layer',
   'image.export',
@@ -359,6 +386,7 @@ export const EVENTS = {
   windowState: 'evt:window-state',
   sceneAdd: 'evt:scene-add',
   sceneExport: 'evt:scene-export',
+  textureExport: 'evt:texture-export',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   activity: 'evt:activity',
@@ -377,6 +405,9 @@ export type SceneAddRequest = { kind: MeshKind | LightKind | ObjectKind }
 
 /** What the native menu asks of the scene in front: a format, and how much of the scene. */
 export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selection' }
+
+/** What the native menu asks of the texture in front: which engine it is being handed to. */
+export type TextureExportCommand = { target: TextureExportTarget }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
@@ -632,6 +663,14 @@ export type StudioBridge = {
      */
     export: (request: SceneExportRequest) => Promise<string | null>
   }
+  texture: {
+    /**
+     * Writes an exported texture into a folder of its own, inside the one the dialog landed on.
+     * Answers the folder's name, or `null` when the dialog was dismissed — the name, never the
+     * path, exactly as a scene answers.
+     */
+    export: (request: TextureExportRequest) => Promise<string | null>
+  }
   /**
    * The typefaces the machine has installed. The studio's own three are not here: they ship
    * inside it, and `EMBEDDED_FONTS` names them without anyone having to ask.
@@ -672,6 +711,7 @@ export type StudioBridge = {
     onCommand: (callback: (command: CommandId) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
+    onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
   }
   diagnostics: {
     onLog: (callback: (entry: LogEntry) => void) => Unsubscribe

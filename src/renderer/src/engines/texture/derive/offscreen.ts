@@ -15,6 +15,13 @@ export type PictureSize = { width: number; height: number }
 /** A picture ready to be sampled, and the size the frame drawn from it must have. */
 export type Source = { texture: Texture; size: PictureSize }
 
+/**
+ * The sources of one pass, in the order they were asked for. A tuple rather than an array
+ * because every pass reads at least one, and a type that says so is what lets the passes that
+ * read exactly one keep reading `sources[0]` without a guard for a case that cannot happen.
+ */
+export type Sources = readonly [Source, ...Source[]]
+
 /** What a pass hands back: the material that computes it, and nothing else. */
 export type OffscreenPass = { readonly material: ShaderMaterial }
 
@@ -29,11 +36,12 @@ export type OffscreenFrame = {
 
 export type OffscreenRun<T> = {
   load: TextureSource
-  url: string
-  /** The pass to build over the decoded source, once the pixels are in hand. */
-  pass: (source: Texture, size: PictureSize) => OffscreenPass
-  /** The frame the pass draws into. The source's own size unless the pass says otherwise. */
-  frame?: (size: PictureSize) => PictureSize
+  /** What the pass reads, in the order it reads them. One for a derivation, three for an ORM. */
+  urls: readonly string[]
+  /** The pass to build over the decoded sources, once the pixels are in hand. */
+  pass: (sources: Sources) => OffscreenPass
+  /** The frame the pass draws into. The first source's size unless the pass says otherwise. */
+  frame?: (sources: Sources) => PictureSize
   draw: (frame: OffscreenFrame) => Promise<T> | T
 }
 
@@ -61,14 +69,20 @@ function serialize<T>(run: () => Promise<T>): Promise<T> {
  * process has died — and every one of them used to pin a fully decoded picture for the life of
  * the window.
  */
-export function runOffscreenPass<T>({ load, url, pass, frame, draw }: OffscreenRun<T>): Promise<T> {
+export function runOffscreenPass<T>({
+  load,
+  urls,
+  pass,
+  frame,
+  draw,
+}: OffscreenRun<T>): Promise<T> {
   return serialize(async () => {
-    const { texture, size } = await loadSource(load, url)
+    const sources = await loadSources(load, urls)
 
     try {
-      const built = pass(texture, size)
+      const built = pass(sources)
       try {
-        const drawn = frame ? frame(size) : size
+        const drawn = frame ? frame(sources) : sources[0].size
         return await withRenderer(drawn, (renderer, pipeline) =>
           draw({ renderer, pipeline, material: built.material, size: drawn }),
         )
@@ -76,9 +90,39 @@ export function runOffscreenPass<T>({ load, url, pass, frame, draw }: OffscreenR
         built.material.dispose()
       }
     } finally {
-      texture.dispose()
+      for (const source of sources) source.texture.dispose()
     }
   })
+}
+
+/**
+ * Every source of one pass, or none of them.
+ *
+ * Settled rather than `all`: a rejection out of `all` settles the call while the sources that
+ * did decode are still on their way, and they arrive with nobody holding them — 64 MB each, for
+ * the life of the window. The same reason `loadSource` frees the one throw it cannot hand back.
+ */
+async function loadSources(load: TextureSource, urls: readonly string[]): Promise<Sources> {
+  const settled = await Promise.allSettled(urls.map(url => loadSource(load, url)))
+
+  const loaded: Source[] = []
+  // The settled result itself, not its reason: it is what tells "nothing failed" apart from
+  // "something failed with an undefined reason", and it is a type the platform already has.
+  let failure: PromiseRejectedResult | undefined
+  for (const result of settled) {
+    if (result.status === 'fulfilled') loaded.push(result.value)
+    else failure ??= result
+  }
+
+  const [first, ...rest] = loaded
+  // The empty case is the caller's mistake rather than the picture's, and it lands here because
+  // this is where the tuple is built — a pass over nothing would draw an untouched frame.
+  if (failure || !first) {
+    for (const source of loaded) source.texture.dispose()
+    throw failure ? failure.reason : new Error('a pass needs a source to read')
+  }
+
+  return [first, ...rest]
 }
 
 /**
@@ -128,6 +172,12 @@ async function withRenderer<T>(
     // Without it the drawing buffer is cleared before the canvas can be read back, and every
     // derivation comes out blank.
     preserveDrawingBuffer: true,
+    // three defaults this to true, and `alpha: false` below does NOT reach the context — it only
+    // picks the clear colour. A pass writing straight values into a context declared premultiplied
+    // has its colours divided by alpha at `toBlob`: Unity's mask map, the one recipe whose alpha
+    // is a channel rather than 1, came out with its metallic and occlusion destroyed — fully
+    // rough (smoothness 0) encoded as (0,0,0,0). Every other pass writes alpha 1, which hid it.
+    premultipliedAlpha: false,
     // A full-screen quad depth-tests against nothing and blends with nothing. Left on, the depth
     // attachment alone is another 67 MB at 4K, allocated and thrown away.
     antialias: false,
