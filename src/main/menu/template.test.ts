@@ -15,6 +15,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   runCommand: () => {},
   addNode: () => {},
   exportScene: () => {},
+  exportTexture: () => {},
   ...overrides,
 })
 
@@ -451,5 +452,38 @@ describe('the export menu', () => {
     const file = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Fichier')
 
     expect(file.map(item => item.label)).not.toContain('Exporter la scène')
+  })
+
+  it('offers the five targets where a texture is what is being edited', () => {
+    const file = submenuOf(menuTemplate(options({ workspace: 'textures' })), 'Fichier')
+
+    expect(submenuOf(file, 'Exporter la matière').map(item => item.label)).toEqual([
+      'glTF / GLB (.glb)',
+      'Unity (URP)',
+      'Unreal Engine',
+      'Roblox',
+      'Canaux bruts',
+    ])
+  })
+
+  it('asks for the engine the row names', () => {
+    const exportTexture = vi.fn()
+    const file = submenuOf(
+      menuTemplate(options({ workspace: 'textures', actions: actions({ exportTexture }) })),
+      'Fichier',
+    )
+    const roblox = submenuOf(file, 'Exporter la matière')[3]
+
+    roblox?.click?.(...([] as never[] as [never, never, never]))
+
+    expect(exportTexture).toHaveBeenCalledWith({ target: 'roblox' })
+  })
+
+  it('keeps the two exports apart, neither workspace showing the rows of the other', () => {
+    const textures = submenuOf(menuTemplate(options({ workspace: 'textures' })), 'Fichier')
+    const three = submenuOf(menuTemplate(options({ workspace: '3d' })), 'Fichier')
+
+    expect(textures.map(item => item.label)).not.toContain('Exporter la scène')
+    expect(three.map(item => item.label)).not.toContain('Exporter la matière')
   })
 })

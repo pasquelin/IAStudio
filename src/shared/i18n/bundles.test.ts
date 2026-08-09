@@ -101,7 +101,8 @@ describe('the translation bundles', () => {
 
   /**
    * The sentences that read the same in both bundles because nobody translates them: the brand,
-   * two format names, two paths, a copyright line, and an example someone types over.
+   * the names of file formats and of the engines a texture is exported to, two paths, a
+   * copyright line, and an example someone types over.
    *
    * Anything else arriving here is an English sentence pasted into the French file — the one
    * untranslated string no other guard can see, precisely because it *is* in the bundle.
@@ -121,6 +122,10 @@ describe('the translation bundles', () => {
       'exportFormats.gltf',
       'exportFormats.usdz',
       'settings.ffmpegPath.placeholder',
+      // Two engines and a format. `roblox` and `raw` are one word each, which this already skips.
+      'textureExportTargets.gltf',
+      'textureExportTargets.unity',
+      'textureExportTargets.unreal',
     ])
 
     const copied = [...BUNDLES.fr]

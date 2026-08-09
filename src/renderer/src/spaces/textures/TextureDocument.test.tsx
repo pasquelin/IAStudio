@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { TextureExportCommand } from '@shared/ipc'
 import { setChannel } from '@/engines/texture/commands'
+import { installFakeBridge } from '@/services/fake-bridge'
+import { useDocuments } from '@/stores/documents'
 import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
 import { useTextures } from '@/stores/textures'
@@ -79,5 +82,58 @@ describe('TextureDocument', () => {
 
       expect(screen.queryByRole('presentation')).toBeNull()
     })
+  })
+})
+
+/**
+ * The export itself needs a GPU and a save dialog; what this covers is the wiring around it —
+ * which tab answers a menu row, and which one stays quiet.
+ */
+describe('the export menu row', () => {
+  const listen = (): { listeners: () => number; unsubscribed: () => number } => {
+    const callbacks: ((command: TextureExportCommand) => void)[] = []
+    let released = 0
+
+    installFakeBridge({
+      menu: {
+        onTextureExport: callback => {
+          callbacks.push(callback)
+          return () => {
+            released += 1
+          }
+        },
+      },
+    })
+
+    return { listeners: () => callbacks.length, unsubscribed: () => released }
+  }
+
+  it('is listened to while the tab is in front', () => {
+    const menu = listen()
+    useDocuments.setState({ activeId: DOCUMENT })
+
+    render(<TextureDocument documentId={DOCUMENT} />)
+
+    expect(menu.listeners()).toBe(1)
+  })
+
+  /** Two open textures would both answer one click, and both would open a folder dialog. */
+  it('is not listened to by a tab that is not in front', () => {
+    const menu = listen()
+    useDocuments.setState({ activeId: 'another-document' })
+
+    render(<TextureDocument documentId={DOCUMENT} />)
+
+    expect(menu.listeners()).toBe(0)
+  })
+
+  it('lets go of the menu when the tab goes away', () => {
+    const menu = listen()
+    useDocuments.setState({ activeId: DOCUMENT })
+    const { unmount } = render(<TextureDocument documentId={DOCUMENT} />)
+
+    unmount()
+
+    expect(menu.unsubscribed()).toBe(1)
   })
 })

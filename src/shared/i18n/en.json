@@ -147,6 +147,7 @@
       "texture.channel": "A picture had to stay out of a channel",
       "texture.seam": "The seams could not be measured",
       "texture.shader": "The material preview lost one of its settings",
+      "texture.export": "Exporting the texture failed",
       "skybox.source": "The sky picture could not be loaded",
       "canvas.layer": "A layer could not be loaded",
       "image.export": "Exporting the picture failed",
@@ -695,6 +696,13 @@
     "gltf": "glTF (.gltf)",
     "usdz": "USDZ (.usdz)"
   },
+  "textureExportTargets": {
+    "gltf": "glTF / GLB (.glb)",
+    "unity": "Unity (URP)",
+    "unreal": "Unreal Engine",
+    "roblox": "Roblox",
+    "raw": "Raw channels"
+  },
   "sceneViews": {
     "front": "Front",
     "back": "Back",
@@ -779,6 +787,7 @@
     "object": "Object",
     "exportScene": "Export the scene",
     "exportSelection": "Export the selection",
+    "exportTexture": "Export the texture",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
     "zoomIn": "Zoom in",

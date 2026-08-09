@@ -2,6 +2,10 @@ import { mdiTextureBox } from '@mdi/js'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, type Asset } from '@shared/domain/asset'
+import { safeFileName, type TextureExportTarget } from '@shared/domain/texture-export'
+import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
+import { useDocuments } from '@/stores/documents'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { loadTexture } from '@/engines/scene/texture-cache'
@@ -10,6 +14,46 @@ import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
+
+/**
+ * A texture handed to an engine, from the row of the native menu that was picked.
+ *
+ * The port is reached through `import()` rather than at the top of this file, and that is not
+ * tidiness: `app/tool-components.ts` imports every panel eagerly, so whatever this module can
+ * reach is in the chunk the first window pays for — and what this one reaches is `GLTFExporter`.
+ * Exporting is a gesture; loading its exporter belongs to the gesture.
+ */
+async function exportTexture(documentId: string, target: TextureExportTarget): Promise<void> {
+  const bridge = getBridge()
+  if (!bridge) return
+
+  try {
+    const texture = textureOf(useTextures.getState(), documentId)
+    // Cleaned before it is either a folder or a file name: a document is titled by hand.
+    const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'texture')
+
+    const [{ createTextureExportPort }, { exportChannelsOf }] = await Promise.all([
+      import('@/engines/texture/export/export-port'),
+      import('@/engines/texture/export/channels'),
+    ])
+
+    const files = await createTextureExportPort({ loadTexture })({
+      target,
+      channels: exportChannelsOf(texture),
+      name,
+      material: texture.material,
+      shape: texture.preview.shape,
+    })
+
+    // A texture with no channels resolves to no file, and a dialog asking where to put nothing
+    // is a dialog that cannot be answered.
+    if (files.length === 0) throw new Error('this texture has no channel to export')
+
+    await bridge.texture.export({ folder: name, files })
+  } catch (error) {
+    reportFailure('texture.export', target, error)
+  }
+}
 
 /**
  * The subject, under light, and nothing else. Every setting it shows lives in the inspector — the
@@ -23,8 +67,21 @@ export function TextureDocument({ documentId }: { documentId: string }) {
 
   const texture = useTextures(state => textureOf(state, documentId))
   const inspected = useTextureViews(state => inspectedChannel(state, documentId))
+  const active = useDocuments(state => state.activeId === documentId)
 
   useRestoredDocument(documentId)
+
+  // Only while this tab is in front. The event goes to the window, not to a document, so two
+  // open textures would otherwise both answer one click of the same menu row — and both would
+  // open a folder dialog.
+  useEffect(() => {
+    const bridge = getBridge()
+    if (!bridge || !active) return
+
+    return bridge.menu.onTextureExport(({ target }) => {
+      void exportTexture(documentId, target)
+    })
+  }, [documentId, active])
 
   useEffect(() => {
     const element = host.current

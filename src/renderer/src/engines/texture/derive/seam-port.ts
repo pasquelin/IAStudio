@@ -17,8 +17,8 @@ export function createSeamPort({ loadTexture }: SeamPortOptions): SeamPort {
   return sourceUrl =>
     runOffscreenPass({
       load: loadTexture,
-      url: sourceUrl,
-      pass: createSeamPass,
+      urls: [sourceUrl],
+      pass: ([source]) => createSeamPass(source.texture, source.size),
       frame: () => READBACK,
       draw: ({ renderer, pipeline, material }) => {
         // Into a target rather than onto the canvas: a WebGL canvas has no 2D context to read

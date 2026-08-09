@@ -147,6 +147,7 @@
       "texture.channel": "Une image n’a pas pu entrer dans un canal",
       "texture.seam": "Les coutures n’ont pas pu être mesurées",
       "texture.shader": "L’aperçu du matériau a perdu l’un de ses réglages",
+      "texture.export": "L’export de la matière a échoué",
       "skybox.source": "L’image du ciel n’a pas pu être chargée",
       "canvas.layer": "Un calque n’a pas pu être chargé",
       "image.export": "L’export de l’image a échoué",
@@ -695,6 +696,13 @@
     "gltf": "glTF (.gltf)",
     "usdz": "USDZ (.usdz)"
   },
+  "textureExportTargets": {
+    "gltf": "glTF / GLB (.glb)",
+    "unity": "Unity (URP)",
+    "unreal": "Unreal Engine",
+    "roblox": "Roblox",
+    "raw": "Canaux bruts"
+  },
   "sceneViews": {
     "front": "De face",
     "back": "De dos",
@@ -779,6 +787,7 @@
     "object": "Objet",
     "exportScene": "Exporter la scène",
     "exportSelection": "Exporter la sélection",
+    "exportTexture": "Exporter la matière",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
     "zoomIn": "Zoom avant",
