@@ -52,36 +52,16 @@ export function signatureOf(event: KeyChord): Signature {
 const MODIFIER_ORDER: readonly string[] = ['Ctrl', 'Alt', 'Shift', 'Meta']
 
 /**
- * The shapes a `KeyboardEvent.code` takes. Codes are positions, not characters — which is the
- * whole point of the check below.
+ * The shape of a `KeyboardEvent.code`: a word, capitalised, of at least two characters.
+ *
+ * A shape rather than a list of the codes that exist. The two are not the same bet, and the
+ * wrong one is expensive in a way the right one is not: a code this refuses is a key nobody can
+ * bind — `IntlBackslash`, the `<>` key of every AZERTY keyboard this studio is aimed at, would
+ * have been one — while a code this accepts and no keyboard emits is merely a shortcut that
+ * never fires. Permissive about what looks like a code, strict about what does not: `'P'` is one
+ * character, and that is the whole of the defect this exists for.
  */
-const CODE_SHAPES: readonly RegExp[] = [
-  /^Key[A-Z]$/,
-  /^Digit[0-9]$/,
-  /^Numpad[A-Za-z0-9]+$/,
-  /^F([1-9]|1[0-9]|2[0-4])$/,
-  /^Arrow(Up|Down|Left|Right)$/,
-]
-
-/** The codes that are neither letters, digits nor words: the punctuation a key carries. */
-const PUNCTUATION_CODES: readonly string[] = [
-  'Equal',
-  'Minus',
-  'Semicolon',
-  'Quote',
-  'Comma',
-  'Period',
-  'Slash',
-  'Backslash',
-  'Backquote',
-  'BracketLeft',
-  'BracketRight',
-]
-
-function isKeyCode(code: string): boolean {
-  if (CODE_SHAPES.some(shape => shape.test(code))) return true
-  return isNamedKey(code) || PUNCTUATION_CODES.includes(code)
-}
+const CODE_SHAPE = /^[A-Z][A-Za-z0-9]+$/
 
 /**
  * Whether a string is a signature this studio could ever produce.
@@ -91,11 +71,11 @@ function isKeyCode(code: string): boolean {
  * green: a code is a position and a letter is not one, so the binding simply never fired, and
  * only a test driving a real keyboard caught it.
  *
- * Checked here rather than at each caller: the registry is one user, the overrides read off the
- * settings file are another, and a rule with two spellings is a rule that will be relaxed in one.
+ * Checked here rather than at each caller: the registry is one user, the recorder on the
+ * shortcuts screen is another, and the overrides read off the settings file are a third.
  */
 export function isSignature(value: unknown): value is Signature {
-  if (typeof value !== 'string' || value.length === 0) return false
+  if (typeof value !== 'string') return false
 
   const parts = value.split('+')
   const code = parts.at(-1) ?? ''
@@ -110,7 +90,7 @@ export function isSignature(value: unknown): value is Signature {
     next = at + 1
   }
 
-  return isKeyCode(code)
+  return CODE_SHAPE.test(code)
 }
 
 /**

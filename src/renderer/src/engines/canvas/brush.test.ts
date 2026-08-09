@@ -93,11 +93,24 @@ describe('how far the edge of a dab is spread', () => {
     expect(blurRadius(brush(0, 1))).toBe(0)
   })
 
+  /** The threshold itself, from both sides: half a pixel shows, a hair under it does not. */
+  it('keeps a spread of exactly half a pixel, and drops anything under it', () => {
+    // 2 px at hardness 0 spreads by exactly 0.5.
+    expect(blurRadius(brush(0, 2))).toBe(0.5)
+    // 4 px at 0.5 spreads by 0.5 as well; a hair harder and it falls under.
+    expect(blurRadius(brush(0.5, 4))).toBe(0.5)
+    expect(blurRadius(brush(0.501, 4))).toBe(0)
+  })
+
   it('holds a hardness read from outside the unit interval', () => {
-    // A hand-edited setting is user territory, and a negative one would spread further than
-    // the radius — a dab with no middle.
-    expect(blurRadius(brush(2, 40))).toBe(0)
+    // A hand-edited setting is user territory. Held at both ends: below zero it would spread
+    // further than the radius — a dab with no middle — and above one it would spread backwards,
+    // which the floor would then hide as a zero that looks deliberate.
     expect(blurRadius(brush(-1, 40))).toBe(10)
+    expect(blurRadius(brush(1.5, 40))).toBe(0)
+    // Read unclamped, a hardness of 2 gives −10 and a hardness of 3 gives −20: distinct numbers
+    // where the clamp gives one. Both must answer the same nothing.
+    expect(blurRadius(brush(3, 40))).toBe(blurRadius(brush(2, 40)))
   })
 
   it('spreads the default brush a little, which is what "mostly hard" means', () => {

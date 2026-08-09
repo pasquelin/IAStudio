@@ -164,6 +164,31 @@ describe('whether a string is a signature the studio could produce', () => {
     expect(isSignature('ArrowUp')).toBe(true)
     expect(isSignature('F5')).toBe(true)
     expect(isSignature('BracketLeft')).toBe(true)
+    expect(isSignature('NumpadDecimal')).toBe(true)
+  })
+
+  /**
+   * A guard written as a list of the codes that exist refuses the ones nobody thought of, and a
+   * refused code is a key nobody can bind. `IntlBackslash` is the `<>` key of every AZERTY
+   * keyboard — the layout this file's own opening paragraph says the codes are here to serve.
+   */
+  it('accepts the codes a real keyboard emits, listed or not', () => {
+    const emitted = [
+      'IntlBackslash',
+      'IntlRo',
+      'IntlYen',
+      'ContextMenu',
+      'CapsLock',
+      'Insert',
+      'PrintScreen',
+      'Pause',
+      'NumLock',
+      'AudioVolumeUp',
+      'ShiftLeft',
+      'MetaRight',
+    ]
+
+    for (const code of emitted) expect(isSignature(code), code).toBe(true)
   })
 
   it('accepts the modifiers in the order `signatureOf` writes them', () => {
@@ -190,15 +215,17 @@ describe('whether a string is a signature the studio could produce', () => {
     expect(isSignature('Meta+Meta+KeyS')).toBe(false)
   })
 
-  it('refuses a modifier that is not one, and a code that is not one', () => {
+  it('refuses a modifier that is not one', () => {
     expect(isSignature('Cmd+KeyS')).toBe(false)
-    expect(isSignature('Meta+Klavier')).toBe(false)
-    expect(isSignature('Meta+KeyAB')).toBe(false)
-    expect(isSignature('F25')).toBe(false)
+    expect(isSignature('Super+KeyS')).toBe(false)
   })
 
-  it('refuses what is not a string at all, and the empty one', () => {
+  /** What is not shaped like a code at all: one character, a glyph, a lowercase word. */
+  it('refuses what no `KeyboardEvent.code` looks like', () => {
     expect(isSignature('')).toBe(false)
+    expect(isSignature('Meta+')).toBe(false)
+    expect(isSignature('keyP')).toBe(false)
+    expect(isSignature('KEY P')).toBe(false)
     expect(isSignature(null)).toBe(false)
     expect(isSignature(undefined)).toBe(false)
     expect(isSignature(42)).toBe(false)
@@ -211,8 +238,20 @@ describe('whether a string is a signature the studio could produce', () => {
       { code: 'Escape', ctrlKey: true, altKey: true, shiftKey: true, metaKey: true },
       { code: 'ArrowLeft', ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
       { code: 'Slash', ctrlKey: false, altKey: false, shiftKey: true, metaKey: false },
+      { code: 'IntlBackslash', ctrlKey: false, altKey: false, shiftKey: false, metaKey: true },
     ]
 
     for (const chord of chords) expect(isSignature(signatureOf(chord))).toBe(true)
+  })
+
+  /**
+   * The sister table of the registry, in this very file, with the same failure mode: `'W'` where
+   * `'KeyW'` was meant would hold no direction and say nothing. It is not remappable today,
+   * which is exactly why nothing else would ever read it back.
+   */
+  it('spells every motion the studio publishes as a signature', () => {
+    const malformed = Object.entries(DEFAULT_MOTION).filter(([, bound]) => !isSignature(bound))
+
+    expect(malformed).toEqual([])
   })
 })

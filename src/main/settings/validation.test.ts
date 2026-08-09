@@ -132,5 +132,61 @@ describe('salvaging the bar order', () => {
 
     expect(salvaged.workspaces?.order ?? []).toEqual([])
     expect(salvaged.appearance?.theme).toBe('light')
+ * A remap crosses as a plain string, so the shape is all there is to check. The cost of getting
+ * it wrong is not symmetrical: a refused binding is a key nobody can bind, while an accepted one
+ * no keyboard emits is only a shortcut that never fires.
+ */
+describe('the keys a settings file remaps', () => {
+  it('keeps a binding on any key a real keyboard emits', () => {
+    const overrides = {
+      'canvas.toolBrush': 'IntlBackslash',
+      'canvas.toolPencil': 'Meta+ContextMenu',
+      'canvas.undo': 'Ctrl+Alt+Shift+Meta+KeyZ',
+    }
+
+    expect(salvagePartialSettings({ shortcuts: { overrides } }).shortcuts?.overrides).toEqual(
+      overrides,
+    )
+  })
+
+  /**
+   * The defect the guard exists for: a letter is what is printed on a key, never its position.
+   */
+  it('drops a binding written as a letter rather than a code', () => {
+    const file = { shortcuts: { overrides: { 'canvas.toolBrush': 'P' } } }
+
+    expect(salvagePartialSettings(file).shortcuts?.overrides).toEqual({})
+  })
+
+  /**
+   * One unreadable remap costs its own line and nothing else. Refusing the whole file would take
+   * the theme and the projects folder down with a key bound under an older version — which is
+   * what `home.sections` already learnt.
+   */
+  it('keeps every other setting, and every other binding, around the one it drops', () => {
+    const file = {
+      appearance: { theme: 'dark' },
+      shortcuts: { overrides: { 'canvas.toolBrush': 'P', 'canvas.toolPencil': 'Shift+KeyP' } },
+    }
+
+    const salvaged = salvagePartialSettings(file)
+
+    expect(salvaged.appearance?.theme).toBe('dark')
+    expect(salvaged.shortcuts?.overrides).toEqual({ 'canvas.toolPencil': 'Shift+KeyP' })
+  })
+
+  /**
+   * The write side drops it too rather than refusing the draft. `settings-draft` clears what is
+   * pending before the write settles, so a throw here would take the theme staged in the same
+   * Apply with it — and say nothing about either.
+   */
+  it('drops it on the way in as well, keeping the rest of the draft', () => {
+    const written = parsePartialSettings({
+      appearance: { theme: 'dark' },
+      shortcuts: { overrides: { 'canvas.toolBrush': 'P', 'canvas.undo': 'Meta+KeyZ' } },
+    })
+
+    expect(written.appearance?.theme).toBe('dark')
+    expect(written.shortcuts?.overrides).toEqual({ 'canvas.undo': 'Meta+KeyZ' })
   })
 })
