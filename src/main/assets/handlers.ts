@@ -1,7 +1,7 @@
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
 import { defined } from '@shared/guards'
-import type { CloudPage, CloudQuery, ExploreQuery } from '@shared/domain/cloud-asset'
+import type { CloudPage, CloudQuery, ExploreQuery, SimilarPage } from '@shared/domain/cloud-asset'
 import type { SyncOutcome } from '@shared/domain/sync'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
@@ -10,6 +10,7 @@ import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
 import {
   filterExpression,
   publicFeedFilter,
+  NSFW_EMPTY,
   PUBLIC_FEED_SORT,
 } from '@main/scenario/filter-expression'
 import { withPublicThumbnail } from '@main/scenario/asset-normalizer'
@@ -144,6 +145,42 @@ async function explore(remote: RemoteAssetCatalog, query: ExploreQuery): Promise
   }
 }
 
+/** How many lookalikes are worth a shelf. One row of tiles, and one search's worth of quota. */
+const SIMILAR_SIZE = 12
+
+/**
+ * Published assets in the vein of one of this account's own.
+ *
+ * The reference is the library's most recent asset rather than something the reader picks: the
+ * band is a suggestion, and a picker on the home would be a second asset browser. It comes back
+ * with the answer so the shelf can say what the likeness was measured against.
+ *
+ * No `sortBy` here, deliberately: the API ranks by likeness, and asking for another order on a
+ * semantic search silently drops the ranking that is the whole point.
+ */
+async function similar(remote: RemoteAssetCatalog): Promise<SimilarPage | null> {
+  const library = await remote.list({ pageSize: 1 })
+  const reference = library.assets[0]
+  if (!reference) return null
+
+  const page = await remote.search({
+    like: [reference.id],
+    publicFeed: true,
+    filter: NSFW_EMPTY,
+    // One more than shown: the API answers with the reference itself, at the top.
+    limit: SIMILAR_SIZE + 1,
+    offset: 0,
+  })
+
+  return {
+    reference,
+    assets: page.assets
+      .filter(asset => asset.id !== reference.id)
+      .slice(0, SIMILAR_SIZE)
+      .map(withPublicThumbnail),
+  }
+}
+
 /** The rows behind a list of ids, minus the ones the catalogue no longer holds. */
 async function findMany(catalog: () => AsyncCatalog, ids: readonly string[]): Promise<Asset[]> {
   const found = await Promise.all(ids.map(id => catalog().find(id)))
@@ -237,6 +274,8 @@ export function registerAssetHandlers({
 
     return describeAssets(found.filter(asset => asset !== null))
   })
+
+  handle(CHANNELS.cloudSimilar, () => reduced(() => similar(remote())))
 
   handle(CHANNELS.cloudExplore, (_event, query) =>
     reduced(() => explore(remote(), parseExploreQuery(query))),

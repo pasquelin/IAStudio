@@ -1497,6 +1497,8 @@
       "documents": "Vos documents",
       "jobs": "En cours",
       "activity": "Activité récente",
+      "spark": "Une idée pour commencer",
+      "similar": "Dans la même veine",
       "usage": "Ce que vous avez consommé",
       "explore": "Explorer"
     },
@@ -1562,6 +1564,15 @@
     "hidden_one": "{{count}} section masquée",
     "hidden_other": "{{count}} sections masquées",
     "restore": "Les réafficher",
+    "spark": {
+      "ask": "Proposez-moi une idée",
+      "asking": "Un instant…",
+      "help": "Des départs écrits pour le modèle que le générateur ouvrira. Gratuit : aucune unité créative n’est consommée.",
+      "use": "Ouvrir le générateur sur « {{prompt}} »"
+    },
+    "similar": {
+      "title": "Dans la veine de « {{name}} »"
+    },
     "usage": {
       "summary_one": "{{units}} unités sur {{days}} jours, pour {{count}} génération.",
       "summary_other": "{{units}} unités sur {{days}} jours, pour {{count}} générations.",

@@ -63,6 +63,7 @@ type ChannelMethod = {
   [CHANNELS.assetsDescribe]: StudioBridge['assets']['describe']
   [CHANNELS.cloudBrowse]: StudioBridge['cloud']['browse']
   [CHANNELS.cloudExplore]: StudioBridge['cloud']['explore']
+  [CHANNELS.cloudSimilar]: StudioBridge['cloud']['similar']
   [CHANNELS.cloudPull]: StudioBridge['cloud']['pull']
   [CHANNELS.cloudPush]: StudioBridge['cloud']['push']
   [CHANNELS.cloudPlan]: StudioBridge['cloud']['plan']

@@ -1497,6 +1497,8 @@
       "documents": "Your documents",
       "jobs": "Running now",
       "activity": "Recent activity",
+      "spark": "An idea to start from",
+      "similar": "In the same vein",
       "usage": "What you have spent",
       "explore": "Explore"
     },
@@ -1562,6 +1564,15 @@
     "hidden_one": "{{count}} section hidden",
     "hidden_other": "{{count}} sections hidden",
     "restore": "Show them again",
+    "spark": {
+      "ask": "Suggest an idea",
+      "asking": "One moment…",
+      "help": "Starting points written for the model the generator will open on. Free: no creative unit is spent.",
+      "use": "Open the generator on “{{prompt}}”"
+    },
+    "similar": {
+      "title": "In the vein of “{{name}}”"
+    },
     "usage": {
       "summary_one": "{{units}} units over {{days}} days, for {{count}} generation.",
       "summary_other": "{{units}} units over {{days}} days, for {{count}} generations.",

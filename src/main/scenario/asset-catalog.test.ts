@@ -138,6 +138,15 @@ describe('searching the library', () => {
     expect(recorded.search[1]).not.toHaveProperty('sortBy')
   })
 
+  it('asks for a likeness under the shape the SDK expects', async () => {
+    const { backend, recorded } = backendSpy()
+    await assetCatalogOf(backend).search({ limit: 20, offset: 0, like: ['asset_1'] })
+    await assetCatalogOf(backend).search({ limit: 20, offset: 0, like: [] })
+
+    expect(recorded.search[0]).toMatchObject({ images: { like: ['asset_1'] } })
+    expect(recorded.search[1]).not.toHaveProperty('images')
+  })
+
   it('copies the order, so the SDK cannot rewrite a caller constant', async () => {
     const order: readonly string[] = ['createdAt:desc']
     const { backend, recorded } = backendSpy()

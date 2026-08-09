@@ -80,6 +80,13 @@ export type CloudPage = {
  * pages by offset alone, and drops anything the API flagged. Sharing the type would have meant
  * a `CloudQuery` whose fields mean one thing in one mode and another in the other.
  */
+export type SimilarPage = {
+  /** What the likeness was measured against — one of the account's own assets. */
+  reference: CloudAsset
+  /** Published assets that resemble it, the reference itself taken out. */
+  assets: CloudAsset[]
+}
+
 export type ExploreQuery = {
   /** One tab of the feed. The kinds a masonry can show are the six the studio already has. */
   type: AssetType

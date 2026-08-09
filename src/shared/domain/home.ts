@@ -21,6 +21,8 @@ export type HomeSectionId =
   | 'jobs'
   | 'activity'
   | 'usage'
+  | 'similar'
+  | 'spark'
   | 'explore'
 
 export type HomeSectionEntry = {
@@ -61,6 +63,8 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
   { id: 'activity', requires: ['project'], defaultLimit: 6 },
+  { id: 'similar', requires: ['api'] },
+  { id: 'spark', requires: ['api'] },
   { id: 'usage', requires: ['api'], defaultLimit: 6 },
   // No limit: it is the one band that does not end — the grid pages as it is scrolled, so a
   // count would cap what the reader can reach rather than how much is drawn at once.

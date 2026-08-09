@@ -318,6 +318,45 @@ describe('the public feed', () => {
   })
 })
 
+describe('what resembles the account own work', () => {
+  it('measures the likeness against the library latest asset', async () => {
+    const harness = setup()
+    await invoke(CHANNELS.cloudSimilar)
+
+    expect(harness.listed[0]).toMatchObject({ pageSize: 1 })
+    // `remote_1` is what the listing answers with in the harness above.
+    expect(harness.searched[0]).toMatchObject({ like: ['remote_1'], publicFeed: true })
+  })
+
+  it('asks for no order at all, since the API ranks by likeness', async () => {
+    // Naming a sort on a semantic search silently drops the ranking that is the whole point.
+    const harness = setup()
+    await invoke(CHANNELS.cloudSimilar)
+
+    expect(harness.searched[0]).not.toHaveProperty('sortBy')
+  })
+
+  it('takes the reference back out of its own results', async () => {
+    // The API answers with the reference itself, at the top.
+    setup({
+      remote: {
+        list: () => Promise.resolve({ assets: [cloudAsset('ref')], token: null }),
+        search: () =>
+          Promise.resolve({ assets: [cloudAsset('ref'), cloudAsset('other')], token: null }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudSimilar)
+    expect(page.assets.map(asset => asset.id)).toEqual(['other'])
+  })
+
+  it('answers nothing when the account holds nothing to compare', async () => {
+    setup({ remote: { list: () => Promise.resolve({ assets: [], token: null }) } })
+
+    expect(await invoke(CHANNELS.cloudSimilar)).toBeNull()
+  })
+})
+
 describe('renaming and tagging', () => {
   let harness: Harness
 
