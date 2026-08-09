@@ -15,6 +15,7 @@ import {
   type SettingActionId,
 } from '@shared/domain/settings-registry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
+import { DICTATION_MODES } from '@shared/domain/dictation'
 import { HOME_LIMIT_MAX, HOME_LIMIT_MIN, HOME_SECTION_IDS } from '@shared/domain/home'
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -148,6 +149,24 @@ const shortcuts = z.object({
 
 const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 
+const silence = boundsOf('dictation.silenceMs')
+const preview = boundsOf('dictation.previewMs')
+const threads = boundsOf('dictation.threads')
+const idleUnload = boundsOf('dictation.idleUnloadMinutes')
+
+const dictation = z.object({
+  enabled: z.boolean().optional(),
+  mode: z.enum(DICTATION_MODES).optional(),
+  silenceMs: z.number().int().min(silence.min).max(silence.max).optional(),
+  previewMs: z.number().int().min(preview.min).max(preview.max).optional(),
+  threads: z.number().int().min(threads.min).max(threads.max).optional(),
+  idleUnloadMinutes: z.number().int().min(idleUnload.min).max(idleUnload.max).optional(),
+  modelFolder: z.string().min(1).optional(),
+  // A device id from a machine whose microphones have since changed is stored all the same:
+  // the capture falls back to the default rather than refusing to record.
+  inputDeviceId: z.string().min(1).optional(),
+})
+
 const partialSettings = z.object({
   general: general.optional(),
   home: home.optional(),
@@ -159,6 +178,7 @@ const partialSettings = z.object({
   shortcuts: shortcuts.optional(),
   media: media.optional(),
   advanced: advanced.optional(),
+  dictation: dictation.optional(),
 })
 
 /** Validates what the renderer sends. Throws: an out-of-bounds write must not be persisted. */

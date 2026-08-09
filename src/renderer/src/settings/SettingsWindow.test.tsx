@@ -104,6 +104,7 @@ describe('SettingsWindow', () => {
       'Espaces de travail',
       '3D',
       'Raccourcis',
+      'Dictée',
       'Médias',
       'Stockage',
       'Avancé',

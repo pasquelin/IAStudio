@@ -45,3 +45,35 @@ modifié.
   premier endroit où regarder ; `TROUBLESHOOTING.md` y renvoie.
 - Tout ajout d’entitlement passe par un amendement de cet ADR, avec le besoin démontré — pas par
   une modification silencieuse du `.plist`.
+
+---
+
+## Amendement du 9 août 2026 — le micro, pour la dictée
+
+**Ajouté : `com.apple.security.device.audio-input`.** Les deux autres restent refusés.
+
+La dictée vocale hors ligne enregistre depuis le micro : le renderer ouvre `getUserMedia`, et
+c’est le besoin que cet ADR réclamait avant d’accorder quoi que ce soit.
+
+**Une phrase de la version initiale était fausse, et le rester aurait coûté cher.** Elle range
+les clés micro et caméra parmi celles que l’absence d’App Sandbox rend « de toute façon
+inertes ». C’est vrai des entitlements *App Sandbox* — `network.client`, `files.user-selected`.
+Ce ne l’est pas de `device.audio-input`, qui appartient à la famille *Resource Access* du
+**hardened runtime**, lequel est bien activé (`hardenedRuntime: true`). Sans cette clé, une
+build signée se voit refuser le micro par le runtime **alors que le développement fonctionne** :
+exactement le symptôme que la section « Conséquences » annonçait, et le premier endroit où
+regarder si la dictée ne dit rien sur une version installée.
+
+Le fichier sert à la fois d’`entitlements` et d’`entitlementsInherit`, donc les processus helper
+en héritent. C’est nécessaire : celui qui ouvre la capture est le renderer, pas le processus
+principal.
+
+**Ce qui accompagne l’ajout, et sans quoi il ne sert à rien** — `NSMicrophoneUsageDescription`
+dans `mac.extendInfo`. L’entitlement autorise ; la clé Info.plist est ce que macOS exige pour
+seulement *demander*, et son absence tue le processus au premier accès plutôt que d’afficher un
+refus. Les deux se posent ensemble ou pas du tout.
+
+`disable-library-validation` reste refusé, y compris pour le moteur de reconnaissance : ses
+quatre bibliothèques sortent de l’asar et sont signées avec l’application, comme
+`better-sqlite3` — c’est ce que `asarUnpack` et la signature du bundle servent à garantir.
+Voir [`docs/stt/02-packaging.md`](../../stt/02-packaging.md).

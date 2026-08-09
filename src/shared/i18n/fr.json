@@ -821,10 +821,12 @@
     "appearance": "Apparence",
     "generation": "Génération",
     "media": "Médias",
+    "dictation": "Dictée",
     "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
     "appearanceDescription": "Thème et densité des contrôles.",
     "generationDescription": "File de génération et modèles par défaut, par famille.",
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
+    "dictationDescription": "Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous dites n’est envoyé nulle part.",
     "theme": {
       "title": "Thème",
       "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
@@ -854,6 +856,37 @@
       "title": "Chemin de ffmpeg",
       "help": "Emplacement d’un programme ffmpeg à utiliser à la place de celui fourni avec l’application. Laissez vide, sauf si vous tenez au vôtre.",
       "placeholder": "/opt/homebrew/bin/ffmpeg"
+    },
+    "dictationEnabled": {
+      "title": "Activer la dictée",
+      "help": "Propose un bouton de micro à côté des champs de texte, et met en service le raccourci qui écoute. Désactivée, la dictée ne charge rien et ne demande jamais l’accès au micro."
+    },
+    "dictationMode": {
+      "title": "Façon de déclencher",
+      "help": "« Maintenir » écoute tant que vous gardez le raccourci enfoncé, et s’arrête dès que vous le relâchez : c’est le plus sûr, on ne laisse jamais le micro ouvert par oubli. « Basculer » démarre à la première pression et s’arrête à la suivante, ce qui repose la main sur les longues dictées.",
+      "pushToTalk": "Maintenir la touche",
+      "continuous": "Basculer marche/arrêt"
+    },
+    "dictationSilence": {
+      "title": "Silence qui termine une phrase",
+      "help": "Durée de blanc, en millisecondes, au bout de laquelle ce que vous venez de dire est considéré comme fini et transcrit. Augmentez-la si vos phrases sont coupées en deux parce que vous marquez des pauses pour réfléchir."
+    },
+    "dictationPreview": {
+      "title": "Aperçu pendant que vous parlez",
+      "help": "Intervalle, en millisecondes, entre deux aperçus du texte en cours. Le modèle n’écrit pas au fil de la parole : chaque aperçu relit tout ce qui a été dit depuis le début de la phrase, et coûte donc du calcul. Mettez 0 pour n’afficher que le texte définitif de chaque phrase."
+    },
+    "dictationThreads": {
+      "title": "Fils de calcul",
+      "help": "Nombre de cœurs que la reconnaissance a le droit d’occuper. Plus haut va plus vite jusqu’à un certain point, mais chaque fil est un cœur en moins pour le reste de l’application."
+    },
+    "dictationIdleUnload": {
+      "title": "Libérer la mémoire après",
+      "help": "Minutes sans dicter au bout desquelles le modèle est déchargé, rendant environ 700 Mo de mémoire. Il se recharge tout seul à la dictée suivante, ce qui prend quelques secondes. Mettez 0 pour le garder chargé en permanence."
+    },
+    "dictationModelFolder": {
+      "title": "Dossier du modèle",
+      "help": "Emplacement d’un modèle de reconnaissance déjà présent sur ce disque, à utiliser au lieu de celui que l’application télécharge. Laissez vide dans le cas normal.",
+      "placeholder": "/Volumes/Modeles/parakeet-tdt-0.6b-v3-int8"
     },
     "defaultModel": "Modèle par défaut",
     "noDefaultModel": "Demander à chaque fois",
@@ -1044,6 +1077,10 @@
     "appSettings": {
       "title": "Réglages",
       "help": "Ouvre la fenêtre des réglages, celle-ci même : la langue, les couleurs, le compte, les raccourcis et tout ce qui se règle."
+    },
+    "appDictate": {
+      "title": "Dicter",
+      "help": "Écoute le micro et écrit ce que vous dites à l’endroit du curseur, dans le champ où vous êtes. Se maintient enfoncée par défaut : on parle, on relâche, le texte s’écrit."
     },
     "windowFullScreen": {
       "title": "Plein écran",
@@ -1634,6 +1671,27 @@
     "alreadyEnglish": "Ce texte est déjà en anglais.",
     "describeStyle": "Décrire le style des références",
     "noReference": "Déposez une image de référence pour en décrire le style."
+  },
+  "dictation": {
+    "start": "Dicter",
+    "stop": "Arrêter la dictée",
+    "listening": "Je vous écoute…",
+    "loadingEngine": "Chargement du modèle…",
+    "download": "Télécharger le modèle ({{size}})",
+    "downloading": "Téléchargement du modèle : {{done}} sur {{total}}",
+    "cancelDownload": "Interrompre le téléchargement",
+    "openPrivacySettings": "Ouvrir les réglages du système",
+    "active": "Micro actif",
+    "device": "Micro",
+    "defaultDevice": "Périphérique par défaut",
+    "noDevice": "Aucun micro n’a été trouvé sur cet ordinateur.",
+    "errors": {
+      "permissionDenied": "L’accès au micro a été refusé.",
+      "noInputDevice": "Aucun micro disponible.",
+      "modelDownloadFailed": "Le téléchargement du modèle a échoué.",
+      "modelChecksumMismatch": "Le modèle téléchargé est abîmé ; il a été supprimé.",
+      "engineCrashed": "La reconnaissance vocale s’est arrêtée."
+    }
   },
   "units": {
     "byte": "o",

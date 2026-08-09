@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/about-panel'
@@ -12,6 +12,7 @@ import { log, mirrorLogsTo } from '@main/log'
 import { createServices, createSettings } from '@main/services'
 import type { SettingsStore } from '@main/settings/store'
 import { lockNavigation } from '@main/window/navigation'
+import { lockPermissions, rendererOrigin } from '@main/window/permissions'
 import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splash-window'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
@@ -61,6 +62,9 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
     event.preventDefault()
     leaving = true
+    // Not awaited with the rest: the recognition process holds no state worth settling, and a
+    // model still loading would otherwise keep the studio on screen for seconds.
+    services.dictation.dispose()
     // The note of what is still running goes out with the journal: a job whose submission
     // landed in the last moments would otherwise be lost, and it has already been paid for.
     void Promise.all([services.journal.flush(), services.flushJobs()]).finally(() => app.quit())
@@ -106,6 +110,10 @@ function bootstrap(): void {
   lockNavigation()
 
   void app.whenReady().then(() => {
+    // The session only exists once ready, and no window may exist before it is locked: with no
+    // handler installed Electron grants every permission a page asks for.
+    lockPermissions(session.defaultSession, rendererOrigin())
+
     // Before the splash: it is painted from the theme, and reading the settings is a JSON file —
     // the rest of the services open SQLite synchronously, far too late to decide what to paint.
     const settings = createSettings()

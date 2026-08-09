@@ -102,6 +102,66 @@ de mots, la plupart des modèles diluent. Mieux vaut une phrase juste que trois 
 
 ---
 
+## Dicter au lieu de taper
+
+Un quatrième bouton, en forme de micro, se tient au même endroit. Il apparaît sur **tous** les
+champs de texte long du formulaire, pas seulement sur le prompt : un prompt négatif se dicte
+aussi bien.
+
+**Tout se passe sur votre ordinateur.** Rien de ce que vous dites n'est envoyé nulle part, il
+n'y a pas de clé à saisir, et la dictée fonctionne sans connexion.
+
+### La première fois
+
+La reconnaissance a besoin d'un modèle, qui pèse 640 Mo et se télécharge **une seule fois**. Le
+studio ne le rapatrie jamais tout seul : il vous le propose, vous décidez. Pendant le
+téléchargement, l'application reste entièrement utilisable — vous pouvez générer, dessiner,
+monter, comme si de rien n'était.
+
+Votre ordinateur vous demandera aussi l'autorisation d'utiliser le micro. Si vous refusez, un
+lien vous emmène directement dans les réglages du système pour revenir dessus : une fois refusé,
+macOS ne redemande plus.
+
+### Dicter
+
+Deux façons, au choix dans les réglages :
+
+- **En maintenant ⌥D** (le réglage d'origine). On appuie, on parle, on relâche : le texte
+  s'écrit. C'est le plus sûr — le micro n'est jamais laissé ouvert par oubli.
+- **En basculant** : une pression démarre, la suivante arrête. La main se repose, ce qui vaut
+  mieux pour les longues dictées.
+
+Le raccourci fonctionne **depuis le champ où vous êtes en train d'écrire**, ce qui est tout
+l'intérêt, et le texte se pose **à l'endroit du curseur** — pas à la fin. Ce que vous aviez déjà
+tapé n'est jamais écrasé.
+
+Cela vaut pour tous les champs du studio, pas seulement le prompt : la recherche d'assets, le
+renommage d'un calque, un nom de document.
+
+### Ce que vous voyez pendant
+
+Pendant que vous parlez, une phrase grisée s'affiche **sous** le champ : c'est ce que la
+reconnaissance croit entendre, et elle se corrige au fil des mots. Elle n'entre pas dans le
+champ. Quand vous marquez un silence — ou que vous relâchez la touche — la phrase est arrêtée,
+ponctuée, et **elle seule** est écrite dans le champ.
+
+Un petit indicateur à côté du micro monte et descend avec votre voix. S'il ne bouge pas, le
+micro n'entend rien : vérifiez lequel votre ordinateur utilise.
+
+### Ce qu'il faut savoir
+
+- **Parlez normalement**, comme à quelqu'un. La ponctuation est ajoutée toute seule, il est
+  inutile de dire « virgule ».
+- **Une phrase à la fois.** Un silence d'une demi-seconde suffit à la clore. Si vos phrases se
+  coupent en deux parce que vous réfléchissez en parlant, allongez ce délai dans les réglages.
+- **Le français fonctionne**, et vingt-quatre autres langues européennes, reconnues toutes
+  seules — vous n'avez rien à annoncer. Mais souvenez-vous que les modèles d'image lisent
+  l'anglais : dictez en français, puis **Traduire en anglais** juste en dessous.
+- **La mémoire est rendue** après dix minutes sans dicter. La fois suivante demande quelques
+  secondes de rechargement, et c'est tout.
+
+---
+
 ## Se faire aider pour écrire le prompt
 
 Trois boutons se tiennent au-dessus du champ. Ils ne sont pas là sur tous les formulaires :

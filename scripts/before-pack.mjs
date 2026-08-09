@@ -1,5 +1,6 @@
 /**
- * Fetches the ffmpeg of the target being packaged, right before electron-builder packs it.
+ * Fetches what the studio ships beside itself, right before electron-builder packs a target:
+ * the ffmpeg of that target, and the voice detector dictation listens through.
  *
  * A single `pnpm dist` builds several targets — macOS ships arm64 and x64 from one run — while
  * `resources/ffmpeg/` holds one platform's binaries at a time. Left to a manual
@@ -14,6 +15,7 @@
  */
 import { Arch } from 'electron-builder'
 import { fetchFfmpeg } from './fetch-ffmpeg.mjs'
+import { fetchStt } from './fetch-stt.mjs'
 
 export default async function beforePack(context) {
   const platform = context.electronPlatformName
@@ -27,4 +29,9 @@ export default async function beforePack(context) {
 
   console.log(`Fetching ffmpeg for ${platform}-${arch}`)
   await fetchFfmpeg(platform, arch)
+
+  // The same bytes on every target, so it is fetched per target only because this is the one
+  // hook that runs before each pack — and re-fetching 640 KB costs nothing worth optimising.
+  console.log('Fetching the voice detector')
+  await fetchStt()
 }

@@ -143,6 +143,18 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onProgress: noSubscription,
       ...overrides.media,
     },
+    dictation: {
+      state: () => Promise.resolve({ state: 'idle', download: null, failure: null }),
+      start: () => Promise.resolve(),
+      stop: () => Promise.resolve(),
+      cancel: () => Promise.resolve(),
+      push: () => Promise.resolve(),
+      downloadModel: () => Promise.resolve(),
+      cancelDownload: () => Promise.resolve(),
+      openPrivacySettings: () => Promise.resolve(),
+      onEvent: noSubscription,
+      ...overrides.dictation,
+    },
     window: {
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),

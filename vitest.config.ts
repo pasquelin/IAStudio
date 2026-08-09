@@ -52,6 +52,17 @@ export default defineConfig({
         'src/main/scenario/**': { statements: -85, branches: -70 },
         'src/main/project/**': { statements: -115, branches: -60 },
         'src/main/media/**': { statements: -70, branches: -32 },
+        // The recognition engine and what feeds it. Three files here cannot be reached by a
+        // test and account for nearly all of the allowance: `stt-worker` loads a native addon
+        // at import, `stt-process` forks a `utilityProcess`, and `model-store` is the real
+        // network and the real disk. Everything that decides anything — the protocol, the
+        // download, the session's states, the segmenting — sits beside them and is covered.
+        'src/main/dictation/**': { statements: -140, branches: -60 },
+        // The window's half. Most of what is left uncovered is `capture.ts`: jsdom has no
+        // `getUserMedia` and no audio graph, so what it does can only be watched in the
+        // application. Everything it hands over — the conversions, the insertion at the caret,
+        // the store — is covered here.
+        'src/renderer/src/dictation/**': { statements: -55, branches: -34 },
         // Where the library meets the disk. Tight on purpose: nothing here needs a GPU or a
         // network, so what is not covered is what nobody got round to, not what cannot be run.
         'src/main/assets/**': { statements: -10, branches: -10 },

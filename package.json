@@ -27,6 +27,7 @@
     "validate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:coverage",
     "docs:scenario": "bash scripts/fetch-scenario-docs.sh",
     "ffmpeg:fetch": "node scripts/fetch-ffmpeg.mjs",
+    "stt:fetch": "node scripts/fetch-stt.mjs",
     "licences:collect": "node scripts/collect-licences.mjs",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "decoders:copy": "node scripts/copy-decoders.mjs",
@@ -45,6 +46,7 @@
     "pixi.js": "8.19.0",
     "react-is": "^19.2.8",
     "recharts": "^3.10.1",
+    "sherpa-onnx-node": "1.13.4",
     "three": "0.185.1",
     "three-mesh-bvh": "^0.9.14"
   },

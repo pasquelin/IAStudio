@@ -162,6 +162,14 @@ The size of the interface's controls. **Comfortable** leaves air (28 px tall); *
 A texture *channel* the studio computed from another, rather than received from a *model*. The
 computation is relaunched from its thumbnail's menu, as many times as you like.
 
+**Dictation**
+Writing a text by saying it rather than typing it. Recognition runs **on this computer**, with no
+key and no connection: nothing said goes anywhere else.
+
+It needs a recognition *model*, downloaded once (640 MB), and works in every text field of the
+studio — the text lands at the caret. See
+[Generating](06-generating.md#speaking-instead-of-typing).
+
 **Dock**
 An area of the window where *panels* can settle: the left and right columns, the bottom strip. See
 [The window](03-the-window.md).

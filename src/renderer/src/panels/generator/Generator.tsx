@@ -7,6 +7,7 @@ import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/d
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
 import { PromptAssistant } from '@/design/PromptAssistant'
+import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failure-message'
 import { getBridge } from '@/services/bridge'
 import { useJobs } from '@/stores/jobs'
@@ -159,23 +160,29 @@ export function Generator() {
               onValuesChange={cost.onValuesChange}
               busy={!project}
               preset={preset}
-              // The API marks the field its assistance rewrites; every other one gets nothing.
-              accessory={(field, handle) =>
-                field.promptSpark === true && (
-                  <PromptAssistant
-                    readDraft={() => textOf(handle.read())}
-                    request={draft => suggestPrompts(modelId, draft)}
-                    translate={translateDraft}
-                    describeStyle={describeStyle}
-                    readReferences={() =>
-                      referencePictures(descriptor.data?.fields ?? [], handle.readAll())
-                    }
-                    onAdoptText={handle.write}
-                    onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
-                    failureMessage={error => t(failureKeyOf(error))}
-                  />
-                )
-              }
+              // Two accessories, on two different sets of fields. Assistance hangs on the one
+              // the API marks as its prompt, because only that one can be rewritten for the
+              // model. Dictation hangs on anything a sentence can be spoken into — a negative
+              // prompt is worth dictating too, and the API marks none of those.
+              accessory={(field, handle) => (
+                <>
+                  {dictationAccessory(field)}
+                  {field.promptSpark === true && (
+                    <PromptAssistant
+                      readDraft={() => textOf(handle.read())}
+                      request={draft => suggestPrompts(modelId, draft)}
+                      translate={translateDraft}
+                      describeStyle={describeStyle}
+                      readReferences={() =>
+                        referencePictures(descriptor.data?.fields ?? [], handle.readAll())
+                      }
+                      onAdoptText={handle.write}
+                      onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
+                      failureMessage={error => t(failureKeyOf(error))}
+                    />
+                  )}
+                </>
+              )}
             />
           </Suspense>
         </ErrorBoundary>

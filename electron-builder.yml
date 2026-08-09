@@ -52,6 +52,10 @@ electronFuses:
 # A native module cannot be loaded from inside the asar archive.
 asarUnpack:
   - '**/*.node'
+  # The recognition engine ships four dynamic libraries beside its `.node`, and the loader reads
+  # them from disk by name. The rule above unpacks the addon alone, which loads and then fails
+  # looking for a `libonnxruntime.dylib` still sealed in the archive.
+  - '**/sherpa-onnx-*/**'
 
 # The encoder the studio ships with. `beforePack` fetches the one matching the target about to
 # be packed, so a run building several of them gives each its own. Outside the asar on purpose:
@@ -61,6 +65,12 @@ beforePack: scripts/before-pack.mjs
 extraResources:
   - from: resources/ffmpeg
     to: ffmpeg
+    filter: ['**/*']
+  # The voice detector dictation listens through — 640 KB, fetched by `pnpm stt:fetch` and
+  # verified against a pinned digest. Shipped rather than downloaded because it is small, and
+  # because it lets the microphone be checked before the 640 MB recognition model is there.
+  - from: resources/stt
+    to: stt
     filter: ['**/*']
   # Beside the application rather than only inside its Help window: a notice reachable only from
   # a running app is out of reach for whoever cannot start it, and the FFmpeg source offer has to
@@ -80,6 +90,14 @@ mac:
   # The value Electron 43 already carries in its Info.plist, written down so it stops being
   # implicit: electron-updater reads it to decide whether a client may take an update.
   minimumSystemVersion: '12.0'
+  extendInfo:
+    # macOS shows this sentence in the permission dialog, and kills the process outright if the
+    # key is missing when the microphone is first touched. Not localised: an Info.plist string
+    # needs an `InfoPlist.strings` per language, which electron-builder does not assemble — see
+    # docs/stt/02-packaging.md.
+    NSMicrophoneUsageDescription:
+      Scenario Studio uses the microphone to turn what you say into text, on this computer.
+      Nothing you say is sent anywhere.
   # `notarize` is deliberately left at its default rather than pinned to false: electron-builder
   # only notarises what it managed to sign, so an unsigned build skips it on its own — and the
   # day the secrets of ADR-07 exist, signing and notarising both start without touching this

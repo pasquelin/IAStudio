@@ -62,12 +62,21 @@ menu, which catches them before anybody else. They are therefore the only ones t
 | **Open project** | `⌘O` | opens an existing project in place of the current one |
 | **Save document** | `⌘S` | writes the document in front into the project |
 | **Settings** | `⌘,` | opens the settings window |
+| **Dictate** | `⌥D` | listens to the microphone and writes what you say at the caret |
 | **Full screen** | `⌃⌘F` | makes the window take the whole screen |
 | **Reset layout** | *none* | puts the panels back where they started |
 
 **Reset layout** deliberately has **no** default key: it is an action you reach for once every six
 months, and giving it a shortcut would mean occupying a key for nothing. It is in the **View** menu,
 and you can assign one to it (see below).
+
+**Dictate is the only shortcut that works while you are typing into a field.** Every other one
+stays quiet in that case, and rightly so: a letter must reach the field, not the surface behind
+it. But dictating into the field you are already in is the whole point — see
+[Generating](06-generating.md#speaking-instead-of-typing).
+
+It is **held** rather than tapped: press, speak, let go. It can be set to toggle instead, in the
+[settings](14-settings.md#how-it-is-triggered).
 
 > **The open project saves as it goes.** `⌘S` concerns only the **document** in front — a 3D scene,
 > for instance — not the project itself. The tab carries a dot (`•`) as long as what is on screen is

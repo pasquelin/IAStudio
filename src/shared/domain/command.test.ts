@@ -7,6 +7,7 @@ import {
   COMMAND_SCOPES,
   commandDescriptor,
   commandFor,
+  commandIn,
   commandsIn,
   conflicts,
 } from './command'
@@ -133,5 +134,20 @@ describe('every scope the registry declares', () => {
     const empty = COMMAND_SCOPES.filter(scope => commandsIn(scope).length === 0)
 
     expect(empty).toEqual([])
+  })
+})
+
+describe('looking a command up by its suffix', () => {
+  it('finds the one that scope declares', () => {
+    expect(commandIn('scene', 'undo')).toBe('scene.undo')
+  })
+
+  /**
+   * The native menu asks every scope for `undo` and `redo` and greys the row out when the
+   * answer is `null` — so the answer for a scope that has no such command is what the menu is
+   * actually built on, and it was the one path never exercised.
+   */
+  it('answers null rather than guessing when that scope has none', () => {
+    expect(commandIn('scene', 'jamaisDeclare')).toBeNull()
   })
 })

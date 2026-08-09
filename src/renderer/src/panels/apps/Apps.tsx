@@ -10,6 +10,7 @@ import {
   type WorkflowSummary,
 } from '@shared/domain/workflow'
 import type { FormValues } from '@/helpers/dynamic-form'
+import { dictationAccessory } from '@/dictation/DictationField'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
@@ -187,6 +188,7 @@ function AppRunner({ workflowId, onBack }: { workflowId: string; onBack: () => v
               submitNote={cost.note}
               onValuesChange={cost.onValuesChange}
               busy={!project || !isRunnable(app)}
+              accessory={dictationAccessory}
             />
           </Suspense>
         </ErrorBoundary>

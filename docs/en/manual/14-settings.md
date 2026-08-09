@@ -483,6 +483,70 @@ This section has its own chapter: [Every shortcut](15-shortcuts.md).
 
 ---
 
+## Dictation
+
+*Speaking a text instead of typing it. Everything happens on this computer: nothing you say is
+sent anywhere.*
+
+The gesture is described in [Generating](06-generating.md#speaking-instead-of-typing); here is
+what can be adjusted.
+
+### Enable dictation
+
+Unticked, dictation disappears: no microphone button beside the fields, no shortcut, and the
+application loads nothing and never asks for microphone access.
+
+### How it is triggered
+
+**Hold the key** listens for as long as ⌥D is pressed and stops when you let go. It is the
+default, and the safest: the microphone is never left open by mistake.
+
+**Toggle on and off** starts on the first press and stops on the next. It rests the hand, which
+is better over a long dictation.
+
+### Silence that ends a sentence
+
+In milliseconds, 600 by default. It is how much quiet before what you have just said counts as
+finished, is transcribed, and is written into the field.
+
+**Raise it** if your sentences are cut in half because you pause to think. Lower it if the text
+feels slow to appear.
+
+### Preview while you speak
+
+In milliseconds, 700 by default. It is the interval between two previews of the sentence being
+spoken — the greyed text below the field.
+
+It is not free, and it is worth knowing why: **the model does not write as the words come**.
+Every preview reads back everything said since the sentence began. On a machine that struggles,
+previews space themselves out — the settled text never suffers for it.
+
+**Set it to 0** to remove previews entirely: the text will then appear only at the end of each
+sentence, and the machine will work far less.
+
+### Compute threads
+
+From 1 to 8, two by default. How many cores recognition may occupy. Higher is faster up to a
+point, but every thread is a core taken away from the rest of the application — the 3D view, the
+timeline, the interface.
+
+### Free the memory after
+
+In minutes, ten by default. The loaded model takes around 700 MB; past that long without
+dictating, it is released and the memory returned. It loads itself again on the next dictation,
+in a few seconds.
+
+**Set it to 0** to keep it resident: dictation then starts instantly, at the cost of 700 MB held
+for as long as the studio is open.
+
+### Model folder
+
+Leave it empty in the normal case: the model is downloaded beside your settings. This field is
+for pointing at a model already somewhere else — an external disk, or one shared between several
+accounts on the machine.
+
+---
+
 ## Media
 
 *Preparation of imported files: proxies and waveforms.*

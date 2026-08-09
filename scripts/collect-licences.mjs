@@ -15,6 +15,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { sourceArchives as FFMPEG_SOURCES, TARGETS as FFMPEG_TARGETS } from './fetch-ffmpeg.mjs'
+import { VAD as STT_VAD } from './fetch-stt.mjs'
 // A `.ts` from a `.mjs`: Node 24 strips the types on the way in. Worth the novelty here — the
 // rule that decides who owes a source offer must be the one the tests check, not a twin of it.
 import { isCopyleft } from '../src/shared/domain/licence.ts'
@@ -40,6 +41,7 @@ const SHIPPED = [
   'mediabunny',
   'opentype.js',
   'pixi.js',
+  'sherpa-onnx-node',
   'three',
   'three-mesh-bvh',
   // The runtime itself.
@@ -169,6 +171,65 @@ function fontLicences() {
 }
 
 /**
+ * What dictation ships that npm does not describe.
+ *
+ * The addon is collected like any package; these two are not packages. The detector sits in
+ * `resources/stt/`, fetched by `pnpm stt:fetch`. ONNX Runtime is inside the platform packages
+ * of sherpa-onnx as four dynamic libraries, and it is Microsoft's, not theirs — a notice that
+ * named only sherpa-onnx would attribute their work to someone else.
+ *
+ * The recognition model is listed although it is downloaded by the user rather than shipped:
+ * CC-BY-4.0 asks for attribution wherever the work is used, and the licence text is offered by
+ * link because that is what that licence itself asks for.
+ */
+function dictationLicences() {
+  return [
+    {
+      name: 'ONNX Runtime',
+      version: '1.27.0',
+      spdx: 'MIT',
+      text: [
+        'ONNX Runtime is redistributed inside the sherpa-onnx platform packages, as the',
+        'dynamic libraries the recognition addon loads.',
+        '',
+        'Copyright (c) Microsoft Corporation. Licensed under the MIT License.',
+        'Full terms: https://github.com/microsoft/onnxruntime/blob/main/LICENSE',
+      ].join('\n'),
+      sources: 'https://github.com/microsoft/onnxruntime',
+    },
+    {
+      name: 'Silero VAD',
+      version: STT_VAD.version,
+      spdx: STT_VAD.licence,
+      text: [
+        'Silero VAD decides when someone is speaking. It ships beside the application, in',
+        'resources/stt/, and is read by the recognition engine rather than executed.',
+        '',
+        `Full terms: ${STT_VAD.source}/blob/master/LICENSE`,
+      ].join('\n'),
+      sources: STT_VAD.source,
+    },
+    {
+      name: 'Parakeet TDT 0.6b v3',
+      version: 'int8',
+      spdx: 'CC-BY-4.0',
+      text: [
+        'The speech recognition model dictation uses. It is NOT shipped with the application:',
+        'it is downloaded on first use into the user data folder, and can be removed from',
+        'there. It is listed here because CC-BY-4.0 asks for attribution wherever the work is',
+        'used, shipped or not.',
+        '',
+        'Created by NVIDIA, as part of the NeMo toolkit, and converted to ONNX by the',
+        'sherpa-onnx project.',
+        '',
+        'Full terms: https://creativecommons.org/licenses/by/4.0/legalcode',
+      ].join('\n'),
+      sources: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
+    },
+  ]
+}
+
+/**
  * The same notice as the in-app window, as a file — for whoever reads the repository or the
  * release page rather than the installed application, and for the EULA to point at.
  */
@@ -207,7 +268,12 @@ function renderNotices(entries) {
   ].join('\n')
 }
 
-const licences = [ffmpegLicence(), ...fontLicences(), ...SHIPPED.map(collect)].sort((one, other) =>
+const licences = [
+  ffmpegLicence(),
+  ...fontLicences(),
+  ...dictationLicences(),
+  ...SHIPPED.map(collect),
+].sort((one, other) =>
   one.name.localeCompare(other.name),
 )
 

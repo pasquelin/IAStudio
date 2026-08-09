@@ -1,4 +1,5 @@
 import { LANGUAGES } from '../i18n/languages'
+import { DICTATION_MODES } from './dictation'
 import {
   DENSITIES,
   LOG_VERBOSITIES,
@@ -123,6 +124,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     id: 'shortcuts',
     labelKey: 'settings.shortcuts',
     descriptionKey: 'settings.shortcutsDescription',
+  },
+  {
+    id: 'dictation',
+    labelKey: 'settings.dictation',
+    descriptionKey: 'settings.dictationDescription',
   },
   {
     id: 'media',
@@ -450,6 +456,77 @@ export const SETTING_REGISTRY = [
     })),
   }),
   setting({
+    path: 'dictation.enabled',
+    kind: 'boolean',
+    section: 'dictation',
+    titleKey: 'settings.dictationEnabled.title',
+    helpKey: 'settings.dictationEnabled.help',
+  }),
+  setting({
+    path: 'dictation.mode',
+    kind: 'choice',
+    section: 'dictation',
+    titleKey: 'settings.dictationMode.title',
+    helpKey: 'settings.dictationMode.help',
+    options: DICTATION_MODES.map(mode => ({
+      value: mode,
+      labelKey: `settings.dictationMode.${mode}`,
+    })),
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.silenceMs',
+    kind: 'number',
+    section: 'dictation',
+    titleKey: 'settings.dictationSilence.title',
+    helpKey: 'settings.dictationSilence.help',
+    min: 200,
+    max: 2000,
+    step: 50,
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.previewMs',
+    kind: 'number',
+    section: 'dictation',
+    titleKey: 'settings.dictationPreview.title',
+    helpKey: 'settings.dictationPreview.help',
+    min: 0,
+    max: 2000,
+    step: 100,
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.threads',
+    kind: 'number',
+    section: 'dictation',
+    titleKey: 'settings.dictationThreads.title',
+    helpKey: 'settings.dictationThreads.help',
+    min: 1,
+    max: 8,
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.idleUnloadMinutes',
+    kind: 'number',
+    section: 'dictation',
+    titleKey: 'settings.dictationIdleUnload.title',
+    helpKey: 'settings.dictationIdleUnload.help',
+    min: 0,
+    max: 120,
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.modelFolder',
+    kind: 'path',
+    pathKind: 'folder',
+    section: 'dictation',
+    titleKey: 'settings.dictationModelFolder.title',
+    helpKey: 'settings.dictationModelFolder.help',
+    placeholderKey: 'settings.dictationModelFolder.placeholder',
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
     path: 'media.ffmpegPath',
     kind: 'path',
     pathKind: 'file',
@@ -526,6 +603,9 @@ function paths<P extends SettingPath[]>(...list: P): P {
 export const UNLISTED_PATHS = paths(
   // Written by the main process every time a project opens: session state, not a preference.
   'storage.lastProject',
+  // Picked from the microphones actually plugged in, which no table can list ahead of time —
+  // `DictationDevices` renders it and `devicechange` keeps it honest.
+  'dictation.inputDeviceId',
   // Waits on the cloud backend actually existing: offering a choice nothing implements would
   // be a promise the application cannot keep.
   'storage.backend',

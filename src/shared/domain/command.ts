@@ -18,6 +18,7 @@ export type CommandId =
   | 'document.save'
   | 'layout.reset'
   | 'app.settings'
+  | 'app.dictate'
   | 'window.fullScreen'
   | 'scene.select'
   | 'scene.translate'
@@ -120,6 +121,18 @@ export type CommandDescriptor = {
    * key someone chooses to give it.
    */
   defaultBinding: Signature | null
+  /**
+   * Held rather than tapped: it reports pressed and released instead of firing once.
+   *
+   * A held command is heard by the window even when its scope is `global`, which is the one
+   * exception to the rule below — a native accelerator has no release to report, so the menu
+   * cannot serve one, and no menu row is declared for it.
+   *
+   * It is also heard while the focus sits in a text field, where every other shortcut is
+   * silent: dictation exists to write into the field one is already in. A held command
+   * therefore has to carry a modifier, or it would swallow a letter.
+   */
+  held?: boolean
 }
 
 function command(descriptor: CommandDescriptor): CommandDescriptor {
@@ -161,6 +174,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.appSettings.title',
     helpKey: 'commands.appSettings.help',
     defaultBinding: 'Meta+Comma',
+  }),
+  command({
+    id: 'app.dictate',
+    scope: 'global',
+    titleKey: 'commands.appDictate.title',
+    helpKey: 'commands.appDictate.help',
+    defaultBinding: 'Alt+KeyD',
+    held: true,
   }),
   command({
     id: 'window.fullScreen',
@@ -843,7 +864,25 @@ export function commandFor(
   overrides: BindingOverrides,
 ): CommandId | null {
   const found = COMMAND_REGISTRY.find(
-    descriptor => descriptor.scope === scope && bindingOf(descriptor.id, overrides) === signature,
+    descriptor =>
+      descriptor.scope === scope &&
+      !descriptor.held &&
+      bindingOf(descriptor.id, overrides) === signature,
+  )
+  return found?.id ?? null
+}
+
+/**
+ * The held command a signature answers to, on any surface. Held commands are matched across
+ * scopes rather than within one: they are heard by the window itself, which is what a release
+ * requires, and the menu never claims their key.
+ */
+export function heldCommandFor(
+  signature: Signature,
+  overrides: BindingOverrides,
+): CommandId | null {
+  const found = COMMAND_REGISTRY.find(
+    descriptor => descriptor.held && bindingOf(descriptor.id, overrides) === signature,
   )
   return found?.id ?? null
 }

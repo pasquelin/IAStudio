@@ -28,7 +28,9 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | immer | 11.1.16 | MIT |
 | Lato | shipped with the application | OFL-1.1 |
 | mediabunny | 1.52.3 | MPL-2.0 |
+| ONNX Runtime | 1.27.0 | MIT |
 | opentype.js | 2.0.0 | MIT |
+| Parakeet TDT 0.6b v3 | int8 | CC-BY-4.0 |
 | pixi.js | 8.19.0 | MIT |
 | react | 19.2.8 | MIT |
 | react-dom | 19.2.8 | MIT |
@@ -37,6 +39,8 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | react-is | 19.2.8 | MIT |
 | react-tooltip | 6.0.8 | MIT |
 | recharts | 3.10.1 | MIT |
+| sherpa-onnx-node | 1.13.4 | Apache-2.0 |
+| Silero VAD | v5 | MIT |
 | tailwind-merge | 3.6.0 | MIT |
 | tailwindcss | 4.3.3 | MIT |
 | three | 0.185.1 | MIT |
@@ -1149,6 +1153,24 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   This Source Code Form is "Incompatible With Secondary Licenses", as
   defined by the Mozilla Public License, v. 2.0.
 ```
+## ONNX Runtime
+
+Version: 1.27.0  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/microsoft/onnxruntime
+```
+
+```
+ONNX Runtime is redistributed inside the sherpa-onnx platform packages, as the
+dynamic libraries the recognition addon loads.
+
+Copyright (c) Microsoft Corporation. Licensed under the MIT License.
+Full terms: https://github.com/microsoft/onnxruntime/blob/main/LICENSE
+```
 ## opentype.js
 
 Version: 2.0.0  
@@ -1175,6 +1197,28 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+## Parakeet TDT 0.6b v3
+
+Version: int8  
+Licence: CC-BY-4.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
+```
+
+```
+The speech recognition model dictation uses. It is NOT shipped with the application:
+it is downloaded on first use into the user data folder, and can be removed from
+there. It is listed here because CC-BY-4.0 asks for attribution wherever the work is
+used, shipped or not.
+
+Created by NVIDIA, as part of the NeMo toolkit, and converted to ONNX by the
+sherpa-onnx project.
+
+Full terms: https://creativecommons.org/licenses/by/4.0/legalcode
 ```
 ## pixi.js
 
@@ -1399,6 +1443,31 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+## sherpa-onnx-node
+
+Version: 1.13.4  
+Licence: Apache-2.0
+
+```
+See README.md of the package.
+```
+## Silero VAD
+
+Version: v5  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/snakers4/silero-vad
+```
+
+```
+Silero VAD decides when someone is speaking. It ships beside the application, in
+resources/stt/, and is read by the recognition engine rather than executed.
+
+Full terms: https://github.com/snakers4/silero-vad/blob/master/LICENSE
 ```
 ## tailwind-merge
 

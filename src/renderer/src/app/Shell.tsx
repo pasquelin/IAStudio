@@ -6,6 +6,7 @@ import { useSettings } from '@/stores/settings'
 import { arrangementOf, DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
+import { DictationStatus } from '@/dictation/DictationStatus'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
 import { ActivityStatus } from './ActivityStatus'
@@ -85,6 +86,8 @@ export function Shell() {
         left={<Breadcrumb />}
         right={
           <>
+            {/* First of the indicators: a live microphone outranks a download. */}
+            <DictationStatus />
             <UpdateStatus />
             <JobsStatus />
             <ActivityStatus />
