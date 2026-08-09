@@ -356,6 +356,59 @@ existe déjà et donne le patron), ses clés dans les deux bundles i18n, la vers
 plafonnée comme celle des documents, et une décision sur `updatedAt`. Deux des quatre points sont
 dans le main — c’est un chantier, il se traite d’un bloc.
 
+### 17. Le dossier d’un projet perd son extension, et sa mécanique passe sous le tapis
+
+**Décidé le 9 août 2026.** Un projet est un dossier : lui coller `.scenario` n’a pas de sens. Et
+`project.json` ne regarde pas l’utilisateur — il doit être masqué, comme **tout ce qui n’est pas
+fait pour lui**.
+
+**L’extension ne sert à rien, vérifié plutôt que supposé.** `PROJECT_EXTENSION` n’a **qu’un seul
+usage** dans tout `src/` — `store.ts:90`, pour fabriquer le nom du dossier à la création. Elle
+n’est **déclarée nulle part au système** : aucune `fileAssociations`, aucun type de document dans
+la configuration de build. Elle n’ouvre donc rien au double-clic, macOS ne la traite pas comme un
+paquet, et la reconnaissance ne s’en sert pas — c’est le manifeste qui dit qu’un dossier est un
+projet, jamais son nom. **Une extension sans association est une décoration.**
+
+> L’extension aurait pu servir à une chose, non faite : déclarer `.scenario` comme paquet macOS,
+> ce qui aurait montré le projet comme **un seul fichier** double-cliquable. C’est l’inverse de ce
+> qui est décidé ici, et c’est écrit pour que la décision soit prise en connaissance de cause,
+> pas pour la rouvrir.
+
+**Et la retirer ne casse aucun projet existant** : `open(path)` reçoit un chemin absolu et ne teste
+jamais l’extension. Les dossiers déjà nommés `X.scenario` continueront de s’ouvrir tels quels.
+
+**Le manifeste caché, lui, demande une migration** — les projets existants portent `project.json`,
+et un studio qui ne cherche que `.project.json` ne les ouvrirait plus. Lire les deux et écrire le
+nouveau, le temps que le parc tourne.
+
+> **Un point de plateforme à ne pas découvrir en recette** : le point initial masque sur macOS et
+> Linux, **pas sur Windows**, qui a besoin de l’attribut `FILE_ATTRIBUTE_HIDDEN` — que Node
+> n’expose pas. Un dossier technique nommé `.index` a le même problème, et il existe déjà. Le
+> pipeline empaquette les trois plateformes : la décision doit valoir sur les trois, ou dire
+> laquelle elle laisse de côté.
+
+**Inventaire de ce qui vit dans un projet**, puisque la règle est « masquer ce qui n’est pas pour
+l’utilisateur » :
+
+| Dossier | Pour qui | Aujourd’hui |
+|---|---|---|
+| `assets/` et ses six sous-dossiers | **l’utilisateur** — ce sont ses fichiers | visible, et ça doit le rester |
+| `documents/` | **l’utilisateur** — son travail | visible, et ça doit le rester |
+| `.index/` (catalogue, proxies, peaks, filmstrips) | la machine — cache reconstructible | déjà masqué |
+| `layouts/` | la machine — arrangement des panneaux | **visible, et créé dans chaque projet sans que rien n’y écrive jamais** |
+| `project.json` | la machine | visible — c’est l’objet de cette entrée |
+
+**`layouts/` est le cas le plus net** : il est dans `PROJECT_FOLDERS`, donc créé à chaque
+ouverture, et c’est sa **seule** occurrence dans tout `src/`. Les arrangements sont persistés dans
+le `localStorage` du renderer (`scenario-studio:layouts`), pas là. C’est un dossier vide posé chez
+l’utilisateur. Deux issues, pas trois : ou il servira un jour et il passe sous `.index/`, ou il ne
+sert pas et il ne doit pas être créé.
+
+**La limite à ne pas franchir.** « A project is a folder, not a binary file — versionable,
+inspectable, repairable by hand » : c’est la raison d’être du format. Masquer la mécanique ne doit
+pas rendre le projet opaque — les assets et les documents restent où l’utilisateur peut les voir,
+les copier et les réparer. La règle est « cacher ce qui n’est pas à lui », pas « cacher ».
+
 ### 4. Aucun sélecteur de couleur ne s’ouvre
 
 Les **quatre** `input type="color"` de l’application sont muets — pinceau, inspecteur, formulaire de
