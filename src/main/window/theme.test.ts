@@ -43,8 +43,9 @@ describe('the light theme', () => {
 
   it('actually changes them, rather than restating the dark value', () => {
     // Deliberately shared: the accent reads on either background, the create button keeps its
-    // warm colour, and the monitor stays black because a picture is judged against the black it
-    // will be shown on — not against the studio's chrome.
+    // own colour so the one action that creates is the same mark in both themes, and the monitor
+    // stays black because a picture is judged against the black it will be shown on — not
+    // against the studio's chrome.
     // The marquee joins them for the monitor's reason: its two strokes are drawn over the
     // document, which does not turn light with the studio around it.
     const shared = [

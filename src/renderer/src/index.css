@@ -36,12 +36,13 @@
    */
   --color-warning: #e0a350;
   /*
-   * The one button that CREATES rather than shows. Its own token, warm against the blue accent
-   * of everything that merely selects: the new-document button has to be findable in a rail of
-   * grey glyphs without borrowing the colour that means "focused".
+   * The one button that CREATES rather than shows. Its own token, apart from the blue accent of
+   * everything that merely selects: the new-document button has to be findable in a rail of grey
+   * glyphs without borrowing the colour that means "focused". Opaque, both of them — half an
+   * alpha over the chassis reads as a disabled button rather than the one action always offered.
    */
-  --color-create: rgba(18, 182, 0, 0.5);
-  --color-create-hover: rgb(18, 182, 0);
+  --color-create: #12b600;
+  --color-create-hover: #0e9200;
   --color-text: #dfe1e5;
   --color-muted: #868a91;
 
@@ -198,8 +199,8 @@
   --color-border: #c9cbd1;
   --color-accent-soft: #d3e1fb;
   --color-danger: #d0342c;
-  --color-create: #c65b4b;
-  --color-create-hover: #b04f40;
+  --color-create: #12b600;
+  --color-create-hover: #0e9200;
   --color-text: #1f2124;
   --color-muted: #6b7078;
 
