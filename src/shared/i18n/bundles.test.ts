@@ -79,6 +79,27 @@ describe('the translation bundles', () => {
   })
 
   /**
+   * A count is text too, and a thousand is not written the same in the two languages: `4 000`
+   * against `4,000`. The usage window formatted its figures through `Intl` from the start, but
+   * the counts written INSIDE a sentence went out raw, and a library of four thousand assets
+   * read `4000` in both.
+   *
+   * `{{count, number}}` hands it to i18next's own `Intl.NumberFormat`. The exception is a
+   * factor rather than a tally — `4×` repeats, it does not count, and grouping it would be
+   * wrong at exactly the point where the grouping would show.
+   */
+  it.each(CODES)('hands every count it writes to the number formatter in %s', code => {
+    const factors = new Set(['texture.tilingPreviewTimes'])
+
+    const raw = [...BUNDLES[code]]
+      .filter(([key]) => !factors.has(key.replace(/_(one|other|zero|two|few|many)$/, '')))
+      .filter(([, text]) => /\{\{count\}\}/.test(text))
+      .map(([key]) => key)
+
+    expect(raw).toEqual([])
+  })
+
+  /**
    * The sentences that read the same in both bundles because nobody translates them: the brand,
    * two format names, two paths, a copyright line, and an example someone types over.
    *
