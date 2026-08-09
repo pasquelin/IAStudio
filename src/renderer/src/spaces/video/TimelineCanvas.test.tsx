@@ -2,10 +2,10 @@ import { fireEvent, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
-import { RULER_HEIGHT, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { RULER_HEIGHT, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import type { Clip } from '@/engines/timeline/timeline-state'
-import { EMPTY_SEQUENCE } from '@/engines/timeline/timeline-state'
+import { EMPTY_SEQUENCE, snapToFrame } from '@/engines/timeline/timeline-state'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
@@ -138,6 +138,27 @@ describe('TimelineCanvas', () => {
     fireEvent.pointerDown(paint('blade'), { clientX: 40, clientY: RULER_HEIGHT + 10 })
 
     expect(clipsOf()).toHaveLength(2)
+  })
+
+  /**
+   * WHERE it cuts, which the count above cannot tell apart: the blade cuts under the pointer and
+   * the `S` shortcut cuts at the playhead — two gestures, and the bar used to describe the wrong
+   * one. The playhead is parked elsewhere, so a cut that drifted to it would show; and the click
+   * lands off a frame boundary, so the expectation has to run the real sum rather than agree with
+   * it by accident.
+   */
+  it('splits under the pointer, not at the playhead the shortcut uses', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    useSequences.getState().replace('doc-1', {
+      ...sequenceOf(useSequences.getState(), 'doc-1'),
+      playhead: 800_000,
+    })
+
+    fireEvent.pointerDown(paint('blade'), { clientX: 41, clientY: RULER_HEIGHT + 10 })
+
+    const { settings } = sequenceOf(useSequences.getState(), 'doc-1')
+    const [first] = clipsOf()
+    expect(first?.duration).toBe(snapToFrame(xToTime(41, viewOf()), settings) - clip.start)
   })
 
   it('moves the playhead when the ruler is pressed', () => {

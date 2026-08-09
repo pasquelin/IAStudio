@@ -651,7 +651,7 @@
     "select": "Sélection",
     "selectHint": "Sélectionner, déplacer et rogner un clip",
     "blade": "Lame",
-    "bladeHint": "Couper un clip à la tête de lecture",
+    "bladeHint": "Couper un clip sous le pointeur",
     "hand": "Main",
     "handHint": "Faire défiler la timeline — molette pour zoomer"
   },
