@@ -90,6 +90,11 @@
     "failures_other": "{{count, number}} échecs",
     "clearFilters": "Tout afficher",
     "dismiss": "Masquer",
+    "all": "Tout",
+    "filters": {
+      "levels": "Niveau",
+      "topics": "Sujet"
+    },
     "levels": {
       "info": "Information",
       "warn": "Avertissement",
