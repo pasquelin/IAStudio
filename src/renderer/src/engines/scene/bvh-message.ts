@@ -31,5 +31,4 @@ export type SerializedBvh = {
  * shape as `catalog-protocol.ts`, the studio's other worker boundary.
  */
 export type BvhResponse =
-  | { id: number; ok: true; bvh: SerializedBvh }
-  | { id: number; ok: false; error: string }
+  { id: number; ok: true; bvh: SerializedBvh } | { id: number; ok: false; error: string }
