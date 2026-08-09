@@ -55,6 +55,16 @@ export function RangeField({
   const span = max - min
   const percent = (edge: number): number => ((edge - min) / span) * 100
 
+  /**
+   * Which handle takes the presses where they overlap. The two inputs are stacked, so the last
+   * one in the DOM — «to» — catches every press at a shared position: dragged up against it,
+   * «from» ends up under it with no way back, and the range is stuck at a single value.
+   *
+   * Lifted once «from» is past halfway, which is the only side where it can be trapped: at the
+   * bottom of the rail «to» is already on top and free to move up.
+   */
+  const fromOnTop = percent(value.min) > 50
+
   const set = (edge: 'min' | 'max', raw: number): void => {
     const next = bound(raw, { min, max, step })
     // Clamped against the other handle rather than refused: a drag that ran past it stops there,
@@ -97,7 +107,7 @@ export function RangeField({
           onChange={event => set('min', Number(event.target.value))}
           onFocus={() => onGestureStart?.()}
           onBlur={() => onGestureEnd?.()}
-          className={HANDLE}
+          className={cn(HANDLE, fromOnTop && 'z-1')}
         />
         <input
           type="range"

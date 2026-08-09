@@ -86,6 +86,26 @@ describe('RangeField', () => {
     expect(onChange).toHaveBeenCalledWith({ min: 0.2, max: 1 })
   })
 
+  /**
+   * Stacked inputs: the last in the DOM catches every press where they overlap. Dragged up to
+   * the top of the rail, «from» would sit under «to» with no way back — and the range is then
+   * stuck at one value for the rest of the session, keyboard aside. Reproduced on screen: two
+   * handles at 1 is one drag away, since `set('min')` clamps against `value.max`.
+   */
+  it('lifts the lower handle above the upper one once it is past halfway', () => {
+    const { from, to } = renderField({ min: 1, max: 1 })
+
+    expect(from.className).toContain('z-1')
+    expect(to.className).not.toContain('z-1')
+  })
+
+  /** At the bottom of the rail the upper handle is already on top, and free to move up. */
+  it('leaves the stacking alone while the lower handle is in the bottom half', () => {
+    const { from } = renderField({ min: 0, max: 0 })
+
+    expect(from.className).not.toContain('z-1')
+  })
+
   it('reports a drag across the rail as one gesture', () => {
     const { onGestureStart, onGestureEnd, from } = renderField()
 
