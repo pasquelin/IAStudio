@@ -1179,8 +1179,12 @@ canal** — ce qui dépasse le blanc est écrêté, et un éclairage à forte dy
 
 # 6. Le node editor et les workflows Scenario
 
-> **Le chantier a son plan**, dix étapes :
-> [`docs/plans/2026-08-08-workflows-node-editor.md`](plans/2026-08-08-workflows-node-editor.md).
+> **Le chantier a son plan**, dix étapes — `docs/plans/2026-08-08-workflows-node-editor.md`.
+> **Ce fichier n'est pas dans le dépôt** : `docs/plans/` n'a jamais été commité, et le dossier a
+> disparu du dépôt principal le 9 août 2026 au soir. La seule copie vivante est dans le worktree
+> `.claude/worktrees/workflows/`. **À commiter avant que ce worktree ne soit retiré**, sans quoi les
+> dix étapes s'en vont avec lui — c'est exactement le cas que le § « le prompt de reprise » annonce
+> deux cents lignes plus haut, et il s'est produit.
 
 **Sept étapes sur dix sont fusionnées dans `develop`** — les six premières, puis **la dixième**. Le
 graphe est un espace pour de bon : document `.graph`, entrée dans `IO_BY_KIND`, composant en `lazy()`,

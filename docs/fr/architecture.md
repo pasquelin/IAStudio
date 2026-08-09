@@ -148,9 +148,10 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           renvoie des données typées
 ```
 
-**82 canaux dans `CHANNELS`, plus 17 événements dans `EVENTS`** — relevé le 9 août 2026, et le
-chiffre bouge à chaque chantier : le compter (`CHANNELS`, deux espaces d’indentation) coûte moins
-que de le croire. Vingt préfixes, dont les plus chargés :
+**83 canaux dans `CHANNELS`, plus 18 événements dans `EVENTS`** — relevé le 9 août 2026 au soir, et
+le chiffre bouge à chaque chantier : **il a bougé deux fois dans la journée où cette phrase a été
+écrite**. Le compter (`CHANNELS`, deux espaces d’indentation) coûte moins que de le croire.
+Vingt et un préfixes, dont les plus chargés :
 
 | Famille | Nb | Ce qu’elle porte |
 |---|---|---|
@@ -159,11 +160,12 @@ que de le croire. Vingt préfixes, dont les plus chargés :
 | `dictation:*` | 8 | permissions du micro, modèle, session de reconnaissance |
 | `settings:*` / `accounts:*` | 6 + 5 | lecture, écriture, identifiants, état d’authentification |
 | `document:*` | 6 | ouvrir, écrire, lister les documents du projet |
-| `styles:*`, `favorites:*`, `workflows:*`, `project:*`, `media:*`, `window:*` | 3 chacun | — |
+| `styles:*` | 4 | les réglages de matière, enregistrés et rejoués |
+| `favorites:*`, `workflows:*`, `project:*`, `media:*`, `window:*` | 3 chacun | — |
 | `dialog:*`, `fonts:*`, `update:*` | 2 chacun | — |
-| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*` | 1 chacun | — |
+| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*`, `skybox:*` | 1 chacun | — |
 
-**`EVENTS` est l’autre sens** — le main poussant vers le renderer, dix-sept entrées : progression
+**`EVENTS` est l’autre sens** — le main poussant vers le renderer, dix-huit entrées : progression
 des jobs et des imports, lignes de journal, changements de projet et de réglages, état de fenêtre,
 aperçus de dictée, et le menu natif qui demande à l’UI d’ouvrir un outil ou une section de réglages,
 d’exécuter une commande, ou de déposer un nœud dans la scène.
@@ -630,7 +632,7 @@ Les primitives, toutes dans `design/` :
 | `MediaTile`, `Thumbnail` | la tuile carrée légendée, et la même image à taille fixe |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | la barre partagée, ses boutons d’icône, ses boutons libellés, l’unique porte des icônes |
 | `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par le résumé des générations, sa liste dépliée et l’import de médias |
-| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `ColorField`, `Vector3Field`, `TextureField`, `PropertyRow` — ce dont l’inspecteur est fait |
+| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — ce dont l’inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | les chaînes de classes partagées par plus d’un composant : `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
@@ -648,15 +650,16 @@ ignorent purement et simplement.
 
 Trois conséquences pour l’appelant, et aucune n’est facultative :
 
-- **`label` est requis.** Un `listbox` sans nom est une violation WCAG 2.0 A (4.1.2), et six
-  panneaux qui n’en passent pas s’annoncent tous « listbox ». Chacun donne le titre qu’il porte
-  déjà.
+- **`label` est requis.** Un `listbox` sans nom est une violation WCAG 2.0 A (4.1.2), et des
+  panneaux qui n’en passent pas s’annoncent tous « listbox », sans se distinguer. Chacun donne le
+  titre qu’il porte déjà.
 - **Le compte annoncé est celui des données, pas de la fenêtre virtualisée.** `aria-posinset` et
   `aria-setsize` sont posés depuis l’index réel : sans eux, un catalogue de 2000 modèles se dit
   « 1 sur 35 », et le nombre change au défilement.
 - **`aria-multiselectable` est déclaré, jamais déduit.** `pickFrom` offre shift et ⌘ à tous les
-  appelants, mais trois panneaux sur six n’en gardent qu’un : le déduire promettrait une plage
-  qu’ils ne construisent pas.
+  appelants, mais la plupart n’en gardent qu’un — deux seulement passent `multiple`, l’étagère
+  d’assets et la liste de nœuds. Le déduire promettrait une plage que les autres ne construisent
+  pas.
 
 `aria-selected` ne se pose que sur un `option`. L’Explorateur peint « ouvert » avec la même prop,
 et l’annoncer « sélectionné » décrirait un état que ses lignes ne peuvent ni prendre ni rendre.
