@@ -13,9 +13,22 @@ describe('resolving a machine tag', () => {
     expect(resolveLanguage('en-GB')).toBe('en')
   })
 
-  it('falls back for a language nothing is translated into', () => {
-    expect(resolveLanguage('de-DE')).toBe(DEFAULT_LANGUAGE)
-    expect(resolveLanguage(undefined)).toBe(DEFAULT_LANGUAGE)
+  /**
+   * English rather than French, and the two are not the same decision. A reader whose machine
+   * is set to German, Spanish or Japanese is far likelier to read English than French, and the
+   * studio is the only thing standing between them and a window they cannot use — they would
+   * have to find the settings, in French, to discover that English exists.
+   */
+  it('serves English to a machine set to neither language', () => {
+    expect(resolveLanguage('de-DE')).toBe('en')
+    expect(resolveLanguage('es-ES')).toBe('en')
+    expect(resolveLanguage('ja-JP')).toBe('en')
+    expect(resolveLanguage(undefined)).toBe('en')
+  })
+
+  // The bundle a missing key falls back to stays French: it is the reference, and the fullest.
+  it('keeps French as the bundle behind a key nobody translated', () => {
+    expect(DEFAULT_LANGUAGE).toBe('fr')
   })
 })
 
@@ -27,8 +40,8 @@ describe('the language in force', () => {
     expect(effectiveLanguage('fr', 'en-GB')).toBe('fr')
   })
 
-  it('ignores a machine tag it cannot honour', () => {
-    expect(effectiveLanguage('system', 'de-DE')).toBe(DEFAULT_LANGUAGE)
+  it('ignores a machine tag it cannot honour, and serves English instead', () => {
+    expect(effectiveLanguage('system', 'de-DE')).toBe('en')
   })
 })
 
