@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collection-state'
+import { FAMILY_FACET } from './family-facet'
 import {
   CAPABILITY_FACET,
   facetsFor,
@@ -23,7 +24,7 @@ describe('model filters', () => {
    * back empty on every one. A category, author or rating facet would filter nothing at all.
    */
   it('offers only the facets the API can answer', () => {
-    const keys = facetsFor('image', identity).map(facet => facet.key)
+    const keys = facetsFor(DEFAULT_COLLECTION_STATE, 'image', identity).map(facet => facet.key)
 
     expect(keys).toEqual([ORIGIN_FACET, CAPABILITY_FACET, TAG_FACET, PUBLISHER_FACET, PERIOD_FACET])
     // Category and collections are empty on all 642 public models, even through
@@ -33,7 +34,9 @@ describe('model filters', () => {
   })
 
   it('offers the capabilities of the family at hand', () => {
-    const capability = facetsFor('video', identity).find(facet => facet.key === CAPABILITY_FACET)
+    const capability = facetsFor(DEFAULT_COLLECTION_STATE, 'video', identity).find(
+      facet => facet.key === CAPABILITY_FACET,
+    )
 
     expect(capability?.options.map(option => option.value)).toEqual([
       'txt2video',
@@ -44,7 +47,7 @@ describe('model filters', () => {
 
   // Families the API describes no capability or tag for must not show an empty menu.
   it('drops the facets the family has nothing for', () => {
-    expect(facetsFor('other', identity).map(facet => facet.key)).toEqual([
+    expect(facetsFor(DEFAULT_COLLECTION_STATE, 'other', identity).map(facet => facet.key)).toEqual([
       ORIGIN_FACET,
       PERIOD_FACET,
     ])
@@ -52,10 +55,42 @@ describe('model filters', () => {
 
   /**
    * Capability, tag and publisher are one family's own vocabulary; unioned over the ten they
-   * would list options that narrow nothing in common. Origin and period every model carries.
+   * would list options that narrow nothing in common. Origin and period every model carries —
+   * and the family facet is what gets the other three back, one family at a time.
+   *
+   * It is offered HERE and nowhere else: the exact equality above says the same thing for a
+   * surface that has a family, where the title bar already names it.
    */
   it('offers only the family-free facets to a space that browses them all', () => {
-    expect(facetsFor(null, identity).map(facet => facet.key)).toEqual([ORIGIN_FACET, PERIOD_FACET])
+    expect(facetsFor(DEFAULT_COLLECTION_STATE, null, identity).map(facet => facet.key)).toEqual([
+      FAMILY_FACET,
+      ORIGIN_FACET,
+      PERIOD_FACET,
+    ])
+  })
+
+  it('offers the chosen family its own vocabulary, where the surface has none', () => {
+    const state = stateWith({ selections: { [FAMILY_FACET]: ['video'] } })
+    const capability = facetsFor(state, null, identity).find(
+      facet => facet.key === CAPABILITY_FACET,
+    )
+
+    expect(capability?.options.map(option => option.value)).toEqual([
+      'txt2video',
+      'img2video',
+      'video2video',
+    ])
+  })
+
+  // A persisted state can hold anything; only the ten families are one.
+  it('ignores a chosen family it does not recognize', () => {
+    const state = stateWith({ selections: { [FAMILY_FACET]: ['sculpture'] } })
+
+    expect(facetsFor(state, null, identity).map(facet => facet.key)).toEqual([
+      FAMILY_FACET,
+      ORIGIN_FACET,
+      PERIOD_FACET,
+    ])
   })
 
   /**
@@ -63,8 +98,12 @@ describe('model filters', () => {
    * workspace, a publisher whose only possible answer is "no result".
    */
   it('offers only the publishers of the family at hand', () => {
-    const forImage = facetsFor('image', identity).find(facet => facet.key === PUBLISHER_FACET)
-    const forVideo = facetsFor('video', identity).find(facet => facet.key === PUBLISHER_FACET)
+    const forImage = facetsFor(DEFAULT_COLLECTION_STATE, 'image', identity).find(
+      facet => facet.key === PUBLISHER_FACET,
+    )
+    const forVideo = facetsFor(DEFAULT_COLLECTION_STATE, 'video', identity).find(
+      facet => facet.key === PUBLISHER_FACET,
+    )
     const values = (facet?: { options: readonly { value: string }[] }) =>
       facet?.options.map(option => option.value) ?? []
 
@@ -78,7 +117,9 @@ describe('model filters', () => {
    * "Post Processing" would send a label that matches nothing.
    */
   it('offers tags verbatim rather than translated', () => {
-    const tag = facetsFor('video', identity).find(facet => facet.key === TAG_FACET)
+    const tag = facetsFor(DEFAULT_COLLECTION_STATE, 'video', identity).find(
+      facet => facet.key === TAG_FACET,
+    )
 
     expect(tag?.options).toContainEqual({ value: 'I2V', label: 'I2V' })
   })
@@ -88,7 +129,9 @@ describe('model filters', () => {
    * excluded every model the facet could match, so the menu's only possible answer was none.
    */
   it('offers no tag that names a family of its own', () => {
-    const tag = facetsFor('image', identity).find(facet => facet.key === TAG_FACET)
+    const tag = facetsFor(DEFAULT_COLLECTION_STATE, 'image', identity).find(
+      facet => facet.key === TAG_FACET,
+    )
 
     expect(tag?.options.map(option => option.value)).not.toContain('image-upscale')
   })
@@ -116,6 +159,37 @@ describe('model filters', () => {
         sort: 'relevance',
         origin: 'official',
         search: 'flux',
+      })
+    })
+
+    /**
+     * The one thing the facet is for: a space with no family of its own asks the API for the
+     * family the user picked, rather than walking the whole catalogue for it.
+     */
+    it('narrows to the family the facet names where the space has none', () => {
+      const state = stateWith({ selections: { [FAMILY_FACET]: ['video'] } })
+
+      expect(queryFrom(state, null, '')).toMatchObject({ family: 'video' })
+    })
+
+    /**
+     * The facet is not offered here, so a value left in the state by another space must not
+     * quietly override the family this one browses — that is the panel emptied with no cause.
+     */
+    it('lets the space family win over a facet left over from elsewhere', () => {
+      const state = stateWith({ selections: { [FAMILY_FACET]: ['video'] } })
+
+      expect(queryFrom(state, 'image', '')).toMatchObject({ family: 'image' })
+    })
+
+    it('carries the chosen capability of a family the facet named', () => {
+      const state = stateWith({
+        selections: { [FAMILY_FACET]: ['video'], [CAPABILITY_FACET]: ['img2video'] },
+      })
+
+      expect(queryFrom(state, null, '')).toMatchObject({
+        family: 'video',
+        capabilities: ['img2video'],
       })
     })
 

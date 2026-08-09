@@ -78,9 +78,19 @@ export function setFacetValue(
   return { ...state, selections }
 }
 
-/** Whether anything is narrowing the collection — which is what tells the two empty states apart. */
-export function isFiltered(state: CollectionState): boolean {
-  return state.search.trim().length > 0 || Object.keys(state.selections).length > 0
+/**
+ * Whether anything is narrowing the collection — which is what tells the two empty states apart.
+ *
+ * `offered` bounds the question to the facets this surface actually shows, and a panel whose
+ * facets depend on where it is opened must pass them: a value the bar does not draw cannot be
+ * relaxed by the user, so blaming an empty panel on it asks for a filter nobody can find.
+ */
+export function isFiltered(state: CollectionState, offered?: readonly string[]): boolean {
+  if (state.search.trim().length > 0) return true
+
+  return Object.entries(state.selections).some(
+    ([key, values]) => values.length > 0 && (offered ? offered.includes(key) : true),
+  )
 }
 
 export type LocalFilter<T> = {

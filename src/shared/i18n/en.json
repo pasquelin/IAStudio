@@ -221,6 +221,7 @@
     "none": "No model in this workspace.",
     "noSelection": "No model chosen",
     "pickOne": "Pick one from the list",
+    "family": "Family",
     "origin": "Origin",
     "official": "Official",
     "community": "Community",

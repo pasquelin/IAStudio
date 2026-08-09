@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ModelScope } from '@shared/domain/model'
+import type { ModelFamily, ModelScope } from '@shared/domain/model'
 import type { FormValues } from '@/helpers/dynamic-form'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
   type CollectionState,
 } from '@/helpers/collection-state'
+import { FAMILY_FACET } from '@/panels/models/family-facet'
 
 type ModelsState = {
   /**
@@ -33,11 +34,27 @@ type ModelsState = {
    */
   prepared: ModelScope | null
 
-  select: (scope: ModelScope, modelId: string) => void
+  /**
+   * Files the choice under the scope it was browsed in AND under the model's own family. In a
+   * space that browses one family the two keys are the same; in one that browses them all they
+   * are not, and filing under `'all'` alone would hide the choice from everything that asks for
+   * "the image model" — which is every generator node a graph puts down.
+   *
+   * A choice is therefore GLOBAL to its family, and picking an image model in the graph replaces
+   * the one the Image space was on. Assumed rather than worked around: the alternative is a
+   * second table filed per family, persisted and migrated, to record a distinction — "chosen
+   * here" against "chosen there" — that nothing in the studio asks about.
+   */
+  select: (scope: ModelScope, modelId: string, family: ModelFamily) => void
   /** Picks the model AND the values to open its form on, in one write. */
   prepare: (scope: ModelScope, modelId: string, params: FormValues) => void
   setCollection: (collection: CollectionState) => void
   dropPreparation: () => void
+}
+
+/** The facet choices worth restoring — every one the user made by hand, and no other. */
+function lasting({ selections }: CollectionState): Record<string, readonly string[]> {
+  return Object.fromEntries(Object.entries(selections).filter(([key]) => key !== FAMILY_FACET))
 }
 
 /**
@@ -52,8 +69,11 @@ export const useModels = create<ModelsState>()(
       preset: {},
       prepared: null,
 
-      select: (scope, modelId) =>
-        set(state => ({ selected: { ...state.selected, [scope]: modelId }, prepared: null })),
+      select: (scope, modelId, family) =>
+        set(state => ({
+          selected: { ...state.selected, [scope]: modelId, [family]: modelId },
+          prepared: null,
+        })),
 
       prepare: (scope, modelId, params) =>
         set(state => ({
@@ -73,9 +93,13 @@ export const useModels = create<ModelsState>()(
       version: COLLECTION_PERSIST_VERSION,
       // The search text is deliberately dropped: restoring it would open the studio on a
       // narrowed catalogue nobody typed, which reads as a catalogue gone missing.
+      //
+      // The family goes with it, and for a stronger reason: nobody types that one either — a
+      // generator node with no model to build from writes it on its way to opening this panel.
+      // Kept, it would reopen the graph on one family for good, as the side effect of a node.
       partialize: state => ({
         selected: state.selected,
-        collection: { ...state.collection, search: '' },
+        collection: { ...state.collection, search: '', selections: lasting(state.collection) },
       }),
     },
   ),

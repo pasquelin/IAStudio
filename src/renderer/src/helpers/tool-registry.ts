@@ -24,10 +24,9 @@ import {
   type ToolSurface,
   type ToolZone,
 } from '@shared/domain/tool'
-import { preferredModelOf, type ModelScope } from '@shared/domain/model'
+import type { ModelScope } from '@shared/domain/model'
+import { modelForScope, useModelForScope } from '@/helpers/model-for-scope'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
-import { useModels } from '@/stores/models'
-import { useSettings } from '@/stores/settings'
 import { workspaceById } from './workspaces'
 
 export type Tool = {
@@ -114,11 +113,7 @@ function scopeFor(surface: ToolSurface): ModelScope | null {
  */
 export function hasModelFor(surface: ToolSurface): boolean {
   const scope = scopeFor(surface)
-  if (!scope) return false
-
-  const { selected } = useModels.getState()
-  const { defaultModels } = useSettings.getState().settings.generation
-  return Boolean(selected[scope] ?? preferredModelOf(scope, defaultModels))
+  return Boolean(scope && modelForScope(scope))
 }
 
 /**
@@ -136,12 +131,7 @@ function canOffer(id: ToolId, hasModel: boolean): boolean {
  * happened to re-render.
  */
 export function useHasModel(surface: ToolSurface): boolean {
-  const scope = scopeFor(surface)
-  const chosen = useModels(state => (scope ? state.selected[scope] : undefined))
-  const preferred = useSettings(state =>
-    scope ? preferredModelOf(scope, state.settings.generation.defaultModels) : undefined,
-  )
-  return Boolean(chosen ?? preferred)
+  return Boolean(useModelForScope(scopeFor(surface)))
 }
 
 /**

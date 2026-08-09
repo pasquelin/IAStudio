@@ -2,8 +2,9 @@ import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
 import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import { preferredModelOf, type ModelDescriptor } from '@shared/domain/model'
+import type { ModelDescriptor } from '@shared/domain/model'
 import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
+import { useModelForScope } from '@/helpers/model-for-scope'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
 import { PromptAssistant } from '@/design/PromptAssistant'
@@ -83,8 +84,6 @@ export function Generator() {
   const prepared = useModels(state => state.prepared)
   const scope = prepared ?? workspaceById(workspace).scope
 
-  // The panel's choice wins over the preference: the preference is what to start from.
-  const chosen = useModels(state => state.selected[scope] ?? null)
   // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
   // undefined and every field opens on its own default.
   //
@@ -93,12 +92,7 @@ export function Generator() {
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
   const preset = useModels(state => state.preset[scope])
   const prepare = useModels(state => state.prepare)
-  // A preference is set per family, so a space that browses them all starts from none: the graph
-  // picks its model in the panel, and there is no one family whose default would be right here.
-  const preferred = useSettings(
-    state => preferredModelOf(scope, state.settings.generation.defaultModels) ?? null,
-  )
-  const modelId = chosen ?? preferred
+  const modelId = useModelForScope(scope)
 
   const authenticated = useSettings(state => state.auth.authenticated)
   const project = useProject(state => state.project)

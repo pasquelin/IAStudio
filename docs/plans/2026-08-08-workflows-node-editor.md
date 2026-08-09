@@ -769,6 +769,84 @@ s’ouvre dans le studio, et un graphe non exportable dit pourquoi.
 > (le texte d’un nœud texte, le modèle d’un générateur). C’est une face de plus dans
 > `panels/inspector/`, et c’est le premier geste à écrire après.
 
+### Le correctif du 9 août — trois des quatre générateurs de la palette étaient inertes
+
+Vu à l’écran, et le journal le disait en clair : « Un nœud n’a pas pu être créé — video / 3d /
+audio : no model chosen ». Le défaut n’était pas dans le graphe, il était dans **la chaîne du
+choix de modèle, écrite trois fois et une fois de travers**.
+
+- **Le graphe classe son choix sous `'all'`**, puisqu’il n’appartient à aucune famille — et un
+  nœud générateur demande le modèle d’**une** famille. `GraphDocument` lisait `selected[family]`
+  seul : toute famille jamais visitée ailleurs répondait « rien », et le studio empilait un
+  `reportFailure` au lieu d’indiquer quoi faire.
+- **`chosenModelOf(scope)`** (`helpers/chosen-model.ts`) réunit « choix de session, puis
+  préférence ». Elle vivait en trois exemplaires — le rail (`hasModelFor`), les édits d’image
+  (`prepareEdit`), et le graphe qui n’en gardait que la première moitié. C’est exactement la
+  forme du défaut : trois copies, l’une d’elles incomplète.
+- **Quand il n’y a toujours rien, le panneau Modèles s’ouvre narrowé sur la famille**
+  (`revealModelsOfFamily`), sur le modèle de `revealAssetsOfKind`. **Arbitré avec l’utilisateur** :
+  un message d’échec dit ce qui ne va pas, jamais quoi faire.
+- **Deux ajouts sans lesquels cette ouverture ne débloquerait rien**, et c’est le point à ne pas
+  redécouvrir : une **facette famille** dans le panneau Modèles, offerte *uniquement* là où la
+  surface n’a pas de famille propre (ailleurs la barre de titre la nomme déjà) ; et
+  `select()` qui **classe le modèle sous SA famille en plus du scope parcouru** — sans quoi
+  choisir un modèle vidéo depuis le graphe l’écrivait sous `'all'`, invisible au nœud même qui
+  avait envoyé l’utilisateur le choisir.
+- **Le garde du chunk de démarrage a mordu**, et il avait raison : `reveal-panel.ts` est atteint
+  au démarrage, donc importer `model-filters.ts` pour une seule constante y tirait tout le
+  vocabulaire des modèles. D’où `panels/models/family-facet.ts`, une constante seule dans son
+  fichier — **exactement ce que `panels/assets/type-facet.ts` est déjà**, et pour la même raison.
+- **Un défaut du harnais de test, payé ici** : React Flow relit le zoom du viewport dans un
+  `DOMMatrixReadOnly` que jsdom n’a pas. Un nœud posé **au montage** ne le déclenchait pas ; un
+  nœud qui arrive **après** — ce que fait un générateur, dont le schéma est asynchrone — levait
+  une exception non rattrapée. Polyfill identité dans `test-setup.ts`.
+
+#### Ce que la revue a rendu, et qui vaut au-delà de ce correctif
+
+Six agents, deux revues adverses et les quatre passes de `/simplify`. Ils ont convergé — trois
+d’entre eux sur les mêmes points.
+
+- **La chaîne vivait en SIX exemplaires, pas trois.** Les trois autres étaient des versions
+  *abonnées* : `useHasModel`, `Generator.tsx`, et `Models.tsx` — ce dernier **divergent**, lisant
+  le choix de session **sans** la préférence. Défaut visible à l’écran, indépendant du graphe :
+  avec un modèle par défaut réglé et aucun choix à la main, le rail dessine le générateur, le
+  générateur rend le bon formulaire, et **le panneau Modèles affiche « Aucun modèle choisi »**
+  sans surligner de ligne. Le panneau qui sert à choisir était le seul à prétendre qu’il n’y a
+  rien. `modelForScope` / `useModelForScope` réunit les six.
+- **Deux réponses concurrentes à « où choisit-on un modèle de cette famille ? »** —
+  `offerToChooseOne` (vers les préférences) et le nouveau helper (vers le panneau). Fusionnées en
+  une seule, `offerModelsOfFamily`. **Et le garde du chunk a mordu une seconde fois** : la
+  fonction fusionnée atteint `settings-registry`, que le démarrage ne doit pas voir. D’où
+  `helpers/offer-model.ts`, à part de `reveal-panel.ts` — ses deux appelants sont des espaces,
+  chargés à la demande. La règle générale : **une fonction qui peut mener aux préférences ne peut
+  pas vivre dans un module que le démarrage atteint.**
+- **La facette famille était persistée.** Un nœud posé sans modèle l’écrivait, et le
+  redémarrage rouvrait le catalogue rétréci sur une famille que personne n’avait tapée —
+  exactement ce que le commentaire de `partialize` refuse pour le texte de recherche. Exclue de
+  la persistance, avec son test sur ce qui atterrit vraiment dans `localStorage`.
+- **`isFiltered` accusait un filtre invisible.** Une facette qu’une surface n’offre pas ne peut
+  pas être relâchée : le panneau vide disait « aucun résultat pour ce filtre » là où il fallait
+  dire « aucun modèle dans cet espace ». `isFiltered` prend désormais les facettes offertes.
+- **`facetsFor` n’était pas mémoïsé** — mesuré à **+125 à +285 µs par rendu** sur la seule surface
+  graphe, le panneau se rendant à chaque frappe dans sa recherche. Le commentaire « No memo »
+  d’à côté visait `queryFrom`, gratuit, et se lisait comme s’il couvrait les deux.
+- **La ligne charnière n’était couverte par rien.** Remplacer `model.family` par le littéral
+  `'image'` dans `Models.tsx` laissait **toute la suite verte** et ramenait le bug d’origine. Un
+  test rend maintenant le panneau dans l’espace Graphe — le seul où `scope !== family`.
+- **Dix mutations, dix tests qui rougissent**, vérifiées une par une.
+
+#### Ce qui reste ouvert, et qui est le jumeau exact de ce correctif
+
+**`prepare()` n’a pas appris la famille, `select()` si.** Dans le graphe, « Régénérer avec ces
+paramètres » (inspecteur) et les recettes de l’accueil passent par `openGeneratorOn(scope, …)`
+avec le scope de l’espace, donc `'all'` : le générateur s’arme sur un modèle vidéo, et poser un
+nœud « Vidéo » ne le trouve pas — le panneau Modèles s’ouvre par-dessus le générateur qui
+l’affichait.
+
+Non corrigé **délibérément** : deux des trois appelants n’ont qu’un `modelId` et pas la famille,
+donc le correctif demande une décision (aller la chercher, ou classer autrement), pas un patch.
+À trancher avec l’utilisateur — et l’inspecteur d’un nœud, le lot suivant, passe par ce chemin.
+
 À faire en dernier, quand le contenu existe — mais **à concevoir dès l’étape 6**, parce que ça
 détermine où le canvas est monté.
 

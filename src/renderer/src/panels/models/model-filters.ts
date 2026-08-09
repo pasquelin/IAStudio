@@ -1,5 +1,6 @@
 import {
   CAPABILITIES_BY_FAMILY,
+  MODEL_FAMILIES,
   MODEL_ORIGINS,
   MODEL_PERIODS,
   MODEL_SORTS,
@@ -15,6 +16,7 @@ import {
   type CollectionState,
   type FacetDescriptor,
 } from '@/helpers/collection-state'
+import { FAMILY_FACET } from './family-facet'
 
 export const ORIGIN_FACET = 'origin'
 export const CAPABILITY_FACET = 'capability'
@@ -34,23 +36,51 @@ function ownedBy(
 }
 
 /**
+ * The family the catalogue is narrowed to: the surface's own where it has one, and the facet's
+ * choice only where it has none. The graph belongs to no family, so without the facet its
+ * catalogue could only ever be browsed whole — and every facet below, being a family's own
+ * vocabulary, would stay empty.
+ */
+export function narrowedFamily(
+  family: ModelFamily | null,
+  state: CollectionState,
+): ModelFamily | null {
+  return family ?? chosen(state, FAMILY_FACET, MODEL_FAMILIES) ?? null
+}
+
+/**
  * The facets the API can actually answer. Category, author, rating and generation time are
  * absent on purpose: measured over the 642 public models, `class`, `performanceStats` and the
  * author name come back empty on every single one — a filter for them would filter nothing.
  */
-export function facetsFor(family: ModelFamily | null, t: Translate): FacetDescriptor[] {
-  const facets: FacetDescriptor[] = [
-    {
-      key: ORIGIN_FACET,
-      label: t('models.origin'),
-      options: [
-        { value: 'official', label: t('models.official') },
-        { value: 'community', label: t('models.community') },
-      ],
-    },
-  ]
+export function facetsFor(
+  state: CollectionState,
+  family: ModelFamily | null,
+  t: Translate,
+): FacetDescriptor[] {
+  const narrowed = narrowedFamily(family, state)
+  const facets: FacetDescriptor[] = []
 
-  const capabilities = ownedBy(CAPABILITIES_BY_FAMILY, family)
+  // Offered only where the surface has none of its own: elsewhere the title bar already says
+  // which family is being browsed, and a control repeating it could only contradict it.
+  if (!family) {
+    facets.push({
+      key: FAMILY_FACET,
+      label: t('models.family'),
+      options: MODEL_FAMILIES.map(value => ({ value, label: t(`families.${value}`) })),
+    })
+  }
+
+  facets.push({
+    key: ORIGIN_FACET,
+    label: t('models.origin'),
+    options: [
+      { value: 'official', label: t('models.official') },
+      { value: 'community', label: t('models.community') },
+    ],
+  })
+
+  const capabilities = ownedBy(CAPABILITIES_BY_FAMILY, narrowed)
   if (capabilities.length) {
     facets.push({
       key: CAPABILITY_FACET,
@@ -59,7 +89,7 @@ export function facetsFor(family: ModelFamily | null, t: Translate): FacetDescri
     })
   }
 
-  const tags = ownedBy(TAGS_BY_FAMILY, family)
+  const tags = ownedBy(TAGS_BY_FAMILY, narrowed)
   if (tags.length) {
     // Tags are the publishers' own words — untranslated on purpose, and matched as written.
     facets.push({
@@ -70,7 +100,7 @@ export function facetsFor(family: ModelFamily | null, t: Translate): FacetDescri
   }
 
   // The publisher is a tag like any other, so both facets narrow through the same parameter.
-  const publishers = ownedBy(PUBLISHERS_BY_FAMILY, family)
+  const publishers = ownedBy(PUBLISHERS_BY_FAMILY, narrowed)
   if (publishers.length) {
     facets.push({
       key: PUBLISHER_FACET,
@@ -123,26 +153,27 @@ function chosen<T extends string>(
  * workspaces, so a capability picked under Image survives a switch to 3D: the menu no longer
  * lists it and shows nothing selected, while the query still carried it and emptied the panel.
  *
- * A `null` family is the whole catalogue, and the family is then left OUT of the query rather
- * than sent empty: the registry narrows on `family` only when it is there.
+ * A family narrowed to none is the whole catalogue, and the family is then left OUT of the query
+ * rather than sent empty: the registry narrows on `family` only when it is there.
  */
 export function queryFrom(
   state: CollectionState,
   family: ModelFamily | null,
   search: string,
 ): ModelQuery {
-  const capabilities = offered(state, CAPABILITY_FACET, ownedBy(CAPABILITIES_BY_FAMILY, family))
+  const narrowed = narrowedFamily(family, state)
+  const capabilities = offered(state, CAPABILITY_FACET, ownedBy(CAPABILITIES_BY_FAMILY, narrowed))
   // One parameter for both: the API matches a publisher exactly as it matches any other tag.
   const tags = [
-    ...offered(state, TAG_FACET, ownedBy(TAGS_BY_FAMILY, family)),
-    ...offered(state, PUBLISHER_FACET, ownedBy(PUBLISHERS_BY_FAMILY, family)),
+    ...offered(state, TAG_FACET, ownedBy(TAGS_BY_FAMILY, narrowed)),
+    ...offered(state, PUBLISHER_FACET, ownedBy(PUBLISHERS_BY_FAMILY, narrowed)),
   ]
   const origin = chosen(state, ORIGIN_FACET, MODEL_ORIGINS)
   const since = chosen<ModelPeriod>(state, PERIOD_FACET, MODEL_PERIODS)
   const trimmed = search.trim()
 
   return {
-    ...(family ? { family } : {}),
+    ...(narrowed ? { family: narrowed } : {}),
     sort: MODEL_SORTS.find(candidate => candidate === state.sort) ?? 'relevance',
     ...(trimmed ? { search: trimmed } : {}),
     ...(origin ? { origin } : {}),
