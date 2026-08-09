@@ -8,7 +8,6 @@ import { Application } from '@/app/Application'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Failure } from '@/design/Failure'
 import { initI18n } from '@/i18n'
-import { SettingsWindow } from '@/settings/SettingsWindow'
 import './index.css'
 
 const root = document.getElementById('root')
@@ -26,6 +25,11 @@ await initI18n(resolveLanguage(navigator.language))
  * fragment is only ever what the main process loaded. The splash is the one exception — it
  * has its own entry precisely so it never pulls this bundle in.
  */
+/** Fifty kilobytes of another window — its registry, its sections and its draft store. */
+const SettingsWindow = lazy(async () => ({
+  default: (await import('@/settings/SettingsWindow')).SettingsWindow,
+}))
+
 /**
  * The whole notice — every shipped licence, in full — is fifty kilobytes nobody reads in a
  * usual session, and a static import puts it in the chunk the splash waits for.
@@ -40,7 +44,13 @@ const UsageWindow = lazy(async () => ({
 }))
 
 function Route({ hash }: { hash: string }) {
-  if (isSettingsRoute(hash)) return <SettingsWindow />
+  if (isSettingsRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <SettingsWindow />
+      </Suspense>
+    )
+  }
   if (isLicencesRoute(hash)) {
     return (
       <Suspense fallback={null}>

@@ -161,4 +161,16 @@ describe('the opening chunk', () => {
 
     expect(packages).not.toContain('opentype.js')
   })
+
+  // Deferred by `main.tsx` on 9 August: −48,29 kB across the whole first screen, preloads
+  // included. Settings open in a window of their own, which the main one never mounts — the
+  // registry and its draft store came along for the ride.
+  it('never reaches the settings window', async () => {
+    const { files } = await eagerGraph()
+
+    expect(files).not.toContain('./settings/SettingsWindow.tsx')
+    expect(files).not.toContain('./stores/settings-draft.ts')
+    expect(files).not.toContain('../../shared/domain/settings-registry.ts')
+    expect(files).not.toContain('../../shared/domain/settings-search.ts')
+  })
 })
