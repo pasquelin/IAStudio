@@ -245,6 +245,49 @@ describe('the texture preview', () => {
     })
 
     /**
+     * A multiplier over the material's own repeat, never a replacement: the preview asks "how
+     * does this look repeated", and the answer has to be the material's repeat seen more times.
+     * Written into `material.tiling` instead, a glance would go out into a scene.
+     */
+    it('multiplies the repeat by the preview, on every map at once', async () => {
+      const renderer = mounted()
+      const state = everyChannel()
+      // Asymmetric on purpose: at 3 by 3 the assertion holds with the two axes swapped.
+      state.material.tiling = { x: 3, y: 5 }
+      state.preview.tilingPreview = 4
+      renderer.apply(state)
+      await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(PBR_CHANNELS.length))
+
+      for (const result of source.load.mock.results) {
+        const map = await result.value
+        await vi.waitFor(() => expect(map.repeat.x).toBe(12))
+        expect(map.repeat.y).toBe(20)
+      }
+      // And the document keeps what its author chose.
+      expect(state.material.tiling).toEqual({ x: 3, y: 5 })
+    })
+
+    /**
+     * Half a width and half a height is exactly what brings a wrap edge to the middle of the
+     * frame. On every map at once, or the relief stops matching the picture it lifts.
+     */
+    it('brings the seams to the middle without touching the material offset', async () => {
+      const renderer = mounted()
+      const state = everyChannel()
+      state.material.offset = { x: 0.25, y: 0 }
+      state.preview.showSeam = true
+      renderer.apply(state)
+      await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(PBR_CHANNELS.length))
+
+      for (const result of source.load.mock.results) {
+        const map = await result.value
+        await vi.waitFor(() => expect(map.offset.x).toBe(0.75))
+        expect(map.offset.y).toBe(0.5)
+      }
+      expect(state.material.offset).toEqual({ x: 0.25, y: 0 })
+    })
+
+    /**
      * The regression this exists for, measured rather than supposed: `Texture.needsUpdate` bumps
      * `source.needsUpdate` too, so three re-uploads the pixels AND rebuilds the mip chain. Set on
      * every `apply`, eight 2K channels came to 128 MB of upload per frame of any drag — four to ten

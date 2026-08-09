@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '@/design/Button'
 import { ColorField } from '@/design/ColorField'
+import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { RangeField } from '@/design/RangeField'
 import { SliderField } from '@/design/SliderField'
@@ -11,14 +14,24 @@ import {
   MATERIAL_BOUNDS,
   PREVIEW_BOUNDS,
   PREVIEW_SHAPES,
+  TILING_PREVIEWS,
   type PreviewShape,
 } from '@/engines/texture/texture-state'
 import { toDegrees, toRadians } from '@shared/domain/angles'
+import { seamVerdict, type SeamVerdict } from '@shared/domain/texture'
 import { textureOf, useTextures } from '@/stores/textures'
+import { seamOf, useTextureViews } from '@/stores/texture-views'
 import { EnvironmentSection } from './EnvironmentSection'
 import { useDocumentEdit } from './useDocumentEdit'
 
 export type TextureInspectorProps = { documentId: string }
+
+/** i18n key of a verdict — never the label itself, as the shapes below do. */
+const SEAM_LABELS: Record<SeamVerdict, string> = {
+  none: 'texture.seamNone',
+  faint: 'texture.seamFaint',
+  visible: 'texture.seamVisible',
+}
 
 /** i18n key of a shape — never the label itself, as the scene registry does for its primitives. */
 const SHAPE_LABELS: Record<PreviewShape, string> = {
@@ -194,6 +207,30 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           onChange={value => onMaterial('rotation', toRadians(value))}
           {...edit.gesture}
         />
+
+        {/* Below the values it multiplies, and visibly apart from them: these two are how the
+            repeat is LOOKED at, and neither ever reaches a scene. */}
+        <PropertyRow label={t('texture.tilingPreview')}>
+          <div className="flex justify-end gap-2">
+            {TILING_PREVIEWS.map(times => (
+              <button
+                key={times}
+                type="button"
+                onClick={() => onPreview('tilingPreview', times)}
+                aria-pressed={preview.tilingPreview === times}
+                className={chipSkin(preview.tilingPreview === times)}
+              >
+                {t('texture.tilingPreviewTimes', { count: times })}
+              </button>
+            ))}
+          </div>
+        </PropertyRow>
+        <ToggleField
+          label={t('texture.showSeam')}
+          value={preview.showSeam}
+          onChange={value => onPreview('showSeam', value)}
+        />
+        <SeamReading documentId={documentId} />
       </PropertySection>
 
       <PropertySection title={t('texture.preview')}>
@@ -246,5 +283,56 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         onChange={next => onPreview('environment', next)}
       />
     </>
+  )
+}
+
+/**
+ * What the wrap edge of this texture measures, and the button that asks. On demand rather than
+ * on every change: it is a GPU pass over the base colour, and a reading nobody looked at is a
+ * context opened for nothing.
+ */
+function SeamReading({ documentId }: { documentId: string }) {
+  const { t } = useTranslation()
+  const source = useTextures(
+    state => textureOf(state, documentId).channels.baseColor?.assetId ?? null,
+  )
+  const seam = useTextureViews(state => seamOf(state, documentId))
+  const [measuring, setMeasuring] = useState(false)
+
+  // Only for the picture it was read off: a base colour replaced since leaves words on screen
+  // about pixels the document no longer points at.
+  const verdict = seam && seam.assetId === source ? seamVerdict(seam.ratio) : null
+
+  /**
+   * Reached by an `import()` rather than at the top of the file: the panels are in the opening
+   * chunk, and the measurement carries three.js and a WebGL renderer behind it. A seam is
+   * measured once in a while, by hand — the wait to fetch its chunk is the click itself.
+   */
+  const measure = async (): Promise<void> => {
+    setMeasuring(true)
+    try {
+      const { measureTextureSeam } = await import('@/spaces/textures/measure-seam')
+      await measureTextureSeam(documentId)
+    } finally {
+      setMeasuring(false)
+    }
+  }
+
+  return (
+    <PropertyRow label={t('texture.seams')}>
+      <div className="flex items-center justify-end gap-2">
+        {verdict && !measuring && (
+          <span className="text-muted truncate">{t(SEAM_LABELS[verdict])}</span>
+        )}
+        <Button
+          // Said rather than hidden: an empty base colour is something to go and fill.
+          disabled={!source || measuring}
+          title={source ? undefined : t('texture.seamNoSource')}
+          onClick={() => void measure()}
+        >
+          {t(measuring ? 'texture.measuringSeam' : 'texture.measureSeam')}
+        </Button>
+      </div>
+    </PropertyRow>
   )
 }
