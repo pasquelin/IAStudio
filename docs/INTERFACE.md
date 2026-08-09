@@ -178,7 +178,7 @@ Trois réponses possibles, par coût croissant, aucune tranchée :
 > génération d’images lit `seed` et `guidance scale` en anglais partout ailleurs. Traduire peut
 > desservir autant que servir.
 
-### 19. En vue Icônes, une vignette sélectionnée ne se distingue en rien
+### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
 **Vu le 9 août 2026**, en soldant la vérification à l’écran des entrées 6 et 8 : l’étagère
 annonçait trois assets sélectionnés — l’inspecteur affichait « Éléments 3 » — et les trois carrés
