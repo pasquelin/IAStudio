@@ -62,12 +62,10 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > **Une chose passe avant le reste** : le **§ 0** (la porte — mesurer le budget de couverture avant
 > de croire une livraison verte).
 >
-> **Quatre entrées attendent une décision de ma part et personne ne doit les trancher à ma place** :
-> la **39** (l'Explorateur en arbre : quelle racine ? que fait un double-clic sur un fichier que le
-> studio ne sait pas ouvrir ? le panneau suit-il le disque ?), la **12** (« ouvrir » devient-il
-> l'action par défaut des vignettes de l'accueil ?), la **40** (`accent-soft` veut-il dire
-> « sélectionné » ou « actif » ?) et la **29** (embarquer `Inter`, donc une dépendance, ou cesser de
-> la nommer). Demande-les-moi, ne les déduis pas.
+> **Les quatre décisions qui attendaient sont prises le 10 août 2026** — 39, 12, 40, 29. Elles sont
+> écrites dans leur entrée, et **ne se redemandent pas**. Une seule question en est née et reste
+> ouverte : ce que fait un clic sur une vignette de bibliothèque **pas encore rapatriée** (entrée
+> 12). **Ce qui dit « à trancher » ailleurs se demande, ne se déduit pas.**
 >
 > **Le prochain chantier libre est l'entrée 36** (§ 4.3), et il est déjà repéré : `canRotate` existe
 > et `gizmoTargetFor` le consulte, mais `TransformSection` rend la ligne Rotation sans le lire, et
@@ -504,11 +502,16 @@ avait corrigé ce que la ligne annonce ; personne n'a corrigé ce qu'elle montre
 **Et l'inverse est vrai là où ça compterait** : quel style est appliqué et quelle App est ouverte
 sont exactement ce qu'une sélection dirait, et ni l'un ni l'autre ne le dit.
 
-**Ce que ça demande, et l'ordre importe** : trancher d'abord **ce que `accent-soft` signifie** — une
-sélection, ou un état actif ? — puis brancher les deux listes qui ne le passent pas, et donner à
-« ouvert » sa propre marque dans l'Explorateur, qui n'est pas celle de la sélection. Un troisième
-jeton n'est pas nécessaire : `chipSkin` a déjà tranché la même question dans l'autre sens
-(« il lit en `accent-soft` où les autres utilisent `elevated`, le jeton de survol du studio »).
+**`accent-soft` veut dire « sélectionné » — tranché le 10 août 2026.** C'est la ligne que
+l'utilisateur a désignée, jamais l'élément en vigueur. Trois conséquences, dans cet ordre :
+
+1. **Styles et Apps passent enfin `selectedIds`** : le style appliqué et l'App ouverte deviennent
+   des sélections, ce qu'ils étaient déjà pour l'utilisateur.
+2. **L'Explorateur cesse de détourner la prop.** « Ouvert » n'est pas une sélection et prend sa
+   propre marque — un troisième jeton n'est pas nécessaire, `chipSkin` ayant déjà tranché la même
+   question dans l'autre sens (« il lit en `accent-soft` où les autres utilisent `elevated` »).
+3. **Un point à ne pas manquer en écrivant** : l'Explorateur perd alors sa seule marque visuelle
+   tant que la nouvelle n'est pas posée. Les deux moitiés vont ensemble, ou le panneau régresse.
 
 ---
 
@@ -651,19 +654,24 @@ virtualisation, glisser de ligne, sélection multiple par `pickFrom`, et il pein
 `rowSkin` que `Collection` — précisément pour qu'une ligne d'arbre et une ligne de liste soient
 identiques. **Il n'a qu'un seul appelant : `SceneTree`**, l'outliner 3D.
 
-**Ce n'est donc pas qu'un changement de composant**, et c'est ce qu'il faut trancher avant d'écrire
-une ligne : un arbre de fichiers montrerait **le dossier du projet** — `assets/`, `documents/`, et ce
-que l'utilisateur y a déposé lui-même — là où le panneau ne montre aujourd'hui que les documents que
-le studio sait ouvrir. Trois questions, dans cet ordre :
+**Ce n'est donc pas qu'un changement de composant** : un arbre de fichiers montre **le dossier du
+projet** — `assets/`, `documents/`, et ce que l'utilisateur y a déposé lui-même — là où le panneau ne
+montre aujourd'hui que les documents que le studio sait ouvrir.
 
-1. **Qu'est-ce que la racine ?** Le dossier du projet, ou `documents/` seul ? Le premier expose la
-   mécanique que l'entrée 17 vient justement de masquer (`.index/` caché sur les trois plateformes) —
-   il faudra dire ce qui se montre et ce qui reste caché.
-2. **Que fait un double-clic sur un fichier que le studio ne sait pas ouvrir ?** Aujourd'hui la
-   question ne se pose pas : tout ce qui est listé s'ouvre.
-3. **Le panneau suit-il le disque ?** Un arbre qui ne se rafraîchit qu'au montage ment dès qu'on
-   copie un fichier dans le dossier depuis le Finder — et `relist` n'est appelé qu'au changement de
-   projet.
+**Les trois questions sont tranchées, le 10 août 2026.** Elles conditionnaient l'écriture de la
+première ligne ; elles ne se redemandent pas.
+
+1. **La racine est le dossier du projet, `.index/` masqué.** Ce que l'entrée 17 a caché reste caché —
+   sur les trois plateformes. Tout le reste se montre, y compris ce que le studio ne sait pas ouvrir,
+   puisque c'est précisément ce qui distingue un explorateur d'une liste de documents.
+2. **Un double-clic sur un fichier inconnu le confie au système** (`shell.openPath`) : un `.pdf`
+   s'ouvre dans le visualiseur de l'OS. Conséquence à porter : le studio lance alors une application
+   tierce, ce qui n'arrivait nulle part ailleurs — le canal est dans le main, et son échec est un
+   message à écrire, pas une exception à laisser remonter.
+3. **L'arbre suit le disque**, par surveillance du dossier dans le main (`fs.watch` récursif,
+   débouncé), et non par un bouton. Deux choses à prévoir : `fs.watch` **n'est pas récursif sur
+   Linux**, et un événement y arrive par dossier surveillé ; et un projet posé sur un volume réseau
+   peut n'émettre aucun événement — le repli est une relecture au retour du focus.
 
 > **Ce que le panneau a de juste et qu'un arbre ne doit pas perdre** : il rend un document fermé
 > atteignable de nouveau, et c'est sa raison d'être — sa JSDoc le dit. Un document fermé alors
@@ -704,8 +712,15 @@ l'entend, l'œil ne le voit jamais. Le `hint` est un `title` natif. Ce qui reste
 
 Ce n'est donc pas un défaut de compréhension mais **d'affordance**.
 
-> À trancher au moment de traiter : « ouvrir » est-il l'action attendue par défaut sur ces vignettes,
-> les verbes actuels devenant secondaires ? La capture dit que c'est ce qu'on croit cliquer.
+> **Tranché le 10 août 2026 : « ouvrir » devient l'action par défaut.** Le clic ouvre le fichier
+> dans son espace ; « Recréer » et « Rapatrier » deviennent secondaires — au survol ou au menu
+> contextuel. C'est ce que la capture dit qu'on croit cliquer.
+>
+> **Un cas reste à poser, et il ne se déduit pas de la décision** : un asset de la bibliothèque
+> **pas encore rapatrié** n'est pas sur le disque, donc il n'y a rien à ouvrir. Le rapatriement
+> implicite a été explicitement écarté ; reste donc à demander ce que le clic fait alors —
+> « Rapatrier » en action principale sur ces vignettes-là seulement, ou une autre réponse. **Ne pas
+> trancher seul, et ne pas le lire comme une remise en cause de « ouvrir par défaut ».**
 
 ---
 
@@ -1154,8 +1169,14 @@ Tailwind pose `line-height: 1.5` sur `html`, sans unité, donc calculé sur la t
 et non sur les métriques de la fonte.
 
 **Ce que ça change quand même** : la chasse et le dessin des lettres, donc la largeur d'un libellé,
-donc le point où un `truncate` coupe. Deux issues, pas trois : embarquer Inter, ou cesser de la
-nommer. **La nommer sans la charger est la seule qui mente.**
+donc le point où un `truncate` coupe.
+
+**Tranché le 10 août 2026 : cesser de la nommer.** `--font-sans` retombe sur `system-ui` — San
+Francisco, Segoe, la police système sous Linux. Aucune dépendance ajoutée, aucun poids de paquet, et
+l'interface se fond dans chaque OS. **Ce qui est assumé par ce choix** : un libellé ne coupe pas au
+même endroit sur les trois plateformes, donc une largeur de colonne ajustée à l'œil sur macOS peut
+tronquer ailleurs — les gauges se dimensionnent sur le contenu, jamais sur une mesure prise dans une
+capture. Le geste est d'une ligne : retirer `'Inter', ` de `index.css`.
 
 ---
 
