@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
-import { registerTextureHandlers } from './export'
+import { registerExportHandlers } from './folder'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
 
@@ -17,6 +17,37 @@ const file = (name: string, extension = '.png', bytes = png): unknown => ({
   bytes,
 })
 
+describe('the two doors onto one writer', () => {
+  let chosen: string
+
+  beforeEach(async () => {
+    resetHandlers()
+    chosen = await mkdtemp(join(tmpdir(), 'scenario-export-'))
+    registerExportHandlers({ pickFolder: () => Promise.resolve<string | null>(chosen) })
+  })
+
+  it('writes a sky through its own channel, into a folder of its own', async () => {
+    await invoke(CHANNELS.skyboxExport, {
+      folder: 'Coucher',
+      files: [file('Coucher_Rt'), file('Coucher_Up')],
+    })
+
+    await expect(readdir(join(chosen, 'Coucher'))).resolves.toEqual([
+      'Coucher_Rt.png',
+      'Coucher_Up.png',
+    ])
+  })
+
+  it('refuses a sky the same way it refuses a texture — one writer, one set of rules', async () => {
+    await expect(
+      invoke(CHANNELS.skyboxExport, { folder: '../escape', files: [file('Rt')] }),
+    ).rejects.toThrow()
+    await expect(
+      invoke(CHANNELS.skyboxExport, { folder: 'Ciel', files: [file('sub/Rt')] }),
+    ).rejects.toThrow()
+  })
+})
+
 describe('the texture export handler', () => {
   let chosen: string
   let pickFolder: () => Promise<string | null>
@@ -25,7 +56,7 @@ describe('the texture export handler', () => {
     resetHandlers()
     chosen = await mkdtemp(join(tmpdir(), 'scenario-texture-'))
     pickFolder = vi.fn(() => Promise.resolve<string | null>(chosen))
-    registerTextureHandlers({ pickFolder })
+    registerExportHandlers({ pickFolder })
   })
 
   it('writes every file into a folder named after the texture', async () => {
@@ -67,7 +98,7 @@ describe('the texture export handler', () => {
   it('writes nothing when the dialog was dismissed', async () => {
     pickFolder = () => Promise.resolve(null)
     resetHandlers()
-    registerTextureHandlers({ pickFolder })
+    registerExportHandlers({ pickFolder })
 
     await expect(
       invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('Brique_BaseColor')] }),

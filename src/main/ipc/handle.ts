@@ -82,6 +82,7 @@ type ChannelMethod = {
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
 
   [CHANNELS.textureExport]: StudioBridge['texture']['export']
+  [CHANNELS.skyboxExport]: StudioBridge['skybox']['export']
 
   [CHANNELS.fontsList]: StudioBridge['fonts']['list']
   [CHANNELS.fontsRead]: StudioBridge['fonts']['read']

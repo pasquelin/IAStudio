@@ -132,6 +132,7 @@ export type Channels = {
   sceneExport: 'scene:export'
 
   textureExport: 'texture:export'
+  skyboxExport: 'skybox:export'
 
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
@@ -240,6 +241,7 @@ export const CHANNELS: Channels = {
   sceneExport: 'scene:export',
 
   textureExport: 'texture:export',
+  skyboxExport: 'skybox:export',
 
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
@@ -291,8 +293,8 @@ export type SceneExportRequest = {
   data: Uint8Array
 }
 
-/** One file of an exported texture, already encoded by the renderer that drew it. */
-export type TextureExportFile = {
+/** One file of an export, already encoded by the renderer that drew it. */
+export type ExportedFile = {
   /** No separator and no extension: it is joined to a folder this process chose. */
   name: string
   /** Carried rather than derived: a target writes `.png`s, and one of them writes a `.glb`. */
@@ -301,14 +303,17 @@ export type TextureExportFile = {
 }
 
 /**
- * A texture on its way to a folder. Unlike a scene, an export is several files that mean
- * nothing apart — a base colour without the ORM beside it is half a material — so the dialog
- * asks for a folder and they land in one named after the texture.
+ * Several files on their way to a folder. Unlike a scene, this kind of export means nothing
+ * file by file — a base colour without the ORM beside it is half a material, and five faces of
+ * a sky are not a sky — so the dialog asks for a folder and they land in one named after them.
+ *
+ * Shared by the texture and the skybox rather than written twice: the two differ in what they
+ * draw, never in what "write these together" means.
  */
-export type TextureExportRequest = {
-  /** The folder to create inside the chosen one, named after the texture. */
+export type FolderExportRequest = {
+  /** The folder to create inside the chosen one, named after what is being exported. */
   folder: string
-  files: readonly TextureExportFile[]
+  files: readonly ExportedFile[]
 }
 
 export type LogLevel = 'info' | 'warn' | 'error'
@@ -706,7 +711,11 @@ export type StudioBridge = {
      * Answers the folder's name, or `null` when the dialog was dismissed — the name, never the
      * path, exactly as a scene answers.
      */
-    export: (request: TextureExportRequest) => Promise<string | null>
+    export: (request: FolderExportRequest) => Promise<string | null>
+  }
+  skybox: {
+    /** The six faces of a sky, same bargain as a texture's folder — and the same writer. */
+    export: (request: FolderExportRequest) => Promise<string | null>
   }
   /**
    * The typefaces the machine has installed. The studio's own three are not here: they ship

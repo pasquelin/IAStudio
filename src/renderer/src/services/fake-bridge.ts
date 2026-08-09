@@ -129,6 +129,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       export: () => Promise.resolve(null),
       ...overrides.texture,
     },
+    skybox: {
+      export: () => Promise.resolve(null),
+      ...overrides.skybox,
+    },
     // A test machine's installed faces are not the studio's business: the list is empty unless
     // a case says otherwise, so nothing under test depends on what happens to be on the disk.
     fonts: {

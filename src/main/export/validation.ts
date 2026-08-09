@@ -1,11 +1,11 @@
 import { z } from 'zod'
-import type { TextureExportRequest } from '@shared/ipc'
+import type { FolderExportRequest } from '@shared/ipc'
 import { pathSegment } from '@main/validation'
 
 /**
- * An exported texture crosses the boundary as bytes and as names this process joins to a path
- * it chose. Both are checked rather than trusted: the renderer is the sandboxed side, and a
- * name carrying a separator is a write outside the folder the user picked.
+ * An export crosses the boundary as bytes and as names this process joins to a path it chose.
+ * Both are checked rather than trusted: the renderer is the sandboxed side, and a name carrying
+ * a separator is a write outside the folder the user picked.
  */
 
 /** What a target writes. An unknown one would be an extension chosen by the sandboxed side. */
@@ -30,7 +30,7 @@ const file = z.object({
   bytes: z.instanceof(Uint8Array),
 })
 
-const textureExport = z
+const folderExport = z
   .object({
     folder: pathSegment,
     files: z.array(file).min(1).max(MAX_FILES),
@@ -40,6 +40,6 @@ const textureExport = z
       value.files.reduce((total, entry) => total + entry.bytes.byteLength, 0) <= MAX_EXPORT_BYTES,
   )
 
-export function parseTextureExport(value: unknown): TextureExportRequest {
-  return textureExport.parse(value)
+export function parseFolderExport(value: unknown): FolderExportRequest {
+  return folderExport.parse(value)
 }

@@ -131,6 +131,9 @@ const bridge: StudioBridge = {
   texture: {
     export: request => ipcRenderer.invoke(CHANNELS.textureExport, request),
   },
+  skybox: {
+    export: request => ipcRenderer.invoke(CHANNELS.skyboxExport, request),
+  },
   fonts: {
     list: () => ipcRenderer.invoke(CHANNELS.fontsList),
     read: family => ipcRenderer.invoke(CHANNELS.fontsRead, family),

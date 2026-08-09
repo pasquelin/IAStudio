@@ -67,10 +67,10 @@ describe('what the flat views owe the screen', () => {
   it('asks three for the two conversions, by names three actually publishes', () => {
     const shader = shaderOf()
 
-    for (const chunk of ['tonemapping_fragment', 'colorspace_fragment']) {
-      expect(shader).toContain(`#include <${chunk}>`)
-      expect(ShaderChunk[chunk]).toBeTypeOf('string')
-    }
+    expect(shader).toContain('#include <tonemapping_fragment>')
+    expect(shader).toContain('#include <colorspace_fragment>')
+    expect(ShaderChunk.tonemapping_fragment).toBeTypeOf('string')
+    expect(ShaderChunk.colorspace_fragment).toBeTypeOf('string')
   })
 
   it('leaves no path out of main that skips them', () => {
