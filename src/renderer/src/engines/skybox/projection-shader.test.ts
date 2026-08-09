@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs'
-import { Texture } from 'three'
+import { ShaderChunk, Texture } from 'three'
 import { describe, expect, it } from 'vitest'
 import { CROSS_CELLS, CROSS_COLUMNS, CROSS_ROWS, CUBE_FACES } from '@shared/domain/skybox'
 import { createProjectionPass, LAYOUT_ASPECT } from './projection-shader'
@@ -16,13 +15,10 @@ describe('the projection shader', () => {
    * Read out of three rather than restated, so a change upstream fails here instead of on screen.
    */
   it('maps a direction the way three does, read out of three', () => {
-    const common = readFileSync(
-      'node_modules/three/src/renderers/shaders/ShaderChunk/common.glsl.js',
-      'utf8',
-    )
-
-    // The two lines of `equirectUv`, stripped of the spacing three writes them with.
-    const bare = common.replace(/\s+/g, '')
+    // `ShaderChunk` rather than the file on disk: three publishes its own GLSL, and this is a
+    // renderer test — `node:fs` does not exist on that target. Same bargain as
+    // `material-shader.test.ts`, which holds its anchors against the real `ShaderLib`.
+    const bare = (ShaderChunk.common ?? '').replace(/\s+/g, '')
     expect(bare).toContain('atan(dir.z,dir.x)')
     expect(bare).toContain('asin(clamp(dir.y,-1.0,1.0))')
 
