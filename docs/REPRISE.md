@@ -636,6 +636,16 @@ brèves pour que la question se pose autrement.
 
 **Le décodage du clone IPC** — 73 % du coût d’un ⌘S, intouché. Cf. § 3.3 et § 6.
 
+**L’horloge d’un viewport n’a pas d’état « au repos », et sa JSDoc prétend le contraire.**
+`ViewportEngine.lastTime` est documenté comme valant `null` quand la boucle dort, mais rien ne l’y
+ramène : `renderFrame` y écrit `now` à chaque frame et seul `resetClock()` y touche par ailleurs.
+Chaque appelant qui démarre une animation doit donc penser à appeler `resetClock()` — et, depuis
+`feat/textures-revue`, à garder cet appel sur un front montant qu’il suit lui-même.
+`SceneRenderer.onPointerDown` refait déjà la même danse à la main. **Le remède est plus profond
+qu’aucun des deux appelants** : que `renderFrame` remette `lastTime` à `null` quand il décide de ne
+pas replanifier de frame, ce qui supprime la classe entière au lieu de la rustiner deux fois — un
+viewport qui l’oublierait ouvre son mouvement sur un saut de `MAX_DELTA`, 0,1 s.
+
 **Une commande asynchrone vole le geste en cours.** `document-store.ts` réécrit l’identifiant de
 coalescence du document à **chaque** `runCommand` dès qu’un geste est ouvert, y compris pour une
 commande venue d’ailleurs. Tant que toutes les écritures venaient de la main de l’utilisateur, elles

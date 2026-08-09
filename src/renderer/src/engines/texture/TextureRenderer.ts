@@ -303,10 +303,8 @@ export class TextureRenderer {
     environment.setIntensity(preview.envIntensity)
     environment.setRotation(preview.envRotation)
     environment.setBackgroundVisible(preview.showBackground)
-    // On the edge, never on every apply: `resetClock` is for a caller about to animate, and this
-    // runs on every frame of every drag. Restarted there, the clock keeps handing the spin the
-    // time since the last slider value instead of the time since the last frame — so the shape
-    // crawls, or stops, for as long as a setting is being dragged.
+    // On the edge only: `apply` runs on every value a drag emits, and restarting the clock there
+    // leaves the spin the time since the last slider value instead of since the last frame.
     if (preview.autoSpin && !this.spinning) this.viewport.resetClock()
     this.spinning = preview.autoSpin
 

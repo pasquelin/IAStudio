@@ -87,37 +87,38 @@ describe('RangeField', () => {
   })
 
   /**
-   * Stacked inputs: the last in the DOM catches every press where they overlap. Dragged up to
-   * the top of the rail, «from» would sit under «to» with no way back — and the range is then
-   * stuck at one value for the rest of the session, keyboard aside. Reproduced on screen: two
-   * handles at 1 is one drag away, since `set('min')` clamps against `value.max`.
+   * Stacked inputs: the last in the DOM catches every press where they overlap. Both handles at
+   * the ceiling is one drag away — `set('min')` clamps against `value.max` — and there «to» has
+   * nowhere to drag to, so it cannot part them: «from» would stay buried for the session,
+   * keyboard aside. Reproduced on screen before it was fixed.
+   *
+   * `classList`, not `toContain`: `className` is one string, so a `z-10` added later would
+   * satisfy the positive assertion and break the negative one without anyone noticing.
    */
-  it('lifts the lower handle above the upper one once it is past halfway', () => {
+  it('lifts the lower handle once the upper one is against the ceiling', () => {
     const { from, to } = renderField({ min: 1, max: 1 })
 
-    expect(from.className).toContain('z-1')
-    expect(to.className).not.toContain('z-1')
-  })
-
-  /** At the bottom of the rail the upper handle is already on top, and free to move up. */
-  it('leaves the stacking alone while the lower handle is in the bottom half', () => {
-    const { from } = renderField({ min: 0, max: 0 })
-
-    expect(from.className).not.toContain('z-1')
+    expect(from.classList.contains('z-1')).toBe(true)
+    expect(to.classList.contains('z-1')).toBe(false)
   })
 
   /**
-   * Both handles at the exact middle: «to» keeps the presses, and that is the answer, not an
-   * oversight. It still has the whole upper half to move into, and one drag on it parts the two
-   * — which is what the top of the rail, where it has nowhere to go, cannot offer.
+   * Anywhere below the ceiling the presses stay with «to», and that is the answer, not an
+   * oversight: it still has room above to drag into, and one gesture parts the two. Lifting
+   * «from» here would take that gesture away — the span could then only ever be narrowed,
+   * since `set('min')` clamps against `value.max` and would move nothing.
    */
-  it('leaves the stacking alone when the two meet where the upper handle can still move', () => {
-    const { from, onChange, to } = renderField({ min: 0.5, max: 0.5 })
+  it.each([
+    ['at the floor', 0],
+    ['halfway', 0.5],
+    ['high but not against the ceiling', 0.7],
+  ])('leaves the stacking alone with both handles %s', (_where, at) => {
+    const { from, onChange, to } = renderField({ min: at, max: at })
 
-    expect(from.className).not.toContain('z-1')
+    expect(from.classList.contains('z-1')).toBe(false)
 
-    fireEvent.change(to, { target: { value: '0.9' } })
-    expect(onChange).toHaveBeenCalledWith({ min: 0.5, max: 0.9 })
+    fireEvent.change(to, { target: { value: '0.95' } })
+    expect(onChange).toHaveBeenCalledWith({ min: at, max: 0.95 })
   })
 
   it('reports a drag across the rail as one gesture', () => {
