@@ -95,6 +95,9 @@ l’Explorateur : ouvrir un document peut vous emmener dans un autre espace de t
 `Tab` ramène là où vous étiez : la liste garde un seul point d’entrée, celui de votre sélection
 s’il y en a une, la première cellule visible sinon.
 
+**Dans l’étagère, la sélection se fait aussi à plusieurs** — `⌘` pioche, `Maj` étend. Voir
+[Choisir plusieurs assets](07-assets.md#choisir-plusieurs-assets).
+
 ---
 
 ## Dans la vue 3D

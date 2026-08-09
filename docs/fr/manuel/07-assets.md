@@ -86,9 +86,27 @@ Le message dit lequel des trois cas vous êtes, parce qu’ils appellent des ré
 | Geste | Effet |
 |---|---|
 | **Clic** | sélectionne — l’Inspecteur, à droite, montre ses informations |
+| **⌘-clic** *(Ctrl ailleurs)* | ajoute cet asset à la sélection, ou l’en retire |
+| **Maj-clic** | sélectionne toute la plage entre le dernier choisi et celui-ci |
 | **Double-clic** | envoie l’asset dans le document qui peut le prendre, en changeant d’espace s’il le faut |
 | **Clic droit** | ouvre la liste de **toutes** ses destinations |
 | **Glisser-déposer** | dépose l’asset là où vous le lâchez |
+
+### Choisir plusieurs assets
+
+Deux actions de l’étagère travaillent sur **plusieurs** assets à la fois : **Envoyer** et
+**Décrire**. C’est pour elles que la sélection multiple existe.
+
+**Maj-clic étend, ⌘-clic pioche.** Le premier prend tout ce qui se trouve entre le dernier asset
+choisi et celui que vous cliquez ; le second n’ajoute — ou ne retire — que celui-là. Un clic nu
+recommence à zéro.
+
+**Le point de départ suit vos choix.** Après un ⌘-clic, c’est ce dernier asset qui sert d’ancre au
+Maj-clic suivant : vous piochez trois vignettes ici, puis vous étendez à partir de la troisième,
+pas de la première.
+
+**L’étagère s’atteint aussi au clavier**, comme les autres listes du studio — voir
+[Parcourir une liste au clavier](15-raccourcis.md#parcourir-une-liste-au-clavier).
 
 ### Le clic droit dit ce que le double-clic ne montre pas
 
@@ -222,7 +240,8 @@ relisent — c’est le même fichier, c’est la bibliothèque d’en face qui 
 ### Envoyer une sélection
 
 Le bouton **Envoyer**, sur la ligne de titre de l’étagère, téléverse les assets **sélectionnés**
-dans la bibliothèque de votre compte.
+dans la bibliothèque de votre compte — voir [Choisir plusieurs assets](#choisir-plusieurs-assets)
+pour en désigner plus d’un.
 
 Trois choses le décrivent mieux qu’une phrase de présentation :
 
