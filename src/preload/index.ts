@@ -101,6 +101,11 @@ const bridge: StudioBridge = {
     push: assetIds => ipcRenderer.invoke(CHANNELS.cloudPush, assetIds),
     plan: (assetIds, policy) => ipcRenderer.invoke(CHANNELS.cloudPlan, assetIds, policy),
   },
+  favorites: {
+    list: () => ipcRenderer.invoke(CHANNELS.favoritesList),
+    pin: assetId => ipcRenderer.invoke(CHANNELS.favoritesPin, assetId),
+    unpin: id => ipcRenderer.invoke(CHANNELS.favoritesUnpin, id),
+  },
   activity: {
     read: query => ipcRenderer.invoke(CHANNELS.activityRead, query),
     onEntries: callback => subscribe<readonly ActivityEntry[]>(EVENTS.activity, callback),

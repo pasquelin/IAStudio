@@ -94,6 +94,12 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
         Promise.resolve({ actions: [], summary: { push: 0, pull: 0, conflict: 0, skip: 0 } }),
       ...overrides.cloud,
     },
+    favorites: {
+      list: () => Promise.resolve([]),
+      pin: () => Promise.resolve([]),
+      unpin: () => Promise.resolve([]),
+      ...overrides.favorites,
+    },
     activity: {
       read: () => Promise.resolve([]),
       onEntries: () => () => {},

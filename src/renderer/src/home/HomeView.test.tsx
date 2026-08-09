@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { DEFAULT_HOME_SECTIONS, visibleHomeSections } from '@shared/domain/home'
+import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -140,15 +140,16 @@ describe('customising the home', () => {
    * first place is not something an opening banner does.
    */
   it('carries a menu on every titled band', () => {
-    render(<HomeView />)
+    useProject.setState({ project: PROJECT, known: true })
+    useDocuments.setState({ stored: [POSTER_DOCUMENT] })
+    const { container } = render(<HomeView />)
 
-    const titled = visibleHomeSections(DEFAULT_HOME_SECTIONS, {
-      authenticated: false,
-      hasProject: false,
-    }).filter(id => id !== 'spotlight')
-
+    // Counted off what is actually drawn, not off the registry: a section whose shelf is empty
+    // takes itself off the page, and it must take its heading and its menu with it.
+    const headings = container.querySelectorAll('h2')
+    expect(headings.length).toBeGreaterThan(0)
     expect(screen.getAllByRole('button', { name: 'Personnaliser cette section' })).toHaveLength(
-      titled.length,
+      headings.length,
     )
   })
 

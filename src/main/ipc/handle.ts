@@ -61,6 +61,10 @@ type ChannelMethod = {
   [CHANNELS.cloudPush]: StudioBridge['cloud']['push']
   [CHANNELS.cloudPlan]: StudioBridge['cloud']['plan']
 
+  [CHANNELS.favoritesList]: StudioBridge['favorites']['list']
+  [CHANNELS.favoritesPin]: StudioBridge['favorites']['pin']
+  [CHANNELS.favoritesUnpin]: StudioBridge['favorites']['unpin']
+
   [CHANNELS.activityRead]: StudioBridge['activity']['read']
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']

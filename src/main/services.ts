@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
-import { delimiter, dirname } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
 import type { Asset, AssetType } from '@shared/domain/asset'
@@ -20,6 +20,7 @@ import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
 import { assetFilePath, ownFileOf, serveAssets, servedFileOf } from './assets/protocol'
+import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, resourcesRoot } from './resources'
 import { linkedAsset, mediaFilters } from './media/link'
@@ -111,6 +112,8 @@ export type Services = {
   /** Drops the file an asset owns, leaving a linked one where it lies. */
   removeAssetFile: (asset: Asset) => Promise<void>
   project: ProjectStore
+  /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
+  favorites: FavoritesStore
   /** What the studio did, and what it failed to do — the surface it had none of. */
   journal: ActivityLog
   /** Settles the note of what is still running. Awaited at quit, beside the journal. */
@@ -639,13 +642,18 @@ export function createServices(settings: SettingsStore): Services {
     enabled: () => settings.read().generation.captionArrivals,
   })
 
-  serveAssets(async assetId => {
-    const current = project.current()
-    if (!current) return null
+  const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))
 
-    const asset = await project.catalog().find(assetId)
-    return asset ? servedFileOf(current.path, asset) : null
-  })
+  serveAssets(
+    async assetId => {
+      const current = project.current()
+      if (!current) return null
+
+      const asset = await project.catalog().find(assetId)
+      return asset ? servedFileOf(current.path, asset) : null
+    },
+    favoriteId => favorites.thumbnailPath(favoriteId),
+  )
 
   const stored = settings.read()
   const lastProject = stored.general.startup === 'lastProject' ? stored.storage.lastProject : null
@@ -661,6 +669,7 @@ export function createServices(settings: SettingsStore): Services {
 
   return {
     settings,
+    favorites,
     client,
     models,
     jobs,

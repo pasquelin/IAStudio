@@ -1,6 +1,7 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
+import type { FavoriteRecipe } from './domain/favorite'
 import type { CloudPage, CloudQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type {
@@ -92,6 +93,10 @@ export type Channels = {
   cloudPush: 'cloud:push'
   cloudPlan: 'cloud:plan'
 
+  favoritesList: 'favorites:list'
+  favoritesPin: 'favorites:pin'
+  favoritesUnpin: 'favorites:unpin'
+
   activityRead: 'activity:read'
 
   mediaIngest: 'media:ingest'
@@ -172,6 +177,10 @@ export const CHANNELS: Channels = {
   cloudPull: 'cloud:pull',
   cloudPush: 'cloud:push',
   cloudPlan: 'cloud:plan',
+
+  favoritesList: 'favorites:list',
+  favoritesPin: 'favorites:pin',
+  favoritesUnpin: 'favorites:unpin',
 
   activityRead: 'activity:read',
 
@@ -509,6 +518,24 @@ export type StudioBridge = {
     push: (assetIds: readonly string[]) => Promise<SyncOutcome[]>
     /** What a push or a pull would do, before it costs a single request. */
     plan: (assetIds: readonly string[], policy: SyncPolicy) => Promise<SyncPlan>
+  }
+  /**
+   * Recipes worth keeping, held outside every project.
+   *
+   * A favourite is a way of making something, not a thing: the model, the words and the settings
+   * that produced an asset, so it can be run again from anywhere. It survives changing project —
+   * which is exactly when one reaches for it — so it lives beside the settings rather than in a
+   * catalogue, and its still is a copy on disk rather than a URL that would expire.
+   */
+  favorites: {
+    list: () => Promise<FavoriteRecipe[]>
+    /**
+     * Pins what produced an asset of the open project. Answers the whole list, so a window never
+     * has to guess where the new one landed. An asset nobody generated has no recipe to keep,
+     * and the list comes back unchanged.
+     */
+    pin: (assetId: string) => Promise<FavoriteRecipe[]>
+    unpin: (id: string) => Promise<FavoriteRecipe[]>
   }
   /**
    * What the studio did, and what it failed to do — the surface it had none of.

@@ -16,6 +16,7 @@ export type HomeSectionId =
   | 'projects'
   | 'creations'
   | 'byMode'
+  | 'favorites'
   | 'library'
   | 'documents'
   | 'jobs'
@@ -53,6 +54,9 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'creations', requires: ['project'], defaultLimit: 12 },
   // No limit: the band is one counter per kind, and there are exactly six kinds.
   { id: 'byMode', requires: ['project'] },
+  // Requires nothing: a recipe is kept outside every project, and the shelf is the one place
+  // that still has something to show when no folder is open.
+  { id: 'favorites', requires: [], defaultLimit: 12 },
   { id: 'library', requires: ['api'], defaultLimit: 12 },
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },

@@ -6,7 +6,7 @@ import type { Asset } from '@shared/domain/asset'
 // Electron in — and there is no Electron under Vitest.
 vi.mock('electron', () => ({ net: {}, protocol: {} }))
 
-const { assetFilePath, servedFileOf } = await import('./protocol')
+const { assetFilePath, servedFileOf, servedPath } = await import('./protocol')
 
 const asset = (fields: Partial<Asset>): Asset => ({
   id: 'asset-1',
@@ -66,5 +66,36 @@ describe('what the scheme serves for an asset', () => {
 
   it('serves nothing for an asset that has no file yet', () => {
     expect(servedFileOf(PROJECT, asset({}))).toBeNull()
+  })
+})
+
+/**
+ * One scheme, two hosts: a row of the open project's catalogue, and a still kept outside every
+ * project. Resolved by different means, so the routing has to tell them apart — the wrong
+ * resolver would answer 404 on a file that is plainly there.
+ */
+describe('routing a URL of the scheme', () => {
+  const resolveAsset = vi.fn(() => Promise.resolve('/projects/a/assets/img/asset_1.png'))
+  const resolveFavorite = vi.fn(() => Promise.resolve('/userData/favorites/favorite_1.png'))
+
+  it('sends an asset to the catalogue and a favourite to the folder beside the settings', async () => {
+    await expect(
+      servedPath('scenario://asset/asset_1', resolveAsset, resolveFavorite),
+    ).resolves.toBe('/projects/a/assets/img/asset_1.png')
+    expect(resolveAsset).toHaveBeenCalledWith('asset_1')
+
+    await expect(
+      servedPath('scenario://favorite/favorite_1', resolveAsset, resolveFavorite),
+    ).resolves.toBe('/userData/favorites/favorite_1.png')
+    expect(resolveFavorite).toHaveBeenCalledWith('favorite_1')
+  })
+
+  it('serves nothing for a host neither resolver knows', async () => {
+    await expect(
+      servedPath('scenario://something-else/1', resolveAsset, resolveFavorite),
+    ).resolves.toBeNull()
+    await expect(
+      servedPath('https://example.com/1', resolveAsset, resolveFavorite),
+    ).resolves.toBeNull()
   })
 })

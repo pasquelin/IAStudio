@@ -511,6 +511,9 @@
     "model": "Modèle",
     "prompt": "Prompt",
     "seed": "Graine",
+    "pin": "Épingler la recette",
+    "pinned": "Recette épinglée",
+    "pinHint": "La garder à portée sur l’accueil, dans tous vos projets",
     "regenerate": "Régénérer",
     "regenerateHint": "Ouvrir le générateur avec ces paramètres",
     "file": "Fichier",
@@ -1469,6 +1472,7 @@
       "projects": "Vos projets",
       "creations": "Ce que vous avez produit",
       "byMode": "Par type",
+      "favorites": "Vos recettes",
       "library": "Votre bibliothèque",
       "documents": "Vos documents",
       "jobs": "En cours",
@@ -1502,6 +1506,9 @@
     },
     "library": {
       "fetch": "Récupérer « {{name}} » dans le projet"
+    },
+    "favorites": {
+      "unpin": "Retirer « {{name}} » de vos recettes"
     },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",

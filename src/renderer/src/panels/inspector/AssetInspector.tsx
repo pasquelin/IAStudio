@@ -1,7 +1,8 @@
-import { mdiFolderOpenOutline, mdiRefresh } from '@mdi/js'
-import { useState } from 'react'
+import { mdiFolderOpenOutline, mdiPin, mdiPinOutline, mdiRefresh } from '@mdi/js'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
+import { sameRecipe } from '@shared/domain/favorite'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
@@ -12,6 +13,7 @@ import { revealTool } from '@/helpers/reveal-panel'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
+import { useFavorites } from '@/stores/favorites'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -64,7 +66,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
         </PropertyRow>
       </PropertyGroup>
 
-      {generation && <GenerationGroup generation={generation} />}
+      {generation && <GenerationGroup assetId={asset.id} generation={generation} />}
 
       {asset.location === 'local' && (
         <PropertyGroup title={t('inspector.file')}>
@@ -90,9 +92,22 @@ export function AssetInspector({ asset }: { asset: Asset }) {
  * What produced the asset, and the offer to run it again. The prompt is shown whole and
  * selectable: it is the one field anyone wants to copy out and adjust.
  */
-function GenerationGroup({ generation }: { generation: AssetGeneration }) {
+function GenerationGroup({
+  assetId,
+  generation,
+}: {
+  assetId: string
+  generation: AssetGeneration
+}) {
   const { t } = useTranslation()
   const workspace = useLayouts(state => state.activeWorkspace)
+  const pinned = useFavorites(state =>
+    state.recipes.some(recipe => sameRecipe(recipe.generation, generation)),
+  )
+
+  // Read when the group appears: the shelf that shows these lives on the home, and this panel
+  // has to know whether the recipe in front of it is already there before offering to keep it.
+  useEffect(() => void useFavorites.getState().load(), [])
 
   const regenerate = (): void => {
     const { family } = workspaceById(workspace)
@@ -114,7 +129,19 @@ function GenerationGroup({ generation }: { generation: AssetGeneration }) {
           </p>
         </PropertyRow>
       )}
-      <div className="flex justify-end px-2 pt-1">
+      <div className="flex justify-end gap-1 px-2 pt-1">
+        {/* Pinning keeps the recipe outside this project, so it is still there in the next one.
+            Already pinned, the button says so rather than disappearing: a control that vanishes
+            once used leaves no way to tell "done" from "never offered". */}
+        <ToolButton
+          icon={pinned ? mdiPin : mdiPinOutline}
+          label={t(pinned ? 'inspector.pinned' : 'inspector.pin')}
+          description={t('inspector.pinHint')}
+          tooltip={TIP_LEFT}
+          variant="header"
+          active={pinned}
+          onClick={() => void useFavorites.getState().pin(assetId)}
+        />
         <ToolButton
           icon={mdiRefresh}
           label={t('inspector.regenerate')}

@@ -1,7 +1,10 @@
+import { randomUUID } from 'node:crypto'
 import { registerAssetHandlers } from '@main/assets/handlers'
 import { registerDiagnosticsHandlers } from '@main/diagnostics/handlers'
 import { createInstalledFonts } from '@main/fonts/disk'
 import { registerFontHandlers } from '@main/fonts/handlers'
+import { registerFavoriteHandlers } from '@main/favorites/handlers'
+import { readFavoriteThumbnail } from '@main/favorites/thumbnail'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
 import { registerProjectHandlers } from '@main/project/handlers'
@@ -42,6 +45,13 @@ export function registerIpc(services: Services): void {
     journal: () => services.journal,
     captionArrivals: services.captionArrivals,
     describeAssets: services.describeAssets,
+  })
+  registerFavoriteHandlers({
+    favorites: services.favorites,
+    project: services.project,
+    readThumbnail: readFavoriteThumbnail,
+    newFavoriteId: () => `favorite_${randomUUID()}`,
+    now: () => new Date().toISOString(),
   })
   registerMediaHandlers(services)
   registerDialogHandlers(services)

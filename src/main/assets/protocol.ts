@@ -2,6 +2,7 @@ import { net, protocol } from 'electron'
 import { isAbsolute, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { ASSET_SCHEME, assetIdFromUrl, type Asset } from '@shared/domain/asset'
+import { favoriteIdFromUrl } from '@shared/domain/favorite'
 
 /**
  * Resolves an asset's stored path inside its project, or refuses.
@@ -71,12 +72,32 @@ export function registerAssetScheme(): void {
 /** Asynchronous since the catalogue moved to its own thread — see `catalog-thread.ts`. */
 export type AssetResolver = (assetId: string) => Promise<string | null>
 
-export function serveAssets(resolveAsset: AssetResolver): void {
+/**
+ * One scheme, two hosts. `scenario://asset/<id>` is a row of the open project's catalogue;
+ * `scenario://favorite/<id>` is a still kept outside every project, which is why it cannot be
+ * resolved the same way — there is no catalogue to look it up in.
+ */
+export function serveAssets(resolveAsset: AssetResolver, resolveFavorite: AssetResolver): void {
   protocol.handle(ASSET_SCHEME, async request => {
-    const assetId = assetIdFromUrl(request.url)
-    const file = assetId ? await resolveAsset(assetId) : null
+    const file = await servedPath(request.url, resolveAsset, resolveFavorite)
 
     if (!file) return new Response(null, { status: 404 })
     return net.fetch(pathToFileURL(file).toString())
   })
+}
+
+/**
+ * Which file a URL of the scheme names — the routing itself, apart from the handler so it can be
+ * tested without an Electron `protocol`. A host neither resolver knows is answered with nothing.
+ */
+export async function servedPath(
+  url: string,
+  resolveAsset: AssetResolver,
+  resolveFavorite: AssetResolver,
+): Promise<string | null> {
+  const assetId = assetIdFromUrl(url)
+  if (assetId) return resolveAsset(assetId)
+
+  const favoriteId = favoriteIdFromUrl(url)
+  return favoriteId ? resolveFavorite(favoriteId) : null
 }

@@ -87,8 +87,20 @@ type Graph = {
   unresolved: Set<string>
 }
 
+/**
+ * Walked once for the whole suite. The four cases below ask the same question of the same tree,
+ * and reading every source of the renderer four times over was five seconds of the same work —
+ * enough to time the first case out under a full run, on a graph that only ever grows.
+ */
+let walked: Promise<Graph> | null = null
+
+function eagerGraph(): Promise<Graph> {
+  walked ??= walk()
+  return walked
+}
+
 /** Every package and every source file the entry point reaches without an `import()`. */
-async function eagerGraph(): Promise<Graph> {
+async function walk(): Promise<Graph> {
   const packages = new Set<string>()
   const files = new Set<string>()
   const unresolved = new Set<string>()

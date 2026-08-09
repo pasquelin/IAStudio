@@ -349,6 +349,27 @@ export const ASSET_SCHEME = 'scenario'
 const ASSET_HOST = 'asset'
 
 /**
+ * `scenario://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
+ * keep their stills outside any project, so they answer on a host of their own.
+ */
+export function hostedUrl(host: string, id: string): string {
+  return `${ASSET_SCHEME}://${host}/${encodeURIComponent(id)}`
+}
+
+/** The id back out, or null when the URL names another host — which is not ours to serve. */
+export function hostedIdFromUrl(url: string, host: string): string | null {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== `${ASSET_SCHEME}:` || parsed.hostname !== host) return null
+
+    const id = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+    return id.length > 0 ? id : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Where the renderer loads a local asset from. Derived from the identifier rather than asked
  * for over IPC: the answer is a pure function of the id, and asking would mean one round trip
  * and two synchronous SQLite queries per thumbnail on screen.
@@ -357,7 +378,7 @@ const ASSET_HOST = 'asset'
  * catalogue when it serves the scheme.
  */
 export function assetUrl(assetId: string): string {
-  return `${ASSET_SCHEME}://${ASSET_HOST}/${encodeURIComponent(assetId)}`
+  return hostedUrl(ASSET_HOST, assetId)
 }
 
 /**
@@ -371,13 +392,5 @@ export function posterUrl(asset: Asset): string | null {
 
 /** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */
 export function assetIdFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== `${ASSET_SCHEME}:` || parsed.hostname !== ASSET_HOST) return null
-
-    const id = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-    return id.length > 0 ? id : null
-  } catch {
-    return null
-  }
+  return hostedIdFromUrl(url, ASSET_HOST)
 }
