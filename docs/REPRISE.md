@@ -46,6 +46,13 @@ ce qui est fait.
 > et les deux architectures ont été réalignés le 9 août** — si tu renommes un libellé, `grep` le
 > dans `docs/fr/manuel/` et `docs/en/manual/` dans le même mouvement.
 >
+> **Les six tests i18n lisaient tous le même sens** — une clé nommée dans la source doit exister
+> dans les deux bundles. `renderer/src/hardcoded-text.i18n.test.ts` lit l'autre : il parse chaque
+> `.tsx` et refuse un nœud de texte JSX, un `{'…'}` en enfant ou un attribut lisible
+> (`title`, `placeholder`, `aria-label`, …) portant un littéral. **Zéro trouvaille au 9 août** —
+> c'est ce qui rend la règle tenable. Le main n'est pas dans sa portée : ses libellés passent par
+> l'objet `t` de `menu/template.ts`.
+>
 > **Avant cela**, `feat/textures-materiau` (8 août) : l'espace **Textures** a son panneau matériau —
 > une face de l'inspecteur unique, avec le remap à double poignée — et sa bande de canaux, en
 > colonne de droite. Le viewport est nu. Le § 3.4 dit ce que ce lot a appris et qu'il ne faut pas
