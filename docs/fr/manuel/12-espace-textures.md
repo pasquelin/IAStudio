@@ -105,7 +105,7 @@ Chaque canal a une **origine** :
 | Origine | Ce que ça veut dire |
 |---|---|
 | **Généré** | produit par un modèle Scenario — il est figé |
-| **Dérivé** | calculé par le studio depuis un autre canal — il se recalcule si sa source change |
+| **Dérivé** | calculé par le studio depuis un autre canal, à la demande |
 | **Importé** | une image que vous avez posée vous-même |
 
 ### Le panneau Canaux
@@ -117,7 +117,7 @@ ce qu’elle a.
 | Geste | Ce qu’il fait |
 |---|---|
 | **Glisser une image sur une vignette** | pose cette image dans **ce** canal |
-| **Le menu d’une vignette** | choisit parmi les images du projet, ou vide le canal |
+| **Le menu d’une vignette** | calcule le canal depuis sa source, choisit parmi les images du projet, ou vide le canal |
 | **Cliquer une vignette** | montre ce canal **seul**, à plat |
 | **Cliquer la même à nouveau** | revient à la matière éclairée |
 
@@ -133,6 +133,33 @@ Une vignette vide ne se clique pas : il n’y a rien à regarder.
 > **Une image glissée sur l’aperçu, elle, va toujours dans la couleur de base.** C’est le canal
 > sans lequel une matière ne se juge pas, et l’aperçu ne peut pas devenir : pour viser un autre
 > canal, déposez sur sa vignette.
+
+### Calculer un canal depuis un autre
+
+Quatre canaux se calculent depuis un autre, sur votre carte graphique — sans appel à l’API, donc
+**sans dépenser un crédit**.
+
+| Canal | Calculé depuis | Ce que le calcul fait |
+|---|---|---|
+| **Hauteur** | Couleur de base | la luminosité de l’image devient un relief |
+| **Normales** | Hauteur | un filtre de Sobel lit la pente sous chaque pixel |
+| **Occlusion ambiante** | Hauteur | ce qui est plus bas que son voisinage s’assombrit |
+| **Rugosité** | Couleur de base | les zones sombres deviennent mates, les claires brillantes |
+
+Le calcul est la **première ligne du menu de la vignette**. Si le canal source est vide, la ligne le
+dit et ne se clique pas : c’est celui-là qu’il faut remplir d’abord.
+
+Le résultat est une **image du projet** comme une autre — elle apparaît dans l’étagère, se regarde à
+plat, part avec le projet — et le canal la porte avec le badge « dérivé ». Chaque calcul en crée une
+nouvelle : relancer trois fois laisse trois images, dont une seule est en place.
+
+**Aucune force n’est figée dans les pixels.** L’intensité se règle après coup, dans l’Inspecteur :
+*Normale* (section **Relief**) pour la force du relief, *Occlusion* (section **Matériau**) pour
+l’ombrage des creux, la *plage de rugosité* pour le contraste du mat au brillant. C’est ce qui rend
+une dérivation réversible sans la refaire.
+
+**Un canal calculé ne se met pas à jour tout seul.** Si vous remplacez la hauteur, la normale qui en
+venait décrit encore l’ancienne : relancez son calcul.
 
 ---
 
@@ -245,9 +272,6 @@ puce sur l’onglet dit ce qui attend encore d’être écrit.
 
 ## Ce qui manque encore
 
-- les **dérivations automatiques** — fabriquer les normales depuis la hauteur, par exemple. Le
-  badge « dérivé » existe et le studio sait qu’un canal en dérive un autre ; ce qui manque est le
-  calcul lui-même ;
 - l’**import d’un fichier du disque** directement dans un canal. Passez par l’import du projet
   (chapitre 7), puis posez l’image sur la vignette ;
 - l’**aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures ;

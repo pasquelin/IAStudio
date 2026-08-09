@@ -214,15 +214,15 @@ as new**. That is not a loss: it is a different working model, and it is complet
 
 ### What is missing
 
-- **the automatic derivations** — making *normals* from *height*, for example. The "derived" badge
-  exists, and the studio knows which channel derives from which; it is the computation that is
-  missing, not the vocabulary;
+- **chained derivations** — computing height from the base colour does not recompute the normal
+  that came from it: each channel is recomputed on demand, one at a time;
 - **importing a file from disk** straight into a channel. The detour exists: import the picture into
   the project, then drop it onto the channel's thumbnail;
 - **the tiling preview** at 1×, 2×, 4×, and visible-seam detection;
 - **export** to glTF, Unity, Unreal, Roblox.
 
-What works today: generating a material, placing a picture in each of its eight channels, setting
+What works today: generating a material, placing a picture in each of its eight channels, computing
+four of them from another, setting
 everything it is made of — roughness and metalness with their remap, relief, emission, tiling —
 looking at it on five shapes under the lighting of your choice, inspecting each channel flat, and
 saving it.

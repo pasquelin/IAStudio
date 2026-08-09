@@ -105,7 +105,7 @@ Each channel has an **origin**:
 | Origin | What it means |
 |---|---|
 | **Generated** | produced by a Scenario model — it is fixed |
-| **Derived** | computed by the studio from another channel — it recomputes if its source changes |
+| **Derived** | computed by the studio from another channel, on demand |
 | **Imported** | an image you placed yourself |
 
 ### The Channels panel
@@ -116,7 +116,7 @@ all eight, **empty ones included**: what a material lacks counts as much as what
 | Gesture | What it does |
 |---|---|
 | **Drag an image onto a thumbnail** | puts that image in **that** channel |
-| **A thumbnail's menu** | picks from the project's pictures, or empties the channel |
+| **A thumbnail's menu** | computes the channel from its source, picks from the project's pictures, or empties the channel |
 | **Click a thumbnail** | shows that channel **on its own**, flat |
 | **Click the same one again** | back to the lit material |
 
@@ -132,6 +132,33 @@ An empty thumbnail cannot be clicked: there is nothing to look at.
 > **An image dropped on the preview still goes to the base colour.** It is the channel without which
 > a material cannot be judged, and the one the preview cannot become: to aim at another channel, drop
 > onto its thumbnail.
+
+### Computing a channel from another
+
+Four channels are computed from another, on your graphics card — no API call, so **no credit is
+spent**.
+
+| Channel | Computed from | What the computation does |
+|---|---|---|
+| **Height** | Base colour | the brightness of the picture becomes relief |
+| **Normal** | Height | a Sobel filter reads the slope under each pixel |
+| **Ambient occlusion** | Height | whatever sits lower than its surroundings darkens |
+| **Roughness** | Base colour | dark areas turn matte, bright ones glossy |
+
+The computation is the **first row of the thumbnail's menu**. When the source channel is empty, the
+row says so and cannot be clicked: that is the one to fill first.
+
+The result is a **picture of the project** like any other — it shows up in the shelf, it can be read
+flat, it travels with the project — and the channel carries it with the "derived" badge. Each
+computation makes a new one: running it three times leaves three pictures, only one of them in place.
+
+**No strength is baked into the pixels.** It is set afterwards, in the Inspector: *Normal*
+(**Relief** section) for the strength of the relief, *Occlusion* (**Material** section) for the
+shading of the hollows, the *roughness range* for the contrast from matte to glossy. That is what
+makes a derivation reversible without redoing it.
+
+**A computed channel does not update itself.** Replace the height and the normal that came from it
+still describes the old one: run its computation again.
 
 ---
 
@@ -241,9 +268,6 @@ is still waiting to be written.
 
 ## What is still missing
 
-- the **automatic derivations** — making normals from height, for example. The "derived" badge
-  exists and the studio knows one channel derives from another; what is missing is the computation
-  itself;
 - **importing a file from disk** straight into a channel. Go through the project's import
   (chapter 7), then drop the picture onto the thumbnail;
 - the **tiling preview** at 1×, 2×, 4×, and seam detection;

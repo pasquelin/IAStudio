@@ -132,7 +132,9 @@ Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’o
    répétition du motif ;
 5. **Inspecteur** → section **Matériau** : réglez rugosité, métal, relief et émission. Si la
    matière paraît uniformément moyenne, c’est le **remappage** qu’il faut ouvrir — voir plus bas ;
-6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir ;
+6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir —
+   et pour la **hauteur**, la **normale**, l’**occlusion** et la **rugosité**, le menu de la vignette
+   les calcule depuis un autre canal, sans rien dépenser ;
 7. `⌘S` **enregistre**.
 
 **Le piège.** Une image déposée sur l’**aperçu** va toujours dans la couleur de base — c’est
