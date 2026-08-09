@@ -335,8 +335,9 @@ And it keeps the first that **runs**, not the first that exists: it launches it 
 that is present but broken is treated as missing — see
 [When something goes wrong](16-troubleshooting.md#the-puzzling-case-ffmpeg-is-there-and-the-studio-says-it-is-not).
 
-If none of the three answers, the banner says so: "Video preparation unavailable: no lighter copy,
-no waveform."
+If none of the three answers, an **amber warning triangle** appears on the asset shelf's title
+bar, left of the counter. Hover it, or reach it with the keyboard, and it says: "Video preparation
+unavailable: no lighter copy, no waveform." `Esc` closes the tooltip.
 
 **The import still works.** You only lose comfort: scrubbing through videos will be less smooth,
 and audio tracks will not show their drawing.
