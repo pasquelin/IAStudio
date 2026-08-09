@@ -1,5 +1,7 @@
 import { ShaderMaterial, Vector2, type Texture } from 'three'
 import { QUAD_VERTEX_SHADER } from '../../gpu/passes/quad'
+import { LUMA, SOURCE_PREAMBLE } from './glsl'
+import type { PictureSize } from './offscreen'
 
 /**
  * How badly a picture disagrees with itself where it wraps.
@@ -18,14 +20,9 @@ import { QUAD_VERTEX_SHADER } from '../../gpu/passes/quad'
 const SAMPLES = 256
 
 const FRAGMENT_SHADER = /* glsl */ `
-precision highp float;
+${SOURCE_PREAMBLE}
+${LUMA}
 
-uniform sampler2D uSource;
-uniform vec2 uTexel;
-
-varying vec2 vUv;
-
-const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 const float SAMPLES = ${SAMPLES}.0;
 
 float lumaAt(vec2 uv) {
@@ -74,7 +71,7 @@ export type SeamPass = {
   readonly uniforms: SeamUniforms
 }
 
-export function createSeamPass(source: Texture, size: { width: number; height: number }): SeamPass {
+export function createSeamPass(source: Texture, size: PictureSize): SeamPass {
   if (size.width <= 0 || size.height <= 0) throw new Error('seam source has no pixels')
 
   const uniforms: SeamUniforms = {

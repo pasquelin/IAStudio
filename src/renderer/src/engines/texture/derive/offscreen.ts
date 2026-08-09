@@ -1,12 +1,19 @@
-import { LinearFilter, NoColorSpace, WebGLRenderer, type Texture } from 'three'
+import {
+  LinearFilter,
+  NoColorSpace,
+  WebGLRenderer,
+  type ShaderMaterial,
+  type Texture,
+} from 'three'
 import { isRecord, readNumber } from '@shared/guards'
 import { createGpuPipeline, type GpuPipeline } from '../../gpu/GpuPipeline'
 import type { TextureSource } from '../../scene/texture-cache'
 
 /**
  * The plumbing every off-screen pass over a channel shares: take the pixels, open a context,
- * give both back. Written once because the giving back is the part that is easy to get wrong —
- * a decoded 4K channel is 64 MB, and a context that leaks blacks out somebody's viewport.
+ * draw once, give both back. Written once because the giving back is the part that is easy to
+ * get wrong — a decoded 4K channel is 64 MB, and a context that leaks blacks out somebody's
+ * viewport.
  */
 
 export type PictureSize = { width: number; height: number }
@@ -14,12 +21,78 @@ export type PictureSize = { width: number; height: number }
 /** A picture ready to be sampled, and the size the frame drawn from it must have. */
 export type Source = { texture: Texture; size: PictureSize }
 
+/** What a pass hands back: the material that computes it, and nothing else. */
+export type OffscreenPass = { readonly material: ShaderMaterial }
+
+/** The context of one draw, alive only for the length of the call it is handed to. */
+export type OffscreenFrame = {
+  renderer: WebGLRenderer
+  pipeline: GpuPipeline
+  material: ShaderMaterial
+  /** The frame's own size, which is not the source's when the pass reduces into one texel. */
+  size: PictureSize
+}
+
+export type OffscreenRun<T> = {
+  load: TextureSource
+  url: string
+  /** The pass to build over the decoded source, once the pixels are in hand. */
+  pass: (source: Texture, size: PictureSize) => OffscreenPass
+  /** The frame the pass draws into. The source's own size unless the pass says otherwise. */
+  frame?: (size: PictureSize) => PictureSize
+  draw: (frame: OffscreenFrame) => Promise<T> | T
+}
+
+/**
+ * One off-screen pass at a time, whoever asks.
+ *
+ * The invariant belongs here rather than to the panels: they do not know about each other, and
+ * the channel grid going dead said nothing to the inspector's measure button — two clicks
+ * decoded two 4K pictures and held two contexts at once. A browser evicts the OLDEST context
+ * when it hands out the seventeenth, so what goes black is a viewport somebody was looking at.
+ */
+let queued: Promise<unknown> = Promise.resolve()
+
+function serialize<T>(run: () => Promise<T>): Promise<T> {
+  const result = queued.then(run)
+  // The queue carries no rejection forward: one refused context would reject every pass behind it.
+  queued = result.catch(() => undefined)
+  return result
+}
+
+/**
+ * Everything between taking the pixels and giving them back, in the one order that frees both.
+ *
+ * Each step throws — sizing, building the pass, and asking for a context on a machine whose GPU
+ * process has died — and every one of them used to pin a fully decoded picture for the life of
+ * the window.
+ */
+export function runOffscreenPass<T>({ load, url, pass, frame, draw }: OffscreenRun<T>): Promise<T> {
+  return serialize(async () => {
+    const { texture, size } = await loadSource(load, url)
+
+    try {
+      const built = pass(texture, size)
+      try {
+        const drawn = frame ? frame(size) : size
+        return await withRenderer(drawn, (renderer, pipeline) =>
+          draw({ renderer, pipeline, material: built.material, size: drawn }),
+        )
+      } finally {
+        built.material.dispose()
+      }
+    } finally {
+      texture.dispose()
+    }
+  })
+}
+
 /**
  * Reads the channel as stored, whatever `contentOf` says it holds. A base colour decoded to
  * linear would have a pass compute on values the file never held — where the luminance of the
  * stored picture is what the eye reads as depth, and as grain.
  */
-export async function loadSource(load: TextureSource, url: string): Promise<Source> {
+async function loadSource(load: TextureSource, url: string): Promise<Source> {
   const texture = await load(url)
   texture.colorSpace = NoColorSpace
   // Every pass samples LOD 0 only. Left on, three builds the whole pyramid: +22 MB and a full
@@ -51,11 +124,9 @@ function sizeOf(texture: Texture): PictureSize {
  * One context, one frame, given back inside this call whatever happens.
  *
  * A context of its own rather than the viewport's — the exception `GpuPipeline` names: nothing
- * is exchanged between the two, the result leaves as a PNG or as a number. And the one that
- * pays for a leak is not this call: a browser evicts the OLDEST context when it hands out the
- * seventeenth, so what goes black is a viewport somebody was looking at.
+ * is exchanged between the two, the result leaves as a PNG or as a number.
  */
-export async function withRenderer<T>(
+async function withRenderer<T>(
   size: PictureSize,
   draw: (renderer: WebGLRenderer, pipeline: GpuPipeline) => Promise<T> | T,
 ): Promise<T> {

@@ -628,7 +628,7 @@ describe('inspector panel', () => {
       render(<Content />)
       await openTiling()
 
-      expect(screen.getByRole('button', { name: 'Mesurer les coutures' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Mesurer' })).toBeDisabled()
     })
 
     it('offers the measurement once a base colour is there', async () => {
@@ -642,16 +642,39 @@ describe('inspector panel', () => {
       render(<Content />)
       await openTiling()
 
-      expect(screen.getByRole('button', { name: 'Mesurer les coutures' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Mesurer' })).toBeEnabled()
     })
 
-    it('reads a measurement back in words rather than as a ratio', async () => {
+    /** The base colour a reading was taken off, so the words on screen can be checked against it. */
+    const measured = (assetId: string, ratio: number) => {
       installTexture('doc-1')
-      useTextureViews.setState({ seams: { 'doc-1': 3 } })
+      useTextures
+        .getState()
+        .runCommand(
+          'doc-1',
+          setChannel('baseColor', { assetId, origin: 'imported', width: 8, height: 8 }),
+        )
+      useTextureViews.setState({ seams: { 'doc-1': { assetId: 'img-1', ratio } } })
+    }
+
+    it('reads a measurement back in words rather than as a ratio', async () => {
+      measured('img-1', 3)
       render(<Content />)
       await openTiling()
 
       expect(screen.getByText('Couture visible')).toBeInTheDocument()
+    })
+
+    /**
+     * A reading describes one picture. Left on screen after the base colour was replaced, it
+     * says "Visible seam" about pixels the document no longer points at.
+     */
+    it('drops the words when the base colour they described is gone', async () => {
+      measured('img-2', 3)
+      render(<Content />)
+      await openTiling()
+
+      expect(screen.queryByText('Couture visible')).not.toBeInTheDocument()
     })
 
     /**

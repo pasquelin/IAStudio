@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '@/design/Button'
 import { ColorField } from '@/design/ColorField'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
@@ -292,9 +293,15 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
  */
 function SeamReading({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
-  const hasSource = useTextures(state => Boolean(textureOf(state, documentId).channels.baseColor))
+  const source = useTextures(
+    state => textureOf(state, documentId).channels.baseColor?.assetId ?? null,
+  )
   const seam = useTextureViews(state => seamOf(state, documentId))
   const [measuring, setMeasuring] = useState(false)
+
+  // Only for the picture it was read off: a base colour replaced since leaves words on screen
+  // about pixels the document no longer points at.
+  const verdict = seam && seam.assetId === source ? seamVerdict(seam.ratio) : null
 
   /**
    * Reached by an `import()` rather than at the top of the file: the panels are in the opening
@@ -312,21 +319,19 @@ function SeamReading({ documentId }: { documentId: string }) {
   }
 
   return (
-    <PropertyRow label={t('texture.measureSeam')}>
+    <PropertyRow label={t('texture.seams')}>
       <div className="flex items-center justify-end gap-2">
-        {seam !== null && !measuring && (
-          <span className="text-muted truncate">{t(SEAM_LABELS[seamVerdict(seam)])}</span>
+        {verdict && !measuring && (
+          <span className="text-muted truncate">{t(SEAM_LABELS[verdict])}</span>
         )}
-        <button
-          type="button"
+        <Button
           // Said rather than hidden: an empty base colour is something to go and fill.
-          disabled={!hasSource || measuring}
-          title={hasSource ? undefined : t('texture.seamNoSource')}
+          disabled={!source || measuring}
+          title={source ? undefined : t('texture.seamNoSource')}
           onClick={() => void measure()}
-          className={chipSkin(false)}
         >
           {t(measuring ? 'texture.measuringSeam' : 'texture.measureSeam')}
-        </button>
+        </Button>
       </div>
     </PropertyRow>
   )

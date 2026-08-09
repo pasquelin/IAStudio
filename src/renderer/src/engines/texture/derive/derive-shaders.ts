@@ -1,6 +1,8 @@
 import { ShaderMaterial, Vector2, type Texture } from 'three'
 import type { PbrChannel } from '@shared/domain/texture'
 import { QUAD_VERTEX_SHADER } from '../../gpu/passes/quad'
+import { LUMA, SOURCE_PREAMBLE } from './glsl'
+import type { PictureSize } from './offscreen'
 
 /**
  * The four channels a texture can compute for itself, one shader each. Everything happens per
@@ -12,16 +14,6 @@ import { QUAD_VERTEX_SHADER } from '../../gpu/passes/quad'
  * the remap — so the pixels are baked neutral and the material panel is what one turns. Baking
  * a strength in would freeze into a file a decision the sliders already make reversible.
  */
-
-const PREAMBLE = /* glsl */ `
-precision highp float;
-uniform sampler2D uSource;
-uniform vec2 uTexel;
-varying vec2 vUv;
-`
-
-/** Rec. 709, the same weights the grading pass uses. */
-const LUMA = /* glsl */ `const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);`
 
 /** A neighbour of the pixel being written, in texels. Shared by the two shaders that slope. */
 const HEIGHT_AT = /* glsl */ `
@@ -40,7 +32,7 @@ float heightAt(vec2 offset) {
  */
 function fromLuminance(expression: string): string {
   return /* glsl */ `
-${PREAMBLE}
+${SOURCE_PREAMBLE}
 ${LUMA}
 
 void main() {
@@ -58,7 +50,7 @@ const HEIGHT_FROM_COLOR = fromLuminance('luma')
 const ROUGHNESS_FROM_COLOR = fromLuminance('1.0 - luma')
 
 const NORMAL_FROM_HEIGHT = /* glsl */ `
-${PREAMBLE}
+${SOURCE_PREAMBLE}
 ${HEIGHT_AT}
 
 void main() {
@@ -84,7 +76,7 @@ void main() {
 `
 
 const AO_FROM_HEIGHT = /* glsl */ `
-${PREAMBLE}
+${SOURCE_PREAMBLE}
 ${HEIGHT_AT}
 
 // Three rings rather than one: occlusion is a question about the neighbourhood, and a single
@@ -139,8 +131,6 @@ export type DerivePass = {
   readonly material: ShaderMaterial
   readonly uniforms: DeriveUniforms
 }
-
-export type PictureSize = { width: number; height: number }
 
 /**
  * The pass that computes a channel, aimed at the source it reads. Throws for a channel nothing

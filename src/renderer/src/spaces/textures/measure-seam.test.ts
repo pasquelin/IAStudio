@@ -32,7 +32,8 @@ describe('measuring the seam of a texture', () => {
     await expect(measureTextureSeam('doc-1', measure)).resolves.toBe(true)
 
     expect(measure).toHaveBeenCalledWith(assetUrl('img-1'))
-    expect(reading()).toBe(2.5)
+    // The asset with it: a reading of pixels the document no longer points at is not a reading.
+    expect(reading()).toEqual({ assetId: 'img-1', ratio: 2.5 })
   })
 
   /**

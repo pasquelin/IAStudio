@@ -1,5 +1,5 @@
 import type { TextureSource } from '../../scene/texture-cache'
-import { loadSource, withRenderer } from './offscreen'
+import { runOffscreenPass } from './offscreen'
 import { createSeamPass, SEAM_SCALE } from './seam-shader'
 
 /**
@@ -14,30 +14,24 @@ export type SeamPortOptions = { loadTexture: TextureSource }
 const READBACK = { width: 1, height: 1 }
 
 export function createSeamPort({ loadTexture }: SeamPortOptions): SeamPort {
-  return async sourceUrl => {
-    const { texture, size } = await loadSource(loadTexture, sourceUrl)
-
-    try {
-      const pass = createSeamPass(texture, size)
-      try {
-        return await withRenderer(READBACK, (renderer, pipeline) => {
-          // Into a target rather than onto the canvas: a WebGL canvas has no 2D context to read
-          // one pixel back from, and `readRenderTargetPixels` is the one door three offers.
-          const target = pipeline.createTarget(READBACK.width, READBACK.height)
-          try {
-            pipeline.renderTo(pass.material, target)
-            const pixel = new Uint8Array(4)
-            renderer.readRenderTargetPixels(target, 0, 0, 1, 1, pixel)
-            return ((pixel[0] ?? 0) / 255) * SEAM_SCALE
-          } finally {
-            target.dispose()
-          }
-        })
-      } finally {
-        pass.material.dispose()
-      }
-    } finally {
-      texture.dispose()
-    }
-  }
+  return sourceUrl =>
+    runOffscreenPass({
+      load: loadTexture,
+      url: sourceUrl,
+      pass: createSeamPass,
+      frame: () => READBACK,
+      draw: ({ renderer, pipeline, material }) => {
+        // Into a target rather than onto the canvas: a WebGL canvas has no 2D context to read
+        // one pixel back from, and `readRenderTargetPixels` is the one door three offers.
+        const target = pipeline.createTarget(READBACK.width, READBACK.height)
+        try {
+          pipeline.renderTo(material, target)
+          const pixel = new Uint8Array(4)
+          renderer.readRenderTargetPixels(target, 0, 0, 1, 1, pixel)
+          return ((pixel[0] ?? 0) / 255) * SEAM_SCALE
+        } finally {
+          target.dispose()
+        }
+      },
+    })
 }

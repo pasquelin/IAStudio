@@ -1,7 +1,7 @@
 import type { PbrChannel } from '@shared/domain/texture'
 import type { TextureSource } from '../../scene/texture-cache'
 import { createDerivePass } from './derive-shaders'
-import { encodePng, loadSource, withRenderer, type PictureSize } from './offscreen'
+import { encodePng, runOffscreenPass, type PictureSize } from './offscreen'
 
 export type DeriveRequest = {
   /** The channel to compute. Its source channel is what `sourceUrl` points at. */
@@ -26,32 +26,18 @@ export type DerivePortOptions = {
 }
 
 /**
- * The GPU behind the port. One context per run, released before the promise settles — see
- * `withRenderer` for why that matters more than it looks.
- *
- * What keeps two runs from overlapping is the caller: every derivable menu row goes dead while
- * one runs.
+ * The GPU behind the port. One context per run, released before the promise settles, and never
+ * two at once — `runOffscreenPass` holds both of those.
  */
 export function createDerivePort({ loadTexture }: DerivePortOptions): DerivePort {
-  return async ({ channel, sourceUrl }) => {
-    const { texture, size } = await loadSource(loadTexture, sourceUrl)
-
-    // The whole of it in one `try`, opened the instant the pixels are ours. Building the pass and
-    // asking for a context both throw — a machine whose GPU process has died throws on the second
-    // — and outside this block each of them pinned a fully decoded picture for the life of the
-    // window, 64 MB for a 4K channel.
-    try {
-      const pass = createDerivePass(channel, texture, size)
-      try {
-        return await withRenderer(size, async (renderer, pipeline) => {
-          pipeline.renderToScreen(pass.material)
-          return { ...size, png: await encodePng(renderer.domElement) }
-        })
-      } finally {
-        pass.material.dispose()
-      }
-    } finally {
-      texture.dispose()
-    }
-  }
+  return ({ channel, sourceUrl }) =>
+    runOffscreenPass({
+      load: loadTexture,
+      url: sourceUrl,
+      pass: (source, size) => createDerivePass(channel, source, size),
+      draw: async ({ renderer, pipeline, material, size }) => {
+        pipeline.renderToScreen(material)
+        return { ...size, png: await encodePng(renderer.domElement) }
+      },
+    })
 }

@@ -8,6 +8,12 @@ import type { PbrChannel } from '@shared/domain/texture'
  * at a document is not something one made of it. Inspecting a normal map flat must not travel in
  * the `.tex`, and ⌘Z must not give the sphere back.
  */
+/**
+ * A ratio, and the picture it was read off. The asset is half the reading: replace the base
+ * colour and "Visible seam" would otherwise stay on screen for pixels that are no longer there.
+ */
+export type SeamReading = { assetId: string; ratio: number }
+
 export type TextureViewsState = {
   inspected: Record<string, PbrChannel | null>
   /**
@@ -15,9 +21,9 @@ export type TextureViewsState = {
    * not a document field on purpose: it describes the base colour as it is right now, and one
    * saved into the `.tex` would be a measurement of pixels the file no longer points at.
    */
-  seams: Record<string, number>
+  seams: Record<string, SeamReading>
   inspect: (documentId: string, channel: PbrChannel | null) => void
-  setSeam: (documentId: string, ratio: number) => void
+  setSeam: (documentId: string, reading: SeamReading) => void
   /** Dropped on close: the project folder hands ids out again, and a document reopened later must
    * not open on the flat view of the one before it. */
   forget: (documentId: string) => void
@@ -28,8 +34,8 @@ export const useTextureViews = create<TextureViewsState>()(set => ({
   seams: {},
   inspect: (documentId, channel) =>
     set(state => ({ inspected: { ...state.inspected, [documentId]: channel } })),
-  setSeam: (documentId, ratio) =>
-    set(state => ({ seams: { ...state.seams, [documentId]: ratio } })),
+  setSeam: (documentId, reading) =>
+    set(state => ({ seams: { ...state.seams, [documentId]: reading } })),
   forget: documentId =>
     set(state => {
       if (!(documentId in state.inspected) && !(documentId in state.seams)) return state
@@ -42,7 +48,10 @@ export const useTextureViews = create<TextureViewsState>()(set => ({
 }))
 
 /** The last seam reading, or `null` when none was asked for. */
-export function seamOf(state: Pick<TextureViewsState, 'seams'>, documentId: string): number | null {
+export function seamOf(
+  state: Pick<TextureViewsState, 'seams'>,
+  documentId: string,
+): SeamReading | null {
   return state.seams[documentId] ?? null
 }
 

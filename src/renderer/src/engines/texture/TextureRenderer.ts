@@ -68,7 +68,7 @@ export class TextureRenderer {
   private readonly holding = new Map<PbrChannel, string>()
   private readonly uniforms = createUniforms()
   /** What the maps are currently placed on, so a map arriving late is placed on the same thing. */
-  private transform: MapTransform | null = null
+  private transform: MapTransform = DEFAULT_TRANSFORM
   /** Anchors already reported, so a rebuilt program does not say the same thing again. */
   private readonly reported = new Set<string>()
   private shape: PreviewShape = 'sphere'
@@ -195,10 +195,14 @@ export class TextureRenderer {
    * and `wrapS`/`wrapT`, which really are upload-time state, are set once in `install`.
    */
   private applyTransform({ material, preview }: TextureState): void {
+    const seamShift = seamShiftOf(preview)
+    // Compared before anything is built, not after: this used to allocate two objects to answer
+    // a question that is nearly always no — twelve of the fifteen settings above have nothing to
+    // do with tiling, and each of them arrives on every frame of its own drag.
+    if (samePlacement(this.transform, material, preview.tilingPreview, seamShift)) return
+
     const { tiling, offset, rotation } = material
-    const next = { tiling, offset, rotation, ...previewFrame(preview) }
-    if (this.transform && sameTransform(this.transform, next)) return
-    this.transform = next
+    this.transform = { tiling, offset, rotation, tilingPreview: preview.tilingPreview, seamShift }
 
     for (const map of this.maps()) this.placeMap(map)
     syncEdgeTransform(this.uniforms)
@@ -255,8 +259,7 @@ export class TextureRenderer {
 
   /** The transform this material is on, onto one map — the new one, or all of them. */
   private placeMap(map: Texture): void {
-    const { tiling, offset, rotation, tilingPreview, seamShift } =
-      this.transform ?? DEFAULT_TRANSFORM
+    const { tiling, offset, rotation, tilingPreview, seamShift } = this.transform
     // Multiplied, not replaced: the preview asks "how does this look repeated", and the answer
     // has to be the material's own repeat seen more times, not somebody else's repeat.
     map.repeat.set(tiling.x * tilingPreview, tiling.y * tilingPreview)
@@ -343,28 +346,36 @@ function spaceOf(channel: PbrChannel): ColorSpace {
  */
 type MapTransform = Pick<TextureState['material'], 'tiling' | 'offset' | 'rotation'> & PreviewFrame
 
-/** What the view adds. Half a width and half a height is exactly what brings a wrap edge to the middle. */
+/** What the view adds, on top of what the material decided. */
 type PreviewFrame = { tilingPreview: number; seamShift: number }
 
 const SEAM_SHIFT = 0.5
 
-function previewFrame({ tilingPreview, showSeam }: TextureState['preview']): PreviewFrame {
-  return { tilingPreview, seamShift: showSeam ? SEAM_SHIFT : 0 }
+/** Half a width and half a height is exactly what brings a wrap edge to the middle. */
+function seamShiftOf({ showSeam }: TextureState['preview']): number {
+  return showSeam ? SEAM_SHIFT : 0
 }
 
+/** Where every map starts, so one arriving before the first `apply` is still placed on something. */
 const DEFAULT_TRANSFORM: MapTransform = {
   ...DEFAULT_TEXTURE_MATERIAL,
-  ...previewFrame(DEFAULT_PREVIEW),
+  tilingPreview: DEFAULT_PREVIEW.tilingPreview,
+  seamShift: seamShiftOf(DEFAULT_PREVIEW),
 }
 
-function sameTransform(a: MapTransform, b: MapTransform): boolean {
+function samePlacement(
+  current: MapTransform,
+  material: TextureState['material'],
+  tilingPreview: number,
+  seamShift: number,
+): boolean {
   return (
-    a.rotation === b.rotation &&
-    a.tiling.x === b.tiling.x &&
-    a.tiling.y === b.tiling.y &&
-    a.offset.x === b.offset.x &&
-    a.offset.y === b.offset.y &&
-    a.tilingPreview === b.tilingPreview &&
-    a.seamShift === b.seamShift
+    current.rotation === material.rotation &&
+    current.tiling.x === material.tiling.x &&
+    current.tiling.y === material.tiling.y &&
+    current.offset.x === material.offset.x &&
+    current.offset.y === material.offset.y &&
+    current.tilingPreview === tilingPreview &&
+    current.seamShift === seamShift
   )
 }

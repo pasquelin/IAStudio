@@ -23,16 +23,18 @@ export async function measureTextureSeam(
 ): Promise<boolean> {
   const source = textureOf(useTextures.getState(), documentId).channels.baseColor
   if (!source) {
-    reportFailure('texture.channel', 'baseColor', new Error('baseColor is empty'))
+    reportFailure('texture.seam', 'baseColor', new Error('baseColor is empty'))
     return false
   }
 
   try {
     const ratio = await measure(assetUrl(source.assetId))
-    useTextureViews.getState().setSeam(documentId, ratio)
+    // The asset it was read off travels with it: replace the base colour and the words on screen
+    // would otherwise describe pixels the document no longer points at.
+    useTextureViews.getState().setSeam(documentId, { assetId: source.assetId, ratio })
     return true
   } catch (error) {
-    reportFailure('texture.channel', 'baseColor', error)
+    reportFailure('texture.seam', 'baseColor', error)
     return false
   }
 }
