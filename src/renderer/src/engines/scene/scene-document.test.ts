@@ -14,6 +14,7 @@ import { SPRITE_SPECS } from './property-fields'
 import { scenePayload, sceneFromPayload } from './scene-document'
 import {
   DEFAULT_MATERIAL,
+  DEFAULT_SPRITE,
   DEFAULT_TEXT,
   EMPTY_SCENE,
   IDENTITY_TRANSFORM,
@@ -277,7 +278,6 @@ describe('sceneFromPayload', () => {
       'a material of an unknown kind',
       nodeWith({ material: { ...DEFAULT_MATERIAL, kind: 'toon' } }),
     ],
-    ['a material missing a slot', nodeWith({ material: { ...DEFAULT_MATERIAL, map: undefined } })],
     ['a texture without an asset', nodeWith({ material: { ...DEFAULT_MATERIAL, map: {} } })],
     ['an id that is not text', nodeWith({ id: 7 })],
     ['a transform that is not an object', nodeWith({ transform: 'origin' })],
@@ -312,11 +312,57 @@ describe('sceneFromPayload', () => {
     expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a', 'c'])
   })
 
+  /**
+   * The guarantee this used to get from a dropped node, now that an absent slot is legal: a slot
+   * added to `MaterialDescriptor` and forgotten in `TEXTURE_SLOTS` would go unchecked, and the
+   * texture it names would be neither validated nor drawn.
+   */
   it('names every texture slot a dressed material has to carry', () => {
-    for (const slot of TEXTURE_SLOTS) {
-      const stripped: Record<string, unknown> = { ...DEFAULT_MATERIAL }
-      delete stripped[slot]
-      expect(sceneFromPayload({ nodes: [nodeWith({ material: stripped })] }).nodes).toEqual([])
-    }
+    const declared = Object.keys(DEFAULT_MATERIAL).filter(name => name.endsWith('Map'))
+
+    expect([...TEXTURE_SLOTS].sort()).toEqual(['map', ...declared].sort())
+  })
+
+  /**
+   * The defect this guards: the tables are exhaustive by typecheck, so a field added to one is
+   * required of every document written before it existed — and a node that fails its guard is
+   * dropped in silence, indistinguishable from a node that never was.
+   */
+  it('revives a material missing a slot rather than dropping the node', () => {
+    const stripped: Record<string, unknown> = { ...DEFAULT_MATERIAL }
+    delete stripped.normalMap
+
+    const [node] = sceneFromPayload({ nodes: [nodeWith({ material: stripped })] }).nodes
+
+    expect(node?.type === 'mesh' && node.material.normalMap).toBe(null)
+  })
+
+  it('revives a sprite missing a measured field with the default for it', () => {
+    const stripped: Record<string, unknown> = { ...DEFAULT_SPRITE }
+    delete stripped.opacity
+    const nodes: unknown[] = [{ ...spriteNodeFixture('s1'), sprite: stripped }]
+
+    const [node] = sceneFromPayload({ nodes }).nodes
+
+    expect(node?.type === 'sprite' && node.sprite.opacity).toBe(DEFAULT_SPRITE.opacity)
+  })
+
+  it('revives a text missing a measured field with the default for it', () => {
+    const stripped: Record<string, unknown> = { ...DEFAULT_TEXT }
+    delete stripped.curveSegments
+    const nodes: unknown[] = [{ ...textNodeFixture('t1'), text: stripped }]
+
+    const [node] = sceneFromPayload({ nodes }).nodes
+
+    expect(node?.type === 'text' && node.text.curveSegments).toBe(DEFAULT_TEXT.curveSegments)
+  })
+
+  // Absent is a file that says nothing; `null` is a file that says something wrong.
+  it('still drops a node whose measured field is null rather than absent', () => {
+    const nodes: unknown[] = [
+      { ...spriteNodeFixture('s1'), sprite: { ...DEFAULT_SPRITE, opacity: null } },
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes).toEqual([])
   })
 })

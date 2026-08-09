@@ -198,37 +198,15 @@ mesurée.
 
 # 1. Ce qui perd du travail en silence
 
-Le mot qui compte est **silence** : dans les deux cas, ce qui disparaît ne laisse aucune trace,
-et un utilisateur ne peut pas savoir qu'il a perdu quelque chose. Rien d'autre dans ce fichier
-n'a cette propriété.
+Le mot qui compte est **silence** : ce qui disparaît ne laisse aucune trace, et un utilisateur
+ne peut pas savoir qu'il a perdu quelque chose. Rien d'autre dans ce fichier n'a cette
+propriété.
 
 > **Deux fragments du même genre vivent ailleurs**, parce qu'ils appartiennent à un chantier qui
 > les dépasse : le **document neuf jamais enregistré, perdu au rechargement** (§ 5.1) et
 > l'**absence de `fsync`** (§ 7).
 
-## 1.1 Les tables de specs — un champ ajouté fait disparaître le nœud
-
-### 37. Un garde dérivé de sa table rend tout futur champ obligatoire, en silence
-
-**Le geste attendu.** Ajouter un champ à une table de specs ne doit **jamais** faire disparaître un nœud des
-documents déjà enregistrés.
-
-**Vu le 9 août 2026**, sur `isSprite`, mais la dette est plus large.
-
-`SpriteSpecs` est exhaustif sur `SpriteDescriptor` moins `map` : un champ ajouté est **forcé par le
-typecheck** dans `SPRITE_SPECS`, donc dans `MEASURED_SPRITE`, et `matches(undefined, spec)` est
-faux — le nœud disparaît à la relecture, sans trace, dans tous les documents déjà écrits. Un nœud
-supprimé ressemble exactement à un nœud qui n'a jamais existé.
-
-**`MEASURED_MATERIAL` et `TEXT_SPECS` dérivent depuis plus longtemps et portent le même piège.**
-
-Le dépôt a déjà rencontré ça avec les drapeaux d'ombre et y a répondu par `isOptionalFlag` +
-`withDefaults` (`scene-document.ts`). Soit on généralise ce mécanisme aux trois tables, soit on écrit
-la règle noir sur blanc : **tout champ ajouté à une table de specs arrive avec son défaut**.
-
----
-
-## 1.2 La couche projet — un seul chantier, trois entrées
+## 1.1 La couche projet — un seul chantier, trois entrées
 
 **Elles se traitent d'un bloc, et le document le disait déjà** : c'est le même bouton qui ouvre
 le sélecteur de l'entrée 16 et qui manque au panneau de l'entrée 15, et c'est le même manifeste
@@ -952,10 +930,8 @@ et un BVH construit en worker pour le picking.
 | Graisses d'une police | une seule coupe par famille est offerte, le romain. Un sélecteur demande d'indexer les faces par famille — mécanique, pas conceptuel |
 | three livré deux fois | le chunk du worker BVH pèse 490 ko parce qu'il embarque three, déjà dans le bundle principal. Chargé à la demande et en local, donc supportable — mais c'est du poids d'installation en double |
 
-**Deux dettes de cet espace sont rangées ailleurs, et pour la même raison : leur sujet n'est pas la
-3D.** Les tables de specs qui rendent tout futur champ obligatoire sont au **§ 1.1** — elles perdent
-des nœuds dans des documents déjà écrits, ce qui les met avec le reste de ce qui perd du travail. Les
-branchements que la couverture certifie sans que rien ne les tienne sont au **§ 0.3** : ce qu'ils
+**Une dette de cet espace est rangée ailleurs, et pour la même raison : son sujet n'est pas la 3D.**
+Les branchements que la couverture certifie sans que rien ne les tienne sont au **§ 0.3** : ce qu'ils
 mettent en cause est le filet, pas l'espace. **L'entrée 36 ci-dessous, elle, est bien de la 3D**, et
 elle voisine ce que le lot sprite a laissé derrière lui.
 
@@ -1448,6 +1424,15 @@ de volet ne garantit une ligne.
 ## 12.3 Les pièges déjà payés
 
 ### three.js
+
+**Un champ ajouté à une table de specs n'a plus à emporter les nœuds déjà écrits.** Les tables sont
+exhaustives par le typecheck, donc un champ neuf devient exigé des fichiers qui ne pouvaient pas le
+porter, et un nœud qui rate sa garde disparaît sans trace. `measures` accepte l'absence, `revived`
+la comble depuis `DEFAULT_MATERIAL`, `DEFAULT_SPRITE` et `DEFAULT_TEXT` (`feat/spec-defaults`,
+9 août 2026). **Un champ ajouté doit donc arriver avec son défaut dans la constante correspondante**,
+faute de quoi il revit en `undefined`. `null` reste refusé pour un champ mesuré : un fichier qui ne
+dit rien n'est pas un fichier qui dit faux.
+
 
 - **`SpriteMaterial` naît transparent**, three l'écrase exprès : l'éteindre à pleine opacité fait
   dessiner le carré entier de toute image à canal alpha. Et **un `Sprite` n'est pas un `Mesh`** : toute
