@@ -205,10 +205,10 @@ Quatre choses à savoir avant d’y toucher :
   comme **donnée de document** (une scène dont le contenu s’appelle `Groupe` ne s’échange pas avec un
   studio anglais), et `message` nomme l’échec d’un worker, jamais un écran ;
 - **le fichier s’appelle `no-hardcoded-text`, pas `*.i18n.test.ts`.** Une session l’a cherché sous le
-  second motif, ne l’a pas trouvé, et en a réécrit un doublon complet. **Huit gardes i18n, et trois
-  conventions de nommage** : cinq en `*.i18n.test.ts`, deux en `no-hardcoded-text.test.ts`, et
-  `shared/i18n/model-text.test.ts` qui ne suit ni l’un ni l’autre. `grep` sur le sujet, pas sur le
-  motif.
+  second motif, ne l’a pas trouvé, et en a réécrit un doublon complet. **Neuf gardes i18n, et deux
+  conventions de nommage** depuis que `model-text` a rejoint `*.i18n.test.ts` : six sous ce motif,
+  deux en `no-hardcoded-text.test.ts`, et `bundles.test.ts` qui tient les clés composées. `grep`
+  sur le sujet, pas sur le motif.
 
 **Le manuel utilisateur** — 19 chapitres, fr et en (`docs/fr/manuel/`, `docs/en/manual/`). Il ne se
 relit pas, il **se vérifie** : les registres (`COMMAND_REGISTRY`, `IMAGE_TOOLS`, `UNBUILT_TOOLS`,

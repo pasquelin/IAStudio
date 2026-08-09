@@ -75,7 +75,7 @@ describe('the graph canvas', () => {
     canvas()
 
     expect(screen.getByText('Prompt')).toBeInTheDocument()
-    expect(screen.getByText('output')).toBeInTheDocument()
+    expect(screen.getByText('Sortie')).toBeInTheDocument()
   })
 
   it('draws the dotted background rather than React Flow’s own chrome', () => {
