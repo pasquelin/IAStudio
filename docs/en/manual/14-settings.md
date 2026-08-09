@@ -317,6 +317,21 @@ sees in it.
 > the setting exists: clear it, and nothing leaves on its own any more. The naming works in
 > batches, under a bounded queue, and every result takes its line in the activity journal.
 
+**What counts as "without a useful name"**, and nothing else:
+
+| What the studio describes | Examples |
+|---|---|
+| an empty name, or a device prefix followed by a number | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
+| the names operating systems give, in both languages | `Untitled`, `Download`, `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image` |
+| a screenshot **followed by its timestamp or copy number** | `Screenshot 2026-08-09 at 10.30.45`, `Screenshot (3)`, `Capture d'écran (2)` |
+
+**A name you chose is never described**, even when it starts with the same words: `Screenshot of
+the main menu` stays as it is. The studio does not pay to replace a name somebody took the
+trouble to write.
+
+Accents make no difference to this recognition: `Capture d'écran` and `Capture d’écran` are
+treated alike, including in the particular form macOS writes inside its file names.
+
 ### Max retries
 
 **Whole number. From 0 to 10. Starts at: 4.**

@@ -327,6 +327,22 @@ voit.
 > nommage travaille en lots, sous une file bornée, et chaque résultat prend sa ligne dans le
 > journal d’activité.
 
+**Ce qui compte comme « sans nom utile »**, et rien d’autre :
+
+| Ce que le studio décrit | Exemples |
+|---|---|
+| un nom vide, ou un préfixe d’appareil suivi d’un numéro | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
+| les noms que donnent les systèmes, dans les deux langues | `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image`, `Untitled`, `Download` |
+| une capture d’écran **suivie de son horodatage ou de son numéro** | `Capture d’écran 2026-08-09 à 10.30.45`, `Screenshot (3)` |
+
+**Un nom que vous avez choisi n’est jamais décrit**, même s’il commence par les mêmes mots :
+`Capture d’écran du menu principal` reste tel quel. Le studio ne paie pas pour remplacer un nom
+que quelqu’un a pris la peine d’écrire.
+
+Les accents ne changent rien à cette reconnaissance : `Capture d'écran` et `Capture d’écran`
+sont traités pareil, y compris sous la forme particulière que macOS écrit dans ses noms de
+fichiers.
+
 ### Tentatives maximum
 
 **Nombre entier. De 0 à 10. Départ : 4.**
