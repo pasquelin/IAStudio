@@ -63,6 +63,24 @@ describe('the catalogue queue', () => {
     expect(ran).toEqual([1, 3])
   })
 
+  /**
+   * The property the whole shape exists for: the queue gives the loop its turn BETWEEN two
+   * requests, so an abandon posted while one is running is read before the next one starts.
+   * Drained in one go, all six searches of six keystrokes run before the first abandon is seen.
+   */
+  it('reads what arrived while it was running, before running the next one', () => {
+    const { queue, ran, turn } = harness()
+
+    queue.accept(search(1, 'm'))
+    queue.accept(search(2, 'mo'))
+    turn()
+    // Posted while the first was running — the only moment that tells the two shapes apart.
+    queue.accept({ op: 'abandon', target: 2 })
+    while (turn());
+
+    expect(ran).toEqual([1])
+  })
+
   /** A caller that never abandoned must not be left holding a promise nobody settles. */
   it('answers an abandoned request rather than dropping it', () => {
     const { queue, answers, turn } = harness()
