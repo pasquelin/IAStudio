@@ -70,6 +70,8 @@ export class SkyboxRenderer {
   private gesture: SkyboxGesture | null = null
   private lastPointer: { x: number; y: number } | null = null
 
+  /** What the setting asks for; what is shown is this AND a sky to judge — see `syncProbes`. */
+  private probesWanted = true
   private sourceAssetId: string | null = null
   private sourceTexture: Texture | null = null
   private quiet: ReturnType<typeof setTimeout> | null = null
@@ -80,6 +82,9 @@ export class SkyboxRenderer {
     )
     this.viewport.camera.position.set(0, EYE_HEIGHT, 0)
     this.viewport.scene.add(this.probes.group, this.sunLight, this.sunLight.target)
+    // Hidden until a sky arrives, and before the first frame rather than after it: `apply` is
+    // what reveals them, and a viewport mounted before it would flash the ground for a frame.
+    this.probes.setVisible(false)
   }
 
   mount(host: HTMLElement): void {
@@ -112,6 +117,7 @@ export class SkyboxRenderer {
 
     this.adjust.setAdjustments(content.adjustments)
     this.loadSource(content.source?.assetId ?? null)
+    this.syncProbes()
     this.regrade()
   }
 
@@ -120,7 +126,19 @@ export class SkyboxRenderer {
   }
 
   setProbesVisible(visible: boolean): void {
-    this.probes.setVisible(visible)
+    this.probesWanted = visible
+    this.syncProbes()
+  }
+
+  /**
+   * Shown when the setting asks for them AND there is a sky to judge.
+   *
+   * Nothing to judge is only half the reason. The other half is that the empty state is the one
+   * sentence telling anyone what to do in this space, and it sits over the viewport: a
+   * `text-muted` over a lit ground and three spheres does not read at all.
+   */
+  private syncProbes(): void {
+    this.probes.setVisible(this.probesWanted && this.sourceAssetId !== null)
     this.viewport.requestRender()
   }
 
@@ -176,6 +194,7 @@ export class SkyboxRenderer {
 
     this.releaseSource()
     this.sourceAssetId = assetId
+
     if (!assetId) {
       this.adjust.setSource(null)
       this.environment?.setTexture(null)
