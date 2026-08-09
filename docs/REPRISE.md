@@ -566,21 +566,25 @@ les mêmes valeurs**, sinon ils se désalignent.
 Metallic=B) **en une passe shader**. L’écriture disque passe par le main. `GLTFExporter` vient de
 `three/addons`. C’est ici que « aperçu en 1024, export en pleine résolution » s’applique.
 
-### Ce qui n’est toujours pas vérifié à l’écran, et devrait l’être avant l’étape 6
+### Vérifié à l’écran le 9 août — ne pas le redemander
 
-L’espace s’ouvre, le document se crée, l’état vide s’affiche — acquis. Restent à voir de ses propres
-yeux, protocole au § « Vérifier à l’écran ce qui se voit » de `docs/INTERFACE.md` :
+Sphère éclairée, remap, masque de cavité, vue à plat : les quatre sont vus sur l’application
+lancée, et les cinq angles de revue ont rendu. Deux choses seulement en restent, parce qu’elles
+coûteraient une seconde fois :
 
-- **la sphère éclairée** et une image posée en couleur de base ;
-- **le remap** : un canal de rugosité plat, les deux poignées écartées, le contraste qui apparaît ;
-- **le masque de cavité**, seul uniform à porter sa propre matrice d’uv ;
-- **la vue à plat** d’un canal, en `image-rendering: pixelated`.
+- **une sphère à rugosité 1 sous un IBL uniforme paraît plate, et rien n’est cassé.** Le premier
+  regard conclut à un environnement mort ; ce sont les spéculaires d’une carte de rugosité qui
+  prouvent l’éclairage. Juger un IBL demande un matériau qui réfléchit ;
+- **le shader est vérifié contre three 0.185, chunk par chunk.** three n’émet jamais `USE_UV`
+  lui-même — il génère `USE_UV1/2/3` — donc le define de `setEdgeMap` n’entre en collision avec
+  rien, et `aomap_fragment` tombe deux lignes avant `totalDiffuse` dans `meshphysical`, ce qui met
+  la cavité au bon endroit. Rien à réinstruire de ce côté.
 
-jsdom ne compile aucun shader : `material-shader.test.ts` prouve le texte du GLSL, **pas** ce qu’il
-dessine.
-
-> **Trois angles de revue sur cinq n’ont pas rendu sur ce lot** — bugs par reproduction, historique
-> git, adverse three.js/React. Les relancer est le premier geste utile si un défaut apparaît ici.
+**Deux constats vérifiés et non traités**, hors de cet espace : l’**onglet fantôme** — un onglet
+dont le document n’a jamais été enregistré survit dans le layout persisté et affiche « Ce document
+n’est plus ouvert. » au centre ; et `ChannelTile`, dont le bouton d’inspection en `inset-0` recouvre
+le badge d’origine, si bien que son `title` ne peut jamais s’afficher (l’`aria-label` reste lu,
+c’est cosmétique).
 
 **Deux dettes notées hors périmètre** : `design/MenuRow.tsx` n’expose aucun `aria-checked` — aucun
 lecteur d’écran ne dit quelle ligne est active, dans **tous** les menus du studio ; et
@@ -601,6 +605,13 @@ huit allers-retours pour remplir un écran. **`skybox-upscale` ne porte pas ce t
 images, ce qui est correct : un agrandisseur ne produit pas le document de l’espace.
 
 **Ce qu’il reste, dans l’ordre du coût croissant :**
+
+0. **L’état vide est illisible**, vu à l’écran le 9 août. `SkyboxDocument.tsx:102` le pose bien
+**au-dessus** du canvas — l’ordre du DOM est correct, ce n’est pas un problème d’empilement — mais
+il n’a aucune plaque de fond, et derrière lui la scène n’est pas vide : le sol gris, les sondes et
+les sphères de test. Un `text-muted` sur ce fond bariolé ne se lit pas, et c’est la seule phrase qui
+dise quoi faire dans cet espace. Deux remèdes : une plaque sous le texte, ou ne pas peupler la scène
+tant qu’aucune source n’est posée.
 
 1. **Trois vues sur quatre sont des boutons morts.** `SKYBOX_VIEWS` en déclare quatre ; le renderer
    n’expose aucun `setView`, et le state de `SkyboxDocument.tsx` ne pilote que la couleur du bouton :
