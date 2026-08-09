@@ -7,11 +7,17 @@ import { TOOLTIP_ID } from '@/helpers/tooltip'
  *
  * Escape closes it: where a tooltip is the only thing that shows a sentence, it is content
  * rather than decoration, and content has to go away without the pointer having to move.
+ *
+ * `clickable` is what makes it hoverable (WCAG SC 1.4.13): it lifts the core sheet's
+ * `pointer-events: none`, so the pointer can cross the `offset` gap and sweep the bubble instead
+ * of dismissing it. A shown bubble then sits in the hit test of whatever it floats above — the
+ * trade every hoverable tooltip makes, bounded by the 100 ms hide the flag brings with it.
  */
 export function TooltipHost() {
   return (
     <Tooltip
       id={TOOLTIP_ID}
+      clickable
       globalCloseEvents={{ escape: true }}
       delayShow={450}
       offset={8}
