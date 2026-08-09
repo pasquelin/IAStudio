@@ -110,6 +110,45 @@ existe déjà : `EnvironmentSection` leur est commun, et sa JSDoc dit pourquoi.
 style lisible par les deux espaces demande que la forme sérialisée descende dans `shared/domain/` —
 sans quoi le main, qui écrira le fichier de `userData`, ne peut pas la typer.
 
+### 18. Le formulaire de génération est en anglais dans une application en français
+
+**Vu le 9 août 2026, capture à l’appui**, sur `HY World - Multi-view to Splat` : le panneau
+s’appelle « Génération », le bouton dit « Générer ~36 UC », et entre les deux tout est en
+anglais — `Images`, `Video`, `SETTINGS`, `Target size`, `Max splat points`, et les trois phrases
+d’explication.
+
+**Ce n’est pas une traduction oubliée : c’est la frontière.** Le châssis appartient au studio et
+il est traduit ; **le contenu du formulaire appartient au modèle Scenario**, qui répond en
+anglais. `labelOf` (`main/scenario/schema.ts:61`) prend `input.label` tel quel, et à défaut
+dérive le nom technique — `numInferenceSteps` devient `Num inference steps`. Le groupe
+(`SETTINGS`) est la valeur brute de l’API, que la légende passe en majuscules. C’est l’invariant
+5 du guide : aucun formulaire écrit à la main, tout vient de `GET /models/{modelId}`.
+
+**Il n’y a donc pas de bug à corriger, et pas non plus de traduction à écrire** : ces libellés
+sont propres à chaque modèle, il y en a des centaines, et de nouveaux arrivent sans préavis. Un
+dictionnaire complet serait faux le lendemain.
+
+**Mais le mélange est plus visible qu’il n’a besoin de l’être.** Sur cette seule capture, `Video`
+sans accent est écrit à trente pixels de `Vidéo` accentué dans la barre du haut, et `Images` est
+un mot que le français écrit à l’identique — c’est-à-dire que deux des champs ne sont pas
+vraiment en anglais, ils sont juste **non traités**.
+
+Trois réponses possibles, par coût croissant, aucune tranchée :
+
+1. **Traduire les groupes seulement.** Ils sont peu nombreux et se répètent d’un modèle à l’autre
+   (`SETTINGS`…). Une table avec repli sur la valeur brute, ce qui est déjà la règle du
+   `FieldDescriptor` pour tout ce qu’il ne connaît pas.
+2. **Traduire les clés universelles** — `prompt`, `seed`, `width`, `height`,
+   `numInferenceSteps` — celles que **tous** les modèles portent. Table par `key`, jamais par
+   libellé, et repli sur l’anglais. Le risque est de s’arrêter à mi-chemin : un formulaire moitié
+   traduit se lit plus mal qu’un formulaire qui ne l’est pas.
+3. **Assumer et le dire** — une mention discrète que les paramètres viennent du modèle. Le coût
+   est nul, l’honnêteté est bonne, et ça n’aide personne à lire `Max splat points`.
+
+> À trancher avec la question de fond : ce vocabulaire est celui du métier, et un praticien de la
+> génération d’images lit `seed` et `guidance scale` en anglais partout ailleurs. Traduire peut
+> desservir autant que servir.
+
 ### 10. Les filtres du journal reviennent à la ligne, et il leur manque « Tout »
 
 **Vu le 9 août 2026, capture à l’appui.** Dans le volet du journal d’activité — celui qu’ouvre
