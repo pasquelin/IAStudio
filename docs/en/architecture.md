@@ -643,6 +643,23 @@ Three consequences, one of them to be accepted:
   line more, their fields coming from the same place. Invariant 5 is intact: nothing is written by
   hand for a given model.
 
+**Not all remote text calls for that remedy, and picking the wrong one costs you the guard.** The
+usage report was showing "images-generation" and "video" in a French window: same symptom,
+different tool. Those values are two **closed, documented unions** — 21 spending actions, 8 asset
+kinds, listed by `usages.list` and mirrored in `shared/domain/usage.ts` — so **one bundle key per
+value**, held by `bundles.test.ts` the way the PBR channels and the journal's scopes already are.
+An action Scenario adds without its line turns the guard red.
+
+The rule that tells them apart:
+
+| When the remote text… | The tool |
+|---|---|
+| belongs to a **closed list** the API documents | one bundle key per value, plus an exhaustive guard |
+| is **written freely** and changes with every published model | the dictionary indexed on the source text |
+
+In both cases the fallback is **the API's raw text, never a key**: an English screen stays
+readable, a screen showing `usage.action.images-generation` does not.
+
 ### Four guards, and what each one holds
 
 They are not the same test, and treating them as one suggests a single thing is being watched.

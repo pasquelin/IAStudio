@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`e0a07b2`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline e0a07b2..develop`) au lieu de relire mille lignes.
+à **`99cb1ef`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 99cb1ef..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -43,7 +43,8 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > qui traverse les espaces, étagère à assets et sa sélection multiple (`feat/explorateur-clavier`,
 > `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader des Textures**
 > (`feat/textures-derive`) · le **formulaire de génération traduit** sans rien écrire par modèle
-> (`feat/i18n-schema-api`) · le prix d’une génération, avant et après
+> (`feat/i18n-schema-api`) et le **rapport d’usage** avec lui (`feat/i18n-usage`) · le prix d’une
+> génération, avant et après
 > (`feat/workflows`) · six passes i18n et les trois gardes de texte en dur (`feat/i18n-*`) · le
 > pinceau à taille réglable (`feat/pinceau`) · le panneau matériau et la bande de canaux des
 > Textures (`feat/textures-materiau`). Le détail est au § 1.
@@ -80,8 +81,8 @@ la configuration et de l’espace 3D ayant été supprimées une fois leurs chan
 
 # 1. L’état
 
-**964 fichiers dans `src/`, dont 382 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
-en exécutait alors **4840 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
+**965 fichiers dans `src/`, dont 383 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
+en exécutait alors **4843 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
 nombres ne se lit dans un fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
 demande avant de perdre quoi que ce soit. L’application démarre par `pnpm start`.
 
@@ -103,12 +104,21 @@ glob dont la marge de croissance est du GPU intestable).
 
 > **Un grain de sable environnemental : les tests lents dépassent leur budget de 5 s quand la machine
 > porte plusieurs sessions** — des sous-ensembles différents à chaque passage, verts en isolation.
-> Ce n’est ni un seul fichier ni une seule cause : `ShortcutsSettings.test.tsx` et
-> `LicencesWindow.test.tsx` pilotent `userEvent`, qui est lent, mais `renderer/src/eager-graph.test.ts`
-> est tombé le 9 août et construit un graphe Rollup, sans `userEvent` — relancé seul, il passe en
-> 4,93 s. **La marge est le sujet, pas le fichier.** Devant un échec de ce genre :
-> `vitest run <le fichier>` en isolation, ou `vitest run --coverage --maxWorkers=2` pour toute la
-> passe, avant de chercher une cause dans le code.
+> Ce n’est ni un seul fichier ni une seule cause : `LicencesWindow.test.tsx` pilote `userEvent`, qui
+> est lent, mais `renderer/src/eager-graph.test.ts` est tombé le 9 août et construit un graphe
+> Rollup, sans `userEvent` — relancé seul, il passe en 4,93 s. **La marge est le sujet, pas le
+> fichier.** Devant un échec de ce genre : `vitest run <le fichier>` en isolation, ou
+> `vitest run --coverage --maxWorkers=2` pour toute la passe, avant de chercher une cause dans le
+> code.
+>
+> **Le pire cas a été mesuré et réglé** (`0d59c57`). `ShortcutsSettings.test.tsx` rend l’arbre le
+> plus lourd de la suite — 115 boutons dont le nom accessible est redérivé à chaque appel — et il
+> tenait **1,0 s au repos contre 4,8 s sous charge**, pour un plafond à 5 s. D’où un `pnpm validate`
+> vert seul et rouge en suite complète, sans qu’une ligne de production ait bougé : la pire façon
+> pour une suite d’avoir tort, puisqu’elle **accuse le dernier commit venu**. Son plafond est passé
+> à 20 s ; l’assertion par rôle est la partie lente et c’est celle qui vaut d’être gardée. **Un
+> plafond de temps qu’une machine chargée fait franchir n’est pas une garde, c’est un générateur de
+> fausses accusations** — le mesurer avant de le déplacer, et ne déplacer que celui-là.
 >
 > **Et ce grain-là ne se présente pas toujours comme un dépassement de temps.** Le 9 août au soir,
 > une passe a rendu **26 échecs sur 5 fichiers** — des **échecs d’assertion**, pas des timeouts,
@@ -138,6 +148,12 @@ Le repli est la phrase anglaise, jamais une clé — un libellé changé côté 
 l’écran d’avant. Le vocabulaire du métier (`seed`, `guidance scale`, `sampler`, `CFG`) reste en
 anglais **et un test tient la liste**. Appliqué au rendu, pas à la construction des descripteurs :
 changer de langue redit le formulaire ouvert, et les Apps en profitent sans une ligne.
+
+**Le rapport d’usage, lui, ne relève pas du même outil**, et c’est la distinction à ne pas
+manquer : ses actions et ses genres d’assets sont deux **unions fermées** que l’API documente, donc
+une clé de bundle par valeur et une garde exhaustive dans `bundles.test.ts`. Le dictionnaire par
+texte source est pour ce qui change à chaque modèle publié ; une liste fermée mérite une garde qui
+rougit. Le tableau qui départage les deux est dans `fr/architecture.md`, § Internationalisation.
 
 **Le prix, avant et après** — `main/scenario/cost.ts` tire l’estimation d’un `?dryRun=true`, qui
 **répond 200** avec `creativeUnitsCost` dans le corps ; le 402 que documente la référence est gardé

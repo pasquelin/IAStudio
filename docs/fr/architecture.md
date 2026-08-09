@@ -669,6 +669,23 @@ Trois conséquences, dont une à accepter :
   en profitent sans une ligne de plus, leurs champs venant du même endroit. L’invariant 5 est
   intact : rien n’est écrit à la main pour un modèle donné.
 
+**Tout texte distant n’appelle pas ce remède, et prendre le mauvais coûte la garde.** Le rapport
+d’usage affichait « images-generation » et « video » dans une fenêtre française : même symptôme,
+autre outil. Ces valeurs-là sont deux **unions fermées et documentées** — 21 actions dépensières,
+8 genres d’assets, listées par `usages.list` et recopiées dans `shared/domain/usage.ts` — donc
+**une clé de bundle par valeur**, tenue par `bundles.test.ts` comme le sont déjà les canaux PBR et
+les portées du journal. Une action ajoutée par Scenario sans sa ligne fait rougir la garde.
+
+La règle qui départage les deux :
+
+| Le texte distant… | L’outil |
+|---|---|
+| appartient à une **liste fermée** que l’API documente | une clé de bundle par valeur, plus une garde exhaustive |
+| est **écrit librement** et change avec chaque modèle publié | le dictionnaire indexé sur le texte source |
+
+Dans les deux cas le repli est **le texte brut de l’API, jamais une clé** : un écran en anglais
+reste lisible, un écran qui affiche `usage.action.images-generation` ne l’est pas.
+
 ### Quatre gardes, et ce que chacun tient
 
 Ce ne sont pas les mêmes tests, et les confondre laisse croire qu’une seule chose est surveillée.

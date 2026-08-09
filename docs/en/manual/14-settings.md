@@ -592,6 +592,7 @@ What you have on a fresh install, at a glance.
 |---|---|---|---|
 | General | Language | System | System, Français, English |
 | General | On opening | Reopen the last project | — |
+| General | Show the home screen | on | — |
 | Appearance | Theme | Dark | Dark, Light, System |
 | Appearance | Density | Comfortable | Comfortable, Compact |
 | Appearance | Accent colour | the theme's own | — |
@@ -606,6 +607,11 @@ What you have on a fresh install, at a glance.
 | 3D | Fly speed | 4 m/s | 0.5 to 20 |
 | 3D | Boost | 3× | 1 to 10 |
 | 3D | Field of view | 60° | 30 to 100 |
+| 3D | Move step | 0.5 m | 0.1 to 10 |
+| 3D | Rotate step | 15° | 1 to 90 |
+| 3D | Scale step | 0.1 | 0.05 to 1 |
+| 3D | Shadow softness | Soft | Hard or Soft |
+| 3D | Shadow detail | 2048 | 512, 1024, 2048, 4096 |
 | Media | Path to ffmpeg | empty | — |
 | Storage | Projects folder | empty | — |
 | Advanced | Log detail | Everything | Nothing → Everything |

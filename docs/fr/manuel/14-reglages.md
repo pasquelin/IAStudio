@@ -612,6 +612,7 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 |---|---|---|---|
 | Général | Langue | Système | Système, Français, English |
 | Général | À l’ouverture | Rouvrir le dernier projet | — |
+| Général | Afficher l’accueil | activé | — |
 | Apparence | Thème | Sombre | Sombre, Clair, Système |
 | Apparence | Densité | Confort | Confort, Compact |
 | Apparence | Couleur d’accent | celle du thème | — |
