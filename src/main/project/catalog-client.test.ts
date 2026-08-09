@@ -6,6 +6,9 @@ import { openMemoryDatabase } from './sqlite-memory'
 import { ABANDONED, isAbandon, type CatalogMessage, type CatalogResponse } from './catalog-protocol'
 import type { Asset } from '@shared/domain/asset'
 
+/** The DOM lib is not on this target: the signal's own signature is where the type lives. */
+type AbortListener = Parameters<AbortSignal['addEventListener']>[1]
+
 const asset: Asset = {
   id: 'asset-1',
   name: 'sunset concept',
@@ -141,7 +144,7 @@ describe('createCatalogClient', () => {
     const port = manualPort()
     const catalog = createCatalogClient(port)
     const controller = new AbortController()
-    const listeners: EventListenerOrEventListenerObject[] = []
+    const listeners: AbortListener[] = []
     const signal = controller.signal
     vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
       listeners.push(listener)
@@ -166,7 +169,7 @@ describe('createCatalogClient', () => {
     const catalog = createCatalogClient(port)
     const controller = new AbortController()
     const signal = controller.signal
-    const listeners: EventListenerOrEventListenerObject[] = []
+    const listeners: AbortListener[] = []
     vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
       listeners.push(listener)
     })
