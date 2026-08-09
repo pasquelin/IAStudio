@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`4ea72ce`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline 4ea72ce..develop`) au lieu de relire mille lignes.
+à **`93f2e44`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 93f2e44..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -130,6 +130,14 @@ glob dont la marge de croissance est du GPU intestable).
 > symptôme **trois fois** là où il se voyait. **Un réglage qui semble global dans un fichier de
 > configuration à projets ne l’est pas** : avant de rustiner le troisième fichier, relire d’où le
 > chiffre du message d’erreur sort vraiment.
+>
+> **Les deux projets ont aussi deux `tsconfig`, et `vitest run` n’est pas `pnpm validate`.**
+> `develop` est passé au rouge le 9 août parce qu’un test du **main** employait
+> `EventListenerOrEventListenerObject` : `tsconfig.node.json` ne charge pas la lib DOM, et le type
+> n’existe pas sur cette cible. **4892 tests étaient verts** dans le worktree — la passe lancée
+> avant la fusion était `vitest run`, donc sans typecheck, et le compilateur n’avait rien dit parce
+> que personne ne le lui avait demandé. Une suite verte ne dit rien du typecheck : la porte est
+> `pnpm validate`, en entier, **après** la fusion comme avant.
 >
 > **Et ce grain-là ne se présente pas toujours comme un dépassement de temps.** Le 9 août au soir,
 > une passe a rendu **26 échecs sur 5 fichiers** — des **échecs d’assertion**, pas des timeouts,
@@ -819,13 +827,20 @@ mais quiconque cherchera « pourquoi mon HDRI n’apparaît pas dans l’import 
   renoncer. Un `setImmediate`, pas une micro-tâche — celle-ci se résout avant que la boucle
   n’interroge le port.
 
-> **Toute nouvelle recherche passe par `foldForSearch` (`shared/text.ts`), jamais par
-> `toLowerCase`.** La règle était écrite et vécue **privée** dans `settings-search.ts` pendant que
-> la recherche des collections — assets, modèles, Apps, la plus utilisée du studio — s’en passait :
-> « Forêt d’hiver » restait introuvable à qui tape `foret`. Le fold **décompose en NFD d’abord**, et
-> ce n’est pas un raffinement : **macOS livre ses noms de fichiers en forme décomposée**, donc un
-> asset déposé depuis le Finder ne répondait pas non plus à son propre nom retapé dans le studio.
-> Les deux formes sont indiscernables à l’œil — le test les écrit par points de code.
+> **Une recherche ne réclame jamais l’accent — et deux mécanismes distincts le tiennent, selon
+> l’endroit où elle tourne.** Ne pas router l’une vers l’autre :
+>
+> - **en mémoire** (collections : assets, modèles, Apps ; et les réglages) → `foldForSearch`
+>   (`shared/text.ts`), **jamais `toLowerCase`**. La règle était écrite et vécue **privée** dans
+>   `settings-search.ts` pendant que la recherche la plus utilisée du studio s’en passait :
+>   « Forêt d’hiver » restait introuvable à qui tape `foret` ;
+> - **dans SQLite** (catalogue) → le tokenizer de la table FTS5, `unicode61 remove_diacritics 2`.
+>   Rien à plier côté JS, et plier la requête avant de l’envoyer la casserait.
+>
+> Le fold JS **décompose en NFD d’abord**, et ce n’est pas un raffinement : **macOS livre ses noms
+> de fichiers en forme décomposée**, donc un asset déposé depuis le Finder ne répondait pas à son
+> propre nom retapé dans le studio. Les deux formes sont indiscernables à l’œil — le test les écrit
+> par points de code.
 
 **Le décodage du clone IPC** — 73 % du coût d’un ⌘S, intouché. Cf. § 3.3 et § 6.
 
