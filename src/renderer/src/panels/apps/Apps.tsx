@@ -14,6 +14,7 @@ import { dictationAccessory } from '@/dictation/DictationField'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
+import { FormHeader } from '@/design/FormHeader'
 import { Row } from '@/design/Row'
 import { Thumbnail } from '@/design/Thumbnail'
 import { ToolButton } from '@/design/ToolButton'
@@ -164,10 +165,10 @@ function AppRunner({ workflowId, onBack }: { workflowId: string; onBack: () => v
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto">
-      <div className="border-border flex items-center gap-2 border-b px-1 py-1.5">
-        <ToolButton icon={mdiArrowLeft} label={t('apps.back')} onClick={onBack} />
-        <p className="truncate text-[11px]">{app?.name ?? t('collection.loading')}</p>
-      </div>
+      <FormHeader
+        title={app?.name ?? t('collection.loading')}
+        leading={<ToolButton icon={mdiArrowLeft} label={t('apps.back')} onClick={onBack} />}
+      />
 
       {!project && <p className="text-muted px-2 pt-2 text-xs">{t('generation.noProject')}</p>}
 

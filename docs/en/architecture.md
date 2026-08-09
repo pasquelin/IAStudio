@@ -619,6 +619,7 @@ Key primitives, all in `design/`:
 | `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the generations summary, its expanded list and media import |
 | `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
+| `FormHeader` | the line naming what the form is for — the model in Generate, the App in its runner |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
 

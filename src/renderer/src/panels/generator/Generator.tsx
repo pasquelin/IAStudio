@@ -17,6 +17,7 @@ import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { claimOnSubmit } from '@/stores/generation-claims'
 import { useSettings } from '@/stores/settings'
+import { FormHeader } from '@/design/FormHeader'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
@@ -133,8 +134,8 @@ export function Generator() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-auto">
-      <p className="text-muted truncate px-2 pt-2 text-[11px]">{descriptor.data?.name}</p>
+    <div className="flex h-full min-h-0 flex-col overflow-auto">
+      <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
 
       {/* A project is where a generated asset lands; without one there is nowhere to put it. */}
       {!project && <p className="text-muted px-2 text-xs">{t('generation.noProject')}</p>}

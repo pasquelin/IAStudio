@@ -641,6 +641,7 @@ Les primitives, toutes dans `design/` :
 | `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par le résumé des générations, sa liste dépliée et l’import de médias |
 | `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — ce dont l’inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
+| `FormHeader` | la ligne qui nomme ce que le formulaire sert — le modèle dans Génération, l’App dans son lanceur |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | les chaînes de classes partagées par plus d’un composant : `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
 
