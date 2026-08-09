@@ -38,11 +38,12 @@ The studio files each action under a **context** — the surface where it makes 
 surface listens at a time, the one you are looking at. A key shared between two contexts can
 therefore never be ambiguous.
 
-Five contexts:
+Six contexts:
 
 | Context | Where it applies |
 |---|---|
 | **Anywhere in the application** | any window, any workspace |
+| **In the bar of spaces** | the top bar, while the focus is on one of its tabs |
 | **In the 3D view** | the viewport of the 3D workspace |
 | **In the edit** | the timeline of the Video and Audio workspaces |
 | **In the picture** | the canvas of the Image workspace |
@@ -108,11 +109,15 @@ one, the first visible cell otherwise.
 
 | Key | Effect |
 |---|---|
-| `⌥←` / `⌥→` | moves the focused workspace one place left or right |
+| `⌥←` | moves the focused workspace one place left |
+| `⌥→` | moves the focused workspace one place right |
 
 **`⌥` and not the bare arrows**: those belong to whoever walks the bar, and taking them would
 trade one gesture for another. Dragging and right-clicking do the same thing — see
 [The title bar](03-the-window.md#arranging-the-workspaces-in-the-order-that-suits-you).
+
+Both keys can be changed like any other, under the **In the bar of spaces** context of the
+shortcuts screen.
 
 ---
 

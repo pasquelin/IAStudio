@@ -38,11 +38,12 @@ Le studio range chaque action dans un **contexte** — la surface où elle a un 
 surface écoute à la fois, celle que vous regardez. Une touche partagée entre deux contextes ne
 peut donc jamais être ambiguë.
 
-Cinq contextes :
+Six contextes :
 
 | Contexte | Où il s’applique |
 |---|---|
 | **Partout dans l’application** | n’importe quelle fenêtre, n’importe quel espace |
+| **Dans la barre des espaces** | la barre du haut, quand le focus est sur l’un de ses onglets |
 | **Dans la vue 3D** | le viewport de l’espace 3D |
 | **Dans le montage** | la timeline de l’espace Vidéo et de l’espace Audio |
 | **Dans l’image** | le canvas de l’espace Image |
@@ -111,11 +112,15 @@ s’il y en a une, la première cellule visible sinon.
 
 | Touche | Effet |
 |---|---|
-| `⌥←` / `⌥→` | déplace l’espace focalisé d’un cran vers la gauche ou la droite |
+| `⌥←` | déplace l’espace focalisé d’un cran vers la gauche |
+| `⌥→` | déplace l’espace focalisé d’un cran vers la droite |
 
 **`⌥` et non les flèches nues** : celles-ci appartiennent à qui parcourt la barre, et les prendre
 échangerait un geste contre un autre. Le glisser et le clic droit font la même chose — voir
 [La barre de titre](03-la-fenetre.md#ranger-les-espaces-dans-lordre-qui-vous-arrange).
+
+Ces deux touches se changent comme les autres, sous le contexte **Dans la barre des espaces** de
+l’écran des raccourcis.
 
 ---
 
