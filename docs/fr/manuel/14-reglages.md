@@ -501,6 +501,70 @@ Cette section a son chapitre : [Tous les raccourcis](15-raccourcis.md).
 
 ---
 
+## Dictée
+
+*Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous
+dites n'est envoyé nulle part.*
+
+Le geste est décrit dans [Générer](06-generer.md#dicter-au-lieu-de-taper) ; ici, ce qui se règle.
+
+### Activer la dictée
+
+Décochée, la dictée disparaît : plus de bouton de micro à côté des champs, plus de raccourci, et
+l'application ne charge rien ni ne demande jamais l'accès au micro.
+
+### Façon de déclencher
+
+**Maintenir la touche** écoute tant que ⌥D est enfoncée et s'arrête au relâchement. C'est le
+réglage d'origine, et le plus sûr : on ne laisse jamais le micro ouvert par oubli.
+
+**Basculer marche/arrêt** démarre à la première pression et s'arrête à la suivante. La main se
+repose, ce qui vaut mieux quand on dicte longtemps.
+
+### Silence qui termine une phrase
+
+En millisecondes, 600 par défaut. C'est la durée de blanc au bout de laquelle ce que vous venez
+de dire est considéré comme fini, transcrit, et écrit dans le champ.
+
+**Augmentez-la** si vos phrases se coupent en deux parce que vous marquez des pauses pour
+réfléchir. Réduisez-la si vous trouvez que le texte met trop longtemps à apparaître.
+
+### Aperçu pendant que vous parlez
+
+En millisecondes, 700 par défaut. C'est l'intervalle entre deux aperçus de la phrase en cours —
+le texte grisé sous le champ.
+
+Ce n'est pas gratuit, et il vaut la peine de savoir pourquoi : **le modèle n'écrit pas au fil de
+la parole**. Chaque aperçu relit tout ce qui a été dit depuis le début de la phrase. Sur une
+machine qui peine, les aperçus s'espacent d'eux-mêmes — le texte définitif, lui, n'en souffre
+jamais.
+
+**Mettez 0** pour supprimer les aperçus : le texte n'apparaîtra alors qu'à la fin de chaque
+phrase, et la machine travaillera beaucoup moins.
+
+### Fils de calcul
+
+De 1 à 8, deux par défaut. Le nombre de cœurs que la reconnaissance a le droit d'occuper. Plus
+haut va plus vite jusqu'à un certain point, mais chaque fil est un cœur en moins pour le reste
+de l'application — la vue 3D, le montage, l'interface.
+
+### Libérer la mémoire après
+
+En minutes, dix par défaut. Le modèle chargé occupe environ 700 Mo ; passé ce délai sans dicter,
+il est relâché et la mémoire rendue. Il se recharge tout seul à la dictée suivante, en quelques
+secondes.
+
+**Mettez 0** pour le garder chargé en permanence : la dictée démarre alors instantanément, au
+prix de 700 Mo occupés tant que le studio est ouvert.
+
+### Dossier du modèle
+
+Laissez vide dans le cas normal : le modèle est téléchargé à côté de vos réglages. Ce champ sert
+à pointer un modèle déjà présent ailleurs — sur un disque externe, ou partagé entre plusieurs
+comptes de la machine.
+
+---
+
 ## Médias
 
 *Préparation des fichiers importés : proxies et waveforms.*

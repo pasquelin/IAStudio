@@ -386,6 +386,52 @@ workspace you want — then double-click. You do not have to go there first: the
 
 ---
 
+## Dictation messages
+
+### "Dictation needs a recognition model, downloaded once and for all."
+
+Not a fault: it is the first time. The model weighs 640 MB and is never fetched without being
+asked. Click, and carry on working while it downloads — it gets in the way of nothing.
+
+### "Microphone access was refused."
+
+You answered no to the system's request, and **macOS never asks again**. The "Open the system
+settings" button takes you to the exact place to allow it. The studio then has to be restarted.
+
+### "The downloaded model is damaged; it has been removed."
+
+The file arrived incomplete or corrupted — a dropped connection, a proxy that rewrites, a full
+disk. The studio deleted it rather than load a model it does not trust. Start the download again.
+
+### "The model could not be downloaded."
+
+The network gave up. What had arrived is kept: the next attempt **resumes where it stopped**, it
+does not start the 640 MB again.
+
+### "Speech recognition stopped."
+
+The engine quit mid-way. It restarts on its own at the next dictation, up to three times; past
+that the studio stops trying rather than relaunch a process that dies on every sentence. The
+detail is in the journal (**Help ▸ Journal**), not on screen: it names a file path, which helps
+nobody in front of the screen and tells everything to whoever reads the journal.
+
+### "No microphone available."
+
+No audio input answered. A USB headset unplugged mid-dictation gives this message: plug it back
+in, or let the studio take the built-in microphone.
+
+### The text is written nowhere
+
+Dictation writes **at the caret**, in the field it sits in. If the caret is in no text field,
+there is nowhere to write and nothing happens: click into the field first.
+
+### The level does not move when you speak
+
+The microphone is hearing nothing. Check which one your computer is using (System Settings ▸
+Sound ▸ Input), and that it is not a muted input — some audio interfaces expose those.
+
+---
+
 ## The troubles that show no message
 
 These are the most disconcerting: nothing is written, but something is wrong.

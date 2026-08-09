@@ -63,6 +63,7 @@ toujours un vrai conflit.
 | **Ouvrir un projet** | `⌘O` | ouvre un projet existant à la place de celui en cours |
 | **Enregistrer le document** | `⌘S` | écrit le document en avant dans le projet |
 | **Réglages** | `⌘,` | ouvre la fenêtre des réglages |
+| **Dicter** | `⌥D` | écoute le micro et écrit ce que vous dites au curseur |
 | **Plein écran** | `⌃⌘F` | fait occuper tout l’écran à la fenêtre |
 | **Réinitialiser la disposition** | *aucune* | remet les panneaux là où ils étaient au départ |
 
@@ -70,6 +71,14 @@ toujours un vrai conflit.
 qu’on cherche une fois tous les six mois, et lui donner un raccourci reviendrait à occuper une
 touche pour rien. Elle est dans le menu **Affichage**, et vous pouvez lui en attribuer une (voir
 plus bas).
+
+**Dicter est le seul raccourci qui fonctionne alors que vous êtes en train d’écrire dans un
+champ.** Tous les autres se taisent dans ce cas, et c’est voulu : une lettre doit atteindre le
+champ, pas la surface derrière. Mais dicter dans le champ où l’on est, c’est tout l’intérêt —
+voir [Générer](06-generer.md#dicter-au-lieu-de-taper).
+
+Il se **maintient** au lieu de se déclencher : on appuie, on parle, on relâche. C’est réglable
+en bascule dans les [réglages](14-reglages.md#façon-de-déclencher).
 
 > **Le projet ouvert s’enregistre au fur et à mesure.** `⌘S` ne concerne que le **document** en
 > cours — une scène 3D, par exemple — pas le projet lui-même. L’onglet porte un point (`•`) tant

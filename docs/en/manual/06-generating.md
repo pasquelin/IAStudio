@@ -99,6 +99,62 @@ most models dilute. One accurate sentence beats three vague ones.
 
 ---
 
+## Speaking instead of typing
+
+A fourth button, shaped like a microphone, sits in the same place. It appears on **every** long
+text field of the form, not only on the prompt: a negative prompt is worth dictating too.
+
+**Everything happens on your computer.** Nothing you say is sent anywhere, there is no key to
+enter, and dictation works with no connection at all.
+
+### The first time
+
+Recognition needs a model, which weighs 640 MB and is downloaded **once**. The studio never
+fetches it on its own: it offers, you decide. While it downloads, the application stays entirely
+usable — you can generate, draw and edit as if nothing were happening.
+
+Your computer will also ask you to allow the microphone. If you refuse, a link takes you straight
+to the system settings to change your mind: once refused, macOS never asks again.
+
+### Dictating
+
+Two ways, chosen in the settings:
+
+- **Holding ⌥D** (the default). Press, speak, let go: the text appears. It is the safest — the
+  microphone is never left open by mistake.
+- **Toggling**: one press starts, the next stops. It rests the hand, which is better over a long
+  dictation.
+
+The shortcut works **from the field you are already writing in**, which is the whole point, and
+the text lands **at the caret** — not at the end. What you had already typed is never overwritten.
+
+This holds for every field in the studio, not only the prompt: the asset search, renaming a
+layer, naming a document.
+
+### What you see while it listens
+
+While you speak, a greyed sentence appears **below** the field: it is what recognition believes
+it is hearing, and it corrects itself as the words come. It does not enter the field. When you
+pause — or let go of the key — the sentence is settled, punctuated, and **only then** written
+into the field.
+
+A small indicator beside the microphone rises and falls with your voice. If it does not move,
+the microphone is hearing nothing: check which one your computer is using.
+
+### Worth knowing
+
+- **Speak normally**, as you would to someone. Punctuation is added on its own; there is no need
+  to say "comma".
+- **One sentence at a time.** Half a second of quiet closes it. If your sentences are cut in half
+  because you think out loud, lengthen that delay in the settings.
+- **French works**, along with twenty-four other European languages, recognised without being
+  told — you announce nothing. But remember that image models read English: dictate in your own
+  language, then use **Translate to English** just below.
+- **The memory is returned** after ten minutes without dictating. The next time takes a few
+  seconds to load again, and that is all.
+
+---
+
 ## Getting help writing the prompt
 
 Three buttons sit above the field. They are not on every form: **the model is the one naming the

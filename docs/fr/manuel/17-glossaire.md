@@ -165,6 +165,14 @@ resserre (24 px) pour faire tenir plus de choses à l’écran.
 Un *canal* de texture que le studio a calculé à partir d’un autre, plutôt que reçu d’un *modèle*.
 Le calcul se relance depuis le menu de sa vignette, autant de fois qu’on veut.
 
+**Dictée**
+Écrire un texte en le disant plutôt qu'en le tapant. La reconnaissance tourne **sur cet
+ordinateur**, sans clé ni connexion : rien de ce qui est dit ne part ailleurs.
+
+Elle a besoin d'un *modèle* de reconnaissance, téléchargé une seule fois (640 Mo), et fonctionne
+dans tous les champs de texte du studio — le texte se pose à l'endroit du curseur. Voir
+[Générer](06-generer.md#dicter-au-lieu-de-taper).
+
 **Détourage** *(background removal)*
 Retirer le fond d’une image pour ne garder que le sujet, sur du transparent. La commande
 **Détourer** est dans le menu Image ; son modèle se règle dans

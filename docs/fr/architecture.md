@@ -125,6 +125,14 @@ fenêtre, les buffers d’échantillons étant **transférés** plutôt que copi
 de la tuyauterie : le catalogue, le dispatch et l’arithmétique audio se testent seuls, sans
 worker.
 
+**Et un processus, pour la reconnaissance vocale.** `main/dictation/stt-worker.ts` tient Parakeet
+— six cents millions de paramètres, 640 Mo de poids — dans un `utilityProcess` à lui. Un thread
+n'aurait pas suffi : il partage le heap et le cycle de vie de son processus, donc les 700 Mo
+resteraient dans l'empreinte du principal et un plantage de l'addon natif emporterait le studio.
+Ce qui décide quoi que ce soit — le tampon, la file, la machine à états — vit à côté et se teste
+sans lui. Voir [`docs/stt/`](stt/00-architecture.md) et
+[`ADR-17`](ci/adr/ADR-17-moteur-de-dictee-hors-processus.md).
+
 ---
 
 ## Traverser la frontière des processus
@@ -806,7 +814,8 @@ développeur, et ce dont le build a besoin.
 
 ### Ce que règle l’utilisateur
 
-`shared/domain/settings.ts` déclare la forme entière — apparence, génération, stockage, médias.
+`shared/domain/settings.ts` déclare la forme entière — apparence, génération, stockage, médias,
+dictée.
 C’est le contrat, et c’est délibérément le **seul** type de réglages que le renderer puisse
 voir : **les identifiants d’API n’y figurent jamais**. Le renderer lit un `AuthState`, pas une
 clé.

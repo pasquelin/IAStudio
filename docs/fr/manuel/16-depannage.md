@@ -400,6 +400,56 @@ l’espace voulu — puis double-cliquez. Vous n’avez pas à y aller d’abord
 
 ---
 
+## Les messages de la dictée
+
+### « La dictée a besoin d'un modèle de reconnaissance, à télécharger une seule fois. »
+
+Ce n'est pas une panne : c'est la première fois. Le modèle pèse 640 Mo et n'est jamais rapatrié
+sans qu'on le demande. Cliquez, et continuez à travailler pendant le téléchargement — il ne gêne
+rien.
+
+### « L'accès au micro a été refusé. »
+
+Vous avez répondu non à la demande du système, et **macOS ne redemande plus**. Le bouton
+« Ouvrir les réglages du système » vous emmène à l'endroit exact où l'autoriser. Il faut ensuite
+redémarrer le studio.
+
+### « Le modèle téléchargé est abîmé ; il a été supprimé. »
+
+Le fichier est arrivé incomplet ou corrompu — connexion coupée, proxy qui réécrit, disque plein.
+Le studio l'a effacé plutôt que de charger un modèle en lequel il n'a pas confiance. Relancez le
+téléchargement.
+
+### « Le téléchargement du modèle a échoué. »
+
+Le réseau a lâché. Ce qui était arrivé est conservé : la tentative suivante **reprend là où elle
+s'était arrêtée**, elle ne recommence pas les 640 Mo.
+
+### « La reconnaissance vocale s'est arrêtée. »
+
+Le moteur a quitté en cours de route. Il redémarre tout seul à la dictée suivante, jusqu'à trois
+fois ; au-delà, le studio cesse d'essayer plutôt que de relancer un processus qui meurt à chaque
+phrase. Le détail est dans le journal (**Aide ▸ Journal**), pas à l'écran : il nomme un chemin de
+fichier, ce qui n'aide personne devant l'écran mais dit tout à qui lit le journal.
+
+### « Aucun micro disponible. »
+
+Aucune entrée audio n'a répondu. Un casque USB débranché en cours de dictée donne ce message :
+rebranchez-le, ou laissez le studio prendre le micro intégré.
+
+### Le texte ne s'écrit nulle part
+
+La dictée écrit **à l'endroit du curseur**, dans le champ où il se trouve. Si le curseur n'est
+dans aucun champ de texte, il n'y a nulle part où écrire, et rien ne se passe : cliquez d'abord
+dans le champ.
+
+### Le niveau ne bouge pas quand vous parlez
+
+Le micro n'entend rien. Vérifiez lequel votre ordinateur utilise (Réglages Système ▸ Son ▸
+Entrée), et que ce n'est pas une entrée muette — certaines interfaces audio en exposent.
+
+---
+
 ## Les ennuis qui n’affichent aucun message
 
 Ceux-là sont les plus déroutants : rien ne s’écrit, mais quelque chose ne va pas.
