@@ -262,8 +262,13 @@ From top to bottom:
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace |
 | *separator* | |
-| The **left column** icons | Models, then Generate — the same two in every workspace |
+| The **upper half** icons of the left column | Models, then Generate — the same two in every workspace |
+| *separator* | |
+| The **lower half** icons | Explorer, then Apps — the same everywhere, the home included for the Explorer |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
+
+**One separator per cut of the column, never one more.** The rail is the column's legend: it cuts
+the way the column is cut, and an empty half never reaches it.
 
 The **+** button is solid and blue, where all the others are grey glyphs. That is because it
 **acts** — it creates something — while the others only show or hide.
@@ -363,7 +368,7 @@ instead.
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
-| **Assets** | bottom | 1st | Image, 3D, Textures, Skyboxes | the same shelf, as a strip |
+| **Assets** | bottom | 1st | Image, 3D, Textures, Skyboxes, Graph | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio | the sequence being edited |
 
 > **"Everywhere" means the workspaces, not the home screen**, unless the row says otherwise. A
@@ -429,10 +434,11 @@ The lower left half opens on the **Explorer** everywhere, the Apps behind it.
 | **Audio** | Assets | Timeline |
 | **Textures** | Channels | Assets |
 | **Skyboxes** | Skybox | Assets |
+| **Graph** | *nothing — it declares no panel there* | Assets |
 
 **Why this is not a panel pinned once and for all.** Your layout is remembered once for all
 workspaces, while the panel that comes first differs in each. Writing one into the default layout
-would impose one workspace's answer on the other five.
+would impose one workspace's answer on the other six.
 
 As soon as you click an icon, that half remembers **your** choice, and does not move again until
 you click another — or reset the layout.

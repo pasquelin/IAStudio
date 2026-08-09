@@ -270,8 +270,13 @@ De haut en bas :
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif |
 | *séparateur* | |
-| Les icônes de la **colonne de gauche** | Modèles, puis Génération — les mêmes dans tous les espaces |
+| Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces |
+| *séparateur* | |
+| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes partout, accueil compris pour l’Explorateur |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
+
+**Un séparateur par coupure de la colonne, jamais un de plus.** Le rail est la légende de la
+colonne : il la découpe comme elle est découpée, et une moitié vide ne l’atteint pas.
 
 Le bouton **+** est plein et bleu, quand tous les autres sont des glyphes gris. C’est parce
 qu’il **agit** — il crée quelque chose — alors que les autres ne font que montrer ou cacher.
@@ -375,7 +380,7 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
-| **Assets** | bas | 1re | Image, 3D, Textures, Skyboxes | la même étagère, en bande |
+| **Assets** | bas | 1re | Image, 3D, Textures, Skyboxes, Graphe | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio | la séquence en cours de montage |
 
 > **« Partout » veut dire les espaces de travail, pas l’accueil**, sauf mention contraire. Un
@@ -445,11 +450,12 @@ La moitié basse de gauche s’ouvre partout sur l’**Explorateur**, les Apps d
 | **Audio** | Assets | Timeline |
 | **Textures** | Canaux | Assets |
 | **Skyboxes** | Skybox | Assets |
+| **Graphe** | *rien — il n’y déclare aucun panneau* | Assets |
 
 **Pourquoi ce n’est pas un panneau fixé une fois pour toutes.** Votre disposition est retenue une
 seule fois pour tous les espaces, alors que le panneau qui vient en premier diffère dans chacun.
 En inscrire un dans la disposition par défaut reviendrait à imposer la réponse d’un espace aux
-cinq autres.
+six autres.
 
 Dès que vous cliquez une icône, cette moitié retient **votre** choix, et ne bouge plus jusqu’à ce
 que vous en cliquiez une autre — ou que vous réinitialisiez la disposition.
