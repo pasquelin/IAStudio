@@ -1,9 +1,16 @@
-import type { ColorSpace, Texture } from 'three'
+import { TextureLoader, type ColorSpace, type Texture } from 'three'
 import { assetUrl } from '@shared/domain/asset'
 import { createRefCache } from '../core/ref-cache'
 
 /** A port rather than a hard-wired `TextureLoader`, like `SqliteDriver`: jsdom decodes no image. */
 export type TextureSource = (url: string) => Promise<Texture>
+
+/**
+ * What production hands every engine that decodes a picture. Here rather than at each of them:
+ * the port is declared on this line, and three spaces had grown their own identical copy of the
+ * one implementation it has.
+ */
+export const loadTexture: TextureSource = url => new TextureLoader().loadAsync(url)
 
 export type TextureCache = {
   /**

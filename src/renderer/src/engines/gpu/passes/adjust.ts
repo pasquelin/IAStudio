@@ -1,22 +1,12 @@
 import { ShaderMaterial, type Texture } from 'three'
 import { adjustUniformsOf, type AdjustmentStack } from '@shared/domain/adjustments'
+import { QUAD_VERTEX_SHADER } from './quad'
 
 /**
  * Colour grading, in one shader, for every workspace that grades. Uniforms only: nothing here
  * ever writes a pixel to disk, which is what makes an adjustment free to change and free to
  * undo — and what a competitor charges another generation for.
  */
-
-const VERTEX_SHADER = /* glsl */ `
-varying vec2 vUv;
-
-void main() {
-  vUv = uv;
-  // The quad already spans clip space, so no projection is needed — and skipping it means the
-  // pass draws the same way whatever camera the viewport happens to hold.
-  gl_Position = vec4(position.xy, 0.0, 1.0);
-}
-`
 
 const FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
@@ -96,7 +86,7 @@ export function createAdjustPass(): AdjustPass {
   }
 
   const material = new ShaderMaterial({
-    vertexShader: VERTEX_SHADER,
+    vertexShader: QUAD_VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
     uniforms,
   })

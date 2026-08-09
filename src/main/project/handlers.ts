@@ -19,10 +19,14 @@ import {
   parseProjectName,
   parseProjectPath,
   parseSaveAudio,
+  parseSaveTexture,
 } from './validation'
 
 /** What `saveAudio` writes — the renderer encodes uncompressed PCM, never a codec. */
 const WAV_EXTENSION = '.wav'
+
+/** What `saveTexture` writes. Lossless, because a channel is data before it is a picture. */
+const PNG_EXTENSION = '.png'
 
 export type ProjectHandlerDeps = {
   project: ProjectStore
@@ -109,6 +113,27 @@ export function registerProjectHandlers({
           ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
         },
         request.wav,
+      ),
+    )
+  })
+
+  handle(CHANNELS.assetsSaveTexture, async (_event, value) => {
+    const request = parseSaveTexture(value)
+
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: request.name,
+          // A channel is a texture in the catalogue, which is what puts it under the right
+          // facet of the shelf and what `PICTURES` then lets a tile show. Decided here and
+          // never sent by the renderer: the kind is what the extension and the folder follow.
+          type: 'texture',
+          extension: PNG_EXTENSION,
+          map: request.map,
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+        },
+        request.png,
       ),
     )
   })

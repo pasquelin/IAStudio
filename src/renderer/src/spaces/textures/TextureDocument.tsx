@@ -1,18 +1,15 @@
 import { mdiTextureBox } from '@mdi/js'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TextureLoader, type Texture } from 'three'
 import { assetUrl, PICTURES, type Asset } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
+import { loadTexture } from '@/engines/scene/texture-cache'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
-
-/** jsdom decodes no image; the engine takes its loader as a port for exactly that reason. */
-const loadTexture = (url: string): Promise<Texture> => new TextureLoader().loadAsync(url)
 
 /**
  * The subject, under light, and nothing else. Every setting it shows lives in the inspector — the

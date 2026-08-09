@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { PBR_CHANNELS } from '@shared/domain/texture'
 import { setChannel } from '@/engines/texture/commands'
@@ -26,11 +26,18 @@ const picture = (id: string, name: string, location: Asset['location'] = 'local'
 
 const channels = () => textureOf(useTextures.getState(), 'doc-1').channels
 
+/** The panel reaches it through an `import()`, and behind it sit three.js and a WebGL context. */
+const deriveTextureChannel = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
+
+vi.mock('@/spaces/textures/derive-channel', () => ({ deriveTextureChannel }))
+
 beforeEach(() => {
   installTexture('doc-1')
   // Session state, shared by every document: a channel left inspected would leak into the next.
   useTextureViews.setState({ inspected: {} })
   useAssets.setState({ items: [picture('img-1', 'Brique')] })
+  // `vi.fn` keeps its calls across tests, and a count read from the previous one proves nothing.
+  deriveTextureChannel.mockClear()
 })
 
 describe('Channels', () => {
@@ -194,6 +201,90 @@ describe('Channels', () => {
         'aria-pressed',
         'true',
       )
+    })
+  })
+
+  describe('computing a channel from another', () => {
+    const open = (channel: string) =>
+      userEvent.click(
+        screen.getByRole('button', { name: new RegExp(`Ce que contient ${channel}`) }),
+      )
+
+    /** `sourceFor` decides: four channels have one, and the other four have nothing to read. */
+    it('offers no derivation for a channel nothing computes', async () => {
+      render(<Channels />)
+
+      await open('Couleur de base')
+
+      expect(screen.queryByRole('menuitem', { name: /Calculer depuis/ })).toBeNull()
+    })
+
+    it('computes the channel from the source the domain names', async () => {
+      useTextures
+        .getState()
+        .runCommand(
+          'doc-1',
+          setChannel('height', { assetId: 'img-1', origin: 'imported', width: 8, height: 8 }),
+        )
+      render(<Channels />)
+
+      await open('Normale')
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /Calculer depuis Hauteur/ }),
+      )
+
+      expect(deriveTextureChannel).toHaveBeenCalledWith('doc-1', 'normal')
+    })
+
+    /**
+     * Offered and refused rather than absent: an empty source is something to go and fill, and a
+     * row that simply is not there leaves nothing to read that from.
+     */
+    it('says which channel is missing instead of hiding the row', async () => {
+      render(<Channels />)
+
+      await open('Normale')
+
+      const row = await screen.findByRole('menuitem', {
+        name: /Calculer depuis Hauteur — ce canal est vide/,
+      })
+      expect(row).toBeDisabled()
+      expect(deriveTextureChannel).not.toHaveBeenCalled()
+    })
+
+    /**
+     * Each derivation opens a WebGL context of its own, and a browser stops handing them out
+     * around sixteen. So the other rows go dead while one runs — and they say why.
+     */
+    it('closes every other derivation while one is running', async () => {
+      let finish = (): void => {}
+      deriveTextureChannel.mockImplementationOnce(
+        () => new Promise<boolean>(resolve => (finish = () => resolve(true))),
+      )
+      useTextures
+        .getState()
+        .runCommand(
+          'doc-1',
+          setChannel('height', { assetId: 'img-1', origin: 'imported', width: 8, height: 8 }),
+        )
+      useTextures
+        .getState()
+        .runCommand(
+          'doc-1',
+          setChannel('baseColor', { assetId: 'img-1', origin: 'imported', width: 8, height: 8 }),
+        )
+      render(<Channels />)
+
+      await open('Normale')
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /Calculer depuis Hauteur/ }),
+      )
+
+      await open('Rugosité')
+      const other = await screen.findByRole('menuitem', { name: /un autre canal est en calcul/ })
+      expect(other).toBeDisabled()
+
+      finish()
     })
   })
 

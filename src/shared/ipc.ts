@@ -25,6 +25,7 @@ import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/sce
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
+import type { PbrChannel } from './domain/texture'
 import type { ToolId, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
@@ -89,6 +90,7 @@ export type Channels = {
   assetsPeaks: 'assets:peaks'
   assetsReveal: 'assets:reveal'
   assetsSaveAudio: 'assets:save-audio'
+  assetsSaveTexture: 'assets:save-texture'
   assetsUpdate: 'assets:update'
   assetsRemove: 'assets:remove'
   assetsDescribe: 'assets:describe'
@@ -178,6 +180,7 @@ export const CHANNELS: Channels = {
   assetsPeaks: 'assets:peaks',
   assetsReveal: 'assets:reveal',
   assetsSaveAudio: 'assets:save-audio',
+  assetsSaveTexture: 'assets:save-texture',
   assetsUpdate: 'assets:update',
   assetsRemove: 'assets:remove',
   assetsDescribe: 'assets:describe',
@@ -221,6 +224,23 @@ export type SaveAudioRequest = {
   derivedFrom?: string
   /** 16-bit PCM WAV, encoded by the renderer that decoded it. */
   wav: Uint8Array
+}
+
+/**
+ * A channel the renderer computed, on its way into the project — see
+ * `StudioBridge['assets']['saveTexture']`.
+ *
+ * `map` is required, and that is what keeps the channel honest: it says which of the eight
+ * these pixels ARE, the shelf badges it, and the catalogue can then answer "which normal maps
+ * does this project hold". Bytes with no channel are an ordinary picture and belong elsewhere.
+ */
+export type SaveTextureRequest = {
+  name: string
+  map: PbrChannel
+  /** The channel asset they were computed from, so the two stay traceable to each other. */
+  derivedFrom?: string
+  /** PNG, encoded by the renderer that drew it. */
+  png: Uint8Array
 }
 
 /** A scene on its way to a file the studio will never look at again. */
@@ -504,6 +524,13 @@ export type StudioBridge = {
     reveal: (assetId: string) => Promise<boolean>
     /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
     saveAudio: (request: SaveAudioRequest) => Promise<Asset>
+    /**
+     * Puts a channel the renderer computed into the project.
+     *
+     * Always a new asset: a derivation is cheap to run again, and overwriting the file the
+     * user pointed at would destroy pixels the studio did not author.
+     */
+    saveTexture: (request: SaveTextureRequest) => Promise<Asset>
     /** Renames an asset or rewrites its tags. Whichever field is absent is left as it was. */
     update: (assetId: string, changes: AssetChanges) => Promise<Asset>
     /**

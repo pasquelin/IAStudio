@@ -1,11 +1,11 @@
 import { mdiCubeOutline } from '@mdi/js'
 import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TextureLoader, type Texture } from 'three'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { PICTURES, type Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { setSunAngles } from '@/engines/skybox/commands'
+import { loadTexture } from '@/engines/scene/texture-cache'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
@@ -14,9 +14,6 @@ import { useSkyboxViews, viewOf } from '@/stores/skybox-views'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import type { CommandId } from '@shared/domain/command'
-
-/** jsdom decodes no image; the engine takes its loader as a port for exactly that reason. */
-const loadTexture = (url: string): Promise<Texture> => new TextureLoader().loadAsync(url)
 
 export function SkyboxDocument({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
