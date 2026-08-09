@@ -327,6 +327,53 @@ l’inspecteur exigent un projet, sans doute. Le **Générateur** est la vraie q
 projet produit un job qui ne se collecte nulle part — « un job ne collecte que dans son propre
 projet » (§ 3.6). Soit il exige un projet, soit il faut dire ce que devient ce qu’il produit.
 
+### 16. Ouvrir un projet ne dit rien quand ça rate, et le manifeste n’est pas défendu
+
+**Demandé le 9 août 2026**, à la suite de l’entrée 15 : c’est le même bouton qui va ouvrir ce
+sélecteur. Le but énoncé — **un projet reste fiable même modifié de l’extérieur, et ce qui rate le
+dit clairement**.
+
+Le dossier d’un projet est **territoire de l’utilisateur** : le code le dit deux fois (« A project
+folder is user territory: its manifest can be edited, truncated or replaced »). Il est édité,
+déplacé, synchronisé, sauvegardé, ouvert dans un autre outil. Ce qui suit est ce qui arrive alors.
+
+**Ce qui tient déjà, et qu’il ne faut pas défaire.** Le listing des documents est solide : le
+dossier fait foi sur l’extension, un document illisible ne coûte pas le listing des autres, un
+dossier absent rend `[]` plutôt que d’échouer, et la lecture est séquentielle pour ne pas épuiser
+les descripteurs. `open()` **répare** en repassant `ensureFolders` : un `assets/vid` supprimé à la
+main revient tout seul. Et le catalogue neuf est ouvert **avant** que l’ancien soit lâché, pour
+qu’une base illisible ne laisse pas le studio sans projet alors que l’interface en montre un.
+
+**Les quatre trous, du plus visible au plus sournois :**
+
+| Ce qui arrive | Ce qui se passe aujourd’hui |
+|---|---|
+| On désigne un dossier qui n’est pas un projet | `readFile` échoue sur `project.json`, l’erreur remonte l’IPC telle quelle. Les appelants font `() => void openPicked()` : personne ne l’attrape. L’utilisateur lit un `ENOENT … project.json` au lieu de « Ce dossier n’est pas un projet Scenario » |
+| Le manifeste est tronqué ou bricolé | Même chose : une `ZodError` brute, qui ne dit pas quel champ manque |
+| Le projet vient d’une **version future** du studio | **Il s’ouvre**, et le studio écrit dedans avec son modèle à lui |
+| Le projet est ouvert et refermé cent fois | `updatedAt` ne bouge jamais : il vaut `createdAt` à vie |
+
+**Le troisième est le plus grave, et la règle qui manque est déjà écrite dix lignes plus bas.**
+`documentEnvelope` plafonne sa version — `z.number().int().min(1).max(DOCUMENT_VERSION)` — avec ce
+commentaire : « **Capped, not merely floored**: a file written by a later build must be refused
+rather than read as if it were this one and silently flattened by the next save. » Le manifeste,
+dans le même fichier, ne porte que `min(1)`. Le raisonnement est identique et l’enjeu plus grand :
+un document aplati, c’est un fichier ; un projet aplati, c’est le dossier entier.
+
+**Le quatrième est un champ qui ment.** `updatedAt` est écrit une fois, à la création
+(`store.ts:98`), et **aucune autre écriture du manifeste n’existe**. Deux réponses possibles, et
+il faut en choisir une : l’écrire à chaque fermeture de projet, ou le retirer du manifeste. Un
+champ qu’on affiche un jour en croyant qu’il dit quelque chose est pire que pas de champ.
+
+**Et le sélecteur ne filtre rien** : `pickPath('folder')` est un `openDirectory` générique, donc
+n’importe quel dossier est désignable. C’est cohérent — le manifeste est la vérité, pas
+l’extension — mais ça met tout le poids sur le message d’échec, qui est justement ce qui manque.
+
+**Ce que ça demande :** un type d’erreur nommé plutôt qu’une exception brute (`NoProjectError`
+existe déjà et donne le patron), ses clés dans les deux bundles i18n, la version du manifeste
+plafonnée comme celle des documents, et une décision sur `updatedAt`. Deux des quatre points sont
+dans le main — c’est un chantier, il se traite d’un bloc.
+
 ### 4. Aucun sélecteur de couleur ne s’ouvre
 
 Les **quatre** `input type="color"` de l’application sont muets — pinceau, inspecteur, formulaire de
