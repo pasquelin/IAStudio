@@ -46,12 +46,23 @@ ce qui est fait.
 > et les deux architectures ont été réalignés le 9 août** — si tu renommes un libellé, `grep` le
 > dans `docs/fr/manuel/` et `docs/en/manual/` dans le même mouvement.
 >
-> **Les six tests i18n lisaient tous le même sens** — une clé nommée dans la source doit exister
-> dans les deux bundles. `renderer/src/hardcoded-text.i18n.test.ts` lit l'autre : il parse chaque
-> `.tsx` et refuse un nœud de texte JSX, un `{'…'}` en enfant ou un attribut lisible
-> (`title`, `placeholder`, `aria-label`, …) portant un littéral. **Zéro trouvaille au 9 août** —
-> c'est ce qui rend la règle tenable. Le main n'est pas dans sa portée : ses libellés passent par
-> l'objet `t` de `menu/template.ts`.
+> **`renderer/src/no-hardcoded-text.test.ts` voit maintenant les accolades et les branches.** Il
+> attrapait un nœud de texte JSX et un attribut à littéral nu. Trois formes lui échappaient, qui
+> montrent pourtant les mêmes mots : `title={'x'}` et `{'x'}` en enfant, un gabarit qui interpole,
+> et surtout **`{ok ? 'Chargement…' : 'Rien à montrer'}` et `{raté && 'Une erreur'}`** — c'est la
+> forme qu'on écrit quand on remplace un `t(…)` par une chaîne. La récursion s'arrête aux
+> opérateurs logiques : entrer dans un `===` ferait sonner les huit `side === 'left'` du renderer.
+> **Zéro trouvaille sur l'arbre au 9 août**, filet élargi.
+>
+> **Le main a son propre garde** — `src/main/no-hardcoded-text.test.ts`, sur les appels qui
+> montrent du texte (`showMessageBox`, `Notification`…). **Il ne surveille pas les `label` du
+> menu natif** : un `{ label: 'Undo' }` glissé dans `menu/template.ts` passerait aujourd'hui
+> devant tous les tests. Le menu est intégralement en `t.*` à ce jour, vérifié à la main le
+> 9 août — mais rien ne l'y tient.
+>
+> **Ce fichier s'appelle `no-hardcoded-text`, pas `*.i18n.test.ts`.** Une session l'a cherché sous
+> le second motif, ne l'a pas trouvé, et en a réécrit un doublon complet avant de s'en apercevoir.
+> Les sept gardes i18n ne portent pas tous le même nom : `grep` sur le sujet, pas sur le motif.
 >
 > **Avant cela**, `feat/textures-materiau` (8 août) : l'espace **Textures** a son panneau matériau —
 > une face de l'inspecteur unique, avec le remap à double poignée — et sa bande de canaux, en

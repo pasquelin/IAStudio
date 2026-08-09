@@ -69,6 +69,43 @@ function looksLikeSentence(text: string): boolean {
   )
 }
 
+/** `&&`, `||` and `??` pick between two things a user may read. `===` compares; it shows nothing. */
+const LOGICAL_OPERATORS = new Set([
+  ts.SyntaxKind.AmpersandAmpersandToken,
+  ts.SyntaxKind.BarBarToken,
+  ts.SyntaxKind.QuestionQuestionToken,
+])
+
+/**
+ * Every word an expression spells out — one entry per branch, because `cond ? 'A' : 'B'` shows
+ * one or the other and both are words. A template keeps only its literal parts: the holes are
+ * values, and `${a}${b}` says nothing in any language.
+ *
+ * Walking into a comparison would be a mistake, not an omission: the `'left'` of `side === 'left'`
+ * is an operand. Eight of them sit in the components today, and every one would be a false alarm.
+ */
+function literalsIn(expression: ts.Expression): string[] {
+  if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression))
+    return [expression.text]
+  if (ts.isTemplateExpression(expression))
+    return [
+      expression.head.text + expression.templateSpans.map(span => span.literal.text).join(' '),
+    ]
+  if (ts.isConditionalExpression(expression))
+    return [...literalsIn(expression.whenTrue), ...literalsIn(expression.whenFalse)]
+  if (ts.isBinaryExpression(expression) && LOGICAL_OPERATORS.has(expression.operatorToken.kind))
+    return [...literalsIn(expression.left), ...literalsIn(expression.right)]
+  if (ts.isParenthesizedExpression(expression)) return literalsIn(expression.expression)
+  return []
+}
+
+/** What an attribute was given, whether or not it wears braces — `title="x"` and `title={'x'}`. */
+function attributeValues(initializer: ts.JsxAttributeValue): string[] {
+  if (ts.isJsxExpression(initializer))
+    return initializer.expression ? literalsIn(initializer.expression) : []
+  return literalsIn(initializer)
+}
+
 function findingsIn(path: string, code: string): string[] {
   const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const findings: string[] = []
@@ -82,19 +119,23 @@ function findingsIn(path: string, code: string): string[] {
     // Text sitting between tags: `<span>Ready</span>`.
     if (ts.isJsxText(node) && isWords(node.text)) note(node, node.text)
 
-    // An attribute given a literal. A spoken one may not hold a word at all; any other one may
-    // hold a keyword, but not a sentence.
-    if (
-      ts.isJsxAttribute(node) &&
-      node.initializer !== undefined &&
-      ts.isStringLiteral(node.initializer)
-    ) {
-      const name = node.name.getText(source)
-      const value = node.initializer.text
-      const spoken = SPOKEN_ATTRIBUTES.has(name) && isWords(value)
-      const sentence = !TECHNICAL_ATTRIBUTES.has(name) && looksLikeSentence(value)
+    // A literal handed over in braces is a child too, just not a JsxText. An attribute's braces
+    // are the same node, hence the parent check.
+    if (ts.isJsxExpression(node) && node.expression && !ts.isJsxAttribute(node.parent)) {
+      for (const text of literalsIn(node.expression)) if (isWords(text)) note(node, text)
+    }
 
-      if (spoken || sentence) note(node, `${name}="${value}"`)
+    // An attribute given a literal. A spoken one may not hold a word at all; any other one may
+    // hold a keyword, but not a sentence. A technical one can be neither, so it is dropped before
+    // its value is read at all — that is most of the attributes in the window.
+    if (ts.isJsxAttribute(node) && node.initializer !== undefined) {
+      const name = node.name.getText(source)
+      if (!TECHNICAL_ATTRIBUTES.has(name)) {
+        for (const value of attributeValues(node.initializer)) {
+          const spoken = SPOKEN_ATTRIBUTES.has(name) && isWords(value)
+          if (spoken || looksLikeSentence(value)) note(node, `${name}="${value}"`)
+        }
+      }
     }
 
     ts.forEachChild(node, visit)
@@ -136,6 +177,42 @@ describe('the renderer', () => {
     const found = findingsIn('probe.tsx', 'const A = () => <Table nameHeader="Action" />')
 
     expect(found).toHaveLength(1)
+  })
+
+  // The second blind spot: braces. A literal reads the same to a user whether or not it wears
+  // them, but they are two different nodes to the parser, and only the bare one was looked at.
+  it('would see a word put in braces, as a child or as an attribute', () => {
+    const found = findingsIn('probe.tsx', "const A = () => <p title={'Close'}>{'Ready'}</p>")
+
+    expect(found.map(finding => finding.split(' ').slice(1).join(' ')).sort()).toEqual([
+      'Ready',
+      'title="Close"',
+    ])
+  })
+
+  it('would see a word left in a template that interpolates', () => {
+    const found = findingsIn('probe.tsx', 'const A = () => <p>{`${count} assets pushed`}</p>')
+
+    expect(found).toHaveLength(1)
+  })
+
+  // The third blind spot, and the likeliest of them: a ternary and a `&&` are what a developer
+  // reaches for to swap a raw string in where a `t(…)` belongs.
+  it('would see a word held behind a ternary or a guard', () => {
+    const behind = [
+      "const A = () => <p>{ok ? 'Loading your project' : 'Nothing to show'}</p>",
+      "const B = () => <p>{bad && 'Something went wrong'}</p>",
+    ]
+
+    expect(behind.flatMap((code, index) => findingsIn(`probe${index}.tsx`, code))).toHaveLength(3)
+  })
+
+  // Where the recursion has to stop: an operand is not a word on screen. Eight of these sit in
+  // the components today, and walking into comparisons would make every one of them an alarm.
+  it('leaves the operand of a comparison alone', () => {
+    const found = findingsIn('probe.tsx', "const A = () => <p>{side === 'left' && <X />}</p>")
+
+    expect(found).toEqual([])
   })
 
   it('leaves class names, ARIA keywords and symbols alone', () => {
