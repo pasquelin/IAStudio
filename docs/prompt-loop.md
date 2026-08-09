@@ -116,7 +116,18 @@ sur une question ouverte, elle la met de côté et avance sur un autre front.
 ## Ce qui se vérifie plutôt que se croire
 
 - **Un chiffre rapporté n'est pas un chiffre mesuré.** Un budget de couverture annoncé dépassé sans
-  l'avoir été a coûté deux jours de doute.
+  l'avoir été a coûté deux jours de doute. **Et un chiffre mesuré une fois n'est pas un chiffre
+  qu'on peut rejouer** : une mesure qui justifie un choix devient un `*.bench.ts` (`pnpm bench`, la
+  convention existe et quatre bancs sont commités), et le commentaire renvoie au banc au lieu
+  d'annoncer le nombre. Un commentaire qui cite un chiffre invérifiable est le défaut que ce dépôt
+  a déjà payé.
+- **Le harnais de mutation ment, et il a trouvé une troisième façon.** Les deux connues : `zsh` ne
+  découpe pas une variable en mots — un tableau `TESTS=(a b)` et `"${TESTS[@]}"` — et une mutation
+  qui fait déborder la pile ne dit pas « failed », elle tue le fichier, d'où la comparaison des
+  **comptes** de tests. La troisième, payée le 10 août : **`git checkout --` ne restaure pas un
+  fichier non suivi**, donc sur un lot dont les fichiers sont neufs, git répond « pathspec did not
+  match » et les mutations **s'empilent** les unes sur les autres. Restaurer depuis une **copie de
+  référence**, et vérifier l'application par `cmp`, jamais par `git diff`.
 - **Un rouge ne se croit pas sur parole** : relance une fois avant d'ouvrir une enquête, et ne conclus
   à une régression que si le second passage rougit **au même endroit**. Des échecs qui se déplacent
   d'une exécution à l'autre sont de la contention entre sessions, pas une régression.
