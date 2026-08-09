@@ -228,18 +228,23 @@ export function SettingsWindow() {
       <div className="flex min-h-0 flex-1">
         <nav
           aria-label={t('settings.sections')}
-          className="border-base-300 flex w-56 shrink-0 flex-col gap-2 overflow-auto border-r p-2"
+          className="border-base-300 flex w-56 shrink-0 flex-col gap-2 border-r p-2"
         >
+          {/*
+            Outside the scrolling part, deliberately. Inside it the field was `w-full` of a box
+            the scrollbar had already taken its width from, so it narrowed and widened as the
+            list grew past the window — and it scrolled away with the sections it filters.
+          */}
           <input
             type="search"
-            className="input input-xs w-full"
+            className="input input-xs w-full shrink-0"
             aria-label={t('settings.search')}
             placeholder={t('settings.search')}
             value={query}
             onChange={event => setQuery(event.target.value)}
           />
 
-          <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+          <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-0.5 overflow-auto p-0">
             {SETTINGS_SECTIONS.map(entry => (
               <NavigationEntry
                 key={entry.id}

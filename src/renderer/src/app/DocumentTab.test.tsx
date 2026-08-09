@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { IDockviewPanelHeaderProps } from 'dockview-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import theme from './dockview-theme.css?raw'
 import { DocumentTab } from './DocumentTab'
 
 const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
@@ -114,5 +115,39 @@ describe('a document tab', () => {
     await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByTestId('default-tab') })
 
     expect(screen.getByRole('menuitem', { name: 'Fermer les autres onglets' })).toBeDisabled()
+  })
+
+  /**
+   * The cross sits beside the title, never under it. jsdom lays nothing out, so what is checked
+   * is the rule that puts it there — the same approach as the colour tokens.
+   *
+   * Dockview 7 leaves `.dv-tab` a block and makes its own `.dv-default-tab` `width: 100%`. The
+   * cross is a sibling of that tab: on a block parent it wrapped to a second line and the strip
+   * clipped it. Nothing in dockview's own stylesheet prevents that, so this rule is ours to keep.
+   */
+  describe('the close button beside the title', () => {
+    const tabRule = (): string => {
+      const at = theme.indexOf('.dv-dockview .dv-tab {')
+      return at < 0 ? '' : theme.slice(at, theme.indexOf('}', at))
+    }
+
+    // Without this the rule below reads an empty string and passes on nothing: the renderer
+    // project stubs stylesheets, and `vitest.config.ts` has to spare each `?raw` read by name.
+    it('reads the theme at all', () => {
+      expect(theme).toContain('.dv-dockview')
+    })
+
+    it('is laid on a row by the theme, not left to wrap', () => {
+      expect(tabRule()).toMatch(/display:\s*flex/)
+      expect(tabRule()).toMatch(/align-items:\s*center/)
+    })
+
+    it('never shrinks away when the title is long', () => {
+      render(<DocumentTab {...props('doc-1')} />)
+
+      expect(screen.getByRole('button', { name: 'Fermer l’onglet' }).className).toContain(
+        'shrink-0',
+      )
+    })
   })
 })
