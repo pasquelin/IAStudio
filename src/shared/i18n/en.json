@@ -1497,6 +1497,7 @@
       "documents": "Your documents",
       "jobs": "Running now",
       "activity": "Recent activity",
+      "usage": "What you have spent",
       "explore": "Explore"
     },
     "title": "Home",
@@ -1561,6 +1562,12 @@
     "hidden_one": "{{count}} section hidden",
     "hidden_other": "{{count}} sections hidden",
     "restore": "Show them again",
+    "usage": {
+      "summary_one": "{{units}} units over {{days}} days, for {{count}} generation.",
+      "summary_other": "{{units}} units over {{days}} days, for {{count}} generations.",
+      "model_one": "{{units}} units · {{count}} generation",
+      "model_other": "{{units}} units · {{count}} generations"
+    },
     "explore": {
       "loading": "Loading the feed…",
       "none": "Nothing published in this category yet."

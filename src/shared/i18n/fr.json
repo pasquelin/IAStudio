@@ -1497,6 +1497,7 @@
       "documents": "Vos documents",
       "jobs": "En cours",
       "activity": "Activité récente",
+      "usage": "Ce que vous avez consommé",
       "explore": "Explorer"
     },
     "title": "Accueil",
@@ -1561,6 +1562,12 @@
     "hidden_one": "{{count}} section masquée",
     "hidden_other": "{{count}} sections masquées",
     "restore": "Les réafficher",
+    "usage": {
+      "summary_one": "{{units}} unités sur {{days}} jours, pour {{count}} génération.",
+      "summary_other": "{{units}} unités sur {{days}} jours, pour {{count}} générations.",
+      "model_one": "{{units}} unités · {{count}} génération",
+      "model_other": "{{units}} unités · {{count}} générations"
+    },
     "explore": {
       "loading": "Chargement du fil…",
       "none": "Rien de publié dans cette catégorie pour le moment."

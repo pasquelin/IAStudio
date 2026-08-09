@@ -11,6 +11,7 @@ import { Library } from './sections/Library'
 import { Projects } from './sections/Projects'
 import { Spotlight } from './sections/Spotlight'
 import { Tools } from './sections/Tools'
+import { Usage } from './sections/Usage'
 
 /**
  * What draws each section. A `Record` rather than a list, so a section added to the shared
@@ -27,5 +28,6 @@ export const HOME_COMPONENTS: Record<HomeSectionId, FC> = {
   documents: Documents,
   jobs: Jobs,
   activity: Activity,
+  usage: Usage,
   explore: Explore,
 }

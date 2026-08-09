@@ -20,6 +20,7 @@ export type HomeSectionId =
   | 'documents'
   | 'jobs'
   | 'activity'
+  | 'usage'
   | 'explore'
 
 export type HomeSectionEntry = {
@@ -60,6 +61,7 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
   { id: 'activity', requires: ['project'], defaultLimit: 6 },
+  { id: 'usage', requires: ['api'], defaultLimit: 6 },
   // No limit: it is the one band that does not end — the grid pages as it is scrolled, so a
   // count would cap what the reader can reach rather than how much is drawn at once.
   { id: 'explore', requires: ['api'], anchored: true },
@@ -179,8 +181,6 @@ function neighbourOf(
   shown?: readonly HomeSectionId[],
 ): number {
   const step = move === 'up' ? -1 : 1
-  const moving = sections[from]
-  if (!moving || anchored(moving)) return -1
 
   for (let at = from + step; at >= 0 && at < sections.length; at += step) {
     const candidate = sections[at]
@@ -201,6 +201,8 @@ export function canMoveHomeSection(
   move: HomeMove,
   shown?: readonly HomeSectionId[],
 ): boolean {
+  if (homeSectionOf(id)?.anchored === true) return false
+
   const sections = homeSections(stored)
   const from = sections.findIndex(setting => setting.id === id)
   return from !== -1 && neighbourOf(sections, from, move, shown) !== -1
@@ -217,6 +219,8 @@ export function movedHomeSection(
   shown?: readonly HomeSectionId[],
 ): HomeSectionSetting[] {
   const sections = homeSections(stored)
+  if (homeSectionOf(id)?.anchored === true) return sections
+
   const from = sections.findIndex(setting => setting.id === id)
   if (from === -1) return sections
 
