@@ -60,6 +60,30 @@ describe('Collection', () => {
     expect(screen.getByText('row Row 0')).toBeInTheDocument()
   })
 
+  /**
+   * The selection is painted on the cell, and a card is an opaque tile of exactly the cell's
+   * size: flush, it covered `bg-accent-soft` to the last pixel. The shelf said "3 items" over
+   * three squares indistinguishable from the rest — while the same selection read perfectly in
+   * list view, where nothing sits on top of the row.
+   */
+  it('insets a card so the selection painted under it is not covered', () => {
+    renderCollection(rows(4), {}, { onSelect: vi.fn(), selectedIds: ['row_0'] })
+
+    const cell = screen.getByText('Row 0').closest('[data-cell]')
+
+    expect(cell).toHaveClass('bg-accent-soft')
+    expect(cell).toHaveClass('p-1')
+  })
+
+  it('leaves a list row flush, where nothing is drawn over it', () => {
+    renderCollection(rows(4), { view: 'list' }, { onSelect: vi.fn(), selectedIds: ['row_0'] })
+
+    const cell = screen.getByText('Row 0').closest('[data-cell]')
+
+    expect(cell).toHaveClass('bg-accent-soft')
+    expect(cell).not.toHaveClass('p-1')
+  })
+
   it('lays out more columns as the thumbnails shrink', () => {
     const { rerender } = renderCollection(rows(500), { thumbnailSize: 200 })
     const wide = screen.getAllByText(/^Row \d+$/).length

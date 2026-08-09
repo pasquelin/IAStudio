@@ -564,16 +564,19 @@ flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le me
 
 # 4. Ce que l'interface ne dit pas
 
-Dix entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
+Neuf entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
 bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
-## 4.1 L'état d'une ligne, et d'une tuile — un seul composant, trois aspects
+## 4.1 L'état d'une ligne — ce que trois panneaux en font
 
-**Regroupées** : les entrées 20 et 40 sont le même défaut vu de deux côtés. `rowSkin` est l'unique
-fonction qui peint hover, sélection et focus d'une ligne, et sa JSDoc énonce la règle — « the same
-line must not light up differently depending on whether a `Tree` or a `Collection` is holding it ».
-Elle est enfreinte des deux manières possibles : **la sélection ne se voit pas là où elle existe**
-(20), et **elle se peint là où elle n'existe pas** (40).
+`rowSkin` est l'unique fonction qui peint hover, sélection et focus d'une ligne, et sa JSDoc
+énonce la règle — « the same line must not light up differently depending on whether a `Tree` or
+a `Collection` is holding it ». Ce qui reste ouvert est **la sélection peinte là où elle n'existe
+pas**, et absente des deux listes où elle voudrait dire quelque chose.
+
+> **L'autre moitié est livrée** (`feat/tile-selection`, 9 août 2026) : en vue Icônes la sélection
+> ne se voyait nulle part, la tuile opaque couvrant le fond de la cellule au pixel près. La
+> cellule d'une grille est désormais encartée de 4 px, ce qui suffit. **Ne pas re-signaler.**
 
 ### 40. La même liste s'allume en bleu, en gris, ou pas du tout
 
@@ -608,32 +611,6 @@ sélection, ou un état actif ? — puis brancher les deux listes qui ne le pass
 « ouvert » sa propre marque dans l'Explorateur, qui n'est pas celle de la sélection. Un troisième
 jeton n'est pas nécessaire : `chipSkin` a déjà tranché la même question dans l'autre sens
 (« il lit en `accent-soft` où les autres utilisent `elevated`, le jeton de survol du studio »).
-
-### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
-
-**Le geste attendu.** En vue Icônes, voir lesquelles des vignettes sont sélectionnées.
-
-**Vu le 9 août 2026** : l'étagère annonçait trois assets sélectionnés — l'inspecteur affichait
-« Éléments 3 » — et les trois carrés étaient rigoureusement identiques aux autres.
-
-**Mesuré plutôt que supposé** : la cellule fait 114 × 114 et la `figure` de `MediaTile` en fait
-**autant**. Le fond que `rowSkin` peint sur la cellule sélectionnée — `bg-accent-soft`, vérifié
-présent dans la classe — est intégralement recouvert par une tuile opaque (`bg-surface`, sa bordure,
-l'image en `object-cover`). Il n'en dépasse **aucun pixel**. Le liseré qu'on croit voir au bord est la
-bordure de la tuile, la même sélectionnée ou non.
-
-**La même sélection se voit parfaitement en vue Liste**, où la ligne n'a pas de tuile par-dessus : le
-tort n'est pas dans `rowSkin`.
-
-**Deux panneaux au moins, pas un** — l'étagère à assets et le panneau **Modèles**. `MediaTile` a
-**quatre** appelants : `AssetCard`, `Models`, `ChannelTile`, `ShelfCard`. À regarder d'un bloc.
-
-**Ce qui marche déjà, et qui montre la voie** : l'anneau de focus se voit — la cellule atteinte au
-clavier porte un `ring-accent` net autour de la tuile. Le focus est dessiné **par dessus**, la
-sélection **par dessous**.
-
-> Ne pas confondre les deux états en les réglant : une cellule peut être focalisée sans être
-> sélectionnée, et l'inverse.
 
 ---
 
