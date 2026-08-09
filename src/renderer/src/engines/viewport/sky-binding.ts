@@ -6,14 +6,14 @@ import type { ViewportEnvironment } from './environment'
 export type SkyBinding = {
   /** Shows what the document asks for, loading the sky if it is one. Safe to call on every apply. */
   apply: (environment: ViewportEnvironment, wanted: EnvironmentRef) => Promise<void>
-  /** Whether a sky is currently shown — which is to say, whether it owns the background. */
+  /** Whether a sky owns the background — true from the moment one is asked for, not once it decodes. */
   showsSky: () => boolean
   /** Gives the reference back. The viewport is going away, or is being shown something else. */
   release: () => void
 }
 
 /**
- * The reference a viewport holds on the sky it displays, and the two-step way a sky is shown:
+ * The references a viewport holds on the sky it displays, and the two-step way a sky is shown:
  * the picture at once, the prefiltered reflections when it has decoded.
  *
  * Written once for the two viewports that light themselves this way. The order of operations is
@@ -25,20 +25,32 @@ export type SkyBinding = {
  * but hangs nothing behind it, so without this the backdrop stays whatever was there — black.
  */
 export function createSkyBinding(cache: TextureCache, paintBackground: () => void): SkyBinding {
-  let held: string | null = null
+  /** Settles the races. */
+  let wanted: string | null = null
+  /** What `scene.background` holds, which is not what was last asked for while one decodes. */
+  let shown: string | null = null
+  /** Every reference a decode still carries: one name could hold only the last of them. */
+  const inFlight = new Map<symbol, string>()
 
   const release = (): void => {
-    if (held) cache.release(held, SRGBColorSpace)
-    held = null
+    if (shown) cache.release(shown, SRGBColorSpace)
+    // Drained here rather than left to each continuation: the viewport may be going away, and a
+    // reference handed back a decode later is one held too long.
+    for (const assetId of inFlight.values()) cache.release(assetId, SRGBColorSpace)
+    inFlight.clear()
+    shown = null
+    wanted = null
   }
 
   return {
-    showsSky: () => held !== null,
+    // Either: a sky still decoding must not have its backdrop repainted underneath it, and one
+    // already painted still owns the background even when the sky asked for after it failed.
+    showsSky: () => wanted !== null || shown !== null,
     release,
 
-    apply: async (environment, wanted) => {
-      const assetId = wanted.kind === 'skybox' ? wanted.assetId : null
-      if (assetId === held) return
+    apply: async (environment, asked) => {
+      const assetId = asked.kind === 'skybox' ? asked.assetId : null
+      if (assetId === wanted) return
 
       if (!assetId) {
         release()
@@ -48,17 +60,37 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
         return
       }
 
-      const previous = held
-      held = assetId
+      wanted = assetId
+      const token = Symbol(assetId)
+      inFlight.set(token, assetId)
       const loaded = await cache.acquire(assetId, SRGBColorSpace)
-      // Another sky was chosen while this one was decoding.
-      if (held !== assetId) return
 
-      if (loaded) {
-        environment.setTexture(loaded)
-        environment.refresh()
+      // Drained by `release` while this decoded: the reference is already back, and giving it
+      // twice would take the count to zero under whoever else holds the same sky.
+      if (!inFlight.delete(token)) return
+
+      // Failure first, because it holds nothing to give back — `ref-cache` drops the entry. Asked
+      // after the overtaken case, a sky that both failed and lost would hand back a reference it
+      // never took. `wanted` stops claiming it so `release` does not either, and so the same sky
+      // can be asked for again; only if it is still the one wanted, or a loser would clear the
+      // winner's claim.
+      if (!loaded) {
+        if (wanted === assetId) wanted = null
+        return
       }
+
+      // Overtaken while decoding: gives back what it acquired, which it never put on screen.
+      if (wanted !== assetId) {
+        cache.release(assetId, SRGBColorSpace)
+        return
+      }
+
+      environment.setTexture(loaded)
+      environment.refresh()
+
       // After the swap, never before: the old texture is bound to the background until then.
+      const previous = shown
+      shown = assetId
       if (previous) cache.release(previous, SRGBColorSpace)
     },
   }
