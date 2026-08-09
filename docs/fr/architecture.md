@@ -631,6 +631,19 @@ quatre-vingt-quatorze clés — et les inventorier coûterait plus cher que ce q
 Sept phrases sont identiques à dessein, et elles sont nommées : la marque, deux noms de format,
 deux chemins, une ligne de copyright, un exemple de saisie.
 
+### La seule surface qui embarque ses mots
+
+Aucun garde ne peut atteindre le raccourci de bureau Linux : le `.desktop` est **écrit à la
+compilation** et lu par l’environnement de bureau bien avant qu’un bundle existe. Il se localise
+de la seule façon qu’il connaisse — une clé par langue, `Comment` servant de repli — et c’est
+`electron-builder.yml` qui les porte.
+
+Ce qui reste sous cette ligne n’est traduisible nulle part : la **description du paquet `.deb`**
+n’a qu’une langue, comme le `synopsis` dont elle est la longue forme. Les deux sont désormais
+la même phrase anglaise, au lieu d’un anglais dans le raccourci et d’un français dans le
+gestionnaire de paquets — c’est la convention des métadonnées de paquet, et c’est l’endroit
+exact où « tout est traduit » cesse d’être une promesse tenable.
+
 ---
 
 ## La configuration
