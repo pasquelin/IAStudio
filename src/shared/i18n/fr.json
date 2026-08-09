@@ -13,7 +13,7 @@
     "graph": "Graphe",
     "moveLeft": "Déplacer à gauche",
     "moveRight": "Déplacer à droite",
-    "moved": "{{label}} déplacé, position {{position}} sur {{total}}"
+    "moved": "{{label}} en position {{position}} sur {{total}}"
   },
   "panels": {
     "layers": "Calques",
