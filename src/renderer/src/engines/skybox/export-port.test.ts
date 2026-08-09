@@ -22,7 +22,7 @@ const request = { assetId: 'a-sky', adjustments: NEUTRAL_ADJUSTMENTS, name: 'Cie
 
 describe('the skybox export port', () => {
   it('asks for the source by its asset url, and for nothing else', async () => {
-    const loadTexture = vi.fn(() => Promise.resolve(decoded(4096, 2048)))
+    const loadTexture = vi.fn((_url: string) => Promise.resolve(decoded(4096, 2048)))
     const port = createSkyboxExportPort({ loadTexture })
 
     await expect(port(request)).rejects.toThrow()
@@ -47,7 +47,7 @@ describe('the skybox export port', () => {
   })
 
   it('decodes the panorama once for all six faces, never once per face', async () => {
-    const loadTexture = vi.fn(() => Promise.resolve(decoded(2048, 1024)))
+    const loadTexture = vi.fn((_url: string) => Promise.resolve(decoded(2048, 1024)))
     const port = createSkyboxExportPort({ loadTexture })
 
     await expect(port(request)).rejects.toThrow()
