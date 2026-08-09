@@ -64,6 +64,14 @@ button out of the frame — so it drops back below the title.
 Filtering is **instant**, even on a large project: the whole catalogue is already loaded in memory,
 unlike the Models panel which queries the Scenario catalogue remotely.
 
+> **Search does not ask you for accents.** Typing `foret` finds "Forêt d'hiver", and `ete` finds
+> "Été". The same holds in the **Models** panel, in **Apps** and in the settings search: you search
+> by typing, not by spelling.
+>
+> It applies to files coming from the Finder too. macOS writes names in a form where the accent is
+> a character of its own — invisible to the eye, different to the machine — so an imported asset
+> did not always answer to its own name retyped here. Both forms are now treated as one.
+
 Both views are **virtualised**: only what is actually on screen is drawn. A project with several
 thousand assets therefore scrolls without stutter.
 

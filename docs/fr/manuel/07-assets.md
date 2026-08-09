@@ -66,6 +66,15 @@ titre.
 Le filtrage est **instantané**, même sur un gros projet : tout le catalogue est déjà chargé en
 mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario à distance.
 
+> **La recherche ne réclame pas vos accents.** Taper `foret` trouve « Forêt d’hiver », et `ete`
+> trouve « Été ». C’est vrai de la même façon dans le panneau **Modèles**, dans **Apps** et dans
+> la recherche des préférences : on cherche en tapant, pas en épelant.
+>
+> Cela vaut aussi pour les fichiers venus du Finder. macOS écrit les noms sous une forme où
+> l’accent est un caractère à part, invisible à l’œil mais différent pour la machine — un asset
+> importé ne répondait donc pas toujours à son propre nom retapé ici. Les deux formes sont
+> désormais traitées comme une seule.
+
 Les deux vues sont **virtualisées** : seul ce qui est réellement à l’écran est dessiné. Un
 projet de plusieurs milliers d’assets défile donc sans à-coups.
 

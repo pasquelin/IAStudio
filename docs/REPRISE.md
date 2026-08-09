@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`dcfc207`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline dcfc207..develop`) au lieu de relire mille lignes.
+à **`fd8290b`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline fd8290b..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -111,20 +111,25 @@ glob dont la marge de croissance est du GPU intestable).
 > `vitest run --coverage --maxWorkers=2` pour toute la passe, avant de chercher une cause dans le
 > code.
 >
-> **Deux fichiers ont été mesurés et réglés, et c’est un motif, pas deux accidents.**
-> `ShortcutsSettings.test.tsx` (`0d59c57`) rend l’arbre le plus lourd de la suite — 115 boutons
-> dont le nom accessible est redérivé à chaque appel — et tenait **1,0 s au repos contre 4,8 s sous
-> charge**, pour un plafond à 5 s. `known-keys.i18n.test.ts` (`0dc2c8f`) relit à la source chaque
-> fichier du renderer pour en extraire les clés nommées, et flanchait **deux fois sur trois passes**
-> sous `--coverage`. Les deux passent à 20 s.
+> **La cause a été trouvée, et ce n’était aucune des trois qu’on lui prêtait** (`0ada618`). Trois
+> gardes ont flanché en trois tours — `ShortcutsSettings.test.tsx`, `known-keys.i18n.test.ts`, et
+> `LicencesWindow.test.tsx` avant elles — et chacune a reçu **son propre `vi.setConfig`**. Trois
+> rustines pour une seule cause, que le message disait pourtant à chaque fois : *« timed out in
+> 5000ms »*, sous un `vitest.config.ts` qui écrit **15 000** depuis longtemps.
 >
-> D’où un `pnpm validate` vert seul et rouge en suite complète, sans qu’une ligne de production ait
-> bougé : la pire façon pour une suite d’avoir tort, puisqu’elle **accuse le dernier commit venu**.
-> **Un plafond de temps qu’une machine chargée fait franchir n’est pas une garde, c’est un
-> générateur de fausses accusations** — et une garde qui clignote finit par être désactivée, alors
-> que celle-ci est précisément ce qui empêche une clé d’atteindre l’écran sans traduction. Le
-> réflexe est donc : **mesurer au repos et sous charge, relever le plafond de ce fichier-là, et ne
-> jamais toucher à l’assertion** — c’est elle qui vaut d’être gardée, et c’est elle qui est lente.
+> **Un projet vitest n’hérite pas du bloc `test` de la racine.** Le fichier déclare deux projets,
+> `node` et `renderer`, chacun avec le sien : la valeur posée une fois en haut ne gouvernait
+> **rien**, et le budget réel était le défaut de 5 s. `TEST_TIMEOUT` est désormais nommé et répété
+> dans les deux projets, où il compte ; les deux `setConfig` par fichier ont sauté. Celui de
+> `LicencesWindow` reste, au-dessus du global et délibérément : déplier le texte entier d’une
+> licence est lent pour une raison qui lui est propre.
+>
+> **La leçon vaut au-delà des tests.** Un `pnpm validate` vert seul et rouge en suite complète est
+> la pire façon pour une suite d’avoir tort, puisqu’elle **accuse le dernier commit venu** — et le
+> réflexe qui semblait juste, « mesurer et relever le plafond de ce fichier-là », a traité le
+> symptôme **trois fois** là où il se voyait. **Un réglage qui semble global dans un fichier de
+> configuration à projets ne l’est pas** : avant de rustiner le troisième fichier, relire d’où le
+> chiffre du message d’erreur sort vraiment.
 >
 > **Et ce grain-là ne se présente pas toujours comme un dépassement de temps.** Le 9 août au soir,
 > une passe a rendu **26 échecs sur 5 fichiers** — des **échecs d’assertion**, pas des timeouts,
@@ -806,6 +811,14 @@ supprimeraient.**
 pas. Elles ne bloquent plus rien depuis le worker, mais elles occupent le thread — et l’invariant 6
 demande que toute tâche longue soit annulable. À traiter **avec les index**, qui les rendront assez
 brèves pour que la question se pose autrement.
+
+> **Toute nouvelle recherche passe par `foldForSearch` (`shared/text.ts`), jamais par
+> `toLowerCase`.** La règle était écrite et vécue **privée** dans `settings-search.ts` pendant que
+> la recherche des collections — assets, modèles, Apps, la plus utilisée du studio — s’en passait :
+> « Forêt d’hiver » restait introuvable à qui tape `foret`. Le fold **décompose en NFD d’abord**, et
+> ce n’est pas un raffinement : **macOS livre ses noms de fichiers en forme décomposée**, donc un
+> asset déposé depuis le Finder ne répondait pas non plus à son propre nom retapé dans le studio.
+> Les deux formes sont indiscernables à l’œil — le test les écrit par points de code.
 
 **Le décodage du clone IPC** — 73 % du coût d’un ⌘S, intouché. Cf. § 3.3 et § 6.
 
