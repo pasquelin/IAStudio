@@ -36,10 +36,13 @@ l’étape 6 dans `develop`**.
 > 4. **Vérifie le code de sortie, jamais la dernière ligne.**
 > 5. **Préfixe chaque commande du chemin absolu du worktree.**
 >
-> **Ce que tu fais : les étapes 7 à 10**, dans l’ordre. L’étape 7 compile le graphe vers le `flow`
-> de Scenario, le valide et l’exécute — c’est le **main** qui adapte `shared/domain/graph.ts` au
-> convertisseur du SDK, et une divergence de forme doit échouer au **typecheck**, pas à
-> l’exécution.
+> **Ce que tu fais, dans cet ordre :**
+>
+> 1. **le montage du septième espace** — tranché avec moi le 9 août, pas encore écrit ; le détail
+>    est plus bas, section « Le travail suivant » ;
+> 2. puis les **étapes 7 à 10**. L’étape 7 compile le graphe vers le `flow` de Scenario, le valide
+>    et l’exécute — c’est le **main** qui adapte `shared/domain/graph.ts` au convertisseur du SDK,
+>    et une divergence de forme doit échouer au **typecheck**, pas à l’exécution.
 >
 > **Definition of Done à chaque étape, sans demander :** tests écrits avec le code, `pnpm validate`
 > vert, `/simplify`, `/code-review`, corrections appliquées, commit. Ces deux passes trouvent des
@@ -108,10 +111,58 @@ l’étape 6 dans `develop`**.
   `isValidConnection` refusait une entrée déjà câblée, rendant « le nouveau fil remplace l’ancien »
   vrai dans le moteur et inatteignable à la souris.
 
+## Le travail suivant : le septième espace
+
+**Tranché avec l’utilisateur le 9 août 2026 : le graphe est un septième espace**, pas un type de
+document dans les six. Il n’est la sortie d’aucun espace, il les traverse tous — et le code disait
+déjà la même chose : `DocumentKind` et `WorkspaceId` sont en correspondance **1:1**
+(`KIND_BY_WORKSPACE`, `workspaceForKind`), donc un `kind: 'graph'` sans espace aurait été le premier
+à casser cette règle, et il aurait fallu désigner un espace d’accueil — question sans bonne réponse.
+
+**Rien n’en est écrit** : une tentative a été défaite pour laisser le worktree propre.
+
+Le compilateur guide, et c’est voulu — `helpers/workspaces.ts` le dit lui-même : *« a seventh
+workspace is a compile error rather than a list left to drift »*. Ajouter `'graph'` à `WorkspaceId`
+fait échouer exactement **quatre** tables, et il n’y en a pas une cinquième :
+
+1. `ICONS` (`renderer/helpers/workspaces.ts`) — `mdiGraphOutline` convient ;
+2. `USED_BY_WORKSPACE` (idem) — ce que l’étagère offre dans le graphe ;
+3. `FAMILIES` (idem) — **c’est là qu’est la question**, voir plus bas ;
+4. `KIND_BY_WORKSPACE` (`shared/domain/document.ts`) — avec `DocumentKind` étendu à `'graph'`.
+
+Puis, que le compilateur n’exigera pas : `DOCUMENT_COMPONENTS` (`app/documents.tsx`, **en
+`lazy()`** — `eager-graph.test.ts` verrouille ce qui atterrit dans le premier écran, et React Flow
+n’a rien à y faire), `IO_BY_KIND` (`app/document-io.ts`), `TOOL_PLACEMENTS`
+(`shared/domain/tool.ts`), les deux bundles i18n (`workspaces.graph`, **même ordre dans les deux
+fichiers**, un test le verrouille), et les tests qui comptent « six ».
+
+**La question à poser avant d’écrire : `Workspace.family`.** Chaque espace déclare une
+`ModelFamily` qui filtre le catalogue de modèles. Un graphe n’appartient à aucune famille — il les
+enchaîne. Trois voies, et elles ne se valent pas :
+
+- **`family: 'other'`** — le moins de code, mais le catalogue serait filtré sur « Autre », donc faux
+  dès que le panneau Modèles est dans cet espace ;
+- **rendre `family` nullable** et faire qu’un catalogue sans famille montre tout — c’est la vérité
+  du domaine, et ça touche quatre lecteurs (`Models.tsx`, `Generator.tsx`, `recreate.ts`,
+  `AssetInspector.tsx`) ;
+- **ne pas mettre `models`/`generator` dans le graphe** — `TOOL_PLACEMENTS` les déclare sur
+  `WORKSPACE_IDS`, il faudrait lister les six explicitement. Attention : `revealTool` sort **en
+  silence** si l’outil n’est pas dans l’espace, donc un « Régénérer » vu depuis l’inspecteur du
+  graphe ne ferait rien — à masquer plutôt qu’à laisser mort.
+
+Recommandation : la deuxième, avec le bouton masqué là où il n’y a pas de générateur. Mais c’est un
+arbitrage, pas une évidence : **le poser avant d’écrire.**
+
+Deux règles de disposition à ne pas enfreindre (`docs/interface.md`) : la colonne de gauche est
+réservée à la génération dans les six espaces média — une bibliothèque de nœuds ne peut donc **pas**
+y aller ; et le centre ne porte que la barre d’outils et les règles, ce qui tombe bien, la barre du
+canvas est flottante.
+
 ## Ce qui reste ouvert
 
-1. **Le canvas n’est monté nulle part.** C’est voulu — le point de montage est l’**étape 10** — mais
-   cela veut dire que rien de l’étape 6 n’a été vu à l’écran, et qu’aucune capture n’existe.
+1. **Le canvas n’est monté nulle part**, donc rien de l’étape 6 n’a été vu à l’écran et aucune
+   capture n’existe. Ce n’est plus une question ouverte : le montage est **tranché et décrit**
+   ci-dessous, et c’est le travail suivant.
 2. **Le panneau Apps n’a pas été vérifié à l’écran non plus.** Les trois inconnues d’API, elles,
    sont tranchées : une App a été lancée pour de vrai le 9 août 2026 par le SDK, relevé au § 4.5 de
    `REPRISE.md` — statuts `queued`/`in-progress`/`success`, progression en 0–1, `metadata.assetIds`
