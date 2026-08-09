@@ -211,11 +211,15 @@ défauts — il est propre par construction.
 Ce qui reste utile sur un son généré, c’est de le raccourcir, de l’amener au bon niveau et de le
 faire entrer et sortir proprement. C’est exactement ce que fait cet espace, et rien de plus.
 
-### Pas de document audio
+### Le document audio ne garde pas l’écoute A/B
 
-Il n’y a pas de fichier `.aud` sur le disque. L’espace Audio écrit directement des *assets*, via
-**Appliquer** ou **Enregistrer comme nouveau**. Ce n’est pas une perte : c’est un autre modèle de
-travail, et il est complet.
+Le fichier `.aud` existe et se rouvre — c’est le tableau du haut de ce chapitre qui fait foi. Ce
+qu’il tient est **le montage**, pas le son : les coupes, les fondus, le gain, rejoués sur l’asset
+d’origine. Ce qu’il ne garde pas, c’est l’**écoute A/B** — un document rouvert écoute la chaîne,
+jamais la source.
+
+L’espace sait aussi écrire un *asset* directement, par **Appliquer** ou **Enregistrer comme
+nouveau** : c’est ce qu’on fait quand le résultat doit servir ailleurs, pas continuer d’être édité.
 
 ---
 
@@ -258,7 +262,7 @@ nulle part dans le panneau.
 En attendant, on recopie le prompt et la graine à la main dans le panneau **Génération**, ce qui
 revient au même en trois gestes de plus.
 
-### Pas d’export
+### L’export sort en PNG, donc sans les hautes lumières
 
 Un ciel s’enregistre désormais en `.sky` — l’exposition, la rotation de l’horizon et la position
 du soleil se rouvrent telles quelles. Ce que le document ne garde pas : la vue et le champ de
