@@ -606,6 +606,18 @@ are spelled the same in both languages — ninety-four keys — and listing thos
 more than it would catch. Seven sentences are identical on purpose, and they are named: the
 brand, two format names, two paths, a copyright line, an example to type over.
 
+### The one surface that ships its wording
+
+No guard can reach the Linux desktop entry: a `.desktop` file is **written at build time** and
+read by the desktop shell long before any bundle exists. It localises the only way it knows —
+one key per locale, with `Comment` as the fallback — and `electron-builder.yml` carries them.
+
+What sits below that line is translatable nowhere: the **`.deb` package description** has one
+language only, as does the `synopsis` it is the long form of. Both are now the same English
+sentence, instead of English in the shortcut and French in the package manager — that is the
+convention for package metadata, and it is the exact point where "everything is translated"
+stops being a promise that can be kept.
+
 ---
 
 ## Configuration

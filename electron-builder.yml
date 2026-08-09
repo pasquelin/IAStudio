@@ -133,9 +133,14 @@ linux:
   category: Graphics
   synopsis: Image, video, 3D, audio, texture and skybox creation on the Scenario API
   maintainer: Alban Pasquelin <alban.pasquelin@gmail.com>
+  # The one surface of the studio that ships its wording instead of reading it: a `.desktop` file
+  # is written at build time and read by the desktop shell, long before any bundle is loaded. It
+  # localises the only way it can — one key per locale, `Comment` being the C fallback.
   desktop:
     entry:
       StartupWMClass: Scenario Studio
+      Comment: Image, video, 3D, audio, texture and skybox creation on the Scenario API
+      Comment[fr]: Création d’images, vidéos, modèles 3D, audio, textures et skyboxes sur l’API Scenario
   target: [AppImage, deb]
 
 appImage:
