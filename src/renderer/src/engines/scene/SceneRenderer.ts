@@ -784,7 +784,9 @@ export class SceneRenderer {
       // A dense model is what makes a click cost a frame — measured in `scene-picking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.viewport.requestRender()
-      void this.accelerate(holder)
+      // Reported rather than swallowed: `scene.model` is what the same asset's load failure uses
+      // twenty lines up, and a click that costs a frame is worth a line in the journal.
+      void this.accelerate(holder).catch(error => reportFailure('scene.model', assetId, error))
     })
 
     return holder

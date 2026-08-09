@@ -18,11 +18,11 @@ import type { BvhRequest, BvhResponse } from './bvh-message'
  */
 function scriptedWorker() {
   const sent: BvhRequest[] = []
-  let reply: ((response: BvhResponse) => void) | null = null
+  const listeners = new Map<string, (event: Event) => void>()
 
   const worker = {
-    addEventListener: (_type: string, listener: (event: MessageEvent<BvhResponse>) => void) => {
-      reply = response => listener(new MessageEvent('message', { data: response }))
+    addEventListener: (type: string, listener: (event: Event) => void) => {
+      listeners.set(type, listener)
     },
     postMessage: (request: BvhRequest) => sent.push(request),
     terminate: vi.fn(),
@@ -31,6 +31,11 @@ function scriptedWorker() {
   // `as`: the builder calls exactly these three members of a `Worker`, and jsdom has no other.
   const spawn = vi.fn(() => worker as unknown as Worker)
 
+  const reply = async (response: BvhResponse): Promise<void> => {
+    listeners.get('message')?.(new MessageEvent('message', { data: response }))
+    await Promise.resolve()
+  }
+
   return {
     spawn,
     sent,
@@ -38,15 +43,16 @@ function scriptedWorker() {
     /** Answers the last request the way the real worker would, tree included. */
     settle: async () => {
       const request = sent.at(-1)
-      if (!request || !reply) return
+      if (!request) return
 
       const geometry = new BufferGeometry()
       geometry.setAttribute('position', new BufferAttribute(request.position, 3))
       if (request.index) geometry.setIndex(new BufferAttribute(request.index, 1))
 
       const serialized = MeshBVH.serialize(new MeshBVH(geometry))
-      reply({
+      await reply({
         id: request.id,
+        ok: true,
         bvh: {
           version: 1,
           roots: serialized.roots,
@@ -57,7 +63,20 @@ function scriptedWorker() {
           indirectBuffer: null,
         },
       })
-      await Promise.resolve()
+    },
+    /** Answers the last request the way a build that threw does. */
+    refuse: async (error: string) => {
+      const request = sent.at(-1)
+      if (!request) return
+      await reply({ id: request.id, ok: false, error })
+    },
+    /** The worker itself died, which no `try` inside it can report. */
+    die: (message: string) => {
+      listeners.get('error')?.(new ErrorEvent('error', { message }))
+    },
+    /** It answered with something the structured clone could not carry. */
+    garble: () => {
+      listeners.get('messageerror')?.(new MessageEvent('messageerror'))
     },
   }
 }
@@ -186,6 +205,105 @@ describe('createBvhBuilder', () => {
     await createBvhBuilder(spawn).accelerate(light())
 
     expect(spawn).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * Before this, a build that raised left its promise open forever: the caller waited for a window's
+ * life, and the geometry stayed in `building` so no later click ever got its tree either.
+ */
+describe('when a build does not come back', () => {
+  it('rejects the build the worker refused', async () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+
+    const done = builder.accelerate(dense())
+    await scripted.refuse('index out of range')
+
+    await expect(done).rejects.toThrow('index out of range')
+  })
+
+  // The geometry has to leave `building`, or the mesh is refused a tree for the rest of the session.
+  it('lets the same geometry be tried again after a refusal', async () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+    const mesh = dense()
+
+    const failed = builder.accelerate(mesh)
+    await scripted.refuse('index out of range')
+    await expect(failed).rejects.toThrow()
+
+    const done = builder.accelerate(mesh)
+    await scripted.settle()
+    await done
+
+    expect(mesh.geometry.boundsTree).toBeDefined()
+    expect(scripted.sent).toHaveLength(2)
+  })
+
+  it('rejects what was in flight when the worker itself died', async () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+
+    const done = builder.accelerate(dense())
+    scripted.die('killed')
+
+    await expect(done).rejects.toThrow('killed')
+  })
+
+  it('rejects what was in flight when the answer could not be read', async () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+
+    const done = builder.accelerate(dense())
+    scripted.garble()
+
+    await expect(done).rejects.toThrow('unreadable')
+  })
+
+  // One model running the thread out of memory must not cost every later click its tree.
+  it('starts a fresh worker for the mesh after the one that died', async () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+
+    const died = builder.accelerate(dense())
+    scripted.die('killed')
+    await expect(died).rejects.toThrow()
+
+    const done = builder.accelerate(dense())
+    await scripted.settle()
+    await done
+
+    expect(scripted.spawn).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('once the engine is gone', () => {
+  it('starts no worker for a mesh asked for after the fact', () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+
+    builder.dispose()
+    void builder.accelerate(dense())
+
+    expect(scripted.spawn).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The way it actually happens: `SceneRenderer.accelerate` walks a model's meshes one await at a
+   * time, and the engine can go between two of them. The turn after the dispose used to spawn a
+   * second worker — one nothing would ever terminate, since `dispose` had already run.
+   */
+  it('starts no worker for the next mesh of a loop the dispose interrupted', async () => {
+    const scripted = scriptedWorker()
+    const builder = createBvhBuilder(scripted.spawn)
+
+    const done = builder.accelerate(dense())
+    builder.dispose()
+    await done
+    await builder.accelerate(dense())
+
+    expect(scripted.spawn).toHaveBeenCalledTimes(1)
   })
 })
 

@@ -1,11 +1,14 @@
 import type { BufferGeometry, Mesh } from 'three'
 import { MeshBVH } from 'three-mesh-bvh'
-import type { BvhIndex, BvhRequest, BvhResponse } from './bvh-message'
+import type { BvhIndex, BvhRequest, BvhResponse, SerializedBvh } from './bvh-message'
 
 export type BvhBuilder = {
   /**
    * Gives a mesh the tree that makes a click on it cheap. Resolves once it is in place, or
    * straight away for a geometry that already has one or is too light to be worth a build.
+   *
+   * Rejects when the build failed — the caller decides what a scene without its tree is worth
+   * saying; it draws and it picks either way, only more slowly.
    */
   accelerate: (mesh: Mesh) => Promise<void>
   /** The engine is going away: the worker with it, and whatever it had not answered yet. */
@@ -27,19 +30,37 @@ export const WORTH_A_TREE = 20_000
 export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
   let worker: Worker | null = null
   let nextId = 0
-  const pending = new Map<number, (response: BvhResponse | null) => void>()
+  let disposed = false
+  const pending = new Map<number, Settle>()
   /** Builds already asked for. Two nodes of one model share their geometry — and their tree. */
   const building = new Map<BufferGeometry, Promise<void>>()
+
+  /** The worker answers nothing more: everyone waiting on it would wait for the window's life. */
+  const abandon = (reason: string): void => {
+    worker?.terminate()
+    worker = null
+    const waiting = [...pending.values()]
+    pending.clear()
+    // Not a rebuild: whoever asked will hear, and the next mesh spawns a worker of its own. A
+    // model that runs the thread out of memory must not take every later click's tree with it.
+    for (const slot of waiting) slot.reject(new Error(reason))
+  }
 
   const workerOf = (): Worker => {
     if (worker) return worker
 
     const started = spawn()
     started.addEventListener('message', (event: MessageEvent<BvhResponse>) => {
-      const resolve = pending.get(event.data.id)
+      const slot = pending.get(event.data.id)
       pending.delete(event.data.id)
-      resolve?.(event.data)
+      if (!slot) return
+      if (event.data.ok) slot.resolve(event.data.bvh)
+      else slot.reject(new Error(event.data.error))
     })
+    // The two failures no `try` in the worker can catch: one that died before its handler ran,
+    // and a response the structured clone could not carry back.
+    started.addEventListener('error', event => abandon(`BVH worker failed: ${event.message}`))
+    started.addEventListener('messageerror', () => abandon('BVH worker sent an unreadable answer'))
     worker = started
     return started
   }
@@ -54,21 +75,25 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
       index: indexOf(geometry),
     }
 
-    const response = await new Promise<BvhResponse | null>(resolve => {
-      pending.set(id, resolve)
+    const bvh = await new Promise<SerializedBvh | null>((resolve, reject) => {
+      pending.set(id, { resolve, reject })
       workerOf().postMessage(request, transferablesOf(request))
     })
 
     // The mesh may have been thrown away while the tree was being built — the same race a
     // texture runs, and the same answer: what nobody wants any more is dropped. `null` is the
     // engine going: an awaited promise nobody answers never ends.
-    if (!response || mesh.geometry !== geometry) return
+    if (!bvh || mesh.geometry !== geometry) return
     // A variable, not a literal: the library's own type omits the `version` its code reads.
-    geometry.boundsTree = MeshBVH.deserialize(response.bvh, geometry)
+    geometry.boundsTree = MeshBVH.deserialize(bvh, geometry)
   }
 
   return {
     accelerate: mesh => {
+      // The engine is gone, and `accelerate` is called from a serial loop that started before it
+      // went: without this, the next turn spawns a worker nothing will ever terminate.
+      if (disposed) return Promise.resolve()
+
       const geometry = mesh.geometry
       if (geometry.boundsTree || triangleCount(geometry) < WORTH_A_TREE) return Promise.resolve()
 
@@ -83,13 +108,20 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
     },
 
     dispose: () => {
+      disposed = true
       worker?.terminate()
       worker = null
-      for (const resolve of pending.values()) resolve(null)
+      // Resolved, not rejected: a window closing is not a failure anyone should be told about.
+      for (const slot of pending.values()) slot.resolve(null)
       pending.clear()
       building.clear()
     },
   }
+}
+
+type Settle = {
+  resolve: (bvh: SerializedBvh | null) => void
+  reject: (error: Error) => void
 }
 
 function triangleCount(geometry: BufferGeometry): number {
