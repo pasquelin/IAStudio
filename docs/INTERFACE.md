@@ -309,6 +309,29 @@ suspect à regarder en premier est `eager-graph.test.ts` lui-même : il lit **74
 > livraison est bonne — et c’est le seul filet, puisqu’aucun test ne s’exécute sur l’application
 > lancée.
 
+**Cherché, et voici où ça bloque — 9 août, 18 h 10.** Le second groupe **ne se reproduit pas à
+la demande** : une exécution complète du projet renderer, 286 fichiers et 3431 tests, ne rend
+**aucune** occurrence de `Unknown workspace`. Et rien ne l’a corrigé entre-temps : aucun commit
+postérieur à la fusion du septième espace ne touche `workspaces.ts`, `workspace.ts`,
+`tool-registry.ts` ni `eager-graph.test.ts` — vérifié.
+
+Ce qui distingue les deux exécutions n’est donc pas le code mais **les conditions** : le
+`validate` lance les projets `node` et `renderer` **en parallèle**, et celui qui a échoué tournait
+pendant que quatre agents de revue et d’autres sessions occupaient la machine. Celui qui passe
+n’a lancé que `renderer`, à froid.
+
+**Et c’est ce qui empêche de le corriger aujourd’hui.** La règle du dépôt est le test avant le
+correctif ; sans reproduction, tout correctif serait une supposition — exactement ce que ce
+registre reproche aux entrées qui devinent leur cause. Ce qu’il faudrait pour avancer : faire
+échouer le `validate` **volontairement**, en le relançant sous charge jusqu’à ce qu’il tombe, et
+capturer une trace fraîche. Deux ou trois exécutions de dix minutes, à faire quand la machine
+n’est prise par personne d’autre.
+
+> Une piste à ne pas perdre : la trace du 17 h 25 désignait `tool-registry.ts:97`, ligne qui est
+> **un commentaire** dans le code d’une heure plus tard. Le fichier avait changé pendant que le
+> `validate` tournait. Sur un dépôt où cinq commits tombent en quarante minutes, une trace se lit
+> avec le `git log` de son heure, ou elle envoie chercher au mauvais endroit.
+
 ### 28. Le bouton du journal est une cible de 12 × 12 px
 
 **Mesuré le 9 août 2026**, en soldant l’entrée 22. `ActivityStatus` sans échec ne contient qu’un
