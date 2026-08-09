@@ -7,6 +7,92 @@ page web. Ce chapitre en démonte chaque morceau.
 
 ---
 
+## L’accueil, avant tout le reste
+
+**Le studio ne s’ouvre pas sur une fenêtre vide.** Il s’ouvre sur un écran pleine largeur —
+l’accueil — qui dit où vous en étiez, ce que vous avez produit, et ce que vous pouvez faire.
+
+Il se ferme dès que vous entrez dans un espace de travail, et il n’a ni rail, ni panneau, ni
+onglet : c’est une page, pas une disposition. La ligne d’état reste en bas, parce qu’une
+génération lancée hier peut très bien finir pendant que vous le lisez.
+
+### La bannière, en haut
+
+Elle ne dit qu’une chose à la fois, celle qui compte à cet instant.
+
+| Ce qu’elle affiche | Quand |
+|---|---|
+| **Reprendre où vous en étiez** | un document était ouvert la dernière fois |
+| **_n_ générations en cours** | quelque chose tourne encore |
+| **Connecter une clé API** | aucune clé n’est enregistrée |
+| **Démarrer un projet** | aucun projet n’est ouvert |
+| **Tout est prêt** | le projet est ouvert et ne contient encore rien |
+
+**Elle attend de savoir avant de conclure.** Lire les projets et les documents prend un instant ;
+la bannière ne s’affiche qu’une fois la réponse arrivée, plutôt que d’annoncer « démarrez un
+projet » puis de se corriger.
+
+### Les bandes
+
+Sous la bannière, une bande par sujet, dans cet ordre :
+
+| Bande | Ce qu’elle montre | Il faut |
+|---|---|---|
+| **Outils** | les six espaces, et les gestes de projet | rien |
+| **Vos projets** | les projets récents | rien |
+| **Ce que vous avez produit** | vos générations, légendées du modèle qui les a faites | un projet ouvert |
+| **Par type** | six compteurs — Image, Vidéo, Audio, Maillage, Texture, Skybox | un projet ouvert |
+| **Vos recettes** | les réglages que vous avez épinglés | rien |
+| **Votre bibliothèque** | ce qui vit en ligne, sur votre compte Scenario | une clé API |
+| **Vos documents** | les documents du projet | un projet ouvert |
+| **En cours** | les générations en route | une clé API |
+| **Activité récente** | ce que le studio a fait et raté | un projet ouvert |
+
+**Une bande qui n’a pas ce qu’il lui faut n’est pas grisée : elle n’est pas là.** Sans clé API,
+la bibliothèque n’existe pas sur cet écran.
+
+**Vos recettes ne demandent rien**, et c’est voulu : une recette est gardée en dehors des
+projets, elle vous suit d’un projet à l’autre. C’est la seule bande qui ait encore quelque chose
+à montrer quand aucun dossier n’est ouvert.
+
+### Deux gestes qui font gagner du temps
+
+**Refaire une image ne coûte aucun appel réseau.** Sous chaque création, « En refaire une
+avec… » rouvre le formulaire déjà rempli : le modèle, le prompt et les réglages sont gardés à
+côté de l’asset, dans le projet.
+
+**Un compteur mène à ses assets.** Cliquer celui des images ouvre l’espace Image et pose le
+filtre : vous arrivez sur les images, pas sur l’étagère entière. Un type à zéro reste sur la
+rangée mais ne répond pas — il n’y a nulle part où aller. Si le projet est vide de bout en bout,
+la bande ne s’affiche pas.
+
+### Ranger la page
+
+Chaque bande a son menu — **Personnaliser cette section**.
+
+| Entrée | Effet |
+|---|---|
+| **Monter** / **Descendre** | change l’ordre, qui est retenu |
+| **Masquer cette section** | la retire de la page |
+| **Afficher _n_ éléments** | de 3 à 48 |
+
+Les sections masquées sont comptées en bas de page — « 2 sections masquées » — avec un bouton
+**Les réafficher**. Rien ne disparaît sans laisser de trace.
+
+**Trois bandes ne se masquent pas** : la bannière, les Outils et Vos projets. C’est ce qui
+garantit que l’accueil n’est jamais une page blanche, quoi qu’on décoche.
+
+### La colonne de gauche
+
+Un rail étroit portant l’**Explorateur** : les documents du projet, en arborescence. Il est là
+pour ce qu’on garde à l’œil pendant qu’on lit la page, au lieu de le lire à son tour.
+
+> **L’accueil peut être coupé.** **Préférences ▸ Général ▸ Afficher l’accueil** : décoché, le
+> studio va droit à l’espace que vous aviez quitté. L’ordre des bandes et celles que vous avez
+> masquées se règlent sur l’accueil lui-même, pas dans les préférences.
+
+---
+
 ## Le plan d’ensemble
 
 ```

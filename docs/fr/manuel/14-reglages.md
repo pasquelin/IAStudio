@@ -89,6 +89,21 @@ Ce que l’application fait quand vous la lancez.
 « Ne rien ouvrir » est plus rapide au démarrage, et plus reposant si vous jonglez entre beaucoup
 de projets.
 
+### Afficher l’accueil
+
+**Interrupteur. Départ : activé.**
+
+L’écran pleine largeur sur lequel le studio s’ouvre : vos projets, ce sur quoi vous travailliez,
+ce qui tourne, et ce que les modèles savent faire. Décoché, le studio va droit à l’espace que
+vous aviez quitté.
+
+**Ce réglage et le précédent sont indépendants.** « Ne rien ouvrir » ne concerne que le projet :
+l’accueil s’affiche quand même, et vous propose d’en créer un. Pour arriver directement dans un
+espace de travail, il faut décocher celui-ci.
+
+Ce qui se règle **sur l’accueil lui-même**, et pas ici : quelles bandes sont affichées, dans quel
+ordre, et combien d’éléments chacune montre — voir [La fenêtre](03-la-fenetre.md#laccueil-avant-tout-le-reste).
+
 ---
 
 ## Compte
