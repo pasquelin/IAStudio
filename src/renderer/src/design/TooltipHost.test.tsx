@@ -27,6 +27,34 @@ describe('TooltipHost', () => {
     await waitFor(() => expect(screen.getByRole('img')).toHaveAttribute('aria-describedby'))
   })
 
+  // WCAG SC 1.4.13: at 400% zoom the bubble has to be swept to be read, so leaving the anchor
+  // for it must not dismiss it.
+  it('stays open once the pointer reaches the bubble', async () => {
+    render(<Anchored />)
+    const anchor = screen.getByRole('img')
+
+    await userEvent.hover(anchor)
+    await waitFor(() => expect(anchor).toHaveAttribute('aria-describedby'))
+    await userEvent.hover(screen.getByRole('tooltip'))
+
+    // Outlasting the library's 100 ms hide is the whole assertion: nothing else says it stayed.
+    await new Promise(resolve => setTimeout(resolve, 300))
+    expect(anchor).toHaveAttribute('aria-describedby')
+  })
+
+  it('closes once the pointer leaves the bubble too', async () => {
+    render(<Anchored />)
+    const anchor = screen.getByRole('img')
+    await userEvent.hover(anchor)
+    await waitFor(() => expect(anchor).toHaveAttribute('aria-describedby'))
+    const bubble = screen.getByRole('tooltip')
+    await userEvent.hover(bubble)
+
+    await userEvent.unhover(bubble)
+
+    await waitFor(() => expect(anchor).not.toHaveAttribute('aria-describedby'))
+  })
+
   // Where a tooltip is the only thing that shows a sentence, it is content rather than
   // decoration — and content has to go away without the pointer having to move.
   it('closes on Escape, without asking the focus to go anywhere', async () => {

@@ -479,7 +479,7 @@ même moitié et la même rangée de rail partout, ce que l'invariant existe pr�
 
 # 3. Les gestes qui n'aboutissent pas
 
-Cinq entrées. La première échoue **complètement et en silence** ; les autres ne se constatent qu'en
+Quatre entrées. La première échoue **complètement et en silence** ; les autres ne se constatent qu'en
 lâchant la souris.
 
 ## 3.1 La dictée — le geste demandé n'a jamais existé
@@ -592,27 +592,7 @@ flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le me
 
 ---
 
-## 3.3 Les infobulles
-
-### 30. Une infobulle ne se laisse pas survoler
-
-**Le geste attendu.** Amener le pointeur sur une infobulle pour la lire jusqu'au bout, sans qu'elle se referme en
-chemin.
-
-**Vu le 9 août 2026.** `TooltipHost` ne pose pas `clickable`, donc la bulle garde le
-`pointer-events: none` de la feuille de style du cœur, à `offset: 8` de son ancre : aller vers elle
-quitte l'ancre et la referme. C'est l'exigence **« survolable » de WCAG SC 1.4.13 (AA)**.
-
-**C'est préexistant et ça vaut pour toutes les infobulles.** Quelqu'un qui zoome à 400 % doit balayer
-la bulle pour lire soixante-cinq caractères, et il ne le peut pas.
-
-**L'exigence « écartable » du même critère est réglée** (`globalCloseEvents={{ escape: true }}`).
-Reste `clickable`, qui bascule `pointer-events` sur **toutes** les infobulles : à regarder d'un bloc,
-avec ce que ça fait aux barres flottantes qui en portent.
-
----
-
-## 3.4 Les raccourcis hors registre
+## 3.3 Les raccourcis hors registre
 
 **Elle était regroupée avec la garde de format des signatures ; ce regroupement est tombé** — la
 garde est livrée (`isSignature`, `feat/pinceau-durete`, 9 août 2026). L'entrée reste entière et sa
