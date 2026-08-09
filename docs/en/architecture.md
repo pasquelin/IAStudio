@@ -931,6 +931,13 @@ written in the same movement as the code, never after.
 `pnpm validate` — typecheck, lint, format check, tests with coverage budgets — must be green
 before any commit.
 
+**Budgets are declared per glob in `vitest.config.ts`, and their sign is their whole meaning.** A
+threshold that is **zero or above** is a **minimum percentage**; a **negative** one is a **maximum
+count** of uncovered lines or branches. A budget of zero therefore cannot be written: `0` reads as
+"at least 0 %", which is nothing at all, and a glob covered whole is written `100`. Three guards
+were decorative for exactly that reason, and `src/main/coverage-thresholds.test.ts` now reads them
+back from the config file — comments stripped first, since they quote thresholds.
+
 What gets tested, in practice: every helper, every state and command module of every engine,
 the schema translation, the job manager's queue and backoff, the catalogue, the IPC contract,
 and the panels through Testing Library.

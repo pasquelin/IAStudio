@@ -968,6 +968,14 @@ code) et écrits dans le même mouvement que le code, jamais après.
 `pnpm validate` — typecheck, lint, vérification de format, tests avec budgets de couverture —
 doit être vert avant tout commit.
 
+**Les budgets se déclarent par glob dans `vitest.config.ts`, et leur signe est tout leur sens.**
+Un seuil **positif ou nul** est un **pourcentage minimum** ; un seuil **négatif** est un **nombre
+maximum** de lignes ou de branches non couvertes. Un budget de zéro ne s’écrit donc pas : `0` se
+lit « au moins 0 % », c’est-à-dire rien du tout, et un glob couvert entièrement s’écrit `100`.
+Trois gardes ont été décoratives pour cette raison, et `src/main/coverage-thresholds.test.ts` les
+relit désormais depuis le fichier de configuration — commentaires retirés d’abord, puisqu’ils
+citent des seuils.
+
 Ce qui est couvert, en pratique : chaque helper, chaque module d’état et de commandes de chaque
 moteur, la traduction de schéma, la file et le backoff du job manager, le catalogue, le contrat
 IPC, et les panneaux via Testing Library.
