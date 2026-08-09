@@ -708,7 +708,7 @@ sélection **par dessous**.
 
 ---
 
-## 4.2 L'Explorateur n'explore rien
+## 4.4 L'Explorateur n'explore rien
 
 ### 39. Le panneau s'appelle « Explorateur » et liste six documents à plat
 
@@ -749,7 +749,7 @@ le studio sait ouvrir. Trois questions, dans cet ordre :
 
 ---
 
-## 4.3 L'accueil — deux entrées, une surface
+## 4.5 L'accueil — deux entrées, une surface
 
 **Regroupées** : l'entrée 13 finit sur le constat de l'entrée 12 — le menu « … » qui masque une
 bande n'a pas été trouvé, « l'accueil ne montre pas ce qu'il permet ». Même page, même défaut
@@ -804,7 +804,7 @@ Que ce menu « … » n'ait pas été trouvé est un retour en soi, et il rejoin
 
 ---
 
-## 4.4 Les Apps — deux entrées, un panneau
+## 4.6 Les Apps — deux entrées, un panneau
 
 **Regroupées** : les deux demandent d'écrire une phrase que le panneau ne porte pas, elles
 coûtent leurs clés dans les deux mêmes bundles, et la réponse de l'une conditionne l'autre —
