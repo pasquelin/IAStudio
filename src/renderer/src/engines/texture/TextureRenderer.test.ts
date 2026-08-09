@@ -109,6 +109,65 @@ describe('the texture preview', () => {
   })
 
   /**
+   * `resetClock` tells the viewport the next frame starts now, which is right once — when the
+   * spin begins. `apply` runs on every value a drag emits, and restarting the clock on each of
+   * them leaves the spin the time since the last slider value instead of the time since the last
+   * frame: the shape crawls for as long as a setting is held.
+   */
+  describe('the auto spin', () => {
+    const spinning = (): TextureState => {
+      const state = newTexture()
+      state.preview.autoSpin = true
+      return state
+    }
+
+    /**
+     * Cleared rather than created per test: `vi.spyOn` hands back the mock already installed on a
+     * method, so a fresh `const` inside a test would read the count of the one before it — which
+     * is what made the first version of these three pass on numbers that meant nothing.
+     */
+    const watchClock = () => {
+      const reset = vi.spyOn(ViewportEngine.prototype, 'resetClock')
+      reset.mockClear()
+      return reset
+    }
+
+    it('starts the frame clock when the spin begins', () => {
+      const reset = watchClock()
+
+      mounted().apply(spinning())
+
+      expect(reset).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves the clock alone while a setting is dragged under a spinning shape', () => {
+      const renderer = mounted()
+      renderer.apply(spinning())
+      const reset = watchClock()
+
+      // What a drag is: one `apply` per value, the spin untouched throughout.
+      for (const roughness of [0.2, 0.4, 0.6]) {
+        const dragged = spinning()
+        dragged.material.roughness = roughness
+        renderer.apply(dragged)
+      }
+
+      expect(reset).not.toHaveBeenCalled()
+    })
+
+    it('starts the clock again when the spin is turned off and back on', () => {
+      const renderer = mounted()
+      renderer.apply(spinning())
+      renderer.apply(newTexture())
+      const reset = watchClock()
+
+      renderer.apply(spinning())
+
+      expect(reset).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  /**
    * The cavity mask reaches the shader through a uniform of its own, so it takes the one path in
    * this engine that no material slot walks. Covered channel by channel rather than for `edge`
    * alone: the loop is what decides, and it is the loop a refactor narrows by accident.
