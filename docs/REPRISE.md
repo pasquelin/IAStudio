@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`89b5392`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline 89b5392..develop`) au lieu de relire mille lignes.
+à **`ea558bd`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline ea558bd..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -37,8 +37,9 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > `/Users/pasquelin/Applications/scenario/docs/INTERFACE.md`, sans quoi chaque branche tient sa
 > propre version des retours et elles divergent.
 >
-> **Ce qui vient d’être livré — ne le refais pas.** Le **canvas du node editor**, étape 6 du § 4,
-> monté nulle part (`feat/workflows`) · **l’accueil** et ses onze bandes, avec « en refaire une
+> **Ce qui vient d’être livré — ne le refais pas.** Le **graphe est le septième espace**, avec son
+> document `.graph`, sa palette et sa barre — étapes 6 et 10 du § 4 (`feat/workflows`) ·
+> **l’accueil** et ses onze bandes, avec « en refaire une
 > avec… » (`feat/home`, `feat/home-creations`) · les trois accès clavier — Explorateur, double-clic
 > qui traverse les espaces, étagère à assets et sa sélection multiple (`feat/explorateur-clavier`,
 > `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader des Textures**
@@ -83,7 +84,7 @@ la configuration et de l’espace 3D ayant été supprimées une fois leurs chan
 
 **999 fichiers dans `src/`, dont 397 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
 en exécutait alors **4969 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
-nombres ne se lit dans un fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
+nombres ne se lit dans un fichier). **Sept espaces éditables, les sept genres de documents s’enregistrent**, et fermer un onglet
 demande avant de perdre quoi que ce soit. L’application démarre par `pnpm start`.
 
 ## Le budget de couverture, qui est la porte du projet
@@ -209,8 +210,17 @@ exception : il facture 0 sur lui-même, ses nœuds portent la charge, et ce zér
 **Les projets** — un dossier, un manifeste, un catalogue SQLite. Le catalogue tourne sur son propre
 `worker_threads` : de 16 blocages du thread principal à 0 (§ 6).
 
-**Les six espaces** — Image (PixiJS), 3D (three.js), Vidéo (timeline, moniteur, ffmpeg), Audio,
-Skyboxes, Textures. Un éditeur par type de document, chargé à l’ouverture, jamais avant.
+**Les sept espaces** — Image (PixiJS), 3D (three.js), Vidéo (timeline, moniteur, ffmpeg), Audio,
+Skyboxes, Textures, et **Graphe** (`@xyflow/react`) depuis l’étape 10 du § 4. Un éditeur par type
+de document, chargé à l’ouverture, jamais avant.
+
+**Le septième n’appartient à aucune famille de modèles**, et c’est la seule nouveauté structurelle
+du lot : `Workspace.family` est passé à `ModelFamily | null` — un graphe ne produit pas un genre,
+il les enchaîne — et le `scope` correspondant est **dérivé sur le record `Workspace`**, jamais
+recomposé chez ses lecteurs. Il l’était à quatre endroits ; le cinquième a été oublié et le graphe
+y a perdu son Générateur, une famille nulle se lisant « pas de modèle » au lieu de « tous ».
+**Vert au niveau du registre**, parce que la règle de disposition lit `TOOL_PLACEMENTS` et ne voit
+pas la couche au-dessus.
 
 **L’espace Image édite pour de bon** — calques, groupes, masques, seize modes de fusion, sélection
 qui borne les outils, poignées de transformation, formes, texte, calques de réglage, cinq éditions IA
@@ -876,7 +886,7 @@ commande venue d’ailleurs. Tant que toutes les écritures venaient de la main 
 partageaient le geste. L’espace Skyboxes a introduit le premier écrivain **asynchrone** — une
 génération qui aboutit — et le rend atteignable : si un job se termine pendant qu’un curseur est
 tenu, l’annulation se fragmente en trois entrées, dont la génération au milieu, et un ⌘Z fait
-disparaître l’image au lieu de défaire le réglage. **La ligne fautive sert les six espaces.**
+disparaître l’image au lieu de défaire le réglage. **La ligne fautive sert tous les espaces.**
 
 **L’écriture atomique existe en deux exemplaires.** `scenario/job-store.ts` et `project/documents.ts`
 écrivent tous deux une copie de transit puis renomment, avec le **même commentaire mot pour mot**, et
@@ -1078,18 +1088,26 @@ temps que le parc tourne.
 > Branche `feat/workflows`, worktree `.claude/worktrees/workflows`, base `develop`. Les deux dettes
 > d’API du § 3.6 y étaient les étapes 2 et 3, parce qu’elles le bloquaient : elles sont livrées.
 
-**Six étapes sur dix sont fusionnées dans `develop`**, l’étape 6 comprise : l’éditeur existe —
-format, moteur, canvas — mais **il n’est monté nulle part**, et rien de ce qui suit n’est donc
-atteignable par l’utilisateur. C’est pourquoi le manuel n’en dit pas un mot et n’a pas à en dire :
-le point de montage est la décision de l’**étape 10**, et elle est prise — **le graphe sera un
-septième espace**.
+**Sept étapes sur dix sont fusionnées dans `develop`** — les six premières, puis **la dixième,
+prise avant les 7 à 9**. Le graphe est un espace pour de bon : document `.graph`, entrée dans
+`IO_BY_KIND`, composant en `lazy()`, palette et barre. Le manuel le décrit dans les deux langues,
+avec l’avertissement qui convient — **il s’ouvre, on y pose des nœuds et on les enregistre, il ne
+sait pas encore exécuter ce qu’il décrit.**
 
-C’est le plus gros trou fonctionnel du projet, et le seul chantier qui ferait passer le studio de
-« une interface devant une API » à « un outil ». D’où une section à lui, hors du § 3 : celui-là
-liste ce qui reste d’un chantier commencé, celui-ci porte le chantier entier.
+**Prendre l’étape 10 avant les 7 à 9 était le bon ordre**, et c’est la leçon à garder : rien de ce
+qui suit n’aurait été regardable, et monter d’abord a rendu **cinq défauts qu’aucun test unitaire
+ne voyait** — dont `⌘Z` qui ne faisait rien, parce que `SCOPE_BY_WORKSPACE` est un `Partial` et
+qu’un espace absent garde l’undo **natif**, lequel enregistre l’accélérateur auprès de l’OS et
+l’avale avant la fenêtre. L’historique du graphe existait, était testé, et aucun geste ne
+l’atteignait. **Skyboxes avait déjà payé exactement ce défaut** ; son commentaire le raconte.
+
+Ce qui reste est le cœur exécutable — étapes 7 à 9 : compiler vers le `flow`, valider, exécuter
+en local, puis la logique, les boucles, les transforms, l’approbation, et enfin l’import/export et
+la publication. D’où une section à lui, hors du § 3 : celui-là liste ce qui reste d’un chantier
+commencé, celui-ci porte le chantier entier.
 
 > **L’étape 5 est livrée : les Apps s’exécutent.** `workflows.list` en `privacy: 'public'` alimente
-> un panneau **Apps** (colonne de droite, les six espaces), une App s’ouvre sur le formulaire que
+> un panneau **Apps** (colonne de droite, tous les espaces), une App s’ouvre sur le formulaire que
 > `translateSchema` bâtit de ses `inputs` — le même traducteur que pour un modèle, invariant 5 — et
 > se lance par le `JobManager`, avec son coût estimé sur le bouton. **Trois** canaux — `workflows:search`,
 > `:describe`, `:run` — et **pas un quatrième pour le prix** : `scenario:estimate-cost` price
@@ -1117,7 +1135,7 @@ liste ce qui reste d’un chantier commencé, celui-ci porte le chantier entier.
 >   graphie des statuts, l’échelle de la progression, le peuplement d'`assetIds` — ont donc été
 >   tranchées le 9 août 2026 en lançant une App par le SDK. **Le relevé est au § 4.5.**
 
-> **L’étape 6 est livrée : le canvas existe, et il n’est monté nulle part.** `@xyflow/react`
+> **L’étape 6 est livrée : le canvas, que l’étape 10 a depuis monté en espace.** `@xyflow/react`
 > **12.11.2** est entré — la seule dépendance que le chantier avait le droit d’ajouter, accord
 > donné, licence collectée. Ce qu’elle a laissé derrière elle :
 >
@@ -1326,6 +1344,14 @@ compris.
 pages locales**. La compilation **locale** est donc le seul chemin documenté :
 `convertWorkflowEditorToFlow`, puis `validateWorkflowFlow`, puis `update({ flow, status: 'ready' })`.
 C’est aussi le meilleur : la validation devient un retour instantané dans l’éditeur au lieu d’un 400.
+
+> **Corrigé à l’appel, pas à la lecture** — `workflow_publish` **existe** côté MCP, contrairement à
+> ce que ce paragraphe a affirmé. Quatre erreurs de ce § ont été redressées d’un seul
+> `workflow_get` sur `wflow_coloring-page-maker` : le port d’un nœud texte est `-target-prompt` de
+> type `text`, **pas** `-target-text` ; une note porte son texte sous `content`, **pas** `value`,
+> si bien que toute note importée s’affichait vide ; et **tout** nœud porte un port conditionnel,
+> la note comprise. **Un appel réel vaut mieux que quatre relectures** — c’est la troisième fois
+> que ce § l’apprend (cf. le relevé du 9 août plus haut).
 
 Deux détails à ne pas redécouvrir : `"workflow"` est **réservé** dans `ref.node` — il désigne les
 inputs du workflow parent, donc **ne jamais nommer un node `workflow`** ; et

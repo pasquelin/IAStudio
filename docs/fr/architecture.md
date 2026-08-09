@@ -639,7 +639,11 @@ Six choses passent par les bundles sans en avoir l’air, et chacune répond à 
   insécable étroite. Le formateur d’i18next est `Intl.NumberFormat`, rien à configurer. Vingt-sept
   clés le portent. **L’exception est un facteur, pas un dénombrement** :
   `texture.tilingPreviewTimes` écrit « 4× », et grouper une répétition serait faux précisément là
-  où le groupement se verrait — `bundles.test.ts` tient la règle **et son exception** ;
+  où le groupement se verrait — `bundles.test.ts` tient la règle **et son exception**. Une **unité
+  créative** ne passe pas non plus par `{{units, number}}` mais par `formatUnits`, qui ne se
+  contente pas de grouper : elle garde deux décimales sous dix unités, parce qu’un appel bon
+  marché arrondi à zéro se lirait **gratuit**. Dix-neuf appelants ; le dernier à l’avoir oubliée
+  écrivait « 1 234 UC » avant la génération et « 1234 UC » après ;
 - **les portées du journal** — une ligne d’activité affiche une phrase, jamais la clé qui la
   désigne ;
 - **la langue du document lui-même** — `document.documentElement.lang` suit la langue choisie.

@@ -615,7 +615,11 @@ Six things go through the bundles without looking like it, and each answers an o
   narrow no-break space. i18next's formatter is `Intl.NumberFormat`, nothing to configure.
   Twenty-seven keys carry it. **The exception is a factor, not a count**:
   `texture.tilingPreviewTimes` writes "4×", and grouping a repetition would be wrong exactly where
-  the grouping would show — `bundles.test.ts` holds the rule **and its exception**;
+  the grouping would show — `bundles.test.ts` holds the rule **and its exception**. A **creative
+  unit** does not go through `{{units, number}}` either but through `formatUnits`, which does more
+  than group: it keeps two decimals under ten units, because a cheap call rounded to zero would
+  read as **free**. Nineteen callers; the last one to forget it wrote "1,234 CU" before the
+  generation and "1234 CU" after;
 - **the journal's scopes** — an activity line shows a sentence, never the key naming it;
 - **the document's own language** — `document.documentElement.lang` follows the chosen language.
   `index.html` carried it hardcoded: a screen reader picks its voice from it, and an English
