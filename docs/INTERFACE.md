@@ -253,6 +253,36 @@ session qui compile — ils débordent.
 un test de réglages met une seconde par assertion. La seconde est la bonne question ; la première
 est ce qui rendra les livraisons lisibles en attendant.
 
+> **Le pire des trois est traité par la seconde réponse** — `55ddf63` (feat/tests-lents), 9 août
+> 2026. `ShortcutsSettings.test.tsx` passe de **26 s à 3 s**, et aucun de ses tests ne dépasse
+> désormais 400 ms. Il ne débordera plus d’un délai de quinze secondes, même sous charge.
+>
+> **La cause n’était pas la lenteur du panneau, c’étaient deux requêtes.** Les deux seuls appels
+> à `getByRole('button', { name })` du fichier coûtaient 5771 et 4419 ms — sur les 18 s de tests.
+> Le panneau rend **171 boutons** (85 commandes × 2, plus la recherche par accord ; les
+> commentaires du fichier disaient 115 depuis deux relectures, c’est corrigé), et `getByRole` avec
+> un nom redérive le nom accessible de chacun. Repère utile pour les autres fichiers : **un rendu
+> complet de ce panneau coûte 230 ms** — la requête était vingt-cinq fois plus chère que le rendu
+> qu’elle interrogeait.
+>
+> **Ce qui a failli être troqué contre la vitesse** : la première version remplaçait les deux
+> `getByRole` par `getByLabelText`, ce qui trouve un `<div>` aussi bien qu’un bouton. La revue l’a
+> reproduit — le contrôle de restauration changé en `role="link"`, **les quinze tests passaient**.
+> Les deux contrôles atteints par leur label déclarent maintenant leur rôle avec `toHaveRole`, qui
+> lit l’élément déjà trouvé au lieu d’en parcourir cent soixante-dix autres.
+>
+> **Les deux autres fichiers ne relèvent pas de ce remède, mesuré plutôt que supposé** :
+> `Channels.test.tsx` a une lenteur diffuse (487 ms au pire, 24 tests, aucun point chaud isolable)
+> et `known-keys.i18n.test.ts` passe **3,6 s à importer** le graphe pour 0,5 s de tests. Pour ces
+> deux-là, relever le délai reste la bonne réponse.
+>
+> **Une piste large a été mesurée puis écartée**, pour qu’on ne la reprenne pas :
+> `configure({ defaultHidden: true })` dans `test-setup.ts` fait gagner **33 %** sur tout le
+> dépôt, parce que le filtre de visibilité de `byRole` appelle `getComputedStyle` sur chaque
+> candidat. Refusé : un bouton `aria-hidden` deviendrait trouvable par `getByRole` dans les
+> quatre cents fichiers — un angle mort permanent, dans un dépôt qui vient de livrer l’entrée 9.
+> Le gain ciblé est de toute façon dix fois meilleur.
+
 **Et il y a pire, mesuré le 9 août à 17 h 25 sur `develop` fusionné.** Un second groupe échoue
 pour une raison qui n’est pas le temps :
 
