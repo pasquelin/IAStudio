@@ -29,12 +29,27 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
    */
   const committed = useRef(false)
 
+  const field = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     latest.current = { draft, onCommit, value }
   })
 
   useEffect(() => {
+    // Both caught while the input is still attached: `closest` from a detached node finds
+    // nothing, and by the time the cleanup runs the field is out of the tree.
+    const row = field.current?.closest<HTMLElement>('[tabindex]')
+    const list = field.current?.closest<HTMLElement>('[role="list"], [role="listbox"]')
+
     return () => {
+      // An input torn out of the tree leaves the focus on `document.body`, so the next Tab
+      // restarts from the top of the window — whoever renamed at the keyboard is thrown out of
+      // the list they were editing. Given back to the row it started on; and when that row went
+      // with it — a sibling added mid-type remounts the rows at new indices — to wherever the
+      // list holds its tab stop now, which at least keeps the keyboard inside the list.
+      const target = row?.isConnected ? row : list?.querySelector<HTMLElement>('[tabindex="0"]')
+      target?.focus()
+
       if (committed.current) return
 
       const { draft: typed, onCommit: commit, value: original } = latest.current
@@ -67,6 +82,7 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
 
   return (
     <input
+      ref={field}
       autoFocus
       aria-label={label}
       value={draft}
