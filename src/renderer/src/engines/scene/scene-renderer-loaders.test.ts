@@ -1,9 +1,18 @@
 import { Group, Mesh, SphereGeometry } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as Diagnostics from '@/services/diagnostics'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvh-builder'
 import { modelNodeFixture } from './scene-fixtures'
 import { EMPTY_SCENE } from './scene-state'
+
+/** The journal, stood in for: what reaches it is the only trace a failure without a surface has. */
+const reported = vi.hoisted(() => vi.fn())
+
+vi.mock('@/services/diagnostics', async importOriginal => ({
+  ...(await importOriginal<typeof Diagnostics>()),
+  reportFailure: reported,
+}))
 
 const builtDraco = vi.fn()
 const disposeDraco = vi.fn()
@@ -90,6 +99,29 @@ describe('SceneRenderer and a tree that will not build', () => {
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
     // The model lands a tick after the sync that built its holder, and the walk a tick after that.
     await vi.waitFor(() => expect(asked).toHaveLength(2))
+
+    engine.dispose()
+  })
+
+  // A model nobody can click without costing a frame says so once, or it says nothing at all.
+  it('writes the failure to the journal under its own scope', async () => {
+    const bvh: BvhBuilder = {
+      accelerate: () => Promise.reject(new Error('out of memory')),
+      dispose: () => {},
+    }
+
+    const loaded = twoMeshes()
+    const engine = new SceneRenderer({
+      onSelect: () => {},
+      onTransform: () => {},
+      loadModel: () => Promise.resolve(loaded),
+      bvh,
+    })
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
+
+    await vi.waitFor(() =>
+      expect(reported).toHaveBeenCalledWith('scene.bvh', 'asset-1', expect.anything()),
+    )
 
     engine.dispose()
   })
