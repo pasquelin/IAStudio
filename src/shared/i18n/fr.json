@@ -860,7 +860,7 @@
     },
     "dictationMode": {
       "title": "Façon de déclencher",
-      "help": "« Maintenir » écoute tant que vous gardez le raccourci enfoncé, et s’arrête dès que vous le relâchez : c’est le plus sûr, on ne laisse jamais le micro ouvert par oubli. « Basculer » démarre à la première pression et s’arrête à la suivante, ce qui repose la main sur les longues dictées.",
+      "help": "« Maintenir » écoute tant que vous gardez le raccourci enfoncé, et s’arrête dès que vous le relâchez : c’est le plus sûr, on ne laisse jamais le micro ouvert par oubli. « Basculer » démarre à la première pression et s’arrête à la suivante, ce qui repose la main sur les longues dictées.",
       "pushToTalk": "Maintenir la touche",
       "continuous": "Basculer marche/arrêt"
     },
@@ -870,7 +870,7 @@
     },
     "dictationPreview": {
       "title": "Aperçu pendant que vous parlez",
-      "help": "Intervalle, en millisecondes, entre deux aperçus du texte en cours. Le modèle n’écrit pas au fil de la parole : chaque aperçu relit tout ce qui a été dit depuis le début de la phrase, et coûte donc du calcul. Mettez 0 pour n’afficher que le texte définitif de chaque phrase."
+      "help": "Intervalle, en millisecondes, entre deux aperçus du texte en cours. Le modèle n’écrit pas au fil de la parole : chaque aperçu relit tout ce qui a été dit depuis le début de la phrase, et coûte donc du calcul. Mettez 0 pour n’afficher que le texte définitif de chaque phrase."
     },
     "dictationThreads": {
       "title": "Fils de calcul",
@@ -1077,7 +1077,7 @@
     },
     "appDictate": {
       "title": "Dicter",
-      "help": "Écoute le micro et écrit ce que vous dites à l’endroit du curseur, dans le champ où vous êtes. Se maintient enfoncée par défaut : on parle, on relâche, le texte s’écrit."
+      "help": "Écoute le micro et écrit ce que vous dites à l’endroit du curseur, dans le champ où vous êtes. Se maintient enfoncée par défaut : on parle, on relâche, le texte s’écrit."
     },
     "windowFullScreen": {
       "title": "Plein écran",
@@ -1675,7 +1675,7 @@
     "listening": "Je vous écoute…",
     "loadingEngine": "Chargement du modèle…",
     "download": "Télécharger le modèle ({{size}})",
-    "downloading": "Téléchargement du modèle : {{done}} sur {{total}}",
+    "downloading": "Téléchargement du modèle : {{done}} sur {{total}}",
     "cancelDownload": "Interrompre le téléchargement",
     "openPrivacySettings": "Ouvrir les réglages du système",
     "active": "Micro actif",
@@ -1686,7 +1686,7 @@
       "permissionDenied": "L’accès au micro a été refusé.",
       "noInputDevice": "Aucun micro disponible.",
       "modelDownloadFailed": "Le téléchargement du modèle a échoué.",
-      "modelChecksumMismatch": "Le modèle téléchargé est abîmé ; il a été supprimé.",
+      "modelChecksumMismatch": "Le modèle téléchargé est abîmé ; il a été supprimé.",
       "engineCrashed": "La reconnaissance vocale s’est arrêtée."
     }
   },
