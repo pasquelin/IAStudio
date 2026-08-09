@@ -17,9 +17,15 @@ import { WebGLRenderTarget } from 'three'
  * colour grading a sky, deriving a normal map from a height map, packing three channels into
  * one — is the same operation: one shader, one source, one destination.
  *
- * It shares the viewport's renderer rather than making its own. Two WebGL contexts in one
- * window cannot exchange a texture, so a second one would mean reading every result back
- * through the CPU — which is exactly what invariant 6 forbids.
+ * It takes the renderer it draws with rather than making one. Two WebGL contexts in one window
+ * cannot exchange a texture, so anything whose result feeds the scene — a graded sky, a
+ * prefiltered environment — has to be given the viewport's own, or every frame would come back
+ * through the CPU, which is exactly what invariant 6 forbids.
+ *
+ * **One exception, and it is the shape of it that makes it one**: a pass whose result leaves as
+ * a file exchanges nothing. `engines/texture/derive` opens a context of its own for the length
+ * of one derivation, because drawing into the viewport's would draw over the frame the user is
+ * looking at. Anything that keeps its result on the GPU does not get to make that choice.
  */
 export type GpuPipeline = {
   /**

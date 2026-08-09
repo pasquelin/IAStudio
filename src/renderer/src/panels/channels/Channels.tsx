@@ -1,17 +1,18 @@
 import { mdiTextureBox } from '@mdi/js'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isLocalPicture, PICTURES, type Asset } from '@shared/domain/asset'
-import { PBR_CHANNELS } from '@shared/domain/texture'
+import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { setChannel } from '@/engines/texture/commands'
+import { canDerive, sourceFor } from '@/engines/texture/texture-state'
 import { placeTextureChannel } from '@/spaces/textures/place-channel'
 import { useAssets } from '@/stores/assets'
 import { activeTextureId, useDocuments } from '@/stores/documents'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
-import { ChannelTile } from './ChannelTile'
+import { ChannelTile, type DerivationState } from './ChannelTile'
 
 /**
  * The eight channels a material is made of, each one a tile.
@@ -25,7 +26,10 @@ export function Channels() {
   const documentId = useDocuments(activeTextureId)
 
   return documentId ? (
-    <Grid documentId={documentId} />
+    // Keyed: the derivation in flight is the grid's own state, and one instance shared across
+    // documents left every derivable row of the texture in front dead for a job running in
+    // another tab — with a reason that was true of a document nobody was looking at.
+    <Grid key={documentId} documentId={documentId} />
   ) : (
     <EmptyState icon={mdiTextureBox} message={t('texture.noDocument')} />
   )
@@ -55,37 +59,78 @@ function Grid({ documentId }: { documentId: string }) {
   const run = useTextures(state => state.runCommand)
   const inspected = useTextureViews(state => inspectedChannel(state, documentId))
   const inspect = useTextureViews(state => state.inspect)
+
+  const [deriving, setDeriving] = useState<PbrChannel | null>(null)
+
+  /**
+   * Reached by an `import()` rather than at the top of the file: the panels are in the opening
+   * chunk, and the derivation carries three.js and a WebGL renderer behind it. A channel is
+   * computed once in a while, by hand — the wait to fetch its chunk is the click itself.
+   */
+  const derive = async (channel: PbrChannel): Promise<void> => {
+    setDeriving(channel)
+    try {
+      const { deriveTextureChannel } = await import('@/spaces/textures/derive-channel')
+      await deriveTextureChannel(documentId, channel)
+    } finally {
+      setDeriving(null)
+    }
+  }
+
+  /**
+   * One derivation at a time: each opens a WebGL context of its own, and a browser stops handing
+   * them out around sixteen. So the other rows go dead rather than merely unmarked — and they say
+   * why, which is the difference between waiting and being broken.
+   */
+  const derivationState = (channel: PbrChannel): DerivationState => {
+    if (deriving === channel) return 'running'
+    if (deriving) return 'blocked'
+    return canDerive(channels, channel) ? 'ready' : 'missing'
+  }
   // Derived where both stores are visible, as the document derives it: a channel emptied while it
   // was the one being looked at left its tile pressed AND disabled, saying two things at once.
   const shown = inspected && channels[inspected] ? inspected : null
 
   return (
     <div className="grid grid-cols-2 gap-2 p-1">
-      {PBR_CHANNELS.map(channel => (
-        // Dropped on its own tile, so a picture lands in the channel it was aimed at rather than
-        // in the base colour the viewport assumes.
-        <AssetDropTarget
-          key={channel}
-          accepts={PICTURES}
-          onDrop={(asset: Asset) => placeTextureChannel(documentId, asset, channel)}
-          className="relative"
-        >
-          <ChannelTile
-            channel={channel}
-            map={channels[channel] ?? null}
-            options={options}
-            inspected={shown === channel}
-            onPick={assetId => {
-              const asset = pictures.find(candidate => candidate.id === assetId)
-              if (asset) placeTextureChannel(documentId, asset, channel)
-            }}
-            onClear={() => run(documentId, setChannel(channel, null))}
-            // Clicking the one already shown flat goes back to the lit material: one gesture in
-            // and out, rather than a second control to find.
-            onInspect={() => inspect(documentId, shown === channel ? null : channel)}
-          />
-        </AssetDropTarget>
-      ))}
+      {PBR_CHANNELS.map(channel => {
+        // `sourceFor` alone decides whether the row exists: it is the domain's own answer, and
+        // a test holds it against the table of shaders so the two cannot drift apart.
+        const from = sourceFor(channel)
+
+        return (
+          // Dropped on its own tile, so a picture lands in the channel it was aimed at rather
+          // than in the base colour the viewport assumes.
+          <AssetDropTarget
+            key={channel}
+            accepts={PICTURES}
+            onDrop={(asset: Asset) => placeTextureChannel(documentId, asset, channel)}
+            className="relative"
+          >
+            <ChannelTile
+              channel={channel}
+              map={channels[channel] ?? null}
+              options={options}
+              inspected={shown === channel}
+              derivation={
+                from && {
+                  source: from,
+                  state: derivationState(channel),
+                  run: () => void derive(channel),
+                }
+              }
+              onPick={assetId => {
+                const asset = pictures.find(candidate => candidate.id === assetId)
+                if (asset) placeTextureChannel(documentId, asset, channel)
+              }}
+              onClear={() => run(documentId, setChannel(channel, null))}
+              // Clicking the one already shown flat goes back to the lit material: one gesture
+              // in and out, rather than a second control to find.
+              onInspect={() => inspect(documentId, shown === channel ? null : channel)}
+            />
+          </AssetDropTarget>
+        )
+      })}
     </div>
   )
 }

@@ -87,22 +87,22 @@ describe('sourceFor', () => {
 
 describe('canDerive', () => {
   it('answers yes once the pixels it needs are there', () => {
-    expect(canDerive(textureWith({ height: mapOf('h') }), 'normal')).toBe(true)
+    expect(canDerive(textureWith({ height: mapOf('h') }).channels, 'normal')).toBe(true)
   })
 
   it('answers no while its source is missing', () => {
-    expect(canDerive(textureWith({ baseColor: mapOf('b') }), 'normal')).toBe(false)
+    expect(canDerive(textureWith({ baseColor: mapOf('b') }).channels, 'normal')).toBe(false)
   })
 
   it('answers no for a channel nothing derives', () => {
-    expect(canDerive(textureWith({ baseColor: mapOf('b') }), 'metalness')).toBe(false)
+    expect(canDerive(textureWith({ baseColor: mapOf('b') }).channels, 'metalness')).toBe(false)
   })
 
   // "Derivable" is about the source, not about the target: a derived channel is recomputed
   // whenever what it was read from changes.
   it('still answers yes when the channel already holds a map', () => {
     const texture = textureWith({ height: mapOf('h'), normal: mapOf('n') })
-    expect(canDerive(texture, 'normal')).toBe(true)
+    expect(canDerive(texture.channels, 'normal')).toBe(true)
   })
 })
 

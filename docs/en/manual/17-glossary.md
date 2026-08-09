@@ -159,8 +159,8 @@ The size of the interface's controls. **Comfortable** leaves air (28 px tall); *
 (24 px) to fit more on screen.
 
 **Derived** *(channel)*
-A texture *channel* the studio computed from another, rather than received from a *model*. It
-recomputes on its own if its source changes.
+A texture *channel* the studio computed from another, rather than received from a *model*. The
+computation is relaunched from its thumbnail's menu, as many times as you like.
 
 **Dock**
 An area of the window where *panels* can settle: the left and right columns, the bottom strip. See

@@ -77,7 +77,8 @@ function isChannelOrigin(value: unknown): value is ChannelOrigin {
 
 /**
  * One channel of a texture. `origin` is what the strip badges, and what tells a derived channel
- * — recomputed whenever its source changes — from a generated one, which is frozen.
+ * — computed by a shader from another channel of the same texture, and recomputed on demand —
+ * from a generated one, which is frozen at what the model answered.
  *
  * What a derived channel was computed *from* is not stored: `sourceFor` answers it from the
  * graph, and a second copy in the file would be free to contradict it.
@@ -270,10 +271,14 @@ export function resetMaterial(texture: TextureState): TextureState {
   return { ...texture, material: structuredClone(DEFAULT_TEXTURE_MATERIAL) }
 }
 
-/** Whether the pixels a channel would be computed from are there. */
-export function canDerive(texture: TextureState, channel: PbrChannel): boolean {
+/**
+ * Whether the pixels a channel would be computed from are there. Takes the channels rather than
+ * the whole texture: the panel that asks selects nothing else, and the material and the preview
+ * change on every frame of every drag.
+ */
+export function canDerive(channels: ChannelSet, channel: PbrChannel): boolean {
   const from = sourceFor(channel)
-  return from !== null && texture.channels[from] !== undefined
+  return from !== null && channels[from] !== undefined
 }
 
 /** The empty channels, in the order the strip shows them. */

@@ -137,4 +137,134 @@ describe('project handlers', () => {
     registerProjectHandlers(deps(catalog))
     await expect(invoke(CHANNELS.assetsReveal, '')).rejects.toThrow()
   })
+
+  describe('a channel the renderer computed', () => {
+    const backend = () => ({
+      importFromUrl: vi.fn(),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
+      replaceBytes: vi.fn(),
+    })
+
+    /**
+     * A channel goes in as a `texture`, which is what puts it under the right facet of the shelf,
+     * and carries its `map` so the catalogue can later be asked which normal maps a project holds.
+     */
+    it('files it as a channel of the project, under a new identifier', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await invoke(CHANNELS.assetsSaveTexture, {
+        name: 'Brique — Normale',
+        map: 'normal',
+        derivedFrom: 'asset-1',
+        png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+      })
+
+      expect(assets.importFromBytes).toHaveBeenCalledWith(
+        {
+          id: 'asset-new',
+          name: 'Brique — Normale',
+          type: 'texture',
+          extension: '.png',
+          map: 'normal',
+          derivedFrom: 'asset-1',
+        },
+        new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+      )
+    })
+
+    it('never hands back where the file sits', async () => {
+      const assets = backend()
+      assets.importFromBytes = vi.fn(async () =>
+        asset({ id: 'asset-new', type: 'texture', sourcePath: '/Users/someone/secret.png' }),
+      )
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      const saved = await invoke(CHANNELS.assetsSaveTexture, {
+        name: 'Brique',
+        map: 'normal',
+        png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+      })
+
+      expect(saved).toEqual(expect.not.objectContaining({ sourcePath: expect.anything() }))
+    })
+
+    /** Bytes with no channel are an ordinary picture: this door files textures, and says so. */
+    it('refuses a request that names no channel', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveTexture, {
+          name: 'Brique',
+          png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        }),
+      ).rejects.toThrow()
+    })
+
+    /** The renderer is the sandboxed side, and this one writes a file to the user's disk. */
+    it('refuses a channel it has never heard of', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveTexture, {
+          name: 'Brique',
+          map: 'displacement',
+          png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        }),
+      ).rejects.toThrow()
+    })
+
+    /** The renderer is sandboxed, and this door writes a file: an unbounded buffer is a partition. */
+    it('refuses a payload past the ceiling', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveTexture, {
+          name: 'Brique',
+          map: 'normal',
+          png: new Uint8Array(257 * 1024 * 1024),
+        }),
+      ).rejects.toThrow()
+    })
+
+    /**
+     * The bytes are checked, not merely bounded. An encoder that answered with nothing would
+     * otherwise be catalogued as a channel, and the tile would show an empty frame for a file
+     * that is not a picture — with no way, from there, to read why.
+     */
+    it('refuses bytes that are not a PNG', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      for (const png of [new Uint8Array(), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])]) {
+        await expect(
+          invoke(CHANNELS.assetsSaveTexture, { name: 'Brique', map: 'normal', png }),
+        ).rejects.toThrow()
+      }
+    })
+
+    it('refuses a source identifier that is not one', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveTexture, {
+          name: 'Brique',
+          map: 'normal',
+          derivedFrom: '   ',
+          png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        }),
+      ).rejects.toThrow()
+    })
+
+    it('refuses a request with no name to file it under', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveTexture, {
+          name: '   ',
+          map: 'normal',
+          png: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        }),
+      ).rejects.toThrow()
+    })
+  })
 })

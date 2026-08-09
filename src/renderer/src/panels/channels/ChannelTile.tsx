@@ -18,6 +18,30 @@ import { MenuRow } from '@/design/MenuRow'
 import { UiIcon } from '@/design/UiIcon'
 import type { ChannelMap, ChannelOrigin } from '@/engines/texture/texture-state'
 
+/**
+ * Where a derivation stands, as one value rather than three booleans that could contradict one
+ * another. `missing` and `blocked` are offered and refused rather than hidden: each names what
+ * is in the way, and a row that simply is not there leaves nothing to read that from.
+ */
+export type DerivationState = 'ready' | 'missing' | 'running' | 'blocked'
+
+const DERIVE_LABELS: Record<DerivationState, string> = {
+  ready: 'texture.derive',
+  missing: 'texture.deriveMissing',
+  running: 'texture.deriving',
+  blocked: 'texture.deriveBusy',
+}
+
+/**
+ * What this channel can compute itself from, when anything can. `null` for the four a shader
+ * has no recipe for — offering the row there would promise a result nothing can produce.
+ */
+export type ChannelDerivation = {
+  source: PbrChannel
+  state: DerivationState
+  run: () => void
+}
+
 export type ChannelTileProps = {
   channel: PbrChannel
   map: ChannelMap | null
@@ -25,6 +49,7 @@ export type ChannelTileProps = {
   options: readonly { id: string; name: string }[]
   /** Whether the document is currently showing this channel flat instead of the lit material. */
   inspected: boolean
+  derivation: ChannelDerivation | null
   onPick: (assetId: string) => void
   onClear: () => void
   onInspect: () => void
@@ -34,9 +59,10 @@ export type ChannelTileProps = {
  * What each origin looks like. A glyph rather than a colour alone, for the reason `AssetBadge`
  * gives: three states have to be told apart on a small tile, and none of them is alarming.
  *
- * The distinction is the point of the badge: a *derived* channel is recomputed whenever its
- * source changes, a *generated* one is frozen at what the model answered, and an *imported* one
- * is the user's own file. Someone about to repaint a height map needs to know which.
+ * The distinction is the point of the badge: a *derived* channel was computed from another
+ * channel of this same texture, a *generated* one is frozen at what the model answered, and an
+ * *imported* one is the user's own file. Someone about to repaint a height map needs to know
+ * which.
  */
 const ORIGINS: Record<ChannelOrigin, { icon: string; key: string }> = {
   generated: { icon: mdiTextureBox, key: 'texture.originGenerated' },
@@ -50,6 +76,7 @@ export function ChannelTile({
   map,
   options,
   inspected,
+  derivation,
   onPick,
   onClear,
   onInspect,
@@ -120,6 +147,22 @@ export function ChannelTile({
            */
           rowCount={Math.max(options.length + 1, 2)}
           rows={close => [
+            ...(derivation
+              ? [
+                  <MenuRow
+                    key="derive"
+                    label={t(DERIVE_LABELS[derivation.state], {
+                      source: t(`texture.channel.${derivation.source}`),
+                    })}
+                    icon={mdiCogOutline}
+                    disabled={derivation.state !== 'ready'}
+                    onSelect={() => {
+                      derivation.run()
+                      close()
+                    }}
+                  />,
+                ]
+              : []),
             <MenuRow
               key="clear"
               label={t('texture.clearChannel')}

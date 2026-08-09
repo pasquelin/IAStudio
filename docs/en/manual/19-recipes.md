@@ -131,7 +131,9 @@ flat.
    best;
 5. **Inspector** → **Material** section: set roughness, metalness, relief and emission. If the
    material looks uniformly average, the **remap** is what to open — see below;
-6. **Channels** panel: drop a picture onto the thumbnail of each channel you want to fill;
+6. **Channels** panel: drop a picture onto the thumbnail of each channel you want to fill — and
+   for **height**, **normal**, **occlusion** and **roughness**, the thumbnail's menu computes them
+   from another channel, at no cost;
 7. `⌘S` **saves**.
 
 **The catch.** A picture dropped on the **preview** always goes to the base colour — that is

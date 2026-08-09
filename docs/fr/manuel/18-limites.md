@@ -222,16 +222,15 @@ travail, et il est complet.
 
 ### Ce qui manque
 
-- **les dérivations automatiques** — fabriquer les *normales* depuis la *hauteur*, par exemple. Le
-  badge « dérivé » existe, et le studio sait quel canal dérive de quel autre ; c’est le calcul qui
-  manque, pas le vocabulaire ;
+- **l’enchaînement des dérivations** — calculer la hauteur depuis la couleur de base ne recalcule
+  pas la normale qui en venait : chaque canal se recalcule à la demande, un par un ;
 - **l’import d’un fichier du disque** directement dans un canal. Le détour existe : importez
   l’image dans le projet, puis posez-la sur la vignette du canal ;
 - **l’aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures visibles ;
 - **l’export** vers glTF, Unity, Unreal, Roblox.
 
 Ce qui fonctionne aujourd’hui : générer une matière, poser une image dans chacun de ses huit
-canaux, régler tout ce dont elle est faite — rugosité et métal avec leur remappage, relief,
+canaux, en calculer quatre depuis un autre, régler tout ce dont elle est faite — rugosité et métal avec leur remappage, relief,
 émission, répétition —, la regarder sur cinq formes sous l’éclairage de votre choix, inspecter
 chaque canal à plat, et l’enregistrer.
 

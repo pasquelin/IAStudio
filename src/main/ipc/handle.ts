@@ -57,6 +57,7 @@ type ChannelMethod = {
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']
   [CHANNELS.assetsReveal]: StudioBridge['assets']['reveal']
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
+  [CHANNELS.assetsSaveTexture]: StudioBridge['assets']['saveTexture']
   [CHANNELS.assetsUpdate]: StudioBridge['assets']['update']
   [CHANNELS.assetsRemove]: StudioBridge['assets']['remove']
   [CHANNELS.assetsDescribe]: StudioBridge['assets']['describe']

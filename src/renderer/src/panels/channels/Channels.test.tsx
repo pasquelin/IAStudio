@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { PBR_CHANNELS } from '@shared/domain/texture'
 import { setChannel } from '@/engines/texture/commands'
@@ -26,12 +26,27 @@ const picture = (id: string, name: string, location: Asset['location'] = 'local'
 
 const channels = () => textureOf(useTextures.getState(), 'doc-1').channels
 
+/** The panel reaches it through an `import()`, and behind it sit three.js and a WebGL context. */
+const deriveTextureChannel = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
+
+vi.mock('@/spaces/textures/derive-channel', () => ({ deriveTextureChannel }))
+
 beforeEach(() => {
   installTexture('doc-1')
   // Session state, shared by every document: a channel left inspected would leak into the next.
   useTextureViews.setState({ inspected: {} })
   useAssets.setState({ items: [picture('img-1', 'Brique')] })
+  // `vi.fn` keeps its calls across tests, and a count read from the previous one proves nothing.
+  deriveTextureChannel.mockClear()
 })
+
+const fillChannel = (channel: 'height' | 'baseColor') =>
+  useTextures
+    .getState()
+    .runCommand(
+      'doc-1',
+      setChannel(channel, { assetId: 'img-1', origin: 'imported', width: 8, height: 8 }),
+    )
 
 describe('Channels', () => {
   // The panel sits on the edge, outside Dockview: it reads the texture in front.
@@ -194,6 +209,123 @@ describe('Channels', () => {
         'aria-pressed',
         'true',
       )
+    })
+  })
+
+  describe('computing a channel from another', () => {
+    const open = (channel: string) =>
+      userEvent.click(
+        screen.getByRole('button', { name: new RegExp(`Ce que contient ${channel}`) }),
+      )
+
+    /** `sourceFor` decides: four channels have one, and the other four have nothing to read. */
+    it('offers no derivation for a channel nothing computes', async () => {
+      render(<Channels />)
+
+      await open('Couleur de base')
+
+      expect(screen.queryByRole('menuitem', { name: /Calculer depuis/ })).toBeNull()
+    })
+
+    it('computes the channel from the source the domain names', async () => {
+      fillChannel('height')
+      render(<Channels />)
+
+      await open('Normale')
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /Calculer depuis Hauteur/ }),
+      )
+
+      expect(deriveTextureChannel).toHaveBeenCalledWith('doc-1', 'normal')
+    })
+
+    /**
+     * Offered and refused rather than absent: an empty source is something to go and fill, and a
+     * row that simply is not there leaves nothing to read that from.
+     */
+    it('says which channel is missing instead of hiding the row', async () => {
+      render(<Channels />)
+
+      await open('Normale')
+
+      const row = await screen.findByRole('menuitem', {
+        name: /Calculer depuis Hauteur — Hauteur est vide/,
+      })
+      expect(row).toBeDisabled()
+      expect(deriveTextureChannel).not.toHaveBeenCalled()
+    })
+
+    /** The manual sends the reader to the first row of the menu. Nothing else held that. */
+    it('offers the derivation before the pictures of the project', async () => {
+      fillChannel('height')
+      render(<Channels />)
+
+      await open('Normale')
+
+      const rows = await screen.findAllByRole('menuitem')
+      expect(rows[0]).toHaveAccessibleName(/Calculer depuis Hauteur/)
+    })
+
+    /**
+     * Each derivation opens a WebGL context of its own, and a browser evicts the oldest to hand
+     * out the seventeenth — what would go black is a viewport somebody is looking at. So the
+     * other rows go dead while one runs, they say why, and they come back.
+     */
+    it('closes every other derivation while one is running, and reopens them after', async () => {
+      let finish = (): void => {}
+      deriveTextureChannel.mockImplementationOnce(
+        () => new Promise<boolean>(resolve => (finish = () => resolve(true))),
+      )
+      fillChannel('height')
+      fillChannel('baseColor')
+      render(<Channels />)
+
+      await open('Normale')
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /Calculer depuis Hauteur/ }),
+      )
+
+      await open('Normale')
+      expect(await screen.findByRole('menuitem', { name: /Calcul en cours/ })).toBeDisabled()
+
+      await open('Rugosité')
+      const other = await screen.findByRole('menuitem', { name: /un autre canal est en calcul/ })
+      expect(other).toBeDisabled()
+
+      finish()
+
+      // Without it, every derivable row of the session stays dead after the first computation.
+      await open('Rugosité')
+      expect(
+        await screen.findByRole('menuitem', { name: /Calculer depuis Couleur de base$/ }),
+      ).toBeEnabled()
+    })
+
+    /**
+     * The channel being computed is the grid's own state, and one instance served every texture:
+     * a job on one document left the rows of the one in front dead, with a reason that was true
+     * of a document nobody was looking at.
+     */
+    it('leaves another texture alone while one of them computes', async () => {
+      deriveTextureChannel.mockImplementationOnce(() => new Promise<boolean>(() => {}))
+      fillChannel('height')
+      const { rerender } = render(<Channels />)
+
+      await open('Normale')
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /Calculer depuis Hauteur/ }),
+      )
+
+      installTexture('doc-2')
+      useTextures.setState(state => ({
+        states: { ...state.states, 'doc-2': { ...textureOf(state, 'doc-2') } },
+      }))
+      rerender(<Channels />)
+
+      await open('Normale')
+      expect(
+        await screen.findByRole('menuitem', { name: /Calculer depuis Hauteur — Hauteur est vide/ }),
+      ).toBeInTheDocument()
     })
   })
 

@@ -16,7 +16,8 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import type { Manifest } from '@shared/domain/project'
-import type { SaveAudioRequest } from '@shared/ipc'
+import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
+import type { SaveAudioRequest, SaveTextureRequest } from '@shared/ipc'
 
 const manifest = z.object({
   version: z.number().int().min(1),
@@ -94,6 +95,34 @@ const saveAudio = z.object({
 
 export function parseSaveAudio(value: unknown): SaveAudioRequest {
   return saveAudio.parse(value)
+}
+
+// A derived channel is at most the size of what it was derived from, and 8K RGBA encodes well
+// under this. Bounded for the same reason a take is: the renderer is the sandboxed side.
+const MAX_PICTURE_BYTES = 256 * 1024 * 1024
+
+/** The eight bytes every PNG opens with. A file that does not is not one, whatever it is called. */
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+
+function isPng(bytes: Uint8Array): boolean {
+  return PNG_SIGNATURE.every((byte, index) => bytes[index] === byte)
+}
+
+const saveTexture = z.object({
+  name: z.string().trim().min(1).max(200),
+  map: z.custom<PbrChannel>(isPbrChannel),
+  derivedFrom: assetId.optional(),
+  // Checked, not merely bounded: an encoder that answered with nothing would otherwise be
+  // catalogued as a channel, and the tile would show an empty frame for a file that is not a
+  // picture — with no way, from there, to read why.
+  png: z
+    .instanceof(Uint8Array)
+    .refine(bytes => bytes.byteLength <= MAX_PICTURE_BYTES)
+    .refine(isPng),
+})
+
+export function parseSaveTexture(value: unknown): SaveTextureRequest {
+  return saveTexture.parse(value)
 }
 
 export function parseDocumentId(value: unknown): string {

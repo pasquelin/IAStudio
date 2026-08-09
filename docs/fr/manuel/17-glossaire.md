@@ -163,7 +163,7 @@ resserre (24 px) pour faire tenir plus de choses à l’écran.
 
 **Dérivé** *(canal)*
 Un *canal* de texture que le studio a calculé à partir d’un autre, plutôt que reçu d’un *modèle*.
-Il se recalcule tout seul si sa source change.
+Le calcul se relance depuis le menu de sa vignette, autant de fois qu’on veut.
 
 **Détourage** *(background removal)*
 Retirer le fond d’une image pour ne garder que le sujet, sur du transparent. La commande
