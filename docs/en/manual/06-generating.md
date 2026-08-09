@@ -430,10 +430,13 @@ the fastest way to explore a direction.
 
 ## Apps: ready-made pipelines
 
-The **Apps** panel, in the right column, lists Scenario's *public workflows*. An App is a pipeline
-— several models chained together, sometimes a slice, a cutout and an upscale one after the other
-— published by Scenario or by the community, and runnable as it is. There is nothing to build:
-it already has its steps and its settings.
+The **Apps** panel, in the lower half of the left column, lists Scenario's *public workflows*. An
+App is a pipeline — several models chained together, sometimes a slice, a cutout and an upscale
+one after the other — published by Scenario or by the community, and runnable as it is. There is
+nothing to build: it already has its steps and its settings.
+
+The panel says so itself, above its list: **generating is one model, one step; an App is several
+models chained together, already assembled.**
 
 **The gesture is the one you know**, in three beats:
 

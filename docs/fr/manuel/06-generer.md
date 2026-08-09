@@ -449,10 +449,14 @@ de relancer, ce qui est la façon la plus rapide d’explorer une piste.
 
 ## Les Apps : des chaînes toutes faites
 
-Le panneau **Apps**, dans la colonne de droite, liste les *workflows publics* de Scenario. Une App
-est une chaîne de traitements — plusieurs modèles enchaînés, parfois une découpe, un détourage et
-un agrandissement à la suite — publiée par Scenario ou par la communauté, et exécutable telle
-quelle. Vous n’avez rien à construire : elle a déjà ses étapes et ses réglages.
+Le panneau **Apps**, en moitié basse de la colonne de gauche, liste les *workflows publics* de
+Scenario. Une App est une chaîne de traitements — plusieurs modèles enchaînés, parfois une
+découpe, un détourage et un agrandissement à la suite — publiée par Scenario ou par la
+communauté, et exécutable telle quelle. Vous n’avez rien à construire : elle a déjà ses étapes et
+ses réglages.
+
+Le panneau le dit lui-même, au-dessus de sa liste : **la Génération, c’est un modèle, une
+étape ; une App, c’est plusieurs modèles enchaînés, déjà montés.**
 
 **Le geste est le même que pour un modèle**, en trois temps :
 

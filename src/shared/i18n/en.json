@@ -57,6 +57,7 @@
     "estimatedCost": "~{{units}} CU"
   },
   "apps": {
+    "what": "Generating is one model, one step. An App is several models chained together, already assembled: one form, and the whole chain runs.",
     "none": "No App published yet.",
     "back": "All Apps",
     "run": "Run",

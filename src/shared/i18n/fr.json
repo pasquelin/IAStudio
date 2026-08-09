@@ -57,6 +57,7 @@
     "estimatedCost": "~{{units}} UC"
   },
   "apps": {
+    "what": "La Génération, c’est un modèle, une étape. Une App, c’est plusieurs modèles enchaînés, déjà montés : un seul formulaire, et toute la chaîne tourne.",
     "none": "Aucune App publiée pour l’instant.",
     "back": "Toutes les Apps",
     "run": "Lancer",

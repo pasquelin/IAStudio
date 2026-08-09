@@ -73,6 +73,29 @@ describe('Apps panel', () => {
     expect(search).toHaveBeenCalledWith(expect.objectContaining({ privacy: 'public' }))
   })
 
+  /**
+   * « c'est quoi App, le titre je ne le comprends pas ». The word is Scenario's and stays
+   * untranslated, so the panel has to say what one is — and say it over the list, not only in
+   * the empty state, which is the one case with nothing on screen to understand.
+   */
+  it('says what an App is, over the listing rather than in place of it', async () => {
+    installFakeBridge({
+      workflows: { search: () => Promise.resolve({ items: [app()], cursor: null }) },
+    })
+    renderPanel()
+
+    expect(await screen.findByText('Background remover')).toBeInTheDocument()
+    expect(screen.getByText(/plusieurs modèles enchaînés/)).toBeInTheDocument()
+  })
+
+  // The sentence explains the panel, so it is there whether or not the platform answered.
+  it('says it with nothing to list too', async () => {
+    installFakeBridge({ workflows: { search: () => Promise.resolve({ items: [], cursor: null }) } })
+    renderPanel()
+
+    expect(await screen.findByText(/plusieurs modèles enchaînés/)).toBeInTheDocument()
+  })
+
   it('opens one on its form, built from the inputs the API declares', async () => {
     installFakeBridge({
       workflows: {

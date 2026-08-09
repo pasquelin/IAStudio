@@ -734,40 +734,16 @@ Que ce menu « … » n'ait pas été trouvé est un retour en soi, et il rejoin
 
 ---
 
-## 3.6 Les Apps — deux entrées, un panneau
+## 3.6 Les Apps — ce qu'une App produit
 
-**Regroupées** : les deux demandent d'écrire une phrase que le panneau ne porte pas, elles
-coûtent leurs clés dans les deux mêmes bundles, et la réponse de l'une conditionne l'autre —
-dire *ce qu'est* une App et dire *ce qu'elle produit* sont deux moitiés du même texte.
-**Le panneau a fini de bouger** : il est en moitié basse de la colonne gauche depuis
-`feat/left-column` (9 août 2026), et la phrase peut donc s'écrire là où elle restera.
+> **Dire ce qu'est une App est livré** (`feat/apps-blurb`, 10 août 2026) : la phrase du registre
+> — « la Génération, c'est un modèle, une étape ; une App, c'est plusieurs modèles enchaînés,
+> déjà montés » — est au-dessus de la liste, et non plus dans le seul état vide, qui était le
+> seul cas où l'utilisateur n'avait rien sous les yeux à comprendre. **Ne pas re-signaler.**
+> Des trois endroits que l'entrée proposait, le geste attendu en écartait deux : « comprendre
+> **sans quitter le panneau** » exclut l'infobulle du rail comme le manuel seul.
 
-### 19. « Apps » ne dit pas ce que le panneau contient
-
-**Le geste attendu.** Comprendre ce qu'est une App sans quitter le panneau.
-
-**Vu le 9 août 2026** — « c'est quoi App, le titre je ne le comprends pas ». Le panneau liste seize
-entrées et ne dit nulle part ce qu'elles sont.
-
-**Le mot vient de Scenario** et il est **délibérément non traduit** — `panels.apps` vaut « Apps » dans
-les deux bundles. Ce qui se défend. Mais un nom de produit tenu par une plateforme tierce ne suffit
-pas à expliquer un panneau dans un dock.
-
-**La phrase qui a fini par expliquer**, à reprendre telle quelle : la Génération, c'est **un modèle,
-une étape** ; une App, c'est **plusieurs modèles enchaînés, déjà montés par quelqu'un** — un seul
-formulaire, la chaîne entière tourne.
-
-**Ce qui n'aide pas** : le panneau n'a d'explication qu'à vide (`apps.none`), c'est-à-dire dans le
-seul cas où l'utilisateur n'a rien sous les yeux à comprendre.
-
-Trois endroits possibles, à trancher : une ligne sous le titre du panneau, l'infobulle de son icône
-dans le rail — qui ne dit aujourd'hui que « Apps » elle aussi —, ou le manuel seul. Les deux premiers
-coûtent une clé i18n dans chaque bundle.
-
-> À savoir avant d'écrire cette phrase : le panneau ne montre **que les workflows publics**
-> (`privacy: 'public'`), délibérément. Un workflow privé appartient au compte qui l'a écrit, et le
-> studio n'a pas encore d'éditeur pour ça (§ 5). La formulation ne doit donc pas promettre « vos
-> workflows ».
+Ce qui reste tient en une entrée, dont la première moitié attend un compte qui porte une App.
 
 ---
 
