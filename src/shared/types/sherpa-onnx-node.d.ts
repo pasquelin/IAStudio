@@ -54,7 +54,13 @@ declare module 'sherpa-onnx-node' {
     isEmpty(): boolean
     /** Someone is speaking right now — which is not the same as a segment being ready. */
     isDetected(): boolean
-    /** The oldest closed segment. Undefined behaviour while `isEmpty()`. */
+    /**
+     * The oldest closed segment. Undefined behaviour while `isEmpty()`.
+     *
+     * `enableExternalBuffer` defaults to TRUE in the package, and must be passed `false` here:
+     * an external buffer wraps the addon's own memory, which Electron refuses outright with
+     * "External buffers are not allowed" while plain Node accepts it.
+     */
     front(enableExternalBuffer?: boolean): SpeechSegment
     /** Drops the segment `front` returned. Nothing else advances the queue. */
     pop(): void

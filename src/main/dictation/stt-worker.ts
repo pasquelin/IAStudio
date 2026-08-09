@@ -4,6 +4,7 @@
 import sherpa, { type OfflineRecognizer, type Vad } from 'sherpa-onnx-node'
 import { STT_SAMPLE_RATE, toFloat } from '@shared/domain/dictation'
 import { emptyHeld, hold, previewOf, type Held } from './segmenter'
+import { createSerial } from './serial'
 import { isAudio, isLoad, type SttLoad, type SttMessage, type SttResponse } from './stt-protocol'
 
 /**
@@ -12,7 +13,8 @@ import { isAudio, isLoad, type SttLoad, type SttMessage, type SttResponse } from
  * It runs here and nowhere else. Parakeet is 600 million parameters: on the main process it
  * would freeze every window at once, and in the renderer it would freeze the window it was
  * typed into. `decodeAsync` keeps even this process answering while it works, so audio arriving
- * during an inference is held rather than lost.
+ * during an inference is received rather than lost — and then queued, never handled at once
+ * (see the message loop at the bottom).
  *
  * Never throws. A failure travels back as a message, because a message loop that dies leaves
  * the main process holding a promise nobody settles.
@@ -35,8 +37,6 @@ let held: Held = emptyHeld()
 /** Samples fed since the detector last said someone started speaking. */
 let spoken = 0
 let previewAt = 0
-/** One decode at a time: a second would queue behind the first and report yesterday's words. */
-let decoding = false
 let lastDropped = 0
 
 const reply = (response: SttResponse): void => {
@@ -105,7 +105,10 @@ async function drainSegments(current: Engine): Promise<void> {
   let alone = true
 
   while (!current.vad.isEmpty()) {
-    const segment = current.vad.front()
+    // `false`, so the addon copies the samples instead of wrapping its own memory in an
+    // external buffer. Electron refuses those — "External buffers are not allowed" — while
+    // plain Node accepts them, which is why this only ever failed inside the application.
+    const segment = current.vad.front(false)
     current.vad.pop()
 
     const samples = alone && held.length > 0 ? previewOf(held, spoken) : segment.samples
@@ -126,23 +129,20 @@ async function drainSegments(current: Engine): Promise<void> {
 }
 
 /**
- * Decodes the sentence in flight, if it is time and nothing else is running.
+ * Decodes the sentence in flight, if enough time has passed since the last one.
  *
  * The model is not a streaming one: a preview is a full decode of everything said since the
- * sentence began, which is why it is paced and why a pass is skipped rather than queued. On a
- * machine that cannot keep up, previews simply thin out and the settled text is unaffected.
+ * sentence began, which is why it is paced. On a machine that cannot keep up, previews thin out
+ * on their own and the settled text is unaffected.
  */
 async function preview(current: Engine, now: number): Promise<void> {
-  if (current.previewMs === 0 || decoding || now - previewAt < current.previewMs) return
+  if (current.previewMs === 0 || now - previewAt < current.previewMs) return
 
+  // Stamped before the decode, not after: what paces previews is when one started, so a slow
+  // machine spaces them out on its own instead of running them back to back to catch up.
   previewAt = now
-  decoding = true
-  try {
-    const text = await decode(current, previewOf(held, spoken))
-    if (text) reply({ partial: text })
-  } finally {
-    decoding = false
-  }
+  const text = await decode(current, previewOf(held, spoken))
+  if (text) reply({ partial: text })
 }
 
 async function accept(current: Engine, samples: Int16Array): Promise<void> {
@@ -208,16 +208,30 @@ async function handle(message: SttMessage): Promise<void> {
   unload()
 }
 
+/**
+ * One message at a time — see `serial.ts` for what happens without it.
+ *
+ * A chunk arriving while a decode runs costs almost nothing when its turn comes: it is fed to
+ * the detector and held, and the preview that would have cost something is passed over by its
+ * own pacing.
+ */
+let handling: SttMessage | null = null
+
+const serial = createSerial((error: unknown) => {
+  const reason = error instanceof Error ? error.message : String(error)
+
+  // A load that failed answers the handshake; anything later is a session that has broken.
+  if (handling && isLoad(handling)) reply({ ready: false, error: reason })
+  else reply({ failed: reason })
+
+  unload()
+})
+
 process.parentPort.on('message', event => {
   const message: SttMessage = event.data
 
-  void handle(message).catch((error: unknown) => {
-    const reason = error instanceof Error ? error.message : String(error)
-
-    // A load that failed answers the handshake; anything later is a session that has broken.
-    if (isLoad(message)) reply({ ready: false, error: reason })
-    else reply({ failed: reason })
-
-    unload()
+  void serial.run(() => {
+    handling = message
+    return handle(message)
   })
 })
