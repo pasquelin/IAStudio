@@ -185,7 +185,7 @@ toute seule, et vous pouvez faire autre chose pendant ce temps.
 Quand la ligne affiche **Terminée**, votre image est arrivée. Elle est rangée dans le panneau
 **Assets** — l’étagère du projet — et sur votre disque, dans `assets/img/`.
 
-**Cliquez sur la vignette** : l'**Inspecteur**, à droite, montre tout ce qu’on sait d’elle — sa
+**Cliquez sur la vignette** : l’**Inspecteur**, à droite, montre tout ce qu’on sait d’elle — sa
 taille, son poids, le modèle qui l’a faite, le prompt que vous avez écrit, et la *graine* qui
 permettra d’y revenir.
 

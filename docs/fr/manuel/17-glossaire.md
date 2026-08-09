@@ -48,7 +48,7 @@ Les assets vivent dans le panneau **Assets**, qu’on appelle familièrement *l�
 
 **Azimut**
 La direction d’une chose tout autour de vous, mesurée en tournant sur place. Pour le soleil d’une
-*skybox* : est, sud, ouest, nord. Se combine avec l'*élévation*, qui dit sa hauteur.
+*skybox* : est, sud, ouest, nord. Se combine avec l’*élévation*, qui dit sa hauteur.
 
 ---
 
@@ -57,7 +57,7 @@ La direction d’une chose tout autour de vous, mesurée en tournant sur place. 
 **Backoff** → voir *Temporisation exponentielle*.
 
 **Badge** *(d’un asset)*
-La petite marque sur une vignette de l'*étagère*, qui dit où en est ce fichier vis-à-vis de la
+La petite marque sur une vignette de l’*étagère*, qui dit où en est ce fichier vis-à-vis de la
 *bibliothèque* : local seulement, synchronisé, à envoyer, à rapatrier, modifié des deux côtés,
 échec, ou appartenant à un autre projet. Il n’est pas stocké mais **recalculé** — il dépend du
 compte actif. Voir [Les assets](07-assets.md).
@@ -114,7 +114,7 @@ Ce qu’un *modèle* sait faire, écrit en abrégé. Le catalogue les affiche co
 
 **Catalogue**
 La liste des *modèles* disponibles sur Scenario. Plusieurs centaines. Le panneau **Modèles** ne
-vous montre à chaque fois que ceux qui savent fabriquer ce que l'*espace de travail* en cours
+vous montre à chaque fois que ceux qui savent fabriquer ce que l’*espace de travail* en cours
 fabrique.
 
 **Clé API**
@@ -192,7 +192,7 @@ Six sortes, une par *espace de travail* : `.img` (image), `.scene` (scène 3D), 
 
 **Élévation**
 La hauteur d’une chose au-dessus de l’horizon, en degrés. Pour le soleil d’une *skybox* : 0° au
-ras de l’horizon, 90° à la verticale. Se combine avec l'*azimut*.
+ras de l’horizon, 90° à la verticale. Se combine avec l’*azimut*.
 
 **Émission** *(canal de texture)*
 Ce qui brille par soi-même dans une matière : une enseigne au néon, des braises, un écran allumé.

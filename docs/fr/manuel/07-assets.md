@@ -161,7 +161,7 @@ barre d’outils comprise : un lâcher qui tombe à côté serait un raté qu’
 
 ## L’inspecteur d’un asset
 
-Sélectionnez un asset et regardez l'**Inspecteur**, dans la colonne de droite. Il montre, selon
+Sélectionnez un asset et regardez l’**Inspecteur**, dans la colonne de droite. Il montre, selon
 ce qu’il sait :
 
 | Section | Ce qu’elle contient |

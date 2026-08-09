@@ -90,7 +90,7 @@ Quatre écarts assumés :
    Les deux composants du design system ont désormais une seule notion de sélection.
 
 **Une valeur tapée est absolue, un geste est relatif.** Taper une hauteur l’écrit sur tous les
-nœuds sélectionnés (comme Unity) ; tirer le gizmo applique un delta. Seul l'**axe** touché est
+nœuds sélectionnés (comme Unity) ; tirer le gizmo applique un delta. Seul l’**axe** touché est
 écrit : trois cubes à qui l’on donne une hauteur gardent les colonnes où ils sont posés. Le nom
 fait exception et reste sur l’ancre — trois nœuds du même nom n’est pas un renommage.
 
@@ -682,7 +682,7 @@ régression. Le noter ici plutôt que de la bâcler.
 
 **Les trois y sont.** La projection bascule (`O`), la caméra va se poser sur l’un des six côtés, et
 le viewport dessine les surfaces, leurs arêtes, ou les deux (`Z`, comme dans Blender). Tout cela
-est de l'**état de session**, dans un store `scene-views` calqué sur `canvas-views` : par document,
+est de l’**état de session**, dans un store `scene-views` calqué sur `canvas-views` : par document,
 jamais enregistré, jamais dans l’historique.
 
 **Qui d’autre lit `viewport.camera`, vérifié avant d’y toucher** : `SkyboxRenderer`,
@@ -737,7 +737,7 @@ Rien de tout cela n’existe dans le viewport.
   clic pourrait les servir.
 - Affichage : rendu, filaire, rendu + filaire. Sur les matériaux, pas sur un second passage de
   rendu.
-- Ces trois-là sont de l'**état de session**, jamais du document et jamais de l’historique : c’est
+- Ces trois-là sont de l’**état de session**, jamais du document et jamais de l’historique : c’est
   la règle que `canvas-views.ts` a posée pour l’espace Image, la suivre.
 
 ---

@@ -573,7 +573,7 @@ Le studio demande d’abord confirmation :
 
 **Vos projets, vos images et vos montages ne sont pas touchés.** Seuls les réglages le sont.
 
-> **C’est sans retour.** Ce bouton ne passe pas par le tampon d’édition : il n’y a pas d'**Annuler**
+> **C’est sans retour.** Ce bouton ne passe pas par le tampon d’édition : il n’y a pas d’**Annuler**
 > qui le rattrape. C’est pour cette raison qu’il demande confirmation, contrairement aux autres
 > réglages.
 

@@ -248,10 +248,10 @@ puce sur l’onglet dit ce qui attend encore d’être écrit.
 - les **dérivations automatiques** — fabriquer les normales depuis la hauteur, par exemple. Le
   badge « dérivé » existe et le studio sait qu’un canal en dérive un autre ; ce qui manque est le
   calcul lui-même ;
-- l'**import d’un fichier du disque** directement dans un canal. Passez par l’import du projet
+- l’**import d’un fichier du disque** directement dans un canal. Passez par l’import du projet
   (chapitre 7), puis posez l’image sur la vignette ;
-- l'**aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures ;
-- l'**export** vers glTF, Unity, Unreal, Roblox.
+- l’**aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures ;
+- l’**export** vers glTF, Unity, Unreal, Roblox.
 
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 

@@ -456,7 +456,7 @@ côté de son nom. Deux cas connus :
   l’enregistrer, pour ne pas écrire un document vide par-dessus celui qu’il n’a pas su lire — le
   fichier est la seule copie. La raison est dans le journal d’activité.
 
-**Ce qui ne revient jamais**, et c’est voulu : l'**historique d’annulation**. Rouvrir un
+**Ce qui ne revient jamais**, et c’est voulu : l’**historique d’annulation**. Rouvrir un
 document, c’est repartir sans `⌘Z`. La liste complète est dans
 [Ce qui n’existe pas encore](18-limites.md).
 

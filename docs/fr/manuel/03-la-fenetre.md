@@ -219,7 +219,7 @@ donc ils se relaient dans la même moitié.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
 qui est sélectionné. Les panneaux y prennent leur tour dans la moitié haute — un espace ne
-déclare jamais les six à la fois — et l'**Inspecteur** occupe l’autre moitié, toujours en bas.
+déclare jamais les six à la fois — et l’**Inspecteur** occupe l’autre moitié, toujours en bas.
 On lit ce qui est sélectionné **pendant** qu’on choisit un modèle et qu’on écrit un prompt :
 dans un éditeur, l’inspecteur n’est jamais le panneau qu’il faut quitter pour voir autre chose.
 

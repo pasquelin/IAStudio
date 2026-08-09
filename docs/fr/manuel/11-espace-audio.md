@@ -144,7 +144,7 @@ Volontairement. Ce ne sont pas des oublis :
 - pas de **réduction de bruit** ;
 - pas de **dé-esseur** ;
 - pas de **réparation spectrale** ;
-- pas d'**égaliseur**, pas de **compresseur**.
+- pas d’**égaliseur**, pas de **compresseur**.
 
 La raison est simple : ces outils répondent à des problèmes de **prise de son réelle** — un
 micro qui souffle, une pièce qui résonne, un sifflement sur les « s ». Un son **généré** n’a pas
