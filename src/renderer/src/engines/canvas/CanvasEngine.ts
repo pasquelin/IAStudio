@@ -80,6 +80,7 @@ import {
   type ShapeGeometry,
   type ShapeKind,
 } from './shape-geometry'
+import { DEFAULT_BRUSH, type BrushSettings } from './brush'
 import { brushRect } from './tiles'
 import {
   containIn,
@@ -105,15 +106,6 @@ export type CanvasTool =
   | 'fill'
   | 'picker'
   | 'hand'
-
-export type BrushSettings = {
-  size: number
-  /** 0 to 1. 1 is a hard edge, 0 a fully feathered one. */
-  hardness: number
-  opacity: number
-  /** Packed RGB, the form Pixi takes. */
-  color: number
-}
 
 /**
  * What the engine may do to the guides. It builds no id and runs no command: those belong to the
@@ -169,13 +161,6 @@ export type CanvasEngineOptions = {
   layers: LayerPort
   /** Puts an embedded face in the page. Injected because jsdom has no `FontFace` to put it with. */
   addFace: FaceRegistrar
-}
-
-export const DEFAULT_BRUSH: BrushSettings = {
-  size: 24,
-  hardness: 0.8,
-  opacity: 1,
-  color: 0x000000,
 }
 
 /**
@@ -297,6 +282,13 @@ type Gesture =
   | { kind: 'rotate'; id: string; center: Point; from: Point; origin: Transform }
 
 const NO_GESTURE: Gesture = { kind: 'none' }
+
+/**
+ * The tools that lay a disc down where the hand is, and so the ones the ring stands for. The
+ * fill floods a region rather than stamping one, and the shapes are drawn corner to corner:
+ * neither says anything about the brush's footprint.
+ */
+const RINGED_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'eraser'])
 
 /** Which gestures hold a layer open in the history, so releasing one closes its entry. */
 const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate'])
@@ -953,6 +945,14 @@ export class CanvasEngine {
 
   setBrush(settings: BrushSettings): void {
     this.brush = settings
+    // The ring is drawn from this size: without a repaint it would keep the old footprint until
+    // the hand next moved, and a size slider would look disconnected from what it sets.
+    if (this.ringed()) this.overlay.invalidate()
+  }
+
+  /** Whether the armed tool stamps a disc, and so whether the ring stands for anything. */
+  private ringed(): boolean {
+    return RINGED_TOOLS.has(this.tool)
   }
 
   /**
@@ -1345,6 +1345,7 @@ export class CanvasEngine {
         lit: this.hover?.kind === 'handle' ? this.hover.id : null,
         pending: this.pending,
         selection: this.selection,
+        brushRadius: this.ringed() ? this.brush.size / 2 : null,
       },
     }
   }
@@ -1848,8 +1849,10 @@ export class CanvasEngine {
   private readonly onPointerMove = (event: PointerEvent): void => {
     const host = this.toHost(event)
     this.pointer = host
-    // The rulers echo the pointer, so an idle move still costs one overlay frame.
-    if (this.view.rulers) this.overlay.invalidate()
+    // Two things follow the pointer without a gesture: the rulers echo it, and the brush ring
+    // rides on it. Either one makes an idle move cost one overlay frame; neither armed, and it
+    // costs none.
+    if (this.view.rulers || this.ringed()) this.overlay.invalidate()
 
     const gesture = this.gesture
     if (gesture.kind === 'none') return this.hovering(host)

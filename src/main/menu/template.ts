@@ -301,6 +301,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
               { type: 'separator' },
               commandItem('canvas.toolText', t.commands.canvasToolText.title),
               commandItem('canvas.toolPicker', t.commands.canvasToolPicker.title),
+              { type: 'separator' },
+              commandItem('canvas.brushSmaller', t.commands.canvasBrushSmaller.title),
+              commandItem('canvas.brushLarger', t.commands.canvasBrushLarger.title),
             ],
           },
         ]

@@ -335,6 +335,11 @@
     "pickerHint": "Pick up the colour under the pointer",
     "color": "Colour",
     "colorHint": "Colour of the brush, the shapes and the fill",
+    "brushSettings": "Brush settings",
+    "brushSettingsHint": "Size, hardness and opacity of the brush, the eraser and the shapes",
+    "size": "Size",
+    "hardness": "Hardness",
+    "opacity": "Opacity",
     "textDefault": "Your text"
   },
   "imageView": {
@@ -1267,6 +1272,14 @@
     "canvasToolPicker": {
       "title": "Eyedropper tool",
       "help": "Arms the eyedropper: a click takes the colour under the pointer and hands it to the brush."
+    },
+    "canvasBrushSmaller": {
+      "title": "Smaller brush",
+      "help": "Narrows the brush, the eraser and the shape stroke by one step of the scale."
+    },
+    "canvasBrushLarger": {
+      "title": "Larger brush",
+      "help": "Widens the brush, the eraser and the shape stroke by one step of the scale."
     }
   },
   "texture": {

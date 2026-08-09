@@ -105,6 +105,8 @@ const KEY_GLYPHS: Record<string, string> = {
   Comma: ',',
   Period: '.',
   Slash: '/',
+  BracketLeft: '[',
+  BracketRight: ']',
   ArrowUp: '↑',
   ArrowDown: '↓',
   ArrowLeft: '←',

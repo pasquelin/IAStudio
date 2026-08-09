@@ -90,6 +90,8 @@ export type CommandId =
   | 'canvas.toolEraserSelection'
   | 'canvas.toolFill'
   | 'canvas.toolPicker'
+  | 'canvas.brushSmaller'
+  | 'canvas.brushLarger'
   | 'canvas.undo'
   | 'canvas.redo'
   | 'skybox.view'
@@ -693,6 +695,22 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasToolPicker.title',
     helpKey: 'commands.canvasToolPicker.help',
     defaultBinding: 'KeyI',
+  }),
+  // The two bracket keys, as every editor binds them. Physical codes: on AZERTY the same two
+  // positions carry ")" and "^", and a signature written from the letter would miss them.
+  command({
+    id: 'canvas.brushSmaller',
+    scope: 'canvas',
+    titleKey: 'commands.canvasBrushSmaller.title',
+    helpKey: 'commands.canvasBrushSmaller.help',
+    defaultBinding: 'BracketLeft',
+  }),
+  command({
+    id: 'canvas.brushLarger',
+    scope: 'canvas',
+    titleKey: 'commands.canvasBrushLarger.title',
+    helpKey: 'commands.canvasBrushLarger.help',
+    defaultBinding: 'BracketRight',
   }),
   command({
     id: 'canvas.undo',

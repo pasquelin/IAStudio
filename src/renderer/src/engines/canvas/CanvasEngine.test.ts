@@ -19,6 +19,7 @@ import {
   type Rect,
   type Transform,
 } from './canvas-state'
+import { DEFAULT_BRUSH } from './brush'
 import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from './shape-geometry'
@@ -440,12 +441,14 @@ function press(host: HTMLElement, x: number, y: number, button = 0): void {
 }
 
 /**
- * Every rectangle the overlay filled, in order. The overlay paints only when its canvas hands
- * out a 2D context, and `test-setup` denies one to the whole renderer — lending it a recorder
- * for the length of one test is the only outlet the grips have.
+ * What the overlay put on screen, in order: the rectangles it filled — the grips — and the
+ * circles it traced — the brush ring. The overlay paints only when its canvas hands out a 2D
+ * context, and `test-setup` denies one to the whole renderer, so lending it a recorder for the
+ * length of one test is the only outlet this chrome has.
  */
-function chromeRecorder(): number[][] {
+function overlayRecorder(): { fills: number[][]; rings: number[][] } {
   const fills: number[][] = []
+  const rings: number[][] = []
   const ignore = (): void => {}
   const context = {
     save: ignore,
@@ -459,6 +462,9 @@ function chromeRecorder(): number[][] {
     strokeRect: ignore,
     fillText: ignore,
     setLineDash: ignore,
+    arc: (x: number, y: number, radius: number): void => {
+      rings.push([x, y, radius])
+    },
     fillRect: (x: number, y: number, width: number, height: number): void => {
       fills.push([x, y, width, height])
     },
@@ -479,7 +485,7 @@ function chromeRecorder(): number[][] {
     HTMLCanvasElement.prototype.getContext = previous
   })
 
-  return fills
+  return { fills, rings }
 }
 
 /** How many tree mutations happen from here on, read when the assertion needs it. */
@@ -3033,7 +3039,7 @@ describe('the grips offered on the armed layer', () => {
   const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
 
   async function chromeOf(tool: CanvasTool, layer: Layer): Promise<number[][]> {
-    const fills = chromeRecorder()
+    const { fills } = overlayRecorder()
     const harness = await mounted(stacked([layer]), tool)
 
     // Twice: the first drains the frames mounting already booked, with the rulers still on.
@@ -3060,5 +3066,94 @@ describe('the grips offered on the armed layer', () => {
     const pinned = layerFixture({ locked: { ...UNLOCKED, position: true } })
 
     expect(await chromeOf('move', pinned)).toHaveLength(0)
+  })
+})
+
+/**
+ * The ring under the hand, which says what the next dab will cover before it covers it. Same
+ * split as the grips: the engine decides its radius, the overlay puts it on screen.
+ */
+describe('the brush ring', () => {
+  /** Rulers off on purpose: they are the other reason the overlay repaints on a bare move. */
+  const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
+
+  async function ringsAfterMoving(tool: CanvasTool, size?: number): Promise<number[][]> {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, tool)
+    harness.engine.setView(BARE)
+    if (size !== undefined) harness.engine.setBrush({ ...DEFAULT_BRUSH, size })
+    await nextFrame()
+
+    rings.length = 0
+    drag(harness.host, 120, 90)
+    await nextFrame()
+    return rings
+  }
+
+  it('rings the hand while the brush is armed', async () => {
+    const rings = await ringsAfterMoving('brush', 40)
+
+    expect(rings).toHaveLength(2)
+    // Half the brush: the setting is a diameter, and the ring is the footprint of one dab.
+    expect(rings[0]).toEqual([120, 90, 20])
+  })
+
+  it('rings the hand for the eraser too, which lays down the same disc', async () => {
+    expect(await ringsAfterMoving('eraser', 40)).toHaveLength(2)
+  })
+
+  it('leaves the hand bare under a tool that lays down no disc', async () => {
+    expect(await ringsAfterMoving('move')).toHaveLength(0)
+    expect(await ringsAfterMoving('select')).toHaveLength(0)
+    expect(await ringsAfterMoving('crop')).toHaveLength(0)
+  })
+
+  /**
+   * The overlay used to repaint on an idle move only to echo the pointer on the rulers. With
+   * them off, the ring would have been painted once and then stood still while the hand moved.
+   */
+  it('follows the hand with the rulers off', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    drag(harness.host, 100, 100)
+    await nextFrame()
+    rings.length = 0
+    drag(harness.host, 160, 140)
+    await nextFrame()
+
+    expect(rings[0]?.slice(0, 2)).toEqual([160, 140])
+  })
+
+  // Dragging the size slider must show the new footprint at once: waiting for the next twitch
+  // of the mouse is what makes a slider feel disconnected from what it sets.
+  it('resizes under a still hand when the setting changes', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 100, 100)
+    await nextFrame()
+
+    rings.length = 0
+    harness.engine.setBrush({ ...DEFAULT_BRUSH, size: 64 })
+    await nextFrame()
+
+    expect(rings[0]).toEqual([100, 100, 32])
+  })
+
+  it('drops the ring once the hand leaves the canvas', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 100, 100)
+    await nextFrame()
+
+    rings.length = 0
+    harness.host.dispatchEvent(new PointerEvent('pointerleave'))
+    await nextFrame()
+
+    expect(rings).toHaveLength(0)
   })
 })

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_DRAG_TYPE, startAssetDrag } from '@/helpers/asset-drag'
+import { BRUSH_SIZE } from '@/engines/canvas/brush'
 import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
 import { canUndo } from '@/engines/core/history'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -25,9 +26,9 @@ const mergeInto = vi.fn()
 // that the document wires the bar to the right calls.
 vi.mock('@/engines/canvas/CanvasEngine', () => {
   return {
-    // Repeated rather than imported from the real module: importing it would pull Pixi into a
-    // jsdom run that has no WebGL context.
-    DEFAULT_BRUSH: { size: 24, hardness: 0.8, opacity: 1, color: 0x000000 },
+    // The brush's own defaults are NOT doubled here: they live in `engines/canvas/brush`, which
+    // holds no Pixi, so the real ones are used. A copy kept here could drift from them in
+    // silence — and a double that no longer doubles is a test that lies.
     CanvasEngine: class {
       mount = vi.fn(() => Promise.resolve())
       apply = vi.fn()
@@ -181,6 +182,58 @@ describe('ImageDocument', () => {
   it('offers a colour input', () => {
     render(<ImageDocument documentId="doc-1" />)
     expect(screen.getByLabelText('Couleur')).toBeInTheDocument()
+  })
+
+  /**
+   * The brush shipped with a size, a hardness and an opacity that nothing on screen could reach:
+   * every stroke was 24 px wide for the life of the session.
+   */
+  describe('the brush settings', () => {
+    const openSettings = async (): Promise<void> => {
+      render(<ImageDocument documentId="doc-1" />)
+      await userEvent.click(screen.getByRole('button', { name: 'Réglages du pinceau' }))
+    }
+
+    it('offers all three behind the brush button', async () => {
+      await openSettings()
+
+      expect(await screen.findByLabelText('Taille')).toBeInTheDocument()
+      expect(screen.getByLabelText('Dureté')).toBeInTheDocument()
+      expect(screen.getByLabelText('Opacité')).toBeInTheDocument()
+    })
+
+    it('hands a new size straight to the engine', async () => {
+      await openSettings()
+      fireEvent.change(await screen.findByLabelText('Taille'), { target: { value: '96' } })
+
+      expect(setBrush).toHaveBeenLastCalledWith(expect.objectContaining({ size: 96 }))
+    })
+
+    it('shows the size it is set to, so the next stroke is no longer a guess', async () => {
+      await openSettings()
+
+      expect(await screen.findByLabelText('Taille')).toHaveValue('24')
+      expect(screen.getByLabelText('Taille')).toHaveAttribute('max', String(BRUSH_SIZE.max))
+    })
+  })
+
+  describe('the bracket keys', () => {
+    it('steps the size up and down through the registry, not by a listener of its own', () => {
+      armed()
+
+      press('BracketRight')
+      expect(setBrush).toHaveBeenLastCalledWith(expect.objectContaining({ size: 34 }))
+
+      press('BracketLeft')
+      expect(setBrush).toHaveBeenLastCalledWith(expect.objectContaining({ size: 24 }))
+    })
+
+    it('leaves the colour alone while it resizes', () => {
+      armed()
+
+      press('BracketRight')
+      expect(setBrush).toHaveBeenLastCalledWith(expect.objectContaining({ color: 0x000000 }))
+    })
   })
 
   it('hands the chosen tool to the engine', async () => {
