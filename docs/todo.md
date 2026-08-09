@@ -794,10 +794,21 @@ où on l'a lancé.** Une App lancée depuis la 3D peut déposer une image dans l
 **Ne pas filtrer par espace est correct** : filtrer cacherait justement les Apps les plus utiles.
 Mais l'absence de filtre n'exempte pas d'expliquer — deux manques, dans l'ordre :
 
-1. **Dire ce qu'une App produit**, avant de la lancer. Vérifier d'abord si l'API le dit : le
-   descripteur ne le porte pas, ses `tags` peut-être. À mesurer contre l'API réelle avant d'inventer.
+1. **Dire ce qu'une App produit**, avant de la lancer. **La mesure a été tentée le 9 août 2026 et
+   elle n'a rien pu dire** : `workflows_list` répond `{"workflows": []}` sur ce compte, et le
+   serveur MCP n'expose aucun listing public — son seul filtre est `status`, pas `privacy`. Le
+   studio, lui, liste `privacy: 'public'`, c'est-à-dire la galerie de Scenario, qu'aucun outil à
+   disposition n'atteint. C'est le cas qu'aucun appel ne produit : **ne pas re-tenter la même
+   mesure**, et ne pas conclure des `tags` sans une App réelle sous les yeux. Le commentaire de
+   `statusOf` (`workflow-registry.ts`) dit déjà la même chose d'un autre champ — « no public
+   workflow was reachable to check it ». Ce point attend donc soit un compte qui en porte une,
+   soit une App lancée à la main dans l'application.
 2. **Dire où le résultat est parti**, après. La barre de jobs et le journal savent qu'il est arrivé ;
-   ni l'un ni l'autre ne dit dans quelle étagère.
+   ni l'un ni l'autre ne dit dans quelle étagère. **Celui-là ne dépend pas de l'API** : le
+   collecteur calcule déjà le type de chaque sortie (`assetTypeOfRemote`, `assets/collector.ts`)
+   et le jette. Le rendre — à côté des ids qu'il retourne déjà — suffirait à ce que `journal`
+   (`job-manager.ts`, `activity.generated`) nomme les étagères. Coût réel : le contrat de
+   `AssetCollector`, une clé i18n dans les deux bundles, et leurs tests.
 
 ---
 
