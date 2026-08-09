@@ -1,4 +1,4 @@
-import { clamp } from '@/helpers/numeric'
+import { clamp } from '@shared/numeric'
 import type { Rect } from './canvas-state'
 import type { Size } from './viewport'
 

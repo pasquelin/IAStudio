@@ -1,6 +1,6 @@
-import type { PbrChannel } from '@shared/domain/texture'
+import type { MaterialSettings, PbrChannel } from '@shared/domain/texture'
 import type { Command } from '../core/history'
-import type { ChannelMap, MaterialSettings, PreviewSettings, TextureState } from './texture-state'
+import type { ChannelMap, PreviewSettings, TextureState } from './texture-state'
 
 /**
  * Texture edits. Each captures what it needs to revert **as it is applied** rather than as it is

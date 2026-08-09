@@ -23,10 +23,10 @@ import {
   syncEdgeTransform,
 } from './material-shader'
 import { previewGeometry } from './preview-geometry'
+import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/texture'
 import {
   contentOf,
   DEFAULT_PREVIEW,
-  DEFAULT_TEXTURE_MATERIAL,
   slotFor,
   type PreviewShape,
   type TextureState,

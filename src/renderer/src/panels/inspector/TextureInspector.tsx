@@ -11,14 +11,13 @@ import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
 import { setMaterial, setPreview } from '@/engines/texture/commands'
 import {
-  MATERIAL_BOUNDS,
   PREVIEW_BOUNDS,
   PREVIEW_SHAPES,
   TILING_PREVIEWS,
   type PreviewShape,
 } from '@/engines/texture/texture-state'
 import { toDegrees, toRadians } from '@shared/domain/angles'
-import { seamVerdict, type SeamVerdict } from '@shared/domain/texture'
+import { MATERIAL_BOUNDS, seamVerdict, type SeamVerdict } from '@shared/domain/texture'
 import { textureOf, useTextures } from '@/stores/textures'
 import { seamOf, useTextureViews } from '@/stores/texture-views'
 import { EnvironmentSection } from './EnvironmentSection'

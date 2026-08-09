@@ -1,4 +1,4 @@
-import type { NumericBounds } from '@/helpers/numeric'
+import type { NumericBounds } from '@shared/numeric'
 import { NumberField } from './NumberField'
 import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
