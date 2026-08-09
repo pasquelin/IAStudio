@@ -10,8 +10,8 @@ import {
   type SettingDescriptor,
 } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
-import { cn } from '@/helpers/cn'
 import { useToken } from '@/hooks/useToken'
+import { SettingLine } from './SettingLine'
 import { getBridge } from '@/services/bridge'
 import { useSettingsDraft, useSettingValue } from '@/stores/settings-draft'
 
@@ -317,56 +317,47 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   const describedBy = `${id}-help`
 
   return (
-    <div
-      className={cn(
-        'border-base-300 flex flex-col gap-2 border-b py-3 last:border-b-0',
-        !enabled && 'pointer-events-none opacity-50',
-      )}
+    <SettingLine
+      title={t(descriptor.titleKey)}
+      labelFor={id}
+      // Marks the row AND, through the section it belongs to, the entry in the tree.
+      staged={staged}
+      stagedLabel={t('settings.modified')}
+      disabled={!enabled}
+      help={
+        <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
+          {t(descriptor.helpKey)}
+          {/* A greyed control that does not say why is a dead end. */}
+          {!enabled && requirement && (
+            <span className="text-warning block">
+              {t('settings.requires', {
+                setting: t(descriptorAt(requirement.path)?.titleKey ?? ''),
+              })}
+            </span>
+          )}
+        </p>
+      }
     >
-      <div className="flex items-center justify-between gap-4">
-        <label htmlFor={id} className="flex items-center gap-1.5 text-xs font-medium">
-          {/* Marks the row AND, through the section it belongs to, the entry in the tree. */}
-          <span
-            aria-hidden={!staged}
-            title={staged ? t('settings.modified') : undefined}
-            className={cn('bg-primary size-1.5 shrink-0 rounded-full', !staged && 'invisible')}
-          />
-          {t(descriptor.titleKey)}
-        </label>
+      <Control
+        descriptor={descriptor}
+        id={id}
+        describedBy={describedBy}
+        value={value}
+        onChange={next => stage(descriptor.path, next)}
+      />
 
-        <div className="flex shrink-0 items-center gap-2">
-          <Control
-            descriptor={descriptor}
-            id={id}
-            describedBy={describedBy}
-            value={value}
-            onChange={next => stage(descriptor.path, next)}
-          />
-
-          <button
-            type="button"
-            title={t('settings.restoreDefault')}
-            aria-label={t('settings.restoreDefault')}
-            // Kept in place rather than unmounted: a button appearing between the control and
-            // the edge would shift the whole row the moment a value is touched.
-            className="btn btn-ghost btn-xs btn-square"
-            disabled={!restorable}
-            onClick={() => stage(descriptor.path, fallback)}
-          >
-            <UiIcon path={mdiRestore} size={14} className={restorable ? '' : 'opacity-0'} />
-          </button>
-        </div>
-      </div>
-
-      <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
-        {t(descriptor.helpKey)}
-        {/* A greyed control that does not say why is a dead end. */}
-        {!enabled && requirement && (
-          <span className="text-warning block">
-            {t('settings.requires', { setting: t(descriptorAt(requirement.path)?.titleKey ?? '') })}
-          </span>
-        )}
-      </p>
-    </div>
+      <button
+        type="button"
+        title={t('settings.restoreDefault')}
+        aria-label={t('settings.restoreDefault')}
+        // Kept in place rather than unmounted: a button appearing between the control and the
+        // edge would shift the whole row the moment a value is touched.
+        className="btn btn-ghost btn-xs btn-square"
+        disabled={!restorable}
+        onClick={() => stage(descriptor.path, fallback)}
+      >
+        <UiIcon path={mdiRestore} size={14} className={restorable ? '' : 'opacity-0'} />
+      </button>
+    </SettingLine>
   )
 }

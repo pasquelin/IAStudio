@@ -15,6 +15,7 @@ import { signatureOf, type Signature } from '@shared/domain/shortcut'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import { SettingLine } from './SettingLine'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
 
@@ -94,49 +95,48 @@ function CommandRow({
   const describedBy = `${id}-help`
 
   return (
-    <div className="border-base-300 flex flex-col gap-2 border-b py-3 last:border-b-0">
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-xs font-medium">{t(descriptor.titleKey)}</span>
+    <SettingLine
+      title={t(descriptor.titleKey)}
+      help={
+        <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
+          {t(descriptor.helpKey)}
+        </p>
+      }
+    >
+      <>
+        {clashing && (
+          <span className="text-error flex" title={t('settings.shortcutConflict')}>
+            <UiIcon path={mdiAlertCircleOutline} size={14} />
+          </span>
+        )}
 
-        <div className="flex shrink-0 items-center gap-2">
-          {clashing && (
-            <span className="text-error flex" title={t('settings.shortcutConflict')}>
-              <UiIcon path={mdiAlertCircleOutline} size={14} />
-            </span>
+        <button
+          id={id}
+          type="button"
+          aria-describedby={describedBy}
+          aria-label={t(descriptor.titleKey)}
+          onClick={onCapture}
+          className={cn(
+            'btn btn-sm w-40 font-mono',
+            capturing && 'btn-primary',
+            clashing && !capturing && 'btn-error btn-outline',
           )}
+        >
+          {capturing ? t('settings.pressAKey') : label(binding) || t('settings.unbound')}
+        </button>
 
-          <button
-            id={id}
-            type="button"
-            aria-describedby={describedBy}
-            aria-label={t(descriptor.titleKey)}
-            onClick={onCapture}
-            className={cn(
-              'btn btn-sm w-40 font-mono',
-              capturing && 'btn-primary',
-              clashing && !capturing && 'btn-error btn-outline',
-            )}
-          >
-            {capturing ? t('settings.pressAKey') : label(binding) || t('settings.unbound')}
-          </button>
-
-          <button
-            type="button"
-            title={t('settings.restoreDefault')}
-            aria-label={`${t('settings.restoreDefault')} — ${t(descriptor.titleKey)}`}
-            className="btn btn-ghost btn-xs btn-square"
-            disabled={!remapped}
-            onClick={() => onBind(null)}
-          >
-            <UiIcon path={mdiRestore} size={14} className={remapped ? '' : 'opacity-0'} />
-          </button>
-        </div>
-      </div>
-
-      <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
-        {t(descriptor.helpKey)}
-      </p>
-    </div>
+        <button
+          type="button"
+          title={t('settings.restoreDefault')}
+          aria-label={`${t('settings.restoreDefault')} — ${t(descriptor.titleKey)}`}
+          className="btn btn-ghost btn-xs btn-square"
+          disabled={!remapped}
+          onClick={() => onBind(null)}
+        >
+          <UiIcon path={mdiRestore} size={14} className={remapped ? '' : 'opacity-0'} />
+        </button>
+      </>
+    </SettingLine>
   )
 }
 
