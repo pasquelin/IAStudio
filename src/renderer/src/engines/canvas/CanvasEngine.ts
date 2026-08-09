@@ -290,6 +290,13 @@ const NO_GESTURE: Gesture = { kind: 'none' }
  */
 const RINGED_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'eraser'])
 
+/**
+ * The tools that write on the armed layer's surface, and so the ones a layer can refuse. The
+ * text tool is not one: it places a caption of its own rather than writing on what is armed.
+ * The eyedropper reads, and the selection tools carve out a region rather than a layer.
+ */
+const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'eraser', 'fill', 'shape'])
+
 /** Which gestures hold a layer open in the history, so releasing one closes its entry. */
 const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate'])
 
@@ -429,6 +436,18 @@ export class CanvasEngine {
 
   private gesture: Gesture = NO_GESTURE
   private hover: HandleHit | null = null
+  /** Whether the armed tool is currently saying it can do nothing here — see `refuses`. */
+  private refused = false
+  /**
+   * The last refusal, and what it was computed from. Memoised for the same reason `corners` is:
+   * answering it walks the layer tree and inverts a matrix, and `hovering` runs per pointer move.
+   */
+  private refusal: {
+    of: CanvasState | null
+    tool: CanvasTool
+    painting: PaintSurface
+    value: boolean
+  } | null = null
   /**
    * The armed layer's corners, derived once per state. Reaching a layer flattens the whole tree,
    * and both the hover test and the overlay frame want the same answer on the same pointer move.
@@ -934,8 +953,11 @@ export class CanvasEngine {
    * guessed at from before: a lit grip that no longer sits under the pointer is worse than none.
    */
   private forgetHover(): void {
-    if (!this.hover) return
+    // The refusal is dropped alongside the grip: a refusing tool holds no chrome, so a guard on
+    // the grip alone left `not-allowed` on screen after arming a tool that refuses nothing.
+    if (!this.hover && !this.refused) return
     this.hover = null
+    this.refused = false
     // Never over a cursor something else owns: a gesture holds its own for as long as it runs —
     // a pan keeps `grabbing` across every frame it moves the view by — and space held is a pan
     // in waiting that `releaseSpace` will give back.
@@ -1345,7 +1367,8 @@ export class CanvasEngine {
         lit: this.hover?.kind === 'handle' ? this.hover.id : null,
         pending: this.pending,
         selection: this.selection,
-        brushRadius: this.ringed() ? this.brush.size / 2 : null,
+        // Not while the tool is refusing: a ring is a promise that a dab lands there.
+        brushRadius: this.ringed() && !this.refuses() ? this.brush.size / 2 : null,
       },
     }
   }
@@ -1765,6 +1788,38 @@ export class CanvasEngine {
     return box
   }
 
+  /**
+   * Whether the armed tool can do nothing at all where the hand is — a group or an adjustment
+   * layer under the brush, a padlock on the pixels, a layer pinned under the move tool.
+   *
+   * Answered by the very test the gesture will run, never by a copy of it: a cursor that
+   * promises a stroke the press then refuses is worse than no cursor at all.
+   */
+  private refuses(): boolean {
+    const cached = this.refusal
+    if (
+      cached &&
+      cached.of === this.state &&
+      cached.tool === this.tool &&
+      cached.painting === this.painting
+    ) {
+      return cached.value
+    }
+
+    const value = this.wouldRefuse()
+    this.refusal = { of: this.state, tool: this.tool, painting: this.painting, value }
+    return value
+  }
+
+  private wouldRefuse(): boolean {
+    if (this.tool === 'move') {
+      const layer = this.activeLayer()
+      return !layer || layer.locked.position
+    }
+
+    return WRITING_TOOLS.has(this.tool) && this.paintTarget() === null
+  }
+
   /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
   private paintTarget(): BrushTarget | null {
     const layer = this.activeLayer()
@@ -1982,10 +2037,19 @@ export class CanvasEngine {
   private hovering(host: Point): void {
     const box = this.spacing ? null : this.hoverBox()
     const next = box && this.chromeAt(box, toDocument(this.view.viewport, host))
-    if (sameHit(next, this.hover)) return
+    // Weighed alongside the grip, never behind it: a refusing tool holds no chrome, so both
+    // hits compare equal on every move and a test on the grip alone would return before the
+    // refusal was ever read.
+    const refused = !this.spacing && this.refuses()
+    if (sameHit(next, this.hover) && refused === this.refused) return
 
     this.hover = next
-    if (!this.spacing) this.setCursor(box && next ? cursorFor(next, box.facing) : '')
+    this.refused = refused
+    // The refusal wins over a grip: a padlocked layer still draws its box, and an arrow over one
+    // would promise a pull the press declines.
+    if (!this.spacing) {
+      this.setCursor(refused ? 'not-allowed' : box && next ? cursorFor(next, box.facing) : '')
+    }
     this.overlay.invalidate()
   }
 
@@ -2042,8 +2106,10 @@ export class CanvasEngine {
     this.setCursor('')
     // What the pointer was over was left standing while space held the cursor. Dropped rather
     // than kept: the hover is only recomputed when it *changes*, so a grip the hand never left
-    // would compare equal on the next move and its arrow would never come back.
+    // would compare equal on the next move and its arrow would never come back. Same for the
+    // refusal, which is weighed the same way.
     this.hover = null
+    this.refused = false
     this.overlay.invalidate()
   }
 
