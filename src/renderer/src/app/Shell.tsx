@@ -3,7 +3,7 @@ import { cn } from '@/helpers/cn'
 import { TooltipHost } from '@/design/TooltipHost'
 import { useHomeVisible, useLayouts, useToolSurface } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
-import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
+import { arrangementOf, DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
 import { Breadcrumb } from './Breadcrumb'
@@ -102,15 +102,22 @@ export function Shell() {
  * panels first; the opposite zones put the handle first, because they grow backwards.
  */
 function Edge({ zone }: { zone: ToolZone }) {
+  const surface = useToolSurface()
+
   // Stable across the whole drag, so the memoized panels skip a size change entirely.
   const focusZone = useCallback(() => useTools.getState().focus(zone), [zone])
-  const closePrimary = useCallback(() => useTools.getState().close(zone, 'primary'), [zone])
-  const closeSecondary = useCallback(() => useTools.getState().close(zone, 'secondary'), [zone])
+  const closePrimary = useCallback(
+    () => useTools.getState().close(surface, zone, 'primary'),
+    [surface, zone],
+  )
+  const closeSecondary = useCallback(
+    () => useTools.getState().close(surface, zone, 'secondary'),
+    [surface, zone],
+  )
 
-  const slots = useTools(state => state.open[zone])
-  const size = useTools(state => state.sizes[zone] ?? DEFAULT_SIZES[zone])
-  const split = useTools(state => state.splits[zone] ?? DEFAULT_SPLIT)
-  const surface = useToolSurface()
+  const slots = useTools(state => arrangementOf(state, surface).open[zone])
+  const size = useTools(state => arrangementOf(state, surface).sizes[zone] ?? DEFAULT_SIZES[zone])
+  const split = useTools(state => arrangementOf(state, surface).splits[zone] ?? DEFAULT_SPLIT)
   const hasModel = useHasModel(surface)
 
   // The stored value straight through: `undefined` is a closed half and `null` an unchosen one,
@@ -144,7 +151,7 @@ function Edge({ zone }: { zone: ToolZone }) {
           axis={lying ? 'horizontal' : 'vertical'}
           invert
           size={split}
-          onSize={(value, available) => resplit(zone, value, available)}
+          onSize={(value, available) => resplit(surface, zone, value, available)}
         />
       )}
 
@@ -166,7 +173,7 @@ function Edge({ zone }: { zone: ToolZone }) {
       axis={lying ? 'vertical' : 'horizontal'}
       invert={!isLeading(zone)}
       size={size}
-      onSize={(value, available) => resize(zone, value, available)}
+      onSize={(value, available) => resize(surface, zone, value, available)}
     />
   )
 

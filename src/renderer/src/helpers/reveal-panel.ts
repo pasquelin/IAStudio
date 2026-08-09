@@ -6,7 +6,7 @@ import { workspaceOfType } from '@/helpers/workspaces'
 import { TYPE_FACET } from '@/panels/assets/type-facet'
 import { useAssets } from '@/stores/assets'
 import { toolSurface, useLayouts } from '@/stores/layouts'
-import { useTools } from '@/stores/tools'
+import { arrangementOf, useTools } from '@/stores/tools'
 
 /**
  * Brings a panel forward, wherever this surface puts it. The zone is resolved rather than
@@ -28,10 +28,11 @@ export function revealTool(tool: ToolId): void {
 
   const { zone, slot } = placement
   const tools = useTools.getState()
-  const up = shownTool(tools.open[zone]?.[slot], zone, slot, surface, hasModelFor(surface))
+  const { open } = arrangementOf(tools, surface)
+  const up = shownTool(open[zone]?.[slot], zone, slot, surface, hasModelFor(surface))
 
   if (up === tool) tools.focus(zone)
-  else tools.show(zone, tool)
+  else tools.show(surface, zone, tool)
 }
 
 /**

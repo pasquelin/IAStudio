@@ -13,6 +13,7 @@ import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { arrangedFor } from '@/stores/tool-fixtures'
 import { useTools } from '@/stores/tools'
 import { ImageDocument } from './ImageDocument'
 
@@ -310,7 +311,10 @@ describe('ImageDocument', () => {
 
   // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
   it('brings the shelf forward instead of arming a tool that draws nothing', async () => {
-    useTools.setState({ open: { bottom: { primary: 'assets' } }, focusedZone: null })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+      focusedZone: null,
+    })
     render(<ImageDocument documentId="doc-1" />)
 
     await userEvent.hover(screen.getByRole('button', { name: /^Rectangle/ }))

@@ -17,6 +17,23 @@ export type ToolSurface = WorkspaceId | 'home'
 
 export const HOME_SURFACE = 'home'
 
+/**
+ * Surfaces that share one arrangement of zones.
+ *
+ * The six workspaces share theirs on purpose: what is open is stored per zone, so a shelf opened
+ * in Image is still there in Video. The home shares with none — it never stands beside a
+ * workspace, and its left column holds the Explorer where the six hold generation. One state for
+ * both would make closing the Explorer close the Models panel, and naming it overwrite the panel
+ * the user had named there.
+ */
+export type SurfaceFamily = 'workspaces' | 'home'
+
+export const SURFACE_FAMILIES: readonly SurfaceFamily[] = ['workspaces', 'home']
+
+export function familyOf(surface: ToolSurface): SurfaceFamily {
+  return surface === HOME_SURFACE ? 'home' : 'workspaces'
+}
+
 export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
 
 export type ToolId =

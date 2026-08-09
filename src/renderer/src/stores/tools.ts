@@ -1,13 +1,18 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
+  familyOf,
   isHorizontal,
+  placementIn,
   placementOf,
+  SURFACE_FAMILIES,
   workspacePlacementsOf,
   TOOL_SLOTS,
   TOOL_ZONES,
+  type SurfaceFamily,
   type ToolId,
   type ToolSlot,
+  type ToolSurface,
   type ToolZone,
 } from '@shared/domain/tool'
 import { isRecord } from '@shared/guards'
@@ -34,25 +39,39 @@ type ZoneSlots = Partial<Record<ToolSlot, ToolId | null>>
 export type OpenByZone = Partial<Record<ToolZone, ZoneSlots>>
 type SizesByZone = Partial<Record<ToolZone, number>>
 
-type ToolsState = {
+/**
+ * How one family of surfaces has arranged its zones. Kept per family, not once for the studio:
+ * the home's left column is the Explorer and the workspaces' is generation, so one shared entry
+ * made closing the first close the second, and naming either overwrite the other.
+ */
+export type Arrangement = {
   open: OpenByZone
   /** The zone's own length: a width for the side columns, a height for the strips. */
   sizes: SizesByZone
   /** Length the second half takes inside its zone, along the zone's other axis. */
   splits: SizesByZone
+}
+
+type ToolsState = {
+  arrangements: Record<SurfaceFamily, Arrangement>
   /** Last clicked zone: the one whose rail icon gets accented. */
   focusedZone: ToolZone | null
   /** Brings a tool up in the half its placement declares, and focuses its zone. */
-  show: (zone: ToolZone, tool: ToolId) => void
-  close: (zone: ToolZone, slot: ToolSlot) => void
+  show: (surface: ToolSurface, zone: ToolZone, tool: ToolId) => void
+  close: (surface: ToolSurface, zone: ToolZone, slot: ToolSlot) => void
   focus: (zone: ToolZone | null) => void
   /** `available`: the container's dimension along the zone's axis. */
-  resize: (zone: ToolZone, size: number, available: number) => void
+  resize: (surface: ToolSurface, zone: ToolZone, size: number, available: number) => void
   /** Moves the divider between a zone's two halves. */
-  resplit: (zone: ToolZone, size: number, available: number) => void
-  /** Re-clamps every zone after the window changed size. */
+  resplit: (surface: ToolSurface, zone: ToolZone, size: number, available: number) => void
+  /** Re-clamps every zone of every family after the window changed size. */
   fit: (width: number, height: number) => void
   reset: () => void
+}
+
+/** The arrangement a surface reads and writes. One line, but it is the whole point of the split. */
+export function arrangementOf(state: ToolsState, surface: ToolSurface): Arrangement {
+  return state.arrangements[familyOf(surface)]
 }
 
 // The wider column is the one holding the generator: it renders a model's own form, and a
@@ -68,13 +87,24 @@ export const DEFAULT_SPLIT = 240
 
 /**
  * Which halves start open — and nothing about what they draw. Every one of them is `null`, so
- * each section opens on the panel it declares first: the layers in Image, the shelf in Video,
- * the sky in Skyboxes, the models on the left everywhere.
+ * each surface opens on the panel it declares first: the layers in Image, the shelf in Video,
+ * the sky in Skyboxes, the models on the left in all six, and the Explorer on the home.
+ *
+ * The home names only the left column, the one zone it has: an entry for the others would hold
+ * a handle open beside a column nothing can fill.
  */
-export const DEFAULT_OPEN: OpenByZone = {
-  left: { primary: null },
-  right: { primary: null, secondary: null },
-  bottom: { primary: null },
+export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
+  workspaces: {
+    left: { primary: null },
+    right: { primary: null, secondary: null },
+    bottom: { primary: null },
+  },
+  home: { left: { primary: null } },
+}
+
+export const DEFAULT_ARRANGEMENTS: Record<SurfaceFamily, Arrangement> = {
+  workspaces: { open: DEFAULT_OPEN.workspaces, sizes: {}, splits: {} },
+  home: { open: DEFAULT_OPEN.home, sizes: {}, splits: {} },
 }
 
 const OPPOSITE: Record<ToolZone, ToolZone> = {
@@ -110,12 +140,48 @@ function sizeOf(sizes: SizesByZone, zone: ToolZone, open: OpenByZone): number {
   return isZoneOpen(open, zone) ? (sizes[zone] ?? DEFAULT_SIZES[zone]) : 0
 }
 
+/** One family's arrangement, patched — the others left as they were, which is the whole point. */
+function written(
+  state: { arrangements: Record<SurfaceFamily, Arrangement> },
+  surface: ToolSurface,
+  patch: Partial<Arrangement>,
+): Record<SurfaceFamily, Arrangement> {
+  const family = familyOf(surface)
+  return { ...state.arrangements, [family]: { ...state.arrangements[family], ...patch } }
+}
+
+/** Every stored length of one arrangement, re-clamped to a window of this size. */
+function fitted(arrangement: Arrangement, width: number, height: number): Arrangement {
+  const sizes = { ...arrangement.sizes }
+  const splits = { ...arrangement.splits }
+
+  for (const zone of TOOL_ZONES) {
+    const stored = sizes[zone]
+    if (stored === undefined) continue
+
+    const available = isHorizontal(zone) ? height : width
+    sizes[zone] = fitZoneSize(
+      stored,
+      available,
+      sizeOf(arrangement.sizes, OPPOSITE[zone], arrangement.open),
+    )
+
+    // The divider lives inside the zone, along its other axis: left unclamped it ends up past
+    // the bottom of a shrunken column, with no way to drag it back.
+    const divider = splits[zone]
+    if (divider === undefined) continue
+    splits[zone] = fitSplit(divider, isHorizontal(zone) ? width : height)
+  }
+
+  return { ...arrangement, sizes, splits }
+}
+
 /**
  * Reads what version 2 wrote — one bare id per zone — and lands it in the slot that tool
  * declares today. A version bump must not cost someone the layout they arranged.
  */
 export function openFrom(persisted: unknown): OpenByZone {
-  if (!isRecord(persisted)) return DEFAULT_OPEN
+  if (!isRecord(persisted)) return DEFAULT_OPEN.workspaces
 
   const open: OpenByZone = {}
   for (const zone of TOOL_ZONES) {
@@ -168,6 +234,43 @@ function openEverywhereItSits(open: OpenByZone): OpenByZone {
   return next
 }
 
+/**
+ * What an older store comes back as. Every version this runs for predates the split, so the
+ * whole stored arrangement is the workspaces': the home had no zones of its own to arrange. It
+ * becomes theirs, and the home starts on its default — one column, open, on the Explorer.
+ */
+export function migrateTools(
+  persisted: unknown,
+  version: number,
+): { arrangements: Record<SurfaceFamily, Arrangement> } | undefined {
+  if (!isRecord(persisted)) return undefined
+
+  return {
+    arrangements: {
+      workspaces: arrangementFrom(persisted, version),
+      home: DEFAULT_ARRANGEMENTS.home,
+    },
+  }
+}
+
+/** One family's arrangement, read back from what an older version wrote. */
+function arrangementFrom(persisted: unknown, version: number): Arrangement {
+  if (!isRecord(persisted)) return DEFAULT_ARRANGEMENTS.workspaces
+
+  const sizes: unknown = Reflect.get(persisted, 'sizes')
+  const splits: unknown = Reflect.get(persisted, 'splits')
+  const open = openFrom(Reflect.get(persisted, 'open'))
+
+  return {
+    // Up to version 7 every half named a panel, including the ones nobody had ever clicked —
+    // the default did the naming. Kept as chosen, an untouched Image would still open on the
+    // explorer rather than its layers, and no update would ever fix it.
+    open: version < 8 ? unchosen(open) : open,
+    sizes: isRecord(sizes) ? sizes : {},
+    splits: isRecord(splits) ? splits : {},
+  }
+}
+
 /** The same halves, open on no panel in particular — which section decides is then the section's. */
 export function unchosen(open: OpenByZone): OpenByZone {
   const next: OpenByZone = {}
@@ -210,30 +313,33 @@ function slotsFrom(stored: unknown): ZoneSlots | null {
 export const useTools = create<ToolsState>()(
   persist(
     set => ({
-      open: DEFAULT_OPEN,
-      sizes: {},
-      splits: {},
+      arrangements: DEFAULT_ARRANGEMENTS,
       focusedZone: null,
 
-      show: (zone, tool) =>
+      show: (surface, zone, tool) =>
         set(state => {
-          const slot = placementOf(tool)?.slot
+          const slot = placementIn(tool, surface)?.slot
           if (!slot) return state
-          if (state.open[zone]?.[slot] === tool) return { focusedZone: zone }
+
+          const { open } = arrangementOf(state, surface)
+          if (open[zone]?.[slot] === tool) return { focusedZone: zone }
 
           return {
-            open: { ...state.open, [zone]: { ...(state.open[zone] ?? {}), [slot]: tool } },
+            arrangements: written(state, surface, {
+              open: { ...open, [zone]: { ...(open[zone] ?? {}), [slot]: tool } },
+            }),
             focusedZone: zone,
           }
         }),
 
-      close: (zone, slot) =>
+      close: (surface, zone, slot) =>
         set(state => {
-          const next = { ...(state.open[zone] ?? {}) }
+          const next = { ...(arrangementOf(state, surface).open[zone] ?? {}) }
           delete next[slot]
-          const open = { ...state.open, [zone]: next }
+          const open = { ...arrangementOf(state, surface).open, [zone]: next }
+
           return {
-            open,
+            arrangements: written(state, surface, { open }),
             focusedZone:
               !isZoneOpen(open, zone) && state.focusedZone === zone ? null : state.focusedZone,
           }
@@ -243,44 +349,34 @@ export const useTools = create<ToolsState>()(
 
       // Both guarded: `persist` writes localStorage on every `set`, and a drag past the ceiling
       // clamps to the same number for as long as the pointer keeps going.
-      resize: (zone, size, available) =>
+      resize: (surface, zone, size, available) =>
         set(state => {
-          const next = fitZoneSize(size, available, sizeOf(state.sizes, OPPOSITE[zone], state.open))
-          if (next === state.sizes[zone]) return state
-          return { sizes: { ...state.sizes, [zone]: next } }
+          const { open, sizes } = arrangementOf(state, surface)
+          const next = fitZoneSize(size, available, sizeOf(sizes, OPPOSITE[zone], open))
+          if (next === sizes[zone]) return state
+          return { arrangements: written(state, surface, { sizes: { ...sizes, [zone]: next } }) }
         }),
 
-      resplit: (zone, size, available) =>
+      resplit: (surface, zone, size, available) =>
         set(state => {
+          const { splits } = arrangementOf(state, surface)
           const next = fitSplit(size, available)
-          if (next === state.splits[zone]) return state
-          return { splits: { ...state.splits, [zone]: next } }
+          if (next === splits[zone]) return state
+          return { arrangements: written(state, surface, { splits: { ...splits, [zone]: next } }) }
         }),
 
+      // Every family, not just the one in front: the window is as wide for the home as for a
+      // workspace, and an arrangement re-clamped only when visible comes back overflowing.
       fit: (width, height) =>
         set(state => {
-          const sizes = { ...state.sizes }
-          const splits = { ...state.splits }
-          for (const zone of TOOL_ZONES) {
-            const stored = sizes[zone]
-            if (stored === undefined) continue
-            const available = isHorizontal(zone) ? height : width
-            sizes[zone] = fitZoneSize(
-              stored,
-              available,
-              sizeOf(state.sizes, OPPOSITE[zone], state.open),
-            )
-
-            // The divider lives inside the zone, along its other axis: left unclamped it ends up
-            // past the bottom of a shrunken column, with no way to drag it back.
-            const divider = splits[zone]
-            if (divider === undefined) continue
-            splits[zone] = fitSplit(divider, isHorizontal(zone) ? width : height)
+          const arrangements = { ...state.arrangements }
+          for (const family of SURFACE_FAMILIES) {
+            arrangements[family] = fitted(arrangements[family], width, height)
           }
-          return { sizes, splits }
+          return { arrangements }
         }),
 
-      reset: () => set({ open: DEFAULT_OPEN, sizes: {}, splits: {}, focusedZone: null }),
+      reset: () => set({ arrangements: DEFAULT_ARRANGEMENTS, focusedZone: null }),
     }),
     {
       name: 'scenario-studio:tools',
@@ -289,26 +385,15 @@ export const useTools = create<ToolsState>()(
       // startup. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
       // mesh and light panels, and 4 the asset shelf moving out of the bottom strip. 5 still
       // cut that strip in two and knew a `jobs` panel, which the status line carries now, and
-      // 6 had the generation panels on the right, where everything else sits today, and 7 named
-      // a panel in every default half, which imposed one section's answer on the other five.
-      version: 8,
-      migrate: (persisted, version) => {
-        if (typeof persisted !== 'object' || persisted === null) return undefined
-        const sizes: unknown = Reflect.get(persisted, 'sizes')
-        const splits: unknown = Reflect.get(persisted, 'splits')
-        const open = openFrom(Reflect.get(persisted, 'open'))
-        return {
-          // Up to version 7 every half named a panel, including the ones nobody had ever clicked
-          // — the default did the naming. Kept as chosen, an untouched Image would still open on
-          // the explorer rather than its layers, and no update would ever fix it.
-          open: version < 8 ? unchosen(open) : open,
-          sizes: isRecord(sizes) ? sizes : {},
-          splits: isRecord(splits) ? splits : {},
-        }
-      },
+      // 6 had the generation panels on the right, where everything else sits today, 7 named
+      // a panel in every default half, which imposed one section's answer on the other five,
+      // and 8 held ONE arrangement for the whole studio — the home then took the left column
+      // the six spaces keep for generation, and a click on either was a click on both.
+      version: 9,
+      migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.
-      partialize: state => ({ open: state.open, sizes: state.sizes, splits: state.splits }),
+      partialize: state => ({ arrangements: state.arrangements }),
     },
   ),
 )

@@ -6,7 +6,8 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
-import { DEFAULT_OPEN, useTools } from '@/stores/tools'
+import { arrangedFor } from '@/stores/tool-fixtures'
+import { DEFAULT_ARRANGEMENTS, arrangementOf, useTools } from '@/stores/tools'
 import { Rail } from './Rail'
 
 const openDocument = vi.fn()
@@ -139,7 +140,7 @@ describe('Rail', () => {
   // the section declares — the layers in Image, never the explorer under them.
   it('marks the section-first panel as up on the default layout', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     render(<Rail side="right" />)
 
     expect(screen.getByRole('button', { name: 'Calques' })).toHaveAttribute('aria-pressed', 'true')
@@ -153,13 +154,15 @@ describe('Rail', () => {
   // that reads as up — and a click on it closes the half instead of merely restating it.
   it('accents the icon of the panel the half actually shows', async () => {
     useLayouts.setState({ activeWorkspace: 'video' })
-    useTools.setState({ open: { bottom: { primary: 'assets' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+    })
     render(<Rail side="left" />)
 
     const montage = screen.getByRole('button', { name: 'Timeline' })
     expect(montage).toHaveAttribute('aria-pressed', 'true')
 
     await userEvent.click(montage)
-    expect(useTools.getState().open.bottom?.primary).toBeUndefined()
+    expect(arrangementOf(useTools.getState(), 'image').open.bottom?.primary).toBeUndefined()
   })
 })

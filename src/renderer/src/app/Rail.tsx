@@ -7,7 +7,7 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { useLayouts, useToolSurface } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
-import { useTools } from '@/stores/tools'
+import { arrangementOf, useTools } from '@/stores/tools'
 import { createDocumentIn } from './new-document'
 import { HOME_SURFACE, TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
 import {
@@ -121,7 +121,7 @@ function RailGroup({ zone }: { zone: ToolZone }) {
   // the Shell — and with it the Dockview host at the center.
   const focusedZone = useTools(state => state.focusedZone)
   const surface = useToolSurface()
-  const open = useTools(state => state.open)
+  const open = useTools(state => arrangementOf(state, surface).open)
   const hasModel = useHasModel(surface)
   const tools = useAvailableTools(zone, surface)
   // Actions are stable for the store's lifetime: subscribing to them would only add selectors
@@ -151,7 +151,9 @@ function RailGroup({ zone }: { zone: ToolZone }) {
                   tooltip={TIP_RIGHT}
                   active={isOpen}
                   accented={isOpen && focusedZone === zone}
-                  onClick={() => (isOpen ? close(zone, slot) : show(zone, tool.id))}
+                  onClick={() =>
+                    isOpen ? close(surface, zone, slot) : show(surface, zone, tool.id)
+                  }
                   className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
                 />
               )
