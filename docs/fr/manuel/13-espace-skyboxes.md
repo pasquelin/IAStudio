@@ -19,7 +19,7 @@ Une skybox sert à deux choses :
 
 1. **on la voit** — c’est le décor derrière tout le reste ;
 2. **elle éclaire** — chaque partie du ciel renvoie sa lumière et sa couleur sur les objets de la
-   scène. C’est ce qu’on appelle l'*éclairage par image*, ou IBL.
+   scène. C’est ce qu’on appelle l’*éclairage par image*, ou IBL.
 
 C’est le deuxième point qui compte le plus. Un ciel de coucher de soleil ne fait pas que remplir
 le fond : il pose une lumière orange rasante sur tout ce qui est devant.

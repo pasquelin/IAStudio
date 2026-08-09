@@ -144,7 +144,7 @@ taisent, qu’elles soient muettes ou non. C’est la convention de tous les log
 
 ## L’inspecteur d’un clip
 
-Sélectionnez un clip, et regardez l'**Inspecteur**, dans la colonne de droite.
+Sélectionnez un clip, et regardez l’**Inspecteur**, dans la colonne de droite.
 
 | Champ | Ce qu’il fait |
 |---|---|
@@ -208,7 +208,7 @@ se remarque surtout sur un portable : le ventilateur se tait, la batterie tient.
 > **Une séquence s’enregistre** en `.seq` par `⌘S`, et se rouvre telle quelle : pistes, clips,
 > fondus et gains. Ce qui ne revient pas, c’est l’historique d’annulation.
 >
-> Il n’y a en revanche toujours pas d'**export** : on ne peut pas encore écrire un fichier vidéo
+> Il n’y a en revanche toujours pas d’**export** : on ne peut pas encore écrire un fichier vidéo
 > final. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ---

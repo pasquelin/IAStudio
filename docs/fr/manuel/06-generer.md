@@ -350,7 +350,7 @@ bouton `+` du rail gauche. Voir [Les assets](07-assets.md).
 
 ## Régénérer avec les mêmes réglages
 
-Sélectionnez un asset dans l’étagère, et regardez l'**Inspecteur**, à droite. S’il connaît la
+Sélectionnez un asset dans l’étagère, et regardez l’**Inspecteur**, à droite. S’il connaît la
 génération qui l’a produit, il affiche son modèle, son prompt et sa graine — et propose
 **Régénérer**.
 

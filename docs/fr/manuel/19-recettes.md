@@ -135,7 +135,7 @@ Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’o
 6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir ;
 7. `⌘S` **enregistre**.
 
-**Le piège.** Une image déposée sur l'**aperçu** va toujours dans la couleur de base — c’est
+**Le piège.** Une image déposée sur l’**aperçu** va toujours dans la couleur de base — c’est
 voulu. Pour viser les normales ou la rugosité, déposez sur **leur vignette** dans le panneau
 Canaux.
 
@@ -201,7 +201,7 @@ sélectionnez-le, `Suppr`.
 telle quelle — pistes, clips, fondus et gains. Ce qui ne revient pas, c’est l’historique
 d’annulation.
 
-**Ce qui manque toujours :** l'**export**. Le studio ne peut pas encore écrire un fichier vidéo
+**Ce qui manque toujours :** l’**export**. Le studio ne peut pas encore écrire un fichier vidéo
 final.
 
 ---
@@ -227,8 +227,8 @@ autre règle encore.
 |---|---|---|
 | un clip sur un montage | glisser sur la **timeline** | un onglet séquence |
 | une image en calque | glisser sur la **toile** | un onglet image |
-| une image en couleur de base | glisser sur l'**aperçu de la matière** | un onglet texture |
-| une image en ciel | glisser sur l'**aperçu du ciel** | un onglet ciel |
+| une image en couleur de base | glisser sur l’**aperçu de la matière** | un onglet texture |
+| une image en ciel | glisser sur l’**aperçu du ciel** | un onglet ciel |
 | un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
 Une texture, elle, n’accepte **que** le glisser-déposer : la double-cliquer ne fait rien.
@@ -257,7 +257,7 @@ ses textures à côté — ainsi que `.obj`, `.fbx` et les HDRI (`.hdr`) sont re
 ## Refaire une image que j’avais réussie
 
 1. cliquez l’image dans le panneau **Assets** ;
-2. regardez l'**Inspecteur**, à droite : s’il connaît la génération, il affiche le **modèle**, le
+2. regardez l’**Inspecteur**, à droite : s’il connaît la génération, il affiche le **modèle**, le
    **prompt** et la **graine** ;
 3. bouton **Régénérer** : le modèle et ses paramètres reviennent dans le panneau Génération, prêts
    à repartir.
