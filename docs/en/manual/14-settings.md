@@ -85,6 +85,19 @@ What the application does when you launch it.
 
 "Open nothing" is quicker to start, and calmer if you juggle a lot of projects.
 
+### Show the home screen
+
+**Switch. Default: on.**
+
+The full-width screen the studio opens on: your projects, what you were working on, what is
+running, and what the models can do. Unticked, the studio goes straight to the workspace you left.
+
+**This setting and the one above are independent.** "Open nothing" only concerns the project: the
+home still appears, offering to create one. To land directly in a workspace, untick this one.
+
+What is set **on the home itself**, and not here: which bands are shown, in which order, and how
+many items each one displays — see [The window](03-the-window.md#the-home-screen-before-anything-else).
+
 ---
 
 ## Account

@@ -7,6 +7,92 @@ chapter takes it apart, piece by piece.
 
 ---
 
+## The home screen, before anything else
+
+**The studio does not open on an empty window.** It opens on a full-width screen — the home —
+saying where you were, what you have made, and what you can do next.
+
+It closes as soon as you step into a workspace, and it has no rail, no panel and no tab: it is a
+page, not a layout. The status line stays at the bottom, because a generation started yesterday
+may well finish while you read it.
+
+### The banner, at the top
+
+It says one thing at a time, whichever matters right now.
+
+| What it shows | When |
+|---|---|
+| **Pick up where you left off** | a document was open last time |
+| **_n_ generations running** | something is still working |
+| **Connect an API key** | no key is stored |
+| **Start a project** | no project is open |
+| **Ready when you are** | the project is open and still holds nothing |
+
+**It waits to know before concluding.** Reading the projects and the documents takes a moment; the
+banner appears once the answer has landed, rather than announcing "start a project" and then
+correcting itself.
+
+### The bands
+
+Under the banner, one band per subject, in this order:
+
+| Band | What it shows | It needs |
+|---|---|---|
+| **Tools** | the six workspaces, and the project gestures | nothing |
+| **Your projects** | the recent projects | nothing |
+| **What you have made** | your generations, captioned with the model that made them | an open project |
+| **By kind** | six counters — Image, Video, Audio, Mesh, Texture, Skybox | an open project |
+| **Your recipes** | the settings you have pinned | nothing |
+| **Your library** | what lives online, on your Scenario account | an API key |
+| **Your documents** | the project's documents | an open project |
+| **Running now** | the generations under way | an API key |
+| **Recent activity** | what the studio has done and failed to do | an open project |
+
+**A band that lacks what it needs is not greyed out: it is not there.** With no API key, the
+library does not exist on this screen.
+
+**Your recipes need nothing**, and that is deliberate: a recipe is kept outside every project and
+follows you from one to the next. It is the one band with something left to show when no folder
+is open.
+
+### Two gestures that save time
+
+**Making another image costs no network call.** Under each creation, "Make another one with…"
+reopens the form already filled in: the model, the prompt and the settings are kept beside the
+asset, in the project.
+
+**A counter leads to its assets.** Clicking the images one opens the Image workspace and sets the
+filter: you land on the images, not on the whole shelf. A kind at zero stays on the row but does
+not respond — there is nowhere to go. If the project is empty throughout, the band does not show
+at all.
+
+### Tidying the page
+
+Every band has its menu — **Customise this section**.
+
+| Entry | Effect |
+|---|---|
+| **Move up** / **Move down** | changes the order, which is remembered |
+| **Hide this section** | takes it off the page |
+| **Show _n_ items** | from 3 to 48 |
+
+Hidden sections are counted at the foot of the page — "2 sections hidden" — with a **Show them
+again** button. Nothing disappears without leaving a trace.
+
+**Three bands cannot be hidden**: the banner, Tools and Your projects. That is what keeps the home
+from ever being a blank page, whatever you untick.
+
+### The left column
+
+A narrow rail holding the **Explorer**: the project's documents, as a tree. It is there for what
+you keep an eye on while reading the page, rather than what you read in turn.
+
+> **The home can be skipped.** **Preferences ▸ General ▸ Show the home screen**: unticked, the
+> studio goes straight to the workspace you left. The order of the bands, and which ones you have
+> hidden, are set on the home itself, not in the preferences.
+
+---
+
 ## The overall plan
 
 ```
