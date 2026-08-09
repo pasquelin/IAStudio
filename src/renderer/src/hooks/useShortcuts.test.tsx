@@ -205,6 +205,35 @@ describe('useHeldCommand', () => {
     expect(onChange.mock.calls).toEqual([[true], [false]])
   })
 
+  /**
+   * The order a hand actually uses: the little finger leaves ⌥ before the index leaves D. Read
+   * as a signature, that release is `KeyD` — matching nothing — and the one after it `AltLeft`,
+   * matching nothing either. The microphone stayed open, and because the hook still believed
+   * the key was down, every later press was ignored: dictation was dead until the window lost
+   * the focus.
+   */
+  it('releases when the modifier is let go before the key', () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    press()
+    fireEvent.keyUp(window, { code: 'AltLeft', key: 'Alt', altKey: false })
+
+    expect(onChange.mock.calls).toEqual([[true], [false]])
+  })
+
+  it('takes the next press after a release in that order', () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    press()
+    fireEvent.keyUp(window, { code: 'AltLeft', key: 'Alt', altKey: false })
+    fireEvent.keyUp(window, { code: 'KeyD', key: 'd', altKey: false })
+    press()
+
+    expect(onChange.mock.calls).toEqual([[true], [false], [true]])
+  })
+
   it('reports the press once, not once per auto-repeat', () => {
     const onChange = vi.fn()
     hold(onChange)
@@ -217,7 +246,7 @@ describe('useHeldCommand', () => {
   })
 
   // The whole point of dictation is to speak into the field one is already in, so the guard
-  // every other shortcut obeys is lifted for a command that declares `whileTyping`.
+  // every other shortcut obeys is lifted for a command that declares `held`.
   it('fires while the focus sits in a text field', async () => {
     const onChange = vi.fn()
     hold(onChange)

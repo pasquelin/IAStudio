@@ -144,6 +144,19 @@ describe('a running session', () => {
     expect(harnessed.listeners.onFailure).toHaveBeenCalledWith(new Error('exited with code 139'))
   })
 
+  /**
+   * `utilityProcess` reports the exit of a process we killed exactly as it reports one that
+   * died, and the idle unload kills one on purpose every ten minutes of silence. Read as a
+   * crash, it put the studio in `error` and said the engine had stopped — long after it had
+   * been let go deliberately.
+   */
+  it('says nothing when the process we closed reports its exit', () => {
+    harnessed.client.close()
+    harnessed.crash(new Error('exited with code 0'))
+
+    expect(harnessed.listeners.onFailure).not.toHaveBeenCalled()
+  })
+
   // A dead process swallows `postMessage` without a word, so audio pushed into one would look
   // like a microphone nobody is listening to.
   it('stops sending once the process is gone', () => {

@@ -182,6 +182,61 @@ describe('a session that goes wrong', () => {
     expect(opened).toHaveBeenCalledTimes(2)
     expect(session.snapshot().state).toBe('listening')
   })
+
+  // A worker that answers `{failed}` on a segment is still running. Letting go of the reference
+  // without killing it leaves 700 MB resident, and the next press forks a second one.
+  it('closes the engine it is giving up on', async () => {
+    const { session, engine, crash } = harness()
+
+    await session.start()
+    crash(new Error('the decoder refused a segment'))
+
+    expect(engine.close).toHaveBeenCalled()
+  })
+
+  /**
+   * The budget counts failures in a row, and a crash is one — it used to count only failures to
+   * load, so an engine that died on the first chunk of every session was forked again, forever.
+   * A sentence that comes back is what proves the engine works, so that is what clears it.
+   */
+  it('stops forking after three crashes in a row', async () => {
+    const { session, crash, opened } = harness()
+
+    for (let attempt = 0; attempt < MAX_RESTARTS; attempt += 1) {
+      await session.start()
+      crash(new Error('exited with code 139'))
+    }
+    await session.start()
+
+    expect(opened).toHaveBeenCalledTimes(MAX_RESTARTS)
+    expect(session.snapshot().state).toBe('error')
+  })
+
+  it('gives the budget back once a sentence comes through', async () => {
+    const { session, crash, speak, opened } = harness()
+
+    for (let attempt = 0; attempt < MAX_RESTARTS; attempt += 1) {
+      await session.start()
+      if (attempt === 1) speak('Un phare rouge.')
+      crash(new Error('exited with code 139'))
+    }
+    await session.start()
+
+    expect(opened).toHaveBeenCalledTimes(MAX_RESTARTS + 1)
+    expect(session.snapshot().state).toBe('listening')
+  })
+
+  /**
+   * Three awaits stand between the guard and the moment the engine exists, the last of them
+   * seconds long. Two presses inside that window forked two workers and kept the second.
+   */
+  it('forks one engine when two starts overlap', async () => {
+    const { session, opened } = harness()
+
+    await Promise.all([session.start(), session.start()])
+
+    expect(opened).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('ending a session', () => {
@@ -222,6 +277,32 @@ describe('ending a session', () => {
   it('reports what was heard', async () => {
     const { session, events, speak } = harness()
 
+    await session.start()
+    speak('Un phare rouge.')
+
+    expect(events).toContainEqual({ type: 'final', text: 'Un phare rouge.', latencyMs: 300 })
+  })
+
+  /**
+   * The worker takes `{cancel}` in turn, behind the audio it has already accepted, and a decode
+   * under way answers when it resolves. Without this, a sentence the user explicitly threw away
+   * was written into the field a moment later.
+   */
+  it('drops a sentence that settles after it was cancelled', async () => {
+    const { session, events, speak } = harness()
+
+    await session.start()
+    await session.cancel()
+    speak('Un phare rouge.')
+
+    expect(events.filter(event => event.type === 'final')).toEqual([])
+  })
+
+  it('takes sentences again once a new session starts', async () => {
+    const { session, events, speak } = harness()
+
+    await session.start()
+    await session.cancel()
     await session.start()
     speak('Un phare rouge.')
 
@@ -300,6 +381,27 @@ describe('fetching the model', () => {
     await running
 
     expect(seen).toEqual({ received: 42, total: 100 })
+  })
+
+  /**
+   * The key pressed mid-download used to answer `modelMissing` over the progress bar, and the
+   * button that answer offers does nothing while a download is already running — so the 640 MB
+   * looked as though they had stopped arriving.
+   */
+  it('leaves a running download alone when someone asks to dictate', async () => {
+    const { session, states } = harness({
+      download: (_report, signal) =>
+        new Promise(resolve => {
+          signal.addEventListener('abort', () => resolve())
+        }),
+    })
+
+    const running = session.downloadModel()
+    await session.start()
+    session.cancelDownload()
+    await running
+
+    expect(states()).toEqual(['downloadingModel', 'idle'])
   })
 
   it('goes back to asking when the download is cancelled', async () => {

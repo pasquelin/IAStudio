@@ -42,7 +42,8 @@
     "redoHint": "Redo the action that was undone",
     "generate": "Generate",
     "close": "Close",
-    "removeTool": "Remove tool"
+    "removeTool": "Remove tool",
+    "retry": "Try again"
   },
   "generation": {
     "noParameter": "This model takes no parameters.",
@@ -1673,11 +1674,9 @@
     "stop": "Stop dictating",
     "listening": "Listening…",
     "loadingEngine": "Loading the model…",
-    "modelMissing": "Dictation needs a recognition model, downloaded once and for all.",
     "download": "Download the model ({{size}})",
     "downloading": "Downloading the model: {{done}} of {{total}}",
     "cancelDownload": "Stop the download",
-    "permissionRequired": "Microphone access was refused. Allow it for this application, then try again.",
     "openPrivacySettings": "Open the system settings",
     "active": "Microphone on",
     "device": "Microphone",
@@ -1689,8 +1688,7 @@
       "modelDownloadFailed": "The model could not be downloaded.",
       "modelChecksumMismatch": "The downloaded model is damaged; it has been removed.",
       "engineCrashed": "Speech recognition stopped."
-    },
-    "retry": "Try again"
+    }
   },
   "units": {
     "byte": "B",

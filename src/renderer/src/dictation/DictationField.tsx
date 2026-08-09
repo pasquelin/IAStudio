@@ -27,8 +27,14 @@ export function DictationField() {
         <DictationButton variant="header" />
       </div>
 
+      {/*
+        Not a live region. The hypothesis is replaced about every 700 ms and each one is the
+        whole sentence so far, never a delta: announced politely, they queue up and the reader
+        falls further behind the voice with every pass. What settles goes into the field, which
+        a screen reader follows on its own.
+      */}
       {isListening && (
-        <p role="status" aria-live="polite" className="text-muted text-[11px] italic">
+        <p aria-live="off" className="text-muted text-[11px] italic">
           {partial || t('dictation.listening')}
         </p>
       )}

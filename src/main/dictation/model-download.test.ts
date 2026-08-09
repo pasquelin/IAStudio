@@ -7,7 +7,6 @@ import {
   fetchModel,
   fetchModelFile,
   modelIsComplete,
-  sweepPartials,
   type DownloadHost,
 } from './model-download'
 
@@ -337,23 +336,5 @@ describe('modelIsComplete', () => {
 
     disk.delete(`/models/${missing.name}`)
     expect(await modelIsComplete(host, '/models')).toBe(false)
-  })
-})
-
-describe('sweepPartials', () => {
-  const half = STT_MODEL_FILES[0]!
-  const whole = STT_MODEL_FILES[1]!
-
-  // A `.part` is only ever resumed by a download someone asked for, so one left by a crash
-  // would sit there for good — and be resumed months later against a URL that has moved.
-  it('drops what an interrupted download left behind, and nothing else', async () => {
-    const { host, disk } = harness()
-    disk.set(`/models/${half.name}.part`, 'half')
-    disk.set(`/models/${whole.name}`, 'whole')
-
-    await sweepPartials(host, '/models')
-
-    expect(disk.has(`/models/${half.name}.part`)).toBe(false)
-    expect(disk.get(`/models/${whole.name}`)).toBe('whole')
   })
 })

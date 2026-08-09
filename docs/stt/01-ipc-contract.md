@@ -109,8 +109,11 @@ et une exception réglerait une promesse que personne n'attend pendant que le mi
 
 Un protocole à part (`stt-protocol.ts`), qui ne traverse pas la frontière renderer.
 
-**Entrées** : `{ load, …chemins et réglages }`, `{ audio: Int16Array }`, `{ flush }`,
-`{ cancel }`, `{ unload }`.
+**Entrées** : `{ load, …chemins et réglages }`, `{ audio: Int16Array }`, `{ flush }`, `{ cancel }`.
+
+Il n'y a **pas** de `{ unload }` : décharger, c'est tuer le processus. Un message qui demanderait
+au worker de relâcher ses 700 Mo laisserait un processus vide à surveiller, là où `kill()` rend la
+mémoire à l'OS sans que personne ait à s'en occuper.
 **Sorties** : `{ ready }` puis `{ partial }`, `{ final }`, `{ dropped }`, `{ failed }`.
 
 Le worker reçoit des **chemins**, jamais des poids : le modèle fait 640 Mo sur le disque, et le

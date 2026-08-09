@@ -47,6 +47,17 @@ type DictationState = {
  */
 let capture: Capture | null = null
 
+/**
+ * Which session a capture belongs to.
+ *
+ * `capture` is only assigned once `startCapture` resolves, and two awaits stand before that —
+ * the round trip that may load 700 MB, then `getUserMedia`. A stop landing in that window found
+ * nothing to close, and the stream opened behind it stayed live with the microphone light on,
+ * blocking every later start. Bumped synchronously by whoever ends a session, so the start that
+ * is still running knows its stream is no longer wanted.
+ */
+let session = 0
+
 const failureOf = (error: unknown): SttFailure => {
   if (error instanceof MicrophoneRefused) {
     return { code: 'permissionDenied', message: error.message }
@@ -117,17 +128,18 @@ export const useDictation = create<DictationState>()((set, get) => ({
     const bridge = getBridge()
     if (!bridge || capture) return
 
+    const mine = (session += 1)
     set({ failure: null })
     await bridge.dictation.start()
 
     // Only once the main process says it is listening: the model may be missing, or the
     // microphone refused, and opening a stream then would ask for a device for nothing.
-    if (get().state !== 'listening') return
+    if (mine !== session || get().state !== 'listening') return
 
     const chosen = useSettings.getState().settings.dictation.inputDeviceId
 
     try {
-      capture = await startCapture({
+      const opened = await startCapture({
         ...(chosen ? { deviceId: chosen } : {}),
         onChunk: chunk => {
           // `Int16Array` over a plain `ArrayBuffer`, so its buffer is one: only a shared buffer
@@ -136,6 +148,11 @@ export const useDictation = create<DictationState>()((set, get) => ({
         },
         onLevel: level => set({ level }),
       })
+
+      // Let go of the key while the device was opening, and this stream is already stale: it is
+      // closed here rather than kept, because nothing else holds a reference to it.
+      if (mine !== session) await opened.stop()
+      else capture = opened
     } catch (error) {
       set({ failure: failureOf(error) })
       await bridge.dictation.cancel()
@@ -182,6 +199,11 @@ export const useDictation = create<DictationState>()((set, get) => ({
 }))
 
 async function closeCapture(): Promise<void> {
+  // Bumped before the first await, so a start still opening a device sees it and closes what it
+  // was about to keep. Every path that ends a session comes through here, the engine crashing
+  // included.
+  session += 1
+
   const running = capture
   capture = null
   useDictation.setState({ level: 0 })

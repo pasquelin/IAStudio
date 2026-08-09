@@ -15,6 +15,9 @@ export type ShortcutsOptions = {
   onMotionChange?: (held: Set<MotionId>) => void
 }
 
+/** `KeyboardEvent.key` of the four modifiers, whichever side of the keyboard they came from. */
+const MODIFIER_KEYS: ReadonlySet<string> = new Set(['Alt', 'Control', 'Meta', 'Shift'])
+
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   return (
@@ -136,6 +139,10 @@ export function useHeldCommand(
   useEffect(() => {
     if (!enabled) return
 
+    // The physical key the chord started on. A release is recognised by it rather than by
+    // rebuilding the signature — see `releases`.
+    let pressed: string | null = null
+
     let down = false
     const set = (held: boolean) => {
       if (down === held) return
@@ -152,15 +159,34 @@ export function useHeldCommand(
     const onKeyDown = (event: KeyboardEvent) => {
       if (!matches(event)) return
       event.preventDefault()
+      pressed = event.code
       set(true)
     }
 
+    /**
+     * Whether this release ends the chord: the key it started on coming up, or any modifier —
+     * since a held command always carries one.
+     *
+     * Not `matches(event)`, which rebuilds the signature from the modifiers as they stand at
+     * that instant. Letting go of ⌥ before D — which is what a hand does — sends `keyup` for D
+     * with `altKey: false`, signature `KeyD`, matching nothing. The microphone stayed open, and
+     * `down` stayed `true`, so every later press was ignored: the shortcut was dead until the
+     * window lost focus.
+     */
+    const releases = (event: KeyboardEvent) =>
+      event.code === pressed || MODIFIER_KEYS.has(event.key)
+
     const onKeyUp = (event: KeyboardEvent) => {
-      if (matches(event)) set(false)
+      if (!releases(event)) return
+      pressed = null
+      set(false)
     }
 
     // The window losing focus never delivers the keyup — the same hole the motions have.
-    const onBlur = () => set(false)
+    const onBlur = () => {
+      pressed = null
+      set(false)
+    }
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)

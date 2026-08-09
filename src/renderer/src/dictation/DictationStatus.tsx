@@ -78,9 +78,10 @@ export function DictationStatus() {
 
   if (dictation.state === 'permissionRequired') {
     return (
+      // No `role="status"`: it would replace the implicit `button` role, and this is the only
+      // way out of a refused microphone — a screen reader has to find it among the buttons.
       <button
         type="button"
-        role="status"
         onClick={() => void dictation.openPrivacySettings()}
         className="hover:text-text flex items-center gap-1.5"
       >

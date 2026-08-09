@@ -182,6 +182,44 @@ describe('starting and stopping', () => {
     expect(useDictation.getState().failure?.code).toBe('noInputDevice')
   })
 
+  /**
+   * `capture` is only assigned once the device has opened, and a stop landing before that found
+   * nothing to close: the stream came up behind it with the recording light on, and — being
+   * truthy — turned every later start into an immediate return. Dictation was over for the rest
+   * of the session, microphone included.
+   */
+  it('closes a microphone that finished opening after the session ended', async () => {
+    const { emit } = connected({
+      start: () => {
+        emit({ type: 'state', state: 'listening' })
+        return Promise.resolve()
+      },
+    })
+    await useDictation.getState().connect()
+
+    let openDevice = (): void => {}
+    startCapture.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          openDevice = () => resolve({ stop })
+        }),
+    )
+
+    const starting = useDictation.getState().start()
+    // Stopped while the device is still opening — the window the guard used to miss entirely.
+    await vi.waitFor(() => expect(startCapture).toHaveBeenCalled())
+    await useDictation.getState().stop()
+    openDevice()
+    await starting
+
+    expect(stop).toHaveBeenCalled()
+
+    // And the next press is served rather than swallowed by a capture nobody can reach.
+    await useDictation.getState().start()
+
+    expect(startCapture).toHaveBeenCalledTimes(2)
+  })
+
   it('closes the microphone on stop, and drops the level with it', async () => {
     const { emit } = connected({
       start: () => {

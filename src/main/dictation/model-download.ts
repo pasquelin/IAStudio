@@ -190,15 +190,3 @@ export async function modelIsComplete(host: DownloadHost, folder: string): Promi
   }
   return true
 }
-
-/**
- * Drops the leftovers of a download that never finished. Called once at startup: a `.part` is
- * only ever resumed by a download the user asked for, so one left by a crash would otherwise
- * sit there for good.
- */
-export async function sweepPartials(host: DownloadHost, folder: string): Promise<void> {
-  for (const file of STT_MODEL_FILES) {
-    const part = partOf(host.join(folder, file.name))
-    if (await host.exists(part)) await host.remove(part)
-  }
-}

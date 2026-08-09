@@ -88,6 +88,10 @@ export function createSession(host: SessionHost): DictationSession {
   let restarts = 0
   let downloading: AbortController | null = null
   let cancelIdle: (() => void) | null = null
+  /** Shared by every caller that arrives while one start is still running — see `start`. */
+  let starting: Promise<void> | null = null
+  /** Set by `cancel`, cleared by the next start: what was dropped must not arrive late. */
+  let discarding = false
 
   const publish = (next: SttState): void => {
     if (state === next) return
@@ -128,13 +132,23 @@ export function createSession(host: SessionHost): DictationSession {
   const listeners: EngineListeners = {
     onPartial: text => host.emit({ type: 'partial', text }),
     onFinal: (text, latencyMs) => {
+      // A sentence settled after `cancel` was asked for is a sentence the user threw away: the
+      // worker had already accepted the audio, and its answer arrives behind the refusal.
+      if (discarding) return
+
       // End of speech to text on screen. Measured rather than assumed: it is what tells a
       // machine that struggles from a setting that is wrong.
       host.log('info', `${latencyMs} ms for ${text.length} characters`)
       host.emit({ type: 'final', text, latencyMs })
+      // The engine answered, so it works: what the restart budget counts is failures in a row.
+      restarts = 0
     },
     onFailure: error => {
+      // Closed rather than merely forgotten: a worker that reported a failed segment is still
+      // running, and dropping the reference would leave 700 MB resident until the studio quits.
+      engine?.close()
       engine = null
+      restarts += 1
       refuse('engineCrashed', error)
     },
   }
@@ -171,8 +185,11 @@ export function createSession(host: SessionHost): DictationSession {
     return true
   }
 
-  const start = async (): Promise<void> => {
+  const begin = async (): Promise<void> => {
     if (state === 'listening') return
+    // A download in flight owns the state: starting would answer `modelMissing` over its
+    // progress bar, and the button that answer offers does nothing while it runs.
+    if (state === 'downloadingModel') return
 
     const access = await host.requestMicrophone()
     if (access === 'denied') {
@@ -192,17 +209,33 @@ export function createSession(host: SessionHost): DictationSession {
     // Cleared here rather than on every state change: what it says is why the engine is not
     // there, and it stops being true exactly when one starts.
     failure = null
-    restarts = 0
+    discarding = false
     cancelIdle?.()
     cancelIdle = null
     publish('listening')
   }
 
+  /**
+   * One start at a time, whatever asks.
+   *
+   * Three awaits stand between the guard and the moment `engine` exists, and the last of them —
+   * reading 700 MB of weights — takes seconds. Two presses of the key inside that window used to
+   * fork two workers, keep the second, and leave the first resident for the rest of the session.
+   */
+  const start = (): Promise<void> => {
+    starting ??= begin().finally(() => {
+      starting = null
+    })
+    return starting
+  }
+
   const settle = async (drop: boolean): Promise<void> => {
     if (state !== 'listening') return
 
-    if (drop) engine?.cancel()
-    else engine?.flush()
+    if (drop) {
+      discarding = true
+      engine?.cancel()
+    } else engine?.flush()
 
     publish('ready')
     armIdle()

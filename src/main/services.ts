@@ -26,7 +26,7 @@ import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
 import { createSession, type DictationSession } from './dictation/session'
-import { fetchModel, modelIsComplete, sweepPartials } from './dictation/model-download'
+import { fetchModel, modelIsComplete } from './dictation/model-download'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/model-store'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/stt-process'
@@ -523,9 +523,9 @@ export function createServices(settings: SettingsStore): Services {
     download: async (onProgress, signal) => {
       const folder = modelFolder()
       await ensureFolder(folder)
-      // Swept before fetching rather than at startup: a `.part` is only ever resumed by a
-      // download someone asked for, and this is that moment.
-      await sweepPartials(downloads, folder)
+      // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
+      // resumes from what already arrived. A leftover that is not a prefix of what is being
+      // fetched cannot survive anyway — it fails its digest and is removed there.
       await fetchModel(downloads, { folder, onProgress, signal })
     },
     requestMicrophone: () =>

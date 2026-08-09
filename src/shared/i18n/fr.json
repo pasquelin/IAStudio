@@ -42,7 +42,8 @@
     "redoHint": "Rétablir l’action annulée",
     "generate": "Générer",
     "close": "Fermer",
-    "removeTool": "Retirer le module"
+    "removeTool": "Retirer le module",
+    "retry": "Réessayer"
   },
   "generation": {
     "noParameter": "Ce modèle n’attend aucun paramètre.",
@@ -1673,11 +1674,9 @@
     "stop": "Arrêter la dictée",
     "listening": "Je vous écoute…",
     "loadingEngine": "Chargement du modèle…",
-    "modelMissing": "La dictée a besoin d’un modèle de reconnaissance, à télécharger une seule fois.",
     "download": "Télécharger le modèle ({{size}})",
     "downloading": "Téléchargement du modèle : {{done}} sur {{total}}",
     "cancelDownload": "Interrompre le téléchargement",
-    "permissionRequired": "L’accès au micro a été refusé. Autorisez-le pour cette application, puis réessayez.",
     "openPrivacySettings": "Ouvrir les réglages du système",
     "active": "Micro actif",
     "device": "Micro",
@@ -1689,8 +1688,7 @@
       "modelDownloadFailed": "Le téléchargement du modèle a échoué.",
       "modelChecksumMismatch": "Le modèle téléchargé est abîmé ; il a été supprimé.",
       "engineCrashed": "La reconnaissance vocale s’est arrêtée."
-    },
-    "retry": "Réessayer"
+    }
   },
   "units": {
     "byte": "o",

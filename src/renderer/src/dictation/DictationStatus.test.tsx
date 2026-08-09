@@ -78,7 +78,9 @@ describe('what dictation says to the whole application', () => {
     useDictation.setState({ openPrivacySettings })
     show('permissionRequired')
 
-    await userEvent.click(screen.getByRole('status'))
+    // By its button role, not `status`: it is the only way out of a refused microphone, and a
+    // `role="status"` would take that role away from it for anyone browsing by button.
+    await userEvent.click(screen.getByRole('button'))
 
     expect(openPrivacySettings).toHaveBeenCalled()
   })

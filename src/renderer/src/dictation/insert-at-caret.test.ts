@@ -18,6 +18,7 @@ function area(value = ''): HTMLTextAreaElement {
 
 afterEach(() => {
   document.body.innerHTML = ''
+  vi.restoreAllMocks()
 })
 
 describe('insertInto', () => {
@@ -107,7 +108,7 @@ describe('insertInto', () => {
 
 describe('editableOf', () => {
   it('accepts the fields a sentence can be spoken into', () => {
-    for (const type of ['text', 'search', 'email', 'url', 'password', 'tel', 'number']) {
+    for (const type of ['text', 'search', 'url', 'password', 'tel']) {
       expect(editableOf(field('', type))).not.toBeNull()
     }
     expect(editableOf(area())).not.toBeNull()
@@ -121,6 +122,26 @@ describe('editableOf', () => {
     }
     expect(editableOf(document.createElement('div'))).toBeNull()
     expect(editableOf(null)).toBeNull()
+  })
+
+  /**
+   * These two have a caret and refuse the selection API: `setSelectionRange` throws
+   * `InvalidStateError` after the value has been assigned and before the `input` event fires, so
+   * a dictated Seed was wiped and nothing downstream ever heard about it.
+   *
+   * Asserted through `insertInto` as well as `editableOf`: listing them as refused proves
+   * nothing on its own, since it is the write that used to throw.
+   */
+  it('refuses the fields that have a caret but no selection', () => {
+    for (const type of ['number', 'email']) {
+      expect(editableOf(field('', type))).toBeNull()
+    }
+
+    const seed = field('42', 'number')
+    seed.focus()
+
+    expect(insertAtCaret('un phare rouge')).toBe(false)
+    expect(seed.value).toBe('42')
   })
 })
 
@@ -140,6 +161,20 @@ describe('insertAtCaret', () => {
   it('answers false, and writes nothing, when the focus is elsewhere', () => {
     const input = field('intact')
     input.blur()
+
+    expect(insertAtCaret('perdu')).toBe(false)
+    expect(input.value).toBe('intact')
+  })
+
+  /**
+   * The sentence is broadcast to every window, and a document keeps its `activeElement` after
+   * its own window has lost the focus — so two windows each holding a focused field would both
+   * have written it, one of them out of sight.
+   */
+  it('answers false when the window itself does not have the focus', () => {
+    const input = field('intact')
+    input.focus()
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
 
     expect(insertAtCaret('perdu')).toBe(false)
     expect(input.value).toBe('intact')

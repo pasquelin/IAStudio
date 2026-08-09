@@ -43,6 +43,20 @@ const reply = (response: SttResponse): void => {
   process.parentPort.postMessage(response)
 }
 
+/**
+ * Back to a sentence that has not started.
+ *
+ * `lastDropped` belongs here with the rest: it is compared against `held.dropped`, which the new
+ * buffer resets to zero, so leaving it behind made every overflow after the first one either
+ * silent or wrong by the previous count.
+ */
+function startSegment(): void {
+  held = emptyHeld()
+  spoken = 0
+  previewAt = 0
+  lastDropped = 0
+}
+
 async function load(request: SttLoad): Promise<void> {
   const vad = new sherpa.Vad(
     {
@@ -124,8 +138,7 @@ async function drainSegments(current: Engine): Promise<void> {
 
     // Cleared as soon as the sentence it belonged to is settled: holding it would have the next
     // preview read a sentence already on screen.
-    held = emptyHeld()
-    spoken = 0
+    startSegment()
   }
 }
 
@@ -139,10 +152,14 @@ async function drainSegments(current: Engine): Promise<void> {
 async function preview(current: Engine, now: number): Promise<void> {
   if (current.previewMs === 0 || now - previewAt < current.previewMs) return
 
-  // Stamped before the decode, not after: what paces previews is when one started, so a slow
-  // machine spaces them out on its own instead of running them back to back to catch up.
-  previewAt = now
   const text = await decode(current, previewOf(held, spoken))
+
+  // Stamped once the decode is done, not when it started. Stamped at the start, a decode longer
+  // than the interval leaves the test true at every following chunk, so previews run back to
+  // back, the message queue grows by everything that arrives meanwhile, and the `flush` sent on
+  // key release waits behind all of it. Measured from the end, a slow machine genuinely thins
+  // them out — which is what the pacing was for.
+  previewAt = Date.now()
   if (text) reply({ partial: text })
 }
 
@@ -169,10 +186,7 @@ async function accept(current: Engine, samples: Int16Array): Promise<void> {
 /** Drops the engine and everything that belonged to the session it was serving. */
 function forget(): void {
   engine = null
-  held = emptyHeld()
-  spoken = 0
-  previewAt = 0
-  lastDropped = 0
+  startSegment()
 }
 
 async function handle(message: SttMessage): Promise<void> {
@@ -197,13 +211,15 @@ async function handle(message: SttMessage): Promise<void> {
     // the key would drop whatever was said since the last silence.
     current.vad.flush()
     await drainSegments(current)
+    // Speech too short to close a segment leaves the buffer untouched by the drain — and a "yes"
+    // nobody transcribed would come back at the head of the next sentence.
+    startSegment()
     return
   }
 
   current.vad.clear()
   current.vad.reset()
-  held = emptyHeld()
-  spoken = 0
+  startSegment()
 }
 
 /**

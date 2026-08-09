@@ -55,7 +55,12 @@ export function lockPermissions(session: Electron.Session, appOrigin: string): v
     callback(grantsPermission({ permission, origin: originOf(contents.getURL()) }, appOrigin))
   })
 
+  // Through `originOf` like the handler above, and for a reason the dev server hides: the two
+  // callbacks are not handed the same shape. One gets a URL to normalise, the other Chromium's
+  // own serialisation of the origin, which for the `file://` document of a packaged build is not
+  // the `'null'` a URL parses to. Compared raw, the check refused what the request had granted —
+  // and the microphone labels stayed empty in the only build nobody runs from a terminal.
   session.setPermissionCheckHandler((_contents, permission, requestingOrigin) =>
-    grantsPermission({ permission, origin: requestingOrigin }, appOrigin),
+    grantsPermission({ permission, origin: originOf(requestingOrigin) }, appOrigin),
   )
 }

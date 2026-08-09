@@ -66,6 +66,11 @@ export function createSttClient(port: SttPort, listeners: SttListeners): SttClie
   })
 
   port.onFailure(error => {
+    // A process we killed ourselves still reports its exit, and `utilityProcess` has no way to
+    // tell that exit from a crash. Without this the idle unload — which closes the engine on
+    // purpose — would surface as `engineCrashed` ten minutes after the last sentence.
+    if (closed) return
+
     closed = true
     fail(error)
   })

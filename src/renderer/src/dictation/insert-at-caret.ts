@@ -12,8 +12,16 @@
 
 type Editable = HTMLInputElement | HTMLTextAreaElement
 
-/** Fields a caret can sit in and text can be written to. A checkbox is neither. */
-const TYPED = ['text', 'search', 'url', 'tel', 'email', 'password', 'number']
+/**
+ * Fields a caret can sit in and text can be written to. A checkbox is neither.
+ *
+ * `number` and `email` are deliberately absent, though a caret does sit in them: they do not
+ * support the selection API, so `setSelectionRange` throws `InvalidStateError` — after the value
+ * has been assigned and before the `input` event is dispatched. Dictating into the generator's
+ * Seed field wiped it (a `number` input drops anything non-numeric) and told no one, since the
+ * event React listens for never fired. Refusing writes nothing, which is the lesser of the two.
+ */
+const TYPED = ['text', 'search', 'url', 'tel', 'password']
 
 export function editableOf(element: Element | null): Editable | null {
   if (element instanceof HTMLTextAreaElement) return element
@@ -69,6 +77,11 @@ export function insertInto(element: Editable, text: string): void {
  * field nobody was looking at is worse than not writing it.
  */
 export function insertAtCaret(text: string, root: Document = document): boolean {
+  // Every window receives the sentence, because the event is broadcast — and a document keeps
+  // its `activeElement` after its window loses focus. Without this the phrase landed in two
+  // fields at once, one of them behind whatever the user was actually looking at.
+  if (!root.hasFocus()) return false
+
   const element = editableOf(root.activeElement)
   if (!element) return false
 
