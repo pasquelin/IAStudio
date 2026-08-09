@@ -7,6 +7,7 @@ import { activeOwnerId, useSettings } from '@/stores/settings'
 // pulls the chart library in with it, which `eager-graph.test.ts` holds the line on.
 import { formatUnits } from '@/usage/format'
 import { Section } from '../Section'
+import { SectionNote } from '../SectionNote'
 import { SHELF_CARD_HEIGHT } from '../ShelfCard'
 import { useShelf } from '../use-shelf'
 
@@ -38,9 +39,9 @@ export function Usage() {
 
   return (
     <Section id="usage" title={t('home.sections.usage')}>
-      <p className="text-muted m-0 text-[12px]">
+      <SectionNote>
         {t('home.usage.summary', { units: spent, count: report.jobs, days: report.period })}
-      </p>
+      </SectionNote>
 
       {report.models.length > 0 && (
         <Carousel

@@ -10,6 +10,7 @@ import { openGeneratorOn } from '@/helpers/generation'
 import { getBridge } from '@/services/bridge'
 import { useModels } from '@/stores/models'
 import { Section } from '../Section'
+import { SectionNote } from '../SectionNote'
 
 /** Three fit the width without wrapping, and reading more than three is choosing, not sparking. */
 const HOW_MANY = 3
@@ -59,7 +60,7 @@ export function Spark() {
       }
     >
       {suggestions.length === 0 ? (
-        <p className="text-muted m-0 text-[12px]">{t('home.spark.help')}</p>
+        <SectionNote>{t('home.spark.help')}</SectionNote>
       ) : (
         <div className="flex flex-col gap-2">
           {suggestions.map(suggestion => (

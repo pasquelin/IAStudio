@@ -7,6 +7,7 @@ import { MediaTile } from '@/design/MediaTile'
 import { chipSkin } from '@/design/styles'
 import { assetIcon } from '@/helpers/workspaces'
 import { Section } from '../Section'
+import { SectionNote } from '../SectionNote'
 import { useExplore } from '../use-explore'
 
 /** What one column aims for. Wider than a shelf tile: this is the band people browse. */
@@ -58,9 +59,9 @@ export function Explore() {
         // a page the studio narrowed away after the index answered — still has pages behind it,
         // and announcing emptiness there is a claim that is about to be contradicted.
         empty={
-          <p className="text-muted m-0 py-6 text-center text-[12px]">
+          <SectionNote centred spaced>
             {t(exhausted ? 'home.explore.none' : 'home.explore.loading')}
-          </p>
+          </SectionNote>
         }
         renderCard={asset => <Tile asset={asset} />}
       />

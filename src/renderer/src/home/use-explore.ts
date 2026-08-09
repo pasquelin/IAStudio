@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AssetType } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset, CloudPage } from '@shared/domain/cloud-asset'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 
@@ -22,9 +22,25 @@ type Feed = {
   assets: readonly CloudAsset[]
   cursor: string | null
   exhausted: boolean
+  /**
+   * Pages in a row that brought nothing this feed did not already hold. Counted because
+   * `appended` drops the duplicates silently, and nobody downstream can tell a page that added
+   * forty tiles from one that added none.
+   */
+  barren: number
 }
 
-const START: Feed = { assets: [], cursor: null, exhausted: false }
+const START: Feed = { assets: [], cursor: null, exhausted: false, barren: 0 }
+
+/**
+ * How many barren pages are walked before the feed is called finished.
+ *
+ * A bound on a real runaway: at the foot of the feed the grid stays near its end, `more` takes a
+ * new identity with every cursor, and the effect fires again — thirty requests without a gesture,
+ * measured. Offset paging over a feed with deletions produces exactly that. A page or two of pure
+ * duplicates is ordinary though (the feed shifts under the offset), so this is not one.
+ */
+const BARREN_MAX = 3
 
 /**
  * The pages so far, plus what just arrived, minus what was already there.
@@ -39,6 +55,28 @@ function appended(
 ): readonly CloudAsset[] {
   const seen = new Set(held.map(asset => asset.id))
   return [...held, ...arriving.filter(asset => !seen.has(asset.id))]
+}
+
+/**
+ * The feed after a page landed on it.
+ *
+ * Two symmetric ways a feed with no new assets goes wrong, and both are settled here. Asking
+ * again for a cursor that came back unchanged is guaranteed to return the same page, so one is
+ * enough to know: `more`'s dependencies would not move either, the effect would never fire
+ * again, and the tab would stop for good with nothing on it. A cursor that DOES advance while
+ * bringing nothing new is only suspicious, so it is counted instead.
+ */
+function grown(held: Feed, page: CloudPage): Feed {
+  const assets = appended(held.assets, page.assets)
+  const barren = assets.length > held.assets.length ? 0 : held.barren + 1
+  const repeats = page.cursor !== null && page.cursor === held.cursor
+
+  return {
+    assets,
+    cursor: page.cursor,
+    barren,
+    exhausted: page.cursor === null || repeats || barren >= BARREN_MAX,
+  }
 }
 
 /**
@@ -59,12 +97,29 @@ export function useExplore(type: AssetType): Explore {
   const [feed, setFeed] = useState<Feed>(START)
   const [shown, setShown] = useState(source)
 
-  // Emptied as the tab or the key changes, during the render rather than after it. What the feed
+  /**
+   * The tabs already read, so walking across them costs nothing twice.
+   *
+   * Six tabs, each re-reading its first page on every visit, and the main process spending up to
+   * three searches to fill one of them: a sweep of the row could cost eighteen `POST
+   * /search/assets` — the endpoint the catalogue bills apart and reserves for the debounced path.
+   *
+   * Held per mounted hook and not per module: the home is torn down when a workspace takes over,
+   * so coming back is still a genuine refresh. Only the tab strip is made free.
+   */
+  const remembered = useRef(new Map<string, Feed>())
+
+  // Swapped as the tab or the key changes, during the render rather than after it. What the feed
   // held was read under the previous one, and a tab that keeps the last one's pictures while it
   // loads is answering a question nobody asked.
   if (shown !== source) {
+    // Compared against what WAS shown, never against the source being built from this very
+    // `owner`: that test is true by construction, and the tabs of a revoked key would be kept.
+    if (shown.startsWith(`${owner}/`)) remembered.current.set(shown, feed)
+    else remembered.current.clear()
+
     setShown(source)
-    setFeed(START)
+    setFeed(remembered.current.get(source) ?? START)
   }
 
   /**
@@ -103,11 +158,7 @@ export function useExplore(type: AssetType): Explore {
       .explore({ type, pageSize: PAGE_SIZE, ...(feed.cursor ? { cursor: feed.cursor } : {}) })
       .then(page => {
         if (!settle()) return
-        setFeed(held => ({
-          assets: appended(held.assets, page.assets),
-          cursor: page.cursor,
-          exhausted: page.cursor === null,
-        }))
+        setFeed(held => grown(held, page))
       })
       .catch(() => {
         if (!settle()) return
