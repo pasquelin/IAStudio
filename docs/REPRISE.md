@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`ea08ce0`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline ea08ce0..develop`) au lieu de relire mille lignes.
+à **`e0a07b2`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline e0a07b2..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -42,7 +42,8 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > avec… » (`feat/home`, `feat/home-creations`) · les trois accès clavier — Explorateur, double-clic
 > qui traverse les espaces, étagère à assets et sa sélection multiple (`feat/explorateur-clavier`,
 > `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader des Textures**
-> (`feat/textures-derive`) · le prix d’une génération, avant et après
+> (`feat/textures-derive`) · le **formulaire de génération traduit** sans rien écrire par modèle
+> (`feat/i18n-schema-api`) · le prix d’une génération, avant et après
 > (`feat/workflows`) · six passes i18n et les trois gardes de texte en dur (`feat/i18n-*`) · le
 > pinceau à taille réglable (`feat/pinceau`) · le panneau matériau et la bande de canaux des
 > Textures (`feat/textures-materiau`). Le détail est au § 1.
@@ -79,8 +80,8 @@ la configuration et de l’espace 3D ayant été supprimées une fois leurs chan
 
 # 1. L’état
 
-**961 fichiers dans `src/`, dont 381 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
-en exécutait alors **4822 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
+**964 fichiers dans `src/`, dont 382 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
+en exécutait alors **4840 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
 nombres ne se lit dans un fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
 demande avant de perdre quoi que ce soit. L’application démarre par `pnpm start`.
 
@@ -127,6 +128,16 @@ typé des deux côtés, `contextIsolation`/`sandbox` actifs, navigation verrouil
 le main, `ModelRegistry` avec auto-pagination et cache, `JobManager` qui poll seul et borne la
 concurrence, `DynamicForm` construit depuis les descripteurs et chargé paresseusement, zod avec lui.
 Aucun formulaire de génération écrit à la main (invariant 5).
+
+**Et il se dit en français.** L’API ne connaît aucune langue — ni `Accept-Language`, ni locale sur
+`models.retrieve` —, donc le texte qu’un modèle publie pour ses entrées est traduit ici ou nulle
+part. `model-text.fr.json` est **le seul dictionnaire du studio indexé sur le texte anglais et non
+sur une clé** : la moitié de ce que le panneau montre est une phrase écrite par le modèle, et
+indexer sur la clé traduirait « Max splat points » en laissant sa description en anglais dessous.
+Le repli est la phrase anglaise, jamais une clé — un libellé changé côté Scenario dégrade vers
+l’écran d’avant. Le vocabulaire du métier (`seed`, `guidance scale`, `sampler`, `CFG`) reste en
+anglais **et un test tient la liste**. Appliqué au rendu, pas à la construction des descripteurs :
+changer de langue redit le formulaire ouvert, et les Apps en profitent sans une ligne.
 
 **Le prix, avant et après** — `main/scenario/cost.ts` tire l’estimation d’un `?dryRun=true`, qui
 **répond 200** avec `creativeUnitsCost` dans le corps ; le 402 que documente la référence est gardé
@@ -178,8 +189,10 @@ Quatre choses à savoir avant d’y toucher :
   comme **donnée de document** (une scène dont le contenu s’appelle `Groupe` ne s’échange pas avec un
   studio anglais), et `message` nomme l’échec d’un worker, jamais un écran ;
 - **le fichier s’appelle `no-hardcoded-text`, pas `*.i18n.test.ts`.** Une session l’a cherché sous le
-  second motif, ne l’a pas trouvé, et en a réécrit un doublon complet. Les sept gardes i18n ne
-  portent pas le même nom : `grep` sur le sujet, pas sur le motif.
+  second motif, ne l’a pas trouvé, et en a réécrit un doublon complet. **Huit gardes i18n, et trois
+  conventions de nommage** : cinq en `*.i18n.test.ts`, deux en `no-hardcoded-text.test.ts`, et
+  `shared/i18n/model-text.test.ts` qui ne suit ni l’un ni l’autre. `grep` sur le sujet, pas sur le
+  motif.
 
 **Le manuel utilisateur** — 19 chapitres, fr et en (`docs/fr/manuel/`, `docs/en/manual/`). Il ne se
 relit pas, il **se vérifie** : les registres (`COMMAND_REGISTRY`, `IMAGE_TOOLS`, `UNBUILT_TOOLS`,

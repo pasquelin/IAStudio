@@ -603,7 +603,7 @@ re-renders every mounted row on each frame, and `useTranslation()` is not free.
 
 ### What gets translated goes beyond sentences
 
-Four things go through the bundles without looking like it, and each answers an observed defect:
+Five things go through the bundles without looking like it, and each answers an observed defect:
 
 - **key names** — `Space`, `Delete`, `Home` are not English labels left in place: the shortcuts
   screen resolves them like everything else;
@@ -613,7 +613,35 @@ Four things go through the bundles without looking like it, and each answers an 
 - **the journal's scopes** — an activity line shows a sentence, never the key naming it;
 - **the document's own language** — `document.documentElement.lang` follows the chosen language.
   `index.html` carried it hardcoded: a screen reader picks its voice from it, and an English
-  interface under `lang="fr"` was read with French phonetics.
+  interface under `lang="fr"` was read with French phonetics;
+- **the text the model writes** — the generation form's labels, descriptions and options. See just
+  below: it is the only mechanism in the studio that is not indexed on a key.
+
+### The one dictionary indexed on text, and why
+
+**The Scenario API has no notion of language** — no `Accept-Language`, no locale parameter on
+`models.retrieve`, nothing in the SDK. The text a model publishes for its own inputs ("Target
+size", "Max splat points", and the explanatory sentences under them) is therefore translated here
+or nowhere.
+
+`model-text.fr.json` is indexed on the **English text**, not on the field's key, and it is the only
+place in the studio that works this way. The reason is that half of what the panel shows is a
+**sentence the model wrote**, not a field name: indexing on the key would translate "Max splat
+points" and leave its description in English right underneath.
+
+Three consequences, one of them to be accepted:
+
+- **a label changed on Scenario's side falls back to English** rather than failing.
+  `normalizeModelText` absorbs what costs nothing to absorb — case, whitespace, typographic
+  apostrophes and dashes, trailing punctuation — and the fallback is **the English sentence
+  itself, never a key**. The worst case is the screen as it was, not a broken one;
+- **the trade vocabulary stays in English, deliberately** — `seed`, `guidance scale`, `sampler`,
+  `CFG` read that way in every other tool. A test holds the list, so translating one is a decision
+  taken against a red test;
+- **translation applies at render, not when descriptors are built.** Switching language restates
+  the open form instead of waiting for the model to be reloaded — and the Apps benefit without a
+  line more, their fields coming from the same place. Invariant 5 is intact: nothing is written by
+  hand for a given model.
 
 ### Four guards, and what each one holds
 

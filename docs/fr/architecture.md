@@ -627,7 +627,7 @@ pas gratuit.
 
 ### Ce qui est traduit va plus loin que les phrases
 
-Quatre choses passent par les bundles sans en avoir l’air, et chacune répond à un défaut constaté :
+Cinq choses passent par les bundles sans en avoir l’air, et chacune répond à un défaut constaté :
 
 - **les noms de touches** — `Espace`, `Suppr`, `Début` ne sont pas des libellés anglais laissés en
   place : l’écran des raccourcis les résout comme le reste ;
@@ -638,7 +638,36 @@ Quatre choses passent par les bundles sans en avoir l’air, et chacune répond 
   désigne ;
 - **la langue du document lui-même** — `document.documentElement.lang` suit la langue choisie.
   `index.html` la portait en dur : un lecteur d’écran choisit sa voix dessus, et une interface
-  anglaise sous `lang="fr"` était lue avec une phonétique française.
+  anglaise sous `lang="fr"` était lue avec une phonétique française ;
+- **le texte que le modèle écrit** — libellés, descriptions et options du formulaire de
+  génération. Voir juste dessous : c’est le seul mécanisme du studio qui ne s’indexe pas sur une
+  clé.
+
+### Le seul dictionnaire indexé sur du texte, et pourquoi
+
+**L’API Scenario ne connaît pas la langue** — ni `Accept-Language`, ni paramètre de locale sur
+`models.retrieve`, rien dans le SDK. Le texte qu’un modèle publie pour ses propres entrées
+(« Target size », « Max splat points », et les phrases d’explication sous elles) est donc traduit
+ici ou nulle part.
+
+`model-text.fr.json` s’indexe sur le **texte anglais**, pas sur la clé du champ, et c’est le seul
+endroit du studio qui procède ainsi. La raison est que la moitié de ce que le panneau affiche est
+une **phrase que le modèle a écrite**, pas un nom de champ : indexer sur la clé traduirait
+« Max splat points » et laisserait sa description en anglais juste dessous.
+
+Trois conséquences, dont une à accepter :
+
+- **un libellé changé côté Scenario retombe en anglais** au lieu d’échouer. `normalizeModelText`
+  absorbe ce qui ne coûte rien à absorber — casse, espaces, apostrophe et tiret typographiques,
+  ponctuation finale — et le repli est **la phrase anglaise elle-même, jamais une clé**. Le pire
+  cas est donc l’écran d’avant, pas un écran cassé ;
+- **le vocabulaire du métier reste en anglais, délibérément** — `seed`, `guidance scale`,
+  `sampler`, `CFG` se lisent ainsi dans tous les autres outils. Un test tient la liste, pour
+  qu’en traduire un soit une décision prise contre un test rouge ;
+- **la traduction s’applique au rendu, pas à la construction des descripteurs.** Changer de
+  langue redit le formulaire ouvert au lieu d’attendre que le modèle soit rechargé — et les Apps
+  en profitent sans une ligne de plus, leurs champs venant du même endroit. L’invariant 5 est
+  intact : rien n’est écrit à la main pour un modèle donné.
 
 ### Quatre gardes, et ce que chacun tient
 

@@ -72,6 +72,16 @@ screen. That is deliberate: you recognise your own language before you can read 
 The change is **immediate**, nothing needs relaunching. It touches neither your projects nor what
 you write in them: a prompt written in English stays in English.
 
+> **The generation form follows too, but not always all the way.** The names of the settings a
+> model offers — and the explanatory sentences under them — are written by the model, and the
+> Scenario API only ever returns them in English. The studio translates them itself. A setting it
+> does not know yet therefore stays **in English** rather than disappearing, and a model published
+> tomorrow arrives in its original wording.
+>
+> **Some words stay in English on purpose**: `seed`, `guidance scale`, `sampler`, `CFG`. These are
+> the trade's terms, and they read that way in every image generation tool — translating them
+> would make you look twice.
+
 ### On opening
 
 **Choice. Starts at: Reopen the last project.**
