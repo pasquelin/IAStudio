@@ -332,21 +332,6 @@ n’est prise par personne d’autre.
 > `validate` tournait. Sur un dépôt où cinq commits tombent en quarante minutes, une trace se lit
 > avec le `git log` de son heure, ou elle envoie chercher au mauvais endroit.
 
-### 28. Le bouton du journal est une cible de 12 × 12 px
-
-**Mesuré le 9 août 2026**, en soldant l’entrée 22. `ActivityStatus` sans échec ne contient qu’un
-`UiIcon size={12}` : sa cible cliquable fait **12 × 12 px**, quand **WCAG 2.2, SC 2.5.8 (AA)**
-demande 24 × 24. `JobsStatus`, à côté, a la même forme.
-
-**Ce qui le sauve aujourd’hui, de justesse** : l’exception « espacement » du critère — le
-`gap-3` de la ligne d’état met la cible voisine à 18 px du centre, donc un cercle de 24 px tient.
-C’est une exception, pas une conformité.
-
-**Ce qui a changé sous lui** : le pied de fenêtre n’a plus de hauteur propre (entrée 11), donc la
-réparation la moins chère a disparu — sous `h-6`, passer la ligne en `items-stretch` donnait
-24 px gratuitement. Il faut maintenant une hauteur au bouton lui-même, et `--sc-control` est la
-jauge qui la porte.
-
 ### 29. `Inter` est déclarée comme police de l’interface, et n’est chargée nulle part
 
 **Vu le 9 août 2026.** `--font-sans` nomme `'Inter', system-ui, …` dans `index.css`, mais **aucun
@@ -702,7 +687,36 @@ correction.
 | **(7)** Aucun moyen de garder un réglage de matière pour la texture suivante | `c3ec714` (feat/styles-textures) |
 | **(10)** Les filtres du journal revenaient à la ligne, orphelinant une famille | `71f3140` (feat/journal-filtres) |
 | **(22)** L’avis « pas de ffmpeg » volait une ligne à l’étagère, trois en colonne | `8bb53b2` (feat/ffmpeg-notice) |
+| **(28)** Les trois boutons de la ligne d’état offraient une cible de 12 × 12 | `53e1b34` (feat/cible-journal) |
 | **(11)** La ligne d’état était collée au bord et alignée sur rien | `d66b811` (feat/ligne-etat) |
+
+
+> **L’entrée 28 en cachait un troisième.** Elle nommait le journal et les générations ; la mise à
+> jour (`UpdateStatus`) a la même forme, le même défaut, et n’était nommée nulle part. Le gabarit
+> vit donc dans `styles.ts` sous `STATUS_BUTTON`, à côté de `chipSkin`, dont le commentaire décrit
+> exactement ce qui serait arrivé sinon — trois surfaces, la troisième qui dérive.
+>
+> **Le remède que l’entrée proposait aurait défait l’entrée 11.** `--sc-control` sur le bouton est
+> juste, mais seul il emporte la ligne : le pied n’ayant plus de hauteur propre, un bouton de 28 px
+> la fait passer de **29 px à 40** — mesuré à l’écran, puis remesuré en retirant le correctif, pas
+> déduit. Une marge négative d’une gouttière rend au flux ce que la cible prend : le bouton compte
+> alors 16 px, sous les 17 px du fil d’Ariane, qui continue donc de dicter la hauteur.
+>
+> **Le critère est satisfait par la taille, sans exception** : 28 × 28 en confort, 24 × 24 en
+> compact, mesurés. L’exception d’espacement qui les sauvait tenait au hasard de l’écart entre
+> deux voisins.
+>
+> **Un effet de bord vu, mesuré et gardé** : au repos, l’icône du journal n’est plus collée au bord
+> — 14 px au lieu de 6, puisqu’elle se centre dans une cible de 28. C’est le motif du rail, où le
+> bouton s’aligne sur la marge et l’icône se centre dedans. La recoller demanderait de décentrer la
+> cible, donc de cliquer à côté de ce qu’on voit.
+>
+> **Deux choses qui ne sont pas de cette entrée et restent ouvertes** : ces trois boutons n’ont
+> jamais porté `FOCUS_RING` — ils gardent l’anneau natif du système, seule surface du studio dans
+> ce cas ; et la mesure à l’écran s’est faite sur une instance à soi, port 9224 et `--user-data-dir`
+> dédié, ce qui **contourne le verrou d’instance unique** et permet à plusieurs sessions de piloter
+> chacune la sienne. Le MCP `electron` ne parlant qu’au 9222, la mesure est passée par CDP direct
+> (`WebSocket` natif de Node, aucune dépendance) — le script est réutilisable.
 
 > **L’entrée 11 se trompait sur ses DEUX prémisses, et les deux se mesurent.** Elle affirmait que
 > « tout ce qui est au-dessus est posé à `--sc-gutter` du bord » : cette jauge n’est un retrait
