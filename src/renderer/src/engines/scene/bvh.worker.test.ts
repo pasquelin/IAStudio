@@ -1,4 +1,5 @@
 import type { BufferGeometry } from 'three'
+import type * as MeshBvhModule from 'three-mesh-bvh'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -9,7 +10,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 const build = vi.hoisted(() => ({ fails: false }))
 
 vi.mock('three-mesh-bvh', async importOriginal => {
-  const real = await importOriginal<typeof import('three-mesh-bvh')>()
+  const real = await importOriginal<typeof MeshBvhModule>()
   return {
     ...real,
     MeshBVH: class extends real.MeshBVH {
