@@ -69,7 +69,7 @@ const HELD = new Map<ToolId, ToolDefinition>()
 /**
  * What a tool draws, loaded on demand. The home screen opens ONE panel, and importing them all
  * outright held `engines/`, four helpers of the editors' folders and the usage formatter in the
- * chunk the splash screen waits for: first screen 2 312 278 → 2 065 382 bytes, −246 896,
+ * chunk the splash screen waits for: first screen 2 331 395 → 2 081 385 bytes, −250 010,
  * −10,7 %, measured at equal commit with the preloads counted and no sourcemaps.
  */
 export function toolDefinition(id: ToolId): ToolDefinition {
