@@ -84,9 +84,26 @@ The message says which of the three cases you are in, because they call for diff
 | Gesture | Effect |
 |---|---|
 | **Click** | selects — the Inspector, on the right, shows its information |
+| **⌘-click** *(Ctrl elsewhere)* | adds this asset to the selection, or takes it out |
+| **Shift-click** | selects the whole range between the last one picked and this one |
 | **Double-click** | sends the asset into whichever document can take it, switching workspace if need be |
 | **Right-click** | lists **every** destination it has |
 | **Drag and drop** | drops the asset wherever you release it |
+
+### Picking several assets
+
+Two of the shelf's actions work on **several** assets at once: **Send** and **Describe**. Multiple
+selection exists for them.
+
+**Shift-click extends, ⌘-click picks.** The first takes everything between the last asset chosen
+and the one you click; the second only adds — or removes — that one. A plain click starts over.
+
+**The starting point follows your choices.** After a ⌘-click, that last asset is the anchor for
+the next shift-click: you pick three thumbnails here, then extend from the third, not from the
+first.
+
+**The shelf is reachable from the keyboard too**, like every other list in the studio — see
+[Walking a list with the keyboard](15-shortcuts.md#walking-a-list-with-the-keyboard).
 
 ### Right-click says what double-click keeps quiet about
 
@@ -212,7 +229,7 @@ again — same file, different library on the other end.
 ### Sending a selection
 
 The **Send** button, on the shelf's title line, uploads the **selected** assets to your account's
-library.
+library — see [Picking several assets](#picking-several-assets) for designating more than one.
 
 Three things describe it better than an introduction would:
 

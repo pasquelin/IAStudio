@@ -92,6 +92,9 @@ document may take you to another workspace, and `Space` promises that nowhere el
 `Tab` brings you back where you were: a list keeps a single way in — your selection if there is
 one, the first visible cell otherwise.
 
+**In the shelf, the selection can also be plural** — `⌘` picks, `Shift` extends. See
+[Picking several assets](07-assets.md#picking-several-assets).
+
 ---
 
 ## In the 3D view
