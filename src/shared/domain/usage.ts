@@ -151,7 +151,12 @@ export type UsageReport = {
 export type UsageEvent = {
   /** ISO timestamp. */
   time: string
-  /** Raw API action name (`images-generation`, `delete-asset`, …), translated on screen. */
+  /**
+   * Raw API action name (`images-generation`, `delete-asset`, `subscription`, …), shown as it
+   * comes. Its union is ninety-nine values wide — the activity log, not the billing one — so it
+   * is NOT the `USAGE_ACTIONS` list above, and the journal is the one usage surface still
+   * reading in English.
+   */
   action: string
   accountName: string
   modelName?: string
