@@ -1,9 +1,9 @@
 import { mdiArrowDown, mdiArrowUp, mdiCounter, mdiDotsHorizontal, mdiEyeOffOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import {
+  canMoveHomeSection,
   homeSectionLimit,
   homeSectionOf,
-  homeSections,
   limitedHomeSection,
   movedHomeSection,
   shownHomeSection,
@@ -24,8 +24,6 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
   const stored = useSettings(state => state.settings.home.sections)
 
   const entry = homeSectionOf(id)
-  const order = homeSections(stored)
-  const position = order.findIndex(setting => setting.id === id)
   const limit = homeSectionLimit(stored, id)
 
   const write = (sections: HomeSectionSetting[]): void => {
@@ -50,7 +48,7 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
           <MenuRow
             icon={mdiArrowUp}
             label={t('home.moveUp')}
-            disabled={position <= 0}
+            disabled={!canMoveHomeSection(stored, id, 'up')}
             onSelect={() => {
               write(movedHomeSection(stored, id, 'up'))
               close()
@@ -59,7 +57,7 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
           <MenuRow
             icon={mdiArrowDown}
             label={t('home.moveDown')}
-            disabled={position === -1 || position >= order.length - 1}
+            disabled={!canMoveHomeSection(stored, id, 'down')}
             onSelect={() => {
               write(movedHomeSection(stored, id, 'down'))
               close()

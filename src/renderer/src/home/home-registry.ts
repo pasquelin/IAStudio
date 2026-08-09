@@ -4,6 +4,7 @@ import { Activity } from './sections/Activity'
 import { ByMode } from './sections/ByMode'
 import { Creations } from './sections/Creations'
 import { Documents } from './sections/Documents'
+import { Explorer } from './sections/Explorer'
 import { Jobs } from './sections/Jobs'
 import { Projects } from './sections/Projects'
 import { Spotlight } from './sections/Spotlight'
@@ -14,6 +15,7 @@ import { Tools } from './sections/Tools'
  * registry is a compile error here rather than a heading with nothing under it.
  */
 export const HOME_COMPONENTS: Record<HomeSectionId, FC> = {
+  explorer: Explorer,
   spotlight: Spotlight,
   tools: Tools,
   projects: Projects,

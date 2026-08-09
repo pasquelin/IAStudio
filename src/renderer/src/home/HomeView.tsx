@@ -1,5 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/domain/home'
+import {
+  hiddenHomeSections,
+  homeSections,
+  shownHomeSection,
+  type HomeSectionId,
+} from '@shared/domain/home'
 import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { FOCUS_RING } from '@/design/styles'
@@ -18,26 +23,40 @@ import { useHomeSections } from './use-home-sections'
  * has to hang off it rather than open a second scrollbar inside the first.
  */
 export function HomeView() {
-  const sections = useHomeSections()
+  const aside = useHomeSections('aside')
+  const main = useHomeSections('main')
 
   return (
     <div className="h-full overflow-x-hidden overflow-y-auto">
       {/* Bounded, and centred: shelves stretched across a 34" display stop being shelves. */}
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-8 px-6 py-6">
-        {sections.map(id => {
-          const Section = HOME_COMPONENTS[id]
-          return (
-            // Per section: a shelf that throws takes itself off the home, not the home with it.
-            <ErrorBoundary key={id}>
-              <Section />
-            </ErrorBoundary>
-          )
-        })}
+      <div className="mx-auto flex max-w-[1400px] gap-6 px-6 py-6">
+        {/* Withdrawn on a narrow window rather than stacked above the page: a rail one keeps an
+            eye on is not worth the first screenful when there is no room to put it beside. */}
+        {aside.length > 0 && (
+          <aside className="sticky top-0 hidden w-[240px] shrink-0 flex-col gap-8 self-start lg:flex">
+            <Column ids={aside} />
+          </aside>
+        )}
 
-        <Closing />
+        <div className="flex min-w-0 flex-1 flex-col gap-8">
+          <Column ids={main} />
+          <Closing />
+        </div>
       </div>
     </div>
   )
+}
+
+function Column({ ids }: { ids: readonly HomeSectionId[] }) {
+  return ids.map(id => {
+    const Section = HOME_COMPONENTS[id]
+    return (
+      // Per section: a shelf that throws takes itself off the home, not the home with it.
+      <ErrorBoundary key={id}>
+        <Section />
+      </ErrorBoundary>
+    )
+  })
 }
 
 /** The foot of the page: one sentence, two ways on. Nobody should reach the bottom and stop. */

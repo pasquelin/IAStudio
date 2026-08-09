@@ -82,7 +82,9 @@ describe('the home', () => {
     render(<HomeView />)
 
     expect(screen.getByText('Vos documents')).toBeInTheDocument()
-    expect(screen.getByText('Poster')).toBeInTheDocument()
+    // The shelf's own card, not the tree in the aside: both list the folder, and this case is
+    // about the band.
+    expect(screen.getByRole('button', { name: /Poster/ })).toBeInTheDocument()
     expect(screen.getByText('Reprendre où vous en étiez')).toBeInTheDocument()
   })
 
@@ -98,6 +100,29 @@ describe('the home', () => {
 
     expect(screen.getByText('Tout est prêt')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Créer une image' })).toBeInTheDocument()
+  })
+
+  /**
+   * The aside is the second column, and it is a column: what stands in it is declared by the
+   * shared registry like everything else, so a second panel is a line there rather than a new
+   * layout here.
+   */
+  it('stands the tree of documents beside the page, not above it', () => {
+    useProject.setState({ project: PROJECT, known: true })
+    useDocuments.setState({ stored: [POSTER_DOCUMENT] })
+    const { container } = render(<HomeView />)
+
+    const aside = container.querySelector('aside')
+    expect(aside).not.toBeNull()
+    expect(aside?.textContent).toContain('Explorateur')
+    expect(aside?.textContent).toContain('Poster')
+  })
+
+  it('leaves the aside out entirely when nothing stands in it', () => {
+    const { container } = render(<HomeView />)
+
+    // No project, so the tree has no folder to read — and an empty rail is worth no room.
+    expect(container.querySelector('aside')).toBeNull()
   })
 
   it('ends on a way forward rather than on the last shelf', () => {

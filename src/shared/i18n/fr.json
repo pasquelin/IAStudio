@@ -1463,6 +1463,7 @@
   },
   "home": {
     "sections": {
+      "explorer": "Explorateur",
       "spotlight": "Où vous en étiez",
       "tools": "Outils",
       "projects": "Vos projets",
