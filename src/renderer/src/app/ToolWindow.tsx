@@ -1,5 +1,5 @@
 import { mdiClose } from '@mdi/js'
-import { memo } from 'react'
+import { memo, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
@@ -7,7 +7,7 @@ import { Panel } from '@/design/Panel'
 import { PanelHeader } from '@/design/PanelHeader'
 import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
-import { TOOL_COMPONENTS } from './tool-components'
+import { isKnownTool, toolDefinition } from './tool-components'
 import { isHorizontal, type ToolId, type ToolZone } from '@shared/domain/tool'
 import { toolTitleKey } from '@/helpers/tool-registry'
 import { ToolZoneProvider } from './tool-zone'
@@ -42,13 +42,12 @@ export const ToolWindow = memo(function ToolWindow({
   onClose,
 }: ToolWindowProps) {
   const { t } = useTranslation()
-  const definition = TOOL_COMPONENTS[tool]
   const title = t(toolTitleKey(tool))
 
   // The id comes from persisted state: an entry from an older version names no component —
   // a tool this version dropped, not a failure to present as one.
-  if (!definition) return null
-  const { Content, Actions, fillActions } = definition
+  if (!isKnownTool(tool)) return null
+  const { Content, Actions, fillActions } = toolDefinition(tool)
 
   return (
     // Zone-wide, header included: a panel lays out differently in a narrow column and in a
@@ -84,7 +83,12 @@ export const ToolWindow = memo(function ToolWindow({
               button with them, and a failure notice does not fit on a header row. */}
           {Actions !== undefined && (
             <ErrorBoundary key={tool} fallback={() => null}>
-              <Actions />
+              {/* A chunk that never arrives is a failure like any other — React rejects rather
+                  than suspending forever, and the boundary above catches it either way round.
+                  Nested as `documents.tsx` nests them, for one shape across the studio. */}
+              <Suspense fallback={null}>
+                <Actions />
+              </Suspense>
             </ErrorBoundary>
           )}
         </PanelHeader>
@@ -93,7 +97,9 @@ export const ToolWindow = memo(function ToolWindow({
               still be closed. Keyed by the tool — the rail swaps `tool` on this same element,
               and a boundary left standing would hand its failure to the tool that replaced it. */}
           <ErrorBoundary key={tool}>
-            <Content />
+            <Suspense fallback={null}>
+              <Content />
+            </Suspense>
           </ErrorBoundary>
         </div>
       </Panel>

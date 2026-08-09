@@ -4,8 +4,11 @@ import { ToolWindow } from './ToolWindow'
 
 // A tool that cannot render, which no real one does on demand. Its own file because `vi.mock`
 // is hoisted over the whole module, and the other ToolWindow tests need the real registry.
-vi.mock('./tool-components', () => ({
-  TOOL_COMPONENTS: {
+// The factory is async so it can reach `lazy` — hoisting puts it above every import.
+vi.mock('./tool-components', async () => {
+  const { lazy } = await import('react')
+
+  const panels: Record<string, unknown> = {
     assets: {
       Content: () => {
         throw new Error('tool exploded')
@@ -22,8 +25,16 @@ vi.mock('./tool-components', () => ({
       Content: () => <p>explorer tree</p>,
       Actions: () => <p>explorer actions</p>,
     },
-  },
-}))
+    // Every panel is fetched on demand, so a chunk that never lands is a failure mode all
+    // fourteen now have — and one React reports by throwing, not by suspending forever.
+    channels: { Content: lazy(() => Promise.reject(new Error('chunk never landed'))) },
+  }
+
+  return {
+    isKnownTool: (id: string) => id in panels,
+    toolDefinition: (id: string) => panels[id],
+  }
+})
 
 beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -76,6 +87,15 @@ describe('a half switched to another tool', () => {
     rerender(<ToolWindow tool="explorer" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
 
     expect(screen.getByText('explorer actions')).toBeInTheDocument()
+  })
+})
+
+describe('a panel whose chunk never arrives', () => {
+  it('keeps its header, so the panel can still be closed', async () => {
+    render(<ToolWindow tool="channels" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+
+    expect(await screen.findByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
   })
 })
 

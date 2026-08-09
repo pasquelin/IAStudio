@@ -303,7 +303,7 @@ function slotsFrom(stored: unknown): ZoneSlots | null {
     }
 
     // Through `placementOf`, so an id no version knows any more is dropped rather than
-    // reaching `TOOL_COMPONENTS` and blanking the window.
+    // reaching `toolDefinition` and blanking the window.
     const placement = placementOf(value)
     if (placement) slots[placement.slot] = placement.id
   }
@@ -381,8 +381,8 @@ export const useTools = create<ToolsState>()(
     {
       name: 'scenario-studio:tools',
       // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
-      // would reach `TOOL_COMPONENTS[tool]`, come back undefined, and blank the window on
-      // startup. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
+      // would reach a tool no version knows, which `isKnownTool` drops — a blank half where a
+      // panel used to be. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
       // mesh and light panels, and 4 the asset shelf moving out of the bottom strip. 5 still
       // cut that strip in two and knew a `jobs` panel, which the status line carries now, and
       // 6 had the generation panels on the right, where everything else sits today, 7 named

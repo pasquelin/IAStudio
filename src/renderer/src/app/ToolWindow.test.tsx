@@ -15,6 +15,19 @@ function headerOf(node: HTMLElement | null): HTMLElement | null {
   return node?.closest('header') ?? null
 }
 
+/**
+ * Every panel arrives through `import()`, so nothing of its own is on screen on the first tick.
+ * A second — Testing Library's default — is not enough for the RUNNER, which transforms the
+ * panel's subgraph on demand and took 2,6 s over the shelf here. That figure is the runner's,
+ * not the studio's, where the chunk is already built.
+ *
+ * `BUDGET` is the case's own, and it has to be: `testTimeout: 15_000` in `vitest.config.ts` is
+ * NOT inherited by the projects — measured, a case of this project dies at vitest's default
+ * 5 000 ms — so without it the case would expire before `ARRIVES` ever gave up.
+ */
+const ARRIVES = { timeout: 10_000 }
+const BUDGET = 20_000
+
 beforeEach(() => {
   useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
   useProject.setState({ project: null })
@@ -24,11 +37,15 @@ beforeEach(() => {
 describe('a panel lying in a band', () => {
   // A band is short and wide: a second row of controls under the title costs a tenth of the
   // shelf's height and buys nothing, since the row it sits on is mostly empty.
-  it('carries its filter bar on the title row', () => {
-    renderShelf('bottom')
+  it(
+    'carries its filter bar on the title row',
+    async () => {
+      renderShelf('bottom')
 
-    expect(headerOf(screen.getByRole('searchbox'))).not.toBeNull()
-  })
+      expect(headerOf(await screen.findByRole('searchbox', {}, ARRIVES))).not.toBeNull()
+    },
+    BUDGET,
+  )
 
   it('leaves the way out of the panel reachable beside it', () => {
     renderShelf('bottom')
@@ -59,9 +76,13 @@ describe('a panel lying in a band', () => {
 describe('a panel standing in a column', () => {
   // 500 px of browser bar in a 320 px header pushed the close button out of the frame, which
   // is why the bar sits under the title here — and why the band is the exception, not the rule.
-  it('keeps its filter bar under the title', () => {
-    renderShelf('left')
+  it(
+    'keeps its filter bar under the title',
+    async () => {
+      renderShelf('left')
 
-    expect(headerOf(screen.getByRole('searchbox'))).toBeNull()
-  })
+      expect(headerOf(await screen.findByRole('searchbox', {}, ARRIVES))).toBeNull()
+    },
+    BUDGET,
+  )
 })
