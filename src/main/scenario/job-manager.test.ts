@@ -1,6 +1,7 @@
 import { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import type { Job, JobProgress } from '@shared/domain/job'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import type { ActivityReport } from '@main/project/activity-log'
 import {
   createJobManager,
@@ -8,6 +9,7 @@ import {
   jobStatusOf,
   POLL_REQUESTS_PER_MINUTE,
   type AssetCollector,
+  type CollectedOutputs,
   type JobManager,
   type JobManagerDeps,
   type JobRunner,
@@ -61,6 +63,10 @@ type HarnessOptions = Partial<JobManagerDeps> & {
   collect?: AssetCollector
 }
 
+/** What a collector answers with. Typed here so a shelf id stays one rather than widening. */
+const landing = (ids: string[], workspaces: WorkspaceId[] = ['image']): Promise<CollectedOutputs> =>
+  Promise.resolve({ ids, workspaces })
+
 function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harness {
   const progress: JobProgress[] = []
   const sleeps: number[] = []
@@ -76,7 +82,7 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
       cancel: () => Promise.resolve(),
       ...runner,
     },
-    collect: collect ?? (() => Promise.resolve([])),
+    collect: collect ?? (() => landing([], [])),
   }
 
   const manager = createJobManager({
@@ -368,7 +374,7 @@ describe('job manager', () => {
       },
       collect: (_job, remoteAssetIds) => {
         order.push(`collect:${remoteAssetIds.join(',')}`)
-        return Promise.resolve(['asset_local'])
+        return landing(['asset_local'])
       },
       onProgress: entry => void order.push(`progress:${entry.status}`),
     })
@@ -467,7 +473,7 @@ describe('the account a job runs on', () => {
         poll: vi.fn(studioPoll ?? defaultPoll),
         cancel: vi.fn(() => Promise.resolve()),
       },
-      collect: vi.fn(() => Promise.resolve(['asset_local'])),
+      collect: vi.fn(() => landing(['asset_local'])),
     }
 
     const accounts = {
@@ -630,7 +636,7 @@ describe('a job that outlives the session', () => {
         poll: () => Promise.resolve(remote('success', { assetIds: ['r_1'] })),
         cancel: () => Promise.resolve(),
       },
-      collect: () => Promise.resolve(['asset_local']),
+      collect: () => landing(['asset_local']),
     })
 
     manager.resume([RUNNING])
@@ -748,7 +754,7 @@ describe('a job that outlives the session', () => {
    */
   it('leaves its outputs uncollected rather than put them in another project', async () => {
     let open = '/projects/kingdom'
-    const collect = vi.fn(() => Promise.resolve(['asset_local']))
+    const collect = vi.fn(() => landing(['asset_local']))
     const { manager, remembered } = harness({
       projectPath: () => open,
       collect,
@@ -972,9 +978,14 @@ describe('what a finished job leaves behind to read', () => {
     })
   })
 
-  it('records what a success produced, counted rather than listed', async () => {
+  /**
+   * Counted rather than listed — and the shelves named, which is the half nobody could guess: an
+   * App produces what it produces whichever space launched it, so a run started in 3D can leave
+   * a picture in the Image shelf and nothing said where it went.
+   */
+  it('records what a success produced, and the shelves it landed in', async () => {
     const { manager, recorded } = harness({
-      collect: () => Promise.resolve(['asset_1', 'asset_2']),
+      collect: () => landing(['asset_1', 'asset_2'], ['image', '3d']),
     })
 
     manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
@@ -983,15 +994,30 @@ describe('what a finished job leaves behind to read', () => {
     expect(recorded).toContainEqual({
       level: 'info',
       topic: 'generation',
+      messageKey: 'activity.generatedInto',
+      params: { count: 2, workspaces: ['image', '3d'] },
+    })
+  })
+
+  // Ids, never names: the line outlives the language it was written in.
+  it('leaves the shelves out when the collector named none', async () => {
+    const { manager, recorded } = harness({ collect: () => landing(['asset_1'], []) })
+
+    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    await settled()
+
+    expect(recorded).toContainEqual({
+      level: 'info',
+      topic: 'generation',
       messageKey: 'activity.generated',
-      params: { count: 2 },
+      params: { count: 1 },
     })
   })
 
   // Nothing came of it, so there is nothing to say: a line saying "0 assets generated" is one
   // the reader has to work out the meaning of.
   it('says nothing about a success that produced no asset', async () => {
-    const { manager, recorded } = harness({ collect: () => Promise.resolve([]) })
+    const { manager, recorded } = harness({ collect: () => landing([], []) })
 
     manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
     await settled()
@@ -1024,7 +1050,7 @@ describe('what a finished job leaves behind to read', () => {
   // The message is a key and its parameters, never a sentence: a journal written in French is
   // French for ever, and reads as gibberish once the interface is in English.
   it('never stores a sentence, only a key and what fills it', async () => {
-    const { manager, recorded } = harness({ collect: () => Promise.resolve(['asset_1']) })
+    const { manager, recorded } = harness({ collect: () => landing(['asset_1']) })
 
     manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
     await settled()

@@ -803,12 +803,12 @@ Mais l'absence de filtre n'exempte pas d'expliquer — deux manques, dans l'ordr
    `statusOf` (`workflow-registry.ts`) dit déjà la même chose d'un autre champ — « no public
    workflow was reachable to check it ». Ce point attend donc soit un compte qui en porte une,
    soit une App lancée à la main dans l'application.
-2. **Dire où le résultat est parti**, après. La barre de jobs et le journal savent qu'il est arrivé ;
-   ni l'un ni l'autre ne dit dans quelle étagère. **Celui-là ne dépend pas de l'API** : le
-   collecteur calcule déjà le type de chaque sortie (`assetTypeOfRemote`, `assets/collector.ts`)
-   et le jette. Le rendre — à côté des ids qu'il retourne déjà — suffirait à ce que `journal`
-   (`job-manager.ts`, `activity.generated`) nomme les étagères. Coût réel : le contrat de
-   `AssetCollector`, une clé i18n dans les deux bundles, et leurs tests.
+2. **Dire où le résultat est parti** — **livré** (`feat/output-shelf`, 10 août 2026). Le collecteur
+   rend les étagères à côté des ids, et le journal écrit « 2 assets générés dans Image, 3D ». Les
+   ids voyagent dans `params`, pas dans une colonne : la table `activity` a des colonnes fixes, et
+   une migration de schéma pour une phrase ne se justifiait pas. Ils restent des **ids** jusqu'à
+   l'affichage — une ligne relue six mois plus tard le sera dans la langue du jour, pas dans celle
+   de son écriture. **Ne pas re-signaler.**
 
 ---
 

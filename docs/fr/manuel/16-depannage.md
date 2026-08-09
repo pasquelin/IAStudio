@@ -16,7 +16,7 @@ chercher plus loin : il nomme l’objet en cause et dit ce qui a échoué.
 
 | Ce que le journal peut raconter | Sujet |
 |---|---|
-| « La génération « … » a échoué », « Génération « … » annulée » | Génération |
+| « La génération « … » a échoué », « Génération « … » annulée », « 2 assets générés dans Image, 3D » | Génération |
 | « Impossible d’importer « … » », « « … » est illisible » | Import |
 | « Impossible d’envoyer « … » », « Les tags de « … » n’ont pas rejoint la bibliothèque », « L’API Scenario a refusé une requête » | Bibliothèque |
 | « L’enregistrement du document a échoué », « Un calque n’a pas pu être chargé », « L’export de la scène a échoué », « Le fichier n’a pas pu être montré » | Document |
@@ -26,6 +26,10 @@ afficher** relâche les filtres.
 
 Le volet se referme de trois façons : un clic à côté, `Échap`, ou le passage à une autre
 application. Recliquer l’icône marche aussi. C’est vrai de la barre des générations à sa gauche.
+
+> **Une génération réussie dit dans quelle étagère elle a atterri.** Ça compte surtout pour les
+> **Apps** : une App produit ce qu’elle produit, quel que soit l’espace d’où vous l’avez lancée —
+> une chaîne démarrée depuis la 3D peut déposer une image dans l’étagère Image.
 
 **Un échec fait aussi apparaître une bulle** dans le coin, qui ne s’efface pas toute seule. Si
 vous ne l’avez pas vue, le compteur rouge de la ligne d’état la garde en mémoire jusqu’à ce que

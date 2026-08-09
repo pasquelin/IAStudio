@@ -29,10 +29,13 @@ export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
 ]
 
 /**
- * The values a message key interpolates. Strings and numbers only: what goes in has to survive
- * a round trip through JSON and come back meaning the same thing.
+ * The values a message key interpolates. Strings, numbers, and lists of ids — what goes in has
+ * to survive a round trip through JSON and come back meaning the same thing.
+ *
+ * A list is ids, never names: a line is read back long after it was written, and a name would
+ * freeze at the language of the day. The window turns them into words when it draws the line.
  */
-export type ActivityParams = Record<string, string | number>
+export type ActivityParams = Record<string, string | number | readonly string[]>
 
 /** A line as it is written. The catalogue assigns the id, the caller stamps the time. */
 export type ActivityDraft = {

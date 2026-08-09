@@ -127,6 +127,8 @@
     "jobCancelled": "Génération « {{name}} » annulée",
     "generated": "{{count, number}} asset généré",
     "generated_other": "{{count, number}} assets générés",
+    "generatedInto": "{{count, number}} asset généré dans {{workspaces}}",
+    "generatedInto_other": "{{count, number}} assets générés dans {{workspaces}}",
     "importFailed": "Impossible d’importer « {{name}} »",
     "imported": "{{name}} importé",
     "importUnreadable": "« {{name}} » est illisible",

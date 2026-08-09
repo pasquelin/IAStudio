@@ -1,4 +1,5 @@
 import type { ApiFailure, JobFailure } from '@shared/domain/failure'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import {
   INTERACTIVE_REQUESTS_PER_MINUTE,
   isFinished,
@@ -34,10 +35,27 @@ export type JobRunner = {
 }
 
 /**
+ * What a collected generation left in the project: the local ids, and the shelves they landed
+ * in — deduplicated, in the order the outputs came back.
+ *
+ * The shelves are returned rather than recomputed, because the collector is the only place that
+ * ever knows them: it reads each output's type off the API answer and files it accordingly. An
+ * App produces what it produces, whichever space it was launched from, so where the result went
+ * is the one thing the person waiting cannot guess.
+ */
+export type CollectedOutputs = {
+  ids: string[]
+  workspaces: WorkspaceId[]
+}
+
+/**
  * Brings a finished job's outputs into the project. Separate from the runner because it is
  * not an API call but a disk write — and because a job is not done until it lands.
  */
-export type AssetCollector = (job: Job, remoteAssetIds: readonly string[]) => Promise<string[]>
+export type AssetCollector = (
+  job: Job,
+  remoteAssetIds: readonly string[],
+) => Promise<CollectedOutputs>
 
 /**
  * What a job addresses its account through, captured at submission so that it finishes on the
@@ -305,14 +323,19 @@ export function createJobManager({
    * A generation is minutes spent elsewhere: the progress bar is gone by the time it ends, and
    * a failure that only reached the terminal was a failure nobody was there for.
    */
-  const journal = (job: Job, status: JobStatus): void => {
+  const journal = (job: Job, status: JobStatus, workspaces: WorkspaceId[] = []): void => {
     if (status === 'succeeded') {
       if (job.assetIds.length > 0) {
+        // Two keys rather than one with an empty clause: a line written before the shelves were
+        // reported — or by a collection that named none — must not read "generated into ".
         record({
           level: 'info',
           topic: 'generation',
-          messageKey: 'activity.generated',
-          params: { count: job.assetIds.length },
+          messageKey: workspaces.length > 0 ? 'activity.generatedInto' : 'activity.generated',
+          // Where they landed, which is not where the person was: an App produces what it
+          // produces whichever space launched it, so a run started in 3D can leave a picture in
+          // the Image shelf. Ids, never names — the window says them in its own language.
+          params: { count: job.assetIds.length, ...(workspaces.length > 0 ? { workspaces } : {}) },
         })
       }
       return
@@ -326,7 +349,12 @@ export function createJobManager({
     })
   }
 
-  const settle = (entry: Entry, status: JobStatus, error?: JobFailure): void => {
+  const settle = (
+    entry: Entry,
+    status: JobStatus,
+    error?: JobFailure,
+    workspaces?: WorkspaceId[],
+  ): void => {
     entry.job.status = status
     entry.job.finishedAt = now()
     entry.body = {}
@@ -338,7 +366,7 @@ export function createJobManager({
     if (status === 'succeeded') entry.job.progress = 1
     if (error !== undefined) entry.job.error = error
     emit(entry)
-    journal(entry.job, status)
+    journal(entry.job, status, workspaces)
     evictOldFinished()
     remember()
   }
@@ -427,8 +455,10 @@ export function createJobManager({
 
     // Succeeded only once the files are on disk and indexed: announcing it earlier shows a
     // finished job with nothing behind it in the asset browser.
+    let landed: CollectedOutputs
     try {
-      entry.job.assetIds = await bound.collect(entry.job, remote.assetIds)
+      landed = await bound.collect(entry.job, remote.assetIds)
+      entry.job.assetIds = landed.ids
     } catch {
       // Writing or indexing failed — a local problem, distinct from anything the API said, and
       // one the note must outlive: the generation is paid for and its outputs are still there.
@@ -437,7 +467,7 @@ export function createJobManager({
     }
 
     entry.done = true
-    settle(entry, 'succeeded')
+    settle(entry, 'succeeded', undefined, landed.workspaces)
   }
 
   const execute = async (entry: Entry): Promise<void> => {
