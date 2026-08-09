@@ -126,6 +126,48 @@ const MIGRATIONS: readonly string[] = [
   -- order the journal is ever read in. A second B-tree would be maintained on every insert —
   -- two hundred of them on a push of two hundred assets — and answer no query the first cannot.
   `,
+  `
+  -- The page every browser opens on, and the one the audit measured at 15,17 ms: one kind,
+  -- newest first. Neither simple index could answer it whole — SQLite picks the one that
+  -- narrows, then walks what it found to sort it. The tie-break column is here because the
+  -- query carries it: without \`id DESC\` in the index, the sort survives the seek.
+  CREATE INDEX assets_type_created_idx ON assets(type, created_at DESC, id DESC);
+
+  -- Full text over what one remembers of an asset — its name, and what was asked for. The
+  -- \`LIKE '%…%'\` it replaces could not use any index by construction: 22,53 ms to answer that
+  -- nothing matched, because answering that means reading everything.
+  --
+  -- \`content='assets'\`: the words are indexed, the columns are not stored a second time.
+  -- Diacritics folded, so « mousse » finds "Mousse" typed without its accent in a hurry.
+  CREATE VIRTUAL TABLE assets_fts USING fts5(
+    name,
+    prompt,
+    content='assets',
+    content_rowid='rowid',
+    tokenize='unicode61 remove_diacritics 2'
+  );
+
+  -- An external-content table indexes nothing by itself: these three are what keep it true, and
+  -- a delete is written as a command rather than as a DELETE — that is the fts5 contract.
+  CREATE TRIGGER assets_fts_insert AFTER INSERT ON assets BEGIN
+    INSERT INTO assets_fts(rowid, name, prompt) VALUES (new.rowid, new.name, new.prompt);
+  END;
+
+  CREATE TRIGGER assets_fts_delete AFTER DELETE ON assets BEGIN
+    INSERT INTO assets_fts(assets_fts, rowid, name, prompt)
+      VALUES ('delete', old.rowid, old.name, old.prompt);
+  END;
+
+  CREATE TRIGGER assets_fts_update AFTER UPDATE ON assets BEGIN
+    INSERT INTO assets_fts(assets_fts, rowid, name, prompt)
+      VALUES ('delete', old.rowid, old.name, old.prompt);
+    INSERT INTO assets_fts(rowid, name, prompt) VALUES (new.rowid, new.name, new.prompt);
+  END;
+
+  -- What is already there. A project opened after this migration must be searchable at once,
+  -- not from its next import onwards.
+  INSERT INTO assets_fts(rowid, name, prompt) SELECT rowid, name, prompt FROM assets;
+  `,
 ]
 
 const DEFAULT_LIMIT = 200
@@ -267,6 +309,20 @@ function parseProbe(raw: string | undefined): MediaProbe | undefined {
 /** `%` and `_` are wildcards: typed by a user they must match themselves, not everything. */
 function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, character => `\\${character}`)
+}
+
+/**
+ * What the user typed, as an fts5 expression — or `null` when nothing they typed is a word.
+ *
+ * Words only, and quoted: `-`, `*`, `AND` and `(` are operators in that grammar, and a name is
+ * not a query. The trailing star is what makes the row appear while the word is still being
+ * typed, which is the only reason a search runs on every keystroke at all.
+ *
+ * Every term must match, as the tag filter does: filters narrow, they do not widen.
+ */
+function matchExpression(text: string): string | null {
+  const terms = text.match(/[\p{L}\p{N}_]+/gu)
+  return terms ? terms.map(term => `"${term}"*`).join(' AND ') : null
 }
 
 /**
@@ -543,9 +599,19 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       // The prompt is searched alongside the name: what one remembers of a generated asset is
       // what one asked for, not the label the job happened to give it.
       if (query.text) {
-        conditions.push("(name LIKE ? ESCAPE '\\' OR prompt LIKE ? ESCAPE '\\')")
-        const pattern = `%${escapeLike(query.text)}%`
-        params.push(pattern, pattern)
+        const match = matchExpression(query.text)
+
+        if (match) {
+          conditions.push('rowid IN (SELECT rowid FROM assets_fts WHERE assets_fts MATCH ?)')
+          params.push(match)
+        } else {
+          // Punctuation alone tokenises to nothing, and fts5 cannot look for what it never
+          // indexed — searching "%" and finding "100%" is what this keeps. The scan it costs is
+          // the one the index exists to avoid, which is why it is the exception and not the rule.
+          conditions.push("(name LIKE ? ESCAPE '\\' OR prompt LIKE ? ESCAPE '\\')")
+          const pattern = `%${escapeLike(query.text)}%`
+          params.push(pattern, pattern)
+        }
       }
 
       // Every tag must match, not any: filters narrow, they do not widen.

@@ -799,18 +799,25 @@ mais quiconque cherchera « pourquoi mon HDRI n’apparaît pas dans l’import 
 
 ### Ce qui reste ouvert
 
-**Les index du catalogue n’ont pas été posés.** `catalog.ts` déclare des index simples
-(`assets(type)`, `assets(created_at DESC)`, `asset_tags(tag)`, `assets(hash)`…). **Il manque l’index
-composite `(type, created_at DESC)` et un FTS5** pour la recherche texte. Les deux requêtes coûteuses
-de l’audit — `type = ?` à 15,17 ms et un `LIKE '%…%'` sans résultat à 22,53 ms — tombent dans le même
-piège : parcourir toute la table pour remplir une page. **Le worker a déplacé ce coût, les index le
-supprimeraient.**
+**Les index du catalogue et l’abandon d’une recherche sont livrés** (`feat/catalog-index`,
+9 août 2026). Ce qui en reste à savoir :
 
-**Une recherche engagée ne s’interrompt pas.** Six frappes produisent six recherches ;
-`catalog-client.ts` n’expose aucun abandon, et une requête `better-sqlite3` engagée ne s’interrompt
-pas. Elles ne bloquent plus rien depuis le worker, mais elles occupent le thread — et l’invariant 6
-demande que toute tâche longue soit annulable. À traiter **avec les index**, qui les rendront assez
-brèves pour que la question se pose autrement.
+- **la recherche texte ne trouve plus au milieu d’un mot.** C’est le prix du FTS5 et il est
+  volontaire : « oulder » ne rend plus « Boulder », « boul » oui. L’étoile de préfixe est ce qui
+  fait apparaître la ligne pendant qu’on tape encore ;
+- **la ponctuation seule retombe sur le `LIKE`.** fts5 ne sait pas chercher ce qu’il n’a jamais
+  indexé, et taper « % » doit continuer de trouver « 100% » ;
+- **SQLite recycle les rowid**, et c’est ce qui rend le trigger de suppression nécessaire :
+  sans lui, les mots d’un asset supprimé répondent pour celui qui prend sa place. Le défaut ne
+  se voit par aucune requête tant que personne ne reprend le numéro ;
+- **l’abandon est livré comme une assurance, pas comme un correctif.** Aucun composant du
+  renderer n’envoie encore `text:` au catalogue local. **Le brancher au handler IPC serait un
+  bug** : `stores/assets.ts` lit un rejet comme « pas de projet » et VIDE l’étagère. Un champ de
+  recherche devra donc distinguer `ABANDONED` d’un échec avant de tenir un `AbortController` ;
+- **le fil traite une requête par tour de boucle**, et c’est tout ce qui permet d’abandonner :
+  une requête `better-sqlite3` engagée ne s’interrompt pas, seules celles qui attendent peuvent
+  renoncer. Un `setImmediate`, pas une micro-tâche — celle-ci se résout avant que la boucle
+  n’interroge le port.
 
 > **Toute nouvelle recherche passe par `foldForSearch` (`shared/text.ts`), jamais par
 > `toLowerCase`.** La règle était écrite et vécue **privée** dans `settings-search.ts` pendant que
