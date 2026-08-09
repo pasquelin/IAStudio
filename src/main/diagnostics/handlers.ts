@@ -1,4 +1,4 @@
-import { CHANNELS, isLogScope, type LogScope } from '@shared/ipc'
+import { CHANNELS, type LogScope } from '@shared/ipc'
 import type { ActivityTopic } from '@shared/domain/activity'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
@@ -57,10 +57,6 @@ export function registerDiagnosticsHandlers(journal: () => ActivityLog): void {
     const { level, scope, message } = parseLogEntry(entry)
     // Prefixed here rather than sent prefixed, so a line can never claim to come from this side.
     log[level](`renderer/${scope}`, message)
-
-    // `parseLogEntry` has already refused anything outside `LOG_SCOPES`; the guard is what lets
-    // the table below stay exhaustive rather than defaulting.
-    if (!isLogScope(scope)) return
 
     journal().record({
       level,
