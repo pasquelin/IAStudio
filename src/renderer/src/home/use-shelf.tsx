@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useOnScreen } from '@/hooks/useOnScreen'
 
 /**
@@ -50,21 +50,22 @@ export function useShelf<T>(initial: T, read: () => Promise<T> | undefined, sour
 export type DeferredShelf<T> = {
   value: T
   /**
-   * Goes on whatever the band draws INSTEAD of its content while it holds nothing — a marker
-   * that stays mounted. A band that renders `null` here is a band nothing can ever scroll to,
-   * so its read never happens.
+   * What the band draws INSTEAD of its content while it holds nothing. Never `null` before the
+   * band has been seen — a band that renders nothing is a band nothing can scroll to, and its
+   * read would never happen — and always `null` afterwards, so a band with nothing to say costs
+   * no room: the home lays its sections out with a gap, and an empty marker still takes one.
    */
-  ref: (node: HTMLElement | null) => void
+  marker: ReactNode
 }
 
 /**
  * A shelf that reads nothing until it has been scrolled to.
  *
- * Three things have to line up for that, and they are subtle enough that both bands using it had
- * copied them: the read must answer `undefined` while unseen, `seen` must be part of what the
- * shelf reads under (or the first read is the only one), and a marker must stay on screen in
- * place of the content. Forgetting either of the last two gives a band that never loads — and
- * says nothing about why.
+ * Three things have to line up for that, and they were subtle enough that both bands using it
+ * had copied them: the read must answer `undefined` while unseen, `seen` must be part of what
+ * the shelf reads under (or the first read is the only one), and something must stay on screen
+ * in place of the content. The marker is owned here rather than described to callers, because
+ * two of those three are silent when forgotten — the band simply never loads.
  */
 export function useDeferredShelf<T>(
   initial: T,
@@ -74,5 +75,5 @@ export function useDeferredShelf<T>(
   const { ref, seen } = useOnScreen()
   const value = useShelf(initial, () => (seen ? read() : undefined), `${source}/${seen}`)
 
-  return { value, ref }
+  return { value, marker: seen ? null : <div ref={ref} aria-hidden /> }
 }

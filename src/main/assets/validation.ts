@@ -20,7 +20,11 @@ import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
  * and silently serving two hundred would hide it while dropping a third of the answer.
  */
 
-const assetId = z.string().trim().min(1)
+/**
+ * Bounded like every other string that crosses: an id travels into a filter expression and into
+ * the request line the SDK logs, and that line is not truncated the way a failure detail is.
+ */
+const assetId = z.string().trim().min(1).max(200)
 
 export function parseAssetId(value: unknown): string {
   return assetId.parse(value)

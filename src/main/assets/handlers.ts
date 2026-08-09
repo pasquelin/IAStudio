@@ -178,7 +178,13 @@ async function explore(remote: RemoteAssetCatalog, query: ExploreQuery): Promise
     token = page.token
 
     if (assets.length > 0 || token === null) break
-    offset = boundedOffset(token)
+
+    // An offset that did not move asks the index the very same question again, and the answer
+    // costs a search either way. Reachable two ways: a token the bound clamps to the ceiling, and
+    // a token that is not a number at all.
+    const next = boundedOffset(token)
+    if (next === offset) break
+    offset = next
   }
 
   return { assets, cursor: marked(OFFSET_CURSOR, token) }
@@ -310,17 +316,23 @@ export function registerAssetHandlers({
     return describeAssets(found.filter(asset => asset !== null))
   })
 
-  handle(CHANNELS.cloudSimilar, (_event, assetId) =>
-    quietly(() => similar(remote(), parseAssetId(assetId))),
-  )
+  // Parsed before the reduction, as every other channel in this file already does: what `quietly`
+  // keeps out of the journal is an API that refused, and a malformed message is not that — it is
+  // a bug on the other side of the boundary, and reducing it to `unexpected` would hide it.
+  handle(CHANNELS.cloudSimilar, (_event, assetId) => {
+    const reference = parseAssetId(assetId)
+    return quietly(() => similar(remote(), reference))
+  })
 
-  handle(CHANNELS.cloudExplore, (_event, query) =>
-    quietly(() => explore(remote(), parseExploreQuery(query))),
-  )
+  handle(CHANNELS.cloudExplore, (_event, query) => {
+    const parsed = parseExploreQuery(query)
+    return quietly(() => explore(remote(), parsed))
+  })
 
-  handle(CHANNELS.cloudBrowse, (_event, query) =>
-    quietly(() => browse(remote(), parseCloudQuery(query))),
-  )
+  handle(CHANNELS.cloudBrowse, (_event, query) => {
+    const parsed = parseCloudQuery(query)
+    return quietly(() => browse(remote(), parsed))
+  })
 
   handle(CHANNELS.cloudPull, async (_event, remoteAssetIds) => {
     const ids = parseAssetIds(remoteAssetIds)

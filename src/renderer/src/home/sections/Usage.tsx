@@ -29,11 +29,11 @@ export function Usage() {
   const owner = useSettings(activeOwnerId)
   // Below the fold on any window, so it is read when reached rather than at mount. Read again
   // when the active key changes too: another key spends its own units.
-  const { value: report, ref } = useDeferredShelf<UsageReport | null>(null, spending, `${owner}`)
+  const { value: report, marker } = useDeferredShelf<UsageReport | null>(null, spending, `${owner}`)
 
   // Nothing spent is not nothing to say — but nothing READ is, and the two look alike from here
   // until the report lands.
-  if (!report) return <div ref={ref} aria-hidden />
+  if (!report) return marker
 
   const spent = formatUnits(report.units, i18n.language)
 

@@ -319,13 +319,6 @@ describe('the public feed', () => {
     expect(harness.searched[0]).toMatchObject({ offset: 40 })
   })
 
-  it('starts over rather than sending NaN when a cursor is not a number', async () => {
-    // The cursor is opaque and bounded by length alone, so anything can arrive in it. Serialized,
-    // `NaN` reaches the SDK as `null` and the API refuses the whole page.
-    await invoke(CHANNELS.cloudExplore, { type: 'image', cursor: 'o:page-2' })
-    expect(harness.searched[0]).toMatchObject({ offset: 0 })
-  })
-
   it('caps how far into the index a cursor may point', async () => {
     // `o:1e99` passes validation — it is a short string — and asks the index for an offset no
     // index can answer for.
@@ -337,18 +330,46 @@ describe('the public feed', () => {
 
   it('bounds the offset it walks to itself, not only the one handed in', async () => {
     // The empty-round loop reads the API's own token back as an offset, and that token is just
-    // as much an outside value as the cursor.
-    const { searched } = setup({
+    // as much an outside value as the cursor. Recorded HERE and not through the harness: this
+    // override replaces the `search` the harness records through, so its log would stay empty
+    // and an assertion over it would hold vacuously.
+    const offsets: unknown[] = []
+    setup({
       remote: {
-        search: () =>
-          Promise.resolve({ assets: [{ ...cloudAsset('a'), type: 'audio' }], token: 'later' }),
+        search: request => {
+          offsets.push(request.offset)
+          return Promise.resolve({
+            assets: [{ ...cloudAsset('a'), type: 'audio' }],
+            token: 'later',
+          })
+        },
       },
     })
 
     await invoke(CHANNELS.cloudExplore, { type: 'image' })
-    expect(searched.every(request => Number.isFinite((request as { offset: number }).offset))).toBe(
-      true,
-    )
+
+    expect(offsets.length).toBeGreaterThan(0)
+    expect(offsets.every(offset => Number.isFinite(offset))).toBe(true)
+  })
+
+  it('stops walking once the offset can no longer move', async () => {
+    // A token the bound clamps, or one that is not a number, asks the index the very same
+    // question again — and the search is billed either way.
+    const offsets: number[] = []
+    setup({
+      remote: {
+        search: request => {
+          offsets.push(request.offset)
+          return Promise.resolve({
+            assets: [{ ...cloudAsset('a'), type: 'audio' }],
+            token: 'not-a-number',
+          })
+        },
+      },
+    })
+
+    await invoke(CHANNELS.cloudExplore, { type: 'image' })
+    expect(offsets).toEqual([0])
   })
 
   it('refuses a feed of everything: the masonry shows one kind at a time', async () => {

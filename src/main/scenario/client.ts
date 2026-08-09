@@ -158,16 +158,18 @@ export function reducedBy(scope: string) {
 }
 
 /**
- * The same reduction, for a call the user never made.
+ * The same reduction, kept out of the JOURNAL — and only out of the journal.
  *
  * The journal is what somebody opens after a job went wrong, and a decorative band that polls on
  * its own must not fill it: one rate-limited home leaves five entries about requests nobody asked
- * for, and the push that actually failed scrolls off the top. The failure still reaches the log,
- * and still reaches the caller — the terminal keeps the trail, and it stays a refusal rather than
- * becoming an empty answer.
+ * for, and the push that actually failed scrolls off the top.
+ *
+ * Still `log.error`, deliberately. A packaged app has no terminal attached and only mirrors its
+ * log to the window in development, and `settings.advanced.logLevel` can drop warnings outright —
+ * so demoting the level here would not move the failure somewhere quieter, it would erase it.
  */
 export function quietlyReducedBy(scope: string) {
-  return reducing(error => log.warn(scope, describeFailure(error)))
+  return reducing(error => log.error(scope, describeFailure(error)))
 }
 
 /** What a client is built through, so that no client can be built without its rate limit. */

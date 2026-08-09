@@ -51,13 +51,13 @@ export function Similar() {
   // second copy of the fetch that `useShelf` already owns.
   const [attempt, setAttempt] = useState(0)
   // Two requests, both below the fold on any window: spent when the band is reached.
-  const { value: page, ref } = useDeferredShelf<Lookalikes>(
+  const { value: page, marker } = useDeferredShelf<Lookalikes>(
     { state: 'silent' },
     lookalikes,
     `${owner}/${attempt}`,
   )
 
-  if (page.state === 'silent') return <div ref={ref} aria-hidden />
+  if (page.state === 'silent') return marker
 
   if (page.state === 'refused') {
     return (

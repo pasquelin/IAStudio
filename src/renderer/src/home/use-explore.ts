@@ -28,9 +28,23 @@ type Feed = {
    * forty tiles from one that added none.
    */
   barren: number
+  /**
+   * Stopped because the API refused, rather than because the feed ran out.
+   *
+   * The two look the same on screen and must not be remembered the same way: a feed that ended
+   * is worth keeping, a feed that was refused is worth trying again. Without this, one 429 left
+   * a tab reading "nothing published" for as long as the home stayed open.
+   */
+  refused: boolean
 }
 
-const START: Feed = { assets: [], cursor: null, exhausted: false, barren: 0 }
+const START: Feed = {
+  assets: [],
+  cursor: null,
+  exhausted: false,
+  barren: 0,
+  refused: false,
+}
 
 /**
  * How many barren pages are walked before the feed is called finished.
@@ -74,6 +88,7 @@ function grown(held: Feed, page: CloudPage): Feed {
     assets,
     cursor: page.cursor,
     barren,
+    refused: false,
     exhausted: page.cursor === null || page.cursor === held.cursor || barren >= BARREN_MAX,
   }
 }
@@ -110,12 +125,25 @@ export function useExplore(type: AssetType): Explore {
    */
   const [feeds, setFeeds] = useState<Record<string, Feed>>({})
   const [readUnder, setReadUnder] = useState(owner)
+  const [shown, setShown] = useState(type)
 
   // Dropped as the key changes, during the render rather than after it. What every tab held was
   // read under the previous key, and showing one of them again would answer for the wrong account.
   if (readUnder !== owner) {
     setReadUnder(owner)
     setFeeds({})
+  } else if (shown !== type && feeds[type]?.refused) {
+    // Coming back to a tab the API had refused is the occasion to try it again. Remembering that
+    // refusal is how a cache turns one 429 into a tab that reads "nothing published" for the rest
+    // of the session — the very failure this band was fixed for, moved one level up.
+    setShown(type)
+    setFeeds(all => {
+      const kept = { ...all }
+      delete kept[type]
+      return kept
+    })
+  } else if (shown !== type) {
+    setShown(type)
   }
 
   const feed = feeds[type] ?? START
@@ -166,7 +194,9 @@ export function useExplore(type: AssetType): Explore {
       })
       .catch(() => {
         if (!settle()) return
-        setFeed(held => ({ ...held, exhausted: true }))
+        // Stops the feed, and says why: what is on screen stays, and coming back to this tab
+        // asks again rather than repeating a refusal as though it were an answer.
+        setFeed(held => ({ ...held, exhausted: true, refused: true }))
       })
 
     return undefined

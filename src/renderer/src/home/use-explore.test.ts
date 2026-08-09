@@ -304,6 +304,47 @@ describe('one tab of the public feed', () => {
     expect(explore).toHaveBeenCalledTimes(2)
   })
 
+  it('asks again on a tab the API had refused, rather than remembering the refusal', async () => {
+    // The cache must not turn one 429 into a tab that reads "nothing published" for the rest of
+    // the session — that is the failure this band was fixed for, one level up.
+    const explore = vi
+      .fn<() => Promise<CloudPage>>()
+      .mockRejectedValueOnce(new Error('429'))
+      .mockResolvedValue({ assets: [cloudAsset('a')], cursor: null })
+    installFakeBridge({ cloud: { explore } })
+
+    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
+      initialProps: { type: 'image' },
+    })
+    await waitFor(() => expect(result.current.exhausted).toBe(true))
+    expect(result.current.assets).toHaveLength(0)
+
+    rerender({ type: 'video' })
+    rerender({ type: 'image' })
+
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+  })
+
+  it('keeps a tab that genuinely ran out, and does not read it again', async () => {
+    // The contrast: an exhausted feed is worth remembering, a refused one is not.
+    const { explore } = install([
+      { assets: [cloudAsset('a')], cursor: null },
+      { assets: [cloudAsset('b', 'video')], cursor: null },
+    ])
+
+    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
+      initialProps: { type: 'image' },
+    })
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+
+    rerender({ type: 'video' })
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['b']))
+    rerender({ type: 'image' })
+
+    expect(result.current.assets.map(asset => asset.id)).toEqual(['a'])
+    expect(explore).toHaveBeenCalledTimes(2)
+  })
+
   it('forgets what it read under another key', async () => {
     const { explore } = install([
       { assets: [cloudAsset('a')], cursor: 'o:40' },
