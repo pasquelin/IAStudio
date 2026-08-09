@@ -49,24 +49,6 @@ pas un choix.
 
 ## À faire
 
-### 8. L’étagère à assets n’a pas d’accès clavier non plus
-
-**Trouvé en traitant l’entrée 5, le 9 août 2026** — et il contredit ce que celle-ci affirmait : les
-lignes de l’Explorateur n’étaient pas « les seules du studio » dans ce cas. `AssetBrowser` ne passe à
-`Collection` **ni `selectedIds` ni `onSelect`** : ses cellules tombent dans la branche non
-interactive, sans rôle ni tabulation. Sa sélection se fait par `onPointerDown` dans
-`DraggableAsset`, et son ouverture par un `onDoubleClick` maison — le geste que `onActivate` existe
-désormais pour porter.
-
-Ce n’est donc pas une prop à ajouter mais **la réunion de deux propriétaires du geste** : la cellule
-sélectionne au clic pendant que `DraggableAsset` sélectionne au `pointerdown`. C’est le plus gros
-panneau du studio, et l’entrée 6 touche le même chemin — les traiter ensemble se défend.
-
-**Un piège les attend là-bas** : le double-clic de `Collection` n’a pas la garde de vol
-d’événement que le clavier a (`event.target !== event.currentTarget`), et il ne peut pas l’avoir —
-un double-clic part du texte de la ligne, pas de la cellule. Un panneau qui porte des contrôles
-dans ses lignes (`LayerRow` renomme déjà au double-clic) verra donc les deux gestes se déclencher.
-
 ### 9. `role="option"` sans `listbox`, et `aria-selected` qui dit « ouvert »
 
 **Même origine, même date.** Aucun `role="listbox"` n’existe nulle part dans `src/` : les cellules de
@@ -413,6 +395,28 @@ correction.
 | **(3)** `gap-1` partout où il traînait — 45 occurrences, 27 fichiers | `6ef915e` (feat/pinceau) |
 | **(5)** Les lignes de l’Explorateur n’avaient aucun accès clavier | `776e85b` (feat/explorateur-clavier) |
 | **(6)** Le double-clic sur un asset ne traversait pas les espaces, et se taisait | `33d31f3` (feat/double-clic) |
+| **(8)** L’étagère à assets n’avait aucun accès clavier, ni sélection multiple | `a98357e` (feat/etagere-clavier) |
+
+> **L’entrée 8 cachait un défaut plus gênant que le clavier.** La ligne s’était approprié les deux
+> gestes — `DraggableAsset` sélectionnait au `pointerdown`, ouvrait au double-clic — d’où des
+> cellules inertes, mais surtout : **la sélection au `pointerdown` déplaçait l’ancre avant que le
+> clic de la cellule ne la lise**, si bien qu’un shift-clic ne pouvait jamais étendre une plage.
+> Dans le seul panneau dont les actions sont plurielles. Le panneau reprend les deux gestes ; la
+> ligne ne garde que le glisser et son menu.
+>
+> **Trois défauts de plus, trouvés en revue et corrigés avec.** Le `mode` de `pickFrom` était jeté,
+> donc un ⌘-clic remplaçait la sélection au lieu de l’enrichir ; un glisser ou un clic droit
+> écrasait une sélection multiple, y compris un glisser lâché dans le vide ; et la dérivation
+> « quels assets sont sélectionnés », écrite deux fois, faisait repeindre l’étagère à chaque calque
+> choisi ailleurs — elle descend dans le store, en `selectedAssetIds`.
+>
+> **La vérification à l’écran reste due pour les entrées 6 et 8**, et pas faute d’avoir essayé :
+> le MCP `electron` **n’atteint pas les cartes de l’étagère** — `electron_click_by_text` répond
+> « cliqué » sans que le focus ni la sélection ne bougent, et aucun sélecteur ne distingue les
+> cellules d’une collection de celles d’une autre (`data-cell` recommence à zéro dans chacune).
+> Ce qui a été vu : les cellules de l’étagère portent bien `tabindex` et `aria-selected`, que le
+> panneau n’avait pas avant. Ce qui reste à voir de ses yeux : le clic qui peint, la plage au
+> shift, et la bascule d’espace au double-clic depuis un autre espace.
 
 > **L’entrée 6 est tranchée dans le sens qu’elle proposait** : c’est le comportement de
 > l’Explorateur qui était le bon. Une destination est prête dès qu’un document de son genre est
