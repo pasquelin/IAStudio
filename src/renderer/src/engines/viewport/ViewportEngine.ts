@@ -5,12 +5,16 @@ import {
   OrthographicCamera,
   PerspectiveCamera,
   Scene,
+  Vector3,
   WebGLRenderer,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { token } from '../core/palette'
 import { frameDelta } from './frame-clock'
 import { pointerNdc, type PointerPosition } from './pointer'
+
+/** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
+const ORIGIN = new Vector3()
 
 /**
  * The parts of a viewport every workspace repeats: a canvas it owns, a renderer, a camera that
@@ -106,17 +110,37 @@ export class ViewportEngine {
     if (kind === this.projection) return
 
     const previous = this.camera
+    // An orthographic camera zooms by scaling its frustum, never by moving — so what the wheel
+    // left on it has no counterpart in one that zooms by moving. Spent as distance rather than
+    // dropped: dropped, coming back to perspective threw the view out to where it stood before.
+    const spent = this.projection === 'orthographic' ? this.orthographic.zoom : 1
+
     this.projection = kind
     const next = this.camera
     next.position.copy(previous.position)
     next.quaternion.copy(previous.quaternion)
-    // Orbiting an orthographic camera changes its `zoom`, never its distance: carried over, a
-    // zoom from an earlier swap would apply again on top of the frustum just sized for it.
+    if (spent !== 1) {
+      // The same fallback as `fitProjection`: with no controls, there is no target but the origin.
+      const target = this.controls?.target ?? ORIGIN
+      next.position.sub(target).divideScalar(spent).add(target)
+    }
+    // Carried over, a zoom from an earlier swap would apply again on top of the frustum just
+    // sized for it.
     next.zoom = 1
 
     this.fitProjection()
     if (this.controls) this.controls.object = next
     this.requestRender()
+  }
+
+  /**
+   * The camera was moved rather than turned: the orthographic frustum has to be sized again, and
+   * its zoom let go with it. A perspective camera shows something new the moment it moves; an
+   * orthographic one shows exactly what it showed, which is how framing a selection did nothing.
+   */
+  refit(): void {
+    this.orthographic.zoom = 1
+    this.fitProjection()
   }
 
   /**

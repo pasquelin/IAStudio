@@ -59,6 +59,66 @@ describe('ViewportEngine projection', () => {
     expect(engine.orthographic.zoom).toBe(1)
   })
 
+  /**
+   * The wheel is the whole difference between the two cameras: an orthographic one scales its
+   * frustum and never moves, a perspective one only moves. Coming back, the zoom was simply
+   * dropped — a view zoomed four times in orthographic jumped back out to where it had started.
+   */
+  it('spends an orthographic zoom as distance when it swaps back to perspective', () => {
+    const engine = new ViewportEngine()
+    engine.perspective.position.set(0, 0, 12)
+    engine.setProjection('orthographic')
+    // What the wheel does to an orthographic camera, and the only trace it leaves.
+    engine.orthographic.zoom = 4
+
+    engine.setProjection('perspective')
+
+    // Four times closer, because four times nearer is what four times bigger means here.
+    expect(engine.perspective.position.z).toBeCloseTo(3, 5)
+  })
+
+  // Two axes with different values: a camera on the diagonal would pass either way round.
+  it('spends it along the line to the target, not along one axis', () => {
+    const engine = new ViewportEngine()
+    engine.perspective.position.set(6, 0, 12)
+    engine.setProjection('orthographic')
+    engine.orthographic.zoom = 2
+
+    engine.setProjection('perspective')
+
+    expect(engine.perspective.position.x).toBeCloseTo(3, 5)
+    expect(engine.perspective.position.z).toBeCloseTo(6, 5)
+  })
+
+  // Going the other way there is nothing to spend, and the placement must be carried untouched.
+  it('leaves the placement alone going into orthographic', () => {
+    const engine = new ViewportEngine()
+    engine.perspective.position.set(3, 4, 5)
+
+    engine.setProjection('orthographic')
+
+    expect(engine.orthographic.position.toArray()).toEqual([3, 4, 5])
+  })
+
+  /**
+   * A move tells a perspective camera everything; it tells an orthographic one nothing at all.
+   * Framing a selection moved the camera and left the screen exactly as it was.
+   */
+  it('sizes the frustum again for where the camera was moved to', () => {
+    const engine = new ViewportEngine({ fieldOfView: 90 })
+    engine.perspective.position.set(0, 0, 10)
+    engine.setProjection('orthographic')
+    engine.orthographic.zoom = 3
+    engine.orthographic.position.set(0, 0, 4)
+
+    engine.refit()
+
+    expect(engine.orthographic.zoom).toBe(1)
+    // tan(45°) = 1, so a 90° lens spans the distance either side: four up, four down.
+    expect(engine.orthographic.top).toBeCloseTo(4, 5)
+    expect(engine.orthographic.bottom).toBeCloseTo(-4, 5)
+  })
+
   it('does nothing at all when asked for the projection it already draws with', () => {
     const engine = new ViewportEngine()
     engine.orthographic.zoom = 4

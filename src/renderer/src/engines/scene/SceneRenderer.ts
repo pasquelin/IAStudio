@@ -74,15 +74,12 @@ import {
 } from './scene-view'
 import BvhWorker from './bvh.worker?worker'
 import { createBvhBuilder, type BvhBuilder } from './bvh-builder'
+import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmo-target'
 import { exportObjects } from './scene-export'
 import { snapSteps } from './snap-steps'
 import { createTextureCache, type TextureCache, type TextureSource } from './texture-cache'
 
-/** `select` clicks without arming a gizmo — the mode you come back to. */
-export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
-
-/** Which frame the gizmo's handles line up with: the world's axes, or the object's own. */
-export type TransformSpace = 'world' | 'local'
+export type { TransformMode, TransformSpace } from './gizmo-target'
 
 export type SceneRendererOptions = {
   /**
@@ -377,6 +374,9 @@ export class SceneRenderer {
     orbit.target.copy(centre)
     this.viewport.camera.position.copy(centre).add(new ThreeVector3(4, 4, 4))
     orbit.update()
+    // Moving an orthographic camera changes nothing of what it shows: without this, `F` recentred
+    // the orbit and left the screen exactly as it was.
+    this.viewport.refit()
     this.viewport.requestRender()
   }
 
@@ -975,22 +975,20 @@ export class SceneRenderer {
     // would drag it to the origin — a mode key pressed during a drag must not move anything.
     if (gizmo.dragging) return
 
-    const objects = this.mode === 'select' ? [] : this.selectedObjects()
-    const [first] = objects
-    if (!first) {
+    const target = gizmoTargetFor(this.mode, this.space, this.selectedObjects(), object =>
+      this.applied.get(object.name),
+    )
+
+    if (target.kind === 'none') {
       gizmo.detach()
       return
     }
-    // One node attaches straight to its object: routing a single move through the pivot would
-    // round-trip its transform through two matrices for nothing.
-    if (objects.length === 1) {
-      gizmo.attach(first)
+    if (target.kind === 'object') {
+      gizmo.attach(target.object)
       return
     }
 
-    // The anchor is the last node picked, and in the local frame it is what the handles line up
-    // with — a group has no orientation of its own to offer.
-    placePivot(this.pivot, objects, this.space === 'local' ? objects.at(-1) : undefined)
+    placePivot(this.pivot, target.objects, target.anchor)
     gizmo.attach(this.pivot)
   }
 

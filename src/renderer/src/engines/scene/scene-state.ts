@@ -104,6 +104,15 @@ export function canReceiveShadow(node: ShadowSubject): boolean {
   return node.type !== 'light' && node.type !== 'sprite'
 }
 
+/**
+ * Whether turning a node shows. A sprite always faces the camera: three.js reads its size off the
+ * *lengths* of the first two columns of the model matrix — which a rotation leaves untouched — and
+ * takes its angle from a material uniform. So the handle would write an undo that draws nothing.
+ */
+export function canRotate(node: { type: SceneNodeType }): boolean {
+  return node.type !== 'sprite'
+}
+
 const SHADOW_CASTING_LIGHTS: readonly LightDescriptor['kind'][] = ['directional', 'spot', 'point']
 
 export const IDENTITY_TRANSFORM: Transform = {
