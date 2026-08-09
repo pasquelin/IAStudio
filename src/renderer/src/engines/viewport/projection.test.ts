@@ -90,14 +90,30 @@ describe('ViewportEngine projection', () => {
     expect(engine.perspective.position.z).toBeCloseTo(6, 5)
   })
 
-  // Going the other way there is nothing to spend, and the placement must be carried untouched.
+  /**
+   * Going the other way there is nothing to spend. The stale orthographic zoom is set on purpose:
+   * without it the guard short-circuits on `!== 1` and the direction of the spend is never read,
+   * so the test could not see it being dropped.
+   */
   it('leaves the placement alone going into orthographic', () => {
     const engine = new ViewportEngine()
     engine.perspective.position.set(3, 4, 5)
+    engine.orthographic.zoom = 2
 
     engine.setProjection('orthographic')
 
     expect(engine.orthographic.position.toArray()).toEqual([3, 4, 5])
+  })
+
+  // A swap the code promises is a no-op must not pull a distant camera in to the clamp band.
+  it('moves nothing when there is no zoom to spend', () => {
+    const engine = new ViewportEngine()
+    engine.perspective.position.set(0, 0, 600)
+    engine.setProjection('orthographic')
+
+    engine.setProjection('perspective')
+
+    expect(engine.perspective.position.toArray()).toEqual([0, 0, 600])
   })
 
   /**
