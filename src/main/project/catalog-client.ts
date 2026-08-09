@@ -52,7 +52,7 @@ type Pending = {
   resolve: (value: CatalogResults[CatalogRequest['op']]) => void
   reject: (error: Error) => void
   /** Drops the abort listener: a signal outlives the search it was handed to. */
-  release?: () => void
+  release: () => void
 }
 
 export function createCatalogClient(port: CatalogPort): AsyncCatalog {
@@ -65,7 +65,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     const waiting = [...pending.values()]
     pending.clear()
     for (const slot of waiting) {
-      slot.release?.()
+      slot.release()
       slot.reject(new Error(reason))
     }
   }
@@ -75,7 +75,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     // An answer to a request already settled — by a close, or by a duplicate — is not an error.
     if (!slot) return
     pending.delete(response.id)
-    slot.release?.()
+    slot.release()
 
     if (response.ok) slot.resolve(response.value)
     else slot.reject(new Error(response.error))
@@ -116,7 +116,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
       pending.set(id, {
         resolve: value => resolve(value as CatalogResults[Op]),
         reject,
-        ...(signal ? { release: () => signal.removeEventListener('abort', abort) } : {}),
+        release: () => signal?.removeEventListener('abort', abort),
       })
       port.postMessage(build(id))
     })
