@@ -160,7 +160,7 @@ export function CollectionBar({
   )
 
   const views = (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <ToolButton
         icon={mdiViewGridOutline}
         label={t('collection.gridView')}
@@ -183,7 +183,7 @@ export function CollectionBar({
   )
 
   const zoom = (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <ToolButton
         icon={mdiMinus}
         label={t('collection.smaller')}
@@ -211,14 +211,14 @@ export function CollectionBar({
     return (
       <div
         className={cn(
-          'flex items-center gap-1',
+          'flex items-center gap-2',
           layout === 'header' ? 'min-w-0 flex-1' : 'border-border border-b px-2 py-1.5',
           className,
         )}
       >
         {search}
         {menus}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-2">
           {sortMenu}
           {views}
           {zoom}
@@ -258,7 +258,7 @@ export function CollectionBar({
 
       <div className="flex items-center justify-between">
         {views}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {sortMenu}
           {zoom}
         </div>

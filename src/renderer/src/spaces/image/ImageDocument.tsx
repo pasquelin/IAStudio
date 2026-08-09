@@ -421,7 +421,7 @@ function BrushControls({
   const { t } = useTranslation()
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       {/*
         A native colour input, deliberately: macOS opens the system picker, which already has
         an eyedropper, swatches and HSL fields. Same reasoning as the native `<select>` in
@@ -453,7 +453,7 @@ function BrushControls({
         // `useHoverFlyout` treats a single row as no menu at all.
         rowCount={BRUSH_FIELDS.length}
         rows={() => (
-          <div className="flex w-56 flex-col gap-1 p-1">
+          <div className="flex w-56 flex-col gap-2 p-1">
             {BRUSH_FIELDS.map(field => (
               <SliderField
                 key={field.of}

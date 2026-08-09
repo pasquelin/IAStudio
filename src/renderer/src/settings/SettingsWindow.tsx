@@ -147,7 +147,7 @@ function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
     <button
       type="button"
       onClick={onGo}
-      className="border-base-300 hover:bg-base-300 flex w-full flex-col gap-1 border-b py-3 text-left last:border-b-0"
+      className="border-base-300 hover:bg-base-300 flex w-full flex-col gap-2 border-b py-3 text-left last:border-b-0"
     >
       <span className="flex items-center justify-between gap-4">
         <span className="text-xs font-medium">{t(entry.titleKey)}</span>

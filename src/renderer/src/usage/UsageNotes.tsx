@@ -13,7 +13,7 @@ export function UsageNotes({ report }: { report: UsageReport }) {
   const silent = report.silent.map(account => account.name).join(', ')
 
   return (
-    <footer className="border-base-300 text-base-content/60 flex flex-col gap-1 border-t pt-3 text-[11px]">
+    <footer className="border-base-300 text-base-content/60 flex flex-col gap-2 border-t pt-3 text-[11px]">
       <p>{t('usage.noBalance')}</p>
       {report.accounts.length > 1 && <p>{t('usage.mixedAccounts')}</p>}
       {silent && <p className="text-warning">{t('usage.silent', { names: silent })}</p>}

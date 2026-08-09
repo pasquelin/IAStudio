@@ -197,7 +197,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
       </PropertySection>
 
       <PropertySection title={t('texture.preview')}>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-2">
           {PREVIEW_SHAPES.map(shape => (
             <button
               key={shape}

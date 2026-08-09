@@ -49,7 +49,7 @@ export function View() {
         <div className={FIELD_ROW}>
           <span className={FIELD_LABEL}>{t('view.mode')}</span>
 
-          <div className="flex min-w-0 flex-wrap gap-1">
+          <div className="flex min-w-0 flex-wrap gap-2">
             {SKYBOX_VIEWS.map(candidate => (
               <button
                 key={candidate}

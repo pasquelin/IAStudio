@@ -41,7 +41,7 @@ export function AccountSettings() {
       {accounts.length === 0 ? (
         <p className="text-base-content/60 text-xs">{t('accounts.none')}</p>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-2">
           {accounts.map(account => (
             <AccountRow key={account.id} account={account} authenticated={auth.authenticated} />
           ))}
@@ -197,7 +197,7 @@ function AddAccountForm() {
 
   return (
     <form className="flex flex-col gap-3 border-t border-current/10 pt-4" onSubmit={submit}>
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-2 text-xs">
         {t('accounts.name')}
         <input
           className="input input-sm w-full"
@@ -210,7 +210,7 @@ function AddAccountForm() {
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-2 text-xs">
         {t('auth.key')}
         <input
           className="input input-sm w-full"
@@ -222,7 +222,7 @@ function AddAccountForm() {
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-2 text-xs">
         {t('auth.secret')}
         <input
           className="input input-sm w-full"

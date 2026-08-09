@@ -102,7 +102,7 @@ function Control({
 
     case 'seed':
       return (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <input type="number" className={cn(FIELD, 'min-w-0 flex-1')} {...registration} />
           <ToolButton
             icon={mdiDiceMultipleOutline}
@@ -210,7 +210,7 @@ export function DynamicForm({
             // The accessory sits outside the label rather than in it: it holds buttons, and a
             // control nested in a label steals the click meant for the field.
             <Fragment key={field.key}>
-              <label className="flex flex-col gap-1 text-xs">
+              <label className="flex flex-col gap-2 text-xs">
                 <span className="text-muted">
                   {field.label}
                   {field.required && <span aria-hidden> *</span>}

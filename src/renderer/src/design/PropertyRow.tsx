@@ -19,7 +19,7 @@ export function PropertyRow({ label, children, stacked = false }: PropertyRowPro
     <div
       className={cn(
         'px-2 py-1 text-[11px]',
-        stacked ? 'flex flex-col gap-1' : 'flex min-h-(--sc-control) items-center gap-2',
+        stacked ? 'flex flex-col gap-2' : 'flex min-h-(--sc-control) items-center gap-2',
       )}
     >
       <span className={cn('text-muted shrink-0', stacked ? '' : 'w-20 truncate')}>{label}</span>

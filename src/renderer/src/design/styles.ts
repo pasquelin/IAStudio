@@ -74,8 +74,8 @@ export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
 /**
  * One property row of an inspector: a label of fixed width, then the control it names.
  *
- * `gap-2`, not `gap-1`: at one the label, the track and the number read as one run-on string
- * rather than as three things.
+ * The gap is two, never one: at one the label, the track and the number read as a single
+ * run-on string rather than as three things. It is the studio's spacing, applied throughout.
  */
 export const FIELD_ROW = 'flex min-w-0 items-center gap-2 text-[11px]'
 

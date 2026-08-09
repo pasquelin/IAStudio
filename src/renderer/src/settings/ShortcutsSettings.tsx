@@ -94,11 +94,11 @@ function CommandRow({
   const describedBy = `${id}-help`
 
   return (
-    <div className="border-base-300 flex flex-col gap-1 border-b py-3 last:border-b-0">
+    <div className="border-base-300 flex flex-col gap-2 border-b py-3 last:border-b-0">
       <div className="flex items-center justify-between gap-4">
         <span className="text-xs font-medium">{t(descriptor.titleKey)}</span>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-2">
           {clashing && (
             <span className="text-error flex" title={t('settings.shortcutConflict')}>
               <UiIcon path={mdiAlertCircleOutline} size={14} />

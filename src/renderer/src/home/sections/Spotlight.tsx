@@ -178,7 +178,7 @@ function Card({ slide, layout }: { slide: Slide; layout: 'banner' | 'stacked' })
 
       {/* `contents` rather than a second flex column when stacked: the heading and the body are
           then the card's own children, spaced by its gap like the button under them. */}
-      <span className={banner ? 'flex min-w-0 flex-1 flex-col gap-1' : 'contents'}>
+      <span className={banner ? 'flex min-w-0 flex-1 flex-col gap-2' : 'contents'}>
         <h3 className="text-text m-0 text-[13px] font-semibold">{slide.title}</h3>
         {/* Bounded, and the button is not: a body long enough to push the action out of the
             card would leave the one thing to click off screen. */}

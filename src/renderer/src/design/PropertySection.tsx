@@ -22,7 +22,7 @@ export function PropertySection({ title, children, defaultOpen = true }: Propert
         aria-expanded={open}
         onClick={() => setOpen(current => !current)}
         className={cn(
-          'text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-1',
+          'text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-2',
           'border-none bg-transparent px-2 text-left text-[11px] font-medium tracking-wide uppercase',
           FOCUS_RING,
         )}
@@ -33,7 +33,7 @@ export function PropertySection({ title, children, defaultOpen = true }: Propert
 
       {/* Unmounted rather than hidden: a folded section keeps no field mounted, and a scene with
           six sections folded costs nothing to render. */}
-      {open && <div className="flex flex-col gap-1 px-2 pt-1 pb-2">{children}</div>}
+      {open && <div className="flex flex-col gap-2 px-2 pt-1 pb-2">{children}</div>}
     </section>
   )
 }

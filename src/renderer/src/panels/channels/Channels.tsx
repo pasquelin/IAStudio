@@ -60,7 +60,7 @@ function Grid({ documentId }: { documentId: string }) {
   const shown = inspected && channels[inspected] ? inspected : null
 
   return (
-    <div className="grid grid-cols-2 gap-1 p-1">
+    <div className="grid grid-cols-2 gap-2 p-1">
       {PBR_CHANNELS.map(channel => (
         // Dropped on its own tile, so a picture lands in the channel it was aimed at rather than
         // in the base colour the viewport assumes.

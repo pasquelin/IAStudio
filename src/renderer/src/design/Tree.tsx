@@ -172,7 +172,7 @@ export function Tree<T extends TreeNode>({
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
                 style={{ paddingLeft: row.depth * INDENT }}
                 className={cn(
-                  'group flex h-(--sc-control) cursor-pointer items-center gap-1 px-1',
+                  'group flex h-(--sc-control) cursor-pointer items-center gap-2 px-1',
                   rowSkin(selected.has(row.node.id)),
                   // The row a drop would land in, told apart from the row that is selected.
                   over === row.node.id && 'outline-accent outline -outline-offset-1',

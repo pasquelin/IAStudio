@@ -48,7 +48,7 @@ export function TitleBar({
       <nav
         aria-label={t('workspaces.navigation')}
         style={CLICKABLE}
-        className="flex items-center gap-1"
+        className="flex items-center gap-2"
       >
         {onHome && (
           <BarButton
@@ -73,7 +73,7 @@ export function TitleBar({
       </nav>
 
       {actions !== undefined && (
-        <div style={CLICKABLE} className="ml-auto flex items-center gap-1">
+        <div style={CLICKABLE} className="ml-auto flex items-center gap-2">
           {actions}
         </div>
       )}

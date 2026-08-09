@@ -120,7 +120,7 @@ function PathControl({
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <TextControl
         descriptor={descriptor}
         id={id}
@@ -319,7 +319,7 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   return (
     <div
       className={cn(
-        'border-base-300 flex flex-col gap-1 border-b py-3 last:border-b-0',
+        'border-base-300 flex flex-col gap-2 border-b py-3 last:border-b-0',
         !enabled && 'pointer-events-none opacity-50',
       )}
     >
@@ -334,7 +334,7 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
           {t(descriptor.titleKey)}
         </label>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-2">
           <Control
             descriptor={descriptor}
             id={id}

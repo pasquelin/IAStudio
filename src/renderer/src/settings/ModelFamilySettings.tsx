@@ -57,7 +57,7 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
 
   return (
     <div className="flex max-w-md flex-col gap-3">
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-2 text-xs">
         {t('settings.defaultModel')}
         <select
           className="select select-sm"

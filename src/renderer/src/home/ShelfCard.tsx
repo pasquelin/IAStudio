@@ -29,7 +29,7 @@ export function ShelfCard({ icon, title, subtitle, hint, onClick }: ShelfCardPro
       title={hint}
       className={cn(
         'bg-surface hover:bg-elevated flex size-full cursor-pointer flex-col justify-center',
-        'gap-1 rounded-(--radius-sc-md) border-none px-3 text-left transition-colors',
+        'gap-2 rounded-(--radius-sc-md) border-none px-3 text-left transition-colors',
         FOCUS_RING,
       )}
     >
