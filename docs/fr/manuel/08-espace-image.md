@@ -254,6 +254,14 @@ Le dernier bouton de la barre en ouvre trois curseurs.
 **Ils valent pour trois outils à la fois** : le pinceau, la gomme et le trait des formes. Un
 pinceau de 40 px et une gomme de 4 px, ce n’est pas possible — c’est le même réglage.
 
+**Le crayon fait exception, et c’est sa raison d’être** : il lit la taille et l’opacité, jamais la
+dureté. Son bord est net quoi que dise le curseur. Pour un bord fondu, prenez le pinceau.
+
+**En dessous d’un certain point, adoucir ne se voit plus.** Un fondu qui n’atteindrait pas un
+demi-pixel ne déplace rien qu’un œil distingue — un pinceau de 4 px reste net à toute dureté. Et
+le fondu ne mange jamais plus de la moitié du rayon : il adoucit un bord, il ne dissout pas la
+marque.
+
 **`[` rétrécit, `]` élargit**, sans rien ouvrir : c’est ce dont la main se sert en plein tracé. Le
 pas n’est pas un nombre de pixels mais un rapport — un cran fait environ ×1,4 — sans quoi un pas
 fixe ramperait à 400 px et bondirait à 4. En bas de l’échelle il reste d’au moins un pixel.

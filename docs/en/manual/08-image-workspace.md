@@ -246,6 +246,14 @@ The last button in the bar opens three sliders.
 **They apply to three tools at once**: the brush, the eraser and the shape stroke. A 40 px brush
 with a 4 px eraser is not possible — it is the same setting.
 
+**The pencil is the exception, and that is what it is for**: it reads the size and the opacity,
+never the hardness. Its edge is hard whatever the slider says. For a feathered edge, take the
+brush.
+
+**Below a certain point, softening stops showing.** A feather that would not reach half a pixel
+moves nothing an eye can tell — a 4 px brush stays hard at any hardness. And the feather never
+eats more than half the radius: it softens an edge, it does not dissolve the mark.
+
 **`[` shrinks, `]` widens**, without opening anything: that is what the hand uses mid-stroke. The
 step is a ratio rather than a count of pixels — one notch is about ×1.4 — because a fixed step
 would crawl at 400 px and leap at 4. At the bottom of the scale it stays at least one pixel.
