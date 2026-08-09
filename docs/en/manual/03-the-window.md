@@ -116,7 +116,7 @@ The **+** button is solid and blue, where all the others are grey glyphs. That i
 
 ### The right rail
 
-The **right column** icons: Skybox, Layers, Channels, Assets, Explorer, Scene, Lights, Meshes — whichever ones the
+The **right column** icons: Skybox, View, Layers, Channels, Assets, Explorer, Scene, Lights, Meshes — whichever ones the
 workspace declares, in that order — then, below the separator, Inspector.
 
 ### The rail only shows what the workspace can do
@@ -194,6 +194,7 @@ instead.
 | **Models** | left | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
 | **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
 | **Skybox** | right | 1st | Skyboxes | the open sky's settings |
+| **View** | right | 1st | Skyboxes | the projection, the field of view and the test objects |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
 | **Assets** | right | 1st | Video, Audio | the project's shelf, as a column |
 | **Explorer** | right | 1st | everywhere | the documents of the project, open or not |
@@ -486,6 +487,20 @@ You do not have to save any of this:
 - **the last project opened**, reopened on the next launch — adjustable, see
   [Every setting](14-settings.md);
 - **the chosen model**, per family.
+
+---
+
+## Closing the last window quits the studio
+
+On macOS, the habit is for an application to outlive its windows and for you to reopen one from
+the Dock. **That is not what the studio does**: closing the last window quits it, on all three
+systems.
+
+This is deliberate. A document editor has nothing left to offer once its windows are gone, and the
+convention left an application running that no gesture could bring back into view.
+
+> Your documents do not go with it: anything unsaved is **asked about before** the window closes,
+> as everywhere else.
 
 ---
 

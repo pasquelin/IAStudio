@@ -376,6 +376,22 @@ vous-même. Dans les deux cas, le fichier peut être réimporté.
 
 Ceux-là sont les plus déroutants : rien ne s’écrit, mais quelque chose ne va pas.
 
+### « Je peins et rien ne se dépose »
+
+**Regardez le curseur avant de glisser.** S’il est un sens interdit, l’outil vous dit qu’il ne
+peut rien faire là où il est, et il vous le dit **avant** le geste.
+
+| Ce qui bloque | Comment le lever |
+|---|---|
+| Un **groupe** est armé dans la pile | choisissez un calque, pas le groupe qui le contient |
+| Le calque actif est un **calque de réglage** | il n’a pas de pixels à peindre : prenez le calque du dessous |
+| Ses **pixels sont verrouillés** | déverrouillez-le dans le panneau Calques |
+| Sa **position est verrouillée** | même chose, pour l’outil Déplacement |
+
+Si le curseur est normal et que rien n’apparaît quand même, c’est ailleurs : une **sélection**
+est peut-être posée hors de la zone où vous peignez — le pinceau, la gomme et le pot n’agissent
+qu’à l’intérieur. `⌘D` l’abandonne.
+
 ### « Je double-clique sur un asset et rien ne se passe »
 
 **C’est de loin le plus fréquent.** Et ce n’est ni un bug, ni un fichier abîmé.

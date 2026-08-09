@@ -119,7 +119,7 @@ qu’il **agit** — il crée quelque chose — alors que les autres ne font que
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Skybox, Calques, Canaux, Assets, Explorateur, Scène,
+Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Assets, Explorateur, Scène,
 Lumières, Mailles — celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
 
 ### Le rail ne montre que ce que l’espace sait faire
@@ -201,6 +201,7 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Modèles** | gauche | 1re | partout | le catalogue Scenario, filtré sur l’espace actif |
 | **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
 | **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
+| **Vue** | droite | 1re | Skyboxes | la projection, le champ de vision et les objets de test |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
 | **Assets** | droite | 1re | Vidéo, Audio | l’étagère du projet, en colonne |
 | **Explorateur** | droite | 1re | partout | les documents du projet, ouverts ou non |
@@ -505,6 +506,20 @@ Vous n’avez rien à enregistrer pour cela :
 - **le dernier projet ouvert**, rouvert au lancement suivant — réglable, voir
   [Tous les réglages](14-reglages.md) ;
 - **le modèle choisi**, par famille.
+
+---
+
+## Fermer la dernière fenêtre quitte le studio
+
+Sur macOS, l’habitude veut qu’une application survive à ses fenêtres et qu’on en rouvre une
+depuis le Dock. **Ce n’est pas ce que fait le studio** : fermer la dernière fenêtre le quitte,
+sur les trois systèmes.
+
+C’est assumé. Un éditeur de documents n’a plus rien à offrir une fois ses fenêtres fermées, et
+la convention laissait tourner une application qu’aucun geste ne permettait de revoir.
+
+> Vos documents ne partent pas avec elle : ce qui n’est pas enregistré est **demandé avant** que
+> la fenêtre se ferme, comme partout ailleurs.
 
 ---
 

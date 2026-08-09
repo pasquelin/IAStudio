@@ -362,6 +362,22 @@ the file can be imported again.
 
 These are the most disconcerting: nothing is written, but something is wrong.
 
+### "I paint and nothing lands"
+
+**Look at the cursor before you drag.** If it is a no-entry sign, the tool is telling you it can
+do nothing where it is, and it tells you **before** the gesture.
+
+| What is blocking | How to clear it |
+|---|---|
+| A **group** is armed in the stack | pick a layer, not the group holding it |
+| The active layer is an **adjustment layer** | it has no pixels to paint: take the layer below |
+| Its **pixels are locked** | unlock it in the Layers panel |
+| Its **position is locked** | same thing, for the Move tool |
+
+If the cursor is normal and nothing appears anyway, it is elsewhere: a **selection** may be drawn
+outside the area you are painting — the brush, the eraser and the bucket only act inside it. `⌘D`
+drops it.
+
 ### "I double-click an asset and nothing happens"
 
 **By far the most common one.** And it is neither a bug nor a damaged file.

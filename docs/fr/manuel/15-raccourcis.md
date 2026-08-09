@@ -212,6 +212,20 @@ sélective — et vous pouvez leur en donner une dans les réglages.
 > **Le Trait a changé de touche.** Il répondait à `L`, qui servait déjà au Lasso dans le même
 > contexte ; il est passé à `⇧R`, près du Rectangle, et la Flèche à `A`.
 
+### La taille du trait
+
+| Action | Touche | Ce qu’elle fait |
+|---|---|---|
+| **Réduire le pinceau** | `[` | rétrécit d’un cran le diamètre |
+| **Agrandir le pinceau** | `]` | l’élargit d’un cran |
+
+Un seul diamètre pour trois outils : le pinceau, la gomme et le trait des formes. Le cran est un
+rapport, environ ×1,4, jamais un nombre fixe de pixels.
+
+> **Ces deux touches sont repérées par leur position, pas par leur symbole.** Sur un clavier
+> français, les deux mêmes emplacements portent `)` et `^` — vous appuyez au même endroit qu’un
+> clavier américain, quelle que soit la lettre gravée dessus.
+
 ### Recadrage
 
 Ces deux touches n’agissent **que** tant qu’un cadre de recadrage est posé sur l’image, et
