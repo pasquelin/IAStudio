@@ -8,6 +8,7 @@ import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
 import { PBR_CHANNELS } from '../domain/texture'
+import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 
 function flatten(
@@ -78,8 +79,30 @@ describe('the translation bundles', () => {
   })
 
   /**
+   * A count is text too, and a thousand is not written the same in the two languages: `4 000`
+   * against `4,000`. The usage window formatted its figures through `Intl` from the start, but
+   * the counts written INSIDE a sentence went out raw, and a library of four thousand assets
+   * read `4000` in both.
+   *
+   * `{{count, number}}` hands it to i18next's own `Intl.NumberFormat`. The exception is a
+   * factor rather than a tally — `4×` repeats, it does not count, and grouping it would be
+   * wrong at exactly the point where the grouping would show.
+   */
+  it.each(CODES)('hands every count it writes to the number formatter in %s', code => {
+    const factors = new Set(['texture.tilingPreviewTimes'])
+
+    const raw = [...BUNDLES[code]]
+      .filter(([key]) => !factors.has(key.replace(/_(one|other|zero|two|few|many)$/, '')))
+      .filter(([, text]) => /\{\{count\}\}/.test(text))
+      .map(([key]) => key)
+
+    expect(raw).toEqual([])
+  })
+
+  /**
    * The sentences that read the same in both bundles because nobody translates them: the brand,
-   * two format names, two paths, a copyright line, and an example someone types over.
+   * the names of file formats and of the engines a texture is exported to, two paths, a
+   * copyright line, and an example someone types over.
    *
    * Anything else arriving here is an English sentence pasted into the French file — the one
    * untranslated string no other guard can see, precisely because it *is* in the bundle.
@@ -99,6 +122,10 @@ describe('the translation bundles', () => {
       'exportFormats.gltf',
       'exportFormats.usdz',
       'settings.ffmpegPath.placeholder',
+      // Two engines and a format. `roblox` and `raw` are one word each, which this already skips.
+      'textureExportTargets.gltf',
+      'textureExportTargets.unity',
+      'textureExportTargets.unreal',
     ])
 
     const copied = [...BUNDLES.fr]
@@ -165,6 +192,12 @@ const DYNAMIC_KEYS: readonly string[] = [
   // channel — and the domain warns the API adds types without notice — would caption a tile with
   // its own key.
   ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
+  // The usage report showed what the API called things — `images-generation` sat in a French
+  // table, and `video` beside a `Vidéo` the bundle already knew.
+  ...USAGE_ACTIONS.map(action => `usage.actionNames.${action}`),
+  // The journal's own union, wider: what happened, not only what was billed.
+  ...USAGE_EVENT_ACTIONS.map(action => `usage.actionNames.${action}`),
+  ...USAGE_ASSET_KINDS.map(kind => `usage.assetKinds.${kind}`),
 ]
 
 describe('the keys the interface composes', () => {

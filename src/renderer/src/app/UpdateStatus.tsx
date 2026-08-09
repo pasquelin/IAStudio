@@ -2,6 +2,7 @@ import { mdiDownloadOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ProgressBar } from '@/design/ProgressBar'
 import { UiIcon } from '@/design/UiIcon'
+import { STATUS_BUTTON } from '@/design/styles'
 import { useUpdates } from '@/stores/updates'
 
 export function UpdateStatus() {
@@ -27,11 +28,7 @@ export function UpdateStatus() {
   if (update.phase !== 'ready') return null
 
   return (
-    <button
-      type="button"
-      onClick={() => void install()}
-      className="hover:text-text flex items-center gap-1.5"
-    >
+    <button type="button" onClick={() => void install()} className={STATUS_BUTTON}>
       <UiIcon path={mdiDownloadOutline} size={12} />
       <span>{t('updates.restart', { version: update.version })}</span>
     </button>

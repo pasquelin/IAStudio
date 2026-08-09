@@ -1,4 +1,4 @@
-| The **six editors** | a session opens one or two; all six weigh five megabytes |# Scenario Studio — architecture
+# Scenario Studio — architecture
 
 How the studio is built, and why it is built that way. Written for someone picking the codebase
 up. Looking for how to *use* it? See [user-guide.md](user-guide.md).
@@ -307,11 +307,12 @@ src/renderer/src/
 for.** That is the only rule, and it decides what opening an empty window costs. The splash has an
 entry of its own, precisely so it never pulls this bundle in.
 
-Six things are kept out, each because an ordinary session does not open them all:
+Seven things are kept out, each because an ordinary session does not open them all:
 
 | Loaded on demand | Why |
 |---|---|
-| The **six editors** | a session opens one or two; all six weigh five megabytes |
+| The **seven editors** | a session opens one or two; all seven weigh five megabytes |
+| The **fifteen panels** | a workspace shows three or four, never fifteen |
 | The **generation form**, and zod, `react-hook-form`, `@hookform/resolvers` with it | you open a generator, you do not land on one |
 | The **Settings** window — its registry, its sections, its draft | fifty kilobytes of another window |
 | The **Licences** window | every shipped licence in full, which nobody reads in a usual session |
@@ -324,17 +325,35 @@ per-panel ones cover the docks, not the shell holding them — and it catches re
 event handlers, not rejected promises, and not `main.tsx`'s own evaluation, where a throw predates
 the boundary and leaves an empty window no React can see.
 
-**A test holds all six rows**, `eager-graph.test.ts`: it walks the static import graph from
+**A test holds all seven rows**, `eager-graph.test.ts`: it walks the static import graph from
 `main.tsx` and fails if any of them reappears. Without it, an `import` added without a thought
 undoes the gain while breaking nothing visible — the worst kind of regression, the one only a
 stopwatch sees.
 
-**The editors are out; their neighbours not quite.** Six modules from the `spaces/` folders do
-reach the first screen, and none of them is an editor: they are helpers a **panel** reaches for
-next to one — `TimelinePanel` pulls `TimelineCanvas`, `Channels` pulls `place-channel` — because
-**no panel is lazy**, `app/tool-components.ts` importing all eleven outright. The test makes it a
-**budget**: the list may shrink, never grow. A seventh entry means a panel reached further than
-it needed to.
+**The panels went out in their turn**, and that is what shrank the neighbours list.
+`app/tool-components.ts` used to import them all outright; it now declares, per panel, **the
+module to load and what its header does** — that second half is needed, because the title row lays
+itself out on the first paint and a separator arriving a frame later would shift a row already on
+screen. Measured at the same commit on both sides, preloads counted, no sourcemaps:
+**2,331,395 → 2,081,385 bytes, −250,010, that is −10.7%.**
+
+> **A glob on the folder would remove the copy of each panel's name, and it was written then taken
+> back out.** `eager-graph.test.ts` walks **static** imports: a glob is invisible to it, and the
+> very guard that watches this property would have stayed green whatever the glob did to the entry
+> chunk. The copy stays, and `tool-components.test.ts` holds it — a `layers` naming the meshes
+> module would swap the two in silence.
+
+**Two neighbours remain**, and neither is an editor: they are helpers something on the first
+screen reaches for next to one. There were six; **four left with the panels**, since they came in
+through a panel rather than through the shell. The test makes it a **budget**: the list may
+shrink, never grow. A third entry means the first screen reached further than it needed to.
+
+**The graph is the one workspace whose reader is not behind its editor**: `document-io.ts` parses
+a graph as it parses every other kind, so `engines/graph/serialize.ts` comes in. The mutation
+engine and the canvas stay out — `@xyflow/react` is never in the entry chunk. It was two modules
+wider until the reserved node id moved down into `shared/domain/graph.ts`: a predicate reached
+from the reader pulled `mutations.ts`, which pulled `connect.ts` and `handles.ts` — half the
+engine, for a string comparison.
 
 **It aims at folders, not files.** A guard set on four files of the settings folder lets the fifth
 back in; that was fixed at the same time as the settings themselves.
@@ -603,19 +622,43 @@ re-renders every mounted row on each frame, and `useTranslation()` is not free.
 
 ### What gets translated goes beyond sentences
 
-Five things go through the bundles without looking like it, and each answers an observed defect:
+Six things go through the bundles without looking like it, and each answers an observed defect:
 
 - **key names** — `Space`, `Delete`, `Home` are not English labels left in place: the shortcuts
   screen resolves them like everything else;
 - **units and dates** — `formatBytes` computes a size but **does not name it**: the unit's name
   comes from the caller, because `Mio` and `MiB` are the same size in two languages and the
   abbreviations had ended up living in French inside a computation file;
+- **numbers written INSIDE a sentence** — `{{count, number}}` rather than `{{count}}`: a thousand
+  reads "4,000" on one side of the Channel and "4 000" on the other, and French's separator is a
+  narrow no-break space. i18next's formatter is `Intl.NumberFormat`, nothing to configure.
+  Twenty-seven keys carry it. **The exception is a factor, not a count**:
+  `texture.tilingPreviewTimes` writes "4×", and grouping a repetition would be wrong exactly where
+  the grouping would show — `bundles.test.ts` holds the rule **and its exception**. A **creative
+  unit** does not go through `{{units, number}}` either but through `formatUnits`, which does more
+  than group: it keeps two decimals under ten units, because a cheap call rounded to zero would
+  read as **free**. Nineteen callers; the last one to forget it wrote "1,234 CU" before the
+  generation and "1234 CU" after;
 - **the journal's scopes** — an activity line shows a sentence, never the key naming it;
 - **the document's own language** — `document.documentElement.lang` follows the chosen language.
   `index.html` carried it hardcoded: a screen reader picks its voice from it, and an English
   interface under `lang="fr"` was read with French phonetics;
 - **the text the model writes** — the generation form's labels, descriptions and options. See just
   below: it is the only mechanism in the studio that is not indexed on a key.
+
+### A fixed width is an internationalisation decision
+
+**French runs half as long again as English across 126 keys of the bundle.** Wherever a width is
+frozen, that gap becomes a label cut off **in one language only** — "Aperçu de la répétition" read
+as "Aperçu de la ré…" in an 80 px inspector column where "Repeat preview" fitted whole.
+
+The remedy is not to shorten the offending label: that fixes this case and leaves the next one.
+**What is truncated is readable on hover** — `PropertyRow` sets the `title`, and sets it **in
+stacked mode too**, where the column constrains nothing: a title that comes and goes with the
+layout would be a second rule to remember.
+
+Toolbars escape the question by construction — `ToolButton` shows no label at all, it makes one
+into a tooltip.
 
 ### The one dictionary indexed on text, and why
 
@@ -642,6 +685,33 @@ Three consequences, one of them to be accepted:
   the open form instead of waiting for the model to be reloaded — and the Apps benefit without a
   line more, their fields coming from the same place. Invariant 5 is intact: nothing is written by
   hand for a given model.
+
+**Not all remote text calls for that remedy, and picking the wrong one costs you the guard.** The
+usage report was showing "images-generation" and "video" in a French window: same symptom,
+different tool. Those values are two **closed, documented unions** — 21 spending actions, 8 asset
+kinds, listed by `usages.list` and mirrored in `shared/domain/usage.ts` — so **one bundle key per
+value**, held by `bundles.test.ts` the way the PBR channels and the journal's scopes already are.
+An action Scenario adds without its line turns the guard red.
+
+The rule that tells them apart:
+
+| When the remote text… | The tool |
+|---|---|
+| belongs to a **closed list** the API documents | one bundle key per value, plus an exhaustive guard |
+| is **written freely** and changes with every published model | the dictionary indexed on the source text |
+| is **read by the code as much as by the eye** | nothing — it comes out raw, deliberately |
+
+In the first two cases the fallback is **the API's raw text, never a key**: an English screen stays
+readable, a screen showing `usage.action.images-generation` does not.
+
+**The third row is the one that gets forgotten, and it breaks silently.** A workflow node's port
+shows the name the workflow gave it — that one goes through the dictionary. But a port **without**
+a name shows what it accepts, `image` or `video`, and **that string is what the connection check
+compares**: translated on one side of an edge and not the other, it no longer says whether two
+ports go together. `NodePorts.tsx` carries the rule in JSDoc, where it would be paid for.
+
+It is the same split as `name` and `message` in the hardcoded-text guards: **a string that is also
+data is not a label**, and translating it breaks it as data.
 
 ### Four guards, and what each one holds
 

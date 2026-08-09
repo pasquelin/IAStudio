@@ -20,7 +20,7 @@ and download an image, is **everything that comes after**:
   each file, and one button replays them;
 - **nothing leaves**: your files stay with you.
 
-> **One thing worth knowing straight away:** all six document kinds save into the project
+> **One thing worth knowing straight away:** all seven document kinds save into the project
 > folder and open back exactly as they were, and closing a tab that holds unsaved work asks
 > before losing it. What never comes back is the undo history. The complete and honest list of
 > what is still missing is the chapter [What does not exist yet](18-limits.md) — it exists to be
@@ -74,7 +74,7 @@ A work in progress, open in a tab, in the centre of the window.
 The difference from an asset is the one between **material** and **work**: a generated image is an
 asset; the image you are painting on, with its layers and its history, is a document.
 
-There are six kinds of document, one per workspace:
+There are seven kinds of document, one per workspace:
 
 | Workspace | Document | File extension |
 |---|---|---|
@@ -84,6 +84,7 @@ There are six kinds of document, one per workspace:
 | Audio | a sound being edited | `.aud` |
 | Skyboxes | a sky | `.sky` |
 | Textures | a material | `.tex` |
+| Graph | a node graph | `.graph` |
 
 ### 4. A **model**
 

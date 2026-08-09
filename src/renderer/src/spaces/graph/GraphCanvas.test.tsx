@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { GraphState } from '@shared/domain/graph'
 import { GraphCanvas } from './GraphCanvas'
@@ -31,7 +31,8 @@ const graph: GraphState = {
         ],
       },
     },
-    { id: 'note1', type: 'stickyNote', position: { x: 0, y: 300 }, data: { value: 'Read me' } },
+    // `content`, as Scenario writes it — `value` is the text and asset nodes' field.
+    { id: 'note1', type: 'stickyNote', position: { x: 0, y: 300 }, data: { content: 'Read me' } },
   ],
   edges: [],
   inputKeys: [],
@@ -39,7 +40,7 @@ const graph: GraphState = {
 
 const noop = vi.fn()
 
-const canvas = (state: GraphState = graph) =>
+const canvas = (state: GraphState = graph, onAdd = noop) =>
   render(
     <GraphCanvas
       graph={state}
@@ -47,6 +48,12 @@ const canvas = (state: GraphState = graph) =>
       onRemoveNodes={noop}
       onConnect={noop}
       onDisconnect={noop}
+      onAdd={onAdd}
+      onDropAsset={noop}
+      onUndo={noop}
+      onRedo={noop}
+      canUndo={false}
+      canRedo={false}
     />,
   )
 
@@ -75,7 +82,7 @@ describe('the graph canvas', () => {
     canvas()
 
     expect(screen.getByText('Prompt')).toBeInTheDocument()
-    expect(screen.getByText('output')).toBeInTheDocument()
+    expect(screen.getByText('Sortie')).toBeInTheDocument()
   })
 
   it('draws the dotted background rather than React Flow’s own chrome', () => {
@@ -115,5 +122,69 @@ describe('the graph canvas', () => {
     const { container } = canvas({ nodes: [], edges: [], inputKeys: [] })
 
     expect(container.querySelector('.react-flow')).toBeInTheDocument()
+  })
+
+  /**
+   * An empty graph with no way to add a node is a space that opens on nothing and offers
+   * nothing — which is what the canvas was until it was mounted anywhere.
+   */
+  describe('adding a node', () => {
+    const rightClickPane = (container: HTMLElement): void => {
+      const pane = container.querySelector('.react-flow__pane')
+      if (!pane) throw new Error('no pane to right-click')
+      fireEvent.contextMenu(pane, { clientX: 120, clientY: 40 })
+    }
+
+    /** The two groups Scenario's own palette reads: what comes in, and what generates. */
+    it('offers the inputs it can fill and a generator per family', () => {
+      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] })
+      rightClickPane(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Texte' })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: 'Asset' })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: 'Note' })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: 'Image' })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: 'Vidéo' })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: '3D' })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: 'Audio' })).toBeInTheDocument()
+    })
+
+    // The position is the pointer's. That it is CONVERTED through the pan and the zoom cannot be
+    // proved here — jsdom measures nothing, so the viewport is identity — and is checked on screen.
+    it('hands the chosen entry back with the point it was asked for', () => {
+      const onAdd = vi.fn()
+      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] }, onAdd)
+      rightClickPane(container)
+
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Texte' }))
+
+      expect(onAdd).toHaveBeenCalledWith(
+        { group: 'input', id: 'text', node: 'text' },
+        expect.objectContaining({ x: 120, y: 40 }),
+      )
+    })
+
+    /** A generator is one `model` node narrowed to a family, never a node type of its own. */
+    it('names the family a generator entry stands for', () => {
+      const onAdd = vi.fn()
+      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] }, onAdd)
+      rightClickPane(container)
+
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Vidéo' }))
+
+      expect(onAdd).toHaveBeenCalledWith(
+        { group: 'generator', id: 'generator-video', family: 'video' },
+        expect.anything(),
+      )
+    })
+
+    it('closes the menu on the choice rather than leaving it under the pointer', () => {
+      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] })
+      rightClickPane(container)
+
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Note' }))
+
+      expect(screen.queryByRole('menuitem', { name: 'Note' })).not.toBeInTheDocument()
+    })
   })
 })

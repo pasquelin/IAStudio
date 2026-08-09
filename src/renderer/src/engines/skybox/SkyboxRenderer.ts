@@ -5,7 +5,7 @@ import {
   directionFromAngles,
   type SphericalAngles,
 } from '@shared/domain/angles'
-import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent } from '@shared/domain/skybox'
+import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent, type SkyboxView } from '@shared/domain/skybox'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/GpuPipeline'
 import { createAdjustPass } from '../gpu/passes/adjust'
 import { reportFailure } from '@/services/diagnostics'
@@ -14,6 +14,7 @@ import { createEnvironment, type ViewportEnvironment } from '../viewport/environ
 import { createTestObjects, type TestObjects } from '../viewport/test-objects'
 import { turnBy } from '../viewport/look-around'
 import { ViewportEngine } from '../viewport/ViewportEngine'
+import { createProjectionPass, type ProjectionPass } from './projection-shader'
 import { gestureFor, type SkyboxGesture } from './sun-drag'
 
 export type SkyboxRendererOptions = {
@@ -52,9 +53,13 @@ export class SkyboxRenderer {
     toneMapping: true,
     controls: 'none',
     fieldOfView: DEFAULT_FIELD_OF_VIEW,
+    // Drawn over the scene rather than instead of it: `onOverlay` is the one hook that runs with
+    // `autoClear` off, and a flat projection is a quad that covers everything behind it anyway.
+    onOverlay: () => this.drawProjection(),
   })
 
   private readonly adjust = createAdjustPass()
+  private readonly projection: ProjectionPass = createProjectionPass()
   private readonly probes: TestObjects = createTestObjects({ probeDistance: PROBE_DISTANCE })
   private readonly sunLight = new DirectionalLight(0xffffff, 1)
   private readonly cache: TextureCache
@@ -70,6 +75,11 @@ export class SkyboxRenderer {
   private gesture: SkyboxGesture | null = null
   private lastPointer: { x: number; y: number } | null = null
 
+  /** What the setting asks for; what is shown is this AND a sky to judge — see `syncProbes`. */
+  private probesWanted = true
+  private view: SkyboxView = 'immersive'
+  /** What the document asks of the backdrop. A flat view turns it off without forgetting it. */
+  private backgroundWanted = true
   private sourceAssetId: string | null = null
   private sourceTexture: Texture | null = null
   private quiet: ReturnType<typeof setTimeout> | null = null
@@ -80,6 +90,9 @@ export class SkyboxRenderer {
     )
     this.viewport.camera.position.set(0, EYE_HEIGHT, 0)
     this.viewport.scene.add(this.probes.group, this.sunLight, this.sunLight.target)
+    // Hidden until a sky arrives, and before the first frame rather than after it: `apply` is
+    // what reveals them, and a viewport mounted before it would flash the ground for a frame.
+    this.probes.setVisible(false)
   }
 
   mount(host: HTMLElement): void {
@@ -108,10 +121,11 @@ export class SkyboxRenderer {
     this.applySun(content)
 
     this.environment?.setIntensity(content.environment.intensity)
-    this.environment?.setBackgroundVisible(content.environment.showBackground)
+    this.backgroundWanted = content.environment.showBackground
 
     this.adjust.setAdjustments(content.adjustments)
     this.loadSource(content.source?.assetId ?? null)
+    this.syncView()
     this.regrade()
   }
 
@@ -119,9 +133,58 @@ export class SkyboxRenderer {
     this.viewport.setFieldOfView(degrees)
   }
 
+  /**
+   * Which of the four ways of looking at the sky is on screen. The three flat ones are one shader
+   * over the frame — see `projection-shader` — so nothing about the scene changes but what is
+   * worth drawing behind them.
+   */
+  setView(view: SkyboxView): void {
+    if (view === this.view) return
+    this.view = view
+    this.syncView()
+  }
+
   setProbesVisible(visible: boolean): void {
-    this.probes.setVisible(visible)
+    this.probesWanted = visible
+    this.syncProbes()
+  }
+
+  /**
+   * Shown when the setting asks for them AND there is a sky to judge.
+   *
+   * Nothing to judge is only half the reason. The other half is that the empty state is the one
+   * sentence telling anyone what to do in this space, and it sits over the viewport: a
+   * `text-muted` over a lit ground and three spheres does not read at all.
+   */
+  private syncProbes(): void {
+    // Nothing to judge behind a flat projection either: the quad covers them whole.
+    const immersive = this.view === 'immersive'
+    this.probes.setVisible(immersive && this.probesWanted && this.sourceAssetId !== null)
+  }
+
+  /**
+   * What the scene is worth drawing under the current view, and what the projection draws over it.
+   *
+   * The backdrop goes with the flat views on purpose: the quad letterboxes its picture, and the
+   * immersive sky showing through the bars would read as part of what is being judged.
+   */
+  private syncView(): void {
+    const immersive = this.view === 'immersive'
+    this.syncProbes()
+    this.environment?.setBackgroundVisible(immersive && this.backgroundWanted)
+    // `immersive` is not a layout: the guard above is what makes the narrowing safe here.
+    if (this.view !== 'immersive') this.projection.setLayout(this.view)
     this.viewport.requestRender()
+  }
+
+  /** The flat views, drawn after the scene. The immersive one is the scene. */
+  private drawProjection(): void {
+    if (this.view === 'immersive' || !this.pipeline || !this.graded) return
+
+    const canvas = this.viewport.canvas
+    this.projection.setFrame(canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0)
+    this.projection.setSource(this.graded.texture)
+    this.pipeline.renderToScreen(this.projection.material)
   }
 
   setGroundVisible(visible: boolean): void {
@@ -144,6 +207,7 @@ export class SkyboxRenderer {
     this.graded?.dispose()
     this.pipeline?.dispose()
     this.adjust.dispose()
+    this.projection.dispose()
     this.probes.dispose()
     this.viewport.dispose()
   }
@@ -176,6 +240,7 @@ export class SkyboxRenderer {
 
     this.releaseSource()
     this.sourceAssetId = assetId
+
     if (!assetId) {
       this.adjust.setSource(null)
       this.environment?.setTexture(null)

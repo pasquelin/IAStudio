@@ -102,11 +102,14 @@ describe('the lists that stand for a union', () => {
   it('names every scope the renderer can report a failure under', () => {
     const all: Record<LogScope, true> = {
       'scene.model': true,
+      'scene.bvh': true,
       'scene.texture': true,
       'scene.export': true,
       'texture.map': true,
       'texture.channel': true,
+      'texture.seam': true,
       'texture.shader': true,
+      'texture.export': true,
       'skybox.source': true,
       'canvas.layer': true,
       'image.export': true,
@@ -117,6 +120,7 @@ describe('the lists that stand for a union', () => {
       'assets.reveal': true,
       'assets.open': true,
       'font.face': true,
+      'graph.node': true,
     }
 
     expect(sorted(LOG_SCOPES)).toEqual(sorted(Object.keys(all)))

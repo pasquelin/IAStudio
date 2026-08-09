@@ -25,10 +25,10 @@ Three categories, not to be confused:
 
 ---
 
-## Saving: all six types are there
+## Saving: every type is there
 
 **This chapter long opened with "three documents out of six do not save". That is no longer
-true.** All six write into the project folder and open back exactly as they were.
+true.** All seven write into the project folder and open back exactly as they were.
 
 | Document | Extension | Saves? |
 |---|---|---|
@@ -38,6 +38,7 @@ true.** All six write into the project folder and open back exactly as they were
 | Video sequence | `.seq` | **yes** |
 | Edited sound | `.aud` | **yes** |
 | Sky | `.sky` | **yes** |
+| Graph | `.graph` | **yes** — though it cannot run yet |
 
 **What does not save, and that is deliberate:**
 
@@ -217,15 +218,18 @@ as new**. That is not a loss: it is a different working model, and it is complet
 - **chained derivations** — computing height from the base colour does not recompute the normal
   that came from it: each channel is recomputed on demand, one at a time;
 - **importing a file from disk** straight into a channel. The detour exists: import the picture into
-  the project, then drop it onto the channel's thumbnail;
-- **the tiling preview** at 1×, 2×, 4×, and visible-seam detection;
-- **export** to glTF, Unity, Unreal, Roblox.
+  the project, then drop it onto the channel's thumbnail.
+
+**Export now exists** — glTF/GLB, Unity, Unreal, Roblox and the raw channels, through File →
+Export the texture. Two bounds worth knowing: **Roblox refuses a map above 1024 px**, so its four
+files are brought under that ceiling; and the `.glb` leaves with the shape of the preview, an
+object format having no way to carry a material on its own.
 
 What works today: generating a material, placing a picture in each of its eight channels, computing
-four of them from another, setting
+four of them from another, judging how it repeats and measuring its seams, setting
 everything it is made of — roughness and metalness with their remap, relief, emission, tiling —
-looking at it on five shapes under the lighting of your choice, inspecting each channel flat, and
-saving it.
+looking at it on five shapes under the lighting of your choice, inspecting each channel flat,
+saving it, and handing it to five destinations.
 
 ### A channel's opacity cannot be set
 
@@ -237,17 +241,6 @@ which is a different question.
 
 ## Skyboxes workspace
 
-### Three views out of four draw nothing
-
-The **View** panel offers four projections. Only one works.
-
-| View | State |
-|---|---|
-| **360°** | works |
-| **Equirect** | button inactive |
-| **Cross** | button inactive |
-| **6 faces** | button inactive |
-
 ### The Generation section has no buttons
 
 It does show the model, the prompt and the seed that produced the sky, read-only. But the two
@@ -256,12 +249,14 @@ buttons the translations announce — **Regenerate** and **Reset** — are place
 Until then, you copy the prompt and the seed by hand into the **Generate** panel, which comes to the
 same thing in three more gestures.
 
-### No saving, no export
+### No export
 
-A sky is not written into a `.sky` file: **closing the tab loses the settings** — the exposure, the
-horizon rotation, the sun's position.
+A sky is now written into a `.sky` file — the exposure, the horizon rotation and the sun's position
+reopen exactly as they were. What the document does not keep: the view and the field of view, which
+say how you were looking at it rather than what it is.
 
-And you cannot export the six faces of a cube, nor an *HDRI* usable in another application.
+You still cannot export the six faces of a cube, though, nor an *HDRI* usable in another
+application.
 
 ---
 
@@ -389,7 +384,7 @@ cannot leak your account.
 
 If you only remember five things from this chapter:
 
-1. **all six documents save now**, and closing a tab asks before losing anything; what does not
+1. **all seven documents save now**, and closing a tab asks before losing anything; what does not
    come back is the undo history;
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;

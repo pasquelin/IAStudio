@@ -166,3 +166,39 @@ describe('picking through what a file brought', () => {
     expect(nodeIdOf(helper.children[0] ?? helper, isNode)).toBe('node-1')
   })
 })
+
+/**
+ * The defect the shadow walk fixes, seen from where it happened. `shadows.test.ts` proves the
+ * helper and its predicate; nothing proved the renderer handed one over — mutating
+ * `ownedByAnotherNode(this.objects)` to `() => false` left the whole suite green.
+ */
+describe('a node hanging under another node', () => {
+  // The port is handed a URL, not an id — `createModelCache` wraps every id in `assetUrl`.
+  const holding = (parentCopy: Object3D, childCopy: Object3D) =>
+    rendererLoading(async (url: string) =>
+      Object.assign(source(), { clone: () => (url.includes('parent') ? parentCopy : childCopy) }),
+    )
+
+  const nodes = (parentCasts: boolean): SceneState => ({
+    ...EMPTY_SCENE,
+    nodes: [
+      { ...modelNodeFixture('parent', 'asset-parent'), castShadow: parentCasts },
+      { ...modelNodeFixture('child', 'asset-child'), parentId: 'parent', castShadow: false },
+    ],
+  })
+
+  it('keeps its own shadow flags when its parent takes new ones', async () => {
+    const parentCopy = source()
+    const childCopy = source()
+    const renderer = holding(parentCopy, childCopy)
+
+    renderer.apply(nodes(false))
+    await vi.waitFor(() => expect(childCopy.parent).not.toBeNull())
+    // Both files are in the scene, so the walk below is the only thing left to write flags.
+    renderer.apply(nodes(true))
+
+    expect(parentCopy.children[0]?.castShadow).toBe(true)
+    expect(childCopy.children[0]?.castShadow).toBe(false)
+    renderer.dispose()
+  })
+})

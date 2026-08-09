@@ -23,9 +23,10 @@ import {
   syncEdgeTransform,
 } from './material-shader'
 import { previewGeometry } from './preview-geometry'
+import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/texture'
 import {
   contentOf,
-  DEFAULT_TEXTURE_MATERIAL,
+  DEFAULT_PREVIEW,
   slotFor,
   type PreviewShape,
   type TextureState,
@@ -67,7 +68,7 @@ export class TextureRenderer {
   private readonly holding = new Map<PbrChannel, string>()
   private readonly uniforms = createUniforms()
   /** What the maps are currently placed on, so a map arriving late is placed on the same thing. */
-  private transform: MapTransform | null = null
+  private transform: MapTransform = DEFAULT_TRANSFORM
   /** Anchors already reported, so a rebuilt program does not say the same thing again. */
   private readonly reported = new Set<string>()
   private shape: PreviewShape = 'sphere'
@@ -178,7 +179,7 @@ export class TextureRenderer {
 
     // No `needsUpdate` here: nothing above affects the PROGRAM. A slot going empty→filled does,
     // and `install`, `release` and `setEdgeMap` are the three that say so.
-    this.applyTransform(material)
+    this.applyTransform(texture)
   }
 
   /**
@@ -193,9 +194,15 @@ export class TextureRenderer {
    * here needs it: `matrixAutoUpdate` is on, so three refreshes the uv matrix itself every frame,
    * and `wrapS`/`wrapT`, which really are upload-time state, are set once in `install`.
    */
-  private applyTransform({ tiling, offset, rotation }: TextureState['material']): void {
-    if (this.transform && sameTransform(this.transform, { tiling, offset, rotation })) return
-    this.transform = { tiling, offset, rotation }
+  private applyTransform({ material, preview }: TextureState): void {
+    const seamShift = seamShiftOf(preview)
+    // Compared before anything is built, not after: this used to allocate two objects to answer
+    // a question that is nearly always no — twelve of the fifteen settings above have nothing to
+    // do with tiling, and each of them arrives on every frame of its own drag.
+    if (samePlacement(this.transform, material, preview.tilingPreview, seamShift)) return
+
+    const { tiling, offset, rotation } = material
+    this.transform = { tiling, offset, rotation, tilingPreview: preview.tilingPreview, seamShift }
 
     for (const map of this.maps()) this.placeMap(map)
     syncEdgeTransform(this.uniforms)
@@ -252,9 +259,11 @@ export class TextureRenderer {
 
   /** The transform this material is on, onto one map — the new one, or all of them. */
   private placeMap(map: Texture): void {
-    const { tiling, offset, rotation } = this.transform ?? DEFAULT_TEXTURE_MATERIAL
-    map.repeat.set(tiling.x, tiling.y)
-    map.offset.set(offset.x, offset.y)
+    const { tiling, offset, rotation, tilingPreview, seamShift } = this.transform
+    // Multiplied, not replaced: the preview asks "how does this look repeated", and the answer
+    // has to be the material's own repeat seen more times, not somebody else's repeat.
+    map.repeat.set(tiling.x * tilingPreview, tiling.y * tilingPreview)
+    map.offset.set(offset.x + seamShift, offset.y + seamShift)
     map.rotation = rotation
   }
 
@@ -330,15 +339,43 @@ function spaceOf(channel: PbrChannel): ColorSpace {
   return contentOf(channel) === 'color' ? SRGBColorSpace : NoColorSpace
 }
 
-/** How every map is laid on the shape. The three values that move together, and only those. */
-type MapTransform = Pick<TextureState['material'], 'tiling' | 'offset' | 'rotation'>
+/**
+ * How every map is laid on the shape: what the material decided, and what the view adds on top.
+ * The two are kept apart right up to `placeMap` — a preview that wrote into the material would
+ * send a texture out into a scene tiled four times over, and offset by half.
+ */
+type MapTransform = Pick<TextureState['material'], 'tiling' | 'offset' | 'rotation'> & PreviewFrame
 
-function sameTransform(a: MapTransform, b: MapTransform): boolean {
+/** What the view adds, on top of what the material decided. */
+type PreviewFrame = { tilingPreview: number; seamShift: number }
+
+const SEAM_SHIFT = 0.5
+
+/** Half a width and half a height is exactly what brings a wrap edge to the middle. */
+function seamShiftOf({ showSeam }: TextureState['preview']): number {
+  return showSeam ? SEAM_SHIFT : 0
+}
+
+/** Where every map starts, so one arriving before the first `apply` is still placed on something. */
+const DEFAULT_TRANSFORM: MapTransform = {
+  ...DEFAULT_TEXTURE_MATERIAL,
+  tilingPreview: DEFAULT_PREVIEW.tilingPreview,
+  seamShift: seamShiftOf(DEFAULT_PREVIEW),
+}
+
+function samePlacement(
+  current: MapTransform,
+  material: TextureState['material'],
+  tilingPreview: number,
+  seamShift: number,
+): boolean {
   return (
-    a.rotation === b.rotation &&
-    a.tiling.x === b.tiling.x &&
-    a.tiling.y === b.tiling.y &&
-    a.offset.x === b.offset.x &&
-    a.offset.y === b.offset.y
+    current.rotation === material.rotation &&
+    current.tiling.x === material.tiling.x &&
+    current.tiling.y === material.tiling.y &&
+    current.offset.x === material.offset.x &&
+    current.offset.y === material.offset.y &&
+    current.tilingPreview === tilingPreview &&
+    current.seamShift === seamShift
   )
 }

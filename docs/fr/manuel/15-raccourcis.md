@@ -346,9 +346,9 @@ L’espace Skyboxes répond au clavier comme les autres.
 > image : les sphères témoins montrent ce que votre panorama fait à une surface mate et à une
 > surface miroir.
 
-> **`V` fait bien défiler les quatre vues, mais trois ne dessinent rien encore.** Seule la vue
-> immersive est branchée ; Équirect, Croix et 6 faces changent le bouton actif et rien d’autre.
-> Voir [L’espace Skyboxes](13-espace-skyboxes.md).
+> **`V` défile les quatre vues, et les quatre dessinent.** Les trois vues à plat — Équirect, Croix
+> et 6 faces — éteignent le fond et les objets de test pendant qu’elles sont devant, et le champ de
+> vision ne joue que sur la vue immersive. Voir [L’espace Skyboxes](13-espace-skyboxes.md).
 
 ---
 

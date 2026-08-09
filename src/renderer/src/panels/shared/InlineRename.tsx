@@ -22,13 +22,36 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
   const [draft, setDraft] = useState(value)
   // Read by the unmount cleanup, which must not re-run on every keystroke to see the last one.
   const latest = useRef({ draft, onCommit, value })
+  /**
+   * Whether a commit already happened. Without it, Enter commits and then the unmount fires a
+   * SECOND commit with the same name: the caller writes asynchronously, so `value` is still the
+   * old name when the field is torn down, and the "was it abandoned mid-type" guard reads true.
+   */
+  const committed = useRef(false)
+
+  const field = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     latest.current = { draft, onCommit, value }
   })
 
   useEffect(() => {
+    // Both caught while the input is still attached: `closest` from a detached node finds
+    // nothing, and by the time the cleanup runs the field is out of the tree.
+    const row = field.current?.closest<HTMLElement>('[tabindex]')
+    const list = field.current?.closest<HTMLElement>('[role="list"], [role="listbox"]')
+
     return () => {
+      // An input torn out of the tree leaves the focus on `document.body`, so the next Tab
+      // restarts from the top of the window — whoever renamed at the keyboard is thrown out of
+      // the list they were editing. Given back to the row it started on; and when that row went
+      // with it — a sibling added mid-type remounts the rows at new indices — to wherever the
+      // list holds its tab stop now, which at least keeps the keyboard inside the list.
+      const target = row?.isConnected ? row : list?.querySelector<HTMLElement>('[tabindex="0"]')
+      target?.focus()
+
+      if (committed.current) return
+
       const { draft: typed, onCommit: commit, value: original } = latest.current
       const name = typed.trim()
       if (name && name !== original) commit(name)
@@ -36,6 +59,9 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
   }, [])
 
   const done = (): void => {
+    if (committed.current) return
+    committed.current = true
+
     const name = draft.trim()
     onCommit(name || value)
   }
@@ -49,12 +75,14 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
       // Restored first, so neither the blur nor the unmount writes what was abandoned.
       setDraft(value)
       latest.current = { ...latest.current, draft: value }
+      committed.current = true
       onCommit(value)
     }
   }
 
   return (
     <input
+      ref={field}
       autoFocus
       aria-label={label}
       value={draft}

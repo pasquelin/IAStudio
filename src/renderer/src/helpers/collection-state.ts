@@ -3,7 +3,8 @@
  * the components so the panels that own this state — and drive a server query from it — can
  * be tested without rendering a virtualized grid.
  */
-import { clamp } from './numeric'
+import { foldForSearch } from '@shared/text'
+import { clamp } from '@shared/numeric'
 
 export type CollectionView = 'grid' | 'list'
 
@@ -99,10 +100,10 @@ export function filterLocally<T>(
   state: CollectionState,
   filter: LocalFilter<T>,
 ): T[] {
-  const needle = state.search.trim().toLowerCase()
+  const needle = foldForSearch(state.search.trim())
 
   return items.filter(item => {
-    if (needle && !filter.text(item).toLowerCase().includes(needle)) return false
+    if (needle && !foldForSearch(filter.text(item)).includes(needle)) return false
 
     for (const [key, values] of Object.entries(state.selections)) {
       const read = filter.facets?.[key]

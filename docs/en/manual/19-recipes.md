@@ -112,8 +112,9 @@ as light.
 Then **click and drag** in the preview to turn your head, and use the **Skybox** panel, on the
 right, to set exposure and rotation.
 
-**The catch.** Three of the four view buttons — equirectangular, cross, faces — draw nothing yet.
-Only the 360 view works.
+**To check what you are shipping**, go through the other three views — equirectangular, cross,
+6 faces. They show the same sky, at the same rotation, but laid flat: a seam at the back or a
+crushed pole shows up at a glance, where the 360 view makes you turn your head to run into it.
 
 ---
 

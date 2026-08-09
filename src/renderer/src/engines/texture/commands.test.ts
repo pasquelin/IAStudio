@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { run, undo, emptyHistory } from '../core/history'
-import { setChannel, setMaterial, setPreview } from './commands'
+import { applyStyle, setChannel, setMaterial, setPreview } from './commands'
 import { newTexture, type ChannelMap, type TextureState } from './texture-state'
 
 const MAP: ChannelMap = { assetId: 'a1', origin: 'imported', width: 512, height: 512 }
@@ -97,5 +97,42 @@ describe('setChannel', () => {
     const [reverted] = undo(after, history)
 
     expect(reverted.channels.baseColor).toEqual(MAP)
+  })
+})
+
+describe('applyStyle', () => {
+  const STYLE = { ...newTexture().material, roughness: 0.1, metalness: 1, heightScale: 0.2 }
+
+  it('writes every value of the style at once', () => {
+    const next = applied(newTexture(), applyStyle('style_1', STYLE))
+
+    expect(next.material).toEqual(STYLE)
+  })
+
+  it('leaves the channels alone — a style says how to read maps, never which', () => {
+    const withMap: TextureState = { ...newTexture(), channels: { baseColor: MAP } }
+
+    const next = applied(withMap, applyStyle('style_1', STYLE))
+
+    expect(next.channels).toEqual({ baseColor: MAP })
+  })
+
+  it('takes one undo entry back to what was there before', () => {
+    const [applied, history] = run(
+      newTexture(),
+      emptyHistory<TextureState>(),
+      applyStyle('s', STYLE),
+    )
+    const [reverted] = undo(applied, history)
+
+    expect(reverted.material).toEqual(newTexture().material)
+  })
+
+  /**
+   * Applying two styles in a row must leave two entries. Sharing one id would coalesce them, and
+   * undoing the second would silently give back what was there before the first.
+   */
+  it('gives each style an id of its own', () => {
+    expect(applyStyle('style_1', STYLE).id).not.toBe(applyStyle('style_2', STYLE).id)
   })
 })

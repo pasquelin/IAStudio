@@ -1,4 +1,5 @@
 import { ASSET_NAME_MAX_LENGTH, type Asset } from '@shared/domain/asset'
+import { foldForSearch } from '@shared/text'
 import type { ActivityReport } from '@main/project/activity-log'
 import { chunk } from '@main/scenario/limits'
 
@@ -10,9 +11,24 @@ import { chunk } from '@main/scenario/limits'
  */
 export const CAPTION_BATCH = 10
 
-/** Names a file gets from a camera, a screenshot or a download — a name that says nothing. */
+/**
+ * Names a file gets from a camera or a download — a name that says nothing. Written without
+ * accents because they are compared folded: macOS hands its own names out decomposed, so an
+ * `é` typed here would not match the `é` it wrote.
+ */
 const UNINFORMATIVE =
-  /^(img|dsc|dscn|pxl|image|photo|screenshot|untitled|download|capture)[-_ ]?\d*$/i
+  /^(img|dsc|dscn|pxl|image|photo|screenshot|untitled|download|capture|sans titre|telechargement|image collee|nouvelle image)[-_ ]?\d*$/
+
+/**
+ * A screenshot as an operating system actually writes one. Neither macOS nor Windows stops at
+ * the bare word: both append the moment it was taken or which copy it is, and both say the
+ * word in the language they are set to.
+ *
+ * What follows has to be that stamp — a digit or a copy number in brackets. `Capture d'écran du
+ * menu principal` is a name somebody chose, and paying to describe it would be paying to lose
+ * it.
+ */
+const OS_SCREENSHOT = /^(screen ?shot|capture d['’]ecran)[-_ ]*(\(\d+\)|\d.*)$/
 
 /**
  * A picture the API can be asked about: captioning takes an asset id, and one that never
@@ -34,8 +50,8 @@ export function describable(asset: Asset): asset is Describable {
 export function worthCaptioning(asset: Asset): asset is Describable {
   if (!describable(asset)) return false
 
-  const stem = asset.name.replace(/\.[^.]+$/, '').trim()
-  return stem === '' || UNINFORMATIVE.test(stem)
+  const stem = foldForSearch(asset.name.replace(/\.[^.]+$/, '').trim())
+  return stem === '' || UNINFORMATIVE.test(stem) || OS_SCREENSHOT.test(stem)
 }
 
 export type AutoCaptionDeps = {

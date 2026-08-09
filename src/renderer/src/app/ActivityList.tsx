@@ -8,7 +8,6 @@ import {
   type ActivityLevel,
 } from '@shared/domain/activity'
 import { EmptyState } from '@/design/EmptyState'
-import { Separator } from '@/design/Separator'
 import { UiIcon } from '@/design/UiIcon'
 import { chipSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
@@ -82,31 +81,55 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
   )
 }
 
-/** Nothing selected is "everything" — which is what an empty list means to `matchesActivity`. */
-function Chips<T extends string>({
+// A row per family rather than one wrap: past seven chips the break fell after the separator,
+// wrapping the subjects away from the hairline that announced them.
+function FilterRow<T extends string>({
+  name,
+  allLabel,
   values,
   active,
   label,
-  onToggle,
+  onChange,
 }: {
+  name: string
+  allLabel: string
   values: readonly T[]
   active: readonly T[]
   label: (value: T) => string
-  onToggle: (values: T[]) => void
+  onChange: (values: T[]) => void
 }) {
-  return values.map(value => (
-    <button
-      key={value}
-      type="button"
-      aria-pressed={active.includes(value)}
-      onClick={() =>
-        onToggle(active.includes(value) ? active.filter(one => one !== value) : [...active, value])
-      }
-      className={chipSkin(active.includes(value))}
-    >
-      {label(value)}
-    </button>
-  ))
+  return (
+    <div role="group" aria-label={name} className="flex flex-wrap items-center gap-2">
+      {/* Nothing selected is "everything" to `matchesActivity`, so this clears rather than adds.
+          Pressed, it no longer answers — like a radio, and unlike the toggle `aria-pressed` names.
+          Kept because the state is true and drawn: dropping it would tell the eye what it hides
+          from a screen reader. */}
+      <button
+        type="button"
+        aria-pressed={active.length === 0}
+        onClick={() => onChange([])}
+        className={chipSkin(active.length === 0)}
+      >
+        {allLabel}
+      </button>
+
+      {values.map(value => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={active.includes(value)}
+          onClick={() =>
+            onChange(
+              active.includes(value) ? active.filter(one => one !== value) : [...active, value],
+            )
+          }
+          className={chipSkin(active.includes(value))}
+        >
+          {label(value)}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 /**
@@ -133,19 +156,22 @@ export function ActivityList() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-border flex flex-wrap items-center gap-2 border-b p-1">
-        <Chips
+      <div className="border-border flex flex-col gap-1.5 border-b p-1">
+        <FilterRow
+          name={t('activity.filters.levels')}
+          allLabel={t('activity.all')}
           values={ACTIVITY_LEVELS}
           active={levels}
           label={level => t(`activity.levels.${level}`)}
-          onToggle={next => setFilters({ levels: next })}
+          onChange={next => setFilters({ levels: next })}
         />
-        <Separator orientation="vertical" />
-        <Chips
+        <FilterRow
+          name={t('activity.filters.topics')}
+          allLabel={t('activity.all')}
           values={ACTIVITY_TOPICS}
           active={topics}
           label={topic => t(`activity.topics.${topic}`)}
-          onToggle={next => setFilters({ topics: next })}
+          onChange={next => setFilters({ topics: next })}
         />
       </div>
 

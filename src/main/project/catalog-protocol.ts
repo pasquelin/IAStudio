@@ -35,6 +35,25 @@ export type CatalogResults = {
 
 export type CatalogOp = CatalogRequest['op']
 
+/**
+ * Not a request: it answers nothing, and the id it names is one already sent.
+ *
+ * A `better-sqlite3` query cannot be interrupted once it has begun — what this buys is the ones
+ * that have NOT begun. Six keystrokes queue six searches behind one that is running; five of
+ * them describe a word nobody is looking for any more by the time their turn comes.
+ */
+export type CatalogAbandon = { op: 'abandon'; target: number }
+
+/** Everything the thread receives. */
+export type CatalogMessage = CatalogRequest | CatalogAbandon
+
+export function isAbandon(message: CatalogMessage): message is CatalogAbandon {
+  return message.op === 'abandon'
+}
+
+/** What an abandoned request rejects with, so a caller can tell it from a failure. */
+export const ABANDONED = 'abandoned'
+
 export type CatalogResponse =
   | { id: number; ok: true; value: CatalogResults[CatalogOp] }
   | { id: number; ok: false; error: string }

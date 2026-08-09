@@ -228,8 +228,10 @@ In **perspective**, receding lines converge: that is what an eye sees, and it is
 That is what lets an alignment be judged. Two cubes set side by side look offset in perspective; in
 orthographic they either are or they are not.
 
-The swap does not move the view: the camera takes its exact place back, and the frustum is sized so
-that whatever sits at the centre keeps the size it had.
+The swap does not change what you see, and that is the only promise it makes: the camera itself
+moves to keep it. In orthographic the frustum is sized so that whatever sits at the centre keeps the
+size it had; coming back to perspective, where zooming means moving, what the wheel had magnified
+becomes distance instead.
 
 ### Stand at — the six sides
 
@@ -325,7 +327,7 @@ Three things worth knowing:
 
 The **Scene** panel, in the right column, shows everything the scene contains, as a tree. It used
 to be the Explorer; that one now lists the documents of the project, which is a different
-question and holds in all six workspaces.
+question and holds in every workspace.
 
 - **Click** a line to select the object — with `⇧`, `⌘` or `Ctrl` to pick several, exactly as in
   the view.

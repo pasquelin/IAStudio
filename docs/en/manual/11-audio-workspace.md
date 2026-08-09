@@ -68,7 +68,7 @@ example.
 
 | Tool | What it does |
 |---|---|
-| **Trim** | keeps only the selection, throws away the rest |
+| **Crop** | keeps only the selection, throws away the rest |
 | **Fade in** | brings the sound up from silence, over the selection |
 | **Fade out** | brings the sound down to silence, over the selection |
 | **Normalise** | brings the overall level to −14 LUFS |
@@ -102,7 +102,7 @@ and A/B tells the truth in three seconds.
 
 This is the important point of this workspace.
 
-Your tools **do not write into the file**. They stack a list of instructions — "trim here",
+Your tools **do not write into the file**. They stack a list of instructions — "crop here",
 "one-second fade", "normalise" — which is replayed over the original sound every time.
 
 Two very practical consequences:

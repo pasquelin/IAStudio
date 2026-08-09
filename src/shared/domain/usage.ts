@@ -64,6 +64,161 @@ export type UsageTally = {
   units?: number
 }
 
+/**
+ * The spending actions the API bills, as `usages.list` enumerates them. Listed so the report
+ * reads in French instead of showing `images-generation`: closed unions, unlike a model's own
+ * labels, so a bundle key per value is the right tool here.
+ *
+ * `creative-unit-cost` and `creative-unit-discount` are absent on purpose — they are the
+ * synthesis lines the aggregate already folds into its own totals.
+ */
+export const USAGE_ACTIONS: readonly string[] = [
+  'background-removal',
+  'captioning',
+  'custom',
+  'custom-asset-created',
+  'detection',
+  'generators-training',
+  'image-prompt-editing',
+  'images-generation',
+  'ip-detection',
+  'models-training',
+  'patch',
+  'pixelate',
+  'refunds',
+  'repaint',
+  'restyle',
+  'segmentation',
+  'skybox-base-360',
+  'skybox-upscale-360',
+  'texture',
+  'upscale',
+  'vectorization',
+]
+
+/** The asset kinds `usages.list` counts. Its own union, wider than the studio's own kinds. */
+export const USAGE_ASSET_KINDS: readonly string[] = [
+  '3d',
+  'audio',
+  'document',
+  'image',
+  'image-hdr',
+  'json',
+  'text',
+  'video',
+]
+
+/**
+ * Every action the raw activity log records, as `usages.list` enumerates them — a hundred of
+ * them, and a different union from `USAGE_ACTIONS` above: that one is what gets BILLED, this
+ * one is what HAPPENED. It carries events nothing charges for, from `subscription` to
+ * `asset-privacy`.
+ *
+ * Listed so the journal reads in the language of the window rather than in the API’s own.
+ */
+export const USAGE_EVENT_ACTIONS: readonly string[] = [
+  '3d',
+  'asset',
+  'asset-privacy',
+  'assistant-message',
+  'background-removal',
+  'byok-remove-project-provider',
+  'byok-remove-provider',
+  'byok-set-project-provider',
+  'byok-set-provider',
+  'captioning',
+  'collection',
+  'collection-assets',
+  'collection-models',
+  'controlnet',
+  'controlnet-img2img',
+  'controlnet-inpaint',
+  'controlnet-ip-adapter',
+  'controlnet-texture',
+  'copy-asset',
+  'copy-model',
+  'creative-unit-cost',
+  'creative-unit-discount',
+  'custom',
+  'custom-asset-created',
+  'delete-asset',
+  'delete-collection',
+  'delete-collection-assets',
+  'delete-collection-models',
+  'delete-inference-image',
+  'delete-model',
+  'delete-model-preset',
+  'delete-oscu-auto-refill',
+  'delete-project-member',
+  'delete-subscription',
+  'delete-team-api-key',
+  'delete-team-invitations',
+  'delete-team-member',
+  'delete-training-images',
+  'describe-style',
+  'detection',
+  'disable-project-model',
+  'disable-team-model',
+  'download-assets',
+  'download-model',
+  'embed',
+  'enable-project-model',
+  'enable-team-model',
+  'generative-fill',
+  'image-prompt-editing',
+  'images-generation',
+  'img2img',
+  'img2img-ip-adapter',
+  'img2img-texture',
+  'inference',
+  'inpaint',
+  'inpaint-ip-adapter',
+  'ip-detection',
+  'model',
+  'model-preset',
+  'models-training',
+  'oscu',
+  'patch',
+  'pixelate',
+  'project',
+  'project-member',
+  'reframe',
+  'refunds',
+  'repaint',
+  'restyle',
+  'segmentation',
+  'skybox-base-360',
+  'skybox-upscale-360',
+  'start-train',
+  'subscription',
+  'subscription-seats',
+  'tag-asset',
+  'tag-model',
+  'team-api-key',
+  'team-member',
+  'texture',
+  'train-succeeded',
+  'training-images-to-model',
+  'transfer-model',
+  'txt2img',
+  'txt2img-ip-adapter',
+  'update-asset',
+  'update-collection',
+  'update-model',
+  'update-model-description',
+  'update-model-examples',
+  'update-model-prompt-guide',
+  'update-oscu-auto-refill',
+  'update-project',
+  'update-project-instructions',
+  'update-subscription',
+  'update-team',
+  'update-team-instructions',
+  'update-team-member',
+  'upscale',
+  'vectorization',
+]
+
 /** An account whose key refused the call. The report holds what the others answered. */
 export type SilentAccount = {
   accountId: string
@@ -107,7 +262,11 @@ export type UsageReport = {
 export type UsageEvent = {
   /** ISO timestamp. */
   time: string
-  /** Raw API action name (`images-generation`, `delete-asset`, …), translated on screen. */
+  /**
+   * Raw API action name (`images-generation`, `delete-asset`, `subscription`, …), said on screen
+   * through `usage.actionNames`. Its union is the activity log's, not the billing one — a
+   * hundred values wide, which is why `USAGE_EVENT_ACTIONS` exists beside `USAGE_ACTIONS`.
+   */
   action: string
   accountName: string
   modelName?: string

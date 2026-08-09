@@ -38,7 +38,7 @@ Sous la bannière, une bande par sujet, dans cet ordre :
 
 | Bande | Ce qu’elle montre | Il faut |
 |---|---|---|
-| **Outils** | les six espaces, et les gestes de projet | rien |
+| **Outils** | les sept espaces, et les gestes de projet | rien |
 | **Vos projets** | les projets récents | rien |
 | **Ce que vous avez produit** | vos générations, légendées du modèle qui les a faites | un projet ouvert |
 | **Par type** | six compteurs — Image, Vidéo, Audio, Maillage, Texture, Skybox | un projet ouvert |
@@ -97,7 +97,7 @@ pour ce qu’on garde à l’œil pendant qu’on lit la page, au lieu de le lir
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  BARRE DE TITRE — les six espaces de travail                 │
+│  BARRE DE TITRE — les sept espaces de travail                │
 ├──┬────────────────────────────────────────────────────────┬──┤
 │  │                    zone haute                          │  │
 │ R├────────────────────────────────────────────────────────┤ R│
@@ -129,9 +129,12 @@ logiciel de montage.
 
 ## La barre de titre
 
-Elle ne porte pas le nom du fichier. Elle porte les **six espaces de travail** :
+Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** :
 
-**Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes**
+**Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes** · **Graphe**
+
+> **Le Graphe est en construction.** Il s’ouvre, on y pose des nœuds et on les enregistre, mais
+> il ne sait pas encore exécuter ce qu’il décrit. Son chapitre viendra quand il le saura.
 
 Un clic change d’espace. L’espace actif est celui dont le bouton est plus clair que les autres.
 
@@ -194,7 +197,7 @@ De haut en bas :
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif |
 | *séparateur* | |
-| Les icônes de la **colonne de gauche** | Modèles, puis Génération — les mêmes dans les six espaces |
+| Les icônes de la **colonne de gauche** | Modèles, puis Génération — les mêmes dans tous les espaces |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
 
 Le bouton **+** est plein et bleu, quand tous les autres sont des glyphes gris. C’est parce
@@ -205,7 +208,7 @@ qu’il **agit** — il crée quelque chose — alors que les autres ne font que
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Assets, Explorateur, Scène,
+Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Styles, Assets, Explorateur, Scène,
 Lumières, Mailles, Apps — celles que l’espace déclare, dans cet ordre — puis, sous le trait,
 Inspecteur.
 
@@ -290,6 +293,8 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
 | **Vue** | droite | 1re | Skyboxes | la projection, le champ de vision et les objets de test |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
+| **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte, et ce que chacun porte |
+| **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
 | **Assets** | droite | 1re | Vidéo, Audio | l’étagère du projet, en colonne |
 | **Explorateur** | droite | 1re | partout | les documents du projet, ouverts ou non |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
@@ -300,15 +305,20 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Assets** | bas | 1re | Image, 3D, Textures, Skyboxes | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio | la séquence en cours de montage |
 
+> **« Partout » veut dire les espaces de travail, pas l’accueil.** Un espace est un endroit qui
+> ouvre des documents d’une sorte à lui ; l’accueil n’en ouvre aucun — il ouvre ceux des autres.
+> Il n’a qu’une colonne de gauche, où il met l’**Explorateur** — là où les espaces mettent la
+> génération.
+
 **La colonne de gauche est la génération, et rien d’autre.** Deux panneaux seulement y ont le
 droit — **Modèles** et **Génération** — et aucun des deux ne s’affiche ailleurs. Générer est la
-seule chose que les six espaces font tous : elle a donc la même place dans les six, juste sous le
+seule chose que tous les espaces font : elle a donc la même place dans chacun, juste sous le
 bouton **+** qui crée un document. Ce sont deux moments du même travail, choisir puis remplir,
 donc ils se relaient dans la même moitié.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
 qui est sélectionné. Les panneaux y prennent leur tour dans la moitié haute — un espace ne
-déclare jamais les six à la fois — et l’**Inspecteur** occupe l’autre moitié, toujours en bas.
+déclare jamais tous à la fois — et l’**Inspecteur** occupe l’autre moitié, toujours en bas.
 On lit ce qui est sélectionné **pendant** qu’on choisit un modèle et qu’on écrit un prompt :
 dans un éditeur, l’inspecteur n’est jamais le panneau qu’il faut quitter pour voir autre chose.
 
@@ -353,7 +363,7 @@ disposition** rétablit :
 | **Skyboxes** | Skybox | Assets |
 
 **Pourquoi ce n’est pas un panneau fixé une fois pour toutes.** Votre disposition est retenue une
-seule fois pour les six espaces, alors que le panneau qui vient en premier diffère dans chacun.
+seule fois pour tous les espaces, alors que le panneau qui vient en premier diffère dans chacun.
 En inscrire un dans la disposition par défaut reviendrait à imposer la réponse d’un espace aux
 cinq autres.
 
@@ -361,7 +371,7 @@ Dès que vous cliquez une icône, cette moitié retient **votre** choix, et ne b
 que vous en cliquiez une autre — ou que vous réinitialisiez la disposition.
 
 **Pourquoi l’Explorateur est visible partout.** Il liste les documents du dossier de projet,
-ouverts ou non, et c’est la même question dans les six espaces : un double-clic sur une ligne
+ouverts ou non, et c’est la même question dans tous les espaces : un double-clic sur une ligne
 ouvre le document, en changeant d’espace s’il appartient à un autre. Il a longtemps montré
 l’arbre de la scène 3D — celui-ci a désormais son propre panneau, **Scène**.
 
@@ -391,8 +401,8 @@ Le point disparaît à l’enregistrement (`⌘S` / `Ctrl+S`), et revient à la 
 Si vous annulez jusqu’au point exact où vous aviez enregistré, il disparaît aussi : ce que vous
 voyez est alors bien ce que contient le fichier.
 
-> **Les six types de documents savent s’enregistrer** — images, scènes 3D, textures, séquences,
-> sons édités et ciels. Ce qui ne revient pas d’un enregistrement à l’autre, c’est l’historique
+> **Les sept types de documents savent s’enregistrer** — images, scènes 3D, textures, séquences,
+> sons édités, ciels et graphes. Ce qui ne revient pas d’un enregistrement à l’autre, c’est l’historique
 > d’annulation. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ### Fermer un onglet
@@ -531,6 +541,11 @@ colonne de gauche :
 | **Modèles** | quels modèles ont coûté, combien de générations chacun a servi, et la part passée par une clé API |
 | **Activités** | ce qui a été fait, et les assets qui en sont sortis |
 | **Journal** | chaque événement facturé, du plus récent au plus ancien, par pages |
+
+**Activités et Journal nomment leurs lignes dans la langue de la fenêtre**, pas dans celle de
+l’API : vous lisez « Génération d’images », pas `images-generation`. Si Scenario ajoute un type
+d’événement que le studio ne connaît pas encore, sa ligne affiche le nom brut de l’API — c’est le
+seul cas où l’anglais technique reparaît, et il vaut mieux qu’une ligne vide.
 
 Trois avertissements y sont affichés, et aucun n’est décoratif :
 

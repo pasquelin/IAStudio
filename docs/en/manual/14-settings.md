@@ -62,9 +62,13 @@ The language of every text in the application: menus, buttons, messages.
 
 | Value | Effect |
 |---|---|
-| **System** | follows your computer's own language |
+| **System** | follows your computer's own language — **English** if that is neither French nor English |
 | **Français** | French |
 | **English** | English |
+
+> **A machine set to German, Spanish or Japanese opens the studio in English**, not in French.
+> That is deliberate: someone whose computer speaks a third language is likelier to read English,
+> and refusing it would mean making them hunt for this setting in a window written in French.
 
 Each language names itself in its own language — "Français" stays "Français" even on an English
 screen. That is deliberate: you recognise your own language before you can read the screen's.
@@ -78,9 +82,15 @@ you write in them: a prompt written in English stays in English.
 > does not know yet therefore stays **in English** rather than disappearing, and a model published
 > tomorrow arrives in its original wording.
 >
-> **Some words stay in English on purpose**: `seed`, `guidance scale`, `sampler`, `CFG`. These are
-> the trade's terms, and they read that way in every image generation tool — translating them
-> would make you look twice.
+> **Seven words stay in English on purpose**: `sampler`, `scheduler`, `LoRA`, `checkpoint`,
+> `prompt`, `clip skip`, `denoising strength`. The rule is not "it is the trade's term" — it is
+> easier to check than that: **a word is left in English only where the studio never gives it a
+> French name** — not in one of its own surfaces, and not in the [glossary](17-glossary.md).
+>
+> The list has emptied twice under that rule. `seed` left it because the inspector and the Skybox
+> panel had said "Graine" for a long time; `guidance scale` and `negative prompt` left it because
+> the glossary named them — "Guidage" and "Prompt négatif". Each time, the form was the only
+> surface refusing the word the rest of the studio uses.
 
 ### On opening
 
@@ -316,6 +326,21 @@ sees in it.
 > **This is the only place where the studio spends without being asked**, and that is exactly why
 > the setting exists: clear it, and nothing leaves on its own any more. The naming works in
 > batches, under a bounded queue, and every result takes its line in the activity journal.
+
+**What counts as "without a useful name"**, and nothing else:
+
+| What the studio describes | Examples |
+|---|---|
+| an empty name, or a device prefix followed by a number | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
+| the names operating systems give, in both languages | `Untitled`, `Download`, `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image` |
+| a screenshot **followed by its timestamp or copy number** | `Screenshot 2026-08-09 at 10.30.45`, `Screenshot (3)`, `Capture d'écran (2)` |
+
+**A name you chose is never described**, even when it starts with the same words: `Screenshot of
+the main menu` stays as it is. The studio does not pay to replace a name somebody took the
+trouble to write.
+
+Accents make no difference to this recognition: `Capture d'écran` and `Capture d’écran` are
+treated alike, including in the particular form macOS writes inside its file names.
 
 ### Max retries
 
@@ -592,6 +617,7 @@ What you have on a fresh install, at a glance.
 |---|---|---|---|
 | General | Language | System | System, Français, English |
 | General | On opening | Reopen the last project | — |
+| General | Show the home screen | on | — |
 | Appearance | Theme | Dark | Dark, Light, System |
 | Appearance | Density | Comfortable | Comfortable, Compact |
 | Appearance | Accent colour | the theme's own | — |
@@ -606,6 +632,11 @@ What you have on a fresh install, at a glance.
 | 3D | Fly speed | 4 m/s | 0.5 to 20 |
 | 3D | Boost | 3× | 1 to 10 |
 | 3D | Field of view | 60° | 30 to 100 |
+| 3D | Move step | 0.5 m | 0.1 to 10 |
+| 3D | Rotate step | 15° | 1 to 90 |
+| 3D | Scale step | 0.1 | 0.05 to 1 |
+| 3D | Shadow softness | Soft | Hard or Soft |
+| 3D | Shadow detail | 2048 | 512, 1024, 2048, 4096 |
 | Media | Path to ffmpeg | empty | — |
 | Storage | Projects folder | empty | — |
 | Advanced | Log detail | Everything | Nothing → Everything |

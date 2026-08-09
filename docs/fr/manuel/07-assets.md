@@ -66,6 +66,15 @@ titre.
 Le filtrage est **instantané**, même sur un gros projet : tout le catalogue est déjà chargé en
 mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario à distance.
 
+> **La recherche ne réclame pas vos accents.** Taper `foret` trouve « Forêt d’hiver », et `ete`
+> trouve « Été ». C’est vrai de la même façon dans le panneau **Modèles**, dans **Apps** et dans
+> la recherche des préférences : on cherche en tapant, pas en épelant.
+>
+> Cela vaut aussi pour les fichiers venus du Finder. macOS écrit les noms sous une forme où
+> l’accent est un caractère à part, invisible à l’œil mais différent pour la machine — un asset
+> importé ne répondait donc pas toujours à son propre nom retapé ici. Les deux formes sont
+> désormais traitées comme une seule.
+
 Les deux vues sont **virtualisées** : seul ce qui est réellement à l’écran est dessiné. Un
 projet de plusieurs milliers d’assets défile donc sans à-coups.
 
@@ -230,7 +239,7 @@ Ce badge n’est pas stocké, il est **recalculé** : il dépend du compte actif
 ouvre sur un projet et un seul. Changez de compte dans la barre de titre, et les badges se
 relisent — c’est le même fichier, c’est la bibliothèque d’en face qui a changé.
 
-> **Quatre de ces sept badges sont hors d’atteinte aujourd’hui**, et c’est cohérent : tant que
+> **Trois de ces sept badges sont hors d’atteinte aujourd’hui**, et c’est cohérent : tant que
 > les transferts se déclenchent à la main, rien ne peut modifier la version en ligne dans votre
 > dos. « À rapatrier », « modifié des deux côtés » et « autre projet » n’apparaîtront qu’avec la
 > synchronisation automatique, quand elle existera. Le filtre **Emplacement** ne propose donc que
@@ -342,8 +351,9 @@ Et il retient le premier qui **démarre**, pas le premier qui existe : il le lan
 Un binaire présent mais cassé est traité comme absent — voir
 [Quand ça coince](16-depannage.md#le-cas-déroutant--ffmpeg-est-là-et-le-studio-dit-quil-ny-est-pas).
 
-Si aucun des trois ne répond, le bandeau le dit : « Préparation vidéo indisponible : ni copie
-allégée ni forme d’onde. »
+Si aucun des trois ne répond, un **triangle d’alerte ambre** apparaît dans la barre de titre de
+l’étagère à assets, à gauche du compteur. Survolez-le, ou atteignez-le au clavier, et il dit :
+« Préparation vidéo indisponible : ni copie allégée ni forme d’onde. » `Échap` referme l’infobulle.
 
 **L’import fonctionne quand même.** Vous perdez seulement le confort : la navigation dans les
 vidéos sera moins fluide, et les pistes audio n’afficheront pas leur dessin.

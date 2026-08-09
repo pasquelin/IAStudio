@@ -4,7 +4,9 @@ import {
   type DocumentKind,
   type DocumentPart,
 } from '@shared/domain/document'
+import { EMPTY_GRAPH } from '@shared/domain/graph'
 import { parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
+import { parseGraph } from '@/engines/graph/serialize'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { parseSkybox } from '@/engines/skybox/skybox-state'
@@ -14,6 +16,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { closePanel } from './dockview-api'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audio-edits'
+import { graphStore } from '@/stores/graphs'
 import { sceneStore } from '@/stores/scenes'
 import { sequenceStore } from '@/stores/sequences'
 import { skyboxStore } from '@/stores/skyboxes'
@@ -185,6 +188,7 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   audio: textDocumentIo(audioEditStore, asIs, parseAudioEdits, () => EMPTY_AUDIO_EDIT),
   skybox: textDocumentIo(skyboxStore, asIs, parseSkybox, createSkyboxContent),
   texture: textDocumentIo(textureStore, asIs, parseTexture, newTexture),
+  graph: textDocumentIo(graphStore, asIs, parseGraph, () => EMPTY_GRAPH),
 }
 
 /** `undefined` for an id no tab is showing — never for a kind that cannot be saved. */

@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { isPbrChannel, PBR_CHANNELS } from '@shared/domain/texture'
+import {
+  DEFAULT_TEXTURE_MATERIAL,
+  isPbrChannel,
+  MATERIAL_BOUNDS,
+  PBR_CHANNELS,
+} from '@shared/domain/texture'
 import {
   canDerive,
   contentOf,
   DEFAULT_PREVIEW,
-  MATERIAL_BOUNDS,
   PREVIEW_BOUNDS,
-  DEFAULT_TEXTURE_MATERIAL,
   missingChannels,
   newTexture,
   parseTexture,
@@ -209,6 +212,7 @@ describe('parseTexture', () => {
         showBackground: false,
         autoSpin: true,
         tilingPreview: 2,
+        showSeam: true,
       },
     }
 

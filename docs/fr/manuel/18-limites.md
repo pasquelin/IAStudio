@@ -26,10 +26,10 @@ Trois catégories, à ne pas confondre :
 
 ---
 
-## L’enregistrement : les six types y sont
+## L’enregistrement : les sept types y sont
 
 **Ce chapitre a longtemps commencé par « trois documents sur six ne s’enregistrent pas ». Ce
-n’est plus vrai.** Les six s’écrivent dans le dossier du projet et se rouvrent tels quels.
+n’est plus vrai.** Les sept s’écrivent dans le dossier du projet et se rouvrent tels quels.
 
 | Document | Extension | S’enregistre ? |
 |---|---|---|
@@ -39,6 +39,7 @@ n’est plus vrai.** Les six s’écrivent dans le dossier du projet et se rouvr
 | Séquence vidéo | `.seq` | **oui** |
 | Son édité | `.aud` | **oui** |
 | Ciel | `.sky` | **oui** |
+| Graphe | `.graph` | **oui** — mais il ne sait pas encore s’exécuter |
 
 **Ce qui ne s’enregistre pas, et c’est délibéré :**
 
@@ -225,14 +226,18 @@ travail, et il est complet.
 - **l’enchaînement des dérivations** — calculer la hauteur depuis la couleur de base ne recalcule
   pas la normale qui en venait : chaque canal se recalcule à la demande, un par un ;
 - **l’import d’un fichier du disque** directement dans un canal. Le détour existe : importez
-  l’image dans le projet, puis posez-la sur la vignette du canal ;
-- **l’aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures visibles ;
-- **l’export** vers glTF, Unity, Unreal, Roblox.
+  l’image dans le projet, puis posez-la sur la vignette du canal.
+
+**L’export existe désormais** — glTF/GLB, Unity, Unreal, Roblox et les canaux bruts, par
+Fichier → Exporter la matière. Deux bornes à connaître : **Roblox refuse une carte au-delà de
+1024 px**, donc ses quatre fichiers sont ramenés sous ce plafond ; et le `.glb` part avec la
+forme de l’aperçu, faute pour un format d’objet de savoir porter une matière toute seule.
 
 Ce qui fonctionne aujourd’hui : générer une matière, poser une image dans chacun de ses huit
-canaux, en calculer quatre depuis un autre, régler tout ce dont elle est faite — rugosité et métal avec leur remappage, relief,
+canaux, en calculer quatre depuis un autre, juger sa répétition et mesurer ses coutures, régler tout ce
+dont elle est faite — rugosité et métal avec leur remappage, relief,
 émission, répétition —, la regarder sur cinq formes sous l’éclairage de votre choix, inspecter
-chaque canal à plat, et l’enregistrer.
+chaque canal à plat, l’enregistrer, et la sortir vers cinq destinations.
 
 ### L’opacité d’un canal ne se règle pas
 
@@ -243,17 +248,6 @@ dans laquelle la carte est relue, ce qui est une autre question.
 ---
 
 ## Espace Skyboxes
-
-### Trois vues sur quatre ne dessinent rien
-
-Le panneau **Vue** propose quatre projections. Une seule fonctionne.
-
-| Vue | État |
-|---|---|
-| **360°** | fonctionne |
-| **Équirect** | bouton inactif |
-| **Croix** | bouton inactif |
-| **6 faces** | bouton inactif |
 
 ### La section Génération n’a pas ses boutons
 
@@ -403,7 +397,7 @@ ne peut pas divulguer votre compte.
 
 Si vous ne deviez retenir que cinq choses de ce chapitre :
 
-1. **Les six documents s’enregistrent maintenant**, et fermer un onglet demande avant de perdre
+1. **Les sept documents s’enregistrent maintenant**, et fermer un onglet demande avant de perdre
    quoi que ce soit ; ce qui ne revient pas, c’est l’historique d’annulation ;
 2. **un recadrage ne se défait qu’à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;

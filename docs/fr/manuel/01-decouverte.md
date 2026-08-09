@@ -20,7 +20,7 @@ phrase et où l’on télécharge une image, c’est **tout ce qui vient après*
   restent attachés à chaque fichier, et un bouton les rejoue ;
 - **rien ne repart** : vos fichiers restent chez vous.
 
-> **Une chose à savoir tout de suite :** les six types de documents s’enregistrent dans le
+> **Une chose à savoir tout de suite :** les sept types de documents s’enregistrent dans le
 > dossier du projet et se rouvrent tels quels, et fermer un onglet qui a du travail non
 > enregistré pose la question avant de le perdre. Ce qui ne revient jamais, c’est l’historique
 > d’annulation. La liste complète et honnête de ce qui manque encore est le chapitre
@@ -78,7 +78,7 @@ La différence avec un asset est celle qui sépare **la matière** de **l’ouvr
 générée est un asset ; l’image que vous êtes en train de peindre, avec ses calques et son
 historique, est un document.
 
-Il y a six sortes de documents, une par espace :
+Il y a sept sortes de documents, une par espace :
 
 | Espace | Document | Extension du fichier |
 |---|---|---|
@@ -88,6 +88,7 @@ Il y a six sortes de documents, une par espace :
 | Audio | un son en cours d’édition | `.aud` |
 | Skyboxes | un ciel | `.sky` |
 | Textures | une matière | `.tex` |
+| Graphe | un graphe de nœuds | `.graph` |
 
 ### 4. Un **modèle**
 

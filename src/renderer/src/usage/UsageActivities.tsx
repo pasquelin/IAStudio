@@ -18,6 +18,7 @@ export function UsageActivities({ report }: { report: UsageReport }) {
           title={t('usage.actions')}
           nameHeader={t('usage.columns.action')}
           rows={report.actions}
+          names="usage.actionNames"
           withUnits
         />
       )}
@@ -27,6 +28,7 @@ export function UsageActivities({ report }: { report: UsageReport }) {
           title={t('usage.assets')}
           nameHeader={t('usage.columns.kind')}
           rows={report.assets}
+          names="usage.assetKinds"
         />
       )}
     </div>
@@ -37,10 +39,12 @@ type TalliesProps = {
   title: string
   nameHeader: string
   rows: readonly UsageTally[]
+  /** Where the row names are said, the label itself being the API's own — `images-generation`. */
+  names: 'usage.actionNames' | 'usage.assetKinds'
   withUnits?: boolean
 }
 
-function Tallies({ title, nameHeader, rows, withUnits = false }: TalliesProps) {
+function Tallies({ title, nameHeader, rows, names, withUnits = false }: TalliesProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
 
@@ -58,7 +62,8 @@ function Tallies({ title, nameHeader, rows, withUnits = false }: TalliesProps) {
       >
         {rows.map(row => (
           <Row key={row.label}>
-            <td className="py-1.5">{row.label}</td>
+            {/* Scenario adds usage names without notice: an unnamed one shows as the API sent it. */}
+            <td className="py-1.5">{t(`${names}.${row.label}`, { defaultValue: row.label })}</td>
             <td className="py-1.5 text-right font-mono">{formatUnits(row.count, locale)}</td>
             {withUnits && (
               <td className="py-1.5 text-right font-mono">{formatUnits(row.units ?? 0, locale)}</td>

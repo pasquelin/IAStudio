@@ -73,6 +73,47 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
 ]
 
 /**
+ * What a surface browses the catalogue by: one family, or all of them.
+ *
+ * `'all'` is not an eleventh family — no model carries it, and `ModelQuery.family` stays
+ * optional so an unfiltered query is the absence of the filter rather than a value for it.
+ * It exists because a space that chains families still has one choice to remember, and the
+ * chosen model is stored per scope.
+ */
+export type ModelScope = ModelFamily | 'all'
+
+export const ALL_FAMILIES = 'all'
+
+/** The scope of a surface, whose family is `null` where it belongs to none. */
+export function scopeOf(family: ModelFamily | null): ModelScope {
+  return family ?? ALL_FAMILIES
+}
+
+/**
+ * The other way round, for whatever is filed per FAMILY rather than per scope — the default
+ * model of a preference, the capabilities a facet offers. Written here beside its inverse
+ * because a caller re-deriving it is a caller free to get it backwards.
+ */
+export function familyOfScope(scope: ModelScope): ModelFamily | null {
+  return scope === ALL_FAMILIES ? null : scope
+}
+
+/**
+ * The model a scope starts from, which is a preference and never a choice already made.
+ *
+ * Written once because three surfaces read it — the rail deciding whether to draw the
+ * generator, the generator itself, and the image edits — and a scope that narrows to no family
+ * has no preference to read: a default model "for every family" would mean nothing.
+ */
+export function preferredModelOf(
+  scope: ModelScope,
+  defaults: Partial<Record<ModelFamily, string>>,
+): string | undefined {
+  const family = familyOfScope(scope)
+  return family ? defaults[family] : undefined
+}
+
+/**
  * Who published the model. The API exposes no author name — only an opaque `authorId` — so
  * the `sc:scenario` tag is the single authorship signal there is to filter on.
  */

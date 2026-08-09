@@ -1,3 +1,4 @@
+import { foldForSearch } from '../text'
 import { COMMAND_REGISTRY, type CommandDescriptor } from './command'
 import type { SettingsSectionId } from './settings'
 import {
@@ -18,17 +19,6 @@ export type SearchHit =
   | { kind: 'action'; section: SettingsSectionId; action: SettingAction }
   | { kind: 'command'; section: SettingsSectionId; command: CommandDescriptor }
 
-/**
- * Accents dropped and case folded, so "thème" is found by typing `theme` — a search box that
- * demands a circumflex is a search box nobody uses.
- */
-function fold(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-}
-
 export type Translate = (key: string) => string
 
 /**
@@ -36,11 +26,11 @@ export type Translate = (key: string) => string
  * which the user never sees. `translate` is injected because `shared/` carries no i18n runtime.
  */
 export function matchSettings(query: string, translate: Translate): readonly SearchHit[] {
-  const needle = fold(query.trim())
+  const needle = foldForSearch(query.trim())
   if (needle === '') return []
 
   const matches = (...keys: string[]): boolean =>
-    fold(keys.map(translate).join(' ')).includes(needle)
+    foldForSearch(keys.map(translate).join(' ')).includes(needle)
 
   return [
     ...SETTING_REGISTRY.filter(entry => matches(entry.titleKey, entry.helpKey)).map(

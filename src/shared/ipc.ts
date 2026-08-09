@@ -2,6 +2,7 @@ import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
+import type { MaterialStyle } from './domain/style'
 import type { CloudPage, CloudQuery, ExploreQuery, SimilarPage } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type {
@@ -22,6 +23,7 @@ import type {
   SuggestPromptsRequest,
 } from './domain/prompt-assist'
 import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/scene'
+import type { TextureExportTarget } from './domain/texture-export'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
@@ -106,6 +108,11 @@ export type Channels = {
   favoritesPin: 'favorites:pin'
   favoritesUnpin: 'favorites:unpin'
 
+  stylesList: 'styles:list'
+  stylesSave: 'styles:save'
+  stylesRename: 'styles:rename'
+  stylesRemove: 'styles:remove'
+
   activityRead: 'activity:read'
 
   mediaIngest: 'media:ingest'
@@ -113,6 +120,8 @@ export type Channels = {
   mediaAvailable: 'media:available'
 
   sceneExport: 'scene:export'
+
+  textureExport: 'texture:export'
 
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
@@ -198,6 +207,11 @@ export const CHANNELS: Channels = {
   favoritesPin: 'favorites:pin',
   favoritesUnpin: 'favorites:unpin',
 
+  stylesList: 'styles:list',
+  stylesSave: 'styles:save',
+  stylesRename: 'styles:rename',
+  stylesRemove: 'styles:remove',
+
   activityRead: 'activity:read',
 
   mediaIngest: 'media:ingest',
@@ -205,6 +219,8 @@ export const CHANNELS: Channels = {
   mediaAvailable: 'media:available',
 
   sceneExport: 'scene:export',
+
+  textureExport: 'texture:export',
 
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
@@ -256,6 +272,26 @@ export type SceneExportRequest = {
   data: Uint8Array
 }
 
+/** One file of an exported texture, already encoded by the renderer that drew it. */
+export type TextureExportFile = {
+  /** No separator and no extension: it is joined to a folder this process chose. */
+  name: string
+  /** Carried rather than derived: a target writes `.png`s, and one of them writes a `.glb`. */
+  extension: string
+  bytes: Uint8Array
+}
+
+/**
+ * A texture on its way to a folder. Unlike a scene, an export is several files that mean
+ * nothing apart — a base colour without the ORM beside it is half a material — so the dialog
+ * asks for a folder and they land in one named after the texture.
+ */
+export type TextureExportRequest = {
+  /** The folder to create inside the chosen one, named after the texture. */
+  folder: string
+  files: readonly TextureExportFile[]
+}
+
 export type LogLevel = 'info' | 'warn' | 'error'
 
 export const LOG_LEVELS: readonly LogLevel[] = ['info', 'warn', 'error']
@@ -267,11 +303,14 @@ export const LOG_LEVELS: readonly LogLevel[] = ['info', 'warn', 'error']
  */
 export type LogScope =
   | 'scene.model'
+  | 'scene.bvh'
   | 'scene.texture'
   | 'scene.export'
   | 'texture.map'
   | 'texture.channel'
+  | 'texture.seam'
   | 'texture.shader'
+  | 'texture.export'
   | 'skybox.source'
   | 'canvas.layer'
   | 'image.export'
@@ -282,14 +321,18 @@ export type LogScope =
   | 'assets.reveal'
   | 'assets.open'
   | 'font.face'
+  | 'graph.node'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
+  'scene.bvh',
   'scene.texture',
   'scene.export',
   'texture.map',
   'texture.channel',
+  'texture.seam',
   'texture.shader',
+  'texture.export',
   'skybox.source',
   'canvas.layer',
   'image.export',
@@ -300,6 +343,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.reveal',
   'assets.open',
   'font.face',
+  'graph.node',
 ]
 
 /** `LogEntry.scope` is a free string — the main process logs under its own names too. */
@@ -346,6 +390,7 @@ export const EVENTS = {
   windowState: 'evt:window-state',
   sceneAdd: 'evt:scene-add',
   sceneExport: 'evt:scene-export',
+  textureExport: 'evt:texture-export',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   activity: 'evt:activity',
@@ -364,6 +409,9 @@ export type SceneAddRequest = { kind: MeshKind | LightKind | ObjectKind }
 
 /** What the native menu asks of the scene in front: a format, and how much of the scene. */
 export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selection' }
+
+/** What the native menu asks of the texture in front: which engine it is being handed to. */
+export type TextureExportCommand = { target: TextureExportTarget }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
@@ -598,6 +646,17 @@ export type StudioBridge = {
     pin: (assetId: string) => Promise<FavoriteRecipe[]>
     unpin: (id: string) => Promise<FavoriteRecipe[]>
   }
+  /** Saved ways of reading a material, held outside every project — see `domain/style.ts`. */
+  styles: {
+    list: () => Promise<MaterialStyle[]>
+    /**
+     * Keeps the values handed over. Each of the four answers the whole list, as the favourites
+     * do: one write, one truth back, and a window that never has to guess where a row landed.
+     */
+    save: (style: MaterialStyle) => Promise<MaterialStyle[]>
+    rename: (id: string, name: string) => Promise<MaterialStyle[]>
+    remove: (id: string) => Promise<MaterialStyle[]>
+  }
   /**
    * What the studio did, and what it failed to do — the surface it had none of.
    *
@@ -620,6 +679,14 @@ export type StudioBridge = {
      * a file sits is the main process's business, exactly as for an asset.
      */
     export: (request: SceneExportRequest) => Promise<string | null>
+  }
+  texture: {
+    /**
+     * Writes an exported texture into a folder of its own, inside the one the dialog landed on.
+     * Answers the folder's name, or `null` when the dialog was dismissed — the name, never the
+     * path, exactly as a scene answers.
+     */
+    export: (request: TextureExportRequest) => Promise<string | null>
   }
   /**
    * The typefaces the machine has installed. The studio's own three are not here: they ship
@@ -661,6 +728,7 @@ export type StudioBridge = {
     onCommand: (callback: (command: CommandId) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
+    onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
   }
   diagnostics: {
     onLog: (callback: (entry: LogEntry) => void) => Unsubscribe

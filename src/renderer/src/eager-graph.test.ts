@@ -144,11 +144,11 @@ describe('the opening chunk', () => {
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
     expect(files).toContain('./app/tool-components.ts')
-    expect(files).toContain('./panels/generator/Generator.tsx')
     expect(files).toContain('../../shared/domain/tool.ts')
-    // The panels read this one eagerly for `referencePictures` — which is exactly why zod had to
-    // leave it. If it stops being reached, the assertions below stop meaning anything.
-    expect(files).toContain('./helpers/dynamic-form.ts')
+    // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
+    // point and past the shell, or every negative assertion below passes on an empty graph.
+    expect(files).toContain('./app/Shell.tsx')
+    expect(files).toContain('./home/HomeView.tsx')
   })
 
   // Deferred by `Generator.tsx` on 8 August: −219,38 kB, three quarters of it zod.
@@ -187,7 +187,7 @@ describe('the opening chunk', () => {
     expect(files).not.toContain('../../shared/domain/settings-search.ts')
   })
 
-  // The heaviest row of the table, and the one that was described but never held: six editors,
+  // The heaviest row of the table, and the one that was described but never held: seven editors,
   // five megabytes between them, of which a session opens one or two.
   it('never reaches an editor', () => {
     const { files } = GRAPH
@@ -199,27 +199,63 @@ describe('the opening chunk', () => {
       './spaces/audio/AudioDocument.tsx',
       './spaces/skyboxes/SkyboxDocument.tsx',
       './spaces/textures/TextureDocument.tsx',
+      './spaces/graph/GraphDocument.tsx',
     ]
 
     expect(editors.filter(editor => files.has(editor))).toEqual([])
   })
 
   /**
-   * What still comes out of the editors' folders, and it is never an editor: a panel is not lazy
-   * (`app/tool-components.ts` imports all eleven outright), so a panel reaching for a helper next
-   * to an editor drags that helper in. A budget rather than a ban — the list is allowed to
-   * shrink, never to grow, and a seventh entry means a new panel reached further than it needed.
+   * The graph is the one space whose reader is NOT behind its editor: `document-io.ts` parses a
+   * graph eagerly, as it does for every kind. A budget rather than a ban, like the neighbours
+   * above — the reader is allowed here, the mutation engine and the canvas are not.
+   *
+   * It was two modules wider until the reserved node id moved into `shared/domain/graph.ts`:
+   * one predicate reached from the reader into `mutations.ts` and brought `connect.ts` and
+   * `handles.ts` along, half the graph engine, for a string comparison.
    */
-  it('pulls only these six neighbours out of the editors folders', () => {
+  it('pulls only the reader out of the graph engine, and never the canvas library', () => {
+    const { files, packages } = GRAPH
+
+    expect(packages).not.toContain('@xyflow/react')
+    expect([...files].filter(path => path.startsWith('./engines/graph/')).sort()).toEqual([
+      './engines/graph/serialize.ts',
+    ])
+  })
+
+  /**
+   * What still comes out of the editors' folders, and it is never an editor: something the first
+   * screen does reach for a helper that happens to live next to one. Four of the six left when
+   * the panels went lazy — they came in through a panel, not through the shell.
+   *
+   * A budget rather than a ban — the list is allowed to shrink, never to grow, and a third entry
+   * means something on the first screen reached further than it needed.
+   */
+  it('pulls only these two neighbours out of the editors folders', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
-      './spaces/audio/load-take.ts',
       './spaces/image/canvas-hosts.ts',
       './spaces/image/place-asset.ts',
-      './spaces/textures/place-channel.ts',
-      './spaces/video/TimelineCanvas.tsx',
-      './spaces/video/video-tools.ts',
+    ])
+  })
+
+  /**
+   * Deferred by `app/tool-components.ts` on 9 August: not one of the fourteen, the home screen's
+   * Explorer included. Stated over the whole folder, so a fifteenth panel cannot land eager with
+   * the guard still green.
+   *
+   * The three left are not tools of that table: `panels/jobs/**` belongs to the status bar
+   * (`app/JobsStatus.tsx:8`) and the home (`home/sections/Jobs.tsx:3`), and `type-facet.ts` is
+   * read by `helpers/reveal-panel.ts:6`. None of them opens in a zone.
+   */
+  it('reaches no panel of the tool table, not even the one the home screen opens', () => {
+    const { files } = GRAPH
+
+    expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
+      './panels/assets/type-facet.ts',
+      './panels/jobs/JobRow.tsx',
+      './panels/jobs/Jobs.tsx',
     ])
   })
 
@@ -230,8 +266,8 @@ describe('the opening chunk', () => {
   })
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
-  // `format.ts` is the exception, and it earns it: the Generate button prices a run in the same
-  // units the window totals, so the one formatter is shared rather than written twice.
+  // `format.ts` is the exception, and it earns it: a job row prices a run in the units the
+  // window totals (`panels/jobs/JobRow.tsx:7`), and the status bar carries those rows.
   it('never reaches the usage window, nor what draws its charts', () => {
     const { files, packages } = GRAPH
 

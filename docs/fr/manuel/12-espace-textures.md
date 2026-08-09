@@ -98,7 +98,7 @@ différent de la surface.
 | **Occlusion ambiante** | les coins où la lumière entre mal | de la profondeur dans les creux |
 | **Hauteur** | le relief réel | un déplacement de la surface, plus fort que les normales |
 | **Émission** | ce qui brille par soi-même | une enseigne au néon, des braises |
-| **Arêtes** | où sont les bords | sert à d’autres calculs |
+| **Cavité** | les creux et les arêtes de la surface | assombrit le fond des rainures, réglable par le curseur *Cavité* de la section **Matériau** |
 
 Chaque canal a une **origine** :
 
@@ -160,6 +160,33 @@ une dérivation réversible sans la refaire.
 
 **Un canal calculé ne se met pas à jour tout seul.** Si vous remplacez la hauteur, la normale qui en
 venait décrit encore l’ancienne : relancez son calcul.
+
+### Juger la répétition, et voir les coutures
+
+Une matière ne se juge pas sur un seul carreau. Trois contrôles, dans **Inspecteur ▸ Répétition**,
+sous les valeurs qu’ils regardent :
+
+| Contrôle | Ce qu’il fait |
+|---|---|
+| **Aperçu de la répétition** — 1×, 2×, 4× | multiplie la répétition **pour l’œil seulement** |
+| **Amener les coutures au centre** | décale tous les canaux d’une demi-largeur **et d’une demi-hauteur** : les deux bords qui se raccordent arrivent au milieu de l’aperçu |
+| **Coutures** — le bouton **Mesurer** | compare le raccord au grain de l’image et répond en trois mots |
+
+**Les deux premiers ne touchent jamais la matière.** Ils changent la façon de la regarder, pas ce
+qu’elle est : la répétition qui part dans une scène reste celle du champ **Répéter**, et le décalage
+reste celui du champ **Décalage**. Regarder à 4× ne fabrique pas une texture répétée quatre fois.
+
+**La mesure est un rapport, pas une différence.** Une pierre bruitée supporte un saut qui ferait une
+cicatrice sur un enduit lisse : ce qu’on lit comme une couture, c’est la marche au raccord comparée
+au grain que l’image a déjà. D’où trois réponses — *aucune couture visible*, *couture discrète*,
+*couture visible* — plutôt qu’un pourcentage qui ne voudrait rien dire seul.
+
+Elle porte sur la **couleur de base** : c’est le canal où une couture se voit, et les huit sont
+posés ensemble. Le bouton reste éteint tant qu’aucune couleur de base n’est en place, et les mots
+disparaissent dès qu’on la remplace — ils décrivaient des pixels qui ne sont plus là.
+
+La mesure et le calcul d’un canal passent par la même carte graphique, **une passe à la fois** :
+demander l’une pendant que l’autre tourne ne la refuse pas, elle attend son tour.
 
 ---
 
@@ -256,6 +283,39 @@ désaligneraient et le relief cesserait de correspondre à l’image qu’il sou
 
 ---
 
+## Les styles — garder un réglage pour la matière suivante
+
+Une matière bien réglée, c’est une quinzaine de valeurs. Les retrouver à la main sur la matière
+d’après, c’est le genre de travail qu’on ne refait pas deux fois de bon cœur.
+
+**Le bouton en haut à droite de l’inspecteur** enregistre l’état courant du matériau sous un nom
+généré — « Style 1 », « Style 2 ». Le panneau **Styles**, dans la colonne de droite à côté des
+Canaux, les liste tous.
+
+**Double-cliquez un style** — ou pressez Entrée dessus — pour l’appliquer à la matière ouverte.
+C’est une seule annulation : `⌘Z` remet exactement ce qui était réglé avant.
+
+**Clic droit → Renommer**, comme dans un IDE. Le nom s’édite là où il se lit. Clic droit →
+Supprimer retire le style.
+
+### Ce qu’un style emporte, et ce qu’il n’emporte pas
+
+**Un style ne contient aucune carte.** Il dit *comment lire* les canaux de la matière en face,
+jamais *lesquels*. C’est précisément ce qui lui permet de s’appliquer à n’importe quelle
+matière : un style qui apporterait ses propres canaux ne s’appliquerait plus, il remplacerait.
+
+Conséquence à connaître, qui n’est pas un défaut : **une bonne moitié des réglages ne fait rien
+sans la carte correspondante**. Un « effet métal » posé sur une matière sans carte agit par sa
+couleur, sa rugosité et sa métallicité ; les plages de remappage et la force de normale
+attendront que les canaux arrivent. Elles sont gardées telles quelles, et prendront effet le
+jour où la matière se complète.
+
+**Les styles suivent la machine, pas le projet.** Ils sont rangés dans votre dossier
+d’utilisateur, à côté des favoris, et sont donc là quel que soit le projet ouvert. C’est voulu :
+une carte appartient au catalogue d’un projet, un tour de main n’appartient à aucun.
+
+---
+
 ## Enregistrer
 
 Tout est enregistré **automatiquement**, quelques instants après votre dernier geste, dans un
@@ -264,18 +324,112 @@ fichier `.tex` du dossier `documents/` de votre projet.
 **Rien n’est cuit dans les pixels.** Rouvrez le document dans six mois : chaque réglage est
 encore là, et se règle encore. Ce qui est écrit, ce sont vos décisions, pas leur résultat.
 
-**Les six types de documents s’enregistrent désormais**, mais la matière garde une particularité :
+**Tous les types de documents s’enregistrent désormais**, mais la matière garde une particularité :
 elle est la seule à s’écrire **toute seule**. Ailleurs, c’est `⌘S` qui décide du moment, et la
 puce sur l’onglet dit ce qui attend encore d’être écrit.
+
+---
+
+## Exporter la matière
+
+Menu **Fichier → Exporter la matière**, puis la ligne du moteur qui va la recevoir. Le menu
+n'apparaît que dans l'espace Textures, et il s'adresse à **l'onglet au premier plan** : deux
+matières ouvertes ne répondent pas ensemble au même clic.
+
+Le studio demande **un dossier**, et crée dedans un sous-dossier au nom de votre document. Les
+fichiers d'un export ne veulent rien dire séparés — une couleur de base sans son ORM à côté est
+la moitié d'une matière —, alors ils voyagent ensemble.
+
+### Les cinq destinations
+
+| Ligne | Ce qui est écrit |
+|---|---|
+| **glTF / GLB** | **un seul fichier** `.glb`, textures embarquées, posé sur la forme de l'aperçu |
+| **Unity (URP)** | `_BaseMap`, `_BumpMap`, `_MaskMap`, `_EmissionMap`, `_ParallaxMap` |
+| **Unreal Engine** | `_BaseColor`, `_Normal`, `_ORM`, `_Emissive`, `_Height` |
+| **Roblox** | `_ColorMap`, `_NormalMap`, `_RoughnessMap`, `_MetalnessMap` |
+| **Canaux bruts** | les huit canaux, un fichier chacun, masque de cavité compris |
+
+Les canaux sortent en **PNG**, sans perte : un canal est de la donnée avant d'être une image, et
+le JPEG inventerait des dégradés là où le relief se lit. La première ligne, elle, écrit un seul
+fichier `.glb` qui porte ses images à l'intérieur.
+
+### Ce que veut dire « empaqueter »
+
+Un moteur ne lit pas huit fichiers quand trois composantes lui suffisent. Trois canaux gris
+tiennent dans une seule image, un par composante — c'est ce qu'on appelle un *pack*, et chaque
+moteur a le sien :
+
+- **`_ORM` d'Unreal** : occlusion sur le **rouge**, rugosité sur le **vert**, métallicité sur le
+  **bleu**. C'est aussi ce que lit glTF, qui prend la même image pour son occlusion et pour son
+  couple métallique-rugosité ;
+- **`_MaskMap` d'Unity** : métallicité sur le **rouge**, occlusion sur le **vert**, et le
+  **lissage sur l'alpha**. Une seule image, à poser dans les **deux** emplacements — celui du
+  métallique et celui de l'occlusion ;
+- **Roblox** ne pack rien : sa `SurfaceAppearance` prend exactement quatre cartes séparées.
+
+Le calcul se fait **sur le GPU, en une passe** par image. Une image 4K, c'est seize millions de
+pixels et trois canaux lus par pixel : une boucle en JavaScript figerait la fenêtre.
+
+### Deux conventions que l'export réconcilie pour vous
+
+**Le vert d'une normale.** OpenGL et DirectX ne sont pas d'accord sur son sens. Le studio écrit de
+l'OpenGL ; Unreal attend du DirectX. L'export retourne donc le vert pour Unreal, et pas pour les
+autres. Et si vous aviez coché **Inverser le vert** parce que votre normale était arrivée en
+DirectX, l'export le sait : il ne retourne pas deux fois.
+
+**La rugosité rangée à l'envers.** Le convertisseur de Scenario répond parfois avec une carte de
+*lissage* — la même image lue dans l'autre sens. Le studio la garde telle qu'elle est arrivée et
+retient qu'elle est inversée. Un fichier `_Roughness` contient donc bien de la rugosité, et le
+`_MaskMap` d'Unity bien du lissage : le nom du fichier dit ce qu'il y a dedans.
+
+### Quatre choses à savoir
+
+**Vos réglages de plage partent avec.** La double poignée du panneau Matériau — celle qui
+resserre la rugosité ou la métallicité — n’existe dans aucun des quatre formats. Elle est donc
+**écrite dans les pixels** : une rugosité resserrée entre 0,3 et 0,7 à l’écran sort resserrée.
+Une seule exception, et c’est sa raison d’être : **les canaux bruts sortent tels qu’ils sont
+stockés**, sans remappage — c’est la ligne qu’on choisit précisément pour récupérer ses pixels
+intacts.
+
+**La pleine résolution, pas celle de l'aperçu.** L'export lit chaque canal à la taille où il est
+stocké. Une seule exception, et elle n'est pas la nôtre : **Roblox refuse une carte au-delà de
+1024 px**, donc ses quatre fichiers sont ramenés sous ce plafond, en gardant les proportions.
+
+**Une image qu'aucun canal ne nourrit n'est pas écrite.** Une matière sans occlusion ni
+métallicité ne produit pas d'`_ORM` gris uniforme : tout l'intérêt de cet emplacement est que ce
+qu'il contient a été mesuré. Les composantes manquantes d'une image qui, elle, est écrite prennent
+une valeur neutre — pas d'occlusion, pas de métal.
+
+**Ré-exporter écrase fichier par fichier, et ne fait pas le ménage.** Le même document exporté
+deux fois au même endroit réécrit les fichiers de même nom, mais **ne vide pas le dossier** :
+exporter vers Unreal puis vers Roblox laisse les deux jeux côte à côte, et un canal supprimé
+entre-temps y laisse son fichier périmé. Videz le dossier vous-même si vous voulez qu'il ne
+contienne que le dernier export.
+
+### Ce que le `.glb` emporte en plus
+
+Lui seul est un objet et pas un jeu de fichiers : il part avec **la forme de l'aperçu**, et avec
+les réglages du panneau Matériau que le format sait porter : la teinte, la rugosité, la
+métallicité, la force de la normale, l'intensité d'occlusion, l'émission et son intensité, et la
+répétition avec son décalage et sa rotation. Ouvert ailleurs, il ressemble à ce que vous jugiez à
+l'écran.
+
+Deux choses n'y entrent pas, faute d'exister dans le format : le **relief** — glTF n'a pas
+d'emplacement de déplacement, donc la hauteur ne part ni comme carte ni comme force — et le
+**centre de la rotation**. `KHR_texture_transform` n'a pas de pivot : une matière exportée avec
+une rotation tourne autour du coin de l'image là où l'aperçu tourne autour du milieu.
+
+La **prévisualisation** de la répétition (×1, ×2, ×4) n'en fait pas partie, et c'est voulu :
+juger une répétition et en choisir une sont deux gestes, et seul celui que vous avez choisi
+appartient à un fichier.
 
 ---
 
 ## Ce qui manque encore
 
 - l’**import d’un fichier du disque** directement dans un canal. Passez par l’import du projet
-  (chapitre 7), puis posez l’image sur la vignette ;
-- l’**aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures ;
-- l’**export** vers glTF, Unity, Unreal, Roblox.
+  (chapitre 7), puis posez l’image sur la vignette.
 
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 

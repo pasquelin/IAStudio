@@ -27,7 +27,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   // Held in a store rather than here: the controls that set these live in the View panel, and
   // the centre carries the toolbar and the rulers only. Session state all the same — none of it
   // is saved with the document, and ⌘Z never touches it.
-  const { fieldOfView, probes } = useSkyboxViews(state => viewOf(state, documentId))
+  const { fieldOfView, probes, view } = useSkyboxViews(state => viewOf(state, documentId))
 
   useRestoredDocument(documentId)
 
@@ -61,6 +61,10 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setProbesVisible(probes)
   }, [probes])
+
+  useEffect(() => {
+    engine.current?.setView(view)
+  }, [view])
 
   const onDrop = (asset: Asset): void => setSkyboxSource(documentId, asset)
 

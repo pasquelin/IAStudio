@@ -18,6 +18,8 @@ import {
   isViewDirection,
   viewPosition,
   VIEW_DIRECTIONS,
+  framingDistance,
+  framingPlacement,
 } from './scene-view'
 
 const ORIGIN = new Vector3(0, 0, 0)
@@ -245,5 +247,78 @@ describe('the wireframe overlay under the pointer', () => {
     const raycaster = new Raycaster(new Vector3(0.9, 0, 5), new Vector3(0, 0, -1))
 
     expect(raycaster.intersectObject(mesh, true)).toEqual([])
+  })
+})
+
+/**
+ * The whole of what framing does, once the orthographic frustum stopped ignoring the move: a
+ * constant step framed a studio primitive and stood inside a fifty-unit model.
+ */
+describe('framingDistance', () => {
+  // tan(45°) = 1, so a 90° lens needs exactly the half-size, plus the margin.
+  it('stands as far back as the object is wide, for a square lens', () => {
+    expect(framingDistance(10, 90)).toBeCloseTo(12, 5)
+  })
+
+  // The defect it replaces: the same distance whatever the size.
+  it('stands further back for a bigger object', () => {
+    expect(framingDistance(50, 60)).toBeGreaterThan(framingDistance(5, 60))
+  })
+
+  // A narrower lens sees less at the same distance, so it has to back off further.
+  it('stands further back for a narrower lens', () => {
+    expect(framingDistance(10, 30)).toBeGreaterThan(framingDistance(10, 90))
+  })
+
+  /**
+   * A point light and an empty group have no size at all, and would ask for a distance of nil.
+   * The value, not just « more than zero » : a floor of a millimetre also clears that bar, and
+   * would frame a light from inside it.
+   */
+  it('keeps a usable distance from something with no size', () => {
+    // 0.5 / tan(45°) × 1.2 — the floor, the lens and the margin, pinned together.
+    expect(framingDistance(0, 90)).toBeCloseTo(0.6, 5)
+  })
+})
+
+/**
+ * The composition `frameSelection` performs, which no test could reach while it lived inside a
+ * method that returns early without mounted orbit controls.
+ */
+describe('framingPlacement', () => {
+  const boxAt = (x: number, size: number): Mesh =>
+    new Mesh(new BoxGeometry(size, size, size)).translateX(x)
+
+  it('looks at the middle of what is enclosed, not at the average of the placements', () => {
+    // Two boxes of very different sizes: their centroid and their bounds centre disagree.
+    const target = framingPlacement([boxAt(0, 2), boxAt(20, 10)], 60).target
+
+    expect(target.x).toBeCloseTo(12, 5)
+  })
+
+  it('stands back by what the size asks for, along the studio diagonal', () => {
+    const { target, position } = framingPlacement([boxAt(0, 50)], 60)
+    const away = position.clone().sub(target)
+
+    expect(away.length()).toBeCloseTo(framingDistance(25, 60), 5)
+    // Normalised, and the same on all three axes — an unnormalised step would be √3 times too far.
+    expect(away.x).toBeCloseTo(away.length() / Math.sqrt(3), 5)
+    expect(away.y).toBeCloseTo(away.x, 5)
+  })
+
+  // The defect it replaces: a constant step, so the same distance whatever the selection.
+  it('stands further back for a bigger selection', () => {
+    const near = framingPlacement([boxAt(0, 2)], 60)
+    const far = framingPlacement([boxAt(0, 50)], 60)
+
+    expect(far.position.length()).toBeGreaterThan(near.position.length() * 5)
+  })
+
+  // A light and an empty group enclose nothing; their placements still average to somewhere.
+  it('falls back on the average placement when nothing encloses a box', () => {
+    const lamp = new Object3D().translateX(10)
+    const other = new Object3D().translateX(20)
+
+    expect(framingPlacement([lamp, other], 60).target.x).toBeCloseTo(15, 5)
   })
 })

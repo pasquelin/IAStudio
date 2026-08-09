@@ -3,8 +3,11 @@ import { createCatalogClient, type CatalogPort } from './catalog-client'
 import { dispatchCatalogRequest } from './catalog-dispatch'
 import { createCatalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
-import type { CatalogRequest, CatalogResponse } from './catalog-protocol'
+import { ABANDONED, isAbandon, type CatalogMessage, type CatalogResponse } from './catalog-protocol'
 import type { Asset } from '@shared/domain/asset'
+
+/** The DOM lib is not on this target: the signal's own signature is where the type lives. */
+type AbortListener = Parameters<AbortSignal['addEventListener']>[1]
 
 const asset: Asset = {
   id: 'asset-1',
@@ -16,16 +19,17 @@ const asset: Asset = {
 }
 
 /** A port wired to a real catalogue, answering on the next microtask like a thread would. */
-function loopbackPort(): CatalogPort & { requests: CatalogRequest[] } {
+function loopbackPort(): CatalogPort & { requests: CatalogMessage[] } {
   const catalog = createCatalog(openMemoryDatabase())
-  const requests: CatalogRequest[] = []
+  const requests: CatalogMessage[] = []
   let listener: ((response: CatalogResponse) => void) | null = null
 
   return {
     requests,
-    postMessage: request => {
-      requests.push(request)
-      void Promise.resolve().then(() => listener?.(dispatchCatalogRequest(catalog, request)))
+    postMessage: message => {
+      requests.push(message)
+      if (isAbandon(message)) return
+      void Promise.resolve().then(() => listener?.(dispatchCatalogRequest(catalog, message)))
     },
     onMessage: next => {
       listener = next
@@ -37,14 +41,19 @@ function loopbackPort(): CatalogPort & { requests: CatalogRequest[] } {
 
 /** A port that records requests and lets the test answer them by hand, in any order. */
 function manualPort(): CatalogPort & {
+  requests: CatalogMessage[]
   answer: (response: CatalogResponse) => void
   fail: (error: Error) => void
 } {
   let listener: ((response: CatalogResponse) => void) | null = null
   let onFailure: ((error: Error) => void) | null = null
+  const requests: CatalogMessage[] = []
 
   return {
-    postMessage: () => {},
+    requests,
+    postMessage: message => {
+      requests.push(message)
+    },
     onMessage: next => {
       listener = next
     },
@@ -85,13 +94,105 @@ describe('createCatalogClient', () => {
     await expect(catalog.countByType()).resolves.toMatchObject({ image: 1, video: 0 })
   })
 
+  /**
+   * A search given up on stops costing both sides: this one stops waiting, and the thread is
+   * told, so it can skip the query if it has not begun it.
+   */
+  it('tells the thread about a search given up on, and stops waiting for it', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+    const controller = new AbortController()
+
+    const search = catalog.search({ text: 'mos' }, controller.signal)
+    controller.abort()
+
+    await expect(search).rejects.toThrow(ABANDONED)
+    expect(port.requests.filter(isAbandon)).toEqual([{ op: 'abandon', target: 1 }])
+  })
+
+  /** An answer to a search already given up on settles nothing and is not an error either. */
+  it('ignores the answer to a search it already gave up on', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+    const controller = new AbortController()
+
+    const search = catalog.search({ text: 'mos' }, controller.signal)
+    controller.abort()
+    await expect(search).rejects.toThrow(ABANDONED)
+
+    expect(() => port.answer({ id: 1, ok: true, value: [] })).not.toThrow()
+  })
+
+  /** Nothing crosses the boundary for a search abandoned before it was ever sent. */
+  it('sends nothing at all when the signal is already aborted', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+
+    await expect(catalog.search({ text: 'mos' }, AbortSignal.abort())).rejects.toThrow(ABANDONED)
+
+    expect(port.requests).toEqual([])
+  })
+
+  /**
+   * The listener goes with the answer, and it is watched directly rather than through what it
+   * would do: a signal outlives the one search it was handed to — a search field holds one for a
+   * whole session — and every answered search would leave a closure hanging off it.
+   *
+   * It is also what makes `abort` unreachable after a settle, which is why nothing guards that.
+   */
+  it('drops its abort listener once the search has answered', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+    const controller = new AbortController()
+    const listeners: AbortListener[] = []
+    const signal = controller.signal
+    vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
+      listeners.push(listener)
+    })
+    vi.spyOn(signal, 'removeEventListener').mockImplementation((_type, listener) => {
+      const index = listeners.indexOf(listener)
+      if (index >= 0) listeners.splice(index, 1)
+    })
+
+    const search = catalog.search({ text: 'mos' }, signal)
+    expect(listeners).toHaveLength(1)
+
+    port.answer({ id: 1, ok: true, value: [] })
+    await search
+
+    expect(listeners).toEqual([])
+  })
+
+  /** The same, for the other way a request settles: the thread died, or the project closed. */
+  it('drops its abort listener when the catalogue closes under it', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+    const controller = new AbortController()
+    const signal = controller.signal
+    const listeners: AbortListener[] = []
+    vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
+      listeners.push(listener)
+    })
+    vi.spyOn(signal, 'removeEventListener').mockImplementation((_type, listener) => {
+      const index = listeners.indexOf(listener)
+      if (index >= 0) listeners.splice(index, 1)
+    })
+
+    const search = catalog.search({ text: 'mos' }, signal)
+    await catalog.close()
+    await expect(search).rejects.toThrow(/closed/)
+
+    expect(listeners).toEqual([])
+  })
+
   it('gives every request its own id, so two in flight do not collide', async () => {
     const port = loopbackPort()
     const catalog = createCatalogClient(port)
 
     await Promise.all([catalog.find('a'), catalog.find('b'), catalog.find('c')])
 
-    expect(new Set(port.requests.map(request => request.id)).size).toBe(3)
+    const ids = port.requests.flatMap(request => (isAbandon(request) ? [] : [request.id]))
+    expect(new Set(ids).size).toBe(3)
   })
 
   // Out-of-order answers are the normal case the moment two queries differ in cost.

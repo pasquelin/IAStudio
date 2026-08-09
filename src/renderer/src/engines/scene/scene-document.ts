@@ -89,6 +89,9 @@ type SpecTable = Record<string, Record<string, PropertySpec> | undefined>
 /** The colour is checked apart: `null` is legal for it, and for nothing else. */
 const MEASURED_MATERIAL = Object.entries(MATERIAL_SPECS).filter(([name]) => name !== 'color')
 
+/** Same, for a sprite: derived from the table so a field added to it cannot go unchecked. */
+const MEASURED_SPRITE = Object.entries(SPRITE_SPECS).filter(([name]) => name !== 'color')
+
 function isSceneNode(value: unknown): value is SceneNode {
   if (!isRecord(value)) return false
   if (typeof value.id !== 'string' || value.id === '') return false
@@ -160,7 +163,7 @@ function isMaterial(value: unknown): boolean {
 function isSprite(value: unknown): boolean {
   if (!isRecord(value)) return false
   if (value.color !== null && typeof value.color !== 'string') return false
-  if (!matches(value.opacity, SPRITE_SPECS.opacity)) return false
+  if (!MEASURED_SPRITE.every(([name, spec]) => matches(value[name], spec))) return false
 
   return isTextureRef(value.map)
 }

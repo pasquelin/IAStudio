@@ -64,6 +64,14 @@ button out of the frame — so it drops back below the title.
 Filtering is **instant**, even on a large project: the whole catalogue is already loaded in memory,
 unlike the Models panel which queries the Scenario catalogue remotely.
 
+> **Search does not ask you for accents.** Typing `foret` finds "Forêt d'hiver", and `ete` finds
+> "Été". The same holds in the **Models** panel, in **Apps** and in the settings search: you search
+> by typing, not by spelling.
+>
+> It applies to files coming from the Finder too. macOS writes names in a form where the accent is
+> a character of its own — invisible to the eye, different to the machine — so an imported asset
+> did not always answer to its own name retyped here. Both forms are now treated as one.
+
 Both views are **virtualised**: only what is actually on screen is drawn. A project with several
 thousand assets therefore scrolls without stutter.
 
@@ -220,7 +228,7 @@ The badge is not stored, it is **recomputed**: it depends on the active account,
 opens onto one project and one only. Switch accounts in the title bar and the badges are read
 again — same file, different library on the other end.
 
-> **Four of those seven badges are out of reach today**, and consistently so: as long as
+> **Three of those seven badges are out of reach today**, and consistently so: as long as
 > transfers are triggered by hand, nothing can change the online version behind your back. "To
 > fetch", "changed on both sides" and "another project" will only appear with automatic syncing,
 > once it exists. The **Location** filter therefore offers only the four states actually
@@ -327,8 +335,9 @@ And it keeps the first that **runs**, not the first that exists: it launches it 
 that is present but broken is treated as missing — see
 [When something goes wrong](16-troubleshooting.md#the-puzzling-case-ffmpeg-is-there-and-the-studio-says-it-is-not).
 
-If none of the three answers, the banner says so: "Video preparation unavailable: no lighter copy,
-no waveform."
+If none of the three answers, an **amber warning triangle** appears on the asset shelf's title
+bar, left of the counter. Hover it, or reach it with the keyboard, and it says: "Video preparation
+unavailable: no lighter copy, no waveform." `Esc` closes the tooltip.
 
 **The import still works.** You only lose comfort: scrubbing through videos will be less smooth,
 and audio tracks will not show their drawing.

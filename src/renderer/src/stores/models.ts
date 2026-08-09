@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ModelFamily } from '@shared/domain/model'
+import type { ModelScope } from '@shared/domain/model'
 import type { FormValues } from '@/helpers/dynamic-form'
 import {
   COLLECTION_PERSIST_VERSION,
@@ -10,19 +10,20 @@ import {
 
 type ModelsState = {
   /**
-   * One choice per family: the panel follows the active workspace, and switching from Image
-   * to Video and back must not lose what was picked on either side.
+   * One choice per scope: the panel follows the active workspace, and switching from Image
+   * to Video and back must not lose what was picked on either side. The graph browses the
+   * whole catalogue, so its choice is filed under `'all'` rather than under a family.
    */
-  selected: Partial<Record<ModelFamily, string>>
+  selected: Partial<Record<ModelScope, string>>
   collection: CollectionState
   /**
-   * Parameters the generator should open on, per family. Set by "regenerate with these" in the
+   * Parameters the generator should open on, per scope. Set by "regenerate with these" in the
    * inspector; kept out of the persisted state, since it belongs to one gesture and not to a
    * preference.
    */
-  preset: Partial<Record<ModelFamily, FormValues>>
+  preset: Partial<Record<ModelScope, FormValues>>
   /**
-   * The family an action asked the generator to open on, when it is not the workspace's own —
+   * The scope an action asked the generator to open on, when it is not the workspace's own —
    * Enlarge reaches for an upscaler. Without it the panel went on showing the image model it
    * already held: the picture the edit had just uploaded never appeared, and Generate would
    * have run the wrong model on it.
@@ -30,11 +31,11 @@ type ModelsState = {
    * A parenthesis, not a preference: it lasts until a model is picked by hand or the user
    * leaves the space — see `connectPreparation`.
    */
-  prepared: ModelFamily | null
+  prepared: ModelScope | null
 
-  select: (family: ModelFamily, modelId: string) => void
+  select: (scope: ModelScope, modelId: string) => void
   /** Picks the model AND the values to open its form on, in one write. */
-  prepare: (family: ModelFamily, modelId: string, params: FormValues) => void
+  prepare: (scope: ModelScope, modelId: string, params: FormValues) => void
   setCollection: (collection: CollectionState) => void
   dropPreparation: () => void
 }
@@ -51,14 +52,14 @@ export const useModels = create<ModelsState>()(
       preset: {},
       prepared: null,
 
-      select: (family, modelId) =>
-        set(state => ({ selected: { ...state.selected, [family]: modelId }, prepared: null })),
+      select: (scope, modelId) =>
+        set(state => ({ selected: { ...state.selected, [scope]: modelId }, prepared: null })),
 
-      prepare: (family, modelId, params) =>
+      prepare: (scope, modelId, params) =>
         set(state => ({
-          selected: { ...state.selected, [family]: modelId },
-          preset: { ...state.preset, [family]: params },
-          prepared: family,
+          selected: { ...state.selected, [scope]: modelId },
+          preset: { ...state.preset, [scope]: params },
+          prepared: scope,
         })),
 
       setCollection: collection => set({ collection }),

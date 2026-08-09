@@ -1,5 +1,5 @@
 import { cn } from '@/helpers/cn'
-import { bound } from '@/helpers/numeric'
+import { bound } from '@shared/numeric'
 import { Readout } from './Readout'
 import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
 

@@ -1,13 +1,19 @@
 import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import type { Asset, AssetCounts, AssetQuery } from '@shared/domain/asset'
-import type { CatalogRequest, CatalogResponse, CatalogResults } from './catalog-protocol'
+import {
+  ABANDONED,
+  type CatalogMessage,
+  type CatalogRequest,
+  type CatalogResponse,
+  type CatalogResults,
+} from './catalog-protocol'
 
 /**
  * The thread, reduced to what the client needs. Injected rather than imported so the protocol
  * can be tested against a real catalogue without spawning anything.
  */
 export type CatalogPort = {
-  postMessage: (request: CatalogRequest) => void
+  postMessage: (message: CatalogMessage) => void
   onMessage: (listener: (response: CatalogResponse) => void) => void
   /** The thread died. Whatever it was asked will never be answered. */
   onFailure: (listener: (error: Error) => void) => void
@@ -27,7 +33,12 @@ export type AsyncCatalog = {
   findByHash: (hash: string) => Promise<Asset | null>
   /** The local row a generated asset landed in, looked up by its Scenario identifier. */
   findByRemoteId: (remoteAssetId: string) => Promise<Asset | null>
-  search: (query: AssetQuery) => Promise<Asset[]>
+  /**
+   * The signal is what an abandoned search costs nothing: the thread skips the ones it has not
+   * begun, and this side stops waiting for the one it may already be running. Rejects with
+   * `ABANDONED`, which a caller must tell from a failure — it is not an empty result.
+   */
+  search: (query: AssetQuery, signal?: AbortSignal) => Promise<Asset[]>
   /** The six totals, counted in SQL — the home asks for them, never for the rows behind them. */
   countByType: () => Promise<AssetCounts>
   remove: (assetId: string) => Promise<void>
@@ -40,6 +51,8 @@ export type AsyncCatalog = {
 type Pending = {
   resolve: (value: CatalogResults[CatalogRequest['op']]) => void
   reject: (error: Error) => void
+  /** Drops the abort listener: a signal outlives the search it was handed to. */
+  release: () => void
 }
 
 export function createCatalogClient(port: CatalogPort): AsyncCatalog {
@@ -51,7 +64,10 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
   const abandon = (reason: string): void => {
     const waiting = [...pending.values()]
     pending.clear()
-    for (const slot of waiting) slot.reject(new Error(reason))
+    for (const slot of waiting) {
+      slot.release()
+      slot.reject(new Error(reason))
+    }
   }
 
   port.onMessage(response => {
@@ -59,6 +75,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     // An answer to a request already settled — by a close, or by a duplicate — is not an error.
     if (!slot) return
     pending.delete(response.id)
+    slot.release()
 
     if (response.ok) slot.resolve(response.value)
     else slot.reject(new Error(response.error))
@@ -71,6 +88,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
 
   const send = <Op extends CatalogRequest['op']>(
     build: (id: number) => Extract<CatalogRequest, { op: Op }>,
+    signal?: AbortSignal,
   ): Promise<CatalogResults[Op]> =>
     new Promise((resolve, reject) => {
       if (closed) {
@@ -78,12 +96,30 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
         return
       }
 
+      // Nothing is sent for a search already given up on before it left.
+      if (signal?.aborted) {
+        reject(new Error(ABANDONED))
+        return
+      }
+
       const id = nextId++
+
+      // Reachable only while the request is still waiting: `release` drops this listener on both
+      // paths that settle one, which is what makes the state a guard here would defend against
+      // impossible. Two tests hold that, one per path.
+      const abort = (): void => {
+        pending.delete(id)
+        port.postMessage({ op: 'abandon', target: id })
+        reject(new Error(ABANDONED))
+      }
+      signal?.addEventListener('abort', abort, { once: true })
+
       // The response type follows the request's `op`, which the union already guarantees; the
       // map cannot carry that link, so the narrowing happens here once rather than per caller.
       pending.set(id, {
         resolve: value => resolve(value as CatalogResults[Op]),
         reject,
+        release: () => signal?.removeEventListener('abort', abort),
       })
       port.postMessage(build(id))
     })
@@ -97,7 +133,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     findByRemoteId: remoteAssetId =>
       send<'findByRemoteId'>(id => ({ id, op: 'findByRemoteId', remoteAssetId })),
 
-    search: query => send<'search'>(id => ({ id, op: 'search', query })),
+    search: (query, signal) => send<'search'>(id => ({ id, op: 'search', query }), signal),
 
     countByType: () => send<'countByType'>(id => ({ id, op: 'countByType' })),
 

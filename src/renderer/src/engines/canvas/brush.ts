@@ -1,4 +1,4 @@
-import { clamp } from '@/helpers/numeric'
+import { clamp } from '@shared/numeric'
 
 /**
  * What the brush, the eraser and the shape stroke are set to. Session state, not document

@@ -106,7 +106,7 @@ describe('DynamicForm', () => {
   it('rolls a new seed on demand', async () => {
     renderForm([field({ key: 'seed', label: 'Seed', kind: 'seed' })])
 
-    const input = screen.getByLabelText(/Seed/)
+    const input = screen.getByLabelText(/Graine/)
     expect(input).toHaveValue(null)
 
     await userEvent.click(screen.getByRole('button', { name: 'Aléatoire' }))
@@ -118,7 +118,7 @@ describe('DynamicForm', () => {
   it('submits a hand-typed seed as a number', async () => {
     const onSubmit = renderForm([field({ key: 'seed', label: 'Seed', kind: 'seed' })])
 
-    await userEvent.type(screen.getByLabelText(/Seed/), '1234')
+    await userEvent.type(screen.getByLabelText(/Graine/), '1234')
     await userEvent.click(screen.getByRole('button', { name: 'Générer' }))
 
     expect(onSubmit).toHaveBeenCalledWith({ seed: 1234 })
@@ -254,13 +254,13 @@ describe('what the model itself wrote', () => {
   it('is left as it came when nobody translated it, rather than showing a key', () => {
     render(
       <DynamicForm
-        fields={[field({ key: 'guidance', label: 'Guidance scale', help: 'Karras sigmas' })]}
+        fields={[field({ key: 'sampler', label: 'Sampler', help: 'Karras sigmas' })]}
         onSubmit={vi.fn()}
         submitLabel="Générer"
       />,
     )
 
-    expect(screen.getByText('Guidance scale')).toBeDefined()
+    expect(screen.getByText('Sampler')).toBeDefined()
     expect(screen.getByText('Karras sigmas')).toBeDefined()
   })
 

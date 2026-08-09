@@ -315,11 +315,12 @@ src/renderer/src/
 démarrage attend.** C’est la seule règle, et elle décide de ce que coûte l’ouverture d’une fenêtre
 vide. Le splash lui-même a son entrée à part, précisément pour ne jamais tirer ce bundle.
 
-Six choses en sont tenues dehors, chacune parce qu’une session ordinaire ne les ouvre pas toutes :
+Sept choses en sont tenues dehors, chacune parce qu’une session ordinaire ne les ouvre pas toutes :
 
 | Ce qui est chargé à la demande | Pourquoi |
 |---|---|
-| Les **six éditeurs** | une session en ouvre un ou deux ; les six pèsent cinq mégaoctets |
+| Les **sept éditeurs** | une session en ouvre un ou deux ; les sept pèsent cinq mégaoctets |
+| Les **quinze panneaux** | un espace en montre trois ou quatre, jamais les quinze |
 | Le **formulaire de génération**, et zod, `react-hook-form`, `@hookform/resolvers` avec lui | on ouvre un générateur, on n’arrive pas dessus |
 | La fenêtre des **Réglages** — son registre, ses sections, son brouillon | une cinquantaine de kilooctets d’une autre fenêtre |
 | La fenêtre des **Licences** | le texte intégral de chaque licence embarquée, que personne ne lit dans une session ordinaire |
@@ -333,17 +334,36 @@ tient — et elle n’attrape que les rendus : ni les gestionnaires d’événem
 rejetées, ni l’évaluation de `main.tsx` lui-même, dont un jet précède la frontière et laisse une
 fenêtre vide qu’aucun React ne voit.
 
-**Un test tient les six lignes**, `eager-graph.test.ts` : il marche le graphe des imports
+**Un test tient les sept lignes**, `eager-graph.test.ts` : il marche le graphe des imports
 statiques depuis `main.tsx` et échoue si l’un d’eux réapparaît. Sans lui, un `import` ajouté sans
 y penser défait le gain sans rien casser de visible — le pire des régressions, celle qui ne se
 voit qu’au chronomètre.
 
-**Les éditeurs sont dehors, leurs voisins pas tout à fait.** Six modules des dossiers `spaces/`
-entrent quand même dans le premier écran, et aucun n’est un éditeur : ce sont des helpers qu’un
-**panneau** va chercher à côté d’un éditeur — `TimelinePanel` tire `TimelineCanvas`, `Channels`
-tire `place-channel` — parce qu’**aucun panneau n’est paresseux**, `app/tool-components.ts` les
-important tous les onze d’un coup. Le test en fait un **budget** : la liste peut rétrécir, jamais
-grandir. Une septième entrée veut dire qu’un panneau est allé chercher plus loin que nécessaire.
+**Les panneaux sont sortis à leur tour**, et c’est ce qui a rétréci la liste des voisins.
+`app/tool-components.ts` les importait tous d’un coup ; il déclare désormais, par panneau, **le
+module à charger et ce que son en-tête fait** — cette seconde moitié est nécessaire, parce que la
+ligne de titre se dispose au premier rendu et qu’un séparateur qui arriverait une frame plus tard
+décalerait une rangée déjà à l’écran. Mesuré sur le même commit des deux côtés, préchargés
+comptés, sans sourcemaps : **2 331 395 → 2 081 385 octets, −250 010, soit −10,7 %.**
+
+> **Un glob sur le dossier supprimerait la copie du nom de chaque panneau, et il a été écrit puis
+> retiré.** `eager-graph.test.ts` marche les imports **statiques** : un glob lui est invisible, et
+> la garde qui surveille précisément cette propriété serait restée verte quoi que le glob fasse au
+> chunk d’entrée. La copie reste, et `tool-components.test.ts` la tient — un `layers` qui
+> nommerait le module des mailles échangerait les deux en silence.
+
+**Il reste deux voisins**, et aucun n’est un éditeur : ce sont des helpers que quelque chose du
+premier écran va chercher à côté d’un éditeur. Ils étaient six ; **quatre sont partis avec les
+panneaux**, puisqu’ils entraient par un panneau et non par le shell. Le test en fait un
+**budget** : la liste peut rétrécir, jamais grandir. Une troisième entrée veut dire que le premier
+écran est allé chercher plus loin que nécessaire.
+
+**Le graphe est le seul espace dont le lecteur n’est pas derrière son éditeur** : `document-io.ts`
+parse un graphe comme il parse les autres genres, donc `engines/graph/serialize.ts` entre. Le
+moteur de mutation et le canvas, eux, restent dehors — `@xyflow/react` n’est jamais dans le chunk
+d’entrée. C’était deux modules de plus jusqu’à ce que l’id de nœud réservé descende dans
+`shared/domain/graph.ts` : un prédicat atteint depuis le lecteur tirait `mutations.ts`, qui tirait
+`connect.ts` et `handles.ts` — la moitié du moteur, pour une comparaison de chaînes.
 
 **Il vise des dossiers, pas des fichiers.** Une garde posée sur quatre fichiers du dossier des
 réglages laisse entrer le cinquième ; c’est ce qui a été corrigé en même temps que les réglages
@@ -627,13 +647,23 @@ pas gratuit.
 
 ### Ce qui est traduit va plus loin que les phrases
 
-Cinq choses passent par les bundles sans en avoir l’air, et chacune répond à un défaut constaté :
+Six choses passent par les bundles sans en avoir l’air, et chacune répond à un défaut constaté :
 
 - **les noms de touches** — `Espace`, `Suppr`, `Début` ne sont pas des libellés anglais laissés en
   place : l’écran des raccourcis les résout comme le reste ;
 - **les unités et les dates** — `formatBytes` calcule une taille mais **ne la nomme pas** : le
   nom de l’unité est fourni par l’appelant, parce que `Mio` et `MiB` sont la même taille dans deux
   langues et que les abréviations avaient fini par vivre en français dans un fichier de calcul ;
+- **les nombres écrits DANS une phrase** — `{{count, number}}` plutôt que `{{count}}` : un millier
+  s’écrit « 4 000 » d’un côté de la Manche et « 4,000 » de l’autre, et l’espace du français est une
+  insécable étroite. Le formateur d’i18next est `Intl.NumberFormat`, rien à configurer. Vingt-sept
+  clés le portent. **L’exception est un facteur, pas un dénombrement** :
+  `texture.tilingPreviewTimes` écrit « 4× », et grouper une répétition serait faux précisément là
+  où le groupement se verrait — `bundles.test.ts` tient la règle **et son exception**. Une **unité
+  créative** ne passe pas non plus par `{{units, number}}` mais par `formatUnits`, qui ne se
+  contente pas de grouper : elle garde deux décimales sous dix unités, parce qu’un appel bon
+  marché arrondi à zéro se lirait **gratuit**. Dix-neuf appelants ; le dernier à l’avoir oubliée
+  écrivait « 1 234 UC » avant la génération et « 1234 UC » après ;
 - **les portées du journal** — une ligne d’activité affiche une phrase, jamais la clé qui la
   désigne ;
 - **la langue du document lui-même** — `document.documentElement.lang` suit la langue choisie.
@@ -642,6 +672,21 @@ Cinq choses passent par les bundles sans en avoir l’air, et chacune répond à
 - **le texte que le modèle écrit** — libellés, descriptions et options du formulaire de
   génération. Voir juste dessous : c’est le seul mécanisme du studio qui ne s’indexe pas sur une
   clé.
+
+### Une largeur fixe est une décision d’internationalisation
+
+**Le français dépasse l’anglais de moitié sur 126 clés du bundle.** Partout où une largeur est
+figée, cet écart devient un libellé coupé **dans une langue seulement** — « Aperçu de la
+répétition » se lisait « Aperçu de la ré… » dans une colonne d’inspecteur de 80 px où
+« Repeat preview » tenait entier.
+
+Le remède n’est pas de raccourcir le libellé fautif : cela traite ce cas-ci et laisse le suivant.
+**Ce qui est tronqué se lit au survol** — `PropertyRow` pose le `title`, et le pose **aussi en
+mode empilé**, là où la colonne ne contraint pourtant rien : un titre qui apparaît et disparaît
+selon la disposition serait une seconde règle à retenir.
+
+Les barres d’outils échappent à la question par construction — `ToolButton` ne montre aucun
+libellé, il en fait une infobulle.
 
 ### Le seul dictionnaire indexé sur du texte, et pourquoi
 
@@ -668,6 +713,33 @@ Trois conséquences, dont une à accepter :
   langue redit le formulaire ouvert au lieu d’attendre que le modèle soit rechargé — et les Apps
   en profitent sans une ligne de plus, leurs champs venant du même endroit. L’invariant 5 est
   intact : rien n’est écrit à la main pour un modèle donné.
+
+**Tout texte distant n’appelle pas ce remède, et prendre le mauvais coûte la garde.** Le rapport
+d’usage affichait « images-generation » et « video » dans une fenêtre française : même symptôme,
+autre outil. Ces valeurs-là sont deux **unions fermées et documentées** — 21 actions dépensières,
+8 genres d’assets, listées par `usages.list` et recopiées dans `shared/domain/usage.ts` — donc
+**une clé de bundle par valeur**, tenue par `bundles.test.ts` comme le sont déjà les canaux PBR et
+les portées du journal. Une action ajoutée par Scenario sans sa ligne fait rougir la garde.
+
+La règle qui départage les deux :
+
+| Le texte distant… | L’outil |
+|---|---|
+| appartient à une **liste fermée** que l’API documente | une clé de bundle par valeur, plus une garde exhaustive |
+| est **écrit librement** et change avec chaque modèle publié | le dictionnaire indexé sur le texte source |
+| est **lu par le code autant que par l’œil** | rien — il sort brut, et c’est délibéré |
+
+Dans les deux premiers cas le repli est **le texte brut de l’API, jamais une clé** : un écran en
+anglais reste lisible, un écran qui affiche `usage.action.images-generation` ne l’est pas.
+
+**La troisième ligne est celle qu’on oublie, et elle casse en silence.** Un port de nœud de
+workflow montre le nom que le workflow lui a donné — celui-là passe par le dictionnaire. Mais un
+port **sans** nom affiche ce qu’il accepte, `image` ou `video`, et **cette chaîne est ce que la
+vérification de connexion compare** : traduite d’un côté de l’arête et pas de l’autre, elle ne dit
+plus si deux ports vont ensemble. `NodePorts.tsx` porte la règle en JSDoc, là où elle se paierait.
+
+C’est le même partage que `name` et `message` dans les gardes de texte en dur : **une chaîne qui
+est aussi une donnée n’est pas un libellé**, et la traduire la casse comme donnée.
 
 ### Quatre gardes, et ce que chacun tient
 

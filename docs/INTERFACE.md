@@ -49,66 +49,42 @@ pas un choix.
 
 ## À faire
 
-### 7. Un panneau Styles dans l’espace Textures
+### 24. L’Explorateur et Apps passent au rail gauche, dans toute l’application
 
-**Demandé le 9 août 2026.** C’est une fonctionnalité, pas un défaut — elle est ici parce qu’elle se
-joue entièrement à l’écran.
+**Décidé le 9 août 2026**, dans la foulée de l’entrée 23 : les deux quittent le rail droit pour
+le gauche, **partout**.
 
-Un panneau qui liste des **styles de rendu prédéfinis** — effet métal, effet plastique, effet bois —
-pour ne pas refaire les mêmes réglages à chaque texture. On en ajoute depuis l’inspecteur, par un
-**petit bouton dans le header, en haut à droite**, comme le panneau Assets, qui enregistre les
-réglages courants. Le nom est **généré automatiquement** et se change dans le panneau Styles par un
-**clic droit → Renommer**, comme dans les applications JetBrains.
+**L’Explorateur y est déjà à moitié, et le code l’avait déjà tranché dans ce sens.** Il porte
+**deux** placements : `left/primary` pour l’accueil, `right/primary` pour les six espaces. Et le
+commentaire de celui de l’accueil dit exactement ceci — « Same panel and same half as in the six
+spaces, **one column over** ». Le déplacement ne fait donc pas qu’obéir : il **réunit les deux
+entrées en une**, et supprime la seule raison qu’avait ce panneau d’exister en double.
 
-**Rien de tout cela n’existe** : aucune notion de preset ni de style de matériau dans `src/` (les
-occurrences de `preset` sont ailleurs — `DynamicForm`, ffmpeg). En revanche, les quatre briques sont
-déjà là et aucune n’est à écrire :
+**Ce que la droite garde**, une fois les deux partis — c’est le vrai enjeu, et il ne se voit pas
+avant de l’écrire :
 
-| Ce qu’il faut | Ce qui existe déjà |
+| Espace | Colonne droite, après |
 |---|---|
-| Ce qu’un style capture | `MaterialSettings` (`engines/texture/texture-state.ts`) — 16 champs, de `color` à `rotation`, plus `DEFAULT_TEXTURE_MATERIAL` gelé |
-| Le bouton dans le header | `AssetBrowserActions.tsx`, `variant="header"` — le motif qu’il cite |
-| Le clic droit → Renommer | `design/ContextMenu.tsx`, et `AssetMenu.tsx` comme exemple |
-| Le renommage lui-même | `LayerRow.tsx` le fait déjà, double-clic sur le nom seul, clé i18n `layers.rename` |
+| Image | `layers` **seul** |
+| Vidéo | `assets` **seul** |
+| Audio | `assets` **seul** |
+| Textures | `channels` seul — deux avec le panneau Styles de l’entrée 7 |
+| 3D | `scene`, `lights`, `meshes` |
+| Skyboxes | `skybox`, `view` |
 
-Le panneau se déclare dans `TOOL_PLACEMENTS` (`shared/domain/tool.ts`), où `channels` occupe déjà
-`zone: 'right', slot: 'primary'` pour l’espace Textures. **Il va dans la colonne de droite** : c’est
-du rendu, pas de la génération.
+L’inspecteur ne bouge pas : il occupe l’autre moitié (`right/secondary`) et reste en bas à
+droite dans les six espaces.
 
-**Les deux questions sont tranchées** — 9 août 2026.
+**Et la gauche passe à quatre panneaux qui prennent leur tour** — `models`, `generator`,
+`explorer`, `apps` — **cinq en Textures** quand Styles arrivera. C’est la contrepartie, et elle
+est à regarder à l’écran : quatre icônes empilées dans un rail, c’est le moment où une colonne
+cesse d’être un endroit qu’on connaît pour devenir une pile qu’on fouille. L’ordre de
+déclaration décide de ce qui s’ouvre par défaut.
 
-**Les styles vivent dans `userData`**, pas dans le projet : ils suivent la machine et servent quel
-que soit le projet ouvert.
-
-**Un style ne porte que des valeurs, jamais de maps.** C’est le rangement dans `userData` qui
-l’impose, pas une préférence : une map est un asset du **catalogue d’un projet**, désigné par un id
-qui n’a pas de sens dans le projet suivant. Les copier plutôt que les référencer ne sauve rien — ce
-sont des images 4K, hors catalogue, hors hash, et le style pèserait des centaines de mégaoctets. Le
-fond de l’affaire est plus simple : **un style dit comment lire les maps de la texture courante, pas
-lesquelles**. C’est ce qui lui permet de s’appliquer à n’importe quelle texture ; un style qui
-apporte ses propres canaux ne s’applique plus, il remplace.
-
-Conséquence à connaître, qui n’est pas un défaut : **une bonne moitié des 16 champs est inerte sans
-la map correspondante** — `roughnessRange` et `metalnessRange` remappent une map, `normalScale` et
-`invertNormalGreen` n’agissent que sur une normale, `heightScale`, `aoIntensity`, `edgeIntensity` de
-même, et `tiling`/`offset`/`rotation` ne décalent rien s’il n’y a rien à décaler. **Ne pas les
-filtrer à l’enregistrement** : un style amputé de ses valeurs inertes deviendrait faux dès que la
-texture se complète.
-
-Deux espaces les lisent, et ils ne lisent pas la même chose :
-
-| Espace | Ce qu’un style y apporte |
-|---|---|
-| **Textures** | les 16 champs de `MaterialSettings` — c’est son domaine |
-| **3D** | `color`, `roughness`, `metalness` seulement — `MaterialDescriptor` (`shared/domain/scene.ts`) n’a que ces trois scalaires, plus ses cinq slots de texture |
-
-Les trois champs communs sont justement ceux qui font l’essentiel d’un « effet métal » ou d’un
-« effet plastique » quand il n’y a pas de maps. Le précédent d’un partage entre les deux inspecteurs
-existe déjà : `EnvironmentSection` leur est commun, et sa JSDoc dit pourquoi.
-
-**Ce qu’il reste à trancher** : `MaterialSettings` ne vit aujourd’hui que dans `engines/texture/`. Un
-style lisible par les deux espaces demande que la forme sérialisée descende dans `shared/domain/` —
-sans quoi le main, qui écrira le fichier de `userData`, ne peut pas la typer.
+> **Deux commentaires deviennent faux le jour où c’est fait** et doivent partir avec le code :
+> « The left column is generation, **and only generation**, in every space » sur `models`, et
+> celui d’`apps` qui explique pourquoi il n’est *pas* à gauche. Une raison écrite pour une
+> décision qui n’est plus prise se lit comme la règle en vigueur.
 
 ### 19. « Apps » ne dit pas ce que le panneau contient
 
@@ -199,7 +175,7 @@ clic dehors. Il n’y a rien à concevoir : il y a à partager.
 fenêtre qui perd le focus. La troisième compte plus qu’il n’y paraît dans un studio : on passe à
 une autre application, on revient, et le volet est toujours là par-dessus le travail.
 
-### 20. Une App n’appartient à aucun espace, et rien ne dit ce qu’elle produit
+### 23. Une App n’appartient à aucun espace, et rien ne dit ce qu’elle produit
 
 **Constaté le 9 août 2026** — « je le vois sur toutes les sections ». C’est exact, et c’est
 entier : `TOOL_PLACEMENTS` déclare `apps` pour `WORKSPACE_IDS`, et `searchApps` ne filtre que
@@ -233,44 +209,152 @@ filtre n’exempte pas d’expliquer — deux manques, dans l’ordre :
 2. **Dire où le résultat est parti**, après. La barre de jobs et le journal savent qu’il est
    arrivé ; ni l’un ni l’autre ne dit dans quelle étagère.
 
-### 18. Le formulaire de génération est en anglais dans une application en français
+### 27. `develop` est rouge par intermittence, et jamais deux fois au même endroit
 
-**Vu le 9 août 2026, capture à l’appui**, sur `HY World - Multi-view to Splat` : le panneau
-s’appelle « Génération », le bouton dit « Générer ~36 UC », et entre les deux tout est en
-anglais — `Images`, `Video`, `SETTINGS`, `Target size`, `Max splat points`, et les trois phrases
-d’explication.
+**Vu le 9 août 2026**, sur quatre exécutions de `pnpm validate` d’affilée. Ce n’est pas un retour
+d’interface au sens strict, et il est ici parce qu’il **fait douter de chaque livraison** : un
+`validate` rouge qu’il faut réexécuter pour croire est un filet qui ne tient plus.
 
-**Ce n’est pas une traduction oubliée : c’est la frontière.** Le châssis appartient au studio et
-il est traduit ; **le contenu du formulaire appartient au modèle Scenario**, qui répond en
-anglais. `labelOf` (`main/scenario/schema.ts:61`) prend `input.label` tel quel, et à défaut
-dérive le nom technique — `numInferenceSteps` devient `Num inference steps`. Le groupe
-(`SETTINGS`) est la valeur brute de l’API, que la légende passe en majuscules. C’est l’invariant
-5 du guide : aucun formulaire écrit à la main, tout vient de `GET /models/{modelId}`.
+| Fichier | Seul | En suite |
+|---|---|---|
+| `settings/ShortcutsSettings.test.tsx` | 15/15, 17 s | jusqu’à 60 s, 2 échecs |
+| `panels/channels/Channels.test.tsx` | 24/24, 12 s | 25 s, 1 échec |
+| `known-keys.i18n.test.ts` | 6/6 | 18 s, 2 échecs |
 
-**Il n’y a donc pas de bug à corriger, et pas non plus de traduction à écrire** : ces libellés
-sont propres à chaque modèle, il y en a des centaines, et de nouveaux arrivent sans préavis. Un
-dictionnaire complet serait faux le lendemain.
+**Le message le dit lui-même** : « Test timed out in 15000ms ». Ce sont des dépassements de
+délai, jamais des assertions fausses — et les fichiers en cause n’ont rien de commun entre eux
+sinon d’être **lents seuls déjà** : dix-sept secondes pour quinze tests, c’est plus que le délai
+accordé à un seul d’entre eux. Sous charge — quatre agents de revue en parallèle, une autre
+session qui compile — ils débordent.
 
-**Mais le mélange est plus visible qu’il n’a besoin de l’être.** Sur cette seule capture, `Video`
-sans accent est écrit à trente pixels de `Vidéo` accentué dans la barre du haut, et `Images` est
-un mot que le français écrit à l’identique — c’est-à-dire que deux des champs ne sont pas
-vraiment en anglais, ils sont juste **non traités**.
+**Deux réponses possibles pour ceux-là** : relever le délai de ces fichiers, ou regarder pourquoi
+un test de réglages met une seconde par assertion. La seconde est la bonne question ; la première
+est ce qui rendra les livraisons lisibles en attendant.
 
-Trois réponses possibles, par coût croissant, aucune tranchée :
+> **Le pire des trois est traité par la seconde réponse** — `55ddf63` (feat/tests-lents), 9 août
+> 2026. `ShortcutsSettings.test.tsx` passe de **26 s à 3 s**, et aucun de ses tests ne dépasse
+> désormais 400 ms. Il ne débordera plus d’un délai de quinze secondes, même sous charge.
+>
+> **La cause n’était pas la lenteur du panneau, c’étaient deux requêtes.** Les deux seuls appels
+> à `getByRole('button', { name })` du fichier coûtaient 5771 et 4419 ms — sur les 18 s de tests.
+> Le panneau rend **171 boutons** (85 commandes × 2, plus la recherche par accord ; les
+> commentaires du fichier disaient 115 depuis deux relectures, c’est corrigé), et `getByRole` avec
+> un nom redérive le nom accessible de chacun. Repère utile pour les autres fichiers : **un rendu
+> complet de ce panneau coûte 230 ms** — la requête était vingt-cinq fois plus chère que le rendu
+> qu’elle interrogeait.
+>
+> **Ce qui a failli être troqué contre la vitesse** : la première version remplaçait les deux
+> `getByRole` par `getByLabelText`, ce qui trouve un `<div>` aussi bien qu’un bouton. La revue l’a
+> reproduit — le contrôle de restauration changé en `role="link"`, **les quinze tests passaient**.
+> Les deux contrôles atteints par leur label déclarent maintenant leur rôle avec `toHaveRole`, qui
+> lit l’élément déjà trouvé au lieu d’en parcourir cent soixante-dix autres.
+>
+> **Les deux autres fichiers ne relèvent pas de ce remède, mesuré plutôt que supposé** :
+> `Channels.test.tsx` a une lenteur diffuse (487 ms au pire, 24 tests, aucun point chaud isolable)
+> et `known-keys.i18n.test.ts` passe **3,6 s à importer** le graphe pour 0,5 s de tests. Pour ces
+> deux-là, relever le délai reste la bonne réponse.
+>
+> **Une piste large a été mesurée puis écartée**, pour qu’on ne la reprenne pas :
+> `configure({ defaultHidden: true })` dans `test-setup.ts` fait gagner **33 %** sur tout le
+> dépôt, parce que le filtre de visibilité de `byRole` appelle `getComputedStyle` sur chaque
+> candidat. Refusé : un bouton `aria-hidden` deviendrait trouvable par `getByRole` dans les
+> quatre cents fichiers — un angle mort permanent, dans un dépôt qui vient de livrer l’entrée 9.
+> Le gain ciblé est de toute façon dix fois meilleur.
 
-1. **Traduire les groupes seulement.** Ils sont peu nombreux et se répètent d’un modèle à l’autre
-   (`SETTINGS`…). Une table avec repli sur la valeur brute, ce qui est déjà la règle du
-   `FieldDescriptor` pour tout ce qu’il ne connaît pas.
-2. **Traduire les clés universelles** — `prompt`, `seed`, `width`, `height`,
-   `numInferenceSteps` — celles que **tous** les modèles portent. Table par `key`, jamais par
-   libellé, et repli sur l’anglais. Le risque est de s’arrêter à mi-chemin : un formulaire moitié
-   traduit se lit plus mal qu’un formulaire qui ne l’est pas.
-3. **Assumer et le dire** — une mention discrète que les paramètres viennent du modèle. Le coût
-   est nul, l’honnêteté est bonne, et ça n’aide personne à lire `Max splat points`.
+**Et il y a pire, mesuré le 9 août à 17 h 25 sur `develop` fusionné.** Un second groupe échoue
+pour une raison qui n’est pas le temps :
 
-> À trancher avec la question de fond : ce vocabulaire est celui du métier, et un praticien de la
-> génération d’images lit `seed` et `guidance scale` en anglais partout ailleurs. Traduire peut
-> desservir autant que servir.
+| Fichier | Ce qu’il dit en suite |
+|---|---|
+| `helpers/tool-registry.test.ts` | `Error: Unknown workspace: graph` |
+| `app/document-io.test.ts` | idem, sur « carries a graph to disk and back » |
+| `panels/models/model-filters.test.ts` | idem, deux tests |
+| `eager-graph.test.ts` | idem |
+
+**Les quatre passent seuls** — 33 tests verts en une seule commande, vérifié. Et `graph` est bien
+déclaré des deux côtés : dans `WORKSPACE_IDS` (`shared/domain/workspace.ts`) et dans les `ICONS`
+de `helpers/workspaces.ts`, que `WORKSPACES` mappe l’un sur l’autre.
+
+Donc ce n’est **pas un délai dépassé et pas une déclaration manquante** : c’est un ordre de
+chargement. `WORKSPACES` est calculé à l’évaluation du module, et quelque chose fait qu’il est
+calculé trop tôt — ou qu’un autre fichier de test a déjà figé une version de ces modules. Le
+suspect à regarder en premier est `eager-graph.test.ts` lui-même : il lit **741 sources** par
+`import.meta.glob` et marche le graphe de modules, ce qu’aucun autre test ne fait.
+
+> **Ce n’est pas un retour d’interface, et c’est la chose la plus urgente du registre.** Le
+> septième espace vient d’être fusionné ; ces quatre fichiers parlent tous de lui. Un `develop`
+> dont le `validate` échoue à des endroits différents à chaque exécution ne dit plus si une
+> livraison est bonne — et c’est le seul filet, puisqu’aucun test ne s’exécute sur l’application
+> lancée.
+
+**Cherché, et voici où ça bloque — 9 août, 18 h 10.** Le second groupe **ne se reproduit pas à
+la demande** : une exécution complète du projet renderer, 286 fichiers et 3431 tests, ne rend
+**aucune** occurrence de `Unknown workspace`. Et rien ne l’a corrigé entre-temps : aucun commit
+postérieur à la fusion du septième espace ne touche `workspaces.ts`, `workspace.ts`,
+`tool-registry.ts` ni `eager-graph.test.ts` — vérifié.
+
+Ce qui distingue les deux exécutions n’est donc pas le code mais **les conditions** : le
+`validate` lance les projets `node` et `renderer` **en parallèle**, et celui qui a échoué tournait
+pendant que quatre agents de revue et d’autres sessions occupaient la machine. Celui qui passe
+n’a lancé que `renderer`, à froid.
+
+**Et c’est ce qui empêche de le corriger aujourd’hui.** La règle du dépôt est le test avant le
+correctif ; sans reproduction, tout correctif serait une supposition — exactement ce que ce
+registre reproche aux entrées qui devinent leur cause. Ce qu’il faudrait pour avancer : faire
+échouer le `validate` **volontairement**, en le relançant sous charge jusqu’à ce qu’il tombe, et
+capturer une trace fraîche. Deux ou trois exécutions de dix minutes, à faire quand la machine
+n’est prise par personne d’autre.
+
+> Une piste à ne pas perdre : la trace du 17 h 25 désignait `tool-registry.ts:97`, ligne qui est
+> **un commentaire** dans le code d’une heure plus tard. Le fichier avait changé pendant que le
+> `validate` tournait. Sur un dépôt où cinq commits tombent en quarante minutes, une trace se lit
+> avec le `git log` de son heure, ou elle envoie chercher au mauvais endroit.
+
+### 29. `Inter` est déclarée comme police de l’interface, et n’est chargée nulle part
+
+**Vu le 9 août 2026.** `--font-sans` nomme `'Inter', system-ui, …` dans `index.css`, mais **aucun
+`@font-face`, aucune dépendance dans `package.json`, aucun lien dans `index.html`** : la pile
+retombe sur `system-ui`, c’est-à-dire une police différente sur chacune des trois plateformes que
+le pipeline empaquette.
+
+**Ce que ça ne casse pas, contrairement à ce qu’on croirait** : les hauteurs de ligne. Le préflight
+Tailwind pose `line-height: 1.5` sur `html`, sans unité, donc calculé sur la taille de chaque
+élément et non sur les métriques de la fonte — vérifié en soldant l’entrée 11. Les boîtes de ligne
+sont identiques partout.
+
+**Ce que ça change quand même** : la chasse et le dessin des lettres, donc la largeur d’un libellé,
+donc le point où un `truncate` coupe. Deux issues, pas trois : embarquer Inter, ou cesser de la
+nommer. La nommer sans la charger est la seule qui mente.
+
+### 30. Une infobulle ne se laisse pas survoler, et c’est devenu gênant
+
+**Vu le 9 août 2026**, en soldant l’entrée 22. `TooltipHost` ne pose pas `clickable`, donc la bulle
+garde le `pointer-events: none` de la feuille de style du cœur, à `offset: 8` de son ancre : aller
+vers elle quitte l’ancre et la referme. C’est l’exigence **« survolable » de WCAG SC 1.4.13 (AA)**.
+
+**C’est préexistant et ça vaut pour toutes les infobulles de l’application** — ce n’est donc pas
+un défaut de l’entrée 22. Il est ici parce que celle-ci **promeut l’infobulle de décoration à
+unique porteuse visuelle d’un message** : quelqu’un qui zoome à 400 % doit balayer la bulle pour
+lire soixante-cinq caractères, et il ne le peut pas.
+
+**L’exigence « écartable » du même critère est réglée** (`globalCloseEvents={{ escape: true }}`,
+livré avec l’entrée 22). Reste `clickable`, qui bascule `pointer-events` sur **toutes** les
+infobulles : à regarder d’un bloc, avec ce que ça fait aux barres flottantes qui en portent.
+
+### 31. L’infobulle de la Lame promet une coupe à la tête de lecture ; elle coupe où on clique
+
+**Trouvé le 9 août 2026** en confrontant le manuel au registre `VIDEO_TOOLS`, et tranché par le
+code, pas par l’écran : `TimelineCanvas.tsx:263` prend le clic, `xToTime(point.x, viewport)`, et
+`splitClip(clipId, at)`. La tête de lecture n’entre nulle part dedans — elle sert à `S`, qui est
+l’autre geste, celui du raccourci.
+
+`videoTools.bladeHint` dit pourtant « Couper un clip à la tête de lecture » / « Cut a clip at the
+playhead », dans les deux bundles. **Les deux manuels disent juste** (« coupe un clip là où vous
+cliquez ») : c’est l’application qui ment, et elle ment sur le seul geste où l’utilisateur choisit
+lui-même l’endroit.
+
+Une ligne dans chaque bundle : « Couper un clip là où l’on clique » / « Cut a clip where you
+click ». Rien d’autre à toucher — la clé n’est lue que par la barre.
 
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
@@ -302,50 +386,6 @@ réponse se trouve.
 > Ne pas confondre les deux états en les réglant : une cellule peut être focalisée sans être
 > sélectionnée, et l’inverse. L’entrée 9 vient justement de séparer ce que ces cellules
 > annoncent ; il s’agit ici de leur faire dire à l’œil ce qu’elles disent déjà au lecteur d’écran.
-
-### 10. Les filtres du journal reviennent à la ligne, et il leur manque « Tout »
-
-**Vu le 9 août 2026, capture à l’appui.** Dans le volet du journal d’activité — celui qu’ouvre
-« 1 échec » en bas à droite — les filtres passent sur deux lignes : `Information / Avertissement /
-Échec | Génération` puis `Import / Bibliothèque / Document`. Et il manque un **premier bouton
-« Tout »**, alias du « rien de sélectionné », pratique à l’usage.
-
-**Le retour à la ligne ne fait pas qu’être laid : il détruit le groupement.** `ActivityList.tsx`
-pose sept boutons dans un `flex-wrap`, avec un `Separator` vertical entre les trois niveaux et les
-quatre sujets. Le `Flyout` fait `w-96` (384 px), les sept libellés français n’y tiennent pas, et la
-coupure tombe **après** le séparateur — les trois sujets de la seconde ligne se retrouvent orphelins
-du trait qui était censé les annoncer. Les deux familles deviennent illisibles comme familles.
-
-Deux rangées **explicites**, une par famille, règlent la mise en forme et la place du « Tout » d’un
-seul geste : le séparateur disparaît au profit de ce qu’il essayait de dire, et chaque rangée reçoit
-son propre « Tout » en tête, sans l’ambiguïté qu’aurait un « Tout » unique posé devant deux familles
-qui se filtrent séparément. Élargir le flyout ne réglerait que la première moitié.
-
-**« Tout » est bien un alias, et l’alias existe déjà** — `ActivityList.tsx:85` : « Nothing selected
-is "everything" ». Le bouton n’ajoute donc aucun état : il vide la sélection de sa famille et
-s’affiche actif quand elle est vide. Le geste existe aussi déjà, mais **seulement quand la liste est
-vide** — `EmptyState` propose `activity.clearFilters`, qui appelle exactement
-`setFilters({ levels: [], topics: [] })`. Aujourd’hui, un filtre trop étroit se défait en le
-défaisant chip par chip, ou en attendant que la liste soit vide pour qu’on vous offre le bouton.
-
-Trois choses qui suivent : `chipSkin` (`design/styles.ts`) porte déjà les deux états et **trois
-surfaces le partagent** — ne pas en dériver une variante locale ; une clé i18n neuve est à poser
-dans les deux bundles ; et `ActivityList.test.tsx` existe.
-
-### 11. La ligne d’état est collée au bord et désalignée du reste
-
-**Même capture.** En bas de fenêtre, `Verif4` à gauche et `1 échec` à droite touchent presque le
-bord — il manque de l’air sous le texte, et la ligne ne s’aligne sur rien.
-
-Ce n’est pas qu’une impression : `Footer.tsx` est en **`h-6 px-3`**, c’est-à-dire 12 px de marge
-horizontale écrits en dur, quand tout ce qui est au-dessus est posé à `--sc-gutter` du bord — **6 px
-en confort, 4 px en compact** (`index.css`). Le fil d’Ariane est donc décalé de 6 px vers l’intérieur
-par rapport à la surface qui le surplombe, et l’écart double en densité compacte. Verticalement, le
-`h-6` ne réserve rien : la ligne s’arrête au pixel du bas de la fenêtre.
-
-C’est le cas d’école de la règle du guide — **pas de pixel en dur là où une gauge existe**. Reprendre
-`--sc-gutter` remet le footer dans le même appareil de mesure que les rails et les panneaux, et le
-suit quand la densité change.
 
 ### 12. L’accueil ne dit pas ce que cliquer va faire — et ça n’ouvre jamais le fichier
 
@@ -623,7 +663,6 @@ correction.
 
 | Ce qui était signalé | Commit |
 |---|---|
-| La croix de fermeture passait **sous** le titre dans les onglets | `La croix est à droite du titre…` |
 | Le champ de recherche des réglages changeait de largeur | idem |
 | Fermer la dernière fenêtre laissait l’application ouverte sans interface | `bcc3f69` (feat/pinceau) |
 | Les barres n’avaient pas toutes la même longueur | idem |
@@ -636,6 +675,186 @@ correction.
 | **(6)** Le double-clic sur un asset ne traversait pas les espaces, et se taisait | `33d31f3` (feat/double-clic) |
 | **(8)** L’étagère à assets n’avait aucun accès clavier, ni sélection multiple | `a98357e` (feat/etagere-clavier) |
 | **(9)** `role="option"` sans `listbox`, et `aria-selected` qui disait « ouvert » | `ea08ce0` (feat/aria-listbox) |
+| **(25)** La croix des onglets passait sous le titre — la règle visait le mauvais nœud | *à commiter* |
+| **(18)** Le formulaire de génération parlait anglais dans une application en français | `e0a07b2` (feat/i18n-schema-api) |
+| **(7)** Aucun moyen de garder un réglage de matière pour la texture suivante | `c3ec714` (feat/styles-textures) |
+| **(10)** Les filtres du journal revenaient à la ligne, orphelinant une famille | `71f3140` (feat/journal-filtres) |
+| **(22)** L’avis « pas de ffmpeg » volait une ligne à l’étagère, trois en colonne | `8bb53b2` (feat/ffmpeg-notice) |
+| **(28)** Les trois boutons de la ligne d’état offraient une cible de 12 × 12 | `53e1b34` (feat/cible-journal) |
+| **(26)** Le focus tombait hors de la liste après un renommage en place | `42c1e50` (feat/focus-renommage) |
+| **(11)** La ligne d’état était collée au bord et alignée sur rien | `d66b811` (feat/ligne-etat) |
+
+
+
+> **L’entrée 26 avait le bon défaut et le mauvais remède**, et les trois repères qu’elle donnait
+> sont faux — vérifiés un par un.
+>
+> Elle annonçait **trois surfaces** : `InlineRename` n’a que **deux** appelants, `LayerRow` et
+> `StyleRow`. Les en-têtes de piste, qu’elle citait, ont leur **propre** `<input autoFocus>`
+> (`TrackHeaders.tsx`) — et la JSDoc du composant se trompe de la même façon, elle se dit écrite
+> « pour la pile de calques et les en-têtes de piste ».
+>
+> Elle demandait d’**ouvrir `focusCell`** : inutile. `CollectionCell` pose `tabIndex` sur **toute**
+> cellule montée, `0` ou `-1` selon qu’elle est le point d’entrée clavier — un `-1` se focalise
+> très bien par script. Le champ retrouve donc sa ligne par un `closest('[tabindex]')`, sans que
+> `Collection` expose quoi que ce soit.
+>
+> **Le remède est allé là où le focus est emprunté**, pas là où il devrait atterrir : c’est
+> `autoFocus` qui le prend, c’est au champ de le rendre. Trois lignes, aucune interface élargie.
+>
+> **Un second chemin, que seule la revue a vu.** Quand une ligne est ajoutée pendant la frappe —
+> ce qu’une génération qui aboutit fait tout le temps — les lignes se remontent à d’autres index
+> et celle qu’on éditait n’existe plus : `isConnected` est faux et le défaut revenait entier. La
+> liste, elle, tient toujours son point d’entrée clavier (`[tabindex="0"]`), et c’est lui qui sert
+> de repli. On ne revient pas sur sa ligne, mais on ne quitte pas la liste. Le test qui existait
+> pour ce cas ne jugeait que le **nom** conservé, jamais le focus.
+>
+> **Ce qui reste ouvert, et qui n’est pas une négligence** : les en-têtes de piste ont le même
+> défaut et ne sont atteints ni par ce correctif ni par celui que l’entrée proposait. Les
+> réparer demande soit de rendre leur `<span>` focalisable — ce qui change le parcours clavier de
+> la timeline —, soit de les faire passer par `InlineRename`, ce qui change leur habillage. C’est
+> une décision de conception, pas une correction : elle revient à l’humain.
+
+> **L’entrée 28 en cachait un troisième.** Elle nommait le journal et les générations ; la mise à
+> jour (`UpdateStatus`) a la même forme, le même défaut, et n’était nommée nulle part. Le gabarit
+> vit donc dans `styles.ts` sous `STATUS_BUTTON`, à côté de `chipSkin`, dont le commentaire décrit
+> exactement ce qui serait arrivé sinon — trois surfaces, la troisième qui dérive.
+>
+> **Le remède que l’entrée proposait aurait défait l’entrée 11.** `--sc-control` sur le bouton est
+> juste, mais seul il emporte la ligne : le pied n’ayant plus de hauteur propre, un bouton de 28 px
+> la fait passer de **29 px à 40** — mesuré à l’écran, puis remesuré en retirant le correctif, pas
+> déduit. Une marge négative d’une gouttière rend au flux ce que la cible prend : le bouton compte
+> alors 16 px, sous les 17 px du fil d’Ariane, qui continue donc de dicter la hauteur.
+>
+> **Le critère est satisfait par la taille, sans exception** : 28 × 28 en confort, 24 × 24 en
+> compact, mesurés. L’exception d’espacement qui les sauvait tenait au hasard de l’écart entre
+> deux voisins.
+>
+> **Un effet de bord vu, mesuré et gardé** : au repos, l’icône du journal n’est plus collée au bord
+> — 14 px au lieu de 6, puisqu’elle se centre dans une cible de 28. C’est le motif du rail, où le
+> bouton s’aligne sur la marge et l’icône se centre dedans. La recoller demanderait de décentrer la
+> cible, donc de cliquer à côté de ce qu’on voit.
+>
+> **Deux choses qui ne sont pas de cette entrée et restent ouvertes** : ces trois boutons n’ont
+> jamais porté `FOCUS_RING` — ils gardent l’anneau natif du système, seule surface du studio dans
+> ce cas ; et la mesure à l’écran s’est faite sur une instance à soi, port 9224 et `--user-data-dir`
+> dédié, ce qui **contourne le verrou d’instance unique** et permet à plusieurs sessions de piloter
+> chacune la sienne. Le MCP `electron` ne parlant qu’au 9222, la mesure est passée par CDP direct
+> (`WebSocket` natif de Node, aucune dépendance) — le script est réutilisable.
+
+> **L’entrée 11 se trompait sur ses DEUX prémisses, et les deux se mesurent.** Elle affirmait que
+> « tout ce qui est au-dessus est posé à `--sc-gutter` du bord » : cette jauge n’est un retrait
+> horizontal de bord de fenêtre **nulle part** dans l’application — ses usages sont l’épaisseur
+> d’une poignée, deux paddings verticaux, une indentation. Les rails sont collés à 0. Ce qui tombe
+> à 6 px, c’est le **bord du bouton** du rail, par l’arithmétique `(48 − 36)/2` — égal à la
+> gouttière en confort, et pas en compact, où il vaut 5 contre 4. D’où **`--sc-rail-inset`**,
+> dérivée de ses deux termes : ceux-ci étant redéclarés en compact, le `calc()` se réévalue seul.
+>
+> Elle affirmait aussi que « le `h-6` ne réserve rien : la ligne s’arrête au pixel du bas ». Il
+> réservait `(24 − 16,5)/2 = 3,75 px` : le préflight Tailwind pose `line-height: 1.5` sur `html`,
+> sans unité, et le CSS compilé montre que `text-[11px]` ne pose **que** `font-size`. L’air passe
+> à 6 px en confort ; **en compact il reste à 4, délibérément** — c’est l’écart de tout le châssis
+> à cette densité. Un plancher `min-h-(--sc-control)`, essayé sur recommandation d’une revue, a
+> été retiré : contenu plus padding vaut 28,5 contre 28, et 24,5 contre 24, il ne mord jamais.
+>
+> Deux revues adverses se sont **contredites** sur la hauteur de boîte de ligne (13 px contre
+> 16,5). C’est le CSS compilé qui a tranché, pas l’arbitrage.
+
+> **L’entrée 22 a été corrigée quatre fois après `/simplify`, qui n’avait rien vu.** L’avis
+> devient un triangle d’alerte dans la ligne de titre — `AssetBrowserActions` étant le `children`
+> de `PanelHeader`, le même geste couvre la bande **et** la colonne, `ToolWindow` montant les
+> actions inconditionnellement. Au passage, **le registre situait mal le `!lying`** : il est dans
+> `AssetBrowser.tsx`, pas dans `AssetBrowserActions`, qui fait `lying &&`.
+>
+> Ce que les deux agents ont trouvé : l’infobulle s’ouvrait **vers le haut**, donc hors du panneau,
+> alors que tous les en-têtes du dépôt utilisent `TIP_BOTTOM` ; le glyphe faisait 16 px au milieu
+> de voisins à 14 (`ToolButton variant="header"` rend `iconSize ?? 14`) ; l’icône était peinte en
+> `muted`, qui est ici le ton des états **réglés** (`AssetBadge`, `ProgressRow`) ; et le message
+> n’avait **aucun canal hors pointeur** alors qu’il était permanent avant — WCAG 2.1.1.
+> `react-tooltip` écoute déjà le focus, l’ancre ne le recevait jamais. `TooltipHost` ferme
+> désormais sur Échap.
+>
+> **Les deux manuels décrivaient un bandeau disparu**, dans les deux langues, et le dépannage
+> prenait la phrase pour un titre de section. Aucun test ne garde ce lien : `validate` serait
+> resté vert sur une documentation devenue fausse.
+
+> **L’entrée 10 avait raison sur la cause, et c’est assez rare ici pour le dire.** Le calcul la
+> confirme : 376 px utiles dans le volet, ≈600 px de puces, et le cumul atteint 351 px juste
+> **après** `Génération` — exactement la coupure décrite. Rien à rechercher.
+>
+> **Ce qu’elle ne disait pas, et qui change la portée du correctif** : le `Separator` est
+> `aria-hidden` — « Decorative, hence hidden from assistive tech ». Le groupement que le retour à
+> la ligne venait de détruire à l’œil **n’avait jamais existé** pour un lecteur d’écran. Les deux
+> rangées sont donc des `role="group"` **nommés**, ce qui n’était pas demandé et qui coûte deux
+> clés de plus : sans nom, les deux boutons « Tout » seraient rigoureusement indistinguables dans
+> l’arbre d’accessibilité, même libellé et même rôle.
+>
+> **`flex-wrap` est conservé À L’INTÉRIEUR de chaque rangée, délibérément.** La largeur des puces
+> suit la langue — « Échec » n’est pas « Failure » — donc aucune largeur de volet ne garantit une
+> ligne. Ce qui est garanti, c’est qu’un débordement reste désormais **dans** sa famille au lieu
+> de la couper en deux. C’est pour ça qu’élargir `w-96` n’aurait pas été le correctif, et pas
+> seulement parce que ça n’aurait réglé « que la première moitié ».
+>
+> **Un cas de bord tranché, à ne pas rouvrir comme un défaut** : cocher les trois niveaux un par
+> un laisse « Tout » éteint, alors que `matchesActivity` ne filtre alors plus rien. C’est voulu.
+> « Tout » ne dit pas « rien n’est caché », il dit « aucun filtre n’est posé » — et trois filtres
+> dont l’union couvre tout restent trois filtres. Les allumer ensemble donnerait quatre boutons
+> actifs pour un seul état.
+>
+> **Et une trouvaille hors périmètre, qui sert l’entrée 21** : `Flyout` pose `role="menu"` sur son
+> conteneur alors qu’il héberge des `role="group"` et des `<ul>`, et il n’implémente ni `Échap`,
+> ni piège de focus, ni navigation aux flèches. L’entrée 21 ne parle que de la fermeture au clic à
+> côté ; le rôle est à corriger dans le même geste, sous peine de laisser un menu qui n’en est pas
+> un.
+
+> **L’entrée 7 s’est faite dans le sens qu’elle demandait, mais pas avec la carte qu’elle
+> donnait.** Trois de ses repères étaient faux, et chacun a coûté un détour.
+>
+> `MaterialSettings` a **quinze** champs, pas seize — l’entrée le disait trois fois. Le renommage
+> n’était pas « ce que fait `LayerRow` » mais un composant déjà partagé, `InlineRename`. Et
+> surtout, **l’inspecteur n’est pas le panneau Assets qu’elle citait en exemple** : Assets a un
+> contenu, l’inspecteur en a huit — un calque, un clip, une piste, un asset, une scène, une
+> texture. Un bouton posé sans condition dans son en-tête aurait proposé d’enregistrer un
+> matériau pendant qu’un clip vidéo remplissait le panneau au-dessous. « Quelle face est
+> dessinée » devient `inspectedTextureId`, que `Face` lit aussi : deux réponses à cette question
+> auraient fini par se contredire.
+>
+> **Les deux décisions du 9 août tiennent telles quelles.** Les styles vivent dans `userData`, et
+> un style ne porte que des valeurs. Rien n’est filtré à l’enregistrement, y compris ce qui est
+> inerte sans la map correspondante — vérifié sur le fichier écrit : quinze champs, aucune map.
+>
+> **Ce que la revue a trouvé et que `/simplify` avait manqué**, une fois de plus. Le nom généré
+> pouvait être un doublon : le bouton vit dans l’inspecteur, que le panneau n’a pas besoin d’avoir
+> été ouvert pour, si bien que « Style 1 » repartait par-dessus un fichier qui en tenait déjà un —
+> la collision même que `nextStyleName` disait éviter, qu’il évitait dans la liste qu’on lui
+> donnait, et qu’on lui donnait vide. Une lecture en vol écrasait une écriture plus récente. Et
+> **renommer ou supprimer étaient cent pour cent souris** : un `contextmenu` déclenché par
+> Shift+F10 cible la cellule focalisée, jamais le `div` qui écoute à l’intérieur d’elle — un
+> événement ne descend pas dans ses propres descendants. La ligne porte désormais un bouton de
+> menu, comme celle d’un calque.
+>
+> **Deux corrections ont débordé sur du code partagé, et c’est tant mieux.** `InlineRename`
+> commitait deux fois sur Entrée — le renommage étant asynchrone, le nom à l’écran est encore
+> l’ancien quand le champ est démonté, donc la garde « abandonné en cours de frappe » répondait
+> vrai ; les calques faisaient deux écritures depuis toujours. Et le fichier de transit renommé à
+> sa place était écrit **trois fois** — notes de jobs, favoris, styles — le code le disant
+> lui-même deux fois au lieu de l’enlever.
+>
+> **Reste à faire, et c’est un lot à part** : la 3D, où un style n’apporte que `color`,
+> `roughness` et `metalness` — les trois scalaires de `MaterialDescriptor`.
+
+> **L’entrée 18 s’est réglée autrement que les trois pistes qu’elle proposait.** Aucune n’a été
+> prise : le dictionnaire (`src/shared/i18n/model-text.fr.json`) s’indexe sur **le texte anglais**
+> et non sur la `key` du champ, parce que la moitié de ce que le panneau montre est une phrase
+> écrite par le modèle, pas un nom de champ — indexer sur la clé aurait traduit « Max splat
+> points » en laissant sa description anglaise juste dessous. La contrepartie est assumée : un
+> libellé changé côté Scenario retombe en anglais au lieu d’échouer.
+>
+> **Et la question de fond a été tranchée par une vérification, pas par un arbitrage** : l’API
+> Scenario ne connaît aucune langue — ni `Accept-Language`, ni paramètre de locale dans
+> `models.retrieve`, rien dans le SDK, vérifié sur les 210 pages de `docs/scenario-api/`. Ce texte
+> est donc traduit dans le studio ou nulle part. C’est le premier bundle du dépôt dont les clés
+> sont de l’anglais, et `CLAUDE.md` nomme désormais l’exception.
 
 > **L’entrée 8 cachait un défaut plus gênant que le clavier.** La ligne s’était approprié les deux
 > gestes — `DraggableAsset` sélectionnait au `pointerdown`, ouvrait au double-clic — d’où des
@@ -722,8 +941,8 @@ correction.
 > `stores/skybox-views`, le panneau « Vue » les offre, et le centre ne porte plus que la barre
 > d’outils et les règles. Un seul espace était concerné — vérifié : Vidéo et Audio ont bien une
 > rangée horizontale, mais c’est une barre de transport, un outil et non un menu. **Les trois vues
-> mortes du skybox restent mortes** (§ 3.5 de `REPRISE`) : le déplacement ne les a ni réparées ni
-> aggravées.
+> mortes du skybox restaient mortes** au moment de ce lot — le déplacement ne les avait ni réparées
+> ni aggravées ; elles ont été branchées depuis, par `feat/skybox-vues` (§ 3.5 de `REPRISE`).
 
 > **L’entrée 3 est close et verrouillée.** Les `gap-1.5` sont laissés tels quels, délibérément : ils
 > sont déjà plus larges qu’un, et quelques rangées denses reposent sur ce demi-cran. Un test
@@ -794,7 +1013,6 @@ deux fois et qu’aucune des deux versions ne devienne fausse.
 - **La garde manquante sur le format des signatures du registre** (`'P'` au lieu de `'KeyP'`) — § 3.2.
 - **⌘Z se fragmente quand une génération aboutit pendant un glissement** — § 3.6. La ligne fautive
   sert les six espaces : ce n’est pas un rustinage local.
-- **Les trois vues mortes de l’espace Skybox** — § 3.5. Manque fonctionnel ; l’entrée 1 le croise.
 - **La croix de fermeture d’onglet** — § 3.1. Celle de Dockview est masquée **délibérément** (elle
   retire un panneau, ce qui n’est pas fermer un document). Ne pas « réparer » ce masquage.
 - **`app/**` et `panels/**` ne sont sous aucun budget de couverture** — § 3.1.

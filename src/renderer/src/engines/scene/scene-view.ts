@@ -1,11 +1,13 @@
 import {
+  Box3,
   LineSegments,
   Mesh,
+  Vector3,
   WireframeGeometry,
   type Material,
   type Object3D,
-  type Vector3,
 } from 'three'
+import { centreOf } from './pivot'
 
 /**
  * How a scene is being looked at, and drawn. Session state, like an image document's zoom: it is
@@ -157,3 +159,46 @@ export function applyWireOverlay(object: Object3D, on: boolean, material: Materi
     mesh.add(edges)
   }
 }
+
+/**
+ * How far a camera has to stand for something that size to fill its view, plus a margin so the
+ * edges are not flush against the frame.
+ *
+ * A constant step framed a studio primitive and stood *inside* a fifty-unit model. That went
+ * unseen while an orthographic frustum ignored the move altogether — and became the whole of what
+ * framing does the moment it stopped ignoring it.
+ */
+export function framingDistance(halfSize: number, fieldOfView: number): number {
+  return (
+    (Math.max(halfSize, MIN_FRAMED_HALF) / Math.tan((fieldOfView * Math.PI) / 360)) * FRAME_MARGIN
+  )
+}
+
+/** A point light and an empty group have no size at all, and would otherwise ask for distance nil. */
+const MIN_FRAMED_HALF = 0.5
+
+const FRAME_MARGIN = 1.2
+
+/** Where to stand, and what to look at, so a selection fills the view. */
+export type Framing = { target: Vector3; position: Vector3 }
+
+/**
+ * The whole of what framing decides. Its own function because `frameSelection` needs mounted orbit
+ * controls, which jsdom cannot give — leaving the decision inside it left it measured by nothing.
+ */
+export function framingPlacement(objects: readonly Object3D[], fieldOfView: number): Framing {
+  const bounds = new Box3()
+  for (const object of objects) bounds.expandByObject(object)
+
+  // A selection of lights and empty groups encloses no box at all, and their placements still
+  // average to somewhere worth looking at.
+  const empty = bounds.isEmpty()
+  const target = empty ? centreOf(objects, new Vector3()) : bounds.getCenter(new Vector3())
+  const size = empty ? new Vector3() : bounds.getSize(new Vector3())
+  const distance = framingDistance(Math.max(size.x, size.y, size.z) / 2, fieldOfView)
+
+  return { target, position: target.clone().addScaledVector(FRAME_FROM, distance) }
+}
+
+/** Where framing stands from what it frames — the studio's three-quarter view, distance apart. */
+const FRAME_FROM = new Vector3(4, 4, 4).normalize()

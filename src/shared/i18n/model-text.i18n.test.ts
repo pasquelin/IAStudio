@@ -3,21 +3,19 @@ import fr from './model-text.fr.json'
 import { normalizeModelText, translateModelText } from './model-text'
 
 /**
- * The words the dictionary deliberately does not hold. A practitioner reads `seed` and
- * `guidance scale` in English in every other tool of the craft, and a French `graine` would
- * cost more than it gives. Held here so that translating one later is a decision somebody took
- * against a failing test, rather than an entry nobody weighed.
+ * The words the dictionary deliberately does not hold, because the studio says them in English
+ * everywhere else too. That last clause is the test, and it has emptied this list twice:
+ * `seed` left it when `inspector.seed` turned out to say « Graine », then `negative prompt`
+ * and `guidance scale` when the manual's glossary turned out to name them « Prompt négatif »
+ * and « Guidage ». What stays is what the studio has never named in French anywhere — no
+ * glossary entry, no bundle key. The usage decides, never the argument about the trade.
  */
 const KEPT_IN_ENGLISH = [
-  'seed',
-  'guidance scale',
-  'cfg scale',
   'sampler',
   'scheduler',
   'lora',
   'checkpoint',
   'prompt',
-  'negative prompt',
   'clip skip',
   'denoising strength',
 ]
@@ -104,5 +102,43 @@ describe('the French of the model texts', () => {
 
   it('holds the words the generation panel shows on a model of every kind', () => {
     expect(entries.length).toBeGreaterThan(20)
+  })
+})
+
+/**
+ * The word this dictionary was written to keep in English, and no longer does. `inspector.seed`
+ * and `skybox.seed` had said « Graine » all along: the generation form was the one surface
+ * where the same notion answered to another name.
+ */
+describe('a word the studio already had its own name for', () => {
+  it('says it the way the rest of the studio does', () => {
+    expect(translateModelText('Seed', 'fr')).toBe('Graine')
+    expect(translateModelText('seed', 'fr')).toBe('Graine')
+  })
+
+  it('leaves it alone in English, where the model already speaks the language', () => {
+    expect(translateModelText('Seed', 'en')).toBe('Seed')
+  })
+})
+
+/**
+ * The manual's glossary is a source of vocabulary in its own right, and for these two it is the
+ * only one: no surface of the studio's own shows a negative prompt or a guidance scale, so no
+ * bundle key names them — they reach the screen through a model's form and nowhere else.
+ */
+describe('the words only the glossary had named', () => {
+  it('says a negative prompt the way the glossary does', () => {
+    expect(translateModelText('Negative prompt', 'fr')).toBe('Prompt négatif')
+  })
+
+  // The glossary entry « Guidage » carries both senses on purpose: ControlNet, and cfg.
+  it('says a guidance scale the way the glossary does', () => {
+    expect(translateModelText('Guidance scale', 'fr')).toBe('Échelle de guidage')
+    expect(translateModelText('CFG scale', 'fr')).toBe('Échelle de guidage')
+  })
+
+  it('leaves what the studio has never named in French', () => {
+    expect(translateModelText('Sampler', 'fr')).toBe('Sampler')
+    expect(translateModelText('Denoising strength', 'fr')).toBe('Denoising strength')
   })
 })

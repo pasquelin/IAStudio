@@ -290,6 +290,10 @@ the line away once it is finished.
 
 ### "Video preparation unavailable: no lighter copy, no waveform."
 
+**Where it shows.** On an amber warning triangle, on the asset shelf's title bar: hover it, or
+reach it with the keyboard. The same state is written out in full, and permanently, in
+**Settings ▸ Media**.
+
 **What it means.** No usable ffmpeg was found — not even the one the application carries.
 
 **What still works.** The import itself. Your file is in the project, it plays, it edits.
@@ -445,7 +449,7 @@ which is far more pleasant than a jerky slide.
 
 ### "I lost my work when I closed a tab"
 
-**This is not supposed to be possible any more.** All six document kinds save, and closing a tab
+**This is not supposed to be possible any more.** All document kinds save, and closing a tab
 whose work is not written asks first: *Save*, *Don't save*, *Cancel*.
 
 **If no question came up**, the document was clean — no dot (`•`) beside its name. Two known

@@ -109,6 +109,13 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       unpin: () => Promise.resolve([]),
       ...overrides.favorites,
     },
+    styles: {
+      list: () => Promise.resolve([]),
+      save: () => Promise.resolve([]),
+      rename: () => Promise.resolve([]),
+      remove: () => Promise.resolve([]),
+      ...overrides.styles,
+    },
     activity: {
       read: () => Promise.resolve([]),
       onEntries: () => () => {},
@@ -117,6 +124,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     scene: {
       export: () => Promise.resolve(null),
       ...overrides.scene,
+    },
+    texture: {
+      export: () => Promise.resolve(null),
+      ...overrides.texture,
     },
     // A test machine's installed faces are not the studio's business: the list is empty unless
     // a case says otherwise, so nothing under test depends on what happens to be on the disk.
@@ -149,6 +160,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onCommand: noSubscription,
       onSceneAdd: noSubscription,
       onSceneExport: noSubscription,
+      onTextureExport: noSubscription,
       ...overrides.menu,
     },
     updates: {

@@ -76,10 +76,18 @@ In the right column, under the Skybox panel. Two sections.
 | Control | What it does |
 |---|---|
 | **360°** | the immersive view — you are inside the sky |
-| **Equirect** | the image laid flat *(not wired up yet)* |
-| **Cross** | the six faces unfolded as a cross *(not wired up yet)* |
-| **6 faces** | the six faces side by side *(not wired up yet)* |
-| **Field of view** | from 50° to 110°, 75° by default |
+| **Equirect** | the image laid flat, as it is stored — twice as wide as it is tall |
+| **Cross** | the six faces unfolded as a cross, on a 4 × 3 grid |
+| **6 faces** | the same six faces packed 3 × 2 — the cross spends half its cells on nothing, this one spends none, so a face is inspected at nearly twice the size |
+| **Field of view** | from 50° to 110°, 75° by default — **only affects the 360° view** |
+
+> **The three flat views are not pictures built on the side**: every pixel of the frame asks the
+> question backwards — which direction of the sky is this, and where does it land in the source.
+> So the sky they show is exactly the one of the immersive view, at the same rotation.
+>
+> They **letterbox their picture** rather than stretching it, and while one of them is in front the
+> backdrop and the test objects go dark: they would sit behind the picture, and the immersive sky
+> showing through the bars would read as part of what is being judged.
 
 **Helpers**
 
@@ -178,7 +186,6 @@ place. Two ways to carry on:
 
 ## What is still missing
 
-- **three views out of four** — Equirect, Cross and 6 faces are buttons that draw nothing yet;
 - **the Regenerate and Reset buttons** — announced in the translations, never placed in the panel;
 - **export** — you cannot yet write the six faces of a cube, nor an HDRI usable elsewhere;
 - **importing a `.hdr`** — the studio only imports ordinary images. An imported `.exr` is catalogued

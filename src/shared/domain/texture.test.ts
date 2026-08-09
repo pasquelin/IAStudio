@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   channelFromScenarioType,
+  seamVerdict,
   CHANNEL_BY_SCENARIO_TYPE,
   isPbrChannel,
   PBR_CHANNELS,
@@ -73,5 +74,26 @@ describe('channelFromScenarioType', () => {
     for (const source of Object.values(CHANNEL_BY_SCENARIO_TYPE)) {
       expect(isPbrChannel(source.channel)).toBe(true)
     }
+  })
+})
+
+/**
+ * The scale is of the picture's own grain, not of anything absolute: a wrap no worse than the
+ * detail already there cannot be seen, and one twice as strong is what the eye lands on first.
+ */
+describe('reading a seam ratio in words', () => {
+  it('calls a wrap no worse than the grain no seam at all', () => {
+    expect(seamVerdict(0)).toBe('none')
+    expect(seamVerdict(1.19)).toBe('none')
+  })
+
+  it('calls a wrap above the grain a faint one', () => {
+    expect(seamVerdict(1.2)).toBe('faint')
+    expect(seamVerdict(1.99)).toBe('faint')
+  })
+
+  it('calls a wrap twice the grain a visible one', () => {
+    expect(seamVerdict(2)).toBe('visible')
+    expect(seamVerdict(10)).toBe('visible')
   })
 })

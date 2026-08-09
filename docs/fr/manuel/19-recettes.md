@@ -113,8 +113,10 @@ de lumière.
 Ensuite, **cliquez et glissez** dans l’aperçu pour tourner la tête, et servez-vous du panneau
 **Skybox**, à droite, pour régler l’exposition et la rotation.
 
-**Le piège.** Trois des quatre boutons de vue — équirectangulaire, croix, faces — ne dessinent
-rien encore. Seule la vue 360 fonctionne.
+**Pour vérifier ce que vous livrez**, passez par les trois autres vues — équirectangulaire, croix,
+6 faces. Elles montrent le même ciel, à la même rotation, mais à plat : une couture au dos ou un
+pôle écrasé s’y voient d’un coup d’œil, alors que la vue 360 demande de tourner la tête pour
+tomber dessus.
 
 ---
 

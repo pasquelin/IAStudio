@@ -65,9 +65,14 @@ La langue de tous les textes de l’application : menus, boutons, messages.
 
 | Valeur | Effet |
 |---|---|
-| **Système** | reprend la langue de votre ordinateur |
+| **Système** | reprend la langue de votre ordinateur — **anglais** si ce n’est ni le français ni l’anglais |
 | **Français** | français |
 | **English** | anglais |
+
+> **Une machine en allemand, en espagnol ou en japonais ouvre le studio en anglais**, pas en
+> français. C’est délibéré : quelqu’un dont l’ordinateur parle une troisième langue lit plus
+> probablement l’anglais, et le lui refuser reviendrait à lui faire chercher ce réglage dans une
+> fenêtre écrite en français.
 
 Chaque langue s’écrit dans sa propre langue — « Français » reste « Français » même sur un écran en
 anglais. C’est volontaire : on reconnaît sa langue avant de savoir lire celle de l’écran.
@@ -81,9 +86,16 @@ vous écrivez dedans : un prompt écrit en anglais reste en anglais.
 > qu’il ne connaît pas encore reste donc **en anglais** plutôt que de disparaître, et un modèle
 > publié demain arrive dans sa langue d’origine.
 >
-> **Certains mots restent en anglais exprès** : `seed`, `guidance scale`, `sampler`, `CFG`. Ce
-> sont les termes du métier, et ils s’écrivent ainsi dans tous les outils de génération d’images
-> — les traduire vous ferait chercher deux fois.
+> **Sept mots restent en anglais exprès** : `sampler`, `scheduler`, `LoRA`, `checkpoint`,
+> `prompt`, `clip skip`, `denoising strength`. La règle n’est pas « c’est le terme du métier » —
+> elle est plus simple à vérifier : **ne reste en anglais que ce que le studio ne nomme en
+> français nulle part**, ni dans une de ses surfaces, ni dans le [glossaire](17-glossaire.md).
+>
+> La liste s’est vidée deux fois en appliquant cette règle. `seed` en est parti parce que
+> l’inspecteur et le panneau Skybox disaient « Graine » depuis longtemps ; `guidance scale` et
+> `negative prompt` parce que le glossaire, lui, les nommait — « Guidage » et « Prompt négatif ».
+> Le formulaire était à chaque fois la seule surface à refuser le mot que le reste du studio
+> emploie.
 
 ### À l’ouverture
 
@@ -326,6 +338,22 @@ voit.
 > exactement pourquoi ce réglage existe : décochez-le, et plus rien ne part de lui-même. Le
 > nommage travaille en lots, sous une file bornée, et chaque résultat prend sa ligne dans le
 > journal d’activité.
+
+**Ce qui compte comme « sans nom utile »**, et rien d’autre :
+
+| Ce que le studio décrit | Exemples |
+|---|---|
+| un nom vide, ou un préfixe d’appareil suivi d’un numéro | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
+| les noms que donnent les systèmes, dans les deux langues | `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image`, `Untitled`, `Download` |
+| une capture d’écran **suivie de son horodatage ou de son numéro** | `Capture d’écran 2026-08-09 à 10.30.45`, `Screenshot (3)` |
+
+**Un nom que vous avez choisi n’est jamais décrit**, même s’il commence par les mêmes mots :
+`Capture d’écran du menu principal` reste tel quel. Le studio ne paie pas pour remplacer un nom
+que quelqu’un a pris la peine d’écrire.
+
+Les accents ne changent rien à cette reconnaissance : `Capture d'écran` et `Capture d’écran`
+sont traités pareil, y compris sous la forme particulière que macOS écrit dans ses noms de
+fichiers.
 
 ### Tentatives maximum
 
@@ -612,6 +640,7 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 |---|---|---|---|
 | Général | Langue | Système | Système, Français, English |
 | Général | À l’ouverture | Rouvrir le dernier projet | — |
+| Général | Afficher l’accueil | activé | — |
 | Apparence | Thème | Sombre | Sombre, Clair, Système |
 | Apparence | Densité | Confort | Confort, Compact |
 | Apparence | Couleur d’accent | celle du thème | — |

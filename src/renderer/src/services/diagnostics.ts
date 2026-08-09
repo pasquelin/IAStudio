@@ -29,6 +29,12 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // A drop is a gesture: dropping the same cloud picture twice must say so twice, which is the
   // very defect `feat/documents-erreurs` fixed for the others.
   'texture.channel',
+  // And so is pressing Measure: the second press happens precisely because the first said
+  // nothing, and a silent button is how a measurement that keeps failing looks like one that ran.
+  'texture.seam',
+  // Picking a row of the export menu is one as well, and it is the same row twice that says the
+  // first attempt failed — silenced, a second try looks exactly like a dialog somebody dismissed.
+  'texture.export',
 ])
 
 /**

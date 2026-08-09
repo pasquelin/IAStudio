@@ -15,6 +15,7 @@ import {
   type LogEntry,
   type SceneAddRequest,
   type SceneExportCommand,
+  type TextureExportCommand,
   type StudioBridge,
   type ToolRequest,
   type Unsubscribe,
@@ -113,12 +114,21 @@ const bridge: StudioBridge = {
     pin: assetId => ipcRenderer.invoke(CHANNELS.favoritesPin, assetId),
     unpin: id => ipcRenderer.invoke(CHANNELS.favoritesUnpin, id),
   },
+  styles: {
+    list: () => ipcRenderer.invoke(CHANNELS.stylesList),
+    save: style => ipcRenderer.invoke(CHANNELS.stylesSave, style),
+    rename: (id, name) => ipcRenderer.invoke(CHANNELS.stylesRename, id, name),
+    remove: id => ipcRenderer.invoke(CHANNELS.stylesRemove, id),
+  },
   activity: {
     read: query => ipcRenderer.invoke(CHANNELS.activityRead, query),
     onEntries: callback => subscribe<readonly ActivityEntry[]>(EVENTS.activity, callback),
   },
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),
+  },
+  texture: {
+    export: request => ipcRenderer.invoke(CHANNELS.textureExport, request),
   },
   fonts: {
     list: () => ipcRenderer.invoke(CHANNELS.fontsList),
@@ -142,6 +152,7 @@ const bridge: StudioBridge = {
     onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
+    onTextureExport: callback => subscribe<TextureExportCommand>(EVENTS.textureExport, callback),
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),

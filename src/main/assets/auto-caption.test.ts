@@ -31,6 +31,39 @@ describe('worthCaptioning', () => {
     expect(worthCaptioning(asset({ name: 'hero shot 3' }))).toBe(false)
   })
 
+  /**
+   * The names an operating system actually writes, rather than the bare word. Neither macOS nor
+   * Windows stops at `Screenshot`: both append the moment it was taken, and both say it in the
+   * language they are set to. A studio that captions an English user's screenshot and not a
+   * French one's is a studio whose feature depends on the OS language.
+   */
+  it('takes a screenshot named the way an OS names it, in either language', () => {
+    const shots = [
+      'Screenshot 2026-08-09 at 10.30.45',
+      'Screen Shot 2026-08-09 at 10.30.45',
+      'Capture d’écran 2026-08-09 à 10.30.45',
+      "Capture d'écran 2026-08-09 à 10.30.45",
+      'Capture d’écran (3)',
+      'Screenshot (3)',
+    ]
+
+    for (const name of shots) expect(worthCaptioning(asset({ name })), name).toBe(true)
+  })
+
+  it('takes the other names an OS hands out in French', () => {
+    const names = ['Sans titre', 'Sans titre 2', 'Téléchargement', 'Image collée']
+
+    for (const name of names) expect(worthCaptioning(asset({ name })), name).toBe(true)
+  })
+
+  // The words above are only uninformative where the OS put them: a caption someone wrote
+  // around one is a caption, and paying to replace it would be paying to lose it.
+  it('leaves those same words alone once a sentence carries them', () => {
+    const chosen = ['Capture d’écran du menu principal', 'Screenshot of the main menu']
+
+    for (const name of chosen) expect(worthCaptioning(asset({ name })), name).toBe(false)
+  })
+
   // Captioning takes an asset id: one that never reached the library has none.
   it('skips what the API cannot see', () => {
     expect(worthCaptioning(asset({ remoteAssetId: undefined }))).toBe(false)

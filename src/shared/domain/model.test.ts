@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { FAMILY_TAGS, MODEL_FAMILIES, TAGS_BY_FAMILY, tagOfFamily } from './model'
+import {
+  ALL_FAMILIES,
+  FAMILY_TAGS,
+  MODEL_FAMILIES,
+  scopeOf,
+  TAGS_BY_FAMILY,
+  tagOfFamily,
+} from './model'
 
 describe('the tags that name a family', () => {
   it('names a family that exists, and each one at most once', () => {
@@ -24,5 +31,23 @@ describe('the tags that name a family', () => {
   it('answers the tag of a family that has one, and nothing for the others', () => {
     expect(tagOfFamily('upscale')).toBe('image-upscale')
     expect(tagOfFamily('image')).toBeUndefined()
+  })
+})
+
+describe('the scope a surface browses by', () => {
+  it('is the family itself wherever there is one', () => {
+    for (const family of MODEL_FAMILIES) expect(scopeOf(family)).toBe(family)
+  })
+
+  it('stands in for the absence of a family, so a choice still has somewhere to be filed', () => {
+    expect(scopeOf(null)).toBe(ALL_FAMILIES)
+  })
+
+  /**
+   * No model carries it, and nothing must start listing it beside the ten: an eleventh entry in
+   * the family menu would offer a filter whose only answer is none.
+   */
+  it('is not an eleventh family', () => {
+    expect(MODEL_FAMILIES).not.toContain(ALL_FAMILIES)
   })
 })

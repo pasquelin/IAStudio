@@ -22,6 +22,7 @@ import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
 import { assetFilePath, ownFileOf, serveAssets, servedFileOf } from './assets/protocol'
 import { createFavorites, type FavoritesStore } from './favorites/store'
+import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, resourcesRoot } from './resources'
 import { linkedAsset, mediaFilters } from './media/link'
@@ -119,6 +120,8 @@ export type Services = {
   project: ProjectStore
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
+  /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */
+  styles: StylesStore
   /** What the studio did, and what it failed to do — the surface it had none of. */
   journal: ActivityLog
   /** Settles the note of what is still running. Awaited at quit, beside the journal. */
@@ -136,6 +139,8 @@ export type Services = {
   pickPath: (kind: PathKind) => Promise<string | null>
   savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
   pickSavePath: (name: string, extension: string) => Promise<string | null>
+  /** Where a folder the studio is about to fill goes — an exported texture is several files. */
+  pickFolder: () => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
@@ -657,6 +662,7 @@ export function createServices(settings: SettingsStore): Services {
   })
 
   const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))
+  const styles = createStyles(() => app.getPath('userData'))
 
   serveAssets({
     [ASSET_HOST]: async assetId => {
@@ -684,6 +690,7 @@ export function createServices(settings: SettingsStore): Services {
   return {
     settings,
     favorites,
+    styles,
     client,
     models,
     workflows,
@@ -721,6 +728,9 @@ export function createServices(settings: SettingsStore): Services {
     pickPath,
     savePicture,
     pickSavePath,
+    // The same picker the settings use for a folder: a second dialog with slightly different
+    // options is how two flows start behaving differently.
+    pickFolder: () => pickPath('folder'),
     reveal: file => shell.showItemInFolder(file),
     askUser,
     pickMedia: () => pickMedia(language()),

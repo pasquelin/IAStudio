@@ -302,6 +302,10 @@ enlève la ligne une fois qu’elle est finie.
 
 ### « Préparation vidéo indisponible : ni copie allégée ni forme d’onde. »
 
+**Où ça s’affiche.** Sur un triangle d’alerte ambre, dans la barre de titre de l’étagère à
+assets : survolez-le ou atteignez-le au clavier. Le même état est écrit en toutes lettres, et en
+permanence, dans **Réglages ▸ Médias**.
+
 **Ce que ça veut dire.** Aucun ffmpeg utilisable n’a été trouvé — pas même celui que
 l’application transporte.
 
@@ -460,7 +464,7 @@ au lieu de glisser, ce qui est bien plus agréable qu’un glissement haché.
 
 ### « J’ai perdu mon travail en fermant un onglet »
 
-**Ce n’est plus censé pouvoir arriver.** Les six types de documents s’enregistrent, et fermer un
+**Ce n’est plus censé pouvoir arriver.** Tous les types de documents s’enregistrent, et fermer un
 onglet dont le travail n’est pas écrit pose la question avant de fermer : *Enregistrer*, *Ne pas
 enregistrer*, *Annuler*.
 

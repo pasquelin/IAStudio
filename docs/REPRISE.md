@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`e0a07b2`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline e0a07b2..develop`) au lieu de relire mille lignes.
+à **`6ad591f`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 6ad591f..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -37,22 +37,30 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > `/Users/pasquelin/Applications/scenario/docs/INTERFACE.md`, sans quoi chaque branche tient sa
 > propre version des retours et elles divergent.
 >
-> **Ce qui vient d’être livré — ne le refais pas.** Le **canvas du node editor**, étape 6 du § 4,
-> monté nulle part (`feat/workflows`) · **l’accueil** et ses onze bandes, avec « en refaire une
+> **Ce qui vient d’être livré — ne le refais pas.** Le **graphe est le septième espace**, avec son
+> document `.graph`, sa palette et sa barre — étapes 6 et 10 du § 4 (`feat/workflows`) ·
+> **l’accueil** et ses onze bandes, avec « en refaire une
 > avec… » (`feat/home`, `feat/home-creations`) · les trois accès clavier — Explorateur, double-clic
 > qui traverse les espaces, étagère à assets et sa sélection multiple (`feat/explorateur-clavier`,
-> `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader des Textures**
-> (`feat/textures-derive`) · le **formulaire de génération traduit** sans rien écrire par modèle
-> (`feat/i18n-schema-api`) · le prix d’une génération, avant et après
+> `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader et le tiling des
+> Textures**, plus leur **panneau Styles** (`feat/textures-derive`, `feat/textures-tiling`,
+> `feat/styles-textures`) · les **index du catalogue** et l’abandon d’une recherche
+> (`feat/catalog-index`) · le **BVH qui dit ses pannes et l’ombre qui s’arrête aux nœuds**
+> (`feat/scene-bvh`) · les **quatre vues du skybox**, dont trois n’étaient que des boutons, et son
+> état vide qui ne se lisait pas (`feat/skybox-vues`) · le **formulaire de génération traduit** sans rien écrire par modèle
+> (`feat/i18n-schema-api`) et le **rapport d’usage** avec lui (`feat/i18n-usage`) · le prix d’une
+> génération, avant et après
 > (`feat/workflows`) · six passes i18n et les trois gardes de texte en dur (`feat/i18n-*`) · le
 > pinceau à taille réglable (`feat/pinceau`) · le panneau matériau et la bande de canaux des
 > Textures (`feat/textures-materiau`). Le détail est au § 1.
 >
 > **Propose-moi un ordre et attends ma réponse** avant d’ouvrir un worktree. Les candidats, sans
-> priorité imposée : les **étapes 7 et 8 des Textures** (§ 3.4) · le **backlog qualité P1**
-> (`.claude/loop/BACKLOG.md`, dont les statuts ont déjà menti trois fois : vérifie avant de prendre)
-> · les **13 constats du § 3.3** et l’export en six faces du skybox (§ 3.5) · les **dettes
-> transverses** du § 3.6.
+> priorité imposée : les **étapes 7 à 9 du node editor** — compiler, valider, exécuter (§ 4) ·
+> le **backlog qualité P1** (`.claude/loop/BACKLOG.md`, dont
+> les statuts ont déjà menti trois fois : vérifie avant de prendre) · l’**export en six faces du
+> skybox** (§ 3.5), dont la moitié difficile est écrite depuis `feat/skybox-vues` · les **deux
+> dernières dettes transverses** du § 3.6. La table des constats du § 3.3 est **vide** : ne pas
+> l’y chercher.
 >
 > Cinq règles qui ne sont pas dans `CLAUDE.md` :
 >
@@ -80,9 +88,9 @@ la configuration et de l’espace 3D ayant été supprimées une fois leurs chan
 
 # 1. L’état
 
-**964 fichiers dans `src/`, dont 382 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
-en exécutait alors **4840 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
-nombres ne se lit dans un fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
+**999 fichiers dans `src/`, dont 397 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
+en exécutait alors **4969 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
+nombres ne se lit dans un fichier). **Sept espaces éditables, les sept genres de documents s’enregistrent**, et fermer un onglet
 demande avant de perdre quoi que ce soit. L’application démarre par `pnpm start`.
 
 ## Le budget de couverture, qui est la porte du projet
@@ -96,19 +104,69 @@ demande avant de perdre quoi que ce soit. L’application démarre par `pnpm sta
 | `engines/{timeline,canvas,audio,core}/**` | 242 / 250 | **8 — c’est lui, le tendu** |
 | `main/diagnostics/**`, `renderer/src/services/**` | **zéro** | le canal qui dit les échecs : une branche que personne n’exerce y serait un échec que personne ne lirait |
 | `renderer/src/app/**`, `panels/**` | **aucun budget** | c’est ce qui a laissé cinq fichiers neufs y atterrir sans qu’aucun seuil ne bouge |
-| `src/main/project/**` | 115 / 115 statements | **nulle**, et `document-io.ts` à une branche près |
+| `src/main/project/**` | 113 / 115 statements · **60 / 60 branches** | 2 sur les statements, **nulle sur les branches** — mesuré le 9 août au soir |
 
 **Couvrir avant d’élargir** ; le commentaire du fichier dit le seul cas où élargir est légitime (un
-glob dont la marge de croissance est du GPU intestable).
+glob dont la marge de croissance est du GPU intestable). **Le geste a été refait le 9 août**
+(`a688626`) : trois statements de trop dans `catalog-worker.ts`, qu’aucun test n’atteint — plutôt
+que d’élargir, `serveCatalog` est sorti dans `catalog-queue.ts`, où un port de deux fonctions
+l’exerce. Démarrer un thread pour vérifier trois lignes de plomberie coûte plus que ce que ça
+prouve ; **déplacer la ligne jusqu’à un endroit testable, non.**
+
+> **Les quatre premières lignes de ce tableau datent d’avant plusieurs fusions de moteurs et n’ont
+> pas été remesurées.** Seule celle de `src/main/project/**` l’a été. Un chiffre de marge se relève
+> par `pnpm test:coverage`, pas par lecture — et il ne se recopie pas d’un tour sur l’autre.
 
 > **Un grain de sable environnemental : les tests lents dépassent leur budget de 5 s quand la machine
 > porte plusieurs sessions** — des sous-ensembles différents à chaque passage, verts en isolation.
-> Ce n’est ni un seul fichier ni une seule cause : `ShortcutsSettings.test.tsx` et
-> `LicencesWindow.test.tsx` pilotent `userEvent`, qui est lent, mais `renderer/src/eager-graph.test.ts`
-> est tombé le 9 août et construit un graphe Rollup, sans `userEvent` — relancé seul, il passe en
-> 4,93 s. **La marge est le sujet, pas le fichier.** Devant un échec de ce genre :
-> `vitest run <le fichier>` en isolation, ou `vitest run --coverage --maxWorkers=2` pour toute la
-> passe, avant de chercher une cause dans le code.
+> Ce n’est ni un seul fichier ni une seule cause : `LicencesWindow.test.tsx` pilote `userEvent`, qui
+> est lent, mais `renderer/src/eager-graph.test.ts` est tombé le 9 août et construit un graphe
+> Rollup, sans `userEvent` — relancé seul, il passe en 4,93 s. **La marge est le sujet, pas le
+> fichier.** Devant un échec de ce genre : `vitest run <le fichier>` en isolation, ou
+> `vitest run --coverage --maxWorkers=2` pour toute la passe, avant de chercher une cause dans le
+> code.
+>
+> **La cause a été trouvée, et ce n’était aucune des trois qu’on lui prêtait** (`0ada618`). Trois
+> gardes ont flanché en trois tours — `ShortcutsSettings.test.tsx`, `known-keys.i18n.test.ts`, et
+> `LicencesWindow.test.tsx` avant elles — et chacune a reçu **son propre `vi.setConfig`**. Trois
+> rustines pour une seule cause, que le message disait pourtant à chaque fois : *« timed out in
+> 5000ms »*, sous un `vitest.config.ts` qui écrit **15 000** depuis longtemps.
+>
+> **Un projet vitest n’hérite pas du bloc `test` de la racine.** Le fichier déclare deux projets,
+> `node` et `renderer`, chacun avec le sien : la valeur posée une fois en haut ne gouvernait
+> **rien**, et le budget réel était le défaut de 5 s. `TEST_TIMEOUT` est désormais nommé et répété
+> dans les deux projets, où il compte ; les deux `setConfig` par fichier ont sauté. Celui de
+> `LicencesWindow` reste, au-dessus du global et délibérément : déplier le texte entier d’une
+> licence est lent pour une raison qui lui est propre.
+>
+> **Le coût a fini par être supprimé au lieu d’être toléré** (`e8ec83a`), et c’est le seul des
+> quatre épisodes qui règle la cause. `ShortcutsSettings.test.tsx` passe de **26 s à 3 s** : deux
+> de ses quinze tests en consommaient dix à eux seuls, et c’étaient les deux seuls à chercher un
+> bouton **par son rôle ET son nom**. Le panneau rend **171 boutons**, et `getByRole(…, { name })`
+> **redérive le nom accessible de chacun d’eux** — un rendu complet coûte 230 ms, un seul de ces
+> appels en coûtait 3 600.
+>
+> **La règle qui en sort, valable partout** : chercher par label, puis vérifier le rôle sur
+> l’élément trouvé (`toHaveRole`), plutôt que chercher par rôle et par nom. La couverture ne se
+> troque pas contre de la vitesse — le rôle reste vérifié, mais sur un élément au lieu de 171. Et
+> **chaque contrôle atteint par son label déclare le sien**, pas seulement le premier : sans quoi
+> le bouton de réinitialisation pouvait devenir un lien sans qu’aucun test ne bronche. Vérifié en
+> le changeant pour de bon.
+>
+> **La leçon vaut au-delà des tests.** Un `pnpm validate` vert seul et rouge en suite complète est
+> la pire façon pour une suite d’avoir tort, puisqu’elle **accuse le dernier commit venu** — et le
+> réflexe qui semblait juste, « mesurer et relever le plafond de ce fichier-là », a traité le
+> symptôme **trois fois** là où il se voyait. **Un réglage qui semble global dans un fichier de
+> configuration à projets ne l’est pas** : avant de rustiner le troisième fichier, relire d’où le
+> chiffre du message d’erreur sort vraiment.
+>
+> **Les deux projets ont aussi deux `tsconfig`, et `vitest run` n’est pas `pnpm validate`.**
+> `develop` est passé au rouge le 9 août parce qu’un test du **main** employait
+> `EventListenerOrEventListenerObject` : `tsconfig.node.json` ne charge pas la lib DOM, et le type
+> n’existe pas sur cette cible. **4892 tests étaient verts** dans le worktree — la passe lancée
+> avant la fusion était `vitest run`, donc sans typecheck, et le compilateur n’avait rien dit parce
+> que personne ne le lui avait demandé. Une suite verte ne dit rien du typecheck : la porte est
+> `pnpm validate`, en entier, **après** la fusion comme avant.
 >
 > **Et ce grain-là ne se présente pas toujours comme un dépassement de temps.** Le 9 août au soir,
 > une passe a rendu **26 échecs sur 5 fichiers** — des **échecs d’assertion**, pas des timeouts,
@@ -139,6 +197,20 @@ l’écran d’avant. Le vocabulaire du métier (`seed`, `guidance scale`, `samp
 anglais **et un test tient la liste**. Appliqué au rendu, pas à la construction des descripteurs :
 changer de langue redit le formulaire ouvert, et les Apps en profitent sans une ligne.
 
+**Le rapport d’usage, lui, ne relève pas du même outil**, et c’est la distinction à ne pas
+manquer : ses actions et ses genres d’assets sont deux **unions fermées** que l’API documente, donc
+une clé de bundle par valeur et une garde exhaustive dans `bundles.test.ts`. Le dictionnaire par
+texte source est pour ce qui change à chaque modèle publié ; une liste fermée mérite une garde qui
+rougit.
+
+**Et un troisième cas ne se traduit pas du tout.** Les ports d’un nœud de workflow passent leur
+**nom** par le même dictionnaire (`useModelText`, pas une seconde table) — mais un port sans nom
+affiche son **type**, `image` ou `video`, et cette chaîne-là est ce que la vérification de
+connexion compare. Traduite d’un côté de l’arête et pas de l’autre, elle ne dit plus si deux ports
+vont ensemble. **Une chaîne qui est aussi une donnée n’est pas un libellé** — même partage que
+`name` et `message` dans les gardes de texte en dur. Le tableau qui départage les trois est dans
+`fr/architecture.md`, § Internationalisation.
+
 **Le prix, avant et après** — `main/scenario/cost.ts` tire l’estimation d’un `?dryRun=true`, qui
 **répond 200** avec `creativeUnitsCost` dans le corps ; le 402 que documente la référence est gardé
 en repli et n’a jamais été observé. `useCostEstimate` la tient à jour sous le bouton Générer,
@@ -150,8 +222,17 @@ exception : il facture 0 sur lui-même, ses nœuds portent la charge, et ce zér
 **Les projets** — un dossier, un manifeste, un catalogue SQLite. Le catalogue tourne sur son propre
 `worker_threads` : de 16 blocages du thread principal à 0 (§ 6).
 
-**Les six espaces** — Image (PixiJS), 3D (three.js), Vidéo (timeline, moniteur, ffmpeg), Audio,
-Skyboxes, Textures. Un éditeur par type de document, chargé à l’ouverture, jamais avant.
+**Les sept espaces** — Image (PixiJS), 3D (three.js), Vidéo (timeline, moniteur, ffmpeg), Audio,
+Skyboxes, Textures, et **Graphe** (`@xyflow/react`) depuis l’étape 10 du § 4. Un éditeur par type
+de document, chargé à l’ouverture, jamais avant.
+
+**Le septième n’appartient à aucune famille de modèles**, et c’est la seule nouveauté structurelle
+du lot : `Workspace.family` est passé à `ModelFamily | null` — un graphe ne produit pas un genre,
+il les enchaîne — et le `scope` correspondant est **dérivé sur le record `Workspace`**, jamais
+recomposé chez ses lecteurs. Il l’était à quatre endroits ; le cinquième a été oublié et le graphe
+y a perdu son Générateur, une famille nulle se lisant « pas de modèle » au lieu de « tous ».
+**Vert au niveau du registre**, parce que la règle de disposition lit `TOOL_PLACEMENTS` et ne voit
+pas la couche au-dessus.
 
 **L’espace Image édite pour de bon** — calques, groupes, masques, seize modes de fusion, sélection
 qui borne les outils, poignées de transformation, formes, texte, calques de réglage, cinq éditions IA
@@ -189,10 +270,10 @@ Quatre choses à savoir avant d’y toucher :
   comme **donnée de document** (une scène dont le contenu s’appelle `Groupe` ne s’échange pas avec un
   studio anglais), et `message` nomme l’échec d’un worker, jamais un écran ;
 - **le fichier s’appelle `no-hardcoded-text`, pas `*.i18n.test.ts`.** Une session l’a cherché sous le
-  second motif, ne l’a pas trouvé, et en a réécrit un doublon complet. **Huit gardes i18n, et trois
-  conventions de nommage** : cinq en `*.i18n.test.ts`, deux en `no-hardcoded-text.test.ts`, et
-  `shared/i18n/model-text.test.ts` qui ne suit ni l’un ni l’autre. `grep` sur le sujet, pas sur le
-  motif.
+  second motif, ne l’a pas trouvé, et en a réécrit un doublon complet. **Neuf gardes i18n, et deux
+  conventions de nommage** depuis que `model-text` a rejoint `*.i18n.test.ts` : six sous ce motif,
+  deux en `no-hardcoded-text.test.ts`, et `bundles.test.ts` qui tient les clés composées. `grep`
+  sur le sujet, pas sur le motif.
 
 **Le manuel utilisateur** — 19 chapitres, fr et en (`docs/fr/manuel/`, `docs/en/manual/`). Il ne se
 relit pas, il **se vérifie** : les registres (`COMMAND_REGISTRY`, `IMAGE_TOOLS`, `UNBUILT_TOOLS`,
@@ -224,6 +305,16 @@ seulement si elles ont répondu `image` (deux des neuf `remove-background` sont 
 il pré-filtre une liste côté serveur. Les trois familles ont leur écran de réglages — le seul endroit
 où leur modèle se choisit. Les cinq commandes ont une ligne dans le menu Image et **restent sans
 raccourci : elles dépensent du crédit.**
+
+> **La famille `other` n’attrape rien, et le seul modèle qu’elle devrait attraper part dans Image.**
+> Vérifié par un appel le 9 août 2026, pas déduit : sur les 100 premiers modèles publics, **quinze
+> capacités distinctes**, dont une seule qu’aucun motif de `FAMILY_BY_CAPABILITY` ne classe —
+> `txt2txt`. Elle appartient à `model_scenario-llm`, qui déclare **aussi `img2txt`**, et `img2txt`
+> contient `img` : le motif de l’image mord, et le LLM est catalogué modèle d’**image**. Le test
+> `familyOf(['txt2txt'], []) === 'other'` (`schema.test.ts:151`) garde donc un jeu de capacités
+> qu’**aucun modèle réel ne porte**. Conséquence à l’écran, non vérifiée sur l’app lancée : le
+> panneau Modèles de l’espace Image liste un modèle qui produit du texte. Le remède serait un motif
+> de sortie (`txt$`) avant celui de l’image, pas une nouvelle famille.
 
 **L’entrée d’une image dans un ciel** — trois portes vers l’espace Skyboxes : double-clic sur un
 asset, dépôt depuis l’étagère, et la génération, qui retient le document d’où elle est partie et s’y
@@ -287,60 +378,50 @@ Ce qu’il faut retenir de `feat/prompt-assist` (`generate/prompt`, `caption`, `
 
 # 2. Le plus urgent
 
-## Deux onglets ouverts sur « Ce document n’est plus ouvert » — au premier rechargement
+## Les onglets fantômes — livré (`feat/onglets-fantomes`, 9 août 2026)
 
-**Vu à l’écran le 9 août 2026, capture à l’appui, et reproductible en trois gestes** : ouvrir deux
-documents neufs dans l’espace Image, ne rien y enregistrer, recharger l’application. Les onglets
-« Sans titre 1 » et « Sans titre 2 » reviennent, le centre affiche *« Ce document n’est plus
-ouvert. »*, les Calques disent *« Ouvrez une image »*. **Un onglet ouvert qui affirme qu’il n’y a
-pas de document est un état que l’interface ne doit pas pouvoir atteindre.**
+Le défaut : deux documents neufs jamais enregistrés, un rechargement, et les onglets « Sans titre »
+revenaient sur *« Ce document n’est plus ouvert. »*. `refresh` reconstruisait les documents par
+l’intersection dossier ∩ layout et **ne corrigeait jamais le layout**, seul à prétendre que l’onglet
+existe. `closeOrphanTabs` (`app/orphan-tabs.ts`), appelé par `followProject` après la
+réconciliation, ferme cette boucle : `useLayouts.prune` retire les panneaux du layout persisté de
+**chaque** espace — Dockview n’en monte qu’un, les autres ne sont atteignables que là — puis
+`closePanel` retire l’onglet de celui qui est à l’écran.
 
-**Ce n’est pas une régression : c’est un trou de conception, et le code le documente en le
-décrivant.** `app/documents.tsx:76` porte la JSDoc « The layout is persisted, the documents are
-not: a tab restored on startup outlives its document », et le rend proprement plutôt que de lever.
-Ce que ce commentaire décrit comme un cas de bord est en réalité **le cas nominal** dès qu’un
-document n’a pas été enregistré.
+**Les trois conditions à ne pas simplifier**, chacune tenue par un test qui rougit sans elle :
 
-**La chaîne, vérifiée dans le code :**
+1. **« absent du dossier » ne suffit pas.** Un document créé dans la session l’est aussi : la
+   condition est « absent du dossier **et** absent de `state.documents` », et le store est lu au
+   moment où le listing est retombé, pour qu’un `adopt` arrivé entre-temps compte.
+2. **Le dossier doit avoir répondu.** `listed()` rend désormais `null` quand la lecture échoue,
+   distinct de la liste vide, et `refresh` répond un booléen. Un dossier disparu laisse le même
+   centre vide qu’un projet neuf : purger dessus coûterait pour de bon l’arrangement d’un projet
+   vivant.
+3. **Purger un layout Dockview n’est pas retirer une clé de `panels`.** Un identifiant vit aussi
+   dans les `views` du groupe, et `fromJSON` construit chaque vue depuis `panels[id]` — une vue
+   orpheline lève, et `DocumentArea` jette alors l’arrangement entier.
 
-1. `create` (`stores/documents.ts:198`) **n’écrit rien** dans le dossier du projet, délibérément —
-   « a file per tab opened and never typed in would litter the project with empty documents ». Un
-   document neuf n’existe donc que dans le store, en mémoire.
-2. `useDocuments` **n’est pas persisté**, aussi délibérément (§ « Corrigé — ne pas le re-signaler » :
-   persisté, les onglets d’un projet réapparaissaient dans le suivant).
-3. **Le layout Dockview, lui, est persisté** — c’est même « the reliable record of what is open »
-   (`panelIds`, même fichier).
-4. `refresh` (`:157`) reconstruit les documents par **l’intersection dossier ∩ layout** :
-   `found.filter(document => shown.has(document.id))`.
+**Ce que la source de Dockview 7.0.4 a dit, et qu’aucune doc n’annonçait :** `fromJSON` **lève**
+si `grid.root` n’est pas une branche (d’où le root vide de forme conservée), **ignore** en revanche
+un `activeGroup` inconnu, et **Maj + glisser un onglet crée un groupe flottant** — activé par
+défaut, jamais désactivé ici. Un fantôme peut donc être dans `floatingGroups` ou `popoutGroups`,
+que `withoutPanels` traite pour cette raison.
 
-Un document jamais enregistré est absent du dossier, donc absent de l’intersection — **mais son
-panneau, lui, est dans le layout.** L’intersection décide ce qui vit côté documents et **ne corrige
-jamais le layout**, qui reste seul à prétendre que l’onglet existe. Personne ne ferme la boucle.
-
-**Ce qu’il faut trancher, et le piège qui attend.** Aligner le layout sur la réalité est la bonne
-moitié : un document dont rien n’est écrit ne peut pas revivre, son onglet ne doit donc pas
-survivre. Mais **la condition ne peut pas être « absent du dossier »** — un document créé pendant
-la session est lui aussi absent du dossier, et le balayer fermerait l’onglet sous les doigts. Il
-faut « absent du dossier **et** absent de `state.documents` », et le nettoyage doit tenir compte du
-fait que `refresh` est asynchrone et que `adopt` peut arriver entre-temps.
-
-L’autre moitié est un choix de produit : un document neuf où l’on a peint sans enregistrer est
-perdu au rechargement, silencieusement, aujourd’hui comme après le correctif. Décider s’il faut le
-dire, ou l’écrire — et l’écrire contredit le commentaire de `create`, qui a ses raisons.
-
-**Non commencé.** Tests de reprise à écrire dans le même mouvement : `app/**` n’est sous aucun
-budget de couverture (§ 3.1), ce qui est précisément pourquoi ce chemin n’a rien qui le tienne.
+**Ce qui reste ouvert, et c’est un choix de produit, pas un correctif :** un document neuf où l’on
+a peint sans enregistrer est perdu au rechargement, silencieusement — avant comme après. Décider
+s’il faut le dire ou l’écrire, sachant qu’écrire contredit le commentaire de `create`, qui a ses
+raisons.
 
 ---
 
-L’espace **Textures** est le prochain manque fonctionnel par ordre de valeur hors workflows : les
-**étapes 7 et 8** (§ 3.4) sont écrites et non commencées, et **les dérivations livrées le 9 août
-n’ont pas été vues à l’écran** — c’est la seule chose de cet espace qui reste à regarder.
+L’espace **Textures** n’a plus de manque fonctionnel écrit : les étapes 6 à 8 sont livrées. Ce qui
+reste est un regard — **ni les dérivations, ni le tiling, ni l’export n’ont été vus à l’écran**, et
+c’est la seule chose de cet espace qui demande que l’application soit fermée d’abord.
 
-Les deux dettes d’API qui bloquaient le node editor — borne de débit et survie des jobs — **sont
-livrées** par les étapes 2 et 3 de `feat/workflows` (§ 3.6). Ce qui reste des dettes transverses :
-les index du catalogue, la recherche qui ne s’interrompt pas, le décodage du clone IPC, la
-coalescence d’undo volée par une commande asynchrone.
+**Des dettes transverses du § 3.6, il ne reste que deux lignes** : le **décodage du clone IPC** —
+73 % du coût d’un ⌘S, intouché — et la **coalescence d’undo volée par une commande asynchrone**.
+Les index du catalogue et l’abandon d’une recherche sont livrés (`feat/catalog-index`), comme
+l’étaient déjà la borne de débit et la survie des jobs.
 
 ---
 
@@ -447,26 +528,140 @@ export glTF/GLB/USDZ, et un BVH construit en worker pour le picking.
 | Graisses d’une police | une seule coupe par famille est offerte, le romain. Un sélecteur demande d’indexer les faces par famille — mécanique, pas conceptuel |
 | three livré deux fois | le chunk du worker BVH pèse 490 ko parce qu’il embarque three, déjà dans le bundle principal. Chargé à la demande et en local, donc supportable — mais c’est du poids d’installation en double |
 
-### Les treize constats vérifiés que personne n’a traités
+### Ce que l’export a appris, et qu’il ne faut pas repayer
 
-Par ordre de gravité. Chaque ligne est actionnable telle quelle.
+`feat/scene-export` a traité les six constats qui portaient sur ce qui sort du studio. Trois
+savoirs en restent :
 
-| Où | Quoi |
-|---|---|
-| `shadows.ts:42` via `SceneRenderer.ts:617` | `applyShadowFlags(deep)` traverse **au-delà des nœuds enfants** : régler une ombre sur un parent écrase les drapeaux de ses enfants, que `syncNode` ne répare jamais (`previous === node`). Un changement de thème rejoue l’écrasement sur toute la scène. Corriger en arrêtant la traversée sur tout enfant portant l’id d’un nœud connu |
-| `bvh-builder.ts:34-45` | `dispose()` n’est pas définitif : `workerOf()` respawne sans condition, donc la boucle série de `accelerate` fait naître un worker **après** le démontage du moteur, que rien ne terminera. Un drapeau `disposed` suffit |
-| `bvh.worker.ts` | Aucun canal d’échec — pas de `try/catch`, pas de variante d’erreur, et le builder n’écoute ni `'error'` ni `'messageerror'`. Une exception laisse la promesse suspendue, garde la géométrie dans `building` pour toujours et bloque les mailles suivantes |
-| `SceneRenderer.ts:772` | `void this.accelerate(holder)` avale ses rejets alors que `scene.model` est branché vingt lignes plus haut |
-| `main/scene/export.ts:24` | Le message d’erreur de `writeFile` **livre le chemin absolu au renderer** (invariant 1) : un `EPERM` traverse la frontière et part au journal. À trancher avec l’asymétrie connue de `savePicture`, qui rend déjà le chemin |
-| `SceneRenderer.ts:599` | Le fichier exporté porte des **UUID** en guise de noms : `object.name = node.id`, et le `name` du document n’atteint jamais le fichier. Le test qui semblait le prouver utilisait une fixture dont l’id vaut le nom |
-| `scene-export.ts` | Une lumière directionnelle ou spot **perd son orientation** : la cible est sœur des nœuds, non exportée, et three prévient elle-même |
-| `SceneRenderer.ts:389` | Un nœud **caché** produit un fichier vide, écrit sans un mot (`onlyVisible` vaut `true` chez les deux exporteurs) |
-| `scene-export.ts` | Un GLB **riggé** sort en glTF invalide, `"joints":[null,null]` : `SkinnedMesh.copy` partage le squelette de l’original, hors du sous-arbre exporté. `model-cache.ts:28` a le même défaut — une instance riggée est pilotée par les os du cache |
-| `scene-export.ts:37` | Le décodeur de textures compressées crée un `WebGLRenderer` **par slot de map**, pas par texture, et laisse derrière lui des écouteurs `dispose` morts plus un singleton de module qui retient la dernière texture. Coût sur le thread UI, et rétention |
-| `services/diagnostics.ts` | `reportFailure` dédoublonne par `scope:subject`, et le sujet de l’export est le **format** : le second export raté du même format est muet. Insuffisant pour une action relancée à la main |
-| `three-sync.ts:68` | Le mode `rotate` s’arme sur un sprite et n’a aucun effet — le shader ne lit que les longueurs de colonnes — mais salit le document et empile un undo vide |
-| `scene-document.ts:160` | `isSprite` est le seul garde non dérivé de sa table : un champ ajouté au descripteur ne sera pas vérifié à la relecture |
-| `ViewportEngine.ts:105-120` | Le passage ortho → perspective jette le zoom accumulé ; `frameSelection` ne redimensionne pas le tronc orthographique, donc `F` en ortho ne change rien à l’écran |
+- **`SkinnedMesh.copy` garde le squelette de l’ORIGINAL.** C’est vrai à l’export — glTF écrivait
+  `"joints":[null,null]`, qu’aucun lecteur n’ouvre — et c’était vrai à l’écran dans
+  `model-cache.instanceOf`, où toutes les instances d’un modèle riggé étaient pilotées par les os
+  du cache. `SkeletonUtils.clone` est le seul clone qui relie une copie à ses propres os.
+- **glTF n’a pas de cible de lumière.** `KHR_lights_punctual` lit le −Z du nœud, et three le dit
+  au passage : « make light.target a child of the light with position 0,0,-1 ». Une cible sœur
+  des nœuds ne voyage donc jamais avec l’export.
+- **`decompress` sans renderer en fabrique un et le détruit à chaque appel**, et il est appelé
+  par slot de map. Lu dans `WebGLTextureUtils.js` de three 0.185 : un renderer à soi, créé au
+  premier besoin, est ce qui évite d’évincer le viewport que quelqu’un regarde.
+
+**Un septième constat était périmé** : `reportFailure` ne dédoublonne PAS l’export, `scene.export`
+étant dans `GESTURE_SCOPES` depuis `feat/documents-erreurs`, et un `it.each(GESTURES)` le
+verrouille. Cinquième fois qu’une ligne de ce fichier décrit un défaut déjà corrigé.
+
+### Les constats vérifiés — la table est vide
+
+Les sept qu’un audit avait relevés sont traités. Les deux lots qui les ont absorbés sont ci-dessous ;
+ce qu’ils ont appris est tout ce qui reste à en savoir.
+
+### Le lot BVH et ombres — livré, et ce qu’il a appris
+
+Les quatre premiers de ces constats, traités ensemble parce qu’ils vivaient dans le même
+sous-système.
+
+- **La traversée des ombres s’arrête sur tout enfant qui tient lieu de nœud**, et le paramètre
+  `deep` a disparu avec : un groupe, dont *tous* les enfants sont des nœuds, est le cas extrême de
+  la même règle, plus son cas particulier. Le prédicat **n’a pas de valeur par défaut**, exprès —
+  un appelant qui l’oublierait rouvrirait le défaut sans que rien ne le dise.
+- **Le manuel disait déjà vrai avant que le code le soit.** « Les deux se décident objet par
+  objet » était **faux** tant que la traversée écrasait les enfants ; le correctif rattrape la
+  phrase. Rien à corriger dans les manuels — vérifié aux six endroits qui l’affirment.
+- **Un rejet ajouté à une API est un changement de contrat pour ses appelants.** Faire rejeter
+  `accelerate` a introduit une régression que la relecture a trouvée : la boucle série de
+  `SceneRenderer.accelerate` avortait à la première panne, et les mailles suivantes du modèle
+  n’obtenaient jamais leur arbre — pour la session, puisque rien ne reparcourt un modèle chargé.
+  Le builder se remet d’un worker mort ; encore faut-il qu’on le lui redemande.
+- **Deux causes sous un même scope de journal partagent sa dédup**, et `reported` vit à l’échelle
+  du processus. `scene.bvh` existe pour ça : sinon un arbre raté avalait le message d’un
+  chargement raté plus tard pour le même asset.
+- **Un port injectable est ce qui rend un invariant testable.** `bvh` rejoint `loadModel` et
+  `loadTexture` dans `SceneRendererOptions` : sans lui, la boucle série n’était atteignable par
+  aucun test, et le correctif serait parti sans surveillance.
+- **Vérifié et écarté — ne pas rouvrir** : `applyDisplayMode` et `applyWireOverlay`
+  (`scene-view.ts`) traversent nûment, sans arrêt sur les nœuds, et **ne portent pas** le même
+  défaut. Le mode d’affichage est unique pour tout le viewport — `scene-state.ts` n’en déclare
+  aucun par nœud — donc traverser au-delà d’un nœud enfant y écrit la valeur qu’il recevrait de
+  toute façon. Une revue l’a signalé comme un défaut jumeau ; c’en est un faux.
+- **Écarté aussi** : mutualiser la file de promesses avec `catalog-client.ts`. La forme est la
+  même à la ligne près, mais les deux fichiers sont de part et d’autre de la frontière
+  main/renderer et le seul endroit qui les réunirait est `shared/`, qui n’a aucune dépendance
+  runtime. Les sémantiques divergent d’ailleurs là où ça compte : le catalogue rejette à la
+  fermeture, le BVH résout `null` — une fenêtre qui se ferme n’est l’échec de personne.
+- **Ce qu’aucun test ne tient**, dit franchement : l’entrée que laisse dans `pending` une requête
+  dont le `spawn` a été refusé. Rien hors du module ne lit cette carte ; le `finally` qui la vide
+  est une assurance, pas une mesure.
+
+### Le lot des trois derniers constats — livré, et ce qu’il a appris
+
+Sprite, garde de relecture, caméra orthographique. Rien en commun sinon d’avoir été relevés le même
+jour, et c’est pour ça qu’ils sont partis ensemble.
+
+- **Un contrôle sans effet ne s’affiche pas** — la règle que le studio applique déjà à la case
+  d’ombre d’un sprite vaut pour la poignée de rotation. Vérifié dans le shader de three 0.185
+  (`sprite.glsl.js`) plutôt que sur la foi du constat : il lit `length(modelMatrix[0].xyz)` et
+  `length(modelMatrix[1].xyz)` — des **longueurs**, qu’une rotation laisse intactes — et prend son
+  angle d’un `uniform` de matériau. **Une sélection mixte garde sa poignée** : tourner le groupe
+  déplace le sprite dans l’espace, et ça se voit.
+- **Un zoom orthographique se dépense en distance, il ne se jette pas.** Les deux caméras zooment
+  autrement — l’une met à l’échelle son tronc, l’autre avance — et la conversion tient en une
+  division : `distance / zoom`, parce que `fitProjection` a dimensionné le tronc depuis cette
+  distance-là. Pas de trigonométrie à réécrire.
+- **Déplacer une caméra orthographique ne change rien à ce qu’elle montre.** D’où `refit()`, et
+  d’où la vérification qui va avec : sur les **six** endroits de `src/` qui écrivent
+  `camera.position`, `frameSelection` est le **seul** qui change la distance à la cible.
+  `viewFrom` et le vol WASD la préservent délibérément, et les viewports de texture et de skybox
+  n’appellent jamais `setProjection`. Poser `refit()` dans le viewport à chaque déplacement serait
+  donc le mauvais geste — c’est mesuré, pas supposé.
+- **Deux affirmations des manuels étaient fausses**, dont une que le correctif venait de créer :
+  « la caméra reprend exactement sa place » ne tient plus, puisqu’elle se déplace justement pour
+  que la vue ne change pas. Et « `F` rapproche la caméra pour que l’objet remplisse la vue » n’a
+  jamais décrit le code, qui se pose à distance fixe — ce lot redimensionne le tronc pour cette
+  distance, il ne cadre toujours pas sur la taille de l’objet.
+- **Un zoom orthographique n’est borné par rien** — `minZoom` vaut 0 et quatre-vingt-dix crans de
+  molette y sont gratuits. Dépensé tel quel en distance, il envoyait la caméra à 1200 unités pour
+  un `far` de 1000 : cible clippée, viewport noir, **et aucun retour en arrière**, puisque
+  `fitProjection` dimensionnait ensuite le tronc pour 1200. La dépense est bornée à une demi-plaque
+  des deux plans. La leçon générale : **une valeur qu’on convertit d’un espace à un autre doit
+  atterrir dans les bornes du second**, même quand le premier n’en a pas.
+- **Refuser une poignée demande de savoir ce que la poignée pilote.** Dès deux objets, elle pilote
+  le pivot, et tourner un pivot déplace ses enfants — sprites compris. Un sprite dont d’autres
+  nœuds descendent est dans le même cas. Le refus ne vaut donc que pour **un objet seul et sans
+  enfant**.
+- **Une porte de couverture ne voit pas ce qu’une mutation voit.** Vider entièrement le corps de
+  `frameSelection` laissait **1786 tests verts** — le pas constant et l’appel à `refit()`, c’est-à-dire
+  les deux défauts mêmes du lot, n’étaient surveillés par rien. Les lignes nues tenaient dans les
+  700 statements alloués au glob, donc le budget certifiait une branche dont le comportement
+  principal n’avait aucun test. **Une méthode qui sort tôt sur une dépendance que jsdom ne peut pas
+  fournir est un angle mort structurel** : la décision doit en sortir, ou elle n’est pas mesurée.
+- **Un test peut passer pour une raison qui n’est pas la sienne.** « leaves the placement alone
+  going into orthographic » entrait en orthographique avec un zoom déjà à 1 : le garde
+  court-circuitait sur `!== 1` avant même de lire la direction du transfert, si bien que le test
+  nommé d’après la direction ne pouvait pas voir la direction disparaître. Et un plancher tenu par
+  `toBeGreaterThan(0)` est franchi par un plancher d’un millimètre.
+- **`it.each` sur une table d’un élément donne l’illusion de la couverture** : `SPRITE_SPECS` moins
+  la couleur ne laisse que `opacity`, et sur un singleton `every` et `some` sont indiscernables. Le
+  quantificateur — qui *est* le changement — reste donc non vérifié jusqu’au jour où un second champ
+  arrive, où le test se réparera seul. Connu, pas corrigé : le verrouiller aujourd’hui demanderait
+  d’exporter `MEASURED_SPRITE` pour lui seul.
+- **Ce qu’aucun test ne tient**, dit franchement : le branchement `frameSelection → refit()`.
+  `frameSelection` sort tôt sans `orbit`, qui n’existe qu’après un `mount` exigeant WebGL.
+  `framingPlacement`, `framingDistance` et `refit()` sont mesurés ; ne restent hors d’atteinte que
+  les trois lignes qui les enchaînent.
+
+**Deux restes identifiés, délibérément non traités :**
+
+- **L’inspecteur laisse encore saisir une rotation sur un sprite.** `TransformSection` rend la
+  ligne pour tous les types, sans consulter `canRotate`, et la garde de commande ne filtre que les
+  drapeaux d’ombre. Le geste au gizmo est traité, la saisie numérique non — c’est de l’interface,
+  et la garde de commande correspondante devrait tenir compte des enfants (`state.nodes.some(n =>
+  n.parentId === node.id)`), sans quoi elle casserait un cas légitime. À faire avec l’inspecteur,
+  pas à la sauvette.
+- **Dériver `isSprite` de sa table rend tout futur champ OBLIGATOIRE.** `SpriteSpecs` est exhaustif
+  sur `SpriteDescriptor` moins `map` : un champ ajouté est forcé par le typecheck dans
+  `SPRITE_SPECS`, donc dans `MEASURED_SPRITE`, et `matches(undefined, spec)` est faux — le nœud
+  disparaît à la relecture, en silence, dans tous les documents déjà écrits. Le dépôt a déjà
+  rencontré ça avec les drapeaux d’ombre et y a répondu par `isOptionalFlag` + `withDefaults`.
+  **Tout champ ajouté à `SPRITE_SPECS` doit arriver avec son défaut**, et la même dette vaut pour
+  `MEASURED_MATERIAL` et `TEXT_SPECS`, dérivés depuis plus longtemps.
 
 ### Les pièges three.js déjà payés — ne pas les repayer
 
@@ -659,22 +854,80 @@ inversée. Le résultat traverse `assets:save-texture` et devient un asset `text
 `JobManager`**, jamais un appel direct au SDK. Un job rend six canaux ; `collector.ts` sait déjà les
 répartir par `metadata.type`.
 
-### Les deux étapes écrites et non commencées
+### L’étape 7 est livrée — ce qu’elle a appris
 
-**7 — Tiling.** Aperçu 1×/2×/4× (multiplicateur **local**, jamais écrit dans `material.tiling`),
-détection de coutures par gradient aux bords, seamless par décalage d’une demi-largeur. `overlap` et
-`featherRadius` sont les paramètres de `model_scenario-texture`. Appliqué à tous les canaux **avec
-les mêmes valeurs**, sinon ils se désalignent.
+Aperçu 1×/2×/4×, décalage d’une demie pour amener les coutures au centre, mesure des coutures par
+shader. Les trois vivent dans `preview`, aucun ne touche la matière.
 
-**8 — Export.** glTF/GLB, Unity, Unreal, Roblox, canaux bruts. Empaquetage ORM (AO=R, Roughness=G,
-Metallic=B) **en une passe shader**. L’écriture disque passe par le main. `GLTFExporter` vient de
-`three/addons`. C’est ici que « aperçu en 1024, export en pleine résolution » s’applique.
+- **L’invariant « une seule passe hors écran à la fois » appartient au port**, pas aux panneaux :
+  `runOffscreenPass` (`derive/offscreen.ts`) sérialise. Il a vécu six heures réparti entre deux
+  composants qui s’ignorent — la grille de canaux éteignait ses lignes, l’inspecteur avait son
+  booléen — de sorte que dériver puis cliquer « Mesurer » ouvrait deux contextes et décodait deux
+  4K. La file **ne reporte pas un rejet** : sans le `catch`, un contexte refusé rejetterait toutes
+  les passes derrière lui pour la vie de la fenêtre.
+- **Le prix de cette file, non traité** : une passe dont le `load` ne se règle jamais la bloque
+  définitivement. Avant, elle ne bloquait que sa propre ligne de menu. Un délai de garde serait une
+  complexité non mesurée ; c’est un choix, pas un oubli.
+- **Une demie est une demi-période, pas une demi-image.** `Matrix3.setUvTransform` pose l’offset
+  **après** l’échelle (`sx*(u − cx) + cx + tx`), donc la couture arrive au milieu d’une tuile quel
+  que soit le multiplicateur. Une revue a affirmé le contraire ; trente secondes dans
+  `node_modules/three` l’ont réfutée. **Ne pas rouvrir.**
+- **Une mesure retient l’asset qu’elle a lu**, pas seulement le nombre (`{ assetId, ratio }`) :
+  remplacer la couleur de base laissait « Couture visible » à l’écran pour des pixels partis. La
+  donnée porte sa propre péremption, ce qui évite une garde après l’`await`.
+- **Mesurer est un geste** : `texture.seam` est dans `GESTURE_SCOPES`, comme le dépôt. Un second
+  clic qui échoue doit le redire, sinon le bouton a l’air muet.
+- **jsdom ne voit pas la taille du frame** passée au renderer : un test qui prétendait la
+  surveiller ne mordait sur aucune mutation. Ce qui se vérifie de ce côté, c’est que le pass est
+  construit sur la taille de la **source**, jamais sur celle du frame réduit.
+- **Un carré passe un test d’axes.** `tiling` à 3×3 laissait `repeat.set(y, x)` vert ; c’est le
+  test voisin qui mordait à sa place. Toute assertion sur deux axes prend deux valeurs différentes.
+
+### L’étape 8 est livrée — ce qu’elle a appris
+
+Cinq cibles, décrites comme **données** dans `shared/domain/texture-export.ts` : une recette dit
+quel canal alimente quelle composante, et une passe shader unique les sert toutes.
+
+- **Le contexte hors écran est prémultiplié, et `alpha: false` ne l’atteint pas.** three met
+  `premultipliedAlpha: true` par défaut ; l’attribut `alpha` du constructeur ne choisit que la
+  couleur d’effacement. Une passe qui écrit des valeurs droites se fait diviser par son alpha à
+  `toBlob`. Toutes les passes du dépôt écrivaient alpha 1, ce qui l’a caché huit mois — le
+  `_MaskMap` d’Unity, seul alpha variable, sortait en (0,0,0,0) sur une surface rugueuse.
+  **Toute passe future qui écrit un alpha qui varie dépend de cette ligne.**
+- **Trois négations peuvent se croiser sur une composante** : celle de la recette, celle du canal
+  stocké à l’envers, celle d’une normale arrivée en DirectX. Elles se comptent au lieu de
+  s’enchaîner. Et une composante ne porte pas un booléen mais **deux bornes** — `0 → 1` ne fait
+  rien, `1 → 0` inverse, `0,3 → 0,7` est le remap du panneau. C’est `remapOf` de l’aperçu, que
+  `shared/` ne peut pas importer.
+- **Un réglage de rendu qui n’en est pas un.** `invertNormalGreen` ne dit pas comment afficher :
+  il dit dans quelle convention la normale est **arrivée**. Il descend donc jusqu’à l’export, seul
+  endroit où la convention d’un canal et celle d’une cible se rencontrent. Il reste stocké sous le
+  matériau parce que les `.tex` déjà écrits l’y portent — **dette nommée, pas réglée**.
+- **glTF ne porte ni déplacement ni pivot.** Pas de `displacementMap`, donc la hauteur ne part pas
+  et la géométrie ne se subdivise pas (196 000 triangles pour un cube, six Mo de sommets pour
+  rien) ; et `KHR_texture_transform` n’a **pas** de champ de pivot — `GLTFExporter` ne lit jamais
+  `texture.center`. Une rotation sort donc autour du coin quand l’aperçu tourne autour du milieu.
+  Écrit aux deux manuels. Le compenser dans l’offset n’est pas exact quand les deux axes de
+  répétition diffèrent.
+- **Un dossier, pas un fichier.** Les fichiers d’un export ne veulent rien dire séparés, et
+  `mkdir` n’en vide aucun : ré-exporter écrase fichier par fichier et laisse les périmés. Dit au
+  manuel plutôt que corrigé — vider le dossier de quelqu’un est un geste qu’on ne prend pas seul.
+- **Roblox refuse une carte au-delà de 1024 px.** Le seul plafond, et il ne vient pas de nous.
+
+**Ce qui reste, mesuré et non traité** : la cible glTF encode quatre PNG puis les redécode aussitôt
+pour les remonter en textures — un aller-retour d’encodeur pour des octets qu’elle n’écrit jamais,
+de l’ordre de trois à sept secondes sur un export 4K. Sortir un `ImageBitmap` de la passe
+l’éviterait, au prix d’une passe qui répond deux choses selon la cible.
 
 ### Vérifié à l’écran le 9 août — ne pas le redemander
 
-> **Les dérivations n’en font pas partie** : elles sont livrées et testées, jamais vues tourner.
-> C’est la seule chose de cet espace qui reste à regarder, et elle demande que l’application soit
-> fermée d’abord — le verrou d’instance unique.
+> **Trois choses n’en font pas partie** : les dérivations, le tiling et l’export. Livrés et
+> testés, jamais vus tourner. C’est tout ce qui reste à regarder dans cet espace, et cela demande
+> que l’application soit fermée d’abord — le verrou d’instance unique.
+>
+> Pour l’export, deux choses ne se jugent qu’à l’œil et qu’aucun test ne peut rendre : ce que
+> donne un `.glb` **ouvert ailleurs** (Blender, un moteur), et ce que vaut un `_MaskMap`
+> **relu par Unity**, puisque c’est un canal alpha et que rien ici n’en affiche un.
 
 Sphère éclairée, remap, masque de cavité, vue à plat : les quatre sont vus sur l’application
 lancée, et les cinq angles de revue ont rendu. Deux choses seulement en restent, parce qu’elles
@@ -712,24 +965,31 @@ pré-filtre serveur : garder trois modèles sur six cents en marchant le catalog
 huit allers-retours pour remplir un écran. **`skybox-upscale` ne porte pas ce tag** et reste avec les
 images, ce qui est correct : un agrandisseur ne produit pas le document de l’espace.
 
-**Ce qu’il reste, dans l’ordre du coût croissant :**
+**Ce qu’il reste — un seul point, et le plus gros obstacle vient de tomber :**
 
-0. **L’état vide est illisible**, vu à l’écran le 9 août. `SkyboxDocument.tsx:102` le pose bien
-**au-dessus** du canvas — l’ordre du DOM est correct, ce n’est pas un problème d’empilement — mais
-il n’a aucune plaque de fond, et derrière lui la scène n’est pas vide : le sol gris, les sondes et
-les sphères de test. Un `text-muted` sur ce fond bariolé ne se lit pas, et c’est la seule phrase qui
-dise quoi faire dans cet espace. Deux remèdes : une plaque sous le texte, ou ne pas peupler la scène
-tant qu’aucune source n’est posée.
+1. **L’export n’existe pas, mais sa moitié difficile est écrite.** `CUBE_FACES`, `FACE_LABELS`
+   (`Rt`/`Lf`/`Up`…, ce que les moteurs attendent), `CROSS_CELLS`, `FACE_SIZES`, `isCubeFace`
+   attendaient dans `shared/domain/skybox.ts` depuis le début ; `feat/skybox-vues` (`21ab75b`) les
+   a **branchés** en écrivant les trois vues à plat. Ce qui reste à faire est donc un **écrivain**,
+   pas une passe shader : le mode `single` de `projection-shader.ts` rend déjà une face seule
+   remplissant le cadre, ce qui est exactement ce qu’un export en six fichiers demande.
 
-1. **Trois vues sur quatre sont des boutons morts.** `SKYBOX_VIEWS` en déclare quatre ; le renderer
-   n’expose aucun `setView`, et le state de `SkyboxDocument.tsx` ne pilote que la couleur du bouton :
-   `equirect`, `cross` et `faces` ne dessinent rien. Arbitrage à rendre : implémenter les
-   projections, ou retirer le contrôle — un bouton qui ment vaut moins qu’un bouton absent.
-2. **L’export n’existe pas, et son vocabulaire attend depuis le début.** `CUBE_FACES`, `FACE_LABELS`
-   (`Rt`/`Lf`/`Up`…, ce que les moteurs attendent), `CROSS_CELLS`, `FACE_SIZES`, `isCubeFace` sont
-   écrits et testés dans `shared/domain/skybox.ts` — et **référencés par leurs seuls tests**. Le
-   domaine a été écrit pour un export qui n’a pas suivi ; le faire, c’est une passe shader et un
-   écrivain, pas une refonte.
+**Ce que `feat/skybox-vues` a appris, et qu’il ne faut pas repayer :**
+
+- **Les quatre vues sont un seul shader, pas quatre rendus.** Aucune face n’est rendue dans un cube
+  map : une face est un rectangle d’écran dont chaque pixel pose la question à l’envers — quelle
+  direction de la sphère est-ce, et où tombe-t-elle dans la source. L’export posera la même question,
+  une face à la fois.
+- **La projection est celle de three, copiée et non approchée.** `equirectUv` de `common.glsl.js` :
+  `atan(d.z, d.x)` et `asin(d.y)`. Une formule voisine ferait montrer à la croix un ciel tourné par
+  rapport à la vue immersive posée à côté — l’écart ne se verrait qu’en comparant les deux.
+- **La table de la croix se génère depuis `CROSS_CELLS`**, jamais recopiée dans le shader : la
+  disposition appartient au domaine, et les deux ne peuvent alors pas diverger.
+- **L’état vide se peuple, ou ne se peuple pas.** Des deux remèdes que ce § proposait pour le
+  message illisible sur fond de sol et de sphères, c’est le second qui a été retenu : rien n’est
+  peuplé tant qu’aucune source n’est posée. Le piège trouvé au premier test : la synchronisation
+  vivait dans `loadSource`, **qui sort tôt quand l’identifiant n’a pas bougé** — donc jamais
+  appelée quand il n’y a jamais eu de source, c’est-à-dire précisément l’état vide.
 
 **Un piège avant d’y toucher.** Un `.hdr` **n’est pas importable** : `IMPORTABLE_TYPES`
 (`main/media/link.ts`) ne connaît que vidéo, audio et image, et un `.exr` importé est catalogué
@@ -740,18 +1000,40 @@ mais quiconque cherchera « pourquoi mon HDRI n’apparaît pas dans l’import 
 
 ### Ce qui reste ouvert
 
-**Les index du catalogue n’ont pas été posés.** `catalog.ts` déclare des index simples
-(`assets(type)`, `assets(created_at DESC)`, `asset_tags(tag)`, `assets(hash)`…). **Il manque l’index
-composite `(type, created_at DESC)` et un FTS5** pour la recherche texte. Les deux requêtes coûteuses
-de l’audit — `type = ?` à 15,17 ms et un `LIKE '%…%'` sans résultat à 22,53 ms — tombent dans le même
-piège : parcourir toute la table pour remplir une page. **Le worker a déplacé ce coût, les index le
-supprimeraient.**
+**Les index du catalogue et l’abandon d’une recherche sont livrés** (`feat/catalog-index`,
+9 août 2026). Ce qui en reste à savoir :
 
-**Une recherche engagée ne s’interrompt pas.** Six frappes produisent six recherches ;
-`catalog-client.ts` n’expose aucun abandon, et une requête `better-sqlite3` engagée ne s’interrompt
-pas. Elles ne bloquent plus rien depuis le worker, mais elles occupent le thread — et l’invariant 6
-demande que toute tâche longue soit annulable. À traiter **avec les index**, qui les rendront assez
-brèves pour que la question se pose autrement.
+- **la recherche texte ne trouve plus au milieu d’un mot.** C’est le prix du FTS5 et il est
+  volontaire : « oulder » ne rend plus « Boulder », « boul » oui. L’étoile de préfixe est ce qui
+  fait apparaître la ligne pendant qu’on tape encore ;
+- **la ponctuation seule retombe sur le `LIKE`.** fts5 ne sait pas chercher ce qu’il n’a jamais
+  indexé, et taper « % » doit continuer de trouver « 100% » ;
+- **SQLite recycle les rowid**, et c’est ce qui rend le trigger de suppression nécessaire :
+  sans lui, les mots d’un asset supprimé répondent pour celui qui prend sa place. Le défaut ne
+  se voit par aucune requête tant que personne ne reprend le numéro ;
+- **l’abandon est livré comme une assurance, pas comme un correctif.** Aucun composant du
+  renderer n’envoie encore `text:` au catalogue local. **Le brancher au handler IPC serait un
+  bug** : `stores/assets.ts` lit un rejet comme « pas de projet » et VIDE l’étagère. Un champ de
+  recherche devra donc distinguer `ABANDONED` d’un échec avant de tenir un `AbortController` ;
+- **le fil traite une requête par tour de boucle**, et c’est tout ce qui permet d’abandonner :
+  une requête `better-sqlite3` engagée ne s’interrompt pas, seules celles qui attendent peuvent
+  renoncer. Un `setImmediate`, pas une micro-tâche — celle-ci se résout avant que la boucle
+  n’interroge le port.
+
+> **Une recherche ne réclame jamais l’accent — et deux mécanismes distincts le tiennent, selon
+> l’endroit où elle tourne.** Ne pas router l’une vers l’autre :
+>
+> - **en mémoire** (collections : assets, modèles, Apps ; et les réglages) → `foldForSearch`
+>   (`shared/text.ts`), **jamais `toLowerCase`**. La règle était écrite et vécue **privée** dans
+>   `settings-search.ts` pendant que la recherche la plus utilisée du studio s’en passait :
+>   « Forêt d’hiver » restait introuvable à qui tape `foret` ;
+> - **dans SQLite** (catalogue) → le tokenizer de la table FTS5, `unicode61 remove_diacritics 2`.
+>   Rien à plier côté JS, et plier la requête avant de l’envoyer la casserait.
+>
+> Le fold JS **décompose en NFD d’abord**, et ce n’est pas un raffinement : **macOS livre ses noms
+> de fichiers en forme décomposée**, donc un asset déposé depuis le Finder ne répondait pas à son
+> propre nom retapé dans le studio. Les deux formes sont indiscernables à l’œil — le test les écrit
+> par points de code.
 
 **Le décodage du clone IPC** — 73 % du coût d’un ⌘S, intouché. Cf. § 3.3 et § 6.
 
@@ -771,7 +1053,7 @@ commande venue d’ailleurs. Tant que toutes les écritures venaient de la main 
 partageaient le geste. L’espace Skyboxes a introduit le premier écrivain **asynchrone** — une
 génération qui aboutit — et le rend atteignable : si un job se termine pendant qu’un curseur est
 tenu, l’annulation se fragmente en trois entrées, dont la génération au milieu, et un ⌘Z fait
-disparaître l’image au lieu de défaire le réglage. **La ligne fautive sert les six espaces.**
+disparaître l’image au lieu de défaire le réglage. **La ligne fautive sert tous les espaces.**
 
 **L’écriture atomique existe en deux exemplaires.** `scenario/job-store.ts` et `project/documents.ts`
 écrivent tous deux une copie de transit puis renomment, avec le **même commentaire mot pour mot**, et
@@ -973,18 +1255,26 @@ temps que le parc tourne.
 > Branche `feat/workflows`, worktree `.claude/worktrees/workflows`, base `develop`. Les deux dettes
 > d’API du § 3.6 y étaient les étapes 2 et 3, parce qu’elles le bloquaient : elles sont livrées.
 
-**Six étapes sur dix sont fusionnées dans `develop`**, l’étape 6 comprise : l’éditeur existe —
-format, moteur, canvas — mais **il n’est monté nulle part**, et rien de ce qui suit n’est donc
-atteignable par l’utilisateur. C’est pourquoi le manuel n’en dit pas un mot et n’a pas à en dire :
-le point de montage est la décision de l’**étape 10**, et elle est prise — **le graphe sera un
-septième espace**.
+**Sept étapes sur dix sont fusionnées dans `develop`** — les six premières, puis **la dixième,
+prise avant les 7 à 9**. Le graphe est un espace pour de bon : document `.graph`, entrée dans
+`IO_BY_KIND`, composant en `lazy()`, palette et barre. Le manuel le décrit dans les deux langues,
+avec l’avertissement qui convient — **il s’ouvre, on y pose des nœuds et on les enregistre, il ne
+sait pas encore exécuter ce qu’il décrit.**
 
-C’est le plus gros trou fonctionnel du projet, et le seul chantier qui ferait passer le studio de
-« une interface devant une API » à « un outil ». D’où une section à lui, hors du § 3 : celui-là
-liste ce qui reste d’un chantier commencé, celui-ci porte le chantier entier.
+**Prendre l’étape 10 avant les 7 à 9 était le bon ordre**, et c’est la leçon à garder : rien de ce
+qui suit n’aurait été regardable, et monter d’abord a rendu **cinq défauts qu’aucun test unitaire
+ne voyait** — dont `⌘Z` qui ne faisait rien, parce que `SCOPE_BY_WORKSPACE` est un `Partial` et
+qu’un espace absent garde l’undo **natif**, lequel enregistre l’accélérateur auprès de l’OS et
+l’avale avant la fenêtre. L’historique du graphe existait, était testé, et aucun geste ne
+l’atteignait. **Skyboxes avait déjà payé exactement ce défaut** ; son commentaire le raconte.
+
+Ce qui reste est le cœur exécutable — étapes 7 à 9 : compiler vers le `flow`, valider, exécuter
+en local, puis la logique, les boucles, les transforms, l’approbation, et enfin l’import/export et
+la publication. D’où une section à lui, hors du § 3 : celui-là liste ce qui reste d’un chantier
+commencé, celui-ci porte le chantier entier.
 
 > **L’étape 5 est livrée : les Apps s’exécutent.** `workflows.list` en `privacy: 'public'` alimente
-> un panneau **Apps** (colonne de droite, les six espaces), une App s’ouvre sur le formulaire que
+> un panneau **Apps** (colonne de droite, tous les espaces), une App s’ouvre sur le formulaire que
 > `translateSchema` bâtit de ses `inputs` — le même traducteur que pour un modèle, invariant 5 — et
 > se lance par le `JobManager`, avec son coût estimé sur le bouton. **Trois** canaux — `workflows:search`,
 > `:describe`, `:run` — et **pas un quatrième pour le prix** : `scenario:estimate-cost` price
@@ -1012,7 +1302,7 @@ liste ce qui reste d’un chantier commencé, celui-ci porte le chantier entier.
 >   graphie des statuts, l’échelle de la progression, le peuplement d'`assetIds` — ont donc été
 >   tranchées le 9 août 2026 en lançant une App par le SDK. **Le relevé est au § 4.5.**
 
-> **L’étape 6 est livrée : le canvas existe, et il n’est monté nulle part.** `@xyflow/react`
+> **L’étape 6 est livrée : le canvas, que l’étape 10 a depuis monté en espace.** `@xyflow/react`
 > **12.11.2** est entré — la seule dépendance que le chantier avait le droit d’ajouter, accord
 > donné, licence collectée. Ce qu’elle a laissé derrière elle :
 >
@@ -1221,6 +1511,14 @@ compris.
 pages locales**. La compilation **locale** est donc le seul chemin documenté :
 `convertWorkflowEditorToFlow`, puis `validateWorkflowFlow`, puis `update({ flow, status: 'ready' })`.
 C’est aussi le meilleur : la validation devient un retour instantané dans l’éditeur au lieu d’un 400.
+
+> **Corrigé à l’appel, pas à la lecture** — `workflow_publish` **existe** côté MCP, contrairement à
+> ce que ce paragraphe a affirmé. Quatre erreurs de ce § ont été redressées d’un seul
+> `workflow_get` sur `wflow_coloring-page-maker` : le port d’un nœud texte est `-target-prompt` de
+> type `text`, **pas** `-target-text` ; une note porte son texte sous `content`, **pas** `value`,
+> si bien que toute note importée s’affichait vide ; et **tout** nœud porte un port conditionnel,
+> la note comprise. **Un appel réel vaut mieux que quatre relectures** — c’est la troisième fois
+> que ce § l’apprend (cf. le relevé du 9 août plus haut).
 
 Deux détails à ne pas redécouvrir : `"workflow"` est **réservé** dans `ref.node` — il désigne les
 inputs du workflow parent, donc **ne jamais nommer un node `workflow`** ; et

@@ -77,10 +77,18 @@ Dans la colonne de droite, sous le panneau Skybox. Deux sections.
 | Contrôle | Ce qu’il fait |
 |---|---|
 | **360°** | la vue immersive — vous êtes dans le ciel |
-| **Équirect** | l’image à plat *(pas encore branché)* |
-| **Croix** | les six faces dépliées en croix *(pas encore branché)* |
-| **6 faces** | les six faces côte à côte *(pas encore branché)* |
-| **Champ de vision** | de 50° à 110°, 75° par défaut |
+| **Équirect** | l’image à plat, telle qu’elle est stockée — deux fois plus large que haute |
+| **Croix** | les six faces dépliées en croix, sur une grille de 4 × 3 |
+| **6 faces** | les mêmes six faces serrées en 3 × 2 — la croix dépense la moitié de ses cases en vide, celle-ci aucune, donc une face s’inspecte presque deux fois plus grande |
+| **Champ de vision** | de 50° à 110°, 75° par défaut — **ne joue que sur la vue 360°** |
+
+> **Les trois vues à plat ne sont pas des images fabriquées à côté** : chaque pixel du cadre pose
+> la question à l’envers — quelle direction du ciel est-ce, et où tombe-t-elle dans la source. Le
+> ciel qu’elles montrent est donc exactement celui de la vue immersive, à la même rotation.
+>
+> Elles **mettent leur image en boîte aux lettres** plutôt que de l’étirer, et pendant qu’elles
+> sont devant, le fond et les objets de test s’éteignent : ils seraient derrière l’image, et le
+> ciel immersif qui passerait dans les barres se lirait comme une partie de ce qu’on juge.
 
 **Repères**
 
@@ -183,8 +191,6 @@ endroit. Deux façons de continuer :
 
 ## Ce qui manque encore
 
-- **Trois vues sur quatre** — Équirect, Croix et 6 faces sont des boutons qui ne dessinent rien
-  encore ;
 - **les boutons Régénérer et Réinitialiser** — annoncés dans les traductions, jamais posés dans le
   panneau ;
 - **l’export** — on ne peut pas encore écrire les six faces d’un cube, ni un HDRI utilisable
