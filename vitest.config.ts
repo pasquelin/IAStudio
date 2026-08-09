@@ -40,6 +40,10 @@ export default defineConfig({
       // rather than by one rule: a glob whose room to grow is mostly untestable GPU needs a
       // wider budget than one made of state machines, or growth alone would break it.
       //
+      // The sign is the whole meaning: a threshold `>= 0` is read as a minimum PERCENTAGE, so a
+      // budget of zero cannot be written and a glob covered whole says `100`. Guarded by
+      // `src/main/coverage-thresholds.test.ts`, which tells what it cost.
+      //
       // A glob matching nothing passes silently. Renaming a folder turns its budget into a
       // no-op, and a new `engines/` subfolder lands under no budget at all — both without a
       // warning. These names follow `src/`; keep them in step.
@@ -77,10 +81,11 @@ export default defineConfig({
           statements: -700,
           branches: -310,
         },
-        // Both at zero: the diagnostics channel is the studio's only trace of a failure that has
-        // no surface, and a branch of it nobody exercises is a failure nobody would ever read.
-        'src/main/diagnostics/**': { statements: 0, branches: 0 },
-        'src/renderer/src/services/**': { statements: 0, branches: 0 },
+        // Both covered whole: the diagnostics channel is the studio's only trace of a failure
+        // that has no surface, and a branch of it nobody exercises is a failure nobody would
+        // ever read.
+        'src/main/diagnostics/**': { statements: 100, branches: 100 },
+        'src/renderer/src/services/**': { statements: 100, branches: 100 },
         // Kept tight for the same reason: an update downloads itself and `quitAndInstall` is
         // irreversible, so a branch nobody exercises is one nobody would see go wrong either.
         'src/main/{updater.ts,update/**}': { statements: -3, branches: -1 },
@@ -88,7 +93,15 @@ export default defineConfig({
         'src/renderer/src/hooks/**': { statements: -38, branches: -20 },
         // The renderer half of project-file serialization; `src/main/project/**` guards the other.
         'src/renderer/src/app/document-io.ts': { statements: -14, branches: -6 },
-        'src/renderer/src/app/UpdateStatus.tsx': { statements: 0, branches: 0 },
+        'src/renderer/src/app/UpdateStatus.tsx': { statements: 100, branches: 100 },
+        // The three globs that had no budget at all, which is how five new files landed in them
+        // without a threshold moving. Set to what they measure today, not to a round number:
+        // a budget above what a glob carries is room nobody decided to grant. What sits under
+        // them is what jsdom cannot run — a canvas, a WebGL context, a drag — plus, in `panels`,
+        // the branches of a shelf that needs a project open.
+        'src/renderer/src/app/**': { statements: -48, branches: -26 },
+        'src/renderer/src/panels/**': { statements: -147, branches: -120 },
+        'src/renderer/src/design/**': { statements: -59, branches: -66 },
       },
     },
     projects: [

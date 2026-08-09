@@ -59,8 +59,10 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > conclusions sont acquises. Puis `git log --oneline -15`, `git worktree list` et `pnpm validate`
 > pour partir d'une base verte.
 >
-> **Une chose passe avant le reste** : le **§ 0** (la porte — mesurer le budget de couverture avant
-> de croire une livraison verte).
+> **Le § 0 reste la porte, mais sa première marche est franchie** : les budgets de couverture sont
+> mesurés et les trous comblés (10 août 2026) — **ne pas les remesurer pour le plaisir**, le § 0.1
+> dit ce que chacun porte. Ce qui reste ouvert y est le rouge intermittent (§ 0.2) et les deux
+> branchements que seule la mutation trouve (§ 0.3).
 >
 > **Les quatre décisions qui attendaient sont prises le 10 août 2026** — 39, 12, 40, 29. Elles sont
 > écrites dans leur entrée, et **ne se redemandent pas**. Une seule question en est née et reste
@@ -117,40 +119,89 @@ Si la demande touche l'API Scenario : `docs/scenario-api/README.md`, 209 pages a
 
 # 0. La porte — rien n'est prouvable tant qu'elle n'est pas verte
 
-Trois choses rendent aujourd'hui le filet du projet peu fiable : un budget qu'on croit tenu
-sans l'avoir mesuré, une suite qui rougit ailleurs à chaque exécution, et trois branchements
-que la couverture certifie alors que rien ne les tient. **Tant qu'elles tiennent, une livraison
-verte ne prouve rien** — et c'est ce qui les met avant tout le reste, y compris avant ce qui
-perd des données : sans porte, un correctif ne se prouve pas non plus.
+Deux choses rendent encore le filet du projet peu fiable : une suite qui rougit ailleurs à
+chaque exécution (§ 0.2), et deux branchements que la couverture certifie alors que rien ne
+les tient (§ 0.3). **Tant qu'elles tiennent, une livraison verte ne prouve rien** — et c'est ce
+qui les met avant tout le reste, y compris avant ce qui perd des données : sans porte, un
+correctif ne se prouve pas non plus.
 
-## 0.1 Le budget de couverture de `renderer/src/stores/**` est annoncé dépassé
+> **Les budgets de couverture sont mesurés et les trous comblés** (10 août 2026) : le § 0.1 dit
+> ce que chaque glob porte, ce que la mesure a démenti, et le piège de seuil qui rendait trois
+> gardes décoratives. **Ce qui reste vrai et ne s'use pas** : un chiffre de marge se relève,
+> jamais ne se relit.
 
-⚠️ Annoncé DÉPASSÉ depuis `bc9356a` (9 août, ~19 h), sur ses deux seuils (`statements: -90`,
-`branches: -82`). **Rapporté par le message de `d73635c`, jamais mesuré** — et la distinction compte.
+## 0.1 Les budgets de couverture — mesurés, et ce que la mesure a démenti
 
-**Le doute s'est élargi, pas résorbé.** `vitest.config.ts` porte toujours les mêmes deux chiffres,
-mais **`renderer/src/stores/` a été touché plusieurs fois depuis** — `tools.ts` par la colonne
-gauche, `documents.ts` et `selection.ts` par l'inspecteur du graphe, `models.ts` par les générateurs
-de la palette. Le seuil n'a donc pas seulement échappé à la mesure : ce qu'il mesure a changé
-dessous. **Premier geste de la prochaine session : le mesurer**, avant de supposer la porte verte.
+**Mesuré le 10 août 2026**, glob par glob, en lisant le rapport JSON de `pnpm test:coverage` plutôt
+que le résumé — un budget qui passe n'affiche aucun chiffre, et c'est ce qui l'avait laissé se
+raconter pendant deux jours.
 
-Les seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
-pourcentages. **Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas où élargir est
-légitime (un glob dont la marge de croissance est du GPU intestable).
+**Le dépassement annoncé de `renderer/src/stores/**` n'existe pas.** Le glob porte **84 / 90**
+statements et **80 / 82** branches : tendu, jamais franchi. Le message de `d73635c` rapportait un
+dépassement que personne n'avait mesuré. **La leçon est celle que le § 11.3 dit déjà d'un rouge : un
+chiffre rapporté n'est pas un chiffre mesuré**, et celui-ci a coûté deux jours de doute.
 
-| Glob | État connu | Marge |
-|---|---|---|
-| `engines/{scene,skybox,viewport,texture,gpu}/**` | 232 / 310 branches | 78 — ce qui reste dessous est du WebGL que jsdom n'exécute pas |
-| `engines/{timeline,canvas,audio,core}/**` | 242 / 250 | **8 — c'est lui, le tendu** |
-| `main/diagnostics/**`, `renderer/src/services/**` | **zéro** | le canal qui dit les échecs : une branche que personne n'exerce y serait un échec que personne ne lirait |
-| `renderer/src/app/**`, `panels/**` | **aucun budget** | **trou ouvert** — c'est ce qui a laissé cinq fichiers neufs y atterrir sans qu'aucun seuil ne bouge |
-| `src/main/project/**` | 113 / 115 statements · 60 / 60 branches | mesuré le 9 août au soir |
+Les seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), et non des
+pourcentages — **à une exception près qui a fait toute la panne ci-dessous**. **Couvrir avant
+d'élargir** ; le commentaire du fichier dit le seul cas où élargir est légitime (un glob dont la
+marge de croissance est du GPU intestable).
 
-> **Les quatre premières lignes datent d'avant plusieurs fusions de moteurs et n'ont pas été
-> remesurées.** Un chiffre de marge se relève par `pnpm test:coverage`, pas par lecture — et il ne se
-> recopie pas d'un tour sur l'autre.
+### Le piège qui rendait trois gardes décoratives — réglé, à ne pas réintroduire
 
-**Deux trous à combler** : `renderer/src/app/**` et `panels/**` n'ont **aucun budget**.
+**Un seuil `>= 0` est lu par vitest comme un pourcentage minimal, pas comme un compte.** C'est écrit
+dans son code (`if (threshold >= 0)` — le chemin pourcentage ; l'autre branche seule fait un budget).
+Trois globs portaient `{ statements: 0, branches: 0 }` en croyant exiger « zéro élément non
+couvert » : ils demandaient **« au moins 0 % de couverture »**, ce que rien ne peut échouer.
+`main/diagnostics/**` portait d'ailleurs déjà une branche non couverte, et la porte était verte.
+
+**Il n'existe aucune façon d'écrire un budget de zéro** — `-0 >= 0` est vrai en JavaScript, donc
+`-0` retomberait dans le même piège. Un glob qui doit être couvert entièrement s'écrit **`100`**.
+C'est ce qui est en place, et **la morsure a été vérifiée** : une branche non couverte ajoutée à
+`main/diagnostics/**` fait bien rougir la porte (`statements (90%)`, `branches (50%)`).
+
+**Un test verrouille la règle** (`src/main/coverage-thresholds.test.ts`) : tout seuil qui n'est ni
+négatif ni `100` fait rougir, avec le message qui dit quoi écrire. C'était la moitié qui manquait —
+écrire `100` répare la porte du jour, le test empêche de la redéfaire.
+
+### Ce que chaque glob porte, et ce qui lui reste
+
+| Glob | Statements | Branches | Marge |
+|---|---|---|---|
+| `main/project/**` | 110 / 115 | **60 / 60** | **0 en branches — le plus tendu du dépôt** |
+| `main/scenario/**` | 75 / 85 | **69 / 70** | 1 en branches |
+| `shared/**` | **5 / 6** | 18 / 20 | 1 et 2 |
+| `main/assets/**` | **9 / 10** | **9 / 10** | 1 et 1 |
+| `renderer/src/stores/**` | 84 / 90 | 80 / 82 | 6 et 2 |
+| `main/{updater.ts,update/**}` | 3 / 3 | 1 / 1 | **0 et 0** |
+| `renderer/src/app/document-io.ts` | 6 / 14 | 5 / 6 | 8 et 1 |
+| `main/settings/**` | 26 / 30 | 7 / 12 | 4 et 5 |
+| `main/media/**` | 56 / 70 | 25 / 32 | 14 et 7 |
+| `main/dictation/**` | 128 / 140 | 49 / 60 | 12 et 11 |
+| `renderer/src/dictation/**` | 42 / 55 | 25 / 34 | 13 et 9 |
+| `renderer/src/helpers/**` | 10 / 30 | 12 / 28 | 20 et 16 |
+| `renderer/src/hooks/**` | 12 / 38 | 14 / 20 | 26 et 6 |
+| `engines/{scene,skybox,viewport,texture,gpu}/**` | 502 / 700 | 288 / 310 | 198 et **22** |
+| `engines/{timeline,canvas,audio,core}/**` | 165 / 270 | 198 / 250 | 105 et 52 |
+| `main/diagnostics/**`, `renderer/src/services/**`, `app/UpdateStatus.tsx` | couverts entiers (`100`) | — | aucune marge, et c'est voulu |
+
+**Deux chiffres que ce fichier annonçait sont démentis** : `engines/{timeline,canvas,audio,core}/**`
+était donné pour « le tendu, marge 8 » — son budget a été relevé à 270/250 depuis, et sa marge réelle
+est de **105**. Et `engines/{scene,…}/**` était donné à 78 de marge en branches ; il n'en a plus que
+**22**. **C'est celui-là, le tendu des moteurs, et l'autre ne l'est plus.**
+
+### Les trous sont comblés
+
+`renderer/src/app/**` (−48 / −26), `panels/**` (−147 / −120) et `design/**` (−59 / −66) n'avaient
+**aucun budget** — c'est ce qui a laissé cinq fichiers neufs y atterrir sans qu'aucun seuil ne bouge.
+`design/**` ne figurait pas dans le constat d'origine et portait le même trou.
+
+**Les trois sont posés à ce qu'ils mesurent, pas à un chiffre rond** : un budget au-dessus de ce
+qu'un glob porte est de la place que personne n'a décidé d'accorder. Conséquence à assumer, et c'est
+le but : **un fichier neuf non testé dans un panneau fait rougir la porte** au lieu de passer.
+
+> Deux choses qui ne se relisent pas, elles se relèvent. Un chiffre de marge se prend par
+> `pnpm test:coverage`, **et le résumé ne l'affiche pas** : seul le rapport JSON par fichier le
+> donne, agrégé par glob. Et **il ne se recopie pas d'un tour sur l'autre**.
 
 ---
 
@@ -812,7 +863,6 @@ un geste : ce sont des fonctions annoncées et pas finies.
   correctif.**
 - **`useDocuments.refresh()` ne passe pas par `forgetDocument`** : les vues de session d'un projet
   quitté y survivent.
-- Les deux trous de budget de couverture du § 0.1 (`app/**`, `panels/**`).
 
 ---
 

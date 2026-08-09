@@ -372,11 +372,6 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'graph.node',
 ]
 
-/** `LogEntry.scope` is a free string — the main process logs under its own names too. */
-export function isLogScope(value: unknown): value is LogScope {
-  return LOG_SCOPES.some(candidate => candidate === value)
-}
-
 /**
  * Long enough for a stack trace, short enough that a renderer looping on a failure cannot fill
  * the terminal. Applied on both sides: by the sender so the boundary carries no more than it
