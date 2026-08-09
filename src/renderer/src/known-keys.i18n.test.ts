@@ -1,7 +1,15 @@
 import ts from 'typescript'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
+
+/**
+ * Given room to breathe: this guard parses every source file the renderer ships, and under
+ * `--coverage` on a loaded machine that walk crossed the 5 s default — the file then failed
+ * inside `pnpm validate` and passed on its own. A guard that flickers is a guard somebody ends
+ * up deleting, and this one is the reason a key never reaches the screen untranslated.
+ */
+vi.setConfig({ testTimeout: 20_000 })
 
 /** Every file the renderer ships, as text — read through Vite, as `tokens.test.ts` does. */
 const SOURCES: Record<string, string> = import.meta.glob(
