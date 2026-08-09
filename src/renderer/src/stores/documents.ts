@@ -66,6 +66,28 @@ export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): strin
   return id !== null && state.documents[id]?.kind === kind ? id : null
 }
 
+/** What kind of document is in front, or `null` when none is. */
+export function activeKind(state: DocumentsSlice): DocumentKind | null {
+  return (state.activeId !== null && state.documents[state.activeId]?.kind) || null
+}
+
+/**
+ * A document of a kind, preferring the one in front.
+ *
+ * What tells "a tab of this kind is open somewhere" from `activeIdOfKind`'s "the tab in front is
+ * of this kind" — the difference between a gesture that crosses workspaces and one that only
+ * works on the tab already on screen.
+ */
+export function documentOfKind(
+  state: DocumentsSlice,
+  kind: DocumentKind,
+): DocumentDescriptor | null {
+  const front = state.activeId !== null ? state.documents[state.activeId] : undefined
+  if (front?.kind === kind) return front
+
+  return Object.values(state.documents).find(document => document.kind === kind) ?? null
+}
+
 /**
  * The scene in front, as a selector. Shared rather than re-declared per panel: a selector built
  * inside a component body is a new identity on every render, and zustand re-subscribes to it.

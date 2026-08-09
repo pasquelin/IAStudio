@@ -78,9 +78,10 @@ describe('what the shelf offers to do with an asset', () => {
     expect(screen.getByRole('menuitem', { name: /calque/ })).toBeDisabled()
   })
 
-  // `addAssetToSequence` refuses when no sequence is in front, so an always-live row promised
-  // a landing the montage was never going to give.
-  it('greys out the montage when no sequence is in front', () => {
+  // A destination with no document to write into has no landing to promise, and an always-live
+  // row would offer one anyway. Open somewhere is enough — the row does not care which tab is
+  // in front, since choosing it brings its document forward.
+  it('greys out the montage when no sequence is open at all', () => {
     render(<AssetMenu asset={asset()} at={AT} onClose={() => {}} />)
     expect(screen.getByRole('menuitem', { name: /montage/ })).toBeDisabled()
 

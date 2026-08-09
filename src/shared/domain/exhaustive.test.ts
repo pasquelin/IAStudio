@@ -115,6 +115,7 @@ describe('the lists that stand for a union', () => {
       'document.close': true,
       'document.delete': true,
       'assets.reveal': true,
+      'assets.open': true,
       'font.face': true,
     }
 

@@ -256,6 +256,7 @@ export type LogScope =
   | 'document.close'
   | 'document.delete'
   | 'assets.reveal'
+  | 'assets.open'
   | 'font.face'
 
 export const LOG_SCOPES: readonly LogScope[] = [
@@ -273,6 +274,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'document.close',
   'document.delete',
   'assets.reveal',
+  'assets.open',
   'font.face',
 ]
 

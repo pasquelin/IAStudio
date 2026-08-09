@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
+import { kindForWorkspace } from '@shared/domain/document'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { WORKSPACES } from './workspaces'
@@ -57,6 +58,14 @@ describe('where an asset can be sent', () => {
     for (const intent of ASSET_INTENTS) {
       expect(intent.labelKey).toMatch(/^intents\./)
       expect(spaces).toContain(intent.workspace)
+    }
+  })
+
+  // Two fields for one pairing, and `KIND_BY_WORKSPACE` is the one that decides. A destination
+  // whose kind belonged to another workspace would write into a tab it never brings forward.
+  it('names the workspace its own kind opens in', () => {
+    for (const intent of ASSET_INTENTS) {
+      expect(kindForWorkspace(intent.workspace)).toBe(intent.kind)
     }
   })
 
