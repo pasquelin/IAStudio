@@ -206,6 +206,9 @@ L’ordre de la barre n’est pas imposé. Trois façons de le changer, au choix
 | **Clavier** | `⌥←` / `⌥→` sur l’espace focalisé — les flèches nues, elles, servent à parcourir la barre |
 | **Clic droit** | **Déplacer à gauche** / **Déplacer à droite** |
 
+Les deux touches **se remappent comme les autres**, sous le contexte *Dans la barre des espaces*
+de l’[écran des raccourcis](15-raccourcis.md).
+
 **L’Accueil ne bouge pas** : il n’est pas un espace parmi les autres, il les couvre tous, et il
 reste en tête.
 

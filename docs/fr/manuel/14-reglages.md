@@ -724,6 +724,12 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 | 3D | Pas d’échelle | 0,1 | 0,05 à 1 |
 | 3D | Douceur des ombres | Douce | Dure ou Douce |
 | 3D | Finesse des ombres | 2048 | 512, 1024, 2048, 4096 |
+| Dictée | Activer la dictée | activée | — |
+| Dictée | Façon de déclencher | Maintenir la touche | Maintenir la touche, Basculer marche/arrêt |
+| Dictée | Silence qui termine une phrase | 600 ms | 200 à 2000 |
+| Dictée | Aperçu pendant que vous parlez | 700 ms | 0 à 2000 |
+| Dictée | Fils de calcul | 2 | 1 à 8 |
+| Dictée | Libérer la mémoire après | 10 min | 0 à 120 |
 | Médias | Chemin de ffmpeg | vide | — |
 | Stockage | Dossier des projets | vide | — |
 | Avancé | Détail du journal | Tout | Rien → Tout |

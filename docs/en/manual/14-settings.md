@@ -701,6 +701,12 @@ What you have on a fresh install, at a glance.
 | 3D | Scale step | 0.1 | 0.05 to 1 |
 | 3D | Shadow softness | Soft | Hard or Soft |
 | 3D | Shadow detail | 2048 | 512, 1024, 2048, 4096 |
+| Dictation | Enable dictation | on | — |
+| Dictation | How it is triggered | Hold the key | Hold the key, Toggle on and off |
+| Dictation | Silence that ends a sentence | 600 ms | 200 to 2000 |
+| Dictation | Preview while you speak | 700 ms | 0 to 2000 |
+| Dictation | Compute threads | 2 | 1 to 8 |
+| Dictation | Free the memory after | 10 min | 0 to 120 |
 | Media | Path to ffmpeg | empty | — |
 | Storage | Projects folder | empty | — |
 | Advanced | Log detail | Everything | Nothing → Everything |
