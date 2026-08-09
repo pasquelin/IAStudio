@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`0d11ef6`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline 0d11ef6..develop`) au lieu de relire mille lignes.
+à **`0f1553d`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 0f1553d..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 

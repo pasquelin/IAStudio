@@ -627,6 +627,20 @@ Six things go through the bundles without looking like it, and each answers an o
 - **the text the model writes** — the generation form's labels, descriptions and options. See just
   below: it is the only mechanism in the studio that is not indexed on a key.
 
+### A fixed width is an internationalisation decision
+
+**French runs half as long again as English across 126 keys of the bundle.** Wherever a width is
+frozen, that gap becomes a label cut off **in one language only** — "Aperçu de la répétition" read
+as "Aperçu de la ré…" in an 80 px inspector column where "Repeat preview" fitted whole.
+
+The remedy is not to shorten the offending label: that fixes this case and leaves the next one.
+**What is truncated is readable on hover** — `PropertyRow` sets the `title`, and sets it **in
+stacked mode too**, where the column constrains nothing: a title that comes and goes with the
+layout would be a second rule to remember.
+
+Toolbars escape the question by construction — `ToolButton` shows no label at all, it makes one
+into a tooltip.
+
 ### The one dictionary indexed on text, and why
 
 **The Scenario API has no notion of language** — no `Accept-Language`, no locale parameter on

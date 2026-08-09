@@ -653,6 +653,21 @@ Six choses passent par les bundles sans en avoir l’air, et chacune répond à 
   génération. Voir juste dessous : c’est le seul mécanisme du studio qui ne s’indexe pas sur une
   clé.
 
+### Une largeur fixe est une décision d’internationalisation
+
+**Le français dépasse l’anglais de moitié sur 126 clés du bundle.** Partout où une largeur est
+figée, cet écart devient un libellé coupé **dans une langue seulement** — « Aperçu de la
+répétition » se lisait « Aperçu de la ré… » dans une colonne d’inspecteur de 80 px où
+« Repeat preview » tenait entier.
+
+Le remède n’est pas de raccourcir le libellé fautif : cela traite ce cas-ci et laisse le suivant.
+**Ce qui est tronqué se lit au survol** — `PropertyRow` pose le `title`, et le pose **aussi en
+mode empilé**, là où la colonne ne contraint pourtant rien : un titre qui apparaît et disparaît
+selon la disposition serait une seconde règle à retenir.
+
+Les barres d’outils échappent à la question par construction — `ToolButton` ne montre aucun
+libellé, il en fait une infobulle.
+
 ### Le seul dictionnaire indexé sur du texte, et pourquoi
 
 **L’API Scenario ne connaît pas la langue** — ni `Accept-Language`, ni paramètre de locale sur
