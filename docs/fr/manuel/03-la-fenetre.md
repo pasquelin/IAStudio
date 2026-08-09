@@ -281,8 +281,8 @@ qu’il **agit** — il crée quelque chose — alors que les autres ne font que
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Styles, Assets, Explorateur, Scène,
-Lumières, Mailles, Apps — celles que l’espace déclare, dans cet ordre — puis, sous le trait,
+Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Styles, Assets, Scène,
+Lumières, Mailles — celles que l’espace déclare, dans cet ordre — puis, sous le trait,
 Inspecteur.
 
 ### Le rail ne montre que ce que l’espace sait faire
@@ -369,25 +369,34 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte, et ce que chacun porte |
 | **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
 | **Assets** | droite | 1re | Vidéo, Audio | l’étagère du projet, en colonne |
-| **Explorateur** | droite | 1re | partout | les documents du projet, ouverts ou non |
+| **Explorateur** | gauche | 2de | partout, accueil compris | les documents du projet, ouverts ou non |
+| **Apps** | gauche | 2de | partout | les chaînes toutes faites de Scenario, à lancer telles quelles |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
-| **Apps** | droite | 1re | partout | les chaînes toutes faites de Scenario, à lancer telles quelles |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
 | **Assets** | bas | 1re | Image, 3D, Textures, Skyboxes | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio | la séquence en cours de montage |
 
-> **« Partout » veut dire les espaces de travail, pas l’accueil.** Un espace est un endroit qui
-> ouvre des documents d’une sorte à lui ; l’accueil n’en ouvre aucun — il ouvre ceux des autres.
-> Il n’a qu’une colonne de gauche, où il met l’**Explorateur** — là où les espaces mettent la
-> génération.
+> **« Partout » veut dire les espaces de travail, pas l’accueil**, sauf mention contraire. Un
+> espace est un endroit qui ouvre des documents d’une sorte à lui ; l’accueil n’en ouvre aucun —
+> il ouvre ceux des autres. Il n’a qu’une colonne de gauche, et il y met l’**Explorateur**, à la
+> même place et sous la même icône que les espaces : en moitié basse. N’ayant pas de génération
+> à mettre au-dessus, le panneau y occupe toute la colonne.
 
-**La colonne de gauche est la génération, et rien d’autre.** Deux panneaux seulement y ont le
-droit — **Modèles** et **Génération** — et aucun des deux ne s’affiche ailleurs. Générer est la
-seule chose que tous les espaces font : elle a donc la même place dans chacun, juste sous le
-bouton **+** qui crée un document. Ce sont deux moments du même travail, choisir puis remplir,
-donc ils se relaient dans la même moitié.
+**La colonne de gauche est celle de ce qui produit**, et elle est coupée en deux.
+
+**En haut, la génération, et rien d’autre.** Deux panneaux seulement y ont le droit —
+**Modèles** et **Génération** — et aucun des deux ne s’affiche ailleurs. Générer est la seule
+chose que tous les espaces font : elle a donc la même place dans chacun, juste sous le bouton
+**+** qui crée un document. Ce sont deux moments du même travail, choisir puis remplir, donc ils
+se relaient dans la même moitié.
+
+**En bas, l’Explorateur et les Apps**, qui se relaient de la même façon. Une App produit des
+assets : c’est de la génération, donc la colonne de gauche. Et une moitié plutôt que deux tours
+de plus en haut, parce que quatre icônes empilées dans un rail, c’est le moment où une colonne
+cesse d’être un endroit qu’on connaît pour devenir une pile qu’on fouille — tandis que deux
+moitiés de deux gardent la génération visible **pendant** qu’on lit l’Explorateur.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
 qui est sélectionné. Les panneaux y prennent leur tour dans la moitié haute — un espace ne
@@ -426,11 +435,13 @@ le premier du rail.
 C’est ce que vous voyez à la première ouverture, et ce que **Affichage ▸ Réinitialiser la
 disposition** rétablit :
 
+La moitié basse de gauche s’ouvre partout sur l’**Explorateur**, les Apps derrière lui.
+
 | Espace | La moitié haute de droite s’ouvre sur | La bande basse sur |
 |---|---|---|
 | **Image** | Calques | Assets |
 | **Vidéo** | Assets | Timeline |
-| **3D** | Explorateur | Assets |
+| **3D** | Scène | Assets |
 | **Audio** | Assets | Timeline |
 | **Textures** | Canaux | Assets |
 | **Skyboxes** | Skybox | Assets |

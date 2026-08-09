@@ -22,9 +22,10 @@ Pour *comprendre* le logiciel plutôt que reprendre son développement :
 ## Comment ce fichier est ordonné
 
 **Les sections descendent par gravité, et l'ordre est la recommandation.** Ce qui empêche de prouver
-une livraison (§ 0), puis ce qui perd du travail sans le dire (§ 1), puis une décision de disposition
-qui déplace des surfaces que tout le reste décrit (§ 2), puis ce qui bloque un geste (§ 3), ce qui
-fait douter (§ 4), ce qui manque (§ 5 à § 7), et enfin ce qui coûtera plus tard (§ 8, § 9).
+une livraison (§ 0), puis ce qui perd du travail sans le dire (§ 1), puis ce qui bloque un geste
+(§ 3), ce qui fait douter (§ 4), ce qui manque (§ 5 à § 7), et enfin ce qui coûtera plus tard
+(§ 8, § 9). **Le § 2 est vide** : la décision de disposition qu'il portait est livrée, et ses
+numéros de section ne se renumérotent pas plus que ceux des entrées.
 
 **Chaque entrée commence par le geste attendu, avant tout diagnostic.** Une phrase qui dit ce que
 l'utilisateur doit pouvoir faire à l'écran — pas ce que le code fait, pas la cause, pas le remède. La
@@ -54,9 +55,9 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > conclusions sont acquises. Puis `git log --oneline -15`, `git worktree list` et `pnpm validate`
 > pour partir d'une base verte.
 >
-> **Deux choses passent avant le reste** : le **§ 0** (la porte — mesurer le budget de couverture
-> avant de croire une livraison verte) et l'**entrée 24 du § 2**, l'Explorateur et Apps en moitié
-> basse de la colonne gauche, partout.
+> **Une chose passe avant le reste** : le **§ 0** (la porte — mesurer le budget de couverture avant
+> de croire une livraison verte). Le déplacement de l'Explorateur et des Apps en moitié basse de la
+> colonne gauche est **livré** (`feat/left-column`, 9 août 2026).
 >
 > **Pour la suite, propose-moi un ordre et attends ma réponse** avant d'ouvrir un worktree. Les
 > candidats, sans priorité imposée : les **étapes 7 à 9 du node editor** — compiler, valider,
@@ -340,95 +341,6 @@ dossier.
 > qui n'a peut-être pas suivi.
 
 ---
-
----
-
-# 2. La disposition — décidée, et prioritaire
-
-Une seule entrée, et elle est ici parce qu'elle **déplace des surfaces que les autres entrées
-décrivent** : la traiter après elles les ferait toutes mentir. C'est la seule chose de ce
-fichier dont la position dans l'ordre vient de sa portée et non de sa gravité.
-
-### 24. L'Explorateur et Apps passent au rail gauche, dans toute l'application
-
-**Le geste attendu.** Trouver l'Explorateur et les Apps **à gauche, sous la génération**, dans les sept espaces comme
-sur l'accueil.
-
-**Décidé le 9 août 2026, et précisé le même jour : ils vont en MOITIÉ BASSE de la colonne gauche,
-sous les deux panneaux de génération.** Pas un troisième et un quatrième onglet qui prennent leur
-tour avec eux — une seconde moitié, sous l'IA, comme l'inspecteur occupe la moitié basse à droite.
-**À prendre en premier des retours d'interface** : elle déplace des surfaces que les autres entrées
-décrivent, et la traiter après elles les ferait toutes mentir.
-
-| | Colonne gauche, après |
-|---|---|
-| **Moitié haute** (`left/primary`) | `models`, `generator` — la génération, inchangée |
-| **Moitié basse** (`left/secondary`) | `explorer`, `apps` — qui prennent leur tour à deux |
-
-**Une App produit des assets : c'est de la génération, donc la colonne de gauche.** Le code portait la
-raison inverse, écrite noir sur blanc dans `TOOL_PLACEMENTS` — « an App is a pipeline of its own, not
-a model the generator would fill a form for ». L'argument est recevable et il est écarté : ce que
-l'utilisateur cherche à gauche, c'est **de quoi produire**.
-
-**Ce que la droite garde**, une fois les deux partis :
-
-| Espace | Colonne droite, après |
-|---|---|
-| Image | `layers` **seul** |
-| Vidéo | `assets` **seul** |
-| Audio | `assets` **seul** |
-| Textures | `channels` seul — deux avec le panneau Styles |
-| 3D | `scene`, `lights`, `meshes` |
-| Skyboxes | `skybox`, `view` |
-
-L'inspecteur ne bouge pas : `right/secondary`, en bas à droite dans les six espaces.
-
-**Ce que la moitié basse règle, et que quatre onglets à la file auraient coûté** : quatre icônes
-empilées dans un rail, c'est le moment où une colonne cesse d'être un endroit qu'on connaît pour
-devenir une pile qu'on fouille. Deux moitiés de deux gardent la génération visible **pendant** qu'on
-lit l'Explorateur, ce qu'un jeu d'onglets interdit par construction.
-
-**Trois faits vérifiés dans le code le 9 août — ce chantier est plus petit qu'il n'en a l'air :**
-
-- **Le domaine porte déjà la moitié.** `ToolSlot = 'primary' | 'secondary'`, et sa JSDoc dit
-  « `primary` is the half nearest the window edge the zone hangs from — **the top of a side
-  column** ». `left` + `secondary` **est** le bas de la colonne gauche. Rien à inventer.
-- **Le shell compose les deux moitiés par zone, sans aucun cas particulier.** `Edge`
-  (`app/Shell.tsx`) rend `primary`, la poignée de partage, puis `secondary` pour n'importe quelle
-  zone, et `shownTool` (`helpers/tool-registry.ts`) interroge zone **et** slot génériquement.
-  **Aucun changement de composition à écrire** — c'est la déclaration qui bouge, pas le rendu.
-- **`canOffer` ne concerne que le générateur** (absent tant qu'aucun modèle n'est choisi) : la
-  moitié basse n'hérite d'aucun repli surprise.
-
-**Le vrai travail est de retourner la règle, et trois tests la tiennent** (`shared/domain/tool.test.ts`) :
-
-| Test | Ce qu'il affirme aujourd'hui |
-|---|---|
-| `is never cut in two — nothing shares the column with the generator` (`:171`) | `if (placement.zone === 'left') expect(placement.slot).toBe('primary')` — **c'est la règle à retourner**, pas à contourner |
-| la gauche d'un espace ne contient que `GENERATION_TOOLS` (`:155`) | devient « sa moitié **haute** ne contient que » |
-| `share a slot, or the tool would change rail row with the workspace` (`:35`) | `explorer` porte deux placements, tous deux `primary` — voir ci-dessous |
-
-**L'accueil suit — tranché le 9 août 2026 : `left/secondary` là aussi.** Son Explorateur est
-aujourd'hui en `left/primary`, l'accueil n'ayant **pas** de génération (« the home has no document to
-generate into, so the left column is free there »). Il passe quand même en moitié basse, et c'est ce
-qui tient l'invariant « deux placements d'un outil partagent leur slot » : **les deux placements de
-l'Explorateur fusionnent alors en un seul**
-
-    { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: [...WORKSPACE_IDS, HOME_SURFACE] }
-
-ce qui supprime la seule raison qu'avait ce panneau d'exister en double. Le panneau garde ainsi la
-même moitié et la même rangée de rail partout, ce que l'invariant existe précisément pour garantir.
-
-> **La moitié haute vide de l'accueil n'est pas un trou visuel, vérifié dans `Edge`** : `primary &&
-> secondary` seul pose la poignée de partage, et la seconde moitié reçoit `length={primary ? split :
-> undefined}` — « alone, it fills the zone ». L'Explorateur occupera donc toute la colonne gauche de
-> l'accueil, comme aujourd'hui. **Rien à écrire pour ça.**
-
-> **Trois commentaires deviennent faux le jour où c'est fait** et doivent partir avec le code : « The
-> left column is generation, **and only generation**, in every space » sur `models` ; « **The whole
-> column, not a half of it** » dans la JSDoc de `GENERATION_TOOLS` ; et celui d'`apps` qui explique
-> pourquoi il n'est *pas* à gauche. Une raison écrite pour une décision qui n'est plus prise se lit
-> comme la règle en vigueur.
 
 ---
 
@@ -816,8 +728,8 @@ Que ce menu « … » n'ait pas été trouvé est un retour en soi, et il rejoin
 **Regroupées** : les deux demandent d'écrire une phrase que le panneau ne porte pas, elles
 coûtent leurs clés dans les deux mêmes bundles, et la réponse de l'une conditionne l'autre —
 dire *ce qu'est* une App et dire *ce qu'elle produit* sont deux moitiés du même texte.
-**L'entrée 24 (§ 2) déplace ce panneau** : la faire d'abord, sans quoi la phrase serait écrite
-dans une colonne qu'elle quitte.
+**Le panneau a fini de bouger** : il est en moitié basse de la colonne gauche depuis
+`feat/left-column` (9 août 2026), et la phrase peut donc s'écrire là où elle restera.
 
 ### 19. « Apps » ne dit pas ce que le panneau contient
 
@@ -1359,17 +1271,21 @@ nouveau constat se compare.
 
 ## 12.1 Les règles de disposition — tranchées
 
-**La colonne de gauche est réservée à la génération**, dans les six espaces. La droite porte ce qui
-parle du document, **inspecteur en moitié basse**. L'étagère à assets est en **bande du bas** partout —
-sauf en Vidéo et en Audio, où la timeline occupe le bas et où c'est la colonne de droite qui la porte
-(`TOOL_PLACEMENTS`, `shared/domain/tool.ts`).
+**La colonne de gauche est celle de ce qui produit** : la génération en **moitié haute** dans les
+six espaces, l'Explorateur et les Apps en **moitié basse**, partout, accueil compris. La droite
+porte ce qui parle du document, **inspecteur en moitié basse**. L'étagère à assets est en **bande du
+bas** partout — sauf en Vidéo et en Audio, où la timeline occupe le bas et où c'est la colonne de
+droite qui la porte (`TOOL_PLACEMENTS`, `shared/domain/tool.ts`).
 
-> Avant, l'étagère était à droite dans tous les espaces, où elle mangeait la largeur du canvas.
+> Avant, l'étagère était à droite dans tous les espaces, où elle mangeait la largeur du canvas. Et
+> avant `feat/left-column` (9 août 2026), la gauche était la génération **et rien d'autre**, tandis
+> que l'Explorateur et Apps prenaient leur tour à droite. Les deux colonnes se lisent désormais
+> pareil : ce qu'on choisit en haut, ce qu'on parcourt en bas.
 >
-> **L'entrée 24 du § 2 amende la première règle, et c'est la seule des trois qui bouge** : la
-> génération garde la colonne gauche, mais **sa moitié haute seulement** — l'Explorateur et Apps
-> prennent la moitié basse, partout, accueil compris. Les deux colonnes se lisent alors pareil : ce
-> qu'on choisit en haut, ce qu'on parcourt en bas.
+> **Ne pas re-signaler** : l'Explorateur n'a plus qu'un seul placement, partagé par les espaces et
+> l'accueil, et c'est ce qui lui garde la même rangée de rail partout. La moitié basse est ouverte
+> par défaut comme toutes les autres — une moitié qui démarre fermée serait l'arrangement retenu
+> jusqu'à ce que quelqu'un le cherche dans le rail.
 
 **Une moitié vaut `null` quand personne ne l'a choisie**, et chaque espace y lit le premier panneau
 qu'il déclare. **Ne pas remettre d'identifiant dans `DEFAULT_OPEN`** : nommer un panneau par moitié

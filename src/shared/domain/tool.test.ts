@@ -116,12 +116,18 @@ describe('every workspace', () => {
 
 describe('the home', () => {
   it('stands the Explorer in its left column, where a panel is reached from the rail', () => {
-    expect(placementIn('explorer', HOME_SURFACE)).toMatchObject({ zone: 'left', slot: 'primary' })
+    expect(placementIn('explorer', HOME_SURFACE)).toMatchObject({ zone: 'left', slot: 'secondary' })
   })
 
-  it('leaves the Explorer on the right in the six spaces, where the left column generates', () => {
+  /**
+   * One placement, not two, and that is the point: the panel keeps the same half and the same
+   * rail row on the home as in the spaces. The home has no generation for it to sit under, and
+   * `Edge` gives a lone half the whole zone — so it fills the column there, as it always did.
+   */
+  it('reaches the Explorer through the same placement the spaces use', () => {
+    expect(placementsOf('explorer')).toHaveLength(1)
     for (const workspace of WORKSPACE_IDS) {
-      expect(placementIn('explorer', workspace)?.zone).toBe('right')
+      expect(placementIn('explorer', workspace)).toMatchObject({ zone: 'left', slot: 'secondary' })
     }
   })
 
@@ -149,12 +155,13 @@ describe('a horizontal band', () => {
 })
 
 describe('the left column', () => {
-  it('holds the generation panels, and only them, in every workspace', () => {
+  it('holds the generation panels, and only them, in the upper half of every workspace', () => {
     for (const workspace of WORKSPACE_IDS) {
-      const left = TOOL_PLACEMENTS.filter(
-        placement => placement.zone === 'left' && serves(placement, workspace),
+      const upper = TOOL_PLACEMENTS.filter(
+        placement =>
+          placement.zone === 'left' && placement.slot === 'primary' && serves(placement, workspace),
       )
-      expect(new Set(left.map(placement => placement.id))).toEqual(new Set(GENERATION_TOOLS))
+      expect(new Set(upper.map(placement => placement.id))).toEqual(new Set(GENERATION_TOOLS))
     }
   })
 
@@ -168,33 +175,42 @@ describe('the left column', () => {
     }
   })
 
-  it('is never cut in two — nothing shares the column with the generator', () => {
-    for (const placement of TOOL_PLACEMENTS) {
-      if (placement.zone === 'left') expect(placement.slot).toBe('primary')
-    }
+  /**
+   * Two halves of two, never four turns in one. Four icons stacked in a rail is the moment a
+   * column stops being a place one knows and becomes a pile one searches — and a half keeps the
+   * generator visible WHILE the Explorer is read, which taking turns forbids by construction.
+   */
+  it('holds what one produces with in its lower half, and nothing else', () => {
+    const lower = TOOL_PLACEMENTS.filter(
+      placement => placement.zone === 'left' && placement.slot === 'secondary',
+    )
+
+    expect(lower.map(placement => placement.id)).toEqual(['explorer', 'apps'])
   })
 })
 
 describe('the rail order of the upper right', () => {
-  it('reads layers then explorer in Image, and explorer before the scene panels in 3D', () => {
-    expect(upperRightIn('image')).toEqual(['layers', 'explorer', 'apps'])
-    expect(upperRightIn('3d')).toEqual(['explorer', 'scene', 'lights', 'meshes', 'apps'])
+  // What the right keeps once the Explorer and the Apps have gone left: what acts on the
+  // document that is already open, and only that.
+  it('reads the panels of the document, and no longer the Explorer or the Apps', () => {
+    expect(upperRightIn('image')).toEqual(['layers'])
+    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes'])
   })
 
   it('puts the shelf first where a take is dragged onto a track', () => {
-    expect(upperRightIn('video')).toEqual(['assets', 'explorer', 'apps'])
-    expect(upperRightIn('audio')).toEqual(['assets', 'explorer', 'apps'])
+    expect(upperRightIn('video')).toEqual(['assets'])
+    expect(upperRightIn('audio')).toEqual(['assets'])
   })
 
   // `view` sits right behind them: how a sky is being looked at is next of kin to what it is,
   // and both used to be a menu floating over the picture.
   it('puts the sky controls first in Skyboxes — it is what that space is for', () => {
-    expect(upperRightIn('skyboxes')).toEqual(['skybox', 'view', 'explorer', 'apps'])
+    expect(upperRightIn('skyboxes')).toEqual(['skybox', 'view'])
   })
 
   /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */
   it('puts the channels first in Textures, with the styles that read them beside', () => {
-    expect(upperRightIn('textures')).toEqual(['channels', 'styles', 'explorer', 'apps'])
+    expect(upperRightIn('textures')).toEqual(['channels', 'styles'])
   })
 })
 

@@ -153,10 +153,13 @@ describe('the home and the workspaces arrange their zones apart', () => {
   })
 
   it('does not close the generation column when the Explorer is closed on the home', () => {
-    useTools.getState().close(HOME_SURFACE, 'left', 'primary')
+    useTools.getState().close(HOME_SURFACE, 'left', 'secondary')
 
-    expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left?.primary).toBeUndefined()
-    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: null })
+    expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left?.secondary).toBeUndefined()
+    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({
+      primary: null,
+      secondary: null,
+    })
   })
 
   // The one that lost a setting: the space kept `generator`, the home wrote `explorer` over it,
@@ -165,9 +168,12 @@ describe('the home and the workspaces arrange their zones apart', () => {
     useTools.getState().show('image', 'left', 'generator')
     useTools.getState().show(HOME_SURFACE, 'left', 'explorer')
 
-    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: 'generator' })
+    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({
+      primary: 'generator',
+      secondary: null,
+    })
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
-      primary: 'explorer',
+      secondary: 'explorer',
     })
   })
 
@@ -296,24 +302,24 @@ describe('openFrom', () => {
       bottom: { primary: 'assets' },
     })
 
-    expect(open.left).toEqual({ primary: 'models' })
-    // Two tools of the old left column now declare the same half; the last one read wins it, and
-    // the shelf is not lost with it — it keeps the band, which is its other placement.
-    expect(open.right).toEqual({ primary: 'explorer', secondary: 'inspector' })
+    // The Explorer keeps the lower left it was stored in — it is where it lives now too.
+    expect(open.left).toEqual({ primary: 'models', secondary: 'explorer' })
+    // The shelf takes the upper right the Explorer used to win: it declares that half in Video
+    // and Audio, and nothing is left there to outrank it.
+    expect(open.right).toEqual({ primary: 'assets', secondary: 'inspector' })
     expect(open.bottom).toEqual({ primary: 'assets' })
   })
 
   /**
-   * The Explorer stands in the left column on the home and in the right one in the six spaces.
-   * Propagating that first placement would hand the spaces' left column — which is generation,
-   * and only generation — to a panel the user opened somewhere they cannot see it from.
+   * A panel stored in a zone it no longer belongs to is moved to the one it declares, rather
+   * than left where nothing would ever draw it. The Explorer used to stand in the upper right.
    */
-  it('does not let the home placement of a tool claim a workspace zone', () => {
+  it('moves a panel out of a zone it no longer belongs to', () => {
     const open = openFrom({ right: { primary: 'explorer' } })
 
-    expect(open.right).toEqual({ primary: 'explorer' })
-    // Not merely closed: absent. A zone the rebuild names at all keeps its size and its handle.
-    expect(open.left).toBeUndefined()
+    expect(open.left).toEqual({ secondary: 'explorer' })
+    // Emptied, not dropped: a zone the stored layout named at all keeps its size and its handle.
+    expect(open.right).toEqual({})
   })
 
   // The shelf claims the upper right and the band both; the column was only left on its default.
@@ -341,7 +347,7 @@ describe('openFrom', () => {
     const stored = { bottom: { primary: 'timeline', secondary: 'explorer' } }
     expect(openFrom(stored).bottom?.secondary).toBeUndefined()
     // The explorer is not lost with the half it was stored in: it goes back to the column.
-    expect(openFrom(stored).right?.primary).toBe('explorer')
+    expect(openFrom(stored).left?.secondary).toBe('explorer')
   })
 
   it('reads its own shape back unchanged', () => {

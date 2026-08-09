@@ -56,11 +56,13 @@ export type ToolId =
   | 'apps'
 
 /**
- * The panels the LEFT column is reserved for: choosing a model, then filling its form. Nothing
- * else may sit there, and neither sits anywhere else — `tool.test.ts` enforces both directions.
+ * The panels the UPPER HALF of the left column is reserved for: choosing a model, then filling
+ * its form. Nothing else may sit in that half, and neither sits anywhere else — `tool.test.ts`
+ * enforces both directions.
  *
- * The whole column, not a half of it: generating is the one thing every space does, so it gets
- * the same place in each, under the same button that creates a document.
+ * The upper half of every space's left column, so generating — the one thing every space does —
+ * keeps the same place in each, under the same button that creates a document. The half below
+ * is the Explorer and the Apps, which is what makes the whole column "where one produces".
  */
 export const GENERATION_TOOLS: readonly ToolId[] = ['models', 'generator']
 
@@ -100,16 +102,25 @@ export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
  * across the whole width, and cutting it leaves two panels too narrow to be either.
  */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
-  // The left column is generation, and only generation, in every space: the same two panels in
-  // the same place, right under the button that makes a document. The graph included — it
-  // belongs to no model family, which is not the same as having no model to choose.
+  // The upper half of the left column is generation, and only generation, in every space: the
+  // same two panels in the same place, right under the button that makes a document. The graph
+  // included — it belongs to no model family, which is not the same as having no model to choose.
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
   { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
 
-  // The home has no document to generate into, so the left column is free there — and the
-  // documents are what one opens the studio to reach. Same panel and same half as in the
-  // spaces, one column over: the home offers no right-hand column for it to keep.
-  { id: 'explorer', zone: 'left', slot: 'primary', surfaces: [HOME_SURFACE] },
+  // The lower half, in the spaces AND on the home. What one looks left for is something to
+  // produce with, and both of these are that: the documents to produce into, and the pipelines
+  // that produce. A half rather than two more turns in the upper one — four icons stacked in a
+  // rail is the moment a column stops being a place one knows and becomes a pile one searches,
+  // and two halves of two keep the generator visible WHILE the Explorer is read.
+  //
+  // One placement rather than two, which is what keeps the panel in the same rail row
+  // everywhere: the home has no generation to sit under, so its lower half simply fills the
+  // column — `Edge` gives a lone half the whole zone.
+  { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: [...WORKSPACE_IDS, HOME_SURFACE] },
+  // Scenario's Apps — public workflows, run as they are. An App produces assets, which is
+  // generating, so it belongs to the column one produces from.
+  { id: 'apps', zone: 'left', slot: 'secondary', surfaces: WORKSPACE_IDS },
 
   // The upper right, in rail order. Every tool here takes its turn with the others its space
   // declares — the order below is the order their icons stack.
@@ -133,17 +144,11 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // Where a take is dragged onto a track, the shelf and the montage have to be on screen
   // together — and the montage owns the band, so the shelf takes the column.
   { id: 'assets', zone: 'right', slot: 'primary', surfaces: ['video', 'audio'] },
-  { id: 'explorer', zone: 'right', slot: 'primary', surfaces: WORKSPACE_IDS },
   // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
   // lists the documents of the project in every space, which is a different question.
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', surfaces: ['3d'] },
-  // Scenario's Apps — public workflows, run as they are. In the right column and not in the
-  // left one, which is reserved for the two generation panels: an App is a pipeline of its own,
-  // not a model the generator would fill a form for. Last of the half in every space, so it
-  // takes the place of nothing: what a space opens on is what it declares first here.
-  { id: 'apps', zone: 'right', slot: 'primary', surfaces: WORKSPACE_IDS },
 
   // The other half of the right column, and always up: what is selected is read WHILE a
   // model is chosen and a prompt written, and in an editor the inspector is never the panel
@@ -179,16 +184,18 @@ export function placementsOf(id: unknown): ToolPlacement[] {
 }
 
 /**
- * The placements a workspace can show — every one of them but the home's.
+ * The placements a workspace can show — every one that reaches a workspace at all.
  *
  * What is open is stored once per zone, for all six spaces, so a tool open in one of its zones
- * is opened in the others: the shelf must not go missing on the way from Image to Video. The
- * home is not in that game. It never shares the screen with a workspace, and the Explorer stands
- * in its left column while the six put generation there — propagated, it would take the column
- * the user had named the Models panel for.
+ * is opened in the others: the shelf must not go missing on the way from Image to Video. A
+ * placement that serves the home ALONE is not in that game — the home never shares the screen
+ * with a workspace, and propagating a half it named would take a column the spaces use for
+ * something else. A placement serving both, as the Explorer's does, belongs to both.
  */
 export function workspacePlacementsOf(id: unknown): ToolPlacement[] {
-  return placementsOf(id).filter(placement => !serves(placement, HOME_SURFACE))
+  return placementsOf(id).filter(placement =>
+    placement.surfaces.some(surface => surface !== HOME_SURFACE),
+  )
 }
 
 /**

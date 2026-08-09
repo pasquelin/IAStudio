@@ -88,18 +88,24 @@ export const DEFAULT_SPLIT = 240
 /**
  * Which halves start open — and nothing about what they draw. Every one of them is `null`, so
  * each surface opens on the panel it declares first: the layers in Image, the shelf in Video,
- * the sky in Skyboxes, the models on the left in every space, and the Explorer on the home.
+ * the sky in Skyboxes, the models in the upper left of every space, and the Explorer in the
+ * lower left everywhere, the home included.
  *
- * The home names only the left column, the one zone it has: an entry for the others would hold
- * a handle open beside a column nothing can fill.
+ * Every half a surface has is named here, and the lower left is no exception: two halves of two
+ * exist so the generator stays visible WHILE the Explorer is read, and a half that starts closed
+ * would be that arrangement withheld until someone goes looking for it in the rail.
+ *
+ * The home names only the left column, the one zone it has — and only its lower half, which is
+ * where its Explorer sits. `Edge` gives a lone half the whole zone, so the panel fills the
+ * column there rather than hanging under an empty one.
  */
 export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   workspaces: {
-    left: { primary: null },
+    left: { primary: null, secondary: null },
     right: { primary: null, secondary: null },
     bottom: { primary: null },
   },
-  home: { left: { primary: null } },
+  home: { left: { secondary: null } },
 }
 
 export const DEFAULT_ARRANGEMENTS: Record<SurfaceFamily, Arrangement> = {

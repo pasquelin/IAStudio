@@ -40,9 +40,9 @@ describe('the generator', () => {
   })
 
   it('is the only panel its absence removes', () => {
-    expect(idsOf('left', 'image')).toEqual(['models'])
+    expect(idsOf('left', 'image')).toEqual(['models', 'explorer', 'apps'])
     useModels.setState({ selected: { image: 'flux-dev' } })
-    expect(idsOf('left', 'image')).toEqual(['models', 'generator'])
+    expect(idsOf('left', 'image')).toEqual(['models', 'generator', 'explorer', 'apps'])
   })
 
   /**
@@ -52,11 +52,11 @@ describe('the generator', () => {
    * for good — green at the registry layer, where the placement is there all along.
    */
   it('is offered in the space that belongs to no family, once a model is chosen there', () => {
-    expect(idsOf('left', 'graph')).toEqual(['models'])
+    expect(idsOf('left', 'graph')).toEqual(['models', 'explorer', 'apps'])
     useModels.setState({ selected: { all: 'flux-dev' } })
 
     expect(hasModelFor('graph')).toBe(true)
-    expect(idsOf('left', 'graph')).toEqual(['models', 'generator'])
+    expect(idsOf('left', 'graph')).toEqual(['models', 'generator', 'explorer', 'apps'])
   })
 
   /** The home is the one surface with nothing to generate at all, and it stays that way. */
@@ -76,13 +76,7 @@ describe('the generator', () => {
   // Named for what it checks: `canOffer` answers for the generator and for nothing else, so a
   // section with no model still shows every panel of its right column.
   it('leaves the right column alone — no model removes anything there', () => {
-    expect(idsOf('right', 'textures')).toEqual([
-      'channels',
-      'styles',
-      'explorer',
-      'apps',
-      'inspector',
-    ])
+    expect(idsOf('right', 'textures')).toEqual(['channels', 'styles', 'inspector'])
   })
 })
 
@@ -91,7 +85,7 @@ describe('the generator', () => {
 describe('a half open on no panel in particular', () => {
   it('shows the one this section declares first', () => {
     expect(shownTool(null, 'right', 'primary', 'image', true)).toBe('layers')
-    expect(shownTool(null, 'right', 'primary', '3d', true)).toBe('explorer')
+    expect(shownTool(null, 'right', 'primary', '3d', true)).toBe('scene')
     expect(shownTool(null, 'right', 'primary', 'video', true)).toBe('assets')
     expect(shownTool(null, 'right', 'primary', 'skyboxes', true)).toBe('skybox')
     expect(shownTool(null, 'right', 'primary', 'textures', true)).toBe('channels')
@@ -114,7 +108,12 @@ describe('a half open on no panel in particular', () => {
   })
 
   it('shows nothing where the section fills no such half', () => {
-    expect(shownTool(null, 'left', 'secondary', 'image', true)).toBeNull()
+    expect(shownTool(null, 'bottom', 'secondary', 'image', true)).toBeNull()
+  })
+
+  // The lower half of the left column, which the Explorer and the Apps took over.
+  it('opens the lower left on the first panel that half declares', () => {
+    expect(shownTool(null, 'left', 'secondary', 'image', true)).toBe('explorer')
   })
 })
 
@@ -141,8 +140,7 @@ describe('what a half of a zone shows', () => {
   })
 
   it('answers null for a half this section does not fill', () => {
-    // The left column is one half: generating is a single panel, whichever of the two shows it.
-    expect(shownTool('models', 'left', 'secondary', 'image', true)).toBeNull()
+    // A band is read across its width, so it has no second half for anything to substitute into.
     expect(shownTool('assets', 'bottom', 'secondary', 'image', true)).toBeNull()
   })
 
@@ -154,7 +152,7 @@ describe('what a half of a zone shows', () => {
   // order of `TOOL_PLACEMENTS` is the choice, so it is spelled out here rather than left to
   // whoever reorders that table next.
   it('substitutes the first tool the half declares when several share it', () => {
-    expect(shownTool('layers', 'right', 'primary', '3d', true)).toBe('explorer')
+    expect(shownTool('layers', 'right', 'primary', '3d', true)).toBe('scene')
     expect(shownTool('layers', 'right', 'primary', 'skyboxes', true)).toBe('skybox')
   })
 
