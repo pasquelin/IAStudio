@@ -7,6 +7,9 @@ import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { FOCUS_RING } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
+import { bindingOf, commandFor } from '@shared/domain/command'
+import { signatureOf } from '@shared/domain/shortcut'
+import { currentOverrides } from '@/stores/bindings'
 import { useWindowState } from '@/hooks/useWindowState'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import {
@@ -198,6 +201,17 @@ type BarButtonProps = {
   reorder?: Reorder
 }
 
+/**
+ * The two chords a reader is told about, in the space-separated form `aria-keyshortcuts` wants
+ * — which is the form a `Signature` already has. Resolved, so a remap is announced too.
+ */
+function reorderKeyshortcuts(): string | undefined {
+  const overrides = currentOverrides()
+  const chords = [bindingOf('spaces.moveLeft', overrides), bindingOf('spaces.moveRight', overrides)]
+  const bound = chords.filter(chord => chord !== null)
+  return bound.length > 0 ? bound.join(' ') : undefined
+}
+
 /** One destination of the bar. The home and the spaces are read as one row, so they wear
  * the same chrome — the home is not a control of a different kind. */
 function BarButton({ icon, label, current, onClick, reorder }: BarButtonProps) {
@@ -227,15 +241,18 @@ function BarButton({ icon, label, current, onClick, reorder }: BarButtonProps) {
         reorder.onDrop(event)
       }}
       onDragEnd={reorder?.onEnd}
-      // Alt and not the bare arrows: those belong to whoever walks the bar, and taking them
-      // would trade one gesture for another.
+      // Read off the registry rather than matched by hand: this was the studio's one keyboard
+      // gesture the shortcuts screen could neither show nor remap. Heard here rather than
+      // through `useShortcuts` because it belongs to the focused pill, not to the window.
       onKeyDown={event => {
-        if (!reorder || !event.altKey) return
-        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        if (!reorder) return
+        const overrides = currentOverrides()
+        const command = commandFor(signatureOf(event.nativeEvent), 'spaces', overrides)
+        if (command !== 'spaces.moveLeft' && command !== 'spaces.moveRight') return
         event.preventDefault()
-        reorder.onStep(event.key === 'ArrowLeft' ? 'left' : 'right')
+        reorder.onStep(command === 'spaces.moveLeft' ? 'left' : 'right')
       }}
-      aria-keyshortcuts={reorder && 'Alt+ArrowLeft Alt+ArrowRight'}
+      aria-keyshortcuts={reorder && reorderKeyshortcuts()}
       onContextMenu={event => {
         if (!reorder) return
         event.preventDefault()

@@ -124,7 +124,7 @@ describe('capturing a new binding', () => {
     })
     render(<ShortcutsSettings />)
 
-    const restore = screen.getByLabelText(/Restaurer la valeur par défaut — Déplacer/)
+    const restore = screen.getByLabelText(/Restaurer la valeur par défaut — Déplacer$/)
 
     expect(restore).toHaveRole('button')
     await user.click(restore)

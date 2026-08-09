@@ -947,6 +947,7 @@
     "chordFree": "No action uses this key: it is free.",
     "scope": {
       "global": "Anywhere in the application",
+      "spaces": "In the bar of spaces",
       "scene": "In the 3D view",
       "sequence": "In the edit",
       "canvas": "In the picture",
@@ -1093,6 +1094,14 @@
     "windowFullScreen": {
       "title": "Full screen",
       "help": "Gives the window the whole screen, with no bar and no border, to work with nothing around it."
+    },
+    "spacesMoveLeft": {
+      "title": "Move the space left",
+      "help": "Shifts the focused space one place to the left in the top bar. The order you settle on is kept from one session to the next."
+    },
+    "spacesMoveRight": {
+      "title": "Move the space right",
+      "help": "Shifts the focused space one place to the right in the top bar. The order you settle on is kept from one session to the next."
     },
     "sceneSelect": {
       "title": "Select",

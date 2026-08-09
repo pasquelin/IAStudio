@@ -479,7 +479,7 @@ même moitié et la même rangée de rail partout, ce que l'invariant existe pr�
 
 # 3. Les gestes qui n'aboutissent pas
 
-Trois entrées. La première échoue **complètement et en silence** ; les autres ne se constatent qu'en
+Deux entrées. La première échoue **complètement et en silence** ; l'autre ne se constate qu'en
 lâchant la souris.
 
 ## 3.1 La dictée — le geste demandé n'a jamais existé
@@ -559,27 +559,6 @@ flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le me
 
 > **C'est préexistant et ça touche tout le monde** : `DocumentTab`, `DraggableAsset`, `AssetMenu`,
 > `StyleRow`, et la barre des espaces. Le menu seul ferme WCAG 2.5.7, jamais 2.1.1.
-
----
-
-## 3.3 Les raccourcis hors registre
-
-**Elle était regroupée avec la garde de format des signatures ; ce regroupement est tombé** — la
-garde est livrée (`isSignature`, `feat/pinceau-durete`, 9 août 2026). L'entrée reste entière et sa
-phrase reste vraie : `Alt+Flèches` ne passant toujours pas par le registre, il échappe toujours à
-cette garde. Elle se traite désormais seule.
-
-### 34. Le raccourci de réordonnancement n'est pas remappable
-
-**Le geste attendu.** Changer le raccourci de réordonnancement des espaces depuis l'écran des raccourcis, comme
-n'importe quel autre.
-
-`Alt+Flèches` est codé dans `TitleBar` et annoncé par `aria-keyshortcuts`, mais il ne passe pas par le
-registre de commandes — donc il n'apparaît pas dans les réglages de raccourcis, et
-`shortcuts.overrides` ne peut pas le changer.
-
-C'est le seul geste clavier du studio dans ce cas. Tant qu'il l'est, il échappe aussi à la garde qui
-vérifie le format des signatures du registre (§ 5.2).
 
 ---
 

@@ -947,6 +947,7 @@
     "chordFree": "Aucune action n’utilise cette touche : elle est libre.",
     "scope": {
       "global": "Partout dans l’application",
+      "spaces": "Dans la barre des espaces",
       "scene": "Dans la vue 3D",
       "sequence": "Dans le montage",
       "canvas": "Dans l’image",
@@ -1093,6 +1094,14 @@
     "windowFullScreen": {
       "title": "Plein écran",
       "help": "Fait occuper tout l’écran à la fenêtre, sans barre ni bordure, pour travailler sans rien autour."
+    },
+    "spacesMoveLeft": {
+      "title": "Déplacer l’espace vers la gauche",
+      "help": "Décale d’un cran vers la gauche l’espace sur lequel se trouve le focus, dans la barre du haut. L’ordre choisi est retenu d’une session à l’autre."
+    },
+    "spacesMoveRight": {
+      "title": "Déplacer l’espace vers la droite",
+      "help": "Décale d’un cran vers la droite l’espace sur lequel se trouve le focus, dans la barre du haut. L’ordre choisi est retenu d’une session à l’autre."
     },
     "sceneSelect": {
       "title": "Sélectionner",

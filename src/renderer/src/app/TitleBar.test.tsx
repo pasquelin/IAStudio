@@ -130,7 +130,7 @@ describe('TitleBar', () => {
     useSettings.setState({ write })
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', altKey: true })
+    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
 
     expect(write).toHaveBeenCalledWith({
       workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes', 'graph'] },
@@ -143,9 +143,60 @@ describe('TitleBar', () => {
     useSettings.setState({ write })
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight' })
+    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight' })
 
     expect(write).not.toHaveBeenCalled()
+  })
+
+  /**
+   * It was the studio's one keyboard gesture written outside the command registry: invisible to
+   * the shortcuts screen, and beyond anything `shortcuts.overrides` could say.
+   */
+  it('follows a remap of the reordering command', () => {
+    const write = vi.fn(async () => undefined)
+    useSettings.setState({
+      write,
+      settings: {
+        ...structuredClone(DEFAULT_SETTINGS),
+        shortcuts: { overrides: { 'spaces.moveRight': 'Alt+KeyL' } },
+      },
+    })
+    render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
+
+    fireEvent.keyDown(pill('Image'), { key: 'l', code: 'KeyL', altKey: true })
+
+    expect(write).toHaveBeenCalledWith({
+      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes', 'graph'] },
+    })
+  })
+
+  it('drops the default once it has been remapped away', () => {
+    const write = vi.fn(async () => undefined)
+    useSettings.setState({
+      write,
+      settings: {
+        ...structuredClone(DEFAULT_SETTINGS),
+        shortcuts: { overrides: { 'spaces.moveRight': 'Alt+KeyL' } },
+      },
+    })
+    render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
+
+    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
+
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  // Announced as well as heard: a reader told about a chord the remap has moved is told wrong.
+  it('announces the chord it currently answers to', () => {
+    useSettings.setState({
+      settings: {
+        ...structuredClone(DEFAULT_SETTINGS),
+        shortcuts: { overrides: { 'spaces.moveRight': 'Alt+KeyL' } },
+      },
+    })
+    render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
+
+    expect(pill('Image')).toHaveAttribute('aria-keyshortcuts', 'Alt+ArrowLeft Alt+KeyL')
   })
 
   it('writes nothing at the ends of the bar', () => {
@@ -153,7 +204,7 @@ describe('TitleBar', () => {
     useSettings.setState({ write })
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Image'), { key: 'ArrowLeft', altKey: true })
+    fireEvent.keyDown(pill('Image'), { key: 'ArrowLeft', code: 'ArrowLeft', altKey: true })
 
     expect(write).not.toHaveBeenCalled()
   })
@@ -184,7 +235,7 @@ describe('TitleBar', () => {
   it('says where the space landed', () => {
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', altKey: true })
+    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
 
     expect(screen.getByRole('status')).toHaveTextContent('Image en position 2 sur 7')
   })
@@ -198,7 +249,7 @@ describe('TitleBar', () => {
   it('says it without an agreement French would have to make', () => {
     render(<TitleBar activeWorkspace="video" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Vidéo'), { key: 'ArrowRight', altKey: true })
+    fireEvent.keyDown(pill('Vidéo'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
 
     expect(screen.getByRole('status')).toHaveTextContent('Vidéo en position 3 sur 7')
   })

@@ -10,7 +10,8 @@ import type { WorkspaceId } from './workspace'
  * offers. Its bindings are the only ones that may clash with everything else, so they are the
  * only ones a conflict check treats as competing with every scope.
  */
-export type CommandScope = 'global' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'graph'
+export type CommandScope =
+  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'graph'
 
 export type CommandId =
   | 'project.new'
@@ -20,6 +21,8 @@ export type CommandId =
   | 'app.settings'
   | 'app.dictate'
   | 'window.fullScreen'
+  | 'spaces.moveLeft'
+  | 'spaces.moveRight'
   | 'scene.select'
   | 'scene.translate'
   | 'scene.rotate'
@@ -189,6 +192,24 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.windowFullScreen.title',
     helpKey: 'commands.windowFullScreen.help',
     defaultBinding: 'Ctrl+Meta+KeyF',
+  }),
+
+  // Alt and not the bare arrows: those belong to whoever walks the bar, and taking them would
+  // trade one gesture for another. Its own scope because it is heard by the focused pill alone,
+  // where a `global` binding would fire from anywhere and move a space nobody was pointing at.
+  command({
+    id: 'spaces.moveLeft',
+    scope: 'spaces',
+    titleKey: 'commands.spacesMoveLeft.title',
+    helpKey: 'commands.spacesMoveLeft.help',
+    defaultBinding: 'Alt+ArrowLeft',
+  }),
+  command({
+    id: 'spaces.moveRight',
+    scope: 'spaces',
+    titleKey: 'commands.spacesMoveRight.title',
+    helpKey: 'commands.spacesMoveRight.help',
+    defaultBinding: 'Alt+ArrowRight',
   }),
 
   // `KeyV` as in every editor that has a pointer tool. Not `KeyQ` or `KeyW`, which fly the
@@ -795,6 +816,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
 
 export const COMMAND_SCOPES: readonly CommandScope[] = [
   'global',
+  'spaces',
   'scene',
   'sequence',
   'canvas',
