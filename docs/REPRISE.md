@@ -10,14 +10,89 @@ pas. Pour *comprendre* le logiciel plutôt que reprendre son développement :
 
 ## Prompt de reprise
 
-> Je reprends le développement de **Scenario Studio**, dans
-> `/Users/pasquelin/Applications/scenario`.
+Le texte ci-dessous est à coller tel quel dans une session neuve. Il est daté : **le mettre à jour
+en même temps que le § 3 quand un chantier est livré**, sinon il envoie la prochaine session refaire
+ce qui est fait.
+
+> Je reprends le développement de **Scenario Studio**, dans `/Users/pasquelin/Applications/scenario`.
 >
 > Lis `docs/REPRISE.md` en entier, puis `CLAUDE.md`. Ne refais pas les mesures du § 6 : leurs
-> conclusions sont acquises. Puis `git log --oneline -15` et `pnpm validate` pour partir d'une
-> base verte.
+> conclusions sont acquises. Puis `git log --oneline -15`, `git worktree list` et `pnpm validate`
+> pour partir d'une base verte.
 >
-> Commence par me proposer ton plan avant de coder.
+> ## Ce qui vient d'être livré — ne le refais pas
+>
+> `feat/textures-materiau` est fusionnée dans `develop` (8 août 2026) : l'espace **Textures** a son
+> panneau matériau — une face de l'inspecteur unique, avec le remap à double poignée — et sa bande
+> de canaux, en colonne de droite, où chaque canal se dépose, se badge et se regarde à plat. Le
+> viewport est nu. Le § 3.4 dit ce que ce lot a appris et qu'il ne faut pas repayer ; **les étapes 6
+> à 8 restent entières**.
+>
+> ## Trois choses inachevées sur ce lot, à traiter avant de l'oublier
+>
+> 1. **Rien n'y est vérifié à l'écran.** jsdom ne compile aucun shader : les tests prouvent le texte
+>    du GLSL, pas ce qu'il dessine. La liste de ce qu'il faut voir est à la fin du § 3.4. Il faut un
+>    projet ouvert et `pnpm start:debug`, donc `secrets/.env` copié dans le worktree — une session
+>    précédente s'est vu refuser cette copie par la politique de permissions, prévois-le.
+> 2. **Trois angles de revue sur cinq n'ont pas rendu** sur ce diff — bugs par reproduction,
+>    historique git, adverse three.js/React. Les relancer est le premier geste utile si un défaut
+>    apparaît dans cet espace.
+> 3. **Deux dettes notées et non traitées** : `design/MenuRow.tsx` n'expose aucun `aria-checked`
+>    (aucun lecteur d'écran ne dit quelle ligne est active, dans **tous** les menus du studio), et
+>    `useDocuments.refresh()` ne passe pas par `forgetDocument`, donc les vues de session d'un projet
+>    quitté y survivent.
+>
+> ## Le plan, à trancher avec moi avant d'ouvrir un worktree
+>
+> Propose-moi un ordre et attends ma réponse. Les candidats, sans priorité imposée :
+>
+> - **§ 3.4, étapes 6 à 8** — dérivations en shader, tiling, export. La suite directe, et le plus
+>   gros manque fonctionnel restant hors workflows.
+> - **Backlog qualité P1** (`.claude/loop/BACKLOG.md`) — **vérifie d'abord ce qui reste** : les
+>   statuts de ce fichier ont déjà menti trois fois. Au 8 août il restait L59/L60 (le `useCallback`
+>   autour de `run`, débloqués depuis la fusion de `feat/ergonomie`), L31 sur quatre budgets tendus
+>   plus `app/**` et `panels/**` qui n'ont aucun budget, et L61 (zod dans le chunk initial).
+> - **§ 3.3 + § 3.5** — les 13 lignes actionnables de la table du § 3.3, les 3 vues mortes du skybox
+>   et l'export en 6 faces.
+> - **§ 3.6** — les dettes transverses : borne de débit sur l'API, jobs qui ne survivent pas à la
+>   fermeture, index du catalogue.
+>
+> ## Les règles de travail
+>
+> - **Un worktree par chantier**, dans `.claude/worktrees/<nom>`, branche partant de `develop`.
+>   Copie `CLAUDE.md` dedans, `pnpm install`.
+> - **Rebase sur `develop` LOCAL après chaque étape**, et `pnpm validate` vert **après** le rebase.
+>   Plusieurs sessions travaillent en parallèle : `git worktree list` avant d'ouvrir quoi que ce
+>   soit, et ne prends pas un sujet déjà tenu.
+> - **Avant chaque merge : `/simplify` puis `/code-review`**, corrections appliquées. C'est la
+>   definition of done du dépôt, pas une option — et une revue interrompue n'est pas une revue.
+> - **Mets la doc à jour** quand le code change ce qu'elle affirme — manuel fr *et* en, et ce
+>   fichier. Un grep sur les tournures de manque (« ne sait pas », « pas encore », « aucun bouton »)
+>   trouve en trente secondes ce qu'aucune fusion ne signalera.
+> - **Ce fichier est une reprise, pas un journal.** Le récit d'une correction appartient au message
+>   du commit qui la porte. N'écris ici que ce qui coûterait une seconde fois.
+> - **Pose-moi les questions avant d'attaquer. N'invente jamais** : si un choix de conception se
+>   présente, demande.
+> - **Aucune dépendance nouvelle** sans mon accord. Les tests e2e (Playwright) sont reportés à la
+>   fin du projet, c'est décidé.
+> - **Un composant = un fichier.** Vérifie que ça n'existe pas déjà avant d'écrire du custom
+>   (`design/`, `helpers/`, `hooks/`, `shared/`). **Règle absolue : aucun code dupliqué.**
+> - Code performant : 8,33 ms par frame dans le renderer, 16 ms pour toute opération synchrone du
+>   main.
+>
+> ## Trois leçons des dernières sessions
+>
+> **Les revues qui reproduisent trouvent ce que les revues qui lisent ratent.** Demande
+> explicitement la reproduction et la sortie qui la prouve. Et **casse ton propre code pour voir si
+> un test rougit** : sur le dernier lot, deux tests écrits de bonne foi ne mordaient pas — l'un
+> mesurait une garde au lieu du défaut, l'autre cherchait un mot qu'aucun bundle ne contient.
+>
+> **Une fusion sans conflit n'est pas une fusion sans contradiction.** C'est arrivé encore une fois :
+> `develop` avait ajouté un test d'exhaustivité sur `LogScope` que git a fusionné proprement, et dont
+> les portées neuves manquaient. Après chaque rebase, relis ce que le résultat affirme.
+>
+> **Un commentaire déplacé garde sa formulation et perd sa vérité.** Le dernier bug de rendu vient de
+> là : une JSDoc recopiée d'un module où elle était exacte justifiait, dans le nouveau, un test faux.
 
 Si la demande touche l'API Scenario : `docs/scenario-api/README.md`, 209 pages aspirées en local,
 **à consulter avant le web**. La conception validée est dans
