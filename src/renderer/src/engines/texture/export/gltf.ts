@@ -4,13 +4,14 @@ import {
   NoColorSpace,
   RepeatWrapping,
   SRGBColorSpace,
-  type BufferGeometry,
   type Texture,
 } from 'three'
 import type { MaterialRole } from '@shared/domain/texture-export'
+import { disposeTree } from '../../scene/model-cache'
 import { exportObjects } from '../../scene/scene-export'
 import type { TextureSource } from '../../scene/texture-cache'
 import { previewGeometry } from '../preview-geometry'
+import { contentOf } from '../texture-state'
 import type { MaterialSettings, PreviewShape } from '../texture-state'
 
 /**
@@ -22,13 +23,22 @@ import type { MaterialSettings, PreviewShape } from '../texture-state'
  * file opens looking like the preview did, which is the whole promise of exporting what one
  * has been judging.
  *
- * The pictures are decoded again on the way in. `GLTFExporter` writes what a texture holds, and
- * what these hold is the PNG the packing pass just encoded — so the export cannot disagree with
- * the folder the other targets would have written.
+ * The pictures are decoded again on the way in: the packing pass answers in PNG, and a texture
+ * is what `GLTFExporter` writes from. It is a round trip through an encoder for bytes this
+ * target never writes to disk, and it is the one real waste on this path — kept because the
+ * alternative, carrying an `ImageBitmap` out of the pass, splits what the pass answers in two.
  */
 
-/** Colour where the picture is one, data everywhere else — the same rule the preview reads by. */
-const COLOR_ROLES: readonly MaterialRole[] = ['baseColor', 'emissive']
+/**
+ * Colour where the picture is one, data everywhere else. Asked of `contentOf` rather than listed
+ * here: the list that names which channels carry colour has already been written once and has
+ * already been got wrong once, when the emissive was left out of it and came out dark.
+ *
+ * `orm` is the one role that is not a channel, and it is data on all three of its components.
+ */
+function isColour(role: MaterialRole): boolean {
+  return role !== 'orm' && contentOf(role) === 'color'
+}
 
 export type GlbRequest = {
   /** The packed pictures, by the slot each fills. */
@@ -48,14 +58,15 @@ export async function buildGlb({
   const decoded = await decodePictures(pictures, load, material)
 
   const geometry = previewGeometry(shape, material.heightScale > 0)
-  const standard = buildMaterial(decoded, material)
-  const mesh = new Mesh(geometry, standard)
+  const mesh = new Mesh(geometry, buildMaterial(decoded, material))
 
   try {
     return await exportObjects([mesh], 'glb')
   } finally {
-    // The copy `exportObjects` walks shares these, so nothing is freed before it has written.
-    disposeAll(geometry, standard, decoded)
+    // The copy `exportObjects` walks shares the geometry and the material, so nothing is freed
+    // before it has written. Through the tree rather than by hand: an export that one day gains
+    // a second node would otherwise leak it with nothing to say so.
+    disposeTree(mesh)
   }
 }
 
@@ -76,7 +87,7 @@ async function decodePictures(
   try {
     for (const [role, bytes] of pictures) {
       const texture = await decodeOne(bytes, load)
-      placeTexture(texture, material, COLOR_ROLES.includes(role))
+      placeTexture(texture, material, isColour(role))
       decoded.set(role, texture)
     }
   } catch (error) {
@@ -89,8 +100,8 @@ async function decodePictures(
 }
 
 async function decodeOne(bytes: Uint8Array, load: TextureSource): Promise<Texture> {
-  // A fresh view over the bytes: `Blob` takes an ArrayBufferView, and handing it the buffer
-  // itself would carry whatever else shares that buffer.
+  // `slice`, and it is the type that asks rather than tidiness: a `Uint8Array` may sit on a
+  // `SharedArrayBuffer`, which `Blob` refuses. The copy is what gives it a buffer it accepts.
   const url = URL.createObjectURL(new Blob([bytes.slice()], { type: 'image/png' }))
   try {
     return await load(url)
@@ -110,6 +121,10 @@ function placeTexture(texture: Texture, material: MaterialSettings, colour: bool
   texture.colorSpace = colour ? SRGBColorSpace : NoColorSpace
   texture.wrapS = RepeatWrapping
   texture.wrapT = RepeatWrapping
+  // The pivot of the rotation, as `TextureRenderer.install` sets it. Left at the corner, a
+  // material exported with a rotation turns around a point the preview never turned around —
+  // which is the one difference nobody would look for in a file that opens.
+  texture.center.set(0.5, 0.5)
   texture.repeat.set(material.tiling.x, material.tiling.y)
   texture.offset.set(material.offset.x, material.offset.y)
   texture.rotation = material.rotation
@@ -144,14 +159,4 @@ function buildMaterial(
   material.emissiveIntensity = settings.emissiveIntensity
 
   return material
-}
-
-function disposeAll(
-  geometry: BufferGeometry,
-  material: MeshStandardMaterial,
-  decoded: ReadonlyMap<MaterialRole, Texture>,
-): void {
-  for (const texture of decoded.values()) texture.dispose()
-  material.dispose()
-  geometry.dispose()
 }

@@ -3,8 +3,6 @@ import { PBR_CHANNELS, type PbrChannel } from './texture'
 import {
   assetsOf,
   boundedSize,
-  isTextureExportTarget,
-  kindOf,
   maxSizeOf,
   resolvePictures,
   safeFileName,
@@ -13,6 +11,7 @@ import {
   type ResolvedComponent,
   type ResolvedPicture,
   type TextureExportTarget,
+  writesOneFile,
 } from './texture-export'
 
 /** The four that write a folder — the ones every recipe-wide assertion below walks. */
@@ -30,9 +29,20 @@ function pictureNamed(pictures: ResolvedPicture[], suffix: string): ResolvedPict
   return found
 }
 
-function reads(component: ResolvedComponent): { assetId: string; from: string; invert: boolean } {
+function reads(component: ResolvedComponent): {
+  assetId: string
+  from: string
+  low: number
+  high: number
+} {
   if ('constant' in component) throw new Error('expected a channel, found a constant')
   return component
+}
+
+/** Whether the value is read the other way round, which is the ends being the wrong way up. */
+function inverts(component: ResolvedComponent): boolean {
+  const { low, high } = reads(component)
+  return low > high
 }
 
 function constant(component: ResolvedComponent): number {
@@ -41,16 +51,16 @@ function constant(component: ResolvedComponent): number {
 }
 
 describe('the target registry', () => {
-  it('names every target it lists, and nothing else', () => {
-    expect(TEXTURE_EXPORT_TARGETS.filter(isTextureExportTarget)).toEqual(TEXTURE_EXPORT_TARGETS)
-    expect(isTextureExportTarget('godot')).toBe(false)
-    expect(isTextureExportTarget(undefined)).toBe(false)
+  it('sends glTF down its own road and the four others through a folder', () => {
+    expect(writesOneFile('gltf')).toBe(true)
+    for (const target of FOLDER_TARGETS) {
+      expect(writesOneFile(target)).toBe(false)
+    }
   })
 
-  it('sends glTF down its own road and the four others through pictures', () => {
-    expect(kindOf('gltf')).toBe('gltf')
-    for (const target of FOLDER_TARGETS) {
-      expect(kindOf(target)).toBe('pictures')
+  it('resolves at least one picture for every target it lists', () => {
+    for (const target of TEXTURE_EXPORT_TARGETS) {
+      expect(resolvePictures(target, ALL, 'mat').length).toBeGreaterThan(0)
     }
   })
 })
@@ -73,7 +83,7 @@ describe('the glTF recipes', () => {
   it('leaves the normal in the convention the format states, green unflipped', () => {
     const normal = pictureNamed(resolvePictures('gltf', ALL, 'mat'), '_Normal')
 
-    expect(reads(normal.green).invert).toBe(false)
+    expect(inverts(normal.green)).toBe(false)
   })
 
   it('carries no height, which the format has no slot for', () => {
@@ -111,9 +121,9 @@ describe('the Unreal recipes', () => {
   it('flips the green of the normal, and only the green', () => {
     const normal = pictureNamed(resolvePictures('unreal', ALL, 'mat'), '_Normal')
 
-    expect(reads(normal.red).invert).toBe(false)
-    expect(reads(normal.green).invert).toBe(true)
-    expect(reads(normal.blue).invert).toBe(false)
+    expect(inverts(normal.red)).toBe(false)
+    expect(inverts(normal.green)).toBe(true)
+    expect(inverts(normal.blue)).toBe(false)
     expect(reads(normal.green).from).toBe('g')
   })
 })
@@ -131,7 +141,7 @@ describe('the Unity recipes', () => {
   it('writes smoothness where the studio holds roughness', () => {
     const mask = pictureNamed(resolvePictures('unity', ALL, 'mat'), '_MaskMap')
 
-    expect(reads(mask.alpha).invert).toBe(true)
+    expect(inverts(mask.alpha)).toBe(true)
   })
 
   it('leaves a texture with no roughness fully rough, which is no smoothness at all', () => {
@@ -150,19 +160,19 @@ describe('a channel stored the other way round', () => {
   it('is put back the right way round for a slot that wants roughness', () => {
     const orm = pictureNamed(resolvePictures('unreal', smoothness, 'mat'), '_ORM')
 
-    expect(reads(orm.green).invert).toBe(true)
+    expect(inverts(orm.green)).toBe(true)
   })
 
   it('is left alone for a slot that wants smoothness — two negations are none', () => {
     const mask = pictureNamed(resolvePictures('unity', smoothness, 'mat'), '_MaskMap')
 
-    expect(reads(mask.alpha).invert).toBe(false)
+    expect(inverts(mask.alpha)).toBe(false)
   })
 
   it('goes out as roughness under the raw target, which names what it holds', () => {
     const roughness = pictureNamed(resolvePictures('raw', smoothness, 'mat'), '_Roughness')
 
-    expect(reads(roughness.red).invert).toBe(true)
+    expect(inverts(roughness.red)).toBe(true)
   })
 })
 
@@ -172,22 +182,22 @@ describe('a normal that arrived in the other convention', () => {
   it('is put back to OpenGL for a target that reads it that way', () => {
     const normal = pictureNamed(resolvePictures('gltf', directX, 'mat'), '_Normal')
 
-    expect(reads(normal.green).invert).toBe(true)
-    expect(reads(normal.red).invert).toBe(false)
-    expect(reads(normal.blue).invert).toBe(false)
+    expect(inverts(normal.green)).toBe(true)
+    expect(inverts(normal.red)).toBe(false)
+    expect(inverts(normal.blue)).toBe(false)
   })
 
   it('is left alone for Unreal, which wanted DirectX anyway', () => {
     const normal = pictureNamed(resolvePictures('unreal', directX, 'mat'), '_Normal')
 
-    expect(reads(normal.green).invert).toBe(false)
+    expect(inverts(normal.green)).toBe(false)
   })
 
   it('is flipped for Unreal when it arrived as OpenGL', () => {
     const openGl: ExportChannels = { normal: { assetId: 'a-normal' } }
     const normal = pictureNamed(resolvePictures('unreal', openGl, 'mat'), '_Normal')
 
-    expect(reads(normal.green).invert).toBe(true)
+    expect(inverts(normal.green)).toBe(true)
   })
 
   it('touches no channel but the normal', () => {
@@ -199,7 +209,59 @@ describe('a normal that arrived in the other convention', () => {
     }
     const orm = pictureNamed(resolvePictures('unreal', both, 'mat'), '_ORM')
 
-    expect([orm.red, orm.green, orm.blue].map(c => reads(c).invert)).toEqual([false, false, false])
+    expect([orm.red, orm.green, orm.blue].map(c => inverts(c))).toEqual([false, false, false])
+  })
+})
+
+describe('the remap of the material panel', () => {
+  const narrowed: ExportChannels = {
+    roughness: { assetId: 'a-roughness', range: { min: 0.3, max: 0.7 } },
+    ao: { assetId: 'a-ao' },
+  }
+
+  it('is written into the pixels for an engine, which has no slot for a double handle', () => {
+    const orm = pictureNamed(resolvePictures('unreal', narrowed, 'mat'), '_ORM')
+
+    expect(reads(orm.green).low).toBe(0.3)
+    expect(reads(orm.green).high).toBe(0.7)
+  })
+
+  it('leaves the raw target alone, which means the channels as stored', () => {
+    const roughness = pictureNamed(resolvePictures('raw', narrowed, 'mat'), '_Roughness')
+
+    expect(reads(roughness.red).low).toBe(0)
+    expect(reads(roughness.red).high).toBe(1)
+  })
+
+  it('turns the window upside down where the slot wants the other way round', () => {
+    const mask = pictureNamed(resolvePictures('unity', narrowed, 'mat'), '_MaskMap')
+
+    // Unity wants smoothness: the ends of the roughness window, swapped.
+    expect(reads(mask.alpha).low).toBe(0.7)
+    expect(reads(mask.alpha).high).toBe(0.3)
+  })
+
+  it('turns it upside down twice, which is not at all', () => {
+    const stored: ExportChannels = {
+      roughness: { assetId: 'a-roughness', inverted: true, range: { min: 0.3, max: 0.7 } },
+    }
+    const mask = pictureNamed(resolvePictures('unity', stored, 'mat'), '_MaskMap')
+
+    expect(reads(mask.alpha).low).toBe(0.3)
+    expect(reads(mask.alpha).high).toBe(0.7)
+  })
+
+  it('touches no channel that has no window', () => {
+    const orm = pictureNamed(resolvePictures('unreal', narrowed, 'mat'), '_ORM')
+
+    expect(reads(orm.red).low).toBe(0)
+    expect(reads(orm.red).high).toBe(1)
+  })
+
+  it('leaves the identity where the handles were never moved', () => {
+    const orm = pictureNamed(resolvePictures('unreal', ALL, 'mat'), '_ORM')
+
+    expect(reads(orm.green)).toMatchObject({ low: 0, high: 1 })
   })
 })
 

@@ -50,7 +50,10 @@ describe('the channels an export reads', () => {
       },
     })
 
-    expect(exportChannelsOf(texture).roughness).toEqual({ assetId: 'a-rough', inverted: true })
+    expect(exportChannelsOf(texture).roughness).toMatchObject({
+      assetId: 'a-rough',
+      inverted: true,
+    })
   })
 
   it('brings the green convention down from the material onto the normal', () => {
@@ -75,5 +78,48 @@ describe('the channels an export reads', () => {
     })
 
     expect(exportChannelsOf(texture).normal).toEqual({ assetId: 'a-normal' })
+  })
+})
+
+describe('the remap window an export carries', () => {
+  it('carries the double handle of the two channels that have one', () => {
+    const texture = textureWith({
+      channels: {
+        roughness: { assetId: 'a-rough', origin: 'generated', width: 8, height: 8 },
+        metalness: { assetId: 'a-metal', origin: 'generated', width: 8, height: 8 },
+      },
+      material: {
+        ...newTexture().material,
+        roughnessRange: { min: 0.3, max: 0.7 },
+        metalnessRange: { min: 0.1, max: 0.9 },
+      },
+    })
+
+    const exported = exportChannelsOf(texture)
+
+    expect(exported.roughness?.range).toEqual({ min: 0.3, max: 0.7 })
+    expect(exported.metalness?.range).toEqual({ min: 0.1, max: 0.9 })
+  })
+
+  it('gives none to a channel the panel has no handle for', () => {
+    const texture = textureWith({
+      channels: {
+        ao: { assetId: 'a-ao', origin: 'derived', width: 8, height: 8 },
+        baseColor: { assetId: 'a-base', origin: 'imported', width: 8, height: 8 },
+      },
+    })
+
+    const exported = exportChannelsOf(texture)
+
+    expect(exported.ao).not.toHaveProperty('range')
+    expect(exported.baseColor).not.toHaveProperty('range')
+  })
+
+  it('carries the identity window where the handles were never moved', () => {
+    const texture = textureWith({
+      channels: { roughness: { assetId: 'a-rough', origin: 'generated', width: 8, height: 8 } },
+    })
+
+    expect(exportChannelsOf(texture).roughness?.range).toEqual({ min: 0, max: 1 })
   })
 })

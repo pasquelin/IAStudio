@@ -106,10 +106,12 @@ async function loadSources(load: TextureSource, urls: readonly string[]): Promis
   const settled = await Promise.allSettled(urls.map(url => loadSource(load, url)))
 
   const loaded: Source[] = []
-  let failure: { reason: unknown } | null = null
+  // The settled result itself, not its reason: it is what tells "nothing failed" apart from
+  // "something failed with an undefined reason", and it is a type the platform already has.
+  let failure: PromiseRejectedResult | undefined
   for (const result of settled) {
     if (result.status === 'fulfilled') loaded.push(result.value)
-    else failure ??= { reason: result.reason }
+    else failure ??= result
   }
 
   const [first, ...rest] = loaded

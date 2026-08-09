@@ -14,3 +14,8 @@ export const pathSegment = z
   .min(1)
   .max(120)
   .refine(value => !/[/\\]/.test(value) && value !== '.' && value !== '..')
+  // A control character is no escape, but every filesystem call throws on one — after the folder
+  // was made and the values before it were written, which leaves something nobody can tell from
+  // finished work. `\p{Cc}` rather than a range of literal control characters, which the linter
+  // refuses.
+  .refine(value => !/\p{Cc}/u.test(value))

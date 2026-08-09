@@ -21,20 +21,6 @@ export const TEXTURE_EXPORT_TARGETS: readonly TextureExportTarget[] = [
   'raw',
 ]
 
-export function isTextureExportTarget(value: unknown): value is TextureExportTarget {
-  return TEXTURE_EXPORT_TARGETS.some(candidate => candidate === value)
-}
-
-/**
- * What becomes of the pictures a target resolves. Every target packs the same way; they differ
- * in where the result lands — beside each other in a folder, or embedded in one `.glb`.
- */
-export type TargetKind = 'pictures' | 'gltf'
-
-export function kindOf(target: TextureExportTarget): TargetKind {
-  return target === 'gltf' ? 'gltf' : 'pictures'
-}
-
 /** Which of a channel's own components is read. A grey map holds its value on all three. */
 export type PackComponent = 'r' | 'g' | 'b'
 
@@ -138,19 +124,23 @@ const UNITY: readonly ExportPicture[] = [
 ]
 
 /**
- * Unreal. ORM is the packing the engine's own starter content uses — occlusion on red,
- * roughness on green, metallic on blue — and the normal is DirectX.
+ * Occlusion on red, roughness on green, metallic on blue. Unreal's own starter content packs it
+ * this way and glTF reads it this way, so the two targets share the object rather than each
+ * holding a copy of the one ordering nothing downstream would flag as wrong.
  */
+const ORM: ExportPicture = {
+  suffix: '_ORM',
+  red: { channel: 'ao', from: 'r', missing: 1 },
+  green: { channel: 'roughness', from: 'r', missing: 1 },
+  blue: { channel: 'metalness', from: 'r', missing: 0 },
+  alpha: 1,
+}
+
+/** Unreal, whose normal is DirectX. */
 const UNREAL: readonly ExportPicture[] = [
   copy('baseColor', '_BaseColor'),
   flippedNormal('_Normal'),
-  {
-    suffix: '_ORM',
-    red: { channel: 'ao', from: 'r', missing: 1 },
-    green: { channel: 'roughness', from: 'r', missing: 1 },
-    blue: { channel: 'metalness', from: 'r', missing: 0 },
-    alpha: 1,
-  },
+  ORM,
   copy('emissive', '_Emissive'),
   grey('height', '_Height', 0),
 ]
@@ -203,36 +193,53 @@ const RAW: readonly ExportPicture[] = PBR_CHANNELS.map(channel =>
 const GLTF: readonly ExportPicture[] = [
   { ...copy('baseColor', '_BaseColor'), role: 'baseColor' },
   { ...copy('normal', '_Normal'), role: 'normal' },
-  {
-    suffix: '_ORM',
-    red: { channel: 'ao', from: 'r', missing: 1 },
-    green: { channel: 'roughness', from: 'r', missing: 1 },
-    blue: { channel: 'metalness', from: 'r', missing: 0 },
-    alpha: 1,
-    role: 'orm',
-  },
+  { ...ORM, role: 'orm' },
   { ...copy('emissive', '_Emissive'), role: 'emissive' },
 ]
 
-const PICTURES_BY_TARGET: Record<TextureExportTarget, readonly ExportPicture[]> = {
-  gltf: GLTF,
-  unity: UNITY,
-  unreal: UNREAL,
-  roblox: ROBLOX,
-  raw: RAW,
+/**
+ * Everything one target decides, in one place.
+ *
+ * One record rather than three tables keyed by the same union: two of the three used to be
+ * partial or defaulted, so a sixth engine would have compiled while silently inheriting a
+ * ceiling and a layout nobody chose for it. Here it fails to compile until all four are stated.
+ */
+type Target = {
+  pictures: readonly ExportPicture[]
+  /** A `.glb` embeds its pictures, so it is one file where the others are a folder of them. */
+  writesOneFile: boolean
+  /**
+   * The longest side the target accepts. Roblox refuses a map above 1024, so an export at full
+   * resolution would be an export it rejects — the one place where "full resolution" is not the
+   * studio's call to make.
+   */
+  maxSize: number | null
+  /**
+   * Whether the remap of the material panel is written into the pixels.
+   *
+   * True for the engines: none of the four formats has a slot for a double handle, so a
+   * roughness narrowed to [0.3, 0.7] on screen has to leave narrowed or the file is not the
+   * material that was judged. False for `raw`, which means the channels **as stored** — the one
+   * target somebody reaches for precisely to get their pixels back untouched.
+   */
+  bakesRemap: boolean
 }
 
-/**
- * The longest side a target accepts, where it has one. Roblox refuses a map above 1024, so an
- * export at full resolution would be an export it rejects — the one place where "export at full
- * resolution" is not the studio's call to make.
- */
-const MAX_SIZE_BY_TARGET: Partial<Record<TextureExportTarget, number>> = {
-  roblox: 1024,
+const TARGETS: Record<TextureExportTarget, Target> = {
+  gltf: { pictures: GLTF, writesOneFile: true, maxSize: null, bakesRemap: true },
+  unity: { pictures: UNITY, writesOneFile: false, maxSize: null, bakesRemap: true },
+  unreal: { pictures: UNREAL, writesOneFile: false, maxSize: null, bakesRemap: true },
+  roblox: { pictures: ROBLOX, writesOneFile: false, maxSize: 1024, bakesRemap: true },
+  raw: { pictures: RAW, writesOneFile: false, maxSize: null, bakesRemap: false },
 }
 
 export function maxSizeOf(target: TextureExportTarget): number | null {
-  return MAX_SIZE_BY_TARGET[target] ?? null
+  return TARGETS[target].maxSize
+}
+
+/** Whether the export lands in one file rather than in a folder of pictures. */
+export function writesOneFile(target: TextureExportTarget): boolean {
+  return TARGETS[target].writesOneFile
 }
 
 /**
@@ -256,9 +263,19 @@ export function boundedSize(
   }
 }
 
-/** What a component ends up being, once the texture's own channels have answered. */
+/**
+ * What a component ends up being, once the texture's own channels have answered.
+ *
+ * `low` and `high` are the ends the stored value is mixed between: `0 → 1` leaves it alone,
+ * `1 → 0` reads it the other way round, and `0.3 → 0.7` is the double handle of the material
+ * panel written into the pixels. One expression covers the three, which is the same trick
+ * `remapOf` plays for the preview — `mix(1, 0, v)` IS `1 - v`.
+ *
+ * Not that function itself: it lives in the texture engine, and `shared/` cannot import the
+ * renderer. The rule is the one thing the two have to keep saying identically.
+ */
 export type ResolvedComponent =
-  { assetId: string; from: PackComponent; invert: boolean } | { constant: number }
+  { assetId: string; from: PackComponent; low: number; high: number } | { constant: number }
 
 /** One picture, ready to draw: its file name, and where each of its four components reads. */
 export type ResolvedPicture = {
@@ -282,8 +299,17 @@ export type ExportChannel = {
    * It belongs here rather than staying a render setting: a target asks for a convention, the
    * channel already has one, and the export is the one place the two have to be reconciled.
    * Read on green alone — the other two components mean the same thing either way round.
+   *
+   * That it lives on the material at all is debt this branch documents rather than moves: the
+   * fact is a property of the map, like `inverted` beside it, and `.tex` files already written
+   * hold it under the material.
    */
   greenFlipped?: true
+  /**
+   * The window the material panel remaps this channel through — the double handle. Only the two
+   * channels that have one carry it, and only a target that bakes the material reads it.
+   */
+  range?: { min: number; max: number }
 }
 
 export type ExportChannels = { [C in PbrChannel]?: ExportChannel }
@@ -291,6 +317,7 @@ export type ExportChannels = { [C in PbrChannel]?: ExportChannel }
 function resolveComponent(
   component: PackSource | number,
   channels: ExportChannels,
+  bakesRemap: boolean,
 ): ResolvedComponent {
   if (typeof component === 'number') return { constant: component }
 
@@ -306,8 +333,19 @@ function resolveComponent(
     (channel.inverted === true ? 1 : 0) +
     (channel.greenFlipped === true && component.from === 'g' ? 1 : 0)
 
-  return { assetId: channel.assetId, from: component.from, invert: flips % 2 === 1 }
+  const range = bakesRemap && channel.range ? channel.range : IDENTITY
+  const flipped = flips % 2 === 1
+
+  return {
+    assetId: channel.assetId,
+    from: component.from,
+    low: flipped ? range.max : range.min,
+    high: flipped ? range.min : range.max,
+  }
 }
+
+/** The window that changes nothing, which is what a channel with no remap is read through. */
+const IDENTITY = { min: 0, max: 1 }
 
 function readsSomething(picture: ResolvedPicture): boolean {
   return [picture.red, picture.green, picture.blue, picture.alpha].some(
@@ -327,14 +365,16 @@ export function resolvePictures(
   channels: ExportChannels,
   name: string,
 ): ResolvedPicture[] {
-  return PICTURES_BY_TARGET[target]
+  const { pictures, bakesRemap } = TARGETS[target]
+
+  return pictures
     .map(picture => ({
       name: `${name}${picture.suffix}`,
-      red: resolveComponent(picture.red, channels),
-      green: resolveComponent(picture.green, channels),
-      blue: resolveComponent(picture.blue, channels),
-      alpha: resolveComponent(picture.alpha, channels),
-      ...(picture.role ? { role: picture.role } : {}),
+      red: resolveComponent(picture.red, channels, bakesRemap),
+      green: resolveComponent(picture.green, channels, bakesRemap),
+      blue: resolveComponent(picture.blue, channels, bakesRemap),
+      alpha: resolveComponent(picture.alpha, channels, bakesRemap),
+      role: picture.role,
     }))
     .filter(readsSomething)
 }

@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, type Asset } from '@shared/domain/asset'
 import { safeFileName, type TextureExportTarget } from '@shared/domain/texture-export'
+import { exportChannelsOf } from '@/engines/texture/export/channels'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
@@ -18,10 +19,10 @@ import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 /**
  * A texture handed to an engine, from the row of the native menu that was picked.
  *
- * The port is reached through `import()` rather than at the top of this file, and that is not
- * tidiness: `app/tool-components.ts` imports every panel eagerly, so whatever this module can
- * reach is in the chunk the first window pays for — and what this one reaches is `GLTFExporter`.
- * Exporting is a gesture; loading its exporter belongs to the gesture.
+ * The port is reached through `import()` rather than at the top of this file. Not for the first
+ * screen — `eager-graph.test.ts` says this component is not in the opening chunk — but for the
+ * one after it: statically imported, `GLTFExporter` would be downloaded by anyone who opens a
+ * texture tab, and it is only ever read by somebody who exports one.
  */
 async function exportTexture(documentId: string, target: TextureExportTarget): Promise<void> {
   const bridge = getBridge()
@@ -32,10 +33,7 @@ async function exportTexture(documentId: string, target: TextureExportTarget): P
     // Cleaned before it is either a folder or a file name: a document is titled by hand.
     const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'texture')
 
-    const [{ createTextureExportPort }, { exportChannelsOf }] = await Promise.all([
-      import('@/engines/texture/export/export-port'),
-      import('@/engines/texture/export/channels'),
-    ])
+    const { createTextureExportPort } = await import('@/engines/texture/export/export-port')
 
     const files = await createTextureExportPort({ loadTexture })({
       target,

@@ -29,12 +29,21 @@ function glslFloat(value: number): string {
   return Number.isInteger(value) ? `${value}.0` : `${value}`
 }
 
-/** What one component of the output reads, as an expression. */
-function expressionFor(component: ResolvedComponent, indexOf: (assetId: string) => number): string {
+/**
+ * What one component of the output reads, as an expression.
+ *
+ * The two ends collapse to nothing where they are the identity, and to a subtraction where they
+ * are its reverse: `mix` covers all three, but a shader that spelled out `mix(0.0, 1.0, s)` for
+ * the ordinary case would be one nobody can read against the recipe it came from.
+ */
+function expressionFor(component: ResolvedComponent, assets: readonly string[]): string {
   if ('constant' in component) return glslFloat(component.constant)
 
-  const sample = `texture2D(uSource${indexOf(component.assetId)}, vUv).${component.from}`
-  return component.invert ? `(1.0 - ${sample})` : sample
+  const sample = `texture2D(uSource${assets.indexOf(component.assetId)}, vUv).${component.from}`
+  if (component.low === 0 && component.high === 1) return sample
+  if (component.low === 1 && component.high === 0) return `(1.0 - ${sample})`
+
+  return `mix(${glslFloat(component.low)}, ${glslFloat(component.high)}, ${sample})`
 }
 
 type PackUniforms = Record<string, { value: Texture }>
@@ -42,28 +51,27 @@ type PackUniforms = Record<string, { value: Texture }>
 /**
  * The pass that writes one picture, aimed at the channels it reads.
  *
+ * The textures come in the order `assetsOf` names them — the order the run was asked to decode
+ * them in — so the sampler a component reads is its index, with nothing to look up.
+ *
  * Throws for an asset the caller did not decode: a sampler left unbound reads black on every
- * driver, and an ORM whose roughness came out black is a texture that ships fully polished
- * with nothing on the way to say why.
+ * driver, and an ORM whose roughness came out black is a texture that ships fully polished with
+ * nothing on the way to say why.
  */
 export function createPackPass(
   picture: ResolvedPicture,
-  textureFor: (assetId: string) => Texture | undefined,
+  textures: readonly Texture[],
 ): OffscreenPass {
   const assets = assetsOf(picture)
-
   const uniforms: PackUniforms = {}
-  const declarations: string[] = []
 
-  assets.forEach((assetId, index) => {
-    const texture = textureFor(assetId)
+  const declarations = assets.map((assetId, index) => {
+    const texture = textures[index]
     if (!texture) throw new Error(`${picture.name} reads ${assetId}, which was not decoded`)
 
     uniforms[`uSource${index}`] = { value: texture }
-    declarations.push(`uniform sampler2D uSource${index};`)
+    return `uniform sampler2D uSource${index};`
   })
-
-  const indexOf = (assetId: string): number => assets.indexOf(assetId)
 
   const fragmentShader = /* glsl */ `
 ${PIXEL_PREAMBLE}
@@ -71,10 +79,10 @@ ${declarations.join('\n')}
 
 void main() {
   gl_FragColor = vec4(
-    ${expressionFor(picture.red, indexOf)},
-    ${expressionFor(picture.green, indexOf)},
-    ${expressionFor(picture.blue, indexOf)},
-    ${expressionFor(picture.alpha, indexOf)}
+    ${expressionFor(picture.red, assets)},
+    ${expressionFor(picture.green, assets)},
+    ${expressionFor(picture.blue, assets)},
+    ${expressionFor(picture.alpha, assets)}
   );
 }
 `

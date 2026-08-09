@@ -192,17 +192,25 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   /**
    * Only where the thing being edited is what the rows export. An image document has neither a
    * scene nor a set of channels, and a row that exported nothing would still look like one.
+   *
+   * Returns rather than a nested ternary: this file's idiom is one flat arm per feature, and a
+   * third exporting space — skyboxes is the obvious next — would make that a triple.
    */
-  const exportMenu: MenuItemConstructorOptions[] =
-    workspace === '3d'
-      ? [
-          { type: 'separator' },
-          { label: t.menu.exportScene, submenu: exportItems('scene') },
-          { label: t.menu.exportSelection, submenu: exportItems('selection') },
-        ]
-      : workspace === 'textures'
-        ? [{ type: 'separator' }, { label: t.menu.exportTexture, submenu: textureItems() }]
-        : []
+  const exportMenu = (): MenuItemConstructorOptions[] => {
+    if (workspace === '3d') {
+      return [
+        { type: 'separator' },
+        { label: t.menu.exportScene, submenu: exportItems('scene') },
+        { label: t.menu.exportSelection, submenu: exportItems('selection') },
+      ]
+    }
+
+    if (workspace === 'textures') {
+      return [{ type: 'separator' }, { label: t.menu.exportTexture, submenu: textureItems() }]
+    }
+
+    return []
+  }
 
   /**
    * A row that is exactly a command: its label, its accelerator and what it fires all come from
@@ -399,7 +407,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('document.save'),
           click: () => actions.runCommand('document.save'),
         },
-        ...exportMenu,
+        ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,
         { role: isMac ? 'close' : 'quit' },

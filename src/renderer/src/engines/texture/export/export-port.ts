@@ -2,13 +2,13 @@ import { assetUrl } from '@shared/domain/asset'
 import {
   assetsOf,
   boundedSize,
-  kindOf,
   maxSizeOf,
   resolvePictures,
   type ExportChannels,
   type MaterialRole,
   type ResolvedPicture,
   type TextureExportTarget,
+  writesOneFile,
 } from '@shared/domain/texture-export'
 import type { TextureSource } from '../../scene/texture-cache'
 import type { MaterialSettings, PreviewShape } from '../texture-state'
@@ -81,17 +81,16 @@ function drawPicture(
   picture: ResolvedPicture,
   max: number | null,
 ): Promise<Uint8Array> {
-  const assets = assetsOf(picture)
-
   return runOffscreenPass({
     load: loadTexture,
-    urls: assets.map(assetUrl),
-    pass: sources => {
-      // Zipped by index rather than by lookup: `runOffscreenPass` answers in the order it was
-      // asked, and the pass names its samplers by the same order.
-      const decoded = new Map(assets.map((assetId, index) => [assetId, sources[index]?.texture]))
-      return createPackPass(picture, assetId => decoded.get(assetId))
-    },
+    urls: assetsOf(picture).map(assetUrl),
+    // In order rather than by lookup: `runOffscreenPass` answers in the order it was asked, and
+    // the pass names its samplers by that same order.
+    pass: sources =>
+      createPackPass(
+        picture,
+        sources.map(source => source.texture),
+      ),
     frame: sources => frameFor(sources, max),
     draw: async ({ renderer, pipeline, material }) => {
       pipeline.renderToScreen(material)
@@ -122,7 +121,7 @@ export function createTextureExportPort({
       drawn.push({ picture, bytes: await drawPicture(loadTexture, picture, max) })
     }
 
-    if (kindOf(target) === 'pictures') {
+    if (!writesOneFile(target)) {
       return drawn.map(({ picture, bytes }) => ({
         name: picture.name,
         extension: PNG_EXTENSION,

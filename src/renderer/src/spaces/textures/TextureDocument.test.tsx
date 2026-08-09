@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TextureExportCommand } from '@shared/ipc'
 import { setChannel } from '@/engines/texture/commands'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
@@ -91,13 +90,13 @@ describe('TextureDocument', () => {
  */
 describe('the export menu row', () => {
   const listen = (): { listeners: () => number; unsubscribed: () => number } => {
-    const callbacks: ((command: TextureExportCommand) => void)[] = []
+    let listeners = 0
     let released = 0
 
     installFakeBridge({
       menu: {
-        onTextureExport: callback => {
-          callbacks.push(callback)
+        onTextureExport: () => {
+          listeners += 1
           return () => {
             released += 1
           }
@@ -105,7 +104,7 @@ describe('the export menu row', () => {
       },
     })
 
-    return { listeners: () => callbacks.length, unsubscribed: () => released }
+    return { listeners: () => listeners, unsubscribed: () => released }
   }
 
   it('is listened to while the tab is in front', () => {

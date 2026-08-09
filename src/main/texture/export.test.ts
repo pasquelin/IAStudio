@@ -131,24 +131,27 @@ describe('the texture export handler', () => {
       ).rejects.toThrow()
     })
 
-    it('a file too large to be a channel', async () => {
-      const huge = { name: 'base', extension: '.png', bytes: new Uint8Array(0) }
-      Object.defineProperty(huge.bytes, 'byteLength', { value: 513 * 1024 * 1024 })
-
-      await expect(
-        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [huge] }),
-      ).rejects.toThrow()
-    })
-
-    /** Each file under the ceiling, all of them over it — the case a per-file bound misses. */
-    it('a set of files that is too large taken together', async () => {
+    it('a set of files too large to be an export', async () => {
       const files = Array.from({ length: 5 }, (_unused, index) => {
         const bytes = new Uint8Array(0)
-        Object.defineProperty(bytes, 'byteLength', { value: 500 * 1024 * 1024 })
+        Object.defineProperty(bytes, 'byteLength', { value: 200 * 1024 * 1024 })
         return { name: `base-${index}`, extension: '.png', bytes }
       })
 
       await expect(invoke(CHANNELS.textureExport, { folder: 'Brique', files })).rejects.toThrow()
+    })
+
+    /** The ceiling is on the whole export, so one file over it is refused by the same rule. */
+    it('a single file that is over the ceiling on its own', async () => {
+      const bytes = new Uint8Array(0)
+      Object.defineProperty(bytes, 'byteLength', { value: 513 * 1024 * 1024 })
+
+      await expect(
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          files: [{ name: 'base', extension: '.png', bytes }],
+        }),
+      ).rejects.toThrow()
     })
   })
 
