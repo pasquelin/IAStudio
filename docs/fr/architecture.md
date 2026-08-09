@@ -895,8 +895,8 @@ développeur, et ce dont le build a besoin.
 
 ### Ce que règle l’utilisateur
 
-`shared/domain/settings.ts` déclare la forme entière — apparence, génération, stockage, médias,
-dictée.
+`shared/domain/settings.ts` déclare la forme entière, groupe par groupe — de l’apparence à la
+dictée, en passant par la 3D, les raccourcis et l’accueil.
 C’est le contrat, et c’est délibérément le **seul** type de réglages que le renderer puisse
 voir : **les identifiants d’API n’y figurent jamais**. Le renderer lit un `AuthState`, pas une
 clé.
@@ -948,12 +948,11 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d’é
 ## Les tests
 
 **Plus de 5 600 tests, sur plus de 440 fichiers**, exécutés par Vitest — le chiffre exact bouge à
-chaque fusion, `pnpm test` le dit. Les tests unitaires sont colocalisés
-(`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
+chaque fusion, `pnpm test` le dit. Les tests unitaires sont colocalisés (`*.test.ts` à côté du
+code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` — typecheck, lint, vérification de format, tests avec budgets de couverture —
-doit être vert avant tout
-commit.
+doit être vert avant tout commit.
 
 Ce qui est couvert, en pratique : chaque helper, chaque module d’état et de commandes de chaque
 moteur, la traduction de schéma, la file et le backoff du job manager, le catalogue, le contrat
