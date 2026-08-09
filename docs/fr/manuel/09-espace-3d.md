@@ -235,8 +235,10 @@ que soit sa distance.
 C’est ce qui permet de juger un alignement. Deux cubes posés côte à côte semblent décalés en
 perspective ; en orthographique, ils le sont ou ils ne le sont pas.
 
-La bascule ne bouge pas la vue : la caméra reprend exactement sa place, et le tronc de la
-projection est calculé pour que ce qui est au centre garde sa taille.
+La bascule ne change pas ce que vous voyez, et c'est la seule promesse qu'elle tient : la caméra,
+elle, se replace pour cela. En orthographique le tronc de la projection est calculé pour que ce qui
+est au centre garde sa taille ; au retour en perspective, où l'on ne peut zoomer qu'en avançant, ce
+que la molette avait grossi devient de la distance.
 
 ### Se placer — les six côtés
 

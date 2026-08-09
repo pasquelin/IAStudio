@@ -111,7 +111,7 @@ one, the first visible cell otherwise.
 | **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
 | **Projection** | `O` | switches between perspective and orthographic projection |
 | **Display** | `Z` | cycles shaded, wireframe, shaded and wireframe |
-| **Frame selection** | `F` | brings the camera in so the object fills the view |
+| **Frame selection** | `F` | recentres the camera on the chosen object, at a fixed distance |
 | **Delete** | `Delete` | removes the chosen object. `⌘Z` brings it back |
 
 ### Assemble and duplicate
