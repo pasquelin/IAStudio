@@ -162,9 +162,8 @@ describe('the opening chunk', () => {
     expect(packages).not.toContain('opentype.js')
   })
 
-  // Deferred by `main.tsx` on 9 August: −48,29 kB across the whole first screen, preloads
-  // included. Settings open in a window of their own, which the main one never mounts — the
-  // registry and its draft store came along for the ride.
+  // Deferred by `main.tsx` on 9 August: −48,29 kB, preloads counted. The registry, the search
+  // over it and the draft store all came along for the ride.
   it('never reaches the settings window', async () => {
     const { files } = await eagerGraph()
 
