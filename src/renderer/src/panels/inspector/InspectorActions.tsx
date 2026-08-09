@@ -11,8 +11,9 @@ import { inspectedTextureId } from './inspected'
 /**
  * What the inspector's title row carries.
  *
- * One button, and only on the material face. The inspector is a single panel with eight faces —
- * a layer, a clip, a track, an asset, a scene, a texture — so a button posted here unconditionally
+ * One button, and only on the material face. The inspector is a single panel with seven faces —
+ * a layer, a clip, a track, an asset, a graph node, a scene, a texture — so one posted here
+ * unconditionally
  * would offer to save a material while a video clip filled the panel below it. Which face is
  * drawn is `inspectedTextureId`, the same answer `Face` renders from.
  */

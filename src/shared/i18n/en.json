@@ -611,7 +611,10 @@
     "font": "Font",
     "noFont": "None",
     "chooseFont": "Choose a font",
-    "fontMissing": "{{family}} (missing)"
+    "fontMissing": "{{family}} (missing)",
+    "node": "Node",
+    "title": "Title",
+    "nodeId": "Identifier"
   },
   "transport": {
     "play": "Play",

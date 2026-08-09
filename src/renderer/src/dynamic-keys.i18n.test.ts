@@ -11,6 +11,7 @@ import {
 } from '@/engines/canvas/canvas-state'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
+import { NODE_LABEL_KEY_LIST } from '@/spaces/graph/node-labels'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
 
 function resolve(code: Language, key: string): unknown {
@@ -38,6 +39,9 @@ const COMPOSED_KEYS: readonly string[] = [
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
   ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
+  // The node palette and the node inspector both name a type through this record, and
+  // nothing named these four until now — the palette composed its key and walked free.
+  ...NODE_LABEL_KEY_LIST,
   ...WORKSPACE_IDS.map(workspace => `home.tools.${workspace}`),
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
+import type { GraphNode } from '@shared/domain/graph'
 import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/node-factory'
@@ -17,6 +18,7 @@ import type { Transform } from '@shared/domain/scene'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useDocuments } from '@/stores/documents'
+import { installGraph } from '@/stores/graph-fixtures'
 import { useSelection } from '@/stores/selection'
 import { installScene } from '@/stores/scene-fixtures'
 import { installTexture } from '@/stores/texture-fixtures'
@@ -699,6 +701,58 @@ describe('inspector panel', () => {
         screen.getByText('Sélectionnez un élément pour voir ses propriétés.'),
       ).toBeInTheDocument()
       expect(screen.queryByLabelText('Rugosité')).toBeNull()
+    })
+  })
+
+  /**
+   * The graph is the seventh space and its nodes are the sixth thing this one panel describes —
+   * `main` set the rule of a single inspector, so a node has a face here rather than a panel of
+   * its own.
+   */
+  describe('a graph node', () => {
+    const node: GraphNode = {
+      id: 'text1',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: { value: 'a small grey rock' },
+    }
+
+    beforeEach(() => {
+      installGraph('graph-1', { nodes: [node], edges: [], inputKeys: [] })
+    })
+
+    it('describes the node the canvas reported', () => {
+      useSelection.getState().selectNodes('graph-1', ['text1'])
+      render(<Content />)
+
+      expect(screen.getByLabelText('Prompt')).toHaveValue('a small grey rock')
+    })
+
+    /**
+     * Node ids are numbered per TYPE, so `text1` exists in most graphs there are: unguarded, a
+     * selection made in one tab describes a different node of the same name in the next.
+     */
+    it('says nothing when the selection was made in another graph', () => {
+      useSelection.getState().selectNodes('graph-2', ['text1'])
+      render(<Content />)
+
+      expect(screen.queryByLabelText('Prompt')).toBeNull()
+      expect(
+        screen.getByText('Sélectionnez un élément pour voir ses propriétés.'),
+      ).toBeInTheDocument()
+    })
+
+    /** A rubber band takes several, and describing the first of six edits the wrong node. */
+    it('describes none of them when several are picked', () => {
+      installGraph('graph-1', {
+        nodes: [node, { id: 'text2', type: 'text', position: { x: 0, y: 0 }, data: {} }],
+        edges: [],
+        inputKeys: [],
+      })
+      useSelection.getState().selectNodes('graph-1', ['text1', 'text2'])
+      render(<Content />)
+
+      expect(screen.queryByLabelText('Prompt')).toBeNull()
     })
   })
 })

@@ -41,6 +41,13 @@ export type GraphCanvasProps = {
   onAdd: (entry: PaletteEntry, position: GraphPosition) => void
   /** An asset let go over the canvas, with the point in the graph it was dropped at. */
   onDropAsset: (asset: Asset, position: GraphPosition) => void
+  /**
+   * The nodes picked, held above because the inspector reads them too — see `adapter.ts` for why
+   * they must come back down. Edges stay below: lifting them waits on `Selection` holding more
+   * than one kind at a time.
+   */
+  selectedNodeIds: readonly string[]
+  onSelectNodes: (ids: readonly string[]) => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -70,16 +77,17 @@ export function GraphCanvas({
   onDisconnect,
   onAdd,
   onDropAsset,
+  selectedNodeIds,
+  onSelectNodes,
   onUndo,
   onRedo,
   canUndo,
   canRedo,
 }: GraphCanvasProps) {
-  /**
-   * Session state, and the canvas is where it belongs: nothing about which node is selected
-   * survives a save, and a graph that reopened selected would say the file remembered a click.
-   */
-  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set())
+  /** An edge has no inspector face, so which one is picked never leaves this surface. */
+  const [selectedEdges, setSelectedEdges] = useState<ReadonlySet<string>>(() => new Set())
+
+  const selectedNodes = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds])
 
   /**
    * Where the add menu was asked for, in viewport coordinates. Kept unconverted: the pane
@@ -108,12 +116,15 @@ export function GraphCanvas({
     setMenuAt({ x: event.clientX, y: event.clientY })
   }, [])
 
-  const nodes = useMemo(() => canvasNodesOf(graph, selected), [graph, selected])
-  const edges = useMemo(() => toCanvasEdges(graph, selected), [graph, selected])
+  const nodes = useMemo(() => canvasNodesOf(graph, selectedNodes), [graph, selectedNodes])
+  const edges = useMemo(() => toCanvasEdges(graph, selectedEdges), [graph, selectedEdges])
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setSelected(current => selectionAfter(current, changes))
+      // Reported only when it actually moved: every frame of a drag is a batch of changes, and
+      // `selectionAfter` hands the very same set back when none of them touched the selection.
+      const next = selectionAfter(selectedNodes, changes)
+      if (next !== selectedNodes) onSelectNodes([...next])
 
       const removed = removalsIn(changes)
       if (removed.length > 0) onRemoveNodes(removed)
@@ -121,12 +132,12 @@ export function GraphCanvas({
       const moves = movesIn(changes)
       if (moves.size > 0) onMove(moves, !isDragging(changes))
     },
-    [onMove, onRemoveNodes],
+    [onMove, onRemoveNodes, onSelectNodes, selectedNodes],
   )
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange<Edge>[]) => {
-      setSelected(current => selectionAfter(current, changes))
+      setSelectedEdges(current => selectionAfter(current, changes))
 
       const removed = changes.filter(change => change.type === 'remove').map(change => change.id)
       if (removed.length > 0) onDisconnect(removed)

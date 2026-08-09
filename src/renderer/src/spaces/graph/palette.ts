@@ -1,5 +1,6 @@
 import type { ModelFamily } from '@shared/domain/model'
 import { CREATABLE_NODE_TYPES, type CreatableNodeType } from '@/engines/graph/factory'
+import { NODE_LABEL_KEYS } from './node-labels'
 
 /**
  * What the add menu offers, in the two groups Scenario's own palette reads: what comes IN, and
@@ -28,5 +29,7 @@ export const PALETTE: readonly PaletteEntry[] = [
 
 /** The i18n key of an entry's label — the label itself is never written here. */
 export function paletteLabelKey(entry: PaletteEntry): string {
-  return entry.group === 'input' ? `graph.nodes.${entry.node}` : `families.${entry.family}`
+  // Never null for a creatable type, but said rather than asserted: the record is what decides.
+  if (entry.group === 'input') return NODE_LABEL_KEYS[entry.node] ?? entry.node
+  return `families.${entry.family}`
 }
