@@ -37,9 +37,9 @@ export type Job = {
   /**
    * What it cost, in creative units.
    *
-   * Read from `creativeUnitsCost` on the submission response, which is the only place the studio
-   * has seen it. The typings also declare a `billing.cuCost` on a polled job, unobserved so far —
-   * so a job resumed from a previous session simply has no figure rather than a wrong one.
+   * Read from `creativeUnitsCost` beside a submission, and from `billing.cuCost` on the job
+   * itself — which is where a job resumed from a previous session can still find it. A workflow
+   * job is the exception: it bills nothing on itself, its nodes do (see `runner.ts`).
    */
   cost?: number
 }

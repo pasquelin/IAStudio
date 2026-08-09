@@ -546,10 +546,7 @@ describe('a job that outlives the session', () => {
     },
   })
 
-  /**
-   * The API prices the request, not the job: the figure is on the submission response and never
-   * said again. Read anywhere later — a poll, a resumed note — there would be nothing to read.
-   */
+  /** A generation prices the request, beside the job: that figure is only ever said once. */
   it('keeps what the submission said the job cost', async () => {
     const { manager, progress } = harness({
       runner: { submit: () => Promise.resolve(remote('success', { cost: 12 })) },
@@ -569,6 +566,29 @@ describe('a job that outlives the session', () => {
     await settled()
 
     expect(manager.list()[0]?.cost).toBeUndefined()
+  })
+
+  /** Submitted in another session, so a poll is the only place its cost can still arrive. */
+  it('takes the cost a poll brings for a job it never submitted', async () => {
+    let polls = 0
+    // The figure rides the poll that is still running, and the one that ends says nothing: read
+    // anywhere but in `advance`, there would be no 7 left to find at the end of this.
+    const { manager, progress } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () =>
+          Promise.resolve(
+            polls++ === 0 ? remote('in-progress', { progress: 0.5, cost: 7 }) : remote('success'),
+          ),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.resume([RUNNING])
+    await settled()
+
+    expect(manager.list()[0]?.cost).toBe(7)
+    expect(progress.at(-1)?.cost).toBe(7)
   })
 
   it('writes a job down once it exists at the API, and not before', async () => {

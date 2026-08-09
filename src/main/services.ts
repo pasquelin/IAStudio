@@ -526,8 +526,8 @@ export function createServices(settings: SettingsStore): Services {
   // `maxRetries: 0`, because a held request is answered with a synthetic 429 the SDK honours:
   // retried twice, one courtesy estimate would take three slots of the window precisely when
   // there are none left, and hold the transport for half a minute for a figure nobody waits on.
-  // The very same 402 on either endpoint, which is why the estimator takes a function: what runs
-  // decides which one is asked, exactly as it does for running it.
+  // Both endpoints price a dry run the same way, which is why the estimator takes a function:
+  // what runs decides which one is asked, exactly as it does for running it.
   const estimateCost = costEstimatorOf((target, body) =>
     target.kind === 'workflow'
       ? client.require().workflows.run(target.id, { body, dryRun: true }, { maxRetries: 0 })

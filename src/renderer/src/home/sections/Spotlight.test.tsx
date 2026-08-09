@@ -78,7 +78,8 @@ describe('the spotlight while the studio is still opening', () => {
       jobs: [
         {
           id: 'job_1',
-          modelId: 'flux_2',
+          kind: 'model',
+          targetId: 'flux_2',
           label: 'a boulder',
           status: 'running',
           progress: 0.4,

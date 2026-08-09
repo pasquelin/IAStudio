@@ -23,7 +23,7 @@ export type RemoteJob = {
   progress?: number
   /** What it has produced so far, as remote asset ids — a workflow job fills it node by node. */
   assetIds: readonly string[]
-  /** Only ever on a submission: the API prices the request, not the job it hands back. */
+  /** On a submission, and on a poll too — which is where a resumed job finds its own. */
   cost?: number
 }
 
@@ -363,11 +363,15 @@ export function createJobManager({
     const status = jobStatusOf(remote.status)
     const progress = jobProgressOf(remote.progress ?? entry.job.progress)
 
+    // Before the early return: a resumed job's cost only ever arrives by poll, outcome included.
+    const priced = remote.cost !== undefined && remote.cost !== entry.job.cost
+    if (priced) entry.job.cost = remote.cost
+
     // An outcome is announced by `settle` alone, and only once it is actually complete: a
     // success emitted here would reach the jobs bar before the asset exists on disk.
     if (isFinished(status)) return status
 
-    if (status !== entry.job.status || progress !== entry.job.progress) {
+    if (priced || status !== entry.job.status || progress !== entry.job.progress) {
       entry.job.status = status
       entry.job.progress = progress
       emit(entry)

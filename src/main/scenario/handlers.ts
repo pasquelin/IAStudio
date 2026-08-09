@@ -125,7 +125,7 @@ export function registerScenarioHandlers({
   )
 
   // One channel for the two things the studio runs: what is priced is a target, exactly as what
-  // is submitted is. A dry run answers 402, and the estimator swallows that one into `null`.
+  // is submitted is. Where the figure sits in the answer is `cost.ts`'s business, not this one's.
   handle(CHANNELS.scenarioEstimateCost, (_event, target, body) =>
     reduced(() => estimateCost(parseJobTarget(target), parseGenerationBody(body))),
   )

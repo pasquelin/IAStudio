@@ -257,9 +257,13 @@ Le bouton **Annuler la tâche** arrête ce qui n’est pas encore terminé.
 **Sous la barre, la ligne dit ce que la génération a coûté** — `3 UC` — ou, si elle a échoué,
 pourquoi. Jamais les deux : une génération ratée n’a pas de prix à annoncer.
 
-> **Une génération reprise au démarrage n’affiche aucun chiffre.** Le coût réel se capte au
-> moment où le studio lance la tâche ; s’il a été fermé entre-temps, il préfère ne rien dire
-> plutôt que d’annoncer un chiffre faux.
+> **Une génération reprise affiche son prix dès que le studio redemande où elle en est** — le
+> chiffre voyage avec la tâche, pas seulement avec la demande. Tant qu’il n’est pas revenu, la
+> ligne ne dit rien : mieux vaut se taire qu’annoncer un chiffre faux.
+
+> **Une App n’affiche pas de prix une fois lancée.** Une chaîne ne facture rien pour elle-même :
+> ce sont ses étapes qui sont facturées, chacune de son côté. Le prix que vous avez lu sur le
+> bouton avant de lancer reste donc le seul chiffre — et il vaut pour la chaîne entière.
 
 ### La file d’attente
 

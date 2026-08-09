@@ -250,9 +250,13 @@ The **Cancel job** button stops anything not yet finished.
 **Under the bar, the line says what the generation cost** — `3 CU` — or, if it failed, why.
 Never both: a failed generation has no price to announce.
 
-> **A generation resumed at startup shows no figure.** The real cost is captured the moment the
-> studio launches the job; if it was closed in between, it would rather say nothing than announce
-> a wrong number.
+> **A resumed generation shows its price as soon as the studio asks where it stands again** — the
+> figure travels with the job, not only with the request that started it. Until it comes back the
+> line says nothing: better silent than wrong.
+
+> **An App shows no price once it is running.** A pipeline bills nothing for itself: its steps are
+> billed, each on its own. The price you read on the button before launching is therefore the only
+> figure — and it covers the whole chain.
 
 ### The queue
 

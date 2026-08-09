@@ -10,11 +10,15 @@ const triggerAction = vi.fn(() => Promise.resolve({}))
  * The three resources the runner touches. Narrow on purpose: standing up a whole `Scenario` to
  * prove which field is kept would prove nothing about the field.
  */
-function client(runModel: () => Promise<unknown>, runWorkflow?: () => Promise<unknown>): Scenario {
+function client(
+  runModel: () => Promise<unknown>,
+  runWorkflow?: () => Promise<unknown>,
+  retrieve?: () => Promise<unknown>,
+): Scenario {
   const stub = {
     generate: { runModel: vi.fn(runModel) },
     workflows: { run: vi.fn(runWorkflow ?? (() => Promise.resolve({ job: REMOTE }))) },
-    jobs: { retrieve: () => Promise.resolve({ job: REMOTE }), triggerAction },
+    jobs: { retrieve: retrieve ?? (() => Promise.resolve({ job: REMOTE })), triggerAction },
   }
 
   // Three of the SDK's dozens of resources; the rest would be dead weight in a stub and
@@ -137,7 +141,8 @@ describe('the runner that binds the job manager to the SDK', () => {
   /**
    * The doubt `REPRISE.md` § 4 left open: both references declare `billing.cuCost` on the job
    * itself, and nothing had ever been read from it. A workflow prices nothing beside its job,
-   * so this is the only figure an App can ever show.
+   * so this is the only figure an App could show — when the API fills it in, which for a
+   * workflow it was observed not to. See the two tests below.
    */
   it('reads what the job says it cost when the submission said nothing', async () => {
     const priced = client(
@@ -148,6 +153,69 @@ describe('the runner that binds the job manager to the SDK', () => {
     await expect(
       runnerOf(priced).submit({ kind: 'workflow', id: 'workflow_1' }, {}),
     ).resolves.toMatchObject({ cost: 7 })
+  })
+
+  /**
+   * Observed on 9 August 2026: the parent of a two-node App answered `cuCost: 0` while the node
+   * it ran answered 12. Zero on a pipeline is where the charge is not, never what it cost.
+   */
+  it('shows no cost for a workflow job that bills nothing itself', async () => {
+    const parent = client(
+      () => Promise.resolve({ job: REMOTE }),
+      () => Promise.resolve({ job: { ...REMOTE, jobType: 'workflow', billing: { cuCost: 0 } } }),
+    )
+
+    await expect(
+      runnerOf(parent).submit({ kind: 'workflow', id: 'workflow_1' }, {}),
+    ).resolves.not.toHaveProperty('cost')
+  })
+
+  // And on the poll as well, which is the path a resumed App only ever takes.
+  it('shows no cost for a workflow job polled after the session that ran it', async () => {
+    const parent = client(
+      () => Promise.resolve({ job: REMOTE }),
+      undefined,
+      () => Promise.resolve({ job: { ...REMOTE, jobType: 'workflow', billing: { cuCost: 0 } } }),
+    )
+
+    await expect(runnerOf(parent).poll('job_remote')).resolves.not.toHaveProperty('cost')
+  })
+
+  // The day the API does charge the parent, the figure is shown: only the zero is read as absence.
+  it('shows a workflow cost the API does fill in', async () => {
+    const parent = client(
+      () => Promise.resolve({ job: REMOTE }),
+      () => Promise.resolve({ job: { ...REMOTE, jobType: 'workflow', billing: { cuCost: 30 } } }),
+    )
+
+    await expect(
+      runnerOf(parent).submit({ kind: 'workflow', id: 'workflow_1' }, {}),
+    ).resolves.toMatchObject({ cost: 30 })
+  })
+
+  /**
+   * The job manager only emits on change, and `NaN !== NaN` walks straight through that guard —
+   * one unusable figure would then emit a progress event on every poll, for ever.
+   */
+  it('drops a figure that cannot be drawn', async () => {
+    const broken = client(() =>
+      Promise.resolve({ job: { ...REMOTE, billing: { cuCost: Number.NaN } } }),
+    )
+
+    await expect(
+      runnerOf(broken).submit({ kind: 'model', id: 'model_flux' }, {}),
+    ).resolves.not.toHaveProperty('cost')
+  })
+
+  // A generation that really is free says so on its own job, and that zero is a price.
+  it('keeps a zero on a generation, where it means free', async () => {
+    const free = client(() =>
+      Promise.resolve({ job: { ...REMOTE, jobType: 'custom', billing: { cuCost: 0 } } }),
+    )
+
+    await expect(
+      runnerOf(free).submit({ kind: 'model', id: 'model_free' }, {}),
+    ).resolves.toMatchObject({ cost: 0 })
   })
 
   // An observed figure always wins over a declared one.

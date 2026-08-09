@@ -9,6 +9,8 @@ type RemoteFlowNode = { assets?: readonly { assetId?: string }[] }
 type RemoteJobPayload = {
   jobId: string
   status: string
+  /** `workflow` for an App, `custom` for a generation — read by `costOf`, and by nothing else. */
+  jobType?: string
   progress?: number
   cost?: number
   /** Declared by `workflows.run` and by `jobs.retrieve` alike — see `normalized`. */
@@ -45,14 +47,21 @@ export function outputsOf(payload: RemoteJobPayload): string[] {
 /**
  * What the job cost, from whichever of the two places the API says it.
  *
- * `creativeUnitsCost` sits beside a submitted generation and is never said again. `billing.cuCost`
- * is declared on the job itself by `workflows.run` and by `jobs.retrieve` — documented in both
- * references, never yet observed. Read second, so an observed figure always wins over a declared
- * one; read at all, so a workflow job and a resumed one can show what they cost instead of
- * nothing.
+ * `creativeUnitsCost` sits beside a submitted generation; `billing.cuCost` sits on the job, so a
+ * resumed one can still show what it cost. A workflow job never bills itself — each node does,
+ * and `cuCost: 0` on the parent means unbilled, not free (observed 9 August 2026: parent 0, node
+ * 12). A generation that really is free says so on its own job.
+ *
+ * A figure that cannot be drawn is no figure: the job manager only emits on change, and a NaN
+ * would defeat that guard on every poll — the very trap `jobProgressOf` was sealed against.
  */
-const costOf = (payload: RemoteJobPayload): number | undefined =>
-  payload.cost ?? payload.billing?.cuCost
+const costOf = (payload: RemoteJobPayload): number | undefined => {
+  const billed = payload.billing?.cuCost
+  const spent =
+    payload.cost ?? (payload.jobType === 'workflow' && billed === 0 ? undefined : billed)
+
+  return spent !== undefined && Number.isFinite(spent) ? spent : undefined
+}
 
 const normalized = (payload: RemoteJobPayload): RemoteJob => {
   const cost = costOf(payload)
