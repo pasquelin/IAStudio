@@ -167,6 +167,40 @@ remplacer par la nouvelle raison, en une ligne.
 > le studio n’a pas encore d’éditeur pour ça — c’est le node editor, § 4 de `REPRISE`. La
 > formulation ne doit donc pas promettre « vos workflows ».
 
+### 20. Une App n’appartient à aucun espace, et rien ne dit ce qu’elle produit
+
+**Constaté le 9 août 2026** — « je le vois sur toutes les sections ». C’est exact, et c’est
+entier : `TOOL_PLACEMENTS` déclare `apps` pour `WORKSPACE_IDS`, et `searchApps` ne filtre que
+`privacy: 'public'`. **La même liste s’affiche dans les six espaces**, sans aucun tri.
+
+**Une App n’est liée à aucun type**, et le domaine le confirme : `WorkflowSummary` porte `id`,
+`name`, `description`, `status`, `privacy`, `tags`, `thumbnail`, `locked` — **aucune notion de
+sortie**. Rien, avant de la lancer, ne dit si elle rend une image, un maillage ou les deux. Le
+seul signal existant est `tags`, et il ne sert aujourd’hui que de sous-titre de secours quand la
+description manque.
+
+**Le multi-sorties, lui, fonctionne déjà — et bien.** Le collecteur traite chaque sortie
+séparément : `assetTypeOfRemote` lit le type que l’API annonce **pour celle-là**, l’asset est
+importé sous ce type et atterrit dans l’étagère correspondante. Quand il y en a plusieurs, elles
+reçoivent un `groupId` commun — l’identifiant du job — et un `outputIndex`, si bien qu’elles
+restent liées entre elles. Un type inconnu est ignoré plutôt que rangé de travers. Une App qui
+rend une image de concept, un maillage et ses textures se range donc toute seule, dans trois
+étagères, sans rien à configurer.
+
+**La conséquence à l’écran est celle qu’on ne voit pas venir : le résultat n’apparaît pas
+forcément là où on l’a lancé.** Une App lancée depuis la 3D peut déposer une image dans
+l’étagère Image, et l’espace où l’on attendait quelque chose ne montre rien.
+
+**Ce qui se défend, et ce qui manque.** Ne pas filtrer par espace est **correct** : filtrer
+cacherait justement les Apps les plus utiles, celles qui traversent les types. Mais l’absence de
+filtre n’exempte pas d’expliquer — deux manques, dans l’ordre :
+
+1. **Dire ce qu’une App produit**, avant de la lancer. Il faut d’abord vérifier si l’API le dit :
+   le descripteur ne le porte pas, ses `tags` peut-être. C’est à mesurer contre l’API réelle
+   avant d’inventer quoi que ce soit.
+2. **Dire où le résultat est parti**, après. La barre de jobs et le journal savent qu’il est
+   arrivé ; ni l’un ni l’autre ne dit dans quelle étagère.
+
 ### 18. Le formulaire de génération est en anglais dans une application en français
 
 **Vu le 9 août 2026, capture à l’appui**, sur `HY World - Multi-view to Splat` : le panneau
