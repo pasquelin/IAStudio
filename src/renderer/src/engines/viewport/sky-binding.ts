@@ -35,8 +35,10 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
 
   const release = (): void => {
     if (shown) cache.release(shown, SRGBColorSpace)
+    // A sky still decoding is given back here rather than left to its own continuation: the
+    // viewport may be going away, and a reference returned a decode later is one held too long.
+    if (wanted && wanted !== shown) cache.release(wanted, SRGBColorSpace)
     shown = null
-    // Cleared too: a load still in flight reads this to know its sky is no longer asked for.
     wanted = null
   }
 
@@ -62,8 +64,9 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
       const loaded = await cache.acquire(assetId, SRGBColorSpace)
 
       // Overtaken while decoding: gives back what it acquired, which it never put on screen.
+      // Unless nothing is wanted any more — `release` gave it back on this call's behalf.
       if (wanted !== assetId) {
-        cache.release(assetId, SRGBColorSpace)
+        if (wanted !== null) cache.release(assetId, SRGBColorSpace)
         return
       }
 

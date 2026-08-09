@@ -1,3 +1,4 @@
+import { SRGBColorSpace } from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { EnvironmentRef } from '@shared/domain/scene'
 import { createTextureCache } from '../scene/texture-cache'
@@ -162,6 +163,24 @@ describe('createSkyBinding', () => {
     expect(source.freed[0]).not.toHaveBeenCalled()
     expect(source.freed[1]).toHaveBeenCalled()
     expect(sky.showsSky()).toBe(true)
+  })
+
+  /**
+   * The cache is shared with the material slots of the same engine, so a sky can be held twice
+   * over. Handing one reference back twice — once by `release`, once by the load it interrupted —
+   * would drop the count to zero under the other holder and free a texture still in use.
+   */
+  it('gives a reference back once when a release interrupts a load', async () => {
+    const cache = createTextureCache(source.load, silent)
+    const sky = createSkyBinding(cache, paint)
+    const alsoHeld = await cache.acquire('sky-1', SRGBColorSpace)
+
+    const inFlight = sky.apply(fakeEnvironment(), SKY)
+    sky.release()
+    await inFlight
+
+    expect(alsoHeld).not.toBeNull()
+    expect(source.freed[0]).not.toHaveBeenCalled()
   })
 
   it('shows nothing rather than throwing when the file cannot be read', async () => {
