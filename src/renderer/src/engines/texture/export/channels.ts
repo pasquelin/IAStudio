@@ -1,6 +1,7 @@
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import type { ExportChannels } from '@shared/domain/texture-export'
-import type { MaterialSettings, TextureState } from '../texture-state'
+import type { MaterialSettings, ValueRange } from '@shared/domain/texture'
+import type { TextureState } from '../texture-state'
 
 /**
  * What the export needs to know about a texture's channels, and nothing else.
@@ -37,10 +38,7 @@ export function exportChannelsOf({ channels, material }: TextureState): ExportCh
  * these into `materialFrameOf` and sends them to the shader as uniforms; an exported file has no
  * uniform to send, so the same window has to reach the pixels instead.
  */
-function remapOf(
-  channel: PbrChannel,
-  material: MaterialSettings,
-): { min: number; max: number } | null {
+function remapOf(channel: PbrChannel, material: MaterialSettings): ValueRange | null {
   if (channel === 'roughness') return material.roughnessRange
   if (channel === 'metalness') return material.metalnessRange
   return null

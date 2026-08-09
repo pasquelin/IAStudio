@@ -8,7 +8,7 @@
  *
  * In `shared/` for the second reason. It holds no three.js and no `fs`.
  */
-import { PBR_CHANNELS, type PbrChannel } from './texture'
+import { PBR_CHANNELS, type PbrChannel, type ValueRange } from './texture'
 
 /** The engines a texture can be handed to, plus the one that hands over nothing but pixels. */
 export type TextureExportTarget = 'gltf' | 'unity' | 'unreal' | 'roblox' | 'raw'
@@ -309,7 +309,7 @@ export type ExportChannel = {
    * The window the material panel remaps this channel through — the double handle. Only the two
    * channels that have one carry it, and only a target that bakes the material reads it.
    */
-  range?: { min: number; max: number }
+  range?: ValueRange
 }
 
 export type ExportChannels = { [C in PbrChannel]?: ExportChannel }
@@ -345,7 +345,7 @@ function resolveComponent(
 }
 
 /** The window that changes nothing, which is what a channel with no remap is read through. */
-const IDENTITY = { min: 0, max: 1 }
+const IDENTITY: ValueRange = { min: 0, max: 1 }
 
 function readsSomething(picture: ResolvedPicture): boolean {
   return [picture.red, picture.green, picture.blue, picture.alpha].some(

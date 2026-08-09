@@ -12,7 +12,8 @@ import { exportObjects } from '../../scene/scene-export'
 import type { TextureSource } from '../../scene/texture-cache'
 import { previewGeometry } from '../preview-geometry'
 import { contentOf } from '../texture-state'
-import type { MaterialSettings, PreviewShape } from '../texture-state'
+import type { MaterialSettings } from '@shared/domain/texture'
+import type { PreviewShape } from '../texture-state'
 
 /**
  * A texture as one file an engine opens without being told anything.

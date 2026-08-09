@@ -11,7 +11,8 @@ import {
   writesOneFile,
 } from '@shared/domain/texture-export'
 import type { TextureSource } from '../../scene/texture-cache'
-import type { MaterialSettings, PreviewShape } from '../texture-state'
+import type { MaterialSettings } from '@shared/domain/texture'
+import type { PreviewShape } from '../texture-state'
 import { encodePng, runOffscreenPass, type PictureSize, type Sources } from '../derive/offscreen'
 import { createPackPass } from './pack-shader'
 import { buildGlb } from './gltf'
