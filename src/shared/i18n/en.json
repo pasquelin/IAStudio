@@ -57,6 +57,14 @@
     "run": "Run",
     "draft": "This App is a draft: it cannot be run."
   },
+  "graph": {
+    "nodes": {
+      "text": "Text",
+      "asset": "Asset",
+      "model": "Model",
+      "stickyNote": "Note"
+    }
+  },
   "jobs": {
     "none": "No job running.",
     "running_one": "{{count}} generation",

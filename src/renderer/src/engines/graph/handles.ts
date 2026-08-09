@@ -1,0 +1,63 @@
+import type { GraphHandleInput, GraphHandleOutput, GraphNode } from '@shared/domain/graph'
+
+/**
+ * The naming Scenario's converter reads, copied rather than invented.
+ *
+ * `workflow_converter.js` matches handle ids literally — it builds `` `${nodeId}-source-items` ``
+ * to find a port — so a handle named any other way is a port the compiler cannot see.
+ */
+export const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
+  `${nodeId}-${side}-${field}`
+
+/** The nth output of a loop, which the converter finds by the regexp `/-output-(\d+)$/`. */
+export const loopOutputId = (nodeId: string, index: number): string => `${nodeId}-output-${index}`
+
+/** What an output is called when it does not say — `?? 'output'` in the converter. */
+export const DEFAULT_OUTPUT_NAME = 'output'
+
+/**
+ * The id the webapp gives an edge: the output handle, then the input handle.
+ *
+ * The converter never reads it — it walks `source`/`target` — so this is for the eye and for the
+ * round trip. Matching their spelling costs nothing and makes a diff between the two editors
+ * readable.
+ */
+export const edgeId = (outputHandle: string, inputHandle: string): string =>
+  `${outputHandle}--TO--${inputHandle}`
+
+/** Every type an input port accepts. A list means polymorphic; nothing means it takes anything. */
+export function acceptedTypes(handle: GraphHandleInput): readonly string[] {
+  if (handle.type === undefined) return []
+  return typeof handle.type === 'string' ? [handle.type] : handle.type
+}
+
+/**
+ * Whether an output can feed an input.
+ *
+ * An untyped port on either side accepts anything: the studio must not refuse a connection the
+ * webapp would allow, and Scenario leaves the type off wherever it does not narrow. Refusing on
+ * silence would make a graph imported from the webapp unwireable in the studio.
+ */
+export function typesConnect(output: GraphHandleOutput, input: GraphHandleInput): boolean {
+  const accepted = acceptedTypes(input)
+  if (accepted.length === 0 || output.type === undefined) return true
+
+  return accepted.includes(output.type)
+}
+
+/** Input ports, nested ones included: a sub-handle is a port that can be wired like any other. */
+export function inputHandlesOf(node: GraphNode): readonly GraphHandleInput[] {
+  const flatten = (handles: readonly GraphHandleInput[]): GraphHandleInput[] =>
+    handles.flatMap(handle => [handle, ...flatten(handle.subHandles ?? [])])
+
+  return flatten(node.data.inputHandles ?? [])
+}
+
+export const outputHandlesOf = (node: GraphNode): readonly GraphHandleOutput[] =>
+  node.data.outputHandles ?? []
+
+export const inputHandleOf = (node: GraphNode, id: string): GraphHandleInput | undefined =>
+  inputHandlesOf(node).find(handle => handle.id === id)
+
+export const outputHandleOf = (node: GraphNode, id: string): GraphHandleOutput | undefined =>
+  outputHandlesOf(node).find(handle => handle.id === id)

@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* The node canvas will not lay out at all without it — its transforms and its handle geometry
+   live here. `base.css` and not `style.css`: the latter carries a light theme of its own. */
+@import '@xyflow/react/dist/base.css';
 @plugin 'daisyui' {
   themes: false;
 }
@@ -263,6 +266,34 @@ html,
 body,
 #root {
   height: 100%;
+}
+
+/*
+ * React Flow reads its own colours from these, so the canvas is dressed by the studio's tokens
+ * rather than by a stylesheet holding hex values of its own — the one rule no component escapes.
+ *
+ * The dashed, thick edge is the webapp's: `stroke-width: 3; stroke-dasharray: 8`, read off
+ * `app.scenario.com`. Keeping it means a graph looks the same in both editors, which is the
+ * point of adopting their format in the first place.
+ */
+.react-flow {
+  --xy-background-color: var(--color-panel);
+  --xy-background-pattern-color: var(--color-border);
+  --xy-node-color: var(--color-text);
+  --xy-edge-stroke: var(--color-border);
+  --xy-edge-stroke-selected: var(--color-accent);
+  --xy-edge-stroke-width: 3;
+  --xy-connectionline-stroke: var(--color-accent);
+  --xy-connectionline-stroke-width: 3;
+  --xy-handle-background-color: var(--color-surface);
+  --xy-selection-background-color: var(--color-accent-soft);
+  --xy-selection-border: 1px dotted var(--color-accent);
+  --xy-resize-background-color: var(--color-accent);
+}
+
+.react-flow__edge-path,
+.react-flow__connection-path {
+  stroke-dasharray: 8;
 }
 
 body {

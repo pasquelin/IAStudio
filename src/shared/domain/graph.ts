@@ -1,0 +1,164 @@
+/**
+ * A graph document, in Scenario's own `editorInfo` format rather than a shape of our own.
+ *
+ * That is what makes the compiler, the validator and the round trip with the webapp free: the
+ * SDK publishes `convertWorkflowEditorToFlow`, and it reads exactly these fields. A format of
+ * our own would owe a translator in both directions and drift on the first node type Scenario
+ * adds.
+ *
+ * Spelled out here rather than imported from the SDK because `shared/` carries no runtime
+ * dependency, and because the main process is the only side that speaks SDK (invariant 2). The
+ * compile step of the next milestone hands these very objects to the converter, so a divergence
+ * fails the typecheck there rather than at runtime.
+ */
+
+/** The fifteen node types of the editor. Ten of them compile to an execution node; five do not. */
+export type GraphNodeType =
+  | 'text'
+  | 'asset'
+  | 'aspectRatio'
+  | 'model'
+  | 'modelInput'
+  | 'llm'
+  | 'transformText'
+  | 'splitText'
+  | 'ifElse'
+  | 'groupItems'
+  | 'sliceAssets'
+  | 'forEach'
+  | 'forEachEnd'
+  | 'stickyNote'
+  | 'approval'
+
+export const GRAPH_NODE_TYPES: readonly GraphNodeType[] = [
+  'text',
+  'asset',
+  'aspectRatio',
+  'model',
+  'modelInput',
+  'llm',
+  'transformText',
+  'splitText',
+  'ifElse',
+  'groupItems',
+  'sliceAssets',
+  'forEach',
+  'forEachEnd',
+  'stickyNote',
+  'approval',
+]
+
+export function isGraphNodeType(value: unknown): value is GraphNodeType {
+  return GRAPH_NODE_TYPES.some(candidate => candidate === value)
+}
+
+/**
+ * An input port, on the LEFT of a node. `type` may be a list, which means the port is
+ * polymorphic and accepts any of them — that is what the connection check and the port colours
+ * are made of. `subHandles` are the ports nested under one, as a model's grouped inputs are.
+ */
+export type GraphHandleInput = {
+  id: string
+  label?: string
+  name?: string
+  type?: string | readonly string[]
+  subHandles?: readonly GraphHandleInput[]
+}
+
+/** An output port, on the RIGHT of a node. One type, never a list: a producer knows what it makes. */
+export type GraphHandleOutput = {
+  id: string
+  name?: string
+  type?: string
+  isArray?: boolean
+}
+
+/** What every node carries in `data`, whatever its type adds to it. */
+export type GraphNodeData = {
+  inputHandles?: readonly GraphHandleInput[]
+  outputHandles?: readonly GraphHandleOutput[]
+  /** Marks a node as an input of the workflow itself, or as one of its outputs. */
+  isInput?: boolean
+  isOutput?: boolean
+  /** The uuid of the box it is filed under — see `GraphGroups`. */
+  group?: string
+  title?: string
+}
+
+export type GraphPosition = { x: number; y: number }
+
+/**
+ * The node types this milestone draws. The other eleven are declared above and land in the
+ * editor with the loops and the logic — until then a graph can hold one, and it renders as the
+ * type it says it is with nothing but its ports.
+ */
+export type GraphNodeBody =
+  | { type: 'text'; data: GraphNodeData & { value?: string } }
+  | { type: 'stickyNote'; data: GraphNodeData & { value?: string } }
+  | {
+      type: 'asset'
+      data: GraphNodeData & {
+        /** The asset kind the port carries: `image`, `video`, `audio`… */
+        type?: string
+        value?: string | readonly string[]
+        isMultiple?: boolean
+        isRequired?: boolean
+      }
+    }
+  | {
+      type: 'model'
+      data: GraphNodeData & {
+        modelId?: string
+        /** What the model's own form holds — its shape is the model's, not ours (invariant 5). */
+        form?: Readonly<Record<string, unknown>>
+        type?: string
+      }
+    }
+  | { type: Exclude<GraphNodeType, 'text' | 'stickyNote' | 'asset' | 'model'>; data: GraphNodeData }
+
+export type GraphNode = GraphNodeBody & {
+  id: string
+  position: GraphPosition
+  /** Written by the resize handle on the node types that carry one, and only on those. */
+  width?: number
+  height?: number
+}
+
+/**
+ * An edge, and the convention that would cost the most to get wrong: Scenario points it from
+ * the CONSUMER to the PROVIDER.
+ *
+ * `source` is the INPUT, on the left of the screen; `target` is the OUTPUT, on the right. Data
+ * flows left to right, the edge object points right to left. Verified in the SDK's own
+ * `workflow_converter.js` and against a published App: `{ source: 'imageGenerator1', target:
+ * 'image1' }` for an edge feeding the generator from the asset. Wired the intuitive way, every
+ * export is reversed — with no error and no warning.
+ */
+export type GraphEdge = {
+  id: string
+  source: string
+  target: string
+  sourceHandle?: string
+  targetHandle?: string
+}
+
+/**
+ * The named boxes drawn behind a group of nodes, keyed by the uuid each node repeats in
+ * `data.group`. A fourth field of `editorInfo` that neither the plan nor the SDK types name —
+ * read off a published App on 9 August 2026.
+ */
+export type GraphGroups = Record<string, { title?: string; color?: string }>
+
+/** The whole state of a graph document: what `editorInfo` holds, and nothing besides. */
+export type GraphState = {
+  nodes: readonly GraphNode[]
+  edges: readonly GraphEdge[]
+  /** The node ids that stand for the workflow's own inputs, in the order they are asked. */
+  inputKeys: readonly string[]
+  nodeGroups?: GraphGroups
+}
+
+export const EMPTY_GRAPH: GraphState = { nodes: [], edges: [], inputKeys: [] }
+
+/** Scenario's own limit on a workflow, which only the export has to obey — see the plan, step 9. */
+export const MAX_GRAPH_NODES_FOR_EXPORT = 50
