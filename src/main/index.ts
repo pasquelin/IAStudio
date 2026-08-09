@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/about-panel'
@@ -12,6 +12,7 @@ import { log, mirrorLogsTo } from '@main/log'
 import { createServices, createSettings } from '@main/services'
 import type { SettingsStore } from '@main/settings/store'
 import { lockNavigation } from '@main/window/navigation'
+import { lockPermissions, rendererOrigin } from '@main/window/permissions'
 import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splash-window'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
@@ -106,6 +107,10 @@ function bootstrap(): void {
   lockNavigation()
 
   void app.whenReady().then(() => {
+    // The session only exists once ready, and no window may exist before it is locked: with no
+    // handler installed Electron grants every permission a page asks for.
+    lockPermissions(session.defaultSession, rendererOrigin())
+
     // Before the splash: it is painted from the theme, and reading the settings is a JSON file —
     // the rest of the services open SQLite synchronously, far too late to decide what to paint.
     const settings = createSettings()

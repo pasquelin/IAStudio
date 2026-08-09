@@ -23,8 +23,10 @@ CLAUDE.md
 # Sorties d'exécution, jamais du code
 logs/
 
-# Shipped with the app, fetched by `pnpm ffmpeg:fetch` — binaries, never committed.
+# Shipped with the app, fetched by `pnpm ffmpeg:fetch` and `pnpm stt:fetch` — binaries and
+# model weights, never committed.
 resources/ffmpeg/
+resources/stt/
 src/renderer/public/decoders/
 
 # Signing material. A safety net, never a permission: certificates belong in the GitHub

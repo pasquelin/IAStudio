@@ -15,8 +15,17 @@
       No App Sandbox entitlements here: `com.apple.security.app-sandbox` is absent, as it must
       be for direct DMG distribution, which makes `network.client` and `files.user-selected`
       inert. Granting them would only suggest a confinement that does not exist.
+
+      `device.audio-input` is the exception, and is NOT one of those: it belongs to the
+      hardened runtime's resource-access family, which applies with or without a sandbox.
+      Dictation records from the microphone, and without this key a signed build is denied by
+      the runtime while development works perfectly — see ADR-11 and docs/stt/02-packaging.md.
+      It is inherited by the helper processes because this same file is `entitlementsInherit`,
+      which is what the renderer needs: it is the one that opens the capture.
     -->
     <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.device.audio-input</key>
     <true/>
   </dict>
 </plist>
