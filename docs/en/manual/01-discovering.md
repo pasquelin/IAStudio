@@ -26,10 +26,10 @@ and download an image, is **everything that comes after**:
 > what is still missing is the chapter [What does not exist yet](18-limits.md) — it exists to be
 > read, not hidden.
 
-## Six ways of working
+## Seven ways of working
 
-The studio is not six different applications. It is one application that **rearranges itself**
-according to what you are making. Those six arrangements are called **workspaces**.
+The studio is not seven different applications. It is one application that **rearranges itself**
+according to what you are making. Those seven arrangements are called **workspaces**.
 
 | Workspace | What you make there | An example |
 |---|---|---|
@@ -39,6 +39,7 @@ according to what you are making. Those six arrangements are called **workspaces
 | **Audio** | sounds and music | an ambience, a sound effect, a musical bed |
 | **Textures** | materials | wood, rusted metal, fabric — to dress a 3D object |
 | **Skyboxes** | 360° skies | what you see around you when you look up in a scene |
+| **Graph** | chains of models | *under construction: it holds and saves, it does not run yet* |
 
 You switch workspace by clicking its name, at the top of the window. The panels rearrange
 themselves, and the model catalogue filters down to what can make that kind of thing.

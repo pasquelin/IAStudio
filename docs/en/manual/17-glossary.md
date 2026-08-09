@@ -259,6 +259,13 @@ The document keeps its layers. Flattening is not destructive here.
 To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
 result lands in your *assets*.
 
+**Graph** *(node editor, workflow)*
+The seventh *workspace*: a canvas where you place *nodes*, wire them together, and one's output
+becomes the next one's input. A `.graph` document.
+
+It opens, it saves, it does **not run yet** — that is written in
+[What does not exist yet](18-limits.md).
+
 **Group**
 Several objects filed under one parent. In the 3D workspace (`⌘G`) as in the layer stack: moving
 the group moves everything hanging below it, and folding it away makes a busy scene readable.
@@ -397,6 +404,11 @@ thing. **Choosing the right model matters as much as writing a good prompt.**
 **Negative prompt**
 What you want to avoid. Short, in keywords: `blurry, text, watermark`. It is not the place to
 describe a scene in reverse.
+
+**Node**
+A box on the *graph*'s canvas. Each does one thing — hold a text, run a *model*, carry a note —
+and exposes **ports** through which it takes and gives. Changing a node's model rebuilds its
+ports, and the links whose port is gone leave with them.
 
 **Normalise** *(audio)*
 Bringing a sound's perceived loudness to a reference level, here −14 *LUFS*. It stops two sounds
@@ -597,10 +609,10 @@ The drawing of a sound: those waves showing where it is loud and where it is sil
 you spot a phrase or a beat without listening. Making it requires *ffmpeg*.
 
 **Workspace**
-One of the studio's six arrangements: **Image**, **Video**, **3D**, **Audio**, **Textures**,
-**Skyboxes**. Switching workspace rearranges the *panels* and refilters the *catalogue*.
+One of the studio's seven arrangements: **Image**, **Video**, **3D**, **Audio**, **Textures**,
+**Skyboxes**, **Graph**. Switching workspace rearranges the *panels* and refilters the *catalogue*.
 
-It is not six applications: it is one application that rearranges itself.
+It is not seven applications: it is one application that rearranges itself.
 
 ---
 
