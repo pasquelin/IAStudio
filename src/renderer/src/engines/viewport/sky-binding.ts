@@ -25,20 +25,30 @@ export type SkyBinding = {
  * but hangs nothing behind it, so without this the backdrop stays whatever was there — black.
  */
 export function createSkyBinding(cache: TextureCache, paintBackground: () => void): SkyBinding {
-  let held: string | null = null
+  /**
+   * Two, not one. `wanted` is what the document asks for and settles the races; `shown` is what
+   * `scene.background` actually holds. Conflated, a call that lost the race had no way to name
+   * its own reference apart from the picture on screen, and gave back whichever it could reach.
+   */
+  let wanted: string | null = null
+  let shown: string | null = null
 
   const release = (): void => {
-    if (held) cache.release(held, SRGBColorSpace)
-    held = null
+    if (shown) cache.release(shown, SRGBColorSpace)
+    shown = null
+    // Cleared too: a load still in flight reads this to know its sky is no longer asked for.
+    wanted = null
   }
 
   return {
-    showsSky: () => held !== null,
+    // What is asked for, not what is on screen: a viewport whose sky is still decoding must not
+    // repaint its backdrop underneath it. Unchanged by the two-field split, deliberately.
+    showsSky: () => wanted !== null,
     release,
 
-    apply: async (environment, wanted) => {
-      const assetId = wanted.kind === 'skybox' ? wanted.assetId : null
-      if (assetId === held) return
+    apply: async (environment, asked) => {
+      const assetId = asked.kind === 'skybox' ? asked.assetId : null
+      if (assetId === wanted) return
 
       if (!assetId) {
         release()
@@ -48,21 +58,23 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
         return
       }
 
-      const previous = held
-      held = assetId
+      wanted = assetId
       const loaded = await cache.acquire(assetId, SRGBColorSpace)
-      // Another sky was chosen while this one was decoding. The reference this call was carrying
-      // is still owed: the winner released the sky *it* took over, never the one before that.
-      if (held !== assetId) {
-        if (previous) cache.release(previous, SRGBColorSpace)
+
+      // Overtaken while decoding: gives back what it acquired, which it never put on screen.
+      if (wanted !== assetId) {
+        cache.release(assetId, SRGBColorSpace)
         return
       }
 
-      if (loaded) {
-        environment.setTexture(loaded)
-        environment.refresh()
-      }
+      if (!loaded) return
+
+      environment.setTexture(loaded)
+      environment.refresh()
+
       // After the swap, never before: the old texture is bound to the background until then.
+      const previous = shown
+      shown = assetId
       if (previous) cache.release(previous, SRGBColorSpace)
     },
   }

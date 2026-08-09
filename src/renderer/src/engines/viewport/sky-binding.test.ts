@@ -127,6 +127,25 @@ describe('createSkyBinding', () => {
   })
 
   /**
+   * The ordering rule this module exists for, in the case a losing call can break it: sky-1 is on
+   * the background while 2 and 3 decode, and 2 resolves first. Whatever 2 gives back, it must not
+   * be the picture three.js is still drawing from.
+   */
+  it('never frees the sky on screen before its replacement is shown', async () => {
+    const sky = binding()
+    const environment = fakeEnvironment()
+    await sky.apply(environment, SKY)
+
+    const second = sky.apply(environment, OTHER)
+    const third = sky.apply(environment, THIRD)
+    await Promise.all([second, third])
+
+    const shown = vi.mocked(environment.setTexture).mock.invocationCallOrder.at(-1) ?? 0
+    const freedFirst = source.freed[0]?.mock.invocationCallOrder[0] ?? 0
+    expect(freedFirst).toBeGreaterThan(shown)
+  })
+
+  /**
    * The mirror risk of giving a carried reference back: hand back one too many and the sky on
    * screen is disposed of under the frame that is drawing it. Coming back to a sky while another
    * decodes is the case where the same asset is both carried and wanted.
