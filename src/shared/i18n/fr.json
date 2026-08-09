@@ -1313,6 +1313,8 @@
   "styles": {
     "none": "Aucun style enregistré. Réglez un matériau, puis enregistrez-le depuis l’inspecteur.",
     "rename": "Renommer",
+    "actions": "Actions du style",
+    "actionsHint": "Renommer ou supprimer ce style.",
     "remove": "Supprimer",
     "newName": "Style",
     "save": "Enregistrer comme style",

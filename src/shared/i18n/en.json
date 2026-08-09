@@ -1313,6 +1313,8 @@
   "styles": {
     "none": "No style saved yet. Set a material up, then save it from the inspector.",
     "rename": "Rename",
+    "actions": "Style actions",
+    "actionsHint": "Rename or delete this style.",
     "remove": "Delete",
     "newName": "Style",
     "save": "Save as style",

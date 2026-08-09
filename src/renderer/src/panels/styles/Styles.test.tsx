@@ -67,6 +67,47 @@ describe('the styles panel', () => {
     expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveValue('Style 1')
   })
 
+  /**
+   * The right click cannot be the only way in: `contextmenu` raised by Shift+F10 targets the
+   * focused cell, and the listener sits on a div inside it — an event never walks down into its
+   * own descendants. Without a button on the row, renaming and removing were mouse-only.
+   */
+  it('offers the same two actions to the keyboard, through a button on the row', async () => {
+    render(<Styles />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Supprimer' })).toBeInTheDocument()
+  })
+
+  it('renames from the row button, not only from the right click', async () => {
+    render(<Styles />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
+
+    expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveValue('Style 1')
+  })
+
+  /**
+   * Enter commits, and the field is torn down by the re-render that follows. The teardown used
+   * to commit a second time: the caller writes asynchronously, so the name on screen is still
+   * the old one when the cleanup asks "was this abandoned mid-type".
+   */
+  it('renames once when the name is committed with Enter', async () => {
+    const rename = vi.fn(() => Promise.resolve([]))
+    installFakeBridge({ styles: { rename } })
+    render(<Styles />)
+
+    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('Style 1') })
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'Métal brossé{Enter}')
+
+    expect(rename).toHaveBeenCalledExactlyOnceWith('style_1', 'Métal brossé')
+  })
+
   it('removes the one the menu was opened on', async () => {
     const remove = vi.fn(() => Promise.resolve([]))
     installFakeBridge({ styles: { remove } })

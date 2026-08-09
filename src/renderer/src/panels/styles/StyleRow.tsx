@@ -1,10 +1,13 @@
+import { mdiDotsHorizontal } from '@mdi/js'
 import { memo, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MaterialStyle } from '@shared/domain/style'
+import { MenuButton } from '@/design/MenuButton'
 import { Row } from '@/design/Row'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { InlineRename } from '@/panels/shared/InlineRename'
 import { useStyles } from '@/stores/styles'
-import { StyleMenu } from './StyleMenu'
+import { StyleMenu, StyleMenuRows, STYLE_MENU_ROWS } from './StyleMenu'
 
 export type StyleRowProps = { style: MaterialStyle }
 
@@ -13,7 +16,12 @@ export type StyleRowProps = { style: MaterialStyle }
  * Held here rather than in the panel because both are per-row: lifted, opening one row's menu
  * re-rendered every other row in the list.
  *
- * It draws its name and nothing else on purpose: the fifteen values behind it are read by
+ * `memo` earns less here than on an asset card, and it is worth saying so: every write answers
+ * with the whole list re-read from disk, so a rename gives all the rows a new identity, not just
+ * the one that changed. What it does catch is a re-render this list has no part in — switching
+ * the texture in front, which happens far more often than a style is saved.
+ *
+ * It draws its name and nothing else besides the menu: the fifteen values behind it are read by
  * applying it, and a subtitle summarising three of them would go stale against the twelve it
  * left out.
  */
@@ -24,6 +32,7 @@ export const StyleRow = memo(function StyleRow({ style }: StyleRowProps) {
 
   // Stable, or the open menu re-subscribes its three global listeners on every list refresh.
   const closeMenu = useCallback(() => setMenuAt(null), [])
+  const startRename = useCallback(() => setRenaming(true), [])
 
   if (renaming) {
     return (
@@ -48,15 +57,25 @@ export const StyleRow = memo(function StyleRow({ style }: StyleRowProps) {
         setMenuAt({ x: event.clientX, y: event.clientY })
       }}
     >
-      <Row title={style.name} />
-      {menuAt && (
-        <StyleMenu
-          id={style.id}
-          at={menuAt}
-          onRename={() => setRenaming(true)}
-          onClose={closeMenu}
-        />
-      )}
+      <Row
+        title={style.name}
+        actions={
+          // The keyboard's way to the same two rows. A right-click cannot be one: `contextmenu`
+          // raised by Shift+F10 targets the focused cell, and the listener is on the div inside
+          // it — an event never walks down into its own descendants.
+          <MenuButton
+            icon={mdiDotsHorizontal}
+            label={t('styles.actions')}
+            description={t('styles.actionsHint')}
+            tooltip={TIP_LEFT}
+            variant="header"
+            rowCount={STYLE_MENU_ROWS}
+            opensOnClick
+            rows={close => <StyleMenuRows id={style.id} onRename={startRename} onClose={close} />}
+          />
+        }
+      />
+      {menuAt && <StyleMenu id={style.id} at={menuAt} onRename={startRename} onClose={closeMenu} />}
     </div>
   )
 })

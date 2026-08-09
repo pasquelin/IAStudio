@@ -44,11 +44,26 @@ export const useStyles = create<StylesState>()((set, get) => {
 
     load: async () => {
       if (get().loaded) return
-      await run(getBridge()?.styles.list())
+
+      const styles = await getBridge()
+        ?.styles.list()
+        // An unreadable file is an empty panel, never a workspace that loses a panel over it.
+        .catch(() => [])
+
+      // A write that landed while the read was in flight is NEWER than the read: answering with
+      // the read would put the panel back to what the disk held before the save, and `loaded`
+      // means nothing would ever read again to correct it.
+      if (get().loaded) return
+      set({ styles: styles ?? [], loaded: true })
     },
 
-    save: (values, prefix) =>
-      run(
+    save: async (values, prefix) => {
+      // The button that saves lives in the inspector, which the panel need not have been opened
+      // for. Naming from a list nobody has read hands out "Style 1" over a file that already
+      // holds one — the collision `nextStyleName` exists to avoid.
+      await get().load()
+
+      await run(
         getBridge()?.styles.save({
           id: newId(),
           name: nextStyleName(get().styles, prefix),
@@ -57,7 +72,8 @@ export const useStyles = create<StylesState>()((set, get) => {
           // being edited with, and a style must not follow the next drag of the slider.
           values: structuredClone(values),
         }),
-      ),
+      )
+    },
 
     rename: (id, name) => run(getBridge()?.styles.rename(id, name)),
     remove: id => run(getBridge()?.styles.remove(id)),

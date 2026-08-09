@@ -1,6 +1,7 @@
 import { mdiPaletteSwatchOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { activeSceneId, activeTextureId, useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
 import { useStyles } from '@/stores/styles'
@@ -29,6 +30,9 @@ export function InspectorActions() {
       icon={mdiPaletteSwatchOutline}
       label={t('styles.save')}
       description={t('styles.saveHint')}
+      // Without it `description` is never rendered and never announced: every other header
+      // button of the studio hands one over, and this was the only one that did not.
+      tooltip={TIP_BOTTOM}
       variant="header"
       // The settings are read at click time rather than subscribed to. They are never drawn
       // here, and a drag emits one value per frame: a subscription would redraw this button on

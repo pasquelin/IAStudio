@@ -67,3 +67,55 @@ describe('the styles a window holds', () => {
     expect(useStyles.getState().styles).toMatchObject([{ name: 'Brushed metal' }])
   })
 })
+
+/**
+ * The save button lives in the inspector, which does not need the panel to have ever been
+ * opened. Both of these were reproduced before they were fixed.
+ */
+describe('saving before the panel has ever been opened', () => {
+  it('does not hand out a name the file already holds', async () => {
+    const saved: MaterialStyle[] = []
+    installFakeBridge({
+      styles: {
+        list: () => Promise.resolve([styleNamed('Style 1'), styleNamed('Style 2')]),
+        save: style => {
+          saved.push(style)
+          return Promise.resolve([style])
+        },
+      },
+    })
+
+    await useStyles.getState().save(DEFAULT_TEXTURE_MATERIAL, 'Style')
+
+    expect(saved[0]?.name).toBe('Style 3')
+  })
+
+  /**
+   * A read in flight is older than a write that lands during it. Answering with it puts the
+   * panel back to what the disk held before the save, and `loaded` stops `load` ever retrying.
+   */
+  /**
+   * A read in flight is older than a write that lands during it. Answering with it would put the
+   * panel back to what the disk held before, and `loaded` stops `load` ever retrying.
+   *
+   * Shown through `rename` because `save` cannot race any more — it waits for the read, which is
+   * what the naming above needs. The other two writes do not, and must not be undone by it.
+   */
+  it('keeps a rename that landed while a read was still in flight', async () => {
+    let answerList = (styles: MaterialStyle[]): void => void styles
+    const list = (): Promise<MaterialStyle[]> =>
+      new Promise(resolve => {
+        answerList = resolve
+      })
+    installFakeBridge({
+      styles: { list, rename: () => Promise.resolve([styleNamed('Brushed metal')]) },
+    })
+
+    const reading = useStyles.getState().load()
+    await useStyles.getState().rename('style_1', 'Brushed metal')
+    answerList([styleNamed('Style 1')])
+    await reading
+
+    expect(useStyles.getState().styles).toMatchObject([{ name: 'Brushed metal' }])
+  })
+})
