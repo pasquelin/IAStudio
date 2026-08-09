@@ -392,6 +392,7 @@ scrubbing starts stuttering for no visible reason.
 3. main fetches it               GET /models/{id}
 4. ModelRegistry translates      JSON schema → FieldDescriptor[]
 5. DynamicForm renders it        react-hook-form + a zod schema built from the descriptors
+5b. the price shows up           scenario:estimate-cost → POST ?dryRun=true → 402
 6. user submits                  scenario:generate
 7. JobManager queues it          bounded concurrency
 8. it polls                      jobs.retrieve, every 2 s
@@ -405,6 +406,23 @@ hand is right for exactly one model on exactly one day.
 
 An unknown field kind renders as raw input rather than failing the descriptor — a generation
 form that silently loses a field is worse than an ugly one.
+
+**Step 5b is the one call in the studio where a 4xx is the success path.** A `?dryRun=true`
+creates no job and spends nothing; the API answers **402**, carrying `estimatedCost` in its body.
+`main/scenario/cost.ts` swallows that status and nothing else — a 500 or a dead network is thrown
+on, so it reaches the log like every other failure. The port is a function rather than a method,
+because the dry run is documented on `workflows.run` as much as on generation.
+
+On the renderer side, `useCostEstimate` debounces at 600 ms **and** keeps a floor between two
+requests, derived from `INTERACTIVE_REQUESTS_PER_MINUTE`: a trailing debounce alone has no
+ceiling, only a cliff — type slower than its delay and every keystroke becomes a request. The
+same estimate is never bought twice, and it does not retry.
+
+**`DynamicForm` is lazy-loaded**, and the three functions that call zod live in
+`helpers/dynamic-form-schema`, apart from `helpers/dynamic-form`. The two halves go together:
+without the second, `referencePictures` kept zod in the eager graph. zod, `react-hook-form` and
+`@hookform/resolvers` are at **zero** in the initial chunk, which drops from 2,030.50 to
+1,810.88 kB — measured by VLQ-decoding the sourcemaps, and locked by tests that read the source.
 
 ---
 

@@ -176,8 +176,8 @@ Le cadre ne sort jamais de l'image — un recadrage rogne, il n'agrandit pas.
 
 | Outil | Raccourci | Ce qu'il fait |
 |---|---|---|
-| **Sélection rectangle** | `M` | trace une zone rectangulaire |
-| **Sélection ellipse** | — | trace une zone ovale |
+| **Sélection rectangulaire** | `M` | trace une zone rectangulaire |
+| **Sélection elliptique** | — | trace une zone ovale |
 | **Lasso** | `L` | trace une zone à main levée |
 
 > Tant qu'une zone est tracée, **le pinceau, la gomme et le pot n'agissent qu'à l'intérieur**.

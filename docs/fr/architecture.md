@@ -404,6 +404,7 @@ le scrubbing se met à saccader sans raison visible.
 3. le main le récupère               GET /models/{id}
 4. le ModelRegistry traduit          schéma JSON → FieldDescriptor[]
 5. DynamicForm le rend               react-hook-form + un schéma zod bâti sur les descripteurs
+5b. le prix s'affiche                scenario:estimate-cost → POST ?dryRun=true → 402
 6. soumission                        scenario:generate
 7. le JobManager met en file         concurrence bornée
 8. il poll                           jobs.retrieve, toutes les 2 s
@@ -418,6 +419,24 @@ jour.
 
 Un `kind` de champ inconnu se rend en saisie brute plutôt que de faire échouer le descripteur —
 un formulaire de génération qui perd un champ en silence est pire qu'un formulaire laid.
+
+**L'étape 5b est le seul appel du studio où un 4xx est le chemin nominal.** Un `?dryRun=true` ne
+crée aucun job et ne dépense rien ; l'API répond **402**, et `estimatedCost` est dans son corps.
+`main/scenario/cost.ts` rattrape ce seul statut — un 500 ou un réseau mort remonte comme
+n'importe quelle panne, jusqu'au journal. Le port est une fonction, pas une méthode, parce que le
+dry run est documenté sur `workflows.run` autant que sur la génération.
+
+Côté renderer, `useCostEstimate` débounce à 600 ms **et** garde un plancher entre deux envois,
+dérivé de `INTERACTIVE_REQUESTS_PER_MINUTE` : un débounce seul n'a pas de plafond, seulement une
+falaise — tapé plus lentement que son délai, chaque frappe part en requête. La même estimation
+n'est pas achetée deux fois, et elle ne se réessaie pas.
+
+**`DynamicForm` est chargé paresseusement**, et les trois fonctions qui appellent zod vivent dans
+`helpers/dynamic-form-schema` séparément de `helpers/dynamic-form`. Les deux moitiés vont
+ensemble : sans la seconde, `referencePictures` retenait zod dans le graphe eager. zod,
+`react-hook-form` et `@hookform/resolvers` sont à **zéro** dans le chunk initial, qui passe de
+2 030,50 à 1 810,88 kB — mesuré par décodage VLQ des sourcemaps, et verrouillé par des tests qui
+lisent la source.
 
 ---
 

@@ -1,7 +1,12 @@
 # Scenario Studio — reprise
 
 **Le seul document de travail du projet.** État, ce qu'il reste à faire, les mesures acquises, la
-méthode. Vérifié dans le code le 8 août 2026.
+méthode. Vérifié dans le code le 9 août 2026, contre `develop`.
+
+> **La branche de référence est `develop`, plus `main`.** `develop` intègre les features au fil de
+> l'eau ; `main` ne reçoit que des merges de release. Ce document, comme les deux manuels et les
+> deux architectures, décrit **ce qui est sur `develop`** — donc en avance sur la dernière version
+> publiée. Un écart entre ce texte et un binaire installé n'est pas une erreur du texte.
 
 Les conventions et les invariants sont dans **`CLAUDE.md`**, à la racine — ce fichier ne les répète
 pas. Pour *comprendre* le logiciel plutôt que reprendre son développement :
@@ -22,11 +27,29 @@ ce qui est fait.
 >
 > ## Ce qui vient d'être livré — ne le refais pas
 >
-> `feat/textures-materiau` est fusionnée dans `develop` (8 août 2026) : l'espace **Textures** a son
-> panneau matériau — une face de l'inspecteur unique, avec le remap à double poignée — et sa bande
-> de canaux, en colonne de droite, où chaque canal se dépose, se badge et se regarde à plat. Le
-> viewport est nu. Le § 3.4 dit ce que ce lot a appris et qu'il ne faut pas repayer ; **les étapes 6
-> à 8 restent entières**.
+> **Le prix d'une génération se voit avant et après** (`feat/workflows`, 8 août 2026). Le bouton
+> Générer porte `~N UC`, réévalué pendant qu'on remplit le formulaire ; la ligne de la barre de jobs
+> dit ce que la génération a réellement coûté. L'estimation vient d'un `?dryRun=true` qui répond
+> **402** — le seul appel du studio où un 4xx est le chemin nominal. Un job repris au démarrage
+> n'affiche aucun chiffre, délibérément.
+>
+> **Le formulaire de génération a quitté le premier écran** (`perf/form-lazy`). `DynamicForm` est
+> `lazy()`, et zod vit dans `helpers/dynamic-form-schema` à part de `helpers/dynamic-form` : les
+> deux moitiés ensemble, sinon `referencePictures` retient zod dans le graphe eager. Chunk initial
+> **2 030,50 → 1 810,88 kB**, −10,8 %. **C'est le L61 du backlog** — il est FAIT, ne pas le
+> reprendre.
+>
+> **Six passes i18n** (`feat/i18n-{cost,typo,wording,scene,order,holes}`) : le prix suit la langue,
+> une seule apostrophe française (`’`) dans tout le bundle, un outil porte le même nom dans toutes
+> les barres (« Sélection rectangulaire », « Sélection elliptique », « Pivoter »), les deux bundles
+> se relisent dans le même ordre, et une interpolation trouve toujours sa valeur. **Les deux manuels
+> et les deux architectures ont été réalignés le 9 août** — si tu renommes un libellé, `grep` le
+> dans `docs/fr/manuel/` et `docs/en/manual/` dans le même mouvement.
+>
+> **Avant cela**, `feat/textures-materiau` (8 août) : l'espace **Textures** a son panneau matériau —
+> une face de l'inspecteur unique, avec le remap à double poignée — et sa bande de canaux, en
+> colonne de droite. Le viewport est nu. Le § 3.4 dit ce que ce lot a appris et qu'il ne faut pas
+> repayer ; **les étapes 6 à 8 restent entières**.
 >
 > ## Trois choses inachevées sur ce lot, à traiter avant de l'oublier
 >
@@ -49,9 +72,9 @@ ce qui est fait.
 > - **§ 3.4, étapes 6 à 8** — dérivations en shader, tiling, export. La suite directe, et le plus
 >   gros manque fonctionnel restant hors workflows.
 > - **Backlog qualité P1** (`.claude/loop/BACKLOG.md`) — **vérifie d'abord ce qui reste** : les
->   statuts de ce fichier ont déjà menti trois fois. Au 8 août il restait L59/L60 (le `useCallback`
->   autour de `run`, débloqués depuis la fusion de `feat/ergonomie`), L31 sur quatre budgets tendus
->   plus `app/**` et `panels/**` qui n'ont aucun budget, et L61 (zod dans le chunk initial).
+>   statuts de ce fichier ont déjà menti trois fois. Au 9 août il restait L59/L60 (le `useCallback`
+>   autour de `run`, débloqués depuis la fusion de `feat/ergonomie`) et L31 sur quatre budgets
+>   tendus plus `app/**` et `panels/**` qui n'ont aucun budget. **L61 est fait** — voir ci-dessus.
 > - **§ 3.3 + § 3.5** — les 13 lignes actionnables de la table du § 3.3, les 3 vues mortes du skybox
 >   et l'export en 6 faces.
 > - **§ 3.6** — les dettes transverses : borne de débit sur l'API, jobs qui ne survivent pas à la
@@ -107,12 +130,12 @@ celles de la configuration et de l'espace 3D ayant été supprimées une fois le
 
 # 1. L'état
 
-**852 fichiers dans `src/`, dont 335 de test — `pnpm validate` en exécute 4326. 6 espaces
+**892 fichiers dans `src/`, dont 352 de test — `pnpm test` en exécute 4442. 6 espaces
 éditables. **Les six types de documents s'enregistrent**, et fermer un onglet demande avant de
 perdre quoi que ce soit. L'espace Image est complet : ses cinq gestes sont offerts, recadrage
 compris.**
 
-> Les deux comptes sont **relevés sur une passe réelle** du 8 août, pas déclarés : les `it.each`
+> Les deux comptes sont **relevés sur une passe réelle** du 9 août, pas déclarés : les `it.each`
 > exécutent plusieurs cas chacun, donc le total d'un `describe` ne se lit pas dans le fichier. Ne
 > recopier aucun de ces trois nombres sans avoir relancé `pnpm validate` — plusieurs sessions
 > fusionnent dans la journée.
@@ -121,7 +144,7 @@ compris.**
 seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
 pourcentages.
 
-**Il sortait en 1 sur `main` le 8 août** : `engines/{scene,skybox,viewport,texture,gpu}/**` était
+**Il sortait en 1 sur `develop` le 8 août** : `engines/{scene,skybox,viewport,texture,gpu}/**` était
 à 367 branches non couvertes pour 310 permises, depuis la fusion des espaces Image et 3D. Deux
 chantiers l'ont refermé sans se concerter — `test/gpu-coverage` sur le GPU, `feat/3d-finition` sur
 les 57 branches de logique pure qui n'en étaient pas. Le glob est à **232 pour 310**, 78 de marge.
@@ -134,16 +157,20 @@ qui dit les échecs — une branche que personne n'exerce y serait un échec que
 **Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas où élargir est légitime
 (un glob dont la marge de croissance est du GPU intestable).
 
-> **Un grain de sable environnemental subsiste : les tests qui pilotent `userEvent` dépassent leur
-> budget de 5 s quand la machine porte plusieurs sessions** — des sous-ensembles différents à
-> chaque passage, verts en isolation. C'est `userEvent` qui est lent, pas une régression. Il rend
-> `validate` capricieux pour tout le monde tant que plusieurs worktrees tournent en parallèle.
+> **Un grain de sable environnemental subsiste : les tests lents dépassent leur budget de 5 s quand
+> la machine porte plusieurs sessions** — des sous-ensembles différents à chaque passage, verts en
+> isolation. Ce n'est pas une régression. Il rend `validate` capricieux pour tout le monde tant que
+> plusieurs worktrees tournent en parallèle.
 >
-> **Ce n'est pas un seul fichier.** `settings/ShortcutsSettings.test.tsx` a été le premier nommé ;
-> `licences/LicencesWindow.test.tsx` est tombé le 8 août pour la même raison, à 5,25 s en charge et
-> 5,11 s seul — la marge est le vrai sujet, pas le fichier. Devant un échec de ce genre, le
-> réflexe est `vitest run <le fichier>` en isolation, ou `vitest run --coverage --maxWorkers=2`
-> pour toute la passe, avant de chercher une cause dans le code.
+> **Ce n'est pas un seul fichier, ni une seule cause.** `settings/ShortcutsSettings.test.tsx` a été
+> le premier nommé, `licences/LicencesWindow.test.tsx` est tombé le 8 août : ceux-là pilotent
+> `userEvent`, qui est lent. Le 9 août ce sont deux `it` de `renderer/src/eager-graph.test.ts` qui
+> sont tombés en timeout — **et celui-là ne touche pas à `userEvent`** : il construit un graphe
+> Rollup. Relancé seul dans la foulée, le fichier passe en 4,93 s de temps de test, sous le budget.
+> La marge est le vrai sujet, pas le fichier ni le mécanisme. Devant un échec de ce genre, le
+> réflexe est `vitest run <le fichier>` en isolation, ou
+> `vitest run --coverage --maxWorkers=2` pour toute la passe, avant de chercher une cause dans le
+> code.
 
 L'application démarre par `pnpm start`.
 
@@ -155,8 +182,13 @@ typé des deux côtés, `contextIsolation`/`sandbox` actifs, navigation verrouil
 
 **La chaîne de génération** — réglages chiffrés par `safeStorage`, client `@scenario-labs/sdk` dans
 le main, `ModelRegistry` avec auto-pagination et cache, `JobManager` qui poll seul et borne la
-concurrence, `DynamicForm` construit depuis les descripteurs. Aucun formulaire de génération écrit à
-la main (invariant 5).
+concurrence, `DynamicForm` construit depuis les descripteurs — et chargé paresseusement, zod avec
+lui. Aucun formulaire de génération écrit à la main (invariant 5).
+
+**Le prix, avant et après** — `main/scenario/cost.ts` tire l'estimation d'un `?dryRun=true` qui
+répond 402, et `useCostEstimate` la tient à jour sous le bouton Générer, débounce plus plancher
+partagé avec le polling du `JobManager`. Le coût réel se capte à la soumission, à côté du job et
+non dedans, et s'affiche sous la barre de sa ligne.
 
 **Les projets** — un dossier, un manifeste, un catalogue SQLite. Le catalogue tourne sur son propre
 `worker_threads` : de 16 blocages du thread principal à 0.

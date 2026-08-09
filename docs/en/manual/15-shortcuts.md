@@ -196,12 +196,12 @@ Every tool in the bar is a command: its key arms it, and remaps like the rest.
 | `H` | Hand | | `⇧R` | Line |
 | `K` | Scale | | `A` | Arrow |
 | `F` | Crop | | `O` | Ellipse |
-| `M` | Rectangle select | | `P` | Brush |
+| `M` | Rectangular selection | | `P` | Brush |
 | `L` | Lasso | | `⇧P` | Pencil |
 | `T` | Text | | `E` | Eraser |
 | `G` | Fill the layer | | `I` | Eyedropper |
 
-**Four tools have no default key** — ellipse select, polygon, star, selection eraser — and you can
+**Four tools have no default key** — elliptical selection, polygon, star, selection eraser — and you can
 give them one in the settings.
 
 > **Line changed key.** It answered to `L`, which the Lasso already used in the same context; it

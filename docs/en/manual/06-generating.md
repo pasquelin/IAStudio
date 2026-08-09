@@ -187,6 +187,25 @@ The **Generate** button, at the bottom of the form.
 > **Button not responding?** It is inactive as long as no project is open — the message "Open a
 > project to generate." appears above the form. A result has to land somewhere.
 
+### The price, before you pay it
+
+The button carries an estimate: **`~12 CU`**, next to the word Generate. That is what the
+generation would cost if you pressed it now.
+
+The figure follows the form. Change the size, the number of images, the model: it refreshes on
+its own, once you have stopped typing. It is not asked for while a required field is empty —
+there would be nothing to price.
+
+> **Asking for the price costs nothing and generates nothing.** The studio sends a *dry* request:
+> the API prices it and stops there. No creative unit is spent, no asset appears.
+
+**No figure on the button?** Three cases look alike on screen, and none of them is a problem:
+nothing has been asked yet, the API declined to price that model, or the request did not go
+through. A price is a courtesy; its absence never stops you from generating.
+
+> **It is an estimate, not an invoice.** What you actually spent reads afterwards, on the
+> generation's own line, and in **Help ▸ Usage…**.
+
 ---
 
 ## Following your generations
@@ -227,6 +246,13 @@ its state.
 | **Cancelled** | you stopped it |
 
 The **Cancel job** button stops anything not yet finished.
+
+**Under the bar, the line says what the generation cost** — `3 CU` — or, if it failed, why.
+Never both: a failed generation has no price to announce.
+
+> **A generation resumed at startup shows no figure.** The real cost is captured the moment the
+> studio launches the job; if it was closed in between, it would rather say nothing than announce
+> a wrong number.
 
 ### The queue
 

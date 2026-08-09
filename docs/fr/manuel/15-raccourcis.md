@@ -201,12 +201,12 @@ Chaque outil de la barre est une commande : sa touche l'arme, et se remappe comm
 | `H` | Main | | `⇧R` | Trait |
 | `K` | Mise à l'échelle | | `A` | Flèche |
 | `F` | Recadrage | | `O` | Ellipse |
-| `M` | Sélection rectangle | | `P` | Pinceau |
+| `M` | Sélection rectangulaire | | `P` | Pinceau |
 | `L` | Lasso | | `⇧P` | Crayon |
 | `T` | Texte | | `E` | Gomme |
 | `G` | Remplir le calque | | `I` | Pipette |
 
-**Quatre outils n'ont pas de touche par défaut** — sélection ellipse, polygone, étoile, gomme
+**Quatre outils n'ont pas de touche par défaut** — sélection elliptique, polygone, étoile, gomme
 sélective — et vous pouvez leur en donner une dans les réglages.
 
 > **Le Trait a changé de touche.** Il répondait à `L`, qui servait déjà au Lasso dans le même

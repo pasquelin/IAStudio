@@ -193,6 +193,25 @@ Le bouton **Générer**, en bas du formulaire.
 > « Ouvrez un projet pour générer. » s'affiche au-dessus du formulaire. Un résultat doit
 > atterrir quelque part.
 
+### Le prix, avant de payer
+
+Le bouton porte une estimation : **`~12 UC`**, à côté du mot Générer. C'est ce que la génération
+coûterait si vous appuyiez maintenant.
+
+Le chiffre suit le formulaire. Changez la taille, le nombre d'images, le modèle : il se remet à
+jour tout seul, une fois que vous avez cessé de taper. Il ne se demande pas tant qu'un champ
+obligatoire est vide — sans quoi il n'y aurait aucun prix à donner.
+
+> **Demander le prix ne coûte rien et ne génère rien.** Le studio envoie une demande *à blanc* :
+> l'API la chiffre et s'arrête là. Aucune unité créative n'est dépensée, aucun asset n'apparaît.
+
+**Pas de chiffre sur le bouton ?** Trois cas se ressemblent à l'écran, et aucun n'est un
+problème : rien n'a encore été demandé, l'API n'a pas voulu chiffrer ce modèle, ou la demande
+n'est pas passée. Un prix est une courtoisie ; son absence n'empêche jamais de générer.
+
+> **C'est une estimation, pas une facture.** Ce que vous avez réellement dépensé se lit après
+> coup, sur la ligne de la génération, et dans **Aide ▸ Consommation…**.
+
 ---
 
 ## Suivre ses générations
@@ -234,6 +253,13 @@ modèle et son état.
 | **Annulée** | vous l'avez arrêtée |
 
 Le bouton **Annuler la tâche** arrête ce qui n'est pas encore terminé.
+
+**Sous la barre, la ligne dit ce que la génération a coûté** — `3 UC` — ou, si elle a échoué,
+pourquoi. Jamais les deux : une génération ratée n'a pas de prix à annoncer.
+
+> **Une génération reprise au démarrage n'affiche aucun chiffre.** Le coût réel se capte au
+> moment où le studio lance la tâche ; s'il a été fermé entre-temps, il préfère ne rien dire
+> plutôt que d'annoncer un chiffre faux.
 
 ### La file d'attente
 

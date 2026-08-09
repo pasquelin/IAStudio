@@ -169,12 +169,12 @@ The frame never leaves the picture — a crop trims, it does not grow.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Rectangle select** | `M` | draws a rectangular area |
-| **Ellipse select** | — | draws an oval area |
+| **Rectangular selection** | `M` | draws a rectangular area |
+| **Elliptical selection** | — | draws an oval area |
 | **Lasso** | `L` | draws a freehand area |
 
-> These three tools **draw** the area but do not yet constrain anything: no tool restricts its
-> action to the selection for now. See [What does not exist yet](18-limits.md).
+> As long as an area is drawn, **the brush, the eraser and the bucket only act inside it**.
+> A click without a drag drops the area, just like `⌘D`.
 
 ### Shapes group
 

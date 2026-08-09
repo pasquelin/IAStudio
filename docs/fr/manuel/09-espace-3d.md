@@ -63,7 +63,7 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
 |---|---|---|
 | **Sélectionner** | `V` | choisit un objet sans armer de poignée |
 | **Déplacer** | `G` | tire l'objet le long des flèches de couleur |
-| **Tourner** | `R` | fait pivoter l'objet avec les cercles de couleur |
+| **Pivoter** | `R` | fait pivoter l'objet avec les cercles de couleur |
 | **Redimensionner** | `S` | agrandit ou rétrécit avec les poignées |
 | **Magnétisme** | `M` | fait avancer les poignées **par crans** au lieu de les laisser libres |
 | **Repère local** | `L` | aligne les poignées sur l'orientation de **l'objet** plutôt que sur celle du monde |
