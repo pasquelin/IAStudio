@@ -49,67 +49,6 @@ pas un choix.
 
 ## À faire
 
-### 7. Un panneau Styles dans l’espace Textures
-
-**Demandé le 9 août 2026.** C’est une fonctionnalité, pas un défaut — elle est ici parce qu’elle se
-joue entièrement à l’écran.
-
-Un panneau qui liste des **styles de rendu prédéfinis** — effet métal, effet plastique, effet bois —
-pour ne pas refaire les mêmes réglages à chaque texture. On en ajoute depuis l’inspecteur, par un
-**petit bouton dans le header, en haut à droite**, comme le panneau Assets, qui enregistre les
-réglages courants. Le nom est **généré automatiquement** et se change dans le panneau Styles par un
-**clic droit → Renommer**, comme dans les applications JetBrains.
-
-**Rien de tout cela n’existe** : aucune notion de preset ni de style de matériau dans `src/` (les
-occurrences de `preset` sont ailleurs — `DynamicForm`, ffmpeg). En revanche, les quatre briques sont
-déjà là et aucune n’est à écrire :
-
-| Ce qu’il faut | Ce qui existe déjà |
-|---|---|
-| Ce qu’un style capture | `MaterialSettings` (`engines/texture/texture-state.ts`) — 16 champs, de `color` à `rotation`, plus `DEFAULT_TEXTURE_MATERIAL` gelé |
-| Le bouton dans le header | `AssetBrowserActions.tsx`, `variant="header"` — le motif qu’il cite |
-| Le clic droit → Renommer | `design/ContextMenu.tsx`, et `AssetMenu.tsx` comme exemple |
-| Le renommage lui-même | `LayerRow.tsx` le fait déjà, double-clic sur le nom seul, clé i18n `layers.rename` |
-
-Le panneau se déclare dans `TOOL_PLACEMENTS` (`shared/domain/tool.ts`), où `channels` occupe déjà
-`zone: 'right', slot: 'primary'` pour l’espace Textures. **Il va dans la colonne de droite** : c’est
-du rendu, pas de la génération.
-
-**Les deux questions sont tranchées** — 9 août 2026.
-
-**Les styles vivent dans `userData`**, pas dans le projet : ils suivent la machine et servent quel
-que soit le projet ouvert.
-
-**Un style ne porte que des valeurs, jamais de maps.** C’est le rangement dans `userData` qui
-l’impose, pas une préférence : une map est un asset du **catalogue d’un projet**, désigné par un id
-qui n’a pas de sens dans le projet suivant. Les copier plutôt que les référencer ne sauve rien — ce
-sont des images 4K, hors catalogue, hors hash, et le style pèserait des centaines de mégaoctets. Le
-fond de l’affaire est plus simple : **un style dit comment lire les maps de la texture courante, pas
-lesquelles**. C’est ce qui lui permet de s’appliquer à n’importe quelle texture ; un style qui
-apporte ses propres canaux ne s’applique plus, il remplace.
-
-Conséquence à connaître, qui n’est pas un défaut : **une bonne moitié des 16 champs est inerte sans
-la map correspondante** — `roughnessRange` et `metalnessRange` remappent une map, `normalScale` et
-`invertNormalGreen` n’agissent que sur une normale, `heightScale`, `aoIntensity`, `edgeIntensity` de
-même, et `tiling`/`offset`/`rotation` ne décalent rien s’il n’y a rien à décaler. **Ne pas les
-filtrer à l’enregistrement** : un style amputé de ses valeurs inertes deviendrait faux dès que la
-texture se complète.
-
-Deux espaces les lisent, et ils ne lisent pas la même chose :
-
-| Espace | Ce qu’un style y apporte |
-|---|---|
-| **Textures** | les 16 champs de `MaterialSettings` — c’est son domaine |
-| **3D** | `color`, `roughness`, `metalness` seulement — `MaterialDescriptor` (`shared/domain/scene.ts`) n’a que ces trois scalaires, plus ses cinq slots de texture |
-
-Les trois champs communs sont justement ceux qui font l’essentiel d’un « effet métal » ou d’un
-« effet plastique » quand il n’y a pas de maps. Le précédent d’un partage entre les deux inspecteurs
-existe déjà : `EnvironmentSection` leur est commun, et sa JSDoc dit pourquoi.
-
-**Ce qu’il reste à trancher** : `MaterialSettings` ne vit aujourd’hui que dans `engines/texture/`. Un
-style lisible par les deux espaces demande que la forme sérialisée descende dans `shared/domain/` —
-sans quoi le main, qui écrira le fichier de `userData`, ne peut pas la typer.
-
 ### 24. L’Explorateur et Apps passent au rail gauche, dans toute l’application
 
 **Décidé le 9 août 2026**, dans la foulée de l’entrée 23 : les deux quittent le rail droit pour
@@ -305,6 +244,50 @@ filtre n’exempte pas d’expliquer — deux manques, dans l’ordre :
    avant d’inventer quoi que ce soit.
 2. **Dire où le résultat est parti**, après. La barre de jobs et le journal savent qu’il est
    arrivé ; ni l’un ni l’autre ne dit dans quelle étagère.
+
+### 26. Après un renommage en place, le focus tombe hors de la liste
+
+**Vu le 9 août 2026**, en traitant l’entrée 7 : le défaut n’est pas dans le panneau Styles, il
+est dans le composant que trois surfaces partagent.
+
+`InlineRename` (`panels/shared/InlineRename.tsx`) remplace le nom par un champ, et le champ
+disparaît au commit — Entrée, perte de focus, ou démontage. **Rien ne rend le focus à la ligne.**
+Il retombe sur `document.body` : la tabulation suivante repart du haut du document, et
+l’utilisateur au clavier qui vient de renommer se retrouve hors de la liste qu’il éditait.
+
+**Reproduit à la mesure**, pas déduit : `activeElement` vaut `BODY` après le commit.
+
+**Trois surfaces l’utilisent** — la pile de calques, les en-têtes de piste, et maintenant les
+styles — donc la réparation vaut pour les trois. Elle demande de rendre le focus à la cellule
+que `Collection` a montée, ce que l’appelant ne sait pas faire seul aujourd’hui : `focusCell`
+est privé au composant. C’est ce qui range cette entrée ici plutôt que dans le lot qui l’a
+trouvée — ce n’est pas un `if` à poser, c’est un geste que `Collection` doit offrir.
+
+> À ne pas confondre avec l’entrée 20 : celle-ci parle du **focus**, qui se voit déjà très bien
+> (l’anneau `ring-accent` est net) ; l’autre parle de la **sélection**, qui ne se voit pas. Les
+> deux états sont distincts, et l’entrée 9 vient justement de les séparer.
+
+### 27. Trois tests passent seuls et échouent en suite
+
+**Vu le 9 août 2026**, sur quatre exécutions de `pnpm validate` d’affilée. Ce n’est pas un retour
+d’interface au sens strict, et il est ici parce qu’il **fait douter de chaque livraison** : un
+`validate` rouge qu’il faut réexécuter pour croire est un filet qui ne tient plus.
+
+| Fichier | Seul | En suite |
+|---|---|---|
+| `settings/ShortcutsSettings.test.tsx` | 15/15, 17 s | jusqu’à 60 s, 2 échecs |
+| `panels/channels/Channels.test.tsx` | 24/24, 12 s | 25 s, 1 échec |
+| `known-keys.i18n.test.ts` | 6/6 | 18 s, 2 échecs |
+
+**Le message le dit lui-même** : « Test timed out in 15000ms ». Ce sont des dépassements de
+délai, jamais des assertions fausses — et les fichiers en cause n’ont rien de commun entre eux
+sinon d’être **lents seuls déjà** : dix-sept secondes pour quinze tests, c’est plus que le délai
+accordé à un seul d’entre eux. Sous charge — quatre agents de revue en parallèle, une autre
+session qui compile — ils débordent.
+
+**Deux réponses possibles, à trancher** : relever le délai de ces fichiers, ou regarder pourquoi
+un test de réglages met une seconde par assertion. La seconde est la bonne question ; la première
+est ce qui rendra les livraisons lisibles en attendant.
 
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
@@ -671,6 +654,43 @@ correction.
 | **(9)** `role="option"` sans `listbox`, et `aria-selected` qui disait « ouvert » | `ea08ce0` (feat/aria-listbox) |
 | **(25)** La croix des onglets passait sous le titre — la règle visait le mauvais nœud | *à commiter* |
 | **(18)** Le formulaire de génération parlait anglais dans une application en français | `e0a07b2` (feat/i18n-schema-api) |
+| **(7)** Aucun moyen de garder un réglage de matière pour la texture suivante | `c3ec714` (feat/styles-textures) |
+
+> **L’entrée 7 s’est faite dans le sens qu’elle demandait, mais pas avec la carte qu’elle
+> donnait.** Trois de ses repères étaient faux, et chacun a coûté un détour.
+>
+> `MaterialSettings` a **quinze** champs, pas seize — l’entrée le disait trois fois. Le renommage
+> n’était pas « ce que fait `LayerRow` » mais un composant déjà partagé, `InlineRename`. Et
+> surtout, **l’inspecteur n’est pas le panneau Assets qu’elle citait en exemple** : Assets a un
+> contenu, l’inspecteur en a huit — un calque, un clip, une piste, un asset, une scène, une
+> texture. Un bouton posé sans condition dans son en-tête aurait proposé d’enregistrer un
+> matériau pendant qu’un clip vidéo remplissait le panneau au-dessous. « Quelle face est
+> dessinée » devient `inspectedTextureId`, que `Face` lit aussi : deux réponses à cette question
+> auraient fini par se contredire.
+>
+> **Les deux décisions du 9 août tiennent telles quelles.** Les styles vivent dans `userData`, et
+> un style ne porte que des valeurs. Rien n’est filtré à l’enregistrement, y compris ce qui est
+> inerte sans la map correspondante — vérifié sur le fichier écrit : quinze champs, aucune map.
+>
+> **Ce que la revue a trouvé et que `/simplify` avait manqué**, une fois de plus. Le nom généré
+> pouvait être un doublon : le bouton vit dans l’inspecteur, que le panneau n’a pas besoin d’avoir
+> été ouvert pour, si bien que « Style 1 » repartait par-dessus un fichier qui en tenait déjà un —
+> la collision même que `nextStyleName` disait éviter, qu’il évitait dans la liste qu’on lui
+> donnait, et qu’on lui donnait vide. Une lecture en vol écrasait une écriture plus récente. Et
+> **renommer ou supprimer étaient cent pour cent souris** : un `contextmenu` déclenché par
+> Shift+F10 cible la cellule focalisée, jamais le `div` qui écoute à l’intérieur d’elle — un
+> événement ne descend pas dans ses propres descendants. La ligne porte désormais un bouton de
+> menu, comme celle d’un calque.
+>
+> **Deux corrections ont débordé sur du code partagé, et c’est tant mieux.** `InlineRename`
+> commitait deux fois sur Entrée — le renommage étant asynchrone, le nom à l’écran est encore
+> l’ancien quand le champ est démonté, donc la garde « abandonné en cours de frappe » répondait
+> vrai ; les calques faisaient deux écritures depuis toujours. Et le fichier de transit renommé à
+> sa place était écrit **trois fois** — notes de jobs, favoris, styles — le code le disant
+> lui-même deux fois au lieu de l’enlever.
+>
+> **Reste à faire, et c’est un lot à part** : la 3D, où un style n’apporte que `color`,
+> `roughness` et `metalness` — les trois scalaires de `MaterialDescriptor`.
 
 > **L’entrée 18 s’est réglée autrement que les trois pistes qu’elle proposait.** Aucune n’a été
 > prise : le dictionnaire (`src/shared/i18n/model-text.fr.json`) s’indexe sur **le texte anglais**
