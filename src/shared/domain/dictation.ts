@@ -114,11 +114,14 @@ export function rmsOf(samples: Float32Array): number {
 export function toInt16(samples: Float32Array): Int16Array {
   const pcm = new Int16Array(samples.length)
 
-  for (let index = 0; index < samples.length; index += 1) {
-    const sample = Math.max(-1, Math.min(1, samples[index] ?? 0))
+  // Iterated rather than indexed, like `rmsOf` above: an index would need a `?? 0` that no
+  // input can reach, and an unreachable branch is one a test can never account for.
+  let index = 0
+  for (const sample of samples) {
     // Scaled by 32767 on the way up and by 32768 on the way down: it is the pair that keeps a
     // full-scale sample inside the range in both directions.
-    pcm[index] = Math.round(sample * 32_767)
+    pcm[index] = Math.round(Math.max(-1, Math.min(1, sample)) * 32_767)
+    index += 1
   }
 
   return pcm
@@ -128,10 +131,12 @@ export function toInt16(samples: Float32Array): Int16Array {
 export function toFloat(samples: Int16Array): Float32Array {
   const floats = new Float32Array(samples.length)
 
-  for (let index = 0; index < samples.length; index += 1) {
+  let index = 0
+  for (const sample of samples) {
     // 32768 rather than 32767: it is the magnitude of the most negative sample, so -32768 maps
     // to exactly -1 and nothing overshoots.
-    floats[index] = (samples[index] ?? 0) / 32_768
+    floats[index] = sample / 32_768
+    index += 1
   }
 
   return floats
