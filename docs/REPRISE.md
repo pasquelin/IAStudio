@@ -850,10 +850,19 @@ répétée : un seul chemin à masquer, donc un seul geste par plateforme, un se
 est possible. Tout ce qui n’appartient pas à l’utilisateur y entre — le manifeste, le catalogue, les
 proxies, les waveforms, les filmstrips, et `layouts/` s’il doit vivre.
 
-> **`layouts/` est à trancher d’abord.** Il est dans `PROJECT_FOLDERS`, donc créé dans chaque projet,
-> et c’est sa **seule occurrence dans tout `src/`** : les arrangements sont persistés dans le
-> `localStorage` du renderer (`scenario-studio:layouts`). C’est un dossier vide chez l’utilisateur.
-> Ou il servira et il rejoint le dossier technique, ou il ne sert pas et il ne doit pas être créé.
+> **`layouts/` est à trancher d’abord, et ce n’est pas un oubli : c’est une divergence.** La
+> conception le prévoit — « `layouts/` : dispositions Dockview sérialisées, par espace », § 5 de
+> `docs/specs/2026-08-06-scenario-studio-design.md`. L’implémentation a pris l’autre chemin : les
+> arrangements vivent dans le `localStorage` du renderer (`scenario-studio:layouts`), et le dossier
+> est créé dans chaque projet sans que rien n’y écrive jamais — c’est sa **seule occurrence dans
+> tout `src/`**.
+>
+> La question n’est donc pas « sert-il à quelque chose » mais **où doit vivre un arrangement** :
+> dans le projet, il voyage avec lui — on ouvre le projet sur une autre machine et on retrouve son
+> écran, ce qu’un studio fait tous les jours ; dans le `localStorage`, il suit la machine et pas le
+> travail. La spec a tranché pour le projet ; le code dit le contraire depuis le début. **Acter
+> l’un des deux** : ramener les layouts dans le dossier technique, ou assumer le `localStorage` et
+> cesser de créer le dossier.
 
 **Le manifeste ne peut pas aller dans `.index/`**, et c’est le piège de l’idée simple : `.index/` est
 déclaré **cache reconstructible** — un utilisateur qui le supprime pour récupérer de la place doit
