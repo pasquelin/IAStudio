@@ -290,6 +290,7 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
 | **Vue** | droite | 1re | Skyboxes | la projection, le champ de vision et les objets de test |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
+| **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte, et ce que chacun porte |
 | **Assets** | droite | 1re | Vidéo, Audio | l’étagère du projet, en colonne |
 | **Explorateur** | droite | 1re | partout | les documents du projet, ouverts ou non |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
@@ -299,6 +300,10 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
 | **Assets** | bas | 1re | Image, 3D, Textures, Skyboxes | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio | la séquence en cours de montage |
+
+> **« Partout » veut dire les six espaces, pas l’accueil.** L’accueil n’est pas un septième
+> espace : il n’ouvre aucun document, et il n’a qu’une colonne de gauche, où il met
+> l’**Explorateur** — là où les six espaces mettent la génération.
 
 **La colonne de gauche est la génération, et rien d’autre.** Deux panneaux seulement y ont le
 droit — **Modèles** et **Génération** — et aucun des deux ne s’affiche ailleurs. Générer est la

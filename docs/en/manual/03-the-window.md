@@ -282,6 +282,7 @@ instead.
 | **Skybox** | right | 1st | Skyboxes | the open sky's settings |
 | **View** | right | 1st | Skyboxes | the projection, the field of view and the test objects |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
+| **Channels** | right | 1st | Textures | the eight channels of the open material, and what each one holds |
 | **Assets** | right | 1st | Video, Audio | the project's shelf, as a column |
 | **Explorer** | right | 1st | everywhere | the documents of the project, open or not |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
@@ -291,6 +292,10 @@ instead.
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
 | **Assets** | bottom | 1st | Image, 3D, Textures, Skyboxes | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio | the sequence being edited |
+
+> **"Everywhere" means the six workspaces, not the home screen.** The home is not a seventh
+> workspace: it opens no document, and it has only a left column, where it puts the **Explorer** —
+> where the six workspaces put generation.
 
 **The left column is generation, and nothing else.** Only two panels may sit there — **Models**
 and **Generate** — and neither appears anywhere else. Generating is the one thing all six
