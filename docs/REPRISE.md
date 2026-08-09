@@ -54,11 +54,28 @@ ce qui est fait.
 > opérateurs logiques : entrer dans un `===` ferait sonner les huit `side === 'left'` du renderer.
 > **Zéro trouvaille sur l'arbre au 9 août**, filet élargi.
 >
-> **Le main a son propre garde** — `src/main/no-hardcoded-text.test.ts`, sur les appels qui
-> montrent du texte (`showMessageBox`, `Notification`…). **Il ne surveille pas les `label` du
-> menu natif** : un `{ label: 'Undo' }` glissé dans `menu/template.ts` passerait aujourd'hui
-> devant tous les tests. Le menu est intégralement en `t.*` à ce jour, vérifié à la main le
-> 9 août — mais rien ne l'y tient.
+> **Trois gardes couvrent tout le projet, une fois chacun.** Ils se partagent l'arbre sans se
+> recouvrir, et c'est ce partage qu'il faut garder en tête avant d'en toucher un :
+>
+> | Garde | Ce qu'il tient |
+> |---|---|
+> | `renderer/src/no-hardcoded-text.test.ts` | les `.tsx` : texte entre balises, accolades, branches, attributs |
+> | `main/no-hardcoded-text.test.ts`, § « the main process » | les dialogues natifs, **et depuis le 9 août les `label` du menu** |
+> | `main/no-hardcoded-text.test.ts`, § « the registries » | les `.ts` de `renderer`, `shared` et `preload` |
+>
+> Le troisième est le moins évident et le plus utile : un descripteur de champ, une définition
+> d'outil, une ligne de réglage ne sont ni un composant ni un dialogue, donc les deux premiers ne
+> les voient pas — et c'est précisément là qu'un libellé habite. Il distingue une clé d'un mot :
+> `label: 'skybox.exposure'` est le motif à encourager, `label: 'Exposure'` est le défaut.
+>
+> **Il vit dans `main/` alors qu'il surveille le renderer**, et ce n'est pas une négligence : il
+> lit l'arborescence sur le disque, or `src/shared/` est compilé pour le web aussi, où `node:fs`
+> n'a ni types ni raison d'être. Le poser dans `shared/` casse `pnpm typecheck`.
+>
+> **Deux champs sont volontairement hors surveillance**, et pas par facilité : `name`, parce qu'un
+> nœud de scène en porte un comme **donnée de document** — une scène dont le contenu s'appelle
+> `Groupe` ne s'échange pas avec un studio anglais — et qu'un store en porte un comme identifiant
+> de stockage ; `message`, parce qu'il nomme l'échec d'un worker, jamais un écran.
 >
 > **Ce fichier s'appelle `no-hardcoded-text`, pas `*.i18n.test.ts`.** Une session l'a cherché sous
 > le second motif, ne l'a pas trouvé, et en a réécrit un doublon complet avant de s'en apercevoir.

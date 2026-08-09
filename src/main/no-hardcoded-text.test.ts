@@ -35,10 +35,67 @@ function sourceFiles(directory: string, into: string[] = []): string[] {
   for (const name of readdirSync(directory)) {
     const path = join(directory, name)
     if (statSync(path).isDirectory()) sourceFiles(path, into)
-    else if (path.endsWith('.ts') && !path.endsWith('.test.ts')) into.push(path)
+    else if (path.endsWith('.ts') && !/\.(test|bench)\.ts$/.test(path)) into.push(path)
   }
 
   return into
+}
+
+/**
+ * Fields a registry fills for something on screen to read out. `name` is absent on purpose: a
+ * scene node carries one as document data — a scene whose contents are called `Groupe` in French
+ * could not be shared with an English studio — and a store carries one as its storage id.
+ * `message` is absent for the same kind of reason: it names a worker's failure, never a screen.
+ */
+const REGISTRY_FIELDS = new Set([
+  'buttonLabel',
+  'caption',
+  'description',
+  'emptyLabel',
+  'heading',
+  'hint',
+  'label',
+  'legend',
+  'placeholder',
+  'summary',
+  'title',
+  'tooltip',
+])
+
+/**
+ * A key, not a word. Registries hand `label: 'skybox.exposure'` to a component that resolves it,
+ * which is the pattern to encourage — flagging it would push people back to writing the word.
+ */
+function isKey(text: string): boolean {
+  return /^[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_]+)+$/.test(text)
+}
+
+/** A word, rather than a symbol or a number that reads the same in any language. */
+function isWords(text: string): boolean {
+  return /\p{Letter}{2}/u.test(text)
+}
+
+function registryFindingsIn(path: string, code: string): string[] {
+  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
+  const findings: string[] = []
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      REGISTRY_FIELDS.has(node.name.getText(source)) &&
+      ts.isStringLiteral(node.initializer) &&
+      isWords(node.initializer.text) &&
+      !isKey(node.initializer.text)
+    ) {
+      const { line } = source.getLineAndCharacterOfPosition(node.initializer.getStart(source))
+      findings.push(`${path}:${line + 1} ${node.name.getText(source)}="${node.initializer.text}"`)
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+  return findings
 }
 
 /** What a call is named, whether it is `dialog.showMessageBox(…)` or `new Notification(…)`. */
@@ -86,6 +143,38 @@ function findingsIn(path: string, code: string): string[] {
 }
 
 /**
+ * What a menu item shows. `accelerator` is deliberately absent: `Shift+CmdOrCtrl+R` is a key
+ * spec Electron parses, not a word — and it is the one literal the menu writes today.
+ */
+const MENU_FIELDS = new Set(['label', 'sublabel', 'toolTip'])
+
+/**
+ * A menu is built from plain objects rather than passed to a call, so the dialog check above
+ * cannot see it. It is the other surface with no component and no `t` of its own.
+ */
+function menuFindingsIn(path: string, code: string): string[] {
+  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
+  const findings: string[] = []
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      MENU_FIELDS.has(node.name.getText(source)) &&
+      ts.isStringLiteral(node.initializer) &&
+      node.initializer.text.trim() !== ''
+    ) {
+      const { line } = source.getLineAndCharacterOfPosition(node.initializer.getStart(source))
+      findings.push(`${path}:${line + 1} ${node.name.getText(source)}="${node.initializer.text}"`)
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+  return findings
+}
+
+/**
  * The main process draws the one surface the bundles could be forgotten on: a native dialog has
  * no component and no `t`, so its wording is written where the call is. Everything it shows is
  * read from `TRANSLATIONS[windowLanguage()]` today, and this is what keeps it that way.
@@ -112,6 +201,23 @@ describe('the main process', () => {
     expect(found).toHaveLength(3)
   })
 
+  it('never writes the words the native menu shows', () => {
+    const findings = sourceFiles(MAIN).flatMap(path =>
+      menuFindingsIn(relative(MAIN, path), readFileSync(path, 'utf8')),
+    )
+
+    expect(findings).toEqual([])
+  })
+
+  it('would see a label typed into a menu item', () => {
+    const found = menuFindingsIn(
+      'probe.ts',
+      "const item = { label: 'Undo', accelerator: 'CmdOrCtrl+Z' }",
+    )
+
+    expect(found).toHaveLength(1)
+  })
+
   it('leaves alone what the caller reads from a bundle, and what is not a word', () => {
     const quiet = [
       'dialog.showMessageBox(window, { message: t.discardTitle, buttons: [t.cancel, t.discard] })',
@@ -120,5 +226,46 @@ describe('the main process', () => {
     ]
 
     expect(quiet.flatMap((code, index) => findingsIn(`probe${index}.ts`, code))).toEqual([])
+  })
+})
+
+/**
+ * The third guard, and the one that watches where nobody looks: a registry. A field descriptor,
+ * a tool definition, a settings row is neither a component nor a native dialog, so the renderer's
+ * JSX check never sees it and the two above do not either — and it is exactly where a label lives.
+ *
+ * It runs from here, of all places, because it reads the tree off the disk: `src/shared` is
+ * compiled for the web as well, where `node:fs` has no types and no business being imported.
+ */
+describe('the registries', () => {
+  const trees = ['renderer', 'shared', 'preload'].map(tree => join(MAIN, '..', tree))
+
+  it('name their words rather than writing them', () => {
+    const findings = trees.flatMap(tree =>
+      sourceFiles(tree).flatMap(path =>
+        registryFindingsIn(relative(join(MAIN, '..'), path), readFileSync(path, 'utf8')),
+      ),
+    )
+
+    expect(findings).toEqual([])
+  })
+
+  it('would see a word written where a key belongs', () => {
+    const found = registryFindingsIn(
+      'probe.ts',
+      "const field = { key: 'exposure', label: 'Exposure' }",
+    )
+
+    expect(found).toHaveLength(1)
+  })
+
+  it('leaves a key alone, and what carries no word', () => {
+    const quiet = [
+      "const a = { label: 'skybox.exposure' }",
+      "const b = { label: t('skybox.exposure') }",
+      "const c = { title: '—' }",
+    ]
+
+    expect(quiet.flatMap((code, index) => registryFindingsIn(`probe${index}.ts`, code))).toEqual([])
   })
 })
