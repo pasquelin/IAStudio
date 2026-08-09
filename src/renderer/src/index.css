@@ -241,6 +241,11 @@
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;
   --sc-rail-button: 36px;
+  /* The margin the rail keeps its button off the window edge with. Whatever else aligns on that
+     edge derives it from the same two gauges: it equals the gutter in comfort and not in compact,
+     so a value copied from either one is right by accident. Both terms are redeclared below, so
+     this needs no second declaration. */
+  --sc-rail-inset: calc((var(--sc-rail) - var(--sc-rail-button)) / 2);
   --sc-gutter: 6px;
   --sc-header: 40px;
   /* The strip, not the tab: the tab sits inside it with 6px of air above and below, so this
