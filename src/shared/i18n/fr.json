@@ -1469,6 +1469,7 @@
       "projects": "Vos projets",
       "creations": "Ce que vous avez produit",
       "byMode": "Par type",
+      "library": "Votre bibliothèque",
       "documents": "Vos documents",
       "jobs": "En cours",
       "activity": "Activité récente"
@@ -1498,6 +1499,9 @@
     },
     "creations": {
       "recreate": "En refaire une avec {{model}}"
+    },
+    "library": {
+      "fetch": "Récupérer « {{name}} » dans le projet"
     },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",

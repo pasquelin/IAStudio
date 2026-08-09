@@ -16,6 +16,7 @@ export type HomeSectionId =
   | 'projects'
   | 'creations'
   | 'byMode'
+  | 'library'
   | 'documents'
   | 'jobs'
   | 'activity'
@@ -52,6 +53,7 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'creations', requires: ['project'], defaultLimit: 12 },
   // No limit: the band is one counter per kind, and there are exactly six kinds.
   { id: 'byMode', requires: ['project'] },
+  { id: 'library', requires: ['api'], defaultLimit: 12 },
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
   { id: 'activity', requires: ['project'], defaultLimit: 6 },

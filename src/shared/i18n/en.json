@@ -1469,6 +1469,7 @@
       "projects": "Your projects",
       "creations": "What you have made",
       "byMode": "By kind",
+      "library": "Your library",
       "documents": "Your documents",
       "jobs": "Running now",
       "activity": "Recent activity"
@@ -1498,6 +1499,9 @@
     },
     "creations": {
       "recreate": "Make another one with {{model}}"
+    },
+    "library": {
+      "fetch": "Fetch \u201c{{name}}\u201d into the project"
     },
     "spotlight": {
       "resume": "Pick up where you left off",

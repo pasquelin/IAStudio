@@ -6,6 +6,7 @@ import { Creations } from './sections/Creations'
 import { Documents } from './sections/Documents'
 import { Explorer } from './sections/Explorer'
 import { Jobs } from './sections/Jobs'
+import { Library } from './sections/Library'
 import { Projects } from './sections/Projects'
 import { Spotlight } from './sections/Spotlight'
 import { Tools } from './sections/Tools'
@@ -21,6 +22,7 @@ export const HOME_COMPONENTS: Record<HomeSectionId, FC> = {
   projects: Projects,
   creations: Creations,
   byMode: ByMode,
+  library: Library,
   documents: Documents,
   jobs: Jobs,
   activity: Activity,
