@@ -118,6 +118,11 @@ Ensuite, **cliquez et glissez** dans l’aperçu pour tourner la tête, et serve
 pôle écrasé s’y voient d’un coup d’œil, alors que la vue 360 demande de tourner la tête pour
 tomber dessus.
 
+**Pour l’emporter dans un moteur** : **Fichier ▸ Exporter le ciel**, et une taille. Six PNG sortent
+dans un dossier, nommés `_Rt`, `_Lf`, `_Up`, `_Dn`, `_Ft`, `_Bk` — les deux lettres qu’Unity,
+Unreal et Roblox attendent. **Réglez avant d’exporter** : l’exposition, la rotation de l’horizon et
+tout le reste sont cuits dans les fichiers. Voir [Espace Skyboxes](13-espace-skyboxes.md#sortir-le-ciel--les-six-faces).
+
 ---
 
 ## Faire une matière pour un objet 3D
