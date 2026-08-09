@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UsageReport } from '@shared/domain/usage'
 import { installFakeBridge } from '@/services/fake-bridge'
@@ -69,10 +69,16 @@ describe('the usage band', () => {
   })
 
   it('stays silent when the key is refused, like every other band', async () => {
-    install(null)
+    // Waited on the call, then on a tick: the band is empty at first render too, so asserting
+    // emptiness straight away would pass before the refusal had even been read.
+    const { usageReport } = install(null)
     const { container } = render(<Usage />)
 
-    await vi.waitFor(() => expect(container).toBeEmptyDOMElement())
+    await vi.waitFor(() => expect(usageReport).toHaveBeenCalled())
+    await act(async () => {
+      await new Promise(done => setTimeout(done, 0))
+    })
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('reports a period nobody spent anything in, rather than hiding', async () => {

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CloudAsset, SimilarPage } from '@shared/domain/cloud-asset'
 import { installFakeBridge } from '@/services/fake-bridge'
@@ -46,19 +46,32 @@ describe('the band of lookalikes', () => {
     expect(await screen.findByText('Dans la veine de « boulder.png »')).toBeInTheDocument()
   })
 
+  /**
+   * Both cases assert an ABSENCE, and the band is absent at first render too — so the wait has
+   * to be on something positive first, or the assertion passes before the bridge has answered
+   * and would stay green against a band that draws the previous key's shelf.
+   */
+  async function settled(similar: ReturnType<typeof install>['similar']): Promise<void> {
+    await waitFor(() => expect(similar).toHaveBeenCalled())
+    await act(async () => {
+      await new Promise(done => setTimeout(done, 0))
+    })
+  }
+
   it('draws nothing when the account holds nothing to compare', async () => {
     const { similar } = install(null)
     const { container } = render(<Similar />)
 
-    await waitFor(() => expect(similar).toHaveBeenCalled())
+    await settled(similar)
     expect(container).toBeEmptyDOMElement()
   })
 
   it('draws nothing when nothing out there resembles it', async () => {
     // Not an incident: a fresh account's first upload may genuinely match nothing published.
-    install({ reference: cloudAsset('ref'), assets: [] })
+    const { similar } = install({ reference: cloudAsset('ref'), assets: [] })
     const { container } = render(<Similar />)
 
-    await waitFor(() => expect(container).toBeEmptyDOMElement())
+    await settled(similar)
+    expect(container).toBeEmptyDOMElement()
   })
 })

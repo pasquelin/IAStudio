@@ -9,9 +9,10 @@ const PAGE_SIZE = 40
 
 export type Explore = {
   assets: readonly CloudAsset[]
-  /** True while a page is on its way — including the first, which is not "nothing published". */
-  loading: boolean
-  /** Nothing more to ask for: the feed ran out, or the API refused. */
+  /**
+   * Nothing more to ask for: the feed ran out, or the API refused. Until it is true there are
+   * pages behind what is on screen — which is what tells "not read yet" from "nothing here".
+   */
   exhausted: boolean
   /** Asks for the next page. Tolerates being called again before it has answered. */
   more: () => void
@@ -57,7 +58,6 @@ export function useExplore(type: AssetType): Explore {
 
   const [feed, setFeed] = useState<Feed>(START)
   const [shown, setShown] = useState(source)
-  const [loading, setLoading] = useState(false)
 
   // Emptied as the tab or the key changes, during the render rather than after it. What the feed
   // held was read under the previous one, and a tab that keeps the last one's pictures while it
@@ -65,11 +65,18 @@ export function useExplore(type: AssetType): Explore {
   if (shown !== source) {
     setShown(source)
     setFeed(START)
-    setLoading(false)
   }
 
-  /** The source a request has to still belong to for its answer to count. */
-  const live = useRef(source)
+  /**
+   * Which request an answer belongs to, counted rather than named.
+   *
+   * The source alone cannot tell two requests apart, and leaving a tab and coming back makes
+   * exactly that pair: the first request answers under the same `owner/type` as the third, so it
+   * was accepted — merging a page from deep in the feed into a freshly reset one, overwriting
+   * the cursor with a further one (every page in between then unreachable), and, when the stale
+   * page happened to be the last, marking a two-tile band exhausted for good.
+   */
+  const ticket = useRef(0)
   /** One request at a time: the grid asks again on every frame it is near the end. */
   const busy = useRef(false)
 
@@ -81,14 +88,14 @@ export function useExplore(type: AssetType): Explore {
     if (!bridge) return setFeed(current => ({ ...current, exhausted: true }))
 
     busy.current = true
-    setLoading(true)
-    const mine = source
+    const mine = (ticket.current += 1)
 
     /** Whether this answer is still the one being waited on — and if so, it frees the lock. */
     const settle = (): boolean => {
-      if (live.current !== mine) return false
+      // Never by a twin: releasing the lock for a request still in flight is how two of them
+      // end up running at once.
+      if (ticket.current !== mine) return false
       busy.current = false
-      setLoading(false)
       return true
     }
 
@@ -108,11 +115,12 @@ export function useExplore(type: AssetType): Explore {
       })
 
     return undefined
-  }, [source, type, feed.cursor, feed.exhausted])
+  }, [type, feed.cursor, feed.exhausted])
 
   useEffect(() => {
-    // Declared before the one below, so the first page of the new source is asked for under it.
-    live.current = source
+    // Declared before the one below, so the first page of the new source is asked for under a
+    // ticket that no answer already in flight can carry.
+    ticket.current += 1
     busy.current = false
   }, [source])
 
@@ -128,8 +136,8 @@ export function useExplore(type: AssetType): Explore {
    * stops the loop. Once anything is on screen, the grid drives the paging again.
    */
   useEffect(() => {
-    if (feed.assets.length === 0 && !feed.exhausted && !loading) more()
-  }, [feed.assets.length, feed.exhausted, loading, more])
+    if (!busy.current && feed.assets.length === 0 && !feed.exhausted) more()
+  }, [feed.assets.length, feed.exhausted, more])
 
-  return { assets: feed.assets, loading, exhausted: feed.exhausted, more }
+  return { assets: feed.assets, exhausted: feed.exhausted, more }
 }

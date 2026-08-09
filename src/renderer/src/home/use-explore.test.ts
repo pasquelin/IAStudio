@@ -124,6 +124,37 @@ describe('one tab of the public feed', () => {
     await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
   })
 
+  it('drops the answer to a request the reader left behind and came back past', async () => {
+    // Leaving a tab and returning makes two requests for the SAME source: told apart by name
+    // alone, the first was accepted into the second's freshly reset feed — merging a page from
+    // deep in the feed, overwriting the cursor, and marking a two-tile band exhausted for good.
+    let answerDeep = (_page: CloudPage): void => {}
+    const deep = new Promise<CloudPage>(resolve => {
+      answerDeep = resolve
+    })
+    const explore = vi
+      .fn<() => Promise<CloudPage>>()
+      .mockReturnValueOnce(deep)
+      .mockResolvedValue({ assets: [cloudAsset('fresh')], cursor: 'o:40' })
+    installFakeBridge({ cloud: { explore } })
+
+    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
+      initialProps: { type: 'image' },
+    })
+
+    rerender({ type: 'video' })
+    rerender({ type: 'image' })
+    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['fresh']))
+
+    await act(async () => {
+      answerDeep({ assets: [cloudAsset('stale')], cursor: null })
+      await new Promise(settled => setTimeout(settled, 0))
+    })
+
+    expect(result.current.assets.map(asset => asset.id)).toEqual(['fresh'])
+    expect(result.current.exhausted).toBe(false)
+  })
+
   it('stops asking once the feed says there is no more', async () => {
     const { explore } = install([{ assets: [cloudAsset('a')], cursor: null }])
 
@@ -180,15 +211,16 @@ describe('one tab of the public feed', () => {
 
     // A refusal is not a reason to blank a band that is already showing what was published.
     expect(result.current.assets).toHaveLength(1)
-    expect(result.current.loading).toBe(false)
   })
 
-  it('reports the first read as loading, which is not the same as nothing published', async () => {
+  it('does not call the feed empty before it has run out', async () => {
+    // `exhausted` is the only thing allowed to mean "nothing published": before it, the first
+    // round trip has not even come back.
     install([{ assets: [], cursor: null }])
 
     const { result } = renderHook(() => useExplore('image'))
-    expect(result.current.loading).toBe(true)
+    expect(result.current.exhausted).toBe(false)
 
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    await waitFor(() => expect(result.current.exhausted).toBe(true))
   })
 })
