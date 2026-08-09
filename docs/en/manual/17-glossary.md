@@ -55,6 +55,10 @@ Keep this in mind: **an asset is a finished, reusable file**.
 
 Assets live in the **Assets** panel, familiarly called *the shelf*.
 
+**Automatic retry**
+What the studio does when a *job* fails for a reason another attempt can mend: a dropped
+connection, a busy service, too many requests. See *Exponential backoff*.
+
 **Azimuth**
 The direction of something all around you, measured by turning on the spot. For a *skybox*'s sun:
 east, south, west, north. It pairs with *elevation*, which gives its height.
@@ -120,6 +124,10 @@ eight — see [Textures workspace](12-textures-workspace.md).
 **Clip**
 A piece of video or sound placed on a *track* of the edit. The same *asset* can give several clips;
 cutting a clip never touches the original file.
+
+**Colour grading**
+Setting a picture's colours and lights as a whole, after the fact: *exposure*, *contrast*,
+*saturation*, *temperature*, *tint*. The term comes from cinema.
 
 **Context** *(of a shortcut)*
 The surface where a key has a meaning. The studio knows four: anywhere in the application, in the 3D
@@ -275,6 +283,10 @@ meant to light. Extensions `.hdr` and `.exr`.
 **Height** *(texture channel)*
 A greyscale image giving a surface's real relief: white is high, black is low. Stronger than
 *normals*, because it actually displaces the geometry rather than simulating it.
+
+**Horizon rotation**
+Turning a whole *skybox* around you. A sky's most useful setting: it puts the sun on whichever
+side suits you, instantly, without regenerating anything.
 
 ---
 
@@ -513,6 +525,10 @@ the one you give it.
 
 ## T
 
+**Tab**
+An open *document*, in the centre of the window. A tab whose work is not yet written to disk
+carries a dot (`•`) beside its name.
+
 **Temperature**
 An image's shift towards cold (blue) or warm (orange). It is the setting that stops a photograph
 taken under a bulb from looking yellow.
@@ -542,6 +558,10 @@ To shorten a *clip* from one of its ends, or to keep only the selected portion o
 ---
 
 ## U
+
+**Undo** *(⌘Z)*
+To take back the last action. Each *document* has its own *undo stack*: `⌘Z` steps back in the
+active tab, not in the last gesture made anywhere in the studio.
 
 **Undo stack**
 A *document*'s history of actions, in which `⌘Z` steps back and `⇧⌘Z` steps forward. **Each document

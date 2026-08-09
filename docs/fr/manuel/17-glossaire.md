@@ -267,6 +267,10 @@ Une montée depuis le silence (fondu d’entrée) ou une descente vers lui (fond
 Demander à un *modèle* de fabriquer quelque chose. La demande part chez Scenario, revient sous
 forme de *tâche*, et le résultat atterrit dans vos *assets*.
 
+**Gouttière**
+L’espace entre deux *panneaux*. C’est lui-même la poignée qui les redimensionne : il n’y a pas de
+petite prise à viser.
+
 **Graine** *(seed)*
 Le point de départ du hasard d’une génération. C’est un nombre.
 

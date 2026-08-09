@@ -75,6 +75,26 @@ plus bas).
 > cours — une scène 3D, par exemple — pas le projet lui-même. L’onglet porte un point (`•`) tant
 > que ce qui est à l’écran n’est pas ce qui est sur le disque.
 
+### Parcourir une liste au clavier
+
+Les listes du studio se traversent toutes de la même façon : l’étagère, l’Explorateur, les
+calques, les modèles, les Apps, l’arbre de la scène.
+
+| Touche | Effet |
+|---|---|
+| `Tab` | entre dans la liste, ou en sort |
+| `←` `→` | la cellule précédente, la suivante |
+| `↑` `↓` | la même colonne, une rangée plus haut ou plus bas |
+| `Entrée` | ouvre |
+| `Espace` | sélectionne |
+
+**Une ligne qui ne fait qu’ouvrir laisse `Espace` au défilement.** C’est le cas de
+l’Explorateur : ouvrir un document peut vous emmener dans un autre espace de travail, et
+`Espace` ne promet cela nulle part ailleurs dans le studio.
+
+`Tab` ramène là où vous étiez : la liste garde un seul point d’entrée, celui de votre sélection
+s’il y en a une, la première cellule visible sinon.
+
 ---
 
 ## Dans la vue 3D
