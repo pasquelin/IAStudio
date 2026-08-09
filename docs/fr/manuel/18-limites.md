@@ -226,11 +226,11 @@ travail, et il est complet.
   pas la normale qui en venait : chaque canal se recalcule à la demande, un par un ;
 - **l’import d’un fichier du disque** directement dans un canal. Le détour existe : importez
   l’image dans le projet, puis posez-la sur la vignette du canal ;
-- **l’aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures visibles ;
 - **l’export** vers glTF, Unity, Unreal, Roblox.
 
 Ce qui fonctionne aujourd’hui : générer une matière, poser une image dans chacun de ses huit
-canaux, en calculer quatre depuis un autre, régler tout ce dont elle est faite — rugosité et métal avec leur remappage, relief,
+canaux, en calculer quatre depuis un autre, juger sa répétition et mesurer ses coutures, régler tout ce
+dont elle est faite — rugosité et métal avec leur remappage, relief,
 émission, répétition —, la regarder sur cinq formes sous l’éclairage de votre choix, inspecter
 chaque canal à plat, et l’enregistrer.
 

@@ -160,6 +160,29 @@ makes a derivation reversible without redoing it.
 **A computed channel does not update itself.** Replace the height and the normal that came from it
 still describes the old one: run its computation again.
 
+### Judging the repeat, and seeing the seams
+
+A material cannot be judged on a single tile. Three controls, in **Inspector ▸ Tiling**, under the
+values they look at:
+
+| Control | What it does |
+|---|---|
+| **Repeat preview** — 1×, 2×, 4× | multiplies the repeat **for the eye only** |
+| **Bring the seams to the middle** | shifts every channel by half a width: the edge that wraps lands in the middle of the preview |
+| **Measure the seams** | compares the wrap with the grain of the picture, and answers in three words |
+
+**The first two never touch the material.** They change how it is looked at, not what it is: the
+repeat that goes out into a scene stays the one in the **Repeat** field, and the shift stays the one
+in **Offset**. Looking at 4× does not make a texture repeated four times.
+
+**The measurement is a ratio, not a difference.** A noisy stone tolerates a jump that would be a
+scar across smooth plaster: what reads as a seam is the step at the wrap compared with the grain the
+picture already has. Hence three answers — *no visible seam*, *faint seam*, *visible seam* — rather
+than a percentage that would mean nothing on its own.
+
+It is taken on the **base colour**: that is the channel a seam is seen in, and the eight are laid
+out together. The button stays off until a base colour is in place.
+
 ---
 
 ## Roughness and metalness, explained
@@ -270,7 +293,6 @@ is still waiting to be written.
 
 - **importing a file from disk** straight into a channel. Go through the project's import
   (chapter 7), then drop the picture onto the thumbnail;
-- the **tiling preview** at 1×, 2×, 4×, and seam detection;
 - **export** to glTF, Unity, Unreal, Roblox.
 
 The detail is in [What does not exist yet](18-limits.md).

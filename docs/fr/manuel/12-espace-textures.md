@@ -161,6 +161,29 @@ une dérivation réversible sans la refaire.
 **Un canal calculé ne se met pas à jour tout seul.** Si vous remplacez la hauteur, la normale qui en
 venait décrit encore l’ancienne : relancez son calcul.
 
+### Juger la répétition, et voir les coutures
+
+Une matière ne se juge pas sur un seul carreau. Trois contrôles, dans **Inspecteur ▸ Répétition**,
+sous les valeurs qu’ils regardent :
+
+| Contrôle | Ce qu’il fait |
+|---|---|
+| **Aperçu de la répétition** — 1×, 2×, 4× | multiplie la répétition **pour l’œil seulement** |
+| **Amener les coutures au centre** | décale tous les canaux d’une demi-largeur : le bord qui se raccorde arrive au milieu de l’aperçu |
+| **Mesurer les coutures** | compare le raccord au grain de l’image et répond en trois mots |
+
+**Les deux premiers ne touchent jamais la matière.** Ils changent la façon de la regarder, pas ce
+qu’elle est : la répétition qui part dans une scène reste celle du champ **Répéter**, et le décalage
+reste celui du champ **Décalage**. Regarder à 4× ne fabrique pas une texture répétée quatre fois.
+
+**La mesure est un rapport, pas une différence.** Une pierre bruitée supporte un saut qui ferait une
+cicatrice sur un enduit lisse : ce qu’on lit comme une couture, c’est la marche au raccord comparée
+au grain que l’image a déjà. D’où trois réponses — *aucune couture visible*, *couture discrète*,
+*couture visible* — plutôt qu’un pourcentage qui ne voudrait rien dire seul.
+
+Elle porte sur la **couleur de base** : c’est le canal où une couture se voit, et les huit sont
+posés ensemble. Le bouton reste éteint tant qu’aucune couleur de base n’est en place.
+
 ---
 
 ## Rugosité et métallicité, expliquées
@@ -274,7 +297,6 @@ puce sur l’onglet dit ce qui attend encore d’être écrit.
 
 - l’**import d’un fichier du disque** directement dans un canal. Passez par l’import du projet
   (chapitre 7), puis posez l’image sur la vignette ;
-- l’**aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures ;
 - l’**export** vers glTF, Unity, Unreal, Roblox.
 
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
