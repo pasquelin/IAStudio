@@ -29,13 +29,6 @@ const ASSET: GraphNode = {
   data: { type: 'image', value: 'asset_Hr7', title: 'Kingfisher' },
 }
 
-const MODEL: GraphNode = {
-  id: 'videoGenerator1',
-  type: 'model',
-  position: { x: 0, y: 0 },
-  data: { modelId: 'model_bytedance-seedance-2-0', type: 'video' },
-}
-
 const LOOP: GraphNode = { id: 'forEach1', type: 'forEach', position: { x: 0, y: 0 }, data: {} }
 
 /**
@@ -57,7 +50,7 @@ const MANY_ASSETS: GraphNode = {
 }
 
 beforeEach(() => {
-  installGraph(DOCUMENT, { nodes: [TEXT, NOTE, ASSET, MODEL, LOOP], edges: [], inputKeys: [] })
+  installGraph(DOCUMENT, { nodes: [TEXT, NOTE, ASSET, LOOP], edges: [], inputKeys: [] })
 })
 
 const nodeById = (id: string): GraphNode | undefined =>
@@ -139,15 +132,7 @@ describe('GraphNodeInspector', () => {
     expect(screen.getByText('image')).toBeInTheDocument()
   })
 
-  /**
-   * The node draws its model id on the canvas. A panel whose job is to describe what is selected
-   * must not say less than the rectangle it describes — the form itself is the next lot.
-   */
-  it('names the model a generator runs', () => {
-    show(MODEL)
-
-    expect(screen.getByText('model_bytedance-seedance-2-0')).toBeInTheDocument()
-  })
+  // A generator's face is `ModelNodeFields`, which asks the catalogue and has its own suite.
 
   /**
    * `parseGraph` keeps `data` as it found it, so both of these come off a file unvalidated. A

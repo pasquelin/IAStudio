@@ -124,19 +124,32 @@ export function createModelNode(
   position: GraphPosition,
 ): GraphNode {
   const id = nextNodeId(graph.nodes, `${family === '3d' ? 'threeD' : family}Generator`)
-  const kind = OUTPUT_KIND_BY_FAMILY[family]
+
+  return { id, type: 'model', position, data: modelDataOf(id, { id: modelId, family, fields }) }
+}
+
+/**
+ * Everything a generator node holds BECAUSE of its model — written once because two gestures
+ * build it: putting the node down, and swapping the model of one already down. Built twice, the
+ * second would drift from the first, and a node's ports would depend on how it was made.
+ *
+ * Takes what it reads rather than a whole `ModelDescriptor`, so a caller that has only the three
+ * facts does not have to invent the rest of one.
+ */
+export function modelDataOf(
+  id: string,
+  model: { id: string; family: ModelFamily; fields: readonly FieldDescriptor[] },
+  /** Values to keep where the new model declares the same key — what a model swap must not lose. */
+  kept?: Readonly<Record<string, unknown>>,
+): GraphNode['data'] {
+  const kind = OUTPUT_KIND_BY_FAMILY[model.family]
 
   return {
-    id,
-    type: 'model',
-    position,
-    data: {
-      modelId,
-      type: kind,
-      form: defaultValues(fields),
-      inputHandles: modelPorts(id, fields),
-      outputHandles: [{ id: handleId(id, 'target', kind), name: DEFAULT_OUTPUT_NAME, type: kind }],
-    },
+    modelId: model.id,
+    type: kind,
+    form: defaultValues(model.fields, kept),
+    inputHandles: modelPorts(id, model.fields),
+    outputHandles: [{ id: handleId(id, 'target', kind), name: DEFAULT_OUTPUT_NAME, type: kind }],
   }
 }
 

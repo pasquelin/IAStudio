@@ -1,6 +1,7 @@
 import type { GraphEdge, GraphNode, GraphPosition, GraphState } from '@shared/domain/graph'
 import type { Connection } from './connect'
 import { edgeOf } from './connect'
+import { inputHandlesOf, outputHandlesOf } from './handles'
 
 /**
  * The id the webapp gives a node: its type in camel case, then the smallest free number.
@@ -80,6 +81,46 @@ export function updateNodeData(
     ...graph,
     nodes: graph.nodes.map(node => (node.id === id ? withData(node, patch) : node)),
   }
+}
+
+/**
+ * Swaps what a node holds AND the ports it is wired by, then cuts what those ports no longer
+ * answer for.
+ *
+ * A generator's ports come from its model's own schema (invariant 5), so changing the model
+ * changes the ports — and an edge aimed at one that is gone names a handle no node carries. That
+ * is not a drawing problem: `validateWorkflowFlow` rejects it at export, far from the gesture
+ * that caused it, and `removeNode` already takes this care for a node the same way.
+ *
+ * Only edges touching THIS node are examined: the rest of the graph is not the caller's business,
+ * and walking it would make a model swap cost the whole edge list.
+ */
+export function replaceNodePorts(
+  graph: GraphState,
+  id: string,
+  patch: Partial<GraphNode['data']>,
+): GraphState {
+  const next = updateNodeData(graph, id, patch)
+  const node = next.nodes.find(candidate => candidate.id === id)
+  if (!node) return graph
+
+  const inputs = new Set(inputHandlesOf(node).map(handle => handle.id))
+  const outputs = new Set(outputHandlesOf(node).map(handle => handle.id))
+
+  // Both ends of every edge, never the first that answers: an edge may touch this node twice, and
+  // an `if/else` would keep one whose surviving end vouched for a departed one.
+  const kept = next.edges.filter(edge => {
+    // `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention.
+    const feeds = edge.source !== id || edge.sourceHandle === undefined
+    const reads = edge.target !== id || edge.targetHandle === undefined
+
+    return (
+      (feeds || inputs.has(edge.sourceHandle ?? '')) &&
+      (reads || outputs.has(edge.targetHandle ?? ''))
+    )
+  })
+
+  return kept.length === next.edges.length ? next : { ...next, edges: kept }
 }
 
 /** The edges that feed a node, and the ones it feeds — the inverted convention, read both ways. */

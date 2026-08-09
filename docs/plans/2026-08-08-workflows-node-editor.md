@@ -891,10 +891,61 @@ La face existe : `panels/inspector/GraphNodeInspector.tsx`, branchée par un `ca
   atteindre — React Flow n’émet **aucun** changement quand un clic ne modifie rien — et le test
   qui prétendait la couvrir a été **retiré** plutôt que gardé.
 
-**Ce que B1 ne fait pas, et qui est le lot B2** : choisir le modèle d’un nœud générateur et rendre
-son formulaire. Changer de modèle reconstruit les ports depuis le schéma (`modelPorts`,
-invariant 5) et **laisse des arêtes pointant vers un port disparu** — ce que `removeNode` traite
-pour un nœud supprimé et que rien ne traite pour un port supprimé.
+**Ce que B1 ne faisait pas, et que le lot B2 a livré** : voir la section suivante.
+
+### Le lot B2 — le modèle d’un nœud se choisit, et son formulaire se remplit
+
+**Tranché avec l’utilisateur : un menu déroulant dans l’inspecteur**, pas un bouton vers le
+panneau Modèles ni un glisser-déposer. `panels/inspector/ModelNodeFields.tsx`.
+
+- **Changer de modèle est UNE commande.** Les ports d’un générateur viennent du schéma du modèle
+  (invariant 5) : changer le modèle change les ports, et une arête visant un port disparu nomme un
+  handle qu’aucun nœud ne porte — ce que `validateWorkflowFlow` rejette **à l’export**, loin du
+  geste. `replaceNodePorts` (`engines/graph/mutations.ts`) échange les deux et coupe ces arêtes,
+  comme `removeNode` le fait déjà pour un nœud. Un seul `⌘Z` rend le modèle, les ports et l’arête.
+- **`modelDataOf` est écrit une fois pour deux gestes** — poser le nœud, et changer son modèle.
+  Bâti deux fois, le second aurait dérivé du premier et les ports d’un nœud auraient dépendu de la
+  façon dont il a été fait.
+- **Ce qui est tapé survit au changement de modèle**, sous chaque clé que le nouveau modèle
+  déclare encore : `defaultValues` prend un preset exactement pour ça. Sans lui, essayer un autre
+  modèle coûtait quarante mots de prompt sans avertissement.
+
+**Cinq défauts que les deux revues adverses ont rendus, et qu’aucun test ne voyait :**
+
+1. **Chaque frappe du formulaire était une entrée d’undo.** `DynamicForm` rapporte par frappe et
+   n’a ni focus ni blur où accrocher un geste, contrairement aux `TextField` du même panneau.
+   Mesuré : `hello` → 5 entrées. `HISTORY_LIMIT` vaut 100, donc **un prompt de 120 caractères
+   évinçait les nœuds et les fils qu’il décrit**. Un geste ouvert à la première écriture, fermé au
+   démontage du formulaire.
+2. **L’inspecteur embarquait `zod` et `react-hook-form` en statique** — 220 kB, et l’inspecteur est
+   placé dans **tous** les espaces (`TOOL_PLACEMENTS`), donc une session 3D payait un formulaire
+   qu’elle ne rendra jamais. `lazy()` + `Suspense`, comme le générateur et le panneau Apps.
+3. **Le catalogue partait avant le schéma**, donc offrait **toutes** les familles pendant le
+   chargement — et un modèle d’une autre famille choisi là renomme le port de sortie, ce qui coupe
+   en silence chaque arête lisant ce nœud. La requête attend que le schéma ait nommé la famille.
+4. **Un nœud sans `modelId` nommait un modèle qu’il ne fait pas tourner**, et ce modèle était le
+   seul impossible à choisir (la valeur du DOM ne changeait pas). Une ligne « Aucun » le ferme.
+5. **`swap()` n’avait pas de `catch`** : hors ligne, le menu revenait tout seul à l’ancienne valeur
+   et rien nulle part ne disait pourquoi.
+
+**Et un test qui ne pouvait pas rougir** : le faux `searchModels` ignorait son argument, si bien
+que supprimer le filtre de famille ET diviser la limite par douze laissait les sept tests verts.
+Il enregistre désormais la requête.
+
+**Ce qui reste ouvert, et qui est écrit pour ne pas être redécouvert :**
+
+- **Le menu tient en une page de 60** et ne suit pas le curseur. Le filtre de famille est appliqué
+  **côté main, à la main** (`model-registry.ts`), donc l’API ne narrowe rien pour image, vidéo, 3D
+  et audio : sur 642 modèles publics, le modèle cherché peut être sur une page que personne ne
+  demande. Une entrée « Parcourir les modèles… » ouvrant `offerModelsOfFamily` rendrait le geste
+  riche du panneau Modèles.
+- **Ni identifiants manquants, ni erreur, ni chargement** ne sont dits : sans clé API le menu ne
+  contient que l’identifiant brut. `MissingCredentials` et `failureKeyOf` existent déjà.
+- **Une valeur invalide s’écrit quand même** dans le nœud : `watch` rapporte sans filtre de
+  validité, là où le générateur la bloque au `submit`.
+- **Le canvas dessine `modelId` brut, l’inspecteur le nom du modèle.** Les deux coïncidaient avant
+  ce lot. Les réconcilier demande le nom dans le nœud — un champ que le format de Scenario ne
+  porte pas, donc à ne pas ajouter à la légère.
 
 **Deux constats laissés ouverts délibérément**, tranchés avec l’utilisateur le 9 août :
 

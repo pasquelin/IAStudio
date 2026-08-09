@@ -16,6 +16,7 @@ import {
   nextNodeId,
   providersOf,
   removeNode,
+  replaceNodePorts,
   updateNodeData,
 } from './mutations'
 
@@ -136,5 +137,101 @@ describe('wiring', () => {
 
   it('leaves an empty graph empty when the connection carries no handles', () => {
     expect(connect(EMPTY_GRAPH, { source: 'a', target: 'b' })).toEqual(EMPTY_GRAPH)
+  })
+})
+
+/**
+ * A generator's ports come from its model's own schema, so swapping the model swaps the ports —
+ * and an edge aimed at one that is gone names a handle no node carries. `validateWorkflowFlow`
+ * rejects that at export, far from the gesture that caused it.
+ */
+describe('swapping what a node is wired by', () => {
+  const generator: GraphNode = {
+    id: 'imageGenerator1',
+    type: 'model',
+    position: { x: 0, y: 0 },
+    data: {
+      modelId: 'model_flux',
+      inputHandles: [
+        { id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' },
+        { id: 'imageGenerator1-source-mask', name: 'mask', type: 'image' },
+      ],
+      outputHandles: [{ id: 'imageGenerator1-target-image', name: 'output', type: 'image' }],
+    },
+  }
+
+  const fed: GraphState = {
+    nodes: [text('text1'), generator],
+    edges: [
+      {
+        id: 'a',
+        source: 'imageGenerator1',
+        sourceHandle: 'imageGenerator1-source-prompt',
+        target: 'text1',
+        targetHandle: 'text1-target-output',
+      },
+      {
+        id: 'b',
+        source: 'imageGenerator1',
+        sourceHandle: 'imageGenerator1-source-mask',
+        target: 'text1',
+        targetHandle: 'text1-target-output',
+      },
+    ],
+    inputKeys: [],
+  }
+
+  const withoutMask: Partial<GraphNode['data']> = {
+    modelId: 'model_sdxl',
+    inputHandles: [{ id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' }],
+    outputHandles: [{ id: 'imageGenerator1-target-image', name: 'output', type: 'image' }],
+  }
+
+  it('cuts the edge whose port the new model does not have', () => {
+    const next = replaceNodePorts(fed, 'imageGenerator1', withoutMask)
+
+    expect(next.edges.map(edge => edge.id)).toEqual(['a'])
+  })
+
+  it('keeps what the new model still answers for', () => {
+    const next = replaceNodePorts(fed, 'imageGenerator1', withoutMask)
+
+    expect(next.nodes.find(node => node.id === 'imageGenerator1')?.data).toMatchObject({
+      modelId: 'model_sdxl',
+    })
+  })
+
+  /** The rest of the graph is not the caller's business — and walking it would cost the lot. */
+  it('leaves an edge between two other nodes alone', () => {
+    const aside = { id: 'c', source: 'text1', target: 'other1' }
+    const next = replaceNodePorts(
+      { ...fed, edges: [...fed.edges, aside] },
+      'imageGenerator1',
+      withoutMask,
+    )
+
+    expect(next.edges.some(edge => edge.id === 'c')).toBe(true)
+  })
+
+  /** The node feeds others too, and its output survives the swap: those edges must not be cut. */
+  it('keeps an edge that reads the output the node still publishes', () => {
+    const consumed: GraphState = {
+      ...fed,
+      edges: [
+        {
+          id: 'd',
+          source: 'other1',
+          sourceHandle: 'other1-source-image',
+          target: 'imageGenerator1',
+          targetHandle: 'imageGenerator1-target-image',
+        },
+      ],
+    }
+
+    expect(replaceNodePorts(consumed, 'imageGenerator1', withoutMask).edges).toHaveLength(1)
+  })
+
+  it('hands the very same graph back when the node is not there', () => {
+    expect(replaceNodePorts(fed, 'nobody', withoutMask)).toBe(fed)
   })
 })

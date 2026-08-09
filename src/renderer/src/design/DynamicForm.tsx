@@ -24,8 +24,12 @@ import { ToolButton } from './ToolButton'
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
-  onSubmit: (body: FormValues) => void
-  submitLabel: string
+  /**
+   * Absent where the form is not run but read into something — a node's parameters, which the
+   * graph executes later. The button then has nothing to say and is not drawn.
+   */
+  onSubmit?: (body: FormValues) => void
+  submitLabel?: string
   /** Beside the label on the button, for what the form costs. Absent draws nothing. */
   submitNote?: string
   /**
@@ -200,7 +204,7 @@ export function DynamicForm({
     <form
       className="flex flex-col gap-3 p-2"
       onSubmit={event =>
-        void handleSubmit(submitted => onSubmit(buildBody(fields, submitted)))(event)
+        void handleSubmit(submitted => onSubmit?.(buildBody(fields, submitted)))(event)
       }
     >
       {groups.map(([group, groupedFields]) => (
@@ -246,12 +250,14 @@ export function DynamicForm({
         </fieldset>
       ))}
 
-      <Button type="submit" variant="primary" disabled={busy}>
-        {submitLabel}
-        {/* Spaced here rather than by a gap on the button: every tool button in the studio is
-            built on the same base, and most of them are an icon beside a word. */}
-        {submitNote && <span className="ml-1.5 text-[11px] opacity-70">{submitNote}</span>}
-      </Button>
+      {submitLabel !== undefined && (
+        <Button type="submit" variant="primary" disabled={busy}>
+          {submitLabel}
+          {/* Spaced here rather than by a gap on the button: every tool button in the studio is
+              built on the same base, and most of them are an icon beside a word. */}
+          {submitNote && <span className="ml-1.5 text-[11px] opacity-70">{submitNote}</span>}
+        </Button>
+      )}
     </form>
   )
 }
