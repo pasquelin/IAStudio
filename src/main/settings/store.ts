@@ -118,6 +118,7 @@ function merge(base: Settings, partial: PartialSettings): Settings {
   return {
     general: { ...base.general, ...partial.general },
     home: { ...base.home, ...partial.home },
+    workspaces: { ...base.workspaces, ...partial.workspaces },
     appearance: { ...base.appearance, ...partial.appearance },
     generation: { ...base.generation, ...partial.generation },
     storage: { ...base.storage, ...partial.storage },

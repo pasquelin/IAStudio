@@ -1,13 +1,28 @@
-import { mdiHomeOutline } from '@mdi/js'
-import type { ReactNode } from 'react'
+import { mdiArrowLeft, mdiArrowRight, mdiHomeOutline } from '@mdi/js'
+import { useState, type DragEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
+import { ContextMenu } from '@/design/ContextMenu'
+import { MenuRow } from '@/design/MenuRow'
 import { FOCUS_RING } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { useWindowState } from '@/hooks/useWindowState'
-import type { WorkspaceId } from '@shared/domain/workspace'
-import { workspaceLabelKey, WORKSPACES } from '@/helpers/workspaces'
+import { useWorkspaces } from '@/hooks/useWorkspaces'
+import {
+  canMoveWorkspace,
+  isWorkspaceId,
+  movedWorkspace,
+  movedWorkspaceBy,
+  type WorkspaceId,
+  type WorkspaceMove,
+} from '@shared/domain/workspace'
+import { workspaceLabelKey } from '@/helpers/workspaces'
+import { dragChannel } from '@/helpers/drag'
+import { useSettings } from '@/stores/settings'
+
+/** Its own MIME type, so a file from the desktop never reads as one of the bar's pills. */
+const SPACES = dragChannel('application/x-scenario-workspace')
 
 export type TitleBarProps = {
   activeWorkspace: WorkspaceId
@@ -34,6 +49,42 @@ export function TitleBar({
 }: TitleBarProps) {
   const { t } = useTranslation()
   const { fullScreen } = useWindowState()
+  const workspaces = useWorkspaces()
+
+  // The dragged id rides on the drag itself, which is what lets a target ask `carries` first.
+  // It is kept here as well for one thing only: the platform forbids reading it before the drop,
+  // and without it the pill being dragged would light itself up as somewhere it could land.
+  const [drag, setDrag] = useState<{ from: WorkspaceId; over: WorkspaceId | null } | null>(null)
+
+  const [menuAt, setMenuAt] = useState<{ id: WorkspaceId; x: number; y: number } | null>(null)
+  const [announcement, setAnnouncement] = useState('')
+
+  const order = workspaces.map(workspace => workspace.id)
+
+  const apply = (next: readonly WorkspaceId[], moved: WorkspaceId): void => {
+    void useSettings.getState().write({ workspaces: { order: [...next] } })
+    setAnnouncement(
+      t('workspaces.moved', {
+        label: t(workspaceLabelKey(moved)),
+        position: next.indexOf(moved) + 1,
+        total: next.length,
+      }),
+    )
+  }
+
+  // What the same reordering looks like without a drag: the keyboard's, and the menu's.
+  const step = (id: WorkspaceId, move: WorkspaceMove): void => {
+    if (!canMoveWorkspace(order, id, move)) return
+    apply(movedWorkspaceBy(order, id, move), id)
+  }
+
+  const drop = (event: DragEvent, onto: WorkspaceId): void => {
+    setDrag(null)
+    const dragged = SPACES.idFrom(event)
+    if (!dragged || !isWorkspaceId(dragged) || dragged === onto) return
+
+    apply(movedWorkspace(order, dragged, onto), dragged)
+  }
 
   return (
     <header
@@ -59,7 +110,7 @@ export function TitleBar({
           />
         )}
 
-        {WORKSPACES.map(workspace => (
+        {workspaces.map(workspace => (
           <BarButton
             key={workspace.id}
             icon={workspace.icon}
@@ -68,9 +119,54 @@ export function TitleBar({
             // of them is the page being read.
             current={!home && workspace.id === activeWorkspace}
             onClick={() => onWorkspace(workspace.id)}
+            reorder={{
+              over: drag?.over === workspace.id && drag.from !== workspace.id,
+              onStart: event => {
+                SPACES.start(event, workspace.id)
+                setDrag({ from: workspace.id, over: null })
+              },
+              onOver: () => setDrag(current => current && { ...current, over: workspace.id }),
+              onLeave: () =>
+                setDrag(current =>
+                  current?.over === workspace.id ? { ...current, over: null } : current,
+                ),
+              onDrop: event => drop(event, workspace.id),
+              onEnd: () => setDrag(null),
+              onStep: move => step(workspace.id, move),
+              onMenu: at => setMenuAt({ id: workspace.id, ...at }),
+            }}
           />
         ))}
       </nav>
+
+      {menuAt && (
+        <ContextMenu at={menuAt} onClose={() => setMenuAt(null)}>
+          <MenuRow
+            label={t('workspaces.moveLeft')}
+            icon={mdiArrowLeft}
+            disabled={!canMoveWorkspace(order, menuAt.id, 'left')}
+            onSelect={() => {
+              step(menuAt.id, 'left')
+              setMenuAt(null)
+            }}
+          />
+          <MenuRow
+            label={t('workspaces.moveRight')}
+            icon={mdiArrowRight}
+            disabled={!canMoveWorkspace(order, menuAt.id, 'right')}
+            onSelect={() => {
+              step(menuAt.id, 'right')
+              setMenuAt(null)
+            }}
+          />
+        </ContextMenu>
+      )}
+
+      {/* The order changes under a focus that does not move and a label that does not change:
+          without this the gesture succeeds in silence for anyone reading rather than looking. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
 
       {actions !== undefined && (
         <div style={CLICKABLE} className="ml-auto flex items-center gap-2">
@@ -81,26 +177,78 @@ export function TitleBar({
   )
 }
 
+/** What makes a button one of the row's movable pills. Absent on the home, which never moves. */
+type Reorder = {
+  /** Whether the pointer carrying another space is over this one right now. */
+  over: boolean
+  onStart: (event: DragEvent) => void
+  onOver: () => void
+  onLeave: () => void
+  onDrop: (event: DragEvent) => void
+  onEnd: () => void
+  onStep: (move: WorkspaceMove) => void
+  onMenu: (at: { x: number; y: number }) => void
+}
+
 type BarButtonProps = {
   icon: string
   label: string
   current: boolean
   onClick: () => void
+  reorder?: Reorder
 }
 
 /** One destination of the bar. The home and the spaces are read as one row, so they wear
  * the same chrome — the home is not a control of a different kind. */
-function BarButton({ icon, label, current, onClick }: BarButtonProps) {
+function BarButton({ icon, label, current, onClick, reorder }: BarButtonProps) {
   return (
     <button
       type="button"
       aria-current={current ? 'page' : undefined}
       onClick={onClick}
+      draggable={reorder !== undefined}
+      onDragStart={reorder?.onStart}
+      onDragOver={event => {
+        // Asked before accepting: saying yes to a drag we cannot read swallows someone else's file.
+        if (!reorder || !SPACES.carries(event)) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+        reorder.onOver()
+      }}
+      onDragLeave={event => {
+        // `dragleave` fires on the way into the pill's own icon; only a target outside it left.
+        const to = event.relatedTarget
+        if (to instanceof Node && event.currentTarget.contains(to)) return
+        reorder?.onLeave()
+      }}
+      onDrop={event => {
+        if (!reorder) return
+        event.preventDefault()
+        reorder.onDrop(event)
+      }}
+      onDragEnd={reorder?.onEnd}
+      // Alt and not the bare arrows: those belong to whoever walks the bar, and taking them
+      // would trade one gesture for another.
+      onKeyDown={event => {
+        if (!reorder || !event.altKey) return
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        reorder.onStep(event.key === 'ArrowLeft' ? 'left' : 'right')
+      }}
+      aria-keyshortcuts={reorder && 'Alt+ArrowLeft Alt+ArrowRight'}
+      onContextMenu={event => {
+        if (!reorder) return
+        event.preventDefault()
+        reorder.onMenu({ x: event.clientX, y: event.clientY })
+      }}
       className={cn(
         'flex cursor-pointer items-center gap-2 rounded-(--radius-sc-md) border-none px-3 py-1',
         'text-muted bg-transparent transition-colors',
         'hover:bg-elevated/60 hover:text-text',
         current && 'bg-elevated text-text',
+        // A ring rather than a fill: `accent-soft` sits at 1.03:1 on the light chassis, and it
+        // would also take the active pill's own background away from it.
+        reorder?.over && 'ring-accent text-text ring-2',
         // Without it the platform draws its own outline, in a blue that belongs to no theme.
         FOCUS_RING,
       )}

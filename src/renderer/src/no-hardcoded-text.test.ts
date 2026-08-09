@@ -41,6 +41,9 @@ const SPOKEN_ATTRIBUTES = new Set([
  */
 const TECHNICAL_ATTRIBUTES = new Set([
   'className',
+  // Key identifiers the spec fixes — `Alt+ArrowLeft`, never `Alt+FlècheGauche`. The screen
+  // reader is the one that names them in the reader's language.
+  'aria-keyshortcuts',
   'style',
   'src',
   'href',

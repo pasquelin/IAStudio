@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { UiIcon } from '@/design/UiIcon'
 import { FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { WORKSPACES, workspaceLabelKey } from '@/helpers/workspaces'
+import { workspaceLabelKey } from '@/helpers/workspaces'
+import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 import { enterWorkspace } from '../open'
@@ -26,7 +27,7 @@ type Entry = {
 export function Tools() {
   const { t } = useTranslation()
 
-  const create: Entry[] = WORKSPACES.map(workspace => ({
+  const create: Entry[] = useWorkspaces().map(workspace => ({
     key: workspace.id,
     icon: workspace.icon,
     label: t(workspaceLabelKey(workspace.id)),

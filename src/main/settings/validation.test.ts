@@ -96,3 +96,41 @@ describe('settings validation', () => {
     })
   })
 })
+
+/**
+ * The bar order is the one branch a stale or hand-edited file is likely to carry wrong, since
+ * it is written by a gesture rather than typed into a screen. Before it existed, an unknown key
+ * was simply stripped — it must not become the key that costs the file.
+ */
+describe('salvaging the bar order', () => {
+  const withTheme = (workspaces: unknown): unknown => ({
+    workspaces,
+    appearance: { theme: 'light' },
+  })
+
+  it('drops a space this build no longer knows, keeping the rest of the order', () => {
+    const salvaged = salvagePartialSettings(withTheme({ order: ['image', 'nether', 'audio'] }))
+
+    expect(salvaged.workspaces?.order).toEqual(['image', 'audio'])
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+
+  it('keeps the other settings when the order is not a list at all', () => {
+    expect(salvagePartialSettings(withTheme({ order: 'image' })).appearance?.theme).toBe('light')
+  })
+
+  it('keeps the other settings when the branch itself is not an object', () => {
+    expect(salvagePartialSettings(withTheme(['image', 'audio'])).appearance?.theme).toBe('light')
+  })
+
+  // A written order is always a reconciled one, so it can never legitimately outgrow the
+  // registry — a longer list is a file to distrust, not a list to keep in memory and rewrite.
+  it('refuses an order longer than the registry, and only the order', () => {
+    const long = Array.from({ length: 10_000 }, () => 'image')
+
+    const salvaged = salvagePartialSettings(withTheme({ order: long }))
+
+    expect(salvaged.workspaces?.order ?? []).toEqual([])
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+})

@@ -3,6 +3,7 @@ import type { BindingOverrides } from './command'
 import type { ApiFailure } from './failure'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
+import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 import type { ModelFamily } from './model'
 import type { ShadowQuality } from './scene'
 
@@ -61,6 +62,14 @@ export type Settings = {
   home: {
     enabled: boolean
     sections: HomeSectionSetting[]
+  }
+  /**
+   * The bar of spaces. `order` is the user's own, reconciled against what this build declares
+   * by `workspaceOrder` — a stored order is a photograph of the spaces that existed the day it
+   * was written, and the registry order is only what an untouched bar falls back to.
+   */
+  workspaces: {
+    order: WorkspaceId[]
   }
   appearance: {
     theme: Theme
@@ -149,6 +158,7 @@ export type Settings = {
 export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject' },
   home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
+  workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {}, captionArrivals: true },
   three: {
