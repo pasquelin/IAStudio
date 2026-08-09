@@ -258,6 +258,52 @@ Ce qu’il faut retenir de `feat/prompt-assist` (`generate/prompt`, `caption`, `
 
 # 2. Le plus urgent
 
+## Deux onglets ouverts sur « Ce document n’est plus ouvert » — au premier rechargement
+
+**Vu à l’écran le 9 août 2026, capture à l’appui, et reproductible en trois gestes** : ouvrir deux
+documents neufs dans l’espace Image, ne rien y enregistrer, recharger l’application. Les onglets
+« Sans titre 1 » et « Sans titre 2 » reviennent, le centre affiche *« Ce document n’est plus
+ouvert. »*, les Calques disent *« Ouvrez une image »*. **Un onglet ouvert qui affirme qu’il n’y a
+pas de document est un état que l’interface ne doit pas pouvoir atteindre.**
+
+**Ce n’est pas une régression : c’est un trou de conception, et le code le documente en le
+décrivant.** `app/documents.tsx:76` porte la JSDoc « The layout is persisted, the documents are
+not: a tab restored on startup outlives its document », et le rend proprement plutôt que de lever.
+Ce que ce commentaire décrit comme un cas de bord est en réalité **le cas nominal** dès qu’un
+document n’a pas été enregistré.
+
+**La chaîne, vérifiée dans le code :**
+
+1. `create` (`stores/documents.ts:198`) **n’écrit rien** dans le dossier du projet, délibérément —
+   « a file per tab opened and never typed in would litter the project with empty documents ». Un
+   document neuf n’existe donc que dans le store, en mémoire.
+2. `useDocuments` **n’est pas persisté**, aussi délibérément (§ « Corrigé — ne pas le re-signaler » :
+   persisté, les onglets d’un projet réapparaissaient dans le suivant).
+3. **Le layout Dockview, lui, est persisté** — c’est même « the reliable record of what is open »
+   (`panelIds`, même fichier).
+4. `refresh` (`:157`) reconstruit les documents par **l’intersection dossier ∩ layout** :
+   `found.filter(document => shown.has(document.id))`.
+
+Un document jamais enregistré est absent du dossier, donc absent de l’intersection — **mais son
+panneau, lui, est dans le layout.** L’intersection décide ce qui vit côté documents et **ne corrige
+jamais le layout**, qui reste seul à prétendre que l’onglet existe. Personne ne ferme la boucle.
+
+**Ce qu’il faut trancher, et le piège qui attend.** Aligner le layout sur la réalité est la bonne
+moitié : un document dont rien n’est écrit ne peut pas revivre, son onglet ne doit donc pas
+survivre. Mais **la condition ne peut pas être « absent du dossier »** — un document créé pendant
+la session est lui aussi absent du dossier, et le balayer fermerait l’onglet sous les doigts. Il
+faut « absent du dossier **et** absent de `state.documents` », et le nettoyage doit tenir compte du
+fait que `refresh` est asynchrone et que `adopt` peut arriver entre-temps.
+
+L’autre moitié est un choix de produit : un document neuf où l’on a peint sans enregistrer est
+perdu au rechargement, silencieusement, aujourd’hui comme après le correctif. Décider s’il faut le
+dire, ou l’écrire — et l’écrire contredit le commentaire de `create`, qui a ses raisons.
+
+**Non commencé.** Tests de reprise à écrire dans le même mouvement : `app/**` n’est sous aucun
+budget de couverture (§ 3.1), ce qui est précisément pourquoi ce chemin n’a rien qui le tienne.
+
+---
+
 L’espace **Textures** est le prochain manque fonctionnel par ordre de valeur hors workflows : les
 **étapes 6 à 8** (§ 3.4) sont écrites et non commencées, et **rien de cet espace n’a été vérifié à
 l’écran**.

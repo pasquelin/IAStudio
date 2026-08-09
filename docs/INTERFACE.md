@@ -78,17 +78,6 @@ L’entrée 5 a élargi le problème sans le créer : l’Explorateur rejoint le
 `aria-selected` y veut dire « ouvert » — un état que l’utilisateur ne peut ni poser ni retirer depuis
 ce panneau, alors que la ligne le dit déjà en clair.
 
-### 6. Le double-clic répond deux choses différentes selon d’où il part
-
-Depuis l’Explorateur, il ouvre le document **en changeant d’espace si besoin**. Depuis un asset, il
-ne traverse pas les espaces : `helpers/asset-intents.ts` exige un onglet déjà ouvert et **refuse en
-silence** sinon.
-
-Deux réponses à la même question, et l’une des deux ne dit pas qu’elle a refusé. À trancher — c’est
-le comportement de l’Explorateur qui semble le bon.
-
-*(Même revue, même date.)*
-
 ### 7. Un panneau Styles dans l’espace Textures
 
 **Demandé le 9 août 2026.** C’est une fonctionnalité, pas un défaut — elle est ici parce qu’elle se
@@ -150,9 +139,101 @@ existe déjà : `EnvironmentSection` leur est commun, et sa JSDoc dit pourquoi.
 style lisible par les deux espaces demande que la forme sérialisée descende dans `shared/domain/` —
 sans quoi le main, qui écrira le fichier de `userData`, ne peut pas la typer.
 
----
+### 10. Les filtres du journal reviennent à la ligne, et il leur manque « Tout »
 
-## Bloqué
+**Vu le 9 août 2026, capture à l’appui.** Dans le volet du journal d’activité — celui qu’ouvre
+« 1 échec » en bas à droite — les filtres passent sur deux lignes : `Information / Avertissement /
+Échec | Génération` puis `Import / Bibliothèque / Document`. Et il manque un **premier bouton
+« Tout »**, alias du « rien de sélectionné », pratique à l’usage.
+
+**Le retour à la ligne ne fait pas qu’être laid : il détruit le groupement.** `ActivityList.tsx`
+pose sept boutons dans un `flex-wrap`, avec un `Separator` vertical entre les trois niveaux et les
+quatre sujets. Le `Flyout` fait `w-96` (384 px), les sept libellés français n’y tiennent pas, et la
+coupure tombe **après** le séparateur — les trois sujets de la seconde ligne se retrouvent orphelins
+du trait qui était censé les annoncer. Les deux familles deviennent illisibles comme familles.
+
+Deux rangées **explicites**, une par famille, règlent la mise en forme et la place du « Tout » d’un
+seul geste : le séparateur disparaît au profit de ce qu’il essayait de dire, et chaque rangée reçoit
+son propre « Tout » en tête, sans l’ambiguïté qu’aurait un « Tout » unique posé devant deux familles
+qui se filtrent séparément. Élargir le flyout ne réglerait que la première moitié.
+
+**« Tout » est bien un alias, et l’alias existe déjà** — `ActivityList.tsx:85` : « Nothing selected
+is "everything" ». Le bouton n’ajoute donc aucun état : il vide la sélection de sa famille et
+s’affiche actif quand elle est vide. Le geste existe aussi déjà, mais **seulement quand la liste est
+vide** — `EmptyState` propose `activity.clearFilters`, qui appelle exactement
+`setFilters({ levels: [], topics: [] })`. Aujourd’hui, un filtre trop étroit se défait en le
+défaisant chip par chip, ou en attendant que la liste soit vide pour qu’on vous offre le bouton.
+
+Trois choses qui suivent : `chipSkin` (`design/styles.ts`) porte déjà les deux états et **trois
+surfaces le partagent** — ne pas en dériver une variante locale ; une clé i18n neuve est à poser
+dans les deux bundles ; et `ActivityList.test.tsx` existe.
+
+### 11. La ligne d’état est collée au bord et désalignée du reste
+
+**Même capture.** En bas de fenêtre, `Verif4` à gauche et `1 échec` à droite touchent presque le
+bord — il manque de l’air sous le texte, et la ligne ne s’aligne sur rien.
+
+Ce n’est pas qu’une impression : `Footer.tsx` est en **`h-6 px-3`**, c’est-à-dire 12 px de marge
+horizontale écrits en dur, quand tout ce qui est au-dessus est posé à `--sc-gutter` du bord — **6 px
+en confort, 4 px en compact** (`index.css`). Le fil d’Ariane est donc décalé de 6 px vers l’intérieur
+par rapport à la surface qui le surplombe, et l’écart double en densité compacte. Verticalement, le
+`h-6` ne réserve rien : la ligne s’arrête au pixel du bas de la fenêtre.
+
+C’est le cas d’école de la règle du guide — **pas de pixel en dur là où une gauge existe**. Reprendre
+`--sc-gutter` remet le footer dans le même appareil de mesure que les rails et les panneaux, et le
+suit quand la densité change.
+
+### 12. L’accueil ne dit pas ce que cliquer va faire — et ça n’ouvre jamais le fichier
+
+**Vu le 9 août 2026, capture à l’appui.** « Je clique sur une vignette, il y a une activité, mais ça
+n’ouvre pas le fichier, et je ne comprends pas ce qui se passe. »
+
+**Le fichier ne s’ouvre pas parce qu’aucune étagère n’ouvre quoi que ce soit.** Trois étagères
+dessinent le **même carré** — même `ShelfTile`, même taille, même survol — et font **trois choses
+différentes**, dont aucune n’est « ouvrir » :
+
+| Étagère | Ce que le clic fait |
+|---|---|
+| **Ce que vous avez produit** | `recreate(asset.type, generation)` — **relance une génération** avec les paramètres d’origine |
+| **Votre bibliothèque** | `useCloud.pull([asset.id])` — **rapatrie** l’asset dans le projet, d’où les « 1 asset rapatrié » du journal |
+| **Votre bibliothèque**, asset déjà rapatrié | **rien** : `fetchable` faux retire le `onClick`, et la vignette devient inerte sans le dire |
+
+Sur la capture, la **même image** figure dans les deux étagères — donc deux carrés identiques, côte à
+côte dans la même page, l’un qui régénère et l’autre qui télécharge.
+
+**L’intention est écrite, mais nulle part visible.** Chaque vignette porte bien son verbe —
+`home.creations.recreate`, `home.library.fetch` — mais dans un **`aria-label`** : un lecteur d’écran
+l’entend, l’œil ne le voit jamais. Le `hint` est un `title` natif, donc une infobulle du système
+après un temps d’arrêt. Ce qui reste à l’écran est un `hover:opacity-90`, identique pour les trois.
+
+Ce n’est donc pas un défaut de compréhension mais **d’affordance** : le studio a trois verbes et les
+dessine tous pareil. Ce qui manque est ce qui les distingue à l’œil — le verbe sur la carte ou au
+survol, un état visible pour la vignette inerte, et une réponse à la question « et si je veux
+seulement l’ouvrir ? », qu’aucune des trois étagères ne pose aujourd’hui.
+
+> À trancher au moment de traiter : « ouvrir » est-il l’action attendue par défaut sur ces
+> vignettes, les verbes actuels devenant secondaires ? La capture dit que c’est ce qu’on croit
+> cliquer.
+
+### 13. L’activité est affichée deux fois
+
+**Même capture, même jour.** La bande « Activité récente » de l’accueil montre ce que le volet du
+bas montre déjà, et ça n’a pas à être sur l’accueil.
+
+C’est bien la **même source**, pas deux vues d’une même idée : `home/sections/Activity.tsx` lit
+`useActivity(state => state.entries)`, exactement comme `ActivityList`, et sa JSDoc dit qu’elle
+emprunte au volet ses glyphes, ses teintes et son message pour ne pas en diverger. Elle est donc
+redondante par construction.
+
+**Rien n’est perdu en la retirant** : `ActivityStatus` est dans la ligne d’état en permanence — son
+icône `mdiHistory` s’affiche même sans échec — et le volet complet, filtres compris, est à un clic.
+Ce qui manque à l’accueil ne manque nulle part.
+
+**Le mécanisme existe déjà** : les sections de l’accueil sont ordonnables et masquables
+(`hiddenHomeSections`, le menu « … » visible en haut à droite d’une bande). C’est donc un
+**changement de défaut**, pas une suppression — la section reste disponible pour qui la veut. Que
+ce menu n’ait pas été trouvé est un retour en soi, et il rejoint l’entrée 12 : l’accueil ne montre
+pas ce qu’il permet.
 
 ### 4. Aucun sélecteur de couleur ne s’ouvre
 
@@ -192,6 +273,27 @@ correction.
 | **(2)** La marge que la barre de défilement de macOS mangeait | idem |
 | **(3)** `gap-1` partout où il traînait — 45 occurrences, 27 fichiers | `6ef915e` (feat/pinceau) |
 | **(5)** Les lignes de l’Explorateur n’avaient aucun accès clavier | `776e85b` (feat/explorateur-clavier) |
+| **(6)** Le double-clic sur un asset ne traversait pas les espaces, et se taisait | `33d31f3` (feat/double-clic) |
+
+> **L’entrée 6 est tranchée dans le sens qu’elle proposait** : c’est le comportement de
+> l’Explorateur qui était le bon. Une destination est prête dès qu’un document de son genre est
+> ouvert **où qu’il soit** (`documentOfKind`, posé à côté d’`activeIdOfKind` qu’il complète), la
+> poser amène cet onglet au premier plan, et l’onglet qu’on regarde garde la priorité sur l’ordre de
+> la cascade — celle-ci ne tranche qu’entre les destinations qu’on ne regarde pas. Un double-clic
+> qui ne peut rien faire le dit, sous la portée `assets.open`, rangée dans les gestes : deux refus
+> parlent deux fois.
+>
+> **Trois défauts trouvés en revue, corrigés avant la fusion.** Le premier valait la revue à lui
+> seul : **écrire dans un onglet jamais monté détruisait son fichier** — il ne tient aucun état,
+> donc `restoreDocument` le prenait pour déjà chargé, son fichier n’était jamais lu, et le ⌘S
+> suivant écrivait par-dessus. La pose attend désormais la lecture. Ensuite : le **montage**
+> acceptait puis refusait en silence, en changeant d’espace pour ne rien faire ; et
+> `addAssetToSequence` lisait lui-même l’onglet du premier plan, seule destination sur six à le
+> faire.
+>
+> **Ce qui reste dû : la vérification à l’écran.** Une autre session tenait l’application au moment
+> de la fusion, et le verrou d’instance unique interdit d’en lancer une seconde. Les 4680 tests
+> passent, mais personne n’a *vu* la bascule d’espace.
 
 > **L’entrée 5 n’avait pas la cause qu’elle croyait.** Le détournement de `selectedIds` était réel,
 > mais ce qui privait les lignes du clavier était ailleurs : dans `Collection`, le rôle, le tab stop
@@ -280,6 +382,9 @@ Ces chantiers **se voient**, mais leur cause n’est pas la mise en page. Ils vi
 `docs/REPRISE.md`, au § indiqué — **ici, une ligne et rien de plus**, pour qu’on ne les cherche pas
 deux fois et qu’aucune des deux versions ne devienne fausse.
 
+- **Deux onglets rouverts sur « Ce document n’est plus ouvert »** au rechargement — **§ 2, en tête
+  du plus urgent.** Le layout est persisté, les documents ne le sont pas, et l’intersection qui les
+  réconcilie ne corrige jamais le layout.
 - **La dureté du pinceau n’est pas implémentée**, et crayon et pinceau rendent le même outil — § 3.2.
 - **La garde manquante sur le format des signatures du registre** (`'P'` au lieu de `'KeyP'`) — § 3.2.
 - **⌘Z se fragmente quand une génération aboutit pendant un glissement** — § 3.6. La ligne fautive
