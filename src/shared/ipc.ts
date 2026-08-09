@@ -336,6 +336,7 @@ export type LogScope =
   | 'texture.shader'
   | 'texture.export'
   | 'skybox.source'
+  | 'skybox.export'
   | 'canvas.layer'
   | 'image.export'
   | 'document.load'
@@ -358,6 +359,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'texture.shader',
   'texture.export',
   'skybox.source',
+  'skybox.export',
   'canvas.layer',
   'image.export',
   'document.load',
@@ -416,6 +418,7 @@ export const EVENTS = {
   sceneAdd: 'evt:scene-add',
   sceneExport: 'evt:scene-export',
   textureExport: 'evt:texture-export',
+  skyboxExport: 'evt:skybox-export',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   activity: 'evt:activity',
@@ -437,6 +440,15 @@ export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selec
 
 /** What the native menu asks of the texture in front: which engine it is being handed to. */
 export type TextureExportCommand = { target: TextureExportTarget }
+
+/**
+ * What the native menu asks of the sky in front: how large each of the six faces comes out.
+ *
+ * A size where a texture takes a target, because a sky has no per-engine recipe to choose from —
+ * six PNGs named `_Rt`…`_Bk` is what all of them read. What differs is what the machine can
+ * hold, and that is a number.
+ */
+export type SkyboxExportCommand = { size: number }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
@@ -785,6 +797,7 @@ export type StudioBridge = {
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
     onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
+    onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe
   }
   diagnostics: {
     onLog: (callback: (entry: LogEntry) => void) => Unsubscribe

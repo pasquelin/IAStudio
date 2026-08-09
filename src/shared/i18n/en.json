@@ -707,6 +707,7 @@
     "roblox": "Roblox",
     "raw": "Raw channels"
   },
+  "skyboxFaceSize": "{{size}} × {{size}}",
   "sceneViews": {
     "front": "Front",
     "back": "Back",
@@ -792,6 +793,7 @@
     "exportScene": "Export the scene",
     "exportSelection": "Export the selection",
     "exportTexture": "Export the texture",
+    "exportSkybox": "Export the sky",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
     "zoomIn": "Zoom in",

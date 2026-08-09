@@ -24,6 +24,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // the document because that is where it shows — as a slider that moves nothing.
   'texture.shader': 'document',
   'skybox.source': 'document',
+  'skybox.export': 'document',
   'canvas.layer': 'document',
   'image.export': 'document',
   'document.load': 'document',

@@ -16,6 +16,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   addNode: () => {},
   exportScene: () => {},
   exportTexture: () => {},
+  exportSkybox: () => {},
   ...overrides,
 })
 
@@ -481,7 +482,35 @@ describe('the export menu', () => {
     expect(labels('3d')).not.toContain('Exporter la matière')
     expect(labels('textures')).toContain('Exporter la matière')
     expect(labels('textures')).not.toContain('Exporter la scène')
+    expect(labels('skyboxes')).toContain('Exporter le ciel')
+    expect(labels('skyboxes')).not.toContain('Exporter la matière')
     expect(labels('image')).not.toContain('Exporter la scène')
     expect(labels('image')).not.toContain('Exporter la matière')
+    expect(labels('image')).not.toContain('Exporter le ciel')
+  })
+})
+
+describe('exporting a sky', () => {
+  it('offers one row per face size, and only sizes the domain knows', () => {
+    const file = submenuOf(menuTemplate(options({ workspace: 'skyboxes' })), 'Fichier')
+
+    expect(submenuOf(file, 'Exporter le ciel').map(item => item.label)).toEqual([
+      '512 × 512',
+      '1024 × 1024',
+      '2048 × 2048',
+    ])
+  })
+
+  it('asks for the size the row names', () => {
+    const exportSkybox = vi.fn()
+    const file = submenuOf(
+      menuTemplate(options({ workspace: 'skyboxes', actions: actions({ exportSkybox }) })),
+      'Fichier',
+    )
+    const largest = submenuOf(file, 'Exporter le ciel')[2]
+
+    largest?.click?.(...([] as never[] as [never, never, never]))
+
+    expect(exportSkybox).toHaveBeenCalledWith({ size: 2048 })
   })
 })

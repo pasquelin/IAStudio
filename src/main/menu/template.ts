@@ -24,9 +24,11 @@ import {
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
 import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
+import { FACE_SIZES } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
   SceneExportCommand,
+  SkyboxExportCommand,
   TextureExportCommand,
   ToolRequest,
 } from '@shared/ipc'
@@ -46,6 +48,7 @@ export type MenuActions = {
   addNode: (request: SceneAddRequest) => void
   exportScene: (command: SceneExportCommand) => void
   exportTexture: (command: TextureExportCommand) => void
+  exportSkybox: (command: SkyboxExportCommand) => void
 }
 
 /**
@@ -190,11 +193,21 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     }))
 
   /**
+   * One face size per row. A sky has no engine to choose between — six PNGs named `_Rt`…`_Bk` is
+   * what all of them read — so what the rows offer is the one thing that does differ.
+   */
+  const skyboxItems = (): MenuItemConstructorOptions[] =>
+    FACE_SIZES.map(size => ({
+      label: t.skyboxFaceSize.replace(/\{\{size\}\}/g, String(size)),
+      click: () => actions.exportSkybox({ size }),
+    }))
+
+  /**
    * Only where the thing being edited is what the rows export. An image document has neither a
    * scene nor a set of channels, and a row that exported nothing would still look like one.
    *
-   * Returns rather than a nested ternary: this file's idiom is one flat arm per feature, and a
-   * third exporting space — skyboxes is the obvious next — would make that a triple.
+   * Returns rather than a nested ternary: this file's idiom is one flat arm per feature, and
+   * there are three exporting spaces now — a ternary would already be a triple.
    */
   const exportMenu = (): MenuItemConstructorOptions[] => {
     if (workspace === '3d') {
@@ -207,6 +220,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
     if (workspace === 'textures') {
       return [{ type: 'separator' }, { label: t.menu.exportTexture, submenu: textureItems() }]
+    }
+
+    if (workspace === 'skyboxes') {
+      return [{ type: 'separator' }, { label: t.menu.exportSkybox, submenu: skyboxItems() }]
     }
 
     return []

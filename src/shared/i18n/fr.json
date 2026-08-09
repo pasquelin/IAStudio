@@ -707,6 +707,7 @@
     "roblox": "Roblox",
     "raw": "Canaux bruts"
   },
+  "skyboxFaceSize": "{{size}} × {{size}}",
   "sceneViews": {
     "front": "De face",
     "back": "De dos",
@@ -792,6 +793,7 @@
     "exportScene": "Exporter la scène",
     "exportSelection": "Exporter la sélection",
     "exportTexture": "Exporter la matière",
+    "exportSkybox": "Exporter le ciel",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
     "zoomIn": "Zoom avant",
