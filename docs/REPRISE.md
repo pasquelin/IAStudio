@@ -840,33 +840,33 @@ qui le ferait passer de « une interface devant une API » à « un outil ». D�
 du § 3 : celui-là liste ce qui reste d’un chantier commencé, celui-ci ouvre un chantier qui ne l’est
 pas.
 
-> **L'étape 5 est livrée : les Apps s'exécutent.** `workflows.list` en `privacy: 'public'` alimente
-> un panneau **Apps** (colonne de droite, les six espaces), une App s'ouvre sur le formulaire que
+> **L’étape 5 est livrée : les Apps s’exécutent.** `workflows.list` en `privacy: 'public'` alimente
+> un panneau **Apps** (colonne de droite, les six espaces), une App s’ouvre sur le formulaire que
 > `translateSchema` bâtit de ses `inputs` — le même traducteur que pour un modèle, invariant 5 — et
 > se lance par le `JobManager`, avec son coût estimé sur le bouton. **Trois** canaux — `workflows:search`,
 > `:describe`, `:run` — et **pas un quatrième pour le prix** : `scenario:estimate-cost` price
-> désormais une **cible** (`{ kind, id }`), la même que celle qu'on soumet.
+> désormais une **cible** (`{ kind, id }`), la même que celle qu’on soumet.
 >
 > Trois choses à ne pas redécouvrir :
 >
-> - **un job dit maintenant ce qu'il lance** — `Job.kind` (`model` | `workflow`) et `Job.targetId`.
+> - **un job dit maintenant ce qu’il lance** — `Job.kind` (`model` | `workflow`) et `Job.targetId`.
 >   Sans quoi « Régénérer avec ces paramètres » rouvrait le générateur sur un id de workflow, que
 >   le catalogue de modèles ne connaît pas. Les **notes de jobs déjà sur disque** nomment un
 >   `modelId` : la relecture accepte les deux noms, sinon une génération payée serait abandonnée ;
-> - **les sorties d'un job de workflow** se lisent d'abord dans `metadata.assetIds`, et seulement
->   s'il est vide en aplatissant `metadata.flow[].assets[]` — `outputsOf`, dans `runner.ts`, parce
->   que c'est le fichier qui parle SDK. Les deux à la fois importeraient chaque image
+> - **les sorties d’un job de workflow** se lisent d’abord dans `metadata.assetIds`, et seulement
+>   s’il est vide en aplatissant `metadata.flow[].assets[]` — `outputsOf`, dans `runner.ts`, parce
+>   que c’est le fichier qui parle SDK. Les deux à la fois importeraient chaque image
 >   intermédiaire de la chaîne comme un résultat ;
-> - **`billing.cuCost` est enfin lu**, sur le job lui-même, après `creativeUnitsCost` — pour qu'un
->   chiffre donné à la soumission l'emporte toujours. **Mais un job de workflow y répond `0`** : la
+> - **`billing.cuCost` est enfin lu**, sur le job lui-même, après `creativeUnitsCost` — pour qu’un
+>   chiffre donné à la soumission l’emporte toujours. **Mais un job de workflow y répond `0`** : la
 >   charge est sur ses sous-jobs, ce que le lancement réel du 9 août a montré. Voir le § 4.5 :
->   ce zéro-là ne s'affiche pas ;
-> - **un statut inconnu vaut `ready`, pas `draft`.** La graphie n'a pas pu être observée : refuser
->   ce qu'on ne reconnaît pas rendrait **toutes** les Apps inertes le jour où Scenario écrirait
+>   ce zéro-là ne s’affiche pas ;
+> - **un statut inconnu vaut `ready`, pas `draft`.** La graphie n’a pas pu être observée : refuser
+>   ce qu’on ne reconnaît pas rendrait **toutes** les Apps inertes le jour où Scenario écrirait
 >   `published`. Seul un `draft` explicite éteint le bouton ;
-> - **ce que le MCP ne pouvait pas dire, un vrai lancement l'a dit.** Le serveur ne liste que les
->   workflows **privés** du compte (aucun) et n'a pas de filtre `public`. Les trois inconnues — la
->   graphie des statuts, l'échelle de la progression, le peuplement d'`assetIds` — ont donc été
+> - **ce que le MCP ne pouvait pas dire, un vrai lancement l’a dit.** Le serveur ne liste que les
+>   workflows **privés** du compte (aucun) et n’a pas de filtre `public`. Les trois inconnues — la
+>   graphie des statuts, l’échelle de la progression, le peuplement d'`assetIds` — ont donc été
 >   tranchées le 9 août 2026 en lançant une App par le SDK. **Le relevé est au § 4.5.**
 
 ## 4.1 Ce que l’API offre, vérifié dans la copie locale
