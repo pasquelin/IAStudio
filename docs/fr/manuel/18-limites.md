@@ -264,8 +264,9 @@ Un ciel s’enregistre désormais en `.sky` — l’exposition, la rotation de l
 du soleil se rouvrent telles quelles. Ce que le document ne garde pas : la vue et le champ de
 vision, qui disent comment on le regardait et non ce qu’il est.
 
-En revanche, on ne peut toujours pas exporter les six faces d’un cube, ni un *HDRI* utilisable
-dans un autre logiciel.
+Les six faces d’un cube s’exportent depuis **Fichier › Exporter le ciel**, en 512, 1024 ou 2048.
+Ce qui manque encore est le *HDRI* : les faces sortent en PNG, donc en 8 bits par canal, et ce qui
+dépasse le blanc est écrêté.
 
 ---
 
