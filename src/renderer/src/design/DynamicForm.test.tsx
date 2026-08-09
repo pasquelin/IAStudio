@@ -254,13 +254,13 @@ describe('what the model itself wrote', () => {
   it('is left as it came when nobody translated it, rather than showing a key', () => {
     render(
       <DynamicForm
-        fields={[field({ key: 'guidance', label: 'Guidance scale', help: 'Karras sigmas' })]}
+        fields={[field({ key: 'sampler', label: 'Sampler', help: 'Karras sigmas' })]}
         onSubmit={vi.fn()}
         submitLabel="Générer"
       />,
     )
 
-    expect(screen.getByText('Guidance scale')).toBeDefined()
+    expect(screen.getByText('Sampler')).toBeDefined()
     expect(screen.getByText('Karras sigmas')).toBeDefined()
   })
 
