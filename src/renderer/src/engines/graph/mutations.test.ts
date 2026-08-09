@@ -1,25 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { EMPTY_GRAPH, type GraphNode, type GraphState } from '@shared/domain/graph'
+import {
+  EMPTY_GRAPH,
+  isReservedNodeId,
+  type GraphNode,
+  type GraphState,
+} from '@shared/domain/graph'
+import { textNode as text } from './graph-fixtures'
 import { edgeOf } from './connect'
 import {
   addNode,
   connect,
   consumersOf,
   disconnect,
-  isReservedNodeId,
   moveNode,
   nextNodeId,
   providersOf,
   removeNode,
   updateNodeData,
 } from './mutations'
-
-const text = (id: string): GraphNode => ({
-  id,
-  type: 'text',
-  position: { x: 0, y: 0 },
-  data: { outputHandles: [{ id: `${id}-target-output`, type: 'prompt' }] },
-})
 
 const model: GraphNode = {
   id: 'model1',

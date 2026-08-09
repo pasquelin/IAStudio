@@ -7,11 +7,13 @@
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
- * A surface panels can stand on: one of the six workspaces, or the home screen.
+ * A surface panels can stand on: one of the workspaces, or the home screen.
  *
- * The home is deliberately NOT a seventh `WorkspaceId` — that union drives the document kinds
- * and the workspace menu, and a workspace opening no document would be a fiction both have to
- * guard against. It only ever needed to be a place a panel can sit, which is this and no more.
+ * The home is deliberately NOT a `WorkspaceId`, and the criterion is what a workspace IS: a
+ * place that opens documents of a kind of its own. The graph is one — it opens `.graph` files —
+ * which is why it became an id of its own; the home opens the other spaces' documents and makes
+ * none, so a workspace opening no document would be a fiction the union has to guard against.
+ * It only ever needed to be a place a panel can sit, which is this and no more.
  */
 export type ToolSurface = WorkspaceId | 'home'
 
@@ -20,9 +22,9 @@ export const HOME_SURFACE = 'home'
 /**
  * Surfaces that share one arrangement of zones.
  *
- * The six workspaces share theirs on purpose: what is open is stored per zone, so a shelf opened
+ * The workspaces share theirs on purpose: what is open is stored per zone, so a shelf opened
  * in Image is still there in Video. The home shares with none — it never stands beside a
- * workspace, and its left column holds the Explorer where the six hold generation. One state for
+ * workspace, and its left column holds the Explorer where they hold generation. One state for
  * both would make closing the Explorer close the Models panel, and naming it overwrite the panel
  * the user had named there.
  */
@@ -57,7 +59,7 @@ export type ToolId =
  * else may sit there, and neither sits anywhere else — `tool.test.ts` enforces both directions.
  *
  * The whole column, not a half of it: generating is the one thing every space does, so it gets
- * the same place in all six, under the same button that creates a document.
+ * the same place in each, under the same button that creates a document.
  */
 export const GENERATION_TOOLS: readonly ToolId[] = ['models', 'generator']
 
@@ -98,12 +100,13 @@ export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
  */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The left column is generation, and only generation, in every space: the same two panels in
-  // the same place, right under the button that makes a document.
+  // the same place, right under the button that makes a document. The graph included — it
+  // belongs to no model family, which is not the same as having no model to choose.
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
   { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
 
   // The home has no document to generate into, so the left column is free there — and the
-  // documents are what one opens the studio to reach. Same panel and same half as in the six
+  // documents are what one opens the studio to reach. Same panel and same half as in the
   // spaces, one column over: the home offers no right-hand column for it to keep.
   { id: 'explorer', zone: 'left', slot: 'primary', surfaces: [HOME_SURFACE] },
 
@@ -127,7 +130,7 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'assets', zone: 'right', slot: 'primary', surfaces: ['video', 'audio'] },
   { id: 'explorer', zone: 'right', slot: 'primary', surfaces: WORKSPACE_IDS },
   // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
-  // lists the documents of the project in all six, which is a different question.
+  // lists the documents of the project in every space, which is a different question.
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', surfaces: ['3d'] },
@@ -148,7 +151,7 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
     id: 'assets',
     zone: 'bottom',
     slot: 'primary',
-    surfaces: ['image', '3d', 'textures', 'skyboxes'],
+    surfaces: ['image', '3d', 'textures', 'skyboxes', 'graph'],
   },
   // The band is the montage's, across the whole width — that is how a montage is read, in Audio
   // as in Video.

@@ -6,7 +6,7 @@ import { SceneTree } from './SceneTree'
 
 /**
  * The outliner of the scene in front. Its own tool rather than a face of the Explorer: the
- * Explorer lists the documents of the project, which is a different question asked in all six
+ * Explorer lists the documents of the project, which is a different question asked everywhere
  * workspaces — and the panel that answered both answered neither outside 3D.
  */
 export function Scene() {

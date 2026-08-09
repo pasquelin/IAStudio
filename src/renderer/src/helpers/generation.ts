@@ -1,6 +1,6 @@
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
-import type { ModelFamily } from '@shared/domain/model'
+import type { ModelScope } from '@shared/domain/model'
 import { revealTool } from '@/helpers/reveal-panel'
 import { useModels } from '@/stores/models'
 
@@ -34,11 +34,11 @@ function seedIn(body: Record<string, unknown>): number | undefined {
  * The seed is deliberately not part of it: replaying one asks for the picture one already has.
  */
 export function openGeneratorOn(
-  family: ModelFamily,
+  scope: ModelScope,
   modelId: string,
   params: Record<string, unknown>,
 ): void {
-  useModels.getState().prepare(family, modelId, params)
+  useModels.getState().prepare(scope, modelId, params)
   // The generator may well be closed — it is a tool window like any other.
   revealTool('generator')
 }

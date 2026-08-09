@@ -51,6 +51,14 @@ describe('model filters', () => {
   })
 
   /**
+   * Capability, tag and publisher are one family's own vocabulary; unioned over the ten they
+   * would list options that narrow nothing in common. Origin and period every model carries.
+   */
+  it('offers only the family-free facets to a space that browses them all', () => {
+    expect(facetsFor(null, identity).map(facet => facet.key)).toEqual([ORIGIN_FACET, PERIOD_FACET])
+  })
+
+  /**
    * Kling and Vidu publish video, Tripo publishes 3D. A flat list would offer, in the Image
    * workspace, a publisher whose only possible answer is "no result".
    */
@@ -92,6 +100,23 @@ describe('model filters', () => {
   describe('query', () => {
     it('always narrows to the workspace family', () => {
       expect(queryFrom(DEFAULT_COLLECTION_STATE, '3d', '')).toMatchObject({ family: '3d' })
+    })
+
+    /**
+     * Exact equality rather than three absences: the family is left OUT, never sent empty —
+     * the registry narrows whenever the key is there — and a capability the bar kept from
+     * another space goes with it, while origin and search, which every model carries, stay.
+     */
+    it('asks for the whole catalogue where the space belongs to no family', () => {
+      const state = stateWith({
+        selections: { [ORIGIN_FACET]: ['official'], [CAPABILITY_FACET]: ['txt2video'] },
+      })
+
+      expect(queryFrom(state, null, 'flux')).toEqual({
+        sort: 'relevance',
+        origin: 'official',
+        search: 'flux',
+      })
     })
 
     it('leaves out a search that is only whitespace', () => {

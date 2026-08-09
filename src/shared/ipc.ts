@@ -279,6 +279,7 @@ export type LogScope =
   | 'assets.reveal'
   | 'assets.open'
   | 'font.face'
+  | 'graph.node'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -298,6 +299,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.reveal',
   'assets.open',
   'font.face',
+  'graph.node',
 ]
 
 /** `LogEntry.scope` is a free string — the main process logs under its own names too. */

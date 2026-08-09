@@ -19,6 +19,9 @@ import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
 import { holdCanvas } from '@/spaces/image/canvas-hosts'
 import { useCanvases } from '@/stores/canvases'
 import { pushEdit } from '@/engines/audio/edits'
+import { addGraphNode, connectGraph } from '@/engines/graph/commands'
+import { textNode } from '@/engines/graph/graph-fixtures'
+import { useGraphs } from '@/stores/graphs'
 import { addClip } from '@/engines/timeline/commands'
 import { makeClip } from '@/engines/timeline/timeline-state'
 import { setSunAngles } from '@/engines/skybox/commands'
@@ -531,9 +534,9 @@ describe('an image document', () => {
 })
 
 /**
- * The three kinds that could not reach the disk before. What is checked is the whole round
- * trip rather than either half: a serializer and a reader that agree only with themselves
- * would pass two separate tests and still lose the document.
+ * The kinds a string holds. What is checked is the whole round trip rather than either half: a
+ * serializer and a reader that agree only with themselves would pass two separate tests and
+ * still lose the document.
  */
 describe('the kinds a string holds', () => {
   /** Writes to memory and reads back, which is what a project folder does. */
@@ -563,7 +566,7 @@ describe('the kinds a string holds', () => {
     })
   }
 
-  const open = async (workspace: 'video' | 'audio' | 'skyboxes'): Promise<string> => {
+  const open = async (workspace: 'video' | 'audio' | 'skyboxes' | 'graph'): Promise<string> => {
     const created = await useDocuments.getState().create(workspace)
     if (!created) throw new Error('expected a document')
     await restoreDocument(created.id)
@@ -614,6 +617,36 @@ describe('the kinds a string holds', () => {
     useSkyboxes.getState().drop(documentId)
     await restoreDocument(documentId)
     expect(useSkyboxes.getState().states[documentId]).toEqual(before)
+  })
+
+  /**
+   * The graph is read back through the same reader an imported workflow goes through, which
+   * drops what does not hold rather than failing — so a round trip that loses a node or an edge
+   * would look exactly like an editor opening normally.
+   */
+  it('carries a graph to disk and back, edges included', async () => {
+    diskBackedBridge('graph')
+    const documentId = await open('graph')
+
+    const graphs = useGraphs.getState()
+    graphs.runCommand(documentId, addGraphNode(textNode('text1')))
+    graphs.runCommand(documentId, addGraphNode(textNode('text2')))
+    graphs.runCommand(
+      documentId,
+      connectGraph({
+        source: 'text2',
+        target: 'text1',
+        sourceHandle: 'text2-source-prompt',
+        targetHandle: 'text1-target-output',
+      }),
+    )
+    const before = useGraphs.getState().states[documentId]
+    expect(before?.edges).toHaveLength(1)
+    await saveDocument(documentId)
+
+    useGraphs.getState().drop(documentId)
+    await restoreDocument(documentId)
+    expect(useGraphs.getState().states[documentId]).toEqual(before)
   })
 
   // The document opens clean: what is on screen is exactly what the disk holds.

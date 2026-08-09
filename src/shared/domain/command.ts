@@ -10,7 +10,7 @@ import type { WorkspaceId } from './workspace'
  * offers. Its bindings are the only ones that may clash with everything else, so they are the
  * only ones a conflict check treats as competing with every scope.
  */
-export type CommandScope = 'global' | 'scene' | 'sequence' | 'canvas' | 'skybox'
+export type CommandScope = 'global' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'graph'
 
 export type CommandId =
   | 'project.new'
@@ -98,6 +98,8 @@ export type CommandId =
   | 'skybox.probes'
   | 'skybox.undo'
   | 'skybox.redo'
+  | 'graph.undo'
+  | 'graph.redo'
 
 /**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
@@ -754,6 +756,20 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
+  command({
+    id: 'graph.undo',
+    scope: 'graph',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'graph.redo',
+    scope: 'graph',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
 ]
 
 export const COMMAND_SCOPES: readonly CommandScope[] = [
@@ -762,20 +778,26 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'sequence',
   'canvas',
   'skybox',
+  'graph',
 ]
 
 /**
- * What each workspace edits, when it edits something undoable. The three absent ones — Audio,
- * Textures, Skyboxes — have no history of their own, so the native undo keeps the key.
+ * What each workspace edits, when it edits something undoable. The absent ones — Audio and
+ * Textures — have no history of their own, so the native undo keeps the key.
  *
  * Declared rather than derived: the menu is built in the main process from a workspace id, and
  * it has to name the exact command the surface in front is listening for.
+ *
+ * A workspace whose store DOES hold a history and is missing here is the one failure this table
+ * can have, and it is silent: the native role keeps the accelerator, so ⌘Z never reaches the
+ * window. It cost Skyboxes once and the graph once — `command.test.ts` now names them all.
  */
 const SCOPE_BY_WORKSPACE: Partial<Record<WorkspaceId, CommandScope>> = {
   image: 'canvas',
   '3d': 'scene',
   video: 'sequence',
   skyboxes: 'skybox',
+  graph: 'graph',
 }
 
 /** The surface a workspace edits through, or `null` where nothing is undoable. */

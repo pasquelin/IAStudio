@@ -25,12 +25,20 @@ export const PERIOD_FACET = 'period'
 /** Translates a key into user text. Taking it as an argument keeps this module renderless. */
 type Translate = (key: string) => string
 
+/** A family's own vocabulary — nothing where a surface browses every family at once. */
+function ownedBy(
+  table: Record<ModelFamily, readonly string[]>,
+  family: ModelFamily | null,
+): readonly string[] {
+  return family ? table[family] : []
+}
+
 /**
  * The facets the API can actually answer. Category, author, rating and generation time are
  * absent on purpose: measured over the 642 public models, `class`, `performanceStats` and the
  * author name come back empty on every single one — a filter for them would filter nothing.
  */
-export function facetsFor(family: ModelFamily, t: Translate): FacetDescriptor[] {
+export function facetsFor(family: ModelFamily | null, t: Translate): FacetDescriptor[] {
   const facets: FacetDescriptor[] = [
     {
       key: ORIGIN_FACET,
@@ -42,7 +50,7 @@ export function facetsFor(family: ModelFamily, t: Translate): FacetDescriptor[] 
     },
   ]
 
-  const capabilities = CAPABILITIES_BY_FAMILY[family]
+  const capabilities = ownedBy(CAPABILITIES_BY_FAMILY, family)
   if (capabilities.length) {
     facets.push({
       key: CAPABILITY_FACET,
@@ -51,7 +59,7 @@ export function facetsFor(family: ModelFamily, t: Translate): FacetDescriptor[] 
     })
   }
 
-  const tags = TAGS_BY_FAMILY[family]
+  const tags = ownedBy(TAGS_BY_FAMILY, family)
   if (tags.length) {
     // Tags are the publishers' own words — untranslated on purpose, and matched as written.
     facets.push({
@@ -62,7 +70,7 @@ export function facetsFor(family: ModelFamily, t: Translate): FacetDescriptor[] 
   }
 
   // The publisher is a tag like any other, so both facets narrow through the same parameter.
-  const publishers = PUBLISHERS_BY_FAMILY[family]
+  const publishers = ownedBy(PUBLISHERS_BY_FAMILY, family)
   if (publishers.length) {
     facets.push({
       key: PUBLISHER_FACET,
@@ -114,20 +122,27 @@ function chosen<T extends string>(
  * Every value is checked against what THIS family offers. The bar's state is shared by all
  * workspaces, so a capability picked under Image survives a switch to 3D: the menu no longer
  * lists it and shows nothing selected, while the query still carried it and emptied the panel.
+ *
+ * A `null` family is the whole catalogue, and the family is then left OUT of the query rather
+ * than sent empty: the registry narrows on `family` only when it is there.
  */
-export function queryFrom(state: CollectionState, family: ModelFamily, search: string): ModelQuery {
-  const capabilities = offered(state, CAPABILITY_FACET, CAPABILITIES_BY_FAMILY[family])
+export function queryFrom(
+  state: CollectionState,
+  family: ModelFamily | null,
+  search: string,
+): ModelQuery {
+  const capabilities = offered(state, CAPABILITY_FACET, ownedBy(CAPABILITIES_BY_FAMILY, family))
   // One parameter for both: the API matches a publisher exactly as it matches any other tag.
   const tags = [
-    ...offered(state, TAG_FACET, TAGS_BY_FAMILY[family]),
-    ...offered(state, PUBLISHER_FACET, PUBLISHERS_BY_FAMILY[family]),
+    ...offered(state, TAG_FACET, ownedBy(TAGS_BY_FAMILY, family)),
+    ...offered(state, PUBLISHER_FACET, ownedBy(PUBLISHERS_BY_FAMILY, family)),
   ]
   const origin = chosen(state, ORIGIN_FACET, MODEL_ORIGINS)
   const since = chosen<ModelPeriod>(state, PERIOD_FACET, MODEL_PERIODS)
   const trimmed = search.trim()
 
   return {
-    family,
+    ...(family ? { family } : {}),
     sort: MODEL_SORTS.find(candidate => candidate === state.sort) ?? 'relevance',
     ...(trimmed ? { search: trimmed } : {}),
     ...(origin ? { origin } : {}),

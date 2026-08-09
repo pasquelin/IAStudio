@@ -53,6 +53,19 @@ export function isGraphNodeType(value: unknown): value is GraphNodeType {
 }
 
 /**
+ * `workflow` is reserved in a reference: it names the inputs of the workflow itself, and the
+ * validator does not check it against node ids. A node called `workflow` would silently steal
+ * every reference to them.
+ *
+ * A rule of the FORMAT, so it lives beside the format rather than in the mutations: the reader
+ * is what enforces it on a file, and the reader is in the opening chunk — reaching into
+ * `engines/graph/` for this one predicate dragged the whole mutation engine in with it.
+ */
+export const RESERVED_NODE_ID = 'workflow'
+
+export const isReservedNodeId = (id: string): boolean => id === RESERVED_NODE_ID
+
+/**
  * An input port, on the LEFT of a node. `type` may be a list, which means the port is
  * polymorphic and accepts any of them — that is what the connection check and the port colours
  * are made of. `subHandles` are the ports nested under one, as a model's grouped inputs are.
@@ -94,7 +107,20 @@ export type GraphPosition = { x: number; y: number }
  */
 export type GraphNodeBody =
   | { type: 'text'; data: GraphNodeData & { value?: string } }
-  | { type: 'stickyNote'; data: GraphNodeData & { value?: string } }
+  /**
+   * Its text is `content`, NOT `value` — the field the other two use. Read off a published App
+   * on 9 August 2026, where the note also carries its own colour and text size. Named `value`
+   * here until then, which drew every imported note blank.
+   */
+  | {
+      type: 'stickyNote'
+      data: GraphNodeData & {
+        content?: string
+        backgroundColor?: string
+        backgroundColorOpacity?: number
+        fontSize?: string
+      }
+    }
   | {
       type: 'asset'
       data: GraphNodeData & {
