@@ -7,6 +7,7 @@ import {
   type SettingSectionEntry,
 } from '@shared/domain/settings-registry'
 import { AccountSettings } from './AccountSettings'
+import { DictationSettings } from './DictationSettings'
 import { MediaSettings } from './MediaSettings'
 import { ShortcutsSettings } from './ShortcutsSettings'
 import { ModelFamilySettings } from './ModelFamilySettings'
@@ -29,6 +30,7 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   account: AccountSettings,
   shortcuts: ShortcutsSettings,
   media: MediaSettings,
+  dictation: DictationSettings,
   'generation.image': () => <ModelFamilySettings family="image" />,
   'generation.video': () => <ModelFamilySettings family="video" />,
   'generation.3d': () => <ModelFamilySettings family="3d" />,

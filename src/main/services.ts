@@ -537,7 +537,7 @@ export function createServices(settings: SettingsStore): Services {
       }),
     openEngine: openSttProcess,
     emit: event => broadcast(EVENTS.dictation, event),
-    log: message => log.error('dictation', message),
+    log: (level, message) => log[level]('dictation', message),
     join,
     now: Date.now,
     schedule: (run, delayMs) => {
