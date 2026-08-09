@@ -1,5 +1,5 @@
 import { mdiAlertCircleOutline, mdiHistory } from '@mdi/js'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flyout } from '@/design/Flyout'
 import { UiIcon } from '@/design/UiIcon'
@@ -23,6 +23,7 @@ export function ActivityStatus() {
   const failures = useActivity(failureCount)
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const [open, setOpen] = useState(false)
+  const close = useCallback(() => setOpen(false), [])
 
   return (
     <>
@@ -45,7 +46,7 @@ export function ActivityStatus() {
       </button>
 
       {open && (
-        <Flyout anchor={anchor} placement="above">
+        <Flyout anchor={anchor} placement="above" onDismiss={close}>
           <div className="flex h-80 w-96 flex-col">
             <ActivityList />
           </div>

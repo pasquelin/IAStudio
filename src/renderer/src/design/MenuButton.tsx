@@ -20,6 +20,12 @@ export type MenuButtonProps = Pick<
    * menu only offers to switch, and opening it on every click would fight the armed tool.
    */
   opensOnClick: boolean
+  /**
+   * Whether the rows really are menu items. False for the one caller whose flyout holds sliders:
+   * `role="menu"` over anything but menu items sends a screen reader looking for rows to step
+   * through, and finding none.
+   */
+  menu?: boolean
 }
 
 /**
@@ -33,6 +39,7 @@ export function MenuButton({
   rows,
   onClick,
   opensOnClick,
+  menu = true,
   ...button
 }: MenuButtonProps) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
@@ -51,7 +58,7 @@ export function MenuButton({
       />
 
       {flyout.showing && (
-        <Flyout anchor={anchor} {...flyout.flyoutProps}>
+        <Flyout anchor={anchor} role={menu ? 'menu' : undefined} {...flyout.flyoutProps}>
           {rows(flyout.close)}
         </Flyout>
       )}

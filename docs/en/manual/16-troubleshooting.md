@@ -24,6 +24,9 @@ names the object involved and says what failed.
 Filter by **level** — information, warning, failure — or by **topic**, and **Show everything**
 releases the filters.
 
+The panel closes three ways: a click beside it, `Escape`, or switching to another application.
+Clicking the icon again works too. The same holds for the generations bar to its left.
+
 **A failure also raises a toast** in the corner, which does not fade on its own. If you missed
 it, the red counter in the status line holds it until you open the journal.
 

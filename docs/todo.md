@@ -479,7 +479,7 @@ même moitié et la même rangée de rail partout, ce que l'invariant existe pr�
 
 # 3. Les gestes qui n'aboutissent pas
 
-Quatre entrées. La première échoue **complètement et en silence** ; les autres ne se constatent qu'en
+Trois entrées. La première échoue **complètement et en silence** ; les autres ne se constatent qu'en
 lâchant la souris.
 
 ## 3.1 La dictée — le geste demandé n'a jamais existé
@@ -527,50 +527,20 @@ devine.
 ## 3.2 Les surcouches flottantes — un seul lot, trois composants
 
 **Regroupées** : `Flyout`, `ContextMenu` et `MenuRow` sont le même sous-système du design
-system, l'entrée 21 demande déjà de corriger le rôle de `Flyout` dans le même geste, et le
-remède des deux entrées est le même patron de focus et de rejet. Les traiter séparément
-reviendrait à écrire trois fois la gestion d'`Échap`.
+system, et ce qui reste ouvert ici est d'un seul tenant — donner à ces surfaces les manières
+d'un menu au clavier. Les traiter séparément reviendrait à écrire deux fois la navigation aux
+flèches.
 
-> **Une troisième dette entre dans ce lot** : `design/MenuRow.tsx` n'expose aucun
+> **Le rejet est livré** (`feat/flyout-dismiss`, 9 août 2026) : `useDismiss` porte les trois
+> sorties — pression à côté, `Échap`, fenêtre qui perd le focus — et `Flyout` l'offre en option
+> à ses appelants qui n'ouvrent pas au survol. `Flyout` ne pose plus `role="menu"` d'office non
+> plus : le rôle se déclare, et le seul appelant qui héberge des curseurs ne le déclare pas.
+> **Ne pas re-signaler ces deux-là.** Ce qui reste de `Flyout` est le clavier : aucun piège de
+> focus, aucune navigation aux flèches.
+
+> **Une deuxième dette entre dans ce lot** : `design/MenuRow.tsx` n'expose aucun
 > `aria-checked` — aucun lecteur d'écran ne dit quelle ligne est active, dans **tous** les menus
 > du studio.
-
-### 21. Le volet du journal ne se ferme pas au clic à côté
-
-**Le geste attendu.** Cliquer à côté du volet du journal le referme. `Échap` aussi. Passer à une autre application
-aussi.
-
-**Vu le 9 août 2026, capture à l'appui.** Un clic en dehors du volet devrait le refermer. La seule
-sortie est de recliquer sur « 1 échec » — ce que personne n'a le réflexe de faire : c'est un
-indicateur d'état, pas un bouton de fermeture.
-
-**`Flyout` ne ferme rien, par construction.** Sur ses cinq appelants, deux gèrent, deux ne gèrent pas :
-
-| Appelant | Comment il ferme |
-|---|---|
-| `MenuButton`, `AccountSelect` | `useHoverFlyout` — le pointeur sort, ça ferme, avec période de grâce |
-| **`ActivityStatus`, `JobsStatus`** | **un `useState` et le clic du bouton, rien d'autre** |
-
-C'est donc **deux volets**, pas un : la barre de jobs a exactement le même défaut, moins souvent vu.
-
-**Le remède est déjà écrit, ailleurs.** `ContextMenu` fait le travail complet, avec ses raisons en
-commentaire : `pointerdown` **en capture** — « a menu that survives until mouseup stays under the
-pointer while the surface behind it has already reacted to the press » —, `Escape`, `window.blur`, et
-la garde qui distingue un clic **dans** le menu d'un clic dehors. Il n'y a rien à concevoir : il y a à
-partager.
-
-> **Le piège du remède rapide** : ne pas poser ce comportement dans `Flyout` d'office. Deux de ses
-> appelants ouvrent et ferment au survol, avec une période de grâce — un `pointerdown` global ajouté
-> sous eux se battrait avec. Une prop de rejet optionnelle, ou un hook que les deux volets appellent.
-
-**Trois sorties valent mieux qu'une** : le clic à côté, `Échap`, et la fenêtre qui perd le focus. La
-troisième compte plus qu'il n'y paraît dans un studio.
-
-> **À corriger dans le même geste** : `Flyout` pose `role="menu"` sur son conteneur alors qu'il
-> héberge des `role="group"` et des `<ul>`, et il n'implémente ni `Échap`, ni piège de focus, ni
-> navigation aux flèches. Sous peine de laisser un menu qui n'en est pas un.
-
----
 
 ### 32. Un menu contextuel ne se prend jamais au clavier
 

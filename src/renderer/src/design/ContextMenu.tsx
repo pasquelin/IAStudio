@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
+import { useDismiss } from '@/hooks/useDismiss'
 import { MENU_SURFACE } from './styles'
 
 export type ContextMenuProps = {
@@ -24,28 +25,8 @@ const MARGIN = 8
 export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
   const menu = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    const dismiss = (event: Event): void => {
-      // A click inside is a row being chosen; the row closes the menu itself.
-      if (event.target instanceof Node && menu.current?.contains(event.target)) return
-      onClose()
-    }
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose()
-    }
-
-    // `pointerdown` rather than `click`: a menu that survives until mouseup stays under the
-    // pointer while the surface behind it has already reacted to the press.
-    document.addEventListener('pointerdown', dismiss, true)
-    document.addEventListener('keydown', onKey)
-    window.addEventListener('blur', onClose)
-
-    return () => {
-      document.removeEventListener('pointerdown', dismiss, true)
-      document.removeEventListener('keydown', onKey)
-      window.removeEventListener('blur', onClose)
-    }
-  }, [onClose])
+  // A press inside is a row being chosen; the row closes the menu itself.
+  useDismiss(onClose, menu)
 
   // Placed through a callback ref rather than state, as `Flyout` does: measuring in an effect
   // would draw the menu once off-screen and then move it. Memoised because React re-runs a

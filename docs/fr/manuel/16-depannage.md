@@ -24,6 +24,9 @@ chercher plus loin : il nomme l’objet en cause et dit ce qui a échoué.
 Filtrez par **niveau** — information, avertissement, échec — ou par **sujet**, et **Tout
 afficher** relâche les filtres.
 
+Le volet se referme de trois façons : un clic à côté, `Échap`, ou le passage à une autre
+application. Recliquer l’icône marche aussi. C’est vrai de la barre des générations à sa gauche.
+
 **Un échec fait aussi apparaître une bulle** dans le coin, qui ne s’efface pas toute seule. Si
 vous ne l’avez pas vue, le compteur rouge de la ligne d’état la garde en mémoire jusqu’à ce que
 vous ouvriez le journal.

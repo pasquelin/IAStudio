@@ -450,6 +450,7 @@ function BrushControls({
         description={`${t('imageTools.brushSettingsHint')} — ${shortcuts.smaller} / ${shortcuts.larger}`}
         tooltip={TIP_RIGHT}
         opensOnClick
+        menu={false}
         // `useHoverFlyout` treats a single row as no menu at all.
         rowCount={BRUSH_FIELDS.length}
         rows={() => (
