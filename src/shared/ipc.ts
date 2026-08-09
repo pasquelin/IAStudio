@@ -1,6 +1,7 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
-import type { Asset, AssetChanges, AssetQuery } from './domain/asset'
+import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
+import type { FavoriteRecipe } from './domain/favorite'
 import type { CloudPage, CloudQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type {
@@ -79,6 +80,7 @@ export type Channels = {
   documentConfirmDelete: 'document:confirm-delete'
 
   assetsSearch: 'assets:search'
+  assetsCounts: 'assets:counts'
   assetsPeaks: 'assets:peaks'
   assetsReveal: 'assets:reveal'
   assetsSaveAudio: 'assets:save-audio'
@@ -90,6 +92,10 @@ export type Channels = {
   cloudPull: 'cloud:pull'
   cloudPush: 'cloud:push'
   cloudPlan: 'cloud:plan'
+
+  favoritesList: 'favorites:list'
+  favoritesPin: 'favorites:pin'
+  favoritesUnpin: 'favorites:unpin'
 
   activityRead: 'activity:read'
 
@@ -159,6 +165,7 @@ export const CHANNELS: Channels = {
   documentConfirmDelete: 'document:confirm-delete',
 
   assetsSearch: 'assets:search',
+  assetsCounts: 'assets:counts',
   assetsPeaks: 'assets:peaks',
   assetsReveal: 'assets:reveal',
   assetsSaveAudio: 'assets:save-audio',
@@ -170,6 +177,10 @@ export const CHANNELS: Channels = {
   cloudPull: 'cloud:pull',
   cloudPush: 'cloud:push',
   cloudPlan: 'cloud:plan',
+
+  favoritesList: 'favorites:list',
+  favoritesPin: 'favorites:pin',
+  favoritesUnpin: 'favorites:unpin',
 
   activityRead: 'activity:read',
 
@@ -453,6 +464,11 @@ export type StudioBridge = {
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
     /**
+     * How many assets of each kind the project holds — counted in SQL, so the answer is six
+     * numbers rather than the catalogue itself.
+     */
+    counts: () => Promise<AssetCounts>
+    /**
      * The waveform computed at ingest, as min/max pairs at `PEAKS_PER_SECOND`. Null when the
      * asset carries no sound, or when ffmpeg was missing when it was brought in.
      */
@@ -502,6 +518,17 @@ export type StudioBridge = {
     push: (assetIds: readonly string[]) => Promise<SyncOutcome[]>
     /** What a push or a pull would do, before it costs a single request. */
     plan: (assetIds: readonly string[], policy: SyncPolicy) => Promise<SyncPlan>
+  }
+  /** Recipes worth keeping, held outside every project — see `domain/favorite.ts`. */
+  favorites: {
+    list: () => Promise<FavoriteRecipe[]>
+    /**
+     * Pins what produced an asset of the open project. Answers the whole list, so a window never
+     * has to guess where the new one landed. An asset nobody generated has no recipe to keep,
+     * and the list comes back unchanged.
+     */
+    pin: (assetId: string) => Promise<FavoriteRecipe[]>
+    unpin: (id: string) => Promise<FavoriteRecipe[]>
   }
   /**
    * What the studio did, and what it failed to do — the surface it had none of.

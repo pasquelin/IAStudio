@@ -49,6 +49,7 @@ type ChannelMethod = {
   [CHANNELS.documentConfirmDelete]: StudioBridge['documents']['confirmDelete']
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
+  [CHANNELS.assetsCounts]: StudioBridge['assets']['counts']
   [CHANNELS.assetsPeaks]: StudioBridge['assets']['peaks']
   [CHANNELS.assetsReveal]: StudioBridge['assets']['reveal']
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
@@ -59,6 +60,10 @@ type ChannelMethod = {
   [CHANNELS.cloudPull]: StudioBridge['cloud']['pull']
   [CHANNELS.cloudPush]: StudioBridge['cloud']['push']
   [CHANNELS.cloudPlan]: StudioBridge['cloud']['plan']
+
+  [CHANNELS.favoritesList]: StudioBridge['favorites']['list']
+  [CHANNELS.favoritesPin]: StudioBridge['favorites']['pin']
+  [CHANNELS.favoritesUnpin]: StudioBridge['favorites']['unpin']
 
   [CHANNELS.activityRead]: StudioBridge['activity']['read']
 

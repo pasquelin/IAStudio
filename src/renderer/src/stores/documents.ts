@@ -32,8 +32,11 @@ type DocumentsState = {
    * tabs are open. `create` posts a descriptor without writing a file — deliberately, so a tab
    * opened and never typed in leaves nothing behind — and a reconciliation triggered by opening
    * the Explorer would evict exactly that document while its tab is still on screen.
+   *
+   * `after: 'own-write'` for a caller that has just written or deleted a file: the listing this
+   * shares otherwise may have started BEFORE that write, and would answer without it.
    */
-  relist: () => Promise<void>
+  relist: (after?: 'own-write') => Promise<void>
   /**
    * Reads the open project's folder and settles both halves: what exists, and which of those a
    * layout still shows. For a change of project — where dropping the documents of the previous
@@ -129,14 +132,26 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     if (get().activeId !== id) set({ activeId: id })
   },
 
-  relist: async () => {
-    const mine = ++generations.relist
-    const found = await listed()
-    // A second project opened while the first was still listing: the last answer to arrive is
-    // not necessarily the one that was asked for last.
-    if (mine !== generations.relist) return
+  relist: async after => {
+    // Callers that only want the folder share the listing already in flight rather than opening
+    // a second one: three surfaces ask on the same paint — the home's shelf, its tree, and the
+    // project that just opened — and each answer costs a round trip and a folder walk.
+    if (listing && after !== 'own-write') {
+      await listing
+      return
+    }
 
-    set({ stored: sorted(found) })
+    const mine = ++generations.relist
+    listing = listed()
+
+    try {
+      const found = await listing
+      // A second project opened while the first was still listing: the last answer to arrive is
+      // not necessarily the one that was asked for last.
+      if (mine === generations.relist) set({ stored: sorted(found) })
+    } finally {
+      listing = null
+    }
   },
 
   refresh: async () => {
@@ -211,6 +226,9 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
  * `refresh` exists for.
  */
 const generations = { relist: 0, refresh: 0 }
+
+/** The listing `relist` has in flight, shared by whoever asks while it is still travelling. */
+let listing: Promise<DocumentDescriptor[]> | null = null
 
 /**
  * Sorted by title rather than by whatever order the folder was read in: a listing that

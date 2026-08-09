@@ -86,6 +86,7 @@ const bridge: StudioBridge = {
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
+    counts: () => ipcRenderer.invoke(CHANNELS.assetsCounts),
     peaks: assetId => ipcRenderer.invoke(CHANNELS.assetsPeaks, assetId),
     reveal: assetId => ipcRenderer.invoke(CHANNELS.assetsReveal, assetId),
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
@@ -99,6 +100,11 @@ const bridge: StudioBridge = {
     pull: remoteAssetIds => ipcRenderer.invoke(CHANNELS.cloudPull, remoteAssetIds),
     push: assetIds => ipcRenderer.invoke(CHANNELS.cloudPush, assetIds),
     plan: (assetIds, policy) => ipcRenderer.invoke(CHANNELS.cloudPlan, assetIds, policy),
+  },
+  favorites: {
+    list: () => ipcRenderer.invoke(CHANNELS.favoritesList),
+    pin: assetId => ipcRenderer.invoke(CHANNELS.favoritesPin, assetId),
+    unpin: id => ipcRenderer.invoke(CHANNELS.favoritesUnpin, id),
   },
   activity: {
     read: query => ipcRenderer.invoke(CHANNELS.activityRead, query),

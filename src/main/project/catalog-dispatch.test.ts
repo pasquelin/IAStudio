@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { createCatalog, type Catalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
 import { dispatchCatalogRequest } from './catalog-dispatch'
-import type { Asset } from '@shared/domain/asset'
+import { emptyAssetCounts, type Asset } from '@shared/domain/asset'
 
 function catalogOf(): Catalog {
   return createCatalog(openMemoryDatabase())
 }
+
+const NO_ASSETS = emptyAssetCounts()
 
 const asset: Asset = {
   id: 'asset-1',
@@ -73,6 +75,24 @@ describe('dispatchCatalogRequest', () => {
     expect(response).toEqual({ id: 4, ok: true, value: [asset] })
   })
 
+  it('counts each kind without carrying a single row back', () => {
+    const catalog = catalogOf()
+    dispatchCatalogRequest(catalog, { id: 1, op: 'add', asset })
+    dispatchCatalogRequest(catalog, {
+      id: 2,
+      op: 'add',
+      asset: { ...asset, id: 'b', type: 'mesh' },
+    })
+
+    const response = dispatchCatalogRequest(catalog, { id: 3, op: 'countByType' })
+
+    expect(response).toEqual({
+      id: 3,
+      ok: true,
+      value: { ...NO_ASSETS, image: 1, mesh: 1 },
+    })
+  })
+
   // The worker must answer every request: a thrown query that killed the message loop would
   // leave the main process waiting on a promise nobody ever settles.
   it('reports a failure as a response rather than throwing', () => {
@@ -84,6 +104,7 @@ describe('dispatchCatalogRequest', () => {
       findByHash: () => null,
       findByRemoteId: () => null,
       search: () => [],
+      countByType: () => NO_ASSETS,
       remove: () => {},
       appendActivity: () => [],
       readActivity: () => [],
@@ -104,6 +125,7 @@ describe('dispatchCatalogRequest', () => {
       search: () => {
         throw new Error('malformed query')
       },
+      countByType: () => NO_ASSETS,
       remove: () => {},
       appendActivity: () => [],
       readActivity: () => [],

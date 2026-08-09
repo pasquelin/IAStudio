@@ -68,6 +68,23 @@ describe('project handlers', () => {
     expect(found).toEqual([expect.objectContaining({ name: 'A001' })])
   })
 
+  // Six numbers rather than the catalogue: the home draws a counter per kind, and reading the
+  // rows to count them would carry a whole project across the boundary to print six integers.
+  it('answers how many of each kind the project holds', async () => {
+    await catalog.add(asset())
+    await catalog.add(asset({ id: 'asset-2', type: 'image' }))
+    registerProjectHandlers(deps(catalog))
+
+    await expect(invoke(CHANNELS.assetsCounts)).resolves.toEqual({
+      image: 1,
+      video: 1,
+      audio: 0,
+      mesh: 0,
+      texture: 0,
+      skybox: 0,
+    })
+  })
+
   it('shows a linked file where the user actually put it', async () => {
     await catalog.add(asset({ sourcePath: '/Volumes/Rushes/A001.mov' }))
     const injected = deps(catalog)

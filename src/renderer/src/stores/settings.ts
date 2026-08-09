@@ -16,6 +16,13 @@ type SettingsState = {
   auth: AuthState
   /** False until the main process has answered once — the defaults are a placeholder. */
   loaded: boolean
+  /**
+   * False until the key has been tried. Separate from `loaded` because it is a separate wait:
+   * reading the settings touches a file, while deciding whether a key works asks the API. A
+   * surface that took the initial `false` of `auth` for an answer would announce a missing key
+   * to someone who has one, then take it back a second later.
+   */
+  authKnown: boolean
 
   /** Loads the settings and follows the changes other windows make. Returns the unsubscribe. */
   connect: () => Promise<() => void>
@@ -35,6 +42,7 @@ export const useSettings = create<SettingsState>()((set, get) => ({
   settings: DEFAULT_SETTINGS,
   auth: UNKNOWN_AUTH,
   loaded: false,
+  authKnown: false,
 
   connect: async () => {
     const bridge = getBridge()
@@ -46,19 +54,25 @@ export const useSettings = create<SettingsState>()((set, get) => ({
       set({ settings })
     })
 
-    try {
-      const [settings, auth] = await Promise.all([
-        bridge.settings.read(),
-        bridge.settings.authState(),
-      ])
-
+    // Applied as each answers rather than together: the settings come off a file and the key is
+    // tried against the API, so waiting for both would hold the whole window on the slower one.
+    // A failure on either side leaves the defaults on screen and the subscription standing —
+    // throwing here would strand the listener with nobody holding the way to remove it.
+    const readSettings = bridge.settings
+      .read()
       // A change landing while the read was in flight is newer than what the read answered:
       // applying the snapshot on top of it would put the window back one version.
-      set({ auth, loaded: true, ...(pushed ? {} : { settings }) })
-    } catch {
-      // The defaults stay on screen, and the subscription still stands: throwing here would
-      // strand the listener with nobody holding the way to remove it.
-    }
+      .then(settings => set({ loaded: true, ...(pushed ? {} : { settings }) }))
+      // Answered, badly. The defaults stay on screen — and surfaces that wait to be told, like
+      // the home, must not wait for the rest of the session.
+      .catch(() => set({ loaded: true }))
+
+    const readAuth = bridge.settings
+      .authState()
+      .then(auth => set({ auth, authKnown: true }))
+      .catch(() => {})
+
+    await Promise.all([readSettings, readAuth])
 
     return stop
   },
@@ -76,7 +90,7 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     if (!bridge) return get().auth
 
     const auth = await bridge.settings.authState()
-    set({ auth })
+    set({ auth, authKnown: true })
     return auth
   },
 

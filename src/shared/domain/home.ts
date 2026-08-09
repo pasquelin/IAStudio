@@ -9,11 +9,30 @@
 /** What a section cannot be drawn without. A section with none is drawable at all times. */
 export type HomeRequirement = 'api' | 'project'
 
-export type HomeSectionId = 'spotlight' | 'tools' | 'projects' | 'documents' | 'jobs' | 'activity'
+export type HomeSectionId =
+  | 'explorer'
+  | 'spotlight'
+  | 'tools'
+  | 'projects'
+  | 'creations'
+  | 'byMode'
+  | 'favorites'
+  | 'library'
+  | 'documents'
+  | 'jobs'
+  | 'activity'
+
+/**
+ * Which of the home's two columns a section stands in. The aside is a narrow rail down the left,
+ * for what one keeps an eye on while reading the page rather than what one reads in turn.
+ */
+export type HomePlace = 'main' | 'aside'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
   requires: readonly HomeRequirement[]
+  /** Absent means the page's own column: the aside is the exception, not the rule. */
+  place?: HomePlace
   /**
    * Sections the user may not hide. Together they are what keeps the screen from ever being
    * empty — which is why `home.test.ts` demands that every pinned section require nothing.
@@ -28,9 +47,17 @@ export type HomeSectionEntry = {
  * that draws it: an id nothing renders is a line in the settings nobody can act on.
  */
 export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
+  { id: 'explorer', requires: ['project'], place: 'aside' },
   { id: 'spotlight', requires: [], pinned: true },
   { id: 'tools', requires: [], pinned: true },
   { id: 'projects', requires: [], pinned: true, defaultLimit: 12 },
+  { id: 'creations', requires: ['project'], defaultLimit: 12 },
+  // No limit: the band is one counter per kind, and there are exactly six kinds.
+  { id: 'byMode', requires: ['project'] },
+  // Requires nothing: a recipe is kept outside every project, and the shelf is the one place
+  // that still has something to show when no folder is open.
+  { id: 'favorites', requires: [], defaultLimit: 12 },
+  { id: 'library', requires: ['api'], defaultLimit: 12 },
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
   { id: 'activity', requires: ['project'], defaultLimit: 6 },
@@ -55,6 +82,11 @@ export type HomeSectionSetting = {
 
 export function homeSectionOf(id: unknown): HomeSectionEntry | null {
   return HOME_SECTIONS.find(entry => entry.id === id) ?? null
+}
+
+/** Which column a section belongs to. One place per id, so the two columns cannot both claim it. */
+export function homePlaceOf(id: HomeSectionId): HomePlace {
+  return homeSectionOf(id)?.place ?? 'main'
 }
 
 function settingOf(entry: HomeSectionEntry): HomeSectionSetting {
@@ -127,6 +159,40 @@ export function visibleHomeSections(
 export type HomeMove = 'up' | 'down'
 
 /**
+ * Where a section would land if it moved, or -1 when it has nowhere to go.
+ *
+ * The neighbour it swaps with is the next one IN THE SAME COLUMN, not the next in the list: one
+ * order holds both columns, and stepping over the section that happens to sit between them would
+ * be a menu row that appears to do nothing.
+ */
+function neighbourOf(
+  sections: readonly HomeSectionSetting[],
+  from: number,
+  place: HomePlace,
+  move: HomeMove,
+): number {
+  const step = move === 'up' ? -1 : 1
+
+  for (let at = from + step; at >= 0 && at < sections.length; at += step) {
+    const setting = sections[at]
+    if (setting && homePlaceOf(setting.id) === place) return at
+  }
+
+  return -1
+}
+
+/** Whether the menu may offer the move at all — a row that cannot act is disabled, not silent. */
+export function canMoveHomeSection(
+  stored: readonly HomeSectionSetting[],
+  id: HomeSectionId,
+  move: HomeMove,
+): boolean {
+  const sections = homeSections(stored)
+  const from = sections.findIndex(setting => setting.id === id)
+  return from !== -1 && neighbourOf(sections, from, homePlaceOf(id), move) !== -1
+}
+
+/**
  * The order after a section has been moved one place. Unchanged at either end: a section that
  * cannot move is a disabled row in the menu, never a write that quietly does nothing.
  */
@@ -137,9 +203,10 @@ export function movedHomeSection(
 ): HomeSectionSetting[] {
   const sections = homeSections(stored)
   const from = sections.findIndex(setting => setting.id === id)
-  const to = move === 'up' ? from - 1 : from + 1
+  if (from === -1) return sections
 
-  if (from === -1 || to < 0 || to >= sections.length) return sections
+  const to = neighbourOf(sections, from, homePlaceOf(id), move)
+  if (to === -1) return sections
 
   const moving = sections[from]
   const displaced = sections[to]

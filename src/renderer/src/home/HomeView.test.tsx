@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { DEFAULT_HOME_SECTIONS, visibleHomeSections } from '@shared/domain/home'
+import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -29,6 +29,10 @@ const PROJECT = {
 function setSettings(home = DEFAULT_HOME_SECTIONS, authenticated = false): void {
   useSettings.setState(state => ({
     auth: authenticated ? { authenticated: true } : { authenticated: false, reason: 'missing' },
+    // A studio that has already answered. The home says nothing before it has — see the
+    // spotlight's own suite.
+    authKnown: true,
+    loaded: true,
     settings: {
       ...state.settings,
       home: { enabled: true, sections: [...home] },
@@ -40,7 +44,7 @@ function setSettings(home = DEFAULT_HOME_SECTIONS, authenticated = false): void 
 beforeEach(() => {
   installFakeBridge()
   setSettings()
-  useProject.setState({ project: null })
+  useProject.setState({ project: null, known: true })
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
 })
 
@@ -70,7 +74,7 @@ describe('the home', () => {
   })
 
   it('offers the documents of the project once one is open', () => {
-    useProject.setState({ project: PROJECT })
+    useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({
       documents: { a: POSTER_DOCUMENT },
       stored: [POSTER_DOCUMENT],
@@ -79,7 +83,9 @@ describe('the home', () => {
     render(<HomeView />)
 
     expect(screen.getByText('Vos documents')).toBeInTheDocument()
-    expect(screen.getByText('Poster')).toBeInTheDocument()
+    // The shelf's own card, not the tree in the aside: both list the folder, and this case is
+    // about the band.
+    expect(screen.getByRole('button', { name: /Poster/ })).toBeInTheDocument()
     expect(screen.getByText('Reprendre où vous en étiez')).toBeInTheDocument()
   })
 
@@ -90,11 +96,54 @@ describe('the home', () => {
    */
   it('still opens on a band when a key is connected and the project is empty', () => {
     setSettings(DEFAULT_HOME_SECTIONS, true)
-    useProject.setState({ project: PROJECT })
+    useProject.setState({ project: PROJECT, known: true })
     render(<HomeView />)
 
     expect(screen.getByText('Tout est prêt')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Créer une image' })).toBeInTheDocument()
+  })
+
+  /**
+   * The aside is the second column, and it is a column: what stands in it is declared by the
+   * shared registry like everything else, so a second panel is a line there rather than a new
+   * layout here.
+   */
+  it('stands the tree of documents beside the page, not above it', () => {
+    useProject.setState({ project: PROJECT, known: true })
+    useDocuments.setState({ stored: [POSTER_DOCUMENT] })
+    const { container } = render(<HomeView />)
+
+    const aside = container.querySelector('aside')
+    expect(aside).not.toBeNull()
+    expect(aside?.textContent).toContain('Explorateur')
+    expect(aside?.textContent).toContain('Poster')
+  })
+
+  /**
+   * Both waits are file reads, and both decide what the page holds: which project is open, and
+   * which sections this person kept in which order. Drawing before either lays out one page and
+   * then reflows it into another — the flicker this guard exists to stop.
+   */
+  it('draws nothing at all until it knows what it is drawing', () => {
+    useProject.setState({ project: null, known: false })
+    const { container, rerender } = render(<HomeView />)
+    expect(container.textContent).toBe('')
+
+    useProject.setState({ known: true })
+    useSettings.setState({ loaded: false })
+    rerender(<HomeView />)
+    expect(container.textContent).toBe('')
+
+    useSettings.setState({ loaded: true })
+    rerender(<HomeView />)
+    expect(screen.getByText('Outils')).toBeInTheDocument()
+  })
+
+  it('leaves the aside out entirely when nothing stands in it', () => {
+    const { container } = render(<HomeView />)
+
+    // No project, so the tree has no folder to read — and an empty rail is worth no room.
+    expect(container.querySelector('aside')).toBeNull()
   })
 
   it('ends on a way forward rather than on the last shelf', () => {
@@ -112,15 +161,16 @@ describe('customising the home', () => {
    * first place is not something an opening banner does.
    */
   it('carries a menu on every titled band', () => {
-    render(<HomeView />)
+    useProject.setState({ project: PROJECT, known: true })
+    useDocuments.setState({ stored: [POSTER_DOCUMENT] })
+    const { container } = render(<HomeView />)
 
-    const titled = visibleHomeSections(DEFAULT_HOME_SECTIONS, {
-      authenticated: false,
-      hasProject: false,
-    }).filter(id => id !== 'spotlight')
-
+    // Counted off what is actually drawn, not off the registry: a section whose shelf is empty
+    // takes itself off the page, and it must take its heading and its menu with it.
+    const headings = container.querySelectorAll('h2')
+    expect(headings.length).toBeGreaterThan(0)
     expect(screen.getAllByRole('button', { name: 'Personnaliser cette section' })).toHaveLength(
-      titled.length,
+      headings.length,
     )
   })
 
@@ -130,7 +180,7 @@ describe('customising the home', () => {
         section.id === 'documents' ? { ...section, visible: false } : section,
       ),
     )
-    useProject.setState({ project: PROJECT })
+    useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     render(<HomeView />)
 

@@ -16,6 +16,13 @@ export default defineConfig({
     __COMMIT_HASH__: JSON.stringify('test'),
   },
   test: {
+    /**
+     * Three times the default. A rendering case with `userEvent` takes a few hundred milliseconds
+     * on an idle machine and several times that when the whole suite runs across every core —
+     * two of them started timing out at five seconds as the suite grew, and neither was slow for
+     * a reason anyone could act on. Long enough to tell a busy machine from a wedged test.
+     */
+    testTimeout: 15_000,
     // Without `include`, a file no test imports is absent from the report — deleting its tests
     // would RAISE the percentage. Budgets of uncovered items, not percentages: the same
     // percentage buys a handful of statements in a small module and hundreds in a large one,

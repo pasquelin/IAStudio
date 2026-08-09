@@ -17,6 +17,7 @@ export function memoryCatalog(file = ':memory:'): AsyncCatalog {
     findByHash: async hash => catalog.findByHash(hash),
     findByRemoteId: async remoteAssetId => catalog.findByRemoteId(remoteAssetId),
     search: async query => catalog.search(query),
+    countByType: async () => catalog.countByType(),
     remove: async assetId => catalog.remove(assetId),
     appendActivity: async entries => catalog.appendActivity(entries),
     readActivity: async query => catalog.readActivity(query),

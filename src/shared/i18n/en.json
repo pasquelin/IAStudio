@@ -511,6 +511,9 @@
     "model": "Model",
     "prompt": "Prompt",
     "seed": "Seed",
+    "pin": "Pin this recipe",
+    "pinned": "Recipe pinned",
+    "pinHint": "Keep it on the home screen, in every project",
     "regenerate": "Regenerate",
     "regenerateHint": "Open the generator with these parameters",
     "file": "File",
@@ -1463,9 +1466,14 @@
   },
   "home": {
     "sections": {
+      "explorer": "Explorer",
       "spotlight": "Where you were",
       "tools": "Tools",
       "projects": "Your projects",
+      "creations": "What you have made",
+      "byMode": "By kind",
+      "favorites": "Your recipes",
+      "library": "Your library",
       "documents": "Your documents",
       "jobs": "Running now",
       "activity": "Recent activity"
@@ -1492,6 +1500,15 @@
     },
     "documents": {
       "none": "This project holds no document yet. Pick a tool above to make one."
+    },
+    "creations": {
+      "recreate": "Make another one with {{model}}"
+    },
+    "library": {
+      "fetch": "Fetch \u201c{{name}}\u201d into the project"
+    },
+    "favorites": {
+      "unpin": "Take \u201c{{name}}\u201d off your recipes"
     },
     "spotlight": {
       "resume": "Pick up where you left off",

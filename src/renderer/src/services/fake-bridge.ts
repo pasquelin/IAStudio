@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import type { CloseChoice } from '@shared/domain/document'
+import { emptyAssetCounts } from '@shared/domain/asset'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { LogEntry, StudioBridge } from '@shared/ipc'
 
@@ -76,6 +77,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     assets: {
       search: () => Promise.resolve([]),
+      counts: () => Promise.resolve(emptyAssetCounts()),
       peaks: () => Promise.resolve(null),
       reveal: () => Promise.resolve(false),
       saveAudio: () => Promise.reject(new Error('no project')),
@@ -91,6 +93,12 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       plan: () =>
         Promise.resolve({ actions: [], summary: { push: 0, pull: 0, conflict: 0, skip: 0 } }),
       ...overrides.cloud,
+    },
+    favorites: {
+      list: () => Promise.resolve([]),
+      pin: () => Promise.resolve([]),
+      unpin: () => Promise.resolve([]),
+      ...overrides.favorites,
     },
     activity: {
       read: () => Promise.resolve([]),

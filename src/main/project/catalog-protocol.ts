@@ -1,5 +1,5 @@
 import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
-import type { Asset, AssetQuery } from '@shared/domain/asset'
+import type { Asset, AssetCounts, AssetQuery } from '@shared/domain/asset'
 
 /**
  * What the main process and the catalogue worker say to each other.
@@ -15,6 +15,7 @@ export type CatalogRequest =
   | { id: number; op: 'findByHash'; hash: string }
   | { id: number; op: 'findByRemoteId'; remoteAssetId: string }
   | { id: number; op: 'search'; query: AssetQuery }
+  | { id: number; op: 'countByType' }
   | { id: number; op: 'remove'; assetId: string }
   | { id: number; op: 'appendActivity'; entries: readonly ActivityDraft[] }
   | { id: number; op: 'readActivity'; query: ActivityQuery }
@@ -26,6 +27,7 @@ export type CatalogResults = {
   findByHash: Asset | null
   findByRemoteId: Asset | null
   search: Asset[]
+  countByType: AssetCounts
   remove: void
   appendActivity: ActivityEntry[]
   readActivity: ActivityEntry[]

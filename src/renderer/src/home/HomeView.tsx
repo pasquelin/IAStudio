@@ -1,9 +1,16 @@
 import { useTranslation } from 'react-i18next'
-import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/domain/home'
+import {
+  hiddenHomeSections,
+  homePlaceOf,
+  homeSections,
+  shownHomeSection,
+  type HomeSectionId,
+} from '@shared/domain/home'
 import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { HOME_COMPONENTS } from './home-registry'
@@ -19,25 +26,58 @@ import { useHomeSections } from './use-home-sections'
  */
 export function HomeView() {
   const sections = useHomeSections()
+  const projectKnown = useProject(state => state.known)
+  const settingsLoaded = useSettings(state => state.loaded)
+
+  // Nothing at all until the main process has said which project is open and which sections this
+  // person kept. Half the sections require a project, and the order is a setting: drawing first
+  // lays out three default bands and then reflows into nine in someone else's order — the aside
+  // appearing alone moves the whole column 264 px sideways.
+  //
+  // Both waits are file reads. The key is a request, and is left to settle under the page.
+  if (!projectKnown || !settingsLoaded) return <div className="h-full" />
+
+  const aside = sections.filter(id => homePlaceOf(id) === 'aside')
+  const main = sections.filter(id => homePlaceOf(id) !== 'aside')
 
   return (
     <div className="h-full overflow-x-hidden overflow-y-auto">
       {/* Bounded, and centred: shelves stretched across a 34" display stop being shelves. */}
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-8 px-6 py-6">
-        {sections.map(id => {
-          const Section = HOME_COMPONENTS[id]
-          return (
-            // Per section: a shelf that throws takes itself off the home, not the home with it.
-            <ErrorBoundary key={id}>
-              <Section />
-            </ErrorBoundary>
-          )
-        })}
+      <div className="mx-auto flex max-w-[1400px] gap-6 px-6 py-6">
+        {/* Withdrawn on a narrow window rather than stacked above the page: a rail one keeps an
+            eye on is not worth the first screenful when there is no room to put it beside. */}
+        {aside.length > 0 && (
+          <aside
+            className={cn(
+              'sticky top-0 hidden w-[240px] shrink-0 flex-col gap-8 self-start lg:flex',
+              // Bounded and scrollable from the start: a sticky column taller than the window
+              // hides its own foot, and nothing about the page's scroll can bring it back.
+              'max-h-[calc(100vh-3rem)] overflow-y-auto',
+            )}
+          >
+            <Column ids={aside} />
+          </aside>
+        )}
 
-        <Closing />
+        <div className="flex min-w-0 flex-1 flex-col gap-8">
+          <Column ids={main} />
+          <Closing />
+        </div>
       </div>
     </div>
   )
+}
+
+function Column({ ids }: { ids: readonly HomeSectionId[] }) {
+  return ids.map(id => {
+    const Section = HOME_COMPONENTS[id]
+    return (
+      // Per section: a shelf that throws takes itself off the home, not the home with it.
+      <ErrorBoundary key={id}>
+        <Section />
+      </ErrorBoundary>
+    )
+  })
 }
 
 /** The foot of the page: one sentence, two ways on. Nobody should reach the bottom and stop. */

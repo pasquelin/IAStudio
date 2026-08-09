@@ -319,8 +319,28 @@ export type AssetQuery = {
   syncStatus?: SyncStatus
   /** The siblings of one generation — the seven channels of a PBR pack. */
   groupId?: string
+  /**
+   * What a model produced, as opposed to what was imported. Only ever asked for affirmatively:
+   * "everything that was NOT generated" is a question no surface asks, and a branch nothing
+   * reaches is a branch nothing tests.
+   */
+  generated?: true
   limit?: number
   offset?: number
+}
+
+/**
+ * How many assets of each kind a project holds. Every kind is present, zero included: a counter
+ * that vanishes when it reaches nothing is a counter that reads as a bug rather than as a total.
+ */
+export type AssetCounts = Record<AssetType, number>
+
+/**
+ * A fresh tally at zero. A literal rather than built from `ASSET_TYPES`, so a seventh kind is a
+ * compile error here instead of a counter silently missing from five hand-written copies.
+ */
+export function emptyAssetCounts(): AssetCounts {
+  return { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0 }
 }
 
 /**
@@ -334,7 +354,34 @@ export type AssetChanges = {
 }
 
 export const ASSET_SCHEME = 'scenario'
-const ASSET_HOST = 'asset'
+export const ASSET_HOST = 'asset'
+
+/**
+ * `scenario://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
+ * keep their stills outside any project, so they answer on a host of their own.
+ */
+export function hostedUrl(host: string, id: string): string {
+  return `${ASSET_SCHEME}://${host}/${encodeURIComponent(id)}`
+}
+
+/** What a URL of the scheme names, or null when it is not one of ours. */
+export function hostedParts(url: string): { host: string; id: string } | null {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== `${ASSET_SCHEME}:`) return null
+
+    const id = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+    return id.length > 0 ? { host: parsed.hostname, id } : null
+  } catch {
+    return null
+  }
+}
+
+/** The id back out, or null when the URL names another host — which is not ours to serve. */
+export function hostedIdFromUrl(url: string, host: string): string | null {
+  const parts = hostedParts(url)
+  return parts?.host === host ? parts.id : null
+}
 
 /**
  * Where the renderer loads a local asset from. Derived from the identifier rather than asked
@@ -345,7 +392,7 @@ const ASSET_HOST = 'asset'
  * catalogue when it serves the scheme.
  */
 export function assetUrl(assetId: string): string {
-  return `${ASSET_SCHEME}://${ASSET_HOST}/${encodeURIComponent(assetId)}`
+  return hostedUrl(ASSET_HOST, assetId)
 }
 
 /**
@@ -359,13 +406,5 @@ export function posterUrl(asset: Asset): string | null {
 
 /** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */
 export function assetIdFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== `${ASSET_SCHEME}:` || parsed.hostname !== ASSET_HOST) return null
-
-    const id = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-    return id.length > 0 ? id : null
-  } catch {
-    return null
-  }
+  return hostedIdFromUrl(url, ASSET_HOST)
 }
