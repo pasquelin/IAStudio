@@ -134,6 +134,34 @@ icône dans le rail — qui ne dit aujourd’hui que « Apps » elle aussi —, 
 acceptant que le panneau ne s’explique pas. Les deux premiers coûtent une clé i18n dans chaque
 bundle.
 
+**La phrase qui a fini par expliquer**, et qui vaut d’être reprise telle quelle : la Génération,
+c’est **un modèle, une étape** ; une App, c’est **plusieurs modèles enchaînés, déjà montés par
+quelqu’un** — un seul formulaire, la chaîne entière tourne. « Coloring Page Maker » prend une
+photo et rend un coloriage ; derrière, plusieurs modèles se sont passé le relais.
+
+#### Et il passe à gauche — 9 août 2026
+
+**Une App produit des assets : c’est de la génération, donc la colonne de gauche.** C’est la
+règle du studio, celle des six espaces, et elle prime.
+
+**Le code portait la raison inverse, et elle est écrite noir sur blanc** dans `TOOL_PLACEMENTS` :
+« In the right column and **not** in the left one, which is reserved for the two generation
+panels: an App is a pipeline of its own, not a model the generator would fill a form for. »
+L’argument était que la gauche appartient aux **deux** panneaux de génération — choisir un
+modèle, remplir son formulaire — et qu’une App ne se choisit pas comme un modèle. Il est
+recevable et il est écarté : ce que l’utilisateur cherche à gauche, c’est **de quoi produire**,
+et une App en est.
+
+**Ce que le déplacement change concrètement.** La gauche est un `slot: 'primary'` où les panneaux
+**prennent leur tour** : `models` et `generator` s’y relaient déjà, `apps` ferait un troisième.
+Trois onglets dans une colonne au lieu de deux, et l’ordre de déclaration décide de celui qui
+s’ouvre par défaut — c’est `TOOL_PLACEMENTS` qui en décide, pas `DEFAULT_OPEN`. À vérifier à
+l’écran : la colonne de gauche ne doit pas devenir la pile où l’on cherche.
+
+**Et le commentaire part avec le panneau.** Une raison écrite pour une décision qui n’est plus
+prise est un piège pour la session suivante : elle le lira comme la règle en vigueur. Le
+remplacer par la nouvelle raison, en une ligne.
+
 > À savoir avant d’écrire cette phrase : le panneau ne montre **que les workflows publics**
 > (`privacy: 'public'`), délibérément. Un workflow privé appartient au compte qui l’a écrit, et
 > le studio n’a pas encore d’éditeur pour ça — c’est le node editor, § 4 de `REPRISE`. La
