@@ -1,18 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent, { PointerEventsCheckLevel, type UserEvent } from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
 import { ShortcutsSettings } from './ShortcutsSettings'
-
-/**
- * Given room to breathe. The panel is the heaviest tree the suite renders, and under
- * `--coverage` the one accessible-name query below measured between 1.0 s and 4.8 s on a tree
- * nobody had touched — near enough the 5 s default that `pnpm validate` failed on a loaded
- * machine and passed on an idle one, which is the worst way for a suite to be wrong.
- */
-vi.setConfig({ testTimeout: 20_000 })
 
 const staged = () => useSettingsDraft.getState().pending.shortcuts?.overrides
 

@@ -7,6 +7,17 @@ const alias = {
   '@': resolve('src/renderer/src'),
 }
 
+/**
+ * Three times the default. A rendering case with `userEvent` takes a few hundred milliseconds
+ * on an idle machine and several times that when the whole suite runs across every core — two
+ * of them started timing out at five seconds as the suite grew, and neither was slow for a
+ * reason anyone could act on. Long enough to tell a busy machine from a wedged test.
+ *
+ * Named because every project below has to repeat it: a project inherits nothing from the root
+ * `test` block, so the value written once governed nothing.
+ */
+const TEST_TIMEOUT = 15_000
+
 export default defineConfig({
   // Injected by `define` in electron.vite.config.ts, so a module reaching for one under vitest
   // would throw a bare ReferenceError. Development is the truthful answer here: the tests are
@@ -16,13 +27,7 @@ export default defineConfig({
     __COMMIT_HASH__: JSON.stringify('test'),
   },
   test: {
-    /**
-     * Three times the default. A rendering case with `userEvent` takes a few hundred milliseconds
-     * on an idle machine and several times that when the whole suite runs across every core —
-     * two of them started timing out at five seconds as the suite grew, and neither was slow for
-     * a reason anyone could act on. Long enough to tell a busy machine from a wedged test.
-     */
-    testTimeout: 15_000,
+    testTimeout: TEST_TIMEOUT,
     // Without `include`, a file no test imports is absent from the report — deleting its tests
     // would RAISE the percentage. Budgets of uncovered items, not percentages: the same
     // percentage buys a handful of statements in a small module and hundreds in a large one,
@@ -81,6 +86,10 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
+          // Repeated from the root block, which a project does NOT inherit: three guards that
+          // parse a whole folder failed announcing `timed out in 5000ms` under a config saying
+          // fifteen. The root value governs no project, so every project states its own.
+          testTimeout: TEST_TIMEOUT,
           include: ['src/{main,preload,shared}/**/*.test.ts'],
           setupFiles: ['src/main/test-setup.ts'],
         },
@@ -90,6 +99,7 @@ export default defineConfig({
         test: {
           name: 'renderer',
           environment: 'jsdom',
+          testTimeout: TEST_TIMEOUT,
           include: ['src/renderer/**/*.test.{ts,tsx}'],
           // Stylesheets are stubbed to an empty string by default, `?raw` included — which
           // silently empties the checks that read a rule back. Only the raw reads are spared;

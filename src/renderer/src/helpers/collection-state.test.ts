@@ -74,6 +74,24 @@ describe('local filtering', () => {
     expect(filterLocally(ROWS, state, FILTER).map(row => row.id)).toEqual(['b'])
   })
 
+  /**
+   * The same rule the settings search already follows: a box that demands a circumflex is a box
+   * nobody uses. An asset named `Forêt d’hiver` has to answer to `foret`, which is what a hand
+   * on a keyboard actually types when it is looking rather than spelling.
+   */
+  it('finds an accented name from an unaccented search, and the other way round', () => {
+    const accented: Row[] = [
+      { id: 'd', name: 'Forêt d’hiver', capabilities: [] },
+      { id: 'e', name: 'Ete indien', capabilities: [] },
+    ]
+
+    const plain = { ...DEFAULT_COLLECTION_STATE, search: 'foret' }
+    const marked = { ...DEFAULT_COLLECTION_STATE, search: 'été' }
+
+    expect(filterLocally(accented, plain, FILTER).map(row => row.id)).toEqual(['d'])
+    expect(filterLocally(accented, marked, FILTER).map(row => row.id)).toEqual(['e'])
+  })
+
   // Values within one facet widen the result; that is what makes a facet a facet.
   it('keeps an item holding any of a facet’s selected values', () => {
     const state = {
