@@ -706,9 +706,16 @@ Trois conséquences, dont une à accepter :
   absorbe ce qui ne coûte rien à absorber — casse, espaces, apostrophe et tiret typographiques,
   ponctuation finale — et le repli est **la phrase anglaise elle-même, jamais une clé**. Le pire
   cas est donc l’écran d’avant, pas un écran cassé ;
-- **le vocabulaire du métier reste en anglais, délibérément** — `seed`, `guidance scale`,
-  `sampler`, `CFG` se lisent ainsi dans tous les autres outils. Un test tient la liste, pour
-  qu’en traduire un soit une décision prise contre un test rouge ;
+- **sept mots restent en anglais, et la règle qui les garde a été refaite deux fois** —
+  `sampler`, `scheduler`, `LoRA`, `checkpoint`, `prompt`, `clip skip`, `denoising strength`.
+  L’argument d’origine était « c’est le terme du métier, on le lit ainsi dans tous les autres
+  outils » : il est **général et invérifiable**, et il a laissé passer `seed`, que
+  `inspector.seed` et `skybox.seed` nommaient « Graine » depuis longtemps, puis `guidance scale`
+  et `negative prompt`, que le glossaire du manuel nommait. Le formulaire était à chaque fois la
+  **seule surface** à refuser le mot que le reste du studio emploie. La règle est donc devenue
+  vérifiable : **on ne garde en anglais que ce qu’aucune surface ni le glossaire ne nomme en
+  français.** Un test tient la liste, pour qu’en traduire un soit une décision prise contre un
+  test rouge ;
 - **la traduction s’applique au rendu, pas à la construction des descripteurs.** Changer de
   langue redit le formulaire ouvert au lieu d’attendre que le modèle soit rechargé — et les Apps
   en profitent sans une ligne de plus, leurs champs venant du même endroit. L’invariant 5 est
@@ -716,8 +723,13 @@ Trois conséquences, dont une à accepter :
 
 **Tout texte distant n’appelle pas ce remède, et prendre le mauvais coûte la garde.** Le rapport
 d’usage affichait « images-generation » et « video » dans une fenêtre française : même symptôme,
-autre outil. Ces valeurs-là sont deux **unions fermées et documentées** — 21 actions dépensières,
-8 genres d’assets, listées par `usages.list` et recopiées dans `shared/domain/usage.ts` — donc
+autre outil. Ces valeurs-là sont **trois unions fermées et documentées**, listées par `usages.list`
+et recopiées dans `shared/domain/usage.ts` : **21 actions dépensières**, **8 genres d’assets**, et
+**100 actions du journal brut** — ces dernières sont une union *différente* des premières, et le
+mot qui les rapproche est un piège. `USAGE_ACTIONS` est ce qui est **facturé** ; `USAGE_EVENT_ACTIONS`
+est ce qui **s’est passé**, y compris ce que rien ne facture (`subscription`, `asset-privacy`,
+`assistant-message`). Les deux listes se recouvrent aux trois quarts, d’où **une seule table de
+libellés que les deux consultent** — donc
 **une clé de bundle par valeur**, tenue par `bundles.test.ts` comme le sont déjà les canaux PBR et
 les portées du journal. Une action ajoutée par Scenario sans sa ligne fait rougir la garde.
 
@@ -748,10 +760,20 @@ Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm valida
 
 | Garde | Ce qu’il refuse |
 |---|---|
-| `shared/i18n/bundles.test.ts` | une clé présente d’un côté et pas de l’autre, un ordre qui diverge, une valeur vide, une apostrophe ASCII en français, un trou d’interpolation perdu — **et une phrase anglaise recopiée dans `fr.json`** |
+| `shared/i18n/bundles.test.ts` | une clé présente d’un côté et pas de l’autre, un ordre qui diverge, une valeur vide, une apostrophe ASCII en français, **une espace sécable devant `; : ! ?` ou dans les guillemets français**, un trou d’interpolation perdu — **et une phrase anglaise recopiée dans `fr.json`** |
 | `renderer/src/no-hardcoded-text.test.ts` | dans un `.tsx` : du texte entre balises, un littéral entre accolades, derrière un ternaire ou un `&&`, et tout attribut qu’un humain lit |
 | `main/no-hardcoded-text.test.ts`, § *the main process* | un mot écrit dans un dialogue natif ou dans un `label` de menu |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | dans un `.ts` de `renderer`, `shared` ou `preload` : un libellé écrit là où une clé est attendue |
+
+**Une garde typographique n’est pas un luxe : elle tient ce qu’aucun éditeur ne montre.** Le
+bundle français écrivait sa ponctuation double avec une espace ordinaire — quatre-vingt-quatre
+valeurs, zéro insécable — et une espace ordinaire est un endroit où la ligne a le droit de se
+couper. « Impossible d’importer « {{name}} » » vit dans le journal d’activité, une colonne étroite
+où le nom interpolé fait ce qu’il veut de la longueur : le guillemet fermant se retrouvait seul en
+début de ligne. Le choix est **U+00A0 et non la fine U+202F** — indiscernables à onze pixels, et
+la large est celle que toutes les polices ont. La garde a mordu **dix minutes après sa livraison**,
+sur trois clés d’un lot fusionné en parallèle : le motif étant invisible dans un éditeur, personne
+ne l’aurait vu à la relecture.
 
 **Le premier voit ce qu’aucun des trois autres ne peut voir.** Une phrase anglaise collée dans
 `fr.json` passe *par* le bundle : elle est irréprochable pour les gardes qui traquent le texte en

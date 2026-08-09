@@ -678,9 +678,15 @@ Three consequences, one of them to be accepted:
   `normalizeModelText` absorbs what costs nothing to absorb — case, whitespace, typographic
   apostrophes and dashes, trailing punctuation — and the fallback is **the English sentence
   itself, never a key**. The worst case is the screen as it was, not a broken one;
-- **the trade vocabulary stays in English, deliberately** — `seed`, `guidance scale`, `sampler`,
-  `CFG` read that way in every other tool. A test holds the list, so translating one is a decision
-  taken against a red test;
+- **seven words stay in English, and the rule guarding them has been remade twice** — `sampler`,
+  `scheduler`, `LoRA`, `checkpoint`, `prompt`, `clip skip`, `denoising strength`. The original
+  argument was "it is the trade's term, it reads that way in every other tool": **general, and
+  impossible to check**, and it let `seed` through — which `inspector.seed` and `skybox.seed` had
+  called "Graine" for a long time — then `guidance scale` and `negative prompt`, which the manual's
+  glossary named. Each time, the form was the **only surface** refusing the word the rest of the
+  studio uses. So the rule became checkable: **a word stays in English only where no surface and
+  no glossary entry gives it a French name.** A test holds the list, so translating one is a
+  decision taken against a red test;
 - **translation applies at render, not when descriptors are built.** Switching language restates
   the open form instead of waiting for the model to be reloaded — and the Apps benefit without a
   line more, their fields coming from the same place. Invariant 5 is intact: nothing is written by
@@ -688,8 +694,13 @@ Three consequences, one of them to be accepted:
 
 **Not all remote text calls for that remedy, and picking the wrong one costs you the guard.** The
 usage report was showing "images-generation" and "video" in a French window: same symptom,
-different tool. Those values are two **closed, documented unions** — 21 spending actions, 8 asset
-kinds, listed by `usages.list` and mirrored in `shared/domain/usage.ts` — so **one bundle key per
+different tool. Those values are **three closed, documented unions**, listed by `usages.list` and
+mirrored in `shared/domain/usage.ts`: **21 spending actions**, **8 asset kinds**, and **100 raw
+journal actions** — that last one a *different* union from the first, and the word that brings them
+together is a trap. `USAGE_ACTIONS` is what gets **billed**; `USAGE_EVENT_ACTIONS` is what
+**happened**, including what nothing charges for (`subscription`, `asset-privacy`,
+`assistant-message`). The two overlap by three quarters, hence **a single label table both read
+from** — so **one bundle key per
 value**, held by `bundles.test.ts` the way the PBR channels and the journal's scopes already are.
 An action Scenario adds without its line turns the guard red.
 
@@ -720,10 +731,20 @@ They share the tree without overlapping, and all of them run in `pnpm validate`.
 
 | Guard | What it refuses |
 |---|---|
-| `shared/i18n/bundles.test.ts` | a key on one side and not the other, a diverging order, a blank value, an ASCII apostrophe in French, a lost interpolation hole — **and an English sentence copied into `fr.json`** |
+| `shared/i18n/bundles.test.ts` | a key on one side and not the other, a diverging order, a blank value, an ASCII apostrophe in French, **a breaking space before `; : ! ?` or inside French quotation marks**, a lost interpolation hole — **and an English sentence copied into `fr.json`** |
 | `renderer/src/no-hardcoded-text.test.ts` | in a `.tsx`: text between tags, a literal in braces, one behind a ternary or an `&&`, and any attribute a human reads |
 | `main/no-hardcoded-text.test.ts`, § *the main process* | a word written into a native dialog or a menu `label` |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | in a `.ts` of `renderer`, `shared` or `preload`: a label written where a key belongs |
+
+**A typographic guard is not a luxury: it holds what no editor shows.** The French bundle wrote
+its double punctuation with an ordinary space — eighty-four values, not one non-breaking — and an
+ordinary space is a place where the line is allowed to break. « Impossible d’importer « {{name}} » »
+lives in the activity journal, a narrow column where the interpolated name does as it pleases with
+the length: the closing quotation mark ended up alone at the start of a line. The choice is
+**U+00A0 rather than the narrow U+202F** — indistinguishable at eleven pixels, and the wide one is
+what every font has. The guard bit **ten minutes after it shipped**, on three keys from a batch
+merged in parallel: the pattern being invisible in an editor, nobody would have caught it by
+reading.
 
 **The first sees what none of the other three can.** An English sentence pasted into `fr.json`
 goes *through* the bundle: it is spotless to the guards hunting hardcoded text, and it still
