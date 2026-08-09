@@ -85,6 +85,7 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
     persist: jobs => void (remembered = [...jobs]),
     concurrency: () => 2,
     maxRetries: () => 3,
+    resolveAssetInputs: (body: Record<string, unknown>) => Promise.resolve(body),
     onProgress: entry => void progress.push(structuredClone(entry)),
     onListChanged: list => void announced.push(structuredClone(list)),
     record: report => void recorded.push(report),
@@ -187,6 +188,94 @@ describe('job manager', () => {
     await settled()
 
     expect(submit).toHaveBeenCalledWith({ kind: 'workflow', id: 'workflow_1' }, { image: 'a' })
+  })
+
+  /**
+   * The ids a form hands over are the studio's own, which the API answers 404 on — see
+   * `asset-inputs.ts`. Translated here rather than at the boundary, so that sending a file up
+   * happens under this loop's bound, with the job already on screen.
+   */
+  it('runs what the asset translation gave back, over the body it was submitted with', async () => {
+    const submit = vi.fn(() => Promise.resolve(remote('success')))
+    // Reads its argument, or translating the wrong body — or none at all — would pass here.
+    const resolveAssetInputs = vi.fn((body: Record<string, unknown>) =>
+      Promise.resolve({ ...body, image: 'asset_remote' }),
+    )
+    const { manager } = harness({ runner: { submit }, resolveAssetInputs })
+
+    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {
+      image: 'asset_local',
+      prompt: 'a fox',
+    })
+    await settled()
+
+    expect(resolveAssetInputs).toHaveBeenCalledWith({ image: 'asset_local', prompt: 'a fox' })
+    expect(submit).toHaveBeenCalledWith(
+      { kind: 'model', id: 'model_flux' },
+      { image: 'asset_remote', prompt: 'a fox' },
+    )
+  })
+
+  // The longer of the two calls on the wire, so the one a dropped connection finds — and the
+  // one whose failure would otherwise cost a whole upload for nothing.
+  it('retries a translation that failed on the wire, as it retries a submission', async () => {
+    let attempts = 0
+    const resolveAssetInputs = vi.fn((body: Record<string, unknown>) => {
+      attempts += 1
+      return attempts === 1
+        ? Promise.reject(APIError.generate(503, undefined, 'upstream', new Headers()))
+        : Promise.resolve(body)
+    })
+    const { manager, progress } = harness({ resolveAssetInputs })
+
+    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', { image: 'asset_local' })
+    await settled()
+
+    expect(attempts).toBe(2)
+    expect(progress.at(-1)).toMatchObject({ status: 'succeeded' })
+  })
+
+  // Queued first and failed after, rather than a channel held open with nothing on screen: an
+  // upload is a file transfer of any size, and it is the job that says so while it runs.
+  it('fails the job it already queued when an asset cannot be sent up', async () => {
+    const submit = vi.fn(() => Promise.resolve(remote('success')))
+    const { manager, progress } = harness({
+      runner: { submit },
+      resolveAssetInputs: () => Promise.reject(new Error('upload-too-large')),
+    })
+
+    const job = manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {
+      image: 'asset_local',
+    })
+    expect(job.status).toBe('queued')
+    await settled()
+
+    expect(submit).not.toHaveBeenCalled()
+    expect(progress.at(-1)).toMatchObject({ id: job.id, status: 'failed' })
+  })
+
+  /**
+   * Nothing reaches a transfer already under way, so cancelling during one is heard only once it
+   * ends. What must not happen is the studio calling it an error: the journal would carry a
+   * failure for something the user asked to stop.
+   */
+  it('reports a job cancelled mid-upload as cancelled, not as failed', async () => {
+    let release = (): void => {}
+    const held = new Promise<void>(resolve => {
+      release = resolve
+    })
+    const { manager, progress } = harness({
+      resolveAssetInputs: () => held.then(() => Promise.reject(new Error('upload-too-large'))),
+    })
+
+    const job = manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', { image: 'asset_x' })
+    await settled()
+    await manager.cancel(job.id)
+    release()
+    await settled()
+
+    expect(progress.at(-1)).toMatchObject({ id: job.id, status: 'cancelled' })
+    expect(progress.at(-1)?.error).toBeUndefined()
   })
 
   it('remembers what a running workflow job runs, so a resumed one is not taken for a model', async () => {
@@ -333,6 +422,9 @@ describe('job manager', () => {
     })
 
     manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    // Awaited, because the first job now translates its asset ids before it submits: without
+    // this it would still be holding the slot on that step, and the runner untouched either way.
+    await settled()
     const queued = manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
     await manager.cancel(queued.id)
 

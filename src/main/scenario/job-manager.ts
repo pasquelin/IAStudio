@@ -75,6 +75,12 @@ export type JobManagerDeps = {
   persist: (jobs: readonly PersistedJob[], handled: readonly string[]) => void
   concurrency: () => number
   maxRetries: () => number
+  /**
+   * Turns the local asset ids a body carries into the ones the API answers to, sending a file
+   * up where it has no twin yet. Injected rather than reached for: it needs the catalogue and
+   * the cloud backend, neither of which this file knows anything about.
+   */
+  resolveAssetInputs: (body: Record<string, unknown>) => Promise<Record<string, unknown>>
   onProgress: (progress: JobProgress) => void
   /** Told when the list gains or loses an entry. See `onJobsChanged` in `shared/ipc.ts`. */
   onListChanged: (jobs: readonly Job[]) => void
@@ -215,6 +221,7 @@ export function createJobManager({
   persist,
   concurrency,
   maxRetries,
+  resolveAssetInputs,
   onProgress,
   onListChanged,
   record,
@@ -454,7 +461,12 @@ export function createJobManager({
       if (remoteId !== null) return await follow(entry, bound, remoteId)
 
       const target: JobTarget = { kind: entry.job.kind, id: entry.job.targetId }
-      const submitted = await withRetry(() => bound.runner.submit(target, entry.body))
+      // Here rather than at the IPC boundary, because sending a picture up is a file transfer of
+      // any size: done before the job exists, it holds the channel open with nothing queued on
+      // screen and outside this loop's concurrency bound. Retried like the submission beside it —
+      // it is the longer of the two on the wire, so it is the one a dropped connection finds.
+      const body = await withRetry(() => resolveAssetInputs(entry.body))
+      const submitted = await withRetry(() => bound.runner.submit(target, body))
       entry.remoteId = submitted.jobId
       if (submitted.cost !== undefined) entry.job.cost = submitted.cost
 
@@ -467,6 +479,15 @@ export function createJobManager({
 
       await follow(entry, bound, submitted.jobId, submitted)
     } catch (error) {
+      // What the user asked for wins over how it ended. Nothing reaches the work already under
+      // way — an upload runs to its end — so a cancelled job that then fails on the wire would
+      // otherwise be reported as an error, and written to the journal as one.
+      if (entry.cancelled) {
+        entry.done = true
+        settle(entry, 'cancelled')
+        return
+      }
+
       const failure = failureOf(error)
       entry.done = SETTLED_FOR_GOOD.has(failure)
       settle(entry, 'failed', failure)
