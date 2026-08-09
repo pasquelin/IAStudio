@@ -1,7 +1,9 @@
 # Scenario Studio — reprise
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
-seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026, contre `develop`.
+seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
+à **`59e7644`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 59e7644..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -35,11 +37,14 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > `/Users/pasquelin/Applications/scenario/docs/INTERFACE.md`, sans quoi chaque branche tient sa
 > propre version des retours et elles divergent.
 >
-> **Ce qui vient d’être livré — ne le refais pas.** Le prix d’une génération, avant et après
-> (`feat/workflows`) · le formulaire de génération sorti du premier écran, **c’est le L61 du
-> backlog** (`perf/form-lazy`) · six passes i18n et les trois gardes de texte en dur
-> (`feat/i18n-*`) · le pinceau à taille réglable et le centre dégagé (`feat/pinceau`) · le panneau
-> matériau et la bande de canaux des Textures (`feat/textures-materiau`). Le détail est au § 1.
+> **Ce qui vient d’être livré — ne le refais pas.** Le **canvas du node editor**, étape 6 du § 4,
+> monté nulle part (`feat/workflows`) · **l’accueil** et ses onze bandes, avec « en refaire une
+> avec… » (`feat/home`, `feat/home-creations`) · les trois accès clavier — Explorateur, double-clic
+> qui traverse les espaces, étagère à assets et sa sélection multiple (`feat/explorateur-clavier`,
+> `feat/double-clic`, `feat/etagere-clavier`) · le prix d’une génération, avant et après
+> (`feat/workflows`) · six passes i18n et les trois gardes de texte en dur (`feat/i18n-*`) · le
+> pinceau à taille réglable (`feat/pinceau`) · le panneau matériau et la bande de canaux des
+> Textures (`feat/textures-materiau`). Le détail est au § 1.
 >
 > **Propose-moi un ordre et attends ma réponse** avant d’ouvrir un worktree. Les candidats, sans
 > priorité imposée : les **étapes 6 à 8 des Textures** (§ 3.4) · le **backlog qualité P1**
