@@ -424,41 +424,6 @@ Ce qui manque à l’accueil ne manque nulle part.
 ce menu n’ait pas été trouvé est un retour en soi, et il rejoint l’entrée 12 : l’accueil ne montre
 pas ce qu’il permet.
 
-### 14. Réordonner les espaces au glisser, Accueil restant fixe
-
-**Demandé le 9 août 2026.** Mettre Image avant 3D, ou l’ordre qu’on veut, en **glissant** les
-entrées de la barre du haut. **Accueil ne bouge pas** : il reste en tête.
-
-**Accueil est déjà hors de la liste, structurellement**, et il n’y a rien à protéger : `TitleBar`
-rend son bouton **avant** la boucle, il n’appartient pas à `WORKSPACES`, et le commentaire dit
-pourquoi — « the home covers the spaces rather than being one of them ». Il suffit de ne pas
-l’ajouter à ce qui devient réordonnable.
-
-**L’ordre est en dur** dans `WORKSPACE_IDS` (`shared/domain/workspace.ts`) ; `WORKSPACES`
-(`helpers/workspaces.ts`) en dérive avec les icônes, et `TitleBar` le mappe tel quel.
-
-**Le patron à suivre existe, et il est à côté.** L’accueil ordonne déjà ses sections : l’ordre vit
-dans les réglages (`settings.home.sections`), et le déplacement est une **fonction pure du domaine
-partagé** — `movedHomeSection`, `canMoveHomeSection` — dont l’interface n’est que le déclencheur.
-La même découpe vaut ici : l’ordre dans les réglages, le déplacement dans
-`shared/domain/workspace.ts`, testable sans rendre quoi que ce soit.
-
-**Ce qui n’existe pas et qu’il faudra écrire : le glisser lui-même.** L’accueil réordonne par un
-menu « Monter / Descendre », pas au glisser. Rien dans `src/` ne réordonne une liste à la souris —
-les seuls glissers du studio déplacent des assets (`DraggableAsset`, `AssetDropTarget`) ou du temps
-(`TimelineCanvas`).
-
-**Deux surfaces montrent cet ordre, pas une.** `home/sections/Tools.tsx` mappe `WORKSPACES` lui
-aussi : réordonner la barre sans réordonner l’accueil laisserait deux vérités à l’écran, dans la
-même application. Le reste du code ne lit `WORKSPACE_IDS` que comme un **ensemble** (`includes`,
-`find` — `tool.ts`, `document.ts`, `main/menu/index.ts`), donc l’ordre n’y casse rien.
-
-> **Le piège est le lieu.** Le `header` de la barre de titre est en `WebkitAppRegion: 'drag'` — la
-> zone par laquelle macOS déplace la fenêtre — et le `nav` repasse en `no-drag` pour rendre les
-> boutons cliquables. Un glisser HTML5 qui part d’une barre de titre est un cas connu de conflit
-> avec le déplacement de fenêtre. Ça peut marcher, ça ne se prouve pas au test unitaire : à
-> vérifier à l’écran, port de debug, avant de considérer l’entrée traitée.
-
 ### 15. Un panneau ne déclare pas ce dont il a besoin — l’Explorateur sans projet
 
 > Les entrées **15, 16 et 17** forment un seul chantier, décrit au **§ 3.7 de `docs/REPRISE.md`** :
@@ -567,59 +532,6 @@ existe déjà et donne le patron), ses clés dans les deux bundles i18n, la vers
 plafonnée comme celle des documents, et une décision sur `updatedAt`. Deux des quatre points sont
 dans le main — c’est un chantier, il se traite d’un bloc.
 
-### 17. Le dossier d’un projet perd son extension, et sa mécanique passe sous le tapis
-
-**Décidé le 9 août 2026.** Un projet est un dossier : lui coller `.scenario` n’a pas de sens. Et
-`project.json` ne regarde pas l’utilisateur — il doit être masqué, comme **tout ce qui n’est pas
-fait pour lui**.
-
-**L’extension ne sert à rien, vérifié plutôt que supposé.** `PROJECT_EXTENSION` n’a **qu’un seul
-usage** dans tout `src/` — `store.ts:90`, pour fabriquer le nom du dossier à la création. Elle
-n’est **déclarée nulle part au système** : aucune `fileAssociations`, aucun type de document dans
-la configuration de build. Elle n’ouvre donc rien au double-clic, macOS ne la traite pas comme un
-paquet, et la reconnaissance ne s’en sert pas — c’est le manifeste qui dit qu’un dossier est un
-projet, jamais son nom. **Une extension sans association est une décoration.**
-
-> L’extension aurait pu servir à une chose, non faite : déclarer `.scenario` comme paquet macOS,
-> ce qui aurait montré le projet comme **un seul fichier** double-cliquable. C’est l’inverse de ce
-> qui est décidé ici, et c’est écrit pour que la décision soit prise en connaissance de cause,
-> pas pour la rouvrir.
-
-**Et la retirer ne casse aucun projet existant** : `open(path)` reçoit un chemin absolu et ne teste
-jamais l’extension. Les dossiers déjà nommés `X.scenario` continueront de s’ouvrir tels quels.
-
-**Le manifeste caché, lui, demande une migration** — les projets existants portent `project.json`,
-et un studio qui ne cherche que `.project.json` ne les ouvrirait plus. Lire les deux et écrire le
-nouveau, le temps que le parc tourne.
-
-> **Un point de plateforme à ne pas découvrir en recette** : le point initial masque sur macOS et
-> Linux, **pas sur Windows**, qui a besoin de l’attribut `FILE_ATTRIBUTE_HIDDEN` — que Node
-> n’expose pas. Un dossier technique nommé `.index` a le même problème, et il existe déjà. Le
-> pipeline empaquette les trois plateformes : la décision doit valoir sur les trois, ou dire
-> laquelle elle laisse de côté.
-
-**Inventaire de ce qui vit dans un projet**, puisque la règle est « masquer ce qui n’est pas pour
-l’utilisateur » :
-
-| Dossier | Pour qui | Aujourd’hui |
-|---|---|---|
-| `assets/` et ses six sous-dossiers | **l’utilisateur** — ce sont ses fichiers | visible, et ça doit le rester |
-| `documents/` | **l’utilisateur** — son travail | visible, et ça doit le rester |
-| `.index/` (catalogue, proxies, peaks, filmstrips) | la machine — cache reconstructible | déjà masqué |
-| `layouts/` | la machine — arrangement des panneaux | **visible, et créé dans chaque projet sans que rien n’y écrive jamais** |
-| `project.json` | la machine | visible — c’est l’objet de cette entrée |
-
-**`layouts/` est le cas le plus net** : il est dans `PROJECT_FOLDERS`, donc créé à chaque
-ouverture, et c’est sa **seule** occurrence dans tout `src/`. Les arrangements sont persistés dans
-le `localStorage` du renderer (`scenario-studio:layouts`), pas là. C’est un dossier vide posé chez
-l’utilisateur. Deux issues, pas trois : ou il servira un jour et il passe sous `.index/`, ou il ne
-sert pas et il ne doit pas être créé.
-
-**La limite à ne pas franchir.** « A project is a folder, not a binary file — versionable,
-inspectable, repairable by hand » : c’est la raison d’être du format. Masquer la mécanique ne doit
-pas rendre le projet opaque — les assets et les documents restent où l’utilisateur peut les voir,
-les copier et les réparer. La règle est « cacher ce qui n’est pas à lui », pas « cacher ».
-
 ### 4. Aucun sélecteur de couleur ne s’ouvre
 
 Les **quatre** `input type="color"` de l’application sont muets — pinceau, inspecteur, formulaire de
@@ -668,10 +580,41 @@ correction.
 | **(28)** Les trois boutons de la ligne d’état offraient une cible de 12 × 12 | `53e1b34` (feat/cible-journal) |
 | **(26)** Le focus tombait hors de la liste après un renommage en place | `42c1e50` (feat/focus-renommage) |
 | **(31)** La Lame annonçait une coupe à la tête de lecture ; elle coupe au pointeur | `e5a75b4` (feat/lame-infobulle) |
+| **(17)** Un projet portait `.scenario`, et sa mécanique traînait à la vue | `f989b5e` (feat/projet-dossier) |
 | **(11)** La ligne d’état était collée au bord et alignée sur rien | `d66b811` (feat/ligne-etat) |
 
 
 
+
+
+> **L’entrée 17 disait vrai sur tout ce qu’elle avançait**, vérifié : `PROJECT_EXTENSION` n’avait
+> qu’**un** usage, **aucune** association n’est déclarée au système, et `layouts/` n’était nommé
+> nulle part ailleurs que dans sa propre déclaration.
+>
+> **Les deux décisions ont été prises par l’humain**, comme l’entrée le demandait : masquer sur les
+> **trois** plateformes — donc `attrib +h` sur Windows, que Node ne sait pas poser seul — et **ne
+> plus créer `layouts/`**.
+>
+> **Ce que l’entrée demandait sans le détailler, et qui manquait à la première version** : « lire
+> les deux et écrire le nouveau ». Lire les deux ne suffit pas — sans l’écriture, un projet d’avant
+> garde `project.json` à la vue pour toujours. La migration se fait donc à la lecture, et l’ancien
+> fichier est **laissé en place** : le dossier appartient à l’utilisateur, il le synchronise
+> peut-être, et une version antérieure du studio le lit encore.
+>
+> **Le seul endroit où ce correctif pouvait coûter des données, trouvé en revue et reproduit.**
+> Le repli traitait **tout** échec de lecture comme « projet d’avant le renommage ». Un manifeste
+> présent mais seulement illisible — permissions asymétriques (`chmod 200`), verrou d’antivirus,
+> marque-page d’un service de synchronisation — était donc remplacé par la copie périmée d’à côté :
+> le manifeste de l’utilisateur, détruit sans un mot. Le repli ne se déclenche plus que sur
+> **`ENOENT`**, et un test rougit si la garde saute.
+>
+> **Deux choses vues en chemin, laissées ouvertes** : `store.create` ne nettoie pas le nom qu’on
+> lui donne (`'../evil'` atterrit hors du dossier choisi) — inatteignable depuis l’application,
+> qui valide par `parseProjectName` avant d’appeler le store, mais sans défense propre si un
+> script ou un outil de migration l’appelait un jour ; et le prédicat `isMissing`, qui distingue
+> `ENOENT` du reste, vit dans `main/scenario/job-store.ts` alors que **cinq** fichiers de système
+> de fichiers l’importent — `main/persistence.ts` serait son lieu, et sa propre JSDoc décrit
+> exactement ce cas.
 
 > **L’entrée 31 est la seule du lot dont les trois repères étaient justes** — cause, lieu, et
 > remède. Elle est notée ici pour ce qu’elle a révélé à côté.
