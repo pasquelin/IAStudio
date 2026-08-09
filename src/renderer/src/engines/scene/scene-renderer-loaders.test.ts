@@ -1,5 +1,18 @@
+import { Group, Mesh, SphereGeometry } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as Diagnostics from '@/services/diagnostics'
 import { SceneRenderer } from './SceneRenderer'
+import type { BvhBuilder } from './bvh-builder'
+import { modelNodeFixture } from './scene-fixtures'
+import { EMPTY_SCENE } from './scene-state'
+
+/** The journal, stood in for: what reaches it is the only trace a failure without a surface has. */
+const reported = vi.hoisted(() => vi.fn())
+
+vi.mock('@/services/diagnostics', async importOriginal => ({
+  ...(await importOriginal<typeof Diagnostics>()),
+  reportFailure: reported,
+}))
 
 const builtDraco = vi.fn()
 const disposeDraco = vi.fn()
@@ -51,5 +64,65 @@ describe('SceneRenderer and the model decoders', () => {
     engine(() => Promise.reject(new Error('never asked'))).dispose()
 
     expect(builtDraco).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * A model is one node over a whole imported tree, and its meshes are accelerated one await at a
+ * time. Letting the first failure out of that loop cost every mesh behind it its tree — for the
+ * session, since nothing walks a loaded model a second time to ask again.
+ */
+describe('SceneRenderer and a tree that will not build', () => {
+  const twoMeshes = (): Group => {
+    const group = new Group()
+    group.add(new Mesh(new SphereGeometry(1, 8, 8)), new Mesh(new SphereGeometry(1, 8, 8)))
+    return group
+  }
+
+  it('asks for every mesh of a model even after one of them failed', async () => {
+    const asked: Mesh[] = []
+    const bvh: BvhBuilder = {
+      accelerate: mesh => {
+        asked.push(mesh)
+        return asked.length === 1 ? Promise.reject(new Error('out of memory')) : Promise.resolve()
+      },
+      dispose: () => {},
+    }
+
+    const loaded = twoMeshes()
+    const engine = new SceneRenderer({
+      onSelect: () => {},
+      onTransform: () => {},
+      loadModel: () => Promise.resolve(loaded),
+      bvh,
+    })
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
+    // The model lands a tick after the sync that built its holder, and the walk a tick after that.
+    await vi.waitFor(() => expect(asked).toHaveLength(2))
+
+    engine.dispose()
+  })
+
+  // A model nobody can click without costing a frame says so once, or it says nothing at all.
+  it('writes the failure to the journal under its own scope', async () => {
+    const bvh: BvhBuilder = {
+      accelerate: () => Promise.reject(new Error('out of memory')),
+      dispose: () => {},
+    }
+
+    const loaded = twoMeshes()
+    const engine = new SceneRenderer({
+      onSelect: () => {},
+      onTransform: () => {},
+      loadModel: () => Promise.resolve(loaded),
+      bvh,
+    })
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
+
+    await vi.waitFor(() =>
+      expect(reported).toHaveBeenCalledWith('scene.bvh', 'asset-1', expect.anything()),
+    )
+
+    engine.dispose()
   })
 })

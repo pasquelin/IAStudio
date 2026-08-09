@@ -548,13 +548,46 @@ Par ordre de gravité. Chaque ligne est actionnable telle quelle.
 
 | Où | Quoi |
 |---|---|
-| `shadows.ts:42` via `SceneRenderer.ts:617` | `applyShadowFlags(deep)` traverse **au-delà des nœuds enfants** : régler une ombre sur un parent écrase les drapeaux de ses enfants, que `syncNode` ne répare jamais (`previous === node`). Un changement de thème rejoue l’écrasement sur toute la scène. Corriger en arrêtant la traversée sur tout enfant portant l’id d’un nœud connu |
-| `bvh-builder.ts:34-45` | `dispose()` n’est pas définitif : `workerOf()` respawne sans condition, donc la boucle série de `accelerate` fait naître un worker **après** le démontage du moteur, que rien ne terminera. Un drapeau `disposed` suffit |
-| `bvh.worker.ts` | Aucun canal d’échec — pas de `try/catch`, pas de variante d’erreur, et le builder n’écoute ni `'error'` ni `'messageerror'`. Une exception laisse la promesse suspendue, garde la géométrie dans `building` pour toujours et bloque les mailles suivantes |
-| `SceneRenderer.ts:772` | `void this.accelerate(holder)` avale ses rejets alors que `scene.model` est branché vingt lignes plus haut |
 | `three-sync.ts:68` | Le mode `rotate` s’arme sur un sprite et n’a aucun effet — le shader ne lit que les longueurs de colonnes — mais salit le document et empile un undo vide |
 | `scene-document.ts:160` | `isSprite` est le seul garde non dérivé de sa table : un champ ajouté au descripteur ne sera pas vérifié à la relecture |
 | `ViewportEngine.ts:105-120` | Le passage ortho → perspective jette le zoom accumulé ; `frameSelection` ne redimensionne pas le tronc orthographique, donc `F` en ortho ne change rien à l’écran |
+
+### Le lot BVH et ombres — livré, et ce qu’il a appris
+
+Les quatre premiers constats de la table ci-dessus, traités ensemble parce qu’ils vivaient dans le
+même sous-système.
+
+- **La traversée des ombres s’arrête sur tout enfant qui tient lieu de nœud**, et le paramètre
+  `deep` a disparu avec : un groupe, dont *tous* les enfants sont des nœuds, est le cas extrême de
+  la même règle, plus son cas particulier. Le prédicat **n’a pas de valeur par défaut**, exprès —
+  un appelant qui l’oublierait rouvrirait le défaut sans que rien ne le dise.
+- **Le manuel disait déjà vrai avant que le code le soit.** « Les deux se décident objet par
+  objet » était **faux** tant que la traversée écrasait les enfants ; le correctif rattrape la
+  phrase. Rien à corriger dans les manuels — vérifié aux six endroits qui l’affirment.
+- **Un rejet ajouté à une API est un changement de contrat pour ses appelants.** Faire rejeter
+  `accelerate` a introduit une régression que la relecture a trouvée : la boucle série de
+  `SceneRenderer.accelerate` avortait à la première panne, et les mailles suivantes du modèle
+  n’obtenaient jamais leur arbre — pour la session, puisque rien ne reparcourt un modèle chargé.
+  Le builder se remet d’un worker mort ; encore faut-il qu’on le lui redemande.
+- **Deux causes sous un même scope de journal partagent sa dédup**, et `reported` vit à l’échelle
+  du processus. `scene.bvh` existe pour ça : sinon un arbre raté avalait le message d’un
+  chargement raté plus tard pour le même asset.
+- **Un port injectable est ce qui rend un invariant testable.** `bvh` rejoint `loadModel` et
+  `loadTexture` dans `SceneRendererOptions` : sans lui, la boucle série n’était atteignable par
+  aucun test, et le correctif serait parti sans surveillance.
+- **Vérifié et écarté — ne pas rouvrir** : `applyDisplayMode` et `applyWireOverlay`
+  (`scene-view.ts`) traversent nûment, sans arrêt sur les nœuds, et **ne portent pas** le même
+  défaut. Le mode d’affichage est unique pour tout le viewport — `scene-state.ts` n’en déclare
+  aucun par nœud — donc traverser au-delà d’un nœud enfant y écrit la valeur qu’il recevrait de
+  toute façon. Une revue l’a signalé comme un défaut jumeau ; c’en est un faux.
+- **Écarté aussi** : mutualiser la file de promesses avec `catalog-client.ts`. La forme est la
+  même à la ligne près, mais les deux fichiers sont de part et d’autre de la frontière
+  main/renderer et le seul endroit qui les réunirait est `shared/`, qui n’a aucune dépendance
+  runtime. Les sémantiques divergent d’ailleurs là où ça compte : le catalogue rejette à la
+  fermeture, le BVH résout `null` — une fenêtre qui se ferme n’est l’échec de personne.
+- **Ce qu’aucun test ne tient**, dit franchement : l’entrée que laisse dans `pending` une requête
+  dont le `spawn` a été refusé. Rien hors du module ne lit cette carte ; le `finally` qui la vide
+  est une assurance, pas une mesure.
 
 ### Les pièges three.js déjà payés — ne pas les repayer
 

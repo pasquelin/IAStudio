@@ -57,7 +57,13 @@ import { textGeometry } from './text-geometry'
 import { createGltfSource, type GltfSource } from './gltf-source'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
-import { applyShadowFlags, applyShadowQuality, fitShadowCamera, resizeShadowMap } from './shadows'
+import {
+  applyShadowFlags,
+  applyShadowQuality,
+  fitShadowCamera,
+  ownedByAnotherNode,
+  resizeShadowMap,
+} from './shadows'
 import {
   applyDisplayMode,
   applyWireOverlay,
@@ -89,6 +95,8 @@ export type SceneRendererOptions = {
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
   loadTexture?: TextureSource
+  /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
+  bvh?: BvhBuilder
   /** The typefaces a text is cut from. Shared with the image workspace — see `services/fonts`. */
   fonts?: FontLibrary
 }
@@ -182,6 +190,8 @@ export class SceneRenderer {
   private readonly raycaster = new Raycaster()
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
+  /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
+  private readonly belongsToAnotherNode = ownedByAnotherNode(this.objects)
   private readonly helpers = new Map<string, LightHelper>()
   /** The texture slots of each mesh, and the references they hold on the cache. */
   private readonly textures = new Map<string, MaterialTextures>()
@@ -220,7 +230,7 @@ export class SceneRenderer {
 
   /** One line material for every overlay: they all draw the same edges in the same colour. */
   private readonly wireMaterial = new LineBasicMaterial()
-  private readonly bvh: BvhBuilder = createBvhBuilder(() => new BvhWorker())
+  private readonly bvh: BvhBuilder
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
 
@@ -241,6 +251,7 @@ export class SceneRenderer {
       // otherwise indistinguishable from one that was never asked for.
       (assetId, error) => reportFailure('scene.model', assetId, error),
     )
+    this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
     this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
     // The studio's own by default: a face parsed for a caption in the image workspace is the
     // same object a text node extrudes, and half a megabyte of glyph tables is worth sharing.
@@ -627,9 +638,7 @@ export class SceneRenderer {
     // would be walked on every value an inspector drag emits. What a model brings later is
     // flagged where it arrives, in `buildModel`.
     if (previous?.castShadow !== node.castShadow || previous.receiveShadow !== node.receiveShadow) {
-      // Not through a group: its children carry their own flags, and traversing would
-      // overwrite them without writing anything into their nodes.
-      applyShadowFlags(object, node.castShadow, receivesShadow(node), node.type !== 'group')
+      applyShadowFlags(object, node.castShadow, receivesShadow(node), this.belongsToAnotherNode)
     }
     if (node.type === 'light') this.tuneShadow(object)
 
@@ -777,14 +786,22 @@ export class SceneRenderer {
       // Here rather than in `syncNode`: what arrives lands after the sync that built the holder,
       // and the next one skips an unchanged node — the model would throw nothing until edited.
       const applied = this.applied.get(node.id) ?? node
-      applyShadowFlags(holder, applied.castShadow, receivesShadow(applied))
+      applyShadowFlags(
+        holder,
+        applied.castShadow,
+        receivesShadow(applied),
+        this.belongsToAnotherNode,
+      )
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
       if (this.display !== 'shaded') this.applyDisplay(holder)
       // A dense model is what makes a click cost a frame — measured in `scene-picking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.viewport.requestRender()
-      void this.accelerate(holder)
+      // Reported rather than swallowed, and under a scope of its own: `reportFailure` says a
+      // subject once per scope, so sharing `scene.model` would let a tree that failed swallow the
+      // message of a load that fails later for the same asset — two failures nothing relates.
+      void this.accelerate(holder).catch(error => reportFailure('scene.bvh', assetId, error))
     })
 
     return holder
@@ -797,8 +814,20 @@ export class SceneRenderer {
       if (child instanceof Mesh) meshes.push(child)
     })
 
-    for (const mesh of meshes) await this.bvh.accelerate(mesh)
+    // Every mesh is asked before any failure is raised. Letting the first one out of the loop
+    // would cost the meshes behind it the tree the builder is ready to build them — it recovers
+    // from a dead worker, and nothing ever walks a loaded model a second time to ask again.
+    const failures: unknown[] = []
+    for (const mesh of meshes) {
+      try {
+        await this.bvh.accelerate(mesh)
+      } catch (error) {
+        failures.push(error)
+      }
+    }
+
     this.viewport.requestRender()
+    if (failures.length > 0) throw failures[0]
   }
 
   private applyDisplay(object: Object3D): void {

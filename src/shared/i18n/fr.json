@@ -140,6 +140,7 @@
     "apiRefused": "L’API Scenario a refusé une requête",
     "scope": {
       "scene.model": "Un modèle 3D n’a pas pu être chargé",
+      "scene.bvh": "Un modèle 3D n’a pas pu être préparé pour la sélection",
       "scene.texture": "Une texture n’a pas pu être chargée",
       "scene.export": "L’export de la scène a échoué",
       "texture.map": "Un canal de texture n’a pas pu être chargé",

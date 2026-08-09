@@ -274,6 +274,7 @@ export const LOG_LEVELS: readonly LogLevel[] = ['info', 'warn', 'error']
  */
 export type LogScope =
   | 'scene.model'
+  | 'scene.bvh'
   | 'scene.texture'
   | 'scene.export'
   | 'texture.map'
@@ -294,6 +295,7 @@ export type LogScope =
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
+  'scene.bvh',
   'scene.texture',
   'scene.export',
   'texture.map',

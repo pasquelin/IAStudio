@@ -102,6 +102,7 @@ describe('the lists that stand for a union', () => {
   it('names every scope the renderer can report a failure under', () => {
     const all: Record<LogScope, true> = {
       'scene.model': true,
+      'scene.bvh': true,
       'scene.texture': true,
       'scene.export': true,
       'texture.map': true,
