@@ -11,7 +11,7 @@ import {
   type Project,
 } from '@shared/domain/project'
 import { log } from '@main/log'
-import { isMissing } from '@main/scenario/job-store'
+import { isMissing } from '@main/persistence'
 import type { AsyncCatalog } from './catalog-client'
 import { parseManifest } from './validation'
 
