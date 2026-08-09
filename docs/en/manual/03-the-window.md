@@ -199,6 +199,9 @@ The bar's order is not imposed. Three ways to change it, whichever you prefer:
 | **Keyboard** | `⌥←` / `⌥→` on the focused workspace — the bare arrows walk the bar instead |
 | **Right-click** | **Move left** / **Move right** |
 
+Both keys **remap like any other**, under the *In the workspace bar* context of the
+[shortcuts screen](15-shortcuts.md).
+
 **Home does not move**: it is not one workspace among the others, it covers them all, and it
 stays at the head.
 
