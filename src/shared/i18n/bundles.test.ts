@@ -31,6 +31,19 @@ function holes(text: string): readonly string[] {
   return [...text.matchAll(/\{\{[^}]+\}\}/g)].map(match => match[0]).sort()
 }
 
+/** Every key, nested ones included, in the order the file writes them. */
+function orderOf(bundle: unknown, prefix = '', into: string[] = []): string[] {
+  if (!isRecord(bundle)) return into
+
+  for (const [name, value] of Object.entries(bundle)) {
+    const key = prefix ? `${prefix}.${name}` : name
+    into.push(key)
+    if (isRecord(value)) orderOf(value, key, into)
+  }
+
+  return into
+}
+
 const CODES = LANGUAGES.map(language => language.code)
 
 // Written out rather than mapped over `LANGUAGES`: the Record makes a new language a compile
@@ -46,6 +59,16 @@ describe('the translation bundles', () => {
   // The typecheck only catches a bundle that MISSES a key: an extra one is still assignable.
   it.each(CODES)('says the same things in %s as every other language', code => {
     expect([...BUNDLES[code].keys()].sort()).toEqual([...REFERENCE.keys()].sort())
+  })
+
+  /**
+   * Same keys in the same places, so the two files can be read side by side — which is how a
+   * translation is checked, and how a missing one is seen. Two features landing at once put
+   * `licences` before `usage` in one bundle and after it in the other, and forty-nine keys
+   * stopped lining up.
+   */
+  it.each(CODES)('lists its keys in the same order as the others in %s', code => {
+    expect(orderOf(TRANSLATIONS[code])).toEqual(orderOf(TRANSLATIONS.fr))
   })
 
   it.each(CODES)('leaves nothing blank in %s', code => {
