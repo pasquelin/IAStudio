@@ -1803,7 +1803,7 @@
       "use": "Ouvrir le générateur sur « {{prompt}} »"
     },
     "similar": {
-      "title": "Dans la veine de « {{name}} »",
+      "title": "Dans la veine de « {{name}} »",
       "refused": "La bibliothèque n’a pas répondu. La bande revient dès que vous réessayez."
     },
     "usage": {

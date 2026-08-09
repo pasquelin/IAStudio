@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_USAGE_PERIOD, type ModelSpend, type UsageReport } from '@shared/domain/usage'
 import { Carousel } from '@/design/Carousel'
+import { useOnScreen } from '@/hooks/useOnScreen'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 // `format.ts` is the one file of the usage window the opening chunk may reach — the rest of it
@@ -8,7 +9,7 @@ import { activeOwnerId, useSettings } from '@/stores/settings'
 import { formatUnits } from '@/usage/format'
 import { Section } from '../Section'
 import { SectionNote } from '../SectionNote'
-import { SHELF_CARD_HEIGHT } from '../ShelfCard'
+import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
 import { useShelf } from '../use-shelf'
 
 /** Wide enough for a model name and two figures under it, without wrapping either. */
@@ -27,13 +28,19 @@ const CARD_WIDTH = 220
 export function Usage() {
   const { t, i18n } = useTranslation()
   const owner = useSettings(activeOwnerId)
+  // Below the fold on any window: read when it is reached, not when the home mounts.
+  const { ref, seen } = useOnScreen()
 
   // Read again when the active key changes: another key spends its own units.
-  const report = useShelf<UsageReport | null>(null, () => spending(), `${owner}`)
+  const report = useShelf<UsageReport | null>(
+    null,
+    () => (seen ? spending() : undefined),
+    `${owner}/${seen}`,
+  )
 
   // Nothing spent is not nothing to say — but nothing READ is, and the two look alike from here
-  // until the report lands.
-  if (!report) return null
+  // until the report lands. The marker stays so the band can still be reached by scrolling.
+  if (!report) return <div ref={ref} aria-hidden />
 
   const spent = formatUnits(report.units, i18n.language)
 
@@ -69,16 +76,13 @@ function ModelCard({ model }: { model: ModelSpend }) {
   const { t, i18n } = useTranslation()
 
   return (
-    <div className="bg-surface flex size-full flex-col justify-center gap-2 rounded-(--radius-sc-md) px-3">
-      <span className="text-text truncate text-[12px]" title={model.name}>
-        {model.name}
-      </span>
-      <span className="text-muted truncate text-[11px]">
-        {t('home.usage.model', {
-          units: formatUnits(model.units, i18n.language),
-          count: model.jobs,
-        })}
-      </span>
-    </div>
+    <ShelfCard
+      title={model.name}
+      hint={model.name}
+      subtitle={t('home.usage.model', {
+        units: formatUnits(model.units, i18n.language),
+        count: model.jobs,
+      })}
+    />
   )
 }

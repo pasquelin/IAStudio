@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/domain/home'
 import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
+import { ScrollHostProvider } from '@/design/ScrollHost'
 import { FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { useProject } from '@/stores/project'
@@ -22,6 +24,8 @@ export function HomeView() {
   const sections = useHomeSections()
   const projectKnown = useProject(state => state.known)
   const settingsLoaded = useSettings(state => state.loaded)
+  // State and not a ref: what hangs off this scroller has to render again once it exists.
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null)
 
   // Nothing at all until the main process has said which project is open and which sections this
   // person kept. Half the sections require a project, and the order is a setting: drawing first
@@ -31,20 +35,24 @@ export function HomeView() {
   if (!projectKnown || !settingsLoaded) return <div className="h-full" />
 
   return (
-    <div className="h-full overflow-x-hidden overflow-y-auto">
-      <div className="flex flex-col gap-8 px-6 py-6">
-        {sections.map(id => {
-          const Section = HOME_COMPONENTS[id]
-          return (
-            // Per section: a shelf that throws takes itself off the home, not the home with it.
-            <ErrorBoundary key={id}>
-              <Section />
-            </ErrorBoundary>
-          )
-        })}
-        <Closing />
+    // Published rather than left to be found: the grid virtualizes against this scroll and the
+    // sticky headings measure themselves from its top, and neither could say so.
+    <ScrollHostProvider host={scroller}>
+      <div ref={setScroller} className="h-full overflow-x-hidden overflow-y-auto">
+        <div className="flex flex-col gap-8 px-6 py-6">
+          {sections.map(id => {
+            const Section = HOME_COMPONENTS[id]
+            return (
+              // Per section: a shelf that throws takes itself off the home, not the home with it.
+              <ErrorBoundary key={id}>
+                <Section />
+              </ErrorBoundary>
+            )
+          })}
+          <Closing />
+        </div>
       </div>
-    </div>
+    </ScrollHostProvider>
   )
 }
 

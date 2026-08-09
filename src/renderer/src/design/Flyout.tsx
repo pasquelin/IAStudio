@@ -52,7 +52,10 @@ export function Flyout({
         // heading reaches the very edge of the window, and its menu was drawn outside it.
         const beside = box.right + OFFSET
         const fits = beside + node.offsetWidth <= window.innerWidth
-        node.style.left = `${fits ? beside : box.left - node.offsetWidth - OFFSET}px`
+        // Clamped like every other placement, the flip included: a menu wider than the room to
+        // the left of its anchor lands at a negative x, and runs off the side it flipped to.
+        const wanted = fits ? beside : box.left - node.offsetWidth - OFFSET
+        node.style.left = `${clamped(wanted, node.offsetWidth, window.innerWidth)}px`
         return
       }
 

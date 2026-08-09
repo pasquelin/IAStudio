@@ -4,7 +4,7 @@ import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowSkin } from './styles'
-import { columnsIn, GAP, PREFETCH_ROWS } from './virtual'
+import { columnsIn, GAP, PREFETCH_ROWS, useReachEnd, useRemeasure } from './virtual'
 
 const ROW_HEIGHT = 26
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
@@ -158,22 +158,11 @@ export function Collection<T extends { id: string }>({
     overscan: grid ? 2 : 8,
   })
 
-  // The virtualizer memoizes its measurements on `count` and friends, never on the estimator
-  // itself: without this, resizing the thumbnails leaves every row at its former height.
-  useEffect(() => virtualizer.measure(), [virtualizer, size])
+  useRemeasure(virtualizer, size)
 
   const virtualRows = virtualizer.getVirtualItems()
   const lastRow = virtualRows.at(-1)?.index ?? 0
-  /**
-   * An empty collection is NOT the end of one. Asking for more with nothing on screen loops
-   * until the source runs dry — the caller knows whether an empty answer is worth another
-   * request, and this component does not.
-   */
-  const nearEnd = rows > 0 && lastRow >= rows - PREFETCH_ROWS
-
-  useEffect(() => {
-    if (nearEnd) onReachEnd?.()
-  }, [nearEnd, rows, onReachEnd])
+  useReachEnd({ last: lastRow, count: rows, ahead: PREFETCH_ROWS }, onReachEnd)
 
   const firstVisible = virtualRows[0]?.index ?? 0
   useEffect(() => {

@@ -150,6 +150,14 @@ describe('an asset from a search hit', () => {
     expect(cloudAssetOfHit(own)?.thumbnailUrl).toBe('https://cdn.example/thumbnails/asset_2')
   })
 
+  it('turns away a hit it cannot read, rather than deriving a thumbnail for nothing', () => {
+    // The search index answers with what the library holds, captioning output included.
+    expect(
+      cloudAssetOfHit({ id: 'asset_4', metadata: { kind: 'json', type: 'img2txt' } }),
+    ).toBeNull()
+    expect(cloudAssetOfHit(null)).toBeNull()
+  })
+
   it('leaves a listing alone: it carries its own thumbnail already', () => {
     const listed = cloudAssetOfListing(LISTING)
     expect(listed?.thumbnailUrl).toBe('https://cdn.cloud.scenario.com/thumbnails/asset_1')

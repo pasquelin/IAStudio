@@ -146,6 +146,30 @@ function polyfillLayout(): void {
     })
   }
 
+  // Same reading as the size stubs above: with no layout there is nothing off screen, so what is
+  // observed is reported as on screen at once. A test about deferring itself replaces this.
+  if (!('IntersectionObserver' in globalThis)) {
+    globalThis.IntersectionObserver = class {
+      constructor(private readonly callback: IntersectionObserverCallback) {}
+
+      observe(target: Element): void {
+        // `as`: an entry has eight fields, and a caller only ever reads `isIntersecting`.
+        this.callback([{ target, isIntersecting: true } as IntersectionObserverEntry], this)
+      }
+
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return []
+      }
+
+      readonly root = null
+      readonly rootMargin = ''
+      readonly scrollMargin = ''
+      readonly thresholds: readonly number[] = []
+    }
+  }
+
   const sizes: [string, number][] = [
     ['clientWidth', VIEWPORT_WIDTH],
     ['offsetWidth', VIEWPORT_WIDTH],

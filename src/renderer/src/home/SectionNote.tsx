@@ -17,13 +17,7 @@ export type SectionNoteProps = {
  */
 export function SectionNote({ children, centred = false, spaced = false }: SectionNoteProps) {
   return (
-    <p
-      className={cn(
-        'text-muted m-0 text-[12px]',
-        centred && 'text-center',
-        spaced && 'py-6',
-      )}
-    >
+    <p className={cn('text-muted m-0 text-[12px]', centred && 'text-center', spaced && 'py-6')}>
       {children}
     </p>
   )

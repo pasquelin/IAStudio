@@ -1803,7 +1803,7 @@
       "use": "Open the generator on “{{prompt}}”"
     },
     "similar": {
-      "title": "In the vein of \u201c{{name}}\u201d",
+      "title": "In the vein of “{{name}}”",
       "refused": "The library did not answer. The band comes back as soon as you try again."
     },
     "usage": {

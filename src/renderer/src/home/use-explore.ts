@@ -94,33 +94,35 @@ export function useExplore(type: AssetType): Explore {
   const owner = useSettings(activeOwnerId)
   const source = `${owner}/${type}`
 
-  const [feed, setFeed] = useState<Feed>(START)
-  const [shown, setShown] = useState(source)
-
   /**
-   * The tabs already read, so walking across them costs nothing twice.
+   * Every tab read so far, not just the one on screen — so walking across them costs nothing
+   * twice.
    *
    * Six tabs, each re-reading its first page on every visit, and the main process spending up to
    * three searches to fill one of them: a sweep of the row could cost eighteen `POST
    * /search/assets` — the endpoint the catalogue bills apart and reserves for the debounced path.
    *
-   * Held per mounted hook and not per module: the home is torn down when a workspace takes over,
-   * so coming back is still a genuine refresh. Only the tab strip is made free.
+   * Kept in state and not in a ref: this is what the hook renders from, and a tab arriving on
+   * screen is a render. It lives and dies with the hook, so the home being torn down when a
+   * workspace takes over still makes coming back a genuine refresh — only the tab strip is free.
    */
-  const remembered = useRef(new Map<string, Feed>())
+  const [feeds, setFeeds] = useState<Record<string, Feed>>({})
+  const [readUnder, setReadUnder] = useState(owner)
 
-  // Swapped as the tab or the key changes, during the render rather than after it. What the feed
-  // held was read under the previous one, and a tab that keeps the last one's pictures while it
-  // loads is answering a question nobody asked.
-  if (shown !== source) {
-    // Compared against what WAS shown, never against the source being built from this very
-    // `owner`: that test is true by construction, and the tabs of a revoked key would be kept.
-    if (shown.startsWith(`${owner}/`)) remembered.current.set(shown, feed)
-    else remembered.current.clear()
-
-    setShown(source)
-    setFeed(remembered.current.get(source) ?? START)
+  // Dropped as the key changes, during the render rather than after it. What every tab held was
+  // read under the previous key, and showing one of them again would answer for the wrong account.
+  if (readUnder !== owner) {
+    setReadUnder(owner)
+    setFeeds({})
   }
+
+  const feed = feeds[source] ?? START
+  const setFeed = useCallback(
+    (grow: (held: Feed) => Feed) => {
+      setFeeds(all => ({ ...all, [source]: grow(all[source] ?? START) }))
+    },
+    [source],
+  )
 
   /**
    * Which request an answer belongs to, counted rather than named.
@@ -166,7 +168,7 @@ export function useExplore(type: AssetType): Explore {
       })
 
     return undefined
-  }, [type, feed.cursor, feed.exhausted])
+  }, [type, feed.cursor, feed.exhausted, setFeed])
 
   useEffect(() => {
     // Declared before the one below, so the first page of the new source is asked for under a

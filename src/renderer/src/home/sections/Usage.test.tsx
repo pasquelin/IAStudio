@@ -65,7 +65,10 @@ describe('the usage band', () => {
     install(report())
     const { container } = render(<Usage />)
 
-    expect(container).toBeEmptyDOMElement()
+    // Nothing a reader can perceive. Not an empty container: a hidden marker stays behind so
+    // the band knows when it has been scrolled to, which is what defers its request.
+    expect(container.textContent).toBe('')
+    expect(screen.queryByRole('region')).not.toBeInTheDocument()
   })
 
   it('stays silent when the key is refused, like every other band', async () => {
@@ -78,7 +81,10 @@ describe('the usage band', () => {
     await act(async () => {
       await new Promise(done => setTimeout(done, 0))
     })
-    expect(container).toBeEmptyDOMElement()
+    // Nothing a reader can perceive. Not an empty container: a hidden marker stays behind so
+    // the band knows when it has been scrolled to, which is what defers its request.
+    expect(container.textContent).toBe('')
+    expect(screen.queryByRole('region')).not.toBeInTheDocument()
   })
 
   it('reports a period nobody spent anything in, rather than hiding', async () => {

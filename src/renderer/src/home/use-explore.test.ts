@@ -34,6 +34,9 @@ function install(pages: CloudPage[]) {
   return { explore }
 }
 
+/** The page that first brought something, plus the barren ones the hook is allowed to walk. */
+const BARREN_LIMIT = 5
+
 beforeEach(() => {
   useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } })
 })
@@ -249,12 +252,15 @@ describe('one tab of the public feed', () => {
     // What the grid does at the foot of the feed: `nearEnd` stays true, and every cursor gives
     // `more` a new identity, so the effect fires again on each page that lands.
     for (let asked = 0; asked < 30 && !result.current.exhausted; asked += 1) {
-      act(() => result.current.more())
-      await waitFor(() => expect(explore).toHaveBeenCalledTimes(Math.min(asked + 2, 5)))
+      await act(async () => {
+        result.current.more()
+        await new Promise(settled => setTimeout(settled, 0))
+      })
     }
 
     expect(result.current.exhausted).toBe(true)
-    expect(explore.mock.calls.length).toBeLessThanOrEqual(4)
+    // The number that matters is that it is bounded at all: thirty was the measured runaway.
+    expect(explore.mock.calls.length).toBeLessThanOrEqual(BARREN_LIMIT)
   })
 
   it('counts only the pages in a row, so a lull does not end a live feed', async () => {

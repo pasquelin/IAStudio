@@ -1,7 +1,8 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { scrollOffsetWithin, scrollParentOf } from '@/helpers/scroll-parent'
-import { columnsIn, GAP, PREFETCH_ROWS } from './virtual'
+import { useScrollHost } from './ScrollHost'
+import { columnsIn, GAP, PREFETCH_ROWS, useReachEnd, useRemeasure } from './virtual'
 
 /** A picture whose shape nobody stated. Square is the least wrong guess, and never distorts. */
 const FALLBACK_RATIO = 1
@@ -58,13 +59,17 @@ export function Masonry<T extends { id: string }>({
   empty,
 }: MasonryProps<T>) {
   const host = useRef<HTMLDivElement>(null)
-  const [scroller, setScroller] = useState<HTMLElement | null>(null)
+  const published = useScrollHost()
+  /** `undefined` while nothing has been looked for yet; `null` once nothing was found. */
+  const [scroller, setScroller] = useState<HTMLElement | null | undefined>(undefined)
   const [width, setWidth] = useState(0)
   const [scrollMargin, setScrollMargin] = useState(0)
 
-  // The page itself when nothing above scrolls: a virtualizer with no scroll element renders
-  // nothing at all, and a grid that is silently blank is worse than one that is not virtualized.
-  useEffect(() => setScroller(scrollParentOf(host.current) ?? document.documentElement), [])
+  // The page's own scroller when it published one, and a walk up the tree otherwise. Never
+  // `document.documentElement` as a last resort: the page's scroll is dispatched on `document`,
+  // and `firstElementChild` of `<html>` is `<head>`, which has no box — that fallback produced a
+  // grid that could not be scrolled at all, which is worse than one that is not virtualized.
+  useEffect(() => setScroller(published ?? scrollParentOf(host.current)), [published])
 
   useEffect(() => {
     const element = host.current
@@ -72,7 +77,9 @@ export function Masonry<T extends { id: string }>({
 
     const observer = new ResizeObserver(entries => {
       const measured = entries[0]?.contentRect.width
-      if (measured !== undefined) setWidth(measured)
+      // Rounded: the observer reports fractions of a pixel, `laneWidth` is a float derived from
+      // it, and every frame of a resize would otherwise re-estimate all N cells (invariant 6).
+      if (measured !== undefined) setWidth(Math.round(measured))
     })
 
     observer.observe(element)
@@ -110,7 +117,7 @@ export function Masonry<T extends { id: string }>({
 
   const virtualizer = useVirtualizer({
     count: items.length,
-    getScrollElement: () => scroller,
+    getScrollElement: () => scroller ?? null,
     estimateSize: index => {
       const item = items[index]
       const stated = item ? (ratioOf(item) ?? FALLBACK_RATIO) : FALLBACK_RATIO
@@ -126,21 +133,35 @@ export function Masonry<T extends { id: string }>({
     laneAssignmentMode: 'estimate',
   })
 
-  // The virtualizer memoizes its measurements on `count` and friends, never on the estimator:
-  // without this, a resize leaves every cell at the height the previous width gave it.
-  useEffect(() => virtualizer.measure(), [virtualizer, laneWidth, lanes])
+  // Rounded to the pixel: a lane a third of a pixel narrower draws the same grid, and paying N
+  // estimates for it on every frame of a splitter drag is the whole of the cost this avoids.
+  useRemeasure(virtualizer, `${lanes}:${Math.round(laneWidth)}`)
 
   const virtualItems = virtualizer.getVirtualItems()
-  const last = virtualItems.at(-1)?.index ?? 0
-  /**
-   * An empty grid is NOT the end of one. Asking for more with nothing on screen loops until the
-   * source runs dry — the caller knows whether an empty answer is worth another request.
-   */
-  const nearEnd = items.length > 0 && last >= items.length - lanes * PREFETCH_ROWS
+  useReachEnd(
+    { last: virtualItems.at(-1)?.index ?? 0, count: items.length, ahead: lanes * PREFETCH_ROWS },
+    onReachEnd,
+  )
 
-  useEffect(() => {
-    if (nearEnd) onReachEnd?.()
-  }, [nearEnd, items.length, onReachEnd])
+  // Nothing scrolls this, so nothing can be left out of it: the whole set is laid out in CSS
+  // columns instead. Unreachable from the home, which publishes its scroller — this is for a
+  // caller that mounts a grid inside a surface with no scroll of its own.
+  if (scroller === null && items.length > 0) {
+    return (
+      <div
+        ref={host}
+        role="region"
+        aria-label={label}
+        style={{ columnCount: lanes, columnGap: GAP }}
+      >
+        {items.map(item => (
+          <div key={item.id} style={{ marginBottom: GAP }} className="break-inside-avoid">
+            {renderCard(item)}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div ref={host} role="region" aria-label={label}>

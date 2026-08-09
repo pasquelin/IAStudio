@@ -89,7 +89,10 @@ describe('the band of lookalikes', () => {
     const { container } = render(<Similar />)
 
     await settled(browse)
-    expect(container).toBeEmptyDOMElement()
+    // Nothing a reader can perceive. Not an empty container: a hidden marker stays behind so
+    // the band knows when it has been scrolled to, which is what defers its request.
+    expect(container.textContent).toBe('')
+    expect(screen.queryByRole('region')).not.toBeInTheDocument()
   })
 
   it('draws nothing when nothing out there resembles it', async () => {
@@ -98,7 +101,10 @@ describe('the band of lookalikes', () => {
     const { container } = render(<Similar />)
 
     await settled(similar)
-    expect(container).toBeEmptyDOMElement()
+    // Nothing a reader can perceive. Not an empty container: a hidden marker stays behind so
+    // the band knows when it has been scrolled to, which is what defers its request.
+    expect(container.textContent).toBe('')
+    expect(screen.queryByRole('region')).not.toBeInTheDocument()
   })
 
   it('offers to try again when the library refused, instead of vanishing', async () => {

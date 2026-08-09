@@ -119,7 +119,23 @@ function satisfies(entry: HomeSectionEntry, context: HomeContext): boolean {
  * looking in the preferences for a feature they have never seen, and a new section landing
  * under the fold is a feature that ships invisible.
  */
+/**
+ * The last answer, kept against the exact array it was computed from.
+ *
+ * Every heading on the home reads this list — through `useHomeSections`, through the two moves
+ * its menu offers — and they all read the same stored array, so the same walk was run a dozen
+ * times per render for one result. One entry is enough: there is one settings object at a time,
+ * and a miss costs exactly what every call used to.
+ *
+ * A copy goes out rather than the held array itself: `movedHomeSection` swaps in place, and
+ * handing out the cached one would let a caller rewrite what the next reader is given.
+ */
+let memoOf: readonly HomeSectionSetting[] | null = null
+let memoized: HomeSectionSetting[] = []
+
 export function homeSections(stored: readonly HomeSectionSetting[]): HomeSectionSetting[] {
+  if (stored === memoOf) return [...memoized]
+
   const settings = stored.filter(setting => homeSectionOf(setting.id) !== null)
 
   for (const [index, entry] of HOME_SECTIONS.entries()) {
@@ -137,7 +153,10 @@ export function homeSections(stored: readonly HomeSectionSetting[]): HomeSection
   // Anchored bands are put back at the foot whatever the stored order says. Settings written by
   // an earlier version — or by hand — would otherwise place one mid-page, where its endless
   // scroll makes everything under it unreachable.
-  return [...settings.filter(setting => !anchored(setting)), ...settings.filter(anchored)]
+  memoized = [...settings.filter(setting => !anchored(setting)), ...settings.filter(anchored)]
+  memoOf = stored
+
+  return [...memoized]
 }
 
 function anchored(setting: HomeSectionSetting): boolean {

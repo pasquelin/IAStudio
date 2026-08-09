@@ -63,6 +63,18 @@ describe('Flyout', () => {
     expect(menuLeft()).toBe(`${1000 - 640 - 2}px`)
   })
 
+  it('keeps the flipped side inside the window too', () => {
+    // Flipping is not enough on its own: a menu wider than the room to the left of its anchor
+    // lands at a negative x, and runs off the side it just flipped to. Every other placement
+    // went through `clamped`; this branch was the one that did not.
+    render(
+      <Flyout anchor={anchorAt(300, 1020)}>
+        <button type="button">Pinceau</button>
+      </Flyout>,
+    )
+    expect(menuLeft()).toBe('0px')
+  })
+
   it('exposes itself as a menu', () => {
     const anchor = document.createElement('div')
     document.body.appendChild(anchor)

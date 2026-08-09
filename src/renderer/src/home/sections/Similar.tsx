@@ -5,6 +5,7 @@ import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
 import { Button } from '@/design/Button'
 import { Carousel } from '@/design/Carousel'
 import { assetIcon } from '@/helpers/workspaces'
+import { useOnScreen } from '@/hooks/useOnScreen'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { Section } from '../Section'
@@ -51,10 +52,17 @@ export function Similar() {
   // Part of what the shelf reads under, so pressing "try again" is a new read rather than a
   // second copy of the fetch that `useShelf` already owns.
   const [attempt, setAttempt] = useState(0)
+  // Two requests, both below the fold on any window: spent when the band is reached.
+  const { ref, seen } = useOnScreen()
 
-  const page = useShelf<Lookalikes>({ state: 'reading' }, lookalikes, `${owner}/${attempt}`)
+  const page = useShelf<Lookalikes>(
+    { state: 'reading' },
+    () => (seen ? lookalikes() : undefined),
+    `${owner}/${attempt}/${seen}`,
+  )
 
-  if (page.state === 'reading' || page.state === 'none') return null
+  // The marker stays where the band would be, so scrolling to it is what triggers the read.
+  if (page.state === 'reading' || page.state === 'none') return <div ref={ref} aria-hidden />
 
   if (page.state === 'refused') {
     return (

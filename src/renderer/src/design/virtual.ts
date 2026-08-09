@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+
 /**
  * What the three virtualized surfaces of the studio agree on.
  *
@@ -35,4 +37,43 @@ export type Columns = {
 export function columnsIn(width: number, aim: number): Columns {
   const columns = Math.max(1, Math.floor((width + GAP) / (Math.max(aim, 1) + GAP)))
   return { columns, columnWidth: (width - (columns - 1) * GAP) / columns }
+}
+
+export type ReachEnd = {
+  /** The furthest index currently mounted — rows for a list, items for a masonry. */
+  last: number
+  /** How many there are in that same unit. */
+  count: number
+  /** How much warning the caller wants, in that same unit. */
+  ahead: number
+}
+
+/**
+ * Calls back as the end of a virtualized surface nears, so the next page is asked for before
+ * the reader sees the bottom.
+ *
+ * An empty surface is NOT the end of one: asking for more with nothing on screen loops until the
+ * source runs dry, and only the caller knows whether an empty answer is worth another request.
+ *
+ * `Collection` and `Masonry` had this rule twice, down to the comment. The unit differs — rows
+ * there, items here — which is why it is the caller that says what it counts in.
+ */
+export function useReachEnd({ last, count, ahead }: ReachEnd, onReachEnd?: () => void): void {
+  const nearEnd = count > 0 && last >= count - ahead
+
+  useEffect(() => {
+    if (nearEnd) onReachEnd?.()
+  }, [nearEnd, count, onReachEnd])
+}
+
+/**
+ * Re-measures a virtualizer when what its estimator reads has changed.
+ *
+ * The virtualizer memoizes on `count` and friends, never on the estimator itself: without this,
+ * a resize leaves every cell at the height the previous width gave it. `key` is whatever the
+ * estimate is computed from, flattened — a scalar, so that a float drifting by a fraction of a
+ * pixel can be rounded out of it before it costs N estimates a frame.
+ */
+export function useRemeasure(virtualizer: { measure: () => void }, key: string | number): void {
+  useEffect(() => virtualizer.measure(), [virtualizer, key])
 }
