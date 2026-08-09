@@ -1,9 +1,9 @@
 # Audit de cadrage — pipeline de packaging et de distribution
 
 État du dépôt au **8 août 2026**, relevé avant toute écriture. Ce document fige le point de
-départ : les ADR de `docs/ci/adr/` s'y réfèrent au lieu de le reparaphraser.
+départ : les ADR de `docs/ci/adr/` s’y réfèrent au lieu de le reparaphraser.
 
-## L'existant
+## L’existant
 
 | Point | Constat | Chemin |
 |---|---|---|
@@ -22,7 +22,7 @@ départ : les ADR de `docs/ci/adr/` s'y réfèrent au lieu de le reparaphraser.
 | Fuses | Complets, dont `onlyLoadAppFromAsar` et `enableEmbeddedAsarIntegrityValidation` | `electron-builder.yml` |
 | `publish:` | **Absent** — aucun canal de mise à jour configuré | — |
 | `electron-updater` | **Absent** du projet | — |
-| CI | **`.github/` n'existait pas.** Aucun workflow, aucune release publiée | — |
+| CI | **`.github/` n’existait pas.** Aucun workflow, aucune release publiée | — |
 | Dépôt | `git@github.com:pasquelin/scenario.git` — **public** | — |
 | Branche par défaut | `feat/scenario-pipeline` ; `main` local en avance de **83 commits** sur `origin/main` | — |
 | Dépendances natives | **`better-sqlite3` 13.0.3 seule.** 8 prebuilds N-API, les 4 cibles couvertes. `fsevents` en dev/darwin | — |
@@ -40,12 +40,12 @@ départ : les ADR de `docs/ci/adr/` s'y réfèrent au lieu de le reparaphraser.
 1. **Modèle de branches incohérent avec un pipeline de release.** Branche par défaut du remote
    `feat/scenario-pipeline`, 83 commits jamais poussés sur `main`, pas de `develop`. Traité par
    [ADR-15](adr/ADR-15-modele-de-branches.md).
-2. **`CLAUDE.md` est gitignoré.** Sa mise à jour n'est pas versionnée : elle n'apparaît dans
+2. **`CLAUDE.md` est gitignoré.** Sa mise à jour n’est pas versionnée : elle n’apparaît dans
    aucun commit et manque à tout worktree neuf. État assumé du dépôt, signalé pour mémoire.
 
 **MAJEUR**
 
-3. **`postinstall` s'exécute en CI.** `scripts/dev-app-identity.mjs` réécrit le bundle Electron
+3. **`postinstall` s’exécute en CI.** `scripts/dev-app-identity.mjs` réécrit le bundle Electron
    de `node_modules` (`PlistBuddy`, `sips`, `iconutil`, `codesign`) à chaque `pnpm install`.
    Traité par [ADR-13](adr/ADR-13-epinglage-node-pnpm-postinstall.md).
 4. **ffmpeg non reproductible.** Téléchargé depuis osxexperts.net, evermeet.cx (`getrelease`,
@@ -53,12 +53,12 @@ départ : les ADR de `docs/ci/adr/` s'y réfèrent au lieu de le reparaphraser.
    chaque fetch — deux packagings concurrents se corrompraient. Traité par
    [ADR-12](adr/ADR-12-ffmpeg-epinglage-et-concurrence.md).
 5. **Licence ffmpeg macOS = GPL-3.0-or-later** (Windows et Linux en LGPL). Publier sur GitHub
-   Releases est l'acte de distribution qui déclenche l'obligation de fournir les sources
+   Releases est l’acte de distribution qui déclenche l’obligation de fournir les sources
    correspondantes. Décision prise en connaissance de cause, cf. ADR-12.
 6. **Budgets de couverture absolus.** `vitest.config.ts` fixe des seuils négatifs par glob,
    sensibles à la plateforme. Traité par [ADR-14](adr/ADR-14-portee-de-la-validation-continue.md).
-7. **Le token `gh` n'a pas le scope `workflow`** (`admin:public_key, gist, read:org, repo`).
-   Pousser `.github/workflows/` via l'API `gh` échoue ; via SSH, aucune restriction.
+7. **Le token `gh` n’a pas le scope `workflow`** (`admin:public_key, gist, read:org, repo`).
+   Pousser `.github/workflows/` via l’API `gh` échoue ; via SSH, aucune restriction.
 
 **MINEUR**
 
@@ -66,16 +66,16 @@ départ : les ADR de `docs/ci/adr/` s'y réfèrent au lieu de le reparaphraser.
 9. Les 8 prebuilds de `better-sqlite3` (16 Mo) sont embarqués sur chaque plateforme : ~14 Mo
    inutiles par installeur. Non traité, cf. ADR-08.
 10. Refs orphelines `refs/remotes/local/main` et `refs/remotes/localmain` — supprimées après
-    vérification qu'elles ne portaient aucun commit absent de `main`.
+    vérification qu’elles ne portaient aucun commit absent de `main`.
 11. `react-toastify` en devDependency, importé nulle part.
 12. `productName` dupliqué dans `scripts/dev-app-identity.mjs`, non couvert par un test.
 
-## Ce que l'audit tranche seul
+## Ce que l’audit tranche seul
 
-- **Aucun rebuild natif n'est nécessaire.** `better-sqlite3` v13 résout
+- **Aucun rebuild natif n’est nécessaire.** `better-sqlite3` v13 résout
   `prebuilds/<platform>-<arch>.node` **avant** `build/Release/` (`lib/binding.js`), les quatre
-  cibles sont couvertes, et `rebuild:native` n'est appelé par aucun script de build.
-- **Le budget de minutes CI n'est pas une contrainte** : le dépôt est public, les runners
+  cibles sont couvertes, et `rebuild:native` n’est appelé par aucun script de build.
+- **Le budget de minutes CI n’est pas une contrainte** : le dépôt est public, les runners
   hébergés sont gratuits.
-- **Les icônes ne bloquent pas.** L'absence de `.icns` et `.ico` est sans effet, le SVG source
+- **Les icônes ne bloquent pas.** L’absence de `.icns` et `.ico` est sans effet, le SVG source
   étant accepté et rasterisé.

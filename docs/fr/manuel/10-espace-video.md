@@ -2,38 +2,38 @@
 
 [← Espace 3D](09-espace-3d.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)
 
-L'espace où l'on assemble des plans les uns après les autres pour en faire une séquence.
+L’espace où l’on assemble des plans les uns après les autres pour en faire une séquence.
 
 ---
 
-## Comment l'espace est disposé
+## Comment l’espace est disposé
 
-Comme l'espace Audio, c'est un espace où la **bande basse appartient au montage**. Une séquence se
-lit sur toute la largeur de l'écran : la **Timeline** y prend donc toute la place, et l'étagère à
+Comme l’espace Audio, c’est un espace où la **bande basse appartient au montage**. Une séquence se
+lit sur toute la largeur de l’écran : la **Timeline** y prend donc toute la place, et l’étagère à
 assets passe dans la moitié haute de la colonne de droite, pour rester visible en même temps.
 
 Au centre, deux moniteurs côte à côte — la convention de Premiere et de DaVinci :
 
-| Moniteur | Ce qu'il montre |
+| Moniteur | Ce qu’il montre |
 |---|---|
 | **Source**, à gauche | le clip sélectionné, seul |
-| **Programme**, à droite | le montage tel qu'il sera |
+| **Programme**, à droite | le montage tel qu’il sera |
 
-Quand aucun clip n'est sélectionné, le moniteur Source affiche « Sélectionnez un clip pour le
+Quand aucun clip n’est sélectionné, le moniteur Source affiche « Sélectionnez un clip pour le
 voir ici. »
 
 ---
 
 ## Le vocabulaire du montage
 
-| Mot | Ce que c'est |
+| Mot | Ce que c’est |
 |---|---|
 | **Séquence** | le montage entier, avec ses pistes |
 | **Piste** | une ligne horizontale qui reçoit des clips. Il y a des pistes image et des pistes son |
 | **Clip** | un morceau de média posé sur une piste |
 | **Tête de lecture** | le trait vertical qui indique où on en est |
-| **Rogner** (*trim*) | raccourcir un clip par l'un de ses bouts |
-| **Point d'entrée** | l'endroit du fichier d'origine où le clip commence |
+| **Rogner** (*trim*) | raccourcir un clip par l’un de ses bouts |
+| **Point d’entrée** | l’endroit du fichier d’origine où le clip commence |
 
 ---
 
@@ -43,55 +43,55 @@ Deux gestes, et **ils ne posent pas le clip au même endroit** :
 
 | Geste | Sur quelle piste | À quel instant |
 |---|---|---|
-| **Glisser-déposer** depuis l'étagère | celle que vous survolez, **exactement** | là où vous lâchez |
-| **Double-clic** sur l'asset | le studio choisit | à la **tête de lecture** |
+| **Glisser-déposer** depuis l’étagère | celle que vous survolez, **exactement** | là où vous lâchez |
+| **Double-clic** sur l’asset | le studio choisit | à la **tête de lecture** |
 
-**Le glisser-déposer vous obéit au pixel près.** C'est vous qui visez la piste, donc c'est vous
-qui décidez — y compris de viser une piste où le clip ne s'entendra pas. Lâcher sur la **règle des
-temps**, en haut, ou en dehors de toute piste, **ne fait rien** : il n'y a pas de piste sous le
+**Le glisser-déposer vous obéit au pixel près.** C’est vous qui visez la piste, donc c’est vous
+qui décidez — y compris de viser une piste où le clip ne s’entendra pas. Lâcher sur la **règle des
+temps**, en haut, ou en dehors de toute piste, **ne fait rien** : il n’y a pas de piste sous le
 pointeur.
 
 **Le double-clic choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
 le reste sur une piste image, et les pistes **verrouillées** ou **rendues muettes** sont évitées —
-un clip qui y atterrirait aurait l'air de n'avoir rien fait.
+un clip qui y atterrirait aurait l’air de n’avoir rien fait.
 
 Dans les deux cas, le studio décide de deux choses :
 
 - **la durée** — celle du média. Une image fixe, ou un média dont la durée est inconnue, dure
   **5 secondes** par défaut ;
 - **le calage** — sur une image entière, jamais entre deux. Vous pouvez viser au pixel, le clip
-  se range tout seul sur l'image la plus proche.
+  se range tout seul sur l’image la plus proche.
 
 ---
 
 ## Les outils
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Sélection** | `V` | sélectionne, déplace et rogne les clips |
 | **Lame** | `C` | coupe un clip là où vous cliquez |
 | **Main** | `H` | fait défiler la timeline — molette pour zoomer |
 
-> **Ces trois touches ne sont pas encore actives** : elles s'affichent dans les infobulles, mais
+> **Ces trois touches ne sont pas encore actives** : elles s’affichent dans les infobulles, mais
 > rien ne les écoute. Un outil se choisit à la souris. Les touches en service dans le montage —
 > `Espace`, `S`, `Suppr`, les zooms — sont dans [Tous les raccourcis](15-raccourcis.md).
 
-### Avec l'outil Sélection
+### Avec l’outil Sélection
 
 | Geste | Effet |
 |---|---|
-| **Clic** sur un clip | le sélectionne — l'inspecteur le montre |
-| **Glisser** le corps du clip | le déplace, y compris d'une piste à l'autre |
+| **Clic** sur un clip | le sélectionne — l’inspecteur le montre |
+| **Glisser** le corps du clip | le déplace, y compris d’une piste à l’autre |
 | **Glisser** un bord du clip | le rogne de ce côté |
 
 **Le magnétisme est automatique.** Un clip déplacé colle :
 
 - à la **grille des images** — jamais entre deux images ;
-- aux **bords des clips voisins**, pour qu'il n'y ait pas de trou d'un millième de seconde
-  invisible à l'œil.
+- aux **bords des clips voisins**, pour qu’il n’y ait pas de trou d’un millième de seconde
+  invisible à l’œil.
 
-> Un clip rogné ne peut pas dépasser la longueur du média d'origine. Le studio arrête le
-> rognage tout seul plutôt que d'afficher du noir.
+> Un clip rogné ne peut pas dépasser la longueur du média d’origine. Le studio arrête le
+> rognage tout seul plutôt que d’afficher du noir.
 
 ---
 
@@ -111,16 +111,16 @@ Sous chaque moniteur :
 | `Fin` (End) | aller à la fin |
 | `⌘=` / `Ctrl+=` | zoomer sur la timeline |
 | `⌘−` / `Ctrl+−` | dézoomer |
-| `⇧Z` | tout afficher — le montage entier tient à l'écran |
+| `⇧Z` | tout afficher — le montage entier tient à l’écran |
 | `S` | **couper le clip à la tête de lecture** |
 | `Suppr` | supprimer le clip sélectionné |
 | `⌘Z` / `⇧⌘Z` | annuler / rétablir |
 
-> **`C` et `S` ne font pas la même chose.** `C` **arme l'outil Lame** — vous coupez ensuite là où
-> vous cliquez. `S` **coupe tout de suite**, à la tête de lecture, sans changer d'outil.
+> **`C` et `S` ne font pas la même chose.** `C` **arme l’outil Lame** — vous coupez ensuite là où
+> vous cliquez. `S` **coupe tout de suite**, à la tête de lecture, sans changer d’outil.
 
 **Un seul lecteur est actif à la fois.** Si vous ouvrez deux séquences, seule celle qui est en
-avant répond à la barre d'espace. C'est ce qui garde la lecture fluide : deux décodeurs vidéo qui
+avant répond à la barre d’espace. C’est ce qui garde la lecture fluide : deux décodeurs vidéo qui
 tournent en même temps se disputent la machine.
 
 ---
@@ -132,35 +132,35 @@ La colonne de gauche de la timeline, face à chaque ligne.
 | Contrôle | Effet |
 |---|---|
 | **Double-clic sur le nom** | renomme la piste |
-| **Muette** | la piste n'est plus entendue |
+| **Muette** | la piste n’est plus entendue |
 | **Solo** | **seules** les pistes en solo sont entendues |
 | **Verrouillée** | la piste refuse toute modification |
-| **Tirer le bas de l'en-tête** | change la hauteur de la ligne |
+| **Tirer le bas de l’en-tête** | change la hauteur de la ligne |
 
-**Solo l'emporte sur muet.** Dès qu'une piste passe en solo, toutes celles qui ne le sont pas se
-taisent, qu'elles soient muettes ou non. C'est la convention de tous les logiciels de montage.
+**Solo l’emporte sur muet.** Dès qu’une piste passe en solo, toutes celles qui ne le sont pas se
+taisent, qu’elles soient muettes ou non. C’est la convention de tous les logiciels de montage.
 
 ---
 
-## L'inspecteur d'un clip
+## L’inspecteur d’un clip
 
 Sélectionnez un clip, et regardez l'**Inspecteur**, dans la colonne de droite.
 
-| Champ | Ce qu'il fait |
+| Champ | Ce qu’il fait |
 |---|---|
 | **Source** | de quel asset le clip vient |
 | **Début** | où le clip commence dans la séquence |
 | **Fin** | où il finit |
 | **Durée** | sa longueur |
-| **Point d'entrée** | à quel endroit du fichier d'origine il commence |
-| **Fondu d'entrée** | une montée depuis le noir ou le silence, au début |
+| **Point d’entrée** | à quel endroit du fichier d’origine il commence |
+| **Fondu d’entrée** | une montée depuis le noir ou le silence, au début |
 | **Fondu de sortie** | une descente vers le noir ou le silence, à la fin |
 | **Vitesse** | 1 = normal, 0,5 = deux fois plus lent, 2 = deux fois plus rapide |
-| **Gain** | le volume, en décibels. 0 laisse le son tel qu'il a été enregistré |
+| **Gain** | le volume, en décibels. 0 laisse le son tel qu’il a été enregistré |
 
-### L'inspecteur d'une piste
+### L’inspecteur d’une piste
 
-| Champ | Ce qu'il fait |
+| Champ | Ce qu’il fait |
 |---|---|
 | **Nom** | le nom affiché |
 | **Type** | image ou son |
@@ -168,12 +168,12 @@ Sélectionnez un clip, et regardez l'**Inspecteur**, dans la colonne de droite.
 | **État** | Muette, Solo, Verrouillée |
 | **Hauteur** | la hauteur de la ligne |
 
-<!-- CAPTURE : l'espace Vidéo, timeline avec plusieurs clips et les deux moniteurs au-dessus.
+<!-- CAPTURE : l’espace Vidéo, timeline avec plusieurs clips et les deux moniteurs au-dessus.
      Vers ../../images/timeline.png -->
 
 ---
 
-## Les réglages d'une séquence
+## Les réglages d’une séquence
 
 Une séquence neuve part sur :
 
@@ -181,35 +181,35 @@ Une séquence neuve part sur :
 |---|---|
 | **Dimensions** | 1920 × 1080 |
 | **Images par seconde** | 25 |
-| **Fréquence d'échantillonnage audio** | 48 000 Hz |
+| **Fréquence d’échantillonnage audio** | 48 000 Hz |
 
 Le temps est compté en **microsecondes** en interne, jamais en secondes décimales : sur un
-montage long, les arrondis finiraient par décaler l'image du son.
+montage long, les arrondis finiraient par décaler l’image du son.
 
 ---
 
 ## Pourquoi la lecture est fluide
 
-Quand vous importez une vidéo, le studio en fabrique une **copie allégée** — un *proxy*. C'est
+Quand vous importez une vidéo, le studio en fabrique une **copie allégée** — un *proxy*. C’est
 elle qui est lue pendant que vous montez, ce qui permet de naviguer dans un rush lourd sans
 saccade.
 
-Si ffmpeg est absent, il n'y a pas de proxy, et la navigation dans les gros fichiers devient
+Si ffmpeg est absent, il n’y a pas de proxy, et la navigation dans les gros fichiers devient
 laborieuse. Voir [Les assets](07-assets.md#si-la-préparation-vidéo-est-indisponible).
 
-**À l'arrêt, le moniteur ne dessine rien.** Une image fixe repeinte soixante fois par seconde
-consomme autant qu'une lecture — pour rien. Le moniteur s'arrête dès que la lecture s'arrête, ce qui
+**À l’arrêt, le moniteur ne dessine rien.** Une image fixe repeinte soixante fois par seconde
+consomme autant qu’une lecture — pour rien. Le moniteur s’arrête dès que la lecture s’arrête, ce qui
 se remarque surtout sur un portable : le ventilateur se tait, la batterie tient.
 
 ---
 
 ## Ce qui manque encore
 
-> **Une séquence s'enregistre** en `.seq` par `⌘S`, et se rouvre telle quelle : pistes, clips,
-> fondus et gains. Ce qui ne revient pas, c'est l'historique d'annulation.
+> **Une séquence s’enregistre** en `.seq` par `⌘S`, et se rouvre telle quelle : pistes, clips,
+> fondus et gains. Ce qui ne revient pas, c’est l’historique d’annulation.
 >
-> Il n'y a en revanche toujours pas d'**export** : on ne peut pas encore écrire un fichier vidéo
-> final. Voir [Ce qui n'existe pas encore](18-limites.md).
+> Il n’y a en revanche toujours pas d'**export** : on ne peut pas encore écrire un fichier vidéo
+> final. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ---
 

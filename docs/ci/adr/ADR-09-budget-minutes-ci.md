@@ -18,11 +18,11 @@ Linux ×1, Windows ×2, **macOS ×10**, ce qui donne, aux durées attendues :
 | Linux | ~15 min | ×1 | 15 |
 | | | | **~345 par release** |
 
-Le chiffre est écrit ici parce qu'il a failli s'appliquer, et parce qu'il désigne où regarder :
+Le chiffre est écrit ici parce qu’il a failli s’appliquer, et parce qu’il désigne où regarder :
 le job macOS pèse à lui seul 87 % du total.
 
-Restent, indépendamment du prix, la durée d'attente et le bruit : un échec de packaging sur une
-branche de feature n'apprend rien d'utile.
+Restent, indépendamment du prix, la durée d’attente et le bruit : un échec de packaging sur une
+branche de feature n’apprend rien d’utile.
 
 ## Décision
 
@@ -39,11 +39,11 @@ branche de feature n'apprend rien d'utile.
 
 ## Conséquences
 
-- **Un `dry_run` exécute la même matrice qu'une vraie release.** Gratuit tant que le dépôt est
-  public, mais long — ce n'est pas un geste à répéter sans raison.
+- **Un `dry_run` exécute la même matrice qu’une vraie release.** Gratuit tant que le dépôt est
+  public, mais long — ce n’est pas un geste à répéter sans raison.
 - Une régression propre au packaging (une entrée manquante dans `files`, un ffmpeg introuvable)
-  n'est détectée qu'au `dry_run` ou au tag. `RELEASE.md` fait du `dry_run` une étape de la
+  n’est détectée qu’au `dry_run` ou au tag. `RELEASE.md` fait du `dry_run` une étape de la
   procédure, précisément pour que ce ne soit pas le tag qui la découvre.
-- **Si le dépôt repassait en privé, le job macOS pèserait à lui seul 87 % de la facture.** C'est
-  là qu'il faudrait regarder en premier : renoncer à l'architecture x64 diviserait ce job par
+- **Si le dépôt repassait en privé, le job macOS pèserait à lui seul 87 % de la facture.** C’est
+  là qu’il faudrait regarder en premier : renoncer à l’architecture x64 diviserait ce job par
   deux, au prix des Mac Intel. À ne trancher que si le besoin se présente.

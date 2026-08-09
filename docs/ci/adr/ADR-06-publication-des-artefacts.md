@@ -6,8 +6,8 @@
 ## Contexte
 
 Trois jobs de matrice qui publieraient chacun vers la même GitHub Release entrent en course :
-releases dupliquées, manifestes d'auto-update écrasés l'un par l'autre. Le mode d'échec est
-connu et silencieux — la release paraît complète et ne l'est pas.
+releases dupliquées, manifestes d’auto-update écrasés l’un par l’autre. Le mode d’échec est
+connu et silencieux — la release paraît complète et ne l’est pas.
 
 ## Décision
 
@@ -24,17 +24,17 @@ avec un message explicite, avant toute publication.
 
 ## Alternatives écartées
 
-- **`--publish always` dans chaque job de matrice** : c'est exactement la condition de course
+- **`--publish always` dans chaque job de matrice** : c’est exactement la condition de course
   décrite ci-dessus.
-- **Publier en `release` plutôt qu'en `draft`** : prive de toute inspection des binaires avant
+- **Publier en `release` plutôt qu’en `draft`** : prive de toute inspection des binaires avant
   que la base installée ne les voie.
-- **`permissions: contents: write` au niveau du workflow** : donnerait le droit d'écriture aux
-  trois jobs de build, qui n'en ont aucun usage.
+- **`permissions: contents: write` au niveau du workflow** : donnerait le droit d’écriture aux
+  trois jobs de build, qui n’en ont aucun usage.
 
 ## Conséquences
 
 - La publication reste un geste humain : la draft doit être ouverte et publiée à la main.
-- **Une release sans manifeste casse l'auto-update de toute la base installée, sans erreur
-  visible côté serveur.** C'est la raison d'être de la vérification bloquante ; la retirer
-  ramènerait ce mode d'échec.
+- **Une release sans manifeste casse l’auto-update de toute la base installée, sans erreur
+  visible côté serveur.** C’est la raison d’être de la vérification bloquante ; la retirer
+  ramènerait ce mode d’échec.
 - Remettre en cause cette architecture ramène aussi la course entre jobs.

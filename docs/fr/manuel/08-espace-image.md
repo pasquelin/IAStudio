@@ -2,7 +2,7 @@
 
 [← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace 3D →](09-espace-3d.md)
 
-L'espace où l'on peint, gomme, recadre et empile des calques.
+L’espace où l’on peint, gomme, recadre et empile des calques.
 
 ---
 
@@ -12,108 +12,108 @@ L'espace où l'on peint, gomme, recadre et empile des calques.
 **1024 × 1024 pixels**, avec un unique calque blanc nommé **Background**, déjà sélectionné.
 
 > Ce blanc est un **vrai calque**, pas une couleur de fond. Vous pouvez le masquer, le rendre
-> transparent ou le supprimer comme n'importe quel autre — le damier de transparence apparaît
+> transparent ou le supprimer comme n’importe quel autre — le damier de transparence apparaît
 > alors dessous.
 
-Le `+` demande une seule chose : un projet ouvert. Sans projet, il est gris — il n'y aurait nulle
+Le `+` demande une seule chose : un projet ouvert. Sans projet, il est gris — il n’y aurait nulle
 part où écrire le document.
 
 ### Faire entrer une image existante
 
-**Un document image n'est pas condamné à partir du blanc.** Trois gestes y posent une image de
+**Un document image n’est pas condamné à partir du blanc.** Trois gestes y posent une image de
 votre étagère, et les trois font la même chose : un **calque de plus**, au-dessus de la pile,
-nommé d'après l'asset et **déjà actif** : c'est lui que le prochain trait recevra.
+nommé d’après l’asset et **déjà actif** : c’est lui que le prochain trait recevra.
 
-| Geste | Ce qu'il faut |
+| Geste | Ce qu’il faut |
 |---|---|
-| **Glisser-déposer** l'image sur la toile | l'onglet image ouvert devant vous |
-| **Double-clic** sur l'image dans l'étagère | un onglet image en avant — c'est lui qui la reçoit |
-| L'outil **Image…** (`⇧⌘K`), groupe Formes | rien : il ouvre l'étagère, vous y choisissez |
+| **Glisser-déposer** l’image sur la toile | l’onglet image ouvert devant vous |
+| **Double-clic** sur l’image dans l’étagère | un onglet image en avant — c’est lui qui la reçoit |
+| L’outil **Image…** (`⇧⌘K`), groupe Formes | rien : il ouvre l’étagère, vous y choisissez |
 
-> Seules les **images du projet** entrent — celles que vous voyez dans l'étagère, générées ou
-> importées. Une image qui n'a pas encore été téléchargée dans le projet n'est pas déposable.
+> Seules les **images du projet** entrent — celles que vous voyez dans l’étagère, générées ou
+> importées. Une image qui n’a pas encore été téléchargée dans le projet n’est pas déposable.
 
-Il n'y a **pas de menu « Ouvrir »** : un document image ne s'ouvre pas *sur* un fichier, il
-reçoit des images comme calques. La nuance compte au moment de fermer l'onglet — voir la fin de
+Il n’y a **pas de menu « Ouvrir »** : un document image ne s’ouvre pas *sur* un fichier, il
+reçoit des images comme calques. La nuance compte au moment de fermer l’onglet — voir la fin de
 ce chapitre.
 
 ---
 
-## Naviguer dans l'image
+## Naviguer dans l’image
 
-Avant les outils, les gestes. Ils marchent quel que soit l'outil armé.
+Avant les outils, les gestes. Ils marchent quel que soit l’outil armé.
 
 | Geste | Effet |
 |---|---|
-| **Molette** | fait défiler l'image, comme dans Figma |
+| **Molette** | fait défiler l’image, comme dans Figma |
 | **⌘ + molette** / **Ctrl + molette** | zoome vers le pointeur |
 | **Pincement** sur trackpad | zoome |
-| **Maintenir Espace + glisser** | déplace la vue, quel que soit l'outil |
+| **Maintenir Espace + glisser** | déplace la vue, quel que soit l’outil |
 | **Clic du milieu + glisser** | déplace la vue aussi |
 
-> Maintenir Espace change le curseur en main. Le geste est celui de tous les éditeurs d'image :
-> vous n'avez pas à changer d'outil pour vous déplacer.
+> Maintenir Espace change le curseur en main. Le geste est celui de tous les éditeurs d’image :
+> vous n’avez pas à changer d’outil pour vous déplacer.
 
 ### La barre de zoom
 
-En bas à droite de l'image, une petite barre flottante.
+En bas à droite de l’image, une petite barre flottante.
 
 | Bouton | Effet | Raccourci |
 |---|---|---|
-| **−** | zoom arrière d'un cran | `⌘−` / `Ctrl+−` |
+| **−** | zoom arrière d’un cran | `⌘−` / `Ctrl+−` |
 | **Le pourcentage** | revient à la taille réelle — un clic dessus | `⌘1` / `Ctrl+1` |
-| **+** | zoom avant d'un cran | `⌘+` / `Ctrl+=` |
-| **Ajuster** | l'image entière tient dans le panneau | `⌘0` / `Ctrl+0` |
+| **+** | zoom avant d’un cran | `⌘+` / `Ctrl+=` |
+| **Ajuster** | l’image entière tient dans le panneau | `⌘0` / `Ctrl+0` |
 
 Le zoom va de **2 %** à **6400 %**. En dessous de 100 %, le pourcentage affiche une décimale :
 3 % et 3,7 % ne cadrent pas la même chose.
 
-**Taille réelle** (`⌘1`) est la seule échelle où l'on juge la netteté : un pixel de l'image pour
-un pixel d'écran.
+**Taille réelle** (`⌘1`) est la seule échelle où l’on juge la netteté : un pixel de l’image pour
+un pixel d’écran.
 
 ### Les règles et les repères
 
-| Élément | Raccourci | Ce que c'est |
+| Élément | Raccourci | Ce que c’est |
 |---|---|---|
 | **Règles** | `⌘R` / `Ctrl+R` | deux graduations, en haut et à gauche |
-| **Repères** | `⌘;` / `Ctrl+;` | des lignes d'alignement que vous posez |
+| **Repères** | `⌘;` / `Ctrl+;` | des lignes d’alignement que vous posez |
 | **Effacer les repères** | — | retire tous les repères |
 | **Magnétisme** | `⇧⌘;` / `Ctrl+Shift+;` | ce que vous déplacez colle aux repères |
 
-**Poser un repère** : tirez depuis une règle vers l'image. Tirez-le en dehors de l'image pour
-l'enlever.
+**Poser un repère** : tirez depuis une règle vers l’image. Tirez-le en dehors de l’image pour
+l’enlever.
 
 Masquer les repères ne les efface pas — ils reviennent au prochain `⌘;`.
 
-Le magnétisme fait coller ce que vous déplacez aux repères, aux **bords de l'image** et à son
-**centre**, à quelques pixels près. La tolérance est en pixels d'écran : elle ne change donc pas
+Le magnétisme fait coller ce que vous déplacez aux repères, aux **bords de l’image** et à son
+**centre**, à quelques pixels près. La tolérance est en pixels d’écran : elle ne change donc pas
 selon le zoom.
 
 ---
 
-## La barre d'outils
+## La barre d’outils
 
 Elle est en haut du document. Les outils sont **groupés**, comme dans Figma :
 
 - **survolez un groupe** pour voir le reste de ses outils ;
-- **cliquez le bouton lui-même** pour armer l'outil qu'il montre déjà.
+- **cliquez le bouton lui-même** pour armer l’outil qu’il montre déjà.
 
-Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
+Autrement dit : un outil armé n’a jamais besoin du menu pour être repris.
 
-> **Les touches ci-dessous arment l'outil**, et elles se remappent comme toutes les autres : chaque
+> **Les touches ci-dessous arment l’outil**, et elles se remappent comme toutes les autres : chaque
 > outil est une commande à part entière, listée dans **Réglages ▸ Raccourcis**. Voir
 > [Tous les raccourcis](15-raccourcis.md).
 
 ### Groupe Curseur
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Déplacement** | `V` | fait glisser le contenu du calque actif |
 | **Main** | `H` | déplace la vue |
-| **Mise à l'échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
+| **Mise à l’échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
 
-> **C'est le groupe armé à l'ouverture.** Un document s'ouvre sur **Déplacement**, jamais sur le
-> pinceau : le premier clic sur une image que vous venez d'ouvrir ne doit pas pouvoir y laisser
+> **C’est le groupe armé à l’ouverture.** Un document s’ouvre sur **Déplacement**, jamais sur le
+> pinceau : le premier clic sur une image que vous venez d’ouvrir ne doit pas pouvoir y laisser
 > une trace. Le pinceau est à une touche — `P`.
 
 ### Le menu **Image**
@@ -121,71 +121,71 @@ Autrement dit : un outil armé n'a jamais besoin du menu pour être repris.
 Six entrées. Les quatre dernières agissent sur **tout le document**, calques compris — pas sur le
 calque actif :
 
-| Entrée | Ce qu'elle fait |
+| Entrée | Ce qu’elle fait |
 |---|---|
 | **Fusionner vers le bas** (`⌘E`) | réunit le calque actif et celui **juste en dessous, au même niveau** — jamais à travers la paroi de son groupe. Le résultat garde le nom du calque du dessous, comme partout ailleurs |
-| **Aplatir l'image** | réduit toute la pile à un seul calque nommé « Arrière-plan » |
+| **Aplatir l’image** | réduit toute la pile à un seul calque nommé « Arrière-plan » |
 | **Miroir horizontal** | retourne le document de gauche à droite |
 | **Miroir vertical** | retourne le document de haut en bas |
 | **Rotation horaire** | un quart de tour vers la droite ; **le cadre pivote avec** — un portrait devient un paysage |
 | **Rotation antihoraire** | un quart de tour vers la gauche, même chose |
 
-Aucune n'a de raccourci par défaut : le menu est leur seule porte. Vous pouvez leur en donner un
-dans les [réglages](14-reglages.md), comme à n'importe quelle commande.
+Aucune n’a de raccourci par défaut : le menu est leur seule porte. Vous pouvez leur en donner un
+dans les [réglages](14-reglages.md), comme à n’importe quelle commande.
 
-> **Un miroir suivi du même miroir rend exactement l'image de départ.** Ce n'est pas une évidence :
-> le studio retourne le calque plutôt que de réécrire ses pixels, et c'est ce qui évite qu'un
-> aller-retour laisse une trace d'arrondi.
+> **Un miroir suivi du même miroir rend exactement l’image de départ.** Ce n’est pas une évidence :
+> le studio retourne le calque plutôt que de réécrire ses pixels, et c’est ce qui évite qu’un
+> aller-retour laisse une trace d’arrondi.
 
-> **Aplatir perd les calques masqués**, il ne les fusionne pas — c'est aussi ce que fait Photoshop.
+> **Aplatir perd les calques masqués**, il ne les fusionne pas — c’est aussi ce que fait Photoshop.
 > Ce que vous voyez est ce que vous gardez.
 
 **Fusionner et Aplatir écrivent vraiment des pixels**, à la différence du reste du menu : le calque
-qui reste reçoit l'image composée de ce qui disparaît. `⌘Z` rend la pile — et l'image avec, tant que
-le document n'a pas changé de taille entre-temps.
+qui reste reçoit l’image composée de ce qui disparaît. `⌘Z` rend la pile — et l’image avec, tant que
+le document n’a pas changé de taille entre-temps.
 
 ### Groupe Cadre
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Recadrage** | `F` | glissez un cadre sur l'image, ajustez-le, puis `⏎` pour rogner |
+| **Recadrage** | `F` | glissez un cadre sur l’image, ajustez-le, puis `⏎` pour rogner |
 | **Section** | `⇧S` | *pas encore disponible* |
 | **Découpe** | `S` | *pas encore disponible* |
 
 Le geste se fait en trois temps :
 
-1. **Glissez** un cadre sur l'image. Ce qui en sort est **assombri** — c'est exactement ce que le
+1. **Glissez** un cadre sur l’image. Ce qui en sort est **assombri** — c’est exactement ce que le
    recadrage va retirer. `⇧` pendant le glissement contraint le cadre au carré.
-2. **Ajustez-le.** Le cadre reste à l'écran quand vous relâchez, avec ses huit poignées : tirez
+2. **Ajustez-le.** Le cadre reste à l’écran quand vous relâchez, avec ses huit poignées : tirez
    un coin ou une arête pour le corriger. Glisser ailleurs recommence un cadre neuf.
 3. **`⏎` applique**, `⎋` abandonne.
 
-Rien n'est modifié avant `⏎` : vous pouvez zoomer, faire glisser la vue au bouton du milieu, et
-revenir au cadre. Changer d'outil l'abandonne ; redimensionner ou pivoter l'image aussi, puisque
+Rien n’est modifié avant `⏎` : vous pouvez zoomer, faire glisser la vue au bouton du milieu, et
+revenir au cadre. Changer d’outil l’abandonne ; redimensionner ou pivoter l’image aussi, puisque
 le cadre ne désignerait plus la même chose.
 
-Le cadre ne sort jamais de l'image — un recadrage rogne, il n'agrandit pas.
+Le cadre ne sort jamais de l’image — un recadrage rogne, il n’agrandit pas.
 
 > ⚠️ **`⌘Z` rend le cadre, pas les pixels rognés.** Rétrécir le document jette pour de bon ce
-> qui tombait dehors : l'annulation rétablit la taille d'origine, mais la zone retirée revient
-> vide. C'est le comportement de Photoshop lorsque « Supprimer les pixels rognés » est coché —
+> qui tombait dehors : l’annulation rétablit la taille d’origine, mais la zone retirée revient
+> vide. C’est le comportement de Photoshop lorsque « Supprimer les pixels rognés » est coché —
 > à ceci près que Photoshop, lui, sait les rendre. **Exportez avant de rogner large** si vous
 > comptez revenir en arrière.
 
 ### Groupe Sélection
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Sélection rectangulaire** | `M` | trace une zone rectangulaire |
 | **Sélection elliptique** | — | trace une zone ovale |
 | **Lasso** | `L` | trace une zone à main levée |
 
-> Tant qu'une zone est tracée, **le pinceau, la gomme et le pot n'agissent qu'à l'intérieur**.
+> Tant qu’une zone est tracée, **le pinceau, la gomme et le pot n’agissent qu’à l’intérieur**.
 > Un clic sans glisser abandonne la zone, comme `⌘D`.
 
 ### Groupe Formes
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Rectangle** | `R` | Maj pour un carré |
 | **Trait** | `⇧R` | Maj pour le contraindre à 45° |
@@ -197,7 +197,7 @@ Le cadre ne sort jamais de l'image — un recadrage rogne, il n'agrandit pas.
 
 ### Groupe Dessin
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Pinceau** | `P` | peint, bord adouci |
 | **Crayon** | `⇧P` | peint, bord net |
@@ -205,48 +205,48 @@ Le cadre ne sort jamais de l'image — un recadrage rogne, il n'agrandit pas.
 
 ### Groupe Texte
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Texte** | `T` | pose du texte sur le calque actif |
 | **Texte sur chemin** | — | *pas encore disponible* |
 
-Un calque texte reste du texte : il se corrige, et il reste net à tous les zooms. L'inspecteur en
+Un calque texte reste du texte : il se corrige, et il reste net à tous les zooms. L’inspecteur en
 règle le **contenu**, le **corps** et la **police**.
 
-**La liste des polices est celle de l'espace 3D**, et c'est voulu : les trois polices que le
-studio embarque d'abord, puis celles de votre machine. Une légende écrite ici et un texte en
+**La liste des polices est celle de l’espace 3D**, et c’est voulu : les trois polices que le
+studio embarque d’abord, puis celles de votre machine. Une légende écrite ici et un texte en
 volume là-bas se règlent dans la même famille, sous le même nom. Ce que dit
-[l'espace 3D](09-espace-3d.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
+[l’espace 3D](09-espace-3d.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
 
 ### Groupe Gomme
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Gomme ponctuelle** | `E` | efface au passage du pointeur |
-| **Gomme sélective** | — | efface l'intérieur de la sélection d'un geste |
+| **Gomme sélective** | — | efface l’intérieur de la sélection d’un geste |
 
 La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 
 ### Outils isolés
 
-| Outil | Raccourci | Ce qu'il fait |
+| Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Commentaire** | `C` | *pas encore disponible* |
 | **Remplir le calque** | `G` | remplit **tout** le calque actif de la couleur courante |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, des formes et du remplissage |
 
-> **Remplir n'est pas un pot de peinture.** Il remplit le calque entier, d'un bord à l'autre.
-> C'est ce qui donne un fond uni en un geste, mais ce n'est pas le remplissage par zone que vous
+> **Remplir n’est pas un pot de peinture.** Il remplit le calque entier, d’un bord à l’autre.
+> C’est ce qui donne un fond uni en un geste, mais ce n’est pas le remplissage par zone que vous
 > connaissez peut-être ailleurs.
 
 ### Les outils grisés
 
-Certains outils sont visibles mais inactifs. **C'est délibéré** : la barre annonce ce qui vient
+Certains outils sont visibles mais inactifs. **C’est délibéré** : la barre annonce ce qui vient
 plutôt que de cacher ce qui manque. Un outil qui apparaîtrait un jour sans prévenir serait plus
-déroutant qu'un bouton gris.
+déroutant qu’un bouton gris.
 
-Le chapitre [Ce qui n'existe pas encore](18-limites.md) en donne la liste complète.
+Le chapitre [Ce qui n’existe pas encore](18-limites.md) en donne la liste complète.
 
 ---
 
@@ -261,10 +261,10 @@ dessous. Vous peignez sur celui qui est **actif** — cliquez sur son nom pour l
 |---|---|
 | **Ajouter un calque** | le bouton **+** du panneau — il se pose au-dessus de la pile |
 | **Supprimer le calque** | le bouton de suppression — le dernier calque ne peut pas être supprimé |
-| **Masquer / afficher** | l'œil, à gauche du nom |
+| **Masquer / afficher** | l’œil, à gauche du nom |
 | **Réordonner** | les boutons de pile, ou le glisser-déposer |
 
-Un calque masqué est **estompé et barré** : on voit d'un coup d'œil ce qui est caché.
+Un calque masqué est **estompé et barré** : on voit d’un coup d’œil ce qui est caché.
 
 ---
 
@@ -275,35 +275,35 @@ Un calque masqué est **estompé et barré** : on voit d'un coup d'œil ce qui e
 | **Annuler** | `⌘Z` / `Ctrl+Z` |
 | **Rétablir** | `⇧⌘Z` / `Ctrl+Shift+Z` |
 
-**L'historique appartient au document**, pas à l'application. Chaque onglet a sa propre pile.
-Si `⌘Z` semble ne rien faire, c'est très probablement que l'action que vous visez appartient à un
-autre onglet : cliquez d'abord sur celui-là.
+**L’historique appartient au document**, pas à l’application. Chaque onglet a sa propre pile.
+Si `⌘Z` semble ne rien faire, c’est très probablement que l’action que vous visez appartient à un
+autre onglet : cliquez d’abord sur celui-là.
 
 Les gestes continus — un trait de pinceau, un glissement de calque — comptent pour **une seule**
-entrée d'historique. Vous n'annulez pas un trait pixel par pixel.
+entrée d’historique. Vous n’annulez pas un trait pixel par pixel.
 
-> L'historique garde les **100 dernières** actions. Au-delà, les plus anciennes disparaissent.
+> L’historique garde les **100 dernières** actions. Au-delà, les plus anciennes disparaissent.
 
 <!-- CAPTURE : un document image, le volet du groupe Formes ouvert, la pile de calques visible.
      Vers ../../images/image-tools.png -->
 
 ---
 
-## Sortir l'image du studio
+## Sortir l’image du studio
 
 **`⇧⌘E` écrit le document aplati en `.png`**, où vous voulez sur le disque. Les calques sont
-composités à l'export ; les règles, les repères et les pointillés de sélection n'y sont pas.
+composités à l’export ; les règles, les repères et les pointillés de sélection n’y sont pas.
 
 > **`⌘S` enregistre le document lui-même**, calques compris, dans le projet — et il se rouvre
-> tel quel. Ce n'est pas la même chose que `⇧⌘E` : l'export aplatit et sort du studio, tandis que
-> l'enregistrement garde la pile intacte pour continuer à travailler.
+> tel quel. Ce n’est pas la même chose que `⇧⌘E` : l’export aplatit et sort du studio, tandis que
+> l’enregistrement garde la pile intacte pour continuer à travailler.
 >
-> L'image s'écrit en **dossier** `documents/<id>.img/` : un `document.json` pour la pile, et un
-> `.png` par calque — plus un second pour son masque, s'il en a un. C'est volontairement
+> L’image s’écrit en **dossier** `documents/<id>.img/` : un `document.json` pour la pile, et un
+> `.png` par calque — plus un second pour son masque, s’il en a un. C’est volontairement
 > inspectable : vous pouvez ouvrir le dossier et regarder les calques un par un.
 >
-> **Ce qui ne s'enregistre pas :** l'historique d'annulation. Rouvrir un document, c'est repartir
-> d'une pile propre — les pixels sont là, les cinquante derniers gestes ne le sont plus.
+> **Ce qui ne s’enregistre pas :** l’historique d’annulation. Rouvrir un document, c’est repartir
+> d’une pile propre — les pixels sont là, les cinquante derniers gestes ne le sont plus.
 
 ---
 

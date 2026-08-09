@@ -1,18 +1,18 @@
-# 18. Ce qui n'existe pas encore
+# 18. Ce qui n’existe pas encore
 
 [← Glossaire](17-glossaire.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Comment faire pour… →](19-recettes.md)
 
-Les boutons gris, les promesses en cours, et ce qu'il ne faut pas attendre. La liste complète, à
+Les boutons gris, les promesses en cours, et ce qu’il ne faut pas attendre. La liste complète, à
 jour, et honnête.
 
 ---
 
 ## Pourquoi ce chapitre existe
 
-Un logiciel qui cache ce qu'il ne sait pas faire vous fait perdre une heure à chercher un bouton
-qui n'existe pas.
+Un logiciel qui cache ce qu’il ne sait pas faire vous fait perdre une heure à chercher un bouton
+qui n’existe pas.
 
-Le studio a choisi l'inverse : **il montre ce qui vient**. Les outils qui ne fonctionnent pas
+Le studio a choisi l’inverse : **il montre ce qui vient**. Les outils qui ne fonctionnent pas
 encore sont visibles et grisés, les vues à venir sont dans les barres, et ce chapitre dit
 exactement où sont les bords.
 
@@ -20,18 +20,18 @@ Trois catégories, à ne pas confondre :
 
 | | |
 |---|---|
-| **Pas encore fait** | c'est prévu, ce sera là un jour |
+| **Pas encore fait** | c’est prévu, ce sera là un jour |
 | **Volontairement absent** | ce ne sera pas fait, et il y a une raison |
-| **Défaut connu** | ça marche mal, et c'est identifié |
+| **Défaut connu** | ça marche mal, et c’est identifié |
 
 ---
 
-## L'enregistrement : les six types y sont
+## L’enregistrement : les six types y sont
 
-**Ce chapitre a longtemps commencé par « trois documents sur six ne s'enregistrent pas ». Ce
-n'est plus vrai.** Les six s'écrivent dans le dossier du projet et se rouvrent tels quels.
+**Ce chapitre a longtemps commencé par « trois documents sur six ne s’enregistrent pas ». Ce
+n’est plus vrai.** Les six s’écrivent dans le dossier du projet et se rouvrent tels quels.
 
-| Document | Extension | S'enregistre ? |
+| Document | Extension | S’enregistre ? |
 |---|---|---|
 | Scène 3D | `.scene` | **oui** |
 | Matière | `.tex` | **oui** |
@@ -40,13 +40,13 @@ n'est plus vrai.** Les six s'écrivent dans le dossier du projet et se rouvrent 
 | Son édité | `.aud` | **oui** |
 | Ciel | `.sky` | **oui** |
 
-**Ce qui ne s'enregistre pas, et c'est délibéré :**
+**Ce qui ne s’enregistre pas, et c’est délibéré :**
 
-- **l'historique d'annulation** — rouvrir un document, c'est repartir sans `⌘Z` ;
-- **la façon dont on regarde** — zoom, cadrage, vue d'un ciel, sélection : c'est de l'état de
+- **l’historique d’annulation** — rouvrir un document, c’est repartir sans `⌘Z` ;
+- **la façon dont on regarde** — zoom, cadrage, vue d’un ciel, sélection : c’est de l’état de
   session, pas ce que le document *est*. Un document rouvert ne discute pas avec la fenêtre qui
-  l'ouvre ;
-- **en Audio, l'écoute A/B** : un document rouvert écoute la chaîne, jamais la source.
+  l’ouvre ;
+- **en Audio, l’écoute A/B** : un document rouvert écoute la chaîne, jamais la source.
 
 **Fermer un onglet demande maintenant.** Si le document a du travail non enregistré, le studio
 pose la question — Enregistrer, Ne pas enregistrer, Annuler — et *Annuler* est ce que répond une
@@ -56,23 +56,23 @@ touche `⎋` frappée sans lire.
 
 ## Espace Image
 
-### Il n'y a pas de menu « Ouvrir », et il n'en faut pas
+### Il n’y a pas de menu « Ouvrir », et il n’en faut pas
 
-Une image de l'étagère **entre** dans un document — glissée sur la toile, double-cliquée, ou
-choisie par l'outil **Image…** (`⇧⌘K`) : elle y devient un calque. Voir
+Une image de l’étagère **entre** dans un document — glissée sur la toile, double-cliquée, ou
+choisie par l’outil **Image…** (`⇧⌘K`) : elle y devient un calque. Voir
 [Espace Image](08-espace-image.md).
 
 Rouvrir un document composé plus tôt passe par le panneau **Explorateur**, qui liste les
-documents du projet : un double-clic sur une ligne l'ouvre, en changeant d'espace s'il le faut.
-C'est la porte, et il n'y a pas de dialogue de fichiers — le studio n'ouvre que ce qui est dans
+documents du projet : un double-clic sur une ligne l’ouvre, en changeant d’espace s’il le faut.
+C’est la porte, et il n’y a pas de dialogue de fichiers — le studio n’ouvre que ce qui est dans
 le projet.
 
 `⇧⌘E` sort toujours un `.png` aplati ; ce PNG, réimporté, revient comme une image et non comme
-ses calques — c'est un export, pas un enregistrement.
+ses calques — c’est un export, pas un enregistrement.
 
 ### Outils annoncés mais inactifs
 
-Ils sont visibles dans la barre d'outils, en gris.
+Ils sont visibles dans la barre d’outils, en gris.
 
 | Outil | Groupe |
 |---|---|
@@ -82,110 +82,110 @@ Ils sont visibles dans la barre d'outils, en gris.
 | **Texte sur chemin** | Texte |
 | **Commentaire** (`C`) | seul de son groupe |
 
-**Ils disent tous leur état par leur gris**, et c'est la seule chose qu'on leur demande tant qu'ils
-n'existent pas. Le Commentaire a été le dernier à rentrer dans le rang : il s'armait comme les
-autres, changeait le curseur, et laissait le moteur jeter chaque clic — un bouton qui avait l'air
-vivant sans l'être.
+**Ils disent tous leur état par leur gris**, et c’est la seule chose qu’on leur demande tant qu’ils
+n’existent pas. Le Commentaire a été le dernier à rentrer dans le rang : il s’armait comme les
+autres, changeait le curseur, et laissait le moteur jeter chaque clic — un bouton qui avait l’air
+vivant sans l’être.
 
 ### En Vidéo, les touches des outils ne sont pas écoutées
 
-La barre du montage affiche `V`, `C` et `H` à côté de ses trois outils. **Aucune n'est active** :
-elles apparaissent dans les infobulles, et rien ne les résout — un outil s'y choisit à la souris.
+La barre du montage affiche `V`, `C` et `H` à côté de ses trois outils. **Aucune n’est active** :
+elles apparaissent dans les infobulles, et rien ne les résout — un outil s’y choisit à la souris.
 
-**L'espace Image, lui, a réglé la question** : ses vingt outils sont devenus des commandes à part
-entière, donc leurs touches arment vraiment, se remappent, et apparaissent dans l'écran des
-raccourcis. C'est le modèle que le montage n'a pas encore suivi.
+**L’espace Image, lui, a réglé la question** : ses vingt outils sont devenus des commandes à part
+entière, donc leurs touches arment vraiment, se remappent, et apparaissent dans l’écran des
+raccourcis. C’est le modèle que le montage n’a pas encore suivi.
 
-La règle générale reste la même : ce qui passe par le registre de commandes répond, ce qui n'y
+La règle générale reste la même : ce qui passe par le registre de commandes répond, ce qui n’y
 passe pas est une intention affichée.
 
-### Le recadrage ne rend pas ses pixels à l'annulation
+### Le recadrage ne rend pas ses pixels à l’annulation
 
 **Les cinq sont offerts** — Fusionner, Aplatir, le miroir, le quart de tour, et depuis peu le
-**recadrage** (`F`). Ce qui les bloquait était qu'une surface de calque ne suivait pas son
+**recadrage** (`F`). Ce qui les bloquait était qu’une surface de calque ne suivait pas son
 document ; elle le suit maintenant.
 
-Le recadrage a en revanche une limite qu'il faut connaître avant de s'en servir : **rétrécir le
-document jette pour de bon ce qui tombe hors du cadre**. `⌘Z` rétablit la taille d'origine, mais
-la zone retirée revient vide, et les traits de pinceau qu'elle contenait ne reviennent pas non
-plus. C'est le comportement de Photoshop quand « Supprimer les pixels rognés » est coché — sauf
+Le recadrage a en revanche une limite qu’il faut connaître avant de s’en servir : **rétrécir le
+document jette pour de bon ce qui tombe hors du cadre**. `⌘Z` rétablit la taille d’origine, mais
+la zone retirée revient vide, et les traits de pinceau qu’elle contenait ne reviennent pas non
+plus. C’est le comportement de Photoshop quand « Supprimer les pixels rognés » est coché — sauf
 que son historique à lui sait les rendre.
 
 **La raison.** Les pixels ne vivent pas dans le document mais dans des textures GPU, et
-l'historique n'en garde que des tuiles de 512 px, plafonnées à 256 Mo. Un recadrage sévère
-retirerait plus de tuiles que ce plafond n'en autorise. Garder l'intégralité de l'image d'avant
-demanderait des instantanés pleine taille dans la pile d'annulation, ce que le studio s'interdit
+l’historique n’en garde que des tuiles de 512 px, plafonnées à 256 Mo. Un recadrage sévère
+retirerait plus de tuiles que ce plafond n’en autorise. Garder l’intégralité de l’image d’avant
+demanderait des instantanés pleine taille dans la pile d’annulation, ce que le studio s’interdit
 justement pour que `⌘Z` reste instantané sur des documents lourds.
 
-**Ce qu'il faut faire :** `⇧⌘E` avant un recadrage large, si vous pensez revenir en arrière.
+**Ce qu’il faut faire :** `⇧⌘E` avant un recadrage large, si vous pensez revenir en arrière.
 
-### Remplir n'est pas un pot de peinture
+### Remplir n’est pas un pot de peinture
 
-**Remplir le calque** (`G`) remplit le calque **entier**, d'un bord à l'autre. Ce n'est pas le
-remplissage par zone que vous connaissez peut-être ailleurs — celui qui s'arrête aux contours.
+**Remplir le calque** (`G`) remplit le calque **entier**, d’un bord à l’autre. Ce n’est pas le
+remplissage par zone que vous connaissez peut-être ailleurs — celui qui s’arrête aux contours.
 
-Ce n'est pas un défaut : c'est un outil différent, qui porte bien son nom.
+Ce n’est pas un défaut : c’est un outil différent, qui porte bien son nom.
 
-### L'historique s'arrête à 100
+### L’historique s’arrête à 100
 
-La *pile d'annulation* garde les **100 dernières** actions. Au-delà, les plus anciennes
+La *pile d’annulation* garde les **100 dernières** actions. Au-delà, les plus anciennes
 disparaissent définitivement.
 
-### L'export aplatit, l'enregistrement non
+### L’export aplatit, l’enregistrement non
 
 `⇧⌘E` écrit le document **aplati** en `.png` où vous voulez : une seule image, les calques fondus
-ensemble. Ce n'est pas une sauvegarde — c'est une sortie.
+ensemble. Ce n’est pas une sauvegarde — c’est une sortie.
 
-Pour garder la pile de calques, c'est `⌘S` : le document s'écrit en dossier `.img`, masques
+Pour garder la pile de calques, c’est `⌘S` : le document s’écrit en dossier `.img`, masques
 compris, et se rouvre tel quel. Les deux gestes ne servent pas à la même chose et aucun ne
-remplace l'autre. Ce qui ne revient dans aucun des deux : l'historique d'annulation.
+remplace l’autre. Ce qui ne revient dans aucun des deux : l’historique d’annulation.
 
 ---
 
 ## Espace 3D
 
-### Le texte 3D n'offre qu'une graisse par famille
+### Le texte 3D n’offre qu’une graisse par famille
 
-**Ajouter ▸ Objet ▸ Texte** fonctionne — voir [l'espace 3D](09-espace-3d.md). Deux réserves.
+**Ajouter ▸ Objet ▸ Texte** fonctionne — voir [l’espace 3D](09-espace-3d.md). Deux réserves.
 
-**Une seule coupe par famille.** La liste offre le romain de chaque police et rien d'autre : pas
-de gras, pas d'italique. Une famille qui installe neuf graisses n'occupe donc qu'une ligne, ce
-qui est le bon compromis tant que le studio n'a pas de sélecteur de graisse.
+**Une seule coupe par famille.** La liste offre le romain de chaque police et rien d’autre : pas
+de gras, pas d’italique. Une famille qui installe neuf graisses n’occupe donc qu’une ligne, ce
+qui est le bon compromis tant que le studio n’a pas de sélecteur de graisse.
 
 **Une police du système ne voyage pas.** Elle reste écrite dans le document, mais une machine qui
-ne l'a pas dessine les lettres dans la police embarquée par défaut, en marquant le nom manquant
-dans la liste. Les trois polices que le studio embarque, elles, s'ouvrent partout à l'identique.
+ne l’a pas dessine les lettres dans la police embarquée par défaut, en marquant le nom manquant
+dans la liste. Les trois polices que le studio embarque, elles, s’ouvrent partout à l’identique.
 
-**Et quelques polices anciennes ne s'ouvrent pas du tout** : la bibliothèque de lecture de polices
-que le studio emploie ne connaît pas tous les formats de table que les faces héritées d'avant les
+**Et quelques polices anciennes ne s’ouvrent pas du tout** : la bibliothèque de lecture de polices
+que le studio emploie ne connaît pas tous les formats de table que les faces héritées d’avant les
 années 2000 emploient. Sur une machine Apple, cela concerne une police sur dix environ. Le texte
 retombe alors sur la police par défaut, et le journal dit laquelle a échoué.
 
 ### Le raccourci `S` fait deux choses à la fois
 
-Dans la vue 3D, `S` choisit l'outil **Redimensionner** *et* fait reculer la caméra tant qu'on le
+Dans la vue 3D, `S` choisit l’outil **Redimensionner** *et* fait reculer la caméra tant qu’on le
 tient. Les deux tables de touches — les outils et le vol — sont lues sur le même appui.
 
-En pratique on le remarque peu : prendre l'outil recule la caméra d'un cheveu. Mais c'est un
+En pratique on le remarque peu : prendre l’outil recule la caméra d’un cheveu. Mais c’est un
 chevauchement, pas une intention.
 
 ### Les touches de vol ne se remappent pas
 
-`W A S D Q E` et la touche d'accélération sont figées. Elles n'apparaissent pas dans l'écran des
+`W A S D Q E` et la touche d’accélération sont figées. Elles n’apparaissent pas dans l’écran des
 raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
 
 ---
 
 ## Espace Vidéo
 
-### Pas d'export
+### Pas d’export
 
-Une séquence s'enregistre désormais en `.seq` et se rouvre telle quelle.
+Une séquence s’enregistre désormais en `.seq` et se rouvre telle quelle.
 
-**Il n'y a toujours pas d'export** : on ne peut pas encore produire un fichier vidéo final. C'est
-la limite la plus lourde du studio à ce jour, parce qu'elle empêche de livrer.
+**Il n’y a toujours pas d’export** : on ne peut pas encore produire un fichier vidéo final. C’est
+la limite la plus lourde du studio à ce jour, parce qu’elle empêche de livrer.
 
-### Les réglages d'une séquence sont figés
+### Les réglages d’une séquence sont figés
 
 Une séquence neuve part toujours sur 1920 × 1080, 25 images par seconde, 48 000 Hz. Ces valeurs ne
 se changent pas encore.
@@ -204,16 +204,16 @@ Ce ne sont **pas** des oublis :
 - pas d'**égaliseur**, pas de **compresseur**.
 
 **La raison.** Ces outils répondent à des problèmes de **prise de son réelle** : un micro qui
-souffle, une pièce qui résonne, un sifflement sur les « s ». Un son **généré** n'a pas ces
+souffle, une pièce qui résonne, un sifflement sur les « s ». Un son **généré** n’a pas ces
 défauts — il est propre par construction.
 
-Ce qui reste utile sur un son généré, c'est de le raccourcir, de l'amener au bon niveau et de le
-faire entrer et sortir proprement. C'est exactement ce que fait cet espace, et rien de plus.
+Ce qui reste utile sur un son généré, c’est de le raccourcir, de l’amener au bon niveau et de le
+faire entrer et sortir proprement. C’est exactement ce que fait cet espace, et rien de plus.
 
 ### Pas de document audio
 
-Il n'y a pas de fichier `.aud` sur le disque. L'espace Audio écrit directement des *assets*, via
-**Appliquer** ou **Enregistrer comme nouveau**. Ce n'est pas une perte : c'est un autre modèle de
+Il n’y a pas de fichier `.aud` sur le disque. L’espace Audio écrit directement des *assets*, via
+**Appliquer** ou **Enregistrer comme nouveau**. Ce n’est pas une perte : c’est un autre modèle de
 travail, et il est complet.
 
 ---
@@ -223,22 +223,22 @@ travail, et il est complet.
 ### Ce qui manque
 
 - **les dérivations automatiques** — fabriquer les *normales* depuis la *hauteur*, par exemple. Le
-  badge « dérivé » existe, et le studio sait quel canal dérive de quel autre ; c'est le calcul qui
+  badge « dérivé » existe, et le studio sait quel canal dérive de quel autre ; c’est le calcul qui
   manque, pas le vocabulaire ;
-- **l'import d'un fichier du disque** directement dans un canal. Le détour existe : importez
-  l'image dans le projet, puis posez-la sur la vignette du canal ;
-- **l'aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures visibles ;
-- **l'export** vers glTF, Unity, Unreal, Roblox.
+- **l’import d’un fichier du disque** directement dans un canal. Le détour existe : importez
+  l’image dans le projet, puis posez-la sur la vignette du canal ;
+- **l’aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures visibles ;
+- **l’export** vers glTF, Unity, Unreal, Roblox.
 
-Ce qui fonctionne aujourd'hui : générer une matière, poser une image dans chacun de ses huit
+Ce qui fonctionne aujourd’hui : générer une matière, poser une image dans chacun de ses huit
 canaux, régler tout ce dont elle est faite — rugosité et métal avec leur remappage, relief,
-émission, répétition —, la regarder sur cinq formes sous l'éclairage de votre choix, inspecter
-chaque canal à plat, et l'enregistrer.
+émission, répétition —, la regarder sur cinq formes sous l’éclairage de votre choix, inspecter
+chaque canal à plat, et l’enregistrer.
 
-### L'opacité d'un canal ne se règle pas
+### L’opacité d’un canal ne se règle pas
 
-Un canal est posé ou il ne l'est pas. Il n'y a pas de mélange partiel entre deux images dans le
-même canal, ni de fondu entre la valeur d'ensemble et la carte : le remappage règle la **plage**
+Un canal est posé ou il ne l’est pas. Il n’y a pas de mélange partiel entre deux images dans le
+même canal, ni de fondu entre la valeur d’ensemble et la carte : le remappage règle la **plage**
 dans laquelle la carte est relue, ce qui est une autre question.
 
 ---
@@ -247,7 +247,7 @@ dans laquelle la carte est relue, ce qui est une autre question.
 
 ### Trois vues sur quatre ne dessinent rien
 
-La barre d'aperçu propose quatre vues. Une seule fonctionne.
+La barre d’aperçu propose quatre vues. Une seule fonctionne.
 
 | Vue | État |
 |---|---|
@@ -256,7 +256,7 @@ La barre d'aperçu propose quatre vues. Une seule fonctionne.
 | **Croix** | bouton inactif |
 | **6 faces** | bouton inactif |
 
-### La section Génération n'a pas ses boutons
+### La section Génération n’a pas ses boutons
 
 Elle affiche bien le modèle, le prompt et la graine qui ont produit le ciel, en lecture seule. Mais
 les deux boutons que les traductions annoncent — **Régénérer** et **Réinitialiser** — ne sont posés
@@ -265,20 +265,20 @@ nulle part dans le panneau.
 En attendant, on recopie le prompt et la graine à la main dans le panneau **Génération**, ce qui
 revient au même en trois gestes de plus.
 
-### Pas d'export
+### Pas d’export
 
-Un ciel s'enregistre désormais en `.sky` — l'exposition, la rotation de l'horizon et la position
+Un ciel s’enregistre désormais en `.sky` — l’exposition, la rotation de l’horizon et la position
 du soleil se rouvrent telles quelles. Ce que le document ne garde pas : la vue et le champ de
-vision, qui disent comment on le regardait et non ce qu'il est.
+vision, qui disent comment on le regardait et non ce qu’il est.
 
-En revanche, on ne peut toujours pas exporter les six faces d'un cube, ni un *HDRI* utilisable
+En revanche, on ne peut toujours pas exporter les six faces d’un cube, ni un *HDRI* utilisable
 dans un autre logiciel.
 
 ---
 
 ## Import
 
-### Ce qui s'importe
+### Ce qui s’importe
 
 | Type | Extensions |
 |---|---|
@@ -287,70 +287,70 @@ dans un autre logiciel.
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
 | **3D** | `glb` |
 
-### Ce qui ne s'importe pas
+### Ce qui ne s’importe pas
 
 - **les fichiers 3D autres que `.glb`** — `.gltf` séparé, `.obj`, `.fbx` ;
 - **les HDRI** — `.hdr`.
 
-Un `.exr` s'importe, mais il est catalogué comme **image**, pas comme ciel. Il fonctionne quand
+Un `.exr` s’importe, mais il est catalogué comme **image**, pas comme ciel. Il fonctionne quand
 même comme source pour une *skybox* : il faut simplement aller le chercher dans les images.
 
-### Le fichier n'est pas copié
+### Le fichier n’est pas copié
 
 Le studio crée un **lien** vers votre fichier, là où il se trouve. Déplacer ou supprimer
-l'original casse le lien.
+l’original casse le lien.
 
-Ce n'est pas un défaut mais un choix : copier des rushes de plusieurs gigaoctets dans chaque
+Ce n’est pas un défaut mais un choix : copier des rushes de plusieurs gigaoctets dans chaque
 projet remplirait votre disque pour rien.
 
 ---
 
 ## Réglages et raccourcis
 
-### Deux familles n'ont pas de modèle par défaut
+### Deux familles n’ont pas de modèle par défaut
 
 **Réglages ▸ Génération** propose sept sous-sections : Image, Vidéo, 3D, Audio, Agrandissement,
 Détourage, Vectorisation. **Texture** et **Skybox** manquent, alors que ce sont désormais des
 familles de modèles à part entière.
 
-Conséquence : dans les espaces Textures et Skyboxes, le panneau **Génération** n'apparaît qu'après
+Conséquence : dans les espaces Textures et Skyboxes, le panneau **Génération** n’apparaît qu’après
 avoir choisi un modèle à la main, et il faut recommencer à chaque session — les autres espaces
 peuvent, eux, mémoriser leur choix.
 
 ### Un projet reste sur votre disque, toujours
 
 Le fichier de réglages prévoit un choix entre « sur votre disque » et « dans le nuage » pour
-l'endroit où un projet vit. **Le second n'est pas implémenté**, et le choix n'est donc offert
-nulle part dans l'interface. Offrir un bouton qui ne mène nulle part serait une promesse que le
+l’endroit où un projet vit. **Le second n’est pas implémenté**, et le choix n’est donc offert
+nulle part dans l’interface. Offrir un bouton qui ne mène nulle part serait une promesse que le
 logiciel ne peut pas tenir.
 
 > **À ne pas confondre avec la bibliothèque de votre compte**, qui, elle, existe : vous pouvez
-> **envoyer** des assets vers elle depuis l'étagère. Ce sont deux choses différentes — l'une est
-> l'endroit où le projet lui-même est rangé, l'autre est un stock d'assets en ligne à côté du
+> **envoyer** des assets vers elle depuis l’étagère. Ce sont deux choses différentes — l’une est
+> l’endroit où le projet lui-même est rangé, l’autre est un stock d’assets en ligne à côté du
 > projet. Voir [Les assets](07-assets.md).
 
-### Le rapatriement n'a pas de bouton
+### Le rapatriement n’a pas de bouton
 
-L'envoi vers la bibliothèque existe ; le chemin inverse non. Le studio sait rapatrier et sait
-comparer les deux côtés — c'est écrit et testé — mais aucun bouton ne le déclenche, et aucun écran
+L’envoi vers la bibliothèque existe ; le chemin inverse non. Le studio sait rapatrier et sait
+comparer les deux côtés — c’est écrit et testé — mais aucun bouton ne le déclenche, et aucun écran
 ne montre le contenu de la bibliothèque.
 
-Conséquence directe, et ce n'est pas une panne : sur les sept badges qu'un asset peut porter,
+Conséquence directe, et ce n’est pas une panne : sur les sept badges qu’un asset peut porter,
 **trois ne peuvent pas apparaître** — « à rapatrier », « modifié des deux côtés » et « appartient
-à un autre projet ». Tant que rien ne bouge sans que vous le demandiez, l'autre côté ne peut pas
-prendre de l'avance sur le vôtre.
+à un autre projet ». Tant que rien ne bouge sans que vous le demandiez, l’autre côté ne peut pas
+prendre de l’avance sur le vôtre.
 
 ### Sur Windows et Linux, `⌘` est pris au pied de la lettre
 
-Deux défauts distincts, l'un d'affichage, l'autre de fonctionnement.
+Deux défauts distincts, l’un d’affichage, l’autre de fonctionnement.
 
-**L'affichage** : les infobulles et l'écran des raccourcis dessinent le symbole `⌘` du Mac au lieu
+**L’affichage** : les infobulles et l’écran des raccourcis dessinent le symbole `⌘` du Mac au lieu
 de `Ctrl`, partout.
 
 **Le fonctionnement** : les raccourcis portés par le menu du système — `⌘Z`, `⌘S`, `⌘N` — répondent
-bien à `Ctrl`, c'est le menu qui les déclenche. Mais ceux qu'une surface écoute elle-même, comme
-`⌘D` dans la vue 3D, attendent la touche **Windows** et non `Ctrl` : ils sont pour l'instant hors
-d'atteinte ailleurs que sur un Mac.
+bien à `Ctrl`, c’est le menu qui les déclenche. Mais ceux qu’une surface écoute elle-même, comme
+`⌘D` dans la vue 3D, attendent la touche **Windows** et non `Ctrl` : ils sont pour l’instant hors
+d’atteinte ailleurs que sur un Mac.
 
 ---
 
@@ -363,23 +363,23 @@ Ce ne sont pas des manques : ce sont des bornes assumées.
 La fabrication se passe sur les serveurs de Scenario. Sans connexion, vous pouvez ouvrir,
 retoucher, monter, enregistrer — mais pas créer de nouveau contenu.
 
-### Il n'est pas gratuit à l'usage
+### Il n’est pas gratuit à l’usage
 
 Chaque génération consomme le crédit de votre compte Scenario. Le studio ne vous facture rien : il
 transmet. Mais votre compte, lui, compte.
 
-**Et il ne peut pas vous dire ce qu'il vous reste.** La fenêtre **Aide ▸ Consommation…** montre ce
-qui a été dépensé sur 7, 31 ou 120 jours — jamais un solde, parce que l'API Scenario n'en expose
-aucun. Le montant en euros qui l'accompagne est calculé sur la grille publique des packs
+**Et il ne peut pas vous dire ce qu’il vous reste.** La fenêtre **Aide ▸ Consommation…** montre ce
+qui a été dépensé sur 7, 31 ou 120 jours — jamais un solde, parce que l’API Scenario n’en expose
+aucun. Le montant en euros qui l’accompagne est calculé sur la grille publique des packs
 prépayés : un ordre de grandeur, pas votre facture.
 
-Ce qu'il sait dire, en revanche, c'est ce qu'une génération va coûter : le bouton **Générer**
-porte une estimation avant que vous appuyiez. Combien il vous reste pour la payer, c'est votre
+Ce qu’il sait dire, en revanche, c’est ce qu’une génération va coûter : le bouton **Générer**
+porte une estimation avant que vous appuyiez. Combien il vous reste pour la payer, c’est votre
 compte Scenario qui le sait, pas le studio.
 
 ### Il ne remplace pas Photoshop, Blender ni Premiere
 
-Il en fait une part utile, au même endroit, **autour de la génération**. C'est un outil de
+Il en fait une part utile, au même endroit, **autour de la génération**. C’est un outil de
 fabrication assistée, pas une suite de production complète.
 
 ### La fenêtre ne sera jamais translucide
@@ -387,31 +387,31 @@ fabrication assistée, pas une suite de production complète.
 Pas de vibrancy, pas de fond flouté derrière la fenêtre.
 
 Dans un studio, on juge des couleurs. Un fond translucide fausse la perception de tout ce qui est
-affiché au-dessus. C'est une décision de métier, et elle ne changera pas.
+affiché au-dessus. C’est une décision de métier, et elle ne changera pas.
 
-### Vos identifiants ne s'afficheront jamais
+### Vos identifiants ne s’afficheront jamais
 
-Il n'y a pas de bouton « voir ma clé API », et il n'y en aura pas. Une fois enregistrée, la clé
-est chiffrée par le *trousseau* de votre système, et la partie du logiciel qui dessine l'écran
-n'y a **structurellement** pas accès.
+Il n’y a pas de bouton « voir ma clé API », et il n’y en aura pas. Une fois enregistrée, la clé
+est chiffrée par le *trousseau* de votre système, et la partie du logiciel qui dessine l’écran
+n’y a **structurellement** pas accès.
 
-Ce n'est pas une gêne à contourner : c'est ce qui garantit qu'une capture d'écran de vos réglages
+Ce n’est pas une gêne à contourner : c’est ce qui garantit qu’une capture d’écran de vos réglages
 ne peut pas divulguer votre compte.
 
 ---
 
-## Récapitulatif : par ordre d'importance
+## Récapitulatif : par ordre d’importance
 
 Si vous ne deviez retenir que cinq choses de ce chapitre :
 
-1. **Les six documents s'enregistrent maintenant**, et fermer un onglet demande avant de perdre
-   quoi que ce soit ; ce qui ne revient pas, c'est l'historique d'annulation ;
-2. **un recadrage ne se défait qu'à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
+1. **Les six documents s’enregistrent maintenant**, et fermer un onglet demande avant de perdre
+   quoi que ce soit ; ce qui ne revient pas, c’est l’historique d’annulation ;
+2. **un recadrage ne se défait qu’à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
-3. **il n'y a pas d'export vidéo** — le studio ne peut pas encore livrer un fichier final ;
-4. **les familles Texture et Skybox n'ont pas de modèle par défaut** — ces deux espaces font
+3. **il n’y a pas d’export vidéo** — le studio ne peut pas encore livrer un fichier final ;
+4. **les familles Texture et Skybox n’ont pas de modèle par défaut** — ces deux espaces font
    rechoisir leur modèle à chaque session ;
-5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu'un `.glb`.
+5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu’un `.glb`.
 
 Tout le reste est du confort.
 
