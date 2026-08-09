@@ -65,9 +65,14 @@ La langue de tous les textes de l’application : menus, boutons, messages.
 
 | Valeur | Effet |
 |---|---|
-| **Système** | reprend la langue de votre ordinateur |
+| **Système** | reprend la langue de votre ordinateur — **anglais** si ce n’est ni le français ni l’anglais |
 | **Français** | français |
 | **English** | anglais |
+
+> **Une machine en allemand, en espagnol ou en japonais ouvre le studio en anglais**, pas en
+> français. C’est délibéré : quelqu’un dont l’ordinateur parle une troisième langue lit plus
+> probablement l’anglais, et le lui refuser reviendrait à lui faire chercher ce réglage dans une
+> fenêtre écrite en français.
 
 Chaque langue s’écrit dans sa propre langue — « Français » reste « Français » même sur un écran en
 anglais. C’est volontaire : on reconnaît sa langue avant de savoir lire celle de l’écran.

@@ -522,6 +522,11 @@ Top right, the period: **7, 31 or 120 days**, 31 by default. Four sections down 
 | **Activities** | what was done, and the assets that came out of it |
 | **Journal** | every billed event, newest first, by pages |
 
+**Activities and Journal name their rows in the window's language**, not in the API's: you read
+"Image generation", not `images-generation`. If Scenario adds a kind of event the studio does not
+know yet, its row shows the raw API name — the only place that technical English comes back, and
+better than an empty row.
+
 Three warnings are shown there, and none is decorative:
 
 - **there is no balance.** The Scenario API only exposes what has been spent, never what is

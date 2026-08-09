@@ -62,9 +62,13 @@ The language of every text in the application: menus, buttons, messages.
 
 | Value | Effect |
 |---|---|
-| **System** | follows your computer's own language |
+| **System** | follows your computer's own language — **English** if that is neither French nor English |
 | **Français** | French |
 | **English** | English |
+
+> **A machine set to German, Spanish or Japanese opens the studio in English**, not in French.
+> That is deliberate: someone whose computer speaks a third language is likelier to read English,
+> and refusing it would mean making them hunt for this setting in a window written in French.
 
 Each language names itself in its own language — "Français" stays "Français" even on an English
 screen. That is deliberate: you recognise your own language before you can read the screen's.

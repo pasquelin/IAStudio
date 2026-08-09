@@ -542,6 +542,11 @@ colonne de gauche :
 | **Activités** | ce qui a été fait, et les assets qui en sont sortis |
 | **Journal** | chaque événement facturé, du plus récent au plus ancien, par pages |
 
+**Activités et Journal nomment leurs lignes dans la langue de la fenêtre**, pas dans celle de
+l’API : vous lisez « Génération d’images », pas `images-generation`. Si Scenario ajoute un type
+d’événement que le studio ne connaît pas encore, sa ligne affiche le nom brut de l’API — c’est le
+seul cas où l’anglais technique reparaît, et il vaut mieux qu’une ligne vide.
+
 Trois avertissements y sont affichés, et aucun n’est décoratif :
 
 - **il n’y a pas de solde.** L’API Scenario n’expose que ce qui a été dépensé, jamais ce qui
