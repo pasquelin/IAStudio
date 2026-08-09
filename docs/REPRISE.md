@@ -41,13 +41,14 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > monté nulle part (`feat/workflows`) · **l’accueil** et ses onze bandes, avec « en refaire une
 > avec… » (`feat/home`, `feat/home-creations`) · les trois accès clavier — Explorateur, double-clic
 > qui traverse les espaces, étagère à assets et sa sélection multiple (`feat/explorateur-clavier`,
-> `feat/double-clic`, `feat/etagere-clavier`) · le prix d’une génération, avant et après
+> `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader des Textures**
+> (`feat/textures-derive`) · le prix d’une génération, avant et après
 > (`feat/workflows`) · six passes i18n et les trois gardes de texte en dur (`feat/i18n-*`) · le
 > pinceau à taille réglable (`feat/pinceau`) · le panneau matériau et la bande de canaux des
 > Textures (`feat/textures-materiau`). Le détail est au § 1.
 >
 > **Propose-moi un ordre et attends ma réponse** avant d’ouvrir un worktree. Les candidats, sans
-> priorité imposée : les **étapes 6 à 8 des Textures** (§ 3.4) · le **backlog qualité P1**
+> priorité imposée : les **étapes 7 et 8 des Textures** (§ 3.4) · le **backlog qualité P1**
 > (`.claude/loop/BACKLOG.md`, dont les statuts ont déjà menti trois fois : vérifie avant de prendre)
 > · les **13 constats du § 3.3** et l’export en six faces du skybox (§ 3.5) · les **dettes
 > transverses** du § 3.6.
@@ -318,8 +319,8 @@ budget de couverture (§ 3.1), ce qui est précisément pourquoi ce chemin n’a
 ---
 
 L’espace **Textures** est le prochain manque fonctionnel par ordre de valeur hors workflows : les
-**étapes 6 à 8** (§ 3.4) sont écrites et non commencées, et **rien de cet espace n’a été vérifié à
-l’écran**.
+**étapes 7 et 8** (§ 3.4) sont écrites et non commencées, et **les dérivations livrées le 9 août
+n’ont pas été vues à l’écran** — c’est la seule chose de cet espace qui reste à regarder.
 
 Les deux dettes d’API qui bloquaient le node editor — borne de débit et survie des jobs — **sont
 livrées** par les étapes 2 et 3 de `feat/workflows` (§ 3.6). Ce qui reste des dettes transverses :
@@ -611,13 +612,39 @@ bande de canaux.
 détour existe (importer dans le projet, puis déposer sur la vignette) et il est écrit au manuel.
 `IMPORTABLE_TYPES` ne connaît pas les canaux : c’est un chemin à ouvrir, pas un bug.
 
-### Les trois étapes écrites et non commencées
+### L’étape 6 est livrée — ce qu’elle a appris
 
-**6 — Dérivations en shader.** `engines/texture/derive/` : quad plein écran, `WebGLRenderTarget`,
-**port injectable** (jsdom n’a pas de WebGL). Sobel height→normal d’abord. **Aucune boucle JS sur des
-pixels.** Puis « améliorer ce canal » : `model_sc-texture-converter`, **via le `JobManager`**, jamais
-un appel direct au SDK. Un job rend six canaux ; `collector.ts` sait déjà les répartir par
-`metadata.type`.
+`engines/texture/derive/` calcule quatre canaux sur le GPU : hauteur ← luminance de la couleur de
+base, normale ← hauteur par Sobel 3×3, occlusion ← hauteur par trois anneaux, rugosité ← luminance
+inversée. Le résultat traverse `assets:save-texture` et devient un asset `texture` du projet.
+
+- **Le port ouvre son propre contexte WebGL**, et c’est l’exception que nomme désormais la JSDoc de
+  `GpuPipeline` : rien n’est échangé entre les deux contextes, le résultat part en PNG sur le
+  disque. Le plafond de seize contextes ne fait pas échouer la dérivation — le navigateur **évince
+  le plus ancien**, donc ce qui noircit est un viewport ouvert. D’où « une seule à la fois », tenue
+  par le panneau et dite par les autres lignes du menu.
+- **Un `ShaderMaterial` à fragment maison n’est pas encodé en sortie** : `colorspace_fragment` ne
+  vit que dans les shaders de `ShaderLib`. La source est lue en `NoColorSpace` et les octets
+  écrits sont ceux que le shader calcule. Vérifié en contexte réel : 128 → 128.
+- **Aucune force n’est figée dans les pixels.** `normalScale`, `aoIntensity` et `roughnessRange`
+  règlent déjà tout au rendu ; baker une intensité figerait dans un fichier ce que les curseurs
+  rendent réversible.
+- **Deux courses, trouvées par sonde et non par lecture.** La vignette accepte un dépôt pendant le
+  calcul — la destination se garde comme la source ; et la garde doit être rejouée **après** les
+  deux attentes longues (écriture du fichier, relistage du catalogue), pas seulement après le GPU.
+- **109 ms de thread UI pour une normale 2048²**, ~400 ms en 4K, dominés par le décodage et
+  `toBlob`. C’est un geste, pas une frame, mais l’invariant 6 n’est pas honoré : un
+  `OffscreenCanvas` dans un worker sortirait le tout. **Mesuré, non traité.**
+- **Un canal dérivé ne se met pas à jour tout seul.** Rien ne s’abonne à sa source ; les deux
+  manuels le disent maintenant. Le chaînage (recalculer la normale quand la hauteur change)
+  demanderait un `isStale` à côté de `canDerive` — `derivedFrom` sur l’asset porte déjà de quoi
+  le calculer.
+
+**Ce qui reste de l’étape 6** : « améliorer ce canal » par `model_sc-texture-converter`, **via le
+`JobManager`**, jamais un appel direct au SDK. Un job rend six canaux ; `collector.ts` sait déjà les
+répartir par `metadata.type`.
+
+### Les deux étapes écrites et non commencées
 
 **7 — Tiling.** Aperçu 1×/2×/4× (multiplicateur **local**, jamais écrit dans `material.tiling`),
 détection de coutures par gradient aux bords, seamless par décalage d’une demi-largeur. `overlap` et
@@ -629,6 +656,10 @@ Metallic=B) **en une passe shader**. L’écriture disque passe par le main. `GL
 `three/addons`. C’est ici que « aperçu en 1024, export en pleine résolution » s’applique.
 
 ### Vérifié à l’écran le 9 août — ne pas le redemander
+
+> **Les dérivations n’en font pas partie** : elles sont livrées et testées, jamais vues tourner.
+> C’est la seule chose de cet espace qui reste à regarder, et elle demande que l’application soit
+> fermée d’abord — le verrou d’instance unique.
 
 Sphère éclairée, remap, masque de cavité, vue à plat : les quatre sont vus sur l’application
 lancée, et les cinq angles de revue ont rendu. Deux choses seulement en restent, parce qu’elles
