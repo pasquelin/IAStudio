@@ -181,6 +181,51 @@ describe('catalog', () => {
     expect(catalog.search({ text: '%' }).map(found => found.id)).toEqual(['asset_2'])
   })
 
+  /**
+   * The search runs on every keystroke, so a word half typed has to find its row — that is what
+   * the trailing star of the fts5 expression is for.
+   */
+  it('finds a word still being typed', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.add(asset({ id: 'asset_2', name: 'Sky' }))
+
+    expect(catalog.search({ text: 'mos' }).map(found => found.id)).toEqual(['asset_1'])
+  })
+
+  /** Filters narrow: two words are two conditions, not two chances. */
+  it('asks for every word, not any of them', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.add(asset({ id: 'asset_2', name: 'Mossy sky' }))
+
+    expect(catalog.search({ text: 'mossy boulder' }).map(found => found.id)).toEqual(['asset_1'])
+  })
+
+  /** Typed in a hurry, without the accent the name carries. */
+  it('folds the accents away on both sides', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Pierre moussée' }))
+
+    expect(catalog.search({ text: 'moussee' }).map(found => found.id)).toEqual(['asset_1'])
+  })
+
+  /**
+   * The words are indexed in a table of their own, and nothing keeps it true but the triggers.
+   * Without them a deleted asset stays findable — a row the studio would then fail to open.
+   */
+  it('forgets the words of an asset that is gone', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.remove('asset_1')
+
+    expect(catalog.search({ text: 'mossy' })).toEqual([])
+  })
+
+  it('forgets the name an asset used to carry', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.add(asset({ id: 'asset_1', name: 'Dry boulder' }))
+
+    expect(catalog.search({ text: 'mossy' })).toEqual([])
+    expect(catalog.search({ text: 'dry' }).map(found => found.id)).toEqual(['asset_1'])
+  })
+
   it('narrows on every tag at once rather than any of them', () => {
     catalog.add(asset({ id: 'asset_1', tags: ['stone', 'set-dressing'] }))
     catalog.add(asset({ id: 'asset_2', tags: ['stone'] }))
@@ -467,5 +512,38 @@ describe('migrating a catalogue that already holds assets', () => {
     expect(found?.generation).toBeUndefined()
     expect(found?.syncStatus).toBeUndefined()
     expect(found?.groupId).toBeUndefined()
+  })
+
+  /**
+   * The words of a project that predates the index. A migration that only started indexing from
+   * its next import would leave a library of two thousand assets unsearchable, and nothing on
+   * screen would say why.
+   */
+  it('makes what was already there searchable at once', () => {
+    const older = openMemoryDatabase()
+    older.exec(`
+      CREATE TABLE assets (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,
+        path TEXT, remote_asset_id TEXT, job_id TEXT, width INTEGER, height INTEGER,
+        bytes INTEGER, created_at TEXT NOT NULL, derived_from TEXT,
+        source_path TEXT, hash TEXT, probe TEXT, proxy_path TEXT, peaks_path TEXT,
+        map TEXT, map_inverted INTEGER
+      );
+      CREATE TABLE asset_tags (
+        asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+        tag TEXT NOT NULL, PRIMARY KEY (asset_id, tag)
+      );
+      INSERT INTO assets (id, name, type, location, created_at)
+        VALUES ('asset_old', 'Mossy boulder', 'image', 'local', '2026-08-01T10:00:00.000Z');
+      PRAGMA user_version = 3;
+    `)
+
+    migrate(older)
+
+    expect(
+      createCatalog(older)
+        .search({ text: 'mossy' })
+        .map(found => found.id),
+    ).toEqual(['asset_old'])
   })
 })
