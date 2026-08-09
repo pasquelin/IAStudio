@@ -49,17 +49,6 @@ pas un choix.
 
 ## À faire
 
-### 9. `role="option"` sans `listbox`, et `aria-selected` qui dit « ouvert »
-
-**Même origine, même date.** Aucun `role="listbox"` n’existe nulle part dans `src/` : les cellules de
-`Collection` portent `role="option"` en orphelines, sans « liste de N éléments » ni « 3 sur 12 »
-annoncés, et sans `aria-multiselectable` alors que la sélection multiple existe. `Tree` fait la même
-chose correctement à côté (`role="tree"` sur la liste, `role="treeitem"` sur les lignes).
-
-L’entrée 5 a élargi le problème sans le créer : l’Explorateur rejoint les porteurs du rôle, et son
-`aria-selected` y veut dire « ouvert » — un état que l’utilisateur ne peut ni poser ni retirer depuis
-ce panneau, alors que la ligne le dit déjà en clair.
-
 ### 7. Un panneau Styles dans l’espace Textures
 
 **Demandé le 9 août 2026.** C’est une fonctionnalité, pas un défaut — elle est ici parce qu’elle se
@@ -453,6 +442,7 @@ correction.
 | **(5)** Les lignes de l’Explorateur n’avaient aucun accès clavier | `776e85b` (feat/explorateur-clavier) |
 | **(6)** Le double-clic sur un asset ne traversait pas les espaces, et se taisait | `33d31f3` (feat/double-clic) |
 | **(8)** L’étagère à assets n’avait aucun accès clavier, ni sélection multiple | `a98357e` (feat/etagere-clavier) |
+| **(9)** `role="option"` sans `listbox`, et `aria-selected` qui disait « ouvert » | `ea08ce0` (feat/aria-listbox) |
 
 > **L’entrée 8 cachait un défaut plus gênant que le clavier.** La ligne s’était approprié les deux
 > gestes — `DraggableAsset` sélectionnait au `pointerdown`, ouvrait au double-clic — d’où des
@@ -474,6 +464,20 @@ correction.
 > Ce qui a été vu : les cellules de l’étagère portent bien `tabindex` et `aria-selected`, que le
 > panneau n’avait pas avant. Ce qui reste à voir de ses yeux : le clic qui peint, la plage au
 > shift, et la bascule d’espace au double-clic depuis un autre espace.
+
+> **L’entrée 9 est la seule du registre qui ne se juge pas à l’œil**, et c’est pourquoi elle y a
+> vécu si longtemps. Le rôle du conteneur et celui de la cellule sont devenus **une seule
+> décision** (`rolesFor`) : `listbox`/`option` quand les lignes se sélectionnent, `list`/`listitem`
+> quand elles ne peuvent qu’être ouvertes, rien quand elles ne répondent à rien. `aria-selected` ne
+> se pose plus que sur un `option`, ce qui règle du même coup le « ouvert » de l’Explorateur.
+>
+> **Trois défauts introduits par ce déplacement, trouvés par axe-core avant la fusion** : un
+> `listbox` sans nom est une violation WCAG 2.0 A (4.1.2) et aucun appelant n’en fournissait — le
+> `label` est désormais requis ; le compte annoncé était celui de la **fenêtre virtualisée**, donc
+> « 1 sur 35 » sur un catalogue de 2000 modèles, d’où `aria-posinset`/`aria-setsize` ; et
+> `aria-multiselectable` est **déclaré par l’appelant, jamais déduit** — `pickFrom` offre shift et
+> ⌘ à tous, mais trois panneaux sur six n’en gardent qu’un et annonceraient une plage qu’ils ne
+> construisent pas.
 
 > **L’entrée 6 est tranchée dans le sens qu’elle proposait** : c’est le comportement de
 > l’Explorateur qui était le bon. Une destination est prête dès qu’un document de son genre est

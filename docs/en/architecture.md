@@ -522,6 +522,28 @@ Key primitives, all in `design/`:
 
 Writing a row, a panel surface or a picture frame by hand is a style bug, not a shortcut.
 
+### A collection announces what it is, and that is a single decision
+
+`Collection` picks the container role and the cell role **together** — `rolesFor`:
+`listbox`/`option` when rows can be selected, `list`/`listitem` when they can only be opened, no
+role at all when they answer to nothing. The two cannot diverge, and that is the point: an
+`option` with no `listbox` around it is invalid ARIA, which engines ignore outright.
+
+Three consequences for the caller, none of them optional:
+
+- **`label` is required.** A `listbox` with no name is a WCAG 2.0 A violation (4.1.2), and six
+  panels that pass none all announce themselves as "listbox". Each passes the title it already
+  carries.
+- **The announced count is the data's, not the virtualised window's.** `aria-posinset` and
+  `aria-setsize` come from the real index: without them a 2000-model catalogue says "1 of 35",
+  and the number changes as you scroll.
+- **`aria-multiselectable` is declared, never inferred.** `pickFrom` offers shift and ⌘ to every
+  caller, but three panels out of six keep only one selection: inferring it would promise a range
+  they do not build.
+
+`aria-selected` is only ever set on an `option`. The Explorer paints "open" with that same prop,
+and announcing it as "selected" would describe a state its rows can neither take nor give back.
+
 ### What the design system took back from a library
 
 **Failure toasts no longer come from `react-toastify`**, which has left the dependencies. A toast

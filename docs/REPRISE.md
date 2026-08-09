@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`59e7644`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline 59e7644..develop`) au lieu de relire mille lignes.
+à **`ea08ce0`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline ea08ce0..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -79,8 +79,8 @@ la configuration et de l’espace 3D ayant été supprimées une fois leurs chan
 
 # 1. L’état
 
-**954 fichiers dans `src/`, dont 378 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
-en exécutait alors **4771 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
+**961 fichiers dans `src/`, dont 381 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
+en exécutait alors **4822 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
 nombres ne se lit dans un fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
 demande avant de perdre quoi que ce soit. L’application démarre par `pnpm start`.
 
@@ -226,12 +226,14 @@ ramenée de force.
 
 ## Ce qui n’est pas commencé
 
-**La surface Scenario que le studio prend est plus étroite qu’elle n’en a l’air.** Dix canaux
-`scenario:*`, cinq `assets:*` et quatre `cloud:*` couvrent la génération, le catalogue de modèles,
-les jobs, l’upload, la bibliothèque et l’assistance au prompt — et rien d’autre. Ce qui n’est **pas**
-touché : les workflows, `usages` et le solde, `detect`, `patch`, l’entraînement, la composition de
-LoRA, les écrans de collections, la recherche par similarité visuelle. **Le § 4 est l’inventaire
-raisonné de ce trou.**
+**La surface Scenario que le studio prend est plus étroite qu’elle n’en a l’air.** Treize canaux
+`scenario:*`, neuf `assets:*`, quatre `cloud:*` et trois `workflows:*` couvrent la génération, le
+catalogue de modèles, les jobs, l’upload, la bibliothèque, l’assistance au prompt, la consommation
+de chaque clé et l’exécution des Apps — et rien d’autre. Ce qui n’est **pas** touché : l’**édition**
+d’un workflow (les trois canaux cherchent, décrivent et lancent ; aucun n’écrit), `detect`, `patch`,
+l’entraînement, la composition de LoRA, les écrans de collections, la recherche par similarité
+visuelle. Et le **solde** ne manque pas par oubli : l’API n’expose que ce qui a été dépensé.
+**Le § 4 est l’inventaire raisonné de ce trou.**
 
 Ce qu’il faut retenir de `feat/prompt-assist` (`generate/prompt`, `caption`, `describe_style`,
 `translate`) avant de toucher au reste de cette liste :

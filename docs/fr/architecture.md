@@ -542,6 +542,29 @@ Les primitives, toutes dans `design/` :
 Écrire à la main une ligne, une surface de panneau ou un cadre d’image est un bug de style, pas
 un raccourci.
 
+### Une collection annonce ce qu’elle est, et c’est une seule décision
+
+`Collection` choisit **ensemble** le rôle du conteneur et celui de la cellule — `rolesFor` :
+`listbox`/`option` quand les lignes se sélectionnent, `list`/`listitem` quand elles ne peuvent
+qu’être ouvertes, aucun rôle quand elles ne répondent à rien. Les deux ne peuvent pas diverger,
+et c’est le point : un `option` sans `listbox` autour est de l’ARIA invalide, que les moteurs
+ignorent purement et simplement.
+
+Trois conséquences pour l’appelant, et aucune n’est facultative :
+
+- **`label` est requis.** Un `listbox` sans nom est une violation WCAG 2.0 A (4.1.2), et six
+  panneaux qui n’en passent pas s’annoncent tous « listbox ». Chacun donne le titre qu’il porte
+  déjà.
+- **Le compte annoncé est celui des données, pas de la fenêtre virtualisée.** `aria-posinset` et
+  `aria-setsize` sont posés depuis l’index réel : sans eux, un catalogue de 2000 modèles se dit
+  « 1 sur 35 », et le nombre change au défilement.
+- **`aria-multiselectable` est déclaré, jamais déduit.** `pickFrom` offre shift et ⌘ à tous les
+  appelants, mais trois panneaux sur six n’en gardent qu’un : le déduire promettrait une plage
+  qu’ils ne construisent pas.
+
+`aria-selected` ne se pose que sur un `option`. L’Explorateur peint « ouvert » avec la même prop,
+et l’annoncer « sélectionné » décrirait un état que ses lignes ne peuvent ni prendre ni rendre.
+
 ### Ce que le design system a repris à une bibliothèque
 
 **Les bulles d’échec ne viennent plus de `react-toastify`**, qui a quitté les dépendances. Une
