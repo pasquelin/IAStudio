@@ -235,7 +235,7 @@ clic dehors. Il n’y a rien à concevoir : il y a à partager.
 fenêtre qui perd le focus. La troisième compte plus qu’il n’y paraît dans un studio : on passe à
 une autre application, on revient, et le volet est toujours là par-dessus le travail.
 
-### 20. Une App n’appartient à aucun espace, et rien ne dit ce qu’elle produit
+### 23. Une App n’appartient à aucun espace, et rien ne dit ce qu’elle produit
 
 **Constaté le 9 août 2026** — « je le vois sur toutes les sections ». C’est exact, et c’est
 entier : `TOOL_PLACEMENTS` déclare `apps` pour `WORKSPACE_IDS`, et `searchApps` ne filtre que
@@ -268,45 +268,6 @@ filtre n’exempte pas d’expliquer — deux manques, dans l’ordre :
    avant d’inventer quoi que ce soit.
 2. **Dire où le résultat est parti**, après. La barre de jobs et le journal savent qu’il est
    arrivé ; ni l’un ni l’autre ne dit dans quelle étagère.
-
-### 18. Le formulaire de génération est en anglais dans une application en français
-
-**Vu le 9 août 2026, capture à l’appui**, sur `HY World - Multi-view to Splat` : le panneau
-s’appelle « Génération », le bouton dit « Générer ~36 UC », et entre les deux tout est en
-anglais — `Images`, `Video`, `SETTINGS`, `Target size`, `Max splat points`, et les trois phrases
-d’explication.
-
-**Ce n’est pas une traduction oubliée : c’est la frontière.** Le châssis appartient au studio et
-il est traduit ; **le contenu du formulaire appartient au modèle Scenario**, qui répond en
-anglais. `labelOf` (`main/scenario/schema.ts:61`) prend `input.label` tel quel, et à défaut
-dérive le nom technique — `numInferenceSteps` devient `Num inference steps`. Le groupe
-(`SETTINGS`) est la valeur brute de l’API, que la légende passe en majuscules. C’est l’invariant
-5 du guide : aucun formulaire écrit à la main, tout vient de `GET /models/{modelId}`.
-
-**Il n’y a donc pas de bug à corriger, et pas non plus de traduction à écrire** : ces libellés
-sont propres à chaque modèle, il y en a des centaines, et de nouveaux arrivent sans préavis. Un
-dictionnaire complet serait faux le lendemain.
-
-**Mais le mélange est plus visible qu’il n’a besoin de l’être.** Sur cette seule capture, `Video`
-sans accent est écrit à trente pixels de `Vidéo` accentué dans la barre du haut, et `Images` est
-un mot que le français écrit à l’identique — c’est-à-dire que deux des champs ne sont pas
-vraiment en anglais, ils sont juste **non traités**.
-
-Trois réponses possibles, par coût croissant, aucune tranchée :
-
-1. **Traduire les groupes seulement.** Ils sont peu nombreux et se répètent d’un modèle à l’autre
-   (`SETTINGS`…). Une table avec repli sur la valeur brute, ce qui est déjà la règle du
-   `FieldDescriptor` pour tout ce qu’il ne connaît pas.
-2. **Traduire les clés universelles** — `prompt`, `seed`, `width`, `height`,
-   `numInferenceSteps` — celles que **tous** les modèles portent. Table par `key`, jamais par
-   libellé, et repli sur l’anglais. Le risque est de s’arrêter à mi-chemin : un formulaire moitié
-   traduit se lit plus mal qu’un formulaire qui ne l’est pas.
-3. **Assumer et le dire** — une mention discrète que les paramètres viennent du modèle. Le coût
-   est nul, l’honnêteté est bonne, et ça n’aide personne à lire `Max splat points`.
-
-> À trancher avec la question de fond : ce vocabulaire est celui du métier, et un praticien de la
-> génération d’images lit `seed` et `guidance scale` en anglais partout ailleurs. Traduire peut
-> desservir autant que servir.
 
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
@@ -672,6 +633,20 @@ correction.
 | **(6)** Le double-clic sur un asset ne traversait pas les espaces, et se taisait | `33d31f3` (feat/double-clic) |
 | **(8)** L’étagère à assets n’avait aucun accès clavier, ni sélection multiple | `a98357e` (feat/etagere-clavier) |
 | **(9)** `role="option"` sans `listbox`, et `aria-selected` qui disait « ouvert » | `ea08ce0` (feat/aria-listbox) |
+| **(18)** Le formulaire de génération parlait anglais dans une application en français | `e0a07b2` (feat/i18n-schema-api) |
+
+> **L’entrée 18 s’est réglée autrement que les trois pistes qu’elle proposait.** Aucune n’a été
+> prise : le dictionnaire (`src/shared/i18n/model-text.fr.json`) s’indexe sur **le texte anglais**
+> et non sur la `key` du champ, parce que la moitié de ce que le panneau montre est une phrase
+> écrite par le modèle, pas un nom de champ — indexer sur la clé aurait traduit « Max splat
+> points » en laissant sa description anglaise juste dessous. La contrepartie est assumée : un
+> libellé changé côté Scenario retombe en anglais au lieu d’échouer.
+>
+> **Et la question de fond a été tranchée par une vérification, pas par un arbitrage** : l’API
+> Scenario ne connaît aucune langue — ni `Accept-Language`, ni paramètre de locale dans
+> `models.retrieve`, rien dans le SDK, vérifié sur les 210 pages de `docs/scenario-api/`. Ce texte
+> est donc traduit dans le studio ou nulle part. C’est le premier bundle du dépôt dont les clés
+> sont de l’anglais, et `CLAUDE.md` nomme désormais l’exception.
 
 > **L’entrée 8 cachait un défaut plus gênant que le clavier.** La ligne s’était approprié les deux
 > gestes — `DraggableAsset` sélectionnait au `pointerdown`, ouvrait au double-clic — d’où des
