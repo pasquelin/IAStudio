@@ -1,24 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SttState } from '@shared/domain/dictation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import type { SttFailure, SttState } from '@shared/domain/dictation'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { DictationButton } from './DictationButton'
 
-function show(
-  state: SttState = 'idle',
-  extra: { failure?: SttFailure; download?: { received: number; total: number } } = {},
-) {
-  useDictation.setState({
-    state,
-    partial: '',
-    level: 0,
-    failure: extra.failure ?? null,
-    download: extra.download ?? null,
-  })
+function show(state: SttState = 'idle', level = 0) {
+  useDictation.setState({ state, partial: '', level, failure: null, download: null })
   render(<DictationButton />)
 }
 
@@ -27,8 +18,6 @@ beforeEach(() => {
   useSettings.setState({ settings: DEFAULT_SETTINGS })
   useDictation.setState({ state: 'idle', partial: '', level: 0, failure: null, download: null })
 })
-
-afterEach(() => vi.unstubAllGlobals())
 
 describe('the microphone button', () => {
   it('offers to dictate when nothing is running', () => {
@@ -54,6 +43,13 @@ describe('the microphone button', () => {
     expect(start).toHaveBeenCalled()
   })
 
+  it('waits rather than takes a click while the engine loads', () => {
+    show('loadingEngine')
+
+    expect(screen.getByRole('button')).toBeDisabled()
+    expect(screen.getByText('Chargement du modèle…')).toBeInTheDocument()
+  })
+
   // Hidden rather than greyed: a control switched off in the settings has nothing to say, and a
   // dead microphone beside every prompt would be a permanent question.
   it('shows nothing at all when dictation is switched off', () => {
@@ -67,54 +63,33 @@ describe('the microphone button', () => {
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
-})
 
-describe('the model it needs', () => {
-  it('says what is missing, and how big it is', () => {
-    show('modelMissing')
+  // What the model needs and what the system refused belong to the whole application, not to
+  // one field: a form with two long text fields would offer the same 640 MB twice.
+  it('never carries what belongs to the status line', () => {
+    for (const state of ['modelMissing', 'downloadingModel', 'permissionRequired'] as SttState[]) {
+      const { unmount } = render(<DictationButton />)
+      useDictation.setState({ state })
 
-    expect(screen.getByText(/besoin d’un modèle/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Télécharger le modèle/ })).toBeInTheDocument()
-  })
-
-  it('shows how far the download has got, and offers to stop it', () => {
-    show('downloadingModel', { download: { received: 335_239_386, total: 670_478_772 } })
-
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50')
-    expect(screen.getByRole('button', { name: /Interrompre/ })).toBeInTheDocument()
-  })
-
-  // A window opened mid-download learns where it is from the state it read, not from an event
-  // it was not there for.
-  it('draws nothing rather than a full bar when the size is not known yet', () => {
-    show('downloadingModel', { download: { received: 0, total: 0 } })
-
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+      expect(screen.queryByText(/Télécharger|réglages du système/)).not.toBeInTheDocument()
+      unmount()
+    }
   })
 })
 
-describe('when it cannot listen', () => {
-  it('leads to the system settings after a refusal', async () => {
-    const openPrivacySettings = vi.fn(() => Promise.resolve())
-    useDictation.setState({ openPrivacySettings })
-    show('permissionRequired')
+describe('the level meter', () => {
+  // Five bars, and a level that wobbles without lighting another one renders nothing: the
+  // level changes ten times a second, and it must not re-render the field it sits under.
+  it('lights bars in proportion to the voice', () => {
+    show('listening', 1)
+    const lit = document.querySelectorAll('[role="img"] .bg-accent')
 
-    expect(screen.getByRole('status')).toHaveTextContent(/accès au micro a été refusé/)
-    await userEvent.click(screen.getByRole('button', { name: /réglages du système/ }))
-
-    expect(openPrivacySettings).toHaveBeenCalled()
+    expect(lit).toHaveLength(5)
   })
 
-  it('names the failure in the language of the person reading it', () => {
-    show('error', { failure: { code: 'engineCrashed', message: 'exited with code 139' } })
+  it('lights none of them in silence', () => {
+    show('listening', 0)
 
-    expect(screen.getByRole('status')).toHaveTextContent('La reconnaissance vocale s’est arrêtée.')
-  })
-
-  // The detail names a file path or an ONNX symbol: it belongs in the log, not on screen.
-  it('never shows the detail of a failure', () => {
-    show('error', { failure: { code: 'engineCrashed', message: 'exited with code 139' } })
-
-    expect(screen.queryByText(/139/)).not.toBeInTheDocument()
+    expect(document.querySelectorAll('[role="img"] .bg-accent')).toHaveLength(0)
   })
 })

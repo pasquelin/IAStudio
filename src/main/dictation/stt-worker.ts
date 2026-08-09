@@ -105,13 +105,14 @@ async function drainSegments(current: Engine): Promise<void> {
   let alone = true
 
   while (!current.vad.isEmpty()) {
-    // `false`, so the addon copies the samples instead of wrapping its own memory in an
-    // external buffer. Electron refuses those — "External buffers are not allowed" — while
-    // plain Node accepts them, which is why this only ever failed inside the application.
-    const segment = current.vad.front(false)
+    const ours = alone && held.length > 0
+    // Read only on the branch that uses it: `front(false)` exists to COPY the addon's buffer —
+    // 640 KB for a ten-second sentence — and the ordinary branch would throw that copy away.
+    //
+    // `false` because Electron refuses an external buffer, which is what the default wraps:
+    // "External buffers are not allowed", where plain Node accepts it.
+    const samples = ours ? previewOf(held, spoken) : current.vad.front(false).samples
     current.vad.pop()
-
-    const samples = alone && held.length > 0 ? previewOf(held, spoken) : segment.samples
     alone = false
 
     const startedAt = Date.now()
@@ -165,10 +166,12 @@ async function accept(current: Engine, samples: Int16Array): Promise<void> {
   if (spoken > 0) await preview(current, Date.now())
 }
 
-function unload(): void {
+/** Drops the engine and everything that belonged to the session it was serving. */
+function forget(): void {
   engine = null
   held = emptyHeld()
   spoken = 0
+  previewAt = 0
   lastDropped = 0
 }
 
@@ -197,15 +200,10 @@ async function handle(message: SttMessage): Promise<void> {
     return
   }
 
-  if ('cancel' in message) {
-    current.vad.clear()
-    current.vad.reset()
-    held = emptyHeld()
-    spoken = 0
-    return
-  }
-
-  unload()
+  current.vad.clear()
+  current.vad.reset()
+  held = emptyHeld()
+  spoken = 0
 }
 
 /**
@@ -224,7 +222,7 @@ const serial = createSerial((error: unknown) => {
   if (handling && isLoad(handling)) reply({ ready: false, error: reason })
   else reply({ failed: reason })
 
-  unload()
+  forget()
 })
 
 process.parentPort.on('message', event => {

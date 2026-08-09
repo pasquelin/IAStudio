@@ -21,32 +21,20 @@ export type SttState =
   | 'listening'
   | 'error'
 
-export const STT_STATES: readonly SttState[] = [
-  'idle',
-  'permissionRequired',
-  'modelMissing',
-  'downloadingModel',
-  'loadingEngine',
-  'ready',
-  'listening',
-  'error',
-]
-
 export type SttErrorCode =
   | 'permissionDenied'
   | 'noInputDevice'
   | 'modelDownloadFailed'
   | 'modelChecksumMismatch'
   | 'engineCrashed'
-  | 'unsupportedPlatform'
 
+/** Enumerated, not just typed: the bundle guard walks it to demand a phrase in both languages. */
 export const STT_ERROR_CODES: readonly SttErrorCode[] = [
   'permissionDenied',
   'noInputDevice',
   'modelDownloadFailed',
   'modelChecksumMismatch',
   'engineCrashed',
-  'unsupportedPlatform',
 ]
 
 /**
@@ -156,7 +144,11 @@ export function toFloat(samples: Int16Array): Float32Array {
  * Individual files rather than the `.tar.bz2` release: each one supports `Range`, so a download
  * resumes where it stopped, and a corrupted file costs its own size rather than all 640 MB.
  */
+export type SttModelRole = 'encoder' | 'decoder' | 'joiner' | 'tokens'
+
 export type SttModelFile = {
+  /** What the engine asks for. Named, so nothing has to spell the four file names again. */
+  role: SttModelRole
   name: string
   url: string
   bytes: number
@@ -172,24 +164,28 @@ const MODEL_BASE =
  */
 export const STT_MODEL_FILES: readonly SttModelFile[] = [
   {
+    role: 'encoder',
     name: 'encoder.int8.onnx',
     url: `${MODEL_BASE}/encoder.int8.onnx`,
     bytes: 652_184_281,
     sha256: 'acfc2b4456377e15d04f0243af540b7fe7c992f8d898d751cf134c3a55fd2247',
   },
   {
+    role: 'decoder',
     name: 'decoder.int8.onnx',
     url: `${MODEL_BASE}/decoder.int8.onnx`,
     bytes: 11_845_275,
     sha256: '179e50c43d1a9de79c8a24149a2f9bac6eb5981823f2a2ed88d655b24248db4e',
   },
   {
+    role: 'joiner',
     name: 'joiner.int8.onnx',
     url: `${MODEL_BASE}/joiner.int8.onnx`,
     bytes: 6_355_277,
     sha256: '3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3',
   },
   {
+    role: 'tokens',
     name: 'tokens.txt',
     url: `${MODEL_BASE}/tokens.txt`,
     bytes: 93_939,
@@ -198,6 +194,25 @@ export const STT_MODEL_FILES: readonly SttModelFile[] = [
 ]
 
 export const STT_MODEL_BYTES = STT_MODEL_FILES.reduce((total, file) => total + file.bytes, 0)
+
+/**
+ * Where each file of the model sits, once it is on disk.
+ *
+ * Read from the same table the download uses, rather than spelled out again where the engine is
+ * loaded: a model swapped for another would otherwise download four files and open four other
+ * ones, and nothing — not a test, not the compiler — would say so.
+ */
+export function sttModelPaths(
+  folder: string,
+  join: (folder: string, name: string) => string,
+): Record<SttModelRole, string> {
+  const paths: Partial<Record<SttModelRole, string>> = {}
+  for (const file of STT_MODEL_FILES) paths[file.role] = join(folder, file.name)
+
+  // Every role is present: the type of `STT_MODEL_FILES` is what guarantees it, and the four
+  // roles are the four files.
+  return paths as Record<SttModelRole, string>
+}
 
 /** Suffix of a download in flight. Nothing reads a `.part`, and an orphan is swept at startup. */
 export const PART_SUFFIX = '.part'

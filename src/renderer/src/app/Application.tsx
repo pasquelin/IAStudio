@@ -98,26 +98,16 @@ export function Application() {
  * The push-to-talk key, heard once for the whole window.
  *
  * Here rather than in a panel: dictation writes wherever the caret is, so it belongs to the
- * shell and not to whichever surface happens to be open. Holding starts a session and letting
- * go settles it; in toggle mode the same key starts and stops.
+ * shell and not to whichever surface happens to be open. What holding and releasing mean is
+ * the store's business — see `setHeld`.
  */
 function useDictationShortcut(): void {
   const enabled = useSettings(state => state.settings.dictation.enabled)
-  const mode = useSettings(state => state.settings.dictation.mode)
-  const start = useDictationStore(state => state.start)
-  const stop = useDictationStore(state => state.stop)
+  const setHeld = useDictationStore(state => state.setHeld)
 
   useHeldCommand(
     'app.dictate',
     enabled,
-    useCallback(
-      held => {
-        if (mode === 'pushToTalk') void (held ? start() : stop())
-        // Toggling acts on the press alone: acting on the release too would start and stop it
-        // in the time it takes to tap a key.
-        else if (held) void (useDictationStore.getState().state === 'listening' ? stop() : start())
-      },
-      [mode, start, stop],
-    ),
+    useCallback(held => void setHeld(held), [setHeld]),
   )
 }

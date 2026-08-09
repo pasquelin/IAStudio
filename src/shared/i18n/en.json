@@ -42,8 +42,7 @@
     "redoHint": "Redo the action that was undone",
     "generate": "Generate",
     "close": "Close",
-    "removeTool": "Remove tool",
-    "retry": "Try again"
+    "removeTool": "Remove tool"
   },
   "generation": {
     "noParameter": "This model takes no parameters.",
@@ -1684,14 +1683,12 @@
     "device": "Microphone",
     "defaultDevice": "Default device",
     "noDevice": "No microphone was found on this computer.",
-    "disabled": "Dictation is switched off in the settings.",
     "errors": {
       "permissionDenied": "Microphone access was refused.",
       "noInputDevice": "No microphone available.",
       "modelDownloadFailed": "The model could not be downloaded.",
       "modelChecksumMismatch": "The downloaded model is damaged; it has been removed.",
-      "engineCrashed": "Speech recognition stopped.",
-      "unsupportedPlatform": "Dictation is not available on this computer."
+      "engineCrashed": "Speech recognition stopped."
     },
     "retry": "Try again"
   },

@@ -20,6 +20,7 @@ const digestOf = (text: string): string => createHash('sha256').update(text).dig
  * it would leak into the next one.
  */
 const fileOf = (content: string, name = 'encoder.int8.onnx'): SttModelFile => ({
+  role: 'encoder',
   name,
   url: `https://models.test/${name}`,
   bytes: content.length,
@@ -33,6 +34,8 @@ const fileOf = (content: string, name = 'encoder.int8.onnx'): SttModelFile => ({
 function harness(served: Record<string, string[]> = {}) {
   const disk = new Map<string, string>()
   const requests: { url: string; range: number }[] = []
+  const opened: { path: string; resume: boolean }[] = []
+  const closed: string[] = []
   let partial = true
   let failWith: number | null = null
 
@@ -61,10 +64,19 @@ function harness(served: Record<string, string[]> = {}) {
       })
     },
     sizeOf: path => Promise.resolve(disk.get(path)?.length ?? 0),
-    append: (path, chunk, resume) => {
-      const text = new TextDecoder().decode(chunk)
-      disk.set(path, resume ? `${disk.get(path) ?? ''}${text}` : text)
-      return Promise.resolve()
+    open: (path, resume) => {
+      opened.push({ path, resume })
+      if (!resume) disk.set(path, '')
+      return Promise.resolve({
+        write: chunk => {
+          disk.set(path, `${disk.get(path) ?? ''}${new TextDecoder().decode(chunk)}`)
+          return Promise.resolve()
+        },
+        close: () => {
+          closed.push(path)
+          return Promise.resolve()
+        },
+      })
     },
     readBack: async function* (path) {
       const held = disk.get(path)
@@ -88,6 +100,8 @@ function harness(served: Record<string, string[]> = {}) {
     host,
     disk,
     requests,
+    opened,
+    closed,
     ignoreRanges: () => {
       partial = false
     },
@@ -177,23 +191,89 @@ describe('fetchModelFile', () => {
 
     await fetchModelFile(host, FILE, { ...options(onProgress), alreadyDone: 1_000 })
 
-    expect(onProgress.mock.calls).toEqual([
-      [{ received: 1_009, total: STT_MODEL_BYTES }],
-      [{ received: 1_017, total: STT_MODEL_BYTES }],
-    ])
+    expect(onProgress).toHaveBeenLastCalledWith({ received: 1_017, total: STT_MODEL_BYTES })
+  })
+
+  // `net.fetch` hands out chunks of a few tens of kilobytes: one event each would be twenty
+  // thousand broadcasts for the encoder, every one of them re-rendering a bar of sixty steps.
+  it('does not report once per chunk', async () => {
+    const { host } = harness({ [FILE.url]: [...'the whole encoder'] })
+    const onProgress = vi.fn()
+
+    await fetchModelFile(host, FILE, options(onProgress))
+
+    // One, at the end: nothing here comes close to the four megabytes between two reports.
+    expect(onProgress).toHaveBeenCalledTimes(1)
+  })
+
+  // A bar that stops at 97% reads as a download that stalled, and the last step is almost
+  // never a whole one.
+  it('always reports the end, whatever the last chunk weighed', async () => {
+    const { host } = harness({ [FILE.url]: ['the whole encoder'] })
+    const onProgress = vi.fn()
+
+    await fetchModelFile(host, FILE, options(onProgress))
+
+    expect(onProgress).toHaveBeenLastCalledWith({ received: 17, total: STT_MODEL_BYTES })
   })
 
   it('stops between chunks when cancelled', async () => {
     const { host, disk } = harness({ [FILE.url]: ['the whole', ' encoder'] })
     const controller = new AbortController()
-    const onProgress = vi.fn(() => controller.abort())
+    // Aborted on the first write rather than on a progress report, which is now spaced out.
+    const open = host.open
+    host.open = async (path, resume) => {
+      const sink = await open(path, resume)
+      return {
+        ...sink,
+        write: async chunk => {
+          await sink.write(chunk)
+          controller.abort()
+        },
+      }
+    }
 
     await expect(
-      fetchModelFile(host, FILE, options(onProgress, controller.signal)),
+      fetchModelFile(host, FILE, options(vi.fn(), controller.signal)),
     ).rejects.toBeInstanceOf(DownloadCancelled)
 
     // What arrived stays: the next attempt resumes from it rather than starting over.
     expect(disk.get(part)).toBe('the whole')
+  })
+
+  // `appendFile` opens and closes the file on every call: for the encoder alone that would be
+  // sixty thousand syscalls where one handle does.
+  it('opens the file once and closes it once', async () => {
+    const harnessed = harness({ [FILE.url]: [...'the whole encoder'] })
+
+    await fetchModelFile(harnessed.host, FILE, options())
+
+    expect(harnessed.opened).toEqual([{ path: part, resume: false }])
+    expect(harnessed.closed).toEqual([part])
+  })
+
+  // A cancelled download leaves a `.part` the next attempt resumes from — and an open handle
+  // would keep it locked on Windows.
+  it('closes the file even when it is cancelled', async () => {
+    const harnessed = harness({ [FILE.url]: ['the whole', ' encoder'] })
+    const controller = new AbortController()
+    const open = harnessed.host.open
+    harnessed.host.open = async (path, resume) => {
+      const sink = await open(path, resume)
+      return {
+        ...sink,
+        write: async chunk => {
+          await sink.write(chunk)
+          controller.abort()
+        },
+      }
+    }
+
+    await expect(
+      fetchModelFile(harnessed.host, FILE, options(vi.fn(), controller.signal)),
+    ).rejects.toBeInstanceOf(DownloadCancelled)
+
+    expect(harnessed.closed).toEqual([part])
   })
 
   it('refuses before writing anything when the server says no', async () => {

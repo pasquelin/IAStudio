@@ -8,7 +8,6 @@ function harness(overrides: Partial<SessionHost> = {}) {
   const events: SttEvent[] = []
   const timers: { run: () => void; delayMs: number }[] = []
   let captured: EngineListeners | null = null
-  let onExit: (() => void) | null = null
   let loadFails: string | null = null
 
   const engine: SttClient = {
@@ -16,13 +15,11 @@ function harness(overrides: Partial<SessionHost> = {}) {
     push: vi.fn(),
     flush: vi.fn(),
     cancel: vi.fn(),
-    unload: vi.fn(),
     close: vi.fn(),
   }
 
-  const opened = vi.fn((listeners: EngineListeners, exit: () => void) => {
+  const opened = vi.fn((listeners: EngineListeners) => {
     captured = listeners
-    onExit = exit
     return engine
   })
 
@@ -37,7 +34,6 @@ function harness(overrides: Partial<SessionHost> = {}) {
     emit: event => void events.push(event),
     log: vi.fn(),
     join: (folder, name) => `${folder}/${name}`,
-    now: () => 0,
     schedule: (run, delayMs) => {
       timers.push({ run, delayMs })
       return () => {
@@ -56,7 +52,6 @@ function harness(overrides: Partial<SessionHost> = {}) {
     timers,
     states: () => events.filter(event => event.type === 'state').map(event => event.state),
     crash: (error: Error) => captured?.onFailure(error),
-    exit: () => onExit?.(),
     speak: (text: string) => captured?.onFinal(text, 300),
     failLoad: (reason: string) => {
       loadFails = reason

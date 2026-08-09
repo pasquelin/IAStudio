@@ -6,6 +6,7 @@ import type {
   SttSnapshot,
   SttState,
 } from '@shared/domain/dictation'
+import { sttModelPaths } from '@shared/domain/dictation'
 import { ChecksumMismatch } from './model-download'
 import type { SttClient } from './stt-client'
 
@@ -31,8 +32,11 @@ export type SessionHost = {
   download: (onProgress: (progress: DownloadProgress) => void, signal: AbortSignal) => Promise<void>
   /** Asks the operating system, before the renderer ever opens a capture. */
   requestMicrophone: () => Promise<'granted' | 'denied' | 'unknown'>
-  /** Forks the worker. The listeners are wired by the session, which is what reads them. */
-  openEngine: (listeners: EngineListeners, onExit: () => void) => SttClient
+  /**
+   * Forks the worker. One door for a process that goes away, not two: `stt-process` fires
+   * `onFailure` from the same `exit` it would have fired a second callback from.
+   */
+  openEngine: (listeners: EngineListeners) => SttClient
   emit: (event: SttEvent) => void
   /**
    * Where what the interface never shows is written down: the detail of a refusal, which names
@@ -40,7 +44,6 @@ export type SessionHost = {
    */
   log: (level: 'info' | 'error', message: string) => void
   join: (folder: string, name: string) => string
-  now: () => number
   /** Deferred so the idle timer can be driven by a test rather than waited on. */
   schedule: (run: () => void, delayMs: number) => () => void
 }
@@ -147,16 +150,11 @@ export function createSession(host: SessionHost): DictationSession {
     publish('loadingEngine')
     const folder = host.modelFolder()
     const settings = host.settings()
-    const client = host.openEngine(listeners, () => {
-      engine = null
-    })
+    const client = host.openEngine(listeners)
 
     try {
       await client.load({
-        encoder: host.join(folder, 'encoder.int8.onnx'),
-        decoder: host.join(folder, 'decoder.int8.onnx'),
-        joiner: host.join(folder, 'joiner.int8.onnx'),
-        tokens: host.join(folder, 'tokens.txt'),
+        ...sttModelPaths(folder, host.join),
         vad: host.vadPath(),
         threads: settings.threads,
         silenceMs: settings.silenceMs,

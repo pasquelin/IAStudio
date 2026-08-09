@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import type { ReactNode } from 'react'
+import type { FieldDescriptor } from '@shared/domain/model'
 import { DictationButton } from './DictationButton'
 import { useDictation } from './useDictation'
 
@@ -32,4 +34,15 @@ export function DictationField() {
       )}
     </div>
   )
+}
+
+/**
+ * The dictation a `DynamicForm` hangs under its fields, or nothing.
+ *
+ * Written here rather than in each panel: `Generator` and `Apps` render the same form from the
+ * same descriptors, and the second one had no dictation at all because the rule lived in the
+ * first.
+ */
+export function dictationAccessory(field: FieldDescriptor): ReactNode {
+  return field.kind === 'longText' ? <DictationField /> : null
 }

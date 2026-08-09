@@ -28,7 +28,7 @@ import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
 import { createSession, type DictationSession } from './dictation/session'
 import { fetchModel, modelIsComplete, sweepPartials } from './dictation/model-download'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/model-store'
-import { MACOS_MICROPHONE_SETTINGS, requestMicrophone } from './dictation/permissions'
+import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/stt-process'
 import { linkedAsset, mediaFilters } from './media/link'
 import {
@@ -533,13 +533,11 @@ export function createServices(settings: SettingsStore): Services {
         platform: process.platform,
         status: () => systemPreferences.getMediaAccessStatus('microphone'),
         ask: () => systemPreferences.askForMediaAccess('microphone'),
-        openPrivacySettings: () => void shell.openExternal(MACOS_MICROPHONE_SETTINGS),
       }),
     openEngine: openSttProcess,
     emit: event => broadcast(EVENTS.dictation, event),
     log: (level, message) => log[level]('dictation', message),
     join,
-    now: Date.now,
     schedule: (run, delayMs) => {
       const timer = setTimeout(run, delayMs)
       return () => clearTimeout(timer)
@@ -761,7 +759,7 @@ export function createServices(settings: SettingsStore): Services {
     newAssetId,
     media,
     dictation,
-    openMicrophoneSettings: () => void shell.openExternal(MACOS_MICROPHONE_SETTINGS),
+    openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>
       await project
         .catalog()

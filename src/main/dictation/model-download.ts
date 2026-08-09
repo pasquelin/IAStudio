@@ -19,8 +19,14 @@ export type DownloadHost = {
   fetch: (url: string, range: number) => Promise<DownloadResponse>
   /** How much of a partial file is already on disk. `0` when there is none. */
   sizeOf: (path: string) => Promise<number>
-  /** Appends to a `.part`, creating it when `resume` is false and truncating what was there. */
-  append: (path: string, chunk: Uint8Array, resume: boolean) => Promise<void>
+  /**
+   * Opens a `.part` for writing — appending when `resume`, truncating otherwise — and answers
+   * the handle to write through.
+   *
+   * A handle rather than a `write(path, chunk)`: `appendFile` opens and closes the file on
+   * every call, which for the encoder alone would be sixty thousand syscalls.
+   */
+  open: (path: string, resume: boolean) => Promise<DownloadSink>
   /** Reads a `.part` back, in chunks, to hash what was downloaded before this run. */
   readBack: (path: string) => AsyncIterable<Uint8Array>
   remove: (path: string) => Promise<void>
@@ -28,6 +34,12 @@ export type DownloadHost = {
   rename: (from: string, to: string) => Promise<void>
   exists: (path: string) => Promise<boolean>
   join: (folder: string, name: string) => string
+}
+
+/** An open `.part`, for the length of one file. */
+export type DownloadSink = {
+  write: (chunk: Uint8Array) => Promise<void>
+  close: () => Promise<void>
 }
 
 export type DownloadResponse = {
@@ -43,6 +55,16 @@ export type DownloadOptions = {
   signal?: AbortSignal
   onProgress: (progress: DownloadProgress) => void
 }
+
+/**
+ * How much has to arrive before the progress is reported again.
+ *
+ * `net.fetch` hands out chunks of a few tens of kilobytes, so reporting each one would push
+ * around twenty thousand events through the IPC for the encoder alone — every one of them
+ * broadcast to every window and re-rendering a bar that can show sixty steps. The media ingest
+ * has the same rule for the same reason: it reports per stage, not per byte.
+ */
+const PROGRESS_STEP = 4 * 1024 * 1024
 
 /** Refused by the download itself, as opposed to a network that simply failed. */
 export class ChecksumMismatch extends Error {}
@@ -98,14 +120,30 @@ export async function fetchModelFile(
     }
   }
 
-  let appending = resuming
-  for await (const chunk of response.body) {
-    abortIfCancelled(options.signal)
-    await host.append(part, chunk, appending)
-    // Only the first write of a fresh download truncates; everything after it appends.
-    appending = true
-    digest.update(chunk)
-    received += chunk.byteLength
+  let reported = received
+  const sink = await host.open(part, resuming)
+
+  try {
+    for await (const chunk of response.body) {
+      abortIfCancelled(options.signal)
+      await sink.write(chunk)
+      digest.update(chunk)
+      received += chunk.byteLength
+
+      if (received - reported >= PROGRESS_STEP) {
+        reported = received
+        options.onProgress({ received: options.alreadyDone + received, total: STT_MODEL_BYTES })
+      }
+    }
+  } finally {
+    // Closed on the way out whatever happened: a cancelled download leaves a `.part` the next
+    // attempt resumes from, and an open handle would keep it locked on Windows.
+    await sink.close()
+  }
+
+  // The last step is almost never a whole one, and a bar that stops at 97% reads as a download
+  // that stalled.
+  if (received > reported) {
     options.onProgress({ received: options.alreadyDone + received, total: STT_MODEL_BYTES })
   }
 

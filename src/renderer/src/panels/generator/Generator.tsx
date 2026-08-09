@@ -7,7 +7,7 @@ import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/d
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
 import { PromptAssistant } from '@/design/PromptAssistant'
-import { DictationField } from '@/dictation/DictationField'
+import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failure-message'
 import { getBridge } from '@/services/bridge'
 import { useJobs } from '@/stores/jobs'
@@ -166,7 +166,7 @@ export function Generator() {
               // prompt is worth dictating too, and the API marks none of those.
               accessory={(field, handle) => (
                 <>
-                  {field.kind === 'longText' && <DictationField />}
+                  {dictationAccessory(field)}
                   {field.promptSpark === true && (
                     <PromptAssistant
                       readDraft={() => textOf(handle.read())}

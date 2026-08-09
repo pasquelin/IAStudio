@@ -1,32 +1,110 @@
 import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
-import type { SttState } from '@shared/domain/dictation'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SttFailure, SttState } from '@shared/domain/dictation'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useDictation } from '@/stores/dictation'
+import { useSettings } from '@/stores/settings'
 import { DictationStatus } from './DictationStatus'
 
+function show(
+  state: SttState,
+  extra: { failure?: SttFailure; download?: { received: number; total: number } } = {},
+) {
+  useDictation.setState({
+    state,
+    failure: extra.failure ?? null,
+    download: extra.download ?? null,
+  })
+  render(<DictationStatus />)
+}
+
 beforeEach(() => {
-  useDictation.setState({ state: 'idle' })
+  installFakeBridge()
+  useSettings.setState({ settings: DEFAULT_SETTINGS })
+  useDictation.setState({ state: 'idle', failure: null, download: null })
 })
 
-describe('the microphone indicator', () => {
+describe('what dictation says to the whole application', () => {
   // An application that records has to show it, and the button that started the session may be
   // behind a panel or in another workspace by then.
   it('says the microphone is on while it listens', () => {
-    useDictation.setState({ state: 'listening' })
-    render(<DictationStatus />)
+    show('listening')
 
     expect(screen.getByRole('status')).toHaveTextContent('Micro actif')
   })
 
-  it('says nothing the rest of the time', () => {
-    const quiet: SttState[] = ['idle', 'ready', 'loadingEngine', 'modelMissing', 'error']
-
-    for (const state of quiet) {
-      useDictation.setState({ state })
+  it('says nothing when there is nothing to say', () => {
+    for (const state of ['idle', 'ready', 'loadingEngine'] as SttState[]) {
       const { unmount } = render(<DictationStatus />)
+      useDictation.setState({ state })
 
       expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button')).not.toBeInTheDocument()
       unmount()
     }
+  })
+
+  // Here rather than beside a field: a form with two long text fields would otherwise offer two
+  // buttons to fetch the same 640 MB.
+  it('offers the model once, with its size', async () => {
+    const downloadModel = vi.fn(() => Promise.resolve())
+    useDictation.setState({ downloadModel })
+    show('modelMissing')
+
+    await userEvent.click(screen.getByRole('button', { name: /Télécharger le modèle/ }))
+
+    expect(downloadModel).toHaveBeenCalled()
+  })
+
+  it('shows how far the download has got, and offers to stop it', () => {
+    show('downloadingModel', { download: { received: 335_239_386, total: 670_478_772 } })
+
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50')
+    expect(screen.getByRole('button', { name: /Interrompre/ })).toBeInTheDocument()
+  })
+
+  // A window opened mid-download learns where it is from the state it read, not from an event
+  // it was not there for.
+  it('draws nothing rather than a full bar when the size is not known yet', () => {
+    show('downloadingModel', { download: { received: 0, total: 0 } })
+
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+  })
+
+  it('leads to the system settings after a refusal', async () => {
+    const openPrivacySettings = vi.fn(() => Promise.resolve())
+    useDictation.setState({ openPrivacySettings })
+    show('permissionRequired')
+
+    await userEvent.click(screen.getByRole('status'))
+
+    expect(openPrivacySettings).toHaveBeenCalled()
+  })
+
+  it('names the failure in the language of the person reading it', () => {
+    show('error', { failure: { code: 'engineCrashed', message: 'exited with code 139' } })
+
+    expect(screen.getByRole('status')).toHaveTextContent('La reconnaissance vocale s’est arrêtée.')
+  })
+
+  // The detail names a file path or an ONNX symbol: it belongs in the journal, not on screen.
+  it('never shows the detail of a failure', () => {
+    show('error', { failure: { code: 'engineCrashed', message: 'exited with code 139' } })
+
+    expect(screen.queryByText(/139/)).not.toBeInTheDocument()
+  })
+
+  it('shows nothing at all when dictation is switched off', () => {
+    useSettings.setState({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        dictation: { ...DEFAULT_SETTINGS.dictation, enabled: false },
+      },
+    })
+    show('modelMissing')
+
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

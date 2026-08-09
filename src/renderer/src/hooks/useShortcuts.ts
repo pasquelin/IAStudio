@@ -30,11 +30,6 @@ function holdsText(): boolean {
   return selection !== null && !selection.isCollapsed
 }
 
-/** Whether a command is heard where the focus currently sits — see `whileTyping`. */
-function reaches(command: CommandId, target: EventTarget | null): boolean {
-  return !isTyping(target) || commandDescriptor(command)?.whileTyping === true
-}
-
 /**
  * Commands fire once on press; motions are held, and reported only when the set changes.
  *
@@ -151,14 +146,15 @@ export function useHeldCommand(
     const matches = (event: KeyboardEvent) =>
       heldCommandFor(signatureOf(event), currentOverrides()) === command
 
+    // No typing guard, on either edge: a held command carries a modifier and exists to be used
+    // from inside a field — and a key pressed outside one and released inside it still has to
+    // be let go, or dictation would stay on with nothing holding it.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!matches(event) || !reaches(command, event.target)) return
+      if (!matches(event)) return
       event.preventDefault()
       set(true)
     }
 
-    // Matched on the key alone, without `reaches`: a key pressed outside a field and released
-    // inside one still has to be let go, or dictation would stay on with nothing holding it.
     const onKeyUp = (event: KeyboardEvent) => {
       if (matches(event)) set(false)
     }

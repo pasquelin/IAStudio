@@ -29,15 +29,15 @@ type DictationState = {
   stop: () => Promise<void>
   /** Drops the sentence in flight. Nothing is inserted. */
   cancel: () => Promise<void>
+  /**
+   * The shortcut, pressed or released. What that means is the mode's business, and the mode
+   * needs the state of the session — so it is decided here rather than in a component.
+   */
+  setHeld: (held: boolean) => Promise<void>
   downloadModel: () => Promise<void>
   cancelDownload: () => Promise<void>
   openPrivacySettings: () => Promise<void>
   refreshDevices: () => Promise<void>
-  /**
-   * Where a settled sentence goes. Claimed by `useDictation` for as long as a component asks
-   * for it; absent — the usual case — puts the sentence at the caret.
-   */
-  onFinal: ((text: string) => void) | null
 }
 
 /**
@@ -72,7 +72,6 @@ export const useDictation = create<DictationState>()((set, get) => ({
   download: null,
   failure: null,
   devices: [],
-  onFinal: null,
 
   connect: async () => {
     const bridge = getBridge()
@@ -93,11 +92,9 @@ export const useDictation = create<DictationState>()((set, get) => ({
       if (event.type === 'partial') set({ partial: event.text })
       else if (event.type === 'final') {
         set({ partial: '' })
-        // Whoever asked to be told, or the field the caret is in — which is what makes
-        // dictation work in every input of the studio without any of them being rewritten.
-        const listener = get().onFinal
-        if (listener) listener(event.text)
-        else insertAtCaret(event.text)
+        // Into the field the caret is in — which is what makes dictation work in every input of
+        // the studio without any of them being rewritten.
+        insertAtCaret(event.text)
       } else if (event.type === 'download') set({ download: event.progress })
       else set({ failure: event.failure })
     })
@@ -154,6 +151,15 @@ export const useDictation = create<DictationState>()((set, get) => ({
     await closeCapture()
     set({ partial: '' })
     await getBridge()?.dictation.cancel()
+  },
+
+  setHeld: async held => {
+    const { mode } = useSettings.getState().settings.dictation
+
+    if (mode === 'pushToTalk') await (held ? get().start() : get().stop())
+    // Toggling acts on the press alone: acting on the release too would start and stop it in
+    // the time it takes to tap a key.
+    else if (held) await (get().state === 'listening' ? get().stop() : get().start())
   },
 
   downloadModel: async () => {

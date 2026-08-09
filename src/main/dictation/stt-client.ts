@@ -26,7 +26,6 @@ export type SttClient = {
   push: (audio: Int16Array) => void
   flush: () => void
   cancel: () => void
-  unload: () => void
   close: () => void
 }
 
@@ -96,7 +95,6 @@ export function createSttClient(port: SttPort, listeners: SttListeners): SttClie
     push: audio => send({ audio }),
     flush: () => send({ flush: true }),
     cancel: () => send({ cancel: true }),
-    unload: () => send({ unload: true }),
 
     close: () => {
       closed = true

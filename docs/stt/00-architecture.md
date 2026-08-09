@@ -129,15 +129,18 @@ essaie de lire. Il s'affiche sous le champ, en atténué.
 
 ## Le raccourci
 
-`app.dictate`, `⌥D` par défaut, déclaré dans `shared/domain/command.ts` comme les autres. Deux
-champs le distinguent :
+`app.dictate`, `⌥D` par défaut, déclaré dans `shared/domain/command.ts` comme les autres. **Un
+seul champ** le distingue, `held`, et il porte trois conséquences à lui seul :
 
-- **`whileTyping`** — il est entendu alors que le focus est dans un champ. Tous les autres
-  raccourcis sont coupés dans ce cas, et c'est la bonne règle : une lettre nue doit atteindre le
-  champ. Mais dicter dans le champ où l'on est, c'est exactement l'usage.
-- **`held`** — il se maintient au lieu de se déclencher. Une commande maintenue est entendue par
-  la fenêtre même en portée `global`, et **n'a pas de rangée de menu** : un accélérateur natif ne
-  rapporte aucun relâchement, donc le menu ne peut pas la servir.
+- Il **se maintient** au lieu de se déclencher : pressé et relâché, au lieu d'un seul coup.
+- Il est entendu par la fenêtre **même en portée `global`**, et **n'a pas de rangée de menu** :
+  un accélérateur natif ne rapporte aucun relâchement, donc le menu ne peut pas le servir.
+- Il est entendu **alors que le focus est dans un champ**, là où tous les autres raccourcis sont
+  coupés — une lettre nue doit atteindre le champ, mais dicter dans le champ où l'on est, c'est
+  exactement l'usage. Une commande maintenue porte donc obligatoirement un modificateur.
+
+Un second champ `whileTyping` disait cette dernière ligne séparément. Il valait `true` exactement
+quand `held` valait `true`, et deux drapeaux qui ne peuvent pas diverger sont un drapeau.
 
 `useHeldCommand` est monté **une seule fois**, par la coquille : cinq documents à l'écoute
 rapporteraient une pression cinq fois.

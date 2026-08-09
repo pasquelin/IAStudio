@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { rmsOf, STT_MODEL_BYTES, STT_MODEL_FILES, toFloat, toInt16 } from './dictation'
+import {
+  rmsOf,
+  STT_MODEL_BYTES,
+  STT_MODEL_FILES,
+  sttModelPaths,
+  toFloat,
+  toInt16,
+} from './dictation'
 
 describe('the model manifest', () => {
   it('names four files, each with a digest and a size', () => {
@@ -26,6 +33,26 @@ describe('the model manifest', () => {
   it('fetches every file from one place, so a moved repository moves once', () => {
     const hosts = new Set(STT_MODEL_FILES.map(file => new URL(file.url).host))
     expect([...hosts]).toEqual(['huggingface.co'])
+  })
+})
+
+describe('sttModelPaths', () => {
+  const join = (folder: string, name: string) => `${folder}/${name}`
+
+  // The download reads the manifest and the engine is handed paths: spelled out twice, a model
+  // swapped for another would fetch four files and open four others, in silence.
+  it('names every file the engine asks for, from the table the download uses', () => {
+    expect(sttModelPaths('/models', join)).toEqual({
+      encoder: '/models/encoder.int8.onnx',
+      decoder: '/models/decoder.int8.onnx',
+      joiner: '/models/joiner.int8.onnx',
+      tokens: '/models/tokens.txt',
+    })
+  })
+
+  it('points at the same files the download writes', () => {
+    const written = STT_MODEL_FILES.map(file => join('/models', file.name)).sort()
+    expect(Object.values(sttModelPaths('/models', join)).sort()).toEqual(written)
   })
 })
 

@@ -122,19 +122,15 @@ export type CommandDescriptor = {
    */
   defaultBinding: Signature | null
   /**
-   * Fires even when the focus is in a text field. Off for everything else, and deliberately so:
-   * a bare letter must reach the field being typed into, not the surface behind it.
-   *
-   * Dictation is the case that needs it — the whole point is to speak into the field one is
-   * already in. A command that sets this has to carry a modifier, or it would swallow a letter.
-   */
-  whileTyping?: boolean
-  /**
    * Held rather than tapped: it reports pressed and released instead of firing once.
    *
    * A held command is heard by the window even when its scope is `global`, which is the one
    * exception to the rule below — a native accelerator has no release to report, so the menu
-   * cannot serve one. It therefore gets no menu row, and `menu/template.ts` gives it none.
+   * cannot serve one, and no menu row is declared for it.
+   *
+   * It is also heard while the focus sits in a text field, where every other shortcut is
+   * silent: dictation exists to write into the field one is already in. A held command
+   * therefore has to carry a modifier, or it would swallow a letter.
    */
   held?: boolean
 }
@@ -185,7 +181,6 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.appDictate.title',
     helpKey: 'commands.appDictate.help',
     defaultBinding: 'Alt+KeyD',
-    whileTyping: true,
     held: true,
   }),
   command({

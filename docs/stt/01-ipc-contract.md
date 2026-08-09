@@ -51,12 +51,17 @@ type SttSnapshot = {
 }
 ```
 
-Les six refus possibles : `permissionDenied`, `noInputDevice`, `modelDownloadFailed`,
-`modelChecksumMismatch`, `engineCrashed`, `unsupportedPlatform`.
+Les cinq refus possibles : `permissionDenied`, `noInputDevice`, `modelDownloadFailed`,
+`modelChecksumMismatch`, `engineCrashed`.
+
+Il y en avait six. `unsupportedPlatform` a été retiré parce qu'aucun code ne le produit et
+qu'aucun code ne le pourrait : le moteur natif est empaqueté pour les quatre cibles de la build
+(§ `02-packaging.md`), et un chargement qui échoue quand même revient en `engineCrashed` avec le
+vrai message. Un code sans producteur coûtait deux traductions pour un écran inatteignable.
 
 **L'interface montre le code traduit, jamais le message.** Le message nomme un chemin de fichier
 ou un symbole ONNX : il part au journal du processus principal, où il est la seule chose qui
-explique la panne. Le garde `bundles.test.ts` vérifie que les six codes ont leur phrase dans les
+explique la panne. Le garde `bundles.test.ts` vérifie que les cinq codes ont leur phrase dans les
 deux langues.
 
 ---

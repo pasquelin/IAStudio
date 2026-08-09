@@ -42,8 +42,7 @@
     "redoHint": "Rétablir l’action annulée",
     "generate": "Générer",
     "close": "Fermer",
-    "removeTool": "Retirer le module",
-    "retry": "Réessayer"
+    "removeTool": "Retirer le module"
   },
   "generation": {
     "noParameter": "Ce modèle n’attend aucun paramètre.",
@@ -1684,14 +1683,12 @@
     "device": "Micro",
     "defaultDevice": "Périphérique par défaut",
     "noDevice": "Aucun micro n’a été trouvé sur cet ordinateur.",
-    "disabled": "La dictée est désactivée dans les réglages.",
     "errors": {
       "permissionDenied": "L’accès au micro a été refusé.",
       "noInputDevice": "Aucun micro disponible.",
       "modelDownloadFailed": "Le téléchargement du modèle a échoué.",
       "modelChecksumMismatch": "Le modèle téléchargé est abîmé ; il a été supprimé.",
-      "engineCrashed": "La reconnaissance vocale s’est arrêtée.",
-      "unsupportedPlatform": "La dictée n’est pas disponible sur cet ordinateur."
+      "engineCrashed": "La reconnaissance vocale s’est arrêtée."
     },
     "retry": "Réessayer"
   },

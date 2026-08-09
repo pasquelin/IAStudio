@@ -1,5 +1,3 @@
-import { log } from '@main/log'
-
 /** Whether the operating system will let this application record. */
 export type MicrophoneAccess = 'granted' | 'denied' | 'unknown'
 
@@ -13,7 +11,6 @@ export type MicrophoneHost = {
   status: () => string
   /** Shows the system prompt, once ever. Later calls answer from what was decided then. */
   ask: () => Promise<boolean>
-  openPrivacySettings: () => void
 }
 
 /**
@@ -43,9 +40,16 @@ export async function requestMicrophone(host: MicrophoneHost): Promise<Microphon
  * opened would be a renderer that can open anything, which is what `openExternally` guards
  * against for every other URL.
  */
-export const MACOS_MICROPHONE_SETTINGS =
+const MACOS_MICROPHONE_SETTINGS =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone'
 
-export function reportRefusal(access: MicrophoneAccess): void {
-  if (access === 'denied') log.warn('dictation', 'the operating system refused the microphone')
+/**
+ * Opens the screen where microphone access is granted back after a refusal.
+ *
+ * The address never leaves this module, and no caller names it: a renderer that could say what
+ * gets opened would be a renderer that can open anything — which is what `openExternally`
+ * guards against for every other URL.
+ */
+export function openMicrophoneSettings(open: (url: string) => void): void {
+  open(MACOS_MICROPHONE_SETTINGS)
 }

@@ -1,6 +1,6 @@
 import { net } from 'electron'
 import { createReadStream } from 'node:fs'
-import { appendFile, mkdir, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, open as openFile, rename, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { DownloadHost, DownloadResponse } from './model-download'
 
@@ -64,9 +64,14 @@ export function createDownloadHost(): DownloadHost {
       }
     },
 
-    append: async (path, chunk, resume) => {
-      if (resume) await appendFile(path, chunk)
-      else await writeFile(path, chunk)
+    open: async (path, resume) => {
+      const handle = await openFile(path, resume ? 'a' : 'w')
+      return {
+        write: async chunk => {
+          await handle.write(chunk)
+        },
+        close: () => handle.close(),
+      }
     },
 
     readBack: path => createReadStream(path),

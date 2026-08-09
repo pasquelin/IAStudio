@@ -54,7 +54,6 @@ beforeEach(async () => {
     download: null,
     failure: null,
     devices: [],
-    onFinal: null,
   })
 })
 
@@ -122,7 +121,9 @@ describe('following the session', () => {
 })
 
 describe('where a settled sentence goes', () => {
-  it('lands at the caret when nobody asked for it', async () => {
+  // The whole point: no field of the studio was rewritten, and none of them knows dictation
+  // exists — the sentence goes where the caret is.
+  it('lands at the caret of the field that has the focus', async () => {
     const input = document.createElement('input')
     document.body.append(input)
     input.focus()
@@ -133,17 +134,6 @@ describe('where a settled sentence goes', () => {
 
     expect(input.value).toBe('Un phare rouge.')
     input.remove()
-  })
-
-  it('goes to whoever claimed it instead', async () => {
-    const onFinal = vi.fn()
-    useDictation.setState({ onFinal })
-
-    const { emit } = connected()
-    await useDictation.getState().connect()
-    emit({ type: 'final', text: 'Un phare rouge.', latencyMs: 300 })
-
-    expect(onFinal).toHaveBeenCalledWith('Un phare rouge.')
   })
 })
 

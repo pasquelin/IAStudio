@@ -36,10 +36,7 @@ export type SttFlush = { flush: true }
 /** Drop the speech in flight. What was said is not transcribed and never reaches a field. */
 export type SttCancel = { cancel: true }
 
-/** Let the model go, returning its memory. The worker stays, ready to load it again. */
-export type SttUnload = { unload: true }
-
-export type SttMessage = SttLoad | SttAudio | SttFlush | SttCancel | SttUnload
+export type SttMessage = SttLoad | SttAudio | SttFlush | SttCancel
 
 export function isLoad(message: SttMessage): message is SttLoad {
   return 'load' in message

@@ -5,7 +5,6 @@ const host = (overrides: Partial<MicrophoneHost> = {}): MicrophoneHost => ({
   platform: 'darwin',
   status: () => 'not-determined',
   ask: () => Promise.resolve(true),
-  openPrivacySettings: vi.fn(),
   ...overrides,
 })
 

@@ -161,12 +161,11 @@ describe('a running session', () => {
     expect(harnessed.listeners.onFailure).toHaveBeenCalledWith(new Error('the channel is closed'))
   })
 
-  it('sends the three session commands', () => {
+  it('sends the two session commands', () => {
     harnessed.client.flush()
     harnessed.client.cancel()
-    harnessed.client.unload()
 
-    expect(harnessed.sent).toEqual([{ flush: true }, { cancel: true }, { unload: true }])
+    expect(harnessed.sent).toEqual([{ flush: true }, { cancel: true }])
   })
 
   it('kills the process on close, and sends nothing after', () => {
