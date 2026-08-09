@@ -114,7 +114,9 @@ describe('the filter the public feed is narrowed by', () => {
    * under-catch, because nothing downstream can recover an asset the index was not asked for.
    */
   it('catches every provenance the studio files as a material or a sky', () => {
-    for (const type of ['texture', 'skybox'] as const) {
+    const byProvenance: AssetType[] = ['texture', 'skybox']
+
+    for (const type of byProvenance) {
       const filter = publicFeedFilter(type)
 
       for (const remoteType of remoteTypesFor([type]) ?? []) {

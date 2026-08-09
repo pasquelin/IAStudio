@@ -17,19 +17,28 @@ function listing(id: string, overrides: Record<string, unknown> = {}): unknown {
   }
 }
 
-type Recorded = { list: unknown[]; getBulk: unknown[]; deleted: unknown[]; tagged: unknown[] }
+type Recorded = {
+  list: unknown[]
+  search: unknown[]
+  getBulk: unknown[]
+  deleted: unknown[]
+  tagged: unknown[]
+}
 
 function backendSpy(overrides: Partial<AssetBackend> = {}): {
   backend: AssetBackend
   recorded: Recorded
 } {
-  const recorded: Recorded = { list: [], getBulk: [], deleted: [], tagged: [] }
+  const recorded: Recorded = { list: [], search: [], getBulk: [], deleted: [], tagged: [] }
   const backend: AssetBackend = {
     list: params => {
       recorded.list.push(params)
       return Promise.resolve({ assets: [] })
     },
-    search: () => Promise.resolve({ hits: [], estimatedTotalHits: 0 }),
+    search: params => {
+      recorded.search.push(params)
+      return Promise.resolve({ hits: [], estimatedTotalHits: 0 })
+    },
     getBulk: params => {
       recorded.getBulk.push(params)
       return Promise.resolve({ assets: params.assetIds.map(id => listing(id)) })
@@ -101,6 +110,40 @@ describe('searching the library', () => {
     })
 
     expect((await assetCatalogOf(backend).search({ limit: 20, offset: 0 })).token).toBe('1')
+  })
+
+  it('says nothing about the public feed when it was not asked for', async () => {
+    // An absent flag and `public: false` are not the same request: one searches this key's
+    // library, the other would ask the API to leave it out.
+    const { backend, recorded } = backendSpy()
+    await assetCatalogOf(backend).search({ limit: 20, offset: 0 })
+
+    expect(recorded.search[0]).not.toHaveProperty('public')
+    expect(recorded.search[0]).not.toHaveProperty('sortBy')
+  })
+
+  it('asks for the public feed under the name the SDK gives it', async () => {
+    const { backend, recorded } = backendSpy()
+    await assetCatalogOf(backend).search({ limit: 20, offset: 0, publicFeed: true })
+
+    expect(recorded.search[0]).toMatchObject({ public: true })
+  })
+
+  it('passes an order through, and drops an empty one', async () => {
+    const { backend, recorded } = backendSpy()
+    await assetCatalogOf(backend).search({ limit: 20, offset: 0, sortBy: ['createdAt:desc'] })
+    await assetCatalogOf(backend).search({ limit: 20, offset: 0, sortBy: [] })
+
+    expect(recorded.search[0]).toMatchObject({ sortBy: ['createdAt:desc'] })
+    expect(recorded.search[1]).not.toHaveProperty('sortBy')
+  })
+
+  it('copies the order, so the SDK cannot rewrite a caller constant', async () => {
+    const order: readonly string[] = ['createdAt:desc']
+    const { backend, recorded } = backendSpy()
+    await assetCatalogOf(backend).search({ limit: 20, offset: 0, sortBy: order })
+
+    expect(Object.values(recorded.search[0] ?? {})).not.toContain(order)
   })
 })
 
