@@ -270,6 +270,39 @@ même application. Le reste du code ne lit `WORKSPACE_IDS` que comme un **ensemb
 > avec le déplacement de fenêtre. Ça peut marcher, ça ne se prouve pas au test unitaire : à
 > vérifier à l’écran, port de debug, avant de considérer l’entrée traitée.
 
+### 15. Un panneau ne déclare pas ce dont il a besoin — l’Explorateur sans projet
+
+**Demandé le 9 août 2026.** Sans projet ouvert, pas d’Explorateur : un projet est le dossier qui
+tient les documents et les assets, et l’Explorateur n’a rien à explorer sans lui.
+
+**Le panneau connaît déjà la règle, il l’applique juste autrement.** `Explorer.tsx:36` fait
+`if (!projectPath) return <EmptyState message={t('explorer.noProject')} />` — il se dessine, vide,
+en disant qu’il n’y a pas de projet. La demande est qu’il **ne soit pas là**.
+
+**Et l’accueil, lui, tranche déjà dans ce sens.** `HOME_SECTIONS` donne à chaque bande un
+`requires: ['project' | 'api']`, et la règle est écrite noir sur blanc dans `visibleHomeSections` :
+« a section whose requirements are unmet is **dropped rather than drawn empty** ». La section
+`explorer` de l’accueil porte `requires: ['project']`. Donc **la même question a déjà reçu sa
+réponse à trois mètres de là**, et les panneaux du dock font l’inverse.
+
+**Ce qui manque est donc une notion, pas un `if`.** `ToolPlacement` (`shared/domain/tool.ts`)
+déclare `id`, `zone`, `slot`, `workspaces` — **jamais de prérequis**. Chaque panneau se débrouille
+seul, et ils sont **cinq** à lire `useProject` chacun de son côté : `Explorer`, `Generator`,
+`AssetBrowser`, `AssetBrowserActions`, `Apps`. Porter `requires` dans `TOOL_PLACEMENTS` réunit ces
+cinq réponses en une règle, et la rend testable sans rendre quoi que ce soit — exactement la
+découpe de l’accueil.
+
+**Deux choses à trancher avant de coder :**
+
+1. **Retiré du rail, ou présent et désactivé ?** L’accueil retire. Pour un panneau, retirer touche
+   le **layout persisté** : Dockview est remonté par espace, et un panneau ajouté à l’API sortante
+   est jeté par le `fromJSON` du suivant (§ 3.1 de `REPRISE`). Un panneau qui disparaît et revient
+   avec le projet doit retrouver sa place, pas la perdre.
+2. **Quels panneaux exigent un projet ?** L’Explorateur, l’étagère à assets et l’inspecteur, sans
+   doute. Le **Générateur** est la vraie question : générer sans projet produit un job qui ne se
+   collecte nulle part — « un job ne collecte que dans son propre projet » (§ 3.6). Soit il exige
+   un projet, soit il faut dire ce que devient ce qu’il produit.
+
 ### 4. Aucun sélecteur de couleur ne s’ouvre
 
 Les **quatre** `input type="color"` de l’application sont muets — pinceau, inspecteur, formulaire de
