@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { NodeProps } from '@xyflow/react'
 import type { GraphHandleInput, GraphHandleOutput, GraphNodeType } from '@shared/domain/graph'
 import { cn } from '@/helpers/cn'
+import { NODE_LABEL_KEYS } from './node-labels'
 import { InputPorts, OutputPorts } from './NodePorts'
 
 /** Home-made, like the whole dock: React Flow's own node carries hex values of its own. */
@@ -59,13 +60,16 @@ const asText = (value: unknown): string => (typeof value === 'string' ? value : 
 
 const asHandles = <T,>(value: unknown): readonly T[] => (Array.isArray(value) ? value : [])
 
+/** The key naming a type, or the type itself — i18next hands a missing key straight back. */
+const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
+
 /**
  * Memoised, like the rows of the collections: React Flow re-renders every mounted node on each
  * frame of a pan, and a graph is the one surface of the studio holding dozens of them at once.
  */
 function nodeOf(
   name: string,
-  kindKey: string,
+  drawn: GraphNodeType,
   body: (data: NodeData) => ReactNode,
 ): (props: NodeProps) => ReactNode {
   // Named per type rather than once for all three: without it React DevTools shows the same
@@ -76,7 +80,7 @@ function nodeOf(
 
     return (
       <NodeShell
-        title={asText(fields.title) || t(kindKey)}
+        title={asText(fields.title) || t(labelOf(drawn))}
         kind={type}
         selected={selected === true}
         inputs={asHandles<GraphHandleInput>(fields.inputHandles)}
@@ -91,15 +95,15 @@ function nodeOf(
   return memo(Node)
 }
 
-const TextNode = nodeOf('TextNode', 'graph.nodes.text', data => (
+const TextNode = nodeOf('TextNode', 'text', data => (
   <p className="text-muted line-clamp-3 text-[11px] whitespace-pre-wrap">{asText(data.value)}</p>
 ))
 
-const AssetNode = nodeOf('AssetNode', 'graph.nodes.asset', data => (
+const AssetNode = nodeOf('AssetNode', 'asset', data => (
   <p className="text-muted truncate text-[11px]">{asText(data.value)}</p>
 ))
 
-const ModelNode = nodeOf('ModelNode', 'graph.nodes.model', data => (
+const ModelNode = nodeOf('ModelNode', 'model', data => (
   <p className="text-muted truncate text-[11px]">{asText(data.modelId)}</p>
 ))
 
@@ -122,7 +126,7 @@ const StickyNoteNode = memo(function StickyNoteNode({ data, selected }: NodeProp
       )}
     >
       <p className="text-muted text-[11px] whitespace-pre-wrap">
-        {value || t('graph.nodes.stickyNote')}
+        {value || t(labelOf('stickyNote'))}
       </p>
     </div>
   )

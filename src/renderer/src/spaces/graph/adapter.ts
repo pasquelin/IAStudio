@@ -57,8 +57,8 @@ export function canvasNodesOf(graph: GraphState, selected: ReadonlySet<string>):
 /**
  * The selection a batch of changes leaves behind, applied to the one it started from.
  *
- * One set for nodes and edges alike: their ids cannot collide — an edge id carries `--TO--` —
- * and React Flow reports both through the same two change types.
+ * Kind-agnostic, which is what lets the two selections share it: the nodes are held above the
+ * canvas for the inspector to read, the edges below it.
  *
  * The very same set comes back when nothing about the selection moved — every frame of a drag is
  * a batch of changes, and a new set each time would rebuild the node list for nothing.

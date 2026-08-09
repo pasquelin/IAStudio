@@ -18,6 +18,7 @@ export type Selection =
   | { kind: 'clip'; ownerId: string; ids: readonly string[] }
   | { kind: 'track'; ownerId: string; ids: readonly string[] }
   | { kind: 'layer'; ownerId: string; ids: readonly string[] }
+  | { kind: 'node'; ownerId: string; ids: readonly string[] }
 
 type SelectionState = {
   selection: Selection
@@ -25,13 +26,14 @@ type SelectionState = {
   selectClip: (documentId: string, clipId: string) => void
   selectTrack: (documentId: string, trackId: string) => void
   selectLayer: (documentId: string, layerId: string) => void
+  selectNodes: (documentId: string, ids: readonly string[]) => void
   clear: () => void
 }
 
 const NONE: Selection = { kind: 'none' }
 
-/** Stable, so a shelf reading it through a selector does not re-render on every other pick. */
-const NO_ASSETS: readonly string[] = []
+/** Stable, so a surface reading it through a selector does not re-render on every other pick. */
+const NO_IDS: readonly string[] = []
 
 /**
  * The picked assets, or none. Read as a selector rather than off `selection`: a panel that
@@ -39,7 +41,7 @@ const NO_ASSETS: readonly string[] = []
  * the studio, and an asset shelf has no use for any of them.
  */
 export function selectedAssetIds(state: Pick<SelectionState, 'selection'>): readonly string[] {
-  return state.selection.kind === 'asset' ? state.selection.ids : NO_ASSETS
+  return state.selection.kind === 'asset' ? state.selection.ids : NO_IDS
 }
 
 /**
@@ -77,6 +79,8 @@ export const useSelection = create<SelectionState>()(set => {
       point({ kind: 'track', ownerId: documentId, ids: [trackId] }),
     selectLayer: (documentId, layerId) =>
       point({ kind: 'layer', ownerId: documentId, ids: [layerId] }),
+    selectNodes: (documentId, ids) =>
+      point(ids.length > 0 ? { kind: 'node', ownerId: documentId, ids } : NONE),
     clear: () => point(NONE),
   }
 })

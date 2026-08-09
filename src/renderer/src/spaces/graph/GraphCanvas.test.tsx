@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { GraphState } from '@shared/domain/graph'
-import { GraphCanvas } from './GraphCanvas'
+import { GraphCanvas, type GraphCanvasProps } from './GraphCanvas'
+import { canvasNode, clickNode } from './graph-canvas-fixtures'
 
 /**
  * jsdom measures nothing, so React Flow renders its nodes but lays them out at zero. What can be
@@ -40,7 +41,9 @@ const graph: GraphState = {
 
 const noop = vi.fn()
 
-const canvas = (state: GraphState = graph, onAdd = noop) =>
+type Overrides = Partial<GraphCanvasProps>
+
+const canvas = (state: GraphState = graph, overrides: Overrides = {}) =>
   render(
     <GraphCanvas
       graph={state}
@@ -48,12 +51,15 @@ const canvas = (state: GraphState = graph, onAdd = noop) =>
       onRemoveNodes={noop}
       onConnect={noop}
       onDisconnect={noop}
-      onAdd={onAdd}
+      onAdd={noop}
       onDropAsset={noop}
+      selectedNodeIds={[]}
+      onSelectNodes={noop}
       onUndo={noop}
       onRedo={noop}
       canUndo={false}
       canRedo={false}
+      {...overrides}
     />,
   )
 
@@ -125,6 +131,44 @@ describe('the graph canvas', () => {
   })
 
   /**
+   * The half of the selection the inspector reads. It is handed down rather than kept here
+   * because a fully controlled canvas keeps none of its own — what is not given to it is not
+   * selected, and the delete key would find nothing to delete.
+   */
+  describe('the selection of nodes', () => {
+    it('reports upward the node that was clicked', () => {
+      const onSelectNodes = vi.fn()
+      const { container } = canvas(graph, { onSelectNodes })
+
+      clickNode(container, 'text1')
+
+      expect(onSelectNodes).toHaveBeenCalledWith(['text1'])
+    })
+
+    it('draws as selected the node it was handed, and only that one', () => {
+      const { container } = canvas(graph, { selectedNodeIds: ['note1'] })
+
+      expect(canvasNode(container, 'note1')).toHaveClass('selected')
+      expect(canvasNode(container, 'text1')).not.toHaveClass('selected')
+    })
+
+    /**
+     * That a batch leaving the selection alone reports nothing is NOT proved here, and a test
+     * claiming to was removed rather than kept: React Flow emits no change at all when a click
+     * alters nothing, so it stayed green with the guard taken out. What the guard rests on —
+     * `selectionAfter` handing the very same set back — is proved in `adapter.test.ts`.
+     */
+    it('replaces the selection it reports when another node is clicked', () => {
+      const onSelectNodes = vi.fn()
+      const { container } = canvas(graph, { selectedNodeIds: ['text1'], onSelectNodes })
+
+      clickNode(container, 'note1')
+
+      expect(onSelectNodes).toHaveBeenCalledWith(['note1'])
+    })
+  })
+
+  /**
    * An empty graph with no way to add a node is a space that opens on nothing and offers
    * nothing — which is what the canvas was until it was mounted anywhere.
    */
@@ -153,7 +197,7 @@ describe('the graph canvas', () => {
     // proved here — jsdom measures nothing, so the viewport is identity — and is checked on screen.
     it('hands the chosen entry back with the point it was asked for', () => {
       const onAdd = vi.fn()
-      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] }, onAdd)
+      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] }, { onAdd })
       rightClickPane(container)
 
       fireEvent.click(screen.getByRole('menuitem', { name: 'Texte' }))
@@ -167,7 +211,7 @@ describe('the graph canvas', () => {
     /** A generator is one `model` node narrowed to a family, never a node type of its own. */
     it('names the family a generator entry stands for', () => {
       const onAdd = vi.fn()
-      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] }, onAdd)
+      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] }, { onAdd })
       rightClickPane(container)
 
       fireEvent.click(screen.getByRole('menuitem', { name: 'Vidéo' }))

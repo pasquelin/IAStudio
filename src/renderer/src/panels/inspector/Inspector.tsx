@@ -10,16 +10,19 @@ import { assetsById, useAssets } from '@/stores/assets'
 import { layerById, type Layer } from '@/engines/canvas/canvas-state'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import {
+  activeGraphId,
   activeImageId,
   activeSceneId,
   activeSequenceId,
   activeTextureId,
   useDocuments,
 } from '@/stores/documents'
+import { graphOf, useGraphs } from '@/stores/graphs'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { AssetInspector } from './AssetInspector'
 import { ClipInspector } from './ClipInspector'
+import { GraphNodeInspector } from './GraphNodeInspector'
 import { LayerInspector } from './LayerInspector'
 import { SceneInspector } from './SceneInspector'
 import { TextureInspector } from './TextureInspector'
@@ -31,8 +34,8 @@ import { inspectedTextureId } from './inspected'
  *
  * It owns no state: every face reads the store that holds the thing it describes, so two
  * panels showing the same clip cannot disagree about it. One panel for the whole studio — a
- * scene node, an asset, a clip, a track — because "what is selected" is one question, and an
- * inspector per space would be four panels to learn to find.
+ * scene node, an asset, a clip, a track, a layer, a graph node — because "what is selected" is
+ * one question, and an inspector per space would be seven panels to learn to find.
  */
 export function Inspector() {
   // The scroller belongs here rather than to each face: one of them used to forget it.
@@ -83,6 +86,9 @@ function Face() {
       return imageId && layer ? <LayerInspector documentId={imageId} layer={layer} /> : <Empty />
     }
 
+    case 'node':
+      return <NodeSelection ownerId={selection.ownerId} ids={selection.ids} />
+
     case 'track': {
       const track =
         sequence && selection.ownerId === sequenceId
@@ -111,6 +117,27 @@ function Face() {
 function Empty() {
   const { t } = useTranslation()
   return <EmptyState icon={mdiTuneVariant} message={t('inspector.empty')} />
+}
+
+/**
+ * Its own store, read here rather than in `Face` — the rule the asset shelf above set, and the
+ * one the graph makes expensive to break: a node moves 60 times a second, and a subscription up
+ * there would re-render the clip and texture faces on every frame of a drag that concerns
+ * neither.
+ *
+ * Owner-guarded like the clip and track faces, for a sharper reason: node ids are numbered per
+ * TYPE, so `text1` exists in most graphs there are. One node at a time — a rubber band takes
+ * several, and describing the first of six is how someone edits the wrong one.
+ */
+function NodeSelection({ ownerId, ids }: { ownerId: string; ids: readonly string[] }) {
+  const graphId = useDocuments(activeGraphId)
+  const node = useGraphs(state =>
+    graphId === ownerId && ids.length === 1
+      ? graphOf(state, graphId).nodes.find(candidate => candidate.id === ids[0])
+      : undefined,
+  )
+
+  return graphId && node ? <GraphNodeInspector documentId={graphId} node={node} /> : <Empty />
 }
 
 /**

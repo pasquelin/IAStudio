@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
@@ -9,11 +9,13 @@ import { installFakeBridge } from '@/services/fake-bridge'
 import { graphOf, useGraphs } from '@/stores/graphs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
+import { useSelection } from '@/stores/selection'
 import { useSettings } from '@/stores/settings'
 import { preferModels } from '@/stores/settings-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { GraphDocument } from './GraphDocument'
+import { canvasNode, clickNode } from './graph-canvas-fixtures'
 
 const DOCUMENT = 'graph_1'
 
@@ -73,6 +75,7 @@ beforeEach(() => {
   }))
   useTools.setState({ arrangements: arrangedFor('graph', { open: {} }), focusedZone: null })
   useLayouts.setState({ activeWorkspace: 'graph', home: false })
+  useSelection.getState().clear()
 })
 
 describe('a graph as a document', () => {
@@ -187,6 +190,66 @@ describe('a graph as a document', () => {
 
     store.undo(DOCUMENT)
     expect(state().nodes[0]?.position.x).toBe(0)
+  })
+
+  /**
+   * The selection is global — one inspector serves every panel — so a graph has to say which
+   * document a pick belongs to, and read back only its own.
+   */
+  describe('the selection it publishes', () => {
+    it('files a picked node under this document', () => {
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text))
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      clickNode(container, 'text1')
+
+      expect(useSelection.getState().selection).toEqual({
+        kind: 'node',
+        ownerId: DOCUMENT,
+        ids: ['text1'],
+      })
+    })
+
+    /** Node ids are numbered per type, so `text1` exists in most graphs there are. */
+    it('draws nothing as selected when the pick belongs to another graph', () => {
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text))
+      useSelection.getState().selectNodes('graph_2', ['text1'])
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(canvasNode(container, 'text1')).not.toHaveClass('selected')
+    })
+
+    /**
+     * The asset shelf shares this space's screen, and `Selection` carries ONE kind at a time: a
+     * thumbnail clicked would unhighlight the node and leave Suppr with nothing to delete. The
+     * pick is therefore held above the store and only published to it.
+     */
+    it('keeps the node highlighted when another panel takes the selection', () => {
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text))
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+      clickNode(container, 'text1')
+
+      useSelection.getState().selectAssets(['asset_1'])
+
+      expect(canvasNode(container, 'text1')).toHaveClass('selected')
+    })
+
+    /**
+     * React Flow reports a deselection for a node it MOUNTED. One that left the graph while the
+     * panel was down — an undone add, a tab reopened — is never spoken of again, and its id would
+     * sit in the pick for the rest of the session: every later click would then read as two, and
+     * the inspector would describe neither, for good.
+     */
+    it('forgets a picked node the graph no longer holds', () => {
+      const store = useGraphs.getState()
+      store.runCommand(DOCUMENT, addGraphNode(text))
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+      clickNode(container, 'text1')
+
+      act(() => store.undo(DOCUMENT))
+
+      expect(useSelection.getState().selection).toEqual({ kind: 'none' })
+    })
   })
 })
 

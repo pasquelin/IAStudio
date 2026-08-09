@@ -611,7 +611,10 @@
     "font": "Police",
     "noFont": "Aucune",
     "chooseFont": "Choisir une police",
-    "fontMissing": "{{family}} (absente)"
+    "fontMissing": "{{family}} (absente)",
+    "node": "Nœud",
+    "title": "Titre",
+    "nodeId": "Identifiant"
   },
   "transport": {
     "play": "Lire",

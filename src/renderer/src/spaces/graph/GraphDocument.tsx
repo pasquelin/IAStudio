@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Connection } from '@xyflow/react'
 import type { CommandId } from '@shared/domain/command'
 import type { GraphPosition } from '@shared/domain/graph'
@@ -18,6 +18,7 @@ import { reportFailure } from '@/services/diagnostics'
 import type { PaletteEntry } from './palette'
 import { useDocuments } from '@/stores/documents'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
+import { useSelection } from '@/stores/selection'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { GraphCanvas } from './GraphCanvas'
 
@@ -30,6 +31,13 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const active = useDocuments(state => state.activeId === documentId)
   const canUndo = useGraphs(state => historyOf(state, documentId).past.length > 0)
   const canRedo = useGraphs(state => historyOf(state, documentId).future.length > 0)
+  /**
+   * Held here, not in the global selection: that one carries a single kind at a time, so clicking
+   * a thumbnail in the asset shelf — which shares this space's screen — would unhighlight the node
+   * and leave Suppr with nothing to delete. Held in the canvas instead, it would not survive the
+   * canvas being remounted. It is PUBLISHED below for the inspector to read, never owned there.
+   */
+  const [picked, setPicked] = useState<readonly string[]>([])
   const dragging = useRef(false)
 
   /**
@@ -160,6 +168,24 @@ export function GraphDocument({ documentId }: { documentId: string }) {
     [documentId],
   )
 
+  /**
+   * Only ids the graph still holds. React Flow reports a deselection for a node it MOUNTED; a
+   * node that left the graph while the panel was unmounted — an undone add, a tab reopened — is
+   * never spoken of again, and its id would sit in the set for the rest of the session, making
+   * every later pick read as two and the inspector describe none of them.
+   */
+  const live = useMemo(
+    () => picked.filter(id => graph.nodes.some(node => node.id === id)),
+    [picked, graph],
+  )
+
+  /** Published for the inspector to read; the truth stays above, out of a single-kind store. */
+  useEffect(() => {
+    useSelection.getState().selectNodes(documentId, live)
+  }, [documentId, live])
+
+  const onSelectNodes = useCallback((ids: readonly string[]) => setPicked(ids), [])
+
   const undo = useCallback(() => useGraphs.getState().undo(documentId), [documentId])
   const redo = useCallback(() => useGraphs.getState().redo(documentId), [documentId])
 
@@ -182,6 +208,8 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onDisconnect={onDisconnect}
       onAdd={onAdd}
       onDropAsset={onDropAsset}
+      selectedNodeIds={live}
+      onSelectNodes={onSelectNodes}
       onUndo={undo}
       onRedo={redo}
       canUndo={canUndo}
