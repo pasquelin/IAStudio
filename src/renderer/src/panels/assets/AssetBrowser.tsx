@@ -8,10 +8,13 @@ import { CollectionBar } from '@/design/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
 import { LIST_ROW_HEIGHT } from '@/design/styles'
 import { filterLocally, isFiltered } from '@/helpers/collection-state'
+import { applySelection } from '@/helpers/selection'
+import { openAsset } from '@/helpers/open-asset'
 import { assetTypesOf } from '@/helpers/workspaces'
 import { useAssets } from '@/stores/assets'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
+import { selectedAssetIds, useSelection } from '@/stores/selection'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { AssetCard } from './AssetCard'
 import { AssetRow } from './AssetRow'
@@ -38,6 +41,7 @@ export function AssetBrowser() {
   const facets = useAssetFacets(typeLabels)
   const lying = useToolLying()
   const setScope = useAssets(state => state.setScope)
+  const selectedIds = useSelection(selectedAssetIds)
 
   /**
    * What the space in front can actually take — a default, and one the user can step out of.
@@ -83,6 +87,16 @@ export function AssetBrowser() {
       <Collection
         items={shown}
         state={collection}
+        // The shelf owns its rows' gestures rather than each row wiring its own: that is what
+        // put these cells in the tab order, and what gives them the range a click could not ask
+        // for. `DraggableAsset` keeps the drag and the menu, which belong to the row itself.
+        selectedIds={selectedIds}
+        // The mode travels with the ids: without it a ⌘-click replaces the selection instead of
+        // adding to it, and the one panel whose actions are plural could not build a disjoint pick.
+        onSelect={(_asset, ids, mode) =>
+          useSelection.getState().selectAssets(applySelection(selectedIds, ids, mode))
+        }
+        onActivate={openAsset}
         rowHeight={LIST_ROW_HEIGHT}
         renderCard={asset => (
           <AssetCard asset={asset} ownerId={ownerId} badgeLabels={badgeLabels} />

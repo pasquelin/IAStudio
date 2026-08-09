@@ -64,10 +64,26 @@ describe('what a tile in the shelf answers to', () => {
     expect(selected()).toEqual(['asset_1'])
   })
 
-  it('selects on a plain press too, without opening anything', () => {
-    fireEvent.pointerDown(tile())
+  // A drag can start without a click, and the shelf must light up what is flying.
+  it('takes the selection when a drag starts', () => {
+    useSelection.getState().selectAssets(['asset_9'])
+
+    fireEvent.dragStart(tile(), { dataTransfer: dragTransfer() })
 
     expect(selected()).toEqual(['asset_1'])
+  })
+
+  /**
+   * The press belongs to the collection now. Selecting here as well moved the anchor before the
+   * cell's own click could read it, so a shift-click could never extend a range — and a row that
+   * wired its own gestures is exactly what kept the shelf out of the tab order.
+   */
+  it('leaves a plain press to the collection', () => {
+    useSelection.getState().selectAssets(['asset_9'])
+
+    fireEvent.pointerDown(tile())
+
+    expect(selected()).toEqual(['asset_9'])
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 

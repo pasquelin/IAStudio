@@ -51,7 +51,7 @@ function Face() {
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
-  const layerOf = (documentId: string, picked: { ids: string[] }): Layer | null =>
+  const layerOf = (documentId: string, picked: { ids: readonly string[] }): Layer | null =>
     canvas && documentId === imageId ? layerById(canvas, picked.ids[0] ?? null) : null
 
   switch (selection.kind) {
