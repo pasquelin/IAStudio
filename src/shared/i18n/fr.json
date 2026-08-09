@@ -57,7 +57,7 @@
     "none": "Aucune App publiée pour l’instant.",
     "back": "Toutes les Apps",
     "run": "Lancer",
-    "draft": "Cette App est un brouillon : elle ne peut pas être lancée."
+    "draft": "Cette App est un brouillon : elle ne peut pas être lancée."
   },
   "graph": {
     "nodes": {
@@ -120,23 +120,23 @@
       "library": "Bibliothèque",
       "document": "Document"
     },
-    "jobFailed": "La génération « {{name}} » a échoué",
-    "jobCancelled": "Génération « {{name}} » annulée",
+    "jobFailed": "La génération « {{name}} » a échoué",
+    "jobCancelled": "Génération « {{name}} » annulée",
     "generated": "{{count, number}} asset généré",
     "generated_other": "{{count, number}} assets générés",
-    "importFailed": "Impossible d’importer « {{name}} »",
+    "importFailed": "Impossible d’importer « {{name}} »",
     "imported": "{{name}} importé",
-    "importUnreadable": "« {{name}} » est illisible",
-    "pullFailed": "Impossible de rapatrier « {{name}} »",
+    "importUnreadable": "« {{name}} » est illisible",
+    "pullFailed": "Impossible de rapatrier « {{name}} »",
     "pulled": "{{count, number}} asset rapatrié",
     "pulled_other": "{{count, number}} assets rapatriés",
-    "pushFailed": "Impossible d’envoyer « {{name}} »",
+    "pushFailed": "Impossible d’envoyer « {{name}} »",
     "pushed": "{{count, number}} asset envoyé",
     "pushed_other": "{{count, number}} assets envoyés",
     "captioned": "{{count, number}} asset nommé",
     "captioned_other": "{{count, number}} assets nommés",
     "captionFailed": "La description automatique a échoué",
-    "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
+    "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
     "apiRefused": "L’API Scenario a refusé une requête",
     "scope": {
       "scene.model": "Un modèle 3D n’a pas pu être chargé",
@@ -210,7 +210,7 @@
     "failed": "Échec",
     "cancel": "Interrompre la préparation",
     "dismiss": "Retirer de la liste",
-    "noFfmpeg": "Préparation vidéo indisponible : ni copie allégée ni forme d’onde.",
+    "noFfmpeg": "Préparation vidéo indisponible : ni copie allégée ni forme d’onde.",
     "duplicate": "Déjà dans le projet",
     "unreadable": "Fichier illisible"
   },
@@ -228,9 +228,9 @@
     "publisher": "Éditeur"
   },
   "sorts": {
-    "relevance": "Qualité : les meilleurs",
-    "recent": "Création : les plus récents",
-    "oldest": "Création : les plus anciens"
+    "relevance": "Qualité : les meilleurs",
+    "recent": "Création : les plus récents",
+    "oldest": "Création : les plus anciens"
   },
   "periods": {
     "day": "Dernières 24 h",
@@ -305,12 +305,12 @@
     "close": "Fermer l’onglet",
     "closeOthers": "Fermer les autres onglets",
     "delete": "Supprimer le document…",
-    "saveTitle": "Enregistrer les modifications de « {{title}} » ?",
+    "saveTitle": "Enregistrer les modifications de « {{title}} » ?",
     "saveBody": "Si vous ne les enregistrez pas, elles seront perdues.",
     "save": "Enregistrer",
     "dontSave": "Ne pas enregistrer",
     "cancel": "Annuler",
-    "deleteTitle": "Supprimer « {{title}} » du projet ?",
+    "deleteTitle": "Supprimer « {{title}} » du projet ?",
     "deleteBody": "Le fichier est retiré du dossier du projet. Cette action est irréversible.",
     "deleteConfirm": "Supprimer"
   },
@@ -677,7 +677,7 @@
     "viewHint": "Regarder la scène par l’un de ses six côtés",
     "display": "Affichage",
     "displayHint": "Dessiner les surfaces, leurs arêtes, ou les deux",
-    "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
+    "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
     "group": "Grouper",
     "groupHint": "Ranger les objets sélectionnés sous un même groupe",
     "duplicate": "Dupliquer",
@@ -751,7 +751,7 @@
       "duplicate": "Un autre compte porte déjà ce nom.",
       "unknown-account": "Ce compte n’existe plus.",
       "store-unreadable": "Le trousseau n’a pas rendu vos comptes. Réessayez après l’avoir déverrouillé — rien n’a été modifié.",
-      "read-only-account": "Ce compte vient de secrets/.env : modifiez ce fichier pour le renommer ou le retirer.",
+      "read-only-account": "Ce compte vient de secrets/.env : modifiez ce fichier pour le renommer ou le retirer.",
       "unexpected": "Le compte n’a pas pu être enregistré."
     }
   },
@@ -821,17 +821,17 @@
     "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
     "appearanceDescription": "Thème et densité des contrôles.",
     "generationDescription": "File de génération et modèles par défaut, par famille.",
-    "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
+    "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
     "theme": {
       "title": "Thème",
-      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
+      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
       "dark": "Sombre",
       "light": "Clair",
       "system": "Système"
     },
     "density": {
       "title": "Densité",
-      "help": "Règle la taille des boutons et la hauteur des lignes. « Compact » fait tenir plus de choses à l’écran ; « Confort » laisse plus d’air entre elles, ce qui les rend plus faciles à viser à la souris.",
+      "help": "Règle la taille des boutons et la hauteur des lignes. « Compact » fait tenir plus de choses à l’écran ; « Confort » laisse plus d’air entre elles, ce qui les rend plus faciles à viser à la souris.",
       "comfortable": "Confort",
       "compact": "Compact"
     },
@@ -845,7 +845,7 @@
     },
     "maxRetries": {
       "title": "Tentatives maximum",
-      "help": "Quand une génération échoue à cause d’une coupure réseau ou d’un serveur occupé, l’application réessaie toute seule. Ce nombre dit combien de fois avant d’abandonner. À 0, elle n’essaie jamais deux fois. Une clé API invalide n’est jamais réessayée : réessayer ne la corrigerait pas."
+      "help": "Quand une génération échoue à cause d’une coupure réseau ou d’un serveur occupé, l’application réessaie toute seule. Ce nombre dit combien de fois avant d’abandonner. À 0, elle n’essaie jamais deux fois. Une clé API invalide n’est jamais réessayée : réessayer ne la corrigerait pas."
     },
     "ffmpegPath": {
       "title": "Chemin de ffmpeg",
@@ -854,53 +854,53 @@
     },
     "defaultModel": "Modèle par défaut",
     "noDefaultModel": "Demander à chaque fois",
-    "ffmpegFound": "ffmpeg est disponible : proxies et waveforms seront préparés.",
+    "ffmpegFound": "ffmpeg est disponible : proxies et waveforms seront préparés.",
     "ffmpegMissing": "ffmpeg reste introuvable. L’import fonctionne, sans proxy ni waveform.",
     "browse": "Parcourir…",
     "accent": {
       "title": "Couleur d’accent",
-      "help": "La couleur qui signale ce qui est sélectionné ou en cours : le contour d’un panneau actif, la tête de lecture de la timeline, le cadre d’une sélection. Elle ne change rien à ce que vous fabriquez, seulement à la façon dont l’application vous montre où vous en êtes. Laissez-la telle quelle pour garder celle du thème."
+      "help": "La couleur qui signale ce qui est sélectionné ou en cours : le contour d’un panneau actif, la tête de lecture de la timeline, le cadre d’une sélection. Elle ne change rien à ce que vous fabriquez, seulement à la façon dont l’application vous montre où vous en êtes. Laissez-la telle quelle pour garder celle du thème."
     },
     "fontScale": {
       "title": "Taille du texte",
-      "help": "Agrandit ou réduit tous les textes de l’application d’un seul coup. 1 est la taille d’origine ; au-dessus, les mots deviennent plus gros et il en tient moins à l’écran ; en dessous, c’est l’inverse. Les boutons, eux, gardent leur taille : c’est la densité qui s’en occupe."
+      "help": "Agrandit ou réduit tous les textes de l’application d’un seul coup. 1 est la taille d’origine ; au-dessus, les mots deviennent plus gros et il en tient moins à l’écran ; en dessous, c’est l’inverse. Les boutons, eux, gardent leur taille : c’est la densité qui s’en occupe."
     },
     "reduceMotion": {
       "title": "Limiter les animations",
-      "help": "Coupe les petits mouvements de l’interface : les panneaux apparaissent d’un coup au lieu de glisser. Utile si les animations vous fatiguent ou vous donnent mal au cœur, et sur une machine un peu lente où elles saccadent."
+      "help": "Coupe les petits mouvements de l’interface : les panneaux apparaissent d’un coup au lieu de glisser. Utile si les animations vous fatiguent ou vous donnent mal au cœur, et sur une machine un peu lente où elles saccadent."
     },
     "general": "Général",
     "generalDescription": "Langue de l’application et ce qu’elle fait en s’ouvrant.",
     "language": {
       "title": "Langue",
-      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement est immédiat, il n’y a rien à relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
+      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement est immédiat, il n’y a rien à relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
       "system": "Système"
     },
     "startup": {
       "title": "À l’ouverture",
-      "help": "Ce que l’application fait quand vous la lancez. « Rouvrir le dernier projet » vous remet là où vous vous étiez arrêté. « Ne rien ouvrir » démarre sur une fenêtre vide, ce qui est plus rapide et plus reposant si vous jonglez entre beaucoup de projets.",
+      "help": "Ce que l’application fait quand vous la lancez. « Rouvrir le dernier projet » vous remet là où vous vous étiez arrêté. « Ne rien ouvrir » démarre sur une fenêtre vide, ce qui est plus rapide et plus reposant si vous jonglez entre beaucoup de projets.",
       "lastProject": "Rouvrir le dernier projet",
       "nothing": "Ne rien ouvrir"
     },
     "home": {
       "title": "Afficher l’accueil",
-      "help": "L’écran pleine largeur sur lequel le studio s’ouvre : vos projets, ce sur quoi vous travailliez, ce qui tourne, et ce que les modèles savent faire. Désactivez-le pour aller droit à l’espace que vous aviez quitté. Les sections affichées et leur ordre se règlent sur l’accueil lui-même."
+      "help": "L’écran pleine largeur sur lequel le studio s’ouvre : vos projets, ce sur quoi vous travailliez, ce qui tourne, et ce que les modèles savent faire. Désactivez-le pour aller droit à l’espace que vous aviez quitté. Les sections affichées et leur ordre se règlent sur l’accueil lui-même."
     },
     "modified": "Modifié, pas encore appliqué",
     "apply": "Appliquer",
     "cancel": "Annuler",
     "confirm": "OK",
     "discardTitle": "Des réglages n’ont pas été appliqués",
-    "discardBody": "Vous avez changé des réglages sans les appliquer. Que voulez-vous faire ?",
+    "discardBody": "Vous avez changé des réglages sans les appliquer. Que voulez-vous faire ?",
     "discard": "Ne pas appliquer",
     "shortcuts": "Raccourcis",
     "shortcutsDescription": "Les touches qui déclenchent chaque action. Cliquez sur une touche pour la remplacer.",
     "pressAKey": "Appuyez…",
     "unbound": "Aucune",
-    "shortcutConflict": "Deux actions se disputent cette touche : une seule répondra.",
+    "shortcutConflict": "Deux actions se disputent cette touche : une seule répondra.",
     "findByChord": "Chercher par touche",
     "showAll": "Tout afficher",
-    "chordFree": "Aucune action n’utilise cette touche : elle est libre.",
+    "chordFree": "Aucune action n’utilise cette touche : elle est libre.",
     "scope": {
       "global": "Partout dans l’application",
       "scene": "Dans la vue 3D",
@@ -910,11 +910,11 @@
       "graph": "Dans le graphe"
     },
     "spaces": "Espaces de travail",
-    "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
-    "requires": "Sans effet tant que « {{setting}} » est désactivé.",
+    "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
+    "requires": "Sans effet tant que « {{setting}} » est désactivé.",
     "showGrid": {
       "title": "Afficher la grille",
-      "help": "Le quadrillage posé au sol de la vue 3D. Il ne fait pas partie de ce que vous fabriquez : c’est un repère pour savoir où sont les choses et à quelle hauteur. On le cache pour juger une image sans rien autour."
+      "help": "Le quadrillage posé au sol de la vue 3D. Il ne fait pas partie de ce que vous fabriquez : c’est un repère pour savoir où sont les choses et à quelle hauteur. On le cache pour juger une image sans rien autour."
     },
     "gridSize": {
       "title": "Taille de la grille",
@@ -922,37 +922,37 @@
     },
     "flySpeed": {
       "title": "Vitesse de déplacement",
-      "help": "À quelle vitesse la caméra avance quand vous volez dans la vue 3D, en mètres par seconde. Trop lent, on met dix secondes à traverser la scène ; trop rapide, on la dépasse sans la voir."
+      "help": "À quelle vitesse la caméra avance quand vous volez dans la vue 3D, en mètres par seconde. Trop lent, on met dix secondes à traverser la scène ; trop rapide, on la dépasse sans la voir."
     },
     "boostFactor": {
       "title": "Accélération",
-      "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
+      "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
     },
     "shadowQuality": {
       "title": "Douceur des ombres",
-      "help": "Le grain du bord d’une ombre. « Dure » découpe net et coûte le moins ; « Douce » adoucit le bord. Ce qui projette une ombre, en revanche, se décide objet par objet dans l’inspecteur.",
+      "help": "Le grain du bord d’une ombre. « Dure » découpe net et coûte le moins ; « Douce » adoucit le bord. Ce qui projette une ombre, en revanche, se décide objet par objet dans l’inspecteur.",
       "hard": "Dure",
       "soft": "Douce"
     },
     "shadowMapSize": {
       "title": "Finesse des ombres",
-      "help": "La taille de la carte d’ombre que calcule chaque lumière qui en projette une, en pixels de côté. Doubler ce nombre quadruple la mémoire utilisée : 2048 suffit à une scène de quelques objets, 4096 sert quand une lumière éclaire un décor entier."
+      "help": "La taille de la carte d’ombre que calcule chaque lumière qui en projette une, en pixels de côté. Doubler ce nombre quadruple la mémoire utilisée : 2048 suffit à une scène de quelques objets, 4096 sert quand une lumière éclaire un décor entier."
     },
     "snapTranslate": {
       "title": "Pas de déplacement",
-      "help": "De combien un objet avance d’un cran quand le magnétisme est actif, en mètres. Le magnétisme s’allume dans la barre d’outils de la scène ; cette valeur dit seulement à quel point il est fin."
+      "help": "De combien un objet avance d’un cran quand le magnétisme est actif, en mètres. Le magnétisme s’allume dans la barre d’outils de la scène ; cette valeur dit seulement à quel point il est fin."
     },
     "snapRotate": {
       "title": "Pas de rotation",
-      "help": "L’angle d’un cran de rotation quand le magnétisme est actif, en degrés. La rotation avance par crans depuis là où elle a commencé : 15° donne vingt-quatre crans par tour, 90° des quarts de tour."
+      "help": "L’angle d’un cran de rotation quand le magnétisme est actif, en degrés. La rotation avance par crans depuis là où elle a commencé : 15° donne vingt-quatre crans par tour, 90° des quarts de tour."
     },
     "snapScale": {
       "title": "Pas d’échelle",
-      "help": "De combien l’échelle avance d’un cran quand le magnétisme est actif. Les valeurs atteignables sont les multiples du pas : 0,1 tombe pile sur les dixièmes et les demis, 0,25 sur les quarts."
+      "help": "De combien l’échelle avance d’un cran quand le magnétisme est actif. Les valeurs atteignables sont les multiples du pas : 0,1 tombe pile sur les dixièmes et les demis, 0,25 sur les quarts."
     },
     "fieldOfView": {
       "title": "Angle de vue",
-      "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
+      "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
     },
     "advanced": "Avancé",
     "advancedDescription": "Ce dont on n’a besoin que pour comprendre un problème, ou pour repartir de zéro.",
@@ -960,7 +960,7 @@
     "open": "Ouvrir",
     "logLevel": {
       "title": "Détail du journal",
-      "help": "Combien l’application raconte ce qu’elle fait, dans la console. « Rien » ne dit plus rien du tout ; « Erreurs » ne signale que ce qui a échoué ; « Tout » raconte chaque étape, ce qui est utile pour comprendre un problème et bavard le reste du temps.",
+      "help": "Combien l’application raconte ce qu’elle fait, dans la console. « Rien » ne dit plus rien du tout ; « Erreurs » ne signale que ce qui a échoué ; « Tout » raconte chaque étape, ce qui est utile pour comprendre un problème et bavard le reste du temps.",
       "silent": "Rien",
       "error": "Erreurs seulement",
       "warn": "Erreurs et avertissements",
@@ -972,19 +972,19 @@
     },
     "openDevtools": {
       "title": "Outils de développement",
-      "help": "Ouvre la console technique du navigateur intégré. Elle affiche les messages du journal et les erreurs. Réservé au dépannage : rien de ce qui s’y trouve n’est nécessaire pour se servir du logiciel."
+      "help": "Ouvre la console technique du navigateur intégré. Elle affiche les messages du journal et les erreurs. Réservé au dépannage : rien de ce qui s’y trouve n’est nécessaire pour se servir du logiciel."
     },
     "resetAll": {
       "title": "Tout réinitialiser",
-      "help": "Remet TOUS les réglages dans l’état d’une installation neuve : thème, langue, raccourcis, tout. Vos projets, vos images et vos montages ne sont pas touchés — seuls les réglages le sont. C’est sans retour.",
+      "help": "Remet TOUS les réglages dans l’état d’une installation neuve : thème, langue, raccourcis, tout. Vos projets, vos images et vos montages ne sont pas touchés — seuls les réglages le sont. C’est sans retour.",
       "button": "Réinitialiser",
-      "confirm": "Remettre tous les réglages à zéro ? Vos projets ne sont pas touchés, mais ce retour en arrière est définitif."
+      "confirm": "Remettre tous les réglages à zéro ? Vos projets ne sont pas touchés, mais ce retour en arrière est définitif."
     },
     "storage": "Stockage",
     "storageDescription": "Où vos projets sont rangés sur le disque.",
     "projectsFolder": {
       "title": "Dossier des projets",
-      "help": "Le dossier que l’application vous propose quand vous créez ou ouvrez un projet. Cela ne déplace rien : les projets déjà créés restent où ils sont. Laissez vide pour repartir à chaque fois du dernier endroit visité."
+      "help": "Le dossier que l’application vous propose quand vous créez ou ouvrez un projet. Cela ne déplace rien : les projets déjà créés restent où ils sont. Laissez vide pour repartir à chaque fois du dernier endroit visité."
     }
   },
   "skybox": {
@@ -1024,7 +1024,7 @@
   "commands": {
     "projectNew": {
       "title": "Nouveau projet",
-      "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."
+      "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."
     },
     "projectOpen": {
       "title": "Ouvrir un projet",
@@ -1032,7 +1032,7 @@
     },
     "documentSave": {
       "title": "Enregistrer le document",
-      "help": "Écrit le document en avant dans le projet. Une scène 3D vit dans la fenêtre tant qu’elle n’est pas enregistrée : l’onglet porte un point tant que ce qui est à l’écran n’est pas ce qui est sur le disque."
+      "help": "Écrit le document en avant dans le projet. Une scène 3D vit dans la fenêtre tant qu’elle n’est pas enregistrée : l’onglet porte un point tant que ce qui est à l’écran n’est pas ce qui est sur le disque."
     },
     "layoutReset": {
       "title": "Réinitialiser la disposition",
@@ -1040,7 +1040,7 @@
     },
     "appSettings": {
       "title": "Réglages",
-      "help": "Ouvre la fenêtre des réglages, celle-ci même : la langue, les couleurs, le compte, les raccourcis et tout ce qui se règle."
+      "help": "Ouvre la fenêtre des réglages, celle-ci même : la langue, les couleurs, le compte, les raccourcis et tout ce qui se règle."
     },
     "windowFullScreen": {
       "title": "Plein écran",
@@ -1048,7 +1048,7 @@
     },
     "sceneSelect": {
       "title": "Sélectionner",
-      "help": "L’outil de base : cliquer sur un objet de la scène pour le choisir, sans rien lui faire. C’est celui sur lequel on revient entre deux manipulations."
+      "help": "L’outil de base : cliquer sur un objet de la scène pour le choisir, sans rien lui faire. C’est celui sur lequel on revient entre deux manipulations."
     },
     "sceneTranslate": {
       "title": "Déplacer",
@@ -1072,7 +1072,7 @@
     },
     "sceneSpace": {
       "title": "Repère local",
-      "help": "Aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde. Sur un objet tourné, c’est ce qui permet de le déplacer « vers son avant » plutôt que vers le nord."
+      "help": "Aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde. Sur un objet tourné, c’est ce qui permet de le déplacer « vers son avant » plutôt que vers le nord."
     },
     "sceneProjection": {
       "title": "Projection",
@@ -1080,7 +1080,7 @@
     },
     "sceneDisplay": {
       "title": "Affichage",
-      "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
+      "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
     },
     "sceneGroup": {
       "title": "Grouper",
@@ -1092,7 +1092,7 @@
     },
     "sceneCopy": {
       "title": "Copier",
-      "help": "Retient ce qui est sélectionné pour le coller ensuite, ici ou dans une autre scène. Ce presse-papiers est celui du studio : il ne touche pas à celui du système."
+      "help": "Retient ce qui est sélectionné pour le coller ensuite, ici ou dans une autre scène. Ce presse-papiers est celui du studio : il ne touche pas à celui du système."
     },
     "sceneCut": {
       "title": "Couper",
@@ -1104,11 +1104,11 @@
     },
     "sceneDelete": {
       "title": "Supprimer",
-      "help": "Retire de la scène tout ce qui est sélectionné. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
+      "help": "Retire de la scène tout ce qui est sélectionné. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
     },
     "undo": {
       "title": "Annuler",
-      "help": "Défait la dernière chose que vous avez faite dans ce document. Chaque document a sa propre pile : annuler agit sur l’onglet en cours, pas sur les autres."
+      "help": "Défait la dernière chose que vous avez faite dans ce document. Chaque document a sa propre pile : annuler agit sur l’onglet en cours, pas sur les autres."
     },
     "redo": {
       "title": "Rétablir",
@@ -1128,7 +1128,7 @@
     },
     "sequenceZoomIn": {
       "title": "Zoomer",
-      "help": "Étale le montage pour voir le détail : les clips deviennent plus larges et on vise plus précisément."
+      "help": "Étale le montage pour voir le détail : les clips deviennent plus larges et on vise plus précisément."
     },
     "sequenceZoomOut": {
       "title": "Dézoomer",
@@ -1160,7 +1160,7 @@
     },
     "canvasZoomActual": {
       "title": "Taille réelle",
-      "help": "Un pixel de l’image pour un pixel d’écran : la seule échelle où l’on juge la netteté."
+      "help": "Un pixel de l’image pour un pixel d’écran : la seule échelle où l’on juge la netteté."
     },
     "canvasRulers": {
       "title": "Règles",
@@ -1180,7 +1180,7 @@
     },
     "canvasDeselect": {
       "title": "Désélectionner",
-      "help": "Abandonner la région sélectionnée : le pinceau retrouve tout le calque"
+      "help": "Abandonner la région sélectionnée : le pinceau retrouve tout le calque"
     },
     "canvasCropApply": {
       "title": "Appliquer le recadrage",
@@ -1220,7 +1220,7 @@
     },
     "canvasFlatten": {
       "title": "Aplatir l’image",
-      "help": "Réduire toute la pile à un seul calque : les calques masqués sont perdus, pas fusionnés",
+      "help": "Réduire toute la pile à un seul calque : les calques masqués sont perdus, pas fusionnés",
       "layerName": "Arrière-plan"
     },
     "canvasFlipHorizontal": {
@@ -1233,11 +1233,11 @@
     },
     "canvasRotateCw": {
       "title": "Rotation horaire",
-      "help": "Pivoter le document d’un quart de tour vers la droite : le cadre pivote avec lui"
+      "help": "Pivoter le document d’un quart de tour vers la droite : le cadre pivote avec lui"
     },
     "canvasRotateCcw": {
       "title": "Rotation antihoraire",
-      "help": "Pivoter le document d’un quart de tour vers la gauche : le cadre pivote avec lui"
+      "help": "Pivoter le document d’un quart de tour vers la gauche : le cadre pivote avec lui"
     },
     "canvasExport": {
       "title": "Exporter l’image",
@@ -1245,7 +1245,7 @@
     },
     "skyboxView": {
       "title": "Changer de vue",
-      "help": "Fait défiler les quatre façons de regarder le ciel : immersive, panoramique, croix, faces."
+      "help": "Fait défiler les quatre façons de regarder le ciel : immersive, panoramique, croix, faces."
     },
     "skyboxProbes": {
       "title": "Sondes de lumière",
@@ -1253,15 +1253,15 @@
     },
     "canvasToolMove": {
       "title": "Outil Déplacement",
-      "help": "Arme le pointeur : un glissement déplace le calque actif, et ses poignées le redimensionnent ou le font tourner."
+      "help": "Arme le pointeur : un glissement déplace le calque actif, et ses poignées le redimensionnent ou le font tourner."
     },
     "canvasToolHand": {
       "title": "Outil Main",
-      "help": "Arme la main : un glissement fait défiler la vue sans rien toucher au document. La barre d’espace fait la même chose sans changer d’outil."
+      "help": "Arme la main : un glissement fait défiler la vue sans rien toucher au document. La barre d’espace fait la même chose sans changer d’outil."
     },
     "canvasToolScale": {
       "title": "Outil Échelle",
-      "help": "Arme la mise à l’échelle : les poignées du calque actif le redimensionnent, et MAJ conserve ses proportions."
+      "help": "Arme la mise à l’échelle : les poignées du calque actif le redimensionnent, et MAJ conserve ses proportions."
     },
     "canvasToolCrop": {
       "title": "Outil Recadrage",
@@ -1273,15 +1273,15 @@
     },
     "canvasToolSelectEllipse": {
       "title": "Sélection elliptique",
-      "help": "Arme la sélection elliptique : un glissement inscrit l’ellipse dans le rectangle parcouru, et MAJ en fait un cercle."
+      "help": "Arme la sélection elliptique : un glissement inscrit l’ellipse dans le rectangle parcouru, et MAJ en fait un cercle."
     },
     "canvasToolSelectLasso": {
       "title": "Lasso",
-      "help": "Arme le lasso : la sélection suit la main, à main levée."
+      "help": "Arme le lasso : la sélection suit la main, à main levée."
     },
     "canvasToolShapeRectangle": {
       "title": "Forme Rectangle",
-      "help": "Arme le tracé d’un rectangle sur le calque actif ; MAJ en fait un carré."
+      "help": "Arme le tracé d’un rectangle sur le calque actif ; MAJ en fait un carré."
     },
     "canvasToolShapeLine": {
       "title": "Forme Ligne",
@@ -1293,7 +1293,7 @@
     },
     "canvasToolShapeEllipse": {
       "title": "Forme Ellipse",
-      "help": "Arme le tracé d’une ellipse sur le calque actif ; MAJ en fait un cercle."
+      "help": "Arme le tracé d’une ellipse sur le calque actif ; MAJ en fait un cercle."
     },
     "canvasToolShapePolygon": {
       "title": "Forme Polygone",
@@ -1309,27 +1309,27 @@
     },
     "canvasToolPencil": {
       "title": "Outil Crayon",
-      "help": "Arme le crayon, aux bords nets : le même geste que le pinceau, sans l’adoucissement des bords."
+      "help": "Arme le crayon, aux bords nets : le même geste que le pinceau, sans l’adoucissement des bords."
     },
     "canvasToolText": {
       "title": "Outil Texte",
-      "help": "Arme le texte : un clic pose une légende, dont les mots se saisissent dans l’inspecteur."
+      "help": "Arme le texte : un clic pose une légende, dont les mots se saisissent dans l’inspecteur."
     },
     "canvasToolEraser": {
       "title": "Outil Gomme",
-      "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s’il y en a une."
+      "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s’il y en a une."
     },
     "canvasToolEraserSelection": {
       "title": "Gomme de la sélection",
-      "help": "Arme la gomme de sélection : un clic efface d’un coup tout ce que la sélection enferme, au lieu de le frotter."
+      "help": "Arme la gomme de sélection : un clic efface d’un coup tout ce que la sélection enferme, au lieu de le frotter."
     },
     "canvasToolFill": {
       "title": "Outil Pot de peinture",
-      "help": "Arme le pot : un clic remplit le calque, ou la sélection s’il y en a une."
+      "help": "Arme le pot : un clic remplit le calque, ou la sélection s’il y en a une."
     },
     "canvasToolPicker": {
       "title": "Outil Pipette",
-      "help": "Arme la pipette : un clic prend la couleur sous le pointeur et la donne au pinceau."
+      "help": "Arme la pipette : un clic prend la couleur sous le pointeur et la donne au pinceau."
     },
     "canvasBrushSmaller": {
       "title": "Réduire le pinceau",
@@ -1422,7 +1422,7 @@
   "licences": {
     "title": "Licences",
     "intro": "Scenario Studio est livré avec les logiciels ci-dessous. Chacun garde sa propre licence, reproduite ici en entier.",
-    "sources": "Sources correspondantes :"
+    "sources": "Sources correspondantes :"
   },
   "usage": {
     "title": "Consommation",
@@ -1448,7 +1448,7 @@
     "retry": "Réessayer",
     "empty": "Aucune activité sur cette période.",
     "noAccount": "Aucune clé API enregistrée. Ajoutez-en une dans les préférences pour voir votre consommation.",
-    "noBalance": "L’API Scenario n’expose pas de solde : ces chiffres sont ce qui a été dépensé, jamais ce qu’il reste.",
+    "noBalance": "L’API Scenario n’expose pas de solde : ces chiffres sont ce qui a été dépensé, jamais ce qu’il reste.",
     "mixedAccounts": "Le total additionne des clés facturées séparément — il ne correspond à aucune facture.",
     "total": "Total consommé",
     "discount": "Remises",
@@ -1457,7 +1457,7 @@
     "indicative": "Montant indicatif, calculé sur la grille publique des packs prépayés.",
     "daily": "Par jour",
     "perAccount": "Par compte",
-    "silent": "Ces clés n’ont pas répondu : {{names}}. Les chiffres ci-dessus sont ceux des autres.",
+    "silent": "Ces clés n’ont pas répondu : {{names}}. Les chiffres ci-dessus sont ceux des autres.",
     "columns": {
       "model": "Modèle",
       "units": "Unités",
@@ -1695,10 +1695,10 @@
       "recreate": "En refaire une avec {{model}}"
     },
     "library": {
-      "fetch": "Récupérer « {{name}} » dans le projet"
+      "fetch": "Récupérer « {{name}} » dans le projet"
     },
     "favorites": {
-      "unpin": "Retirer « {{name}} » de vos recettes"
+      "unpin": "Retirer « {{name}} » de vos recettes"
     },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",
@@ -1711,7 +1711,7 @@
       "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé et un secret Scenario. Collez-les dans Préférences ▸ Compte — ils sont chiffrés par le trousseau du système et ne quittent jamais cette machine. Tout ce qui est sur votre disque fonctionne sans.",
       "connectAction": "Saisir ma clé API",
       "start": "Démarrer un projet",
-      "startBody": "Un projet est un dossier : vos documents, vos assets, et l’index que le studio tient à côté.",
+      "startBody": "Un projet est un dossier : vos documents, vos assets, et l’index que le studio tient à côté.",
       "startAction": "Créer un projet",
       "ready": "Tout est prêt",
       "readyBody": "{{project}} est ouvert et ne contient encore rien. Choisissez un espace et créez-y la première pièce.",
