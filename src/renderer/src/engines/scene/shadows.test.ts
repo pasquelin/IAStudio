@@ -11,7 +11,13 @@ import {
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { SHADOW_QUALITIES } from '@shared/domain/scene'
-import { applyShadowFlags, applyShadowQuality, fitShadowCamera, resizeShadowMap } from './shadows'
+import {
+  applyShadowFlags,
+  applyShadowQuality,
+  fitShadowCamera,
+  ownedByAnotherNode,
+  resizeShadowMap,
+} from './shadows'
 
 /** Enough of a renderer for what this reads: jsdom has no WebGL to build a real one. */
 function fakeRenderer() {
@@ -41,17 +47,39 @@ describe('applyShadowQuality', () => {
 })
 
 describe('applyShadowFlags', () => {
-  // A helper wears its light's flags and nothing under it does: it has no tree to reach into,
-  // and walking one would be walking the scene the helper is drawn beside.
-  it('stops at the object itself when it is told not to descend', () => {
+  /**
+   * The defect this replaced: a group's children are nodes carrying flags of their own, and
+   * writing over them wrote nothing into their nodes — so nothing ever put them back.
+   */
+  it('stops at a child that stands for a node of its own', () => {
     const root = new Object3D()
-    const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
-    root.add(mesh)
+    const child = new Object3D()
+    const under = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    child.add(under)
+    root.add(child)
 
-    applyShadowFlags(root, true, true, false)
+    applyShadowFlags(root, true, true, candidate => candidate === child)
 
     expect(root.castShadow).toBe(true)
-    expect(mesh.castShadow).toBe(false)
+    expect(child.castShadow).toBe(false)
+    // And not around it either: what hangs under a node belongs to that node.
+    expect(under.castShadow).toBe(false)
+  })
+
+  // A model's own tree is scenery, and three.js reads the flags per mesh: the walk goes through it.
+  it('walks past a child that stands for nothing, down to the meshes', () => {
+    const root = new Object3D()
+    const scenery = new Object3D()
+    const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    scenery.add(mesh)
+    root.add(scenery)
+    const node = new Object3D()
+    root.add(node)
+
+    applyShadowFlags(root, true, true, candidate => candidate === node)
+
+    expect(mesh.castShadow).toBe(true)
+    expect(node.castShadow).toBe(false)
   })
 
   // A model is one node over a whole imported tree, and three.js reads the flags per mesh.
@@ -78,6 +106,28 @@ describe('applyShadowFlags', () => {
 
     expect(mesh.castShadow).toBe(false)
     expect(mesh.receiveShadow).toBe(false)
+  })
+})
+
+describe('ownedByAnotherNode', () => {
+  it('stops on a child the engine holds under that very name', () => {
+    const child = new Object3D()
+    child.name = 'node-7'
+
+    expect(ownedByAnotherNode(new Map([['node-7', child]]))(child)).toBe(true)
+  })
+
+  // An imported file names its own objects, and one of them carrying an id would otherwise keep
+  // the flags a model is supposed to spread over its whole tree.
+  it('walks through a namesake the engine does not hold', () => {
+    const impostor = new Object3D()
+    impostor.name = 'node-7'
+
+    expect(ownedByAnotherNode(new Map([['node-7', new Object3D()]]))(impostor)).toBe(false)
+  })
+
+  it('walks through what the file left unnamed', () => {
+    expect(ownedByAnotherNode(new Map())(new Object3D())).toBe(false)
   })
 })
 

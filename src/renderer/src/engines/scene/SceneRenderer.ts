@@ -57,7 +57,13 @@ import { textGeometry } from './text-geometry'
 import { createGltfSource, type GltfSource } from './gltf-source'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, centreOf, placePivot, release, transformOf } from './pivot'
-import { applyShadowFlags, applyShadowQuality, fitShadowCamera, resizeShadowMap } from './shadows'
+import {
+  applyShadowFlags,
+  applyShadowQuality,
+  fitShadowCamera,
+  ownedByAnotherNode,
+  resizeShadowMap,
+} from './shadows'
 import {
   applyDisplayMode,
   applyWireOverlay,
@@ -182,6 +188,8 @@ export class SceneRenderer {
   private readonly raycaster = new Raycaster()
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
+  /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
+  private readonly belongsToAnotherNode = ownedByAnotherNode(this.objects)
   private readonly helpers = new Map<string, LightHelper>()
   /** The texture slots of each mesh, and the references they hold on the cache. */
   private readonly textures = new Map<string, MaterialTextures>()
@@ -627,9 +635,7 @@ export class SceneRenderer {
     // would be walked on every value an inspector drag emits. What a model brings later is
     // flagged where it arrives, in `buildModel`.
     if (previous?.castShadow !== node.castShadow || previous.receiveShadow !== node.receiveShadow) {
-      // Not through a group: its children carry their own flags, and traversing would
-      // overwrite them without writing anything into their nodes.
-      applyShadowFlags(object, node.castShadow, receivesShadow(node), node.type !== 'group')
+      applyShadowFlags(object, node.castShadow, receivesShadow(node), this.belongsToAnotherNode)
     }
     if (node.type === 'light') this.tuneShadow(object)
 
@@ -777,7 +783,12 @@ export class SceneRenderer {
       // Here rather than in `syncNode`: what arrives lands after the sync that built the holder,
       // and the next one skips an unchanged node — the model would throw nothing until edited.
       const applied = this.applied.get(node.id) ?? node
-      applyShadowFlags(holder, applied.castShadow, receivesShadow(applied))
+      applyShadowFlags(
+        holder,
+        applied.castShadow,
+        receivesShadow(applied),
+        this.belongsToAnotherNode,
+      )
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
       if (this.display !== 'shaded') this.applyDisplay(holder)
