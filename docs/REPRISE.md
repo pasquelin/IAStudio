@@ -625,9 +625,35 @@ jour, et c’est pour ça qu’ils sont partis ensemble.
   que la vue ne change pas. Et « `F` rapproche la caméra pour que l’objet remplisse la vue » n’a
   jamais décrit le code, qui se pose à distance fixe — ce lot redimensionne le tronc pour cette
   distance, il ne cadre toujours pas sur la taille de l’objet.
+- **Un zoom orthographique n’est borné par rien** — `minZoom` vaut 0 et quatre-vingt-dix crans de
+  molette y sont gratuits. Dépensé tel quel en distance, il envoyait la caméra à 1200 unités pour
+  un `far` de 1000 : cible clippée, viewport noir, **et aucun retour en arrière**, puisque
+  `fitProjection` dimensionnait ensuite le tronc pour 1200. La dépense est bornée à une demi-plaque
+  des deux plans. La leçon générale : **une valeur qu’on convertit d’un espace à un autre doit
+  atterrir dans les bornes du second**, même quand le premier n’en a pas.
+- **Refuser une poignée demande de savoir ce que la poignée pilote.** Dès deux objets, elle pilote
+  le pivot, et tourner un pivot déplace ses enfants — sprites compris. Un sprite dont d’autres
+  nœuds descendent est dans le même cas. Le refus ne vaut donc que pour **un objet seul et sans
+  enfant**.
 - **Ce qu’aucun test ne tient**, dit franchement : le branchement `frameSelection → refit()`.
   `frameSelection` sort tôt sans `orbit`, qui n’existe qu’après un `mount` exigeant WebGL.
-  `refit()` lui-même est testé ; l’appel ne l’est pas.
+  `refit()` et `framingDistance` sont testés ; l’appel ne l’est pas.
+
+**Deux restes identifiés, délibérément non traités :**
+
+- **L’inspecteur laisse encore saisir une rotation sur un sprite.** `TransformSection` rend la
+  ligne pour tous les types, sans consulter `canRotate`, et la garde de commande ne filtre que les
+  drapeaux d’ombre. Le geste au gizmo est traité, la saisie numérique non — c’est de l’interface,
+  et la garde de commande correspondante devrait tenir compte des enfants (`state.nodes.some(n =>
+  n.parentId === node.id)`), sans quoi elle casserait un cas légitime. À faire avec l’inspecteur,
+  pas à la sauvette.
+- **Dériver `isSprite` de sa table rend tout futur champ OBLIGATOIRE.** `SpriteSpecs` est exhaustif
+  sur `SpriteDescriptor` moins `map` : un champ ajouté est forcé par le typecheck dans
+  `SPRITE_SPECS`, donc dans `MEASURED_SPRITE`, et `matches(undefined, spec)` est faux — le nœud
+  disparaît à la relecture, en silence, dans tous les documents déjà écrits. Le dépôt a déjà
+  rencontré ça avec les drapeaux d’ombre et y a répondu par `isOptionalFlag` + `withDefaults`.
+  **Tout champ ajouté à `SPRITE_SPECS` doit arriver avec son défaut**, et la même dette vaut pour
+  `MEASURED_MATERIAL` et `TEXT_SPECS`, dérivés depuis plus longtemps.
 
 ### Les pièges three.js déjà payés — ne pas les repayer
 
