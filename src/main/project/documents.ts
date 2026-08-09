@@ -219,9 +219,15 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         if (held) await rename(stepped, folder)
         throw error
       }
-      if (held) await rm(stepped, { force: true, recursive: true })
+      // Swallowed for the opposite reason to the one below: the swap has landed, the document
+      // IS saved, and refusing the save because the previous copy would not go away would leave
+      // the tab marked dirty over a folder nothing reads.
+      if (held) await rm(stepped, { force: true, recursive: true }).catch(() => {})
     } catch (error) {
-      await rm(staged, { force: true, recursive: true })
+      // The tidy-up must not become the failure, exactly as in `writeAtomic`: what the caller
+      // has to hear is why the document could not be written, not why the staging folder would
+      // not go away. Unguarded, an `rm` that throws replaces the error it was cleaning up after.
+      await rm(staged, { force: true, recursive: true }).catch(() => {})
       throw error
     } finally {
       staging.delete(basename(staged))

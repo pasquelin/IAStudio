@@ -279,6 +279,23 @@ describe('createDocumentFiles', () => {
       expect([...entries].sort()).toEqual(['document.json', 'layer-1.png'])
     })
 
+    /**
+     * The defect `writeAtomic` had, and the folder path had kept: the tidy-up threw over the
+     * error it was cleaning up after, and the caller heard the wrong one.
+     *
+     * A `documents` that is a FILE is what makes the two distinguishable — `mkdir` fails on it
+     * and so does the `rm` of the staging folder it never created, both `ENOTDIR`, one naming
+     * `mkdir` and the other `lstat`. Aiming at a path that simply does not exist would prove
+     * nothing: `force: true` never throws there.
+     */
+    it('reports why the write failed, not why the tidy-up would not go away', async () => {
+      await writeFile(join(root, 'documents'), 'a file where the folder goes')
+
+      await expect(
+        documents.write('doc-1', 'image', { title: 'Poster', content: '{}' }),
+      ).rejects.toThrow(/mkdir/)
+    })
+
     it('lists a folder document like any other', async () => {
       await documents.write('doc-1', 'image', { title: 'Poster', content: '{}' })
 

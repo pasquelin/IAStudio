@@ -198,7 +198,7 @@ mesurée.
 
 # 1. Ce qui perd du travail en silence
 
-Le mot qui compte est **silence** : dans les trois cas, ce qui disparaît ne laisse aucune trace,
+Le mot qui compte est **silence** : dans les deux cas, ce qui disparaît ne laisse aucune trace,
 et un utilisateur ne peut pas savoir qu'il a perdu quelque chose. Rien d'autre dans ce fichier
 n'a cette propriété.
 
@@ -362,29 +362,6 @@ dossier.
 > qui n'a peut-être pas suivi.
 
 ---
-
-## 1.3 L'écriture sur le disque
-
-### 38. Les écritures de dossier de `documents.ts` gardent leur propre nettoyage
-
-**Le geste attendu.** Quand l'enregistrement d'un document dossier échoue, lire l'erreur qui dit **pourquoi** — pas
-celle du ménage qui a suivi.
-
-**Vu le 9 août 2026**, en mutualisant l'écriture atomique de fichier.
-
-`writeAtomic` (`persistence.ts`) sert maintenant les trois stores et `documents.ts` pour les
-documents *fichier*. Les documents *dossier* — le manifeste et ses parties, trois `rename` autour de
-`staged`/`stepped` — n'ont pas été touchés : ils ne se ramènent pas à `writeAtomic`, qui écrit un
-fichier.
-
-**À vérifier avant toute chose** : portent-ils le même défaut que celui qui vient d'être corrigé, un
-`rm` de nettoyage non protégé qui lève par-dessus l'erreur que l'appelant avait besoin d'entendre ?
-Si oui, c'est une ligne ; sinon, le noter pour clore la question.
-
-**Et un piège de test à ne pas repayer** : un test de nettoyage ne mord que si les deux erreurs se
-distinguent. Viser un chemin inexistant ne prouve rien — `rm` avec `force: true` n'y lève jamais. Il
-faut un dossier non vide : `writeFile` répond « illegal operation on a directory », `rm` sans
-`recursive` répond « rm returned EISDIR ».
 
 ---
 
