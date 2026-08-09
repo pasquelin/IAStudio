@@ -72,6 +72,11 @@ l’API ne sait de toute façon pas les ordonner les uns contre les autres.
 sélectionner — et cherche des créations publiques qui lui ressemblent. La référence elle-même est
 retirée des résultats, où elle arriverait en tête.
 
+**Si la bibliothèque ne répond pas, cette bande ne s’efface pas** : elle le dit, et propose
+**Réessayer**. C’est la seule du lot à faire la différence entre un refus et un compte qui n’a
+rien de ressemblant — les deux arrivaient jusqu’ici comme une étagère vide, et seul le premier
+vaut qu’on repropose d’essayer.
+
 **Une idée pour commencer** est la seule bande qui n’appelle rien tant que vous ne le demandez
 pas : elle a un bouton **Proposez-moi une idée**. C’est délibéré — un accueil qui déclencherait un
 aller-retour à chaque lancement dépenserait la limite de débit du compte pour une bande que

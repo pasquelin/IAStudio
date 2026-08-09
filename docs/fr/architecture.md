@@ -352,6 +352,7 @@ src/renderer/src/
 ├── helpers/      fonctions pures, toutes testées
 ├── services/     l'accès au pont et la traduction des échecs
 ├── i18n/         l'initialisation d'i18next côté fenêtre
+├── types/        `window.studio`, déclaré en global — le seul fichier de types du renderer
 ├── main.tsx      l'entrée — tout ce qu'elle atteint statiquement est dans le premier écran
 └── splash.ts     l'entrée de l'écran de démarrage, séparée pour ne jamais tirer le bundle
 ```
@@ -943,7 +944,8 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d’é
 
 ## Les tests
 
-**5655 tests répartis sur 447 fichiers**, exécutés par Vitest. Les tests unitaires sont colocalisés
+**Plus de 5 600 tests, sur plus de 440 fichiers**, exécutés par Vitest — le chiffre exact bouge à
+chaque fusion, `pnpm test` le dit. Les tests unitaires sont colocalisés
 (`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` — typecheck, lint, vérification de format, tests avec budgets de couverture —
