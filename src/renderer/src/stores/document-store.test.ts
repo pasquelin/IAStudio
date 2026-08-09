@@ -62,40 +62,65 @@ describe('a gesture held over a document', () => {
   })
 
   /**
-   * The defect: `runCommand` rewrote the gesture's id on *every* command, so a command from
-   * elsewhere took the gesture over. Two of them landing while a cursor is held then coalesced
-   * into each other — one ⌘Z undoing both generations at once — which outside a gesture they
-   * never would.
+   * A job that lands whenever it lands, a picture dropped on a document. The store cannot tell where
+   * a command came from and no rule on `command.id` can, so the caller says it.
    *
-   * The workspace that made this reachable is Skyboxes: it introduced the first asynchronous
-   * writer, a generation that lands whenever it lands.
+   * The workspace that made this reachable is Skyboxes: it introduced the first asynchronous writer.
    */
-  it('never merges two commands from elsewhere into each other', () => {
-    const store = storeOf()
-    const { beginGesture, runCommand } = store.use.getState()
+  describe("a command that belongs to nobody's gesture", () => {
+    it('never merges two of them into each other', () => {
+      const store = storeOf()
+      const { beginGesture, runCommand, runOutsideGesture } = store.use.getState()
 
-    beginGesture('doc')
-    runCommand('doc', set('slider', 'a'))
-    runCommand('doc', set('generate', 'first image'))
-    runCommand('doc', set('generate', 'second image'))
+      beginGesture('doc')
+      runCommand('doc', set('slider', 'a'))
+      runOutsideGesture('doc', set('generate', 'first image'))
+      runOutsideGesture('doc', set('generate', 'second image'))
 
-    // Three: the drag, and one entry per generation. Outside a gesture these are always three.
-    expect(entries(store)).toBe(3)
-  })
+      // Three: the drag, and one entry per generation — what they are outside a gesture too.
+      expect(entries(store)).toBe(3)
+    })
 
-  // What an interrupted gesture must still do: carry on collapsing, into an entry of its own.
-  it('goes on collapsing after something else wrote in the middle', () => {
-    const store = storeOf()
-    const { beginGesture, runCommand } = store.use.getState()
+    // What an interrupted gesture must still do: carry on collapsing, into an entry of its own.
+    it('lets the gesture go on collapsing after it', () => {
+      const store = storeOf()
+      const { beginGesture, runCommand, runOutsideGesture } = store.use.getState()
 
-    beginGesture('doc')
-    runCommand('doc', set('slider', 'a'))
-    runCommand('doc', set('generate', 'an image'))
-    runCommand('doc', set('slider', 'b'))
-    runCommand('doc', set('slider', 'c'))
+      beginGesture('doc')
+      runCommand('doc', set('slider', 'a'))
+      runOutsideGesture('doc', set('generate', 'an image'))
+      runCommand('doc', set('slider', 'b'))
+      runCommand('doc', set('slider', 'c'))
 
-    expect(entries(store)).toBe(3)
-    expect(valueOf(store)).toBe('c')
+      expect(entries(store)).toBe(3)
+      expect(valueOf(store)).toBe('c')
+    })
+
+    /**
+     * A field opens its gesture on focus, before any command at all — tab into a slider, or hold the
+     * thumb without moving. A landing inside that silent window used to name the gesture, and then
+     * nothing the user did ever collapsed again: one entry per frame, for the whole drag.
+     */
+    it('does not name a gesture that has not written yet', () => {
+      const store = storeOf()
+      const { beginGesture, runCommand, runOutsideGesture } = store.use.getState()
+
+      beginGesture('doc')
+      runOutsideGesture('doc', set('generate', 'an image'))
+      for (const value of ['a', 'b', 'c', 'd']) runCommand('doc', set('slider', value))
+
+      expect(entries(store)).toBe(2)
+    })
+
+    it('writes on its own outside any gesture', () => {
+      const store = storeOf()
+      const { runOutsideGesture } = store.use.getState()
+
+      runOutsideGesture('doc', set('generate', 'an image'))
+
+      expect(entries(store)).toBe(1)
+      expect(valueOf(store)).toBe('an image')
+    })
   })
 
   it('merges nothing at all outside a gesture', () => {

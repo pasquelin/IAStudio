@@ -23,6 +23,16 @@ export type DocumentStoreState<S> = {
   saved: Record<string, Command<S> | null>
   runCommand: (documentId: string, command: Command<S>) => void
   /**
+   * Writes a command that belongs to nobody's gesture — a job that lands whenever it lands, a
+   * picture dropped on a document.
+   *
+   * The store cannot tell where a command came from, and no rule on `command.id` can: provenance
+   * has to be said. Said, such a command neither merges into an open gesture nor takes it over —
+   * two generations landing while a cursor is held stay two entries, and the cursor goes on
+   * collapsing into its own.
+   */
+  runOutsideGesture: (documentId: string, command: Command<S>) => void
+  /**
    * Opens a gesture: from here until `endGesture`, successive commands of the same edit collapse
    * into one history entry. A slider dragged across a panel is one thing the user did, and ⌘Z
    * has to give all of it back at once.
@@ -149,11 +159,11 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
         step(documentId, (state, history) =>
           merging ? runCoalescing(state, history, command) : run(state, history, command),
         )
-        // Only the gesture's own first command names it. Rewriting on every command handed the
-        // gesture to whatever wrote last, so two commands from elsewhere — two generations landing
-        // while a cursor is held — coalesced into each other, which outside a gesture they never do.
-        if (gestures.get(documentId) === null) gestures.set(documentId, command.id)
+        if (gestures.has(documentId)) gestures.set(documentId, command.id)
       },
+
+      runOutsideGesture: (documentId, command) =>
+        step(documentId, (state, history) => run(state, history, command)),
 
       beginGesture: documentId => gestures.set(documentId, null),
 
