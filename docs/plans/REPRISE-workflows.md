@@ -1,7 +1,7 @@
 # Reprise — chantier « workflows et node editor »
 
-**À coller tel quel dans une nouvelle session.** Réécrit le 9 août 2026, après le commit de
-l’**étape 5** — livrée, **pas encore rebasée ni fusionnée**.
+**À coller tel quel dans une nouvelle session.** Réécrit le 9 août 2026, après la **fusion de
+l’étape 6 dans `develop`**.
 
 ---
 
@@ -14,51 +14,49 @@ l’**étape 5** — livrée, **pas encore rebasée ni fusionnée**.
 >
 > 1. Lis en entier, dans cet ordre : `CLAUDE.md` à la racine (il prime sur tout, y compris sur le
 >    plan) ; **ce fichier** ; `docs/REPRISE.md` — le § 4 est le chantier, le § 3.6 les dettes ;
->    puis `docs/plans/2026-08-08-workflows-node-editor.md`. **Les étapes 1 à 5 sont cochées.** Lis
+>    puis `docs/plans/2026-08-08-workflows-node-editor.md`. **Les étapes 1 à 6 sont cochées.** Lis
 >    leurs encadrés : ils disent où le plan s’est trompé et ce qu’il ne faut pas défaire.
 > 2. `cd /Users/pasquelin/Applications/scenario/.claude/worktrees/workflows`. Le worktree existe,
 >    `pnpm install` est fait, le binaire Electron est posé, `secrets/.env` est copié.
-> 3. **Première chose à faire, avant toute ligne de code** — l’étape 5 est commitée mais pas
->    intégrée, et `develop` a pris une dizaine de commits pendant qu’elle s’écrivait :
+> 3. **Première chose à faire, avant toute ligne de code** — l’étape 6 est fusionnée, mais le
+>    worktree est resté sur son commit et `develop` avance sans lui :
 >
 >    ```bash
 >    cd /Users/pasquelin/Applications/scenario/.claude/worktrees/workflows
 >    git fetch origin develop
 >    git rebase --autostash develop        # `develop` LOCAL
+>    pnpm install                          # seulement si le lockfile a bougé
 >    pnpm validate > /tmp/v.log 2>&1; echo "EXIT=$?"
 >    ```
 >
->    **N’enchaîne jamais rebase et merge dans une seule commande.** Puis, depuis le dépôt principal
->    (`/Users/pasquelin/Applications/scenario`, où `develop` est sorti) : `git merge --no-ff
->    feat/workflows`, et `pnpm validate` **après** la fusion — une fusion sans conflit n’est pas une
->    fusion sans contradiction.
-> 4. **Vérifie le code de sortie, jamais la dernière ligne.** Référence après l’étape 5 :
->    **356 fichiers de tests, 4495 tests**, `EXIT=0`.
+>    **N’enchaîne jamais rebase et merge dans une seule commande.** À la fin d’une étape, depuis le
+>    dépôt principal (`/Users/pasquelin/Applications/scenario`, où `develop` est sorti) :
+>    `git merge --no-ff feat/workflows`, et `pnpm validate` **après** la fusion — une fusion sans
+>    conflit n’est pas une fusion sans contradiction.
+> 4. **Vérifie le code de sortie, jamais la dernière ligne.**
 > 5. **Préfixe chaque commande du chemin absolu du worktree.**
 >
-> **Ce que tu fais : les étapes 6 à 10**, dans l’ordre. L’étape 6 est le canvas — et le
-> propriétaire du dépôt a fourni une capture de l’éditeur de la webapp Scenario comme cible
-> visuelle : deux nœuds (`Text 1` avec son compteur de caractères, `Image Generator 1` avec sa
-> vignette et son modèle en pied de carte), poignées rondes colorées, arête bézier **pointillée**,
-> fond en points, barre d’outils flottante à droite (curseur, main, undo/redo, zoom), et un bouton
-> **Run** bleu en haut à droite. Demande-la-lui si tu en as besoin.
+> **Ce que tu fais : les étapes 7 à 10**, dans l’ordre. L’étape 7 compile le graphe vers le `flow`
+> de Scenario, le valide et l’exécute — c’est le **main** qui adapte `shared/domain/graph.ts` au
+> convertisseur du SDK, et une divergence de forme doit échouer au **typecheck**, pas à
+> l’exécution.
 >
 > **Definition of Done à chaque étape, sans demander :** tests écrits avec le code, `pnpm validate`
 > vert, `/simplify`, `/code-review`, corrections appliquées, commit. Ces deux passes trouvent des
 > défauts réels — à l’étape 5 elles ont rendu **deux bugs reproduits** et une décision d’API à
-> revoir. **Casse ton propre code pour voir si le test rougit** : deux de mes tests ne mordaient
-> pas, et l’un d’eux ne s’était même pas inséré dans le fichier.
+> revoir, à l’étape 6 **six défauts** qu’aucun test unitaire du moteur ne pouvait voir. **Casse ton
+> propre code pour voir si le test rougit** : deux de mes tests ne mordaient pas, et l’un d’eux ne
+> s’était même pas inséré dans le fichier.
 >
-> **Deux choses sur lesquelles tu m’arrêtes :** à l’étape 10, le graphe devient-il un septième
-> espace ou un type de document dans les six ? Pose-la en arrivant à l’étape. Et si une étape se
-> révèle plus grosse **ou plus petite** que le plan, dis-le avec ta recommandation.
+> **Une chose sur laquelle tu m’arrêtes :** si une étape se révèle plus grosse **ou plus petite**
+> que le plan, dis-le avec ta recommandation. La question du point de montage, elle, est
+> **tranchée** — le graphe sera un **septième espace**, c’est l’étape 10.
 
 ---
 
 ## L’état exact au moment d’écrire
 
-**Cinq étapes livrées.** Les quatre premières sont fusionnées dans `develop` ; la cinquième est
-**commitée sur `feat/workflows` (`4d69a6a`) et n’a pas encore été rebasée ni fusionnée.**
+**Six étapes livrées, et toutes fusionnées dans `develop`.**
 
 | Étape | Ce qu’elle a livré |
 |---|---|
@@ -68,6 +66,7 @@ l’**étape 5** — livrée, **pas encore rebasée ni fusionnée**.
 | — | La revue de cohérence : dix défauts, dont quatre qui perdaient du travail ou de l’argent |
 | 4 | Le coût d’une génération, estimé avant et affiché après |
 | 5 | **Les Apps s’exécutent** : panneau, domaine, registre, trois canaux, `Job.kind`/`targetId` |
+| 6 | **Le canvas** : `@xyflow/react`, `shared/domain/graph.ts`, `engines/graph/`, `spaces/graph/` |
 
 ## Ce que l’étape 5 a appris, et qui vaut pour la suite
 
@@ -77,9 +76,9 @@ l’**étape 5** — livrée, **pas encore rebasée ni fusionnée**.
   simplifier ce schéma.
 - **Un seul canal price les deux.** `scenario:estimate-cost` prend une `JobTarget`. Il n’y a **pas**
   de `workflows:estimate-cost` — trois canaux `workflows:*` seulement.
-- **`billing.cuCost` est lu**, après `creativeUnitsCost` : c’est le seul chiffre qu’une App puisse
-  afficher, et le doute du § 4.5 est levé côté doc (déclaré par les deux références), pas côté
-  observation.
+- **`billing.cuCost` est lu**, après `creativeUnitsCost` — **mais un job de workflow y répond `0`** :
+  la charge est sur ses sous-jobs, un par nœud. Un `cuCost` nul sur un **workflow** vaut absence de
+  prix ; sur une génération il vaut gratuit, et il s’affiche.
 - **Un statut inconnu vaut `ready`.** Refuser ce qu’on ne reconnaît pas rendrait toutes les Apps
   inertes si Scenario écrivait `published`. Même esprit que le `kind` inconnu d’un champ, qui
   retombe en saisie brute.
@@ -89,25 +88,46 @@ l’**étape 5** — livrée, **pas encore rebasée ni fusionnée**.
 - **`outputsOf` vit dans `runner.ts`**, pas dans le manager : c’est le fichier qui parle SDK. Il
   lit `metadata.assetIds` d’abord, `metadata.flow[].assets[]` ensuite, et déduplique les deux.
 
-## Ce qui reste ouvert sur l’étape 5
+## Ce que l’étape 6 a appris, et qui gouverne les étapes 7 à 10
 
-1. **Rien n’a été vérifié à l’écran.** Le port de debug 9222 était tenu par une autre session
-   (worktree `textures-revue`) ; l’application a bien démarré sur **9223**, mais le MCP `electron`
-   ne cherche que 9222. **À faire dès que 9222 est libre** : ouvrir le panneau Apps dans les six
-   espaces, vérifier que la liste se remplit, qu’une App s’ouvre sur son formulaire, que le prix
-   s’affiche, et lancer la moins chère pour observer ce qu’un **vrai** job de workflow répond.
-2. **Trois inconnues attendent ce premier lancement** : la graphie des statuts, l’échelle de la
-   progression, et si `metadata.assetIds` est peuplé — ou s’il faut vraiment aplatir `flow[]`.
-   Le serveur MCP ne les tranchera pas : il ne liste que les workflows **privés** du compte, et il
-   n’y en a aucun.
-3. **`git worktree list`** avant de commencer : plusieurs sessions travaillent en parallèle.
+- **Le format natif est l’`editorInfo` de Scenario, et il vit dans `shared/domain/graph.ts`** —
+  écrit à la main plutôt qu’importé du SDK : un graphe est un document qui traverse l’IPC, donc son
+  type appartient à `shared/`, qui ne porte aucune dépendance runtime (invariant 2). **C’est le
+  main qui l’adaptera au convertisseur**, à l’étape 7.
+- **`editorInfo` a un quatrième champ** : `nodeGroups`, `{ [uuid]: { title, color } }`, avec un
+  `data.group` par nœud. Le domaine le porte ; l’éditeur ne le rend pas encore.
+- **La convention d’arête inversée est écrite dans `NodePorts.tsx`**, là où l’inverser se paierait :
+  une ENTRÉE est un handle de type `source` posé à GAUCHE, une SORTIE un handle `target` posé à
+  DROITE. Vérifiée sur données réelles, § 4.4 et § 4.5 de `REPRISE.md`.
+- **`engines/graph/` n’importe pas React** (invariant 4), et ses commandes passent par l’historique
+  partagé : `⌘Z` défait une arête sans défaire les nœuds qu’elle joignait.
+- **Trois pièges de canvas contrôlé, payés une fois** : un canvas entièrement contrôlé **ne garde
+  aucune sélection** (donc Suppr ne trouvait rien à supprimer, ni nœud ni arête) ; React Flow
+  compare les nœuds **par identité**, donc refaire la liste à chaque rendu lui fait jeter la mesure
+  de chaque nœud et réabonner son `ResizeObserver`, à chaque frame d’un déplacement ; et
+  `isValidConnection` refusait une entrée déjà câblée, rendant « le nouveau fil remplace l’ancien »
+  vrai dans le moteur et inatteignable à la souris.
+
+## Ce qui reste ouvert
+
+1. **Le canvas n’est monté nulle part.** C’est voulu — le point de montage est l’**étape 10** — mais
+   cela veut dire que rien de l’étape 6 n’a été vu à l’écran, et qu’aucune capture n’existe.
+2. **Le panneau Apps n’a pas été vérifié à l’écran non plus.** Les trois inconnues d’API, elles,
+   sont tranchées : une App a été lancée pour de vrai le 9 août 2026 par le SDK, relevé au § 4.5 de
+   `REPRISE.md` — statuts `queued`/`in-progress`/`success`, progression en 0–1, `metadata.assetIds`
+   peuplé. **Ce qui reste est de l’ordre du regard** : ouvrir le panneau Apps dans les six espaces,
+   voir la liste se remplir, une App s’ouvrir sur son formulaire, le prix s’afficher.
+3. **Une App publique compte 62 nœuds** (`wflow_H1bKz78jgpinWPKJfVCM5uAp`) : le plafond de 50
+   annoncé par le guide n’est pas opposé aux workflows publiés. À vérifier **avant** d’écrire le
+   refus d’export de l’étape 9.
+4. **`git worktree list`** avant de commencer : plusieurs sessions travaillent en parallèle.
 
 ## Les pièges déjà payés — ne pas les repayer
 
 - **La convention d’arête de Scenario est inversée** — `{ source: consumer, target: provider }`,
-  vérifié dans `lib/workflow_converter.js`. Relire le § 4.4 de `REPRISE.md` **avant la première
-  arête** de l’étape 6. Câbler dans le sens intuitif produit un flow retourné à l’export, sans
-  erreur et sans avertissement.
+  vérifié dans `lib/workflow_converter.js` puis sur les données d’une App publiée. Relire le § 4.4
+  de `REPRISE.md` **avant la première ligne de l’étape 7** : c’est à la compilation que l’inversion
+  se manifesterait, sans erreur et sans avertissement.
 - **Le type du SDK fait foi contre la page de doc.** Vérifié quatre fois.
 - **Le SDK arme le timeout d’une requête AVANT d’appeler le transport** : toute attente dans le
   `fetch` est prise sur le budget de l’aller-retour.

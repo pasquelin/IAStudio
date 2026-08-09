@@ -73,9 +73,9 @@ la configuration et de l’espace 3D ayant été supprimées une fois leurs chan
 
 # 1. L’état
 
-**902 fichiers dans `src/`, dont 357 de test** (relevé le 9 août ; `pnpm test` en exécutait 4442 cas
-la veille — les `it.each` en portent plusieurs chacun, donc aucun de ces nombres ne se lit dans un
-fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
+**954 fichiers dans `src/`, dont 378 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
+en exécutait alors **4771 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
+nombres ne se lit dans un fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
 demande avant de perdre quoi que ce soit. L’application démarre par `pnpm start`.
 
 ## Le budget de couverture, qui est la porte du projet
@@ -102,6 +102,14 @@ glob dont la marge de croissance est du GPU intestable).
 > 4,93 s. **La marge est le sujet, pas le fichier.** Devant un échec de ce genre :
 > `vitest run <le fichier>` en isolation, ou `vitest run --coverage --maxWorkers=2` pour toute la
 > passe, avant de chercher une cause dans le code.
+>
+> **Et ce grain-là ne se présente pas toujours comme un dépassement de temps.** Le 9 août au soir,
+> une passe a rendu **26 échecs sur 5 fichiers** — des **échecs d’assertion**, pas des timeouts,
+> dont un `toBe` d’identité dans `stores/tools.test.ts` qui compare une constante à elle-même.
+> **La passe suivante, sans un seul changement, est repassée verte de bout en bout** (378 fichiers,
+> 4771 cas, `EXIT=0`). Un rouge de ce genre ne se croit donc pas sur parole : **relancer une fois
+> avant d’ouvrir une enquête**, et ne conclure à une régression que si le second passage rougit au
+> même endroit.
 
 ## Ce qui est fait
 
@@ -360,9 +368,10 @@ un document enregistré alors que son historique était vide. `History` retient 
 commande qu’il a laissée tomber (`dropped`), et le remède général est le **jeton monotone par
 commande** de `engines/core/history.ts`, partagé par tous les espaces.
 
-**Ce qui reste ouvert** : les deux défauts d’interaction (Explorateur sans accès clavier, double-clic
-qui ne traverse pas les espaces) sont dans `docs/INTERFACE.md`, entrées 5 et 6 ; les deux trous de
-budget de couverture sont au § 1.
+**Les trois défauts d’interaction sont livrés** — l’Explorateur au clavier (`776e85b`), le
+double-clic qui traverse les espaces (`33d31f3`), l’étagère au clavier avec sa sélection multiple
+(`a98357e`) : entrées 5, 6 et 8 de `docs/INTERFACE.md`, section **Fait**. **Ce qui reste ouvert** :
+la vérification à l’écran des entrées 6 et 8, et les deux trous de budget de couverture du § 1.
 
 ## 3.2 Espace Image
 
@@ -913,10 +922,15 @@ temps que le parc tourne.
 > Branche `feat/workflows`, worktree `.claude/worktrees/workflows`, base `develop`. Les deux dettes
 > d’API du § 3.6 y étaient les étapes 2 et 3, parce qu’elles le bloquaient : elles sont livrées.
 
-**Rien n’existe côté éditeur.** C’est le plus gros trou fonctionnel du projet, et le seul chantier
-qui le ferait passer de « une interface devant une API » à « un outil ». D’où une section à lui, hors
-du § 3 : celui-là liste ce qui reste d’un chantier commencé, celui-ci ouvre un chantier qui ne l’est
-pas.
+**Six étapes sur dix sont fusionnées dans `develop`**, l’étape 6 comprise : l’éditeur existe —
+format, moteur, canvas — mais **il n’est monté nulle part**, et rien de ce qui suit n’est donc
+atteignable par l’utilisateur. C’est pourquoi le manuel n’en dit pas un mot et n’a pas à en dire :
+le point de montage est la décision de l’**étape 10**, et elle est prise — **le graphe sera un
+septième espace**.
+
+C’est le plus gros trou fonctionnel du projet, et le seul chantier qui ferait passer le studio de
+« une interface devant une API » à « un outil ». D’où une section à lui, hors du § 3 : celui-là
+liste ce qui reste d’un chantier commencé, celui-ci porte le chantier entier.
 
 > **L’étape 5 est livrée : les Apps s’exécutent.** `workflows.list` en `privacy: 'public'` alimente
 > un panneau **Apps** (colonne de droite, les six espaces), une App s’ouvre sur le formulaire que
@@ -947,6 +961,30 @@ pas.
 >   graphie des statuts, l’échelle de la progression, le peuplement d'`assetIds` — ont donc été
 >   tranchées le 9 août 2026 en lançant une App par le SDK. **Le relevé est au § 4.5.**
 
+> **L’étape 6 est livrée : le canvas existe, et il n’est monté nulle part.** `@xyflow/react`
+> **12.11.2** est entré — la seule dépendance que le chantier avait le droit d’ajouter, accord
+> donné, licence collectée. Ce qu’elle a laissé derrière elle :
+>
+> - **le format natif du studio est l’`editorInfo` de Scenario**, mais il vit dans
+>   `shared/domain/graph.ts` et il est **écrit à la main plutôt qu’importé du SDK** : un graphe est
+>   un document qui traverse l’IPC, donc son type appartient à `shared/`, qui ne porte aucune
+>   dépendance runtime (invariant 2). C’est le **main** qui l’adaptera au convertisseur à l’étape 7,
+>   et une divergence de forme échouera alors au **typecheck**, pas à l’exécution ;
+> - **`nodeGroups` est porté par le domaine**, le quatrième champ d’`editorInfo` relevé au § 4.5 ;
+> - **`engines/graph/` n’importe pas React** (invariant 4) : nommage des handles, règle de
+>   connexion, mutations pures, relecture d’une entrée non fiable, commandes réversibles sur
+>   l’historique partagé. `⌘Z` défait une arête sans défaire les nœuds qu’elle joignait ;
+> - **la convention d’arête du § 4.4 est vérifiée sur données réelles**, et elle est écrite dans
+>   `NodePorts.tsx` — là où l’inverser se paierait.
+>
+> **Trois défauts de la revue qui valent pour tout canvas contrôlé**, et qu’aucun test unitaire du
+> moteur ne pouvait voir : un canvas entièrement contrôlé **ne garde aucune sélection**, donc la
+> touche Suppr ne trouvait jamais rien à supprimer, ni nœud ni arête ; React Flow compare les nœuds
+> **par identité**, donc refaire la liste à chaque rendu lui faisait jeter la mesure de chaque nœud
+> et réabonner son `ResizeObserver`, à chaque frame d’un déplacement ; et `isValidConnection`
+> refusait une entrée déjà câblée, si bien que « le nouveau fil remplace l’ancien » était vrai dans
+> le moteur, prouvé par un test, et **inatteignable à la souris**.
+
 ## 4.1 Ce que l’API offre, vérifié dans la copie locale
 
 Huit endpoints, tous dans `docs/scenario-api/reference/` : `workflows.create`, `.update`, `.run`,
@@ -957,7 +995,7 @@ Huit endpoints, tous dans `docs/scenario-api/reference/` : `workflows.create`, `
 |---|---|
 | **Workflow** | `inputs` + `flow` (le graphe exécutable) + `editorInfo` (l’état visuel) |
 | **Flow** | tableau de nodes : le format d’**exécution** |
-| **editorInfo** | `nodes` + `edges` + `inputKeys` : le format d’**édition** |
+| **editorInfo** | `nodes` + `edges` + `inputKeys` + `nodeGroups` : le format d’**édition** |
 | **App** | un workflow `privacy: public`, découvrable et exécutable par tout le monde |
 | **status** | `draft` (non exécutable) · `ready` · `deleted` (suppression douce) |
 
@@ -981,8 +1019,8 @@ compilateur.**
 L’évaluateur **CEL** vit dans `@scenario-labs/sdk/tools/cel` (`createCelEnvironment`, `evaluateCel`).
 Il repose sur `@marcbachmann/cel-js`, **dépendance du SDK déjà présente dans le store pnpm** : donc
 l’évaluation locale d’un node `transform`, et son aperçu en direct pendant la frappe, **ne coûtent
-aucune dépendance nouvelle**. Le seul paquet à ajouter serait le canvas lui-même (`@xyflow/react`),
-et **ça demande l’accord de l’utilisateur**.
+aucune dépendance nouvelle**. Le seul paquet à ajouter était le canvas lui-même — **`@xyflow/react`
+12.11.2, entré à l’étape 6** avec l’accord de l’utilisateur. Le chantier n’en ajoute pas d’autre.
 
 ## 4.3 Les deux vocabulaires de nodes, et le compte exact
 

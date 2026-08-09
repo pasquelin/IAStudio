@@ -530,15 +530,22 @@ animation to fight the tokens with — exactly why a dock carries no DaisyUI con
 `ActivityToasts` reuses `MENU_SURFACE`, so a toast and a menu look alike because they share the
 same class string.
 
-Two libraries went the other way and came in, each for something one does not write oneself:
+Three libraries went the other way and came in, each for something one does not write oneself:
 
 | | |
 |---|---|
 | `recharts` | the curves in the usage window — spend per day, per account |
 | `opentype.js` | reading a typeface's tables, for 3D text and an image's caption |
+| `@xyflow/react` | the node editor canvas: viewport, bézier edges, handles, lasso selection |
 
 `opentype.js` is **loaded on demand**: it does not weigh on the first screen, which has no
 typeface to dissect.
+
+`@xyflow/react` is **Scenario's own canvas** — the webapp renders it, DOM in evidence — and that
+is what makes the round trip possible: the studio's native format is Scenario's `editorInfo`,
+written by hand in `shared/domain/graph.ts` because a graph crosses the IPC and `shared/` carries
+no runtime dependency. The canvas is **mounted nowhere today**: the graph will become a seventh
+workspace, and none of that stack is reachable before it is.
 
 ### Tokens and density
 

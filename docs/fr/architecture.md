@@ -550,16 +550,23 @@ propre rayon et sa propre animation, à combattre contre les jetons — exacteme
 laquelle un dock ne porte pas de contrôle DaisyUI. `ActivityToasts` réutilise `MENU_SURFACE`,
 donc une bulle et un menu ont le même aspect parce qu’ils partagent la même chaîne de classes.
 
-Deux bibliothèques ont fait le chemin inverse et sont entrées, chacune pour une chose qu’on
+Trois bibliothèques ont fait le chemin inverse et sont entrées, chacune pour une chose qu’on
 n’écrit pas soi-même :
 
 | | |
 |---|---|
 | `recharts` | les courbes de la fenêtre de consommation — dépense par jour, par compte |
 | `opentype.js` | la lecture des tables d’une police, pour le texte en volume et la légende d’une image |
+| `@xyflow/react` | le canvas du node editor : viewport, arêtes bézier, poignées, sélection au lasso |
 
 `opentype.js` est **chargé à la demande** : il ne pèse pas sur le premier écran, qui n’a aucune
 police à disséquer.
+
+`@xyflow/react` est **le canvas de Scenario lui-même** — la webapp le rend, DOM à l’appui — et
+c’est ce qui rend l’aller-retour possible : le format natif du studio est l’`editorInfo` de
+Scenario, écrit à la main dans `shared/domain/graph.ts` parce qu’un graphe traverse l’IPC et que
+`shared/` ne porte aucune dépendance runtime. Le canvas **n’est monté nulle part aujourd’hui** :
+le graphe deviendra un septième espace, et rien de cette pile n’est atteignable avant.
 
 ### Jetons et densité
 
