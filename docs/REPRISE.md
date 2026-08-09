@@ -635,9 +635,26 @@ jour, et c’est pour ça qu’ils sont partis ensemble.
   le pivot, et tourner un pivot déplace ses enfants — sprites compris. Un sprite dont d’autres
   nœuds descendent est dans le même cas. Le refus ne vaut donc que pour **un objet seul et sans
   enfant**.
+- **Une porte de couverture ne voit pas ce qu’une mutation voit.** Vider entièrement le corps de
+  `frameSelection` laissait **1786 tests verts** — le pas constant et l’appel à `refit()`, c’est-à-dire
+  les deux défauts mêmes du lot, n’étaient surveillés par rien. Les lignes nues tenaient dans les
+  700 statements alloués au glob, donc le budget certifiait une branche dont le comportement
+  principal n’avait aucun test. **Une méthode qui sort tôt sur une dépendance que jsdom ne peut pas
+  fournir est un angle mort structurel** : la décision doit en sortir, ou elle n’est pas mesurée.
+- **Un test peut passer pour une raison qui n’est pas la sienne.** « leaves the placement alone
+  going into orthographic » entrait en orthographique avec un zoom déjà à 1 : le garde
+  court-circuitait sur `!== 1` avant même de lire la direction du transfert, si bien que le test
+  nommé d’après la direction ne pouvait pas voir la direction disparaître. Et un plancher tenu par
+  `toBeGreaterThan(0)` est franchi par un plancher d’un millimètre.
+- **`it.each` sur une table d’un élément donne l’illusion de la couverture** : `SPRITE_SPECS` moins
+  la couleur ne laisse que `opacity`, et sur un singleton `every` et `some` sont indiscernables. Le
+  quantificateur — qui *est* le changement — reste donc non vérifié jusqu’au jour où un second champ
+  arrive, où le test se réparera seul. Connu, pas corrigé : le verrouiller aujourd’hui demanderait
+  d’exporter `MEASURED_SPRITE` pour lui seul.
 - **Ce qu’aucun test ne tient**, dit franchement : le branchement `frameSelection → refit()`.
   `frameSelection` sort tôt sans `orbit`, qui n’existe qu’après un `mount` exigeant WebGL.
-  `refit()` et `framingDistance` sont testés ; l’appel ne l’est pas.
+  `framingPlacement`, `framingDistance` et `refit()` sont mesurés ; ne restent hors d’atteinte que
+  les trois lignes qui les enchaînent.
 
 **Deux restes identifiés, délibérément non traités :**
 
