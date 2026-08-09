@@ -241,13 +241,12 @@ describe('the opening chunk', () => {
   })
 
   /**
-   * Deferred by `app/tool-components.ts` on 9 August. Not one of the fourteen, the Explorer of
-   * the home screen included: the table reaches every panel through `import()`, so none of their
-   * `index.ts` may be walked. Stated over the whole folder rather than over a list of fourteen —
-   * a fifteenth panel would otherwise land eager with the guard still green.
+   * Deferred by `app/tool-components.ts` on 9 August: not one of the fourteen, the home screen's
+   * Explorer included. Stated over the whole folder, so a fifteenth panel cannot land eager with
+   * the guard still green.
    *
-   * The three exceptions are not tools of that table: `panels/jobs/**` is the status bar's
-   * (`app/JobsStatus.tsx:8`) and the home's (`home/sections/Jobs.tsx:3`), and `type-facet.ts` is
+   * The three left are not tools of that table: `panels/jobs/**` belongs to the status bar
+   * (`app/JobsStatus.tsx:8`) and the home (`home/sections/Jobs.tsx:3`), and `type-facet.ts` is
    * read by `helpers/reveal-panel.ts:6`. None of them opens in a zone.
    */
   it('reaches no panel of the tool table, not even the one the home screen opens', () => {
@@ -258,7 +257,6 @@ describe('the opening chunk', () => {
       './panels/jobs/JobRow.tsx',
       './panels/jobs/Jobs.tsx',
     ])
-    expect([...files].filter(path => /^\.\/panels\/[^/]+\/index\.ts$/.test(path))).toEqual([])
   })
 
   it('never reaches the licences window', () => {

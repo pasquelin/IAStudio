@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { ToolId } from '@shared/domain/tool'
 import type { ToolDefinition } from '@/panels/definition'
 import { definition as apps } from '@/panels/apps'
 import { definition as assets } from '@/panels/assets'
@@ -20,8 +21,11 @@ import { TOOL_COMPONENTS } from './tool-components'
  * The panels themselves, imported outright — which only a test may do. `tool-components.ts`
  * knows them through `import()`, so what it says about their headers is a second copy of the
  * truth, and nothing but this file stops the two from drifting.
+ *
+ * Keyed on `ToolId`, like the table it checks: a panel added, renamed or dropped fails to
+ * compile here rather than at a case, so the two cases below only have to weigh the headers.
  */
-const PANELS: Record<string, ToolDefinition> = {
+const PANELS: Record<ToolId, ToolDefinition> = {
   layers,
   meshes,
   lights,
@@ -39,7 +43,7 @@ const PANELS: Record<string, ToolDefinition> = {
 }
 
 function idsWhere(
-  table: Record<string, ToolDefinition>,
+  table: Record<ToolId, ToolDefinition>,
   holds: (definition: ToolDefinition) => boolean,
 ): string[] {
   return Object.entries(table)
@@ -49,10 +53,6 @@ function idsWhere(
 }
 
 describe('the tool table', () => {
-  it('lists every panel there is, and no other', () => {
-    expect(Object.keys(TOOL_COMPONENTS).sort()).toEqual(Object.keys(PANELS).sort())
-  })
-
   // The header draws its separator on the first paint, before the panel's chunk lands. Declaring
   // one for a panel that publishes none would put a divider beside an empty row, and forgetting
   // one would make the divider appear a frame after the row it separates.

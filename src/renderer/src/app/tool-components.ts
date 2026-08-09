@@ -3,12 +3,10 @@ import type { ToolId } from '@shared/domain/tool'
 import type { ToolDefinition } from '@/panels/definition'
 
 /**
- * What the title row must know about a panel before that panel's chunk arrives.
- *
- * `'actions'` says the panel publishes buttons for its header, `'fill-actions'` that they take
- * the row's free width in a band. Declared here rather than read off the panel, because the
- * header lays itself out on the first paint: a separator that turned up a frame later would
- * shift a row already on screen. `tool-components.test.ts` holds both to what the panels do.
+ * What the title row must know before the panel's chunk arrives — the header lays itself out on
+ * the first paint, and a separator turning up a frame later would shift a row already on screen.
+ * `'fill-actions'` additionally takes the row's free width in a band.
+ * `tool-components.test.ts` holds both to what the panels actually publish.
  */
 type HeaderRole = 'actions' | 'fill-actions'
 

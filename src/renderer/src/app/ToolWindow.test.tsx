@@ -17,9 +17,10 @@ function headerOf(node: HTMLElement | null): HTMLElement | null {
 
 /**
  * Every panel arrives through `import()`, so nothing of its own is on screen on the first tick.
- * Testing Library waits one second by default, and that is not enough here: the runner transforms
- * the panel's whole subgraph on demand — 2,6 s for the shelf on an idle machine. Under the file's
- * 15 s budget, so a panel that never arrives still fails as a timeout rather than hanging.
+ * A second — Testing Library's default — is not enough for the RUNNER, which transforms the
+ * panel's subgraph on demand and took 2,6 s over the shelf here. That figure is the runner's,
+ * not the studio's, where the chunk is already built. Kept under the file's 15 s budget, so a
+ * panel that never arrives still fails as a timeout.
  */
 const ARRIVES = { timeout: 10_000 }
 
