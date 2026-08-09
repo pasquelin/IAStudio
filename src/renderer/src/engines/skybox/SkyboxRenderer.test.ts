@@ -541,3 +541,83 @@ describe('the test objects of a skybox', () => {
     expect(probes.group.visible).toBe(false)
   })
 })
+
+/**
+ * A flat view is a quad over the frame, so what sits behind it is worth nothing — and worse
+ * than nothing for the backdrop: the projection letterboxes its picture, and the immersive sky
+ * showing through the bars would read as part of what is being judged.
+ */
+describe('the views of a skybox', () => {
+  const mountedRenderers: SkyboxRenderer[] = []
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+    vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
+    vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(
+      document.createElement('canvas'),
+    )
+  })
+
+  afterEach(() => {
+    for (const renderer of mountedRenderers.splice(0)) renderer.dispose()
+    vi.useRealTimers()
+  })
+
+  const withSky = (): SkyboxContent => {
+    const content = createSkyboxContent()
+    content.source = { assetId: 'sky-1' }
+    return content
+  }
+
+  const mounted = (): SkyboxRenderer => {
+    const renderer = new SkyboxRenderer({
+      onSunChange: vi.fn(),
+      loadTexture: fakeTextureSource().load,
+    })
+    renderer.mount(document.createElement('div'))
+    mountedRenderers.push(renderer)
+    renderer.apply(withSky())
+    return renderer
+  }
+
+  it('drops the backdrop and the probes for a flat view', () => {
+    const renderer = mounted()
+
+    renderer.setView('cross')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
+    expect(probes.group.visible).toBe(false)
+  })
+
+  it('gives them back on the way home', () => {
+    const renderer = mounted()
+
+    renderer.setView('faces')
+    renderer.setView('immersive')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(true)
+    expect(probes.group.visible).toBe(true)
+  })
+
+  /** What the document asked of the backdrop is not forgotten while a flat view is on. */
+  it('does not turn a backdrop back on that the document had turned off', () => {
+    const renderer = mounted()
+    const content = withSky()
+    content.environment = { ...content.environment, showBackground: false }
+    renderer.apply(content)
+
+    renderer.setView('equirect')
+    renderer.setView('immersive')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
+  })
+
+  /** Nothing is drawn over the immersive view — it IS the scene. */
+  it('draws no projection in the immersive view', () => {
+    mounted()
+
+    expect(pipeline.renderToScreen).not.toHaveBeenCalled()
+  })
+})
