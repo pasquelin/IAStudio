@@ -16,6 +16,7 @@ import {
   type FormValues,
 } from '@/helpers/dynamic-form'
 import { buildSchema } from '@/helpers/dynamic-form-schema'
+import { useModelText } from '@/hooks/useModelText'
 import { Button } from './Button'
 import { AssetDropField } from './AssetDropField'
 import { FIELD } from './styles'
@@ -77,6 +78,7 @@ function Control({
   onRoll: () => void
 }) {
   const { t } = useTranslation()
+  const say = useModelText()
 
   switch (field.kind) {
     case 'longText':
@@ -91,7 +93,7 @@ function Control({
           {!field.required && <option value="" />}
           {field.options?.map(option => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {say(option.label)}
             </option>
           ))}
         </select>
@@ -156,6 +158,7 @@ export function DynamicForm({
   accessory,
 }: DynamicFormProps) {
   const { t } = useTranslation()
+  const say = useModelText()
   const schema = useMemo(() => buildSchema(fields), [fields])
   const initial = useMemo(() => defaultValues(fields, preset), [fields, preset])
   const groups = useMemo(() => groupFields(fields), [fields])
@@ -203,7 +206,9 @@ export function DynamicForm({
       {groups.map(([group, groupedFields]) => (
         <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
           {group && (
-            <legend className="text-muted p-0 text-[11px] tracking-wide uppercase">{group}</legend>
+            <legend className="text-muted p-0 text-[11px] tracking-wide uppercase">
+              {say(group)}
+            </legend>
           )}
 
           {visibleFields(groupedFields, values).map(field => (
@@ -212,7 +217,7 @@ export function DynamicForm({
             <Fragment key={field.key}>
               <label className="flex flex-col gap-2 text-xs">
                 <span className="text-muted">
-                  {field.label}
+                  {say(field.label)}
                   {field.required && <span aria-hidden> *</span>}
                 </span>
 
@@ -223,7 +228,7 @@ export function DynamicForm({
                   onRoll={() => setValue(field.key, randomSeed())}
                 />
 
-                {field.help && <span className="text-muted text-[11px]">{field.help}</span>}
+                {field.help && <span className="text-muted text-[11px]">{say(field.help)}</span>}
                 {formState.errors[field.key] && (
                   <span role="alert" className="text-danger text-[11px]">
                     {t('errors.invalidValue')}
