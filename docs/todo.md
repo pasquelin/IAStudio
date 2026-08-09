@@ -1137,7 +1137,9 @@ canal** — ce qui dépasse le blanc est écrêté, et un éclairage à forte dy
 **Sept étapes sur dix sont fusionnées dans `develop`** — les six premières, puis **la dixième**. Le
 graphe est un espace pour de bon : document `.graph`, entrée dans `IO_BY_KIND`, composant en `lazy()`,
 palette et barre, et **un nœud sélectionné s'ouvre dans l'Inspecteur** depuis `61b1955` — identifiant,
-genre, titre, et ce que le nœud porte selon son type. Le manuel le décrit dans les deux langues, avec
+genre, titre, et ce que le nœud porte selon son type. Depuis `7f5c440`, **le modèle d'un nœud se
+choisit** et son formulaire s'ouvre dessous : changer de modèle refait les ports et emporte les liens
+dont le port a disparu, en une commande annulable. Le manuel le décrit dans les deux langues, avec
 l'avertissement qui convient — **il ne sait toujours pas exécuter ce qu'il décrit.**
 
 ## 6.1 Ce qui reste — étapes 7 à 9

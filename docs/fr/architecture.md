@@ -671,6 +671,11 @@ Trois conséquences pour l’appelant, et aucune n’est facultative :
 `aria-selected` ne se pose que sur un `option`. L’Explorateur peint « ouvert » avec la même prop,
 et l’annoncer « sélectionné » décrirait un état que ses lignes ne peuvent ni prendre ni rendre.
 
+**La même règle vaut pour `Flyout`**, dont le `role` est un paramètre et non une supposition :
+`role="menu"` promet des rangées qu’un lecteur d’écran parcourt à la flèche, et un volet qui
+contient un formulaire ou une liste de filtres ne tient pas cette promesse. Le composant ne peut
+pas deviner lequel des deux il porte ; son appelant, si.
+
 ### Ce que le design system a repris à une bibliothèque
 
 **Les bulles d’échec ne viennent plus de `react-toastify`**, qui a quitté les dépendances. Une
@@ -742,14 +747,15 @@ Six choses passent par les bundles sans en avoir l’air, et chacune répond à 
   langues et que les abréviations avaient fini par vivre en français dans un fichier de calcul ;
 - **les nombres écrits DANS une phrase** — `{{count, number}}` plutôt que `{{count}}` : un millier
   s’écrit « 4 000 » d’un côté de la Manche et « 4,000 » de l’autre, et l’espace du français est une
-  insécable étroite. Le formateur d’i18next est `Intl.NumberFormat`, rien à configurer. Vingt-sept
-  clés le portent. **L’exception est un facteur, pas un dénombrement** :
+  insécable étroite. Le formateur d’i18next est `Intl.NumberFormat`, rien à configurer. Le compte
+  des clés concernées monte à chaque lot ; `bundles.test.ts` est ce qui fait foi, pas un chiffre
+  écrit ici. **L’exception est un facteur, pas un dénombrement** :
   `texture.tilingPreviewTimes` écrit « 4× », et grouper une répétition serait faux précisément là
   où le groupement se verrait — `bundles.test.ts` tient la règle **et son exception**. Une **unité
   créative** ne passe pas non plus par `{{units, number}}` mais par `formatUnits`, qui ne se
   contente pas de grouper : elle garde deux décimales sous dix unités, parce qu’un appel bon
-  marché arrondi à zéro se lirait **gratuit**. Dix-neuf appelants ; le dernier à l’avoir oubliée
-  écrivait « 1 234 UC » avant la génération et « 1234 UC » après ;
+  marché arrondi à zéro se lirait **gratuit**. Le dernier appelant à l’avoir oubliée écrivait
+  « 1 234 UC » avant la génération et « 1234 UC » après ;
 - **les portées du journal** — une ligne d’activité affiche une phrase, jamais la clé qui la
   désigne ;
 - **la langue du document lui-même** — `document.documentElement.lang` suit la langue choisie.
@@ -761,7 +767,7 @@ Six choses passent par les bundles sans en avoir l’air, et chacune répond à 
 
 ### Une largeur fixe est une décision d’internationalisation
 
-**Le français dépasse l’anglais de moitié sur 126 clés du bundle.** Partout où une largeur est
+**Le français dépasse l’anglais de moitié sur une clé du bundle sur six.** Partout où une largeur est
 figée, cet écart devient un libellé coupé **dans une langue seulement** — « Aperçu de la
 répétition » se lisait « Aperçu de la ré… » dans une colonne d’inspecteur de 80 px où
 « Repeat preview » tenait entier.

@@ -646,6 +646,11 @@ Three consequences for the caller, none of them optional:
 `aria-selected` is only ever set on an `option`. The Explorer paints "open" with that same prop,
 and announcing it as "selected" would describe a state its rows can neither take nor give back.
 
+**The same rule governs `Flyout`**, whose `role` is a parameter rather than an assumption:
+`role="menu"` promises rows a screen reader steps through with the arrow keys, and a panel holding
+a form or a list of filters does not keep that promise. The component cannot guess which of the
+two it carries; its caller can.
+
 ### What the design system took back from a library
 
 **Failure toasts no longer come from `react-toastify`**, which has left the dependencies. A toast
@@ -715,13 +720,14 @@ Six things go through the bundles without looking like it, and each answers an o
 - **numbers written INSIDE a sentence** — `{{count, number}}` rather than `{{count}}`: a thousand
   reads "4,000" on one side of the Channel and "4 000" on the other, and French's separator is a
   narrow no-break space. i18next's formatter is `Intl.NumberFormat`, nothing to configure.
-  Twenty-seven keys carry it. **The exception is a factor, not a count**:
+  The count of keys carrying it climbs with every batch; `bundles.test.ts` is what holds, not a
+  figure written here. **The exception is a factor, not a count**:
   `texture.tilingPreviewTimes` writes "4×", and grouping a repetition would be wrong exactly where
   the grouping would show — `bundles.test.ts` holds the rule **and its exception**. A **creative
   unit** does not go through `{{units, number}}` either but through `formatUnits`, which does more
   than group: it keeps two decimals under ten units, because a cheap call rounded to zero would
-  read as **free**. Nineteen callers; the last one to forget it wrote "1,234 CU" before the
-  generation and "1234 CU" after;
+  read as **free**. The last caller to forget it wrote "1,234 CU" before the generation and
+  "1234 CU" after;
 - **the journal's scopes** — an activity line shows a sentence, never the key naming it;
 - **the document's own language** — `document.documentElement.lang` follows the chosen language.
   `index.html` carried it hardcoded: a screen reader picks its voice from it, and an English
@@ -731,7 +737,7 @@ Six things go through the bundles without looking like it, and each answers an o
 
 ### A fixed width is an internationalisation decision
 
-**French runs half as long again as English across 126 keys of the bundle.** Wherever a width is
+**French runs half as long again as English on one bundle key in six.** Wherever a width is
 frozen, that gap becomes a label cut off **in one language only** — "Aperçu de la répétition" read
 as "Aperçu de la ré…" in an 80 px inspector column where "Repeat preview" fitted whole.
 
