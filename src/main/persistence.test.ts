@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -128,12 +128,19 @@ describe("a staging name of the caller's own", () => {
 
   /**
    * The defect this shares out: `documents.ts` had its own copy of this, with an unprotected `rm`.
-   * A tidy-up that throws replaces the error the caller needed with one about the copy.
+   *
+   * A staging path that is a non-empty folder fails both ways — `writeFile` cannot open it, and
+   * `rm` without `recursive` will not remove it — and the two say so differently. What must reach
+   * the caller is why the *content* could not be written.
    */
   it('raises why the content could not be written, not why the copy would not go away', async () => {
-    // A staging path inside a folder that does not exist: the write fails, and so does the `rm`.
-    const missing = join(folder, 'nowhere', 'doc.json.ccc.tmp')
+    const staging = join(folder, 'doc.json.ccc.tmp')
+    await mkdir(staging)
+    await writeFile(join(staging, 'inside'), 'x')
 
-    await expect(writeAtomic(join(folder, 'doc.json'), 'x', missing)).rejects.toThrow(/ENOENT/)
+    const write = writeAtomic(join(folder, 'doc.json'), 'x', staging)
+
+    await expect(write).rejects.toThrow(/illegal operation on a directory/)
+    await expect(write).rejects.not.toThrow(/rm returned/)
   })
 })
