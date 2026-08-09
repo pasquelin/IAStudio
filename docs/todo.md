@@ -685,13 +685,14 @@ encore.
 espacement. Ce qui décale tout, c'est **80 px contre 64**, et **8 px de retrait contre zéro**.
 
 **Et ce n'est pas un défaut du graphe : cinq inspecteurs sur six mélangent les deux familles**, sur
-`develop`, depuis longtemps — `LayerInspector` (7 lignes contre 13 champs), `TextureInspector`
-(5 contre 16), `ClipInspector` (10 contre 4), `TrackInspector` (6 contre 1). Seul `AssetInspector`
-n'emploie que `PropertyRow`, et c'est pourquoi lui seul est aligné.
+`develop` — `LayerInspector` (7 lignes contre 13 champs), `TextureInspector` (5 contre 16),
+`ClipInspector` (10 contre 4), `TrackInspector` (6 contre 1), `GraphNodeInspector` (5 contre 4).
+Seul `AssetInspector` n'emploie que `PropertyRow`, et c'est pourquoi lui seul est aligné.
 
-> **Le nœud de graphe n'est pas encore sur `develop`** : `GraphNodeInspector.tsx` vit dans le
-> worktree `workflows`. La capture vient de là — **mais le défaut qu'elle montre est en amont**, et
-> le corriger dans le graphe seul le laisserait dans les quatre autres.
+> **Remesuré le 9 août au soir** : `GraphNodeInspector.tsx` a été fusionné entre-temps
+> (`feat/workflows`) et il est désormais sur `develop`, où il rejoint les quatre autres. La capture
+> venait de son worktree ; **le défaut qu'elle montre était en amont**, et le corriger dans le graphe
+> seul le laisserait dans les quatre autres.
 
 **Ce que ça demande** : que les deux familles partagent une seule colonne de libellé. `FIELD_LABEL`
 et le `w-20` de `PropertyRow` sont deux déclarations de la même chose — une gauge, comme
