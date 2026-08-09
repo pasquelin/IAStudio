@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`93f2e44`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline 93f2e44..develop`) au lieu de relire mille lignes.
+à **`89b5392`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 89b5392..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -81,8 +81,8 @@ la configuration et de l’espace 3D ayant été supprimées une fois leurs chan
 
 # 1. L’état
 
-**979 fichiers dans `src/`, dont 390 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
-en exécutait alors **4907 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
+**999 fichiers dans `src/`, dont 397 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
+en exécutait alors **4969 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
 nombres ne se lit dans un fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
 demande avant de perdre quoi que ce soit. L’application démarre par `pnpm start`.
 
@@ -97,10 +97,18 @@ demande avant de perdre quoi que ce soit. L’application démarre par `pnpm sta
 | `engines/{timeline,canvas,audio,core}/**` | 242 / 250 | **8 — c’est lui, le tendu** |
 | `main/diagnostics/**`, `renderer/src/services/**` | **zéro** | le canal qui dit les échecs : une branche que personne n’exerce y serait un échec que personne ne lirait |
 | `renderer/src/app/**`, `panels/**` | **aucun budget** | c’est ce qui a laissé cinq fichiers neufs y atterrir sans qu’aucun seuil ne bouge |
-| `src/main/project/**` | 115 / 115 statements | **nulle**, et `document-io.ts` à une branche près |
+| `src/main/project/**` | 113 / 115 statements · **60 / 60 branches** | 2 sur les statements, **nulle sur les branches** — mesuré le 9 août au soir |
 
 **Couvrir avant d’élargir** ; le commentaire du fichier dit le seul cas où élargir est légitime (un
-glob dont la marge de croissance est du GPU intestable).
+glob dont la marge de croissance est du GPU intestable). **Le geste a été refait le 9 août**
+(`a688626`) : trois statements de trop dans `catalog-worker.ts`, qu’aucun test n’atteint — plutôt
+que d’élargir, `serveCatalog` est sorti dans `catalog-queue.ts`, où un port de deux fonctions
+l’exerce. Démarrer un thread pour vérifier trois lignes de plomberie coûte plus que ce que ça
+prouve ; **déplacer la ligne jusqu’à un endroit testable, non.**
+
+> **Les quatre premières lignes de ce tableau datent d’avant plusieurs fusions de moteurs et n’ont
+> pas été remesurées.** Seule celle de `src/main/project/**` l’a été. Un chiffre de marge se relève
+> par `pnpm test:coverage`, pas par lecture — et il ne se recopie pas d’un tour sur l’autre.
 
 > **Un grain de sable environnemental : les tests lents dépassent leur budget de 5 s quand la machine
 > porte plusieurs sessions** — des sous-ensembles différents à chaque passage, verts en isolation.
@@ -123,6 +131,14 @@ glob dont la marge de croissance est du GPU intestable).
 > dans les deux projets, où il compte ; les deux `setConfig` par fichier ont sauté. Celui de
 > `LicencesWindow` reste, au-dessus du global et délibérément : déplier le texte entier d’une
 > licence est lent pour une raison qui lui est propre.
+>
+> **Le nouveau plafond n’est pas confortable pour autant.** Le 9 août au soir, une passe
+> `test:coverage` est tombée sur `ShortcutsSettings.test.tsx` à **15 930 ms contre 15 000
+> permis** — puis la passe suivante, sans un changement, a rendu **397 fichiers et 4969 cas
+> verts**. Ce fichier reste donc le premier à mordre : sous `--coverage`, son bloc prend une
+> quarantaine de secondes à lui seul. **Relancer une fois avant de conclure** vaut ici plus que
+> partout ailleurs — et si une troisième passe rougissait au même endroit, ce serait le plafond
+> global qu’il faudrait mesurer, pas le fichier qu’il faudrait rustiner à nouveau.
 >
 > **La leçon vaut au-delà des tests.** Un `pnpm validate` vert seul et rouge en suite complète est
 > la pire façon pour une suite d’avoir tort, puisqu’elle **accuse le dernier commit venu** — et le
