@@ -1420,7 +1420,40 @@
     "assets": "Assets produced",
     "actions": "Actions",
     "loadMore": "Load more",
-    "free": "free"
+    "free": "free",
+    "actionNames": {
+      "background-removal": "Background removal",
+      "captioning": "Captioning",
+      "custom": "Custom",
+      "custom-asset-created": "Custom asset created",
+      "detection": "Detection",
+      "generators-training": "Generator training",
+      "image-prompt-editing": "Image prompt editing",
+      "images-generation": "Image generation",
+      "ip-detection": "Protected content detection",
+      "models-training": "Model training",
+      "patch": "Patch",
+      "pixelate": "Pixelate",
+      "refunds": "Refunds",
+      "repaint": "Repaint",
+      "restyle": "Restyle",
+      "segmentation": "Segmentation",
+      "skybox-base-360": "360 skybox",
+      "skybox-upscale-360": "360 skybox upscale",
+      "texture": "Texture",
+      "upscale": "Upscale",
+      "vectorization": "Vectorization"
+    },
+    "assetKinds": {
+      "3d": "3D",
+      "audio": "Audio",
+      "document": "Document",
+      "image": "Image",
+      "image-hdr": "HDR image",
+      "json": "JSON",
+      "text": "Text",
+      "video": "Video"
+    }
   },
   "blend": {
     "normal": "Normal",
@@ -1525,10 +1558,10 @@
       "recreate": "Make another one with {{model}}"
     },
     "library": {
-      "fetch": "Fetch \u201c{{name}}\u201d into the project"
+      "fetch": "Fetch “{{name}}” into the project"
     },
     "favorites": {
-      "unpin": "Take \u201c{{name}}\u201d off your recipes"
+      "unpin": "Take “{{name}}” off your recipes"
     },
     "spotlight": {
       "resume": "Pick up where you left off",

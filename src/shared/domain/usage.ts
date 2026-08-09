@@ -64,6 +64,50 @@ export type UsageTally = {
   units?: number
 }
 
+/**
+ * The spending actions the API bills, as `usages.list` enumerates them. Listed so the report
+ * reads in French instead of showing `images-generation`: closed unions, unlike a model's own
+ * labels, so a bundle key per value is the right tool here.
+ *
+ * `creative-unit-cost` and `creative-unit-discount` are absent on purpose — they are the
+ * synthesis lines the aggregate already folds into its own totals.
+ */
+export const USAGE_ACTIONS: readonly string[] = [
+  'background-removal',
+  'captioning',
+  'custom',
+  'custom-asset-created',
+  'detection',
+  'generators-training',
+  'image-prompt-editing',
+  'images-generation',
+  'ip-detection',
+  'models-training',
+  'patch',
+  'pixelate',
+  'refunds',
+  'repaint',
+  'restyle',
+  'segmentation',
+  'skybox-base-360',
+  'skybox-upscale-360',
+  'texture',
+  'upscale',
+  'vectorization',
+]
+
+/** The asset kinds `usages.list` counts. Its own union, wider than the studio's own kinds. */
+export const USAGE_ASSET_KINDS: readonly string[] = [
+  '3d',
+  'audio',
+  'document',
+  'image',
+  'image-hdr',
+  'json',
+  'text',
+  'video',
+]
+
 /** An account whose key refused the call. The report holds what the others answered. */
 export type SilentAccount = {
   accountId: string

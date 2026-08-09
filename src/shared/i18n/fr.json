@@ -1420,7 +1420,40 @@
     "assets": "Assets produits",
     "actions": "Actions",
     "loadMore": "Charger la suite",
-    "free": "gratuit"
+    "free": "gratuit",
+    "actionNames": {
+      "background-removal": "Suppression d’arrière-plan",
+      "captioning": "Légendage",
+      "custom": "Personnalisé",
+      "custom-asset-created": "Asset personnalisé créé",
+      "detection": "Détection",
+      "generators-training": "Entraînement de générateurs",
+      "image-prompt-editing": "Édition par prompt",
+      "images-generation": "Génération d’images",
+      "ip-detection": "Détection de contenu protégé",
+      "models-training": "Entraînement de modèles",
+      "patch": "Retouche",
+      "pixelate": "Pixellisation",
+      "refunds": "Remboursements",
+      "repaint": "Repeinte",
+      "restyle": "Restylage",
+      "segmentation": "Segmentation",
+      "skybox-base-360": "Skybox 360",
+      "skybox-upscale-360": "Agrandissement de skybox 360",
+      "texture": "Texture",
+      "upscale": "Agrandissement",
+      "vectorization": "Vectorisation"
+    },
+    "assetKinds": {
+      "3d": "3D",
+      "audio": "Audio",
+      "document": "Document",
+      "image": "Image",
+      "image-hdr": "Image HDR",
+      "json": "JSON",
+      "text": "Texte",
+      "video": "Vidéo"
+    }
   },
   "blend": {
     "normal": "Normal",
