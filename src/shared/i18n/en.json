@@ -651,7 +651,7 @@
     "select": "Selection",
     "selectHint": "Select, move and trim a clip",
     "blade": "Blade",
-    "bladeHint": "Cut a clip at the playhead",
+    "bladeHint": "Cut a clip under the pointer",
     "hand": "Hand",
     "handHint": "Scroll the timeline — wheel to zoom"
   },
