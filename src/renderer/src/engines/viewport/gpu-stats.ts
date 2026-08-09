@@ -5,7 +5,6 @@
  * without a WebGL context, and these numbers are what a GPU change has to prove itself with.
  */
 export type GpuStats = {
-  /** Draw calls of the whole frame — the scene pass and the overlay pass together. */
   calls: number
   triangles: number
   points: number
@@ -17,15 +16,10 @@ export type GpuStats = {
   textures: number
 }
 
-/**
- * Only the counters that are read, so a test can hand them over without a WebGL context. A real
- * `WebGLRenderer` satisfies this by shape.
- */
+/** Only the counters that are read. A real `WebGLRenderer.info` satisfies this by shape. */
 export type FrameCounters = {
-  info: {
-    render: { calls: number; triangles: number; points: number; lines: number }
-    memory: { geometries: number; textures: number }
-  }
+  render: { calls: number; triangles: number; points: number; lines: number }
+  memory: { geometries: number; textures: number }
 }
 
 export function emptyGpuStats(): GpuStats {
@@ -39,8 +33,7 @@ export function emptyGpuStats(): GpuStats {
  * `frames` is counted here rather than read off `info.render.frame`, which counts calls to
  * `render`: a viewport that draws an overlay makes two of those per frame.
  */
-export function recordFrame(renderer: FrameCounters, into: GpuStats): void {
-  const { render, memory } = renderer.info
+export function recordFrame({ render, memory }: FrameCounters, into: GpuStats): void {
   into.calls = render.calls
   into.triangles = render.triangles
   into.points = render.points

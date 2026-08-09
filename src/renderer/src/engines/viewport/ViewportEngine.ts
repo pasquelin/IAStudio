@@ -83,8 +83,9 @@ export class ViewportEngine {
   private frame: number | null = null
   /** `null` while the loop is at rest: the next frame is a first frame, not a long one. */
   private lastTime: number | null = null
-  /** One object for the viewport's life: a fresh one per frame is the allocation to avoid. */
-  private readonly gpuStats = emptyGpuStats()
+  /** What the last drawn frame cost, and what the context holds. `frames` standing still is a
+   * viewport that went back to sleep, which is what the loop is meant to do. */
+  readonly stats: GpuStats = emptyGpuStats()
 
   constructor(private readonly options: ViewportEngineOptions = {}) {
     this.perspective = new PerspectiveCamera(
@@ -242,15 +243,6 @@ export class ViewportEngine {
     return this.controls
   }
 
-  /**
-   * What the last drawn frame cost, and what the context holds. The same object throughout, so
-   * a reader keeps a reference rather than polling; `frames` standing still is a viewport that
-   * went back to sleep, which is what the loop is meant to do.
-   */
-  get stats(): GpuStats {
-    return this.gpuStats
-  }
-
   /** Reads a studio token off the canvas, so a viewport follows a theme change with the rest. */
   paletteToken(name: string): string {
     const canvas = this.renderer?.domElement
@@ -314,7 +306,6 @@ export class ViewportEngine {
     const renderer = this.renderer
     if (!renderer) return
 
-    // Cleared here rather than by three.js, which would do it again inside the overlay pass.
     renderer.info.reset()
 
     const now = performance.now()
@@ -351,8 +342,8 @@ export class ViewportEngine {
       }
     }
 
-    // After the overlay, so the count covers the frame the user sees and not the scene pass alone.
-    recordFrame(renderer, this.gpuStats)
+    // Read per frame, never cached: a context restore replaces `info` and its two counter objects.
+    recordFrame(renderer.info, this.stats)
 
     if (moving || settling) this.requestRender()
   }

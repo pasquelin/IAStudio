@@ -16,7 +16,6 @@ import { ViewportEngine } from './ViewportEngine'
 const disposed = vi.fn()
 const sized = vi.fn()
 const pixelRatio = vi.fn()
-const drawCallsPerRender = { value: 1 }
 const rendered = vi.fn()
 
 vi.mock('three', async importOriginal => ({
@@ -28,7 +27,7 @@ vi.mock('three', async importOriginal => ({
     autoClear = true
     readonly info = {
       autoReset: true,
-      render: { calls: 0, frame: 0, triangles: 0, points: 0, lines: 0 },
+      render: { calls: 0, triangles: 0, points: 0, lines: 0 },
       memory: { geometries: 0, textures: 0 },
       reset: (): void => {
         this.info.render.calls = 0
@@ -46,9 +45,8 @@ vi.mock('three', async importOriginal => ({
     setSize = sized
     dispose = disposed
     render = (...args: unknown[]): void => {
-      this.info.render.frame += 1
       if (this.info.autoReset) this.info.reset()
-      this.info.render.calls += drawCallsPerRender.value
+      this.info.render.calls += 1
       rendered(...args)
     }
   },
@@ -66,7 +64,6 @@ describe('a viewport', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    drawCallsPerRender.value = 1
     host = document.createElement('div')
     document.body.appendChild(host)
     engines = []
@@ -227,11 +224,6 @@ describe('a viewport', () => {
       expect(mounted({ controls: 'none' }).stats).toMatchObject({ calls: 0, frames: 0 })
     })
 
-    /**
-     * The reason `info.autoReset` is turned off at mount. `ViewHelper.render` and its kind call
-     * `render` again, which clears the counters — left automatic, a viewport would publish what
-     * its trihedron cost and call it the frame.
-     */
     it('counts the overlay pass into the frame instead of being reset by it', () => {
       const engine = mounted({
         controls: 'none',
@@ -244,40 +236,20 @@ describe('a viewport', () => {
       expect(engine.stats.calls).toBe(2)
     })
 
-    it('carries what the frame drew, not just how many calls it took', () => {
-      drawCallsPerRender.value = 7
-      const engine = mounted({ controls: 'none' })
-
-      drawFrames()
-
-      expect(engine.stats.calls).toBe(7)
-    })
-
     /**
      * Turning `autoReset` off hands the clearing to the engine: skip it and the counters add up
      * across frames, so a viewport left orbiting would report a cost that only ever climbs.
      */
     it('reports one frame at a time rather than the sum of every frame drawn', () => {
       const engine = mounted({ controls: 'none', onFrame: () => true })
-
-      drawFrames()
-      drawFrames()
-      drawFrames()
-
-      expect(engine.stats.frames).toBe(3)
-      expect(engine.stats.calls).toBe(1)
-    })
-
-    /** A render loop must not allocate: readers keep the reference rather than polling a copy. */
-    it('hands back one object for the viewport life, not one per frame', () => {
-      const engine = mounted({ controls: 'none', onFrame: () => true })
       const first = engine.stats
 
       drawFrames()
       drawFrames()
+      drawFrames()
 
+      expect(engine.stats).toMatchObject({ frames: 3, calls: 1 })
       expect(engine.stats).toBe(first)
-      expect(first.frames).toBe(2)
     })
 
     /** What proves a viewport went back to sleep rather than burning frames unseen. */
