@@ -1,8 +1,7 @@
 import { net, protocol } from 'electron'
 import { isAbsolute, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { ASSET_SCHEME, assetIdFromUrl, type Asset } from '@shared/domain/asset'
-import { favoriteIdFromUrl } from '@shared/domain/favorite'
+import { ASSET_SCHEME, hostedParts, type Asset } from '@shared/domain/asset'
 
 /**
  * Resolves an asset's stored path inside its project, or refuses.
@@ -73,13 +72,15 @@ export function registerAssetScheme(): void {
 export type AssetResolver = (assetId: string) => Promise<string | null>
 
 /**
- * One scheme, two hosts. `scenario://asset/<id>` is a row of the open project's catalogue;
- * `scenario://favorite/<id>` is a still kept outside every project, which is why it cannot be
- * resolved the same way — there is no catalogue to look it up in.
+ * One resolver per host of the scheme. `asset` is a row of the open project's catalogue;
+ * `favorite` is a still kept outside every project, which is why it cannot be resolved the same
+ * way — there is no catalogue to look it up in. A third kind is a third entry, nothing else.
  */
-export function serveAssets(resolveAsset: AssetResolver, resolveFavorite: AssetResolver): void {
+export type AssetResolvers = Readonly<Record<string, AssetResolver>>
+
+export function serveAssets(resolvers: AssetResolvers): void {
   protocol.handle(ASSET_SCHEME, async request => {
-    const file = await servedPath(request.url, resolveAsset, resolveFavorite)
+    const file = await servedPath(request.url, resolvers)
 
     if (!file) return new Response(null, { status: 404 })
     return net.fetch(pathToFileURL(file).toString())
@@ -88,16 +89,12 @@ export function serveAssets(resolveAsset: AssetResolver, resolveFavorite: AssetR
 
 /**
  * Which file a URL of the scheme names — the routing itself, apart from the handler so it can be
- * tested without an Electron `protocol`. A host neither resolver knows is answered with nothing.
+ * tested without an Electron `protocol`. A host nobody registered is answered with nothing.
  */
-export async function servedPath(
-  url: string,
-  resolveAsset: AssetResolver,
-  resolveFavorite: AssetResolver,
-): Promise<string | null> {
-  const assetId = assetIdFromUrl(url)
-  if (assetId) return resolveAsset(assetId)
+export async function servedPath(url: string, resolvers: AssetResolvers): Promise<string | null> {
+  const parsed = hostedParts(url)
+  if (!parsed) return null
 
-  const favoriteId = favoriteIdFromUrl(url)
-  return favoriteId ? resolveFavorite(favoriteId) : null
+  const resolve = resolvers[parsed.host]
+  return resolve ? resolve(parsed.id) : null
 }

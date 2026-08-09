@@ -8,7 +8,6 @@ import { CHANNELS } from '@shared/ipc'
 import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import type { AsyncCatalog } from '@main/project/catalog-client'
-import type { ProjectStore } from '@main/project/store'
 import { registerFavoriteHandlers, type FavoriteHandlerDeps } from './handlers'
 import { createFavorites } from './store'
 
@@ -48,10 +47,7 @@ async function register(overrides: Partial<FavoriteHandlerDeps> = {}) {
 
   const deps: FavoriteHandlerDeps = {
     favorites: createFavorites(folder),
-    project: {
-      path: () => PROJECT,
-      catalog: () => catalog,
-    } as unknown as ProjectStore,
+    project: { path: () => PROJECT, catalog: () => catalog },
     readThumbnail,
     newFavoriteId: () => 'favorite_1',
     now: () => '2026-08-09T10:00:00.000Z',
@@ -120,7 +116,7 @@ describe('the favourites channels', () => {
         catalog: () => {
           throw new Error('no project open')
         },
-      } as unknown as ProjectStore,
+      },
     })
 
     await expect(invoke(CHANNELS.favoritesPin, 'asset-1')).resolves.toEqual([])

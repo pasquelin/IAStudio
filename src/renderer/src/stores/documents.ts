@@ -130,13 +130,25 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   },
 
   relist: async () => {
-    const mine = ++generations.relist
-    const found = await listed()
-    // A second project opened while the first was still listing: the last answer to arrive is
-    // not necessarily the one that was asked for last.
-    if (mine !== generations.relist) return
+    // Callers that want the folder NOW share the listing already in flight rather than opening a
+    // second one. Three surfaces ask on the same paint — the home's shelf, its tree, and the
+    // project that just opened — and each answer costs a round trip and a folder walk.
+    if (listing) {
+      await listing
+      return
+    }
 
-    set({ stored: sorted(found) })
+    const mine = ++generations.relist
+    listing = listed()
+
+    try {
+      const found = await listing
+      // A second project opened while the first was still listing: the last answer to arrive is
+      // not necessarily the one that was asked for last.
+      if (mine === generations.relist) set({ stored: sorted(found) })
+    } finally {
+      listing = null
+    }
   },
 
   refresh: async () => {
@@ -211,6 +223,9 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
  * `refresh` exists for.
  */
 const generations = { relist: 0, refresh: 0 }
+
+/** The listing `relist` has in flight, shared by whoever asks while it is still travelling. */
+let listing: Promise<DocumentDescriptor[]> | null = null
 
 /**
  * Sorted by title rather than by whatever order the folder was read in: a listing that

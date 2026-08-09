@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import {
   hiddenHomeSections,
+  homePlaceOf,
   homeSections,
   shownHomeSection,
   type HomeSectionId,
@@ -9,6 +10,7 @@ import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { HOME_COMPONENTS } from './home-registry'
@@ -23,8 +25,17 @@ import { useHomeSections } from './use-home-sections'
  * has to hang off it rather than open a second scrollbar inside the first.
  */
 export function HomeView() {
-  const aside = useHomeSections('aside')
-  const main = useHomeSections('main')
+  const sections = useHomeSections()
+  const projectKnown = useProject(state => state.known)
+
+  // Nothing at all until the main process has said which project is open, if any. Half the
+  // sections require one, so drawing before the answer lays out a page of three bands and then
+  // reflows it into nine — the aside appearing alone moves the whole column 264 px sideways.
+  // The wait is a file read; the key, which is a request, is left to settle under the page.
+  if (!projectKnown) return <div className="h-full" />
+
+  const aside = sections.filter(id => homePlaceOf(id) === 'aside')
+  const main = sections.filter(id => homePlaceOf(id) !== 'aside')
 
   return (
     <div className="h-full overflow-x-hidden overflow-y-auto">
@@ -33,7 +44,14 @@ export function HomeView() {
         {/* Withdrawn on a narrow window rather than stacked above the page: a rail one keeps an
             eye on is not worth the first screenful when there is no room to put it beside. */}
         {aside.length > 0 && (
-          <aside className="sticky top-0 hidden w-[240px] shrink-0 flex-col gap-8 self-start lg:flex">
+          <aside
+            className={cn(
+              'sticky top-0 hidden w-[240px] shrink-0 flex-col gap-8 self-start lg:flex',
+              // Bounded and scrollable from the start: a sticky column taller than the window
+              // hides its own foot, and nothing about the page's scroll can bring it back.
+              'max-h-[calc(100vh-3rem)] overflow-y-auto',
+            )}
+          >
             <Column ids={aside} />
           </aside>
         )}

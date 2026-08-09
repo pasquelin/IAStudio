@@ -1,22 +1,21 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
+import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
 import { homeSectionLimit } from '@shared/domain/home'
 import { Carousel } from '@/design/Carousel'
-import { MediaTile } from '@/design/MediaTile'
-import { FOCUS_RING } from '@/design/styles'
-import { cn } from '@/helpers/cn'
 import { assetIcon } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { Section } from '../Section'
+import { ShelfTile, SHELF_TILE_SIZE } from '../ShelfCard'
+import { useShelf } from '../use-shelf'
 
-const CARD = 132
+const NOTHING: readonly CloudAsset[] = []
 
-/** Twice the tile, for a dense display. The CDN resizes; a 4K down the wire to draw 132 does not. */
-const PREVIEW_WIDTH = CARD * 2
+/** The CDN resizes; a 4K down the wire to draw a 132 px tile does not. Same width a pin keeps. */
+const PREVIEW_WIDTH = FAVORITE_THUMBNAIL_WIDTH
 
 /**
  * The library the API key opens onto, which is not this project's catalogue.
@@ -31,39 +30,29 @@ export function Library() {
   const sections = useSettings(state => state.settings.home.sections)
   const limit = homeSectionLimit(sections, 'library')
 
-  const [assets, setAssets] = useState<readonly CloudAsset[]>([])
-
   // Read again when the active key changes: another key is another library, and the tiles of the
   // previous one would be pictures nobody in this account can fetch.
-  useEffect(() => {
-    let live = true
+  const page = useShelf(NOTHING, () => browse(limit), [owner, limit])
 
-    getBridge()
-      ?.cloud.browse({ pageSize: limit })
-      .then(page => {
-        if (live) setAssets(page.assets)
-      })
-      // No key, or the API refused: the shelf stays empty and the section takes itself off.
-      .catch(() => {})
-
-    return () => {
-      live = false
-    }
-  }, [owner, limit])
-
-  if (assets.length === 0) return null
+  if (page.length === 0) return null
 
   return (
     <Section id="library" title={t('home.sections.library')}>
       <Carousel
-        items={assets}
-        itemWidth={CARD}
-        itemHeight={CARD}
+        items={page}
+        itemWidth={SHELF_TILE_SIZE}
+        itemHeight={SHELF_TILE_SIZE}
         label={t('home.sections.library')}
         renderCard={asset => <Tile asset={asset} />}
       />
     </Section>
   )
+}
+
+function browse(limit: number | undefined): Promise<CloudAsset[]> | undefined {
+  return getBridge()
+    ?.cloud.browse({ pageSize: limit })
+    .then(page => page.assets)
 }
 
 /**
@@ -77,29 +66,18 @@ function Tile({ asset }: { asset: CloudAsset }) {
   const hasProject = useProject(state => state.project !== null)
   const busy = useCloud(state => state.busy)
 
-  const tile = (
-    <MediaTile
+  const fetchable = hasProject && !busy
+
+  return (
+    <ShelfTile
+      // The thumbnail, never the asset's own URL: that one is signed, and a parameter appended
+      // to it invalidates the signature — the CDN answers 403.
       url={cloudPreviewUrl(asset, { width: PREVIEW_WIDTH }) ?? undefined}
       caption={asset.generation?.modelLabel || asset.name}
       fallbackIcon={assetIcon(asset.type)}
+      hint={asset.name}
+      label={t('home.library.fetch', { name: asset.name })}
+      {...(fetchable ? { onClick: () => void useCloud.getState().pull([asset.id]) } : {})}
     />
-  )
-
-  if (!hasProject) return <div title={asset.name}>{tile}</div>
-
-  return (
-    <button
-      type="button"
-      disabled={busy}
-      onClick={() => void useCloud.getState().pull([asset.id])}
-      aria-label={t('home.library.fetch', { name: asset.name })}
-      className={cn(
-        'block size-full cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
-        'hover:opacity-90 disabled:cursor-default disabled:opacity-60',
-        FOCUS_RING,
-      )}
-    >
-      {tile}
-    </button>
   )
 }

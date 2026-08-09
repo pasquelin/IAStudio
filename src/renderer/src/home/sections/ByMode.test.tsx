@@ -1,28 +1,16 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AssetCounts } from '@shared/domain/asset'
-import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
+import { emptyAssetCounts, type AssetCounts } from '@shared/domain/asset'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { TYPE_FACET } from '@/panels/assets/type-facet'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { settleHome } from '../home-fixtures'
 import { useAssets } from '@/stores/assets'
 import { useLayouts } from '@/stores/layouts'
-import { useProject } from '@/stores/project'
-import { useSettings } from '@/stores/settings'
 import { ByMode } from './ByMode'
 
-const NONE: AssetCounts = { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0 }
-
-const PROJECT = {
-  path: '/projects/summer',
-  manifest: {
-    version: 1,
-    name: 'Summer',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  },
-}
+const NONE = emptyAssetCounts()
 
 function install(counts: Partial<AssetCounts>) {
   const read = vi.fn(() => Promise.resolve({ ...NONE, ...counts }))
@@ -31,10 +19,7 @@ function install(counts: Partial<AssetCounts>) {
 }
 
 beforeEach(() => {
-  useSettings.setState(state => ({
-    settings: { ...state.settings, home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] } },
-  }))
-  useProject.setState({ project: PROJECT })
+  settleHome()
   useLayouts.setState({ home: true, activeWorkspace: 'image' })
   useAssets.setState({ collection: DEFAULT_COLLECTION_STATE, items: [], scope: null })
 })

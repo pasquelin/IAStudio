@@ -1,8 +1,9 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { isAssetType, type AssetGeneration, type AssetType } from '@shared/domain/asset'
+import type { AssetGeneration, AssetType } from '@shared/domain/asset'
 import { FAVORITES_MAX, sameRecipe, type FavoriteRecipe } from '@shared/domain/favorite'
-import { isRecord } from '@shared/guards'
+import { isMissing } from '@main/scenario/job-store'
+import { parseFavoriteIndex } from './validation'
 
 /** What a pin carries beyond the recipe itself: the still to keep, when there was one to copy. */
 export type FavoriteDraft = {
@@ -19,126 +20,138 @@ export type FavoritesStore = {
   /** Answers the whole list, as the account channels do: one write, one truth back. */
   pin: (draft: FavoriteDraft) => Promise<FavoriteRecipe[]>
   unpin: (id: string) => Promise<FavoriteRecipe[]>
-  /** The file behind `scenario://favorite/<id>`, or null when this build kept none. */
-  thumbnailPath: (id: string) => Promise<string | null>
+  /** The file behind `scenario://favorite/<id>`. */
+  thumbnailPath: (id: string) => string
 }
 
 const INDEX = 'favorites.json'
 const THUMBNAIL_EXTENSION = '.png'
 
 /**
- * The pinned recipes, in a folder of their own beside the settings.
+ * The pinned recipes, in a folder of their own beside the settings — see `domain/favorite.ts`
+ * for why they live outside every project.
  *
- * Deliberately not in a project and deliberately not in the settings: a favourite outlives the
- * project it was taken in — that is what it is for — and the settings are a replicated document
- * that every window rewrites, which a still on disk has no business being part of.
- *
- * The folder is the truth. The index names what the shelf shows and the stills sit next to it,
- * one file per recipe, so removing one is removing two files and nothing else.
+ * Written the way `job-store` writes its notes, and for the same reason: through a staging copy
+ * renamed into place, refusing to rewrite from an index that could not be read, and one write at
+ * a time. What is at stake is what a favourite exists to promise — that it is still there.
  */
 export function createFavorites(folder: string): FavoritesStore {
   const indexPath = join(folder, INDEX)
-  const thumbnailPath = (id: string): string => join(folder, `${id}${THUMBNAIL_EXTENSION}`)
+  const fileOf = (id: string): string => join(folder, `${id}${THUMBNAIL_EXTENSION}`)
 
-  const read = async (): Promise<FavoriteRecipe[]> => {
+  // Serialized, so two pins racing cannot have the older one land last.
+  let pending: Promise<unknown> = Promise.resolve()
+
+  // What the last read or write settled on. The folder has one writer, so the copy cannot go
+  // stale — and the protocol asks for a thumbnail path once per tile drawn, which used to parse
+  // the whole index each time.
+  let held: FavoriteRecipe[] | null = null
+
+  /** The index, or `null` when the file is there and could not be read — not the same answer. */
+  const read = async (): Promise<FavoriteRecipe[] | null> => {
+    if (held) return held
+
+    let content: string
     try {
-      const parsed: unknown = JSON.parse(await readFile(indexPath, 'utf8'))
-      return Array.isArray(parsed) ? parsed.flatMap(entry => recipeOf(entry) ?? []) : []
-    } catch {
-      // No file yet, or one edited into something unreadable: an empty shelf, never a failure —
-      // the home would lose a band over a file the user was not supposed to know about.
-      return []
+      content = await readFile(indexPath, 'utf8')
+    } catch (error) {
+      // Nothing pinned yet. Anything else stops the write rather than rebuilding from a guess.
+      if (!isMissing(error)) return null
+      held = []
+      return held
     }
+
+    // Unparseable is not unreadable: the content is beyond recovery whatever we do, so writing
+    // over it is the only way out. A single bad line is dropped, not the shelf with it.
+    held = parseFavoriteIndex(content)
+    return held
   }
 
   const write = async (recipes: readonly FavoriteRecipe[]): Promise<FavoriteRecipe[]> => {
     await mkdir(folder, { recursive: true })
-    await writeFile(indexPath, JSON.stringify(recipes, null, 2), 'utf8')
+    // A fixed name rather than a unique one: the writes are serialized, so a crash mid-write
+    // leaves one staging copy the next write overwrites, not an orphan per crash.
+    const staging = `${indexPath}.staging`
+
+    try {
+      await writeFile(staging, JSON.stringify(recipes, null, 2), 'utf8')
+      // Renaming within a folder is atomic: a crash can never leave a truncated shelf.
+      await rename(staging, indexPath)
+    } catch (error) {
+      await rm(staging, { force: true }).catch(() => {})
+      throw error
+    }
+
+    held = [...recipes]
     return [...recipes]
   }
 
-  return {
-    list: read,
-
-    pin: async draft => {
+  /** Runs one change against the index, after whichever change is already in flight. */
+  const change = (
+    body: (recipes: FavoriteRecipe[]) => Promise<FavoriteRecipe[]>,
+  ): Promise<FavoriteRecipe[]> => {
+    const run = async (): Promise<FavoriteRecipe[]> => {
       const recipes = await read()
+      // Refusing beats rewriting from a list we could not read: the shelf would come back short
+      // of everything the failed read did not see, and nothing would say so.
+      if (recipes === null) throw new Error('favourites could not be read')
+      return body(recipes)
+    }
 
-      // Pinning the same recipe again is the same intention twice. It moves back to the front
-      // rather than being refused: the gesture has to do something visible.
-      const existing = recipes.find(recipe => sameRecipe(recipe.generation, draft.generation))
-      if (existing) {
-        return write([existing, ...recipes.filter(recipe => recipe.id !== existing.id)])
-      }
-
-      // Refused rather than evicting the oldest: a favourite that vanished to make room would
-      // be a shelf that loses things on its own.
-      if (recipes.length >= FAVORITES_MAX) return recipes
-
-      if (draft.thumbnail) {
-        await mkdir(folder, { recursive: true })
-        await writeFile(thumbnailPath(draft.id), draft.thumbnail)
-      }
-
-      const recipe: FavoriteRecipe = {
-        id: draft.id,
-        label: draft.label,
-        type: draft.type,
-        generation: draft.generation,
-        pinnedAt: draft.pinnedAt,
-        hasThumbnail: draft.thumbnail !== null,
-      }
-
-      return write([recipe, ...recipes])
-    },
-
-    unpin: async id => {
-      const recipes = await read()
-      const kept = recipes.filter(recipe => recipe.id !== id)
-      if (kept.length === recipes.length) return recipes
-
-      // The still goes with the line that named it; a folder of orphans nothing reads would
-      // grow for as long as the studio is used.
-      await rm(thumbnailPath(id), { force: true })
-      return write(kept)
-    },
-
-    thumbnailPath: async id => {
-      const recipes = await read()
-      const recipe = recipes.find(candidate => candidate.id === id)
-      return recipe?.hasThumbnail === true ? thumbnailPath(recipe.id) : null
-    },
+    const next = pending.then(run)
+    // Settled either way: a failed write must not wedge the folder for the rest of the session.
+    pending = next.catch(() => {})
+    return next
   }
-}
-
-/**
- * One entry of the index, or null when it is not one. The file sits in the user's own folder:
- * a line edited into something else drops out rather than reaching the window as a half-recipe
- * whose `generation.modelId` is undefined.
- */
-function recipeOf(value: unknown): FavoriteRecipe | null {
-  if (!isRecord(value)) return null
-
-  const { id, label, type, pinnedAt, hasThumbnail, generation } = value
-  if (typeof id !== 'string' || id === '' || typeof label !== 'string') return null
-  if (!isAssetType(type) || typeof pinnedAt !== 'string') return null
-
-  const parsed = generationOf(generation)
-  if (!parsed) return null
-
-  return { id, label, type, generation: parsed, pinnedAt, hasThumbnail: hasThumbnail === true }
-}
-
-function generationOf(value: unknown): AssetGeneration | null {
-  if (!isRecord(value)) return null
-
-  const { modelId, modelLabel, prompt, params, seed } = value
-  if (typeof modelId !== 'string' || modelId === '') return null
 
   return {
-    modelId,
-    modelLabel: typeof modelLabel === 'string' ? modelLabel : '',
-    prompt: typeof prompt === 'string' ? prompt : '',
-    params: isRecord(params) ? params : {},
-    ...(typeof seed === 'number' ? { seed } : {}),
+    list: async () => (await read()) ?? [],
+
+    pin: draft =>
+      change(async recipes => {
+        // Pinning the same recipe again is the same intention twice. It moves back to the front
+        // rather than being refused: the gesture has to do something visible.
+        const existing = recipes.find(recipe => sameRecipe(recipe.generation, draft.generation))
+        if (existing) {
+          return write([existing, ...recipes.filter(recipe => recipe.id !== existing.id)])
+        }
+
+        // Refused rather than evicting the oldest: a favourite that vanished to make room would
+        // be a shelf that loses things on its own. The inspector disables its button at the
+        // bound, so nobody reaches this without having been told.
+        if (recipes.length >= FAVORITES_MAX) return recipes
+
+        if (draft.thumbnail) {
+          await mkdir(folder, { recursive: true })
+          await writeFile(fileOf(draft.id), draft.thumbnail)
+        }
+
+        return write([
+          {
+            id: draft.id,
+            label: draft.label,
+            type: draft.type,
+            generation: draft.generation,
+            pinnedAt: draft.pinnedAt,
+            hasThumbnail: draft.thumbnail !== null,
+          },
+          ...recipes,
+        ])
+      }),
+
+    unpin: id =>
+      change(async recipes => {
+        const kept = recipes.filter(recipe => recipe.id !== id)
+        if (kept.length === recipes.length) return recipes
+
+        // The still goes with the line that named it; a folder of orphans nothing reads would
+        // grow for as long as the studio is used.
+        await rm(fileOf(id), { force: true })
+        return write(kept)
+      }),
+
+    // Answered without reading anything: the window only builds this URL for a recipe whose
+    // `hasThumbnail` it already holds, and a file that is not there is a 404 either way.
+    thumbnailPath: fileOf,
   }
 }

@@ -1,27 +1,19 @@
 import { useMemo } from 'react'
-import {
-  homePlaceOf,
-  visibleHomeSections,
-  type HomePlace,
-  type HomeSectionId,
-} from '@shared/domain/home'
+import { visibleHomeSections, type HomeSectionId } from '@shared/domain/home'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 
 /**
- * The sections to draw in one column, in the user's order. The rules live in `domain/home.ts` —
- * this only says where the two answers it needs come from, and which column is being asked for.
+ * The sections to draw, in the user's order, whichever column they stand in. The rules live in
+ * `domain/home.ts` — this only says where the two answers it needs come from.
  */
-export function useHomeSections(place: HomePlace): readonly HomeSectionId[] {
+export function useHomeSections(): readonly HomeSectionId[] {
   const stored = useSettings(state => state.settings.home.sections)
   const authenticated = useSettings(state => state.auth.authenticated)
   const hasProject = useProject(state => state.project !== null)
 
   return useMemo(
-    () =>
-      visibleHomeSections(stored, { authenticated, hasProject }).filter(
-        id => homePlaceOf(id) === place,
-      ),
-    [stored, authenticated, hasProject, place],
+    () => visibleHomeSections(stored, { authenticated, hasProject }),
+    [stored, authenticated, hasProject],
   )
 }

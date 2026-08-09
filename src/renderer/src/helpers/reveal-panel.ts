@@ -1,5 +1,10 @@
+import type { AssetType } from '@shared/domain/asset'
 import { placementIn, type ToolId } from '@shared/domain/tool'
+import { setFacetValue } from '@/helpers/collection-state'
 import { hasModelFor, shownTool } from '@/helpers/tool-registry'
+import { workspaceOfType } from '@/helpers/workspaces'
+import { TYPE_FACET } from '@/panels/assets/type-facet'
+import { useAssets } from '@/stores/assets'
 import { useLayouts } from '@/stores/layouts'
 import { useTools } from '@/stores/tools'
 
@@ -34,4 +39,22 @@ export function revealTool(tool: ToolId): void {
  */
 export function revealAssets(): void {
   revealTool('assets')
+}
+
+/**
+ * Brings the shelf up narrowed to one kind, in the workspace that makes it.
+ *
+ * Beside `revealAssets` rather than in the home that asks for it: naming a facet and writing it
+ * into the browser's state is the panel's own language, and the home has no business speaking
+ * it. The shelf drops its workspace scope when it finds a kind chosen — which is what makes a
+ * click on "Skyboxes" show every sky rather than the ones this space happens to accept.
+ */
+export function revealAssetsOfKind(type: AssetType): void {
+  useLayouts.getState().setActiveWorkspace(workspaceOfType(type))
+
+  const { collection, setCollection } = useAssets.getState()
+  setCollection(setFacetValue(collection, TYPE_FACET, type))
+
+  // After the workspace: the shelf lands wherever THAT space puts it.
+  revealAssets()
 }

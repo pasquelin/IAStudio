@@ -2,24 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
-import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { settleHome } from '../home-fixtures'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { connectPreparation } from '@/stores/preparation'
-import { useProject } from '@/stores/project'
-import { useSettings } from '@/stores/settings'
 import { Creations } from './Creations'
-
-const PROJECT = {
-  path: '/projects/summer',
-  manifest: {
-    version: 1,
-    name: 'Summer',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  },
-}
 
 function creation(overrides: Partial<Asset> = {}): Asset {
   return {
@@ -46,10 +34,7 @@ function install(assets: readonly Asset[]) {
 }
 
 beforeEach(() => {
-  useSettings.setState(state => ({
-    settings: { ...state.settings, home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] } },
-  }))
-  useProject.setState({ project: PROJECT })
+  settleHome()
   useLayouts.setState({ home: true, activeWorkspace: 'video' })
   useModels.setState({ selected: {}, preset: {}, prepared: null })
 })

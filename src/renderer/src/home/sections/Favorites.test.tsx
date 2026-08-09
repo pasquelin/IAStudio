@@ -1,25 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
 import type { FavoriteRecipe } from '@shared/domain/favorite'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { settleHome } from '../home-fixtures'
 import { useFavorites } from '@/stores/favorites'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
-import { useProject } from '@/stores/project'
-import { useSettings } from '@/stores/settings'
 import { Favorites } from './Favorites'
-
-const PROJECT = {
-  path: '/projects/summer',
-  manifest: {
-    version: 1,
-    name: 'Summer',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  },
-}
 
 function recipe(overrides: Partial<FavoriteRecipe> = {}): FavoriteRecipe {
   return {
@@ -46,13 +34,10 @@ function install(recipes: readonly FavoriteRecipe[]) {
 }
 
 beforeEach(() => {
-  useSettings.setState(state => ({
-    settings: { ...state.settings, home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] } },
-  }))
-  useProject.setState({ project: PROJECT, known: true })
+  settleHome()
   useLayouts.setState({ home: true, activeWorkspace: 'video' })
   useModels.setState({ selected: {}, preset: {}, prepared: null })
-  useFavorites.setState({ recipes: [] })
+  useFavorites.setState({ recipes: [], loaded: false })
 })
 
 describe('the recipes shelf', () => {

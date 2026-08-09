@@ -40,7 +40,7 @@ export type JobStore = {
 const FILE_NAME = 'jobs.json'
 
 /** Node reports a missing path this way, and it is the one failure that is not an error here. */
-const isMissing = (error: unknown): boolean =>
+export const isMissing = (error: unknown): boolean =>
   error instanceof Error && 'code' in error && error.code === 'ENOENT'
 
 /**

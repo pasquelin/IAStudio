@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { createCatalog, type Catalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
 import { dispatchCatalogRequest } from './catalog-dispatch'
-import type { Asset, AssetCounts } from '@shared/domain/asset'
+import { emptyAssetCounts, type Asset } from '@shared/domain/asset'
 
 function catalogOf(): Catalog {
   return createCatalog(openMemoryDatabase())
 }
 
-const NO_ASSETS: AssetCounts = { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0 }
+const NO_ASSETS = emptyAssetCounts()
 
 const asset: Asset = {
   id: 'asset-1',

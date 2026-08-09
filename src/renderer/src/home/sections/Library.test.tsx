@@ -2,22 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
-import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { settleHome } from '../home-fixtures'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { Library } from './Library'
-
-const PROJECT = {
-  path: '/projects/summer',
-  manifest: {
-    version: 1,
-    name: 'Summer',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  },
-}
 
 function cloudAsset(overrides: Partial<CloudAsset> = {}): CloudAsset {
   return {
@@ -45,12 +35,8 @@ function install(assets: readonly CloudAsset[]) {
 }
 
 beforeEach(() => {
-  useSettings.setState(state => ({
-    auth: { authenticated: true, ownerId: 'team_1' },
-    authKnown: true,
-    settings: { ...state.settings, home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] } },
-  }))
-  useProject.setState({ project: PROJECT, known: true })
+  settleHome()
+  useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } })
   useCloud.setState({ busy: false, outcomes: [] })
 })
 

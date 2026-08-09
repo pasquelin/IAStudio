@@ -1,24 +1,25 @@
 import { nativeImage } from 'electron'
-
-/** Twice a tile of the home's shelf, which is what a dense display asks for and no more. */
-const WIDTH = 264
+import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
 
 /**
- * A still cut down to what a tile draws.
+ * A still cut down to what a tile draws, copied rather than referenced: a favourite outlives the
+ * project it was taken in, and the picture it stands for is a file that may be moved or deleted.
  *
- * Copied rather than referenced: a favourite outlives the project it was taken in, and the
- * picture it stands for is a file in a folder that may be moved, renamed or deleted. Cut down
- * because the original can be a 4K frame, and forty-eight of those in `userData` would be a
- * folder nobody asked for.
- *
- * A kind `nativeImage` cannot read — a mesh, a sound — comes back null, and the shelf draws its
- * glyph instead.
+ * `createThumbnailFromPath` rather than `createFromPath().resize()`: the second decodes, scales
+ * and re-encodes on the calling thread — a 4K source is a tenth of a second with every window
+ * frozen behind it (CLAUDE.md, invariant 6). This one hands the work to the OS and answers a
+ * promise. A kind it cannot read — a mesh, a sound — comes back null, and the shelf draws the
+ * glyph of its kind instead.
  */
-export function readFavoriteThumbnail(file: string): Promise<Uint8Array | null> {
-  const image = nativeImage.createFromPath(file)
-  if (image.isEmpty()) return Promise.resolve(null)
+export async function readFavoriteThumbnail(file: string): Promise<Uint8Array | null> {
+  try {
+    const image = await nativeImage.createThumbnailFromPath(file, {
+      width: FAVORITE_THUMBNAIL_WIDTH,
+      height: FAVORITE_THUMBNAIL_WIDTH,
+    })
 
-  const { width } = image.getSize()
-  const resized = width > WIDTH ? image.resize({ width: WIDTH, quality: 'good' }) : image
-  return Promise.resolve(resized.toPNG())
+    return image.isEmpty() ? null : image.toPNG()
+  } catch {
+    return null
+  }
 }

@@ -9,6 +9,7 @@ import {
   type ActivityQuery,
 } from '@shared/domain/activity'
 import {
+  emptyAssetCounts,
   isAssetType,
   isSyncStatus,
   mediaProbeOf,
@@ -572,16 +573,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     },
 
     countByType: () => {
-      // Every kind starts at zero: a kind absent from the grouping has none, and the caller
-      // draws six counters whatever the project holds.
-      const counts: AssetCounts = {
-        image: 0,
-        video: 0,
-        audio: 0,
-        mesh: 0,
-        texture: 0,
-        skybox: 0,
-      }
+      const counts = emptyAssetCounts()
 
       for (const row of countTypes.all()) {
         const type = text(row, 'type')

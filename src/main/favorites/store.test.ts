@@ -57,7 +57,8 @@ describe('the favourites folder', () => {
     const [recipe] = await favorites.pin(draft({ type: 'audio', thumbnail: null }))
 
     expect(recipe?.hasThumbnail).toBe(false)
-    await expect(favorites.thumbnailPath('favorite_1')).resolves.toBeNull()
+    // Nothing written beside the index: the shelf reads `hasThumbnail` and draws the glyph.
+    await expect(readdir(folder)).resolves.toEqual(['favorites.json'])
   })
 
   it('puts the newest first, which is the order the shelf reads', async () => {

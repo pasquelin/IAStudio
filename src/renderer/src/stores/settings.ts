@@ -62,7 +62,7 @@ export const useSettings = create<SettingsState>()((set, get) => ({
       .read()
       // A change landing while the read was in flight is newer than what the read answered:
       // applying the snapshot on top of it would put the window back one version.
-      .then(settings => set(pushed ? { loaded: true } : { settings, loaded: true }))
+      .then(settings => set({ loaded: true, ...(pushed ? {} : { settings }) }))
       .catch(() => {})
 
     const readAuth = bridge.settings

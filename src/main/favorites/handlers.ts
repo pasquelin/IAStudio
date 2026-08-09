@@ -11,7 +11,8 @@ export type ThumbnailReader = (file: string) => Promise<Uint8Array | null>
 
 export type FavoriteHandlerDeps = {
   favorites: FavoritesStore
-  project: ProjectStore
+  /** Only what pinning reads: the open project's catalogue, and where its files sit. */
+  project: Pick<ProjectStore, 'path' | 'catalog'>
   readThumbnail: ThumbnailReader
   newFavoriteId: () => string
   now: () => string
@@ -49,7 +50,10 @@ export function registerFavoriteHandlers({
   handle(CHANNELS.favoritesUnpin, (_event, id) => favorites.unpin(parseFavoriteId(id)))
 }
 
-async function assetOf(project: ProjectStore, assetId: string): Promise<Asset | null> {
+async function assetOf(
+  project: FavoriteHandlerDeps['project'],
+  assetId: string,
+): Promise<Asset | null> {
   try {
     return await project.catalog().find(assetId)
   } catch {
@@ -63,7 +67,7 @@ async function assetOf(project: ProjectStore, assetId: string): Promise<Asset | 
  * has no still, and the shelf draws its glyph instead.
  */
 async function stillOf(
-  project: ProjectStore,
+  project: FavoriteHandlerDeps['project'],
   asset: Asset,
   readThumbnail: ThumbnailReader,
 ): Promise<Uint8Array | null> {

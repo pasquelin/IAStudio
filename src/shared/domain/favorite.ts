@@ -31,7 +31,14 @@ export type FavoriteRecipe = {
  */
 export const FAVORITES_MAX = 48
 
-const FAVORITE_HOST = 'favorite'
+/**
+ * How wide a kept still is. Twice a tile of the home's shelf, for a dense display — and shared,
+ * because one process cuts the picture and the other draws it: the two are a pair, and neither
+ * end could see the other's number.
+ */
+export const FAVORITE_THUMBNAIL_WIDTH = 264
+
+export const FAVORITE_HOST = 'favorite'
 
 /** Where the renderer loads a pinned recipe's still from. Served from outside every project. */
 export function favoriteThumbnailUrl(id: string): string {

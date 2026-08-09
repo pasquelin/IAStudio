@@ -6,8 +6,9 @@ import { availableParallelism } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
-import type { Asset, AssetType } from '@shared/domain/asset'
+import { ASSET_HOST, type Asset, type AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
+import { FAVORITE_HOST } from '@shared/domain/favorite'
 import { withRecentProject } from '@shared/domain/project'
 import type { PathKind } from '@shared/domain/settings-registry'
 import type { AuthState } from '@shared/domain/settings'
@@ -644,16 +645,16 @@ export function createServices(settings: SettingsStore): Services {
 
   const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))
 
-  serveAssets(
-    async assetId => {
+  serveAssets({
+    [ASSET_HOST]: async assetId => {
       const current = project.current()
       if (!current) return null
 
       const asset = await project.catalog().find(assetId)
       return asset ? servedFileOf(current.path, asset) : null
     },
-    favoriteId => favorites.thumbnailPath(favoriteId),
-  )
+    [FAVORITE_HOST]: favoriteId => Promise.resolve(favorites.thumbnailPath(favoriteId)),
+  })
 
   const stored = settings.read()
   const lastProject = stored.general.startup === 'lastProject' ? stored.storage.lastProject : null

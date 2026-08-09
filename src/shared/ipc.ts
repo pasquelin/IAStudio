@@ -519,14 +519,7 @@ export type StudioBridge = {
     /** What a push or a pull would do, before it costs a single request. */
     plan: (assetIds: readonly string[], policy: SyncPolicy) => Promise<SyncPlan>
   }
-  /**
-   * Recipes worth keeping, held outside every project.
-   *
-   * A favourite is a way of making something, not a thing: the model, the words and the settings
-   * that produced an asset, so it can be run again from anywhere. It survives changing project —
-   * which is exactly when one reaches for it — so it lives beside the settings rather than in a
-   * catalogue, and its still is a copy on disk rather than a URL that would expire.
-   */
+  /** Recipes worth keeping, held outside every project — see `domain/favorite.ts`. */
   favorites: {
     list: () => Promise<FavoriteRecipe[]>
     /**
