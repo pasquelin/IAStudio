@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MaterialStyle } from '@shared/domain/style'
@@ -88,6 +88,19 @@ describe('the styles panel', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
 
     expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveValue('Style 1')
+  })
+
+  // The second surface `InlineRename` serves, and the reason the fix belongs to the field rather
+  // than to one of its callers: neither of them knows where the focus should land.
+  it('gives the focus back to the row when the rename ends', async () => {
+    render(<Styles />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), '{Enter}')
+
+    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument())
+    expect(screen.getByText('Style 1').closest('[role="listitem"]')).toHaveFocus()
   })
 
   /**

@@ -85,6 +85,19 @@ describe('LayersPanel', () => {
       expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Sky')
     })
 
+    // The field is torn out on commit, and a torn-out input leaves focus on `document.body`:
+    // the next Tab restarts from the top of the window, so whoever just renamed at the keyboard
+    // is thrown out of the list they were editing.
+    it('gives the focus back to the row rather than dropping it on the document', async () => {
+      render(<LayersPanel />)
+      await userEvent.dblClick(screen.getByText('Background'))
+      await userEvent.clear(screen.getByRole('textbox'))
+      await userEvent.type(screen.getByRole('textbox'), 'Sky{Enter}')
+
+      await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument())
+      expect(screen.getByText('Sky').closest('[role="option"]')).toHaveFocus()
+    })
+
     // Clicking away from a half-typed name is how most renames end.
     it('keeps what was typed when the field loses focus', async () => {
       render(<LayersPanel />)
@@ -161,6 +174,28 @@ describe('LayersPanel', () => {
 
     await waitFor(() =>
       expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Sky'),
+    )
+  })
+
+  /**
+   * The same tear-out, judged on the focus rather than on the name. The row the edit started on
+   * is gone — remounted at another index under another key — so there is nothing to give the
+   * focus back to. Landing on `document.body` would throw the keyboard out of the panel, which
+   * is the whole defect; the stack's own tab stop keeps it inside.
+   */
+  it('keeps the keyboard in the stack when the row is torn out from under it', async () => {
+    render(<LayersPanel />)
+    await userEvent.dblClick(screen.getByText('Background'))
+    await userEvent.clear(screen.getByRole('textbox'))
+    await userEvent.type(screen.getByRole('textbox'), 'Sky')
+
+    useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
+
+    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument())
+    expect(document.activeElement).not.toBe(document.body)
+    expect(screen.getByRole('listbox', { name: 'Calques' })).toContainElement(
+      // `as`: `activeElement` is typed as `Element`, and `toContainElement` wants an `HTMLElement`.
+      document.activeElement as HTMLElement,
     )
   })
 })
