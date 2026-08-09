@@ -72,6 +72,10 @@ against each other anyway.
 select — and looks for public creations that resemble it. The reference itself is removed from the
 results, where it would otherwise come first.
 
+**If the library does not answer, this band does not vanish**: it says so, and offers **Try
+again**. It is the only one that tells a refusal apart from an account with nothing alike — both
+used to arrive as an empty shelf, and only the first is worth offering another go.
+
 **An idea to start from** is the only band that calls nothing until you ask: it has a **Suggest an
 idea** button. That is deliberate — a home screen firing a round trip at every launch would spend
 the account's rate limit on a band nobody looked at. **It is free**: no creative unit is spent.

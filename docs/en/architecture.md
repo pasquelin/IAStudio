@@ -345,6 +345,7 @@ src/renderer/src/
 ├── helpers/      pure functions, all unit-tested
 ├── services/     the bridge accessor and failure-message mapping
 ├── i18n/         the window-side i18next setup
+├── types/        `window.studio`, declared global — the renderer's only types file
 ├── main.tsx      the entry — everything it reaches statically is in the first screen
 └── splash.ts     the splash entry, kept separate so it never pulls that bundle
 ```
@@ -908,7 +909,8 @@ opaquely.
 
 ## Testing
 
-**5655 tests across 447 files**, run by Vitest. Unit tests are colocated (`*.test.ts` next to the
+**Over 5,600 tests across more than 440 files**, run by Vitest — the exact figure moves with every
+merge, and `pnpm test` states it. Unit tests are colocated (`*.test.ts` next to the
 code) and written in the same movement as the code, never after.
 
 `pnpm validate` — typecheck, lint, format check, tests with coverage budgets — must be green
