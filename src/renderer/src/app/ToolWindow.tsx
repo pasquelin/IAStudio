@@ -1,5 +1,5 @@
 import { mdiClose } from '@mdi/js'
-import { memo } from 'react'
+import { memo, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
@@ -84,7 +84,11 @@ export const ToolWindow = memo(function ToolWindow({
               button with them, and a failure notice does not fit on a header row. */}
           {Actions !== undefined && (
             <ErrorBoundary key={tool} fallback={() => null}>
-              <Actions />
+              {/* Inside the boundary: a panel chunk that fails to arrive is a failure like any
+                  other, and must not escape past the header's own guard. */}
+              <Suspense fallback={null}>
+                <Actions />
+              </Suspense>
             </ErrorBoundary>
           )}
         </PanelHeader>
@@ -93,7 +97,9 @@ export const ToolWindow = memo(function ToolWindow({
               still be closed. Keyed by the tool — the rail swaps `tool` on this same element,
               and a boundary left standing would hand its failure to the tool that replaced it. */}
           <ErrorBoundary key={tool}>
-            <Content />
+            <Suspense fallback={null}>
+              <Content />
+            </Suspense>
           </ErrorBoundary>
         </div>
       </Panel>

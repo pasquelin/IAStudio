@@ -144,11 +144,11 @@ describe('the opening chunk', () => {
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
     expect(files).toContain('./app/tool-components.ts')
-    expect(files).toContain('./panels/generator/Generator.tsx')
     expect(files).toContain('../../shared/domain/tool.ts')
-    // The panels read this one eagerly for `referencePictures` — which is exactly why zod had to
-    // leave it. If it stops being reached, the assertions below stop meaning anything.
-    expect(files).toContain('./helpers/dynamic-form.ts')
+    // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
+    // point and past the shell, or every negative assertion below passes on an empty graph.
+    expect(files).toContain('./app/Shell.tsx')
+    expect(files).toContain('./home/HomeView.tsx')
   })
 
   // Deferred by `Generator.tsx` on 8 August: −219,38 kB, three quarters of it zod.
@@ -224,22 +224,41 @@ describe('the opening chunk', () => {
   })
 
   /**
-   * What still comes out of the editors' folders, and it is never an editor: a panel is not lazy
-   * (`app/tool-components.ts` imports all eleven outright), so a panel reaching for a helper next
-   * to an editor drags that helper in. A budget rather than a ban — the list is allowed to
-   * shrink, never to grow, and a seventh entry means a new panel reached further than it needed.
+   * What still comes out of the editors' folders, and it is never an editor: something the first
+   * screen does reach for a helper that happens to live next to one. Four of the six left when
+   * the panels went lazy — they came in through a panel, not through the shell.
+   *
+   * A budget rather than a ban — the list is allowed to shrink, never to grow, and a third entry
+   * means something on the first screen reached further than it needed.
    */
-  it('pulls only these six neighbours out of the editors folders', () => {
+  it('pulls only these two neighbours out of the editors folders', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
-      './spaces/audio/load-take.ts',
       './spaces/image/canvas-hosts.ts',
       './spaces/image/place-asset.ts',
-      './spaces/textures/place-channel.ts',
-      './spaces/video/TimelineCanvas.tsx',
-      './spaces/video/video-tools.ts',
     ])
+  })
+
+  /**
+   * Deferred by `app/tool-components.ts` on 9 August. Not one of the fourteen, the Explorer of
+   * the home screen included: the table reaches every panel through `import()`, so none of their
+   * `index.ts` may be walked. Stated over the whole folder rather than over a list of fourteen —
+   * a fifteenth panel would otherwise land eager with the guard still green.
+   *
+   * The three exceptions are not tools of that table: `panels/jobs/**` is the status bar's
+   * (`app/JobsStatus.tsx:8`) and the home's (`home/sections/Jobs.tsx:3`), and `type-facet.ts` is
+   * read by `helpers/reveal-panel.ts:6`. None of them opens in a zone.
+   */
+  it('reaches no panel of the tool table, not even the one the home screen opens', () => {
+    const { files } = GRAPH
+
+    expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
+      './panels/assets/type-facet.ts',
+      './panels/jobs/JobRow.tsx',
+      './panels/jobs/Jobs.tsx',
+    ])
+    expect([...files].filter(path => /^\.\/panels\/[^/]+\/index\.ts$/.test(path))).toEqual([])
   })
 
   it('never reaches the licences window', () => {
@@ -249,12 +268,12 @@ describe('the opening chunk', () => {
   })
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
-  // `format.ts` is the exception, and it earns it: the Generate button prices a run in the same
-  // units the window totals, so the one formatter is shared rather than written twice.
+  // `format.ts` was the one exception until the panels went lazy: the Generate button prices a
+  // run in the units the window totals, and that button lives in a panel.
   it('never reaches the usage window, nor what draws its charts', () => {
     const { files, packages } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual(['./usage/format.ts'])
+    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual([])
     expect(packages).not.toContain('recharts')
   })
 })
