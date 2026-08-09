@@ -1,5 +1,6 @@
 import type { AssetType } from './asset'
 import { channelFromScenarioType } from './texture'
+import type { WorkspaceId } from './workspace'
 
 /**
  * What the API says about an asset's nature, gathered from the three separate fields it uses.
@@ -122,4 +123,24 @@ export function assetTypeOfRemote({
     if (mimeType?.startsWith(prefix)) return type
   }
   return null
+}
+
+/**
+ * Where a kind is made — the space its generator belongs to, and the shelf its outputs land in.
+ *
+ * Shared rather than kept in the renderer's helpers: the main process names the shelf a
+ * generation landed in when it writes the journal line, and it has no way to reach them.
+ * `Record<AssetType, …>` so a new kind is a compile error rather than a silent hole.
+ */
+const WORKSPACE_OF_TYPE: Record<AssetType, WorkspaceId> = {
+  image: 'image',
+  video: 'video',
+  audio: 'audio',
+  mesh: '3d',
+  texture: 'textures',
+  skybox: 'skyboxes',
+}
+
+export function workspaceOfType(type: AssetType): WorkspaceId {
+  return WORKSPACE_OF_TYPE[type]
 }

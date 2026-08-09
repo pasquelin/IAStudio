@@ -127,6 +127,8 @@
     "jobCancelled": "Generation \"{{name}}\" cancelled",
     "generated": "{{count, number}} asset generated",
     "generated_other": "{{count, number}} assets generated",
+    "generatedInto": "{{count, number}} asset generated in {{workspaces}}",
+    "generatedInto_other": "{{count, number}} assets generated in {{workspaces}}",
     "importFailed": "Could not import \"{{name}}\"",
     "imported": "{{name}} imported",
     "importUnreadable": "\"{{name}}\" is unreadable",

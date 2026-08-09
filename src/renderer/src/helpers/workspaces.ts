@@ -8,6 +8,7 @@ import {
   mdiVolumeHigh,
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
+import { workspaceOfType } from '@shared/domain/asset-kind'
 import { scopeOf, type ModelFamily, type ModelScope } from '@shared/domain/model'
 import { WORKSPACE_IDS, workspaceOrder, type WorkspaceId } from '@shared/domain/workspace'
 
@@ -42,26 +43,16 @@ const ICONS: Record<WorkspaceId, string> = {
  * Which workspace an asset belongs to. `Record` both ways, so a new kind or a new workspace is
  * a compile error rather than an asset drawn under the wrong glyph.
  */
-const WORKSPACE_OF_TYPE: Record<AssetType, WorkspaceId> = {
-  image: 'image',
-  video: 'video',
-  audio: 'audio',
-  mesh: '3d',
-  texture: 'textures',
-  skybox: 'skyboxes',
-}
+// Re-exported so the panels keep one import for everything workspace-shaped, while the table
+// itself lives in `shared/` — the main process names shelves from it too.
+export { workspaceOfType }
 
 /**
  * What stands for an asset when there is no picture to show it by. Read off the workspace table
  * rather than relisted: changing the video glyph in the rail must change it on the tiles too.
  */
 export function assetIcon(type: AssetType): string {
-  return ICONS[WORKSPACE_OF_TYPE[type]]
-}
-
-/** Where a kind is made — the space its generator belongs to. */
-export function workspaceOfType(type: AssetType): WorkspaceId {
-  return WORKSPACE_OF_TYPE[type]
+  return ICONS[workspaceOfType(type)]
 }
 
 /**

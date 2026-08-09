@@ -16,7 +16,7 @@ names the object involved and says what failed.
 
 | What the journal can report | Topic |
 |---|---|
-| "Generation \"…\" failed", "Generation \"…\" cancelled" | Generation |
+| "Generation \"…\" failed", "Generation \"…\" cancelled", "2 assets generated in Image, 3D" | Generation |
 | "Could not import \"…\"", "\"…\" is unreadable" | Import |
 | "Could not send \"…\"", "The tags of \"…\" did not reach the library", "The Scenario API refused a request" | Library |
 | "Saving the document failed", "A layer could not be loaded", "Exporting the scene failed", "The file could not be shown" | Document |
@@ -26,6 +26,10 @@ releases the filters.
 
 The panel closes three ways: a click beside it, `Escape`, or switching to another application.
 Clicking the icon again works too. The same holds for the generations bar to its left.
+
+> **A successful generation says which shelf it landed in.** That matters most for **Apps**: an
+> App produces what it produces, whichever workspace you launched it from — a pipeline started
+> from 3D can drop a picture in the Image shelf.
 
 **A failure also raises a toast** in the corner, which does not fade on its own. If you missed
 it, the red counter in the status line holds it until you open the journal.

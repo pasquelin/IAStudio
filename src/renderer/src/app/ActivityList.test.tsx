@@ -30,6 +30,47 @@ describe('the journal, drawn', () => {
     expect(screen.getByText(/moss\.png/)).toBeInTheDocument()
   })
 
+  /**
+   * The half nobody could guess: an App produces what it produces whichever space launched it,
+   * so a run started in 3D can leave a picture in the Image shelf. The line stores ids and says
+   * them in the language of the day — a name written at the time would have frozen.
+   */
+  it('names the shelves a generation landed in, in the language of the window', () => {
+    useActivity.setState({
+      entries: [
+        entry({
+          level: 'info',
+          topic: 'generation',
+          messageKey: 'activity.generatedInto',
+          params: { count: 2, workspaces: ['image', '3d'] },
+        }),
+      ],
+    })
+
+    render(<ActivityList />)
+
+    expect(screen.getByText('2 assets générés dans Image, 3D')).toBeInTheDocument()
+  })
+
+  // An id nothing names is left as it is: a shelf missing from the sentence reads as a bug,
+  // an untranslated one reads as a shelf.
+  it('leaves an id it cannot name alone rather than dropping it', () => {
+    useActivity.setState({
+      entries: [
+        entry({
+          level: 'info',
+          topic: 'generation',
+          messageKey: 'activity.generatedInto',
+          params: { count: 1, workspaces: ['nether'] },
+        }),
+      ],
+    })
+
+    render(<ActivityList />)
+
+    expect(screen.getByText(/nether/)).toBeInTheDocument()
+  })
+
   it('says so when there is nothing to report', () => {
     render(<ActivityList />)
 

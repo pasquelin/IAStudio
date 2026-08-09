@@ -1,4 +1,5 @@
 import { mdiAlertCircleOutline, mdiAlertOutline, mdiCheckCircleOutline, mdiHistory } from '@mdi/js'
+import type { TFunction } from 'i18next'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -6,11 +7,14 @@ import {
   ACTIVITY_TOPICS,
   type ActivityEntry,
   type ActivityLevel,
+  type ActivityParams,
 } from '@shared/domain/activity'
+import { isWorkspaceId } from '@shared/domain/workspace'
 import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
 import { chipSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useActivity, visibleActivity } from '@/stores/activity'
 
 export const GLYPHS: Record<ActivityLevel, string> = {
@@ -54,12 +58,36 @@ function timeOf(at: string, language: string): string {
  * The detail is `persistableFailure` output — a status and a parsed body, never a stack and
  * never credentials. Small and dim: it is for whoever is asked what went wrong, not for the eye.
  */
+/**
+ * A line's params, with the id lists turned into words.
+ *
+ * The journal stores ids so a line survives a change of language, which leaves this the one
+ * place that can say them out loud. Only workspace ids are listed today; an id nothing names
+ * is left as it is rather than dropped — a shelf missing from a sentence reads as a bug, an
+ * untranslated one reads as a shelf.
+ */
+function namedParams(params: ActivityParams | undefined, t: TFunction): ActivityParams | undefined {
+  if (!params) return params
+
+  const named: Record<string, string | number> = {}
+  for (const [name, value] of Object.entries(params)) {
+    // Narrowed by what it is not: `Array.isArray` leaves a `readonly string[]` unnarrowed.
+    named[name] =
+      typeof value === 'string' || typeof value === 'number'
+        ? value
+        : value.map(id => (isWorkspaceId(id) ? t(workspaceLabelKey(id)) : id)).join(', ')
+  }
+  return named
+}
+
 export function ActivityMessage({ entry }: { entry: ActivityEntry }) {
   const { t } = useTranslation()
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span className="text-text text-[11px] break-words">{t(entry.messageKey, entry.params)}</span>
+      <span className="text-text text-[11px] break-words">
+        {t(entry.messageKey, namedParams(entry.params, t))}
+      </span>
       {entry.detail && (
         <span className="text-muted/70 font-mono text-[10px] break-all">{entry.detail}</span>
       )}

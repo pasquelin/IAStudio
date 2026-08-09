@@ -50,7 +50,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    expect(await collect(JOB, ['remote_1'])).toEqual(['asset_1'])
+    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_1'] })
     expect(imported[0]).toMatchObject({ name: 'Flux', type: 'image', jobId: 'job_1' })
   })
 
@@ -78,7 +78,9 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    expect(await collect(JOB, ['remote_caption', 'remote_image'])).toEqual(['asset_1'])
+    expect(await collect(JOB, ['remote_caption', 'remote_image'])).toMatchObject({
+      ids: ['asset_1'],
+    })
     expect(imported).toHaveLength(1)
   })
 
@@ -138,7 +140,7 @@ describe('asset collector', () => {
       backend,
       newId: () => 'asset_1',
       heldFor: async remoteAssetId =>
-        remoteAssetId === 'remote_source' ? { id: 'asset_source' } : null,
+        remoteAssetId === 'remote_source' ? { id: 'asset_source', type: 'image' } : null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -206,10 +208,10 @@ describe('asset collector', () => {
       retrieve,
       backend,
       newId: () => 'asset_new',
-      heldFor: async () => ({ id: 'asset_already_here', jobId: JOB.id }),
+      heldFor: async () => ({ id: 'asset_already_here', jobId: JOB.id, type: 'image' }),
     })
 
-    expect(await collect(JOB, ['remote_1'])).toEqual(['asset_already_here'])
+    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_already_here'] })
     expect(retrieve).not.toHaveBeenCalled()
     expect(imported).toEqual([])
   })
@@ -220,10 +222,10 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => 'asset_generated',
-      heldFor: async () => ({ id: 'asset_pulled_from_cloud' }),
+      heldFor: async () => ({ id: 'asset_pulled_from_cloud', type: 'image' }),
     })
 
-    expect(await collect(JOB, ['remote_1'])).toEqual(['asset_generated'])
+    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_generated'] })
     expect(imported[0]).toMatchObject({ jobId: JOB.id, name: 'Flux' })
   })
 })

@@ -1,6 +1,7 @@
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
-import { assetTypeOfRemote } from '@shared/domain/asset-kind'
+import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/asset-kind'
 import { channelFromScenarioType } from '@shared/domain/texture'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import type { AssetCollector } from '@main/scenario/job-manager'
 import type { LocalBackend } from './local-backend'
 
@@ -28,8 +29,9 @@ export type CollectorDeps = {
   /**
    * The local asset an API one became, or `null` when it never entered the project. `jobId` is
    * what put it there, and the collector reads it: a row alone does not say whose output it is.
+   * `type` too, so a second pass over outputs already collected still names their shelves.
    */
-  heldFor: (remoteAssetId: string) => Promise<Pick<Asset, 'id' | 'jobId'> | null>
+  heldFor: (remoteAssetId: string) => Promise<Pick<Asset, 'id' | 'jobId' | 'type'> | null>
 }
 
 export function createAssetCollector({
@@ -40,6 +42,8 @@ export function createAssetCollector({
 }: CollectorDeps): AssetCollector {
   return async (job, remoteAssetIds) => {
     const collected: string[] = []
+    // A set, and read back as one: the seven channels of a PBR pack are one shelf, not seven.
+    const shelves = new Set<WorkspaceId>()
 
     // Sequential on purpose: a single generation can return a dozen outputs, and downloading
     // them all at once would fight the very concurrency the JobManager bounds.
@@ -52,6 +56,7 @@ export function createAssetCollector({
       const held = await heldFor(remoteAssetId)
       if (held?.jobId === job.id) {
         collected.push(held.id)
+        shelves.add(workspaceOfType(held.type))
         continue
       }
 
@@ -84,8 +89,9 @@ export function createAssetCollector({
       })
 
       collected.push(asset.id)
+      shelves.add(workspaceOfType(type))
     }
 
-    return collected
+    return { ids: collected, workspaces: [...shelves] }
   }
 }
