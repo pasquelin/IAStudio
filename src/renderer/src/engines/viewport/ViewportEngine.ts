@@ -11,6 +11,7 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { token } from '../core/palette'
 import { frameDelta } from './frame-clock'
+import { emptyGpuStats, recordFrame, type GpuStats } from './gpu-stats'
 import { pointerNdc, type PointerPosition } from './pointer'
 
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
@@ -82,6 +83,8 @@ export class ViewportEngine {
   private frame: number | null = null
   /** `null` while the loop is at rest: the next frame is a first frame, not a long one. */
   private lastTime: number | null = null
+  /** One object for the viewport's life: a fresh one per frame is the allocation to avoid. */
+  private readonly gpuStats = emptyGpuStats()
 
   constructor(private readonly options: ViewportEngineOptions = {}) {
     this.perspective = new PerspectiveCamera(
@@ -190,6 +193,9 @@ export class ViewportEngine {
     renderer.setPixelRatio(window.devicePixelRatio)
     renderer.toneMapping = this.options.toneMapping ? ACESFilmicToneMapping : NoToneMapping
     renderer.shadowMap.enabled = this.options.shadows ?? false
+    // three.js clears the counters at the top of every `render`, and the overlay pass calls
+    // `render` a second time — left automatic, a frame would report the trihedron alone.
+    renderer.info.autoReset = false
     this.renderer = renderer
 
     if (this.options.controls !== 'none') {
@@ -234,6 +240,15 @@ export class ViewportEngine {
 
   get orbit(): OrbitControls | null {
     return this.controls
+  }
+
+  /**
+   * What the last drawn frame cost, and what the context holds. The same object throughout, so
+   * a reader keeps a reference rather than polling; `frames` standing still is a viewport that
+   * went back to sleep, which is what the loop is meant to do.
+   */
+  get stats(): GpuStats {
+    return this.gpuStats
   }
 
   /** Reads a studio token off the canvas, so a viewport follows a theme change with the rest. */
@@ -299,6 +314,9 @@ export class ViewportEngine {
     const renderer = this.renderer
     if (!renderer) return
 
+    // Cleared here rather than by three.js, which would do it again inside the overlay pass.
+    renderer.info.reset()
+
     const now = performance.now()
     const delta = frameDelta({
       since: this.lastTime === null ? null : now - this.lastTime,
@@ -332,6 +350,9 @@ export class ViewportEngine {
         renderer.autoClear = true
       }
     }
+
+    // After the overlay, so the count covers the frame the user sees and not the scene pass alone.
+    recordFrame(renderer, this.gpuStats)
 
     if (moving || settling) this.requestRender()
   }
