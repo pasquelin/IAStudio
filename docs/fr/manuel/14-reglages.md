@@ -86,9 +86,12 @@ vous écrivez dedans : un prompt écrit en anglais reste en anglais.
 > qu’il ne connaît pas encore reste donc **en anglais** plutôt que de disparaître, et un modèle
 > publié demain arrive dans sa langue d’origine.
 >
-> **Certains mots restent en anglais exprès** : `seed`, `guidance scale`, `sampler`, `CFG`. Ce
-> sont les termes du métier, et ils s’écrivent ainsi dans tous les outils de génération d’images
-> — les traduire vous ferait chercher deux fois.
+> **Certains mots restent en anglais exprès** : `guidance scale`, `CFG scale`, `sampler`,
+> `scheduler`. La règle n’est pas « c’est le terme du métier » — elle est plus simple à
+> vérifier : **ne reste en anglais que ce que le studio dit en anglais partout ailleurs.** C’est
+> pourquoi `seed` n’y est plus : l’inspecteur et le panneau Skybox disaient « Graine » depuis
+> longtemps, et le formulaire était la seule surface à refuser le mot que le reste de la fenêtre
+> emploie.
 
 ### À l’ouverture
 

@@ -82,9 +82,11 @@ you write in them: a prompt written in English stays in English.
 > does not know yet therefore stays **in English** rather than disappearing, and a model published
 > tomorrow arrives in its original wording.
 >
-> **Some words stay in English on purpose**: `seed`, `guidance scale`, `sampler`, `CFG`. These are
-> the trade's terms, and they read that way in every image generation tool — translating them
-> would make you look twice.
+> **Some words stay in English on purpose**: `guidance scale`, `CFG scale`, `sampler`,
+> `scheduler`. The rule is not "it is the trade's term" — it is easier to check than that: **only
+> what the studio says in English everywhere else stays in English.** Which is why `seed` is no
+> longer among them: the inspector and the Skybox panel had said "Graine" in French for a long
+> time, and the form was the only surface refusing the word the rest of the window uses.
 
 ### On opening
 

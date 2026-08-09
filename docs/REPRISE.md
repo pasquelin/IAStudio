@@ -305,6 +305,16 @@ il pré-filtre une liste côté serveur. Les trois familles ont leur écran de r
 où leur modèle se choisit. Les cinq commandes ont une ligne dans le menu Image et **restent sans
 raccourci : elles dépensent du crédit.**
 
+> **La famille `other` n’attrape rien, et le seul modèle qu’elle devrait attraper part dans Image.**
+> Vérifié par un appel le 9 août 2026, pas déduit : sur les 100 premiers modèles publics, **quinze
+> capacités distinctes**, dont une seule qu’aucun motif de `FAMILY_BY_CAPABILITY` ne classe —
+> `txt2txt`. Elle appartient à `model_scenario-llm`, qui déclare **aussi `img2txt`**, et `img2txt`
+> contient `img` : le motif de l’image mord, et le LLM est catalogué modèle d’**image**. Le test
+> `familyOf(['txt2txt'], []) === 'other'` (`schema.test.ts:151`) garde donc un jeu de capacités
+> qu’**aucun modèle réel ne porte**. Conséquence à l’écran, non vérifiée sur l’app lancée : le
+> panneau Modèles de l’espace Image liste un modèle qui produit du texte. Le remède serait un motif
+> de sortie (`txt$`) avant celui de l’image, pas une nouvelle famille.
+
 **L’entrée d’une image dans un ciel** — trois portes vers l’espace Skyboxes : double-clic sur un
 asset, dépôt depuis l’étagère, et la génération, qui retient le document d’où elle est partie et s’y
 pose seule.

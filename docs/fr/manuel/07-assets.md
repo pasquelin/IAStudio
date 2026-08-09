@@ -239,7 +239,7 @@ Ce badge n’est pas stocké, il est **recalculé** : il dépend du compte actif
 ouvre sur un projet et un seul. Changez de compte dans la barre de titre, et les badges se
 relisent — c’est le même fichier, c’est la bibliothèque d’en face qui a changé.
 
-> **Quatre de ces sept badges sont hors d’atteinte aujourd’hui**, et c’est cohérent : tant que
+> **Trois de ces sept badges sont hors d’atteinte aujourd’hui**, et c’est cohérent : tant que
 > les transferts se déclenchent à la main, rien ne peut modifier la version en ligne dans votre
 > dos. « À rapatrier », « modifié des deux côtés » et « autre projet » n’apparaîtront qu’avec la
 > synchronisation automatique, quand elle existera. Le filtre **Emplacement** ne propose donc que

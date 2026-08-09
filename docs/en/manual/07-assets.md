@@ -228,7 +228,7 @@ The badge is not stored, it is **recomputed**: it depends on the active account,
 opens onto one project and one only. Switch accounts in the title bar and the badges are read
 again — same file, different library on the other end.
 
-> **Four of those seven badges are out of reach today**, and consistently so: as long as
+> **Three of those seven badges are out of reach today**, and consistently so: as long as
 > transfers are triggered by hand, nothing can change the online version behind your back. "To
 > fetch", "changed on both sides" and "another project" will only appear with automatic syncing,
 > once it exists. The **Location** filter therefore offers only the four states actually
