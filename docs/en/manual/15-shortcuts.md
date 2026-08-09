@@ -73,6 +73,25 @@ and you can assign one to it (see below).
 > for instance — not the project itself. The tab carries a dot (`•`) as long as what is on screen is
 > not what is on disk.
 
+### Walking a list with the keyboard
+
+Every list in the studio is crossed the same way: the shelf, the Explorer, the layers, the models,
+the Apps, the scene tree.
+
+| Key | Effect |
+|---|---|
+| `Tab` | steps into the list, or out of it |
+| `←` `→` | the previous cell, the next one |
+| `↑` `↓` | the same column, one row up or down |
+| `Enter` | opens |
+| `Space` | picks |
+
+**A row that only opens leaves `Space` to scrolling.** That is the Explorer's case: opening a
+document may take you to another workspace, and `Space` promises that nowhere else in the studio.
+
+`Tab` brings you back where you were: a list keeps a single way in — your selection if there is
+one, the first visible cell otherwise.
+
 ---
 
 ## In the 3D view
