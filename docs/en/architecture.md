@@ -1,4 +1,4 @@
-# Scenario Studio — architecture
+| The **six editors** | a session opens one or two; all six weigh five megabytes |# Scenario Studio — architecture
 
 How the studio is built, and why it is built that way. Written for someone picking the codebase
 up. Looking for how to *use* it? See [user-guide.md](user-guide.md).
@@ -311,7 +311,7 @@ Six things are kept out, each because an ordinary session does not open them all
 
 | Loaded on demand | Why |
 |---|---|
-| The **four editors** | a session opens one or two; all four weigh five megabytes |
+| The **six editors** | a session opens one or two; all six weigh five megabytes |
 | The **generation form**, and zod, `react-hook-form`, `@hookform/resolvers` with it | you open a generator, you do not land on one |
 | The **Settings** window — its registry, its sections, its draft | fifty kilobytes of another window |
 | The **Licences** window | every shipped licence in full, which nobody reads in a usual session |
@@ -324,14 +324,22 @@ per-panel ones cover the docks, not the shell holding them — and it catches re
 event handlers, not rejected promises, and not `main.tsx`'s own evaluation, where a throw predates
 the boundary and leaves an empty window no React can see.
 
-**A test holds the list**, `eager-graph.test.ts`: it walks the static import graph from `main.tsx`
-and fails if any of them reappears. Without it, an `import` added without a thought undoes the
-gain while breaking nothing visible — the worst kind of regression, the one only a stopwatch sees.
+**A test holds all six rows**, `eager-graph.test.ts`: it walks the static import graph from
+`main.tsx` and fails if any of them reappears. Without it, an `import` added without a thought
+undoes the gain while breaking nothing visible — the worst kind of regression, the one only a
+stopwatch sees.
+
+**The editors are out; their neighbours not quite.** Six modules from the `spaces/` folders do
+reach the first screen, and none of them is an editor: they are helpers a **panel** reaches for
+next to one — `TimelinePanel` pulls `TimelineCanvas`, `Channels` pulls `place-channel` — because
+**no panel is lazy**, `app/tool-components.ts` importing all eleven outright. The test makes it a
+**budget**: the list may shrink, never grow. A seventh entry means a panel reached further than
+it needed to.
 
 **It aims at folders, not files.** A guard set on four files of the settings folder lets the fifth
 back in; that was fixed at the same time as the settings themselves.
 
-The four editors are loaded when a document of their kind is opened, never before: the one a
+The six editors are loaded when a document of their kind is opened, never before: the one a
 session opens costs a few hundred milliseconds it was going to spend anyway.
 
 ### The shell

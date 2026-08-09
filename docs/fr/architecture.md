@@ -319,7 +319,7 @@ Six choses en sont tenues dehors, chacune parce qu’une session ordinaire ne le
 
 | Ce qui est chargé à la demande | Pourquoi |
 |---|---|
-| Les **quatre éditeurs** | une session en ouvre un ou deux ; les quatre pèsent cinq mégaoctets |
+| Les **six éditeurs** | une session en ouvre un ou deux ; les six pèsent cinq mégaoctets |
 | Le **formulaire de génération**, et zod, `react-hook-form`, `@hookform/resolvers` avec lui | on ouvre un générateur, on n’arrive pas dessus |
 | La fenêtre des **Réglages** — son registre, ses sections, son brouillon | une cinquantaine de kilooctets d’une autre fenêtre |
 | La fenêtre des **Licences** | le texte intégral de chaque licence embarquée, que personne ne lit dans une session ordinaire |
@@ -333,16 +333,23 @@ tient — et elle n’attrape que les rendus : ni les gestionnaires d’événem
 rejetées, ni l’évaluation de `main.tsx` lui-même, dont un jet précède la frontière et laisse une
 fenêtre vide qu’aucun React ne voit.
 
-**Un test tient la liste**, `eager-graph.test.ts` : il marche le graphe des imports statiques
-depuis `main.tsx` et échoue si l’un d’eux réapparaît. Sans lui, un `import` ajouté sans y penser
-défait le gain sans rien casser de visible — le pire des régressions, celle qui ne se voit qu’au
-chronomètre.
+**Un test tient les six lignes**, `eager-graph.test.ts` : il marche le graphe des imports
+statiques depuis `main.tsx` et échoue si l’un d’eux réapparaît. Sans lui, un `import` ajouté sans
+y penser défait le gain sans rien casser de visible — le pire des régressions, celle qui ne se
+voit qu’au chronomètre.
+
+**Les éditeurs sont dehors, leurs voisins pas tout à fait.** Six modules des dossiers `spaces/`
+entrent quand même dans le premier écran, et aucun n’est un éditeur : ce sont des helpers qu’un
+**panneau** va chercher à côté d’un éditeur — `TimelinePanel` tire `TimelineCanvas`, `Channels`
+tire `place-channel` — parce qu’**aucun panneau n’est paresseux**, `app/tool-components.ts` les
+important tous les onze d’un coup. Le test en fait un **budget** : la liste peut rétrécir, jamais
+grandir. Une septième entrée veut dire qu’un panneau est allé chercher plus loin que nécessaire.
 
 **Il vise des dossiers, pas des fichiers.** Une garde posée sur quatre fichiers du dossier des
 réglages laisse entrer le cinquième ; c’est ce qui a été corrigé en même temps que les réglages
 eux-mêmes.
 
-Les quatre éditeurs sont chargés à l’ouverture d’un document de leur type, jamais avant : celui
+Les six éditeurs sont chargés à l’ouverture d’un document de leur type, jamais avant : celui
 qu’une session ouvre coûte quelques centaines de millisecondes qu’elle allait dépenser de toute
 façon.
 

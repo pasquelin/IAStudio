@@ -186,4 +186,56 @@ describe('the opening chunk', () => {
     expect(files).not.toContain('../../shared/domain/settings-registry.ts')
     expect(files).not.toContain('../../shared/domain/settings-search.ts')
   })
+
+  // The heaviest row of the table, and the one that was described but never held: six editors,
+  // five megabytes between them, of which a session opens one or two.
+  it('never reaches an editor', async () => {
+    const { files } = await eagerGraph()
+
+    const editors = [
+      './spaces/image/ImageDocument.tsx',
+      './spaces/three/SceneDocument.tsx',
+      './spaces/video/SequenceDocument.tsx',
+      './spaces/audio/AudioDocument.tsx',
+      './spaces/skyboxes/SkyboxDocument.tsx',
+      './spaces/textures/TextureDocument.tsx',
+    ]
+
+    expect(editors.filter(editor => files.has(editor))).toEqual([])
+  })
+
+  /**
+   * What still comes out of the editors' folders, and it is never an editor: a panel is not lazy
+   * (`app/tool-components.ts` imports all eleven outright), so a panel reaching for a helper next
+   * to an editor drags that helper in. A budget rather than a ban — the list is allowed to
+   * shrink, never to grow, and a seventh entry means a new panel reached further than it needed.
+   */
+  it('pulls only these six neighbours out of the editors folders', async () => {
+    const { files } = await eagerGraph()
+
+    expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
+      './spaces/audio/load-take.ts',
+      './spaces/image/canvas-hosts.ts',
+      './spaces/image/place-asset.ts',
+      './spaces/textures/place-channel.ts',
+      './spaces/video/TimelineCanvas.tsx',
+      './spaces/video/video-tools.ts',
+    ])
+  })
+
+  it('never reaches the licences window', async () => {
+    const { files } = await eagerGraph()
+
+    expect([...files].filter(path => path.startsWith('./licences/'))).toEqual([])
+  })
+
+  // The chart library is the reason this one is deferred, more than the window's own weight.
+  // `format.ts` is the exception, and it earns it: the Generate button prices a run in the same
+  // units the window totals, so the one formatter is shared rather than written twice.
+  it('never reaches the usage window, nor what draws its charts', async () => {
+    const { files, packages } = await eagerGraph()
+
+    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual(['./usage/format.ts'])
+    expect(packages).not.toContain('recharts')
+  })
 })
