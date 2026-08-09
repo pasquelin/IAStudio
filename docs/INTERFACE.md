@@ -143,42 +143,6 @@ remplacer par la nouvelle raison, en une ligne.
 > le studio n’a pas encore d’éditeur pour ça — c’est le node editor, § 4 de `REPRISE`. La
 > formulation ne doit donc pas promettre « vos workflows ».
 
-### 22. L’avis « pas de ffmpeg » vole une deuxième ligne à l’étagère
-
-**Vu le 9 août 2026, capture à l’appui.** « Préparation vidéo indisponible : ni copie allégée ni
-forme d’onde. » s’écrit sous la barre de l’étagère et lui prend une ligne entière. **Il doit
-tenir sur la ligne de la barre, pas en dessous.**
-
-**Et la règle qu’il enfreint est déjà écrite, pour cette barre-là.** `AssetBrowserActions` porte
-ceci : « The bar rides here in a band, where the row is wide and **a second one would cost
-height the zone cannot spare**. » C’est exactement pour éviter une deuxième ligne que la barre a
-été remontée dans la ligne de titre. L’avis, lui, la recrée.
-
-**D’où il vient** : `ImportProgress` est une bande posée entre la barre et la grille, qui porte
-deux choses — les lignes de progression des imports en cours, et cet avis. Le `<p>` de l’avis
-est en `px-2 py-1`, sur toute la largeur.
-
-**Ce qui interdit de le déplacer tel quel** : le message fait 65 caractères en français, et la
-ligne porte déjà le titre, le compteur, l’import, la recherche et deux facettes. En texte, il ne
-rentrera pas — ou il chassera les facettes, ce qui déplace le défaut sans le corriger. La forme
-qui tient à toute largeur est **une icône d’alerte dans la ligne de titre, le message en
-infobulle** ; `ToolButton variant="header"` et `TooltipHost` existent tous les deux.
-
-**Deux choses à ne pas casser en le faisant :**
-
-1. **L’avis doit rester tant que ffmpeg manque**, et le commentaire dit pourquoi : « The notice
-   outlives the ingests: without ffmpeg one lasts a few hundred milliseconds, and the
-   explanation would vanish just as the user wonders where the waveform went. » Ce n’est donc
-   pas un toast, et ça ne se dissout pas avec l’import.
-2. **La bande reste pour les imports en cours** — ce sont des lignes, au pluriel, qui ne
-   remontent nulle part. La demande porte sur l’avis, pas sur la bande.
-
-> **En colonne, c’est pire, et ça ne se voit pas sur la capture.** En Vidéo et en Audio,
-> l’étagère est dans la colonne de droite : la barre y est rendue **hors** de la ligne de titre
-> (`!lying && <CollectionBar/>`), sur sa propre ligne. L’avis y fait donc une **troisième**
-> ligne avant la première vignette. Corriger la bande sans regarder ce cas ne corrige que la
-> moitié visible.
-
 ### 21. Le volet du journal ne se ferme pas au clic à côté
 
 **Vu le 9 août 2026, capture à l’appui.** Un clic en dehors du volet devrait le refermer. Il
@@ -315,6 +279,52 @@ suspect à regarder en premier est `eager-graph.test.ts` lui-même : il lit **74
 > livraison est bonne — et c’est le seul filet, puisqu’aucun test ne s’exécute sur l’application
 > lancée.
 
+### 28. Le bouton du journal est une cible de 12 × 12 px
+
+**Mesuré le 9 août 2026**, en soldant l’entrée 22. `ActivityStatus` sans échec ne contient qu’un
+`UiIcon size={12}` : sa cible cliquable fait **12 × 12 px**, quand **WCAG 2.2, SC 2.5.8 (AA)**
+demande 24 × 24. `JobsStatus`, à côté, a la même forme.
+
+**Ce qui le sauve aujourd’hui, de justesse** : l’exception « espacement » du critère — le
+`gap-3` de la ligne d’état met la cible voisine à 18 px du centre, donc un cercle de 24 px tient.
+C’est une exception, pas une conformité.
+
+**Ce qui a changé sous lui** : le pied de fenêtre n’a plus de hauteur propre (entrée 11), donc la
+réparation la moins chère a disparu — sous `h-6`, passer la ligne en `items-stretch` donnait
+24 px gratuitement. Il faut maintenant une hauteur au bouton lui-même, et `--sc-control` est la
+jauge qui la porte.
+
+### 29. `Inter` est déclarée comme police de l’interface, et n’est chargée nulle part
+
+**Vu le 9 août 2026.** `--font-sans` nomme `'Inter', system-ui, …` dans `index.css`, mais **aucun
+`@font-face`, aucune dépendance dans `package.json`, aucun lien dans `index.html`** : la pile
+retombe sur `system-ui`, c’est-à-dire une police différente sur chacune des trois plateformes que
+le pipeline empaquette.
+
+**Ce que ça ne casse pas, contrairement à ce qu’on croirait** : les hauteurs de ligne. Le préflight
+Tailwind pose `line-height: 1.5` sur `html`, sans unité, donc calculé sur la taille de chaque
+élément et non sur les métriques de la fonte — vérifié en soldant l’entrée 11. Les boîtes de ligne
+sont identiques partout.
+
+**Ce que ça change quand même** : la chasse et le dessin des lettres, donc la largeur d’un libellé,
+donc le point où un `truncate` coupe. Deux issues, pas trois : embarquer Inter, ou cesser de la
+nommer. La nommer sans la charger est la seule qui mente.
+
+### 30. Une infobulle ne se laisse pas survoler, et c’est devenu gênant
+
+**Vu le 9 août 2026**, en soldant l’entrée 22. `TooltipHost` ne pose pas `clickable`, donc la bulle
+garde le `pointer-events: none` de la feuille de style du cœur, à `offset: 8` de son ancre : aller
+vers elle quitte l’ancre et la referme. C’est l’exigence **« survolable » de WCAG SC 1.4.13 (AA)**.
+
+**C’est préexistant et ça vaut pour toutes les infobulles de l’application** — ce n’est donc pas
+un défaut de l’entrée 22. Il est ici parce que celle-ci **promeut l’infobulle de décoration à
+unique porteuse visuelle d’un message** : quelqu’un qui zoome à 400 % doit balayer la bulle pour
+lire soixante-cinq caractères, et il ne le peut pas.
+
+**L’exigence « écartable » du même critère est réglée** (`globalCloseEvents={{ escape: true }}`,
+livré avec l’entrée 22). Reste `clickable`, qui bascule `pointer-events` sur **toutes** les
+infobulles : à regarder d’un bloc, avec ce que ça fait aux barres flottantes qui en portent.
+
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
 **Vu le 9 août 2026**, en soldant la vérification à l’écran des entrées 6 et 8 : l’étagère
@@ -345,21 +355,6 @@ réponse se trouve.
 > Ne pas confondre les deux états en les réglant : une cellule peut être focalisée sans être
 > sélectionnée, et l’inverse. L’entrée 9 vient justement de séparer ce que ces cellules
 > annoncent ; il s’agit ici de leur faire dire à l’œil ce qu’elles disent déjà au lecteur d’écran.
-
-### 11. La ligne d’état est collée au bord et désalignée du reste
-
-**Même capture.** En bas de fenêtre, `Verif4` à gauche et `1 échec` à droite touchent presque le
-bord — il manque de l’air sous le texte, et la ligne ne s’aligne sur rien.
-
-Ce n’est pas qu’une impression : `Footer.tsx` est en **`h-6 px-3`**, c’est-à-dire 12 px de marge
-horizontale écrits en dur, quand tout ce qui est au-dessus est posé à `--sc-gutter` du bord — **6 px
-en confort, 4 px en compact** (`index.css`). Le fil d’Ariane est donc décalé de 6 px vers l’intérieur
-par rapport à la surface qui le surplombe, et l’écart double en densité compacte. Verticalement, le
-`h-6` ne réserve rien : la ligne s’arrête au pixel du bas de la fenêtre.
-
-C’est le cas d’école de la règle du guide — **pas de pixel en dur là où une gauge existe**. Reprendre
-`--sc-gutter` remet le footer dans le même appareil de mesure que les rails et les panneaux, et le
-suit quand la densité change.
 
 ### 12. L’accueil ne dit pas ce que cliquer va faire — et ça n’ouvre jamais le fichier
 
@@ -653,6 +648,44 @@ correction.
 | **(18)** Le formulaire de génération parlait anglais dans une application en français | `e0a07b2` (feat/i18n-schema-api) |
 | **(7)** Aucun moyen de garder un réglage de matière pour la texture suivante | `c3ec714` (feat/styles-textures) |
 | **(10)** Les filtres du journal revenaient à la ligne, orphelinant une famille | `71f3140` (feat/journal-filtres) |
+| **(22)** L’avis « pas de ffmpeg » volait une ligne à l’étagère, trois en colonne | `8bb53b2` (feat/ffmpeg-notice) |
+| **(11)** La ligne d’état était collée au bord et alignée sur rien | `d66b811` (feat/ligne-etat) |
+
+> **L’entrée 11 se trompait sur ses DEUX prémisses, et les deux se mesurent.** Elle affirmait que
+> « tout ce qui est au-dessus est posé à `--sc-gutter` du bord » : cette jauge n’est un retrait
+> horizontal de bord de fenêtre **nulle part** dans l’application — ses usages sont l’épaisseur
+> d’une poignée, deux paddings verticaux, une indentation. Les rails sont collés à 0. Ce qui tombe
+> à 6 px, c’est le **bord du bouton** du rail, par l’arithmétique `(48 − 36)/2` — égal à la
+> gouttière en confort, et pas en compact, où il vaut 5 contre 4. D’où **`--sc-rail-inset`**,
+> dérivée de ses deux termes : ceux-ci étant redéclarés en compact, le `calc()` se réévalue seul.
+>
+> Elle affirmait aussi que « le `h-6` ne réserve rien : la ligne s’arrête au pixel du bas ». Il
+> réservait `(24 − 16,5)/2 = 3,75 px` : le préflight Tailwind pose `line-height: 1.5` sur `html`,
+> sans unité, et le CSS compilé montre que `text-[11px]` ne pose **que** `font-size`. L’air passe
+> à 6 px en confort ; **en compact il reste à 4, délibérément** — c’est l’écart de tout le châssis
+> à cette densité. Un plancher `min-h-(--sc-control)`, essayé sur recommandation d’une revue, a
+> été retiré : contenu plus padding vaut 28,5 contre 28, et 24,5 contre 24, il ne mord jamais.
+>
+> Deux revues adverses se sont **contredites** sur la hauteur de boîte de ligne (13 px contre
+> 16,5). C’est le CSS compilé qui a tranché, pas l’arbitrage.
+
+> **L’entrée 22 a été corrigée quatre fois après `/simplify`, qui n’avait rien vu.** L’avis
+> devient un triangle d’alerte dans la ligne de titre — `AssetBrowserActions` étant le `children`
+> de `PanelHeader`, le même geste couvre la bande **et** la colonne, `ToolWindow` montant les
+> actions inconditionnellement. Au passage, **le registre situait mal le `!lying`** : il est dans
+> `AssetBrowser.tsx`, pas dans `AssetBrowserActions`, qui fait `lying &&`.
+>
+> Ce que les deux agents ont trouvé : l’infobulle s’ouvrait **vers le haut**, donc hors du panneau,
+> alors que tous les en-têtes du dépôt utilisent `TIP_BOTTOM` ; le glyphe faisait 16 px au milieu
+> de voisins à 14 (`ToolButton variant="header"` rend `iconSize ?? 14`) ; l’icône était peinte en
+> `muted`, qui est ici le ton des états **réglés** (`AssetBadge`, `ProgressRow`) ; et le message
+> n’avait **aucun canal hors pointeur** alors qu’il était permanent avant — WCAG 2.1.1.
+> `react-tooltip` écoute déjà le focus, l’ancre ne le recevait jamais. `TooltipHost` ferme
+> désormais sur Échap.
+>
+> **Les deux manuels décrivaient un bandeau disparu**, dans les deux langues, et le dépannage
+> prenait la phrase pour un titre de section. Aucun test ne garde ce lien : `validate` serait
+> resté vert sur une documentation devenue fausse.
 
 > **L’entrée 10 avait raison sur la cause, et c’est assez rare ici pour le dire.** Le calcul la
 > confirme : 376 px utiles dans le volet, ≈600 px de puces, et le cumul atteint 351 px juste
