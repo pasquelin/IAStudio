@@ -370,6 +370,30 @@ convertissez-le dans un format courant (`.mp4`, `.wav`, `.png`).
 **Échec** : la préparation s’est arrêtée sur un problème. **Interrompu** : vous l’avez arrêtée
 vous-même. Dans les deux cas, le fichier peut être réimporté.
 
+### « Cet asset n’a nulle part où aller »
+
+**Ce que ça veut dire.** Vous avez double-cliqué un asset, et **aucun document ouvert ne sait le
+recevoir**. Ce n’est ni un bug, ni un fichier abîmé.
+
+**La cause.** Le double-clic **n’ouvre jamais d’onglet** : il envoie l’asset dans un document
+déjà ouvert. Il cherche dans tous les espaces, pas seulement celui que vous regardez — mais il
+lui faut au moins une destination.
+
+| Vous double-cliquez… | Il faut, ouvert quelque part… |
+|---|---|
+| une image, pour en faire un ciel | un document **ciel** (espace Skyboxes) |
+| un maillage, pour le poser dans une scène | une **scène 3D** |
+| un son, pour l’éditer | une **prise** (espace Audio) |
+| une image, pour la peindre | un document **image** |
+| n’importe quoi, pour le monter | une **séquence** (espace Vidéo) |
+| une image, pour en faire une matière | une **matière** (espace Textures) |
+
+**Quoi faire.** Ouvrez un document capable de le recevoir — le bouton `+` du rail gauche, dans
+l’espace voulu — puis double-cliquez. Vous n’avez pas à y aller d’abord : le studio vous y amène.
+
+> **Le clic droit répond à la question sans essayer.** Il liste toutes les destinations de cet
+> asset, en grisant celles dont aucun document n’est ouvert. C’est plus rapide que de deviner.
+
 ---
 
 ## Les ennuis qui n’affichent aucun message
@@ -392,30 +416,6 @@ Si le curseur est normal et que rien n’apparaît quand même, c’est ailleurs
 est peut-être posée hors de la zone où vous peignez — le pinceau, la gomme et le pot n’agissent
 qu’à l’intérieur. `⌘D` l’abandonne.
 
-### « Je double-clique sur un asset et rien ne se passe »
-
-**C’est de loin le plus fréquent.** Et ce n’est ni un bug, ni un fichier abîmé.
-
-**La cause.** Le double-clic **n’ouvre jamais d’onglet** : il envoie l’asset dans l’onglet déjà
-en avant. S’il n’y a aucun onglet ouvert, ou si l’onglet en avant ne sait pas quoi faire de ce
-que vous lui envoyez, il ne se passe rien — et rien ne le dit.
-
-| Vous double-cliquez… | Il faut, devant vous… |
-|---|---|
-| une image, pour en faire un ciel | un onglet **ciel** ouvert (espace Skyboxes) |
-| un son, pour l’éditer | un onglet **son** ouvert (espace Audio) |
-| un média, pour le monter | un onglet **séquence** ouvert (espace Vidéo) |
-| une image, pour la peindre | un onglet **image** ouvert (espace Image) |
-
-**Quoi faire.**
-
-1. Vérifiez l’espace en haut de la fenêtre : êtes-vous dans le bon ?
-2. Vérifiez qu’un onglet est bien ouvert — sinon, le bouton `+` du rail gauche en crée un.
-3. Alors seulement, double-cliquez.
-
-> **Le cas de la scène 3D et de la matière est différent.** Ces deux-là ne reçoivent rien par
-> double-clic, quel que soit l’asset : une texture se pose en glissant l’image sur son aperçu, et
-> la vue 3D n’accepte aucun dépôt. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ### « ⌘Z ne fait rien »
 
@@ -547,7 +547,7 @@ installation neuve.
 | Pas de vagues sur la piste audio | idem |
 | « Préparation vidéo indisponible » alors que `which ffmpeg` en trouve un | `ffmpeg -version` : le binaire existe mais ne démarre plus |
 | « Le trousseau n’a pas rendu vos comptes » | déverrouiller le trousseau, puis recommencer — rien n’a été perdu |
-| Double-clic sur un asset sans effet | ouvrir d’abord un onglet, avec le `+` du rail gauche |
+| « Cet asset n’a nulle part où aller » | ouvrir un document qui sache le recevoir, avec le `+` du rail gauche |
 | « Ce panneau a rencontré une erreur » | cliquer **Réessayer** — le reste de la fenêtre va bien |
 | `⌘Z` sans effet | activer le bon onglet |
 | Canvas 3D noir | fermer et rouvrir l’onglet |

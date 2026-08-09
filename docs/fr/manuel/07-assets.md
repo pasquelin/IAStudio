@@ -86,7 +86,7 @@ Le message dit lequel des trois cas vous êtes, parce qu’ils appellent des ré
 | Geste | Effet |
 |---|---|
 | **Clic** | sélectionne — l’Inspecteur, à droite, montre ses informations |
-| **Double-clic** | envoie l’asset dans **l’onglet ouvert devant vous** |
+| **Double-clic** | envoie l’asset dans le document qui peut le prendre, en changeant d’espace s’il le faut |
 | **Clic droit** | ouvre la liste de **toutes** ses destinations |
 | **Glisser-déposer** | dépose l’asset là où vous le lâchez |
 
@@ -116,33 +116,42 @@ grisée.** C’est délibéré : un menu qui change de longueur selon ce qui est
 qu’on ne peut pas apprendre. Une ligne grisée vous dit quoi faire — ouvrir un document dans cet
 espace — là où une ligne absente ne dit rien du tout.
 
-C’est aussi la réponse au piège du double-clic : quand rien ne bouge, le clic droit montre en une
-fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse.
+C’est aussi ce qu’il faut regarder quand le double-clic répond « Cet asset n’a nulle part où
+aller » : le clic droit montre en une fois ce que cet asset peut faire, et ce qui manque pour
+qu’il le fasse.
 
 ### Le double-clic ne fait pas ce qu’on croit
 
 **Il n’ouvre jamais de nouvel onglet.** C’est le point qui surprend tout le monde une fois, et une
-seule : le double-clic **envoie** l’asset dans le document déjà en avant.
+seule : le double-clic **envoie** l’asset dans un document déjà ouvert. Il n’en crée aucun.
 
-Ce que ça donne, selon l’onglet qui est devant :
+En revanche, il n’est pas prisonnier de l’onglet que vous regardez : **il traverse les espaces**.
+Un document ouvert ailleurs — dans un autre espace de travail, derrière un autre onglet — est une
+destination valable, et l’y envoyer vous y amène.
 
-| L’onglet en avant est… | Un double-clic sur un asset… |
+Deux règles, dans cet ordre :
+
+1. **L’onglet devant vous a la priorité**, dès lors qu’il sait prendre cet asset. Double-cliquer
+   une image alors qu’une image est ouverte la pose en calque, point.
+2. **Sinon, la cascade tranche** entre les documents ouverts ailleurs, toujours dans le même
+   ordre : ciel, scène 3D, prise audio, image, montage, matière.
+
+| Ce que vous double-cliquez | Où ça va |
 |---|---|
-| un **ciel** (espace Skyboxes) | pose l’image comme ciel — seules les images du projet sont acceptées |
-| un **son** (espace Audio) | charge cette prise dans l’éditeur, si c’est bien un son |
-| une **séquence** (espace Vidéo) | pose un clip sur une piste, à la tête de lecture |
-| une **image** (espace Image) | pose l’image comme un calque de plus, déjà armé |
-| une **scène 3D** | fait entrer le maillage dans la scène, s’il s’agit bien d’un maillage |
-| une **texture** | **rien du tout** — une matière se remplit au glisser-déposer |
-| aucun onglet ouvert | **rien du tout** |
+| une **image**, une **texture**, un **ciel** | ciel, calque, montage ou couleur de base — selon ce qui est ouvert |
+| un **maillage** | la scène 3D ouverte |
+| un **son** | la prise audio ouverte, ou une piste du montage |
+| une **vidéo** | le montage ouvert |
 
-**Rien ne prévient quand il ne se passe rien.** Pas de message, pas de refus visible : le
-double-clic est simplement sans effet. Si vous double-cliquez et que rien ne bouge, la question à
-se poser est **« quel onglet est devant ? »**, jamais « l’asset est-il abîmé ? ».
+Le montage prend **tout** — c’est ce qui lui vaut sa place en fin de cascade : il ne récupère un
+asset que lorsque aucune destination plus précise ne le réclame.
+
+**Un double-clic qui ne mène nulle part le dit maintenant** : « Cet asset n’a nulle part où
+aller ». C’est le cas quand aucun document capable de le recevoir n’est ouvert — pas quand
+l’asset est abîmé.
 
 > **Pour ouvrir un document, c’est le bouton `+` du rail gauche**, dans l’espace voulu. Il crée un
-> document neuf. Le double-clic sert ensuite à y faire entrer de la matière — quand l’espace sait
-> en recevoir.
+> document neuf. Le double-clic sert ensuite à y faire entrer de la matière.
 
 ### Ce que le glisser-déposer sait faire aujourd’hui
 
