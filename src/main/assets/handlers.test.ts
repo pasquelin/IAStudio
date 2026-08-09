@@ -261,6 +261,44 @@ describe('the public feed', () => {
     expect(page.assets.map(asset => asset.id)).toEqual(['a'])
   })
 
+  it('draws each tile from the public thumbnail, not the whole file', async () => {
+    // A search hit carries only the signed URL of the original — 28 MB for one upscaled texture,
+    // against 1.6 KB for its thumbnail, and a width appended to it answers 302.
+    setup({
+      remote: {
+        search: () =>
+          Promise.resolve({
+            assets: [{ ...cloudAsset('a'), url: 'https://cdn.example/assets-transform/a?p=100' }],
+            token: null,
+          }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.assets[0]?.thumbnailUrl).toBe('https://cdn.example/thumbnails/a')
+  })
+
+  it('leaves a thumbnail the API did name alone', async () => {
+    setup({
+      remote: {
+        search: () =>
+          Promise.resolve({
+            assets: [
+              {
+                ...cloudAsset('a'),
+                url: 'https://cdn.example/assets-transform/a',
+                thumbnailUrl: 'https://cdn.example/its/own.png',
+              },
+            ],
+            token: null,
+          }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.assets[0]?.thumbnailUrl).toBe('https://cdn.example/its/own.png')
+  })
+
   it('walks by offset, and marks the cursor as the index produced it', async () => {
     setup({
       remote: { search: () => Promise.resolve({ assets: [cloudAsset('a')], token: '40' }) },

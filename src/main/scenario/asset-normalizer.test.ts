@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { cloudAssetOfHit, cloudAssetOfListing } from './asset-normalizer'
+import type { CloudAsset } from '@shared/domain/cloud-asset'
+import { cloudAssetOfHit, cloudAssetOfListing, withPublicThumbnail } from './asset-normalizer'
 
 const LISTING = {
   id: 'asset_1',
@@ -132,5 +133,44 @@ describe('an asset from a search hit', () => {
   it('reads the kind off the mime type when even the metadata has none', () => {
     const sparse = { id: 'asset_3', mimeType: 'audio/wav', metadata: { type: 'uploaded-audio' } }
     expect(cloudAssetOfHit(sparse)?.type).toBe('audio')
+  })
+})
+
+describe('the thumbnail a search hit does not carry', () => {
+  function hit(overrides: Partial<CloudAsset> = {}): CloudAsset {
+    return {
+      id: 'asset_1',
+      name: 'boulder',
+      type: 'image',
+      remoteType: 'txt2img',
+      ownerId: 'team_1',
+      createdAt: '2026-08-06T10:00:00.000Z',
+      updatedAt: '2026-08-06T10:00:00.000Z',
+      privacy: 'public',
+      tags: [],
+      collectionIds: [],
+      ...overrides,
+    }
+  }
+
+  it('derives it from the CDN the signed URL already names', () => {
+    // Never a written-down host: it is the same CDN by construction, and a constant here is one
+    // deployment away from being wrong.
+    const asset = withPublicThumbnail(hit({ url: 'https://cdn.example/assets-transform/a?p=100' }))
+    expect(asset.thumbnailUrl).toBe('https://cdn.example/thumbnails/asset_1')
+  })
+
+  it('leaves a thumbnail the API did name alone', () => {
+    const named = hit({ url: 'https://cdn.example/a', thumbnailUrl: 'https://cdn.example/t.png' })
+    expect(withPublicThumbnail(named).thumbnailUrl).toBe('https://cdn.example/t.png')
+  })
+
+  it('has nothing to derive from without a URL', () => {
+    expect(withPublicThumbnail(hit()).thumbnailUrl).toBeUndefined()
+  })
+
+  it('does not fail a whole page over one unparseable URL', () => {
+    // The tile falls back to its glyph; the other thirty-nine still draw.
+    expect(withPublicThumbnail(hit({ url: 'not a url' })).thumbnailUrl).toBeUndefined()
   })
 })

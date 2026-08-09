@@ -6,6 +6,17 @@ import { GAP, PREFETCH_ROWS } from './virtual'
 /** A picture whose shape nobody stated. Square is the least wrong guess, and never distorts. */
 const FALLBACK_RATIO = 1
 
+/**
+ * How far from square a tile may go, as width ÷ height.
+ *
+ * Seamless textures are published at 3584×512 — seven to one. Reserved faithfully, they draw a
+ * letterbox strip a few pixels tall beside square tiles, and a column of them reads as a list of
+ * captions rather than as pictures. Past these bounds the picture is cropped by `object-cover`
+ * instead: showing the middle of a tiling texture loses nothing, and the grid stays legible.
+ */
+const RATIO_MIN = 0.5
+const RATIO_MAX = 2
+
 /** Beyond this a column is too narrow to read, so the grid drops one rather than shrink on. */
 const MIN_COLUMN_WIDTH = 120
 
@@ -114,9 +125,10 @@ export function Masonry<T extends { id: string }>({
     getScrollElement: () => scroller,
     estimateSize: index => {
       const item = items[index]
-      const ratio = item ? (ratioOf(item) ?? FALLBACK_RATIO) : FALLBACK_RATIO
+      const stated = item ? (ratioOf(item) ?? FALLBACK_RATIO) : FALLBACK_RATIO
       // A ratio of zero or worse would collapse the cell and stack every item at one offset.
-      return laneWidth / (ratio > 0 ? ratio : FALLBACK_RATIO)
+      const ratio = stated > 0 ? stated : FALLBACK_RATIO
+      return laneWidth / Math.min(RATIO_MAX, Math.max(RATIO_MIN, ratio))
     },
     lanes,
     gap: GAP,

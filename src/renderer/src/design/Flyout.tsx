@@ -20,6 +20,11 @@ export type FlyoutProps = {
  */
 const OFFSET = 2
 
+/** Kept inside the window: rows drawn past its edge cannot be reached, by pointer or by key. */
+function clamped(wanted: number, size: number, within: number): number {
+  return Math.max(0, Math.min(wanted, within - size))
+}
+
 /**
  * The rows of a tool's modes, laid beside the bar.
  *
@@ -42,8 +47,12 @@ export function Flyout({
       const box = anchor.getBoundingClientRect()
 
       if (placement === 'right') {
-        node.style.top = `${box.top}px`
-        node.style.left = `${box.right + OFFSET}px`
+        node.style.top = `${clamped(box.top, node.offsetHeight, window.innerHeight)}px`
+        // Flipped to the other side when the anchor sits too near the right edge. A section
+        // heading reaches the very edge of the window, and its menu was drawn outside it.
+        const beside = box.right + OFFSET
+        const fits = beside + node.offsetWidth <= window.innerWidth
+        node.style.left = `${fits ? beside : box.left - node.offsetWidth - OFFSET}px`
         return
       }
 
@@ -51,7 +60,7 @@ export function Flyout({
       // against the window edge, and a menu hung from their left would run off it.
       const above = placement === 'above'
       node.style.top = `${above ? box.top - node.offsetHeight - OFFSET : box.bottom + OFFSET}px`
-      node.style.left = `${box.right - node.offsetWidth}px`
+      node.style.left = `${clamped(box.right - node.offsetWidth, node.offsetWidth, window.innerWidth)}px`
     },
     [anchor, placement],
   )

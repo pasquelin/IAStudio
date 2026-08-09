@@ -32,6 +32,14 @@ export type HomeSectionEntry = {
   pinned?: boolean
   /** How many items the section shows before the user says otherwise. */
   defaultLimit?: number
+  /**
+   * Held at the foot of the page, and not movable.
+   *
+   * For a band that never ends: the feed pages as it is scrolled, so anything below it can only
+   * be reached by outrunning the fetches. Ordering is a preference; burying a section is not one
+   * the menu should be able to express.
+   */
+  anchored?: boolean
 }
 
 /**
@@ -52,9 +60,9 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
   { id: 'activity', requires: ['project'], defaultLimit: 6 },
-  // Last, and no limit: it is the one band that does not end — the grid pages as it is scrolled,
-  // so a count would cap what the reader can reach rather than how much is drawn at once.
-  { id: 'explore', requires: ['api'] },
+  // No limit: it is the one band that does not end — the grid pages as it is scrolled, so a
+  // count would cap what the reader can reach rather than how much is drawn at once.
+  { id: 'explore', requires: ['api'], anchored: true },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)
@@ -120,7 +128,14 @@ export function homeSections(stored: readonly HomeSectionSetting[]): HomeSection
     settings.splice(at, 0, settingOf(entry))
   }
 
-  return settings
+  // Anchored bands are put back at the foot whatever the stored order says. Settings written by
+  // an earlier version — or by hand — would otherwise place one mid-page, where its endless
+  // scroll makes everything under it unreachable.
+  return [...settings.filter(setting => !anchored(setting)), ...settings.filter(anchored)]
+}
+
+function anchored(setting: HomeSectionSetting): boolean {
+  return homeSectionOf(setting.id)?.anchored === true
 }
 
 /**
@@ -147,10 +162,36 @@ export function visibleHomeSections(
 /** Which way a section is being moved. Positions are settings, not ids, so this is enough. */
 export type HomeMove = 'up' | 'down'
 
-/** Where a section would land if it moved, or -1 when it is already at that end of the page. */
-function neighbourOf(count: number, from: number, move: HomeMove): number {
-  const at = from + (move === 'up' ? -1 : 1)
-  return at >= 0 && at < count ? at : -1
+/**
+ * Where a section would land if it moved, or -1 when nothing is left to swap with.
+ *
+ * It steps over the sections that are not being drawn. Swapping with a hidden neighbour is a
+ * write that changes the stored order and nothing on screen — an enabled row that does nothing,
+ * which is exactly what `canMoveHomeSection` exists to prevent. Explore made it plain: it sits
+ * last, behind three bands that need a project, so moving it up did nothing until one was open.
+ *
+ * `shown` absent means every section counts, which is what a caller with nothing hidden wants.
+ */
+function neighbourOf(
+  sections: readonly HomeSectionSetting[],
+  from: number,
+  move: HomeMove,
+  shown?: readonly HomeSectionId[],
+): number {
+  const step = move === 'up' ? -1 : 1
+  const moving = sections[from]
+  if (!moving || anchored(moving)) return -1
+
+  for (let at = from + step; at >= 0 && at < sections.length; at += step) {
+    const candidate = sections[at]
+    if (!candidate) return -1
+    // Nothing may be swapped past an anchored band either — that is how a section would end up
+    // under a feed that never ends.
+    if (anchored(candidate)) return -1
+    if (!shown || shown.includes(candidate.id)) return at
+  }
+
+  return -1
 }
 
 /** Whether the menu may offer the move at all — a row that cannot act is disabled, not silent. */
@@ -158,10 +199,11 @@ export function canMoveHomeSection(
   stored: readonly HomeSectionSetting[],
   id: HomeSectionId,
   move: HomeMove,
+  shown?: readonly HomeSectionId[],
 ): boolean {
   const sections = homeSections(stored)
   const from = sections.findIndex(setting => setting.id === id)
-  return from !== -1 && neighbourOf(sections.length, from, move) !== -1
+  return from !== -1 && neighbourOf(sections, from, move, shown) !== -1
 }
 
 /**
@@ -172,12 +214,13 @@ export function movedHomeSection(
   stored: readonly HomeSectionSetting[],
   id: HomeSectionId,
   move: HomeMove,
+  shown?: readonly HomeSectionId[],
 ): HomeSectionSetting[] {
   const sections = homeSections(stored)
   const from = sections.findIndex(setting => setting.id === id)
   if (from === -1) return sections
 
-  const to = neighbourOf(sections.length, from, move)
+  const to = neighbourOf(sections, from, move, shown)
   if (to === -1) return sections
 
   const moving = sections[from]

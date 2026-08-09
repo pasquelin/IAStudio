@@ -30,18 +30,25 @@ export function Explore() {
   const { assets, loading, more } = useExplore(type)
 
   return (
-    <Section id="explore" title={t('home.sections.explore')}>
-      <div role="tablist" aria-label={t('home.sections.explore')} className="flex gap-2">
-        {ASSET_TYPES.map(candidate => (
-          <Tab
-            key={candidate}
-            type={candidate}
-            current={candidate === type}
-            onSelect={() => setType(candidate)}
-          />
-        ))}
-      </div>
-
+    <Section
+      id="explore"
+      title={t('home.sections.explore')}
+      // The feed is the one band tall enough to scroll past its own controls, and losing the
+      // tabs halfway down means scrolling back up to change kind.
+      sticky
+      actions={
+        <div role="tablist" aria-label={t('home.sections.explore')} className="flex gap-2">
+          {ASSET_TYPES.map(candidate => (
+            <Tab
+              key={candidate}
+              type={candidate}
+              current={candidate === type}
+              onSelect={() => setType(candidate)}
+            />
+          ))}
+        </div>
+      }
+    >
       <Masonry
         items={assets}
         columnWidth={COLUMN_WIDTH}

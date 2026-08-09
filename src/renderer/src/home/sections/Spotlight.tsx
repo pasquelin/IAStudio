@@ -1,10 +1,4 @@
-import {
-  mdiCreationOutline,
-  mdiFolderPlusOutline,
-  mdiKeyOutline,
-  mdiPlayOutline,
-  mdiProgressClock,
-} from '@mdi/js'
+import { mdiCreationOutline, mdiKeyOutline, mdiPlayOutline, mdiProgressClock } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { isFinished } from '@shared/domain/job'
@@ -107,18 +101,8 @@ export function Spotlight() {
     })
   }
 
-  if (projectKnown && !project) {
-    slides.push({
-      id: 'create',
-      icon: mdiFolderPlusOutline,
-      title: t('home.spotlight.start'),
-      body: t('home.spotlight.startBody'),
-      action: {
-        label: t('home.spotlight.startAction'),
-        onClick: () => void useProject.getState().createPicked(),
-      },
-    })
-  }
+  // No card for "start a project": the rail's + makes one, the tools band offers it twice more,
+  // and a banner across the top of the page said the same thing a fourth time.
 
   // Every branch above is conditional, and a project open with nothing in it yet satisfies none
   // of them. Being pinned is a promise to draw something: without this, the home would open on

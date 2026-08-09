@@ -71,6 +71,22 @@ describe('Masonry', () => {
     expect(cells()[0]?.style.height).toBe(`${LANE_WIDTH}px`)
   })
 
+  it('never draws a letterbox strip, however flat the picture is', async () => {
+    // Seamless textures are published at 3584×512. Reserved faithfully, they are a few pixels
+    // tall beside square tiles and the column reads as a list of captions.
+    renderMasonry(pictures(6, 7))
+
+    await waitFor(() => expect(cells().length).toBeGreaterThan(0))
+    expect(cells()[0]?.style.height).toBe(`${LANE_WIDTH / 2}px`)
+  })
+
+  it('never draws a tower either', async () => {
+    renderMasonry(pictures(6, 0.1))
+
+    await waitFor(() => expect(cells().length).toBeGreaterThan(0))
+    expect(cells()[0]?.style.height).toBe(`${LANE_WIDTH / 0.5}px`)
+  })
+
   it('lays the items out in columns of free height', async () => {
     renderMasonry(pictures(9, 1))
 

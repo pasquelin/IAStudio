@@ -12,6 +12,7 @@ import {
   publicFeedFilter,
   PUBLIC_FEED_SORT,
 } from '@main/scenario/filter-expression'
+import { withPublicThumbnail } from '@main/scenario/asset-normalizer'
 import { remoteTypesFor } from '@main/scenario/remote-types'
 import { PAGE_SIZE_MAX } from '@main/scenario/limits'
 import type { AsyncCatalog } from '@main/project/catalog-client'
@@ -138,7 +139,7 @@ async function explore(remote: RemoteAssetCatalog, query: ExploreQuery): Promise
   })
 
   return {
-    assets: page.assets.filter(asset => asset.type === query.type),
+    assets: page.assets.filter(asset => asset.type === query.type).map(withPublicThumbnail),
     cursor: marked(OFFSET_CURSOR, page.token),
   }
 }
