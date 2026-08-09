@@ -126,19 +126,6 @@ describe('rearranging the home', () => {
     expect(order.indexOf('projects')).toBe(order.indexOf('tools') - 1)
   })
 
-  /**
-   * One order holds both columns. Stepping over the section that happens to sit between two of
-   * the same column would be a menu row that writes something nobody can see.
-   */
-  it('steps over the other column rather than swapping across it', () => {
-    const aside = HOME_SECTIONS.filter(entry => entry.place === 'aside')
-
-    for (const entry of aside) {
-      expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, entry.id, 'up')).toBe(false)
-      expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, entry.id, 'down')).toBe(aside.length > 1)
-    }
-  })
-
   it('refuses a move at either end of the column it belongs to', () => {
     expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'spotlight', 'up')).toBe(false)
     expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'activity', 'down')).toBe(false)

@@ -5,7 +5,8 @@ import {
   placementIn,
   placementOf,
   placementsOf,
-  servesWorkspace,
+  HOME_SURFACE,
+  serves,
   TOOL_PLACEMENTS,
   type ToolId,
 } from './tool'
@@ -17,9 +18,7 @@ const TOOL_IDS: ToolId[] = [...new Set(TOOL_PLACEMENTS.map(placement => placemen
 function upperRightIn(workspace: WorkspaceId): ToolId[] {
   return TOOL_PLACEMENTS.filter(
     placement =>
-      placement.zone === 'right' &&
-      placement.slot === 'primary' &&
-      servesWorkspace(placement, workspace),
+      placement.zone === 'right' && placement.slot === 'primary' && serves(placement, workspace),
   ).map(placement => placement.id)
 }
 
@@ -27,7 +26,7 @@ describe('the placements of one tool', () => {
   it('never overlap — a workspace must not have to choose between two zones', () => {
     for (const id of TOOL_IDS) {
       for (const workspace of WORKSPACE_IDS) {
-        const serving = placementsOf(id).filter(placement => servesWorkspace(placement, workspace))
+        const serving = placementsOf(id).filter(placement => serves(placement, workspace))
         expect(serving.length).toBeLessThanOrEqual(1)
       }
     }
@@ -103,14 +102,41 @@ describe('every workspace', () => {
 
   it('is served by at least one panel', () => {
     for (const workspace of WORKSPACE_IDS) {
-      expect(TOOL_PLACEMENTS.some(placement => servesWorkspace(placement, workspace))).toBe(true)
+      expect(TOOL_PLACEMENTS.some(placement => serves(placement, workspace))).toBe(true)
     }
   })
 
   it('is named by the placements that claim it', () => {
+    const known: readonly string[] = [...WORKSPACE_IDS, HOME_SURFACE]
     for (const placement of TOOL_PLACEMENTS) {
-      for (const workspace of placement.workspaces) expect(WORKSPACE_IDS).toContain(workspace)
+      for (const surface of placement.surfaces) expect(known).toContain(surface)
     }
+  })
+})
+
+describe('the home', () => {
+  it('stands the Explorer in its left column, where a panel is reached from the rail', () => {
+    expect(placementIn('explorer', HOME_SURFACE)).toMatchObject({ zone: 'left', slot: 'primary' })
+  })
+
+  it('leaves the Explorer on the right in the six spaces, where the left column generates', () => {
+    for (const workspace of WORKSPACE_IDS) {
+      expect(placementIn('explorer', workspace)?.zone).toBe('right')
+    }
+  })
+
+  /**
+   * The rest act on an open document, and the home has none — the shell draws it no right rail
+   * and no bottom strip, so a placement reaching them would be an icon nothing can show.
+   */
+  it('offers the Explorer and nothing else', () => {
+    const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
+    expect(served.map(placement => placement.id)).toEqual(['explorer'])
+  })
+
+  it('is not a workspace: no document kind or workspace menu can name it', () => {
+    const surfaces: readonly string[] = WORKSPACE_IDS
+    expect(surfaces).not.toContain(HOME_SURFACE)
   })
 })
 
@@ -123,9 +149,13 @@ describe('a horizontal band', () => {
 })
 
 describe('the left column', () => {
-  it('holds the generation panels, and only them', () => {
-    const left = TOOL_PLACEMENTS.filter(placement => placement.zone === 'left')
-    expect(new Set(left.map(placement => placement.id))).toEqual(new Set(GENERATION_TOOLS))
+  it('holds the generation panels, and only them, in every workspace', () => {
+    for (const workspace of WORKSPACE_IDS) {
+      const left = TOOL_PLACEMENTS.filter(
+        placement => placement.zone === 'left' && serves(placement, workspace),
+      )
+      expect(new Set(left.map(placement => placement.id))).toEqual(new Set(GENERATION_TOOLS))
+    }
   })
 
   it('is the only place they sit, and the same place in every workspace', () => {

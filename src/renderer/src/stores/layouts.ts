@@ -2,6 +2,7 @@ import type { SerializedDockview } from 'dockview-react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
+import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
 import { useSettings } from './settings'
 
 /** Serialized Dockview layout. Its shape belongs to Dockview; we never read it back. */
@@ -96,4 +97,20 @@ export function useHomeVisible(): boolean {
   const home = useLayouts(state => state.home)
   const enabled = useSettings(state => state.settings.home.enabled)
   return home && enabled
+}
+
+/**
+ * Which surface the panels answer to. Every question about what may be open — the rails, the
+ * zones, the native menu — asks this rather than the workspace: the home carries panels of its
+ * own, and reading `activeWorkspace` there would offer the ones of the space behind it.
+ */
+export function toolSurface(): ToolSurface {
+  return homeIsVisible() ? HOME_SURFACE : useLayouts.getState().activeWorkspace
+}
+
+/** The same answer, subscribed. */
+export function useToolSurface(): ToolSurface {
+  const home = useHomeVisible()
+  const workspace = useLayouts(state => state.activeWorkspace)
+  return home ? HOME_SURFACE : workspace
 }

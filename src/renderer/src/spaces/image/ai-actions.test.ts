@@ -7,7 +7,8 @@ import { useCanvases } from '@/stores/canvases'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { useTools } from '@/stores/tools'
+import { arrangedFor } from '@/stores/tool-fixtures'
+import { arrangementOf, useTools } from '@/stores/tools'
 import { prepareEdit } from './ai-actions'
 
 const DOCUMENT = 'doc-1'
@@ -45,8 +46,8 @@ beforeEach(() => {
   uploaded = []
   installCanvas(DOCUMENT)
   useModels.setState({ selected: {}, preset: {} })
-  useTools.setState({ open: {}, focusedZone: null })
-  useLayouts.setState({ activeWorkspace: 'image' })
+  useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+  useLayouts.setState({ activeWorkspace: 'image', home: false })
   defaultModel('image', 'model_flux')
 })
 
@@ -133,7 +134,7 @@ describe('preparing an edit', () => {
     await expect(prepareEdit(DOCUMENT, 'regenerate', host, bridge)).resolves.toBe(false)
 
     expect(uploaded).toEqual([])
-    expect(useTools.getState().open.left?.primary).toBe('models')
+    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('models')
   })
 
   /**

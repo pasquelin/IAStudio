@@ -5,11 +5,11 @@ import { useTranslation } from 'react-i18next'
 import { Separator } from '@/design/Separator'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
-import { useLayouts } from '@/stores/layouts'
+import { useLayouts, useToolSurface } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
-import { useTools } from '@/stores/tools'
+import { arrangementOf, useTools } from '@/stores/tools'
 import { createDocumentIn } from './new-document'
-import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
+import { HOME_SURFACE, TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
 import {
   shownTool,
   toolTitleKey,
@@ -47,7 +47,7 @@ export function Rail({ side }: RailProps) {
       <div className="flex flex-col items-center gap-2">
         {side === 'left' && (
           <>
-            <NewDocumentButton />
+            <NewButton />
             <Separator orientation="horizontal" />
           </>
         )}
@@ -66,22 +66,32 @@ export function Rail({ side }: RailProps) {
  * Above the tool icons rather than in the Explorer header: it stays reachable when every panel
  * is closed. Disabled — not hidden — where no editor exists yet: a button that vanishes reads
  * as a display bug.
+ *
+ * It makes what the surface makes. A space makes documents; the home makes the project they
+ * need — and a document created from the home would land in the space behind it, out of sight
+ * of the screen that was asked.
  */
-function NewDocumentButton() {
+function NewButton() {
   const { t } = useTranslation()
+  const surface = useToolSurface()
   const workspace = useLayouts(state => state.activeWorkspace)
-  // A document is a file in a project folder: with no project open there is nowhere to write it,
-  // and the create would fail after the click rather than before it.
   const project = useProject(state => state.project)
+
+  const home = surface === HOME_SURFACE
 
   return (
     <ToolButton
       icon={mdiPlus}
       iconSize={22}
-      label={t('documents.new')}
+      label={home ? t('home.tools.newProject') : t('documents.new')}
       tooltip={TIP_RIGHT}
-      disabled={kindForWorkspace(workspace) === null || !project}
-      onClick={() => createDocumentIn(workspace)}
+      // A document is a file in a project folder: with no project open there is nowhere to write
+      // it, and the create would fail after the click rather than before it. A project needs no
+      // project, so on the home the button is never dead.
+      disabled={!home && (kindForWorkspace(workspace) === null || !project)}
+      onClick={() =>
+        home ? void useProject.getState().createPicked() : createDocumentIn(workspace)
+      }
       // Filled, unlike every tool icon around it: this one acts, the others only switch what is
       // shown. A grey plus among grey glyphs is a plus nobody finds.
       className="bg-create hover:bg-create-hover size-(--sc-rail-button) rounded-(--radius-sc-md) text-white hover:text-white disabled:bg-transparent disabled:text-current"
@@ -110,10 +120,10 @@ function RailGroup({ zone }: { zone: ToolZone }) {
   // Reading the store here rather than receiving props keeps a rail click from re-rendering
   // the Shell — and with it the Dockview host at the center.
   const focusedZone = useTools(state => state.focusedZone)
-  const workspace = useLayouts(state => state.activeWorkspace)
-  const open = useTools(state => state.open)
-  const hasModel = useHasModel(workspace)
-  const tools = useAvailableTools(zone, workspace)
+  const surface = useToolSurface()
+  const open = useTools(state => arrangementOf(state, surface).open)
+  const hasModel = useHasModel(surface)
+  const tools = useAvailableTools(zone, surface)
   // Actions are stable for the store's lifetime: subscribing to them would only add selectors
   // re-run on every write.
   const { show, close } = useTools.getState()
@@ -123,7 +133,7 @@ function RailGroup({ zone }: { zone: ToolZone }) {
       {halvesOf(tools).map(([slot, inSlot], index) => {
         // What the half draws, not what it stores: a panel standing in for one this section
         // puts elsewhere is up, and its icon has to read — and close — as up.
-        const up = shownTool(open[zone]?.[slot], zone, slot, workspace, hasModel)
+        const up = shownTool(open[zone]?.[slot], zone, slot, surface, hasModel)
 
         return (
           <Fragment key={`${zone}:${slot}`}>
@@ -141,7 +151,9 @@ function RailGroup({ zone }: { zone: ToolZone }) {
                   tooltip={TIP_RIGHT}
                   active={isOpen}
                   accented={isOpen && focusedZone === zone}
-                  onClick={() => (isOpen ? close(zone, slot) : show(zone, tool.id))}
+                  onClick={() =>
+                    isOpen ? close(surface, zone, slot) : show(surface, zone, tool.id)
+                  }
                   className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
                 />
               )

@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_OPEN, useTools } from '@/stores/tools'
+import { arrangedFor } from '@/stores/tool-fixtures'
+import { DEFAULT_ARRANGEMENTS, DEFAULT_OPEN, arrangementOf, useTools } from '@/stores/tools'
 import { useLayouts } from '@/stores/layouts'
 import { revealAssets } from './reveal-panel'
 
 beforeEach(() => {
-  useTools.setState({ open: {}, focusedZone: null })
-  useLayouts.setState({ activeWorkspace: 'image' })
+  useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+  useLayouts.setState({ activeWorkspace: 'image', home: false })
 })
 
 /**
@@ -17,8 +18,8 @@ describe('revealing the shelf', () => {
   it('opens it in the half this workspace puts it in', () => {
     revealAssets()
 
-    expect(useTools.getState().open.bottom?.primary).toBe('assets')
-    expect(useTools.getState().open.right).toBeUndefined()
+    expect(arrangementOf(useTools.getState(), 'image').open.bottom?.primary).toBe('assets')
+    expect(arrangementOf(useTools.getState(), 'image').open.right).toBeUndefined()
   })
 
   it('follows the workspace rather than a fixed corner', () => {
@@ -26,11 +27,13 @@ describe('revealing the shelf', () => {
 
     revealAssets()
 
-    expect(useTools.getState().open.right?.primary).toBe('assets')
+    expect(arrangementOf(useTools.getState(), 'image').open.right?.primary).toBe('assets')
   })
 
   it('focuses the band rather than reopening it when it is already there', () => {
-    useTools.setState({ open: { bottom: { primary: 'assets' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+    })
 
     revealAssets()
 
@@ -38,11 +41,11 @@ describe('revealing the shelf', () => {
   })
 
   it('leaves a default layout exactly as it found it', () => {
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
 
     revealAssets()
 
-    expect(useTools.getState().open).toEqual(DEFAULT_OPEN)
+    expect(arrangementOf(useTools.getState(), 'image').open).toEqual(DEFAULT_OPEN.workspaces)
     expect(useTools.getState().focusedZone).toBe('bottom')
   })
 })

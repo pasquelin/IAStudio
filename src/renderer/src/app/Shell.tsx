@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
 import { cn } from '@/helpers/cn'
 import { TooltipHost } from '@/design/TooltipHost'
-import { useHomeVisible, useLayouts } from '@/stores/layouts'
+import { useHomeVisible, useLayouts, useToolSurface } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
-import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
+import { arrangementOf, DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
 import { Breadcrumb } from './Breadcrumb'
@@ -57,33 +57,29 @@ export function Shell() {
         actions={<AccountSelect />}
       />
 
-      {home ? (
-        // No rails, no zones, no Dockview: the home is read across the whole window, and a
-        // dock around it would frame an entry point as though it were a panel.
-        <Panel className="mx-(--sc-gutter) mb-(--sc-gutter) min-h-0 min-w-0 flex-1">
-          <HomeView />
-        </Panel>
-      ) : (
-        <div className="flex min-h-0 flex-1">
-          <Rail side="left" />
+      {/* One frame for both surfaces. The zones the home does not have take themselves off: no
+          placement serves them there, so every `Edge` but the left column renders nothing. Only
+          the right rail has to be told — it is a strip of chassis whether or not it holds an
+          icon. The home swaps the centre for the page; no Dockview, which takes documents only. */}
+      <div className="flex min-h-0 flex-1">
+        <Rail side="left" />
 
-          {/* Handles occupy exactly the gutter: the space between two surfaces IS the resize
-              area, rather than decorative emptiness doubled by a handle. */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
-            <Edge zone="top" />
-            <div className="flex min-h-0 flex-1">
-              <Edge zone="left" />
-              <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
-                <DocumentArea />
-              </Panel>
-              <Edge zone="right" />
-            </div>
-            <Edge zone="bottom" />
+        {/* Handles occupy exactly the gutter: the space between two surfaces IS the resize
+            area, rather than decorative emptiness doubled by a handle. */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
+          <Edge zone="top" />
+          <div className="flex min-h-0 flex-1">
+            <Edge zone="left" />
+            <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
+              {home ? <HomeView /> : <DocumentArea />}
+            </Panel>
+            <Edge zone="right" />
           </div>
-
-          <Rail side="right" />
+          <Edge zone="bottom" />
         </div>
-      )}
+
+        {!home && <Rail side="right" />}
+      </div>
 
       <Footer
         left={<Breadcrumb />}
@@ -106,21 +102,28 @@ export function Shell() {
  * panels first; the opposite zones put the handle first, because they grow backwards.
  */
 function Edge({ zone }: { zone: ToolZone }) {
+  const surface = useToolSurface()
+
   // Stable across the whole drag, so the memoized panels skip a size change entirely.
   const focusZone = useCallback(() => useTools.getState().focus(zone), [zone])
-  const closePrimary = useCallback(() => useTools.getState().close(zone, 'primary'), [zone])
-  const closeSecondary = useCallback(() => useTools.getState().close(zone, 'secondary'), [zone])
+  const closePrimary = useCallback(
+    () => useTools.getState().close(surface, zone, 'primary'),
+    [surface, zone],
+  )
+  const closeSecondary = useCallback(
+    () => useTools.getState().close(surface, zone, 'secondary'),
+    [surface, zone],
+  )
 
-  const slots = useTools(state => state.open[zone])
-  const size = useTools(state => state.sizes[zone] ?? DEFAULT_SIZES[zone])
-  const split = useTools(state => state.splits[zone] ?? DEFAULT_SPLIT)
-  const workspace = useLayouts(state => state.activeWorkspace)
-  const hasModel = useHasModel(workspace)
+  const slots = useTools(state => arrangementOf(state, surface).open[zone])
+  const size = useTools(state => arrangementOf(state, surface).sizes[zone] ?? DEFAULT_SIZES[zone])
+  const split = useTools(state => arrangementOf(state, surface).splits[zone] ?? DEFAULT_SPLIT)
+  const hasModel = useHasModel(surface)
 
   // The stored value straight through: `undefined` is a closed half and `null` an unchosen one,
   // and collapsing the two would close every half nobody has clicked.
   const shown = (slot: ToolSlot): ToolId | null =>
-    shownTool(slots?.[slot], zone, slot, workspace, hasModel)
+    shownTool(slots?.[slot], zone, slot, surface, hasModel)
 
   const primary = shown('primary')
   const secondary = shown('secondary')
@@ -148,7 +151,7 @@ function Edge({ zone }: { zone: ToolZone }) {
           axis={lying ? 'horizontal' : 'vertical'}
           invert
           size={split}
-          onSize={(value, available) => resplit(zone, value, available)}
+          onSize={(value, available) => resplit(surface, zone, value, available)}
         />
       )}
 
@@ -170,7 +173,7 @@ function Edge({ zone }: { zone: ToolZone }) {
       axis={lying ? 'vertical' : 'horizontal'}
       invert={!isLeading(zone)}
       size={size}
-      onSize={(value, available) => resize(zone, value, available)}
+      onSize={(value, available) => resize(surface, zone, value, available)}
     />
   )
 

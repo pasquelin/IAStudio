@@ -14,14 +14,16 @@ import {
 } from '@mdi/js'
 import { useMemo } from 'react'
 import {
+  HOME_SURFACE,
   placementIn,
-  servesWorkspace,
+  serves,
   TOOL_PLACEMENTS,
   type ToolId,
   type ToolSlot,
+  type ToolSurface,
   type ToolZone,
 } from '@shared/domain/tool'
-import type { WorkspaceId } from '@shared/domain/workspace'
+import type { ModelFamily } from '@shared/domain/model'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
@@ -32,7 +34,7 @@ export type Tool = {
   icon: string
   zone: ToolZone
   slot: ToolSlot
-  workspaces: readonly WorkspaceId[]
+  surfaces: readonly ToolSurface[]
 }
 
 const ICONS: Record<ToolId, string> = {
@@ -75,12 +77,12 @@ const BY_ZONE = TOOLS.reduce<Record<ToolZone, Tool[]>>(
 )
 
 /**
- * The tools of a zone that the workspace actually has. A layer stack means nothing in the audio
+ * The tools of a zone that the surface actually has. A layer stack means nothing in the audio
  * space: its icon has no business sitting in that rail, and its panel none being restored there
  * by a layout arranged elsewhere.
  */
-export function toolsInZone(zone: ToolZone, workspace: WorkspaceId): Tool[] {
-  return BY_ZONE[zone].filter(tool => servesWorkspace(tool, workspace))
+export function toolsInZone(zone: ToolZone, surface: ToolSurface): Tool[] {
+  return BY_ZONE[zone].filter(tool => serves(tool, surface))
 }
 
 /** i18n key of a tool's title — never the displayed text. */
@@ -88,16 +90,23 @@ export function toolTitleKey(id: ToolId): string {
   return `panels.${id}`
 }
 
+/** What a surface generates into. The home generates nothing: it opens documents, it makes none. */
+function familyOf(surface: ToolSurface): ModelFamily | null {
+  return surface === HOME_SURFACE ? null : workspaceById(surface).family
+}
+
 /**
- * Whether this section has a model to generate with — one chosen in the Models panel, or one
+ * Whether this surface has a model to generate with — one chosen in the Models panel, or one
  * preferred in the settings, which is what that preference is for.
  *
  * This is the single placement rule the shared registry cannot answer: it depends on state, and
  * `shared/` holds no runtime dependency. Hence a layer here, above the registry rather than in
  * it.
  */
-export function hasModelFor(workspace: WorkspaceId): boolean {
-  const { family } = workspaceById(workspace)
+export function hasModelFor(surface: ToolSurface): boolean {
+  const family = familyOf(surface)
+  if (!family) return false
+
   const { selected } = useModels.getState()
   const { defaultModels } = useSettings.getState().settings.generation
   return Boolean(selected[family] ?? defaultModels[family])
@@ -117,10 +126,12 @@ function canOffer(id: ToolId, hasModel: boolean): boolean {
  * picked, and `hasModelFor` alone would leave the generator's icon out until something else
  * happened to re-render.
  */
-export function useHasModel(workspace: WorkspaceId): boolean {
-  const { family } = workspaceById(workspace)
-  const chosen = useModels(state => state.selected[family])
-  const preferred = useSettings(state => state.settings.generation.defaultModels[family])
+export function useHasModel(surface: ToolSurface): boolean {
+  const family = familyOf(surface)
+  const chosen = useModels(state => (family ? state.selected[family] : undefined))
+  const preferred = useSettings(state =>
+    family ? state.settings.generation.defaultModels[family] : undefined,
+  )
   return Boolean(chosen ?? preferred)
 }
 
@@ -148,30 +159,30 @@ export function shownTool(
   tool: ToolId | null | undefined,
   zone: ToolZone,
   slot: ToolSlot,
-  workspace: WorkspaceId,
+  surface: ToolSurface,
   hasModel: boolean,
 ): ToolId | null {
   if (tool === undefined) return null
-  if (tool === null) return firstToolIn(zone, slot, workspace, hasModel)
+  if (tool === null) return firstToolIn(zone, slot, surface, hasModel)
 
   // Zone AND half: a stored id that names neither is not this half's business, whether it
   // belongs to the other column, the other half, or to a band no placement ever cuts.
-  const placement = placementIn(tool, workspace)
+  const placement = placementIn(tool, surface)
   if (placement?.zone === zone && placement.slot === slot) {
     return canOffer(tool, hasModel) ? tool : 'models'
   }
 
-  return firstToolIn(zone, slot, workspace, hasModel)
+  return firstToolIn(zone, slot, surface, hasModel)
 }
 
 /** The panel a section puts first in a half — what an unchosen half shows, and the fallback. */
 function firstToolIn(
   zone: ToolZone,
   slot: ToolSlot,
-  workspace: WorkspaceId,
+  surface: ToolSurface,
   hasModel: boolean,
 ): ToolId | null {
-  const first = toolsInZone(zone, workspace).find(
+  const first = toolsInZone(zone, surface).find(
     candidate => candidate.slot === slot && canOffer(candidate.id, hasModel),
   )
   return first ? first.id : null
@@ -181,9 +192,9 @@ function firstToolIn(
  * Every panel this section can currently open, across all zones. What the native menu is told,
  * since it lives in the main process and cannot ask a store.
  */
-export function availableToolIds(workspace: WorkspaceId): ToolId[] {
-  const hasModel = hasModelFor(workspace)
-  return TOOLS.filter(tool => servesWorkspace(tool, workspace) && canOffer(tool.id, hasModel)).map(
+export function availableToolIds(surface: ToolSurface): ToolId[] {
+  const hasModel = hasModelFor(surface)
+  return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, hasModel)).map(
     tool => tool.id,
   )
 }
@@ -193,11 +204,11 @@ export function availableToolIds(workspace: WorkspaceId): ToolId[] {
  * impossible, so the generator is not merely disabled there — it is absent, and the rail shows
  * what the section can do rather than what it cannot.
  */
-export function useAvailableTools(zone: ToolZone, workspace: WorkspaceId): Tool[] {
-  const hasModel = useHasModel(workspace)
+export function useAvailableTools(zone: ToolZone, surface: ToolSurface): Tool[] {
+  const hasModel = useHasModel(surface)
 
   return useMemo(
-    () => toolsInZone(zone, workspace).filter(tool => canOffer(tool.id, hasModel)),
-    [zone, workspace, hasModel],
+    () => toolsInZone(zone, surface).filter(tool => canOffer(tool.id, hasModel)),
+    [zone, surface, hasModel],
   )
 }

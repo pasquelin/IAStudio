@@ -11,8 +11,10 @@ import { useJobs } from '@/stores/jobs'
 import { useModels } from '@/stores/models'
 import { installSequence } from '@/stores/sequence-fixtures'
 import { sequenceOf, useSequences } from '@/stores/sequences'
+import { useLayouts } from '@/stores/layouts'
 import { useSelection } from '@/stores/selection'
-import { useTools } from '@/stores/tools'
+import { arrangedFor } from '@/stores/tool-fixtures'
+import { arrangementOf, useTools } from '@/stores/tools'
 import { Inspector } from './Inspector'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
@@ -42,6 +44,7 @@ function openSequence(): void {
 
 describe('Inspector, on what a panel selected', () => {
   beforeEach(() => {
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
     useSelection.setState({ selection: { kind: 'none' } })
     useAssets.setState({ items: [asset()] })
     useJobs.setState({ jobs: [], bodies: {} })
@@ -92,7 +95,7 @@ describe('Inspector, on what a panel selected', () => {
     useAssets.setState({ items: [asset({ jobId: 'job-1' })] })
     useJobs.setState({ jobs: [job], bodies: { 'job-1': { prompt: 'x', guidance: 7 } } })
     useSelection.getState().selectAssets(['asset-1'])
-    useTools.setState({ open: {} })
+    useTools.setState({ arrangements: arrangedFor('image', { open: {} }) })
     render(<Inspector />)
 
     await userEvent.click(screen.getByRole('button', { name: /Régénérer/ }))
@@ -100,7 +103,7 @@ describe('Inspector, on what a panel selected', () => {
     const models = useModels.getState()
     expect(models.selected.image).toBe('eleven-music-v2')
     expect(models.preset.image).toEqual({ prompt: 'x', guidance: 7 })
-    expect(useTools.getState().open.left?.primary).toBe('generator')
+    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('generator')
   })
 
   it('reads out the clip the montage has selected', () => {

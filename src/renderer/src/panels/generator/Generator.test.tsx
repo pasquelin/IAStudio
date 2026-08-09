@@ -9,6 +9,7 @@ import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { connectPreparation } from '@/stores/preparation'
 import { useSettings } from '@/stores/settings'
+import { arrangedFor } from '@/stores/tool-fixtures'
 import { useTools } from '@/stores/tools'
 import { prepareEdit } from '@/spaces/image/ai-actions'
 import panelSource from './Generator.tsx?raw'
@@ -68,7 +69,7 @@ describe('Generator', () => {
     installCanvas(DOCUMENT)
     useSettings.setState({ auth: { authenticated: true } })
     useModels.setState({ selected: {}, preset: {}, prepared: null })
-    useTools.setState({ open: {}, focusedZone: null })
+    useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
     defaultModels({ image: 'model_flux', upscale: 'model_big' })
 

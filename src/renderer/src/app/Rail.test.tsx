@@ -6,7 +6,8 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
-import { DEFAULT_OPEN, useTools } from '@/stores/tools'
+import { arrangedFor } from '@/stores/tool-fixtures'
+import { DEFAULT_ARRANGEMENTS, arrangementOf, useTools } from '@/stores/tools'
 import { Rail } from './Rail'
 
 const openDocument = vi.fn()
@@ -17,7 +18,7 @@ describe('Rail', () => {
     vi.clearAllMocks()
     installFakeBridge()
     useDocuments.setState({ documents: {} })
-    useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
+    useLayouts.setState({ activeWorkspace: '3d', home: false, layouts: {} })
     useModels.setState({ selected: {} })
     const stamp = '2026-08-07T10:00:00.000Z'
     useProject.setState({
@@ -51,6 +52,37 @@ describe('Rail', () => {
   it('carries no new-document button on the right rail', () => {
     render(<Rail side="right" />)
     expect(screen.queryByRole('button', { name: 'Nouveau document' })).not.toBeInTheDocument()
+  })
+
+  /**
+   * The button makes what the surface makes. On the home a document would land in the space
+   * behind it, out of sight of the screen that was asked — and the project is what the studio
+   * needs first anyway, which is why the button must not be dead there.
+   */
+  describe('on the home', () => {
+    beforeEach(() => {
+      useLayouts.setState({ home: true })
+    })
+
+    it('offers a new project instead of a new document', () => {
+      render(<Rail side="left" />)
+
+      expect(screen.getByRole('button', { name: 'Nouveau projet' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Nouveau document' })).not.toBeInTheDocument()
+    })
+
+    it('stays clickable with no project open — creating one needs no project', async () => {
+      useProject.setState({ project: null })
+      const createPicked = vi.fn(() => Promise.resolve())
+      useProject.setState({ createPicked })
+      render(<Rail side="left" />)
+
+      const button = screen.getByRole('button', { name: 'Nouveau projet' })
+      expect(button).not.toBeDisabled()
+
+      await userEvent.click(button)
+      expect(createPicked).toHaveBeenCalled()
+    })
   })
 
   // Generating without a model is impossible, so the icon is absent rather than dead: the rail
@@ -108,7 +140,7 @@ describe('Rail', () => {
   // the section declares — the layers in Image, never the explorer under them.
   it('marks the section-first panel as up on the default layout', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     render(<Rail side="right" />)
 
     expect(screen.getByRole('button', { name: 'Calques' })).toHaveAttribute('aria-pressed', 'true')
@@ -122,13 +154,15 @@ describe('Rail', () => {
   // that reads as up — and a click on it closes the half instead of merely restating it.
   it('accents the icon of the panel the half actually shows', async () => {
     useLayouts.setState({ activeWorkspace: 'video' })
-    useTools.setState({ open: { bottom: { primary: 'assets' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+    })
     render(<Rail side="left" />)
 
     const montage = screen.getByRole('button', { name: 'Timeline' })
     expect(montage).toHaveAttribute('aria-pressed', 'true')
 
     await userEvent.click(montage)
-    expect(useTools.getState().open.bottom?.primary).toBeUndefined()
+    expect(arrangementOf(useTools.getState(), 'image').open.bottom?.primary).toBeUndefined()
   })
 })

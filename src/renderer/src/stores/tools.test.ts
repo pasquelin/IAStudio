@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { arrangedFor } from './tool-fixtures'
+import { HOME_SURFACE } from '@shared/domain/tool'
 import {
+  arrangementOf,
+  DEFAULT_ARRANGEMENTS,
   DEFAULT_OPEN,
+  DEFAULT_SIZES,
+  migrateTools,
   fitZoneSize,
   fitSplit,
   MIN_CENTER,
@@ -37,78 +43,180 @@ describe('fitZoneSize', () => {
 
 describe('tools store', () => {
   beforeEach(() => {
-    useTools.setState({ open: {}, sizes: {}, splits: {}, focusedZone: null })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: {}, sizes: {}, splits: {} }),
+      focusedZone: null,
+    })
   })
 
   it('clamps the stored size on resize', () => {
-    useTools.setState({ open: { bottom: { primary: 'assets' } } })
-    useTools.getState().resize('bottom', 900, 800)
-    expect(useTools.getState().sizes.bottom).toBe(800 - MIN_CENTER)
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+    })
+    useTools.getState().resize('image', 'bottom', 900, 800)
+    expect(arrangementOf(useTools.getState(), 'image').sizes.bottom).toBe(800 - MIN_CENTER)
   })
 
   it('keeps the center alive when both sides are dragged wide', () => {
     useTools.setState({
-      open: { left: { primary: 'generator' }, right: { primary: 'explorer' } },
+      arrangements: arrangedFor('image', {
+        open: { left: { primary: 'generator' }, right: { primary: 'explorer' } },
+      }),
     })
     const { resize } = useTools.getState()
-    resize('left', 900, 1000)
-    resize('right', 900, 1000)
+    resize('image', 'left', 900, 1000)
+    resize('image', 'right', 900, 1000)
 
-    const { sizes } = useTools.getState()
+    const { sizes } = arrangementOf(useTools.getState(), 'image')
     expect((sizes.left ?? 0) + (sizes.right ?? 0)).toBeLessThanOrEqual(1000 - MIN_CENTER)
   })
 
   it('re-clamps every zone when the window shrinks', () => {
-    useTools.setState({ open: { left: { primary: 'models' } }, sizes: { left: 600 } })
+    useTools.setState({
+      arrangements: arrangedFor('image', {
+        open: { left: { primary: 'models' } },
+        sizes: { left: 600 },
+      }),
+    })
     useTools.getState().fit(800, 600)
-    expect(useTools.getState().sizes.left).toBe(800 - MIN_CENTER)
+    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(800 - MIN_CENTER)
   })
 
   it('opens a tool in the half its placement declares', () => {
-    useTools.getState().show('right', 'layers')
-    expect(useTools.getState().open.right).toEqual({ primary: 'layers' })
+    useTools.getState().show('image', 'right', 'layers')
+    expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({ primary: 'layers' })
   })
 
   it('leaves the other half alone, so both show at once', () => {
     const { show } = useTools.getState()
-    show('right', 'inspector')
-    show('right', 'layers')
+    show('image', 'right', 'inspector')
+    show('image', 'right', 'layers')
 
-    expect(useTools.getState().open.right).toEqual({ primary: 'layers', secondary: 'inspector' })
+    expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+      primary: 'layers',
+      secondary: 'inspector',
+    })
   })
 
   it('swaps within a half rather than stacking, when two tools share it', () => {
     const { show } = useTools.getState()
-    show('left', 'generator')
-    show('left', 'models')
+    show('image', 'left', 'generator')
+    show('image', 'left', 'models')
 
-    expect(useTools.getState().open.left).toEqual({ primary: 'models' })
+    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: 'models' })
   })
 
   it('empties the half it is asked to close', () => {
-    useTools.setState({ open: { bottom: { primary: 'assets' } } })
-    useTools.getState().close('bottom', 'primary')
-    expect(useTools.getState().open.bottom?.primary).toBeUndefined()
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+    })
+    useTools.getState().close('image', 'bottom', 'primary')
+    expect(arrangementOf(useTools.getState(), 'image').open.bottom?.primary).toBeUndefined()
   })
 
   it('drops focus only once both halves are empty', () => {
     useTools.setState({
-      open: { right: { primary: 'layers', secondary: 'inspector' } },
+      arrangements: arrangedFor('image', {
+        open: { right: { primary: 'layers', secondary: 'inspector' } },
+      }),
       focusedZone: 'right',
     })
     const { close } = useTools.getState()
 
-    close('right', 'secondary')
+    close('image', 'right', 'secondary')
     expect(useTools.getState().focusedZone).toBe('right')
 
-    close('right', 'primary')
+    close('image', 'right', 'primary')
     expect(useTools.getState().focusedZone).toBeNull()
   })
 
   it('clamps the divider between the two halves', () => {
-    useTools.setState({ open: { right: { primary: 'layers', secondary: 'inspector' } } })
-    useTools.getState().resplit('right', 900, 400)
-    expect(useTools.getState().splits.right).toBe(400 - MIN_SPLIT)
+    useTools.setState({
+      arrangements: arrangedFor('image', {
+        open: { right: { primary: 'layers', secondary: 'inspector' } },
+      }),
+    })
+    useTools.getState().resplit('image', 'right', 900, 400)
+    expect(arrangementOf(useTools.getState(), 'image').splits.right).toBe(400 - MIN_SPLIT)
+  })
+})
+
+/**
+ * The home and the six spaces both use the left column — for the Explorer and for generation.
+ * They never share the screen, so they must not share the column: every one of these was a real
+ * defect before the arrangement was split per family, and each is a gesture on one surface
+ * silently rewriting the other.
+ */
+describe('the home and the workspaces arrange their zones apart', () => {
+  beforeEach(() => {
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS, focusedZone: null })
+  })
+
+  it('does not close the generation column when the Explorer is closed on the home', () => {
+    useTools.getState().close(HOME_SURFACE, 'left', 'primary')
+
+    expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left?.primary).toBeUndefined()
+    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: null })
+  })
+
+  // The one that lost a setting: the space kept `generator`, the home wrote `explorer` over it,
+  // and `shownTool` then fell back to the Models panel for good.
+  it('does not overwrite the panel a space named in the same column', () => {
+    useTools.getState().show('image', 'left', 'generator')
+    useTools.getState().show(HOME_SURFACE, 'left', 'explorer')
+
+    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: 'generator' })
+    expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
+      primary: 'explorer',
+    })
+  })
+
+  // The generator renders a model's own form; 320 is its width for that reason. A file tree
+  // narrowed on the home has no business taking it with it.
+  it('keeps the width of one column out of the other', () => {
+    useTools.getState().resize(HOME_SURFACE, 'left', 170, 1000)
+
+    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(170)
+    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBeUndefined()
+  })
+
+  /**
+   * The home draws no right column, so nothing on the right may bound the left one's drag —
+   * while in a space the same drag still has to leave the right column and the document room.
+   */
+  it('does not bound the home column against a right column it never draws', () => {
+    useTools.getState().resize(HOME_SURFACE, 'left', 700, 1000)
+    useTools.getState().resize('image', 'left', 700, 1000)
+
+    const home = arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left ?? 0
+    const workspaces = arrangementOf(useTools.getState(), 'image').sizes.left ?? 0
+
+    expect(home).toBe(700)
+    expect(workspaces).toBe(1000 - DEFAULT_SIZES.right - MIN_CENTER)
+  })
+
+  it('re-clamps both families when the window shrinks', () => {
+    useTools.getState().resize(HOME_SURFACE, 'left', 700, 1000)
+    useTools.getState().resize('image', 'left', 600, 1400)
+
+    useTools.getState().fit(600, 600)
+
+    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(600 - MIN_CENTER)
+    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(MIN_SIZE)
+  })
+})
+
+describe('migrating to the split arrangement', () => {
+  // Everything version 8 stored was the workspaces': the home had no zones of its own to arrange.
+  it('reads a version 8 layout as the workspaces, and starts the home on its default', () => {
+    const migrated = migrateTools(
+      { open: { right: { primary: 'layers' } }, sizes: { left: 400 } },
+      8,
+    )
+
+    expect(migrated?.arrangements.workspaces.open.right).toEqual({ primary: 'layers' })
+    expect(migrated?.arrangements.workspaces.sizes).toEqual({ left: 400 })
+    expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
   })
 })
 
@@ -126,13 +234,15 @@ describe('the default layout', () => {
   // What "Reset layout" in the native menu restores. It names no panel at all: naming one would
   // pick a section's answer — the layers, the shelf, the sky — and impose it on the other five.
   it('names which halves are open, and no panel in any of them', () => {
-    for (const slots of Object.values(DEFAULT_OPEN)) {
-      for (const tool of Object.values(slots)) expect(tool).toBeNull()
+    for (const family of Object.values(DEFAULT_OPEN)) {
+      for (const slots of Object.values(family)) {
+        for (const tool of Object.values(slots)) expect(tool).toBeNull()
+      }
     }
   })
 
   it('survives a round trip through the persisted shape', () => {
-    expect(openFrom(DEFAULT_OPEN)).toEqual(DEFAULT_OPEN)
+    expect(openFrom(DEFAULT_OPEN.workspaces)).toEqual(DEFAULT_OPEN.workspaces)
   })
 
   // Every half named a panel up to version 7, the default included. Kept as a choice, an Image
@@ -193,6 +303,19 @@ describe('openFrom', () => {
     expect(open.bottom).toEqual({ primary: 'assets' })
   })
 
+  /**
+   * The Explorer stands in the left column on the home and in the right one in the six spaces.
+   * Propagating that first placement would hand the spaces' left column — which is generation,
+   * and only generation — to a panel the user opened somewhere they cannot see it from.
+   */
+  it('does not let the home placement of a tool claim a workspace zone', () => {
+    const open = openFrom({ right: { primary: 'explorer' } })
+
+    expect(open.right).toEqual({ primary: 'explorer' })
+    // Not merely closed: absent. A zone the rebuild names at all keeps its size and its handle.
+    expect(open.left).toBeUndefined()
+  })
+
   // The shelf claims the upper right and the band both; the column was only left on its default.
   // An explicit choice outranks a default, whichever of the two the rebuild reads first.
   it('lets a named panel win a half left on its default', () => {
@@ -232,6 +355,6 @@ describe('openFrom', () => {
   })
 
   it('falls back to the defaults when there is nothing to read', () => {
-    expect(openFrom(null)).toBe(DEFAULT_OPEN)
+    expect(openFrom(null)).toBe(DEFAULT_OPEN.workspaces)
   })
 })

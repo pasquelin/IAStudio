@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
-import { DEFAULT_OPEN, useTools, type OpenByZone } from '@/stores/tools'
+import { arrangedFor } from '@/stores/tool-fixtures'
+import { DEFAULT_ARRANGEMENTS, DEFAULT_OPEN, useTools, type OpenByZone } from '@/stores/tools'
 import { Shell } from './Shell'
 
 vi.mock('./DocumentArea', () => ({ DocumentArea: () => null }))
@@ -32,7 +33,7 @@ beforeEach(() => {
   // Every test below is about the docks, which the home covers entirely — see the last block,
   // which is the one that exercises it.
   useLayouts.setState({ activeWorkspace: 'image', layouts: {}, home: false })
-  useTools.setState({ open: {}, sizes: {}, splits: {} })
+  useTools.setState({ arrangements: arrangedFor('image', { open: {}, sizes: {}, splits: {} }) })
   // The store is shared across files: one test turns the home off, and every later one would
   // inherit a studio whose entry point does not exist.
   useSettings.setState(state => ({
@@ -42,7 +43,9 @@ beforeEach(() => {
 
 describe('a horizontal band', () => {
   it('is one surface: the shelf and the zone handle, nothing else', () => {
-    useTools.setState({ open: { bottom: { primary: 'assets' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+    })
     renderShell()
 
     expect(screen.getByLabelText('Assets')).toBeInTheDocument()
@@ -52,7 +55,9 @@ describe('a horizontal band', () => {
   // No placement declares a second half in a band, but a layout written by an older version
   // can still hold one. It must not draw a panel there.
   it('shows nothing in a second half a stored layout still asks for', () => {
-    useTools.setState({ open: { bottom: { secondary: 'assets' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottom: { secondary: 'assets' } } }),
+    })
     renderShell()
 
     expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
@@ -61,7 +66,11 @@ describe('a horizontal band', () => {
   // The divider is what would leave two panels too narrow to be either — and drawn from a
   // state nothing writes any more, nothing puts it back.
   it('draws no divider inside itself, whatever the stored layout holds', () => {
-    useTools.setState({ open: { bottom: { primary: 'assets', secondary: 'assets' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', {
+        open: { bottom: { primary: 'assets', secondary: 'assets' } },
+      }),
+    })
     renderShell()
 
     expect(screen.getAllByLabelText('Assets')).toHaveLength(1)
@@ -73,7 +82,7 @@ describe('a horizontal band', () => {
 // all six sections; each reads its own first panel into every half.
 describe('the default layout', () => {
   it('opens Image on the layers, the inspector and the shelf', () => {
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
@@ -84,7 +93,7 @@ describe('the default layout', () => {
 
   it('opens Video on the montage and the shelf beside it', () => {
     useLayouts.setState({ activeWorkspace: 'video' })
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.getByLabelText('Timeline')).toBeInTheDocument()
@@ -93,7 +102,7 @@ describe('the default layout', () => {
 
   it('opens Skyboxes on the sky controls', () => {
     useLayouts.setState({ activeWorkspace: 'skyboxes' })
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.getByLabelText('Skybox')).toBeInTheDocument()
@@ -105,13 +114,13 @@ describe('the default layout', () => {
 describe('the Video layout', () => {
   // One stored layout, read by two sections: the halves keep their place, their contents follow.
   const SHELF_IN_COLUMN: OpenByZone = {
-    ...DEFAULT_OPEN,
+    ...DEFAULT_OPEN.workspaces,
     right: { primary: 'assets', secondary: 'inspector' },
   }
 
   it('puts the montage in the band and the shelf in the right column', () => {
     useLayouts.setState({ activeWorkspace: 'video' })
-    useTools.setState({ open: SHELF_IN_COLUMN })
+    useTools.setState({ arrangements: arrangedFor('image', { open: SHELF_IN_COLUMN }) })
     renderShell()
 
     expect(screen.getByLabelText('Timeline')).toBeInTheDocument()
@@ -120,7 +129,7 @@ describe('the Video layout', () => {
 
   it('gives the same halves the panels Image puts there', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
-    useTools.setState({ open: SHELF_IN_COLUMN })
+    useTools.setState({ arrangements: arrangedFor('image', { open: SHELF_IN_COLUMN }) })
     renderShell()
 
     expect(screen.getByLabelText('Assets')).toBeInTheDocument()
@@ -133,7 +142,11 @@ describe('a side column', () => {
   // The cut a band refuses is exactly what a column is for: two panels stacked, and a divider
   // to share the height between them.
   it('keeps both halves and the divider between them', () => {
-    useTools.setState({ open: { right: { primary: 'layers', secondary: 'inspector' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', {
+        open: { right: { primary: 'layers', secondary: 'inspector' } },
+      }),
+    })
     renderShell()
 
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
@@ -144,7 +157,9 @@ describe('a side column', () => {
   // The left column holds one panel, whichever of the two generation panels it is: no divider
   // to drag, and no half to leave empty.
   it('draws no divider in the left column, which is never cut', () => {
-    useTools.setState({ open: { left: { primary: 'models' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { left: { primary: 'models' } } }),
+    })
     renderShell()
 
     expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
@@ -153,14 +168,33 @@ describe('a side column', () => {
 })
 
 describe('the home', () => {
-  it('covers the docks entirely: no rail, no zone, no divider', () => {
+  /**
+   * The panels of the right column and the bottom strip all act on an open document, and the
+   * home has none: their zones are not drawn, so neither are their rails.
+   */
+  it('leaves out every zone but the left column', () => {
     useLayouts.setState({ home: true })
-    useTools.setState({ open: DEFAULT_OPEN })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
-    expect(handles()).toHaveLength(0)
+    // One divider: the left column's. The zones that would carry the others are absent.
+    expect(handles()).toHaveLength(1)
+  })
+
+  /**
+   * The Explorer is a panel, and it opens where panels open — under an icon in the left rail,
+   * in a tool window that closes and reopens like the others. The home puts it there because
+   * its own left column is free: the six spaces reserve theirs for generation.
+   */
+  it('stands the Explorer in the left column, reachable from the rail', () => {
+    useLayouts.setState({ home: true })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+    renderShell()
+
+    expect(screen.getByLabelText('Explorateur')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Modèles')).not.toBeInTheDocument()
   })
 
   // The status line is the studio's global view — jobs, activity, updates — and the home is
@@ -174,7 +208,9 @@ describe('the home', () => {
 
   it('gives back the workspace and its panels when it is left', () => {
     useLayouts.setState({ home: true })
-    useTools.setState({ open: { right: { primary: 'layers' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { right: { primary: 'layers' } } }),
+    })
     const { rerender } = renderShell()
 
     useLayouts.setState({ home: false })
@@ -192,7 +228,9 @@ describe('the home', () => {
       settings: { ...state.settings, home: { ...state.settings.home, enabled: false } },
     }))
     useLayouts.setState({ home: true })
-    useTools.setState({ open: { right: { primary: 'layers' } } })
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { right: { primary: 'layers' } } }),
+    })
     renderShell()
 
     expect(screen.queryByRole('button', { name: 'Accueil' })).not.toBeInTheDocument()
