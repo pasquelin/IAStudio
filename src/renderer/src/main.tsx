@@ -8,7 +8,6 @@ import { Application } from '@/app/Application'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Failure } from '@/design/Failure'
 import { initI18n } from '@/i18n'
-import { SettingsWindow } from '@/settings/SettingsWindow'
 import './index.css'
 
 const root = document.getElementById('root')
@@ -20,12 +19,11 @@ if (!root) throw new Error('Root element not found in index.html')
 // `useAppliedSettings` corrects it as soon as they land.
 await initI18n(resolveLanguage(navigator.language))
 
-/**
- * Every application window loads the same bundle and reads the route from the fragment: the
- * i18n bootstrap, the tokens and the bridge are shared, and navigation is locked, so the
- * fragment is only ever what the main process loaded. The splash is the one exception — it
- * has its own entry precisely so it never pulls this bundle in.
- */
+/** Same reason as the licences below, for another window's folder: registry, sections, draft. */
+const SettingsWindow = lazy(async () => ({
+  default: (await import('@/settings/SettingsWindow')).SettingsWindow,
+}))
+
 /**
  * The whole notice — every shipped licence, in full — is fifty kilobytes nobody reads in a
  * usual session, and a static import puts it in the chunk the splash waits for.
@@ -39,8 +37,20 @@ const UsageWindow = lazy(async () => ({
   default: (await import('@/usage/UsageWindow')).UsageWindow,
 }))
 
+/**
+ * Every application window loads the same bundle and reads the route from the fragment: the
+ * i18n bootstrap, the tokens and the bridge are shared, and navigation is locked, so the
+ * fragment is only ever what the main process loaded. The splash is the one exception — it
+ * has its own entry precisely so it never pulls this bundle in.
+ */
 function Route({ hash }: { hash: string }) {
-  if (isSettingsRoute(hash)) return <SettingsWindow />
+  if (isSettingsRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <SettingsWindow />
+      </Suspense>
+    )
+  }
   if (isLicencesRoute(hash)) {
     return (
       <Suspense fallback={null}>
