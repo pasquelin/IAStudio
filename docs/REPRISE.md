@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`53e1b34`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline 53e1b34..develop`) au lieu de relire mille lignes.
+à **`d8fff21`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline d8fff21..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -46,7 +46,8 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > Textures**, plus leur **panneau Styles** (`feat/textures-derive`, `feat/textures-tiling`,
 > `feat/styles-textures`) · les **index du catalogue** et l’abandon d’une recherche
 > (`feat/catalog-index`) · le **BVH qui dit ses pannes et l’ombre qui s’arrête aux nœuds**
-> (`feat/scene-bvh`) · le **formulaire de génération traduit** sans rien écrire par modèle
+> (`feat/scene-bvh`) · les **quatre vues du skybox**, dont trois n’étaient que des boutons, et son
+> état vide qui ne se lisait pas (`feat/skybox-vues`) · le **formulaire de génération traduit** sans rien écrire par modèle
 > (`feat/i18n-schema-api`) et le **rapport d’usage** avec lui (`feat/i18n-usage`) · le prix d’une
 > génération, avant et après
 > (`feat/workflows`) · six passes i18n et les trois gardes de texte en dur (`feat/i18n-*`) · le
@@ -895,24 +896,31 @@ pré-filtre serveur : garder trois modèles sur six cents en marchant le catalog
 huit allers-retours pour remplir un écran. **`skybox-upscale` ne porte pas ce tag** et reste avec les
 images, ce qui est correct : un agrandisseur ne produit pas le document de l’espace.
 
-**Ce qu’il reste, dans l’ordre du coût croissant :**
+**Ce qu’il reste — un seul point, et le plus gros obstacle vient de tomber :**
 
-0. **L’état vide est illisible**, vu à l’écran le 9 août. `SkyboxDocument.tsx:102` le pose bien
-**au-dessus** du canvas — l’ordre du DOM est correct, ce n’est pas un problème d’empilement — mais
-il n’a aucune plaque de fond, et derrière lui la scène n’est pas vide : le sol gris, les sondes et
-les sphères de test. Un `text-muted` sur ce fond bariolé ne se lit pas, et c’est la seule phrase qui
-dise quoi faire dans cet espace. Deux remèdes : une plaque sous le texte, ou ne pas peupler la scène
-tant qu’aucune source n’est posée.
+1. **L’export n’existe pas, mais sa moitié difficile est écrite.** `CUBE_FACES`, `FACE_LABELS`
+   (`Rt`/`Lf`/`Up`…, ce que les moteurs attendent), `CROSS_CELLS`, `FACE_SIZES`, `isCubeFace`
+   attendaient dans `shared/domain/skybox.ts` depuis le début ; `feat/skybox-vues` (`21ab75b`) les
+   a **branchés** en écrivant les trois vues à plat. Ce qui reste à faire est donc un **écrivain**,
+   pas une passe shader : le mode `single` de `projection-shader.ts` rend déjà une face seule
+   remplissant le cadre, ce qui est exactement ce qu’un export en six fichiers demande.
 
-1. **Trois vues sur quatre sont des boutons morts.** `SKYBOX_VIEWS` en déclare quatre ; le renderer
-   n’expose aucun `setView`, et le state de `SkyboxDocument.tsx` ne pilote que la couleur du bouton :
-   `equirect`, `cross` et `faces` ne dessinent rien. Arbitrage à rendre : implémenter les
-   projections, ou retirer le contrôle — un bouton qui ment vaut moins qu’un bouton absent.
-2. **L’export n’existe pas, et son vocabulaire attend depuis le début.** `CUBE_FACES`, `FACE_LABELS`
-   (`Rt`/`Lf`/`Up`…, ce que les moteurs attendent), `CROSS_CELLS`, `FACE_SIZES`, `isCubeFace` sont
-   écrits et testés dans `shared/domain/skybox.ts` — et **référencés par leurs seuls tests**. Le
-   domaine a été écrit pour un export qui n’a pas suivi ; le faire, c’est une passe shader et un
-   écrivain, pas une refonte.
+**Ce que `feat/skybox-vues` a appris, et qu’il ne faut pas repayer :**
+
+- **Les quatre vues sont un seul shader, pas quatre rendus.** Aucune face n’est rendue dans un cube
+  map : une face est un rectangle d’écran dont chaque pixel pose la question à l’envers — quelle
+  direction de la sphère est-ce, et où tombe-t-elle dans la source. L’export posera la même question,
+  une face à la fois.
+- **La projection est celle de three, copiée et non approchée.** `equirectUv` de `common.glsl.js` :
+  `atan(d.z, d.x)` et `asin(d.y)`. Une formule voisine ferait montrer à la croix un ciel tourné par
+  rapport à la vue immersive posée à côté — l’écart ne se verrait qu’en comparant les deux.
+- **La table de la croix se génère depuis `CROSS_CELLS`**, jamais recopiée dans le shader : la
+  disposition appartient au domaine, et les deux ne peuvent alors pas diverger.
+- **L’état vide se peuple, ou ne se peuple pas.** Des deux remèdes que ce § proposait pour le
+  message illisible sur fond de sol et de sphères, c’est le second qui a été retenu : rien n’est
+  peuplé tant qu’aucune source n’est posée. Le piège trouvé au premier test : la synchronisation
+  vivait dans `loadSource`, **qui sort tôt quand l’identifiant n’a pas bougé** — donc jamais
+  appelée quand il n’y a jamais eu de source, c’est-à-dire précisément l’état vide.
 
 **Un piège avant d’y toucher.** Un `.hdr` **n’est pas importable** : `IMPORTABLE_TYPES`
 (`main/media/link.ts`) ne connaît que vidéo, audio et image, et un `.exr` importé est catalogué

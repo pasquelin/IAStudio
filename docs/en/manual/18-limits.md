@@ -241,17 +241,6 @@ which is a different question.
 
 ## Skyboxes workspace
 
-### Three views out of four draw nothing
-
-The **View** panel offers four projections. Only one works.
-
-| View | State |
-|---|---|
-| **360°** | works |
-| **Equirect** | button inactive |
-| **Cross** | button inactive |
-| **6 faces** | button inactive |
-
 ### The Generation section has no buttons
 
 It does show the model, the prompt and the seed that produced the sky, read-only. But the two
@@ -260,12 +249,14 @@ buttons the translations announce — **Regenerate** and **Reset** — are place
 Until then, you copy the prompt and the seed by hand into the **Generate** panel, which comes to the
 same thing in three more gestures.
 
-### No saving, no export
+### No export
 
-A sky is not written into a `.sky` file: **closing the tab loses the settings** — the exposure, the
-horizon rotation, the sun's position.
+A sky is now written into a `.sky` file — the exposure, the horizon rotation and the sun's position
+reopen exactly as they were. What the document does not keep: the view and the field of view, which
+say how you were looking at it rather than what it is.
 
-And you cannot export the six faces of a cube, nor an *HDRI* usable in another application.
+You still cannot export the six faces of a cube, though, nor an *HDRI* usable in another
+application.
 
 ---
 

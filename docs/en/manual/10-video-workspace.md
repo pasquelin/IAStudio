@@ -66,7 +66,7 @@ Either way, the studio settles two things:
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Select** | `V` | selects, moves and trims clips |
+| **Selection** | `V` | selects, moves and trims clips |
 | **Blade** | `C` | cuts a clip where you click |
 | **Hand** | `H` | scrolls the timeline — wheel to zoom |
 
@@ -74,7 +74,7 @@ Either way, the studio settles two things:
 > them. A tool is picked with the mouse. The keys in service in the edit — `Space`, `S`,
 > `Delete`, the zooms — are in [Every shortcut](15-shortcuts.md).
 
-### With the Select tool
+### With the Selection tool
 
 | Gesture | Effect |
 |---|---|

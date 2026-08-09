@@ -917,8 +917,8 @@ correction.
 > `stores/skybox-views`, le panneau « Vue » les offre, et le centre ne porte plus que la barre
 > d’outils et les règles. Un seul espace était concerné — vérifié : Vidéo et Audio ont bien une
 > rangée horizontale, mais c’est une barre de transport, un outil et non un menu. **Les trois vues
-> mortes du skybox restent mortes** (§ 3.5 de `REPRISE`) : le déplacement ne les a ni réparées ni
-> aggravées.
+> mortes du skybox restaient mortes** au moment de ce lot — le déplacement ne les avait ni réparées
+> ni aggravées ; elles ont été branchées depuis, par `feat/skybox-vues` (§ 3.5 de `REPRISE`).
 
 > **L’entrée 3 est close et verrouillée.** Les `gap-1.5` sont laissés tels quels, délibérément : ils
 > sont déjà plus larges qu’un, et quelques rangées denses reposent sur ce demi-cran. Un test
@@ -989,7 +989,6 @@ deux fois et qu’aucune des deux versions ne devienne fausse.
 - **La garde manquante sur le format des signatures du registre** (`'P'` au lieu de `'KeyP'`) — § 3.2.
 - **⌘Z se fragmente quand une génération aboutit pendant un glissement** — § 3.6. La ligne fautive
   sert les six espaces : ce n’est pas un rustinage local.
-- **Les trois vues mortes de l’espace Skybox** — § 3.5. Manque fonctionnel ; l’entrée 1 le croise.
 - **La croix de fermeture d’onglet** — § 3.1. Celle de Dockview est masquée **délibérément** (elle
   retire un panneau, ce qui n’est pas fermer un document). Ne pas « réparer » ce masquage.
 - **`app/**` et `panels/**` ne sont sous aucun budget de couverture** — § 3.1.

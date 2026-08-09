@@ -339,9 +339,9 @@ The Skyboxes workspace answers the keyboard like the others.
 > **The probes are not a gadget.** A sky is judged by what it lights, not by its own picture: the
 > witness spheres show what your panorama does to a matte surface and to a mirror one.
 
-> **`V` does cycle through all four views, but three of them draw nothing yet.** Only the
-> immersive view is wired; Equirect, Cross and 6 faces change which button is active and nothing
-> else. See [The Skyboxes workspace](13-skyboxes-workspace.md).
+> **`V` cycles through all four views, and all four draw.** The three flat ones — Equirect, Cross
+> and 6 faces — turn the backdrop and the test objects off while they are in front, and the field
+> of view only affects the immersive one. See [The Skyboxes workspace](13-skyboxes-workspace.md).
 
 ---
 

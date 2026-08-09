@@ -249,17 +249,6 @@ dans laquelle la carte est relue, ce qui est une autre question.
 
 ## Espace Skyboxes
 
-### Trois vues sur quatre ne dessinent rien
-
-Le panneau **Vue** propose quatre projections. Une seule fonctionne.
-
-| Vue | État |
-|---|---|
-| **360°** | fonctionne |
-| **Équirect** | bouton inactif |
-| **Croix** | bouton inactif |
-| **6 faces** | bouton inactif |
-
 ### La section Génération n’a pas ses boutons
 
 Elle affiche bien le modèle, le prompt et la graine qui ont produit le ciel, en lecture seule. Mais
