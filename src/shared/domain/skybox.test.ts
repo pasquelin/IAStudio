@@ -9,6 +9,7 @@ import {
   DEFAULT_FACE_SIZE,
   DEFAULT_FIELD_OF_VIEW,
   DEFAULT_SUN,
+  FACE_BASES,
   FACE_LABELS,
   FACE_SIZES,
   faceFileNames,
@@ -16,6 +17,7 @@ import {
   MAX_FIELD_OF_VIEW,
   MIN_FIELD_OF_VIEW,
   type CubeFace,
+  type FaceAxis,
 } from './skybox'
 
 describe('cube faces', () => {
@@ -75,6 +77,66 @@ describe('the unfolded cross', () => {
     expect(CROSS_CELLS.nx.column).toBeLessThan(CROSS_CELLS.pz.column)
     expect(CROSS_CELLS.pz.column).toBeLessThan(CROSS_CELLS.px.column)
     expect(CROSS_CELLS.px.column).toBeLessThan(CROSS_CELLS.nz.column)
+  })
+})
+
+describe('the face bases', () => {
+  // A cross product of unit axes produces negative zeros, and `toEqual` tells those from zero:
+  // the assertion is about a direction, not about the sign of nothing.
+  const zeroed = (value: number): number => (value === 0 ? 0 : value)
+
+  const cross = (a: FaceAxis, b: FaceAxis): FaceAxis => [
+    zeroed(a[1] * b[2] - a[2] * b[1]),
+    zeroed(a[2] * b[0] - a[0] * b[2]),
+    zeroed(a[0] * b[1] - a[1] * b[0]),
+  ]
+
+  const dot = (a: FaceAxis, b: FaceAxis): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+  it('gives every face a right-handed orthonormal basis', () => {
+    for (const face of CUBE_FACES) {
+      const { forward, right, up } = FACE_BASES[face]
+      expect(dot(right, right)).toBe(1)
+      expect(dot(up, up)).toBe(1)
+      expect(dot(forward, forward)).toBe(1)
+      expect(dot(right, up)).toBe(0)
+      // Derived rather than restated: a table typed by hand is exactly where a face ends up
+      // mirrored, and the type system cannot see it.
+      expect(cross(right, up)).toEqual(forward)
+    }
+  })
+
+  it('points each face down its own axis, and never down another', () => {
+    expect(FACE_BASES.px.forward).toEqual([1, 0, 0])
+    expect(FACE_BASES.nx.forward).toEqual([-1, 0, 0])
+    expect(FACE_BASES.py.forward).toEqual([0, 1, 0])
+    expect(FACE_BASES.ny.forward).toEqual([0, -1, 0])
+    expect(FACE_BASES.pz.forward).toEqual([0, 0, 1])
+    expect(FACE_BASES.nz.forward).toEqual([0, 0, -1])
+  })
+
+  /**
+   * The one that was wrong on screen. Four of the six faces are a horizon with sky above and
+   * ground below, and a horizon reads as a horizon upside down — so nothing in the picture says
+   * the vertical has been flipped. It has to be asserted here or not at all.
+   */
+  it('keeps the four horizontal faces upright', () => {
+    const horizontal: CubeFace[] = ['px', 'nx', 'pz', 'nz']
+    for (const face of horizontal) expect(FACE_BASES[face].up).toEqual([0, 1, 0])
+  })
+
+  it('unfolds the two vertical faces away from the front one, each its own way', () => {
+    // Up hinges on the top edge of the front face and Down on its bottom edge: their pictures
+    // run opposite ways, and giving them the same `up` folds the cube inside out.
+    expect(FACE_BASES.py.up).toEqual([0, 0, -1])
+    expect(FACE_BASES.ny.up).toEqual([0, 0, 1])
+    expect(FACE_BASES.py.right).toEqual(FACE_BASES.ny.right)
+  })
+
+  it('follows the OpenGL cube map axes, which is what a target engine samples', () => {
+    // +X is looked at from the origin, so its picture runs towards -Z as it goes right.
+    expect(FACE_BASES.px.right).toEqual([0, 0, -1])
+    expect(FACE_BASES.nz.right).toEqual([-1, 0, 0])
   })
 })
 

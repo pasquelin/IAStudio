@@ -1,6 +1,12 @@
 import { ShaderChunk, Texture } from 'three'
 import { describe, expect, it } from 'vitest'
-import { CROSS_CELLS, CROSS_COLUMNS, CROSS_ROWS, CUBE_FACES } from '@shared/domain/skybox'
+import {
+  CROSS_CELLS,
+  CROSS_COLUMNS,
+  CROSS_ROWS,
+  CUBE_FACES,
+  FACE_BASES,
+} from '@shared/domain/skybox'
 import { createProjectionPass, LAYOUT_ASPECT } from './projection-shader'
 
 const shaderOf = (): string => createProjectionPass().material.fragmentShader
@@ -52,6 +58,42 @@ describe('the projection shader', () => {
     expect(LAYOUT_ASPECT.equirect).toBe(2)
     expect(LAYOUT_ASPECT.cross).toBe(CROSS_COLUMNS / CROSS_ROWS)
     expect(LAYOUT_ASPECT.single).toBe(1)
+  })
+})
+
+describe('which way a face points', () => {
+  /**
+   * The vertical was inverted here, and nothing said so: four of the six faces are a horizon,
+   * and a horizon reads as a horizon upside down. `PlaneGeometry` writes `v = 1 - iy / gridY`
+   * against a vertex pushed at `-y`, so v is 1 at the TOP of the quad — a `t` falling as v rose
+   * aimed the top of every face at the ground.
+   */
+  it('measures the vertical the way the quad does, from the bottom up', () => {
+    const shader = shaderOf()
+
+    expect(shader).toContain('float t = uv.y * 2.0 - 1.0;')
+    expect(shader).not.toContain('1.0 - uv.y * 2.0')
+  })
+
+  it('builds all six directions out of the domain table, none of them by hand', () => {
+    const shader = shaderOf()
+
+    for (const face of CUBE_FACES) {
+      const { forward, right, up } = FACE_BASES[face]
+      const vec = (axis: readonly number[]): string =>
+        `vec3(${axis.map(value => value.toFixed(1)).join(', ')})`
+
+      expect(shader).toContain(`${vec(forward)} + s * ${vec(right)} + t * ${vec(up)}`)
+    }
+  })
+
+  it('reads a face off `uFace` in the order the domain names them', () => {
+    const pass = createProjectionPass()
+    CUBE_FACES.forEach((face, index) => {
+      pass.setLayout('single', face)
+      expect(pass.uniforms.uFace.value).toBe(index)
+    })
+    pass.dispose()
   })
 })
 

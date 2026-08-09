@@ -52,6 +52,31 @@ export const CROSS_CELLS: Record<CubeFace, { column: number; row: number }> = {
 export const CROSS_COLUMNS = 4
 export const CROSS_ROWS = 3
 
+/** One axis, as x/y/z. A tuple rather than a `Vector3`: `shared/` carries no runtime dependency. */
+export type FaceAxis = readonly [number, number, number]
+
+/**
+ * The basis of one face: where its centre points, where a pixel travels as the picture goes
+ * right, and where it travels as the picture goes UP.
+ *
+ * These are the OpenGL cube map axes, which is what every engine named in `FACE_LABELS` samples.
+ * A face drawn on any other basis lands mirrored or a quarter turn out, and nothing in the
+ * picture says which — the four horizontal faces look plausible upside down.
+ *
+ * `forward` is `right × up` for all six; the test derives it rather than trusting six triplets
+ * typed by hand, which is the one thing the type system cannot check here.
+ */
+export type FaceBasis = { forward: FaceAxis; right: FaceAxis; up: FaceAxis }
+
+export const FACE_BASES: Record<CubeFace, FaceBasis> = {
+  px: { forward: [1, 0, 0], right: [0, 0, -1], up: [0, 1, 0] },
+  nx: { forward: [-1, 0, 0], right: [0, 0, 1], up: [0, 1, 0] },
+  py: { forward: [0, 1, 0], right: [1, 0, 0], up: [0, 0, -1] },
+  ny: { forward: [0, -1, 0], right: [1, 0, 0], up: [0, 0, 1] },
+  pz: { forward: [0, 0, 1], right: [1, 0, 0], up: [0, 1, 0] },
+  nz: { forward: [0, 0, -1], right: [-1, 0, 0], up: [0, 1, 0] },
+}
+
 /**
  * The sun, as two angles rather than a position. The angles are the truth and the light is
  * derived from them: the viewport drags one end and the panel types the other, and a position

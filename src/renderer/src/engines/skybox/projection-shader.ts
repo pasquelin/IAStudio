@@ -4,7 +4,9 @@ import {
   CROSS_COLUMNS,
   CROSS_ROWS,
   CUBE_FACES,
+  FACE_BASES,
   type CubeFace,
+  type FaceAxis,
   type SkyboxView,
 } from '@shared/domain/skybox'
 import { QUAD_VERTEX_SHADER } from '../gpu/passes/quad'
@@ -50,6 +52,22 @@ const CROSS_BRANCHES = CUBE_FACES.map((face, index) => {
   return `if (column == ${cell.column} && row == ${cell.row}) return ${index}.0;`
 }).join('\n    ')
 
+const glslVec3 = (axis: FaceAxis): string =>
+  `vec3(${axis.map(value => value.toFixed(1)).join(', ')})`
+
+/**
+ * The six directions, written from `FACE_BASES` for the same reason the cross is written from
+ * `CROSS_CELLS`: which way a face points is the domain's to decide, and a second table spelled
+ * in GLSL is one nothing checks. Reading it back is how the vertical came to be inverted here
+ * for a whole afternoon — four of the six faces look plausible upside down.
+ */
+const FACE_BRANCHES = CUBE_FACES.map((face, index) => {
+  const { forward, right, up } = FACE_BASES[face]
+  const direction = `${glslVec3(forward)} + s * ${glslVec3(right)} + t * ${glslVec3(up)}`
+  const last = index === CUBE_FACES.length - 1
+  return last ? `return ${direction};` : `if (face < ${index}.5) return ${direction};`
+}).join('\n  ')
+
 const FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
 
@@ -75,16 +93,13 @@ float crossFaceAt(int column, int row) {
 
 /** The direction a point of a face looks at, in the axis order \`CUBE_FACES\` is written in. */
 vec3 faceDirection(float face, vec2 uv) {
-  // From 0..1 to −1..1, with v flipped: a texture's v climbs while a face's rows descend.
+  // Both climb with the picture. \`PlaneGeometry\` writes \`v = 1 - iy / gridY\` against a vertex
+  // at \`-y\`, so v is 1 at the TOP of the quad: a t that fell as v rose pointed the top of every
+  // face at the ground, and left the four horizontal ones looking plausible upside down.
   float s = uv.x * 2.0 - 1.0;
-  float t = 1.0 - uv.y * 2.0;
+  float t = uv.y * 2.0 - 1.0;
 
-  if (face < 0.5) return vec3(1.0, t, -s);
-  if (face < 1.5) return vec3(-1.0, t, s);
-  if (face < 2.5) return vec3(s, 1.0, -t);
-  if (face < 3.5) return vec3(s, -1.0, t);
-  if (face < 4.5) return vec3(s, t, 1.0);
-  return vec3(-s, t, -1.0);
+  ${FACE_BRANCHES}
 }
 
 /** three's own mapping, from \`common.glsl.js\`. Anything else turns the sky against itself. */
