@@ -67,16 +67,36 @@ export function ActivityMessage({ entry }: { entry: ActivityEntry }) {
   )
 }
 
-function ActivityRow({ entry }: { entry: ActivityEntry }) {
-  const { i18n } = useTranslation()
-
+/**
+ * One journal line, wherever it is read. Shared for the same reason `ActivityMessage` is: the
+ * home drew its own and had already drifted — no `tabular-nums`, so its timestamps would not line
+ * up, and no `shrink-0`, so a long message squeezed the level glyph.
+ *
+ * `time` is handed over already written, not derived here: the panel states the hour and the home
+ * says how long ago, and that difference is the one worth keeping. `null` for a stamp neither can
+ * read, which leaves the slot empty rather than printing a placeholder date.
+ *
+ * The padding stays with the caller — a dock is dense, a home band sits on a surface with its own
+ * `p-2`, and folding one into the row would give the other twice the inset.
+ */
+export function ActivityRow({
+  entry,
+  time,
+  className,
+}: {
+  entry: ActivityEntry
+  time: string | null
+  className?: string
+}) {
   return (
-    <li className="flex items-start gap-2 px-2 py-1.5">
-      <UiIcon path={GLYPHS[entry.level]} size={14} className={cn('mt-px', TINTS[entry.level])} />
+    <li className={cn('flex items-start gap-2', className)}>
+      <UiIcon
+        path={GLYPHS[entry.level]}
+        size={14}
+        className={cn('mt-px shrink-0', TINTS[entry.level])}
+      />
       <ActivityMessage entry={entry} />
-      <span className="text-muted shrink-0 text-[11px] tabular-nums">
-        {timeOf(entry.at, i18n.language)}
-      </span>
+      <span className="text-muted shrink-0 text-[11px] tabular-nums">{time}</span>
     </li>
   )
 }
@@ -140,7 +160,7 @@ function FilterRow<T extends string>({
  * whenever its flyout closes.
  */
 export function ActivityList() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const entries = useActivity(state => state.entries)
   const levels = useActivity(state => state.levels)
   const topics = useActivity(state => state.topics)
@@ -189,7 +209,12 @@ export function ActivityList() {
       ) : (
         <ul className="divide-border min-h-0 flex-1 divide-y overflow-y-auto">
           {visible.map(entry => (
-            <ActivityRow key={entry.id} entry={entry} />
+            <ActivityRow
+              key={entry.id}
+              entry={entry}
+              time={timeOf(entry.at, i18n.language)}
+              className="px-2 py-1.5"
+            />
           ))}
         </ul>
       )}
