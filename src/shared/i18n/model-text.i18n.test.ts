@@ -3,13 +3,13 @@ import fr from './model-text.fr.json'
 import { normalizeModelText, translateModelText } from './model-text'
 
 /**
- * The words the dictionary deliberately does not hold. A practitioner reads `seed` and
- * `guidance scale` in English in every other tool of the craft, and a French `graine` would
- * cost more than it gives. Held here so that translating one later is a decision somebody took
- * against a failing test, rather than an entry nobody weighed.
+ * The words the dictionary deliberately does not hold, because the studio says them in English
+ * everywhere else too. That last clause is the test: `seed` was on this list on the argument
+ * that a practitioner reads it in English — but `inspector.seed` and `skybox.seed` had said
+ * « Graine » since long before, so the form was the only surface refusing the word its own
+ * inspector uses. The bundle decides, not the argument.
  */
 const KEPT_IN_ENGLISH = [
-  'seed',
   'guidance scale',
   'cfg scale',
   'sampler',
@@ -104,5 +104,21 @@ describe('the French of the model texts', () => {
 
   it('holds the words the generation panel shows on a model of every kind', () => {
     expect(entries.length).toBeGreaterThan(20)
+  })
+})
+
+/**
+ * The word this dictionary was written to keep in English, and no longer does. `inspector.seed`
+ * and `skybox.seed` had said « Graine » all along: the generation form was the one surface
+ * where the same notion answered to another name.
+ */
+describe('a word the studio already had its own name for', () => {
+  it('says it the way the rest of the studio does', () => {
+    expect(translateModelText('Seed', 'fr')).toBe('Graine')
+    expect(translateModelText('seed', 'fr')).toBe('Graine')
+  })
+
+  it('leaves it alone in English, where the model already speaks the language', () => {
+    expect(translateModelText('Seed', 'en')).toBe('Seed')
   })
 })
