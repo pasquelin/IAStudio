@@ -1,17 +1,17 @@
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
 import { defined } from '@shared/guards'
-import type {
-  CloudAsset,
-  CloudPage,
-  CloudQuery,
-  ExploreQuery,
-  SimilarPage,
-} from '@shared/domain/cloud-asset'
+import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from '@shared/domain/cloud-asset'
 import type { SyncOutcome } from '@shared/domain/sync'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
-import { describeFailure, failureOf, persistableFailure, reducedBy } from '@main/scenario/client'
+import {
+  describeFailure,
+  failureOf,
+  persistableFailure,
+  quietlyReducedBy,
+  reducedBy,
+} from '@main/scenario/client'
 import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
 import {
   filterExpression,
@@ -19,7 +19,6 @@ import {
   NSFW_EMPTY,
   PUBLIC_FEED_SORT,
 } from '@main/scenario/filter-expression'
-import { withPublicThumbnail } from '@main/scenario/asset-normalizer'
 import { remoteTypesFor } from '@main/scenario/remote-types'
 import { PAGE_SIZE_MAX } from '@main/scenario/limits'
 import type { AsyncCatalog } from '@main/project/catalog-client'
@@ -31,6 +30,7 @@ import {
   parseActivityQuery,
   parseAlsoRemote,
   parseAssetChanges,
+  parseAssetId,
   parseAssetIds,
   parseCloudQuery,
   parseExploreQuery,
@@ -56,6 +56,8 @@ export type AssetHandlerDeps = {
 }
 
 const reduced = reducedBy('assets')
+/** For the home's decorative bands, which poll on their own — see `quietlyReducedBy`. */
+const quietly = quietlyReducedBy('assets')
 
 /**
  * Whether this query has to go through the search index rather than the plain listing.
@@ -78,11 +80,29 @@ function needsSearch(query: CloudQuery): boolean {
 const TOKEN_CURSOR = 't:'
 const OFFSET_CURSOR = 'o:'
 
-function offsetFrom(cursor: string | undefined): number {
-  if (cursor === undefined || !cursor.startsWith(OFFSET_CURSOR)) return 0
+/**
+ * How far into the index an offset may point.
+ *
+ * A bound and not a page count: the cursor is a string, so `o:1e99` passes validation — the field
+ * is opaque and rightly bounded by length alone — and reaches the SDK as a number no index can
+ * answer for. Walking to the ceiling is not a dead end either: the feed then answers the same
+ * page twice, and `useExplore` reads a page that brings nothing new as the end of it.
+ */
+const OFFSET_MAX = 10_000
 
-  const offset = Number(cursor.slice(OFFSET_CURSOR.length))
-  return Number.isFinite(offset) && offset > 0 ? offset : 0
+/**
+ * A number the index will take, from whatever was handed in. Both cursors reach the API as an
+ * offset, and both come from outside — one from the renderer, one from the API's own token.
+ */
+function boundedOffset(value: string | undefined): number {
+  const offset = Number(value)
+  if (!Number.isFinite(offset) || offset <= 0) return 0
+
+  return Math.min(Math.floor(offset), OFFSET_MAX)
+}
+
+function offsetFrom(cursor: string | undefined): number {
+  return cursor?.startsWith(OFFSET_CURSOR) ? boundedOffset(cursor.slice(OFFSET_CURSOR.length)) : 0
 }
 
 function tokenFrom(cursor: string | undefined): string | undefined {
@@ -157,11 +177,11 @@ async function explore(remote: RemoteAssetCatalog, query: ExploreQuery): Promise
       offset,
     })
 
-    assets.push(...page.assets.filter(asset => asset.type === query.type).map(withPublicThumbnail))
+    assets.push(...page.assets.filter(asset => asset.type === query.type))
     token = page.token
 
     if (assets.length > 0 || token === null) break
-    offset = Number(token)
+    offset = boundedOffset(token)
   }
 
   return { assets, cursor: marked(OFFSET_CURSOR, token) }
@@ -177,22 +197,18 @@ const SIMILAR_SIZE = 12
 const EMPTY_ROUNDS_MAX = 3
 
 /**
- * Published assets in the vein of one of this account's own.
+ * Published assets in the vein of one this caller names.
  *
- * The reference is the library's most recent asset rather than something the reader picks: the
- * band is a suggestion, and a picker on the home would be a second asset browser. It comes back
- * with the answer so the shelf can say what the likeness was measured against.
+ * The reference is an argument and not a decision taken here: "the library's most recent asset"
+ * is what the HOME wants, and baking it in left the channel unusable for the next caller — a
+ * "find lookalikes" on a right-click names the asset under the pointer.
  *
  * No `sortBy` here, deliberately: the API ranks by likeness, and asking for another order on a
  * semantic search silently drops the ranking that is the whole point.
  */
-async function similar(remote: RemoteAssetCatalog): Promise<SimilarPage | null> {
-  const library = await remote.list({ pageSize: 1 })
-  const reference = library.assets[0]
-  if (!reference) return null
-
+async function similar(remote: RemoteAssetCatalog, assetId: string): Promise<CloudAsset[]> {
   const page = await remote.search({
-    like: [reference.id],
+    like: [assetId],
     publicFeed: true,
     filter: NSFW_EMPTY,
     // One more than shown: the API answers with the reference itself, at the top.
@@ -200,13 +216,7 @@ async function similar(remote: RemoteAssetCatalog): Promise<SimilarPage | null> 
     offset: 0,
   })
 
-  return {
-    reference,
-    assets: page.assets
-      .filter(asset => asset.id !== reference.id)
-      .slice(0, SIMILAR_SIZE)
-      .map(withPublicThumbnail),
-  }
+  return page.assets.filter(asset => asset.id !== assetId).slice(0, SIMILAR_SIZE)
 }
 
 /** The rows behind a list of ids, minus the ones the catalogue no longer holds. */
@@ -303,10 +313,12 @@ export function registerAssetHandlers({
     return describeAssets(found.filter(asset => asset !== null))
   })
 
-  handle(CHANNELS.cloudSimilar, () => reduced(() => similar(remote())))
+  handle(CHANNELS.cloudSimilar, (_event, assetId) =>
+    quietly(() => similar(remote(), parseAssetId(assetId))),
+  )
 
   handle(CHANNELS.cloudExplore, (_event, query) =>
-    reduced(() => explore(remote(), parseExploreQuery(query))),
+    quietly(() => explore(remote(), parseExploreQuery(query))),
   )
 
   handle(CHANNELS.cloudBrowse, (_event, query) =>

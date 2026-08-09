@@ -147,6 +147,22 @@ describe('searching the library', () => {
     expect(recorded.search[1]).not.toHaveProperty('images')
   })
 
+  it('draws every hit from the thumbnail, whichever errand searched', async () => {
+    // A hit carries only the signed original — 28 MB for one upscaled texture, against 1.6 KB
+    // for its thumbnail. Filled in here rather than per errand: `browse` did not remember, so
+    // every text or tag search was still pulling the full files down.
+    const { backend } = backendSpy({
+      search: () =>
+        Promise.resolve({
+          hits: [listing('asset_1', { url: 'https://cdn.example/assets-transform/asset_1?p=100' })],
+          estimatedTotalHits: 1,
+        }),
+    })
+
+    const page = await assetCatalogOf(backend).search({ limit: 20, offset: 0 })
+    expect(page.assets[0]?.thumbnailUrl).toBe('https://cdn.example/thumbnails/asset_1')
+  })
+
   it('copies the order, so the SDK cannot rewrite a caller constant', async () => {
     const order: readonly string[] = ['createdAt:desc']
     const { backend, recorded } = backendSpy()

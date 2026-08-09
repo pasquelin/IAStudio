@@ -72,13 +72,6 @@ export type CloudPage = {
   cursor: string | null
 }
 
-export type SimilarPage = {
-  /** What the likeness was measured against — one of the account's own assets. */
-  reference: CloudAsset
-  /** Published assets that resemble it, the reference itself taken out. */
-  assets: CloudAsset[]
-}
-
 /**
  * What the home's explore feed asks for.
  *

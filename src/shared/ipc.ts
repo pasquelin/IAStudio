@@ -3,7 +3,7 @@ import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
 import type { MaterialStyle } from './domain/style'
-import type { CloudPage, CloudQuery, ExploreQuery, SimilarPage } from './domain/cloud-asset'
+import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type { SttEvent, SttSnapshot } from './domain/dictation'
 import type {
@@ -657,10 +657,12 @@ export type StudioBridge = {
      */
     explore: (query: ExploreQuery) => Promise<CloudPage>
     /**
-     * Published assets in the vein of the library's most recent one, and that one with them.
-     * `null` when the account holds nothing to measure a likeness against.
+     * Published assets that resemble the one named, that one taken out of its own results.
+     *
+     * The reference is the caller's to choose: the home measures against the library's most
+     * recent asset, and a right-click elsewhere would name the asset under the pointer.
      */
-    similar: () => Promise<SimilarPage | null>
+    similar: (assetId: string) => Promise<CloudAsset[]>
     /**
      * Brings assets into the project, bytes and all. Answers what each one did — a download
      * that fails halfway has already written the ones before it, and a rejection would lose

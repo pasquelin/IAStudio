@@ -134,6 +134,26 @@ describe('an asset from a search hit', () => {
     const sparse = { id: 'asset_3', mimeType: 'audio/wav', metadata: { type: 'uploaded-audio' } }
     expect(cloudAssetOfHit(sparse)?.type).toBe('audio')
   })
+
+  it('fills in the thumbnail the shape omits, whichever errand asked', () => {
+    // Here and not in the handlers: three of them read hits, and the two that remembered left
+    // `browse` drawing its tiles from the originals on every text or tag search.
+    const withUrl = { ...HIT, url: 'https://cdn.example/assets-transform/asset_2?p=100' }
+    expect(cloudAssetOfHit(withUrl)?.thumbnailUrl).toBe('https://cdn.example/thumbnails/asset_2')
+  })
+
+  it('fills it in for a private asset too, which the CDN serves all the same', () => {
+    // `/thumbnails/{id}` answered 200 with a JPEG for a private asset of this account on
+    // 9 August 2026, against a 502 for an id that does not exist. Gating this on privacy would
+    // cost every private hit its thumbnail for a rule the CDN does not enforce.
+    const own = { ...HIT, privacy: 'private', url: 'https://cdn.example/assets-transform/asset_2' }
+    expect(cloudAssetOfHit(own)?.thumbnailUrl).toBe('https://cdn.example/thumbnails/asset_2')
+  })
+
+  it('leaves a listing alone: it carries its own thumbnail already', () => {
+    const listed = cloudAssetOfListing(LISTING)
+    expect(listed?.thumbnailUrl).toBe('https://cdn.cloud.scenario.com/thumbnails/asset_1')
+  })
 })
 
 describe('the thumbnail a search hit does not carry', () => {

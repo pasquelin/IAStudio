@@ -150,6 +150,26 @@ export function reducedBy(scope: string) {
   }
 }
 
+/**
+ * The same reduction, for a call the user never made.
+ *
+ * The journal is what somebody opens after a job went wrong, and a decorative band that polls on
+ * its own must not fill it: one rate-limited home leaves five entries about requests nobody asked
+ * for, and the push that actually failed scrolls off the top. The failure still reaches the log,
+ * and still reaches the caller — the terminal keeps the trail, and it stays a refusal rather than
+ * becoming an empty answer.
+ */
+export function quietlyReducedBy(scope: string) {
+  return async <T>(action: () => Promise<T>): Promise<T> => {
+    try {
+      return await action()
+    } catch (error) {
+      log.warn(scope, describeFailure(error))
+      throw new Error(failureOf(error), { cause: error })
+    }
+  }
+}
+
 /** What a client is built through, so that no client can be built without its rate limit. */
 export type Transport = (credentials: Credentials) => NonNullable<ClientOptions['fetch']>
 
