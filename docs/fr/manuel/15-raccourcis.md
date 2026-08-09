@@ -38,7 +38,7 @@ Le studio range chaque action dans un **contexte** — la surface où elle a un 
 surface écoute à la fois, celle que vous regardez. Une touche partagée entre deux contextes ne
 peut donc jamais être ambiguë.
 
-Six contextes :
+Sept contextes :
 
 | Contexte | Où il s’applique |
 |---|---|
@@ -48,6 +48,7 @@ Six contextes :
 | **Dans le montage** | la timeline de l’espace Vidéo et de l’espace Audio |
 | **Dans l’image** | le canvas de l’espace Image |
 | **Dans le ciel** | la vue de l’espace Skyboxes |
+| **Dans le graphe** | la toile de l’espace Graphe |
 
 Un seul contexte est spécial : **Partout dans l’application**. Ses touches passent par le menu du
 système d’exploitation, qui les attrape avant tout le monde. Elles sont donc les seules à ne
@@ -376,6 +377,22 @@ L’espace Skyboxes répond au clavier comme les autres.
 
 ---
 
+## Dans le graphe
+
+Le septième contexte, et le plus court : l’espace Graphe n’écoute que l’annulation.
+
+| Action | Touche | Ce qu’elle fait |
+|---|---|---|
+| **Annuler** | `⌘Z` | |
+| **Rétablir** | `⇧⌘Z` | |
+
+Elles couvrent tout ce que le graphe sait faire — poser un nœud, le déplacer, le relier, le
+renommer, changer son modèle — parce que tout y passe par une commande. Poser des nœuds se fait à
+la souris depuis la palette : il n’y a pas encore de touche pour en armer un, comme il y en a une
+par outil dans l’espace Image.
+
+---
+
 ## Une chose importante sur ⌘Z
 
 **Chaque document a sa propre pile d’annulation.**
@@ -460,43 +477,45 @@ figées pour l’instant. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ## Aide-mémoire, tout sur une page
 
-| Touche | Partout | Vue 3D | Montage | Image | Ciel |
-|---|---|---|---|---|---|
-| `⌘N` | Nouveau projet | | | | |
-| `⌘O` | Ouvrir un projet | | | | |
-| `⌘S` | Enregistrer | | | | |
-| `⌘,` | Réglages | | | | |
-| `⌃⌘F` | Plein écran | | | | |
-| `⌘Z` | | Annuler | Annuler | Annuler | Annuler |
-| `⇧⌘Z` | | Rétablir | Rétablir | Rétablir | Rétablir |
-| `⌘G` | | Grouper | | | |
-| `⌘D` | | Dupliquer | | Désélectionner | |
-| `⌘C` / `⌘X` / `⌘V` | | Copier / Couper / Coller | | | |
-| `O` | | Projection | | | |
-| `Z` | | Affichage | | | |
-| `V` | | Sélectionner | | | Changer de vue |
-| `P` | | | | | Sondes de lumière |
-| `G` | | Déplacer | | | |
-| `R` | | Pivoter | | | |
-| `S` | | Redimensionner *(et reculer)* | Couper le clip | | |
-| `M` | | Magnétisme | | | |
-| `L` | | Repère local | | | |
-| `F` | | Cadrer la sélection | | | |
-| `Suppr` | | Supprimer l’objet | Supprimer le clip | | |
-| `W A S D` | | Voler | | | |
-| `Q` / `E` | | Descendre / Monter | | | |
-| `⇧` gauche | | Accélérer | | | |
-| `Espace` | | | Lire / Pause | | |
-| `Début` / `Fin` | | | Début / Fin du montage | | |
-| `⌘=` | | | Zoomer | Zoom avant | |
-| `⌘−` | | | Dézoomer | Zoom arrière | |
-| `⇧Z` | | | Tout afficher | | |
-| `⌘0` | | | | Ajuster à la fenêtre | |
-| `⌘1` | | | | Taille réelle | |
-| `⌘R` | | | | Règles | |
-| `⌘;` | | | | Repères | |
-| `⇧⌘;` | | | | Magnétisme | |
-| `⇧⌘E` | | | | Exporter l’image | |
+| Touche | Partout | Barre | Vue 3D | Montage | Image | Ciel | Graphe |
+|---|---|---|---|---|---|---|---|
+| `⌘N` | Nouveau projet |  |  |  |  |  |  |
+| `⌘O` | Ouvrir un projet |  |  |  |  |  |  |
+| `⌘S` | Enregistrer |  |  |  |  |  |  |
+| `⌘,` | Réglages |  |  |  |  |  |  |
+| `⌃⌘F` | Plein écran |  |  |  |  |  |  |
+| `⌘Z` |  |  | Annuler | Annuler | Annuler | Annuler | Annuler |
+| `⇧⌘Z` |  |  | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir |
+| `⌘G` |  |  | Grouper |  |  |  |  |
+| `⌘D` |  |  | Dupliquer |  | Désélectionner |  |  |
+| `⌘C` / `⌘X` / `⌘V` |  |  | Copier / Couper / Coller |  |  |  |  |
+| `O` |  |  | Projection |  |  |  |  |
+| `Z` |  |  | Affichage |  |  |  |  |
+| `V` |  |  | Sélectionner |  |  | Changer de vue |  |
+| `P` |  |  |  |  |  | Sondes de lumière |  |
+| `G` |  |  | Déplacer |  |  |  |  |
+| `R` |  |  | Pivoter |  |  |  |  |
+| `S` |  |  | Redimensionner *(et reculer)* | Couper le clip |  |  |  |
+| `M` |  |  | Magnétisme |  |  |  |  |
+| `L` |  |  | Repère local |  |  |  |  |
+| `F` |  |  | Cadrer la sélection |  |  |  |  |
+| `Suppr` |  |  | Supprimer l’objet | Supprimer le clip |  |  |  |
+| `W A S D` |  |  | Voler |  |  |  |  |
+| `Q` / `E` |  |  | Descendre / Monter |  |  |  |  |
+| `⇧` gauche |  |  | Accélérer |  |  |  |  |
+| `Espace` |  |  |  | Lire / Pause |  |  |  |
+| `Début` / `Fin` |  |  |  | Début / Fin du montage |  |  |  |
+| `⌘=` |  |  |  | Zoomer | Zoom avant |  |  |
+| `⌘−` |  |  |  | Dézoomer | Zoom arrière |  |  |
+| `⇧Z` |  |  |  | Tout afficher |  |  |  |
+| `⌘0` |  |  |  |  | Ajuster à la fenêtre |  |  |
+| `⌘1` |  |  |  |  | Taille réelle |  |  |
+| `⌘R` |  |  |  |  | Règles |  |  |
+| `⌘;` |  |  |  |  | Repères |  |  |
+| `⇧⌘;` |  |  |  |  | Magnétisme |  |  |
+| `⇧⌘E` |  |  |  |  | Exporter l’image |  |  |
+| `⌥←` |  | Déplacer à gauche |  |  |  |  |  |
+| `⌥→` |  | Déplacer à droite |  |  |  |  |  |
 
 ---
 
