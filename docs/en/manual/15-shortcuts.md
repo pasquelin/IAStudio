@@ -207,6 +207,20 @@ give them one in the settings.
 > **Line changed key.** It answered to `L`, which the Lasso already used in the same context; it
 > moved to `⇧R`, next to Rectangle, and the Arrow to `A`.
 
+### The size of the stroke
+
+| Action | Key | What it does |
+|---|---|---|
+| **Smaller brush** | `[` | narrows the diameter by one notch |
+| **Larger brush** | `]` | widens it by one notch |
+
+One diameter for three tools: the brush, the eraser and the shape stroke. The notch is a ratio,
+about ×1.4, never a fixed count of pixels.
+
+> **These two keys are found by position, not by symbol.** On a French keyboard the same two
+> places carry `)` and `^` — you press where an American keyboard would, whatever letter is
+> printed on the key.
+
 ### Cropping
 
 These two keys act **only** while a crop frame is placed on the picture, and only in the tab in

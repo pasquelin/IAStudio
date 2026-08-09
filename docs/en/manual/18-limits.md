@@ -13,7 +13,7 @@ Software that hides what it cannot do makes you lose an hour looking for a butto
 exist.
 
 The studio chose the opposite: **it shows what is coming**. Tools that do not work yet are visible
-and greyed out, views to come are in the bars, and this chapter says exactly where the edges are.
+and greyed out, views to come are in the panels, and this chapter says exactly where the edges are.
 
 Three categories, not to be confused:
 
@@ -239,7 +239,7 @@ which is a different question.
 
 ### Three views out of four draw nothing
 
-The preview bar offers four views. Only one works.
+The **View** panel offers four projections. Only one works.
 
 | View | State |
 |---|---|

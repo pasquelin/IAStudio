@@ -67,9 +67,11 @@ This is **not** a camera orbiting something — you are at the centre of the sph
 you. The drag follows your hand: pulling to the right turns the view to the left, as if you were
 grabbing the world.
 
-### The preview bar
+### The View panel
 
-Top left.
+In the right column, under the Skybox panel. Two sections.
+
+**Projection**
 
 | Control | What it does |
 |---|---|
@@ -77,11 +79,20 @@ Top left.
 | **Equirect** | the image laid flat *(not wired up yet)* |
 | **Cross** | the six faces unfolded as a cross *(not wired up yet)* |
 | **6 faces** | the six faces side by side *(not wired up yet)* |
-| **Test objects** | shows or hides witness spheres |
 | **Field of view** | from 50° to 110°, 75° by default |
 
-**Two keys skip the bar**: `V` cycles through the four views, `P` shows or hides the test objects.
-`⌘Z` and `⇧⌘Z` undo and redo here as anywhere else — see [Every shortcut](15-shortcuts.md).
+**Helpers**
+
+| Control | What it does |
+|---|---|
+| **Test objects** | shows or hides witness spheres |
+
+> **These settings live in a panel, not above the image.** The centre carries the toolbar and the
+> rulers, nothing else: a menu laid over the preview would cover the one thing this workspace
+> exists to show.
+
+**Two keys skip the panel**: `V` cycles through the four views, `P` shows or hides the test
+objects. `⌘Z` and `⇧⌘Z` undo and redo here as anywhere else — see [Every shortcut](15-shortcuts.md).
 
 **The test objects** are spheres set in the middle of the sky: one matte, one glossy, one metallic.
 They are not part of the sky — they are there to **see what the sky lights**. A sky is judged by

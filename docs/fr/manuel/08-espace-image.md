@@ -235,10 +235,37 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 | **Remplir le calque** | `G` | remplit **tout** le calque actif de la couleur courante |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, des formes et du remplissage |
+| **Réglages du pinceau** | `[` et `]` | la taille, la dureté et l’opacité |
 
 > **Remplir n’est pas un pot de peinture.** Il remplit le calque entier, d’un bord à l’autre.
 > C’est ce qui donne un fond uni en un geste, mais ce n’est pas le remplissage par zone que vous
 > connaissez peut-être ailleurs.
+
+### Les réglages du pinceau
+
+Le dernier bouton de la barre en ouvre trois curseurs.
+
+| Réglage | Plage | Ce qu’il fait |
+|---|---|---|
+| **Taille** | 1 à 512 px | le diamètre du trait |
+| **Dureté** | 0 à 1 | 1 donne un bord net, 0 un bord entièrement fondu |
+| **Opacité** | 0 à 1 | la transparence de ce qui est déposé |
+
+**Ils valent pour trois outils à la fois** : le pinceau, la gomme et le trait des formes. Un
+pinceau de 40 px et une gomme de 4 px, ce n’est pas possible — c’est le même réglage.
+
+**`[` rétrécit, `]` élargit**, sans rien ouvrir : c’est ce dont la main se sert en plein tracé. Le
+pas n’est pas un nombre de pixels mais un rapport — un cran fait environ ×1,4 — sans quoi un pas
+fixe ramperait à 400 px et bondirait à 4. En bas de l’échelle il reste d’au moins un pixel.
+
+> **Le cercle qui suit le pointeur montre ce que le prochain trait couvrira**, au diamètre réel.
+> Il grandit et rétrécit avec le zoom, comme le ferait le trait : un pinceau de 24 px couvre la
+> moitié de l’écran à 1600 %, et un point à 5 %.
+
+> **Le curseur devient un sens interdit quand l’outil ne peut rien faire ici** — un groupe est
+> armé, le calque actif est un calque de réglage, ses pixels ou sa position sont verrouillés. Le
+> refus se lit **avant** le geste, plutôt qu’après coup dans un message : une image qui ne prend
+> pas la peinture ressemble sinon exactement à une image dont le trait est parti ailleurs.
 
 ### Les outils grisés
 

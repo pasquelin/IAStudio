@@ -68,9 +68,11 @@ Ce n’est **pas** une caméra qui tourne autour de quelque chose — vous êtes
 sphère, et vous regardez autour de vous. Le glissement suit la main : tirer vers la droite fait
 tourner la vue vers la gauche, comme si vous attrapiez le monde.
 
-### La barre d’aperçu
+### Le panneau Vue
 
-En haut à gauche.
+Dans la colonne de droite, sous le panneau Skybox. Deux sections.
+
+**Projection**
 
 | Contrôle | Ce qu’il fait |
 |---|---|
@@ -78,10 +80,19 @@ En haut à gauche.
 | **Équirect** | l’image à plat *(pas encore branché)* |
 | **Croix** | les six faces dépliées en croix *(pas encore branché)* |
 | **6 faces** | les six faces côte à côte *(pas encore branché)* |
-| **Objets de test** | affiche ou masque des sphères témoins |
 | **Champ de vision** | de 50° à 110°, 75° par défaut |
 
-**Deux touches évitent la barre** : `V` fait défiler les quatre vues, `P` montre ou cache les
+**Repères**
+
+| Contrôle | Ce qu’il fait |
+|---|---|
+| **Objets de test** | affiche ou masque des sphères témoins |
+
+> **Ces réglages sont dans un panneau, pas au-dessus de l’image.** Le centre ne porte que la
+> barre d’outils et les règles : un menu posé sur l’aperçu couvrirait la seule chose que cet
+> espace existe pour montrer.
+
+**Deux touches évitent le panneau** : `V` fait défiler les quatre vues, `P` montre ou cache les
 objets de test. `⌘Z` et `⇧⌘Z` annulent et rétablissent ici comme ailleurs — voir
 [Tous les raccourcis](15-raccourcis.md).
 

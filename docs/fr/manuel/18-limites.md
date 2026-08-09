@@ -13,7 +13,7 @@ Un logiciel qui cache ce qu’il ne sait pas faire vous fait perdre une heure à
 qui n’existe pas.
 
 Le studio a choisi l’inverse : **il montre ce qui vient**. Les outils qui ne fonctionnent pas
-encore sont visibles et grisés, les vues à venir sont dans les barres, et ce chapitre dit
+encore sont visibles et grisés, les vues à venir sont dans les panneaux, et ce chapitre dit
 exactement où sont les bords.
 
 Trois catégories, à ne pas confondre :
@@ -247,7 +247,7 @@ dans laquelle la carte est relue, ce qui est une autre question.
 
 ### Trois vues sur quatre ne dessinent rien
 
-La barre d’aperçu propose quatre vues. Une seule fonctionne.
+Le panneau **Vue** propose quatre projections. Une seule fonctionne.
 
 | Vue | État |
 |---|---|

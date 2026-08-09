@@ -228,9 +228,36 @@ The eraser erases **to transparency**; it does not paint white.
 | **Fill layer** | `G` | fills the **whole** active layer with the current colour |
 | **Eyedropper** | `I` | picks up the colour under the pointer |
 | **Colour** | — | the colour of the brush, the shapes and the fill |
+| **Brush settings** | `[` and `]` | the size, the hardness and the opacity |
 
 > **Fill is not a paint bucket.** It fills the entire layer, edge to edge. That is what gives a
 > plain background in one gesture, but it is not the region fill you may know from elsewhere.
+
+### The brush settings
+
+The last button in the bar opens three sliders.
+
+| Setting | Range | What it does |
+|---|---|---|
+| **Size** | 1 to 512 px | the diameter of the stroke |
+| **Hardness** | 0 to 1 | 1 gives a hard edge, 0 a fully feathered one |
+| **Opacity** | 0 to 1 | how transparent what you lay down is |
+
+**They apply to three tools at once**: the brush, the eraser and the shape stroke. A 40 px brush
+with a 4 px eraser is not possible — it is the same setting.
+
+**`[` shrinks, `]` widens**, without opening anything: that is what the hand uses mid-stroke. The
+step is a ratio rather than a count of pixels — one notch is about ×1.4 — because a fixed step
+would crawl at 400 px and leap at 4. At the bottom of the scale it stays at least one pixel.
+
+> **The circle following the pointer shows what the next stroke will cover**, at its real
+> diameter. It grows and shrinks with the zoom, exactly as the stroke would: a 24 px brush covers
+> half the screen at 1600 %, and a dot at 5 %.
+
+> **The cursor turns to a no-entry sign when the tool can do nothing here** — a group is armed,
+> the active layer is an adjustment layer, its pixels or its position are locked. The refusal
+> reads **before** the gesture rather than after it in a message: an image that will not take
+> paint otherwise looks exactly like an image whose stroke went somewhere else.
 
 ### The greyed-out tools
 
