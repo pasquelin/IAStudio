@@ -22,7 +22,11 @@ export function PropertyRow({ label, children, stacked = false }: PropertyRowPro
         stacked ? 'flex flex-col gap-2' : 'flex min-h-(--sc-control) items-center gap-2',
       )}
     >
-      <span className={cn('text-muted shrink-0', stacked ? '' : 'w-20 truncate')}>{label}</span>
+      {/* Titled because the column truncates: `Repeat preview` fits eighty pixels and
+          `Aperçu de la répétition` does not, so the label was readable in one language only. */}
+      <span title={label} className={cn('text-muted shrink-0', stacked ? '' : 'w-20 truncate')}>
+        {label}
+      </span>
       <div className={cn('text-text min-w-0', stacked ? '' : 'flex-1 truncate text-right')}>
         {children}
       </div>
