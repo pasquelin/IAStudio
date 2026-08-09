@@ -207,12 +207,19 @@ describe('the renderer', () => {
     expect(behind.flatMap((code, index) => findingsIn(`probe${index}.tsx`, code))).toHaveLength(3)
   })
 
-  // Where the recursion has to stop: an operand is not a word on screen. Eight of these sit in
-  // the components today, and walking into comparisons would make every one of them an alarm.
+  // Where the recursion stops, and why, is on `literalsIn`.
   it('leaves the operand of a comparison alone', () => {
     const found = findingsIn('probe.tsx', "const A = () => <p>{side === 'left' && <X />}</p>")
 
     expect(found).toEqual([])
+  })
+
+  // Dropping a technical attribute before its value is read assumes the two lists never meet: a
+  // name in both would be gone before the spoken rule ever saw it.
+  it('keeps the two lists of attributes apart', () => {
+    const both = [...SPOKEN_ATTRIBUTES].filter(name => TECHNICAL_ATTRIBUTES.has(name))
+
+    expect(both).toEqual([])
   })
 
   it('leaves class names, ARIA keywords and symbols alone', () => {
