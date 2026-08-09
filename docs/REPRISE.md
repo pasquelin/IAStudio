@@ -351,6 +351,37 @@ suggestion prend seule. Les réglages proposés sont filtrés contre les descrip
 traverser la frontière : le SDK les type `unknown`, et une valeur hors bornes est écartée plutôt que
 ramenée de force.
 
+**La dictée hors ligne** (`feat/dictation`, `41da7d9`) — on dicte dans le champ où l’on est, et
+**rien de ce qui est dit ne quitte la machine**. Parakeet TDT 0.6b, six cents millions de
+paramètres, 640 Mo de poids téléchargés **une seule fois et sur décision de l’utilisateur**.
+
+> **Ce chantier a sa propre documentation, et elle est bien plus détaillée que ce §.** Quatre
+> documents techniques dans **[`docs/stt/`](stt/00-architecture.md)** — architecture, contrat IPC,
+> empaquetage, gestion du modèle — et **[`ADR-17`](ci/adr/ADR-17-moteur-de-dictee-hors-processus.md)**
+> pour le choix du processus. Les deux manuels le couvrent sur **cinq chapitres chacun** (06, 14,
+> 15, 16, 17). **Ne pas redécrire tout cela ici** : ce paragraphe ne garde que ce qui mordrait
+> ailleurs.
+
+Trois choses qui coûteraient une seconde fois :
+
+- **Un `utilityProcess`, pas un `worker_threads`.** Un fil partage le heap et le cycle de vie de
+  son processus : les 700 Mo resteraient dans l’empreinte du principal, et un plantage de l’addon
+  natif emporterait le studio. Les chiffres qui ont tranché sont dans l’ADR — chargement ~3,3 s,
+  décodage d’un segment de 7 s entre 250 et 1 600 ms.
+- **Le module s’importe par défaut, jamais par ses noms.** `sherpa-onnx-node` est CommonJS et
+  construit ses exports par accès de propriété, ce que l’analyseur de Node ne traverse pas :
+  `import { Vad }` **compile parfaitement** puis lève « Named export not found » au premier
+  lancement. Aucune relecture ne l’attrape ; seule l’exécution le dit.
+- **Un aperçu est un décodage complet depuis le début de la phrase**, pas un ajout : le modèle
+  n’écrit pas au fil de la parole. Il est donc cadencé, et une passe est **sautée** plutôt que mise
+  en file — sur une machine qui ne suit pas, les aperçus s’espacent et le texte définitif n’en sait
+  rien.
+
+**Quatre composants tiers sont arrivés avec** — `sherpa-onnx-node`, ONNX Runtime, Silero VAD, et le
+modèle Parakeet lui-même, qui est **listé bien qu’il ne soit pas embarqué** : CC-BY-4.0 demande
+l’attribution partout où l’œuvre est utilisée, livrée ou non. `src/shared/licences.json` passe de
+37 à **41** entrées.
+
 ## Ce qui n’est pas commencé
 
 **La surface Scenario que le studio prend est plus étroite qu’elle n’en a l’air.** Treize canaux

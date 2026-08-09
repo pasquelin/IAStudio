@@ -130,8 +130,8 @@ worker.
 n'aurait pas suffi : il partage le heap et le cycle de vie de son processus, donc les 700 Mo
 resteraient dans l'empreinte du principal et un plantage de l'addon natif emporterait le studio.
 Ce qui décide quoi que ce soit — le tampon, la file, la machine à états — vit à côté et se teste
-sans lui. Voir [`docs/stt/`](stt/00-architecture.md) et
-[`ADR-17`](ci/adr/ADR-17-moteur-de-dictee-hors-processus.md).
+sans lui. Voir [`docs/stt/`](../stt/00-architecture.md) et
+[`ADR-17`](../ci/adr/ADR-17-moteur-de-dictee-hors-processus.md).
 
 ---
 
