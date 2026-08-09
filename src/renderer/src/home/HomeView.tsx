@@ -1,10 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import {
-  hiddenHomeSections,
-  homeSections,
-  shownHomeSection,
-  type HomeSectionId,
-} from '@shared/domain/home'
+import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/domain/home'
 import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { FOCUS_RING } from '@/design/styles'
@@ -39,23 +34,19 @@ export function HomeView() {
     <div className="h-full overflow-x-hidden overflow-y-auto">
       {/* Bounded, and centred: shelves stretched across a 34" display stop being shelves. */}
       <div className="mx-auto flex max-w-[1400px] flex-col gap-8 px-6 py-6">
-        <Column ids={sections} />
+        {sections.map(id => {
+          const Section = HOME_COMPONENTS[id]
+          return (
+            // Per section: a shelf that throws takes itself off the home, not the home with it.
+            <ErrorBoundary key={id}>
+              <Section />
+            </ErrorBoundary>
+          )
+        })}
         <Closing />
       </div>
     </div>
   )
-}
-
-function Column({ ids }: { ids: readonly HomeSectionId[] }) {
-  return ids.map(id => {
-    const Section = HOME_COMPONENTS[id]
-    return (
-      // Per section: a shelf that throws takes itself off the home, not the home with it.
-      <ErrorBoundary key={id}>
-        <Section />
-      </ErrorBoundary>
-    )
-  })
 }
 
 /** The foot of the page: one sentence, two ways on. Nobody should reach the bottom and stop. */

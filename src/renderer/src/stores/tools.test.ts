@@ -199,10 +199,11 @@ describe('openFrom', () => {
    * and only generation — to a panel the user opened somewhere they cannot see it from.
    */
   it('does not let the home placement of a tool claim a workspace zone', () => {
-    const open = openFrom({ left: { primary: 'models' }, right: { primary: 'explorer' } })
+    const open = openFrom({ right: { primary: 'explorer' } })
 
-    expect(open.left).toEqual({ primary: 'models' })
     expect(open.right).toEqual({ primary: 'explorer' })
+    // Not merely closed: absent. A zone the rebuild names at all keeps its size and its handle.
+    expect(open.left).toBeUndefined()
   })
 
   // The shelf claims the upper right and the band both; the column was only left on its default.

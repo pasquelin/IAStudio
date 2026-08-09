@@ -144,13 +144,9 @@ export function visibleHomeSections(
 export type HomeMove = 'up' | 'down'
 
 /** Where a section would land if it moved, or -1 when it is already at that end of the page. */
-function neighbourOf(
-  sections: readonly HomeSectionSetting[],
-  from: number,
-  move: HomeMove,
-): number {
+function neighbourOf(count: number, from: number, move: HomeMove): number {
   const at = from + (move === 'up' ? -1 : 1)
-  return at >= 0 && at < sections.length ? at : -1
+  return at >= 0 && at < count ? at : -1
 }
 
 /** Whether the menu may offer the move at all — a row that cannot act is disabled, not silent. */
@@ -161,7 +157,7 @@ export function canMoveHomeSection(
 ): boolean {
   const sections = homeSections(stored)
   const from = sections.findIndex(setting => setting.id === id)
-  return from !== -1 && neighbourOf(sections, from, move) !== -1
+  return from !== -1 && neighbourOf(sections.length, from, move) !== -1
 }
 
 /**
@@ -177,7 +173,7 @@ export function movedHomeSection(
   const from = sections.findIndex(setting => setting.id === id)
   if (from === -1) return sections
 
-  const to = neighbourOf(sections, from, move)
+  const to = neighbourOf(sections.length, from, move)
   if (to === -1) return sections
 
   const moving = sections[from]

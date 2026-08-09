@@ -57,44 +57,29 @@ export function Shell() {
         actions={<AccountSelect />}
       />
 
-      {home ? (
-        // The left rail and its column, and nothing else: the documents of the project are what
-        // one opens the studio to reach, and the Explorer is a panel — it belongs in the column
-        // panels live in, under an icon that survives closing it. No right rail and no bottom
-        // strip: every tool they carry acts on an open document, and the home has none.
-        //
-        // No Dockview either. The center is the page itself, not a tab host.
-        <div className="flex min-h-0 flex-1">
-          <Rail side="left" />
+      {/* One frame for both surfaces. The zones the home does not have take themselves off: no
+          placement serves them there, so every `Edge` but the left column renders nothing. Only
+          the right rail has to be told — it is a strip of chassis whether or not it holds an
+          icon. The home swaps the centre for the page; no Dockview, which takes documents only. */}
+      <div className="flex min-h-0 flex-1">
+        <Rail side="left" />
 
-          <div className="flex min-h-0 min-w-0 flex-1 py-(--sc-gutter)">
+        {/* Handles occupy exactly the gutter: the space between two surfaces IS the resize
+            area, rather than decorative emptiness doubled by a handle. */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
+          <Edge zone="top" />
+          <div className="flex min-h-0 flex-1">
             <Edge zone="left" />
             <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
-              <HomeView />
+              {home ? <HomeView /> : <DocumentArea />}
             </Panel>
+            <Edge zone="right" />
           </div>
+          <Edge zone="bottom" />
         </div>
-      ) : (
-        <div className="flex min-h-0 flex-1">
-          <Rail side="left" />
 
-          {/* Handles occupy exactly the gutter: the space between two surfaces IS the resize
-              area, rather than decorative emptiness doubled by a handle. */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
-            <Edge zone="top" />
-            <div className="flex min-h-0 flex-1">
-              <Edge zone="left" />
-              <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
-                <DocumentArea />
-              </Panel>
-              <Edge zone="right" />
-            </div>
-            <Edge zone="bottom" />
-          </div>
-
-          <Rail side="right" />
-        </div>
-      )}
+        {!home && <Rail side="right" />}
+      </div>
 
       <Footer
         left={<Breadcrumb />}

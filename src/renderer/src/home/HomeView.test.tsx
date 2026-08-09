@@ -83,8 +83,6 @@ describe('the home', () => {
     render(<HomeView />)
 
     expect(screen.getByText('Vos documents')).toBeInTheDocument()
-    // The shelf's own card, not the tree in the aside: both list the folder, and this case is
-    // about the band.
     expect(screen.getByRole('button', { name: /Poster/ })).toBeInTheDocument()
     expect(screen.getByText('Reprendre où vous en étiez')).toBeInTheDocument()
   })

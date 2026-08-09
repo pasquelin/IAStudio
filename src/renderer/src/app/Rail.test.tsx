@@ -53,6 +53,37 @@ describe('Rail', () => {
     expect(screen.queryByRole('button', { name: 'Nouveau document' })).not.toBeInTheDocument()
   })
 
+  /**
+   * The button makes what the surface makes. On the home a document would land in the space
+   * behind it, out of sight of the screen that was asked — and the project is what the studio
+   * needs first anyway, which is why the button must not be dead there.
+   */
+  describe('on the home', () => {
+    beforeEach(() => {
+      useLayouts.setState({ home: true })
+    })
+
+    it('offers a new project instead of a new document', () => {
+      render(<Rail side="left" />)
+
+      expect(screen.getByRole('button', { name: 'Nouveau projet' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Nouveau document' })).not.toBeInTheDocument()
+    })
+
+    it('stays clickable with no project open — creating one needs no project', async () => {
+      useProject.setState({ project: null })
+      const createPicked = vi.fn(() => Promise.resolve())
+      useProject.setState({ createPicked })
+      render(<Rail side="left" />)
+
+      const button = screen.getByRole('button', { name: 'Nouveau projet' })
+      expect(button).not.toBeDisabled()
+
+      await userEvent.click(button)
+      expect(createPicked).toHaveBeenCalled()
+    })
+  })
+
   // Generating without a model is impossible, so the icon is absent rather than dead: the rail
   // says what the section can do.
   it('offers no generator icon while no model is chosen', () => {

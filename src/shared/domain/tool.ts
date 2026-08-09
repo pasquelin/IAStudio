@@ -163,9 +163,7 @@ export function placementsOf(id: unknown): ToolPlacement[] {
  * the user had named the Models panel for.
  */
 export function workspacePlacementsOf(id: unknown): ToolPlacement[] {
-  return placementsOf(id).filter(placement =>
-    WORKSPACE_IDS.some(workspace => serves(placement, workspace)),
-  )
+  return placementsOf(id).filter(placement => !serves(placement, HOME_SURFACE))
 }
 
 /**
