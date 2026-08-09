@@ -1,14 +1,17 @@
+import { execFile as execFileCallback } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { promisify } from 'node:util'
 import { dirname, join } from 'node:path'
 import {
   CATALOG_FILE,
   MANIFEST_FILE,
   MANIFEST_VERSION,
-  PROJECT_EXTENSION,
+  LEGACY_MANIFEST_FILE,
   PROJECT_FOLDERS,
   type Project,
 } from '@shared/domain/project'
 import { log } from '@main/log'
+import { isMissing } from '@main/scenario/job-store'
 import type { AsyncCatalog } from './catalog-client'
 import { parseManifest } from './validation'
 
@@ -40,8 +43,56 @@ export type ProjectStore = {
   close: () => void
 }
 
+const execFile = promisify(execFileCallback)
+
 async function ensureFolders(root: string): Promise<void> {
   await Promise.all(PROJECT_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
+  await hideFromExplorer(join(root, '.index'))
+}
+
+/**
+ * A leading dot hides on macOS and Linux and means nothing on Windows, which reads the
+ * FILE_ATTRIBUTE_HIDDEN bit that Node does not expose. `attrib` is the only way to set it
+ * without a native module, and it costs one short process per project rather than per file.
+ *
+ * Failures are swallowed on purpose: a manifest the Explorer happens to show is a cosmetic
+ * problem, and refusing to open the project over it would be a real one.
+ */
+async function hideFromExplorer(path: string): Promise<void> {
+  if (process.platform !== 'win32') return
+
+  try {
+    await execFile('attrib', ['+h', path])
+  } catch {
+    return
+  }
+}
+
+/**
+ * The manifest, under whichever name the folder carries it, migrated to the hidden one as it is
+ * read. The dotted file wins when both are there: a project opened once since the rename keeps
+ * the old one beside it, and the stale copy must not be what the studio believes.
+ *
+ * The old file is left where it is rather than deleted — a folder the user may be syncing is
+ * not ours to tidy, and an older build of the studio still reads it.
+ */
+async function readManifest(path: string): Promise<string> {
+  try {
+    return await readFile(join(path, MANIFEST_FILE), 'utf8')
+  } catch (error) {
+    // Only an ABSENT file means "made before the rename". Any other failure — permissions, a
+    // folder in its place, a sync placeholder — is a manifest that exists, and taking it for a
+    // missing one would overwrite it with the stale copy beside it.
+    if (!isMissing(error)) throw error
+
+    const legacy = await readFile(join(path, LEGACY_MANIFEST_FILE), 'utf8')
+
+    // Best effort: a read-only folder still opens, it just migrates on the next writable one.
+    await writeFile(join(path, MANIFEST_FILE), legacy, 'utf8').catch(() => undefined)
+    await hideFromExplorer(join(path, MANIFEST_FILE))
+
+    return legacy
+  }
 }
 
 export function createProjectStore({
@@ -87,7 +138,7 @@ export function createProjectStore({
 
   return {
     create: async (parentFolder, name) => {
-      const root = join(parentFolder, `${name}${PROJECT_EXTENSION}`)
+      const root = join(parentFolder, name)
       await ensureFolders(root)
 
       const timestamp = now()
@@ -98,12 +149,13 @@ export function createProjectStore({
         updatedAt: timestamp,
       }
       await writeFile(join(root, MANIFEST_FILE), JSON.stringify(manifest, null, 2), 'utf8')
+      await hideFromExplorer(join(root, MANIFEST_FILE))
 
       return await activate({ path: root, manifest })
     },
 
     open: async path => {
-      const manifest = parseManifest(JSON.parse(await readFile(join(path, MANIFEST_FILE), 'utf8')))
+      const manifest = parseManifest(JSON.parse(await readManifest(path)))
 
       // Repairs a project whose subfolders were deleted between two sessions — the folder is
       // the user's, and a missing `assets/vid` must not stop it from opening.

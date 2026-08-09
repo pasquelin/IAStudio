@@ -3,9 +3,19 @@ import { DOCUMENTS_FOLDER } from './document'
 
 export const MANIFEST_VERSION = 1
 
-/** A project is a folder, not a binary file — versionable, inspectable, repairable by hand. */
-export const PROJECT_EXTENSION = '.scenario'
-export const MANIFEST_FILE = 'project.json'
+/**
+ * A project is a folder, not a binary file — versionable, inspectable, repairable by hand.
+ *
+ * Hidden because it is not the user's: what the folder holds FOR them — `assets/`, `documents/`
+ * — stays in the open, and only what the machine keeps goes under a dot. There is no extension
+ * on the folder itself: nothing was ever registered against `.scenario`, so it opened as a
+ * plain folder and the suffix only decorated it.
+ */
+export const MANIFEST_FILE = '.project.json'
+
+/** What projects made before the rename carry. Read, never written — see `openManifest`. */
+export const LEGACY_MANIFEST_FILE = 'project.json'
+
 export const CATALOG_FILE = '.index/catalog.db'
 
 export type Manifest = {
@@ -93,5 +103,4 @@ export const PROJECT_FOLDERS: readonly string[] = [
   PROXIES_FOLDER,
   PEAKS_FOLDER,
   FILMSTRIPS_FOLDER,
-  'layouts',
 ]
