@@ -26,10 +26,10 @@ phrase et où l’on télécharge une image, c’est **tout ce qui vient après*
 > d’annulation. La liste complète et honnête de ce qui manque encore est le chapitre
 > [Ce qui n’existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
 
-## Six façons de travailler
+## Sept façons de travailler
 
-Le studio ne fait pas six logiciels différents. Il fait un seul logiciel qui **se réarrange**
-selon ce que vous fabriquez. Ces six arrangements s’appellent des **espaces de travail**.
+Le studio ne fait pas sept logiciels différents. Il fait un seul logiciel qui **se réarrange**
+selon ce que vous fabriquez. Ces sept arrangements s’appellent des **espaces de travail**.
 
 | Espace | Ce qu’on y fabrique | Un exemple |
 |---|---|---|
@@ -39,6 +39,7 @@ selon ce que vous fabriquez. Ces six arrangements s’appellent des **espaces de
 | **Audio** | des sons et des musiques | une ambiance, un bruitage, une nappe musicale |
 | **Textures** | des matières | du bois, du métal rouillé, du tissu — pour habiller un objet 3D |
 | **Skyboxes** | des ciels à 360° | ce qu’on voit autour de soi quand on lève les yeux dans une scène |
+| **Graphe** | des enchaînements de modèles | *en construction : il se pose et s’enregistre, il ne s’exécute pas encore* |
 
 Vous changez d’espace en cliquant sur son nom, en haut de la fenêtre. Les panneaux se
 réorganisent tout seuls, et le catalogue de modèles se filtre sur ce qui sait fabriquer ce

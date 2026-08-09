@@ -222,10 +222,10 @@ comme une carte du monde contient la Terre. C’est sous cette forme qu’une *s
 avant d’être repliée autour de vous.
 
 **Espace de travail**
-Un des six arrangements du studio : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
-**Skyboxes**. Changer d’espace réorganise les *panneaux* et refiltre le *catalogue*.
+Un des sept arrangements du studio : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
+**Skyboxes**, **Graphe**. Changer d’espace réorganise les *panneaux* et refiltre le *catalogue*.
 
-Ce n’est pas six logiciels : c’est un logiciel qui se réarrange.
+Ce n’est pas sept logiciels : c’est un logiciel qui se réarrange.
 
 **Étagère**
 Le surnom du panneau **Assets**. On y range ce qu’on a fabriqué et importé ; on y pioche pour
@@ -278,6 +278,13 @@ forme de *tâche*, et le résultat atterrit dans vos *assets*.
 **Gouttière**
 L’espace entre deux *panneaux*. C’est lui-même la poignée qui les redimensionne : il n’y a pas de
 petite prise à viser.
+
+**Graphe** *(node editor, workflow)*
+Le septième *espace de travail* : une toile où l’on pose des *nœuds*, où on les relie, et où la
+sortie de l’un devient l’entrée du suivant. Un document `.graph`.
+
+Il s’ouvre, il enregistre, il ne **s’exécute pas encore** — c’est écrit au chapitre
+[Ce qui n’existe pas encore](18-limites.md).
 
 **Graine** *(seed)*
 Le point de départ du hasard d’une génération. C’est un nombre.
@@ -396,6 +403,11 @@ Réglable par *famille*, dans Réglages → **Génération**.
 ---
 
 ## N
+
+**Nœud** *(node)*
+Une boîte de la toile du *graphe*. Chacune fait une chose — tenir un texte, lancer un *modèle*,
+porter une note — et expose des **ports** par lesquels elle reçoit et rend. Changer le modèle d’un
+nœud refait ses ports, et les liens dont le port a disparu s’en vont avec eux.
 
 **Normales** *(canal de texture)*
 Une image aux couleurs étranges — des bleus, des violets — qui encode les **micro-reliefs** d’une
