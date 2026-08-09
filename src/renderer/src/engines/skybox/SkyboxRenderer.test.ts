@@ -5,6 +5,8 @@ import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import type * as AdjustModule from '../gpu/passes/adjust'
 import type { AdjustPass } from '../gpu/passes/adjust'
 import type { GpuPipeline } from '../gpu/GpuPipeline'
+import type * as TestObjectsModule from '../viewport/test-objects'
+import type { TestObjects } from '../viewport/test-objects'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { SkyboxRenderer } from './SkyboxRenderer'
@@ -26,6 +28,23 @@ const pipeline = {
  * — so the material handed to the pipeline stays the real one.
  */
 let adjust: AdjustPass
+
+/**
+ * Kept real underneath — they are three meshes in a group, which jsdom builds fine — and held
+ * onto so a test can read what the viewport would actually draw.
+ */
+let probes: TestObjects
+
+vi.mock('../viewport/test-objects', async importOriginal => {
+  const actual = await importOriginal<typeof TestObjectsModule>()
+  return {
+    ...actual,
+    createTestObjects: (options: Parameters<typeof actual.createTestObjects>[0]) => {
+      probes = actual.createTestObjects(options)
+      return probes
+    },
+  }
+})
 
 vi.mock('../viewport/environment', () => ({ createEnvironment: () => environment }))
 vi.mock('../gpu/GpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
@@ -448,5 +467,157 @@ describe('the renderer of a skybox', () => {
       expect(() => renderer.dispose()).not.toThrow()
       expect(pipeline.dispose).not.toHaveBeenCalled()
     })
+  })
+})
+
+/**
+ * The empty state is the one sentence telling anyone what to do in this space, and it is drawn
+ * over the viewport. Seen on screen on 9 August: a `text-muted` over a lit ground and three
+ * spheres does not read — and there is nothing to judge without a sky anyway.
+ */
+describe('the test objects of a skybox', () => {
+  const mountedRenderers: SkyboxRenderer[] = []
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+    vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
+    vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(
+      document.createElement('canvas'),
+    )
+  })
+
+  afterEach(() => {
+    for (const renderer of mountedRenderers.splice(0)) renderer.dispose()
+    vi.useRealTimers()
+  })
+
+  const mounted = (): SkyboxRenderer => {
+    const renderer = new SkyboxRenderer({
+      onSunChange: vi.fn(),
+      loadTexture: fakeTextureSource().load,
+    })
+    renderer.mount(document.createElement('div'))
+    mountedRenderers.push(renderer)
+    return renderer
+  }
+
+  const withSky = (): SkyboxContent => {
+    const content = createSkyboxContent()
+    content.source = { assetId: 'sky-1' }
+    return content
+  }
+
+  it('shows nothing to judge until a sky is placed', () => {
+    mounted().apply(createSkyboxContent())
+
+    expect(probes.group.visible).toBe(false)
+  })
+
+  it('shows them once a sky is placed', () => {
+    mounted().apply(withSky())
+
+    expect(probes.group.visible).toBe(true)
+  })
+
+  /** The setting still wins: asked to hide them, they stay hidden with a sky in place. */
+  it('keeps them hidden when the setting says so', () => {
+    const renderer = mounted()
+
+    renderer.setProbesVisible(false)
+    renderer.apply(withSky())
+
+    expect(probes.group.visible).toBe(false)
+  })
+
+  /** And they go again when the sky is taken away — the empty state comes back with them. */
+  it('hides them again when the sky is removed', () => {
+    const renderer = mounted()
+    renderer.apply(withSky())
+
+    renderer.apply(createSkyboxContent())
+
+    expect(probes.group.visible).toBe(false)
+  })
+})
+
+/**
+ * A flat view is a quad over the frame, so what sits behind it is worth nothing — and worse
+ * than nothing for the backdrop: the projection letterboxes its picture, and the immersive sky
+ * showing through the bars would read as part of what is being judged.
+ */
+describe('the views of a skybox', () => {
+  const mountedRenderers: SkyboxRenderer[] = []
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+    vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
+    vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(
+      document.createElement('canvas'),
+    )
+  })
+
+  afterEach(() => {
+    for (const renderer of mountedRenderers.splice(0)) renderer.dispose()
+    vi.useRealTimers()
+  })
+
+  const withSky = (): SkyboxContent => {
+    const content = createSkyboxContent()
+    content.source = { assetId: 'sky-1' }
+    return content
+  }
+
+  const mounted = (): SkyboxRenderer => {
+    const renderer = new SkyboxRenderer({
+      onSunChange: vi.fn(),
+      loadTexture: fakeTextureSource().load,
+    })
+    renderer.mount(document.createElement('div'))
+    mountedRenderers.push(renderer)
+    renderer.apply(withSky())
+    return renderer
+  }
+
+  it('drops the backdrop and the probes for a flat view', () => {
+    const renderer = mounted()
+
+    renderer.setView('cross')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
+    expect(probes.group.visible).toBe(false)
+  })
+
+  it('gives them back on the way home', () => {
+    const renderer = mounted()
+
+    renderer.setView('faces')
+    renderer.setView('immersive')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(true)
+    expect(probes.group.visible).toBe(true)
+  })
+
+  /** What the document asked of the backdrop is not forgotten while a flat view is on. */
+  it('does not turn a backdrop back on that the document had turned off', () => {
+    const renderer = mounted()
+    const content = withSky()
+    content.environment = { ...content.environment, showBackground: false }
+    renderer.apply(content)
+
+    renderer.setView('equirect')
+    renderer.setView('immersive')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
+  })
+
+  /** Nothing is drawn over the immersive view — it IS the scene. */
+  it('draws no projection in the immersive view', () => {
+    mounted()
+
+    expect(pipeline.renderToScreen).not.toHaveBeenCalled()
   })
 })
