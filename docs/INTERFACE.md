@@ -341,6 +341,52 @@ lire soixante-cinq caractères, et il ne le peut pas.
 livré avec l’entrée 22). Reste `clickable`, qui bascule `pointer-events` sur **toutes** les
 infobulles : à regarder d’un bloc, avec ce que ça fait aux barres flottantes qui en portent.
 
+### 32. Un menu contextuel ne se prend jamais au clavier
+
+**Vu le 9 août 2026**, en soldant l’entrée 14. `design/ContextMenu.tsx` est un `createPortal` vers
+`document.body` portant `role="menu"`, avec des `MenuRow` en `role="menuitem"`. Il n’a **aucune
+gestion du focus** : ni entrée au focus, ni `tabIndex`, ni piège de focus, ni traitement des
+flèches, ni restauration à la fermeture.
+
+**Ce que ça coûte concrètement** : même quand l’ouverture est possible au clavier, le focus reste
+où il était, et le menu — ajouté en fin de `body` — ne s’atteint qu’en traversant tout le document
+à la tabulation. Ce n’est pas un mécanisme clavier, c’est un menu qu’on ne peut que pointer.
+
+**Le patron APG existe et il est nommé** : entrée au focus sur la première ligne, navigation aux
+flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le menu.
+
+> **C’est préexistant et ça touche tout le monde** : `DocumentTab`, `DraggableAsset`, `AssetMenu`,
+> `StyleRow`, et la barre des espaces depuis l’entrée 14. C’est ce qui range cette entrée ici
+> plutôt que dans le lot qui l’a trouvée. Et c’est aussi pourquoi ce lot a dû livrer `Alt+Flèches`
+> **en plus** du menu : le menu seul ferme 2.5.7, jamais 2.1.1.
+
+### 33. Le même algorithme de réconciliation d’ordre, écrit deux fois
+
+**Vu le 9 août 2026**, par deux agents de revue indépendamment. `workspaceOrder`
+(`shared/domain/workspace.ts`) et `homeSections` (`shared/domain/home.ts`) portent la même boucle à
+deux passes : garder les ids stockés que le build connaît encore, puis réinsérer chaque entrée
+manquante du registre **juste après son dernier voisin antérieur encore présent**.
+
+C’est la partie subtile — le calcul de l’indice d’insertion — dupliquée presque mot pour mot, et
+**deux suites de tests prouvent séparément le même algorithme**.
+
+Un générique `reconcileOrder<T, K>(stored, registry, keyOf)` dans `shared/domain/` absorbe les
+deux : une vingtaine de lignes contre deux sites d’appel de trois. La différence de forme — ids
+nus d’un côté, `{ id, visible, limit }` de l’autre — se règle par `keyOf`.
+
+**Ne pas généraliser les `moved*` avec**, en revanche : `movedWorkspace` déplace vers une cible
+(sémantique du lâcher), `movedHomeSection` échange deux voisins (sémantique du menu). Un paramètre
+de mode coûterait plus en indirection que deux fonctions de dix lignes ne rendent.
+
+### 34. Le raccourci de réordonnancement n’est pas remappable
+
+**Vu le 9 août 2026**, avec l’entrée 14. `Alt+Flèches` est codé dans `TitleBar` et annoncé par
+`aria-keyshortcuts`, mais il ne passe pas par le registre de commandes — donc il n’apparaît pas
+dans les réglages de raccourcis, et `shortcuts.overrides` ne peut pas le changer.
+
+C’est le seul geste clavier du studio dans ce cas. Tant qu’il l’est, il échappe aussi à la garde
+qui vérifie le format des signatures du registre.
+
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
 **Vu le 9 août 2026**, en soldant la vérification à l’écran des entrées 6 et 8 : l’étagère
@@ -582,6 +628,33 @@ correction.
 | **(31)** La Lame annonçait une coupe à la tête de lecture ; elle coupe au pointeur | `e5a75b4` (feat/lame-infobulle) |
 | **(17)** Un projet portait `.scenario`, et sa mécanique traînait à la vue | `f989b5e` (feat/projet-dossier) |
 | **(11)** La ligne d’état était collée au bord et alignée sur rien | `d66b811` (feat/ligne-etat) |
+| **(14)** L’ordre des espaces était en dur, et deux surfaces le montraient sans qu’on puisse le changer | `8faba6f` (feat/ordre-espaces) |
+
+> **Le piège de l’entrée 14 a été mesuré, et il ne mord pas.** Un glisser HTML5 part bien d’un
+> `-webkit-app-region: drag` : `Input.setInterceptDrags` puis `Input.dragIntercepted` répondent
+> OUI sur l’application lancée, l’ordre change à l’écran et atterrit dans `settings.json`. Le
+> `no-drag` du `nav` suffit, puisqu’on ne lâche jamais que sur une autre pastille. **Le MCP
+> `electron` ne pouvait pas le prouver** — `electron_drag_from_to` envoie des événements souris,
+> dont Chromium ne démarre aucun glisser HTML5 : c’est le CDP direct qui tranche.
+>
+> **Ce que l’entrée ne demandait pas, et qui manquait quand même.** Le réordonnancement n’avait
+> **aucun chemin hors du glisser** — ni clavier, ni pointeur incapable de maintenir un bouton en
+> se déplaçant — et le réglage étant `DedicatedPath`, l’écran de préférences ne l’offrait pas non
+> plus. **WCAG 2.1.1 (A) et 2.5.7 (AA)**, prouvés par sonde plutôt que déduits. D’où `Alt+Flèches`
+> sur la pastille focalisée, un menu contextuel calqué sur celui de l’accueil, et une région live
+> qui dit où l’espace a atterri — sans elle le geste réussissait en silence (**4.1.3**).
+>
+> **Six trouvailles de revue, chacune reproduite.** Les deux qui valaient la revue : la barre de
+> titre **acceptait les fichiers du Finder**, parce que `helpers/drag.ts` existait et que sa JSDoc
+> énonçait la règle enfreinte — « `carries`, qu’une cible de dépôt doit interroger **avant**
+> `preventDefault` » ; et un `order` mal formé **jetait tout le fichier de réglages** — thème,
+> densité, chemin ffmpeg, projets récents — parce que le `.catch` copié de `home` portait sur
+> l’élément et non sur la branche. Cette clé était inerte avant le lot : la régression venait de
+> lui. `home.sections` a le même trou, lui, depuis toujours.
+>
+> **Un ordre stocké est la photo des espaces d’un jour donné.** `graph` était le septième et ne
+> sera pas le dernier : la réconciliation réinsère un espace que l’ordre précède à la place que le
+> registre lui donne, pas à la fin.
 
 
 
