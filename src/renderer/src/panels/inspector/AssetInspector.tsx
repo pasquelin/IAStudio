@@ -127,7 +127,7 @@ function GenerationGroup({
           </p>
         </PropertyRow>
       )}
-      <div className="flex justify-end gap-1 px-2 pt-1">
+      <div className="flex justify-end gap-2 px-2 pt-1">
         {/* Already pinned, the button says so rather than disappearing: a control that vanishes
             once used leaves no way to tell "done" from "never offered". At the bound it is
             disabled and says why — the store refuses silently, and a click that does nothing
