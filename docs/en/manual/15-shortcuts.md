@@ -38,7 +38,7 @@ The studio files each action under a **context** — the surface where it makes 
 surface listens at a time, the one you are looking at. A key shared between two contexts can
 therefore never be ambiguous.
 
-Six contexts:
+Seven contexts:
 
 | Context | Where it applies |
 |---|---|
@@ -48,6 +48,7 @@ Six contexts:
 | **In the edit** | the timeline of the Video and Audio workspaces |
 | **In the picture** | the canvas of the Image workspace |
 | **In the sky** | the view of the Skyboxes workspace |
+| **In the graph** | the canvas of the Graph workspace |
 
 One context is special: **Anywhere in the application**. Its keys go through the operating system's
 menu, which catches them before anybody else. They are therefore the only ones that can never be
@@ -369,6 +370,22 @@ The Skyboxes workspace answers the keyboard like the others.
 
 ---
 
+## In the graph
+
+The seventh context, and the shortest: the Graph workspace listens for undo and nothing else.
+
+| Action | Key | What it does |
+|---|---|---|
+| **Undo** | `⌘Z` | |
+| **Redo** | `⇧⌘Z` | |
+
+They cover everything the graph can do — placing a node, moving it, wiring it, renaming it,
+changing its model — because all of it goes through a command. Nodes are placed with the mouse
+from the palette: there is no key yet that arms one, the way there is one per tool in the Image
+workspace.
+
+---
+
 ## One important thing about ⌘Z
 
 **Each document has its own undo stack.**
@@ -450,43 +467,45 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 
 ## Crib sheet, all on one page
 
-| Key | Anywhere | 3D view | Edit | Image | Sky |
-|---|---|---|---|---|---|
-| `⌘N` | New project | | | | |
-| `⌘O` | Open project | | | | |
-| `⌘S` | Save | | | | |
-| `⌘,` | Settings | | | | |
-| `⌃⌘F` | Full screen | | | | |
-| `⌘Z` | | Undo | Undo | Undo | Undo |
-| `⇧⌘Z` | | Redo | Redo | Redo | Redo |
-| `⌘G` | | Group | | | |
-| `⌘D` | | Duplicate | | Deselect | |
-| `⌘C` / `⌘X` / `⌘V` | | Copy / Cut / Paste | | | |
-| `O` | | Projection | | | |
-| `Z` | | Display | | | |
-| `V` | | Select | | | Change the view |
-| `P` | | | | | Light probes |
-| `G` | | Move | | | |
-| `R` | | Rotate | | | |
-| `S` | | Scale *(and back up)* | Split clip | | |
-| `M` | | Snapping | | | |
-| `L` | | Local frame | | | |
-| `F` | | Frame selection | | | |
-| `Delete` | | Delete object | Delete clip | | |
-| `W A S D` | | Fly | | | |
-| `Q` / `E` | | Down / Up | | | |
-| left `⇧` | | Boost | | | |
-| `Space` | | | Play / Pause | | |
-| `Home` / `End` | | | Start / End of edit | | |
-| `⌘=` | | | Zoom in | Zoom in | |
-| `⌘−` | | | Zoom out | Zoom out | |
-| `⇧Z` | | | Fit to view | | |
-| `⌘0` | | | | Fit to window | |
-| `⌘1` | | | | Actual size | |
-| `⌘R` | | | | Rulers | |
-| `⌘;` | | | | Guides | |
-| `⇧⌘;` | | | | Snap | |
-| `⇧⌘E` | | | | Export the image | |
+| Key | Anywhere | Bar | 3D view | Edit | Image | Sky | Graph |
+|---|---|---|---|---|---|---|---|
+| `⌘N` | New project |  |  |  |  |  |  |
+| `⌘O` | Open project |  |  |  |  |  |  |
+| `⌘S` | Save |  |  |  |  |  |  |
+| `⌘,` | Settings |  |  |  |  |  |  |
+| `⌃⌘F` | Full screen |  |  |  |  |  |  |
+| `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo |
+| `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo |
+| `⌘G` |  |  | Group |  |  |  |  |
+| `⌘D` |  |  | Duplicate |  | Deselect |  |  |
+| `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |
+| `O` |  |  | Projection |  |  |  |  |
+| `Z` |  |  | Display |  |  |  |  |
+| `V` |  |  | Select |  |  | Change the view |  |
+| `P` |  |  |  |  |  | Light probes |  |
+| `G` |  |  | Move |  |  |  |  |
+| `R` |  |  | Rotate |  |  |  |  |
+| `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |
+| `M` |  |  | Snapping |  |  |  |  |
+| `L` |  |  | Local frame |  |  |  |  |
+| `F` |  |  | Frame selection |  |  |  |  |
+| `Delete` |  |  | Delete object | Delete clip |  |  |  |
+| `W A S D` |  |  | Fly |  |  |  |  |
+| `Q` / `E` |  |  | Down / Up |  |  |  |  |
+| left `⇧` |  |  | Boost |  |  |  |  |
+| `Space` |  |  |  | Play / Pause |  |  |  |
+| `Home` / `End` |  |  |  | Start / End of edit |  |  |  |
+| `⌘=` |  |  |  | Zoom in | Zoom in |  |  |
+| `⌘−` |  |  |  | Zoom out | Zoom out |  |  |
+| `⇧Z` |  |  |  | Fit to view |  |  |  |
+| `⌘0` |  |  |  |  | Fit to window |  |  |
+| `⌘1` |  |  |  |  | Actual size |  |  |
+| `⌘R` |  |  |  |  | Rulers |  |  |
+| `⌘;` |  |  |  |  | Guides |  |  |
+| `⇧⌘;` |  |  |  |  | Snap |  |  |
+| `⇧⌘E` |  |  |  |  | Export the image |  |  |
+| `⌥←` |  | Move left |  |  |  |  |  |
+| `⌥→` |  | Move right |  |  |  |  |  |
 
 ---
 
