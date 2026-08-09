@@ -98,6 +98,16 @@ s’il y en a une, la première cellule visible sinon.
 **Dans l’étagère, la sélection se fait aussi à plusieurs** — `⌘` pioche, `Maj` étend. Voir
 [Choisir plusieurs assets](07-assets.md#choisir-plusieurs-assets).
 
+### Ranger la barre des espaces
+
+| Touche | Effet |
+|---|---|
+| `⌥←` / `⌥→` | déplace l’espace focalisé d’un cran vers la gauche ou la droite |
+
+**`⌥` et non les flèches nues** : celles-ci appartiennent à qui parcourt la barre, et les prendre
+échangerait un geste contre un autre. Le glisser et le clic droit font la même chose — voir
+[La barre de titre](03-la-fenetre.md#ranger-les-espaces-dans-lordre-qui-vous-arrange).
+
 ---
 
 ## Dans la vue 3D

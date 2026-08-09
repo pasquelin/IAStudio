@@ -95,6 +95,16 @@ one, the first visible cell otherwise.
 **In the shelf, the selection can also be plural** — `⌘` picks, `Shift` extends. See
 [Picking several assets](07-assets.md#picking-several-assets).
 
+### Arranging the workspace bar
+
+| Key | Effect |
+|---|---|
+| `⌥←` / `⌥→` | moves the focused workspace one place left or right |
+
+**`⌥` and not the bare arrows**: those belong to whoever walks the bar, and taking them would
+trade one gesture for another. Dragging and right-clicking do the same thing — see
+[The title bar](03-the-window.md#arranging-the-workspaces-in-the-order-that-suits-you).
+
 ---
 
 ## In the 3D view

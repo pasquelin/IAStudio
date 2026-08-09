@@ -177,6 +177,28 @@ Switching workspace does three things at once:
 
 On macOS, the three red / orange / green buttons stay in their usual place, on the left.
 
+### Arranging the workspaces in the order that suits you
+
+The bar's order is not imposed. Three ways to change it, whichever you prefer:
+
+| Gesture | How |
+|---|---|
+| **Drag** | pick up a workspace and drop it onto another |
+| **Keyboard** | `⌥←` / `⌥→` on the focused workspace — the bare arrows walk the bar instead |
+| **Right-click** | **Move left** / **Move right** |
+
+**Home does not move**: it is not one workspace among the others, it covers them all, and it
+stays at the head.
+
+**The order follows everywhere.** The home screen's **Tools** band shows the same workspaces:
+reordering one without the other would leave two truths on the same screen. It is kept from one
+session to the next, along with your settings.
+
+> **A workspace added by an update does not land at the end of your bar.** It lands where the
+> studio files it by default — after the last of its earlier neighbours you kept. A stored order is
+> a photograph of the workspaces that existed the day it was written: the Graph was the seventh and
+> will not be the last.
+
 ### The account switcher
 
 On the right of the title bar: a small coloured dot, a name, and a chevron.

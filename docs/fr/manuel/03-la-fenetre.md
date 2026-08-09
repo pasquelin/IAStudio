@@ -181,6 +181,28 @@ Changer d’espace fait trois choses d’un coup :
 
 Sur macOS, les trois pastilles rouge / orange / verte restent à leur place habituelle, à gauche.
 
+### Ranger les espaces dans l’ordre qui vous arrange
+
+L’ordre de la barre n’est pas imposé. Trois façons de le changer, au choix :
+
+| Geste | Comment |
+|---|---|
+| **Glisser** | attrapez un espace et lâchez-le sur un autre |
+| **Clavier** | `⌥←` / `⌥→` sur l’espace focalisé — les flèches nues, elles, servent à parcourir la barre |
+| **Clic droit** | **Déplacer à gauche** / **Déplacer à droite** |
+
+**L’Accueil ne bouge pas** : il n’est pas un espace parmi les autres, il les couvre tous, et il
+reste en tête.
+
+**L’ordre suit partout.** La bande **Outils** de l’accueil montre les mêmes espaces : réordonner
+l’un sans l’autre laisserait deux vérités sur le même écran. Il est retenu d’une session à
+l’autre, avec vos réglages.
+
+> **Un espace ajouté par une mise à jour n’atterrit pas au bout de votre barre.** Il se pose là où
+> le studio le range d’origine — après le dernier de ses voisins que vous avez gardés. Un ordre
+> enregistré est la photo des espaces d’un jour donné : le Graphe a été le septième et ne sera pas
+> le dernier.
+
 ### Le sélecteur de compte
 
 À droite de la barre de titre : un petit point de couleur, un nom, et un chevron.
