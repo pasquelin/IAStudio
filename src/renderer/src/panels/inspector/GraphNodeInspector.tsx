@@ -6,6 +6,7 @@ import { TextField } from '@/design/TextField'
 import { setGraphNodeData } from '@/engines/graph/commands'
 import { NODE_LABEL_KEYS } from '@/spaces/graph/node-labels'
 import { useGraphs } from '@/stores/graphs'
+import { ModelNodeFields } from './ModelNodeFields'
 import { useDocumentEdit, type DocumentEdit } from './useDocumentEdit'
 
 export type GraphNodeInspectorProps = { documentId: string; node: GraphNode }
@@ -36,12 +37,7 @@ export function GraphNodeInspector({ documentId, node }: GraphNodeInspectorProps
         {...edit.gesture}
       />
 
-      {/* Read out rather than edited: which model a generator runs, and the form that goes with
-          it, are the next lot — but the node draws its id on the canvas, and a panel that
-          describes what is selected must not say less than the rectangle it describes. */}
-      {node.type === 'model' && node.data.modelId !== undefined && (
-        <PropertyRow label={t('inspector.model')}>{node.data.modelId}</PropertyRow>
-      )}
+      {node.type === 'model' && <ModelNodeFields documentId={documentId} node={node} edit={edit} />}
 
       {node.type === 'text' && (
         <TextField

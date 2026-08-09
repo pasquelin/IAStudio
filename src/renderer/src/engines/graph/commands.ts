@@ -1,7 +1,15 @@
 import type { GraphNode, GraphPosition, GraphState } from '@shared/domain/graph'
 import type { Command } from '../core/history'
 import type { Connection } from './connect'
-import { addNode, connect, disconnect, moveNode, removeNode, updateNodeData } from './mutations'
+import {
+  addNode,
+  connect,
+  disconnect,
+  moveNode,
+  removeNode,
+  replaceNodePorts,
+  updateNodeData,
+} from './mutations'
 
 /**
  * Graph edits, on the very history the other five spaces use.
@@ -58,3 +66,15 @@ export const setGraphNodeData = (
   reversible(`graph:data:${id}:${Object.keys(patch).sort().join(',')}`, graph =>
     updateNodeData(graph, id, patch),
   )
+
+/**
+ * A generator's model, and the ports that come with it.
+ *
+ * One command rather than two: the ports are derived from the model, so an undo that gave back
+ * the model without the ports — or the reverse — would leave a node the compiler cannot read.
+ */
+export const setGraphNodeModel = (
+  id: string,
+  patch: Partial<GraphNode['data']>,
+): Command<GraphState> =>
+  reversible(`graph:model:${id}`, graph => replaceNodePorts(graph, id, patch))

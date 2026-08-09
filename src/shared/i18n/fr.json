@@ -614,7 +614,8 @@
     "fontMissing": "{{family}} (absente)",
     "node": "Nœud",
     "title": "Titre",
-    "nodeId": "Identifiant"
+    "nodeId": "Identifiant",
+    "noModel": "Aucun"
   },
   "transport": {
     "play": "Lire",
