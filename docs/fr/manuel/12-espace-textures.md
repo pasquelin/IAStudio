@@ -330,11 +330,89 @@ puce sur l’onglet dit ce qui attend encore d’être écrit.
 
 ---
 
+## Exporter la matière
+
+Menu **Fichier → Exporter la matière**, puis la ligne du moteur qui va la recevoir. Le menu
+n'apparaît que dans l'espace Textures, et il s'adresse à **l'onglet au premier plan** : deux
+matières ouvertes ne répondent pas ensemble au même clic.
+
+Le studio demande **un dossier**, et crée dedans un sous-dossier au nom de votre document. Les
+fichiers d'un export ne veulent rien dire séparés — une couleur de base sans son ORM à côté est
+la moitié d'une matière —, alors ils voyagent ensemble.
+
+### Les cinq destinations
+
+| Ligne | Ce qui est écrit |
+|---|---|
+| **glTF / GLB** | **un seul fichier** `.glb`, textures embarquées, posé sur la forme de l'aperçu |
+| **Unity (URP)** | `_BaseMap`, `_BumpMap`, `_MaskMap`, `_EmissionMap`, `_ParallaxMap` |
+| **Unreal Engine** | `_BaseColor`, `_Normal`, `_ORM`, `_Emissive`, `_Height` |
+| **Roblox** | `_ColorMap`, `_NormalMap`, `_RoughnessMap`, `_MetalnessMap` |
+| **Canaux bruts** | les huit canaux, un fichier chacun, masque de cavité compris |
+
+Tout est en **PNG**, sans perte : un canal est de la donnée avant d'être une image, et le JPEG
+inventerait des dégradés là où le relief se lit.
+
+### Ce que veut dire « empaqueter »
+
+Un moteur ne lit pas huit fichiers quand trois composantes lui suffisent. Trois canaux gris
+tiennent dans une seule image, un par composante — c'est ce qu'on appelle un *pack*, et chaque
+moteur a le sien :
+
+- **`_ORM` d'Unreal** : occlusion sur le **rouge**, rugosité sur le **vert**, métallicité sur le
+  **bleu**. C'est aussi ce que lit glTF, qui prend la même image pour son occlusion et pour son
+  couple métallique-rugosité ;
+- **`_MaskMap` d'Unity** : métallicité sur le **rouge**, occlusion sur le **vert**, et le
+  **lissage sur l'alpha**. Une seule image, à poser dans les **deux** emplacements — celui du
+  métallique et celui de l'occlusion ;
+- **Roblox** ne pack rien : sa `SurfaceAppearance` prend exactement quatre cartes séparées.
+
+Le calcul se fait **sur le GPU, en une passe** par image. Une image 4K, c'est seize millions de
+pixels et trois canaux lus par pixel : une boucle en JavaScript figerait la fenêtre.
+
+### Deux conventions que l'export réconcilie pour vous
+
+**Le vert d'une normale.** OpenGL et DirectX ne sont pas d'accord sur son sens. Le studio écrit de
+l'OpenGL ; Unreal attend du DirectX. L'export retourne donc le vert pour Unreal, et pas pour les
+autres. Et si vous aviez coché **Inverser le vert** parce que votre normale était arrivée en
+DirectX, l'export le sait : il ne retourne pas deux fois.
+
+**La rugosité rangée à l'envers.** Le convertisseur de Scenario répond parfois avec une carte de
+*lissage* — la même image lue dans l'autre sens. Le studio la garde telle qu'elle est arrivée et
+retient qu'elle est inversée. Un fichier `_Roughness` contient donc bien de la rugosité, et le
+`_MaskMap` d'Unity bien du lissage : le nom du fichier dit ce qu'il y a dedans.
+
+### Trois choses à savoir
+
+**La pleine résolution, pas celle de l'aperçu.** L'export lit chaque canal à la taille où il est
+stocké. Une seule exception, et elle n'est pas la nôtre : **Roblox refuse une carte au-delà de
+1024 px**, donc ses quatre fichiers sont ramenés sous ce plafond, en gardant les proportions.
+
+**Une image qu'aucun canal ne nourrit n'est pas écrite.** Une matière sans occlusion ni
+métallicité ne produit pas d'`_ORM` gris uniforme : tout l'intérêt de cet emplacement est que ce
+qu'il contient a été mesuré. Les composantes manquantes d'une image qui, elle, est écrite prennent
+une valeur neutre — pas d'occlusion, pas de métal.
+
+**Ré-exporter écrase.** Le même document exporté deux fois au même endroit réécrit son dossier.
+C'est ce que veut dire ré-exporter après une retouche.
+
+### Ce que le `.glb` emporte en plus
+
+Lui seul est un objet et pas un jeu de fichiers : il part avec **la forme de l'aperçu**, et avec
+les réglages du panneau Matériau que le format sait porter — la teinte, la rugosité, la
+métallicité, la force de la normale et du relief, l'émission, et la répétition. Ouvert ailleurs,
+il ressemble à ce que vous jugiez à l'écran.
+
+La **prévisualisation** de la répétition (×1, ×2, ×4) n'en fait pas partie, et c'est voulu :
+juger une répétition et en choisir une sont deux gestes, et seul celui que vous avez choisi
+appartient à un fichier.
+
+---
+
 ## Ce qui manque encore
 
 - l’**import d’un fichier du disque** directement dans un canal. Passez par l’import du projet
-  (chapitre 7), puis posez l’image sur la vignette ;
-- l’**export** vers glTF, Unity, Unreal, Roblox.
+  (chapitre 7), puis posez l’image sur la vignette.
 
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
