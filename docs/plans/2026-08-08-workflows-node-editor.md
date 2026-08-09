@@ -376,7 +376,34 @@ tous deux non testés. **Un budget de couverture qui déborde nomme souvent le d
 
 ## Étape 4 — `dryRun` et le coût visible
 
-- [ ] Livrée
+- [x] Livrée
+
+> **Livrée le 9 août 2026, fusionnée.** Les points 1 à 3 sont faits ; le point 4 l'était déjà
+> par ailleurs (voir ci-dessous).
+>
+> **Ce que les deux passes ont rattrapé, et qui vaut pour les étapes suivantes.** Un débounce seul
+> n'a pas de plafond de débit, seulement une falaise : tapé plus lentement que son délai, chaque
+> frappe part en requête. Le remède est un **plancher** entre deux envois — et il doit dériver de
+> `INTERACTIVE_REQUESTS_PER_MINUTE`, désormais dans `shared/domain/job.ts` parce que les deux
+> processus s'en servent : le principal dimensionne son polling sur ce qu'il en reste, le renderer
+> y cale ses estimations. La première version calait le plancher à 1,5 s quand la part n'autorise
+> qu'une requête toutes les 4 s : **le `JobManager` comptait sur une réserve que le hook dépensait
+> presque trois fois.**
+>
+> Trois autres défauts, tous trouvés en revue : un échec réseau figeait la déduplication et
+> laissait ce formulaire exact sans prix pour toujours ; le prix d'un modèle restait sur le bouton
+> d'un autre ; et l'espacement du badge, posé sur `BUTTON_BASE`, écartait les icônes de **toutes**
+> les barres d'outils du studio — un ajout à une base partagée pour un besoin d'un seul appelant.
+>
+> **Le port est une fonction, pas un objet à méthode `runModel`.** Le dry run est documenté sur
+> `workflows.run` autant que sur la génération : l'étape 5 s'y branche par
+> `costEstimatorOf((id, body) => client.workflows.run(id, { body, dryRun: true }))`, sans rien
+> défaire.
+>
+> **Une affirmation à vérifier un jour** : le code lit `creativeUnitsCost` sur la réponse de
+> soumission. Les typages déclarent aussi un `billing.cuCost` sur un job **interrogé** — jamais
+> observé. Si l'API le peuple vraiment, un job repris pourrait afficher son coût, ce qu'il ne fait
+> pas aujourd'hui.
 
 > **Le point 4 est déjà livré, par quelqu'un d'autre.** `feat/usage-window` a été fusionnée dans
 > `develop` le 8 août 2026 et donne à la consommation de chaque clé **sa propre fenêtre**

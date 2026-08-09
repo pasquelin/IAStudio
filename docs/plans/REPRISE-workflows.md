@@ -1,7 +1,7 @@
 # Reprise — chantier « workflows et node editor »
 
-**À coller tel quel dans une nouvelle session.** Réécrit le 8 août 2026, après la fusion des
-trois premières étapes et de la revue de cohérence dans `develop`.
+**À coller tel quel dans une nouvelle session.** Réécrit le 9 août 2026, après la fusion des
+**quatre premières étapes** et de la revue de cohérence dans `develop`.
 
 ---
 
@@ -15,23 +15,27 @@ trois premières étapes et de la revue de cohérence dans `develop`.
 > 1. Lis en entier, dans cet ordre : `CLAUDE.md` à la racine (il prime sur tout, y compris sur le
 >    plan) ; **ce fichier** (`docs/plans/REPRISE-workflows.md`) ; `docs/REPRISE.md` — le § 4 est le
 >    chantier, le § 3.6 porte les dettes ; puis `docs/plans/2026-08-08-workflows-node-editor.md`,
->    le plan en dix étapes. **Les étapes 1, 2 et 3 sont cochées, livrées et FUSIONNÉES** : lis
->    leurs encadrés et la section « Revue de cohérence de la branche », ils disent où le plan
->    s'est trompé et ce que la revue a coûté.
+>    le plan en dix étapes. **Les étapes 1 à 4 sont cochées, livrées et FUSIONNÉES** : lis leurs
+>    encadrés et la section « Revue de cohérence de la branche », ils disent où le plan s'est
+>    trompé, ce que les revues ont coûté, et ce qu'il ne faut pas défaire.
 > 2. Ton worktree existe déjà : `cd /Users/pasquelin/Applications/scenario/.claude/worktrees/workflows`.
 >    S'il a disparu : `git worktree add .claude/worktrees/workflows feat/workflows` puis
 >    `cp CLAUDE.md .claude/worktrees/workflows/` et `pnpm install && pnpm rebuild:native`.
 > 3. `git log --oneline -8` puis `pnpm validate` — **doit être vert avant ta première ligne**.
->    Référence au 8 août 2026 après fusion : **329 fichiers de tests, 4219 tests**. Aucune étape ne
->    fait baisser ce nombre.
+>    Référence au 9 août 2026 après fusion : **351 fichiers de tests, 4434 tests**. Aucune étape ne
+>    fait baisser ce nombre — mais il monte vite tout seul, d'autres sessions livrent en parallèle.
 >    **Vérifie le code de sortie, jamais la dernière ligne** : `pnpm validate | tail` masque
 >    l'échec, et une session entière a cru la branche verte alors que trois budgets de couverture
 >    débordaient. Fais `pnpm validate > /tmp/v.log 2>&1; echo "EXIT=$?"`.
 > 4. **Préfixe chaque commande du chemin absolu du worktree.** Le shell retombe ailleurs entre deux
->    appels, et d'autres sessions travaillent dans ce dépôt — `develop` a pris **30 commits**
->    pendant la session précédente.
+>    appels — un `npx vitest` lancé au mauvais endroit répond « no test files found » sur un
+>    fichier qui existe. Et d'autres sessions livrent sans arrêt : `develop` a pris **30 commits**
+>    pendant une session, et **trois fusions pendant la seule étape 4**, dont une sur le fichier
+>    que j'étais en train de modifier.
 >
-> **Ce que tu fais :** les étapes 4 à 10 du plan, dans l'ordre, sans en sauter ni en fusionner deux.
+> **Ce que tu fais :** les étapes 5 à 10 du plan, dans l'ordre, sans en sauter ni en fusionner deux.
+> L'étape 5 — exécuter les Apps de Scenario — vaut un produit à elle seule et donne les premiers
+> `editorInfo` réels, ceux contre lesquels le canvas de l'étape 6 se vérifiera.
 >
 > **Les règles, qui ne se renégocient pas :**
 >
@@ -55,6 +59,10 @@ trois premières étapes et de la revue de cohérence dans `develop`.
 >    deux fois). Puis `pnpm validate` sur `develop` **après** la fusion — une fusion sans conflit
 >    n'est pas une fusion sans contradiction. Tu ne pousses rien, tu ne touches jamais à `main`,
 >    tu ne poses jamais de tag.
+>
+>    **N'enchaîne jamais `rebase && merge` dans une seule commande.** Le rebase peut buter sur un
+>    conflit, et le merge part quand même — sur un état intermédiaire. C'est arrivé à l'étape 4 :
+>    deux commandes, et on regarde le résultat de la première.
 > 6. `git add` par chemin explicite, jamais `git add -A` : l'index est partagé entre worktrees.
 >    Même règle pour `git stash` — préfère un commit de travail.
 > 7. **Ce qui doit survivre à la session est commité.** Le scratchpad est propre à la session.
@@ -79,14 +87,14 @@ trois premières étapes et de la revue de cohérence dans `develop`.
 > **Entre deux étapes, une ligne :** l'étape livrée, ce que `validate` rend, ce que `/code-review` a
 > trouvé et ce que tu en as retenu. Pas de récit.
 >
-> Commence par lire, puis reprends à l'étape 4. Ne me demande pas la permission de démarrer.
+> Commence par lire, puis reprends à l'étape 5. Ne me demande pas la permission de démarrer.
 
 ---
 
 ## L'état exact au moment d'écrire
 
-**Trois étapes livrées, revues, et FUSIONNÉES dans `develop`** — plus une revue de cohérence de la
-branche entière. **31 défauts confirmés et corrigés** au total (21 par étape, 10 en transverse).
+**Quatre étapes livrées, revues, et FUSIONNÉES dans `develop`** — plus une revue de cohérence de la
+branche entière. **38 défauts confirmés et corrigés** au total.
 
 | Étape | Ce qu'elle a livré |
 |---|---|
@@ -94,8 +102,9 @@ branche entière. **31 défauts confirmés et corrigés** au total (21 par étap
 | 2 | Le limiteur de débit, sur le `fetch` du client SDK |
 | 3 | Un job payé survit à la fermeture de l'application |
 | — | La revue de cohérence : dix défauts, dont quatre qui perdaient du travail ou de l'argent |
+| 4 | Le coût d'une génération, estimé avant et affiché après |
 
-`develop` après fusion : **329 fichiers de tests, 4219 tests, `pnpm validate` vert.**
+`develop` après fusion : **351 fichiers de tests, 4434 tests, `pnpm validate` vert.**
 
 ### Ce que la revue de cohérence a changé, et qu'il ne faut pas défaire
 
@@ -119,162 +128,38 @@ branche entière. **31 défauts confirmés et corrigés** au total (21 par étap
 
 ---
 
-## Ce qui a changé sous les pieds du plan : l'étape 4 a rétréci
+## Ce que l'étape 4 a appris, et qui vaut pour l'étape 5
 
-**`feat/usage-window` a été fusionnée dans `develop` pendant la session précédente**, et elle livre
-le point 4 de l'étape 4. La consommation de chaque clé a désormais **sa propre fenêtre** —
-`src/renderer/src/usage/UsageWindow.tsx`, alimentée par `main/scenario/usage.ts` et
-`usage-aggregate.ts`, avec `usages.list`, `pricing.oscu.retrievePrices`, un journal paginé par
-compte et une période dans la barre de titre.
+**Le plan avait rétréci sans le savoir.** `feat/usage-window` a été fusionnée en cours de route et
+livre la consommation par clé dans **sa propre fenêtre** (`renderer/src/usage/`,
+`main/scenario/usage.ts`, `usage-aggregate.ts`). Le point 4 de l'étape 4 était donc déjà fait,
+mieux et ailleurs. **Attends-toi à ce que ça recommence** : `develop` a pris trois fusions pendant
+la seule étape 4. Avant d'écrire une ligne d'une étape, `grep` ce qu'elle prétend créer.
 
-**Donc : ne pas refaire « `usages.list` dans Réglages > Compte ».** C'est fait, mieux et ailleurs.
-Le plan écrit encore le contraire à l'étape 4 — il a été écrit avant.
+**La part interactive est partagée, et elle est mince.** `INTERACTIVE_REQUESTS_PER_MINUTE` vit
+maintenant dans `shared/domain/job.ts` : le principal dimensionne son polling sur ce qu'il en
+reste, le renderer y cale ses estimations de coût. **Quinze requêtes par minute pour tout ce que
+l'utilisateur attend.** L'étape 5 va lister des Apps, les décrire et les lancer — chaque écran qui
+interroge l'API en régime continu doit se demander ce qu'il prend dans cette part, et le dire.
 
-**Ce que l'étape 4 garde**, et qui n'existe nulle part (`grep -rn dryRun src/` → zéro) :
+**Un débounce n'est pas une borne.** Tapé plus lentement que son délai, chaque frappe part en
+requête. Toute frappe qui déclenche un appel réseau veut un **plancher** entre deux envois, pas
+seulement une pause. Mesuré, corrigé, et verrouillé par un test dans `useCostEstimate.test.ts` —
+copie ce motif plutôt que d'en réinventer un.
 
-1. le canal `scenario:estimate-cost` (typé dans `shared/ipc.ts`, validé par zod côté main comme le
-   fait `scenario/validation.ts`) ;
-2. le badge de coût sur le bouton Générer, **débouncé** et **annulable** — un formulaire qu'on
-   remplit ne doit pas lancer une estimation par frappe, et le limiteur de l'étape 2 rappelle que
-   ces appels comptent ;
-3. le coût réel dans la barre de jobs. **`creativeUnitsCost` n'est pas sur le job** mais sur la
-   réponse de **soumission** (`GenerateRunModelResponse`), à côté de `job` — or `runnerOf` fait
-   `(...).job` et jette le reste. C'est là qu'il faut le capter, c'est le seul instant où il existe.
-   Noter que `usage-aggregate.ts` lit déjà ce champ **côté événements de facturation** : deux
-   chemins différents vers la même grandeur, ne pas les confondre.
+**Un port se forme sur ce qu'il devra accueillir.** `costEstimatorOf` prend une **fonction**, pas
+un objet à méthode `runModel`, parce que le dry run est documenté sur `workflows.run` : l'étape 5
+s'y branche sans rien défaire. La première version était liée à la génération, et la revue l'a
+rattrapée avant que ça ne coûte.
 
-### Le code de l'étape 4 déjà écrit et testé
+**Une panne ne doit pas se déguiser en absence.** L'estimateur ne rattrape que le 402 attendu ;
+tout le reste repasse par `reduced`, donc par le log et le journal. Un écran qui avale ses erreurs
+est un écran dont personne ne saura jamais pourquoi il est vide.
 
-Il vivait dans le scratchpad d'une session morte. Le voici en entier, pour qu'il ne se reperde pas.
-
-**`src/shared/domain/job.ts`** — deux ajouts :
-
-```ts
-  /**
-   * What it actually cost, in creative units. Known at submission and never again: the API
-   * carries it on the response that creates the job, not on the job it polls back.
-   */
-  cost?: number
-```
-
-```ts
-/**
- * What a generation would cost, asked before it is run.
- *
- * `null` where the API declines to say — an estimate is a courtesy, and a button that refuses to
- * work because the price could not be fetched would be worse than a button with no price on it.
- */
-export type CostEstimate = { creativeUnits: number } | null
-```
-
-**`src/main/scenario/cost.ts`** — écrit, non commité :
-
-```ts
-import { APIError } from '@scenario-labs/sdk'
-import type { CostEstimate } from '@shared/domain/job'
-import { isRecord } from '@shared/guards'
-
-/**
- * What a generation would cost, without running it.
- *
- * `?dryRun=true` creates no job and spends nothing. The catch is how it answers: **HTTP 402**,
- * carrying `estimatedCost` in its body (`workflows-and-apps.md`, "Dry Run Response"). So the one
- * call in the studio where a 4xx is the success path — reduced through `failureOf` like any
- * other, it would surface as an unexpected failure and the button would say nothing.
- */
-export type CostEstimator = (modelId: string, body: Record<string, unknown>) => Promise<CostEstimate>
-
-export type DryRunner = {
-  runModel: (
-    modelId: string,
-    params: { body: Record<string, unknown>; dryRun: boolean },
-  ) => Promise<unknown>
-}
-
-const estimatedCostOf = (error: unknown): number | null => {
-  if (!(error instanceof APIError) || error.status !== 402) return null
-  if (!isRecord(error.error)) return null
-
-  const { estimatedCost } = error.error
-  return typeof estimatedCost === 'number' && Number.isFinite(estimatedCost) ? estimatedCost : null
-}
-
-export function costEstimatorOf(client: DryRunner): CostEstimator {
-  return async (modelId, body) => {
-    try {
-      await client.runModel(modelId, { body, dryRun: true })
-      // No 402 means the API did not price this one. Nothing was generated either way — the
-      // dry run flag is honoured whatever the answer — so there is simply no figure to show.
-      return null
-    } catch (error) {
-      const creativeUnits = estimatedCostOf(error)
-      return creativeUnits === null ? null : { creativeUnits }
-    }
-  }
-}
-```
-
-**`src/main/scenario/cost.test.ts`** — cinq tests, verts au moment de l'écriture :
-
-```ts
-import { APIError } from '@scenario-labs/sdk'
-import { describe, expect, it, vi } from 'vitest'
-import { costEstimatorOf } from './cost'
-
-const refusedWith = (status: number, body: object): unknown =>
-  APIError.generate(status, body, undefined, new Headers())
-
-const estimator = (answer: () => Promise<unknown>) => costEstimatorOf({ runModel: vi.fn(answer) })
-
-describe('cost estimate', () => {
-  /**
-   * The one call in the studio where a 4xx is the success path: a dry run answers 402 and puts
-   * the figure in the body. Read as an ordinary failure, the button would say nothing.
-   */
-  it('reads the estimate off the 402 the API answers with', async () => {
-    const estimate = estimator(() =>
-      Promise.reject(refusedWith(402, { message: 'Dry run completed', estimatedCost: 12 })),
-    )
-
-    await expect(estimate('model_flux', { prompt: 'a rock' })).resolves.toEqual({
-      creativeUnits: 12,
-    })
-  })
-
-  it('asks for a dry run, so nothing is generated and nothing is spent', async () => {
-    const runModel = vi.fn(() => Promise.reject(refusedWith(402, { estimatedCost: 3 })))
-    await costEstimatorOf({ runModel })('model_flux', { prompt: 'a rock' })
-
-    expect(runModel).toHaveBeenCalledWith('model_flux', {
-      body: { prompt: 'a rock' },
-      dryRun: true,
-    })
-  })
-
-  // A price is a courtesy: no figure means a button with no badge, never a button that refuses.
-  it('answers with no figure rather than a failure when the API prices nothing', async () => {
-    await expect(estimator(() => Promise.resolve({ job: {} }))('model_flux', {})).resolves.toBeNull()
-  })
-
-  it('answers with no figure on a refusal that is not a dry run', async () => {
-    const estimate = estimator(() => Promise.reject(refusedWith(400, { message: 'bad body' })))
-
-    await expect(estimate('model_flux', {})).resolves.toBeNull()
-  })
-
-  it('answers with no figure on a 402 that carries no number', async () => {
-    const estimate = estimator(() => Promise.reject(refusedWith(402, { estimatedCost: 'twelve' })))
-
-    await expect(estimate('model_flux', {})).resolves.toBeNull()
-  })
-})
-```
-
-⚠️ **Ce code n'a pas été revérifié depuis que `develop` a pris 30 commits.** `isRecord` vient de
-`@shared/guards` et existe toujours ; `failureOf` classe encore le 402 dans `unexpected`
-(`scenario/client.ts`), donc le premier point du plan tient. Relancer les tests avant d'y croire.
-
----
+**Ne pas ajouter à une base partagée pour un besoin d'un seul appelant.** Le badge de coût avait
+gagné son espacement sur `BUTTON_BASE` : il écartait les icônes de toutes les barres d'outils du
+studio. `DynamicForm` a en revanche gagné deux props (`submitNote`, `onValuesChange`) et c'était le
+bon niveau — le formulaire est le seul à détenir les valeurs en cours et le bouton.
 
 ## Ce que le plan dit de faux, vérifié dans le code
 
@@ -288,7 +173,11 @@ describe('cost estimate', () => {
 2. **`reducedBy` n'est pas le passage obligé de chaque appel** — il enrobe deux familles de
    handlers IPC, et le `JobManager` poll sans le traverser. Le limiteur est sur
    `ClientOptions.fetch`.
-3. **`creativeUnitsCost` n'est pas sur le job** mais sur la réponse de **soumission**. Cf. ci-dessus.
+3. **`creativeUnitsCost` n'est pas sur le job** mais sur la réponse de **soumission**, à côté de
+   `job` — `runnerOf` le lit là et nulle part ailleurs. **Un doute non levé** : les typages
+   déclarent aussi un `billing.cuCost` sur un job **interrogé** (`jobs.retrieve`), que personne n'a
+   observé. Si l'API le peuple vraiment, un job repris pourrait afficher son coût. Un seul vrai
+   appel trancherait.
 
 Et un quatrième, découvert à la fusion : **le plan croit `usages.list` à faire, il est livré.**
 
