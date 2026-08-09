@@ -255,8 +255,9 @@ A sky is now written into a `.sky` file — the exposure, the horizon rotation a
 reopen exactly as they were. What the document does not keep: the view and the field of view, which
 say how you were looking at it rather than what it is.
 
-You still cannot export the six faces of a cube, though, nor an *HDRI* usable in another
-application.
+The six faces of a cube export from **File › Export the sky**, at 512, 1024 or 2048. What is
+still missing is the *HDRI*: the faces come out as PNG, so eight bits a channel, and anything
+above white is clipped.
 
 ---
 

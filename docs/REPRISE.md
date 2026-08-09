@@ -1036,20 +1036,40 @@ pré-filtre serveur : garder trois modèles sur six cents en marchant le catalog
 huit allers-retours pour remplir un écran. **`skybox-upscale` ne porte pas ce tag** et reste avec les
 images, ce qui est correct : un agrandisseur ne produit pas le document de l’espace.
 
-**Ce qu’il reste — un seul point, et le plus gros obstacle vient de tomber :**
+**Ce qu’il reste : le HDRI, et rien d’autre.** Les six faces sortent en PNG, donc en 8 bits par
+canal — ce qui dépasse le blanc est écrêté, et un éclairage à forte dynamique n’a pas de sortie.
+Un `.exr` en écriture demanderait un encodeur que le studio n’embarque pas.
 
-1. **L’export n’existe pas, mais sa moitié difficile est écrite.** `CUBE_FACES`, `FACE_LABELS`
-   (`Rt`/`Lf`/`Up`…, ce que les moteurs attendent), `CROSS_CELLS`, `FACE_SIZES`, `isCubeFace`
-   attendaient dans `shared/domain/skybox.ts` depuis le début ; `feat/skybox-vues` (`21ab75b`) les
-   a **branchés** en écrivant les trois vues à plat. Ce qui reste à faire est donc un **écrivain**,
-   pas une passe shader : le mode `single` de `projection-shader.ts` rend déjà une face seule
-   remplissant le cadre, ce qui est exactement ce qu’un export en six fichiers demande.
+**Ce que `feat/skybox-export` a appris, et qu’il ne faut pas repayer :**
+
+- **Le haut de chaque face regardait le sol, et personne ne l’a vu.** `PlaneGeometry` écrit
+  `vertices.push(x, -y, 0)` avec `v = 1 - iy / gridY`, donc **`v` vaut 1 en HAUT du quad** : un `t`
+  qui descendait quand `v` montait visait le sol. Quatre des six faces sont un horizon, et un
+  horizon retourné reste un horizon — rien à l’écran ne le disait. Le remède est structurel :
+  `faceDirection` est **généré depuis `FACE_BASES`**, comme la croix l’est depuis `CROSS_CELLS`.
+  Une seconde table écrite en GLSL est une table que rien ne vérifie.
+- **Pas de tone mapping à l’export, et c’est un choix.** Le contexte hors écran n’en a pas par
+  défaut ; un moteur applique le sien, et le cuire dans le fichier le ferait appliquer deux fois.
+  L’aperçu et le PNG diffèrent donc volontairement — les deux manuels le disent.
+- **`loadSource` force `colorSpace = NoColorSpace`** : juste pour un canal PBR, **faux pour un
+  ciel**, qui est une couleur. Le port le remet à `SRGBColorSpace` + `needsUpdate`, sinon le
+  grading travaille sur des nombres sRGB et la sortie les encode une seconde fois.
+  `needsUpdate` est un setter **en écriture seule** dans three : ce qui s’observe est `version`.
+- **Un export grade à la résolution de la source**, pas à celle de l’aperçu : le viewport passe
+  par un target 2048×1024 pour l’IBL, et l’export ne le traverse pas. Une seule passe de grading
+  pour les six faces, un seul décodage.
+- **Écrire plusieurs fichiers dans un dossier n’appartient plus aux textures** : `main/export/`,
+  deux canaux (`texture:export`, `skybox:export`) sur un seul corps, `ExportedFile` /
+  `FolderExportRequest`. Le validateur zod était déjà générique.
+- **Un test « le garde a refusé » doit s’ancrer sur le message**, jamais sur l’absence d’effet :
+  en jsdom, un export qui aurait franchi le garde échouerait aussi, et le test passerait des deux
+  façons.
 
 **Ce que `feat/skybox-vues` a appris, et qu’il ne faut pas repayer :**
 
 - **Les quatre vues sont un seul shader, pas quatre rendus.** Aucune face n’est rendue dans un cube
   map : une face est un rectangle d’écran dont chaque pixel pose la question à l’envers — quelle
-  direction de la sphère est-ce, et où tombe-t-elle dans la source. L’export posera la même question,
+  direction de la sphère est-ce, et où tombe-t-elle dans la source. L’export pose la même question,
   une face à la fois.
 - **La projection est celle de three, copiée et non approchée.** `equirectUv` de `common.glsl.js` :
   `atan(d.z, d.x)` et `asin(d.y)`. Une formule voisine ferait montrer à la croix un ciel tourné par

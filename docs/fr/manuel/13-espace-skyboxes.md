@@ -189,12 +189,47 @@ endroit. Deux façons de continuer :
 
 ---
 
+## Sortir le ciel : les six faces
+
+**Fichier › Exporter le ciel**, et une taille : 512, 1024 ou 2048 pixels de côté. Le studio
+demande un dossier, y crée un sous-dossier au nom du document, et y écrit six PNG :
+
+| Fichier | Face |
+|---|---|
+| `<titre>_Rt.png` | à droite |
+| `<titre>_Lf.png` | à gauche |
+| `<titre>_Up.png` | au-dessus |
+| `<titre>_Dn.png` | au-dessous |
+| `<titre>_Ft.png` | devant |
+| `<titre>_Bk.png` | derrière |
+
+Ces deux lettres sont celles que les moteurs attendent — Unity, Unreal et Roblox les lisent tous,
+Roblox en les préfixant de `Skybox`. Les faces suivent la convention des cube maps OpenGL, donc
+elles entrent à l’endroit sans avoir à en retourner une.
+
+Trois choses valent d’être sues :
+
+- **vos réglages partent avec les pixels.** Exposition, contraste, saturation, température et
+  rotation de l’horizon sont cuits dans les six fichiers. Ce que vous avez jugé est ce qui sort ;
+- **l’export lit la source, pas l’aperçu.** Le viewport travaille sur une copie réduite pour
+  rester fluide ; l’export repart de l’image d’origine à sa taille, quelle que soit celle des
+  faces demandées ;
+- **le fichier peut sembler plus contrasté que l’écran.** Le viewport applique une courbe de
+  rendu pour montrer une image très lumineuse sur un écran qui ne l’est pas ; le fichier porte
+  les valeurs, pas cette courbe. C’est voulu : votre moteur appliquera la sienne, et la cuire ici
+  la ferait appliquer deux fois.
+
+Un ciel sans image ne s’exporte pas : le studio le dit dans le journal plutôt que d’ouvrir un
+sélecteur de dossier pour six fichiers vides.
+
+---
+
 ## Ce qui manque encore
 
 - **les boutons Régénérer et Réinitialiser** — annoncés dans les traductions, jamais posés dans le
   panneau ;
-- **l’export** — on ne peut pas encore écrire les six faces d’un cube, ni un HDRI utilisable
-  ailleurs ;
+- **l’export en HDRI** — les six faces sortent en PNG, donc en 8 bits par canal : ce qui dépasse
+  le blanc est écrêté. Pour un éclairage à forte dynamique, il n’y a pas encore de sortie ;
 - **l’import d’un `.hdr`** — le studio n’importe que les images ordinaires. Un `.exr` importé est
   catalogué comme image, pas comme ciel. Il fonctionne quand même comme source, mais il faut
   aller le chercher dans les images.

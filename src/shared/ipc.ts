@@ -132,6 +132,7 @@ export type Channels = {
   sceneExport: 'scene:export'
 
   textureExport: 'texture:export'
+  skyboxExport: 'skybox:export'
 
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
@@ -240,6 +241,7 @@ export const CHANNELS: Channels = {
   sceneExport: 'scene:export',
 
   textureExport: 'texture:export',
+  skyboxExport: 'skybox:export',
 
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
@@ -291,8 +293,8 @@ export type SceneExportRequest = {
   data: Uint8Array
 }
 
-/** One file of an exported texture, already encoded by the renderer that drew it. */
-export type TextureExportFile = {
+/** One file of an export, already encoded by the renderer that drew it. */
+export type ExportedFile = {
   /** No separator and no extension: it is joined to a folder this process chose. */
   name: string
   /** Carried rather than derived: a target writes `.png`s, and one of them writes a `.glb`. */
@@ -301,14 +303,17 @@ export type TextureExportFile = {
 }
 
 /**
- * A texture on its way to a folder. Unlike a scene, an export is several files that mean
- * nothing apart — a base colour without the ORM beside it is half a material — so the dialog
- * asks for a folder and they land in one named after the texture.
+ * Several files on their way to a folder. Unlike a scene, this kind of export means nothing
+ * file by file — a base colour without the ORM beside it is half a material, and five faces of
+ * a sky are not a sky — so the dialog asks for a folder and they land in one named after them.
+ *
+ * Shared by the texture and the skybox rather than written twice: the two differ in what they
+ * draw, never in what "write these together" means.
  */
-export type TextureExportRequest = {
-  /** The folder to create inside the chosen one, named after the texture. */
+export type FolderExportRequest = {
+  /** The folder to create inside the chosen one, named after what is being exported. */
   folder: string
-  files: readonly TextureExportFile[]
+  files: readonly ExportedFile[]
 }
 
 export type LogLevel = 'info' | 'warn' | 'error'
@@ -331,6 +336,7 @@ export type LogScope =
   | 'texture.shader'
   | 'texture.export'
   | 'skybox.source'
+  | 'skybox.export'
   | 'canvas.layer'
   | 'image.export'
   | 'document.load'
@@ -353,6 +359,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'texture.shader',
   'texture.export',
   'skybox.source',
+  'skybox.export',
   'canvas.layer',
   'image.export',
   'document.load',
@@ -411,6 +418,7 @@ export const EVENTS = {
   sceneAdd: 'evt:scene-add',
   sceneExport: 'evt:scene-export',
   textureExport: 'evt:texture-export',
+  skyboxExport: 'evt:skybox-export',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   activity: 'evt:activity',
@@ -432,6 +440,15 @@ export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selec
 
 /** What the native menu asks of the texture in front: which engine it is being handed to. */
 export type TextureExportCommand = { target: TextureExportTarget }
+
+/**
+ * What the native menu asks of the sky in front: how large each of the six faces comes out.
+ *
+ * A size where a texture takes a target, because a sky has no per-engine recipe to choose from —
+ * six PNGs named `_Rt`…`_Bk` is what all of them read. What differs is what the machine can
+ * hold, and that is a number.
+ */
+export type SkyboxExportCommand = { size: number }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
@@ -706,7 +723,11 @@ export type StudioBridge = {
      * Answers the folder's name, or `null` when the dialog was dismissed — the name, never the
      * path, exactly as a scene answers.
      */
-    export: (request: TextureExportRequest) => Promise<string | null>
+    export: (request: FolderExportRequest) => Promise<string | null>
+  }
+  skybox: {
+    /** The six faces of a sky, same bargain as a texture's folder — and the same writer. */
+    export: (request: FolderExportRequest) => Promise<string | null>
   }
   /**
    * The typefaces the machine has installed. The studio's own three are not here: they ship
@@ -776,6 +797,7 @@ export type StudioBridge = {
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
     onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
+    onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe
   }
   diagnostics: {
     onLog: (callback: (entry: LogEntry) => void) => Unsubscribe

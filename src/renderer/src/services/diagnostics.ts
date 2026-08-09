@@ -35,6 +35,7 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // Picking a row of the export menu is one as well, and it is the same row twice that says the
   // first attempt failed — silenced, a second try looks exactly like a dialog somebody dismissed.
   'texture.export',
+  'skybox.export',
 ])
 
 /**

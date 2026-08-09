@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TextureExportCommand, TextureExportRequest } from '@shared/ipc'
+import type { TextureExportCommand, FolderExportRequest } from '@shared/ipc'
 import type { TextureExportTarget } from '@shared/domain/texture-export'
 import { setChannel } from '@/engines/texture/commands'
 import { reportFailure } from '@/services/diagnostics'
@@ -98,12 +98,12 @@ describe('the export menu row', () => {
     listeners: () => number
     unsubscribed: () => number
     fire: (target: TextureExportTarget) => void
-    exported: () => TextureExportRequest[]
+    exported: () => FolderExportRequest[]
   }
 
   const listen = (): Menu => {
     const callbacks: ((command: TextureExportCommand) => void)[] = []
-    const exported: TextureExportRequest[] = []
+    const exported: FolderExportRequest[] = []
     let released = 0
 
     installFakeBridge({

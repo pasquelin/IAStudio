@@ -184,10 +184,46 @@ place. Two ways to carry on:
 
 ---
 
+## Taking the sky out: the six faces
+
+**File › Export the sky**, then a size: 512, 1024 or 2048 pixels a side. The studio asks for a
+folder, creates one named after the document inside it, and writes six PNGs:
+
+| File | Face |
+|---|---|
+| `<title>_Rt.png` | right |
+| `<title>_Lf.png` | left |
+| `<title>_Up.png` | above |
+| `<title>_Dn.png` | below |
+| `<title>_Ft.png` | front |
+| `<title>_Bk.png` | back |
+
+Those two letters are the ones engines expect — Unity, Unreal and Roblox all read them, Roblox
+with a `Skybox` prefix. The faces follow the OpenGL cube map convention, so they come in the
+right way up without any of them needing to be flipped.
+
+Three things worth knowing:
+
+- **your settings leave with the pixels.** Exposure, contrast, saturation, temperature and
+  horizon rotation are baked into the six files. What you judged is what comes out;
+- **the export reads the source, not the preview.** The viewport works on a reduced copy to stay
+  responsive; the export starts again from the original picture at its own size, whatever face
+  size you asked for;
+- **the file may look more contrasted than the screen.** The viewport applies a render curve to
+  show a very bright picture on a screen that is not; the file carries the values, not that
+  curve. This is deliberate: your engine will apply its own, and baking one here would apply it
+  twice.
+
+A sky with no picture does not export: the studio says so in the journal rather than opening a
+folder chooser for six empty files.
+
+---
+
 ## What is still missing
 
 - **the Regenerate and Reset buttons** — announced in the translations, never placed in the panel;
-- **export** — you cannot yet write the six faces of a cube, nor an HDRI usable elsewhere;
+- **HDRI export** — the six faces come out as PNG, so eight bits a channel: anything above white
+  is clipped. For high dynamic range lighting there is no output yet;
 - **importing a `.hdr`** — the studio only imports ordinary images. An imported `.exr` is catalogued
   as an image, not as a sky. It still works as a source, but you have to go and find it among the
   images.

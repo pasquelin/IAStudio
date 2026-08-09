@@ -16,6 +16,7 @@ import {
   type LogEntry,
   type SceneAddRequest,
   type SceneExportCommand,
+  type SkyboxExportCommand,
   type TextureExportCommand,
   type StudioBridge,
   type ToolRequest,
@@ -131,6 +132,9 @@ const bridge: StudioBridge = {
   texture: {
     export: request => ipcRenderer.invoke(CHANNELS.textureExport, request),
   },
+  skybox: {
+    export: request => ipcRenderer.invoke(CHANNELS.skyboxExport, request),
+  },
   fonts: {
     list: () => ipcRenderer.invoke(CHANNELS.fontsList),
     read: family => ipcRenderer.invoke(CHANNELS.fontsRead, family),
@@ -165,6 +169,7 @@ const bridge: StudioBridge = {
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
     onTextureExport: callback => subscribe<TextureExportCommand>(EVENTS.textureExport, callback),
+    onSkyboxExport: callback => subscribe<SkyboxExportCommand>(EVENTS.skyboxExport, callback),
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),
