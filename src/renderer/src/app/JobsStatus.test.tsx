@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Job, JobStatus } from '@shared/domain/job'
+import { STATUS_BUTTON } from '@/design/styles'
 import { useJobs } from '@/stores/jobs'
 import { JobsStatus } from './JobsStatus'
 
@@ -60,5 +61,12 @@ describe('the jobs indicator', () => {
 
     await userEvent.click(screen.getByRole('button'))
     expect(screen.getByRole('menu')).toHaveTextContent('Take a')
+  })
+
+  it('offers the target the status line shares', () => {
+    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    render(<JobsStatus />)
+
+    expect(screen.getByRole('button')).toHaveClass(STATUS_BUTTON)
   })
 })
