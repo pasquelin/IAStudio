@@ -6,6 +6,7 @@ import { fakeEnvironment, fakeTextureSource } from './viewport-fixtures'
 
 const SKY: EnvironmentRef = { kind: 'skybox', assetId: 'sky-1' }
 const OTHER: EnvironmentRef = { kind: 'skybox', assetId: 'sky-2' }
+const THIRD: EnvironmentRef = { kind: 'skybox', assetId: 'sky-3' }
 const STUDIO: EnvironmentRef = { kind: 'studio' }
 
 describe('createSkyBinding', () => {
@@ -103,6 +104,45 @@ describe('createSkyBinding', () => {
 
     expect(sky.showsSky()).toBe(true)
     expect(environment.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * Two skies never showed this: the first one holds no predecessor, so nothing is owed. It takes
+   * a third to overtake a choice that is *already* carrying one — and a sky whose reference is
+   * never given back stays in GPU memory until the engine is disposed of.
+   */
+  it('gives back the sky an overtaken choice was carrying', async () => {
+    const sky = binding()
+    const environment = fakeEnvironment()
+
+    const first = sky.apply(environment, SKY)
+    const second = sky.apply(environment, OTHER)
+    const third = sky.apply(environment, THIRD)
+    await Promise.all([first, second, third])
+
+    expect(source.freed[0]).toHaveBeenCalled()
+    expect(source.freed[1]).toHaveBeenCalled()
+    expect(source.freed[2]).not.toHaveBeenCalled()
+    expect(sky.showsSky()).toBe(true)
+  })
+
+  /**
+   * The mirror risk of giving a carried reference back: hand back one too many and the sky on
+   * screen is disposed of under the frame that is drawing it. Coming back to a sky while another
+   * decodes is the case where the same asset is both carried and wanted.
+   */
+  it('keeps the sky that came back while another was decoding', async () => {
+    const sky = binding()
+    const environment = fakeEnvironment()
+
+    const first = sky.apply(environment, SKY)
+    const second = sky.apply(environment, OTHER)
+    const back = sky.apply(environment, SKY)
+    await Promise.all([first, second, back])
+
+    expect(source.freed[0]).not.toHaveBeenCalled()
+    expect(source.freed[1]).toHaveBeenCalled()
+    expect(sky.showsSky()).toBe(true)
   })
 
   it('shows nothing rather than throwing when the file cannot be read', async () => {

@@ -51,8 +51,12 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
       const previous = held
       held = assetId
       const loaded = await cache.acquire(assetId, SRGBColorSpace)
-      // Another sky was chosen while this one was decoding.
-      if (held !== assetId) return
+      // Another sky was chosen while this one was decoding. The reference this call was carrying
+      // is still owed: the winner released the sky *it* took over, never the one before that.
+      if (held !== assetId) {
+        if (previous) cache.release(previous, SRGBColorSpace)
+        return
+      }
 
       if (loaded) {
         environment.setTexture(loaded)
