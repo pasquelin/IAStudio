@@ -97,25 +97,33 @@ export function Apps() {
   }
 
   return (
-    <Collection
-      label={t('panels.apps')}
-      items={items}
-      onSelect={app => setOpenedId(app.id)}
-      onReachEnd={loadMore}
-      rowHeight={ROW_HEIGHT}
-      renderRow={app => <AppRow app={app} />}
-      empty={
-        <EmptyState
-          icon={mdiApplicationBracesOutline}
-          message={listing.isFetching ? t('collection.loading') : t('apps.none')}
-        />
-      }
-      footer={
-        listing.isFetchingNextPage ? (
-          <p className="text-muted py-2 text-center text-[11px]">{t('collection.loading')}</p>
-        ) : null
-      }
-    />
+    <div className="flex h-full min-w-0 flex-col">
+      {/*
+        Always, not only when the list is empty — which was the one case with nothing on screen
+        to understand. "Apps" is Scenario's word, deliberately untranslated, and a product name
+        held by a third party does not explain a panel in a dock.
+      */}
+      <p className="text-muted px-2 pt-2 text-[11px]">{t('apps.what')}</p>
+      <Collection
+        label={t('panels.apps')}
+        items={items}
+        onSelect={app => setOpenedId(app.id)}
+        onReachEnd={loadMore}
+        rowHeight={ROW_HEIGHT}
+        renderRow={app => <AppRow app={app} />}
+        empty={
+          <EmptyState
+            icon={mdiApplicationBracesOutline}
+            message={listing.isFetching ? t('collection.loading') : t('apps.none')}
+          />
+        }
+        footer={
+          listing.isFetchingNextPage ? (
+            <p className="text-muted py-2 text-center text-[11px]">{t('collection.loading')}</p>
+          ) : null
+        }
+      />
+    </div>
   )
 }
 
