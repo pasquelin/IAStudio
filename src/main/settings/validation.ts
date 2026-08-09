@@ -16,6 +16,7 @@ import {
 } from '@shared/domain/settings-registry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
 import { DICTATION_MODES } from '@shared/domain/dictation'
+import { isSignature } from '@shared/domain/shortcut'
 import { HOME_LIMIT_MAX, HOME_LIMIT_MIN, HOME_SECTION_IDS } from '@shared/domain/home'
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -115,8 +116,6 @@ const workspaces = z
   })
   .catch({})
 
-// Keys are command ids and values signatures, both free strings here: a build that no longer
-// knows a command ignores its remap rather than refusing the whole write.
 const grid = boundsOf('three.gridSize')
 const fly = boundsOf('three.flySpeed')
 const boost = boundsOf('three.boostFactor')
@@ -143,8 +142,23 @@ const three = z.object({
     .optional(),
 })
 
+/**
+ * Keys are command ids and values signatures. Checked in shape rather than merely non-empty:
+ * `Signature` is a string, so `'P'` written where `'KeyP'` was meant arrives here typechecked,
+ * and a code is a position while a letter is not — the binding would never fire, with nothing
+ * anywhere saying why.
+ *
+ * One unreadable remap costs its own line and nothing else, as `home.sections` does above: a
+ * build that no longer knows a command, or a key bound under an older version, must not take
+ * the theme and the projects folder down with it. The whole draft goes through one `safeParse`.
+ */
 const shortcuts = z.object({
-  overrides: z.record(z.string().min(1), z.string().min(1)).optional(),
+  overrides: z
+    .record(z.string().min(1), z.string().refine(isSignature).nullable().catch(null))
+    .transform(entries =>
+      Object.fromEntries(Object.entries(entries).filter(([, bound]) => bound !== null)),
+    )
+    .optional(),
 })
 
 const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })

@@ -243,8 +243,18 @@ The last button in the bar opens three sliders.
 | **Hardness** | 0 to 1 | 1 gives a hard edge, 0 a fully feathered one |
 | **Opacity** | 0 to 1 | how transparent what you lay down is |
 
-**They apply to three tools at once**: the brush, the eraser and the shape stroke. A 40 px brush
-with a 4 px eraser is not possible — it is the same setting.
+**Size and opacity apply to four tools at once**: the brush, the pencil, the eraser and the shape
+stroke. A 40 px brush with a 4 px eraser is not possible — it is the same setting.
+
+**Hardness reaches only one of them: the brush.** The pencil is hard by definition — that is what
+it is for, and it reads the size and the opacity like the others. The eraser and the shape stroke
+have a hard edge too: softening them needs a check nothing automatic can do here, and a feathered
+edge that stopped erasing would be worse than no feather at all.
+
+**Below a certain point, softening stops showing.** A feather that would not reach half a pixel
+moves nothing an eye can tell: on a 4 px brush, hardness has to come down to 0.5 before the
+feather begins. And the feather never eats more than half the radius — it softens an edge, it does
+not dissolve the mark.
 
 **`[` shrinks, `]` widens**, without opening anything: that is what the hand uses mid-stroke. The
 step is a ratio rather than a count of pixels — one notch is about ×1.4 — because a fixed step

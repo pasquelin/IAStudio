@@ -20,6 +20,7 @@ import {
   type Transform,
 } from './canvas-state'
 import { DEFAULT_BRUSH } from './brush'
+import { PixelPatches } from './PixelPatches'
 import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from './shape-geometry'
@@ -267,6 +268,12 @@ vi.mock('pixi.js', () => {
       from: () => ({ resources: { adjustUniforms: { uniforms: {} } } }),
     },
     AlphaFilter: class {
+      destroy(): void {}
+    },
+    /** What softens the edge of a dab: the engine writes a strength and a padding into it. */
+    BlurFilter: class {
+      strength = 0
+      padding = 0
       destroy(): void {}
     },
     Container,
@@ -950,6 +957,120 @@ describe('painting a transformed layer', () => {
     press(host, x, y)
     release(x, y)
   }
+
+  /** The box a stroke reports to the undo, in surface pixels. */
+  const reachOf = (
+    host: HTMLElement,
+    at: { x: number; y: number } = { x: 200, y: 200 },
+  ): { x: number; y: number; width: number; height: number } | undefined => {
+    const touched = vi.spyOn(PixelPatches.prototype, 'touch')
+    onTestFinished(() => touched.mockRestore())
+    touched.mockClear()
+    dabAt(host, at.x, at.y)
+    return touched.mock.calls[0]?.[0]
+  }
+
+  /** The stamp is the one thing `paintSpace` carries into a surface. */
+  const stamp = (): Placed | undefined => paintSpace()?.children[0]
+
+  /**
+   * The reach, not the disc. A soft brush lays pixels beyond its own radius — that fringe IS the
+   * soft edge — and a stroke whose undo footprint was the radius alone would put back everything
+   * except what the softness had just drawn.
+   */
+  it('reaches past the disc when the edge is soft, and stops at it when it is hard', async () => {
+    const { host, engine } = await mounted(shifted({}))
+
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 1 })
+    const hard = reachOf(host)
+
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+    const soft = reachOf(host)
+
+    // 40 across, plus the pixel of slack `brushRect` already keeps for the antialiased rim.
+    expect(hard).toMatchObject({ width: 42, height: 42 })
+    // Ten pixels of spread, and the filter's padding is twice that on each side.
+    expect(soft).toMatchObject({ width: 82, height: 82 })
+    // The box grows on both sides, so its origin moves back by exactly what its width gained.
+    expect((hard?.x ?? 0) - (soft?.x ?? 0)).toBe(20)
+    expect((hard?.y ?? 0) - (soft?.y ?? 0)).toBe(20)
+  })
+
+  /**
+   * The fringe is counted in surface pixels and the disc in document ones. Added before the
+   * mapping, a layer scaled 2× recorded half the box its own stroke covered — and an undo left
+   * the fringe on screen. The one state the other cases never reach, being pure translations.
+   */
+  it('reports the fringe in the surface’s pixels, not the document’s', async () => {
+    const { host, engine } = await mounted(shifted({ scaleX: 2, scaleY: 2 }))
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+
+    const reach = reachOf(host)
+
+    // The disc maps to 20 surface px across; the filter's padding is 20 surface px each side.
+    expect(reach).toMatchObject({ width: 61, height: 61 })
+  })
+
+  /** The pencil reads the same settings and spreads none of them: that is the whole difference. */
+  it('reaches no further under the pencil, whatever the hardness slider says', async () => {
+    const { host, engine } = await mounted(shifted({}))
+    engine.setTool('pencil')
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+
+    expect(reachOf(host)).toMatchObject({ width: 42 })
+  })
+
+  /**
+   * What the reach is computed from. Without this the filter could stop being hung at all and
+   * every assertion above would still pass: they read `softness()`, never the filter it sets.
+   */
+  describe('the filter that softens the edge', () => {
+    it('is hung, at the spread the brush asks for', async () => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+      dabAt(host, 200, 200)
+
+      expect(stamp()?.filters).toHaveLength(1)
+      expect(stamp()?.filters[0]).toMatchObject({ strength: 10, padding: 20 })
+    })
+
+    it('is taken off for an edge that is already hard', async () => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+      dabAt(host, 200, 200)
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 1 })
+
+      expect(stamp()?.filters).toEqual([])
+    })
+
+    /**
+     * Arming the pencil from the toolbar calls `setTool` alone — `setBrush` does not follow. The
+     * filter left hanging would paint a feathered pencil while the undo box believed it hard.
+     */
+    it('is taken off by arming the pencil, with no setting touched', async () => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+      dabAt(host, 200, 200)
+
+      engine.setTool('pencil')
+
+      expect(stamp()?.filters).toEqual([])
+    })
+
+    /**
+     * A filtered container is drawn into a texture of its own and composed back with the
+     * filter's blend mode, never the stamp's — so an `erase` stamp under a filter rubs out
+     * against nothing. The eraser stays hard until that can be checked on a GPU.
+     */
+    it('is never hung under the eraser, whose blend would not survive it', async () => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setTool('eraser')
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+      dabAt(host, 200, 200)
+
+      expect(stamp()?.filters).toEqual([])
+    })
+  })
 
   it('draws straight into the pixels of an untouched layer', async () => {
     const { host } = await mounted(shifted({}))

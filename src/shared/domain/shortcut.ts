@@ -45,6 +45,38 @@ export function signatureOf(event: KeyChord): Signature {
 }
 
 /**
+ * The shape of a whole signature: the modifiers in the one order `signatureOf` writes them,
+ * then a `KeyboardEvent.code` — a word, capitalised, of at least two characters.
+ *
+ * One expression rather than a walk over the parts, and the order is what makes it one: read as
+ * a set, `Meta+Ctrl+KeyS` and `Ctrl+Meta+KeyS` would be the same chord under two spellings, and
+ * every lookup that decides what a key does is an equality on this string. Written this way a
+ * modifier cannot repeat either, which a walk had to rule out on its own.
+ *
+ * The code is a shape rather than a list of the codes that exist. The two are not the same bet,
+ * and the wrong one is expensive in a way the right one is not: a code refused here is a key
+ * nobody can bind — `IntlBackslash`, the `<>` of every AZERTY keyboard this studio is aimed at,
+ * would have been one — while a code accepted here that no keyboard emits is merely a shortcut
+ * that never fires.
+ */
+const SIGNATURE_SHAPE = /^(Ctrl\+)?(Alt\+)?(Shift\+)?(Meta\+)?[A-Z][A-Za-z0-9]+$/
+
+/**
+ * Whether a string is a signature this studio could ever produce.
+ *
+ * `Signature` is a string, so nothing in the type system stops `'P'` from being written where
+ * `'KeyP'` was meant — and sixteen commands were. Typecheck green, lint green, every unit test
+ * green: a code is a position and a letter is not one, so the binding simply never fired, and
+ * only a test driving a real keyboard caught it.
+ *
+ * Checked here rather than at each caller: the registry is one user, the recorder on the
+ * shortcuts screen is another, and the overrides read off the settings file are a third.
+ */
+export function isSignature(value: unknown): value is Signature {
+  return typeof value === 'string' && SIGNATURE_SHAPE.test(value)
+}
+
+/**
  * The chords the platform also runs on any highlighted text, editable or not.
  *
  * A command bound to one of them steps aside while something is selected: the copy the user

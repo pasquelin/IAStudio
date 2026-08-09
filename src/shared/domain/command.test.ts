@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
+import { isSignature } from './shortcut'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import {
   bindingOf,
@@ -149,5 +150,29 @@ describe('looking a command up by its suffix', () => {
    */
   it('answers null rather than guessing when that scope has none', () => {
     expect(commandIn('scene', 'jamaisDeclare')).toBeNull()
+  })
+})
+
+/**
+ * Sixteen commands once shipped bound to `'P'` where `'KeyP'` was meant. `Signature` is a string,
+ * so the typecheck was green, the lint was green, and every unit test was green — the binding
+ * simply never fired, because a code is a position and a letter is not one. Only a test driving
+ * a real keyboard caught it.
+ */
+describe('the keys the registry binds', () => {
+  it('spells every default binding as a signature the studio can produce', () => {
+    const malformed = COMMAND_REGISTRY.filter(
+      descriptor => descriptor.defaultBinding !== null && !isSignature(descriptor.defaultBinding),
+    )
+
+    expect(malformed.map(descriptor => `${descriptor.id}: ${descriptor.defaultBinding}`)).toEqual(
+      [],
+    )
+  })
+
+  /** A guard that passed everything would pass this list too, and say nothing about it. */
+  it('would refuse a letter written in place of a code', () => {
+    expect(isSignature('KeyP')).toBe(true)
+    expect(isSignature('P')).toBe(false)
   })
 })

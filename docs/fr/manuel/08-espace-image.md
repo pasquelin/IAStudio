@@ -251,8 +251,19 @@ Le dernier bouton de la barre en ouvre trois curseurs.
 | **Dureté** | 0 à 1 | 1 donne un bord net, 0 un bord entièrement fondu |
 | **Opacité** | 0 à 1 | la transparence de ce qui est déposé |
 
-**Ils valent pour trois outils à la fois** : le pinceau, la gomme et le trait des formes. Un
-pinceau de 40 px et une gomme de 4 px, ce n’est pas possible — c’est le même réglage.
+**La taille et l’opacité valent pour quatre outils à la fois** : le pinceau, le crayon, la gomme
+et le trait des formes. Un pinceau de 40 px et une gomme de 4 px, ce n’est pas possible — c’est le
+même réglage.
+
+**La dureté, elle, n’en touche qu’un : le pinceau.** Le crayon est net par définition — c’est sa
+raison d’être, et il lit la taille et l’opacité comme les autres. La gomme et le trait des formes
+ont un bord net eux aussi : leur adoucissement demande une vérification que rien d’automatique ne
+peut faire ici, et un bord fondu qui n’effacerait plus rien serait pire que pas de fondu du tout.
+
+**En dessous d’un certain point, adoucir ne se voit plus.** Un fondu qui n’atteindrait pas un
+demi-pixel ne déplace rien qu’un œil distingue : sur un pinceau de 4 px, il faut descendre la
+dureté à 0,5 pour que le fondu commence. Et le fondu ne mange jamais plus de la moitié du rayon —
+il adoucit un bord, il ne dissout pas la marque.
 
 **`[` rétrécit, `]` élargit**, sans rien ouvrir : c’est ce dont la main se sert en plein tracé. Le
 pas n’est pas un nombre de pixels mais un rapport — un cran fait environ ×1,4 — sans quoi un pas

@@ -31,6 +31,31 @@ export const DEFAULT_BRUSH: BrushSettings = {
 }
 
 /**
+ * How far a fully soft edge reaches, as a fraction of the radius. Half: the dab keeps a solid
+ * core at every setting, where a full radius would leave a cloud with no mark in the middle —
+ * softness is meant to feather an edge, not to dissolve the brush.
+ */
+const FEATHER = 0.5
+
+/**
+ * Under this, a blur costs a full filter pass and moves no pixel a user can see: half a pixel of
+ * spread is below what the edge of a disc already owes to antialiasing.
+ */
+const LEAST_VISIBLE_BLUR = 0.5
+
+/**
+ * How far the edge of a dab is spread, in document pixels — zero for a hard edge, and zero as
+ * well whenever the answer would be too small to show.
+ *
+ * Here rather than in the engine so it can be read without Pixi: the number decides both the
+ * filter's strength and how far the stroke reaches, and those two must not be computed twice.
+ */
+export function blurRadius(brush: BrushSettings): number {
+  const spread = (1 - clamp(brush.hardness, 0, 1)) * (brush.size / 2) * FEATHER
+  return spread < LEAST_VISIBLE_BLUR ? 0 : spread
+}
+
+/**
  * A step of the scale, as a ratio rather than a count of pixels: a fixed step crawls at 400 px
  * and leaps at 4. Half an octave, which is what puts a handful of presses between the extremes.
  */

@@ -2,6 +2,7 @@ import {
   AlphaFilter,
   type Application,
   Assets,
+  BlurFilter,
   Container,
   Graphics,
   Matrix,
@@ -80,8 +81,8 @@ import {
   type ShapeGeometry,
   type ShapeKind,
 } from './shape-geometry'
-import { DEFAULT_BRUSH, type BrushSettings } from './brush'
-import { brushRect } from './tiles'
+import { blurRadius, DEFAULT_BRUSH, type BrushSettings } from './brush'
+import { brushRect, grownBy } from './tiles'
 import {
   containIn,
   DEFAULT_VIEW,
@@ -100,6 +101,11 @@ export type CanvasTool =
   | 'crop'
   | 'shape'
   | 'brush'
+  /**
+   * The same gesture as the brush, with the edge the bundle promises it: a pencil is hard, and
+   * nothing on screen sets that — which is why it is a tool rather than a mode of the brush.
+   */
+  | 'pencil'
   | 'text'
   | 'comment'
   | 'eraser'
@@ -288,14 +294,20 @@ const NO_GESTURE: Gesture = { kind: 'none' }
  * fill floods a region rather than stamping one, and the shapes are drawn corner to corner:
  * neither says anything about the brush's footprint.
  */
-const RINGED_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'eraser'])
+const RINGED_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'pencil', 'eraser'])
 
 /**
  * The tools that write on the armed layer's surface, and so the ones a layer can refuse. The
  * text tool is not one: it places a caption of its own rather than writing on what is armed.
  * The eyedropper reads, and the selection tools carve out a region rather than a layer.
  */
-const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'eraser', 'fill', 'shape'])
+const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set([
+  'brush',
+  'pencil',
+  'eraser',
+  'fill',
+  'shape',
+])
 
 /** Which gestures hold a layer open in the history, so releasing one closes its entry. */
 const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate'])
@@ -411,6 +423,16 @@ export class CanvasEngine {
    */
   private readonly pendingSnapshots = new Map<string, string>()
   private readonly stamp = new Graphics()
+  /**
+   * What softens the edge of a dab. One instance, tuned when the brush changes and never per
+   * dab: a filter rebuilt inside a `pointermove` would recompile a shader hundreds of times
+   * across one stroke.
+   */
+  private readonly softener = new BlurFilter({ strength: 0, quality: 2 })
+  /** The spread currently hung on the stamp, in document pixels. `dab` reads it rather than
+   * asking again: the number that sets the filter and the number that sizes the undo box are
+   * the same number, and two callers of one formula are two chances to disagree. */
+  private spread = 0
   /** Carries the map back into a surface's own pixels — see `inSurfaceSpace`. */
   private readonly paintSpace = new Container()
   private readonly paintMatrix = new Matrix()
@@ -940,6 +962,9 @@ export class CanvasEngine {
     // bound to a crop nothing on screen still explains.
     if (tool !== 'crop') this.dropCrop()
     this.tool = tool
+    this.tuneSoftener()
+    // The pencil and the brush read the same settings and spread them differently: switching
+    // between them changes the edge with nothing else moving.
     // The chrome belongs to the tool that draws it: without this the move tool's grips stayed on
     // screen under the brush until something else happened to invalidate.
     this.forgetHover()
@@ -967,9 +992,57 @@ export class CanvasEngine {
 
   setBrush(settings: BrushSettings): void {
     this.brush = settings
+    this.tuneSoftener()
     // The ring is drawn from this size: without a repaint it would keep the old footprint until
     // the hand next moved, and a size slider would look disconnected from what it sets.
     if (this.ringed()) this.overlay.invalidate()
+  }
+
+  /**
+   * How far the edge of a dab is spread, in document pixels — zero for every tool that does not
+   * feather.
+   *
+   * The pencil is hard by definition, and that is the whole of what tells it from the brush. The
+   * eraser is hard for a reason of Pixi's: a filtered container is drawn into a texture of its
+   * own, cleared to nothing, and composed back with the FILTER's blend mode rather than the
+   * stamp's — so an `erase` stamp under a filter rubs out against an empty texture and takes
+   * nothing away. Softening it would mean moving the blend onto the filter, which no test here
+   * can check: there is no GPU under vitest, and this is the one path where being wrong means
+   * the eraser silently stops erasing.
+   */
+  private softness(): number {
+    return this.tool === 'brush' ? blurRadius(this.brush) : 0
+  }
+
+  /**
+   * How far the softened edge reaches past the disc, in SURFACE pixels — which is the space a
+   * filter works in. Zero when nothing is hung, so a hard brush records the box it always did.
+   */
+  private fringe(): number {
+    return this.spread === 0 ? 0 : this.softener.padding
+  }
+
+  /**
+   * The filter is hung on the stamp only while it has something to do. Left in place at zero
+   * strength it would still cost a render pass and a framebuffer bind on every dab of a hard
+   * brush, which is the common case.
+   */
+  private tuneSoftener(): void {
+    const spread = this.softness()
+    if (spread === this.spread) return
+
+    this.spread = spread
+    if (spread === 0) {
+      this.stamp.filters = []
+      return
+    }
+
+    this.softener.strength = spread
+    // Rounded up, and that is what this line is for: Pixi computes the same `strength * 2` and
+    // then applies it as `(padding | 0)`, so a fractional spread would lose its last pixel of
+    // fringe. Written after `strength`, whose setter recomputes padding from scratch.
+    this.softener.padding = Math.ceil(spread * 2)
+    this.stamp.filters = [this.softener]
   }
 
   /** Whether the armed tool stamps a disc, and so whether the ring stands for anything. */
@@ -1318,6 +1391,9 @@ export class CanvasEngine {
     this.isolation?.destroy()
     this.isolation = null
     this.stamp.destroy()
+    // The filter is not the stamp's to free: it is held here, and a destroyed Graphics takes
+    // only what it made itself.
+    this.softener.destroy()
 
     // `removeView`, because the canvas belongs to this engine now: leaving it behind would
     // stack a dead canvas per mount.
@@ -2208,7 +2284,14 @@ export class CanvasEngine {
     // Before a single pixel is written: what the tiles hold now is what an undo will put back.
     // Mapped onto the surface, like the dabs themselves — tiles index the texture, and a stroke
     // on a turned layer covers a different set of them than its document-space box suggests.
-    this.patches?.touch(mapRect(target.toSurface, brushRect(points, this.brush.size / 2)))
+    //
+    // The fringe is added AFTER the mapping, and it has to be: a filter is applied once the
+    // container's transform has run, so its padding is a count of surface pixels while the
+    // brush's radius is a count of document ones. Added before, a layer scaled 2× recorded half
+    // the box its stroke actually covered, and an undo left the fringe behind.
+    this.patches?.touch(
+      grownBy(mapRect(target.toSurface, brushRect(points, this.brush.size / 2)), this.fringe()),
+    )
 
     const erasing = this.tool === 'eraser'
     this.stamp.clear()

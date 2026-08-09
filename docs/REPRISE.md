@@ -550,15 +550,32 @@ Deux savoirs qui coûteraient une seconde fois :
   partait de 707 px à un quart de tour. Le test de la branche produisait le défaut sans le voir — il
   n’assertait que les échelles.
 
-**Ce qui reste :**
+### La dureté et la garde des signatures sont livrées — ce qu’elles ont appris
 
-- **`hardness` est déclaré et lu nulle part.** Le curseur de dureté ne déplace aucun pixel, et c’est
-  la même raison qui fait que `paint/brush` et `paint/pencil` rendent le même `CanvasTool` — alors
-  que le bundle promet « bord adouci » contre « bord net ». L’implémenter referme les deux d’un
-  coup : un filtre de flou sur le stamp, réglé dans `setBrush` et jamais par dab.
-- **Une garde sur le format des signatures manque.** `defaultBinding` accepte n’importe quelle
-  chaîne : seize commandes ont été écrites `'P'` au lieu de `'KeyP'` — typecheck vert, lint vert,
-  aucun test du dépôt n’a bronché, seul un test de bout en bout l’a attrapé.
+- **Un filtre isole ce qu’il filtre, et le blend du conteneur ne survit pas.** Pixi dessine un
+  conteneur filtré dans une texture à lui, vidée d’abord, puis recompose avec le blend du
+  **filtre**. Un stamp en `erase` sous filtre gomme donc contre du vide : la gomme cessait
+  d’effacer, et par défaut, la dureté valant 0,8. D’où un adoucissement **réservé au pinceau**.
+  Le rendre à la gomme demande de porter le blend sur le filtre — **et une vérification GPU**,
+  parce que se tromper là veut dire une gomme qui ne dit rien en cessant de servir.
+- **Un filtre travaille en pixels de surface, un rayon de pinceau en pixels de document.** Le
+  filtre s’applique une fois la transformation du conteneur passée. Additionnées avant la
+  projection, les deux marges donnaient sur un calque agrandi deux fois une boîte d’annulation
+  deux fois trop petite, et l’undo laissait la frange. La marge s’ajoute **après** `mapRect`.
+- **Une garde de forme, jamais une liste.** `isSignature` lisait une liste des codes qui
+  existent : elle en refusait quarante qu’un vrai clavier émet, `IntlBackslash` — la touche
+  « < > » de tout AZERTY — en tête, et le refus jetait le fichier de réglages entier. Le pari
+  n’est pas symétrique : un code refusé est une touche que personne ne peut lier, un code accepté
+  qu’aucun clavier n’émet n’est qu’un raccourci qui ne part jamais.
+- **Une entrée illisible coûte sa ligne, jamais le fichier.** `overrides` filtre par entrée comme
+  `home.sections`. Sans cela, une touche liée sous une version antérieure emportait le thème et le
+  dossier de projets à la mise à jour.
+- **Le curseur de dureté reste vivant sous le crayon**, et ne déplace rien. Le § 3.2 dénonçait ce
+  symptôme ; il est déplacé d’un cran, pas refermé. `BRUSH_FIELDS` est déjà une table : de quoi
+  griser une ligne selon l’outil armé y tiendrait.
+
+**À voir à l’écran, et rien d’autre ne le dira** : le fondu du pinceau, et que la gomme efface
+toujours. Aucun test ne peut les regarder — il n’y a pas de GPU sous vitest.
 
 ## 3.3 Espace 3D
 
