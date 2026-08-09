@@ -1,6 +1,7 @@
-import { useCallback, type ReactNode } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
+import { useDismiss } from '@/hooks/useDismiss'
 import { MENU_SURFACE } from './styles'
 
 /** Which side of its anchor the menu hangs on. */
@@ -10,6 +11,18 @@ export type FlyoutProps = {
   anchor: HTMLElement | null
   children: ReactNode
   placement?: FlyoutPlacement
+  /**
+   * Declared rather than assumed. `role="menu"` promises rows a screen reader can step through,
+   * and the surface also serves panels and sliders — announcing a menu that has no menu items
+   * sends a reader looking for something that is not there.
+   */
+  role?: 'menu'
+  /**
+   * Closes on a press outside, on `Escape`, and when the window loses focus. Optional because
+   * the hover callers already close on pointer-out, with a grace period a global `pointerdown`
+   * would fight. Must be stable — it is what the listeners hang off.
+   */
+  onDismiss?: () => void
   onPointerEnter?: () => void
   onPointerLeave?: () => void
 }
@@ -36,13 +49,20 @@ export function Flyout({
   anchor,
   children,
   placement = 'right',
+  role,
+  onDismiss,
   onPointerEnter,
   onPointerLeave,
 }: FlyoutProps) {
+  const panel = useRef<HTMLDivElement | null>(null)
+
+  useDismiss(onDismiss, panel, anchor)
+
   // Placed through a callback ref rather than state: measuring in an effect and storing the
   // result would render the menu once at the wrong place, then move it.
   const place = useCallback(
     (node: HTMLDivElement | null) => {
+      panel.current = node
       if (!node || !anchor) return
       const box = anchor.getBoundingClientRect()
 
@@ -73,7 +93,7 @@ export function Flyout({
   return createPortal(
     <div
       ref={place}
-      role="menu"
+      role={role}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       className={cn(

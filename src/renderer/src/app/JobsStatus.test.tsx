@@ -60,7 +60,24 @@ describe('the jobs indicator', () => {
     render(<JobsStatus />)
 
     await userEvent.click(screen.getByRole('button'))
-    expect(screen.getByRole('menu')).toHaveTextContent('Take a')
+    expect(screen.getByText(/Take a/)).toBeInTheDocument()
+  })
+
+  // Same defect as the journal beside it, seen less often only because the bar is not always up.
+  it('closes on a press beside it', async () => {
+    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    render(
+      <>
+        <JobsStatus />
+        <button type="button">Ailleurs</button>
+      </>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /génération/i }))
+    expect(screen.getByText(/Take a/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ailleurs' }))
+
+    expect(screen.queryByText(/Take a/)).not.toBeInTheDocument()
   })
 
   it('offers the target the status line shares', () => {

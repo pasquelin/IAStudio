@@ -45,7 +45,7 @@ describe('Flyout', () => {
 
   it('hangs beside its anchor when there is room', () => {
     render(
-      <Flyout anchor={anchorAt(80, 100)}>
+      <Flyout anchor={anchorAt(80, 100)} role="menu">
         <button type="button">Pinceau</button>
       </Flyout>,
     )
@@ -56,7 +56,7 @@ describe('Flyout', () => {
     // A section heading reaches the very right edge: hung to the right, its rows sit outside the
     // window and cannot be reached at all.
     render(
-      <Flyout anchor={anchorAt(1000, 1020)}>
+      <Flyout anchor={anchorAt(1000, 1020)} role="menu">
         <button type="button">Pinceau</button>
       </Flyout>,
     )
@@ -68,19 +68,33 @@ describe('Flyout', () => {
     // lands at a negative x, and runs off the side it just flipped to. Every other placement
     // went through `clamped`; this branch was the one that did not.
     render(
-      <Flyout anchor={anchorAt(300, 1020)}>
+      <Flyout anchor={anchorAt(300, 1020)} role="menu">
         <button type="button">Pinceau</button>
       </Flyout>,
     )
     expect(menuLeft()).toBe('0px')
   })
 
-  it('exposes itself as a menu', () => {
+  // `role="menu"` promises rows a reader can step through. The surface also holds panels and
+  // sliders, and announcing a menu over those sends a reader looking for rows that do not exist.
+  it('carries no role of its own', () => {
     const anchor = document.createElement('div')
     document.body.appendChild(anchor)
 
     render(
       <Flyout anchor={anchor}>
+        <button type="button">Pinceau</button>
+      </Flyout>,
+    )
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('announces a menu when its caller says the rows are menu items', () => {
+    const anchor = document.createElement('div')
+    document.body.appendChild(anchor)
+
+    render(
+      <Flyout anchor={anchor} role="menu">
         <button type="button">Pinceau</button>
       </Flyout>,
     )

@@ -1,5 +1,5 @@
 import { mdiChevronUp } from '@mdi/js'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
 import { Flyout } from '@/design/Flyout'
@@ -34,6 +34,7 @@ export function JobsStatus() {
   const jobs = useJobs(state => state.jobs)
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const [open, setOpen] = useState(false)
+  const close = useCallback(() => setOpen(false), [])
 
   const { count, ratio, failed } = useMemo(() => summarize(jobs), [jobs])
 
@@ -64,7 +65,7 @@ export function JobsStatus() {
       </button>
 
       {open && (
-        <Flyout anchor={anchor} placement="above">
+        <Flyout anchor={anchor} placement="above" onDismiss={close}>
           <div className="max-h-80 w-80 overflow-auto">
             <Jobs />
           </div>

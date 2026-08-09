@@ -64,7 +64,7 @@ export function AccountSelect() {
       </button>
 
       {flyout.showing && (
-        <Flyout anchor={anchor} placement="below" {...flyout.flyoutProps}>
+        <Flyout anchor={anchor} placement="below" role="menu" {...flyout.flyoutProps}>
           {accounts.map(account => (
             <MenuRow
               key={account.id}
