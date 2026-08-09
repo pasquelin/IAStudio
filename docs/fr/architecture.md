@@ -600,7 +600,7 @@ coupure en cours d’écriture ne laisse jamais un document tronqué là où ét
 
 Le corps du fichier appartient à l’espace qui l’a écrit : le processus principal ne le lit pas, il
 l’estampille et le rend tel quel. Un espace qui apprend à s’enregistrer n’a donc pas de canal à
-lui. **Aujourd’hui la 3D et les Textures sont branchées** — cf. `docs/REPRISE.md`.
+lui. **Aujourd’hui la 3D et les Textures sont branchées** — cf. `docs/todo.md`.
 
 ---
 

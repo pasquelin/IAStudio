@@ -580,7 +580,7 @@ leave a truncated document where the work was.
 
 The body belongs to the space that wrote it: the main process never reads into it, it stamps an
 envelope and hands it back untouched. A space that learns to save therefore needs no channel of
-its own. **3D and Textures are wired today** — see `docs/REPRISE.md`.
+its own. **3D and Textures are wired today** — see `docs/todo.md`.
 
 ---
 

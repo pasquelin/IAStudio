@@ -19,7 +19,7 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 <!-- SCREENSHOT: the studio in the 3D workspace — rails on both edges, scene viewport in the
      centre, outliner and meshes on the left, models on the right, asset shelf at the bottom.
      Save to docs/images/studio-3d.png (2560×1600, dark theme), then uncomment the block below.
-     See docs/REPRISE.md § 6 for the full shot list.
+     See docs/todo.md § 10 for the full shot list.
 
 <div align="center">
   <img src="docs/images/studio-3d.png" alt="Scenario Studio in the 3D workspace" width="900">
