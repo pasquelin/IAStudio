@@ -10,6 +10,7 @@ import {
   textNodeFixture,
 } from './scene-fixtures'
 import { groupNode } from './node-factory'
+import { SPRITE_SPECS } from './property-fields'
 import { scenePayload, sceneFromPayload } from './scene-document'
 import {
   DEFAULT_MATERIAL,
@@ -195,10 +196,18 @@ describe('sceneFromPayload', () => {
     expect(sceneFromPayload({ nodes }).nodes).toHaveLength(0)
   })
 
-  it('drops a sprite whose opacity is not a number', () => {
+  /**
+   * Driven off the table rather than named one by one: `isSprite` was the last guard checking its
+   * fields by hand, so a field added to `SPRITE_SPECS` went unverified at load — and a document
+   * carrying a wrong value for it reopened with that value in place.
+   */
+  // The colour apart: `null` is legal for it and for nothing else, and a case below covers it.
+  const measured = Object.keys(SPRITE_SPECS).filter(name => name !== 'color')
+
+  it.each(measured)('drops a sprite whose %s is not a number', field => {
     const broken = {
       ...spriteNodeFixture('s1'),
-      sprite: { color: null, opacity: 'half', map: null },
+      sprite: { color: null, opacity: 1, map: null, [field]: 'half' },
     }
 
     expect(sceneFromPayload({ nodes: [broken] }).nodes).toEqual([])
