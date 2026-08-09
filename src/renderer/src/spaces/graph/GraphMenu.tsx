@@ -1,4 +1,5 @@
 import { mdiFormatText, mdiImageOutline, mdiLayersTripleOutline, mdiNoteOutline } from '@mdi/js'
+import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useReactFlow } from '@xyflow/react'
 import type { GraphPosition } from '@shared/domain/graph'
@@ -41,7 +42,7 @@ export function GraphMenu({ at, onClose, onAdd }: GraphMenuProps) {
   return (
     <ContextMenu at={at} onClose={onClose}>
       {PALETTE.map((entry, index) => (
-        <div key={entry.id}>
+        <Fragment key={entry.id}>
           {/* Where the inputs end and the generators begin — the two groups the webapp reads. */}
           {index > 0 && PALETTE[index - 1]?.group !== entry.group && (
             <Separator orientation="horizontal" />
@@ -56,7 +57,7 @@ export function GraphMenu({ at, onClose, onAdd }: GraphMenuProps) {
               onClose()
             }}
           />
-        </div>
+        </Fragment>
       ))}
     </ContextMenu>
   )
