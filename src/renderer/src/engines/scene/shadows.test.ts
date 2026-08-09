@@ -57,10 +57,14 @@ describe('applyShadowFlags', () => {
     const under = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
     child.add(under)
     root.add(child)
+    // A sibling the walk must still reach, so this reads as "stops there" and not "stops".
+    const scenery = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    root.add(scenery)
 
     applyShadowFlags(root, true, true, candidate => candidate === child)
 
     expect(root.castShadow).toBe(true)
+    expect(scenery.castShadow).toBe(true)
     expect(child.castShadow).toBe(false)
     // And not around it either: what hangs under a node belongs to that node.
     expect(under.castShadow).toBe(false)

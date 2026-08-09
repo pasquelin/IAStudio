@@ -22,13 +22,14 @@ vi.mock('three-mesh-bvh', async importOriginal => {
   }
 })
 
-const posted: unknown[] = []
+/** Each call as `[message, transfer]`: what came back, and what was moved rather than copied. */
+const posted: unknown[][] = []
 
 // Imported once for the file: the module registers its listener on import, and a second import
 // would leave two of them answering every request.
 beforeAll(async () => {
-  vi.spyOn(self, 'postMessage').mockImplementation(message => {
-    posted.push(message)
+  vi.spyOn(self, 'postMessage').mockImplementation((...args: unknown[]) => {
+    posted.push(args)
   })
   await import('./bvh.worker')
 })
@@ -39,16 +40,40 @@ beforeEach(() => {
 })
 
 /** A request the way `bvh-builder` sends one: buffers, never a geometry. */
-function ask(id: number): void {
+function ask(id: number, index: Uint32Array | null = null): void {
   const position = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])
-  self.dispatchEvent(new MessageEvent('message', { data: { id, position, index: null } }))
+  self.dispatchEvent(new MessageEvent('message', { data: { id, position, index } }))
 }
 
 describe('the BVH worker', () => {
   it('answers a tree it built', () => {
     ask(3)
 
-    expect(posted).toMatchObject([{ id: 3, ok: true }])
+    // `version` included: `deserialize` reads it, and the builder's own fake stamps its own, so
+    // nothing else in the repo exercises the line that writes it.
+    expect(posted[0]?.[0]).toMatchObject({ id: 3, ok: true, bvh: { version: 1 } })
+  })
+
+  /**
+   * A tree for a dense model is megabytes: copying it back would spend on the UI thread exactly
+   * what the worker was there to save. Two, not one — the build makes an index even for a
+   * geometry that arrived without one, and it travels with the roots.
+   */
+  it('transfers what it built rather than copying it', () => {
+    ask(3)
+
+    expect(posted[0]?.[1]).toHaveLength(2)
+  })
+
+  /**
+   * The branch `index: null` never reaches — a file that carried its own index. What this pins is
+   * that such a request still comes back with a tree and an index; that the index *describes* the
+   * right triangles is three-mesh-bvh's business, and no assertion here would tell.
+   */
+  it('answers a request that carried its own index', () => {
+    ask(4, new Uint32Array([0, 1, 2]))
+
+    expect(posted[0]?.[0]).toMatchObject({ id: 4, ok: true, bvh: { index: expect.anything() } })
   })
 
   /**
@@ -59,8 +84,8 @@ describe('the BVH worker', () => {
   it('answers a build that raised, rather than saying nothing', () => {
     build.fails = true
 
-    ask(4)
+    ask(5)
 
-    expect(posted).toEqual([{ id: 4, ok: false, error: 'out of memory' }])
+    expect(posted[0]?.[0]).toEqual({ id: 5, ok: false, error: 'out of memory' })
   })
 })

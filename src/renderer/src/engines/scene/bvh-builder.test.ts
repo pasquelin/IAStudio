@@ -192,14 +192,16 @@ describe('createBvhBuilder', () => {
     const scripted = scriptedWorker()
     const builder = createBvhBuilder(scripted.spawn)
     const mesh = dense()
+    // The one the build was asked for: production writes the tree onto the geometry it captured,
+    // so asserting on the replacement passed under every possible implementation.
+    const asked = mesh.geometry
 
     const done = builder.accelerate(mesh)
-    const replaced = new SphereGeometry(2, 8, 8)
-    mesh.geometry = replaced
+    mesh.geometry = new SphereGeometry(2, 8, 8)
     await scripted.settle()
     await done
 
-    expect(replaced.boundsTree).toBeUndefined()
+    expect(asked.boundsTree).toBeUndefined()
   })
 
   it('sends the buffers, never the geometry', async () => {
@@ -300,6 +302,9 @@ describe('when a build does not come back', () => {
     scripted.die('killed')
 
     await expect(done).rejects.toThrow('killed')
+    // A worker left running holds its thread for the window's life — `messageerror` fires on one
+    // that is still perfectly alive.
+    expect(scripted.terminated).toHaveBeenCalled()
   })
 
   it('rejects what was in flight when the answer could not be read', async () => {
@@ -310,6 +315,7 @@ describe('when a build does not come back', () => {
     scripted.garble()
 
     await expect(done).rejects.toThrow('unreadable')
+    expect(scripted.terminated).toHaveBeenCalled()
   })
 
   // One model running the thread out of memory must not cost every later click its tree.
