@@ -117,6 +117,39 @@ export function rmsOf(samples: Float32Array): number {
 }
 
 /**
+ * Floats to the 16-bit samples that cross the boundary, clamped.
+ *
+ * Halves what is copied a hundred times a minute, and a microphone has nowhere near sixteen
+ * bits of real dynamic range anyway. Done here rather than in the worklet because a worklet
+ * cannot import anything — it would be a second copy of this, untested.
+ */
+export function toInt16(samples: Float32Array): Int16Array {
+  const pcm = new Int16Array(samples.length)
+
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, samples[index] ?? 0))
+    // Scaled by 32767 on the way up and by 32768 on the way down: it is the pair that keeps a
+    // full-scale sample inside the range in both directions.
+    pcm[index] = Math.round(sample * 32_767)
+  }
+
+  return pcm
+}
+
+/** The 16-bit samples back to the [-1, 1] floats the engine reads. */
+export function toFloat(samples: Int16Array): Float32Array {
+  const floats = new Float32Array(samples.length)
+
+  for (let index = 0; index < samples.length; index += 1) {
+    // 32768 rather than 32767: it is the magnitude of the most negative sample, so -32768 maps
+    // to exactly -1 and nothing overshoots.
+    floats[index] = (samples[index] ?? 0) / 32_768
+  }
+
+  return floats
+}
+
+/**
  * One file of the model, and what proves it arrived intact. The digests are the LFS object ids
  * HuggingFace publishes, except `tokens.txt` which is not stored in LFS and was hashed by hand.
  *

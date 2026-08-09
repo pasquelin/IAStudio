@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_TOPICS } from '../domain/activity'
 import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
+import { STT_ERROR_CODES } from '../domain/dictation'
 import { isRecord } from '../guards'
 import { NAMED_KEYS } from '../domain/shortcut'
 import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES, MODEL_PERIODS, MODEL_SORTS } from '../domain/model'
@@ -216,6 +217,9 @@ const DYNAMIC_KEYS: readonly string[] = [
   // The journal's own union, wider: what happened, not only what was billed.
   ...USAGE_EVENT_ACTIONS.map(action => `usage.actionNames.${action}`),
   ...USAGE_ASSET_KINDS.map(kind => `usage.assetKinds.${kind}`),
+  // What the microphone answered, said in the language of whoever is reading. The detail of a
+  // failure never reaches the screen — it names a file path — so the code is all there is.
+  ...STT_ERROR_CODES.map(code => `dictation.errors.${code}`),
 ]
 
 describe('the keys the interface composes', () => {

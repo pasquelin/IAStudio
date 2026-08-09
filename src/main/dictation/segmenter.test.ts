@@ -8,7 +8,6 @@ import {
   PREROLL_SECONDS,
   previewOf,
   secondsOf,
-  toFloat,
 } from './segmenter'
 
 const chunk = (length: number, value = 0): Float32Array => new Float32Array(length).fill(value)
@@ -78,28 +77,5 @@ describe('previewOf', () => {
     const preview = previewOf(held, 2)
 
     expect(preview[preview.length - 1]).toBeCloseTo(0.7, 6)
-  })
-})
-
-describe('toFloat', () => {
-  it('maps the full negative sample to exactly -1', () => {
-    expect([...toFloat(new Int16Array([-32_768]))]).toEqual([-1])
-  })
-
-  it('maps silence to silence', () => {
-    expect([...toFloat(new Int16Array([0, 0]))]).toEqual([0, 0])
-  })
-
-  // Just short of 1 rather than past it: 32767 is the largest positive sample there is, and a
-  // value above 1 is what a recogniser reads as clipping.
-  it('keeps the largest positive sample inside the range', () => {
-    const [loudest] = toFloat(new Int16Array([32_767]))
-
-    expect(loudest).toBeLessThan(1)
-    expect(loudest).toBeCloseTo(1, 4)
-  })
-
-  it('halves a half-scale sample', () => {
-    expect([...toFloat(new Int16Array([16_384]))]).toEqual([0.5])
   })
 })

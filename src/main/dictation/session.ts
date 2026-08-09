@@ -34,6 +34,8 @@ export type SessionHost = {
   /** Forks the worker. The listeners are wired by the session, which is what reads them. */
   openEngine: (listeners: EngineListeners, onExit: () => void) => SttClient
   emit: (event: SttEvent) => void
+  /** Where a refusal is written down. The interface never shows the detail of one. */
+  log: (message: string) => void
   join: (folder: string, name: string) => string
   now: () => number
   /** Deferred so the idle timer can be driven by a test rather than waited on. */
@@ -89,6 +91,10 @@ export function createSession(host: SessionHost): DictationSession {
 
   const refuse = (code: SttErrorCode, error: unknown): void => {
     failure = failureOf(code, error)
+    // Logged as well as shown: the interface says which refusal it was, in the reader's own
+    // language, and never the detail — which names a file path or an ONNX symbol, and is the
+    // only thing that says what actually went wrong.
+    host.log(`${code}: ${failure.message}`)
     host.emit({ type: 'error', failure })
     publish('error')
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rmsOf, STT_MODEL_BYTES, STT_MODEL_FILES } from './dictation'
+import { rmsOf, STT_MODEL_BYTES, STT_MODEL_FILES, toFloat, toInt16 } from './dictation'
 
 describe('the model manifest', () => {
   it('names four files, each with a digest and a size', () => {
@@ -50,5 +50,40 @@ describe('rmsOf', () => {
 
   it('is zero for an empty chunk rather than NaN', () => {
     expect(rmsOf(new Float32Array(0))).toBe(0)
+  })
+})
+
+describe('toInt16', () => {
+  it('maps silence to silence', () => {
+    expect([...toInt16(new Float32Array([0, 0]))]).toEqual([0, 0])
+  })
+
+  it('maps full scale to the ends of the range', () => {
+    expect([...toInt16(new Float32Array([1, -1]))]).toEqual([32_767, -32_767])
+  })
+
+  // A sample past full scale is what clipping looks like, and wrapping it round would turn the
+  // loudest moment of a sentence into the quietest.
+  it('clamps what overshoots instead of wrapping it', () => {
+    expect([...toInt16(new Float32Array([1.5, -1.5]))]).toEqual([32_767, -32_767])
+  })
+})
+
+describe('the round trip', () => {
+  // The capture converts one way and the engine the other, so what matters is that a sample
+  // comes back where it started rather than what either half does on its own.
+  it('brings a sample back to itself, within a bit', () => {
+    const original = new Float32Array([0, 0.25, -0.25, 0.5, -0.5, 0.999, -0.999])
+    const returned = toFloat(toInt16(original))
+
+    for (const [index, sample] of [...original].entries()) {
+      expect(returned[index]).toBeCloseTo(sample, 4)
+    }
+  })
+
+  it('never comes back outside the range the engine reads', () => {
+    for (const sample of toFloat(toInt16(new Float32Array([1, -1, 2, -2])))) {
+      expect(Math.abs(sample)).toBeLessThanOrEqual(1)
+    }
   })
 })

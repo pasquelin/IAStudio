@@ -2,8 +2,8 @@
 // property accesses, which Node cannot see through — `import { Vad }` compiles and then throws
 // on the first run. See `shared/types/sherpa-onnx-node.d.ts`.
 import sherpa, { type OfflineRecognizer, type Vad } from 'sherpa-onnx-node'
-import { STT_SAMPLE_RATE } from '@shared/domain/dictation'
-import { emptyHeld, hold, previewOf, toFloat, type Held } from './segmenter'
+import { STT_SAMPLE_RATE, toFloat } from '@shared/domain/dictation'
+import { emptyHeld, hold, previewOf, type Held } from './segmenter'
 import { isAudio, isLoad, type SttLoad, type SttMessage, type SttResponse } from './stt-protocol'
 
 /**

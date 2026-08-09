@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAccountChange } from '@/hooks/useAccountChange'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
+import { useHeldCommand } from '@/hooks/useShortcuts'
 import { useWindowFit } from '@/hooks/useWindowFit'
 import { useAccounts } from '@/stores/accounts'
 import { useJobs } from '@/stores/jobs'
+import { useDictation as useDictationStore } from '@/stores/dictation'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -28,6 +30,7 @@ export function Application() {
   const connectProject = useProject(state => state.connect)
   const connectJobs = useJobs(state => state.connect)
   const connectMedia = useMedia(state => state.connect)
+  const connectDictation = useDictationStore(state => state.connect)
   const connectUpdates = useUpdates(state => state.connect)
   const connectActivity = useActivity(state => state.connect)
 
@@ -38,6 +41,7 @@ export function Application() {
       connectProject(),
       connectJobs(),
       connectMedia(),
+      connectDictation(),
       connectUpdates(),
       connectActivity(),
     ]
@@ -50,6 +54,7 @@ export function Application() {
     connectProject,
     connectJobs,
     connectMedia,
+    connectDictation,
     connectUpdates,
     connectActivity,
   ])
@@ -65,6 +70,7 @@ export function Application() {
   useEffect(() => connectPreparation(), [])
 
   useAppliedSettings()
+  useDictationShortcut()
 
   const [client] = useState(
     () =>
@@ -85,5 +91,33 @@ export function Application() {
     <QueryClientProvider client={client}>
       <Shell />
     </QueryClientProvider>
+  )
+}
+
+/**
+ * The push-to-talk key, heard once for the whole window.
+ *
+ * Here rather than in a panel: dictation writes wherever the caret is, so it belongs to the
+ * shell and not to whichever surface happens to be open. Holding starts a session and letting
+ * go settles it; in toggle mode the same key starts and stops.
+ */
+function useDictationShortcut(): void {
+  const enabled = useSettings(state => state.settings.dictation.enabled)
+  const mode = useSettings(state => state.settings.dictation.mode)
+  const start = useDictationStore(state => state.start)
+  const stop = useDictationStore(state => state.stop)
+
+  useHeldCommand(
+    'app.dictate',
+    enabled,
+    useCallback(
+      held => {
+        if (mode === 'pushToTalk') void (held ? start() : stop())
+        // Toggling acts on the press alone: acting on the release too would start and stop it
+        // in the time it takes to tap a key.
+        else if (held) void (useDictationStore.getState().state === 'listening' ? stop() : start())
+      },
+      [mode, start, stop],
+    ),
   )
 }

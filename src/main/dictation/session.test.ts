@@ -35,6 +35,7 @@ function harness(overrides: Partial<SessionHost> = {}) {
     requestMicrophone: () => Promise.resolve('granted'),
     openEngine: opened,
     emit: event => void events.push(event),
+    log: vi.fn(),
     join: (folder, name) => `${folder}/${name}`,
     now: () => 0,
     schedule: (run, delayMs) => {

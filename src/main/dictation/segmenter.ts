@@ -83,17 +83,6 @@ export function previewOf(held: Held, spokenSamples: number): Float32Array {
   return all.subarray(all.length - wanted)
 }
 
-/** 16-bit samples back to the [-1, 1] floats the engine reads. */
-export function toFloat(samples: Int16Array): Float32Array {
-  const floats = new Float32Array(samples.length)
-  for (let index = 0; index < samples.length; index += 1) {
-    // 32768 rather than 32767: it is the magnitude of the most negative sample, so -32768 maps
-    // to exactly -1 and nothing overshoots.
-    floats[index] = (samples[index] ?? 0) / 32768
-  }
-  return floats
-}
-
 export function secondsOf(samples: number): number {
   return samples / STT_SAMPLE_RATE
 }
