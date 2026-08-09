@@ -119,8 +119,31 @@ describe('documents store', () => {
     it('empties the centre rather than throwing when the project cannot answer', async () => {
       installFakeBridge({ documents: { list: () => Promise.reject(new Error('no project')) } })
 
-      await expect(useDocuments.getState().refresh()).resolves.toBeUndefined()
+      await expect(useDocuments.getState().refresh()).resolves.toBe(false)
       expect(Object.keys(useDocuments.getState().documents)).toHaveLength(0)
+    })
+
+    // An empty centre is honest about a folder that went away and says nothing about which
+    // tabs deserve to survive it: whoever settles those has to tell the two apart.
+    it('says the folder answered when it did, empty or not', async () => {
+      installFakeBridge({ documents: { list: () => Promise.resolve([]) } })
+
+      await expect(useDocuments.getState().refresh()).resolves.toBe(true)
+    })
+
+    it('says nothing of a listing another refresh overtook', async () => {
+      let release = (): void => {}
+      const slow = new Promise<DocumentDescriptor[]>(resolve => {
+        release = () => resolve([])
+      })
+      installFakeBridge({ documents: { list: () => slow } })
+
+      const overtaken = useDocuments.getState().refresh()
+      installFakeBridge({ documents: { list: () => Promise.resolve([]) } })
+      await useDocuments.getState().refresh()
+      release()
+
+      await expect(overtaken).resolves.toBe(false)
     })
   })
 

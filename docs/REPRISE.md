@@ -378,49 +378,39 @@ Ce qu’il faut retenir de `feat/prompt-assist` (`generate/prompt`, `caption`, `
 
 # 2. Le plus urgent
 
-## Deux onglets ouverts sur « Ce document n’est plus ouvert » — au premier rechargement
+## Les onglets fantômes — livré (`feat/onglets-fantomes`, 9 août 2026)
 
-**Vu à l’écran le 9 août 2026, capture à l’appui, et reproductible en trois gestes** : ouvrir deux
-documents neufs dans l’espace Image, ne rien y enregistrer, recharger l’application. Les onglets
-« Sans titre 1 » et « Sans titre 2 » reviennent, le centre affiche *« Ce document n’est plus
-ouvert. »*, les Calques disent *« Ouvrez une image »*. **Un onglet ouvert qui affirme qu’il n’y a
-pas de document est un état que l’interface ne doit pas pouvoir atteindre.**
+Le défaut : deux documents neufs jamais enregistrés, un rechargement, et les onglets « Sans titre »
+revenaient sur *« Ce document n’est plus ouvert. »*. `refresh` reconstruisait les documents par
+l’intersection dossier ∩ layout et **ne corrigeait jamais le layout**, seul à prétendre que l’onglet
+existe. `closeOrphanTabs` (`app/orphan-tabs.ts`), appelé par `followProject` après la
+réconciliation, ferme cette boucle : `useLayouts.prune` retire les panneaux du layout persisté de
+**chaque** espace — Dockview n’en monte qu’un, les autres ne sont atteignables que là — puis
+`closePanel` retire l’onglet de celui qui est à l’écran.
 
-**Ce n’est pas une régression : c’est un trou de conception, et le code le documente en le
-décrivant.** `app/documents.tsx:79` porte la JSDoc « The layout is persisted, the documents are
-not: a tab restored on startup outlives its document », et le rend proprement plutôt que de lever.
-Ce que ce commentaire décrit comme un cas de bord est en réalité **le cas nominal** dès qu’un
-document n’a pas été enregistré.
+**Les trois conditions à ne pas simplifier**, chacune tenue par un test qui rougit sans elle :
 
-**La chaîne, vérifiée dans le code :**
+1. **« absent du dossier » ne suffit pas.** Un document créé dans la session l’est aussi : la
+   condition est « absent du dossier **et** absent de `state.documents` », et le store est lu au
+   moment où le listing est retombé, pour qu’un `adopt` arrivé entre-temps compte.
+2. **Le dossier doit avoir répondu.** `listed()` rend désormais `null` quand la lecture échoue,
+   distinct de la liste vide, et `refresh` répond un booléen. Un dossier disparu laisse le même
+   centre vide qu’un projet neuf : purger dessus coûterait pour de bon l’arrangement d’un projet
+   vivant.
+3. **Purger un layout Dockview n’est pas retirer une clé de `panels`.** Un identifiant vit aussi
+   dans les `views` du groupe, et `fromJSON` construit chaque vue depuis `panels[id]` — une vue
+   orpheline lève, et `DocumentArea` jette alors l’arrangement entier.
 
-1. `create` (`stores/documents.ts:198`) **n’écrit rien** dans le dossier du projet, délibérément —
-   « a file per tab opened and never typed in would litter the project with empty documents ». Un
-   document neuf n’existe donc que dans le store, en mémoire.
-2. `useDocuments` **n’est pas persisté**, aussi délibérément (§ « Corrigé — ne pas le re-signaler » :
-   persisté, les onglets d’un projet réapparaissaient dans le suivant).
-3. **Le layout Dockview, lui, est persisté** — c’est même « the reliable record of what is open »
-   (`panelIds`, même fichier).
-4. `refresh` (`:157`) reconstruit les documents par **l’intersection dossier ∩ layout** :
-   `found.filter(document => shown.has(document.id))`.
+**Ce que la source de Dockview 7.0.4 a dit, et qu’aucune doc n’annonçait :** `fromJSON` **lève**
+si `grid.root` n’est pas une branche (d’où le root vide de forme conservée), **ignore** en revanche
+un `activeGroup` inconnu, et **Maj + glisser un onglet crée un groupe flottant** — activé par
+défaut, jamais désactivé ici. Un fantôme peut donc être dans `floatingGroups` ou `popoutGroups`,
+que `withoutPanels` traite pour cette raison.
 
-Un document jamais enregistré est absent du dossier, donc absent de l’intersection — **mais son
-panneau, lui, est dans le layout.** L’intersection décide ce qui vit côté documents et **ne corrige
-jamais le layout**, qui reste seul à prétendre que l’onglet existe. Personne ne ferme la boucle.
-
-**Ce qu’il faut trancher, et le piège qui attend.** Aligner le layout sur la réalité est la bonne
-moitié : un document dont rien n’est écrit ne peut pas revivre, son onglet ne doit donc pas
-survivre. Mais **la condition ne peut pas être « absent du dossier »** — un document créé pendant
-la session est lui aussi absent du dossier, et le balayer fermerait l’onglet sous les doigts. Il
-faut « absent du dossier **et** absent de `state.documents` », et le nettoyage doit tenir compte du
-fait que `refresh` est asynchrone et que `adopt` peut arriver entre-temps.
-
-L’autre moitié est un choix de produit : un document neuf où l’on a peint sans enregistrer est
-perdu au rechargement, silencieusement, aujourd’hui comme après le correctif. Décider s’il faut le
-dire, ou l’écrire — et l’écrire contredit le commentaire de `create`, qui a ses raisons.
-
-**Non commencé.** Tests de reprise à écrire dans le même mouvement : `app/**` n’est sous aucun
-budget de couverture (§ 3.1), ce qui est précisément pourquoi ce chemin n’a rien qui le tienne.
+**Ce qui reste ouvert, et c’est un choix de produit, pas un correctif :** un document neuf où l’on
+a peint sans enregistrer est perdu au rechargement, silencieusement — avant comme après. Décider
+s’il faut le dire ou l’écrire, sachant qu’écrire contredit le commentaire de `create`, qui a ses
+raisons.
 
 ---
 

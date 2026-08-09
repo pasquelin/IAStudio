@@ -2,8 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useProject } from './project'
 
+const closeOrphanTabs = vi.hoisted(() => vi.fn())
+vi.mock('@/app/orphan-tabs', () => ({ closeOrphanTabs }))
+
 beforeEach(() => {
   useProject.setState({ project: null, known: false })
+  closeOrphanTabs.mockClear()
   installFakeBridge()
 })
 
@@ -37,5 +41,27 @@ describe('saying that the answer has arrived', () => {
 
     expect(useProject.getState().known).toBe(true)
     expect(stop).toBeTypeOf('function')
+  })
+})
+
+/**
+ * A tab restored on startup outlives its document: the layout is persisted and the documents
+ * are not, so one created and never saved comes back as a tab that says it is not open.
+ */
+describe('settling the tabs of a project being followed', () => {
+  it('closes what the folder and the store both disown', async () => {
+    await useProject.getState().connect()
+
+    expect(closeOrphanTabs).toHaveBeenCalled()
+  })
+
+  // A folder that went away leaves every document missing, which looks exactly like a project
+  // of ghosts — and closing on it would cost a live arrangement for good.
+  it('closes nothing when the folder could not be read', async () => {
+    installFakeBridge({ documents: { list: () => Promise.reject(new Error('no folder')) } })
+
+    await useProject.getState().connect()
+
+    expect(closeOrphanTabs).not.toHaveBeenCalled()
   })
 })

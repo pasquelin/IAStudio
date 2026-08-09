@@ -1,11 +1,15 @@
 import type { SerializedDockview } from 'dockview-react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
+import { DEFAULT_WORKSPACE, WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
+import { withoutPanels } from './layout-prune'
 import { useSettings } from './settings'
 
-/** Serialized Dockview layout. Its shape belongs to Dockview; we never read it back. */
+/**
+ * Serialized Dockview layout. Its shape belongs to Dockview, and only two things read it back:
+ * `panelIds`, which asks which documents are open, and `prune`, which takes one out.
+ */
 export type SerializedLayout = SerializedDockview
 
 type LayoutsState = {
@@ -27,6 +31,11 @@ type LayoutsState = {
   setHome: (home: boolean) => void
   remember: (workspace: WorkspaceId, layout: SerializedLayout) => void
   forget: (workspace: WorkspaceId) => void
+  /**
+   * Takes those panels out of every workspace's layout — the tabs of documents the window can
+   * no longer open. A layout left with none is forgotten rather than kept as an empty one.
+   */
+  prune: (panels: ReadonlySet<string>) => void
   /** Keeps the arrangement when the same project comes back, drops it for another one. */
   adopt: (projectPath: string | null) => void
 }
@@ -58,6 +67,26 @@ export const useLayouts = create<LayoutsState>()(
           const remaining = { ...state.layouts }
           delete remaining[workspace]
           return { layouts: remaining }
+        }),
+
+      prune: panels =>
+        set(state => {
+          const layouts = { ...state.layouts }
+          let pruned = false
+
+          for (const workspace of WORKSPACE_IDS) {
+            const layout = layouts[workspace]
+            // Asked before rewriting: `withoutPanels` always answers with a new object, and a
+            // layout replaced by an equal one is a write to `localStorage` per launch.
+            if (!layout || !Object.keys(layout.panels).some(id => panels.has(id))) continue
+
+            pruned = true
+            const kept = withoutPanels(layout, panels)
+            if (kept) layouts[workspace] = kept
+            else delete layouts[workspace]
+          }
+
+          return pruned ? { layouts } : {}
         }),
 
       adopt: projectPath =>
