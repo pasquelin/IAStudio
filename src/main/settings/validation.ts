@@ -15,6 +15,7 @@ import {
   type SettingActionId,
 } from '@shared/domain/settings-registry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
+import { isSignature } from '@shared/domain/shortcut'
 import { HOME_LIMIT_MAX, HOME_LIMIT_MIN, HOME_SECTION_IDS } from '@shared/domain/home'
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -143,7 +144,10 @@ const three = z.object({
 })
 
 const shortcuts = z.object({
-  overrides: z.record(z.string().min(1), z.string().min(1)).optional(),
+  // Checked in shape, not merely non-empty: `Signature` is a string, so `'P'` written where
+  // `'KeyP'` was meant reaches here typechecked, and a code is a position while a letter is not
+  // — the binding would simply never fire, with nothing anywhere saying why.
+  overrides: z.record(z.string().min(1), z.string().refine(isSignature)).optional(),
 })
 
 const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })

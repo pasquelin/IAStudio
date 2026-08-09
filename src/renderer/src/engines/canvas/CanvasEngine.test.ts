@@ -20,6 +20,7 @@ import {
   type Transform,
 } from './canvas-state'
 import { DEFAULT_BRUSH } from './brush'
+import { PixelPatches } from './PixelPatches'
 import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from './shape-geometry'
@@ -267,6 +268,12 @@ vi.mock('pixi.js', () => {
       from: () => ({ resources: { adjustUniforms: { uniforms: {} } } }),
     },
     AlphaFilter: class {
+      destroy(): void {}
+    },
+    /** What softens the edge of a dab: the engine writes a strength and a padding into it. */
+    BlurFilter: class {
+      strength = 0
+      padding = 0
       destroy(): void {}
     },
     Container,
@@ -950,6 +957,49 @@ describe('painting a transformed layer', () => {
     press(host, x, y)
     release(x, y)
   }
+
+  /**
+   * The reach, not the disc. A soft brush lays pixels beyond its own radius — that fringe IS the
+   * soft edge — and a stroke whose undo footprint was the radius alone would put back everything
+   * except what the softness had just drawn.
+   */
+  it('reaches past the disc when the edge is soft, and stops at it when it is hard', async () => {
+    const touched = vi.spyOn(PixelPatches.prototype, 'touch')
+
+    const { host, engine } = await mounted(shifted({}))
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 1 })
+    touched.mockClear()
+    dabAt(host, 200, 200)
+    const hard = touched.mock.calls[0]?.[0]
+
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+    touched.mockClear()
+    dabAt(host, 200, 200)
+    const soft = touched.mock.calls[0]?.[0]
+
+    // 40 across, plus the pixel of slack `brushRect` already keeps for the antialiased rim.
+    expect(hard?.width).toBe(42)
+    // Ten pixels of spread, counted twice: a blur reaches beyond its own strength.
+    expect(soft?.width).toBe(82)
+    // The box grows on both sides, so its origin moves back by exactly what its width gained.
+    expect((hard?.x ?? 0) - (soft?.x ?? 0)).toBe(20)
+    expect((hard?.y ?? 0) - (soft?.y ?? 0)).toBe(20)
+    touched.mockRestore()
+  })
+
+  /** The pencil reads the same settings and spreads none of them: that is the whole difference. */
+  it('reaches no further under the pencil, whatever the hardness slider says', async () => {
+    const touched = vi.spyOn(PixelPatches.prototype, 'touch')
+
+    const { host, engine } = await mounted(shifted({}))
+    engine.setTool('pencil')
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+    touched.mockClear()
+    dabAt(host, 200, 200)
+
+    expect(touched.mock.calls[0]?.[0]?.width).toBe(42)
+    touched.mockRestore()
+  })
 
   it('draws straight into the pixels of an untouched layer', async () => {
     const { host } = await mounted(shifted({}))

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BRUSH_SIZE, DEFAULT_BRUSH, resizedBrush } from './brush'
+import { blurRadius, BRUSH_SIZE, DEFAULT_BRUSH, resizedBrush, type BrushSettings } from './brush'
 
 describe('stepping the brush size', () => {
   it('grows and shrinks by a ratio, so a step feels the same at either end of the scale', () => {
@@ -57,5 +57,53 @@ describe('the brush the studio opens on', () => {
   it('sits inside its own scale', () => {
     expect(DEFAULT_BRUSH.size).toBeGreaterThanOrEqual(BRUSH_SIZE.min)
     expect(DEFAULT_BRUSH.size).toBeLessThanOrEqual(BRUSH_SIZE.max)
+  })
+})
+
+/**
+ * The number decides two things at once — how strong the filter is, and how far the stroke
+ * reaches for the undo. A soft brush whose reach was computed from the disc alone would put back
+ * everything but the fringe it had just laid down.
+ */
+describe('how far the edge of a dab is spread', () => {
+  const brush = (hardness: number, size = 24): BrushSettings => ({
+    ...DEFAULT_BRUSH,
+    hardness,
+    size,
+  })
+
+  it('spreads nothing at all under a fully hard edge', () => {
+    expect(blurRadius(brush(1))).toBe(0)
+  })
+
+  it('reaches half the radius when the edge is fully soft', () => {
+    // A solid core at every setting: a full radius would leave a cloud with no mark in it.
+    expect(blurRadius(brush(0, 40))).toBe(10)
+  })
+
+  it('grows as the edge softens, and with the brush', () => {
+    expect(blurRadius(brush(0.5, 40))).toBe(5)
+    expect(blurRadius(brush(0.5, 80))).toBe(10)
+    expect(blurRadius(brush(0.25, 40))).toBe(7.5)
+  })
+
+  it('answers nothing where the answer would be too small to show', () => {
+    // A 4 px brush at 0.8 would spread by 0.2 px: a whole filter pass, and no pixel moved.
+    expect(blurRadius(brush(0.8, 4))).toBe(0)
+    expect(blurRadius(brush(0, 1))).toBe(0)
+  })
+
+  it('holds a hardness read from outside the unit interval', () => {
+    // A hand-edited setting is user territory, and a negative one would spread further than
+    // the radius — a dab with no middle.
+    expect(blurRadius(brush(2, 40))).toBe(0)
+    expect(blurRadius(brush(-1, 40))).toBe(10)
+  })
+
+  it('spreads the default brush a little, which is what "mostly hard" means', () => {
+    const spread = blurRadius(DEFAULT_BRUSH)
+
+    expect(spread).toBeGreaterThan(0)
+    expect(spread).toBeLessThan(DEFAULT_BRUSH.size / 4)
   })
 })

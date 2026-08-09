@@ -45,6 +45,75 @@ export function signatureOf(event: KeyChord): Signature {
 }
 
 /**
+ * The modifiers a signature may carry, in the one order `signatureOf` writes them. Read as an
+ * order rather than a set: two spellings of the same chord would never match each other, and
+ * the lookup that decides what a key does is an equality on this string.
+ */
+const MODIFIER_ORDER: readonly string[] = ['Ctrl', 'Alt', 'Shift', 'Meta']
+
+/**
+ * The shapes a `KeyboardEvent.code` takes. Codes are positions, not characters — which is the
+ * whole point of the check below.
+ */
+const CODE_SHAPES: readonly RegExp[] = [
+  /^Key[A-Z]$/,
+  /^Digit[0-9]$/,
+  /^Numpad[A-Za-z0-9]+$/,
+  /^F([1-9]|1[0-9]|2[0-4])$/,
+  /^Arrow(Up|Down|Left|Right)$/,
+]
+
+/** The codes that are neither letters, digits nor words: the punctuation a key carries. */
+const PUNCTUATION_CODES: readonly string[] = [
+  'Equal',
+  'Minus',
+  'Semicolon',
+  'Quote',
+  'Comma',
+  'Period',
+  'Slash',
+  'Backslash',
+  'Backquote',
+  'BracketLeft',
+  'BracketRight',
+]
+
+function isKeyCode(code: string): boolean {
+  if (CODE_SHAPES.some(shape => shape.test(code))) return true
+  return isNamedKey(code) || PUNCTUATION_CODES.includes(code)
+}
+
+/**
+ * Whether a string is a signature this studio could ever produce.
+ *
+ * `Signature` is a string, so nothing in the type system stops `'P'` from being written where
+ * `'KeyP'` was meant — and sixteen commands were. Typecheck green, lint green, every unit test
+ * green: a code is a position and a letter is not one, so the binding simply never fired, and
+ * only a test driving a real keyboard caught it.
+ *
+ * Checked here rather than at each caller: the registry is one user, the overrides read off the
+ * settings file are another, and a rule with two spellings is a rule that will be relaxed in one.
+ */
+export function isSignature(value: unknown): value is Signature {
+  if (typeof value !== 'string' || value.length === 0) return false
+
+  const parts = value.split('+')
+  const code = parts.at(-1) ?? ''
+  const modifiers = parts.slice(0, -1)
+
+  // Read against the order rather than merely included in it: `Meta+Ctrl+KeyS` and
+  // `Ctrl+Meta+KeyS` are the same chord and would be two different keys in every lookup.
+  let next = 0
+  for (const modifier of modifiers) {
+    const at = MODIFIER_ORDER.indexOf(modifier, next)
+    if (at === -1) return false
+    next = at + 1
+  }
+
+  return isKeyCode(code)
+}
+
+/**
  * The chords the platform also runs on any highlighted text, editable or not.
  *
  * A command bound to one of them steps aside while something is selected: the copy the user

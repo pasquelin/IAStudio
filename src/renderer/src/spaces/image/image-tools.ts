@@ -334,6 +334,9 @@ export function toolById(id: string): ImageTool | null {
  */
 export function canvasToolFor(toolId: string, modeId?: string): CanvasTool | null {
   if (toolId === 'pointer') return modeId === 'hand' ? 'hand' : 'move'
+  // The pencil is not a mode of the brush for the engine: the two lay the same disc down and
+  // differ on the edge, which is the whole of what the bundle promises about them.
+  if (toolId === 'paint') return modeId === 'pencil' ? 'pencil' : 'brush'
   return toolById(toolId)?.tool ?? null
 }
 
