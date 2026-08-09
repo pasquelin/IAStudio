@@ -1466,6 +1466,7 @@
       "spotlight": "Where you were",
       "tools": "Tools",
       "projects": "Your projects",
+      "creations": "What you have made",
       "documents": "Your documents",
       "jobs": "Running now",
       "activity": "Recent activity"
@@ -1492,6 +1493,9 @@
     },
     "documents": {
       "none": "This project holds no document yet. Pick a tool above to make one."
+    },
+    "creations": {
+      "recreate": "Make another one with {{model}}"
     },
     "spotlight": {
       "resume": "Pick up where you left off",

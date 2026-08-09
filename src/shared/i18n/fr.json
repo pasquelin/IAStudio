@@ -1466,6 +1466,7 @@
       "spotlight": "Où vous en étiez",
       "tools": "Outils",
       "projects": "Vos projets",
+      "creations": "Ce que vous avez produit",
       "documents": "Vos documents",
       "jobs": "En cours",
       "activity": "Activité récente"
@@ -1492,6 +1493,9 @@
     },
     "documents": {
       "none": "Ce projet ne contient encore aucun document. Choisissez un outil ci-dessus."
+    },
+    "creations": {
+      "recreate": "En refaire une avec {{model}}"
     },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",

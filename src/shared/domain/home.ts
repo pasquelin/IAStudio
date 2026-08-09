@@ -9,7 +9,8 @@
 /** What a section cannot be drawn without. A section with none is drawable at all times. */
 export type HomeRequirement = 'api' | 'project'
 
-export type HomeSectionId = 'spotlight' | 'tools' | 'projects' | 'documents' | 'jobs' | 'activity'
+export type HomeSectionId =
+  'spotlight' | 'tools' | 'projects' | 'creations' | 'documents' | 'jobs' | 'activity'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
@@ -31,6 +32,7 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'spotlight', requires: [], pinned: true },
   { id: 'tools', requires: [], pinned: true },
   { id: 'projects', requires: [], pinned: true, defaultLimit: 12 },
+  { id: 'creations', requires: ['project'], defaultLimit: 12 },
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
   { id: 'activity', requires: ['project'], defaultLimit: 6 },

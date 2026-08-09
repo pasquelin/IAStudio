@@ -370,6 +370,18 @@ describe('catalogue provenance and sync', () => {
     expect(catalog.search({ syncStatus: 'local-ahead' }).map(one => one.id)).toEqual(['a'])
   })
 
+  it('narrows to what a model produced, leaving imports out', () => {
+    catalog.add(
+      asset({
+        id: 'made',
+        generation: { modelId: 'flux', modelLabel: 'FLUX', prompt: 'a boulder', params: {} },
+      }),
+    )
+    catalog.add(asset({ id: 'imported' }))
+
+    expect(catalog.search({ generated: true }).map(one => one.id)).toEqual(['made'])
+  })
+
   it('searches the prompt as well as the name', () => {
     catalog.add(
       asset({

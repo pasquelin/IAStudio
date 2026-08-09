@@ -527,6 +527,10 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         params.push(query.groupId)
       }
 
+      // The column `parseGeneration` keys off: without a model there is no generation, so this
+      // is exactly the set of rows the studio made rather than the ones it was handed.
+      if (query.generated) conditions.push('model_id IS NOT NULL')
+
       // The prompt is searched alongside the name: what one remembers of a generated asset is
       // what one asked for, not the label the job happened to give it.
       if (query.text) {
