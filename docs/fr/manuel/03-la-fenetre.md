@@ -378,8 +378,9 @@ Ce que vous voyez, quand quelque chose travaille :
 s'effacerait avec la dernière génération en cours est un échec que personne n'aurait lu.
 
 **Le clic ouvre la liste**, dans une petite fenêtre au-dessus de la ligne d'état : une ligne par
-tâche, son modèle, son état, sa barre, et le bouton qui l'annule. C'est le contenu de l'ancien
-panneau, à un clic au lieu d'une place permanente.
+tâche, son modèle, son état, sa barre, et le bouton qui l'annule. Sous la barre, ce que la
+génération a coûté — ou, si elle a échoué, pourquoi. C'est le contenu de l'ancien panneau, à un
+clic au lieu d'une place permanente.
 
 ### Le journal, à côté
 

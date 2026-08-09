@@ -535,14 +535,14 @@ le décor lointain. Stockée en *équirectangulaire*.
 Elle sert à deux choses : **on la voit** (c'est le décor), et **elle éclaire** (voir *IBL*). Le
 second point compte davantage.
 
----
-
-## T
-
 **Sprite**
 Une image posée dans une scène 3D et qui **fait toujours face à la caméra**, quelle que soit la
 direction d'où on la regarde. Utile pour un feuillage, une étincelle, un personnage plat. Il n'est
 ni éclairé ni concerné par les ombres : sa couleur est celle qu'on lui donne.
+
+---
+
+## T
 
 **Tâche** *(job)*
 Une demande de fabrication en cours. Elle vit dans la **ligne d'état**, en bas à droite de la
@@ -581,6 +581,20 @@ translucide fausserait le jugement des couleurs.
 Le coffre-fort de votre système d'exploitation, celui qui garde vos mots de passe. C'est lui qui
 chiffre votre *clé API* et votre *secret API*. Ils n'en sortent jamais en clair, et l'écran que
 vous regardez n'y a pas accès : il sait seulement si la connexion fonctionne.
+
+---
+
+## U
+
+**Unité créative** *(UC)*
+Ce qu'une génération dépense sur votre compte Scenario. C'est le service qui fixe le tarif,
+jamais le studio : une vidéo ne coûte pas ce que coûte une image, et deux modèles d'images ne
+coûtent pas la même chose non plus.
+
+Vous la croisez à trois endroits : le bouton **Générer** en annonce une estimation — `~12 UC` —
+avant que vous appuyiez ; la ligne de la génération montre le montant réel une fois qu'elle est
+partie ; **Aide ▸ Consommation…** fait le total sur une période. Demander l'estimation ne
+dépense rien et ne génère rien.
 
 ---
 

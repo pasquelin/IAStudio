@@ -127,6 +127,14 @@ ambiguity: only one surface listens at a time.
 The gap between dark and light areas. Below 1, the image flattens and goes grey; above, it hardens
 and loses detail at the extremes.
 
+**Creative unit** *(CU)*
+What a generation spends on your Scenario account. The service sets the rate, never the studio: a
+video does not cost what an image costs, and two image models do not cost the same either.
+
+You meet it in three places: the **Generate** button carries an estimate — `~12 CU` — before you
+press it; the generation's own line shows the real figure once it has gone; **Help ▸ Usage…**
+totals a period. Asking for the estimate spends nothing and generates nothing.
+
 **Accent colour**
 The colour that marks what is selected or under way in the interface: the outline of the active
 panel, the *playhead*, the frame around a selection. Adjustable in Settings → **Appearance**.
@@ -487,14 +495,14 @@ matters more.
 Making what you drag stick to *guides*, edges and centre, within a few pixels. It avoids alignments
 that miss by a hair.
 
----
-
-## T
-
 **Sprite**
 A picture placed in a 3D scene that **always faces the camera**, whichever direction you look from.
 Useful for foliage, a spark, a flat character. It is neither lit nor part of shadows: its colour is
 the one you give it.
+
+---
+
+## T
 
 **Temperature**
 An image's shift towards cold (blue) or warm (orange). It is the setting that stops a photograph
@@ -541,12 +549,16 @@ plausible matter where there was only a smeared pixel.
 
 ---
 
-## W
+## V
 
 **Vectorisation**
 Turning a picture into paths — lines and curves, which scale up without ever going blurry. The
 **Vectorize** command lives in the Image menu; its model is set in
 **Settings ▸ Generation ▸ Vectorization**.
+
+---
+
+## W
 
 **Waveform**
 The drawing of a sound: those waves showing where it is loud and where it is silent. It is what lets
