@@ -106,6 +106,20 @@ describe('RangeField', () => {
     expect(from.className).not.toContain('z-1')
   })
 
+  /**
+   * Both handles at the exact middle: «to» keeps the presses, and that is the answer, not an
+   * oversight. It still has the whole upper half to move into, and one drag on it parts the two
+   * — which is what the top of the rail, where it has nowhere to go, cannot offer.
+   */
+  it('leaves the stacking alone when the two meet where the upper handle can still move', () => {
+    const { from, onChange, to } = renderField({ min: 0.5, max: 0.5 })
+
+    expect(from.className).not.toContain('z-1')
+
+    fireEvent.change(to, { target: { value: '0.9' } })
+    expect(onChange).toHaveBeenCalledWith({ min: 0.5, max: 0.9 })
+  })
+
   it('reports a drag across the rail as one gesture', () => {
     const { onGestureStart, onGestureEnd, from } = renderField()
 

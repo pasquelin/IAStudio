@@ -108,17 +108,19 @@ describe('the texture preview', () => {
     expect(source.freed[0]).toHaveBeenCalled()
   })
 
-  /**
-   * `resetClock` tells the viewport the next frame starts now, which is right once — when the
-   * spin begins. `apply` runs on every value a drag emits, and restarting the clock on each of
-   * them leaves the spin the time since the last slider value instead of the time since the last
-   * frame: the shape crawls for as long as a setting is held.
-   */
+  /** Why the edge matters is in `applyEnvironment`; these three hold it to the three cases. */
   describe('the auto spin', () => {
     const spinning = (): TextureState => {
       const state = newTexture()
       state.preview.autoSpin = true
       return state
+    }
+
+    /** Already spinning, which is the state the clock must not be restarted from. */
+    const spun = (): TextureRenderer => {
+      const renderer = mounted()
+      renderer.apply(spinning())
+      return renderer
     }
 
     /**
@@ -141,8 +143,7 @@ describe('the texture preview', () => {
     })
 
     it('leaves the clock alone while a setting is dragged under a spinning shape', () => {
-      const renderer = mounted()
-      renderer.apply(spinning())
+      const renderer = spun()
       const reset = watchClock()
 
       // What a drag is: one `apply` per value, the spin untouched throughout.
@@ -156,8 +157,7 @@ describe('the texture preview', () => {
     })
 
     it('starts the clock again when the spin is turned off and back on', () => {
-      const renderer = mounted()
-      renderer.apply(spinning())
+      const renderer = spun()
       renderer.apply(newTexture())
       const reset = watchClock()
 
