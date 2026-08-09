@@ -218,6 +218,20 @@ describe('catalog', () => {
     expect(catalog.search({ text: 'mossy' })).toEqual([])
   })
 
+  /**
+   * SQLite hands a freed rowid back out: delete the only asset and the next one takes its place
+   * in the table. The words of the first are keyed on that number — left behind, they answer for
+   * the second, and searching "mossy" returns an asset called "Dry sky".
+   */
+  it('does not let the words of a deleted asset answer for the one that takes its place', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.remove('asset_1')
+    catalog.add(asset({ id: 'asset_2', name: 'Dry sky' }))
+
+    expect(catalog.search({ text: 'mossy' })).toEqual([])
+    expect(catalog.search({ text: 'dry' }).map(found => found.id)).toEqual(['asset_2'])
+  })
+
   it('forgets the name an asset used to carry', () => {
     catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
     catalog.add(asset({ id: 'asset_1', name: 'Dry boulder' }))
