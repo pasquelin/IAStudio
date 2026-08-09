@@ -45,23 +45,21 @@ export function signatureOf(event: KeyChord): Signature {
 }
 
 /**
- * The modifiers a signature may carry, in the one order `signatureOf` writes them. Read as an
- * order rather than a set: two spellings of the same chord would never match each other, and
- * the lookup that decides what a key does is an equality on this string.
- */
-const MODIFIER_ORDER: readonly string[] = ['Ctrl', 'Alt', 'Shift', 'Meta']
-
-/**
- * The shape of a `KeyboardEvent.code`: a word, capitalised, of at least two characters.
+ * The shape of a whole signature: the modifiers in the one order `signatureOf` writes them,
+ * then a `KeyboardEvent.code` — a word, capitalised, of at least two characters.
  *
- * A shape rather than a list of the codes that exist. The two are not the same bet, and the
- * wrong one is expensive in a way the right one is not: a code this refuses is a key nobody can
- * bind — `IntlBackslash`, the `<>` key of every AZERTY keyboard this studio is aimed at, would
- * have been one — while a code this accepts and no keyboard emits is merely a shortcut that
- * never fires. Permissive about what looks like a code, strict about what does not: `'P'` is one
- * character, and that is the whole of the defect this exists for.
+ * One expression rather than a walk over the parts, and the order is what makes it one: read as
+ * a set, `Meta+Ctrl+KeyS` and `Ctrl+Meta+KeyS` would be the same chord under two spellings, and
+ * every lookup that decides what a key does is an equality on this string. Written this way a
+ * modifier cannot repeat either, which a walk had to rule out on its own.
+ *
+ * The code is a shape rather than a list of the codes that exist. The two are not the same bet,
+ * and the wrong one is expensive in a way the right one is not: a code refused here is a key
+ * nobody can bind — `IntlBackslash`, the `<>` of every AZERTY keyboard this studio is aimed at,
+ * would have been one — while a code accepted here that no keyboard emits is merely a shortcut
+ * that never fires.
  */
-const CODE_SHAPE = /^[A-Z][A-Za-z0-9]+$/
+const SIGNATURE_SHAPE = /^(Ctrl\+)?(Alt\+)?(Shift\+)?(Meta\+)?[A-Z][A-Za-z0-9]+$/
 
 /**
  * Whether a string is a signature this studio could ever produce.
@@ -75,22 +73,7 @@ const CODE_SHAPE = /^[A-Z][A-Za-z0-9]+$/
  * shortcuts screen is another, and the overrides read off the settings file are a third.
  */
 export function isSignature(value: unknown): value is Signature {
-  if (typeof value !== 'string') return false
-
-  const parts = value.split('+')
-  const code = parts.at(-1) ?? ''
-  const modifiers = parts.slice(0, -1)
-
-  // Read against the order rather than merely included in it: `Meta+Ctrl+KeyS` and
-  // `Ctrl+Meta+KeyS` are the same chord and would be two different keys in every lookup.
-  let next = 0
-  for (const modifier of modifiers) {
-    const at = MODIFIER_ORDER.indexOf(modifier, next)
-    if (at === -1) return false
-    next = at + 1
-  }
-
-  return CODE_SHAPE.test(code)
+  return typeof value === 'string' && SIGNATURE_SHAPE.test(value)
 }
 
 /**
