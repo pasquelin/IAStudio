@@ -980,10 +980,6 @@ n'existent que sous B.**
 en attendant l'utilisateur ; `workflows.userApproval` le débloque. `JobStatus` n'a rien entre `running`
 et fini : c'est une valeur de plus dans le domaine, et elle change `isFinished`.
 
-**Le solde et la consommation ne sont toujours appelés nulle part.** `usages.list` (unités consommées,
-par modèle, par période) et `pricing.oscu.retrievePrices` : la consommation du mois dans
-Réglages > Compte est **deux canaux et aucune dépendance**. Le prix par génération, lui, est livré.
-
 **Les modèles utilitaires de Scenario sont la matière première d'un graphe, et le studio n'en appelle
 aucun.** Ce sont des **opérations déterministes exposées comme des modèles**, donc chaînables dans un
 flow et atteignables par le `runModel` déjà écrit — sans une ligne de code spécifique, puisque leur
