@@ -47,9 +47,40 @@ Under the banner, one band per subject, in this order:
 | **Your documents** | the project's documents | an open project |
 | **Running now** | the generations under way | an API key |
 | **Recent activity** | what the studio has done and failed to do | an open project |
+| **In the same vein** | public creations that look like your latest asset | an API key |
+| **An idea to start from** | prompt starting points written for your image model | an API key |
+| **What you have spent** | your units spent, in total and per model | an API key |
+| **Explore** | what everyone has published, by kind | an API key |
 
 **A band that lacks what it needs is not greyed out: it is not there.** With no API key, the
 library does not exist on this screen.
+
+### The four bands that look beyond your project
+
+**Explore** is the only one that is not about your account: it is the feed of what **everyone**
+has published, one category at a time — the studio's six kinds, as tabs. There is no "all" tab: a
+grid mixing sounds and pictures is a grid of grey rectangles, and the API cannot order them
+against each other anyway.
+
+- **it loads as you go down**: the feed pages while you scroll, and it has no end;
+- **it stays at the foot of the page, and does not move.** Ordering the bands is a preference;
+  burying a section under an endless feed is not one, and the menu cannot express it;
+- **the tiles do nothing.** They belong to someone else, and the studio has no way to fetch one
+  into your project — a button that can only refuse is worth less than no button.
+
+**In the same vein** starts from your **latest asset** — not from a choice, there is nothing to
+select — and looks for public creations that resemble it. The reference itself is removed from the
+results, where it would otherwise come first.
+
+**An idea to start from** is the only band that calls nothing until you ask: it has a **Suggest an
+idea** button. That is deliberate — a home screen firing a round trip at every launch would spend
+the account's rate limit on a band nobody looked at. **It is free**: no creative unit is spent.
+Taking an idea opens the generator on the prompt **and** on the settings that go with it. With no
+image model chosen the band does not appear: the suggestion is written for a model, and without
+one it would propose into the void.
+
+**What you have spent** uses the same period as the consumption window, so the two can never
+disagree. It is a summary, not the window: the detail is under **Help ▸ Consumption…**.
 
 **Your recipes need nothing**, and that is deliberate: a recipe is kept outside every project and
 follows you from one to the next. It is the one band with something left to show when no folder

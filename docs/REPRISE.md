@@ -39,7 +39,8 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 >
 > **Ce qui vient d’être livré — ne le refais pas.** Le **graphe est le septième espace**, avec son
 > document `.graph`, sa palette et sa barre — étapes 6 et 10 du § 4 (`feat/workflows`) ·
-> **l’accueil** et ses onze bandes, avec « en refaire une
+> **l’accueil** et ses **quatorze** bandes — dont le fil public `explore`, `similar`, `spark` et
+> `usage`, livrés par `feat/home-explore` — avec « en refaire une
 > avec… » (`feat/home`, `feat/home-creations`) · les trois accès clavier — Explorateur, double-clic
 > qui traverse les espaces, étagère à assets et sa sélection multiple (`feat/explorateur-clavier`,
 > `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader et le tiling des

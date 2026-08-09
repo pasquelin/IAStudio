@@ -47,9 +47,42 @@ Sous la bannière, une bande par sujet, dans cet ordre :
 | **Vos documents** | les documents du projet | un projet ouvert |
 | **En cours** | les générations en route | une clé API |
 | **Activité récente** | ce que le studio a fait et raté | un projet ouvert |
+| **Dans la même veine** | des créations publiques qui ressemblent à votre dernier asset | une clé API |
+| **Une idée pour commencer** | des départs de prompt écrits pour votre modèle d’image | une clé API |
+| **Ce que vous avez consommé** | vos unités dépensées, en tout et par modèle | une clé API |
+| **Explorer** | ce que tout le monde a publié, par type | une clé API |
 
 **Une bande qui n’a pas ce qu’il lui faut n’est pas grisée : elle n’est pas là.** Sans clé API,
 la bibliothèque n’existe pas sur cet écran.
+
+### Les quatre bandes qui regardent au-delà de votre projet
+
+**Explorer** est la seule qui ne parle pas de votre compte : c’est le fil de ce que **tout le
+monde** a publié, une catégorie à la fois — les six types du studio, en onglets. Pas d’onglet
+« tout » : une grille qui mêle des sons et des images est une grille de rectangles gris, et
+l’API ne sait de toute façon pas les ordonner les uns contre les autres.
+
+- **elle se charge en descendant** : le fil pagine tant que vous scrollez, il n’a pas de fin ;
+- **elle reste en bas de page, et ne se déplace pas.** Ranger les bandes est une préférence ;
+  enterrer une section sous un fil sans fin n’en est pas une, et le menu ne peut pas l’exprimer ;
+- **les tuiles ne font rien.** Elles appartiennent à quelqu’un d’autre, et le studio n’a aucun
+  moyen d’en rapatrier une — un bouton qui peut refuser vaut moins que pas de bouton.
+
+**Dans la même veine** part de votre **dernier asset** — pas d’un choix, il n’y a rien à
+sélectionner — et cherche des créations publiques qui lui ressemblent. La référence elle-même est
+retirée des résultats, où elle arriverait en tête.
+
+**Une idée pour commencer** est la seule bande qui n’appelle rien tant que vous ne le demandez
+pas : elle a un bouton **Proposez-moi une idée**. C’est délibéré — un accueil qui déclencherait un
+aller-retour à chaque lancement dépenserait la limite de débit du compte pour une bande que
+personne n’a regardée. **C’est gratuit** : aucune unité créative n’est consommée. Prendre une idée
+ouvre le générateur sur le prompt **et** sur les réglages qui vont avec. Sans modèle d’image
+choisi, la bande ne s’affiche pas : la proposition est écrite pour un modèle, et sans lui elle
+proposerait dans le vide.
+
+**Ce que vous avez consommé** reprend la période de la fenêtre de consommation, pour que les deux
+ne se contredisent jamais. C’est un résumé, pas la fenêtre : le détail est dans
+**Aide ▸ Consommation…**.
 
 **Vos recettes ne demandent rien**, et c’est voulu : une recette est gardée en dehors des
 projets, elle vous suit d’un projet à l’autre. C’est la seule bande qui ait encore quelque chose
