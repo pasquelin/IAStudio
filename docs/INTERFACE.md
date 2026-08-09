@@ -110,6 +110,35 @@ existe déjà : `EnvironmentSection` leur est commun, et sa JSDoc dit pourquoi.
 style lisible par les deux espaces demande que la forme sérialisée descende dans `shared/domain/` —
 sans quoi le main, qui écrira le fichier de `userData`, ne peut pas la typer.
 
+### 19. « Apps » ne dit pas ce que le panneau contient
+
+**Vu le 9 août 2026** — « c’est quoi App, le titre je ne le comprends pas ». Le panneau liste
+seize entrées et ne dit nulle part ce qu’elles sont.
+
+**Le mot vient de Scenario**, c’est le nom du produit côté plateforme, et il est **délibérément
+non traduit** — `panels.apps` vaut « Apps » dans les deux bundles. Ce qui se défend : c’est ainsi
+qu’ils s’appellent sur `scenario.com`. Mais un nom de produit tenu par une plateforme tierce ne
+suffit pas à expliquer un panneau dans un dock, et rien d’autre ne l’explique ici.
+
+Ce qu’une App est, en une phrase, et qui n’est écrit nulle part à l’écran : **un enchaînement de
+plusieurs modèles derrière un seul formulaire, publié publiquement, qu’on lance tel quel.**
+« 3D Model Pipeline (High-poly to Game-ready) » est un pipeline entier ; « Coloring Page Maker »
+en est un aussi, plus court.
+
+**Ce qui n’aide pas** : le panneau n’a d’explication qu’à vide (`apps.none` — « Aucune App
+publiée pour l’instant »), c’est-à-dire dans le seul cas où l’utilisateur n’a rien sous les yeux
+à comprendre. Rempli, il n’a que son titre.
+
+Trois endroits possibles, à trancher : une ligne sous le titre du panneau, l’infobulle de son
+icône dans le rail — qui ne dit aujourd’hui que « Apps » elle aussi —, ou le manuel seul en
+acceptant que le panneau ne s’explique pas. Les deux premiers coûtent une clé i18n dans chaque
+bundle.
+
+> À savoir avant d’écrire cette phrase : le panneau ne montre **que les workflows publics**
+> (`privacy: 'public'`), délibérément. Un workflow privé appartient au compte qui l’a écrit, et
+> le studio n’a pas encore d’éditeur pour ça — c’est le node editor, § 4 de `REPRISE`. La
+> formulation ne doit donc pas promettre « vos workflows ».
+
 ### 18. Le formulaire de génération est en anglais dans une application en français
 
 **Vu le 9 août 2026, capture à l’appui**, sur `HY World - Multi-view to Splat` : le panneau
