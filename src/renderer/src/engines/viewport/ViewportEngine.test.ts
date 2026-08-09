@@ -6,12 +6,17 @@ import { ViewportEngine } from './ViewportEngine'
 /**
  * A renderer jsdom can hold: the real one asks the canvas for a WebGL context and gets null.
  * Only what the engine reads back is kept — the element it draws into, the two flags it sets at
- * mount, and `autoClear`, which the overlay pass turns off and back on.
+ * mount, `autoClear`, which the overlay pass turns off and back on, and `info`.
+ *
+ * `info` follows three.js 0.185.1 to the letter, because the counting depends on it: `render`
+ * clears the counters first when `autoReset` is on, then adds one draw call. A viewport with an
+ * overlay calls `render` twice, so a stand-in that skipped the clearing would report a passing
+ * count for a viewport that measures only its trihedron.
  */
-const rendered = vi.fn()
 const disposed = vi.fn()
 const sized = vi.fn()
 const pixelRatio = vi.fn()
+const rendered = vi.fn()
 
 vi.mock('three', async importOriginal => ({
   ...(await importOriginal<typeof ThreeModule>()),
@@ -20,6 +25,17 @@ vi.mock('three', async importOriginal => ({
     readonly shadowMap = { enabled: false }
     toneMapping = NoToneMapping
     autoClear = true
+    readonly info = {
+      autoReset: true,
+      render: { calls: 0, triangles: 0, points: 0, lines: 0 },
+      memory: { geometries: 0, textures: 0 },
+      reset: (): void => {
+        this.info.render.calls = 0
+        this.info.render.triangles = 0
+        this.info.render.points = 0
+        this.info.render.lines = 0
+      },
+    }
 
     constructor({ canvas }: { canvas: HTMLCanvasElement }) {
       this.domElement = canvas
@@ -27,8 +43,12 @@ vi.mock('three', async importOriginal => ({
 
     setPixelRatio = pixelRatio
     setSize = sized
-    render = rendered
     dispose = disposed
+    render = (...args: unknown[]): void => {
+      if (this.info.autoReset) this.info.reset()
+      this.info.render.calls += 1
+      rendered(...args)
+    }
   },
 }))
 
@@ -196,6 +216,50 @@ describe('a viewport', () => {
 
       expect(() => drawFrames()).toThrow('overlay')
       expect(engine.gl?.autoClear).toBe(true)
+    })
+  })
+
+  describe('the gpu counters', () => {
+    it('reports nothing until a frame has actually been drawn', () => {
+      expect(mounted({ controls: 'none' }).stats).toMatchObject({ calls: 0, frames: 0 })
+    })
+
+    it('counts the overlay pass into the frame instead of being reset by it', () => {
+      const engine = mounted({
+        controls: 'none',
+        onOverlay: renderer => renderer.render(engine.scene, engine.camera),
+      })
+
+      drawFrames()
+
+      expect(rendered).toHaveBeenCalledTimes(2)
+      expect(engine.stats.calls).toBe(2)
+    })
+
+    /**
+     * Turning `autoReset` off hands the clearing to the engine: skip it and the counters add up
+     * across frames, so a viewport left orbiting would report a cost that only ever climbs.
+     */
+    it('reports one frame at a time rather than the sum of every frame drawn', () => {
+      const engine = mounted({ controls: 'none', onFrame: () => true })
+      const first = engine.stats
+
+      drawFrames()
+      drawFrames()
+      drawFrames()
+
+      expect(engine.stats).toMatchObject({ frames: 3, calls: 1 })
+      expect(engine.stats).toBe(first)
+    })
+
+    /** What proves a viewport went back to sleep rather than burning frames unseen. */
+    it('stops counting once nothing moves', () => {
+      const engine = mounted({ controls: 'none', onFrame: () => false })
+
+      drawFrames()
+      drawFrames()
+
+      expect(engine.stats.frames).toBe(1)
     })
   })
 
