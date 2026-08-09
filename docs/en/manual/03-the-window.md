@@ -169,8 +169,12 @@ It does not carry the file name. It carries the **seven workspaces**:
 
 > **The Graph is under construction.** It opens, nodes can be placed, wired and saved, and
 > **selecting a node opens it in the Inspector** — its id, its kind, and a title you can type. A
-> text node shows its prompt there, a sticky note its text, a model node the model it will run.
-> What you type there goes through the same ⌘Z as the node you drag.
+> text node shows its prompt there, a sticky note its text. A **model node** goes further: the
+> model is **chosen** from a list, and the chosen model's form opens below it, exactly the one the
+> Generation panel shows. What you type there goes through the same ⌘Z as the node you drag.
+>
+> **Changing a node's model rebuilds its ports**, and the links whose port is gone leave with
+> them — in one gesture, so one `⌘Z` takes it all back.
 >
 > What it cannot do **yet**: run what it describes. Its chapter comes when it can.
 
@@ -541,6 +545,10 @@ showing nothing until something breaks leaves the user with nowhere to look **be
 **One click opens the list and marks everything read** — opening it is reading it. Two filters
 wait there: the **level** (information, warning, failure) and the **topic** (generation, import,
 library, document). A **Show everything** button releases them.
+
+**To close it**: a click outside, `Esc`, or switching to another application — clicking the icon
+again works too. That holds for both panels of the status line, and for anything that floats over
+the window.
 
 ### The toasts that do not fade
 

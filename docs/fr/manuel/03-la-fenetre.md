@@ -173,8 +173,13 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 
 > **Le Graphe est en construction.** Il s’ouvre, on y pose des nœuds, on les relie, on les
 > enregistre, et **sélectionner un nœud l’ouvre dans l’Inspecteur** — son identifiant, son genre,
-> et un titre qui se tape. Un nœud de texte y montre son prompt, une note son texte, un nœud de
-> modèle le modèle qu’il lancera. Ce qu’on y tape passe par le même ⌘Z que le nœud qu’on déplace.
+> et un titre qui se tape. Un nœud de texte y montre son prompt, une note son texte. Un **nœud de
+> modèle** va plus loin : le modèle **se choisit** dans une liste, et le formulaire du modèle
+> choisi s’ouvre dessous, exactement celui du panneau Génération. Ce qu’on y tape passe par le
+> même ⌘Z que le nœud qu’on déplace.
+>
+> **Changer le modèle d’un nœud refait ses ports**, et les liens dont le port a disparu s’en vont
+> avec eux — en un seul geste, donc annulable d’un seul `⌘Z`.
 >
 > Ce qu’il ne sait **pas encore** : exécuter ce qu’il décrit. Son chapitre viendra quand il le
 > saura.
@@ -564,6 +569,10 @@ montre rien tant que rien n’a cassé laisse l’utilisateur sans endroit où r
 **Un clic ouvre la liste et marque tout comme lu** — l’ouvrir, c’est le lire. Deux filtres y
 attendent : le **niveau** (information, avertissement, échec) et le **sujet** (génération,
 import, bibliothèque, document). Un bouton **Tout afficher** les relâche.
+
+**Pour refermer** : un clic à côté, `Échap`, ou le passage à une autre application — recliquer
+l’icône marche aussi. C’est vrai des deux volets de la ligne d’état, et de tout ce qui flotte
+au-dessus de la fenêtre.
 
 ### Les bulles qui ne s’effacent pas
 
