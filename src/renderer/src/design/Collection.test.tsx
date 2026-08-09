@@ -20,6 +20,7 @@ function renderCollection(
 ) {
   return render(
     <Collection
+      label="Rows"
       items={items}
       state={{ ...DEFAULT_COLLECTION_STATE, ...overrides }}
       renderCard={item => <span>{item.name}</span>}
@@ -49,6 +50,7 @@ describe('Collection', () => {
   it('stays a list when no card renderer is given, whatever the state says', () => {
     render(
       <Collection
+        label="Rows"
         items={rows(3)}
         state={{ ...DEFAULT_COLLECTION_STATE, view: 'grid' }}
         renderRow={item => <span>row {item.name}</span>}
@@ -64,6 +66,7 @@ describe('Collection', () => {
 
     rerender(
       <Collection
+        label="Rows"
         items={rows(500)}
         state={{ ...DEFAULT_COLLECTION_STATE, thumbnailSize: 64 }}
         renderCard={item => <span>{item.name}</span>}
@@ -199,6 +202,64 @@ describe('Collection', () => {
     expect(onActivate).not.toHaveBeenCalled()
   })
 
+  /**
+   * `option` on its own is invalid ARIA: without a `listbox` around it, a screen reader
+   * announces neither the list nor "3 of 12", and some engines drop the role entirely.
+   */
+  it('wraps its cells in a listbox, so a reader can count them', () => {
+    renderCollection(rows(4), { view: 'list' }, { onSelect: vi.fn() })
+
+    const listbox = screen.getByRole('listbox')
+    expect(listbox).toBeInTheDocument()
+    expect(screen.getAllByRole('option')[0]?.closest('[role="listbox"]')).toBe(listbox)
+  })
+
+  // A shelf whose rows are only opened selects nothing: saying "selected" of a row the user
+  // cannot pick — the explorer paints the documents that are OPEN — describes a state they can
+  // neither set nor clear, and the row already says it in words.
+  it('is a plain list when its rows can only be opened', () => {
+    renderCollection(rows(4), { view: 'list' }, { onActivate: vi.fn() })
+
+    expect(screen.getByRole('list')).toBeInTheDocument()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('listitem')[0]).not.toHaveAttribute('aria-selected')
+  })
+
+  // A `listbox` is a widget, and an unnamed widget is announced as the bare word "listbox" —
+  // the same word in each of the six panels that draw one.
+  it('names the list it draws', () => {
+    renderCollection(rows(4), { view: 'list' }, { onSelect: vi.fn() })
+
+    expect(screen.getByRole('listbox', { name: 'Rows' })).toBeInTheDocument()
+  })
+
+  // `aria-multiselectable` defaults to false, which promises at most one selected row. Three of
+  // the six panels keep a single id, so the answer belongs to the caller.
+  it('says whether picking one row keeps the others', () => {
+    renderCollection(rows(4), { view: 'list' }, { onSelect: vi.fn(), multiple: true })
+    expect(screen.getByRole('listbox')).toHaveAttribute('aria-multiselectable', 'true')
+
+    renderCollection(rows(4), { view: 'list' }, { onSelect: vi.fn() })
+    expect(screen.getAllByRole('listbox')[1]).toHaveAttribute('aria-multiselectable', 'false')
+  })
+
+  // The virtualizer mounts a window of about thirty rows: counted from the tree alone, a
+  // catalogue of two thousand models announces itself as a list of thirty.
+  it('says how many items there are, not how many are mounted', () => {
+    renderCollection(rows(2000), { view: 'list' }, { onSelect: vi.fn() })
+
+    const first = screen.getAllByRole('option')[0]
+    expect(first).toHaveAttribute('aria-setsize', '2000')
+    expect(first).toHaveAttribute('aria-posinset', '1')
+  })
+
+  it('names no list at all when its cells answer to nothing', () => {
+    renderCollection(rows(4), { view: 'list' })
+
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
   it('leaves cells out of the tab order when nothing can be selected nor activated', () => {
     renderCollection(rows(4))
 
@@ -210,7 +271,7 @@ describe('Collection', () => {
   it('keeps a cell reachable when it can only be activated', () => {
     renderCollection(rows(4), { view: 'list' }, { onActivate: vi.fn() })
 
-    expect(screen.getAllByRole('option').some(cell => cell.tabIndex === 0)).toBe(true)
+    expect(screen.getAllByRole('listitem').some(cell => cell.tabIndex === 0)).toBe(true)
   })
 
   // The virtualizer only mounts a window: an anchor scrolled far out of it used to take the tab

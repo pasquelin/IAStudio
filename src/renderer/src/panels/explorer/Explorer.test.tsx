@@ -124,6 +124,20 @@ describe('the project explorer', () => {
     expect(openDocument).toHaveBeenCalledWith(sequence)
   })
 
+  // "Open" is not "selected": the row says it in words, and a state the user can neither set
+  // nor clear from this panel has no business being announced as one they picked.
+  it('lists its documents without claiming any of them is selected', async () => {
+    withProject()
+    useDocuments.setState({ documents: { 'doc-1': scene } })
+    installFakeBridge({ documents: { list: () => Promise.resolve([scene]) } })
+
+    render(<Explorer />)
+
+    await screen.findByText('Niveau')
+    expect(screen.getByRole('list')).toBeInTheDocument()
+    expect(screen.getByRole('listitem')).not.toHaveAttribute('aria-selected')
+  })
+
   it('says the project is empty rather than showing a blank panel', async () => {
     withProject()
     installFakeBridge({ documents: { list: () => Promise.resolve([]) } })
