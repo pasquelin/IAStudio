@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`ea558bd`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline ea558bd..develop`) au lieu de relire mille lignes.
+à **`d66b811`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline d66b811..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -365,7 +365,7 @@ ouvert. »*, les Calques disent *« Ouvrez une image »*. **Un onglet ouvert qui
 pas de document est un état que l’interface ne doit pas pouvoir atteindre.**
 
 **Ce n’est pas une régression : c’est un trou de conception, et le code le documente en le
-décrivant.** `app/documents.tsx:76` porte la JSDoc « The layout is persisted, the documents are
+décrivant.** `app/documents.tsx:79` porte la JSDoc « The layout is persisted, the documents are
 not: a tab restored on startup outlives its document », et le rend proprement plutôt que de lever.
 Ce que ce commentaire décrit comme un cas de bord est en réalité **le cas nominal** dès qu’un
 document n’a pas été enregistré.
@@ -402,14 +402,14 @@ budget de couverture (§ 3.1), ce qui est précisément pourquoi ce chemin n’a
 
 ---
 
-L’espace **Textures** est le prochain manque fonctionnel par ordre de valeur hors workflows : les
-**étape 8** (§ 3.4) est écrite et non commencée, et **ni les dérivations ni le tiling, livrés le
+L’espace **Textures** est le prochain manque fonctionnel par ordre de valeur hors workflows :
+l’**étape 8** (§ 3.4) est écrite et non commencée, et **ni les dérivations ni le tiling, livrés le
 9 août, n’ont été vus à l’écran** — c’est la seule chose de cet espace qui reste à regarder.
 
-Les deux dettes d’API qui bloquaient le node editor — borne de débit et survie des jobs — **sont
-livrées** par les étapes 2 et 3 de `feat/workflows` (§ 3.6). Ce qui reste des dettes transverses :
-les index du catalogue, la recherche qui ne s’interrompt pas, le décodage du clone IPC, la
-coalescence d’undo volée par une commande asynchrone.
+**Des dettes transverses du § 3.6, il ne reste que deux lignes** : le **décodage du clone IPC** —
+73 % du coût d’un ⌘S, intouché — et la **coalescence d’undo volée par une commande asynchrone**.
+Les index du catalogue et l’abandon d’une recherche sont livrés (`feat/catalog-index`), comme
+l’étaient déjà la borne de débit et la survie des jobs.
 
 ---
 
