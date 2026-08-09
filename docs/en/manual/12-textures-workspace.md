@@ -169,7 +169,7 @@ values they look at:
 |---|---|
 | **Repeat preview** — 1×, 2×, 4× | multiplies the repeat **for the eye only** |
 | **Bring the seams to the middle** | shifts every channel by half a width: the edge that wraps lands in the middle of the preview |
-| **Measure the seams** | compares the wrap with the grain of the picture, and answers in three words |
+| **Seams** — the **Measure** button | compares the wrap with the grain of the picture, and answers in three words |
 
 **The first two never touch the material.** They change how it is looked at, not what it is: the
 repeat that goes out into a scene stays the one in the **Repeat** field, and the shift stays the one
@@ -181,7 +181,11 @@ picture already has. Hence three answers — *no visible seam*, *faint seam*, *v
 than a percentage that would mean nothing on its own.
 
 It is taken on the **base colour**: that is the channel a seam is seen in, and the eight are laid
-out together. The button stays off until a base colour is in place.
+out together. The button stays off until a base colour is in place, and the words go as soon as it
+is replaced — they described pixels that are no longer there.
+
+A measurement and a channel computation go through the same graphics card, **one pass at a time**:
+asking for one while the other runs does not refuse it, it waits its turn.
 
 ---
 

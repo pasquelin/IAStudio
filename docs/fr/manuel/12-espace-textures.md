@@ -170,7 +170,7 @@ sous les valeurs qu’ils regardent :
 |---|---|
 | **Aperçu de la répétition** — 1×, 2×, 4× | multiplie la répétition **pour l’œil seulement** |
 | **Amener les coutures au centre** | décale tous les canaux d’une demi-largeur : le bord qui se raccorde arrive au milieu de l’aperçu |
-| **Mesurer les coutures** | compare le raccord au grain de l’image et répond en trois mots |
+| **Coutures** — le bouton **Mesurer** | compare le raccord au grain de l’image et répond en trois mots |
 
 **Les deux premiers ne touchent jamais la matière.** Ils changent la façon de la regarder, pas ce
 qu’elle est : la répétition qui part dans une scène reste celle du champ **Répéter**, et le décalage
@@ -182,7 +182,11 @@ au grain que l’image a déjà. D’où trois réponses — *aucune couture vis
 *couture visible* — plutôt qu’un pourcentage qui ne voudrait rien dire seul.
 
 Elle porte sur la **couleur de base** : c’est le canal où une couture se voit, et les huit sont
-posés ensemble. Le bouton reste éteint tant qu’aucune couleur de base n’est en place.
+posés ensemble. Le bouton reste éteint tant qu’aucune couleur de base n’est en place, et les mots
+disparaissent dès qu’on la remplace — ils décrivaient des pixels qui ne sont plus là.
+
+La mesure et le calcul d’un canal passent par la même carte graphique, **une passe à la fois** :
+demander l’une pendant que l’autre tourne ne la refuse pas, elle attend son tour.
 
 ---
 
