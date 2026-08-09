@@ -222,6 +222,64 @@ describe('browsing the library', () => {
   })
 })
 
+describe('the public feed', () => {
+  let harness: Harness
+
+  beforeEach(() => {
+    harness = setup()
+  })
+
+  it('searches what everyone published, newest first', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'image' })
+
+    // Never the plain listing: `GET /assets` answers for this key alone.
+    expect(harness.listed).toHaveLength(0)
+    expect(harness.searched[0]).toMatchObject({
+      publicFeed: true,
+      sortBy: ['createdAt:desc'],
+      offset: 0,
+    })
+  })
+
+  it('leaves out anything the API flagged', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'video' })
+    expect(harness.searched[0]).toMatchObject({ filter: expect.stringContaining('nsfw IS EMPTY') })
+  })
+
+  it('types the hits again, because the filter casts wider than the studio decides', async () => {
+    setup({
+      remote: {
+        search: () =>
+          Promise.resolve({
+            assets: [{ ...cloudAsset('a'), type: 'texture' }, cloudAsset('b')],
+            token: null,
+          }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'texture' })
+    expect(page.assets.map(asset => asset.id)).toEqual(['a'])
+  })
+
+  it('walks by offset, and marks the cursor as the index produced it', async () => {
+    setup({
+      remote: { search: () => Promise.resolve({ assets: [cloudAsset('a')], token: '40' }) },
+    })
+
+    const page = await invoke<{ cursor: string | null }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.cursor).toBe('o:40')
+  })
+
+  it('reads back the offset it handed out', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'image', cursor: 'o:40' })
+    expect(harness.searched[0]).toMatchObject({ offset: 40 })
+  })
+
+  it('refuses a feed of everything: the masonry shows one kind at a time', async () => {
+    await expect(invoke(CHANNELS.cloudExplore, {})).rejects.toThrow()
+  })
+})
+
 describe('renaming and tagging', () => {
   let harness: Harness
 

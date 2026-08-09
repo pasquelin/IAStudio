@@ -1,13 +1,17 @@
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
 import { defined } from '@shared/guards'
-import type { CloudPage, CloudQuery } from '@shared/domain/cloud-asset'
+import type { CloudPage, CloudQuery, ExploreQuery } from '@shared/domain/cloud-asset'
 import type { SyncOutcome } from '@shared/domain/sync'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import { describeFailure, failureOf, persistableFailure, reducedBy } from '@main/scenario/client'
 import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
-import { filterExpression } from '@main/scenario/filter-expression'
+import {
+  filterExpression,
+  publicFeedFilter,
+  PUBLIC_FEED_SORT,
+} from '@main/scenario/filter-expression'
 import { remoteTypesFor } from '@main/scenario/remote-types'
 import { PAGE_SIZE_MAX } from '@main/scenario/limits'
 import type { AsyncCatalog } from '@main/project/catalog-client'
@@ -21,6 +25,7 @@ import {
   parseAssetChanges,
   parseAssetIds,
   parseCloudQuery,
+  parseExploreQuery,
   parseSyncPolicy,
 } from './validation'
 
@@ -116,6 +121,28 @@ async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<Cl
   return { assets, cursor: page.cursor }
 }
 
+/**
+ * One page of the public feed — everything published, of one kind, newest first.
+ *
+ * The index is asked for the kind rather than handed the whole feed to sift, but the answer is
+ * typed again here all the same: `publicFeedFilter` casts wider than `assetTypeOfRemote` decides,
+ * on purpose. A short page is the price, and the cursor keeps walking.
+ */
+async function explore(remote: RemoteAssetCatalog, query: ExploreQuery): Promise<CloudPage> {
+  const page = await remote.search({
+    filter: publicFeedFilter(query.type),
+    publicFeed: true,
+    sortBy: PUBLIC_FEED_SORT,
+    limit: Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX),
+    offset: offsetFrom(query.cursor),
+  })
+
+  return {
+    assets: page.assets.filter(asset => asset.type === query.type),
+    cursor: marked(OFFSET_CURSOR, page.token),
+  }
+}
+
 /** The rows behind a list of ids, minus the ones the catalogue no longer holds. */
 async function findMany(catalog: () => AsyncCatalog, ids: readonly string[]): Promise<Asset[]> {
   const found = await Promise.all(ids.map(id => catalog().find(id)))
@@ -209,6 +236,10 @@ export function registerAssetHandlers({
 
     return describeAssets(found.filter(asset => asset !== null))
   })
+
+  handle(CHANNELS.cloudExplore, (_event, query) =>
+    reduced(() => explore(remote(), parseExploreQuery(query))),
+  )
 
   handle(CHANNELS.cloudBrowse, (_event, query) =>
     reduced(() => browse(remote(), parseCloudQuery(query))),

@@ -2,7 +2,7 @@ import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
-import type { CloudPage, CloudQuery } from './domain/cloud-asset'
+import type { CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type {
   CloseChoice,
@@ -96,6 +96,7 @@ export type Channels = {
   assetsDescribe: 'assets:describe'
 
   cloudBrowse: 'cloud:browse'
+  cloudExplore: 'cloud:explore'
   cloudPull: 'cloud:pull'
   cloudPush: 'cloud:push'
   cloudPlan: 'cloud:plan'
@@ -186,6 +187,7 @@ export const CHANNELS: Channels = {
   assetsDescribe: 'assets:describe',
 
   cloudBrowse: 'cloud:browse',
+  cloudExplore: 'cloud:explore',
   cloudPull: 'cloud:pull',
   cloudPush: 'cloud:push',
   cloudPlan: 'cloud:plan',
@@ -559,6 +561,14 @@ export type StudioBridge = {
   cloud: {
     /** One page of the library. The cursor is opaque, and null once there is no more. */
     browse: (query: CloudQuery) => Promise<CloudPage>
+    /**
+     * One page of what everyone published, of a single kind and newest first — the home's
+     * explore feed, and the one read here that returns assets this account does not own.
+     *
+     * Anything the API flagged is left out. Nothing is pulled by looking: a tile of the feed
+     * belongs to somebody else until it is fetched like a library one.
+     */
+    explore: (query: ExploreQuery) => Promise<CloudPage>
     /**
      * Brings assets into the project, bytes and all. Answers what each one did — a download
      * that fails halfway has already written the ones before it, and a rejection would lose

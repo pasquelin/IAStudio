@@ -8,9 +8,10 @@ import type { UploadKind } from '@shared/domain/asset-mime'
  * as honouring tags for public assets only — so this expression is what makes the tag facet
  * work at all.
  *
- * Note what is NOT here: `metadata.type`. The search index exposes `kind` and not the eighty
- * provenance values, so a search can ask for pictures but not for skies. That is why the plain
- * listing, which does filter on `types`, stays the path taken whenever tags are not involved.
+ * `filterExpression` below stays on `kind` alone. `metadata.type` IS filterable — measured
+ * against the API on 9 August 2026, see `publicFeedFilter` — but only the public index was
+ * measurable: this account holds no private asset, so nothing proves the same of one's own. The
+ * private path is left exactly as it was rather than changed on an untested assumption.
  */
 
 /**
@@ -65,3 +66,45 @@ export function filterExpression({ tags, types, collectionId }: FilterTerms): st
 
   return clauses.length > 0 ? clauses.join(' AND ') : undefined
 }
+
+/**
+ * Which provenances stand for a surface and for a sky, as an expression the index accepts.
+ *
+ * `CONTAINS` and not a prefix: a texture arrives as `texture`, `upscale-texture` or
+ * `inference-txt2img-texture`, and a sky as `skybox-base-360` or `upscale-skybox`. `ENDS WITH`
+ * would say it exactly and the API answers 500 to it — measured, not assumed.
+ *
+ * Deliberately WIDER than `assetTypeOfRemote`, which decides the same question exactly. This one
+ * only has to avoid asking for a page the caller will then empty: the hits are typed again on
+ * arrival, so an over-catch costs a shorter page and an under-catch would lose assets for good.
+ */
+function contains(needle: string): string {
+  return `metadata.type CONTAINS ${quoted(needle)}`
+}
+
+/**
+ * What the explore feed asks for: one kind of published asset, minus anything flagged.
+ *
+ * `nsfw IS EMPTY` rather than a comparison — the field is an array the API leaves absent on
+ * everything it cleared, and a home that opens onto the public feed cannot afford to guess.
+ */
+export function publicFeedFilter(type: AssetType): string {
+  const clauses = ['nsfw IS EMPTY']
+
+  if (type === 'texture' || type === 'skybox') clauses.push(contains(type))
+  else {
+    clauses.push(`kind = ${quoted(KIND_BY_TYPE[type])}`)
+    // Both share `kind: image`, and a feed of pictures that opens on seven channels of one
+    // material is not the feed anyone asked for.
+    if (type === 'image') clauses.push(`NOT ${contains('texture')}`, `NOT ${contains('skybox')}`)
+  }
+
+  return clauses.join(' AND ')
+}
+
+/**
+ * How the feed is ordered. `score:desc` reads as the obvious choice and the documentation lists
+ * `score` among the sortable fields; the API refuses it outright — `400 Invalid sort field`,
+ * measured 9 August 2026. Newest first is the honest fallback.
+ */
+export const PUBLIC_FEED_SORT: readonly string[] = ['createdAt:desc']

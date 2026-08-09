@@ -72,6 +72,22 @@ export type CloudPage = {
   cursor: string | null
 }
 
+/**
+ * What the home's explore feed asks for: everything published, of one kind at a time.
+ *
+ * A query of its own rather than a flag on `CloudQuery`, because almost nothing about it is the
+ * same errand. It reads assets nobody here owns, narrows to a single kind rather than a set,
+ * pages by offset alone, and drops anything the API flagged. Sharing the type would have meant
+ * a `CloudQuery` whose fields mean one thing in one mode and another in the other.
+ */
+export type ExploreQuery = {
+  /** One tab of the feed. The kinds a masonry can show are the six the studio already has. */
+  type: AssetType
+  /** Opaque, straight from the previous page. */
+  cursor?: string
+  pageSize?: number
+}
+
 /** How large a preview should come down. The CDN resizes; downloading a 4K to draw 112 px does not. */
 export type PreviewSize = { width?: number; quality?: number }
 

@@ -6,7 +6,7 @@ import {
   type ActivityQuery,
 } from '@shared/domain/activity'
 import { ASSET_NAME_MAX_LENGTH, ASSET_TYPES, type AssetChanges } from '@shared/domain/asset'
-import type { CloudQuery } from '@shared/domain/cloud-asset'
+import type { CloudQuery, ExploreQuery } from '@shared/domain/cloud-asset'
 
 import { SYNC_POLICIES, type SyncPolicy } from '@shared/domain/sync'
 import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
@@ -51,6 +51,17 @@ const cloudQuery = z.object({
 
 export function parseCloudQuery(value: unknown): CloudQuery {
   return cloudQuery.parse(value)
+}
+
+/** One tab of the public feed. `type` is required: the feed is never asked for everything. */
+const exploreQuery = z.object({
+  type: z.enum(ASSET_TYPES),
+  cursor: z.string().max(2048).optional(),
+  pageSize: z.number().int().min(1).max(PAGE_SIZE_MAX).optional(),
+})
+
+export function parseExploreQuery(value: unknown): ExploreQuery {
+  return exploreQuery.parse(value)
 }
 
 const syncPolicy = z.enum(SYNC_POLICIES)

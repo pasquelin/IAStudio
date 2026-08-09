@@ -102,6 +102,7 @@ const bridge: StudioBridge = {
   },
   cloud: {
     browse: query => ipcRenderer.invoke(CHANNELS.cloudBrowse, query),
+    explore: query => ipcRenderer.invoke(CHANNELS.cloudExplore, query),
     pull: remoteAssetIds => ipcRenderer.invoke(CHANNELS.cloudPull, remoteAssetIds),
     push: assetIds => ipcRenderer.invoke(CHANNELS.cloudPush, assetIds),
     plan: (assetIds, policy) => ipcRenderer.invoke(CHANNELS.cloudPlan, assetIds, policy),
