@@ -292,16 +292,40 @@ seul, et ils sont **cinq** à lire `useProject` chacun de son côté : `Explorer
 cinq réponses en une règle, et la rend testable sans rendre quoi que ce soit — exactement la
 découpe de l’accueil.
 
-**Deux choses à trancher avant de coder :**
+**Tranché le 9 août 2026 : le panneau reste, on lui donne sa sortie.** Plutôt que le retirer, lui
+mettre le bouton qui ouvre ou crée un projet — **aujourd’hui il faut retourner sur l’accueil pour
+ça**, et repasser par la page d’accueil pour sortir d’un panneau vide n’est pas un chemin.
 
-1. **Retiré du rail, ou présent et désactivé ?** L’accueil retire. Pour un panneau, retirer touche
-   le **layout persisté** : Dockview est remonté par espace, et un panneau ajouté à l’API sortante
-   est jeté par le `fromJSON` du suivant (§ 3.1 de `REPRISE`). Un panneau qui disparaît et revient
-   avec le projet doit retrouver sa place, pas la perdre.
-2. **Quels panneaux exigent un projet ?** L’Explorateur, l’étagère à assets et l’inspecteur, sans
-   doute. Le **Générateur** est la vraie question : générer sans projet produit un job qui ne se
-   collecte nulle part — « un job ne collecte que dans son propre projet » (§ 3.6). Soit il exige
-   un projet, soit il faut dire ce que devient ce qu’il produit.
+Ce choix évite au passage le piège de l’autre : retirer un panneau touche le **layout persisté**
+— Dockview est remonté par espace, et un panneau ajouté à l’API sortante est jeté par le `fromJSON`
+du suivant (§ 3.1 de `REPRISE`). Un panneau qui disparaît et revient avec le projet risquait de
+perdre sa place plutôt que de la retrouver. Le panneau qui reste et se rend utile ne pose pas la
+question.
+
+**Les deux gestes existent déjà, ils ne sont simplement offerts que sur l’accueil.** `openPicked()`
+et `createPicked()` sont sur le store `useProject`, et leurs **quatre** appelants sont tous sur
+l’accueil : `Projects.tsx`, `Tools.tsx` (les deux), `Spotlight.tsx`. Rien à écrire côté mécanique.
+
+**Et `EmptyState` porte déjà une action** — `action?: { label, onClick }`, décrite comme « the way
+out, for a panel whose emptiness the user can act on ». Celui de l’Explorateur n’en passe aucune,
+alors que le composant l’attend. C’est **une prop à remplir**, pas un composant à écrire.
+
+**Un point à trancher, un seul.** `EmptyState` n’accepte **qu’une** action, délibérément : « every
+panel offers its way out the same way, and a node would let each one grow its own button ». Or il
+en faut deux ici — ouvrir un projet existant, et en créer un. Deux réponses possibles :
+
+- **une action secondaire dans `EmptyState`**, ajoutée une fois pour tous les panneaux — dans
+  l’esprit du composant, qui existe justement pour que chaque panneau n’invente pas ses boutons ;
+- **une seule action, « Ouvrir un projet… »**, la création restant sur l’accueil — mais c’est
+  précisément la moitié qui manquait.
+
+La première réponse est la bonne si la création doit être atteignable de là, et c’est ce qui a été
+demandé.
+
+**Reste à décider quels panneaux déclarent quoi.** L’Explorateur, l’étagère à assets et
+l’inspecteur exigent un projet, sans doute. Le **Générateur** est la vraie question : générer sans
+projet produit un job qui ne se collecte nulle part — « un job ne collecte que dans son propre
+projet » (§ 3.6). Soit il exige un projet, soit il faut dire ce que devient ce qu’il produit.
 
 ### 4. Aucun sélecteur de couleur ne s’ouvre
 
