@@ -7,6 +7,7 @@ import {
   mdiGridLarge,
   mdiImageMultipleOutline,
   mdiLayersOutline,
+  mdiPaletteSwatchOutline,
   mdiTuneVariant,
   mdiVideoVintage,
   mdiWeatherPartlyCloudy,
@@ -52,6 +53,7 @@ const ICONS: Record<ToolId, string> = {
   view: mdiEyeOutline,
   assets: mdiImageMultipleOutline,
   channels: mdiGridLarge,
+  styles: mdiPaletteSwatchOutline,
   apps: mdiApplicationBracesOutline,
 }
 

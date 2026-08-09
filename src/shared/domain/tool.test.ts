@@ -193,8 +193,8 @@ describe('the rail order of the upper right', () => {
   })
 
   /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */
-  it('puts the channels first in Textures', () => {
-    expect(upperRightIn('textures')).toEqual(['channels', 'explorer', 'apps'])
+  it('puts the channels first in Textures, with the styles that read them beside', () => {
+    expect(upperRightIn('textures')).toEqual(['channels', 'styles', 'explorer', 'apps'])
   })
 })
 

@@ -1,0 +1,46 @@
+import { mdiPaletteSwatchOutline } from '@mdi/js'
+import { useTranslation } from 'react-i18next'
+import { ToolButton } from '@/design/ToolButton'
+import { activeSceneId, activeTextureId, useDocuments } from '@/stores/documents'
+import { useSelection } from '@/stores/selection'
+import { useStyles } from '@/stores/styles'
+import { textureOf, useTextures } from '@/stores/textures'
+import { inspectedTextureId } from './inspected'
+
+/**
+ * What the inspector's title row carries.
+ *
+ * One button, and only on the material face. The inspector is a single panel with eight faces —
+ * a layer, a clip, a track, an asset, a scene, a texture — so a button posted here unconditionally
+ * would offer to save a material while a video clip filled the panel below it. Which face is
+ * drawn is `inspectedTextureId`, the same answer `Face` renders from.
+ */
+export function InspectorActions() {
+  const selection = useSelection(state => state.selection)
+  const sceneId = useDocuments(activeSceneId)
+  const textureId = useDocuments(activeTextureId)
+  const documentId = inspectedTextureId(selection, sceneId, textureId)
+
+  if (!documentId) return null
+  return <SaveStyle documentId={documentId} />
+}
+
+/**
+ * Split out so the material is only subscribed to when there is one. Read here rather than
+ * passed down from the face: the two are siblings in the title row and the panel body, and
+ * threading it would mean the panel owning what its header saves.
+ */
+function SaveStyle({ documentId }: { documentId: string }) {
+  const { t } = useTranslation()
+  const material = useTextures(state => textureOf(state, documentId).material)
+
+  return (
+    <ToolButton
+      icon={mdiPaletteSwatchOutline}
+      label={t('styles.save')}
+      description={t('styles.saveHint')}
+      variant="header"
+      onClick={() => void useStyles.getState().save(material, t('styles.newName'))}
+    />
+  )
+}

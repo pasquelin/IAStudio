@@ -36,6 +36,19 @@ export function setMaterial<K extends keyof MaterialSettings>(
   return replaceSection(`material:${key}`, 'material', material => ({ ...material, [key]: value }))
 }
 
+/**
+ * A whole material at once — what applying a saved style does.
+ *
+ * Keyed on the style rather than on the word "style": two styles applied in a row must leave two
+ * undo entries, and one shared id would coalesce them into one that gives back neither.
+ *
+ * The channels are not touched, which is the whole reason a style applies to any texture: it
+ * says how to read the maps in front of it, never which maps to read.
+ */
+export function applyStyle(styleId: string, values: MaterialSettings): Command<TextureState> {
+  return replaceSection(`material:style:${styleId}`, 'material', () => values)
+}
+
 export function setPreview<K extends keyof PreviewSettings>(
   key: K,
   value: PreviewSettings[K],

@@ -24,6 +24,7 @@
     "skybox": "Skybox",
     "scene": "Scène",
     "channels": "Canaux",
+    "styles": "Styles",
     "view": "Vue",
     "apps": "Apps"
   },
@@ -1308,6 +1309,14 @@
       "title": "Agrandir le pinceau",
       "help": "Élargit d’un cran le diamètre du pinceau, de la gomme et du trait des formes."
     }
+  },
+  "styles": {
+    "none": "Aucun style enregistré. Réglez un matériau, puis enregistrez-le depuis l’inspecteur.",
+    "rename": "Renommer",
+    "remove": "Supprimer",
+    "newName": "Style",
+    "save": "Enregistrer comme style",
+    "saveHint": "Garde les réglages du matériau courant, sans ses maps, pour les rejouer sur une autre texture."
   },
   "texture": {
     "shapeSphere": "Sphère",

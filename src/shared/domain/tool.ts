@@ -49,6 +49,7 @@ export type ToolId =
   | 'assets'
   | 'skybox'
   | 'channels'
+  | 'styles'
   | 'view'
   | 'apps'
 
@@ -122,6 +123,10 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // first in Skyboxes: it is what the space is for. In the column rather than the band, so a
   // channel and the shelf a picture is dragged from stay on screen together.
   { id: 'channels', zone: 'right', slot: 'primary', surfaces: ['textures'] },
+  // Saved ways of reading a material, beside the channels they read. In the upper half so the
+  // inspector keeps the lower one: a style is saved FROM the inspector, and a panel that took
+  // its place would hide the settings one is capturing at the moment of capturing them.
+  { id: 'styles', zone: 'right', slot: 'primary', surfaces: ['textures'] },
   // Where a take is dragged onto a track, the shelf and the montage have to be on screen
   // together — and the montage owns the band, so the shelf takes the column.
   { id: 'assets', zone: 'right', slot: 'primary', surfaces: ['video', 'audio'] },
