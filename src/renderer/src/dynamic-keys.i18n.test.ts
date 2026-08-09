@@ -39,6 +39,9 @@ const COMPOSED_KEYS: readonly string[] = [
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
   ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
   ...WORKSPACE_IDS.map(workspace => `home.tools.${workspace}`),
+  // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
+  // the one thing the workspace table does NOT make the compiler demand of a new space.
+  ...WORKSPACE_IDS.map(workspace => `workspaces.${workspace}`),
 ]
 
 describe('the keys the renderer composes', () => {

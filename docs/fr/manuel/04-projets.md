@@ -113,6 +113,7 @@ est :
 | son en cours d’édition | `.aud` | Audio |
 | ciel | `.sky` | Skyboxes |
 | matière | `.tex` | Textures |
+| graphe | `.graph` | Graphe |
 
 Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.scene` à côté de
 `b204.tex` dit ce qu’est chacun ; `a3f1.json` à côté de `b204.json` ne dit rien.

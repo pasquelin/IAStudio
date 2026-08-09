@@ -38,7 +38,7 @@ Under the banner, one band per subject, in this order:
 
 | Band | What it shows | It needs |
 |---|---|---|
-| **Tools** | the six workspaces, and the project gestures | nothing |
+| **Tools** | the seven workspaces, and the project gestures | nothing |
 | **Your projects** | the recent projects | nothing |
 | **What you have made** | your generations, captioned with the model that made them | an open project |
 | **By kind** | six counters — Image, Video, Audio, Mesh, Texture, Skybox | an open project |
@@ -97,7 +97,7 @@ you keep an eye on while reading the page, rather than what you read in turn.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  TITLE BAR — the six workspaces                              │
+│  TITLE BAR — the seven workspaces                            │
 ├──┬────────────────────────────────────────────────────────┬──┤
 │  │                     top zone                           │  │
 │ R├────────────────────────────────────────────────────────┤ R│
@@ -128,9 +128,12 @@ deliberate: it gives the reading "panels laid on a table", as in an editing suit
 
 ## The title bar
 
-It does not carry the file name. It carries the **six workspaces**:
+It does not carry the file name. It carries the **seven workspaces**:
 
-**Image** · **Video** · **3D** · **Audio** · **Textures** · **Skyboxes**
+**Image** · **Video** · **3D** · **Audio** · **Textures** · **Skyboxes** · **Graph**
+
+> **The Graph is under construction.** It opens, nodes can be placed and saved, but it cannot
+> yet run what it describes. Its chapter comes when it can.
 
 One click switches workspace. The active one is the button lighter than the others.
 
@@ -191,7 +194,7 @@ From top to bottom:
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace |
 | *separator* | |
-| The **left column** icons | Models, then Generate — the same two in all six workspaces |
+| The **left column** icons | Models, then Generate — the same two in every workspace |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
 
 The **+** button is solid and blue, where all the others are grey glyphs. That is because it
@@ -294,18 +297,18 @@ instead.
 | **Assets** | bottom | 1st | Image, 3D, Textures, Skyboxes | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio | the sequence being edited |
 
-> **"Everywhere" means the six workspaces, not the home screen.** The home is not a seventh
-> workspace: it opens no document, and it has only a left column, where it puts the **Explorer** —
-> where the six workspaces put generation.
+> **"Everywhere" means the workspaces, not the home screen.** A workspace is a place that opens
+> documents of a kind of its own; the home opens none — it opens the others'. It has only a left
+> column, where it puts the **Explorer** — where the workspaces put generation.
 
 **The left column is generation, and nothing else.** Only two panels may sit there — **Models**
-and **Generate** — and neither appears anywhere else. Generating is the one thing all six
-workspaces do, so it gets the same place in all six, right under the **+** button that makes a
+and **Generate** — and neither appears anywhere else. Generating is the one thing every
+workspace does, so it gets the same place in each, right under the **+** button that makes a
 document. They are two moments of the same work, choosing then filling in, so they take turns in
 the same half.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
-selected. Its panels take turns in the upper half — no workspace declares all six at once — and
+selected. Its panels take turns in the upper half — no workspace declares them all at once — and
 the **Inspector** holds the other half, always the lower one. You read what is selected **while**
 a model is being chosen and a prompt written: in an editor, the inspector is never the panel you
 have to switch away from to see something else.
@@ -346,7 +349,7 @@ That is what you see on first launch, and what **View ▸ Reset layout** restore
 | **Textures** | Explorer | Assets |
 | **Skyboxes** | Skybox | Assets |
 
-**Why this is not a panel pinned once and for all.** Your layout is remembered once for all six
+**Why this is not a panel pinned once and for all.** Your layout is remembered once for all
 workspaces, while the panel that comes first differs in each. Writing one into the default layout
 would impose one workspace's answer on the other five.
 
@@ -354,7 +357,7 @@ As soon as you click an icon, that half remembers **your** choice, and does not 
 you click another — or reset the layout.
 
 **Why the Explorer is visible everywhere.** It lists the documents of the project folder, open or
-not, and that is the same question in all six workspaces: double-clicking a row opens the
+not, and that is the same question in every workspace: double-clicking a row opens the
 document, switching workspace if it belongs to another. It long showed the 3D scene tree — that
 now has its own panel, **Scene**.
 
@@ -381,8 +384,8 @@ The dot disappears on save (`⌘S` / `Ctrl+S`), and comes back on the next chang
 to the exact point where you saved, it disappears too: what you see is then indeed what the file
 holds.
 
-> **All six document kinds save** — images, 3D scenes, materials, sequences, edited sounds and
-> skies. What does not survive one save to the next is the undo history. See
+> **All seven document kinds save** — images, 3D scenes, materials, sequences, edited sounds,
+> skies and graphs. What does not survive one save to the next is the undo history. See
 > [What does not exist yet](18-limits.md).
 
 ### Closing a tab

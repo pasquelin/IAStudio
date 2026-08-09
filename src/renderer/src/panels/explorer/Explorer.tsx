@@ -17,7 +17,7 @@ import { DocumentRow } from './DocumentRow'
  * between the two was unreachable from inside the studio — a document closed while no layout
  * held it could only be found on disk.
  *
- * The same list in all six workspaces, and a row opens wherever it belongs: a sequence opened
+ * The same list in every workspace, and a row opens wherever it belongs: a sequence opened
  * from the Image workspace switches to Video, which is what double-clicking an asset already
  * does. Filing them per workspace would hide from the user the one document they are hunting.
  */

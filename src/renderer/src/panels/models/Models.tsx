@@ -96,11 +96,11 @@ function useLazyPreviews() {
 export function Models() {
   const { t } = useTranslation()
   const workspace = useLayouts(state => state.activeWorkspace)
-  const family = workspaceById(workspace).family
+  const { family, scope } = workspaceById(workspace)
 
   const collection = useModels(state => state.collection)
   const setCollection = useModels(state => state.setCollection)
-  const selectedId = useModels(state => state.selected[family] ?? null)
+  const selectedId = useModels(state => state.selected[scope] ?? null)
   const select = useModels(state => state.select)
   const authenticated = useSettings(state => state.auth.authenticated)
 
@@ -205,7 +205,7 @@ export function Models() {
           items={items}
           state={collection}
           selectedIds={selectedId ? [selectedId] : []}
-          onSelect={model => select(family, model.id)}
+          onSelect={model => select(scope, model.id)}
           onReachEnd={loadMore}
           onVisible={onVisible}
           rowHeight={ROW_HEIGHT}

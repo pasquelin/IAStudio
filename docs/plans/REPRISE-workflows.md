@@ -59,7 +59,9 @@ l’étape 6 dans `develop`**.
 
 ## L’état exact au moment d’écrire
 
-**Six étapes livrées, et toutes fusionnées dans `develop`.**
+**Sept étapes livrées.** L'étape 10 a été prise avant les 7 à 9, et c'était le bon ordre :
+l'étape 6 avait livré un canvas que rien ne montait, donc rien de ce qui suit n'aurait été
+regardable. Monter d'abord a rendu **cinq défauts invisibles autrement**, dont trois de l'étape 6.
 
 | Étape | Ce qu’elle a livré |
 |---|---|
@@ -70,6 +72,7 @@ l’étape 6 dans `develop`**.
 | 4 | Le coût d’une génération, estimé avant et affiché après |
 | 5 | **Les Apps s’exécutent** : panneau, domaine, registre, trois canaux, `Job.kind`/`targetId` |
 | 6 | **Le canvas** : `@xyflow/react`, `shared/domain/graph.ts`, `engines/graph/`, `spaces/graph/` |
+| 10 | **Le septième espace**, pris hors ordre : le canvas est monté, vu à l'écran, et éditable |
 
 ## Ce que l’étape 5 a appris, et qui vaut pour la suite
 
@@ -111,52 +114,73 @@ l’étape 6 dans `develop`**.
   `isValidConnection` refusait une entrée déjà câblée, rendant « le nouveau fil remplace l’ancien »
   vrai dans le moteur et inatteignable à la souris.
 
-## Le travail suivant : le septième espace
+## Ce que le septième espace a appris
 
-**Tranché avec l’utilisateur le 9 août 2026 : le graphe est un septième espace**, pas un type de
-document dans les six. Il n’est la sortie d’aucun espace, il les traverse tous — et le code disait
-déjà la même chose : `DocumentKind` et `WorkspaceId` sont en correspondance **1:1**
-(`KIND_BY_WORKSPACE`, `workspaceForKind`), donc un `kind: 'graph'` sans espace aurait été le premier
-à casser cette règle, et il aurait fallu désigner un espace d’accueil — question sans bonne réponse.
+- **Un espace peut n'appartenir à aucune famille de modèles.** `Workspace.family` est
+  `ModelFamily | null`, et un catalogue sans famille montre **tout** — `ModelQuery.family` était
+  déjà optionnel et le registre ne narrowait déjà que si la clé est là. Le `scope`
+  (`ModelScope = ModelFamily | 'all'`) est **dérivé sur le record `Workspace`**, jamais recomposé
+  chez les lecteurs : il l'était à quatre endroits, le cinquième a été oublié, et le graphe y a
+  perdu son générateur — voir juste dessous.
+- **`SCOPE_BY_WORKSPACE` est un `Partial`, donc le compilateur ne demande rien.** Un espace
+  absent de cette table garde l'undo **natif**, qui prend l'accélérateur au niveau de l'OS :
+  l'historique du graphe existait, était testé, et `⌘Z` ne l'atteignait jamais. **Skyboxes avait
+  payé exactement ce défaut** — son commentaire le raconte. Toujours vérifier qu'un espace dont
+  le store expose un `historyOf` déclare un `CommandScope`.
+- **`canOffer` retire le Générateur d'un espace sans modèle.** Lire une famille `null` comme
+  « pas de modèle » l'a donc supprimé du graphe **pour de bon**, en restant vert au niveau du
+  registre : le verrou de disposition lit `TOOL_PLACEMENTS`, où `graph` était arrivé tout seul
+  par `WORKSPACE_IDS`. Le défaut vivait dans la couche au-dessus, que ce verrou ne voit pas.
+- **Trois défauts que seul l'écran pouvait rendre** : le fond à points était invisible
+  (`size={0.5}` est un rayon d'un quart de pixel — lisible sur le canvas clair de la webapp,
+  invisible sur notre `panel`) ; `fitView` sautait à **200 %** au premier nœud posé, parce qu'il
+  se rejoue quand les nœuds arrivent et pas seulement au montage ; et **rien ne permettait de
+  créer un nœud**, l'étape 6 n'ayant livré ni palette ni menu.
+- **Un octet NUL littéral vivait dans `serialize.ts`**, dans la clé de déduplication, depuis
+  l'étape 6. Git voyait le fichier comme binaire et le masquait dans tous les diffs — donc
+  personne ne l'avait relu. Échappé en `\0` : même valeur, fichier redevenu texte.
 
-**Rien n’en est écrit** : une tentative a été défaite pour laisser le worktree propre.
+## Ce que l'API a répondu, et que la doc ne disait pas
 
-Le compilateur guide, et c’est voulu — `helpers/workspaces.ts` le dit lui-même : *« a seventh
-workspace is a compile error rather than a list left to drift »*. Ajouter `'graph'` à `WorkspaceId`
-fait échouer exactement **quatre** tables, et il n’y en a pas une cinquième :
+**Toujours faire l'appel.** `workflow_get` sur `wflow_coloring-page-maker` a corrigé quatre
+choses, dont deux qui étaient déjà écrites dans le code :
 
-1. `ICONS` (`renderer/helpers/workspaces.ts`) — `mdiGraphOutline` convient ;
-2. `USED_BY_WORKSPACE` (idem) — ce que l’étagère offre dans le graphe ;
-3. `FAMILIES` (idem) — **c’est là qu’est la question**, voir plus bas ;
-4. `KIND_BY_WORKSPACE` (`shared/domain/document.ts`) — avec `DocumentKind` étendu à `'graph'`.
+| Ce qui était écrit | Ce que l'API répond |
+|---|---|
+| port texte `-target-text` | **`-target-prompt`**, de type `text` — le nom du champ n'est pas le type |
+| une note porte `value` | elle porte **`content`** : toute note importée de Scenario s'affichait **vide** |
+| aucun port conditionnel sur un nœud neuf | **tout** nœud en porte un (`-source-conditional`), la note comprise |
+| aucun endpoint de publication (§ 4.5) | **`workflow_publish` existe** côté MCP, et compile `editor_info` **côté serveur** |
 
-Puis, que le compilateur n’exigera pas : `DOCUMENT_COMPONENTS` (`app/documents.tsx`, **en
-`lazy()`** — `eager-graph.test.ts` verrouille ce qui atterrit dans le premier écran, et React Flow
-n’a rien à y faire), `IO_BY_KIND` (`app/document-io.ts`), `TOOL_PLACEMENTS`
-(`shared/domain/tool.ts`), les deux bundles i18n (`workspaces.graph`, **même ordre dans les deux
-fichiers**, un test le verrouille), et les tests qui comptent « six ».
+**Il n'y a AUCUNE API de palette de nœuds.** Les dix outils `workflows.*` n'en listent aucun, et
+le SDK ne publie que les 15 types techniques, sans libellé ni catégorie. La palette de la webapp
+(Input / Generators / Composers / Utilities) est une couche produit : **un « Image Generator »
+est un nœud `model` narrowé à une famille**, et les cinq entrées « Input » sont des `text` et des
+`asset` qui ne diffèrent que par `data.type`. Elle est donc écrite chez nous — `spaces/graph/palette.ts`,
+branchée sur les familles de modèles que le studio connaît déjà. **Ne pas la rechercher côté API.**
 
-**La question à poser avant d’écrire : `Workspace.family`.** Chaque espace déclare une
-`ModelFamily` qui filtre le catalogue de modèles. Un graphe n’appartient à aucune famille — il les
-enchaîne. Trois voies, et elles ne se valent pas :
+**Un label est une donnée de DOCUMENT, pas de l'interface.** Scenario écrit `label: 'Is Active'`
+sur ses ports ; nous ne l'écrivons pas. Le traduire désynchroniserait le fichier des deux
+éditeurs, et l'écrire en anglais mettrait un mot en dur dans un registre — ce que la garde
+`no-hardcoded-text` refuse, à raison. Un port sans label se dessine par son `name`.
 
-- **`family: 'other'`** — le moins de code, mais le catalogue serait filtré sur « Autre », donc faux
-  dès que le panneau Modèles est dans cet espace ;
-- **rendre `family` nullable** et faire qu’un catalogue sans famille montre tout — c’est la vérité
-  du domaine, et ça touche quatre lecteurs (`Models.tsx`, `Generator.tsx`, `recreate.ts`,
-  `AssetInspector.tsx`) ;
-- **ne pas mettre `models`/`generator` dans le graphe** — `TOOL_PLACEMENTS` les déclare sur
-  `WORKSPACE_IDS`, il faudrait lister les six explicitement. Attention : `revealTool` sort **en
-  silence** si l’outil n’est pas dans l’espace, donc un « Régénérer » vu depuis l’inspecteur du
-  graphe ne ferait rien — à masquer plutôt qu’à laisser mort.
+## Le travail suivant : l'inspecteur d'un nœud, puis les étapes 7 à 9
 
-Recommandation : la deuxième, avec le bouton masqué là où il n’y a pas de générateur. Mais c’est un
-arbitrage, pas une évidence : **le poser avant d’écrire.**
+**Un nœud se pose, se déplace, se relie et se supprime — mais rien ne permet d'éditer ce qu'il
+contient.** Pas le texte d'un nœud texte, pas le modèle d'un générateur. C'est le premier geste à
+écrire, et le plan le range dans l'étape 10 : **une face de plus dans `panels/inspector/`**, jamais
+un panneau à part — `main` a posé la règle d'un inspecteur unique.
 
-Deux règles de disposition à ne pas enfreindre (`docs/interface.md`) : la colonne de gauche est
-réservée à la génération dans les six espaces média — une bibliothèque de nœuds ne peut donc **pas**
-y aller ; et le centre ne porte que la barre d’outils et les règles, ce qui tombe bien, la barre du
-canvas est flottante.
+Ensuite les étapes 7 à 9, dans l'ordre du plan. Trois choses à savoir avant de les ouvrir :
+
+1. **`workflow_publish` compile côté serveur.** L'étape 9 a donc deux voies, pas une : compiler
+   localement (`convertWorkflowEditorToFlow`) ou laisser le serveur le faire. La locale reste
+   préférable — la validation devient un retour instantané au lieu d'un 400 — mais l'autre existe.
+2. **`workflow_create` valide `editor_info` contre le schéma d'import de la webapp**, et exige des
+   tableaux `nodes`/`edges` **non vides**. Un graphe sans arête est refusé à la création.
+3. **La charge machine fausse `pnpm validate`.** À 130 de load average, huit fichiers dépassent le
+   délai de 5 s et la suite passe de 47 s à 200 s. Relancer les fichiers seuls avant de conclure à
+   une régression — c'est écrit au § 4 du prompt, et ça s'est produit trois fois de suite.
 
 ## Ce qui reste ouvert
 

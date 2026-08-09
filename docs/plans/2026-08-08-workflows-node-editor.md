@@ -716,7 +716,58 @@ s’ouvre dans le studio, et un graphe non exportable dit pourquoi.
 
 ## Étape 10 — L’espace, le document, la place dans le shell
 
-- [ ] Livrée
+- [x] Livrée — **prise AVANT les étapes 7 à 9**, et c’était le bon ordre
+
+> **Faite en premier, contre le plan.** Le plan la mettait en dernier ; l’étape 6 a livré un
+> canvas que rien ne montait, donc rien de ce qui a suivi n’aurait été regardable. Monter
+> d’abord a rendu visibles **cinq défauts qu’aucun test unitaire ne pouvait voir**, dont trois
+> venus de l’étape 6.
+>
+> **Un espace peut n’appartenir à aucune famille de modèles.** `Workspace.family` est
+> `ModelFamily | null`, et un catalogue sans famille montre tout — `ModelQuery.family` était
+> déjà optionnel, et `model-registry.ts` ne narrowait déjà que si la clé est là. Le champ
+> `scope` (`ModelScope = ModelFamily | 'all'`) est **dérivé sur le record**, pas recomposé chez
+> les lecteurs : il l’était à quatre endroits, et le cinquième a été oublié — ce qui a coûté au
+> graphe son générateur, voir plus bas.
+>
+> **Ce que l’écran a rendu, et que rien d’autre n’aurait rendu :**
+>
+> - **le fond à points était invisible.** `size={0.5}` est un rayon d’un quart de pixel : lisible
+>   sur le canvas clair de la webapp, deux gris l’un sur l’autre sur notre `panel`. Le centre
+>   était simplement noir ;
+> - **`fitView` sautait à 200 %** au premier nœud posé — il se rejoue quand les nœuds arrivent,
+>   pas seulement au montage. Le nœud suivant atterrissait dans un repère que la main n’avait pas
+>   choisi. `fitViewOptions={{ maxZoom: 1 }}` ;
+> - **on ne pouvait créer aucun nœud.** Le canvas de l’étape 6 n’avait ni palette ni menu :
+>   l’espace s’ouvrait sur un vide sans issue.
+>
+> **`SCOPE_BY_WORKSPACE` est un `Partial`, donc le compilateur n’a rien demandé — et `⌘Z` ne
+> faisait rien.** Un espace absent de cette table garde l’undo **natif**, qui enregistre
+> l’accélérateur auprès de l’OS et l’avale avant la fenêtre. L’historique du graphe existait,
+> était testé, et aucun geste ne l’atteignait. **Skyboxes avait déjà payé exactement ça**, son
+> commentaire le dit. `CommandScope` gagne `'graph'`.
+>
+> **Quatre erreurs corrigées par un APPEL, pas par la doc** (`workflow_get` sur
+> `wflow_coloring-page-maker`, 9 août) :
+>
+> | Ce qui était écrit | Ce que l’API répond |
+> |---|---|
+> | port texte `-target-text` | `-target-prompt`, de type `text` — le champ n’est pas le type |
+> | une note porte `value` | elle porte **`content`** : toute note importée s’affichait **vide** |
+> | pas de port conditionnel | **tout** nœud en porte un, la note comprise |
+> | aucun endpoint de publication | **`workflow_publish` existe** en MCP et compile `editor_info` **côté serveur** — une seconde voie pour l’étape 9 |
+>
+> **Il n’y a AUCUNE API de palette.** Les 10 outils `workflows.*` ne listent aucun type de nœud,
+> et le SDK ne publie que les 15 types techniques. La palette de la webapp — Input / Generators /
+> Composers / Utilities — est une couche produit : **un « Image Generator » est un nœud `model`
+> narrowé à une famille**, et les cinq entrées « Input » sont des `text`/`asset` qui ne diffèrent
+> que par `data.type`. Elle est donc écrite chez nous (`spaces/graph/palette.ts`), branchée sur
+> les familles que le studio connaît déjà.
+>
+> **Ce qui n’est PAS fait, et qui appartenait à cette étape :** l’inspecteur d’un nœud. Un nœud
+> se pose, se déplace, se relie, se supprime — mais **rien ne permet d’éditer ce qu’il contient**
+> (le texte d’un nœud texte, le modèle d’un générateur). C’est une face de plus dans
+> `panels/inspector/`, et c’est le premier geste à écrire après.
 
 À faire en dernier, quand le contenu existe — mais **à concevoir dès l’étape 6**, parce que ça
 détermine où le canvas est monté.

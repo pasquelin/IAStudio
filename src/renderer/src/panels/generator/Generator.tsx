@@ -2,7 +2,7 @@ import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
 import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ModelDescriptor } from '@shared/domain/model'
+import { preferredModelOf, type ModelDescriptor } from '@shared/domain/model'
 import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
@@ -78,21 +78,25 @@ export function Generator() {
   const workspace = useLayouts(state => state.activeWorkspace)
 
   // What an edit asked this generator to open on — an upscaler for Enlarge — or the workspace's
-  // own family. See `prepared`: it is a parenthesis, and it closes on its own.
+  // own scope. See `prepared`: it is a parenthesis, and it closes on its own.
   const prepared = useModels(state => state.prepared)
-  const family = prepared ?? workspaceById(workspace).family
+  const scope = prepared ?? workspaceById(workspace).scope
 
   // The panel's choice wins over the preference: the preference is what to start from.
-  const chosen = useModels(state => state.selected[family] ?? null)
+  const chosen = useModels(state => state.selected[scope] ?? null)
   // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
   // undefined and every field opens on its own default.
   //
   // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
   // preset changes, so dropping it would blank the form under the hand that is filling it. It
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
-  const preset = useModels(state => state.preset[family])
+  const preset = useModels(state => state.preset[scope])
   const prepare = useModels(state => state.prepare)
-  const preferred = useSettings(state => state.settings.generation.defaultModels[family] ?? null)
+  // A preference is set per family, so a space that browses them all starts from none: the graph
+  // picks its model in the panel, and there is no one family whose default would be right here.
+  const preferred = useSettings(
+    state => preferredModelOf(scope, state.settings.generation.defaultModels) ?? null,
+  )
   const modelId = chosen ?? preferred
 
   const authenticated = useSettings(state => state.auth.authenticated)
@@ -130,7 +134,7 @@ export function Generator() {
   // uses: `DynamicForm` rebuilds on it, so the whole form fills without a line of its own. The
   // model is passed unchanged — `prepare` writes both, and the suggestion was made for it.
   const adoptCall = (promptKey: string, suggestion: PromptSuggestion): void => {
-    prepare(family, modelId, { ...suggestion.parameters, [promptKey]: suggestion.text })
+    prepare(scope, modelId, { ...suggestion.parameters, [promptKey]: suggestion.text })
   }
 
   return (

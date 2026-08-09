@@ -88,7 +88,7 @@ type BarButtonProps = {
   onClick: () => void
 }
 
-/** One destination of the bar. The home and the six spaces are read as one row, so they wear
+/** One destination of the bar. The home and the spaces are read as one row, so they wear
  * the same chrome — the home is not a control of a different kind. */
 function BarButton({ icon, label, current, onClick }: BarButtonProps) {
   return (

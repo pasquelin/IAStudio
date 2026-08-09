@@ -172,8 +172,8 @@ A work in progress, open in a tab in the centre of the window.
 The difference from an *asset* is the one between material and work: a generated image is an asset;
 the image you are painting on, with its *layers* and its history, is a document.
 
-Six kinds, one per *workspace*: `.img` (image), `.scene` (3D scene), `.seq` (sequence), `.aud`
-(audio), `.tex` (material), `.sky` (sky).
+Seven kinds, one per *workspace*: `.img` (image), `.scene` (3D scene), `.seq` (sequence), `.aud`
+(audio), `.tex` (material), `.sky` (sky), `.graph` (graph).
 
 ---
 

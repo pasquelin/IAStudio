@@ -29,7 +29,7 @@ export const MIN_SPLIT = 100
  * One tool per half, so an icon click swaps rather than stacks. Key absent, the half is closed;
  * `null`, it is open on no panel in particular; an id, on the panel the user chose.
  *
- * That third state earns its keep: what is open is stored once for all six sections, while the
+ * That third state earns its keep: what is open is stored once for all the sections, while the
  * panel that comes first in a half differs in each — the layers in Image, the shelf in Video,
  * the sky in Skyboxes. An id there would impose one section's answer on the other five.
  */
@@ -88,7 +88,7 @@ export const DEFAULT_SPLIT = 240
 /**
  * Which halves start open — and nothing about what they draw. Every one of them is `null`, so
  * each surface opens on the panel it declares first: the layers in Image, the shelf in Video,
- * the sky in Skyboxes, the models on the left in all six, and the Explorer on the home.
+ * the sky in Skyboxes, the models on the left in every space, and the Explorer on the home.
  *
  * The home names only the left column, the one zone it has: an entry for the others would hold
  * a handle open beside a column nothing can fill.
@@ -388,7 +388,7 @@ export const useTools = create<ToolsState>()(
       // 6 had the generation panels on the right, where everything else sits today, 7 named
       // a panel in every default half, which imposed one section's answer on the other five,
       // and 8 held ONE arrangement for the whole studio — the home then took the left column
-      // the six spaces keep for generation, and a click on either was a click on both.
+      // the spaces keep for generation, and a click on either was a click on both.
       version: 9,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user

@@ -25,8 +25,15 @@ describe('workspaces', () => {
     expect(() => workspaceById('nope')).toThrow()
   })
 
-  it('maps every workspace to a model family', () => {
-    for (const workspace of WORKSPACES) expect(workspace.family).toBeTruthy()
+  /**
+   * `null` is a value here, not an omission. A space that declared no family by accident would
+   * silently open the Models panel on the whole catalogue — so the one space entitled to it is
+   * named, and every other one has to carry a family.
+   */
+  it('maps every workspace to a model family, except the one that chains them all', () => {
+    for (const workspace of WORKSPACES) {
+      expect(workspace.family === null).toBe(workspace.id === 'graph')
+    }
   })
 
   it('has no two workspaces sharing an id', () => {

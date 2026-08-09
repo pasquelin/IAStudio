@@ -325,7 +325,7 @@ Three things worth knowing:
 
 The **Scene** panel, in the right column, shows everything the scene contains, as a tree. It used
 to be the Explorer; that one now lists the documents of the project, which is a different
-question and holds in all six workspaces.
+question and holds in every workspace.
 
 - **Click** a line to select the object — with `⇧`, `⌘` or `Ctrl` to pick several, exactly as in
   the view.

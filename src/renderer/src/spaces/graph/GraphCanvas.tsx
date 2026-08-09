@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -9,8 +9,11 @@ import {
   type IsValidConnection,
   type NodeChange,
 } from '@xyflow/react'
-import type { GraphState } from '@shared/domain/graph'
+import type { GraphPosition, GraphState } from '@shared/domain/graph'
 import { canDropConnection } from '@/engines/graph/connect'
+import type { PaletteEntry } from './palette'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
+import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
 import {
   canvasNodesOf,
   isDragging,
@@ -20,6 +23,10 @@ import {
   toCanvasEdges,
 } from './adapter'
 import { GRAPH_NODE_TYPES } from './GraphNodes'
+import { GraphMenu } from './GraphMenu'
+import { GraphToolbar } from './GraphToolbar'
+import { ViewportBridge } from './ViewportBridge'
+import type { GraphMode } from './graph-tools'
 
 /**
  * What the canvas asks of whoever owns the graph. It owns nothing itself — the state comes down,
@@ -31,11 +38,29 @@ export type GraphCanvasProps = {
   onRemoveNodes: (ids: readonly string[]) => void
   onConnect: (connection: CanvasConnection) => void
   onDisconnect: (edgeIds: readonly string[]) => void
+  onAdd: (entry: PaletteEntry, position: GraphPosition) => void
+  /** An asset let go over the canvas, with the point in the graph it was dropped at. */
+  onDropAsset: (asset: Asset, position: GraphPosition) => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
 }
 
-/** The webapp's own background: dots, gap 20, size 0.5 — read off `app.scenario.com`. */
+/**
+ * The webapp's own spacing, and NOT its dot size. `app.scenario.com` draws them at 0.5, which is
+ * a radius of a quarter pixel: on their light canvas it reads, on our `panel` it is one grey on
+ * another and the pane looks unpainted — checked on screen, where it was simply black.
+ */
 const DOT_GAP = 20
-const DOT_SIZE = 0.5
+const DOT_SIZE = 2
+
+/**
+ * The initial fit never zooms IN. React Flow runs it when the first node arrives, not only at
+ * mount, so dropping one node onto an empty graph jumped the canvas to 200 % — and the next node
+ * was then placed in a frame the hand had not chosen.
+ */
+const FIT_VIEW = { maxZoom: 1 }
 
 export function GraphCanvas({
   graph,
@@ -43,12 +68,45 @@ export function GraphCanvas({
   onRemoveNodes,
   onConnect,
   onDisconnect,
+  onAdd,
+  onDropAsset,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }: GraphCanvasProps) {
   /**
    * Session state, and the canvas is where it belongs: nothing about which node is selected
    * survives a save, and a graph that reopened selected would say the file remembered a click.
    */
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set())
+
+  /**
+   * Where the add menu was asked for, in viewport coordinates. Kept unconverted: the pane
+   * handler sits above React Flow's provider, so `screenToFlowPosition` is out of reach here —
+   * the menu itself does the conversion, from inside.
+   */
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
+
+  /** What the pointer does on the pane. Session state, like the selection beside it. */
+  const [mode, setMode] = useState<GraphMode>('select')
+
+  /**
+   * The viewport's own converter, published by a child because only a child is under React
+   * Flow's provider. A drop reports a screen point and the graph works in its own coordinates;
+   * without this an asset would land wherever the last one did, however far the canvas has been
+   * panned.
+   */
+  const toFlow = useRef<((at: { x: number; y: number }) => GraphPosition) | null>(null)
+
+  /** Where the pointer was on the last `dragover` — a `drop` reports the point, the target does not. */
+  const dropAt = useRef({ x: 0, y: 0 })
+
+  const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
+    // The OS menu says nothing about a graph, and it would cover the one we do have to offer.
+    event.preventDefault()
+    setMenuAt({ x: event.clientX, y: event.clientY })
+  }, [])
 
   const nodes = useMemo(() => canvasNodesOf(graph, selected), [graph, selected])
   const edges = useMemo(() => toCanvasEdges(graph, selected), [graph, selected])
@@ -87,20 +145,58 @@ export function GraphCanvas({
   )
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={GRAPH_NODE_TYPES}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      isValidConnection={isValidConnection}
-      // Neither `<Controls>` nor `<MiniMap>`: the studio has its own toolbar, and the webapp
-      // shows neither either. `<Background>` is the one piece of their chrome worth keeping.
-      proOptions={{ hideAttribution: false }}
-      fitView
+    // Everything, as the shelf below it offers: a node takes whatever the node before it made.
+    <AssetDropTarget
+      accepts={ASSET_TYPES}
+      className="size-full"
+      onDrop={asset => onDropAsset(asset, toFlow.current?.(dropAt.current) ?? { x: 0, y: 0 })}
     >
-      <Background variant={BackgroundVariant.Dots} gap={DOT_GAP} size={DOT_SIZE} />
-    </ReactFlow>
+      {/* Ours rather than a prop on the shared target: only this surface needs the point, and a
+          `dragover` bubbles up from the pane to here. */}
+      <div
+        className="size-full"
+        onDragOver={event => {
+          dropAt.current = { x: event.clientX, y: event.clientY }
+        }}
+      >
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={GRAPH_NODE_TYPES}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          isValidConnection={isValidConnection}
+          onPaneContextMenu={onPaneContextMenu}
+          // In pan mode the drag pushes the view; in select mode it draws a rubber band, which is
+          // what the pointer tool means everywhere else in the studio.
+          panOnDrag={mode === 'pan'}
+          selectionOnDrag={mode === 'select'}
+          // Neither `<Controls>` nor `<MiniMap>`: the studio has its own toolbar, and the webapp
+          // shows neither either. `<Background>` is the one piece of their chrome worth keeping.
+          proOptions={{ hideAttribution: false }}
+          fitView
+          fitViewOptions={FIT_VIEW}
+        >
+          <Background variant={BackgroundVariant.Dots} gap={DOT_GAP} size={DOT_SIZE} />
+          <GraphToolbar
+            mode={mode}
+            onMode={setMode}
+            // The bar's own button opens the same menu the right-click does; the bar says where.
+            onAdd={setMenuAt}
+            onUndo={onUndo}
+            onRedo={onRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+          />
+          <ViewportBridge
+            onReady={useCallback((convert: (at: { x: number; y: number }) => GraphPosition) => {
+              toFlow.current = convert
+            }, [])}
+          />
+          {menuAt && <GraphMenu at={menuAt} onClose={() => setMenuAt(null)} onAdd={onAdd} />}
+        </ReactFlow>
+      </div>
+    </AssetDropTarget>
   )
 }

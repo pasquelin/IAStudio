@@ -9,7 +9,8 @@
     "3d": "3D",
     "audio": "Audio",
     "textures": "Textures",
-    "skyboxes": "Skyboxes"
+    "skyboxes": "Skyboxes",
+    "graph": "Graph"
   },
   "panels": {
     "layers": "Layers",
@@ -65,6 +66,18 @@
       "model": "Model",
       "stickyNote": "Note"
     }
+  },
+  "graphTools": {
+    "add": "Add a node",
+    "addHint": "Drop a node on the canvas — right-click does the same",
+    "select": "Select",
+    "selectHint": "Pick and move nodes",
+    "pan": "Pan",
+    "panHint": "Drag the canvas under the pointer",
+    "zoomIn": "Zoom in",
+    "zoomInHint": "Bring the graph closer",
+    "zoomOut": "Zoom out",
+    "zoomOutHint": "Push the graph away"
   },
   "jobs": {
     "none": "No job running.",
@@ -140,6 +153,7 @@
       "assets.reveal": "The file could not be shown",
       "assets.open": "This asset has nowhere to go",
       "font.face": "A font could not be loaded",
+      "graph.node": "A node could not be created",
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",
       "document.load": "The document could not be opened"
@@ -882,7 +896,8 @@
       "scene": "In the 3D view",
       "sequence": "In the edit",
       "canvas": "In the picture",
-      "skybox": "In the sky"
+      "skybox": "In the sky",
+      "graph": "In the graph"
     },
     "spaces": "Workspaces",
     "spacesDescription": "What only makes sense inside one space: the 3D view, the edit, the image.",
@@ -1568,6 +1583,7 @@
       "audio": "Compose and edit sound across tracks.",
       "textures": "Produce seamless material channels.",
       "skyboxes": "Generate skies and light a scene with them.",
+      "graph": "Chain models into a graph, and run it.",
       "newProject": "New project",
       "newProjectHelp": "A folder that holds your documents and everything you bring in.",
       "openProject": "Open a project",

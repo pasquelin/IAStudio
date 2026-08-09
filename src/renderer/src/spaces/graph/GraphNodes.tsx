@@ -49,6 +49,7 @@ function NodeShell({
 type NodeData = {
   title?: unknown
   value?: unknown
+  content?: unknown
   modelId?: unknown
   inputHandles?: unknown
   outputHandles?: unknown
@@ -110,7 +111,8 @@ const ModelNode = nodeOf('ModelNode', 'graph.nodes.model', data => (
 const StickyNoteNode = memo(function StickyNoteNode({ data, selected }: NodeProps) {
   const { t } = useTranslation()
   const fields: NodeData = data
-  const value = asText(fields.value)
+  // `content`, which is what Scenario writes; `value` is the field the text and asset nodes use.
+  const value = asText(fields.content)
 
   return (
     <div

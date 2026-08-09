@@ -18,15 +18,6 @@ export function nextNodeId(nodes: readonly GraphNode[], type: string): string {
   return `${type}${index}`
 }
 
-/**
- * `workflow` is reserved in a reference: it names the inputs of the workflow itself, and the
- * validator does not check it against node ids. A node called `workflow` would silently steal
- * every reference to them.
- */
-export const RESERVED_NODE_ID = 'workflow'
-
-export const isReservedNodeId = (id: string): boolean => id === RESERVED_NODE_ID
-
 export function addNode(graph: GraphState, node: GraphNode): GraphState {
   return { ...graph, nodes: [...graph.nodes, node] }
 }

@@ -9,7 +9,8 @@
     "3d": "3D",
     "audio": "Audio",
     "textures": "Textures",
-    "skyboxes": "Skyboxes"
+    "skyboxes": "Skyboxes",
+    "graph": "Graphe"
   },
   "panels": {
     "layers": "Calques",
@@ -65,6 +66,18 @@
       "model": "Modèle",
       "stickyNote": "Note"
     }
+  },
+  "graphTools": {
+    "add": "Ajouter un nœud",
+    "addHint": "Poser un nœud sur le canevas — clic droit fait de même",
+    "select": "Sélectionner",
+    "selectHint": "Choisir et déplacer les nœuds",
+    "pan": "Déplacer la vue",
+    "panHint": "Faire glisser le canevas sous le pointeur",
+    "zoomIn": "Zoomer",
+    "zoomInHint": "Rapprocher la vue du graphe",
+    "zoomOut": "Dézoomer",
+    "zoomOutHint": "Éloigner la vue du graphe"
   },
   "jobs": {
     "none": "Aucune tâche en cours.",
@@ -140,6 +153,7 @@
       "assets.reveal": "Le fichier n’a pas pu être montré",
       "assets.open": "Cet asset n’a nulle part où aller",
       "font.face": "Une police n’a pas pu être chargée",
+      "graph.node": "Un nœud n’a pas pu être créé",
       "document.close": "La fermeture du document a échoué",
       "document.delete": "La suppression du document a échoué",
       "document.load": "Le document n’a pas pu être ouvert"
@@ -882,7 +896,8 @@
       "scene": "Dans la vue 3D",
       "sequence": "Dans le montage",
       "canvas": "Dans l’image",
-      "skybox": "Dans le ciel"
+      "skybox": "Dans le ciel",
+      "graph": "Dans le graphe"
     },
     "spaces": "Espaces de travail",
     "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
@@ -1568,6 +1583,7 @@
       "audio": "Composer et monter du son sur plusieurs pistes.",
       "textures": "Produire les canaux d’un matériau sans raccord.",
       "skyboxes": "Générer des ciels et éclairer une scène avec.",
+      "graph": "Enchaîner des modèles dans un graphe, et le lancer.",
       "newProject": "Nouveau projet",
       "newProjectHelp": "Un dossier qui réunit vos documents et tout ce que vous y importez.",
       "openProject": "Ouvrir un projet",

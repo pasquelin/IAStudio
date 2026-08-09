@@ -24,7 +24,7 @@ import {
   type ToolSurface,
   type ToolZone,
 } from '@shared/domain/tool'
-import type { ModelFamily } from '@shared/domain/model'
+import { preferredModelOf, type ModelScope } from '@shared/domain/model'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
@@ -92,9 +92,16 @@ export function toolTitleKey(id: ToolId): string {
   return `panels.${id}`
 }
 
-/** What a surface generates into. The home generates nothing: it opens documents, it makes none. */
-function familyOf(surface: ToolSurface): ModelFamily | null {
-  return surface === HOME_SURFACE ? null : workspaceById(surface).family
+/**
+ * What a surface browses models by. The home generates nothing: it opens documents, it makes
+ * none — and that is the ONE surface with no scope at all.
+ *
+ * A workspace without a family is a different thing entirely: the graph chains them, so it has
+ * every model to choose from rather than none. Reading its `null` family as "no models" is what
+ * would drop the generator from its rail for good, since `canOffer` removes the panel outright.
+ */
+function scopeFor(surface: ToolSurface): ModelScope | null {
+  return surface === HOME_SURFACE ? null : workspaceById(surface).scope
 }
 
 /**
@@ -106,12 +113,12 @@ function familyOf(surface: ToolSurface): ModelFamily | null {
  * it.
  */
 export function hasModelFor(surface: ToolSurface): boolean {
-  const family = familyOf(surface)
-  if (!family) return false
+  const scope = scopeFor(surface)
+  if (!scope) return false
 
   const { selected } = useModels.getState()
   const { defaultModels } = useSettings.getState().settings.generation
-  return Boolean(selected[family] ?? defaultModels[family])
+  return Boolean(selected[scope] ?? preferredModelOf(scope, defaultModels))
 }
 
 /**
@@ -129,10 +136,10 @@ function canOffer(id: ToolId, hasModel: boolean): boolean {
  * happened to re-render.
  */
 export function useHasModel(surface: ToolSurface): boolean {
-  const family = familyOf(surface)
-  const chosen = useModels(state => (family ? state.selected[family] : undefined))
+  const scope = scopeFor(surface)
+  const chosen = useModels(state => (scope ? state.selected[scope] : undefined))
   const preferred = useSettings(state =>
-    family ? state.settings.generation.defaultModels[family] : undefined,
+    scope ? preferredModelOf(scope, state.settings.generation.defaultModels) : undefined,
   )
   return Boolean(chosen ?? preferred)
 }

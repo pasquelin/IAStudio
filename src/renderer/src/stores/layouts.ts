@@ -15,7 +15,7 @@ type LayoutsState = {
    * launch starts, and remembering that it was closed two days ago would make the entry point
    * something a user has to find again.
    *
-   * Not a seventh `WorkspaceId`: that union drives the tool placements, the document kinds and
+   * Not a `WorkspaceId` of its own: that union drives the tool placements, the document kinds and
    * the native menu, and a workspace that opens no document would be a fiction all three have
    * to guard against.
    */

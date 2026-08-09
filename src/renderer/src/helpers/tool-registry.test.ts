@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { ModelFamily } from '@shared/domain/model'
-import type { ToolZone } from '@shared/domain/tool'
+import { HOME_SURFACE, type ToolZone } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
@@ -52,6 +52,34 @@ describe('the generator', () => {
     expect(idsOf('left', 'image')).toEqual(['models'])
     useModels.setState({ selected: { image: 'flux-dev' } })
     expect(idsOf('left', 'image')).toEqual(['models', 'generator'])
+  })
+
+  /**
+   * The graph belongs to no model family, and that is not the same as having no model: it
+   * chains every family, so its choice is filed under the whole catalogue. Read as a family,
+   * the `null` said "nothing to generate with" and `canOffer` took the panel out of the space
+   * for good — green at the registry layer, where the placement is there all along.
+   */
+  it('is offered in the space that belongs to no family, once a model is chosen there', () => {
+    expect(idsOf('left', 'graph')).toEqual(['models'])
+    useModels.setState({ selected: { all: 'flux-dev' } })
+
+    expect(hasModelFor('graph')).toBe(true)
+    expect(idsOf('left', 'graph')).toEqual(['models', 'generator'])
+  })
+
+  /** The home is the one surface with nothing to generate at all, and it stays that way. */
+  it('is never offered on the home, whatever has been chosen elsewhere', () => {
+    useModels.setState({ selected: { all: 'flux-dev', image: 'flux-dev' } })
+
+    expect(hasModelFor(HOME_SURFACE)).toBe(false)
+  })
+
+  /** A choice made in the graph is not a choice made in Image: the scopes are separate keys. */
+  it('keeps the whole-catalogue choice out of the spaces that have a family', () => {
+    useModels.setState({ selected: { all: 'flux-dev' } })
+
+    expect(hasModelFor('image')).toBe(false)
   })
 
   // Named for what it checks: `canOffer` answers for the generator and for nothing else, so a
